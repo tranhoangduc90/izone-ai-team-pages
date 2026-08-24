@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Bảng kết quả bài test dành cho giảng viên">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://ducizone.ddns.net https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
+    <title>Kết quả bài test của lớp</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="../shared/styles.css?rev=20260821-attempt-review-v1">
+    <link rel="stylesheet" href="styles.css?rev=20260821-remove-average-column-v1">
+  </head>
+  <body>
+    <header class="topbar teacher-topbar">
+      <div>
+        <p class="eyebrow">IZONE · Dành cho giảng viên</p>
+        <h1>Kết quả bài test của lớp</h1>
+        <p>Xem kết quả Listening, Reading và theo dõi tiến độ chấm từng bài Writing.</p>
+      </div>
+      <div class="teacher-topbar-actions">
+        <span class="teacher-login-badge" id="loginBadge">Chưa đăng nhập</span>
+        <button class="button button-secondary" id="refreshButton" type="button" hidden>Làm mới dữ liệu</button>
+      </div>
+    </header>
+
+    <main class="page-shell teacher-page-shell">
+      <div class="notice" id="notice" role="status">Đăng nhập Google để xem các lớp bạn được cấp quyền.</div>
+
+      <section class="panel teacher-access" id="accessView">
+        <div>
+          <p class="eyebrow">Quyền truy cập</p>
+          <h2>Đăng nhập tài khoản giảng viên</h2>
+          <p>Chỉ tài khoản đã được quản trị viên cấp quyền cho lớp mới xem được tên và kết quả học viên.</p>
+        </div>
+        <div id="googleSignInButton"></div>
+      </section>
+
+      <section id="dashboardView" hidden>
+        <div class="panel teacher-toolbar">
+          <label>
+            Lớp
+            <select id="classSelect"></select>
+          </label>
+          <label>
+            Bài test
+            <select id="testSelect"></select>
+          </label>
+          <div class="teacher-context">
+            <span>Giảng viên</span>
+            <strong id="reviewerName">—</strong>
+          </div>
+        </div>
+
+        <div class="teacher-tabs-shell">
+          <button class="teacher-tabs-scroll teacher-tabs-scroll-prev" id="teacherTabsPrev" type="button" aria-label="Xem các tab phía trước" hidden>‹</button>
+          <nav class="teacher-tabs" id="teacherTabs" role="tablist" aria-label="Tổng quan và kết quả từng học viên"></nav>
+          <button class="teacher-tabs-scroll teacher-tabs-scroll-next" id="teacherTabsNext" type="button" aria-label="Xem các tab tiếp theo" hidden>›</button>
+        </div>
+
+        <section class="panel teacher-overview" id="overviewView">
+          <div class="teacher-section-heading">
+            <div>
+              <p class="eyebrow">Tổng quan chung</p>
+              <h2 id="overviewTitle">Kết quả của lớp</h2>
+            </div>
+            <span class="teacher-result-count" id="resultCount">0 học viên</span>
+          </div>
+          <div class="teacher-summary-grid" id="classSummary"></div>
+          <div class="teacher-table-wrap">
+            <table class="teacher-table">
+              <thead>
+                <tr>
+                  <th>Học viên</th>
+                  <th>Listening</th>
+                  <th>Reading</th>
+                  <th>Writing</th>
+                  <th>Trạng thái</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="overviewBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="studentView" hidden></section>
+      </section>
+    </main>
+
+    <script src="../shared/config.js?rev=20260821-attempt-review-v1"></script>
+    <script src="../shared/attempt-review.js?rev=20260821-attempt-review-v1"></script>
+    <script type="module" src="app.js?rev=20260821-remove-average-column-v1"></script>
+  </body>
+</html>
