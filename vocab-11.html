@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#071a33">
+  <title>Chấm bài Vocab 11</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <main class="shell">
+    <section class="grader-card" aria-labelledby="page-title">
+      <header class="hero">
+        <div class="brand-row">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
+          <span class="eyebrow">VOCAB 11 · KHÓA 56 · DEMO</span>
+        </div>
+        <h1 id="page-title">Đang chấm bài của bạn</h1>
+        <p id="lead" class="lead">Bạn cứ giữ trang này mở. Kết quả sẽ được ghi trực tiếp vào bài làm.</p>
+      </header>
+
+      <div class="progress-track" aria-hidden="true"><span id="progress-fill"></span></div>
+
+      <ol class="steps" aria-label="Tiến độ chấm bài" aria-live="polite">
+        <li class="step" data-stage="reading">
+          <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3.75h8.5L18 7.25v13H6zM14 3.75v4h4M9 11h6M9 15h6"/></svg></span>
+          <span class="step-copy"><strong>Đọc nội dung bài làm</strong><small>Nhận diện câu trả lời trong 4 Exercise</small></span>
+          <span class="step-state" aria-hidden="true"></span>
+        </li>
+        <li class="step" data-stage="grading">
+          <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4 4 10-10M5 5.5h7"/></svg></span>
+          <span class="step-copy"><strong>Chấm bài Vocab</strong><small>Đối chiếu đáp án và đánh giá Exercise 4</small></span>
+          <span class="step-state" aria-hidden="true"></span>
+        </li>
+        <li class="step" data-stage="writing">
+          <span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19h4l10-10-4-4L5 15zM13.5 6.5l4 4"/></svg></span>
+          <span class="step-copy"><strong>Ghi kết quả vào bài làm</strong><small>Thêm phản hồi đúng, sai và đáp án cần sửa</small></span>
+          <span class="step-state" aria-hidden="true"></span>
+        </li>
+      </ol>
+
+      <section id="result" class="result" hidden aria-live="assertive">
+        <div class="result-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4 4 10-10"/></svg></div>
+        <div><h2>Bài đã được chấm xong</h2><p>Hãy quay lại file Docs để xem kết quả và sửa lại.</p></div>
+      </section>
+
+      <section id="error-box" class="error-box" hidden aria-live="assertive">
+        <strong>Chưa thể chấm bài</strong>
+        <p id="error-message">Hệ thống gặp lỗi. Vui lòng thử lại.</p>
+      </section>
+
+      <div class="actions">
+        <a id="back-link" class="primary-action" href="#" hidden>Quay lại bài làm</a>
+        <button id="retry-button" class="secondary-action" type="button" hidden>Thử chấm lại</button>
+      </div>
+
+      <footer><span class="security-dot" aria-hidden="true"></span>Trang demo chỉ xử lý bài Vocab 11 được chỉ định</footer>
+    </section>
+  </main>
+
+  <script src="vocab-11-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
