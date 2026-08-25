@@ -27,6 +27,12 @@ const demos = [
     statusPath: '/webhook/tien-do-cham-vocab-04-demo',
   },
   {
+    padded: '06',
+    documentId: 'DEMO_VOCAB_06_DOCUMENT_ID_1234567890',
+    startPath: '/webhook/cham-ngay-vocab-06-demo',
+    statusPath: '/webhook/tien-do-cham-vocab-06-demo',
+  },
+  {
     padded: '11',
     documentId: 'DEMO_VOCAB_11_DOCUMENT_ID_1234567890',
     startPath: '/webhook/cham-ngay-vocab-11-demo',
@@ -41,8 +47,9 @@ for (const demo of demos) {
   assert.ok(html.includes(`vocab-${demo.padded}-config.js`));
   assert.ok(config.includes(demo.startPath));
   assert.ok(config.includes(demo.statusPath));
-  const other = demo.padded === '04' ? '11' : '04';
-  assert.ok(!config.includes(`vocab-${other}-demo`));
+  for (const other of demos.filter((candidate) => candidate.padded !== demo.padded)) {
+    assert.ok(!config.includes(`vocab-${other.padded}-demo`));
+  }
 }
 
 const server = createServer(async (request, response) => {
@@ -114,7 +121,7 @@ try {
     assert.ok(calls.slice(1).every((call) => call.path === demo.statusPath));
     await page.close();
   }
-  console.log('GitHub Pages isolation and UI flow passed for Vocab 04 and Vocab 11.');
+  console.log('GitHub Pages isolation and UI flow passed for Vocab 04, Vocab 06 and Vocab 11.');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

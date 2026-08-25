@@ -41,6 +41,8 @@ Khi thêm một web mới, ưu tiên dùng thư mục con có tên ổn định;
 
 Trang `vocab.html` nhận `documentId` và `homework` từ liên kết trong bài làm, gửi yêu cầu tới workflow Vocab chung và hiển thị tiến độ Đọc → Chấm → Ghi. `vocab-03.html` tiếp tục được giữ làm link tương thích và tự dùng `homework=3`. Trang không chứa credential hoặc nội dung bài làm; quyền Google Docs và dữ liệu chấm nằm trong n8n.
 
+Trang `vocab-06.html` là demo độc lập cho Vocab 06. Trang chỉ gọi hai webhook có hậu tố `vocab-06-demo`, không dùng chung endpoint với các bài Vocab khác.
+
 ## Chấm bài Reading/Listening 67
 
 Trang `check-now.html` dùng chung cho các bài Reading và Listening khóa 67. Trang nhận `documentId` cùng `assignmentCode`, xóa hai giá trị khỏi thanh địa chỉ, gửi yêu cầu chấm tới n8n và chỉ dùng `jobId` để hỏi tiến độ. Trang không chứa credential, nội dung bài làm hoặc dữ liệu định danh học viên.
