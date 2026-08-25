@@ -48,6 +48,10 @@ function createNode(tag, className = '', text = '') {
   return node;
 }
 
+function studentDisplayName(student) {
+  return student.temporary ? `${student.name} (mã tạm)` : student.name;
+}
+
 function getSelectedClass() {
   return state.classes.find(item => item.id === state.selectedClassId) || null;
 }
@@ -162,7 +166,7 @@ function renderTabs() {
     button.setAttribute('aria-selected', String(state.selectedTab === student.ref));
     button.append(
       createNode('span', `teacher-tab-status ${student.status}`),
-      document.createTextNode(student.name)
+      document.createTextNode(studentDisplayName(student))
     );
     return button;
   });
@@ -209,7 +213,7 @@ function renderOverviewRows() {
     const result = student.result;
     const row = document.createElement('tr');
     const nameCell = document.createElement('td');
-    nameCell.append(createNode('span', 'teacher-student-name', student.name));
+    nameCell.append(createNode('span', 'teacher-student-name', studentDisplayName(student)));
     const listeningCell = createNode('td', 'teacher-band', result ? formatBand(result.listening?.band) : '—');
     const readingCell = createNode('td', 'teacher-band', result ? formatBand(result.reading?.band) : '—');
     const writing = student.writing || { status: 'not_submitted' };
@@ -691,7 +695,7 @@ function renderStudentResult(student) {
   const headingCopy = document.createElement('div');
   headingCopy.append(
     createNode('p', 'eyebrow', 'Kết quả cá nhân'),
-    createNode('h2', '', student.name),
+    createNode('h2', '', studentDisplayName(student)),
     createNode('p', '', `${getSelectedClass()?.name || ''} · ${result.testTitle || getSelectedTest()?.title || ''}${student.completedAt ? ` · ${formatCompletedAt(student.completedAt)}` : ''}`)
   );
   const reviewButton = createNode('button', 'button button-secondary teacher-attempt-review-button', 'Xem lại toàn bộ bài làm');

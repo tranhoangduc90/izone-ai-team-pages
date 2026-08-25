@@ -529,6 +529,37 @@ button.writing-score-card:focus-visible {
   font: inherit;
 }
 
+.cbt-temporary-student-form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(140px, .55fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--cbt-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.cbt-temporary-student-form > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--cbt-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cbt-temporary-student-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: var(--cbt-ink);
+  background: #fff;
+  font: inherit;
+}
+
 .cbt-demo-reset {
   align-self: end;
   min-height: 42px;
@@ -2800,6 +2831,10 @@ mark.cbt-annotation-mark:focus-visible {
   .cbt-bootstrap-identity {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .cbt-temporary-student-form {
+    grid-template-columns: 1fr;
   }
 
   .cbt-mode .cbt-identity-panel:has(.cbt-demo-reset) {

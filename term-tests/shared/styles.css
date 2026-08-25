@@ -45,6 +45,18 @@ button:disabled { cursor: wait; opacity: .62; }
 .identity-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; padding: 20px; }
 .identity-panel h2, .section-heading h2, .transition-card h2, .result-heading h2 { margin: 5px 0 7px; }
 .identity-copy p:not(.eyebrow) { margin: 0; color: var(--muted); line-height: 1.5; }
+.temporary-student-form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(140px, .55fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.temporary-student-form > p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
 label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 800; }
 input, select { width: 100%; min-height: 44px; padding: 10px 11px; color: var(--ink); background: #fff; border: 1px solid #ced6e2; border-radius: 9px; outline: none; }
 input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 111, 237, .13); }
@@ -252,7 +264,7 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
     grid-auto-flow: row;
     grid-auto-columns: auto;
   }
-  .identity-panel, .summary-grid, .analysis-grid { grid-template-columns: 1fr; }
+  .identity-panel, .summary-grid, .analysis-grid, .temporary-student-form { grid-template-columns: 1fr; }
   .skill-performance-heading { align-items: flex-start; }
   .section-heading, .result-heading { display: grid; }
   .answer-count { justify-self: start; }

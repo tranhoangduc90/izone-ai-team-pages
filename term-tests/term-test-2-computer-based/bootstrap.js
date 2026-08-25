@@ -82,6 +82,17 @@
             </select>
           </label>
           <button class="button cbt-demo-reset" id="bootstrapDemoReset" type="button" hidden>Reset dữ liệu học viên</button>
+          ${testConfig.allowTemporaryStudents ? `
+            <form class="cbt-temporary-student-form" id="bootstrapTemporaryStudentForm" hidden>
+              <p>Chỉ dùng khi tên của bạn chưa có trong danh sách. Nhập đúng mã tạm giáo viên đã cấp.</p>
+              <label>Họ và tên đầy đủ
+                <input id="bootstrapTemporaryStudentName" type="text" minlength="2" maxlength="80" autocomplete="name" required>
+              </label>
+              <label>Mã tạm
+                <input id="bootstrapTemporaryStudentCode" type="text" minlength="2" maxlength="16" pattern="[A-Za-z0-9_\\-]{2,16}" autocomplete="off" autocapitalize="characters" required>
+              </label>
+              <button class="button button-secondary" id="bootstrapRegisterTemporaryStudent" type="submit">Xác nhận và tải bài thi</button>
+            </form>` : ''}
         </div>
         <div class="cbt-lobby-steps">
           <section class="cbt-lobby-step" id="bootstrapDownloadStep" data-state="locked">
@@ -121,6 +132,8 @@
 
   const elements = Object.fromEntries([
     'bootstrapStudent', 'bootstrapClass', 'bootstrapDemoReset', 'bootstrapDownloadStep', 'bootstrapDownloadStatus',
+    'bootstrapTemporaryStudentForm', 'bootstrapTemporaryStudentName', 'bootstrapTemporaryStudentCode',
+    'bootstrapRegisterTemporaryStudent',
     'bootstrapDownloadProgress', 'bootstrapRetry', 'bootstrapPreviewStep', 'bootstrapPreview',
     'bootstrapVolume', 'bootstrapPreviewStatus', 'bootstrapStartStep', 'bootstrapStartStatus',
     'bootstrapStart', 'bootstrapNotice'
@@ -328,7 +341,11 @@
     const student = roster.find(item => item.ref === studentRef);
     if (!student || preparing) return;
     preparing = true;
-    saveState({ studentRef, studentName: student.name });
+    saveState({
+      studentRef,
+      studentName: student.name,
+      studentIdentitySource: student.temporary ? 'temporary' : 'roster'
+    });
     elements.bootstrapStudent.disabled = true;
     try {
       if (state.attemptToken) {
@@ -544,13 +561,18 @@
     }
   });
   elements.bootstrapStudent.addEventListener('change', () => {
-    const selectedRef = elements.bootstrapStudent.value;
+    const selectedValue = elements.bootstrapStudent.value;
+    const selectingTemporary = selectedValue === '__temporary__';
+    const selectedRef = selectingTemporary ? '' : selectedValue;
     const sameStudent = selectedRef === state.studentRef;
     if (!sameStudent) clearAttemptUiState();
     legacyListeningResume = Boolean(sameStudent && selectedRef && !state.attemptToken && legacyUiState.audioStarted);
     saveState({
       studentRef: selectedRef,
       studentName: roster.find(item => item.ref === selectedRef)?.name || '',
+      studentIdentitySource: roster.find(item => item.ref === selectedRef)?.temporary
+        ? 'temporary'
+        : (selectedRef ? 'roster' : ''),
       clientSubmissionId: sameStudent ? state.clientSubmissionId : '',
       clientSubmissionStudentRef: sameStudent ? state.clientSubmissionStudentRef : '',
       examSessionToken: sameStudent ? state.examSessionToken : '',
@@ -575,7 +597,62 @@
       attemptReview: sameStudent ? state.attemptReview : null
     });
     elements.bootstrapDemoReset.hidden = classCode !== 'CODEXDEMO806' || !selectedRef;
+    if (elements.bootstrapTemporaryStudentForm) {
+      elements.bootstrapTemporaryStudentForm.hidden = !selectingTemporary;
+      if (selectingTemporary) elements.bootstrapTemporaryStudentName.focus();
+    }
     if (selectedRef) prepareSelectedStudent();
+  });
+
+  function renderRosterOptions() {
+    const options = [new Option('Nhấn để chọn', '')];
+    for (const student of roster) {
+      options.push(new Option(student.temporary ? `${student.name} (mã tạm)` : student.name, student.ref));
+    }
+    if (testConfig.allowTemporaryStudents) {
+      options.push(new Option('Tên chưa có trong danh sách', '__temporary__'));
+    }
+    elements.bootstrapStudent.replaceChildren(...options);
+  }
+
+  elements.bootstrapTemporaryStudentForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!elements.bootstrapTemporaryStudentForm.reportValidity() || preparing) return;
+    const studentName = elements.bootstrapTemporaryStudentName.value.trim().replace(/\s+/gu, ' ');
+    const temporaryCode = elements.bootstrapTemporaryStudentCode.value.trim().toUpperCase();
+    const normalText = elements.bootstrapRegisterTemporaryStudent.textContent;
+    elements.bootstrapRegisterTemporaryStudent.disabled = true;
+    elements.bootstrapRegisterTemporaryStudent.textContent = 'Đang xác nhận...';
+    try {
+      const response = await apiRequest(`/api/term-tests/${testConfig.slug}/temporary-students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classCode, studentName, temporaryCode })
+      });
+      const student = response.student;
+      if (!student?.ref || !student?.name || student.temporary !== true) {
+        throw new Error('Hệ thống không trả về hồ sơ học viên tạm hợp lệ.');
+      }
+      roster = roster.filter(item => item.ref !== student.ref);
+      roster.push(student);
+      renderRosterOptions();
+      elements.bootstrapStudent.value = student.ref;
+      elements.bootstrapTemporaryStudentName.value = '';
+      elements.bootstrapTemporaryStudentCode.value = '';
+      elements.bootstrapTemporaryStudentForm.hidden = true;
+      saveState({
+        studentRef: student.ref,
+        studentName: student.name,
+        studentIdentitySource: 'temporary'
+      });
+      showNotice(`Đã xác nhận ${student.name}. Hệ thống đang chuẩn bị bài thi.`);
+      await prepareSelectedStudent();
+    } catch (error) {
+      showNotice(`Chưa xác nhận được học viên: ${error.message}`, true);
+    } finally {
+      elements.bootstrapRegisterTemporaryStudent.disabled = false;
+      elements.bootstrapRegisterTemporaryStudent.textContent = normalText;
+    }
   });
 
   async function initialize() {
@@ -591,10 +668,15 @@
     try {
       const data = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`, {}, 12_000);
       roster = data.students || [];
+      if (testConfig.allowTemporaryStudents
+        && state.studentIdentitySource === 'temporary'
+        && state.studentRef
+        && state.studentName
+        && !roster.some(student => student.ref === state.studentRef)) {
+        roster.push({ ref: state.studentRef, name: state.studentName, temporary: true });
+      }
       elements.bootstrapClass.textContent = `Lớp ${data.class.name}`;
-      const options = [new Option('Nhấn để chọn', '')];
-      for (const student of roster) options.push(new Option(student.name, student.ref));
-      elements.bootstrapStudent.replaceChildren(...options);
+      renderRosterOptions();
       if (demoStudentRef || demoAttemptToken) {
         const demoStudent = roster.find(student => student.ref === demoStudentRef);
         if (!demoStudent || !isUuid(demoStudentRef) || !isUuid(demoAttemptToken)) {

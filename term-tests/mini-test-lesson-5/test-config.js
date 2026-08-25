@@ -17,6 +17,7 @@
   window.TERM_TEST_CONFIG = Object.freeze({
     slug: 'mini-test-lesson-5',
     title: 'Mini Test Buổi 5',
+    allowTemporaryStudents: true,
     intro: 'Chọn đúng họ tên, làm Listening trước rồi chuyển sang Reading. Hệ thống lưu và chấm bài ngay sau khi bạn hoàn tất Reading.',
     listening: {
       title: 'Listening - Câu 11–30',

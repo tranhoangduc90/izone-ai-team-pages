@@ -28,6 +28,7 @@
     className: classCode,
     studentRef: '',
     studentName: '',
+    studentIdentitySource: '',
     clientSubmissionId: '',
     clientSubmissionStudentRef: '',
     examSessionToken: '',
@@ -81,6 +82,7 @@
     const serialized = JSON.stringify({
       studentRef: state.studentRef,
       studentName: state.studentName,
+      studentIdentitySource: state.studentIdentitySource,
       clientSubmissionId: state.clientSubmissionId,
       clientSubmissionStudentRef: state.clientSubmissionStudentRef,
       examSessionToken: state.examSessionToken,
@@ -217,6 +219,17 @@
             <option value="">Nhấn để chọn</option>
           </select>
         </label>
+        ${testConfig.allowTemporaryStudents ? `
+          <form class="temporary-student-form" id="temporaryStudentForm" hidden>
+            <p>Chỉ dùng mục này khi tên của bạn chưa có trong danh sách. Nhập đúng mã tạm giáo viên đã cấp.</p>
+            <label>Họ và tên đầy đủ
+              <input id="temporaryStudentName" type="text" minlength="2" maxlength="80" autocomplete="name" required>
+            </label>
+            <label>Mã tạm
+              <input id="temporaryStudentCode" type="text" minlength="2" maxlength="16" pattern="[A-Za-z0-9_\\-]{2,16}" autocomplete="off" autocapitalize="characters" required>
+            </label>
+            <button class="button button-secondary" id="registerTemporaryStudent" type="submit">Xác nhận và làm bài</button>
+          </form>` : ''}
         ${classCode === 'CODEXDEMO806'
           ? '<button class="button cbt-demo-reset" id="resetDemoData" type="button" disabled>Reset dữ liệu học viên</button>'
           : ''}
@@ -289,6 +302,7 @@
 
   const elements = Object.fromEntries([
     'notice', 'loadingView', 'identityView', 'identityTitle', 'classLabel', 'studentSelect', 'resetDemoData',
+    'temporaryStudentForm', 'temporaryStudentName', 'temporaryStudentCode', 'registerTemporaryStudent',
     'listeningView', 'listeningTitle', 'listeningInstructions', 'listeningQuestions', 'listeningCount', 'submitListening',
     'listeningSavedView', 'viewListeningResult', 'startReading', 'readingView', 'readingTitle', 'readingInstructions',
     'readingQuestions', 'readingCount', 'readingStudentName', 'submitReading', 'resultReadyView',
@@ -687,25 +701,43 @@
     return payload;
   }
 
-  function populateRoster(data) {
-    state.roster = data.students || [];
-    state.className = data.class.name;
-    elements.classLabel.textContent = `Lớp ${state.className}`;
+  function renderRosterOptions() {
     const options = [document.createElement('option')];
     options[0].value = '';
     options[0].textContent = 'Nhấn để chọn';
     for (const student of state.roster) {
       const option = document.createElement('option');
       option.value = student.ref;
-      option.textContent = student.name;
+      option.textContent = student.temporary ? `${student.name} (mã tạm)` : student.name;
       options.push(option);
     }
+    if (testConfig.allowTemporaryStudents) {
+      const temporaryOption = document.createElement('option');
+      temporaryOption.value = '__temporary__';
+      temporaryOption.textContent = 'Tên chưa có trong danh sách';
+      options.push(temporaryOption);
+    }
     elements.studentSelect.replaceChildren(...options);
+  }
+
+  function populateRoster(data) {
+    state.roster = data.students || [];
+    if (testConfig.allowTemporaryStudents
+      && state.studentIdentitySource === 'temporary'
+      && state.studentRef
+      && state.studentName
+      && !state.roster.some(student => student.ref === state.studentRef)) {
+      state.roster.push({ ref: state.studentRef, name: state.studentName, temporary: true });
+    }
+    state.className = data.class.name;
+    elements.classLabel.textContent = `Lớp ${state.className}`;
+    renderRosterOptions();
     if (state.studentRef && state.roster.some(student => student.ref === state.studentRef)) {
       elements.studentSelect.value = state.studentRef;
     } else {
       state.studentRef = '';
       state.studentName = '';
+      state.studentIdentitySource = '';
       saveSession();
     }
     if (elements.resetDemoData) elements.resetDemoData.disabled = !elements.studentSelect.value;
@@ -1634,6 +1666,11 @@
     const student = state.roster.find(item => item.ref === elements.studentSelect.value);
     state.studentRef = student?.ref || '';
     state.studentName = student?.name || '';
+    state.studentIdentitySource = student?.temporary ? 'temporary' : (student ? 'roster' : '');
+    if (elements.temporaryStudentForm) {
+      elements.temporaryStudentForm.hidden = elements.studentSelect.value !== '__temporary__';
+      if (!elements.temporaryStudentForm.hidden) elements.temporaryStudentName.focus();
+    }
     if (previousStudentRef && previousStudentRef !== state.studentRef) {
       // Đổi học viên phải tạo một lượt độc lập; không mang mã gửi bài hoặc bài nháp của người trước sang.
       state.clientSubmissionId = '';
@@ -1655,6 +1692,42 @@
     }
     if (elements.resetDemoData) elements.resetDemoData.disabled = !state.studentRef;
     saveSession();
+  });
+
+  elements.temporaryStudentForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!elements.temporaryStudentForm.reportValidity()) return;
+    const studentName = elements.temporaryStudentName.value.trim().replace(/\s+/gu, ' ');
+    const temporaryCode = elements.temporaryStudentCode.value.trim().toUpperCase();
+    setBusy(elements.registerTemporaryStudent, true, 'Đang xác nhận...', 'Xác nhận và làm bài');
+    try {
+      const response = await apiRequest(`/api/term-tests/${testConfig.slug}/temporary-students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classCode, studentName, temporaryCode })
+      });
+      const student = response.student;
+      if (!student?.ref || !student?.name || student.temporary !== true) {
+        throw new Error('Hệ thống không trả về hồ sơ học viên tạm hợp lệ.');
+      }
+      state.roster = state.roster.filter(item => item.ref !== student.ref);
+      state.roster.push(student);
+      state.studentRef = student.ref;
+      state.studentName = student.name;
+      state.studentIdentitySource = 'temporary';
+      renderRosterOptions();
+      elements.studentSelect.value = student.ref;
+      elements.temporaryStudentName.value = '';
+      elements.temporaryStudentCode.value = '';
+      elements.temporaryStudentForm.hidden = true;
+      elements.readingStudentName.textContent = student.name;
+      saveSession();
+      showNotice(`Đã xác nhận ${student.name}. Bạn có thể bắt đầu làm bài.`, 'success');
+    } catch (error) {
+      showNotice(`Chưa xác nhận được học viên: ${error.message}`, 'error');
+    } finally {
+      setBusy(elements.registerTemporaryStudent, false, 'Đang xác nhận...', 'Xác nhận và làm bài');
+    }
   });
 
   elements.resetDemoData?.addEventListener('click', async () => {
@@ -2103,7 +2176,9 @@
     try {
       const roster = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
       populateRoster(roster);
-      if (!state.roster.length) throw new Error('Lớp chưa có học viên trong hệ thống matching.');
+      if (!state.roster.length && !testConfig.allowTemporaryStudents) {
+        throw new Error('Lớp chưa có học viên trong hệ thống matching.');
+      }
       if (state.attemptToken) {
         try {
           const resumed = await restoreAttemptFromServer();
