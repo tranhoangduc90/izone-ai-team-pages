@@ -616,12 +616,17 @@ function upsertComment(comment) {
 
 async function submitSection(section, card) {
   const errorNode = card.querySelector(".field-error");
+  const acceptedMessage = app.manifest.messages?.checkAccepted
+    || "Đã bắt đầu check... Hệ thống đang chấm phần này; em không cần nhấn lại.";
   if (!sectionIsFilled(section, app.state.responses)) {
     errorNode.hidden = false;
     errorNode.textContent = "Hãy hoàn thành các ô của phần này trước khi Check.";
     return;
   }
-  if (!claimSectionSubmission(app.submittingSections, section.key)) return;
+  if (!claimSectionSubmission(app.submittingSections, section.key)) {
+    showNotice(acceptedMessage);
+    return;
+  }
   errorNode.hidden = true;
   renderBodies();
   let previousStatus = app.state.sections[section.key].status;
@@ -636,6 +641,7 @@ async function submitSection(section, card) {
     upsertComment({ commentRef: attempt.commentRef, attemptRef: attempt.attemptRef, section: section.key,
       commentNumber: attempt.commentNumber, status: "queued", feedback: "Đang chấm", createdAt: new Date().toISOString() });
     app.submittingSections.delete(section.key);
+    showNotice(acceptedMessage);
     setSaveState("Đã nhận Check — đang chấm, không cần bấm lại");
     renderBodies();
   } catch (error) {

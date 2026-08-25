@@ -1,0 +1,135 @@
+{
+  "schemaVersion": "lesson-handout.v1",
+  "contentVersion": "2026-08-25.1",
+  "activity": {
+    "slug": "writing-task2-lawbreakers-prison-alternatives",
+    "title": "Writing Task 2 · Prison or alternatives",
+    "eyebrow": "Writing Task 2 · Lập luận cho hai thân bài",
+    "brand": "iZONE · Writing Task 2"
+  },
+  "task": {
+    "title": "Prison for every lawbreaker?",
+    "statement": "Some people think all lawbreakers should be put into prison, while others believe that there are better alternatives. Discuss both views and give your own opinion."
+  },
+  "messages": {
+    "checkAccepted": "Đã bắt đầu check... Hệ thống đang chấm phần này; em không cần nhấn lại."
+  },
+  "bodies": [
+    {
+      "key": "body1",
+      "title": "Body 1 · Vì sao nhiều người ủng hộ án tù",
+      "description": "Trình bày công bằng quan điểm thứ nhất: nhà tù trừng phạt, răn đe và bảo vệ xã hội.",
+      "sectionKeys": ["body1_topic", "body1_support1", "body1_support2"]
+    },
+    {
+      "key": "body2",
+      "title": "Body 2 · Các biện pháp thay thế và quan điểm của em",
+      "description": "Giải thích vì sao hình phạt nên tương xứng; ưu tiên phục hồi cho người phạm tội nhẹ hoặc lần đầu.",
+      "sectionKeys": ["body2_topic", "body2_support1", "body2_support2"]
+    }
+  ],
+  "sections": [
+    {
+      "key": "body1_topic",
+      "body": "body1",
+      "title": "Chốt idea và Topic Sentence",
+      "kicker": "Body 1 · Bước 1",
+      "instruction": "Viết hai lý do khiến nhiều người muốn giam mọi người vi phạm pháp luật, rồi gộp chúng thành một Topic Sentence trình bày đúng quan điểm này.",
+      "requiredFields": ["body1_idea1", "body1_idea2", "body1_topic"],
+      "validationMode": "all",
+      "fields": [
+        { "key": "body1_idea1", "label": "Idea 1", "rows": 3, "placeholder": "Ví dụ: bảo vệ xã hội khỏi người nguy hiểm…" },
+        { "key": "body1_idea2", "label": "Idea 2", "rows": 3, "placeholder": "Ví dụ: răn đe và thể hiện hậu quả rõ ràng…" },
+        { "key": "body1_topic", "label": "Topic Sentence", "rows": 4, "placeholder": "Câu chủ đề bao quát hai lý do bằng tiếng Anh…" }
+      ]
+    },
+    {
+      "key": "body1_support1",
+      "body": "body1",
+      "title": "Phát triển Supporting Idea 1",
+      "kicker": "Body 1 · Bước 2",
+      "instruction": "A nêu lý do đầu, X giải thích cơ chế, B chốt tác động cuối cùng đối với an toàn hoặc công lý.",
+      "requiredFields": ["body1_support1_a", "body1_support1_x", "body1_support1_b"],
+      "validationMode": "all",
+      "fields": [
+        { "key": "body1_support1_a", "label": "A · Điểm đầu", "rows": 3, "placeholder": "Luận điểm mở đầu…" },
+        { "key": "body1_support1_x", "label": "X · Điểm giữa", "rows": 3, "placeholder": "Giải thích vì sao hoặc bằng cách nào…" },
+        { "key": "body1_support1_b", "label": "B · Điểm cuối", "rows": 3, "placeholder": "Hệ quả cuối cùng muốn chứng minh…" }
+      ]
+    },
+    {
+      "key": "body1_support2",
+      "body": "body1",
+      "title": "Phát triển Supporting Idea 2",
+      "kicker": "Body 1 · Bước 3",
+      "instruction": "Hoàn thiện chuỗi A–X–B cho lý do thứ hai; tránh lặp lại ý bảo vệ xã hội của phần trước.",
+      "requiredFields": ["body1_support2_a", "body1_support2_x", "body1_support2_b"],
+      "validationMode": "all",
+      "fields": [
+        { "key": "body1_support2_a", "label": "A · Điểm đầu", "rows": 3, "placeholder": "Luận điểm mở đầu…" },
+        { "key": "body1_support2_x", "label": "X · Điểm giữa", "rows": 3, "placeholder": "Giải thích cơ chế răn đe hoặc trách nhiệm…" },
+        { "key": "body1_support2_b", "label": "B · Điểm cuối", "rows": 3, "placeholder": "Hệ quả cuối cùng muốn chứng minh…" }
+      ]
+    },
+    {
+      "key": "body2_topic",
+      "body": "body2",
+      "title": "Chốt idea, Topic Sentence và quan điểm",
+      "kicker": "Body 2 · Bước 1",
+      "instruction": "Viết hai lợi ích của biện pháp thay thế, rồi tạo Topic Sentence thể hiện rõ quan điểm của em: án tù cần dành cho tội nghiêm trọng hoặc người có nguy cơ cao.",
+      "requiredFields": ["body2_idea1", "body2_idea2", "body2_topic"],
+      "validationMode": "all",
+      "fields": [
+        { "key": "body2_idea1", "label": "Idea 1", "rows": 3, "placeholder": "Ví dụ: hình phạt tương xứng cho tội nhẹ…" },
+        { "key": "body2_idea2", "label": "Idea 2", "rows": 3, "placeholder": "Ví dụ: phục hồi giúp giảm tái phạm…" },
+        { "key": "body2_topic", "label": "Topic Sentence + opinion", "rows": 4, "placeholder": "Câu chủ đề nêu hướng thay thế và quan điểm bằng tiếng Anh…" }
+      ]
+    },
+    {
+      "key": "body2_support1",
+      "body": "body2",
+      "title": "Phát triển Supporting Idea 1",
+      "kicker": "Body 2 · Bước 2",
+      "instruction": "A nêu biện pháp thay thế phù hợp, X giải thích cách áp dụng cho tội nhẹ hoặc lần đầu, B chốt lợi ích về tính tương xứng hoặc chi phí.",
+      "requiredFields": ["body2_support1_a", "body2_support1_x", "body2_support1_b"],
+      "validationMode": "all",
+      "fields": [
+        { "key": "body2_support1_a", "label": "A · Điểm đầu", "rows": 3, "placeholder": "Luận điểm mở đầu…" },
+        { "key": "body2_support1_x", "label": "X · Điểm giữa", "rows": 3, "placeholder": "Giải thích đối tượng và cách biện pháp hoạt động…" },
+        { "key": "body2_support1_b", "label": "B · Điểm cuối", "rows": 3, "placeholder": "Hệ quả cuối cùng muốn chứng minh…" }
+      ]
+    },
+    {
+      "key": "body2_support2",
+      "body": "body2",
+      "title": "Phát triển Supporting Idea 2",
+      "kicker": "Body 2 · Bước 3",
+      "instruction": "Hoàn thiện chuỗi A–X–B về phục hồi hoặc tái hòa nhập; chốt vì sao cách này có thể giảm tái phạm tốt hơn án tù cho mọi trường hợp.",
+      "requiredFields": ["body2_support2_a", "body2_support2_x", "body2_support2_b"],
+      "validationMode": "all",
+      "fields": [
+        { "key": "body2_support2_a", "label": "A · Điểm đầu", "rows": 3, "placeholder": "Luận điểm mở đầu…" },
+        { "key": "body2_support2_x", "label": "X · Điểm giữa", "rows": 3, "placeholder": "Giải thích cơ chế phục hồi hoặc tái hòa nhập…" },
+        { "key": "body2_support2_b", "label": "B · Điểm cuối", "rows": 3, "placeholder": "Hệ quả cuối cùng muốn chứng minh…" }
+      ]
+    }
+  ],
+  "vocabulary": {
+    "title": "Từ vựng hỗ trợ cho đề này",
+    "columns": ["Ý cần diễn đạt", "Từ/cụm từ tiếng Anh"],
+    "staticRows": [
+      { "meaning": "người vi phạm pháp luật", "english": "lawbreakers / offenders" },
+      { "meaning": "tội phạm nghiêm trọng hoặc bạo lực", "english": "serious or violent offences" },
+      { "meaning": "bảo vệ công chúng", "english": "protect the public" },
+      { "meaning": "ngăn người phạm tội tiếp tục gây hại", "english": "prevent offenders from causing further harm" },
+      { "meaning": "tác dụng răn đe", "english": "a deterrent effect" },
+      { "meaning": "hình phạt tương xứng", "english": "a proportionate punishment" },
+      { "meaning": "người phạm tội lần đầu", "english": "first-time offenders" },
+      { "meaning": "tội nhẹ, không bạo lực", "english": "minor, non-violent offences" },
+      { "meaning": "lao động công ích", "english": "community service" },
+      { "meaning": "quản chế", "english": "probation" },
+      { "meaning": "chương trình phục hồi", "english": "rehabilitation programmes" },
+      { "meaning": "giảm tỷ lệ tái phạm", "english": "reduce reoffending rates" }
+    ]
+  }
+}

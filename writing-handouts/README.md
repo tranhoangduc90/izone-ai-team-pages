@@ -2,6 +2,8 @@
 
 Giao diện GitHub Pages, không dùng framework và không chứa dữ liệu học viên, prompt chấm, credential hay đáp án. Mở `?task=<slug>` để tải `manifests/<slug>.json`; thêm `&version=<phiên-bản>` để tải `manifests/<slug>/<phiên-bản>.json`. Không có query thì dùng `sample-task`.
 
+Đề “lawbreakers — prison or alternatives” cho IC2200 dùng slug `writing-task2-lawbreakers-prison-alternatives` trên trang `lesson.html`.
+
 Với handout dùng chung tại `lesson.html`, không có query `class` thì học viên tự chọn trong toàn bộ lớp đang được gắn với activity. Nếu URL có `class=CS.070626`, app chọn sẵn lớp đó và chỉ nạp danh sách họ tên của lớp đã chọn.
 
 Dashboard giảng viên tại `teacher.html` dùng cùng query `class`. Sau khi đăng nhập, dashboard chọn sẵn lớp và chỉ tải tiến độ của lớp đó; giảng viên vẫn có thể đổi bộ lọc lớp.
