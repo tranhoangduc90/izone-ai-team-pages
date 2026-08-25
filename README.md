@@ -37,9 +37,9 @@ Khi thêm một web mới, ưu tiên dùng thư mục con có tên ổn định;
 - Task 2 · Living alone: `https://tranhoangduc90.github.io/izone-ai-team-pages/writing-handouts/lesson.html?task=writing-task2-living-alone-development`
 - Task 2 · Public-health ban: `https://tranhoangduc90.github.io/izone-ai-team-pages/writing-handouts/lesson.html?task=writing-task2-public-health-ban`
 
-## Chấm bài Vocab 03
+## Chấm bài Vocab 03, 04 và 11
 
-Trang `vocab-03.html` nhận `documentId` từ liên kết trong bài làm, gửi yêu cầu tới workflow Vocab 03 và hiển thị tiến độ Đọc → Chấm → Ghi. Trang không chứa credential hoặc nội dung bài làm; quyền Google Docs và dữ liệu chấm nằm trong n8n.
+Trang `vocab.html` nhận `documentId` và `homework` từ liên kết trong bài làm, gửi yêu cầu tới workflow Vocab chung và hiển thị tiến độ Đọc → Chấm → Ghi. `vocab-03.html` tiếp tục được giữ làm link tương thích và tự dùng `homework=3`. Trang không chứa credential hoặc nội dung bài làm; quyền Google Docs và dữ liệu chấm nằm trong n8n.
 
 ## Chấm bài Reading/Listening 67
 
