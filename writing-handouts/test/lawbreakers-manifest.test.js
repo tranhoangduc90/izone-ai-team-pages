@@ -23,4 +23,3 @@ test("lawbreakers handout matches the two-body Lesson 13 contract", () => {
     "Đã bắt đầu check... Hệ thống đang chấm phần này; em không cần nhấn lại.");
   assert.doesNotMatch(JSON.stringify(manifest), /credential|api.?key|student.?data|Bearer /iu);
 });
-
