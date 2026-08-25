@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -60,10 +60,12 @@ const server = createServer(async (request, response) => {
 });
 
 await new Promise((resolve) => server.listen(4174, '127.0.0.1', resolve));
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-});
+const executablePath = [
+  process.env.CHROME_EXECUTABLE,
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+].find((candidate) => candidate && existsSync(candidate));
+const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
 
 try {
   for (const demo of demos) {

@@ -2,7 +2,7 @@
 
 /**
  * DÀNH CHO NGƯỜI VẬN HÀNH
- * - Nhận vào: Document ID nằm trong liên kết học viên vừa bấm.
+ * - Nhận vào: Document ID và số bài Vocab nằm trong liên kết học viên vừa bấm.
  * - Việc chính: xóa ID khỏi thanh địa chỉ, gửi yêu cầu chấm tới n8n và hỏi tiến độ định kỳ.
  * - Tạo ra: ba trạng thái Đọc → Chấm → Ghi và thông báo hoàn tất.
  * - Khi lỗi: dừng tiến độ, hiện thông báo an toàn cùng nút thử lại.
@@ -13,6 +13,18 @@
   const documentId = String(
     params.get('documentId') ?? params.get('docId') ?? params.get('document_id') ?? '',
   ).trim();
+  const homework = Number(
+    params.get('homework') ?? params.get('vocab') ?? config?.defaultHomework ?? 0,
+  );
+  const allowedHomeworks = Array.isArray(config?.allowedHomeworks)
+    ? config.allowedHomeworks.map(Number)
+    : [3];
+  // Trang Vocab dùng workflow chung cần gửi số bài; các trang có endpoint riêng
+  // (như Vocab 04/11 demo) chỉ gửi Document ID để không trộn luồng chấm.
+  const usesHomeworkRouting = params.has('homework')
+    || params.has('vocab')
+    || Number(config?.defaultHomework) > 0
+    || Array.isArray(config?.allowedHomeworks);
   const localPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname)
     ? params.get('preview')
     : null;
@@ -33,8 +45,14 @@
   let activeJobId = '';
   let stopped = false;
 
-  // Xóa Document ID khỏi thanh địa chỉ để nó không bị sao chép hoặc lưu trong lịch sử lâu hơn cần thiết.
-  if (documentId && !localPreview) {
+  const homeworkLabel = `Vocab ${String(homework || 0).padStart(2, '0')}`;
+  document.querySelectorAll('[data-homework-label]').forEach((element) => {
+    element.textContent = homeworkLabel;
+  });
+  if (homework) document.title = `Chấm bài ${homeworkLabel}`;
+
+  // Hai mã chỉ cần ở lần tải đầu; xóa khỏi thanh địa chỉ để hạn chế bị sao chép hoặc lưu lại ngoài ý muốn.
+  if ((documentId || homework) && !localPreview) {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 
@@ -135,12 +153,16 @@
       showError('Liên kết bài làm không hợp lệ. Hãy quay lại Google Docs và bấm nút chấm bài lần nữa.');
       return;
     }
+    if (usesHomeworkRouting && !allowedHomeworks.includes(homework)) {
+      showError('Số bài Vocab trong liên kết chưa được hệ thống hỗ trợ. Hãy báo giáo viên kiểm tra.');
+      return;
+    }
 
     try {
       const accepted = await requestJson(config.startUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body: JSON.stringify({ documentId }),
+        body: JSON.stringify(usesHomeworkRouting ? { documentId, homework } : { documentId }),
       });
       activeJobId = String(accepted.job_id ?? '');
       if (!/^[A-Za-z0-9_-]{1,80}$/.test(activeJobId)) {
