@@ -41,7 +41,7 @@ try {
   let startPayload = null;
   let pollCount = 0;
 
-  await page.route('https://ducizone.ddns.net/webhook/cham-ngay-reading-listening-67-demo', async (route) => {
+  await page.route('https://ducizone.ddns.net/webhook/cham-ngay-reading-listening-67', async (route) => {
     startPayload = JSON.parse(route.request().postData() || '{}');
     await route.fulfill({
       status: 202,
@@ -50,7 +50,7 @@ try {
       body: JSON.stringify({ job_id: 'demo_job_67', stage: 'reading' }),
     });
   });
-  await page.route('https://ducizone.ddns.net/webhook/tien-do-cham-reading-listening-67-demo?*', async (route) => {
+  await page.route('https://ducizone.ddns.net/webhook/tien-do-cham-reading-listening-67?*', async (route) => {
     pollCount += 1;
     const states = [
       { status: 'running', stage: 'grading' },

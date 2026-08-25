@@ -10,8 +10,8 @@ const assignmentCode = process.env.CHECK_NOW_ASSIGNMENT_CODE;
 if (!/^[A-Za-z0-9_-]{20,}$/.test(documentId ?? '')) throw new Error('Thiếu Document ID demo hợp lệ');
 if (!/^67-(reading|listening)-\d{2}$/.test(assignmentCode ?? '')) throw new Error('Thiếu mã bài demo hợp lệ');
 
-const startUrl = 'https://ducizone.ddns.net/webhook/cham-ngay-reading-listening-67-demo';
-const statusUrl = 'https://ducizone.ddns.net/webhook/tien-do-cham-reading-listening-67-demo';
+const startUrl = 'https://ducizone.ddns.net/webhook/cham-ngay-reading-listening-67';
+const statusUrl = 'https://ducizone.ddns.net/webhook/tien-do-cham-reading-listening-67';
 const headers = { Origin: 'https://tranhoangduc90.github.io', 'Content-Type': 'text/plain;charset=UTF-8' };
 const body = JSON.stringify({ documentId, assignmentCode });
 
