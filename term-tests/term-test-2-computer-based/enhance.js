@@ -175,9 +175,11 @@
       return radio;
     });
     hideBackingField(field);
-    field.addEventListener('input', () => {
+    const renderRadioSelection = () => {
       radios.forEach(radio => { radio.checked = field.value === radio.value; });
-    });
+    };
+    field.addEventListener('input', renderRadioSelection);
+    field.addEventListener('term-test:draft-restored', renderRadioSelection);
     return radios;
   }
 
@@ -242,6 +244,7 @@
     fields.forEach(field => {
       hideBackingField(field);
       field.addEventListener('input', () => renderSelection());
+      field.addEventListener('term-test:draft-restored', () => renderSelection());
     });
     card.append(status);
     renderSelection();
@@ -559,6 +562,7 @@
       nav.append(button);
 
       item.field.addEventListener('input', refreshAll);
+      item.field.addEventListener('term-test:draft-restored', refreshAll);
       item.field.addEventListener('focus', () => {
         activeNumber = item.number;
         refreshAll();
@@ -584,14 +588,18 @@
   // Khi thiếu phần tử: không thay đổi DOM của form để luồng nộp bài cũ tiếp tục hoạt động.
   function placeSubmitInHeading(skill, heading, actions) {
     const count = document.getElementById(skill + 'Count');
+    const saveStatus = document.getElementById(skill + 'SaveStatus');
+    const saveMeta = count?.closest('.answer-save-meta');
     const submit = actions.querySelector('button[type="submit"]');
     if (!count || !submit) return false;
 
     const cluster = document.createElement('div');
     cluster.className = 'cbt-heading-actions';
     submit.classList.add('cbt-heading-submit');
-    cluster.append(count, submit);
+    if (saveStatus) cluster.append(count, saveStatus, submit);
+    else cluster.append(count, submit);
     heading.append(cluster);
+    saveMeta?.remove();
     actions.remove();
     return true;
   }
@@ -1158,6 +1166,7 @@
     }
 
     function lockAndSubmit(now) {
+      if (window.TERM_TEST_DEADLINE_GUARD_ACTIVE) return;
       if (listeningForm.form.dataset.listeningSubmitting === 'true' || now - lastAttempt < 15_000) return;
       lastAttempt = now;
       listeningForm.form.dataset.listeningTimeExpired = 'true';
@@ -1234,6 +1243,7 @@
     }
 
     function submitExpiredReading(now) {
+      if (window.TERM_TEST_DEADLINE_GUARD_ACTIVE) return;
       if (readingForm.form.hidden || readingForm.form.dataset.readingSubmitting === 'true') return;
       if (now - lastAutoSubmitAttempt < retryDelayMs) return;
       lastAutoSubmitAttempt = now;

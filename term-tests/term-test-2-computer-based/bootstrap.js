@@ -366,7 +366,23 @@
         examSessionToken: prepared.examSessionToken,
         listeningStartedAt: prepared.listeningStartedAt,
         listeningDeadlineAt: prepared.listeningDeadlineAt,
-        attemptToken: prepared.attemptToken || state.attemptToken || ''
+        attemptToken: prepared.attemptToken || state.attemptToken || '',
+        listeningSubmitted: Boolean(prepared.listeningSubmitted || prepared.attemptToken),
+        drafts: {
+          ...(state.drafts || {}),
+          listening: { ...(prepared.listeningDraft || state.drafts?.listening || {}) },
+          reading: { ...(prepared.readingDraft || state.drafts?.reading || {}) }
+        },
+        draftRevisions: {
+          ...(state.draftRevisions || {}),
+          listening: Number(prepared.listeningDraftRevision) || Number(state.draftRevisions?.listening) || 0,
+          reading: Number(prepared.readingDraftRevision) || Number(state.draftRevisions?.reading) || 0
+        },
+        draftAckRevisions: {
+          ...(state.draftAckRevisions || {}),
+          listening: Number(prepared.listeningDraftRevision) || Number(state.draftAckRevisions?.listening) || 0,
+          reading: Number(prepared.readingDraftRevision) || Number(state.draftAckRevisions?.reading) || 0
+        }
       });
       if (state.attemptToken || prepared.listeningSubmitted) {
         await resumeAfterListening();
@@ -427,8 +443,8 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260821-attempt-review-v1');
-    await loadScript('../shared/app.js?rev=20260824-writing-note-fix-v1');
-    await loadScript(cbtAssetUrl('enhance.js', '20260823-multi-test-v1'));
+    await loadScript('../shared/app.js?rev=20260826-term-test-reliability-v1');
+    await loadScript(cbtAssetUrl('enhance.js', '20260826-term-test-reliability-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
   }
 
@@ -451,7 +467,20 @@
       writingStartedAt: started.writingStartedAt || state.writingStartedAt || '',
       writingDeadlineAt: started.writingDeadlineAt || state.writingDeadlineAt || '',
       serverTimeOffsetMs: Date.parse(started.serverNow) - Date.now(),
-      attemptToken: started.attemptToken || state.attemptToken || ''
+      attemptToken: started.attemptToken || state.attemptToken || '',
+      listeningSubmitted: true,
+      drafts: {
+        ...(state.drafts || {}),
+        reading: { ...(started.readingDraft || state.drafts?.reading || {}) }
+      },
+      draftRevisions: {
+        ...(state.draftRevisions || {}),
+        reading: Number(started.readingDraftRevision) || Number(state.draftRevisions?.reading) || 0
+      },
+      draftAckRevisions: {
+        ...(state.draftAckRevisions || {}),
+        reading: Number(started.readingDraftRevision) || Number(state.draftAckRevisions?.reading) || 0
+      }
     });
     await enterExam(started);
   }

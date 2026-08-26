@@ -729,6 +729,13 @@ button.writing-score-card:focus-visible {
   padding: 6px 9px;
 }
 
+.cbt-test-heading .autosave-status {
+  max-width: 160px;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: right;
+}
+
 .cbt-heading-submit {
   min-height: 34px;
   padding: 7px 12px;

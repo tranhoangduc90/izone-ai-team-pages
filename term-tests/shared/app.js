@@ -4,6 +4,7 @@
   const testConfig = window.TERM_TEST_CONFIG;
   const appConfig = window.TERM_TEST_APP_CONFIG;
   const root = document.getElementById('app');
+  const clientBuild = '20260826-term-test-reliability-v1';
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const requestedDemo = query.get('demo') || '';
@@ -38,11 +39,14 @@
     writingDeadlineAt: '',
     serverTimeOffsetMs: 0,
     audioVolume: 1,
+    listeningSubmitted: false,
     completed: false,
     writingStarted: false,
     writingSubmitted: false,
     writingDirty: false,
     drafts: { listening: {}, reading: {}, writing: { task1: '', task2: '' } },
+    draftRevisions: { listening: 0, reading: 0 },
+    draftAckRevisions: { listening: 0, reading: 0 },
     writingLayout: { activeTask: 'task1', splits: {} },
     frozenAnswers: { listening: null, reading: null },
     result: null,
@@ -63,6 +67,14 @@
     frozenAnswers: {
       listening: restoredSession.frozenAnswers?.listening || null,
       reading: restoredSession.frozenAnswers?.reading || null
+    },
+    draftRevisions: {
+      listening: Number(restoredSession.draftRevisions?.listening) || 0,
+      reading: Number(restoredSession.draftRevisions?.reading) || 0
+    },
+    draftAckRevisions: {
+      listening: Number(restoredSession.draftAckRevisions?.listening) || 0,
+      reading: Number(restoredSession.draftAckRevisions?.reading) || 0
     }
   };
 
@@ -92,11 +104,14 @@
       writingDeadlineAt: state.writingDeadlineAt,
       serverTimeOffsetMs: state.serverTimeOffsetMs,
       audioVolume: state.audioVolume,
+      listeningSubmitted: state.listeningSubmitted,
       completed: state.completed,
       writingStarted: state.writingStarted,
       writingSubmitted: state.writingSubmitted,
       writingDirty: state.writingDirty,
       drafts: state.drafts,
+      draftRevisions: state.draftRevisions,
+      draftAckRevisions: state.draftAckRevisions,
       writingLayout: state.writingLayout,
       frozenAnswers: state.frozenAnswers
     });
@@ -242,7 +257,10 @@
             <h2 id="listeningTitle"></h2>
             <ul class="instructions" id="listeningInstructions"></ul>
           </div>
-          <span class="answer-count" id="listeningCount">0/${testConfig.listening.controls.length} đã nhập</span>
+          <div class="answer-save-meta">
+            <span class="answer-count" id="listeningCount">0/${testConfig.listening.controls.length} đã nhập</span>
+            <span class="autosave-status" id="listeningSaveStatus" role="status">Đã lưu trên máy</span>
+          </div>
         </div>
         <div class="questions-grid" id="listeningQuestions"></div>
         <div class="form-actions">
@@ -259,7 +277,10 @@
             <h2 id="readingTitle"></h2>
             <ul class="instructions" id="readingInstructions"></ul>
           </div>
-          <span class="answer-count" id="readingCount">0/${testConfig.reading.controls.length} đã nhập</span>
+          <div class="answer-save-meta">
+            <span class="answer-count" id="readingCount">0/${testConfig.reading.controls.length} đã nhập</span>
+            <span class="autosave-status" id="readingSaveStatus" role="status">Đã lưu trên máy</span>
+          </div>
         </div>
         <div class="questions-grid" id="readingQuestions"></div>
         <div class="form-actions">
@@ -303,9 +324,9 @@
   const elements = Object.fromEntries([
     'notice', 'loadingView', 'identityView', 'identityTitle', 'classLabel', 'studentSelect', 'resetDemoData',
     'temporaryStudentForm', 'temporaryStudentName', 'temporaryStudentCode', 'registerTemporaryStudent',
-    'listeningView', 'listeningTitle', 'listeningInstructions', 'listeningQuestions', 'listeningCount', 'submitListening',
+    'listeningView', 'listeningTitle', 'listeningInstructions', 'listeningQuestions', 'listeningCount', 'listeningSaveStatus', 'submitListening',
     'listeningSavedView', 'viewListeningResult', 'startReading', 'readingView', 'readingTitle', 'readingInstructions',
-    'readingQuestions', 'readingCount', 'readingStudentName', 'submitReading', 'resultReadyView',
+    'readingQuestions', 'readingCount', 'readingSaveStatus', 'readingStudentName', 'submitReading', 'resultReadyView',
     'viewResult', 'resultView', 'resultStudentName', 'resultMeta', 'summaryGrid',
     'skillPerformanceSections', 'questionDetails', 'resultStatus', 'continueReadingFromResult',
     'viewFullAttempt',
@@ -437,8 +458,18 @@
       field.value = state.drafts?.[skill]?.[String(control.number)] || '';
       field.addEventListener('input', () => {
         state.drafts[skill][String(control.number)] = field.value;
+        state.draftRevisions[skill] = Math.max(
+          Number(state.draftRevisions[skill]) || 0,
+          Number(state.draftAckRevisions[skill]) || 0
+        ) + 1;
         saveSession();
         updateAnswerCount(skill);
+        const hasServerDraft = skill === 'listening' ? state.examSessionToken : state.attemptToken;
+        setSectionSaveStatus(
+          skill,
+          hasServerDraft ? 'Chưa lưu thay đổi mới' : 'Đã lưu trên máy',
+          hasServerDraft ? 'pending' : 'saved'
+        );
         scheduleSectionDraft(skill);
       });
       wrapper.append(number, field);
@@ -473,7 +504,12 @@
         headers: { ...(options.headers || {}) }
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+      if (!response.ok) {
+        const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
+        requestError.code = String(data.error || 'HTTP_ERROR');
+        requestError.status = response.status;
+        throw requestError;
+      }
       return data;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Vui lòng thử lại.');
@@ -483,12 +519,67 @@
     }
   }
 
-  const sectionDraftTimers = { listening: 0, reading: 0 };
+  function countAnswered(answers) {
+    return Object.values(answers || {}).filter(value => String(value || '').trim()).length;
+  }
 
-  async function saveSectionDraft(skill) {
-    if (demoMode) return null;
+  function sendClientEvent(event, section, details = {}) {
+    const token = section === 'listening'
+      ? { examSessionToken: state.examSessionToken }
+      : { attemptToken: state.attemptToken };
+    if (!Object.values(token)[0]) return;
+    const payload = {
+      ...token,
+      event,
+      section,
+      build: clientBuild,
+      online: navigator.onLine,
+      occurredAt: new Date().toISOString(),
+      ...details
+    };
+    fetch(`${appConfig.API_BASE_URL}/api/term-tests/${testConfig.slug}/client-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).catch(() => {
+      // Telemetry không được làm gián đoạn bài thi khi mạng lỗi.
+    });
+  }
+
+  function setSectionSaveStatus(skill, message, status = '') {
+    const element = skill === 'listening' ? elements.listeningSaveStatus : elements.readingSaveStatus;
+    if (!element) return;
+    element.textContent = message;
+    element.dataset.status = status;
+  }
+
+  function applySectionDraft(skill, answers, revision = 0, force = false) {
+    const normalizedRevision = Number(revision) || 0;
+    const localRevision = Number(state.draftRevisions[skill]) || 0;
+    const localHasAnswers = Object.values(state.drafts[skill] || {}).some(Boolean);
+    if (!force && localHasAnswers && localRevision > normalizedRevision) return false;
+    state.drafts[skill] = { ...(answers || {}) };
+    state.draftRevisions[skill] = Math.max(localRevision, normalizedRevision);
+    state.draftAckRevisions[skill] = Math.max(Number(state.draftAckRevisions[skill]) || 0, normalizedRevision);
     const container = skill === 'listening' ? elements.listeningQuestions : elements.readingQuestions;
-    const answers = collectAnswers(container);
+    for (const field of container.querySelectorAll('[data-number]')) {
+      field.value = state.drafts[skill][field.dataset.number] || '';
+      field.dispatchEvent(new Event('term-test:draft-restored', { bubbles: true }));
+    }
+    updateAnswerCount(skill);
+    setSectionSaveStatus(skill, 'Đã khôi phục bản lưu trên hệ thống', 'saved');
+    saveSession();
+    return true;
+  }
+
+  const sectionDraftFlows = {
+    listening: { timer: 0, retryTimer: 0, promise: Promise.resolve() },
+    reading: { timer: 0, retryTimer: 0, promise: Promise.resolve() }
+  };
+
+  async function saveSectionDraftSnapshot(skill, answers, revision) {
+    if (demoMode) return null;
     const path = skill === 'listening'
       ? `/api/term-tests/${testConfig.slug}/listening/draft`
       : `/api/term-tests/${testConfig.slug}/reading/draft`;
@@ -499,25 +590,73 @@
     const response = await apiRequest(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...token, answers })
+      body: JSON.stringify({ ...token, answers, revision })
     });
     if (response.deadlineAt) {
       if (skill === 'listening') state.listeningDeadlineAt = response.deadlineAt;
       else state.readingDeadlineAt = response.deadlineAt;
     }
     if (response.serverNow) state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
-    saveSession();
     return response;
+  }
+
+  function queueSectionDraft(skill) {
+    if (demoMode) return Promise.resolve(null);
+    const flow = sectionDraftFlows[skill];
+    const revision = Number(state.draftRevisions[skill]) || 0;
+    const answers = { ...(state.drafts[skill] || {}) };
+    const operation = flow.promise.catch(() => undefined).then(async () => {
+      setSectionSaveStatus(skill, 'Đang lưu trên hệ thống...', 'saving');
+      const response = await saveSectionDraftSnapshot(skill, answers, revision);
+      const acknowledgedRevision = Number(response?.revision) || revision;
+      if (response?.accepted === false) {
+        if ((Number(state.draftRevisions[skill]) || 0) <= acknowledgedRevision) {
+          applySectionDraft(skill, response.draft, acknowledgedRevision, true);
+          setSectionSaveStatus(skill, 'Đã dùng bản mới hơn trên hệ thống', 'saved');
+        } else {
+          state.draftAckRevisions[skill] = Math.max(Number(state.draftAckRevisions[skill]) || 0, acknowledgedRevision);
+          scheduleSectionDraft(skill, 0);
+        }
+        return response;
+      }
+      state.draftAckRevisions[skill] = Math.max(Number(state.draftAckRevisions[skill]) || 0, acknowledgedRevision);
+      saveSession();
+      if ((Number(state.draftRevisions[skill]) || 0) > state.draftAckRevisions[skill]) {
+        scheduleSectionDraft(skill, 0);
+      } else {
+        setSectionSaveStatus(skill, 'Đã lưu trên hệ thống', 'saved');
+      }
+      return response;
+    });
+    flow.promise = operation.catch(error => {
+      if (error.code === 'LISTENING_LOCKED' || error.code === 'READING_LOCKED') {
+        setSectionSaveStatus(skill, 'Đã khóa khi hết giờ', 'locked');
+        return null;
+      }
+      setSectionSaveStatus(skill, 'Chưa lưu được · sẽ tự thử lại', 'error');
+      sendClientEvent('draft_retry_scheduled', skill, {
+        revision,
+        answeredCount: countAnswered(answers)
+      });
+      window.clearTimeout(flow.retryTimer);
+      flow.retryTimer = window.setTimeout(() => scheduleSectionDraft(skill, 0), 5000);
+      return null;
+    });
+    return flow.promise;
   }
 
   function scheduleSectionDraft(skill, delay = 600) {
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
-    window.clearTimeout(sectionDraftTimers[skill]);
-    sectionDraftTimers[skill] = window.setTimeout(() => {
-      saveSectionDraft(skill).catch(() => {
-        // Bản trên máy vẫn còn; lần thay đổi hoặc nộp tiếp theo sẽ thử lại.
-      });
-    }, delay);
+    const flow = sectionDraftFlows[skill];
+    window.clearTimeout(flow.timer);
+    window.clearTimeout(flow.retryTimer);
+    flow.timer = window.setTimeout(() => queueSectionDraft(skill), delay);
+  }
+
+  function stopSectionDraftFlow(skill) {
+    const flow = sectionDraftFlows[skill];
+    window.clearTimeout(flow.timer);
+    window.clearTimeout(flow.retryTimer);
   }
 
   function setAnswerControlsLocked(skill, locked) {
@@ -534,6 +673,67 @@
     const deadline = Date.parse(deadlineValue || '');
     return Number.isFinite(deadline) && Date.now() + (Number(state.serverTimeOffsetMs) || 0) >= deadline;
   }
+
+  const sectionDeadlineGuards = {
+    listening: { interval: 0, lastSubmitAttempt: 0, reportedDeadline: false },
+    reading: { interval: 0, lastSubmitAttempt: 0, reportedDeadline: false }
+  };
+
+  function stopSectionDeadlineGuard(skill) {
+    const guard = sectionDeadlineGuards[skill];
+    if (guard.interval) window.clearInterval(guard.interval);
+    guard.interval = 0;
+  }
+
+  // Dữ liệu vào: deadline do server cấp, token của đúng lượt thi và snapshot đang nằm trên máy.
+  // Việc chính: khóa đáp án đúng lúc hết giờ rồi gọi lại request nộp mỗi 15 giây nếu mạng lỗi.
+  // Kết quả: answer sheet và computer-based dùng chung một cơ chế tự nộp, không phụ thuộc lớp giao diện.
+  // Khi lỗi: snapshot đã khóa vẫn nằm trong localStorage và retry tiếp tục cho tới khi server xác nhận.
+  function startSectionDeadlineGuard(skill) {
+    const guard = sectionDeadlineGuards[skill];
+    const form = skill === 'listening' ? elements.listeningView : elements.readingView;
+    const submitButton = skill === 'listening' ? elements.submitListening : elements.submitReading;
+    const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
+    const token = skill === 'listening' ? state.examSessionToken : state.attemptToken;
+    if (!form || !submitButton || !token || !Number.isFinite(Date.parse(deadlineValue || ''))) return;
+    if (guard.interval) return;
+    sendClientEvent('deadline_guard_started', skill, {
+      revision: Number(state.draftRevisions[skill]) || 0,
+      answeredCount: countAnswered(state.drafts[skill])
+    });
+    const tick = () => {
+      if (form.hidden || form.dataset[`${skill}Submitting`] === 'true') return;
+      if ((skill === 'reading' && state.completed) || (skill === 'listening' && state.listeningSubmitted)) {
+        stopSectionDeadlineGuard(skill);
+        return;
+      }
+      if (!isSectionExpired(skill)) return;
+      form.dataset[`${skill}TimeExpired`] = 'true';
+      if (!state.frozenAnswers[skill]) {
+        const container = skill === 'listening' ? elements.listeningQuestions : elements.readingQuestions;
+        state.frozenAnswers[skill] = Object.freeze({ ...collectAnswers(container) });
+        state.drafts[skill] = { ...state.frozenAnswers[skill] };
+        saveSession();
+      }
+      setAnswerControlsLocked(skill, true);
+      stopSectionDraftFlow(skill);
+      if (!guard.reportedDeadline) {
+        guard.reportedDeadline = true;
+        sendClientEvent('deadline_reached', skill, {
+          revision: Number(state.draftRevisions[skill]) || 0,
+          answeredCount: countAnswered(state.frozenAnswers[skill])
+        });
+      }
+      const now = Date.now();
+      if (now - guard.lastSubmitAttempt < 15_000) return;
+      guard.lastSubmitAttempt = now;
+      form.requestSubmit(submitButton);
+    };
+    tick();
+    guard.interval = window.setInterval(tick, 1000);
+  }
+
+  window.TERM_TEST_DEADLINE_GUARD_ACTIVE = true;
 
   let writingSaveTimer = 0;
   let writingRetryTimer = 0;
@@ -699,6 +899,38 @@
     applyWritingFromServer(payload.writing);
     saveSession();
     return payload;
+  }
+
+  async function resumeActiveAttemptForSelectedStudent() {
+    if (demoMode || !state.studentRef || state.attemptToken) return false;
+    const payload = await apiRequest(`/api/term-tests/${testConfig.slug}/attempt/active`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classCode, studentRef: state.studentRef })
+    });
+    if (!payload.active) return false;
+    state.attemptToken = payload.attemptToken;
+    state.examSessionToken = payload.examSessionToken || state.examSessionToken;
+    state.listeningSubmitted = true;
+    state.studentName = payload.studentName || state.studentName;
+    state.readingDeadlineAt = payload.readingDeadlineAt || '';
+    if (payload.serverNow) state.serverTimeOffsetMs = Date.parse(payload.serverNow) - Date.now();
+    applySectionDraft('reading', payload.readingDraft, payload.readingDraftRevision, true);
+    elements.readingStudentName.textContent = state.studentName;
+    saveSession();
+    sendClientEvent('attempt_resumed', 'reading', {
+      revision: Number(payload.readingDraftRevision) || 0,
+      answeredCount: countAnswered(payload.readingDraft)
+    });
+    if (payload.readingStartedAt) {
+      setStage('reading');
+      startSectionDeadlineGuard('reading');
+      showNotice('Đã nối lại đúng lượt Reading đang dở và khôi phục bản lưu trên hệ thống.', 'success');
+    } else {
+      setStage('listening-saved');
+      showNotice('Đã nối lại lượt đã nộp Listening. Bạn có thể tiếp tục Reading.', 'success');
+    }
+    return true;
   }
 
   function renderRosterOptions() {
@@ -1661,7 +1893,7 @@
     }
   }
 
-  elements.studentSelect.addEventListener('change', () => {
+  elements.studentSelect.addEventListener('change', async () => {
     const previousStudentRef = state.studentRef;
     const student = state.roster.find(item => item.ref === elements.studentSelect.value);
     state.studentRef = student?.ref || '';
@@ -1681,17 +1913,27 @@
       state.readingDeadlineAt = '';
       state.writingDeadlineAt = '';
       state.serverTimeOffsetMs = 0;
+      state.listeningSubmitted = false;
       state.completed = false;
       state.writingStarted = false;
       state.writingSubmitted = false;
       state.writingDirty = false;
       state.drafts = { listening: {}, reading: {}, writing: { task1: '', task2: '' } };
+      state.draftRevisions = { listening: 0, reading: 0 };
+      state.draftAckRevisions = { listening: 0, reading: 0 };
       state.frozenAnswers = { listening: null, reading: null };
       state.result = null;
       state.attemptReview = null;
     }
     if (elements.resetDemoData) elements.resetDemoData.disabled = !state.studentRef;
     saveSession();
+    if (state.studentRef && !state.attemptToken) {
+      try {
+        await resumeActiveAttemptForSelectedStudent();
+      } catch (error) {
+        showNotice(`Chưa kiểm tra được lượt đang dở: ${error.message}. Bạn vẫn có thể tiếp tục trên máy này.`, 'error');
+      }
+    }
   });
 
   elements.temporaryStudentForm?.addEventListener('submit', async event => {
@@ -1777,11 +2019,16 @@
     }
     state.drafts.listening = answers;
     saveSession();
+    stopSectionDraftFlow('listening');
     elements.listeningView.dataset.listeningSubmitting = 'true';
     setAnswerControlsLocked('listening', true);
     setBusy(elements.submitListening, true, 'Đang lưu Listening...', 'Nộp bài Listening');
     if (automatic) showNotice('Đã hết giờ. Hệ thống đang tự thu và chấm bài Listening...');
     let submitted = false;
+    sendClientEvent('submit_started', 'listening', {
+      revision: Number(state.draftRevisions.listening) || 0,
+      answeredCount: countAnswered(answers)
+    });
     try {
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/listening`, {
         method: 'POST',
@@ -1791,13 +2038,23 @@
           studentRef: state.studentRef,
           clientSubmissionId: state.clientSubmissionId,
           examSessionToken: state.examSessionToken || undefined,
+          draftRevision: Number(state.draftRevisions.listening) || 0,
           answers
         })
       });
       state.attemptToken = response.attemptToken;
       state.studentName = response.studentName;
+      state.listeningSubmitted = true;
       state.completed = Boolean(response.completed);
+      state.readingDeadlineAt = response.readingDeadlineAt || state.readingDeadlineAt;
+      applySectionDraft('reading', response.readingDraft, response.readingDraftRevision, Boolean(response.resumedActiveAttempt));
       state.frozenAnswers.listening = null;
+      state.draftAckRevisions.listening = Math.max(
+        Number(state.draftAckRevisions.listening) || 0,
+        Number(state.draftRevisions.listening) || 0
+      );
+      setSectionSaveStatus('listening', 'Đã nộp bài', 'saved');
+      stopSectionDeadlineGuard('listening');
       saveSession();
       submitted = true;
       elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
@@ -1812,6 +2069,11 @@
         setStage(state.completed ? 'result-ready' : 'listening-saved');
       }
     } catch (error) {
+      sendClientEvent('submit_failed', 'listening', {
+        revision: Number(state.draftRevisions.listening) || 0,
+        answeredCount: countAnswered(answers),
+        status: Number(error.status) || 0
+      });
       showNotice(automatic
         ? `Hết giờ nhưng chưa thể nộp Listening: ${error.message}. Bài đã khóa và hệ thống sẽ tự thử lại.`
         : `Không thể lưu Listening: ${error.message}`, 'error');
@@ -1823,7 +2085,9 @@
         saveSession();
       } else if (!automatic && !submitted) {
         setAnswerControlsLocked('listening', false);
+        scheduleSectionDraft('listening', 0);
       }
+      if (!submitted && isSectionExpired('listening')) startSectionDeadlineGuard('listening');
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
     }
   });
@@ -1838,10 +2102,12 @@
       });
       state.readingDeadlineAt = response.readingDeadlineAt;
       state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
+      applySectionDraft('reading', response.readingDraft, response.readingDraftRevision);
       saveSession();
       elements.readingStudentName.textContent = state.studentName;
       hideNotice();
       setStage('reading');
+      startSectionDeadlineGuard('reading');
     } catch (error) {
       showNotice(`Chưa thể mở Reading: ${error.message}`, 'error');
     } finally {
@@ -1868,20 +2134,35 @@
     elements.readingView.dataset.readingSubmitting = 'true';
     state.drafts.reading = answers;
     saveSession();
+    stopSectionDraftFlow('reading');
     setAnswerControlsLocked('reading', true);
     setBusy(elements.submitReading, true, 'Đang lưu và chấm...', 'Nộp bài Reading');
     if (automatic) {
       showNotice(`Đã hết ${readingMinutes} phút. Hệ thống đang tự thu và chấm bài Reading...`);
     }
     let submitted = false;
+    sendClientEvent('submit_started', 'reading', {
+      revision: Number(state.draftRevisions.reading) || 0,
+      answeredCount: countAnswered(answers)
+    });
     try {
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/reading`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptToken: state.attemptToken, answers })
+        body: JSON.stringify({
+          attemptToken: state.attemptToken,
+          draftRevision: Number(state.draftRevisions.reading) || 0,
+          answers
+        })
       });
       state.completed = true;
       state.frozenAnswers.reading = null;
+      state.draftAckRevisions.reading = Math.max(
+        Number(state.draftAckRevisions.reading) || 0,
+        Number(state.draftRevisions.reading) || 0
+      );
+      setSectionSaveStatus('reading', 'Đã nộp bài', 'saved');
+      stopSectionDeadlineGuard('reading');
       saveSession();
       submitted = true;
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
@@ -1895,6 +2176,11 @@
         if (automatic) await loadResult(elements.viewResult);
       }
     } catch (error) {
+      sendClientEvent('submit_failed', 'reading', {
+        revision: Number(state.draftRevisions.reading) || 0,
+        answeredCount: countAnswered(answers),
+        status: Number(error.status) || 0
+      });
       showNotice(automatic
         ? `Hết giờ nhưng chưa thể nộp Reading: ${error.message}. Hệ thống sẽ tự thử lại; không làm mới trang.`
         : `Không thể lưu Reading: ${error.message}`, 'error');
@@ -1906,7 +2192,9 @@
         saveSession();
       } else if (!automatic && !submitted) {
         setAnswerControlsLocked('reading', false);
+        scheduleSectionDraft('reading', 0);
       }
+      if (!submitted && isSectionExpired('reading')) startSectionDeadlineGuard('reading');
       setBusy(elements.submitReading, false, 'Đang lưu và chấm...', 'Nộp bài Reading');
     }
   });
@@ -2204,6 +2492,7 @@
       } else if (state.attemptToken) {
         if (state.readingDeadlineAt) {
           setStage('reading');
+          startSectionDeadlineGuard('reading');
           hideNotice();
         } else {
           setStage('listening-saved');
@@ -2211,6 +2500,7 @@
         }
       } else {
         setStage('listening');
+        startSectionDeadlineGuard('listening');
         hideNotice();
       }
     } catch (error) {
