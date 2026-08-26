@@ -16,7 +16,7 @@ export function normalizeProgress(value = {}) {
     const source = sectionMap?.[key] || value.sectionStates?.[key] || {};
     sections[key] = {
       text: typeof source.text === "string" ? source.text : typeof source === "string" ? source : "",
-      status: ["draft", "queued", "revision", "passed"].includes(source.status) ? source.status : "draft",
+      status: ["draft", "queued", "technical_error", "revision", "passed"].includes(source.status) ? source.status : "draft",
       attemptsWithoutPass: Number.isInteger(source.attemptsWithoutPass) ? source.attemptsWithoutPass : 0,
     };
   }
@@ -77,7 +77,13 @@ export function sectionSubmitLabel(section, status, submitting = false) {
     ? "Đang tạo kết quả — không cần bấm lại"
     : "Đang chấm — không cần bấm lại";
   if (status === "passed") return section === "draft" ? "Đã có kết quả LMS" : "Phần này đã đạt";
+  if (status === "technical_error") return "Check lại";
   return section === "draft" ? "Gửi chấm từng câu" : "Gửi để nhận xét";
+}
+export function gradingFailureMessage(attempt = {}) {
+  return attempt.errorCode === "GRADING_TIMEOUT_3_MINUTES"
+    ? "Lượt chấm vừa rồi mất quá 3 phút nên đã dừng. Em hãy bấm Check lại."
+    : "Lượt chấm vừa rồi gặp lỗi. Em hãy bấm Check lại.";
 }
 export function isConflict(error) { return error?.status === 409 && error?.data?.error === "DRAFT_VERSION_CONFLICT"; }
 export function terminalResult(attempt) {

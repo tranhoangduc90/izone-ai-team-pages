@@ -1,5 +1,5 @@
 import { createApi } from "./api.js";
-import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js";
+import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260826-grading-timeout-v2";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
 import { renderStudentFieldComments } from "./teacher-comments-ui.js";
@@ -17,7 +17,7 @@ const app = { manifest: null, activitySlug: null, api: null, roster: null, ident
 function setSaveState(text) { $("save-state").textContent = text; }
 function showNotice(text = "") { const node = $("network-notice"); node.hidden = !text; node.textContent = text; }
 function keyForDraft() { return `${app.activitySlug}:${app.identity?.classRef || ""}:${app.identity?.studentRef || ""}`; }
-function statusLabel(state) { return ({ draft: "Chưa gửi", queued: "Đang chấm", revision: "Cần sửa", passed: "Đã đạt" })[state] || "Chưa gửi"; }
+function statusLabel(state) { return ({ draft: "Chưa gửi", queued: "Đang chấm", technical_error: "Lỗi chấm — thử lại", revision: "Cần sửa", passed: "Đã đạt" })[state] || "Chưa gửi"; }
 function sectionText(section) { return SECTION_INFO[section].fields.map(({ key }) => app.state.texts[key]).join("\n").trim(); }
 function sectionContent(section) { return Object.fromEntries(SECTION_INFO[section].fields.map(({ key }) => [key, app.state.texts[key]])); }
 function activeAttempts() { return [...app.pendingAttempts.values()]; }
@@ -325,7 +325,7 @@ function renderDraftResult(workspace, sectionComments) {
     message.textContent = latest.status === "queued" ? "Hệ thống đang chấm từng câu và tạo link LMS…" : latest.status === "technical_error" ? (latest.feedback || "Tạm thời chưa tạo được link LMS.") : "Kết quả đã cập nhật nhưng link LMS chưa hợp lệ. Vui lòng báo giảng viên.";
     item.append(meta, message);
     if (latest.status === "technical_error" && latest.attemptRef && latest.canRetry !== false) {
-      const retry = document.createElement("button"); retry.type = "button"; retry.className = "button secondary compact"; retry.textContent = "Thử lại";
+      const retry = document.createElement("button"); retry.type = "button"; retry.className = "button secondary compact"; retry.textContent = "Check lại";
       retry.addEventListener("click", () => retryComment(latest, retry)); item.append(retry);
     }
   }
@@ -344,7 +344,7 @@ function renderComments() {
       meta.textContent = `${number}${pending} · ${item.createdAt ? new Date(item.createdAt).toLocaleString("vi-VN") : "Mới cập nhật"}`;
       appendMarkdown(body, item.feedback || item.message || item.text || "Đã cập nhật trạng thái chấm."); li.append(meta, body);
       if (item.status === "technical_error" && item.attemptRef && item.canRetry !== false) {
-        const retry = document.createElement("button"); retry.type = "button"; retry.className = "button secondary compact"; retry.textContent = "Thử lại";
+        const retry = document.createElement("button"); retry.type = "button"; retry.className = "button secondary compact"; retry.textContent = "Check lại";
         retry.addEventListener("click", () => retryComment(item, retry)); li.append(retry);
       }
       list.append(li);
@@ -429,9 +429,12 @@ async function retryComment(comment, button) {
   button.disabled = true; button.textContent = "Đang thử lại…";
   try {
     const result = await app.api.retryAttempt(comment.attemptRef); const attempt = result.data.attempt || result.data;
-    upsertComment({ ...comment, status: "queued", feedback: comment.section === "draft" ? "Hệ thống đang chấm từng câu và tạo link LMS…" : "Đang chấm" });
+    upsertComment({ commentRef: attempt.commentRef, attemptRef: attempt.attemptRef, section: comment.section,
+      commentNumber: attempt.commentNumber, status: "queued",
+      feedback: comment.section === "draft" ? "Hệ thống đang chấm từng câu và tạo link LMS…" : "Đang chấm",
+      createdAt: new Date().toISOString() });
     app.state.sections[comment.section].status = "queued"; registerAttempt(attempt); renderAll(); setSaveState("Đã bắt đầu check...");
-  } catch (error) { showNotice(error.message); button.disabled = false; button.textContent = "Thử lại"; }
+  } catch (error) { showNotice(error.message); button.disabled = false; button.textContent = "Check lại"; }
 }
 
 function registerAttempt(attempt) {
@@ -442,12 +445,17 @@ function registerAttempt(attempt) {
 function applyTerminalAttempt(payload, fallbackSection) {
   const section = payload.section || fallbackSection; const outcome = payload.resultStatus || payload.status;
   if (section && app.state.sections[section]) {
-    app.state.sections[section].status = outcome === "passed" ? "passed" : Number(payload.attemptsWithoutPass || 0) > 0 ? "revision" : "draft";
+    app.state.sections[section].status = payload.status === "failed"
+      ? "technical_error"
+      : outcome === "passed" ? "passed" : Number(payload.attemptsWithoutPass || 0) > 0 ? "revision" : "draft";
     app.state.sections[section].attemptsWithoutPass = payload.attemptsWithoutPass ?? app.state.sections[section].attemptsWithoutPass;
     if (payload.supportWarning) showNotice("Cần liên hệ giảng viên để được hỗ trợ...");
   }
   if (payload.comment || payload.feedback) upsertComment(payload.comment || { attemptRef: payload.attemptRef, section, commentNumber: payload.commentNumber, feedback: payload.feedback, createdAt: new Date().toISOString() });
-  setSaveState("Đã nhận kết quả chấm");
+  if (payload.status === "failed") {
+    showNotice(gradingFailureMessage(payload));
+    setSaveState("Lượt chấm lỗi — có thể Check lại");
+  } else setSaveState("Đã nhận kết quả chấm");
 }
 
 function schedulePoll() {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { claimSectionSubmission, normalizeLessonProgress, sectionIsFilled, sectionPrerequisitesPassed, sectionSubmitLabel, vocabularyPrerequisitesPassed } from "../js/lesson-core.js";
+import { claimSectionSubmission, gradingFailureMessage, normalizeLessonProgress, sectionIsFilled, sectionPrerequisitesPassed, sectionSubmitLabel, vocabularyPrerequisitesPassed } from "../js/lesson-core.js";
 
 const manifest = {
   sections: [{
@@ -39,6 +39,22 @@ test("nút Check giải thích rõ trạng thái chờ và không yêu cầu b�
   assert.equal(sectionSubmitLabel(regular, "revision", true), "Đang gửi bài…");
   assert.equal(sectionSubmitLabel(regular, "queued"), "Đang chấm — không cần bấm lại");
   assert.equal(sectionSubmitLabel(draft, "queued"), "Đang tạo kết quả — không cần bấm lại");
+  assert.equal(sectionSubmitLabel(regular, "technical_error"), "Check lại");
+});
+
+test("lỗi workflow và quá ba phút đều mở lại đúng section dù attempt trả về đảo thứ tự", () => {
+  const progress = normalizeLessonProgress({
+    sections: { body1_topic: { status: "draft" } },
+    attempts: [
+      { attemptRef: "new", section: "body1_topic", commentNumber: 2, status: "failed", errorCode: "MODEL_ERROR", createdAt: "2026-08-26T03:04:00Z" },
+      { attemptRef: "old", section: "body1_topic", commentNumber: 1, status: "completed", resultStatus: "needs_revision", createdAt: "2026-08-26T03:00:00Z" },
+    ]
+  }, manifest);
+  assert.equal(progress.sections.body1_topic.status, "technical_error");
+  assert.equal(gradingFailureMessage({ status: "failed", errorCode: "MODEL_ERROR" }),
+    "Lượt chấm vừa rồi gặp lỗi. Em hãy bấm Check lại.");
+  assert.equal(gradingFailureMessage({ status: "failed", errorCode: "GRADING_TIMEOUT_3_MINUTES" }),
+    "Lượt chấm vừa rồi mất quá 3 phút nên đã dừng. Em hãy bấm Check lại.");
 });
 
 test("Task 2 chỉ mở phần tiếp theo và bảng từ vựng sau khi đủ điều kiện", () => {

@@ -38,7 +38,7 @@ function enqueue(state, studentIndex) {
 }
 
 function runningJobFor(state, studentIndex) {
-  return state.jobs.find((job) => job.studentIndex === studentIndex && ["queued", "running", "waiting_retry"].includes(job.status));
+  return state.jobs.find((job) => job.studentIndex === studentIndex && ["queued", "running"].includes(job.status));
 }
 
 export function createLiveDemoState(studentCount = 40) {
@@ -73,14 +73,14 @@ export function createLiveDemoState(studentCount = 40) {
 }
 
 export function forceNextAiFailures(state, failureCount = 1) {
-  let job = state.jobs.find((item) => ["running", "queued", "waiting_retry"].includes(item.status));
+  let job = state.jobs.find((item) => ["running", "queued"].includes(item.status));
   if (!job) {
     const studentIndex = state.students.findIndex((student) => student.status === "writing");
     job = enqueue(state, studentIndex);
   }
   if (!job) return null;
   job.failuresRemaining = Math.max(job.failuresRemaining, Math.max(1, Math.min(3, failureCount)));
-  addEvent(state, "warning", failureCount >= 3 ? "Đã lên lịch mô phỏng AI lỗi liên tiếp ba lần." : "Đã lên lịch mô phỏng AI lỗi một lần.");
+  addEvent(state, "warning", "Đã lên lịch mô phỏng một lượt chấm báo lỗi.");
   return job.attemptRef;
 }
 
@@ -94,16 +94,6 @@ function saveIndependentDrafts(state) {
   state.totalDatabaseSaves += savesThisTick;
 }
 
-function wakeRetries(state) {
-  for (const job of state.jobs) {
-    if (job.status === "waiting_retry" && job.retryAtTick <= state.tick) {
-      job.status = "queued";
-      job.retryAtTick = null;
-      addEvent(state, "info", `${state.students[job.studentIndex].displayName}: tự xếp lại Comment lần ${job.commentNumber}.`);
-    }
-  }
-}
-
 function finishRunningJobs(state) {
   const ready = state.jobs.filter((job) => job.status === "running" && job.startedTick < state.tick);
   for (const job of ready) {
@@ -114,16 +104,9 @@ function finishRunningJobs(state) {
       if (job.failuresRemaining > 0) job.failuresRemaining -= 1;
       if (shouldAutoFail) state.automaticFailurePending = false;
       job.retryCount += 1;
-      if (job.retryCount < 3) {
-        job.status = "waiting_retry";
-        job.retryAtTick = state.tick + 2;
-        student.status = "queued";
-        addEvent(state, "warning", `${student.displayName}: AI lỗi, giữ nguyên Comment lần ${job.commentNumber} và tự thử lại (${job.retryCount}/3).`);
-      } else {
-        job.status = "failed";
-        student.status = "technical_error";
-        addEvent(state, "danger", `${student.displayName}: AI lỗi ba lần; bài vẫn an toàn và giảng viên có thể xếp lại cùng Comment.`);
-      }
+      job.status = "failed";
+      student.status = "technical_error";
+      addEvent(state, "danger", `${student.displayName}: lượt chấm báo lỗi; bài vẫn an toàn và nút Check lại đã mở.`);
       continue;
     }
     const passed = (job.studentIndex + state.tick + job.retryCount) % 3 === 0;
@@ -163,7 +146,6 @@ export function advanceLiveDemo(state) {
   if (state.paused) return state;
   state.tick += 1;
   saveIndependentDrafts(state);
-  wakeRetries(state);
   finishRunningJobs(state);
   addClassActivity(state);
   startQueuedJobs(state);
@@ -179,6 +161,6 @@ export function demoMetrics(state) {
     saved: state.students.filter((student) => student.savedAtTick !== null).length,
     totalDatabaseSaves: state.totalDatabaseSaves,
     running: state.jobs.filter((job) => job.status === "running").length,
-    waiting: state.jobs.filter((job) => ["queued", "waiting_retry"].includes(job.status)).length,
+    waiting: state.jobs.filter((job) => job.status === "queued").length,
   };
 }

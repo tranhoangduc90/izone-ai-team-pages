@@ -11,28 +11,25 @@ test("live demo starts every queued AI job without a fixed four-job cap", () => 
   assert.equal(demoMetrics(state).running, queuedBefore);
 });
 
-test("a transient AI failure retries the same Comment while database saves continue", () => {
+test("a workflow failure unlocks immediately while database saves continue", () => {
   const state = createLiveDemoState();
   const attemptRef = forceNextAiFailures(state, 1);
   const original = state.jobs.find((job) => job.attemptRef === attemptRef);
-  const commentNumber = original.commentNumber;
   const savesBefore = state.totalDatabaseSaves;
-  for (let index = 0; index < 8; index += 1) advanceLiveDemo(state);
-  const retried = state.jobs.find((job) => job.attemptRef === attemptRef);
-  assert.equal(retried.commentNumber, commentNumber);
+  for (let index = 0; index < 4 && original.status !== "failed"; index += 1) advanceLiveDemo(state);
   assert.equal(state.jobs.filter((job) => job.attemptRef === attemptRef).length, 1);
-  assert.ok(retried.retryCount >= 1);
-  assert.notEqual(retried.status, "failed");
+  assert.equal(original.status, "failed");
+  assert.equal(state.students[original.studentIndex].status, "technical_error");
   assert.ok(state.totalDatabaseSaves > savesBefore);
 });
 
-test("three AI failures create a teacher-recoverable technical error without a revision streak", () => {
+test("AI failure creates a recoverable technical error without a revision streak", () => {
   const state = createLiveDemoState();
-  const attemptRef = forceNextAiFailures(state, 3);
+  const attemptRef = forceNextAiFailures(state, 1);
   const job = state.jobs.find((item) => item.attemptRef === attemptRef);
   const student = state.students[job.studentIndex];
   const streakBefore = student.failStreak;
-  for (let index = 0; index < 15 && job.status !== "failed"; index += 1) advanceLiveDemo(state);
+  for (let index = 0; index < 4 && job.status !== "failed"; index += 1) advanceLiveDemo(state);
   assert.equal(job.status, "failed");
   assert.equal(student.status, "technical_error");
   assert.equal(student.failStreak, streakBefore);

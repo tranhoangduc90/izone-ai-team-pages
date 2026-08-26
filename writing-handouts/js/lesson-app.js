@@ -2,7 +2,7 @@ import { createLessonApi } from "./api.js";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, isConflict, pollingDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
-import { claimSectionSubmission, fieldDefinitions, normalizeLessonProgress, sectionDefinitions, sectionIsFilled, sectionPrerequisitesPassed, sectionSubmitLabel, vocabularyPrerequisitesPassed } from "./lesson-core.js";
+import { claimSectionSubmission, fieldDefinitions, gradingFailureMessage, normalizeLessonProgress, sectionDefinitions, sectionIsFilled, sectionPrerequisitesPassed, sectionSubmitLabel, vocabularyPrerequisitesPassed } from "./lesson-core.js?v=20260826-grading-timeout-v1";
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
 import { renderStudentFieldComments } from "./teacher-comments-ui.js";
@@ -37,7 +37,7 @@ const app = {
 function setSaveState(value) { $("lesson-save-state").textContent = value; }
 function showNotice(value = "") { const node = $("lesson-notice"); node.hidden = !value; node.textContent = value; }
 function draftKey() { return `lesson:${app.activitySlug}:${app.identity?.classRef || ""}:${app.identity?.studentRef || ""}`; }
-function statusLabel(status) { return ({ draft: "Chưa làm", queued: "Đang chấm", revision: "Cần sửa", passed: "Đã đạt" })[status] || "Chưa làm"; }
+function statusLabel(status) { return ({ draft: "Chưa làm", queued: "Đang chấm", technical_error: "Lỗi chấm — thử lại", revision: "Cần sửa", passed: "Đã đạt" })[status] || "Chưa làm"; }
 function sectionByKey(key) { return sectionDefinitions(app.manifest).find((section) => section.key === key); }
 function serverUpdatedAt() { return app.state?.updatedAt ? Date.parse(app.state.updatedAt) : 0; }
 
@@ -677,15 +677,21 @@ function registerAttempt(attempt) {
 function applyTerminalAttempt(payload, fallbackSection) {
   const section = payload.section || fallbackSection;
   const outcome = payload.resultStatus || payload.status;
+  const failed = payload.status === "failed";
   if (app.state.sections[section]) {
-    app.state.sections[section].status = outcome === "passed" ? "passed" : "revision";
+    app.state.sections[section].status = failed ? "technical_error" : outcome === "passed" ? "passed" : "revision";
     app.state.sections[section].attemptsWithoutPass = Number(payload.attemptsWithoutPass || 0);
   }
   if (payload.comment || payload.feedback) upsertComment(payload.comment || { attemptRef: payload.attemptRef, section,
     commentNumber: payload.commentNumber, status: "completed", feedback: payload.feedback,
     artifacts: payload.artifacts || {}, createdAt: new Date().toISOString() });
-  if (payload.supportWarning) showNotice("Cần liên hệ giảng viên để được hỗ trợ...");
-  setSaveState("Đã nhận kết quả chấm");
+  if (failed) {
+    showNotice(gradingFailureMessage(payload));
+    setSaveState("Lượt chấm lỗi — có thể Check lại");
+  } else {
+    if (payload.supportWarning) showNotice("Cần liên hệ giảng viên để được hỗ trợ...");
+    setSaveState("Đã nhận kết quả chấm");
+  }
 }
 
 function schedulePoll() {

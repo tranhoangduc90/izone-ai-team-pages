@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canUnlockDraft2, claimSectionSubmission, draftPrerequisitesPassed, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "../js/core.js";
+import { canUnlockDraft2, claimSectionSubmission, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "../js/core.js";
 
 test("normalizes public session data into three section states", () => {
   const result = normalizeProgress({ draftVersion: 4, draft: { overview: "A", body1: "B", body2: "C", draft1: "D1", draft2: "D2", draft2Unlocked: true }, sectionStates: { overview: { status: "passed" }, outline: { status: "revision", attemptsWithoutPass: 3 } } });
@@ -46,6 +46,13 @@ test("nút Check nói rõ trạng thái gửi và không yêu cầu học viên 
   assert.equal(sectionSubmitLabel("overview", "draft", true), "Đang gửi bài…");
   assert.equal(sectionSubmitLabel("overview", "queued"), "Đang chấm — không cần bấm lại");
   assert.equal(sectionSubmitLabel("draft", "queued"), "Đang tạo kết quả — không cần bấm lại");
+  assert.equal(sectionSubmitLabel("overview", "technical_error"), "Check lại");
+});
+
+test("mọi webapp Writing dùng chung thông báo lỗi và timeout ba phút", () => {
+  assert.equal(normalizeProgress({ sections: { overview: { status: "technical_error" } } }).sections.overview.status, "technical_error");
+  assert.match(gradingFailureMessage({ errorCode: "GRADING_TIMEOUT_3_MINUTES" }), /mất quá 3 phút/u);
+  assert.match(gradingFailureMessage({ errorCode: "MODEL_ERROR" }), /gặp lỗi/u);
 });
 
 test("word count ignores surrounding whitespace", () => {
