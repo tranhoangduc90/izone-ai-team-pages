@@ -56,6 +56,7 @@
   const legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
+  let activeClassName = classCode;
   let encryptedAudio = null;
   let previewObjectUrl = '';
   let officialObjectUrl = '';
@@ -146,6 +147,89 @@
     return String(value || '').replace(/[&<>"']/g, character => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     })[character]);
+  }
+
+  function classConfirmationLabel() {
+    const readableName = String(activeClassName || classCode).trim();
+    return readableName.toUpperCase().includes(classCode)
+      ? readableName
+      : `${readableName} (${classCode})`;
+  }
+
+  function confirmStudentIdentity(student) {
+    // Dữ liệu vào: hồ sơ vừa được chọn và lớp đã tải từ máy chủ.
+    // Việc chính: khóa màn hình bằng popup, cho học viên đọc lại họ tên và lớp.
+    // Kết quả: chỉ trả true khi học viên bấm “Xác nhận, tiếp tục”.
+    // Khi quay lại hoặc nhấn Escape: trả false, không lưu danh tính và không chuẩn bị bài thi.
+    return new Promise(resolve => {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'cbt-identity-confirmation-dialog';
+      dialog.setAttribute('aria-labelledby', 'cbtIdentityConfirmationTitle');
+      dialog.setAttribute('aria-describedby', 'cbtIdentityConfirmationIntro');
+
+      const card = document.createElement('section');
+      card.className = 'cbt-identity-confirmation-card';
+
+      const eyebrow = document.createElement('span');
+      eyebrow.className = 'cbt-identity-confirmation-eyebrow';
+      eyebrow.textContent = 'Kiểm tra trước khi vào bài';
+
+      const title = document.createElement('h2');
+      title.id = 'cbtIdentityConfirmationTitle';
+      title.textContent = 'Xác nhận thông tin học viên';
+
+      const intro = document.createElement('p');
+      intro.id = 'cbtIdentityConfirmationIntro';
+      intro.textContent = 'Vui lòng kiểm tra đúng họ tên và lớp của bạn trước khi tiếp tục.';
+
+      const details = document.createElement('dl');
+      details.className = 'cbt-identity-confirmation-details';
+      for (const [label, value] of [
+        ['Họ và tên', student.name],
+        ['Lớp', classConfirmationLabel()]
+      ]) {
+        const row = document.createElement('div');
+        const term = document.createElement('dt');
+        const description = document.createElement('dd');
+        term.textContent = label;
+        description.textContent = value;
+        row.append(term, description);
+        details.append(row);
+      }
+
+      const reminder = document.createElement('p');
+      reminder.className = 'cbt-identity-confirmation-reminder';
+      reminder.textContent = 'Nếu thông tin chưa đúng, hãy quay lại và chọn lại tên.';
+
+      const actions = document.createElement('div');
+      actions.className = 'cbt-identity-confirmation-actions';
+      const backButton = document.createElement('button');
+      backButton.type = 'button';
+      backButton.className = 'button button-secondary';
+      backButton.textContent = 'Quay lại chọn tên';
+      const confirmButton = document.createElement('button');
+      confirmButton.type = 'button';
+      confirmButton.className = 'button button-primary';
+      confirmButton.textContent = 'Xác nhận, tiếp tục';
+      actions.append(backButton, confirmButton);
+
+      card.append(eyebrow, title, intro, details, reminder, actions);
+      dialog.append(card);
+      backButton.addEventListener('click', () => dialog.close('back'));
+      confirmButton.addEventListener('click', () => dialog.close('confirmed'));
+      dialog.addEventListener('cancel', event => {
+        event.preventDefault();
+        dialog.close('back');
+      });
+      dialog.addEventListener('close', () => {
+        const confirmed = dialog.returnValue === 'confirmed';
+        dialog.remove();
+        resolve(confirmed);
+      }, { once: true });
+      document.body.append(dialog);
+      dialog.showModal();
+      confirmButton.focus();
+    });
   }
 
   function isUuid(value) {
@@ -589,10 +673,22 @@
       elements.bootstrapDemoReset.textContent = normalText;
     }
   });
-  elements.bootstrapStudent.addEventListener('change', () => {
+  elements.bootstrapStudent.addEventListener('change', async () => {
     const selectedValue = elements.bootstrapStudent.value;
     const selectingTemporary = selectedValue === '__temporary__';
     const selectedRef = selectingTemporary ? '' : selectedValue;
+    if (selectedRef) {
+      const selectedStudent = roster.find(item => item.ref === selectedRef);
+      const confirmed = selectedStudent ? await confirmStudentIdentity(selectedStudent) : false;
+      if (!confirmed) {
+        elements.bootstrapStudent.value = roster.some(item => item.ref === state.studentRef)
+          ? state.studentRef
+          : '';
+        elements.bootstrapDemoReset.hidden = classCode !== 'CODEXDEMO806' || !elements.bootstrapStudent.value;
+        if (elements.bootstrapTemporaryStudentForm) elements.bootstrapTemporaryStudentForm.hidden = true;
+        return;
+      }
+    }
     const sameStudent = selectedRef === state.studentRef;
     if (!sameStudent) clearAttemptUiState();
     legacyListeningResume = Boolean(sameStudent && selectedRef && !state.attemptToken && legacyUiState.audioStarted);
@@ -630,7 +726,7 @@
       elements.bootstrapTemporaryStudentForm.hidden = !selectingTemporary;
       if (selectingTemporary) elements.bootstrapTemporaryStudentName.focus();
     }
-    if (selectedRef) prepareSelectedStudent();
+    if (selectedRef) await prepareSelectedStudent();
   });
 
   function renderRosterOptions() {
@@ -704,7 +800,10 @@
         && !roster.some(student => student.ref === state.studentRef)) {
         roster.push({ ref: state.studentRef, name: state.studentName, temporary: true });
       }
-      elements.bootstrapClass.textContent = `Lớp ${data.class.name}`;
+      activeClassName = data.class.name || classCode;
+      elements.bootstrapClass.textContent = /^lớp\s/iu.test(activeClassName)
+        ? activeClassName
+        : `Lớp ${activeClassName}`;
       renderRosterOptions();
       if (demoStudentRef || demoAttemptToken) {
         const demoStudent = roster.find(student => student.ref === demoStudentRef);

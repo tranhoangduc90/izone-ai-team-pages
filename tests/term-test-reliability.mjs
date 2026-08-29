@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseRevision = '20260826-term-test-reliability-v1';
+const termTest2ConfirmationRevision = '20260829-student-confirmation-v1';
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
@@ -21,7 +22,10 @@ test('mọi trang Term/Mini Test nạp đúng bản reliability và không thi�
     const html = await readFile(entryPath, 'utf8');
     assert.match(html, new RegExp(`shared/styles\\.css\\?rev=${releaseRevision}`), relativeEntry);
     if (relativeEntry.includes('computer-based')) {
-      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${releaseRevision}`), relativeEntry);
+      const bootstrapRevision = relativeEntry.endsWith('term-test-2-computer-based/index.html')
+        ? termTest2ConfirmationRevision
+        : releaseRevision;
+      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${bootstrapRevision}`), relativeEntry);
     } else {
       assert.match(html, new RegExp(`shared/app\\.js\\?rev=${releaseRevision}`), relativeEntry);
     }
@@ -32,6 +36,27 @@ test('mọi trang Term/Mini Test nạp đúng bản reliability và không thi�
       await access(path.resolve(path.dirname(entryPath), asset));
     }
   }
+});
+
+test('Term Test 2 computer-based bắt buộc xác nhận đúng tên và lớp trước khi chuẩn bị bài', async () => {
+  const entry = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/index.html'), 'utf8');
+  const bootstrap = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/bootstrap.js'), 'utf8');
+  const styles = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/styles.css'), 'utf8');
+  const changeHandlerStart = bootstrap.indexOf("elements.bootstrapStudent.addEventListener('change'");
+  const changeHandlerEnd = bootstrap.indexOf('function renderRosterOptions', changeHandlerStart);
+  const changeHandler = bootstrap.slice(changeHandlerStart, changeHandlerEnd);
+
+  assert.match(entry, new RegExp(`styles\\.css\\?rev=${termTest2ConfirmationRevision}`));
+  assert.match(entry, new RegExp(`bootstrap\\.js\\?rev=${termTest2ConfirmationRevision}`));
+  assert.match(bootstrap, /function confirmStudentIdentity\(student\)/);
+  assert.match(bootstrap, /\['Họ và tên', student\.name\]/);
+  assert.match(bootstrap, /\['Lớp', classConfirmationLabel\(\)\]/);
+  assert.match(changeHandler, /await confirmStudentIdentity\(selectedStudent\)/);
+  assert.match(changeHandler, /if \(!confirmed\)/);
+  assert.ok(changeHandler.indexOf('await confirmStudentIdentity') < changeHandler.indexOf('saveState({'));
+  assert.ok(changeHandler.indexOf('await confirmStudentIdentity') < changeHandler.indexOf('await prepareSelectedStudent()'));
+  assert.match(styles, /\.cbt-identity-confirmation-dialog::backdrop/);
+  assert.match(styles, /\.cbt-identity-confirmation-actions/);
 });
 
 test('answer sheet và computer-based dùng chung guard, revision và retry', async () => {
