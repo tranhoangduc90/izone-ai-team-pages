@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Tạo phiếu và theo dõi Progress Log dành cho giảng viên">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
+    <title>Progress Log · Giảng viên</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css?rev=20260829-learning-v1">
+    <link rel="stylesheet" href="teacher.css?rev=20260829-learning-v2">
+  </head>
+  <body>
+    <main class="teacher-shell">
+      <header class="teacher-header">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">I</span><div><b>IZONE</b><small>Progress Log · Giảng viên</small></div></div>
+        <span class="teacher-name" id="teacherName">Chưa đăng nhập</span>
+      </header>
+      <p class="notice" id="teacherNotice" role="status">Đăng nhập để bắt đầu.</p>
+
+      <section class="card access-card" id="teacherAccessView">
+        <p class="eyebrow">DÀNH CHO GIẢNG VIÊN</p>
+        <h1>Tạo phiếu trong một phút</h1>
+        <p class="muted">Chọn lớp, chọn câu hỏi từ thư viện, rồi gửi một link cho học viên.</p>
+        <div id="googleSignInButton"></div>
+      </section>
+
+      <section id="teacherWorkspace" hidden>
+        <nav class="teacher-tabs" aria-label="Chức năng">
+          <button class="tab active" id="createTab" type="button">Tạo phiếu</button>
+          <button class="tab" id="dashboardTab" type="button">Theo dõi lớp</button>
+        </nav>
+
+        <section class="card" id="createPanel">
+          <div class="section-heading"><div><p class="eyebrow">PHIẾU MỚI</p><h1>Chọn nội dung cần hỏi</h1></div><span class="effort-chip">≈ 1 phút</span></div>
+          <form id="publishForm">
+            <div class="field-grid">
+              <label class="field"><span>Lớp</span><select id="teacherClassSelect" required></select></label>
+              <label class="field compact-field"><span>Buổi</span><input id="sessionNumber" type="number" min="1" max="100" value="1" required></label>
+            </div>
+            <label class="field"><span>Tên phiếu</span><input id="formTitle" type="text" maxlength="200" value="Phiếu điểm danh và ghi nhanh" required></label>
+            <div class="library-heading"><b>Câu hỏi</b><small>Chọn 2–3 câu. Bạn quyết định lúc nào học viên điền.</small></div>
+            <div id="questionLibrary" class="question-library"></div>
+            <button class="button primary" id="publishButton" type="submit">Tạo link cho lớp</button>
+          </form>
+          <div class="publish-result" id="publishResult" hidden>
+            <p><b>Link đã sẵn sàng</b><span id="rosterCount"></span></p>
+            <div class="copy-row"><input id="studentLink" type="text" readonly><button class="button" id="copyLinkButton" type="button">Sao chép</button></div>
+          </div>
+        </section>
+
+        <section class="card" id="dashboardPanel" hidden>
+          <div class="section-heading"><div><p class="eyebrow">TÌNH HÌNH LỚP</p><h1 id="dashboardTitle">Chọn một phiếu</h1></div><button class="button text-button" id="refreshDashboardButton" type="button">Làm mới</button></div>
+          <label class="field"><span>Phiếu đang theo dõi</span><select id="assignmentSelect"></select></label>
+          <div class="summary-row" id="dashboardSummary"></div>
+          <div class="student-list" id="studentList"></div>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="attendanceDialog">
+      <form method="dialog" id="attendanceForm">
+        <p class="eyebrow">GIẢNG VIÊN XÁC NHẬN</p>
+        <h2 id="attendanceStudentName">—</h2>
+        <label class="field"><span>Trạng thái</span><select id="attendanceStatus"><option value="teacher_confirmed">Có mặt</option><option value="pending_teacher">Chờ xác nhận</option><option value="not_eligible">Không đủ điều kiện</option></select></label>
+        <label class="field"><span>Lý do</span><input id="attendanceReason" type="text" minlength="3" maxlength="500" required></label>
+        <div class="dialog-actions"><button class="button text-button" value="cancel">Hủy</button><button class="button primary dialog-primary" id="saveAttendanceButton" value="default">Lưu</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="reportDialog" class="report-dialog">
+      <form method="dialog">
+        <div class="report-heading"><div><p class="eyebrow">PHÂN TÍCH CỦA HỆ THỐNG</p><h2 id="reportStudentName">—</h2></div><button class="button text-button" value="close">Đóng</button></div>
+        <p class="muted" id="reportScope"></p>
+        <div class="report-system" id="reportSystemContent"></div>
+        <section class="human-note"><p class="eyebrow">LỜI NHẮN THẬT TỪ GIẢNG VIÊN</p><p id="reportHumanNote"></p></section>
+      </form>
+    </dialog>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="config.js?rev=20260829-learning-v2"></script>
+    <script src="teacher.js?rev=20260829-learning-v2"></script>
+  </body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Phiếu điểm danh và ghi nhận tiến bộ trong buổi học">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'">
+    <title>Phiếu điểm danh</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css?rev=20260829-learning-v1">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="brand">
+        <span class="brand-mark" aria-hidden="true">I</span>
+        <div><b>IZONE</b><small>Phiếu điểm danh</small></div>
+      </header>
+
+      <p class="notice" id="notice" role="status">Đang mở phiếu…</p>
+
+      <section class="card" id="identityView" hidden>
+        <p class="eyebrow" id="sessionLabel">BUỔI HỌC</p>
+        <h1 id="assignmentTitle">Phiếu điểm danh</h1>
+        <p class="muted" id="classLabel"></p>
+        <label class="field">
+          <span>Tên của bạn</span>
+          <select id="studentSelect">
+            <option value="">Chọn tên của bạn</option>
+          </select>
+        </label>
+        <button class="button primary" id="chooseStudentButton" type="button" disabled>Tiếp tục</button>
+      </section>
+
+      <section class="card confirm-card" id="confirmView" hidden>
+        <p class="eyebrow">XÁC NHẬN</p>
+        <h1 id="confirmName">—</h1>
+        <p class="muted" id="confirmContext">—</p>
+        <button class="button primary" id="confirmButton" type="button">Đúng là em</button>
+        <button class="button text-button" id="backToNamesButton" type="button">Chọn lại tên</button>
+        <p class="fine-print">Đây là xác nhận của học viên, không phải xác thực chống gian lận.</p>
+      </section>
+
+      <section id="formView" hidden>
+        <div class="context-bar">
+          <div><b id="studentNameLabel">—</b><small id="formContextLabel">—</small></div>
+          <span id="saveState" class="save-state">Chưa có thay đổi</span>
+        </div>
+        <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+        <form class="card form-card" id="reflectionForm" novalidate>
+          <p class="eyebrow" id="checkpointLabel">GHI NHANH 1/2</p>
+          <h1 id="checkpointTitle">Ghi lại điều quan trọng</h1>
+          <p class="muted" id="checkpointInstructions"></p>
+          <div id="questionList"></div>
+          <div class="form-actions">
+            <button class="button text-button" id="previousButton" type="button">Quay lại</button>
+            <button class="button primary" id="nextButton" type="button">Tiếp tục</button>
+            <button class="button primary" id="submitButton" type="submit" hidden>Nộp phiếu &amp; điểm danh</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card result-card" id="resultView" hidden>
+        <div class="success-mark" aria-hidden="true">✓</div>
+        <p class="eyebrow">ĐÃ NHẬN PHIẾU</p>
+        <h1 id="resultTitle">Bạn đã hoàn tất</h1>
+        <div class="result-line"><span>Điểm danh</span><b id="attendanceResult">—</b></div>
+        <div class="result-line"><span>Bài làm</span><b id="completenessResult">—</b></div>
+        <div class="next-action"><small>VIỆC TIẾP THEO</small><p id="nextActionResult">—</p></div>
+      </section>
+
+      <section class="card error-card" id="errorView" hidden>
+        <p class="eyebrow">CHƯA MỞ ĐƯỢC PHIẾU</p>
+        <h1 id="errorTitle">Hãy kiểm tra lại đường dẫn</h1>
+        <p class="muted" id="errorMessage"></p>
+        <button class="button primary" id="retryButton" type="button">Thử lại</button>
+      </section>
+    </main>
+    <script src="config.js?rev=20260829-learning-v1"></script>
+    <script src="app.js?rev=20260829-learning-v1"></script>
+  </body>
+</html>
