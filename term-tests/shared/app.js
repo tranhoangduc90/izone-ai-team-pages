@@ -4,7 +4,7 @@
   const testConfig = window.TERM_TEST_CONFIG;
   const appConfig = window.TERM_TEST_APP_CONFIG;
   const root = document.getElementById('app');
-  const clientBuild = '20260826-term-test-reliability-v1';
+  const clientBuild = '20260829-all-student-confirmation-v2';
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const requestedDemo = query.get('demo') || '';
@@ -517,6 +517,89 @@
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  function classConfirmationLabel() {
+    const readableName = String(state.className || classCode).trim();
+    return readableName.toUpperCase().includes(classCode)
+      ? readableName
+      : `${readableName} (${classCode})`;
+  }
+
+  function confirmStudentIdentity(student) {
+    // Dữ liệu vào: hồ sơ vừa được chọn và lớp đã tải từ máy chủ.
+    // Việc chính: mở popup để học viên kiểm tra lại họ tên và lớp trước khi lưu hoặc gọi API.
+    // Kết quả: chỉ trả true khi học viên bấm “Xác nhận, tiếp tục”.
+    // Khi lỗi lựa chọn: Back hoặc Escape trả false; màn hình trở về tên trước và không đổi lượt thi.
+    return new Promise(resolve => {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'cbt-identity-confirmation-dialog';
+      dialog.setAttribute('aria-labelledby', 'answerSheetIdentityConfirmationTitle');
+      dialog.setAttribute('aria-describedby', 'answerSheetIdentityConfirmationIntro');
+
+      const card = document.createElement('section');
+      card.className = 'cbt-identity-confirmation-card';
+
+      const eyebrow = document.createElement('span');
+      eyebrow.className = 'cbt-identity-confirmation-eyebrow';
+      eyebrow.textContent = 'Kiểm tra trước khi vào bài';
+
+      const title = document.createElement('h2');
+      title.id = 'answerSheetIdentityConfirmationTitle';
+      title.textContent = 'Xác nhận thông tin học viên';
+
+      const intro = document.createElement('p');
+      intro.id = 'answerSheetIdentityConfirmationIntro';
+      intro.textContent = 'Vui lòng kiểm tra đúng họ tên và lớp của bạn trước khi tiếp tục.';
+
+      const details = document.createElement('dl');
+      details.className = 'cbt-identity-confirmation-details';
+      for (const [label, value] of [
+        ['Họ và tên', student.name],
+        ['Lớp', classConfirmationLabel()]
+      ]) {
+        const row = document.createElement('div');
+        const term = document.createElement('dt');
+        const description = document.createElement('dd');
+        term.textContent = label;
+        description.textContent = value;
+        row.append(term, description);
+        details.append(row);
+      }
+
+      const reminder = document.createElement('p');
+      reminder.className = 'cbt-identity-confirmation-reminder';
+      reminder.textContent = 'Nếu thông tin chưa đúng, hãy quay lại và chọn lại tên.';
+
+      const actions = document.createElement('div');
+      actions.className = 'cbt-identity-confirmation-actions';
+      const backButton = document.createElement('button');
+      backButton.type = 'button';
+      backButton.className = 'button button-secondary';
+      backButton.textContent = 'Quay lại chọn tên';
+      const confirmButton = document.createElement('button');
+      confirmButton.type = 'button';
+      confirmButton.className = 'button button-primary';
+      confirmButton.textContent = 'Xác nhận, tiếp tục';
+      actions.append(backButton, confirmButton);
+
+      card.append(eyebrow, title, intro, details, reminder, actions);
+      dialog.append(card);
+      backButton.addEventListener('click', () => dialog.close('back'));
+      confirmButton.addEventListener('click', () => dialog.close('confirmed'));
+      dialog.addEventListener('cancel', event => {
+        event.preventDefault();
+        dialog.close('back');
+      });
+      dialog.addEventListener('close', () => {
+        const confirmed = dialog.returnValue === 'confirmed';
+        dialog.remove();
+        resolve(confirmed);
+      }, { once: true });
+      document.body.append(dialog);
+      dialog.showModal();
+      confirmButton.focus();
+    });
   }
 
   function countAnswered(answers) {
@@ -1895,12 +1978,25 @@
 
   elements.studentSelect.addEventListener('change', async () => {
     const previousStudentRef = state.studentRef;
-    const student = state.roster.find(item => item.ref === elements.studentSelect.value);
+    const selectedValue = elements.studentSelect.value;
+    const selectingTemporary = selectedValue === '__temporary__';
+    const student = selectingTemporary ? null : state.roster.find(item => item.ref === selectedValue);
+    if (student && testConfig.slug.startsWith('term-test-')) {
+      const confirmed = await confirmStudentIdentity(student);
+      if (!confirmed) {
+        elements.studentSelect.value = state.roster.some(item => item.ref === previousStudentRef)
+          ? previousStudentRef
+          : '';
+        if (elements.temporaryStudentForm) elements.temporaryStudentForm.hidden = true;
+        if (elements.resetDemoData) elements.resetDemoData.disabled = !elements.studentSelect.value;
+        return;
+      }
+    }
     state.studentRef = student?.ref || '';
     state.studentName = student?.name || '';
     state.studentIdentitySource = student?.temporary ? 'temporary' : (student ? 'roster' : '');
     if (elements.temporaryStudentForm) {
-      elements.temporaryStudentForm.hidden = elements.studentSelect.value !== '__temporary__';
+      elements.temporaryStudentForm.hidden = !selectingTemporary;
       if (!elements.temporaryStudentForm.hidden) elements.temporaryStudentName.focus();
     }
     if (previousStudentRef && previousStudentRef !== state.studentRef) {

@@ -527,8 +527,8 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260821-attempt-review-v1');
-    await loadScript('../shared/app.js?rev=20260826-term-test-reliability-v1');
-    await loadScript(cbtAssetUrl('enhance.js', '20260826-term-test-reliability-v1'));
+    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2');
+    await loadScript(cbtAssetUrl('enhance.js', '20260829-all-student-confirmation-v2'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
   }
 
