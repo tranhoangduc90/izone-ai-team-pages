@@ -11,7 +11,7 @@
 
 Mở [phiếu học viên](https://tranhoangduc90.github.io/izone-ai-team-pages/progress-log/#assignment=20000000-0000-4000-8000-000000000302).
 
-1. Chọn **BẠN TRẢI NGHIỆM 1** hoặc **BẠN TRẢI NGHIỆM 2**.
+1. Chọn **BẠN TRẢI NGHIỆM 2**. Tên số 1 đã được dùng cho smoke test production.
 2. Kiểm tra màn hình xác nhận có đúng tên, lớp và buổi 6; bấm **Đúng là em**.
 3. Ở lần ghi thứ nhất, nhập kết quả ngắn, ví dụ `8/10`, rồi chuyển tiếp.
 4. Ở lần ghi thứ hai, nhập một điểm còn vướng và một việc tiếp theo.
@@ -46,7 +46,8 @@ Kết quả đúng: dashboard cho thấy 3 nguồn dữ liệu giả gồm Progr
 
 | Học viên giả | Trạng thái để quan sát |
 |---|---|
-| BẠN TRẢI NGHIỆM 1–2 | Chưa làm, dành cho trải nghiệm live |
+| BẠN TRẢI NGHIỆM 1 | Đã nộp đủ trong smoke test production |
+| BẠN TRẢI NGHIỆM 2 | Chưa làm, dành cho trải nghiệm live |
 | MINH ANH DEMO · mã 03 | Nộp đủ, có 3 evidence và tổng kết định kỳ |
 | MINH ANH DEMO · mã 04 | Nộp thiếu, chờ giảng viên |
 | HOÀNG NAM DEMO | Nộp đủ, có ví dụ giảng viên xác nhận |
