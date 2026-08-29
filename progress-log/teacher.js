@@ -254,6 +254,15 @@ function addReportSection(container, title, values) {
   container.append(section);
 }
 
+function evidenceSourceLabel(source) {
+  return {
+    progress_form: 'phiếu trên lớp',
+    term_test: 'Term Test',
+    homework: 'bài tập về nhà',
+    teacher_note: 'ghi chú giảng viên'
+  }[source] || 'nguồn học tập khác';
+}
+
 function openReport(student) {
   const report = student.latestReport;
   if (!report) return;
@@ -261,7 +270,8 @@ function openReport(student) {
   elements.reportStudentName.textContent = student.discriminator
     ? `${student.name} · ${student.discriminator}`
     : student.name;
-  elements.reportScope.textContent = `Buổi ${report.fromSessionNumber}–${report.toSessionNumber} · ${student.evidenceCount || 0} bằng chứng từ ${(student.evidenceSources || []).join(', ') || 'chưa xác định nguồn'}`;
+  const sources = (student.evidenceSources || []).map(evidenceSourceLabel);
+  elements.reportScope.textContent = `Buổi ${report.fromSessionNumber}–${report.toSessionNumber} · ${student.evidenceCount || 0} bằng chứng từ ${sources.join(', ') || 'chưa xác định nguồn'}`;
   elements.reportSystemContent.replaceChildren();
   addReportSection(elements.reportSystemContent, 'Điều đã tiến bộ', output.progress);
   addReportSection(elements.reportSystemContent, 'Điều còn lặp lại', output.recurringIssues);
