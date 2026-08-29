@@ -206,6 +206,23 @@
     }
   }
 
+  function returnToOpenDocument(event) {
+    event.preventDefault();
+    const fallbackUrl = backLink.href;
+
+    // Tab Google Docs đã mở sẵn: gọi tab đó lên trước, rồi đóng trang chấm hiện tại.
+    // Nếu trình duyệt không cho đóng tab, liên kết Docs bên dưới sẽ là phương án dự phòng.
+    try {
+      if (window.opener && !window.opener.closed) window.opener.focus();
+    } catch {
+      // Một số trình duyệt chặn quyền truy cập tab mở trang này; vẫn tiếp tục thử đóng tab.
+    }
+    window.close();
+    window.setTimeout(() => {
+      if (!window.closed) window.location.assign(fallbackUrl);
+    }, 150);
+  }
+
   // Chế độ xem thử chỉ hoạt động ở localhost và không gửi dữ liệu ra ngoài.
   if (localPreview && ['reading', 'grading', 'writing', 'done', 'warning', 'failed'].includes(localPreview)) {
     if (localPreview === 'done') showDone();
@@ -222,5 +239,6 @@
   backLink.href = documentId
     ? `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit`
     : 'https://docs.google.com/';
+  backLink.addEventListener('click', returnToOpenDocument);
   retryButton.addEventListener('click', startGrading);
 })();

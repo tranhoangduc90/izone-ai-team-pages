@@ -165,6 +165,38 @@ try {
   }
   await warning56.screenshot({ path: join(outputDir, 'check-now-mobile-warning-90.png'), fullPage: true });
 
+  async function expectReturnButtonToClosePortal(pathname, preview, buttonName) {
+    const context = await browser.newContext();
+    const documentTab = await context.newPage();
+    await documentTab.goto('about:blank');
+
+    const portalPromise = context.waitForEvent('page');
+    await documentTab.evaluate((url) => window.open(url, '_blank'),
+      `http://127.0.0.1:4173/${pathname}?preview=${preview}`);
+    const portalTab = await portalPromise;
+    const returnButton = portalTab.getByRole('link', { name: buttonName });
+    await returnButton.waitFor();
+
+    const closePromise = portalTab.waitForEvent('close');
+    await returnButton.click();
+    await closePromise;
+    if (!portalTab.isClosed()) throw new Error(`Nút ${buttonName} chưa đóng tab cổng chấm bài`);
+    await context.close();
+  }
+
+  // Tab cổng chấm phải tự đóng ở cả trạng thái hoàn tất và chưa đạt ngưỡng.
+  await expectReturnButtonToClosePortal('check-now.html', 'done', 'Quay lại bài làm');
+  await expectReturnButtonToClosePortal('check-now-56.html', 'warning', 'Quay lại bài làm ngay');
+
+  // Nếu tab được mở trực tiếp và trình duyệt chặn tự đóng, nút vẫn quay về Docs như trước.
+  const fallback = await browser.newPage({ viewport: { width: 900, height: 700 } });
+  await fallback.route('https://docs.google.com/**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<title>Google Docs dự phòng</title>' });
+  });
+  await fallback.goto('http://127.0.0.1:4173/check-now.html?preview=done');
+  await fallback.getByRole('link', { name: 'Quay lại bài làm' }).click();
+  await fallback.waitForURL('https://docs.google.com/**');
+
   const invalid = await browser.newPage({ viewport: { width: 900, height: 700 } });
   await invalid.goto(`http://127.0.0.1:4173/check-now.html?documentId=${documentId}&assignmentCode=67-writing-01`);
   await invalid.getByText('Mã bài trong liên kết không hợp lệ').waitFor();
@@ -181,6 +213,8 @@ try {
     payload: startPayload,
     warning67: '80%',
     warning56: '90%',
+    returnTab: 'passed',
+    directOpenFallback: 'passed',
   }, null, 2));
 } finally {
   await browser.close();
