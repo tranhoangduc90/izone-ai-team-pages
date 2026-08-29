@@ -22,9 +22,15 @@
 
   const stages = ['reading', 'grading', 'writing'];
   const stageProgress = { reading: 18, grading: 52, writing: 82, done: 100 };
+  const minimumCompletionPercent = Number(config?.minimumCompletionPercent) || 80;
+  const card = document.querySelector('.grader-card');
+  const pageTitle = document.querySelector('#page-title');
   const progressFill = document.querySelector('#progress-fill');
   const lead = document.querySelector('#lead');
   const result = document.querySelector('#result');
+  const warningBox = document.querySelector('#warning-box');
+  const warningMessage = document.querySelector('#warning-message');
+  const warningThreshold = document.querySelector('#warning-threshold');
   const errorBox = document.querySelector('#error-box');
   const errorMessage = document.querySelector('#error-message');
   const backLink = document.querySelector('#back-link');
@@ -35,6 +41,8 @@
 
   let activeJobId = '';
   let stopped = false;
+
+  warningThreshold.textContent = `${minimumCompletionPercent}%`;
 
   // Hai mã chỉ cần ở lần tải đầu; xóa khỏi thanh địa chỉ để hạn chế bị sao chép hoặc lưu lại ngoài ý muốn.
   if ((documentId || assignmentCode) && !localPreview) {
@@ -53,23 +61,50 @@
 
   function showDone(message) {
     stopped = true;
+    card.classList.remove('is-warning');
+    pageTitle.textContent = 'Đang chấm bài của bạn';
     setStage('done');
     lead.textContent = message || 'Kết quả đã được ghi trực tiếp vào bài làm của bạn.';
     result.hidden = false;
+    warningBox.hidden = true;
     errorBox.hidden = true;
     retryButton.hidden = true;
+    retryButton.textContent = 'Thử chấm lại';
     backLink.hidden = false;
+    backLink.textContent = 'Quay lại bài làm';
+  }
+
+  function showWarning(status) {
+    stopped = true;
+    document.querySelectorAll('.step.active').forEach((element) => element.classList.remove('active'));
+    card.classList.add('is-warning');
+    pageTitle.textContent = 'Bài chưa đủ điều kiện chấm';
+    lead.textContent = `Bạn cần hoàn thành ít nhất ${minimumCompletionPercent}% bài tập trước khi chấm.`;
+    result.hidden = true;
+    errorBox.hidden = true;
+    warningMessage.textContent = status?.message
+      || `Bài làm hiện chưa đạt ngưỡng ${minimumCompletionPercent}% của khóa học.`;
+    warningBox.hidden = false;
+    retryButton.hidden = status?.retryable === false;
+    retryButton.textContent = 'Tôi đã làm đủ — chấm lại';
+    backLink.hidden = false;
+    backLink.textContent = 'Quay lại bài làm ngay';
   }
 
   function showError(message, retryable = true) {
     stopped = true;
+    card.classList.remove('is-warning');
+    pageTitle.textContent = 'Đang chấm bài của bạn';
     document.querySelectorAll('.step.active').forEach((element) => element.classList.remove('active'));
     lead.textContent = 'Quá trình chấm đã dừng để bảo vệ bài làm của bạn.';
     result.hidden = true;
+    warningBox.hidden = true;
     errorMessage.textContent = message || 'Hệ thống chưa thể chấm bài lúc này. Vui lòng thử lại sau.';
     errorBox.hidden = false;
     retryButton.hidden = !retryable;
+    retryButton.textContent = 'Thử chấm lại';
     backLink.hidden = false;
+    backLink.textContent = 'Quay lại bài làm';
   }
 
   function safeJson(text) {
@@ -106,7 +141,11 @@
         showDone(status.message);
         return;
       }
-      if (status.status === 'failed' || status.status === 'warning') {
+      if (status.status === 'warning') {
+        showWarning(status);
+        return;
+      }
+      if (status.status === 'failed') {
         showError(status.message, status.retryable !== false);
         return;
       }
@@ -125,10 +164,15 @@
   async function startGrading() {
     stopped = false;
     activeJobId = '';
+    card.classList.remove('is-warning');
+    pageTitle.textContent = 'Đang chấm bài của bạn';
     result.hidden = true;
+    warningBox.hidden = true;
     errorBox.hidden = true;
     retryButton.hidden = true;
+    retryButton.textContent = 'Thử chấm lại';
     backLink.hidden = true;
+    backLink.textContent = 'Quay lại bài làm';
     lead.textContent = 'Bạn cứ giữ trang này mở. Kết quả sẽ được ghi trực tiếp vào bài làm.';
     setStage('reading');
 
@@ -163,8 +207,12 @@
   }
 
   // Chế độ xem thử chỉ hoạt động ở localhost và không gửi dữ liệu ra ngoài.
-  if (localPreview && ['reading', 'grading', 'writing', 'done', 'failed'].includes(localPreview)) {
+  if (localPreview && ['reading', 'grading', 'writing', 'done', 'warning', 'failed'].includes(localPreview)) {
     if (localPreview === 'done') showDone();
+    else if (localPreview === 'warning') showWarning({
+      message: `Bạn chưa hoàn thành đủ ${minimumCompletionPercent}% bài tập. Hãy bổ sung các câu còn thiếu.`,
+      retryable: true,
+    });
     else if (localPreview === 'failed') showError('Hệ thống chưa thể đọc bài làm. Vui lòng thử lại.');
     else setStage(localPreview);
   } else {

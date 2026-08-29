@@ -265,7 +265,7 @@ h1 {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.result, .error-box {
+.result, .warning-box, .error-box {
   margin: 0 46px 28px;
   border-radius: 18px;
 }
@@ -301,6 +301,134 @@ h1 {
   color: #456256;
   font-size: .9rem;
   line-height: 1.5;
+}
+
+.warning-box {
+  position: relative;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 24px;
+  overflow: hidden;
+  padding: 28px;
+  border: 3px solid #ef334c;
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 179, 71, .24), transparent 34%),
+    linear-gradient(135deg, #fffaf2, #fff0f3 72%);
+  box-shadow: 0 18px 48px rgba(187, 31, 49, .2), 0 4px 14px rgba(187, 31, 49, .12);
+}
+
+.warning-box::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 8px;
+  background: linear-gradient(90deg, #ff9f1c, var(--red), var(--red-dark));
+  content: "";
+}
+
+.warning-box:not([hidden]) { display: grid; }
+
+.warning-signal {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.warning-icon {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-size: 2.1rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 0 0 5px rgba(229, 47, 66, .16), 0 10px 24px rgba(187, 31, 49, .22);
+}
+
+.warning-threshold {
+  display: grid;
+  justify-items: center;
+  color: var(--red-dark);
+}
+
+.warning-threshold strong {
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+
+.warning-threshold small {
+  margin-top: 5px;
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.warning-content { min-width: 0; }
+
+.warning-eyebrow {
+  margin: 2px 0 8px;
+  color: #a7182a;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.warning-box h2 {
+  margin: 0;
+  color: #7f1322;
+  font-size: clamp(1.45rem, 4vw, 1.8rem);
+  line-height: 1.18;
+  letter-spacing: -.025em;
+}
+
+.warning-message {
+  margin: 10px 0 0;
+  color: #622f36;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.warning-next-step {
+  display: grid;
+  gap: 3px;
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-left: 5px solid #ff9f1c;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .72);
+  color: #603b25;
+}
+
+.warning-next-step strong {
+  color: #8b2f16;
+  font-size: .84rem;
+  text-transform: uppercase;
+}
+
+.warning-next-step span {
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+.grader-card.is-warning .hero { padding-bottom: 22px; }
+.grader-card.is-warning h1 { color: #8e1425; }
+.grader-card.is-warning .lead { color: #63353c; font-size: 1.05rem; font-weight: 700; }
+.grader-card.is-warning .progress-track,
+.grader-card.is-warning .steps { display: none; }
+.grader-card.is-warning .actions { display: grid; grid-template-columns: 1fr; }
+.grader-card.is-warning .primary-action {
+  min-height: 58px;
+  padding: 16px 20px;
+  font-size: 1rem;
+  box-shadow: 0 12px 28px rgba(229, 47, 66, .3);
 }
 
 .error-box {
@@ -375,7 +503,20 @@ footer {
   .step { grid-template-columns: 44px minmax(0, 1fr) 20px; gap: 12px; min-height: 88px; }
   .step-icon { width: 44px; height: 44px; border-radius: 14px; }
   .step:not(:last-child)::after { left: 23px; }
-  .result, .error-box { margin: 0 24px 22px; }
+  .result, .warning-box, .error-box { margin: 0 24px 22px; }
+  .warning-box { grid-template-columns: 1fr; gap: 18px; padding: 24px 20px 22px; }
+  .warning-signal { grid-template-columns: auto auto; align-items: center; justify-content: start; gap: 18px; padding-top: 3px; }
+  .warning-icon { width: 56px; height: 56px; font-size: 1.9rem; }
+  .warning-threshold { justify-items: start; }
+  .warning-threshold strong { font-size: 2.5rem; }
+  .warning-content { text-align: left; }
+  .warning-box h2 { font-size: 1.55rem; }
+  .warning-message { font-size: .96rem; }
+  .grader-card.is-warning .hero { padding: 26px 20px 18px; }
+  .grader-card.is-warning .hero h1 { font-size: 2rem; }
+  .grader-card.is-warning .lead { margin-top: 10px; font-size: .96rem; line-height: 1.5; }
+  .grader-card.is-warning .warning-box { margin: 0 18px 18px; }
+  .grader-card.is-warning .actions { padding: 0 18px 20px; }
   .actions { flex-direction: column; padding: 0 24px 24px; }
   footer { padding: 16px 24px 18px; line-height: 1.45; }
 }

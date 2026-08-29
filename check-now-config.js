@@ -5,6 +5,7 @@
 window.GRADER_CONFIG = Object.freeze({
   startUrl: 'https://ducizone.ddns.net/webhook/cham-ngay-reading-listening-67',
   statusUrl: 'https://ducizone.ddns.net/webhook/tien-do-cham-reading-listening-67',
+  minimumCompletionPercent: 80,
   pollEveryMs: 1300,
   timeoutMs: 240000,
 });
