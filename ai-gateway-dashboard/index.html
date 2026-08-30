@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests">
+  <meta name="description" content="Dashboard vận hành Cổng AI Trung tâm">
+  <title>Cổng AI Trung tâm — Đang vận hành</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css?v=20260830-google-auth-v1">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Cổng AI Trung tâm</h1>
+      <p>Điều phối bốn tài khoản Google, fallback OpenAI và lịch sử debug 14 ngày</p>
+    </div>
+    <div class="header-actions">
+      <span class="environment-pill">ĐANG VẬN HÀNH · Dữ liệu thật</span>
+      <span id="operatorBadge" class="operator-badge" hidden></span>
+      <button id="logoutButton" class="header-button" hidden>Đăng xuất</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="loginView" class="login-card" aria-labelledby="loginTitle">
+      <p class="eyebrow">KHU VỰC HẠN CHẾ</p>
+      <h2 id="loginTitle">Đăng nhập để xem tình hình vận hành</h2>
+      <p>Chỉ tài khoản Google đã được cấp quyền mới xem lịch sử, prompt/response và thay đổi cấu hình.</p>
+      <div id="googleSignInButton" class="google-signin"></div>
+      <p id="loginNotice" class="login-notice" role="alert"></p>
+    </section>
+
+    <div id="dashboardView" hidden>
+      <div class="notice"><strong>Lưu ý quyền riêng tư:</strong> Hệ thống lưu prompt, response và IP thật trong 14 ngày. Không chia sẻ ảnh chụp hoặc dữ liệu trên màn hình ra ngoài nhóm vận hành.</div>
+
+      <section class="section">
+        <div class="section-head">
+          <div><h2>Tình trạng chung</h2><p>14 ngày gần nhất, cập nhật khi bạn mở trang hoặc bấm làm mới.</p></div>
+          <button class="secondary" id="refreshAll">Làm mới</button>
+        </div>
+        <div class="section-body"><div class="cards">
+          <article class="card"><div class="label">Tổng yêu cầu</div><div class="value" id="kpiTotal">—</div><div class="sub">trong 14 ngày</div></article>
+          <article class="card"><div class="label">Tỷ lệ thành công</div><div class="value" id="kpiSuccess">—</div><div class="sub">Google + OpenAI</div></article>
+          <article class="card"><div class="label">Độ trễ trung vị</div><div class="value" id="kpiP50">—</div><div class="sub">p50, giây</div></article>
+          <article class="card"><div class="label">Độ trễ cao</div><div class="value" id="kpiP95">—</div><div class="sub">p95, giây</div></article>
+          <article class="card"><div class="label">Fallback OpenAI</div><div class="value" id="kpiFallback">—</div><div class="sub">đã throttle, không qua OpenRouter</div></article>
+        </div></div>
+      </section>
+
+      <section class="section" id="usageSection">
+        <div class="section-head">
+          <div><h2>Mức sử dụng & tín dụng</h2><p>Xu hướng theo ngày, phân nhóm theo bốn tài khoản và các phân tích cơ bản.</p></div>
+          <div class="filters">
+            <label>Khoảng thời gian<select id="usageDays"><option value="7">7 ngày</option><option value="14" selected>14 ngày</option><option value="30">30 ngày</option></select></label>
+            <label>Tài khoản<select id="usageAccount"><option value="all">Cả 4 tài khoản</option></select></label>
+            <button id="applyUsage">Áp dụng</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="accounts" id="billingAccounts"></div>
+          <div class="charts">
+            <div class="chart-box"><div class="chart-title"><strong>Credit đã dùng từng ngày</strong><span>USD ước tính · xếp chồng theo tài khoản</span></div><canvas id="costChart" width="900" height="300"></canvas></div>
+            <div class="chart-box"><div class="chart-title"><strong>Yêu cầu AI từng ngày</strong><span>Tổng request và số lỗi</span></div><canvas id="requestChart" width="600" height="300"></canvas></div>
+          </div>
+          <div class="analysis-grid" id="usageInsights"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h2>Phân tải bốn máy</h2><p>Trọng số quyết định tỷ lệ lượt đầu; thay đổi có hiệu lực ngay và được ghi lịch sử.</p></div></div>
+        <div class="section-body"><div class="workers" id="workers"></div></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h2>Tài khoản Google xử lý AI</h2><p>Thêm file JSON service account, kiểm tra kết nối rồi mới kích hoạt. Khóa riêng không bao giờ hiển thị lại.</p></div></div>
+        <div class="section-body">
+          <div class="credential-tools">
+            <label>Gắn với máy<select id="credentialWorker"></select></label>
+            <label>Tên dễ nhớ<input id="credentialName" value="Google service account"></label>
+            <label>File JSON<input id="credentialFile" type="file" accept="application/json,.json"></label>
+            <button id="uploadCredential">Tải lên bản mới</button>
+          </div>
+          <div class="credentials" id="credentials"></div>
+          <div class="empty" id="credentialEmpty">Chưa có credential để hiển thị.</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div><h2>Lịch sử yêu cầu AI</h2><p>Lọc cả IP nguồn và tên máy gọi. Bấm một dòng để xem timeline, prompt và response đầy đủ.</p></div>
+          <div class="filters">
+            <label>Sản phẩm<input id="filterProduct" placeholder="Ví dụ: writing"></label>
+            <label>Trạng thái<select id="filterStatus"><option value="all">Tất cả</option><option value="success">Thành công</option><option value="failed">Thất bại</option><option value="running">Đang chạy</option></select></label>
+            <label>Model<input id="filterModel" placeholder="gemini..."></label>
+            <label>IP / tên máy<input id="filterSource" placeholder="IP hoặc tên đã đặt"></label>
+            <button id="applyHistory">Tìm</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="source-tools">
+            <label>IP cần đặt tên<input id="sourceIp" placeholder="Ví dụ: 10.0.0.25"></label>
+            <label>Tên máy dễ nhớ<input id="sourceName" placeholder="Máy chấm Writing 1"></label>
+            <label>Sản phẩm thường gọi<input id="sourceProduct" placeholder="Ví dụ: writing"></label>
+            <button id="saveSource">Lưu tên máy</button>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Thời gian</th><th>Nguồn gọi</th><th>Sản phẩm</th><th>Model</th><th>Kết quả</th><th>Tuyến cuối</th><th>Độ trễ</th><th>Mã request</th></tr></thead>
+            <tbody id="historyBody"></tbody>
+          </table></div>
+          <div class="empty" id="historyEmpty">Chưa có yêu cầu trong phạm vi lọc.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="detailDialog">
+    <div class="dialog-head"><h2>Chi tiết yêu cầu AI</h2><button class="secondary" id="closeDialog">Đóng</button></div>
+    <div class="dialog-body" id="detailBody"></div>
+  </dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="./config.js?v=20260830-google-auth-v1"></script>
+  <script type="module" src="./app.js?v=20260830-google-auth-v1"></script>
+</body>
+</html>

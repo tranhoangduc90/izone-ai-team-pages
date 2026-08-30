@@ -8,6 +8,7 @@ Kho chứa các website HTML tĩnh của đội IZONE để xuất bản bằng 
 - Trang gốc: <https://tranhoangduc90.github.io/izone-ai-team-pages/>
 - Term Test và Mini Test: <https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/>
 - Handout Writing Task 1/2: <https://tranhoangduc90.github.io/izone-ai-team-pages/writing-handouts/>
+- Dashboard Cổng AI Trung tâm: <https://tranhoangduc90.github.io/izone-ai-team-pages/ai-gateway-dashboard/>
 
 Các repo `izone-term-tests` và `izone-writing-task1-practice` cũ vẫn được giữ để quay lui trong giai đoạn chuyển đổi. Không xóa hoặc tắt link cũ cho tới khi các lớp đang dùng đã chuyển hết sang link mới.
 
@@ -15,6 +16,7 @@ Các repo `izone-term-tests` và `izone-writing-task1-practice` cũ vẫn đư�
 
 - `term-tests/`: Term Test 1/2, Mini Test Buổi 5 và dashboard giáo viên.
 - `writing-handouts/`: giao diện và manifest dùng chung cho Writing Task 1/2.
+- `ai-gateway-dashboard/`: dashboard vận hành có Google Auth; frontend không chứa API key hoặc credential.
 - Các file ở thư mục gốc: những trang chấm Reading, Listening và Vocab do team đang vận hành.
 
 Khi thêm một web mới, ưu tiên dùng thư mục con có tên ổn định; không tạo repo Pages riêng nếu không có yêu cầu tách quyền, tên miền hoặc vòng đời phát hành.
