@@ -12,8 +12,15 @@ import {
   writingStatusLabel,
   writingTaskStateLabel
 } from './model.js?rev=20260820-writing-monitor-v1';
+import { createSessionStore } from './auth-session.js?rev=20260903-remember-login-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
+const sessionStore = createSessionStore({
+  apiBaseUrl: appConfig.API_BASE_URL,
+  clientId: appConfig.GOOGLE_CLIENT_ID,
+  getStorage: () => window.sessionStorage
+});
+let loginGeneration = 0;
 const initialParams = new URLSearchParams(window.location.search);
 const state = {
   idToken: '',
@@ -31,7 +38,7 @@ const state = {
 };
 
 const elements = Object.fromEntries([
-  'notice', 'accessView', 'googleSignInButton', 'dashboardView', 'loginBadge', 'refreshButton',
+  'notice', 'accessView', 'googleSignInButton', 'dashboardView', 'loginBadge', 'refreshButton', 'logoutButton',
   'classSelect', 'testSelect', 'reviewerName', 'teacherTabs', 'teacherTabsPrev', 'teacherTabsNext', 'overviewView', 'overviewTitle',
   'resultCount', 'classSummary', 'overviewBody', 'studentView'
 ].map(id => [id, document.getElementById(id)]));
@@ -79,11 +86,25 @@ function updateUrl() {
 async function apiRequest(path) {
   if (!appConfig.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
   if (!state.idToken) throw new Error('Bạn chưa đăng nhập Google.');
+  if (!sessionStore.usable(state.idToken)) {
+    resetLoginAfterError();
+    throw new Error('Phiên Google đã hết hạn; hãy đăng nhập lại.');
+  }
+  const generation = loginGeneration;
   const response = await fetch(`${appConfig.API_BASE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${state.idToken}` }
+    headers: { Authorization: `Bearer ${state.idToken}` },
+    cache: 'no-store'
+  }).catch(error => {
+    if (generation !== loginGeneration) error.staleSession = true;
+    throw error;
   });
   const payload = await response.json().catch(() => null);
+  // Bỏ phản hồi đến muộn sau đăng xuất hoặc đổi tài khoản, không dựng lại dữ liệu cũ.
+  if (generation !== loginGeneration) {
+    throw Object.assign(new Error('Lượt đăng nhập đã thay đổi.'), { staleSession: true });
+  }
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) resetLoginAfterError();
     if (response.status === 401) throw new Error('Phiên Google đã hết hạn; hãy đăng nhập lại.');
     if (response.status === 403) throw new Error(payload?.message || 'Tài khoản chưa được cấp quyền cho lớp này.');
     throw new Error(payload?.message || `API trả về mã ${response.status}.`);
@@ -126,6 +147,7 @@ async function loadOptions() {
   elements.reviewerName.textContent = state.reviewer.displayName || state.reviewer.email;
   elements.loginBadge.textContent = `Đã đăng nhập: ${state.reviewer.displayName || state.reviewer.email}`;
   elements.refreshButton.hidden = false;
+  elements.logoutButton.hidden = false;
   elements.accessView.hidden = true;
   elements.dashboardView.hidden = false;
   state.connected = true;
@@ -583,6 +605,7 @@ async function loadTeacherWritingDetail(student, taskNumber, button) {
     }
     openTeacherWritingFeedback(payload.studentName || student.name, payload.writing);
   } catch (error) {
+    if (error.staleSession) return;
     showNotice(`Không thể tải bài chấm Writing: ${error.message}`, 'error');
   } finally {
     button.disabled = false;
@@ -610,7 +633,8 @@ async function openTeacherAttemptReview(student, button) {
     if (!window.TERM_TEST_ATTEMPT_REVIEW?.open) throw new Error('Chưa tải được giao diện xem lại bài làm.');
     window.TERM_TEST_ATTEMPT_REVIEW.open(state.attemptReviewCache.get(cacheKey));
   } catch (error) {
-    showNotice(`Không thể tải bài chi tiết của ${student.name}: ${error.message}`, 'error');
+    if (error.staleSession) return;
+    showNotice(`Không thể tải bài chi tiết: ${error.message}`, 'error');
   } finally {
     button.disabled = false;
     button.textContent = normalText;
@@ -775,6 +799,7 @@ async function loadResults({ quiet = false } = {}) {
   const selectedClass = getSelectedClass();
   if (!selectedClass || !state.selectedTestSlug) return;
   if (state.resultsLoading) return;
+  const generation = loginGeneration;
   state.resultsLoading = true;
   try {
     if (!quiet) showNotice(`Đang tải kết quả ${selectedClass.name}...`);
@@ -789,22 +814,60 @@ async function loadResults({ quiet = false } = {}) {
     const updatedAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     showNotice(`Đã tải ${state.students.length} học viên; ${completed} học viên đã hoàn thành · cập nhật ${updatedAt}.`, 'success');
   } finally {
-    state.resultsLoading = false;
+    if (generation === loginGeneration) state.resultsLoading = false;
   }
 }
 
 async function connectAfterGoogleLogin() {
   await loadOptions();
+  // Chỉ nhớ mã sau khi máy chủ đã xác nhận tài khoản và quyền truy cập.
+  const remembered = sessionStore.save(state.idToken);
   await loadResults();
+  if (!remembered) showNotice('Đã đăng nhập, nhưng trình duyệt đang chặn lưu phiên. Tải lại trang sẽ cần đăng nhập lại.');
 }
 
-function resetLoginAfterError() {
+function resetLoginAfterError({ clearSavedSession = true } = {}) {
+  loginGeneration += 1;
+  if (clearSavedSession) sessionStore.clear();
   state.idToken = '';
   state.connected = false;
+  state.resultsLoading = false;
+  state.reviewer = null;
+  state.classes = [];
+  state.tests = [];
+  state.students = [];
+  state.selectedClassId = '';
+  state.selectedTestSlug = '';
+  state.writingDetailCache.clear();
+  state.attemptReviewCache.clear();
+  // Xóa cả nội dung ẩn và hộp xem bài để máy dùng chung không giữ kết quả cũ.
+  for (const id of ['classSelect', 'testSelect', 'teacherTabs', 'classSummary', 'overviewBody', 'studentView']) {
+    elements[id].replaceChildren();
+  }
+  document.querySelectorAll('.writing-feedback-dialog, .attempt-review-dialog').forEach(dialog => dialog.remove());
+  elements.reviewerName.textContent = '—';
+  elements.overviewTitle.textContent = 'Kết quả của lớp';
+  elements.resultCount.textContent = '0 học viên';
   elements.loginBadge.textContent = 'Chưa đăng nhập';
   elements.refreshButton.hidden = true;
+  elements.logoutButton.hidden = true;
   elements.accessView.hidden = false;
   elements.dashboardView.hidden = true;
+}
+
+async function restoreLogin() {
+  const token = sessionStore.read();
+  if (!token) return;
+  state.idToken = token;
+  showNotice('Đang khôi phục phiên đăng nhập...');
+  try {
+    await connectAfterGoogleLogin();
+  } catch (error) {
+    if (error.staleSession) return;
+    // Lỗi mạng tạm thời không xóa phiên còn hạn; 401/403 đã xóa trong apiRequest.
+    resetLoginAfterError({ clearSavedSession: false });
+    showNotice(`Không thể khôi phục phiên: ${error.message} Bạn có thể tải lại trang hoặc đăng nhập lại.`, 'error');
+  }
 }
 
 function setupGoogleSignIn() {
@@ -818,11 +881,13 @@ function setupGoogleSignIn() {
       client_id: clientId,
       auto_select: false,
       callback: async response => {
+        resetLoginAfterError();
         state.idToken = response.credential || '';
         try {
           await connectAfterGoogleLogin();
         } catch (error) {
-          resetLoginAfterError();
+          if (error.staleSession) return;
+          resetLoginAfterError({ clearSavedSession: false });
           showNotice(`Không thể đăng nhập: ${error.message}`, 'error');
         }
       }
@@ -840,7 +905,9 @@ function setupGoogleSignIn() {
   script.async = true;
   script.defer = true;
   script.onload = renderButton;
-  script.onerror = () => showNotice('Không tải được màn hình đăng nhập Google.', 'error');
+  script.onerror = () => {
+    if (!state.connected) showNotice('Không tải được màn hình đăng nhập Google.', 'error');
+  };
   document.head.append(script);
 }
 
@@ -850,6 +917,7 @@ elements.classSelect.addEventListener('change', async () => {
   try {
     await loadResults();
   } catch (error) {
+    if (error.staleSession) return;
     showNotice(`Không thể tải kết quả: ${error.message}`, 'error');
   }
 });
@@ -860,6 +928,7 @@ elements.testSelect.addEventListener('change', async () => {
   try {
     await loadResults();
   } catch (error) {
+    if (error.staleSession) return;
     showNotice(`Không thể tải kết quả: ${error.message}`, 'error');
   }
 });
@@ -868,8 +937,15 @@ elements.refreshButton.addEventListener('click', async () => {
   try {
     await loadResults();
   } catch (error) {
+    if (error.staleSession) return;
     showNotice(`Không thể làm mới: ${error.message}`, 'error');
   }
+});
+
+elements.logoutButton.addEventListener('click', () => {
+  resetLoginAfterError();
+  window.google?.accounts?.id?.disableAutoSelect();
+  showNotice('Đã đăng xuất. Đăng nhập Google để xem kết quả lớp.');
 });
 
 elements.teacherTabs.addEventListener('click', event => {
@@ -908,11 +984,18 @@ elements.studentView.addEventListener('click', event => {
 });
 
 setupGoogleSignIn();
+restoreLogin();
 
 // Khi trang đang mở, tự lấy trạng thái mới để giảng viên thấy bài vừa chấm xong mà không phải bấm liên tục.
 window.setInterval(() => {
+  if (state.connected && !sessionStore.usable(state.idToken)) {
+    resetLoginAfterError();
+    showNotice('Phiên Google đã hết hạn; hãy đăng nhập lại.', 'error');
+    return;
+  }
   if (!state.connected || document.hidden) return;
   loadResults({ quiet: true }).catch(error => {
+    if (error.staleSession) return;
     showNotice(`Không thể tự làm mới: ${error.message}`, 'error');
   });
 }, 30_000);
