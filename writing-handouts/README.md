@@ -8,6 +8,16 @@ Với handout dùng chung tại `lesson.html`, không có query `class` thì h�
 
 Dashboard giảng viên tại `teacher.html` dùng cùng query `class`. Sau khi đăng nhập, dashboard chọn sẵn lớp và chỉ tải tiến độ của lớp đó; giảng viên vẫn có thể đổi bộ lọc lớp.
 
+## Đối soát hồ sơ dùng chung cho mọi đề
+
+Từ bản cập nhật 03/09/2026, dashboard chuẩn đã đồng bộ phần đối soát với bản legacy: nhập tên → **Tìm trong database** → chọn đúng hồ sơ kèm lớp → **Ghép hồ sơ** và xác nhận. Kết quả tìm không bị giới hạn vào lớp đang lọc. Có nút **Xóa hồ sơ tạm** với xác nhận riêng; backend chỉ ẩn hồ sơ khỏi danh sách và giữ lịch sử kỹ thuật. Tài khoản chỉ xem không có các nút quản trị.
+
+Mọi đề Task 1, Lesson 13 và Task 2 dùng chung `teacher.html`, `js/teacher-app.js`, `js/api.js` và cùng dịch vụ API. Không sao chép giao diện riêng cho từng đề/lớp. Ghép thành công giữ nguyên bài, bỏ hồ sơ khỏi “Cần đối soát”; nếu không còn hồ sơ chờ thì ẩn cả khung. Việc ghép liên kết danh tính, không chuyển bài sang lớp khác. Các link legacy còn hoạt động, không đổi backend hoặc quyền trong lần đồng bộ giao diện này.
+
+Kiểm tra trước phát hành: chạy kiểm thử mã trong thư mục này; chạy `playwright-cli run-code --filename tests/handout-reconciliation-ui.cjs` từ gốc repo sau khi mở `teacher.html` của đích cần kiểm trong phiên Playwright riêng. Script thay toàn bộ API/Google bằng dữ liệu giả, kiểm từng manifest trên đích, chọn lớp, UUID cùng tên, đồng ý/hủy, lỗi, chỉ xem và mobile. Đọc báo cáo ở trang trắng cuối cùng để xác nhận suite hoàn tất; không coi riêng exit code CLI là đủ. Không dùng script với Chrome đã đăng nhập của giảng viên.
+
+Nguồn giao diện đối soát: repo backend/legacy ở commit `517ca98009005935ccf38a91f6f48b719b11db7c`. Giữ các thay đổi riêng của repo Pages chuẩn; chỉ chuyển phần đối soát và đổi mã phiên bản tài nguyên để tránh cache cũ. Rollback bằng cách hoàn tác commit giao diện này rồi phát hành Pages; không rollback database hay xóa bài làm.
+
 ## Chạy cục bộ
 
 ```powershell
