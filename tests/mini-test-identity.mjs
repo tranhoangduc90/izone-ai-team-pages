@@ -13,6 +13,8 @@ const mime = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
 };
+const clientEventPayloads = [];
+const unavailableRequests = new Set();
 
 // Dữ liệu vào: yêu cầu file tĩnh từ trang Mini Test trên localhost.
 // Việc chính: chỉ đọc file nằm trong repo và trả đúng kiểu nội dung.
@@ -20,6 +22,18 @@ const mime = {
 const server = createServer(async (request, response) => {
   try {
     const pathname = new URL(request.url, 'http://127.0.0.1').pathname;
+    if (request.method === 'POST' && pathname.endsWith('/client-event')) {
+      // Dữ liệu vào: telemetry kỹ thuật do bất kỳ trang giả lập nào gửi trong lúc kiểm thử.
+      // Việc chính: đọc payload, giữ lại để soát quyền riêng tư và trả đúng trạng thái production.
+      // Kết quả: static server không báo 404 cho route API hợp lệ nhưng nằm ngoài repo Pages.
+      // Khi JSON hỏng: chuyển sang nhánh lỗi 404 để bài kiểm thử phát hiện qua console trình duyệt.
+      let rawBody = '';
+      for await (const chunk of request) rawBody += chunk;
+      clientEventPayloads.push(JSON.parse(rawBody || '{}'));
+      response.writeHead(202, { 'Content-Type': 'application/json; charset=utf-8' });
+      response.end(JSON.stringify({ ok: true }));
+      return;
+    }
     const relative = pathname.endsWith('/') ? `${pathname.slice(1)}index.html` : pathname.slice(1);
     const filePath = normalize(join(root, relative));
     if (!filePath.startsWith(normalize(root))) throw new Error('Đường dẫn ngoài repo');
@@ -27,6 +41,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, { 'Content-Type': mime[extname(filePath)] || 'application/octet-stream' });
     response.end(body);
   } catch {
+    unavailableRequests.add(`${request.method} ${request.url}`);
     response.writeHead(404).end('Không tìm thấy');
   }
 });
@@ -61,6 +76,13 @@ try {
         class: { code: 'IC2238', name: 'IC2238' },
         students: [{ ref: 'student-test-001', name: 'Học viên thử nghiệm' }],
       }),
+    });
+  });
+  await page.route('**/api/term-tests/mini-test-lesson-5/attempt/active', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, active: false }),
     });
   });
   await page.route('**/api/term-tests/mini-test-lesson-5/temporary-students', async (route) => {
@@ -241,7 +263,12 @@ try {
     throw new Error('Lựa chọn mã tạm bị hiện nhầm trên Term Test');
   }
   await termContext.close();
-  if (browserErrors.length) throw new Error(`Trình duyệt phát sinh lỗi: ${browserErrors.join(' | ')}`);
+  if (clientEventPayloads.some(payload => 'answers' in payload || 'studentName' in payload)) {
+    throw new Error('Telemetry chứa tên hoặc đáp án học viên');
+  }
+  if (browserErrors.length) {
+    throw new Error(`Trình duyệt phát sinh lỗi: ${browserErrors.join(' | ')}; yêu cầu 404: ${[...unavailableRequests].join(', ')}`);
+  }
 
   process.stdout.write(JSON.stringify({
     ok: true,
@@ -251,6 +278,7 @@ try {
     temporaryStudentRef,
     answerSheetSubmissionUsesTemporaryRef: listeningPayload?.studentRef === temporaryStudentRef,
     computerBasedPrepareUsesTemporaryRef: preparePayload?.studentRef === temporaryStudentRef,
+    clientEventCount: clientEventPayloads.length,
     termTestUnaffected: true,
   }, null, 2));
   await context.close();

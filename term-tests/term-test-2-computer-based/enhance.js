@@ -159,6 +159,19 @@
   function syncRadioField(field, card) {
     const groupName = 'cbt-choice-' + card.dataset.questionNumber + '-' + Math.random().toString(36).slice(2, 8);
     const radios = [...card.querySelectorAll('[data-choice-value]')].map(label => {
+      const choiceValue = String(label.dataset.choiceValue || '').trim();
+      const compact = value => String(value || '').toUpperCase().replace(/\s+/g, '');
+      const badge = label.querySelector(':scope > strong, :scope > .cbt-choice-letter');
+      if (badge
+        && compact(badge.textContent) === compact(choiceValue)
+        && compact(label.textContent) === compact(choiceValue + choiceValue)) {
+        // Dữ liệu vào: lựa chọn có cùng nhãn ở cả badge và phần chữ, ví dụ TRUE + TRUE.
+        // Việc chính: bỏ badge lặp và chuyển hàng về bố cục radio + một nhãn đầy đủ.
+        // Kết quả: học viên chỉ thấy TRUE, FALSE hoặc NOT GIVEN đúng một lần.
+        // Khi nhãn không trùng hoàn toàn: giữ nguyên cấu trúc nguồn để tránh mất nội dung.
+        badge.remove();
+        label.classList.add('cbt-choice-single-label');
+      }
       const radio = document.createElement('input');
       radio.type = 'radio';
       radio.name = groupName;
@@ -411,6 +424,38 @@
     });
   }
 
+  function configureMatchingLayouts(sectionNode) {
+    // Dữ liệu vào: các khối matching trong đề computer-based sau khi nội dung đã được dựng.
+    // Việc chính: ẩn bảng Locations bị lặp ở bài Map, ghép Map với phần trả lời,
+    // và đặt câu hỏi trước bảng phương án ở các bài matching còn lại.
+    // Kết quả: học viên nhìn theo thứ tự dữ kiện → ô chọn → phương án tham chiếu.
+    // Khi cấu trúc hoặc tiêu đề nguồn thay đổi: giữ nguyên bố cục cũ, không ảnh hưởng đáp án.
+    sectionNode.querySelectorAll('.cbt-matching-layout').forEach(layout => {
+      const optionBank = layout.querySelector(':scope > .cbt-option-bank');
+      const bankTitle = optionBank?.querySelector('h4')?.textContent?.trim() || '';
+
+      if (bankTitle && bankTitle !== 'Locations') {
+        layout.classList.add('cbt-answer-first-matching-layout');
+        layout.append(optionBank);
+        return;
+      }
+
+      if (bankTitle !== 'Locations') return;
+      const visual = layout.previousElementSibling;
+      const heading = visual?.previousElementSibling;
+      if (!visual?.classList.contains('cbt-visual-card')
+        || !heading?.classList.contains('cbt-subsection-heading')) return;
+
+      optionBank.hidden = true;
+      layout.classList.add('cbt-map-matching-layout');
+      const workspace = document.createElement('div');
+      workspace.className = 'cbt-map-workspace';
+      workspace.dataset.answerCount = String(layout.querySelectorAll('[data-answer-slot]').length);
+      heading.before(workspace);
+      workspace.append(heading, visual, layout);
+    });
+  }
+
   function createSemanticPane(skill, sectionConfig, heading, fields) {
     const pane = document.createElement('section');
     pane.className = 'cbt-semantic-pane';
@@ -455,6 +500,7 @@
         sectionNode.innerHTML = section.html;
         pagerHost = sectionNode;
       }
+      configureMatchingLayouts(sectionNode);
       pagerHost.append(createSectionPager(skill, sectionIndex, sectionConfig.sections.length, activateSection));
       sectionNode.dataset.sectionIndex = String(sectionIndex);
       annotateQuestionRanges(sectionNode, pagerHost, section.range);

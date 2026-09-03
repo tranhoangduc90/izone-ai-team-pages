@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseRevision = '20260826-term-test-reliability-v1';
 const allStudentConfirmationRevision = '20260829-all-student-confirmation-v2';
+const computerBasedLayoutRevision = '20260904-matching-layout-cleanup-v2';
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
@@ -25,7 +26,7 @@ test('mọi trang Term/Mini Test nạp đúng bản reliability và không thi�
       : releaseRevision;
     assert.match(html, new RegExp(`shared/styles\\.css\\?rev=${entryRevision}`), relativeEntry);
     if (relativeEntry.includes('computer-based')) {
-      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${entryRevision}`), relativeEntry);
+      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${computerBasedLayoutRevision}`), relativeEntry);
     } else {
       assert.match(html, new RegExp(`shared/app\\.js\\?rev=${entryRevision}`), relativeEntry);
     }
@@ -47,10 +48,10 @@ test('hai bản Term Test computer-based bắt buộc xác nhận đúng tên v�
   const changeHandlerEnd = bootstrap.indexOf('function renderRosterOptions', changeHandlerStart);
   const changeHandler = bootstrap.slice(changeHandlerStart, changeHandlerEnd);
 
-  assert.match(termTest1Entry, new RegExp(`styles\\.css\\?rev=${allStudentConfirmationRevision}`));
-  assert.match(termTest1Entry, new RegExp(`bootstrap\\.js\\?rev=${allStudentConfirmationRevision}`));
-  assert.match(entry, new RegExp(`styles\\.css\\?rev=${allStudentConfirmationRevision}`));
-  assert.match(entry, new RegExp(`bootstrap\\.js\\?rev=${allStudentConfirmationRevision}`));
+  assert.match(termTest1Entry, new RegExp(`styles\\.css\\?rev=${computerBasedLayoutRevision}`));
+  assert.match(termTest1Entry, new RegExp(`bootstrap\\.js\\?rev=${computerBasedLayoutRevision}`));
+  assert.match(entry, new RegExp(`styles\\.css\\?rev=${computerBasedLayoutRevision}`));
+  assert.match(entry, new RegExp(`bootstrap\\.js\\?rev=${computerBasedLayoutRevision}`));
   assert.match(bootstrap, /function confirmStudentIdentity\(student\)/);
   assert.match(bootstrap, /\['Họ và tên', student\.name\]/);
   assert.match(bootstrap, /\['Lớp', classConfirmationLabel\(\)\]/);
@@ -97,7 +98,7 @@ test('answer sheet và computer-based dùng chung guard, revision và retry', as
   assert.match(sharedApp, /window\.setTimeout\(\(\) => scheduleSectionDraft\(skill, 0\), 5000\)/);
   assert.match(sharedApp, /form\.requestSubmit\(submitButton\)/);
   assert.match(bootstrap, new RegExp(`shared/app\\.js\\?rev=${allStudentConfirmationRevision}`));
-  assert.match(bootstrap, new RegExp(`enhance\\.js', '${allStudentConfirmationRevision}`));
+  assert.match(bootstrap, new RegExp(`enhance\\.js', '${computerBasedLayoutRevision}`));
   assert.match(bootstrap, /listeningDraftRevision/);
   assert.match(bootstrap, /readingDraftRevision/);
   assert.match(enhance, /if \(window\.TERM_TEST_DEADLINE_GUARD_ACTIVE\) return;/);
