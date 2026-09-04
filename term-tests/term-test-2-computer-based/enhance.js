@@ -448,7 +448,6 @@
 
       optionBank.hidden = true;
       layout.classList.add('cbt-map-matching-layout');
-      sectionNode.classList.add('cbt-has-map-workspace');
       const workspace = document.createElement('div');
       workspace.className = 'cbt-map-workspace';
       workspace.dataset.answerCount = String(layout.querySelectorAll('[data-answer-slot]').length);
