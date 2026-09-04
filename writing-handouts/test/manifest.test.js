@@ -88,6 +88,11 @@ test("a new Task 2 topic is configuration-only and keeps the shared app structur
       file: "writing-task2-living-alone-development.json",
       slug: "writing-task2-living-alone-development",
       statement: "Nowadays, more and more people are choosing to live alone. Is this a positive or negative development?"
+    },
+    {
+      file: "writing-task2-urban-crowding-traffic-congestion.json",
+      slug: "writing-task2-urban-crowding-traffic-congestion",
+      statement: "Many cities are becoming increasingly crowded, and traffic congestion is getting worse. What problems does this cause, and what measures can be taken to solve them?"
     }
   ];
 
