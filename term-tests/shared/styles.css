@@ -292,8 +292,15 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
 .landing-card { width: min(560px, 100%); padding: 30px; }
 .landing-card h1 { margin: 5px 0 8px; font-size: 34px; }
 .landing-card > p:not(.eyebrow) { margin: 0 0 20px; color: var(--muted); line-height: 1.55; }
-.landing-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
-.landing-actions .button { flex: 1 1 190px; }
+.landing-auth { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 18px; align-items: center; margin: 0 0 18px; padding: 14px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 12px; }
+.landing-auth strong { display: block; color: var(--navy); font-size: 13px; }
+.landing-auth p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.landing-logout { min-height: 38px; padding: 8px 13px; }
+.landing-class-field { display: grid; gap: 7px; }
+.landing-class-help { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.landing-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.landing-actions .button { width: 100%; min-height: 62px; }
+#teacherDashboard { grid-column: 1 / -1; }
 
 @media (max-width: 700px) {
   .questions-grid {
@@ -307,5 +314,8 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
   .section-heading, .result-heading { display: grid; }
   .answer-save-meta, .answer-count { justify-self: start; }
   .question { grid-template-columns: 58px 1fr; }
-  .landing-actions { flex-direction: column; }
+  .landing-card { padding: 24px 20px; }
+  .landing-auth { grid-template-columns: 1fr; }
+  .landing-actions { grid-template-columns: 1fr; }
+  #teacherDashboard { grid-column: auto; }
 }
