@@ -29,14 +29,23 @@ test('Term Test 2 và chiều cao nút đúng bố cục Term Test 1', async () 
   assert.match(styles, /#teacherDashboard \{ grid-column: 1 \/ -1; \}/);
 });
 
-test('lớp được xếp từ mã mới tới mã cũ mà không sửa mảng API gốc', () => {
+test('lớp được xếp theo ngày mở trên Portal mà không sửa mảng API gốc', () => {
+  const classes = [
+    { id: '10', name: 'IC9999', startedAt: '2024-01-01T00:00:00Z' },
+    { id: '30', name: 'IC2172', startedAt: '2026-08-01T00:00:00Z' },
+    { id: '20', name: 'IC3000', startedAt: '2025-06-01T00:00:00Z' }
+  ];
+  assert.deepEqual(sortClassesNewestFirst(classes).map(item => item.name), ['IC2172', 'IC3000', 'IC9999']);
+  assert.deepEqual(classes.map(item => item.name), ['IC9999', 'IC2172', 'IC3000']);
+});
+
+test('lớp chưa có ngày Portal vẫn được xếp theo mã mới tới cũ', () => {
   const classes = [
     { id: '10', name: 'IC2172' },
     { id: '30', name: 'IC2238' },
     { id: '20', name: 'IC2200' }
   ];
   assert.deepEqual(sortClassesNewestFirst(classes).map(item => item.name), ['IC2238', 'IC2200', 'IC2172']);
-  assert.deepEqual(classes.map(item => item.name), ['IC2172', 'IC2238', 'IC2200']);
 });
 
 test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đã cấp quyền', async () => {
@@ -58,7 +67,11 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
         response.end(JSON.stringify({
           ok: true,
           reviewer: { displayName: 'Giảng viên thử' },
-          classes: optionsMode === 'empty' ? [] : [{ id: '1', name: 'IC2172' }, { id: '3', name: 'IC2238' }, { id: '2', name: 'IC2200' }],
+          classes: optionsMode === 'empty' ? [] : [
+            { id: '1', name: 'IC9999', startedAt: '2024-01-01T00:00:00Z' },
+            { id: '3', name: 'IC2172', startedAt: '2026-08-01T00:00:00Z' },
+            { id: '2', name: 'IC3000', startedAt: '2025-06-01T00:00:00Z' }
+          ],
           tests: []
         }));
         return;
@@ -87,7 +100,7 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     assert.equal(await page.locator('#classCode').isVisible(), true);
     await page.getByRole('button', { name: 'Đăng nhập thử' }).click();
     await page.locator('#classSelect').waitFor({ state: 'visible' });
-    assert.deepEqual(await page.locator('#classSelect option').allTextContents(), ['IC2238', 'IC2200', 'IC2172']);
+    assert.deepEqual(await page.locator('#classSelect option').allTextContents(), ['IC2172', 'IC3000', 'IC9999']);
     assert.equal(receivedAuthorization, `Bearer ${token}`);
     const heights = await page.locator('.landing-actions .button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().height));
     assert.equal(new Set(heights.map(Math.round)).size, 1);
