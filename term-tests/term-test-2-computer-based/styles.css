@@ -1478,7 +1478,7 @@ button.writing-score-card:focus-visible {
   place-items: center;
   width: 100%;
   max-width: none;
-  height: min(52vh, 390px);
+  height: min(42vh, 320px);
   margin: 0;
   padding: 8px;
   overflow: hidden;
@@ -1488,7 +1488,7 @@ button.writing-score-card:focus-visible {
   width: auto;
   max-width: 100%;
   height: auto;
-  max-height: calc(min(52vh, 390px) - 18px);
+  max-height: calc(min(42vh, 320px) - 18px);
 }
 
 .cbt-map-matching-layout {
@@ -1514,20 +1514,20 @@ button.writing-score-card:focus-visible {
 }
 
 .cbt-map-workspace[data-answer-count="6"] > .cbt-visual-card {
-  height: min(45vh, 330px);
+  height: min(38vh, 280px);
 }
 
 .cbt-map-workspace[data-answer-count="6"] > .cbt-visual-card img {
-  max-height: calc(min(45vh, 330px) - 18px);
+  max-height: calc(min(38vh, 280px) - 18px);
 }
 
 .cbt-map-workspace[data-answer-count="6"] .cbt-matching-questions h4 {
-  padding-block: 7px;
+  padding-block: 4px;
 }
 
 .cbt-map-workspace[data-answer-count="6"] .cbt-matching-questions > div {
-  min-height: 44px;
-  padding-block: 3px;
+  min-height: 40px;
+  padding-block: 1px;
 }
 
 .cbt-full-width {
