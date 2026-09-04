@@ -594,7 +594,13 @@
       activeNumber = item.number;
       source.activateSection(item.sectionIndex, false);
       window.requestAnimationFrame(() => {
-        item.target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        const mapWorkspace = item.target.closest('.cbt-map-workspace');
+        const scrollTarget = mapWorkspace || item.target;
+        scrollTarget.scrollIntoView({
+          behavior: 'smooth',
+          block: mapWorkspace ? 'start' : 'center',
+          inline: 'nearest'
+        });
         const focusTarget = item.radios.find(radio => radio.checked) || item.radios[0] || item.field;
         focusTarget.focus({ preventScroll: true });
         refreshAll();

@@ -528,7 +528,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260821-attempt-review-v1');
     await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2');
-    await loadScript(cbtAssetUrl('enhance.js', '20260904-matching-layout-cleanup-v3'));
+    await loadScript(cbtAssetUrl('enhance.js', '20260904-matching-layout-cleanup-v4'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
   }
 
