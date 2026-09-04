@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseRevision = '20260826-term-test-reliability-v1';
 const allStudentConfirmationRevision = '20260829-all-student-confirmation-v2';
-const computerBasedLayoutRevision = '20260904-matching-layout-cleanup-v6';
+const computerBasedLayoutRevision = '20260904-compact-layout-v7';
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
@@ -103,4 +103,15 @@ test('answer sheet và computer-based dùng chung guard, revision và retry', as
   assert.match(bootstrap, /readingDraftRevision/);
   assert.match(enhance, /if \(window\.TERM_TEST_DEADLINE_GUARD_ACTIVE\) return;/);
   assert.match(enhance, /term-test:draft-restored/);
+});
+
+test('bố cục matching co theo nội dung và nhường chỗ đúng cho bảng tham chiếu', async () => {
+  const styles = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/styles.css'), 'utf8');
+  const enhance = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/enhance.js'), 'utf8');
+
+  assert.match(styles, /grid-template-columns:\s*fit-content\(56%\)\s+minmax\(230px, 1fr\)/);
+  assert.match(styles, /\.cbt-compact-reference-layout\s*{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)\s+max-content/s);
+  assert.match(styles, /\.cbt-map-workspace\s*{[^}]*grid-template-columns:\s*minmax\(360px, 1fr\)\s+max-content/s);
+  assert.match(enhance, /const compactReferenceTitles = new Set\(\['Words', 'People'\]\)/);
+  assert.match(enhance, /layout\.classList\.add\('cbt-compact-reference-layout'\)/);
 });

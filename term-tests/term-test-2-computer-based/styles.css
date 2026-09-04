@@ -1442,7 +1442,9 @@ button.writing-score-card:focus-visible {
 }
 
 .cbt-answer-first-matching-layout {
-  grid-template-columns: minmax(300px, 1.25fr) minmax(230px, .75fr);
+  grid-template-columns: fit-content(56%) minmax(230px, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
 .cbt-answer-first-matching-layout > :first-child {
@@ -1453,6 +1455,25 @@ button.writing-score-card:focus-visible {
 .cbt-answer-first-matching-layout > .cbt-option-bank {
   grid-column: 2;
   grid-row: 1;
+  gap: 5px;
+  padding: 14px;
+}
+
+.cbt-answer-first-matching-layout .cbt-matching-questions h4 {
+  padding: 11px 12px;
+}
+
+.cbt-answer-first-matching-layout .cbt-matching-questions > div {
+  min-height: 52px;
+  padding: 7px 10px;
+}
+
+.cbt-compact-reference-layout {
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
+.cbt-compact-reference-layout > .cbt-option-bank {
+  padding: 12px;
 }
 
 .cbt-map-workspace {
@@ -1460,8 +1481,8 @@ button.writing-score-card:focus-visible {
   grid-template-areas:
     "heading heading"
     "map questions";
-  grid-template-columns: minmax(360px, 1fr) minmax(350px, .9fr);
-  gap: 10px 16px;
+  grid-template-columns: minmax(360px, 1fr) max-content;
+  gap: 10px 12px;
   align-items: start;
   scroll-margin-top: 8px;
 }
@@ -1479,7 +1500,7 @@ button.writing-score-card:focus-visible {
   place-items: center;
   width: 100%;
   max-width: none;
-  height: min(42vh, 320px);
+  height: min(48vh, 360px);
   margin: 0;
   padding: 8px;
   overflow: hidden;
@@ -1489,12 +1510,14 @@ button.writing-score-card:focus-visible {
   width: auto;
   max-width: 100%;
   height: auto;
-  max-height: calc(min(42vh, 320px) - 18px);
+  max-height: calc(min(48vh, 360px) - 18px);
 }
 
 .cbt-map-matching-layout {
   grid-area: questions;
   display: block;
+  width: max-content;
+  max-width: 100%;
 }
 
 .cbt-map-matching-layout > .cbt-option-bank[hidden] {
@@ -1502,12 +1525,12 @@ button.writing-score-card:focus-visible {
 }
 
 .cbt-map-matching-layout .cbt-matching-questions h4 {
-  padding: 11px 13px;
+  padding: 9px 10px;
 }
 
 .cbt-map-matching-layout .cbt-matching-questions > div {
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 50px;
+  padding: 6px 8px;
 }
 
 .cbt-map-workspace[data-answer-count="6"] {
@@ -1515,11 +1538,11 @@ button.writing-score-card:focus-visible {
 }
 
 .cbt-map-workspace[data-answer-count="6"] > .cbt-visual-card {
-  height: min(38vh, 280px);
+  height: min(46vh, 340px);
 }
 
 .cbt-map-workspace[data-answer-count="6"] > .cbt-visual-card img {
-  max-height: calc(min(38vh, 280px) - 18px);
+  max-height: calc(min(46vh, 340px) - 18px);
 }
 
 .cbt-map-workspace[data-answer-count="6"] .cbt-matching-questions h4 {

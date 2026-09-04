@@ -430,12 +430,17 @@
     // và đặt câu hỏi trước bảng phương án ở các bài matching còn lại.
     // Kết quả: học viên nhìn theo thứ tự dữ kiện → ô chọn → phương án tham chiếu.
     // Khi cấu trúc hoặc tiêu đề nguồn thay đổi: giữ nguyên bố cục cũ, không ảnh hưởng đáp án.
+    const compactReferenceTitles = new Set(['Words', 'People']);
+
     sectionNode.querySelectorAll('.cbt-matching-layout').forEach(layout => {
       const optionBank = layout.querySelector(':scope > .cbt-option-bank');
       const bankTitle = optionBank?.querySelector('h4')?.textContent?.trim() || '';
 
       if (bankTitle && bankTitle !== 'Locations') {
         layout.classList.add('cbt-answer-first-matching-layout');
+        if (compactReferenceTitles.has(bankTitle)) {
+          layout.classList.add('cbt-compact-reference-layout');
+        }
         layout.append(optionBank);
         return;
       }
