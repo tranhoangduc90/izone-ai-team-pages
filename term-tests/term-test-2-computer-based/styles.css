@@ -945,6 +945,10 @@ button.writing-score-card:focus-visible {
   scroll-behavior: smooth;
 }
 
+.cbt-listening-section.cbt-has-map-workspace {
+  padding-bottom: 190px;
+}
+
 .cbt-listening-section > * {
   width: min(980px, 100%);
   margin-right: auto;

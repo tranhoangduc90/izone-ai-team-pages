@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseRevision = '20260826-term-test-reliability-v1';
 const allStudentConfirmationRevision = '20260829-all-student-confirmation-v2';
-const computerBasedLayoutRevision = '20260904-matching-layout-cleanup-v4';
+const computerBasedLayoutRevision = '20260904-matching-layout-cleanup-v5';
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
