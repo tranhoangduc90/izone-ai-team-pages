@@ -11,7 +11,7 @@ import {
   summarizeStudents,
   writingStatusLabel,
   writingTaskStateLabel
-} from './model.js?rev=20260820-writing-monitor-v1';
+} from './model.js?rev=20260904-k56-demo-v1';
 import { createSessionStore } from './auth-session.js?rev=20260903-remember-login-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
@@ -68,9 +68,22 @@ function getSelectedTest() {
 }
 
 function configuredWritingTasks() {
+  const configured = getSelectedTest()?.writingTasks;
+  if (Array.isArray(configured)) return configured.map(Number).filter(number => [1, 2].includes(number));
   if (state.selectedTestSlug === 'mini-test-lesson-5') return [];
-  if (state.selectedTestSlug === 'term-test-1') return [2];
+  if (['term-test-1', 'term-test-1-k56'].includes(state.selectedTestSlug)) return [2];
   return [1, 2];
+}
+
+function scoreMode() {
+  return getSelectedTest()?.scoreMode === 'raw' ? 'raw' : 'band';
+}
+
+function formatSectionScore(section) {
+  if (!section) return '—';
+  return scoreMode() === 'raw'
+    ? `${Number(section.correct) || 0}/${Number(section.total) || 0}`
+    : formatBand(section.band);
 }
 
 function updateUrl() {
@@ -160,13 +173,26 @@ function addTeacherSummaryCard(label, value) {
 }
 
 function renderClassSummary() {
-  const summary = summarizeStudents(state.students);
+  const mode = scoreMode();
+  const totals = getSelectedTest()?.sectionTotals || {};
+  const summary = summarizeStudents(state.students, mode);
   elements.classSummary.replaceChildren(
     addTeacherSummaryCard('Sĩ số', String(summary.total)),
     addTeacherSummaryCard('Đã hoàn thành', `${summary.completed}/${summary.total}`),
-    addTeacherSummaryCard('Listening trung bình', formatBand(summary.listeningAverage, 2)),
-    addTeacherSummaryCard('Reading trung bình', formatBand(summary.readingAverage, 2)),
-    addTeacherSummaryCard('Band tổng trung bình', formatBand(summary.overallAverage, 2)),
+    addTeacherSummaryCard(
+      mode === 'raw' ? 'Listening đúng trung bình' : 'Listening trung bình',
+      mode === 'raw' ? `${formatBand(summary.listeningAverage, 2)}/${totals.listening || 40}` : formatBand(summary.listeningAverage, 2)
+    ),
+    addTeacherSummaryCard(
+      mode === 'raw' ? 'Reading đúng trung bình' : 'Reading trung bình',
+      mode === 'raw' ? `${formatBand(summary.readingAverage, 2)}/${totals.reading || 40}` : formatBand(summary.readingAverage, 2)
+    ),
+    addTeacherSummaryCard(
+      mode === 'raw' ? 'Tổng câu đúng trung bình' : 'Band tổng trung bình',
+      mode === 'raw'
+        ? `${formatBand(summary.overallAverage, 2)}/${(totals.listening || 40) + (totals.reading || 40)}`
+        : formatBand(summary.overallAverage, 2)
+    ),
     addTeacherSummaryCard('Writing đã chấm', String(summary.writingReady)),
     addTeacherSummaryCard('Writing đang chấm', String(summary.writingProcessing)),
     addTeacherSummaryCard('Writing cần kiểm tra', String(summary.writingReviewRequired))
@@ -236,8 +262,8 @@ function renderOverviewRows() {
     const row = document.createElement('tr');
     const nameCell = document.createElement('td');
     nameCell.append(createNode('span', 'teacher-student-name', studentDisplayName(student)));
-    const listeningCell = createNode('td', 'teacher-band', result ? formatBand(result.listening?.band) : '—');
-    const readingCell = createNode('td', 'teacher-band', result ? formatBand(result.reading?.band) : '—');
+    const listeningCell = createNode('td', 'teacher-band', result ? formatSectionScore(result.listening) : '—');
+    const readingCell = createNode('td', 'teacher-band', result ? formatSectionScore(result.reading) : '—');
     const writing = student.writing || { status: 'not_submitted' };
     const taskNumbers = configuredWritingTasks();
     const writingCell = document.createElement('td');
@@ -739,8 +765,12 @@ function renderStudentResult(student) {
     writing.status === 'ready'
   ));
   summaryGrid.append(
-    addResultSummaryCard('Listening', `${result.listening.correct}/${result.listening.total} · Band ${result.listening.band}`),
-    addResultSummaryCard('Reading', `${result.reading.correct}/${result.reading.total} · Band ${result.reading.band}`),
+    addResultSummaryCard('Listening', scoreMode() === 'raw'
+      ? `${result.listening.correct}/${result.listening.total} câu đúng`
+      : `${result.listening.correct}/${result.listening.total} · Band ${result.listening.band}`),
+    addResultSummaryCard('Reading', scoreMode() === 'raw'
+      ? `${result.reading.correct}/${result.reading.total} câu đúng`
+      : `${result.reading.correct}/${result.reading.total} · Band ${result.reading.band}`),
     ...writingSummaryCards,
     ...(configuredWritingTasks().length
       ? [addResultSummaryCard('Writing', writing.status === 'ready' ? `Band ${formatBand(Number(writing.writingScore))}` : writingStatusLabel(writing.status))]
