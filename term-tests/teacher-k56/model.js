@@ -12,7 +12,7 @@ export function formatBand(value, decimals = 1) {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(decimals) : '—';
 }
 
-export function summarizeStudents(students) {
+export function summarizeStudents(students, scoreMode = 'band') {
   const completed = (students || []).filter(student => student.status === 'completed' && student.result);
   const average = values => values.length
     ? values.reduce((sum, value) => sum + value, 0) / values.length
@@ -23,9 +23,15 @@ export function summarizeStudents(students) {
     writingReady: (students || []).filter(student => student.writing?.status === 'ready').length,
     writingProcessing: (students || []).filter(student => student.writing?.status === 'processing').length,
     writingReviewRequired: (students || []).filter(student => student.writing?.status === 'review_required').length,
-    listeningAverage: average(completed.map(student => student.result.listening?.band).filter(Number.isFinite)),
-    readingAverage: average(completed.map(student => student.result.reading?.band).filter(Number.isFinite)),
-    overallAverage: average(completed.map(student => getAverageBand(student.result)).filter(Number.isFinite))
+    listeningAverage: average(completed.map(student => scoreMode === 'raw'
+      ? student.result.listening?.correct
+      : student.result.listening?.band).filter(Number.isFinite)),
+    readingAverage: average(completed.map(student => scoreMode === 'raw'
+      ? student.result.reading?.correct
+      : student.result.reading?.band).filter(Number.isFinite)),
+    overallAverage: average(completed.map(student => scoreMode === 'raw'
+      ? student.result.summary?.totalCorrect
+      : getAverageBand(student.result)).filter(Number.isFinite))
   };
 }
 

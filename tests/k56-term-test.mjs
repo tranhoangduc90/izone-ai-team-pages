@@ -42,16 +42,20 @@ test('K56 dùng lớp và API demo riêng, không kế thừa mã K67', async ()
   assert.equal((bootstrap.match(/Học viên Demo 0[1-3]/g) || []).length, 3);
   assert.match(config, /mapping-api-demo/);
   assert.match(landing, /term-test-1-k56-computer-based\/\?class=CODEXDEMO56/);
-  assert.match(landing, /teacher\/\?class=CODEXDEMO56&amp;test=term-test-1-k56/);
+  assert.match(landing, /teacher-k56\/\?class=CODEXDEMO56&amp;test=term-test-1-k56/);
 });
 
-test('dashboard hỗ trợ điểm thô K56 và giữ đường API K67', async () => {
-  const [app, sharedConfig] = await Promise.all([
+test('dashboard K56 tách riêng và các file K67 không đổi hành vi', async () => {
+  const [app, k56Config, k67App, k67Config] = await Promise.all([
+    read('term-tests/teacher-k56/app.js'),
+    read('term-tests/k56-shared/config.js'),
     read('term-tests/teacher/app.js'),
     read('term-tests/shared/config.js')
   ]);
   assert.match(app, /scoreMode\(\) === 'raw'/);
   assert.match(app, /term-test-1-k56/);
-  assert.match(sharedConfig, /mapping-api-demo/);
-  assert.match(sharedConfig, /mapping-api'/);
+  assert.match(k56Config, /mapping-api-demo/);
+  assert.equal(k67App.includes('term-test-1-k56'), false);
+  assert.equal(k67Config.includes('mapping-api-demo'), false);
+  assert.match(k67Config, /mapping-api'/);
 });
