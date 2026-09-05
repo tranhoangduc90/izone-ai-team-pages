@@ -57,8 +57,16 @@ test('Webtest 34 yêu cầu preflight audio trước khi bắt đầu và không
   assert.match(index, /id=["']audioCheckScreen["']/);
   assert.match(index, /id=["']continueToAudio["']/);
   assert.match(index, /id=["']audioPreflight["']/);
-  assert.match(index, /id=["']soundcheckBtn["']/);
+  assert.match(index, /class=["']audio-preflight-featured["'][^>]*data-audio-preflight=["']soundcheck["']/);
+  assert.match(index, /id=["']audioVolume["']/);
+  assert.match(index, /id=["']audioVolumeValue["']/);
+  assert.match(index, /audio\.volume = audioVolume/);
+  assert.match(index, /\$\('#audioVolume'\)\.addEventListener\('input'/);
+  assert.match(index, /class=["']btn btn-primary["'][^>]*id=["']soundcheckBtn["']/);
   assert.match(index, /id=["']startExam["']/);
+  assert.match(index, /id=["']audioStartWarning["']/);
+  assert.match(index, /setError\('audioStartWarning','Hãy bấm/);
+  assert.match(index, /const ready = officialAudioKeys\.every\(key => audioReady\[key\]\)/);
   assert.match(index, /data-audio-preflight=["']vocabulary["']/);
   assert.match(index, /data-audio-preflight=["']listening["']/);
   assert.equal(index.includes('data-audio-preview'), false);

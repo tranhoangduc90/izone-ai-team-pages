@@ -95,10 +95,19 @@
     .field .field-ok{display:block;font-size:12px;font-weight:400;color:#12805c;margin-top:6px}
     .btn-row{display:flex;gap:8px;align-items:center}
     .notice{padding:14px 16px;border-radius:12px;background:#fff7f8;border:1px solid #f5d8dd;color:#6d3e48;font-size:14px}
+    .audio-start-warning{margin-top:16px}
     .start-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px}
     .audio-preflight{margin-top:24px;padding:18px;border:1px solid #e6e8eb;border-radius:14px;background:#fafafa}
     .audio-preflight h2{margin:0;font-size:16px;font-family:Geologica,sans-serif}
+    .audio-volume-control{display:grid;grid-template-columns:auto minmax(160px,1fr) auto;align-items:center;gap:12px;margin:14px 0 16px;padding:12px;border-radius:10px;background:white;border:1px solid #eceef0}
+    .audio-volume-control label{font-size:13px;font-weight:700}
+    .audio-volume-control input{width:100%;accent-color:var(--color-primary)}
+    .audio-volume-control output{min-width:42px;text-align:right;font-size:12px;font-weight:700;color:var(--color-text-secondary)}
     .audio-preflight p{margin:6px 0 14px;color:var(--color-text-secondary);font-size:13px;line-height:1.5}
+    .audio-preflight-featured{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:14px;margin-bottom:10px;padding:14px 12px;border:1px solid #f1c8cf;border-radius:10px;background:#fff3f5}
+    .audio-preflight-featured strong{display:block;font-size:14px}
+    .audio-preflight-featured span{display:block;margin-top:3px;color:var(--color-text-secondary);font-size:12px;line-height:1.4}
+    .audio-preflight-featured .audio-preflight-status{margin-top:0}
     .audio-preflight-grid{display:grid;gap:8px}
     .audio-preflight-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:white;border:1px solid #eceef0}
     .audio-preflight-row strong{min-width:130px;font-size:13px}
@@ -127,10 +136,21 @@
     .learning-result{max-width:var(--content);margin:24px auto 96px;padding:0 24px}
     .learning-result-card{background:white;border:1px solid var(--color-border);border-radius:var(--radius-xl);box-shadow:var(--shadow-2);padding:32px}
     .learning-result-status{padding:14px 16px;border-radius:12px;background:#fff7f8;border:1px solid #f5d8dd;color:#6d3e48;margin:18px 0}
-    .learning-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
-    .learning-result-section{border:1px solid var(--color-border);border-radius:14px;padding:16px;background:#fff}
-    .learning-result-section h3{font-size:18px}
-    .learning-result-score{font-family:Geologica,sans-serif;font-size:20px;color:var(--color-primary);margin-top:6px}
+    .learning-result-grid{display:grid;gap:16px;margin:22px 0}
+    .learning-result-section{border:1px solid var(--color-border);border-radius:14px;padding:20px;background:#fff}
+    .learning-result-section h3{font-size:18px;margin:0}
+    .learning-result-section-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--color-border)}
+    .learning-result-section-summary{text-align:right;flex:0 0 auto}
+    .learning-result-section-actions{display:flex;align-items:center;gap:14px}
+    .result-details-toggle{border:0;background:transparent;color:var(--color-primary);font-size:13px;font-weight:700;padding:4px 0;cursor:pointer}
+    .result-details-toggle:hover{text-decoration:underline}
+    .learning-result-score{font-family:Geologica,sans-serif;font-size:20px;color:var(--color-primary);margin:0}
+    .learning-result-section-summary .meta{margin-top:2px}
+    .learning-result-exercise{margin-top:16px;padding-top:14px;border-top:1px solid var(--color-border)}
+    .learning-result-exercise:first-child{margin-top:0;padding-top:0;border-top:0}
+    .learning-result-exercise-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+    .learning-result-exercise-head strong{font-size:14px}
+    .learning-result-exercise-score{font-size:13px;color:var(--color-text-secondary)}
     .learning-result-items{display:grid;gap:8px;margin-top:14px}
     .learning-result-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--color-border);font-size:13px}
     .learning-result-item:first-child{border-top:0}
@@ -139,16 +159,14 @@
     .learning-result-verdict.incorrect{background:#fff0f2;color:var(--color-primary)}
     .learning-result-verdict.pending{background:#fff7e8;color:#8a5a00}
     .learning-result-answer{color:var(--color-text-secondary);word-break:break-word}
-    @media (max-width:700px){.learning-result{padding:0 14px}.learning-result-card{padding:22px 18px}.learning-result-grid{grid-template-columns:1fr}}
+    @media (max-width:700px){.learning-result{padding:0 14px}.learning-result-card{padding:22px 18px}.learning-result-section-header{display:block}.learning-result-section-actions{justify-content:space-between;margin-top:8px}.learning-result-section-summary{text-align:left}.learning-result-exercise-head{align-items:flex-start;flex-direction:column;gap:3px}}
     .meta{color:var(--color-text-secondary);font-size:12px}
 
     .section-page{display:none}
     .section-page.active{display:block}
-    .section-hero{background:white;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:26px 28px;box-shadow:var(--shadow-1);margin-bottom:18px}
+    .section-hero{background:white;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:18px 24px;box-shadow:var(--shadow-1);margin-bottom:14px}
     .section-kicker{color:var(--color-primary);font-weight:700;font-size:13px;margin-bottom:6px}
-    .section-hero p{color:var(--color-text-secondary);margin:10px 0 0}
-    .section-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-    .chip{background:var(--color-bg-secondary);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--color-text-secondary)}
+    .section-hero p{color:var(--color-text-secondary);margin:6px 0 0}
 
     .exercise{background:white;border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-1);padding:24px;margin-bottom:18px}
     .exercise-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--color-border)}
@@ -220,11 +238,18 @@
 
     .translation-item,.speaking-item{border:1px solid #e8eaed;border-radius:14px;padding:18px;margin-bottom:12px}
     .prompt-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
-    .source-missing{color:var(--color-text-secondary);font-size:14px;background:var(--color-bg-secondary);border-radius:10px;padding:10px 12px;flex:1}
+    .source-missing{color:var(--color-text);font-size:14px;font-weight:600;background:var(--color-bg-secondary);border-radius:10px;padding:10px 12px;flex:1}
+    .translation-item .prompt-row>div{font-weight:600;line-height:1.5}
     textarea{width:100%;min-height:110px;resize:vertical;border:1px solid #e1e4e8;border-radius:11px;padding:12px 13px;outline:none;color:var(--color-text);background:white}
     textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(219,8,41,.06)}
     .word-count{text-align:right;font-size:12px;color:var(--color-text-secondary);margin-top:6px}
     .rubric-note{margin-top:10px;color:var(--color-text-secondary);font-size:12px}
+    .guidance-panel{margin:0 0 18px;padding:12px 14px;border:1px solid #eef0f2;border-left:2px solid #d6dade;border-radius:10px;background:#fafbfb}
+    .guidance-panel h4{margin:0 0 6px;font-family:Geologica,sans-serif;font-size:11px;font-weight:600;color:#7c838b}
+    .guidance-panel p{margin:0;color:#7c838b;font-size:12px;line-height:1.55}
+    .guidance-panel ul{margin:0;padding-left:18px;color:#7c838b;font-size:12px;line-height:1.55}
+    .guidance-panel li+li{margin-top:3px}
+    .question-guidance{min-height:88px}
 
     .bottom-actions{display:flex;justify-content:space-between;gap:12px;margin-top:20px}
     .mobile-bottom{display:none}
@@ -317,12 +342,20 @@
         <p class="meta" style="line-height:1.55">Hãy nghe thử để kiểm tra loa/âm lượng. Hệ thống đang tải trước hai bài nghe chính thức; chỉ khi cả hai sẵn sàng bạn mới có thể bắt đầu.</p>
         <div class="audio-preflight" id="audioPreflight" aria-labelledby="audioPreflightTitle">
           <h2 id="audioPreflightTitle">Trạng thái audio</h2>
-          <div class="audio-preflight-grid">
-            <div class="audio-preflight-row" data-audio-preflight="soundcheck">
-              <strong>Âm thanh kiểm tra</strong>
-              <button class="btn btn-secondary" id="soundcheckBtn" type="button" disabled>🔊 Nghe thử</button>
-              <span class="audio-preflight-status" data-audio-preflight-status="soundcheck">Đang tải…</span>
+          <div class="audio-volume-control">
+            <label for="audioVolume">Âm lượng loa</label>
+            <input id="audioVolume" type="range" min="0" max="1" step="0.05" value="1" aria-describedby="audioVolumeValue">
+            <output id="audioVolumeValue" for="audioVolume">100%</output>
+          </div>
+          <div class="audio-preflight-featured" data-audio-preflight="soundcheck">
+            <div>
+              <strong>Kiểm tra loa ngay</strong>
+              <span>Nghe thử để xác nhận âm lượng phù hợp trước khi làm bài.</span>
             </div>
+            <button class="btn btn-primary" id="soundcheckBtn" type="button" disabled>🔊 Nghe thử</button>
+            <span class="audio-preflight-status" data-audio-preflight-status="soundcheck">Đang tải…</span>
+          </div>
+          <div class="audio-preflight-grid">
             <div class="audio-preflight-row" data-audio-preflight="vocabulary">
               <strong>Vocabulary</strong>
               <span class="audio-preflight-status" data-audio-preflight-status="vocabulary">Chờ tải…</span>
@@ -335,6 +368,7 @@
             </div>
           </div>
         </div>
+        <div class="notice audio-start-warning hidden" id="audioStartWarning" role="alert"></div>
         <div class="start-actions">
           <button class="btn btn-secondary" id="backToIntro" type="button">← Quay lại</button>
           <button class="btn btn-primary" id="startExam" type="button" disabled>Bắt đầu làm bài →</button>
@@ -385,29 +419,29 @@
   const vocab2Prompts = [
     'The c_ _ _ _ _ _ _ leads to three doors. — Note: lead (v): dẫn đến',
     'The two girls love to g_ _ _ _ _ a_ _ _ _ their friends’ lives.',
-    'I often r___ m_ b___ t_ s_____.',
-    'She sent a s_____ in the Messenger app on her phone.',
-    'Every morning, I h___ _ c__ __ c_____ before going to work.',
-    'I usually r____ after school.',
-    'He can c__________ when he studies.',
-    'He is so s_______ with his work.',
-    'She likes to t___ p__________ of beautiful sceneries.',
-    'I often w___ u_ at 6:30 p.m.',
-    'I sometimes g_ f__ _ w___ on the weekend to relax.',
-    'Hồ Gươm is a l____ place of interest.',
-    'He loves to s___ k______.',
-    'I rarely w___ d_____ after meals.',
-    'My friends are really s_______. They love to hang out with me.',
-    'VinMart is a kind of mini s__________.',
-    'He doesn’t play sports d_____ t__ w___.',
-    'They often d______ problems in the meeting.',
-    'I always h___ o__ w___ f______ in my free time.',
-    'I usually g_ s__________ on holiday.',
-    'He has to w___ o_______ at work and he is tired.',
-    'I sometimes c____ t__ t____ after dinner.',
-    'A car is a m____ o_ t________.',
-    'The class starts at nine o’_____ s____.',
-    'My friends sometimes b__ s_____ to eat during break times.'
+    'I often r_ _ _ m_ b_ _ _ t_ s_ _ _ _ _.',
+    'She sent a s_ _ _ _ _ in the Messenger app on her phone.',
+    'Every morning, I h_ _ _ _ c_ _ _ _ c_ _ _ _ before going to work.',
+    'I usually r_ _ _ _ after school.',
+    'He can c_ _ _ _ _ _ _ _ _ when he studies.',
+    'He is so s_ _ _ _ _ _ with his work.',
+    'She likes to t_ _ _ p_ _ _ _ _ _ _ _ _ of beautiful sceneries.',
+    'I often w_ _ _ u_ at 6:30 p.m.',
+    'I sometimes g_ f_ _ _ w_ _ _ on the weekend to relax.',
+    'Hồ Gươm is a l_ _ _ _ place of interest.',
+    'He loves to s_ _ _ k_ _ _ _ _.',
+    'I rarely w_ _ _ d_ _ _ _ _ after meals.',
+    'My friends are really s_ _ _ _ _ _. They love to hang out with me.',
+    'VinMart is a kind of mini s_ _ _ _ _ _ _ _ _.',
+    'He doesn’t play sports d_ _ _ _ _ t_ _ w_ _ _.',
+    'They often d_ _ _ _ _ _ problems in the meeting.',
+    'I always h_ _ _ o_ _ w_ _ _ f_ _ _ _ _ in my free time.',
+    'I usually g_ s_ _ _ _ _ _ _ _ _ on holiday.',
+    'He has to w_ _ _ o_ _ _ _ _ _ at work and he is tired.',
+    'I sometimes c_ _ _ _ t_ _ t_ _ _ _ after dinner.',
+    'A car is a m_ _ _ _ o_ t_ _ _ _ _ _ _ _ _.',
+    'The class starts at nine o’_ _ _ _ _ s_ _ _ _.',
+    'My friends sometimes b_ _ s_ _ _ _ _ to eat during break times.'
   ];
   const vocab2Images = Array.from({length:25}, (_, i) => `assets/test 1/vocabulary/image${i+1}.png`);
 
@@ -574,17 +608,39 @@
       ? 'Đã chấm xong các phần có đáp án cố định.'
       : 'Đã có kết quả chấm tự động cho Vocab, Listening và Pronunciation. Translation/Writing-Speaking đang chờ AI.';
     const verdictLabel = item => item.verdict === 'correct' ? 'Đúng' : item.verdict === 'incorrect' ? 'Sai' : item.verdict === 'pending' ? 'Đang chờ' : 'Chưa chấm';
-    const groupHtml = groups.map(group => `
-      <article class="learning-result-section">
-        <h3>${esc(group.label)}</h3>
-        <div class="learning-result-score">${group.score} / ${group.maxScore} điểm</div>
-        <div class="meta">${group.correct}/${group.items.length} câu đúng</div>
-        <div class="learning-result-items">${group.items.map(item => `
-          <div class="learning-result-item">
-            <span class="learning-result-verdict ${item.verdict === 'correct' ? 'correct' : item.verdict === 'incorrect' ? 'incorrect' : 'pending'}">${verdictLabel(item)}</span>
-            <div><strong>Câu ${esc(item.position)}</strong><div class="learning-result-answer">${esc(resultAnswer(item.rawAnswer))}</div></div>
-          </div>`).join('')}</div>
-      </article>`).join('');
+    const groupHtml = sections.map(section => {
+      const sectionGroups = groups.filter(group => group.label.startsWith(section.label));
+      if(!sectionGroups.length) return '';
+      const sectionItems = sectionGroups.flatMap(group => group.items);
+      const sectionScore = sectionGroups.reduce((sum, group) => sum + group.score, 0);
+      const sectionCorrect = sectionGroups.reduce((sum, group) => sum + group.correct, 0);
+      const exerciseHtml = sectionGroups.map(group => `
+        <div class="learning-result-exercise">
+          <div class="learning-result-exercise-head">
+            <strong>${esc(group.label)}</strong>
+            <span class="learning-result-exercise-score">${group.score} / ${group.maxScore} điểm · ${group.correct}/${group.items.length} đúng</span>
+          </div>
+          <div class="learning-result-items">${group.items.map(item => `
+            <div class="learning-result-item">
+              <span class="learning-result-verdict ${item.verdict === 'correct' ? 'correct' : item.verdict === 'incorrect' ? 'incorrect' : 'pending'}">${verdictLabel(item)}</span>
+              <div><strong>Câu ${esc(item.position)}</strong><div class="learning-result-answer">${esc(resultAnswer(item.rawAnswer))}</div></div>
+            </div>`).join('')}</div>
+        </div>`).join('');
+      return `
+        <article class="learning-result-section">
+          <div class="learning-result-section-header">
+            <h3>${esc(section.label)}</h3>
+            <div class="learning-result-section-actions">
+              <div class="learning-result-section-summary">
+                <div class="learning-result-score">${sectionScore} / ${section.points} điểm</div>
+                <div class="meta">${sectionCorrect}/${sectionItems.length} câu đúng</div>
+              </div>
+              <button class="result-details-toggle" type="button" data-result-details="result-details-${esc(section.id)}" aria-expanded="false">Xem chi tiết</button>
+            </div>
+          </div>
+          <div id="result-details-${esc(section.id)}" hidden>${exerciseHtml}</div>
+        </article>`;
+    }).join('');
     const waitingGroups = groups.filter(group => group.items.some(item => item.verdict === 'pending' || item.verdict === 'manual_review'));
     const waitingHtml = waitingGroups.map(group => `<span class="chip">${esc(group.label)}: Đang chờ chấm AI</span>`).join('');
     resultView.innerHTML = `<div class="learning-result-card">
@@ -593,7 +649,6 @@
       <div class="learning-result-status">${statusText}<br><strong>Điểm đã chấm: ${hardScore} / ${hardMax}</strong></div>
       <div class="learning-result-grid">${groupHtml}</div>
       <div class="section-stats">${waitingHtml}</div>
-      <p class="meta" style="margin-top:18px">Đáp án chuẩn không hiển thị trong kết quả học viên.</p>
     </div>`;
     $('#examApp').classList.add('hidden');
     $('#mobileBottom').classList.add('hidden');
@@ -679,21 +734,31 @@
       </div>`);
   }
 
+  function renderSuggestion(suggestion){
+    const suggestions = Array.isArray(suggestion) ? suggestion : [suggestion];
+    if(suggestions.length===1) return `<p>${esc(suggestions[0])}</p>`;
+    return `<ul>${suggestions.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`;
+  }
+
   function translationHTML(){
-    const sourceSentences = [
-      'Có nhiều gia đình truyền thống ở Việt Nam ngày nay hơn bao giờ hết.',
-      'Việc cưới xin đang ngày càng trở nên đắt đỏ.',
-      'Nếu cha mẹ không nuôi dạy con tốt, cuộc hôn nhân của những đứa trẻ này trong tương lai sẽ kết thúc bằng việc ly hôn/ sự ly dị.',
-      'Những giáo viên thú vị thường cố gắng trình bày/ giải thích những từ mới thông qua cử chỉ và hành động.',
-      'Người thầy nhàm chán nhất mà tôi từng gặp là thầy A, một tấm gương cho rất nhiều học sinh khác.',
-      'Thật là khó để không học hành chăm chỉ khi mà giáo viên đẹp trai/xinh gái của tôi rất hứng thú trong việc dạy học.',
-      'Mọi người thường hay mắc lỗi thuộc thể loại nào (thể loại lỗi nào) khi học tiếng Anh?',
-      'Những học sinh còn lại đã từng xin lỗi giáo viên của họ khi họ phạm lỗi bởi vì họ cảm thấy có lỗi.'
+    const questions = [
+      {prompt:'Có nhiều gia đình truyền thống ở Việt Nam ngày nay hơn bao giờ hết.',suggestion:['Use a comparison structure with “more ... than ever”.','Check the plural noun and comparative word order.']},
+      {prompt:'Việc cưới xin đang ngày càng trở nên đắt đỏ.',suggestion:'Use “become increasingly ...” to show a changing trend.'},
+      {prompt:'Nếu cha mẹ không nuôi dạy con tốt, cuộc hôn nhân của những đứa trẻ này trong tương lai sẽ kết thúc bằng việc ly hôn/ sự ly dị.',suggestion:['Build a first conditional sentence: if-clause + future result.','Keep the verb tense consistent in both clauses.']},
+      {prompt:'Những giáo viên thú vị thường cố gắng trình bày/ giải thích những từ mới thông qua cử chỉ và hành động.',suggestion:'Use “try to” followed by the base verb, then explain the method with “through”.'},
+      {prompt:'Người thầy nhàm chán nhất mà tôi từng gặp là thầy A, một tấm gương cho rất nhiều học sinh khác.',suggestion:'Use a superlative with a relative clause: “the most ... I have ever ...”.'},
+      {prompt:'Thật là khó để không học hành chăm chỉ khi mà giáo viên đẹp trai/xinh gái của tôi rất hứng thú trong việc dạy học.',suggestion:'Start with “It is difficult not to ...” and connect the reason with “when”.'},
+      {prompt:'Mọi người thường hay mắc lỗi thuộc thể loại nào (thể loại lỗi nào) khi học tiếng Anh?',suggestion:'Ask about the type or category of mistakes using “What kind of ...?”.'},
+      {prompt:'Những học sinh còn lại đã từng xin lỗi giáo viên của họ khi họ phạm lỗi bởi vì họ cảm thấy có lỗi.',suggestion:'Use the past perfect with “had ...” for the earlier action and connect the reasons clearly.'}
     ];
-    const items = sourceSentences.map((sentence,i)=>`
+    const items = questions.map((question,i)=>`
       <div class="translation-item">
-        <div class="prompt-row"><span class="qnum">${i+1}</span><div>${esc(sentence)}</div></div>
-        <textarea data-answer="translation_${i+1}" placeholder="Write the complete English sentence. Remember punctuation.">${esc(answerValue(`translation_${i+1}`))}</textarea>
+        <div class="prompt-row"><span class="qnum">${i+1}</span><div>${esc(question.prompt)}</div></div>
+        <div class="guidance-panel question-guidance">
+          <h4>Core structure / criteria</h4>
+          ${renderSuggestion(question.suggestion)}
+        </div>
+        <textarea data-answer="translation_${i+1}" placeholder="Viết câu dịch tiếng Anh">${esc(answerValue(`translation_${i+1}`))}</textarea>
       </div>`).join('');
     return page('translation','Translation',32,'8 sentences · Vietnamese → English',`
       <div class="exercise">
@@ -703,12 +768,12 @@
   }
 
   function speakingHTML(){
-    const prompts = [
-      'Câu 1 · Prompt gốc chưa có trong CSV. Rubric cho thấy câu trả lời liên quan tới lựa chọn gia đình lớn/nhỏ.',
-      'Câu 2 · Prompt gốc chưa có trong CSV. Rubric cho thấy chủ đề liên quan tới hoạt động trong một chuyến xe buýt dài.',
-      'Câu 3 · Prompt gốc chưa có trong CSV. Rubric yêu cầu adverbs of frequency và linking/sequence markers.'
+    const questions = [
+      {prompt:'1. When you start a family, do you prefer to have a big or a small one?',suggestion:['State your preference clearly.','Give two reasons and finish with a brief personal example.']},
+      {prompt:'2. What do you like to do when you go on a long coach trip/coach ride?',suggestion:'Answer with your usual activity, explain why you enjoy it, and add when or how often you do it.'},
+      {prompt:'3. What do you usually do to prepare for an English test?',suggestion:['Organize the answer in sequence: first, next, and finally.','Include specific study activities.']}
     ];
-    const items = prompts.map((p,i)=>`<div class="speaking-item"><div class="prompt-row"><span class="qnum">${i+1}</span><div class="source-missing">${esc(p)}</div></div><textarea data-answer="speaking_${i+1}" placeholder="Type your speaking answer here…">${esc(answerValue(`speaking_${i+1}`))}</textarea><div class="word-count" data-word-count="speaking_${i+1}">0 words</div></div>`).join('');
+    const items = questions.map((question,i)=>`<div class="speaking-item"><div class="prompt-row"><span class="qnum">${i+1}</span><div class="source-missing">${esc(question.prompt)}</div></div><div class="guidance-panel question-guidance"><h4>Core structure / criteria</h4>${renderSuggestion(question.suggestion)}</div><textarea data-answer="speaking_${i+1}" placeholder="Type your speaking answer here…">${esc(answerValue(`speaking_${i+1}`))}</textarea><div class="word-count" data-word-count="speaking_${i+1}">0 words</div></div>`).join('');
     return page('speaking','Speaking',18,'3 written speaking responses',`
       <div class="exercise">
         ${exerciseHead('Exercise 6','Học viên viết câu trả lời cho câu hỏi Speaking. Không yêu cầu thu âm ở prototype này.','18 points')}
@@ -718,7 +783,7 @@
 
   function exerciseHead(title,desc,points){return `<div class="exercise-head"><div><h3>${title}</h3><p>${desc}</p></div><div class="points">${points}</div></div>`}
   function audioDock(key){return `<div class="audio-dock" data-audio-dock="${key}"><div class="audio-dock-controls" data-audio-controls="${key}"></div></div>`}
-  function page(id,title,points,sub,content){return `<section class="section-page ${id===currentSection?'active':''}" data-page="${id}"><div class="section-hero"><div class="section-kicker">${points} POINTS</div><h2>${title}</h2><p>${sub}</p><div class="section-stats"><span class="chip">Auto-save</span><span class="chip">Responsive</span><span class="chip">Keyboard friendly</span></div></div>${content}<div class="bottom-actions"><button class="btn btn-secondary" data-prev>← Phần trước</button><button class="btn btn-primary" data-next>Phần tiếp →</button></div></section>`}
+  function page(id,title,points,sub,content){return `<section class="section-page ${id===currentSection?'active':''}" data-page="${id}"><div class="section-hero"><div class="section-kicker">${points} POINTS</div><h2>${title}</h2><p>${sub}</p></div>${content}<div class="bottom-actions"><button class="btn btn-secondary" data-prev>← Phần trước</button><button class="btn btn-primary" data-next>Phần tiếp →</button></div></section>`}
 
   function renderApp(){
     renderNavigation();
@@ -838,6 +903,7 @@
   const officialAudioKeys = ['vocabulary', 'listening'];
   const audioPlayers = new Map();
   const audioReady = { soundcheck: false, vocabulary: false, listening: false };
+  let audioVolume = 1;
   let preflightPlayed = false;
   let activeAudioKey = null;
   let allowPause = false;
@@ -900,14 +966,23 @@
 
   function updateStartButton(){
     const student = selectedStudent();
-    const ready = preflightPlayed && officialAudioKeys.every(key => audioReady[key]);
+    const ready = officialAudioKeys.every(key => audioReady[key]);
     $('#continueToAudio').disabled = !student;
     $('#startExam').disabled = !student || !ready;
+  }
+
+  function setAudioVolume(value){
+    audioVolume = Math.min(1, Math.max(0, Number(value)));
+    for(const audio of audioPlayers.values()) audio.volume = audioVolume;
+    const output = $('#audioVolumeValue');
+    if(output) output.value = `${Math.round(audioVolume * 100)}%`;
+    if(output) output.textContent = `${Math.round(audioVolume * 100)}%`;
   }
 
   function createAudioPlayer(key){
     const audio = document.createElement('audio');
     audio.preload = 'auto';
+    audio.volume = audioVolume;
     audio.hidden = true;
     audio.setAttribute('aria-hidden', 'true');
     document.body.appendChild(audio);
@@ -967,6 +1042,7 @@
     try{
       await audio.play();
       preflightPlayed = true;
+      setError('audioStartWarning', '');
       setPreflightStatus('soundcheck', 'Đã nghe thử', 'ready');
       $('#soundcheckBtn').textContent = '🔊 Nghe thử lại';
       updateStartButton();
@@ -1010,6 +1086,7 @@
   });
 
   $('#soundcheckBtn').addEventListener('click', playSoundcheck);
+  $('#audioVolume').addEventListener('input', e => setAudioVolume(e.target.value));
   document.addEventListener('click', e => {
     const retry = e.target.closest('[data-audio-retry]');
     if(retry) retryAudio(retry.dataset.audioRetry);
@@ -1204,7 +1281,7 @@
       return;
     }
     if(!preflightPlayed || !officialAudioKeys.every(key => audioReady[key])){
-      setError('studentError','Hãy hoàn tất kiểm tra âm thanh trước khi bắt đầu.');
+      setError('audioStartWarning','Hãy bấm “Nghe lại” và nghe hết âm thanh kiểm tra trước khi bắt đầu làm bài.');
       return;
     }
     const start = async () => {
@@ -1245,6 +1322,15 @@
     const go=e.target.closest('[data-go]'); if(go) goTo(go.dataset.go);
     if(e.target.closest('[data-prev]')) step(-1);
     if(e.target.closest('[data-next]')) step(1);
+    const detailsButton=e.target.closest('[data-result-details]');
+    if(detailsButton){
+      const details=document.getElementById(detailsButton.dataset.resultDetails);
+      if(!details) return;
+      const expanded=detailsButton.getAttribute('aria-expanded')==='true';
+      details.hidden=expanded;
+      detailsButton.setAttribute('aria-expanded',String(!expanded));
+      detailsButton.textContent=expanded?'Xem chi tiết':'Ẩn chi tiết';
+    }
   });
   $('#mobilePrev').addEventListener('click',()=>step(-1));
   $('#mobileNext').addEventListener('click',()=>step(1));
