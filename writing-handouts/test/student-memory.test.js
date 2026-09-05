@@ -43,6 +43,15 @@ test("Tắt cấu hình và lớp ngoài phạm vi giữ chọn thủ công", ()
   assert.equal(resolve([group("a")], "", { enabled: true, classCodes: [] }), null);
   assert.equal(resolve([group("a", "LOPNGOAI")]), null);
 });
+test("Phạm vi phát hành nhận đúng hai mã lớp CS có dấu chấm", () => {
+  const release = { enabled: true, classCodes: ["CS.070626", "CS.160826"] };
+  for (const className of release.classCodes) {
+    assert.equal(resolve([group("scope-for-current-activity", className)], className.toLowerCase(), release).studentRef, student);
+  }
+  for (const className of ["IC2200", "CS", "CS.070626-extra", "CS.999999"]) {
+    assert.equal(resolve([group("a", className)], className, release), null);
+  }
+});
 test("Bộ nhớ chỉ chứa version/UUID, ghi lặp không nhân bản, xóa có readback", () => {
   const data = new Map();
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) };

@@ -1,5 +1,11 @@
 # Bản thử ghi nhớ học viên giữa các bài Writing
 
+## Phạm vi phát hành được duyệt ngày 05/09/2026
+
+Đức đã yêu cầu phát hành cho hai lớp CS vừa mở webapp Task 2. Cấu hình phát hành bật cho `CS.070626` và `CS.160826`, thay cho phạm vi IC2200 từng đề xuất bên dưới. Các bài đã gắn hai lớp này dùng chung phần ghi nhớ; không mở thêm lớp hoặc thay đổi danh sách học viên. Bài `writing-task2-public-health-spending` là một trong các bài được kiểm trực tiếp. Lịch sử bản thử bên dưới được giữ để truy vết; trạng thái phát hành thật phải theo biên bản readback.
+
+Trước ghi cấu hình đã khóa: giữ hành vi bản thử đã kiểm, chỉ bật cờ và đổi hai mã lớp; kiểm bằng fixture cho từng lớp CS và lớp ngoài phạm vi. Rollback bằng tắt cờ hoặc hoàn tác commit phát hành frontend; không sửa database/n8n/bài làm.
+
 ## Đặc tả đã khóa trước khi sửa giao diện
 
 - Nguồn: repo `izone-ai-team-pages`, commit `8bd63a6`, đọc ngày 05/09/2026; `writing-handouts/index.html`, `lesson.html` và hai ứng dụng JavaScript tương ứng.
