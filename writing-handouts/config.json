@@ -1,4 +1,8 @@
 {
   "apiBase": "https://ducizone.ddns.net/writing-api/",
+  "studentMemory": {
+    "enabled": false,
+    "classCodes": ["IC2200"]
+  },
   "googleClientId": "235597750133-urmb86ktf5recnvvtbghf13bktfv5rkj.apps.googleusercontent.com"
 }

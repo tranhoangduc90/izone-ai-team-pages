@@ -1,4 +1,5 @@
 import { createLessonApi } from "./api.js";
+import { installStudentMemory } from "./student-memory-ui.js";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, isConflict, pollingDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
@@ -51,6 +52,8 @@ async function loadManifest() {
   app.manifest = await manifestResponse.json();
   app.activitySlug = app.manifest.activity?.slug || slug;
   const publicConfig = configResponse?.ok ? await configResponse.json() : {};
+  app.studentMemoryConfig = publicConfig.studentMemory;
+  app.apiBase = publicConfig.apiBase || "";
   app.api = createLessonApi(publicConfig.apiBase || "");
   const title = app.manifest.activity?.title || "Handout Writing";
   const eyebrow = app.manifest.activity?.eyebrow || "Writing Task 2";
@@ -742,6 +745,7 @@ async function openSession(event) {
     return;
   }
   errorNode.hidden = true;
+  if (app.studentMemory && !app.studentMemory.begin()) return;
   app.identity = { classRef, studentRef: student.studentRef, label: student.label };
   try {
     const accessCode = student.requiresAccessCode ? $("lesson-access-code").value : undefined;
@@ -761,10 +765,11 @@ async function openSession(event) {
     for (const attempt of app.state.attempts) registerAttempt(attempt);
     schedulePresence();
     app.heartbeatTimer = setInterval(schedulePresence, 30_000);
+    app.studentMemory?.complete(app.identity);
   } catch (error) {
     errorNode.hidden = false;
     errorNode.textContent = error.message;
-  }
+  } finally { app.studentMemory?.end(); }
 }
 
 async function resumeRecent() {
@@ -798,6 +803,14 @@ async function init() {
     $("lesson-class").addEventListener("change", updateStudentOptions);
     $("lesson-student").addEventListener("change", updateAccessCode);
     $("lesson-identity-form").addEventListener("submit", openSession);
+    // Mã lớp riêng từng bài được lấy lại từ roster; chỉ UUID học viên được ghi nhớ.
+    app.studentMemory = installStudentMemory({ config: app.studentMemoryConfig, apiBase: app.apiBase,
+      roster: app.roster, form: $("lesson-identity-form"), classSelect: $("lesson-class"), studentSelect: $("lesson-student"),
+      refreshStudents: updateStudentOptions, refreshAccessCode: updateAccessCode,
+      resumeButton: $("lesson-resume-recent"), workspace: $("lesson-workspace"),
+      workspaceActions: $("lesson-workspace").querySelector(".actions"), notice: showNotice,
+      beforeSwitch: async () => !app.submittingSections.size && await saveRemote("close") && !app.dirty,
+    });
     $("lesson-show-provisional").addEventListener("click", () => { $("lesson-provisional-panel").hidden = !$("lesson-provisional-panel").hidden; });
     $("lesson-create-provisional").addEventListener("click", createProvisionalStudent);
     $("lesson-resume-recent").addEventListener("click", resumeRecent);
@@ -820,7 +833,7 @@ async function init() {
     });
   } catch (error) {
     $("lesson-summary").textContent = error.message;
-    $("lesson-identity-form").querySelector("button").disabled = true;
+    $("lesson-identity-form").querySelector('button[type="submit"]').disabled = true;
     setSaveState("Không thể khởi động handout");
   }
 }

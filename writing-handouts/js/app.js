@@ -1,4 +1,5 @@
 import { createApi } from "./api.js";
+import { installStudentMemory } from "./student-memory-ui.js";
 import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260826-grading-timeout-v2";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
@@ -38,6 +39,8 @@ async function loadManifest() {
   app.activitySlug = app.manifest.activity?.slug || app.manifest.slug;
   if (!app.activitySlug) throw new Error("Cấu hình bài luyện thiếu mã hoạt động.");
   const publicConfig = configResponse?.ok ? await configResponse.json() : {};
+  app.studentMemoryConfig = publicConfig.studentMemory;
+  app.apiBase = publicConfig.apiBase || app.manifest.apiBase || "";
   app.api = createApi(publicConfig.apiBase || app.manifest.apiBase || "");
   const title = app.manifest.activity?.title || app.manifest.title || "Bài luyện Writing Task 1";
   $("task-summary").textContent = title;
@@ -492,6 +495,7 @@ async function pollAttempts() {
 async function openSession(event) {
   event.preventDefault(); const classRef = $("class-id").value; const student = studentFromInput(); const error = $("identity-error");
   if (!classRef || !student) { error.hidden = false; error.textContent = "Hãy chọn đúng lớp và tên có trong danh sách."; return; }
+  if (app.studentMemory && !app.studentMemory.begin()) return;
   error.hidden = true; app.identity = { classRef, studentRef: student.studentRef, label: student.label };
   try {
     const accessCode = student.requiresAccessCode ? $("access-code").value : undefined;
@@ -505,7 +509,9 @@ async function openSession(event) {
     $("student-label").textContent = `${student.label} · ${$("class-id").selectedOptions[0].textContent}`; $("setup-card").hidden = true; $("workspace").hidden = false; renderAll(); setSaveState(app.dirty ? "Đã khôi phục bản lưu cục bộ" : "Đã tải bài làm");
     renderTaskContent(); for (const attempt of app.state.attempts) registerAttempt(attempt); schedulePoll(); void refreshTeacherComments(true);
     schedulePresence(); clearInterval(app.heartbeatTimer); app.heartbeatTimer = setInterval(schedulePresence, 30_000);
+    app.studentMemory?.complete(app.identity);
   } catch (requestError) { error.hidden = false; error.textContent = requestError.message; }
+  finally { app.studentMemory?.end(); }
 }
 
 function schedulePresence() {
@@ -539,6 +545,14 @@ async function init() {
     await loadManifest(); const roster = await app.api.roster(app.activitySlug); app.roster = roster.data; renderClassOptions();
     $("resume-recent").hidden = !(await getLatestDraft(`${app.activitySlug}:`));
     $("class-id").addEventListener("change", updateStudentOptions); $("student-name").addEventListener("change", updateAccessCode); $("identity-form").addEventListener("submit", openSession);
+    // Chỉ bật cho lớp trong bản thử; ghép UUID với roster mới trước khi điền form.
+    app.studentMemory = installStudentMemory({ config: app.studentMemoryConfig, apiBase: app.apiBase,
+      roster: app.roster, form: $("identity-form"), classSelect: $("class-id"), studentSelect: $("student-name"),
+      refreshStudents: updateStudentOptions, refreshAccessCode: updateAccessCode,
+      resumeButton: $("resume-recent"), workspace: $("workspace"),
+      workspaceActions: $("workspace").querySelector(".actions"), notice: showNotice,
+      beforeSwitch: async () => !app.submittingSections.size && await saveRemote("close") && !app.dirty,
+    });
     $("show-provisional").addEventListener("click", () => { $("provisional-panel").hidden = !$("provisional-panel").hidden; });
     $("create-provisional").addEventListener("click", createProvisionalStudent);
     $("resume-recent").addEventListener("click", resumeRecent);
@@ -560,6 +574,6 @@ async function init() {
     });
     document.addEventListener("visibilitychange", () => document.hidden ? (clearTimeout(app.pollTimer), clearTimeout(app.teacherCommentTimer)) : (schedulePoll(), schedulePresence(), refreshTeacherComments()));
     window.addEventListener("beforeunload", (event) => { if (app.dirty) { closeWithKeepalive(); event.preventDefault(); event.returnValue = ""; } });
-  } catch (error) { $("task-summary").textContent = error.message; $("identity-form").querySelector("button").disabled = true; setSaveState("Không thể khởi động bài luyện"); }
+  } catch (error) { $("task-summary").textContent = error.message; $("identity-form").querySelector('button[type="submit"]').disabled = true; setSaveState("Không thể khởi động bài luyện"); }
 }
 init();

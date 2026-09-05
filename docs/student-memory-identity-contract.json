@@ -1,0 +1,58 @@
+{
+  "name": "Ghi nhớ học viên và đối chiếu lại roster của bài Writing",
+  "source_mode": "single",
+  "identity": {
+    "scope": "per_item",
+    "entity_key": "studentRef",
+    "operation_key": "activitySlug:classRef:studentRef",
+    "idempotency_key": "storageKey"
+  },
+  "stages": [
+    {
+      "name": "Đọc UUID đã nhớ và tìm trong roster mới",
+      "kind": "join",
+      "preserves": ["studentRef"],
+      "join_on": ["studentRef"]
+    },
+    {
+      "name": "Chỉ giữ kết quả chính thức duy nhất trong lớp được phép",
+      "kind": "filter",
+      "preserves": ["studentRef", "activitySlug:classRef:studentRef"]
+    },
+    {
+      "name": "Người học bấm mở phiên, form khóa tới khi hoàn tất",
+      "kind": "async",
+      "preserves": ["studentRef", "activitySlug:classRef:studentRef"]
+    },
+    {
+      "name": "Ghi đè bộ nhớ sau khi mở thành công và có lựa chọn ghi nhớ",
+      "kind": "write",
+      "preserves": ["studentRef", "storageKey"]
+    }
+  ],
+  "side_effects": [
+    {
+      "name": "Lưu UUID công khai vào bộ nhớ trình duyệt",
+      "target_key": "studentRef",
+      "storage_slot": "storageKey",
+      "guard": "fail_closed",
+      "readback": true
+    },
+    {
+      "name": "Mở phiên qua API hiện hành theo cặp lớp và học viên đã chốt",
+      "target_key": "studentRef",
+      "target_scope": ["activitySlug", "classRef"],
+      "guard": "fail_closed",
+      "readback": true
+    }
+  ],
+  "tests": [
+    "single",
+    "variable_cardinality",
+    "batch_interleaved",
+    "out_of_order",
+    "duplicate_retry",
+    "partial_failure",
+    "wrong_target_readback"
+  ]
+}
