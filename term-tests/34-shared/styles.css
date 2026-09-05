@@ -1,0 +1,229 @@
+/* CSS bổ sung riêng cho Webtest 34 (5 phần). Dùng kèm ../shared/styles.css.
+   Tiền tố w34- để không đụng class K56/K67. */
+
+/* Thanh tiến trình 5 phần */
+.w34-progress {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 0 0 16px;
+}
+.w34-progress-step {
+  min-width: 0;
+  padding: 9px 6px;
+  overflow: hidden;
+  color: var(--muted);
+  background: #e5eaf1;
+  border-radius: 9px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.w34-progress-step.active { color: #fff; background: var(--blue); }
+.w34-progress-step.done { color: #0d6748; background: #dff4e9; }
+
+/* Khối bài làm trong một phần */
+.w34-panel-body { padding: 20px 22px; }
+.w34-part-heading { margin: 0 0 4px; color: var(--navy); font-size: 21px; }
+.w34-part-description { margin: 0 0 16px; color: var(--muted); line-height: 1.55; }
+
+/* Một exercise (EXERCISE 1/2/…) */
+.w34-exercise { margin-bottom: 18px; }
+.w34-exercise-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: baseline;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.w34-exercise-title { margin: 0; color: var(--navy); font-size: 15px; font-weight: 850; }
+.w34-exercise-points { flex: 0 0 auto; color: var(--muted); font-size: 12px; font-weight: 750; }
+.w34-exercise-instruction { margin: -4px 0 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+/* Danh sách câu hỏi điền từ / chọn */
+.w34-question-list { display: grid; gap: 12px; }
+.w34-question {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface-soft);
+  border: 1px solid #e6eaf0;
+  border-radius: 11px;
+}
+.w34-question-main { min-width: 0; display: grid; gap: 6px; }
+.w34-question-stem { color: var(--ink); font-size: 14px; line-height: 1.5; }
+.w34-question-hint { color: var(--muted); font-size: 12px; font-style: italic; }
+.w34-question input[type="text"] { min-height: 40px; }
+.w34-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.w34-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 11px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #ced6e2;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 750;
+}
+.w34-choice input { min-height: 0; width: auto; accent-color: var(--blue); }
+.w34-choice.is-selected { color: var(--navy); background: #eaf2ff; border-color: var(--blue); }
+
+/* Listening Part 1: sắp thứ tự A–E */
+.w34-order-list { display: grid; gap: 10px; margin-top: 4px; }
+.w34-order-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 132px;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 13px;
+  background: var(--surface-soft);
+  border: 1px solid #e6eaf0;
+  border-radius: 11px;
+}
+.w34-order-letter {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  color: #fff;
+  background: var(--navy);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+}
+.w34-order-text { color: var(--ink); font-size: 14px; line-height: 1.45; }
+.w34-order-input { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 750; }
+.w34-order-input input { width: 74px; min-height: 40px; text-align: center; }
+
+/* Listening Part 2: bảng điền một từ */
+.w34-table { width: 100%; border-collapse: collapse; }
+.w34-table th, .w34-table td { padding: 10px 12px; border: 1px solid #d4dde8; text-align: left; vertical-align: top; font-size: 13px; }
+.w34-table th { color: var(--muted); background: var(--surface-soft); }
+.w34-table input { min-width: 150px; min-height: 38px; }
+
+/* Listening Part 3: T/F */
+.w34-tf-list { display: grid; gap: 10px; }
+.w34-tf-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 13px; background: var(--surface-soft); border: 1px solid #e6eaf0; border-radius: 11px; }
+.w34-tf-item .w34-question-number { color: var(--navy); font-weight: 850; }
+.w34-tf-actions { display: flex; gap: 8px; }
+.w34-tf-actions button { min-width: 54px; min-height: 34px; padding: 5px 10px; border: 1px solid #ced6e2; border-radius: 8px; background: #fff; color: var(--ink); font-weight: 800; }
+.w34-tf-actions button.is-selected { color: #fff; background: var(--blue); border-color: var(--blue); }
+
+/* Hình minh họa (tranh) */
+.w34-picture-card { display: flex; gap: 14px; align-items: flex-start; }
+.w34-picture { width: 180px; max-width: 38vw; height: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+
+/* Pronunciation IPA */
+.w34-ipa { font-family: "Segoe UI", "Arial Unicode MS", sans-serif; font-size: 18px; font-weight: 700; color: var(--navy); }
+
+/* Translation / Writing */
+.w34-sentences { display: grid; gap: 16px; }
+.w34-sentence-card { padding: 15px; background: var(--surface-soft); border: 1px solid #e6eaf0; border-radius: 12px; }
+.w34-sentence-stem { margin: 0 0 10px; color: var(--ink); font-size: 15px; line-height: 1.5; }
+.w34-sentence-stem strong { color: var(--navy); }
+.w34-answer-textarea { width: 100%; min-height: 96px; padding: 11px; color: var(--ink); background: #fff; border: 1px solid #ced6e2; border-radius: 9px; font: inherit; line-height: 1.6; resize: vertical; outline: none; }
+.w34-answer-textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 111, 237, .13); }
+.w34-structure-hints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.w34-structure-chip { padding: 4px 9px; color: #5b4a00; background: #fdf3d4; border: 1px solid #ecdc94; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.w34-word-count { margin: 6px 0 0; color: var(--muted); font-size: 12px; text-align: right; }
+
+/* Điểm minh họa khi xem kết quả từng phần */
+.w34-demo-grade { padding: 12px 14px; margin-bottom: 14px; color: #0f6448; background: #e9f8f1; border: 1px solid #b9e3d0; border-radius: 11px; font-size: 14px; line-height: 1.55; }
+.w34-demo-grade strong { font-size: 17px; }
+
+@media (max-width: 700px) {
+  .w34-progress { grid-template-columns: 1fr; }
+  .w34-question, .w34-order-item, .w34-tf-item { grid-template-columns: 1fr; }
+  .w34-order-input { justify-content: space-between; }
+  .w34-picture-card { flex-direction: column; }
+}
+
+/* Các class bổ trợ (thay cho inline style — CSP style-src 'self') */
+.w34-span-all { grid-column: 1 / -1; }
+.w34-actions-top-border { border-top: 1px solid var(--line); padding-top: 16px; }
+.w34-table-scroll { overflow-x: auto; }
+.w34-total-suffix { font-size: 14px; color: var(--muted); }
+.w34-result-note { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.w34-result-actions-top { padding-top: 8px; }
+.webtest-34-preview-frame { display: block; width: 100%; height: 100vh; min-height: 720px; border: 0; }
+
+/* Visual system đồng bộ với Webtest 34 preview. */
+:root {
+  --color-primary: #db0829;
+  --color-secondary: #b00621;
+  --color-text: #1f2429;
+  --color-text-secondary: #697177;
+  --color-bg-secondary: #f5f6f7;
+  --color-border: #e5e7eb;
+  --content: 1180px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --shadow-1: 0 8px 24px rgba(31, 36, 41, .07);
+  --shadow-2: 0 18px 50px rgba(31, 36, 41, .10);
+}
+.shell { min-height: 100vh; background: #fafafa; }
+.shell .topbar { position: sticky; top: 0; z-index: 30; padding: 0; color: var(--color-text); background: rgba(255,255,255,.96); border-bottom: 1px solid var(--color-border); backdrop-filter: blur(14px); }
+.topbar-inner { max-width: var(--content); margin: auto; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-mark { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; color: #fff; background: var(--color-primary); border-radius: 12px; font-weight: 800; }
+.brand-copy { min-width: 0; }
+.brand-title { overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.brand-sub, .save-state, .meta { color: var(--color-text-secondary); font-size: 12px; }
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.timer { min-width: 84px; padding: 8px 12px; color: var(--color-primary); background: #fff3f5; border-radius: 10px; font-variant-numeric: tabular-nums; font-weight: 700; text-align: center; }
+.section-nav-wrap { border-top: 1px solid var(--color-border); }
+.section-nav { max-width: var(--content); margin: auto; padding: 8px 24px; display: flex; gap: 8px; overflow-x: auto; }
+.section-tab { min-height: 42px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); background: transparent; border: 0; border-radius: 10px; white-space: nowrap; }
+.section-tab:hover, .section-tab.active { color: var(--color-primary); background: #fff3f5; }
+.section-tab.active { font-weight: 700; }
+.tab-count { padding: 2px 7px; color: inherit; background: #fff; border: 1px solid #eadfe2; border-radius: 999px; font-size: 12px; }
+.notice-wrap { max-width: var(--content); margin: 18px auto 0; }
+.intro { max-width: 980px; margin: 42px auto; padding: 0 24px; }
+.intro-card { padding: 40px; background: #fff; border: 1px solid rgba(243,244,246,.9); border-radius: var(--radius-xl); box-shadow: var(--shadow-2); }
+.intro h1 { margin: 0; color: var(--color-text); font-size: 32px; line-height: 1.2; }
+.lead { max-width: 760px; margin: 14px 0 0; color: var(--color-text-secondary); font-size: 17px; }
+.score-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 28px 0; }
+.score-card { padding: 16px; background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: 14px; }
+.score-card strong { display: block; margin-top: 4px; color: var(--color-primary); font-size: 20px; }
+.start-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+.field label { display: block; margin-bottom: 7px; color: var(--color-text); font-size: 13px; font-weight: 700; }
+.field-hint { display: block; margin-top: 6px; color: var(--color-text-secondary); font-size: 12px; }
+.start-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.btn { min-height: 44px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 10px; font-weight: 700; }
+.btn-primary { color: #fff; background: var(--color-primary); border-color: var(--color-primary); box-shadow: 0 8px 20px rgba(219,8,41,.14); }
+.btn-primary:hover:not(:disabled) { background: var(--color-secondary); }
+.exam-layout { max-width: var(--content); margin: 28px auto 56px; padding: 0 24px; display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; }
+.main-column { min-width: 0; }
+.side-panel { align-self: start; position: sticky; top: 128px; }
+.panel-card { padding: 20px; background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
+.progress-row { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.progress-track { height: 8px; overflow: hidden; background: var(--color-bg-secondary); border-radius: 999px; }
+.progress-fill { width: 0; height: 100%; background: var(--color-primary); border-radius: 999px; transition: width .25s ease; }
+.section-hero { background: #fff9fa; }
+.test-panel { border-radius: var(--radius-lg); }
+
+@media (max-width: 1023px) { .exam-layout { grid-template-columns: 1fr; } .side-panel { display: none; } }
+@media (max-width: 639px) {
+  .topbar-inner { padding: 10px 14px; }
+  .brand-sub, .save-state { display: none; }
+  .section-nav { padding: 6px 14px; }
+  .intro { margin: 22px auto; padding: 0 14px; }
+  .intro-card { padding: 24px; border-radius: 18px; }
+  .intro h1 { font-size: 26px; }
+  .lead { font-size: 15px; }
+  .score-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .start-form { grid-template-columns: 1fr; }
+  .start-actions { flex-direction: column; align-items: stretch; }
+  .start-actions .btn { width: 100%; }
+  .exam-layout { margin-top: 14px; padding: 0 14px; }
+}
