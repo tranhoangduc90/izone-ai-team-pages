@@ -1,5 +1,7 @@
 # Rà soát đầy đủ ghi nhớ và đổi người học
 
+Phạm vi hai lớp CS trong tài liệu này là đợt thí điểm. Đợt mở rộng toàn bộ lớp và sản phẩm được mô tả tại [ghi nhớ toàn bộ sản phẩm](student-memory-all-products.md); các quy tắc an toàn và kiểm thử dưới đây vẫn được giữ.
+
 ## Đặc tả khóa trước khi sửa — 05/09/2026
 
 Nguồn: repo Pages commit `d555d37`, hai giao diện Writing và module ghi nhớ đã phát hành. Mục tiêu mới: tick sẵn ô ghi nhớ, đồng bộ lựa chọn giữa các app thuộc phạm vi xác minh, kiểm hồ sơ tạm và cho xem trạng thái đổi người. Không coi cùng trình duyệt là đủ: cần cùng nguồn website, cùng khóa lưu và cùng namespace mã học viên đã được xác minh.

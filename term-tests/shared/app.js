@@ -343,7 +343,7 @@
 
   // Bộ nhớ dùng chung chỉ là gợi ý chọn tên cho hai lớp Writing đã mở thử.
   // Nó không chứa tên, lớp, mã lượt làm hay dữ liệu bài thi, và không tự mở lượt làm.
-  const rememberedClassCodes = new Set(['CS.070626', 'CS.160826']);
+  const studentMemoryForAllClasses = !demoMode && classCode !== 'CODEXDEMO806';
   const studentMemory = {
     api: null,
     storage: null,
@@ -359,7 +359,7 @@
   let identityControlsBefore = [];
 
   function studentMemoryEnabled() {
-    return rememberedClassCodes.has(classCode) && Boolean(studentMemory.api && studentMemory.storage && studentMemory.key);
+    return studentMemoryForAllClasses && Boolean(studentMemory.api && studentMemory.storage && studentMemory.key);
   }
 
   function hasBoundAttempt() {
@@ -486,9 +486,9 @@
   }
 
   async function initializeStudentMemory() {
-    if (!rememberedClassCodes.has(classCode)) return;
+    if (!studentMemoryForAllClasses) return;
     try {
-      const api = await import('../../shared/student-memory.js?v=20260905-memory-v2');
+      const api = await import('../../shared/student-memory.js?v=20260905-memory-v3');
       const storage = window.localStorage;
       const selectLabel = elements.studentSelect.closest('label');
       if (!selectLabel) return;

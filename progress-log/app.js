@@ -1,3 +1,6 @@
+import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
+  writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
+
 /*
  * Dữ liệu nhận vào: token phiếu trong URL fragment, danh sách lớp và FormDefinitionV1 từ API.
  * Xử lý: học viên xác nhận tên, trả lời từng checkpoint, lưu draft có revision và nộp idempotent.
@@ -18,18 +21,103 @@ const state = {
   idleTimer: 0,
   maxTimer: 0,
   saveChain: Promise.resolve(),
-  submitting: false
+  submitting: false,
+  confirmedStudent: null,
+  startingAttempt: false
 };
 
 const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'errorView'];
 const elements = Object.fromEntries([
   'notice', ...viewIds, 'sessionLabel', 'assignmentTitle', 'classLabel', 'studentSelect',
-  'chooseStudentButton', 'confirmName', 'confirmContext', 'confirmButton', 'backToNamesButton',
+  'chooseStudentButton', 'rememberStudentRow', 'rememberStudent', 'rememberStudentStatus', 'changeRememberedStudent',
+  'confirmName', 'confirmContext', 'confirmButton', 'backToNamesButton',
   'studentNameLabel', 'formContextLabel', 'saveState', 'progressBar', 'reflectionForm',
   'checkpointLabel', 'checkpointTitle', 'checkpointInstructions', 'questionList', 'previousButton',
   'nextButton', 'submitButton', 'resultTitle', 'attendanceResult', 'completenessResult',
   'nextActionResult', 'errorTitle', 'errorMessage', 'retryButton'
 ].map(id => [id, document.getElementById(id)]));
+
+const studentMemory = {
+  key: '', storage: null, group: null, busy: false, preference: true, enabled: false, installed: false
+};
+
+function progressRosterGroup() {
+  if (!state.assignment) return null;
+  return {
+    classRef: state.assignment.class?.classRef || state.assignment.class?.classId || state.assignment.class?.id || state.assignment.class?.name || '',
+    className: state.assignment.class?.name || '',
+    students: state.assignment.roster || []
+  };
+}
+
+function memoryStatus(message = '') {
+  elements.rememberStudentStatus.textContent = message;
+}
+
+function syncStudentMemoryControls() {
+  const selected = state.selectedStudent;
+  const nonOfficial = Boolean(selected) && !officialStudent(selected);
+  elements.rememberStudentRow.hidden = !studentMemory.enabled;
+  elements.rememberStudent.disabled = !studentMemory.storage || nonOfficial;
+  elements.rememberStudent.checked = studentMemory.preference && !nonOfficial;
+  const remembered = readMemory(studentMemory.storage, studentMemory.key);
+  elements.changeRememberedStudent.hidden = !studentMemory.enabled || (!selected && !remembered.studentRef);
+  if (!studentMemory.enabled) return;
+  if (!studentMemory.storage) memoryStatus('Trình duyệt chưa lưu được lựa chọn. Bạn vẫn có thể chọn và làm phiếu.');
+  else if (nonOfficial) memoryStatus('Hồ sơ này chỉ dùng trong phiếu hiện tại và không được ghi nhớ.');
+  else if (!elements.rememberStudentStatus.textContent) memoryStatus('Bỏ tick nếu dùng máy chung. Bạn vẫn cần xác nhận tên trước khi mở phiếu.');
+}
+
+function applyStudentMemory() {
+  if (!studentMemory.enabled || studentMemory.busy || state.attempt) return;
+  const remembered = readMemory(studentMemory.storage, studentMemory.key);
+  const match = resolveRememberedStudent([studentMemory.group], remembered.studentRef, '', config.STUDENT_MEMORY);
+  state.selectedStudent = match?.student || null;
+  elements.studentSelect.value = match?.studentRef || '';
+  elements.chooseStudentButton.disabled = !state.selectedStudent;
+  if (match) memoryStatus('Đã chọn sẵn tên của bạn. Kiểm tra trước khi tiếp tục.');
+  else if (remembered.studentRef) memoryStatus('Tên đã nhớ không còn phù hợp với danh sách phiếu này. Hãy chọn lại.');
+  else if (remembered.status === 'unavailable') memoryStatus('Trình duyệt chưa đọc được ghi nhớ. Bạn vẫn có thể chọn và làm phiếu.');
+  else memoryStatus('Bỏ tick nếu dùng máy chung. Hãy chọn đúng tên trước khi mở phiếu.');
+  syncStudentMemoryControls();
+}
+
+function clearRememberedSelection() {
+  if (studentMemory.busy || state.attempt) return false;
+  if (!writeMemory(studentMemory.storage, studentMemory.key, '')) {
+    memoryStatus('Không thể xóa ghi nhớ trong trình duyệt. Hãy kiểm tra cài đặt lưu dữ liệu.');
+    return false;
+  }
+  state.selectedStudent = null;
+  elements.studentSelect.value = '';
+  elements.chooseStudentButton.disabled = true;
+  memoryStatus('Đã quên lựa chọn trên thiết bị này. Hãy chọn người học.');
+  syncStudentMemoryControls();
+  elements.studentSelect.focus();
+  return true;
+}
+
+function installStudentMemory() {
+  studentMemory.group = progressRosterGroup();
+  studentMemory.enabled = Boolean(config.STUDENT_MEMORY?.enabled && allowedGroup(studentMemory.group, config.STUDENT_MEMORY));
+  if (!studentMemory.enabled) return;
+  studentMemory.key = memoryKey(config.API_BASE_URL, location.href);
+  try { studentMemory.storage = window.localStorage; } catch { studentMemory.storage = null; }
+  if (!studentMemory.installed) {
+    elements.rememberStudent.addEventListener('change', () => { studentMemory.preference = elements.rememberStudent.checked; });
+    elements.changeRememberedStudent.addEventListener('click', clearRememberedSelection);
+    window.addEventListener('storage', event => {
+      if (event.storageArea !== studentMemory.storage || (event.key !== studentMemory.key && event.key !== null)) return;
+      if (studentMemory.busy || state.attempt || state.submitting) {
+        setNotice('Lựa chọn ghi nhớ đã đổi ở tab khác. Phiếu đang mở vẫn thuộc người học hiện tại.', '');
+        return;
+      }
+      applyStudentMemory();
+    });
+    studentMemory.installed = true;
+  }
+  applyStudentMemory();
+}
 
 function showView(id) {
   for (const viewId of viewIds) elements[viewId].hidden = viewId !== id;
@@ -299,6 +387,7 @@ async function openAssignment() {
     });
     elements.studentSelect.replaceChildren(new Option('Chọn tên của bạn', ''), ...options);
     elements.chooseStudentButton.disabled = true;
+    installStudentMemory();
     setNotice('Chọn đúng tên để bắt đầu.');
     showView('identityView');
   } catch (error) {
@@ -308,12 +397,15 @@ async function openAssignment() {
 
 async function startAttempt() {
   try {
+    if (!state.confirmedStudent || state.startingAttempt) return;
+    state.startingAttempt = true;
     elements.confirmButton.disabled = true;
+    elements.backToNamesButton.disabled = true;
     setNotice('Đang mở phần ghi nhận…');
     const payload = await apiRequest('/attempts/start', {
       body: {
         publicToken: state.publicToken,
-        studentRef: state.selectedStudent.studentRef,
+        studentRef: state.confirmedStudent.studentRef,
         clientIdempotencyKey: crypto.randomUUID(),
         identityConfirmed: true
       }
@@ -327,11 +419,22 @@ async function startAttempt() {
     setSaveState(state.attempt.draftRevision ? 'Đã khôi phục bản lưu' : 'Chưa có thay đổi', state.attempt.draftRevision ? 'saved' : '');
     setNotice('Bạn có thể điền mỗi phần ngay sau hoạt động tương ứng.');
     state.checkpointIndex = 0;
+    const eligible = officialStudent(state.confirmedStudent) && allowedGroup(studentMemory.group || {}, config.STUDENT_MEMORY);
+    if (studentMemory.enabled && !writeMemory(studentMemory.storage, studentMemory.key,
+      elements.rememberStudent.checked && eligible ? state.confirmedStudent.studentRef : '')) {
+      setNotice('Đã mở phiếu, nhưng trình duyệt chưa lưu được lựa chọn. Lần sau bạn có thể cần chọn lại.', 'error');
+    }
+    state.confirmedStudent = null;
     renderCheckpoint();
     showView('formView');
   } catch (error) {
     setNotice(error.message, 'error');
     elements.confirmButton.disabled = false;
+    elements.backToNamesButton.disabled = false;
+  } finally {
+    state.startingAttempt = false;
+    studentMemory.busy = Boolean(state.confirmedStudent && !state.attempt);
+    syncStudentMemoryControls();
   }
 }
 
@@ -379,20 +482,32 @@ async function submitForm(event) {
 }
 
 elements.studentSelect.addEventListener('change', () => {
+  if (studentMemory.busy) return;
   state.selectedStudent = state.assignment.roster.find(student => student.studentRef === elements.studentSelect.value) || null;
   elements.chooseStudentButton.disabled = !state.selectedStudent;
+  memoryStatus('');
+  syncStudentMemoryControls();
 });
 
 elements.chooseStudentButton.addEventListener('click', () => {
   if (!state.selectedStudent) return;
-  elements.confirmName.textContent = displayStudent(state.selectedStudent);
+  state.confirmedStudent = state.selectedStudent;
+  studentMemory.busy = true;
+  elements.confirmName.textContent = displayStudent(state.confirmedStudent);
   elements.confirmContext.textContent = `${state.assignment.class.name} · Buổi ${state.assignment.sessionNumber}`;
   elements.confirmButton.disabled = false;
   setNotice('Kiểm tra kỹ trước khi xác nhận.');
   showView('confirmView');
 });
 
-elements.backToNamesButton.addEventListener('click', () => showView('identityView'));
+elements.backToNamesButton.addEventListener('click', () => {
+  if (elements.backToNamesButton.disabled) return;
+  state.confirmedStudent = null;
+  state.startingAttempt = false;
+  studentMemory.busy = false;
+  showView('identityView');
+  syncStudentMemoryControls();
+});
 elements.confirmButton.addEventListener('click', () => void startAttempt());
 elements.previousButton.addEventListener('click', () => {
   state.checkpointIndex = Math.max(0, state.checkpointIndex - 1);

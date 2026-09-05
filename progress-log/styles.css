@@ -39,6 +39,8 @@ select:focus, textarea:focus, input:focus { outline: 3px solid rgba(215, 58, 73,
 .primary { width: 100%; color: #fff; background: var(--navy); }
 .primary:hover:not(:disabled) { background: var(--navy-2); }
 .text-button { color: var(--navy); background: transparent; }
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; font-weight: 600; }
+.checkbox-row input { width: auto; }
 .confirm-card, .result-card { text-align: center; }
 .confirm-card .button + .button { margin-top: 8px; }
 .fine-print { margin: 18px 0 0; color: var(--muted); font-size: .78rem; }

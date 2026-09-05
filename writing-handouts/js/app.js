@@ -1,5 +1,5 @@
 import { createApi } from "./api.js";
-import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v2";
+import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v3";
 import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260826-grading-timeout-v2";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";

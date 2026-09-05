@@ -9,6 +9,7 @@
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const demoMode = query.get('demo') || '';
   const localDemo = demoMode === 'exam' && classCode === 'CODEXDEMO56';
+  let studentMemory = null;
   const storageSuffix = localDemo && query.get('grading') === 'server' ? ':server-grade' : '';
   const demoStudentRef = classCode === 'CODEXDEMO56' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
@@ -37,7 +38,7 @@
   const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageSuffix}`;
   const annotationStorageKey = `izone-test-annotations:${testConfig.slug}:${classCode}${storageSuffix}`;
   if (localDemo && query.get('reset') === '1') {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.removeItem(storageKey);
         storage.removeItem(uiStorageKey);
@@ -83,6 +84,12 @@
               <option value="">Nhấn để chọn</option>
             </select>
           </label>
+          <label class="cbt-remember-student"><input id="bootstrapRememberStudent" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label>
+          <p id="bootstrapMemoryStatus" class="cbt-memory-status" role="status" hidden></p>
+          <div class="cbt-identity-memory-actions">
+            <button class="button button-secondary" id="bootstrapConfirmPrefilled" type="button" hidden>Xác nhận học viên đã gợi ý</button>
+            <button class="button button-secondary" id="bootstrapChangeStudent" type="button">Đổi người học</button>
+          </div>
         </div>
         <div class="cbt-lobby-steps">
           <section class="cbt-lobby-step" id="bootstrapDownloadStep" data-state="locked">
@@ -132,13 +139,60 @@
     'bootstrapStudent', 'bootstrapClass', 'bootstrapDownloadStep', 'bootstrapDownloadStatus',
     'bootstrapDownloadProgress', 'bootstrapRetry', 'bootstrapPreviewStep', 'bootstrapPreview',
     'bootstrapVolume', 'bootstrapPreviewStatus', 'bootstrapStartStep', 'bootstrapStartStatus',
-    'bootstrapStart', 'bootstrapNotice'
+    'bootstrapStart', 'bootstrapNotice', 'bootstrapRememberStudent', 'bootstrapConfirmPrefilled', 'bootstrapChangeStudent'
   ].map(id => [id, document.getElementById(id)]));
   const previewAudio = document.createElement('audio');
   previewAudio.hidden = true;
   document.body.append(previewAudio);
   const identityDialog = document.getElementById('identityConfirm');
   let pendingStudent = null;
+  function setMemoryAvailability(available) {
+    elements.bootstrapRememberStudent.disabled = !available;
+    elements.bootstrapRememberStudent.checked = available;
+    elements.bootstrapRememberStudent.closest('label').hidden = !available;
+    elements.bootstrapChangeStudent.hidden = !available;
+  }
+  setMemoryAvailability(false);
+
+  async function initializeStudentMemory() {
+    if (localDemo || classCode === 'CODEXDEMO56') return;
+    try {
+      const core = await import('../../shared/student-memory.js?v=20260905-memory-v3');
+      const memoryKey = core.memoryKey(appConfig.API_BASE_URL, window.location.href);
+      const group = () => [{ classRef: classCode, className: classCode, students: roster }];
+      const config = { enabled: true, allClasses: true };
+      const available = core.readMemory(localStorage, memoryKey).status !== 'unavailable';
+      if (!available) return;
+      studentMemory = Object.freeze({
+        memoryKey,
+        candidate: () => core.resolveRememberedStudent(group(), core.readMemory(localStorage, memoryKey).studentRef, classCode, config)?.student || null,
+        save: studentRef => {
+          const matches = roster.filter(item => item?.ref === studentRef);
+          return matches.length === 1 && core.officialStudent(matches[0])
+            && core.writeMemory(localStorage, memoryKey, studentRef);
+        },
+        clear: () => core.writeMemory(localStorage, memoryKey, '')
+      });
+      setMemoryAvailability(true);
+    } catch {
+      // Trình duyệt chặn storage hoặc module thì học viên vẫn chọn tay bình thường.
+    }
+  }
+
+  function hasActiveExam() {
+    return Boolean(preparing || identityDialog.open || state.listeningStartedAt || state.attemptToken
+      || state.examSessionToken || state.listeningDeadlineAt || state.readingDeadlineAt || state.writingDeadlineAt
+      || legacyListeningResume);
+  }
+
+  function showIdentityConfirmation(student) {
+    if (!student || hasActiveExam()) return;
+    pendingStudent = student;
+    document.getElementById('confirmStudentName').textContent = student.name;
+    document.getElementById('confirmClassName').textContent = elements.bootstrapClass.textContent.replace(/^Lớp\s+/, '');
+    identityDialog.showModal();
+    document.getElementById('confirmIdentity').focus();
+  }
 
   function resetPreparation() {
     downloadController?.abort();
@@ -160,6 +214,20 @@
     for (const step of ['bootstrapDownloadStep', 'bootstrapPreviewStep', 'bootstrapStartStep']) elements[step].dataset.state = 'locked';
   }
 
+  function availableStorages() {
+    const stores = [];
+    for (const getStorage of [() => sessionStorage, () => localStorage]) {
+      try {
+        const storage = getStorage();
+        storage.getItem('__k56_storage_probe__');
+        stores.push(storage);
+      } catch {
+        // Chọn tay và phiên máy chủ vẫn hoạt động khi browser chặn storage.
+      }
+    }
+    return stores;
+  }
+
   function cancelIdentity() {
     pendingStudent = null;
     identityDialog.close();
@@ -173,11 +241,23 @@
     const student = pendingStudent;
     pendingStudent = null;
     identityDialog.close();
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try { storage.removeItem(annotationStorageKey); storage.removeItem(uiStorageKey); } catch { /* Lượt mới vẫn có mã riêng nếu storage bị chặn. */ }
     }
     state = { audioVolume: state.audioVolume };
     saveState({ studentRef: student.ref, studentName: student.name, identityConfirmed: true, annotationRunId: crypto.randomUUID() });
+    try {
+      const saved = elements.bootstrapRememberStudent.checked
+        ? studentMemory?.save(student.ref)
+        : studentMemory?.clear();
+      if (saved === false) throw new Error('Trình duyệt chưa xác nhận thay đổi bộ nhớ.');
+    } catch (error) {
+      elements.bootstrapRememberStudent.checked = false;
+      const status = document.getElementById('bootstrapMemoryStatus');
+      status.hidden = false;
+      status.textContent = 'Trình duyệt chưa lưu được lựa chọn. Lần sau bạn có thể cần chọn lại tên.';
+      showNotice(`Không thể ghi nhớ học viên: ${error.message}`, true);
+    }
     elements.bootstrapStudent.value = student.ref;
     legacyListeningResume = false;
     prepareSelectedStudent();
@@ -194,7 +274,7 @@
   }
 
   function readState() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         const parsed = JSON.parse(storage.getItem(storageKey) || '{}');
         if (Object.keys(parsed).length) return parsed;
@@ -207,7 +287,7 @@
   }
 
   function readLegacyUiState() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         const parsed = JSON.parse(storage.getItem(uiStorageKey) || '{}');
         if (Object.keys(parsed).length) {
@@ -227,7 +307,7 @@
   function saveState(patch = {}) {
     state = { ...state, ...patch };
     const serialized = JSON.stringify(state);
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.setItem(storageKey, serialized);
       } catch {
@@ -678,18 +758,51 @@
     }
   });
   elements.bootstrapRetry.addEventListener('click', prepareSelectedStudent);
+  elements.bootstrapConfirmPrefilled.addEventListener('click', () => {
+    showIdentityConfirmation(roster.find(item => item.ref === elements.bootstrapStudent.value));
+  });
+  elements.bootstrapChangeStudent.addEventListener('click', () => {
+    if (hasActiveExam()) {
+      showNotice('Lượt thi đang giữ danh tính đã xác nhận; chưa thể đổi người học.', true);
+      return;
+    }
+    try {
+      if (studentMemory?.clear() === false) throw new Error('Trình duyệt chưa xác nhận việc xóa học viên đã nhớ.');
+      pendingStudent = null;
+      elements.bootstrapStudent.value = '';
+      elements.bootstrapConfirmPrefilled.hidden = true;
+      resetPreparation();
+      elements.bootstrapStudent.focus();
+      showNotice('Đã xóa học viên đã nhớ trên thiết bị này. Hãy chọn lại trước khi vào bài.');
+    } catch (error) {
+      showNotice(`Chưa thể đổi học viên: ${error.message}`, true);
+    }
+  });
   elements.bootstrapStudent.addEventListener('change', () => {
-    if (preparing || state.listeningStartedAt || state.attemptToken) {
+    if (hasActiveExam()) {
       elements.bootstrapStudent.value = state.studentRef || '';
       return;
     }
     resetPreparation();
-    pendingStudent = roster.find(item => item.ref === elements.bootstrapStudent.value) || null;
-    if (!pendingStudent) return;
-    document.getElementById('confirmStudentName').textContent = pendingStudent.name;
-    document.getElementById('confirmClassName').textContent = elements.bootstrapClass.textContent.replace(/^Lớp\s+/, '');
-    identityDialog.showModal();
-    document.getElementById('confirmIdentity').focus();
+    elements.bootstrapConfirmPrefilled.hidden = true;
+    showIdentityConfirmation(roster.find(item => item.ref === elements.bootstrapStudent.value));
+  });
+
+  window.addEventListener('storage', event => {
+    if (!studentMemory || hasActiveExam()) return;
+    let isLocalStorage = false;
+    try { isLocalStorage = event.storageArea === localStorage; } catch { return; }
+    if (!isLocalStorage || (event.key !== null && event.key !== studentMemory.memoryKey)) return;
+    const remembered = studentMemory.candidate(roster);
+    if (!remembered) {
+      pendingStudent = null;
+      elements.bootstrapStudent.value = '';
+      elements.bootstrapConfirmPrefilled.hidden = true;
+      resetPreparation();
+      return;
+    }
+    elements.bootstrapStudent.value = remembered.ref;
+    elements.bootstrapConfirmPrefilled.hidden = false;
   });
 
   async function initialize() {
@@ -698,6 +811,7 @@
       return;
     }
     try {
+      await initializeStudentMemory();
       if (localDemo) {
         roster = [...localDemoRoster];
         elements.bootstrapClass.textContent = 'Lớp CODEXDEMO56';
@@ -749,7 +863,14 @@
         elements.bootstrapStudent.value = state.studentRef;
         await prepareSelectedStudent();
       } else {
-        elements.bootstrapDownloadStatus.textContent = 'Hãy chọn họ và tên để bắt đầu tải audio.';
+        const remembered = studentMemory?.candidate(roster);
+        if (remembered) {
+          elements.bootstrapStudent.value = remembered.ref;
+          elements.bootstrapConfirmPrefilled.hidden = false;
+          elements.bootstrapDownloadStatus.textContent = 'Đã gợi ý học viên từng dùng trên thiết bị này. Hãy xác nhận trước khi chuẩn bị bài.';
+        } else {
+          elements.bootstrapDownloadStatus.textContent = 'Hãy chọn họ và tên để bắt đầu tải audio.';
+        }
         elements.bootstrapDownloadStep.dataset.state = 'active';
       }
     } catch (error) {

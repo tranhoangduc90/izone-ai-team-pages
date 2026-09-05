@@ -16,10 +16,14 @@ test('trang học viên giữ token trong fragment và có đủ năm trạng th
   }
   assert.match(app, /window\.location\.hash/);
   assert.doesNotMatch(app, /searchParams\.get\(['"]assignment/);
-  assert.doesNotMatch(app, /localStorage/);
+  assert.match(app, /readMemory\(studentMemory\.storage/);
+  assert.match(app, /writeMemory\(studentMemory\.storage/);
   assert.match(app, /sessionStorage/);
   assert.match(app, /identityConfirmed:\s*true/);
   assert.match(app, /draftRevision/);
+  assert.match(app, /identityConfirmed:\s*true/);
+  assert.match(app, /changeRememberedStudent/);
+  assert.match(html, /id="rememberStudent"/);
 });
 
 test('giao diện không dùng API dựng HTML nguy hiểm', async () => {

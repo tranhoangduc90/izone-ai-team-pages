@@ -62,6 +62,18 @@ test("Bộ nhớ chỉ chứa version/UUID, ghi lặp không nhân bản, xóa c
   assert.equal(writeMemory(storage, "key", ""), true);
   assert.equal(readMemory(storage, "key").status, "empty");
 });
+
+test("Toàn bộ lớp vẫn kiểm roster, lớp từ link và hồ sơ chính thức", () => {
+  const global = { enabled: true, allClasses: true };
+  for (const name of ["CS.070626", "IC2200", "LOP-MOI-2027"]) {
+    assert.equal(resolve([group("new-scope", name)], name, global).studentRef, student);
+  }
+  assert.equal(resolve([group("a")], "LOP-SAI", global), null);
+  assert.equal(resolve([group("a", "LOPTHU", [{ studentRef: other }])], "", global), null);
+  assert.equal(resolve([group("a", "LOPTHU", [{ studentRef: student, temporary: true }])], "", global), null);
+  assert.equal(resolve([group("a")], "", { ...global, enabled: false }), null);
+  assert.equal(resolve([group("a")], "", { enabled: true, allClasses: "true" }), null);
+});
 test("Lỗi JSON, schema, read/write/delete và ghi im lặng đều không thành success", () => {
   for (const raw of ["{", '{"version":2}', '{"version":1,"studentRef":"bad"}']) {
     assert.equal(readMemory({ getItem: () => raw }, "key").studentRef, "");

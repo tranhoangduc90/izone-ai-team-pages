@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'">
     <title>Phiếu điểm danh</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="styles.css?rev=20260829-learning-v1">
+    <link rel="stylesheet" href="styles.css?rev=20260905-memory-v3">
   </head>
   <body>
     <main class="shell">
@@ -28,6 +28,12 @@
             <option value="">Chọn tên của bạn</option>
           </select>
         </label>
+        <label class="checkbox-row" id="rememberStudentRow">
+          <input id="rememberStudent" type="checkbox" checked>
+          <span>Ghi nhớ tôi trên thiết bị này</span>
+        </label>
+        <p class="muted" id="rememberStudentStatus" role="status"></p>
+        <button class="button text-button" id="changeRememberedStudent" type="button" hidden>Đổi người học</button>
         <button class="button primary" id="chooseStudentButton" type="button" disabled>Tiếp tục</button>
       </section>
 
@@ -75,7 +81,7 @@
         <button class="button primary" id="retryButton" type="button">Thử lại</button>
       </section>
     </main>
-    <script src="config.js?rev=20260829-learning-v1"></script>
-    <script src="app.js?rev=20260829-learning-v1"></script>
+    <script src="config.js?rev=20260905-memory-v3"></script>
+    <script type="module" src="app.js?rev=20260905-memory-v3"></script>
   </body>
 </html>

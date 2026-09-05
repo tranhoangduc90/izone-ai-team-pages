@@ -1,6 +1,6 @@
 // Nhận trang config.json của bản cần kiểm trong trình duyệt riêng.
 // Giữ cấu hình/source thật, thay mọi API học viên bằng dữ liệu giả trước khi mở app.
-// Kiểm hai lớp CS, lớp ngoài phạm vi, nhớ xuyên bài và đúng UUID; lỗi trả assertion.
+// Kiểm lớp CS và lớp khác, nhớ xuyên bài và đúng UUID; lỗi trả assertion.
 async (page) => {
   const base = page.url().split('writing-handouts/')[0] + 'writing-handouts/';
   if (!/^https?:\/\/(127\.0\.0\.1:4187|tranhoangduc90\.github\.io)\//.test(base)) throw Error('Sai đích kiểm.');
@@ -11,7 +11,7 @@ async (page) => {
   ensure(configResponse.ok(), 'Không đọc được cấu hình phát hành.');
   const config = await configResponse.json();
   ensure(config.studentMemory?.enabled === true, 'Tính năng chưa bật.');
-  ensure(JSON.stringify(config.studentMemory.classCodes) === JSON.stringify(['CS.070626', 'CS.160826']), 'Sai phạm vi lớp.');
+  ensure(config.studentMemory.allClasses === true, 'Chưa mở cho toàn bộ lớp.');
   const studentRef = '11111111-1111-4111-8111-111111111111';
   const classRefs = ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'];
   const nextRefs = ['cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'];
@@ -88,8 +88,13 @@ async (page) => {
   outside = true;
   await page.goto(base + 'lesson.html?task=writing-task2-lawbreakers-prison-alternatives&class=IC2200');
   await page.locator('#lesson-class option[value="' + classRefs[0] + '"]').waitFor({ state: 'attached' });
-  ensure(await page.locator('#remember-student').count() === 0, 'Bật nhầm IC2200 ngoài phạm vi.');
-  checks.push('IC2200 giữ giao diện ngoài phạm vi');
+  await page.locator('#remember-student').waitFor({ state: 'attached' });
+  ensure(await page.locator('#remember-student').isChecked(), 'IC2200 chưa được ghi nhớ mặc định.');
+  await page.evaluate(ref => localStorage.setItem('izone:remembered-writing-student:v1:https://ducizone.ddns.net/writing-api', JSON.stringify({ version: 1, studentRef: ref })), studentRef);
+  await page.reload();
+  await page.locator('#remember-student').waitFor({ state: 'attached' });
+  ensure(await page.locator('#lesson-student').inputValue() === studentRef, 'IC2200 không nhận bộ nhớ chung.');
+  checks.push('IC2200: tick sẵn và chọn đúng UUID từ bộ nhớ chung');
   ensure(unexpected.length === 0, 'Có yêu cầu ngoài fixture: ' + unexpected.join('; '));
   ensure(pageErrors.length === 0 && consoleErrors.length === 0, 'Có lỗi trình duyệt: ' + [...pageErrors, ...consoleErrors].join('; '));
   const report = { outcome: 'success', target: base, checks, mockedSessionRequests: opened.length, unexpectedRequests: unexpected.length, pageErrors: pageErrors.length, consoleErrors: consoleErrors.length };

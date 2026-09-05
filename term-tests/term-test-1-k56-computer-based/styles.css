@@ -720,6 +720,18 @@ button.writing-score-card:focus-visible {
   font: inherit;
 }
 
+.cbt-bootstrap-identity .cbt-remember-student {
+  display: flex;
+  grid-column: 2;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.cbt-bootstrap-identity .cbt-remember-student input { width: auto; min-height: 0; }
+.cbt-identity-memory-actions { display: flex; grid-column: 2; flex-wrap: wrap; gap: 8px; }
+.cbt-memory-status { grid-column: 1 / -1; margin: 0; color: #a51e2a; font-size: 12px; }
+
 .cbt-mode .progress,
 .cbt-mode .notice,
 .cbt-mode .identity-panel {
@@ -2856,6 +2868,8 @@ button.writing-score-card:focus-visible {
     grid-template-columns: 1fr;
     gap: 8px;
   }
+  .cbt-bootstrap-identity .cbt-remember-student,
+  .cbt-identity-memory-actions { grid-column: 1; }
 
   .writing-exam-view:not([hidden]) {
     height: auto;

@@ -74,7 +74,7 @@ try {
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({
         class: { code: 'IC2238', name: 'IC2238' },
-        students: [{ ref: 'student-test-001', name: 'Học viên thử nghiệm' }],
+        students: [{ ref: '11111111-1111-4111-8111-111111111111', name: 'Học viên thử nghiệm' }],
       }),
     });
   });
@@ -136,12 +136,12 @@ try {
   if (!(await listening.isVisible())) throw new Error('Phần Listening không hiển thị cùng bộ chọn tên');
   if ((await studentSelect.locator('option').count()) !== 3) throw new Error('Dropdown thiếu lựa chọn học viên tạm');
 
-  await studentSelect.selectOption('student-test-001');
-  if ((await studentSelect.inputValue()) !== 'student-test-001') throw new Error('Không chọn được học viên');
+  await studentSelect.selectOption('11111111-1111-4111-8111-111111111111');
+  if ((await studentSelect.inputValue()) !== '11111111-1111-4111-8111-111111111111') throw new Error('Không chọn được học viên');
 
   await page.reload();
   await studentSelect.waitFor({ state: 'visible' });
-  if ((await studentSelect.inputValue()) !== 'student-test-001') throw new Error('Tên đã chọn không được giữ sau khi tải lại');
+  if ((await studentSelect.inputValue()) !== '11111111-1111-4111-8111-111111111111') throw new Error('Tên đã chọn không được giữ sau khi tải lại');
 
   await studentSelect.selectOption('__temporary__');
   const temporaryForm = page.locator('#temporaryStudentForm');

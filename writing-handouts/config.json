@@ -2,7 +2,7 @@
   "apiBase": "https://ducizone.ddns.net/writing-api/",
   "studentMemory": {
     "enabled": true,
-    "classCodes": ["CS.070626", "CS.160826"]
+    "allClasses": true
   },
   "googleClientId": "235597750133-urmb86ktf5recnvvtbghf13bktfv5rkj.apps.googleusercontent.com"
 }

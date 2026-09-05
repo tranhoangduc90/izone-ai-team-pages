@@ -144,6 +144,7 @@ async function verifyCbtRoute(browser, classCode, slug, screenshot = false) {
   await otherTab.goto(siteBase + 'writing-handouts/config.json');
   await otherTab.evaluate(({ key, ref }) => localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: ref })), { key: memoryKey, ref: uuidB });
   assert.equal(await picker.inputValue(), uuidA, 'Storage event trong dialog đã đổi UUID đang xác nhận');
+  await opened.page.bringToFront();
   await dialog.getByRole('button', { name: 'Quay lại chọn tên' }).click();
   await opened.page.waitForTimeout(30);
   assert.equal(prepared.count, 0, 'Hủy xác nhận CBT vẫn gọi prepare');
@@ -154,6 +155,7 @@ async function verifyCbtRoute(browser, classCode, slug, screenshot = false) {
   }, { key: memoryKey, ref: uuidB });
   await opened.page.waitForTimeout(50);
   assert.equal(await picker.inputValue(), uuidA, 'Trong dialog, tab khác đổi UUID sắp xác nhận');
+  await opened.page.bringToFront();
   await opened.page.locator('.cbt-identity-confirmation-dialog').getByRole('button', { name: 'Xác nhận, tiếp tục' }).click();
   await opened.page.waitForTimeout(30);
   assert.equal(prepared.count, 1, 'Xác nhận CBT không gọi đúng một prepare');
@@ -227,7 +229,7 @@ async function main() {
     await denied.page.locator('#bootstrapStudent option[value="' + uuidA + '"]').waitFor({ state: 'attached' });
     assert.equal(await denied.page.locator('#bootstrapStudent').isEnabled(), true, 'Storage bị chặn làm hỏng chọn tay CBT');
     await deniedContext.close();
-    for (const classCode of ['CS.070626', 'CS.160826']) {
+    for (const classCode of ['CS.070626', 'CS.160826', 'IC2200', 'LOP-MOI-2027']) {
       for (const slug of answerRoutes) {
         const routeContext = await browser.newContext();
         const route = await openTestPage(routeContext, { classCode, slug });
@@ -239,12 +241,21 @@ async function main() {
         await routeContext.close();
       }
     }
-    for (const classCode of ['CS.070626', 'CS.160826']) {
+    for (const classCode of ['CS.070626', 'CS.160826', 'IC2200', 'LOP-MOI-2027']) {
       for (const slug of ['term-test-1-computer-based', 'term-test-2-computer-based', 'mini-test-lesson-5-computer-based']) {
         await verifyCbtRoute(browser, classCode, slug, classCode === 'CS.070626' && slug === 'term-test-1-computer-based');
       }
     }
 
+    const demoContext = await browser.newContext();
+    const demo = await openTestPage(demoContext, { classCode: 'CODEXDEMO806' });
+    assert.equal(await demo.page.locator('#remember-student').count(), 0, 'Demo vẫn dùng bộ nhớ học viên thật');
+    assert.equal(await demo.page.evaluate(key => JSON.parse(localStorage.getItem(key)).studentRef, memoryKey), uuidA);
+    await demo.page.goto(siteBase + 'term-tests/term-test-1-computer-based/?class=CODEXDEMO806');
+    await demo.page.locator('#bootstrapStudent option[value="' + uuidA + '"]').waitFor({ state: 'attached' });
+    assert.equal(await demo.page.locator('#bootstrap-remember-student').count(), 0, 'CBT demo vẫn dùng bộ nhớ học viên thật');
+    assert.equal(await demo.page.evaluate(key => JSON.parse(localStorage.getItem(key)).studentRef, memoryKey), uuidA);
+    await demoContext.close();
     await context.close();
     assert.deepEqual(unexpectedRequests, [], 'Có yêu cầu mạng chưa mô phỏng');
     assert.deepEqual(pageErrors, [], 'Có lỗi JavaScript trong trình duyệt');
@@ -253,7 +264,7 @@ async function main() {
       'Xác nhận hiện có là cổng trước khi ghi nhớ và resume',
       'Storage event không đổi danh tính active attempt',
       'UUID không thuộc roster và untick đều fail-closed',
-      'Cả 3 answer sheet và 3 CBT trên hai lớp CS không tự mở lượt làm',
+      'Cả 3 answer sheet và 3 CBT trên 4 lớp CS/IC/lớp mới không tự mở lượt làm; demo không đụng bộ nhớ thật',
       'Bộ nhớ đổi trong dialog vẫn chuẩn bị đúng UUID; lỗi xóa không báo đã quên',
       'Hồ sơ tạm → chính thức giữ đúng tick mặc định và lựa chọn bỏ tick'
     ] }, null, 2));

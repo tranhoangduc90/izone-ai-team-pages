@@ -1,5 +1,5 @@
 import { allowedGroup, classMatches, classRefOf, memoryKey, officialStudent, readMemory,
-  resolveRememberedStudent, rosterGroups, studentRefOf, writeMemory } from "./student-memory.js?v=20260905-memory-v2";
+  resolveRememberedStudent, rosterGroups, studentRefOf, writeMemory } from "./student-memory.js?v=20260905-memory-v3";
 
 // Nhận form và roster mới, chọn sẵn đúng UUID và đồng bộ các tab chưa mở bài.
 // Danh tính bài đang làm được giữ cố định; lỗi lưu hoặc lỗi xóa bộ nhớ sẽ được báo rõ.

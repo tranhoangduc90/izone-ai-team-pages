@@ -64,7 +64,7 @@
   let preparing = false;
   let bootstrapSelectionBusy = false;
   let downloadController = null;
-  const rememberedClassCodes = new Set(['CS.070626', 'CS.160826']);
+  const studentMemoryForAllClasses = classCode !== 'CODEXDEMO806';
   const studentMemory = { api: null, storage: null, key: '', checkbox: null, status: null, confirm: null, change: null, candidateRef: '', preferred: true };
 
   root.innerHTML = `
@@ -147,7 +147,7 @@
   document.body.append(previewAudio);
 
   function memoryEnabled() {
-    return rememberedClassCodes.has(classCode) && Boolean(studentMemory.api && studentMemory.storage && studentMemory.key);
+    return studentMemoryForAllClasses && Boolean(studentMemory.api && studentMemory.storage && studentMemory.key);
   }
 
   function officialStudent(student) {
@@ -187,9 +187,9 @@
   }
 
   async function initializeStudentMemory() {
-    if (!rememberedClassCodes.has(classCode)) return;
+    if (!studentMemoryForAllClasses) return;
     try {
-      const api = await import('../../shared/student-memory.js?v=20260905-memory-v2');
+      const api = await import('../../shared/student-memory.js?v=20260905-memory-v3');
       const storage = window.localStorage;
       const label = elements.bootstrapStudent.closest('label');
       if (!label) return;
@@ -634,7 +634,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260821-attempt-review-v1');
-    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v2');
+    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3');
     await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
   }

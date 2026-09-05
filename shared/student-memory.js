@@ -19,8 +19,9 @@ export function rosterGroups(roster = {}) {
 }
 
 export function allowedGroup(group, config) {
-  return config?.enabled === true && Array.isArray(config.classCodes)
-    && config.classCodes.some((code) => classMatches(group, code));
+  // Bật toàn bộ lớp chỉ mở tiện ích chọn sẵn; danh sách mới vẫn quyết định người hợp lệ.
+  return config?.enabled === true && (config.allClasses === true
+    || (Array.isArray(config.classCodes) && config.classCodes.some((code) => classMatches(group, code))));
 }
 
 export function resolveRememberedStudent(groups, studentRef, requestedClass = "", config) {

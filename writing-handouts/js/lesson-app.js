@@ -1,5 +1,5 @@
 import { createLessonApi } from "./api.js";
-import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v2";
+import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v3";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, isConflict, pollingDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
