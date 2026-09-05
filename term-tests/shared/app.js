@@ -78,8 +78,15 @@
     }
   };
 
+  // Trình duyệt chặn một kho lưu vẫn cho chọn tên và dùng kho còn lại.
+  function availableStorages() {
+    return ['sessionStorage', 'localStorage'].flatMap(name => {
+      try { return window[name] ? [window[name]] : []; } catch { return []; }
+    });
+  }
+
   function readSession() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         const restored = JSON.parse(storage.getItem(storageKey) || '{}');
         if (Object.keys(restored).length) return restored;
@@ -115,7 +122,7 @@
       writingLayout: state.writingLayout,
       frozenAnswers: state.frozenAnswers
     });
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.setItem(storageKey, serialized);
       } catch {
@@ -127,7 +134,7 @@
   function clearAllLocalAttemptData() {
     const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}`;
     const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}:`;
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.removeItem(storageKey);
         storage.removeItem(uiStorageKey);
@@ -333,6 +340,208 @@
     'writingPrepView', 'startWriting', 'writingView', 'writingTaskTabs', 'writingWorkspace', 'submitWriting',
     'previousWritingTask', 'nextWritingTask', 'writingTaskPosition', 'writingSubmissionResult'
   ].map(id => [id, document.getElementById(id)]));
+
+  // Bộ nhớ dùng chung chỉ là gợi ý chọn tên cho hai lớp Writing đã mở thử.
+  // Nó không chứa tên, lớp, mã lượt làm hay dữ liệu bài thi, và không tự mở lượt làm.
+  const rememberedClassCodes = new Set(['CS.070626', 'CS.160826']);
+  const studentMemory = {
+    api: null,
+    storage: null,
+    key: '',
+    checkbox: null,
+    status: null,
+    confirm: null,
+    change: null,
+    candidateRef: '',
+    preferred: true
+  };
+  let identitySelectionBusy = false;
+  let identityControlsBefore = [];
+
+  function studentMemoryEnabled() {
+    return rememberedClassCodes.has(classCode) && Boolean(studentMemory.api && studentMemory.storage && studentMemory.key);
+  }
+
+  function hasBoundAttempt() {
+    const hasDraft = value => value && typeof value === 'object'
+      && Object.values(value).some(item => String(item || '').trim());
+    return Boolean(
+      state.attemptToken
+      || state.examSessionToken
+      || state.listeningDeadlineAt
+      || state.listeningSubmitted
+      || state.readingDeadlineAt
+      || state.writingStarted
+      || state.writingSubmitted
+      || state.completed
+      || hasDraft(state.drafts?.listening)
+      || hasDraft(state.drafts?.reading)
+      || Object.values(state.drafts?.writing || {}).some(item => String(item || '').trim())
+    );
+  }
+
+  function setIdentityControlsBusy(busy) {
+    const controls = [
+      elements.studentSelect,
+      studentMemory.checkbox,
+      studentMemory.confirm,
+      studentMemory.change,
+      elements.registerTemporaryStudent,
+      elements.temporaryStudentName,
+      elements.temporaryStudentCode
+    ].filter(Boolean);
+    if (busy) {
+      identityControlsBefore = controls.map(control => [control, control.disabled]);
+      for (const [control] of identityControlsBefore) control.disabled = true;
+      return;
+    }
+    for (const [control, disabled] of identityControlsBefore) control.disabled = disabled;
+    identityControlsBefore = [];
+  }
+
+  function rememberedOfficialStudent(student) {
+    return Boolean(studentMemory.api?.officialStudent({ ...student, studentRef: student?.ref }));
+  }
+
+  function setStudentMemoryStatus(message = '') {
+    if (studentMemory.status) studentMemory.status.textContent = message;
+  }
+
+  function refreshRememberedStudent() {
+    if (!studentMemoryEnabled()) return;
+    if (state.studentIdentitySource === 'temporary' && state.studentRef) {
+      forgetForTemporaryStudent();
+      return;
+    }
+    const remembered = studentMemory.api.readMemory(studentMemory.storage, studentMemory.key);
+    const matches = state.roster.filter(student => rememberedOfficialStudent(student) && student.ref === remembered.studentRef);
+    const candidate = matches.length === 1 ? matches[0] : null;
+    const unboundSetup = !hasBoundAttempt();
+    if (unboundSetup) {
+      // Selection cached before any attempt is only a convenience, never an identity lock.
+      // A newer shared-memory value must be confirmed again before it can target an attempt.
+      state.studentRef = '';
+      state.studentName = '';
+      state.studentIdentitySource = '';
+      elements.studentSelect.value = '';
+      saveSession();
+    }
+    studentMemory.candidateRef = candidate?.ref || '';
+    studentMemory.confirm.hidden = !candidate || !unboundSetup;
+    if (candidate && unboundSetup) {
+      // Gán trực tiếp để không phát event change, không resume attempt và không tạo phiên.
+      elements.studentSelect.value = candidate.ref;
+      setStudentMemoryStatus('Đã chọn sẵn tên của bạn. Hãy xác nhận trước khi tiếp tục.');
+    } else if (remembered.studentRef) {
+      setStudentMemoryStatus('Không tìm thấy đúng một hồ sơ chính thức trong lớp này. Hãy chọn lại tên.');
+    } else if (remembered.status === 'unavailable') {
+      setStudentMemoryStatus('Trình duyệt chưa đọc được ghi nhớ. Bạn vẫn có thể chọn tên và làm bài.');
+    } else {
+      setStudentMemoryStatus('Chỉ ghi nhớ trên thiết bị cá nhân. Bạn vẫn cần xác nhận trước khi làm bài.');
+    }
+  }
+
+  function rememberConfirmedStudent(student) {
+    if (!studentMemoryEnabled() || !rememberedOfficialStudent(student)) return;
+    const saved = studentMemory.api.writeMemory(
+      studentMemory.storage,
+      studentMemory.key,
+      studentMemory.preferred ? student.ref : ''
+    );
+    if (!saved) setStudentMemoryStatus('Đã xác nhận tên, nhưng trình duyệt chưa lưu được lựa chọn.');
+  }
+
+  function forgetForTemporaryStudent() {
+    if (!studentMemoryEnabled()) return;
+    studentMemory.api.writeMemory(studentMemory.storage, studentMemory.key, '');
+    studentMemory.candidateRef = '';
+    studentMemory.checkbox.checked = false;
+    studentMemory.checkbox.disabled = true;
+    studentMemory.confirm.hidden = true;
+    setStudentMemoryStatus('Hồ sơ tạm không được ghi nhớ; hãy dùng mã tạm giáo viên đã cấp.');
+  }
+
+  function clearSetupIdentity() {
+    if (hasBoundAttempt() || identitySelectionBusy) {
+      showNotice('Bài đang gắn với danh tính hiện tại; không thể đổi người học lúc này.', 'error');
+      return;
+    }
+    if (!studentMemory.api.writeMemory(studentMemory.storage, studentMemory.key, '')) {
+      setStudentMemoryStatus('Không thể xóa ghi nhớ trong trình duyệt.');
+      return;
+    }
+    state.studentRef = '';
+    state.studentName = '';
+    state.studentIdentitySource = '';
+    elements.studentSelect.value = '';
+    if (elements.temporaryStudentForm) elements.temporaryStudentForm.hidden = true;
+    if (elements.temporaryStudentName) elements.temporaryStudentName.value = '';
+    if (elements.temporaryStudentCode) elements.temporaryStudentCode.value = '';
+    if (elements.resetDemoData) elements.resetDemoData.disabled = true;
+    studentMemory.candidateRef = '';
+    studentMemory.confirm.hidden = true;
+    saveSession();
+    setStudentMemoryStatus('Đã quên lựa chọn. Hãy chọn đúng tên trước khi tiếp tục.');
+    elements.studentSelect.focus();
+  }
+
+  async function initializeStudentMemory() {
+    if (!rememberedClassCodes.has(classCode)) return;
+    try {
+      const api = await import('../../shared/student-memory.js?v=20260905-memory-v2');
+      const storage = window.localStorage;
+      const selectLabel = elements.studentSelect.closest('label');
+      if (!selectLabel) return;
+      const label = document.createElement('label');
+      label.className = 'checkbox-row';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = 'remember-student';
+      checkbox.checked = true;
+      checkbox.addEventListener('change', () => { studentMemory.preferred = checkbox.checked; });
+      label.append(checkbox, document.createTextNode(' Ghi nhớ tôi trên thiết bị này'));
+      const status = document.createElement('p');
+      status.id = 'remember-student-status';
+      status.className = 'muted';
+      status.setAttribute('role', 'status');
+      const confirm = document.createElement('button');
+      confirm.type = 'button';
+      confirm.id = 'confirm-remembered-student';
+      confirm.className = 'button button-primary';
+      confirm.textContent = 'Xác nhận và tiếp tục';
+      confirm.hidden = true;
+      const change = document.createElement('button');
+      change.type = 'button';
+      change.id = 'change-remembered-student';
+      change.className = 'button button-secondary';
+      change.textContent = 'Đổi người học';
+      selectLabel.after(label, status, confirm, change);
+      studentMemory.api = api;
+      studentMemory.storage = storage;
+      studentMemory.key = api.memoryKey(appConfig.API_BASE_URL, location.href);
+      studentMemory.checkbox = checkbox;
+      studentMemory.status = status;
+      studentMemory.confirm = confirm;
+      studentMemory.change = change;
+      confirm.addEventListener('click', () => {
+        if (!studentMemory.candidateRef || elements.studentSelect.value !== studentMemory.candidateRef) return;
+        void selectStudentIdentity({ requireConfirmation: true });
+      });
+      change.addEventListener('click', clearSetupIdentity);
+      window.addEventListener('storage', event => {
+        if (event.storageArea !== studentMemory.storage) return;
+        // key null nghĩa là tab khác đã clear toàn bộ localStorage; phải bỏ prefill cũ.
+        if (event.key !== null && event.key !== studentMemory.key) return;
+        if (hasBoundAttempt()) {
+          showNotice('Lựa chọn ghi nhớ đã đổi ở tab khác. Bài hiện tại vẫn giữ đúng danh tính.', 'success');
+          return;
+        }
+        if (!identitySelectionBusy) refreshRememberedStudent();
+      });
+    } catch {
+      // Không có module hoặc trình duyệt chặn localStorage: giữ nguyên luồng chọn tay.
+    }
+  }
 
   const progressSteps = [...document.querySelectorAll('[data-progress]')];
   const views = [
@@ -1056,6 +1265,8 @@
       saveSession();
     }
     if (elements.resetDemoData) elements.resetDemoData.disabled = !elements.studentSelect.value;
+    // Chỉ điền dropdown. Không gọi handler change nên không resume/start attempt.
+    refreshRememberedStudent();
   }
 
   function confirmIncomplete(answered, skillLabel) {
@@ -1976,30 +2187,47 @@
     }
   }
 
-  elements.studentSelect.addEventListener('change', async () => {
-    const previousStudentRef = state.studentRef;
-    const selectedValue = elements.studentSelect.value;
-    const selectingTemporary = selectedValue === '__temporary__';
-    const student = selectingTemporary ? null : state.roster.find(item => item.ref === selectedValue);
-    if (student && testConfig.slug.startsWith('term-test-')) {
-      const confirmed = await confirmStudentIdentity(student);
-      if (!confirmed) {
-        elements.studentSelect.value = state.roster.some(item => item.ref === previousStudentRef)
-          ? previousStudentRef
-          : '';
-        if (elements.temporaryStudentForm) elements.temporaryStudentForm.hidden = true;
-        if (elements.resetDemoData) elements.resetDemoData.disabled = !elements.studentSelect.value;
+  async function selectStudentIdentity({ requireConfirmation = false } = {}) {
+    if (identitySelectionBusy) return;
+    identitySelectionBusy = true;
+    setIdentityControlsBusy(true);
+    try {
+      const previousStudentRef = state.studentRef;
+      const selectedValue = elements.studentSelect.value;
+      if (hasBoundAttempt() && selectedValue !== previousStudentRef) {
+        elements.studentSelect.value = previousStudentRef;
+        showNotice('Bài đang gắn với danh tính hiện tại; không thể đổi người học lúc này.', 'error');
         return;
       }
-    }
-    state.studentRef = student?.ref || '';
-    state.studentName = student?.name || '';
-    state.studentIdentitySource = student?.temporary ? 'temporary' : (student ? 'roster' : '');
-    if (elements.temporaryStudentForm) {
-      elements.temporaryStudentForm.hidden = !selectingTemporary;
-      if (!elements.temporaryStudentForm.hidden) elements.temporaryStudentName.focus();
-    }
-    if (previousStudentRef && previousStudentRef !== state.studentRef) {
+      const selectingTemporary = selectedValue === '__temporary__';
+      const student = selectingTemporary ? null : state.roster.find(item => item.ref === selectedValue);
+      // Term Test vốn có popup xác nhận. Với tên được điền sẵn, nút Xác nhận cũng
+      // đi qua chính popup này; chỉ sau đó mới có thể ghi nhớ hoặc kiểm lượt dở.
+      if (student && (testConfig.slug.startsWith('term-test-') || requireConfirmation)) {
+        const confirmed = await confirmStudentIdentity(student);
+        if (!confirmed) {
+          elements.studentSelect.value = state.roster.some(item => item.ref === previousStudentRef)
+            ? previousStudentRef
+            : '';
+          if (elements.temporaryStudentForm) elements.temporaryStudentForm.hidden = true;
+          if (elements.resetDemoData) elements.resetDemoData.disabled = !elements.studentSelect.value;
+          return;
+        }
+      }
+      state.studentRef = student?.ref || '';
+      state.studentName = student?.name || '';
+      state.studentIdentitySource = selectingTemporary ? 'temporary' : (student?.temporary ? 'temporary' : (student ? 'roster' : ''));
+      if (elements.temporaryStudentForm) {
+        elements.temporaryStudentForm.hidden = !selectingTemporary;
+        if (!elements.temporaryStudentForm.hidden) elements.temporaryStudentName.focus();
+        else { elements.temporaryStudentName.value = ''; elements.temporaryStudentCode.value = ''; }
+      }
+      if (selectingTemporary) forgetForTemporaryStudent();
+      else if (studentMemory.checkbox) {
+        studentMemory.checkbox.disabled = false;
+        studentMemory.checkbox.checked = studentMemory.preferred;
+      }
+      if (previousStudentRef && previousStudentRef !== state.studentRef) {
       // Đổi học viên phải tạo một lượt độc lập; không mang mã gửi bài hoặc bài nháp của người trước sang.
       state.clientSubmissionId = '';
       state.clientSubmissionStudentRef = '';
@@ -2020,24 +2248,38 @@
       state.frozenAnswers = { listening: null, reading: null };
       state.result = null;
       state.attemptReview = null;
-    }
-    if (elements.resetDemoData) elements.resetDemoData.disabled = !state.studentRef;
-    saveSession();
-    if (state.studentRef && !state.attemptToken) {
-      try {
-        await resumeActiveAttemptForSelectedStudent();
-      } catch (error) {
-        showNotice(`Chưa kiểm tra được lượt đang dở: ${error.message}. Bạn vẫn có thể tiếp tục trên máy này.`, 'error');
       }
+      if (student) rememberConfirmedStudent(student);
+      studentMemory.candidateRef = '';
+      if (studentMemory.confirm) studentMemory.confirm.hidden = true;
+      if (elements.resetDemoData) elements.resetDemoData.disabled = !state.studentRef;
+      saveSession();
+      if (state.studentRef && !state.attemptToken) {
+        try {
+          await resumeActiveAttemptForSelectedStudent();
+        } catch (error) {
+          showNotice(`Chưa kiểm tra được lượt đang dở: ${error.message}. Bạn vẫn có thể tiếp tục trên máy này.`, 'error');
+        }
+      }
+    } finally {
+      setIdentityControlsBusy(false);
+      if (state.studentIdentitySource === 'temporary') forgetForTemporaryStudent();
+      else if (studentMemory.checkbox) studentMemory.checkbox.disabled = false;
+      identitySelectionBusy = false;
     }
+  }
+
+  elements.studentSelect.addEventListener('change', () => {
+    void selectStudentIdentity();
   });
 
   elements.temporaryStudentForm?.addEventListener('submit', async event => {
     event.preventDefault();
-    if (!elements.temporaryStudentForm.reportValidity()) return;
+    if (identitySelectionBusy || !elements.temporaryStudentForm.reportValidity()) return;
+    identitySelectionBusy = true;
+    setIdentityControlsBusy(true);
     const studentName = elements.temporaryStudentName.value.trim().replace(/\s+/gu, ' ');
     const temporaryCode = elements.temporaryStudentCode.value.trim().toUpperCase();
-    setBusy(elements.registerTemporaryStudent, true, 'Đang xác nhận...', 'Xác nhận và làm bài');
     try {
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/temporary-students`, {
         method: 'POST',
@@ -2060,11 +2302,15 @@
       elements.temporaryStudentForm.hidden = true;
       elements.readingStudentName.textContent = student.name;
       saveSession();
+      forgetForTemporaryStudent();
+      refreshRememberedStudent();
       showNotice(`Đã xác nhận ${student.name}. Bạn có thể bắt đầu làm bài.`, 'success');
     } catch (error) {
       showNotice(`Chưa xác nhận được học viên: ${error.message}`, 'error');
     } finally {
-      setBusy(elements.registerTemporaryStudent, false, 'Đang xác nhận...', 'Xác nhận và làm bài');
+      setIdentityControlsBusy(false);
+      if (state.studentIdentitySource === 'temporary') forgetForTemporaryStudent();
+      identitySelectionBusy = false;
     }
   });
 
@@ -2519,6 +2765,7 @@
     updateAnswerCount('listening');
     updateAnswerCount('reading');
     setupWritingExam();
+    await initializeStudentMemory();
 
     if (demoMode) {
       if ((demoMode === 'writing-prep' || demoMode === 'writing') && writingConfig) {
@@ -2551,7 +2798,7 @@
       return;
     }
 
-    if (!/^[A-Z0-9_-]{2,32}$/.test(classCode)) {
+    if (!/^[A-Z0-9._-]{2,32}$/.test(classCode)) {
       elements.loadingView.hidden = true;
       showNotice('Link chưa có mã lớp hợp lệ. Hãy dùng dạng ?class=IC2139.', 'error');
       return;

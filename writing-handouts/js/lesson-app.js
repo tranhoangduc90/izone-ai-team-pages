@@ -1,5 +1,5 @@
 import { createLessonApi } from "./api.js";
-import { installStudentMemory } from "./student-memory-ui.js";
+import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v2";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, isConflict, pollingDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
@@ -132,26 +132,48 @@ function updateAccessCode() {
 
 async function createProvisionalStudent() {
   const error = $("lesson-identity-error"); const button = $("lesson-create-provisional");
-  const classRef = $("lesson-class").value; const name = $("lesson-provisional-name").value;
+  const classRef = $("lesson-class").value; const name = $("lesson-provisional-name").value.trim().replace(/\s+/gu, " ");
   const pin = $("lesson-provisional-pin").value; const confirmPin = $("lesson-provisional-pin-confirm").value;
   if (!classRef) { error.hidden = false; error.textContent = "Hãy chọn lớp trước."; return; }
+  if (name.length < 2 || name.length > 100) { error.hidden = false; error.textContent = "Họ và tên cần có từ 2 đến 100 ký tự."; return; }
   if (!/^\d{4}$/.test(pin) || pin !== confirmPin) { error.hidden = false; error.textContent = "Hai ô mã phải giống nhau và gồm đúng 4 số."; return; }
-  button.disabled = true;
+  if (app.identityBusy || (app.studentMemory && !app.studentMemory.begin())) return;
+  app.identityBusy = true;
+  const previousDisabled = [...$("lesson-identity-form").elements].map((element) => [element, element.disabled]);
+  for (const [element] of previousDisabled) element.disabled = true;
+  error.hidden = true;
   try {
     const result = await app.api.registerProvisional(app.activitySlug, classRef, name, pin, $("lesson-duplicate-confirm").checked, createRequestId());
     const student = result.data.student; const group = app.roster.classes.find((item) => item.classRef === classRef);
-    group.students.push({ ...student, provisional: true, requiresAccessCode: true });
+    if (!group.students.some((item) => item.studentRef === student.studentRef)) {
+      group.students.push({ ...student, provisional: true, requiresAccessCode: true });
+    }
     updateStudentOptions(); $("lesson-student").value = student.studentRef; updateAccessCode(); $("lesson-access-code").value = pin;
     $("lesson-provisional-panel").hidden = true; error.hidden = false; error.textContent = "Đã tạo hồ sơ tạm. Hãy bấm Mở bài làm.";
+    $("lesson-provisional-pin").value = ""; $("lesson-provisional-pin-confirm").value = "";
   } catch (requestError) {
     if (requestError.data?.error === "PROVISIONAL_STUDENT_EXISTS" && requestError.data.current) {
       const existing = requestError.data.current; const group = app.roster.classes.find((item) => item.classRef === classRef);
       if (!group.students.some((item) => item.studentRef === existing.studentRef)) group.students.push({ ...existing, provisional: true, requiresAccessCode: true });
-      updateStudentOptions(); $("lesson-student").value = existing.studentRef; updateAccessCode(); $("lesson-duplicate-confirm-row").hidden = false;
+      updateStudentOptions(); $("lesson-student").value = existing.studentRef; updateAccessCode(); $("lesson-access-code").value = ""; $("lesson-duplicate-confirm-row").hidden = false;
+      $("lesson-provisional-pin").value = ""; $("lesson-provisional-pin-confirm").value = "";
     }
     if (requestError.data?.error === "DUPLICATE_STUDENT_NAME") $("lesson-duplicate-confirm-row").hidden = false;
     error.hidden = false; error.textContent = requestError.message;
-  } finally { button.disabled = false; }
+  } finally {
+    for (const [element, disabled] of previousDisabled) element.disabled = disabled;
+    app.identityBusy = false;
+    app.studentMemory?.end();
+  }
+}
+
+// Xóa tên/mã đang nhập khi chuyển người hoặc lớp; bài đã lưu vẫn thuộc danh tính cũ.
+function resetIdentityFields() {
+  for (const id of ["lesson-access-code", "lesson-provisional-name", "lesson-provisional-pin", "lesson-provisional-pin-confirm"]) $(id).value = "";
+  $("lesson-provisional-panel").hidden = true;
+  $("lesson-duplicate-confirm-row").hidden = true;
+  $("lesson-duplicate-confirm").checked = false;
+  $("lesson-identity-error").hidden = true;
 }
 
 function mergeServer(payload, preserveResponses = false) {
@@ -191,19 +213,17 @@ async function restoreLocal() {
 }
 
 async function saveRemote(reason = "manual") {
-  if (app.savingPromise) {
-    await app.savingPromise;
-    return app.dirty ? saveRemote(reason) : true;
-  }
+  // Chờ cả cập nhật phiên bản và bản lưu cục bộ, không chỉ chờ HTTP trả về.
+  while (app.savingPromise) if (!(await app.savingPromise)) return false;
   if (!app.dirty || app.conflict) return !app.conflict;
   clearTimeout(app.remoteTimer);
   app.remoteTimer = null;
   const sentSequence = app.changeSequence;
   const progress = { revision: app.state.revision, responses: { ...app.state.responses } };
   setSaveState(reason === "close" ? "Đang lưu trước khi đóng…" : "Đang lưu…");
-  app.savingPromise = app.api.saveResponses(app.sessionRef, progress);
+  app.savingPromise = (async () => {
   try {
-    const result = await app.savingPromise;
+    const result = await app.api.saveResponses(app.sessionRef, progress);
     const preserveResponses = app.changeSequence !== sentSequence;
     mergeServer(result.data.session || result.data, preserveResponses);
     app.dirty = preserveResponses;
@@ -227,9 +247,9 @@ async function saveRemote(reason = "manual") {
       }
     }
     return false;
-  } finally {
-    app.savingPromise = null;
   }
+  })().finally(() => { app.savingPromise = null; });
+  return app.savingPromise;
 }
 
 function schedulePresence(activeField = app.activeField) {
@@ -745,7 +765,7 @@ async function openSession(event) {
     return;
   }
   errorNode.hidden = true;
-  if (app.studentMemory && !app.studentMemory.begin()) return;
+  if (app.identityBusy || (app.studentMemory && !app.studentMemory.begin())) return;
   app.identity = { classRef, studentRef: student.studentRef, label: student.label };
   try {
     const accessCode = student.requiresAccessCode ? $("lesson-access-code").value : undefined;
@@ -756,6 +776,7 @@ async function openSession(event) {
     const result = await app.api.session(app.sessionRef);
     app.state = normalizeLessonProgress(result.data.session || result.data, app.manifest);
     await restoreLocal();
+    $("lesson-access-code").value = ""; $("lesson-provisional-pin").value = ""; $("lesson-provisional-pin-confirm").value = "";
     $("lesson-student-label").textContent = `${student.label} · ${$("lesson-class").selectedOptions[0].textContent}`;
     $("lesson-setup").hidden = true;
     $("lesson-workspace").hidden = false;
@@ -764,9 +785,10 @@ async function openSession(event) {
     setSaveState(app.dirty ? "Đã khôi phục bản lưu trên thiết bị" : "Đã tải bài làm");
     for (const attempt of app.state.attempts) registerAttempt(attempt);
     schedulePresence();
-    app.heartbeatTimer = setInterval(schedulePresence, 30_000);
+    clearInterval(app.heartbeatTimer); app.heartbeatTimer = setInterval(schedulePresence, 30_000);
     app.studentMemory?.complete(app.identity);
   } catch (error) {
+    app.identity = null; app.sessionRef = null;
     errorNode.hidden = false;
     errorNode.textContent = error.message;
   } finally { app.studentMemory?.end(); }
@@ -797,21 +819,29 @@ async function init() {
     await loadManifest();
     const roster = await app.api.roster(app.activitySlug);
     app.roster = roster.data;
+    $("lesson-resume-recent").hidden = !(await getLatestDraft(`lesson:${app.activitySlug}:`));
     renderClassOptions();
     applyClassQuery();
-    $("lesson-resume-recent").hidden = !(await getLatestDraft(`lesson:${app.activitySlug}:`));
     $("lesson-class").addEventListener("change", updateStudentOptions);
     $("lesson-student").addEventListener("change", updateAccessCode);
     $("lesson-identity-form").addEventListener("submit", openSession);
     // Mã lớp riêng từng bài được lấy lại từ roster; chỉ UUID học viên được ghi nhớ.
     app.studentMemory = installStudentMemory({ config: app.studentMemoryConfig, apiBase: app.apiBase,
       roster: app.roster, form: $("lesson-identity-form"), classSelect: $("lesson-class"), studentSelect: $("lesson-student"),
-      refreshStudents: updateStudentOptions, refreshAccessCode: updateAccessCode,
+      refreshStudents: updateStudentOptions, refreshAccessCode: updateAccessCode, resetIdentityFields,
       resumeButton: $("lesson-resume-recent"), workspace: $("lesson-workspace"),
       workspaceActions: $("lesson-workspace").querySelector(".actions"), notice: showNotice,
       beforeSwitch: async () => !app.submittingSections.size && await saveRemote("close") && !app.dirty,
     });
-    $("lesson-show-provisional").addEventListener("click", () => { $("lesson-provisional-panel").hidden = !$("lesson-provisional-panel").hidden; });
+    $("lesson-show-provisional").addEventListener("click", () => {
+      const opening = $("lesson-provisional-panel").hidden;
+      resetIdentityFields();
+      // Khi đăng ký hồ sơ mới, bỏ lựa chọn cũ để không mở nhầm bài của người trước.
+      $("lesson-student").value = "";
+      updateAccessCode();
+      $("lesson-provisional-panel").hidden = !opening;
+      app.studentMemory?.refresh();
+    });
     $("lesson-create-provisional").addEventListener("click", createProvisionalStudent);
     $("lesson-resume-recent").addEventListener("click", resumeRecent);
     $("lesson-save").addEventListener("click", () => saveRemote("manual"));

@@ -68,9 +68,10 @@ test('hai answer sheet Term Test chỉ lưu và nối lượt sau khi học viê
   const termTest2Entry = await readFile(path.join(repoRoot, 'term-tests/term-test-2/index.html'), 'utf8');
   const sharedApp = await readFile(path.join(repoRoot, 'term-tests/shared/app.js'), 'utf8');
   const sharedStyles = await readFile(path.join(repoRoot, 'term-tests/shared/styles.css'), 'utf8');
-  const changeHandlerStart = sharedApp.indexOf("elements.studentSelect.addEventListener('change'");
+  const changeHandlerStart = sharedApp.indexOf("async function selectStudentIdentity(");
   const changeHandlerEnd = sharedApp.indexOf("elements.temporaryStudentForm?.addEventListener", changeHandlerStart);
   const changeHandler = sharedApp.slice(changeHandlerStart, changeHandlerEnd);
+  assert.ok(changeHandlerStart >= 0, 'Không tìm thấy cổng xác nhận dùng chung cho chọn tay và chọn sẵn');
 
   for (const entry of [termTest1Entry, termTest2Entry]) {
     assert.match(entry, new RegExp(`shared/styles\\.css\\?rev=${allStudentConfirmationRevision}`));

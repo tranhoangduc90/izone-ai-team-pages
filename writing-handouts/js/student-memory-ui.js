@@ -1,23 +1,24 @@
 import { allowedGroup, classMatches, classRefOf, memoryKey, officialStudent, readMemory,
-  resolveRememberedStudent, rosterGroups, studentRefOf, writeMemory } from "./student-memory.js";
+  resolveRememberedStudent, rosterGroups, studentRefOf, writeMemory } from "./student-memory.js?v=20260905-memory-v2";
 
-// Nhận form và roster của app hiện tại, thêm ghi nhớ tự nguyện và chọn sẵn đã kiểm.
-// Không mở phiên tự động. Nếu trình duyệt không lưu được, báo ngay và giữ chọn thủ công.
+// Nhận form và roster mới, chọn sẵn đúng UUID và đồng bộ các tab chưa mở bài.
+// Danh tính bài đang làm được giữ cố định; lỗi lưu hoặc lỗi xóa bộ nhớ sẽ được báo rõ.
 export function installStudentMemory(options) {
   const { config, apiBase, roster, form, classSelect, studentSelect, refreshStudents,
-    refreshAccessCode, resumeButton, workspace, workspaceActions, beforeSwitch, notice } = options;
+    refreshAccessCode, resetIdentityFields = () => {}, resumeButton, workspace,
+    workspaceActions, beforeSwitch, notice } = options;
   const groups = rosterGroups(roster);
   if (!groups.some((group) => allowedGroup(group, config))) return null;
   const key = memoryKey(apiBase, location.href);
   let storage;
   try { storage = window.localStorage; } catch { storage = null; }
-  const saved = readMemory(storage, key);
   const requested = new URLSearchParams(location.search).get("class")?.trim() || "";
   const label = document.createElement("label");
   label.className = "checkbox-row";
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
   checkbox.id = "remember-student";
+  checkbox.checked = true;
   label.append(checkbox, document.createTextNode("Ghi nhớ tôi trên thiết bị này"));
   const status = document.createElement("p");
   status.id = "remember-student-status";
@@ -32,11 +33,13 @@ export function installStudentMemory(options) {
   const changeActive = change.cloneNode(true);
   changeActive.id = "change-active-student";
   workspaceActions.append(changeActive);
-  // Mở bài bằng danh tính được chọn để khôi phục đúng phiên, không lấy bài gần nhất của người khác.
+  // Khôi phục bằng đúng danh tính đã chọn, không lấy bài gần nhất của người khác.
   resumeButton.hidden = true;
   let busy = false;
+  let preference = true;
   let disabledBefore = [];
   let rememberThisOpen = false;
+  let activeStudentRef = "";
   const selection = () => {
     const group = groups.find((item) => classRefOf(item) === classSelect.value);
     const matches = group?.students.filter((item) => studentRefOf(item) === studentSelect.value) || [];
@@ -44,26 +47,49 @@ export function installStudentMemory(options) {
   };
   const sync = () => {
     const { group, student } = selection();
-    label.hidden = !allowedGroup(group || {}, config);
-    checkbox.disabled = !officialStudent(student) || label.hidden || !storage;
-    if (checkbox.disabled) checkbox.checked = false;
-    change.hidden = !studentSelect.value && !readMemory(storage, key).studentRef;
-    status.textContent = student && !officialStudent(student)
-      ? "Hồ sơ tạm vẫn cần mã truy cập; không ghi nhớ để chọn sang bài khác."
-      : "Chỉ ghi nhớ trên thiết bị cá nhân. Bạn vẫn cần bấm Mở bài làm.";
+    label.hidden = Boolean(group) && !allowedGroup(group, config);
+    const temporary = (Boolean(student) && !officialStudent(student))
+      || Boolean(form.querySelector('[id$="provisional-panel"]:not([hidden])'));
+    checkbox.disabled = temporary || label.hidden || !storage;
+    checkbox.checked = preference && !temporary;
+    change.hidden = !studentSelect.value && !readMemory(storage, key).studentRef
+      && !form.querySelector('[id$="provisional-panel"]:not([hidden])');
+    status.textContent = temporary
+      ? "Hồ sơ tạm chỉ dùng trong bài này, vẫn cần mã 4 số và chưa được ghi nhớ sang bài khác. Nếu đã có tên ở bài khác, hãy nhờ giảng viên đối soát."
+      : "Bỏ tick nếu dùng máy chung. Chỉ chọn sẵn tên; bạn vẫn cần bấm Mở bài làm.";
   };
   const clearSelection = () => {
+    if (busy) return false;
     const removed = writeMemory(storage, key, "");
-    checkbox.checked = false;
+    resetIdentityFields();
     studentSelect.value = "";
     refreshAccessCode();
     sync();
-    status.textContent = removed ? "Đã quên lựa chọn. Hãy chọn người học." : "Không thể xóa ghi nhớ trong trình duyệt. Hãy kiểm tra cài đặt lưu dữ liệu.";
+    status.textContent = removed ? "Đã quên lựa chọn trên thiết bị này. Hãy chọn người học."
+      : "Không thể xóa ghi nhớ trong trình duyệt. Hãy kiểm tra cài đặt lưu dữ liệu.";
     studentSelect.focus();
     return removed;
   };
-  classSelect.addEventListener("change", () => { checkbox.checked = false; sync(); });
-  studentSelect.addEventListener("change", () => { checkbox.checked = false; sync(); });
+  const applyMemory = () => {
+    const saved = readMemory(storage, key);
+    const match = resolveRememberedStudent(groups, saved.studentRef, requested, config);
+    resetIdentityFields();
+    studentSelect.value = "";
+    if (match) {
+      classSelect.value = match.classRef;
+      refreshStudents();
+      studentSelect.value = match.studentRef;
+    }
+    refreshAccessCode();
+    sync();
+    if (match) status.textContent = "Đã chọn sẵn lớp và tên của bạn. Kiểm tra trước khi mở bài làm.";
+    else if (saved.studentRef) status.textContent = "Chưa xác định được một lớp và hồ sơ phù hợp trong bài này. Hãy chọn lại.";
+    else if (saved.status === "unavailable") status.textContent = "Trình duyệt chưa đọc được ghi nhớ. Bạn vẫn có thể chọn và làm bài.";
+  };
+  checkbox.addEventListener("change", () => { preference = checkbox.checked; });
+  for (const select of [classSelect, studentSelect]) {
+    select.addEventListener("change", () => { resetIdentityFields(); refreshAccessCode(); sync(); });
+  }
   change.addEventListener("click", clearSelection);
   changeActive.addEventListener("click", async () => {
     if (busy) return;
@@ -76,26 +102,22 @@ export function installStudentMemory(options) {
     } catch { notice("Chưa thể đổi người học. Bài hiện tại vẫn được giữ."); }
     finally { workspace.inert = false; busy = false; }
   });
-  // Query lớp có ưu tiên; chỉ điền ID có trong đúng roster mới trả về.
+  // Tab đang làm bài không nhận danh tính khác; chỉ màn chọn tên được cập nhật.
+  window.addEventListener("storage", (event) => {
+    if (event.storageArea !== storage || (event.key !== key && event.key !== null)) return;
+    if (activeStudentRef || !workspace.hidden) {
+      if (readMemory(storage, key).studentRef !== activeStudentRef) notice("Lựa chọn ghi nhớ đã đổi ở tab khác. Bài này vẫn thuộc người học đang hiển thị. Dùng Đổi người học nếu cần chuyển.");
+    } else if (!busy) applyMemory();
+    else status.textContent = "Lựa chọn ghi nhớ đã đổi ở tab khác. Kiểm tra tên sau khi xử lý xong.";
+  });
   if (requested) {
     const matches = groups.filter((group) => classMatches(group, requested));
     if (matches.length === 1) { classSelect.value = classRefOf(matches[0]); refreshStudents(); }
   }
-  const match = resolveRememberedStudent(groups, saved.studentRef, requested, config);
-  if (match) {
-    classSelect.value = match.classRef;
-    refreshStudents();
-    studentSelect.value = match.studentRef;
-    refreshAccessCode();
-    checkbox.checked = true;
-  }
-  sync();
-  if (match) status.textContent = "Đã chọn sẵn lớp và tên của bạn. Kiểm tra trước khi mở bài làm.";
-  else if (saved.studentRef) status.textContent = "Chưa xác định được một lớp và hồ sơ phù hợp trong bài này. Hãy chọn lại.";
-  else if (saved.status === "unavailable") status.textContent = "Trình duyệt chưa đọc được ghi nhớ. Bạn vẫn có thể chọn và làm bài.";
-
+  applyMemory();
   return {
-    // Khóa form khi mở phiên để bấm đôi hoặc đổi dropdown không đổi đích giữa request.
+    refresh: sync,
+    // Dùng chung khóa cho mở phiên và tạo hồ sơ, tránh đổi lớp giữa lúc gửi yêu cầu.
     begin() {
       if (busy) return false;
       busy = true;
@@ -105,6 +127,7 @@ export function installStudentMemory(options) {
       return true;
     },
     complete(identity) {
+      activeStudentRef = identity.studentRef;
       const { group, student } = selection();
       const eligible = allowedGroup(group || {}, config) && officialStudent(student)
         && classRefOf(group) === identity.classRef && studentRefOf(student) === identity.studentRef;
@@ -115,6 +138,7 @@ export function installStudentMemory(options) {
       for (const [element, disabled] of disabledBefore) element.disabled = disabled;
       disabledBefore = [];
       busy = false;
+      sync();
     },
   };
 }

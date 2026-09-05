@@ -61,6 +61,17 @@ label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weig
 input, select { width: 100%; min-height: 44px; padding: 10px 11px; color: var(--ink); background: #fff; border: 1px solid #ced6e2; border-radius: 9px; outline: none; }
 input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 111, 237, .13); }
 
+/* Ô ghi nhớ dùng kích thước checkbox, không dùng chiều cao/rộng của ô nhập đáp án. */
+.identity-panel label.checkbox-row,
+.cbt-bootstrap-identity label.checkbox-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+label.checkbox-row input[type="checkbox"] { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; padding: 0; }
+.cbt-bootstrap-identity:has(#bootstrap-remember-student) { grid-template-columns: minmax(140px, 1fr) minmax(180px, 2fr); }
+.cbt-bootstrap-identity > .checkbox-row,
+#bootstrap-remember-student-status { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 600px) {
+  .cbt-bootstrap-identity:has(#bootstrap-remember-student) { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Xác nhận họ tên/lớp dùng chung cho các answer sheet Term Test. */
 .cbt-identity-confirmation-dialog {
   width: min(520px, calc(100vw - 32px));

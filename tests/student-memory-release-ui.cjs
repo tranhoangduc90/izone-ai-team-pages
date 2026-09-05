@@ -41,7 +41,7 @@ async (page) => {
       unexpected.push(path);
       return route.abort();
     }
-    if (address.startsWith(base)) return route.continue();
+    if (address.startsWith(base) || address.split('?')[0] === new URL('../shared/student-memory.js', base).href) return route.continue();
     unexpected.push(address.split('?')[0]);
     return route.abort();
   });
@@ -73,6 +73,16 @@ async (page) => {
     await page.goto(base + 'lesson.html?task=writing-task2-public-health-spending');
     await page.locator('#remember-student').waitFor({ state: 'attached' });
     ensure(await page.locator('#lesson-student').inputValue() === '', 'Học hai lớp nhưng không có query vẫn tự chọn.');
+    await page.goto(address);
+    await page.locator('#remember-student').waitFor({ state: 'attached' });
+    await page.locator('#lesson-identity-form button[type="submit"]').click();
+    await page.locator('#lesson-workspace').waitFor({ state: 'visible' });
+    if (index === 0) await page.screenshot({ path: 'output/playwright/student-memory-before-change.png' });
+    await page.locator('#change-active-student').click();
+    await page.locator('#lesson-setup #remember-student').waitFor({ state: 'visible' });
+    ensure(await page.locator('#lesson-class').inputValue() === classRefs[index], 'Đổi người làm mất lớp trong link.');
+    ensure(await page.locator('#lesson-student').inputValue() === '', 'Đổi người xong vẫn còn người cũ.');
+    if (index === 0) await page.locator('#lesson-setup').screenshot({ path: 'output/playwright/student-memory-after-change.png' });
     checks.push(className + ': lần đầu, ghi nhớ, mở lại, xuyên đề, nhiều lớp, desktop/mobile');
   }
   outside = true;

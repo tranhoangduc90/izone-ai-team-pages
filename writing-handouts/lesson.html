@@ -23,15 +23,15 @@
         <form id="lesson-identity-form" novalidate>
           <label>Lớp<select id="lesson-class" required><option value="">Chọn lớp của bạn</option></select></label>
           <label>Họ và tên<select id="lesson-student" required disabled><option value="">Chọn họ và tên của bạn</option></select></label>
-          <label id="lesson-access-code-row" hidden>Mã 4 số<input id="lesson-access-code" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" /></label>
+          <label id="lesson-access-code-row" hidden>Mã 4 số<input id="lesson-access-code" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" /></label>
           <button id="lesson-show-provisional" class="link-button" type="button">Không thấy tên trong danh sách?</button>
           <section id="lesson-provisional-panel" class="provisional-panel" hidden aria-labelledby="lesson-provisional-title">
             <h2 id="lesson-provisional-title">Đăng ký học viên tạm</h2>
             <p>Nhập đúng họ tên và tự đặt mã 4 số để vào lại bài trên thiết bị khác. Không chia sẻ mã này.</p>
             <label>Họ và tên<input id="lesson-provisional-name" maxlength="100" autocomplete="name" /></label>
-            <div class="pin-grid"><label>Mã 4 số<input id="lesson-provisional-pin" inputmode="numeric" maxlength="4" autocomplete="new-password" /></label><label>Nhập lại mã<input id="lesson-provisional-pin-confirm" inputmode="numeric" maxlength="4" autocomplete="new-password" /></label></div>
+            <div class="pin-grid"><label>Mã 4 số<input id="lesson-provisional-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" /></label><label>Nhập lại mã<input id="lesson-provisional-pin-confirm" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" /></label></div>
             <label id="lesson-duplicate-confirm-row" class="checkbox-row" hidden><input id="lesson-duplicate-confirm" type="checkbox" /> Tôi là người khác cùng tên</label>
-            <button id="lesson-create-provisional" class="secondary" type="button">Tạo hồ sơ và làm bài ngay</button>
+            <button id="lesson-create-provisional" class="secondary" type="button">Tạo hồ sơ tạm</button>
           </section>
           <p id="lesson-identity-error" class="form-error" role="alert" hidden></p>
           <button class="primary" type="submit">Mở bài làm</button>
@@ -67,6 +67,6 @@
         <aside class="comments-panel"><div class="comments-heading"><div><p class="eyebrow">Nhận xét</p><h3 class="comments-title">Dòng thời gian</h3></div><span class="polling-state">—</span></div><ol class="comment-list" aria-live="polite"></ol><p class="empty-comments muted">Chưa có nhận xét.</p></aside>
       </section>
     </template>
-    <script type="module" src="./js/lesson-app.js?v=20260818-numbering-v3-20260905-student-memory-v1"></script>
+  <script type="module" src="./js/lesson-app.js?v=20260818-numbering-v3-20260905-memory-v2"></script>
   </body>
 </html>

@@ -78,3 +78,11 @@ test("Hai app cùng API dùng chung key; API khác không chia sẻ", () => {
   assert.equal(memoryKey(root, "https://pages.test/writing/index.html"), memoryKey(root, "https://pages.test/writing/lesson.html"));
   assert.notEqual(memoryKey(root, "https://pages.test/"), memoryKey("https://example.test/other-api/", "https://pages.test/"));
 });
+
+test("Writing và Term/Progress chính thức chung sổ; bản demo giữ kho riêng", () => {
+  const page = "https://tranhoangduc90.github.io/izone-ai-team-pages/";
+  const key = memoryKey("https://ducizone.ddns.net/writing-api/", page);
+  assert.equal(key, memoryKey("https://ducizone.ddns.net/mapping-api", page));
+  assert.notEqual(key, memoryKey("https://ducizone.ddns.net/mapping-api-demo", page));
+  assert.notEqual(key, memoryKey("https://other.test/mapping-api", page));
+});

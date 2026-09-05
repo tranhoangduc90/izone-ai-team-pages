@@ -26,7 +26,7 @@
             <label>Họ và tên<input id="provisional-name" maxlength="100" autocomplete="name" /></label>
             <div class="pin-grid"><label>Mã 4 số<input id="provisional-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" /></label><label>Nhập lại mã<input id="provisional-pin-confirm" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" /></label></div>
             <label id="duplicate-confirm-row" class="checkbox-row" hidden><input id="duplicate-confirm" type="checkbox" /> Tôi là người khác cùng tên</label>
-            <button id="create-provisional" class="secondary" type="button">Tạo hồ sơ và làm bài ngay</button>
+            <button id="create-provisional" class="secondary" type="button">Tạo hồ sơ tạm</button>
           </section>
           <p id="identity-error" class="form-error" role="alert" hidden></p><button class="primary" type="submit">Mở bài làm</button>
           <button id="resume-recent" class="secondary" type="button" hidden>Tiếp tục bài gần nhất trên thiết bị</button>
@@ -40,6 +40,6 @@
       </section>
     </main>
     <template id="section-template"><section class="section-workspace"><article class="section-card"><div class="section-heading"><div><p class="section-kicker"></p><h2></h2></div><span class="section-status">Chưa gửi</span></div><div class="text-fields"></div><p class="field-error" role="alert" hidden></p><div class="section-actions"><span class="word-count muted">0 từ</span><button class="secondary submit-section" type="button">Gửi để nhận xét</button></div></article><aside class="comments-panel"><div class="comments-heading"><div><p class="eyebrow">Nhận xét</p><h2 class="comments-title">Dòng thời gian</h2></div><span class="polling-state">—</span></div><ol class="comment-list" aria-live="polite"></ol><p class="empty-comments muted">Chưa có nhận xét nào. Gửi phần này để nhận phản hồi.</p></aside></section></template>
-    <script type="module" src="./js/app.js?v=20260818-numbering-v3-20260905-student-memory-v1"></script>
+  <script type="module" src="./js/app.js?v=20260818-numbering-v3-20260905-memory-v2"></script>
   </body>
 </html>

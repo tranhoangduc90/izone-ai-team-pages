@@ -1,5 +1,5 @@
 import { createApi } from "./api.js";
-import { installStudentMemory } from "./student-memory-ui.js";
+import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v2";
 import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260826-grading-timeout-v2";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
@@ -144,30 +144,52 @@ async function createProvisionalStudent() {
   const error = $("identity-error");
   const button = $("create-provisional");
   const classRef = $("class-id").value;
-  const name = $("provisional-name").value;
+  const name = $("provisional-name").value.trim().replace(/\s+/gu, " ");
   const pin = $("provisional-pin").value;
   const confirmPin = $("provisional-pin-confirm").value;
   if (!classRef) { error.hidden = false; error.textContent = "Hãy chọn lớp trước."; return; }
+  if (name.length < 2 || name.length > 100) { error.hidden = false; error.textContent = "Họ và tên cần có từ 2 đến 100 ký tự."; return; }
   if (!/^\d{4}$/.test(pin) || pin !== confirmPin) { error.hidden = false; error.textContent = "Hai ô mã phải giống nhau và gồm đúng 4 số."; return; }
-  button.disabled = true;
+  if (app.identityBusy || (app.studentMemory && !app.studentMemory.begin())) return;
+  app.identityBusy = true;
+  const previousDisabled = [...$("identity-form").elements].map((element) => [element, element.disabled]);
+  for (const [element] of previousDisabled) element.disabled = true;
+  error.hidden = true;
   try {
     const result = await app.api.registerProvisional(app.activitySlug, classRef, name, pin, $("duplicate-confirm").checked, createRequestId());
     const student = result.data.student;
     const group = (app.roster.classes || []).find((item) => (item.classRef || item.ref) === classRef);
-    group.students.push({ ...student, displayName: student.displayName, requiresAccessCode: true, provisional: true });
+    if (!group.students.some((item) => (item.studentRef || item.ref) === student.studentRef)) {
+      group.students.push({ ...student, displayName: student.displayName, requiresAccessCode: true, provisional: true });
+    }
     updateStudentOptions(); $("student-name").value = student.studentRef; updateAccessCode(); $("access-code").value = pin;
     $("provisional-panel").hidden = true; error.hidden = false; error.textContent = "Đã tạo hồ sơ tạm. Hãy bấm Mở bài làm.";
+    $("provisional-pin").value = ""; $("provisional-pin-confirm").value = "";
   } catch (requestError) {
     if (requestError.data?.error === "PROVISIONAL_STUDENT_EXISTS" && requestError.data.current) {
       const existing = requestError.data.current;
       const group = (app.roster.classes || []).find((item) => (item.classRef || item.ref) === classRef);
       if (!group.students.some((item) => item.studentRef === existing.studentRef)) group.students.push({ ...existing, provisional: true, requiresAccessCode: true });
-      updateStudentOptions(); $("student-name").value = existing.studentRef; updateAccessCode();
+      updateStudentOptions(); $("student-name").value = existing.studentRef; updateAccessCode(); $("access-code").value = "";
+      $("provisional-pin").value = ""; $("provisional-pin-confirm").value = "";
       $("duplicate-confirm-row").hidden = false;
     }
     if (requestError.data?.error === "DUPLICATE_STUDENT_NAME") $("duplicate-confirm-row").hidden = false;
     error.hidden = false; error.textContent = requestError.message;
-  } finally { button.disabled = false; }
+  } finally {
+    for (const [element, disabled] of previousDisabled) element.disabled = disabled;
+    app.identityBusy = false;
+    app.studentMemory?.end();
+  }
+}
+
+// Khi đổi người hoặc lớp, xóa dữ liệu đang nhập của hồ sơ tạm, không xóa bài đã lưu.
+function resetIdentityFields() {
+  for (const id of ["access-code", "provisional-name", "provisional-pin", "provisional-pin-confirm"]) $(id).value = "";
+  $("provisional-panel").hidden = true;
+  $("duplicate-confirm-row").hidden = true;
+  $("duplicate-confirm").checked = false;
+  $("identity-error").hidden = true;
 }
 
 function mergeServer(payload) {
@@ -358,7 +380,7 @@ function renderComments() {
 
 function renderAll() { renderSections(); renderComments(); updatePollingStates(); }
 function resetAutosave() { clearTimeout(app.saveTimer); if (app.dirty) app.saveTimer = setTimeout(async () => { await saveRemote("timer"); resetAutosave(); }, 10 * 60 * 1000); }
-function markDirty() { const wasClean = !app.dirty; app.dirty = true; setSaveState("Có thay đổi chưa lưu"); clearTimeout(app.idbTimer); app.idbTimer = setTimeout(saveLocal, 500); if (wasClean) resetAutosave(); }
+function markDirty() { const wasClean = !app.dirty; app.dirty = true; app.changeSequence = (app.changeSequence || 0) + 1; setSaveState("Có thay đổi chưa lưu"); clearTimeout(app.idbTimer); app.idbTimer = setTimeout(saveLocal, 500); if (wasClean) resetAutosave(); }
 async function saveLocal() { if (!app.identity || !app.state) return; await putDraft({ key: keyForDraft(), savedAt: Date.now(), dirty: app.dirty, progress: app.state, sessionRef: app.sessionRef, identity: app.identity }); }
 
 async function restoreLocal() {
@@ -373,20 +395,35 @@ async function restoreLocal() {
 }
 
 async function saveRemote(reason = "manual") {
+  // Chờ lần lưu trước, rồi mới gửi bản mới; phản hồi cũ không được xóa chữ vừa gõ thêm.
+  while (app.savingPromise) if (!(await app.savingPromise)) return false;
   if (app.conflict) {
     setSaveState("Cần xử lý xung đột bản lưu");
     showNotice("Bài chưa được lưu lên hệ thống. Hãy chọn một phương án trong thẻ xung đột trước khi Check.");
     return false;
   }
   if (!app.dirty) return true;
+  const savingSequence = app.changeSequence || 0;
+  app.savingPromise = (async () => {
   setSaveState(reason === "close" ? "Đang lưu trước khi đóng…" : "Đang lưu…");
   try {
     const result = await app.api.saveDraft(app.sessionRef, app.state);
-    mergeServer(result.data.session || result.data); app.dirty = false; resetAutosave(); await saveLocal(); setSaveState(`Đã lưu lúc ${new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`); renderAll(); return true;
+    const newerChanges = (app.changeSequence || 0) !== savingSequence;
+    const latestTexts = { ...app.state.texts };
+    const latestUnlock = app.state.draft2Unlocked;
+    mergeServer(result.data.session || result.data);
+    if (newerChanges) { app.state.texts = latestTexts; app.state.draft2Unlocked = latestUnlock; }
+    app.dirty = newerChanges;
+    resetAutosave(); await saveLocal();
+    setSaveState(newerChanges ? "Có thay đổi chưa lưu" : `Đã lưu lúc ${new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`);
+    if (!newerChanges) renderAll();
+    return true;
   } catch (error) {
     if (isConflict(error)) { app.conflict = true; app.conflictServer = error.data?.current || null; $("conflict-card").hidden = false; setSaveState("Cần xử lý xung đột bản lưu"); renderAll(); return false; }
     showNotice("Chưa thể lưu vào hệ thống. Bản trên thiết bị vẫn được giữ và sẽ thử lại khi bạn lưu."); setSaveState("Chưa đồng bộ"); return false;
   }
+  })().finally(() => { app.savingPromise = null; });
+  return app.savingPromise;
 }
 
 async function submitSection(section, card) {
@@ -495,7 +532,7 @@ async function pollAttempts() {
 async function openSession(event) {
   event.preventDefault(); const classRef = $("class-id").value; const student = studentFromInput(); const error = $("identity-error");
   if (!classRef || !student) { error.hidden = false; error.textContent = "Hãy chọn đúng lớp và tên có trong danh sách."; return; }
-  if (app.studentMemory && !app.studentMemory.begin()) return;
+  if (app.identityBusy || (app.studentMemory && !app.studentMemory.begin())) return;
   error.hidden = true; app.identity = { classRef, studentRef: student.studentRef, label: student.label };
   try {
     const accessCode = student.requiresAccessCode ? $("access-code").value : undefined;
@@ -510,7 +547,7 @@ async function openSession(event) {
     renderTaskContent(); for (const attempt of app.state.attempts) registerAttempt(attempt); schedulePoll(); void refreshTeacherComments(true);
     schedulePresence(); clearInterval(app.heartbeatTimer); app.heartbeatTimer = setInterval(schedulePresence, 30_000);
     app.studentMemory?.complete(app.identity);
-  } catch (requestError) { error.hidden = false; error.textContent = requestError.message; }
+  } catch (requestError) { app.identity = null; app.sessionRef = null; error.hidden = false; error.textContent = requestError.message; }
   finally { app.studentMemory?.end(); }
 }
 
@@ -542,18 +579,27 @@ function closeWithKeepalive() {
 
 async function init() {
   try {
-    await loadManifest(); const roster = await app.api.roster(app.activitySlug); app.roster = roster.data; renderClassOptions();
+    await loadManifest(); const roster = await app.api.roster(app.activitySlug); app.roster = roster.data;
     $("resume-recent").hidden = !(await getLatestDraft(`${app.activitySlug}:`));
+    renderClassOptions();
     $("class-id").addEventListener("change", updateStudentOptions); $("student-name").addEventListener("change", updateAccessCode); $("identity-form").addEventListener("submit", openSession);
     // Chỉ bật cho lớp trong bản thử; ghép UUID với roster mới trước khi điền form.
     app.studentMemory = installStudentMemory({ config: app.studentMemoryConfig, apiBase: app.apiBase,
       roster: app.roster, form: $("identity-form"), classSelect: $("class-id"), studentSelect: $("student-name"),
-      refreshStudents: updateStudentOptions, refreshAccessCode: updateAccessCode,
+      refreshStudents: updateStudentOptions, refreshAccessCode: updateAccessCode, resetIdentityFields,
       resumeButton: $("resume-recent"), workspace: $("workspace"),
       workspaceActions: $("workspace").querySelector(".actions"), notice: showNotice,
       beforeSwitch: async () => !app.submittingSections.size && await saveRemote("close") && !app.dirty,
     });
-    $("show-provisional").addEventListener("click", () => { $("provisional-panel").hidden = !$("provisional-panel").hidden; });
+    $("show-provisional").addEventListener("click", () => {
+      const opening = $("provisional-panel").hidden;
+      resetIdentityFields();
+      // Người không thấy tên đang khai hồ sơ mới; không để nút Mở dùng nhầm tên cũ.
+      $("student-name").value = "";
+      updateAccessCode();
+      $("provisional-panel").hidden = !opening;
+      app.studentMemory?.refresh();
+    });
     $("create-provisional").addEventListener("click", createProvisionalStudent);
     $("resume-recent").addEventListener("click", resumeRecent);
     $("manual-save").addEventListener("click", () => saveRemote()); $("save-close").addEventListener("click", async () => { if (!(await saveRemote("close"))) return; window.close(); setTimeout(() => showNotice("Đã lưu an toàn, bạn có thể đóng tab"), 250); });

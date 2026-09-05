@@ -3,6 +3,7 @@
 // Chạy bằng playwright-cli -s=student-memory run-code --filename tests/student-memory-ui.cjs.
 // Khi lỗi, CLI báo lỗi kiểm thử; khi đạt, trang cuối hiển thị báo cáo có cấu trúc.
 async (page) => {
+  page.on('dialog', dialog => dialog.type() === 'beforeunload' ? dialog.accept() : dialog.dismiss());
   const base = 'http://127.0.0.1:4187/writing-handouts/';
   const ensure = (ok, message) => { if (!ok) throw Error(message); };
   await page.unrouteAll({ behavior: 'wait' });
@@ -15,7 +16,7 @@ async (page) => {
     c2: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
     other: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   };
-  let enabled = true, mode = 'normal', failOpen = false, failSave = false, delayOpen = false;
+  let enabled = true, mode = 'normal', failOpen = false, failSave = false, delayOpen = false, delaySave = false;
   const opened = [], writes = [], blocked = [], errors = [], sessions = new Map();
   const tasks = { task1: 'sample-task', task2: 'writing-task2-living-alone-development' };
   const url = (type, query = '') => base + (type === 'task1' ? 'index.html' : 'lesson.html') + '?task=' + tasks[type] + query;
@@ -61,6 +62,8 @@ async (page) => {
       if (request.method() === 'PUT' && ['draft', 'responses'].includes(parts[2])) {
         const payload = request.postDataJSON();
         writes.push({ ref, payload });
+        if (delaySave) await page.waitForTimeout(500);
+        if (failSave === 'conflict') return send({ error: 'DRAFT_VERSION_CONFLICT', message: 'Xung đột phiên bản thử.', current: sessions.get(ref) }, 409);
         if (failSave) return send({ message: 'Lưu thử thất bại.' }, 503);
         const previous = sessions.get(ref);
         const next = { ...previous, revision: previous.revision + 1, updatedAt: new Date().toISOString(),
@@ -90,7 +93,7 @@ async (page) => {
       });
     });
     opened.length = 0; writes.length = 0; sessions.clear();
-    mode = 'normal'; failOpen = false; failSave = false; delayOpen = false;
+    mode = 'normal'; failOpen = false; failSave = false; delayOpen = false; delaySave = false;
   };
   const visit = async (type, query = '') => {
     await page.goto(url(type, query));
@@ -119,9 +122,12 @@ async (page) => {
   }
   if (!baseline) {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await reset(); await visit('task1'); await choose('task1'); await open('task1');
-    ensure((await memory()).length === 0, 'Ghi nhớ khi chưa chọn đồng ý.');
-    checks.push('Không tự bật ghi nhớ');
+    await reset(); await visit('task1');
+    ensure(await page.locator('#remember-student').isChecked(), 'Chưa tick ghi nhớ mặc định.');
+    await page.locator('#remember-student').uncheck();
+    await choose('task1'); await open('task1');
+    ensure((await memory()).length === 0, 'Vẫn ghi nhớ sau khi bỏ tick.');
+    checks.push('Tick mặc định, tôn trọng lựa chọn bỏ tick');
     await reset(); await visit('task1'); await choose('task1'); await page.locator('#remember-student').check();
     delayOpen = true;
     await page.locator('#identity-form').evaluate(form => { form.dispatchEvent(new Event('submit', { cancelable: true })); form.dispatchEvent(new Event('submit', { cancelable: true })); });
@@ -129,7 +135,7 @@ async (page) => {
     ensure(opened.length === 1, 'Bấm đôi tạo nhiều phiên.');
     const saved = await memory();
     ensure(saved.length === 1 && saved[0][1] === JSON.stringify({ version: 1, studentRef: ids.a }), 'Bộ nhớ chứa dữ liệu thừa hoặc sai ID.');
-    checks.push('Opt-in, chỉ UUID, bấm đôi một request');
+    checks.push('Chỉ UUID, bấm đôi một request');
     await visit('task2');
     ensure(await page.locator('#lesson-class').inputValue() === ids.c2, 'Mang classRef cũ sang Task 2.');
     ensure(await page.locator('#lesson-student').inputValue() === ids.a, 'Ghép nhầm người cùng tên khi roster đảo thứ tự.');
@@ -169,6 +175,7 @@ async (page) => {
     await page.locator('#change-active-student').click();
     await page.locator('#network-notice').filter({ hasText: 'Chưa thể đổi' }).waitFor();
     ensure(await page.locator('#workspace').isVisible() && (await memory()).length === 1, 'Lưu lỗi vẫn rời bài.');
+    await page.screenshot({ path: 'output/playwright/student-memory-switch-save-error.png', fullPage: true });
     failSave = false; await page.locator('#change-active-student').click();
     await page.locator('#identity-form').waitFor({ state: 'visible' });
     ensure((await memory()).length === 0, 'Đổi người đang làm không quên.');
@@ -190,6 +197,29 @@ async (page) => {
     await choose('task2', ids.b); await open('task2');
     ensure(await page.locator('#lesson-bodies textarea').first().inputValue() === '', 'Task 2 mang bài người trước sang.');
     checks.push('Task 2 đổi người, lưu lỗi và bài viết tách theo UUID');
+    for (const type of ['task1', 'task2']) {
+      await reset(); await visit(type); await choose(type); await open(type);
+      const field = page.locator(type === 'task1' ? '#sections textarea' : '#lesson-bodies textarea').first();
+      const saveButton = type === 'task1' ? '#manual-save' : '#lesson-save';
+      await field.fill('Bản đang gửi.');
+      delaySave = true;
+      await page.locator(saveButton).click();
+      await field.fill('Bản mới nhất phải được lưu cho người A.');
+      await page.locator('#change-active-student').click();
+      await page.locator(selectors(type).form).waitFor({ state: 'visible' });
+      ensure(writes.length === 2 && writes.every(item => item.ref.endsWith(ids.a)), 'Lưu đang chạy khi đổi người không được nối đúng thứ tự.');
+      const last = writes.at(-1).payload;
+      ensure(JSON.stringify(last).includes('Bản mới nhất phải được lưu cho người A.'), 'Mất chữ gõ trong lúc đang lưu.');
+      ensure(await page.locator(selectors(type).student).inputValue() === '', 'Đổi người xong còn tên cũ.');
+      await page.screenshot({ path: 'output/playwright/student-memory-switch-after-' + type + '.png', fullPage: true });
+      await reset(); await visit(type); await choose(type); await open(type);
+      await page.locator(type === 'task1' ? '#sections textarea' : '#lesson-bodies textarea').first().fill('Bản bị xung đột vẫn phải được giữ.');
+      failSave = 'conflict';
+      await page.locator('#change-active-student').click();
+      await page.locator(type === 'task1' ? '#conflict-card' : '#lesson-conflict').waitFor({ state: 'visible' });
+      ensure(await page.locator(selectors(type).workspace).isVisible() && (await memory()).length === 1, '409 vẫn đổi người.');
+    }
+    checks.push('Cả hai app: đổi người khi đang lưu giữ chữ mới nhất; xung đột 409 giữ nguyên bài');
     await reset(); await visit('task1'); await choose('task1'); await page.locator('#remember-student').check(); await open('task1');
     const storedKey = (await memory())[0][0];
     await page.evaluate(key => localStorage.setItem(key, '{broken-json'), storedKey);

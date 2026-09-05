@@ -62,7 +62,10 @@
   let officialObjectUrl = '';
   let previewHeard = false;
   let preparing = false;
+  let bootstrapSelectionBusy = false;
   let downloadController = null;
+  const rememberedClassCodes = new Set(['CS.070626', 'CS.160826']);
+  const studentMemory = { api: null, storage: null, key: '', checkbox: null, status: null, confirm: null, change: null, candidateRef: '', preferred: true };
 
   root.innerHTML = `
     <header class="topbar cbt-bootstrap-topbar">
@@ -142,6 +145,103 @@
   const previewAudio = document.createElement('audio');
   previewAudio.hidden = true;
   document.body.append(previewAudio);
+
+  function memoryEnabled() {
+    return rememberedClassCodes.has(classCode) && Boolean(studentMemory.api && studentMemory.storage && studentMemory.key);
+  }
+
+  function officialStudent(student) {
+    return Boolean(studentMemory.api?.officialStudent({ ...student, studentRef: student?.ref }));
+  }
+
+  function activeIdentityLocked() {
+    return Boolean(state.attemptToken || state.examSessionToken || state.listeningStartedAt || state.listeningDeadlineAt || state.readingStartedAt || state.writingStartedAt);
+  }
+
+  function setMemoryStatus(message) {
+    if (studentMemory.status) studentMemory.status.textContent = message;
+  }
+
+  function refreshRememberedBootstrapStudent() {
+    if (!memoryEnabled() || activeIdentityLocked() || bootstrapSelectionBusy) return;
+    if (state.studentIdentitySource === 'temporary') {
+      studentMemory.api.writeMemory(studentMemory.storage, studentMemory.key, '');
+      studentMemory.checkbox.checked = false;
+      studentMemory.checkbox.disabled = true;
+      studentMemory.confirm.hidden = true;
+      setMemoryStatus('Hồ sơ tạm không được ghi nhớ; hãy dùng mã tạm giáo viên đã cấp.');
+      return;
+    }
+    const remembered = studentMemory.api.readMemory(studentMemory.storage, studentMemory.key);
+    const matches = roster.filter(student => officialStudent(student) && student.ref === remembered.studentRef);
+    const candidate = matches.length === 1 ? matches[0] : null;
+    studentMemory.candidateRef = candidate?.ref || '';
+    state.studentRef = '';
+    state.studentName = '';
+    state.studentIdentitySource = '';
+    elements.bootstrapStudent.value = candidate?.ref || '';
+    studentMemory.confirm.hidden = !candidate;
+    setMemoryStatus(candidate
+      ? 'Đã chọn sẵn tên của bạn. Hãy xác nhận trước khi tải bài thi.'
+      : 'Chỉ ghi nhớ trên thiết bị cá nhân. Bạn vẫn cần xác nhận trước khi tải bài thi.');
+  }
+
+  async function initializeStudentMemory() {
+    if (!rememberedClassCodes.has(classCode)) return;
+    try {
+      const api = await import('../../shared/student-memory.js?v=20260905-memory-v2');
+      const storage = window.localStorage;
+      const label = elements.bootstrapStudent.closest('label');
+      if (!label) return;
+      const remember = document.createElement('label');
+      remember.className = 'checkbox-row';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = 'bootstrap-remember-student';
+      checkbox.checked = true;
+      checkbox.addEventListener('change', () => { studentMemory.preferred = checkbox.checked; });
+      remember.append(checkbox, document.createTextNode(' Ghi nhớ tôi trên thiết bị này'));
+      const status = document.createElement('p');
+      status.id = 'bootstrap-remember-student-status';
+      status.className = 'muted';
+      const confirm = document.createElement('button');
+      confirm.type = 'button'; confirm.id = 'bootstrap-confirm-remembered-student';
+      confirm.className = 'button button-primary'; confirm.textContent = 'Xác nhận và tải bài thi'; confirm.hidden = true;
+      const change = document.createElement('button');
+      change.type = 'button'; change.id = 'bootstrap-change-remembered-student';
+      change.className = 'button button-secondary'; change.textContent = 'Đổi người học';
+      label.after(remember, status, confirm, change);
+      Object.assign(studentMemory, { api, storage, key: api.memoryKey(appConfig.API_BASE_URL, location.href), checkbox, status, confirm, change });
+      confirm.addEventListener('click', () => {
+        if (elements.bootstrapStudent.value !== studentMemory.candidateRef || activeIdentityLocked()) return;
+        elements.bootstrapStudent.dispatchEvent(new Event('change'));
+      });
+      change.addEventListener('click', () => {
+        if (activeIdentityLocked() || preparing) { showNotice('Bài đang gắn với danh tính hiện tại; không thể đổi người học lúc này.', true); return; }
+        if (!studentMemory.api.writeMemory(storage, studentMemory.key, '')) {
+          setMemoryStatus('Không thể xóa ghi nhớ trong trình duyệt.');
+          return;
+        }
+        elements.bootstrapStudent.value = '';
+        state.studentRef = ''; state.studentName = ''; state.studentIdentitySource = '';
+        if (elements.bootstrapTemporaryStudentForm) elements.bootstrapTemporaryStudentForm.hidden = true;
+        if (elements.bootstrapTemporaryStudentName) elements.bootstrapTemporaryStudentName.value = '';
+        if (elements.bootstrapTemporaryStudentCode) elements.bootstrapTemporaryStudentCode.value = '';
+        studentMemory.candidateRef = '';
+        studentMemory.confirm.hidden = true;
+        studentMemory.checkbox.disabled = false;
+        saveState(); setMemoryStatus('Đã quên lựa chọn. Hãy chọn đúng tên trước khi tải bài thi.');
+      });
+      window.addEventListener('storage', event => {
+        if (event.storageArea !== storage || (event.key !== null && event.key !== studentMemory.key)) return;
+        if (activeIdentityLocked()) { showNotice('Lựa chọn ghi nhớ đã đổi ở tab khác. Bài hiện tại vẫn giữ đúng danh tính.', false); return; }
+        if (bootstrapSelectionBusy) return;
+        refreshRememberedBootstrapStudent();
+      });
+    } catch {
+      // Storage/module unavailable: giữ nguyên picker và luồng thi hiện có.
+    }
+  }
 
   function escapeText(value) {
     return String(value || '').replace(/[&<>"']/g, character => ({
@@ -236,8 +336,15 @@
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   }
 
+  // Trình duyệt chặn một kho lưu vẫn cho chọn tên và dùng kho còn lại.
+  function availableStorages() {
+    return ['sessionStorage', 'localStorage'].flatMap(name => {
+      try { return window[name] ? [window[name]] : []; } catch { return []; }
+    });
+  }
+
   function readState() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         const parsed = JSON.parse(storage.getItem(storageKey) || '{}');
         if (Object.keys(parsed).length) return parsed;
@@ -249,7 +356,7 @@
   }
 
   function readLegacyUiState() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         const parsed = JSON.parse(storage.getItem(uiStorageKey) || '{}');
         if (Object.keys(parsed).length) {
@@ -269,7 +376,7 @@
   function saveState(patch = {}) {
     state = { ...state, ...patch };
     const serialized = JSON.stringify(state);
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.setItem(storageKey, serialized);
       } catch {
@@ -279,7 +386,7 @@
   }
 
   function clearAttemptUiState() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.removeItem(uiStorageKey);
       } catch {
@@ -290,7 +397,7 @@
 
   function clearAllLocalAttemptData() {
     const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}:`;
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.removeItem(storageKey);
         storage.removeItem(uiStorageKey);
@@ -527,7 +634,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260821-attempt-review-v1');
-    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2');
+    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v2');
     await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
   }
@@ -674,7 +781,16 @@
     }
   });
   elements.bootstrapStudent.addEventListener('change', async () => {
+    if (bootstrapSelectionBusy) return;
+    bootstrapSelectionBusy = true;
+    elements.bootstrapStudent.closest('.cbt-bootstrap-identity').inert = true;
+    try {
     const selectedValue = elements.bootstrapStudent.value;
+    if (activeIdentityLocked() && selectedValue !== state.studentRef) {
+      elements.bootstrapStudent.value = state.studentRef;
+      showNotice('Bài đang gắn với danh tính hiện tại; không thể đổi người học lúc này.', true);
+      return;
+    }
     const selectingTemporary = selectedValue === '__temporary__';
     const selectedRef = selectingTemporary ? '' : selectedValue;
     if (selectedRef) {
@@ -687,6 +803,9 @@
         elements.bootstrapDemoReset.hidden = classCode !== 'CODEXDEMO806' || !elements.bootstrapStudent.value;
         if (elements.bootstrapTemporaryStudentForm) elements.bootstrapTemporaryStudentForm.hidden = true;
         return;
+      }
+      if (memoryEnabled() && officialStudent(selectedStudent)) {
+        studentMemory.api.writeMemory(studentMemory.storage, studentMemory.key, studentMemory.preferred ? selectedStudent.ref : '');
       }
     }
     const sameStudent = selectedRef === state.studentRef;
@@ -725,8 +844,23 @@
     if (elements.bootstrapTemporaryStudentForm) {
       elements.bootstrapTemporaryStudentForm.hidden = !selectingTemporary;
       if (selectingTemporary) elements.bootstrapTemporaryStudentName.focus();
+      else { elements.bootstrapTemporaryStudentName.value = ''; elements.bootstrapTemporaryStudentCode.value = ''; }
+    }
+    if (selectingTemporary && memoryEnabled()) {
+      studentMemory.api.writeMemory(studentMemory.storage, studentMemory.key, '');
+      studentMemory.checkbox.checked = false;
+      studentMemory.checkbox.disabled = true;
+      studentMemory.confirm.hidden = true;
+      setMemoryStatus('Hồ sơ tạm không được ghi nhớ; hãy dùng mã tạm giáo viên đã cấp.');
+    } else if (studentMemory.checkbox) {
+      studentMemory.checkbox.disabled = false;
+      studentMemory.checkbox.checked = studentMemory.preferred;
     }
     if (selectedRef) await prepareSelectedStudent();
+    } finally {
+      bootstrapSelectionBusy = false;
+      elements.bootstrapStudent.closest('.cbt-bootstrap-identity').inert = false;
+    }
   });
 
   function renderRosterOptions() {
@@ -742,7 +876,9 @@
 
   elements.bootstrapTemporaryStudentForm?.addEventListener('submit', async event => {
     event.preventDefault();
-    if (!elements.bootstrapTemporaryStudentForm.reportValidity() || preparing) return;
+    if (!elements.bootstrapTemporaryStudentForm.reportValidity() || preparing || bootstrapSelectionBusy) return;
+    bootstrapSelectionBusy = true;
+    elements.bootstrapStudent.closest('.cbt-bootstrap-identity').inert = true;
     const studentName = elements.bootstrapTemporaryStudentName.value.trim().replace(/\s+/gu, ' ');
     const temporaryCode = elements.bootstrapTemporaryStudentCode.value.trim().toUpperCase();
     const normalText = elements.bootstrapRegisterTemporaryStudent.textContent;
@@ -770,21 +906,31 @@
         studentName: student.name,
         studentIdentitySource: 'temporary'
       });
+      if (memoryEnabled()) {
+        studentMemory.api.writeMemory(studentMemory.storage, studentMemory.key, '');
+        studentMemory.checkbox.checked = false;
+        studentMemory.checkbox.disabled = true;
+        studentMemory.confirm.hidden = true;
+        setMemoryStatus('Hồ sơ tạm không được ghi nhớ; hãy dùng mã tạm giáo viên đã cấp.');
+      }
       showNotice(`Đã xác nhận ${student.name}. Hệ thống đang chuẩn bị bài thi.`);
       await prepareSelectedStudent();
     } catch (error) {
       showNotice(`Chưa xác nhận được học viên: ${error.message}`, true);
     } finally {
       elements.bootstrapRegisterTemporaryStudent.disabled = false;
+      bootstrapSelectionBusy = false;
+      elements.bootstrapStudent.closest('.cbt-bootstrap-identity').inert = false;
       elements.bootstrapRegisterTemporaryStudent.textContent = normalText;
     }
   });
 
   async function initialize() {
-    if (!/^[A-Z0-9_-]{2,32}$/.test(classCode)) {
+    if (!/^[A-Z0-9._-]{2,32}$/.test(classCode)) {
       showNotice('Link chưa có mã lớp hợp lệ.', true);
       return;
     }
+    await initializeStudentMemory();
     elements.bootstrapDownloadStep.dataset.state = 'active';
     elements.bootstrapDownloadStatus.textContent = 'Đang tải danh sách lớp...';
     elements.bootstrapRetry.hidden = true;
@@ -805,6 +951,7 @@
         ? activeClassName
         : `Lớp ${activeClassName}`;
       renderRosterOptions();
+      refreshRememberedBootstrapStudent();
       if (demoStudentRef || demoAttemptToken) {
         const demoStudent = roster.find(student => student.ref === demoStudentRef);
         if (!demoStudent || !isUuid(demoStudentRef) || !isUuid(demoAttemptToken)) {
