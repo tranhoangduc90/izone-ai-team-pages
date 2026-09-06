@@ -18,6 +18,15 @@ async function browserGlobal(relative, name) {
   return sandbox.window[name];
 }
 
+async function browserGlobals(relatives, name) {
+  const sandbox = { window: { location: { hostname: 'localhost' } } };
+  for (const relative of relatives) {
+    const source = await read(relative);
+    vm.runInNewContext(source, sandbox, { filename: relative, timeout: 5_000 });
+  }
+  return sandbox.window[name];
+}
+
 test('gói Webtest 34 có đúng cấu trúc 5 phần và không chứa answer key', async () => {
   const config = await browserGlobal('term-tests/34-test-config.js', 'TERM_TEST_CONFIG');
   const contentSource = await read('term-tests/34-test-content.js');
@@ -132,7 +141,7 @@ test('demo chỉ dùng index.html và chứa đủ ảnh Vocabulary của Test 1
 });
 
 test('learning answer map theo block để fixture local gửi đúng item Listening', async () => {
-  const keyMap = await browserGlobal('term-tests/34-shared/learning-key-map.js', 'WEBTEST34_LEARNING_KEY_MAP');
+  const keyMap = await browserGlobals(['term-tests/34-shared/pedagogical-types.js', 'term-tests/34-shared/learning-key-map.js'], 'WEBTEST34_LEARNING_KEY_MAP');
   const responses = keyMap.buildResponses({
     blocks: [
       {
@@ -166,7 +175,7 @@ test('learning answer map theo block để fixture local gửi đúng item Liste
 });
 
 test('learning result group theo definition block và itemVersionId', async () => {
-  const resultGrouper = await browserGlobal('term-tests/34-shared/learning-result.js', 'WEBTEST34_LEARNING_RESULT');
+  const resultGrouper = await browserGlobals(['term-tests/34-shared/pedagogical-types.js', 'term-tests/34-shared/learning-result.js'], 'WEBTEST34_LEARNING_RESULT');
   const groups = resultGrouper.groupResultItems({
     blocks: [{
       blockId: '34000000-0000-4000-8000-000000000012',
@@ -195,16 +204,27 @@ test('canonical Webtest 34 có local-learning lifecycle và không rơi về sub
     browserGlobal('term-tests/webtest-34-demo/config.js', 'WEBTEST_34_PREVIEW_CONFIG'),
     read('term-tests/34-shared/learning-result.js')
   ]);
-  assert.equal(config.LEARNING_PUBLIC_TOKEN, 'e4006177-1ef7-453b-a3b7-4fff12889e8e');
+  assert.equal(config.LEARNING_TEST_TOKEN, '34010000-0000-4000-8000-000000000002');
+  assert.equal('LEARNING_PUBLIC_TOKEN' in config, false);
   assert.match(index, /\/api\/learning/);
-  for (const endpoint of ['/assignments/open', '/attempts/start', '/attempts/draft', '/attempts/submit', '/attempts/result']) {
+  for (const endpoint of ['/test-access/resolve', '/attempts/start', '/attempts/draft', '/attempts/submit', '/attempts/result']) {
     assert.match(index, new RegExp(endpoint.replaceAll('/', '\\/')));
   }
+  assert.match(index, /testToken/);
+  assert.doesNotMatch(index, /get\('assignment'\)/);
   assert.match(index, /clientIdempotencyKey/);
   assert.match(index, /WEBTEST34_LEARNING_KEY_MAP/);
+  assert.match(index, /34-shared\/pedagogical-types\.js/);
+  assert.match(index, /Không tải được cấu trúc đề/);
   assert.match(index, /34-shared\/learning-result\.js/);
   assert.match(index, /buildResponses\(\{blocks: definitionBlocks, answers: state\.answers\}\)/);
   assert.match(index, /groupResultItems\(\{/);
+  assert.match(index, /assignment\.assignment\?\.courseCode && assignment\.assignment\.courseCode !== code/);
+  assert.match(index, /Mã lớp không khớp phiếu đang mở\./);
+  assert.match(index, /startLearningResultPolling\(\)/);
+  assert.match(index, /setTimeout\(poll, 2000\)/);
+  assert.match(index, /manual_review/);
+  assert.match(index, /Structure/);
   assert.match(resultHelper, /itemVersionId/);
   assert.doesNotMatch(index, /const hardGroups =/);
   assert.doesNotMatch(index, /const values = \$\$\('\[data-answer\]'\)/);

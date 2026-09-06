@@ -7,8 +7,9 @@
   <title>IZONE · Khóa 34 · Phase 1 · Test 1</title>
   <link rel="icon" href="data:,">
   <script src="config.js?rev=20260904-webtest34-preview-v2"></script>
-  <script src="../34-shared/learning-key-map.js?rev=20260905-block-map-v1"></script>
-  <script src="../34-shared/learning-result.js?rev=20260905-block-result-v1"></script>
+  <script src="../34-shared/pedagogical-types.js?rev=20260906-type-contract-v1"></script>
+  <script src="../34-shared/learning-key-map.js?rev=20260906-block-map-v2"></script>
+  <script src="../34-shared/learning-result.js?rev=20260906-block-result-v2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -159,6 +160,9 @@
     .learning-result-verdict.incorrect{background:#fff0f2;color:var(--color-primary)}
     .learning-result-verdict.pending{background:#fff7e8;color:#8a5a00}
     .learning-result-answer{color:var(--color-text-secondary);word-break:break-word}
+    .learning-result-feedback{margin-top:8px;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid var(--color-border);font-size:12px;line-height:1.5}
+    .learning-result-feedback strong{color:var(--color-text)}
+    .learning-result-feedback ul{margin:4px 0 0 18px;padding:0}
     @media (max-width:700px){.learning-result{padding:0 14px}.learning-result-card{padding:22px 18px}.learning-result-section-header{display:block}.learning-result-section-actions{justify-content:space-between;margin-top:8px}.learning-result-section-summary{text-align:left}.learning-result-exercise-head{align-items:flex-start;flex-direction:column;gap:3px}}
     .meta{color:var(--color-text-secondary);font-size:12px}
 
@@ -488,6 +492,8 @@
   let fontScale = state.fontScale || 1;
   let saveTimer = null;
   let learningDraftChain = Promise.resolve();
+  let learningResultPollTimer = null;
+  let learningResultPollInFlight = false;
 
   const $ = s => document.querySelector(s);
   const $$ = s => [...document.querySelectorAll(s)];
@@ -501,16 +507,16 @@
 
   function learningConfig(){
     const config = window.WEBTEST_34_PREVIEW_CONFIG || {};
-    const assignmentToken = new URLSearchParams(window.location.search).get('assignment') || config.LEARNING_PUBLIC_TOKEN;
+    const testToken = new URLSearchParams(window.location.search).get('test') || config.LEARNING_TEST_TOKEN;
     return {
       baseUrl: String(config.LEARNING_API_BASE_URL || '').replace(/\/$/, ''),
-      publicToken: assignmentToken || ''
+      testToken: testToken || ''
     };
   }
 
   function learningEnabled(){
     const config = learningConfig();
-    return Boolean(config.baseUrl && config.publicToken);
+    return Boolean(config.baseUrl && config.testToken);
   }
 
   async function learningRequest(path, body){
@@ -528,15 +534,38 @@
 
   async function refreshLearningResult(){
     if(!learningEnabled() || !state.learning?.attemptToken || !state.submittedAt) return;
+    if(learningResultPollInFlight) return;
+    learningResultPollInFlight = true;
     try{
       const result = await learningRequest('/attempts/result', {attemptToken: state.learning.attemptToken});
       state.learning.gradingStatus = result.receipt?.gradingStatus || result.result?.gradingStatus || state.learning.gradingStatus;
       if(result.result) state.learning.studentResult = result.result;
       persist();
       if(result.result) renderLearningResult(result.result);
+      if(['complete', 'manual_review'].includes(state.learning.gradingStatus)) stopLearningResultPolling();
     }catch(error){
       if(!/Chưa có bài nộp/.test(error.message)) setError('studentError', `Không tải được kết quả: ${error.message}`);
+    }finally{
+      learningResultPollInFlight = false;
     }
+  }
+
+  function stopLearningResultPolling(){
+    if(learningResultPollTimer){
+      clearTimeout(learningResultPollTimer);
+      learningResultPollTimer = null;
+    }
+  }
+
+  function startLearningResultPolling(){
+    stopLearningResultPolling();
+    const poll = async () => {
+      await refreshLearningResult();
+      if(!['complete', 'manual_review'].includes(state.learning?.gradingStatus) && state.submittedAt){
+        learningResultPollTimer = setTimeout(poll, 2000);
+      }
+    };
+    poll();
   }
 
   function createClientKey(){
@@ -549,6 +578,12 @@
     const keyMap = window.WEBTEST34_LEARNING_KEY_MAP;
     if(!keyMap) throw new Error('WEBTEST34_KEY_MAP_MISSING');
     return keyMap.buildResponses({blocks: definitionBlocks, answers: state.answers});
+  }
+
+  function learningMappingError(error, action){
+    const message = String(error?.message || error || '');
+    if(message.startsWith('WEBTEST34_')) return `Không tải được cấu trúc đề nên chưa thể ${action}. Vui lòng tải lại bài và báo giảng viên.`;
+    return `${action}: ${message}`;
   }
 
   function learningDefinitionBlocks(){
@@ -569,7 +604,7 @@
       $('#saveState').textContent = 'Đã lưu máy chủ';
     }).catch(error => {
       $('#saveState').textContent = 'Lỗi lưu máy chủ';
-      setError('studentError', `Không lưu được bản nháp: ${error.message}`);
+      setError('studentError', learningMappingError(error, 'lưu bản nháp'));
     });
   }
 
@@ -601,13 +636,27 @@
       sections,
       items: result.items
     });
+    const mappingIncomplete = Boolean(groups.incomplete);
     const gradedGroups = groups.filter(group => group.gradedMaxScore > 0);
     const hardScore = gradedGroups.reduce((sum, group) => sum + group.score, 0);
     const hardMax = gradedGroups.reduce((sum, group) => sum + group.gradedMaxScore, 0);
-    const statusText = result.gradingStatus === 'complete'
-      ? 'Đã chấm xong các phần có đáp án cố định.'
-      : 'Đã có kết quả chấm tự động cho Vocab, Listening và Pronunciation. Translation/Writing-Speaking đang chờ AI.';
-    const verdictLabel = item => item.verdict === 'correct' ? 'Đúng' : item.verdict === 'incorrect' ? 'Sai' : item.verdict === 'pending' ? 'Đang chờ' : 'Chưa chấm';
+    const statusText = mappingIncomplete
+      ? 'Kết quả chưa đầy đủ do có câu chưa ghép được với cấu trúc đề; điểm tổng chưa được xác nhận.'
+      : result.gradingStatus === 'complete'
+      ? 'Đã chấm xong toàn bộ bài.'
+      : result.gradingStatus === 'manual_review'
+        ? 'Một phần bài cần giảng viên kiểm tra thêm.'
+        : 'Đang chấm Translation và Speaking; kết quả sẽ tự cập nhật.';
+    const verdictLabel = item => item.verdict === 'correct' ? 'Đúng' : item.verdict === 'incorrect' ? 'Sai' : item.verdict === 'partial' ? 'Một phần' : item.verdict === 'manual_review' ? 'Cần giảng viên' : item.verdict === 'pending' ? 'Đang chờ' : 'Chưa chấm';
+    const feedbackHtml = item => {
+      const feedback = item.feedback;
+      if(!feedback) return '';
+      const structures = (feedback.requiredStructures || []).map(structure => `<li>${structure.achieved ? '✓' : '✗'} ${esc(structure.id)}</li>`).join('');
+      const errors = (feedback.errors || []).map(error => `<li>${esc(error.message)}${error.evidence?.length ? ` · ${esc(error.evidence.join(', '))}` : ''}</li>`).join('');
+      const structureMax = feedback.structureMaxScore ?? 2;
+      const accuracyMax = feedback.accuracyMaxScore ?? 2;
+      return `<div class="learning-result-feedback"><strong>Structure ${esc(feedback.structureScore)} / ${esc(structureMax)} · Accuracy ${esc(feedback.accuracyScore)} / ${esc(accuracyMax)}</strong>${structures ? `<div><strong>Required structures</strong><ul>${structures}</ul></div>` : ''}${errors ? `<div><strong>Lỗi</strong><ul>${errors}</ul></div>` : ''}${feedback.evidence?.length ? `<div><strong>Evidence:</strong> ${esc(feedback.evidence.join(' · '))}</div>` : ''}</div>`;
+    };
     const groupHtml = sections.map(section => {
       const sectionGroups = groups.filter(group => group.label.startsWith(section.label));
       if(!sectionGroups.length) return '';
@@ -623,7 +672,7 @@
           <div class="learning-result-items">${group.items.map(item => `
             <div class="learning-result-item">
               <span class="learning-result-verdict ${item.verdict === 'correct' ? 'correct' : item.verdict === 'incorrect' ? 'incorrect' : 'pending'}">${verdictLabel(item)}</span>
-              <div><strong>Câu ${esc(item.position)}</strong><div class="learning-result-answer">${esc(resultAnswer(item.rawAnswer))}</div></div>
+              <div><strong>Câu ${esc(item.position)}</strong><div class="learning-result-answer">${esc(resultAnswer(item.rawAnswer))}</div>${feedbackHtml(item)}</div>
             </div>`).join('')}</div>
         </div>`).join('');
       return `
@@ -642,11 +691,17 @@
         </article>`;
     }).join('');
     const waitingGroups = groups.filter(group => group.items.some(item => item.verdict === 'pending' || item.verdict === 'manual_review'));
-    const waitingHtml = waitingGroups.map(group => `<span class="chip">${esc(group.label)}: Đang chờ chấm AI</span>`).join('');
+    const waitingHtml = waitingGroups.map(group => `<span class="chip">${esc(group.label)}: ${group.items.some(item => item.verdict === 'manual_review') ? 'Cần giảng viên' : 'Đang chờ chấm AI'}</span>`).join('');
+    const displayedScore = !mappingIncomplete && result.gradingStatus === 'complete'
+      ? `${result.summary.scoreEarned} / ${result.summary.maxScore}`
+      : `${hardScore} / ${hardMax}`;
+    const incompleteHtml = mappingIncomplete
+      ? `<div class="learning-result-status">Chưa ghép được ${groups.unmatchedItems.length} câu vào block của đề.</div>`
+      : '';
     resultView.innerHTML = `<div class="learning-result-card">
       <div class="eyebrow">KẾT QUẢ SAU KHI NỘP</div>
       <h1>Kết quả bài làm của ${esc(state.studentName || 'học viên')}</h1>
-      <div class="learning-result-status">${statusText}<br><strong>Điểm đã chấm: ${hardScore} / ${hardMax}</strong></div>
+      <div class="learning-result-status">${statusText}<br><strong>Điểm đã chấm: ${displayedScore}</strong></div>${incompleteHtml}
       <div class="learning-result-grid">${groupHtml}</div>
       <div class="section-stats">${waitingHtml}</div>
     </div>`;
@@ -877,12 +932,12 @@
   function startTimer(){
     if(!state.startedAt){state.startedAt=Date.now();persist()}
     const tick=()=>{
-      const end=state.startedAt + TOTAL_MINUTES*60*1000;
+      const end=Number(state.learning?.expiresAt) || (state.startedAt + TOTAL_MINUTES*60*1000);
       const left=Math.max(0,end-Date.now());
       const mins=Math.floor(left/60000); const secs=Math.floor((left%60000)/1000);
       $('#timer').textContent=`${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
       $('#timer').classList.toggle('warn',left<=10*60*1000);
-      if(left<=0){clearInterval(timerInt);openSubmit()}
+      if(left<=0){clearInterval(timerInt); if(!state.submittedAt) openSubmit()}
     };
     tick(); const timerInt=setInterval(tick,1000);
   }
@@ -893,7 +948,15 @@
     $('#studentLabel').textContent=[state.studentName,state.classCode].filter(Boolean).join(' · ') || 'Bài kiểm tra 120 phút';
     renderApp(); startTimer(); initAudioDocks();
     if(state.learning?.studentResult) renderLearningResult(state.learning.studentResult);
-    refreshLearningResult();
+    if(state.submittedAt || state.learning?.status === 'submitted') lockSubmittedAttempt();
+    startLearningResultPolling();
+  }
+
+  function lockSubmittedAttempt(){
+    $('#examApp').classList.add('submitted-readonly');
+    $('#examApp input, #examApp textarea, #examApp select').forEach(el => { el.disabled = true; });
+    $('#examApp [data-prev], #examApp [data-next], #mobilePrev, #mobileNext').forEach(el => { el.disabled = true; });
+    $('#saveState').textContent = 'Đã nộp · chỉ xem kết quả';
   }
 
   // ================= Audio preflight + phát một lần =================
@@ -1190,8 +1253,14 @@
       let className = code;
       let usedFallback = false;
       if(learningEnabled()){
-        const assignment = await learningRequest('/assignments/open', { publicToken: learningConfig().publicToken });
+        const assignment = await learningRequest('/test-access/resolve', {
+          testToken: learningConfig().testToken,
+          courseCode: code
+        });
         if(!assignment.assignment?.roster?.length) throw new Error('Assignment chưa có roster local.');
+        if(assignment.assignment?.courseCode && assignment.assignment.courseCode !== code){
+          throw new Error('Mã lớp không khớp phiếu đang mở.');
+        }
         rosterData.assignment = assignment.assignment;
         state.learning = {...(state.learning || {}), definition: assignment.assignment.definition};
         students = assignment.assignment.roster.map(student => ({
@@ -1223,7 +1292,11 @@
       state.className = className;
       persist();
       select.innerHTML = '<option value="">— Chọn tên của bạn —</option>'
-        + students.map(s => `<option value="${esc(s.ref)}">${esc(s.name)}</option>`).join('');
+        + students.map(s => {
+          const duplicate = students.filter(other => other.name === s.name).length > 1;
+          const suffix = duplicate ? ` · ${s.discriminator || s.ref.slice(0, 8)}` : '';
+          return `<option value="${esc(s.ref)}">${esc(s.name + suffix)}</option>`;
+        }).join('');
       select.disabled = false;
       $('#classCode').disabled = true;
       btn.disabled = true;
@@ -1292,7 +1365,8 @@
       if(learningEnabled()){
         const config = learningConfig();
         const result = await learningRequest('/attempts/start', {
-          publicToken: config.publicToken,
+          testToken: config.testToken,
+          courseCode: state.classCode,
           studentRef: student.ref,
           clientIdempotencyKey: state.learning?.clientIdempotencyKey || (state.learning = {...state.learning, clientIdempotencyKey: createClientKey()}).clientIdempotencyKey,
           identityConfirmed: true
@@ -1301,8 +1375,13 @@
           ...(state.learning || {}),
           attemptToken: result.attempt.attemptToken,
           definitionHash: result.attempt.definitionHash,
-          draftRevision: result.attempt.draftRevision || 0
+          draftRevision: result.attempt.draftRevision || 0,
+          status: result.attempt.status || 'active',
+          expiresAt: result.attempt.expiresAt ? Date.parse(result.attempt.expiresAt) : null
         };
+        state.startedAt = result.attempt.startedAt ? Date.parse(result.attempt.startedAt) : state.startedAt;
+        if(result.attempt.status === 'submitted') state.submittedAt = state.submittedAt || Date.now();
+        if(result.attempt.draft) state.answers = {...state.answers, ...result.attempt.draft};
         state.answers = state.answers || {};
       }
       state.startedAt = state.startedAt || Date.now();
@@ -1350,18 +1429,20 @@
           responses: learningResponses()
         });
          state.submittedAt = Date.now();
+         state.learning.status = 'submitted';
          state.learning.gradingStatus = result.receipt?.gradingStatus || result.result?.gradingStatus || 'pending';
          if(result.result) state.learning.studentResult = result.result;
          persist();
          $('#submitModal').classList.add('hidden');
          if(result.result) renderLearningResult(result.result);
          else alert(`Đã nộp bài. Trạng thái chấm: ${state.learning.gradingStatus}.`);
+         startLearningResultPolling();
       } else {
         state.submittedAt=Date.now(); persist(); $('#submitModal').classList.add('hidden');
         alert('Bản demo đã được đánh dấu là đã nộp trên localStorage.');
       }
     } catch(error){
-      setError('studentError', `Không nộp được bài: ${error.message}`);
+      setError('studentError', learningMappingError(error, 'nộp bài'));
     } finally {
       button.disabled = false;
     }

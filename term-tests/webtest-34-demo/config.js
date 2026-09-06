@@ -11,10 +11,10 @@
     // (xem ARCHITECTURE.md: "GET /api/term-tests/roster — không cần Google token").
     // Lưu ý: backend production chỉ cho phép origin GitHub Pages (CORS).
     API_BASE_URL: isLocalPreview ? '' : 'https://ducizone.ddns.net/mapping-api',
-    // Assignment public token chỉ dùng cho fixture local; production truyền token
-    // qua query `?assignment=<public-token>` sau khi assignment thật được phát hành.
+    // Token này thuộc về Test 1 dùng chung cho các lớp; production nhận qua
+    // query `?test=<test-token>` trong link GV gửi cho học viên.
     LEARNING_API_BASE_URL: isLocalPreview ? 'http://localhost:3000' : 'https://ducizone.ddns.net/mapping-api',
-    LEARNING_PUBLIC_TOKEN: isLocalPreview ? 'e4006177-1ef7-453b-a3b7-4fff12889e8e' : '',
+    LEARNING_TEST_TOKEN: isLocalPreview ? '34010000-0000-4000-8000-000000000002' : '',
     TEST_SLUG: 'webtest-34',
     // Khi mở ở local (file/http server) backend chặn CORS nên trang tự dùng
     // roster mẫu bên dưới để minh họa luồng. Khi deploy lên GitHub Pages,

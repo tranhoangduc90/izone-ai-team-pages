@@ -1,14 +1,11 @@
 (function () {
   'use strict';
 
+  const contract = window.WEBTEST34_PEDAGOGICAL_TYPES;
+  if (!contract) throw new Error('WEBTEST34_PEDAGOGICAL_TYPES_MISSING');
+
   function sectionIdForType(type) {
-    const value = String(type || '');
-    if (value.startsWith('vocabulary')) return 'vocabulary';
-    if (value.startsWith('listening')) return 'listening';
-    if (value.startsWith('pronunciation')) return 'pronunciation';
-    if (value.startsWith('translation')) return 'translation';
-    if (value.startsWith('writing') || value.startsWith('speaking')) return 'speaking';
-    return '';
+    return contract.resolvePedagogicalType(type).sectionId;
   }
 
   function sectionIdForTitle(title) {
@@ -48,6 +45,7 @@
       }));
     const groupsByItemId = new Map();
     const groupsByFallbackId = new Map();
+    const unmatchedItems = [];
 
     for (const [index, group] of sourceGroups.entries()) {
       for (const item of sourceBlocks[index]?.items || []) {
@@ -59,8 +57,12 @@
     }
 
     for (const item of items || []) {
-      const group = groupsByItemId.get(item.itemVersionId) || groupsByFallbackId.get(sectionIdForType(item.pedagogicalTypeCode));
-      if (!group) continue;
+      const fallbackId = item.pedagogicalTypeCode ? sectionIdForType(item.pedagogicalTypeCode) : '';
+      const group = groupsByItemId.get(item.itemVersionId) || groupsByFallbackId.get(fallbackId);
+      if (!group) {
+        unmatchedItems.push(item);
+        continue;
+      }
       group.items.push(item);
       const maxScore = Number(item.maxScore) || 0;
       const isPending = item.verdict === 'pending' || item.verdict === 'manual_review';
@@ -74,7 +76,10 @@
       if (item.verdict === 'correct') group.correct += 1;
     }
 
-    return sourceGroups.filter(group => group.items.length);
+    const result = sourceGroups.filter(group => group.items.length);
+    result.incomplete = unmatchedItems.length > 0;
+    result.unmatchedItems = unmatchedItems;
+    return result;
   }
 
   window.WEBTEST34_LEARNING_RESULT = Object.freeze({ groupResultItems });
