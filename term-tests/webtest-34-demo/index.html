@@ -408,6 +408,7 @@
   <div class="modal">
     <h3 id="submitTitle">Nộp bài?</h3>
     <p id="submitMessage">Hãy kiểm tra lại trước khi nộp.</p>
+    <p id="submitError" class="field-error hidden" role="alert"></p>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="cancelSubmit">Tiếp tục làm</button>
       <button class="btn btn-primary" id="confirmSubmit">Xác nhận nộp</button>
@@ -528,7 +529,7 @@
       body: JSON.stringify(body)
     });
     const data = await response.json().catch(() => ({}));
-    if(!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+    if(!response.ok) throw Object.assign(new Error(data.message || `Lỗi HTTP ${response.status}`), { code: data.error });
     return data;
   }
 
@@ -923,6 +924,7 @@
   }
 
   function openSubmit(){
+    setError('submitError', '');
     const all=sections.flatMap(s=>expectedKeysForSection(s.id));
     const missing=all.filter(k=>!isAnswered(k)).length;
     $('#submitMessage').textContent = missing ? `Bạn còn ${missing} mục chưa trả lời. Bạn vẫn có thể nộp, nhưng nên kiểm tra lại trước.` : 'Bạn đã trả lời tất cả các mục. Xác nhận nộp bài?';
@@ -939,7 +941,7 @@
       $('#timer').classList.toggle('warn',left<=10*60*1000);
       if(left<=0){clearInterval(timerInt); if(!state.submittedAt) openSubmit()}
     };
-    tick(); const timerInt=setInterval(tick,1000);
+    const timerInt=setInterval(tick,1000); tick();
   }
 
   function showExam(){
@@ -954,8 +956,8 @@
 
   function lockSubmittedAttempt(){
     $('#examApp').classList.add('submitted-readonly');
-    $('#examApp input, #examApp textarea, #examApp select').forEach(el => { el.disabled = true; });
-    $('#examApp [data-prev], #examApp [data-next], #mobilePrev, #mobileNext').forEach(el => { el.disabled = true; });
+    $$('#examApp input, #examApp textarea, #examApp select').forEach(el => { el.disabled = true; });
+    $$('#examApp [data-prev], #examApp [data-next], #mobilePrev, #mobileNext').forEach(el => { el.disabled = true; });
     $('#saveState').textContent = 'Đã nộp · chỉ xem kết quả';
   }
 
@@ -1416,8 +1418,22 @@
   $('#fontDown').addEventListener('click',()=>{fontScale=Math.max(.86,Math.round((fontScale-.06)*100)/100);document.documentElement.style.setProperty('--font-scale',fontScale);persist()});
   $('#fontUp').addEventListener('click',()=>{fontScale=Math.min(1.2,Math.round((fontScale+.06)*100)/100);document.documentElement.style.setProperty('--font-scale',fontScale);persist()});
   $('#cancelSubmit').addEventListener('click',()=>$('#submitModal').classList.add('hidden'));
+  function acceptLearningSubmission(result){
+    state.submittedAt = state.submittedAt || Date.now();
+    state.learning.status = 'submitted';
+    state.learning.gradingStatus = result.receipt?.gradingStatus || result.result?.gradingStatus || 'pending';
+    if(result.result) state.learning.studentResult = result.result;
+    persist();
+    lockSubmittedAttempt();
+    $('#submitModal').classList.add('hidden');
+    if(result.result) renderLearningResult(result.result);
+    else alert(`Đã nộp bài. Trạng thái chấm: ${state.learning.gradingStatus}.`);
+    startLearningResultPolling();
+  }
+
   $('#confirmSubmit').addEventListener('click', async ()=>{
     const button = $('#confirmSubmit');
+    setError('submitError', '');
     button.disabled = true;
     try{
       if(learningEnabled() && state.learning?.attemptToken){
@@ -1428,21 +1444,23 @@
           draftRevision: Number(state.learning.draftRevision || 0),
           responses: learningResponses()
         });
-         state.submittedAt = Date.now();
-         state.learning.status = 'submitted';
-         state.learning.gradingStatus = result.receipt?.gradingStatus || result.result?.gradingStatus || 'pending';
-         if(result.result) state.learning.studentResult = result.result;
-         persist();
-         $('#submitModal').classList.add('hidden');
-         if(result.result) renderLearningResult(result.result);
-         else alert(`Đã nộp bài. Trạng thái chấm: ${state.learning.gradingStatus}.`);
-         startLearningResultPolling();
+         acceptLearningSubmission(result);
       } else {
         state.submittedAt=Date.now(); persist(); $('#submitModal').classList.add('hidden');
         alert('Bản demo đã được đánh dấu là đã nộp trên localStorage.');
       }
     } catch(error){
-      setError('studentError', learningMappingError(error, 'nộp bài'));
+      if(error.code === 'SUBMISSION_ALREADY_FINAL'){
+        try{
+          const saved = await learningRequest('/attempts/result', { attemptToken: state.learning.attemptToken });
+          acceptLearningSubmission(saved);
+          return;
+        }catch(resultError){
+          setError('submitError', `Bài đã được nộp trước đó. Chưa tải được kết quả: ${resultError.message}`);
+          return;
+        }
+      }
+      setError('submitError', learningMappingError(error, 'nộp bài'));
     } finally {
       button.disabled = false;
     }

@@ -42,6 +42,101 @@ test('gói Webtest 34 có đúng cấu trúc 5 phần và không chứa answer k
   }
 });
 
+test('finalized submissions recover the saved result instead of replacing submitted answers', async () => {
+  const source = await read('term-tests/webtest-34-demo/index.html');
+  const start = source.indexOf("  $('#confirmSubmit').addEventListener('click', async ()=>{");
+  const end = source.indexOf("  $('#submitModal').addEventListener", start);
+  let submit;
+  let accepted;
+  const calls = [];
+  const errors = [];
+  const saved = { receipt: { gradingStatus: 'pending' }, result: { items: [], gradingStatus: 'pending' } };
+  const button = { addEventListener(event, callback) { submit = callback; } };
+  const sandbox = {
+    $: () => button,
+    state: { learning: { attemptToken: 'existing-attempt', submissionId: 'existing-submission' } },
+    learningEnabled: () => true,
+    learningResponses: () => ({ changed: 'answer' }),
+    learningRequest: async (endpoint, body) => {
+      calls.push({ endpoint, body });
+      if (endpoint === '/attempts/submit') throw Object.assign(new Error('Already submitted'), { code: 'SUBMISSION_ALREADY_FINAL' });
+      return saved;
+    },
+    acceptLearningSubmission: result => { accepted = result; },
+    learningMappingError: error => error.message,
+    setError: (id, message) => { if (message) errors.push(message); }
+  };
+  vm.runInNewContext(source.slice(start, end), sandbox);
+  await submit();
+  assert.equal(accepted, saved);
+  assert.deepEqual(calls.map(call => call.endpoint), ['/attempts/submit', '/attempts/result']);
+  assert.deepEqual(Object.keys(calls[1].body), ['attemptToken']);
+  assert.deepEqual(errors, []);
+});
+
+test('submitted Webtest 34 locks every answer and submit control', async () => {
+  const source = await read('term-tests/webtest-34-demo/index.html');
+  const start = source.indexOf('  function lockSubmittedAttempt(){');
+  const end = source.indexOf('  // ================= Audio', start);
+  const fields = [{ disabled: false }, { disabled: false }];
+  const controls = [{ disabled: false }, { disabled: false }];
+  const status = {};
+  const sandbox = {
+    $: selector => selector === '#examApp' ? { classList: { add() {} } } : status,
+    $$: selector => selector.includes('input') ? fields : controls
+  };
+  vm.runInNewContext(`${source.slice(start, end)}\nlockSubmittedAttempt();`, sandbox);
+  assert.ok([...fields, ...controls].every(element => element.disabled));
+  assert.equal(status.textContent, 'Đã nộp · chỉ xem kết quả');
+});
+
+test('failed Webtest 34 submission displays the error in the open confirmation dialog', async () => {
+  const source = await read('term-tests/webtest-34-demo/index.html');
+  const start = source.indexOf("  $('#confirmSubmit').addEventListener('click', async ()=>{");
+  const end = source.indexOf("  $('#submitModal').addEventListener", start);
+  let submit;
+  const button = { disabled: false, addEventListener(event, callback) { submit = callback; } };
+  const errors = new Map();
+  const sandbox = {
+    $: () => button,
+    state: { learning: { attemptToken: 'test-attempt', submissionId: 'test-submission' } },
+    learningEnabled: () => true,
+    learningResponses: () => ({}),
+    learningRequest: async () => { throw new Error('Phiên làm bài không còn hoạt động.'); },
+    learningMappingError: error => error.message,
+    setError: (id, message) => errors.set(id, message)
+  };
+  vm.runInNewContext(source.slice(start, end), sandbox);
+  await submit();
+  assert.equal(errors.get('submitError'), 'Phiên làm bài không còn hoạt động.');
+  assert.equal(button.disabled, false, 'failure must allow another submit attempt');
+  const modal = source.slice(source.indexOf('id="submitModal"'), source.indexOf('<script>', source.indexOf('id="submitModal"')));
+  assert.match(modal, /id="submitError"[^>]*role="alert"/);
+});
+
+test('resuming an expired Webtest 34 timer does not interrupt exam initialization', async () => {
+  const source = await read('term-tests/webtest-34-demo/index.html');
+  const timerSource = source.slice(source.indexOf('  function startTimer(){'), source.indexOf('  function showExam(){'));
+  for (const submittedAt of [null, 1]) {
+    const timer = { textContent: '', classList: { toggle() {} } };
+    const intervals = new Set();
+    let submissions = 0;
+    const sandbox = {
+      state: { startedAt: Date.now() - 3 * 60 * 60 * 1000, submittedAt },
+      TOTAL_MINUTES: 120,
+      $: () => timer,
+      persist() {},
+      setInterval(callback) { intervals.add(callback); return callback; },
+      clearInterval(callback) { intervals.delete(callback); },
+      openSubmit() { submissions += 1; }
+    };
+    assert.doesNotThrow(() => vm.runInNewContext(`${timerSource}\nstartTimer();`, sandbox));
+    assert.equal(timer.textContent, '00:00');
+    assert.equal(intervals.size, 0, 'expired attempts must not keep ticking');
+    assert.equal(submissions, submittedAt ? 0 : 1);
+  }
+});
+
 test('cấu hình Webtest 34 giữ timer và audio chính thức', async () => {
   const [config, previewConfig] = await Promise.all([
     browserGlobal('term-tests/34-test-config.js', 'TERM_TEST_CONFIG'),
