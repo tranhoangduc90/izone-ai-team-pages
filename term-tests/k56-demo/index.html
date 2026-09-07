@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Danh sách bài test demo khóa 56 của IZONE">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
     <title>Danh sách bài test · Khóa 56</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="../shared/styles.css?rev=20260904-k56-demo-v1">
@@ -14,22 +14,39 @@
       <section class="panel landing-card">
         <p class="eyebrow">IZONE · IELTS 5–6 · Dữ liệu giả lập</p>
         <h1>Danh sách bài test · Khóa 56</h1>
-        <p>Lớp CODEXDEMO56 · Dữ liệu giả lập, không ghi điểm lên Portal.</p>
+        <p>Chọn lớp rồi mở bài test để chọn học viên của lớp đó.</p>
+        <section class="landing-auth" aria-label="Đăng nhập giảng viên">
+          <div>
+            <strong id="loginBadge">Giảng viên chưa đăng nhập</strong>
+            <p id="loginStatus" role="status">Đăng nhập Google để chọn các lớp được cấp quyền trên hệ thống K56.</p>
+          </div>
+          <div id="googleSignInButton"></div>
+          <button class="button button-secondary landing-logout" id="logoutButton" type="button" hidden>Đăng xuất</button>
+        </section>
+        <div class="landing-class-field">
+          <label id="classCodeLabel" for="classCode">Chọn lớp / mã lớp</label>
+          <input id="classCode" autocomplete="off" placeholder="Ví dụ: CODEXDEMO56" maxlength="32" value="CODEXDEMO56">
+          <select id="classSelect" aria-labelledby="classCodeLabel" hidden></select>
+          <p class="landing-class-help" id="classHelp" role="status">Bạn vẫn có thể nhập mã lớp khi chưa đăng nhập.</p>
+        </div>
+        <p>Hiện có lớp CODEXDEMO56 với học viên giả lập. Chưa mở roster lớp thật hoặc đồng bộ điểm Portal.</p>
         <h2>Term Test 1 · Demo online</h2>
         <p>Listening: 40 câu · Reading: 26 câu · Writing: Task 2. Có chấm Writing tự động và dashboard giáo viên.</p>
         <div class="landing-actions">
-          <a class="button button-primary" href="../term-test-1-k56-computer-based/?class=CODEXDEMO56">Mở Term Test 1</a>
+          <button class="button button-primary" type="button" data-test="term-test-1-k56-computer-based" data-slug="term-test-1-k56">Mở Term Test 1</button>
         </div>
         <h2>Term Test 2 · Demo online</h2>
         <p>Listening: 40 câu · Reading: 40 câu · Writing: Task 1. Nộp bài Writing để chấm tự động theo TA, CC, LR và GRA.</p>
         <div class="landing-actions">
-          <a class="button button-primary" href="../term-test-2-k56-computer-based/?class=CODEXDEMO56">Mở Term Test 2</a>
+          <button class="button button-primary" type="button" data-test="term-test-2-k56-computer-based" data-slug="term-test-2-k56">Mở Term Test 2</button>
         </div>
         <div class="landing-actions">
-          <a class="button button-secondary" href="../teacher-k56/?class=CODEXDEMO56&amp;test=term-test-2-k56">Xem kết quả</a>
+          <button class="button button-secondary" type="button" id="teacherDashboard">Xem kết quả</button>
         </div>
         <p>Trong trang kết quả, chọn Term Test 1 hoặc Term Test 2. Giảng viên cần đăng nhập Google bằng tài khoản đã được cấp quyền.</p>
       </section>
     </main>
+    <script src="../k56-shared/config.js?rev=20260907-k56-class-picker"></script>
+    <script type="module" src="landing.js?rev=20260907-k56-class-picker"></script>
   </body>
 </html>
