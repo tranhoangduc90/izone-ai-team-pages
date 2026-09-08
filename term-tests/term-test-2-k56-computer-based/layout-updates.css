@@ -8,6 +8,8 @@
 .k56-side-layout .cbt-question-card { padding:12px; }
 .k56-side-layout .cbt-question-heading { gap:8px; }
 .k56-side-layout .cbt-answer-row { width:100%; margin-left:0; }
+.cbt-listening-section .cbt-answer-row { width:min(100%, 520px); margin-inline:auto; justify-content:center; }
+.cbt-listening-section .k56-side-layout .cbt-answer-row { width:min(100%, 360px); }
 .k56-side-layout .cbt-inline-answer { min-width:0; max-width:100%; }
 .k56-side-layout select { width:100%; min-width:0; }
 .k56-side-layout .cbt-option-bank { margin-top:0; padding:12px; }

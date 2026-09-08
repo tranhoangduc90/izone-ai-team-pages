@@ -33,16 +33,19 @@ test('gói K56 có đúng cấu trúc đề và không chứa answer key', async
 });
 
 test('K56 dùng lớp và API demo riêng, không kế thừa mã K67', async () => {
-  const [bootstrap, config, landing] = await Promise.all([
+  const [bootstrap, config, landing, app] = await Promise.all([
     read('term-tests/term-test-1-k56-computer-based/bootstrap.js'),
     read('term-tests/k56-shared/config.js'),
-    read('term-tests/k56-demo/index.html')
+    read('term-tests/k56-demo/index.html'),
+    read('term-tests/k56-shared/app.js')
   ]);
   assert.equal(bootstrap.includes('CODEXDEMO806'), false);
   assert.equal((bootstrap.match(/Học viên Demo 0[1-3]/g) || []).length, 3);
   assert.match(config, /mapping-api-demo/);
-  assert.match(landing, /term-test-1-k56-computer-based\/\?class=CODEXDEMO56/);
-  assert.match(landing, /teacher-k56\/\?class=CODEXDEMO56&amp;test=term-test-1-k56/);
+  assert.match(landing, /data-test="term-test-1-k56-computer-based"/);
+  assert.match(landing, /id="teacherDashboard"/);
+  assert.equal(app.includes('viewListeningResult'), false);
+  assert.equal(app.includes('Xem kết quả Listening'), false);
 });
 
 test('dashboard K56 tách riêng và các file K67 không đổi hành vi', async () => {
