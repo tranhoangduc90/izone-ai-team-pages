@@ -12,7 +12,7 @@
     // Lưu ý: backend production chỉ cho phép origin GitHub Pages (CORS).
     API_BASE_URL: isLocalPreview ? '' : 'https://ducizone.ddns.net/mapping-api',
     // Token này thuộc về Test 1 dùng chung cho các lớp; production nhận qua
-    // query `?test=<test-token>` trong link GV gửi cho học viên.
+    // fragment `#test=<test-token>` trong link GV gửi cho học viên.
     LEARNING_API_BASE_URL: isLocalPreview ? 'http://localhost:3000' : 'https://ducizone.ddns.net/mapping-api',
     LEARNING_TEST_TOKEN: isLocalPreview ? '34010000-0000-4000-8000-000000000002' : '',
     TEST_SLUG: 'webtest-34',

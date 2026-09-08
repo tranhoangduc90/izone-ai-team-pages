@@ -508,7 +508,7 @@
 
   function learningConfig(){
     const config = window.WEBTEST_34_PREVIEW_CONFIG || {};
-    const testToken = new URLSearchParams(window.location.search).get('test') || config.LEARNING_TEST_TOKEN;
+    const testToken = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('test') || config.LEARNING_TEST_TOKEN;
     return {
       baseUrl: String(config.LEARNING_API_BASE_URL || '').replace(/\/$/, ''),
       testToken: testToken || ''
@@ -1276,6 +1276,8 @@
         students = demoRosterByClass[code];
         className = `${code} (bản demo)`;
         usedFallback = true;
+      } else if(config.TEST_SLUG === 'webtest-34'){
+        throw new Error('Link Webtest 34 chưa có mã truy cập. Hãy dùng link do giáo viên cung cấp.');
       } else if(!config.API_BASE_URL){
         throw new Error('Mã lớp demo chưa có roster mẫu. Thử IC34DEMO.');
       } else {

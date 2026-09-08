@@ -18,6 +18,13 @@ async function browserGlobal(relative, name) {
   return sandbox.window[name];
 }
 
+async function browserGlobalAt(relative, name, hostname) {
+  const source = await read(relative);
+  const sandbox = { window: { location: { hostname } } };
+  vm.runInNewContext(source, sandbox, { filename: relative, timeout: 5_000 });
+  return sandbox.window[name];
+}
+
 async function browserGlobals(relatives, name) {
   const sandbox = { window: { location: { hostname: 'localhost' } } };
   for (const relative of relatives) {
@@ -324,6 +331,16 @@ test('canonical Webtest 34 có local-learning lifecycle và không rơi về sub
   assert.doesNotMatch(index, /const hardGroups =/);
   assert.doesNotMatch(index, /const values = \$\$\('\[data-answer\]'\)/);
   assert.doesNotMatch(index, /Prototype: bài đã được đánh dấu là đã nộp trên localStorage/);
+});
+
+test('canonical Webtest 34 đọc test token từ fragment và production config không nhúng token', async () => {
+  const [index, productionConfig] = await Promise.all([
+    read('term-tests/webtest-34-demo/index.html'),
+    browserGlobalAt('term-tests/webtest-34-demo/config.js', 'WEBTEST_34_PREVIEW_CONFIG', 'izone.edu.vn')
+  ]);
+  assert.match(index, /new URLSearchParams\(window\.location\.hash\.replace\(\/\^#\/, ''\)\)\.get\(['"]test['"]\)/);
+  assert.doesNotMatch(index, /new URLSearchParams\(window\.location\.search\)[\s\S]*?get\(['"]test['"]\)/);
+  assert.equal(productionConfig.LEARNING_TEST_TOKEN, '');
 });
 
 test('canonical Webtest 34 lưu và render kết quả chấm cứng cho học viên', async () => {
