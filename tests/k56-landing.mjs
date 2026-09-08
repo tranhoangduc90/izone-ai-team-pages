@@ -7,6 +7,7 @@ function element(){return {value:'',hidden:false,dataset:{},handlers:{},addEvent
 const elements=Object.fromEntries(['classCode','classSelect','classHelp','loginBadge','loginStatus','googleSignInButton','logoutButton','teacherDashboard'].map(id=>[id,element()]));
 const buttons=[1,2].map(n=>Object.assign(element(),{dataset:{test:`term-test-${n}-k56-computer-based`,slug:`term-test-${n}-k56`}}));
 const requests=[];
+buttons.push(Object.assign(element(), {dataset:{test:'mini-test-k56-computer-based',slug:'mini-test-k56'}}));
 let response={ok:true,students:[{ref:'synthetic',name:'Học viên giả lập'}]};
 const context=vm.createContext({
   window:{TERM_TEST_APP_CONFIG:{API_BASE_URL:'https://example.test/mapping-api-demo',GOOGLE_CLIENT_ID:'synthetic'},location:{href:''},sessionStorage:{}},
@@ -28,6 +29,7 @@ assert.equal(elements.classSelect.hidden,false);assert.equal(elements.classCode.
 assert.equal(elements.classSelect.children.length,1);
 response={ok:true,students:[{ref:'synthetic'}]};
 await buttons[1].handlers.click();assert.equal(context.window.location.href,'../term-test-2-k56-computer-based/?class=CODEXDEMO56');
+await buttons[2].handlers.click();assert.equal(context.window.location.href,'../mini-test-k56-computer-based/?class=CODEXDEMO56');
 elements.teacherDashboard.handlers.click();assert.equal(context.window.location.href,'../teacher-k56/?class=CODEXDEMO56');
 elements.logoutButton.handlers.click();assert.equal(elements.classSelect.hidden,true);
 assert.ok(requests.every(r=>r.url.startsWith('https://example.test/mapping-api-demo/')));

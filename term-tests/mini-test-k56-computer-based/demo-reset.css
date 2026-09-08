@@ -1,0 +1,20 @@
+.topbar > .k56-reset-button {
+  flex: 0 0 auto; order: 10; justify-self: end; margin-left: auto;
+  border: 1px solid #d4e1f2; border-radius: 8px; background: #fff;
+  color: #193d66; padding: 9px 14px; font: 700 14px Arial, sans-serif;
+  cursor: pointer; white-space: nowrap;
+}
+.k56-reset-button:hover { background: #eaf2ff; }
+.k56-reset-button:focus-visible, .k56-reset-dialog button:focus-visible { outline: 3px solid #67a6ff; outline-offset: 3px; }
+.k56-reset-dialog { width: min(460px, calc(100vw - 32px)); box-sizing: border-box; margin: auto; padding: 24px; border: 1px solid #cbd9ed; border-radius: 16px; color: #193d66; background: white; font: 16px/1.6 Arial, sans-serif; }
+.k56-reset-dialog::backdrop { background: rgb(14 34 62 / 50%); }
+.k56-reset-dialog h2 { margin: 0 0 12px; font-size: 24px; }
+.k56-reset-dialog p { margin: 12px 0; }
+.k56-reset-summary { font-weight: 700; }
+.k56-reset-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.k56-reset-actions button { padding: 10px 16px; border: 0; border-radius: 8px; font: 700 15px Arial, sans-serif; cursor: pointer; color: #193d66; background: #eaf0f8; }
+.k56-reset-actions [data-reset-confirm] { color: white; background: #b42318; }
+.k56-reset-actions button:disabled { opacity: .6; cursor: wait; }
+.k56-reset-error { color: #a51d18; }
+.cbt-mode .topbar.k56-reset-header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.cbt-mode .topbar.k56-reset-header .cbt-identity-panel { flex: 1 1 360px; min-width: 0; }

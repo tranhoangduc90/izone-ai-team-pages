@@ -67,6 +67,14 @@ function getSelectedTest() {
   return state.tests.find(item => item.slug === state.selectedTestSlug) || null;
 }
 
+function writingTaskLabel(taskNumber) {
+  return state.selectedTestSlug === 'mini-test-k56' ? 'Đoạn văn' : `Task ${taskNumber}`;
+}
+
+function writingScoreLabel() {
+  return state.selectedTestSlug === 'mini-test-k56' ? 'Điểm đoạn văn' : 'Band';
+}
+
 function configuredWritingTasks() {
   const configured = getSelectedTest()?.writingTasks;
   if (Array.isArray(configured)) return configured.map(Number).filter(number => [1, 2].includes(number));
@@ -270,7 +278,7 @@ function renderOverviewRows() {
     const writingMain = taskNumbers.length === 0
       ? 'Không có Writing'
       : writing.status === 'ready'
-      ? `Band ${formatBand(Number(writing.writingScore))}`
+      ? `${writingScoreLabel()} ${formatBand(Number(writing.writingScore))}`
       : writingStatusLabel(writing.status);
     writingCell.append(
       createNode('span', `teacher-writing-status ${taskNumbers.length ? writing.status : 'not_submitted'}`, writingMain),
@@ -278,8 +286,8 @@ function renderOverviewRows() {
         'small',
         'teacher-writing-tasks',
         taskNumbers.map(taskNumber => writing.status === 'ready'
-          ? `Task ${taskNumber}: ${formatBand(Number(writing[`task${taskNumber}Score`]))}`
-          : `Task ${taskNumber}: ${writingTaskStateLabel(writing[`task${taskNumber}State`])}`
+          ? `${writingTaskLabel(taskNumber)}: ${formatBand(Number(writing[`task${taskNumber}Score`]))}`
+          : `${writingTaskLabel(taskNumber)}: ${writingTaskStateLabel(writing[`task${taskNumber}State`])}`
         ).join(' · ')
       )
     );
@@ -311,14 +319,14 @@ function addResultSummaryCard(label, value) {
 }
 
 function addWritingResultSummaryButton(student, taskNumber, value, ready) {
-  if (!ready) return addResultSummaryCard(`Writing Task ${taskNumber}`, value);
+  if (!ready) return addResultSummaryCard(`${writingTaskLabel(taskNumber)}`, value);
   const button = createNode('button', 'summary-card teacher-writing-score-button');
   button.type = 'button';
   button.dataset.writingStudent = student.ref;
   button.dataset.writingTask = String(taskNumber);
-  button.setAttribute('aria-label', `Xem bài chấm chi tiết Writing Task ${taskNumber} của ${student.name}`);
+  button.setAttribute('aria-label', `Xem bài chấm chi tiết ${writingTaskLabel(taskNumber)} của ${student.name}`);
   button.append(
-    createNode('span', '', `Writing Task ${taskNumber} · nhấn để xem chi tiết`),
+    createNode('span', '', `${writingTaskLabel(taskNumber)} · nhấn để xem chi tiết`),
     createNode('strong', '', value)
   );
   return button;
@@ -534,8 +542,8 @@ function openTeacherWritingFeedback(studentName, writing) {
   const headerCopy = document.createElement('div');
   headerCopy.append(
     createNode('span', '', `${studentName} · Kết quả Writing`),
-    createNode('h2', '', `Task ${taskNumber} · Band ${formatBand(Number(writing.taskScore))}`),
-    createNode('p', '', `${Number(writing.wordCount || 0)} từ · Chấm theo 4 tiêu chí IELTS`)
+    createNode('h2', '', `${writingTaskLabel(taskNumber)} · ${writingScoreLabel()} ${formatBand(Number(writing.taskScore))}`),
+    createNode('p', '', `${Number(writing.wordCount || 0)} từ · ${state.selectedTestSlug === 'mini-test-k56' ? 'Rubric đoạn văn · không quy đổi IELTS band' : 'Chấm theo 4 tiêu chí IELTS'}`)
   );
   headerCopy.querySelector('h2').id = `teacherWritingTitle${taskNumber}`;
   const closeButton = createNode('button', 'writing-feedback-close', '×');
@@ -580,7 +588,7 @@ function openTeacherWritingFeedback(studentName, writing) {
     const criterionHeader = document.createElement('header');
     criterionHeader.append(
       createNode('h4', '', criterion.name || criterionTitle(criterion.code, taskNumber)),
-      createNode('strong', '', `Band ${formatBand(Number(criterion.bandScore))}`)
+      createNode('strong', '', `${writingScoreLabel()} ${formatBand(Number(criterion.bandScore))}`)
     );
     card.append(criterionHeader);
     const components = Array.from(criterion.components || []);
@@ -760,7 +768,7 @@ function renderStudentResult(student) {
     student,
     taskNumber,
     writing.status === 'ready'
-      ? `Band ${formatBand(Number(writing[`task${taskNumber}Score`]))}`
+      ? `${writingScoreLabel()} ${formatBand(Number(writing[`task${taskNumber}Score`]))}`
       : writingTaskStateLabel(writing[`task${taskNumber}State`]),
     writing.status === 'ready'
   ));
@@ -773,7 +781,7 @@ function renderStudentResult(student) {
       : `${result.reading.correct}/${result.reading.total} · Band ${result.reading.band}`),
     ...writingSummaryCards,
     ...(configuredWritingTasks().length
-      ? [addResultSummaryCard('Writing', writing.status === 'ready' ? `Band ${formatBand(Number(writing.writingScore))}` : writingStatusLabel(writing.status))]
+      ? [addResultSummaryCard('Writing', writing.status === 'ready' ? `${writingScoreLabel()} ${formatBand(Number(writing.writingScore))}` : writingStatusLabel(writing.status))]
       : [])
   );
 
