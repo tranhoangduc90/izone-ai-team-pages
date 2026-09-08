@@ -70,20 +70,24 @@ async function loadAuthorizedClasses() {
   if (!appConfig.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
   if (!sessionStore.usable(idToken)) throw new Error('Phiên Google đã hết hạn; hãy đăng nhập lại.');
   const generation = loginGeneration;
-  const response = await fetch(`${appConfig.API_BASE_URL}/api/term-tests/teacher/options`, {
-    headers: { Authorization: `Bearer ${idToken}` },
-    cache: 'no-store'
-  });
-  const payload = await response.json().catch(() => null);
+  const responses = await Promise.all((appConfig.API_BASE_URLS || [appConfig.API_BASE_URL]).map(async apiBaseUrl => {
+    const response = await fetch(`${apiBaseUrl}/api/term-tests/teacher/options`, {
+      headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store'
+    });
+    return { response, payload: await response.json().catch(() => null) };
+  }));
   if (generation !== loginGeneration) return;
-  if (!response.ok || !payload?.ok) {
+  const accepted = responses.filter(item => item.response.ok && item.payload?.ok);
+  if (!accepted.length) {
+    const { response, payload } = responses[0];
     const error = new Error(payload?.message || (response.status === 401
       ? 'Phiên Google đã hết hạn; hãy đăng nhập lại.'
       : `Không tải được danh sách lớp (mã ${response.status}).`));
     error.status = response.status;
     throw error;
   }
-  showAuthorizedClasses(payload);
+  const classes = Array.from(new Map(accepted.flatMap(item => item.payload.classes || []).map(item => [item.name, item])).values());
+  showAuthorizedClasses({ reviewer: accepted[0].payload.reviewer, classes });
   sessionStore.save(idToken);
 }
 
@@ -150,8 +154,9 @@ document.querySelectorAll('[data-test]').forEach(button => {
     button.disabled = true;
     classHelp.textContent = 'Đang kiểm tra danh sách học viên của lớp...';
     try {
+      const apiBaseUrl = appConfig.API_BY_CLASS?.[classCode] || appConfig.API_BASE_URL;
       const response = await fetch(
-        `${appConfig.API_BASE_URL}/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(slug)}`,
+        `${apiBaseUrl}/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(slug)}`,
         { cache: 'no-store', signal: AbortSignal.timeout(15000) }
       );
       const payload = await response.json();

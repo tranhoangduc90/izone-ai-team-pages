@@ -78,7 +78,7 @@
       <span class="cbt-kicker">QUESTIONS 18–20</span>
       <p>What does the speaker say about the following forms of transport? Choose A–E.</p>
     </header>
-    <div class="cbt-matching-layout">
+    <div class="cbt-matching-layout k56-answers-left">
       <div class="cbt-option-bank">
         <div class="cbt-transport-option"><strong>A</strong><span>will take more passengers than usual</span></div>
         <div class="cbt-transport-option"><strong>B</strong><span>will suit people who want to see the start of the race</span></div>
@@ -135,7 +135,7 @@
     ${choiceQuestion(35, 'For the activity on Wednesday,', [['A', 'only group bookings are accepted.'], ['B', 'visitors should book in advance.'], ['C', 'attendance is free.']])}
     ${choiceQuestion(36, 'For the activity on Saturday, visitors should', [['A', 'come in suitable clothing.'], ['B', 'make sure they are able to stay for the whole day.'], ['C', 'tell the rangers before the event what they wish to do.']])}
     <header class="cbt-section-intro is-compact"><span class="cbt-kicker">QUESTIONS 37–40</span><p>Label the map. Choose the correct letter, A–I.</p></header>
-    <figure class="cbt-park-map" aria-label="Sơ đồ Hinchingbrooke Park với các vị trí A đến I">
+    <div class="k56-side-layout k56-map-layout"><figure class="cbt-park-map" aria-label="Sơ đồ Hinchingbrooke Park với các vị trí A đến I">
       <img src="assets/figures/hinchingbrooke-park.png" width="1560" height="836" alt="Hinchingbrooke Park: bản đồ gốc với các vị trí A–I, hồ, cổng East gate và West gate, khu Refreshments và la bàn.">
     </figure>
     <div class="cbt-short-answer-list">
@@ -143,7 +143,7 @@
       ${textQuestion(38, 'dog-walking area')}
       ${textQuestion(39, 'flower garden')}
       ${textQuestion(40, 'wooded area')}
-    </div>`;
+    </div></div>`;
 
   const domesticRobotsPassage = `
     <p class="cbt-passage-deck"><em>Machines that look after your home are getting cleverer, but they still need care and attention if they are to perform as intended.</em></p>
@@ -190,7 +190,7 @@
 
   const setiQuestions = `
     <header class="cbt-section-intro"><span>Questions 14–17</span><p>Choose the correct heading for paragraphs B–E from the list below.</p></header>
-    <div class="cbt-option-bank cbt-heading-bank">
+    <div class="k56-side-layout k56-answers-left"><div class="cbt-option-bank cbt-heading-bank">
       <p><strong>i</strong> Seeking the transmission of radio signals from planets</p>
       <p><strong>ii</strong> Appropriate responses to signals from other civilisations</p>
       <p><strong>iii</strong> Vast distances to Earth’s closest neighbours</p>
@@ -201,7 +201,7 @@
     </div>
     <div class="cbt-short-answer-list">
       ${textQuestion(14, 'Paragraph B')}${textQuestion(15, 'Paragraph C')}${textQuestion(16, 'Paragraph D')}${textQuestion(17, 'Paragraph E')}
-    </div>
+    </div></div>
     <header class="cbt-section-intro is-compact"><span>Questions 18–20</span><p>Answer the questions. Choose <strong>NO MORE THAN THREE WORDS AND/OR A NUMBER</strong> from the passage.</p></header>
     ${textQuestion(18, 'What is the life expectancy of Earth?')}
     ${textQuestion(19, 'What kind of signals from other intelligent civilisations are SETI scientists searching for?')}
@@ -218,7 +218,7 @@
     variant: 'semantic-html',
     baseTestSlug: 'term-test-1-k56',
     audio: {
-      src: 'assets/private/listening-k56.mp3',
+      src: '',
       label: 'Term Test 1 · Khóa 56 · Listening',
       durationLabel: 'khoảng 31 phút'
     },

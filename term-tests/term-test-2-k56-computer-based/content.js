@@ -22,8 +22,8 @@
     ${sentence(5,'Go in on',', any time')}${sentence(6,'Interview with assistant called')}${sentence(7,'Address of home: 73','Road')}
     <h4>‘Open house’ days</h4>${sentence(8,'Agreed to help on')}${sentence(9,'Will show visitors where to')}${sentence(10,'Possibility of talking to a','reporter')}</div>`,
     intro('PART 2 · QUESTIONS 11–20','Learning Resource Centre','Questions 11–15: Label the plan below. Write the correct letter, <strong>A–H</strong>, next to Questions 11–15.') +
-    figure('resource-centre.png','Plan of Learning Resource Centre (Ground Floor), locations A–H')+
-    ['Newspapers','Computers','Photocopier','Café','Sports books'].map((t,i)=>question(i+11,t)).join('')+
+    `<div class="k56-side-layout k56-map-layout">`+figure('resource-centre.png','Plan of Learning Resource Centre (Ground Floor), locations A–H')+`<div>`+
+    ['Newspapers','Computers','Photocopier','Café','Sports books'].map((t,i)=>question(i+11,t)).join('')+`</div></div>`+
     group('16–20','Complete the table below. Write <strong>ONE WORD ONLY</strong> for each answer.')+
     `<h4>New staff responsibilities</h4><div class="cbt-table-wrap"><table class="cbt-data-table"><thead><tr><th>Name</th><th>New responsibility</th></tr></thead><tbody>
     <tr><td>Jenny Reed</td><td>Buying ${numbered(16)} for the Centre</td></tr>
@@ -32,7 +32,7 @@
     <tr><td>Saeed Aktar</td><td>Finding a ${numbered(19)}</td></tr>
     <tr><td>Shilpa Desai</td><td>Help with ${numbered(20)}</td></tr></tbody></table></div>`,
     intro('PART 3 · QUESTIONS 21–30','Making a training film','Questions 21–27: What helped Stewart with each of the following stages in making his training film for museum employees? Choose <strong>SEVEN</strong> answers from the box and write the correct letter, <strong>A–I</strong>, next to Questions 21–27.')+
-    `<h4>What helped Stewart</h4><div class="cbt-matching-layout">${bank([
+    `<h4>What helped Stewart</h4><div class="cbt-matching-layout k56-answers-left">${bank([
       ['A','advice from friends'],['B','information on a website'],['C','being allowed extra time'],['D','meeting a professional filmmaker'],['E','good weather conditions'],['F','getting a better computer'],['G','support of a manager'],['H','help from a family member'],['I','work on a previous assignment']
     ])}<div class="cbt-short-answer-list cbt-matching-questions"><h4>Stages in making training film for museum employees</h4>${['finding a location','deciding on equipment','writing the script','casting','filming','editing','designing the DVD cover'].map((t,i)=>question(i+21,t)).join('')}</div></div>`+
     group('28–30',oneWord)+`<div class="k56-source-notes"><h4>Stewart’s work placement: benefits to the Central Museum Association</h4>
@@ -48,13 +48,13 @@
     <h4>Exeter and Oxford research in New Caledonia</h4>${sentence(37,'scientists have attached very small cameras to birds’')}${sentence(38,'food in the form of beetle larvae provides plenty of','for the birds')}${sentence(39,'larvae’s specific','composition can be identified in birds that feed on them')}${sentence(40,'scientists will analyse what the birds include in their')}</div>`
   ];
   const roman = ['i','ii','iii','iv','v','vi','vii','viii','ix'];
-  const headings = (start, end, texts) => group(`${start}–${end}`,`Reading Passage ${start===1?'1':'3'} has six paragraphs, <strong>A–F</strong>. Choose the correct heading for each paragraph from the list of headings below.`)+`<h4>List of Headings</h4>`+bank(texts.map((t,i)=>[roman[i],t]))+Array.from({length:6},(_,i)=>question(start+i,`Paragraph ${String.fromCharCode(65+i)}`)).join('');
+  const headings = (start, end, texts) => group(`${start}–${end}`,`Reading Passage ${start===1?'1':'3'} has six paragraphs, <strong>A–F</strong>. Choose the correct heading for each paragraph from the list of headings below.`)+`<div class="k56-side-layout"><div>`+Array.from({length:6},(_,i)=>question(start+i,`Paragraph ${String.fromCharCode(65+i)}`)).join('')+`</div><div><h4>List of Headings</h4>`+bank(texts.map((t,i)=>[roman[i],t]))+`</div></div>`;
   const reading1 = headings(1,6,[
     'The appearance and location of different seaweeds','The nutritional value of seaweeds','How seaweeds reproduce and grow','How to make agar from seaweeds','The under-use of native seaweeds','Seaweed species at risk of extinction','Recipes for how to cook seaweeds','The range of seaweed products','Why seaweeds don’t sink or dry out'
   ]) + group('7–10','Complete the flow-chart below. Choose <strong>NO MORE THAN THREE WORDS</strong> from the passage for each answer.')+
   figure('seaweed-flowchart-original.png','Gigartina seaweed: flow-chart with blanks 7, 8, 9 and 10')+diagramAnswers([7,8,9,10])+
-  group('11–13','Look at the following statements and list of seaweeds below. Match each statement with the correct seaweed, <strong>A, B or C</strong>.')+bank([['A','brown seaweed'],['B','green seaweed'],['C','red seaweed']])+
-  ['can survive the heat and dryness at the high-water mark','grow far out in the open sea','share their site with karengo seaweed'].map((t,i)=>question(i+11,t)).join('');
+  group('11–13','Look at the following statements and list of seaweeds below. Match each statement with the correct seaweed, <strong>A, B or C</strong>.')+`<div class="k56-side-layout k56-answers-left">`+bank([['A','brown seaweed'],['B','green seaweed'],['C','red seaweed']])+`<div>`+
+  ['can survive the heat and dryness at the high-water mark','grow far out in the open sea','share their site with karengo seaweed'].map((t,i)=>question(i+11,t)).join('')+`</div></div>`;
   const reading2 = group('14–17','Label the diagrams below. Choose <strong>NO MORE THAN TWO WORDS</strong> from the passage for each answer.')+
   figure('crow-tools.png','Three tools made by crows: diagrams with blank labels 14–17')+diagramAnswers([14,15,16,17])+
   group('18–23','Do the following statements agree with the information given in Reading Passage 2?')+
@@ -86,7 +86,7 @@
     'Certain linguistic groups may have difficulty describing smell because they lack the appropriate … .',
     'The sense of smell may involve response to … which do not smell, in addition to obvious odours.',
     'Odours regarded as unpleasant in certain … are not regarded as unpleasant in others.'
-  ].map((t,i)=>question(i+37,t)).join('');
+  ].map((t,i)=>`<div class="k56-inline-sentence">${t.replace('…',numbered(i+37))}</div>`).join('');
   const passageHtml = (p,i) => `<article class="cbt-passage">${p.subtitle?`<p><em>${p.subtitle}</em></p>`:''}${p.paragraphs.map((t,j)=>`<p>${p.unlettered?'':`<strong>${String.fromCharCode(65+j)}</strong> &nbsp;`}${t}</p>`).join('')}</article>`;
   window.K56_TERM_TEST_CONTENT = Object.freeze({
     variant:'semantic-html',baseTestSlug:'term-test-2-k56',
