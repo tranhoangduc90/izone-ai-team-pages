@@ -7,7 +7,11 @@ import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const require = createRequire('file:///C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json');
+const runtimeModules = process.env.CODEX_NODE_MODULES || join(
+  process.env.USERPROFILE || '',
+  '.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'node', 'node_modules'
+);
+const require = createRequire(pathToFileURL(join(runtimeModules, 'playwright', 'package.json')).href);
 const { chromium } = require('playwright');
 const studentA = '11111111-1111-4111-8111-111111111111';
 const studentB = '22222222-2222-4222-8222-222222222222';
@@ -33,7 +37,7 @@ function serve() {
   });
 }
 
-test('K56 nhớ UUID riêng, chỉ gợi ý sau roster và không tự chuẩn bị bài', async () => {
+test('K56 chọn học viên thủ công, không hiện điều khiển ghi nhớ hoặc đổi người học', async () => {
   const server = await serve();
   const port = server.address().port;
   const site = process.env.MEMORY_SITE_BASE || `http://127.0.0.1:${port}/`;
@@ -66,57 +70,27 @@ test('K56 nhớ UUID riêng, chỉ gợi ý sau roster và không tự chuẩn b
   try {
     await page.goto(address);
     await page.locator('#bootstrapStudent option[value="' + studentA + '"]').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('#bootstrapRememberStudent').isChecked(), true);
+    assert.equal(await page.locator('#bootstrapRememberStudent').isChecked(), false);
+    assert.equal(await page.locator('#bootstrapRememberStudent').isVisible(), false);
+    assert.equal(await page.locator('#bootstrapChangeStudent').isVisible(), false);
     await page.locator('#bootstrapStudent').selectOption(studentA);
     await page.locator('#identityConfirm').waitFor({ state: 'visible' });
     await page.locator('#confirmIdentity').click();
     await page.locator('#bootstrapNotice').filter({ hasText: 'Fixture chặn' }).waitFor();
-    assert.equal(await page.evaluate(key => localStorage.getItem(key), memoryKey), JSON.stringify({ version: 1, studentRef: studentA }));
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), memoryKey), null);
     assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).studentRef, officialKey), studentB, 'K56 đã đụng lựa chọn hệ chính');
     assert.equal(prepares, 1);
 
     await page.reload();
     await page.locator('#bootstrapStudent option[value="' + studentA + '"]').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('#bootstrapStudent').inputValue(), studentA);
-    assert.equal(await page.locator('#bootstrapConfirmPrefilled').isVisible(), true);
+    assert.equal(await page.locator('#bootstrapStudent').inputValue(), '');
+    assert.equal(await page.locator('#bootstrapConfirmPrefilled').isVisible(), false);
     assert.equal(prepares, 1, 'Prefill không được chuẩn bị bài tự động');
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'K56 tràn ngang mobile');
     await page.screenshot({ path: join(root, 'output/playwright/k56-memory-mobile.png'), fullPage: true });
 
-    await page.locator('#bootstrapStudent').selectOption(studentB);
-    await page.locator('#identityConfirm').waitFor({ state: 'visible' });
-    await page.evaluate(({ key, ref }) => {
-      localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: ref }));
-      window.dispatchEvent(new StorageEvent('storage', { key, storageArea: localStorage }));
-    }, { key: memoryKey, ref: studentA });
-    assert.equal(await page.locator('#bootstrapStudent').inputValue(), studentB, 'Dialog đang mở không được đổi danh tính qua storage event');
-    await page.locator('#cancelIdentity').click();
-
-    await page.locator('#bootstrapChangeStudent').click();
-    assert.equal(await page.locator('#bootstrapStudent').inputValue(), '');
-    assert.equal(await page.evaluate(key => localStorage.getItem(key), memoryKey), null);
     assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).studentRef, officialKey), studentB);
-
-    await page.evaluate(({ key, ref }) => {
-      localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: ref }));
-    }, { key: memoryKey, ref: studentA });
-    await page.reload();
-    await page.locator('#bootstrapStudent option[value="' + studentA + '"]').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('#bootstrapStudent').inputValue(), studentA);
-    await page.evaluate(() => {
-      window.restoreRemove = Storage.prototype.removeItem;
-      Storage.prototype.removeItem = () => { throw new DOMException('Fixture blocked', 'SecurityError'); };
-    });
-    await page.locator('#bootstrapChangeStudent').click();
-    await page.locator('#bootstrapNotice').filter({ hasText: 'Chưa thể đổi' }).waitFor();
-    assert.equal(await page.locator('#bootstrapStudent').inputValue(), studentA);
-    await page.evaluate(() => { Storage.prototype.removeItem = window.restoreRemove; });
-    await page.locator('#bootstrapRememberStudent').uncheck();
-    await page.locator('#bootstrapConfirmPrefilled').click();
-    await page.locator('#confirmIdentity').click();
-    await page.locator('#bootstrapNotice').filter({ hasText: 'Fixture chặn' }).waitFor();
-    assert.equal(await page.evaluate(key => localStorage.getItem(key), memoryKey), null, 'Bỏ tick vẫn giữ người đã nhớ');
     assert.equal(outside.length, 0, `Có yêu cầu mạng ngoài fixture: ${outside.join(', ')}`);
     assert.equal(pageErrors.length, 0, `Có lỗi trang: ${pageErrors.join('; ')}`);
   } finally {
@@ -129,10 +103,11 @@ test('K56 dùng core chung nhưng giữ namespace K56 và loại demo/hồ sơ t
   const source = await readFile(join(root, 'shared/student-memory.js'), 'utf8');
   const bootstrap = await readFile(join(root, 'term-tests/term-test-1-k56-computer-based/bootstrap.js'), 'utf8');
   const entry = await readFile(join(root, 'term-tests/term-test-1-k56-computer-based/index.html'), 'utf8');
-  assert.match(entry, /bootstrap\.js\?v=20260905-memory-v3/);
+  assert.match(entry, /bootstrap\.js\?v=20260908-manual-student-v1/);
   assert.match(source, /mapping-api/);
   assert.match(bootstrap, /import\('\.\.\/\.\.\/shared\/student-memory\.js\?v=20260905-memory-v3'\)/);
-  assert.match(bootstrap, /localDemo \|\| classCode === 'CODEXDEMO56'/);
+  assert.match(bootstrap, /studentMemoryEnabled = false/);
+  assert.match(bootstrap, /!studentMemoryEnabled \|\| localDemo \|\| classCode === 'CODEXDEMO56'/);
   assert.match(source, /matches\.length === 1/);
   assert.match(source, /officialStudent/);
   assert.match(source, /JSON\.stringify\(\{ version: 1, studentRef \}\)/);

@@ -9,6 +9,7 @@
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const demoMode = query.get('demo') || '';
   const localDemo = demoMode === 'exam' && classCode === 'CODEXDEMO56';
+  const studentMemoryEnabled = false;
   let studentMemory = null;
   const storageSuffix = localDemo && query.get('grading') === 'server' ? ':server-grade' : '';
   const demoStudentRef = classCode === 'CODEXDEMO56' ? (query.get('demoStudent') || '').trim() : '';
@@ -84,9 +85,9 @@
               <option value="">Nhấn để chọn</option>
             </select>
           </label>
-          <label class="cbt-remember-student"><input id="bootstrapRememberStudent" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label>
+          <label class="cbt-remember-student" hidden><input id="bootstrapRememberStudent" type="checkbox"> Ghi nhớ tôi trên thiết bị này</label>
           <p id="bootstrapMemoryStatus" class="cbt-memory-status" role="status" hidden></p>
-          <div class="cbt-identity-memory-actions">
+          <div class="cbt-identity-memory-actions" hidden>
             <button class="button button-secondary" id="bootstrapConfirmPrefilled" type="button" hidden>Xác nhận học viên đã gợi ý</button>
             <button class="button button-secondary" id="bootstrapChangeStudent" type="button">Đổi người học</button>
           </div>
@@ -155,7 +156,7 @@
   setMemoryAvailability(false);
 
   async function initializeStudentMemory() {
-    if (localDemo || classCode === 'CODEXDEMO56') return;
+    if (!studentMemoryEnabled || localDemo || classCode === 'CODEXDEMO56') return;
     try {
       const core = await import('../../shared/student-memory.js?v=20260905-memory-v3');
       const memoryKey = core.memoryKey(appConfig.API_BASE_URL, window.location.href);
