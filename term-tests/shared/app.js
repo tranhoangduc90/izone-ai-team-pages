@@ -1493,6 +1493,7 @@
       .replace(/\r/g, '')
       .replace(/^.*\]\(https:\/\/(?:docs|drive)\.google\.com\/[^)]+\).*$/gim, '')
       .replace(/https:\/\/(?:docs|drive)\.google\.com\/\S+/gi, '')
+      .replace(/^\s*\[\(?Xem phân tích chi tiết[^\n]*\]\(\s*\*?(?:\.\/)?#[a-z_]+\*?\s*\)\s*$/gim, '')
       .replace(/^\s*\(?\s*Xem phân tích chi tiết[^\n]*\)?\s*$/gim, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
@@ -1681,6 +1682,14 @@
       .trim();
   }
 
+  // Nhận nhận xét gốc; giữ nguyên phần giải thích giới hạn điểm thay vì bỏ khi tách khía cạnh.
+  // Không tính lại điểm ở trình duyệt. Nếu không có kết luận riêng thì không thêm nội dung giả.
+  function writingCriterionConclusion(value) {
+    const cleaned = cleanWritingFeedback(value);
+    const marker = /^#{2,5}\s+(?:\*\*)?KẾT LUẬN(?:\*\*)?\s*$/im.exec(cleaned);
+    return marker ? cleaned.slice(marker.index + marker[0].length).trim() : '';
+  }
+
   function appendWritingComponent(parent, component, section, index, criterionCode, taskNumber) {
     const aspect = document.createElement('section');
     aspect.className = 'writing-component';
@@ -1784,7 +1793,9 @@
       reportTitle.textContent = 'Nhận xét tổng hợp';
       const report = document.createElement('div');
       report.className = 'writing-feedback-text writing-feedback-richtext';
-      appendSafeWritingFeedback(report, reportSummary);
+      appendSafeWritingFeedback(report, testConfig.slug === 'term-test-1'
+        ? reportSummary.replace(/>\s+</g, '><')
+        : reportSummary);
       sourcePane.append(reportTitle, report);
     }
     const essayTitle = document.createElement('h3');
@@ -1816,7 +1827,10 @@
         const componentList = document.createElement('div');
         componentList.className = 'writing-component-list';
         for (let index = 0; index < componentCount; index += 1) {
-          appendWritingComponent(componentList, components[index], sections[index], index, criterion.code, taskNumber);
+          const section = sections[index] || (testConfig.slug === 'term-test-1' && components.length === 1
+            ? { body: writingCriterionFallbackSummary(criterion.feedback) }
+            : null);
+          appendWritingComponent(componentList, components[index], section, index, criterion.code, taskNumber);
         }
         card.append(componentList);
       } else {
@@ -1824,6 +1838,18 @@
         feedback.className = 'writing-feedback-text writing-feedback-richtext';
         appendSafeWritingFeedback(feedback, writingCriterionFallbackSummary(criterion.feedback));
         card.append(feedback);
+      }
+      if (testConfig.slug === 'term-test-1') {
+        const conclusion = writingCriterionConclusion(criterion.feedback);
+        if (conclusion) {
+          const conclusionBlock = document.createElement('div');
+          conclusionBlock.className = 'writing-feedback-text writing-feedback-richtext';
+          const conclusionTitle = document.createElement('h5');
+          conclusionTitle.textContent = 'Kết luận và giới hạn điểm';
+          conclusionBlock.append(conclusionTitle);
+          appendSafeWritingFeedback(conclusionBlock, conclusion);
+          card.append(conclusionBlock);
+        }
       }
       scorePane.append(card);
     }

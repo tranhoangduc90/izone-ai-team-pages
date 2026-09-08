@@ -634,7 +634,9 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260821-attempt-review-v1');
-    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3');
+    await loadScript(testConfig.slug === 'term-test-1'
+      ? '../shared/app.js?rev=20260909-writing-test-parity-v1'
+      : '../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3');
     await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
   }
