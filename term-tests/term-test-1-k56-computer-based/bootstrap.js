@@ -7,8 +7,8 @@
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const demoMode = query.get('demo') || '';
-  const localDemo = demoMode === 'exam' && classCode === 'CODEXDEMO56';
+  const demoMode = ['127.0.0.1', 'localhost'].includes(location.hostname) ? (query.get('demo') || '') : '';
+  const localDemo = ['127.0.0.1', 'localhost'].includes(location.hostname) && demoMode === 'exam' && classCode === 'CODEXDEMO56';
   const studentMemoryEnabled = false;
   let studentMemory = null;
   const storageSuffix = localDemo && query.get('grading') === 'server' ? ':server-grade' : '';

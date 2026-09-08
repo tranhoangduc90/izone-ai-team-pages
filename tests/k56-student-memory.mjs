@@ -103,7 +103,7 @@ test('K56 dùng core chung nhưng giữ namespace K56 và loại demo/hồ sơ t
   const source = await readFile(join(root, 'shared/student-memory.js'), 'utf8');
   const bootstrap = await readFile(join(root, 'term-tests/term-test-1-k56-computer-based/bootstrap.js'), 'utf8');
   const entry = await readFile(join(root, 'term-tests/term-test-1-k56-computer-based/index.html'), 'utf8');
-  assert.match(entry, /bootstrap\.js\?v=20260908-manual-student-v1/);
+  assert.match(entry, /bootstrap\.js\?v=20260908-audio-preview-v2/);
   assert.match(source, /mapping-api/);
   assert.match(bootstrap, /import\('\.\.\/\.\.\/shared\/student-memory\.js\?v=20260905-memory-v3'\)/);
   assert.match(bootstrap, /studentMemoryEnabled = false/);
