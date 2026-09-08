@@ -1250,7 +1250,7 @@
     note.textContent = grading?.ready
       ? 'Nhấn vào điểm Paragraph để xem bài chấm chi tiết.'
       : grading?.status === 'review_required'
-        ? 'Bài viết được lưu cục bộ trong trình duyệt. Demo chưa kết nối chấm Writing.'
+        ? 'Bài viết đã được lưu trên máy chủ và cần giáo viên kiểm tra lại kết quả chấm.'
         : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
     heading.append(headingCopy, note);
 
@@ -1264,7 +1264,7 @@
         button.type = 'button';
         button.className = 'writing-score-card is-action';
         const label = document.createElement('span');
-        label.textContent = `Writing Task ${taskNumber}`;
+        label.textContent = 'Đoạn văn';
         const score = document.createElement('strong');
         score.textContent = `Điểm đoạn văn ${formatBand(taskResult?.taskScore)}`;
         const action = document.createElement('small');
@@ -1288,11 +1288,11 @@
       const statusCopy = document.createElement('div');
       const statusTitle = document.createElement('strong');
       statusTitle.textContent = grading?.status === 'review_required'
-        ? 'Chưa chấm Writing tự động'
+        ? 'Cần giáo viên kiểm tra'
         : 'Đang chấm Paragraph';
       const statusText = document.createElement('p');
       statusText.textContent = grading?.status === 'review_required'
-        ? 'Listening và Reading đã được chấm. Writing cần giáo viên kiểm tra; demo không tự trả điểm Writing.'
+        ? 'Listening và Reading đã được chấm. Chưa thể xác nhận điểm đoạn văn tự động; bài làm vẫn được giữ trên máy chủ.'
         : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
       statusCopy.append(statusTitle, statusText);
       const refresh = document.createElement('button');
