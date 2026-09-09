@@ -125,7 +125,8 @@
       const promptPane = createNode('section', 'attempt-review-writing-prompt');
       promptPane.append(createNode('h3', '', 'Đề bài'), createNode('p', '', task.prompt || ''));
       if (task.followUp) promptPane.append(createNode('p', '', task.followUp));
-      if (task.image?.src) {
+      // Không tạo khung ảnh cho đề nghị luận Task 2.
+      if (task.id === 'task1' && task.image?.src) {
         const image = document.createElement('img');
         image.src = task.image.src;
         image.alt = task.image.alt || `Hình minh họa ${task.label || ''}`;

@@ -26,7 +26,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-shared/app.js'))
+      .then(() => loadScript('../k56-shared/app.js?v=20260908-k56-results-v2'))
       .then(() => loadScript('enhance.js'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -610,7 +610,7 @@
     });
     previewAudio.remove();
     revokePreview();
-        await loadScript('../k56-shared/app.js');
+        await loadScript('../k56-shared/app.js?v=20260908-k56-results-v2');
     await loadScript('enhance.js');
     await loadScript('annotations.js');
   }

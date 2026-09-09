@@ -221,9 +221,8 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">Đã chấm bài Listening</p>
         <h2>Điểm Listening đã được ghi độc lập</h2>
-        <p>Reading chưa cần nộp ngay. Bạn có thể xem đầy đủ điểm và phân tích Listening, hoặc tiếp tục làm Reading.</p>
+        <p>Bài Listening đã được lưu. Khi sẵn sàng, hãy tiếp tục làm Reading.</p>
         <div class="form-actions transition-actions">
-          <button class="button button-secondary" id="viewListeningResult" type="button">Xem kết quả Listening</button>
           <button class="button button-primary" id="startReading" type="button">Bắt đầu bài Reading</button>
         </div>
       </section>
@@ -278,7 +277,7 @@
   const elements = Object.fromEntries([
     'notice', 'loadingView', 'identityView', 'identityTitle', 'classLabel', 'studentSelect',
     'listeningView', 'listeningTitle', 'listeningInstructions', 'listeningQuestions', 'listeningCount', 'submitListening',
-    'listeningSavedView', 'viewListeningResult', 'startReading', 'readingView', 'readingTitle', 'readingInstructions',
+    'listeningSavedView', 'startReading', 'readingView', 'readingTitle', 'readingInstructions',
     'readingQuestions', 'readingCount', 'readingStudentName', 'submitReading', 'resultReadyView',
     'viewResult', 'resultView', 'resultStudentName', 'resultMeta', 'summaryGrid',
     'skillPerformanceSections', 'questionDetails', 'resultStatus', 'continueReadingFromResult',
@@ -943,6 +942,24 @@
     return Number.isFinite(band) ? String(band) : '—';
   }
 
+  const sectionBandTable = [
+    [39, 9], [37, 8.5], [35, 8], [33, 7.5], [30, 7], [27, 6.5],
+    [23, 6], [20, 5.5], [16, 5], [13, 4.5], [10, 4], [7, 3.5],
+    [5, 3], [3, 2.5]
+  ];
+
+  function bandFromCorrect(correct) {
+    const row = sectionBandTable.find(([minimum]) => Number(correct) >= minimum);
+    return row ? row[1] : '<2.5';
+  }
+
+  function sectionScoreText(section) {
+    const base = `${section.correct}/${section.total} câu đúng`;
+    if (section.band === '<2.5') return `${base} · Band <2.5`;
+    const band = Number(section.band);
+    return Number.isFinite(band) ? `${base} · Band ${formatBand(band)}` : base;
+  }
+
   function criterionTitle(code, taskNumber) {
     return {
       TA: 'Task Achievement',
@@ -1365,7 +1382,7 @@
     title.textContent = label;
     headingCopy.append(eyebrow, title);
     const score = document.createElement('strong');
-    score.textContent = `${section.correct}/${section.total} câu đúng`;
+    score.textContent = sectionScoreText(section);
     heading.append(headingCopy, score);
 
     const analysis = splitSkillPerformance(section.typeStats);
@@ -1482,8 +1499,8 @@
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
     elements.summaryGrid.replaceChildren(
-      addSummaryCard('Listening', `${result.listening.correct}/${result.listening.total} câu đúng`),
-      addSummaryCard('Reading', hasReading ? `${result.reading.correct}/${result.reading.total} câu đúng` : 'Chưa nộp')
+      addSummaryCard('Listening', sectionScoreText(result.listening)),
+      addSummaryCard('Reading', hasReading ? sectionScoreText(result.reading) : 'Chưa nộp')
     );
     elements.resultStatus.textContent = hasReading
       ? payload.writing?.grading?.ready
@@ -1772,9 +1789,7 @@
     }
   });
 
-  elements.viewListeningResult.dataset.normalText = 'Xem kết quả Listening';
   elements.viewResult.dataset.normalText = 'Xem kết quả';
-  elements.viewListeningResult.addEventListener('click', () => loadResult(elements.viewListeningResult));
   elements.viewResult.addEventListener('click', () => loadResult(elements.viewResult));
 
   if (writingConfig) {
@@ -1881,6 +1896,7 @@
     return {
       correct,
       total,
+      band: bandFromCorrect(correct),
       answered: total,
       details: Array.from({ length: total }, (_, index) => ({
         number: index + 1,

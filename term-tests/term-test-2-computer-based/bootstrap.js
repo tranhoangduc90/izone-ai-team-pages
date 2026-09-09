@@ -362,7 +362,7 @@
         if (Object.keys(parsed).length) {
           return {
             audioStarted: Boolean(parsed.audio?.started),
-            audioTime: Math.min(1844, Math.max(0, Math.floor(Number(parsed.audio?.time) || 0))),
+            audioTime: Math.min(7200, Math.max(0, Number(parsed.audio?.time) || 0)),
             audioVolume: Math.min(1, Math.max(0.1, Number(parsed.audio?.volume) || 1))
           };
         }
@@ -633,9 +633,10 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../shared/attempt-review.js?rev=20260821-attempt-review-v1');
-    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3');
-    await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7'));
+    await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
+    await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
+    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3-20260909-k67-update-v1');
+    await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7-20260909-k67-update-v1-20260909-mini-audio-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
   }
 
@@ -712,10 +713,16 @@
     elements.bootstrapStart.textContent = 'Đang mở đề và audio...';
     previewAudio.pause();
     try {
+      const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
+        ? legacyUiState.audioTime
+        : undefined;
       const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examSessionToken: state.examSessionToken })
+        body: JSON.stringify({
+          examSessionToken: state.examSessionToken,
+          heardSeconds: savedHeardSeconds
+        })
       });
       const decrypted = await decryptOfficialAudio(encryptedAudio, started);
       officialObjectUrl = URL.createObjectURL(new Blob([decrypted], { type: 'audio/mpeg' }));
@@ -725,16 +732,21 @@
       officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       document.body.append(officialAudio);
       const serverElapsed = Math.max(0, (Date.parse(started.serverNow) - Date.parse(started.listeningStartedAt)) / 1000);
+      const serverResumeAt = Number(started.listeningResumeAtSeconds);
+      const resumeAt = Number.isFinite(serverResumeAt)
+        ? Math.min(serverElapsed, Math.max(0, serverResumeAt))
+        : serverElapsed;
       await new Promise((resolve, reject) => {
         officialAudio.addEventListener('loadedmetadata', resolve, { once: true });
         officialAudio.addEventListener('error', () => reject(new Error('Trình duyệt không đọc được audio chính.')), { once: true });
         officialAudio.load();
       });
-      officialAudio.currentTime = Math.min(serverElapsed, Math.max(0, officialAudio.duration - 0.05));
-      if (serverElapsed < officialAudio.duration) await officialAudio.play();
+      officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
+      if (resumeAt < officialAudio.duration) await officialAudio.play();
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
+        listeningRecoverySeconds: Number(started.listeningRecoverySeconds) || 0,
         serverTimeOffsetMs: Date.parse(started.serverNow) - Date.now(),
         audioVolume: officialAudio.volume
       });

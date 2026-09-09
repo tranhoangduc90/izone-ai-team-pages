@@ -120,6 +120,7 @@
       draftRevisions: state.draftRevisions,
       draftAckRevisions: state.draftAckRevisions,
       writingLayout: state.writingLayout,
+      writingPlanning: state.writingPlanning,
       frozenAnswers: state.frozenAnswers
     });
     for (const storage of availableStorages()) {
@@ -621,7 +622,10 @@
     if (stage === 'listening-saved') elements.listeningSavedView.hidden = false;
     if (stage === 'reading') elements.readingView.hidden = false;
     if (stage === 'writing-prep' && elements.writingPrepView) elements.writingPrepView.hidden = false;
-    if (stage === 'writing' && elements.writingView) elements.writingView.hidden = false;
+    if (stage === 'writing' && elements.writingView) {
+      elements.writingView.hidden = false;
+      window.dispatchEvent(new Event('term-test:writing-stage'));
+    }
     if (stage === 'result-ready') elements.resultReadyView.hidden = false;
     if (stage === 'result') elements.resultView.hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -705,7 +709,7 @@
 
   async function apiRequest(path, options = {}) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20_000);
+    const timeout = setTimeout(() => controller.abort(), 45_000);
     try {
       const response = await fetch(`${appConfig.API_BASE_URL}${path}`, {
         ...options,
@@ -970,6 +974,21 @@
     listening: { interval: 0, lastSubmitAttempt: 0, reportedDeadline: false },
     reading: { interval: 0, lastSubmitAttempt: 0, reportedDeadline: false }
   };
+
+  // Dữ liệu vào: deadline mới do endpoint phục hồi audio trả về sau một lần ngắt thực tế.
+  // Việc chính: cập nhật nguồn thời gian dùng chung và lưu lại để cả hai bộ khóa deadline đọc cùng một mốc.
+  // Kết quả: audio được nghe bù bao nhiêu giây thì Listening không bị thu sớm bấy nhiêu giây.
+  // Khi lỗi: bỏ qua payload sai; deadline hiện có trên máy chủ vẫn là nguồn quyết định cuối cùng.
+  window.addEventListener('term-test:listening-timing-updated', event => {
+    const deadlineAt = String(event.detail?.listeningDeadlineAt || '');
+    const serverNow = String(event.detail?.serverNow || '');
+    if (!Number.isFinite(Date.parse(deadlineAt))) return;
+    state.listeningDeadlineAt = deadlineAt;
+    if (Number.isFinite(Date.parse(serverNow))) {
+      state.serverTimeOffsetMs = Date.parse(serverNow) - Date.now();
+    }
+    saveSession();
+  });
 
   function stopSectionDeadlineGuard(skill) {
     const guard = sectionDeadlineGuards[skill];
@@ -1285,17 +1304,22 @@
     return normalized ? normalized.split(/\s+/u).length : 0;
   }
 
+  let writingPlanning = null;
   function setupWritingExam() {
     const tasks = Array.from(writingConfig?.tasks || []);
     if (!tasks.length || !elements.writingWorkspace || !elements.writingTaskTabs) return;
 
     const panels = [];
     const tabs = [];
+    writingPlanning = ['term-test-1', 'term-test-2'].includes(testConfig.slug)
+      ? window.TermTestWritingPlanning?.create({ state, tasks, saveSession, request: apiRequest, demoMode })
+      : null;
 
     function activateTask(index, focusEditor = false) {
       const safeIndex = Math.min(tasks.length - 1, Math.max(0, Number(index) || 0));
       const activeTask = tasks[safeIndex];
       state.writingLayout.activeTask = activeTask.id;
+      writingPlanning?.activate(activeTask.id);
       panels.forEach((panel, panelIndex) => { panel.hidden = panelIndex !== safeIndex; });
       tabs.forEach((tab, tabIndex) => {
         const active = tabIndex === safeIndex;
@@ -1362,7 +1386,7 @@
         followUp.textContent = task.followUp;
         promptBody.append(followUp);
       }
-      if (task.image) {
+      if (task.id === 'task1' && task.image?.src) {
         const figure = document.createElement('figure');
         figure.className = 'writing-task-figure';
         const image = document.createElement('img');
@@ -1375,6 +1399,7 @@
       minimum.className = 'writing-minimum';
       minimum.textContent = `Write at least ${task.minimumWords} words.`;
       promptBody.append(minimum);
+      writingPlanning?.attach(task, promptBody);
       promptPane.append(promptHeader, promptBody);
 
       const separator = document.createElement('button');
@@ -1493,6 +1518,7 @@
       .replace(/\r/g, '')
       .replace(/^.*\]\(https:\/\/(?:docs|drive)\.google\.com\/[^)]+\).*$/gim, '')
       .replace(/https:\/\/(?:docs|drive)\.google\.com\/\S+/gi, '')
+      .replace(/^\s*\[\(?Xem phân tích chi tiết[^\n]*\]\(\s*\*?(?:\.\/)?#[a-z_]+\*?\s*\)\s*$/gim, '')
       .replace(/^\s*\(?\s*Xem phân tích chi tiết[^\n]*\)?\s*$/gim, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
@@ -1525,7 +1551,12 @@
       'script', 'style', 'template', 'iframe', 'object', 'embed', 'svg', 'math',
       'form', 'input', 'button', 'textarea', 'select', 'option', 'link', 'meta'
     ]);
-    const parsed = new DOMParser().parseFromString(String(value || ''), 'text/html');
+    // Giao diện không dùng thuộc tính HTML nguồn: bỏ trước khi parse để không kích hoạt style/tài nguyên.
+    // Đây chỉ là tiền xử lý; danh sách node an toàn bên dưới vẫn là cổng lọc cuối cùng.
+    const inertHtml = String(value || '')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+      .replace(/<([a-z][a-z0-9-]*)(?:\s+(?:[^"'<>]|"[^"]*"|'[^']*')*)?\s*\/?>/gi, '<$1>');
+    const parsed = new DOMParser().parseFromString(inertHtml, 'text/html');
 
     const cloneSafeNode = node => {
       if (node.nodeType === 3) return document.createTextNode(node.textContent || '');
@@ -1681,6 +1712,14 @@
       .trim();
   }
 
+  // Nhận nhận xét gốc; giữ nguyên phần giải thích giới hạn điểm thay vì bỏ khi tách khía cạnh.
+  // Không tính lại điểm ở trình duyệt. Nếu không có kết luận riêng thì không thêm nội dung giả.
+  function writingCriterionConclusion(value) {
+    const cleaned = cleanWritingFeedback(value);
+    const marker = /^#{2,5}\s+(?:\*\*)?KẾT LUẬN(?:\*\*)?\s*$/im.exec(cleaned);
+    return marker ? cleaned.slice(marker.index + marker[0].length).trim() : '';
+  }
+
   function appendWritingComponent(parent, component, section, index, criterionCode, taskNumber) {
     const aspect = document.createElement('section');
     aspect.className = 'writing-component';
@@ -1769,7 +1808,8 @@
       followUp.textContent = task.followUp;
       sourcePane.append(followUp);
     }
-    if (task.image) {
+    // Chỉ Task 1 có hình đề; Task 2 bỏ hoàn toàn phần ảnh, kể cả dữ liệu cũ có giá trị.
+    if (taskNumber === 1 && (typeof task.image === 'object' ? task.image?.src : task.image)) {
       const image = document.createElement('img');
       image.src = typeof task.image === 'object' ? task.image.src : task.image;
       image.alt = typeof task.image === 'object' && task.image.alt
@@ -1784,7 +1824,9 @@
       reportTitle.textContent = 'Nhận xét tổng hợp';
       const report = document.createElement('div');
       report.className = 'writing-feedback-text writing-feedback-richtext';
-      appendSafeWritingFeedback(report, reportSummary);
+      appendSafeWritingFeedback(report, ['term-test-1', 'term-test-2'].includes(testConfig.slug)
+        ? reportSummary.replace(/>\s+</g, '><')
+        : reportSummary);
       sourcePane.append(reportTitle, report);
     }
     const essayTitle = document.createElement('h3');
@@ -1816,7 +1858,10 @@
         const componentList = document.createElement('div');
         componentList.className = 'writing-component-list';
         for (let index = 0; index < componentCount; index += 1) {
-          appendWritingComponent(componentList, components[index], sections[index], index, criterion.code, taskNumber);
+          const section = sections[index] || (['term-test-1', 'term-test-2'].includes(testConfig.slug) && components.length === 1
+            ? { body: writingCriterionFallbackSummary(criterion.feedback) }
+            : null);
+          appendWritingComponent(componentList, components[index], section, index, criterion.code, taskNumber);
         }
         card.append(componentList);
       } else {
@@ -1824,6 +1869,18 @@
         feedback.className = 'writing-feedback-text writing-feedback-richtext';
         appendSafeWritingFeedback(feedback, writingCriterionFallbackSummary(criterion.feedback));
         card.append(feedback);
+      }
+      if (['term-test-1', 'term-test-2'].includes(testConfig.slug)) {
+        const conclusion = writingCriterionConclusion(criterion.feedback);
+        if (conclusion) {
+          const conclusionBlock = document.createElement('div');
+          conclusionBlock.className = 'writing-feedback-text writing-feedback-richtext';
+          const conclusionTitle = document.createElement('h5');
+          conclusionTitle.textContent = 'Kết luận và giới hạn điểm';
+          conclusionBlock.append(conclusionTitle);
+          appendSafeWritingFeedback(conclusionBlock, conclusion);
+          card.append(conclusionBlock);
+        }
       }
       scorePane.append(card);
     }
@@ -2615,6 +2672,13 @@
       for (const editor of elements.writingView.querySelectorAll('textarea')) editor.readOnly = true;
       if (automatic) showNotice(`Đã hết ${writingMinutes} phút. Hệ thống đang tự lưu và thu bài Writing...`);
       try {
+        // Dàn ý lưu riêng trước khi nộp; lỗi dàn ý không được làm mất quyền nộp bài luận khi hết giờ.
+        await Promise.race([
+          writingPlanning?.flush(),
+          new Promise((_, reject) => window.setTimeout(() => reject(new Error('Dàn ý đang chờ đồng bộ.')), 2000))
+        ]).catch(() => {
+          showNotice('Dàn ý chưa đồng bộ hết và vẫn được giữ trên thiết bị. Hệ thống tiếp tục nộp bài viết.');
+        });
         const saved = await saveWritingToServer('submit');
         if (!saved.writing?.submitted) throw new Error('Máy chủ chưa xác nhận bài Writing đã được nộp.');
         state.writingSubmitted = true;

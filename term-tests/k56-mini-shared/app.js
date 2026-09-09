@@ -221,7 +221,7 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">Đã chấm bài Listening</p>
         <h2>Điểm Listening đã được ghi độc lập</h2>
-        <p>Reading chưa cần nộp ngay. Bạn có thể xem đầy đủ điểm và phân tích Listening, hoặc tiếp tục làm Reading.</p>
+        <p>Bài Listening đã được lưu. Khi sẵn sàng, hãy tiếp tục làm Reading.</p>
         <div class="form-actions transition-actions">
           <button class="button button-primary" id="startReading" type="button">Bắt đầu bài Reading</button>
         </div>
@@ -277,7 +277,7 @@
   const elements = Object.fromEntries([
     'notice', 'loadingView', 'identityView', 'identityTitle', 'classLabel', 'studentSelect',
     'listeningView', 'listeningTitle', 'listeningInstructions', 'listeningQuestions', 'listeningCount', 'submitListening',
-    'listeningSavedView', 'viewListeningResult', 'startReading', 'readingView', 'readingTitle', 'readingInstructions',
+    'listeningSavedView', 'startReading', 'readingView', 'readingTitle', 'readingInstructions',
     'readingQuestions', 'readingCount', 'readingStudentName', 'submitReading', 'resultReadyView',
     'viewResult', 'resultView', 'resultStudentName', 'resultMeta', 'summaryGrid',
     'skillPerformanceSections', 'questionDetails', 'resultStatus', 'continueReadingFromResult',

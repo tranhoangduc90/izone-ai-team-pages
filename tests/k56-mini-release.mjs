@@ -16,6 +16,7 @@ const html=read('k56-demo/index.html');
 assert.equal((html.match(/>Xem kết quả</g)||[]).length,1);
 for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56'])assert.ok(html.includes(`data-slug="${slug}"`));
 const app=read('k56-mini-shared/app.js');assert.ok(app.includes('Nộp đoạn văn & chấm tự động'));
+assert.ok(!app.includes('viewListeningResult'));assert.ok(!app.includes('Xem kết quả Listening'));
 assert.ok(app.includes('Điểm đoạn văn'));assert.ok(read('k56-mini-shared/config.js').includes('/mapping-api-demo'));
 assert.ok(read('mini-test-k56-computer-based/bootstrap.js').includes('../k56-mini-shared/app.js'));
 for(const name of ['server-private','assets/private'])assert.equal(fs.existsSync(new URL('mini-test-k56-computer-based/'+name,root)),false);
