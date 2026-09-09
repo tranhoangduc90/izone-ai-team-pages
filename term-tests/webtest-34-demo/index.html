@@ -420,7 +420,7 @@
 (() => {
   const STORAGE_KEY = 'izone_course34_phase1_test1_prototype_v1';
   const TOTAL_MINUTES = 120;
-
+  const LEARNING_RESULT_POLL_MAX_MS = 45 * 60 * 1000;
   const vocab2Prompts = [
     'The c_ _ _ _ _ _ _ leads to three doors. — Note: lead (v): dẫn đến',
     'The two girls love to g_ _ _ _ _ a_ _ _ _ their friends’ lives.',
@@ -491,10 +491,11 @@
   const state = loadState();
   let currentSection = state.currentSection || 'vocabulary';
   let fontScale = state.fontScale || 1;
-  let saveTimer = null;
   let learningDraftChain = Promise.resolve();
   let learningResultPollTimer = null;
   let learningResultPollInFlight = false;
+  let learningResultPollStartedAt = 0;
+  let learningResultPollDelayMs = 2000;
 
   const $ = s => document.querySelector(s);
   const $$ = s => [...document.querySelectorAll(s)];
@@ -529,7 +530,14 @@
       body: JSON.stringify(body)
     });
     const data = await response.json().catch(() => ({}));
-    if(!response.ok) throw Object.assign(new Error(data.message || `Lỗi HTTP ${response.status}`), { code: data.error });
+    if(!response.ok) {
+      const retryAfterSeconds = Number(response.headers.get('Retry-After'));
+      throw Object.assign(new Error(data.message || `Lỗi HTTP ${response.status}`), {
+        code: data.error,
+        status: response.status,
+        retryAfterMs: Number.isFinite(retryAfterSeconds) ? retryAfterSeconds * 1000 : 0
+      });
+    }
     return data;
   }
 
@@ -544,8 +552,16 @@
       persist();
       if(result.result) renderLearningResult(result.result);
       if(['complete', 'manual_review'].includes(state.learning.gradingStatus)) stopLearningResultPolling();
+      else learningResultPollDelayMs = 2000;
     }catch(error){
-      if(!/Chưa có bài nộp/.test(error.message)) setError('studentError', `Không tải được kết quả: ${error.message}`);
+      if(error.status === 429) {
+        learningResultPollDelayMs = Math.min(
+          30_000,
+          Math.max(learningResultPollDelayMs * 2, error.retryAfterMs || 0)
+        );
+      } else if(!/Chưa có bài nộp/.test(error.message)) {
+        setError('studentError', `Không tải được kết quả: ${error.message}`);
+      }
     }finally{
       learningResultPollInFlight = false;
     }
@@ -556,18 +572,32 @@
       clearTimeout(learningResultPollTimer);
       learningResultPollTimer = null;
     }
+    learningResultPollStartedAt = 0;
+    learningResultPollDelayMs = 2000;
   }
 
   function startLearningResultPolling(){
     stopLearningResultPolling();
+    if(['complete', 'manual_review'].includes(state.learning?.gradingStatus)) return;
+    learningResultPollStartedAt = Date.now();
     const poll = async () => {
       await refreshLearningResult();
-      if(!['complete', 'manual_review'].includes(state.learning?.gradingStatus) && state.submittedAt){
-        learningResultPollTimer = setTimeout(poll, 2000);
+      const expired = Date.now() - learningResultPollStartedAt >= LEARNING_RESULT_POLL_MAX_MS;
+      const terminal = ['complete', 'manual_review'].includes(state.learning?.gradingStatus);
+      if(terminal) {
+        stopLearningResultPolling();
+        return;
       }
+      if(expired || !state.submittedAt) {
+        stopLearningResultPolling();
+        if(expired) setError('studentError', 'Hệ thống vẫn chưa hoàn tất chấm tự động. Bạn có thể bấm nộp lại yêu cầu kiểm tra kết quả sau.');
+        return;
+      }
+      learningResultPollTimer = setTimeout(poll, learningResultPollDelayMs);
     };
-    poll();
+    void poll();
   }
+
 
   function createClientKey(){
     if(window.crypto?.randomUUID) return window.crypto.randomUUID();

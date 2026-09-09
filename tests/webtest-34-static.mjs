@@ -324,7 +324,8 @@ test('canonical Webtest 34 có local-learning lifecycle và không rơi về sub
   assert.match(index, /assignment\.assignment\?\.courseCode && assignment\.assignment\.courseCode !== code/);
   assert.match(index, /Mã lớp không khớp phiếu đang mở\./);
   assert.match(index, /startLearningResultPolling\(\)/);
-  assert.match(index, /setTimeout\(poll, 2000\)/);
+  assert.match(index, /learningResultPollDelayMs = 2000/);
+  assert.match(index, /setTimeout\(poll, learningResultPollDelayMs\)/);
   assert.match(index, /manual_review/);
   assert.match(index, /Structure/);
   assert.match(resultHelper, /itemVersionId/);
