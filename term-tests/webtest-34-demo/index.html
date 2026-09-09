@@ -496,6 +496,7 @@
   let learningResultPollInFlight = false;
   let learningResultPollStartedAt = 0;
   let learningResultPollDelayMs = 2000;
+  let saveTimer = 0;
 
   const $ = s => document.querySelector(s);
   const $$ = s => [...document.querySelectorAll(s)];
