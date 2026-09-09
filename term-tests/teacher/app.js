@@ -301,6 +301,8 @@ function addWritingResultSummaryButton(student, taskNumber, value, ready) {
 function cleanWritingFeedback(value) {
   return String(value || '')
     .replace(/\r/g, '')
+    // Bỏ liên kết điều hướng do bộ chấm sinh vì giao diện đã có nút mở chi tiết riêng.
+    .replace(/\[\s*\(?\s*Xem phân tích chi tiết[^\]]*\]\(\s*\*?(?:\.\/)?#[a-z0-9_-]+\*?\s*\)/gi, '')
     .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
     .replace(/https:\/\/(?:docs|drive)\.google\.com\/\S+/gi, '')
     .replace(/^\s*\(?\s*Xem phân tích chi tiết[^\n]*\)?\s*$/gim, '')
