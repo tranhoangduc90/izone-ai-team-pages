@@ -636,7 +636,7 @@
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3-20260909-k67-update-v1');
-    await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7-20260909-k67-update-v1'));
+    await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7-20260909-k67-update-v1-20260909-mini-audio-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
   }
 

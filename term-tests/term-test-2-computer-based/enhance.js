@@ -971,7 +971,7 @@
     // Khi lỗi mạng: giữ checkpoint cục bộ và thử lại ở nhịp sau, không làm dừng audio đang phát.
     function reportAudioProgress(playbackState, keepalive = false) {
       const examSessionToken = protectedBootstrap?.examSessionToken;
-      if (!examSessionToken || !examStarted || !['term-test-1', 'term-test-2'].includes(testConfig.slug)) return Promise.resolve(null);
+      if (!examSessionToken || !examStarted || !['term-test-1', 'term-test-2', 'mini-test-lesson-5'].includes(testConfig.slug)) return Promise.resolve(null);
       const heardSeconds = rememberActualHeardPosition(true);
       if (playbackState === 'playing') {
         const currentSecond = Math.floor(heardSeconds);

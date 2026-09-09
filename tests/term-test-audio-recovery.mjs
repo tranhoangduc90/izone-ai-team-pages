@@ -7,7 +7,7 @@ const start = source.indexOf('    function rememberActualHeardPosition(');
 const end = source.indexOf("    audio.addEventListener('loadedmetadata'", start);
 assert(start >= 0 && end > start);
 // Chạy đúng hàm phục hồi đang phát hành, với phần tử audio/API giả; không phát âm thanh hoặc gọi hệ thống ngoài.
-function harness({ blocked = false, offline = false } = {}) {
+function harness({ blocked = false, offline = false, slug = 'term-test-2' } = {}) {
   const calls = [], events = [];
   const audio = { currentTime: 72.5, duration: 1800, paused: true, ended: false,
     pause() { this.paused = true; },
@@ -17,7 +17,7 @@ function harness({ blocked = false, offline = false } = {}) {
     examCard: { hidden: false }, recoveryInFlight: false, lastRecoveryAttemptAt: 0,
     lastSavedSecond: 0, lastProgressReportedSecond: 0, audioProgressQueue: Promise.resolve(),
     protectedBootstrap: { examSessionToken: '00000000-0000-4000-8000-000000000091' },
-    appConfig: { API_BASE_URL: 'https://synthetic.invalid' }, testConfig: { slug: 'term-test-2' },
+    appConfig: { API_BASE_URL: 'https://synthetic.invalid' }, testConfig: { slug },
     resumeButton: { hidden: true }, examRetryButton: { hidden: true },
     saveUiState() {}, updateExamStatus(value) { calls.push(value); },
     lastObservedAudioTime: 0, lastAudioAdvanceAt: 0, performance, AbortSignal,
@@ -28,8 +28,8 @@ function harness({ blocked = false, offline = false } = {}) {
   vm.runInContext(source.slice(start, end), context);
   return { context, audio, calls, events };
 }
-for (const trigger of ['pause', 'waiting', 'stalled']) test(`audio ${trigger}: phát tiếp đúng mốc đã nghe, không nhảy theo đồng hồ`, async () => {
-  const h = harness();
+for (const slug of ['term-test-1', 'term-test-2', 'mini-test-lesson-5']) for (const trigger of ['pause', 'waiting', 'stalled']) test(`${slug} audio ${trigger}: phát tiếp đúng mốc đã nghe, không nhảy theo đồng hồ`, async () => {
+  const h = harness({ slug });
   await h.context.recoverInterruptedAudio(trigger, true);
   assert.equal(h.audio.currentTime, 72.5);
   assert.equal(h.audio.paused, false);
