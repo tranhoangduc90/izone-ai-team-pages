@@ -300,13 +300,15 @@ test('learning result group theo definition block và itemVersionId', async () =
   assert.equal(groups[0].maxScore, 4);
 });
 
-test('canonical Webtest 34 có local-learning lifecycle và không rơi về submit localStorage-only', async () => {
+test('frontend local dùng production Learning API và không rơi về localStorage-only', async () => {
   const [index, config, resultHelper] = await Promise.all([
     read('term-tests/webtest-34-demo/index.html'),
     browserGlobal('term-tests/webtest-34-demo/config.js', 'WEBTEST_34_PREVIEW_CONFIG'),
     read('term-tests/34-shared/learning-result.js')
   ]);
-  assert.equal(config.LEARNING_TEST_TOKEN, '34010000-0000-4000-8000-000000000002');
+  assert.equal(config.LEARNING_TEST_TOKEN, '');
+  assert.equal(config.LEARNING_API_BASE_URL, 'https://ducizone.ddns.net/mapping-api');
+  assert.equal(config.ENABLE_DEMO_ROSTER_FALLBACK, false);
   assert.equal('LEARNING_PUBLIC_TOKEN' in config, false);
   assert.match(index, /\/api\/learning/);
   for (const endpoint of ['/test-access/resolve', '/attempts/start', '/attempts/draft', '/attempts/submit', '/attempts/result']) {

@@ -9,13 +9,18 @@ Link học viên có dạng `https://<pages-host>/progress-log/#assignment=<publ
 
 ## Chạy thử local
 
-Lệnh dưới chỉ mở static server trên máy. Giao diện sẽ gọi API cùng origin; muốn chạy trọn luồng cần reverse proxy hoặc mock API local.
+Từ thư mục gốc snapshot, chạy:
 
-```powershell
-python -m http.server 4173 --bind 127.0.0.1
+```bash
+bash ./run-local.sh
 ```
 
-Sau đó mở `http://127.0.0.1:4173/progress-log/`.
+Script chỉ phục vụ file frontend tại `http://127.0.0.1:8090/term-tests/`; trang gọi
+`https://ducizone.ddns.net/mapping-api`, và backend production mới kết nối database trên VPS.
+Không khởi động backend hoặc database local cho luồng này.
+
+Backend production phải cho phép origin `http://127.0.0.1:8090` trong `ALLOWED_ORIGINS`; nếu
+không, trình duyệt sẽ chặn CORS.
 
 ## Kiểm thử
 

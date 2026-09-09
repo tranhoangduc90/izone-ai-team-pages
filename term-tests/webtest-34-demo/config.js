@@ -3,23 +3,20 @@
 
   // Cấu hình cho index.html (Khóa 34 · Phase 1 · Test 1).
   // Tách riêng khỏi HTML để dễ đổi endpoint/audio khi chuyển môi trường.
+  // Local preview cũng gọi API production; token production chỉ nhận từ URL fragment.
 
-  const isLocalPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const productionApi = 'https://ducizone.ddns.net/mapping-api';
 
   window.WEBTEST_34_PREVIEW_CONFIG = Object.freeze({
     // Backend Term Test dùng chung. Roster KHÔNG cần Google token
     // (xem ARCHITECTURE.md: "GET /api/term-tests/roster — không cần Google token").
-    // Lưu ý: backend production chỉ cho phép origin GitHub Pages (CORS).
-    API_BASE_URL: isLocalPreview ? '' : 'https://ducizone.ddns.net/mapping-api',
-    // Token này thuộc về Test 1 dùng chung cho các lớp; production nhận qua
-    // fragment `#test=<test-token>` trong link GV gửi cho học viên.
-    LEARNING_API_BASE_URL: isLocalPreview ? 'http://localhost:3000' : 'https://ducizone.ddns.net/mapping-api',
-    LEARNING_TEST_TOKEN: isLocalPreview ? '34010000-0000-4000-8000-000000000002' : '',
+    API_BASE_URL: productionApi,
+    LEARNING_API_BASE_URL: productionApi,
+    LEARNING_TEST_TOKEN: '',
     TEST_SLUG: 'webtest-34',
-    // Khi mở ở local (file/http server) backend chặn CORS nên trang tự dùng
-    // roster mẫu bên dưới để minh họa luồng. Khi deploy lên GitHub Pages,
-    // API_BASE_URL có giá trị và mã lớp thật sẽ gọi roster thật.
-    ENABLE_DEMO_ROSTER_FALLBACK: isLocalPreview,
+    // Khi mở local, dùng test token production trong fragment `#test=<test-token>`.
+    // Không dùng roster/assignment fixture local và không tự fallback sang dữ liệu mẫu.
+    ENABLE_DEMO_ROSTER_FALLBACK: false,
 
     // Audio của Khóa 34 · Phase 1 · Test 1.
     AUDIO: {
