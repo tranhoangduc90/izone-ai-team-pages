@@ -1,0 +1,8 @@
+/* Dàn ý thích nghi từ mẫu khóa 56; không thay bố cục bài luận hay ảnh Task 1. */
+.writing-outline-card { margin: 18px 0; padding: 12px; background: #eef6ff; border: 1px solid #7fb0ea; border-radius: 10px; font-family: ui-sans-serif, system-ui, sans-serif; }
+.writing-outline-card > header { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 8px; color: #174f91; }
+.writing-outline-editor { box-sizing: border-box; width: 100%; min-height: 130px; resize: vertical; padding: 10px; color: #293241; background: #fff; border: 1px solid #7fb0ea; border-radius: 8px; font: inherit; line-height: 1.55; }
+.writing-outline-editor:focus-visible { outline: 3px solid #174f91; outline-offset: 2px; }
+.writing-outline-status { margin: 8px 0 0; font-size: 12px; line-height: 1.5; }
+.writing-outline-card .cbt-writing-phase { display: inline-flex; align-items: center; min-height: 30px; padding: 6px 10px; color: #745400; background: #fff0b8; border: 1px solid #dfbf55; border-radius: 8px; font-size: 12px; font-weight: 750; }
+.writing-outline-card .cbt-writing-phase.is-essay { color: #174f91; background: #fff; border-color: #7fb0ea; }

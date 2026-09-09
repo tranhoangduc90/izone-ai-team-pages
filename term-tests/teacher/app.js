@@ -335,7 +335,11 @@ function appendSanitizedWritingHtml(target, value) {
     'script', 'style', 'template', 'iframe', 'object', 'embed', 'svg', 'math',
     'form', 'input', 'button', 'textarea', 'select', 'option', 'link', 'meta'
   ]);
-  const parsed = new DOMParser().parseFromString(String(value || ''), 'text/html');
+  // Bỏ thuộc tính/style trước khi parse; bộ lọc node an toàn bên dưới vẫn được giữ nguyên.
+  const inertHtml = String(value || '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+    .replace(/<([a-z][a-z0-9-]*)(?:\s+(?:[^"'<>]|"[^"]*"|'[^']*')*)?\s*\/?>/gi, '<$1>');
+  const parsed = new DOMParser().parseFromString(inertHtml, 'text/html');
 
   const cloneSafeNode = node => {
     if (node.nodeType === 3) return document.createTextNode(node.textContent || '');
@@ -522,7 +526,8 @@ function openTeacherWritingFeedback(studentName, writing) {
   const sourcePane = createNode('section', 'writing-feedback-source');
   sourcePane.append(createNode('h3', '', 'Đề bài'), createNode('p', 'writing-feedback-prompt', writing.prompt || 'Chưa lưu nội dung đề bài.'));
   const imageUrl = safeWritingImageUrl(writing.promptImage);
-  if (imageUrl) {
+  // Task 2 chỉ có đề chữ; không dùng giá trị ảnh cũ từ dữ liệu bài chấm.
+  if (taskNumber === 1 && imageUrl) {
     const image = document.createElement('img');
     image.src = imageUrl;
     image.alt = `Hình minh họa Writing Task ${taskNumber}`;
