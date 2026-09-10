@@ -130,6 +130,18 @@
     }
   }
 
+  // Nhận deadline Listening đã được máy chủ bù sau một sự cố audio hợp lệ.
+  window.addEventListener('term-test:listening-timing-updated', event => {
+    const deadlineAt = String(event.detail?.listeningDeadlineAt || '');
+    const serverNow = String(event.detail?.serverNow || '');
+    if (!Number.isFinite(Date.parse(deadlineAt))) return;
+    state.listeningDeadlineAt = deadlineAt;
+    if (Number.isFinite(Date.parse(serverNow))) {
+      state.serverTimeOffsetMs = Date.parse(serverNow) - Date.now();
+    }
+    saveSession();
+  });
+
   const progressMarkup = writingConfig
     ? `<div class="progress-step" data-progress="listening">1. Listening</div>
         <div class="progress-step" data-progress="reading">2. Reading</div>
@@ -1508,10 +1520,13 @@
         ? 'Bài đã được chấm và phân tích đầy đủ.'
         : 'Listening đã được chấm và phân tích đầy đủ.';
     }
-    if (status === 'pending') {
+    if (status === 'unknown' || status === 'processing' || status === 'pending') {
       return completed
-        ? 'Bài đã được chấm. Portal đang bận; hệ thống sẽ tự thử ghi lại khi bạn mở kết quả.'
-        : 'Listening đã được chấm. Portal đang bận; hệ thống sẽ tự thử ghi lại khi bạn mở kết quả.';
+        ? 'Bài đã được chấm. Chưa rõ Portal đã nhận điểm hay chưa; hệ thống không tự gửi lại. Giáo viên cần kiểm tra Portal trước khi retry.'
+        : 'Listening đã được chấm. Chưa rõ Portal đã nhận điểm hay chưa; hệ thống không tự gửi lại. Giáo viên cần kiểm tra Portal trước khi retry.';
+    }
+    if (status === 'failed_response') {
+      return 'Bài đã được chấm nhưng webhook trả lỗi. Giáo viên cần kiểm tra lịch sử gửi điểm và Portal trước khi retry.';
     }
     return completed
       ? 'Cả Listening và Reading đã được chấm và ghi vào Portal.'
@@ -1553,7 +1568,7 @@
       if (payload.writing?.submitted && !grading?.ready) {
         showNotice(writingGradingNotice(grading), 'success');
       } else {
-        showNotice(portalNotice(payload.portalSyncStatus, payload.completed), payload.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(portalNotice(payload.portalSyncStatus, payload.completed), ['unknown', 'processing', 'pending', 'failed_response'].includes(payload.portalSyncStatus) ? '' : 'success');
       }
       setStage('result');
       scheduleWritingGradingRefresh();
@@ -1636,7 +1651,7 @@
       saveSession();
       submitted = true;
       elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
-      showNotice(portalNotice(response.portalSyncStatus, state.completed), response.portalSyncStatus === 'pending' ? '' : 'success');
+      showNotice(portalNotice(response.portalSyncStatus, state.completed), ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
       if (state.completed && writingConfig && !state.writingSubmitted) {
         setStage(state.writingStarted ? 'writing' : 'writing-prep');
       } else {
@@ -1748,9 +1763,9 @@
       if (writingConfig) {
         setStage('writing-prep');
         const portalMessage = portalNotice(response.portalSyncStatus, true);
-        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, response.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, true), response.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(portalNotice(response.portalSyncStatus, true), ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
         setStage('result-ready');
         if (automatic) await loadResult(elements.viewResult);
       }
