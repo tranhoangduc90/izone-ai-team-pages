@@ -22,8 +22,8 @@
 
 .landing-choice.is-selected,
 .landing-choice[aria-pressed="true"] {
-  border-color: var(--primary);
-  background: var(--primary);
+  border-color: var(--blue);
+  background: var(--blue);
   color: #fff;
 }
 
