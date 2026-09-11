@@ -8,7 +8,7 @@
     <title>Danh sách bài test · Khóa 56</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="../shared/styles.css?rev=20260904-k56-demo-v1">
-    <link rel="stylesheet" href="landing.css?rev=20260911-k56-backup-links-v1">
+    <link rel="stylesheet" href="landing.css?rev=20260911-k56-selected-button-v1">
   </head>
   <body>
     <main class="landing-shell">
@@ -34,25 +34,25 @@
         <section class="landing-link-group" aria-labelledby="onlineTestsHeading">
           <h2 id="onlineTestsHeading">Bài thi</h2>
           <div class="landing-actions landing-actions-three">
-            <button class="button button-primary" type="button" data-test="term-test-1-k56-computer-based" data-slug="term-test-1-k56">Term Test 1</button>
-            <button class="button button-primary" type="button" data-test="term-test-2-k56-computer-based" data-slug="term-test-2-k56">Term Test 2</button>
-            <button class="button button-primary" type="button" data-test="mini-test-k56-computer-based" data-slug="mini-test-k56">Mini Test</button>
+            <button class="button button-secondary landing-choice" type="button" data-test="term-test-1-k56-computer-based" data-slug="term-test-1-k56" aria-pressed="false">Term Test 1</button>
+            <button class="button button-secondary landing-choice" type="button" data-test="term-test-2-k56-computer-based" data-slug="term-test-2-k56" aria-pressed="false">Term Test 2</button>
+            <button class="button button-secondary landing-choice" type="button" data-test="mini-test-k56-computer-based" data-slug="mini-test-k56" aria-pressed="false">Mini Test</button>
           </div>
         </section>
         <section class="landing-link-group" aria-labelledby="audioBackupHeading">
           <h2 id="audioBackupHeading">Audio Backup</h2>
           <div class="landing-actions landing-actions-three">
-            <button class="button button-secondary" type="button" data-destination="term-test-1-k56-audio">Audio Term Test 1</button>
-            <button class="button button-secondary" type="button" data-destination="term-test-2-k56-audio">Audio Term Test 2</button>
-            <button class="button button-secondary" type="button" data-destination="mini-test-k56-audio">Audio Mini Test</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-1-k56-audio" aria-pressed="false">Audio Term Test 1</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-2-k56-audio" aria-pressed="false">Audio Term Test 2</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="mini-test-k56-audio" aria-pressed="false">Audio Mini Test</button>
           </div>
         </section>
         <section class="landing-link-group" aria-labelledby="answerSheetHeading">
           <h2 id="answerSheetHeading">Answer Sheet dự phòng</h2>
           <div class="landing-actions landing-actions-three">
-            <button class="button button-secondary" type="button" data-destination="term-test-1-k56">Answer Sheet Term Test 1</button>
-            <button class="button button-secondary" type="button" data-destination="term-test-2-k56">Answer Sheet Term Test 2</button>
-            <button class="button button-secondary" type="button" data-destination="mini-test-k56">Answer Sheet Mini Test</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-1-k56" aria-pressed="false">Answer Sheet Term Test 1</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-2-k56" aria-pressed="false">Answer Sheet Term Test 2</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="mini-test-k56" aria-pressed="false">Answer Sheet Mini Test</button>
           </div>
         </section>
         <div class="landing-actions landing-result-action">
@@ -62,6 +62,6 @@
       </section>
     </main>
     <script src="../k56-shared/config.js?rev=20260907-k56-class-picker"></script>
-    <script type="module" src="landing.js?rev=20260911-k56-backup-links-v1"></script>
+    <script type="module" src="landing.js?rev=20260911-k56-selected-button-v1"></script>
   </body>
 </html>

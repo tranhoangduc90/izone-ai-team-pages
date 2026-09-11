@@ -25,6 +25,14 @@ const sessionStore = createSessionStore({
 let idToken = '';
 let loginGeneration = 0;
 
+function selectLandingButton(selectedButton) {
+  document.querySelectorAll('.landing-choice').forEach(button => {
+    const selected = button === selectedButton;
+    button.classList?.toggle('is-selected', selected);
+    button.setAttribute?.('aria-pressed', String(selected));
+  });
+}
+
 function selectedClassCode() {
   const value = classSelect.hidden ? input.value : classSelect.value;
   return String(value || '').trim().toUpperCase();
@@ -143,6 +151,7 @@ function setupGoogleSignIn() {
 
 document.querySelectorAll('[data-test]').forEach(button => {
   button.addEventListener('click', async () => {
+    selectLandingButton(button);
     const classCode = selectedClassCode();
     if (!validClassCode(classCode)) {
       input.setCustomValidity('Hãy nhập hoặc chọn mã lớp hợp lệ.');
@@ -171,6 +180,7 @@ document.querySelectorAll('[data-test]').forEach(button => {
 
 document.querySelectorAll('[data-destination]').forEach(button => {
   button.addEventListener('click', () => {
+    selectLandingButton(button);
     const classCode = selectedClassCode();
     if (!validClassCode(classCode)) {
       input.setCustomValidity('Hãy nhập hoặc chọn mã lớp hợp lệ.');

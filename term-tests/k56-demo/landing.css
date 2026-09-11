@@ -20,6 +20,13 @@
   min-height: 56px;
 }
 
+.landing-choice.is-selected,
+.landing-choice[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
 .landing-result-action {
   margin-top: 28px;
 }
