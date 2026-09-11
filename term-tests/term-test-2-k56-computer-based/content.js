@@ -32,7 +32,7 @@
     <tr><td>Saeed Aktar</td><td>Finding a ${numbered(19)}</td></tr>
     <tr><td>Shilpa Desai</td><td>Help with ${numbered(20)}</td></tr></tbody></table></div>`,
     intro('PART 3 · QUESTIONS 21–30','Making a training film','Questions 21–27: What helped Stewart with each of the following stages in making his training film for museum employees? Choose <strong>SEVEN</strong> answers from the box and write the correct letter, <strong>A–I</strong>, next to Questions 21–27.')+
-    `<h4>What helped Stewart</h4><div class="cbt-matching-layout k56-answers-left">${bank([
+    `<h4>What helped Stewart</h4><div class="cbt-matching-layout k56-answers-left k56-training-film-matching">${bank([
       ['A','advice from friends'],['B','information on a website'],['C','being allowed extra time'],['D','meeting a professional filmmaker'],['E','good weather conditions'],['F','getting a better computer'],['G','support of a manager'],['H','help from a family member'],['I','work on a previous assignment']
     ])}<div class="cbt-short-answer-list cbt-matching-questions"><h4>Stages in making training film for museum employees</h4>${['finding a location','deciding on equipment','writing the script','casting','filming','editing','designing the DVD cover'].map((t,i)=>question(i+21,t)).join('')}</div></div>`+
     group('28–30',oneWord)+`<div class="k56-source-notes"><h4>Stewart’s work placement: benefits to the Central Museum Association</h4>

@@ -59,3 +59,21 @@ test('ba trang Audio Backup trỏ tới bản audio K56 đúng nguồn', async (
     assert.equal(digest(published), digest(source));
   }
 });
+
+test('nút reset online chỉ áp dụng CODEXDEMO56 và gọi endpoint reset một lần', async () => {
+  const source = await read('term-tests/k56-demo-reset/app.js');
+  assert.match(source, /classCode !== 'CODEXDEMO56'/);
+  assert.match(source, /\/api\/term-tests\/demo\/reset/);
+  assert.match(source, /confirmation: 'RESET_DEMO_STUDENT'/);
+  assert.match(source, /window\.setTimeout\(\(\) => controller\.abort\(\), 30000\)/);
+  assert.equal(/retry|setInterval/.test(source), false);
+  for (const route of [
+    'term-test-1-k56-computer-based',
+    'term-test-2-k56-computer-based',
+    'mini-test-k56-computer-based'
+  ]) {
+    const html = await read(`term-tests/${route}/index.html`);
+    assert.match(html, /\.\.\/k56-demo-reset\/styles\.css/);
+    assert.match(html, /\.\.\/k56-demo-reset\/app\.js/);
+  }
+});
