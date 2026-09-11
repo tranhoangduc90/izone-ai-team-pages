@@ -66,6 +66,23 @@ export function pollingDelay(elapsedSinceSubmitMs) {
   if (elapsedSinceSubmitMs <= 120000) return 5000;
   return 10000;
 }
+export function randomDelay(minimumMs, maximumMs, random = Math.random) {
+  const minimum = Math.max(0, Math.ceil(Number(minimumMs) || 0));
+  const maximum = Math.max(minimum, Math.floor(Number(maximumMs) || minimum));
+  const sample = Math.min(0.999999999, Math.max(0, Number(random()) || 0));
+  return Math.floor(minimum + sample * (maximum - minimum + 1));
+}
+export function pollingDelayWithJitter(elapsedSinceSubmitMs, random = Math.random) {
+  const base = pollingDelay(elapsedSinceSubmitMs);
+  return randomDelay(Math.floor(base * 0.85), Math.ceil(base * 1.15), random);
+}
+export function retryDelay(error, attempt = 0, random = Math.random) {
+  const safeAttempt = Math.max(0, Math.min(6, Number.isInteger(attempt) ? attempt : 0));
+  const exponential = Math.min(60_000, 5_000 * (2 ** safeAttempt));
+  const retryAfter = Number(error?.retryAfterMs);
+  const base = Number.isFinite(retryAfter) && retryAfter >= 0 ? Math.max(exponential, retryAfter) : exponential;
+  return base + randomDelay(0, Math.min(5_000, Math.max(500, Math.floor(base * 0.25))), random);
+}
 export function claimSectionSubmission(pendingSections, sectionKey) {
   if (pendingSections.has(sectionKey)) return false;
   pendingSections.add(sectionKey);

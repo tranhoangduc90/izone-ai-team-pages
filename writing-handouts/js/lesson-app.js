@@ -1,7 +1,7 @@
-import { createLessonApi } from "./api.js";
+import { createLessonApi } from "./api.js?v=20260911-load-guard-v1";
 import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v3";
 import { classQuery, resolveClassRef } from "./class-selection.js";
-import { createRequestId, hasMeaningfulText, isConflict, pollingDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js";
+import { createRequestId, hasMeaningfulText, isConflict, pollingDelayWithJitter, randomDelay, retryDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js?v=20260911-load-guard-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { claimSectionSubmission, fieldDefinitions, gradingFailureMessage, normalizeLessonProgress, sectionDefinitions, sectionIsFilled, sectionPrerequisitesPassed, sectionSubmitLabel, vocabularyPrerequisitesPassed } from "./lesson-core.js?v=20260826-grading-timeout-v1";
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
@@ -22,6 +22,7 @@ const app = {
   conflict: false,
   localTimer: null,
   remoteTimer: null,
+  saveRetryCount: 0,
   heartbeatTimer: null,
   pollTimer: null,
   activeField: null,
@@ -193,7 +194,7 @@ function markDirty() {
   if (!app.remoteTimer) app.remoteTimer = setTimeout(() => {
     app.remoteTimer = null;
     saveRemote("auto").catch(() => {});
-  }, 15_000);
+  }, randomDelay(10_000, 15_000));
 }
 
 async function saveLocal() {
@@ -227,9 +228,10 @@ async function saveRemote(reason = "manual") {
     const preserveResponses = app.changeSequence !== sentSequence;
     mergeServer(result.data.session || result.data, preserveResponses);
     app.dirty = preserveResponses;
+    app.saveRetryCount = 0;
     await saveLocal();
     setSaveState(preserveResponses ? "Có thay đổi chưa lưu" : `Đã lưu lúc ${new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`);
-    if (preserveResponses && !app.remoteTimer) app.remoteTimer = setTimeout(() => { app.remoteTimer = null; saveRemote("auto").catch(() => {}); }, 15_000);
+    if (preserveResponses && !app.remoteTimer) app.remoteTimer = setTimeout(() => { app.remoteTimer = null; saveRemote("auto").catch(() => {}); }, randomDelay(10_000, 15_000));
     return true;
   } catch (error) {
     if (isConflict(error)) {
@@ -240,10 +242,11 @@ async function saveRemote(reason = "manual") {
       showNotice("Chưa thể lưu lên hệ thống. Bản trên thiết bị vẫn được giữ.");
       setSaveState("Chưa đồng bộ");
       if (app.dirty && !app.remoteTimer) {
+        const wait = retryDelay(error, app.saveRetryCount); app.saveRetryCount += 1;
         app.remoteTimer = setTimeout(() => {
           app.remoteTimer = null;
           saveRemote("auto").catch(() => {});
-        }, 15_000);
+        }, wait);
       }
     }
     return false;
@@ -255,6 +258,12 @@ async function saveRemote(reason = "manual") {
 function schedulePresence(activeField = app.activeField) {
   if (!app.sessionRef || document.hidden) return;
   app.api.publishLive(app.sessionRef, activeField).catch(() => {});
+}
+
+function startPresenceHeartbeat() {
+  clearTimeout(app.heartbeatTimer);
+  const tick = () => { schedulePresence(); app.heartbeatTimer = setTimeout(tick, randomDelay(25_000, 35_000)); };
+  app.heartbeatTimer = setTimeout(tick, randomDelay(25_000, 35_000));
 }
 
 function addTextarea(card, section, field, locked) {
@@ -386,7 +395,7 @@ function renderTeacherCommentPanels() {
 
 function scheduleTeacherComments() {
   clearTimeout(app.teacherCommentTimer);
-  if (app.sessionRef && !document.hidden) app.teacherCommentTimer = setTimeout(() => refreshTeacherComments(), 15_000);
+  if (app.sessionRef && !document.hidden) app.teacherCommentTimer = setTimeout(() => refreshTeacherComments(), randomDelay(12_000, 18_000));
 }
 
 async function refreshTeacherComments(force = false) {
@@ -717,12 +726,14 @@ function applyTerminalAttempt(payload, fallbackSection) {
   }
 }
 
-function schedulePoll() {
+function schedulePoll(minimumDelayMs = 0) {
   clearTimeout(app.pollTimer);
   updatePollingStates();
   if (document.hidden || !app.pendingAttempts.size) return;
   const earliest = Math.min(...[...app.pendingAttempts.values()].map((item) => item.submittedAt));
-  app.pollTimer = setTimeout(pollAttempts, pollingDelay(Date.now() - earliest));
+  const base = pollingDelayWithJitter(Date.now() - earliest);
+  const minimum = Math.max(0, Number(minimumDelayMs) || 0); const wait = minimum > base ? randomDelay(minimum, Math.min(60_000, minimum + 5_000)) : base;
+  app.pollTimer = setTimeout(pollAttempts, wait);
 }
 
 function updatePollingStates() {
@@ -736,6 +747,7 @@ function updatePollingStates() {
 
 async function pollAttempts() {
   if (document.hidden) return schedulePoll();
+  let retryAfterMs = 0;
   for (const attempt of [...app.pendingAttempts.values()]) {
     try {
       const result = await app.api.attempt(attempt.ref, attempt.etag);
@@ -747,11 +759,12 @@ async function pollAttempts() {
         applyTerminalAttempt(payload, attempt.section);
       }
     } catch (error) {
+      retryAfterMs = Math.max(retryAfterMs, Number(error.retryAfterMs) || 0);
       if (error.status !== 304) showNotice("Đang chờ phản hồi chấm. Hệ thống sẽ tự thử lại.");
     }
   }
   renderBodies();
-  schedulePoll();
+  schedulePoll(retryAfterMs);
 }
 
 async function openSession(event) {
@@ -785,7 +798,7 @@ async function openSession(event) {
     setSaveState(app.dirty ? "Đã khôi phục bản lưu trên thiết bị" : "Đã tải bài làm");
     for (const attempt of app.state.attempts) registerAttempt(attempt);
     schedulePresence();
-    clearInterval(app.heartbeatTimer); app.heartbeatTimer = setInterval(schedulePresence, 30_000);
+    startPresenceHeartbeat();
     app.studentMemory?.complete(app.identity);
   } catch (error) {
     app.identity = null; app.sessionRef = null;
@@ -804,7 +817,7 @@ async function resumeRecent() {
     $("lesson-student-label").textContent = `${app.identity.label || "Bài gần nhất"} · ${className}`;
     $("lesson-setup").hidden = true; $("lesson-workspace").hidden = false; renderBodies(); void refreshTeacherComments(true);
     for (const attempt of app.state.attempts) registerAttempt(attempt); schedulePresence();
-    clearInterval(app.heartbeatTimer); app.heartbeatTimer = setInterval(schedulePresence, 30_000);
+    startPresenceHeartbeat();
   } catch (error) { errorNode.hidden = false; errorNode.textContent = `Chưa thể tiếp tục bài gần nhất: ${error.message}`; }
 }
 

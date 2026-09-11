@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canUnlockDraft2, claimSectionSubmission, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "../js/core.js";
+import { canUnlockDraft2, claimSectionSubmission, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, pollingDelayWithJitter, randomDelay, rebaseLocalProgress, retryDelay, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "../js/core.js";
 
 test("normalizes public session data into three section states", () => {
   const result = normalizeProgress({ draftVersion: 4, draft: { overview: "A", body1: "B", body2: "C", draft1: "D1", draft2: "D2", draft2Unlocked: true }, sectionStates: { overview: { status: "passed" }, outline: { status: "revision", attemptsWithoutPass: 3 } } });
@@ -32,6 +32,21 @@ test("polling backs off at the specified elapsed-time boundaries", () => {
   assert.equal(pollingDelay(20001), 5000);
   assert.equal(pollingDelay(120000), 5000);
   assert.equal(pollingDelay(120001), 10000);
+});
+
+test("jitter spreads scheduled traffic inside bounded windows", () => {
+  assert.equal(randomDelay(10_000, 15_000, () => 0), 10_000);
+  assert.equal(randomDelay(10_000, 15_000, () => 0.999999), 15_000);
+  assert.equal(pollingDelayWithJitter(0, () => 0), 1_700);
+  assert.equal(pollingDelayWithJitter(0, () => 0.999999), 2_300);
+});
+
+test("save retry backs off and never runs before Retry-After", () => {
+  assert.equal(retryDelay({}, 0, () => 0), 5_000);
+  assert.equal(retryDelay({}, 2, () => 0), 20_000);
+  assert.equal(retryDelay({ retryAfterMs: 30_000 }, 0, () => 0), 30_000);
+  assert.equal(retryDelay({}, 20, () => 0.999999), 65_000);
+  assert.ok(retryDelay({ retryAfterMs: 120_000 }, 0, () => 0) >= 120_000);
 });
 
 test("mỗi phần chỉ nhận một lượt gửi cho tới khi yêu cầu trước kết thúc", () => {
