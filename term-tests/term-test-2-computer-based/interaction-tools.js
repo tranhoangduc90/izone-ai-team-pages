@@ -12,7 +12,8 @@
 
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode;
+  const storageScope = window.TERM_TEST_RETAKE_CONFIG?.mode === 'listening-only' ? ':listening-retake' : '';
+  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageScope;
   const rootSelector = [
     '.cbt-listening-section',
     '.cbt-reading-passage',
@@ -48,7 +49,7 @@
   }
 
   function storageKeyForCurrentAttempt() {
-    return 'izone-test-interactions:' + testConfig.slug + ':' + classCode + ':' + attemptScope();
+    return 'izone-test-interactions:' + testConfig.slug + ':' + classCode + storageScope + ':' + attemptScope();
   }
 
   let activeStorageKey = storageKeyForCurrentAttempt();

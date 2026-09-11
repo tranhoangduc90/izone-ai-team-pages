@@ -8,8 +8,10 @@
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const requestedDemo = query.get('demo') || '';
-  const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
-  const deferResultsUntilComplete = Boolean(window.TERM_TEST_CONTENT?.deferResultsUntilComplete);
+  const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
+  const listeningOnly = retakeConfig.mode === 'listening-only';
+  const writingConfig = listeningOnly ? null : (window.TERM_TEST_CONTENT?.writing || null);
+  const deferResultsUntilComplete = listeningOnly ? false : Boolean(window.TERM_TEST_CONTENT?.deferResultsUntilComplete);
   const readingMinutes = Math.max(1, Number(window.TERM_TEST_CONTENT?.timing?.readingMinutes) || 60);
   const writingMinutes = Math.max(1, Number(window.TERM_TEST_CONTENT?.timing?.writingMinutes) || 60);
   const writingTasks = Array.from(writingConfig?.tasks || []);
@@ -21,7 +23,8 @@
 
   if (!testConfig || !appConfig || !root) return;
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}`;
+  const storageScope = listeningOnly ? ':listening-retake' : '';
+  const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   const restoredSession = readSession();
   const state = {
     stage: 'loading',
@@ -133,8 +136,8 @@
   }
 
   function clearAllLocalAttemptData() {
-    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}`;
-    const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}:`;
+    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageScope}`;
+    const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}${storageScope}:`;
     for (const storage of availableStorages()) {
       try {
         storage.removeItem(storageKey);
@@ -149,7 +152,10 @@
     }
   }
 
-  const progressMarkup = writingConfig
+  const progressMarkup = listeningOnly
+    ? `<div class="progress-step" data-progress="listening">1. Listening</div>
+        <div class="progress-step" data-progress="result">2. Kết quả</div>`
+    : writingConfig
     ? `<div class="progress-step" data-progress="listening">1. Listening</div>
         <div class="progress-step" data-progress="reading">2. Reading</div>
         <div class="progress-step" data-progress="writing">3. Writing</div>
@@ -190,7 +196,18 @@
       </form>
   ` : '';
 
-  const listeningSavedMarkup = (writingConfig || deferResultsUntilComplete) ? `
+  const listeningSavedMarkup = listeningOnly ? `
+      <section class="panel transition-card" id="listeningSavedView" hidden>
+        <div class="transition-icon">✓</div>
+        <p class="eyebrow">Đã chấm bài Listening</p>
+        <h2>Điểm và phân tích Listening đã sẵn sàng</h2>
+        <p>Reading và Writing không thuộc lượt thi bù này nên không hiển thị và không bị ghi đè.</p>
+        <div class="form-actions transition-actions">
+          <button class="button button-primary" id="viewListeningResult" type="button">Xem điểm và phân tích Listening</button>
+          <button id="startReading" type="button" hidden>Không dùng trong lượt thi bù</button>
+        </div>
+      </section>
+  ` : (writingConfig || deferResultsUntilComplete) ? `
       <section class="panel transition-card" id="listeningSavedView" hidden>
         <div class="transition-icon">✓</div>
         <p class="eyebrow">Listening đã được ghi nhận</p>
@@ -570,6 +587,7 @@
   }
 
   function resultsUnlocked() {
+    if (listeningOnly) return Boolean(state.attemptToken || state.result?.result?.listening);
     if (writingConfig) return Boolean(state.writingSubmitted);
     return !deferResultsUntilComplete || Boolean(state.completed);
   }
@@ -600,7 +618,9 @@
       : stage === 'reading' ? 'reading'
         : stage === 'writing-prep' || stage === 'writing' ? 'writing'
           : stage === 'result-ready' || stage === 'result' ? 'result' : '';
-    const order = writingConfig ? ['listening', 'reading', 'writing', 'result'] : ['listening', 'reading', 'result'];
+    const order = listeningOnly
+      ? ['listening', 'result']
+      : writingConfig ? ['listening', 'reading', 'writing', 'result'] : ['listening', 'reading', 'result'];
     const activeIndex = order.indexOf(activeProgress);
     for (const step of progressSteps) {
       const index = order.indexOf(step.dataset.progress);
@@ -2158,24 +2178,26 @@
   function renderResult(payload) {
     if (!resultsUnlocked()) return false;
     const result = payload.result;
-    const hasReading = Boolean(result.reading);
+    const hasReading = !listeningOnly && Boolean(result.reading);
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
-    elements.summaryGrid.replaceChildren(
-      addSummaryCard('Listening', sectionScoreText(result.listening)),
-      addSummaryCard('Reading', hasReading ? sectionScoreText(result.reading) : 'Chưa nộp')
-    );
-    elements.resultStatus.textContent = hasReading
+    const summaryCards = [addSummaryCard('Listening', sectionScoreText(result.listening))];
+    if (!listeningOnly) summaryCards.push(addSummaryCard('Reading', hasReading ? sectionScoreText(result.reading) : 'Chưa nộp'));
+    elements.summaryGrid.replaceChildren(...summaryCards);
+    elements.resultStatus.textContent = listeningOnly
+      ? 'Lượt thi bù này chỉ chấm và phân tích Listening. Điểm Reading và Writing được giữ nguyên.'
+      : hasReading
       ? !writingConfig
         ? 'Listening và Reading được chấm và phân tích riêng.'
         : payload.writing?.grading?.ready
           ? `Listening và Reading được phân tích riêng; điểm Writing đã hoàn tất và có bài chấm chi tiết cho ${writingTaskLabels || 'bài Writing'}.`
           : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
-    elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
+    elements.continueReadingFromResult.hidden = listeningOnly || hasReading || Boolean(demoMode);
     elements.viewFullAttempt.hidden = !(
-      state.attemptToken
+      !listeningOnly
+      && state.attemptToken
       && payload.completed
       && (!writingConfig || payload.writing?.submitted)
       && !demoMode
@@ -2197,14 +2219,41 @@
         ? 'Bài đã được chấm và phân tích đầy đủ.'
         : 'Listening đã được chấm và phân tích đầy đủ.';
     }
-    if (status === 'pending') {
+    if (status === 'pending' || status === 'queued') {
       return completed
-        ? 'Bài đã được chấm. Portal đang bận; hệ thống sẽ tự thử ghi lại khi bạn mở kết quả.'
-        : 'Listening đã được chấm. Portal đang bận; hệ thống sẽ tự thử ghi lại khi bạn mở kết quả.';
+        ? 'Bài đã được chấm. Điểm đang được chuyển lên Portal và hệ thống sẽ tự thử lại nếu Portal đang bận.'
+        : 'Listening đã được chấm. Điểm đang được chuyển lên Portal và hệ thống sẽ tự thử lại nếu Portal đang bận.';
     }
     return completed
       ? 'Cả Listening và Reading đã được chấm và ghi vào Portal.'
       : 'Listening đã được chấm, phân tích và ghi vào Portal.';
+  }
+
+  let portalSyncPolling = false;
+
+  async function waitForListeningPortalSync() {
+    if (!listeningOnly || !state.attemptToken || portalSyncPolling) return;
+    portalSyncPolling = true;
+    try {
+      for (let check = 0; check < 12; check += 1) {
+        await new Promise(resolve => window.setTimeout(resolve, check === 0 ? 400 : 1000));
+        const payload = await apiRequest('/api/term-tests/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptToken: state.attemptToken })
+        });
+        if (payload.portalSyncStatus === 'synced' || payload.portalSyncStatus === 'not_applicable') {
+          showNotice(portalNotice(payload.portalSyncStatus, false), 'success');
+          return;
+        }
+        showNotice(portalNotice(payload.portalSyncStatus, false));
+      }
+      showNotice('Listening đã được chấm. Điểm vẫn đang chờ Portal xác nhận; hệ thống sẽ tiếp tục tự thử lại.');
+    } catch (error) {
+      showNotice(`Listening đã được chấm nhưng chưa đọc được trạng thái Portal: ${error.message}. Hệ thống vẫn tự thử đồng bộ.`, 'error');
+    } finally {
+      portalSyncPolling = false;
+    }
   }
 
   function writingGradingNotice(grading) {
@@ -2233,9 +2282,13 @@
       if (payload.writing?.submitted && !grading?.ready) {
         showNotice(writingGradingNotice(grading), 'success');
       } else {
-        showNotice(portalNotice(payload.portalSyncStatus, payload.completed), payload.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(
+          portalNotice(payload.portalSyncStatus, payload.completed),
+          ['pending', 'queued'].includes(payload.portalSyncStatus) ? '' : 'success'
+        );
       }
       setStage('result');
+      if (listeningOnly) void waitForListeningPortalSync();
       scheduleWritingGradingRefresh();
     } catch (error) {
       showNotice(`Không thể tải kết quả: ${error.message}`, 'error');
@@ -2460,9 +2513,21 @@
       if (writingConfig || deferResultsUntilComplete) {
         showNotice(`Bài Listening đã được ghi nhận. Kết quả sẽ mở sau khi bạn hoàn thành ${writingConfig ? 'Reading và nộp Writing' : 'Reading'}.`, 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, state.completed), response.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(
+          portalNotice(response.portalSyncStatus, state.completed),
+          ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success'
+        );
       }
-      if (state.completed && writingConfig && !state.writingSubmitted) {
+      if (listeningOnly) {
+        renderResult({
+          ...response,
+          className: state.className,
+          studentName: state.studentName,
+          result: response.result
+        });
+        setStage('result');
+        void waitForListeningPortalSync();
+      } else if (state.completed && writingConfig && !state.writingSubmitted) {
         setStage(state.writingStarted ? 'writing' : 'writing-prep');
       } else {
         setStage(state.completed ? 'result-ready' : 'listening-saved');
@@ -2903,7 +2968,9 @@
           hideNotice();
         } else {
           setStage('listening-saved');
-          showNotice('Bài Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
+          showNotice(listeningOnly
+            ? 'Bài Listening đã được lưu. Bạn có thể xem lại điểm và phân tích.'
+            : 'Bài Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
         }
       } else {
         setStage('listening');

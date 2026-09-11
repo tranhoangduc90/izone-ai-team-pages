@@ -6,11 +6,12 @@
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const isDemo = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
+  const storageScope = window.TERM_TEST_RETAKE_CONFIG?.mode === 'listening-only' ? ':listening-retake' : '';
 
   if (!contentConfig || !testConfig || contentConfig.baseTestSlug !== testConfig.slug) return;
 
-  const uiStorageKey = 'izone-test-ui:' + testConfig.slug + ':' + classCode;
-  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode;
+  const uiStorageKey = 'izone-test-ui:' + testConfig.slug + ':' + classCode + storageScope;
+  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageScope;
   const readingMinutes = Math.max(1, Number(contentConfig.timing?.readingMinutes) || 60);
   const writingMinutes = Math.max(1, Number(contentConfig.timing?.writingMinutes) || 60);
   const uiState = readUiState();

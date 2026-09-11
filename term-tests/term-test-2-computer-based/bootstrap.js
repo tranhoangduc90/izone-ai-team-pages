@@ -8,6 +8,9 @@
   const scriptAssetBase = new URL('.', document.currentScript?.src || window.location.href).toString().replace(/\/$/, '');
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
+  const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
+  const listeningOnly = retakeConfig.mode === 'listening-only';
+  const launchStudentRef = listeningOnly ? (query.get('student') || '').trim() : '';
   const demoStudentRef = classCode === 'CODEXDEMO806' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO806' ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
@@ -50,8 +53,9 @@
 
   document.addEventListener('keydown', blockInPageSearchShortcuts, { capture: true });
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}`;
-  const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}`;
+  const storageScope = listeningOnly ? ':listening-retake' : '';
+  const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
+  const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageScope}`;
   let state = readState();
   const legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
@@ -396,7 +400,7 @@
   }
 
   function clearAllLocalAttemptData() {
-    const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}:`;
+    const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}${storageScope}:`;
     for (const storage of availableStorages()) {
       try {
         storage.removeItem(storageKey);
@@ -635,9 +639,9 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3-20260909-k67-update-v1');
-    await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7-20260909-k67-update-v1-20260909-mini-audio-v1'));
-    await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1'));
+    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3-20260909-k67-update-v1-20260911-listening-retake-v1');
+    await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7-20260909-k67-update-v1-20260909-mini-audio-v1-20260911-listening-retake-v1'));
+    await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v1'));
   }
 
   async function resumeAfterListening() {
@@ -997,6 +1001,15 @@
         elements.bootstrapStudent.value = state.studentRef;
         elements.bootstrapDemoReset.hidden = classCode !== 'CODEXDEMO806';
         await prepareSelectedStudent();
+      } else if (launchStudentRef) {
+        const launchMatches = roster.filter(student => !student.temporary && student.ref === launchStudentRef);
+        if (!isUuid(launchStudentRef) || launchMatches.length !== 1) {
+          showNotice('Liên kết thi bù không khớp duy nhất một học viên trong lớp này.', true);
+          return;
+        }
+        elements.bootstrapStudent.value = launchMatches[0].ref;
+        elements.bootstrapDownloadStatus.textContent = 'Đã điền sẵn họ tên. Hãy xác nhận trước khi tải audio.';
+        elements.bootstrapStudent.dispatchEvent(new Event('change'));
       } else {
         elements.bootstrapDownloadStatus.textContent = 'Hãy chọn họ và tên để bắt đầu tải audio.';
         elements.bootstrapDownloadStep.dataset.state = 'active';
