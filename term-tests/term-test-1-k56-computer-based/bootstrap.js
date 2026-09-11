@@ -7,8 +7,15 @@
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const demoMode = ['127.0.0.1', 'localhost'].includes(location.hostname) ? (query.get('demo') || '') : '';
-  const localDemo = ['127.0.0.1', 'localhost'].includes(location.hostname) && demoMode === 'exam' && classCode === 'CODEXDEMO56';
+  const localPreview = ['127.0.0.1', 'localhost'].includes(location.hostname);
+  if (!localPreview && (query.has('demo') || query.has('grading'))) {
+    query.delete('demo');
+    query.delete('grading');
+    const cleanQuery = query.toString();
+    history.replaceState(null, '', `${location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${location.hash}`);
+  }
+  const demoMode = localPreview ? (query.get('demo') || '') : '';
+  const localDemo = localPreview && demoMode === 'exam' && classCode === 'CODEXDEMO56';
   const studentMemoryEnabled = false;
   let studentMemory = null;
   const storageSuffix = localDemo && query.get('grading') === 'server' ? ':server-grade' : '';

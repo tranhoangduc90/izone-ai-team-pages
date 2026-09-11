@@ -23,6 +23,7 @@ assert.ok(app.includes('bandFromCorrect'));assert.ok(app.includes('sectionScoreT
 assert.match(app,/\[39, 9\].*\[37, 8\.5\].*\[35, 8\]/s);
 const layout=read('term-test-2-k56-computer-based/layout-updates.css');
 assert.match(layout,/\.cbt-listening-section \.cbt-answer-row[^}]*margin-inline:auto/);
+assert.match(layout,/\.cbt-listening-section > \.k56-source-notes,[\s\S]*margin-inline:auto/);
 assert.match(layout,/\.k56-training-film-matching > \.cbt-option-bank \{ margin-top:44px; \}/);
 assert.match(read('term-test-2-k56-computer-based/content.js'),/k56-training-film-matching/);
 assert.ok(read('term-test-2-k56-computer-based/bootstrap.js').includes('../k56-test2-shared/app.js'));

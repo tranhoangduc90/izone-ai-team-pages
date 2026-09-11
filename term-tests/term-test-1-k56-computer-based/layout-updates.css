@@ -3,8 +3,8 @@
 .k56-side-layout > *, .cbt-matching-layout.k56-answers-left > * { min-width:0; margin-top:0; }
 .k56-answers-left > :nth-child(2) { order:-1; }
 .k56-map-layout { grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr); }
-.k56-map-layout > figure { width:100%; margin:0; padding:12px; overflow:hidden; }
-.k56-map-layout img { width:128.2%; max-width:none; height:auto; }
+.k56-map-layout > figure, .cbt-park-map { width:100%; margin:0; padding:12px; overflow:hidden; }
+.k56-map-layout img, .cbt-park-map img { display:block; width:128.2% !important; max-width:none !important; height:auto; }
 .k56-side-layout .cbt-question-card { padding:12px; }
 .k56-side-layout .cbt-question-heading { gap:8px; }
 .k56-side-layout .cbt-answer-row { width:100%; margin-left:0; }
