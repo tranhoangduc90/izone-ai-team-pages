@@ -1839,6 +1839,11 @@
         words: countWords(state.drafts.writing[task.id]),
         minimum: task.minimumWords
       })).filter(task => task.words < task.minimum);
+      const emptyTasks = belowMinimum.filter(task => task.words === 0);
+      if (!automatic && emptyTasks.length) {
+        showNotice(`${emptyTasks.map(task => task.label).join(', ')} chưa có nội dung. Hãy viết bài trước khi nộp để hệ thống có thể chấm điểm.`, 'error');
+        return;
+      }
       if (!automatic && belowMinimum.length) {
         const summary = belowMinimum.map(task => `${task.label}: ${task.words}/${task.minimum} từ`).join('\n');
         if (!window.confirm(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
