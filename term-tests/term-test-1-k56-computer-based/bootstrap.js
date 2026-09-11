@@ -215,6 +215,26 @@
     for (const step of ['bootstrapDownloadStep', 'bootstrapPreviewStep', 'bootstrapStartStep']) elements[step].dataset.state = 'locked';
   }
 
+  function recoverFromServerReset(error) {
+    if (error?.status !== 404 || !['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND'].includes(error?.code)) return false;
+    const audioVolume = state.audioVolume;
+    for (const storage of availableStorages()) {
+      try {
+        storage.removeItem(storageKey);
+        storage.removeItem(uiStorageKey);
+        storage.removeItem(annotationStorageKey);
+      } catch {
+        // Vẫn mở lại được phòng chờ nếu một loại storage bị trình duyệt chặn.
+      }
+    }
+    state = { audioVolume };
+    legacyListeningResume = false;
+    elements.bootstrapStudent.value = '';
+    resetPreparation();
+    showNotice('Lượt làm trước đã được reset. Hãy chọn lại học viên để bắt đầu lượt mới.', false);
+    return true;
+  }
+
   function availableStorages() {
     const stores = [];
     for (const getStorage of [() => sessionStorage, () => localStorage]) {
@@ -332,7 +352,12 @@
     try {
       const response = await fetch(appConfig.API_BASE_URL + path, { ...options, signal: controller.signal });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+      if (!response.ok) {
+        const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
+        requestError.status = response.status;
+        requestError.code = data.error || '';
+        throw requestError;
+      }
       return data;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Hãy thử lại.');
@@ -563,7 +588,7 @@
       await downloadForSession(prepared);
     } catch (error) {
       elements.bootstrapStudent.disabled = false;
-      showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, true);
+      if (!recoverFromServerReset(error)) showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, true);
     } finally {
       preparing = false;
       elements.bootstrapStudent.disabled = Boolean(state.listeningStartedAt);
