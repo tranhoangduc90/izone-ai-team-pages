@@ -23,7 +23,7 @@
 
   if (!testConfig || !appConfig || !root) return;
 
-  const storageScope = listeningOnly ? ':listening-retake' : '';
+  const storageScope = listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '';
   const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   const restoredSession = readSession();
   const state = {
@@ -319,9 +319,11 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
         <h2>Kết quả của bạn đã sẵn sàng</h2>
-        <p>${writingConfig
-          ? `Listening và Reading đã được chấm, phân tích. Writing đang được chấm riêng và sẽ hiện điểm khi hoàn tất chấm ${writingTaskLabels || 'bài Writing'}.`
-          : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
+        <p>${listeningOnly
+          ? 'Listening đã được lưu, chấm và phân tích theo từng dạng bài. Điểm Reading và Writing được giữ nguyên.'
+          : writingConfig
+            ? `Listening và Reading đã được chấm, phân tích. Writing đang được chấm riêng và sẽ hiện điểm khi hoàn tất chấm ${writingTaskLabels || 'bài Writing'}.`
+            : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
         <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
       </section>
 
@@ -435,6 +437,12 @@
     const matches = state.roster.filter(student => rememberedOfficialStudent(student) && student.ref === remembered.studentRef);
     const candidate = matches.length === 1 ? matches[0] : null;
     const unboundSetup = !hasBoundAttempt();
+    if (!unboundSetup) {
+      studentMemory.candidateRef = '';
+      studentMemory.confirm.hidden = true;
+      setStudentMemoryStatus('Lượt làm đang gắn với tên đã xác nhận.');
+      return;
+    }
     if (unboundSetup) {
       // Selection cached before any attempt is only a convenience, never an identity lock.
       // A newer shared-memory value must be confirmed again before it can target an attempt.

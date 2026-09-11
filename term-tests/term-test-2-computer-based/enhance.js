@@ -6,7 +6,10 @@
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const isDemo = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
-  const storageScope = window.TERM_TEST_RETAKE_CONFIG?.mode === 'listening-only' ? ':listening-retake' : '';
+  const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
+  const storageScope = retakeConfig.mode === 'listening-only'
+    ? String(retakeConfig.storageScope || ':listening-retake:missing')
+    : '';
 
   if (!contentConfig || !testConfig || contentConfig.baseTestSlug !== testConfig.slug) return;
 

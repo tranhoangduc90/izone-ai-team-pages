@@ -10,6 +10,10 @@
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
   const listeningOnly = retakeConfig.mode === 'listening-only';
+  const configuredRetakeGrant = String(retakeConfig.grant || '').trim();
+  const retakeGrant = listeningOnly && /^[A-Za-z0-9_-]{40,1800}\.[A-Za-z0-9_-]{43}$/.test(configuredRetakeGrant)
+    ? configuredRetakeGrant
+    : '';
   const launchStudentRef = listeningOnly ? (query.get('student') || '').trim() : '';
   const demoStudentRef = classCode === 'CODEXDEMO806' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO806' ? (query.get('demoAttempt') || '').trim() : '';
@@ -53,7 +57,7 @@
 
   document.addEventListener('keydown', blockInPageSearchShortcuts, { capture: true });
 
-  const storageScope = listeningOnly ? ':listening-retake' : '';
+  const storageScope = listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '';
   const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageScope}`;
   let state = readState();
@@ -553,6 +557,7 @@
         body: JSON.stringify({
           classCode,
           studentRef,
+          retakeGrant: retakeGrant || undefined,
           examSessionToken: state.examSessionToken || undefined,
           legacyElapsedSeconds: legacyListeningResume ? legacyUiState.audioTime : 0
         })
@@ -639,9 +644,9 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3-20260909-k67-update-v1-20260911-listening-retake-v1');
-    await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7-20260909-k67-update-v1-20260909-mini-audio-v1-20260911-listening-retake-v1'));
-    await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v1'));
+    await loadScript('../shared/app.js?rev=20260829-all-student-confirmation-v2-20260905-memory-v3-20260909-k67-update-v1-20260911-listening-retake-v2');
+    await loadScript(cbtAssetUrl('enhance.js', '20260904-compact-layout-v7-20260909-k67-update-v1-20260909-mini-audio-v1-20260911-listening-retake-v2'));
+    await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
 
   async function resumeAfterListening() {
@@ -946,6 +951,12 @@
       showNotice('Link chưa có mã lớp hợp lệ.', true);
       return;
     }
+    if (listeningOnly && !retakeGrant) {
+      elements.bootstrapDownloadStep.dataset.state = 'error';
+      elements.bootstrapDownloadStatus.textContent = 'Liên kết thi bù chưa có vé hợp lệ. Hãy dùng đúng liên kết giáo viên đã gửi.';
+      showNotice('Không thể mở lượt thi bù bằng liên kết này.', true);
+      return;
+    }
     await initializeStudentMemory();
     elements.bootstrapDownloadStep.dataset.state = 'active';
     elements.bootstrapDownloadStatus.textContent = 'Đang tải danh sách lớp...';
@@ -996,6 +1007,7 @@
       // các liên kết kết quả có demoStudent + demoAttempt vẫn mở thẳng như trước.
       const shouldRestoreSelectedStudent = classCode !== 'CODEXDEMO806'
         && state.studentRef
+        && (!launchStudentRef || state.studentRef === launchStudentRef)
         && roster.some(student => student.ref === state.studentRef);
       if (shouldRestoreSelectedStudent) {
         elements.bootstrapStudent.value = state.studentRef;

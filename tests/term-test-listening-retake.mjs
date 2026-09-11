@@ -13,6 +13,8 @@ test('trang thi bù chỉ bật chế độ Listening và không nhúng danh tí
   const config = await readFile(configPath, 'utf8');
 
   assert.match(config, /mode:\s*'listening-only'/);
+  assert.match(config, /query\.get\('retake'\)/);
+  assert.match(config, /storageScope:/);
   assert.doesNotMatch(entry + config, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
   assert.doesNotMatch(config, /student(?:Name|Ref)\s*:/i);
   assert.ok(entry.indexOf('term-test-1/test-config.js') < entry.indexOf('retake-config.js'));
@@ -31,11 +33,13 @@ test('thi bù điền sẵn bằng UUID chính thức, giữ cổng xác nhận 
   const interactions = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/interaction-tools.js'), 'utf8');
 
   assert.match(bootstrap, /query\.get\('student'\)/);
+  assert.match(bootstrap, /retakeGrant:\s*retakeGrant \|\| undefined/);
+  assert.match(bootstrap, /Liên kết thi bù chưa có vé hợp lệ/);
   assert.match(bootstrap, /launchMatches\.length !== 1/);
   assert.match(bootstrap, /bootstrapStudent\.dispatchEvent\(new Event\('change'\)\)/);
   assert.match(bootstrap, /await confirmStudentIdentity\(selectedStudent\)/);
   for (const source of [bootstrap, sharedApp, enhance, interactions]) {
-    assert.match(source, /:listening-retake/);
+    assert.match(source, /storageScope/);
   }
 });
 
@@ -47,4 +51,5 @@ test('kết quả thi bù chỉ hiện Listening và chờ Portal xác nhận đ
   assert.match(sharedApp, /waitForListeningPortalSync/);
   assert.match(sharedApp, /payload\.portalSyncStatus === 'synced'/);
   assert.match(sharedApp, /Điểm Reading và Writing được giữ nguyên/);
+  assert.match(sharedApp, /Lượt làm đang gắn với tên đã xác nhận/);
 });

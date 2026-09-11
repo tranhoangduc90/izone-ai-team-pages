@@ -12,7 +12,10 @@
 
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const storageScope = window.TERM_TEST_RETAKE_CONFIG?.mode === 'listening-only' ? ':listening-retake' : '';
+  const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
+  const storageScope = retakeConfig.mode === 'listening-only'
+    ? String(retakeConfig.storageScope || ':listening-retake:missing')
+    : '';
   const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageScope;
   const rootSelector = [
     '.cbt-listening-section',
