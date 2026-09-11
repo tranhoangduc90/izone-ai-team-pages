@@ -169,6 +169,19 @@ document.querySelectorAll('[data-test]').forEach(button => {
   });
 });
 
+document.querySelectorAll('[data-destination]').forEach(button => {
+  button.addEventListener('click', () => {
+    const classCode = selectedClassCode();
+    if (!validClassCode(classCode)) {
+      input.setCustomValidity('Hãy nhập hoặc chọn mã lớp hợp lệ.');
+      input.reportValidity();
+      return;
+    }
+    input.setCustomValidity('');
+    window.location.href = `../${button.dataset.destination}/?class=${encodeURIComponent(classCode)}`;
+  });
+});
+
 document.getElementById('teacherDashboard')?.addEventListener('click', () => {
   const classCode = selectedClassCode();
   const query = validClassCode(classCode) ? `?class=${encodeURIComponent(classCode)}` : '';

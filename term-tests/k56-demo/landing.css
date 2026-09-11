@@ -1,0 +1,31 @@
+.landing-card {
+  width: min(820px, 100%);
+}
+
+.landing-link-group {
+  margin-top: 24px;
+}
+
+.landing-link-group h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.landing-actions-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.landing-actions-three .button {
+  min-height: 56px;
+}
+
+.landing-result-action {
+  margin-top: 28px;
+}
+
+@media (max-width: 700px) {
+  .landing-actions-three {
+    grid-template-columns: 1fr;
+  }
+}

@@ -62,3 +62,14 @@ test('dashboard K56 tách riêng và các file K67 không đổi hành vi', asyn
   assert.equal(k67Config.includes('mapping-api-demo'), false);
   assert.match(k67Config, /mapping-api'/);
 });
+
+test('bản đồ Listening K56 ẩn la bàn nhưng giữ nguyên vị trí A–I', async () => {
+  const [content, layout] = await Promise.all([
+    read('term-tests/term-test-1-k56-computer-based/content.js'),
+    read('term-tests/term-test-1-k56-computer-based/layout-updates.css')
+  ]);
+  assert.match(content, /Hinchingbrooke Park: bản đồ với các vị trí A–I/);
+  assert.equal(content.includes('và la bàn'), false);
+  assert.match(layout, /\.k56-map-layout > figure[^}]*overflow:hidden/);
+  assert.match(layout, /\.k56-map-layout img[^}]*width:128\.2%[^}]*max-width:none/);
+});
