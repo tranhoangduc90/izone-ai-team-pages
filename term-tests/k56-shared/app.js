@@ -1500,7 +1500,7 @@
       ? payload.writing?.grading?.ready
         ? 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.'
         : payload.writing?.grading?.status === 'review_required'
-          ? 'Listening và Reading đã chấm xong. Writing đã được nhận nhưng chưa có điểm từ workflow chấm K67.'
+          ? 'Listening và Reading đã chấm xong. Writing đã được nhận nhưng workflow chấm K56 yêu cầu giáo viên kiểm tra.'
           : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
     elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
@@ -1846,7 +1846,7 @@
         saveSession();
         renderResult(buildDemoPayload('complete'));
         showNotice(serverGradingMode
-          ? 'Backend test đã nhận Writing. Listening và Reading bên dưới là điểm chấm thật; Writing chưa gọi workflow K67.'
+          ? 'Backend test đã nhận Writing. Listening và Reading bên dưới là điểm chấm thật; chế độ kiểm thử cục bộ này không gọi workflow chấm K56.'
           : 'Bản demo: Writing đã nộp; kết quả Listening và Reading đã được mở.', 'success');
         setStage('result');
         return;
