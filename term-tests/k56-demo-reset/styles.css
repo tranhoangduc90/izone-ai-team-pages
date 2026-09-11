@@ -1,8 +1,8 @@
 .topbar > .k56-reset-button {
-  flex: 0 0 auto;
-  order: 10;
-  justify-self: end;
-  margin-left: auto;
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1500;
   padding: 9px 14px;
   border: 1px solid #d4e1f2;
   border-radius: 8px;
@@ -11,6 +11,7 @@
   font: 700 14px Arial, sans-serif;
   white-space: nowrap;
   cursor: pointer;
+  box-shadow: 0 10px 26px rgba(15, 35, 65, .2);
 }
 
 .topbar > .k56-reset-button:hover:not(:disabled) {
@@ -27,14 +28,11 @@
   cursor: not-allowed;
 }
 
-.cbt-mode .topbar.k56-reset-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-
-.cbt-mode .topbar.k56-reset-header .cbt-identity-panel {
-  flex: 1 1 360px;
-  min-width: 0;
+@media (max-width: 620px) {
+  .topbar > .k56-reset-button {
+    right: 10px;
+    bottom: 10px;
+    padding: 8px 11px;
+    font-size: 12px;
+  }
 }
