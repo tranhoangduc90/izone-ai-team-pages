@@ -135,12 +135,14 @@ function showLibrary() {
     return option;
   }));
   renderLibrary();
+  $("auth-title").textContent = "Thư viện đã mở";
   $("library-content").hidden = false;
   $("logout-button").hidden = false;
   $("google-signin").hidden = true;
 }
 
 function hideLibrary() {
+  $("auth-title").textContent = "Đăng nhập để mở thư viện";
   $("library-content").hidden = true;
   $("logout-button").hidden = true;
   $("google-signin").hidden = false;
