@@ -1,5 +1,7 @@
 # Web app luyện Writing Task 1 và Task 2
 
+Thư viện giảng viên Speaking Writing chuyên sâu: `https://tranhoangduc90.github.io/izone-ai-team-pages/writing-handouts/library.html`
+
 Giao diện GitHub Pages, không dùng framework và không chứa dữ liệu học viên, prompt chấm, credential hay đáp án. Mở `?task=<slug>` để tải `manifests/<slug>.json`; thêm `&version=<phiên-bản>` để tải `manifests/<slug>/<phiên-bản>.json`. Không có query thì dùng `sample-task`.
 
 Đề “lawbreakers — prison or alternatives” cho IC2200 dùng slug `writing-task2-lawbreakers-prison-alternatives` trên trang `lesson.html`.

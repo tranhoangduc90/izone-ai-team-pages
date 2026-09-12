@@ -10,11 +10,12 @@ import { selectionOffsets, threadsForField } from "./teacher-comments-core.js";
 import { createTeacherCommentThreadCard, renderAnnotatedText } from "./teacher-comments-ui.js";
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
+import { createTeacherSessionStore } from "./library-core.js?v=20260912-sw-library-v1";
 
 const $ = (id) => document.getElementById(id);
 const state = { token: "", api: null, manifest: null, activitySlug: "", students: [], pollTimer: null,
   selectedStudent: null, detailRequestId: 0, focusSection: "", pending: [], canManage: false, draftResults: new Map(),
-  requestedClass: "", classQueryResolved: false, classQueryError: "", reconciliationSearches: new Map() };
+  requestedClass: "", classQueryResolved: false, classQueryError: "", reconciliationSearches: new Map(), sessionStore: null };
 
 function teacherDefinitions() {
   const dynamic = sectionDefinitions(state.manifest);
@@ -510,6 +511,7 @@ async function refresh() {
     const authFailure = teacherAuthFailure(error.status);
     if (authFailure) {
       state.token = "";
+      state.sessionStore?.clear();
       $("teacher-dashboard").hidden = true;
       $("teacher-login").hidden = false;
       $("teacher-updated").textContent = authFailure.header;
@@ -529,6 +531,7 @@ async function refresh() {
 function handleCredential(response) {
   if (!response?.credential) return showLoginError("Không nhận được thông tin đăng nhập.");
   state.token = response.credential;
+  state.sessionStore?.save(state.token);
   $("teacher-login").hidden = false;
   $("teacher-dashboard").hidden = true;
   $("teacher-updated").textContent = "Đang xác minh quyền…";
@@ -561,6 +564,11 @@ async function init() {
     state.manifest = await manifestResponse.json();
     const config = await configResponse.json();
     if (!config.googleClientId) throw new Error("Dashboard chưa được cấu hình đăng nhập giảng viên.");
+    state.sessionStore = createTeacherSessionStore({
+      apiBase: config.apiBase || "",
+      clientId: config.googleClientId,
+      getStorage: () => window.sessionStorage,
+    });
     state.activitySlug = state.manifest.activity?.slug || slug;
     state.api = createTeacherApi(config.apiBase || "", () => state.token);
     $("teacher-title").textContent = state.manifest.activity?.title || "Theo dõi bài làm";
@@ -578,6 +586,8 @@ async function init() {
       state.selectedStudent = null;
     });
     await waitForGoogle(config.googleClientId);
+    const rememberedToken = state.sessionStore.read();
+    if (rememberedToken) handleCredential({ credential: rememberedToken });
   } catch (error) {
     showLoginError(error.message);
   }
