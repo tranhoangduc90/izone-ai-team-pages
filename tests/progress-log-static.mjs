@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+import vm from 'node:vm';
 const root = new URL('../progress-log/', import.meta.url);
 
 async function source(name) {
@@ -24,6 +25,13 @@ test('trang học viên giữ token trong fragment và có đủ năm trạng th
   assert.match(app, /identityConfirmed:\s*true/);
   assert.match(app, /changeRememberedStudent/);
   assert.match(html, /id="rememberStudent"/);
+});
+
+test('frontend local vẫn trỏ tới API production thay vì same-origin backend', async () => {
+  const configSource = await source('config.js');
+  const sandbox = { window: { location: { hostname: '127.0.0.1' } } };
+  vm.runInNewContext(configSource, sandbox, { filename: 'progress-log/config.js' });
+  assert.equal(sandbox.window.PROGRESS_LOG_CONFIG.API_BASE_URL, 'https://ducizone.ddns.net/mapping-api');
 });
 
 test('giao diện không dùng API dựng HTML nguy hiểm', async () => {

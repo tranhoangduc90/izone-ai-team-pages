@@ -542,6 +542,66 @@
     return data;
   }
 
+  function audioCheckpointUrl(){
+    return `${learningConfig().baseUrl}/api/learning/attempts/audio/checkpoint`;
+  }
+
+  async function sendLearningAudioCheckpoint(body, keepalive){
+    if(!keepalive) return learningRequest('/attempts/audio/checkpoint', body);
+    const payload = JSON.stringify(body);
+    const blob = new Blob([payload], {type: 'application/json'});
+    try{
+      if(typeof navigator.sendBeacon === 'function' && navigator.sendBeacon(audioCheckpointUrl(), blob)){
+        return null;
+      }
+    }catch{}
+    const response = await fetch(audioCheckpointUrl(), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      keepalive: true,
+      cache: 'no-store',
+      body: payload
+    });
+    const data = await response.json().catch(() => ({}));
+    if(!response.ok) throw Object.assign(new Error(data.message || `Lỗi HTTP ${response.status}`), {
+      code: data.error,
+      status: response.status
+    });
+    return data;
+  }
+
+  function queueLearningAudioCheckpoint(key, seconds, completed = false, {keepalive = false} = {}){
+    if(!learningEnabled() || !state.learning?.attemptToken) return Promise.resolve(null);
+    const audio = audioPlayers.get(key);
+    const body = {
+      attemptToken: state.learning.attemptToken,
+      audioKey: key,
+      lastHeardSeconds: Math.max(0, Math.min(86400, Number(seconds) || 0)),
+      completed
+    };
+    const previous = audioCheckpointChains.get(key) || Promise.resolve();
+    const next = previous.catch(() => {}).then(async () => {
+      try{
+        const result = await sendLearningAudioCheckpoint(body, keepalive);
+        if(result?.checkpoint) setAudioCheckpointState(key, result.checkpoint);
+        audioCheckpointWarnings.delete(key);
+        renderAudioDock(key);
+        return result?.checkpoint || null;
+      }catch(error){
+        audioCheckpointWarnings.add(key);
+        renderAudioDock(key);
+        if(audio && activeAudioKey === key) setAudioLive(key, 'Đang phát · chưa lưu được mốc mới');
+        throw error;
+      }
+    });
+    audioCheckpointChains.set(key, next);
+    next.then(
+      () => { if(audioCheckpointChains.get(key) === next) audioCheckpointChains.delete(key); },
+      () => { if(audioCheckpointChains.get(key) === next) audioCheckpointChains.delete(key); }
+    );
+    return next;
+  }
+
   async function refreshLearningResult(){
     if(!learningEnabled() || !state.learning?.attemptToken || !state.submittedAt) return;
     if(learningResultPollInFlight) return;
@@ -768,14 +828,16 @@
         </div>
       </div>`).join('');
     return page('vocabulary','Vocabulary',25,'50 ô trả lời · 2 exercises',`
-      <div class="exercise">
-        ${exerciseHead('Exercise 1','Listen and note down the words/phrases you hear from the recording. Save the Definition for later when the recording is finished.','12.5 points')}
-        ${audioDock('vocabulary','Audio · Vocabulary','Mỗi học viên chỉ được nghe ĐÚNG MỘT LẦN. Không thể dừng hoặc tua.')}
-        <div class="answer-grid">${ex1}</div>
-      </div>
-      <div class="exercise">
-        ${exerciseHead('Exercise 2 · Pictorial Words','Look at the pictures and write down the words/phrases they represent. Chú ý: không dùng một từ cho hai câu.','12.5 points')}
-        <div class="picture-grid">${ex2}</div>
+      ${audioDock('vocabulary')}
+      <div data-audio-content="vocabulary" hidden inert aria-hidden="true">
+        <div class="exercise">
+          ${exerciseHead('Exercise 1','Nghe và ghi lại từ/cụm từ nghe được từ Audio','12.5 points')}
+          <div class="answer-grid">${ex1}</div>
+        </div>
+        <div class="exercise">
+          ${exerciseHead('Exercise 2: Pictorial Word','Dựa vào hình ảnh, và ngữ cảnh gợi ý, hãy viết lại từ/cụm từ mà hình ảnh đó đại diện.','12.5 points')}
+          <div class="picture-grid">${ex2}</div>
+        </div>
       </div>`);
   }
 
@@ -784,26 +846,28 @@
     const ranks = Array.from({length:5},(_,i)=>`<div class="rank-card"><label>Vị trí ${i+1}</label><select data-answer="listen_p1_${i+1}" class="rank-select"><option value="">Chọn</option>${['A','B','C','D','E'].map(x=>`<option value="${x}" ${answerValue(`listen_p1_${i+1}`)===x?'selected':''}>${x}</option>`).join('')}</select></div>`).join('');
     const tf = listeningTF.map((t,i)=>`<div class="statement"><div class="statement-text"><span class="qnum">${i+1}</span><div>${esc(t)}</div></div><div class="statement-actions"><label class="pill-choice"><input type="radio" name="listen_p3_${i+1}" data-answer="listen_p3_${i+1}" value="T" ${answerValue(`listen_p3_${i+1}`)==='T'?'checked':''}><span>True</span></label><label class="pill-choice"><input type="radio" name="listen_p3_${i+1}" data-answer="listen_p3_${i+1}" value="F" ${answerValue(`listen_p3_${i+1}`)==='F'?'checked':''}><span>False</span></label></div></div>`).join('');
     return page('listening','Listening',15,'15 items · 3 parts',`
-      ${audioDock('listening','Audio · Listening (toàn bộ 3 phần)','Mỗi học viên chỉ được nghe ĐÚNG MỘT LẦN. Không thể dừng hoặc tua.')}
-      <div class="exercise">
-        ${exerciseHead('Part 1 · American families today','Listen and order the sentences from A to E. You have 30 seconds to read the questions.','5 points')}
-        <div class="choice-list">${orderList}</div>
-        <div class="rank-grid">${ranks}</div>
-      </div>
-      <div class="exercise">
-        ${exerciseHead('Part 2 · My favourite teacher','Listen and complete the table below. WRITE ONE WORD ONLY for each answer. You have 60 seconds to read the questions.','5 points')}
-        <div class="table-wrap"><table>
-          <thead><tr><th style="width:30%">My favorite teacher · Mr. Lambert</th><th>Notes</th></tr></thead>
-          <tbody>
-            <tr><td>His appearance</td><td>• dark hair<br>• <input class="inline-answer" data-answer="listen_p2_1" value="${esc(answerValue('listen_p2_1'))}" aria-label="Listening Part 2 câu 1"> legs<br>• thick beard</td></tr>
-            <tr><td>His teaching style</td><td>• brings energy to the class<br>• always looks for new ways of teaching to communicate ideas<br>• does not use <input class="inline-answer" data-answer="listen_p2_2" value="${esc(answerValue('listen_p2_2'))}" aria-label="Listening Part 2 câu 2"> in his French classes</td></tr>
-            <tr><td>An unforgettable experience</td><td>Once, he used a desk, a blackboard and a <input class="inline-answer" data-answer="listen_p2_3" value="${esc(answerValue('listen_p2_3'))}" aria-label="Listening Part 2 câu 3"> to communicate the word “above”. The students loved it as he was really <input class="inline-answer" data-answer="listen_p2_4" value="${esc(answerValue('listen_p2_4'))}" aria-label="Listening Part 2 câu 4"> about teaching it.</td></tr>
-            <tr><td>Why he is loved by students</td><td>When the students made him <input class="inline-answer" data-answer="listen_p2_5" value="${esc(answerValue('listen_p2_5'))}" aria-label="Listening Part 2 câu 5">, he still loved his students.</td></tr>
-          </tbody></table></div>
-      </div>
-      <div class="exercise">
-        ${exerciseHead('Part 3 · I Spy','Listen and mark these sentences as T (true) or F (false). You have 30 seconds to read the questions.','5 points')}
-        ${tf}
+      ${audioDock('listening')}
+      <div data-audio-content="listening" hidden inert aria-hidden="true">
+        <div class="exercise">
+          ${exerciseHead('Part 1 · American families today','Listen and order the sentences from A to E. You have 30 seconds to read the questions.','5 points')}
+          <div class="choice-list">${orderList}</div>
+          <div class="rank-grid">${ranks}</div>
+        </div>
+        <div class="exercise">
+          ${exerciseHead('Part 2 · My favourite teacher','Listen and complete the table below. WRITE ONE WORD ONLY for each answer. You have 60 seconds to read the questions.','5 points')}
+          <div class="table-wrap"><table>
+            <thead><tr><th style="width:30%">My favorite teacher · Mr. Lambert</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>His appearance</td><td>• dark hair<br>• <input class="inline-answer" data-answer="listen_p2_1" value="${esc(answerValue('listen_p2_1'))}" aria-label="Listening Part 2 câu 1"> legs<br>• thick beard</td></tr>
+              <tr><td>His teaching style</td><td>• brings energy to the class<br>• always looks for new ways of teaching to communicate ideas<br>• does not use <input class="inline-answer" data-answer="listen_p2_2" value="${esc(answerValue('listen_p2_2'))}" aria-label="Listening Part 2 câu 2"> in his French classes</td></tr>
+              <tr><td>An unforgettable experience</td><td>Once, he used a desk, a blackboard and a <input class="inline-answer" data-answer="listen_p2_3" value="${esc(answerValue('listen_p2_3'))}" aria-label="Listening Part 2 câu 3"> to communicate the word “above”. The students loved it as he was really <input class="inline-answer" data-answer="listen_p2_4" value="${esc(answerValue('listen_p2_4'))}" aria-label="Listening Part 2 câu 4"> about teaching it.</td></tr>
+              <tr><td>Why he is loved by students</td><td>When the students made him <input class="inline-answer" data-answer="listen_p2_5" value="${esc(answerValue('listen_p2_5'))}" aria-label="Listening Part 2 câu 5">, he still loved his students.</td></tr>
+            </tbody></table></div>
+        </div>
+        <div class="exercise">
+          ${exerciseHead('Part 3 · I Spy','Listen and mark these sentences as T (true) or F (false). You have 30 seconds to read the questions.','5 points')}
+          ${tf}
+        </div>
       </div>`);
   }
 
@@ -891,18 +955,10 @@
         const row=el.closest('.q-row,.picture-q'); if(row) row.classList.toggle('done',!!String(state.answers[key]).trim());
         updateProgress(); updateWordCounts(); persist();
         queueLearningDraft();
-        if(el.classList.contains('rank-select')) enforceUniqueRanks();
       });
     });
   }
 
-  function enforceUniqueRanks(){
-    const selects=$$('.rank-select');
-    const vals=selects.map(s=>s.value).filter(Boolean);
-    selects.forEach(s=>{
-      [...s.options].forEach(o=>{ if(!o.value) return; o.disabled = o.value!==s.value && vals.includes(o.value); });
-    });
-  }
 
   function expectedKeysForSection(id){
     if(id==='vocabulary') return [...Array.from({length:25},(_,i)=>`vocab1_${i+1}`),...Array.from({length:25},(_,i)=>`vocab2_${i+1}`)];
@@ -981,7 +1037,7 @@
     $('#studentLabel').textContent=[state.studentName,state.classCode].filter(Boolean).join(' · ') || 'Bài kiểm tra 120 phút';
     renderApp(); startTimer(); initAudioDocks();
     if(state.learning?.studentResult) renderLearningResult(state.learning.studentResult);
-    if(state.submittedAt || state.learning?.status === 'submitted') lockSubmittedAttempt();
+    if(state.submittedAt || ['submitted', 'superseded'].includes(state.learning?.status)) lockSubmittedAttempt();
     startLearningResultPolling();
   }
 
@@ -999,11 +1055,17 @@
   const officialAudioKeys = ['vocabulary', 'listening'];
   const audioPlayers = new Map();
   const audioReady = { soundcheck: false, vocabulary: false, listening: false };
+  const audioStartingKeys = new Set();
   let audioVolume = 1;
   let preflightPlayed = false;
   let activeAudioKey = null;
   let allowPause = false;
   let lastGoodTime = 0;
+  const audioCheckpointChains = new Map();
+  const audioCheckpointWarnings = new Set();
+  const audioEndedKeys = new Set();
+  let audioCheckpointTimer = null;
+  let audioResumeRetryInFlight = false;
 
   function audioFlag(key, kind){ return Boolean(state.audioFlags?.[key]?.[kind]); }
   function setAudioFlag(key, kind, value){
@@ -1011,6 +1073,48 @@
     state.audioFlags[key] = state.audioFlags[key] || {};
     state.audioFlags[key][kind] = value;
     persist();
+  }
+
+  function learningAudioCheckpoint(key){
+    return state.learning?.audioCheckpoints?.[key] || null;
+  }
+
+  function learningAudioResumeUnavailableFor(key){
+    return Boolean(
+      learningEnabled() &&
+      state.learning?.audioResumeError &&
+      (audioFlag(key, 'started') || audioFlag(key, 'finished'))
+    );
+  }
+
+  function audioStarted(key){
+    return learningEnabled() ? Boolean(learningAudioCheckpoint(key)) : audioFlag(key, 'started');
+  }
+
+  function audioFinished(key){
+    return learningEnabled()
+      ? Boolean(learningAudioCheckpoint(key)?.completedAt)
+      : audioFlag(key, 'finished');
+  }
+
+  function formatAudioTime(seconds){
+    const value = Math.max(0, Math.floor(Number(seconds) || 0));
+    return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+  }
+
+  function setAudioCheckpointState(key, checkpoint){
+    state.learning = state.learning || {};
+    state.learning.audioCheckpoints = state.learning.audioCheckpoints || {};
+    state.learning.audioCheckpoints[key] = {
+      audioKey: checkpoint.audioKey || key,
+      lastHeardSeconds: Number(checkpoint.lastHeardSeconds) || 0,
+      checkpointedAt: checkpoint.checkpointedAt || null,
+      completedAt: checkpoint.completedAt || null
+    };
+    if (checkpoint.completedAt) audioEndedKeys.add(key);
+    persist();
+    renderAudioDock(key);
+    syncAudioContentVisibility(key);
   }
 
   // Webtest 34 dùng audio R2 remote-only.
@@ -1021,13 +1125,52 @@
     return entry.remote || '';
   }
 
+  function setAudioContentVisible(key, visible){
+    const content = document.querySelector(`[data-audio-content="${key}"]`);
+    if(!content) return;
+    content.hidden = !visible;
+    content.inert = !visible;
+    content.setAttribute('aria-hidden', String(!visible));
+  }
+
+  function syncAudioContentVisibility(key){
+    setAudioContentVisible(key, audioStarted(key) || audioFinished(key));
+  }
+
   function renderAudioDock(key){
     const controls = document.querySelector(`[data-audio-controls="${key}"]`);
     if(!controls) return;
-    const started = audioFlag(key,'started');
-    const finished = audioFlag(key,'finished');
+    const checkpoint = learningAudioCheckpoint(key);
+    const started = audioStarted(key);
+    const finished = audioFinished(key);
+    if(activeAudioKey === key && started){
+      const warning = audioCheckpointWarnings.has(key) ? ' · chưa lưu được mốc mới' : '';
+      controls.innerHTML = `<span class="audio-live-status" data-audio-live="${key}"><span class="dot"></span>Đang phát bài nghe${warning}</span>`;
+      return;
+    }
     if(finished){
       controls.innerHTML = '<span class="audio-live-status"><span class="dot" style="background:#12805c;animation:none"></span>Đã phát xong</span><span class="audio-note">Audio chỉ được nghe một lần.</span>';
+      return;
+    }
+    if(learningAudioResumeUnavailableFor(key)){
+      controls.innerHTML = '<button type="button" class="btn btn-secondary" data-audio-resume-retry>Thử tải lại tiến độ audio</button>';
+      return;
+    }
+    if(learningEnabled() && state.learning?.audioResumeResumable === false){
+      controls.innerHTML = checkpoint
+        ? `<span class="audio-live-status"><span class="dot" style="background:#6d7480;animation:none"></span>Đã lưu tại ${formatAudioTime(checkpoint.lastHeardSeconds)} · không thể phát tiếp</span>`
+        : '<span class="audio-note">Audio không thể phát trong trạng thái phiên hiện tại.</span>';
+      return;
+    }
+    if(audioStartingKeys.has(key)){
+      controls.innerHTML = '<span class="audio-live-status"><span class="dot"></span>Đang bắt đầu phát…</span>';
+      return;
+    }
+    if(checkpoint && !finished){
+      const warning = audioCheckpointWarnings.has(key) ? '<span class="audio-note">Chưa lưu được mốc mới nhất; hệ thống sẽ thử lại.</span>' : '';
+      controls.innerHTML = `
+        <button type="button" class="btn btn-primary audio-resume-btn" data-audio-resume="${key}">Tiếp tục từ ${formatAudioTime(checkpoint.lastHeardSeconds)}</button>
+        ${warning}`;
       return;
     }
     if(!started){
@@ -1047,6 +1190,10 @@
   }
 
   function stopAnyPlayback(){
+    if(audioCheckpointTimer){
+      clearInterval(audioCheckpointTimer);
+      audioCheckpointTimer = null;
+    }
     allowPause = true;
     for(const audio of audioPlayers.values()) audio.pause();
     allowPause = false;
@@ -1146,38 +1293,87 @@
     finally{ allowPause = false; }
   }
 
-  async function playOfficial(key){
-    if(!key || !audioReady[key] || audioFlag(key,'finished') || audioFlag(key,'started')) return;
+  function startAudioCheckpointTimer(key){
+    if(audioCheckpointTimer) clearInterval(audioCheckpointTimer);
+    audioCheckpointTimer = setInterval(() => {
+      if(activeAudioKey !== key) return;
+      const audio = audioPlayers.get(key);
+      if(!audio || audio.ended) return;
+      void queueLearningAudioCheckpoint(key, audio.currentTime, false).catch(() => {});
+    }, 5_000);
+  }
+
+  async function playOfficial(key, resumeSeconds = null){
+    if(
+      !key ||
+      audioStartingKeys.has(key) ||
+      !audioReady[key] ||
+      audioFinished(key) ||
+      learningAudioResumeUnavailableFor(key) ||
+      (learningEnabled() && state.learning?.audioResumeResumable === false)
+    ) return;
+    const checkpoint = learningAudioCheckpoint(key);
+    if(learningEnabled() && checkpoint && resumeSeconds === null) return;
     stopAnyPlayback();
     const audio = audioPlayers.get(key);
-    activeAudioKey = key;
-    setAudioFlag(key,'started', true);
+    if(!audio) return;
+    audioStartingKeys.add(key);
     renderAudioDock(key);
-    setAudioLive(key, 'Đang phát bài nghe');
     try{
-      audio.currentTime = 0;
+      let target = resumeSeconds;
+      if(learningEnabled() && !checkpoint){
+        const saved = await queueLearningAudioCheckpoint(key, 0, false);
+        if(!saved) throw new Error('Chưa xác nhận được mốc bắt đầu audio.');
+        target = saved.lastHeardSeconds;
+      }
+      if(target === null || target === undefined) target = 0;
+      allowPause = true;
+      audio.currentTime = Math.max(0, Math.min(Number(audio.duration) || 86400, Number(target) || 0));
+      allowPause = false;
+      activeAudioKey = key;
       await audio.play();
+      if(!learningEnabled()){
+        setAudioFlag(key,'started', true);
+      }
+      audioEndedKeys.delete(key);
+      setAudioContentVisible(key, true);
       lastGoodTime = audio.currentTime || 0;
-    }catch(err){
-      setAudioLive(key, 'Chưa phát được. Hãy bấm “Bắt đầu phát audio” lần nữa.');
-      setAudioFlag(key,'started', false);
-      activeAudioKey = null;
+      startAudioCheckpointTimer(key);
+    }catch(error){
+      allowPause = false;
+      if(activeAudioKey === key) activeAudioKey = null;
+      if(learningEnabled() && !checkpoint) {
+        setError('audioStartWarning', `Không thể lưu mốc bắt đầu audio: ${error.message} Hãy thử lại.`);
+      }
+    }finally{
+      audioStartingKeys.delete(key);
       renderAudioDock(key);
+      if(activeAudioKey === key) setAudioLive(key, 'Đang phát bài nghe');
     }
+  }
+
+  function resumeOfficial(key){
+    const checkpoint = learningAudioCheckpoint(key);
+    if(checkpoint && !checkpoint.completedAt) void playOfficial(key, checkpoint.lastHeardSeconds);
   }
 
   function initAudioDocks(){
     $$('[data-audio-dock]').forEach(dock => {
       const key = dock.dataset.audioDock;
       renderAudioDock(key);
+      syncAudioContentVisibility(key);
     });
   }
 
   document.addEventListener('click', e => {
     const startBtn = e.target.closest('[data-audio-start]');
     if(startBtn){
-      playOfficial(startBtn.dataset.audioStart);
+      void playOfficial(startBtn.dataset.audioStart);
       return;
+    }
+    const resumeBtn = e.target.closest('[data-audio-resume]');
+    if(resumeBtn){
+      resumeOfficial(resumeBtn.dataset.audioResume);
     }
   });
 
@@ -1185,27 +1381,47 @@
   $('#audioVolume').addEventListener('input', e => setAudioVolume(e.target.value));
   document.addEventListener('click', e => {
     const retry = e.target.closest('[data-audio-retry]');
-    if(retry) retryAudio(retry.dataset.audioRetry);
+    if(retry) void retryAudio(retry.dataset.audioRetry);
+    const resumeRetry = e.target.closest('[data-audio-resume-retry]');
+    if(resumeRetry) void restoreAudioResume();
   });
+
+
+
 
   // ---- Chặn mọi hình thức tạm dừng / tua khi đang phát chính thức ----
   function bindOfficialAudio(key, audio){
     audio.addEventListener('pause', () => {
       if(activeAudioKey !== key || audio.ended || allowPause) return;
-      if(audioFlag(key,'started')) audio.play().catch(()=>{});
+      if(audioStarted(key)) audio.play().catch(()=>{});
     });
     audio.addEventListener('timeupdate', () => {
-      if(activeAudioKey === key && audioFlag(key,'started') && !audio.ended) lastGoodTime = audio.currentTime;
+      if(activeAudioKey === key && audioStarted(key) && !audio.ended) lastGoodTime = audio.currentTime;
     });
     audio.addEventListener('seeking', () => {
-      if(activeAudioKey !== key || allowPause || !audioFlag(key,'started')) return;
-      if(Math.abs(audio.currentTime - lastGoodTime) > 1.5){ allowPause = true; audio.currentTime = lastGoodTime; allowPause = false; }
+      if(activeAudioKey !== key || allowPause || !audioStarted(key)) return;
+      if(Math.abs(audio.currentTime - lastGoodTime) > 1.5){
+        allowPause = true;
+        audio.currentTime = lastGoodTime;
+        allowPause = false;
+      }
     });
     audio.addEventListener('ended', () => {
       if(activeAudioKey !== key) return;
-      setAudioFlag(key,'finished', true);
+      audioEndedKeys.add(key);
+      const endedAt = audio.currentTime || lastGoodTime || 0;
       activeAudioKey = null;
+      if(audioCheckpointTimer){
+        clearInterval(audioCheckpointTimer);
+        audioCheckpointTimer = null;
+      }
       renderAudioDock(key);
+      if(learningEnabled()){
+        void queueLearningAudioCheckpoint(key, endedAt, true).catch(() => {});
+      }else{
+        setAudioFlag(key,'finished', true);
+        renderAudioDock(key);
+      }
     });
   }
 
@@ -1218,17 +1434,81 @@
     await retryAudio('listening');
   }
 
+  function applyLearningAudioResume(resume){
+    state.learning = state.learning || {};
+    state.learning.audioCheckpoints = Object.fromEntries(
+      (resume.checkpoints || []).map(checkpoint => [checkpoint.audioKey, checkpoint])
+    );
+    state.learning.audioResumeError = false;
+    state.learning.audioResumeLoaded = true;
+    state.learning.audioResumeResumable = Boolean(resume.resumable);
+    state.learning.resumeReason = resume.reason;
+    state.learning.status = resume.status;
+    if(resume.expiresAt) state.learning.expiresAt = Date.parse(resume.expiresAt);
+    if(['submitted', 'superseded'].includes(resume.status)) state.submittedAt = state.submittedAt || Date.now();
+    persist();
+  }
+
+  async function restoreAudioResume(){
+    if(!learningEnabled() || !state.learning?.attemptToken) return null;
+    if(audioResumeRetryInFlight) return null;
+    audioResumeRetryInFlight = true;
+    try{
+      const result = await learningRequest('/attempts/audio/resume', {
+        attemptToken: state.learning.attemptToken
+      });
+      applyLearningAudioResume(result.resume);
+      if(document.querySelector('[data-audio-dock]')) initAudioDocks();
+      return result.resume;
+    }catch(error){
+      state.learning.audioResumeError = true;
+      state.learning.audioResumeLoaded = false;
+      persist();
+      if(document.querySelector('[data-audio-dock]')) initAudioDocks();
+      throw error;
+    }finally{
+      audioResumeRetryInFlight = false;
+    }
+  }
+
   // Cấm phím điều khiển media khi đang phát chính thức.
   document.addEventListener('keydown', e => {
     if(!activeAudioKey || previewing) return;
-    if(!audioFlag(activeAudioKey,'started')) return;
+    if(!audioStarted(activeAudioKey)) return;
     if([' ','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){
       e.preventDefault();
     }
   });
+  function snapshotActiveAudio(){
+    if(!activeAudioKey || activeAudioKey === 'soundcheck' || !audioStarted(activeAudioKey)) return;
+    const audio = audioPlayers.get(activeAudioKey);
+    if(!audio || audio.ended) return;
+    void queueLearningAudioCheckpoint(activeAudioKey, audio.currentTime, false, {keepalive: true}).catch(() => {});
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden') snapshotActiveAudio();
+  });
+
+  window.addEventListener('beforeunload', event => {
+    if(
+      !learningEnabled() ||
+      !state.learning?.attemptToken ||
+      state.learning?.status !== 'active' ||
+      state.learning?.audioResumeResumable === false
+    ) return;
+    const unfinished = officialAudioKeys.some(key => audioStarted(key) && !audioFinished(key) && !audioEndedKeys.has(key));
+    if(unfinished){
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  });
+
   window.addEventListener('pagehide', () => {
+    snapshotActiveAudio();
     allowPause = true;
     stopAnyPlayback();
+    allowPause = false;
   });
   // ==== Hết engine audio một lần ====
 
@@ -1417,7 +1697,7 @@
         state.startedAt = result.attempt.startedAt ? Date.parse(result.attempt.startedAt) : state.startedAt;
         if(result.attempt.status === 'submitted') state.submittedAt = state.submittedAt || Date.now();
         if(result.attempt.draft) state.answers = {...state.answers, ...result.attempt.draft};
-        state.answers = state.answers || {};
+        if(result.attempt.attemptToken) await restoreAudioResume();
       }
       state.startedAt = state.startedAt || Date.now();
       persist();
@@ -1452,8 +1732,10 @@
   $('#fontUp').addEventListener('click',()=>{fontScale=Math.min(1.2,Math.round((fontScale+.06)*100)/100);document.documentElement.style.setProperty('--font-scale',fontScale);persist()});
   $('#cancelSubmit').addEventListener('click',()=>$('#submitModal').classList.add('hidden'));
   function acceptLearningSubmission(result){
+    stopAnyPlayback();
     state.submittedAt = state.submittedAt || Date.now();
     state.learning.status = 'submitted';
+    state.learning.audioResumeResumable = false;
     state.learning.gradingStatus = result.receipt?.gradingStatus || result.result?.gradingStatus || 'pending';
     if(result.result) state.learning.studentResult = result.result;
     persist();
@@ -1499,13 +1781,26 @@
     }
   });
   $('#submitModal').addEventListener('click',e=>{if(e.target.id==='submitModal') $('#submitModal').classList.add('hidden')});
+  // Restore identity fields and persisted Learning audio before rendering the exam.
+  async function initializePage(){
+    await preloadAudioInOrder();
+    if(state.startedAt && state.studentName && state.classCode){
+      if(learningEnabled() && state.learning?.attemptToken){
+        try{
+          await restoreAudioResume();
+        }catch(error){
+          setError('studentError', `Không tải được tiến độ audio: ${error.message} Hãy thử tải lại tiến độ.`);
+        }
+      }
+      showExam();
+    }else if(state.classCode && classCodeValid(state.classCode)){
+      await loadRoster();
+    }
+  }
 
-  // Restore identity fields and resume automatically when a draft exists.
   $('#classCode').value=state.classCode||'';
   updateStartButton();
-  preloadAudioInOrder();
-  if(state.startedAt && state.studentName && state.classCode) showExam();
-  else if(state.classCode && classCodeValid(state.classCode)) loadRoster();
+  void initializePage();
 })();
 </script>
 </body>

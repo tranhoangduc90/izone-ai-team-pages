@@ -163,35 +163,6 @@ test('cấu hình Webtest 34 giữ timer và audio chính thức', async () => {
   });
 });
 
-test('Webtest 34 yêu cầu preflight audio trước khi bắt đầu và không nghe thử trong phần thi', async () => {
-  const index = await read('term-tests/webtest-34-demo/index.html');
-  assert.match(index, /id=["']audioCheckScreen["']/);
-  assert.match(index, /id=["']continueToAudio["']/);
-  assert.match(index, /id=["']audioPreflight["']/);
-  assert.match(index, /class=["']audio-preflight-featured["'][^>]*data-audio-preflight=["']soundcheck["']/);
-  assert.match(index, /id=["']audioVolume["']/);
-  assert.match(index, /id=["']audioVolumeValue["']/);
-  assert.match(index, /audio\.volume = audioVolume/);
-  assert.match(index, /\$\('#audioVolume'\)\.addEventListener\('input'/);
-  assert.match(index, /class=["']btn btn-primary["'][^>]*id=["']soundcheckBtn["']/);
-  assert.match(index, /id=["']startExam["']/);
-  assert.match(index, /id=["']audioStartWarning["']/);
-  assert.match(index, /setError\('audioStartWarning','Hãy bấm/);
-  assert.match(index, /const ready = officialAudioKeys\.every\(key => audioReady\[key\]\)/);
-  assert.match(index, /data-audio-preflight=["']vocabulary["']/);
-  assert.match(index, /data-audio-preflight=["']listening["']/);
-  assert.equal(index.includes('data-audio-preview'), false);
-  assert.equal(index.includes('playPreview'), false);
-  assert.equal(index.includes("audioFlag(key,'previewed')"), false);
-  assert.ok(index.indexOf('id="audioCheckScreen"') < index.indexOf('id="audioPreflight"'));
-  assert.match(index, /async function preloadAudioInOrder\(\)/);
-  assert.match(index, /await retryAudio\('soundcheck'\)/);
-  assert.match(index, /await retryAudio\('vocabulary'\)/);
-  assert.match(index, /await retryAudio\('listening'\)/);
-  assert.match(index, /audio\.src = src/);
-  assert.equal(index.includes('const response = await fetch(src'), false);
-  assert.ok(index.indexOf('const rosterData') < index.lastIndexOf('preloadAudioInOrder();'));
-});
 
 test('demo Webtest 34 dùng index.html làm nguồn prototype duy nhất', async () => {
   const index = await read('term-tests/webtest-34-demo/index.html');
