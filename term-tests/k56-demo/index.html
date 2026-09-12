@@ -8,6 +8,7 @@
     <title>Danh sách bài test · Khóa 56</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="../shared/styles.css?rev=20260904-k56-demo-v1">
+    <link rel="stylesheet" href="landing.css?rev=20260911-k56-selected-button-v1">
   </head>
   <body>
     <main class="landing-shell">
@@ -30,28 +31,37 @@
           <p class="landing-class-help" id="classHelp" role="status">Bạn vẫn có thể nhập mã lớp khi chưa đăng nhập.</p>
         </div>
         <p>CODEXDEMO56 dùng dữ liệu giả lập. IC2264 dùng danh sách lớp thật và đồng bộ điểm sang Portal khóa 56.</p>
-        <h2>Term Test 1 · Online</h2>
-        <p>Listening: 40 câu · Reading: 26 câu · Writing: Task 2. Có chấm Writing tự động và dashboard giáo viên.</p>
-        <div class="landing-actions">
-          <button class="button button-primary" type="button" data-test="term-test-1-k56-computer-based" data-slug="term-test-1-k56">Mở Term Test 1</button>
-        </div>
-        <h2>Term Test 2 · Online</h2>
-        <p>Listening: 40 câu · Reading: 40 câu · Writing: Task 1. Nộp bài Writing để chấm tự động theo TA, CC, LR và GRA.</p>
-        <div class="landing-actions">
-          <button class="button button-primary" type="button" data-test="term-test-2-k56-computer-based" data-slug="term-test-2-k56">Mở Term Test 2</button>
-        </div>
-        <h2>Mini Test · Online</h2>
-        <p>Listening: 10 câu · Reading: 13 câu · Writing: đoạn văn tối thiểu 100 từ trong 15 phút. Chấm tự động theo rubric đoạn văn; điểm Writing không phải IELTS band.</p>
-        <div class="landing-actions">
-          <button class="button button-primary" type="button" data-test="mini-test-k56-computer-based" data-slug="mini-test-k56">Mở Mini Test</button>
-        </div>
-        <div class="landing-actions">
+        <section class="landing-link-group" aria-labelledby="onlineTestsHeading">
+          <h2 id="onlineTestsHeading">Bài thi</h2>
+          <div class="landing-actions landing-actions-three">
+            <button class="button button-secondary landing-choice" type="button" data-test="term-test-1-k56-computer-based" data-slug="term-test-1-k56" aria-pressed="false">Term Test 1</button>
+            <button class="button button-secondary landing-choice" type="button" data-test="term-test-2-k56-computer-based" data-slug="term-test-2-k56" aria-pressed="false">Term Test 2</button>
+            <button class="button button-secondary landing-choice" type="button" data-test="mini-test-k56-computer-based" data-slug="mini-test-k56" aria-pressed="false">Mini Test</button>
+          </div>
+        </section>
+        <section class="landing-link-group" aria-labelledby="audioBackupHeading">
+          <h2 id="audioBackupHeading">Audio Backup</h2>
+          <div class="landing-actions landing-actions-three">
+            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-1-k56-audio" aria-pressed="false">Audio Term Test 1</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-2-k56-audio" aria-pressed="false">Audio Term Test 2</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="mini-test-k56-audio" aria-pressed="false">Audio Mini Test</button>
+          </div>
+        </section>
+        <section class="landing-link-group" aria-labelledby="answerSheetHeading">
+          <h2 id="answerSheetHeading">Answer Sheet dự phòng</h2>
+          <div class="landing-actions landing-actions-three">
+            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-1-k56" aria-pressed="false">Answer Sheet Term Test 1</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-2-k56" aria-pressed="false">Answer Sheet Term Test 2</button>
+            <button class="button button-secondary landing-choice" type="button" data-destination="mini-test-k56" aria-pressed="false">Answer Sheet Mini Test</button>
+          </div>
+        </section>
+        <div class="landing-actions landing-result-action">
           <button class="button button-secondary" type="button" id="teacherDashboard">Xem kết quả</button>
         </div>
         <p>Trong trang kết quả, chọn Term Test 1, Term Test 2 hoặc Mini Test. Giảng viên cần đăng nhập Google bằng tài khoản đã được cấp quyền.</p>
       </section>
     </main>
     <script src="../k56-shared/config.js?rev=20260907-k56-class-picker"></script>
-    <script type="module" src="landing.js?rev=20260907-k56-class-picker"></script>
+    <script type="module" src="landing.js?rev=20260911-k56-selected-button-v1"></script>
   </body>
 </html>

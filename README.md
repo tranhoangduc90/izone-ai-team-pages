@@ -24,6 +24,7 @@ Khi thêm một web mới, ưu tiên dùng thư mục con có tên ổn định;
 ## Link Term Test và Mini Test
 
 - Term Test 1 computer-based: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-1-computer-based/?class=<MÃ_LỚP>`
+- Term Test 1 thi bù riêng Listening: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-1-listening-retake/?class=<MÃ_LỚP>&student=<UUID_HỌC_VIÊN>&retake=<VÉ_THI_BÙ>`
 - Term Test 1 answer sheet: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-1/?class=<MÃ_LỚP>`
 - Term Test 2 computer-based: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-2-computer-based/?class=<MÃ_LỚP>`
 - Term Test 2 answer sheet: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-2/?class=<MÃ_LỚP>`

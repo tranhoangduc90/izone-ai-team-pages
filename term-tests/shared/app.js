@@ -8,8 +8,10 @@
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const requestedDemo = query.get('demo') || '';
-  const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
-  const deferResultsUntilComplete = Boolean(window.TERM_TEST_CONTENT?.deferResultsUntilComplete);
+  const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
+  const listeningOnly = retakeConfig.mode === 'listening-only';
+  const writingConfig = listeningOnly ? null : (window.TERM_TEST_CONTENT?.writing || null);
+  const deferResultsUntilComplete = listeningOnly ? false : Boolean(window.TERM_TEST_CONTENT?.deferResultsUntilComplete);
   const readingMinutes = Math.max(1, Number(window.TERM_TEST_CONTENT?.timing?.readingMinutes) || 60);
   const writingMinutes = Math.max(1, Number(window.TERM_TEST_CONTENT?.timing?.writingMinutes) || 60);
   const writingTasks = Array.from(writingConfig?.tasks || []);
@@ -21,7 +23,8 @@
 
   if (!testConfig || !appConfig || !root) return;
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}`;
+  const storageScope = listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '';
+  const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   const restoredSession = readSession();
   const state = {
     stage: 'loading',
@@ -44,6 +47,8 @@
     writingStarted: false,
     writingSubmitted: false,
     writingDirty: false,
+    writingRevision: 0,
+    writingAckRevision: 0,
     drafts: { listening: {}, reading: {}, writing: { task1: '', task2: '' } },
     draftRevisions: { listening: 0, reading: 0 },
     draftAckRevisions: { listening: 0, reading: 0 },
@@ -75,7 +80,9 @@
     draftAckRevisions: {
       listening: Number(restoredSession.draftAckRevisions?.listening) || 0,
       reading: Number(restoredSession.draftAckRevisions?.reading) || 0
-    }
+    },
+    writingRevision: Number(restoredSession.writingRevision) || 0,
+    writingAckRevision: Number(restoredSession.writingAckRevision) || 0
   };
 
   // Trình duyệt chặn một kho lưu vẫn cho chọn tên và dùng kho còn lại.
@@ -116,6 +123,8 @@
       writingStarted: state.writingStarted,
       writingSubmitted: state.writingSubmitted,
       writingDirty: state.writingDirty,
+      writingRevision: state.writingRevision,
+      writingAckRevision: state.writingAckRevision,
       drafts: state.drafts,
       draftRevisions: state.draftRevisions,
       draftAckRevisions: state.draftAckRevisions,
@@ -133,8 +142,8 @@
   }
 
   function clearAllLocalAttemptData() {
-    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}`;
-    const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}:`;
+    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageScope}`;
+    const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}${storageScope}:`;
     for (const storage of availableStorages()) {
       try {
         storage.removeItem(storageKey);
@@ -149,7 +158,10 @@
     }
   }
 
-  const progressMarkup = writingConfig
+  const progressMarkup = listeningOnly
+    ? `<div class="progress-step" data-progress="listening">1. Listening</div>
+        <div class="progress-step" data-progress="result">2. Kết quả</div>`
+    : writingConfig
     ? `<div class="progress-step" data-progress="listening">1. Listening</div>
         <div class="progress-step" data-progress="reading">2. Reading</div>
         <div class="progress-step" data-progress="writing">3. Writing</div>
@@ -190,7 +202,18 @@
       </form>
   ` : '';
 
-  const listeningSavedMarkup = (writingConfig || deferResultsUntilComplete) ? `
+  const listeningSavedMarkup = listeningOnly ? `
+      <section class="panel transition-card" id="listeningSavedView" hidden>
+        <div class="transition-icon">✓</div>
+        <p class="eyebrow">Đã chấm bài Listening</p>
+        <h2>Điểm và phân tích Listening đã sẵn sàng</h2>
+        <p>Reading và Writing không thuộc lượt thi bù này nên không hiển thị và không bị ghi đè.</p>
+        <div class="form-actions transition-actions">
+          <button class="button button-primary" id="viewListeningResult" type="button">Xem điểm và phân tích Listening</button>
+          <button id="startReading" type="button" hidden>Không dùng trong lượt thi bù</button>
+        </div>
+      </section>
+  ` : (writingConfig || deferResultsUntilComplete) ? `
       <section class="panel transition-card" id="listeningSavedView" hidden>
         <div class="transition-icon">✓</div>
         <p class="eyebrow">Listening đã được ghi nhận</p>
@@ -302,9 +325,11 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
         <h2>Kết quả của bạn đã sẵn sàng</h2>
-        <p>${writingConfig
-          ? `Listening và Reading đã được chấm, phân tích. Writing đang được chấm riêng và sẽ hiện điểm khi hoàn tất chấm ${writingTaskLabels || 'bài Writing'}.`
-          : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
+        <p>${listeningOnly
+          ? 'Listening đã được lưu, chấm và phân tích theo từng dạng bài. Điểm Reading và Writing được giữ nguyên.'
+          : writingConfig
+            ? `Listening và Reading đã được chấm, phân tích. Writing đang được chấm riêng và sẽ hiện điểm khi hoàn tất chấm ${writingTaskLabels || 'bài Writing'}.`
+            : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
         <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
       </section>
 
@@ -418,6 +443,12 @@
     const matches = state.roster.filter(student => rememberedOfficialStudent(student) && student.ref === remembered.studentRef);
     const candidate = matches.length === 1 ? matches[0] : null;
     const unboundSetup = !hasBoundAttempt();
+    if (!unboundSetup) {
+      studentMemory.candidateRef = '';
+      studentMemory.confirm.hidden = true;
+      setStudentMemoryStatus('Lượt làm đang gắn với tên đã xác nhận.');
+      return;
+    }
     if (unboundSetup) {
       // Selection cached before any attempt is only a convenience, never an identity lock.
       // A newer shared-memory value must be confirmed again before it can target an attempt.
@@ -570,6 +601,7 @@
   }
 
   function resultsUnlocked() {
+    if (listeningOnly) return Boolean(state.attemptToken || state.result?.result?.listening);
     if (writingConfig) return Boolean(state.writingSubmitted);
     return !deferResultsUntilComplete || Boolean(state.completed);
   }
@@ -600,7 +632,9 @@
       : stage === 'reading' ? 'reading'
         : stage === 'writing-prep' || stage === 'writing' ? 'writing'
           : stage === 'result-ready' || stage === 'result' ? 'result' : '';
-    const order = writingConfig ? ['listening', 'reading', 'writing', 'result'] : ['listening', 'reading', 'result'];
+    const order = listeningOnly
+      ? ['listening', 'result']
+      : writingConfig ? ['listening', 'reading', 'writing', 'result'] : ['listening', 'reading', 'result'];
     const activeIndex = order.indexOf(activeProgress);
     for (const step of progressSteps) {
       const index = order.indexOf(step.dataset.progress);
@@ -869,9 +903,13 @@
     return true;
   }
 
+  function randomDelay(minimum, maximum) {
+    return Math.floor(minimum + (Math.random() * (maximum - minimum + 1)));
+  }
+
   const sectionDraftFlows = {
-    listening: { timer: 0, retryTimer: 0, promise: Promise.resolve() },
-    reading: { timer: 0, retryTimer: 0, promise: Promise.resolve() }
+    listening: { timer: 0, forceTimer: 0, retryTimer: 0, promise: Promise.resolve() },
+    reading: { timer: 0, forceTimer: 0, retryTimer: 0, promise: Promise.resolve() }
   };
 
   async function saveSectionDraftSnapshot(skill, answers, revision) {
@@ -899,6 +937,10 @@
   function queueSectionDraft(skill) {
     if (demoMode) return Promise.resolve(null);
     const flow = sectionDraftFlows[skill];
+    window.clearTimeout(flow.timer);
+    window.clearTimeout(flow.forceTimer);
+    flow.timer = 0;
+    flow.forceTimer = 0;
     const revision = Number(state.draftRevisions[skill]) || 0;
     const answers = { ...(state.drafts[skill] || {}) };
     const operation = flow.promise.catch(() => undefined).then(async () => {
@@ -935,23 +977,28 @@
         answeredCount: countAnswered(answers)
       });
       window.clearTimeout(flow.retryTimer);
-      flow.retryTimer = window.setTimeout(() => scheduleSectionDraft(skill, 0), 5000);
+      flow.retryTimer = window.setTimeout(() => scheduleSectionDraft(skill, 0), randomDelay(4_000, 8_000));
       return null;
     });
     return flow.promise;
   }
 
-  function scheduleSectionDraft(skill, delay = 600) {
+  function scheduleSectionDraft(skill, delay = null) {
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
     const flow = sectionDraftFlows[skill];
     window.clearTimeout(flow.timer);
     window.clearTimeout(flow.retryTimer);
-    flow.timer = window.setTimeout(() => queueSectionDraft(skill), delay);
+    const idleDelay = Number.isFinite(delay) ? Math.max(0, delay) : randomDelay(2_000, 5_000);
+    flow.timer = window.setTimeout(() => queueSectionDraft(skill), idleDelay);
+    if (!flow.forceTimer && idleDelay > 0) {
+      flow.forceTimer = window.setTimeout(() => queueSectionDraft(skill), randomDelay(10_000, 15_000));
+    }
   }
 
   function stopSectionDraftFlow(skill) {
     const flow = sectionDraftFlows[skill];
     window.clearTimeout(flow.timer);
+    window.clearTimeout(flow.forceTimer);
     window.clearTimeout(flow.retryTimer);
   }
 
@@ -1047,9 +1094,9 @@
   window.TERM_TEST_DEADLINE_GUARD_ACTIVE = true;
 
   let writingSaveTimer = 0;
+  let writingForceSaveTimer = 0;
   let writingRetryTimer = 0;
   let writingSavePromise = Promise.resolve();
-  let writingRevision = 0;
   let writingGradingPollTimer = 0;
   let writingGradingPollStartedAt = 0;
   let writingGradingPollCount = 0;
@@ -1141,6 +1188,9 @@
     state.writingSubmitted = Boolean(writing.submitted || state.writingSubmitted);
     state.writingDeadlineAt = writing.deadlineAt || state.writingDeadlineAt;
     if (writing.serverNow) state.serverTimeOffsetMs = Date.parse(writing.serverNow) - Date.now();
+    const serverRevision = Number(writing.revision) || 0;
+    state.writingAckRevision = Math.max(Number(state.writingAckRevision) || 0, serverRevision);
+    if (useServerDraft) state.writingRevision = Math.max(Number(state.writingRevision) || 0, serverRevision);
     syncWritingEditors();
     saveSession();
   }
@@ -1148,6 +1198,7 @@
   function writingPayload(action) {
     return {
       attemptToken: state.attemptToken,
+      revision: Number(state.writingRevision) || 0,
       action,
       task1: String(state.drafts.writing.task1 || ''),
       task2: String(state.drafts.writing.task2 || '')
@@ -1158,8 +1209,10 @@
     if (demoMode) return { writing: null };
     if (!state.attemptToken) throw new Error('Chưa có mã lượt làm để lưu Writing.');
     window.clearTimeout(writingSaveTimer);
+    window.clearTimeout(writingForceSaveTimer);
     window.clearTimeout(writingRetryTimer);
-    const revision = writingRevision;
+    writingForceSaveTimer = 0;
+    const revision = Number(state.writingRevision) || 0;
     const payload = writingPayload(action);
     const operation = writingSavePromise.catch(() => undefined).then(() => apiRequest('/api/term-tests/writing', {
       method: 'POST',
@@ -1168,30 +1221,46 @@
     }));
     writingSavePromise = operation;
     const response = await operation;
-    if (response.writing?.submitted || revision === writingRevision) {
+    const acknowledgedRevision = Number(response.writing?.revision) || revision;
+    state.writingAckRevision = Math.max(Number(state.writingAckRevision) || 0, acknowledgedRevision);
+    if (response.writing?.submitted || (response.writing?.accepted !== false && revision === state.writingRevision)) {
       state.writingDirty = false;
+      applyWritingFromServer(response.writing, true);
+    } else if (response.writing?.accepted === false && state.writingRevision <= acknowledgedRevision) {
+      state.writingDirty = false;
+      state.writingRevision = acknowledgedRevision;
       applyWritingFromServer(response.writing, true);
     } else {
       state.writingStarted = Boolean(response.writing?.started || state.writingStarted);
       saveSession();
     }
-    if (revision < writingRevision && !state.writingSubmitted) scheduleWritingSave(500);
+    if (revision < state.writingRevision && !state.writingSubmitted) scheduleWritingSave(0);
     else setWritingSaveStatus(response.writing?.submitted ? 'Đã nộp và lưu trên hệ thống' : 'Đã lưu trên hệ thống');
     return response;
   }
 
-  function scheduleWritingSave(delay = 900) {
+  function scheduleWritingSave(delay = null) {
     if (demoMode || !state.writingStarted || state.writingSubmitted) return;
     window.clearTimeout(writingSaveTimer);
     window.clearTimeout(writingRetryTimer);
     setWritingSaveStatus('Đang chờ lưu trên hệ thống...');
+    const idleDelay = Number.isFinite(delay) ? Math.max(0, delay) : randomDelay(3_000, 7_000);
     writingSaveTimer = window.setTimeout(() => {
       setWritingSaveStatus('Đang lưu trên hệ thống...');
       saveWritingToServer('draft').catch(() => {
         setWritingSaveStatus('Chưa lưu được · hệ thống sẽ tự thử lại');
-        writingRetryTimer = window.setTimeout(() => scheduleWritingSave(0), 5000);
+        writingRetryTimer = window.setTimeout(() => scheduleWritingSave(0), randomDelay(5_000, 9_000));
       });
-    }, delay);
+    }, idleDelay);
+    if (!writingForceSaveTimer && idleDelay > 0) {
+      writingForceSaveTimer = window.setTimeout(() => {
+        setWritingSaveStatus('Đang lưu trên hệ thống...');
+        saveWritingToServer('draft').catch(() => {
+          setWritingSaveStatus('Chưa lưu được · hệ thống sẽ tự thử lại');
+          writingRetryTimer = window.setTimeout(() => scheduleWritingSave(0), randomDelay(5_000, 9_000));
+        });
+      }, randomDelay(10_000, 15_000));
+    }
   }
 
   async function restoreAttemptFromServer() {
@@ -1210,6 +1279,36 @@
     applyWritingFromServer(payload.writing);
     saveSession();
     return payload;
+  }
+
+  // Dữ liệu vào: snapshot mới nhất đang giữ trên máy khi tab bị đóng hoặc chuyển trang.
+  // Việc chính: gửi một request keepalive cho đúng token/revision; không chờ phản hồi để cản thao tác của học viên.
+  // Kết quả: thay đổi cuối cùng có thêm cơ hội tới server trước khi trang biến mất; submit cuối vẫn là đường chốt chính thức.
+  // Khi lỗi mạng: localStorage vẫn giữ bản mới nhất để lần mở sau gửi lại.
+  function flushDraftsOnPageHide() {
+    const post = (path, payload) => fetch(`${appConfig.API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).catch(() => null);
+    if (state.examSessionToken && state.draftRevisions.listening > state.draftAckRevisions.listening) {
+      post(`/api/term-tests/${testConfig.slug}/listening/draft`, {
+        examSessionToken: state.examSessionToken,
+        revision: Number(state.draftRevisions.listening) || 0,
+        answers: state.drafts.listening || {}
+      });
+    }
+    if (state.attemptToken && state.draftRevisions.reading > state.draftAckRevisions.reading && !state.completed) {
+      post(`/api/term-tests/${testConfig.slug}/reading/draft`, {
+        attemptToken: state.attemptToken,
+        revision: Number(state.draftRevisions.reading) || 0,
+        answers: state.drafts.reading || {}
+      });
+    }
+    if (state.attemptToken && state.writingDirty && !state.writingSubmitted) {
+      post('/api/term-tests/writing', writingPayload('draft'));
+    }
   }
 
   async function resumeActiveAttemptForSelectedStudent() {
@@ -1441,7 +1540,10 @@
       editor.addEventListener('input', () => {
         state.drafts.writing[task.id] = editor.value;
         state.writingDirty = true;
-        writingRevision += 1;
+        state.writingRevision = Math.max(
+          Number(state.writingRevision) || 0,
+          Number(state.writingAckRevision) || 0
+        ) + 1;
         wordCount.textContent = `${countWords(editor.value)} từ`;
         saveSession();
         scheduleWritingSave();
@@ -2158,24 +2260,26 @@
   function renderResult(payload) {
     if (!resultsUnlocked()) return false;
     const result = payload.result;
-    const hasReading = Boolean(result.reading);
+    const hasReading = !listeningOnly && Boolean(result.reading);
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
-    elements.summaryGrid.replaceChildren(
-      addSummaryCard('Listening', sectionScoreText(result.listening)),
-      addSummaryCard('Reading', hasReading ? sectionScoreText(result.reading) : 'Chưa nộp')
-    );
-    elements.resultStatus.textContent = hasReading
+    const summaryCards = [addSummaryCard('Listening', sectionScoreText(result.listening))];
+    if (!listeningOnly) summaryCards.push(addSummaryCard('Reading', hasReading ? sectionScoreText(result.reading) : 'Chưa nộp'));
+    elements.summaryGrid.replaceChildren(...summaryCards);
+    elements.resultStatus.textContent = listeningOnly
+      ? 'Lượt thi bù này chỉ chấm và phân tích Listening. Điểm Reading và Writing được giữ nguyên.'
+      : hasReading
       ? !writingConfig
         ? 'Listening và Reading được chấm và phân tích riêng.'
         : payload.writing?.grading?.ready
           ? `Listening và Reading được phân tích riêng; điểm Writing đã hoàn tất và có bài chấm chi tiết cho ${writingTaskLabels || 'bài Writing'}.`
           : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
-    elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
+    elements.continueReadingFromResult.hidden = listeningOnly || hasReading || Boolean(demoMode);
     elements.viewFullAttempt.hidden = !(
-      state.attemptToken
+      !listeningOnly
+      && state.attemptToken
       && payload.completed
       && (!writingConfig || payload.writing?.submitted)
       && !demoMode
@@ -2197,14 +2301,41 @@
         ? 'Bài đã được chấm và phân tích đầy đủ.'
         : 'Listening đã được chấm và phân tích đầy đủ.';
     }
-    if (status === 'pending') {
+    if (status === 'pending' || status === 'queued') {
       return completed
-        ? 'Bài đã được chấm. Portal đang bận; hệ thống sẽ tự thử ghi lại khi bạn mở kết quả.'
-        : 'Listening đã được chấm. Portal đang bận; hệ thống sẽ tự thử ghi lại khi bạn mở kết quả.';
+        ? 'Bài đã được chấm. Điểm đang được chuyển lên Portal và hệ thống sẽ tự thử lại nếu Portal đang bận.'
+        : 'Listening đã được chấm. Điểm đang được chuyển lên Portal và hệ thống sẽ tự thử lại nếu Portal đang bận.';
     }
     return completed
       ? 'Cả Listening và Reading đã được chấm và ghi vào Portal.'
       : 'Listening đã được chấm, phân tích và ghi vào Portal.';
+  }
+
+  let portalSyncPolling = false;
+
+  async function waitForListeningPortalSync() {
+    if (!listeningOnly || !state.attemptToken || portalSyncPolling) return;
+    portalSyncPolling = true;
+    try {
+      for (let check = 0; check < 12; check += 1) {
+        await new Promise(resolve => window.setTimeout(resolve, check === 0 ? 400 : 1000));
+        const payload = await apiRequest('/api/term-tests/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptToken: state.attemptToken })
+        });
+        if (payload.portalSyncStatus === 'synced' || payload.portalSyncStatus === 'not_applicable') {
+          showNotice(portalNotice(payload.portalSyncStatus, false), 'success');
+          return;
+        }
+        showNotice(portalNotice(payload.portalSyncStatus, false));
+      }
+      showNotice('Listening đã được chấm. Điểm vẫn đang chờ Portal xác nhận; hệ thống sẽ tiếp tục tự thử lại.');
+    } catch (error) {
+      showNotice(`Listening đã được chấm nhưng chưa đọc được trạng thái Portal: ${error.message}. Hệ thống vẫn tự thử đồng bộ.`, 'error');
+    } finally {
+      portalSyncPolling = false;
+    }
   }
 
   function writingGradingNotice(grading) {
@@ -2233,9 +2364,13 @@
       if (payload.writing?.submitted && !grading?.ready) {
         showNotice(writingGradingNotice(grading), 'success');
       } else {
-        showNotice(portalNotice(payload.portalSyncStatus, payload.completed), payload.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(
+          portalNotice(payload.portalSyncStatus, payload.completed),
+          ['pending', 'queued'].includes(payload.portalSyncStatus) ? '' : 'success'
+        );
       }
       setStage('result');
+      if (listeningOnly) void waitForListeningPortalSync();
       scheduleWritingGradingRefresh();
     } catch (error) {
       showNotice(`Không thể tải kết quả: ${error.message}`, 'error');
@@ -2460,9 +2595,21 @@
       if (writingConfig || deferResultsUntilComplete) {
         showNotice(`Bài Listening đã được ghi nhận. Kết quả sẽ mở sau khi bạn hoàn thành ${writingConfig ? 'Reading và nộp Writing' : 'Reading'}.`, 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, state.completed), response.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(
+          portalNotice(response.portalSyncStatus, state.completed),
+          ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success'
+        );
       }
-      if (state.completed && writingConfig && !state.writingSubmitted) {
+      if (listeningOnly) {
+        renderResult({
+          ...response,
+          className: state.className,
+          studentName: state.studentName,
+          result: response.result
+        });
+        setStage('result');
+        void waitForListeningPortalSync();
+      } else if (state.completed && writingConfig && !state.writingSubmitted) {
         setStage(state.writingStarted ? 'writing' : 'writing-prep');
       } else {
         setStage(state.completed ? 'result-ready' : 'listening-saved');
@@ -2568,9 +2715,9 @@
       if (writingConfig) {
         setStage('writing-prep');
         const portalMessage = portalNotice(response.portalSyncStatus, true);
-        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, response.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, true), response.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(portalNotice(response.portalSyncStatus, true), ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success');
         setStage('result-ready');
         if (automatic) await loadResult(elements.viewResult);
       }
@@ -2666,6 +2813,7 @@
       }
 
       window.clearTimeout(writingSaveTimer);
+      window.clearTimeout(writingForceSaveTimer);
       window.clearTimeout(writingRetryTimer);
       elements.writingView.dataset.writingSubmitting = 'true';
       setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài Writing');
@@ -2903,7 +3051,9 @@
           hideNotice();
         } else {
           setStage('listening-saved');
-          showNotice('Bài Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
+          showNotice(listeningOnly
+            ? 'Bài Listening đã được lưu. Bạn có thể xem lại điểm và phân tích.'
+            : 'Bài Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
         }
       } else {
         setStage('listening');
@@ -2916,5 +3066,6 @@
     }
   }
 
+  window.addEventListener('pagehide', flushDraftsOnPageHide);
   initialize();
 })();

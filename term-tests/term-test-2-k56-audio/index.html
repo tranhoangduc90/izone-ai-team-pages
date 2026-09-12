@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Audio Backup Term Test 2 khóa 56">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; media-src 'self' blob:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'">
+    <title>Audio Term Test 2 · Khóa 56</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="../k56-audio-shared/styles.css?rev=20260911-k56-audio-backup-v1">
+  </head>
+  <body>
+    <main class="audio-shell">
+      <p class="eyebrow">Audio Backup · Khóa 56</p>
+      <h1 id="audioTitle">Audio Term Test 2</h1>
+      <p class="class-label" id="classLabel">Khóa 56</p>
+      <p class="status" id="audioStatus" role="status" aria-live="polite">Đang chuẩn bị audio...</p>
+      <progress id="audioProgress" max="1" value="0"></progress>
+      <span class="progress-text" id="audioProgressText">Đã tải 0%</span>
+      <div class="actions">
+        <button class="secondary" id="previewAudio" type="button" disabled>Nghe thử 30 giây</button>
+        <button id="playAudio" type="button" disabled>Phát audio bài thi</button>
+      </div>
+      <button id="retryAudio" type="button" hidden>Tải lại audio</button>
+      <p class="notice">Chỉ dùng khi giáo viên hướng dẫn mở audio dự phòng.</p>
+      <audio id="previewPlayer" preload="metadata"></audio>
+      <audio id="mainPlayer" preload="metadata"></audio>
+    </main>
+    <script src="audio-config.js?rev=20260911-k56-audio-backup-v1"></script>
+    <script src="../k56-audio-shared/app.js?rev=20260911-k56-audio-backup-v1"></script>
+  </body>
+</html>

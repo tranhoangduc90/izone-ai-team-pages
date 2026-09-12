@@ -2,6 +2,14 @@ import { createRequestId } from "./core.js";
 
 function endpoint(base, path) { return new URL(path.replace(/^\//, ""), base || window.location.href).toString(); }
 
+export function parseRetryAfterMs(value, now = Date.now()) {
+  if (!value) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1_000);
+  const retryAt = Date.parse(value);
+  return Number.isFinite(retryAt) ? Math.max(0, retryAt - now) : null;
+}
+
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
   if (response.status === 304) return { data: null, etag: response.headers.get("etag"), notModified: true };
@@ -10,6 +18,7 @@ async function fetchJson(url, options = {}) {
     const error = new Error(data.message || `Yêu cầu thất bại (${response.status}).`);
     error.status = response.status;
     error.data = data;
+    error.retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
     throw error;
   }
   return { data, etag: response.headers.get("etag") };

@@ -1,0 +1,32 @@
+.k56-find-blocked-notice {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1600;
+  max-width: min(430px, calc(100vw - 36px));
+  padding: 11px 14px;
+  color: #fff;
+  background: #173f70;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 9px;
+  box-shadow: 0 12px 30px rgba(15, 35, 65, .24);
+  font: 700 14px/1.4 Arial, sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.k56-find-blocked-notice.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 620px) {
+  .k56-find-blocked-notice {
+    right: 10px;
+    bottom: 10px;
+    max-width: calc(100vw - 20px);
+    font-size: 13px;
+  }
+}

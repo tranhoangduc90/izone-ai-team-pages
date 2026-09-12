@@ -7,8 +7,15 @@
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const demoMode = ['localhost', '127.0.0.1'].includes(location.hostname) ? (query.get('demo') || '') : '';
-  const localDemo = demoMode === 'exam' && classCode === 'CODEXDEMO56';
+  const localPreview = ['localhost', '127.0.0.1'].includes(location.hostname);
+  if (!localPreview && (query.has('demo') || query.has('grading'))) {
+    query.delete('demo');
+    query.delete('grading');
+    const cleanQuery = query.toString();
+    history.replaceState(null, '', `${location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${location.hash}`);
+  }
+  const demoMode = localPreview ? (query.get('demo') || '') : '';
+  const localDemo = localPreview && demoMode === 'exam' && classCode === 'CODEXDEMO56';
   const storageSuffix = localDemo && query.get('grading') === 'server' ? ':server-grade' : '';
   const demoStudentRef = classCode === 'CODEXDEMO56' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
@@ -24,8 +31,8 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?v=20260908-k56-results-v2'))
-      .then(() => loadScript('enhance.js'))
+      .then(() => loadScript('../k56-mini-shared/app.js?v=20260910-audio-recovery-v1'))
+      .then(() => loadScript('enhance.js?v=20260910-audio-recovery-v1'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -160,6 +167,26 @@
     for (const step of ['bootstrapDownloadStep', 'bootstrapPreviewStep', 'bootstrapStartStep']) elements[step].dataset.state = 'locked';
   }
 
+  function recoverFromServerReset(error) {
+    if (error?.status !== 404 || !['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND'].includes(error?.code)) return false;
+    const audioVolume = state.audioVolume;
+    for (const storage of [sessionStorage, localStorage]) {
+      try {
+        storage.removeItem(storageKey);
+        storage.removeItem(uiStorageKey);
+        storage.removeItem(annotationStorageKey);
+      } catch {
+        // Vẫn mở lại được phòng chờ nếu một loại storage bị trình duyệt chặn.
+      }
+    }
+    state = { audioVolume };
+    legacyListeningResume = false;
+    elements.bootstrapStudent.value = '';
+    resetPreparation();
+    showNotice('Lượt làm trước đã được reset. Hãy chọn lại học viên để bắt đầu lượt mới.', false);
+    return true;
+  }
+
   function cancelIdentity() {
     pendingStudent = null;
     identityDialog.close();
@@ -213,7 +240,7 @@
         if (Object.keys(parsed).length) {
           return {
             audioStarted: Boolean(parsed.audio?.started),
-            audioTime: Math.min(Number(testConfig.listening.durationSeconds) || 1848, Math.max(0, Math.floor(Number(parsed.audio?.time) || 0))),
+            audioTime: Math.min(7200, Math.max(0, Number(parsed.audio?.time) || 0)),
             audioVolume: Math.min(1, Math.max(0.1, Number(parsed.audio?.volume) || 1))
           };
         }
@@ -251,7 +278,12 @@
     try {
       const response = await fetch(appConfig.API_BASE_URL + path, { ...options, signal: controller.signal });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+      if (!response.ok) {
+        const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
+        requestError.status = response.status;
+        requestError.code = data.error || '';
+        throw requestError;
+      }
       return data;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Hãy thử lại.');
@@ -482,7 +514,7 @@
       await downloadForSession(prepared);
     } catch (error) {
       elements.bootstrapStudent.disabled = false;
-      showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, true);
+      if (!recoverFromServerReset(error)) showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, true);
     } finally {
       preparing = false;
       elements.bootstrapStudent.disabled = Boolean(state.listeningStartedAt);
@@ -529,8 +561,8 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?v=20260908-k56-results-v2');
-    await loadScript('enhance.js');
+    await loadScript('../k56-mini-shared/app.js?v=20260910-audio-recovery-v1');
+    await loadScript('enhance.js?v=20260910-audio-recovery-v1');
     await loadScript('annotations.js');
   }
 
@@ -641,10 +673,16 @@
         await enterExam(started, officialAudio);
         return;
       }
+      const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
+        ? legacyUiState.audioTime
+        : undefined;
       const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examSessionToken: state.examSessionToken })
+        body: JSON.stringify({
+          examSessionToken: state.examSessionToken,
+          heardSeconds: savedHeardSeconds
+        })
       });
       const decrypted = await decryptOfficialAudio(encryptedAudio, started);
       officialObjectUrl = URL.createObjectURL(new Blob([decrypted], { type: 'audio/mpeg' }));
@@ -654,16 +692,21 @@
       officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       document.body.append(officialAudio);
       const serverElapsed = Math.max(0, (Date.parse(started.serverNow) - Date.parse(started.listeningStartedAt)) / 1000);
+      const serverResumeAt = Number(started.listeningResumeAtSeconds);
+      const resumeAt = Number.isFinite(serverResumeAt)
+        ? Math.min(serverElapsed, Math.max(0, serverResumeAt))
+        : serverElapsed;
       await new Promise((resolve, reject) => {
         officialAudio.addEventListener('loadedmetadata', resolve, { once: true });
         officialAudio.addEventListener('error', () => reject(new Error('Trình duyệt không đọc được audio chính.')), { once: true });
         officialAudio.load();
       });
-      officialAudio.currentTime = Math.min(serverElapsed, Math.max(0, officialAudio.duration - 0.05));
-      if (serverElapsed < officialAudio.duration) await officialAudio.play();
+      officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
+      if (resumeAt < officialAudio.duration) await officialAudio.play();
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
+        listeningRecoverySeconds: Number(started.listeningRecoverySeconds) || 0,
         serverTimeOffsetMs: Date.parse(started.serverNow) - Date.now(),
         audioVolume: officialAudio.volume
       });

@@ -99,11 +99,53 @@ test('K56 chọn học viên thủ công, không hiện điều khiển ghi nh�
   }
 });
 
+test('K56 tự mở khóa chọn học viên khi lượt cũ đã bị quản trị viên reset', async () => {
+  const server = await serve();
+  const port = server.address().port;
+  const site = `http://127.0.0.1:${port}/`;
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const staleStateKey = 'izone-test:term-test-1-k56:IC5601';
+  await context.route('**/*', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/k56-shared/config.js')) return route.fulfill({ contentType: 'text/javascript', body: "window.TERM_TEST_APP_CONFIG={API_BASE_URL:'https://ducizone.ddns.net/mapping-api-demo'};" });
+    if (url.pathname.endsWith('/api/term-tests/roster')) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ class: { name: 'IC5601' }, students: [
+        { ref: studentA, name: 'Học viên A' }, { ref: studentB, name: 'Học viên B' }
+      ] }) });
+    }
+    if (url.pathname.endsWith('/session/resume-attempt')) {
+      return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({
+        ok: false, error: 'ATTEMPT_NOT_FOUND', message: 'Không tìm thấy lượt thi đã lưu.'
+      }) });
+    }
+    if (route.request().method() === 'GET' && route.request().url().startsWith(site)) return route.continue();
+    return route.abort();
+  });
+  await page.addInitScript(({ key, ref }) => localStorage.setItem(key, JSON.stringify({
+    studentRef: ref,
+    studentName: 'Học viên A',
+    attemptToken: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    listeningStartedAt: '2026-09-10T00:00:00.000Z'
+  })), { key: staleStateKey, ref: studentA });
+  try {
+    await page.goto(`${site}term-tests/term-test-1-k56-computer-based/?class=IC5601`);
+    await page.locator('#bootstrapNotice').filter({ hasText: 'Lượt làm trước đã được reset' }).waitFor();
+    assert.equal(await page.locator('#bootstrapStudent').isDisabled(), false);
+    assert.equal(await page.locator('#bootstrapStudent').inputValue(), '');
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), staleStateKey), null);
+  } finally {
+    await browser.close();
+    await new Promise(resolveClose => server.close(resolveClose));
+  }
+});
+
 test('K56 dùng core chung nhưng giữ namespace K56 và loại demo/hồ sơ thiếu-trùng', async () => {
   const source = await readFile(join(root, 'shared/student-memory.js'), 'utf8');
   const bootstrap = await readFile(join(root, 'term-tests/term-test-1-k56-computer-based/bootstrap.js'), 'utf8');
   const entry = await readFile(join(root, 'term-tests/term-test-1-k56-computer-based/index.html'), 'utf8');
-  assert.match(entry, /bootstrap\.js\?v=20260908-k56-results-v2/);
+  assert.match(entry, /bootstrap\.js\?v=20260911-reset-recovery-v1/);
   assert.match(source, /mapping-api/);
   assert.match(bootstrap, /import\('\.\.\/\.\.\/shared\/student-memory\.js\?v=20260905-memory-v3'\)/);
   assert.match(bootstrap, /studentMemoryEnabled = false/);

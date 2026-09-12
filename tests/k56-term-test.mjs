@@ -48,6 +48,20 @@ test('K56 dùng lớp và API demo riêng, không kế thừa mã K67', async ()
   assert.equal(app.includes('Xem kết quả Listening'), false);
 });
 
+test('link online cũ không thể bật lại giao diện mô phỏng K56', async () => {
+  const bootstraps = await Promise.all([
+    read('term-tests/term-test-1-k56-computer-based/bootstrap.js'),
+    read('term-tests/term-test-2-k56-computer-based/bootstrap.js'),
+    read('term-tests/mini-test-k56-computer-based/bootstrap.js')
+  ]);
+  for (const bootstrap of bootstraps) {
+    assert.match(bootstrap, /const localPreview = \[[^\]]*localhost[^\]]*\]\.includes\(location\.hostname\)/);
+    assert.match(bootstrap, /query\.delete\('demo'\)/);
+    assert.match(bootstrap, /query\.delete\('grading'\)/);
+    assert.match(bootstrap, /const demoMode = localPreview \?/);
+  }
+});
+
 test('dashboard K56 tách riêng và các file K67 không đổi hành vi', async () => {
   const [app, k56Config, k67App, k67Config] = await Promise.all([
     read('term-tests/teacher-k56/app.js'),
@@ -61,4 +75,15 @@ test('dashboard K56 tách riêng và các file K67 không đổi hành vi', asyn
   assert.equal(k67App.includes('term-test-1-k56'), false);
   assert.equal(k67Config.includes('mapping-api-demo'), false);
   assert.match(k67Config, /mapping-api'/);
+});
+
+test('bản đồ Listening K56 ẩn la bàn nhưng giữ nguyên vị trí A–I', async () => {
+  const [content, layout] = await Promise.all([
+    read('term-tests/term-test-1-k56-computer-based/content.js'),
+    read('term-tests/term-test-1-k56-computer-based/layout-updates.css')
+  ]);
+  assert.match(content, /Hinchingbrooke Park: bản đồ với các vị trí A–I/);
+  assert.equal(content.includes('và la bàn'), false);
+  assert.match(layout, /\.cbt-park-map[^}]*overflow:hidden/);
+  assert.match(layout, /\.cbt-park-map img[^}]*width:128\.2%[^}]*max-width:none/);
 });

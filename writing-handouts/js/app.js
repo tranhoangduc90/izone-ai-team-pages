@@ -1,6 +1,6 @@
-import { createApi } from "./api.js";
+import { createApi } from "./api.js?v=20260911-load-guard-v1";
 import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v3";
-import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelay, rebaseLocalProgress, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260826-grading-timeout-v2";
+import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelayWithJitter, randomDelay, rebaseLocalProgress, retryDelay, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260911-load-guard-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
 import { renderStudentFieldComments } from "./teacher-comments-ui.js";
@@ -13,7 +13,7 @@ const SECTION_INFO = {
   outline: { title: "Outline", kicker: "Phần 2", fields: [{ key: "body1", label: "Body 1", placeholder: "Nhóm số liệu thứ nhất…" }, { key: "body2", label: "Body 2", placeholder: "Nhóm số liệu thứ hai…" }] },
   draft: { title: "Draft 1 → Draft 2", kicker: "Phần 3", fields: [{ key: "draft1", label: "Draft 1", placeholder: "Viết liên tục phần Overview và Body 1…" }, { key: "draft2", label: "Draft 2", placeholder: "Sửa bản sao Draft 1 thành tiếng Anh hoàn chỉnh…" }] },
 };
-const app = { manifest: null, activitySlug: null, api: null, roster: null, identity: null, sessionRef: null, state: null, dirty: false, idbTimer: null, saveTimer: null, pollTimer: null, heartbeatTimer: null, pendingAttempts: new Map(), submittingSections: new Set(), conflict: false, conflictServer: null, teacherComments: [], teacherCommentsEtag: null, teacherCommentTimer: null, draftResult: { key: null, status: "idle", data: null, pageIndex: 0 } };
+const app = { manifest: null, activitySlug: null, api: null, roster: null, identity: null, sessionRef: null, state: null, dirty: false, idbTimer: null, saveTimer: null, saveRetryCount: 0, pollTimer: null, heartbeatTimer: null, pendingAttempts: new Map(), submittingSections: new Set(), conflict: false, conflictServer: null, teacherComments: [], teacherCommentsEtag: null, teacherCommentTimer: null, draftResult: { key: null, status: "idle", data: null, pageIndex: 0 } };
 
 function setSaveState(text) { $("save-state").textContent = text; }
 function showNotice(text = "") { const node = $("network-notice"); node.hidden = !text; node.textContent = text; }
@@ -250,7 +250,7 @@ function renderTeacherCommentPanels() {
 
 function scheduleTeacherComments() {
   clearTimeout(app.teacherCommentTimer);
-  if (app.sessionRef && !document.hidden) app.teacherCommentTimer = setTimeout(() => refreshTeacherComments(), 15_000);
+  if (app.sessionRef && !document.hidden) app.teacherCommentTimer = setTimeout(() => refreshTeacherComments(), randomDelay(12_000, 18_000));
 }
 
 async function refreshTeacherComments(force = false) {
@@ -379,7 +379,7 @@ function renderComments() {
 }
 
 function renderAll() { renderSections(); renderComments(); updatePollingStates(); }
-function resetAutosave() { clearTimeout(app.saveTimer); if (app.dirty) app.saveTimer = setTimeout(async () => { await saveRemote("timer"); resetAutosave(); }, 10 * 60 * 1000); }
+function resetAutosave() { clearTimeout(app.saveTimer); if (app.dirty) app.saveTimer = setTimeout(async () => { await saveRemote("timer"); resetAutosave(); }, randomDelay(9 * 60_000, 11 * 60_000)); }
 function markDirty() { const wasClean = !app.dirty; app.dirty = true; app.changeSequence = (app.changeSequence || 0) + 1; setSaveState("Có thay đổi chưa lưu"); clearTimeout(app.idbTimer); app.idbTimer = setTimeout(saveLocal, 500); if (wasClean) resetAutosave(); }
 async function saveLocal() { if (!app.identity || !app.state) return; await putDraft({ key: keyForDraft(), savedAt: Date.now(), dirty: app.dirty, progress: app.state, sessionRef: app.sessionRef, identity: app.identity }); }
 
@@ -414,13 +414,16 @@ async function saveRemote(reason = "manual") {
     mergeServer(result.data.session || result.data);
     if (newerChanges) { app.state.texts = latestTexts; app.state.draft2Unlocked = latestUnlock; }
     app.dirty = newerChanges;
+    app.saveRetryCount = 0;
     resetAutosave(); await saveLocal();
     setSaveState(newerChanges ? "Có thay đổi chưa lưu" : `Đã lưu lúc ${new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`);
     if (!newerChanges) renderAll();
     return true;
   } catch (error) {
     if (isConflict(error)) { app.conflict = true; app.conflictServer = error.data?.current || null; $("conflict-card").hidden = false; setSaveState("Cần xử lý xung đột bản lưu"); renderAll(); return false; }
-    showNotice("Chưa thể lưu vào hệ thống. Bản trên thiết bị vẫn được giữ và sẽ thử lại khi bạn lưu."); setSaveState("Chưa đồng bộ"); return false;
+    const wait = retryDelay(error, app.saveRetryCount); app.saveRetryCount += 1;
+    clearTimeout(app.saveTimer); app.saveTimer = setTimeout(() => saveRemote("retry").catch(() => {}), wait);
+    showNotice("Chưa thể lưu vào hệ thống. Bản trên thiết bị vẫn được giữ và sẽ tự thử lại."); setSaveState("Chưa đồng bộ"); return false;
   }
   })().finally(() => { app.savingPromise = null; });
   return app.savingPromise;
@@ -498,11 +501,12 @@ function applyTerminalAttempt(payload, fallbackSection) {
   } else setSaveState("Đã nhận kết quả chấm");
 }
 
-function schedulePoll() {
+function schedulePoll(minimumDelayMs = 0) {
   clearTimeout(app.pollTimer);
   updatePollingStates();
   if (document.hidden || !activeAttempts().length) return;
-  const earliest = Math.min(...activeAttempts().map((item) => item.submittedAt)); const wait = pollingDelay(Date.now() - earliest);
+  const earliest = Math.min(...activeAttempts().map((item) => item.submittedAt)); const base = pollingDelayWithJitter(Date.now() - earliest);
+  const minimum = Math.max(0, Number(minimumDelayMs) || 0); const wait = minimum > base ? randomDelay(minimum, Math.min(60_000, minimum + 5_000)) : base;
   app.pollTimer = setTimeout(pollAttempts, wait);
 }
 
@@ -516,6 +520,7 @@ function updatePollingStates() {
 
 async function pollAttempts() {
   if (document.hidden) return schedulePoll();
+  let retryAfterMs = 0;
   for (const attempt of activeAttempts()) {
     try {
       const result = await app.api.attempt(attempt.ref, attempt.etag);
@@ -524,9 +529,9 @@ async function pollAttempts() {
       if (terminalResult(payload)) {
         app.pendingAttempts.delete(attempt.ref); applyTerminalAttempt(payload, attempt.section);
       }
-    } catch (error) { if (error.status !== 304) showNotice("Đang chờ phản hồi chấm. Hệ thống sẽ tự thử lại."); }
+    } catch (error) { retryAfterMs = Math.max(retryAfterMs, Number(error.retryAfterMs) || 0); if (error.status !== 304) showNotice("Đang chờ phản hồi chấm. Hệ thống sẽ tự thử lại."); }
   }
-  renderAll(); schedulePoll();
+  renderAll(); schedulePoll(retryAfterMs);
 }
 
 async function openSession(event) {
@@ -545,7 +550,7 @@ async function openSession(event) {
     $("access-code").value = ""; $("provisional-pin").value = ""; $("provisional-pin-confirm").value = "";
     $("student-label").textContent = `${student.label} · ${$("class-id").selectedOptions[0].textContent}`; $("setup-card").hidden = true; $("workspace").hidden = false; renderAll(); setSaveState(app.dirty ? "Đã khôi phục bản lưu cục bộ" : "Đã tải bài làm");
     renderTaskContent(); for (const attempt of app.state.attempts) registerAttempt(attempt); schedulePoll(); void refreshTeacherComments(true);
-    schedulePresence(); clearInterval(app.heartbeatTimer); app.heartbeatTimer = setInterval(schedulePresence, 30_000);
+    schedulePresence(); startPresenceHeartbeat();
     app.studentMemory?.complete(app.identity);
   } catch (requestError) { app.identity = null; app.sessionRef = null; error.hidden = false; error.textContent = requestError.message; }
   finally { app.studentMemory?.end(); }
@@ -554,6 +559,12 @@ async function openSession(event) {
 function schedulePresence() {
   if (!app.sessionRef || document.hidden) return;
   app.api.publishLive(app.sessionRef).catch(() => {});
+}
+
+function startPresenceHeartbeat() {
+  clearTimeout(app.heartbeatTimer);
+  const tick = () => { schedulePresence(); app.heartbeatTimer = setTimeout(tick, randomDelay(25_000, 35_000)); };
+  app.heartbeatTimer = setTimeout(tick, randomDelay(25_000, 35_000));
 }
 
 async function resumeRecent() {
@@ -567,7 +578,7 @@ async function resumeRecent() {
     $("student-label").textContent = `${app.identity.label || "Bài gần nhất"} · ${className}`;
     $("setup-card").hidden = true; $("workspace").hidden = false; renderAll(); renderTaskContent(); setSaveState(app.dirty ? "Đã khôi phục bản lưu cục bộ" : "Đã tải bài làm");
     for (const attempt of app.state.attempts) registerAttempt(attempt); schedulePoll(); schedulePresence(); void refreshTeacherComments(true);
-    clearInterval(app.heartbeatTimer); app.heartbeatTimer = setInterval(schedulePresence, 30_000);
+    startPresenceHeartbeat();
   } catch (requestError) { error.hidden = false; error.textContent = `Chưa thể tiếp tục bài gần nhất: ${requestError.message}`; }
 }
 

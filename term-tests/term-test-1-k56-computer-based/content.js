@@ -136,7 +136,7 @@
     ${choiceQuestion(36, 'For the activity on Saturday, visitors should', [['A', 'come in suitable clothing.'], ['B', 'make sure they are able to stay for the whole day.'], ['C', 'tell the rangers before the event what they wish to do.']])}
     <header class="cbt-section-intro is-compact"><span class="cbt-kicker">QUESTIONS 37–40</span><p>Label the map. Choose the correct letter, A–I.</p></header>
     <div class="k56-side-layout k56-map-layout"><figure class="cbt-park-map" aria-label="Sơ đồ Hinchingbrooke Park với các vị trí A đến I">
-      <img src="assets/figures/hinchingbrooke-park.png" width="1560" height="836" alt="Hinchingbrooke Park: bản đồ gốc với các vị trí A–I, hồ, cổng East gate và West gate, khu Refreshments và la bàn.">
+      <img src="assets/figures/hinchingbrooke-park.png" width="1560" height="836" alt="Hinchingbrooke Park: bản đồ với các vị trí A–I, hồ, cổng East gate và West gate, cùng khu Refreshments.">
     </figure>
     <div class="cbt-short-answer-list">
       ${textQuestion(37, 'bird hide')}

@@ -3,6 +3,7 @@
 
   const contentConfig = window.TERM_TEST_CONTENT;
   const testConfig = window.TERM_TEST_CONFIG;
+  const appConfig = window.TERM_TEST_APP_CONFIG;
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const isDemo = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
@@ -790,6 +791,15 @@
     let downloadRun = 0;
     let downloadController = null;
     let objectUrl = protectedBootstrap?.officialAudioUrl || '';
+    let lastObservedAudioTime = Number(audio.currentTime) || uiState.audio.time || 0;
+    let lastAudioAdvanceAt = performance.now();
+    const checkpointPhaseMs = Array.from(String(protectedBootstrap?.examSessionToken || ''))
+      .reduce((hash, character) => ((hash * 33) ^ character.charCodeAt(0)) >>> 0, 5381) % 5_000;
+    let lastProgressReportedBucket = Math.floor(((lastObservedAudioTime * 1_000) + checkpointPhaseMs) / 5_000);
+    let recoveryInFlight = false;
+    let lastRecoveryAttemptAt = 0;
+    let audioWatchdog = 0;
+    let audioProgressQueue = Promise.resolve();
 
     function readSavedStudentRef() {
       for (const storage of [sessionStorage, localStorage]) {
@@ -899,6 +909,84 @@
         + (duration ? formatTime(duration) : contentConfig.audio.durationLabel);
     }
 
+    function rememberActualHeardPosition(force = false) {
+      const current = Number.isFinite(audio.currentTime) ? audio.currentTime : uiState.audio.time;
+      uiState.audio.time = Math.max(0, Number(current) || 0);
+      const currentSecond = Math.floor(uiState.audio.time);
+      if (force || currentSecond !== lastSavedSecond) {
+        lastSavedSecond = currentSecond;
+        saveUiState();
+      }
+      return uiState.audio.time;
+    }
+
+    // Máy chủ khóa mốc nghe theo phiên, giới hạn 15 phút bù giờ và chống báo tiến độ giả từ client.
+    function reportAudioProgress(playbackState, keepalive = false) {
+      const examSessionToken = protectedBootstrap?.examSessionToken;
+      if (!examSessionToken || !examStarted || !['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56'].includes(testConfig.slug)) return Promise.resolve(null);
+      const heardSeconds = rememberActualHeardPosition(true);
+      if (playbackState === 'playing') {
+        // Mỗi phiên có một pha cố định 0–5 giây để các máy không cùng checkpoint đúng một nhịp.
+        const currentBucket = Math.floor(((heardSeconds * 1_000) + checkpointPhaseMs) / 5_000);
+        if (currentBucket <= lastProgressReportedBucket) return Promise.resolve(null);
+        lastProgressReportedBucket = currentBucket;
+      }
+      const send = async () => {
+        const response = await fetch(`${appConfig.API_BASE_URL}/api/term-tests/${testConfig.slug}/session/audio-progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ examSessionToken, heardSeconds, state: playbackState }),
+          keepalive,
+          signal: AbortSignal.timeout(8000)
+        });
+        if (!response.ok) return null;
+        const payload = await response.json();
+        if (payload.listeningDeadlineAt) {
+          window.dispatchEvent(new CustomEvent('term-test:listening-timing-updated', { detail: payload }));
+        }
+        return payload;
+      };
+      if (keepalive) return send().catch(() => null);
+      const operation = audioProgressQueue.catch(() => null).then(send);
+      audioProgressQueue = operation.catch(() => null);
+      return operation;
+    }
+
+    async function recoverInterruptedAudio(trigger, force = false) {
+      if (!examStarted || !ready || audio.ended || allowPause || examCard.hidden || recoveryInFlight) return;
+      const now = Date.now();
+      if (!force && now - lastRecoveryAttemptAt < 750) return;
+      lastRecoveryAttemptAt = now;
+      recoveryInFlight = true;
+      const heardSeconds = rememberActualHeardPosition(true);
+      reportAudioProgress(trigger).catch(() => null);
+      updateExamStatus('Đang tự khôi phục audio');
+      try {
+        if (!audio.paused) {
+          allowPause = true;
+          audio.pause();
+          allowPause = false;
+        }
+        audio.currentTime = Math.min(
+          Math.max(0, heardSeconds),
+          Math.max(0, (audio.duration || heardSeconds + 1) - 0.05)
+        );
+        await audio.play();
+        resumeButton.hidden = true;
+        examRetryButton.hidden = true;
+        lastObservedAudioTime = audio.currentTime;
+        lastAudioAdvanceAt = performance.now();
+        updateExamStatus('Đang phát bài thi');
+        await reportAudioProgress('recovered').catch(() => null);
+      } catch {
+        resumeButton.hidden = false;
+        updateExamStatus('Audio chưa tự phát lại · nhấn Tiếp tục audio');
+      } finally {
+        allowPause = false;
+        recoveryInFlight = false;
+      }
+    }
+
     audio.addEventListener('loadedmetadata', () => {
       ready = true;
       restoreOfficialTime();
@@ -942,12 +1030,12 @@
       }
       if (!examStarted) return;
       updateExamStatus(audio.paused ? 'Audio đang bị gián đoạn' : 'Đang phát bài thi');
-      const currentSecond = Math.floor(audio.currentTime);
-      if (currentSecond - lastSavedSecond >= 5) {
-        lastSavedSecond = currentSecond;
-        uiState.audio.time = audio.currentTime;
-        saveUiState();
+      rememberActualHeardPosition();
+      if (audio.currentTime > lastObservedAudioTime + 0.05) {
+        lastObservedAudioTime = audio.currentTime;
+        lastAudioAdvanceAt = performance.now();
       }
+      reportAudioProgress('playing').catch(() => null);
     });
     audio.addEventListener('ended', () => {
       if (!examStarted) {
@@ -963,11 +1051,14 @@
     });
     audio.addEventListener('pause', () => {
       if (!examStarted || audio.ended || allowPause || examCard.hidden) return;
-      audio.play().catch(() => {
-        resumeButton.hidden = false;
-        updateExamStatus('Audio đang bị gián đoạn · nhấn Tiếp tục audio');
-      });
+      recoverInterruptedAudio('pause');
     });
+    audio.addEventListener('waiting', () => {
+      window.setTimeout(() => {
+        if (performance.now() - lastAudioAdvanceAt >= 1200) recoverInterruptedAudio('waiting');
+      }, 1250);
+    });
+    audio.addEventListener('stalled', () => recoverInterruptedAudio('stalled'));
     audio.addEventListener('error', () => {
       if (!ready) {
         failDownload('File audio tải xong nhưng trình duyệt không đọc được. Hãy nhấn “Tải lại audio”.');
@@ -1092,15 +1183,7 @@
         downloadStatus.textContent = 'Trình duyệt chưa cho phép phát audio. Hãy nhấn lại “Bắt đầu thi Listening”.';
       }
     });
-    resumeButton.addEventListener('click', async () => {
-      try {
-        await audio.play();
-        resumeButton.hidden = true;
-        updateExamStatus('Đang phát bài thi');
-      } catch {
-        updateExamStatus('Chưa thể phát · hãy nhấn lại Tiếp tục audio');
-      }
-    });
+    resumeButton.addEventListener('click', () => recoverInterruptedAudio('pause', true));
     retryButton.addEventListener('click', downloadFullAudio);
     examRetryButton.addEventListener('click', protectedBootstrap?.officialAudioElement
       ? () => window.location.reload()
@@ -1121,14 +1204,17 @@
     }
     listeningForm.form.addEventListener('submit', () => {
       allowPause = true;
+      window.clearInterval(audioWatchdog);
       audio.pause();
-      if (examStarted) uiState.audio.time = audio.currentTime;
-      saveUiState();
+      if (examStarted) rememberActualHeardPosition(true);
     });
     window.addEventListener('pagehide', () => {
       allowPause = true;
-      if (examStarted) uiState.audio.time = audio.currentTime;
-      saveUiState();
+      window.clearInterval(audioWatchdog);
+      if (examStarted) {
+        rememberActualHeardPosition(true);
+        reportAudioProgress('pagehide', true).catch(() => null);
+      }
       downloadController?.abort();
       revokeAudioUrl();
     });
@@ -1145,6 +1231,20 @@
       setListeningVisible(false);
       downloadFullAudio();
     }
+    audioWatchdog = window.setInterval(() => {
+      if (!examStarted || !ready || audio.ended || allowPause || examCard.hidden) return;
+      const current = Number(audio.currentTime) || 0;
+      if (current > lastObservedAudioTime + 0.05) {
+        lastObservedAudioTime = current;
+        lastAudioAdvanceAt = performance.now();
+        return;
+      }
+      if (audio.paused) {
+        recoverInterruptedAudio('pause');
+      } else if (performance.now() - lastAudioAdvanceAt >= 1800) {
+        recoverInterruptedAudio(audio.readyState < 3 ? 'waiting' : 'stalled');
+      }
+    }, 500);
   }
 
   // Dữ liệu vào: deadline Listening do máy chủ tạo khi học viên bấm Bắt đầu.
