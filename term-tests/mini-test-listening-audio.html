@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IELTS Listening Mock Test</title>
+  <style>
+    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
+    .container { text-align: center; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 90%; max-width: 400px; position: relative; }
+    button { padding: 15px 30px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 6px; transition: 0.3s; width: 100%; margin-bottom: 10px; }
+    button:disabled { background: #cccccc !important; cursor: not-allowed; }
+
+    #btnCheckVol { background: #FF9800; }
+    #btnPlayMain { background: #4CAF50; }
+
+    #status { margin-bottom: 15px; font-size: 16px; font-weight: bold; color: #333; }
+    #progress-wrapper { width: 100%; background-color: #e0e0e0; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
+    #progress-bar { width: 0%; height: 8px; background-color: #2196F3; transition: width 0.1s linear; }
+    #progress-text { font-size: 14px; color: #555; display: block; margin-bottom: 20px; font-weight: bold; }
+
+    /* CSS Modal Thử Âm Lượng */
+    #volModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 350px; text-align: center; }
+    .modal-content p { font-size: 16px; line-height: 1.5; color: #333; margin-bottom: 20px; }
+    #btnReplayTest { background: #2196F3; margin-bottom: 10px; }
+    #btnConfirmVol { background: #4CAF50; margin-bottom: 0; }
+  </style>
+</head>
+<body>
+  <div class="container" id="mainContainer">
+    <div id="status">⏳ Đang tải audio...</div>
+    <div id="progress-wrapper"><div id="progress-bar"></div></div>
+    <span id="progress-text">Đã tải: 0% (0 MB / 0 MB)</span>
+
+    <button id="btnCheckVol" disabled>🔊 THỬ ÂM LƯỢNG TRƯỚC KHI THI</button>
+    <button id="btnPlayMain" disabled>PHÁT AUDIO THI THẬT</button>
+  </div>
+
+  <div id="volModal">
+    <div class="modal-content">
+      <p>Bạn hãy nghe đoạn audio sau và điều chỉnh âm lượng thiết bị cho vừa tai, sau đó nhấn nút xác nhận.</p>
+      <span id="testStatus" style="display:block; margin-bottom:15px; font-weight:bold; color:#FF9800;">Đang phát 30s đầu...</span>
+      <button id="btnReplayTest">🔄 Nghe lại (30s)</button>
+      <button id="btnConfirmVol">✅ Xác nhận đã vừa tai</button>
+    </div>
+  </div>
+
+  <audio id="audioTest"></audio>
+  <audio id="audioMain"></audio>
+
+  <script>
+    // Link audio
+    const AUDIO_URL = "https://res.cloudinary.com/dhvgrthes/video/upload/v1783656299/Mini_Test_Audio_p4yshw.mp3";
+
+    const audioTest = document.getElementById('audioTest');
+    const audioMain = document.getElementById('audioMain');
+
+    const btnCheckVol = document.getElementById('btnCheckVol');
+    const btnPlayMain = document.getElementById('btnPlayMain');
+
+    const volModal = document.getElementById('volModal');
+    const btnReplayTest = document.getElementById('btnReplayTest');
+    const btnConfirmVol = document.getElementById('btnConfirmVol');
+    const testStatus = document.getElementById('testStatus');
+    const statusDiv = document.getElementById('status');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+
+    let isAudioFullyLoaded = false;
+
+    // 1. Logic ép tải Blob
+    function loadAudioBlob() {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', AUDIO_URL, true);
+      xhr.responseType = 'blob';
+
+      xhr.onprogress = function(event) {
+        if (event.lengthComputable) {
+          const percent = (event.loaded / event.total) * 100;
+          progressBar.style.width = percent + '%';
+          progressText.innerText = `Đã tải: ${Math.round(percent)}% (${(event.loaded/1048576).toFixed(1)} MB / ${(event.total/1048576).toFixed(1)} MB)`;
+        }
+      };
+
+      xhr.onload = function() {
+        if (this.status >= 200 && this.status < 300) {
+          const objectUrl = URL.createObjectURL(this.response);
+          audioTest.src = objectUrl;
+          audioMain.src = objectUrl;
+
+          isAudioFullyLoaded = true;
+          statusDiv.innerHTML = "✅ Tải xong 100%. Đã sẵn sàng!";
+          progressBar.style.backgroundColor = "#4CAF50";
+
+          // Sau khi tải xong audio, mở cả nút thử âm lượng và nút phát bài chính
+          btnCheckVol.disabled = false;
+          btnPlayMain.disabled = false;
+        } else {
+          statusDiv.innerHTML = "❌ Không tải được audio. Vui lòng kiểm tra lại link.";
+        }
+      };
+
+      xhr.onerror = function() {
+        statusDiv.innerHTML = "❌ Lỗi mạng khi tải audio. Vui lòng thử lại.";
+      };
+
+      xhr.send();
+    }
+
+    // 2. Logic Thử Âm Lượng (Popup)
+    btnCheckVol.addEventListener('click', () => {
+      volModal.style.display = 'flex';
+      playTestAudio();
+    });
+
+    function playTestAudio() {
+      audioTest.currentTime = 0;
+      audioTest.play();
+      testStatus.innerText = "Đang phát 30s đầu...";
+      testStatus.style.color = "#FF9800";
+    }
+
+    // Tự động dừng test sau 30s
+    audioTest.addEventListener('timeupdate', () => {
+      if (audioTest.currentTime >= 30) {
+        audioTest.pause();
+        testStatus.innerText = "⏹ Đã dừng. Có thể nghe lại hoặc xác nhận.";
+        testStatus.style.color = "#d32f2f";
+      }
+    });
+
+    btnReplayTest.addEventListener('click', playTestAudio);
+
+    btnConfirmVol.addEventListener('click', () => {
+      audioTest.pause();
+      volModal.style.display = 'none';
+    });
+
+    // 3. Logic Thi Thật (Chống Pause)
+    btnPlayMain.addEventListener('click', () => {
+      // Tắt mọi thứ khác
+      audioTest.pause();
+      btnCheckVol.style.display = 'none';
+      btnPlayMain.style.display = 'none';
+      document.getElementById('progress-wrapper').style.display = 'none';
+      progressText.style.display = 'none';
+
+      // ÉP TUA VỀ ĐẦU BÀI NGHE
+      audioMain.currentTime = 0;
+
+      // Chạy audio chính
+      audioMain.play();
+      statusDiv.innerHTML = "🎧 Đang phát bài thi...<br><span style='font-size: 14px; color: red;'>(Tuyệt đối không làm mới trang - Không thể tạm dừng)</span>";
+    });
+
+    audioMain.addEventListener('pause', () => {
+      if (!audioMain.ended) audioMain.play();
+    });
+
+    audioMain.addEventListener('ended', () => {
+      statusDiv.innerHTML = "⏹ Bài nghe đã kết thúc. Vui lòng nộp bài.";
+    });
+
+    // Khởi động
+    loadAudioBlob();
+  </script>
+</body>
+</html>

@@ -17,16 +17,44 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire('file:///C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json');
 const { chromium } = require('playwright');
 
-test('Term Test 2 và chiều cao nút đúng bố cục Term Test 1', async () => {
+test('các bài test có đủ computer-based, answer sheet và Listening audio', async () => {
   const html = await readFile(join(repoRoot, 'term-tests/index.html'), 'utf8');
   const styles = await readFile(join(repoRoot, 'term-tests/shared/styles.css'), 'utf8');
   const computer = 'data-test="term-test-2-computer-based">Term Test 2 · Computer-based';
   const answer = 'data-test="term-test-2">Term Test 2 · Answer sheet';
   assert.ok(html.indexOf(computer) >= 0 && html.indexOf(computer) < html.indexOf(answer));
+  for (const [href, label] of [
+    ['term-test-1-audio.html', 'Term Test 1 · Listening audio'],
+    ['term-test-2-audio.html', 'Term Test 2 · Listening audio'],
+    ['mini-test-listening-audio.html', 'Mini Test Buổi 5 · Listening audio']
+  ]) {
+    assert.match(html, new RegExp(`href="${href}">${label}`));
+  }
   assert.match(html, /accounts\.google\.com/);
   assert.match(html, /type="module" src="shared\/landing\.js/);
   assert.match(styles, /\.landing-actions \.button \{[^}]*min-height: 62px/);
+  assert.match(styles, /\.button-audio \{[^}]*grid-column: 1 \/ -1/);
   assert.match(styles, /#teacherDashboard \{ grid-column: 1 \/ -1; \}/);
+});
+
+test('ba trang Listening audio giữ đúng nguồn âm thanh và cổng phát', async () => {
+  const pages = [
+    ['term-test-1-audio.html', 'Term_Test_1_-_Audio_zn5d4w.mp3', true],
+    ['term-test-2-audio.html', 'Term_Test_2_Audio_fty6pd.mp3', true],
+    ['mini-test-listening-audio.html', 'Mini_Test_Audio_p4yshw.mp3', false]
+  ];
+  for (const [fileName, audioFile, hasTimeWindow] of pages) {
+    const html = await readFile(join(repoRoot, 'term-tests', fileName), 'utf8');
+    assert.match(html, new RegExp(audioFile.replaceAll('.', '\\.')));
+    assert.match(html, /THỬ ÂM LƯỢNG TRƯỚC KHI THI/);
+    assert.match(html, /PHÁT AUDIO THI THẬT/);
+    assert.match(html, /audioTest\.currentTime >= 30/);
+    assert.match(html, /Không tải được audio/);
+    assert.match(html, /Lỗi mạng khi tải audio/);
+    assert.equal(html.includes('function checkTimeWindow()'), hasTimeWindow);
+  }
+  const termTest1 = await readFile(join(repoRoot, 'term-tests', 'term-test-1-audio.html'), 'utf8');
+  assert.doesNotMatch(termTest1, /18h45 - 24h00/);
 });
 
 test('lớp được xếp theo ngày mở trên Portal mà không sửa mảng API gốc', () => {
@@ -95,6 +123,10 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({
       contentType: 'application/javascript',
       body: `globalThis.google={accounts:{id:{initialize(options){this.options=options;},renderButton(element){const button=document.createElement('button');button.textContent='Đăng nhập thử';button.onclick=()=>this.options.callback({credential:'${token}'});element.append(button);}}}};`
+    }));
+    await page.route('**/term-tests/shared/config.js*', route => route.fulfill({
+      contentType: 'application/javascript',
+      body: "window.TERM_TEST_APP_CONFIG=Object.freeze({API_BASE_URL:'http://127.0.0.1:4180',GOOGLE_CLIENT_ID:'fixture-client-id'});"
     }));
     await page.goto('http://127.0.0.1:4180/term-tests/');
     assert.equal(await page.locator('#classCode').isVisible(), true);
