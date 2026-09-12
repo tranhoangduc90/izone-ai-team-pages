@@ -845,7 +845,9 @@
     let objectUrl = protectedBootstrap?.officialAudioUrl || '';
     let lastObservedAudioTime = Number(audio.currentTime) || uiState.audio.time || 0;
     let lastAudioAdvanceAt = performance.now();
-    let lastProgressReportedSecond = Math.floor(lastObservedAudioTime);
+    const checkpointPhaseMs = Array.from(String(protectedBootstrap?.examSessionToken || ''))
+      .reduce((hash, character) => ((hash * 33) ^ character.charCodeAt(0)) >>> 0, 5381) % 5_000;
+    let lastProgressReportedBucket = Math.floor(((lastObservedAudioTime * 1_000) + checkpointPhaseMs) / 5_000);
     let recoveryInFlight = false;
     let lastRecoveryAttemptAt = 0;
     let audioWatchdog = 0;
@@ -978,9 +980,10 @@
       if (!examSessionToken || !examStarted || !['term-test-1', 'term-test-2', 'mini-test-lesson-5'].includes(testConfig.slug)) return Promise.resolve(null);
       const heardSeconds = rememberActualHeardPosition(true);
       if (playbackState === 'playing') {
-        const currentSecond = Math.floor(heardSeconds);
-        if (currentSecond - lastProgressReportedSecond < 5) return Promise.resolve(null);
-        lastProgressReportedSecond = currentSecond;
+        // Mỗi phiên có một pha cố định 0–5 giây để các máy không cùng checkpoint đúng một nhịp.
+        const currentBucket = Math.floor(((heardSeconds * 1_000) + checkpointPhaseMs) / 5_000);
+        if (currentBucket <= lastProgressReportedBucket) return Promise.resolve(null);
+        lastProgressReportedBucket = currentBucket;
       }
       const send = async () => {
         const response = await fetch(`${appConfig.API_BASE_URL}/api/term-tests/${testConfig.slug}/session/audio-progress`, {

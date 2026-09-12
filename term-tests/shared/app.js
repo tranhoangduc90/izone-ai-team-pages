@@ -47,6 +47,8 @@
     writingStarted: false,
     writingSubmitted: false,
     writingDirty: false,
+    writingRevision: 0,
+    writingAckRevision: 0,
     drafts: { listening: {}, reading: {}, writing: { task1: '', task2: '' } },
     draftRevisions: { listening: 0, reading: 0 },
     draftAckRevisions: { listening: 0, reading: 0 },
@@ -78,7 +80,9 @@
     draftAckRevisions: {
       listening: Number(restoredSession.draftAckRevisions?.listening) || 0,
       reading: Number(restoredSession.draftAckRevisions?.reading) || 0
-    }
+    },
+    writingRevision: Number(restoredSession.writingRevision) || 0,
+    writingAckRevision: Number(restoredSession.writingAckRevision) || 0
   };
 
   // Trình duyệt chặn một kho lưu vẫn cho chọn tên và dùng kho còn lại.
@@ -119,6 +123,8 @@
       writingStarted: state.writingStarted,
       writingSubmitted: state.writingSubmitted,
       writingDirty: state.writingDirty,
+      writingRevision: state.writingRevision,
+      writingAckRevision: state.writingAckRevision,
       drafts: state.drafts,
       draftRevisions: state.draftRevisions,
       draftAckRevisions: state.draftAckRevisions,
@@ -897,9 +903,13 @@
     return true;
   }
 
+  function randomDelay(minimum, maximum) {
+    return Math.floor(minimum + (Math.random() * (maximum - minimum + 1)));
+  }
+
   const sectionDraftFlows = {
-    listening: { timer: 0, retryTimer: 0, promise: Promise.resolve() },
-    reading: { timer: 0, retryTimer: 0, promise: Promise.resolve() }
+    listening: { timer: 0, forceTimer: 0, retryTimer: 0, promise: Promise.resolve() },
+    reading: { timer: 0, forceTimer: 0, retryTimer: 0, promise: Promise.resolve() }
   };
 
   async function saveSectionDraftSnapshot(skill, answers, revision) {
@@ -927,6 +937,10 @@
   function queueSectionDraft(skill) {
     if (demoMode) return Promise.resolve(null);
     const flow = sectionDraftFlows[skill];
+    window.clearTimeout(flow.timer);
+    window.clearTimeout(flow.forceTimer);
+    flow.timer = 0;
+    flow.forceTimer = 0;
     const revision = Number(state.draftRevisions[skill]) || 0;
     const answers = { ...(state.drafts[skill] || {}) };
     const operation = flow.promise.catch(() => undefined).then(async () => {
@@ -963,23 +977,28 @@
         answeredCount: countAnswered(answers)
       });
       window.clearTimeout(flow.retryTimer);
-      flow.retryTimer = window.setTimeout(() => scheduleSectionDraft(skill, 0), 5000);
+      flow.retryTimer = window.setTimeout(() => scheduleSectionDraft(skill, 0), randomDelay(4_000, 8_000));
       return null;
     });
     return flow.promise;
   }
 
-  function scheduleSectionDraft(skill, delay = 600) {
+  function scheduleSectionDraft(skill, delay = null) {
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
     const flow = sectionDraftFlows[skill];
     window.clearTimeout(flow.timer);
     window.clearTimeout(flow.retryTimer);
-    flow.timer = window.setTimeout(() => queueSectionDraft(skill), delay);
+    const idleDelay = Number.isFinite(delay) ? Math.max(0, delay) : randomDelay(2_000, 5_000);
+    flow.timer = window.setTimeout(() => queueSectionDraft(skill), idleDelay);
+    if (!flow.forceTimer && idleDelay > 0) {
+      flow.forceTimer = window.setTimeout(() => queueSectionDraft(skill), randomDelay(10_000, 15_000));
+    }
   }
 
   function stopSectionDraftFlow(skill) {
     const flow = sectionDraftFlows[skill];
     window.clearTimeout(flow.timer);
+    window.clearTimeout(flow.forceTimer);
     window.clearTimeout(flow.retryTimer);
   }
 
@@ -1075,9 +1094,9 @@
   window.TERM_TEST_DEADLINE_GUARD_ACTIVE = true;
 
   let writingSaveTimer = 0;
+  let writingForceSaveTimer = 0;
   let writingRetryTimer = 0;
   let writingSavePromise = Promise.resolve();
-  let writingRevision = 0;
   let writingGradingPollTimer = 0;
   let writingGradingPollStartedAt = 0;
   let writingGradingPollCount = 0;
@@ -1169,6 +1188,9 @@
     state.writingSubmitted = Boolean(writing.submitted || state.writingSubmitted);
     state.writingDeadlineAt = writing.deadlineAt || state.writingDeadlineAt;
     if (writing.serverNow) state.serverTimeOffsetMs = Date.parse(writing.serverNow) - Date.now();
+    const serverRevision = Number(writing.revision) || 0;
+    state.writingAckRevision = Math.max(Number(state.writingAckRevision) || 0, serverRevision);
+    if (useServerDraft) state.writingRevision = Math.max(Number(state.writingRevision) || 0, serverRevision);
     syncWritingEditors();
     saveSession();
   }
@@ -1176,6 +1198,7 @@
   function writingPayload(action) {
     return {
       attemptToken: state.attemptToken,
+      revision: Number(state.writingRevision) || 0,
       action,
       task1: String(state.drafts.writing.task1 || ''),
       task2: String(state.drafts.writing.task2 || '')
@@ -1186,8 +1209,10 @@
     if (demoMode) return { writing: null };
     if (!state.attemptToken) throw new Error('Chưa có mã lượt làm để lưu Writing.');
     window.clearTimeout(writingSaveTimer);
+    window.clearTimeout(writingForceSaveTimer);
     window.clearTimeout(writingRetryTimer);
-    const revision = writingRevision;
+    writingForceSaveTimer = 0;
+    const revision = Number(state.writingRevision) || 0;
     const payload = writingPayload(action);
     const operation = writingSavePromise.catch(() => undefined).then(() => apiRequest('/api/term-tests/writing', {
       method: 'POST',
@@ -1196,30 +1221,46 @@
     }));
     writingSavePromise = operation;
     const response = await operation;
-    if (response.writing?.submitted || revision === writingRevision) {
+    const acknowledgedRevision = Number(response.writing?.revision) || revision;
+    state.writingAckRevision = Math.max(Number(state.writingAckRevision) || 0, acknowledgedRevision);
+    if (response.writing?.submitted || (response.writing?.accepted !== false && revision === state.writingRevision)) {
       state.writingDirty = false;
+      applyWritingFromServer(response.writing, true);
+    } else if (response.writing?.accepted === false && state.writingRevision <= acknowledgedRevision) {
+      state.writingDirty = false;
+      state.writingRevision = acknowledgedRevision;
       applyWritingFromServer(response.writing, true);
     } else {
       state.writingStarted = Boolean(response.writing?.started || state.writingStarted);
       saveSession();
     }
-    if (revision < writingRevision && !state.writingSubmitted) scheduleWritingSave(500);
+    if (revision < state.writingRevision && !state.writingSubmitted) scheduleWritingSave(0);
     else setWritingSaveStatus(response.writing?.submitted ? 'Đã nộp và lưu trên hệ thống' : 'Đã lưu trên hệ thống');
     return response;
   }
 
-  function scheduleWritingSave(delay = 900) {
+  function scheduleWritingSave(delay = null) {
     if (demoMode || !state.writingStarted || state.writingSubmitted) return;
     window.clearTimeout(writingSaveTimer);
     window.clearTimeout(writingRetryTimer);
     setWritingSaveStatus('Đang chờ lưu trên hệ thống...');
+    const idleDelay = Number.isFinite(delay) ? Math.max(0, delay) : randomDelay(3_000, 7_000);
     writingSaveTimer = window.setTimeout(() => {
       setWritingSaveStatus('Đang lưu trên hệ thống...');
       saveWritingToServer('draft').catch(() => {
         setWritingSaveStatus('Chưa lưu được · hệ thống sẽ tự thử lại');
-        writingRetryTimer = window.setTimeout(() => scheduleWritingSave(0), 5000);
+        writingRetryTimer = window.setTimeout(() => scheduleWritingSave(0), randomDelay(5_000, 9_000));
       });
-    }, delay);
+    }, idleDelay);
+    if (!writingForceSaveTimer && idleDelay > 0) {
+      writingForceSaveTimer = window.setTimeout(() => {
+        setWritingSaveStatus('Đang lưu trên hệ thống...');
+        saveWritingToServer('draft').catch(() => {
+          setWritingSaveStatus('Chưa lưu được · hệ thống sẽ tự thử lại');
+          writingRetryTimer = window.setTimeout(() => scheduleWritingSave(0), randomDelay(5_000, 9_000));
+        });
+      }, randomDelay(10_000, 15_000));
+    }
   }
 
   async function restoreAttemptFromServer() {
@@ -1238,6 +1279,36 @@
     applyWritingFromServer(payload.writing);
     saveSession();
     return payload;
+  }
+
+  // Dữ liệu vào: snapshot mới nhất đang giữ trên máy khi tab bị đóng hoặc chuyển trang.
+  // Việc chính: gửi một request keepalive cho đúng token/revision; không chờ phản hồi để cản thao tác của học viên.
+  // Kết quả: thay đổi cuối cùng có thêm cơ hội tới server trước khi trang biến mất; submit cuối vẫn là đường chốt chính thức.
+  // Khi lỗi mạng: localStorage vẫn giữ bản mới nhất để lần mở sau gửi lại.
+  function flushDraftsOnPageHide() {
+    const post = (path, payload) => fetch(`${appConfig.API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).catch(() => null);
+    if (state.examSessionToken && state.draftRevisions.listening > state.draftAckRevisions.listening) {
+      post(`/api/term-tests/${testConfig.slug}/listening/draft`, {
+        examSessionToken: state.examSessionToken,
+        revision: Number(state.draftRevisions.listening) || 0,
+        answers: state.drafts.listening || {}
+      });
+    }
+    if (state.attemptToken && state.draftRevisions.reading > state.draftAckRevisions.reading && !state.completed) {
+      post(`/api/term-tests/${testConfig.slug}/reading/draft`, {
+        attemptToken: state.attemptToken,
+        revision: Number(state.draftRevisions.reading) || 0,
+        answers: state.drafts.reading || {}
+      });
+    }
+    if (state.attemptToken && state.writingDirty && !state.writingSubmitted) {
+      post('/api/term-tests/writing', writingPayload('draft'));
+    }
   }
 
   async function resumeActiveAttemptForSelectedStudent() {
@@ -1469,7 +1540,10 @@
       editor.addEventListener('input', () => {
         state.drafts.writing[task.id] = editor.value;
         state.writingDirty = true;
-        writingRevision += 1;
+        state.writingRevision = Math.max(
+          Number(state.writingRevision) || 0,
+          Number(state.writingAckRevision) || 0
+        ) + 1;
         wordCount.textContent = `${countWords(editor.value)} từ`;
         saveSession();
         scheduleWritingSave();
@@ -2641,9 +2715,9 @@
       if (writingConfig) {
         setStage('writing-prep');
         const portalMessage = portalNotice(response.portalSyncStatus, true);
-        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, response.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, true), response.portalSyncStatus === 'pending' ? '' : 'success');
+        showNotice(portalNotice(response.portalSyncStatus, true), ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success');
         setStage('result-ready');
         if (automatic) await loadResult(elements.viewResult);
       }
@@ -2739,6 +2813,7 @@
       }
 
       window.clearTimeout(writingSaveTimer);
+      window.clearTimeout(writingForceSaveTimer);
       window.clearTimeout(writingRetryTimer);
       elements.writingView.dataset.writingSubmitting = 'true';
       setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài Writing');
@@ -2991,5 +3066,6 @@
     }
   }
 
+  window.addEventListener('pagehide', flushDraftsOnPageHide);
   initialize();
 })();
