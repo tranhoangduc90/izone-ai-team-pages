@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "writing-teacher-library.v1",
+  "course": {
+    "id": "speaking-writing-chuyen-sau",
+    "title": "Speaking Writing chuyên sâu",
+    "classCodes": ["CS.070626", "CS.160826"]
+  },
+  "authProbeSlug": "writing-task2-public-health-ban",
+  "handouts": [
+    {
+      "releasedAt": "2026-08-15T00:00:00+07:00",
+      "slug": "australian-destinations-1999-2009",
+      "title": "Điểm đến của người Úc, 1999–2009",
+      "type": "Writing Task 1 · Table",
+      "statement": "The table below gives information on the number of Australian people who visited the seven most popular destinations in 1999 and 2009.",
+      "studentPath": "./index.html",
+      "classes": ["CS.070626"]
+    },
+    {
+      "releasedAt": "2026-08-20T00:00:00+07:00",
+      "slug": "writing-task2-public-health-ban",
+      "title": "Cấm bán thực phẩm, đồ uống có hại",
+      "type": "Writing Task 2 · Agree or disagree",
+      "statement": "Shops should be banned from selling any food or drink that has been scientifically proven to be damaging to public health. Do you agree or disagree?",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "releasedAt": "2026-08-21T00:00:00+07:00",
+      "slug": "writing-task2-living-alone-development",
+      "title": "Sống một mình: tích cực hay tiêu cực",
+      "type": "Writing Task 2 · Positive or negative development",
+      "statement": "Nowadays, more and more people are choosing to live alone. Is this a positive or negative development?",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "releasedAt": "2026-09-04T17:42:36+07:00",
+      "slug": "writing-task2-urban-crowding-traffic-congestion",
+      "title": "Đô thị đông đúc và ùn tắc giao thông",
+      "type": "Writing Task 2 · Problems and solutions",
+      "statement": "Many cities are becoming increasingly crowded, and traffic congestion is getting worse. What problems does this cause, and what measures can be taken to solve them?",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "releasedAt": "2026-09-04T20:52:19+07:00",
+      "slug": "writing-task2-public-health-spending",
+      "title": "Ngân sách y tế: phòng bệnh hay điều trị",
+      "type": "Writing Task 2 · Agree or disagree",
+      "statement": "It is more important to spend public money promoting a healthy lifestyle to prevent illness than to spend it on treating people who are already ill. To what extent do you agree or disagree?",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
+    }
+  ]
+}

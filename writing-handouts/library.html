@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Thư viện handout Writing dành cho giảng viên khóa Speaking Writing chuyên sâu">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'self' https://accounts.google.com">
+    <meta name="theme-color" content="#14213d">
+    <title>Thư viện handout Writing</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="./library.css?v=20260912-sw-library-v1">
+  </head>
+  <body>
+    <header class="library-hero">
+      <div>
+        <p class="eyebrow">IZONE · Dành cho giảng viên</p>
+        <h1>Thư viện handout Writing</h1>
+        <p>Xem bài, sao chép đúng link học viên và mở dashboard theo từng lớp.</p>
+      </div>
+    </header>
+
+    <main class="library-shell">
+      <section class="panel auth-card" aria-labelledby="auth-title">
+        <div>
+          <p class="eyebrow">Speaking Writing chuyên sâu</p>
+          <h2 id="auth-title">Đăng nhập để mở thư viện</h2>
+          <p id="auth-status" role="status">Dữ liệu dashboard chỉ được mở sau khi hệ thống xác minh quyền giảng viên.</p>
+        </div>
+        <div class="auth-actions">
+          <div id="google-signin"></div>
+          <button id="logout-button" class="button button-secondary" type="button" hidden>Đăng xuất</button>
+        </div>
+      </section>
+
+      <section id="library-content" hidden>
+        <section class="panel toolbar" aria-label="Chọn lớp">
+          <div>
+            <p class="eyebrow">Khóa học</p>
+            <h2 id="course-title">Speaking Writing chuyên sâu</h2>
+            <p id="library-summary" class="muted"></p>
+          </div>
+          <label for="class-select">Tạo link cho lớp
+            <select id="class-select"></select>
+          </label>
+        </section>
+
+        <p id="library-notice" class="notice" role="status" hidden></p>
+        <section id="handout-list" class="handout-list" aria-label="Danh sách handout theo thời gian"></section>
+      </section>
+    </main>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script type="module" src="./js/library-app.js?v=20260912-sw-library-v1"></script>
+  </body>
+</html>
