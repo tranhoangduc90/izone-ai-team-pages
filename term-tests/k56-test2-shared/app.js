@@ -1297,7 +1297,7 @@
     if (grading?.ready) {
       gradingArea.className = 'writing-score-grid';
       const tasksByNumber = new Map(Array.from(grading.tasks || []).map(task => [Number(task.taskNumber), task]));
-      for (const taskNumber of [2]) {
+      for (const taskNumber of [1]) {
         const taskResult = tasksByNumber.get(taskNumber);
         const button = document.createElement('button');
         button.type = 'button';
