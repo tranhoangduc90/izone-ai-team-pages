@@ -332,6 +332,12 @@
       && (!demoMode || demoMode === 'exam')
       && !['loading', 'result-ready', 'result'].includes(stage);
     if (showConfirmedIdentity) elements.identityView.hidden = false;
+    // Answer Sheet không có phòng chờ CBT: luôn hiện định danh khi đã tải lớp.
+    if (!document.body.classList.contains('cbt-mode') && !demoMode) {
+      elements.identityView.hidden = stage === 'loading';
+      // Lượt đã nộp phải tiếp tục gắn với cùng học viên, không đổi người giữa các kỹ năng.
+      elements.studentSelect.disabled = Boolean(state.attemptToken);
+    }
     const activeProgress = stage === 'listening' || stage === 'listening-saved'
       ? 'listening'
       : stage === 'reading' ? 'reading'
