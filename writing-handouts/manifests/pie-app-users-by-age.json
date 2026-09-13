@@ -372,13 +372,13 @@
   "chatbots": {
     "data_walk": {
       "label": "Chatbot 1: đọc đề và rà dữ liệu",
-      "href": null,
-      "status": "pending_link"
+      "href": "https://chatgpt.com/share/6a6b0ea5-74ac-83ec-83bd-b9f7b13908ae",
+      "status": "ready"
     },
     "insight_and_routes": {
       "label": "Chatbot 2: tìm insight và chọn hướng thân bài",
-      "href": null,
-      "status": "pending_link"
+      "href": "https://chatgpt.com/share/6a6b0eb0-c0e0-83ec-b6f5-438cae626b3e",
+      "status": "ready"
     }
   },
   "feedback": {

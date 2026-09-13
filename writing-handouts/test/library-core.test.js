@@ -3,17 +3,17 @@ import test from "node:test";
 import {
   classAvailable,
   dashboardUrl,
-  sortHandoutsChronologically,
+  sortHandoutsByWritingLesson,
   studentUrl,
 } from "../js/library-core.js";
 
-test("sortHandoutsChronologically xếp bài cũ trước bài mới", () => {
-  const result = sortHandoutsChronologically([
-    { title: "B", releasedAt: "2026-09-04T20:52:19+07:00" },
-    { title: "A", releasedAt: "2026-08-15T00:00:00+07:00" },
-    { title: "C", releasedAt: "2026-09-04T17:42:36+07:00" },
+test("sortHandoutsByWritingLesson xếp đúng thứ tự buổi Writing", () => {
+  const result = sortHandoutsByWritingLesson([
+    { title: "B", lessonId: "lesson-02", writingLesson: 2 },
+    { title: "A", lessonId: "lesson-01", writingLesson: 1 },
+    { title: "C", lessonId: "lesson-03", writingLesson: 3 },
   ]);
-  assert.deepEqual(result.map((item) => item.title), ["A", "C", "B"]);
+  assert.deepEqual(result.map((item) => item.title), ["A", "B", "C"]);
 });
 
 test("classAvailable không phân biệt hoa thường", () => {

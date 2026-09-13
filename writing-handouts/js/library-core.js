@@ -34,23 +34,14 @@ export function createTeacherSessionStore({ apiBase, clientId, getStorage, now =
   };
 }
 
-export function sortHandoutsChronologically(handouts) {
+export function sortHandoutsByWritingLesson(handouts) {
   return [...(handouts || [])].sort((left, right) => {
-    const byDate = Date.parse(left.releasedAt) - Date.parse(right.releasedAt);
-    if (Number.isFinite(byDate) && byDate !== 0) return byDate;
+    const byLesson = Number(left.writingLesson) - Number(right.writingLesson);
+    if (Number.isFinite(byLesson) && byLesson !== 0) return byLesson;
+    const byId = String(left.lessonId || "").localeCompare(String(right.lessonId || ""), "vi");
+    if (byId !== 0) return byId;
     return String(left.title || "").localeCompare(String(right.title || ""), "vi");
   });
-}
-
-export function formatReleaseDate(value) {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "Chưa rõ ngày";
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Ho_Chi_Minh",
-  }).format(date);
 }
 
 export function classAvailable(handout, classCode) {

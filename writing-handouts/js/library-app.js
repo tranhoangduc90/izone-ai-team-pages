@@ -10,10 +10,9 @@ import {
   classAvailable,
   createTeacherSessionStore,
   dashboardUrl,
-  formatReleaseDate,
-  sortHandoutsChronologically,
+  sortHandoutsByWritingLesson,
   studentUrl,
-} from "./library-core.js?v=20260912-sw-library-v1";
+} from "./library-core.js?v=20260913-writing-sequence-v2";
 
 const $ = (id) => document.getElementById(id);
 const state = { token: "", config: null, library: null, sessionStore: null, loginGeneration: 0 };
@@ -65,14 +64,18 @@ function renderHandout(handout) {
   const card = document.createElement("article");
   card.className = "handout-card";
   card.dataset.slug = handout.slug;
+  card.dataset.lessonId = handout.lessonId;
 
-  const date = document.createElement("div");
-  date.className = "handout-date";
-  const dateLabel = document.createElement("span");
-  dateLabel.textContent = "Phát hành";
-  const dateValue = document.createElement("strong");
-  dateValue.textContent = formatReleaseDate(handout.releasedAt);
-  date.append(dateLabel, dateValue);
+  const lesson = document.createElement("div");
+  lesson.className = "handout-lesson";
+  const lessonLabel = document.createElement("span");
+  lessonLabel.textContent = "Writing buổi";
+  const lessonValue = document.createElement("strong");
+  lessonValue.textContent = String(handout.writingLesson);
+  const taskLabel = document.createElement("span");
+  taskLabel.className = "handout-task";
+  taskLabel.textContent = `Task ${handout.taskNumber}`;
+  lesson.append(lessonLabel, lessonValue, taskLabel);
 
   const body = document.createElement("div");
   body.className = "handout-body";
@@ -115,14 +118,14 @@ function renderHandout(handout) {
     }, !available),
   );
   body.append(meta, title, prompt, availability, actions);
-  card.append(date, body);
+  card.append(lesson, body);
   return card;
 }
 
 function renderLibrary() {
-  const handouts = sortHandoutsChronologically(state.library.handouts);
+  const handouts = sortHandoutsByWritingLesson(state.library.handouts);
   $("course-title").textContent = state.library.course.title;
-  $("library-summary").textContent = `${handouts.length} handout · xếp từ bài phát hành sớm nhất đến mới nhất.`;
+  $("library-summary").textContent = `${handouts.length} handout · xếp theo thứ tự Writing buổi 1 → ${handouts.length}.`;
   $("handout-list").replaceChildren(...handouts.map(renderHandout));
 }
 

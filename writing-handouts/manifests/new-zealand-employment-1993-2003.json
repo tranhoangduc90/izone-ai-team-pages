@@ -1,0 +1,177 @@
+{
+  "schema_version": "task1-web-manifest-v1",
+  "activity": {
+    "version": "task1-web-activity-v1",
+    "id": "5e9a65cb-037e-42e1-933c-1b54d818478f",
+    "slug": "new-zealand-employment-1993-2003",
+    "title": "Luyện Task 1: Việc làm ở New Zealand, 1993–2003",
+    "type": "ielts_writing_task_1_preparation",
+    "locale": "vi-VN"
+  },
+  "task": {
+    "statement": "The table below shows employment patterns for males and females in New Zealand in 1993 and 2003.",
+    "chart_image": {
+      "kind": "reference",
+      "available": true,
+      "mime_type": "image/png",
+      "file_name": "employment-patterns-new-zealand-1993-2003.png",
+      "url": "assets/employment-patterns-new-zealand-1993-2003.png",
+      "alt_text": "Bảng tỷ lệ lao động nam và nữ New Zealand làm việc trong sáu ngành vào năm 1993 và 2003."
+    }
+  },
+  "decoding": {
+    "what": "Cơ cấu việc làm của nam và nữ New Zealand trong sáu ngành ở hai năm",
+    "unit": "% (phần trăm lực lượng lao động của từng giới; không phải số người)",
+    "categories": [
+      "Ngành: dịch vụ và vận tải, nông nghiệp, kinh doanh, sản xuất, xây dựng và dịch vụ xã hội",
+      "Giới tính: nam và nữ",
+      "Thời gian: 1993 và 2003"
+    ]
+  },
+  "analysis": {
+    "bullets": [
+      "Dịch vụ và vận tải là ngành lớn nhất của nữ ở cả hai năm, dù tỷ lệ giảm từ 53% xuống 36%.",
+      "Ngành lớn nhất của nam chuyển từ nông nghiệp năm 1993 sang dịch vụ và vận tải năm 2003.",
+      "Kinh doanh tăng mạnh ở cả hai giới: nữ tăng 21 điểm phần trăm và nam tăng 18 điểm.",
+      "Nông nghiệp giảm ở cả hai giới, đặc biệt ở nam với mức giảm 30 điểm phần trăm.",
+      "Khoảng cách giới thu hẹp ở năm trong sáu ngành; dịch vụ xã hội là ngoại lệ.",
+      "Sản xuất đảo chiều từ nữ cao hơn năm 1993 sang nam cao hơn năm 2003."
+    ]
+  },
+  "routes": [
+    {
+      "id": "A",
+      "name": "So sánh theo thời gian",
+      "rank": 1,
+      "recommended": true,
+      "body": {
+        "body_1": "Mô tả cơ cấu năm 1993: nữ tập trung ở dịch vụ và vận tải, nam tập trung ở nông nghiệp; nêu các khoảng cách giới nổi bật.",
+        "body_2": "Mô tả cơ cấu năm 2003 và sự tái phân bổ: kinh doanh tăng mạnh, nông nghiệp giảm sâu, còn khoảng cách giới nhìn chung thu hẹp.",
+        "strengths": "Cho thấy rõ điểm xuất phát và sự thay đổi sau mười năm.",
+        "tradeoffs": "Cần nhóm ngành theo xu hướng để tránh liệt kê cả sáu hàng ở mỗi đoạn.",
+        "best_for": "Học viên muốn nhấn mạnh thay đổi theo thời gian."
+      }
+    },
+    {
+      "id": "B",
+      "name": "So sánh theo nhóm ngành",
+      "rank": 2,
+      "recommended": false,
+      "body": {
+        "body_1": "Nhóm dịch vụ và tăng trưởng gồm dịch vụ-vận tải, kinh doanh và dịch vụ xã hội; đối chiếu thay đổi của hai giới.",
+        "body_2": "Nhóm sản xuất-vật chất gồm nông nghiệp, sản xuất và xây dựng; nhấn mạnh sự sụt giảm nông nghiệp và đảo chiều ở sản xuất.",
+        "strengths": "Tạo các cụm so sánh có ý nghĩa và liên kết được hai năm trong cùng một ngành.",
+        "tradeoffs": "Ranh giới giữa các nhóm là lựa chọn phân tích, cần giải thích bằng xu hướng chứ không chỉ tên ngành.",
+        "best_for": "Học viên khá giỏi muốn so sánh chéo ngành và giới."
+      }
+    },
+    {
+      "id": "C",
+      "name": "So sánh theo giới tính",
+      "rank": 3,
+      "recommended": false,
+      "body": {
+        "body_1": "Mô tả nữ giới: dịch vụ-vận tải giảm nhưng vẫn đứng đầu, kinh doanh và dịch vụ xã hội tăng, sản xuất giảm.",
+        "body_2": "Mô tả nam giới: nông nghiệp giảm mạnh, dịch vụ-vận tải và kinh doanh tăng để trở thành hai ngành lớn nhất.",
+        "strengths": "Dễ theo dõi sự chuyển dịch riêng của từng giới.",
+        "tradeoffs": "Phải lồng ghép so sánh giới để tránh hai đoạn mô tả độc lập.",
+        "best_for": "Học viên quen tổ chức số liệu theo đối tượng."
+      }
+    }
+  ],
+  "vocabulary": {
+    "overview": {
+      "naming": [
+        { "vi": "cơ cấu việc làm", "en": "employment pattern / employment distribution" },
+        { "vi": "tỷ lệ lao động của từng giới", "en": "the proportion of each gender's workforce" },
+        { "vi": "ngành kinh tế", "en": "employment sector" }
+      ],
+      "insights": [
+        { "vi": "chuyển dịch mạnh khỏi nông nghiệp", "en": "a marked shift away from agriculture" },
+        { "vi": "tăng trưởng đáng kể của ngành kinh doanh", "en": "substantial growth in business" },
+        { "vi": "khoảng cách giới thu hẹp", "en": "the gender gap narrowed" },
+        { "vi": "đảo chiều", "en": "a reversal" }
+      ]
+    },
+    "routes": [
+      {
+        "id": "A",
+        "name": "So sánh theo thời gian",
+        "rank": 1,
+        "recommended": true,
+        "naming": [
+          { "vi": "cơ cấu năm 1993", "en": "the distribution in 1993" },
+          { "vi": "mười năm sau", "en": "a decade later" }
+        ],
+        "story": [
+          { "vi": "chiếm tỷ trọng lớn nhất", "en": "account for the largest share" },
+          { "vi": "giảm mạnh", "en": "drop sharply" },
+          { "vi": "tăng theo điểm phần trăm", "en": "rise by percentage points" },
+          { "vi": "trở thành ngành lớn nhất", "en": "become the largest sector" }
+        ]
+      },
+      {
+        "id": "B",
+        "name": "So sánh theo nhóm ngành",
+        "rank": 2,
+        "recommended": false,
+        "naming": [
+          { "vi": "các ngành dịch vụ", "en": "service-oriented sectors" },
+          { "vi": "các ngành sản xuất-vật chất", "en": "production-related sectors" }
+        ],
+        "story": [
+          { "vi": "ghi nhận mức tăng lớn", "en": "record a substantial increase" },
+          { "vi": "đi theo xu hướng trái ngược", "en": "follow the opposite trend" },
+          { "vi": "giảm xuống còn", "en": "fall to" },
+          { "vi": "vượt tỷ lệ tương ứng", "en": "overtake the corresponding figure" }
+        ]
+      },
+      {
+        "id": "C",
+        "name": "So sánh theo giới tính",
+        "rank": 3,
+        "recommended": false,
+        "naming": [
+          { "vi": "lao động nữ", "en": "female workers" },
+          { "vi": "lao động nam", "en": "male workers" }
+        ],
+        "story": [
+          { "vi": "tập trung chủ yếu ở", "en": "be concentrated mainly in" },
+          { "vi": "dịch chuyển sang", "en": "shift towards" },
+          { "vi": "cao hơn đáng kể", "en": "be considerably higher than" },
+          { "vi": "chênh lệch giảm", "en": "the difference narrowed" }
+        ]
+      }
+    ]
+  },
+  "chatbots": {
+    "data_walk": {
+      "label": "Chatbot 1: đọc đề và rà dữ liệu",
+      "href": "https://chatgpt.com/share/6a6093dc-51d8-83ec-be21-20e0af9495ea",
+      "status": "ready"
+    },
+    "insight_and_routes": {
+      "label": "Chatbot 2: tìm insight và chọn hướng thân bài",
+      "href": "https://chatgpt.com/share/6a609414-d3f0-83ec-b54f-6f3b6b62f6a1",
+      "status": "ready"
+    }
+  },
+  "feedback": {
+    "overview": { "enabled": true, "section": "overview", "prompt_version": "1" },
+    "outline": { "enabled": true, "section": "outline", "prompt_version": "1" },
+    "draft": { "enabled": true, "section": "draft", "prompt_version": "1" }
+  },
+  "metadata": {
+    "factory_version": "task1-factory-v1",
+    "activity_version": "task1-web-activity-v1",
+    "source_contract": "released-handout",
+    "source_contract_version": "2026-09-13",
+    "prompt_versions": {
+      "chatbot_1": "1",
+      "chatbot_2": "1",
+      "overview": "1",
+      "outline": "1",
+      "draft": "1"
+    }
+  }
+}

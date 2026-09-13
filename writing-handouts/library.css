@@ -47,9 +47,10 @@ select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 111, 23
 .notice.error { color: #8d2135; background: #fff0f2; border-color: #f1bdc7; }
 .handout-list { display: grid; gap: 14px; margin-top: 16px; }
 .handout-card { display: grid; grid-template-columns: 130px minmax(0, 1fr); overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 28px rgba(25, 45, 75, .07); }
-.handout-date { display: grid; align-content: start; gap: 7px; padding: 22px 18px; color: #fff; background: var(--navy); }
-.handout-date span { color: #bfd3e7; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.handout-date strong { font-size: 20px; line-height: 1.2; }
+.handout-lesson { display: grid; align-content: start; gap: 7px; padding: 22px 18px; color: #fff; background: var(--navy); }
+.handout-lesson span { color: #bfd3e7; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.handout-lesson strong { font-size: 32px; line-height: 1; }
+.handout-lesson .handout-task { width: max-content; padding: 5px 8px; color: #173b67; background: #fff; border-radius: 999px; letter-spacing: .04em; }
 .handout-body { min-width: 0; padding: 20px 22px; }
 .handout-meta { display: flex; flex-wrap: wrap; gap: 7px; }
 .badge { padding: 6px 9px; color: #315271; background: #edf3f9; border-radius: 999px; font-size: 11px; font-weight: 800; }
@@ -71,8 +72,9 @@ select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 111, 23
   .auth-actions { justify-content: flex-start; }
   .toolbar label { min-width: 0; }
   .handout-card { grid-template-columns: 1fr; }
-  .handout-date { grid-template-columns: auto 1fr; align-items: center; padding: 13px 18px; }
-  .handout-date strong { font-size: 17px; }
+  .handout-lesson { grid-template-columns: auto auto 1fr; align-items: center; padding: 13px 18px; }
+  .handout-lesson strong { font-size: 23px; }
+  .handout-lesson .handout-task { justify-self: end; }
   .handout-actions { display: grid; grid-template-columns: 1fr; }
   .button { width: 100%; }
 }

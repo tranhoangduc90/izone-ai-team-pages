@@ -1,0 +1,147 @@
+{
+  "schema_version": "task1-web-manifest-v1",
+  "activity": {
+    "version": "task1-web-activity-v1",
+    "id": "c501cd2d-71ef-4a48-95b2-98ba27a0a499",
+    "slug": "australian-physical-activity-2010",
+    "title": "Luyện Task 1: Hoạt động thể chất ở Úc năm 2010",
+    "type": "ielts_writing_task_1_preparation",
+    "locale": "vi-VN"
+  },
+  "task": {
+    "statement": "The bar chart below shows the percentage of Australian men and women in different age groups who did regular physical activity in 2010.",
+    "chart_image": {
+      "kind": "reference",
+      "available": true,
+      "mime_type": "image/png",
+      "file_name": "australian-physical-activity-2010.png",
+      "url": "assets/australian-physical-activity-2010.png",
+      "alt_text": "Biểu đồ cột so sánh tỷ lệ nam và nữ Úc ở sáu nhóm tuổi tập thể dục thường xuyên năm 2010."
+    }
+  },
+  "decoding": {
+    "what": "Tỷ lệ nam và nữ Úc ở sáu nhóm tuổi thực hiện hoạt động thể chất thường xuyên",
+    "unit": "% (phần trăm của từng nhóm giới tính và độ tuổi)",
+    "categories": [
+      "Giới tính: nam và nữ",
+      "Nhóm tuổi: 15–24, 25–34, 35–44, 45–54, 55–64 và 65+",
+      "Thời gian: năm 2010"
+    ]
+  },
+  "analysis": {
+    "bullets": [
+      "Nữ có tỷ lệ tập thể dục cao hơn nam ở năm trong sáu nhóm tuổi.",
+      "Nhóm 15–24 là ngoại lệ duy nhất: nam đạt 52,8%, cao hơn nữ ở mức 47,7%.",
+      "Tỷ lệ của nam giảm xuống đáy 39,5% ở nhóm 35–44 rồi phục hồi dần lên 46,7% ở nhóm 65+.",
+      "Tỷ lệ của nữ tăng lên 53,3% ở nhóm 45–54, duy trì quanh 53% đến 64 tuổi rồi giảm ở nhóm cao tuổi nhất.",
+      "Khoảng cách giới lớn nhất xuất hiện ở nhóm 35–44; hai tỷ lệ gần bằng nhau nhất ở nhóm 65+."
+    ]
+  },
+  "routes": [
+    {
+      "id": "A",
+      "name": "So sánh theo giới tính",
+      "rank": 1,
+      "recommended": true,
+      "body": {
+        "body_1": "Mô tả nam giới: bắt đầu ở mức cao nhất 52,8%, giảm xuống 39,5% ở nhóm 35–44 rồi phục hồi dần lên 46,7%.",
+        "body_2": "Mô tả nữ giới: tăng từ 47,7% lên đỉnh 53,3%, gần như ổn định ở tuổi trung niên rồi giảm còn 47,1%; lồng ghép các so sánh với nam.",
+        "strengths": "Dễ theo dõi hai chuỗi số liệu và làm rõ hai xu hướng trái ngược.",
+        "tradeoffs": "Phải có so sánh chéo giữa hai giới để hai đoạn không trở thành hai danh sách tách rời.",
+        "best_for": "Học viên muốn một cấu trúc rõ ràng, dễ kiểm soát số liệu."
+      }
+    },
+    {
+      "id": "B",
+      "name": "So sánh theo giai đoạn tuổi",
+      "rank": 2,
+      "recommended": false,
+      "body": {
+        "body_1": "So sánh ba nhóm 15–44: nam dẫn ở nhóm trẻ nhất, sau đó nữ vượt lên và khoảng cách đạt lớn nhất ở nhóm 35–44.",
+        "body_2": "So sánh ba nhóm 45–65+: nữ tiếp tục dẫn ở hai nhóm trung niên trước khi hai giới hội tụ ở nhóm 65+.",
+        "strengths": "Làm nổi bật trực tiếp sự đảo chiều và thay đổi khoảng cách theo tuổi.",
+        "tradeoffs": "Cần chuyển đoạn khéo để không mô tả tuần tự từng cặp cột.",
+        "best_for": "Học viên thích tổ chức bài theo tiến trình tuổi."
+      }
+    }
+  ],
+  "vocabulary": {
+    "overview": {
+      "naming": [
+        { "vi": "tỷ lệ người tập thể dục thường xuyên", "en": "the proportion of people doing regular physical activity" },
+        { "vi": "nhóm tuổi", "en": "age group / age bracket" },
+        { "vi": "nam và nữ", "en": "males and females" }
+      ],
+      "insights": [
+        { "vi": "cao hơn ở hầu hết nhóm tuổi", "en": "be higher in most age groups" },
+        { "vi": "ngoại lệ duy nhất", "en": "the only exception" },
+        { "vi": "khoảng cách lớn nhất", "en": "the widest gap" },
+        { "vi": "gần như bằng nhau", "en": "be almost identical" }
+      ]
+    },
+    "routes": [
+      {
+        "id": "A",
+        "name": "So sánh theo giới tính",
+        "rank": 1,
+        "recommended": true,
+        "naming": [
+          { "vi": "tỷ lệ ở nam giới", "en": "the male figure" },
+          { "vi": "tỷ lệ tương ứng ở nữ giới", "en": "the corresponding female figure" }
+        ],
+        "story": [
+          { "vi": "giảm xuống mức thấp nhất", "en": "fall to a low of" },
+          { "vi": "phục hồi dần", "en": "recover gradually" },
+          { "vi": "đạt đỉnh ở mức", "en": "peak at" },
+          { "vi": "duy trì tương đối ổn định", "en": "remain relatively stable" }
+        ]
+      },
+      {
+        "id": "B",
+        "name": "So sánh theo giai đoạn tuổi",
+        "rank": 2,
+        "recommended": false,
+        "naming": [
+          { "vi": "ba nhóm tuổi trẻ hơn", "en": "the three younger age groups" },
+          { "vi": "ba nhóm tuổi còn lại", "en": "the remaining three age groups" }
+        ],
+        "story": [
+          { "vi": "dẫn trước", "en": "lead" },
+          { "vi": "bị vượt qua", "en": "be overtaken by" },
+          { "vi": "khoảng cách mở rộng", "en": "the gap widens" },
+          { "vi": "hai tỷ lệ hội tụ", "en": "the two figures converge" }
+        ]
+      }
+    ]
+  },
+  "chatbots": {
+    "data_walk": {
+      "label": "Chatbot 1: đọc đề và rà dữ liệu",
+      "href": "https://chatgpt.com/share/6a4902dd-f76c-83ec-9980-08cd5f155ac0",
+      "status": "ready"
+    },
+    "insight_and_routes": {
+      "label": "Chatbot 2: tìm insight và chọn hướng thân bài",
+      "href": "https://chatgpt.com/share/6a4902e9-36b4-83ec-9e5d-39551854430d",
+      "status": "ready"
+    }
+  },
+  "feedback": {
+    "overview": { "enabled": true, "section": "overview", "prompt_version": "1" },
+    "outline": { "enabled": true, "section": "outline", "prompt_version": "1" },
+    "draft": { "enabled": true, "section": "draft", "prompt_version": "1" }
+  },
+  "metadata": {
+    "factory_version": "task1-factory-v1",
+    "activity_version": "task1-web-activity-v1",
+    "source_contract": "released-handout",
+    "source_contract_version": "2026-09-13",
+    "prompt_versions": {
+      "chatbot_1": "1",
+      "chatbot_2": "1",
+      "overview": "1",
+      "outline": "1",
+      "draft": "1"
+    }
+  }
+}

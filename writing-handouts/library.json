@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "writing-teacher-library.v1",
+  "schemaVersion": "writing-teacher-library.v2",
   "course": {
     "id": "speaking-writing-chuyen-sau",
     "title": "Speaking Writing chuyên sâu",
@@ -8,16 +8,9 @@
   "authProbeSlug": "writing-task2-public-health-ban",
   "handouts": [
     {
-      "releasedAt": "2026-08-15T00:00:00+07:00",
-      "slug": "australian-destinations-1999-2009",
-      "title": "Điểm đến của người Úc, 1999–2009",
-      "type": "Writing Task 1 · Table",
-      "statement": "The table below gives information on the number of Australian people who visited the seven most popular destinations in 1999 and 2009.",
-      "studentPath": "./index.html",
-      "classes": ["CS.070626"]
-    },
-    {
-      "releasedAt": "2026-08-20T00:00:00+07:00",
+      "lessonId": "cs070626-writing-01",
+      "writingLesson": 1,
+      "taskNumber": 2,
       "slug": "writing-task2-public-health-ban",
       "title": "Cấm bán thực phẩm, đồ uống có hại",
       "type": "Writing Task 2 · Agree or disagree",
@@ -26,25 +19,9 @@
       "classes": ["CS.070626", "CS.160826"]
     },
     {
-      "releasedAt": "2026-08-21T00:00:00+07:00",
-      "slug": "writing-task2-living-alone-development",
-      "title": "Sống một mình: tích cực hay tiêu cực",
-      "type": "Writing Task 2 · Positive or negative development",
-      "statement": "Nowadays, more and more people are choosing to live alone. Is this a positive or negative development?",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
-    },
-    {
-      "releasedAt": "2026-09-04T17:42:36+07:00",
-      "slug": "writing-task2-urban-crowding-traffic-congestion",
-      "title": "Đô thị đông đúc và ùn tắc giao thông",
-      "type": "Writing Task 2 · Problems and solutions",
-      "statement": "Many cities are becoming increasingly crowded, and traffic congestion is getting worse. What problems does this cause, and what measures can be taken to solve them?",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
-    },
-    {
-      "releasedAt": "2026-09-04T20:52:19+07:00",
+      "lessonId": "cs070626-writing-02",
+      "writingLesson": 2,
+      "taskNumber": 2,
       "slug": "writing-task2-public-health-spending",
       "title": "Ngân sách y tế: phòng bệnh hay điều trị",
       "type": "Writing Task 2 · Agree or disagree",
@@ -53,7 +30,97 @@
       "classes": ["CS.070626", "CS.160826"]
     },
     {
-      "releasedAt": "2026-09-13T07:16:34+07:00",
+      "lessonId": "cs070626-writing-03",
+      "writingLesson": 3,
+      "taskNumber": 2,
+      "slug": "writing-task2-live-performances-at-home",
+      "title": "Biểu diễn trực tiếp hay xem tại nhà",
+      "type": "Writing Task 2 · Agree or disagree",
+      "statement": "In today’s world, it is no longer necessary to attend live performances such as shows or concerts, as watching them on television or on a computer at home is considered a better option. Do you agree or disagree with this opinion?",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-04",
+      "writingLesson": 4,
+      "taskNumber": 2,
+      "slug": "writing-task2-crime-prevention-responsibility",
+      "title": "Trách nhiệm phòng chống tội phạm",
+      "type": "Writing Task 2 · Discuss both views",
+      "statement": "Some people think that the government should be responsible for crime prevention, while others believe that it is the responsibility of the individual to protect themselves. Discuss both views and give your opinion.",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-05",
+      "writingLesson": 5,
+      "taskNumber": 1,
+      "slug": "australian-physical-activity-2010",
+      "title": "Hoạt động thể chất ở Úc năm 2010",
+      "type": "Writing Task 1 · Bar chart",
+      "statement": "The bar chart below shows the percentage of Australian men and women in different age groups who did regular physical activity in 2010.",
+      "studentPath": "./index.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-06",
+      "writingLesson": 6,
+      "taskNumber": 1,
+      "slug": "new-zealand-employment-1993-2003",
+      "title": "Việc làm ở New Zealand, 1993–2003",
+      "type": "Writing Task 1 · Table",
+      "statement": "The table below shows employment patterns for males and females in New Zealand in 1993 and 2003.",
+      "studentPath": "./index.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-07",
+      "writingLesson": 7,
+      "taskNumber": 1,
+      "slug": "pie-app-users-by-age",
+      "title": "Độ tuổi người dùng ba ứng dụng",
+      "type": "Writing Task 1 · Pie charts",
+      "statement": "The pie charts show the proportion of users across different age groups on three apps:Twitter, Facebook and YouTube.",
+      "studentPath": "./index.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-08",
+      "writingLesson": 8,
+      "taskNumber": 1,
+      "slug": "australian-destinations-1999-2009",
+      "title": "Điểm đến của người Úc, 1999–2009",
+      "type": "Writing Task 1 · Table",
+      "statement": "The table below gives information on the number of Australian people who visited the seven most popular destinations in 1999 and 2009.",
+      "studentPath": "./index.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-09",
+      "writingLesson": 9,
+      "taskNumber": 2,
+      "slug": "writing-task2-living-alone-development",
+      "title": "Sống một mình: tích cực hay tiêu cực",
+      "type": "Writing Task 2 · Positive or negative development",
+      "statement": "Nowadays, more and more people are choosing to live alone. Is this a positive or negative development?",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-10",
+      "writingLesson": 10,
+      "taskNumber": 2,
+      "slug": "writing-task2-urban-crowding-traffic-congestion",
+      "title": "Đô thị đông đúc và ùn tắc giao thông",
+      "type": "Writing Task 2 · Problems and solutions",
+      "statement": "Many cities are becoming increasingly crowded, and traffic congestion is getting worse. What problems does this cause, and what measures can be taken to solve them?",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-11",
+      "writingLesson": 11,
+      "taskNumber": 2,
       "slug": "writing-task2-live-performances-at-home",
       "title": "Biểu diễn trực tiếp hay xem tại nhà",
       "type": "Writing Task 2 · Agree or disagree",
