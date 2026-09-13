@@ -3,7 +3,7 @@ import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js";
 import { sectionDefinitions } from "./lesson-core.js";
 import { appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
-import { commentsForSection, isBackdropClick, latestVocabularyRows } from "./teacher-detail-core.js";
+import { commentsForSection, isBackdropClick, latestVocabularyRows, technicalRecoveryMessage } from "./teacher-detail-core.js?v=20260913-technical-error-copy";
 import { groupStudents } from "./teacher-progress.js";
 import { teacherAuthFailure } from "./teacher-auth-ui.js";
 import { selectionOffsets, threadsForField } from "./teacher-comments-core.js";
@@ -334,9 +334,7 @@ function renderStudentDetail(student, { loading = false, error = "" } = {}) {
         const recovery = document.createElement("div");
         recovery.className = "teacher-ai-recovery";
         const message = document.createElement("p");
-        message.textContent = state.canManage
-          ? "AI đã lỗi sau ba lần thử. Bài viết vẫn được lưu an toàn; bạn có thể xếp lại chính Comment này."
-          : "AI đã lỗi sau ba lần thử. Bài viết vẫn được lưu an toàn; hãy báo tài khoản quản trị để xếp chấm lại.";
+        message.textContent = technicalRecoveryMessage(state.canManage);
         recovery.append(message);
         if (state.canManage) {
         const retry = document.createElement("button");

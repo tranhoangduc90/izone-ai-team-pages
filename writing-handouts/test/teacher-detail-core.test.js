@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { commentsForSection, isBackdropClick, latestVocabularyRows } from "../js/teacher-detail-core.js";
+import { commentsForSection, isBackdropClick, latestVocabularyRows, technicalRecoveryMessage } from "../js/teacher-detail-core.js";
 
 test("teacher detail shows newest comments for only the selected section", () => {
   const comments = [
@@ -24,4 +24,15 @@ test("only a click outside the dialog rectangle is treated as a backdrop click",
   const rect = { left: 100, right: 900, top: 50, bottom: 700 };
   assert.equal(isBackdropClick({ clientX: 20, clientY: 200 }, rect), true);
   assert.equal(isBackdropClick({ clientX: 200, clientY: 200 }, rect), false);
+});
+
+test("technical recovery message does not invent an AI retry count", () => {
+  assert.equal(
+    technicalRecoveryMessage(true),
+    "Lượt chấm gặp lỗi kỹ thuật. Bài viết vẫn được lưu an toàn; bạn có thể xếp lại chính Comment này.",
+  );
+  assert.equal(
+    technicalRecoveryMessage(false),
+    "Lượt chấm gặp lỗi kỹ thuật. Bài viết vẫn được lưu an toàn; hãy báo tài khoản quản trị để xếp chấm lại.",
+  );
 });

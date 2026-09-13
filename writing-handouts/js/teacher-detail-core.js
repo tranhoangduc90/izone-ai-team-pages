@@ -1,5 +1,5 @@
 // Dữ liệu nhận vào: Comment, artifacts từ vựng và tọa độ nhấp chuột trong dashboard.
-// Việc chính: lọc timeline theo section, lấy bảng từ vựng mới nhất và nhận biết cú nhấp ngoài popup.
+// Việc chính: lọc timeline theo section, lấy bảng từ vựng mới nhất, tạo thông báo lỗi chấm và nhận biết cú nhấp ngoài popup.
 // Kết quả: giao diện giảng viên hiển thị cùng dữ liệu với học viên và đóng popup đúng vùng tối.
 // Khi lỗi: trả mảng rỗng hoặc giữ popup mở; không sửa bài làm hay dữ liệu học viên.
 export function commentsForSection(comments = [], sectionKey = "") {
@@ -45,6 +45,12 @@ export function latestVocabularyRows(comments = [], bodyKey = "") {
     if (rows.length) return rows;
   }
   return [];
+}
+
+export function technicalRecoveryMessage(canManage = false) {
+  return canManage
+    ? "Lượt chấm gặp lỗi kỹ thuật. Bài viết vẫn được lưu an toàn; bạn có thể xếp lại chính Comment này."
+    : "Lượt chấm gặp lỗi kỹ thuật. Bài viết vẫn được lưu an toàn; hãy báo tài khoản quản trị để xếp chấm lại.";
 }
 
 export function isBackdropClick(event, rect) {
