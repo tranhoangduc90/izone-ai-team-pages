@@ -121,10 +121,10 @@
       "lessonId": "cs070626-writing-11",
       "writingLesson": 11,
       "taskNumber": 2,
-      "slug": "writing-task2-live-performances-at-home",
-      "title": "Biểu diễn trực tiếp hay xem tại nhà",
-      "type": "Writing Task 2 · Agree or disagree",
-      "statement": "In today’s world, it is no longer necessary to attend live performances such as shows or concerts, as watching them on television or on a computer at home is considered a better option. Do you agree or disagree with this opinion?",
+      "slug": "writing-task2-economic-development-environment",
+      "title": "Phát triển kinh tế hay bảo vệ môi trường",
+      "type": "Writing Task 2 · Discuss both views",
+      "statement": "Some people believe economic development should be the main priority for governments, while others think protecting the natural environment is more important. Discuss both views and give your own opinion.",
       "studentPath": "./lesson.html",
       "classes": ["CS.070626", "CS.160826"]
     }
