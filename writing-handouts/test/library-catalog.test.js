@@ -5,16 +5,18 @@ import { sortHandoutsChronologically } from "../js/library-core.js";
 
 const root = new URL("../", import.meta.url);
 
-test("danh mục chỉ chứa 5 handout Speaking Writing chuyên sâu theo thời gian", async () => {
+test("danh mục chỉ chứa 6 handout Speaking Writing chuyên sâu theo thời gian", async () => {
   const library = JSON.parse(await readFile(new URL("library.json", root), "utf8"));
   assert.equal(library.course.id, "speaking-writing-chuyen-sau");
   assert.deepEqual(library.course.classCodes, ["CS.070626", "CS.160826"]);
-  assert.equal(library.handouts.length, 5);
+  assert.equal(library.handouts.length, 6);
   assert.deepEqual(
     sortHandoutsChronologically(library.handouts).map((item) => item.slug),
     library.handouts.map((item) => item.slug),
   );
   assert.equal(library.handouts.some((item) => item.classes.includes("IC2200")), false);
+  assert.equal(library.handouts.at(-1).slug, "writing-task2-live-performances-at-home");
+  assert.deepEqual(library.handouts.at(-1).classes, ["CS.070626", "CS.160826"]);
 });
 
 test("mỗi mục thư viện khớp manifest công khai và chỉ dùng lớp của đúng khóa", async () => {

@@ -101,6 +101,11 @@ test("a new Task 2 topic is configuration-only and keeps the shared app structur
       file: "writing-task2-public-health-spending.json",
       slug: "writing-task2-public-health-spending",
       statement: "It is more important to spend public money promoting a healthy lifestyle to prevent illness than to spend it on treating people who are already ill. To what extent do you agree or disagree?"
+    },
+    {
+      file: "writing-task2-live-performances-at-home.json",
+      slug: "writing-task2-live-performances-at-home",
+      statement: "In today’s world, it is no longer necessary to attend live performances such as shows or concerts, as watching them on television or on a computer at home is considered a better option. Do you agree or disagree with this opinion?"
     }
   ];
 
