@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; media-src 'self' blob:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'">
     <title>Audio Mini Test · Khóa 56</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="../k56-audio-shared/styles.css?rev=20260911-k56-audio-backup-v1">
+    <link rel="stylesheet" href="../k56-audio-shared/styles.css?rev=20260914-k56-audio-volume-v2">
   </head>
   <body>
     <main class="audio-shell">
@@ -18,15 +18,28 @@
       <progress id="audioProgress" max="1" value="0"></progress>
       <span class="progress-text" id="audioProgressText">Đã tải 0%</span>
       <div class="actions">
-        <button class="secondary" id="previewAudio" type="button" disabled>Nghe thử 30 giây</button>
-        <button id="playAudio" type="button" disabled>Phát audio bài thi</button>
+        <button class="secondary" id="previewAudio" type="button" disabled>THỬ ÂM LƯỢNG TRƯỚC KHI THI</button>
+        <button id="playAudio" type="button" disabled>PHÁT AUDIO BÀI THI</button>
       </div>
       <button id="retryAudio" type="button" hidden>Tải lại audio</button>
+      <button id="resumeAudio" type="button" hidden>Tiếp tục audio</button>
       <p class="notice">Chỉ dùng khi giáo viên hướng dẫn mở audio dự phòng.</p>
       <audio id="previewPlayer" preload="metadata"></audio>
       <audio id="mainPlayer" preload="metadata"></audio>
     </main>
+    <dialog class="volume-modal" id="volumeModal" aria-labelledby="volumeTitle">
+      <h2 id="volumeTitle">Kiểm tra âm lượng</h2>
+      <p>Nghe thử 30 giây đầu và điều chỉnh âm lượng phù hợp trước khi phát bài thi.</p>
+      <p id="previewStatus" role="status" aria-live="polite"></p>
+      <label class="volume-control">Âm lượng
+        <input id="audioVolume" type="range" min="0" max="1" step="0.05" value="1">
+      </label>
+      <div class="modal-actions">
+        <button id="replayPreview" type="button">Nghe thử lại</button>
+        <button id="confirmVolume" type="button" disabled>Âm lượng phù hợp — Xác nhận</button>
+      </div>
+    </dialog>
     <script src="audio-config.js?rev=20260911-k56-audio-backup-v1"></script>
-    <script src="../k56-audio-shared/app.js?rev=20260911-k56-audio-backup-v1"></script>
+    <script src="../k56-audio-shared/app.js?rev=20260914-k56-audio-volume-v2"></script>
   </body>
 </html>

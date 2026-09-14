@@ -31,7 +31,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?v=20260910-audio-recovery-v1'))
+      .then(() => loadScript('../k56-mini-shared/app.js?v=20260914-mini-writing-revision-v1'))
       .then(() => loadScript('enhance.js?v=20260910-audio-recovery-v1'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -561,7 +561,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?v=20260910-audio-recovery-v1');
+    await loadScript('../k56-mini-shared/app.js?v=20260914-mini-writing-revision-v1');
     await loadScript('enhance.js?v=20260910-audio-recovery-v1');
     await loadScript('annotations.js');
   }

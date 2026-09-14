@@ -135,6 +135,9 @@
   overflow-wrap: anywhere;
 }
 .writing-feedback-essay.is-empty { color: #7d8998; font-style: italic; }
+.writing-band-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
+.writing-band-summary-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid #d8e4f1; border-radius: 10px; background: #f3f7fc; color: #173f70; }
+.writing-band-summary-item strong { font-size: 16px; }
 .writing-component-list { margin-top: 14px; border-top: 1px solid #e0e8f1; }
 .writing-component { padding: 16px 0; border-bottom: 1px solid #e7edf4; }
 .writing-component:last-child { border-bottom: 0; }

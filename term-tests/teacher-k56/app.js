@@ -576,12 +576,23 @@ function openTeacherWritingFeedback(studentName, writing) {
   const essay = createNode(
     'div',
     `writing-feedback-essay${essayValue.trim() ? '' : ' is-empty'}`,
-    essayValue.trim() || 'Chưa có nội dung bài viết.'
+    essayValue.trim() ? essayValue : 'Chưa có nội dung bài viết.'
   );
   essay.lang = 'en';
   sourcePane.append(essay);
 
   const scorePane = createNode('section', 'writing-feedback-scores');
+  const bandSummary = createNode('section', 'writing-band-summary');
+  bandSummary.setAttribute('aria-label', 'Điểm từng tiêu chí Writing');
+  for (const criterion of Array.from(writing.criteria || [])) {
+    const item = createNode('div', 'writing-band-summary-item');
+    item.append(
+      createNode('span', '', criterion.code || criterion.name || 'Tiêu chí'),
+      createNode('strong', '', `${writingScoreLabel()} ${formatBand(criterion.bandScore)}`)
+    );
+    bandSummary.append(item);
+  }
+  scorePane.append(bandSummary);
   scorePane.append(createNode('h3', '', 'Nhận xét theo tiêu chí'));
   for (const criterion of Array.from(writing.criteria || [])) {
     const card = createNode('article', 'writing-criterion-card');

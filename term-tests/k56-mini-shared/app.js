@@ -116,6 +116,7 @@
       writingStarted: state.writingStarted,
       writingSubmitted: state.writingSubmitted,
       writingDirty: state.writingDirty,
+      writingRevision,
       drafts: state.drafts,
       writingLayout: state.writingLayout,
       frozenAnswers: state.frozenAnswers,
@@ -539,7 +540,8 @@
   let writingSaveTimer = 0;
   let writingRetryTimer = 0;
   let writingSavePromise = Promise.resolve();
-  let writingRevision = 0;
+  let writingRevision = Number.isSafeInteger(restoredSession.writingRevision)
+    && restoredSession.writingRevision >= 0 ? restoredSession.writingRevision : 0;
   let writingGradingPollTimer = 0;
   let writingGradingPollStartedAt = 0;
   let writingGradingPollCount = 0;
@@ -636,6 +638,7 @@
     state.writingSubmitted = Boolean(writing.submitted || state.writingSubmitted);
     state.writingDeadlineAt = writing.deadlineAt || state.writingDeadlineAt;
     if (writing.serverNow) state.serverTimeOffsetMs = Date.parse(writing.serverNow) - Date.now();
+    if (useServerDraft) writingRevision = Math.max(writingRevision, Number(writing.revision) || 0);
     syncWritingEditors();
     saveSession();
   }
@@ -643,6 +646,7 @@
   function writingPayload(action) {
     return {
       attemptToken: state.attemptToken,
+      revision: writingRevision,
       action,
       outline: String(state.drafts.writing.outline || ''),
       task2: String(state.drafts.writing.task2 || ''),
@@ -664,8 +668,13 @@
     }));
     writingSavePromise = operation;
     const response = await operation;
-    if (response.writing?.submitted || revision === writingRevision) {
+    const acknowledgedRevision = Number(response.writing?.revision) || revision;
+    if (response.writing?.submitted || (response.writing?.accepted !== false && revision === writingRevision)) {
       state.writingDirty = false;
+      applyWritingFromServer(response.writing, true);
+    } else if (response.writing?.accepted === false && writingRevision <= acknowledgedRevision) {
+      state.writingDirty = false;
+      writingRevision = acknowledgedRevision;
       applyWritingFromServer(response.writing, true);
     } else {
       state.writingStarted = Boolean(response.writing?.started || state.writingStarted);
