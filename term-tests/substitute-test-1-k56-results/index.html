@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://izone-substitute-test-1-k56.wingsenglish90.chatgpt.site; base-uri 'none'; form-action 'self'">
+  <title>Kết quả Substitute Test 1 · Khóa 56</title>
+  <link rel="stylesheet" href="/izone-ai-team-pages/term-tests/substitute-k56-shared/styles.css">
+  <link rel="stylesheet" href="/izone-ai-team-pages/term-tests/substitute-test-1-k56-results/styles.css">
+</head>
+<body>
+  <header class="results-header">
+    <div class="header-copy">
+      <a class="back-link" id="back-link" href="/izone-ai-team-pages/term-tests/substitute-test-1-k56-dashboard/">← Danh sách bài</a>
+      <p class="eyebrow">IZONE · Khóa 56 · Thi lại</p>
+      <h1>Kết quả Substitute Test 1</h1>
+      <p>Điểm thực tế của học viên và bản xem trước điểm nguyên gửi Portal.</p>
+    </div>
+    <div class="safety-card">
+      <strong>Không ghi dữ liệu ngoài</strong>
+      <span>Portal · n8n · AI đều tắt</span>
+    </div>
+  </header>
+
+  <main class="results-shell">
+    <div id="page-message" class="notice" hidden></div>
+
+    <section class="filter-bar panel" aria-label="Bộ lọc kết quả">
+      <label>Lớp
+        <select id="class-filter">
+          <option value="ALL">Tất cả lớp</option>
+        </select>
+      </label>
+      <label>Bài kiểm tra
+        <select id="test-select"><option value="substitute-test-1-k56">Substitute Test 1</option></select>
+      </label>
+      <button class="button button-primary" id="load-results" type="button">Mở kết quả</button>
+      <span class="updated-at" id="updated-at">Dữ liệu demo</span>
+    </section>
+
+    <section class="summary-grid summary-grid-wide" aria-label="Tóm tắt kết quả">
+      <article class="summary-card"><span>Học viên</span><strong id="metric-total">—</strong><small>trong danh sách demo</small></article>
+      <article class="summary-card"><span>Đã hoàn thành</span><strong id="metric-completed">—</strong><small>đủ điểm 3 kỹ năng</small></article>
+      <article class="summary-card"><span>Áp dụng trần 55%</span><strong id="metric-capped">—</strong><small>bản xem trước Portal</small></article>
+      <article class="summary-card"><span>Chờ chấm Writing</span><strong id="metric-pending">—</strong><small>chưa tính điểm Portal</small></article>
+    </section>
+
+    <section class="panel roster-panel" aria-labelledby="roster-heading">
+      <div class="section-title">
+        <div><p class="eyebrow">Tổng hợp</p><h2 id="roster-heading">Danh sách bài của học viên</h2></div>
+        <div class="legend"><span><i class="dot actual"></i>Điểm thực tế</span><span><i class="dot portal"></i>Điểm Portal</span></div>
+      </div>
+      <div class="table-wrap">
+        <table class="results-table">
+          <thead><tr><th>Học viên · Lớp</th><th>Listening thực tế</th><th>Reading thực tế</th><th>Writing thực tế</th><th>TB thi lại</th><th>Quy tắc Portal</th><th></th></tr></thead>
+          <tbody id="student-rows"><tr><td colspan="7" class="empty-cell">Đang tải dữ liệu…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel student-panel" id="student-detail" hidden aria-labelledby="student-name">
+      <div class="student-heading">
+        <div><p class="eyebrow">Chi tiết học viên</p><h2 id="student-name">—</h2><p id="student-status">—</p></div>
+        <span id="policy-badge" class="policy-badge">—</span>
+      </div>
+
+      <div class="comparison-grid">
+        <article class="score-block">
+          <div class="block-title"><div><p class="eyebrow">Mốc so sánh</p><h3>Điểm lần đầu</h3></div><strong id="first-average">—</strong></div>
+          <div id="first-scores" class="skill-score-list"></div>
+          <p class="block-note">Chỉ đọc. Hệ thống không ghi đè điểm lần đầu.</p>
+        </article>
+        <article class="score-block score-block-actual">
+          <div class="block-title"><div><p class="eyebrow">Hiển thị cho học viên</p><h3>Điểm thi lại thực tế</h3></div><strong id="retake-average">—</strong></div>
+          <div id="actual-scores" class="skill-score-list"></div>
+          <p class="block-note">Luôn giữ nguyên điểm đúng theo bài làm.</p>
+        </article>
+        <article class="score-block score-block-portal">
+          <div class="block-title"><div><p class="eyebrow">Bản xem trước</p><h3>Điểm gửi Portal</h3></div><strong id="portal-average">—</strong></div>
+          <div id="portal-scores" class="skill-score-list"></div>
+          <p class="block-note" id="portal-note">—</p>
+        </article>
+      </div>
+
+      <section class="policy-explanation" aria-labelledby="policy-heading">
+        <div><p class="eyebrow">Giải thích phép tính</p><h3 id="policy-heading">Quy tắc thi lại</h3></div>
+        <p id="policy-text">—</p>
+        <dl id="policy-math" class="policy-math"></dl>
+      </section>
+
+      <div class="student-lower-grid">
+        <section class="attempt-detail" aria-labelledby="attempt-heading">
+          <div class="subheading"><h3 id="attempt-heading">Tổng hợp bài làm</h3><span>Không lộ đáp án</span></div>
+          <div id="attempt-content"></div>
+        </section>
+        <section class="portal-preview" aria-labelledby="payload-heading">
+          <div class="subheading"><h3 id="payload-heading">Payload Portal</h3><span>Preview only</span></div>
+          <pre id="portal-payload">—</pre>
+          <button class="button disabled-button" type="button" disabled>Demo online — không gửi Portal</button>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/izone-ai-team-pages/term-tests/substitute-test-1-k56-results/app.js"></script>
+</body>
+</html>
