@@ -644,7 +644,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?rev=20260912-load-guard-v1');
+    await loadScript('../shared/app.js?rev=20260914-live-results-v1');
     await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }

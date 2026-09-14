@@ -9,6 +9,7 @@ const releaseRevision = '20260826-term-test-reliability-v1';
 const allStudentConfirmationRevision = '20260829-all-student-confirmation-v2';
 const computerBasedLayoutRevision = '20260904-compact-layout-v7';
 const loadGuardRevision = '20260912-load-guard-v1';
+const liveResultsRevision = '20260914-live-results-v1';
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
@@ -26,10 +27,11 @@ test('mọi trang Term/Mini Test nạp đúng bản reliability và không thi�
       ? allStudentConfirmationRevision
       : releaseRevision;
     assert.match(html, new RegExp(`shared/styles\\.css\\?rev=${entryRevision}`), relativeEntry);
+    const scriptRevision = relativeEntry.includes('mini-test') ? loadGuardRevision : liveResultsRevision;
     if (relativeEntry.includes('computer-based')) {
-      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${loadGuardRevision}`), relativeEntry);
+      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${scriptRevision}`), relativeEntry);
     } else {
-      assert.match(html, new RegExp(`shared/app\\.js\\?rev=${loadGuardRevision}`), relativeEntry);
+      assert.match(html, new RegExp(`shared/app\\.js\\?rev=${scriptRevision}`), relativeEntry);
     }
     const localAssets = [...html.matchAll(/(?:src|href)="([^"#?]+)(?:\?[^"#]*)?"/g)]
       .map(match => match[1])
@@ -50,9 +52,9 @@ test('hai bản Term Test computer-based bắt buộc xác nhận đúng tên v�
   const changeHandler = bootstrap.slice(changeHandlerStart, changeHandlerEnd);
 
   assert.match(termTest1Entry, new RegExp(`styles\\.css\\?rev=${computerBasedLayoutRevision}`));
-  assert.match(termTest1Entry, new RegExp(`bootstrap\\.js\\?rev=${loadGuardRevision}`));
+  assert.match(termTest1Entry, new RegExp(`bootstrap\\.js\\?rev=${liveResultsRevision}`));
   assert.match(entry, new RegExp(`styles\\.css\\?rev=${computerBasedLayoutRevision}`));
-  assert.match(entry, new RegExp(`bootstrap\\.js\\?rev=${loadGuardRevision}`));
+  assert.match(entry, new RegExp(`bootstrap\\.js\\?rev=${liveResultsRevision}`));
   assert.match(bootstrap, /function confirmStudentIdentity\(student\)/);
   assert.match(bootstrap, /\['Họ và tên', student\.name\]/);
   assert.match(bootstrap, /\['Lớp', classConfirmationLabel\(\)\]/);
@@ -76,7 +78,7 @@ test('hai answer sheet Term Test chỉ lưu và nối lượt sau khi học viê
 
   for (const entry of [termTest1Entry, termTest2Entry]) {
     assert.match(entry, new RegExp(`shared/styles\\.css\\?rev=${allStudentConfirmationRevision}`));
-    assert.match(entry, new RegExp(`shared/app\\.js\\?rev=${loadGuardRevision}`));
+    assert.match(entry, new RegExp(`shared/app\\.js\\?rev=${liveResultsRevision}`));
   }
   assert.match(sharedApp, /function confirmStudentIdentity\(student\)/);
   assert.match(changeHandler, /testConfig\.slug\.startsWith\('term-test-'\)/);
@@ -101,7 +103,7 @@ test('answer sheet và computer-based dùng chung guard, revision và retry', as
   assert.match(sharedApp, /randomDelay\(10_000, 15_000\)/);
   assert.match(sharedApp, /randomDelay\(4_000, 8_000\)/);
   assert.match(sharedApp, /form\.requestSubmit\(submitButton\)/);
-  assert.match(bootstrap, new RegExp(`shared/app\\.js\\?rev=${loadGuardRevision}`));
+  assert.match(bootstrap, new RegExp(`shared/app\\.js\\?rev=${liveResultsRevision}`));
   assert.match(bootstrap, new RegExp(`enhance\\.js', '${loadGuardRevision}`));
   assert.match(bootstrap, /listeningDraftRevision/);
   assert.match(bootstrap, /readingDraftRevision/);
