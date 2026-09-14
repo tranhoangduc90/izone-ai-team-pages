@@ -16,11 +16,12 @@
     intro: 'Làm bài trực tiếp trên nội dung đề. Mỗi kỹ năng được lưu và nộp độc lập.',
     listening: {
       title: 'Listening · 40 câu',
-      durationSeconds: 1678,
+      // Metadata MP3 kiểm trực tiếp trên bản online: 1728.535488 giây.
+      durationSeconds: 1728.535488,
       totalQuestions: 40,
       description: [
         'Bài nghe gồm 4 phần và 40 câu.',
-        'Audio dài 27 phút 58 giây và chỉ phát sau khi hoàn thành bước nghe thử.',
+        'Audio dài khoảng 28 phút 49 giây và chỉ phát sau khi hoàn thành bước nghe thử.',
         'Không có thời gian kiểm tra riêng sau khi audio kết thúc.'
       ],
       controls: [

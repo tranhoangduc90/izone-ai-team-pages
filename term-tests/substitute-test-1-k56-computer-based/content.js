@@ -256,12 +256,12 @@
     audio: {
       src: 'https://izone-substitute-test-1-k56.wingsenglish90.chatgpt.site/api/test/audio',
       label: 'Substitute Test 1 · Khóa 56 · Listening',
-      durationLabel: '27 phút 58 giây'
+      durationLabel: '28 phút 48 giây'
     },
     listening: {
       instructions: [
         'Bài nghe gồm 4 phần và 40 câu. Hoàn thành bước kiểm tra âm thanh trước khi bắt đầu.',
-        'Audio dài đúng 27 phút 58 giây; không có thời gian kiểm tra riêng sau khi audio kết thúc.',
+        'Audio dài khoảng 28 phút 49 giây; không có thời gian kiểm tra riêng sau khi audio kết thúc.',
         'Không tải lại hoặc đóng tab khi audio đang phát.'
       ],
       sections: [
