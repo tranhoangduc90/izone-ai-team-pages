@@ -10,6 +10,7 @@ const allStudentConfirmationRevision = '20260829-all-student-confirmation-v2';
 const computerBasedLayoutRevision = '20260904-compact-layout-v7';
 const loadGuardRevision = '20260912-load-guard-v1';
 const liveResultsRevision = '20260914-live-results-v1';
+const resetRecoveryRevision = '20260914-reset-recovery-v1';
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
@@ -27,10 +28,10 @@ test('mọi trang Term/Mini Test nạp đúng bản reliability và không thi�
       ? allStudentConfirmationRevision
       : releaseRevision;
     assert.match(html, new RegExp(`shared/styles\\.css\\?rev=${entryRevision}`), relativeEntry);
-    const scriptRevision = relativeEntry.includes('mini-test') ? loadGuardRevision : liveResultsRevision;
     if (relativeEntry.includes('computer-based')) {
-      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${scriptRevision}`), relativeEntry);
+      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${resetRecoveryRevision}`), relativeEntry);
     } else {
+      const scriptRevision = relativeEntry.includes('mini-test') ? loadGuardRevision : liveResultsRevision;
       assert.match(html, new RegExp(`shared/app\\.js\\?rev=${scriptRevision}`), relativeEntry);
     }
     const localAssets = [...html.matchAll(/(?:src|href)="([^"#?]+)(?:\?[^"#]*)?"/g)]
@@ -52,9 +53,9 @@ test('hai bản Term Test computer-based bắt buộc xác nhận đúng tên v�
   const changeHandler = bootstrap.slice(changeHandlerStart, changeHandlerEnd);
 
   assert.match(termTest1Entry, new RegExp(`styles\\.css\\?rev=${computerBasedLayoutRevision}`));
-  assert.match(termTest1Entry, new RegExp(`bootstrap\\.js\\?rev=${liveResultsRevision}`));
+  assert.match(termTest1Entry, new RegExp(`bootstrap\\.js\\?rev=${resetRecoveryRevision}`));
   assert.match(entry, new RegExp(`styles\\.css\\?rev=${computerBasedLayoutRevision}`));
-  assert.match(entry, new RegExp(`bootstrap\\.js\\?rev=${liveResultsRevision}`));
+  assert.match(entry, new RegExp(`bootstrap\\.js\\?rev=${resetRecoveryRevision}`));
   assert.match(bootstrap, /function confirmStudentIdentity\(student\)/);
   assert.match(bootstrap, /\['Họ và tên', student\.name\]/);
   assert.match(bootstrap, /\['Lớp', classConfirmationLabel\(\)\]/);
@@ -64,6 +65,16 @@ test('hai bản Term Test computer-based bắt buộc xác nhận đúng tên v�
   assert.ok(changeHandler.indexOf('await confirmStudentIdentity') < changeHandler.indexOf('await prepareSelectedStudent()'));
   assert.match(styles, /\.cbt-identity-confirmation-dialog::backdrop/);
   assert.match(styles, /\.cbt-identity-confirmation-actions/);
+});
+
+test('computer-based tự bỏ dấu vết lượt cũ khi máy chủ đã reset', async () => {
+  const bootstrap = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/bootstrap.js'), 'utf8');
+  assert.ok(bootstrap.includes('function recoverFromServerReset(error, student)'));
+  assert.ok(bootstrap.includes("['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND']"));
+  assert.ok(bootstrap.includes('requestError.status = response.status'));
+  assert.ok(bootstrap.includes("requestError.code = data.error || ''"));
+  assert.ok(bootstrap.includes('if (!recoverFromServerReset(error, student)) throw error'));
+  assert.ok(bootstrap.includes('prepared = await prepareSession()'));
 });
 
 test('hai answer sheet Term Test chỉ lưu và nối lượt sau khi học viên xác nhận', async () => {
@@ -121,3 +132,4 @@ test('bố cục matching co theo nội dung và nhường chỗ đúng cho bả
   assert.match(enhance, /const compactReferenceTitles = new Set\(\['Words', 'People'\]\)/);
   assert.match(enhance, /layout\.classList\.add\('cbt-compact-reference-layout'\)/);
 });
+

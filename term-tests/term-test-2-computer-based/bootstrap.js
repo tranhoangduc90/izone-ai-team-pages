@@ -419,6 +419,20 @@
     }
   }
 
+  function recoverFromServerReset(error, student) {
+    if (error?.status !== 404 || !['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND'].includes(error?.code)) return false;
+    const audioVolume = Number(state.audioVolume) || 1;
+    clearAllLocalAttemptData();
+    state = { audioVolume };
+    legacyListeningResume = false;
+    saveState({
+      studentRef: student.ref,
+      studentName: student.name,
+      studentIdentitySource: student.temporary ? 'temporary' : 'roster'
+    });
+    return true;
+  }
+
   function showNotice(message, error = false) {
     elements.bootstrapNotice.hidden = false;
     elements.bootstrapNotice.className = `notice${error ? ' error' : ''}`;
@@ -437,7 +451,12 @@
     try {
       const response = await fetch(appConfig.API_BASE_URL + path, { ...options, signal: controller.signal });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+      if (!response.ok) {
+        const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
+        requestError.status = response.status;
+        requestError.code = data.error || '';
+        throw requestError;
+      }
       return data;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Hãy thử lại.');
@@ -548,10 +567,14 @@
     elements.bootstrapStudent.disabled = true;
     try {
       if (state.attemptToken) {
-        await resumeAfterListening();
-        return;
+        try {
+          await resumeAfterListening();
+          return;
+        } catch (error) {
+          if (!recoverFromServerReset(error, student)) throw error;
+        }
       }
-      const prepared = await apiRequest(`/api/term-tests/${testConfig.slug}/session/prepare`, {
+      const prepareSession = () => apiRequest(`/api/term-tests/${testConfig.slug}/session/prepare`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -562,6 +585,13 @@
           legacyElapsedSeconds: legacyListeningResume ? legacyUiState.audioTime : 0
         })
       });
+      let prepared;
+      try {
+        prepared = await prepareSession();
+      } catch (error) {
+        if (!recoverFromServerReset(error, student)) throw error;
+        prepared = await prepareSession();
+      }
       saveState({
         examSessionToken: prepared.examSessionToken,
         listeningStartedAt: prepared.listeningStartedAt,
@@ -1045,3 +1075,4 @@
   });
   initialize();
 }());
+
