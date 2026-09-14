@@ -29,11 +29,12 @@ function fixture(module,{classCode='CODEXDEMO56',essay='  Synthetic essay\n\nSec
 for(const module of modules) {
   for(const classCode of ['CODEXDEMO56','IC2264'])test(module+': cửa sổ học viên '+classCode+' hiện tổng điểm, 4 tiêu chí, nhận xét và bài gốc',()=>{
     const {nodes}=fixture(module,{classCode});
-    const summary=nodes.find(n=>n.className==='k56-writing-band-summary');
-    const grid=summary.children[1];assert.equal(grid.children.length,5);
+    const summary=nodes.find(n=>n.className==='writing-band-summary');
+    const grid=summary;assert.equal(grid.children.length,4);
     const label=module==='k56-mini-shared'?'Điểm đoạn văn':'Band';
-    assert.equal(grid.children[0].children[1].textContent,label+' 7.5');
-    assert.deepEqual(grid.children.slice(1).map(n=>n.children[0].textContent),['TA','CC','LR','GRA']);
+    assert.ok(nodes.some(n=>n.tag==='h2' && n.textContent.endsWith(label+' 7.5')));
+    assert.equal(grid.children[0].children[1].textContent,label+' 7.0');
+    assert.deepEqual(grid.children.map(n=>n.children[0].textContent),['TA','CC','LR','GRA']);
     assert.ok(nodes.some(n=>n.textContent==='Nhận xét tổng hợp'));
     assert.ok(nodes.some(n=>n.textContent==='Synthetic overall feedback'));
     assert.equal(nodes.find(n=>n.className==='writing-feedback-essay').textContent,'  Synthetic essay\n\nSecond paragraph.  ');

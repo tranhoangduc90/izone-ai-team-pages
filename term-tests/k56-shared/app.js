@@ -1088,7 +1088,7 @@
   function cleanWritingFeedback(value) {
     return String(value || '')
       .replace(/\r/g, '')
-      .replace(/^.*\]\(https:\/\/(?:docs|drive)\.google\.com\/[^)]+\).*$/gim, '')
+      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
       .replace(/https:\/\/(?:docs|drive)\.google\.com\/\S+/gi, '')
       .replace(/^\s*\(?\s*Xem phân tích chi tiết[^\n]*\)?\s*$/gim, '')
       .replace(/\n{3,}/g, '\n\n')
@@ -1146,62 +1146,38 @@
   function appendSafeWritingFeedback(target, value) {
     const appendInline = (parent, source) => {
       const text = String(source || '');
-      const tokenPattern = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g;
+      const tokenPattern = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
       let cursor = 0;
       for (const match of text.matchAll(tokenPattern)) {
         if (match.index > cursor) parent.append(document.createTextNode(text.slice(cursor, match.index)));
-        if (match[1]) {
-          const strong = document.createElement('strong');
-          strong.textContent = match[1];
-          parent.append(strong);
-        } else if (match[2]) {
-          const emphasis = document.createElement('em');
-          emphasis.textContent = match[2];
-          parent.append(emphasis);
-        } else {
-          const link = document.createElement('a');
-          link.href = match[4];
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.referrerPolicy = 'no-referrer';
-          link.textContent = match[3];
-          parent.append(link);
-        }
+        const node = document.createElement(match[1] ? 'strong' : 'em');
+        node.textContent = match[1] || match[2];
+        parent.append(node);
         cursor = match.index + match[0].length;
       }
       if (cursor < text.length) parent.append(document.createTextNode(text.slice(cursor)));
     };
-
-    const cleaned = cleanWritingFeedback(value || 'Chưa có nhận xét tổng hợp.');
+    const cleaned = cleanWritingFeedback(value || 'Chưa có nhận xét.');
     if (looksLikeWritingHtml(cleaned)) {
       appendSanitizedWritingHtml(target, cleaned);
       return;
     }
-    const normalized = cleaned
-      .replace(/[ \t]+(?=#{2,4}\s+\*\*)/g, '\n');
-    const lines = normalized.split('\n');
+    const lines = cleaned.split('\n');
     let index = 0;
     while (index < lines.length) {
-      const rawLine = lines[index];
-      const line = rawLine.trim();
+      const line = lines[index].trim();
       if (!line) {
         index += 1;
         continue;
       }
-      const heading = line.match(/^(#{1,5})\s+(?:\*\*([^*]+)\*\*|([^#]+?))(?:\s+([\s\S]*))?$/);
+      const heading = line.match(/^(#{1,5})\s+(?:\*\*([^*]+)\*\*|(.+))$/);
       if (heading) {
         const title = document.createElement('h5');
         title.textContent = String(heading[2] || heading[3] || '').trim();
         target.append(title);
-        if (heading[4]) {
-          const paragraph = document.createElement('p');
-          appendInline(paragraph, heading[4]);
-          target.append(paragraph);
-        }
         index += 1;
         continue;
       }
-
       const listItem = line.match(/^(?:([-*])|(\d+)\.)\s+(.+)$/);
       if (listItem) {
         const ordered = Boolean(listItem[2]);
@@ -1217,19 +1193,10 @@
         target.append(list);
         continue;
       }
-
-      const paragraphLines = [line];
-      index += 1;
-      while (index < lines.length) {
-        const candidate = lines[index].trim();
-        if (!candidate) break;
-        if (/^#{1,5}\s+/.test(candidate) || /^(?:[-*]|\d+\.)\s+/.test(candidate)) break;
-        paragraphLines.push(candidate);
-        index += 1;
-      }
       const paragraph = document.createElement('p');
-      appendInline(paragraph, paragraphLines.join(' '));
+      appendInline(paragraph, line);
       target.append(paragraph);
+      index += 1;
     }
   }
 
@@ -1335,7 +1302,7 @@
     header.className = 'writing-feedback-header';
     const headerCopy = document.createElement('div');
     const eyebrow = document.createElement('span');
-    eyebrow.textContent = `Kết quả ${task.label}`;
+    eyebrow.textContent = `${state.studentName || 'Học viên'} · Kết quả Writing`;
     const title = document.createElement('h2');
     title.id = `writingFeedbackTitle${taskNumber}`;
     title.textContent = `${task.label} · Band ${formatBand(taskResult.taskScore)}`;
@@ -1395,24 +1362,18 @@
     const scorePane = document.createElement('section');
     scorePane.className = 'writing-feedback-scores';
     const bandSummary = document.createElement('section');
-    bandSummary.className = 'k56-writing-band-summary';
-    bandSummary.setAttribute('aria-label', 'Tổng hợp điểm Writing');
-    const summaryTitle = document.createElement('h3');
-    summaryTitle.textContent = 'Tổng hợp điểm';
-    const scoreGrid = document.createElement('div');
-    scoreGrid.className = 'k56-writing-band-grid';
-    const scores = [{ code: task.label, bandScore: taskResult.taskScore }, ...Array.from(taskResult.criteria || [])];
-    for (const score of scores) {
+    bandSummary.className = 'writing-band-summary';
+    bandSummary.setAttribute('aria-label', 'Điểm từng tiêu chí Writing');
+    for (const criterion of Array.from(taskResult.criteria || [])) {
       const item = document.createElement('div');
-      item.className = 'k56-writing-band-item';
+      item.className = 'writing-band-summary-item';
       const name = document.createElement('span');
-      name.textContent = score.code || score.name || 'Tiêu chí';
+      name.textContent = criterion.code || criterion.name || 'Tiêu chí';
       const value = document.createElement('strong');
-      value.textContent = `Band ${formatBand(score.bandScore)}`;
+      value.textContent = `Band ${formatBand(criterion.bandScore)}`;
       item.append(name, value);
-      scoreGrid.append(item);
+      bandSummary.append(item);
     }
-    bandSummary.append(summaryTitle, scoreGrid);
     scorePane.append(bandSummary);
     const scoreTitle = document.createElement('h3');
     scoreTitle.textContent = 'Nhận xét theo tiêu chí';
@@ -1440,7 +1401,7 @@
       } else {
         const feedback = document.createElement('div');
         feedback.className = 'writing-feedback-text writing-feedback-richtext';
-        appendSafeWritingFeedback(feedback, writingCriterionFallbackSummary(criterion.feedback));
+        appendSafeWritingFeedback(feedback, criterion.feedback || 'Chưa có nhận xét chi tiết.');
         card.append(feedback);
       }
       scorePane.append(card);
