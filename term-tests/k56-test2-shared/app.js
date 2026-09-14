@@ -1169,11 +1169,21 @@
     parent.append(aspect);
   }
 
+  function writingReportSummary(value) {
+    const cleaned = cleanWritingFeedback(value);
+    const markerIndex = cleaned.search(/Nhận xét từng tiêu chí/iu);
+    if (markerIndex < 0) return cleaned;
+    const separatorIndex = cleaned.lastIndexOf('---', markerIndex);
+    const headingIndex = cleaned.lastIndexOf('#', markerIndex);
+    const cutIndex = separatorIndex >= 0 ? separatorIndex : headingIndex >= 0 ? headingIndex : markerIndex;
+    return cleaned.slice(0, cutIndex).trim();
+  }
+
   function openWritingFeedback(taskResult) {
     const taskNumber = Number(taskResult?.taskNumber);
     const task = Array.from(writingConfig?.tasks || []).find(item => item.id === `task${taskNumber}`);
     if (!task) return;
-    const essayValue = state.drafts.writing[task.id] || '';
+    const essayValue = String(state.result?.writing?.[task.id] ?? state.drafts.writing[task.id] ?? '');
     const dialog = document.createElement('dialog');
     dialog.className = 'writing-feedback-dialog';
     dialog.setAttribute('aria-labelledby', `writingFeedbackTitle${taskNumber}`);
@@ -1224,8 +1234,45 @@
       image.className = 'writing-feedback-image';
       sourcePane.append(image);
     }
+    const reportSummary = writingReportSummary(taskResult.report);
+    if (reportSummary) {
+      const reportTitle = document.createElement('h3');
+      reportTitle.textContent = 'Nhận xét tổng hợp';
+      const report = document.createElement('div');
+      report.className = 'writing-feedback-text writing-feedback-richtext';
+      appendSafeWritingFeedback(report, reportSummary);
+      sourcePane.append(reportTitle, report);
+    }
+    const essayTitle = document.createElement('h3');
+    essayTitle.textContent = 'Bài viết của học viên';
+    const essay = document.createElement('div');
+    essay.className = `writing-feedback-essay${essayValue.trim() ? '' : ' is-empty'}`;
+    essay.lang = 'en';
+    essay.textContent = essayValue.trim() ? essayValue : 'Chưa có nội dung bài viết.';
+    sourcePane.append(essayTitle, essay);
+
     const scorePane = document.createElement('section');
     scorePane.className = 'writing-feedback-scores';
+    const bandSummary = document.createElement('section');
+    bandSummary.className = 'k56-writing-band-summary';
+    bandSummary.setAttribute('aria-label', 'Tổng hợp điểm Writing');
+    const summaryTitle = document.createElement('h3');
+    summaryTitle.textContent = 'Tổng hợp điểm';
+    const scoreGrid = document.createElement('div');
+    scoreGrid.className = 'k56-writing-band-grid';
+    const scores = [{ code: task.label, bandScore: taskResult.taskScore }, ...Array.from(taskResult.criteria || [])];
+    for (const score of scores) {
+      const item = document.createElement('div');
+      item.className = 'k56-writing-band-item';
+      const name = document.createElement('span');
+      name.textContent = score.code || score.name || 'Tiêu chí';
+      const value = document.createElement('strong');
+      value.textContent = `Band ${formatBand(score.bandScore)}`;
+      item.append(name, value);
+      scoreGrid.append(item);
+    }
+    bandSummary.append(summaryTitle, scoreGrid);
+    scorePane.append(bandSummary);
     const scoreTitle = document.createElement('h3');
     scoreTitle.textContent = 'Nhận xét theo tiêu chí';
     scorePane.append(scoreTitle);

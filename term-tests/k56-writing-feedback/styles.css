@@ -1,0 +1,10 @@
+.k56-writing-band-summary { margin-bottom: 24px; }
+.k56-writing-band-summary h3 { margin: 0 0 12px; color: #153f70; font-size: 16px; }
+.k56-writing-band-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.k56-writing-band-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid #d7e2ef; border-radius: 10px; background: #f4f8fd; overflow-wrap: anywhere; }
+.k56-writing-band-item:first-child { grid-column: 1 / -1; background: #e9f1ff; }
+.k56-writing-band-item strong { color: #153f70; flex-shrink: 0; }
+.writing-feedback-essay.is-empty { color: #60738b; font-style: italic; }
+@media (max-width: 420px) {
+  .k56-writing-band-grid { grid-template-columns: minmax(0, 1fr); }
+}
