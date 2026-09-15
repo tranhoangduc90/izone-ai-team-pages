@@ -13,17 +13,20 @@ const state = {
   assignments: [],
   library: [],
   dashboard: null,
-  attendanceStudent: null
+  attendanceStudent: null,
+  reportStudent: null,
+  studentJourneyLink: ''
 };
 
 const elements = Object.fromEntries([
   'teacherName', 'teacherNotice', 'teacherAccessView', 'googleSignInButton', 'teacherWorkspace',
   'createTab', 'dashboardTab', 'createPanel', 'dashboardPanel', 'publishForm', 'teacherClassSelect',
-  'sessionNumber', 'formTitle', 'questionLibrary', 'publishButton', 'publishResult', 'rosterCount',
+  'sessionNumber', 'formTitle', 'skillFilter', 'questionLibrary', 'publishButton', 'publishResult', 'rosterCount',
   'studentLink', 'copyLinkButton', 'assignmentSelect', 'dashboardTitle', 'refreshDashboardButton',
-  'dashboardSummary', 'studentList', 'attendanceDialog', 'attendanceForm', 'attendanceStudentName',
+  'blockControls', 'classInsights', 'dashboardSummary', 'studentList', 'attendanceDialog', 'attendanceForm', 'attendanceStudentName',
   'attendanceStatus', 'attendanceReason', 'saveAttendanceButton', 'reportDialog', 'reportStudentName',
-  'reportScope', 'reportSystemContent', 'reportHumanNote'
+  'reportScope', 'reportSystemContent', 'reportHumanNote', 'saveTeacherNoteButton', 'reportDeliveryStatus',
+  'markReportDeliveredButton', 'copyStudentJourneyLinkButton', 'studentJourneyLinkStatus'
 ].map(id => [id, document.getElementById(id)]));
 
 function setNotice(message, kind = '') {
@@ -75,6 +78,7 @@ function switchPanel(panel) {
 function buildLibraryRow(item, index) {
   const row = document.createElement('label');
   row.className = 'library-row';
+  row.dataset.skills = (item.skillCodes || []).join(' ');
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
   checkbox.value = item.id;
@@ -85,7 +89,8 @@ function buildLibraryRow(item, index) {
   const title = document.createElement('b');
   title.textContent = item.title;
   const prompt = document.createElement('small');
-  prompt.textContent = item.prompt;
+  const skills = (item.skillCodes || []).join(', ');
+  prompt.textContent = skills ? `${skills} · ${item.prompt}` : item.prompt;
   copy.append(title, prompt);
   const checkpoint = document.createElement('select');
   checkpoint.setAttribute('aria-label', `Thời điểm cho câu ${item.title}`);
@@ -102,7 +107,80 @@ function buildLibraryRow(item, index) {
 }
 
 function renderLibrary() {
-  elements.questionLibrary.replaceChildren(...state.library.map(buildLibraryRow));
+  const skill = elements.skillFilter.value;
+  if (!elements.questionLibrary.childElementCount) {
+    elements.questionLibrary.replaceChildren(...state.library.map(buildLibraryRow));
+  }
+  for (const row of elements.questionLibrary.children) {
+    row.hidden = Boolean(skill && !row.dataset.skills.split(' ').includes(skill));
+    if (row.hidden) row.querySelector('input[type="checkbox"]').checked = false;
+  }
+}
+
+function releaseLabel(status) {
+  return { locked: 'Chưa mở', open: 'Đang mở', closed: 'Đã đóng' }[status] || status;
+}
+
+function buildBlockControl(release) {
+  const row = document.createElement('div');
+  row.className = 'block-control';
+  const copy = document.createElement('div');
+  const title = document.createElement('b');
+  title.textContent = `Phần ${release.checkpoint}`;
+  const status = document.createElement('small');
+  status.textContent = releaseLabel(release.status);
+  copy.append(title, status);
+  const select = document.createElement('select');
+  for (const [value, label] of [['locked', 'Chưa mở'], ['open', 'Mở cho học viên'], ['closed', 'Đóng phần']]) {
+    const option = new Option(label, value, false, value === release.status);
+    select.append(option);
+  }
+  select.setAttribute('aria-label', `Trạng thái phần ${release.checkpoint}`);
+  select.addEventListener('change', () => void setBlockRelease(release, select));
+  row.append(copy, select);
+  return row;
+}
+
+async function setBlockRelease(release, select) {
+  select.disabled = true;
+  try {
+    await apiRequest('/teacher/blocks/release', {
+      method: 'POST',
+      body: {
+        assignmentId: state.dashboard.assignmentId,
+        blockId: release.blockId,
+        status: select.value,
+        operationId: crypto.randomUUID()
+      }
+    });
+    await loadDashboard();
+  } catch (error) {
+    select.value = release.status;
+    setNotice(error.message, 'error');
+  } finally {
+    select.disabled = false;
+  }
+}
+
+function renderClassInsights(insights) {
+  if (!insights.length) {
+    const empty = document.createElement('p');
+    empty.className = 'muted compact';
+    empty.textContent = 'Chưa có đủ dữ liệu để kết luận ở cấp lớp.';
+    elements.classInsights.replaceChildren(empty);
+    return;
+  }
+  elements.classInsights.replaceChildren(...insights.map(insight => {
+    const card = document.createElement('article');
+    const title = document.createElement('b');
+    title.textContent = insight.title;
+    const summary = document.createElement('p');
+    summary.textContent = insight.summary;
+    const count = document.createElement('small');
+    count.textContent = `${insight.affectedCount} học viên liên quan`;
+    card.append(title, summary, count);
+    return card;
+  }));
 }
 
 function studentLink(publicToken) {
@@ -257,6 +335,7 @@ function addReportSection(container, title, values) {
 function evidenceSourceLabel(source) {
   return {
     progress_form: 'phiếu trên lớp',
+    progress_log: 'phiếu trên lớp',
     term_test: 'Term Test',
     homework: 'bài tập về nhà',
     teacher_note: 'ghi chú giảng viên'
@@ -267,6 +346,9 @@ function openReport(student) {
   const report = student.latestReport;
   if (!report) return;
   const output = report.systemOutput || {};
+  state.reportStudent = student;
+  state.studentJourneyLink = '';
+  elements.studentJourneyLinkStatus.textContent = 'Mỗi lần tạo mới sẽ thay link cũ của học viên này.';
   elements.reportStudentName.textContent = student.discriminator
     ? `${student.name} · ${student.discriminator}`
     : student.name;
@@ -281,8 +363,112 @@ function openReport(student) {
     fallback.textContent = report.systemMarkdown || 'Hệ thống chưa có đủ dữ liệu để kết luận.';
     elements.reportSystemContent.append(fallback);
   }
-  elements.reportHumanNote.textContent = report.humanNote || 'Giảng viên chưa thêm lời nhắn riêng.';
+  elements.reportHumanNote.value = report.humanNote || '';
+  const sent = report.delivery?.status === 'sent';
+  elements.reportDeliveryStatus.textContent = sent
+    ? `Đã xác nhận gửi lúc ${new Date(report.delivery.sentAt).toLocaleString('vi-VN')}.`
+    : 'Chưa xác nhận đã gửi.';
+  elements.markReportDeliveredButton.hidden = sent;
+  elements.markReportDeliveredButton.disabled = !elements.reportHumanNote.value.trim();
   elements.reportDialog.showModal();
+}
+
+function newStudentJourneyToken() {
+  return `${crypto.randomUUID().replaceAll('-', '')}${crypto.randomUUID().replaceAll('-', '')}`;
+}
+
+function studentJourneyUrl(accessToken) {
+  const url = new URL('journey.html', window.location.href);
+  url.hash = new URLSearchParams({ access: accessToken }).toString();
+  return url.toString();
+}
+
+async function copyStudentJourneyLink() {
+  const student = state.reportStudent;
+  if (!student || !state.dashboard?.assignmentId) return;
+  elements.copyStudentJourneyLinkButton.disabled = true;
+  try {
+    if (!state.studentJourneyLink) {
+      const accessToken = newStudentJourneyToken();
+      const payload = await apiRequest('/teacher/student-progress-links', {
+        method: 'POST',
+        body: {
+          assignmentId: state.dashboard.assignmentId,
+          studentRef: student.studentRef,
+          accessToken,
+          expiresInDays: 90,
+          operationId: crypto.randomUUID()
+        }
+      });
+      if (payload.link.studentRef !== student.studentRef) {
+        throw new Error('Link trả về không khớp học viên; hệ thống đã dừng sao chép.');
+      }
+      state.studentJourneyLink = studentJourneyUrl(accessToken);
+    }
+    await navigator.clipboard.writeText(state.studentJourneyLink);
+    elements.studentJourneyLinkStatus.textContent = 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
+    elements.copyStudentJourneyLinkButton.textContent = 'Sao chép lại';
+  } catch (error) {
+    elements.studentJourneyLinkStatus.textContent = state.studentJourneyLink
+      ? `Không sao chép tự động được. Link: ${state.studentJourneyLink}`
+      : error.message;
+  } finally {
+    elements.copyStudentJourneyLinkButton.disabled = false;
+  }
+}
+
+async function saveTeacherHumanNote() {
+  const student = state.reportStudent;
+  const report = student?.latestReport;
+  const noteText = elements.reportHumanNote.value.trim();
+  if (!student || !report || !noteText) {
+    setNotice('Hãy viết một lời nhắn thật, ngắn gọn trước khi gửi tổng kết.', 'error');
+    return;
+  }
+  elements.saveTeacherNoteButton.disabled = true;
+  try {
+    await apiRequest('/teacher/reports/human-note', {
+      method: 'PUT',
+      body: {
+        reportId: report.reportId,
+        assignmentId: state.dashboard.assignmentId,
+        studentRef: student.studentRef,
+        noteText
+      }
+    });
+    report.humanNote = noteText;
+    elements.markReportDeliveredButton.disabled = false;
+    setNotice('Đã lưu lời nhắn thật của giảng viên.');
+  } catch (error) {
+    setNotice(error.message, 'error');
+  } finally {
+    elements.saveTeacherNoteButton.disabled = false;
+  }
+}
+
+async function markReportDelivered() {
+  const student = state.reportStudent;
+  const report = student?.latestReport;
+  if (!student || !report) return;
+  elements.markReportDeliveredButton.disabled = true;
+  try {
+    await apiRequest('/teacher/reports/delivery', {
+      method: 'POST',
+      body: {
+        reportId: report.reportId,
+        assignmentId: state.dashboard.assignmentId,
+        studentRef: student.studentRef,
+        operationId: crypto.randomUUID()
+      }
+    });
+    elements.reportDeliveryStatus.textContent = 'Đã xác nhận gửi.';
+    elements.markReportDeliveredButton.hidden = true;
+    await loadDashboard();
+  } catch (error) {
+    setNotice(error.message, 'error');
+  } finally {
+    elements.markReportDeliveredButton.disabled = false;
+  }
 }
 
 function buildStudentRow(student) {
@@ -297,6 +483,9 @@ function buildStudentRow(student) {
     ? (student.completeness === 'complete' ? 'Đã nộp đủ' : 'Đã nộp nhưng còn thiếu')
     : 'Chưa nộp';
   detail.textContent = `${submissionText} · ${student.evidenceCount || 0} bằng chứng`;
+  if (!student.submissionId && student.checkpoints?.length) {
+    detail.textContent = `Đã nộp ${student.checkpoints.length} phần · chưa nộp phiếu cuối`;
+  }
   copy.append(name, detail);
   const status = document.createElement('span');
   status.className = `status-pill${['self_confirmed', 'teacher_confirmed'].includes(student.attendanceStatus) ? ' good' : ''}`;
@@ -335,6 +524,8 @@ async function loadDashboard() {
     state.dashboard = payload.dashboard;
     elements.dashboardTitle.textContent = `${state.dashboard.className} · Buổi ${state.dashboard.sessionNumber}`;
     elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
+    elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));
+    renderClassInsights(state.dashboard.classInsights || []);
     elements.studentList.replaceChildren(...state.dashboard.students.map(buildStudentRow));
     setNotice(`Đã cập nhật ${state.dashboard.students.length} học viên.`);
   } catch (error) {
@@ -410,5 +601,9 @@ elements.copyLinkButton.addEventListener('click', () => void copyStudentLink());
 elements.assignmentSelect.addEventListener('change', () => void loadDashboard());
 elements.refreshDashboardButton.addEventListener('click', () => void loadDashboard());
 elements.attendanceForm.addEventListener('submit', event => void saveAttendance(event));
+elements.skillFilter.addEventListener('change', renderLibrary);
+elements.markReportDeliveredButton.addEventListener('click', () => void markReportDelivered());
+elements.saveTeacherNoteButton.addEventListener('click', () => void saveTeacherHumanNote());
+elements.copyStudentJourneyLinkButton.addEventListener('click', () => void copyStudentJourneyLink());
 
 initializeGoogle();

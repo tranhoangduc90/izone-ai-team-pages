@@ -7,8 +7,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
     <title>Progress Log · Giảng viên</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="styles.css?rev=20260829-learning-v1">
-    <link rel="stylesheet" href="teacher.css?rev=20260829-learning-v2">
+    <link rel="stylesheet" href="styles.css?rev=20260911-learning-v4">
+    <link rel="stylesheet" href="teacher.css?rev=20260915-journey-v1">
   </head>
   <body>
     <main class="teacher-shell">
@@ -40,6 +40,7 @@
             </div>
             <label class="field"><span>Tên phiếu</span><input id="formTitle" type="text" maxlength="200" value="Phiếu điểm danh và ghi nhanh" required></label>
             <div class="library-heading"><b>Câu hỏi</b><small>Chọn 2–3 câu. Bạn quyết định lúc nào học viên điền.</small></div>
+            <label class="field compact-filter"><span>Lọc theo kỹ năng</span><select id="skillFilter"><option value="">Tất cả</option><option value="listening">Listening</option><option value="reading">Reading</option><option value="writing">Writing</option><option value="speaking">Speaking</option></select></label>
             <div id="questionLibrary" class="question-library"></div>
             <button class="button primary" id="publishButton" type="submit">Tạo link cho lớp</button>
           </form>
@@ -52,7 +53,9 @@
         <section class="card" id="dashboardPanel" hidden>
           <div class="section-heading"><div><p class="eyebrow">TÌNH HÌNH LỚP</p><h1 id="dashboardTitle">Chọn một phiếu</h1></div><button class="button text-button" id="refreshDashboardButton" type="button">Làm mới</button></div>
           <label class="field"><span>Phiếu đang theo dõi</span><select id="assignmentSelect"></select></label>
+          <section class="control-section"><div class="library-heading"><b>Mở từng phần</b><small>Giảng viên quyết định đúng lúc học viên được đi tiếp.</small></div><div id="blockControls" class="block-controls"></div></section>
           <div class="summary-row" id="dashboardSummary"></div>
+          <section class="control-section" id="classInsightSection"><div class="library-heading"><b>Điều cần chú ý trong lớp</b><small>Phân tích của hệ thống; bấm làm mới để đọc dữ liệu mới nhất.</small></div><div id="classInsights" class="class-insights"></div></section>
           <div class="student-list" id="studentList"></div>
         </section>
       </section>
@@ -73,12 +76,14 @@
         <div class="report-heading"><div><p class="eyebrow">PHÂN TÍCH CỦA HỆ THỐNG</p><h2 id="reportStudentName">—</h2></div><button class="button text-button" value="close">Đóng</button></div>
         <p class="muted" id="reportScope"></p>
         <div class="report-system" id="reportSystemContent"></div>
-        <section class="human-note"><p class="eyebrow">LỜI NHẮN THẬT TỪ GIẢNG VIÊN</p><p id="reportHumanNote"></p></section>
+        <section class="human-note"><p class="eyebrow">LỜI NHẮN THẬT TỪ GIẢNG VIÊN</p><textarea id="reportHumanNote" maxlength="500" placeholder="Ví dụ: Cô thấy em đã chủ động hơn nhiều ở phần này nhé."></textarea><button class="button" id="saveTeacherNoteButton" type="button">Lưu lời nhắn</button></section>
+        <section class="journey-share"><div><b>Link hành trình của học viên</b><small id="studentJourneyLinkStatus">Mỗi lần tạo mới sẽ thay link cũ của học viên này.</small></div><button class="button" id="copyStudentJourneyLinkButton" type="button">Tạo và sao chép link</button></section>
+        <div class="report-delivery"><small id="reportDeliveryStatus">Chưa xác nhận đã gửi.</small><button class="button primary" id="markReportDeliveredButton" type="button">Đánh dấu đã gửi</button></div>
       </form>
     </dialog>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
-    <script src="teacher.js?rev=20260829-learning-v3"></script>
+    <script src="teacher.js?rev=20260915-journey-v1"></script>
   </body>
 </html>
