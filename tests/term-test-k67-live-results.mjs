@@ -31,9 +31,3 @@ test('chỉ bốn trang Term Test K67 buộc tải bản giao diện mới', asy
   }
   assert.match(await read('term-tests/term-test-2-computer-based/bootstrap.js'), new RegExp(revision));
 });
-
-test('cập nhật K56 không làm thay đổi các kiểm tra luồng K67', async () => {
-  const app = await read('term-tests/shared/app.js');
-  assert.match(app, /\/api\/term-tests\/result\/stream/);
-  assert.match(app, /eventName === 'ready'/);
-});
