@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+import vm from 'node:vm';
 const root = new URL('../progress-log/', import.meta.url);
 
 async function source(name) {
@@ -26,8 +27,15 @@ test('trang học viên giữ token trong fragment và có đủ năm trạng th
   assert.match(html, /id="rememberStudent"/);
 });
 
+test('frontend local vẫn trỏ tới API production thay vì same-origin backend', async () => {
+  const configSource = await source('config.js');
+  const sandbox = { window: { location: { hostname: '127.0.0.1' } } };
+  vm.runInNewContext(configSource, sandbox, { filename: 'progress-log/config.js' });
+  assert.equal(sandbox.window.PROGRESS_LOG_CONFIG.API_BASE_URL, 'https://ducizone.ddns.net/mapping-api');
+});
+
 test('giao diện không dùng API dựng HTML nguy hiểm', async () => {
-  const scripts = `${await source('app.js')}\n${await source('teacher.js')}`;
+  const scripts = `${await source('app.js')}\n${await source('teacher.js')}\n${await source('journey.js')}`;
   assert.doesNotMatch(scripts, /\.innerHTML\s*=/);
   assert.doesNotMatch(scripts, /insertAdjacentHTML|document\.write|\beval\s*\(|new Function/);
   assert.match(scripts, /replaceChildren/);
@@ -44,10 +52,29 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(html, /PHÂN TÍCH CỦA HỆ THỐNG/);
   assert.match(html, /LỜI NHẮN THẬT TỪ GIẢNG VIÊN/);
   assert.match(app, /student\.latestReport/);
+  assert.match(html, /id="copyStudentJourneyLinkButton"/);
+  assert.match(app, /\/teacher\/student-progress-links/);
+  assert.match(app, /payload\.link\.studentRef !== student\.studentRef/);
+});
+
+test('hành trình dùng link cá nhân trong fragment và chỉ mở timeline khi học viên yêu cầu', async () => {
+  const [html, app] = await Promise.all([source('journey.html'), source('journey.js')]);
+  assert.match(html, /Content-Security-Policy/);
+  assert.match(html, /name="referrer" content="no-referrer"/);
+  assert.match(html, /id="timeline" hidden/);
+  assert.match(html, /PHÂN TÍCH|TỔNG KẾT GẦN NHẤT/);
+  assert.match(html, /LỜI NHẮN TỪ GIẢNG VIÊN/);
+  assert.match(app, /window\.location\.hash/);
+  assert.match(app, /history\.replaceState/);
+  assert.match(app, /\/student\/course-journey/);
+  assert.match(app, /referrerPolicy:\s*'no-referrer'/);
+  assert.doesNotMatch(app, /searchParams\.get\(['"]access/);
 });
 
 test('không nhúng dữ liệu riêng tư hay credential vào bundle', async () => {
-  const files = await Promise.all(['config.js', 'app.js', 'teacher.js', 'index.html', 'teacher.html'].map(source));
+  const files = await Promise.all([
+    'config.js', 'app.js', 'teacher.js', 'journey.js', 'index.html', 'teacher.html', 'journey.html'
+  ].map(source));
   const bundle = files.join('\n');
   assert.doesNotMatch(bundle, /BEGIN (?:RSA|OPENSSH|EC) PRIVATE KEY/);
   assert.doesNotMatch(bundle, /(?:api[_-]?key|client[_-]?secret|password)\s*[:=]\s*['"][^'"]+/i);

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Hành trình học tập cá nhân của học viên IZONE">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+    <title>Hành trình học tập</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css?rev=20260915-journey-v1">
+    <link rel="stylesheet" href="journey.css?rev=20260915-journey-v1">
+  </head>
+  <body>
+    <main class="shell journey-shell">
+      <header class="brand">
+        <span class="brand-mark" aria-hidden="true">I</span>
+        <div><b>IZONE</b><small>Hành trình học tập</small></div>
+      </header>
+
+      <p class="notice" id="journeyNotice" role="status">Đang mở hành trình của bạn…</p>
+
+      <section class="card journey-content" id="journeyView" hidden>
+        <p class="eyebrow">TÌNH HÌNH CỦA BẠN</p>
+        <h1 id="journeyStudentName">—</h1>
+        <p class="muted journey-class" id="journeyClassName">—</p>
+
+        <div class="journey-summary" aria-label="Tóm tắt hành trình">
+          <div><b id="attendedCount">0</b><span>buổi có mặt</span></div>
+          <div><b id="submittedCount">0</b><span>phiếu hoàn tất</span></div>
+          <div><b id="reportCount">0</b><span>lần tổng kết</span></div>
+        </div>
+
+        <section class="latest-report" id="latestReport">
+          <p class="eyebrow">TỔNG KẾT GẦN NHẤT</p>
+          <p class="muted" id="latestReportScope"></p>
+          <div class="report-block">
+            <h2>Điều đã tiến bộ</h2>
+            <div id="progressPoints"></div>
+          </div>
+          <div class="report-block">
+            <h2>Điều cần chú ý</h2>
+            <div id="recurringPoints"></div>
+          </div>
+          <div class="next-action journey-next-action">
+            <small>VIỆC TIẾP THEO</small>
+            <p id="journeyNextAction">—</p>
+          </div>
+          <div class="teacher-message" id="teacherMessage" hidden>
+            <small>LỜI NHẮN TỪ GIẢNG VIÊN</small>
+            <p id="teacherMessageText"></p>
+          </div>
+        </section>
+
+        <p class="empty-report" id="emptyReport" hidden>Chưa có bản tổng kết nào được công bố.</p>
+        <button class="button primary" id="timelineToggle" type="button" aria-expanded="false">Xem tình hình từng buổi</button>
+
+        <section class="timeline" id="timeline" hidden>
+          <div class="timeline-heading">
+            <p class="eyebrow">TỪNG BUỔI HỌC</p>
+            <span id="timelineCount"></span>
+          </div>
+          <div class="session-list" id="sessionList"></div>
+          <section class="report-history" id="reportHistory" hidden>
+            <h2>Các lần tổng kết</h2>
+            <div id="reportList"></div>
+          </section>
+        </section>
+      </section>
+
+      <section class="card error-card" id="journeyError" hidden>
+        <p class="eyebrow">CHƯA MỞ ĐƯỢC HÀNH TRÌNH</p>
+        <h1>Hãy xin lại link từ giảng viên</h1>
+        <p class="muted" id="journeyErrorMessage"></p>
+      </section>
+    </main>
+    <script src="config.js?rev=20260905-memory-v3"></script>
+    <script src="journey.js?rev=20260915-journey-v1"></script>
+  </body>
+</html>

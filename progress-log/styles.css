@@ -33,6 +33,9 @@ select, textarea, input { width: 100%; border: 1px solid #b8c3cc; border-radius:
 select { min-height: 50px; padding: 0 14px; }
 textarea, input[type="text"] { padding: 13px 14px; line-height: 1.45; }
 textarea { min-height: 116px; resize: vertical; }
+.number-score { display: grid; grid-template-columns: minmax(90px, 140px) 1fr; align-items: center; gap: 12px; }
+.number-score input { min-height: 52px; padding: 0 14px; font-size: 1.15rem; font-weight: 800; }
+.number-score b { color: var(--navy); }
 select:focus, textarea:focus, input:focus { outline: 3px solid rgba(215, 58, 73, .15); border-color: var(--red); }
 .button { min-height: 50px; padding: 0 20px; border: 0; border-radius: 12px; cursor: pointer; font-weight: 800; }
 .button:disabled { cursor: not-allowed; opacity: .48; }

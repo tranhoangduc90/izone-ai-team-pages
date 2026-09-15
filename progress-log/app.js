@@ -9,6 +9,10 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
  */
 
 const config = window.PROGRESS_LOG_CONFIG || {};
+const AUTOSAVE_IDLE_MIN_MS = 5_000;
+const AUTOSAVE_IDLE_MAX_MS = 12_000;
+const AUTOSAVE_FORCE_MIN_MS = 25_000;
+const AUTOSAVE_FORCE_MAX_MS = 45_000;
 const state = {
   publicToken: '',
   assignment: null,
@@ -21,6 +25,7 @@ const state = {
   idleTimer: 0,
   maxTimer: 0,
   saveChain: Promise.resolve(),
+  checkpointSubmissions: new Map(),
   submitting: false,
   confirmedStudent: null,
   startingAttempt: false
@@ -206,12 +211,24 @@ function setSaveState(label, kind = '') {
   elements.saveState.className = `save-state${kind ? ` ${kind}` : ''}`;
 }
 
+function randomDelay(minimum, maximum) {
+  return minimum + Math.floor(Math.random() * (maximum - minimum + 1));
+}
+
 function scheduleSave() {
   storeLocalDraft();
   setSaveState('Đang ghi nhận…');
   window.clearTimeout(state.idleTimer);
-  state.idleTimer = window.setTimeout(() => void flushDraft(), 2_000 + Math.floor(Math.random() * 1_000));
-  if (!state.maxTimer) state.maxTimer = window.setTimeout(() => void flushDraft(), 15_000);
+  state.idleTimer = window.setTimeout(
+    () => void flushDraft(),
+    randomDelay(AUTOSAVE_IDLE_MIN_MS, AUTOSAVE_IDLE_MAX_MS)
+  );
+  if (!state.maxTimer) {
+    state.maxTimer = window.setTimeout(
+      () => void flushDraft(),
+      randomDelay(AUTOSAVE_FORCE_MIN_MS, AUTOSAVE_FORCE_MAX_MS)
+    );
+  }
 }
 
 function clearSaveTimers() {
@@ -267,8 +284,17 @@ function responseFor(item) {
   return state.responses[item.itemVersionId] ?? '';
 }
 
+function responseIsPresent(value) {
+  if (Array.isArray(value)) return value.length > 0;
+  if (value && typeof value === 'object') {
+    return Number.isInteger(value.correct) && Number.isInteger(value.total) && value.total > 0;
+  }
+  return String(value ?? '').trim().length > 0;
+}
+
 function recordResponse(itemId, value) {
-  state.responses[itemId] = value;
+  if (value === undefined) delete state.responses[itemId];
+  else state.responses[itemId] = value;
   state.changeVersion += 1;
   scheduleSave();
 }
@@ -314,7 +340,28 @@ function buildQuestion(item) {
     help.textContent = item.helpText;
     wrapper.append(help);
   }
-  if (item.interactionType === 'short_text' || item.interactionType === 'long_text') {
+  if (item.interactionType === 'number_score') {
+    const score = responseFor(item);
+    const config = item.interactionConfig || {};
+    const row = document.createElement('div');
+    row.className = 'number-score';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = String(config.min ?? 0);
+    input.max = String(config.max);
+    input.step = String(config.step ?? 1);
+    input.required = item.required;
+    input.value = score && typeof score === 'object' ? String(score.correct) : '';
+    input.setAttribute('aria-label', item.prompt);
+    input.addEventListener('input', () => {
+      if (input.value === '') recordResponse(item.itemVersionId, undefined);
+      else recordResponse(item.itemVersionId, { correct: Number(input.value), total: Number(config.max) });
+    });
+    const total = document.createElement('b');
+    total.textContent = `/ ${config.max} ${config.unit || ''}`.trim();
+    row.append(input, total);
+    wrapper.append(row);
+  } else if (item.interactionType === 'short_text' || item.interactionType === 'long_text') {
     const input = document.createElement(item.interactionType === 'long_text' ? 'textarea' : 'input');
     if (input instanceof HTMLInputElement) input.type = 'text';
     input.value = String(responseFor(item));
@@ -338,8 +385,17 @@ function blockIsComplete(block) {
   return block.items.every(item => {
     if (!item.required) return true;
     const value = responseFor(item);
-    return Array.isArray(value) ? value.length > 0 : String(value).trim().length > 0;
+    return responseIsPresent(value);
   });
+}
+
+function releaseFor(block) {
+  return (state.assignment.blockReleases || []).find(item => item.blockId === block.blockId) || null;
+}
+
+function blockIsOpen(block) {
+  const release = releaseFor(block);
+  return !release || release.status === 'open';
 }
 
 function renderCheckpoint() {
@@ -351,17 +407,81 @@ function renderCheckpoint() {
   elements.checkpointInstructions.textContent = block.instructions || '';
   elements.checkpointInstructions.hidden = !block.instructions;
   elements.questionList.replaceChildren(...block.items.map(buildQuestion));
+  if (state.checkpointSubmissions.has(block.blockId)) {
+    for (const control of elements.questionList.querySelectorAll('input, textarea, select')) control.disabled = true;
+  }
   elements.previousButton.hidden = state.checkpointIndex === 0;
   elements.nextButton.hidden = state.checkpointIndex === blocks.length - 1;
   elements.submitButton.hidden = state.checkpointIndex !== blocks.length - 1;
+  const nextBlock = blocks[state.checkpointIndex + 1];
+  if (nextBlock && state.checkpointSubmissions.has(block.blockId) && !blockIsOpen(nextBlock)) {
+    elements.nextButton.textContent = 'Kiểm tra phần tiếp theo';
+  } else {
+    elements.nextButton.textContent = 'Nộp phần và tiếp tục';
+  }
   elements.progressBar.style.width = `${((state.checkpointIndex + 1) / blocks.length) * 100}%`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+async function refreshBlockReleases() {
+  const payload = await apiRequest('/assignments/open', { body: { publicToken: state.publicToken } });
+  state.assignment.blockReleases = payload.assignment.blockReleases || [];
+}
+
+async function submitCurrentCheckpoint() {
+  const block = currentBlock();
+  if (!blockIsOpen(block)) throw new Error('Phần này chưa được giảng viên mở.');
+  await flushDraft();
+  const payload = await apiRequest('/attempts/checkpoints/submit', {
+    body: {
+      attemptToken: state.attempt.attemptToken,
+      checkpointSubmissionId: crypto.randomUUID(),
+      blockId: block.blockId,
+      checkpoint: block.checkpoint,
+      draftRevision: state.attempt.draftRevision,
+      definitionHash: state.assignment.definitionHash,
+      responses: state.responses,
+      idempotencyKey: `checkpoint:${state.attempt.attemptToken}:${block.blockId}:v1`
+    }
+  });
+  state.checkpointSubmissions.set(block.blockId, payload.checkpointSubmission);
+  return payload.checkpointSubmission;
+}
+
+async function continueToNextCheckpoint() {
+  if (!validateCurrentBlock() || state.submitting) return;
+  const block = currentBlock();
+  const nextBlock = allBlocks()[state.checkpointIndex + 1];
+  state.submitting = true;
+  elements.nextButton.disabled = true;
+  try {
+    if (!state.checkpointSubmissions.has(block.blockId)) {
+      setNotice('Đang ghi nhận phần này…');
+      await submitCurrentCheckpoint();
+    }
+    await refreshBlockReleases();
+    if (!blockIsOpen(nextBlock)) {
+      setNotice('Phần này đã được ghi nhận. Hãy chờ giảng viên mở phần tiếp theo.');
+      renderCheckpoint();
+      return;
+    }
+    state.checkpointIndex += 1;
+    setNotice('Phần trước đã được ghi nhận.');
+    renderCheckpoint();
+  } catch (error) {
+    setNotice(error.message, 'error');
+  } finally {
+    state.submitting = false;
+    elements.nextButton.disabled = false;
+  }
+}
+
 function validateCurrentBlock() {
-  if (blockIsComplete(currentBlock())) return true;
+  const invalidControl = elements.questionList.querySelector('textarea:invalid, input:invalid, select:invalid');
+  if (blockIsComplete(currentBlock()) && !invalidControl) return true;
   setNotice('Bạn hãy điền đủ các mục có dấu * trước khi tiếp tục.', 'error');
-  const firstEmpty = elements.questionList.querySelector('textarea:invalid, input:invalid, textarea, input');
+  const firstEmpty = invalidControl || elements.questionList.querySelector('textarea, input, select');
+  firstEmpty?.reportValidity?.();
   firstEmpty?.focus();
   return false;
 }
@@ -411,6 +531,9 @@ async function startAttempt() {
       }
     });
     state.attempt = payload.attempt;
+    state.checkpointSubmissions = new Map(
+      (state.attempt.checkpointSubmissions || []).map(item => [item.blockId, item])
+    );
     state.responses = readLocalDraft(state.attempt.draftRevision) || state.attempt.draft || {};
     state.changeVersion = 0;
     state.savedVersion = 0;
@@ -441,7 +564,7 @@ async function startAttempt() {
 async function submitForm(event) {
   event.preventDefault();
   if (!validateCurrentBlock() || state.submitting) return;
-  const missing = allItems().filter(item => item.required && !String(responseFor(item)).trim());
+  const missing = allItems().filter(item => item.required && !responseIsPresent(responseFor(item)));
   if (missing.length) {
     const target = allBlocks().findIndex(block => block.items.some(item => missing.includes(item)));
     state.checkpointIndex = Math.max(0, target);
@@ -454,6 +577,9 @@ async function submitForm(event) {
   setNotice('Đang nộp phiếu…');
   clearSaveTimers();
   try {
+    if (!state.checkpointSubmissions.has(currentBlock().blockId)) {
+      await submitCurrentCheckpoint();
+    }
     await flushDraft();
     const payload = await apiRequest('/attempts/submit', {
       body: {
@@ -514,12 +640,7 @@ elements.previousButton.addEventListener('click', () => {
   setNotice('');
   renderCheckpoint();
 });
-elements.nextButton.addEventListener('click', () => {
-  if (!validateCurrentBlock()) return;
-  state.checkpointIndex = Math.min(allBlocks().length - 1, state.checkpointIndex + 1);
-  setNotice('Nội dung của phần trước đã được giữ lại.');
-  renderCheckpoint();
-});
+elements.nextButton.addEventListener('click', () => void continueToNextCheckpoint());
 elements.reflectionForm.addEventListener('submit', event => void submitForm(event));
 elements.retryButton.addEventListener('click', () => void openAssignment());
 window.addEventListener('pagehide', () => {
