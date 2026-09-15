@@ -631,16 +631,116 @@
   let writingGradingPollStartedAt = 0;
   let writingGradingPollCount = 0;
   let writingGradingPollInFlight = false;
+  let writingGradingRefreshRequested = false;
+  let writingGradingStreamController = null;
+  let writingGradingStreamReconnectTimer = 0;
+  let writingGradingStreamFailureCount = 0;
+  let writingGradingStreamUnsupported = false;
+
+  function shouldWaitForWritingGrading() {
+    const grading = state.result?.writing?.grading;
+    return Boolean(
+      !demoMode
+      && state.attemptToken
+      && state.writingSubmitted
+      && !grading?.ready
+      && grading?.status !== 'review_required'
+    );
+  }
+
+  function stopWritingGradingStream() {
+    window.clearTimeout(writingGradingStreamReconnectTimer);
+    writingGradingStreamReconnectTimer = 0;
+    writingGradingStreamController?.abort();
+    writingGradingStreamController = null;
+    writingGradingStreamFailureCount = 0;
+  }
 
   function stopWritingGradingPolling() {
     window.clearTimeout(writingGradingPollTimer);
     writingGradingPollTimer = 0;
     writingGradingPollStartedAt = 0;
     writingGradingPollCount = 0;
+    writingGradingRefreshRequested = false;
+    stopWritingGradingStream();
+  }
+
+  function scheduleWritingGradingStreamReconnect() {
+    if (!shouldWaitForWritingGrading() || writingGradingStreamUnsupported || writingGradingStreamReconnectTimer) return;
+    const delays = [1_000, 2_000, 5_000, 10_000, 30_000];
+    const delay = delays[Math.min(writingGradingStreamFailureCount, delays.length - 1)];
+    writingGradingStreamFailureCount += 1;
+    writingGradingStreamReconnectTimer = window.setTimeout(() => {
+      writingGradingStreamReconnectTimer = 0;
+      startWritingGradingStream();
+    }, delay);
+  }
+
+  async function startWritingGradingStream() {
+    if (
+      !shouldWaitForWritingGrading()
+      || writingGradingStreamUnsupported
+      || writingGradingStreamController
+    ) return;
+
+    const controller = new AbortController();
+    writingGradingStreamController = controller;
+    try {
+      const response = await fetch(`${appConfig.API_BASE_URL}/api/term-tests/result/stream`, {
+        method: 'POST',
+        headers: {
+          Accept: 'text/event-stream',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ attemptToken: state.attemptToken }),
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      if (!response.ok || !response.body) {
+        if ([404, 405].includes(response.status)) writingGradingStreamUnsupported = true;
+        throw new Error(`RESULT_STREAM_HTTP_${response.status}`);
+      }
+
+      writingGradingStreamFailureCount = 0;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (shouldWaitForWritingGrading()) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+        if (buffer.length > 64 * 1024) throw new Error('RESULT_STREAM_TOO_LARGE');
+        let boundary = buffer.indexOf('\n\n');
+        while (boundary >= 0) {
+          const block = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          const eventName = block.split('\n').find(line => line.startsWith('event:'))?.slice(6).trim();
+          if (eventName === 'ready') {
+            writingGradingRefreshRequested = true;
+            controller.abort();
+            await refreshWritingGrading();
+            return;
+          }
+          if (eventName === 'close') return;
+          boundary = buffer.indexOf('\n\n');
+        }
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      // Polling vẫn hoạt động; chỉ nối lại kênh tín hiệu khi lỗi mạng có thể là tạm thời.
+    } finally {
+      if (writingGradingStreamController === controller) writingGradingStreamController = null;
+      if (shouldWaitForWritingGrading()) scheduleWritingGradingStreamReconnect();
+    }
   }
 
   async function refreshWritingGrading() {
-    if (demoMode || !state.attemptToken || writingGradingPollInFlight) return;
+    if (demoMode || !state.attemptToken) return;
+    if (writingGradingPollInFlight) {
+      writingGradingRefreshRequested = true;
+      return;
+    }
+    writingGradingRefreshRequested = false;
     writingGradingPollInFlight = true;
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
@@ -659,7 +759,12 @@
       // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
     } finally {
       writingGradingPollInFlight = false;
-      if (!state.result?.writing?.grading?.ready) scheduleWritingGradingRefresh();
+      if (writingGradingRefreshRequested && !state.result?.writing?.grading?.ready) {
+        writingGradingRefreshRequested = false;
+        window.queueMicrotask(() => refreshWritingGrading());
+      } else if (!state.result?.writing?.grading?.ready) {
+        scheduleWritingGradingRefresh();
+      }
     }
   }
 
@@ -670,10 +775,11 @@
       || !state.writingSubmitted
       || grading?.ready
       || grading?.status === 'review_required'
-      || writingGradingPollTimer
     ) return;
     if (!writingGradingPollStartedAt) writingGradingPollStartedAt = Date.now();
     if (Date.now() - writingGradingPollStartedAt > 45 * 60 * 1000) return;
+    startWritingGradingStream();
+    if (writingGradingPollTimer) return;
     const delay = Math.min(30_000, 8_000 + (writingGradingPollCount * 2_000));
     writingGradingPollCount += 1;
     writingGradingPollTimer = window.setTimeout(() => {
@@ -2370,6 +2476,9 @@
     }
   }
 
-  window.addEventListener('pagehide', flushDraftsOnPageHide);
+  window.addEventListener('pagehide', () => {
+    stopWritingGradingPolling();
+    flushDraftsOnPageHide();
+  });
   initialize();
 })();
