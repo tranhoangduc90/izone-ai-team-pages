@@ -4,5 +4,6 @@ window.GRADER_CONFIG = Object.freeze({
   statusUrl: 'https://ducizone.ddns.net/webhook/tien-do-cham-reading-listening-vocab-56',
   minimumCompletionPercent: 90,
   pollEveryMs: 1300,
-  timeoutMs: 240000,
+  softTimeoutMs: 240000,
+  hardTimeoutMs: 600000,
 });

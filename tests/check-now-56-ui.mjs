@@ -53,10 +53,41 @@ try {
     await page.close();
   }
 
+  const delayed = await browser.newPage({ viewport: { width: 980, height: 760 } });
+  let delayedPolls = 0;
+  await delayed.route('**/check-now-56-config.js?*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/javascript; charset=utf-8',
+      body: `window.GRADER_CONFIG = Object.freeze({
+        startUrl: 'https://ducizone.ddns.net/webhook/cham-ngay-reading-listening-vocab-56',
+        statusUrl: 'https://ducizone.ddns.net/webhook/tien-do-cham-reading-listening-vocab-56',
+        minimumCompletionPercent: 90,
+        pollEveryMs: 20,
+        softTimeoutMs: 40,
+        hardTimeoutMs: 2000,
+      });`,
+    });
+  });
+  await delayed.route('https://ducizone.ddns.net/webhook/cham-ngay-reading-listening-vocab-56', async (route) => {
+    await route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ job_id: 'delayed_job_56', stage: 'reading' }) });
+  });
+  await delayed.route('https://ducizone.ddns.net/webhook/tien-do-cham-reading-listening-vocab-56?*', async (route) => {
+    delayedPolls += 1;
+    const payload = delayedPolls < 50
+      ? { status: 'processing', stage: 'writing' }
+      : { status: 'done', stage: 'done' };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+  });
+  await delayed.goto('http://127.0.0.1:4174/check-now-56.html?documentId=1Abcdefghijklmnopqrstuvwxyz0123456789&assignmentCode=56-vocab-07');
+  await delayed.getByText('Hệ thống vẫn đang hoàn tất việc ghi và xác minh kết quả. Bạn vui lòng tiếp tục chờ.').waitFor();
+  await delayed.getByRole('heading', { name: 'Bài đã được chấm xong' }).waitFor();
+  await delayed.close();
+
   const invalid = await browser.newPage();
   await invalid.goto('http://127.0.0.1:4174/check-now-56.html?documentId=1Abcdefghijklmnopqrstuvwxyz0123456789&assignmentCode=67-reading-01');
   await invalid.getByText('Mã bài trong liên kết không hợp lệ').waitFor();
-  process.stdout.write(JSON.stringify({ ok: true, accepted: cases, rejected: ['67-reading-01'] }));
+  process.stdout.write(JSON.stringify({ ok: true, accepted: cases, delayedCompletion: true, rejected: ['67-reading-01'] }));
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

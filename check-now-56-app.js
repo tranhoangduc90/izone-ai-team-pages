@@ -17,6 +17,9 @@
   const stages = ['reading', 'grading', 'writing'];
   const stageProgress = { reading: 18, grading: 52, writing: 82, done: 100 };
   const minimumCompletionPercent = Number(config?.minimumCompletionPercent) || 90;
+  const pollEveryMs = Number(config?.pollEveryMs) || 1300;
+  const softTimeoutMs = Number(config?.softTimeoutMs) || 240000;
+  const hardTimeoutMs = Number(config?.hardTimeoutMs) || Number(config?.timeoutMs) || 600000;
   const card = document.querySelector('.grader-card');
   const pageTitle = document.querySelector('#page-title');
   const progressFill = document.querySelector('#progress-fill');
@@ -35,6 +38,7 @@
 
   let activeJobId = '';
   let stopped = false;
+  let delayNotified = false;
 
   warningThreshold.textContent = `${minimumCompletionPercent}%`;
 
@@ -119,9 +123,14 @@
 
   async function pollStatus(startedAt) {
     if (stopped) return;
-    if (Date.now() - startedAt > config.timeoutMs) {
+    const elapsedMs = Date.now() - startedAt;
+    if (elapsedMs > hardTimeoutMs) {
       showError('Việc chấm bài mất nhiều thời gian hơn dự kiến. Vui lòng thử lại.');
       return;
+    }
+    if (elapsedMs > softTimeoutMs && !delayNotified) {
+      delayNotified = true;
+      lead.textContent = 'Hệ thống vẫn đang hoàn tất việc ghi và xác minh kết quả. Bạn vui lòng tiếp tục chờ.';
     }
     try {
       const url = new URL(config.statusUrl);
@@ -137,17 +146,16 @@
         return;
       }
       if (stages.includes(status.stage)) setStage(status.stage);
-    } catch (error) {
-      if (Date.now() - startedAt > config.timeoutMs / 2) {
-        showError(error.message, error.retryable !== false);
-        return;
-      }
+    } catch {
+      // Lỗi mạng tạm thời không được phép biến một lượt chấm đang chạy thành thất bại.
+      // Việc thăm dò tiếp tục cho tới khi backend trả trạng thái cuối hoặc hết hard timeout.
     }
-    window.setTimeout(() => pollStatus(startedAt), config.pollEveryMs);
+    window.setTimeout(() => pollStatus(startedAt), pollEveryMs);
   }
 
   async function startGrading() {
     stopped = false;
+    delayNotified = false;
     activeJobId = '';
     card.classList.remove('is-warning');
     pageTitle.textContent = 'Đang chấm bài của bạn';
