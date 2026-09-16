@@ -66,7 +66,9 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
 
 test('renderer hỗ trợ đúng một câu có nhiều ô đánh số và yêu cầu điền đủ từng ô', async () => {
   const [html, app, css] = await Promise.all([source('index.html'), source('app.js'), source('styles.css')]);
-  assert.match(html, /Progress Log 567/);
+  assert.match(html, /Progress Log · Khóa 56/);
+  assert.doesNotMatch(html, /VIỆC TIẾP THEO/);
+  assert.doesNotMatch(app, /nextActionResult/);
   assert.match(app, /layoutType === 'numbered_short_texts'/);
   assert.match(app, /responseCount/);
   assert.match(app, /value\.every\(entry/);

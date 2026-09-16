@@ -39,7 +39,7 @@ const elements = Object.fromEntries([
   'studentNameLabel', 'formContextLabel', 'saveState', 'progressBar', 'reflectionForm',
   'checkpointLabel', 'checkpointTitle', 'checkpointInstructions', 'questionList', 'previousButton',
   'nextButton', 'submitButton', 'resultTitle', 'attendanceResult', 'completenessResult',
-  'nextActionResult', 'errorTitle', 'errorMessage', 'retryButton'
+  'errorTitle', 'errorMessage', 'retryButton'
 ].map(id => [id, document.getElementById(id)]));
 
 const studentMemory = {
@@ -637,7 +637,6 @@ async function submitForm(event) {
       ? 'Đã tự động ghi nhận'
       : 'Chờ giảng viên xác nhận';
     elements.completenessResult.textContent = receipt.completeness === 'complete' ? 'Đã đủ nội dung' : 'Còn thiếu mục bắt buộc';
-    elements.nextActionResult.textContent = receipt.nextAction;
     setNotice('Hoàn tất. Bạn có thể đóng trang này.');
     showView('resultView');
   } catch (error) {
