@@ -42,12 +42,18 @@ test('giao diện không dùng API dựng HTML nguy hiểm', async () => {
 });
 
 test('trang giảng viên chỉ soạn từ thư viện và override phải có lý do', async () => {
-  const [html, app] = await Promise.all([source('teacher.html'), source('teacher.js')]);
+  const [html, app, css] = await Promise.all([source('teacher.html'), source('teacher.js'), source('teacher.css')]);
+  assert.ok(html.indexOf('id="dashboardTab"') < html.indexOf('id="createTab"'));
+  assert.match(html, /id="createPanel" hidden/);
+  assert.match(app, /switchPanel\('dashboard'\)/);
+  assert.match(html, /class="topbar teacher-header"/);
+  assert.match(css, /\.teacher-shell \.card/);
   assert.match(html, /id="questionLibrary"/);
   assert.match(html, /id="attendanceReason"[^>]+minlength="3"/);
   assert.match(app, /\/teacher\/question-library/);
   assert.match(app, /\/teacher\/reflection-forms\/publish/);
-  assert.match(app, /operationId:\s*crypto\.randomUUID\(\)/);
+  assert.match(app, /attendanceOperationId = crypto\.randomUUID\(\)/);
+  assert.match(app, /operationId:\s*state\.attendanceOperationId/);
   assert.match(app, /url\.hash = new URLSearchParams/);
   assert.match(html, /PHÂN TÍCH CỦA HỆ THỐNG/);
   assert.match(html, /LỜI NHẮN THẬT TỪ GIẢNG VIÊN/);
@@ -62,9 +68,16 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(app, /payload\.live\.assignmentId !== assignmentId/);
   assert.match(app, /document\.hidden/);
   assert.match(app, /8_000/);
+  assert.match(app, /portalSyncQueued/);
+  assert.match(app, /student\.portalSync\?\.status/);
+  assert.match(html, /id="attendanceSyncHint"/);
+  assert.match(app, /student\.checkpoints.*some\(item => item\.blockId === block\.blockId\)/);
+  assert.match(app, /draftAnswers\[item\.itemVersionId\]/);
+  assert.match(app, /Phần \$\{index \+ 1\}: \$\{stateLabel\}/);
+  assert.match(app, /void loadDashboard\(\{ quiet: true \}\)/);
 });
 
-test('renderer hỗ trợ đúng một câu có nhiều ô đánh số và yêu cầu điền đủ từng ô', async () => {
+test('câu Writing 1 điền từ trong bốn câu, vẫn lưu đủ tám ô và yêu cầu điền hết', async () => {
   const [html, app, css] = await Promise.all([source('index.html'), source('app.js'), source('styles.css')]);
   assert.match(html, /Progress Log · Khóa 56/);
   assert.doesNotMatch(html, /VIỆC TIẾP THEO/);
@@ -73,8 +86,21 @@ test('renderer hỗ trợ đúng một câu có nhiều ô đánh số và yêu 
   assert.match(app, /responseCount/);
   assert.match(app, /value\.every\(entry/);
   assert.match(app, /numbered-text-row/);
+  assert.match(app, /SENTENCE_COMPLETION_LAYOUTS/);
+  assert.match(app, /Task Response:/);
+  assert.match(app, /Coherence and Cohesion:/);
+  assert.match(app, /Lexical Resource:/);
+  assert.match(app, /Grammatical Range and Accuracy:/);
+  assert.match(app, /templates\.length \* 2 !== expected/);
+  assert.match(app, /document\.createElement\('input'\)/);
+  assert.match(app, /input\.className = 'sentence-blank'/);
+  assert.match(app, /item\.interactionConfig\.responseLabels/);
   assert.match(css, /\.question-number/);
   assert.match(css, /\.numbered-text-group/);
+  assert.match(css, /\.sentence-row/);
+  assert.match(css, /\.sentence-blank/);
+  assert.match(css, /--canvas: #f7f5ef/);
+  assert.match(css, /--red: #db3e4b/);
 });
 
 test('hành trình dùng link cá nhân trong fragment và chỉ mở timeline khi học viên yêu cầu', async () => {

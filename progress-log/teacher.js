@@ -15,8 +15,10 @@ const state = {
   dashboard: null,
   liveByStudent: new Map(),
   dashboardGeneration: 0,
+  dashboardLoading: 0,
   liveLoadingFor: '',
   attendanceStudent: null,
+  attendanceOperationId: null,
   reportStudent: null,
   studentJourneyLink: ''
 };
@@ -28,7 +30,7 @@ const elements = Object.fromEntries([
   'studentLink', 'copyLinkButton', 'assignmentSelect', 'dashboardTitle', 'refreshDashboardButton',
   'openStudentFormButton', 'copyCurrentLinkButton', 'liveUpdatedAt',
   'blockControls', 'classInsights', 'dashboardSummary', 'studentList', 'attendanceDialog', 'attendanceForm', 'attendanceStudentName',
-  'attendanceStatus', 'attendanceReason', 'saveAttendanceButton', 'reportDialog', 'reportStudentName',
+  'attendanceStatus', 'attendanceReason', 'attendanceSyncHint', 'saveAttendanceButton', 'reportDialog', 'reportStudentName',
   'reportScope', 'reportSystemContent', 'reportHumanNote', 'saveTeacherNoteButton', 'reportDeliveryStatus',
   'markReportDeliveredButton', 'copyStudentJourneyLinkButton', 'studentJourneyLinkStatus',
   'draftDialog', 'draftStudentName', 'draftStatus', 'draftAnswers'
@@ -238,6 +240,7 @@ async function loadWorkspace() {
   renderLibrary();
   elements.teacherAccessView.hidden = true;
   elements.teacherWorkspace.hidden = false;
+  switchPanel('dashboard');
   setNotice(state.classes.length ? 'Sẵn sàng.' : 'Tài khoản chưa được cấp lớp nào.', state.classes.length ? '' : 'error');
 }
 
@@ -371,12 +374,20 @@ function buildSummary(students) {
 
 function openAttendance(student) {
   state.attendanceStudent = student;
+  state.attendanceOperationId = crypto.randomUUID();
   elements.attendanceStudentName.textContent = student.discriminator
     ? `${student.name} · ${student.discriminator}`
     : student.name;
   elements.attendanceStatus.value = student.attendanceStatus || 'teacher_confirmed';
+  updateAttendanceSyncHint();
   elements.attendanceReason.value = student.attendanceReason || '';
   elements.attendanceDialog.showModal();
+}
+
+function updateAttendanceSyncHint() {
+  elements.attendanceSyncHint.textContent = elements.attendanceStatus.value === 'teacher_confirmed'
+    ? 'Có mặt: Progress Log sẽ gửi yêu cầu ghi Portal sau khi lưu. Nếu Portal đã có trạng thái khác, hệ thống dừng để kiểm tra, không tự ghi đè.'
+    : 'Trạng thái này chỉ được lưu trong Progress Log; chưa thay đổi điểm danh trên Portal.';
 }
 
 function addReportSection(container, title, values) {
@@ -552,6 +563,42 @@ function buildStudentRow(student) {
     detail.textContent = `Đang nhập · bản lưu ${live.draftRevision} lúc ${formatSavedAt(live.draftUpdatedAt)}`;
   }
   copy.append(name, detail);
+  const blocks = state.dashboard?.definition?.blocks || [];
+  if (blocks.length) {
+    const progress = document.createElement('div');
+    progress.className = 'student-block-progress';
+    for (const [index, block] of blocks.entries()) {
+      const submitted = (student.submissionId && student.completeness === 'complete')
+        || (student.checkpoints || []).some(item => item.blockId === block.blockId);
+      const draftAnswers = live?.draftResponses || {};
+      const typing = (block.items || []).some(item => {
+        const answer = draftAnswers[item.itemVersionId];
+        return Array.isArray(answer)
+          ? answer.some(value => String(value ?? '').trim())
+          : answer !== undefined && String(answer ?? '').trim();
+      });
+      const release = (state.dashboard.blockReleases || []).find(item => item.blockId === block.blockId);
+      const stateLabel = submitted ? 'Đã nộp' : typing ? 'Đang nhập' : release?.status === 'locked' ? 'Chưa mở' : 'Chưa nộp';
+      const chip = document.createElement('span');
+      chip.className = `block-progress-pill ${submitted ? 'submitted' : typing ? 'typing' : ''}`;
+      chip.textContent = `Phần ${index + 1}: ${stateLabel}`;
+      progress.append(chip);
+    }
+    copy.append(progress);
+  }
+  if (['self_confirmed', 'teacher_confirmed'].includes(student.attendanceStatus)) {
+    const portal = document.createElement('small');
+    portal.className = `portal-sync-status${student.portalSync?.status === 'complete' ? ' complete' : ''}`;
+    portal.textContent = {
+      complete: 'Portal: đã ghi nhận',
+      queued: 'Portal: đang chờ đồng bộ',
+      leased: 'Portal: đang đồng bộ',
+      retry_wait: 'Portal: đang thử lại',
+      review_required: 'Portal: cần kiểm tra xung đột',
+      failed: 'Portal: đồng bộ lỗi'
+    }[student.portalSync?.status] || 'Portal: chưa có xác nhận đồng bộ';
+    copy.append(portal);
+  }
   const status = document.createElement('span');
   status.className = `status-pill${['self_confirmed', 'teacher_confirmed'].includes(student.attendanceStatus) ? ' good' : ''}`;
   status.textContent = attendanceLabel(student.attendanceStatus);
@@ -596,7 +643,7 @@ async function loadLiveDrafts({ quiet = false } = {}) {
     const payload = await apiRequest(`/teacher/live-drafts?assignment=${encodeURIComponent(assignmentId)}`);
     if (generation !== state.dashboardGeneration || payload.live.assignmentId !== assignmentId) return;
     state.liveByStudent = new Map((payload.live.students || []).map(student => [student.studentRef, student]));
-    elements.liveUpdatedAt.textContent = `Bản lưu gần nhất · cập nhật ${formatSavedAt(payload.live.generatedAt)}`;
+    elements.liveUpdatedAt.textContent = `Tự cập nhật mỗi 8 giây · bản lưu lúc ${formatSavedAt(payload.live.generatedAt)}`;
     renderStudentList();
   } catch (error) {
     if (!quiet) setNotice(`Chưa tải được bản nháp: ${error.message}`, 'error');
@@ -605,7 +652,7 @@ async function loadLiveDrafts({ quiet = false } = {}) {
   }
 }
 
-async function loadDashboard() {
+async function loadDashboard({ quiet = false } = {}) {
   const assignmentId = elements.assignmentSelect.value;
   if (!assignmentId) {
     state.dashboardGeneration += 1;
@@ -615,23 +662,27 @@ async function loadDashboard() {
     elements.studentList.replaceChildren();
     return;
   }
-  setNotice('Đang tải tình hình lớp…');
+  if (!quiet) setNotice('Đang tải tình hình lớp…');
+  state.dashboardLoading += 1;
   try {
     state.dashboardGeneration += 1;
     const generation = state.dashboardGeneration;
     const payload = await apiRequest(`/teacher/dashboard?assignment=${encodeURIComponent(assignmentId)}`);
     if (generation !== state.dashboardGeneration) return;
+    const previousAssignmentId = state.dashboard?.assignmentId;
     state.dashboard = payload.dashboard;
-    state.liveByStudent.clear();
+    if (previousAssignmentId !== assignmentId) state.liveByStudent.clear();
     elements.dashboardTitle.textContent = `${state.dashboard.className} · Buổi ${state.dashboard.sessionNumber}`;
     elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
     elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));
     renderClassInsights(state.dashboard.classInsights || []);
     renderStudentList();
-    setNotice(`Đã cập nhật ${state.dashboard.students.length} học viên.`);
+    if (!quiet) setNotice(`Đã cập nhật ${state.dashboard.students.length} học viên.`);
     await loadLiveDrafts({ quiet: true });
   } catch (error) {
-    setNotice(error.message, 'error');
+    setNotice(`Chưa cập nhật được tình hình lớp: ${error.message}`, 'error');
+  } finally {
+    state.dashboardLoading -= 1;
   }
 }
 
@@ -644,18 +695,22 @@ async function saveAttendance(event) {
   if (!state.attendanceStudent || !elements.attendanceReason.reportValidity()) return;
   elements.saveAttendanceButton.disabled = true;
   try {
-    await apiRequest('/teacher/attendance/override', {
+    const response = await apiRequest('/teacher/attendance/override', {
       method: 'POST',
       body: {
         assignmentId: state.dashboard.assignmentId,
         studentRef: state.attendanceStudent.studentRef,
         status: elements.attendanceStatus.value,
         reason: elements.attendanceReason.value.trim(),
-        operationId: crypto.randomUUID()
+        operationId: state.attendanceOperationId
       }
     });
     elements.attendanceDialog.close();
+    state.attendanceOperationId = null;
     await loadDashboard();
+    setNotice(response.attendance.portalSyncQueued
+      ? 'Đã lưu xác nhận. Portal đang được đồng bộ; xem trạng thái trong danh sách học viên.'
+      : 'Đã lưu trong Progress Log. Trạng thái này không tự thay đổi Portal.');
   } catch (error) {
     setNotice(error.message, 'error');
   } finally {
@@ -726,6 +781,9 @@ elements.refreshDashboardButton.addEventListener('click', () => void loadDashboa
 elements.openStudentFormButton.addEventListener('click', openCurrentStudentForm);
 elements.copyCurrentLinkButton.addEventListener('click', () => void copyCurrentStudentLink());
 elements.attendanceForm.addEventListener('submit', event => void saveAttendance(event));
+elements.attendanceStatus.addEventListener('change', updateAttendanceSyncHint);
+elements.attendanceStatus.addEventListener('change', () => { state.attendanceOperationId = crypto.randomUUID(); });
+elements.attendanceReason.addEventListener('input', () => { state.attendanceOperationId = crypto.randomUUID(); });
 elements.skillFilter.addEventListener('change', renderLibrary);
 elements.markReportDeliveredButton.addEventListener('click', () => void markReportDelivered());
 elements.saveTeacherNoteButton.addEventListener('click', () => void saveTeacherHumanNote());
@@ -734,6 +792,7 @@ elements.copyStudentJourneyLinkButton.addEventListener('click', () => void copyS
 initializeGoogle();
 
 window.setInterval(() => {
-  if (!state.idToken || !state.dashboard || document.hidden || elements.dashboardPanel.hidden) return;
-  void loadLiveDrafts({ quiet: true });
+  if (!state.idToken || !state.dashboard || document.hidden || elements.dashboardPanel.hidden || state.dashboardLoading
+    || elements.attendanceDialog.open || elements.reportDialog.open || elements.draftDialog.open) return;
+  void loadDashboard({ quiet: true });
 }, 8_000);

@@ -7,15 +7,16 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'">
     <title>Phiếu điểm danh</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="styles.css?rev=20260916-ic2305-v2">
+    <link rel="stylesheet" href="styles.css?rev=20260916-ic2305-v3">
   </head>
   <body>
-    <main class="shell">
-      <header class="brand">
+    <header class="topbar">
+      <div class="brand">
         <span class="brand-mark" aria-hidden="true">PL</span>
         <div><b>Progress Log · Khóa 56</b><small>Phiếu học tập &amp; xác nhận tham gia</small></div>
-      </header>
-
+      </div>
+    </header>
+    <main class="shell">
       <p class="notice" id="notice" role="status">Đang mở phiếu…</p>
 
       <section class="card" id="identityView" hidden>
@@ -53,9 +54,11 @@
         </div>
         <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
         <form class="card form-card" id="reflectionForm" novalidate>
-          <p class="eyebrow" id="checkpointLabel">PHẦN 1/2</p>
-          <h1 id="checkpointTitle">Ghi lại điều quan trọng</h1>
-          <p class="muted" id="checkpointInstructions"></p>
+          <div class="panel-heading">
+            <p class="eyebrow" id="checkpointLabel">PHẦN 1/2</p>
+            <h1 id="checkpointTitle">Ghi lại điều quan trọng</h1>
+            <p class="muted" id="checkpointInstructions"></p>
+          </div>
           <div id="questionList"></div>
           <div class="form-actions">
             <button class="button text-button" id="previousButton" type="button">Quay lại</button>
@@ -81,6 +84,6 @@
       </section>
     </main>
     <script src="config.js?rev=20260905-memory-v3"></script>
-    <script type="module" src="app.js?rev=20260916-ic2305-v2"></script>
+    <script type="module" src="app.js?rev=20260916-ic2305-v3"></script>
   </body>
 </html>

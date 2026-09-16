@@ -49,6 +49,12 @@
 .student-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--line); }
 .student-copy { display: grid; gap: 3px; }
 .student-copy small { color: var(--muted); }
+.student-block-progress { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.block-progress-pill { padding: 3px 7px; border: 1px solid #e7e3de; border-radius: 7px; background: #fbfaf8; color: var(--muted); font-size: 10px; font-weight: 700; }
+.block-progress-pill.submitted { border-color: #cce9da; background: #e8f5ef; color: #247957; }
+.block-progress-pill.typing { border-color: #eac0c5; background: var(--red-soft); color: #a92737; }
+.student-copy .portal-sync-status { color: #a92737; font-size: 10px; }
+.student-copy .portal-sync-status.complete { color: #247957; }
 .status-pill { padding: 6px 9px; border-radius: 999px; color: var(--muted); background: var(--soft); font-size: .78rem; font-weight: 800; }
 .status-pill.good { color: var(--success); background: #e8f5ef; }
 .student-row .button { min-height: 38px; padding-inline: 11px; border: 1px solid var(--line); background: #fff; }
@@ -100,4 +106,47 @@ dialog h2 { margin: 0; color: var(--navy); }
   .journey-share { align-items: stretch; flex-direction: column; }
   .dashboard-share { align-items: stretch; flex-direction: column; }
   .dashboard-share-actions { display: grid; grid-template-columns: 1fr 1fr; }
+}
+
+/* Đồng bộ ngôn ngữ thị giác với phiếu học viên: nền kem, navy sâu, đỏ điểm nhấn. */
+.teacher-header { justify-content: space-between; width: 100%; }
+.teacher-name { color: var(--muted); font-size: 11px; }
+.teacher-shell { padding-top: 24px; }
+.teacher-shell > .notice { position: static; width: auto; height: auto; margin-bottom: 12px; clip-path: none; white-space: normal; }
+.teacher-shell > .notice:not(.error) { color: var(--muted); }
+.teacher-shell .card { overflow: hidden; padding: 29px 32px 34px; border-radius: 23px; }
+.access-card { margin-top: 36px; }
+.teacher-shell h1 { font-weight: 500; letter-spacing: -.04em; }
+.teacher-shell .eyebrow, dialog .eyebrow { color: var(--red); }
+.teacher-tabs { width: max-content; max-width: 100%; gap: 4px; margin: 0 0 15px; padding: 4px; border-radius: 12px; background: #ebe8e2; }
+.tab { min-height: 38px; padding: 8px 15px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 750; }
+.tab.active { background: var(--navy); color: #fff; box-shadow: 0 4px 10px rgba(18,52,81,.16); }
+.teacher-shell .field, dialog .field { gap: 7px; margin: 17px 0; color: var(--ink); font-size: 12px; font-weight: 750; }
+.teacher-shell :is(select, input[type="text"], input[type="number"]), dialog :is(select, input[type="text"]) { min-height: 44px; border: 1px solid var(--line); border-radius: 9px; background: #fbfaf8; color: var(--ink); padding: 8px 11px; font-size: 12px; }
+.teacher-shell :is(select, input[type="text"], input[type="number"]):focus, dialog :is(select, input[type="text"]):focus { border-color: #dc7581; box-shadow: 0 0 0 3px rgba(219,62,75,.1); }
+.teacher-shell .button, dialog .button { min-height: 42px; border-radius: 9px; font-size: 12px; }
+.teacher-shell .button.primary, dialog .button.primary { background: var(--red); color: #fff; }
+.teacher-shell .button.primary:hover, dialog .button.primary:hover { background: #c9293a; }
+.effort-chip { color: #a92737; background: var(--red-soft); font-size: 10px; }
+.library-row, .block-control, .draft-answers article, .report-system section { border-color: var(--line); border-radius: 9px; }
+.library-row:has(input:checked) { border-color: #dc7581; background: var(--red-soft); }
+.control-section, .summary-item { border: 1px solid #efede9; border-radius: 12px; background: #fbfaf8; }
+.summary-item b { color: var(--navy); }
+.student-row { min-height: 74px; padding: 14px 0; border-top-color: #efede9; }
+.student-row .button { background: #fff; }
+.student-actions .report-button { border-color: var(--navy); background: var(--navy); color: #fff; }
+.status-pill { border-radius: 8px; font-size: 11px; }
+dialog { border-radius: 23px; background: #fff; color: var(--ink); padding: 32px 35px 35px; box-shadow: 0 24px 55px rgba(17,36,55,.24); }
+dialog::backdrop { background: rgba(13,41,65,.48); }
+dialog h2 { margin: 8px 0 25px; font-size: 28px; font-weight: 500; letter-spacing: -.035em; }
+.attendance-sync-hint { margin: -4px 0 18px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.dialog-actions { margin-top: 24px; }
+.dialog-actions .text-button { color: var(--muted); }
+@media (max-width: 650px) {
+  .teacher-shell { padding-top: 15px; }
+  .teacher-shell .card { padding: 23px 18px 28px; border-radius: 18px; }
+  .teacher-header { padding-inline: 12px; }
+  .teacher-name { max-width: 44%; text-align: right; overflow-wrap: anywhere; }
+  dialog { padding: 26px 20px 28px; border-radius: 18px; }
+  .student-row .button { grid-column: auto; }
 }

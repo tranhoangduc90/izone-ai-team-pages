@@ -305,7 +305,64 @@ function recordResponse(itemId, value) {
   scheduleSave();
 }
 
-function buildChoice(item, option, inputType) {
+const SENTENCE_COMPLETION_LAYOUTS = Object.freeze({
+  '56000000-0000-4000-8400-000000000004': [
+    { title: 'Task Response:', parts: ['Yêu cầu người viết phải trả lời đúng ', ' và ', '.'] },
+    { title: 'Coherence and Cohesion:', parts: ['Đảm bảo sự liên kết về ', ' (Coherence) và liên kết về ', ' (Cohesion).'] },
+    { title: 'Lexical Resource:', parts: ['Sử dụng từ vựng đảm bảo tính ', ' và ', '.'] },
+    { title: 'Grammatical Range and Accuracy:', parts: ['Sử dụng cấu trúc ngữ pháp đảm bảo tính ', ' và ', '.'] }
+  ],
+  '56000000-0000-4000-8400-000000000006': [
+    { title: '', parts: ['', ' và ', '.'] }
+  ]
+});
+
+function buildSentenceCompletion(item) {
+  const templates = SENTENCE_COMPLETION_LAYOUTS[item.itemVersionId];
+  const expected = Number(item.interactionConfig?.responseCount || 0);
+  if (!templates || templates.length * 2 !== expected) return null;
+  const existing = Array.isArray(responseFor(item)) ? responseFor(item) : [];
+  const group = document.createElement('div');
+  group.className = 'sentence-group';
+  let slot = 0;
+  for (const [rowIndex, template] of templates.entries()) {
+    const row = document.createElement('div');
+    row.className = 'sentence-row';
+    if (templates.length > 1) {
+      const marker = document.createElement('span');
+      marker.className = 'sentence-index';
+      marker.textContent = `${rowIndex + 1}.`;
+      row.append(marker);
+    }
+    const sentence = document.createElement('p');
+    sentence.className = 'sentence-text';
+    if (template.title) {
+      const title = document.createElement('strong');
+      title.textContent = `${template.title} `;
+      sentence.append(title);
+    }
+    sentence.append(document.createTextNode(template.parts[0]));
+    for (let part = 1; part < template.parts.length; part += 1) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'sentence-blank';
+      input.maxLength = 2_000;
+      input.required = item.required;
+      input.value = existing[slot] || '';
+      input.setAttribute('aria-label', item.interactionConfig.responseLabels?.[slot] || `${item.prompt} — ô ${slot + 1}`);
+      input.addEventListener('input', () => {
+        recordResponse(item.itemVersionId, [...group.querySelectorAll('input')].map(control => control.value));
+      });
+      sentence.append(input, document.createTextNode(template.parts[part]));
+      slot += 1;
+    }
+    row.append(sentence);
+    group.append(row);
+  }
+  return group;
+}
+
+function buildChoice(item, option, inputType, optionIndex) {
   const label = document.createElement('label');
   label.className = 'choice';
   const input = document.createElement('input');
@@ -321,11 +378,17 @@ function buildChoice(item, option, inputType) {
       const selected = [...label.parentElement.querySelectorAll('input:checked')].map(node => node.value);
       recordResponse(item.itemVersionId, selected);
     }
+    for (const choice of label.parentElement.querySelectorAll('.choice')) {
+      const checked = choice.querySelector('input').checked;
+      choice.classList.toggle('selected', checked);
+      choice.querySelector('.choice-key').textContent = checked ? '✓' : choice.dataset.key;
+    }
   });
   const key = document.createElement('span');
   key.className = 'choice-key';
-  key.textContent = /^[A-Z]$/.test(option.id) ? option.id : '';
-  key.hidden = !key.textContent;
+  label.dataset.key = /^[A-Z]$/.test(option.id) ? option.id : String.fromCharCode(65 + optionIndex);
+  key.textContent = input.checked ? '✓' : label.dataset.key;
+  label.classList.toggle('selected', input.checked);
   const text = document.createElement('span');
   text.className = 'choice-text';
   text.textContent = option.label;
@@ -334,12 +397,15 @@ function buildChoice(item, option, inputType) {
 }
 
 function buildQuestion(item) {
-  const wrapper = document.createElement(item.interactionType.includes('choice') ? 'fieldset' : 'div');
+  const wrapper = document.createElement('div');
   wrapper.className = `question ${item.layoutType || 'plain_prompt'}`;
   const number = document.createElement('span');
   number.className = 'question-number';
   number.textContent = String(item.position);
-  const label = document.createElement(item.interactionType.includes('choice') ? 'legend' : 'label');
+  const content = document.createElement('div');
+  content.className = 'question-content';
+  const label = document.createElement('h3');
+  label.id = `question-${item.itemVersionId}`;
   label.textContent = item.prompt;
   if (item.required) {
     const required = document.createElement('span');
@@ -347,12 +413,13 @@ function buildQuestion(item) {
     required.textContent = ' *';
     label.append(required);
   }
-  wrapper.append(number, label);
+  wrapper.append(number, content);
+  content.append(label);
   if (item.helpText) {
     const help = document.createElement('p');
     help.className = 'help';
     help.textContent = item.helpText;
-    wrapper.append(help);
+    content.append(help);
   }
   if (item.interactionType === 'number_score') {
     const score = responseFor(item);
@@ -374,8 +441,13 @@ function buildQuestion(item) {
     const total = document.createElement('b');
     total.textContent = `/ ${config.max} ${config.unit || ''}`.trim();
     row.append(input, total);
-    wrapper.append(row);
+    content.append(row);
   } else if (item.layoutType === 'numbered_short_texts') {
+    const sentence = buildSentenceCompletion(item);
+    if (sentence) {
+      content.append(sentence);
+      return wrapper;
+    }
     const count = Number(item.interactionConfig?.responseCount || 0);
     const labels = item.interactionConfig?.responseLabels || [];
     const existing = Array.isArray(responseFor(item)) ? responseFor(item) : [];
@@ -399,7 +471,7 @@ function buildQuestion(item) {
       row.append(marker, input);
       group.append(row);
     }
-    wrapper.append(group);
+    content.append(group);
   } else if (item.interactionType === 'short_text' || item.interactionType === 'long_text') {
     const input = document.createElement(item.interactionType === 'long_text' ? 'textarea' : 'input');
     if (input instanceof HTMLInputElement) input.type = 'text';
@@ -407,15 +479,17 @@ function buildQuestion(item) {
     input.maxLength = item.interactionType === 'long_text' ? 12_000 : 2_000;
     input.setAttribute('aria-label', item.prompt);
     input.addEventListener('input', () => recordResponse(item.itemVersionId, input.value));
-    wrapper.append(input);
+    content.append(input);
   } else {
     const choices = document.createElement('div');
     choices.className = 'choice-list';
+    choices.setAttribute('role', item.interactionType === 'single_choice' ? 'radiogroup' : 'group');
+    choices.setAttribute('aria-labelledby', label.id);
     const inputType = item.interactionType === 'multi_choice_group' && item.graderType !== 'unordered_group_slot'
       ? 'checkbox'
       : 'radio';
-    choices.append(...item.options.map(option => buildChoice(item, option, inputType)));
-    wrapper.append(choices);
+    choices.append(...item.options.map((option, index) => buildChoice(item, option, inputType, index)));
+    content.append(choices);
   }
   return wrapper;
 }
