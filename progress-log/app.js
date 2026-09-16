@@ -284,8 +284,14 @@ function responseFor(item) {
   return state.responses[item.itemVersionId] ?? '';
 }
 
-function responseIsPresent(value) {
-  if (Array.isArray(value)) return value.length > 0;
+function responseIsPresent(item, value) {
+  if (item?.layoutType === 'numbered_short_texts') {
+    const expected = Number(item.interactionConfig?.responseCount || 0);
+    return Array.isArray(value)
+      && value.length === expected
+      && value.every(entry => String(entry || '').trim().length > 0);
+  }
+  if (Array.isArray(value)) return value.some(entry => String(entry || '').trim().length > 0);
   if (value && typeof value === 'object') {
     return Number.isInteger(value.correct) && Number.isInteger(value.total) && value.total > 0;
   }
@@ -316,15 +322,23 @@ function buildChoice(item, option, inputType) {
       recordResponse(item.itemVersionId, selected);
     }
   });
+  const key = document.createElement('span');
+  key.className = 'choice-key';
+  key.textContent = /^[A-Z]$/.test(option.id) ? option.id : '';
+  key.hidden = !key.textContent;
   const text = document.createElement('span');
+  text.className = 'choice-text';
   text.textContent = option.label;
-  label.append(input, text);
+  label.append(input, key, text);
   return label;
 }
 
 function buildQuestion(item) {
   const wrapper = document.createElement(item.interactionType.includes('choice') ? 'fieldset' : 'div');
-  wrapper.className = 'question';
+  wrapper.className = `question ${item.layoutType || 'plain_prompt'}`;
+  const number = document.createElement('span');
+  number.className = 'question-number';
+  number.textContent = String(item.position);
   const label = document.createElement(item.interactionType.includes('choice') ? 'legend' : 'label');
   label.textContent = item.prompt;
   if (item.required) {
@@ -333,7 +347,7 @@ function buildQuestion(item) {
     required.textContent = ' *';
     label.append(required);
   }
-  wrapper.append(label);
+  wrapper.append(number, label);
   if (item.helpText) {
     const help = document.createElement('p');
     help.className = 'help';
@@ -361,6 +375,31 @@ function buildQuestion(item) {
     total.textContent = `/ ${config.max} ${config.unit || ''}`.trim();
     row.append(input, total);
     wrapper.append(row);
+  } else if (item.layoutType === 'numbered_short_texts') {
+    const count = Number(item.interactionConfig?.responseCount || 0);
+    const labels = item.interactionConfig?.responseLabels || [];
+    const existing = Array.isArray(responseFor(item)) ? responseFor(item) : [];
+    const group = document.createElement('div');
+    group.className = 'numbered-text-group';
+    for (let index = 0; index < count; index += 1) {
+      const row = document.createElement('label');
+      row.className = 'numbered-text-row';
+      const marker = document.createElement('span');
+      marker.textContent = `${index + 1}.`;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.maxLength = 2_000;
+      input.value = existing[index] || '';
+      input.setAttribute('aria-label', labels[index] || `${item.prompt} — ý ${index + 1}`);
+      input.placeholder = labels[index] || `Ý ${index + 1}`;
+      input.addEventListener('input', () => {
+        const values = [...group.querySelectorAll('input')].map(control => control.value);
+        recordResponse(item.itemVersionId, values);
+      });
+      row.append(marker, input);
+      group.append(row);
+    }
+    wrapper.append(group);
   } else if (item.interactionType === 'short_text' || item.interactionType === 'long_text') {
     const input = document.createElement(item.interactionType === 'long_text' ? 'textarea' : 'input');
     if (input instanceof HTMLInputElement) input.type = 'text';
@@ -385,7 +424,7 @@ function blockIsComplete(block) {
   return block.items.every(item => {
     if (!item.required) return true;
     const value = responseFor(item);
-    return responseIsPresent(value);
+    return responseIsPresent(item, value);
   });
 }
 
@@ -402,7 +441,8 @@ function renderCheckpoint() {
   const blocks = allBlocks();
   const block = currentBlock();
   if (!block) return;
-  elements.checkpointLabel.textContent = `GHI NHANH ${state.checkpointIndex + 1}/${blocks.length}`;
+  const minutes = Number(state.assignment?.definition?.estimatedMinutes || 0);
+  elements.checkpointLabel.textContent = `PHẦN ${state.checkpointIndex + 1}/${blocks.length}${minutes ? ` · ${minutes} PHÚT` : ''}`;
   elements.checkpointTitle.textContent = block.title;
   elements.checkpointInstructions.textContent = block.instructions || '';
   elements.checkpointInstructions.hidden = !block.instructions;
@@ -564,7 +604,7 @@ async function startAttempt() {
 async function submitForm(event) {
   event.preventDefault();
   if (!validateCurrentBlock() || state.submitting) return;
-  const missing = allItems().filter(item => item.required && !responseIsPresent(responseFor(item)));
+  const missing = allItems().filter(item => item.required && !responseIsPresent(item, responseFor(item)));
   if (missing.length) {
     const target = allBlocks().findIndex(block => block.items.some(item => missing.includes(item)));
     state.checkpointIndex = Math.max(0, target);

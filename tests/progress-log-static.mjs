@@ -55,6 +55,24 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(html, /id="copyStudentJourneyLinkButton"/);
   assert.match(app, /\/teacher\/student-progress-links/);
   assert.match(app, /payload\.link\.studentRef !== student\.studentRef/);
+  assert.match(html, /id="openStudentFormButton"/);
+  assert.match(html, /id="copyCurrentLinkButton"/);
+  assert.match(html, /id="draftDialog"/);
+  assert.match(app, /\/teacher\/live-drafts/);
+  assert.match(app, /payload\.live\.assignmentId !== assignmentId/);
+  assert.match(app, /document\.hidden/);
+  assert.match(app, /8_000/);
+});
+
+test('renderer hỗ trợ đúng một câu có nhiều ô đánh số và yêu cầu điền đủ từng ô', async () => {
+  const [html, app, css] = await Promise.all([source('index.html'), source('app.js'), source('styles.css')]);
+  assert.match(html, /Progress Log 567/);
+  assert.match(app, /layoutType === 'numbered_short_texts'/);
+  assert.match(app, /responseCount/);
+  assert.match(app, /value\.every\(entry/);
+  assert.match(app, /numbered-text-row/);
+  assert.match(css, /\.question-number/);
+  assert.match(css, /\.numbered-text-group/);
 });
 
 test('hành trình dùng link cá nhân trong fragment và chỉ mở timeline khi học viên yêu cầu', async () => {

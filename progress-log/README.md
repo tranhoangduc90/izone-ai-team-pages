@@ -4,7 +4,9 @@ Hai trang dùng chung API backend:
 
 - `index.html`: học viên chọn tên, xác nhận, điền và nộp từng checkpoint; chỉ lần nộp cuối mới quyết định điểm danh.
 - `journey.html`: học viên mở link cá nhân để xem tổng kết gần nhất và tình hình từng buổi trong cả khóa.
-- `teacher.html`: giảng viên chọn câu hỏi từ thư viện, mở/khóa từng phần, theo dõi checkpoint, điểm danh, insight cấp lớp và tổng kết cá nhân.
+- `teacher.html`: giảng viên chọn câu hỏi từ thư viện, mở/khóa từng phần, sao chép/mở phiếu học viên, xem snapshot draft gần nhất, theo dõi điểm danh, insight cấp lớp và tổng kết cá nhân.
+
+Dashboard chỉ đọc bản nháp đã được autosave, không gửi từng phím gõ. Khi tab đang hiển thị, trang hỏi máy chủ mỗi tám giây; khi tab bị ẩn thì dừng. Mỗi kết quả được đối chiếu `assignmentId` và `studentRef` trước khi hiển thị để request cũ của lớp khác không ghi đè màn hình hiện tại.
 
 Các câu nhập kết quả như `8/10` dùng object `{ correct, total }`, không dùng chuỗi tự do. Nội dung học viên ghi lại từ lời giảng viên có nhãn `student_reported_teacher_feedback`; chỉ nội dung được chính giảng viên lưu ở portal mới là lời nhắn thật của giảng viên.
 

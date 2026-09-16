@@ -13,6 +13,9 @@ const state = {
   assignments: [],
   library: [],
   dashboard: null,
+  liveByStudent: new Map(),
+  dashboardGeneration: 0,
+  liveLoadingFor: '',
   attendanceStudent: null,
   reportStudent: null,
   studentJourneyLink: ''
@@ -23,10 +26,12 @@ const elements = Object.fromEntries([
   'createTab', 'dashboardTab', 'createPanel', 'dashboardPanel', 'publishForm', 'teacherClassSelect',
   'sessionNumber', 'formTitle', 'skillFilter', 'questionLibrary', 'publishButton', 'publishResult', 'rosterCount',
   'studentLink', 'copyLinkButton', 'assignmentSelect', 'dashboardTitle', 'refreshDashboardButton',
+  'openStudentFormButton', 'copyCurrentLinkButton', 'liveUpdatedAt',
   'blockControls', 'classInsights', 'dashboardSummary', 'studentList', 'attendanceDialog', 'attendanceForm', 'attendanceStudentName',
   'attendanceStatus', 'attendanceReason', 'saveAttendanceButton', 'reportDialog', 'reportStudentName',
   'reportScope', 'reportSystemContent', 'reportHumanNote', 'saveTeacherNoteButton', 'reportDeliveryStatus',
-  'markReportDeliveredButton', 'copyStudentJourneyLinkButton', 'studentJourneyLinkStatus'
+  'markReportDeliveredButton', 'copyStudentJourneyLinkButton', 'studentJourneyLinkStatus',
+  'draftDialog', 'draftStudentName', 'draftStatus', 'draftAnswers'
 ].map(id => [id, document.getElementById(id)]));
 
 function setNotice(message, kind = '') {
@@ -289,6 +294,63 @@ function attendanceLabel(status) {
   }[status] || 'Chưa nộp';
 }
 
+function formatSavedAt(value) {
+  if (!value) return 'chưa có bản lưu';
+  return new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function definitionItems() {
+  return state.dashboard?.definition?.blocks?.flatMap(block => block.items || []) || [];
+}
+
+function answerText(item, value) {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => `${index + 1}. ${String(entry || '').trim() || '—'}`).join('\n');
+  }
+  if (value && typeof value === 'object') return `${value.correct ?? '—'} / ${value.total ?? '—'}`;
+  const option = item.options?.find(candidate => candidate.id === value);
+  return option ? option.label : String(value || '').trim() || '—';
+}
+
+function verdictLabel(verdict) {
+  return {
+    correct: 'Đúng', incorrect: 'Chưa đúng', partial: 'Đúng một phần', pending: 'Đang chấm',
+    manual_review: 'Cần xem', ungraded: 'Không chấm điểm'
+  }[verdict] || '';
+}
+
+function openDraft(student) {
+  const live = state.liveByStudent.get(student.studentRef);
+  if (!live) return;
+  const responses = live.submissionId ? live.finalResponses : live.draftResponses;
+  const resultByItem = new Map((live.gradingResult?.items || []).map(item => [item.itemVersionId, item]));
+  elements.draftStudentName.textContent = student.discriminator
+    ? `${student.name} · ${student.discriminator}`
+    : student.name;
+  elements.draftStatus.textContent = live.submissionId
+    ? `Đã nộp lúc ${formatSavedAt(live.submittedAt)} · đây là bản cuối.`
+    : `Bản lưu số ${live.draftRevision || 0} · lưu lúc ${formatSavedAt(live.draftUpdatedAt)}. Nội dung có thể chậm hơn thao tác gõ vài giây.`;
+  const cards = definitionItems().map(item => {
+    const card = document.createElement('article');
+    const heading = document.createElement('b');
+    heading.textContent = `Câu ${item.position}. ${item.prompt}`;
+    const answer = document.createElement('p');
+    answer.textContent = answerText(item, responses?.[item.itemVersionId]);
+    const result = resultByItem.get(item.itemVersionId);
+    if (result && result.verdict !== 'ungraded') {
+      const verdict = document.createElement('small');
+      verdict.className = `draft-verdict ${result.verdict}`;
+      verdict.textContent = verdictLabel(result.verdict);
+      card.append(heading, answer, verdict);
+    } else {
+      card.append(heading, answer);
+    }
+    return card;
+  });
+  elements.draftAnswers.replaceChildren(...cards);
+  elements.draftDialog.showModal();
+}
+
 function buildSummary(students) {
   const counts = [
     ['Đã nộp đủ', students.filter(item => item.completeness === 'complete').length],
@@ -472,6 +534,7 @@ async function markReportDelivered() {
 }
 
 function buildStudentRow(student) {
+  const live = state.liveByStudent.get(student.studentRef);
   const row = document.createElement('div');
   row.className = 'student-row';
   const copy = document.createElement('div');
@@ -485,6 +548,8 @@ function buildStudentRow(student) {
   detail.textContent = `${submissionText} · ${student.evidenceCount || 0} bằng chứng`;
   if (!student.submissionId && student.checkpoints?.length) {
     detail.textContent = `Đã nộp ${student.checkpoints.length} phần · chưa nộp phiếu cuối`;
+  } else if (!student.submissionId && live?.draftRevision > 0) {
+    detail.textContent = `Đang nhập · bản lưu ${live.draftRevision} lúc ${formatSavedAt(live.draftUpdatedAt)}`;
   }
   copy.append(name, detail);
   const status = document.createElement('span');
@@ -492,6 +557,14 @@ function buildStudentRow(student) {
   status.textContent = attendanceLabel(student.attendanceStatus);
   const actions = document.createElement('div');
   actions.className = 'student-actions';
+  if (live?.attemptId) {
+    const draftButton = document.createElement('button');
+    draftButton.className = 'button draft-button';
+    draftButton.type = 'button';
+    draftButton.textContent = live.submissionId ? 'Xem bài nộp' : 'Xem đang gõ';
+    draftButton.addEventListener('click', () => openDraft(student));
+    actions.append(draftButton);
+  }
   if (student.latestReport) {
     const reportButton = document.createElement('button');
     reportButton.className = 'button report-button';
@@ -510,9 +583,33 @@ function buildStudentRow(student) {
   return row;
 }
 
+function renderStudentList() {
+  elements.studentList.replaceChildren(...(state.dashboard?.students || []).map(buildStudentRow));
+}
+
+async function loadLiveDrafts({ quiet = false } = {}) {
+  const assignmentId = state.dashboard?.assignmentId;
+  if (!assignmentId || state.liveLoadingFor === assignmentId) return;
+  const generation = state.dashboardGeneration;
+  state.liveLoadingFor = assignmentId;
+  try {
+    const payload = await apiRequest(`/teacher/live-drafts?assignment=${encodeURIComponent(assignmentId)}`);
+    if (generation !== state.dashboardGeneration || payload.live.assignmentId !== assignmentId) return;
+    state.liveByStudent = new Map((payload.live.students || []).map(student => [student.studentRef, student]));
+    elements.liveUpdatedAt.textContent = `Bản lưu gần nhất · cập nhật ${formatSavedAt(payload.live.generatedAt)}`;
+    renderStudentList();
+  } catch (error) {
+    if (!quiet) setNotice(`Chưa tải được bản nháp: ${error.message}`, 'error');
+  } finally {
+    if (state.liveLoadingFor === assignmentId) state.liveLoadingFor = '';
+  }
+}
+
 async function loadDashboard() {
   const assignmentId = elements.assignmentSelect.value;
   if (!assignmentId) {
+    state.dashboardGeneration += 1;
+    state.liveByStudent.clear();
     elements.dashboardTitle.textContent = 'Chưa có phiếu để theo dõi';
     elements.dashboardSummary.replaceChildren();
     elements.studentList.replaceChildren();
@@ -520,14 +617,19 @@ async function loadDashboard() {
   }
   setNotice('Đang tải tình hình lớp…');
   try {
+    state.dashboardGeneration += 1;
+    const generation = state.dashboardGeneration;
     const payload = await apiRequest(`/teacher/dashboard?assignment=${encodeURIComponent(assignmentId)}`);
+    if (generation !== state.dashboardGeneration) return;
     state.dashboard = payload.dashboard;
+    state.liveByStudent.clear();
     elements.dashboardTitle.textContent = `${state.dashboard.className} · Buổi ${state.dashboard.sessionNumber}`;
     elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
     elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));
     renderClassInsights(state.dashboard.classInsights || []);
-    elements.studentList.replaceChildren(...state.dashboard.students.map(buildStudentRow));
+    renderStudentList();
     setNotice(`Đã cập nhật ${state.dashboard.students.length} học viên.`);
+    await loadLiveDrafts({ quiet: true });
   } catch (error) {
     setNotice(error.message, 'error');
   }
@@ -572,6 +674,27 @@ async function copyStudentLink() {
   }
 }
 
+function currentStudentLink() {
+  return state.dashboard?.publicToken ? studentLink(state.dashboard.publicToken) : '';
+}
+
+function openCurrentStudentForm() {
+  const link = currentStudentLink();
+  if (link) window.open(link, '_blank', 'noopener,noreferrer');
+}
+
+async function copyCurrentStudentLink() {
+  const link = currentStudentLink();
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+    elements.copyCurrentLinkButton.textContent = 'Đã sao chép';
+    window.setTimeout(() => { elements.copyCurrentLinkButton.textContent = 'Sao chép link'; }, 1_500);
+  } catch {
+    setNotice(`Không sao chép tự động được. Link học viên: ${link}`, 'error');
+  }
+}
+
 function initializeGoogle(attempt = 0) {
   if (!config.GOOGLE_CLIENT_ID) {
     setNotice('Chưa cấu hình Google Client ID.', 'error');
@@ -600,6 +723,8 @@ elements.publishForm.addEventListener('submit', event => void publishReflection(
 elements.copyLinkButton.addEventListener('click', () => void copyStudentLink());
 elements.assignmentSelect.addEventListener('change', () => void loadDashboard());
 elements.refreshDashboardButton.addEventListener('click', () => void loadDashboard());
+elements.openStudentFormButton.addEventListener('click', openCurrentStudentForm);
+elements.copyCurrentLinkButton.addEventListener('click', () => void copyCurrentStudentLink());
 elements.attendanceForm.addEventListener('submit', event => void saveAttendance(event));
 elements.skillFilter.addEventListener('change', renderLibrary);
 elements.markReportDeliveredButton.addEventListener('click', () => void markReportDelivered());
@@ -607,3 +732,8 @@ elements.saveTeacherNoteButton.addEventListener('click', () => void saveTeacherH
 elements.copyStudentJourneyLinkButton.addEventListener('click', () => void copyStudentJourneyLink());
 
 initializeGoogle();
+
+window.setInterval(() => {
+  if (!state.idToken || !state.dashboard || document.hidden || elements.dashboardPanel.hidden) return;
+  void loadLiveDrafts({ quiet: true });
+}, 8_000);
