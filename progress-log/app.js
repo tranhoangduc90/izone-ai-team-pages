@@ -317,6 +317,20 @@ const SENTENCE_COMPLETION_LAYOUTS = Object.freeze({
   ]
 });
 
+const sentenceMeasureContext = document.createElement('canvas').getContext('2d');
+
+function resizeSentenceBlank(control) {
+  const sentence = control.closest('.sentence-text');
+  const availableWidth = Math.max(90, (sentence?.clientWidth || 420) - 8);
+  if (sentenceMeasureContext) {
+    sentenceMeasureContext.font = window.getComputedStyle(control).font;
+    const textWidth = sentenceMeasureContext.measureText(control.value || ' ').width;
+    control.style.width = `${Math.min(availableWidth, Math.max(108, Math.ceil(textWidth) + 24))}px`;
+  }
+  control.style.height = 'auto';
+  control.style.height = `${Math.max(30, control.scrollHeight)}px`;
+}
+
 function buildSentenceCompletion(item) {
   const templates = SENTENCE_COMPLETION_LAYOUTS[item.itemVersionId];
   const expected = Number(item.interactionConfig?.responseCount || 0);
@@ -343,15 +357,20 @@ function buildSentenceCompletion(item) {
     }
     sentence.append(document.createTextNode(template.parts[0]));
     for (let part = 1; part < template.parts.length; part += 1) {
-      const input = document.createElement('input');
-      input.type = 'text';
+      const input = document.createElement('textarea');
       input.className = 'sentence-blank';
+      input.rows = 1;
       input.maxLength = 2_000;
       input.required = item.required;
       input.value = existing[slot] || '';
       input.setAttribute('aria-label', item.interactionConfig.responseLabels?.[slot] || `${item.prompt} — ô ${slot + 1}`);
-      input.addEventListener('input', () => {
-        recordResponse(item.itemVersionId, [...group.querySelectorAll('input')].map(control => control.value));
+      input.addEventListener('input', event => {
+        if (!event.isComposing) input.value = input.value.replace(/\s*[\r\n]+\s*/g, ' ');
+        resizeSentenceBlank(input);
+        recordResponse(item.itemVersionId, [...group.querySelectorAll('textarea')].map(control => control.value));
+      });
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.isComposing) event.preventDefault();
       });
       sentence.append(input, document.createTextNode(template.parts[part]));
       slot += 1;
@@ -521,6 +540,9 @@ function renderCheckpoint() {
   elements.checkpointInstructions.textContent = block.instructions || '';
   elements.checkpointInstructions.hidden = !block.instructions;
   elements.questionList.replaceChildren(...block.items.map(buildQuestion));
+  window.requestAnimationFrame(() => {
+    for (const control of elements.questionList.querySelectorAll('.sentence-blank')) resizeSentenceBlank(control);
+  });
   if (state.checkpointSubmissions.has(block.blockId)) {
     for (const control of elements.questionList.querySelectorAll('input, textarea, select')) control.disabled = true;
   }
@@ -755,6 +777,9 @@ elements.previousButton.addEventListener('click', () => {
 });
 elements.nextButton.addEventListener('click', () => void continueToNextCheckpoint());
 elements.reflectionForm.addEventListener('submit', event => void submitForm(event));
+window.addEventListener('resize', () => {
+  for (const control of elements.questionList.querySelectorAll('.sentence-blank')) resizeSentenceBlank(control);
+});
 elements.retryButton.addEventListener('click', () => void openAssignment());
 window.addEventListener('pagehide', () => {
   storeLocalDraft();
