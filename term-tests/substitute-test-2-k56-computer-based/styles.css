@@ -31,6 +31,61 @@
   background: var(--cbt-navy);
 }
 
+.cbt-form-card > p {
+  margin: 0;
+  padding: 18px 20px;
+  line-height: 1.8;
+}
+
+.cbt-form-card > p + p {
+  border-top: 1px solid var(--cbt-line);
+}
+
+.cbt-asteroid-notes {
+  padding: 0 20px 20px;
+}
+
+.cbt-asteroid-notes > h3 {
+  margin: 0 -20px 4px;
+  padding: 17px 20px;
+  color: #fff;
+  background: var(--cbt-navy);
+  text-align: center;
+  letter-spacing: .04em;
+}
+
+.cbt-note-section {
+  padding: 17px 0 4px;
+}
+
+.cbt-note-section + .cbt-note-section {
+  border-top: 1px solid var(--cbt-line);
+}
+
+.cbt-note-section h4 {
+  margin: 0 0 8px;
+  color: var(--cbt-navy);
+}
+
+.cbt-note-section ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.cbt-note-section li {
+  margin: 7px 0;
+  line-height: 1.8;
+}
+
+.cbt-note-section li::marker {
+  color: var(--cbt-blue);
+}
+
+.cbt-note-section .cbt-answer-control {
+  margin: 3px 4px;
+  vertical-align: middle;
+}
+
 .cbt-form-row {
   display: grid;
   grid-template-columns: minmax(150px, .7fr) minmax(220px, 1.3fr);

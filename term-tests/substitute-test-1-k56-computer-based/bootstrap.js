@@ -64,19 +64,12 @@
   let downloadController = null;
   const localDemoClasses = Object.freeze([
     {
-      code: 'K56A',
-      name: 'Khóa 56 · Lớp A',
-      students: Object.freeze([{ ref: 'a5237d46-6b8a-4dd9-930f-8c694db3b6a1', name: 'Học viên Demo 01' }])
+      code: 'DEMO',
+      name: 'DEMO · Chỉ kiểm tra, không gửi Portal'
     },
     {
-      code: 'K56B',
-      name: 'Khóa 56 · Lớp B',
-      students: Object.freeze([{ ref: '3f59e9c1-1974-476a-8be8-f228d3dc9375', name: 'Học viên Demo 02' }])
-    },
-    {
-      code: 'K56C',
-      name: 'Khóa 56 · Lớp C',
-      students: Object.freeze([{ ref: 'e681972c-a64b-457b-9db4-c69c91adbf52', name: 'Học viên Demo 03' }])
+      code: 'IC2264',
+      name: 'IC2264 · Lớp đồng bộ Portal'
     }
   ]);
 
@@ -709,7 +702,13 @@
     }
   });
   elements.bootstrapRetry.addEventListener('click', prepareSelectedStudent);
-  elements.bootstrapClass.addEventListener('change', () => {
+  async function loadDemoRoster(selectedClass) {
+    if (!selectedClass) return [];
+    const data = await apiRequest(`/api/test/roster?class=${encodeURIComponent(selectedClass.code)}`);
+    return Array.isArray(data.students) ? data.students : [];
+  }
+
+  elements.bootstrapClass.addEventListener('change', async () => {
     if (preparing || state.listeningStartedAt || state.attemptToken) {
       elements.bootstrapClass.value = classCode;
       return;
@@ -720,7 +719,12 @@
     if (classCode) query.set('class', classCode);
     else query.delete('class');
     history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);
-    roster = selectedClass ? [...selectedClass.students] : [];
+    try {
+      roster = await loadDemoRoster(selectedClass);
+    } catch (error) {
+      roster = [];
+      showNotice(`Không tải được danh sách lớp: ${error.message}`, true);
+    }
     const options = [new Option(selectedClass ? 'Nhấn để chọn đúng tên' : 'Chọn lớp trước', '')];
     for (const student of roster) options.push(new Option(student.name, student.ref));
     elements.bootstrapStudent.replaceChildren(...options);
@@ -759,7 +763,7 @@
         elements.bootstrapClass.replaceChildren(...classOptions);
         const savedClass = localDemoClasses.find(item => item.code === (state.classCode || classCode));
         if (savedClass && state.studentRef && (state.listeningStartedAt || state.attemptToken)) {
-          roster = [...savedClass.students];
+          roster = await loadDemoRoster(savedClass);
           elements.bootstrapClass.value = savedClass.code;
           elements.bootstrapClass.disabled = true;
           elements.bootstrapStudent.replaceChildren(
