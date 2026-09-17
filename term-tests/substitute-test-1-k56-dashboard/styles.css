@@ -31,6 +31,7 @@
 .section-title { display: flex; justify-content: space-between; gap: 18px; align-items: center; padding: 20px; border-bottom: 1px solid var(--line); }
 .record-count { padding: 7px 10px; color: var(--navy); background: #eaf0f7; border-radius: 999px; font-size: 12px; font-weight: 850; }
 .test-row { display: grid; grid-template-columns: 54px 1fr auto; gap: 18px; align-items: center; padding: 21px 20px; }
+.test-row + .test-row { border-top: 1px solid var(--line); }
 .test-number { display: grid; place-items: center; width: 48px; height: 48px; color: #fff; background: var(--navy); border-radius: 12px; font-weight: 900; }
 .test-title-line { display: flex; gap: 10px; align-items: center; }
 .test-copy h3 { margin: 0; color: var(--navy); font-size: 19px; }
