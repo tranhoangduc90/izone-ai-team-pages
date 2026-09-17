@@ -23,6 +23,9 @@ test('dashboard tổng hợp hai catalog và đường cũ Test 2 quay về dash
   const app = read('term-tests/substitute-test-1-k56-dashboard/app.js');
   assert.match(app, /substitute-test-1-k56[^']*\/api\/test\/catalog/u);
   assert.match(app, /substitute-test-2-k56[^']*\/api\/test\/catalog/u);
+  const oldDashboardHtml = read('term-tests/substitute-test-2-k56-dashboard/index.html');
+  assert.match(oldDashboardHtml, /http-equiv="refresh"[^>]+substitute-test-1-k56-dashboard/u);
+  assert.match(oldDashboardHtml, /app\.js\?v=2/u);
   assert.match(read('term-tests/substitute-test-2-k56-dashboard/app.js'), /substitute-test-1-k56-dashboard/u);
   assert.match(read('term-tests/substitute-test-2-k56-results/index.html'), /substitute-test-1-k56-dashboard/u);
 });
