@@ -13,6 +13,7 @@
     ? requestedDemo
     : '';
   const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
   if (!testConfig || !appConfig || !root) return;
 
@@ -173,6 +174,14 @@
       : 'Không lưu được bản nháp vì bộ nhớ trình duyệt đầy hoặc bị chặn. Đừng đóng hoặc tải lại trang. Hãy sao chép bài làm ra nơi an toàn và bấm Thử lưu lại.');
     if (demoMode) setWritingSaveStatus(localSaveStatus);
     return saved > 0;
+  }
+
+  function ensureValidAttemptToken() {
+    if (!uuidPattern.test(String(state.attemptToken || ''))) {
+      state.attemptToken = crypto.randomUUID();
+      saveSession();
+    }
+    return state.attemptToken;
   }
 
   const progressMarkup = writingConfig
@@ -1663,7 +1672,7 @@
           });
           state.testGrades.listening = grade.section;
         }
-        state.attemptToken = 'demo-attempt';
+        ensureValidAttemptToken();
         state.studentName = state.studentName || 'Học viên Demo';
         state.completed = false;
         state.frozenAnswers.listening = null;
@@ -1872,10 +1881,16 @@
       if (demoMode) {
         if (serverGradingMode) {
           try {
+            ensureValidAttemptToken();
             state.testGrades.writing = await apiRequest('/api/test/writing', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
+                classCode,
+                studentRef: state.studentRef,
+                attemptToken: state.attemptToken,
+                listeningAnswers: state.drafts.listening,
+                readingAnswers: state.drafts.reading,
                 outline: state.drafts.writing.outline,
                 task1: state.drafts.writing.task1,
                 task2: state.drafts.writing.task2
@@ -1890,7 +1905,11 @@
         saveSession();
         renderResult(buildDemoPayload('complete'));
         showNotice(serverGradingMode
-          ? 'Backend test đã nhận Writing. Listening và Reading bên dưới là điểm chấm thật; Writing chưa gọi workflow K67.'
+          ? (state.testGrades.writing?.portalSync?.status === 'synced'
+            ? 'Writing đã được AI chấm và ba điểm thi lại đã đồng bộ lên Portal.'
+            : state.testGrades.writing?.portalSync?.status === 'blocked_missing_first_scores'
+              ? 'Writing đã được AI chấm. Portal chưa nhận điểm thi lại vì còn thiếu điểm lần đầu.'
+              : 'Writing đã được AI chấm. Lớp DEMO không gửi điểm lên Portal.')
           : 'Bản demo: Writing đã nộp; kết quả Listening và Reading đã được mở.', 'success');
         setStage('result');
         return;
@@ -1979,10 +1998,10 @@
       task2: state.drafts.writing.task2,
       started: true,
       submitted: true,
-      grading: {
-        status: 'review_required',
+      grading: state.testGrades.writing?.grading || {
+        status: 'processing',
         ready: false,
-        taskStates: { task1: 'pending_test_integration' }
+        taskStates: { task1: 'processing' }
       }
     } : mode === 'complete' ? {
       task1: state.drafts.writing.task1,
@@ -2020,7 +2039,7 @@
       studentName: state.studentName || 'Học viên Demo',
       className: state.className || classCode || 'CODEXDEMO56SUB2',
       completed: Boolean(reading),
-      portalSyncStatus: serverGradingMode ? 'not_applicable' : 'synced',
+      portalSyncStatus: serverGradingMode ? state.testGrades.writing?.portalSync?.status || 'not_applicable' : 'synced',
       writing: demoWriting,
       result: {
         testTitle: serverGradingMode
