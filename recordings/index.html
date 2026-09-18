@@ -4,40 +4,69 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>IZONE Recording Monitor</title>
+  <title>IZONE Recording Automation</title>
   <link rel="icon" href="assets/izone-recording-thumbnail.png">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
   <div class="shell">
     <header class="hero">
       <div>
         <div class="eyebrow">IZONE ACADEMIC OPERATIONS</div>
-        <h1>Recording Monitor</h1>
-        <p>Theo dõi recording từ Zoom, trạng thái YouTube, thumbnail và playlist theo từng lớp.</p>
+        <h1>Recording Automation</h1>
+        <p>Theo dõi lớp học, recording Zoom và video YouTube trong một giao diện.</p>
       </div>
       <div class="live"><span></span><strong id="liveLabel">Đang kết nối</strong></div>
     </header>
 
     <section class="stats" aria-label="Tổng quan">
+      <article><span>Lớp học hôm qua</span><strong id="yesterdayClassCount">—</strong></article>
       <article><span>Tổng recording</span><strong id="totalCount">—</strong></article>
-      <article><span>Đã đăng hôm nay</span><strong id="todayCount">—</strong></article>
       <article><span>Cần duyệt</span><strong id="reviewCount">—</strong></article>
-      <article><span>Có lỗi</span><strong id="errorCount">—</strong></article>
+      <article><span>Đã duyệt</span><strong id="approvedCount">—</strong></article>
+    </section>
+
+    <section class="yesterday-panel" aria-labelledby="yesterdayHeading">
+      <div class="section-heading">
+        <div><span class="section-kicker">DỮ LIỆU PORTAL</span><h2 id="yesterdayHeading">Lớp có buổi học hôm qua</h2></div>
+        <span id="yesterdayDate" class="date-pill">—</span>
+      </div>
+      <div id="yesterdayClasses" class="class-grid"><div class="loading-inline">Đang tải lịch học…</div></div>
     </section>
 
     <section class="toolbar">
-      <label>Ngày<input id="dateFilter" type="date"></label>
-      <label>Tài khoản<select id="accountFilter"><option value="">Tất cả</option></select></label>
-      <label>Trạng thái<select id="statusFilter"><option value="">Tất cả</option><option value="uploaded">Đã đăng</option><option value="needs_review">Cần duyệt</option><option value="error">Có lỗi</option></select></label>
+      <label>Ngày recording<input id="dateFilter" type="date"></label>
+      <label>Tài khoản Zoom<select id="accountFilter"><option value="">Tất cả</option></select></label>
       <label class="search">Tìm kiếm<input id="searchFilter" type="search" placeholder="Mã lớp, tiêu đề, recording…"></label>
       <button id="refreshButton" type="button">Làm mới</button>
     </section>
 
-    <main id="folders" aria-live="polite"><div class="loading">Đang tải dữ liệu…</div></main>
+    <main id="reviewSections" aria-live="polite"><div class="loading">Đang tải dữ liệu…</div></main>
     <footer>Dữ liệu tự làm mới mỗi 60 giây. Không hiển thị credential hoặc liên kết tải trực tiếp từ Zoom. <span id="updatedAt"></span></footer>
   </div>
 
-  <script src="app.js?v=3" defer></script>
+  <dialog id="renameDialog">
+    <form id="renameForm" method="dialog">
+      <div class="dialog-title"><div><span class="section-kicker">YOUTUBE</span><h2>Đổi tên video</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Đóng">×</button></div>
+      <input id="renameRecordId" type="hidden">
+      <label>Tên video mới<input id="renameTitle" maxlength="100" required></label>
+      <p class="dialog-note">Tên mới sẽ được cập nhật trực tiếp trên YouTube và dashboard.</p>
+      <div class="dialog-actions"><button class="secondary" type="button" data-close-dialog>Hủy</button><button id="renameSubmit" type="submit">Lưu tên</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="playlistDialog">
+    <form id="playlistForm" method="dialog">
+      <div class="dialog-title"><div><span class="section-kicker">YOUTUBE</span><h2>Đổi playlist</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Đóng">×</button></div>
+      <input id="playlistRecordId" type="hidden">
+      <label>Tìm playlist<input id="playlistSearch" type="search" placeholder="Nhập mã lớp hoặc tên playlist"></label>
+      <label>Playlist mới<select id="playlistSelect" required></select></label>
+      <p class="dialog-note">Video sẽ được gỡ khỏi playlist cũ và thêm vào playlist đã chọn.</p>
+      <div class="dialog-actions"><button class="secondary" type="button" data-close-dialog>Hủy</button><button id="playlistSubmit" type="submit">Chuyển playlist</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js?v=4" defer></script>
 </body>
 </html>
