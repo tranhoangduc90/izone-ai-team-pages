@@ -924,6 +924,7 @@
     }
 
     function reportAudioProgress(playbackState, keepalive = false) {
+      if (appConfig.LOCAL_DEMO_ONLY) return Promise.resolve(null);
       const examSessionToken = protectedBootstrap?.examSessionToken;
       if (!examSessionToken || !examStarted || !['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56', 'substitute-test-1-k56'].includes(testConfig.slug)) return Promise.resolve(null);
       const heardSeconds = rememberActualHeardPosition(true);

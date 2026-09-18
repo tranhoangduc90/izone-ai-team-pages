@@ -254,7 +254,7 @@
     variant: 'semantic-html',
     baseTestSlug: 'substitute-test-1-k56',
     audio: {
-      src: 'https://izone-substitute-test-1-k56.wingsenglish90.chatgpt.site/api/test/audio',
+      src: 'assets/private/listening-substitute-test-1-k56.mp3',
       label: 'Substitute Test 1 · Khóa 56 · Listening',
       durationLabel: '28 phút 48 giây'
     },

@@ -24,8 +24,8 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_SUBSTITUTE_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k56-shared/app.js?v=20260918-writing-async'))
-      .then(() => loadScript('enhance.js'))
+      .then(() => loadScript('../substitute-k56-shared/app.js?v=20260918-n8n'))
+      .then(() => loadScript('enhance.js?v=20260918-n8n'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -263,7 +263,18 @@
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(appConfig.API_BASE_URL + path, { ...options, signal: controller.signal });
+      const requestUrl = new URL(path, window.location.origin);
+      let payload = {};
+      if (typeof options.body === 'string' && options.body.trim()) payload = JSON.parse(options.body);
+      for (const [key, value] of requestUrl.searchParams) {
+        if (!(key in payload)) payload[key] = value;
+      }
+      const response = await fetch(appConfig.API_BASE_URL, {
+        method: 'POST',
+        body: JSON.stringify({ route: requestUrl.pathname, payload }),
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        signal: controller.signal
+      });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
       return data;
@@ -547,8 +558,8 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k56-shared/app.js?v=20260918-writing-async');
-    await loadScript('enhance.js');
+    await loadScript('../substitute-k56-shared/app.js?v=20260918-n8n');
+    await loadScript('enhance.js?v=20260918-n8n');
     await loadScript('annotations.js');
   }
 

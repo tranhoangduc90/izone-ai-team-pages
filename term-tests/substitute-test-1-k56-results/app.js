@@ -5,6 +5,7 @@ const SKILLS = [
   ['reading', 'Reading'],
   ['writing', 'Writing']
 ];
+const API_URL = 'https://ducizone.ddns.net/webhook/substitute-test-1-k56-public-api';
 const state = { data: null, selectedRef: null };
 const elements = {
   classFilter: document.querySelector('#class-filter'),
@@ -33,6 +34,17 @@ function setMessage(message, type = '') {
   elements.message.hidden = !message;
   elements.message.textContent = message || '';
   elements.message.className = `notice ${type}`.trim();
+}
+
+async function apiRequest(route, payload = {}) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: JSON.stringify({ route, payload })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Không tải được dữ liệu.');
+  return data;
 }
 
 function renderMetrics() {
@@ -128,9 +140,7 @@ async function loadResults() {
   const classCode = elements.classFilter.value || 'ALL';
   const test = elements.testSelect.value;
   try {
-    const response = await fetch(`https://izone-substitute-test-1-k56.wingsenglish90.chatgpt.site/api/test/teacher/results?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(test)}`, { headers: { Accept: 'application/json' } });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Không tải được kết quả.');
+    const data = await apiRequest('/api/test/teacher/results', { class: classCode, test });
     state.data = data;
     state.selectedRef = null;
     renderMetrics();
@@ -162,9 +172,7 @@ elements.rows.addEventListener('click', event => {
 
 async function initialize() {
   try {
-    const response = await fetch('https://izone-substitute-test-1-k56.wingsenglish90.chatgpt.site/api/test/catalog', { headers: { Accept: 'application/json' } });
-    const catalog = await response.json();
-    if (!response.ok) throw new Error(catalog.message || 'Không tải được danh sách lớp.');
+    const catalog = await apiRequest('/api/test/catalog');
     elements.classFilter.replaceChildren(
       new Option('Tất cả lớp', 'ALL'),
       ...catalog.classes.map(item => new Option(item.name, item.code))

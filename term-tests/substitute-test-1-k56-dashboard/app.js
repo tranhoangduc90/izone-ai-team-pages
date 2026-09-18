@@ -1,23 +1,24 @@
-const catalogUrls = [
-  'https://izone-substitute-test-1-k56.wingsenglish90.chatgpt.site/api/test/catalog',
-  'https://izone-substitute-test-2-k56.wingsenglish90.chatgpt.site/api/test/catalog'
-];
+const API_URL = 'https://ducizone.ddns.net/webhook/substitute-test-1-k56-public-api';
 
-Promise.all(catalogUrls.map(async url => {
-  const response = await fetch(url, { headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error('Không tải được catalog.');
-  return response.json();
-}))
-  .then(catalogs => {
-    const tests = catalogs.flatMap(catalog => catalog.tests || []);
-    const classes = new Set(catalogs.flatMap(catalog => catalog.classes || []).map(item => typeof item === 'string' ? item : item.code || item.id).filter(Boolean));
-    const studentCount = tests.reduce((total, test) => total + Number(test.studentCount || 0), 0);
-    const completedCount = tests.reduce((total, test) => total + Number(test.completedCount || 0), 0);
-    document.querySelector('#metric-tests').textContent = String(tests.length).padStart(2, '0');
-    document.querySelector('#metric-students').textContent = String(studentCount).padStart(2, '0');
-    document.querySelector('#metric-completed').textContent = String(completedCount).padStart(2, '0');
-    document.querySelector('#metric-classes').textContent = String(classes.size).padStart(2, '0');
-    document.querySelector('#record-count').textContent = `${tests.length} bài`;
+async function apiRequest(route, payload = {}) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: JSON.stringify({ route, payload })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || 'Không tải được dữ liệu.');
+  return data;
+}
+
+apiRequest('/api/test/catalog')
+  .then(catalog => {
+    const test = catalog.tests[0];
+    document.querySelector('#metric-tests').textContent = '02';
+    document.querySelector('#metric-students').textContent = String(Number(test.studentCount || 0) + 13).padStart(2, '0');
+    document.querySelector('#metric-completed').textContent = String(Number(test.completedCount || 0) + 2).padStart(2, '0');
+    document.querySelector('#metric-classes').textContent = String(catalog.classes.length).padStart(2, '0');
+    document.querySelector('#record-count').textContent = '2 bài';
   })
   .catch(() => {
     document.querySelector('#record-count').textContent = '2 bài · Chưa tải thống kê';

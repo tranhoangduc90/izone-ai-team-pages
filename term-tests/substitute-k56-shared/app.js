@@ -504,10 +504,17 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
     try {
-      const response = await fetch(`${appConfig.API_BASE_URL}${path}`, {
-        ...options,
+      const requestUrl = new URL(path, window.location.origin);
+      let payload = {};
+      if (typeof options.body === 'string' && options.body.trim()) payload = JSON.parse(options.body);
+      for (const [key, value] of requestUrl.searchParams) {
+        if (!(key in payload)) payload[key] = value;
+      }
+      const response = await fetch(appConfig.API_BASE_URL, {
+        method: 'POST',
+        body: JSON.stringify({ route: requestUrl.pathname, payload }),
         signal: controller.signal,
-        headers: { ...(options.headers || {}) }
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
