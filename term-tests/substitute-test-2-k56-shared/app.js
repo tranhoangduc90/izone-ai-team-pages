@@ -598,20 +598,47 @@
   }
 
   async function refreshWritingGrading() {
-    if (demoMode || !state.attemptToken || writingGradingPollInFlight) return;
+    if ((demoMode && !serverGradingMode) || !state.attemptToken || writingGradingPollInFlight) return;
     writingGradingPollInFlight = true;
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
-      const payload = await apiRequest('/api/term-tests/result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptToken: state.attemptToken })
-      });
-      applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
-      renderResult(payload);
-      if (payload.writing?.grading?.ready) {
+      const payload = serverGradingMode
+        ? await apiRequest('/api/test/writing/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            classCode,
+            studentRef: state.studentRef,
+            attemptToken: state.attemptToken,
+            listeningAnswers: state.drafts.listening,
+            readingAnswers: state.drafts.reading,
+            task1: state.drafts.writing.task1
+          })
+        })
+        : await apiRequest('/api/term-tests/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attemptToken: state.attemptToken })
+        });
+      if (serverGradingMode) {
+        state.testGrades.writing = payload;
+        saveSession();
+        renderResult(buildDemoPayload('complete'));
+      } else {
+        applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
+        renderResult(payload);
+      }
+      const grading = serverGradingMode ? payload.grading : payload.writing?.grading;
+      if (grading?.ready) {
         stopWritingGradingPolling();
-        if (!wasReady) showNotice('Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.', 'success');
+        if (!wasReady) showNotice(
+          payload.portalSync?.status === 'synced'
+            ? 'Bài Writing đã chấm xong và điểm thi lại đã đồng bộ lên Portal.'
+            : payload.portalSync?.status === 'blocked_missing_first_scores'
+              ? 'Bài Writing đã chấm xong. Portal chưa nhận điểm thi lại vì còn thiếu điểm lần đầu.'
+              : 'Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.',
+          'success'
+        );
       }
     } catch {
       // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
@@ -624,7 +651,7 @@
   function scheduleWritingGradingRefresh() {
     const grading = state.result?.writing?.grading;
     if (
-      demoMode
+      (demoMode && !serverGradingMode)
       || !state.writingSubmitted
       || grading?.ready
       || grading?.status === 'review_required'
@@ -1905,13 +1932,10 @@
         saveSession();
         renderResult(buildDemoPayload('complete'));
         showNotice(serverGradingMode
-          ? (state.testGrades.writing?.portalSync?.status === 'synced'
-            ? 'Writing đã được AI chấm và ba điểm thi lại đã đồng bộ lên Portal.'
-            : state.testGrades.writing?.portalSync?.status === 'blocked_missing_first_scores'
-              ? 'Writing đã được AI chấm. Portal chưa nhận điểm thi lại vì còn thiếu điểm lần đầu.'
-              : 'Writing đã được AI chấm. Lớp DEMO không gửi điểm lên Portal.')
+          ? 'Writing đã được nhận và đang chấm bằng AI. Kết quả sẽ tự cập nhật khi hoàn tất.'
           : 'Bản demo: Writing đã nộp; kết quả Listening và Reading đã được mở.', 'success');
         setStage('result');
+        if (serverGradingMode) scheduleWritingGradingRefresh();
         return;
       }
 
@@ -2109,8 +2133,11 @@
         }
         if (serverGradingMode && state.writingSubmitted && state.testGrades.listening && state.testGrades.reading) {
           renderResult(buildDemoPayload('complete'));
-          showNotice('Backend test: đây là điểm Listening và Reading chấm từ bài bạn đã nộp; không ghi Portal.', 'success');
+          showNotice(state.testGrades.writing?.grading?.ready
+            ? 'Kết quả Writing đã được khôi phục.'
+            : 'Bài Writing đang được chấm; kết quả sẽ tự cập nhật khi hoàn tất.', 'success');
           setStage('result');
+          scheduleWritingGradingRefresh();
           return;
         }
         if (serverGradingMode && state.completed && state.testGrades.reading) {
