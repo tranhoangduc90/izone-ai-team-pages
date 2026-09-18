@@ -13,6 +13,7 @@ import {
   writingTaskStateLabel
 } from './model.js?rev=20260820-writing-monitor-v1';
 import { createSessionStore } from './auth-session.js?rev=20260903-remember-login-v1';
+import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const sessionStore = createSessionStore({
@@ -20,6 +21,7 @@ const sessionStore = createSessionStore({
   clientId: appConfig.GOOGLE_CLIENT_ID,
   getStorage: () => window.sessionStorage
 });
+const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 let loginGeneration = 0;
 const initialParams = new URLSearchParams(window.location.search);
 const state = {
@@ -38,7 +40,7 @@ const state = {
 };
 
 const elements = Object.fromEntries([
-  'notice', 'accessView', 'googleSignInButton', 'dashboardView', 'loginBadge', 'refreshButton', 'logoutButton',
+  'notice', 'accessView', 'googleSignInButton', 'rememberTeacherLogin', 'dashboardView', 'loginBadge', 'refreshButton', 'logoutButton',
   'classSelect', 'testSelect', 'reviewerName', 'teacherTabs', 'teacherTabsPrev', 'teacherTabsNext', 'overviewView', 'overviewTitle',
   'resultCount', 'classSummary', 'overviewBody', 'studentView'
 ].map(id => [id, document.getElementById(id)]));
@@ -886,7 +888,7 @@ function setupGoogleSignIn() {
   const renderButton = () => {
     window.google.accounts.id.initialize({
       client_id: clientId,
-      auto_select: false,
+      auto_select: loginPreference.read(),
       callback: async response => {
         resetLoginAfterError();
         state.idToken = response.credential || '';
@@ -906,6 +908,7 @@ function setupGoogleSignIn() {
       text: 'signin_with',
       shape: 'rectangular'
     });
+    if (loginPreference.read() && !state.idToken && !sessionStore.read()) window.google.accounts.id.prompt();
   };
   const script = document.createElement('script');
   script.src = 'https://accounts.google.com/gsi/client';
@@ -952,7 +955,16 @@ elements.refreshButton.addEventListener('click', async () => {
 elements.logoutButton.addEventListener('click', () => {
   resetLoginAfterError();
   window.google?.accounts?.id?.disableAutoSelect();
-  showNotice('Đã đăng xuất. Đăng nhập Google để xem kết quả lớp.');
+  const forgotten = loginPreference.set(false);
+  elements.rememberTeacherLogin.checked = !forgotten;
+  showNotice(forgotten ? 'Đã đăng xuất. Đăng nhập Google để xem kết quả lớp.' : 'Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.', forgotten ? '' : 'error');
+});
+
+elements.rememberTeacherLogin.checked = loginPreference.read();
+elements.rememberTeacherLogin.addEventListener('change', () => {
+  if (loginPreference.set(elements.rememberTeacherLogin.checked)) return;
+  elements.rememberTeacherLogin.checked = loginPreference.read();
+  showNotice('Trình duyệt chưa lưu được lựa chọn tự đăng nhập.', 'error');
 });
 
 elements.teacherTabs.addEventListener('click', event => {

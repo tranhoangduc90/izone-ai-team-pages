@@ -6,6 +6,7 @@
  */
 
 import { createSessionStore } from '../teacher/auth-session.js?rev=20260903-remember-login-v1';
+import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { sortClassesNewestFirst } from './landing-model.js?rev=20260904-landing-google-auth-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
@@ -16,6 +17,8 @@ const loginBadge = document.getElementById('loginBadge');
 const loginStatus = document.getElementById('loginStatus');
 const googleSignInButton = document.getElementById('googleSignInButton');
 const logoutButton = document.getElementById('logoutButton');
+const rememberTeacherLogin = document.getElementById('rememberTeacherLogin');
+const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const sessionStore = createSessionStore({
   apiBaseUrl: appConfig.API_BASE_URL,
   clientId: appConfig.GOOGLE_CLIENT_ID,
@@ -114,7 +117,7 @@ function setupGoogleSignIn() {
   const renderButton = () => {
     window.google.accounts.id.initialize({
       client_id: appConfig.GOOGLE_CLIENT_ID,
-      auto_select: false,
+      auto_select: loginPreference.read(),
       callback: response => {
         resetLogin();
         connectWithToken(response.credential || '');
@@ -127,6 +130,7 @@ function setupGoogleSignIn() {
       text: 'signin_with',
       shape: 'rectangular'
     });
+    if (loginPreference.read() && !idToken && !sessionStore.read()) window.google.accounts.id.prompt();
   };
   const script = document.createElement('script');
   script.src = 'https://accounts.google.com/gsi/client';
@@ -158,7 +162,17 @@ document.getElementById('teacherDashboard')?.addEventListener('click', () => {
 
 logoutButton.addEventListener('click', () => {
   resetLogin();
-  loginStatus.textContent = 'Đã đăng xuất. Bạn có thể nhập mã lớp hoặc đăng nhập tài khoản khác.';
+  window.google?.accounts?.id?.disableAutoSelect();
+  const forgotten = loginPreference.set(false);
+  rememberTeacherLogin.checked = !forgotten;
+  loginStatus.textContent = forgotten ? 'Đã đăng xuất. Bạn có thể nhập mã lớp hoặc đăng nhập tài khoản khác.' : 'Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.';
+});
+
+rememberTeacherLogin.checked = loginPreference.read();
+rememberTeacherLogin.addEventListener('change', () => {
+  if (loginPreference.set(rememberTeacherLogin.checked)) return;
+  rememberTeacherLogin.checked = loginPreference.read();
+  loginStatus.textContent = 'Trình duyệt chưa lưu được lựa chọn tự đăng nhập.';
 });
 
 showManualEntry();
