@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
     <title>IZONE Tests</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="shared/styles.css?rev=20260912-listening-audio-v1">
+    <link rel="stylesheet" href="shared/styles.css?rev=20260918-teacher-checkbox-v1">
   </head>
   <body>
     <main class="landing-shell">
@@ -21,7 +21,7 @@
             <p id="loginStatus" role="status">Đăng nhập Google để chọn nhanh lớp bạn đang hoặc đã dạy.</p>
           </div>
           <div id="googleSignInButton"></div>
-          <label><input id="rememberTeacherLogin" type="checkbox"> Tự đăng nhập Google trên thiết bị này</label>
+          <label class="teacher-login-remember"><input id="rememberTeacherLogin" type="checkbox"> Tự đăng nhập Google trên thiết bị này</label>
           <button class="button button-secondary landing-logout" id="logoutButton" type="button" hidden>Đăng xuất</button>
         </section>
         <div class="landing-class-field">
