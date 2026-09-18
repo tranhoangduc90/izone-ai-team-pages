@@ -67,15 +67,6 @@ tr:last-child td { border-bottom: 0; }
 .empty, .loading { padding: 42px; color: var(--muted); text-align: center; background: #fff; border: 1px solid var(--line); border-radius: 16px; }
 footer { padding: 4px 2px 20px; color: var(--muted); font-size: 12px; }
 
-dialog { width: min(420px, calc(100% - 32px)); padding: 0; border: 0; border-radius: 20px; box-shadow: 0 24px 80px rgba(16,24,40,.28); }
-dialog::backdrop { background: rgba(23,32,51,.62); backdrop-filter: blur(4px); }
-dialog form { display: grid; gap: 14px; padding: 26px; }
-dialog img { width: 76px; height: 76px; border-radius: 16px; object-fit: cover; }
-dialog h2 { margin: 3px 0 0; }
-dialog p { margin: 0; color: var(--muted); }
-dialog input { min-height: 46px; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 9px; }
-#accessError { min-height: 20px; color: var(--error); font-size: 13px; }
-
 @media (max-width: 900px) {
   .shell { padding: 16px; }
   .hero { min-height: 220px; padding: 25px; flex-direction: column; }

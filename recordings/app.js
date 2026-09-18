@@ -1,8 +1,7 @@
 const DATA_API_URL = 'https://ducizone.ddns.net/webhook/recording-monitor-data-884067a346fc458e9e0503e73b3e41b3';
-const KEY_STORAGE = 'izone_recording_dashboard_key';
 const REFRESH_MS = 60_000;
 
-const state = { records: [], key: '', loading: false };
+const state = { records: [], loading: false };
 const $ = (id) => document.getElementById(id);
 const controls = ['dateFilter', 'accountFilter', 'statusFilter', 'searchFilter'].map($);
 
@@ -108,12 +107,11 @@ function setConnection(ok, label) {
 }
 
 async function loadData() {
-  if (!state.key || state.loading) return;
+  if (state.loading) return;
   state.loading = true;
   setConnection(true, 'Đang làm mới');
   try {
-    const response = await fetch(`${DATA_API_URL}?key=${encodeURIComponent(state.key)}`, { cache: 'no-store', referrerPolicy: 'no-referrer' });
-    if (response.status === 403) throw new Error('ACCESS_DENIED');
+    const response = await fetch(DATA_API_URL, { cache: 'no-store', referrerPolicy: 'no-referrer' });
     if (!response.ok) throw new Error(`HTTP_${response.status}`);
     const payload = await response.json();
     state.records = Array.isArray(payload.records) ? payload.records : [];
@@ -124,41 +122,14 @@ async function loadData() {
     setConnection(true, 'Dữ liệu trực tiếp');
   } catch (error) {
     setConnection(false, 'Mất kết nối');
-    if (error.message === 'ACCESS_DENIED') {
-      sessionStorage.removeItem(KEY_STORAGE);
-      state.key = '';
-      $('accessError').textContent = 'Mã truy cập không đúng.';
-      $('accessDialog').showModal();
-    } else {
-      $('folders').innerHTML = '<div class="empty">Không tải được dữ liệu. Hệ thống sẽ thử lại sau 60 giây.</div>';
-    }
+    $('folders').innerHTML = '<div class="empty">Không tải được dữ liệu. Hệ thống sẽ thử lại sau 60 giây.</div>';
   } finally {
     state.loading = false;
   }
 }
 
-function initializeAccess() {
-  const url = new URL(window.location.href);
-  const keyFromUrl = url.searchParams.get('key');
-  if (keyFromUrl) {
-    sessionStorage.setItem(KEY_STORAGE, keyFromUrl);
-    url.searchParams.delete('key');
-    history.replaceState({}, '', url);
-  }
-  state.key = sessionStorage.getItem(KEY_STORAGE) || '';
-  if (state.key) loadData(); else $('accessDialog').showModal();
-}
-
 controls.forEach((control) => control.addEventListener('input', applyFilters));
 $('refreshButton').addEventListener('click', loadData);
-$('accessForm').addEventListener('submit', (event) => {
-  event.preventDefault();
-  state.key = $('accessKey').value.trim();
-  sessionStorage.setItem(KEY_STORAGE, state.key);
-  $('accessError').textContent = '';
-  $('accessDialog').close();
-  loadData();
-});
 document.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-copy]');
   if (!button) return;
@@ -171,6 +142,6 @@ document.addEventListener('click', async (event) => {
   }
 });
 
-initializeAccess();
+loadData();
 setInterval(loadData, REFRESH_MS);
 
