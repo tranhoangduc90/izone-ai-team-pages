@@ -23,9 +23,11 @@
         <h1>Nhìn rõ tình hình lớp</h1>
         <p class="muted">Mở phiếu học viên, xem bài đang nhập và điều chỉnh điểm danh khi cần. Tab Tạo phiếu luôn ở ngay bên cạnh.</p>
         <div id="googleSignInButton"></div>
+        <label><input id="rememberTeacherLogin" type="checkbox"> Tự đăng nhập Google trên thiết bị này</label>
       </section>
 
       <section id="teacherWorkspace" hidden>
+        <button class="button" id="teacherLogoutButton" type="button">Đăng xuất</button>
         <nav class="teacher-tabs" aria-label="Chức năng">
           <button class="tab active" id="dashboardTab" type="button">Theo dõi lớp</button>
           <button class="tab" id="createTab" type="button">Tạo phiếu</button>
@@ -94,6 +96,6 @@
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
-    <script src="teacher.js?rev=20260916-reference-theme-v1"></script>
+    <script type="module" src="teacher.js?rev=20260918-teacher-login-memory-v1"></script>
   </body>
 </html>

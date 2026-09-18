@@ -17,6 +17,7 @@
         <h1 id="teacher-login-title">Đăng nhập để xem tiến độ lớp</h1>
         <p>Dữ liệu bài làm chỉ được tải sau khi tài khoản giảng viên được hệ thống xác minh.</p>
         <div id="google-signin"></div>
+        <label><input id="remember-teacher-login" type="checkbox" /> Tự đăng nhập Google trên thiết bị này</label>
         <p id="teacher-login-error" class="form-error" role="alert" hidden></p>
       </section>
 
@@ -25,7 +26,7 @@
           <div><p class="eyebrow">Dashboard giảng viên</p><h1 id="teacher-title">Theo dõi bài làm</h1><p class="muted">Tự cập nhật bản tổng hợp của lớp mỗi 5 giây.</p></div>
           <label class="teacher-class-filter">Lớp<select id="teacher-class"><option value="">Tất cả lớp</option></select></label>
         </div>
-        <div class="actions"><button id="teacher-export" class="secondary" type="button">Tải báo cáo CSV</button></div>
+        <div class="actions"><button id="teacher-export" class="secondary" type="button">Tải báo cáo CSV</button><button id="teacher-logout" class="secondary" type="button">Đăng xuất</button></div>
         <p id="teacher-error" class="notice" hidden></p>
         <section id="teacher-summary" class="teacher-summary" aria-label="Tổng hợp trạng thái"></section>
         <section id="teacher-reconciliation" class="reconciliation-panel" aria-labelledby="teacher-reconciliation-title" hidden><h2 id="teacher-reconciliation-title">Cần đối soát</h2><div id="teacher-reconciliation-list"></div></section>
@@ -38,6 +39,6 @@
       <div id="teacher-detail-content"></div>
     </dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/teacher-app.js?v=20260818-numbering-v3-vocabulary-scroll-20260822-class-query-v1-20260903-reconciliation-20260912-library-session-20260913-technical-error-copy"></script>
+    <script type="module" src="./js/teacher-app.js?v=20260918-teacher-login-memory-v1"></script>
   </body>
 </html>

@@ -11,11 +11,13 @@ import { createTeacherCommentThreadCard, renderAnnotatedText } from "./teacher-c
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
 import { createTeacherSessionStore } from "./library-core.js?v=20260912-sw-library-v1";
+import { createTeacherLoginPreference } from "../../shared/teacher-login-preference.js?rev=20260918-v1";
 
 const $ = (id) => document.getElementById(id);
+const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = { token: "", api: null, manifest: null, activitySlug: "", students: [], pollTimer: null,
   selectedStudent: null, detailRequestId: 0, focusSection: "", pending: [], canManage: false, draftResults: new Map(),
-  requestedClass: "", classQueryResolved: false, classQueryError: "", reconciliationSearches: new Map(), sessionStore: null };
+  requestedClass: "", classQueryResolved: false, classQueryError: "", reconciliationSearches: new Map(), sessionStore: null, loginGeneration: 0 };
 
 function teacherDefinitions() {
   const dynamic = sectionDefinitions(state.manifest);
@@ -475,12 +477,14 @@ function renderReconciliation() {
 async function refresh() {
   clearTimeout(state.pollTimer);
   if (!state.token) return;
+  const loginGeneration = state.loginGeneration;
   try {
     const selectedClassRef = $("teacher-class").value;
     const result = await state.api.liveActivity(state.activitySlug, selectedClassRef);
+    const pendingResult = await state.api.provisionalStudents(state.activitySlug, $("teacher-class").value);
+    if (loginGeneration !== state.loginGeneration) return;
     state.students = result.data.students || [];
     state.canManage = result.data.permissions?.canManage === true;
-    const pendingResult = await state.api.provisionalStudents(state.activitySlug, $("teacher-class").value);
     state.pending = pendingResult.data.students || [];
     const classes = populateClasses(state.students);
     if (!state.classQueryResolved) {
@@ -498,6 +502,7 @@ async function refresh() {
     renderReconciliation();
     $("teacher-login").hidden = true;
     $("teacher-dashboard").hidden = false;
+    state.sessionStore?.save(state.token);
     $("teacher-updated").textContent = `Cập nhật lúc ${formatTime(result.data.generatedAt)}`;
     showLoginError();
     showDashboardError(state.classQueryError);
@@ -506,12 +511,10 @@ async function refresh() {
       if (updated) await loadStudentDetail({ ...state.selectedStudent, ...updated });
     }
   } catch (error) {
+    if (loginGeneration !== state.loginGeneration) return;
     const authFailure = teacherAuthFailure(error.status);
     if (authFailure) {
-      state.token = "";
-      state.sessionStore?.clear();
-      $("teacher-dashboard").hidden = true;
-      $("teacher-login").hidden = false;
+      clearTeacherLogin();
       $("teacher-updated").textContent = authFailure.header;
       showLoginError(authFailure.message);
       globalThis.google?.accounts?.id?.disableAutoSelect?.();
@@ -528,8 +531,8 @@ async function refresh() {
 
 function handleCredential(response) {
   if (!response?.credential) return showLoginError("Không nhận được thông tin đăng nhập.");
+  state.loginGeneration += 1;
   state.token = response.credential;
-  state.sessionStore?.save(state.token);
   $("teacher-login").hidden = false;
   $("teacher-dashboard").hidden = true;
   $("teacher-updated").textContent = "Đang xác minh quyền…";
@@ -541,7 +544,7 @@ async function waitForGoogle(clientId) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const accounts = globalThis.google?.accounts?.id;
     if (accounts) {
-      accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: false });
+      accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: loginPreference.read() });
       accounts.renderButton($("google-signin"), { theme: "outline", size: "large", text: "signin_with", locale: "vi" });
       return;
     }
@@ -586,9 +589,45 @@ async function init() {
     await waitForGoogle(config.googleClientId);
     const rememberedToken = state.sessionStore.read();
     if (rememberedToken) handleCredential({ credential: rememberedToken });
+    else if (loginPreference.read()) globalThis.google.accounts.id.prompt();
   } catch (error) {
     showLoginError(error.message);
   }
 }
+
+function clearTeacherLogin() {
+  state.loginGeneration += 1;
+  state.token = "";
+  state.sessionStore?.clear();
+  state.students = [];
+  state.pending = [];
+  state.canManage = false;
+  state.draftResults.clear();
+  state.reconciliationSearches.clear();
+  state.selectedStudent = null;
+  if ($("teacher-detail").open) $("teacher-detail").close();
+  clearTimeout(state.pollTimer);
+  for (const id of ["teacher-students", "teacher-summary", "teacher-reconciliation-list", "teacher-class", "teacher-detail-content"]) $(id).replaceChildren();
+  $("teacher-reconciliation").hidden = true;
+  $("teacher-dashboard").hidden = true;
+  $("teacher-login").hidden = false;
+}
+
+$("remember-teacher-login").checked = loginPreference.read();
+$("remember-teacher-login").addEventListener("change", () => {
+  const input = $("remember-teacher-login");
+  if (loginPreference.set(input.checked)) return;
+  input.checked = loginPreference.read();
+  showLoginError("Trình duyệt chưa lưu được lựa chọn tự đăng nhập.");
+});
+
+$("teacher-logout").addEventListener("click", () => {
+  clearTeacherLogin();
+  globalThis.google?.accounts?.id?.disableAutoSelect?.();
+  const forgotten = loginPreference.set(false);
+  $("remember-teacher-login").checked = !forgotten;
+  $("teacher-updated").textContent = "Chưa đăng nhập";
+  showLoginError(forgotten ? "Đã đăng xuất." : "Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.");
+});
 
 init();

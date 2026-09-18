@@ -4,10 +4,19 @@
  * Kết quả: một link lớp để gửi cho học viên; mọi override điểm danh có lý do và operation ID riêng.
  * Khi lỗi: giao diện giữ dữ liệu đang chọn, không giả vờ đã lưu và hiện thông báo để thử lại.
  */
+import { createSessionStore } from '../term-tests/teacher/auth-session.js?rev=20260903-remember-login-v1';
+import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
+const sessionStore = createSessionStore({
+  apiBaseUrl: config.API_BASE_URL,
+  clientId: config.GOOGLE_CLIENT_ID,
+  getStorage: () => window.sessionStorage
+});
+const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = {
   idToken: '',
+  authGeneration: 0,
   reviewer: null,
   classes: [],
   assignments: [],
@@ -24,7 +33,7 @@ const state = {
 };
 
 const elements = Object.fromEntries([
-  'teacherName', 'teacherNotice', 'teacherAccessView', 'googleSignInButton', 'teacherWorkspace',
+  'teacherName', 'teacherNotice', 'teacherAccessView', 'googleSignInButton', 'rememberTeacherLogin', 'teacherWorkspace', 'teacherLogoutButton',
   'createTab', 'dashboardTab', 'createPanel', 'dashboardPanel', 'publishForm', 'teacherClassSelect',
   'sessionNumber', 'formTitle', 'skillFilter', 'questionLibrary', 'publishButton', 'publishResult', 'rosterCount',
   'studentLink', 'copyLinkButton', 'assignmentSelect', 'dashboardTitle', 'refreshDashboardButton',
@@ -44,6 +53,12 @@ function setNotice(message, kind = '') {
 async function apiRequest(path, { method = 'GET', body } = {}) {
   if (!config.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
   if (!state.idToken) throw new Error('Bạn chưa đăng nhập Google.');
+  if (!sessionStore.usable(state.idToken)) {
+    clearTeacherLogin();
+    setNotice('Phiên Google đã hết hạn; hãy đăng nhập lại.', 'error');
+    throw new Error('Phiên Google đã hết hạn; hãy đăng nhập lại.');
+  }
+  const generation = state.authGeneration;
   const response = await fetch(`${config.API_BASE_URL}/api/learning${path}`, {
     method,
     headers: {
@@ -54,11 +69,18 @@ async function apiRequest(path, { method = 'GET', body } = {}) {
     cache: 'no-store'
   });
   const payload = await response.json().catch(() => null);
+  if (generation !== state.authGeneration) throw new Error('Lượt đăng nhập đã thay đổi.');
   if (!response.ok || !payload?.ok) {
     const message = response.status === 401
       ? 'Phiên Google đã hết hạn; hãy tải lại trang và đăng nhập lại.'
       : payload?.message || `Hệ thống trả về mã ${response.status}.`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    if (response.status === 401 || response.status === 403) {
+      clearTeacherLogin();
+      setNotice(message, 'error');
+    }
+    throw error;
   }
   return payload;
 }
@@ -225,11 +247,13 @@ function refreshAssignmentSelect(selectedId = '') {
 }
 
 async function loadWorkspace() {
+  const generation = state.authGeneration;
   setNotice('Đang tải lớp và thư viện câu hỏi…');
   const [options, library] = await Promise.all([
     apiRequest('/teacher/options'),
     apiRequest('/teacher/question-library')
   ]);
+  if (generation !== state.authGeneration) return;
   state.reviewer = options.reviewer;
   state.classes = options.classes || [];
   state.assignments = options.assignments || [];
@@ -240,6 +264,7 @@ async function loadWorkspace() {
   renderLibrary();
   elements.teacherAccessView.hidden = true;
   elements.teacherWorkspace.hidden = false;
+  sessionStore.save(state.idToken);
   switchPanel('dashboard');
   setNotice(state.classes.length ? 'Sẵn sàng.' : 'Tài khoản chưa được cấp lớp nào.', state.classes.length ? '' : 'error');
 }
@@ -762,14 +787,46 @@ function initializeGoogle(attempt = 0) {
   }
   window.google.accounts.id.initialize({
     client_id: config.GOOGLE_CLIENT_ID,
+    auto_select: loginPreference.read(),
     callback: response => {
-      state.idToken = response.credential || '';
-      if (state.idToken) void loadWorkspace().catch(error => setNotice(error.message, 'error'));
+      if (!response.credential) return;
+      state.authGeneration += 1;
+      state.idToken = response.credential;
+      void loadWorkspace().catch(error => {
+        if (state.idToken) setNotice(error.message, 'error');
+      });
     }
   });
   window.google.accounts.id.renderButton(elements.googleSignInButton, {
     theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'vi'
   });
+  const rememberedToken = sessionStore.read();
+  if (rememberedToken) {
+    state.authGeneration += 1;
+    state.idToken = rememberedToken;
+    void loadWorkspace().catch(error => {
+      if (state.idToken) setNotice(error.message, 'error');
+    });
+  } else if (loginPreference.read()) {
+    window.google.accounts.id.prompt();
+  }
+}
+
+function clearTeacherLogin() {
+  state.authGeneration += 1;
+  state.idToken = '';
+  sessionStore.clear();
+  state.reviewer = null;
+  state.classes = [];
+  state.assignments = [];
+  state.library = [];
+  state.dashboard = null;
+  state.liveByStudent.clear();
+  elements.teacherName.textContent = 'Chưa đăng nhập';
+  elements.teacherAccessView.hidden = false;
+  elements.teacherWorkspace.hidden = true;
+  for (const id of ['studentList', 'questionLibrary', 'classInsights', 'dashboardSummary', 'draftAnswers']) elements[id].replaceChildren();
+  for (const id of ['attendanceDialog', 'reportDialog', 'draftDialog']) if (elements[id].open) elements[id].close();
 }
 
 elements.createTab.addEventListener('click', () => switchPanel('create'));
@@ -788,6 +845,19 @@ elements.skillFilter.addEventListener('change', renderLibrary);
 elements.markReportDeliveredButton.addEventListener('click', () => void markReportDelivered());
 elements.saveTeacherNoteButton.addEventListener('click', () => void saveTeacherHumanNote());
 elements.copyStudentJourneyLinkButton.addEventListener('click', () => void copyStudentJourneyLink());
+elements.rememberTeacherLogin.checked = loginPreference.read();
+elements.rememberTeacherLogin.addEventListener('change', () => {
+  if (loginPreference.set(elements.rememberTeacherLogin.checked)) return;
+  elements.rememberTeacherLogin.checked = loginPreference.read();
+  setNotice('Trình duyệt chưa lưu được lựa chọn tự đăng nhập.', 'error');
+});
+elements.teacherLogoutButton.addEventListener('click', () => {
+  clearTeacherLogin();
+  window.google?.accounts?.id?.disableAutoSelect();
+  const forgotten = loginPreference.set(false);
+  elements.rememberTeacherLogin.checked = !forgotten;
+  setNotice(forgotten ? 'Đã đăng xuất.' : 'Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.', forgotten ? '' : 'error');
+});
 
 initializeGoogle();
 
