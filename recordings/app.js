@@ -4,7 +4,7 @@ const RENAME_API_URL = 'https://ducizone.ddns.net/webhook/recording-rename-76328
 const PLAYLIST_API_URL = 'https://ducizone.ddns.net/webhook/recording-playlist-8ea46fc7390145c58ffa915cf6cedbd2';
 const REFRESH_MS = 60_000;
 
-const state = { records: [], yesterdayClasses: [], playlists: [], loading: false, playlistQuery: '' };
+const state = { records: [], yesterdayClasses: [], playlists: [], loading: false, playlistQuery: '', version: 0 };
 const $ = (id) => document.getElementById(id);
 const controls = ['dateFilter', 'accountFilter', 'searchFilter'].map($);
 
@@ -129,6 +129,7 @@ function renderPlaylistOptions(query = '') {
 function replaceRecord(updated) {
   const index = state.records.findIndex((record) => String(record.id) === String(updated.id));
   if (index >= 0) state.records[index] = updated;
+  state.version += 1;
   renderStats();
   renderSections();
 }
@@ -158,11 +159,13 @@ async function postAction(url, payload) {
 async function loadData() {
   if (state.loading) return;
   state.loading = true;
+  const loadVersion = state.version;
   setConnection(true, 'Đang làm mới');
   try {
     const response = await fetch(DATA_API_URL, { cache: 'no-store', referrerPolicy: 'no-referrer' });
     if (!response.ok) throw new Error(`HTTP_${response.status}`);
     const payload = await response.json();
+    if (loadVersion !== state.version) return;
     state.records = Array.isArray(payload.records) ? payload.records : [];
     state.yesterdayClasses = Array.isArray(payload.yesterdayClasses) ? payload.yesterdayClasses : [];
     state.playlists = Array.isArray(payload.playlists) ? payload.playlists : [];
