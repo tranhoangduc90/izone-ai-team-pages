@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bản mô phỏng phiếu Progress Log IC2305 buổi 2; không kết nối dữ liệu thật">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'self'">
+  <title>IC2305 · Buổi 2 · Demo học viên</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../progress-log/styles.css">
+  <link rel="stylesheet" href="demo.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">PL</span><div><b>Progress Log · Khóa 56</b><small>Phiếu học tập &amp; xác nhận tham gia</small></div></div>
+  </header>
+  <div class="demo-ribbon"><strong>DEMO · DỮ LIỆU MÔ PHỎNG</strong><span>Không ghi bài hoặc điểm danh thật.</span><a href="teacher.html">Xem giao diện giảng viên</a></div>
+  <main class="shell">
+    <p class="notice" id="notice" role="status" aria-live="polite"></p>
+
+    <section class="card" id="identityView">
+      <p class="eyebrow">BUỔI 2</p>
+      <h1>ENTRANCE TICKET • WRITING 1</h1>
+      <p class="muted" id="classLabel">IC2305</p>
+      <label class="field"><span>Tên của bạn</span><select id="studentSelect"><option value="">Chọn tên của bạn</option></select></label>
+      <p class="muted demo-hint">Chọn một bài đã nộp để xem lại, hoặc một học viên chưa nộp để thử hành trình từ đầu.</p>
+      <button class="button primary" id="chooseStudentButton" type="button" disabled>Tiếp tục</button>
+    </section>
+
+    <section class="card confirm-card" id="confirmView" hidden>
+      <p class="eyebrow">XÁC NHẬN</p><h1 id="confirmName">—</h1>
+      <p class="muted">IC2305 · Buổi 2 · ENTRANCE TICKET • WRITING 1</p>
+      <button class="button primary" id="confirmButton" type="button">Đúng là em</button>
+      <button class="button text-button" id="backToNamesButton" type="button">Chọn lại tên</button>
+      <p class="fine-print">Bản demo không xác thực danh tính hoặc ghi dữ liệu lên Portal.</p>
+    </section>
+
+    <section id="formView" hidden>
+      <div class="context-bar"><div><b id="studentNameLabel">—</b><small>IC2305 · Buổi 2</small></div><span id="saveState" class="save-state saved">Đã lưu bản demo</span></div>
+      <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+      <form class="card form-card" id="reflectionForm" novalidate>
+        <div class="panel-heading"><p class="eyebrow" id="checkpointLabel">PHẦN 1/3 · 5 PHÚT</p><h1 id="checkpointTitle">—</h1></div>
+        <div id="questionList"></div>
+        <div class="form-actions"><button class="button text-button" id="previousButton" type="button">Quay lại</button><button class="button primary" id="nextButton" type="button">Nộp phần và tiếp tục</button><button class="button primary" id="submitButton" type="submit" hidden>Nộp phiếu &amp; điểm danh</button></div>
+      </form>
+    </section>
+
+    <section class="card result-card" id="resultView" hidden>
+      <div class="success-mark" aria-hidden="true">✓</div><p class="eyebrow">ĐÃ NHẬN PHIẾU</p>
+      <h1 id="resultTitle">Bạn đã hoàn tất</h1>
+      <div class="result-line"><span>Điểm danh</span><b id="attendanceResult">—</b></div>
+      <div class="result-line"><span>Bài làm</span><b id="completenessResult">—</b></div>
+      <p class="muted demo-result-note">Đây là bản mô phỏng; trạng thái Portal thật không thay đổi.</p>
+      <button class="button text-button" id="reviewButton" type="button">Xem lại câu trả lời</button>
+      <button class="button text-button" id="changeStudentButton" type="button">Chọn học viên khác</button>
+    </section>
+  </main>
+  <script type="module" src="student.js"></script>
+</body>
+</html>
