@@ -10,7 +10,7 @@ import { coverageDescription, coverageStatusLabels } from './writing-flow-covera
 // Khi lỗi: giữ dữ liệu cũ trên màn hình và báo rõ; không coi cú bấm là đã chấm xong.
 const $ = id => document.getElementById(id);
 const state = { token: '', api: null, timer: null, pendingRequestIds: new Map(),
-  pairLimit: 100, failureLimit: 100 };
+  pairLimit: 100, failureLimit: 100, activeView: 'overview', data: null };
 const stageNames = {
   intake: 'Tiếp nhận', precheck: 'Kiểm trước khi chấm', main: 'Chấm chính',
   critic: 'Phản biện', arbiter: 'Phân xử', render: 'Xuất kết quả', deliver: 'Ghi link vào homework',
@@ -24,6 +24,12 @@ const statusNames = {
   received: 'Chờ chấm', running: 'Đang xử lý', needs_review: 'Cần kiểm tra',
   delivered: 'Đã có link trong homework', superseded: 'Đã có phiên bản mới',
 };
+const viewPairStatuses = {
+  overview: null,
+  running: new Set(['received', 'running']),
+  unfinished: new Set(['received', 'running', 'needs_review']),
+  delivered: new Set(['delivered']),
+};
 
 function showError(id, message = '') {
   const node = $(id);
@@ -32,7 +38,9 @@ function showError(id, message = '') {
 }
 
 function metadata(row) {
-  return `Lớp ${row.class_code} · Hồ sơ ${row.source_record_id} · Tài liệu ${row.homework_file_id} · link ${row.source_link_index} · bài số ${row.essay_slot}`;
+  const teachers = Array.isArray(row.teacher_names) && row.teacher_names.length
+    ? ` · Giảng viên ${row.teacher_names.join(', ')}` : '';
+  return `Lớp ${row.class_code}${teachers} · Hồ sơ ${row.source_record_id} · Tài liệu ${row.homework_file_id} · link ${row.source_link_index} · bài số ${row.essay_slot}`;
 }
 
 function makeText(tag, value, className = '') {
@@ -85,25 +93,33 @@ function historyDetails(pair) {
   return details;
 }
 
-function renderSummary(summary, selectedClass) {
+function rowMatchesTeacher(row, selectedTeacher) {
+  return !selectedTeacher || (Array.isArray(row.teacher_names)
+    && row.teacher_names.includes(selectedTeacher));
+}
+
+function renderSummary(summary, selectedClass, selectedTeacher) {
   const root = $('flow-summary');
   root.replaceChildren();
   const counts = new Map();
   for (const row of summary) {
     if (selectedClass && row.class_code !== selectedClass) continue;
+    if (!rowMatchesTeacher(row, selectedTeacher)) continue;
     counts.set(row.status, (counts.get(row.status) || 0) + Number(row.pair_count || 0));
   }
-  for (const status of ['received', 'running', 'needs_review', 'delivered']) {
+  for (const status of ['received', 'running', 'needs_review', 'delivered', 'superseded']) {
     const card = document.createElement('article');
+    card.dataset.status = status;
     card.append(makeText('strong', counts.get(status) || 0), makeText('span', statusNames[status]));
     root.append(card);
   }
 }
 
-function renderClassCoverage(classes, selectedClass) {
+function renderClassCoverage(classes, selectedClass, selectedTeacher, classTeachers) {
   const root = $('flow-class-coverage');
   root.replaceChildren();
-  const visible = classes.filter(row => !selectedClass || row.class_code === selectedClass);
+  const visible = classes.filter(row => (!selectedClass || row.class_code === selectedClass)
+    && (!selectedTeacher || classTeachers.get(row.class_code)?.has(selectedTeacher)));
   if (!visible.length) return root.append(makeText('p',
     'Chưa có dữ liệu đối chiếu lớp trong phạm vi đã chọn.', 'muted'));
   for (const item of visible) {
@@ -249,11 +265,32 @@ function renderWorkflowFailures(failures) {
   }
 }
 
-function populateClasses(rows) {
+function classTeacherMap(summary) {
+  const map = new Map();
+  for (const row of summary) {
+    if (!map.has(row.class_code)) map.set(row.class_code, new Set());
+    for (const teacher of row.teacher_names || []) map.get(row.class_code).add(teacher);
+  }
+  return map;
+}
+
+function populateTeachers(summary) {
+  const select = $('flow-teacher');
+  const selected = select.value;
+  const teachers = [...new Set(summary.flatMap(row => row.teacher_names || []))]
+    .sort((a, b) => a.localeCompare(b, 'vi'));
+  select.replaceChildren(new Option('Tất cả giảng viên', ''));
+  for (const teacher of teachers) select.append(new Option(teacher, teacher));
+  select.value = teachers.includes(selected) ? selected : '';
+}
+
+function populateClasses(rows, selectedTeacher, classTeachers) {
   const select = $('flow-class');
   const selected = select.value;
   select.replaceChildren(new Option('Tất cả lớp', ''));
-  for (const code of [...new Set(rows.map(row => row.class_code).filter(Boolean))].sort()) {
+  const codes = [...new Set(rows.map(row => row.class_code).filter(Boolean))]
+    .filter(code => !selectedTeacher || classTeachers.get(code)?.has(selectedTeacher)).sort();
+  for (const code of codes) {
     select.append(new Option(code, code));
   }
   select.value = [...select.options].some(option => option.value === selected) ? selected : '';
@@ -279,11 +316,12 @@ async function loadAllSourceIssues() {
   throw new Error('Danh sách tài liệu lỗi quá dài để tải đầy đủ.');
 }
 
-async function loadPairs(classCode, count) {
+async function loadPairs(classCode, teacherName, count) {
   const pairs = [];
   while (pairs.length < count) {
     const size = Math.min(200, count - pairs.length);
-    const page = (await state.api.writingPairs(classCode, pairs.length, size)).data.pairs || [];
+    const page = (await state.api.writingPairs(classCode, teacherName,
+      pairs.length, size)).data.pairs || [];
     pairs.push(...page);
     if (page.length < size) break;
   }
@@ -301,39 +339,111 @@ async function loadWorkflowFailures(count) {
   return failures;
 }
 
+function scopedSummaryCount(summary, selectedClass, selectedTeacher, statuses = null) {
+  return summary.filter(row => (!selectedClass || row.class_code === selectedClass)
+      && rowMatchesTeacher(row, selectedTeacher)
+      && (!statuses || statuses.has(row.status)))
+    .reduce((total, row) => total + Number(row.pair_count || 0), 0);
+}
+
+function updateViewCounts(data) {
+  const { summary, selectedClass, selectedTeacher, reviews, sourceIssues } = data;
+  const values = {
+    overview: scopedSummaryCount(summary, selectedClass, selectedTeacher),
+    running: scopedSummaryCount(summary, selectedClass, selectedTeacher,
+      viewPairStatuses.running),
+    unfinished: scopedSummaryCount(summary, selectedClass, selectedTeacher,
+      viewPairStatuses.unfinished),
+    review: reviews.length,
+    source: sourceIssues.length,
+    delivered: scopedSummaryCount(summary, selectedClass, selectedTeacher,
+      viewPairStatuses.delivered),
+  };
+  for (const [view, count] of Object.entries(values)) {
+    const node = document.querySelector(`[data-count="${view}"]`);
+    if (node) node.textContent = String(count);
+  }
+}
+
+function setSectionVisibility(activeView) {
+  const visible = {
+    overview: ['flow-coverage-section', 'flow-summary-section', 'flow-reviews-section',
+      'flow-source-section', 'flow-technical-section', 'flow-pairs-section'],
+    running: ['flow-summary-section', 'flow-pairs-section'],
+    unfinished: ['flow-summary-section', 'flow-reviews-section', 'flow-pairs-section'],
+    review: ['flow-reviews-section'],
+    source: ['flow-source-section', 'flow-technical-section'],
+    delivered: ['flow-summary-section', 'flow-pairs-section'],
+  }[activeView] || [];
+  for (const id of ['flow-coverage-section', 'flow-summary-section', 'flow-reviews-section',
+    'flow-source-section', 'flow-technical-section', 'flow-pairs-section']) {
+    $(id).hidden = !visible.includes(id);
+  }
+  for (const button of document.querySelectorAll('#flow-views [data-view]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.view === activeView));
+  }
+}
+
+function renderCurrentView() {
+  if (!state.data) return;
+  const data = state.data;
+  const statuses = viewPairStatuses[state.activeView];
+  const pairs = statuses ? data.pairs.filter(pair => statuses.has(pair.status)) : data.pairs;
+  renderClassCoverage(data.classCoverage, data.selectedClass, data.selectedTeacher,
+    data.classTeachers);
+  renderSummary(data.summary, data.selectedClass, data.selectedTeacher);
+  renderPairs(pairs);
+  renderReviews(data.reviews);
+  renderSourceIssues(data.sourceIssues);
+  renderWorkflowFailures(data.failures);
+  updateViewCounts(data);
+  setSectionVisibility(state.activeView);
+
+  const titles = {
+    overview: 'Các bài gần đây', running: 'Bài đang chờ hoặc đang chấm',
+    unfinished: 'Tất cả bài chưa hoàn thành', delivered: 'Bài đã ghi link vào homework',
+  };
+  $('flow-pairs-title').textContent = titles[state.activeView] || 'Các bài trong view';
+  const visibleTotal = scopedSummaryCount(data.summary, data.selectedClass,
+    data.selectedTeacher, statuses);
+  $('flow-more').hidden = !['overview', 'running', 'unfinished', 'delivered']
+    .includes(state.activeView) || pairs.length >= visibleTotal;
+}
+
 async function refresh() {
   clearTimeout(state.timer);
   if (!state.token || !state.api) return;
   try {
-    const selectedBeforeLoad = $('flow-class').value;
-    const [allPairs, summaryResult, coverageResult, allReviews, sourceIssues, failureResult] = await Promise.all([
-      loadPairs(selectedBeforeLoad, state.pairLimit), state.api.writingSummary(),
-      state.api.writingClassCoverage(),
+    const [summaryResult, coverageResult, allReviews, allSourceIssues, failureResult] = await Promise.all([
+      state.api.writingSummary(), state.api.writingClassCoverage(),
       loadAllReviews(), loadAllSourceIssues(),
       loadWorkflowFailures(state.failureLimit)
         .then(rows => ({ rows })).catch(error => ({ error })),
     ]);
     const summary = summaryResult.data.summary || [];
     const classCoverage = coverageResult.data.classes || [];
-    populateClasses([...summary, ...classCoverage, ...allReviews, ...sourceIssues]);
+    populateTeachers(summary);
+    const selectedTeacher = $('flow-teacher').value;
+    const classTeachers = classTeacherMap(summary);
+    populateClasses([...summary, ...classCoverage, ...allReviews, ...allSourceIssues],
+      selectedTeacher, classTeachers);
     const selectedClass = $('flow-class').value;
-    renderClassCoverage(classCoverage, selectedClass);
-    renderSummary(summary, selectedClass);
-    renderPairs(allPairs);
-    renderReviews(allReviews.filter(review => !selectedClass || review.class_code === selectedClass));
-    renderSourceIssues(sourceIssues.filter(issue => !selectedClass || issue.class_code === selectedClass));
+    const allPairs = await loadPairs(selectedClass, selectedTeacher, state.pairLimit);
+    const reviews = allReviews.filter(review => (!selectedClass || review.class_code === selectedClass)
+      && rowMatchesTeacher(review, selectedTeacher));
+    const sourceIssues = allSourceIssues.filter(issue => (!selectedClass
+        || issue.class_code === selectedClass)
+      && (!selectedTeacher || classTeachers.get(issue.class_code)?.has(selectedTeacher)));
+    state.data = { summary, classCoverage, pairs: allPairs, reviews, sourceIssues,
+      failures: failureResult.rows || [], selectedClass, selectedTeacher, classTeachers };
+    renderCurrentView();
     if (failureResult.error) {
       $('flow-technical-errors').replaceChildren(makeText('p',
         'Chưa tải được lỗi kỹ thuật; các trạng thái bài ở trên vẫn là dữ liệu mới.', 'muted'));
       $('flow-technical-more').hidden = true;
     } else {
-      renderWorkflowFailures(failureResult.rows);
       $('flow-technical-more').hidden = failureResult.rows.length < state.failureLimit;
     }
-    const totalPairs = summary
-      .filter(row => !selectedClass || row.class_code === selectedClass)
-      .reduce((total, row) => total + Number(row.pair_count || 0), 0);
-    $('flow-more').hidden = allPairs.length >= totalPairs;
     $('flow-login').hidden = true;
     $('flow-dashboard').hidden = false;
     $('flow-updated').textContent = `Đã cập nhật ${new Date().toLocaleTimeString('vi-VN')}`;
@@ -383,6 +493,13 @@ async function init() {
     if (!config.googleClientId) throw new Error('Trang chưa được cấu hình đăng nhập.');
     state.api = createTeacherApi(config.apiBase || '', () => state.token);
     $('flow-class').addEventListener('change', () => { state.pairLimit = 100; void refresh(); });
+    $('flow-teacher').addEventListener('change', () => { state.pairLimit = 100; void refresh(); });
+    for (const button of document.querySelectorAll('#flow-views [data-view]')) {
+      button.addEventListener('click', () => {
+        state.activeView = button.dataset.view;
+        renderCurrentView();
+      });
+    }
     $('flow-more').addEventListener('click', () => { state.pairLimit += 100; void refresh(); });
     $('flow-technical-more').addEventListener('click', () => { state.failureLimit += 100; void refresh(); });
     await waitForGoogle(config.googleClientId);
