@@ -28,9 +28,20 @@ test('dashboard có các view quen thuộc, lọc lớp và giảng viên, cùng
   assert.match(html, /Độ phủ lớp đang vận hành/u);
   assert.match(script, /writingClassCoverage/u);
   assert.match(html, /data-view="overview"/u);
-  assert.match(html, /data-view="unfinished"/u);
+  for (const stage of ['intake', 'precheck', 'main', 'critic', 'arbiter', 'render', 'deliver']) {
+    assert.match(html, new RegExp(`data-view="${stage}"`, 'u'));
+  }
   assert.match(html, /data-view="review"/u);
   assert.match(html, /data-view="source"/u);
+  assert.match(html, /data-view="skipped"/u);
+  assert.match(html, /id="flow-manual-form"/u);
+  assert.match(html, /id="flow-manual-name"/u);
+  assert.match(html, /id="flow-manual-url"/u);
+  assert.match(script, /addWritingManualSource/u);
+  assert.match(script, /skipWritingPair/u);
+  assert.match(script, /restoreWritingPair/u);
+  assert.match(script, /retryWritingPairStage/u);
+  assert.match(script, /writingPairDetail/u);
   assert.match(html, /id="flow-teacher"/u);
   assert.match(script, /teacher_names/u);
   assert.match(html, /id="remember-flow-login"/u);

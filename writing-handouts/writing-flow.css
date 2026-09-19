@@ -33,4 +33,26 @@
 .flow-homework-group { margin-left: 0.5rem; padding: 0.85rem; border: 1px solid #dce2eb; border-radius: 0.8rem; }
 .flow-file-group { margin-left: 0.5rem; padding: 0.7rem; background: #f7f9fc; border-radius: 0.6rem; }
 .flow-file-group > a { width: fit-content; }
+.flow-manual { display: grid; grid-template-columns: minmax(220px, 0.8fr) minmax(320px, 1.2fr); gap: 1rem; align-items: end; margin-top: 1rem; }
+.flow-manual h2 { margin-top: 0; }
+.flow-manual-form { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: 0.65rem; align-items: end; }
+.flow-manual-form label { display: grid; gap: 0.3rem; font-weight: 600; color: #344054; }
+.flow-manual-form input { min-width: 0; }
+.flow-table-wrap { overflow: auto; border: 1px solid #dce2eb; border-radius: 0.8rem; background: #fff; }
+.flow-table { width: 100%; min-width: 1180px; border-collapse: collapse; font-size: 0.9rem; }
+.flow-table th { position: sticky; top: 0; z-index: 1; background: #f2f5f9; color: #344054; text-align: left; }
+.flow-table th, .flow-table td { padding: 0.7rem; border-bottom: 1px solid #e7ebf0; vertical-align: top; }
+.flow-table tbody tr:hover { background: #f8fbff; }
+.flow-table .flow-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.flow-table .flow-actions button { padding: 0.4rem 0.65rem; }
+.flow-stage-pill { display: inline-block; border-radius: 999px; padding: 0.18rem 0.5rem; background: #eef2f7; white-space: nowrap; }
+.flow-stage-pill[data-status="needs_review"] { background: #fee4e2; color: #b42318; }
+.flow-stage-pill[data-status="succeeded"] { background: #dcfae6; color: #067647; }
+.flow-detail { width: min(900px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); border: 0; border-radius: 1rem; padding: 1.2rem; box-shadow: 0 22px 70px rgb(16 42 86 / 25%); }
+.flow-detail::backdrop { background: rgb(16 24 40 / 45%); }
+.flow-detail-close { float: right; }
+.flow-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; clear: both; }
+.flow-detail-panel { border: 1px solid #dce2eb; border-radius: 0.8rem; padding: 0.8rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.flow-detail-panel-wide { grid-column: 1 / -1; }
 @media (max-width: 620px) { .flow-row { display: block; } .flow-row button { margin-top: 0.6rem; } .flow-filters { display: grid; } .flow-filters select { width: 100%; } }
+@media (max-width: 850px) { .flow-manual, .flow-manual-form, .flow-detail-grid { grid-template-columns: 1fr; } .flow-detail-panel-wide { grid-column: auto; } }

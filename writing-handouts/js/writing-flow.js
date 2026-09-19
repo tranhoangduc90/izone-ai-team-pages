@@ -1,584 +1,125 @@
 import { createTeacherApi } from './api.js';
 import { createRequestId } from './core.js';
 import { teacherAuthFailure } from './teacher-auth-ui.js';
-import { groupWritingPairs } from './writing-flow-groups.js';
 import { coverageDescription, coverageStatusLabels } from './writing-flow-coverage.js';
 import { createTeacherSessionStore } from './library-core.js?v=20260912-sw-library-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 
-// Nhận vào: trạng thái từng cặp từ API quản trị đã kiểm quyền.
-// Việc chính: hiện bước đang chạy và danh sách cần kiểm tra, chỉ gửi yêu cầu retry sau khi người vận hành xác nhận.
-// Trả ra: màn hình cập nhật từ database; không hiển thị bài làm hay điểm chi tiết.
-// Khi lỗi: giữ dữ liệu cũ trên màn hình và báo rõ; không coi cú bấm là đã chấm xong.
+// Nhận trạng thái và log từ API quản trị, rồi hiện 7 giai đoạn theo dạng bảng 50 dòng.
+// Người vận hành thêm file thủ công, retry, bỏ qua hoặc khôi phục mà không sửa Lark Base.
+// Khi lỗi, màn hình giữ dữ liệu cũ và chỉ báo lỗi; không tự coi thao tác là thành công.
 const $ = id => document.getElementById(id);
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
-const state = { token: '', api: null, timer: null, pendingRequestIds: new Map(),
-  pendingSourceIssueKeys: new Set(), pairLimit: 100, failureLimit: 100,
-  activeView: 'overview', data: null, sessionStore: null, loginGeneration: 0 };
-const stageNames = {
-  intake: 'Tiếp nhận', precheck: 'Kiểm trước khi chấm', main: 'Chấm chính',
-  critic: 'Phản biện', arbiter: 'Phân xử', render: 'Xuất kết quả', deliver: 'Ghi link vào homework',
-};
-const stageWorkflowIds = {
-  precheck: 'P2p5N7iZzwHFDufk', main: 'X0qzwWc5CgBzgOWT',
-  critic: '4o6jEwyQM4U29XU6', arbiter: 'yFdVOEBVhLitToQD',
-  render: 'o8uncH0TWsJybeS2', deliver: 'KqWtSbjkHDMSAgbN',
-};
-const statusNames = {
-  received: 'Chờ chấm', running: 'Đang xử lý', needs_review: 'Cần kiểm tra',
-  delivered: 'Đã có link trong homework', superseded: 'Đã có phiên bản mới',
-};
-const viewPairStatuses = {
-  overview: null,
-  running: new Set(['received', 'running']),
-  unfinished: new Set(['received', 'running', 'needs_review']),
-  delivered: new Set(['delivered']),
-};
+const stages = ['intake', 'precheck', 'main', 'critic', 'arbiter', 'render', 'deliver'];
+const stageNames = { intake: 'Tiếp nhận', precheck: 'Kiểm trước khi chấm', main: 'Chấm chính',
+  critic: 'Phản biện', arbiter: 'Phân xử', render: 'Tạo trang kết quả', deliver: 'Ghi link vào homework' };
+const stageWorkflowIds = { intake: 'zxSd0xBPJzMqQlWt', precheck: 'P2p5N7iZzwHFDufk',
+  main: 'X0qzwWc5CgBzgOWT', critic: '4o6jEwyQM4U29XU6', arbiter: 'yFdVOEBVhLitToQD',
+  render: 'o8uncH0TWsJybeS2', deliver: 'KqWtSbjkHDMSAgbN' };
+const statusNames = { received: 'Chờ chấm', running: 'Đang xử lý', needs_review: 'Cần kiểm tra',
+  delivered: 'Đã giao', superseded: 'Có bản mới', pending: 'Đang chờ', succeeded: 'Đã xong', skipped: 'Bỏ qua' };
+const state = { token: '', api: null, timer: null, sessionStore: null, loginGeneration: 0,
+  activeView: 'overview', pairs: [], nextCursor: null, loadingMore: false, summary: [], counts: null,
+  coverage: [], reviews: [], issues: [], failures: [], legacy: [] };
 
-function showError(id, message = '') {
-  const node = $(id);
-  node.textContent = message;
-  node.hidden = !message;
+function makeText(tag, value, className = '') { const node = document.createElement(tag); node.textContent = String(value ?? ''); if (className) node.className = className; return node; }
+function showError(id, message = '') { const node = $(id); node.textContent = message; node.hidden = !message; }
+function formatTime(value) { return value ? new Date(value).toLocaleString('vi-VN') : '—'; }
+function sourceName(row) { return row.student_name || row.display_name || 'Chưa có tên'; }
+function rowMatchesTeacher(row, teacher) { return !teacher || (row.teacher_names || []).includes(teacher); }
+function filters(extra = {}) { return { classCode: $('flow-class').value, teacherName: $('flow-teacher').value, limit: 50, ...extra }; }
+function viewFilters() { if (stages.includes(state.activeView)) return { stageKey: state.activeView }; if (state.activeView === 'skipped') return { view: 'skipped' }; if (state.activeView === 'delivered') return { view: 'delivered' }; return state.activeView === 'overview' ? {} : { view: 'unfinished' }; }
+
+function populateFilters(rows) {
+  const teacher = $('flow-teacher'); const selectedTeacher = teacher.value;
+  const teachers = [...new Set(rows.flatMap(row => row.teacher_names || []))].sort((a, b) => a.localeCompare(b, 'vi'));
+  teacher.replaceChildren(new Option('Tất cả giảng viên', '')); for (const name of teachers) teacher.append(new Option(name, name));
+  teacher.value = teachers.includes(selectedTeacher) ? selectedTeacher : '';
+  const select = $('flow-class'); const selectedClass = select.value;
+  const codes = [...new Set(rows.filter(row => rowMatchesTeacher(row, teacher.value)).map(row => row.class_code).filter(Boolean))].sort();
+  select.replaceChildren(new Option('Tất cả lớp', '')); for (const code of codes) select.append(new Option(code, code));
+  select.value = codes.includes(selectedClass) ? selectedClass : '';
 }
 
-function metadata(row) {
-  const teachers = Array.isArray(row.teacher_names) && row.teacher_names.length
-    ? ` · Giảng viên ${row.teacher_names.join(', ')}` : '';
-  return `Lớp ${row.class_code}${teachers} · Hồ sơ ${row.source_record_id} · Tài liệu ${row.homework_file_id} · link ${row.source_link_index} · bài số ${row.essay_slot}`;
+function renderSummary() {
+  const root = $('flow-summary'); root.replaceChildren(); const counts = new Map();
+  for (const row of state.summary) counts.set(row.status, (counts.get(row.status) || 0) + Number(row.pair_count || 0));
+  for (const status of ['received', 'running', 'needs_review', 'delivered', 'superseded']) { const card = document.createElement('article'); card.dataset.status = status; card.append(makeText('strong', counts.get(status) || 0), makeText('span', statusNames[status])); root.append(card); }
+}
+function renderCounts() {
+  const values = { overview: state.summary.reduce((sum, row) => sum + Number(row.pair_count || 0), 0), review: state.reviews.length,
+    source: state.issues.length, skipped: 0, delivered: state.summary.filter(row => row.status === 'delivered').reduce((sum, row) => sum + Number(row.pair_count || 0), 0), legacy: state.legacy.length };
+  for (const stage of stages) values[stage] = 0;
+  for (const row of state.counts?.stages || []) { if (row.skipped) values.skipped += Number(row.pair_count || 0); else values[row.stage_key] = (values[row.stage_key] || 0) + Number(row.pair_count || 0); }
+  for (const [view, count] of Object.entries(values)) { const node = document.querySelector(`[data-count="${view}"]`); if (node) node.textContent = String(count); }
+}
+function actionButton(label, handler, className = 'secondary') { const button = makeText('button', label); button.type = 'button'; button.className = className; button.addEventListener('click', handler); return button; }
+
+async function requestClassScan(classCode, button) { const reason = prompt(`Lý do quét lại lớp ${classCode}:`, 'Kiểm tra bài mới')?.trim(); if (!reason) return; button.disabled = true; try { await state.api.requestWritingClassScan(classCode, reason); showError('flow-error', `Đã xếp lớp ${classCode} vào lượt quét gần nhất.`); } catch (error) { showError('flow-error', `Chưa quét được lớp: ${error.message}`); button.disabled = false; } }
+function renderCoverage() {
+  const root = $('flow-class-coverage'); root.replaceChildren(); const rows = state.coverage.filter(row => (!$('flow-class').value || row.class_code === $('flow-class').value));
+  if (!rows.length) return root.append(makeText('p', 'Chưa có dữ liệu đối chiếu lớp.', 'muted'));
+  for (const item of rows) { const row = document.createElement('article'); row.className = 'flow-row flow-coverage-row'; row.dataset.status = item.status;
+    const body = document.createElement('div'); body.append(makeText('strong', `${item.class_code || item.class_name || 'Chưa rõ lớp'} · ${coverageStatusLabels[item.status] || item.status}`), makeText('p', coverageDescription(item), 'flow-meta'));
+    if (item.class_code && item.status !== 'excluded') row.append(body, actionButton('Quét lớp ngay', () => void requestClassScan(item.class_code, row.lastElementChild))); else row.append(body); root.append(row); }
 }
 
-function makeText(tag, value, className = '') {
-  const node = document.createElement(tag);
-  node.textContent = String(value ?? '');
-  if (className) node.className = className;
-  return node;
+async function skipPair(pair) { const reason = prompt('Lý do bỏ qua bài này:')?.trim(); if (!reason) return; try { await state.api.skipWritingPair(pair.pair_id, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa bỏ qua được bài: ${error.message}`); } }
+async function restorePair(pair) { const reason = prompt('Lý do khôi phục bài:', 'Bỏ qua nhầm')?.trim(); if (!reason) return; try { await state.api.restoreWritingPair(pair.pair_id, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa khôi phục được bài: ${error.message}`); } }
+async function retryPair(pair) { const stageKey = stages.includes(state.activeView) ? state.activeView : pair.stage_key; const reason = prompt(`Lý do chạy lại từ bước “${stageNames[stageKey] || stageKey}”:`, 'Kiểm tra và chạy lại')?.trim(); if (!reason) return; try { await state.api.retryWritingPairStage(pair.pair_id, stageKey, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa tạo được lượt retry: ${error.message}`); } }
+
+function renderPairs() {
+  const root = $('flow-pairs'); root.replaceChildren();
+  if (!state.pairs.length) { const row = document.createElement('tr'); const cell = makeText('td', 'Chưa có bài trong phạm vi đã chọn.', 'muted'); cell.colSpan = 10; row.append(cell); root.append(row); return; }
+  for (const pair of state.pairs) { const row = document.createElement('tr'); const status = document.createElement('td'); const pill = makeText('span', `${stageNames[pair.stage_key] || pair.stage_key} · ${statusNames[pair.stage_status] || pair.stage_status}`, 'flow-stage-pill'); pill.dataset.status = pair.stage_status; status.append(pill);
+    const file = document.createElement('td'); if (pair.file_url) { const link = makeText('a', 'Mở Google Docs'); link.href = pair.file_url; link.target = '_blank'; link.rel = 'noopener noreferrer'; file.append(link); } else file.textContent = pair.homework_file_id || '—';
+    const classroom = document.createElement('td'); if (pair.classroom_url) { const link = makeText('a', 'Mở Classroom'); link.href = pair.classroom_url; link.target = '_blank'; link.rel = 'noopener noreferrer'; classroom.append(link); } else classroom.textContent = '—';
+    const actions = document.createElement('td'); actions.className = 'flow-actions'; actions.append(actionButton('Xem', () => void openDetail(pair)));
+    actions.append(pair.skipped_at ? actionButton('Khôi phục', () => void restorePair(pair)) : actionButton('Bỏ qua', () => void skipPair(pair)));
+    if (pair.stage_key !== 'intake') actions.append(actionButton('Retry', () => void retryPair(pair), 'primary'));
+    row.append(status, makeText('td', sourceName(pair)), makeText('td', pair.class_code || '—'), makeText('td', (pair.teacher_names || []).join(', ') || '—'), file, classroom, makeText('td', pair.source_status || '—'), makeText('td', formatTime(pair.finished_at)), makeText('td', formatTime(pair.source_created_at || pair.created_at)), actions); root.append(row); }
+  $('flow-more').hidden = !state.nextCursor;
 }
 
-function describeHistoryEvent(event) {
-  const step = stageNames[event.stage_key] || event.stage_key || '';
-  const status = event.status || 'chưa rõ';
-  if (event.kind === 'stage') return `${step}: ${status}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`;
-  if (event.kind === 'attempt') return `${step}: lần thử ${event.attempt_no}, ${status}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`;
-  if (event.kind === 'ai_call') return `${step}: gọi AI nhóm ${Number(event.batch_index) + 1}, ${status}${event.provider ? ` · ${event.provider}` : ''}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`;
-  if (event.kind === 'handoff') return `Chuyển từ ${stageNames[event.from_stage] || event.from_stage} sang ${stageNames[event.to_stage] || event.to_stage}: ${status}, đã gửi ${event.send_count} lần`;
-  return `${step}: danh sách Cần kiểm tra, ${status}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`;
+function describeEvent(event) { const step = stageNames[event.stage_key] || event.stage_key || ''; if (event.kind === 'attempt') return `${step}: lần ${event.attempt_no}, ${event.status}`; if (event.kind === 'ai_call') return `${step}: gọi AI ${event.provider || ''}, ${event.status}`; if (event.kind === 'handoff') return `Chuyển ${stageNames[event.from_stage] || event.from_stage} → ${stageNames[event.to_stage] || event.to_stage}: ${event.status}`; if (event.kind === 'operator') return `Thao tác ${event.event_type}: ${event.reason || ''}`; return `${step}: ${event.status || event.kind}`; }
+async function openDetail(pair) {
+  const dialog = $('flow-detail'); const content = $('flow-detail-content'); content.textContent = 'Đang tải nội dung và log…'; dialog.showModal();
+  try { const [detailResponse, historyResponse] = await Promise.all([state.api.writingPairDetail(pair.pair_id), state.api.writingPairHistory(pair.pair_id)]); const detail = detailResponse.data.detail; const history = historyResponse.data.history;
+    const grid = document.createElement('div'); grid.className = 'flow-detail-grid'; const source = document.createElement('section'); source.className = 'flow-detail-panel'; source.append(makeText('h3', 'Bài nguồn'), makeText('p', `Đề bài\n${detail.source.topic || '—'}`), makeText('p', `Ảnh biểu đồ\n${detail.source.image || '—'}`), makeText('p', `Nội dung học viên\n${detail.source.essay || '—'}`), makeText('p', `TRCC: ${detail.source.trCcCheck ? 'Có' : 'Không'}`));
+    const results = document.createElement('section'); results.className = 'flow-detail-panel'; results.append(makeText('h3', 'Text chấm bài'));
+    for (const stage of detail.stages) { const block = document.createElement('details'); block.open = ['render', 'deliver'].includes(stage.stage_key); block.append(makeText('summary', `${stageNames[stage.stage_key]} · ${statusNames[stage.status] || stage.status}`), makeText('pre', stage.result ? JSON.stringify(stage.result, null, 2) : 'Chưa có kết quả.')); results.append(block); }
+    const log = document.createElement('section'); log.className = 'flow-detail-panel flow-detail-panel-wide'; log.append(makeText('h3', 'Nhật ký và lỗi'));
+    for (const event of history.events || []) { const line = makeText('p', `${formatTime(event.at)} · ${describeEvent(event)}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`, 'flow-meta'); const workflowId = stageWorkflowIds[event.stage_key]; if (workflowId && event.n8n_execution_id) { const link = makeText('a', 'Mở lượt chạy n8n'); link.href = `https://ducizone.ddns.net/workflow/${workflowId}/executions/${encodeURIComponent(event.n8n_execution_id)}`; link.target = '_blank'; link.rel = 'noopener noreferrer'; line.append(' · ', link); } log.append(line); }
+    grid.append(source, results, log); content.replaceChildren(makeText('h2', sourceName(detail.pair)), grid);
+  } catch (error) { content.textContent = `Chưa đọc được chi tiết: ${error.message}`; }
 }
 
-function historyDetails(pair) {
-  const details = document.createElement('details');
-  details.append(makeText('summary', 'Xem nhật ký từng bước'));
-  const content = makeText('div', '', 'flow-history');
-  details.append(content);
-  details.addEventListener('toggle', async () => {
-    if (!details.open || details.dataset.loaded) return;
-    content.textContent = 'Đang tải nhật ký…';
-    try {
-      const history = (await state.api.writingPairHistory(pair.pair_id)).data.history;
-      content.replaceChildren();
-      if (!history.events.length) content.append(makeText('p', 'Bài chưa bắt đầu xử lý.', 'muted'));
-      for (const event of history.events) {
-        const time = event.at ? new Date(event.at).toLocaleString('vi-VN') : 'Chưa rõ giờ';
-        const execution = event.n8n_execution_id ? ` · mã lượt n8n ${event.n8n_execution_id}` : '';
-        const line = makeText('p', `${time} · ${describeHistoryEvent(event)}${execution}`, 'flow-meta');
-        const workflowId = stageWorkflowIds[event.stage_key];
-        if (workflowId && event.n8n_execution_id) {
-          const link = makeText('a', 'Mở lượt chạy');
-          link.href = `https://ducizone.ddns.net/workflow/${workflowId}/executions/${encodeURIComponent(event.n8n_execution_id)}`;
-          link.target = '_blank'; link.rel = 'noopener noreferrer';
-          line.append(' · ', link);
-        }
-        content.append(line);
-      }
-      details.dataset.loaded = 'true';
-    } catch (error) {
-      content.textContent = `Chưa đọc được nhật ký: ${error.message}`;
-    }
-  });
-  return details;
-}
+async function retryReview(review, button) { if (!confirm(`Chạy lại từ bước “${stageNames[review.stage_key] || review.stage_key}”?`)) return; button.disabled = true; try { await state.api.retryWritingReview(review.review_id, createRequestId()); await refreshData(); } catch (error) { showError('flow-error', `Chưa gửi được yêu cầu: ${error.message}`); button.disabled = false; } }
+function renderReviews() { const root = $('flow-reviews'); root.replaceChildren(); if (!state.reviews.length) return root.append(makeText('p', 'Không có bài cần kiểm tra.', 'muted')); for (const review of state.reviews) { const row = document.createElement('article'); row.className = 'flow-row'; const body = document.createElement('div'); body.append(makeText('strong', `${stageNames[review.stage_key]} · đã thử ${review.attempt_count}/3`), makeText('p', `Lớp ${review.class_code} · bài ${review.essay_slot} · lỗi ${review.error_code}`, 'flow-meta')); const button = actionButton('Chạy lại từ bước này', () => void retryReview(review, button), 'primary'); row.append(body, button); root.append(row); } }
+async function retrySourceIssue(issue, button) { if (!confirm('Đọc lại nguồn này? Thao tác không sửa Lark Base.')) return; button.disabled = true; try { await state.api.retryWritingSourceIssue(issue.issue_key, createRequestId()); await refreshData(); } catch (error) { showError('flow-error', `Chưa đọc lại được nguồn: ${error.message}`); button.disabled = false; } }
+function renderIssues() { const labels = { FILE_TYPE_UNSUPPORTED: 'Sai loại file', FETCH_FAILED: 'Không mở được tài liệu', PARSER_FAILED: 'Không đọc được tài liệu', TOPIC_NOT_IN_REGISTRY: 'Đề không có trong kho đề', ESSAY_ANCHOR_MISSING: 'Thiếu ô “HV Viết bài”', ESSAY_CELL_MISSING: 'Thiếu ô bài làm', TEACHER_COMMENT_ANCHOR_MISSING: 'Thiếu ô “Comment của GV”', RESULT_CELL_AMBIGUOUS: 'Không xác định được ô ghi kết quả', TABLE_STRUCTURE_INVALID: 'Sai format bảng', NO_ESSAY: 'Chưa có bài làm', NOT_WRITING_DOCUMENT: 'Không phải tài liệu Writing' }; const root = $('flow-source-issues'); root.replaceChildren(); if (!state.issues.length) return root.append(makeText('p', 'Không có lỗi nguồn.', 'muted')); for (const issue of state.issues) { const row = document.createElement('article'); row.className = 'flow-row'; const body = document.createElement('div'); body.append(makeText('strong', labels[issue.reason_code] || issue.reason_code), makeText('p', `${sourceName(issue)} · lớp ${issue.class_code || '—'} · bài ${issue.essay_slot || '—'}`, 'flow-meta')); const button = actionButton('Đọc lại nguồn', () => void retrySourceIssue(issue, button)); row.append(body, button); root.append(row); } }
+function renderFailures() { const root = $('flow-technical-errors'); root.replaceChildren(); if (!state.failures.length) return root.append(makeText('p', 'Chưa có lỗi kỹ thuật gần đây.', 'muted')); for (const failure of state.failures) { const row = document.createElement('article'); row.className = 'flow-row'; const body = document.createElement('div'); body.append(makeText('strong', `${failure.workflow_name} · ${failure.last_node}`), makeText('p', `${formatTime(failure.last_seen_at)} · ${failure.error_kind}`, 'flow-meta')); const link = makeText('a', 'Mở trên n8n'); link.href = `https://ducizone.ddns.net/workflow/${encodeURIComponent(failure.workflow_id)}`; link.target = '_blank'; body.append(link); row.append(body); root.append(row); } }
+function renderLegacy() { const root = $('flow-legacy'); root.replaceChildren(); if (!state.legacy.length) return root.append(makeText('p', 'Chưa nhập lịch sử cũ trong phạm vi này.', 'muted')); for (const item of state.legacy) { const row = document.createElement('article'); row.className = 'flow-row'; row.append(makeText('div', `${item.student_name || 'Chưa có tên'} · ${item.class_code || '—'} · bài ${item.essay_slot || '—'} · ${item.source_status || '—'} · ${formatTime(item.created_at_source)}`)); root.append(row); } }
 
-function rowMatchesTeacher(row, selectedTeacher) {
-  return !selectedTeacher || (Array.isArray(row.teacher_names)
-    && row.teacher_names.includes(selectedTeacher));
-}
+function setViewVisibility() { const view = state.activeView; const visible = view === 'overview' ? ['flow-coverage-section', 'flow-summary-section', 'flow-reviews-section', 'flow-source-section', 'flow-technical-section', 'flow-pairs-section'] : view === 'review' ? ['flow-reviews-section'] : view === 'source' ? ['flow-source-section', 'flow-technical-section'] : view === 'legacy' ? ['flow-legacy-section'] : ['flow-pairs-section']; for (const id of ['flow-coverage-section', 'flow-summary-section', 'flow-reviews-section', 'flow-source-section', 'flow-technical-section', 'flow-pairs-section', 'flow-legacy-section']) $(id).hidden = !visible.includes(id); for (const button of document.querySelectorAll('#flow-views [data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === view)); $('flow-pairs-title').textContent = stages.includes(view) ? `Bài ở bước ${stageNames[view]}` : view === 'skipped' ? 'Các bài đã bỏ qua' : view === 'delivered' ? 'Các bài đã giao' : 'Các bài gần đây'; }
+function renderAll() { renderSummary(); renderCounts(); renderCoverage(); renderPairs(); renderReviews(); renderIssues(); renderFailures(); renderLegacy(); setViewVisibility(); }
+async function loadPairs(reset = true) { const cursor = reset ? {} : (state.nextCursor || {}); const response = await state.api.writingPairsPage(filters({ ...viewFilters(), ...cursor })); const rows = response.data.pairs || []; state.pairs = reset ? rows : [...state.pairs, ...rows]; state.nextCursor = response.data.nextCursor || null; }
 
-function renderSummary(summary, selectedClass, selectedTeacher) {
-  const root = $('flow-summary');
-  root.replaceChildren();
-  const counts = new Map();
-  for (const row of summary) {
-    if (selectedClass && row.class_code !== selectedClass) continue;
-    if (!rowMatchesTeacher(row, selectedTeacher)) continue;
-    counts.set(row.status, (counts.get(row.status) || 0) + Number(row.pair_count || 0));
-  }
-  for (const status of ['received', 'running', 'needs_review', 'delivered', 'superseded']) {
-    const card = document.createElement('article');
-    card.dataset.status = status;
-    card.append(makeText('strong', counts.get(status) || 0), makeText('span', statusNames[status]));
-    root.append(card);
-  }
+async function refreshData() {
+  clearTimeout(state.timer); if (!state.token || !state.api) return; const generation = state.loginGeneration;
+  try { const classCode = $('flow-class').value; const teacherName = $('flow-teacher').value; const [summary, counts, coverage, reviews, issues, failures, legacy] = await Promise.all([state.api.writingSummary(), state.api.writingCounts(classCode, teacherName), state.api.writingClassCoverage(), state.api.writingReviews(0, 200), state.api.writingSourceIssues(0, 200), state.api.writingWorkflowFailures(0, 100), state.api.writingLegacy(classCode, 0, 50)]); if (generation !== state.loginGeneration) return;
+    state.summary = summary.data.summary || []; state.counts = counts.data.counts || null; state.coverage = coverage.data.classes || []; state.reviews = (reviews.data.reviews || []).filter(row => (!classCode || row.class_code === classCode) && rowMatchesTeacher(row, teacherName)); state.issues = (issues.data.issues || []).filter(row => !classCode || row.class_code === classCode); state.failures = failures.data.failures || []; state.legacy = legacy.data.records || [];
+    populateFilters([...state.summary, ...state.coverage, ...state.reviews, ...state.issues]); if (!['review', 'source', 'legacy'].includes(state.activeView)) await loadPairs(true); else state.pairs = []; renderAll(); $('flow-login').hidden = true; $('flow-dashboard').hidden = false; state.sessionStore?.save(state.token); $('flow-updated').textContent = `Đã cập nhật ${new Date().toLocaleTimeString('vi-VN')}`; showError('flow-login-error'); showError('flow-error');
+  } catch (error) { const failure = teacherAuthFailure(error.status); if (failure) { clearLogin(); showError('flow-login-error', failure.message); globalThis.google?.accounts?.id?.disableAutoSelect?.(); return; } showError($('flow-dashboard').hidden ? 'flow-login-error' : 'flow-error', `Chưa tải được trạng thái: ${error.message}`); }
+  state.timer = setTimeout(refreshData, 30_000);
 }
-
-function renderClassCoverage(classes, selectedClass, selectedTeacher, classTeachers) {
-  const root = $('flow-class-coverage');
-  root.replaceChildren();
-  const visible = classes.filter(row => (!selectedClass || row.class_code === selectedClass)
-    && (!selectedTeacher || classTeachers.get(row.class_code)?.has(selectedTeacher)));
-  if (!visible.length) return root.append(makeText('p',
-    'Chưa có dữ liệu đối chiếu lớp trong phạm vi đã chọn.', 'muted'));
-  for (const item of visible) {
-    const row = document.createElement('article');
-    row.className = 'flow-row flow-coverage-row';
-    row.dataset.status = item.status;
-    const body = document.createElement('div');
-    body.append(makeText('strong', `${item.class_code || item.class_name || 'Chưa rõ lớp'} · ${coverageStatusLabels[item.status] || item.status}`),
-      makeText('p', coverageDescription(item), 'flow-meta'));
-    row.append(body); root.append(row);
-  }
-}
-
-function renderPairs(pairs) {
-  const root = $('flow-pairs');
-  root.replaceChildren();
-  if (!pairs.length) return root.append(makeText('p', 'Chưa có bài nào trong phạm vi đã chọn.', 'muted'));
-  for (const classGroup of groupWritingPairs(pairs)) {
-    const classSection = document.createElement('section');
-    classSection.className = 'flow-class-group';
-    classSection.append(makeText('h3', `Lớp ${classGroup.classCode}`));
-    for (const [homeworkIndex, homework] of classGroup.homeworks.entries()) {
-      const homeworkSection = document.createElement('section');
-      homeworkSection.className = 'flow-homework-group';
-      homeworkSection.append(makeText('h4', `Homework ${homeworkIndex + 1} · ${homework.files.length} file`),
-        makeText('p', `Mã hồ sơ: ${homework.recordId}`, 'flow-meta'));
-      for (const file of homework.files) {
-        const fileSection = document.createElement('div');
-        fileSection.className = 'flow-file-group';
-        const title = makeText('strong', `Link ${file.linkIndex ?? 'chưa rõ'} · ${file.pairs.length} bài`);
-        fileSection.append(title);
-        if (file.docId) {
-          const link = makeText('a', 'Mở file homework');
-          link.href = `https://drive.google.com/open?id=${encodeURIComponent(file.docId)}`;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          fileSection.append(link);
-        }
-        for (const pair of file.pairs) {
-          const row = document.createElement('article'); row.className = 'flow-row';
-          const body = document.createElement('div');
-          const stage = pair.stage_key ? ` · ${stageNames[pair.stage_key] || pair.stage_key}` : '';
-          const task = pair.task_type === 'task_1' ? 'Task 1'
-            : pair.task_type === 'task_2' ? 'Task 2' : 'Chưa rõ Task';
-          body.append(makeText('strong', `Bài số ${pair.essay_slot} · ${task}`),
-            makeText('p', `${statusNames[pair.status] || pair.status}${stage}`, 'flow-meta'),
-            historyDetails(pair));
-          row.append(body); fileSection.append(row);
-        }
-        homeworkSection.append(fileSection);
-      }
-      classSection.append(homeworkSection);
-    }
-    root.append(classSection);
-  }
-}
-
-async function retryReview(review, button) {
-  if (!confirm(`Bạn đã kiểm tra lỗi ở bước “${stageNames[review.stage_key] || review.stage_key}” và muốn chạy lại đúng bài này?`)) return;
-  const requestId = state.pendingRequestIds.get(review.review_id) || createRequestId();
-  state.pendingRequestIds.set(review.review_id, requestId);
-  button.disabled = true;
-  showError('flow-error');
-  try {
-    await state.api.retryWritingReview(review.review_id, requestId);
-    state.pendingRequestIds.delete(review.review_id);
-    await refresh();
-  } catch (error) {
-    showError('flow-error', `Chưa xác nhận được yêu cầu chạy lại: ${error.message}. Hãy tải lại trạng thái trước khi bấm tiếp.`);
-    button.disabled = false;
-  }
-}
-
-function renderReviews(reviews) {
-  const root = $('flow-reviews'); root.replaceChildren();
-  if (!reviews.length) return root.append(makeText('p', 'Không có bài nào cần kiểm tra.', 'muted'));
-  for (const review of reviews) {
-    const row = document.createElement('article'); row.className = 'flow-row';
-    const body = document.createElement('div');
-    body.append(makeText('strong', `${stageNames[review.stage_key] || review.stage_key} · ${review.status === 'open' ? 'Cần kiểm tra' : 'Đã yêu cầu chạy lại'}`),
-      makeText('p', metadata(review), 'flow-meta'),
-      makeText('p', `Đã thử ${review.attempt_count}/3 lần · Lỗi gần nhất: ${review.error_code}`, 'flow-meta'));
-    row.append(body);
-    if (review.status === 'open') {
-      const button = makeText('button', 'Chạy lại từ bước này');
-      button.type = 'button'; button.className = 'primary';
-      button.addEventListener('click', () => void retryReview(review, button));
-      row.append(button);
-    }
-    root.append(row);
-  }
-}
-
-async function retrySourceIssue(issue, button) {
-  if (!confirm('Bạn đã sửa quyền, link hoặc định dạng của tài liệu này và muốn hệ thống đọc lại? Thao tác này không sửa Lark Base.')) return;
-  const requestKey = `source:${issue.issue_key}`;
-  const requestId = state.pendingRequestIds.get(requestKey) || createRequestId();
-  state.pendingRequestIds.set(requestKey, requestId);
-  button.disabled = true;
-  showError('flow-error');
-  try {
-    await state.api.retryWritingSourceIssue(issue.issue_key, requestId);
-    state.pendingRequestIds.delete(requestKey);
-    state.pendingSourceIssueKeys.add(issue.issue_key);
-    await refresh();
-    setTimeout(() => {
-      state.pendingSourceIssueKeys.delete(issue.issue_key);
-      void refresh();
-    }, 180_000);
-  } catch (error) {
-    showError('flow-error', `Chưa tạo được lượt đọc lại: ${error.message}. Hãy tải lại trạng thái trước khi bấm tiếp.`);
-    button.disabled = false;
-  }
-}
-
-function renderSourceIssues(issues) {
-  const root = $('flow-source-issues'); root.replaceChildren();
-  if (!issues.length) return root.append(makeText('p', 'Không có bài hoặc tài liệu cần kiểm tra.', 'muted'));
-  const reasonLabels = {
-    FILE_TYPE_UNSUPPORTED: 'File không phải Google Docs hoặc DOCX',
-    FETCH_FAILED: 'Không mở được tài liệu',
-    PARSER_FAILED: 'Không đọc được nội dung bài',
-    MIME_UNVERIFIED: 'Chưa xác minh loại file',
-    SOURCE_METADATA_MISSING: 'Thiếu thông tin file',
-    SOURCE_LINK_INVALID: 'Link tài liệu không hợp lệ',
-    CLASS_MISSING: 'Thiếu mã lớp',
-    TITLE_WRITING: 'Tiêu đề cho biết đây không phải bài cần chấm',
-    VIETNAMESE_WRITING: 'Bài viết bằng tiếng Việt',
-    INTAKE_TOPIC_MISSING: 'Ô bài có bài làm nhưng thiếu đề',
-    INTAKE_CHART_LINK_INVALID: 'Link ảnh biểu đồ không hợp lệ',
-    INTAKE_CHART_LINK_AMBIGUOUS: 'Ô ảnh biểu đồ có nhiều link',
-    INTAKE_TASK_TYPE_MISMATCH: 'Loại đề không khớp ảnh biểu đồ',
-  };
-  for (const issue of issues) {
-    const row = document.createElement('article'); row.className = 'flow-row';
-    const body = document.createElement('div');
-    const location = `Lớp ${issue.class_code || 'chưa rõ'} · Hồ sơ ${issue.source_record_id}`
-      + (issue.homework_file_id ? ` · Tài liệu ${issue.homework_file_id}` : '')
-      + (issue.source_link_index ? ` · link ${issue.source_link_index}` : '')
-      + (issue.essay_slot ? ` · bài số ${issue.essay_slot}` : '');
-    body.append(makeText('strong', reasonLabels[issue.reason_code] || issue.reason_code),
-      makeText('p', location, 'flow-meta'));
-    row.append(body);
-    if (Number.isInteger(Number(issue.source_link_index)) && Number(issue.source_link_index) > 0) {
-      const pending = state.pendingSourceIssueKeys.has(issue.issue_key);
-      const button = makeText('button', pending ? 'Đã gửi đọc lại' : 'Đọc lại nguồn');
-      button.type = 'button'; button.className = 'secondary'; button.disabled = pending;
-      if (!pending) button.addEventListener('click', () => void retrySourceIssue(issue, button));
-      row.append(button);
-    }
-    root.append(row);
-  }
-}
-
-function renderWorkflowFailures(failures) {
-  const root = $('flow-technical-errors'); root.replaceChildren();
-  if (!failures.length) return root.append(makeText('p', 'Chưa có lỗi kỹ thuật được ghi nhận.', 'muted'));
-  for (const failure of failures) {
-    const row = document.createElement('article'); row.className = 'flow-row';
-    const time = new Date(failure.last_seen_at).toLocaleString('vi-VN');
-    const body = document.createElement('div');
-    const hasExecution = /^[0-9]{1,20}$/.test(failure.execution_id);
-    body.append(makeText('strong', `${failure.workflow_name} · ${failure.last_node}`),
-      makeText('p', `${time} · ${failure.error_kind} · ${hasExecution
-        ? `mã lượt n8n ${failure.execution_id}`
-        : `lỗi khởi động ${failure.execution_id}`}`
-        + (Number(failure.seen_count) > 1 ? ` · gửi lại ${failure.seen_count} lần` : ''), 'flow-meta'));
-    const link = makeText('a', hasExecution ? 'Mở lượt chạy trên n8n' : 'Mở workflow trên n8n');
-    link.href = `https://ducizone.ddns.net/workflow/${encodeURIComponent(failure.workflow_id)}`
-      + (hasExecution ? `/executions/${encodeURIComponent(failure.execution_id)}` : '');
-    link.target = '_blank'; link.rel = 'noopener noreferrer';
-    body.append(link);
-    row.append(body);
-    root.append(row);
-  }
-}
-
-function classTeacherMap(summary) {
-  const map = new Map();
-  for (const row of summary) {
-    if (!map.has(row.class_code)) map.set(row.class_code, new Set());
-    for (const teacher of row.teacher_names || []) map.get(row.class_code).add(teacher);
-  }
-  return map;
-}
-
-function populateTeachers(summary) {
-  const select = $('flow-teacher');
-  const selected = select.value;
-  const teachers = [...new Set(summary.flatMap(row => row.teacher_names || []))]
-    .sort((a, b) => a.localeCompare(b, 'vi'));
-  select.replaceChildren(new Option('Tất cả giảng viên', ''));
-  for (const teacher of teachers) select.append(new Option(teacher, teacher));
-  select.value = teachers.includes(selected) ? selected : '';
-}
-
-function populateClasses(rows, selectedTeacher, classTeachers) {
-  const select = $('flow-class');
-  const selected = select.value;
-  select.replaceChildren(new Option('Tất cả lớp', ''));
-  const codes = [...new Set(rows.map(row => row.class_code).filter(Boolean))]
-    .filter(code => !selectedTeacher || classTeachers.get(code)?.has(selectedTeacher)).sort();
-  for (const code of codes) {
-    select.append(new Option(code, code));
-  }
-  select.value = [...select.options].some(option => option.value === selected) ? selected : '';
-}
-
-async function loadAllReviews() {
-  const reviews = [];
-  for (let offset = 0; offset <= 100000; offset += 200) {
-    const page = (await state.api.writingReviews(offset, 200)).data.reviews || [];
-    reviews.push(...page);
-    if (page.length < 200) return reviews;
-  }
-  throw new Error('Danh sách cần kiểm tra quá dài để tải đầy đủ.');
-}
-
-async function loadAllSourceIssues() {
-  const issues = [];
-  for (let offset = 0; offset <= 100000; offset += 200) {
-    const page = (await state.api.writingSourceIssues(offset, 200)).data.issues || [];
-    issues.push(...page);
-    if (page.length < 200) return issues;
-  }
-  throw new Error('Danh sách tài liệu lỗi quá dài để tải đầy đủ.');
-}
-
-async function loadPairs(classCode, teacherName, count) {
-  const pairs = [];
-  while (pairs.length < count) {
-    const size = Math.min(200, count - pairs.length);
-    const page = (await state.api.writingPairs(classCode, teacherName,
-      pairs.length, size)).data.pairs || [];
-    pairs.push(...page);
-    if (page.length < size) break;
-  }
-  return pairs;
-}
-
-async function loadWorkflowFailures(count) {
-  const failures = [];
-  while (failures.length < count) {
-    const size = Math.min(200, count - failures.length);
-    const page = (await state.api.writingWorkflowFailures(failures.length, size)).data.failures || [];
-    failures.push(...page);
-    if (page.length < size) break;
-  }
-  return failures;
-}
-
-function scopedSummaryCount(summary, selectedClass, selectedTeacher, statuses = null) {
-  return summary.filter(row => (!selectedClass || row.class_code === selectedClass)
-      && rowMatchesTeacher(row, selectedTeacher)
-      && (!statuses || statuses.has(row.status)))
-    .reduce((total, row) => total + Number(row.pair_count || 0), 0);
-}
-
-function updateViewCounts(data) {
-  const { summary, selectedClass, selectedTeacher, reviews, sourceIssues } = data;
-  const values = {
-    overview: scopedSummaryCount(summary, selectedClass, selectedTeacher),
-    running: scopedSummaryCount(summary, selectedClass, selectedTeacher,
-      viewPairStatuses.running),
-    unfinished: scopedSummaryCount(summary, selectedClass, selectedTeacher,
-      viewPairStatuses.unfinished),
-    review: reviews.length,
-    source: sourceIssues.length,
-    delivered: scopedSummaryCount(summary, selectedClass, selectedTeacher,
-      viewPairStatuses.delivered),
-  };
-  for (const [view, count] of Object.entries(values)) {
-    const node = document.querySelector(`[data-count="${view}"]`);
-    if (node) node.textContent = String(count);
-  }
-}
-
-function setSectionVisibility(activeView) {
-  const visible = {
-    overview: ['flow-coverage-section', 'flow-summary-section', 'flow-reviews-section',
-      'flow-source-section', 'flow-technical-section', 'flow-pairs-section'],
-    running: ['flow-summary-section', 'flow-pairs-section'],
-    unfinished: ['flow-summary-section', 'flow-reviews-section', 'flow-pairs-section'],
-    review: ['flow-reviews-section'],
-    source: ['flow-source-section', 'flow-technical-section'],
-    delivered: ['flow-summary-section', 'flow-pairs-section'],
-  }[activeView] || [];
-  for (const id of ['flow-coverage-section', 'flow-summary-section', 'flow-reviews-section',
-    'flow-source-section', 'flow-technical-section', 'flow-pairs-section']) {
-    $(id).hidden = !visible.includes(id);
-  }
-  for (const button of document.querySelectorAll('#flow-views [data-view]')) {
-    button.setAttribute('aria-pressed', String(button.dataset.view === activeView));
-  }
-}
-
-function renderCurrentView() {
-  if (!state.data) return;
-  const data = state.data;
-  const statuses = viewPairStatuses[state.activeView];
-  const pairs = statuses ? data.pairs.filter(pair => statuses.has(pair.status)) : data.pairs;
-  renderClassCoverage(data.classCoverage, data.selectedClass, data.selectedTeacher,
-    data.classTeachers);
-  renderSummary(data.summary, data.selectedClass, data.selectedTeacher);
-  renderPairs(pairs);
-  renderReviews(data.reviews);
-  renderSourceIssues(data.sourceIssues);
-  renderWorkflowFailures(data.failures);
-  updateViewCounts(data);
-  setSectionVisibility(state.activeView);
-
-  const titles = {
-    overview: 'Các bài gần đây', running: 'Bài đang chờ hoặc đang chấm',
-    unfinished: 'Tất cả bài chưa hoàn thành', delivered: 'Bài đã ghi link vào homework',
-  };
-  $('flow-pairs-title').textContent = titles[state.activeView] || 'Các bài trong view';
-  const visibleTotal = scopedSummaryCount(data.summary, data.selectedClass,
-    data.selectedTeacher, statuses);
-  $('flow-more').hidden = !['overview', 'running', 'unfinished', 'delivered']
-    .includes(state.activeView) || pairs.length >= visibleTotal;
-}
-
-async function refresh() {
-  clearTimeout(state.timer);
-  if (!state.token || !state.api) return;
-  const generation = state.loginGeneration;
-  try {
-    const [summaryResult, coverageResult, allReviews, allSourceIssues, failureResult] = await Promise.all([
-      state.api.writingSummary(), state.api.writingClassCoverage(),
-      loadAllReviews(), loadAllSourceIssues(),
-      loadWorkflowFailures(state.failureLimit)
-        .then(rows => ({ rows })).catch(error => ({ error })),
-    ]);
-    const summary = summaryResult.data.summary || [];
-    const classCoverage = coverageResult.data.classes || [];
-    populateTeachers(summary);
-    const selectedTeacher = $('flow-teacher').value;
-    const classTeachers = classTeacherMap(summary);
-    populateClasses([...summary, ...classCoverage, ...allReviews, ...allSourceIssues],
-      selectedTeacher, classTeachers);
-    const selectedClass = $('flow-class').value;
-    const allPairs = await loadPairs(selectedClass, selectedTeacher, state.pairLimit);
-    if (generation !== state.loginGeneration) return;
-    const reviews = allReviews.filter(review => (!selectedClass || review.class_code === selectedClass)
-      && rowMatchesTeacher(review, selectedTeacher));
-    const sourceIssues = allSourceIssues.filter(issue => (!selectedClass
-        || issue.class_code === selectedClass)
-      && (!selectedTeacher || classTeachers.get(issue.class_code)?.has(selectedTeacher)));
-    state.data = { summary, classCoverage, pairs: allPairs, reviews, sourceIssues,
-      failures: failureResult.rows || [], selectedClass, selectedTeacher, classTeachers };
-    renderCurrentView();
-    if (failureResult.error) {
-      $('flow-technical-errors').replaceChildren(makeText('p',
-        'Chưa tải được lỗi kỹ thuật; các trạng thái bài ở trên vẫn là dữ liệu mới.', 'muted'));
-      $('flow-technical-more').hidden = true;
-    } else {
-      $('flow-technical-more').hidden = failureResult.rows.length < state.failureLimit;
-    }
-    $('flow-login').hidden = true;
-    $('flow-dashboard').hidden = false;
-    state.sessionStore?.save(state.token);
-    $('flow-updated').textContent = `Đã cập nhật ${new Date().toLocaleTimeString('vi-VN')}`;
-    showError('flow-login-error'); showError('flow-error');
-  } catch (error) {
-    const failure = teacherAuthFailure(error.status);
-    if (failure) {
-      clearLogin();
-      $('flow-updated').textContent = failure.header;
-      showError('flow-login-error', failure.message);
-      globalThis.google?.accounts?.id?.disableAutoSelect?.();
-      return;
-    }
-    showError($('flow-dashboard').hidden ? 'flow-login-error' : 'flow-error',
-      'Chưa thể đọc trạng thái chấm. Hệ thống sẽ thử cập nhật lại.');
-  }
-  state.timer = setTimeout(refresh, 30_000);
-}
-
-function handleCredential(response) {
-  if (!response?.credential) return showError('flow-login-error', 'Không nhận được thông tin đăng nhập.');
-  state.loginGeneration += 1;
-  state.token = response.credential;
-  $('flow-updated').textContent = 'Đang xác minh quyền…';
-  void refresh();
-}
-
-async function waitForGoogle(clientId) {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const accounts = globalThis.google?.accounts?.id;
-    if (accounts) {
-      accounts.initialize({ client_id: clientId, callback: handleCredential,
-        auto_select: loginPreference.read() });
-      accounts.renderButton($('google-signin'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'vi' });
-      return;
-    }
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  throw new Error('Không tải được dịch vụ đăng nhập Google.');
-}
-
-async function init() {
-  try {
-    const response = await fetch('./writing-flow-config.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error('Thiếu cấu hình trang chấm bài.');
-    const config = await response.json();
-    if (!config.googleClientId) throw new Error('Trang chưa được cấu hình đăng nhập.');
-    state.sessionStore = createTeacherSessionStore({
-      apiBase: config.apiBase || '',
-      clientId: config.googleClientId,
-      getStorage: () => window.sessionStorage,
-    });
-    state.api = createTeacherApi(config.apiBase || '', () => state.token);
-    $('flow-class').addEventListener('change', () => { state.pairLimit = 100; void refresh(); });
-    $('flow-teacher').addEventListener('change', () => { state.pairLimit = 100; void refresh(); });
-    for (const button of document.querySelectorAll('#flow-views [data-view]')) {
-      button.addEventListener('click', () => {
-        state.activeView = button.dataset.view;
-        renderCurrentView();
-      });
-    }
-    $('flow-more').addEventListener('click', () => { state.pairLimit += 100; void refresh(); });
-    $('flow-technical-more').addEventListener('click', () => { state.failureLimit += 100; void refresh(); });
-    await waitForGoogle(config.googleClientId);
-    const rememberedToken = state.sessionStore.read();
-    if (rememberedToken) handleCredential({ credential: rememberedToken });
-    else if (loginPreference.read()) globalThis.google.accounts.id.prompt();
-  } catch (error) { showError('flow-login-error', error.message); }
-}
-
-function clearLogin() {
-  state.loginGeneration += 1;
-  state.token = '';
-  state.data = null;
-  state.sessionStore?.clear();
-  clearTimeout(state.timer);
-  $('flow-dashboard').hidden = true;
-  $('flow-login').hidden = false;
-}
+async function submitManual(event) { event.preventDefault(); const button = event.submitter; button.disabled = true; try { await state.api.addWritingManualSource($('flow-manual-name').value.trim(), $('flow-manual-url').value.trim(), createRequestId()); event.currentTarget.reset(); showError('flow-error', 'Đã thêm file. Hệ thống sẽ đọc, tách từng bài và chuyển qua 7 giai đoạn.'); await refreshData(); } catch (error) { showError('flow-error', `Chưa thêm được file: ${error.message}`); } finally { button.disabled = false; } }
+function handleCredential(response) { if (!response?.credential) return showError('flow-login-error', 'Không nhận được thông tin đăng nhập.'); state.loginGeneration += 1; state.token = response.credential; void refreshData(); }
+async function waitForGoogle(clientId) { for (let attempt = 0; attempt < 100; attempt += 1) { const accounts = globalThis.google?.accounts?.id; if (accounts) { accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: loginPreference.read() }); accounts.renderButton($('google-signin'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'vi' }); return; } await new Promise(resolve => setTimeout(resolve, 100)); } throw new Error('Không tải được dịch vụ đăng nhập Google.'); }
+function clearLogin() { state.loginGeneration += 1; state.token = ''; clearTimeout(state.timer); state.sessionStore?.clear(); $('flow-dashboard').hidden = true; $('flow-login').hidden = false; }
+async function init() { try { const response = await fetch('./writing-flow-config.json', { cache: 'no-store' }); if (!response.ok) throw new Error('Thiếu cấu hình trang chấm bài.'); const config = await response.json(); state.sessionStore = createTeacherSessionStore({ apiBase: config.apiBase || '', clientId: config.googleClientId, getStorage: () => window.sessionStorage }); state.api = createTeacherApi(config.apiBase || '', () => state.token); $('flow-manual-form').addEventListener('submit', event => void submitManual(event)); $('flow-detail-close').addEventListener('click', () => $('flow-detail').close()); for (const id of ['flow-class', 'flow-teacher']) $(id).addEventListener('change', () => void refreshData()); for (const button of document.querySelectorAll('#flow-views [data-view]')) button.addEventListener('click', () => { state.activeView = button.dataset.view; void refreshData(); }); $('flow-more').addEventListener('click', async () => { if (!state.nextCursor || state.loadingMore) return; state.loadingMore = true; try { await loadPairs(false); renderPairs(); } finally { state.loadingMore = false; } }); await waitForGoogle(config.googleClientId); const token = state.sessionStore.read(); if (token) handleCredential({ credential: token }); else if (loginPreference.read()) globalThis.google.accounts.id.prompt(); } catch (error) { showError('flow-login-error', error.message); } }
 
 $('remember-flow-login').checked = loginPreference.read();
-$('remember-flow-login').addEventListener('change', () => {
-  const input = $('remember-flow-login');
-  if (loginPreference.set(input.checked)) return;
-  input.checked = loginPreference.read();
-  showError('flow-login-error', 'Trình duyệt chưa lưu được lựa chọn tự đăng nhập.');
-});
-
-$('flow-logout').addEventListener('click', () => {
-  clearLogin();
-  globalThis.google?.accounts?.id?.disableAutoSelect?.();
-  const forgotten = loginPreference.set(false);
-  $('remember-flow-login').checked = !forgotten;
-  $('flow-updated').textContent = 'Chưa đăng nhập';
-  showError('flow-login-error', forgotten ? 'Đã đăng xuất.'
-    : 'Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.');
-});
-
+$('remember-flow-login').addEventListener('change', () => { const input = $('remember-flow-login'); if (!loginPreference.set(input.checked)) input.checked = loginPreference.read(); });
+$('flow-logout').addEventListener('click', () => { clearLogin(); globalThis.google?.accounts?.id?.disableAutoSelect?.(); loginPreference.set(false); $('remember-flow-login').checked = false; });
 void init();
