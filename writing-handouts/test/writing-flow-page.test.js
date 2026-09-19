@@ -33,4 +33,11 @@ test('dashboard có các view quen thuộc, lọc lớp và giảng viên, cùng
   assert.match(html, /data-view="source"/u);
   assert.match(html, /id="flow-teacher"/u);
   assert.match(script, /teacher_names/u);
+  assert.match(html, /id="remember-flow-login"/u);
+  assert.match(html, /id="flow-logout"/u);
+  assert.match(script, /createTeacherSessionStore/u);
+  assert.match(script, /window\.sessionStorage/u);
+  assert.match(script, /createTeacherLoginPreference/u);
+  assert.match(script, /auto_select: loginPreference\.read\(\)/u);
+  assert.match(script, /globalThis\.google\.accounts\.id\.prompt\(\)/u);
 });

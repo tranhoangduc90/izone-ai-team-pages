@@ -17,6 +17,7 @@
         <h1 id="flow-login-title">Theo dõi từng bài chấm</h1>
         <p>Đăng nhập để xem trạng thái và các bài cần kiểm tra.</p>
         <div id="google-signin"></div>
+        <label class="teacher-login-remember"><input id="remember-flow-login" type="checkbox" /> Tự đăng nhập Google trên thiết bị này</label>
         <p id="flow-login-error" class="form-error" role="alert" hidden></p>
       </section>
       <section id="flow-dashboard" hidden>
@@ -25,6 +26,7 @@
           <div class="flow-filters">
             <label>Giảng viên <select id="flow-teacher"><option value="">Tất cả giảng viên</option></select></label>
             <label>Lớp <select id="flow-class"><option value="">Tất cả lớp</option></select></label>
+            <button id="flow-logout" class="secondary" type="button">Đăng xuất</button>
           </div>
         </div>
         <p id="flow-error" class="notice" role="alert" hidden></p>

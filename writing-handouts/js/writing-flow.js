@@ -3,15 +3,18 @@ import { createRequestId } from './core.js';
 import { teacherAuthFailure } from './teacher-auth-ui.js';
 import { groupWritingPairs } from './writing-flow-groups.js';
 import { coverageDescription, coverageStatusLabels } from './writing-flow-coverage.js';
+import { createTeacherSessionStore } from './library-core.js?v=20260912-sw-library-v1';
+import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 
 // Nhận vào: trạng thái từng cặp từ API quản trị đã kiểm quyền.
 // Việc chính: hiện bước đang chạy và danh sách cần kiểm tra, chỉ gửi yêu cầu retry sau khi người vận hành xác nhận.
 // Trả ra: màn hình cập nhật từ database; không hiển thị bài làm hay điểm chi tiết.
 // Khi lỗi: giữ dữ liệu cũ trên màn hình và báo rõ; không coi cú bấm là đã chấm xong.
 const $ = id => document.getElementById(id);
+const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = { token: '', api: null, timer: null, pendingRequestIds: new Map(),
   pendingSourceIssueKeys: new Set(), pairLimit: 100, failureLimit: 100,
-  activeView: 'overview', data: null };
+  activeView: 'overview', data: null, sessionStore: null, loginGeneration: 0 };
 const stageNames = {
   intake: 'Tiếp nhận', precheck: 'Kiểm trước khi chấm', main: 'Chấm chính',
   critic: 'Phản biện', arbiter: 'Phân xử', render: 'Xuất kết quả', deliver: 'Ghi link vào homework',
@@ -446,6 +449,7 @@ function renderCurrentView() {
 async function refresh() {
   clearTimeout(state.timer);
   if (!state.token || !state.api) return;
+  const generation = state.loginGeneration;
   try {
     const [summaryResult, coverageResult, allReviews, allSourceIssues, failureResult] = await Promise.all([
       state.api.writingSummary(), state.api.writingClassCoverage(),
@@ -462,6 +466,7 @@ async function refresh() {
       selectedTeacher, classTeachers);
     const selectedClass = $('flow-class').value;
     const allPairs = await loadPairs(selectedClass, selectedTeacher, state.pairLimit);
+    if (generation !== state.loginGeneration) return;
     const reviews = allReviews.filter(review => (!selectedClass || review.class_code === selectedClass)
       && rowMatchesTeacher(review, selectedTeacher));
     const sourceIssues = allSourceIssues.filter(issue => (!selectedClass
@@ -479,14 +484,13 @@ async function refresh() {
     }
     $('flow-login').hidden = true;
     $('flow-dashboard').hidden = false;
+    state.sessionStore?.save(state.token);
     $('flow-updated').textContent = `Đã cập nhật ${new Date().toLocaleTimeString('vi-VN')}`;
     showError('flow-login-error'); showError('flow-error');
   } catch (error) {
     const failure = teacherAuthFailure(error.status);
     if (failure) {
-      state.token = '';
-      $('flow-dashboard').hidden = true;
-      $('flow-login').hidden = false;
+      clearLogin();
       $('flow-updated').textContent = failure.header;
       showError('flow-login-error', failure.message);
       globalThis.google?.accounts?.id?.disableAutoSelect?.();
@@ -500,6 +504,7 @@ async function refresh() {
 
 function handleCredential(response) {
   if (!response?.credential) return showError('flow-login-error', 'Không nhận được thông tin đăng nhập.');
+  state.loginGeneration += 1;
   state.token = response.credential;
   $('flow-updated').textContent = 'Đang xác minh quyền…';
   void refresh();
@@ -509,7 +514,8 @@ async function waitForGoogle(clientId) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const accounts = globalThis.google?.accounts?.id;
     if (accounts) {
-      accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: false });
+      accounts.initialize({ client_id: clientId, callback: handleCredential,
+        auto_select: loginPreference.read() });
       accounts.renderButton($('google-signin'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'vi' });
       return;
     }
@@ -524,6 +530,11 @@ async function init() {
     if (!response.ok) throw new Error('Thiếu cấu hình trang chấm bài.');
     const config = await response.json();
     if (!config.googleClientId) throw new Error('Trang chưa được cấu hình đăng nhập.');
+    state.sessionStore = createTeacherSessionStore({
+      apiBase: config.apiBase || '',
+      clientId: config.googleClientId,
+      getStorage: () => window.sessionStorage,
+    });
     state.api = createTeacherApi(config.apiBase || '', () => state.token);
     $('flow-class').addEventListener('change', () => { state.pairLimit = 100; void refresh(); });
     $('flow-teacher').addEventListener('change', () => { state.pairLimit = 100; void refresh(); });
@@ -536,7 +547,38 @@ async function init() {
     $('flow-more').addEventListener('click', () => { state.pairLimit += 100; void refresh(); });
     $('flow-technical-more').addEventListener('click', () => { state.failureLimit += 100; void refresh(); });
     await waitForGoogle(config.googleClientId);
+    const rememberedToken = state.sessionStore.read();
+    if (rememberedToken) handleCredential({ credential: rememberedToken });
+    else if (loginPreference.read()) globalThis.google.accounts.id.prompt();
   } catch (error) { showError('flow-login-error', error.message); }
 }
+
+function clearLogin() {
+  state.loginGeneration += 1;
+  state.token = '';
+  state.data = null;
+  state.sessionStore?.clear();
+  clearTimeout(state.timer);
+  $('flow-dashboard').hidden = true;
+  $('flow-login').hidden = false;
+}
+
+$('remember-flow-login').checked = loginPreference.read();
+$('remember-flow-login').addEventListener('change', () => {
+  const input = $('remember-flow-login');
+  if (loginPreference.set(input.checked)) return;
+  input.checked = loginPreference.read();
+  showError('flow-login-error', 'Trình duyệt chưa lưu được lựa chọn tự đăng nhập.');
+});
+
+$('flow-logout').addEventListener('click', () => {
+  clearLogin();
+  globalThis.google?.accounts?.id?.disableAutoSelect?.();
+  const forgotten = loginPreference.set(false);
+  $('remember-flow-login').checked = !forgotten;
+  $('flow-updated').textContent = 'Chưa đăng nhập';
+  showError('flow-login-error', forgotten ? 'Đã đăng xuất.'
+    : 'Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.');
+});
 
 void init();
