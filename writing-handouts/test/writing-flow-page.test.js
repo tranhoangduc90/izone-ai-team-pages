@@ -22,4 +22,6 @@ test('dashboard tải đúng mã giao diện và cấu hình staging riêng', as
   assert.match(html, /\.\/js\/writing-flow\.js/u);
   assert.match(script, /\.\/writing-flow-config\.json/u);
   assert.match(script, /Chạy lại từ bước này/u);
+  assert.match(html, /Độ phủ lớp đang vận hành/u);
+  assert.match(script, /writingClassCoverage/u);
 });
