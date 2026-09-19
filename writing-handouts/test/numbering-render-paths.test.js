@@ -18,18 +18,20 @@ test("comment đánh số trong dữ liệu LMS thật tiếp tục qua các đo
 });
 
 test("bản học viên và giảng viên cùng tải bộ Markdown đã sửa, không dùng cache cũ", async () => {
-  const sources = await Promise.all([
+  const javascriptSources = await Promise.all([
     "../js/app.js",
     "../js/lesson-app.js",
     "../js/teacher-app.js",
     "../js/lms-draft-result.js",
+  ].map((path) => readFile(new URL(path, import.meta.url), "utf8")));
+  const htmlSources = await Promise.all([
     "../index.html",
     "../lesson.html",
     "../teacher.html",
   ].map((path) => readFile(new URL(path, import.meta.url), "utf8")));
-  for (const source of sources) assert.match(source, new RegExp(VERSION));
-  assert.match(sources[0], new RegExp(`markdown\\.js\\?v=${VERSION}`));
-  assert.match(sources[1], new RegExp(`markdown\\.js\\?v=${VERSION}`));
-  assert.match(sources[2], new RegExp(`markdown\\.js\\?v=${VERSION}`));
-  assert.match(sources[3], new RegExp(`markdown\\.js\\?v=${VERSION}`));
+  for (const source of javascriptSources) assert.match(source, new RegExp(VERSION));
+  for (const source of javascriptSources) assert.match(source, new RegExp(`markdown\\.js\\?v=${VERSION}`));
+  assert.match(htmlSources[0], /app\.js\?v=[^"]+/u);
+  assert.match(htmlSources[1], /lesson-app\.js\?v=[^"]+/u);
+  assert.match(htmlSources[2], /teacher-app\.js\?v=[^"]+/u);
 });

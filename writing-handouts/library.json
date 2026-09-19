@@ -127,6 +127,17 @@
       "statement": "Some people believe economic development should be the main priority for governments, while others think protecting the natural environment is more important. Discuss both views and give your own opinion.",
       "studentPath": "./lesson.html",
       "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-12",
+      "writingLesson": 12,
+      "taskNumber": 2,
+      "slug": "writing-task2-english-medium-instruction",
+      "title": "Tiếng Anh làm ngôn ngữ giảng dạy",
+      "type": "Writing Task 2 · Advantages outweigh disadvantages",
+      "statement": "In many countries, English is used as the main language of instruction in schools and universities. Do the advantages of this policy outweigh the disadvantages?",
+      "studentPath": "./lesson.html",
+      "classes": ["CS.070626", "CS.160826"]
     }
   ]
 }
