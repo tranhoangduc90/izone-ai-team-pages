@@ -22,6 +22,9 @@ test('dashboard có các view quen thuộc, lọc lớp và giảng viên, cùng
   assert.match(html, /\.\/js\/writing-flow\.js/u);
   assert.match(script, /\.\/writing-flow-config\.json/u);
   assert.match(script, /Chạy lại từ bước này/u);
+  assert.match(script, /Đọc lại nguồn/u);
+  assert.match(script, /retryWritingSourceIssue/u);
+  assert.match(script, /không sửa Lark Base/u);
   assert.match(html, /Độ phủ lớp đang vận hành/u);
   assert.match(script, /writingClassCoverage/u);
   assert.match(html, /data-view="overview"/u);

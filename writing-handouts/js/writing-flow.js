@@ -10,7 +10,8 @@ import { coverageDescription, coverageStatusLabels } from './writing-flow-covera
 // Khi lỗi: giữ dữ liệu cũ trên màn hình và báo rõ; không coi cú bấm là đã chấm xong.
 const $ = id => document.getElementById(id);
 const state = { token: '', api: null, timer: null, pendingRequestIds: new Map(),
-  pairLimit: 100, failureLimit: 100, activeView: 'overview', data: null };
+  pendingSourceIssueKeys: new Set(), pairLimit: 100, failureLimit: 100,
+  activeView: 'overview', data: null };
 const stageNames = {
   intake: 'Tiếp nhận', precheck: 'Kiểm trước khi chấm', main: 'Chấm chính',
   critic: 'Phản biện', arbiter: 'Phân xử', render: 'Xuất kết quả', deliver: 'Ghi link vào homework',
@@ -213,6 +214,28 @@ function renderReviews(reviews) {
   }
 }
 
+async function retrySourceIssue(issue, button) {
+  if (!confirm('Bạn đã sửa quyền, link hoặc định dạng của tài liệu này và muốn hệ thống đọc lại? Thao tác này không sửa Lark Base.')) return;
+  const requestKey = `source:${issue.issue_key}`;
+  const requestId = state.pendingRequestIds.get(requestKey) || createRequestId();
+  state.pendingRequestIds.set(requestKey, requestId);
+  button.disabled = true;
+  showError('flow-error');
+  try {
+    await state.api.retryWritingSourceIssue(issue.issue_key, requestId);
+    state.pendingRequestIds.delete(requestKey);
+    state.pendingSourceIssueKeys.add(issue.issue_key);
+    await refresh();
+    setTimeout(() => {
+      state.pendingSourceIssueKeys.delete(issue.issue_key);
+      void refresh();
+    }, 180_000);
+  } catch (error) {
+    showError('flow-error', `Chưa tạo được lượt đọc lại: ${error.message}. Hãy tải lại trạng thái trước khi bấm tiếp.`);
+    button.disabled = false;
+  }
+}
+
 function renderSourceIssues(issues) {
   const root = $('flow-source-issues'); root.replaceChildren();
   if (!issues.length) return root.append(makeText('p', 'Không có bài hoặc tài liệu cần kiểm tra.', 'muted'));
@@ -224,6 +247,8 @@ function renderSourceIssues(issues) {
     SOURCE_METADATA_MISSING: 'Thiếu thông tin file',
     SOURCE_LINK_INVALID: 'Link tài liệu không hợp lệ',
     CLASS_MISSING: 'Thiếu mã lớp',
+    TITLE_WRITING: 'Tiêu đề cho biết đây không phải bài cần chấm',
+    VIETNAMESE_WRITING: 'Bài viết bằng tiếng Việt',
     INTAKE_TOPIC_MISSING: 'Ô bài có bài làm nhưng thiếu đề',
     INTAKE_CHART_LINK_INVALID: 'Link ảnh biểu đồ không hợp lệ',
     INTAKE_CHART_LINK_AMBIGUOUS: 'Ô ảnh biểu đồ có nhiều link',
@@ -238,7 +263,15 @@ function renderSourceIssues(issues) {
       + (issue.essay_slot ? ` · bài số ${issue.essay_slot}` : '');
     body.append(makeText('strong', reasonLabels[issue.reason_code] || issue.reason_code),
       makeText('p', location, 'flow-meta'));
-    row.append(body); root.append(row);
+    row.append(body);
+    if (Number.isInteger(Number(issue.source_link_index)) && Number(issue.source_link_index) > 0) {
+      const pending = state.pendingSourceIssueKeys.has(issue.issue_key);
+      const button = makeText('button', pending ? 'Đã gửi đọc lại' : 'Đọc lại nguồn');
+      button.type = 'button'; button.className = 'secondary'; button.disabled = pending;
+      if (!pending) button.addEventListener('click', () => void retrySourceIssue(issue, button));
+      row.append(button);
+    }
+    root.append(row);
   }
 }
 
