@@ -44,12 +44,13 @@
             <button type="button" data-view="delivered">Đã giao <span data-count="delivered">0</span></button>
             <button type="button" data-view="legacy">Lịch sử cũ</button>
             <button type="button" data-view="logs">Nhật ký lỗi</button>
+            <button type="button" data-view="audit">Nhật ký thao tác</button>
           </nav>
         </aside>
 
         <div class="flow-main">
           <header class="flow-view-heading">
-            <div><p id="flow-view-kicker" class="eyebrow">Toàn hệ thống</p><h1 id="flow-view-title">Tổng quan vận hành</h1><p id="flow-view-help" class="muted">Các số cần chú ý và tình trạng quét lớp.</p></div>
+            <div><p id="flow-view-kicker" class="eyebrow">Toàn hệ thống</p><h1 id="flow-view-title">Tổng quan vận hành</h1><p id="flow-view-help" class="muted">Các số cần chú ý và tình trạng quét lớp.</p><div id="flow-stage-breakdown" class="flow-stage-breakdown" hidden></div></div>
             <span id="flow-view-status" class="flow-view-status">Tất cả trạng thái</span>
           </header>
 
@@ -58,7 +59,10 @@
             <label><span>Lớp</span><select id="flow-class"><option value="">Tất cả lớp đang học</option></select></label>
             <label><span>Giảng viên</span><select id="flow-teacher"><option value="">Tất cả giảng viên</option></select></label>
             <label><span>Loại bài</span><select id="flow-task-type"><option value="">Cả Task 1 và Task 2</option><option value="task_1">Task 1</option><option value="task_2">Task 2</option></select></label>
+            <label><span>Từ ngày</span><input id="flow-date-from" type="date" /></label>
+            <label><span>Đến ngày</span><input id="flow-date-to" type="date" /></label>
             <details class="flow-fields"><summary>Chọn cột</summary><fieldset id="flow-field-choices"><legend>Cột hiển thị</legend></fieldset></details>
+            <button id="flow-clear-filters" class="secondary" type="button">Xóa bộ lọc</button>
             <button id="flow-manual-open" class="secondary" type="button">Thêm file ngoài lớp</button>
             <button id="flow-refresh" class="secondary" type="button">Cập nhật</button>
             <button id="flow-logout" class="secondary" type="button">Đăng xuất</button>
@@ -74,13 +78,21 @@
           </section>
 
           <section id="flow-daily-section" class="flow-section" hidden>
-            <div class="flow-date-filters"><label>Từ ngày <input id="flow-date-from" type="date" /></label><label>Đến ngày <input id="flow-date-to" type="date" /></label></div>
             <div id="flow-daily-chart" class="flow-chart" role="img" aria-label="Số bài chấm xong theo ngày"></div>
           </section>
-          <section id="flow-classes-section" class="flow-section" hidden><div id="flow-classes" class="flow-class-cards"></div></section>
+          <section id="flow-classes-section" class="flow-section" hidden>
+            <div id="flow-classes" class="flow-class-cards"></div>
+            <section id="flow-class-workspace" class="flow-class-workspace" hidden>
+              <h2 id="flow-class-workspace-title">Tình hình lớp</h2>
+              <div id="flow-class-stage-summary" class="flow-summary"></div>
+              <h3>Số bài đã giao theo ngày</h3>
+              <div id="flow-class-daily-chart" class="flow-chart flow-chart-compact"></div>
+            </section>
+          </section>
           <section id="flow-reviews-section" class="flow-section" hidden><div id="flow-reviews" class="flow-list"></div></section>
           <section id="flow-source-section" class="flow-section" hidden><div id="flow-source-issues" class="flow-list"></div></section>
           <section id="flow-technical-section" class="flow-section" hidden><div id="flow-technical-errors" class="flow-list"></div></section>
+          <section id="flow-audit-section" class="flow-section" hidden><div id="flow-operator-events" class="flow-list"></div></section>
           <section id="flow-pairs-section" class="flow-section" hidden>
             <p class="flow-table-note">Mỗi trang tải 50 bài. Nội dung bài và Text chấm bài chỉ tải khi bạn mở chi tiết để tránh làm nặng hệ thống.</p>
             <div class="flow-table-wrap"><table class="flow-table"><thead><tr id="flow-table-head"></tr></thead><tbody id="flow-pairs"></tbody></table></div>
@@ -102,6 +114,6 @@
     </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/writing-flow.js?v=20260920-server-session-v1"></script>
+    <script type="module" src="./js/writing-flow.js?v=20260920-dashboard-audit-v2"></script>
   </body>
 </html>

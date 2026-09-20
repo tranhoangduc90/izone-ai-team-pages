@@ -28,6 +28,13 @@
 .flow-fields summary::-webkit-details-marker { display: none; }
 .flow-fields fieldset { position: absolute; right: 0; z-index: 12; width: 260px; max-height: 380px; overflow: auto; margin-top: 0.4rem; padding: 0.8rem; border: 1px solid var(--flow-border); border-radius: 0.7rem; background: #fff; box-shadow: 0 16px 38px rgb(16 42 86 / 18%); }
 .flow-fields fieldset label { display: flex; align-items: center; gap: 0.5rem; margin: 0.35rem 0; font-size: 0.9rem; }
+.flow-column-choice { display: grid; grid-template-columns: auto auto 1fr auto auto; align-items: center; gap: 0.35rem; margin: 0.3rem 0; padding: 0.3rem; border-radius: 0.45rem; }
+.flow-column-choice[draggable="true"] { cursor: grab; }
+.flow-column-choice[data-dragging="true"] { opacity: 0.55; background: #eef4ff; }
+.flow-column-choice button { min-width: 2rem; padding: 0.2rem 0.35rem; }
+.flow-column-grip { color: #667085; font-weight: 800; }
+.flow-stage-breakdown { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+.flow-stage-breakdown span { padding: 0.2rem 0.5rem; border-radius: 999px; background: #eef2f7; color: #344054; font-size: 0.8rem; font-weight: 700; }
 .flow-section { margin-top: 0.8rem; }
 .flow-summary { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 0.7rem; }
 .flow-summary article { padding: 0.9rem; border: 1px solid var(--flow-border); border-left: 0.35rem solid var(--flow-blue); border-radius: 0.8rem; background: #fff; }
@@ -48,12 +55,20 @@
 .flow-class-card { padding: 0.9rem; border: 1px solid var(--flow-border); border-radius: 0.8rem; background: #fff; }
 .flow-class-card h3 { margin: 0 0 0.25rem; }
 .flow-class-card-actions { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-top: 0.7rem; }
+.flow-class-card[data-pinned="true"] { border-color: #84adff; box-shadow: 0 0 0 2px rgb(23 92 211 / 8%); }
+.flow-class-workspace { margin-top: 1rem; padding: 1rem; border: 1px solid var(--flow-border); border-radius: 0.8rem; background: #fff; }
+.flow-class-workspace h2, .flow-class-workspace h3 { margin-top: 0; }
 .flow-date-filters { display: flex; gap: 0.7rem; margin-bottom: 0.8rem; }
 .flow-chart { min-height: 330px; padding: 1rem; border: 1px solid var(--flow-border); border-radius: 0.8rem; background: #fff; }
 .flow-chart-bars { display: flex; align-items: end; gap: 0.55rem; height: 270px; padding: 1rem 0 0; overflow-x: auto; }
-.flow-chart-bar { display: grid; grid-template-rows: 1fr auto auto; align-items: end; justify-items: center; min-width: 46px; height: 100%; gap: 0.25rem; }
+.flow-chart-bar { display: grid; grid-template-rows: 1fr auto auto; align-items: end; justify-items: center; min-width: 46px; height: 100%; gap: 0.25rem; border: 0; background: transparent; color: inherit; padding: 0; }
+.flow-chart-bar:hover i, .flow-chart-bar:focus-visible i { background: #0b4cb8; }
 .flow-chart-bar i { display: block; width: 30px; min-height: 3px; border-radius: 0.35rem 0.35rem 0 0; background: var(--flow-blue); }
 .flow-chart-bar small { color: #667085; writing-mode: vertical-rl; transform: rotate(180deg); max-height: 72px; }
+.flow-chart-compact { min-height: 220px; }
+.flow-chart-compact .flow-chart-bars { height: 180px; }
+.flow-audit-state { margin-top: 0.45rem; }
+.flow-audit-state pre { max-height: 240px; overflow: auto; padding: 0.65rem; border-radius: 0.5rem; background: #f6f8fb; white-space: pre-wrap; }
 .flow-table-note { color: #667085; font-size: 0.88rem; }
 .flow-table-wrap { overflow: auto; max-height: calc(100vh - 240px); border: 1px solid var(--flow-border); border-radius: 0.8rem; background: #fff; }
 .flow-table { width: 100%; min-width: 960px; border-collapse: collapse; font-size: 0.88rem; }
