@@ -3,7 +3,7 @@ import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js";
 import { sectionDefinitions } from "./lesson-core.js";
 import { appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
-import { commentsForSection, isBackdropClick, latestVocabularyRows, technicalRecoveryMessage } from "./teacher-detail-core.js?v=20260913-technical-error-copy";
+import { commentsForSection, isBackdropClick, latestVocabularyRows, mergeTeacherStudentDetail, technicalRecoveryMessage } from "./teacher-detail-core.js?v=20260920-student-detail-v1";
 import { groupStudents } from "./teacher-progress.js";
 import { teacherAuthFailure } from "./teacher-auth-ui.js";
 import { selectionOffsets, threadsForField } from "./teacher-comments-core.js";
@@ -383,25 +383,36 @@ async function loadStudentDetail(student) {
     return;
   }
   const requestId = ++state.detailRequestId;
-  try {
-    const [result, commentResult] = await Promise.all([state.api.liveSession(student.sessionRef), state.api.teacherComments(student.sessionRef)]);
-    if (requestId !== state.detailRequestId || !$("teacher-detail").open) return;
-    const session = result.data.session || result.data;
-    const sections = { ...(session.sections || {}), ...(student.sections || {}) };
-    state.selectedStudent = { ...student, ...session, sections, teacherComments: commentResult.data.threads || [] };
-    renderStudentDetail(state.selectedStudent);
-  } catch (error) {
-    if (requestId !== state.detailRequestId || !$("teacher-detail").open) return;
-    renderStudentDetail(student, { error: error.message || "Chưa thể tải dòng thời gian nhận xét." });
-  }
+  const [sessionResult, commentResult] = await Promise.allSettled([
+    state.api.liveSession(student.sessionRef),
+    state.api.teacherComments(student.sessionRef),
+  ]);
+  if (requestId !== state.detailRequestId || !$("teacher-detail").open) return;
+  const session = sessionResult.status === "fulfilled"
+    ? (sessionResult.value.data.session || sessionResult.value.data)
+    : {};
+  const teacherComments = commentResult.status === "fulfilled"
+    ? (commentResult.value.data.threads || [])
+    : undefined;
+  state.selectedStudent = mergeTeacherStudentDetail(student, session, teacherComments);
+  const unavailable = [];
+  if (sessionResult.status === "rejected") unavailable.push("chi tiết mới nhất");
+  if (commentResult.status === "rejected") unavailable.push("comment giảng viên");
+  const error = unavailable.length
+    ? `Bài đang hiển thị từ dữ liệu tổng hợp; tạm thời chưa tải được ${unavailable.join(" và ")}.`
+    : "";
+  renderStudentDetail(state.selectedStudent, { error });
 }
 
 function showStudentDetail(student, focusSection = "") {
+  const dialog = $("teacher-detail");
+  const resetScroll = !dialog.open || state.selectedStudent?.sessionRef !== student.sessionRef;
   state.selectedStudent = student;
   state.focusSection = focusSection;
+  if (resetScroll) dialog.scrollTop = 0;
   renderStudentDetail(student, { loading: Boolean(student.sessionRef) });
-  const dialog = $("teacher-detail");
   if (!dialog.open) dialog.showModal();
+  if (resetScroll) requestAnimationFrame(() => { dialog.scrollTop = 0; });
   void loadStudentDetail(student);
 }
 

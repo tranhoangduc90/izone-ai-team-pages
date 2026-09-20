@@ -1,6 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { commentsForSection, isBackdropClick, latestVocabularyRows, technicalRecoveryMessage } from "../js/teacher-detail-core.js";
+import { commentsForSection, isBackdropClick, latestVocabularyRows, mergeTeacherStudentDetail, technicalRecoveryMessage } from "../js/teacher-detail-core.js";
+
+test("teacher detail keeps summary data and normalizes both Task 1 and Task 2 responses", () => {
+  const summary = {
+    responses: { topic_sentence: "Summary topic", overview: "Summary overview" },
+    sections: { draft: { status: "queued" }, overview: { status: "draft" } },
+    teacherComments: [{ threadRef: "old" }],
+  };
+  const session = {
+    responses: { topic_sentence: "Latest topic" },
+    overview: "Latest overview",
+    body1: "Latest body 1",
+    sections: { overview: { status: "revision" } },
+  };
+  const merged = mergeTeacherStudentDetail(summary, session);
+  assert.equal(merged.responses.topic_sentence, "Latest topic");
+  assert.equal(merged.responses.overview, "Latest overview");
+  assert.equal(merged.responses.body1, "Latest body 1");
+  assert.equal(merged.sections.draft.status, "queued");
+  assert.equal(merged.sections.overview.status, "revision");
+  assert.deepEqual(merged.teacherComments, [{ threadRef: "old" }]);
+});
 
 test("teacher detail shows newest comments for only the selected section", () => {
   const comments = [
