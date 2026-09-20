@@ -9,66 +9,97 @@
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./writing-flow.css" />
   </head>
-  <body class="teacher-page">
-    <header class="topbar"><a class="brand" href="./writing-flow.html">iZONE · Chấm Writing 56/67</a><p id="flow-updated" class="save-state">Chưa đăng nhập</p></header>
+  <body class="teacher-page flow-page">
+    <p id="flow-updated" class="flow-updated">Chưa đăng nhập</p>
     <main class="page-shell flow-shell">
       <section id="flow-login" class="card teacher-login" aria-labelledby="flow-login-title">
         <p class="eyebrow">Dành cho quản trị viên</p>
-        <h1 id="flow-login-title">Theo dõi từng bài chấm</h1>
-        <p>Đăng nhập để xem trạng thái và các bài cần kiểm tra.</p>
+        <h1 id="flow-login-title">Theo dõi chấm Writing 56/67</h1>
+        <p>Đăng nhập để xem từng bài, lỗi và thao tác chạy lại.</p>
         <div id="google-signin"></div>
-        <label class="teacher-login-remember"><input id="remember-flow-login" type="checkbox" /> Tự đăng nhập Google trên thiết bị này</label>
+        <label class="teacher-login-remember"><input id="remember-flow-login" type="checkbox" /> Tự đăng nhập trên thiết bị này</label>
         <p id="flow-login-error" class="form-error" role="alert" hidden></p>
       </section>
-      <section id="flow-dashboard" hidden>
-        <div class="task-header">
-          <div><p class="eyebrow">Từng đề và bài làm</p><h1>Luồng chấm Writing 56/67</h1><p class="muted">Mỗi bài hoàn thành riêng. Số liệu lấy từ database của luồng mới và tự cập nhật mỗi 30 giây.</p></div>
-          <div class="flow-filters">
-            <label>Giảng viên <select id="flow-teacher"><option value="">Tất cả giảng viên</option></select></label>
-            <label>Lớp <select id="flow-class"><option value="">Tất cả lớp</option></select></label>
+
+      <section id="flow-dashboard" class="flow-app" hidden>
+        <aside class="flow-sidebar" aria-label="Khu vực quản lý">
+          <nav id="flow-views" class="flow-views">
+            <p class="flow-nav-label">Theo dõi</p>
+            <button type="button" data-view="overview" aria-pressed="true">Tổng quan <span data-count="overview">0</span></button>
+            <button type="button" data-view="daily">Thống kê theo ngày</button>
+            <button type="button" data-view="classes">Không gian lớp <span data-count="classes">0</span></button>
+            <button type="button" data-view="completed_classes">Các lớp đã hoàn thành <span data-count="completed_classes">0</span></button>
+            <p class="flow-nav-label">7 giai đoạn</p>
+            <button type="button" data-view="intake">1. Tiếp nhận <span data-count="intake">0</span></button>
+            <button type="button" data-view="precheck">2. Kiểm trước <span data-count="precheck">0</span></button>
+            <button type="button" data-view="main">3. Chấm chính <span data-count="main">0</span></button>
+            <button type="button" data-view="critic">4. Phản biện <span data-count="critic">0</span></button>
+            <button type="button" data-view="arbiter">5. Phân xử <span data-count="arbiter">0</span></button>
+            <button type="button" data-view="render">6. Tạo trang <span data-count="render">0</span></button>
+            <button type="button" data-view="deliver">7. Ghi link <span data-count="deliver">0</span></button>
+            <p class="flow-nav-label">Xử lý và tra cứu</p>
+            <button type="button" data-view="review">Cần kiểm tra <span data-count="review">0</span></button>
+            <button type="button" data-view="source">Lỗi nguồn <span data-count="source">0</span></button>
+            <button type="button" data-view="skipped">Đã bỏ qua <span data-count="skipped">0</span></button>
+            <button type="button" data-view="delivered">Đã giao <span data-count="delivered">0</span></button>
+            <button type="button" data-view="legacy">Lịch sử cũ</button>
+            <button type="button" data-view="logs">Nhật ký lỗi</button>
+          </nav>
+        </aside>
+
+        <div class="flow-main">
+          <header class="flow-view-heading">
+            <div><p id="flow-view-kicker" class="eyebrow">Toàn hệ thống</p><h1 id="flow-view-title">Tổng quan vận hành</h1><p id="flow-view-help" class="muted">Các số cần chú ý và tình trạng quét lớp.</p></div>
+            <span id="flow-view-status" class="flow-view-status">Tất cả trạng thái</span>
+          </header>
+
+          <div class="flow-toolbar" aria-label="Tìm kiếm và bộ lọc">
+            <label class="flow-search"><span>Tìm bài</span><input id="flow-search" type="search" placeholder="Link Docs, Docs ID hoặc tên học viên" /></label>
+            <label><span>Lớp</span><select id="flow-class"><option value="">Tất cả lớp đang học</option></select></label>
+            <label><span>Giảng viên</span><select id="flow-teacher"><option value="">Tất cả giảng viên</option></select></label>
+            <label><span>Loại bài</span><select id="flow-task-type"><option value="">Cả Task 1 và Task 2</option><option value="task_1">Task 1</option><option value="task_2">Task 2</option></select></label>
+            <details class="flow-fields"><summary>Chọn cột</summary><fieldset id="flow-field-choices"><legend>Cột hiển thị</legend></fieldset></details>
+            <button id="flow-manual-open" class="secondary" type="button">Thêm file ngoài lớp</button>
+            <button id="flow-refresh" class="secondary" type="button">Cập nhật</button>
             <button id="flow-logout" class="secondary" type="button">Đăng xuất</button>
           </div>
+          <p id="flow-error" class="notice" role="alert" hidden></p>
+
+          <section id="flow-overview-section" class="flow-section">
+            <div id="flow-summary" class="flow-summary"></div>
+            <div class="flow-overview-grid">
+              <article class="card"><h2>Lớp cần chú ý</h2><p class="muted">Lớp thiếu mapping, trùng hoặc quét lỗi.</p><div id="flow-class-coverage" class="flow-list flow-list-compact"></div></article>
+              <article class="card"><h2>Việc cần xử lý</h2><p class="muted">Bài lỗi sau ba lần hoặc tài liệu sai.</p><div id="flow-attention" class="flow-list flow-list-compact"></div></article>
+            </div>
+          </section>
+
+          <section id="flow-daily-section" class="flow-section" hidden>
+            <div class="flow-date-filters"><label>Từ ngày <input id="flow-date-from" type="date" /></label><label>Đến ngày <input id="flow-date-to" type="date" /></label></div>
+            <div id="flow-daily-chart" class="flow-chart" role="img" aria-label="Số bài chấm xong theo ngày"></div>
+          </section>
+          <section id="flow-classes-section" class="flow-section" hidden><div id="flow-classes" class="flow-class-cards"></div></section>
+          <section id="flow-reviews-section" class="flow-section" hidden><div id="flow-reviews" class="flow-list"></div></section>
+          <section id="flow-source-section" class="flow-section" hidden><div id="flow-source-issues" class="flow-list"></div></section>
+          <section id="flow-technical-section" class="flow-section" hidden><div id="flow-technical-errors" class="flow-list"></div></section>
+          <section id="flow-pairs-section" class="flow-section" hidden>
+            <p class="flow-table-note">Mỗi trang tải 50 bài. Nội dung bài và Text chấm bài chỉ tải khi bạn mở chi tiết để tránh làm nặng hệ thống.</p>
+            <div class="flow-table-wrap"><table class="flow-table"><thead><tr id="flow-table-head"></tr></thead><tbody id="flow-pairs"></tbody></table></div>
+            <button id="flow-more" class="secondary" type="button" hidden>Xem 50 bài tiếp theo</button>
+          </section>
+          <section id="flow-legacy-section" class="flow-section" hidden><div id="flow-legacy" class="flow-list"></div></section>
         </div>
-        <section class="flow-manual card" aria-labelledby="flow-manual-title">
-          <div><p class="eyebrow">File ngoài lớp</p><h2 id="flow-manual-title">Thêm bài thủ công</h2>
-            <p class="muted">Nhập tên dễ nhớ và link Google Docs. File sẽ được kiểm tra và chấm như bài từ Classroom.</p></div>
-          <form id="flow-manual-form" class="flow-manual-form">
-            <label>Tên bài <input id="flow-manual-name" required minlength="2" maxlength="200" placeholder="Ví dụ: Bài chữa thêm của Minh" /></label>
-            <label>Link Google Docs <input id="flow-manual-url" required type="url" placeholder="https://docs.google.com/document/d/.../edit" /></label>
-            <button type="submit">Thêm vào hệ thống</button>
-          </form>
-        </section>
-        <p id="flow-error" class="notice" role="alert" hidden></p>
-        <nav id="flow-views" class="flow-views" aria-label="Các view theo dõi">
-          <button type="button" data-view="overview" aria-pressed="true">Tổng quan <span data-count="overview">0</span></button>
-          <button type="button" data-view="intake" aria-pressed="false">1. Tiếp nhận <span data-count="intake">0</span></button>
-          <button type="button" data-view="precheck" aria-pressed="false">2. Kiểm trước <span data-count="precheck">0</span></button>
-          <button type="button" data-view="main" aria-pressed="false">3. Chấm chính <span data-count="main">0</span></button>
-          <button type="button" data-view="critic" aria-pressed="false">4. Phản biện <span data-count="critic">0</span></button>
-          <button type="button" data-view="arbiter" aria-pressed="false">5. Phân xử <span data-count="arbiter">0</span></button>
-          <button type="button" data-view="render" aria-pressed="false">6. Tạo trang <span data-count="render">0</span></button>
-          <button type="button" data-view="deliver" aria-pressed="false">7. Ghi link <span data-count="deliver">0</span></button>
-          <button type="button" data-view="review" aria-pressed="false">Cần kiểm tra <span data-count="review">0</span></button>
-          <button type="button" data-view="source" aria-pressed="false">Lỗi nguồn <span data-count="source">0</span></button>
-          <button type="button" data-view="skipped" aria-pressed="false">Đã bỏ qua <span data-count="skipped">0</span></button>
-          <button type="button" data-view="delivered" aria-pressed="false">Đã giao <span data-count="delivered">0</span></button>
-          <button type="button" data-view="legacy" aria-pressed="false">Lịch sử cũ <span data-count="legacy">0</span></button>
-        </nav>
-        <section id="flow-coverage-section" aria-labelledby="flow-coverage-title"><h2 id="flow-coverage-title">Độ phủ lớp đang vận hành</h2><p class="muted">So danh sách lớp đang vận hành đã duyệt với lượt quét Writing gần nhất. Mục màu đỏ cần kiểm tra nguồn lớp.</p><div id="flow-class-coverage" class="flow-list"></div></section>
-        <section id="flow-summary-section" aria-labelledby="flow-summary-title"><h2 id="flow-summary-title">Tình hình chấm</h2><div id="flow-summary" class="flow-summary"></div></section>
-        <section id="flow-reviews-section" aria-labelledby="flow-reviews-title"><h2 id="flow-reviews-title">Cần kiểm tra</h2><p class="muted">Sau ba lượt chưa xong, kiểm tra lý do rồi chọn chạy lại từ đúng bước lỗi.</p><div id="flow-reviews" class="flow-list"></div></section>
-        <section id="flow-source-section" aria-labelledby="flow-source-title"><h2 id="flow-source-title">Bài hoặc tài liệu chưa nhận được</h2><p class="muted">Link lỗi và từng ô bài lỗi được ghi riêng; các bài khác vẫn tiếp tục chấm.</p><div id="flow-source-issues" class="flow-list"></div></section>
-        <section id="flow-technical-section" aria-labelledby="flow-technical-title"><h2 id="flow-technical-title">Lỗi kỹ thuật gần đây</h2><p class="muted">Mở lượt chạy n8n để xem lỗi, hoặc mở workflow nếu lỗi xảy ra ngay lúc khởi động.</p><div id="flow-technical-errors" class="flow-list"></div><button id="flow-technical-more" class="secondary" type="button" hidden>Xem thêm lỗi</button></section>
-        <section id="flow-pairs-section" aria-labelledby="flow-pairs-title"><h2 id="flow-pairs-title">Các bài trong view</h2>
-          <p class="muted">Bảng chỉ tải 50 dòng mỗi trang. Chọn một dòng để xem nội dung, log và thao tác.</p>
-          <div class="flow-table-wrap"><table class="flow-table"><thead><tr>
-            <th>Trạng thái</th><th>Học viên / tên thủ công</th><th>Lớp</th><th>Giảng viên</th>
-            <th>File Doc</th><th>Classroom</th><th>TRCC</th><th>Thời điểm xong</th><th>Ngày tạo</th><th>Thao tác</th>
-          </tr></thead><tbody id="flow-pairs"></tbody></table></div>
-          <button id="flow-more" class="secondary" type="button" hidden>Xem 50 bài tiếp theo</button></section>
-        <section id="flow-legacy-section" hidden aria-labelledby="flow-legacy-title"><h2 id="flow-legacy-title">Lịch sử từ luồng cũ</h2><div id="flow-legacy" class="flow-list"></div></section>
       </section>
     </main>
+
+    <dialog id="flow-manual-dialog" class="flow-dialog">
+      <form method="dialog" class="flow-dialog-head"><h2>Thêm file ngoài lớp</h2><button class="secondary" value="cancel">Đóng</button></form>
+      <p class="muted">Nhập tên dễ nhớ và link Google Docs. File sẽ được kiểm tra như bài từ Classroom.</p>
+      <form id="flow-manual-form" class="flow-manual-form">
+        <label>Tên bài <input id="flow-manual-name" required minlength="2" maxlength="200" placeholder="Ví dụ: Bài chữa thêm của Minh" /></label>
+        <label>Link Google Docs <input id="flow-manual-url" required type="url" placeholder="https://docs.google.com/document/d/.../edit" /></label>
+        <button type="submit">Thêm vào hệ thống</button>
+      </form>
+    </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="module" src="./js/writing-flow.js"></script>
