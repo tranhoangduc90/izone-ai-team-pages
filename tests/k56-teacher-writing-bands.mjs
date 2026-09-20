@@ -28,7 +28,8 @@ test('bài chấm K56 có bài viết nguyên gốc, 4 band tiêu chí và nhậ
   assert.deepEqual(summary.children.map(n=>n.children[1].textContent),['Band 6.0','Band 6.5','Band 7.0','Band 7.5']);
   assert.equal(all.filter(n=>n.className==='writing-criterion-card').length,4);
 });
-test('bump cache riêng dashboard K56, không đổi dashboard K67',()=>{
+test('dashboard K56 giữ CSS Writing và tải JavaScript phiên mới',()=>{
   const html=fs.readFileSync('term-tests/teacher-k56/index.html','utf8');
-  assert.equal((html.match(/20260914-writing-bands-v1/g)||[]).length,2);
+  assert.equal((html.match(/20260914-writing-bands-v1/g)||[]).length,1);
+  assert.equal((html.match(/20260920-teacher-session-v1/g)||[]).length,1);
 });

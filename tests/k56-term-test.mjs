@@ -71,6 +71,10 @@ test('dashboard K56 tách riêng và các file K67 không đổi hành vi', asyn
   ]);
   assert.match(app, /scoreMode\(\) === 'raw'/);
   assert.match(app, /term-test-1-k56/);
+  assert.match(app, /createTeacherSessionClient/);
+  assert.match(app, /teacherSessionRequestOptions/);
+  assert.equal(app.includes('sessionStorage'), false);
+  assert.equal(app.includes('Authorization: `Bearer'), false);
   assert.match(k56Config, /mapping-api-demo/);
   assert.equal(k67App.includes('term-test-1-k56'), false);
   assert.equal(k67Config.includes('mapping-api-demo'), false);

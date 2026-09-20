@@ -15,7 +15,8 @@ const context=vm.createContext({
   window:{TERM_TEST_APP_CONFIG:{API_BASE_URL:'https://example.test/mapping-api-demo',GOOGLE_CLIENT_ID:'synthetic'},location:{href:''},sessionStorage:{}},
   location:{search:'?class=CODEXDEMO56'},URLSearchParams,AbortSignal,sortClassesNewestFirst,
   document:{getElementById:id=>elements[id],createElement:()=>element(),head:{append(){}},querySelectorAll:selector=>selector==='[data-test]'?buttons:destinationButtons},
-  createSessionStore:()=>({usable:()=>true,save(){},clear(){},read:()=>null}),
+  createTeacherSessionClient:()=>({login:async()=>({ok:true}),restore:async()=>false,logout:async()=>({ok:true})}),
+  teacherSessionRequestOptions:options=>({...options,credentials:'include'}),
   fetch:async(url,options)=>{requests.push({url,options});return {ok:response.ok,status:response.ok?200:404,json:async()=>response}}
 });
 vm.runInContext(source,context);
@@ -26,7 +27,7 @@ assert.ok(requests[0].url.endsWith('roster?class=CODEXDEMO56&test=term-test-1-k5
 context.window.location.href='';response={ok:false,message:'Lớp chưa được mở'};
 await buttons[1].handlers.click();assert.equal(context.window.location.href,'');assert.match(elements.classHelp.textContent,/Lớp chưa được mở/);
 response={ok:true,classes:[{id:'1',name:'CODEXDEMO56'}],reviewer:{displayName:'Giảng viên Demo'}};
-await vm.runInContext('connectWithToken("synthetic-token")',context);
+await vm.runInContext('loginAvailableApis("synthetic-token").then(()=>connectSession())',context);
 assert.equal(elements.classSelect.hidden,false);assert.equal(elements.classCode.hidden,true);
 assert.equal(elements.classSelect.children.length,1);
 response={ok:true,students:[{ref:'synthetic'}]};
@@ -35,6 +36,7 @@ await buttons[2].handlers.click();assert.equal(context.window.location.href,'../
 destinationButtons[0].handlers.click();assert.equal(context.window.location.href,'../term-test-1-k56-audio/?class=CODEXDEMO56');
 destinationButtons[4].handlers.click();assert.equal(context.window.location.href,'../term-test-2-k56/?class=CODEXDEMO56');
 elements.teacherDashboard.handlers.click();assert.equal(context.window.location.href,'../teacher-k56/?class=CODEXDEMO56');
-elements.logoutButton.handlers.click();assert.equal(elements.classSelect.hidden,true);
+await elements.logoutButton.handlers.click();assert.equal(elements.classSelect.hidden,true);
 assert.ok(requests.every(r=>r.url.startsWith('https://example.test/mapping-api-demo/')));
+assert.ok(requests.some(r=>r.options?.credentials==='include'));
 console.log('K56 landing: chọn lớp, roster, ba bài thi, Audio Backup, Answer Sheet, kết quả và đăng xuất đều đạt.');
