@@ -110,7 +110,7 @@
 
   window.K56_SUBSTITUTE_TEST_2_CONTENT = Object.freeze({
     variant: 'semantic-html', baseTestSlug: 'substitute-test-2-k56',
-    audio: { src: 'https://izone-substitute-test-2-k56.wingsenglish90.chatgpt.site/api/test/audio', label: 'Substitute Test 2 · Khóa 56 · Listening', durationLabel: '28 phút 28 giây' },
+    audio: { src: 'assets/private/listening-substitute-test-2-k56.mp3', label: 'Substitute Test 2 · Khóa 56 · Listening', durationLabel: '28 phút 28 giây' },
     listening: { instructions: ['Bài nghe gồm 4 phần và 40 câu.','Audio dài 28 phút 28 giây; không có thời gian kiểm tra riêng sau khi audio kết thúc.','Không tải lại hoặc đóng tab khi audio đang phát.'], sections: [
       {label:'Section 1',range:'Questions 1–10',html:listeningPart1},{label:'Section 2',range:'Questions 11–20',html:listeningPart2},{label:'Section 3',range:'Questions 21–30',html:listeningPart3},{label:'Section 4',range:'Questions 31–40',html:listeningPart4}
     ]},

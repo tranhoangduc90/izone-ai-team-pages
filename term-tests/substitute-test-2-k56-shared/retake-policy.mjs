@@ -36,10 +36,8 @@ function compareCandidates(left, right) {
   return 0;
 }
 
-function chooseIntegerCombination(actual, ideal, maxScores, capPct, portalDecimals) {
-  const exact = [];
-  const displayed = [];
-  let nearest = null;
+function chooseIntegerCombination(actual, ideal, maxScores, floorPct, ceilingPct, portalDecimals) {
+  const candidates = [];
 
   for (let listeningTick = 0; listeningTick <= Math.round(actual.listening * 10); listeningTick += 1) {
     for (let readingTick = 0; readingTick <= Math.round(actual.reading * 10); readingTick += 1) {
@@ -61,24 +59,23 @@ function chooseIntegerCombination(actual, ideal, maxScores, capPct, portalDecima
           displayedPct,
           cost,
           pointDistance,
-          capDistance: Math.abs(averagePct - capPct)
+          capDistance: Math.abs(averagePct - floorPct)
         };
-
-        if (candidate.capDistance <= EPSILON) exact.push(candidate);
-        if (Math.abs(displayedPct - capPct) <= EPSILON) displayed.push(candidate);
-        if (!nearest || candidate.capDistance < nearest.capDistance - EPSILON
-          || (Math.abs(candidate.capDistance - nearest.capDistance) <= EPSILON && compareCandidates(candidate, nearest) < 0)) {
-          nearest = candidate;
+        if (averagePct >= floorPct - EPSILON && averagePct <= ceilingPct + EPSILON
+          && displayedPct >= floorPct - EPSILON && displayedPct <= ceilingPct + EPSILON) {
+          candidates.push(candidate);
         }
       }
     }
   }
 
-  const pool = exact.length ? exact : displayed.length ? displayed : [nearest];
-  pool.sort(compareCandidates);
+  if (!candidates.length) {
+    throw new RangeError(`Không có tổ hợp điểm Portal trong khoảng ${floorPct}%–${ceilingPct}%.`);
+  }
+  candidates.sort(compareCandidates);
   return {
-    ...pool[0],
-    mode: exact.length ? 'exact' : displayed.length ? 'rounds_to_cap' : 'nearest'
+    ...candidates[0],
+    mode: candidates[0].capDistance <= EPSILON ? 'exact' : 'within_55_57'
   };
 }
 
@@ -95,6 +92,7 @@ export function calculateRetakePolicy({
   retakeActual,
   maxScores,
   capPct = 55,
+  ceilingPct = 57,
   portalDecimals = 0,
   testNumber = 1
 }) {
@@ -102,6 +100,9 @@ export function calculateRetakePolicy({
   assertScores('Điểm thi lại', retakeActual, maxScores);
   if (!Number.isInteger(portalDecimals) || portalDecimals < 0 || portalDecimals > 3) {
     throw new TypeError('Số chữ số thập phân hiển thị trên Portal phải từ 0 đến 3.');
+  }
+  if (typeof ceilingPct !== 'number' || !Number.isFinite(ceilingPct) || ceilingPct < capPct) {
+    throw new TypeError('Ngưỡng trên của điểm điều chỉnh phải lớn hơn hoặc bằng 55%.');
   }
 
   const firstAveragePct = normalizedAverage(firstAttempt, maxScores);
@@ -116,6 +117,7 @@ export function calculateRetakePolicy({
       policy: reason,
       policyApplied: false,
       capPct,
+      ceilingPct,
       portalDecimals,
       firstAveragePct,
       retakeAveragePct,
@@ -133,13 +135,14 @@ export function calculateRetakePolicy({
 
   const factor = capPct / retakeAveragePct;
   const idealAdjustedScores = Object.fromEntries(SKILLS.map(skill => [skill, retakeActual[skill] * factor]));
-  const selected = chooseIntegerCombination(retakeActual, idealAdjustedScores, maxScores, capPct, portalDecimals);
+  const selected = chooseIntegerCombination(retakeActual, idealAdjustedScores, maxScores, capPct, ceilingPct, portalDecimals);
 
   return {
     status: 'ready',
     policy: 'cap_55',
     policyApplied: true,
     capPct,
+    ceilingPct,
     portalDecimals,
     firstAveragePct,
     retakeAveragePct,

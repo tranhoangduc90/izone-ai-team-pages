@@ -176,14 +176,6 @@
     return saved > 0;
   }
 
-  function ensureValidAttemptToken() {
-    if (!uuidPattern.test(String(state.attemptToken || ''))) {
-      state.attemptToken = crypto.randomUUID();
-      saveSession();
-    }
-    return state.attemptToken;
-  }
-
   const progressMarkup = writingConfig
     ? `<div class="progress-step" data-progress="listening">1. Listening</div>
         <div class="progress-step" data-progress="reading">2. Reading</div>
@@ -504,10 +496,17 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
     try {
-      const response = await fetch(`${appConfig.API_BASE_URL}${path}`, {
-        ...options,
+      const requestUrl = new URL(path, window.location.origin);
+      let payload = {};
+      if (typeof options.body === 'string' && options.body.trim()) payload = JSON.parse(options.body);
+      for (const [key, value] of requestUrl.searchParams) {
+        if (!(key in payload)) payload[key] = value;
+      }
+      const response = await fetch(appConfig.API_BASE_URL, {
+        method: 'POST',
+        body: JSON.stringify({ route: requestUrl.pathname, payload }),
         signal: controller.signal,
-        headers: { ...(options.headers || {}) }
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
@@ -518,6 +517,14 @@
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  function ensureValidAttemptToken() {
+    if (!uuidPattern.test(String(state.attemptToken || ''))) {
+      state.attemptToken = crypto.randomUUID();
+      saveSession();
+    }
+    return state.attemptToken;
   }
 
   window.addEventListener('term-test:listening-timing-updated', event => {
@@ -1349,7 +1356,7 @@
     if (grading?.ready) {
       gradingArea.className = 'writing-score-grid';
       const tasksByNumber = new Map(Array.from(grading.tasks || []).map(task => [Number(task.taskNumber), task]));
-      for (const taskNumber of [2]) {
+      for (const taskNumber of [1]) {
         const taskResult = tasksByNumber.get(taskNumber);
         const button = document.createElement('button');
         button.type = 'button';
@@ -2035,19 +2042,19 @@
       grading: {
         status: 'ready',
         ready: true,
-        task2Score: 7,
+        task1Score: 7,
         writingScore: 7,
         taskStates: { task1: 'complete' },
         tasks: [
           {
-            taskNumber: 2,
+            taskNumber: 1,
             taskScore: 7,
             wordCount: countWords(state.drafts.writing.task1),
-            criteria: ['TR', 'CC', 'LR', 'GRA'].map(code => ({
+            criteria: ['TA', 'CC', 'LR', 'GRA'].map(code => ({
               code,
-              name: criterionTitle(code, 2),
+              name: criterionTitle(code, 1),
               bandScore: 7,
-              feedback: `Nhận xét minh họa cho tiêu chí ${criterionTitle(code, 2)}.`,
+              feedback: `Nhận xét minh họa cho tiêu chí ${criterionTitle(code, 1)}.`,
               components: [{
                 code: `${code.toLowerCase()}_demo`,
                 label: 'Nhận xét theo khía cạnh',
