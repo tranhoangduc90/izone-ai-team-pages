@@ -50,7 +50,10 @@ test('dashboard có 7 giai đoạn, không gian lớp, tìm kiếm và retry đ�
   assert.match(script, /writingPairDetail/u);
   assert.match(html, /id="flow-teacher"/u);
   assert.match(html, /id="flow-search"/u);
-  assert.match(html, /Link Docs, Docs ID hoặc tên học viên/u);
+  assert.match(html, /Link Docs, Docs ID, tên học viên hoặc nội dung/u);
+  assert.match(html, /id="flow-search-scope"/u);
+  assert.match(html, /value="content"/u);
+  assert.match(html, /id="flow-search-button"/u);
   assert.match(html, /id="flow-field-choices"/u);
   assert.match(html, /id="flow-daily-chart"/u);
   assert.doesNotMatch(html, /<th>Trạng thái<\/th>/u);
@@ -58,7 +61,17 @@ test('dashboard có 7 giai đoạn, không gian lớp, tìm kiếm và retry đ�
   assert.match(script, /writingDailyStats/u);
   assert.match(script, /writingClasses\('completed'\)/u);
   assert.match(script, /search: \$\('flow-search'\)/u);
-  assert.match(script, /Text chấm bài/u);
+  assert.doesNotMatch(`${html}\n${script}`, /Text chấm bài/u);
+  assert.match(script, /Link LMS/u);
+  assert.match(script, /row\.display_name \|\| 'Mở Classroom'/u);
+  assert.match(script, /essay_preview/u);
+  assert.match(script, /dblclick/u);
+  assert.match(script, /writing-flow:columns:v2/u);
+  assert.match(script, /key === 'grading' \? 'lms'/u);
+  assert.match(script, /Đề bài/u);
+  assert.match(script, /Nội dung học viên/u);
+  assert.ok(script.indexOf("makeText('h3', 'Đề bài')")
+    < script.indexOf("makeText('h3', 'Nội dung học viên')"));
   assert.match(script, /teacher_names/u);
   assert.match(html, /id="remember-flow-login"/u);
   assert.match(html, /id="flow-logout"/u);

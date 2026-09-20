@@ -56,7 +56,9 @@
           </header>
 
           <div class="flow-toolbar" aria-label="Tìm kiếm và bộ lọc">
-            <label class="flow-search"><span>Tìm bài</span><input id="flow-search" type="search" placeholder="Link Docs, Docs ID hoặc tên học viên" /></label>
+            <label class="flow-search"><span>Tìm bài</span><input id="flow-search" type="search" placeholder="Link Docs, Docs ID, tên học viên hoặc nội dung" /></label>
+            <label><span>Tìm trong</span><select id="flow-search-scope"><option value="all">Mọi trường</option><option value="identity">Tên học viên</option><option value="docs">Link / Docs ID</option><option value="content">Nội dung bài</option></select></label>
+            <button id="flow-search-button" type="button">Tìm kiếm</button>
             <label><span>Lớp</span><select id="flow-class"><option value="">Tất cả lớp đang học</option></select></label>
             <label><span>Giảng viên</span><select id="flow-teacher"><option value="">Tất cả giảng viên</option></select></label>
             <label><span>Loại bài</span><select id="flow-task-type"><option value="">Cả Task 1 và Task 2</option><option value="task_1">Task 1</option><option value="task_2">Task 2</option></select></label>
@@ -97,7 +99,7 @@
           <section id="flow-audit-section" class="flow-section" hidden><div id="flow-operator-events" class="flow-list"></div></section>
           <section id="flow-mapping-section" class="flow-section" hidden><div id="flow-mapping-coverage" class="flow-list"></div></section>
           <section id="flow-pairs-section" class="flow-section" hidden>
-            <p class="flow-table-note">Mỗi trang tải 50 bài. Nội dung bài và Text chấm bài chỉ tải khi bạn mở chi tiết để tránh làm nặng hệ thống.</p>
+            <p class="flow-table-note">Mỗi trang tải 50 bài. Ô Nội dung chỉ hiện phần đầu; nhấn đúp để xem toàn bộ. Tìm nội dung chỉ chạy khi bấm “Tìm kiếm”.</p>
             <div class="flow-table-wrap"><table class="flow-table"><thead><tr id="flow-table-head"></tr></thead><tbody id="flow-pairs"></tbody></table></div>
             <button id="flow-more" class="secondary" type="button" hidden>Xem 50 bài tiếp theo</button>
           </section>
@@ -117,6 +119,6 @@
     </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/writing-flow.js?v=20260920-dashboard-audit-v3"></script>
+    <script type="module" src="./js/writing-flow.js?v=20260920-dashboard-fields-v4"></script>
   </body>
 </html>
