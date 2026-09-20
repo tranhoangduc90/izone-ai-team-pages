@@ -13,13 +13,15 @@ test('API dashboard truyền đủ bộ lọc ngày và nhật ký thao tác', a
   });
   const api = createTeacherApi('https://example.invalid/writing-api/');
   await api.writingPairsPage({ classCode: 'IC2200', search: 'docs-id-demo',
-    dateFrom: '2026-09-19', dateTo: '2026-09-19', view: 'delivered' });
+    dateFrom: '2026-09-19', dateTo: '2026-09-19', stageKey: 'precheck',
+    stageStatus: 'running', view: 'delivered' });
   await api.writingOperatorEvents({ classCode: 'IC2200', eventType: 'class_mapping_changed', limit: 25 });
   assert.equal(calls[0].pathname, '/writing-api/api/v1/admin/writing-flow/pairs');
   assert.equal(calls[0].searchParams.get('dateFrom'), '2026-09-19');
   assert.equal(calls[0].searchParams.get('dateTo'), '2026-09-19');
   assert.equal(calls[0].searchParams.get('search'), 'docs-id-demo');
   assert.equal(calls[0].searchParams.get('view'), 'delivered');
+  assert.equal(calls[0].searchParams.get('stageStatus'), 'running');
   assert.equal(calls[1].pathname, '/writing-api/api/v1/admin/writing-flow/operator-events');
   assert.equal(calls[1].searchParams.get('classCode'), 'IC2200');
   assert.equal(calls[1].searchParams.get('eventType'), 'class_mapping_changed');
@@ -33,6 +35,8 @@ test('dashboard giữ đủ điều khiển xóa lọc, đổi thứ tự cột 
   ]);
   assert.match(html, /id="flow-clear-filters"/u);
   assert.match(html, /data-view="audit"/u);
+  assert.match(html, /data-view="mapping"/u);
+  assert.match(html, /id="flow-stage-status"/u);
   assert.match(html, /id="flow-class-stage-summary"/u);
   assert.match(html, /id="flow-class-daily-chart"/u);
   assert.match(script, /line\.draggable = state\.visibleColumns\.includes\(key\)/u);
@@ -43,4 +47,7 @@ test('dashboard giữ đủ điều khiển xóa lọc, đổi thứ tự cột 
   assert.match(script, /pinned-classes:v1/u);
   assert.match(script, /recent-classes:v1/u);
   assert.match(script, /flow-stage-breakdown/u);
+  assert.match(script, /attempts: \['Số lần thử'/u);
+  assert.match(script, /error: \['Lỗi gần nhất'/u);
+  assert.match(script, /flow-mapping-coverage/u);
 });

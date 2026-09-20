@@ -29,6 +29,7 @@
             <button type="button" data-view="daily">Thống kê theo ngày</button>
             <button type="button" data-view="classes">Không gian lớp <span data-count="classes">0</span></button>
             <button type="button" data-view="completed_classes">Các lớp đã hoàn thành <span data-count="completed_classes">0</span></button>
+            <button type="button" data-view="mapping">Lớp cần ghép/kiểm tra <span data-count="mapping">0</span></button>
             <p class="flow-nav-label">7 giai đoạn</p>
             <button type="button" data-view="intake">1. Tiếp nhận <span data-count="intake">0</span></button>
             <button type="button" data-view="precheck">2. Kiểm trước <span data-count="precheck">0</span></button>
@@ -59,6 +60,7 @@
             <label><span>Lớp</span><select id="flow-class"><option value="">Tất cả lớp đang học</option></select></label>
             <label><span>Giảng viên</span><select id="flow-teacher"><option value="">Tất cả giảng viên</option></select></label>
             <label><span>Loại bài</span><select id="flow-task-type"><option value="">Cả Task 1 và Task 2</option><option value="task_1">Task 1</option><option value="task_2">Task 2</option></select></label>
+            <label id="flow-stage-status-filter" hidden><span>Trạng thái trong bước</span><select id="flow-stage-status"><option value="">Tất cả trong bước</option><option value="pending">Đang chờ</option><option value="running">Đang xử lý</option><option value="needs_review">Cần kiểm tra</option><option value="succeeded">Đã xong</option></select></label>
             <label><span>Từ ngày</span><input id="flow-date-from" type="date" /></label>
             <label><span>Đến ngày</span><input id="flow-date-to" type="date" /></label>
             <details class="flow-fields"><summary>Chọn cột</summary><fieldset id="flow-field-choices"><legend>Cột hiển thị</legend></fieldset></details>
@@ -93,6 +95,7 @@
           <section id="flow-source-section" class="flow-section" hidden><div id="flow-source-issues" class="flow-list"></div></section>
           <section id="flow-technical-section" class="flow-section" hidden><div id="flow-technical-errors" class="flow-list"></div></section>
           <section id="flow-audit-section" class="flow-section" hidden><div id="flow-operator-events" class="flow-list"></div></section>
+          <section id="flow-mapping-section" class="flow-section" hidden><div id="flow-mapping-coverage" class="flow-list"></div></section>
           <section id="flow-pairs-section" class="flow-section" hidden>
             <p class="flow-table-note">Mỗi trang tải 50 bài. Nội dung bài và Text chấm bài chỉ tải khi bạn mở chi tiết để tránh làm nặng hệ thống.</p>
             <div class="flow-table-wrap"><table class="flow-table"><thead><tr id="flow-table-head"></tr></thead><tbody id="flow-pairs"></tbody></table></div>
@@ -114,6 +117,6 @@
     </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/writing-flow.js?v=20260920-dashboard-audit-v2"></script>
+    <script type="module" src="./js/writing-flow.js?v=20260920-dashboard-audit-v3"></script>
   </body>
 </html>
