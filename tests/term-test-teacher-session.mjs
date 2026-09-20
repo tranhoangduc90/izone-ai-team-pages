@@ -1,72 +1,53 @@
-/* Nhận bộ nhớ và đồng hồ giả; kiểm tra khôi phục, hết hạn, cách ly và lỗi lưu.
- * Không dùng mã Google thật hoặc dữ liệu học viên; lỗi hiện bằng tên ca kiểm thử. */
+/* Kiểm hợp đồng phiên dài hạn bằng fetch giả; không gọi Google/API thật và không dùng dữ liệu học viên. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createSessionStore, tokenExpiresAt } from '../term-tests/teacher/auth-session.js';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js';
 
-const now = 1_800_000_000_000;
-const token = payload => ['fake', Buffer.from(JSON.stringify(payload)).toString('base64url'), 'fake'].join('.');
-const valid = token({ exp: now / 1000 + 3600 });
-
-function fixture(overrides = {}) {
-  const data = new Map();
-  const storage = {
-    getItem: key => data.get(key) ?? null,
-    setItem: (key, value) => data.set(key, value),
-    removeItem: key => data.delete(key)
-  };
-  const options = { apiBaseUrl: 'https://example.invalid', clientId: 'fake-client', getStorage: () => storage, now: () => now, ...overrides };
-  return { data, options, store: createSessionStore(options) };
+function response(status, body) {
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
 
-test('khôi phục mã còn hạn khi tạo lại trang; chỉ lưu một mã, không lưu kết quả', () => {
-  const { data, options, store } = fixture();
-  assert.equal(store.save(valid), true);
-  assert.equal(createSessionStore(options).read(), valid);
-  assert.deepEqual([...data.values()], [valid]);
+test('đổi Google credential lấy cookie máy chủ mà không đưa credential vào URL hoặc storage', async t => {
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push({ url, options });
+    return response(201, { ok: true, reviewer: { email: 'teacher@example.invalid' } });
+  });
+  const client = createTeacherSessionClient({ apiBaseUrl: 'https://api.example.invalid/mapping-api', sessionPath: '/api/auth/session' });
+  await client.login('google-credential-for-test-only');
+  assert.equal(calls[0].url, 'https://api.example.invalid/mapping-api/api/auth/session');
+  assert.equal(calls[0].options.credentials, 'include');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[0].options.body), { credential: 'google-credential-for-test-only' });
+  assert.doesNotMatch(calls[0].url, /credential/u);
 });
 
-test('đăng xuất xóa phiên để tải lại trang không tự đăng nhập', () => {
-  const { options, store, data } = fixture();
-  store.save(valid);
-  store.clear();
-  assert.equal(createSessionStore(options).read(), '');
-  assert.equal(data.size, 0);
+test('khôi phục bằng cookie và coi 401 là chưa có phiên', async t => {
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push({ url, options });
+    return response(401, { ok: false, error: 'UNAUTHORIZED' });
+  });
+  const client = createTeacherSessionClient({ apiBaseUrl: 'https://api.example.invalid/writing-api/', sessionPath: 'api/v1/auth/session' });
+  assert.equal(await client.restore(), null);
+  assert.equal(calls[0].options.credentials, 'include');
+  assert.equal(calls[0].options.cache, 'no-store');
 });
 
-test('xóa mã hết hạn hoặc chỉ còn dưới 10 giây', () => {
-  const { store, options, data } = fixture();
-  store.save(valid);
-  const later = createSessionStore({ ...options, now: () => now + 3600_000 - 10_000 });
-  assert.equal(later.read(), '');
-  assert.equal(data.size, 0);
-  assert.equal(store.save(token({ exp: now / 1000 - 1 })), false);
-});
+test('request ghi và logout luôn có cổng chống CSRF', async t => {
+  const write = teacherSessionRequestOptions({ method: 'POST', headers: { 'content-type': 'application/json' } });
+  assert.equal(write.credentials, 'include');
+  assert.equal(write.headers.get('x-izone-csrf'), '1');
+  assert.equal(teacherSessionRequestOptions().headers.has('x-izone-csrf'), false);
 
-test('từ chối mã hỏng hoặc hạn dùng sai kiểu mà không làm vỡ trang', () => {
-  const { store, options, data } = fixture();
-  store.save(valid);
-  const key = [...data.keys()][0];
-  for (const invalid of ['broken', 'a.!.b', token({}), token({ exp: '9999999999' }), token({ exp: null })]) {
-    data.set(key, invalid);
-    assert.equal(createSessionStore(options).read(), '');
-    assert.equal(data.size, 0);
-    assert.equal(tokenExpiresAt(invalid), 0);
-  }
-});
-
-test('không nối phiên sang API hoặc ứng dụng Google khác', () => {
-  const { store, options } = fixture();
-  store.save(valid);
-  assert.equal(createSessionStore({ ...options, clientId: 'other' }).read(), '');
-  assert.equal(createSessionStore({ ...options, apiBaseUrl: 'https://other.invalid' }).read(), '');
-  assert.equal(store.read(), valid);
-});
-
-test('bộ nhớ bị chặn không ngăn dùng mã trong lượt đăng nhập hiện tại', () => {
-  const { store } = fixture({ getStorage: () => { throw new Error('Storage blocked'); } });
-  assert.equal(store.read(), '');
-  assert.equal(store.save(valid), false);
-  assert.equal(store.usable(valid), true);
-  assert.doesNotThrow(() => store.clear());
+  let logoutOptions;
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    logoutOptions = options;
+    return response(200, { ok: true });
+  });
+  const client = createTeacherSessionClient({ apiBaseUrl: 'https://api.example.invalid/mapping-api', sessionPath: '/api/auth/session' });
+  await client.logout();
+  assert.equal(logoutOptions.method, 'DELETE');
+  assert.equal(logoutOptions.credentials, 'include');
+  assert.equal(logoutOptions.headers.get('x-izone-csrf'), '1');
 });

@@ -62,8 +62,8 @@ test('dashboard có 7 giai đoạn, không gian lớp, tìm kiếm và retry đ�
   assert.match(script, /teacher_names/u);
   assert.match(html, /id="remember-flow-login"/u);
   assert.match(html, /id="flow-logout"/u);
-  assert.match(script, /createTeacherSessionStore/u);
-  assert.match(script, /window\.sessionStorage/u);
+  assert.match(script, /createTeacherSessionClient/u);
+  assert.doesNotMatch(script, /window\.sessionStorage|Bearer\s/u);
   assert.match(script, /createTeacherLoginPreference/u);
   assert.match(script, /auto_select: loginPreference\.read\(\)/u);
   assert.match(script, /globalThis\.google\.accounts\.id\.prompt\(\)/u);

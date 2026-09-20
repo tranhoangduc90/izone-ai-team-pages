@@ -5,7 +5,7 @@
  * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
  */
 
-import { createSessionStore } from '../teacher-k56/auth-session.js?rev=20260903-remember-login-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-k56-v1';
 import { sortClassesNewestFirst } from './landing-model.js?rev=20260907-k56-class-picker';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
@@ -16,13 +16,12 @@ const loginBadge = document.getElementById('loginBadge');
 const loginStatus = document.getElementById('loginStatus');
 const googleSignInButton = document.getElementById('googleSignInButton');
 const logoutButton = document.getElementById('logoutButton');
-const sessionStore = createSessionStore({
-  apiBaseUrl: appConfig.API_BASE_URL,
-  clientId: appConfig.GOOGLE_CLIENT_ID,
-  getStorage: () => window.sessionStorage
-});
-
-let idToken = '';
+const apiBaseUrls = appConfig.API_BASE_URLS || [appConfig.API_BASE_URL];
+const sessionClients = new Map(apiBaseUrls.map(apiBaseUrl => [apiBaseUrl, createTeacherSessionClient({
+  apiBaseUrl,
+  sessionPath: '/api/auth/session'
+})]));
+const authenticatedApiUrls = new Set();
 let loginGeneration = 0;
 
 function selectLandingButton(selectedButton) {
@@ -76,12 +75,10 @@ function showAuthorizedClasses(payload) {
 
 async function loadAuthorizedClasses() {
   if (!appConfig.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
-  if (!sessionStore.usable(idToken)) throw new Error('Phiên Google đã hết hạn; hãy đăng nhập lại.');
+  if (!authenticatedApiUrls.size) throw new Error('Bạn chưa đăng nhập Google.');
   const generation = loginGeneration;
-  const responses = await Promise.all((appConfig.API_BASE_URLS || [appConfig.API_BASE_URL]).map(async apiBaseUrl => {
-    const response = await fetch(`${apiBaseUrl}/api/term-tests/teacher/options`, {
-      headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store'
-    });
+  const responses = await Promise.all(Array.from(authenticatedApiUrls, async apiBaseUrl => {
+    const response = await fetch(`${apiBaseUrl}/api/term-tests/teacher/options`, teacherSessionRequestOptions({ cache: 'no-store' }));
     return { response, payload: await response.json().catch(() => null) };
   }));
   if (generation !== loginGeneration) return;
@@ -96,26 +93,32 @@ async function loadAuthorizedClasses() {
   }
   const classes = Array.from(new Map(accepted.flatMap(item => item.payload.classes || []).map(item => [item.name, item])).values());
   showAuthorizedClasses({ reviewer: accepted[0].payload.reviewer, classes });
-  sessionStore.save(idToken);
 }
 
-function resetLogin({ clearSession = true } = {}) {
+function resetLogin() {
   loginGeneration += 1;
-  if (clearSession) sessionStore.clear();
-  idToken = '';
+  authenticatedApiUrls.clear();
   showManualEntry();
 }
 
-async function connectWithToken(token, restoring = false) {
-  idToken = token;
+async function connectSession(restoring = false) {
   loginStatus.textContent = restoring ? 'Đang khôi phục phiên đăng nhập...' : 'Đang tải các lớp được cấp quyền...';
   try {
     await loadAuthorizedClasses();
   } catch (error) {
-    const authenticationRejected = error.status === 401 || error.status === 403;
-    resetLogin({ clearSession: !restoring || authenticationRejected });
+    resetLogin();
     loginStatus.textContent = `Không thể tải danh sách lớp: ${error.message}`;
   }
+}
+
+async function loginAvailableApis(credential) {
+  const results = await Promise.allSettled(Array.from(sessionClients, async ([apiBaseUrl, client]) => {
+    await client.login(credential);
+    authenticatedApiUrls.add(apiBaseUrl);
+  }));
+  if (authenticatedApiUrls.size) return;
+  const failure = results.find(item => item.status === 'rejected');
+  throw failure?.reason || new Error('Tài khoản chưa được cấp quyền cho hệ thống K56.');
 }
 
 function setupGoogleSignIn() {
@@ -127,9 +130,15 @@ function setupGoogleSignIn() {
     window.google.accounts.id.initialize({
       client_id: appConfig.GOOGLE_CLIENT_ID,
       auto_select: false,
-      callback: response => {
+      callback: async response => {
         resetLogin();
-        connectWithToken(response.credential || '');
+        try {
+          await loginAvailableApis(response.credential || '');
+          await connectSession();
+        } catch (error) {
+          resetLogin();
+          loginStatus.textContent = `Không thể đăng nhập: ${error.message}`;
+        }
       }
     });
     window.google.accounts.id.renderButton(googleSignInButton, {
@@ -198,14 +207,21 @@ document.getElementById('teacherDashboard')?.addEventListener('click', () => {
   window.location.href = `../teacher-k56/${query}`;
 });
 
-logoutButton.addEventListener('click', () => {
+logoutButton.addEventListener('click', async () => {
+  await Promise.allSettled(Array.from(sessionClients.values(), client => client.logout()));
   resetLogin();
+  window.google?.accounts?.id?.disableAutoSelect?.();
   loginStatus.textContent = 'Đã đăng xuất. Bạn có thể nhập mã lớp hoặc đăng nhập tài khoản khác.';
 });
 
 const requestedClass = new URLSearchParams(location.search).get('class');
 input.value = validClassCode(String(requestedClass || '').toUpperCase()) ? requestedClass.toUpperCase() : 'CODEXDEMO56';
 showManualEntry();
-setupGoogleSignIn();
-const rememberedToken = sessionStore.read();
-if (rememberedToken) connectWithToken(rememberedToken, true);
+void Promise.all(Array.from(sessionClients, async ([apiBaseUrl, client]) => {
+  if (await client.restore()) authenticatedApiUrls.add(apiBaseUrl);
+}))
+  .then(async () => {
+    if (authenticatedApiUrls.size) await connectSession(true);
+  })
+  .catch(error => { loginStatus.textContent = `Không thể khôi phục phiên: ${error.message}`; })
+  .finally(setupGoogleSignIn);

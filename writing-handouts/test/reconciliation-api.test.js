@@ -11,7 +11,7 @@ test('mọi đề dùng chung API đối soát và giữ đúng nguồn/đích',
     calls.push({ url: new URL(url), ...options });
     return new Response(JSON.stringify({ students: [], ok: true }), { status: 200 });
   });
-  const api = createTeacherApi('https://example.invalid/writing-api/', () => 'fixture-only');
+  const api = createTeacherApi('https://example.invalid/writing-api/');
   const source = '11111111-1111-4111-8111-111111111111';
   const target = '22222222-2222-4222-8222-222222222222';
   await api.searchOfficialStudents('Học viên giả', source);
@@ -25,7 +25,10 @@ test('mọi đề dùng chung API đối soát và giữ đúng nguồn/đích',
   await api.deleteProvisional(source);
   assert.ok(calls[2].url.pathname.endsWith('/' + source + '/delete'));
   assert.equal(calls[2].method, 'POST');
-  assert.equal(calls.every(call => call.headers.authorization === 'Bearer fixture-only'), true);
+  assert.equal(calls.every(call => call.credentials === 'include'), true);
+  assert.equal(calls[0].headers.has('authorization'), false);
+  assert.equal(calls[1].headers.get('x-izone-csrf'), '1');
+  assert.equal(calls[2].headers.get('x-izone-csrf'), '1');
 });
 
 test('lỗi ghép phải được báo, không được coi là đã ghép', async (t) => {
@@ -44,6 +47,6 @@ test('giao diện chung có tìm toàn database, xác nhận trước ghi và ph
   assert.match(source, /reconciliationSearches.get\(item.studentRef\)/);
   assert.match(source, /confirm\(`Ghép hồ sơ/);
   assert.match(source, /confirm\(`Xóa hồ sơ tạm/);
-  assert.match(html, /teacher-app.js\?v=20260918-teacher-login-memory-v1/);
+  assert.match(html, /teacher-app.js\?v=20260920-server-session-v1/);
   assert.match(html, /styles.css\?v=20260918-teacher-checkbox-v1/);
 });
