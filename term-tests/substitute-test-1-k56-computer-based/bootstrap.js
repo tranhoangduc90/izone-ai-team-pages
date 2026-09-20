@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_SUBSTITUTE_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k56-shared/app.js?v=20260918-n8n'))
+      .then(() => loadScript('../substitute-k56-shared/app.js?v=20260920-writing-result'))
       .then(() => loadScript('enhance.js?v=20260918-n8n'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -558,7 +558,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k56-shared/app.js?v=20260918-n8n');
+    await loadScript('../substitute-k56-shared/app.js?v=20260920-writing-result');
     await loadScript('enhance.js?v=20260918-n8n');
     await loadScript('annotations.js');
   }

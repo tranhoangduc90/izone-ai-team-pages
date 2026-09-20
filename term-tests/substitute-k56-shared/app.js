@@ -661,7 +661,7 @@
       (demoMode && !serverGradingMode)
       || !state.writingSubmitted
       || grading?.ready
-      || grading?.status === 'review_required'
+      || (!serverGradingMode && grading?.status === 'review_required')
       || writingGradingPollTimer
     ) return;
     if (!writingGradingPollStartedAt) writingGradingPollStartedAt = Date.now();
