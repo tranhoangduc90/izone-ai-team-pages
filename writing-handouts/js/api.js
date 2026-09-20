@@ -1,4 +1,5 @@
 import { createRequestId } from "./core.js";
+import { teacherSessionRequestOptions } from "../../shared/teacher-session-client.js?rev=20260920-v1";
 
 function endpoint(base, path) { return new URL(path.replace(/^\//, ""), base || window.location.href).toString(); }
 
@@ -94,46 +95,47 @@ export function createLessonApi(base = "") {
   };
 }
 
-export function createTeacherApi(base = "", getToken = () => "") {
+export function createTeacherApi(base = "") {
   const root = endpoint(base, "api/v1/");
-  const authorized = () => ({ authorization: `Bearer ${getToken()}` });
+  const teacherFetch = (url, options = {}) => fetchJson(url, teacherSessionRequestOptions(options));
+  const teacherJson = (method, body, headers = {}, keepalive = false) => teacherSessionRequestOptions(jsonOptions(method, body, headers, keepalive));
   return {
     liveActivity: (slug, classRef = "") => {
       const url = new URL(endpoint(root, `admin/live/activities/${encodeURIComponent(slug)}`));
       if (classRef) url.searchParams.set("classRef", classRef);
-      return fetchJson(url, { headers: authorized() });
+      return teacherFetch(url);
     },
-    liveSession: (sessionRef) => fetchJson(endpoint(root, `admin/live/sessions/${encodeURIComponent(sessionRef)}`), { headers: authorized() }),
-    draftResult: (sessionRef) => fetchJson(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/draft-result`), { headers: authorized() }),
-    provisionalStudents: (slug, classRef = "") => { const url = new URL(endpoint(root, `admin/activities/${encodeURIComponent(slug)}/provisional-students`)); if (classRef) url.searchParams.set("classRef", classRef); return fetchJson(url, { headers: authorized() }); },
-    searchOfficialStudents: (query, excludeStudentRef = "") => { const url = new URL(endpoint(root, "admin/official-students/search")); url.searchParams.set("q", query); if (excludeStudentRef) url.searchParams.set("excludeStudentRef", excludeStudentRef); return fetchJson(url, { headers: authorized() }); },
-    resetProvisionalCode: (studentRef) => fetchJson(endpoint(root, `admin/provisional-students/${encodeURIComponent(studentRef)}/reset-code`), jsonOptions("POST", {}, authorized())),
-    reconcileProvisional: (studentRef, officialStudentRef) => fetchJson(endpoint(root, `admin/provisional-students/${encodeURIComponent(studentRef)}/reconcile`), jsonOptions("POST", { officialStudentRef }, authorized())),
-    deleteProvisional: (studentRef) => fetchJson(endpoint(root, `admin/provisional-students/${encodeURIComponent(studentRef)}/delete`), jsonOptions("POST", {}, authorized())),
-    exportProgress: async (slug, classRef = "") => { const url = new URL(endpoint(root, `admin/activities/${encodeURIComponent(slug)}/export.csv`)); if (classRef) url.searchParams.set("classRef", classRef); const response = await fetch(url, { headers: authorized() }); if (!response.ok) throw new Error(`Không thể tải CSV (${response.status}).`); return response.blob(); },
-    retryFailedAttempt: (attemptRef) => fetchJson(endpoint(root, `admin/attempts/${encodeURIComponent(attemptRef)}/retry`), jsonOptions("POST", {}, authorized())),
-    writingPairs: (classCode = "", teacherName = "", offset = 0, limit = 200) => { const url = new URL(endpoint(root, "admin/writing-flow/pairs")); if (classCode) url.searchParams.set("classCode", classCode); if (teacherName) url.searchParams.set("teacherName", teacherName); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return fetchJson(url, { headers: authorized() }); },
-    writingPairsPage: (filters = {}) => { const url = new URL(endpoint(root, "admin/writing-flow/pairs")); for (const key of ["classCode", "teacherName", "stageKey", "stageStatus", "view", "cursorAt", "cursorId"]) { if (filters[key]) url.searchParams.set(key, filters[key]); } url.searchParams.set("limit", filters.limit || 50); return fetchJson(url, { headers: authorized() }); },
-    writingCounts: (classCode = "", teacherName = "") => { const url = new URL(endpoint(root, "admin/writing-flow/counts")); if (classCode) url.searchParams.set("classCode", classCode); if (teacherName) url.searchParams.set("teacherName", teacherName); return fetchJson(url, { headers: authorized() }); },
-    writingPairHistory: pairId => fetchJson(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/history`), { headers: authorized() }),
-    writingPairDetail: pairId => fetchJson(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/detail`), { headers: authorized() }),
-    writingSummary: () => fetchJson(endpoint(root, "admin/writing-flow/summary"), { headers: authorized() }),
-    writingClassCoverage: () => fetchJson(endpoint(root, "admin/writing-flow/class-coverage"), { headers: authorized() }),
-    writingReviews: (offset = 0, limit = 200) => { const url = new URL(endpoint(root, "admin/writing-flow/reviews")); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return fetchJson(url, { headers: authorized() }); },
-    writingSourceIssues: (offset = 0, limit = 200) => { const url = new URL(endpoint(root, "admin/writing-flow/source-issues")); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return fetchJson(url, { headers: authorized() }); },
-    writingWorkflowFailures: (offset = 0, limit = 200) => { const url = new URL(endpoint(root, "admin/writing-flow/workflow-failures")); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return fetchJson(url, { headers: authorized() }); },
-    retryWritingReview: (reviewId, requestId = createRequestId()) => fetchJson(endpoint(root, `admin/writing-flow/reviews/${encodeURIComponent(reviewId)}/retry`), jsonOptions("POST", { requestId }, authorized())),
-    retryWritingSourceIssue: (issueKey, requestId = createRequestId()) => fetchJson(endpoint(root, `admin/writing-flow/source-issues/${encodeURIComponent(issueKey)}/retry`), jsonOptions("POST", { requestId }, authorized())),
-    addWritingManualSource: (displayName, documentUrl, requestId = createRequestId()) => fetchJson(endpoint(root, "admin/writing-flow/manual-sources"), jsonOptions("POST", { displayName, documentUrl, requestId }, authorized())),
-    skipWritingPair: (pairId, reason, requestId = createRequestId()) => fetchJson(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/skip`), jsonOptions("POST", { reason, requestId }, authorized())),
-    restoreWritingPair: (pairId, reason, requestId = createRequestId()) => fetchJson(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/restore`), jsonOptions("POST", { reason, requestId }, authorized())),
-    retryWritingPairStage: (pairId, stageKey, reason, requestId = createRequestId()) => fetchJson(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/retry`), jsonOptions("POST", { stageKey, reason, requestId }, authorized())),
-    writingLegacy: (classCode = "", offset = 0, limit = 50) => { const url = new URL(endpoint(root, "admin/writing-flow/legacy")); if (classCode) url.searchParams.set("classCode", classCode); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return fetchJson(url, { headers: authorized() }); },
-    requestWritingClassScan: (classCode, reason, requestId = createRequestId()) => fetchJson(endpoint(root, `admin/writing-flow/classes/${encodeURIComponent(classCode)}/scan`), jsonOptions("POST", { reason, requestId }, authorized())),
-    teacherComments: (sessionRef, etag) => fetchJson(endpoint(root, `admin/live/sessions/${encodeURIComponent(sessionRef)}/teacher-comments`), { headers: { ...authorized(), ...(etag ? { "if-none-match": etag } : {}) } }),
-    createTeacherComment: (sessionRef, payload) => fetchJson(endpoint(root, `admin/live/sessions/${encodeURIComponent(sessionRef)}/teacher-comments`), jsonOptions("POST", payload, authorized())),
-    replyTeacherComment: (threadRef, body, requestId = createRequestId()) => fetchJson(endpoint(root, `admin/teacher-comments/${encodeURIComponent(threadRef)}/replies`), jsonOptions("POST", { body, requestId }, authorized())),
-    setTeacherCommentStatus: (threadRef, status, requestId = createRequestId()) => fetchJson(endpoint(root, `admin/teacher-comments/${encodeURIComponent(threadRef)}/status`), jsonOptions("POST", { status, requestId }, authorized())),
-    reopenSection: (sessionRef, section, reason) => fetchJson(endpoint(root, `admin/lesson-sessions/${encodeURIComponent(sessionRef)}/sections/${encodeURIComponent(section)}/reopen`), jsonOptions("POST", { reason }, authorized())),
+    liveSession: (sessionRef) => teacherFetch(endpoint(root, `admin/live/sessions/${encodeURIComponent(sessionRef)}`)),
+    draftResult: (sessionRef) => teacherFetch(endpoint(root, `sessions/${encodeURIComponent(sessionRef)}/draft-result`)),
+    provisionalStudents: (slug, classRef = "") => { const url = new URL(endpoint(root, `admin/activities/${encodeURIComponent(slug)}/provisional-students`)); if (classRef) url.searchParams.set("classRef", classRef); return teacherFetch(url); },
+    searchOfficialStudents: (query, excludeStudentRef = "") => { const url = new URL(endpoint(root, "admin/official-students/search")); url.searchParams.set("q", query); if (excludeStudentRef) url.searchParams.set("excludeStudentRef", excludeStudentRef); return teacherFetch(url); },
+    resetProvisionalCode: (studentRef) => teacherFetch(endpoint(root, `admin/provisional-students/${encodeURIComponent(studentRef)}/reset-code`), teacherJson("POST", {})),
+    reconcileProvisional: (studentRef, officialStudentRef) => teacherFetch(endpoint(root, `admin/provisional-students/${encodeURIComponent(studentRef)}/reconcile`), teacherJson("POST", { officialStudentRef })),
+    deleteProvisional: (studentRef) => teacherFetch(endpoint(root, `admin/provisional-students/${encodeURIComponent(studentRef)}/delete`), teacherJson("POST", {})),
+    exportProgress: async (slug, classRef = "") => { const url = new URL(endpoint(root, `admin/activities/${encodeURIComponent(slug)}/export.csv`)); if (classRef) url.searchParams.set("classRef", classRef); const response = await fetch(url, teacherSessionRequestOptions()); if (!response.ok) throw new Error(`Không thể tải CSV (${response.status}).`); return response.blob(); },
+    retryFailedAttempt: (attemptRef) => teacherFetch(endpoint(root, `admin/attempts/${encodeURIComponent(attemptRef)}/retry`), teacherJson("POST", {})),
+    writingPairs: (classCode = "", teacherName = "", offset = 0, limit = 200) => { const url = new URL(endpoint(root, "admin/writing-flow/pairs")); if (classCode) url.searchParams.set("classCode", classCode); if (teacherName) url.searchParams.set("teacherName", teacherName); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return teacherFetch(url); },
+    writingPairsPage: (filters = {}) => { const url = new URL(endpoint(root, "admin/writing-flow/pairs")); for (const key of ["classCode", "teacherName", "stageKey", "stageStatus", "view", "cursorAt", "cursorId"]) { if (filters[key]) url.searchParams.set(key, filters[key]); } url.searchParams.set("limit", filters.limit || 50); return teacherFetch(url); },
+    writingCounts: (classCode = "", teacherName = "") => { const url = new URL(endpoint(root, "admin/writing-flow/counts")); if (classCode) url.searchParams.set("classCode", classCode); if (teacherName) url.searchParams.set("teacherName", teacherName); return teacherFetch(url); },
+    writingPairHistory: pairId => teacherFetch(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/history`)),
+    writingPairDetail: pairId => teacherFetch(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/detail`)),
+    writingSummary: () => teacherFetch(endpoint(root, "admin/writing-flow/summary")),
+    writingClassCoverage: () => teacherFetch(endpoint(root, "admin/writing-flow/class-coverage")),
+    writingReviews: (offset = 0, limit = 200) => { const url = new URL(endpoint(root, "admin/writing-flow/reviews")); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return teacherFetch(url); },
+    writingSourceIssues: (offset = 0, limit = 200) => { const url = new URL(endpoint(root, "admin/writing-flow/source-issues")); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return teacherFetch(url); },
+    writingWorkflowFailures: (offset = 0, limit = 200) => { const url = new URL(endpoint(root, "admin/writing-flow/workflow-failures")); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return teacherFetch(url); },
+    retryWritingReview: (reviewId, requestId = createRequestId()) => teacherFetch(endpoint(root, `admin/writing-flow/reviews/${encodeURIComponent(reviewId)}/retry`), teacherJson("POST", { requestId })),
+    retryWritingSourceIssue: (issueKey, requestId = createRequestId()) => teacherFetch(endpoint(root, `admin/writing-flow/source-issues/${encodeURIComponent(issueKey)}/retry`), teacherJson("POST", { requestId })),
+    addWritingManualSource: (displayName, documentUrl, requestId = createRequestId()) => teacherFetch(endpoint(root, "admin/writing-flow/manual-sources"), teacherJson("POST", { displayName, documentUrl, requestId })),
+    skipWritingPair: (pairId, reason, requestId = createRequestId()) => teacherFetch(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/skip`), teacherJson("POST", { reason, requestId })),
+    restoreWritingPair: (pairId, reason, requestId = createRequestId()) => teacherFetch(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/restore`), teacherJson("POST", { reason, requestId })),
+    retryWritingPairStage: (pairId, stageKey, reason, requestId = createRequestId()) => teacherFetch(endpoint(root, `admin/writing-flow/pairs/${encodeURIComponent(pairId)}/retry`), teacherJson("POST", { stageKey, reason, requestId })),
+    writingLegacy: (classCode = "", offset = 0, limit = 50) => { const url = new URL(endpoint(root, "admin/writing-flow/legacy")); if (classCode) url.searchParams.set("classCode", classCode); url.searchParams.set("offset", offset); url.searchParams.set("limit", limit); return teacherFetch(url); },
+    requestWritingClassScan: (classCode, reason, requestId = createRequestId()) => teacherFetch(endpoint(root, `admin/writing-flow/classes/${encodeURIComponent(classCode)}/scan`), teacherJson("POST", { reason, requestId })),
+    teacherComments: (sessionRef, etag) => teacherFetch(endpoint(root, `admin/live/sessions/${encodeURIComponent(sessionRef)}/teacher-comments`), { headers: etag ? { "if-none-match": etag } : {} }),
+    createTeacherComment: (sessionRef, payload) => teacherFetch(endpoint(root, `admin/live/sessions/${encodeURIComponent(sessionRef)}/teacher-comments`), teacherJson("POST", payload)),
+    replyTeacherComment: (threadRef, body, requestId = createRequestId()) => teacherFetch(endpoint(root, `admin/teacher-comments/${encodeURIComponent(threadRef)}/replies`), teacherJson("POST", { body, requestId })),
+    setTeacherCommentStatus: (threadRef, status, requestId = createRequestId()) => teacherFetch(endpoint(root, `admin/teacher-comments/${encodeURIComponent(threadRef)}/status`), teacherJson("POST", { status, requestId })),
+    reopenSection: (sessionRef, section, reason) => teacherFetch(endpoint(root, `admin/lesson-sessions/${encodeURIComponent(sessionRef)}/sections/${encodeURIComponent(section)}/reopen`), teacherJson("POST", { reason })),
   };
 }

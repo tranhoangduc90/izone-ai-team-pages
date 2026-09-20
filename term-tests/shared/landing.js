@@ -5,8 +5,8 @@
  * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
  */
 
-import { createSessionStore } from '../teacher/auth-session.js?rev=20260903-remember-login-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 import { sortClassesNewestFirst } from './landing-model.js?rev=20260904-landing-google-auth-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
@@ -19,13 +19,12 @@ const googleSignInButton = document.getElementById('googleSignInButton');
 const logoutButton = document.getElementById('logoutButton');
 const rememberTeacherLogin = document.getElementById('rememberTeacherLogin');
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
-const sessionStore = createSessionStore({
+const sessionClient = createTeacherSessionClient({
   apiBaseUrl: appConfig.API_BASE_URL,
-  clientId: appConfig.GOOGLE_CLIENT_ID,
-  getStorage: () => window.sessionStorage
+  sessionPath: '/api/auth/session'
 });
 
-let idToken = '';
+let authenticated = false;
 let loginGeneration = 0;
 
 function selectedClassCode() {
@@ -71,40 +70,33 @@ function showAuthorizedClasses(payload) {
 
 async function loadAuthorizedClasses() {
   if (!appConfig.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
-  if (!sessionStore.usable(idToken)) throw new Error('Phiên Google đã hết hạn; hãy đăng nhập lại.');
+  if (!authenticated) throw new Error('Bạn chưa đăng nhập Google.');
   const generation = loginGeneration;
-  const response = await fetch(`${appConfig.API_BASE_URL}/api/term-tests/teacher/options`, {
-    headers: { Authorization: `Bearer ${idToken}` },
-    cache: 'no-store'
-  });
+  const response = await fetch(`${appConfig.API_BASE_URL}/api/term-tests/teacher/options`, teacherSessionRequestOptions({ cache: 'no-store' }));
   const payload = await response.json().catch(() => null);
   if (generation !== loginGeneration) return;
   if (!response.ok || !payload?.ok) {
     const error = new Error(payload?.message || (response.status === 401
-      ? 'Phiên Google đã hết hạn; hãy đăng nhập lại.'
+      ? 'Phiên đăng nhập đã hết hạn; hãy đăng nhập lại.'
       : `Không tải được danh sách lớp (mã ${response.status}).`));
     error.status = response.status;
     throw error;
   }
   showAuthorizedClasses(payload);
-  sessionStore.save(idToken);
 }
 
-function resetLogin({ clearSession = true } = {}) {
+function resetLogin() {
   loginGeneration += 1;
-  if (clearSession) sessionStore.clear();
-  idToken = '';
+  authenticated = false;
   showManualEntry();
 }
 
-async function connectWithToken(token, restoring = false) {
-  idToken = token;
+async function connectSession(restoring = false) {
   loginStatus.textContent = restoring ? 'Đang khôi phục phiên đăng nhập...' : 'Đang tải các lớp được cấp quyền...';
   try {
     await loadAuthorizedClasses();
   } catch (error) {
-    const authenticationRejected = error.status === 401 || error.status === 403;
-    resetLogin({ clearSession: !restoring || authenticationRejected });
+    resetLogin();
     loginStatus.textContent = `Không thể tải danh sách lớp: ${error.message}`;
   }
 }
@@ -118,9 +110,15 @@ function setupGoogleSignIn() {
     window.google.accounts.id.initialize({
       client_id: appConfig.GOOGLE_CLIENT_ID,
       auto_select: loginPreference.read(),
-      callback: response => {
+      callback: async response => {
         resetLogin();
-        connectWithToken(response.credential || '');
+        try {
+          await sessionClient.login(response.credential || '');
+          authenticated = true;
+          await connectSession();
+        } catch (error) {
+          loginStatus.textContent = `Không thể đăng nhập: ${error.message}`;
+        }
       }
     });
     window.google.accounts.id.renderButton(googleSignInButton, {
@@ -130,7 +128,7 @@ function setupGoogleSignIn() {
       text: 'signin_with',
       shape: 'rectangular'
     });
-    if (loginPreference.read() && !idToken && !sessionStore.read()) window.google.accounts.id.prompt();
+    if (loginPreference.read() && !authenticated) window.google.accounts.id.prompt();
   };
   const script = document.createElement('script');
   script.src = 'https://accounts.google.com/gsi/client';
@@ -160,9 +158,10 @@ document.getElementById('teacherDashboard')?.addEventListener('click', () => {
   window.location.href = `teacher/${query}`;
 });
 
-logoutButton.addEventListener('click', () => {
+logoutButton.addEventListener('click', async () => {
+  try { await sessionClient.logout(); } catch { /* Vẫn xóa trạng thái hiển thị trên máy dùng chung. */ }
   resetLogin();
-  window.google?.accounts?.id?.disableAutoSelect();
+  window.google?.accounts?.id?.disableAutoSelect?.();
   const forgotten = loginPreference.set(false);
   rememberTeacherLogin.checked = !forgotten;
   loginStatus.textContent = forgotten ? 'Đã đăng xuất. Bạn có thể nhập mã lớp hoặc đăng nhập tài khoản khác.' : 'Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.';
@@ -176,6 +175,11 @@ rememberTeacherLogin.addEventListener('change', () => {
 });
 
 showManualEntry();
-setupGoogleSignIn();
-const rememberedToken = sessionStore.read();
-if (rememberedToken) connectWithToken(rememberedToken, true);
+void sessionClient.restore()
+  .then(async restored => {
+    if (!restored) return;
+    authenticated = true;
+    await connectSession(true);
+  })
+  .catch(error => { loginStatus.textContent = `Không thể khôi phục phiên: ${error.message}`; })
+  .finally(setupGoogleSignIn);

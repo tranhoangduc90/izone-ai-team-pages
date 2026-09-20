@@ -79,13 +79,36 @@ test('lớp chưa có ngày Portal vẫn được xếp theo mã mới tới cũ
 test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đã cấp quyền', async () => {
   const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
   const token = ['fake', Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url'), 'fake'].join('.');
-  let receivedAuthorization = '';
+  let receivedCookie = '';
   let optionsMode = 'success';
   const server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://127.0.0.1');
+      if (url.pathname === '/api/auth/session') {
+        if (request.method === 'POST') {
+          response.writeHead(201, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Set-Cookie': 'fixture_teacher_session=active; Path=/; HttpOnly; SameSite=Lax'
+          });
+          response.end(JSON.stringify({ ok: true, reviewer: { displayName: 'Giảng viên thử' } }));
+          return;
+        }
+        if (request.method === 'DELETE') {
+          response.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Set-Cookie': 'fixture_teacher_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
+          });
+          response.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        response.writeHead(request.headers.cookie?.includes('fixture_teacher_session=active') ? 200 : 401, { 'Content-Type': 'application/json; charset=utf-8' });
+        response.end(JSON.stringify(request.headers.cookie?.includes('fixture_teacher_session=active')
+          ? { ok: true, reviewer: { displayName: 'Giảng viên thử' } }
+          : { ok: false, error: 'UNAUTHORIZED' }));
+        return;
+      }
       if (url.pathname === '/api/term-tests/teacher/options') {
-        receivedAuthorization = request.headers.authorization || '';
+        receivedCookie = request.headers.cookie || '';
         if (optionsMode === 'error') {
           response.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' });
           response.end(JSON.stringify({ ok: false, message: 'Dịch vụ thử đang bận.' }));
@@ -133,7 +156,7 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     await page.getByRole('button', { name: 'Đăng nhập thử' }).click();
     await page.locator('#classSelect').waitFor({ state: 'visible' });
     assert.deepEqual(await page.locator('#classSelect option').allTextContents(), ['IC2172', 'IC3000', 'IC9999']);
-    assert.equal(receivedAuthorization, `Bearer ${token}`);
+    assert.match(receivedCookie, /fixture_teacher_session=active/u);
     const heights = await page.locator('.landing-actions .button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().height));
     assert.equal(new Set(heights.map(Math.round)).size, 1);
     await page.getByRole('button', { name: 'Đăng xuất' }).click();
