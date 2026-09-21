@@ -1411,7 +1411,7 @@
     clock.append(clockLabel, clockValue, clockTotal);
     const phase = document.createElement('span');
     phase.className = 'cbt-writing-phase';
-    phase.textContent = planningMinutes > 0 ? 'Lập dàn ý · còn ' + planningMinutes + ' phút' : 'Viết bài Task 1 · còn ' + totalMinutes + ' phút';
+    phase.textContent = planningMinutes > 0 ? 'Lập dàn ý · còn ' + planningMinutes + ' phút' : 'Viết bài · còn ' + totalMinutes + ' phút';
     phase.setAttribute('role', 'status');
     header.insertBefore(clock, document.getElementById('submitWriting'));
     header.insertBefore(phase, clock);
@@ -1470,7 +1470,7 @@
         const planningPhase = remainingSeconds > essaySeconds;
         phase.textContent = planningPhase
           ? 'Lập dàn ý · còn ' + formatMinutes(remainingSeconds - essaySeconds) + ' phút'
-          : 'Viết bài Task 1 · còn ' + formatMinutes(remainingSeconds) + ' phút';
+          : 'Viết bài · còn ' + formatMinutes(remainingSeconds) + ' phút';
         phase.classList.toggle('is-essay', !planningPhase);
         if (!planningPhase && !essayPhaseAnnounced && remainingSeconds > 0) {
           essayPhaseAnnounced = true;

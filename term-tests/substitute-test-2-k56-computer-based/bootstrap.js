@@ -263,7 +263,17 @@
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(appConfig.API_BASE_URL + path, { ...options, signal: controller.signal });
+      const requestUrl = new URL(path, window.location.origin);
+      const payload = typeof options.body === 'string' && options.body.trim() ? JSON.parse(options.body) : {};
+      for (const [key, value] of requestUrl.searchParams) {
+        if (!(key in payload)) payload[key] = value;
+      }
+      const response = await fetch(appConfig.API_BASE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify({ route: requestUrl.pathname, payload }),
+        signal: controller.signal
+      });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
       return data;
