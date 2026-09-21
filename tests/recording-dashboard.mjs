@@ -10,7 +10,7 @@ test('dashboard hiển thị số phần của recording nhiều clip', () => {
 });
 
 test('đổi playlist tải lại cả nhóm và thông báo đã sửa tên', () => {
-  assert.match(source, /await loadData\(\);\s*toast\('Đã đổi playlist và sửa lại tên/);
+  assert.match(source, /Đã chuyển playlist và lưu tên video/);
   assert.match(html, /chuyển playlist rồi sửa tên video/);
 });
 

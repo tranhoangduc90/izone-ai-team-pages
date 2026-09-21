@@ -72,7 +72,7 @@ function renderYesterday() {
     <strong>Buổi ${escapeHtml(item.lessonNumber || '—')}</strong>
     <span>${item.normalizedTime?dateTime(item.sessionStart):portalTime(item.sessionStart)+" · "+displayDate(item.sessionStart)}</span>
   </article>`).join('');
-  $('yesterdayClasses').innerHTML = cards || '<div class="empty-inline">Không có lớp Zoom 36 hoặc Zoom 6 trong ngày này.</div>';
+  $('yesterdayClasses').innerHTML = cards || (nightlyState.error||['failed','partial'].includes(nightlyState.snapshot?.scanStatus)?'<div class="empty-inline">Chưa đọc đủ dữ liệu lịch học; chưa thể kết luận ngày này không có lớp.</div>':'<div class="empty-inline">Không có lớp Zoom 36 hoặc Zoom 6 trong ngày này.</div>');
 }
 
 function youtubeState(record) {
@@ -108,7 +108,7 @@ function recordRow(record) {
 function renderSection(title, records, approved) {
   const rows = filteredRecords(records);
   return `<section class="review-section ${approved ? 'approved' : 'pending'}">
-    <div class="review-heading"><div><span class="section-dot"></span><h2>${title}</h2></div><span>${rows.length} recording</span></div>
+    ${!approved&&(nightlyState.error||['failed','partial'].includes(nightlyState.snapshot?.scanStatus))?'<div class="empty-inline" role="alert">Chưa đối soát đầy đủ: nguồn Portal hoặc Zoom đang gặp lỗi. Các bản ghi hiện có được giữ để kiểm tra.</div>':''}<div class="review-heading"><div><span class="section-dot"></span><h2>${title}</h2></div><span>${rows.length} recording</span></div>
     ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Lớp / Zoom</th><th>Recording</th><th>Thời gian học</th><th>YouTube</th><th>Chỉnh sửa</th><th>Liên kết</th><th>Cập nhật</th><th>Đã duyệt</th></tr></thead><tbody>${rows.map(recordRow).join('')}</tbody></table></div>` : '<div class="section-empty">Không có recording trong mục này.</div>'}
   </section>`;
 }
@@ -117,17 +117,7 @@ function renderSections() {
   const newest = (a, b) => parseTimestamp(b.recordingStart || 0) - parseTimestamp(a.recordingStart || 0);
   const pending = state.records.filter((record) => !isApproved(record)).sort(newest);
   const approved = state.records.filter(isApproved).sort((a, b) => parseTimestamp(b.approvedAt || b.recordingStart || 0) - parseTimestamp(a.approvedAt || a.recordingStart || 0));
-  const folders = new Map();
-  for (const record of [...pending, ...approved]) {
-    const name = record.className && record.className !== 'Cần duyệt' ? record.className : 'Chưa xác định lớp';
-    if (!folders.has(name)) folders.set(name, []); folders.get(name).push(record);
-  }
-  const opened = new Set([...document.querySelectorAll('details.class-folder[open]')].map(x=>x.dataset.class));
-  const initial = !document.querySelector('details.class-folder');
-  $('reviewSections').innerHTML = [...folders].sort(([a],[b])=>a.localeCompare(b,'vi')).map(([name,rows]) => {
-    const visible = filteredRecords(rows); if (!visible.length) return '';
-    return `<details class="class-folder" data-class="${escapeHtml(name)}" ${initial||opened.has(name)?'open':''}><summary>${escapeHtml(name)} <span>${visible.filter(r=>!isApproved(r)).length} cần duyệt · ${visible.filter(isApproved).length} đã duyệt</span></summary>${renderSection('Cần duyệt',rows.filter(r=>!isApproved(r)),false)}${renderSection('Đã duyệt',rows.filter(isApproved),true)}</details>`;
-  }).join('') || '<div class="empty">Không có bản ghi phù hợp bộ lọc.</div>';
+  $('reviewSections').innerHTML = renderSection('Cần duyệt',pending,false) + renderSection('Đã duyệt',approved,true);
 }
 
 function populateAccounts() {
@@ -189,7 +179,7 @@ async function loadData(force = false) {
     const payload = await response.json();
     if (loadVersion !== state.version || requestId!==dataRequestId) return;
     let snapshot = null;
-    try { snapshot = await loadNightly(); } catch { $('scanStatus').textContent = 'Không tải được dữ liệu đối soát; dữ liệu video vẫn được giữ.'; }
+    try { snapshot = await loadNightly(); } catch { nightlyState.error=true;toast('Không tải được dữ liệu đối soát của ngày đã chọn.','error'); }
     if (loadVersion !== state.version || requestId!==dataRequestId) return;
     state.records = mergeNightlyRecords(Array.isArray(payload.records) ? payload.records : [], snapshot);
     state.yesterdayClasses = snapshot ? snapshot.records.filter(r=>r.kind==='session').map(r=>({...r,zoomAccount:r.source,normalizedTime:true})) : (Array.isArray(payload.yesterdayClasses) ? payload.yesterdayClasses : []);
@@ -211,7 +201,7 @@ async function loadData(force = false) {
 
 controls.forEach((control) => control.addEventListener('input', renderSections));
 $('refreshButton').addEventListener('click', loadData);
-$('playlistSearch').addEventListener('input', (event) => renderPlaylistOptions(event.target.value));
+
 document.querySelectorAll('[data-close-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
 
 document.addEventListener('click', (event) => {
@@ -228,11 +218,11 @@ document.addEventListener('click', (event) => {
   }
   if (button.dataset.action === 'playlist') {
     $('playlistRecordId').value = record.id;
-    $('playlistSearch').value = '';
+    $('playlistVideoTitle').value = record.title || '';
     renderPlaylistOptions();
     $('playlistDialog').dataset.version=record.version||0;
     $('playlistDialog').showModal();
-    $('playlistSearch').focus();
+    $('playlistSelect').focus();
   }
 });
 
@@ -277,17 +267,27 @@ $('playlistForm').addEventListener('submit', async (event) => {
   const button = $('playlistSubmit');
   button.disabled = true;
   button.textContent = 'Đang chuyển…';
+  let moved = false;
+  const id=$('playlistRecordId').value;
+  const desiredTitle=$('playlistVideoTitle').value.trim();
   try {
-    const record = await postAction(PLAYLIST_API_URL, { id: $('playlistRecordId').value, expectedVersion:Number($('playlistDialog').dataset.version), playlistId: select.value, playlistTitle: option.dataset.title || option.textContent });
-    replaceRecord(record);
-    $('playlistDialog').close();
-    await loadData();
-    toast('Đã đổi playlist và sửa lại tên các video trong buổi học.');
-  } catch {
-    toast('Không đổi được playlist. Hãy kiểm tra playlist đã chọn.', 'error');
+    let record=state.records.find(r=>String(r.id)===id);
+    if(record.playlistId!==select.value){
+      record=await postAction(PLAYLIST_API_URL,{id,expectedVersion:Number($('playlistDialog').dataset.version),playlistId:select.value,playlistTitle:option.dataset.title||option.textContent});
+      moved=true;replaceRecord(record);
+      $('playlistDialog').dataset.version=record.version||0;
+    }
+    if(record.title!==desiredTitle){
+      record=await postAction(RENAME_API_URL,{id,expectedVersion:Number($('playlistDialog').dataset.version),newTitle:desiredTitle});
+      replaceRecord(record);$('playlistDialog').dataset.version=record.version||0;
+    }
+    $('playlistDialog').close();await loadData(true);
+    toast('Đã chuyển playlist và lưu tên video.');
+  } catch(error) {
+    if(error.message.includes('VERSION_CONFLICT')){toast('Dữ liệu đã được người khác sửa. Hãy đóng hộp thoại, làm mới và mở lại để kiểm tra trước khi lưu.','error');return;}
+    toast(moved?'Đã chuyển playlist nhưng chưa lưu được tên video. Hãy kiểm tra và lưu lại.':'Chưa lưu được thay đổi. Hãy làm mới dữ liệu và thử lại.','error');
   } finally {
-    button.disabled = false;
-    button.textContent = 'Chuyển playlist';
+    button.disabled=false;button.textContent='Chuyển playlist và đổi tên';
   }
 });
 

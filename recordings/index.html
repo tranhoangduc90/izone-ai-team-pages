@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>IZONE Recording Automation</title>
   <link rel="icon" href="assets/izone-recording-thumbnail.png">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <div class="shell">
@@ -34,12 +34,6 @@
       <div id="yesterdayClasses" class="class-grid"><div class="loading-inline">Đang tải lịch học…</div></div>
     </section>
 
-    <section class="scan-panel" aria-label="Đối soát ban đêm">
-      <div><strong>Đối soát recording lúc 23:00</strong><p id="scanStatus">Đang đọc kết quả lượt quét…</p></div>
-      <label>Ngày học<input type="date" id="scanDate"></label>
-      <button type="button" id="recheckButton">Kiểm tra lại Zoom 36 và Zoom 6</button>
-      <small>Nút này quét theo yêu cầu. Làm mới dashboard chỉ đọc tiến độ đã lưu.</small>
-    </section>
     <section class="toolbar">
       <label>Ngày recording<input id="dateFilter" type="date"></label>
       <label>Tài khoản Zoom<select id="accountFilter"><option value="">Tất cả</option></select></label>
@@ -65,10 +59,10 @@
     <form id="playlistForm" method="dialog">
       <div class="dialog-title"><div><span class="section-kicker">YOUTUBE</span><h2>Đổi playlist</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Đóng">×</button></div>
       <input id="playlistRecordId" type="hidden">
-      <label>Tìm playlist<input id="playlistSearch" type="search" placeholder="Nhập mã lớp hoặc tên playlist"></label>
-      <label>Playlist mới<select id="playlistSelect" required></select></label>
-      <p class="dialog-note">Hệ thống sẽ xác định lại lớp và buổi từ Portal, chuyển playlist rồi sửa tên video. Nếu buổi có nhiều clip, hệ thống sẽ đánh lại Phần 1, 2, 3 theo thời gian ghi trên Zoom.</p>
-      <div class="dialog-actions"><button class="secondary" type="button" data-close-dialog>Hủy</button><button id="playlistSubmit" type="submit">Chuyển playlist</button></div>
+      <label>Playlist chuyển vào<select id="playlistSelect" required></select></label>
+      <label>Tên video sau khi chuyển<input id="playlistVideoTitle" maxlength="100" required></label>
+      <p class="dialog-note">Chọn playlist đích, sau đó nhập tên video đúng. Hệ thống chuyển playlist rồi sửa tên video; video cần được duyệt lại sau khi sửa.</p>
+      <div class="dialog-actions"><button class="secondary" type="button" data-close-dialog>Hủy</button><button id="playlistSubmit" type="submit">Chuyển playlist và đổi tên</button></div>
     </form>
   </dialog>
 
@@ -78,17 +72,9 @@
     <label>Lý do<input id="exceptionReason" maxlength="500" placeholder="Bắt buộc khi đóng ngoại lệ"></label>
     <div class="dialog-actions"><button type="button" class="secondary" data-close-dialog>Hủy</button><button type="submit" id="exceptionSubmit">Lưu trạng thái</button></div>
   </form></dialog>
-  <dialog id="recordingDecisionDialog"><form id="recordingDecisionForm">
-    <div class="dialog-title"><h2>Xử lý recording</h2><button class="icon-button" type="button" data-close-dialog aria-label="Đóng">×</button></div>
-    <label>Thao tác<select id="recordingDecisionAction"><option value="assign_session">Xác nhận lớp và buổi Portal</option><option value="retry_existing">Tiếp tục bước lỗi của file đã biết</option><option value="exclude_recording">Bỏ qua clip này trong luồng</option></select></label>
-    <label>Buổi Portal<select id="recordingSession"></select></label>
-    <label>Lý do<input id="recordingDecisionReason" maxlength="500" required></label>
-    <p class="dialog-note">Bỏ qua không xóa file. Pilot chỉ đọc lưu quyết định nhưng chưa đăng YouTube.</p>
-    <div class="dialog-actions"><button type="button" class="secondary" data-close-dialog>Hủy</button><button type="submit" id="recordingDecisionSubmit">Lưu quyết định</button></div>
-  </form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="nightly-config.js?v=7" defer></script>
-  <script src="app.js?v=7" defer></script>
-  <script src="nightly.js?v=7" defer></script>
+  <script src="nightly-config.js?v=8" defer></script>
+  <script src="app.js?v=8" defer></script>
+  <script src="nightly.js?v=8" defer></script>
 </body>
 </html>
