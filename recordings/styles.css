@@ -118,3 +118,5 @@ dialog button.secondary { color: var(--navy); background: #fff; border: 1px soli
   .toolbar .search { grid-column: auto; }
   .section-heading { align-items: flex-start; }
 }
+
+.scan-panel{display:flex;align-items:center;flex-wrap:wrap;gap:16px;background:#fff;border:1px solid #dde3ed;border-radius:16px;padding:20px;margin:20px 0}.scan-panel>div{flex:1;min-width:260px}.scan-panel p,.scan-panel small{color:#64748b}.scan-panel small{width:100%}.scan-panel label{display:grid;gap:6px}.class-folder{margin:18px 0;border:1px solid #dce3ee;border-radius:16px;background:#fff;overflow:hidden}.class-folder>summary{cursor:pointer;padding:20px;font-weight:700}.class-folder>summary span{float:right;font-weight:400;color:#64748b;font-size:14px}.class-folder .review-section{margin:0;border-radius:0;border:0;border-top:1px solid #e2e8f0}

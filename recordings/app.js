@@ -41,7 +41,6 @@ function combinedVideoUrl(record) {
   if (!record.videoId) return record.youtubeUrl || '';
   const params = new URLSearchParams({ v: record.videoId });
   if (record.playlistId) params.set('list', record.playlistId);
-  if (record.playlistIndex) params.set('index', String(record.playlistIndex));
   return `https://www.youtube.com/watch?${params}`;
 }
 
@@ -79,16 +78,20 @@ function youtubeState(record) {
 }
 
 function recordRow(record) {
+  if (record.nightly && !record.videoId) return nightlyRow(record);
   const url = combinedVideoUrl(record);
   const linkLabel = record.playlistId ? 'Mở video trong playlist ↗' : 'Mở video ↗';
   const link = url ? `<a class="video-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>` : '—';
   const thumbnail = record.thumbnailStatus === 'applied' ? '<span class="badge ok">Có thumbnail</span>' : '<span class="badge wait">Chưa có thumbnail</span>';
   const playlist = record.playlistId ? `<span class="badge ok">${escapeHtml(record.playlistTitle || 'Đã vào playlist')}</span>` : '<span class="badge wait">Chưa vào playlist</span>';
   const lesson = record.lessonNumber ? `Buổi ${escapeHtml(record.lessonNumber)}` : 'Chưa xác định buổi';
+  const part = Number(record.totalParts) > 1 && Number(record.partNumber) > 0
+    ? ` · Phần ${escapeHtml(record.partNumber)}/${escapeHtml(record.totalParts)}`
+    : '';
   const reason = [record.matchReason, record.playlistReason].filter(Boolean).map((text) => `<div class="subtext">${escapeHtml(text)}</div>`).join('');
   return `<tr data-record-id="${escapeHtml(record.id)}">
     <td><span class="class-code">${escapeHtml(record.className || 'Chưa xác định')}</span><div class="subtext">${escapeHtml(record.source || '—')}</div></td>
-    <td><div class="record-title">${escapeHtml(record.title || 'Zoom recording')}</div><div class="subtext">${lesson} · ${escapeHtml(record.recordingFileId || '')}</div>${reason}</td>
+    <td><div class="record-title">${escapeHtml(record.title || 'Zoom recording')}</div><div class="subtext">${lesson}${part} · ${escapeHtml(record.recordingFileId || '')}</div>${reason}</td>
     <td>${dateTime(record.recordingStart)}</td>
     <td>${youtubeState(record)}<div class="status-stack">${thumbnail}${playlist}</div></td>
     <td><div class="row-actions"><button type="button" class="action-button" data-action="rename" data-id="${escapeHtml(record.id)}">Sửa tên</button><button type="button" class="action-button" data-action="playlist" data-id="${escapeHtml(record.id)}">Đổi playlist</button></div></td>
@@ -110,7 +113,17 @@ function renderSections() {
   const newest = (a, b) => new Date(b.recordingStart || 0) - new Date(a.recordingStart || 0);
   const pending = state.records.filter((record) => !isApproved(record)).sort(newest);
   const approved = state.records.filter(isApproved).sort((a, b) => new Date(b.approvedAt || b.recordingStart || 0) - new Date(a.approvedAt || a.recordingStart || 0));
-  $('reviewSections').innerHTML = renderSection('Cần duyệt', pending, false) + renderSection('Đã duyệt', approved, true);
+  const folders = new Map();
+  for (const record of [...pending, ...approved]) {
+    const name = record.className && record.className !== 'Cần duyệt' ? record.className : 'Chưa xác định lớp';
+    if (!folders.has(name)) folders.set(name, []); folders.get(name).push(record);
+  }
+  const opened = new Set([...document.querySelectorAll('details.class-folder[open]')].map(x=>x.dataset.class));
+  const initial = !document.querySelector('details.class-folder');
+  $('reviewSections').innerHTML = [...folders].sort(([a],[b])=>a.localeCompare(b,'vi')).map(([name,rows]) => {
+    const visible = filteredRecords(rows); if (!visible.length) return '';
+    return `<details class="class-folder" data-class="${escapeHtml(name)}" ${initial||opened.has(name)?'open':''}><summary>${escapeHtml(name)} <span>${visible.filter(r=>!isApproved(r)).length} cần duyệt · ${visible.filter(isApproved).length} đã duyệt</span></summary>${renderSection('Cần duyệt',rows.filter(r=>!isApproved(r)),false)}${renderSection('Đã duyệt',rows.filter(isApproved),true)}</details>`;
+  }).join('') || '<div class="empty">Không có bản ghi phù hợp bộ lọc.</div>';
 }
 
 function populateAccounts() {
@@ -122,7 +135,10 @@ function populateAccounts() {
 function renderPlaylistOptions(query = '') {
   const record = state.records.find((item) => String(item.id) === $('playlistRecordId').value);
   const normalized = query.trim().toLowerCase();
-  const playlists = state.playlists.filter((item) => !normalized || item.title.toLowerCase().includes(normalized)).slice(0, 250);
+  const playlists = state.playlists
+    .filter((item) => /\b[A-Z]{1,4}\d{3,5}\b/i.test(item.title || ''))
+    .filter((item) => !normalized || item.title.toLowerCase().includes(normalized))
+    .slice(0, 250);
   $('playlistSelect').innerHTML = '<option value="">Chọn playlist</option>' + playlists.map((item) => `<option value="${escapeHtml(item.id)}" data-title="${escapeHtml(item.title)}" ${item.id === record?.playlistId ? 'selected' : ''}>${escapeHtml(item.title)}</option>`).join('');
 }
 
@@ -152,24 +168,29 @@ async function postAction(url, payload) {
   const text = await response.text();
   if (!response.ok) throw new Error(text || `HTTP_${response.status}`);
   const data = JSON.parse(text);
-  if (!data.ok || !data.record) throw new Error('Phản hồi không hợp lệ.');
+  if (!data.ok || !data.record) throw new Error(data.error || 'Phản hồi không hợp lệ.');
   return data.record;
 }
 
-async function loadData() {
-  if (state.loading) return;
+let dataRequestId=0;
+async function loadData(force = false) {
+  if (state.loading && force !== true) return;
   state.loading = true;
+  const requestId=++dataRequestId;
   const loadVersion = state.version;
   setConnection(true, 'Đang làm mới');
   try {
     const response = await fetch(DATA_API_URL, { cache: 'no-store', referrerPolicy: 'no-referrer' });
     if (!response.ok) throw new Error(`HTTP_${response.status}`);
     const payload = await response.json();
-    if (loadVersion !== state.version) return;
-    state.records = Array.isArray(payload.records) ? payload.records : [];
-    state.yesterdayClasses = Array.isArray(payload.yesterdayClasses) ? payload.yesterdayClasses : [];
+    if (loadVersion !== state.version || requestId!==dataRequestId) return;
+    let snapshot = null;
+    try { snapshot = await loadNightly(); } catch { $('scanStatus').textContent = 'Không tải được dữ liệu đối soát; dữ liệu video vẫn được giữ.'; }
+    if (loadVersion !== state.version || requestId!==dataRequestId) return;
+    state.records = mergeNightlyRecords(Array.isArray(payload.records) ? payload.records : [], snapshot);
+    state.yesterdayClasses = snapshot ? snapshot.records.filter(r=>r.kind==='session').map(r=>({...r,zoomAccount:r.source})) : (Array.isArray(payload.yesterdayClasses) ? payload.yesterdayClasses : []);
     state.playlists = Array.isArray(payload.playlists) ? payload.playlists : [];
-    $('yesterdayDate').textContent = displayDate(payload.yesterdayDate);
+    $('yesterdayDate').textContent = displayDate(snapshot?.date || payload.yesterdayDate);
     renderStats();
     renderYesterday();
     populateAccounts();
@@ -180,7 +201,7 @@ async function loadData() {
     setConnection(false, 'Mất kết nối');
     $('reviewSections').innerHTML = '<div class="empty">Không tải được dữ liệu. Hệ thống sẽ thử lại sau 60 giây.</div>';
   } finally {
-    state.loading = false;
+    if(requestId===dataRequestId)state.loading = false;
   }
 }
 
@@ -197,6 +218,7 @@ document.addEventListener('click', (event) => {
   if (button.dataset.action === 'rename') {
     $('renameRecordId').value = record.id;
     $('renameTitle').value = record.title || '';
+    $('renameDialog').dataset.version=record.version||0;
     $('renameDialog').showModal();
     $('renameTitle').focus();
   }
@@ -204,6 +226,7 @@ document.addEventListener('click', (event) => {
     $('playlistRecordId').value = record.id;
     $('playlistSearch').value = '';
     renderPlaylistOptions();
+    $('playlistDialog').dataset.version=record.version||0;
     $('playlistDialog').showModal();
     $('playlistSearch').focus();
   }
@@ -214,7 +237,7 @@ document.addEventListener('change', async (event) => {
   if (!checkbox) return;
   checkbox.disabled = true;
   try {
-    const record = await postAction(REVIEW_API_URL, { id: checkbox.dataset.id, approved: checkbox.checked });
+    const record = await postAction(REVIEW_API_URL, { id: checkbox.dataset.id, expectedVersion: Number(state.records.find(r=>String(r.id)===checkbox.dataset.id)?.version||0), approved: checkbox.checked });
     replaceRecord(record);
     toast(checkbox.checked ? 'Đã chuyển recording sang mục Đã duyệt.' : 'Đã chuyển recording về mục Cần duyệt.');
   } catch {
@@ -230,7 +253,7 @@ $('renameForm').addEventListener('submit', async (event) => {
   button.disabled = true;
   button.textContent = 'Đang lưu…';
   try {
-    const record = await postAction(RENAME_API_URL, { id: $('renameRecordId').value, newTitle: $('renameTitle').value.trim() });
+    const record = await postAction(RENAME_API_URL, { id: $('renameRecordId').value, expectedVersion:Number($('renameDialog').dataset.version), newTitle: $('renameTitle').value.trim() });
     replaceRecord(record);
     $('renameDialog').close();
     toast('Đã đổi tên video trên YouTube.');
@@ -251,10 +274,11 @@ $('playlistForm').addEventListener('submit', async (event) => {
   button.disabled = true;
   button.textContent = 'Đang chuyển…';
   try {
-    const record = await postAction(PLAYLIST_API_URL, { id: $('playlistRecordId').value, playlistId: select.value, playlistTitle: option.dataset.title || option.textContent });
+    const record = await postAction(PLAYLIST_API_URL, { id: $('playlistRecordId').value, expectedVersion:Number($('playlistDialog').dataset.version), playlistId: select.value, playlistTitle: option.dataset.title || option.textContent });
     replaceRecord(record);
     $('playlistDialog').close();
-    toast('Đã chuyển video sang playlist mới.');
+    await loadData();
+    toast('Đã đổi playlist và sửa lại tên các video trong buổi học.');
   } catch {
     toast('Không đổi được playlist. Hãy kiểm tra playlist đã chọn.', 'error');
   } finally {
@@ -263,6 +287,5 @@ $('playlistForm').addEventListener('submit', async (event) => {
   }
 });
 
-loadData();
-setInterval(loadData, REFRESH_MS);
+window.addEventListener('DOMContentLoaded',()=>{loadData();setInterval(loadData, REFRESH_MS);});
 
