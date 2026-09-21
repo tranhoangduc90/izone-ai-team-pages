@@ -49,7 +49,7 @@ test('dashboard giữ đủ điều khiển xóa lọc, đổi thứ tự cột 
   assert.match(html, /id="flow-class-daily-chart"/u);
   assert.match(script, /line\.draggable = state\.visibleColumns\.includes\(key\)/u);
   assert.match(script, /addEventListener\('drop'/u);
-  assert.match(script, /openDailyDetails\(item\.day\)/u);
+  assert.match(script, /openDailyDetails\(day\)/u);
   assert.match(script, /state\.activeView = 'delivered'/u);
   assert.match(script, /writingOperatorEvents/u);
   assert.match(script, /pinned-classes:v1/u);
@@ -67,5 +67,6 @@ test('dashboard giữ đủ điều khiển xóa lọc, đổi thứ tự cột 
   assert.match(script, /restoreWritingSourceIssue/u);
   assert.match(script, /status: 'skipped'/u);
   assert.match(script, /Thiếu hoặc xung đột trạng thái nguồn/u);
-  assert.match(script, /\['on_going', 'completed'\]\.includes\(item\.class_status\)/u);
+  assert.match(script, /item\.operational_state === 'active'/u);
+  assert.doesNotMatch(script, /\['on_going', 'completed'\]\.includes\(item\.class_status\)/u);
 });

@@ -7,7 +7,7 @@
     <title>Theo dõi chấm Writing 56/67</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
-    <link rel="stylesheet" href="./writing-flow.css?v=20260921-class-filter-ops-tabs-v1" />
+    <link rel="stylesheet" href="./writing-flow.css?v=20260922-table-polish-v1" />
   </head>
   <body class="teacher-page flow-page">
     <p id="flow-updated" class="flow-updated">Chưa đăng nhập</p>
@@ -66,6 +66,8 @@
             <label><span>Từ ngày</span><input id="flow-date-from" type="date" /></label>
             <label><span>Đến ngày</span><input id="flow-date-to" type="date" /></label>
             <details class="flow-fields"><summary>Chọn cột</summary><fieldset id="flow-field-choices"><legend>Cột hiển thị</legend></fieldset></details>
+            <details id="flow-sort" class="flow-sort"><summary>Sắp xếp</summary><div class="flow-sort-panel"><p class="flow-meta">Dòng trên được ưu tiên trước; tối đa ba điều kiện.</p><div id="flow-sort-rules"></div><div class="flow-sort-actions"><button id="flow-sort-add" class="secondary" type="button">Thêm điều kiện</button><button id="flow-sort-apply" type="button">Áp dụng</button><button id="flow-sort-clear" class="secondary" type="button">Xóa sắp xếp</button></div></div></details>
+            <button id="flow-reset-widths" class="secondary" type="button">Đặt lại độ rộng</button>
             <button id="flow-clear-filters" class="secondary" type="button">Xóa bộ lọc</button>
             <button id="flow-manual-open" class="secondary" type="button">Thêm file ngoài lớp</button>
             <button id="flow-refresh" class="secondary" type="button">Cập nhật</button>
@@ -99,8 +101,8 @@
           <section id="flow-audit-section" class="flow-section" hidden><div id="flow-operator-events" class="flow-list"></div></section>
           <section id="flow-mapping-section" class="flow-section" hidden><div id="flow-mapping-coverage" class="flow-list"></div></section>
           <section id="flow-pairs-section" class="flow-section" hidden>
-            <p class="flow-table-note">Mỗi trang tải 50 bài. Ô Nội dung chỉ hiện phần đầu; nhấn đúp để xem toàn bộ. Tìm nội dung chỉ chạy khi bấm “Tìm kiếm”.</p>
-            <div class="flow-table-wrap"><table class="flow-table"><thead><tr id="flow-table-head"></tr></thead><tbody id="flow-pairs"></tbody></table></div>
+            <p class="flow-table-note">Mỗi trang tải 50 bài. Cuộn ngang để xem thêm cột; kéo mép tiêu đề để đổi độ rộng. Ô Nội dung chỉ hiện phần đầu; nhấn đúp để xem toàn bộ. Tìm nội dung chỉ chạy khi bấm “Tìm kiếm”.</p>
+            <div class="flow-table-wrap"><table id="flow-pairs-table" class="flow-table"><thead><tr id="flow-table-head"></tr></thead><tbody id="flow-pairs"></tbody></table></div>
             <button id="flow-more" class="secondary" type="button" hidden>Xem 50 bài tiếp theo</button>
           </section>
           <section id="flow-legacy-section" class="flow-section" hidden><div id="flow-legacy" class="flow-list"></div></section>
@@ -119,6 +121,6 @@
     </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/writing-flow.js?v=20260921-class-filter-ops-tabs-v1"></script>
+    <script type="module" src="./js/writing-flow.js?v=20260922-table-polish-v1"></script>
   </body>
 </html>
