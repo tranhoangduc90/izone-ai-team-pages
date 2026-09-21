@@ -16,6 +16,11 @@ test('API dashboard truyền đủ bộ lọc ngày và nhật ký thao tác', a
     dateFrom: '2026-09-19', dateTo: '2026-09-19', stageKey: 'precheck',
     stageStatus: 'running', view: 'delivered' });
   await api.writingOperatorEvents({ classCode: 'IC2200', eventType: 'class_mapping_changed', limit: 25 });
+  await api.writingSourceIssues({ classCode: 'IC2172', status: 'skipped', limit: 100 });
+  await api.skipWritingSourceIssue('a'.repeat(64), 'Không phải bài Writing',
+    '11111111-1111-4111-8111-111111111111');
+  await api.restoreWritingSourceIssue('a'.repeat(64), 'Bỏ qua nhầm',
+    '22222222-2222-4222-8222-222222222222');
   assert.equal(calls[0].pathname, '/writing-api/api/v1/admin/writing-flow/pairs');
   assert.equal(calls[0].searchParams.get('dateFrom'), '2026-09-19');
   assert.equal(calls[0].searchParams.get('dateTo'), '2026-09-19');
@@ -25,6 +30,9 @@ test('API dashboard truyền đủ bộ lọc ngày và nhật ký thao tác', a
   assert.equal(calls[1].pathname, '/writing-api/api/v1/admin/writing-flow/operator-events');
   assert.equal(calls[1].searchParams.get('classCode'), 'IC2200');
   assert.equal(calls[1].searchParams.get('eventType'), 'class_mapping_changed');
+  assert.equal(calls[2].searchParams.get('status'), 'skipped');
+  assert.match(calls[3].pathname, /source-issues\/[a-f0-9]{64}\/skip$/u);
+  assert.match(calls[4].pathname, /source-issues\/[a-f0-9]{64}\/restore$/u);
   assert.equal(calls.every(call => call.origin === 'https://example.invalid'), true);
 });
 
@@ -50,4 +58,14 @@ test('dashboard giữ đủ điều khiển xóa lọc, đổi thứ tự cột 
   assert.match(script, /attempts: \['Số lần thử'/u);
   assert.match(script, /error: \['Lỗi gần nhất'/u);
   assert.match(script, /flow-mapping-coverage/u);
+  assert.match(script, /review: \['flow-pairs-section'\]/u);
+  assert.match(script, /source: \['flow-pairs-section'\]/u);
+  assert.match(script, /legacy: \['flow-pairs-section'\]/u);
+  assert.match(script, /sourceIssueRow/u);
+  assert.match(script, /legacyRow/u);
+  assert.match(script, /skipWritingSourceIssue/u);
+  assert.match(script, /restoreWritingSourceIssue/u);
+  assert.match(script, /status: 'skipped'/u);
+  assert.match(script, /Thiếu hoặc xung đột trạng thái nguồn/u);
+  assert.match(script, /\['on_going', 'completed'\]\.includes\(item\.class_status\)/u);
 });
