@@ -21,7 +21,7 @@ test('dashboard chung hiển thị đủ hai bài K56 và không dùng ChatGPT S
 test('dashboard chọn được K56 hoặc K67 và dashboard Test 2 cũ vẫn dùng link GitHub Pages', () => {
   const app = read('term-tests/substitute-test-1-k56-dashboard/app.js');
   assert.match(app, /course-filter/u);
-  assert.match(app, /requested === 'k67'/u);
+  assert.match(app, /allowedCourses\.has\(requested\)/u);
   const dashboardHtml = read('term-tests/substitute-test-1-k56-dashboard/index.html');
   assert.match(dashboardHtml, /option value="k56"/u);
   assert.match(dashboardHtml, /option value="k67"/u);
@@ -32,4 +32,18 @@ test('dashboard chọn được K56 hoặc K67 và dashboard Test 2 cũ vẫn d�
   assert.match(oldDashboardHtml, /substitute-test-2-k56-results/u);
   assert.doesNotMatch(oldDashboardHtml, /chatgpt\.site/u);
   assert.match(read('term-tests/substitute-test-2-k56-results/index.html'), /substitute-test-2-k56-dashboard/u);
+});
+
+test('dashboard mặc định tổng hợp đồng thời bốn bài của K56 và K67', () => {
+  const html = read('term-tests/substitute-test-1-k56-dashboard/index.html');
+  const app = read('term-tests/substitute-test-1-k56-dashboard/app.js');
+
+  assert.match(html, /option value="all" selected>Tất cả khóa học<\/option>/u);
+  assert.equal((html.match(/class="test-row" data-course=/gu) || []).length, 4);
+  assert.doesNotMatch(html, /data-course="k67" hidden/u);
+  assert.match(html, /id="metric-tests">04</u);
+  assert.match(html, /id="record-count">4 bài</u);
+  assert.match(app, /const allowedCourses = new Set\(\['all', 'k56', 'k67'\]\)/u);
+  assert.match(app, /course === 'all' \|\| row\.dataset\.course === course/u);
+  assert.match(app, /next\.searchParams\.delete\('course'\)/u);
 });
