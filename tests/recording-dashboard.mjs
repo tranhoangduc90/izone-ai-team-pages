@@ -17,3 +17,10 @@ test('đổi playlist tải lại cả nhóm và thông báo đã sửa tên', (
 test('chỉ đưa playlist có mã lớp vào danh sách chọn', () => {
   assert.match(source, /\[A-Z\]\{1,4\}\\d\{3,5\}/);
 });
+
+test('Portal local DATETIME giữ 19 giờ ngày học theo giờ Việt Nam',()=>{
+ const source=fs.readFileSync(new URL('../recordings/app.js',import.meta.url),'utf8');
+ const functions=source.slice(source.indexOf('function parseTimestamp'),source.indexOf('function portalTime'));
+ const result=new Function(functions+";return {localDate:localDate('2026-09-17 19:00:00'),display:dateTime('2026-09-17 19:00:00')};")();
+ assert.equal(result.localDate,'2026-09-17');assert.match(result.display,/19:00/);assert.match(result.display,/17\/09\/2026/);
+});

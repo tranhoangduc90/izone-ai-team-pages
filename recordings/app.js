@@ -12,9 +12,13 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 }
 
+function parseTimestamp(value) {
+  const text=String(value||'');
+  return new Date(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(text)?text.replace(' ','T')+'+07:00':value);
+}
 function localDate(value) {
   if (!value) return '';
-  const date = new Date(value);
+  const date = parseTimestamp(value);
   if (Number.isNaN(date.getTime())) return '';
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
 }
@@ -27,7 +31,7 @@ function displayDate(value) {
 
 function dateTime(value) {
   if (!value) return '—';
-  const date = new Date(value);
+  const date = parseTimestamp(value);
   if (Number.isNaN(date.getTime())) return escapeHtml(value);
   return new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 }
@@ -66,7 +70,7 @@ function renderYesterday() {
   const cards = state.yesterdayClasses.map((item) => `<article class="class-card">
     <div><span class="class-code">${escapeHtml(item.className || 'Chưa rõ lớp')}</span><span class="badge zoom">${escapeHtml(item.zoomAccount || 'Chưa phân bổ Zoom')}</span></div>
     <strong>Buổi ${escapeHtml(item.lessonNumber || '—')}</strong>
-    <span>${portalTime(item.sessionStart)} · ${displayDate(item.sessionStart)}</span>
+    <span>${item.normalizedTime?dateTime(item.sessionStart):portalTime(item.sessionStart)+" · "+displayDate(item.sessionStart)}</span>
   </article>`).join('');
   $('yesterdayClasses').innerHTML = cards || '<div class="empty-inline">Không có lớp Zoom 36 hoặc Zoom 6 trong ngày này.</div>';
 }
@@ -110,9 +114,9 @@ function renderSection(title, records, approved) {
 }
 
 function renderSections() {
-  const newest = (a, b) => new Date(b.recordingStart || 0) - new Date(a.recordingStart || 0);
+  const newest = (a, b) => parseTimestamp(b.recordingStart || 0) - parseTimestamp(a.recordingStart || 0);
   const pending = state.records.filter((record) => !isApproved(record)).sort(newest);
-  const approved = state.records.filter(isApproved).sort((a, b) => new Date(b.approvedAt || b.recordingStart || 0) - new Date(a.approvedAt || a.recordingStart || 0));
+  const approved = state.records.filter(isApproved).sort((a, b) => parseTimestamp(b.approvedAt || b.recordingStart || 0) - parseTimestamp(a.approvedAt || a.recordingStart || 0));
   const folders = new Map();
   for (const record of [...pending, ...approved]) {
     const name = record.className && record.className !== 'Cần duyệt' ? record.className : 'Chưa xác định lớp';
@@ -188,7 +192,7 @@ async function loadData(force = false) {
     try { snapshot = await loadNightly(); } catch { $('scanStatus').textContent = 'Không tải được dữ liệu đối soát; dữ liệu video vẫn được giữ.'; }
     if (loadVersion !== state.version || requestId!==dataRequestId) return;
     state.records = mergeNightlyRecords(Array.isArray(payload.records) ? payload.records : [], snapshot);
-    state.yesterdayClasses = snapshot ? snapshot.records.filter(r=>r.kind==='session').map(r=>({...r,zoomAccount:r.source})) : (Array.isArray(payload.yesterdayClasses) ? payload.yesterdayClasses : []);
+    state.yesterdayClasses = snapshot ? snapshot.records.filter(r=>r.kind==='session').map(r=>({...r,zoomAccount:r.source,normalizedTime:true})) : (Array.isArray(payload.yesterdayClasses) ? payload.yesterdayClasses : []);
     state.playlists = Array.isArray(payload.playlists) ? payload.playlists : [];
     $('yesterdayDate').textContent = displayDate(snapshot?.date || payload.yesterdayDate);
     renderStats();
