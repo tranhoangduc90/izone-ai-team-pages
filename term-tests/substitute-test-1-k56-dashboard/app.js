@@ -1,25 +1,24 @@
-const API_URL = 'https://ducizone.ddns.net/webhook/substitute-test-1-k56-public-api';
+const courseFilter = document.querySelector('#course-filter');
+const rows = [...document.querySelectorAll('[data-course]')];
+const params = new URLSearchParams(location.search);
+const requested = params.get('course');
+if (requested === 'k67') courseFilter.value = 'k67';
 
-async function apiRequest(route, payload = {}) {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-    body: JSON.stringify({ route, payload })
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || 'Không tải được dữ liệu.');
-  return data;
+function renderCourse() {
+  const course = courseFilter.value;
+  for (const row of rows) row.hidden = row.dataset.course !== course;
+  const isK67 = course === 'k67';
+  document.querySelector('#metric-scale').textContent = isK67 ? '9 / 9 / 9' : 'Theo bài';
+  document.querySelector('#metric-scale-note').textContent = isK67 ? 'Listening · Reading · Writing' : 'Sub 2 dùng band 9';
+  document.querySelector('#metric-class-note').textContent = isK67 ? 'DEMO và IC2139' : 'DEMO và IC2264';
+  document.querySelector('#portal-badge').textContent = `Bản online · Khóa ${isK67 ? '67' : '56'}`;
+  document.querySelector('#privacy-note').textContent = isK67
+    ? 'DEMO không gửi Portal; đồng bộ Portal lớp IC2139 đang chờ hoàn thiện.'
+    : 'DEMO không gửi Portal; lớp IC2264 áp dụng quy tắc điểm thi lại.';
+  const next = new URL(location.href);
+  next.searchParams.set('course', course);
+  history.replaceState(null, '', next);
 }
 
-apiRequest('/api/test/catalog')
-  .then(catalog => {
-    const test = catalog.tests[0];
-    document.querySelector('#metric-tests').textContent = '02';
-    document.querySelector('#metric-students').textContent = String(Number(test.studentCount || 0) + 13).padStart(2, '0');
-    document.querySelector('#metric-completed').textContent = String(Number(test.completedCount || 0) + 2).padStart(2, '0');
-    document.querySelector('#metric-classes').textContent = String(catalog.classes.length).padStart(2, '0');
-    document.querySelector('#record-count').textContent = '2 bài';
-  })
-  .catch(() => {
-    document.querySelector('#record-count').textContent = '2 bài · Chưa tải thống kê';
-  });
+courseFilter.addEventListener('change', renderCourse);
+renderCourse();

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="470" viewBox="0 0 920 470" role="img" aria-labelledby="title desc">
+  <title id="title">Physical activities in Australia, 2001–2009</title>
+  <desc id="desc">Number of people in millions participating in running, aerobics, tennis, cycling and swimming in 2001, 2005 and 2009.</desc>
+  <rect width="920" height="470" fill="#fff"/>
+  <text x="460" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#173f6d">People engaged in physical activities in Australia (millions)</text>
+  <g font-family="Arial, sans-serif" font-size="18" fill="#152238">
+    <rect x="70" y="78" width="780" height="330" rx="10" fill="#f7faff" stroke="#96afd0" stroke-width="2"/>
+    <path d="M70 138H850M70 192H850M70 246H850M70 300H850M70 354H850M300 78V408M480 78V408M660 78V408" stroke="#c2d0e2" stroke-width="2"/>
+    <g font-weight="700" fill="#173f6d"><text x="185" y="116" text-anchor="middle">Activity</text><text x="390" y="116" text-anchor="middle">2001</text><text x="570" y="116" text-anchor="middle">2005</text><text x="755" y="116" text-anchor="middle">2009</text></g>
+    <text x="185" y="173" text-anchor="middle">Running</text><text x="390" y="173" text-anchor="middle">1.4</text><text x="570" y="173" text-anchor="middle">1.8</text><text x="755" y="173" text-anchor="middle">2.2</text>
+    <text x="185" y="227" text-anchor="middle">Aerobics</text><text x="390" y="227" text-anchor="middle">1.5</text><text x="570" y="227" text-anchor="middle">1.6</text><text x="755" y="227" text-anchor="middle">1.7</text>
+    <text x="185" y="281" text-anchor="middle">Tennis</text><text x="390" y="281" text-anchor="middle">1.0</text><text x="570" y="281" text-anchor="middle">1.1</text><text x="755" y="281" text-anchor="middle">1.2</text>
+    <text x="185" y="335" text-anchor="middle">Cycling</text><text x="390" y="335" text-anchor="middle">4.5</text><text x="570" y="335" text-anchor="middle">3.1</text><text x="755" y="335" text-anchor="middle">3.6</text>
+    <text x="185" y="389" text-anchor="middle">Swimming</text><text x="390" y="389" text-anchor="middle">3.7</text><text x="570" y="389" text-anchor="middle">3.8</text><text x="755" y="389" text-anchor="middle">3.3</text>
+  </g>
+  <text x="460" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#51657d">Figures are in millions of people.</text>
+</svg>
