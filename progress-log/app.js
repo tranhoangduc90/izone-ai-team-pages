@@ -284,6 +284,17 @@ function responseFor(item) {
   return state.responses[item.itemVersionId] ?? '';
 }
 
+function itemIsVisible(item) {
+  const dependencyId = item.interactionConfig?.visibleWhenItemVersionId;
+  if (!dependencyId) return true;
+  return state.responses[dependencyId] === item.interactionConfig.visibleWhenValue;
+}
+
+function itemIsRequired(item) {
+  if (item.required) return true;
+  return item.interactionConfig?.requiredWhenVisible === true && itemIsVisible(item);
+}
+
 function responseIsPresent(item, value) {
   if (item?.layoutType === 'numbered_short_texts') {
     const expected = Number(item.interactionConfig?.responseCount || 0);
@@ -320,7 +331,7 @@ const SENTENCE_COMPLETION_LAYOUTS = Object.freeze({
 const sentenceMeasureContext = document.createElement('canvas').getContext('2d');
 
 function resizeSentenceBlank(control) {
-  const sentence = control.closest('.sentence-text');
+  const sentence = control.closest('.sentence-text, .reasoning-chain');
   const availableWidth = Math.max(90, (sentence?.clientWidth || 420) - 8);
   if (sentenceMeasureContext) {
     sentenceMeasureContext.font = window.getComputedStyle(control).font;
@@ -361,7 +372,7 @@ function buildSentenceCompletion(item) {
       input.className = 'sentence-blank';
       input.rows = 1;
       input.maxLength = 2_000;
-      input.required = item.required;
+      input.required = itemIsRequired(item);
       input.value = existing[slot] || '';
       input.setAttribute('aria-label', item.interactionConfig.responseLabels?.[slot] || `${item.prompt} — ô ${slot + 1}`);
       input.addEventListener('input', event => {
@@ -379,6 +390,68 @@ function buildSentenceCompletion(item) {
     group.append(row);
   }
   return group;
+}
+
+function buildReasoningChain(item) {
+  const config = item.interactionConfig || {};
+  const chain = document.createElement('div');
+  chain.className = 'reasoning-chain';
+  const before = document.createElement('div');
+  before.className = 'reasoning-chain-node';
+  before.textContent = config.beforeText;
+  const firstArrow = document.createElement('span');
+  firstArrow.className = 'reasoning-chain-arrow';
+  firstArrow.setAttribute('aria-hidden', 'true');
+  firstArrow.textContent = '→';
+  const input = document.createElement('textarea');
+  input.className = 'sentence-blank reasoning-chain-input';
+  input.rows = 1;
+  input.maxLength = 2_000;
+  input.required = itemIsRequired(item);
+  input.value = String(responseFor(item));
+  input.placeholder = 'Điền mắt xích còn thiếu';
+  input.setAttribute('aria-label', item.prompt);
+  input.addEventListener('input', event => {
+    if (!event.isComposing) input.value = input.value.replace(/\s*[\r\n]+\s*/g, ' ');
+    resizeSentenceBlank(input);
+    recordResponse(item.itemVersionId, input.value);
+  });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.isComposing) event.preventDefault();
+  });
+  const secondArrow = firstArrow.cloneNode(true);
+  const after = document.createElement('div');
+  after.className = 'reasoning-chain-node';
+  after.textContent = config.afterText;
+  chain.append(before, firstArrow, input, secondArrow, after);
+  return chain;
+}
+
+function refreshConditionalQuestions() {
+  const block = currentBlock();
+  if (!block) return;
+  let removedHiddenAnswer = false;
+  for (const item of block.items.filter(candidate => candidate.layoutType === 'conditional_other_text')) {
+    const visible = itemIsVisible(item);
+    const wrapper = elements.questionList.querySelector(`[data-item-version-id="${item.itemVersionId}"]`);
+    if (wrapper) {
+      wrapper.hidden = !visible;
+      const requiredNow = visible && item.interactionConfig.requiredWhenVisible === true;
+      for (const control of wrapper.querySelectorAll('input, textarea, select')) {
+        control.required = requiredNow;
+      }
+      const marker = wrapper.querySelector('.required');
+      if (marker) marker.hidden = !requiredNow;
+    }
+    if (!visible && Object.hasOwn(state.responses, item.itemVersionId)) {
+      delete state.responses[item.itemVersionId];
+      removedHiddenAnswer = true;
+    }
+  }
+  if (removedHiddenAnswer) {
+    state.changeVersion += 1;
+    scheduleSave();
+  }
 }
 
 function buildChoice(item, option, inputType, optionIndex) {
@@ -402,6 +475,7 @@ function buildChoice(item, option, inputType, optionIndex) {
       choice.classList.toggle('selected', checked);
       choice.querySelector('.choice-key').textContent = checked ? '✓' : choice.dataset.key;
     }
+    refreshConditionalQuestions();
   });
   const key = document.createElement('span');
   key.className = 'choice-key';
@@ -418,18 +492,21 @@ function buildChoice(item, option, inputType, optionIndex) {
 function buildQuestion(item) {
   const wrapper = document.createElement('div');
   wrapper.className = `question ${item.layoutType || 'plain_prompt'}`;
+  wrapper.dataset.itemVersionId = item.itemVersionId;
+  wrapper.hidden = !itemIsVisible(item);
   const number = document.createElement('span');
   number.className = 'question-number';
-  number.textContent = String(item.position);
+  number.textContent = item.displayNumber || String(item.position);
   const content = document.createElement('div');
   content.className = 'question-content';
   const label = document.createElement('h3');
   label.id = `question-${item.itemVersionId}`;
   label.textContent = item.prompt;
-  if (item.required) {
+  if (item.required || item.interactionConfig?.requiredWhenVisible === true) {
     const required = document.createElement('span');
     required.className = 'required';
     required.textContent = ' *';
+    required.hidden = !itemIsRequired(item);
     label.append(required);
   }
   wrapper.append(number, content);
@@ -450,7 +527,7 @@ function buildQuestion(item) {
     input.min = String(config.min ?? 0);
     input.max = String(config.max);
     input.step = String(config.step ?? 1);
-    input.required = item.required;
+    input.required = itemIsRequired(item);
     input.value = score && typeof score === 'object' ? String(score.correct) : '';
     input.setAttribute('aria-label', item.prompt);
     input.addEventListener('input', () => {
@@ -461,6 +538,8 @@ function buildQuestion(item) {
     total.textContent = `/ ${config.max} ${config.unit || ''}`.trim();
     row.append(input, total);
     content.append(row);
+  } else if (item.layoutType === 'reasoning_chain_completion') {
+    content.append(buildReasoningChain(item));
   } else if (item.layoutType === 'numbered_short_texts') {
     const sentence = buildSentenceCompletion(item);
     if (sentence) {
@@ -480,6 +559,7 @@ function buildQuestion(item) {
       const input = document.createElement('input');
       input.type = 'text';
       input.maxLength = 2_000;
+      input.required = itemIsRequired(item);
       input.value = existing[index] || '';
       input.setAttribute('aria-label', labels[index] || `${item.prompt} — ý ${index + 1}`);
       input.placeholder = labels[index] || `Ý ${index + 1}`;
@@ -496,6 +576,7 @@ function buildQuestion(item) {
     if (input instanceof HTMLInputElement) input.type = 'text';
     input.value = String(responseFor(item));
     input.maxLength = item.interactionType === 'long_text' ? 12_000 : 2_000;
+    input.required = itemIsRequired(item);
     input.setAttribute('aria-label', item.prompt);
     input.addEventListener('input', () => recordResponse(item.itemVersionId, input.value));
     content.append(input);
@@ -515,7 +596,7 @@ function buildQuestion(item) {
 
 function blockIsComplete(block) {
   return block.items.every(item => {
-    if (!item.required) return true;
+    if (!itemIsRequired(item)) return true;
     const value = responseFor(item);
     return responseIsPresent(item, value);
   });
@@ -540,6 +621,7 @@ function renderCheckpoint() {
   elements.checkpointInstructions.textContent = block.instructions || '';
   elements.checkpointInstructions.hidden = !block.instructions;
   elements.questionList.replaceChildren(...block.items.map(buildQuestion));
+  refreshConditionalQuestions();
   window.requestAnimationFrame(() => {
     for (const control of elements.questionList.querySelectorAll('.sentence-blank')) resizeSentenceBlank(control);
   });
@@ -700,7 +782,7 @@ async function startAttempt() {
 async function submitForm(event) {
   event.preventDefault();
   if (!validateCurrentBlock() || state.submitting) return;
-  const missing = allItems().filter(item => item.required && !responseIsPresent(item, responseFor(item)));
+  const missing = allItems().filter(item => itemIsRequired(item) && !responseIsPresent(item, responseFor(item)));
   if (missing.length) {
     const target = allBlocks().findIndex(block => block.items.some(item => missing.includes(item)));
     state.checkpointIndex = Math.max(0, target);

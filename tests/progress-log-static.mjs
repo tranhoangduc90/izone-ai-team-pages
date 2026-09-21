@@ -105,7 +105,7 @@ test('câu Writing 1 điền từ trong bốn câu, vẫn lưu đủ tám ô và
   assert.match(css, /overflow-wrap: anywhere/);
   assert.match(css, /#identityView #sessionLabel \{ font-size: 14px/);
   assert.match(css, /#identityView #classLabel \{ margin-top: 9px; color: var\(--ink\); font-size: 16px/);
-  assert.match(html, /styles\.css\?rev=20260916-ic2305-v4/);
+  assert.match(html, /styles\.css\?rev=20260921-session3-v1/);
   assert.match(css, /--canvas: #f7f5ef/);
   assert.match(css, /--red: #db3e4b/);
 });

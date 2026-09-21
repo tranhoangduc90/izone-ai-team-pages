@@ -332,6 +332,12 @@ function answerText(item, value) {
   return option ? option.label : String(value || '').trim() || '—';
 }
 
+function itemApplies(item, responses) {
+  if (item.layoutType !== 'conditional_other_text') return true;
+  const dependencyId = item.interactionConfig?.visibleWhenItemVersionId;
+  return Boolean(dependencyId && responses?.[dependencyId] === item.interactionConfig.visibleWhenValue);
+}
+
 function verdictLabel(verdict) {
   return {
     correct: 'Đúng', incorrect: 'Chưa đúng', partial: 'Đúng một phần', pending: 'Đang chấm',
@@ -350,10 +356,12 @@ function openDraft(student) {
   elements.draftStatus.textContent = live.submissionId
     ? `Đã nộp lúc ${formatSavedAt(live.submittedAt)} · đây là bản cuối.`
     : `Bản lưu số ${live.draftRevision || 0} · lưu lúc ${formatSavedAt(live.draftUpdatedAt)}. Nội dung có thể chậm hơn thao tác gõ vài giây.`;
-  const cards = definitionItems().map(item => {
+  const cards = definitionItems().filter(item => itemApplies(item, responses)).map(item => {
     const card = document.createElement('article');
     const heading = document.createElement('b');
-    heading.textContent = `Câu ${item.position}. ${item.prompt}`;
+    heading.textContent = item.layoutType === 'conditional_other_text'
+      ? item.prompt
+      : `Câu ${item.displayNumber || item.position}. ${item.prompt}`;
     const answer = document.createElement('p');
     answer.textContent = answerText(item, responses?.[item.itemVersionId]);
     const result = resultByItem.get(item.itemVersionId);
