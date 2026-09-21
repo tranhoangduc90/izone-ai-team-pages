@@ -1,7 +1,7 @@
 import { createLessonApi } from "./api.js?v=20260911-load-guard-v1";
 import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v3";
 import { classQuery, resolveClassRef } from "./class-selection.js";
-import { createRequestId, hasMeaningfulText, isConflict, pollingDelayWithJitter, randomDelay, retryDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js?v=20260911-load-guard-v1";
+import { createRequestId, hasMeaningfulText, isConflict, pollingDelayWithJitter, randomDelay, retryDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js?v=20260921-draft-result-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { claimSectionSubmission, fieldDefinitions, gradingFailureMessage, normalizeLessonProgress, sectionDefinitions, sectionIsFilled, sectionPrerequisitesPassed, sectionSubmitLabel, vocabularyPrerequisitesPassed } from "./lesson-core.js?v=20260826-grading-timeout-v1";
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
@@ -611,6 +611,14 @@ function renderDraftResult(workspace, comments) {
         ? "Chưa tải được các thẻ nhận xét từ LMS."
         : "Đang tải các thẻ nhận xét…";
       inline.append(message);
+      if (app.draftResult.status === "error") {
+        // Chỉ tải lại kết quả đã chấm; không tạo lượt Check hoặc gọi AI.
+        const reload = document.createElement("button");
+        reload.type = "button"; reload.className = "secondary draft-result-reload";
+        reload.textContent = "Tải lại kết quả";
+        reload.addEventListener("click", () => { app.draftResult.key = null; renderBodies(); });
+        inline.append(reload);
+      }
     }
     const link = document.createElement("a");
     link.className = "lms-result-link lms-result-fallback";

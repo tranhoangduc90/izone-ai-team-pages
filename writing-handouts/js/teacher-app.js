@@ -1,6 +1,6 @@
 import { createTeacherApi } from "./api.js?rev=20260920-server-session-v1";
 import { classQuery, resolveClassRef } from "./class-selection.js";
-import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js";
+import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js?v=20260921-draft-result-v1";
 import { sectionDefinitions } from "./lesson-core.js";
 import { appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
 import { commentsForSection, isBackdropClick, latestVocabularyRows, mergeTeacherStudentDetail, technicalRecoveryMessage } from "./teacher-detail-core.js?v=20260920-student-detail-v1";
@@ -169,10 +169,27 @@ function renderCommentTimeline(student, definition, loading) {
       const message = document.createElement("p"); message.className = "draft-result-message";
       message.textContent = result?.status === "error" ? "Chưa tải được các thẻ nhận xét từ LMS." : "Đang tải các thẻ nhận xét…";
       inline.append(message);
+      if (result?.status === "error") {
+        // Đọc lại đúng phiên đang xem; không gửi chấm lại bài của học viên.
+        const reload = document.createElement("button");
+        reload.type = "button"; reload.className = "secondary draft-result-reload";
+        reload.textContent = "Tải lại kết quả";
+        reload.addEventListener("click", () => {
+          state.draftResults.delete(key);
+          if (state.selectedStudent?.sessionRef === student.sessionRef) renderStudentDetail(state.selectedStudent);
+        });
+        inline.append(reload);
+      }
     }
     const link = document.createElement("a"); link.className = "lms-result-link lms-result-fallback"; link.href = lmsUrl; link.target = "_blank"; link.rel = "noopener noreferrer";
     link.textContent = result?.status === "error" ? "Mở kết quả trên LMS" : "Mở bản gốc trên LMS";
     item.append(link); list.append(item); timeline.append(list);
+    return timeline;
+  }
+  if (definition.key === "draft" && latest && latest.status !== "queued" && latest.status !== "technical_error") {
+    const message = document.createElement("p"); message.className = "draft-result-message";
+    message.textContent = "Chưa tải được kết quả chấm Draft vì đường dẫn không hợp lệ. Vui lòng báo người quản lý.";
+    timeline.append(message);
     return timeline;
   }
   for (const item of comments) {

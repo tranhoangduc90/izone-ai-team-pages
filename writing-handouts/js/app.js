@@ -1,6 +1,6 @@
 import { createApi } from "./api.js?v=20260911-load-guard-v1";
 import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v3";
-import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelayWithJitter, randomDelay, rebaseLocalProgress, retryDelay, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260911-load-guard-v1";
+import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelayWithJitter, randomDelay, rebaseLocalProgress, retryDelay, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260921-draft-result-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
 import { renderStudentFieldComments } from "./teacher-comments-ui.js";
@@ -340,6 +340,14 @@ function renderDraftResult(workspace, sectionComments) {
       const message = document.createElement("p"); message.className = "draft-result-message";
       message.textContent = app.draftResult.status === "error" ? "Chưa tải được các thẻ nhận xét từ LMS." : "Đang tải các thẻ nhận xét…";
       inline.append(message);
+      if (app.draftResult.status === "error") {
+        // Chỉ tải lại kết quả đã chấm; không tạo lượt Check hoặc gọi AI.
+        const reload = document.createElement("button");
+        reload.type = "button"; reload.className = "secondary draft-result-reload";
+        reload.textContent = "Tải lại kết quả";
+        reload.addEventListener("click", () => { app.draftResult.key = null; renderComments(); });
+        inline.append(reload);
+      }
     }
     const link = document.createElement("a");
     link.className = "lms-result-link lms-result-fallback"; link.href = lmsUrl; link.target = "_blank"; link.rel = "noopener noreferrer";

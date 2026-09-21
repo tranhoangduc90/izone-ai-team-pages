@@ -44,11 +44,13 @@ export function safeLmsUrl(value) {
   const safe = safeHttpUrl(value);
   if (!safe) return null;
   const url = new URL(safe);
-  return url.protocol === "https:"
-    && url.hostname.toLowerCase() === "practice.izone.edu.vn"
-    && url.pathname.startsWith("/shared/writing-essays/")
-    ? url.href
-    : null;
+  if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
+  // Nhận kết quả từ hai hệ thống đã duyệt; link lạ bị chặn trước khi mở hoặc tải.
+  const legacy = url.hostname.toLowerCase() === "practice.izone.edu.vn"
+    && url.pathname.startsWith("/shared/writing-essays/");
+  const viewer = url.origin === "https://ducizone.ddns.net" && !url.search && !url.hash
+    && /^\/writing\/shared\/writing-essays\/[a-f0-9]{48}\/edit$/u.test(url.pathname);
+  return legacy || viewer ? url.href : null;
 }
 export function draftPrerequisitesPassed(sections = {}) { return sections.overview?.status === "passed" && sections.outline?.status === "passed"; }
 export function canUnlockDraft2(texts = {}) { return hasMeaningfulText(texts.draft1); }

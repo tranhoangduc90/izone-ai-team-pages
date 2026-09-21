@@ -8,5 +8,5 @@ test("teacher dashboard áp dụng class query trước khi hiển thị danh s�
   assert.match(source, /import \{ classQuery, resolveClassRef \}/u);
   assert.match(source, /state\.requestedClass = classQuery\(location\.search\)/u);
   assert.match(source, /return refresh\(\)/u);
-  assert.match(html, /teacher-app\.js\?v=20260920-student-detail-v1/u);
+  assert.match(html, /teacher-app\.js\?v=20260921-draft-result-v1/u);
 });
