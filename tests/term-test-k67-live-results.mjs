@@ -19,15 +19,22 @@ test('K67 nhận tín hiệu chấm xong nhưng vẫn giữ polling dự phòng'
   assert.match(app, /writingGradingStreamController\?\.abort\(\)/);
 });
 
-test('chỉ bốn trang Term Test K67 buộc tải bản giao diện mới', async () => {
-  const revision = '20260914-live-results-v1';
+test('bốn trang Term Test K67 nạp đúng revision cho kết quả trực tiếp và phục hồi lượt', async () => {
+  const liveResultsRevision = '20260914-live-results-v1';
+  const resetRecoveryRevision = '20260914-reset-recovery-v1';
   for (const entry of [
     'term-tests/term-test-1/index.html',
-    'term-tests/term-test-2/index.html',
+    'term-tests/term-test-2/index.html'
+  ]) {
+    assert.match(await read(entry), new RegExp(liveResultsRevision), entry);
+  }
+  for (const entry of [
     'term-tests/term-test-1-computer-based/index.html',
     'term-tests/term-test-2-computer-based/index.html'
   ]) {
-    assert.match(await read(entry), new RegExp(revision), entry);
+    assert.match(await read(entry), new RegExp(resetRecoveryRevision), entry);
   }
-  assert.match(await read('term-tests/term-test-2-computer-based/bootstrap.js'), new RegExp(revision));
+  const bootstrap = await read('term-tests/term-test-2-computer-based/bootstrap.js');
+  assert.match(bootstrap, new RegExp(liveResultsRevision));
+  assert.match(bootstrap, /recoverFromServerReset/);
 });

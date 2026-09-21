@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "suite_id": "term-test-67",
+  "groups": {
+    "static": [
+      "tests/substitute-k67.test.mjs",
+      "tests/teacher-login-preference.mjs",
+      "tests/term-teacher-feedback-links.mjs",
+      "tests/term-test-audio-recovery.mjs",
+      "tests/term-test-k67-live-results.mjs",
+      "tests/term-test-k67-writing-update.mjs",
+      "tests/term-test-listening-retake.mjs",
+      "tests/term-test-reliability.mjs",
+      "tests/term-test-teacher-session.mjs",
+      "tests/term-test-writing-parity-feedback.mjs"
+    ],
+    "browser": [
+      "tests/mini-test-identity.mjs",
+      "tests/term-student-memory-ui.cjs",
+      "tests/term-test-landing.mjs"
+    ]
+  }
+}
