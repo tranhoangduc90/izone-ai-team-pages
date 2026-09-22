@@ -72,7 +72,7 @@ function renderYesterday() {
     <strong>Buổi ${escapeHtml(item.lessonNumber || '—')}</strong>
     <span>${item.normalizedTime?dateTime(item.sessionStart):portalTime(item.sessionStart)+" · "+displayDate(item.sessionStart)}</span>
   </article>`).join('');
-  $('yesterdayClasses').innerHTML = cards || (nightlyState.error||['failed','partial'].includes(nightlyState.snapshot?.scanStatus)?'<div class="empty-inline">Chưa đọc đủ dữ liệu lịch học; chưa thể kết luận ngày này không có lớp.</div>':'<div class="empty-inline">Không có lớp Zoom 36 hoặc Zoom 6 trong ngày này.</div>');
+  $('yesterdayClasses').innerHTML = cards || (nightlyState.error||['failed','partial'].includes(nightlyState.snapshot?.scanStatus)?'<div class="empty-inline">Chưa đọc đủ dữ liệu lịch học; chưa thể kết luận ngày này không có lớp.</div>':'<div class="empty-inline">Không có lớp dùng các tài khoản Zoom đang theo dõi trong ngày này.</div>');
 }
 
 function youtubeState(record) {
@@ -122,7 +122,7 @@ function renderSections() {
 
 function populateAccounts() {
   const current = $('accountFilter').value;
-  const accounts = [...new Set(state.records.map((record) => record.source).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  const accounts = [...new Set([...state.records.map((record) => record.source), ...(nightlyState.snapshot?.accounts || []).map(item => item.account)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
   $('accountFilter').innerHTML = '<option value="">Tất cả</option>' + accounts.map((name) => `<option value="${escapeHtml(name)}" ${name === current ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
 }
 
