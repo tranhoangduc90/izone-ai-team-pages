@@ -93,6 +93,9 @@ footer { padding: 4px 2px 20px; color: var(--muted); font-size: 12px; }
 dialog { width: min(560px,calc(100% - 30px)); padding: 0; border: 0; border-radius: 18px; color: var(--navy); box-shadow: 0 24px 70px rgba(16,24,40,.3); }
 dialog::backdrop { background: rgba(15,23,42,.55); backdrop-filter: blur(2px); }
 dialog form { display: grid; gap: 16px; padding: 22px; }
+dialog [hidden] { display: none !important; }
+#previewDialog { padding: 22px; }
+#previewDialog > * + * { margin-top: 16px; }
 .dialog-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .icon-button { width: 36px; min-height: 36px; padding: 0; color: var(--navy); background: #f2f4f7; border-radius: 50%; font-size: 22px; }
 .icon-button:hover { background: #e4e7ec; }

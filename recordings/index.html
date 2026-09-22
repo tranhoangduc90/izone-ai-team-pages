@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>IZONE Recording Automation</title>
   <link rel="icon" href="assets/izone-recording-thumbnail.png">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
   <div class="shell">
@@ -66,6 +66,23 @@
     </form>
   </dialog>
 
+  <dialog id="previewDialog">
+    <div class="dialog-title"><h2>Xem recording gốc</h2><button class="icon-button" type="button" data-close-dialog aria-label="Đóng">×</button></div>
+    <strong id="previewTitle"></strong>
+    <p id="previewMetadata" class="dialog-note"></p>
+    <p id="previewIssues"></p>
+    <p id="previewStatus" role="status"></p>
+    <a id="previewZoomLink" class="video-link" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" hidden>Mở bản gốc trên Zoom ↗</a>
+    <p class="dialog-note">Nếu không có quyền xem, liên hệ người quản lý Zoom để được cấp quyền. Xem video không đánh dấu đã duyệt và không tự đăng YouTube.</p>
+    <p class="dialog-note">Đăng thủ công và xem file nội bộ đang chờ cấu hình đăng nhập cho nhân sự. Hiện có thể xem qua Zoom theo quyền truy cập sẵn có.</p>
+    <form id="publishForm" hidden>
+      <label>Buổi học trên Portal<select id="publishSession" required></select></label>
+      <label>Ghi chú xác nhận<input id="publishReason" maxlength="500" required placeholder="Lý do xác định đúng lớp/buổi"></label>
+      <label><input id="publishConfirmed" type="checkbox" required> Tôi đã xem nội dung và xác nhận đúng buổi học đã chọn</label>
+      <p class="dialog-note">Thao tác này yêu cầu đăng YouTube không công khai vào playlist của lớp. Đây là thao tác riêng với tick Đã duyệt.</p>
+      <div class="dialog-actions"><button id="publishSubmit" type="submit">Xác nhận và đăng</button></div>
+    </form>
+  </dialog>
   <dialog id="exceptionDialog"><form id="exceptionForm">
     <div class="dialog-title"><h2>Xử lý ngoại lệ</h2><button class="icon-button" type="button" data-close-dialog aria-label="Đóng">×</button></div>
     <label>Trạng thái<select id="exceptionAction"><option value="asked_teacher">Đã hỏi giảng viên</option><option value="awaiting_file">Chờ file bổ sung</option><option value="cancelled">Buổi đã hủy</option><option value="accepted_missing">Chấp nhận thiếu</option></select></label>
@@ -73,8 +90,8 @@
     <div class="dialog-actions"><button type="button" class="secondary" data-close-dialog>Hủy</button><button type="submit" id="exceptionSubmit">Lưu trạng thái</button></div>
   </form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="nightly-config.js?v=8" defer></script>
-  <script src="app.js?v=8" defer></script>
-  <script src="nightly.js?v=8" defer></script>
+  <script src="nightly-config.js?v=9" defer></script>
+  <script src="app.js?v=9" defer></script>
+  <script src="nightly.js?v=9" defer></script>
 </body>
 </html>

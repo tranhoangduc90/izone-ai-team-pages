@@ -37,9 +37,9 @@ async function loadNightly() {
   return data.snapshot;
 }
 function nightlyRow(record) {
-  const label=NIGHTLY_LABELS[record.exceptionStatus || record.status] || 'Recording cần xác nhận';
+  const label=record.excluded?'Đã loại khỏi luồng đăng':NIGHTLY_LABELS[record.exceptionStatus || record.status] || 'Recording cần xác nhận';
   const issues=(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x).join(' · ');
-  const actions=record.kind==='session'?`<button class="action-button" data-action="exception" data-id="${escapeHtml(record.id)}">Xử lý ngoại lệ</button>`:'—';
+  const actions=record.kind==='session'?`<button class="action-button" data-action="exception" data-id="${escapeHtml(record.id)}">Xử lý ngoại lệ</button>`:record.type==='MP4'&&!record.excluded?`<button class="action-button" data-action="preview" data-id="${escapeHtml(record.id)}">Xem recording gốc</button>`:'—';
   return `<tr><td><strong>${escapeHtml(record.className||'Chưa xác định')}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong><div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(record.errorCode||"Không ghi nhận lỗi kỹ thuật")}</div></td><td>${dateTime(record.recordingStart)}</td><td><span class="badge wait">${escapeHtml(label)}</span></td><td>${actions}</td><td>—</td><td>${dateTime(record.updatedAt)}</td><td>${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
 }
 document.getElementById('dateFilter').addEventListener('change',()=>{state.version++;loadData(true);});
@@ -49,6 +49,41 @@ document.addEventListener('click',(event)=>{
   const record=state.records.find(r=>r.id===button.dataset.id);if(!record)return;
   const dialog=document.getElementById('exceptionDialog');dialog.dataset.id=record.id;dialog.dataset.version=record.version;
   document.getElementById('exceptionReason').value=record.exceptionReason||'';dialog.showModal();
+});
+
+const PREVIEW_ERRORS={ZOOM_SOURCE_UNAVAILABLE:'Recording không còn truy cập được trên Zoom. Có thể đã bị xóa hoặc chuyển vào thùng rác; hệ thống không tự khôi phục.',ZOOM_ACCESS_DENIED:'Tài khoản kết nối chưa có quyền đọc recording này.',ZOOM_PROCESSING:'Zoom vẫn đang xử lý recording.',ZOOM_PLAYBACK_LINK_UNAVAILABLE:'Zoom chưa cung cấp link xem đúng clip này.',PREVIEW_NOT_AVAILABLE:'Chưa lấy được link xem. Hãy làm mới dữ liệu và thử lại.'};
+let previewGeneration=0;
+document.addEventListener('click',async(event)=>{
+ const button=event.target.closest('[data-action="preview"]');if(!button)return;
+ const record=state.records.find(r=>r.id===button.dataset.id);if(!record)return;
+ const generation=++previewGeneration,dialog=document.getElementById('previewDialog');
+ dialog.dataset.id=record.id;dialog.dataset.version=record.version;dialog.dataset.date=nightlyState.snapshot.date;
+ document.getElementById('publishForm').reset();
+ const sessions=(nightlyState.snapshot.records||[]).filter(r=>r.kind==='session'&&r.numberingVerified&&r.lessonNumber>0);
+ document.getElementById('publishSession').innerHTML='<option value="">Chọn đúng lớp và buổi học</option>'+sessions.map(r=>`<option value="${escapeHtml(r.classSessionId)}">${escapeHtml(r.className)} — Buổi ${escapeHtml(r.lessonNumber)} — ${escapeHtml(dateTime(r.recordingStart))}</option>`).join('');
+ document.getElementById('publishSubmit').disabled=!sessions.length||record.status!=='completed'||record.observationStale===true;
+ const status=document.getElementById('previewStatus'),link=document.getElementById('previewZoomLink');
+ document.getElementById('previewTitle').textContent=record.title;
+ const seconds=Math.max(0,Math.round((Date.parse(record.recordingEnd)-Date.parse(record.recordingStart))/1000));
+ document.getElementById('previewMetadata').textContent=`${record.source} · ${dateTime(record.recordingStart)} → ${dateTime(record.recordingEnd)}${Number.isFinite(seconds)?' · '+Math.floor(seconds/60)+' phút '+seconds%60+' giây':''}`;
+ document.getElementById('previewIssues').textContent=(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x).join(' · ')||'Chờ nhân sự xem nội dung và xác nhận.';
+ status.textContent='Đang lấy link xem từ Zoom…';link.hidden=true;link.removeAttribute('href');dialog.showModal();
+ try {
+  const response=await fetch(window.RECORDING_NIGHTLY.actionUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'preview',id:record.id,date:nightlyState.snapshot.date}),referrerPolicy:'no-referrer'});
+  const data=await response.json();if(generation!==previewGeneration||!dialog.open)return;
+  if(!response.ok||!data.ok)throw new Error(data.error||'PREVIEW_NOT_AVAILABLE');
+  if(!/^https:\/\/(?:[a-z0-9-]+\.)*zoom\.us\/rec\/(?:play|share)\/[a-zA-Z0-9_.~-]+$/i.test(data.preview?.url||''))throw new Error('PREVIEW_NOT_AVAILABLE');
+  link.href=data.preview.url;link.hidden=false;status.textContent='Mở bản gốc ở tab mới. Zoom có thể yêu cầu đăng nhập hoặc mật khẩu do người quản lý cung cấp.';
+ }catch(error){if(generation===previewGeneration&&dialog.open)status.textContent=PREVIEW_ERRORS[error.message]||PREVIEW_ERRORS.PREVIEW_NOT_AVAILABLE;}
+});
+document.getElementById('previewDialog').addEventListener('close',()=>{previewGeneration++;});
+document.getElementById('publishForm').addEventListener('submit',async(event)=>{
+ event.preventDefault();const dialog=document.getElementById('previewDialog'),button=document.getElementById('publishSubmit');button.disabled=true;
+ try{
+  const row=await postAction(window.RECORDING_NIGHTLY.actionUrl,{date:dialog.dataset.date,id:dialog.dataset.id,expectedVersion:Number(dialog.dataset.version),action:'confirm_publish',classSessionId:document.getElementById('publishSession').value,reason:document.getElementById('publishReason').value.trim(),contentConfirmed:document.getElementById('publishConfirmed').checked});
+  replaceRecord({...row,nightly:true,title:row.proposedTitle});dialog.close();toast('Đã lưu yêu cầu đăng. Theo dõi tiến độ; chưa đồng nghĩa video đã đăng thành công.');await loadData(true);
+ }catch(error){toast(error.message.includes('VERSION_CONFLICT')?'Dữ liệu đã thay đổi. Đóng hộp thoại và làm mới trước khi xác nhận.':'Chưa xác nhận đăng được: '+error.message,'error');}
+ finally{button.disabled=false;}
 });
 document.getElementById('exceptionForm').addEventListener('submit',async(event)=>{
   event.preventDefault();const dialog=document.getElementById('exceptionDialog');const button=document.getElementById('exceptionSubmit');button.disabled=true;
