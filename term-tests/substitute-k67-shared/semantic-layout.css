@@ -34,6 +34,14 @@
 .k67-answer-definition { margin: 0; padding: 8px 12px; background: #f0f5fc; border-left: 3px solid #2563eb; line-height: 1.65; }
 .k67-matching-columns { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; align-items: start; margin-top: 20px; }
 .k67-matching-columns > * { min-width: 0; }
+.k67-reading-matching { grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap: 16px; }
+.k67-reading-matching .k67-option-bank { padding: 12px; }
+.k67-reading-matching .cbt-question-card { padding: 12px; }
+.k67-reading-matching .cbt-answer-row { margin-left: 0; max-width: 100%; }
+.k67-reading-matching .cbt-question-heading { grid-template-columns: 28px minmax(0,1fr); }
+.k67-reading-matching .cbt-question-heading .cbt-flag { grid-column: 2; justify-self: end; }
+.k67-reading-matching .k67-inline-control { flex-wrap: wrap; }
+.k67-reading-matching .k67-inline-control .cbt-inline-answer { width: 130px; }
 .k67-matching-columns .k67-note-heading { margin-top: 0; padding-top: 0; border: 0; }
 .k67-option-bank { padding: 20px; border: 1px solid #cbdaf0; border-radius: 12px; background: #f3f7fd; }
 .k67-option-line { display: flex; gap: 14px; align-items: baseline; margin: 0; padding: 12px 0; line-height: 1.7; border-bottom: 1px solid #d7e1ef; }

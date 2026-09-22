@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20260922-task2'))
       .then(() => loadScript('enhance.js'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -34,7 +34,7 @@
   }
 
   const storageNamespace = localDemo ? 'RETAKE-LOBBY' : classCode;
-  const storageKey = `izone-test:${testConfig.slug}:${storageNamespace}${storageSuffix}`;
+  const storageKey = `izone-test:${testConfig.slug}:${storageNamespace}${storageSuffix}:substitute-k67-task2-20260922-v2`;
   const uiStorageKey = `izone-test-ui:${testConfig.slug}:${storageNamespace}${storageSuffix}`;
   const annotationStorageKey = `izone-test-annotations:${testConfig.slug}:${storageNamespace}${storageSuffix}`;
   if (localDemo && query.get('reset') === '1') {
@@ -547,7 +547,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js');
+    await loadScript('../substitute-k67-shared/app.js?v=20260922-task2');
     await loadScript('enhance.js');
     await loadScript('annotations.js');
   }

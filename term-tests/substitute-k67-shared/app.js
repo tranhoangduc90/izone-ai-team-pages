@@ -2,6 +2,7 @@
   'use strict';
 
   const testConfig = window.TERM_TEST_CONFIG;
+  const promptVersion = 'substitute-k67-task2-20260922-v2';
   const appConfig = window.TERM_TEST_APP_CONFIG;
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
@@ -17,7 +18,7 @@
 
   if (!testConfig || !appConfig || !root) return;
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
+  const storageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}:${promptVersion}`;
   if (serverGradingMode && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
     const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}:server-grade`;
     for (const storage of [sessionStorage, localStorage]) {
@@ -136,6 +137,7 @@
       clientSubmissionId: state.clientSubmissionId,
       examSessionToken: state.examSessionToken,
       attemptToken: state.attemptToken,
+      promptVersion,
       listeningStartedAt: state.listeningStartedAt,
       readingStartedAt: state.readingStartedAt,
       writingStartedAt: state.writingStartedAt,
@@ -617,6 +619,7 @@
             classCode,
             studentRef: state.studentRef,
             attemptToken: state.attemptToken,
+            promptVersion,
             listeningAnswers: state.drafts.listening,
             readingAnswers: state.drafts.reading,
             task1: state.drafts.writing.task1,
@@ -723,6 +726,7 @@
   function writingPayload(action) {
     return {
       attemptToken: state.attemptToken,
+      promptVersion,
       action,
       outline: String(state.drafts.writing.outline || ''),
       task1: String(state.drafts.writing.task1 || ''),
@@ -895,14 +899,14 @@
       const outlineTitle = document.createElement('strong');
       outlineTitle.textContent = 'Dàn ý';
       const outlineHint = document.createElement('span');
-      outlineHint.textContent = '15 phút';
+      outlineHint.textContent = writingConfig.planningMinutes ? `${writingConfig.planningMinutes} phút` : 'Tùy chọn';
       outlineHeader.append(outlineTitle, outlineHint);
       const outlineEditor = document.createElement('textarea');
       outlineEditor.className = 'writing-outline-editor';
       outlineEditor.dataset.writingOutline = 'true';
       outlineEditor.value = state.drafts.writing.outline || '';
       outlineEditor.spellcheck = false;
-      outlineEditor.setAttribute('aria-label', 'Dàn ý Writing Task 1');
+      outlineEditor.setAttribute('aria-label', `Dàn ý Writing ${task.label || 'Task 2'}`);
       outlineEditor.addEventListener('input', () => {
         state.drafts.writing.outline = outlineEditor.value;
         state.writingDirty = true;
@@ -1924,6 +1928,7 @@
                 classCode,
                 studentRef: state.studentRef,
                 attemptToken: state.attemptToken,
+                promptVersion,
                 listeningAnswers: state.drafts.listening,
                 readingAnswers: state.drafts.reading,
                 outline: state.drafts.writing.outline,
