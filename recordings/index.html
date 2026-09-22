@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>IZONE Recording Automation</title>
   <link rel="icon" href="assets/izone-recording-thumbnail.png">
-  <link rel="stylesheet" href="styles.css?v=10">
+  <link rel="stylesheet" href="styles.css?v=12">
 </head>
 <body>
   <div class="shell">
@@ -16,13 +16,15 @@
         <h1>Recording Automation</h1>
         <p>Theo dõi lớp học, recording Zoom và video YouTube trong một giao diện.</p>
       </div>
-      <div class="live"><span></span><strong id="liveLabel">Đang kết nối</strong></div>
+      <div class="hero-controls">
+        <div class="live"><span></span><strong id="liveLabel">Đang kết nối</strong></div>
+        <section class="account-box" aria-label="Quyền nhân sự">
+          <span id="recordingAuthStatus" role="status">Đăng nhập Google để xem nội bộ và xác nhận đăng.</span>
+          <div id="recordingGoogleLogin"></div>
+          <button id="recordingLogout" type="button" hidden>Đăng xuất</button>
+        </section>
+      </div>
     </header>
-    <section class="toolbar" aria-label="Quyền nhân sự">
-      <span id="recordingAuthStatus">Đăng nhập Google để xem nội bộ và xác nhận đăng.</span>
-      <div id="recordingGoogleLogin"></div>
-      <button id="recordingLogout" type="button" hidden>Đăng xuất</button>
-    </section>
 
     <section class="stats" aria-label="Tổng quan">
       <article><span>Lớp trong ngày đối soát</span><strong id="yesterdayClassCount">—</strong></article>
