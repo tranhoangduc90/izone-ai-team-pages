@@ -102,3 +102,8 @@ test('HTML dùng phiên bản tài nguyên mới để tránh trình duyệt gi�
   assert.match(html, /app\.js\?v=20260922-google-account-wizard-v1/);
   assert.match(html, /styles\.css\?v=20260922-google-account-wizard-v1/);
 });
+
+test('CSP cho phép đúng style hiện hành của Google Identity Services', () => {
+  assert.match(html, /style-src[^;]*'sha256-RU4sU0AaS8IBGZx8XrGt\/pa9A5SLA3dQszGeqT5L3Kw='/);
+  assert.doesNotMatch(html, /style-src[^;]*'unsafe-inline'/);
+});
