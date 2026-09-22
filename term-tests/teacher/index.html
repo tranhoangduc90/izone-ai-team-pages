@@ -8,7 +8,7 @@
     <title>Kết quả bài test của lớp</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="../shared/styles.css?rev=20260918-teacher-checkbox-v1">
-    <link rel="stylesheet" href="styles.css?rev=20260821-remove-average-column-v1">
+    <link rel="stylesheet" href="styles.css?rev=20260922-admin-access-v1">
   </head>
   <body>
     <header class="topbar teacher-topbar">
@@ -49,10 +49,18 @@
             <select id="testSelect"></select>
           </label>
           <div class="teacher-context">
-            <span>Giảng viên</span>
+            <span>Tài khoản <span class="teacher-role-badge" id="reviewerRoleBadge"></span></span>
             <strong id="reviewerName">—</strong>
           </div>
         </div>
+
+        <aside class="teacher-access-notice" id="classAccessNotice" role="status" aria-live="polite" hidden>
+          <div class="teacher-access-notice-icon" aria-hidden="true">🛡</div>
+          <div>
+            <strong id="classAccessTitle"></strong>
+            <p id="classAccessMessage"></p>
+          </div>
+        </aside>
 
         <div class="teacher-tabs-shell">
           <button class="teacher-tabs-scroll teacher-tabs-scroll-prev" id="teacherTabsPrev" type="button" aria-label="Xem các tab phía trước" hidden>‹</button>
@@ -92,6 +100,6 @@
 
     <script src="../shared/config.js?rev=20260821-attempt-review-v1"></script>
     <script src="../shared/attempt-review.js?rev=20260909-k67-update-v1"></script>
-    <script type="module" src="app.js?rev=20260920-server-session-v1"></script>
+    <script type="module" src="app.js?rev=20260922-admin-access-v1"></script>
   </body>
 </html>
