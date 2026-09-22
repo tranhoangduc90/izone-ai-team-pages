@@ -6,12 +6,15 @@
  */
 
 import {
+  buildClassAccessNotice,
+  classOptionLabel,
   formatBand,
+  selectRequestedClass,
   statusLabel,
   summarizeStudents,
   writingStatusLabel,
   writingTaskStateLabel
-} from './model.js?rev=20260820-writing-monitor-v1';
+} from './model.js?rev=20260922-admin-access-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 
@@ -40,7 +43,8 @@ const state = {
 
 const elements = Object.fromEntries([
   'notice', 'accessView', 'googleSignInButton', 'rememberTeacherLogin', 'dashboardView', 'loginBadge', 'refreshButton', 'logoutButton',
-  'classSelect', 'testSelect', 'reviewerName', 'teacherTabs', 'teacherTabsPrev', 'teacherTabsNext', 'overviewView', 'overviewTitle',
+  'classSelect', 'testSelect', 'reviewerName', 'reviewerRoleBadge', 'classAccessNotice', 'classAccessTitle', 'classAccessMessage',
+  'teacherTabs', 'teacherTabsPrev', 'teacherTabsNext', 'overviewView', 'overviewTitle',
   'resultCount', 'classSummary', 'overviewBody', 'studentView'
 ].map(id => [id, document.getElementById(id)]));
 
@@ -107,25 +111,32 @@ async function apiRequest(path) {
   return payload;
 }
 
-function fillSelect(select, items, valueKey, labelKey) {
+function fillSelect(select, items, valueKey, labelKey, labelFormatter = null) {
   select.replaceChildren(...items.map(item => {
     const option = document.createElement('option');
     option.value = item[valueKey];
-    option.textContent = item[labelKey];
+    option.textContent = labelFormatter ? labelFormatter(item) : item[labelKey];
     return option;
   }));
 }
 
 function chooseInitialFilters() {
-  const requestedClass = (initialParams.get('class') || '').trim().toUpperCase();
+  const requestedClass = (initialParams.get('class') || '').trim();
   const requestedTest = (initialParams.get('test') || '').trim();
-  const selectedClass = state.classes.find(item => item.name.toUpperCase() === requestedClass || item.id === requestedClass)
-    || state.classes[0];
+  const selectedClass = selectRequestedClass(state.classes, requestedClass);
+  if (requestedClass && !selectedClass) throw new Error(`Tài khoản không có quyền xem lớp ${requestedClass}.`);
   const selectedTest = state.tests.find(item => item.slug === requestedTest) || state.tests[0];
   state.selectedClassId = selectedClass?.id || '';
   state.selectedTestSlug = selectedTest?.slug || '';
   elements.classSelect.value = state.selectedClassId;
   elements.testSelect.value = state.selectedTestSlug;
+}
+
+function renderClassAccessNotice(classInfo) {
+  const notice = buildClassAccessNotice(classInfo);
+  elements.classAccessNotice.hidden = !notice;
+  elements.classAccessTitle.textContent = notice?.title || '';
+  elements.classAccessMessage.textContent = notice?.message || '';
 }
 
 async function loadOptions() {
@@ -135,10 +146,12 @@ async function loadOptions() {
   state.tests = payload.tests || [];
   if (!state.classes.length) throw new Error('Tài khoản chưa được cấp quyền xem lớp nào.');
   if (!state.tests.length) throw new Error('Chưa có bài test nào đang hoạt động.');
-  fillSelect(elements.classSelect, state.classes, 'id', 'name');
+  fillSelect(elements.classSelect, state.classes, 'id', 'name', classOptionLabel);
   fillSelect(elements.testSelect, state.tests, 'slug', 'title');
   chooseInitialFilters();
   elements.reviewerName.textContent = state.reviewer.displayName || state.reviewer.email;
+  elements.reviewerRoleBadge.textContent = state.reviewer.role === 'admin' ? 'Quản trị viên' : 'Giảng viên';
+  renderClassAccessNotice(getSelectedClass());
   elements.loginBadge.textContent = `Đã đăng nhập: ${state.reviewer.displayName || state.reviewer.email}`;
   elements.refreshButton.hidden = false;
   elements.logoutButton.hidden = false;
@@ -806,6 +819,10 @@ async function loadResults({ quiet = false } = {}) {
     if (!quiet) showNotice(`Đang tải kết quả ${selectedClass.name}...`);
     const query = new URLSearchParams({ class: selectedClass.name, test: state.selectedTestSlug });
     const payload = await apiRequest(`/api/term-tests/teacher/results?${query}`);
+    if (payload.class?.id === selectedClass.id) {
+      Object.assign(selectedClass, payload.class);
+      renderClassAccessNotice(selectedClass);
+    }
     state.students = payload.students || [];
     if (state.selectedTab !== 'overview' && !state.students.some(student => student.ref === state.selectedTab)) {
       state.selectedTab = 'overview';
@@ -843,6 +860,8 @@ function resetLoginAfterError() {
   }
   document.querySelectorAll('.writing-feedback-dialog, .attempt-review-dialog').forEach(dialog => dialog.remove());
   elements.reviewerName.textContent = '—';
+  elements.reviewerRoleBadge.textContent = '';
+  renderClassAccessNotice(null);
   elements.overviewTitle.textContent = 'Kết quả của lớp';
   elements.resultCount.textContent = '0 học viên';
   elements.loginBadge.textContent = 'Chưa đăng nhập';
@@ -915,6 +934,7 @@ function setupGoogleSignIn() {
 elements.classSelect.addEventListener('change', async () => {
   state.selectedClassId = elements.classSelect.value;
   state.selectedTab = 'overview';
+  renderClassAccessNotice(getSelectedClass());
   try {
     await loadResults();
   } catch (error) {
