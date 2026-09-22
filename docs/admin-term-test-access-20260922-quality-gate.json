@@ -60,7 +60,15 @@
     "full_suite": "Không chạy toàn bộ kho vì có test live gọi POST vào production ngoài phạm vi; đã chạy trọn bảy suite bị ảnh hưởng và kiểm tra cú pháp hai file thay đổi."
   },
   "cross_constraints": [],
-  "mutations": [],
+  "mutations": [
+    {
+      "id": "M-PAGES-PRODUCTION",
+      "target": "GitHub Pages dashboard Term Test",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "GitHub Pages build đúng merge commit 9fb45c2; tệp công khai mới đã xuất hiện và giao diện thật hiển thị đầy đủ nhãn quyền."
+    }
+  ],
   "verification_runs": [
     {
       "id": "V-PAGES-AFFECTED",
@@ -74,17 +82,30 @@
       "failed": 0,
       "skipped": 0,
       "evidence": "Toàn bộ suite dashboard Term Test bị ảnh hưởng đạt; node --check app.js/model.js đạt. Không chạy các test monorepo có POST production ngoài phạm vi."
+    },
+    {
+      "id": "V-PAGES-PRODUCTION-READBACK",
+      "scope": "behavioral",
+      "command": "Đọc trực tiếp DOM GitHub Pages bằng phiên quản trị viên thật",
+      "tree_revision": "85d797baf8127c8a5bdf59fbebf853d22a810963",
+      "captured_at": "2026-09-22T16:03:00+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "URL giữ class=IC2213; nhãn vai trò Quản trị viên, lớp 🛡 IC2213, tiêu đề và thông điệp banner đều hiển thị đúng; dashboard tải đúng lớp."
     }
   ],
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "2e8cb92f25f29950823f99c998db0ccef3d99a46",
     "current_tree_revision": "85d797baf8127c8a5bdf59fbebf853d22a810963",
     "production_authorized": true,
     "rollback": "Revert commit giao diện và chờ GitHub Pages build lại.",
-    "deployment_readback": "not_run",
-    "operational_observation": "Bản xem trước local xác nhận banner hiển thị 1180×80 px, role badge và nhãn lớp rõ ràng; backend production đã readback IC2213 bằng phiên admin thật.",
+    "deployment_readback": "verified",
+    "operational_observation": "GitHub Pages build merge commit 9fb45c2 thành công. Trên URL production, phiên quản trị viên thật giữ đúng IC2213, thấy nhãn 🛡 IC2213, vai trò Quản trị viên và banner giải thích không phải giảng viên phụ trách lớp.",
     "open_risks": []
   }
 }
