@@ -97,7 +97,15 @@
     "full_suite": "Không chạy toàn bộ kho Pages vì có test live gửi request tới production ngoài phạm vi; đã chạy toàn bộ suite Cổng AI bị ảnh hưởng và hai suite chéo Term Test/Writing."
   },
   "cross_constraints": [],
-  "mutations": [],
+  "mutations": [
+    {
+      "id": "M-PAGES-PRODUCTION",
+      "target": "GitHub Pages dashboard Cổng AI",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "GitHub Pages build commit fdf6b6d thành công; Chrome thật giữ phiên đăng nhập và hiển thị đủ bốn số dư VND nguyên."
+    }
+  ],
   "verification_runs": [
     {
       "id": "V-AI-GATEWAY",
@@ -150,17 +158,30 @@
       "failed": 0,
       "skipped": 0,
       "evidence": "Bốn thẻ hiển thị lần lượt 1.768.613 đ, 4.397.816 đ, 6.951.509 đ và 3.382.317 đ; không tràn thẻ, console 0 lỗi."
+    },
+    {
+      "id": "V-PRODUCTION",
+      "scope": "behavioral",
+      "command": "Chrome thật: reload URL GitHub Pages, chờ network idle và đọc lại DOM/console",
+      "tree_revision": "c5377dac011b7906cf86d1ddaa9aee211f7d4e32",
+      "captured_at": "2026-09-22T23:43:00+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Phiên đăng nhập còn nguyên; bốn số dư và các số tiền đã dùng/insight đều là VND nguyên; nhãn biểu đồ là VND; console không có warning/error."
     }
   ],
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "c88960b298e259b2ba9904d722bb5cf0b7679380",
     "current_tree_revision": "c5377dac011b7906cf86d1ddaa9aee211f7d4e32",
     "production_authorized": true,
     "rollback": "Revert commit Pages của thay đổi này rồi chờ GitHub Pages build lại.",
-    "deployment_readback": "not_applicable",
-    "operational_observation": "Bản local dùng API giả an toàn đã đạt trên desktop/mobile và không có lỗi console.",
+    "deployment_readback": "verified",
+    "operational_observation": "GitHub Pages build đúng commit fdf6b6d. Chrome thật giữ phiên đăng nhập, tải dữ liệu production, hiển thị bốn tài khoản bằng VND nguyên và không có lỗi console.",
     "open_risks": [
       {
         "severity": "P2",
