@@ -38,16 +38,11 @@
   const uiStorageKey = `izone-test-ui:${testConfig.slug}:${storageNamespace}${storageSuffix}`;
   const annotationStorageKey = `izone-test-annotations:${testConfig.slug}:${storageNamespace}${storageSuffix}`;
   if (localDemo && query.get('reset') === '1') {
-    for (const storage of [sessionStorage, localStorage]) {
-      try {
-        for (const namespace of ['RETAKE-LOBBY', 'DEMO', 'IC2139']) {
-          storage.removeItem(`izone-test:${testConfig.slug}:${namespace}:server-grade`);
-          storage.removeItem(`izone-test-ui:${testConfig.slug}:${namespace}:server-grade`);
-          storage.removeItem(`izone-test-annotations:${testConfig.slug}:${namespace}:server-grade`);
-        }
-      } catch {
-        // Bản demo vẫn chạy được nếu trình duyệt chặn bộ nhớ cục bộ.
-      }
+    try {
+      window.K67_RESET_STORAGE.clear(testConfig.slug);
+    } catch {
+      root.innerHTML = '<main class="page-shell"><section class="panel"><h1>Chưa reset được dữ liệu.</h1><p>Hãy cho phép lưu trữ của trang rồi tải lại. Bài làm cũ chưa được mở lại.</p></section></main>';
+      return;
     }
     query.delete('reset');
     history.replaceState(null, '', `${location.pathname}?${query.toString()}`);

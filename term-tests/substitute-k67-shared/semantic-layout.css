@@ -27,6 +27,8 @@
 .k67-bullet { position: absolute; left: 2px; color: #2563eb; font-weight: 900; }
 .k67-generated-bullet::before { content: '•'; position: absolute; left: 2px; color: #2563eb; font-weight: 900; }
 .k67-instruction-block, .k67-standalone-instruction { margin: 20px 0; padding: 18px 20px; color: #fff; background: linear-gradient(115deg,#173b67,#245e91); border-radius: 12px; line-height: 1.65; }
+.cbt-listening-section > .k67-instruction-block,
+.cbt-listening-section > .k67-standalone-instruction { margin-inline: auto; }
 .k67-instruction-block:first-child, .k67-standalone-instruction:first-child { margin-top: 0; }
 .k67-instruction-block h4 { margin: 0 0 6px; color: #c9e1fa; font-size: .78em; letter-spacing: .07em; text-transform: uppercase; }
 .k67-instruction-block p { margin: 4px 0; }
