@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Hành trình trải nghiệm học viên Handout Writing</title>
+  <style>
+    :root {
+      --navy:#0b1f3a; --blue:#225cf6; --blue-2:#6e95f4; --ink:#14233b;
+      --muted:#667085; --line:#d7e0ee; --paper:#ffffff; --page:#eef3fb;
+      --green:#17834d; --green-bg:#eaf7f0; --red:#d84a3a; --red-bg:#fff0ee;
+      --amber:#b87900; --amber-bg:#fff8e6; --focus:#245cff;
+      --shadow:0 18px 50px rgba(24,46,82,.14);
+      font-family:Inter,Aptos,"Segoe UI",Arial,sans-serif;
+    }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:linear-gradient(180deg,#eaf1fb 0,#f6f8fc 30%,#eef3fb 100%); }
+    button { font:inherit; }
+    .page-shell { width:min(1260px,calc(100% - 40px)); margin:0 auto; padding:28px 0 156px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:18px; }
+    .brand { display:flex; align-items:center; gap:12px; font-weight:900; color:var(--navy); }
+    .brand-mark { width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--blue); color:white; box-shadow:0 9px 22px rgba(34,92,246,.25); }
+    .privacy-badge { padding:8px 12px; border:1px solid #bfd0f6; border-radius:999px; background:#f7faff; color:#38517d; font-size:13px; font-weight:750; }
+    .hero { background:var(--navy); color:white; border-radius:28px; padding:38px clamp(24px,5vw,62px); box-shadow:var(--shadow); position:relative; overflow:hidden; }
+    .hero::after { content:""; position:absolute; width:320px; height:320px; border-radius:50%; right:-110px; top:-150px; background:radial-gradient(circle,rgba(110,149,244,.7),rgba(110,149,244,0)); }
+    .hero-kicker { color:#a9c1ff; font-size:13px; letter-spacing:.12em; text-transform:uppercase; font-weight:900; }
+    .hero h1 { margin:10px 0 12px; max-width:900px; font-size:clamp(36px,5vw,68px); line-height:1.02; letter-spacing:-.04em; }
+    .hero p { max-width:850px; font-size:clamp(17px,2vw,23px); line-height:1.5; color:#e2eaff; margin:0; }
+    .hero-meta { display:flex; gap:10px; flex-wrap:wrap; margin-top:24px; }
+    .hero-meta span { border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.09); padding:9px 12px; border-radius:12px; font-size:13px; font-weight:750; }
+    .workspace { display:grid; grid-template-columns:220px minmax(0,1fr); gap:20px; align-items:start; margin-top:20px; }
+    .stage-nav { position:sticky; top:18px; background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:22px; padding:14px; box-shadow:0 8px 28px rgba(25,45,78,.08); backdrop-filter:blur(12px); }
+    .stage-nav h2 { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin:2px 8px 10px; }
+    .stage-nav button { width:100%; border:0; background:transparent; color:#455774; text-align:left; padding:10px 11px; border-radius:12px; cursor:pointer; font-weight:750; }
+    .stage-nav button:hover,.stage-nav button.active { background:#eaf1ff; color:var(--blue); }
+    .handout { display:flex; flex-direction:column; gap:18px; min-width:0; }
+    .focus-target { scroll-margin:105px 0 180px; transition:opacity .24s ease,filter .24s ease,transform .24s ease,box-shadow .24s ease; }
+    body.presenter-on .focus-target:not(.is-active) { opacity:.26; filter:saturate(.55); }
+    body.presenter-on .focus-target.is-active { opacity:1; filter:none; transform:translateY(-2px); box-shadow:0 0 0 5px rgba(34,92,246,.2),0 22px 60px rgba(26,55,102,.18); }
+    .panel { background:var(--paper); border:1px solid var(--line); border-radius:22px; padding:24px; box-shadow:0 8px 28px rgba(25,45,78,.07); }
+    .panel h2,.panel h3 { color:var(--navy); margin:0; }
+    .panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; }
+    .kicker { display:block; color:var(--blue); font-size:12px; font-weight:900; letter-spacing:.11em; text-transform:uppercase; margin-bottom:6px; }
+    .status { flex:0 0 auto; padding:7px 10px; border-radius:999px; font-size:12px; font-weight:900; }
+    .status.passed { color:var(--green); background:var(--green-bg); }
+    .status.revision { color:var(--red); background:var(--red-bg); }
+    .status.info { color:#3d5f98; background:#eaf1ff; }
+    .task-prompt { font-size:clamp(20px,2.6vw,31px); line-height:1.45; font-weight:760; color:var(--navy); padding:22px; border-left:6px solid var(--blue); background:#f5f8ff; border-radius:8px 18px 18px 8px; }
+    .grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .field { border:1px solid var(--line); border-radius:15px; padding:14px 15px; background:#fbfcfe; min-width:0; }
+    .field label { display:block; font-size:12px; color:var(--muted); font-weight:900; text-transform:uppercase; letter-spacing:.05em; margin-bottom:7px; }
+    .field .value { font-size:15px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .field.choice { background:#eef4ff; border-color:#b9cdf8; }
+    .attempt-layout { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr); gap:16px; align-items:start; }
+    .feedback { border-radius:16px; padding:16px; white-space:pre-wrap; line-height:1.55; font-size:14px; max-height:380px; overflow:auto; }
+    .feedback.revision { background:var(--red-bg); border:1px solid #efb5ad; }
+    .feedback.passed { background:var(--green-bg); border:1px solid #a8d8bd; }
+    .axb { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .axb .field:nth-child(1) { border-top:4px solid #225cf6; }
+    .axb .field:nth-child(2) { border-top:4px solid #7e67d8; }
+    .axb .field:nth-child(3) { border-top:4px solid #17834d; }
+    .vocab-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .vocab-card { border:1px solid #cddcf8; background:#f7faff; border-radius:15px; padding:14px; }
+    .vocab-card strong { display:block; color:var(--navy); margin-bottom:9px; line-height:1.35; }
+    .vocab-card span { display:block; color:#40577a; line-height:1.45; font-size:14px; }
+    .draft-box { border:1px solid #c8d4e6; background:#fcfdff; border-radius:16px; padding:18px; line-height:1.65; white-space:pre-wrap; max-height:420px; overflow:auto; font-size:16px; }
+    .revision-strip { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; color:var(--muted); font-weight:750; }
+    .revision-strip .step { padding:7px 10px; border-radius:999px; background:#eef3fb; }
+    .revision-strip .active { background:var(--blue); color:white; }
+    .result-intro { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .result-stat { padding:16px; border-radius:16px; text-align:center; background:#f5f8ff; border:1px solid #cfdbef; }
+    .result-stat b { display:block; color:var(--navy); font-size:24px; margin-bottom:3px; }
+    .result-card { background:#f7f9fc; border:1px solid #cdd8e8; border-radius:18px; overflow:hidden; }
+    .result-card-head { padding:13px 16px; display:flex; justify-content:space-between; gap:12px; background:#eaf1fb; font-weight:900; color:var(--navy); }
+    .compare { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:14px; }
+    .sentence { border-radius:13px; overflow:hidden; background:white; border:1px solid var(--line); }
+    .sentence h4 { margin:0; padding:10px 12px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+    .sentence p { margin:0; padding:13px; line-height:1.55; white-space:pre-wrap; max-height:260px; overflow:auto; }
+    .sentence.original { border-color:#efaaa2; } .sentence.original h4 { color:var(--red); background:var(--red-bg); }
+    .sentence.corrected { border-color:#96d0ae; } .sentence.corrected h4 { color:var(--green); background:var(--green-bg); }
+    .explanation { margin:0 14px 14px; padding:15px; border-radius:13px; background:white; border-left:4px solid var(--blue); line-height:1.55; white-space:pre-wrap; max-height:270px; overflow:auto; }
+    .closing { text-align:center; padding:42px 26px; }
+    .closing h2 { font-size:clamp(28px,4vw,48px); letter-spacing:-.03em; }
+    .closing p { max-width:760px; margin:14px auto 0; color:#475a78; font-size:18px; line-height:1.55; }
+    .presenter { position:fixed; z-index:50; left:50%; bottom:18px; transform:translateX(-50%); width:min(1120px,calc(100% - 28px)); display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; gap:12px; align-items:center; padding:12px; border-radius:22px; color:white; background:rgba(11,31,58,.96); box-shadow:0 18px 58px rgba(4,18,40,.35); backdrop-filter:blur(14px); }
+    .presenter button { border:0; border-radius:14px; padding:12px 16px; cursor:pointer; font-weight:900; }
+    .presenter button:disabled { opacity:.35; cursor:not-allowed; }
+    .prev { background:#263d61; color:white; } .next { background:var(--blue); color:white; }
+    .presenter-copy { min-width:0; }
+    .presenter-topline { display:flex; justify-content:space-between; gap:10px; color:#a9b9d2; font-size:12px; font-weight:800; }
+    .presenter-title { margin:3px 0 2px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .presenter-note { color:#dce5f4; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .progress { height:4px; border-radius:999px; overflow:hidden; background:#31496f; margin-top:8px; }
+    .progress span { display:block; height:100%; width:0; background:#7fa3ff; transition:width .25s ease; }
+    .presenter-actions { display:flex; gap:8px; }
+    .icon-btn { width:44px; padding:12px 0!important; background:#263d61; color:white; }
+    .skip-link { position:fixed; top:8px; left:8px; z-index:100; transform:translateY(-160%); background:white; color:var(--navy); padding:10px; border-radius:10px; }
+    .skip-link:focus { transform:none; }
+    @media (max-width:900px) {
+      .workspace { grid-template-columns:1fr; } .stage-nav { position:static; display:flex; overflow:auto; gap:6px; }
+      .stage-nav h2 { display:none; } .stage-nav button { width:auto; white-space:nowrap; }
+      .grid-2,.attempt-layout,.result-intro { grid-template-columns:1fr; } .vocab-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .presenter { grid-template-columns:auto 1fr auto; } .presenter-note,.presenter-actions { display:none; }
+    }
+    @media (max-width:620px) {
+      .page-shell { width:min(100% - 20px,1260px); padding-top:12px; } .topbar { align-items:flex-start; flex-direction:column; }
+      .hero { padding:26px 20px; border-radius:22px; } .panel { padding:18px; border-radius:18px; }
+      .grid-2,.axb,.vocab-grid,.compare { grid-template-columns:1fr; }
+      .presenter { bottom:8px; width:calc(100% - 12px); padding:8px; border-radius:18px; }
+      .presenter button { padding:11px 12px; } .presenter-topline { font-size:10px; } .presenter-title { font-size:13px; }
+    }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .focus-target,.progress span { transition:none; } }
+    @media print { .presenter,.stage-nav,.topbar { display:none!important; } body.presenter-on .focus-target:not(.is-active) { opacity:1; filter:none; } .workspace { display:block; } .focus-target { break-inside:avoid; } }
+  </style>
+</head>
+<body class="presenter-on">
+  <a class="skip-link" href="#journey">Đi tới nội dung hành trình</a>
+  <main class="page-shell" id="journey">
+    <div class="topbar">
+      <div class="brand"><span class="brand-mark">W</span><span>IZONE Handout Writing</span></div>
+      <div class="privacy-badge">Dữ liệu thật ngày 20/09/2026 · Đã ẩn toàn bộ định danh</div>
+    </div>
+    <section class="hero focus-target" data-stage="Mở đầu" data-title="Toàn cảnh hành trình" data-note="Giới thiệu cách một học viên đi từ lập ý đến phản hồi từng câu.">
+      <span class="hero-kicker">Minh họa hành trình học viên</span>
+      <h1>Từ ý tưởng đến bản nháp được sửa từng câu</h1>
+      <p>Một hành trình thật trong đề mới nhất, được trình bày lại để thuyết trình. Mỗi lần bấm Next, trang sẽ đưa đúng khu vực học viên làm bài hoặc nhận phản hồi vào tâm điểm.</p>
+      <div class="hero-meta"><span>Luyện Writing Task 2: Tiếng Anh làm ngôn ngữ giảng dạy</span><span>Phiên bản 2026-09-19.1</span><span>30 bước trình bày</span></div>
+    </section>
+    <div class="workspace">
+      <nav class="stage-nav" aria-label="Các chặng của hành trình"><h2>Đi nhanh tới chặng</h2></nav>
+      <div class="handout" id="handout"></div>
+    </div>
+  </main>
+  <div class="presenter" role="region" aria-label="Điều khiển trình chiếu">
+    <button class="prev" id="prev" type="button" aria-label="Bước trước">← Previous</button>
+    <div class="presenter-copy">
+      <div class="presenter-topline"><span id="stepMeta">Bước 1</span><span id="stageMeta">Mở đầu</span></div>
+      <div class="presenter-title" id="stepTitle">Toàn cảnh hành trình</div>
+      <div class="presenter-note" id="stepNote">Dùng phím mũi tên trái và phải để điều khiển.</div>
+      <div class="progress"><span id="progressBar"></span></div>
+    </div>
+    <div class="presenter-actions">
+      <button class="icon-btn" id="toggleFocus" type="button" aria-label="Bật hoặc tắt chế độ làm nổi bật">◉</button>
+      <button class="icon-btn" id="fullscreen" type="button" aria-label="Toàn màn hình">⛶</button>
+    </div>
+    <button class="next" id="next" type="button" aria-label="Bước tiếp theo">Next →</button>
+  </div>
+  <script id="journey-data" type="application/json">{"source": {"activitySlug": "writing-task2-english-medium-instruction", "contentVersion": "2026-09-19.1", "title": "Luyện Writing Task 2: Tiếng Anh làm ngôn ngữ giảng dạy", "taskPrompt": "In many countries, English is used as the main language of instruction in schools and universities. Do the advantages of this policy outweigh the disadvantages?", "sampleDate": "2026-09-20", "dataPolicy": "Dữ liệu thật đã bỏ toàn bộ định danh học viên, lớp, phiên làm bài và URL kết quả."}, "responses": {"draft1": "Admittedly, using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning. For students with limited language proficiency, when comprehending academic materials in English, they have to translate new vocabulary to gain a deeper understanding of the materials. These constant dictionary lookups can disrupt their concentration, leading to lower learning efficiency. Moreover, educators are often unaccustomed to foreign language instructions. This language barrier can not only hinder their level of comprehension but also compromise a loss of precision in delivery. For example, when students inquiry about the meaning of terminiology or the nuanced differences between two similar terms, teachers' explanations can sometimes convey minor linguistic errors, contributing to challenges in fully understanding.", "draft2": "Admittedly, using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning. For students with limited language proficiency, when comprehending academic materials in English, they have to translate new vocabulary to gain a deeper understanding of the materials. These constant dictionary lookups can disrupt their concentration, leading to lower learning efficiency. Moreover, educators are often unaccustomed to foreign language instructions. This language barrier can not only hinder their level of comprehension but also compromise a loss of precision in delivery. For example, when students inquiry about the meaning of terminiology or the nuanced differences between two similar terms, teachers' explanations can sometimes convey minor linguistic errors, contributing to challenges in fully understanding.", "idea1_a": "đối vs những hs kém ngoại ngữ", "idea1_b": "giảm hiệu suất học tập", "idea1_x": "đọc giáo trình bằng tiếng anh khiến đứt quãng sự tập trung của họ vì phải tra từ liên tục", "idea2_a": "giáo viên thường chưa quen dạy bằng 1 ngôn ngữ khác", "idea2_b": "có thể mắc lỗi sai nhỏ trong quá trình giảng dạy -> giảm độ chính xác", "idea2_x": "khó khăn trong vc giải thích các từ vựng chuyên ngành phức tạp", "body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "attempts": [{"section": "topic_sentence", "commentNumber": 1, "resultStatus": "needs_revision", "snapshot": {"body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Có rất nhiều tác hại mà việc học bắng tiếng anh đem lại"}, "feedback": "Vấn đề chính:\n- Câu chủ đề của em đang quá chung chung (\"rất nhiều tác hại\"). Hai Idea của em (giảm hiệu suất học tập của học sinh, giảm độ chính xác của giáo viên) đều hướng tới một điểm chung cốt lõi là sự suy giảm về **chất lượng dạy và học**, nhưng câu hiện tại chưa khái quát được ý này.\n- Câu đang thiếu đi ngữ cảnh quan trọng mà đề bài đưa ra (việc sử dụng tiếng Anh làm ngôn ngữ giảng dạy tại các trường học và đại học). \n\nEm hãy tự kiểm tra:\n- Em có thể viết lại câu này (bằng tiếng Anh), bổ sung bối cảnh \"tại các trường học\" và dùng một cụm từ bao quát được cả hai Idea (ví dụ: ảnh hưởng tiêu cực đến quá trình/chất lượng giáo dục) thay vì chỉ dùng từ \"tác hại\" chung chung được không?", "vocabulary": null}, {"section": "topic_sentence", "commentNumber": 2, "resultStatus": "needs_revision", "snapshot": {"body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Có rất nhiều tác hại mà việc học bắng tiếng anh đem lại vs chất lượng dạy và học đặc biệt là trong trường học "}, "feedback": "Vấn đề chính:\n- Về mặt tư duy, em đã sửa rất tốt khi bổ sung cụm \"chất lượng dạy và học\" để bao quát trọn vẹn cả hai Idea như góp ý ở lượt trước. \n- Tuy nhiên, câu của em hiện vẫn đang viết bằng tiếng Việt nên chưa thể đánh giá được độ tự nhiên về từ vựng và ngữ pháp. Thêm vào đó, cụm \"việc học bằng tiếng anh\" mới chỉ nhấn mạnh vào góc độ của học sinh, hơi thiếu hụt so với khái niệm \"instruction\" (giảng dạy) mà đề bài đưa ra.\n\nEm hãy tự kiểm tra:\n- Em hãy chuyển đổi ý tưởng rất tốt này thành một câu tiếng Anh hoàn chỉnh nhé.\n- Trong câu tiếng Anh sắp viết, em sẽ dùng cụm từ nào để diễn đạt chính xác khái niệm \"ngôn ngữ giảng dạy\" nhằm bao trùm cả việc dạy của giáo viên và việc học của học sinh?", "vocabulary": null}, {"section": "topic_sentence", "commentNumber": 3, "resultStatus": "needs_revision", "snapshot": {"body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Có rất nhiều tác hại mà việc học và dạy bằng tiếng anh đem lại vs chất lượng dạy và học đặc biệt là trong trường học "}, "feedback": "Vấn đề chính:\n- Em đã điều chỉnh thành \"việc học và dạy\" để ý nghĩa bao quát hơn, nhưng câu chủ đề này vẫn đang viết bằng tiếng Việt thay vì tiếng Anh như đã được lưu ý ở lượt trước.\n- Về mặt diễn đạt, câu hiện tại đang bị lặp từ (\"việc học và dạy\" - \"chất lượng dạy và học\") khiến cấu trúc trở nên rườm rà và thiếu tự nhiên.\n\nEm hãy tự kiểm tra:\n- Em hãy chuyển đổi ý tưởng này thành một câu tiếng Anh hoàn chỉnh nhé.\n- Để câu tiếng Anh ngắn gọn và không bị lặp từ, em sẽ dùng cụm danh từ nào để mô tả \"việc dùng tiếng Anh làm ngôn ngữ giảng dạy\" làm chủ ngữ, và dùng động từ/cụm từ nào để diễn tả việc \"gây ra tác động tiêu cực đến chất lượng giáo dục\"?", "vocabulary": null}, {"section": "topic_sentence", "commentNumber": 4, "resultStatus": "needs_revision", "snapshot": {"body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Converting instructions' language in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "feedback": "Vấn đề chính:\n- Em đã làm rất tốt khi chuyển câu sang tiếng Anh, bao quát được ý \"chất lượng dạy và học\" (quality of teaching and learning) và giải quyết triệt để lỗi lặp từ ở lượt trước. Tuy nhiên, câu hiện tại lại đang bị thiếu mất từ khóa cốt lõi nhất của đề bài là \"English\".\n- Cụm \"Converting instructions' language\" dùng sở hữu cách chưa tự nhiên trong tiếng Anh, đồng thời làm lệch trọng tâm của đề (đề bài yêu cầu bàn về việc \"sử dụng tiếng Anh\", chứ không phải quá trình \"chuyển đổi\").\n\nEm hãy tự kiểm tra:\n- Để câu chủ đề bám sát đề bài một cách tự nhiên nhất, em hãy thay cụm \"Converting instructions' language\" bằng một cụm V-ing diễn đạt trực tiếp hành động \"sử dụng tiếng Anh làm ngôn ngữ giảng dạy\" nhé. Em có thể tận dụng lại những từ vựng nào ngay trong đề bài để cụm từ này chính xác nhất?", "vocabulary": null}, {"section": "topic_sentence", "commentNumber": 5, "resultStatus": "needs_revision", "snapshot": {"body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Using English as the primary instructions' language in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "feedback": "Vấn đề chính:\n- Em đã tiếp thu rất tốt khi đưa từ khóa \"Using English\" vào làm chủ ngữ và giữ được cụm \"quality of teaching and learning\" bao quát trọn vẹn cả hai Idea.\n- Tuy nhiên, cụm \"instructions' language\" sử dụng sở hữu cách ('s) chưa tự nhiên trong tiếng Anh. \n\nEm hãy tự kiểm tra:\n- Em hãy nhìn lại câu hỏi của đề bài gốc, họ đang dùng cụm từ nào (có chứa giới từ \"of\") để diễn đạt khái niệm \"ngôn ngữ giảng dạy\"? Em hãy thay chính xác cụm từ đó vào vị trí của \"instructions' language\" để câu hoàn hảo nhé.", "vocabulary": null}, {"section": "topic_sentence", "commentNumber": 6, "resultStatus": "passed", "snapshot": {"body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "feedback": "👍 Đã đạt. Câu chủ đề của em đã sử dụng rất chính xác và tự nhiên cụm từ của đề bài (language of instruction), đồng thời khái quát trọn vẹn được cả hai Idea (quá trình truyền đạt của giáo viên và hiệu suất tiếp thu của học sinh) thông qua cụm \"the quality of teaching and learning\" mà không hề bị kể lể chi tiết.", "vocabulary": null}, {"section": "supporting_idea_1", "commentNumber": 1, "resultStatus": "needs_revision", "snapshot": {"idea1_a": "đối vs những hs kém ngoại ngữ", "idea1_b": "giảm hiệu suất học tập", "idea1_x": "đọc giáo trình bằng tiếng anh khiến họ annoyed vì phải tra từ liên tục", "body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "feedback": "Mắt xích cần sửa: X → B\n\nVì sao: Việc \"tra từ liên tục\" là một hành động rất thực tế, nhưng kết quả \"annoyed\" (bực mình) lại thiên về cảm xúc. Cảm xúc bực mình chưa phải là nguyên nhân cốt lõi hoặc trực tiếp nhất dẫn đến \"giảm hiệu suất học tập\". Để chứng minh hiệu suất học tập bị giảm, mạch logic cần làm rõ việc liên tục tra từ vựng ảnh hưởng thế nào đến quá trình xử lý, tập trung và tiếp thu kiến thức của môn học chính. \n\nEm hãy tự trả lời:\n1. Khi phải liên tục dừng việc đọc giáo trình lại để tra từ vựng, mạch tập trung và quỹ thời gian tiếp thu kiến thức chuyên môn của học sinh sẽ bị ảnh hưởng như thế nào?\n2. Thay vì dùng từ chỉ cảm xúc (\"annoyed\"), em có thể điều chỉnh lại X để làm rõ sự gián đoạn này cản trở khả năng hiểu sâu bài học ra sao?", "vocabulary": null}, {"section": "supporting_idea_1", "commentNumber": 2, "resultStatus": "passed", "snapshot": {"idea1_a": "đối vs những hs kém ngoại ngữ", "idea1_b": "giảm hiệu suất học tập", "idea1_x": "đọc giáo trình bằng tiếng anh khiến đứt quãng sự tập trung của họ vì phải tra từ liên tục", "body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "feedback": "👍 Đã đạt. \n\nChuỗi logic của em hiện tại đã rất liền mạch và thuyết phục. Bắt đầu từ đối tượng cụ thể (A: học sinh kém ngoại ngữ), em đã chỉ ra được cơ chế thực tế (X: phải tra từ liên tục làm đứt quãng sự tập trung). Từ sự gián đoạn trong quá trình tiếp thu kiến thức này, việc dẫn đến hệ quả cuối cùng (B: giảm hiệu suất học tập) là hoàn toàn hợp lý, qua đó chứng minh trực tiếp được thông điệp về \"drawbacks to the quality of learning\" mà Topic Sentence đã nêu.", "vocabulary": null}, {"section": "supporting_idea_2", "commentNumber": 1, "resultStatus": "needs_revision", "snapshot": {"idea1_a": "đối vs những hs kém ngoại ngữ", "idea1_b": "giảm hiệu suất học tập", "idea1_x": "đọc giáo trình bằng tiếng anh khiến đứt quãng sự tập trung của họ vì phải tra từ liên tục", "idea2_a": "giáo viên thường chưa quen dạy bằng 1 ngôn ngữ khác", "idea2_b": "có thể mắc lỗi sai nhỏ trong quá trình giảng dạy -> giảm độ chính xác", "idea2_x": "khó khăn trong vc truyền đạt", "body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "feedback": "Mắt xích cần sửa: X (khó khăn trong vc truyền đạt)\n\nVì sao: \nViệc em chia hai Idea theo hai đối tượng (Idea 1: Học sinh, Idea 2: Giáo viên) là một hướng đi rất thông minh và giúp đoạn văn không bị lặp ý. Cả hai đều hỗ trợ tốt cho Topic Sentence (giảm chất lượng dạy và học). \n\nTuy nhiên, bước X (\"khó khăn trong việc truyền đạt\") của em còn quá chung chung, giống như một lời nhận xét hơn là một \"cơ chế/cầu nối\". Nó chưa giải thích được chi tiết *tại sao* việc A (\"chưa quen ngôn ngữ\") lại dẫn đến B (\"mắc lỗi sai, giảm độ chính xác\").\n\nEm hãy tự trả lời:\n1. Khi giáo viên chưa quen dạy bằng tiếng Anh, họ thường gặp khó khăn cụ thể gì với các \"từ vựng chuyên ngành\" hoặc khi phải giải thích các \"khái niệm học thuật phức tạp\"?\n2. Cách họ diễn đạt hoặc lựa chọn từ ngữ lúc đó sẽ ra sao để dẫn tới hệ quả cuối cùng (B) là \"mắc lỗi sai/làm sai lệch ý nghĩa bài giảng\"?", "vocabulary": null}, {"section": "supporting_idea_2", "commentNumber": 2, "resultStatus": "passed", "snapshot": {"idea1_a": "đối vs những hs kém ngoại ngữ", "idea1_b": "giảm hiệu suất học tập", "idea1_x": "đọc giáo trình bằng tiếng anh khiến đứt quãng sự tập trung của họ vì phải tra từ liên tục", "idea2_a": "giáo viên thường chưa quen dạy bằng 1 ngôn ngữ khác", "idea2_b": "có thể mắc lỗi sai nhỏ trong quá trình giảng dạy -> giảm độ chính xác", "idea2_x": "khó khăn trong vc giải thích các từ vựng chuyên ngành phức tạp", "body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "feedback": "👍 Đã đạt. \n\nChuỗi A-X-B của Idea 2 giờ đã rất logic và chi tiết. Bước X của em đã chỉ rõ được rào cản cụ thể là \"giải thích các từ vựng chuyên ngành phức tạp\", làm cầu nối vô cùng thuyết phục để dẫn đến hệ quả B là \"mắc lỗi sai/giảm độ chính xác\" trong bài giảng. \n\nĐặc biệt, sự phân vai của em rất xuất sắc: Idea 1 khai thác góc độ \"chất lượng học tập\" (học sinh), trong khi Idea 2 giải quyết trọn vẹn \"chất lượng giảng dạy\" (giáo viên). Hai ý tưởng không hề dẫm chân lên nhau và cùng hợp lực chứng minh xuất sắc cho Topic Sentence. Chúc mừng em!", "vocabulary": [{"idea": "học sinh kém ngoại ngữ", "terms": ["students with limited language proficiency", "non-native learners"]}, {"idea": "đọc giáo trình tiếng Anh", "terms": ["deciphering English textbooks", "comprehending academic materials in English"]}, {"idea": "đứt quãng sự tập trung", "terms": ["disrupt their concentration", "break their train of thought"]}, {"idea": "tra từ liên tục", "terms": ["constant dictionary lookups", "frequent vocabulary translations"]}, {"idea": "giảm hiệu suất học tập", "terms": ["hinder learning efficiency", "diminish overall academic performance"]}, {"idea": "giáo viên chưa quen dạy bằng ngôn ngữ khác", "terms": ["educators unaccustomed to foreign language instruction", "non-native English speaking teachers"]}, {"idea": "giải thích từ vựng chuyên ngành phức tạp", "terms": ["articulate complex jargon", "explain specialized terminology"]}, {"idea": "mắc lỗi sai nhỏ", "terms": ["make minor linguistic errors", "convey nuances inaccurately"]}, {"idea": "giảm độ chính xác trong giảng dạy", "terms": ["compromise instructional accuracy", "lead to a loss of precision in delivery"]}]}, {"section": "draft", "commentNumber": 1, "resultStatus": "passed", "snapshot": {"draft1": "Admittedly, using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning. For students with limited language proficiency, when comprehending academic materials in English, they have to translate new vocabulary to gain a deeper understanding of the materials. These constant dictionary lookups can disrupt their concentration, leading to lower learning efficiency. Moreover, educators are often unaccustomed to foreign language instructions. This language barrier can not only hinder their level of comprehension but also compromise a loss of precision in delivery. For example, when students inquiry about the meaning of terminiology or the nuanced differences between two similar terms, teachers' explanations can sometimes convey minor linguistic errors, contributing to challenges in fully understanding.", "draft2": "Admittedly, using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning. For students with limited language proficiency, when comprehending academic materials in English, they have to translate new vocabulary to gain a deeper understanding of the materials. These constant dictionary lookups can disrupt their concentration, leading to lower learning efficiency. Moreover, educators are often unaccustomed to foreign language instructions. This language barrier can not only hinder their level of comprehension but also compromise a loss of precision in delivery. For example, when students inquiry about the meaning of terminiology or the nuanced differences between two similar terms, teachers' explanations can sometimes convey minor linguistic errors, contributing to challenges in fully understanding.", "idea1_a": "đối vs những hs kém ngoại ngữ", "idea1_b": "giảm hiệu suất học tập", "idea1_x": "đọc giáo trình bằng tiếng anh khiến đứt quãng sự tập trung của họ vì phải tra từ liên tục", "idea2_a": "giáo viên thường chưa quen dạy bằng 1 ngôn ngữ khác", "idea2_b": "có thể mắc lỗi sai nhỏ trong quá trình giảng dạy -> giảm độ chính xác", "idea2_x": "khó khăn trong vc giải thích các từ vựng chuyên ngành phức tạp", "body1_idea1": "giảm hiệu suất học tập", "body1_idea2": "giảm độ chính xác trong vc truyền đạt của gv\n", "body2_idea1": "nâng cao trình độ chuyên môn", "body2_idea2": "đủ khả năng làm vc trong mtrg qte", "body_choice": "body1", "body1_message": "tác hại", "body2_message": "lợi ích", "topic_sentence": "Using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning."}, "feedback": "", "vocabulary": null}], "draftCards": [{"index": 1, "original": "Admittedly, using English as the primary language of instruction in educational institutions can pose several drawbacks to the quality of teaching and learning.", "corrected": "Admittedly, using English as the primary language of instruction in educational institutions can present several drawbacks to the quality of teaching and learning.", "explanation": "Động từ \"pose\" thường đi với \"a threat\", \"a challenge\", \"a problem\" hoặc \"a risk\", nhưng hiếm khi đi với \"drawbacks\".\nEm nên dùng \"present drawbacks\" hoặc \"have several drawbacks\" để tự nhiên và chính xác hơn."}, {"index": 2, "original": "For students with limited language proficiency, when comprehending academic materials in English, they have to translate new vocabulary to gain a deeper understanding of the materials.", "corrected": "When reading academic materials in English, students with limited language proficiency have to translate new vocabulary to gain a deeper understanding of the content.", "explanation": "Cấu trúc \"For students..., when V-ing..., they...\" khiến câu bị lủng củng và thừa chủ ngữ.\nGộp lại thành mệnh đề thời gian \"When reading...\" đi thẳng vào chủ ngữ chính để câu gọn gàng hơn.\nĐộng từ \"read\" cũng hợp logic hơn \"comprehend\" (vì đang trong quá trình đọc mới phải tra từ để hiểu)."}, {"index": 3, "original": "For students with limited language proficiency, when comprehending academic materials in English, they have to translate new vocabulary to gain a deeper understanding of the materials.", "corrected": "When reading academic materials in English, students with limited language proficiency have to translate new vocabulary to gain a deeper understanding of the content.", "explanation": "Đây là việc điều chỉnh vị trí chủ ngữ để phù hợp với mệnh đề thời gian đã được rút gọn ở đầu câu, giúp câu văn tránh lỗi lặp chủ ngữ."}, {"index": 4, "original": "For students with limited language proficiency, when comprehending academic materials in English, they have to translate new vocabulary to gain a deeper understanding of the materials .", "corrected": "When reading academic materials in English, students with limited language proficiency have to translate new vocabulary to gain a deeper understanding of the content .", "explanation": "Lặp từ \"materials\" ở cuối câu, thay bằng \"the content\" (nội dung) để tránh lặp từ và giúp câu văn mượt mà hơn."}, {"index": 5, "original": "Moreover, educators are often unaccustomed to foreign language instructions .", "corrected": "Moreover, educators are often unaccustomed to foreign language instruction .", "explanation": "Khi \"instruction\" mang nghĩa \"sự giảng dạy\", nó là danh từ không đếm được.\nDo đó, em không thêm \"s\" ở cuối nhé."}, {"index": 6, "original": "This language barrier can not only hinder their level of comprehension but also compromise a loss of precision in delivery.", "corrected": "This language barrier can make it difficult for them to explain complex specialized terminology, leading to a loss of precision in delivery.", "explanation": "Câu gốc của em đang bị lệch kế hoạch khi nhắc đến \"hinder their level of comprehension\" (cản trở mức độ đọc hiểu của giáo viên - điều này không hợp lý với chủ thể là người dạy).\nĐã sửa lại để bám sát kế hoạch (khó khăn trong việc giải thích từ vựng chuyên ngành)."}, {"index": 7, "original": "This language barrier can not only hinder their level of comprehension but also compromise a loss of precision in delivery.", "corrected": "This language barrier can make it difficult for them to explain complex specialized terminology, leading to a loss of precision in delivery.", "explanation": "Cụm \"compromise a loss of\" bị thừa chữ và sai logic (chỉ cần dùng \"compromise precision\" hoặc \"lead to a loss of precision\").\nDùng cụm \"lead to a loss of precision\" như gợi ý để chuẩn xác nghĩa của em."}, {"index": 8, "original": "For example, when students inquiry about the meaning of terminiology or the nuanced differences between two similar terms, teachers' explanations can sometimes convey minor linguistic errors, contributing to challenges in fully understanding.", "corrected": "For example, when students inquire about the meaning of specialized terminology or the nuanced differences between two similar terms, teachers' explanations can sometimes contain minor linguistic errors, making it challenging for students to fully understand.", "explanation": "\"Inquiry\" là danh từ, ở đây em cần động từ \"inquire\"."}, {"index": 9, "original": "For example, when students inquiry about the meaning of terminiology or the nuanced differences between two similar terms, teachers' explanations can sometimes convey minor linguistic errors, contributing to challenges in fully understanding.", "corrected": "For example, when students inquire about the meaning of specialized terminology or the nuanced differences between two similar terms, teachers' explanations can sometimes contain minor linguistic errors, making it challenging for students to fully understand.", "explanation": "Từ \"terminiology\" bị gõ sai chính tả, đã sửa thành \"terminology\".\nViệc thêm \"specialized\" giúp cụm từ trở nên chính xác và chuyên nghiệp hơn."}, {"index": 10, "original": "For example, when students inquiry about the meaning of terminiology or the nuanced differences between two similar terms, teachers' explanations can sometimes convey minor linguistic errors, contributing to challenges in fully understanding.", "corrected": "For example, when students inquire about the meaning of specialized terminology or the nuanced differences between two similar terms, teachers' explanations can sometimes contain minor linguistic errors, making it challenging for students to fully understand.", "explanation": "Tiếng Anh dùng \"contain errors\" thay vì \"convey errors\" (truyền tải lỗi sai) để diễn đạt đúng nghĩa việc lỗi sai tồn tại trong bài giảng."}, {"index": 11, "original": "For example, when students inquiry about the meaning of terminiology or the nuanced differences between two similar terms, teachers' explanations can sometimes convey minor linguistic errors, contributing to challenges in fully understanding .", "corrected": "For example, when students inquire about the meaning of specialized terminology or the nuanced differences between two similar terms, teachers' explanations can sometimes contain minor linguistic errors, making it challenging for students to fully understand .", "explanation": "Câu gốc của em không có lỗi, nhưng có thể được nâng cấp để tối ưu hơn.\nCụm \"contributing to challenges in fully understanding\" hơi thiếu tự nhiên và không rõ ai là người gặp khó khăn trong việc hiểu.\nViệc dùng \"making it challenging for students to fully understand\" giúp câu chốt ý rõ ràng và tự nhiên hơn."}]}</script>
+  <script>
+    'use strict';
+    const data = JSON.parse(document.getElementById('journey-data').textContent);
+    const handout = document.getElementById('handout');
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const textBlock = value => esc(value).replace(/\r?\n/g,'<br>');
+    const response = key => data.responses?.[key] || '';
+    const attemptStatus = item => item.resultStatus === 'passed' ? ['Đã đạt','passed'] : ['Cần sửa','revision'];
+    const field = (label,value,extra='') => `<div class="field ${extra}"><label>${esc(label)}</label><div class="value">${textBlock(value)}</div></div>`;
+    const panel = (attrs, inner, cls='panel') => `<section class="${cls} focus-target" ${attrs}>${inner}</section>`;
+    const attrs = (stage,title,note) => `data-stage="${esc(stage)}" data-title="${esc(title)}" data-note="${esc(note)}"`;
+
+    const sections = [];
+    sections.push(panel(attrs('Đề bài','Đề Writing Task 2 mới nhất','Chốt câu hỏi và yêu cầu lập luận trước khi học viên bắt đầu.'), `
+      <div class="panel-head"><div><span class="kicker">Đề bài</span><h2>${esc(data.source.title)}</h2></div><span class="status info">${esc(data.source.contentVersion)}</span></div>
+      <div class="task-prompt">${esc(data.source.taskPrompt)}</div>`));
+
+    sections.push(panel(attrs('Lập kế hoạch','Phác thảo thân bài 1','Học viên xác định thông điệp và hai ý trước khi viết câu chủ đề.'), `
+      <div class="panel-head"><div><span class="kicker">Bước chuẩn bị</span><h2>Thân bài 1</h2></div><span class="status info">Lập ý trước</span></div>
+      <div class="grid-2">${field('Thông điệp chung',response('body1_message'))}${field('Idea 1',response('body1_idea1'))}${field('Idea 2',response('body1_idea2'))}</div>`));
+    sections.push(panel(attrs('Lập kế hoạch','Phác thảo thân bài 2 và chọn hướng luyện','Học viên nhìn cả hai phía rồi chủ động chọn thân bài sẽ phát triển.'), `
+      <div class="panel-head"><div><span class="kicker">Bước chuẩn bị</span><h2>Thân bài 2</h2></div><span class="status info">Chọn ${response('body_choice') === 'body1' ? 'thân bài 1' : 'thân bài 2'}</span></div>
+      <div class="grid-2">${field('Thông điệp chung',response('body2_message'))}${field('Idea 1',response('body2_idea1'))}${field('Idea 2',response('body2_idea2'))}${field('Thân bài sẽ luyện',response('body_choice') === 'body1' ? 'Thân bài 1' : 'Thân bài 2','choice')}</div>`));
+
+    const topicAttempts = data.attempts.filter(x => x.section === 'topic_sentence');
+    topicAttempts.forEach(item => {
+      const [label,css] = attemptStatus(item);
+      sections.push(panel(attrs('Topic Sentence',`Topic Sentence · Lần ${item.commentNumber} · ${label}`, item.resultStatus === 'passed' ? 'Sau nhiều vòng phản hồi, câu chủ đề đã đạt và phần tiếp theo được mở.' : 'Phản hồi xuất hiện ngay để học viên sửa đúng điểm còn yếu.'), `
+        <div class="panel-head"><div><span class="kicker">Bước 1 · Topic Sentence</span><h2>Lần kiểm tra ${item.commentNumber}</h2></div><span class="status ${css}">${label}</span></div>
+        <div class="attempt-layout"><div>${field('Topic Sentence học viên viết',item.snapshot?.topic_sentence || '')}</div><div class="feedback ${css}"><b>Phản hồi</b><br>${textBlock(item.feedback)}</div></div>`));
+    });
+
+    const renderAxbAttempts = (sectionKey, stage, title, prefix) => {
+      data.attempts.filter(x => x.section === sectionKey).forEach(item => {
+        const [label,css] = attemptStatus(item);
+        sections.push(panel(attrs(stage,`${title} · Lần ${item.commentNumber} · ${label}`, item.resultStatus === 'passed' ? 'Chuỗi A–X–B đạt yêu cầu và được khóa lại.' : 'Hệ thống chỉ đúng mắt xích còn yếu để học viên nối lại lập luận.'), `
+          <div class="panel-head"><div><span class="kicker">${stage}</span><h2>${title} · Lần ${item.commentNumber}</h2></div><span class="status ${css}">${label}</span></div>
+          <div class="attempt-layout"><div class="axb">${field('A · Điểm đầu',item.snapshot?.[prefix+'_a'] || '')}${field('X · Điểm giữa',item.snapshot?.[prefix+'_x'] || '')}${field('B · Điểm cuối',item.snapshot?.[prefix+'_b'] || '')}</div><div class="feedback ${css}"><b>Phản hồi</b><br>${textBlock(item.feedback)}</div></div>`));
+      });
+    };
+    renderAxbAttempts('supporting_idea_1','Bước 2 · Idea 1','Phát triển Supporting Idea 1','idea1');
+    renderAxbAttempts('supporting_idea_2','Bước 3 · Idea 2','Phát triển Supporting Idea 2','idea2');
+
+    const vocab = data.attempts.find(x => Array.isArray(x.vocabulary))?.vocabulary || [];
+    sections.push(panel(attrs('Từ vựng','Từ vựng được mở sau khi lập luận đạt','Từ vựng phục vụ một ý đã rõ, thay vì thay thế quá trình suy nghĩ.'), `
+      <div class="panel-head"><div><span class="kicker">Mở khóa đúng thời điểm</span><h2>Từ vựng gợi ý theo hai Idea</h2></div><span class="status passed">${vocab.length} nhóm gợi ý</span></div>
+      <div class="vocab-grid">${vocab.map(item => `<div class="vocab-card"><strong>${esc(item.idea)}</strong>${(item.terms || []).map(term => `<span>• ${esc(term)}</span>`).join('')}</div>`).join('')}</div>`));
+
+    sections.push(panel(attrs('Draft','Draft 1 · Viết từ khung ý','Học viên tự biến Topic Sentence, hai chuỗi A–X–B và từ vựng gợi ý thành đoạn văn.'), `
+      <div class="panel-head"><div><span class="kicker">Bước 4 · Viết</span><h2>Draft 1</h2></div><span class="status info">Bản đầu tiên</span></div>
+      <div class="revision-strip"><span class="step active">1 · Viết</span><span>→</span><span class="step">2 · Tự sửa</span><span>→</span><span class="step">3 · Nhận chấm</span></div>
+      <div class="draft-box">${textBlock(response('draft1'))}</div>`));
+    sections.push(panel(attrs('Draft','Draft 2 · Học viên tự chỉnh','Bản 2 buộc học viên rà lại chính bài của mình trước khi xem phản hồi bên ngoài.'), `
+      <div class="panel-head"><div><span class="kicker">Bước 4 · Tự chỉnh</span><h2>Draft 2</h2></div><span class="status passed">Sẵn sàng gửi chấm</span></div>
+      <div class="revision-strip"><span class="step">1 · Viết</span><span>→</span><span class="step active">2 · Tự sửa</span><span>→</span><span class="step">3 · Nhận chấm</span></div>
+      <div class="draft-box">${textBlock(response('draft2'))}</div>`));
+
+    sections.push(panel(attrs('Chấm từng câu','Kết quả Draft hiện ngay trong handout','Học viên không chỉ nhận một link; kết quả được mở thành từng thẻ có cấu trúc.'), `
+      <div class="panel-head"><div><span class="kicker">Kết quả chấm Draft</span><h2>${data.draftCards.length} thẻ phản hồi cần xem</h2></div><span class="status passed">Đã tải đầy đủ</span></div>
+      <div class="result-intro"><div class="result-stat"><b>${data.draftCards.length}</b><span>Câu hoặc cụm cần xem</span></div><div class="result-stat"><b>3 lớp</b><span>Câu gốc · câu sửa · giải thích</span></div><div class="result-stat"><b>1 nơi</b><span>Xem ngay trong handout</span></div></div>`));
+    data.draftCards.forEach(card => {
+      sections.push(panel(attrs('Chấm từng câu',`Thẻ phản hồi ${card.index}/${data.draftCards.length}`,`Đặt câu gốc cạnh câu sửa và giải thích để học viên hiểu thay đổi.`), `
+        <div class="result-card-head"><span>Thẻ ${card.index} / ${data.draftCards.length}</span><span>Phản hồi từng câu</span></div>
+        <div class="compare"><div class="sentence original"><h4>Bài của em</h4><p>${textBlock(card.original)}</p></div><div class="sentence corrected"><h4>Gợi ý chỉnh sửa</h4><p>${textBlock(card.corrected)}</p></div></div>
+        <div class="explanation"><b>Nhận xét</b><br>${textBlock(card.explanation)}</div>`, 'result-card focus-target'));
+    });
+    sections.push(panel(attrs('Kết thúc','Một vòng học hoàn chỉnh','Khép lại bằng giá trị học viên nhận được sau toàn bộ hành trình.'), `
+      <div class="closing"><span class="kicker">Suy nghĩ · Viết · Nhận phản hồi · Tự sửa</span><h2>Học viên biết mình đang vướng ở đâu và biết cách đi tiếp</h2><p>Mỗi bước nhỏ đều có mục tiêu rõ, phản hồi gắn với bài thật và cơ hội sửa ngay. AI rút ngắn vòng chờ; giảng viên vẫn theo dõi và can thiệp đúng lúc.</p></div>`));
+
+    handout.innerHTML = sections.join('');
+
+    const targets = [...document.querySelectorAll('.focus-target')];
+    const stageNav = document.querySelector('.stage-nav');
+    const stages = [...new Set(targets.map(item => item.dataset.stage))];
+    stages.forEach(stage => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = stage; button.dataset.stageJump = stage;
+      button.addEventListener('click', () => goTo(targets.findIndex(item => item.dataset.stage === stage)));
+      stageNav.appendChild(button);
+    });
+
+    let current = 0;
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    const stepMeta = document.getElementById('stepMeta');
+    const stageMeta = document.getElementById('stageMeta');
+    const stepTitle = document.getElementById('stepTitle');
+    const stepNote = document.getElementById('stepNote');
+    const progressBar = document.getElementById('progressBar');
+
+    function goTo(index, smooth=true) {
+      current = Math.max(0,Math.min(targets.length-1,index));
+      targets.forEach((item,i) => { item.classList.toggle('is-active',i===current); item.setAttribute('aria-current',i===current?'step':'false'); });
+      const active = targets[current];
+      stepMeta.textContent = `Bước ${current+1} / ${targets.length}`;
+      stageMeta.textContent = active.dataset.stage || '';
+      stepTitle.textContent = active.dataset.title || '';
+      stepNote.textContent = active.dataset.note || '';
+      progressBar.style.width = `${((current+1)/targets.length)*100}%`;
+      prev.disabled = current===0; next.disabled = current===targets.length-1;
+      document.querySelectorAll('[data-stage-jump]').forEach(btn => btn.classList.toggle('active',btn.dataset.stageJump===active.dataset.stage));
+      active.scrollIntoView({behavior:smooth && !matchMedia('(prefers-reduced-motion:reduce)').matches?'smooth':'auto',block:'center'});
+    }
+    prev.addEventListener('click',()=>goTo(current-1)); next.addEventListener('click',()=>goTo(current+1));
+    document.getElementById('toggleFocus').addEventListener('click',()=>document.body.classList.toggle('presenter-on'));
+    document.getElementById('fullscreen').addEventListener('click',async()=>{
+      try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch {}
+    });
+    document.addEventListener('keydown',event=>{
+      if (['ArrowRight','PageDown',' '].includes(event.key)) { event.preventDefault(); goTo(current+1); }
+      if (['ArrowLeft','PageUp'].includes(event.key)) { event.preventDefault(); goTo(current-1); }
+      if (event.key==='Home') { event.preventDefault(); goTo(0); }
+      if (event.key==='End') { event.preventDefault(); goTo(targets.length-1); }
+      if (event.key.toLowerCase()==='f') document.getElementById('fullscreen').click();
+    });
+    let resizeTimer;
+    window.addEventListener('resize',()=>{
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(()=>targets[current]?.scrollIntoView({behavior:'auto',block:'center'}),120);
+    });
+    goTo(0,false);
+  </script>
+</body>
+</html>
