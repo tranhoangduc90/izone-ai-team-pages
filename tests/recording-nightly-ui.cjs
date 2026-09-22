@@ -16,6 +16,7 @@ const server=http.createServer((req,res)=>{
   const browser=await chromium.launch({channel:'chrome',headless:true});
   try {
     const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    await page.route('https://accounts.google.com/gsi/client',route=>route.fulfill({contentType:'application/javascript',body:"window.google={accounts:{id:{initialize:o=>window.fixtureLogin=o.callback,renderButton:()=>{},disableAutoSelect:()=>{}}}};"}));
     const session={id:'session:s1',kind:'session',classSessionId:'s1',className:'IC9001',lessonNumber:3,source:'Zoom 36',recordingStart:'2026-09-20T18:00:00+07:00',sessionStart:'2026-09-20T18:00:00+07:00',status:'missing_at_scan',reviewStatus:'pending',version:1,recordingIds:[]};
     let snapshot={date:'2026-09-20',scannedAt:'2026-09-20T23:00:00+07:00',mode:'observe',scanStatus:'completed',records:[session,{id:'pending',kind:'recording',type:'MP4',status:'completed',recordingEnd:'2026-09-20T20:01:00+07:00',source:'Zoom 36',recordingFileId:'pending-file',recordingStart:'2026-09-20T20:00:00+07:00',reasons:['no_matching_session','short_clip'],errorCode:'DOWNLOAD_FAILED',version:1}]};let actions=0,scans=0,previews=0;
     let video={id:'old',source:'Zoom 6',className:'IC9002',title:'IC9002 - Buổi 1',recordingStart:'2026-09-20T19:00:00+07:00',videoId:'abcdefghijk',playlistId:'PLfixture',playlistIndex:99,youtubeStatus:'uploaded',reviewStatus:'approved',version:1};
@@ -31,12 +32,12 @@ const server=http.createServer((req,res)=>{
     });
     await page.route('https://fixture.invalid/**',async route=>{
       const url=route.request().url();
-      if(url.includes('/action')){const b=JSON.parse(route.request().postData());if(b.action==='preview'){previews++;return route.fulfill({json:previews===1?{ok:true,preview:{url:'https://zoom.us/rec/play/fixture'}}:{ok:false,error:'ZOOM_SOURCE_UNAVAILABLE'}});}if(b.action==='acknowledge_review'){const row=snapshot.records.find(r=>r.id===b.id);assert.equal(b.expectedVersion,row.version);row.version++;row.reviewStatus=b.approved?'approved':'pending';const {errorCode,...response}=row;return route.fulfill({json:{ok:true,record:response}});}actions++;assert.equal(b.expectedVersion,session.version);session.version++;session.reviewStatus='approved';session.exceptionStatus=b.action;session.exceptionReason=b.reason;return route.fulfill({json:{ok:true,record:session}});}
+      if(url.includes('/action')){const b=JSON.parse(route.request().postData());if(b.action==='auth')return route.fulfill({json:{ok:true,actor:{verified:true,expiresAt:Date.now()+3600000}}});assert.equal(b.idToken,'fixture-token');if(b.action==='preview_file')return route.fulfill({contentType:'video/mp4',body:Buffer.from('fixture-video')});if(b.action==='preview'){previews++;return route.fulfill({json:previews===1?{ok:true,preview:{url:'https://zoom.us/rec/play/fixture'}}:{ok:false,error:'ZOOM_SOURCE_UNAVAILABLE'}});}if(b.action==='acknowledge_review'){const row=snapshot.records.find(r=>r.id===b.id);assert.equal(b.expectedVersion,row.version);row.version++;row.reviewStatus=b.approved?'approved':'pending';const {errorCode,...response}=row;return route.fulfill({json:{ok:true,record:response}});}actions++;assert.equal(b.expectedVersion,session.version);session.version++;session.reviewStatus='approved';session.exceptionStatus=b.action;session.exceptionReason=b.reason;return route.fulfill({json:{ok:true,record:session}});}
       if(url.includes('/recheck')){scans++;return route.fulfill({json:{message:'started'}});}
       return route.fulfill({json:{ok:true,snapshot}});
     });
     await page.goto(`http://127.0.0.1:${server.address().port}/recordings/index.html`);
-    await page.waitForFunction(()=>document.querySelectorAll('.review-section').length===2);
+    await page.waitForFunction(()=>document.querySelectorAll('.review-section').length===2&&window.fixtureLogin);await page.evaluate(()=>window.fixtureLogin({credential:'fixture-token'}));await page.waitForFunction(()=>window.recordingAuth.isAuthenticated());
     assert.equal(await page.locator('.class-folder').count(),0);assert.equal(await page.locator('.scan-panel').count(),0);assert.equal(await page.locator('#recordingDecisionDialog').count(),0);assert.equal(await page.getByRole('button',{name:'Xử lý recording',exact:true}).count(),0);assert.ok((await page.locator('.pending').innerText()).includes('Lý do cần duyệt:'));assert.ok((await page.locator('.pending').innerText()).includes('DOWNLOAD_FAILED'));
     assert.equal(await page.getByText('Chưa thấy recording tại lần quét',{exact:true}).count(),1);
     assert.match(await page.locator('.video-link[href]').getAttribute('href'),/watch\?v=abcdefghijk&list=PLfixture$/);
@@ -44,8 +45,11 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>!document.querySelector('#previewZoomLink').hidden);
     assert.equal(await page.locator('#previewZoomLink').getAttribute('href'),'https://zoom.us/rec/play/fixture');
     assert.equal(await page.locator('#previewZoomLink').getAttribute('target'),'_blank');
-    assert.equal(await page.locator('#publishForm').isVisible(),false);
+    assert.equal(await page.locator('#publishForm').isVisible(),true);
     assert.match(await page.locator('#previewMetadata').innerText(),/1 phút 0 giây/);
+    await page.locator('#privatePreviewButton').click();await page.waitForFunction(()=>document.querySelector('#privatePreviewVideo').src.startsWith('blob:'));
+    await page.evaluate(()=>window.recordingAuth.clear());assert.equal(await page.locator('#privatePreviewVideo').getAttribute('src'),null);assert.equal(await page.locator('#publishForm').isVisible(),false);
+    await page.evaluate(()=>window.fixtureLogin({credential:'fixture-token'}));await page.waitForFunction(()=>window.recordingAuth.isAuthenticated());
     await page.locator('#previewDialog [data-close-dialog]').click();
     await page.getByRole('button',{name:'Xem recording gốc',exact:true}).click();
     await page.waitForFunction(()=>document.querySelector('#previewStatus').textContent.includes('không còn truy cập'));

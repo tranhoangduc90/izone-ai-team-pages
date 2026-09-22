@@ -158,6 +158,7 @@ function toast(message, type = 'success') {
 }
 
 async function postAction(url, payload) {
+  if(url===window.RECORDING_NIGHTLY?.actionUrl)payload={...payload,idToken:window.recordingAuth.token()};
   const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(payload), referrerPolicy: 'no-referrer' });
   const text = await response.text();
   if (!response.ok) throw new Error(text || `HTTP_${response.status}`);

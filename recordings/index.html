@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>IZONE Recording Automation</title>
   <link rel="icon" href="assets/izone-recording-thumbnail.png">
-  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
   <div class="shell">
@@ -18,6 +18,11 @@
       </div>
       <div class="live"><span></span><strong id="liveLabel">Đang kết nối</strong></div>
     </header>
+    <section class="toolbar" aria-label="Quyền nhân sự">
+      <span id="recordingAuthStatus">Đăng nhập Google để xem nội bộ và xác nhận đăng.</span>
+      <div id="recordingGoogleLogin"></div>
+      <button id="recordingLogout" type="button" hidden>Đăng xuất</button>
+    </section>
 
     <section class="stats" aria-label="Tổng quan">
       <article><span>Lớp trong ngày đối soát</span><strong id="yesterdayClassCount">—</strong></article>
@@ -74,7 +79,9 @@
     <p id="previewStatus" role="status"></p>
     <a id="previewZoomLink" class="video-link" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" hidden>Mở bản gốc trên Zoom ↗</a>
     <p class="dialog-note">Nếu không có quyền xem, liên hệ người quản lý Zoom để được cấp quyền. Xem video không đánh dấu đã duyệt và không tự đăng YouTube.</p>
-    <p class="dialog-note">Đăng thủ công và xem file nội bộ đang chờ cấu hình đăng nhập cho nhân sự. Hiện có thể xem qua Zoom theo quyền truy cập sẵn có.</p>
+    <button id="privatePreviewButton" type="button">Xem nội bộ</button>
+    <video id="privatePreviewVideo" controls playsinline preload="none" hidden style="width:100%"></video>
+    <p class="dialog-note">Xem nội bộ cần đăng nhập và tải file về phiên trình duyệt. Pilot hỗ trợ MP4 tối đa 128 MiB; file lớn hơn dùng bản gốc Zoom.</p>
     <form id="publishForm" hidden>
       <label>Buổi học trên Portal<select id="publishSession" required></select></label>
       <label>Ghi chú xác nhận<input id="publishReason" maxlength="500" required placeholder="Lý do xác định đúng lớp/buổi"></label>
@@ -90,8 +97,10 @@
     <div class="dialog-actions"><button type="button" class="secondary" data-close-dialog>Hủy</button><button type="submit" id="exceptionSubmit">Lưu trạng thái</button></div>
   </form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="nightly-config.js?v=9" defer></script>
-  <script src="app.js?v=9" defer></script>
-  <script src="nightly.js?v=9" defer></script>
+  <script src="nightly-config.js?v=10" defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=10" defer></script>
+  <script src="app.js?v=10" defer></script>
+  <script src="nightly.js?v=10" defer></script>
 </body>
 </html>

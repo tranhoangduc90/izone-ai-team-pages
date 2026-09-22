@@ -94,6 +94,7 @@ dialog { width: min(560px,calc(100% - 30px)); padding: 0; border: 0; border-radi
 dialog::backdrop { background: rgba(15,23,42,.55); backdrop-filter: blur(2px); }
 dialog form { display: grid; gap: 16px; padding: 22px; }
 dialog [hidden] { display: none !important; }
+[hidden] { display: none !important; }
 #previewDialog { padding: 22px; }
 #previewDialog > * + * { margin-top: 16px; }
 .dialog-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }

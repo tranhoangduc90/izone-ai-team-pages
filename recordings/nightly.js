@@ -51,14 +51,14 @@ document.addEventListener('click',(event)=>{
   document.getElementById('exceptionReason').value=record.exceptionReason||'';dialog.showModal();
 });
 
-const PREVIEW_ERRORS={ZOOM_SOURCE_UNAVAILABLE:'Recording không còn truy cập được trên Zoom. Có thể đã bị xóa hoặc chuyển vào thùng rác; hệ thống không tự khôi phục.',ZOOM_ACCESS_DENIED:'Tài khoản kết nối chưa có quyền đọc recording này.',ZOOM_PROCESSING:'Zoom vẫn đang xử lý recording.',ZOOM_PLAYBACK_LINK_UNAVAILABLE:'Zoom chưa cung cấp link xem đúng clip này.',PREVIEW_NOT_AVAILABLE:'Chưa lấy được link xem. Hãy làm mới dữ liệu và thử lại.'};
+const PREVIEW_ERRORS={ZOOM_SOURCE_UNAVAILABLE:'Recording không còn truy cập được trên Zoom. Có thể đã bị xóa hoặc chuyển vào thùng rác; hệ thống không tự khôi phục.',ZOOM_ACCESS_DENIED:'Tài khoản kết nối chưa có quyền đọc recording này.',ZOOM_PROCESSING:'Zoom vẫn đang xử lý recording.',ZOOM_PLAYBACK_LINK_UNAVAILABLE:'Zoom chưa cung cấp link xem đúng clip này.',AUTH_REQUIRED:'Vui lòng đăng nhập Google bằng tài khoản đã được cấp quyền.', AUTH_REQUIRED_OR_FORBIDDEN:'Phiên đăng nhập chưa hợp lệ hoặc chưa có quyền.', PREVIEW_NOT_AVAILABLE:'Chưa lấy được link xem. Hãy làm mới dữ liệu và thử lại.'};
 let previewGeneration=0;
 document.addEventListener('click',async(event)=>{
  const button=event.target.closest('[data-action="preview"]');if(!button)return;
  const record=state.records.find(r=>r.id===button.dataset.id);if(!record)return;
  const generation=++previewGeneration,dialog=document.getElementById('previewDialog');
  dialog.dataset.id=record.id;dialog.dataset.version=record.version;dialog.dataset.date=nightlyState.snapshot.date;
- document.getElementById('publishForm').reset();
+ document.getElementById('publishForm').reset();document.getElementById('publishForm').hidden=!window.recordingAuth?.isAuthenticated();
  const sessions=(nightlyState.snapshot.records||[]).filter(r=>r.kind==='session'&&r.numberingVerified&&r.lessonNumber>0);
  document.getElementById('publishSession').innerHTML='<option value="">Chọn đúng lớp và buổi học</option>'+sessions.map(r=>`<option value="${escapeHtml(r.classSessionId)}">${escapeHtml(r.className)} — Buổi ${escapeHtml(r.lessonNumber)} — ${escapeHtml(dateTime(r.recordingStart))}</option>`).join('');
  document.getElementById('publishSubmit').disabled=!sessions.length||record.status!=='completed'||record.observationStale===true;
@@ -69,7 +69,7 @@ document.addEventListener('click',async(event)=>{
  document.getElementById('previewIssues').textContent=(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x).join(' · ')||'Chờ nhân sự xem nội dung và xác nhận.';
  status.textContent='Đang lấy link xem từ Zoom…';link.hidden=true;link.removeAttribute('href');dialog.showModal();
  try {
-  const response=await fetch(window.RECORDING_NIGHTLY.actionUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'preview',id:record.id,date:nightlyState.snapshot.date}),referrerPolicy:'no-referrer'});
+  const response=await window.recordingAuth.request({action:'preview',id:record.id,date:dialog.dataset.date});
   const data=await response.json();if(generation!==previewGeneration||!dialog.open)return;
   if(!response.ok||!data.ok)throw new Error(data.error||'PREVIEW_NOT_AVAILABLE');
   if(!/^https:\/\/(?:[a-z0-9-]+\.)*zoom\.us\/rec\/(?:play|share)\/[a-zA-Z0-9_.~-]+$/i.test(data.preview?.url||''))throw new Error('PREVIEW_NOT_AVAILABLE');
@@ -77,6 +77,24 @@ document.addEventListener('click',async(event)=>{
  }catch(error){if(generation===previewGeneration&&dialog.open)status.textContent=PREVIEW_ERRORS[error.message]||PREVIEW_ERRORS.PREVIEW_NOT_AVAILABLE;}
 });
 document.getElementById('previewDialog').addEventListener('close',()=>{previewGeneration++;});
+let privatePreviewObjectUrl='';
+function clearPrivatePreview(){const video=document.getElementById('privatePreviewVideo');video.pause();video.removeAttribute('src');video.load();video.hidden=true;if(privatePreviewObjectUrl)URL.revokeObjectURL(privatePreviewObjectUrl);privatePreviewObjectUrl='';}
+document.getElementById('previewDialog').addEventListener('close',clearPrivatePreview);
+document.addEventListener('recording-auth-changed',()=>{
+ document.getElementById('publishForm').hidden=!window.recordingAuth.isAuthenticated();
+ if(!window.recordingAuth.isAuthenticated()){previewGeneration++;clearPrivatePreview();document.getElementById('previewZoomLink').hidden=true;}
+});
+document.getElementById('privatePreviewButton').addEventListener('click',async()=>{
+ const dialog=document.getElementById('previewDialog'),button=document.getElementById('privatePreviewButton'),status=document.getElementById('previewStatus');
+ const generation=previewGeneration;button.disabled=true;clearPrivatePreview();status.textContent='Đang tải video nội bộ. Vui lòng chờ…';
+ try{
+  const response=await window.recordingAuth.request({action:'preview_file',date:dialog.dataset.date,id:dialog.dataset.id});
+  if(!response.ok||!(response.headers.get('Content-Type')||'').includes('video/mp4')){const body=await response.json();throw new Error(body.message||PREVIEW_ERRORS[body.error]||'Chưa xem được file nội bộ.');}
+  const blob=await response.blob();if(!dialog.open||generation!==previewGeneration||!window.recordingAuth.isAuthenticated())return;
+  privatePreviewObjectUrl=URL.createObjectURL(blob);const video=document.getElementById('privatePreviewVideo');video.src=privatePreviewObjectUrl;video.hidden=false;status.textContent='Video đã sẵn sàng để xem trong phiên đăng nhập này.';
+ }catch(error){if(dialog.open&&generation===previewGeneration)status.textContent=PREVIEW_ERRORS[error.message]||error.message;}
+ finally{button.disabled=false;}
+});
 document.getElementById('publishForm').addEventListener('submit',async(event)=>{
  event.preventDefault();const dialog=document.getElementById('previewDialog'),button=document.getElementById('publishSubmit');button.disabled=true;
  try{
