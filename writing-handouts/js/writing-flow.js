@@ -37,6 +37,14 @@ const viewMeta = {
 for (const [index, stage] of stages.entries()) viewMeta[stage] = ['7 giai đoạn',
   `${index + 1}. ${stageNames[stage]}`, 'Mỗi bài ở đây đang chờ, chạy hoặc cần xử lý tại đúng giai đoạn này.',
   `Đang ở bước: ${stageNames[stage]}`];
+viewMeta.test_overview = ['Bài Test', 'Tổng quan chấm Test', 'Chỉ hiển thị bài kiểm tra; dùng chung cơ chế chính xác và retry của Writing.', 'Tất cả trạng thái Test'];
+viewMeta.test_daily = ['Bài Test', 'Số bài Test chấm xong theo ngày', 'Lọc theo lớp, giảng viên, loại bài và khoảng ngày.', 'Test đã giao'];
+viewMeta.test_review = ['Bài Test', 'Bài Test cần kiểm tra', 'Các bài Test đã lỗi ba lần; có thể xem và chạy lại đúng bước.', 'Cần kiểm tra'];
+viewMeta.test_skipped = ['Bài Test', 'Bài Test đã bỏ qua', 'Có thể khôi phục bài Test bị bỏ qua nhầm.', 'Đã bỏ qua'];
+viewMeta.test_delivered = ['Bài Test', 'Bài Test đã giao', 'Kết quả đã được ghi và đọc lại thành công.', 'Đã giao'];
+for (const [index, stage] of stages.entries()) viewMeta[`test_${stage}`] = ['7 giai đoạn Test',
+  `${index + 1}. ${stageNames[stage]}`, 'Mỗi bài Test ở đây đang ở đúng giai đoạn ghi trên tiêu đề.',
+  `Test đang ở bước: ${stageNames[stage]}`];
 
 const columns = {
   student: ['Học viên / tên thủ công', row => sourceName(row)],
@@ -46,6 +54,11 @@ const columns = {
   classroom: ['Classroom', row => externalLink(row.classroom_url, row.display_name || 'Mở Classroom', row.display_name || '—')],
   trcc: ['TRCC', row => row.tr_cc_check == null ? '—' : row.tr_cc_check ? 'Có' : 'Không'],
   sourceStatus: ['Trạng thái nguồn', row => row.source_status || '—'],
+  testProgress: ['Test / tiến độ', row => row.source_type === 'term_test'
+    ? `${row.test_config || 'Chưa rõ kỳ'} · Task ${row.task_number || '?'} · ${Number(row.component_count || 0)}/${Number(row.task_number) === 1 ? 9 : 10} phần · ${row.task_score == null ? 'chưa có điểm' : `Band ${row.task_score}`}`
+    : '—'],
+  testOverall: ['Điểm toàn Test', row => row.source_type === 'term_test'
+    ? row.writing_score == null ? 'Chờ đủ Task' : `Band ${row.writing_score}` : '—'],
   finished: ['Thời điểm xong', row => formatTime(row.finished_at)],
   topic: ['Đề bài', row => row.topic || '—'],
   image: ['Ảnh biểu đồ', row => externalLink(row.image_url, 'Mở ảnh', '—')],
@@ -56,7 +69,8 @@ const columns = {
   error: ['Lỗi gần nhất', row => row.last_error_code || '—'],
   actions: ['Thao tác', row => actionCell(row)],
 };
-const defaultColumns = ['student', 'class', 'teacher', 'file', 'classroom', 'trcc', 'finished', 'topic', 'content', 'lms', 'actions'];
+const defaultColumns = ['student', 'class', 'teacher', 'file', 'classroom', 'trcc',
+  'finished', 'topic', 'content', 'lms', 'testProgress', 'testOverall', 'actions'];
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = { authenticated: false, api: null, timer: null, searchTimer: null, sessionClient: null,
   loginGeneration: 0, activeView: 'overview', pairs: [], nextCursor: null, nextOffset: null,
@@ -67,28 +81,33 @@ const state = { authenticated: false, api: null, timer: null, searchTimer: null,
   sortRules: readSortRules(), pinnedClasses: readClassList('writing-flow:pinned-classes:v1'),
   recentClasses: readClassList('writing-flow:recent-classes:v1') };
 
+function isTestView(view = state.activeView) { return view.startsWith('test_'); }
+function baseView(view = state.activeView) { return isTestView(view) ? view.slice(5) : view; }
+function activeSourceKind() { return isTestView() ? 'test' : 'homework'; }
+function activeStage() { const view = baseView(); return stages.includes(view) ? view : ''; }
+
 function makeText(tag, value, className = '') { const node = document.createElement(tag); node.textContent = String(value ?? ''); if (className) node.className = className; return node; }
 function showError(id, message = '') { const node = $(id); node.textContent = message; node.hidden = !message; }
 function formatTime(value) { return value ? new Date(value).toLocaleString('vi-VN') : '—'; }
 function sourceName(row) { return row.student_name || row.display_name || 'Chưa có tên'; }
 function externalLink(url, label, fallback) { if (!url) return fallback; const link = makeText('a', label); link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer'; return link; }
 function actionButton(label, handler, className = 'secondary') { const button = makeText('button', label); button.type = 'button'; button.className = className; button.addEventListener('click', handler); return button; }
-function readColumns() { try { const saved = JSON.parse(localStorage.getItem('writing-flow:columns:v2') || localStorage.getItem('writing-flow:columns:v1') || 'null'); const value = Array.isArray(saved) ? saved.map(key => key === 'grading' ? 'lms' : key) : null; return value?.length && value.every(key => columns[key]) ? [...new Set(value)] : defaultColumns; } catch { return defaultColumns; } }
-function saveColumns() { try { localStorage.setItem('writing-flow:columns:v2', JSON.stringify(state.visibleColumns)); } catch { /* Vẫn dùng được lựa chọn trong phiên hiện tại. */ } }
+function readColumns() { try { const current = localStorage.getItem('writing-flow:columns:v3'); const saved = JSON.parse(current || localStorage.getItem('writing-flow:columns:v2') || localStorage.getItem('writing-flow:columns:v1') || 'null'); const value = Array.isArray(saved) ? saved.map(key => key === 'grading' ? 'lms' : key) : null; if (!value?.length || !value.every(key => columns[key])) return defaultColumns; return current ? [...new Set(value)] : [...new Set([...value, 'testProgress', 'testOverall'])]; } catch { return defaultColumns; } }
+function saveColumns() { try { localStorage.setItem('writing-flow:columns:v3', JSON.stringify(state.visibleColumns)); } catch { /* Vẫn dùng được lựa chọn trong phiên hiện tại. */ } }
 function readSortRules() { try { const value = JSON.parse(localStorage.getItem('writing-flow:sort:v1') || '[]'); return Array.isArray(value) ? value.slice(0, 3) : []; } catch { return []; } }
 function saveSortRules() { try { localStorage.setItem('writing-flow:sort:v1', JSON.stringify(state.sortRules)); } catch { /* Sort vẫn dùng được trong phiên hiện tại. */ } }
 function readClassList(key) { try { const value = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(value) ? value.filter(item => typeof item === 'string').slice(0, 12) : []; } catch { return []; } }
 function saveClassList(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Danh sách ghim/gần đây chỉ là tiện ích giao diện. */ } }
 function currentFilters(extra = {}) { return { classCode: $('flow-class').value, teacherName: $('flow-teacher').value,
   taskType: $('flow-task-type').value, search: $('flow-search').value.trim(), searchScope: $('flow-search-scope').value,
-  stageStatus: stages.includes(state.activeView) ? $('flow-stage-status').value : '',
+  stageStatus: activeStage() ? $('flow-stage-status').value : '', sourceKind: activeSourceKind(),
   dateFrom: $('flow-date-from').value, dateTo: $('flow-date-to').value,
   sort: serializeSortRules(state.sortRules), limit: 50, ...extra }; }
-function pairViewFilters() { if (stages.includes(state.activeView)) return { stageKey: state.activeView };
-  if (state.activeView === 'review') return { view: 'review' };
-  if (state.activeView === 'skipped') return { view: 'skipped' };
-  if (state.activeView === 'delivered') return { view: 'delivered' };
-  return state.activeView === 'classes' ? {} : { view: 'unfinished' }; }
+function pairViewFilters() { const view = baseView(); if (stages.includes(view)) return { stageKey: view };
+  if (view === 'review') return { view: 'review' };
+  if (view === 'skipped') return { view: 'skipped' };
+  if (view === 'delivered') return { view: 'delivered' };
+  return view === 'classes' ? {} : { view: 'unfinished' }; }
 
 function renderColumnChoices() {
   const root = $('flow-field-choices'); root.replaceChildren(makeText('legend', 'Cột hiển thị'));
@@ -139,8 +158,8 @@ function renderSortControls() {
   $('flow-sort-clear').onclick = () => { state.sortRules = []; saveSortRules(); renderSortControls(); state.pairs = []; state.nextCursor = null; state.nextOffset = null; $('flow-sort').open = false; void refreshData(); };
 }
 
-function renderHeading() { const meta = viewMeta[state.activeView]; $('flow-view-kicker').textContent = meta[0]; $('flow-view-title').textContent = meta[1]; $('flow-view-help').textContent = meta[2]; const badge = $('flow-view-status'); badge.textContent = meta[3]; badge.dataset.tone = ['review', 'source', 'logs'].includes(state.activeView) ? 'danger' : ['delivered', 'completed_classes'].includes(state.activeView) ? 'success' : ''; const breakdown = $('flow-stage-breakdown'); breakdown.replaceChildren(); breakdown.hidden = !stages.includes(state.activeView); if (!breakdown.hidden) { const rows = (state.counts?.stages || []).filter(row => row.stage_key === state.activeView && !row.skipped); const totals = new Map(rows.map(row => [row.stage_status, Number(row.pair_count || 0)])); for (const key of ['pending', 'running', 'needs_review', 'succeeded']) breakdown.append(makeText('span', `${statusNames[key]}: ${totals.get(key) || 0}`)); } for (const button of document.querySelectorAll('#flow-views [data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === state.activeView)); }
-function setViewVisibility() { const map = { overview: ['flow-overview-section'], daily: ['flow-daily-section'], classes: ['flow-classes-section', 'flow-pairs-section'], completed_classes: ['flow-classes-section'], mapping: ['flow-mapping-section'], review: ['flow-pairs-section'], source: ['flow-pairs-section'], logs: ['flow-technical-section'], audit: ['flow-audit-section'], legacy: ['flow-pairs-section'] }; const visible = map[state.activeView] || ['flow-pairs-section']; for (const id of ['flow-overview-section', 'flow-daily-section', 'flow-classes-section', 'flow-reviews-section', 'flow-source-section', 'flow-technical-section', 'flow-audit-section', 'flow-mapping-section', 'flow-pairs-section', 'flow-legacy-section']) $(id).hidden = !visible.includes(id); if (state.activeView === 'classes' && !$('flow-class').value) $('flow-pairs-section').hidden = true; $('flow-stage-status-filter').hidden = !stages.includes(state.activeView); renderHeading(); }
+function renderHeading() { const meta = viewMeta[state.activeView]; const view = baseView(); $('flow-view-kicker').textContent = meta[0]; $('flow-view-title').textContent = meta[1]; $('flow-view-help').textContent = meta[2]; const badge = $('flow-view-status'); badge.textContent = meta[3]; badge.dataset.tone = ['review', 'source', 'logs'].includes(view) ? 'danger' : ['delivered', 'completed_classes'].includes(view) ? 'success' : ''; const breakdown = $('flow-stage-breakdown'); breakdown.replaceChildren(); breakdown.hidden = !stages.includes(view); if (!breakdown.hidden) { const rows = (state.counts?.stages || []).filter(row => row.stage_key === view && !row.skipped); const totals = new Map(rows.map(row => [row.stage_status, Number(row.pair_count || 0)])); for (const key of ['pending', 'running', 'needs_review', 'succeeded']) breakdown.append(makeText('span', `${statusNames[key]}: ${totals.get(key) || 0}`)); } for (const button of document.querySelectorAll('#flow-views [data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === state.activeView)); }
+function setViewVisibility() { const view = baseView(); const map = { overview: ['flow-overview-section'], daily: ['flow-daily-section'], classes: ['flow-classes-section', 'flow-pairs-section'], completed_classes: ['flow-classes-section'], mapping: ['flow-mapping-section'], review: ['flow-pairs-section'], source: ['flow-pairs-section'], logs: ['flow-technical-section'], audit: ['flow-audit-section'], legacy: ['flow-pairs-section'] }; const visible = [...(map[view] || ['flow-pairs-section'])]; if (state.activeView === 'test_overview') visible.push('flow-pairs-section'); for (const id of ['flow-overview-section', 'flow-daily-section', 'flow-classes-section', 'flow-reviews-section', 'flow-source-section', 'flow-technical-section', 'flow-audit-section', 'flow-mapping-section', 'flow-pairs-section', 'flow-legacy-section']) $(id).hidden = !visible.includes(id); if (view === 'classes' && !$('flow-class').value) $('flow-pairs-section').hidden = true; $('flow-stage-status-filter').hidden = !stages.includes(view); renderHeading(); }
 
 function renderCounts() {
   const values = { overview: 0, classes: state.activeClasses.length, completed_classes: state.completedClasses.length,
@@ -150,6 +169,13 @@ function renderCounts() {
   for (const stage of stages) values[stage] = 0;
   for (const row of state.counts?.stages || []) { const count = Number(row.pair_count || 0); values.overview += count; if (row.skipped) values.skipped += count; else { values[row.stage_key] = (values[row.stage_key] || 0) + count; if (row.stage_key === 'deliver' && row.stage_status === 'succeeded') values.delivered += count; } }
   for (const [key, value] of Object.entries(values)) { const node = document.querySelector(`[data-count="${key}"]`); if (node) node.textContent = String(value); }
+  const prefix = isTestView() ? 'test_' : '';
+  const overviewNode = document.querySelector(`[data-count="${prefix}overview"]`);
+  if (overviewNode) overviewNode.textContent = String(values.overview);
+  if (isTestView()) for (const key of [...stages, 'review', 'skipped', 'delivered']) {
+    const node = document.querySelector(`[data-count="test_${key}"]`);
+    if (node) node.textContent = String(values[key] || 0);
+  }
 }
 function renderSummary() { const root = $('flow-summary'); root.replaceChildren(); const stageRows = state.counts?.stages || []; const skipped = stageRows.filter(row => row.skipped).reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const delivered = stageRows.filter(row => !row.skipped && row.stage_key === 'deliver' && row.stage_status === 'succeeded').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const running = stageRows.filter(row => !row.skipped && row.stage_status === 'running').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const attention = Number(state.counts?.support?.reviews || 0) + Number(state.counts?.support?.source_issues || 0); for (const item of [{ key: 'running', label: 'Đang xử lý', value: running }, { key: 'needs_review', label: 'Cần xử lý', value: attention }, { key: 'delivered', label: 'Đã giao', value: delivered }, { key: 'skipped', label: 'Đã bỏ qua', value: skipped }]) { const card = document.createElement('article'); card.dataset.status = item.key; card.append(makeText('strong', item.value), makeText('span', item.label)); root.append(card); } }
 
@@ -172,7 +198,7 @@ function detailButton(row, label) { return actionButton(label, () => void openRo
 function contentPreview(row) { const preview = makeText('button', row.essay_preview || 'Chưa có nội dung', 'flow-content-preview'); preview.type = 'button'; preview.title = 'Nhấn đúp hoặc nhấn Enter để xem đầy đủ'; preview.disabled = !row.essay_preview; const open = () => void openRowDetail(row); preview.addEventListener('dblclick', open); preview.addEventListener('click', event => { if (event.detail === 1) preview.focus(); }); preview.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } }); return preview; }
 async function skipPair(pair) { const reason = prompt('Lý do bỏ qua bài này:')?.trim(); if (!reason) return; try { await state.api.skipWritingPair(pair.pair_id, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa bỏ qua được bài: ${error.message}`); } }
 async function restorePair(pair) { const reason = prompt('Lý do khôi phục bài:', 'Bỏ qua nhầm')?.trim(); if (!reason) return; try { await state.api.restoreWritingPair(pair.pair_id, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa khôi phục được bài: ${error.message}`); } }
-async function retryPair(pair) { const stageKey = stages.includes(state.activeView) ? state.activeView : pair.stage_key; const reason = prompt(`Lý do chạy lại từ bước “${stageNames[stageKey] || stageKey}”:`, 'Kiểm tra và chạy lại')?.trim(); if (!reason) return; try { await state.api.retryWritingPairStage(pair.pair_id, stageKey, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa tạo được lượt retry: ${error.message}`); } }
+async function retryPair(pair) { const stageKey = activeStage() || pair.stage_key; const reason = prompt(`Lý do chạy lại từ bước “${stageNames[stageKey] || stageKey}”:`, 'Kiểm tra và chạy lại')?.trim(); if (!reason) return; try { await state.api.retryWritingPairStage(pair.pair_id, stageKey, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa tạo được lượt retry: ${error.message}`); } }
 async function skipSourceIssue(issue) { const reason = prompt('Lý do bỏ qua lỗi nguồn này:')?.trim(); if (!reason) return; try { await state.api.skipWritingSourceIssue(issue.issue_key, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa bỏ qua được lỗi nguồn: ${error.message}`); } }
 async function restoreSourceIssue(issue) { const reason = prompt('Lý do khôi phục lỗi nguồn:', 'Bỏ qua nhầm')?.trim(); if (!reason) return; try { await state.api.restoreWritingSourceIssue(issue.issue_key, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa khôi phục được lỗi nguồn: ${error.message}`); } }
 function actionCell(row) {
@@ -203,15 +229,17 @@ function startColumnResize(event, key, header) {
 function resetColumnWidths() { state.columnWidths = { ...defaultColumnWidths }; saveColumnWidths(window.localStorage, state.columnWidths); renderPairs(); }
 function renderPairs() {
   const head = $('flow-table-head'); const root = $('flow-pairs'); const table = $('flow-pairs-table');
+  const visible = isTestView() ? state.visibleColumns
+    : state.visibleColumns.filter(key => !['testProgress', 'testOverall'].includes(key));
   head.replaceChildren(); root.replaceChildren();
-  table.style.width = `${state.visibleColumns.reduce((sum, key) => sum + state.columnWidths[key], 0)}px`;
-  for (const key of state.visibleColumns) {
+  table.style.width = `${visible.reduce((sum, key) => sum + state.columnWidths[key], 0)}px`;
+  for (const key of visible) {
     const header = makeText('th', columns[key][0]); header.dataset.column = key; header.style.width = `${state.columnWidths[key]}px`;
     const resizer = document.createElement('span'); resizer.className = 'flow-column-resizer'; resizer.title = 'Kéo để đổi độ rộng cột'; resizer.addEventListener('pointerdown', event => startColumnResize(event, key, header));
     header.append(resizer); head.append(header);
   }
-  if (!state.pairs.length) { const row = document.createElement('tr'); const cell = makeText('td', 'Chưa có bài trong phạm vi đã chọn.', 'muted'); cell.colSpan = state.visibleColumns.length; row.append(cell); root.append(row); $('flow-more').hidden = true; return; }
-  for (const pair of state.pairs) { const row = document.createElement('tr'); for (const key of state.visibleColumns) appendCell(row, key, columns[key][1](pair)); root.append(row); }
+  if (!state.pairs.length) { const row = document.createElement('tr'); const cell = makeText('td', 'Chưa có bài trong phạm vi đã chọn.', 'muted'); cell.colSpan = visible.length; row.append(cell); root.append(row); $('flow-more').hidden = true; return; }
+  for (const pair of state.pairs) { const row = document.createElement('tr'); for (const key of visible) appendCell(row, key, columns[key][1](pair)); root.append(row); }
   $('flow-more').hidden = !state.nextCursor && state.nextOffset == null;
 }
 
@@ -286,16 +314,18 @@ function renderFailures() { const root = $('flow-technical-errors'); root.replac
 const operatorLabels = { retry_requested: 'Retry bài lỗi', rerun_requested: 'Chạy lại từ một bước', skipped: 'Bỏ qua bài', restored: 'Khôi phục bài', source_issue_skipped: 'Bỏ qua lỗi nguồn', source_issue_restored: 'Khôi phục lỗi nguồn', source_edited: 'Sửa nguồn', manual_source_added: 'Thêm file ngoài lớp', class_scan_requested: 'Quét lớp ngay', legacy_imported: 'Nhập lịch sử cũ', legacy_promoted: 'Chuyển lịch sử sang nguồn mới', class_mapping_changed: 'Đổi trạng thái lớp từ mapping' };
 function renderOperatorEvents() { const root = $('flow-operator-events'); root.replaceChildren(); if (!state.events.length) return root.append(makeText('p', 'Chưa có thao tác trong phạm vi đang lọc.', 'muted')); for (const event of state.events) { const row = document.createElement('article'); row.className = 'flow-row'; const body = document.createElement('div'); body.append(makeText('strong', operatorLabels[event.event_type] || event.event_type), makeText('p', `${formatTime(event.created_at)} · lớp ${event.class_code || 'ngoài lớp'} · ${event.actor_ref || 'hệ thống'}`, 'flow-meta')); if (event.reason) body.append(makeText('p', event.reason, 'flow-meta')); const states = document.createElement('details'); states.className = 'flow-audit-state'; states.append(makeText('summary', 'Xem trạng thái trước và sau'), makeText('pre', `Trước:\n${JSON.stringify(event.before_state || {}, null, 2)}\n\nSau:\n${JSON.stringify(event.after_state || {}, null, 2)}`)); body.append(states); row.append(body); root.append(row); } }
 function renderLegacy() { const root = $('flow-legacy'); root.replaceChildren(); if (!state.legacy.length) return root.append(makeText('p', 'Chưa nhập lịch sử cũ trong phạm vi này.', 'muted')); for (const item of state.legacy) { const row = document.createElement('article'); row.className = 'flow-row'; row.append(makeText('div', `${item.student_name || 'Chưa có tên'} · ${item.class_code || '—'} · bài ${item.essay_slot || '—'} · ${item.source_status || '—'} · ${formatTime(item.created_at_source)}`)); root.append(row); } }
-function openDailyDetails(day) { const normalized = normalizeWritingDay(day); if (!normalized) return; $('flow-date-from').value = normalized; $('flow-date-to').value = normalized; state.activeView = 'delivered'; state.pairs = []; state.nextCursor = null; state.nextOffset = null; void refreshData(); }
+function openDailyDetails(day) { const normalized = normalizeWritingDay(day); if (!normalized) return; $('flow-date-from').value = normalized; $('flow-date-to').value = normalized; state.activeView = isTestView() ? 'test_delivered' : 'delivered'; state.pairs = []; state.nextCursor = null; state.nextOffset = null; void refreshData(); }
 function renderDailyBars(root, days, interactive = true, maxHeight = 190) { root.replaceChildren(); if (!days.length) return root.append(makeText('p', 'Chưa có bài hoàn thành trong khoảng đã chọn.', 'muted')); const max = Math.max(...days.map(row => Number(row.completed_count || 0)), 1); const chart = document.createElement('div'); chart.className = 'flow-chart-bars'; for (const item of days) { const day = normalizeWritingDay(item.day); const bar = document.createElement(interactive ? 'button' : 'div'); if (interactive) { bar.type = 'button'; bar.disabled = !day; bar.title = day ? `Mở ${item.completed_count} bài đã giao ngày ${formatWritingDay(day)}` : 'Ngày không hợp lệ'; if (day) bar.addEventListener('click', () => openDailyDetails(day)); } bar.className = 'flow-chart-bar'; const visual = document.createElement('i'); visual.style.height = `${Math.max(3, Math.round(Number(item.completed_count || 0) / max * maxHeight))}px`; bar.append(visual, makeText('strong', item.completed_count), makeText('small', formatWritingDay(item.day))); chart.append(bar); } root.append(chart); }
 function renderDaily() { renderDailyBars($('flow-daily-chart'), state.daily, true); }
 function renderAll() { renderHeading(); renderCounts(); renderSummary(); renderCoverage(); renderAttention(); renderClasses(); renderPairs(); renderReviews(); renderIssues(); renderFailures(); renderOperatorEvents(); renderLegacy(); renderDaily(); setViewVisibility(); }
 
 async function loadPairs(reset = true) { const page = reset ? {} : state.nextCursor || (state.nextOffset == null ? {} : { offset: state.nextOffset }); const response = await state.api.writingPairsPage(currentFilters({ ...pairViewFilters(), ...page })); const rows = response.data.pairs || []; state.pairs = reset ? rows : [...state.pairs, ...rows]; state.nextCursor = response.data.nextCursor || null; state.nextOffset = response.data.nextOffset ?? null; }
-async function loadCommon() { const [counts, activeClasses, completedClasses] = await Promise.all([state.api.writingCounts($('flow-class').value, $('flow-teacher').value), state.api.writingClasses('active'), state.api.writingClasses('completed')]); state.counts = counts.data.counts || null; state.activeClasses = activeClasses.data.classes || []; state.completedClasses = completedClasses.data.classes || []; if (!state.filtersLoaded) { const response = await state.api.writingFilterOptions(); populateFilters(response.data.filters || {}); state.filtersLoaded = true; } }
+async function loadCommon() { const [counts, activeClasses, completedClasses] = await Promise.all([state.api.writingCounts($('flow-class').value, $('flow-teacher').value, activeSourceKind()), state.api.writingClasses('active'), state.api.writingClasses('completed')]); state.counts = counts.data.counts || null; state.activeClasses = activeClasses.data.classes || []; state.completedClasses = completedClasses.data.classes || []; if (!state.filtersLoaded) { const response = await state.api.writingFilterOptions(); populateFilters(response.data.filters || {}); state.filtersLoaded = true; } }
 async function loadView() {
   const filters = currentFilters();
-  if (state.activeView === 'overview') {
+  const view = baseView();
+  if (view === 'overview') {
+    if (isTestView()) { await loadPairs(true); state.coverage = []; state.reviews = []; state.issues = []; return; }
     const [coverage, reviews, issues] = await Promise.all([
       state.api.writingClassCoverage(), state.api.writingReviews({ ...filters, limit: 8 }),
       state.api.writingSourceIssues({ ...filters, status: 'open', limit: 8 }),
@@ -303,18 +333,19 @@ async function loadView() {
     state.coverage = coverage.data.classes || []; state.reviews = reviews.data.reviews || [];
     state.issues = issues.data.issues || []; return;
   }
-  if (state.activeView === 'mapping') { const response = await state.api.writingClassCoverage(); state.coverage = response.data.classes || []; return; }
-  if (state.activeView === 'daily') { const response = await state.api.writingDailyStats(filters); state.daily = response.data.days || []; return; }
-  if (state.activeView === 'classes') { if ($('flow-class').value) { const [stats] = await Promise.all([state.api.writingDailyStats(filters), loadPairs(true)]); state.daily = stats.data.days || []; } else { state.pairs = []; state.daily = []; state.nextCursor = null; state.nextOffset = null; } return; }
-  if (state.activeView === 'completed_classes') return;
-  if (state.activeView === 'review') { await loadPairs(true); return; }
-  if (state.activeView === 'source') {
+  if (view === 'mapping') { const response = await state.api.writingClassCoverage(); state.coverage = response.data.classes || []; return; }
+  if (view === 'daily') { const response = await state.api.writingDailyStats(filters); state.daily = response.data.days || []; return; }
+  if (view === 'classes') { if ($('flow-class').value) { const [stats] = await Promise.all([state.api.writingDailyStats(filters), loadPairs(true)]); state.daily = stats.data.days || []; } else { state.pairs = []; state.daily = []; state.nextCursor = null; state.nextOffset = null; } return; }
+  if (view === 'completed_classes') return;
+  if (view === 'review') { await loadPairs(true); return; }
+  if (view === 'source') {
     const response = await state.api.writingSourceIssues({ ...filters, status: 'open', limit: 100 });
     state.issues = response.data.issues || []; state.pairs = state.issues.map(sourceIssueRow);
     state.nextCursor = null; state.nextOffset = null; return;
   }
-  if (state.activeView === 'skipped') {
+  if (view === 'skipped') {
     await loadPairs(true);
+    if (isTestView()) return;
     const response = await state.api.writingSourceIssues({ ...filters, status: 'skipped', limit: 100 });
     const skippedIssues = (response.data.issues || []).map(sourceIssueRow);
     state.pairs = [...state.pairs, ...skippedIssues].sort((left, right) =>
@@ -322,20 +353,20 @@ async function loadView() {
         - new Date(left.skipped_at || left.updated_at).getTime());
     return;
   }
-  if (state.activeView === 'logs') { const response = await state.api.writingWorkflowFailures(0, 100); state.failures = response.data.failures || []; return; }
-  if (state.activeView === 'audit') { const response = await state.api.writingOperatorEvents({ classCode: filters.classCode, limit: 100 }); state.events = response.data.events || []; return; }
-  if (state.activeView === 'legacy') { const response = await state.api.writingLegacy(filters.classCode, 0, 50); state.legacy = response.data.records || []; state.pairs = state.legacy.map(legacyRow); state.nextCursor = null; state.nextOffset = null; return; }
+  if (view === 'logs') { const response = await state.api.writingWorkflowFailures(0, 100); state.failures = response.data.failures || []; return; }
+  if (view === 'audit') { const response = await state.api.writingOperatorEvents({ classCode: filters.classCode, limit: 100 }); state.events = response.data.events || []; return; }
+  if (view === 'legacy') { const response = await state.api.writingLegacy(filters.classCode, 0, 50); state.legacy = response.data.records || []; state.pairs = state.legacy.map(legacyRow); state.nextCursor = null; state.nextOffset = null; return; }
   await loadPairs(true);
 }
 
 async function refreshData() { clearTimeout(state.timer); if (!state.authenticated || !state.api) return; const generation = state.loginGeneration; try { await loadCommon(); await loadView(); if (generation !== state.loginGeneration) return; renderAll(); $('flow-login').hidden = true; $('flow-dashboard').hidden = false; $('flow-updated').textContent = `Đã cập nhật lúc ${new Date().toLocaleTimeString('vi-VN')}`; showError('flow-login-error'); showError('flow-error'); } catch (error) { const failure = teacherAuthFailure(error.status); if (failure) { clearLogin(); showError('flow-login-error', failure.message); globalThis.google?.accounts?.id?.disableAutoSelect?.(); return; } showError($('flow-dashboard').hidden ? 'flow-login-error' : 'flow-error', `Chưa tải được trạng thái: ${error.message}`); } state.timer = setTimeout(refreshData, 30_000); }
-async function submitManual(event) { event.preventDefault(); const button = event.submitter; button.disabled = true; try { await state.api.addWritingManualSource($('flow-manual-name').value.trim(), $('flow-manual-url').value.trim(), createRequestId()); event.currentTarget.reset(); $('flow-manual-dialog').close(); showError('flow-error', 'Đã thêm file. Hệ thống sẽ kiểm đề và format trước khi chấm.'); await refreshData(); } catch (error) { showError('flow-error', `Chưa thêm được file: ${error.message}`); } finally { button.disabled = false; } }
+async function submitManual(event) { event.preventDefault(); const button = event.submitter; button.disabled = true; try { const kind = $('flow-manual-kind').value; await state.api.addWritingManualSource({ displayName: $('flow-manual-name').value.trim(), documentUrl: $('flow-manual-url').value.trim(), kind, ...(kind === 'test' ? { testConfig: $('flow-manual-test-config').value.trim() || null, topology: $('flow-manual-topology').value, note: $('flow-manual-note').value.trim() || null } : {}) }, createRequestId()); event.currentTarget.reset(); $('flow-manual-test-fields').hidden = true; $('flow-manual-dialog').close(); showError('flow-error', `Đã thêm ${kind === 'test' ? 'bài Test' : 'file'}. Hệ thống sẽ kiểm đề và format trước khi chấm.`); await refreshData(); } catch (error) { showError('flow-error', `Chưa thêm được file: ${error.message}`); } finally { button.disabled = false; } }
 async function handleCredential(response) { if (!response?.credential) return showError('flow-login-error', 'Không nhận được thông tin đăng nhập.'); state.loginGeneration += 1; state.authenticated = false; try { await state.sessionClient.login(response.credential); state.authenticated = true; if ($('remember-flow-login').checked) loginPreference.set(true); await refreshData(); } catch (error) { clearLogin(); showError('flow-login-error', `Không thể đăng nhập: ${error.message}`); } }
 async function waitForGoogle(clientId) { for (let attempt = 0; attempt < 100; attempt += 1) { const accounts = globalThis.google?.accounts?.id; if (accounts) { accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: loginPreference.read() }); accounts.renderButton($('google-signin'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'vi' }); return; } await new Promise(resolve => setTimeout(resolve, 100)); } throw new Error('Không tải được dịch vụ đăng nhập Google.'); }
 function clearLogin() { state.loginGeneration += 1; state.authenticated = false; clearTimeout(state.timer); $('flow-dashboard').hidden = true; $('flow-login').hidden = false; }
 function selectView(view) { state.activeView = view; $('flow-stage-status').value = ''; state.pairs = []; state.nextCursor = null; state.nextOffset = null; void refreshData(); }
 function clearFilters() { $('flow-search').value = ''; $('flow-search-scope').value = 'all'; $('flow-class').value = ''; $('flow-teacher').value = ''; $('flow-task-type').value = ''; $('flow-stage-status').value = ''; $('flow-date-from').value = ''; $('flow-date-to').value = ''; state.pairs = []; state.nextCursor = null; state.nextOffset = null; void refreshData(); }
-async function init() { try { const response = await fetch('./writing-flow-config.json', { cache: 'no-store' }); if (!response.ok) throw new Error('Thiếu cấu hình trang chấm bài.'); const config = await response.json(); state.sessionClient = createTeacherSessionClient({ apiBaseUrl: config.apiBase || '', sessionPath: 'api/v1/auth/session' }); state.api = createTeacherApi(config.apiBase || ''); renderColumnChoices(); renderSortControls(); $('flow-manual-form').addEventListener('submit', event => void submitManual(event)); $('flow-manual-open').addEventListener('click', () => $('flow-manual-dialog').showModal()); $('flow-detail-close').addEventListener('click', () => $('flow-detail').close()); $('flow-detail').addEventListener('click', event => { const dialog = $('flow-detail'); if (event.target === dialog && isBackdropClick(event, dialog.getBoundingClientRect())) dialog.close(); }); $('flow-reset-widths').addEventListener('click', resetColumnWidths); $('flow-class').addEventListener('change', () => { if ($('flow-class').value) rememberClass($('flow-class').value); void refreshData(); }); for (const id of ['flow-teacher', 'flow-task-type', 'flow-stage-status', 'flow-date-from', 'flow-date-to']) $(id).addEventListener('change', () => void refreshData()); $('flow-search-button').addEventListener('click', () => void refreshData()); $('flow-search').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); void refreshData(); } }); for (const button of document.querySelectorAll('#flow-views [data-view]')) button.addEventListener('click', () => selectView(button.dataset.view)); $('flow-clear-filters').addEventListener('click', clearFilters); $('flow-refresh').addEventListener('click', () => void refreshData()); $('flow-more').addEventListener('click', async () => { if ((!state.nextCursor && state.nextOffset == null) || state.loadingMore) return; state.loadingMore = true; try { await loadPairs(false); renderPairs(); } finally { state.loadingMore = false; } }); const restored = await state.sessionClient.restore(); if (restored) { state.authenticated = true; await refreshData(); } await waitForGoogle(config.googleClientId); if (!state.authenticated && loginPreference.read()) globalThis.google.accounts.id.prompt(); } catch (error) { showError('flow-login-error', error.message); } }
+async function init() { try { const response = await fetch('./writing-flow-config.json', { cache: 'no-store' }); if (!response.ok) throw new Error('Thiếu cấu hình trang chấm bài.'); const config = await response.json(); state.sessionClient = createTeacherSessionClient({ apiBaseUrl: config.apiBase || '', sessionPath: 'api/v1/auth/session' }); state.api = createTeacherApi(config.apiBase || ''); renderColumnChoices(); renderSortControls(); $('flow-manual-form').addEventListener('submit', event => void submitManual(event)); $('flow-manual-kind').addEventListener('change', () => { $('flow-manual-test-fields').hidden = $('flow-manual-kind').value !== 'test'; }); $('flow-manual-open').addEventListener('click', () => $('flow-manual-dialog').showModal()); $('flow-detail-close').addEventListener('click', () => $('flow-detail').close()); $('flow-detail').addEventListener('click', event => { const dialog = $('flow-detail'); if (event.target === dialog && isBackdropClick(event, dialog.getBoundingClientRect())) dialog.close(); }); $('flow-reset-widths').addEventListener('click', resetColumnWidths); $('flow-class').addEventListener('change', () => { if ($('flow-class').value) rememberClass($('flow-class').value); void refreshData(); }); for (const id of ['flow-teacher', 'flow-task-type', 'flow-stage-status', 'flow-date-from', 'flow-date-to']) $(id).addEventListener('change', () => void refreshData()); $('flow-search-button').addEventListener('click', () => void refreshData()); $('flow-search').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); void refreshData(); } }); for (const button of document.querySelectorAll('#flow-views [data-view]')) button.addEventListener('click', () => selectView(button.dataset.view)); $('flow-clear-filters').addEventListener('click', clearFilters); $('flow-refresh').addEventListener('click', () => void refreshData()); $('flow-more').addEventListener('click', async () => { if ((!state.nextCursor && state.nextOffset == null) || state.loadingMore) return; state.loadingMore = true; try { await loadPairs(false); renderPairs(); } finally { state.loadingMore = false; } }); const restored = await state.sessionClient.restore(); if (restored) { state.authenticated = true; await refreshData(); } await waitForGoogle(config.googleClientId); if (!state.authenticated && loginPreference.read()) globalThis.google.accounts.id.prompt(); } catch (error) { showError('flow-login-error', error.message); } }
 
 $('remember-flow-login').checked = loginPreference.read();
 $('remember-flow-login').addEventListener('change', () => { const input = $('remember-flow-login'); if (!loginPreference.set(input.checked)) input.checked = loginPreference.read(); });

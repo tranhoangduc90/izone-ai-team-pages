@@ -46,6 +46,19 @@
             <button type="button" data-view="legacy">Lịch sử cũ</button>
             <button type="button" data-view="logs">Nhật ký lỗi</button>
             <button type="button" data-view="audit">Nhật ký thao tác</button>
+            <p class="flow-nav-label">Bài Test</p>
+            <button type="button" data-view="test_overview">Tổng quan Test <span data-count="test_overview">0</span></button>
+            <button type="button" data-view="test_daily">Test theo ngày</button>
+            <button type="button" data-view="test_intake">1. Tiếp nhận <span data-count="test_intake">0</span></button>
+            <button type="button" data-view="test_precheck">2. Kiểm trước <span data-count="test_precheck">0</span></button>
+            <button type="button" data-view="test_main">3. Chấm chính <span data-count="test_main">0</span></button>
+            <button type="button" data-view="test_critic">4. Phản biện <span data-count="test_critic">0</span></button>
+            <button type="button" data-view="test_arbiter">5. Phân xử <span data-count="test_arbiter">0</span></button>
+            <button type="button" data-view="test_render">6. Tạo trang <span data-count="test_render">0</span></button>
+            <button type="button" data-view="test_deliver">7. Ghi link <span data-count="test_deliver">0</span></button>
+            <button type="button" data-view="test_review">Test cần kiểm tra <span data-count="test_review">0</span></button>
+            <button type="button" data-view="test_skipped">Test đã bỏ qua <span data-count="test_skipped">0</span></button>
+            <button type="button" data-view="test_delivered">Test đã giao <span data-count="test_delivered">0</span></button>
           </nav>
         </aside>
 
@@ -112,10 +125,16 @@
 
     <dialog id="flow-manual-dialog" class="flow-dialog">
       <form method="dialog" class="flow-dialog-head"><h2>Thêm file ngoài lớp</h2><button class="secondary" value="cancel">Đóng</button></form>
-      <p class="muted">Nhập tên dễ nhớ và link Google Docs. File sẽ được kiểm tra như bài từ Classroom.</p>
+      <p class="muted">Nhập tên dễ nhớ và link Google Docs. Chọn đúng loại để file đi vào khu Homework hoặc Bài Test.</p>
       <form id="flow-manual-form" class="flow-manual-form">
+        <label>Loại bài <select id="flow-manual-kind"><option value="homework">Homework ngoài lớp</option><option value="test">Bài Test thủ công</option></select></label>
         <label>Tên bài <input id="flow-manual-name" required minlength="2" maxlength="200" placeholder="Ví dụ: Bài chữa thêm của Minh" /></label>
         <label>Link Google Docs <input id="flow-manual-url" required type="url" placeholder="https://docs.google.com/document/d/.../edit" /></label>
+        <div id="flow-manual-test-fields" class="flow-manual-test-fields" hidden>
+          <label>Đợt test <input id="flow-manual-test-config" maxlength="120" placeholder="Ví dụ: Term Test 2 khóa Chuyên sâu" /></label>
+          <label>Cấu trúc bài <select id="flow-manual-topology"><option value="task_1_and_task_2">Có Task 1 và Task 2</option><option value="task_2_only">Chỉ Task 2</option></select></label>
+          <label>Ghi chú <textarea id="flow-manual-note" maxlength="500" placeholder="Thông tin giúp nhận biết bài test"></textarea></label>
+        </div>
         <button type="submit">Thêm vào hệ thống</button>
       </form>
     </dialog>

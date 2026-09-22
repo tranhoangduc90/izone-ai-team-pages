@@ -4,7 +4,8 @@
 // Khi dữ liệu hỏng: dùng mặc định hoặc nhãn “Ngày không hợp lệ”, không làm hỏng toàn dashboard.
 export const defaultColumnWidths = Object.freeze({
   student: 180, class: 95, teacher: 170, file: 95, classroom: 190, trcc: 90,
-  sourceStatus: 135, finished: 145, topic: 330, image: 110, created: 145,
+  sourceStatus: 135, testProgress: 260, testOverall: 130,
+  finished: 145, topic: 330, image: 110, created: 145,
   content: 430, lms: 110, attempts: 100, error: 170, actions: 125,
 });
 

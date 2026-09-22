@@ -43,6 +43,17 @@ test('dashboard có 7 giai đoạn, không gian lớp, tìm kiếm và retry đ�
   assert.match(html, /id="flow-manual-open"/u);
   assert.match(html, /id="flow-manual-name"/u);
   assert.match(html, /id="flow-manual-url"/u);
+  assert.match(html, /id="flow-manual-kind"/u);
+  assert.match(html, /id="flow-manual-topology"/u);
+  for (const stage of ['intake', 'precheck', 'main', 'critic', 'arbiter', 'render', 'deliver']) {
+    assert.match(html, new RegExp(`data-view="test_${stage}"`, 'u'));
+  }
+  assert.match(html, /data-view="test_overview"/u);
+  assert.match(html, /data-view="test_daily"/u);
+  assert.match(html, /data-view="test_review"/u);
+  assert.match(html, /data-view="test_skipped"/u);
+  assert.match(html, /data-view="test_delivered"/u);
+  assert.match(script, /sourceKind: activeSourceKind\(\)/u);
   assert.match(script, /addWritingManualSource/u);
   assert.match(script, /skipWritingPair/u);
   assert.match(script, /restoreWritingPair/u);

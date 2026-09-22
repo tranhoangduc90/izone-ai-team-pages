@@ -50,7 +50,7 @@ test('dashboard giữ đủ điều khiển xóa lọc, đổi thứ tự cột 
   assert.match(script, /line\.draggable = state\.visibleColumns\.includes\(key\)/u);
   assert.match(script, /addEventListener\('drop'/u);
   assert.match(script, /openDailyDetails\(day\)/u);
-  assert.match(script, /state\.activeView = 'delivered'/u);
+  assert.match(script, /state\.activeView = isTestView\(\) \? 'test_delivered' : 'delivered'/u);
   assert.match(script, /writingOperatorEvents/u);
   assert.match(script, /pinned-classes:v1/u);
   assert.match(script, /recent-classes:v1/u);
