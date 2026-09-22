@@ -1052,7 +1052,7 @@
       CC: 'Coherence & Cohesion',
       LR: 'Lexical Resource',
       GRA: 'Grammatical Range & Accuracy'
-    }[code] || `Task 1 · ${code}`;
+    }[code] || `Task ${taskNumber} · ${code}`;
   }
 
   function cleanWritingFeedback(value) {
@@ -1351,7 +1351,7 @@
     headingCopy.append(eyebrow, title);
     const note = document.createElement('p');
     note.textContent = grading?.ready
-      ? 'Nhấn vào điểm Task 1 để xem bài chấm chi tiết.'
+      ? 'Nhấn vào điểm Task 2 để xem bài chấm chi tiết.'
       : grading?.status === 'review_required'
         ? 'Bài làm đã được giữ an toàn; một phần chấm cần giáo viên kiểm tra trước khi công bố.'
         : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
@@ -1361,7 +1361,7 @@
     if (grading?.ready) {
       gradingArea.className = 'writing-score-grid';
       const tasksByNumber = new Map(Array.from(grading.tasks || []).map(task => [Number(task.taskNumber), task]));
-      for (const taskNumber of [1]) {
+      for (const taskNumber of Array.from(writingConfig.tasks || []).map(task => Number(task.id.replace('task', '')))) {
         const taskResult = tasksByNumber.get(taskNumber);
         const button = document.createElement('button');
         button.type = 'button';
@@ -1371,7 +1371,8 @@
         const score = document.createElement('strong');
         score.textContent = `Band ${formatBand(taskResult?.taskScore)}`;
         const action = document.createElement('small');
-        action.textContent = 'Xem bài chấm chi tiết →';
+        action.textContent = taskResult ? 'Xem bài chấm chi tiết →' : 'Chưa có dữ liệu bài chấm chi tiết';
+        button.disabled = !taskResult;
         button.append(label, score, action);
         button.addEventListener('click', () => openWritingFeedback(taskResult));
         gradingArea.append(button);
@@ -1383,7 +1384,7 @@
       const overallScore = document.createElement('strong');
       overallScore.textContent = `Band ${formatBand(grading.writingScore)}`;
       const formula = document.createElement('small');
-      formula.textContent = 'Điểm Writing = điểm Task 1';
+      formula.textContent = 'Điểm Writing = điểm Task 2';
       overall.append(overallLabel, overallScore, formula);
       gradingArea.append(overall);
     } else {
@@ -1392,7 +1393,7 @@
       const statusTitle = document.createElement('strong');
       statusTitle.textContent = grading?.status === 'review_required'
         ? 'Bài chấm đang được kiểm tra'
-        : 'Đang chấm Task 1';
+        : 'Đang chấm Task 2';
       const statusText = document.createElement('p');
       statusText.textContent = grading?.status === 'review_required'
         ? 'Bạn có thể đóng trang; kết quả vẫn được lưu và sẽ hiện khi hoàn chỉnh.'
@@ -1589,7 +1590,7 @@
     );
     elements.resultStatus.textContent = hasReading
       ? payload.writing?.grading?.ready
-        ? 'Listening và Reading được phân tích riêng; điểm Writing Task 1 đã hoàn tất và có bài chấm chi tiết.'
+        ? 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.'
         : payload.writing?.grading?.status === 'review_required'
           ? 'Listening và Reading đã chấm xong. Writing đã được nhận nhưng chưa có điểm từ workflow chấm K67.'
           : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
@@ -2038,7 +2039,7 @@
       grading: state.testGrades.writing?.grading || {
         status: 'processing',
         ready: false,
-        taskStates: { task1: 'processing' }
+        taskStates: { task2: 'processing' }
       }
     } : mode === 'complete' ? {
       task1: state.drafts.writing.task1,
@@ -2048,19 +2049,19 @@
       grading: {
         status: 'ready',
         ready: true,
-        task1Score: 7,
+        task2Score: 7,
         writingScore: 7,
-        taskStates: { task1: 'complete' },
+        taskStates: { task2: 'complete' },
         tasks: [
           {
-            taskNumber: 1,
+            taskNumber: 2,
             taskScore: 7,
-            wordCount: countWords(state.drafts.writing.task1),
-            criteria: ['TA', 'CC', 'LR', 'GRA'].map(code => ({
+            wordCount: countWords(state.drafts.writing.task2),
+            criteria: ['TR', 'CC', 'LR', 'GRA'].map(code => ({
               code,
-              name: criterionTitle(code, 1),
+              name: criterionTitle(code, 2),
               bandScore: 7,
-              feedback: `Nhận xét minh họa cho tiêu chí ${criterionTitle(code, 1)}.`,
+              feedback: `Nhận xét minh họa cho tiêu chí ${criterionTitle(code, 2)}.`,
               components: [{
                 code: `${code.toLowerCase()}_demo`,
                 label: 'Nhận xét theo khía cạnh',
@@ -2079,9 +2080,7 @@
       portalSyncStatus: serverGradingMode ? state.testGrades.writing?.portalSync?.status || 'not_applicable' : 'synced',
       writing: demoWriting,
       result: {
-        testTitle: serverGradingMode
-          ? 'Substitute Test 2 · Khóa 56 · Backend test'
-          : 'Substitute Test 2 · Khóa 56 · Bản minh họa',
+        testTitle: `${testConfig.title} · ${serverGradingMode ? 'Backend test' : 'Bản minh họa'}`,
         listening,
         reading,
         summary: {
