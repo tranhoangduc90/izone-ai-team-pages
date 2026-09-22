@@ -9,6 +9,7 @@ import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 
 const source = readFileSync(new URL('../ai-gateway-dashboard/app.js', import.meta.url), 'utf8');
+const sessionSource = readFileSync(new URL('../ai-gateway-dashboard/session-client.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../ai-gateway-dashboard/index.html', import.meta.url), 'utf8');
 
 class Element {
@@ -30,6 +31,19 @@ function dashboardContext() {
   const elements = new Map();
   const requests = [];
   let assignedUrl = '';
+  const fetchMock = async (url, options = {}) => {
+    requests.push({ url, options });
+    if (url.endsWith('/auth/session')) {
+      return {
+        ok: false, status: 401,
+        async json() { return { error:{ code:'google_login_required' } }; },
+      };
+    }
+    return {
+      ok: true, status: 201,
+      async json() { return { worker_id: 'vps_3', path: 'google-account', ticket: 'ticket-safe-012345678901234567890123456789' }; },
+    };
+  };
   const context = vm.createContext({
     window: {
       AI_GATEWAY_DASHBOARD_CONFIG: {
@@ -37,6 +51,7 @@ function dashboardContext() {
         GOOGLE_CLIENT_ID: 'client.apps.googleusercontent.com',
       },
       addEventListener() {}, setTimeout() {},
+      fetch: fetchMock,
       location: { assign(value) { assignedUrl = value; } },
     },
     document: {
@@ -48,18 +63,13 @@ function dashboardContext() {
       },
       querySelector: () => new Element(),
     },
-    fetch: async (url, options) => {
-      requests.push({ url, options });
-      return {
-        ok: true, status: 201,
-        async json() { return { worker_id: 'vps_3', path: 'google-account', ticket: 'ticket-safe-012345678901234567890123456789' }; },
-      };
-    },
+    fetch: fetchMock,
     crypto: webcrypto,
     URL,
     URLSearchParams,
     encodeURIComponent,
   });
+  vm.runInContext(sessionSource, context);
   vm.runInContext(source, context);
   return { context, elements, requests, assignedUrl: () => assignedUrl };
 }
@@ -67,7 +77,7 @@ function dashboardContext() {
 test('Pages không còn ô nhập hoặc xử lý trực tiếp JSON credential', () => {
   assert.doesNotMatch(html, /id="credentialFile"|id="credentialJson"|id="uploadCredential"/);
   assert.doesNotMatch(source, /JSON\.parse\(await file\.text\(\)\)|uploadCredential|activateCredential/);
-  assert.doesNotMatch(source + html, /localStorage|sessionStorage|BEGIN PRIVATE KEY/);
+  assert.doesNotMatch(source + sessionSource + html, /localStorage|sessionStorage|BEGIN PRIVATE KEY/);
   assert.match(html, /JSON được nhập trên trang bảo mật của gateway/);
 });
 
@@ -85,13 +95,15 @@ test('mỗi thẻ máy có nút Thay tài khoản Google', () => {
 
 test('nút thay tài khoản chỉ gửi worker_id rồi chuyển sang ticket trong fragment', async () => {
   const runtime = dashboardContext();
-  vm.runInContext("state.idToken = 'google-id-token-in-memory'", runtime.context);
+  vm.runInContext('state.authenticated = true', runtime.context);
   const button = { dataset:{ rotateWorker:'vps_3' }, disabled:false };
   await runtime.context.openAccountRotation({ currentTarget:button });
-  assert.equal(runtime.requests.length, 1);
-  assert.equal(runtime.requests[0].url, 'https://gateway.example.test/ai-gateway-dashboard/rotation-sessions');
-  assert.deepEqual(JSON.parse(runtime.requests[0].options.body), { worker_id:'vps_3' });
-  assert.doesNotMatch(runtime.requests[0].options.body, /private_key|credential/);
+  const rotationRequest = runtime.requests.find(request => request.url.endsWith('/rotation-sessions'));
+  assert.equal(rotationRequest.url, 'https://gateway.example.test/ai-gateway-dashboard/rotation-sessions');
+  assert.deepEqual(JSON.parse(rotationRequest.options.body), { worker_id:'vps_3' });
+  assert.equal(rotationRequest.options.credentials, 'include');
+  assert.equal(rotationRequest.options.headers['x-izone-csrf'], '1');
+  assert.doesNotMatch(rotationRequest.options.body, /private_key|credential/);
   const target = new URL(runtime.assignedUrl());
   assert.equal(target.origin, 'https://gateway.example.test');
   assert.equal(target.pathname, '/ai-gateway-dashboard/google-account');
@@ -99,8 +111,9 @@ test('nút thay tài khoản chỉ gửi worker_id rồi chuyển sang ticket tr
 });
 
 test('HTML dùng phiên bản tài nguyên mới để tránh trình duyệt giữ giao diện cũ', () => {
-  assert.match(html, /app\.js\?v=20260922-google-account-wizard-v1/);
-  assert.match(html, /styles\.css\?v=20260922-google-account-wizard-v1/);
+  assert.match(html, /session-client\.js\?v=20260922-dashboard-session-v1/);
+  assert.match(html, /app\.js\?v=20260922-dashboard-session-v1/);
+  assert.match(html, /styles\.css\?v=20260922-dashboard-session-v1/);
 });
 
 test('CSP cho phép đúng style hiện hành của Google Identity Services', () => {

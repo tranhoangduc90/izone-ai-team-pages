@@ -1,6 +1,6 @@
 /*
- * Dữ liệu nhận vào: Google ID token và dữ liệu vận hành từ API production.
- * Việc chính: giữ token trong RAM, tải dashboard, lọc lịch sử và gửi các thay đổi có lý do/audit.
+ * Dữ liệu nhận vào: phiên HttpOnly và dữ liệu vận hành từ API production.
+ * Việc chính: khôi phục phiên, tải dashboard, lọc lịch sử và gửi các thay đổi có lý do/audit.
  * Kết quả: người vận hành xem và điều chỉnh hệ thống mà không phải nhập mã kỹ thuật.
  * Khi lỗi: giao diện giữ dữ liệu cũ, hiện thông báo rõ; phiên hết hạn sẽ quay về màn hình đăng nhập.
  */
@@ -8,7 +8,8 @@ const config = window.AI_GATEWAY_DASHBOARD_CONFIG || {};
 const $ = id => document.getElementById(id);
 const colors = { google_1:'#2878d0', google_2:'#16a085', google_3:'#f39c12', google_4:'#8e5bb7' };
 const statusText = { success:'Thành công', failed:'Thất bại', running:'Đang chạy' };
-const state = { idToken:'', operator:null, workers:[], billing:[], shares:{}, summary:{} };
+const state = { authenticated:false, operator:null, workers:[], billing:[], shares:{}, summary:{} };
+const sessionClient = window.AIGatewaySessionClient.create({ baseUrl:config.API_BASE_URL });
 
 function node(tag, className, textValue) {
   const element = document.createElement(tag);
@@ -40,6 +41,9 @@ function friendlyError(code, fallback) {
   const messages = {
     google_login_required:'Bạn cần đăng nhập Google.',
     google_token_invalid:'Phiên Google đã hết hạn. Hãy đăng nhập lại.',
+    dashboard_session_invalid:'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.',
+    dashboard_csrf_rejected:'Yêu cầu thay đổi không vượt qua kiểm tra an toàn. Hãy tải lại trang.',
+    google_credential_invalid:'Google không trả về thông tin đăng nhập hợp lệ.',
     google_account_not_allowed:'Tài khoản Google này chưa được cấp quyền.',
     dashboard_origin_forbidden:'Trang hiện tại không được phép gọi dashboard.',
     google_dashboard_auth_not_configured:'Backend chưa hoàn tất cấu hình Google Auth.',
@@ -49,29 +53,27 @@ function friendlyError(code, fallback) {
 }
 
 async function api(path, { method='GET', body, reason } = {}) {
-  if (!state.idToken) throw new Error('Bạn chưa đăng nhập Google.');
-  const headers = { Authorization:`Bearer ${state.idToken}` };
-  if (body !== undefined) headers['content-type'] = 'application/json';
+  if (!state.authenticated) throw new Error('Bạn chưa đăng nhập Google.');
+  const headers = {};
   if (reason) {
     headers['x-change-reason'] = encodeURIComponent(reason);
     headers['x-idempotency-key'] = crypto.randomUUID();
   }
-  const response = await fetch(`${config.API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const response = await sessionClient.request(path, { method, headers, body });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
     const code = payload?.error?.code;
-    if (response.status === 401) showLogin();
+    if (response.status === 401) {
+      showLogin();
+      initializeGoogle();
+    }
     throw new Error(friendlyError(code, `API trả về mã ${response.status}.`));
   }
   return payload;
 }
 
 function showLogin(message='') {
-  state.idToken = '';
+  state.authenticated = false;
   state.operator = null;
   $('dashboardView').hidden = true;
   $('operatorBadge').hidden = true;
@@ -437,9 +439,10 @@ async function refreshAll() {
   finally { button.disabled = false; }
 }
 
-async function connectAfterGoogleLogin() {
-  const me = await api('/me');
-  state.operator = me.operator;
+async function connectAfterGoogleLogin(credential) {
+  const session = await sessionClient.login(credential);
+  state.authenticated = true;
+  state.operator = session.operator;
   showDashboard();
   await refreshAll();
 }
@@ -459,25 +462,52 @@ function initializeGoogle(attempt = 0) {
     auto_select:false,
     cancel_on_tap_outside:false,
     callback:response => {
-      state.idToken = response.credential || '';
+      const credential = response.credential || '';
       $('loginNotice').textContent = '';
-      if (!state.idToken) { showLogin('Google không trả về phiên đăng nhập.'); return; }
-      void connectAfterGoogleLogin().catch(error => showLogin(error.message));
+      if (!credential) { showLogin('Google không trả về phiên đăng nhập.'); return; }
+      void connectAfterGoogleLogin(credential).catch(error => {
+        showLogin(friendlyError(error.code, error.message));
+        initializeGoogle();
+      });
     },
   });
+  $('googleSignInButton').replaceChildren();
   window.google.accounts.id.renderButton($('googleSignInButton'), { type:'standard', theme:'outline', size:'large', shape:'pill', text:'signin_with', locale:'vi' });
 }
 
 $('logoutButton').addEventListener('click', () => {
-  window.google?.accounts?.id?.disableAutoSelect();
-  showLogin('Bạn đã đăng xuất khỏi dashboard.');
+  const button = $('logoutButton');
+  button.disabled = true;
+  void sessionClient.logout().then(() => {
+    window.google?.accounts?.id?.disableAutoSelect();
+    showLogin('Bạn đã đăng xuất khỏi dashboard.');
+    initializeGoogle();
+  }).catch(error => toast(`Không thể đăng xuất: ${friendlyError(error.code, error.message)}`))
+    .finally(() => { button.disabled = false; });
 });
 $('refreshAll').addEventListener('click', () => void refreshAll());
 $('applyUsage').addEventListener('click', () => void loadUsage().catch(error => toast(`Lỗi: ${error.message}`)));
 $('applyHistory').addEventListener('click', () => void loadHistory().catch(error => toast(`Lỗi: ${error.message}`)));
 $('saveSource').addEventListener('click', () => void saveSourceMachine().catch(error => toast(`Lỗi: ${error.message}`)));
 $('closeDialog').addEventListener('click', () => $('detailDialog').close());
-window.addEventListener('resize', () => { if (state.idToken) void loadUsage().catch(() => undefined); });
+window.addEventListener('resize', () => { if (state.authenticated) void loadUsage().catch(() => undefined); });
 
-showLogin();
-initializeGoogle();
+async function restoreSession() {
+  showLogin('Đang kiểm tra phiên đăng nhập…');
+  try {
+    const session = await sessionClient.restore();
+    if (session) {
+      state.authenticated = true;
+      state.operator = session.operator;
+      showDashboard();
+      await refreshAll();
+      return;
+    }
+    showLogin();
+  } catch (error) {
+    showLogin(friendlyError(error.code, 'Không kiểm tra được phiên đăng nhập.'));
+  }
+  initializeGoogle();
+}
+
+void restoreSession();
