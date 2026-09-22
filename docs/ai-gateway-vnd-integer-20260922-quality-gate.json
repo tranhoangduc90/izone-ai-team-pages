@@ -1,0 +1,171 @@
+{
+  "schema_version": 2,
+  "product": "Dashboard Cổng AI Trung tâm trên GitHub Pages",
+  "change_id": "ai-gateway-vnd-integer-20260922",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "medium",
+  "system_traits": [
+    "authentication"
+  ],
+  "requirements": [
+    {
+      "id": "REQ-VND",
+      "statement": "Thẻ tài khoản, phần tổng hợp và biểu đồ chi phí hiển thị Việt Nam đồng thay cho USD.",
+      "test_ids": ["T-HP", "T-REG"]
+    },
+    {
+      "id": "REQ-INTEGER",
+      "statement": "Mọi số tiền được làm tròn gần nhất và hiển thị không có chữ số thập phân.",
+      "test_ids": ["T-HP", "T-BAD", "T-REG"]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-NO-CONVERSION",
+      "statement": "Frontend chỉ định dạng số Billing đã là VND, không nhân chia hoặc dùng tỷ giá.",
+      "test_ids": ["T-HP", "T-BAD"]
+    },
+    {
+      "id": "INV-AUTH-ROTATION",
+      "statement": "Khôi phục phiên đăng nhập và quy trình thay tài khoản Google giữ nguyên contract bảo mật.",
+      "test_ids": ["T-SEC", "T-CROSS"]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-HP",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Bốn ca tiền tệ và readback trình duyệt desktop/mobile xác nhận số dư, đã dùng, insight và biểu đồ dùng số nguyên với hậu tố đ."
+    },
+    {
+      "id": "T-BAD",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "NaN, Infinity và chuỗi không hợp lệ hiển thị 0 đ; số âm được làm tròn đúng và không sinh nhãn lỗi."
+    },
+    {
+      "id": "T-SEC",
+      "category": "security_privacy",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Tám test phiên đăng nhập và thay tài khoản Google đạt; test tiền tệ chỉ dùng dữ liệu giả, không chứa credential hoặc dữ liệu người dùng."
+    },
+    {
+      "id": "T-REG",
+      "category": "regression",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Cùng test tiền tệ RED 0/4 trên source base và GREEN 4/4 sau sửa."
+    },
+    {
+      "id": "T-CROSS",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Hồi quy Term Test đạt 5/5 và Writing đạt 125/125; không có file hai hệ thống này bị sửa."
+    }
+  ],
+  "red_green": {
+    "red_on_base": {
+      "test_id": "T-REG",
+      "command": "node --test tests/ai-gateway-credit-display.mjs",
+      "tree_revision": "c88960b298e259b2ba9904d722bb5cf0b7679380",
+      "outcome": "failed",
+      "exit_code": 1,
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0,
+      "evidence": "Source base còn hiển thị 1.768.613,01 US$, nhãn USD và trục biểu đồ có dấu $."
+    },
+    "green_on_head": {
+      "test_id": "T-REG",
+      "command": "node --test tests/ai-gateway-credit-display.mjs",
+      "tree_revision": "c5377dac011b7906cf86d1ddaa9aee211f7d4e32",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Định dạng, nhãn tĩnh, thẻ/insight và trục biểu đồ đều đạt contract VND nguyên."
+    }
+  },
+  "coverage_exemptions": {
+    "full_suite": "Không chạy toàn bộ kho Pages vì có test live gửi request tới production ngoài phạm vi; đã chạy toàn bộ suite Cổng AI bị ảnh hưởng và hai suite chéo Term Test/Writing."
+  },
+  "cross_constraints": [],
+  "mutations": [],
+  "verification_runs": [
+    {
+      "id": "V-AI-GATEWAY",
+      "scope": "focused",
+      "command": "node --test tests/ai-gateway-credit-display.mjs tests/ai-gateway-session-persistence.mjs tests/ai-gateway-account-rotation.mjs && node --check ai-gateway-dashboard/app.js",
+      "tree_revision": "c5377dac011b7906cf86d1ddaa9aee211f7d4e32",
+      "captured_at": "2026-09-22T23:23:00+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Mười hai test Cổng AI đạt và JavaScript qua kiểm tra cú pháp."
+    },
+    {
+      "id": "V-TERM-TEST",
+      "scope": "focused",
+      "command": "node --test tests/term-test-teacher-session.mjs tests/teacher-login-preference.mjs",
+      "tree_revision": "c5377dac011b7906cf86d1ddaa9aee211f7d4e32",
+      "captured_at": "2026-09-22T23:24:00+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Các contract phiên dùng chung của Term Test đạt 5/5."
+    },
+    {
+      "id": "V-WRITING",
+      "scope": "focused",
+      "command": "npm.cmd test (trong writing-handouts)",
+      "tree_revision": "c5377dac011b7906cf86d1ddaa9aee211f7d4e32",
+      "captured_at": "2026-09-22T23:25:00+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 125,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Toàn bộ 125 test Writing đạt."
+    },
+    {
+      "id": "V-BROWSER",
+      "scope": "behavioral",
+      "command": "Playwright CLI với API giả an toàn ở 1440x900 và 390x844",
+      "tree_revision": "c5377dac011b7906cf86d1ddaa9aee211f7d4e32",
+      "captured_at": "2026-09-22T23:33:00+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Bốn thẻ hiển thị lần lượt 1.768.613 đ, 4.397.816 đ, 6.951.509 đ và 3.382.317 đ; không tràn thẻ, console 0 lỗi."
+    }
+  ],
+  "release": {
+    "target_environment": "production",
+    "decision": "ready",
+    "base_tree_revision": "c88960b298e259b2ba9904d722bb5cf0b7679380",
+    "current_tree_revision": "c5377dac011b7906cf86d1ddaa9aee211f7d4e32",
+    "production_authorized": true,
+    "rollback": "Revert commit Pages của thay đổi này rồi chờ GitHub Pages build lại.",
+    "deployment_readback": "not_applicable",
+    "operational_observation": "Bản local dùng API giả an toàn đã đạt trên desktop/mobile và không có lỗi console.",
+    "open_risks": [
+      {
+        "severity": "P2",
+        "summary": "Giao diện HTML nhúng trực tiếp trong backend gateway là đường riêng và không được phát hành lại trong thay đổi Pages để tránh tác động dịch vụ AI."
+      }
+    ]
+  }
+}

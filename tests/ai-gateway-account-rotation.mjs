@@ -112,7 +112,7 @@ test('nút thay tài khoản chỉ gửi worker_id rồi chuyển sang ticket tr
 
 test('HTML dùng phiên bản tài nguyên mới để tránh trình duyệt giữ giao diện cũ', () => {
   assert.match(html, /session-client\.js\?v=20260922-dashboard-session-v1/);
-  assert.match(html, /app\.js\?v=20260922-dashboard-session-v1/);
+  assert.match(html, /app\.js\?v=20260922-dashboard-vnd-v1/);
   assert.match(html, /styles\.css\?v=20260922-dashboard-session-v1/);
 });
 

@@ -19,7 +19,13 @@ function node(tag, className, textValue) {
 }
 
 function money(value) {
-  return new Intl.NumberFormat('vi-VN', { style:'currency', currency:'USD', maximumFractionDigits:2 }).format(Number(value || 0));
+  // Số Billing đã là Việt Nam đồng; chỉ làm tròn để hiển thị, không quy đổi tỷ giá.
+  const amount = Number(value);
+  const safeAmount = Number.isFinite(amount) && !Object.is(amount, -0) ? amount : 0;
+  return `${new Intl.NumberFormat('vi-VN', {
+    minimumFractionDigits:0,
+    maximumFractionDigits:0,
+  }).format(safeAmount)} đ`;
 }
 
 function when(value) {
@@ -249,7 +255,7 @@ async function loadCredentials() {
   renderCredentials(data.items || []);
 }
 
-function drawAxes(context, width, height, maxValue, labelFormatter) {
+function drawAxes(context, width, height, maxValue, labelFormatter, left=44) {
   context.clearRect(0, 0, width, height);
   context.strokeStyle = '#dce5ec';
   context.fillStyle = '#66788a';
@@ -257,7 +263,7 @@ function drawAxes(context, width, height, maxValue, labelFormatter) {
   context.lineWidth = 1;
   for (let index = 0; index <= 4; index += 1) {
     const y = 20 + (height - 55) * (index / 4);
-    context.beginPath(); context.moveTo(44, y); context.lineTo(width - 12, y); context.stroke();
+    context.beginPath(); context.moveTo(left, y); context.lineTo(width - 12, y); context.stroke();
     context.fillText(labelFormatter(maxValue * (1 - index / 4)), 4, y + 4);
   }
 }
@@ -272,13 +278,14 @@ function drawCostChart(rows) {
     byDate.get(row.date)[row.account_id] = Number(row.gross_cost);
   }
   const max = Math.max(1, ...dates.map(date => Object.values(byDate.get(date) || {}).reduce((a, b) => a + b, 0))) * 1.15;
-  drawAxes(context, canvas.width, canvas.height, max, value => `$${value.toFixed(1)}`);
+  const plotLeft = 88;
+  drawAxes(context, canvas.width, canvas.height, max, value => money(value), plotLeft);
   if (!dates.length) return;
-  const plotWidth = canvas.width - 62;
+  const plotWidth = canvas.width - plotLeft - 12;
   const barWidth = Math.max(4, Math.min(34, plotWidth / dates.length * .68));
   dates.forEach((date, index) => {
     let y = canvas.height - 35;
-    const x = 48 + (index + .5) * (plotWidth / dates.length) - barWidth / 2;
+    const x = plotLeft + (index + .5) * (plotWidth / dates.length) - barWidth / 2;
     for (const account of Object.keys(colors)) {
       const value = byDate.get(date)?.[account] || 0;
       const height = value / max * (canvas.height - 55);
