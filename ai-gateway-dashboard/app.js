@@ -43,6 +43,7 @@ function friendlyError(code, fallback) {
     google_account_not_allowed:'Tài khoản Google này chưa được cấp quyền.',
     dashboard_origin_forbidden:'Trang hiện tại không được phép gọi dashboard.',
     google_dashboard_auth_not_configured:'Backend chưa hoàn tất cấu hình Google Auth.',
+    worker_not_found:'Không tìm thấy máy cần thay tài khoản.',
   };
   return messages[code] || fallback || code || 'Không tải được dữ liệu.';
 }
@@ -99,16 +100,6 @@ function renderSummary(data) {
   $('kpiFallback').textContent = String(state.summary.fallback_count || 0);
   renderBilling(state.billing);
   renderWorkers(state.workers, state.shares);
-
-  const workerSelector = $('credentialWorker');
-  const selectedWorker = workerSelector.value;
-  workerSelector.replaceChildren();
-  for (const worker of state.workers) {
-    const option = node('option', '', worker.display_name);
-    option.value = worker.id;
-    workerSelector.append(option);
-  }
-  if (state.workers.some(worker => worker.id === selectedWorker)) workerSelector.value = selectedWorker;
 
   const accountSelector = $('usageAccount');
   const selectedAccount = accountSelector.value;
@@ -172,13 +163,18 @@ function renderWorkers(workers, shares) {
     enabled.dataset.enabled = worker.id;
     toggle.append(enabled, document.createTextNode(' Cho máy này nhận việc'));
     card.append(toggle);
+    const actions = node('div', 'actions');
     const save = node('button', '', 'Lưu trọng số');
     save.dataset.save = worker.id;
-    card.append(save);
+    const rotate = node('button', 'secondary', 'Thay tài khoản Google');
+    rotate.dataset.rotateWorker = worker.id;
+    actions.append(save, rotate);
+    card.append(actions);
     container.append(card);
   }
   container.querySelectorAll('input').forEach(input => input.addEventListener('input', previewShares));
   container.querySelectorAll('button[data-save]').forEach(button => button.addEventListener('click', event => void saveWorker(event)));
+  container.querySelectorAll('button[data-rotate-worker]').forEach(button => button.addEventListener('click', event => void openAccountRotation(event)));
 }
 
 function previewShares() {
@@ -211,6 +207,24 @@ async function saveWorker(event) {
   finally { button.disabled = false; }
 }
 
+async function openAccountRotation(event) {
+  const button = event.currentTarget;
+  const workerId = button.dataset.rotateWorker;
+  button.disabled = true;
+  try {
+    const session = await api('/rotation-sessions', {
+      method:'POST', body:{ worker_id:workerId }, reason:`Mở màn hình thay tài khoản Google cho ${workerId}`,
+    });
+    const base = new URL(config.API_BASE_URL.endsWith('/') ? config.API_BASE_URL : `${config.API_BASE_URL}/`);
+    const target = new URL(session.path, base);
+    target.hash = new URLSearchParams({ ticket:session.ticket }).toString();
+    window.location.assign(target.toString());
+  } catch (error) {
+    toast(`Lỗi: ${error.message}`);
+    button.disabled = false;
+  }
+}
+
 function renderCredentials(items) {
   const container = $('credentials');
   container.replaceChildren();
@@ -224,61 +238,13 @@ function renderCredentials(items) {
       node('div', 'meta', `Dấu vân tay ${item.private_key_fingerprint}`),
       node('div', 'meta', `Trạng thái: ${item.status} · kiểm tra: ${item.test_status}`),
     );
-    const actions = node('div', 'actions');
-    const testButton = node('button', 'secondary', 'Kiểm tra');
-    testButton.dataset.testCredential = item.id;
-    actions.append(testButton);
-    if (item.test_status === 'success' && item.status !== 'active') {
-      const activate = node('button', '', 'Kích hoạt');
-      activate.dataset.activateCredential = item.id;
-      actions.append(activate);
-    }
-    card.append(actions);
     container.append(card);
   }
-  container.querySelectorAll('[data-test-credential]').forEach(button => button.addEventListener('click', event => void testCredential(event)));
-  container.querySelectorAll('[data-activate-credential]').forEach(button => button.addEventListener('click', event => void activateCredential(event)));
 }
 
 async function loadCredentials() {
   const data = await api('/credentials');
   renderCredentials(data.items || []);
-}
-
-async function uploadCredential() {
-  const file = $('credentialFile').files[0];
-  if (!file) throw new Error('Hãy chọn file JSON service account.');
-  if (file.size > 1024 * 1024) throw new Error('File credential lớn bất thường; hãy kiểm tra lại.');
-  let credential;
-  try { credential = JSON.parse(await file.text()); }
-  catch { throw new Error('File credential không phải JSON hợp lệ.'); }
-  const worker = $('credentialWorker').value;
-  await api('/credentials', {
-    method:'POST',
-    body:{ worker_id:worker, display_name:$('credentialName').value.trim(), credential },
-    reason:`Tải credential mới cho ${worker}`,
-  });
-  $('credentialFile').value = '';
-  toast('Đã lưu bản credential mới; cần kiểm tra trước khi kích hoạt.');
-  await loadCredentials();
-}
-
-async function testCredential(event) {
-  const id = event.currentTarget.dataset.testCredential;
-  try {
-    const data = await api(`/credentials/${encodeURIComponent(id)}/test`, { method:'POST', body:{}, reason:'Kiểm tra credential trước khi kích hoạt' });
-    toast(data.ok ? 'Kết nối Google thành công.' : 'Kết nối Google thất bại.');
-    await loadCredentials();
-  } catch (error) { toast(`Lỗi: ${error.message}`); }
-}
-
-async function activateCredential(event) {
-  const id = event.currentTarget.dataset.activateCredential;
-  try {
-    await api(`/credentials/${encodeURIComponent(id)}/activate`, { method:'POST', body:{}, reason:'Kích hoạt credential đã kiểm tra' });
-    toast('Đã kích hoạt credential mới.');
-    await loadCredentials();
-  } catch (error) { toast(`Lỗi: ${error.message}`); }
 }
 
 function drawAxes(context, width, height, maxValue, labelFormatter) {
@@ -510,7 +476,6 @@ $('refreshAll').addEventListener('click', () => void refreshAll());
 $('applyUsage').addEventListener('click', () => void loadUsage().catch(error => toast(`Lỗi: ${error.message}`)));
 $('applyHistory').addEventListener('click', () => void loadHistory().catch(error => toast(`Lỗi: ${error.message}`)));
 $('saveSource').addEventListener('click', () => void saveSourceMachine().catch(error => toast(`Lỗi: ${error.message}`)));
-$('uploadCredential').addEventListener('click', () => void uploadCredential().catch(error => toast(`Lỗi: ${error.message}`)));
 $('closeDialog').addEventListener('click', () => $('detailDialog').close());
 window.addEventListener('resize', () => { if (state.idToken) void loadUsage().catch(() => undefined); });
 

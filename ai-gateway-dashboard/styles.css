@@ -55,7 +55,7 @@ canvas { width:100%; height:260px; display:block; }
 .worker .share { color:var(--blue); font-weight:700; margin-top:5px; }
 .credential-tools { display:grid; grid-template-columns:1fr 1fr 1.4fr auto; gap:10px; align-items:end; margin-bottom:14px; }
 .source-tools { display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px; align-items:end; margin-bottom:14px; padding:12px; background:#f4f7f9; border-radius:10px; }
-.credential .actions { display:flex; gap:7px; margin-top:11px; }
+.credential .actions,.worker .actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:11px; }
 .toggle { display:flex; align-items:center; gap:7px; color:var(--ink); font-size:13px; }
 .toggle input { min-height:auto; width:17px; height:17px; }
 .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:10px; }

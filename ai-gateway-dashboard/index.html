@@ -9,7 +9,7 @@
   <meta name="description" content="Dashboard vận hành Cổng AI Trung tâm">
   <title>Cổng AI Trung tâm — Đang vận hành</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./styles.css?v=20260830-google-auth-v1">
+  <link rel="stylesheet" href="./styles.css?v=20260922-google-account-wizard-v1">
 </head>
 <body>
   <header class="topbar">
@@ -75,14 +75,8 @@
       </section>
 
       <section class="section">
-        <div class="section-head"><div><h2>Tài khoản Google xử lý AI</h2><p>Thêm file JSON service account, kiểm tra kết nối rồi mới kích hoạt. Khóa riêng không bao giờ hiển thị lại.</p></div></div>
+        <div class="section-head"><div><h2>Tài khoản Google xử lý AI</h2><p>Bấm “Thay tài khoản Google” tại đúng máy ở phía trên. JSON được nhập trên trang bảo mật của gateway và khóa riêng không bao giờ hiển thị lại.</p></div></div>
         <div class="section-body">
-          <div class="credential-tools">
-            <label>Gắn với máy<select id="credentialWorker"></select></label>
-            <label>Tên dễ nhớ<input id="credentialName" value="Google service account"></label>
-            <label>File JSON<input id="credentialFile" type="file" accept="application/json,.json"></label>
-            <button id="uploadCredential">Tải lên bản mới</button>
-          </div>
           <div class="credentials" id="credentials"></div>
           <div class="empty" id="credentialEmpty">Chưa có credential để hiển thị.</div>
         </div>
@@ -124,6 +118,6 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="./config.js?v=20260830-google-auth-v1"></script>
-  <script type="module" src="./app.js?v=20260830-google-auth-v1"></script>
+  <script type="module" src="./app.js?v=20260922-google-account-wizard-v1"></script>
 </body>
 </html>
