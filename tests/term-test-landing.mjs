@@ -160,6 +160,7 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     const heights = await page.locator('.landing-actions .button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().height));
     assert.equal(new Set(heights.map(Math.round)).size, 1);
     await page.getByRole('button', { name: 'Đăng xuất' }).click();
+    await page.locator('#loginStatus').filter({ hasText: 'Đã đăng xuất' }).waitFor();
     assert.equal(await page.locator('#classCode').isVisible(), true);
     assert.equal(await page.locator('#classSelect').isHidden(), true);
     optionsMode = 'error';
