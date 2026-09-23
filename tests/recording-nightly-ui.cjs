@@ -2,7 +2,9 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const playwrightModule = process.env.PLAYWRIGHT_MODULE
+  || (process.env.CODEX_NODE_MODULES ? path.join(process.env.CODEX_NODE_MODULES, 'playwright') : 'playwright');
+const {chromium}=require(playwrightModule);
 const root=path.resolve(__dirname,'..');
 const server=http.createServer((req,res)=>{
   const pathname=new URL(req.url,'http://localhost').pathname;
