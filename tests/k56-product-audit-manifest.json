@@ -5,9 +5,11 @@
     "term_mini_56": [
       "tests/k56-answer-sheet-identity.mjs",
       "tests/k56-audio-volume-flow.mjs",
+      "tests/k56-backup-pages.mjs",
       "tests/k56-class-api-routing.mjs",
       "tests/k56-exam-integrity.mjs",
       "tests/k56-landing.mjs",
+      "tests/k56-local-source-parity.mjs",
       "tests/k56-mini-release.mjs",
       "tests/k56-mini-writing-revision.mjs",
       "tests/k56-product-matrix-audit.mjs",
@@ -40,14 +42,5 @@
     ],
     "k67_no_impact_guard": "tests/term-test-67-regression-manifest.json"
   },
-  "excluded_nonhermetic": [
-    {
-      "file": "tests/k56-backup-pages.mjs",
-      "reason": "Một ca đối chiếu hash MP3 nguồn riêng tư nằm ngoài Git; các ca còn lại cần tách để chạy độc lập trong worktree."
-    },
-    {
-      "file": "tests/k56-local-source-parity.mjs",
-      "reason": "Giả định đường dẫn ../.. là workspace gốc; không đúng với linked worktree và phụ thuộc source ngoài Git."
-    }
-  ]
+  "excluded_nonhermetic": []
 }
