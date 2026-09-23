@@ -39,20 +39,23 @@ for (const exam of exams) {
 
 test('Term/Mini K56: demo và lớp thật không được chuyển nhầm sang nhau', () => {
   for (const shared of ['k56-shared', 'k56-test2-shared', 'k56-mini-shared']) {
-    for (const [classCode, endpoint] of [
-      ['CODEXDEMO56', 'mapping-api-demo'],
-      ['IC2264', 'mapping-api-k56'],
-      ['IC2175', 'mapping-api-k56'],
-      ['IC2180', 'mapping-api-k56']
-    ]) {
-      const window = { location: { search: `?class=${classCode}` } };
-      vm.runInNewContext(read(`term-tests/${shared}/config.js`), { window, URLSearchParams });
-      const config = window.TERM_TEST_APP_CONFIG;
-      assert.equal(
-        config.API_BY_CLASS?.[classCode] || config.API_BASE_URL,
-        `https://ducizone.ddns.net/${endpoint}`,
-        `${shared}/${classCode} phải định tuyến đúng môi trường`
-      );
+    for (const initialClass of ['CODEXDEMO56', 'IC2264']) {
+      for (const [classCode, endpoint] of [
+        ['CODEXDEMO56', 'mapping-api-demo'],
+        ['IC2264', 'mapping-api-k56'],
+        ['IC2175', 'mapping-api-k56'],
+        ['IC2180', 'mapping-api-k56'],
+        ['UNKNOWN56', 'mapping-api-k56']
+      ]) {
+        const window = { location: { search: `?class=${initialClass}` } };
+        vm.runInNewContext(read(`term-tests/${shared}/config.js`), { window, URLSearchParams });
+        const config = window.TERM_TEST_APP_CONFIG;
+        assert.equal(
+          config.API_FOR_CLASS?.(classCode) || config.API_BASE_URL,
+          `https://ducizone.ddns.net/${endpoint}`,
+          `${shared}/${initialClass}→${classCode} phải định tuyến đúng môi trường`
+        );
+      }
     }
   }
 });

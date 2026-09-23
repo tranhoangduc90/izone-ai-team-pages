@@ -172,7 +172,7 @@ document.querySelectorAll('[data-test]').forEach(button => {
     button.disabled = true;
     classHelp.textContent = 'Đang kiểm tra danh sách học viên của lớp...';
     try {
-      const apiBaseUrl = appConfig.API_BY_CLASS?.[classCode] || appConfig.API_BASE_URL;
+      const apiBaseUrl = appConfig.API_FOR_CLASS(classCode);
       const response = await fetch(
         `${apiBaseUrl}/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(slug)}`,
         { cache: 'no-store', signal: AbortSignal.timeout(15000) }

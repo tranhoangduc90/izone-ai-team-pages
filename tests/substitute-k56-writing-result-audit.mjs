@@ -49,6 +49,24 @@ for (const number of [1, 2]) {
     const result = harness(number, { ready: true, writingScore: 7.5, tasks: [] });
     const button = result.nodes.find(node => node.className === 'writing-score-card is-action');
     assert.equal(button.disabled, true);
+    assert.equal(button.children[1].textContent, `Chưa có điểm Task ${taskNumber}`);
+    assert.equal(result.opened(), undefined);
+  });
+  test(`Substitute K56 ${number}: kết quả thiếu mảng Task không làm lỗi giao diện`, () => {
+    const result = harness(number, { ready: true, writingScore: 7.5 });
+    const button = result.nodes.find(node => node.className === 'writing-score-card is-action');
+    assert.equal(button.disabled, true);
+    assert.ok(result.nodes.some(node => node.textContent.includes('chưa sẵn sàng')));
+  });
+  test(`Substitute K56 ${number}: Task của bài khác không mở chi tiết`, () => {
+    const otherTaskNumber = taskNumber === 1 ? 2 : 1;
+    const result = harness(number, {
+      ready: true,
+      writingScore: 7.5,
+      tasks: [{ taskNumber: otherTaskNumber, taskScore: 7.5 }]
+    });
+    const button = result.nodes.find(node => node.className === 'writing-score-card is-action');
+    assert.equal(button.disabled, true);
     assert.equal(result.opened(), undefined);
   });
   test(`Substitute K56 ${number}: trạng thái chờ gọi đúng Task ${taskNumber}`, () => {

@@ -22,7 +22,7 @@ Lệnh chạy: `node scripts/run-k56-product-audit.mjs --all`; có thể chọn 
 
 ## Kết quả audit source hiện tại
 
-Full suite: **217 ca, 214 đạt, 3 đỏ, 0 skip** trên 45 file. Không được coi là đã qua cổng chất lượng.
+Mốc audit trên base `435019d`: **217 ca, 214 đạt, 3 đỏ, 0 skip** trên 45 file. Sau sửa trong branch, suite mở rộng đạt **221/221, 0 skip** (23/09/2026). Đây là kết quả source/test giả, **không** xác nhận backend nhiều lớp hay production; cổng phát hành vẫn `not_ready`.
 
 1. **P0 – định tuyến sai lớp K56 thật.** Ba cấu hình Term Test 1, Term Test 2, Mini Test chỉ nhận `IC2264` là lớp thật; hai lớp K56 đang học `IC2175`/`IC2180` (đã kiểm `course_id=4` trong ERP ngày 23/09) rơi vào `mapping-api-demo`. Test mới `k56-product-matrix-audit.mjs` đỏ trên source trước sửa. `IC2181`/`IC2207` thuộc `course_id=5`, không được dùng làm fixture K56. Không đổi frontend đơn độc: backend K56 hiện chỉ map một lớp, cần mở backend/cohort trước và chặn mã không hợp lệ ở server.
 2. **P1 – Substitute 1/2 hiện nút feedback không có nội dung khi gói `ready=true` thiếu Task.** Cả hai app tạo nút vẫn bấm được; `openWritingFeedback(undefined)` không mở nội dung. Hai ca `substitute-k56-writing-result-audit.mjs` đỏ; ca đối ứng K67 đã có guard. Đây là lỗi chịu đựng phản hồi bất thường, chưa chứng minh API thật đang trả gói thiếu Task.

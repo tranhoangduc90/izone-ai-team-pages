@@ -12,7 +12,7 @@ const destinationButtons=['term-test-1-k56-audio','term-test-2-k56-audio','mini-
   .map(destination=>Object.assign(element(),{dataset:{destination}}));
 let response={ok:true,students:[{ref:'synthetic',name:'Học viên giả lập'}]};
 const context=vm.createContext({
-  window:{TERM_TEST_APP_CONFIG:{API_BASE_URL:'https://example.test/mapping-api-demo',GOOGLE_CLIENT_ID:'synthetic'},location:{href:''},sessionStorage:{}},
+  window:{TERM_TEST_APP_CONFIG:{API_BASE_URL:'https://example.test/mapping-api-demo',API_FOR_CLASS:classCode=>classCode==='CODEXDEMO56'?'https://example.test/mapping-api-demo':'https://example.test/mapping-api-k56',GOOGLE_CLIENT_ID:'synthetic'},location:{href:''},sessionStorage:{}},
   location:{search:'?class=CODEXDEMO56'},URLSearchParams,AbortSignal,sortClassesNewestFirst,
   document:{getElementById:id=>elements[id],createElement:()=>element(),head:{append(){}},querySelectorAll:selector=>selector==='[data-test]'?buttons:destinationButtons},
   createTeacherSessionClient:()=>({login:async()=>({ok:true}),restore:async()=>false,logout:async()=>({ok:true})}),
