@@ -1,19 +1,43 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const repo=process.cwd();
-const workspace=path.resolve(repo,'../..');
-const pairs=[
-  ['term-tests/izone-term-tests-k56/term-test-1-k56-computer-based','term-tests/term-test-1-k56-computer-based'],
-  ['term-tests/izone-term-test-2-k56/term-test-2-k56-computer-based','term-tests/term-test-2-k56-computer-based']
+const root = fileURLToPath(new URL('..', import.meta.url));
+
+// Đầu vào: SHA-256 nội dung production Pages đã đọc lại ngày 23/09/2026.
+// Việc chính: so bản branch sau khi chuẩn hóa CRLF/LF; không tải bài hay âm thanh riêng.
+// Kết quả: báo đúng tệp lệch; khi lỗi, test dừng trước khi có thể phát hành.
+const productionBaseline = [
+  {
+    route: 'term-test-1-k56-computer-based',
+    content: '21a73e069ff239af7bf185cbc67fa507efa5f330570bee10659dc5985858e782',
+    layout: 'e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351',
+  },
+  {
+    route: 'term-test-2-k56-computer-based',
+    content: '61653a59ae0b7427f5de300cbbc6ceb0121a668664811436802cdfa89a370aa5',
+    layout: 'f4e81684b6a9c416b72bc7c3ceccdc2e39dda0d0c569f2cd11a6dd7daff3fe9a',
+  },
 ];
-const normalizeContent=text=>text.replace(/src:\s*(?:['"]assets\/private\/[^'"]+['"]|'')/g,"src:''").replace(/\r\n/g,'\n');
-for(const [sourceRelative,onlineRelative] of pairs){
-  const source=path.join(workspace,sourceRelative),online=path.join(repo,onlineRelative);
-  assert.equal(normalizeContent(fs.readFileSync(path.join(online,'content.js'),'utf8')),normalizeContent(fs.readFileSync(path.join(source,'content.js'),'utf8')));
-  assert.equal(fs.readFileSync(path.join(online,'layout-updates.css'),'utf8').replace(/\r\n/g,'\n'),fs.readFileSync(path.join(source,'layout-updates.css'),'utf8').replace(/\r\n/g,'\n'));
-  assert.match(fs.readFileSync(path.join(online,'index.html'),'utf8'),/layout-updates\.css/);
+
+const normalizedDigest = (relative) => {
+  const content = readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n');
+  return createHash('sha256').update(content, 'utf8').digest('hex');
+};
+
+for (const { route, content, layout } of productionBaseline) {
+  const directory = `term-tests/${route}`;
+  assert.equal(normalizedDigest(`${directory}/content.js`), content, `${route}: content khác mốc production`);
+  assert.equal(normalizedDigest(`${directory}/layout-updates.css`), layout, `${route}: layout khác mốc production`);
+  assert.match(readFileSync(path.join(root, directory, 'index.html'), 'utf8'), /layout-updates\.css/);
 }
-assert.equal(fs.readFileSync(path.join(repo,'term-tests/term-test-1-k56-computer-based/styles.css'),'utf8').replace(/\r\n/g,'\n'),fs.readFileSync(path.join(workspace,'term-tests/izone-term-tests-k56/term-test-1-k56-computer-based/styles.css'),'utf8').replace(/\r\n/g,'\n'));
-console.log('K56 online giữ nguyên bố cục/nội dung bản local; chỉ loại URL audio riêng tư.');
+
+assert.equal(
+  normalizedDigest('term-tests/term-test-1-k56-computer-based/styles.css'),
+  'af915a1cfb8c67740764f21c78f3754c37368be417a262df61b9e40d54428699',
+  'Term Test 1 K56: styles khác mốc production',
+);
+
+console.log('Bố cục và nội dung K56 giữ đúng mốc production Pages ngày 23/09/2026.');
