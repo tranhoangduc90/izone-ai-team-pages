@@ -12,6 +12,11 @@ export function parseDocLinks(raw) {
   return { docs, errors };
 }
 
+// Gửi đúng danh sách Doc ID đã kiểm; trang không yêu cầu mã truy cập.
+export function requestBody(docs) {
+  return JSON.stringify({ docs });
+}
+
 // Giữ đúng một kết quả cho mỗi Doc ID đã gửi; phản hồi thiếu hoặc thừa là không xác định.
 export function checkedResults(payload, docs) {
   if (!payload?.ok || !Array.isArray(payload.results)) throw new Error('Hệ thống không trả kết quả hợp lệ.');

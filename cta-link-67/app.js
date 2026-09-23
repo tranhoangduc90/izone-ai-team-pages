@@ -1,5 +1,4 @@
-import { parseDocLinks, checkedResults } from './model.mjs';
-import { signedBody } from './auth.mjs';
+import { parseDocLinks, checkedResults, requestBody } from './model.mjs';
 
 const BASE = 'https://ducizone.ddns.net/webhook/cta-link-batch';
 const labels = {
@@ -45,8 +44,6 @@ function render() {
   if (!rows.length) box.textContent = 'Chưa có file nào được gửi.';
 }
 async function request(action, batch) {
-  const key = $('accessKey').value.trim();
-  if (!key) throw new Error('Nhập mã truy cập nội bộ.');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120000);
   try {
@@ -55,10 +52,9 @@ async function request(action, batch) {
       mode: 'cors',
       cache: 'no-store',
       headers: { 'Content-Type': 'text/plain' },
-      body: await signedBody(batch, key),
+      body: requestBody(batch),
       signal: controller.signal
     });
-    if (response.status === 401 || response.status === 403) throw new Error('Mã truy cập không đúng hoặc chưa được cấp quyền.');
     if (!response.ok) throw new Error('Hệ thống xử lý trả lỗi ' + response.status + '.');
     return checkedResults(await response.json(), batch);
   } finally { clearTimeout(timer); }
