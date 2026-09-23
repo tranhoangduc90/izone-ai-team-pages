@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Gắn link chấm bài khóa 67</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">IZONE · Khóa 67</p>
+      <h1>Gắn link chấm bài vào Google Docs</h1>
+      <p>Dán các link Docs của bài Reading hoặc Listening. Hệ thống tìm bài nộp trong Lark rồi gắn link vào nút chấm của từng file.</p>
+    </header>
+    <section class="card">
+      <label for="accessKey">Mã truy cập nội bộ</label>
+      <input id="accessKey" type="password" autocomplete="off" spellcheck="false" placeholder="Nhập mã truy cập">
+      <p class="hint">Mã dùng để ký yêu cầu, không gửi nguyên văn và không được lưu trên trang hoặc trong trình duyệt.</p>
+      <label for="links">Link Google Docs</label>
+      <textarea id="links" spellcheck="false" placeholder="https://docs.google.com/document/d/.../edit&#10;https://docs.google.com/document/d/.../edit"></textarea>
+      <p class="hint">Tối đa 20 link, mỗi dòng một link. Tài liệu cần có CTA và mã bài khóa 67 ngay bên dưới.</p>
+      <div class="actions">
+        <button id="submit" type="button">Gắn link CTA</button>
+        <button id="check" class="secondary" type="button" disabled>Kiểm tra kết quả</button>
+      </div>
+      <p id="notice" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card results" aria-labelledby="resultsTitle">
+      <h2 id="resultsTitle">Kết quả từng file</h2>
+      <div id="results" aria-live="polite"><p class="hint">Chưa có file nào được gửi.</p></div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
