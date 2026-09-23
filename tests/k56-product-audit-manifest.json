@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "suite_id": "k56-term-mini-substitute-audit",
+  "groups": {
+    "term_mini_56": [
+      "tests/k56-answer-sheet-identity.mjs",
+      "tests/k56-audio-volume-flow.mjs",
+      "tests/k56-class-api-routing.mjs",
+      "tests/k56-exam-integrity.mjs",
+      "tests/k56-landing.mjs",
+      "tests/k56-mini-release.mjs",
+      "tests/k56-mini-writing-revision.mjs",
+      "tests/k56-product-matrix-audit.mjs",
+      "tests/k56-published-audio-audit.mjs",
+      "tests/k56-student-memory.mjs",
+      "tests/k56-student-writing-feedback.mjs",
+      "tests/k56-teacher-writing-bands.mjs",
+      "tests/k56-term-test.mjs",
+      "tests/k56-term1-live-writing-result.mjs",
+      "tests/k56-test2-release.mjs",
+      "tests/k56-test2-writing-result.mjs",
+      "tests/k56-test2-writing-revision.mjs",
+      "tests/k56-ui-parity.mjs",
+      "tests/k56-writing-auto-result.mjs",
+      "tests/k56-writing-html-feedback.mjs",
+      "tests/k56-writing-teacher-student-parity.mjs",
+      "tests/term-test-k56-audio-recovery.mjs",
+      "tests/term-test-teacher-access-banner.mjs"
+    ],
+    "substitute_56_and_shared_67": [
+      "tests/substitute-k56-dashboard.mjs",
+      "tests/substitute-k56-gateway-audit.mjs",
+      "tests/substitute-k56-reset-audit.mjs",
+      "tests/substitute-k56-writing-result-audit.mjs",
+      "tests/substitute-layout-recovery.mjs",
+      "tests/substitute-k67-corrected-prompts.mjs",
+      "tests/substitute-k67-presentation.mjs",
+      "tests/substitute-k67-reset-layout.mjs",
+      "tests/substitute-k67-writing-result.test.mjs"
+    ],
+    "k67_no_impact_guard": "tests/term-test-67-regression-manifest.json"
+  },
+  "excluded_nonhermetic": [
+    {
+      "file": "tests/k56-backup-pages.mjs",
+      "reason": "Một ca đối chiếu hash MP3 nguồn riêng tư nằm ngoài Git; các ca còn lại cần tách để chạy độc lập trong worktree."
+    },
+    {
+      "file": "tests/k56-local-source-parity.mjs",
+      "reason": "Giả định đường dẫn ../.. là workspace gốc; không đúng với linked worktree và phụ thuộc source ngoài Git."
+    }
+  ]
+}
