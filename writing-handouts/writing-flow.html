@@ -7,7 +7,7 @@
     <title>Theo dõi chấm Writing 56/67</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
-    <link rel="stylesheet" href="./writing-flow.css?v=20260922-table-polish-v1" />
+    <link rel="stylesheet" href="./writing-flow.css?v=20260924-daily-breakdown-v1" />
   </head>
   <body class="teacher-page flow-page">
     <p id="flow-updated" class="flow-updated">Chưa đăng nhập</p>
@@ -97,7 +97,8 @@
           </section>
 
           <section id="flow-daily-section" class="flow-section" hidden>
-            <div id="flow-daily-chart" class="flow-chart" role="img" aria-label="Số bài chấm xong theo ngày"></div>
+            <p class="flow-table-note">Ba số là ba hoạt động riêng: một bài có thể được chấm và giao cùng ngày. Lịch sử Homework chưa có loại Task sẽ chỉ hiện khi chọn cả Task 1 và Task 2.</p>
+            <div id="flow-daily-chart" class="flow-chart" role="group" aria-label="Hoạt động chấm Writing theo ngày"></div>
           </section>
           <section id="flow-classes-section" class="flow-section" hidden>
             <div id="flow-classes" class="flow-class-cards"></div>
@@ -140,6 +141,6 @@
     </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/writing-flow.js?v=20260922-table-polish-v1"></script>
+    <script type="module" src="./js/writing-flow.js?v=20260924-daily-breakdown-v1"></script>
   </body>
 </html>

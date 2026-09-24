@@ -4,7 +4,7 @@ import { teacherAuthFailure } from './teacher-auth-ui.js';
 import { coverageDescription, coverageStatusLabels } from './writing-flow-coverage.js';
 import { isBackdropClick } from './teacher-detail-core.js';
 import { clampColumnWidth, defaultColumnWidths, formatWritingDay, normalizeWritingDay, readColumnWidths,
-  saveColumnWidths, serializeSortRules, writingSortFields } from './writing-flow-ui.js';
+  dailyBreakdown, saveColumnWidths, serializeSortRules, writingSortFields } from './writing-flow-ui.js?v=20260924-daily-breakdown-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 
@@ -22,7 +22,7 @@ const statusNames = { received: 'Chờ chấm', running: 'Đang xử lý', needs
   skipped: 'Đã bỏ qua', failed: 'Lỗi', paused: 'Tạm dừng', scanning: 'Đang quét' };
 const viewMeta = {
   overview: ['Toàn hệ thống', 'Tổng quan vận hành', 'Các số cần chú ý và tình trạng quét lớp.', 'Tất cả trạng thái'],
-  daily: ['Thống kê', 'Số bài chấm xong theo ngày', 'Lọc theo lớp, giảng viên, loại bài và khoảng ngày.', 'Đã giao cho học viên'],
+  daily: ['Thống kê', 'Hoạt động Writing theo ngày', 'Tách bài chấm mới, kết quả cũ được ghi nhận và bài đã giao.', 'Ba loại hoạt động'],
   classes: ['Theo lớp', 'Không gian lớp', 'Xem trạng thái nguồn và yêu cầu quét riêng từng lớp đang học.', 'Lớp đang học và lớp CS hợp lệ'],
   completed_classes: ['Lưu trữ', 'Các lớp đã hoàn thành', 'Không nằm trong lượt quét và các view vận hành hằng ngày.', 'Không quét tự động'],
   mapping: ['Nguồn lớp', 'Lớp cần ghép hoặc kiểm tra', 'Các lớp thiếu trạng thái, trùng mapping hoặc chưa đủ điều kiện quét.', 'Đang tạm dừng'],
@@ -38,7 +38,7 @@ for (const [index, stage] of stages.entries()) viewMeta[stage] = ['7 giai đoạ
   `${index + 1}. ${stageNames[stage]}`, 'Mỗi bài ở đây đang chờ, chạy hoặc cần xử lý tại đúng giai đoạn này.',
   `Đang ở bước: ${stageNames[stage]}`];
 viewMeta.test_overview = ['Bài Test', 'Tổng quan chấm Test', 'Chỉ hiển thị bài kiểm tra; dùng chung cơ chế chính xác và retry của Writing.', 'Tất cả trạng thái Test'];
-viewMeta.test_daily = ['Bài Test', 'Số bài Test chấm xong theo ngày', 'Lọc theo lớp, giảng viên, loại bài và khoảng ngày.', 'Test đã giao'];
+viewMeta.test_daily = ['Bài Test', 'Hoạt động Test theo ngày', 'Tách bài chấm mới, kết quả cũ được ghi nhận và bài đã giao.', 'Ba loại hoạt động'];
 viewMeta.test_review = ['Bài Test', 'Bài Test cần kiểm tra', 'Các bài Test đã lỗi ba lần; có thể xem và chạy lại đúng bước.', 'Cần kiểm tra'];
 viewMeta.test_skipped = ['Bài Test', 'Bài Test đã bỏ qua', 'Có thể khôi phục bài Test bị bỏ qua nhầm.', 'Đã bỏ qua'];
 viewMeta.test_delivered = ['Bài Test', 'Bài Test đã giao', 'Kết quả đã được ghi và đọc lại thành công.', 'Đã giao'];
@@ -316,7 +316,54 @@ function renderOperatorEvents() { const root = $('flow-operator-events'); root.r
 function renderLegacy() { const root = $('flow-legacy'); root.replaceChildren(); if (!state.legacy.length) return root.append(makeText('p', 'Chưa nhập lịch sử cũ trong phạm vi này.', 'muted')); for (const item of state.legacy) { const row = document.createElement('article'); row.className = 'flow-row'; row.append(makeText('div', `${item.student_name || 'Chưa có tên'} · ${item.class_code || '—'} · bài ${item.essay_slot || '—'} · ${item.source_status || '—'} · ${formatTime(item.created_at_source)}`)); root.append(row); } }
 function openDailyDetails(day) { const normalized = normalizeWritingDay(day); if (!normalized) return; $('flow-date-from').value = normalized; $('flow-date-to').value = normalized; state.activeView = isTestView() ? 'test_delivered' : 'delivered'; state.pairs = []; state.nextCursor = null; state.nextOffset = null; void refreshData(); }
 function renderDailyBars(root, days, interactive = true, maxHeight = 190) { root.replaceChildren(); if (!days.length) return root.append(makeText('p', 'Chưa có bài hoàn thành trong khoảng đã chọn.', 'muted')); const max = Math.max(...days.map(row => Number(row.completed_count || 0)), 1); const chart = document.createElement('div'); chart.className = 'flow-chart-bars'; for (const item of days) { const day = normalizeWritingDay(item.day); const bar = document.createElement(interactive ? 'button' : 'div'); if (interactive) { bar.type = 'button'; bar.disabled = !day; bar.title = day ? `Mở ${item.completed_count} bài đã giao ngày ${formatWritingDay(day)}` : 'Ngày không hợp lệ'; if (day) bar.addEventListener('click', () => openDailyDetails(day)); } bar.className = 'flow-chart-bar'; const visual = document.createElement('i'); visual.style.height = `${Math.max(3, Math.round(Number(item.completed_count || 0) / max * maxHeight))}px`; bar.append(visual, makeText('strong', item.completed_count), makeText('small', formatWritingDay(item.day))); chart.append(bar); } root.append(chart); }
-function renderDaily() { renderDailyBars($('flow-daily-chart'), state.daily, true); }
+// Nhận vào: ba số theo từng ngày từ API.
+// Việc chính: vẽ ba cột cạnh nhau; chỉ cột Đã giao mở danh sách bài đã giao ngày đó.
+// Trả ra: biểu đồ có chú giải, số và ngày đọc được ngay cả khi không dùng màu.
+// Khi thiếu dữ liệu: giữ thông báo trống, không suy diễn bài đã chấm từ bài lịch sử.
+function renderDaily() {
+  const root = $('flow-daily-chart');
+  root.replaceChildren();
+  const days = dailyBreakdown(state.daily);
+  if (!days.length) {
+    root.append(makeText('p', 'Chưa có hoạt động trong khoảng đã chọn.', 'muted'));
+    return;
+  }
+  const legend = document.createElement('div');
+  legend.className = 'flow-chart-key';
+  for (const series of days[0].series) {
+    const item = makeText('span', series.label);
+    item.className = `flow-chart-key-${series.key}`;
+    legend.append(item);
+  }
+  const chart = document.createElement('div');
+  chart.className = 'flow-chart-days';
+  chart.setAttribute('aria-label', 'Các ngày; cuộn ngang để xem thêm');
+  const max = Math.max(1, ...days.flatMap(row => row.series.map(series => series.count)));
+  for (const row of days) {
+    const group = document.createElement('div');
+    group.className = 'flow-chart-day';
+    const bars = document.createElement('div');
+    bars.className = 'flow-chart-day-bars';
+    for (const series of row.series) {
+      const clickable = series.key === 'delivered' && row.day;
+      const bar = document.createElement(clickable ? 'button' : 'div');
+      bar.className = `flow-chart-day-bar flow-chart-day-bar-${series.key}`;
+      bar.title = `${series.label}: ${series.count} · ${formatWritingDay(row.day)}`;
+      bar.setAttribute('aria-label', bar.title);
+      if (clickable) {
+        bar.type = 'button';
+        bar.addEventListener('click', () => openDailyDetails(row.day));
+      }
+      const visual = document.createElement('i');
+      visual.style.height = `${Math.max(3, Math.round(series.count / max * 180))}px`;
+      bar.append(makeText('strong', series.count), visual);
+      bars.append(bar);
+    }
+    group.append(bars, makeText('small', formatWritingDay(row.day)));
+    chart.append(group);
+  }
+  root.append(legend, makeText('p', 'Vuốt ngang để xem thêm ngày.', 'flow-chart-scroll-hint'), chart);
+}
 function renderAll() { renderHeading(); renderCounts(); renderSummary(); renderCoverage(); renderAttention(); renderClasses(); renderPairs(); renderReviews(); renderIssues(); renderFailures(); renderOperatorEvents(); renderLegacy(); renderDaily(); setViewVisibility(); }
 
 async function loadPairs(reset = true) { const page = reset ? {} : state.nextCursor || (state.nextOffset == null ? {} : { offset: state.nextOffset }); const response = await state.api.writingPairsPage(currentFilters({ ...pairViewFilters(), ...page })); const rows = response.data.pairs || []; state.pairs = reset ? rows : [...state.pairs, ...rows]; state.nextCursor = response.data.nextCursor || null; state.nextOffset = response.data.nextOffset ?? null; }

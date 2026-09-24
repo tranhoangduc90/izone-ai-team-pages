@@ -70,6 +70,20 @@
 .flow-chart-bar:hover i, .flow-chart-bar:focus-visible i { background: #0b4cb8; }
 .flow-chart-bar i { display: block; width: 30px; min-height: 3px; border-radius: 0.35rem 0.35rem 0 0; background: var(--flow-blue); }
 .flow-chart-bar small { color: #667085; writing-mode: vertical-rl; transform: rotate(180deg); max-height: 72px; }
+.flow-chart-key { display: flex; flex-wrap: wrap; gap: 0.5rem 1.3rem; font-size: 0.88rem; color: #344054; }
+.flow-chart-key span::before { content: ''; display: inline-block; width: 0.75rem; height: 0.75rem; margin-right: 0.4rem; border-radius: 0.2rem; vertical-align: middle; background: var(--flow-blue); }
+.flow-chart-key .flow-chart-key-history::before, .flow-chart-day-bar.flow-chart-day-bar-history i { background: #ad7500; }
+.flow-chart-key .flow-chart-key-delivered::before, .flow-chart-day-bar.flow-chart-day-bar-delivered i { background: #07815a; }
+.flow-chart-scroll-hint { display: none; margin: 0.65rem 0 0; color: #667085; font-size: 0.82rem; }
+@media (max-width: 600px) { .flow-chart-scroll-hint { display: block; } }
+.flow-chart-days { display: flex; align-items: end; gap: 0.9rem; overflow-x: auto; padding-top: 1rem; }
+.flow-chart-day { display: grid; gap: 0.5rem; min-width: 116px; text-align: center; }
+.flow-chart-day > small { color: #667085; white-space: nowrap; }
+.flow-chart-day-bars { display: flex; align-items: end; justify-content: center; gap: 0.3rem; height: 215px; }
+.flow-chart-day-bar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.25rem; min-width: 32px; height: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; }
+.flow-chart-day-bar i { width: 22px; min-height: 3px; border-radius: 0.3rem 0.3rem 0 0; background: var(--flow-blue); }
+.flow-chart-day-bar-delivered { cursor: pointer; }
+.flow-chart-day-bar-delivered:hover i, .flow-chart-day-bar-delivered:focus-visible i { background: #056949; }
 .flow-chart-compact { min-height: 220px; }
 .flow-chart-compact .flow-chart-bars { height: 180px; }
 .flow-audit-state { margin-top: 0.45rem; }

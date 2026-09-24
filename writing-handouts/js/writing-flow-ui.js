@@ -32,6 +32,26 @@ export function formatWritingDay(value) {
   return `${date}/${month}/${year}`;
 }
 
+// Nhận vào: số gộp theo ngày từ backend, kể cả bản API cũ chỉ có completed_count.
+// Việc chính: tách ba hoạt động và chuẩn hóa số để biểu đồ không hiện NaN.
+// Trả ra: dữ liệu nhóm cột có nhãn dễ đọc, giữ ngày Việt Nam.
+// Khi dữ liệu thiếu: hiển thị 0; ngày sai được ghi rõ, không tạo ngày giả.
+export function dailyBreakdown(days = []) {
+  const safeCount = value => {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? Math.floor(number) : 0;
+  };
+  return days.map(row => ({
+    day: normalizeWritingDay(row.day),
+    series: [
+      { key: 'new', label: 'Chấm mới', count: safeCount(row.newly_graded_count) },
+      { key: 'history', label: 'Ghi nhận kết quả cũ', count: safeCount(row.historical_count) },
+      { key: 'delivered', label: 'Đã giao',
+        count: safeCount(row.delivered_count ?? row.completed_count) },
+    ],
+  }));
+}
+
 export function clampColumnWidth(value, fallback = 140) {
   const width = Number(value);
   return Number.isFinite(width) ? Math.min(640, Math.max(80, Math.round(width))) : fallback;
