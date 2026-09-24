@@ -16,7 +16,10 @@
     }
   }, true);
 
-  const storageSuffix = serverGradingMode ? ':server-grade' : '';
+  const durableWritingMode = serverGradingMode
+    && window.TERM_TEST_APP_CONFIG?.DURABLE_WRITING_ENABLED === true;
+  const storageSuffix = serverGradingMode
+    ? `:server-grade${durableWritingMode ? ':durable-writing' : ''}` : '';
   const uiStorageKey = 'izone-test-ui:' + testConfig.slug + ':' + classCode + storageSuffix;
   const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageSuffix;
   const uiState = readUiState();

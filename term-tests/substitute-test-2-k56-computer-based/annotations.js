@@ -5,7 +5,11 @@
   const query = new URLSearchParams(location.search);
   const slug = window.TERM_TEST_CONFIG.slug;
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const suffix = query.get('demo') === 'exam' && query.get('grading') === 'server' ? ':server-grade' : '';
+  const serverGradingMode = query.get('demo') === 'exam' && query.get('grading') === 'server';
+  const durableWritingMode = serverGradingMode
+    && window.TERM_TEST_APP_CONFIG?.DURABLE_WRITING_ENABLED === true;
+  const suffix = serverGradingMode
+    ? `:server-grade${durableWritingMode ? ':durable-writing' : ''}` : '';
   const storageKey = `izone-test-annotations:${slug}:${classCode}${suffix}`;
   const sessionKey = `izone-test:${slug}:${classCode}${suffix}`;
   const previewMode = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));

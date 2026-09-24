@@ -13,13 +13,14 @@
     ? requestedDemo
     : '';
   const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
+  const durableWritingMode = serverGradingMode && appConfig?.DURABLE_WRITING_ENABLED === true;
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
   if (!testConfig || !appConfig || !root) return;
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
+  const storageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}${durableWritingMode ? ':durable-writing' : ''}`;
   if (serverGradingMode && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
-    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}:server-grade`;
+    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}:server-grade${durableWritingMode ? ':durable-writing' : ''}`;
     for (const storage of [sessionStorage, localStorage]) {
       try {
         storage.removeItem(storageKey);
@@ -502,7 +503,18 @@
       for (const [key, value] of requestUrl.searchParams) {
         if (!(key in payload)) payload[key] = value;
       }
-      const response = await fetch(appConfig.API_BASE_URL, {
+      const writingRoute = path === '/api/test/writing' || path === '/api/test/writing/status';
+      const apiBaseUrl = durableWritingMode && writingRoute
+        ? appConfig.DURABLE_WRITING_API_BASE_URL : appConfig.API_BASE_URL;
+      if (durableWritingMode && writingRoute) {
+        if (!apiBaseUrl) throw new Error('Cổng nhận bài Writing mới chưa được cấu hình an toàn.');
+        const target = new URL(apiBaseUrl);
+        if (target.origin !== 'https://ducizone.ddns.net'
+          || !target.pathname.startsWith('/webhook/substitute-test-2-k56-public-durable-')) {
+          throw new Error('Cổng nhận bài Writing mới chưa được cấu hình an toàn.');
+        }
+      }
+      const response = await fetch(apiBaseUrl, {
         method: 'POST',
         body: JSON.stringify({ route: requestUrl.pathname, payload }),
         signal: controller.signal,
@@ -605,8 +617,11 @@
   }
 
   async function refreshWritingGrading() {
-    if ((demoMode && !serverGradingMode) || !state.attemptToken || writingGradingPollInFlight) return;
+    if ((demoMode && !serverGradingMode)
+      || !(durableWritingMode ? state.studentRef : state.attemptToken)
+      || writingGradingPollInFlight) return;
     writingGradingPollInFlight = true;
+    const requestedStudentRef = state.studentRef;
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
       const payload = serverGradingMode
@@ -627,15 +642,39 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ attemptToken: state.attemptToken })
         });
+      if (durableWritingMode && state.studentRef !== requestedStudentRef) return;
       if (serverGradingMode) {
+        if (durableWritingMode) {
+          if (!payload.accepted) {
+            stopWritingGradingPolling();
+            return;
+          }
+          if (!payload.sections?.listening || !payload.sections?.reading
+            || typeof payload.submittedEssay !== 'string') {
+            stopWritingGradingPolling();
+            showNotice('Bài đã có trên hệ thống nhưng thiếu dữ liệu để xem lại. Hãy liên hệ giáo viên; hệ thống không tự điền điểm 0.', 'error');
+            return;
+          }
+          state.testGrades.listening = payload.sections.listening;
+          state.testGrades.reading = payload.sections.reading;
+          state.drafts.writing.task1 = payload.submittedEssay;
+          state.writingSubmitted = true;
+          state.completed = true;
+        }
         state.testGrades.writing = payload;
         saveSession();
         renderResult(buildDemoPayload('complete'));
+        if (durableWritingMode) setStage('result');
       } else {
         applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
         renderResult(payload);
       }
       const grading = serverGradingMode ? payload.grading : payload.writing?.grading;
+      if (durableWritingMode && grading?.status === 'needs_review') {
+        stopWritingGradingPolling();
+        showNotice('Bài đã được lưu, nhưng kết quả cần giáo viên kiểm tra. Bạn có thể quay lại sau bằng cách chọn lại tên.', 'error');
+        return;
+      }
       if (grading?.ready) {
         stopWritingGradingPolling();
         if (!wasReady) showNotice(
@@ -651,7 +690,11 @@
       // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
     } finally {
       writingGradingPollInFlight = false;
-      if (!state.result?.writing?.grading?.ready) scheduleWritingGradingRefresh();
+      if (durableWritingMode && state.studentRef !== requestedStudentRef) {
+        queueMicrotask(() => refreshWritingGrading());
+      } else if (!state.result?.writing?.grading?.ready) {
+        scheduleWritingGradingRefresh();
+      }
     }
   }
 
@@ -662,6 +705,7 @@
       || !state.writingSubmitted
       || grading?.ready
       || grading?.status === 'review_required'
+      || grading?.status === 'needs_review'
       || writingGradingPollTimer
     ) return;
     if (!writingGradingPollStartedAt) writingGradingPollStartedAt = Date.now();
@@ -1588,7 +1632,7 @@
     elements.resultStatus.textContent = hasReading
       ? payload.writing?.grading?.ready
         ? 'Listening và Reading được phân tích riêng; điểm Writing Task 1 đã hoàn tất và có bài chấm chi tiết.'
-        : payload.writing?.grading?.status === 'review_required'
+        : ['review_required', 'needs_review'].includes(payload.writing?.grading?.status)
           ? 'Listening và Reading đã chấm xong. Writing đã được nhận nhưng chưa có điểm từ workflow chấm K67.'
           : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
@@ -1623,7 +1667,7 @@
   }
 
   function writingGradingNotice(grading) {
-    if (grading?.status === 'review_required') {
+    if (['review_required', 'needs_review'].includes(grading?.status)) {
       return 'Bài Writing đã được lưu an toàn và đang chờ giáo viên kiểm tra. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
     }
     return 'Bài Writing của bạn đang được chấm. Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
@@ -1670,9 +1714,21 @@
 
   elements.studentSelect.addEventListener('change', () => {
     const student = state.roster.find(item => item.ref === elements.studentSelect.value);
+    if (durableWritingMode && state.studentRef && state.studentRef !== (student?.ref || '')) {
+      stopWritingGradingPolling();
+      state.testGrades = { listening: null, reading: null, writing: null };
+      state.drafts = { listening: {}, reading: {}, writing: { outline: '', task1: '', task2: '' } };
+      state.result = null;
+      state.attemptToken = '';
+      state.clientSubmissionId = '';
+      state.completed = false;
+      state.writingSubmitted = false;
+      state.writingStarted = false;
+    }
     state.studentRef = student?.ref || '';
     state.studentName = student?.name || '';
     saveSession();
+    if (durableWritingMode && state.studentRef) void refreshWritingGrading();
   });
 
   elements.listeningView.addEventListener('submit', async event => {

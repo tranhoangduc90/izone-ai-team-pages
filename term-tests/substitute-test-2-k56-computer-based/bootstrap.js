@@ -9,7 +9,8 @@
   let classCode = (query.get('class') || '').trim().toUpperCase();
   const demoMode = query.get('demo') || '';
   const localDemo = demoMode === 'exam' && query.get('grading') === 'server';
-  const storageSuffix = localDemo && query.get('grading') === 'server' ? ':server-grade' : '';
+  const durableWritingMode = localDemo && appConfig?.DURABLE_WRITING_ENABLED === true;
+  const storageSuffix = localDemo ? `:server-grade${durableWritingMode ? ':durable-writing' : ''}` : '';
   const demoStudentRef = localDemo ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = localDemo ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
@@ -41,9 +42,9 @@
     for (const storage of [sessionStorage, localStorage]) {
       try {
         for (const namespace of ['RETAKE-LOBBY', 'DEMO', 'IC2264']) {
-          storage.removeItem(`izone-test:${testConfig.slug}:${namespace}:server-grade`);
-          storage.removeItem(`izone-test-ui:${testConfig.slug}:${namespace}:server-grade`);
-          storage.removeItem(`izone-test-annotations:${testConfig.slug}:${namespace}:server-grade`);
+          storage.removeItem(`izone-test:${testConfig.slug}:${namespace}${storageSuffix}`);
+          storage.removeItem(`izone-test-ui:${testConfig.slug}:${namespace}${storageSuffix}`);
+          storage.removeItem(`izone-test-annotations:${testConfig.slug}:${namespace}${storageSuffix}`);
         }
       } catch {
         // Bản demo vẫn chạy được nếu trình duyệt chặn bộ nhớ cục bộ.
