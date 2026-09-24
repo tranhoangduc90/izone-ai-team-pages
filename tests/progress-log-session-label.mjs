@@ -21,6 +21,8 @@ test('dashboard chỉ ghi số buổi một lần khi tiêu đề phiếu đã c
   assert.equal(label({ ...item, title: 'Listening 1 + Speaking 2' }), 'IC2305 · Buổi 4 · Listening 1 + Speaking 2');
   assert.equal(label({ ...item, title: 'Buổi 40 - Listening 1' }), 'IC2305 · Buổi 4 · Buổi 40 - Listening 1');
   assert.equal(label({ ...item, title: 'Buổi 4' }), 'IC2305 · Buổi 4');
+  assert.equal(label({ class_name: 'IC2304', session_number: 2, title: 'Progress Log · IC2304 · Buổi 2' }), 'IC2304 · Buổi 2 · Progress Log');
+  assert.equal(label({ class_name: 'IC2304', session_number: 2, title: 'Progress Log · Buổi 20' }), 'IC2304 · Buổi 2 · Progress Log · Buổi 20');
 });
 
 test('nhận xét trên hành trình học viên không lặp số buổi', async () => {

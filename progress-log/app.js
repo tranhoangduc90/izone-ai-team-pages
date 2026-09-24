@@ -848,7 +848,7 @@ function validateCurrentBlock() {
 async function openAssignment() {
   state.publicToken = readPublicToken();
   if (!state.publicToken) {
-    fail('Đường dẫn chưa đúng', 'Link cần có mã phiếu sau dấu #. Hãy mở lại link giảng viên đã gửi.');
+    fail('Đường dẫn chưa đúng', 'Đây là địa chỉ trang chung, chưa có mã phiếu. Hãy nhờ giảng viên chọn phiếu trong dashboard rồi bấm “Sao chép link” để gửi đường dẫn đầy đủ.');
     return;
   }
   try {

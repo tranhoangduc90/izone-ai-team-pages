@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "product": "Progress Log IZONE trên GitHub Pages",
+  "change_id": "progress-log-ic2304-link-label-20260924",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "medium",
+  "system_traits": ["authentication", "personal_data"],
+  "requirements": [
+    {
+      "id": "REQ-LABEL",
+      "statement": "Tên phiếu IC2304 Buổi 2 trong dashboard không lặp mã lớp hoặc số buổi.",
+      "test_ids": ["T-LABEL"]
+    },
+    {
+      "id": "REQ-LINK",
+      "statement": "Trang học viên giải thích cách lấy link đầy đủ khi mở URL chung, và dashboard vẫn tạo link chứa mã phiếu.",
+      "test_ids": ["T-LINK", "T-BROWSER"]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-PRIVATE-TOKEN",
+      "statement": "Mã phiếu chỉ được đưa vào fragment của link, không nhúng mã production hoặc dữ liệu học viên vào Pages.",
+      "test_ids": ["T-LINK", "T-PRIVACY"]
+    },
+    {
+      "id": "INV-GENERIC-LABEL",
+      "statement": "Tên phiếu chung và các buổi có số khác vẫn giữ đủ mã lớp và buổi.",
+      "test_ids": ["T-LABEL"]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-LABEL",
+      "category": "regression",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Cùng test RED trên base và GREEN trên bản sửa; gồm tên IC2304 thật và ca Buổi 20."
+    },
+    {
+      "id": "T-LINK",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Test xác nhận nút sao chép sinh #assignment từ mã giả và trang học viên đọc lại đúng mã."
+    },
+    {
+      "id": "T-BROWSER",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Trình duyệt sạch với URL thiếu fragment hiển thị hướng dẫn trên màn 390px và 1440px, không có page error."
+    },
+    {
+      "id": "T-PRIVACY",
+      "category": "security_privacy",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Source và test chỉ dùng mã UUID giả; kiểm tĩnh không thấy credential, email hay thông tin học viên trong thay đổi."
+    }
+  ],
+  "red_green": {
+    "red_on_base": {
+      "test_id": "T-LABEL",
+      "command": "node --test tests/progress-log-session-label.mjs",
+      "tree_revision": "908230bdd0b624b7ad4d134c1090fa39b2842c77",
+      "outcome": "failed",
+      "exit_code": 1,
+      "passed": 1,
+      "failed": 1,
+      "skipped": 0,
+      "evidence": "IC2304 · Buổi 2 · Progress Log · IC2304 · Buổi 2, khác nhãn mong đợi."
+    },
+    "green_on_head": {
+      "test_id": "T-LABEL",
+      "command": "node --test tests/progress-log-session-label.mjs",
+      "tree_revision": "6c60ba2d84fd4ed1b58218a18d0c76e49bf60918",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "IC2304 · Buổi 2 · Progress Log; các ca IC2305 và Buổi 20 vẫn đúng."
+    }
+  },
+  "coverage_exemptions": {
+    "full_suite": "Toàn repo Pages có test live gọi dịch vụ và lớp khác ngoài phạm vi. Đã chạy toàn bộ suite kiểm thử Progress Log an toàn, gồm 22 test và trình duyệt sạch."
+  },
+  "cross_constraints": [],
+  "mutations": [],
+  "verification_runs": [
+    {
+      "id": "V-PROGRESS-LOG",
+      "scope": "full_suite",
+      "command": "node --test tests/progress-log-static.mjs tests/progress-log-session-label.mjs tests/progress-log-ic2305-demo.mjs tests/progress-log-session3-static.mjs tests/progress-log-link-ui.cjs",
+      "tree_revision": "6c60ba2d84fd4ed1b58218a18d0c76e49bf60918",
+      "captured_at": "2026-09-24T10:32:27Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Toàn bộ test Progress Log an toàn đạt; màn link thiếu mã đã kiểm trên desktop và mobile."
+    }
+  ],
+  "release": {
+    "target_environment": "production",
+    "decision": "ready",
+    "base_tree_revision": "908230bdd0b624b7ad4d134c1090fa39b2842c77",
+    "current_tree_revision": "6c60ba2d84fd4ed1b58218a18d0c76e49bf60918",
+    "production_authorized": true,
+    "rollback": "Revert commit sửa Progress Log trên Pages và chờ GitHub Pages build lại.",
+    "deployment_readback": "pending",
+    "operational_observation": "Chưa phát hành tại thời điểm lập manifest.",
+    "open_risks": []
+  }
+}

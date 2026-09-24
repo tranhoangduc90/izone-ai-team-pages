@@ -63,6 +63,7 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(app, /payload\.link\.studentRef !== student\.studentRef/);
   assert.match(html, /id="openStudentFormButton"/);
   assert.match(html, /id="copyCurrentLinkButton"/);
+  assert.match(html, /Sao chép link để gửi học viên; địa chỉ trang chung không mở được phiếu\./);
   assert.match(html, /id="draftDialog"/);
   assert.match(app, /\/teacher\/live-drafts/);
   assert.match(app, /payload\.live\.assignmentId !== assignmentId/);
@@ -75,6 +76,30 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(app, /draftAnswers\[item\.itemVersionId\]/);
   assert.match(app, /Phần \$\{index \+ 1\}: \$\{stateLabel\}/);
   assert.match(app, /void loadDashboard\(\{ quiet: true \}\)/);
+});
+
+test('link học viên thiếu mã phiếu hướng dẫn giảng viên lấy đúng link', async () => {
+  const app = await source('app.js');
+  assert.match(app, /nhờ giảng viên chọn phiếu trong dashboard rồi bấm “Sao chép link”/);
+});
+
+test('link sao chép từ dashboard mang mã phiếu để trang học viên mở được', async () => {
+  const [teacher, app] = await Promise.all([source('teacher.js'), source('app.js')]);
+  const token = '00000000-0000-4000-8000-000000000001';
+  const makeLink = vm.runInNewContext(
+    `${teacher.slice(teacher.indexOf('function studentLink('), teacher.indexOf('function selectedLibraryItems('))}\nstudentLink`,
+    { URL, URLSearchParams, window: { location: { href: 'https://example.test/progress-log/teacher.html' } } }
+  );
+  const link = new URL(makeLink(token));
+  assert.equal(link.pathname, '/progress-log/');
+  assert.equal(link.hash, `#assignment=${token}`);
+  const readToken = vm.runInNewContext(
+    `${app.slice(app.indexOf('function readPublicToken('), app.indexOf('async function apiRequest('))}\nreadPublicToken`,
+    { URLSearchParams, window: { location: link } }
+  );
+  assert.equal(readToken(), token);
+  link.hash = '';
+  assert.equal(readToken(), '');
 });
 
 test('câu Writing 1 điền từ trong bốn câu, vẫn lưu đủ tám ô và yêu cầu điền hết', async () => {
