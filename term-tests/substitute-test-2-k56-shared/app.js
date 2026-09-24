@@ -708,14 +708,18 @@
       }
       if (grading?.ready) {
         stopWritingGradingPolling();
-        if (!wasReady) showNotice(
-          payload.portalSync?.status === 'synced'
+        if (!wasReady) {
+          const portalStatus = payload.portalSync?.status;
+          const message = portalStatus === 'synced'
             ? 'Bài Writing đã chấm xong và điểm thi lại đã đồng bộ lên Portal.'
-            : payload.portalSync?.status === 'blocked_missing_first_scores'
+            : portalStatus === 'blocked_missing_first_scores'
               ? 'Bài Writing đã chấm xong. Portal chưa nhận điểm thi lại vì còn thiếu điểm lần đầu.'
-              : 'Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.',
-          'success'
-        );
+              : portalStatus === 'needs_review'
+                ? 'Bài Writing đã chấm xong, nhưng điểm Portal chưa đồng bộ và cần giáo viên kiểm tra.'
+                : 'Bài Writing đã chấm xong. Điểm và phân tích đã hiển thị; việc đồng bộ Portal chưa được xác nhận.';
+          showNotice(message, ['blocked_missing_first_scores', 'needs_review']
+            .includes(portalStatus) ? 'error' : portalStatus === 'synced' ? 'success' : '');
+        }
       }
       return 'restored';
     } catch {
@@ -1686,7 +1690,13 @@
         ? 'Bài đã được chấm và phân tích đầy đủ.'
         : 'Listening đã được chấm và phân tích đầy đủ.';
     }
-    if (status === 'unknown' || status === 'processing' || status === 'pending') {
+    if (status === 'needs_review' || status === 'blocked_missing_first_scores') {
+      return status === 'blocked_missing_first_scores'
+        ? 'Bài đã chấm xong nhưng còn thiếu điểm lần đầu; điểm thi lại chưa đồng bộ Portal.'
+        : 'Bài đã chấm xong nhưng điểm Portal chưa đồng bộ và cần giáo viên kiểm tra.';
+    }
+    if (status === 'unknown' || status === 'processing'
+      || status === 'pending' || status === 'running' || status === 'not_ready') {
       return completed
         ? 'Bài đã được chấm. Chưa rõ Portal đã nhận điểm hay chưa; hệ thống không tự gửi lại. Giáo viên cần kiểm tra Portal trước khi retry.'
         : 'Listening đã được chấm. Chưa rõ Portal đã nhận điểm hay chưa; hệ thống không tự gửi lại. Giáo viên cần kiểm tra Portal trước khi retry.';
@@ -1694,9 +1704,10 @@
     if (status === 'failed_response') {
       return 'Bài đã được chấm nhưng webhook trả lỗi. Giáo viên cần kiểm tra lịch sử gửi điểm và Portal trước khi retry.';
     }
-    return completed
+    if (status === 'synced') return completed
       ? 'Cả Listening và Reading đã được chấm và ghi vào Portal.'
       : 'Listening đã được chấm, phân tích và ghi vào Portal.';
+    return 'Chưa xác nhận được điểm đã đồng bộ Portal. Giáo viên cần kiểm tra trước khi gửi lại.';
   }
 
   function writingGradingNotice(grading) {

@@ -288,3 +288,23 @@ test('bộ audit K56 bắt buộc chạy hồi quy phiếu Writing bền vững'
   assert.ok(manifest.groups.substitute_56_and_shared_67.includes(
     'tests/substitute-k56-durable-writing.test.mjs'));
 });
+
+test('Portal cần kiểm tra không được báo học viên là đã ghi điểm', () => {
+  const from = source.indexOf('  function portalNotice(status, completed)');
+  const to = source.indexOf('  function writingGradingNotice(', from);
+  assert.ok(from >= 0 && to > from);
+  const notice = vm.runInNewContext(`${source.slice(from, to)}\nportalNotice`, {});
+  assert.match(notice('needs_review', true), /chưa đồng bộ|cần kiểm tra/u);
+  assert.doesNotMatch(notice('needs_review', true), /đã.*ghi vào Portal/u);
+  assert.match(notice('synced', true), /đã.*Portal/u);
+  const setup = fixture({ accepted: true, submittedEssay: 'Synthetic essay.',
+    sections: { listening: { correct: 31 }, reading: { correct: 20 } },
+    grading: { status: 'ready', ready: true },
+    portalSync: { status: 'needs_review' } });
+  return setup.run().then(() => {
+    assert.equal(setup.events.notices.some(message =>
+      /chưa đồng bộ.*cần giáo viên kiểm tra/u.test(message)), true);
+    assert.equal(setup.events.notices.some(message =>
+      /đã đồng bộ lên Portal/u.test(message)), false);
+  });
+});
