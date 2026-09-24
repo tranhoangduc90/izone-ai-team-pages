@@ -73,6 +73,17 @@
     </form>
   </dialog>
 
+  <dialog id="manualUploadDialog">
+    <form id="manualUploadForm">
+      <div class="dialog-title"><h2>Đăng video lên YouTube</h2><button class="icon-button" type="button" data-close-dialog aria-label="Đóng">×</button></div>
+      <p id="manualUploadSource" class="dialog-note"></p>
+      <label>Đặt tên video<input id="manualUploadTitle" maxlength="100" required></label>
+      <label>Chọn playlist<select id="manualUploadPlaylist" required></select></label>
+      <p class="dialog-note">Bấm Đăng video để xác nhận bạn đã kiểm tra nội dung, tên và playlist. Video sẽ được đăng không công khai và dùng thumbnail IZONE.</p>
+      <p id="manualUploadStatus" role="status"></p>
+      <div class="dialog-actions"><button class="secondary" type="button" data-close-dialog>Hủy</button><button id="manualUploadSubmit" type="submit">Đăng video</button></div>
+    </form>
+  </dialog>
   <dialog id="previewDialog">
     <div class="dialog-title"><h2>Xem recording gốc</h2><button class="icon-button" type="button" data-close-dialog aria-label="Đóng">×</button></div>
     <strong id="previewTitle"></strong>
@@ -102,8 +113,9 @@
   <script src="nightly-config.js?v=10" defer></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="auth.js?v=10" defer></script>
-  <script src="app.js?v=14" defer></script>
+  <script src="app.js?v=15" defer></script>
   <script src="nightly.js?v=14" defer></script>
 <script src="source-links.js?v=14"></script>
+  <script src="manual-upload.js?v=15" defer></script>
 </body>
 </html>

@@ -87,7 +87,7 @@ function recordingSourceCell(record) {
   return '<div data-source-link-id="'+escapeHtml(record.id)+'">'+(typeof sourceLinkMarkup==='function'?sourceLinkMarkup(record):'<span class="subtext">Đang kiểm tra nguồn Zoom…</span>')+'</div>'+detail;
 }
 function videoEditCell(record) {
-  if(!record.videoId)return '<span class="subtext">Chưa đăng video</span>';
+  if(!record.videoId)return typeof manualUploadCell==='function'?manualUploadCell(record):'<span class="subtext">Chưa đăng video</span>';
   return '<select class="video-edit-select" data-edit-id="'+escapeHtml(record.id)+'" aria-label="Chỉnh sửa video"><option value="">Chọn thao tác</option><option value="rename">Đổi tên video</option><option value="playlist">Đổi playlist</option></select>';
 }
 function recordRow(record) {
