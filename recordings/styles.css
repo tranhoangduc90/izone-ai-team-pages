@@ -146,7 +146,7 @@ dialog button.secondary { color: var(--navy); background: #fff; border: 1px soli
 .scan-panel{display:flex;align-items:center;flex-wrap:wrap;gap:16px;background:#fff;border:1px solid #dde3ed;border-radius:16px;padding:20px;margin:20px 0}.scan-panel>div{flex:1;min-width:260px}.scan-panel p,.scan-panel small{color:#64748b}.scan-panel small{width:100%}.scan-panel label{display:grid;gap:6px}.class-folder{margin:18px 0;border:1px solid #dce3ee;border-radius:16px;background:#fff;overflow:hidden}.class-folder>summary{cursor:pointer;padding:20px;font-weight:700}.class-folder>summary span{float:right;font-weight:400;color:#64748b;font-size:14px}.class-folder .review-section{margin:0;border-radius:0;border:0;border-top:1px solid #e2e8f0}
 
 .source-link{background:none;border:0;padding:0;color:#2563eb;font:inherit;font-weight:700;text-align:left;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
-.video-edit-select{max-width:190px;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#172033;font:inherit}
+.video-edit-select{display:block;margin-inline:auto;max-width:190px;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#172033;font:inherit;text-align:center;text-align-last:center}
 
 .external-link-icon { display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 8px; color: var(--blue); vertical-align: middle; }
 .external-link-icon svg { width: 24px; height: 24px; flex: none; }
