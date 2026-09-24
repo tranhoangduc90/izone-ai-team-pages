@@ -1,6 +1,6 @@
 const SKILLS = Object.freeze(['listening', 'reading', 'writing']);
 const EPSILON = 1e-9;
-export const SUBSTITUTE_TEST_2_MAX_SCORES = Object.freeze({ listening: 9, reading: 9, writing: 9 });
+export const SUBSTITUTE_TEST_2_MAX_SCORES = Object.freeze({ listening: 40, reading: 40, writing: 9 });
 export const SUBSTITUTE_TEST_2_PORTAL_CLASS = 'IC2264';
 
 function assertScores(label, scores, maxScores) {
@@ -10,9 +10,9 @@ function assertScores(label, scores, maxScores) {
     if (typeof maximum !== 'number' || !Number.isFinite(maximum) || maximum <= 0) {
       throw new TypeError(`${label}: điểm tối đa ${skill} phải là số dương.`);
     }
-    const validStep = Number.isInteger(value * 10);
+    const validStep = Number.isInteger(value * (skill === 'writing' ? 10 : 1));
     if (typeof value !== 'number' || !Number.isFinite(value) || !validStep || value < 0 || value > maximum) {
-      throw new TypeError(`${label}: điểm ${skill} phải theo bước 0,1 từ 0 đến ${maximum}.`);
+      throw new TypeError(`${label}: điểm ${skill} không đúng bước điểm hoặc vượt ${maximum}.`);
     }
   }
 }
@@ -39,11 +39,11 @@ function compareCandidates(left, right) {
 function chooseIntegerCombination(actual, ideal, maxScores, floorPct, ceilingPct, portalDecimals) {
   const candidates = [];
 
-  for (let listeningTick = 0; listeningTick <= Math.round(actual.listening * 10); listeningTick += 1) {
-    for (let readingTick = 0; readingTick <= Math.round(actual.reading * 10); readingTick += 1) {
+  for (let listeningTick = 0; listeningTick <= actual.listening; listeningTick += 1) {
+    for (let readingTick = 0; readingTick <= actual.reading; readingTick += 1) {
       for (let writingTick = 0; writingTick <= Math.round(actual.writing * 10); writingTick += 1) {
-        const listening = listeningTick / 10;
-        const reading = readingTick / 10;
+        const listening = listeningTick;
+        const reading = readingTick;
         const writing = writingTick / 10;
         const scores = { listening, reading, writing };
         const averagePct = normalizedAverage(scores, maxScores);
@@ -81,21 +81,25 @@ function chooseIntegerCombination(actual, ideal, maxScores, floorPct, ceilingPct
 
 function portalFields(scores, testNumber) {
   return {
-    [`Term Test ${testNumber} Lis (Thi lại)`]: scores.listening,
-    [`Term Test ${testNumber} Read (Thi lại)`]: scores.reading,
-    [`Term Test ${testNumber} Wri (Thi lại)`]: scores.writing
+    [`Term Test ${testNumber} Listening (Thi lại)`]: scores.listening,
+    [`Term Test ${testNumber} Reading (Thi lại)`]: scores.reading,
+    [`Term Test ${testNumber} Writing (Thi lại)`]: scores.writing
   };
 }
 
 export function calculateRetakePolicy({
   firstAttempt,
   retakeActual,
-  maxScores,
+  maxScores = SUBSTITUTE_TEST_2_MAX_SCORES,
   capPct = 55,
   ceilingPct = 57,
   portalDecimals = 0,
-  testNumber = 1
+  testNumber = 2
 }) {
+  if (maxScores?.listening !== 40 || maxScores?.reading !== 40
+    || maxScores?.writing !== 9 || testNumber !== 2) {
+    throw new TypeError('Substitute Test 2 K56 phải dùng đúng cột điểm 40/40/9.');
+  }
   assertScores('Điểm lần đầu', firstAttempt, maxScores);
   assertScores('Điểm thi lại', retakeActual, maxScores);
   if (!Number.isInteger(portalDecimals) || portalDecimals < 0 || portalDecimals > 3) {

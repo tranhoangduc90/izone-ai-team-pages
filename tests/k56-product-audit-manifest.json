@@ -33,6 +33,7 @@
     "substitute_56_and_shared_67": [
       "tests/substitute-k56-dashboard.mjs",
       "tests/substitute-k56-durable-writing.test.mjs",
+      "tests/substitute-k56-portal-score-policy.test.mjs",
       "tests/substitute-k56-gateway-audit.mjs",
       "tests/substitute-k56-reset-audit.mjs",
       "tests/substitute-k56-writing-result-audit.mjs",
