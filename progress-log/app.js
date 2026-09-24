@@ -33,7 +33,7 @@ const state = {
 
 const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'errorView'];
 const elements = Object.fromEntries([
-  'notice', ...viewIds, 'sessionLabel', 'assignmentTitle', 'classLabel', 'studentSelect',
+  'notice', ...viewIds, 'brandLabel', 'sessionLabel', 'assignmentTitle', 'classLabel', 'studentSelect',
   'chooseStudentButton', 'rememberStudentRow', 'rememberStudent', 'rememberStudentStatus', 'changeRememberedStudent',
   'confirmName', 'confirmContext', 'confirmButton', 'backToNamesButton',
   'studentNameLabel', 'formContextLabel', 'saveState', 'progressBar', 'reflectionForm',
@@ -714,6 +714,10 @@ async function openAssignment() {
     setNotice('Đang mở phiếu…');
     const payload = await apiRequest('/assignments/open', { body: { publicToken: state.publicToken } });
     state.assignment = payload.assignment;
+    const courseCode = String(state.assignment.courseCode || '').trim();
+    elements.brandLabel.textContent = /^\d{2,3}$/.test(courseCode)
+      ? `Progress Log · Khóa ${courseCode}`
+      : 'Progress Log · IZONE';
     elements.sessionLabel.textContent = `BUỔI ${state.assignment.sessionNumber}`;
     elements.assignmentTitle.textContent = state.assignment.title;
     elements.classLabel.textContent = state.assignment.class.name;
