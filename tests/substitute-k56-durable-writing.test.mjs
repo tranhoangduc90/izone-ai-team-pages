@@ -19,7 +19,10 @@ function fixture(response) {
   const context = { durableWritingMode: true, demoMode: 'exam',
     serverGradingMode: true, state, classCode: 'IC2264',
     writingGradingPollInFlight: false, queueMicrotask: callback => callback(),
-    apiRequest: async () => response,
+    apiRequest: async () => {
+      if (response instanceof Error) throw response;
+      return response;
+    },
     saveSession: () => {},
     buildDemoPayload: () => ({ writing: { grading: state.testGrades.writing?.grading },
       listening: state.testGrades.listening, reading: state.testGrades.reading }),
@@ -52,15 +55,31 @@ test('chọn lại tên khôi phục bài và hai kỹ năng thật, không dự
 
 test('thiếu phiếu hoặc hai kỹ năng thì không hiện điểm giả và không poll vô hạn', async () => {
   const notStarted = fixture({ accepted: false, grading: { status: 'not_submitted' } });
+  notStarted.state.testGrades.listening = { correct: 31 };
+  notStarted.state.testGrades.reading = { correct: 20 };
+  notStarted.state.writingSubmitted = true;
+  notStarted.state.completed = true;
+  notStarted.state.result = { private: 'Kết quả cũ không có phiếu' };
+  notStarted.state.testGrades.writing = { grading: { ready: true } };
+  notStarted.state.drafts.writing.task1 = 'Bản nháp trên máy';
   await notStarted.run();
   assert.equal(notStarted.events.renders.length, 0);
   assert.equal(notStarted.events.scheduled, 0);
+  assert.equal(notStarted.state.writingSubmitted, false);
+  assert.equal(notStarted.state.testGrades.listening.correct, 31);
+  assert.equal(notStarted.state.testGrades.writing, null);
+  assert.equal(notStarted.state.result, null);
+  assert.equal(notStarted.state.drafts.writing.task1, 'Bản nháp trên máy');
   const incomplete = fixture({ accepted: true, submittedEssay: 'Synthetic essay.',
     sections: null, grading: { status: 'needs_review' } });
   await incomplete.run();
   assert.equal(incomplete.events.renders.length, 0);
   assert.equal(incomplete.events.scheduled, 0);
   assert.ok(incomplete.events.notices.some(message => message.includes('không tự điền điểm 0')));
+  const unavailable = fixture(new Error('Synthetic network failure'));
+  assert.equal(await unavailable.run(), 'unknown');
+  assert.equal(unavailable.events.renders.length, 0);
+  assert.equal(unavailable.events.scheduled, 0);
 });
 
 test('chưa bật cờ thì code giữ API cũ; cổng mới không được fallback im lặng', () => {
@@ -109,4 +128,86 @@ test('đổi tên xóa kết quả người trước trước khi mở bài ngư
   assert.equal(state.drafts.writing.task1, '');
   assert.equal(state.result, null);
   assert.equal(refreshed, 1);
+});
+
+test('chọn lại tên trên thiết bị mới đọc phiếu trước khi mở Listening', async () => {
+  const to = source.indexOf("      if (demoMode === 'listening-only')");
+  const from = source.lastIndexOf("      if (demoMode === 'exam') {", to);
+  assert.ok(from >= 0 && to > from);
+  const stages = [];
+  const notices = [];
+  const state = { studentRef: '1001', studentName: 'Học viên thử',
+    testGrades: { listening: null, reading: null, writing: null },
+    writingSubmitted: false, completed: false };
+  let statusReads = 0;
+  let statusMode = 'restored';
+  const context = { window: { TERM_TEST_BOOTSTRAP: { studentRef: '1001' } },
+    state, restoredSession: { studentRef: '1001' }, classCode: 'IC2264',
+    demoMode: 'exam', serverGradingMode: true,
+    durableWritingMode: true,
+    elements: { studentSelect: { replaceChildren() {}, value: '' },
+      loadingView: { querySelector: () => ({ hidden: false, textContent: '' }) } },
+    Option: class {}, testConfig: { listening: { durationSeconds: 100 } },
+    showNotice: message => notices.push(message), saveSession() {},
+    setStage: stage => stages.push(stage),
+    refreshWritingGrading: async () => {
+      statusReads += 1;
+      if (statusMode !== 'restored') return statusMode;
+      state.writingSubmitted = true;
+      state.testGrades.listening = { correct: 31 };
+      state.testGrades.reading = { correct: 20 };
+      context.setStage('result');
+      return 'restored';
+    },
+  };
+  context.setStage = stage => stages.push(stage);
+  await vm.runInNewContext(`(async () => { ${source.slice(from, to)} })()`, context);
+  assert.equal(statusReads, 1);
+  assert.equal(stages.at(-1), 'result');
+  assert.ok(!stages.includes('listening'));
+
+  const reset = () => {
+    state.writingSubmitted = false;
+    state.completed = false;
+    state.testGrades = { listening: null, reading: null, writing: null };
+    state.listeningDeadlineAt = '';
+    stages.length = 0;
+  };
+  statusMode = 'not_submitted';
+  reset();
+  await vm.runInNewContext(`(async () => { ${source.slice(from, to)} })()`, context);
+  assert.equal(stages.at(-1), 'listening');
+
+  for (const unresolved of ['unknown', 'incomplete']) {
+    statusMode = unresolved;
+    reset();
+    await vm.runInNewContext(`(async () => { ${source.slice(from, to)} })()`, context);
+    assert.equal(stages.at(-1), 'loading');
+    assert.ok(!stages.includes('listening'));
+  }
+  assert.ok(notices.some(message => message.includes('chưa mở lượt mới')));
+});
+
+test('lobby đổi sang người khác phải xóa bài và điểm cũ trước khi hỏi máy chủ', () => {
+  const from = source.indexOf('  if (window.TERM_TEST_BOOTSTRAP?.studentRef) {');
+  const to = source.indexOf('  function readSession()', from);
+  assert.ok(from >= 0 && to > from);
+  const oldResult = { private: 'Kết quả người A' };
+  const state = { studentRef: '1001', studentName: 'Người A',
+    testGrades: { listening: { correct: 31 }, reading: { correct: 20 }, writing: {} },
+    drafts: { listening: { 1: 'A' }, reading: { 1: 'B' },
+      writing: { outline: 'A', task1: 'Bài A', task2: '' } },
+    result: oldResult, writingSubmitted: true, completed: true,
+    attemptToken: 'old-attempt' };
+  const context = { window: { TERM_TEST_BOOTSTRAP: {
+    studentRef: '1002', studentName: 'Người B', classCode: 'IC2264' } },
+  restoredSession: { studentRef: '1001' }, durableWritingMode: true,
+  state, classCode: 'IC2264', saveSession() {} };
+  vm.runInNewContext(source.slice(from, to), context);
+  assert.equal(state.studentRef, '1002');
+  assert.equal(state.result, null);
+  assert.equal(state.testGrades.listening, null);
+  assert.equal(state.drafts.writing.task1, '');
+  assert.equal(state.writingSubmitted, false);
+  assert.equal(state.attemptToken, '');
 });

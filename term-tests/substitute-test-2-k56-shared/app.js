@@ -86,6 +86,30 @@
   };
 
   if (window.TERM_TEST_BOOTSTRAP?.studentRef) {
+    // Dữ liệu vào: tên mới chọn ở phòng chờ và bản lưu cục bộ có thể thuộc người trước.
+    // Việc chính: xóa điểm/bài của người trước trước khi hỏi máy chủ theo tên mới.
+    // Kết quả: chỉ hiển thị lại dữ liệu đã được backend trả cho đúng người mới.
+    // Khi lỗi: trang dừng ở bước kiểm tra, không dựng kết quả từ bộ nhớ người trước.
+    if (durableWritingMode && restoredSession.studentRef
+      && restoredSession.studentRef !== String(window.TERM_TEST_BOOTSTRAP.studentRef)) {
+      state.testGrades = { listening: null, reading: null, writing: null };
+      state.drafts = { listening: {}, reading: {},
+        writing: { outline: '', task1: '', task2: '' } };
+      state.frozenAnswers = { listening: null, reading: null };
+      state.result = null;
+      state.attemptToken = '';
+      state.clientSubmissionId = '';
+      state.examSessionToken = '';
+      state.listeningStartedAt = '';
+      state.readingStartedAt = '';
+      state.writingStartedAt = '';
+      state.listeningDeadlineAt = '';
+      state.readingDeadlineAt = '';
+      state.writingDeadlineAt = '';
+      state.completed = false;
+      state.writingSubmitted = false;
+      state.writingStarted = false;
+    }
     state.studentRef = String(window.TERM_TEST_BOOTSTRAP.studentRef);
     state.studentName = String(window.TERM_TEST_BOOTSTRAP.studentName || 'Học viên Demo');
     state.className = String(window.TERM_TEST_BOOTSTRAP.classCode || classCode);
@@ -619,7 +643,7 @@
   async function refreshWritingGrading() {
     if ((demoMode && !serverGradingMode)
       || !(durableWritingMode ? state.studentRef : state.attemptToken)
-      || writingGradingPollInFlight) return;
+      || writingGradingPollInFlight) return 'skipped';
     writingGradingPollInFlight = true;
     const requestedStudentRef = state.studentRef;
     try {
@@ -647,13 +671,19 @@
         if (durableWritingMode) {
           if (!payload.accepted) {
             stopWritingGradingPolling();
-            return;
+            // Chưa có phiếu Writing trên máy chủ: bỏ trạng thái chấm cũ,
+            // nhưng giữ bản nháp và hai kỹ năng đã làm trên máy này.
+            state.writingSubmitted = false;
+            state.testGrades.writing = null;
+            state.result = null;
+            saveSession();
+            return 'not_submitted';
           }
           if (!payload.sections?.listening || !payload.sections?.reading
             || typeof payload.submittedEssay !== 'string') {
             stopWritingGradingPolling();
             showNotice('Bài đã có trên hệ thống nhưng thiếu dữ liệu để xem lại. Hãy liên hệ giáo viên; hệ thống không tự điền điểm 0.', 'error');
-            return;
+            return 'incomplete';
           }
           state.testGrades.listening = payload.sections.listening;
           state.testGrades.reading = payload.sections.reading;
@@ -673,7 +703,7 @@
       if (durableWritingMode && grading?.status === 'needs_review') {
         stopWritingGradingPolling();
         showNotice('Bài đã được lưu, nhưng kết quả cần giáo viên kiểm tra. Bạn có thể quay lại sau bằng cách chọn lại tên.', 'error');
-        return;
+        return 'restored';
       }
       if (grading?.ready) {
         stopWritingGradingPolling();
@@ -686,8 +716,10 @@
           'success'
         );
       }
+      return 'restored';
     } catch {
       // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
+      return 'unknown';
     } finally {
       writingGradingPollInFlight = false;
       if (durableWritingMode && state.studentRef !== requestedStudentRef) {
@@ -2181,6 +2213,8 @@
       }
       if (demoMode === 'exam') {
         const bootstrappedIdentity = Boolean(window.TERM_TEST_BOOTSTRAP && state.studentRef);
+        if (durableWritingMode && bootstrappedIdentity && restoredSession.studentRef
+          && restoredSession.studentRef !== state.studentRef) saveSession();
         if (bootstrappedIdentity) {
           state.studentName = state.studentName || 'Học viên Demo';
           state.className = classCode || 'CODEXDEMO56SUB2';
@@ -2196,6 +2230,20 @@
           state.examSessionToken = 'demo-session';
           elements.studentSelect.replaceChildren(new Option(state.studentName, state.studentRef));
           elements.studentSelect.value = state.studentRef;
+        }
+        if (durableWritingMode && bootstrappedIdentity) {
+          const restored = await refreshWritingGrading();
+          if (restored === 'restored') return;
+          if (restored !== 'not_submitted') {
+            setStage('loading');
+            const spinner = elements.loadingView.querySelector('.spinner');
+            if (spinner) spinner.hidden = true;
+            elements.loadingView.querySelector('strong').textContent = 'Chưa thể xác nhận bài đã lưu. Vui lòng tải lại trang hoặc liên hệ giáo viên.';
+            if (restored === 'unknown') {
+              showNotice('Chưa đọc được trạng thái bài từ hệ thống; chưa mở lượt mới để tránh nộp trùng.', 'error');
+            }
+            return;
+          }
         }
         if (serverGradingMode && state.writingSubmitted && state.testGrades.listening && state.testGrades.reading) {
           renderResult(buildDemoPayload('complete'));
