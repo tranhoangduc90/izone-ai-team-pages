@@ -407,7 +407,39 @@ async function loadView() {
 }
 
 async function refreshData() { clearTimeout(state.timer); if (!state.authenticated || !state.api) return; const generation = state.loginGeneration; try { await loadCommon(); await loadView(); if (generation !== state.loginGeneration) return; renderAll(); $('flow-login').hidden = true; $('flow-dashboard').hidden = false; $('flow-updated').textContent = `Đã cập nhật lúc ${new Date().toLocaleTimeString('vi-VN')}`; showError('flow-login-error'); showError('flow-error'); } catch (error) { const failure = teacherAuthFailure(error.status); if (failure) { clearLogin(); showError('flow-login-error', failure.message); globalThis.google?.accounts?.id?.disableAutoSelect?.(); return; } showError($('flow-dashboard').hidden ? 'flow-login-error' : 'flow-error', `Chưa tải được trạng thái: ${error.message}`); } state.timer = setTimeout(refreshData, 30_000); }
-async function submitManual(event) { event.preventDefault(); const button = event.submitter; button.disabled = true; try { const kind = $('flow-manual-kind').value; await state.api.addWritingManualSource({ displayName: $('flow-manual-name').value.trim(), documentUrl: $('flow-manual-url').value.trim(), kind, ...(kind === 'test' ? { testConfig: $('flow-manual-test-config').value.trim() || null, topology: $('flow-manual-topology').value, note: $('flow-manual-note').value.trim() || null } : {}) }, createRequestId()); event.currentTarget.reset(); $('flow-manual-test-fields').hidden = true; $('flow-manual-dialog').close(); showError('flow-error', `Đã thêm ${kind === 'test' ? 'bài Test' : 'file'}. Hệ thống sẽ kiểm đề và format trước khi chấm.`); await refreshData(); } catch (error) { showError('flow-error', `Chưa thêm được file: ${error.message}`); } finally { button.disabled = false; } }
+async function submitManual(event) {
+  event.preventDefault();
+  // Giữ biểu mẫu ngay khi người dùng bấm: currentTarget của trình duyệt thành null sau await.
+  const form = event.currentTarget;
+  const button = event.submitter;
+  const kind = $('flow-manual-kind').value;
+  const payload = {
+    displayName: $('flow-manual-name').value.trim(),
+    documentUrl: $('flow-manual-url').value.trim(),
+    kind,
+    ...(kind === 'test' ? {
+      testConfig: $('flow-manual-test-config').value.trim() || null,
+      topology: $('flow-manual-topology').value,
+      note: $('flow-manual-note').value.trim() || null,
+    } : {}),
+  };
+  if (button) button.disabled = true;
+  try {
+    // Chỉ lỗi từ API mới có nghĩa là file chưa được nhận.
+    await state.api.addWritingManualSource(payload, createRequestId());
+  } catch (error) {
+    showError('flow-error', `Chưa thêm được file: ${error.message}`);
+    return;
+  } finally {
+    if (button) button.disabled = false;
+  }
+  // API đã nhận file: đóng form và báo thành công, tránh bấm lại tạo nguồn trùng.
+  form.reset();
+  $('flow-manual-test-fields').hidden = true;
+  $('flow-manual-dialog').close();
+  await refreshData();
+  showError('flow-error', `Đã thêm ${kind === 'test' ? 'bài Test' : 'file'}. Hệ thống sẽ kiểm đề và format trước khi chấm.`);
+}
 async function handleCredential(response) { if (!response?.credential) return showError('flow-login-error', 'Không nhận được thông tin đăng nhập.'); state.loginGeneration += 1; state.authenticated = false; try { await state.sessionClient.login(response.credential); state.authenticated = true; if ($('remember-flow-login').checked) loginPreference.set(true); await refreshData(); } catch (error) { clearLogin(); showError('flow-login-error', `Không thể đăng nhập: ${error.message}`); } }
 async function waitForGoogle(clientId) { for (let attempt = 0; attempt < 100; attempt += 1) { const accounts = globalThis.google?.accounts?.id; if (accounts) { accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: loginPreference.read() }); accounts.renderButton($('google-signin'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'vi' }); return; } await new Promise(resolve => setTimeout(resolve, 100)); } throw new Error('Không tải được dịch vụ đăng nhập Google.'); }
 function clearLogin() { state.loginGeneration += 1; state.authenticated = false; clearTimeout(state.timer); $('flow-dashboard').hidden = true; $('flow-login').hidden = false; }
