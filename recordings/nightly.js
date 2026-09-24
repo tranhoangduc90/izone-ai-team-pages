@@ -15,9 +15,10 @@ const NIGHTLY_LABELS = {
 };
 const nightlyState = {snapshot:null, generation:0};
 function mergeNightlyRecords(existing, snapshot) {
-  const records=[...existing];
+  const isRecording=row=>row.kind!=='session'&&!String(row.id||'').startsWith('session:');
+  const records=existing.filter(isRecording);
   for(const row of snapshot?.records || []) {
-    if(row.kind==='session' && row.status==='recordings_found' && !row.exceptionStatus) continue;
+    if(!isRecording(row)) continue;
     const index=records.findIndex(r=>r.source===row.source && r.recordingFileId && r.recordingFileId===row.recordingFileId);
     if(index<0)records.push({...row,title:row.proposedTitle || `${row.className || row.source} · ${row.kind==='session'?'Buổi '+(row.lessonNumber||'—'):'Recording chưa đăng'}`,nightly:true});
     else records[index]={...row,...records[index],reasons:row.reasons || [],observedMatch:row.observedMatch};
@@ -40,7 +41,7 @@ function nightlyRow(record) {
   const label=record.excluded?'Đã loại khỏi luồng đăng':NIGHTLY_LABELS[record.exceptionStatus || record.status] || 'Recording cần xác nhận';
   const issues=(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x).join(' · ');
   const exception=record.kind==='session'?'<div class="subtext"><button class="action-button" data-action="exception" data-id="'+escapeHtml(record.id)+'">Xử lý ngoại lệ</button></div>':'';
-  return `<tr><td><strong>${escapeHtml(record.className||'Chưa xác định')}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong><div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(record.errorCode||"Không ghi nhận lỗi kỹ thuật")}</div>${exception}</td><td>${dateTime(record.recordingStart)}</td><td>${recordingSourceCell(record)}</td><td>${videoEditCell(record)}</td><td>—</td><td>${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
+  return `<tr><td><strong>${escapeHtml(displayClassName(record))}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong>${record.kind==='session'?'<div class="subtext">Buổi học từ Portal · Chưa gắn recording</div>':''}<div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(record.errorCode||"Không ghi nhận lỗi kỹ thuật")}</div>${exception}</td><td>${dateTime(record.recordingStart)}</td><td>${recordingSourceCell(record)}</td><td>${videoEditCell(record)}</td><td>—</td><td class="approval-cell">${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
 
 }
 document.getElementById('dateFilter').addEventListener('change',()=>{state.version++;loadData(true);});

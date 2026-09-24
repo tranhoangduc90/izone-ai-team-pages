@@ -52,6 +52,11 @@ function isApproved(record) {
   return record.reviewStatus === 'approved';
 }
 
+function displayClassName(record) {
+  const name=String(record.className || '').trim();
+  return !name || /^(cần duyệt|chưa xác định(?: lớp)?)$/i.test(name) ? 'Chưa xác định' : name;
+}
+
 function filteredRecords(records) {
   const [date, account, search] = controls.map((control) => control.value.trim().toLowerCase());
   return records.filter((record) => (!date || localDate(record.recordingStart) === date)
@@ -101,7 +106,7 @@ function recordRow(record) {
     : '';
   const reason = [record.matchReason, record.playlistReason].filter(Boolean).map((text) => `<div class="subtext">${escapeHtml(text)}</div>`).join('');
   return `<tr data-record-id="${escapeHtml(record.id)}">
-    <td><span class="class-code">${escapeHtml(record.className || 'Chưa xác định')}</span><div class="subtext">${escapeHtml(record.source || '—')}</div></td>
+    <td><span class="class-code">${escapeHtml(displayClassName(record))}</span><div class="subtext">${escapeHtml(record.source || '—')}</div></td>
     <td><div class="record-title">${escapeHtml(record.title || 'Zoom recording')}</div><div class="subtext">${lesson}${part} · ${escapeHtml(record.recordingFileId || '')}</div>${reason}</td>
     <td>${dateTime(record.recordingStart)}</td>
     <td>${recordingSourceCell(record)}</td>
@@ -115,7 +120,7 @@ function renderSection(title, records, approved) {
   const rows = filteredRecords(records);
   return `<section class="review-section ${approved ? 'approved' : 'pending'}">
     ${!approved&&(nightlyState.error||['failed','partial'].includes(nightlyState.snapshot?.scanStatus))?'<div class="empty-inline" role="alert">Chưa đối soát đầy đủ: nguồn Portal hoặc Zoom đang gặp lỗi. Các bản ghi hiện có được giữ để kiểm tra.</div>':''}<div class="review-heading"><div><span class="section-dot"></span><h2>${title}</h2></div><span>${rows.length} recording</span></div>
-    ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Lớp / Zoom</th><th>Recording</th><th>Thời gian học</th><th>Link recording</th><th>Chỉnh sửa</th><th>Link YouTube</th><th>Đã duyệt</th></tr></thead><tbody>${rows.map(recordRow).join('')}</tbody></table></div>` : '<div class="section-empty">Không có recording trong mục này.</div>'}
+    ${rows.length ? `<div class="table-wrap"><table><colgroup><col class="column-class"><col class="column-recording"><col class="column-time"><col class="column-source"><col class="column-edit"><col class="column-youtube"><col class="column-review"></colgroup><thead><tr><th>Lớp / Zoom</th><th>Recording</th><th>Thời gian học</th><th>Link recording</th><th>Chỉnh sửa</th><th>Youtube</th><th>Đã duyệt</th></tr></thead><tbody>${rows.map(recordRow).join('')}</tbody></table></div>` : '<div class="section-empty">Không có recording trong mục này.</div>'}
   </section>`;
 }
 

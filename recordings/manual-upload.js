@@ -20,7 +20,7 @@ function manualUploadCell(record) {
   if (record.kind === 'session') return '<span class="subtext">Chưa có video</span>';
   if (!manualUploadSource(record)) return '<button class="action-button manual-upload-disabled" disabled title="Chưa xác định được video nguồn">Đăng lên YouTube</button>';
   const reason = manualUploadUnavailable(record);
-  if (reason) return `<button class="action-button manual-upload-disabled" disabled title="${escapeHtml(reason)}">Đăng lên YouTube</button><div class="subtext">${escapeHtml(reason)}</div>`;
+  if (reason) return `<button class="action-button manual-upload-disabled" disabled title="${escapeHtml(reason)}">Đăng lên YouTube</button>`;
   return `<button class="action-button" data-action="manual-upload" data-id="${escapeHtml(record.id)}">Đăng lên YouTube</button>`;
 }
 document.addEventListener('click', event => {

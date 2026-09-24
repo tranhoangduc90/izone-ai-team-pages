@@ -5,6 +5,7 @@
   function clear(message='Đã đăng xuất.') {
     epoch++;idToken='';actor=null;clearTimeout(expiryTimer);
     document.getElementById('recordingAuthStatus').textContent=message;
+    if(!['Đã đăng xuất.','Đang xác minh quyền…'].includes(message) && typeof toast==='function')toast(message,'error');
     document.getElementById('recordingLogout').hidden=true;
     document.getElementById('recordingGoogleLogin').hidden=false;
     document.dispatchEvent(new Event('recording-auth-changed'));
@@ -27,7 +28,7 @@
   function init(attempt=0){
     if(!window.google?.accounts?.id){if(attempt<50)return setTimeout(()=>init(attempt+1),200);return clear('Không tải được đăng nhập Google. Hãy mở trang bằng Chrome và thử lại.');}
     google.accounts.id.initialize({client_id:clientId,auto_select:false,callback:login});
-    google.accounts.id.renderButton(document.getElementById('recordingGoogleLogin'),{type:'standard',theme:'outline',size:'large',text:'signin_with',locale:'vi'});
+    google.accounts.id.renderButton(document.getElementById('recordingGoogleLogin'),{type:'standard',theme:'outline',size:'medium',text:'signin',locale:'vi'});
   }
   document.getElementById('recordingLogout').addEventListener('click',()=>{window.google?.accounts?.id?.disableAutoSelect();clear();});
   init();

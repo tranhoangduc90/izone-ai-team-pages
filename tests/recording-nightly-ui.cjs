@@ -42,14 +42,30 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>document.querySelectorAll('.review-section').length===2&&window.fixtureLogin);await page.evaluate(()=>window.fixtureLogin({credential:'fixture-token'}));await page.waitForFunction(()=>window.recordingAuth.isAuthenticated());
     await page.waitForSelector('.zoom-source-link');assert.equal(await page.locator('.zoom-source-link').getAttribute('href'),'https://zoom.us/rec/play/fixture-source');assert.ok((await page.locator('.pending').innerText()).includes('Recording đã được xóa trong Zoom'));
     assert.equal(await page.locator('.class-folder').count(),0);assert.equal(await page.locator('.scan-panel').count(),0);assert.equal(await page.locator('#recordingDecisionDialog').count(),0);assert.equal(await page.getByRole('button',{name:'Xử lý recording',exact:true}).count(),0);assert.ok((await page.locator('.pending').innerText()).includes('Lý do cần duyệt:'));assert.ok((await page.locator('.pending').innerText()).includes('DOWNLOAD_FAILED'));
-    assert.ok((await page.locator('.pending').innerText()).includes('Chưa thấy recording tại lần quét'));
-    assert.deepEqual(await page.locator('.pending thead th').allTextContents(),['Lớp / Zoom','Recording','Thời gian học','Link recording','Chỉnh sửa','Link YouTube','Đã duyệt']);
+    assert.ok(!(await page.locator('.pending').innerText()).includes('Chưa thấy recording tại lần quét'));
+    assert.equal(await page.getByRole('button',{name:'Xử lý ngoại lệ'}).count(),0);
+    assert.equal(await page.locator('.pending tbody tr').count(),1);
+    assert.deepEqual(await page.locator('.pending thead th').allTextContents(),['Lớp / Zoom','Recording','Thời gian học','Link recording','Chỉnh sửa','Youtube','Đã duyệt']);
+    assert.equal(await page.locator('.pending thead th').nth(4).evaluate(e=>getComputedStyle(e).textAlign),'center');
     assert.equal(await page.locator('.pending tbody tr').first().locator('td').count(),7);
     assert.deepEqual(await page.locator('[data-edit-id="old"] option').allTextContents(),['Chọn thao tác','Đổi tên video','Đổi playlist']);
     assert.match(await page.locator('.video-link[href]:not(.zoom-source-link)').getAttribute('href'),/watch\?v=abcdefghijk&list=PLfixture$/);
     await page.evaluate(()=>document.fonts.ready);
     assert.ok(await page.evaluate(()=>document.fonts.check('400 16px "Source Sans Pro"')&&document.fonts.check('700 16px "Source Sans Pro"')));
     assert.ok((await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily)).includes('Source Sans Pro'));
+    for(const width of [1440,1920,390]){
+      await page.setViewportSize({width,height:960});
+      const grids=await page.locator('.review-section table').evaluateAll(tables=>tables.map(t=>[...t.querySelectorAll('thead th')].map(c=>({x:c.getBoundingClientRect().x,width:c.getBoundingClientRect().width}))));
+      assert.equal(grids.length,2);
+      for(let i=0;i<7;i++){assert.ok(Math.abs(grids[0][i].x-grids[1][i].x)<1);assert.ok(Math.abs(grids[0][i].width-grids[1][i].width)<1);}
+      const overflow=await page.evaluate(()=>({viewport:innerWidth,width:document.documentElement.scrollWidth,elements:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1&&!e.closest('.table-wrap')).slice(0,8).map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right}))}));
+      assert.ok(overflow.width<=width+1,JSON.stringify(overflow));
+    }
+    await page.setViewportSize({width:1440,height:1080});
+    assert.ok((await page.locator('.account-box').boundingBox()).width<180);
+    assert.equal(await page.locator('#recordingAuthStatus').evaluate(el=>Math.round(el.getBoundingClientRect().width)),1);
+    assert.equal(await page.locator('#recordingLogout').isVisible(),true);
+    if(process.env.RECORDING_LAYOUT_SCREENSHOT)await page.screenshot({path:process.env.RECORDING_LAYOUT_SCREENSHOT,fullPage:true});
     for(const link of await page.locator('.external-link-icon').all()) {assert.equal((await link.innerText()).trim(),'');assert.equal(await link.locator('svg').count(),1);assert.ok(await link.getAttribute('aria-label'));}
     assert.equal(await page.locator('[data-edit-id="old"]').count(),1);
     assert.equal(await page.locator('.manual-upload-disabled').isDisabled(),true);
@@ -77,10 +93,7 @@ const server=http.createServer((req,res)=>{
     await page.getByRole('button',{name:'Làm mới',exact:true}).click();assert.equal(scans,0);
     await page.locator('[data-action="nightly-review"] + span').click();await page.waitForFunction(()=>document.querySelector('.approved [data-action="nightly-review"]')?.checked);assert.ok((await page.locator('.approved').innerText()).includes('DOWNLOAD_FAILED'));
     await page.locator('[data-action="nightly-review"] + span').click();await page.waitForFunction(()=>document.querySelector('.pending [data-action="nightly-review"]')&&!document.querySelector('.pending [data-action="nightly-review"]').disabled);
-    await page.getByRole('button',{name:'Xử lý ngoại lệ'}).click();
-    await page.locator('#exceptionAction').selectOption('accepted_missing');await page.locator('#exceptionReason').fill('Đã đối chiếu nguồn');
-    await page.getByRole('button',{name:'Lưu trạng thái'}).click();await page.waitForFunction(()=>!document.querySelector('#exceptionDialog').open);
-    assert.equal(actions,1);assert.equal(await page.locator('.approved tbody tr').count(),2);
+    assert.equal(actions,0);assert.equal(await page.locator('.approved tbody tr').count(),1);
     await page.locator('[data-edit-id="old"]').selectOption('playlist');
     const labels=await page.locator('#playlistForm > label').allTextContents();assert.ok(labels[0].startsWith('Playlist chuyển vào'));assert.ok(labels[1].startsWith('Tên video sau khi chuyển'));
     await page.locator('#playlistSelect').selectOption('PLnew');await page.locator('#playlistVideoTitle').fill('IC9003 - Buổi 2');
