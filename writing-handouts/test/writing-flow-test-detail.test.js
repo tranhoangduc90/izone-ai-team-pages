@@ -23,3 +23,12 @@ test('kết quả Test cũ đã khôi phục không hiện điểm lượt chấ
   assert.deepEqual(detail.criteria, []);
   assert.match(detail.message, /kết quả cũ.*Google Docs/iu);
 });
+
+test('bài Test chưa có kết quả không tạo điểm hoặc nhận xét giả', () => {
+  assert.equal(summarizeWritingTestDetail(null), null);
+  const detail = summarizeWritingTestDetail({ task_number: 1, task_score: null,
+    criteria: null });
+  assert.equal(detail.scoreLabel, null);
+  assert.deepEqual(detail.criteria, []);
+  assert.match(detail.message, /Chưa có nhận xét chi tiết/iu);
+});
