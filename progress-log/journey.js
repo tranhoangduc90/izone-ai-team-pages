@@ -153,8 +153,13 @@ function renderJourney(journey) {
     .sort((left, right) => Date.parse(left.teacherSessionFeedback.sentAt)
       - Date.parse(right.teacherSessionFeedback.sentAt)).at(-1);
   elements.latestSpeakingFeedback.hidden = !latestFeedbackSession;
+  const originalTitle = String(latestFeedbackSession?.title || '').trim();
+  const prefix = originalTitle.match(/^Buổi\s+(\d+)(?=\s|[-–—:·]|$)/iu);
+  const title = prefix && Number(prefix[1]) === Number(latestFeedbackSession.sessionNumber)
+    ? originalTitle.slice(prefix[0].length).replace(/^[\s:·–—-]+/u, '').trim()
+    : originalTitle;
   elements.latestSpeakingFeedbackScope.textContent = latestFeedbackSession
-    ? `Buổi ${latestFeedbackSession.sessionNumber} · ${latestFeedbackSession.title}` : '';
+    ? [`Buổi ${latestFeedbackSession.sessionNumber}`, title].filter(Boolean).join(' · ') : '';
   elements.latestSpeakingFeedbackText.textContent = latestFeedbackSession?.teacherSessionFeedback.noteText || '';
   elements.timelineCount.textContent = `${journey.summary.totalSessions} buổi`;
   elements.sessionList.replaceChildren(...journey.sessions.map(buildSession));
