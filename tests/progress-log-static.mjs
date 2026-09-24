@@ -79,7 +79,9 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
 
 test('câu Writing 1 điền từ trong bốn câu, vẫn lưu đủ tám ô và yêu cầu điền hết', async () => {
   const [html, app, css] = await Promise.all([source('index.html'), source('app.js'), source('styles.css')]);
-  assert.match(html, /Progress Log · Khóa 56/);
+  assert.match(html, /Progress Log · IZONE/);
+  assert.match(html, /id="brandLabel"/);
+  assert.match(app, /Progress Log · Khóa \$\{courseCode\}/);
   assert.doesNotMatch(html, /VIỆC TIẾP THEO/);
   assert.doesNotMatch(app, /nextActionResult/);
   assert.match(app, /layoutType === 'numbered_short_texts'/);
