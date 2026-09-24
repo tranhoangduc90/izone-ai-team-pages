@@ -15,6 +15,16 @@ export const writingSortFields = Object.freeze([
   ['status', 'Trạng thái'], ['attempts', 'Số lần thử'],
 ]);
 
+// Nhận vào: mã lỗi của dòng bài hoặc mục Cần kiểm tra từ API.
+// Việc chính: phân biệt nguồn Test trùng, vốn không được chấm lại bằng Retry.
+// Kết quả: giao diện hiện hướng dẫn đối chiếu; lỗi khác vẫn dùng Retry bình thường.
+export function writingReviewAction(row) {
+  const code = row?.last_error_code || row?.error_code;
+  return code === 'TEST_DOCUMENT_PAIR_ALREADY_REGISTERED'
+    ? { canRetry: false, message: 'Nguồn Test trùng: đối chiếu hai bài tập rồi Bỏ qua nguồn trùng.' }
+    : { canRetry: true, message: '' };
+}
+
 export function normalizeWritingDay(value) {
   const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/u);
   if (!match) return null;
