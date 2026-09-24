@@ -5,7 +5,7 @@ import { coverageDescription, coverageStatusLabels } from './writing-flow-covera
 import { isBackdropClick } from './teacher-detail-core.js';
 import { clampColumnWidth, defaultColumnWidths, formatWritingDay, normalizeWritingDay, readColumnWidths,
   dailyBreakdown, saveColumnWidths, serializeSortRules, summarizeWritingTestDetail,
-  summarizeWritingTestRow, writingSortFields } from './writing-flow-ui.js?v=20260924-test-row-v2';
+  summarizeWritingTestRow, writingSortFields, writingReviewAction } from './writing-flow-ui.js?v=20260924-test-review-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 
@@ -42,7 +42,7 @@ for (const [index, stage] of stages.entries()) viewMeta[stage] = ['7 giai đoạ
   `Đang ở bước: ${stageNames[stage]}`];
 viewMeta.test_overview = ['Bài Test', 'Tổng quan chấm Test', 'Chỉ hiển thị bài kiểm tra; dùng chung cơ chế chính xác và retry của Writing.', 'Tất cả trạng thái Test'];
 viewMeta.test_daily = ['Bài Test', 'Hoạt động Test theo ngày', 'Tách bài chấm mới, kết quả cũ được ghi nhận và bài đã giao.', 'Ba loại hoạt động'];
-viewMeta.test_review = ['Bài Test', 'Bài Test cần kiểm tra', 'Các bài Test đã lỗi ba lần; có thể xem và chạy lại đúng bước.', 'Cần kiểm tra'];
+viewMeta.test_review = ['Bài Test', 'Bài Test cần kiểm tra', 'Bài lỗi ba lần có thể Retry; nguồn Test trùng cần đối chiếu trước khi bỏ qua.', 'Cần kiểm tra'];
 viewMeta.test_skipped = ['Bài Test', 'Bài Test đã bỏ qua', 'Có thể khôi phục bài Test bị bỏ qua nhầm.', 'Đã bỏ qua'];
 viewMeta.test_delivered = ['Bài Test', 'Bài Test đã giao', 'Kết quả đã được ghi và đọc lại thành công.', 'Đã giao'];
 for (const [index, stage] of stages.entries()) viewMeta[`test_${stage}`] = ['7 giai đoạn Test',
@@ -193,13 +193,27 @@ function renderClasses() { const root = $('flow-classes'); root.replaceChildren(
 
 function renderCoverageList(rootId, limit = null) { const root = $(rootId); root.replaceChildren(); let rows = state.coverage.filter(row => !['covered', 'completed', 'excluded'].includes(row.status)); if (limit) rows = rows.slice(0, limit); if (!rows.length) return root.append(makeText('p', 'Không có lớp cần chú ý.', 'muted')); for (const item of rows) { const row = document.createElement('article'); row.className = 'flow-row'; const body = document.createElement('div'); body.append(makeText('strong', `${item.class_code || item.class_name || 'Chưa rõ lớp'} · ${coverageStatusLabels[item.status] || item.status}`), makeText('p', coverageDescription(item), 'flow-meta')); row.append(body); if (item.class_code && !['excluded', 'completed'].includes(item.status)) { const button = actionButton('Quét ngay', () => void requestClassScan(item.class_code, button)); row.append(button); } root.append(row); } }
 function renderCoverage() { renderCoverageList('flow-class-coverage', 8); renderCoverageList('flow-mapping-coverage'); }
-function renderAttention() { const root = $('flow-attention'); root.replaceChildren(); const rows = [...state.reviews.slice(0, 4).map(item => ({ kind: 'review', item })), ...state.issues.slice(0, 4).map(item => ({ kind: 'issue', item }))].slice(0, 8); if (!rows.length) return root.append(makeText('p', 'Không có việc cần xử lý.', 'muted')); for (const { kind, item } of rows) { const row = document.createElement('article'); row.className = 'flow-row'; const title = kind === 'review' ? `${stageNames[item.stage_key]} · lỗi sau ${item.attempt_count}/3 lần` : `Lỗi nguồn · ${sourceIssueLabel(item.reason_code)}`; row.append(makeText('div', `${title}\n${sourceName(item)} · ${item.class_code || 'ngoài lớp'}`)); root.append(row); } }
+function renderAttention() {
+  const root = $('flow-attention'); root.replaceChildren();
+  const rows = [...state.reviews.slice(0, 4).map(item => ({ kind: 'review', item })),
+    ...state.issues.slice(0, 4).map(item => ({ kind: 'issue', item }))].slice(0, 8);
+  if (!rows.length) return root.append(makeText('p', 'Không có việc cần xử lý.', 'muted'));
+  for (const { kind, item } of rows) {
+    const row = document.createElement('article'); row.className = 'flow-row';
+    const title = kind === 'issue' ? `Lỗi nguồn · ${sourceIssueLabel(item.reason_code)}`
+      : writingReviewAction(item).canRetry
+        ? `${stageNames[item.stage_key]} · lỗi sau ${item.attempt_count}/3 lần`
+        : 'Nguồn Test trùng · cần đối chiếu';
+    row.append(makeText('div', `${title}\n${sourceName(item)} · ${item.class_code || 'ngoài lớp'}`));
+    root.append(row);
+  }
+}
 
 function detailButton(row, label) { return actionButton(label, () => void openRowDetail(row)); }
 function contentPreview(row) { const preview = makeText('button', row.essay_preview || 'Chưa có nội dung', 'flow-content-preview'); preview.type = 'button'; preview.title = 'Nhấn đúp hoặc nhấn Enter để xem đầy đủ'; preview.disabled = !row.essay_preview; const open = () => void openRowDetail(row); preview.addEventListener('dblclick', open); preview.addEventListener('click', event => { if (event.detail === 1) preview.focus(); }); preview.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } }); return preview; }
 async function skipPair(pair) { const reason = prompt('Lý do bỏ qua bài này:')?.trim(); if (!reason) return; try { await state.api.skipWritingPair(pair.pair_id, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa bỏ qua được bài: ${error.message}`); } }
 async function restorePair(pair) { const reason = prompt('Lý do khôi phục bài:', 'Bỏ qua nhầm')?.trim(); if (!reason) return; try { await state.api.restoreWritingPair(pair.pair_id, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa khôi phục được bài: ${error.message}`); } }
-async function retryPair(pair) { const stageKey = activeStage() || pair.stage_key; const reason = prompt(`Lý do chạy lại từ bước “${(pair.source_type === 'term_test' ? testStageNames[stageKey] : stageNames[stageKey]) || stageKey}”:`, 'Kiểm tra và chạy lại')?.trim(); if (!reason) return; try { await state.api.retryWritingPairStage(pair.pair_id, stageKey, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa tạo được lượt retry: ${error.message}`); } }
+async function retryPair(pair) { const action = writingReviewAction(pair); if (!action.canRetry) { showError('flow-error', action.message); return; } const stageKey = activeStage() || pair.stage_key; const reason = prompt(`Lý do chạy lại từ bước “${(pair.source_type === 'term_test' ? testStageNames[stageKey] : stageNames[stageKey]) || stageKey}”:`, 'Kiểm tra và chạy lại')?.trim(); if (!reason) return; try { await state.api.retryWritingPairStage(pair.pair_id, stageKey, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa tạo được lượt retry: ${error.message}`); } }
 async function skipSourceIssue(issue) { const reason = prompt('Lý do bỏ qua lỗi nguồn này:')?.trim(); if (!reason) return; try { await state.api.skipWritingSourceIssue(issue.issue_key, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa bỏ qua được lỗi nguồn: ${error.message}`); } }
 async function restoreSourceIssue(issue) { const reason = prompt('Lý do khôi phục lỗi nguồn:', 'Bỏ qua nhầm')?.trim(); if (!reason) return; try { await state.api.restoreWritingSourceIssue(issue.issue_key, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa khôi phục được lỗi nguồn: ${error.message}`); } }
 function actionCell(row) {
@@ -214,9 +228,11 @@ function actionCell(row) {
     }
     return cell;
   }
-  cell.append(actionButton('Retry', () => void retryPair(row), 'primary'),
-    row.skipped_at ? actionButton('Khôi phục', () => void restorePair(row))
-      : actionButton('Bỏ qua', () => void skipPair(row)));
+  const reviewAction = writingReviewAction(row);
+  if (reviewAction.canRetry) cell.append(actionButton('Retry', () => void retryPair(row), 'primary'));
+  else cell.append(makeText('span', 'Đối chiếu nguồn trùng', 'flow-meta'));
+  cell.append(row.skipped_at ? actionButton('Khôi phục', () => void restorePair(row))
+    : actionButton('Bỏ qua', () => void skipPair(row)));
   return cell;
 }
 function appendCell(row, key, content) { const cell = document.createElement('td'); cell.dataset.column = key; cell.style.width = `${state.columnWidths[key]}px`; if (content instanceof Node) cell.append(content); else cell.textContent = String(content ?? ''); row.append(cell); }
@@ -335,7 +351,27 @@ function testDetailSection(test) {
 async function openDetail(pair) { const dialog = $('flow-detail'); const content = $('flow-detail-content'); content.textContent = 'Đang tải đề bài, nội dung và nhật ký…'; dialog.showModal(); try { const [detailResponse, historyResponse] = await Promise.all([state.api.writingPairDetail(pair.pair_id), state.api.writingPairHistory(pair.pair_id)]); const detail = detailResponse.data.detail; const history = historyResponse.data.history; const topic = document.createElement('section'); topic.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-topic'; topic.append(makeText('h3', 'Đề bài'), makeText('p', detail.source.topic || '—')); if (detail.source.image) topic.append(externalLink(detail.source.image, 'Mở ảnh biểu đồ', '')); const essay = document.createElement('section'); essay.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-essay'; essay.append(makeText('h3', 'Nội dung học viên'), makeText('p', detail.source.essay || '—')); const metadata = document.createElement('section'); metadata.className = 'flow-detail-panel'; const trcc = detail.source.trCcCheck == null ? '—' : detail.source.trCcCheck ? 'Có' : 'Không'; const trccNote = detail.source.trCcSource === 'repair_override' ? ' · bổ sung sau khi cứu TR/CC' : ''; metadata.append(makeText('h3', 'Thông tin bài'), makeText('p', `Học viên: ${sourceName(detail.pair)}`), makeText('p', `Lớp: ${detail.pair.class_code || 'Ngoài lớp'}`), makeText('p', `TRCC: ${trcc}${trccNote}`), makeText('p', `Trạng thái nguồn: ${detail.pair.source_status || '—'}`), externalLink(detail.pair.file_url, 'Mở Docs', '')); const results = document.createElement('section'); results.className = 'flow-detail-panel'; results.append(makeText('h3', 'Kết quả và giai đoạn')); const renderStage = detail.stages.find(stage => stage.stage_key === 'render' && stage.result?.resultUrl); if (detail.pair.source_type !== 'term_test') results.append(externalLink(renderStage?.result?.resultUrl, 'Mở bài chấm trên LMS', 'Chưa có Link LMS')); for (const stage of detail.stages) { const block = document.createElement('details'); block.append(makeText('summary', `${detail.pair.source_type === 'term_test' ? testStageNames[stage.stage_key] : stageNames[stage.stage_key]} · ${statusNames[stage.status] || stage.status}`), makeText('pre', stage.result ? JSON.stringify(stage.result, null, 2) : 'Chưa có kết quả.')); results.append(block); } const log = document.createElement('section'); log.className = 'flow-detail-panel flow-detail-panel-wide'; log.append(makeText('h3', 'Nhật ký và lỗi')); for (const event of history.events || []) { const line = makeText('p', `${formatTime(event.at)} · ${describeEvent(event)}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`, 'flow-meta'); const workflowId = stageWorkflowIds[event.stage_key]; if (workflowId && event.n8n_execution_id) { const link = externalLink(`https://ducizone.ddns.net/workflow/${workflowId}/executions/${encodeURIComponent(event.n8n_execution_id)}`, 'Mở lượt chạy n8n', ''); line.append(' · ', link); } log.append(line); } const grid = document.createElement('div'); grid.className = 'flow-detail-grid'; grid.append(topic, essay, metadata); if (detail.test) grid.append(testDetailSection(detail.test)); grid.append(results, log); content.replaceChildren(makeText('h2', sourceName(detail.pair)), grid); } catch (error) { content.textContent = `Chưa đọc được chi tiết: ${error.message}`; } }
 
 async function retryReview(review, button) { if (!confirm(`Chạy lại từ bước “${stageNames[review.stage_key] || review.stage_key}”?`)) return; button.disabled = true; try { await state.api.retryWritingReview(review.review_id, createRequestId()); await refreshData(); } catch (error) { showError('flow-error', `Chưa gửi được yêu cầu: ${error.message}`); button.disabled = false; } }
-function renderReviews() { const root = $('flow-reviews'); root.replaceChildren(); if (!state.reviews.length) return root.append(makeText('p', 'Không có bài cần kiểm tra.', 'muted')); for (const review of state.reviews) { const row = document.createElement('article'); row.className = 'flow-row'; const body = document.createElement('div'); body.append(makeText('strong', `${stageNames[review.stage_key]} · đã thử ${review.attempt_count}/3`), makeText('p', `${sourceName(review)} · lớp ${review.class_code || 'ngoài lớp'} · lỗi ${review.error_code}`, 'flow-meta')); const button = actionButton('Chạy lại từ bước này', () => void retryReview(review, button), 'primary'); row.append(body, button); root.append(row); } }
+function renderReviews() {
+  const root = $('flow-reviews'); root.replaceChildren();
+  if (!state.reviews.length) return root.append(makeText('p', 'Không có bài cần kiểm tra.', 'muted'));
+  for (const review of state.reviews) {
+    const row = document.createElement('article'); row.className = 'flow-row';
+    const body = document.createElement('div');
+    const action = writingReviewAction(review);
+    const title = action.canRetry
+      ? `${stageNames[review.stage_key]} · đã thử ${review.attempt_count}/3`
+      : 'Nguồn Test trùng · cần đối chiếu';
+    const description = action.canRetry
+      ? `${sourceName(review)} · lớp ${review.class_code || 'ngoài lớp'} · lỗi ${review.error_code}`
+      : `${sourceName(review)} · lớp ${review.class_code || 'ngoài lớp'}. ${action.message}`;
+    body.append(makeText('strong', title), makeText('p', description, 'flow-meta'));
+    if (action.canRetry) {
+      const button = actionButton('Chạy lại từ bước này', () => void retryReview(review, button), 'primary');
+      row.append(body, button);
+    } else row.append(body, actionButton('Xem bài', () => void openDetail(review)));
+    root.append(row);
+  }
+}
 function sourceIssueLabel(code) { return ({ FILE_TYPE_UNSUPPORTED: 'Sai loại file', FETCH_FAILED: 'Không mở được tài liệu', PARSER_FAILED: 'Không đọc được tài liệu', TOPIC_NOT_IN_REGISTRY: 'Đề không có trong kho đề', ESSAY_ANCHOR_MISSING: 'Thiếu ô “HV Viết bài”', ESSAY_CELL_MISSING: 'Thiếu ô bài làm', TEACHER_COMMENT_ANCHOR_MISSING: 'Thiếu ô “Comment của GV”', RESULT_CELL_AMBIGUOUS: 'Không xác định được ô ghi kết quả', TABLE_STRUCTURE_INVALID: 'Sai format bảng', NO_ESSAY: 'Chưa có bài làm', NOT_WRITING_DOCUMENT: 'Không phải tài liệu Writing' })[code] || code; }
 async function retrySourceIssue(issue, button) { if (!confirm('Đọc lại nguồn này? Thao tác không sửa Lark Base.')) return; button.disabled = true; try { await state.api.retryWritingSourceIssue(issue.issue_key, createRequestId()); await refreshData(); } catch (error) { showError('flow-error', `Chưa đọc lại được nguồn: ${error.message}`); button.disabled = false; } }
 function renderIssues() { const root = $('flow-source-issues'); root.replaceChildren(); if (!state.issues.length) return root.append(makeText('p', 'Không có lỗi nguồn.', 'muted')); for (const issue of state.issues) { const row = document.createElement('article'); row.className = 'flow-row'; const body = document.createElement('div'); body.append(makeText('strong', sourceIssueLabel(issue.reason_code)), makeText('p', `${sourceName(issue)} · lớp ${issue.class_code || 'ngoài lớp'} · bài ${issue.essay_slot || '—'}`, 'flow-meta')); const button = actionButton('Đọc lại nguồn', () => void retrySourceIssue(issue, button)); row.append(body, button); root.append(row); } }

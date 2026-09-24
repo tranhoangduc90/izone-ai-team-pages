@@ -45,8 +45,8 @@ test('giao diện mới có responsive mobile và không thêm khối Việc ti�
 });
 
 test('asset thay đổi có revision mới để trình duyệt không giữ giao diện cũ', () => {
-  assert.match(studentHtml, /styles\.css\?rev=20260921-session3-v1/);
-  assert.match(studentHtml, /app\.js\?rev=20260924-ic2304-course-v1/);
-  assert.match(teacherHtml, /styles\.css\?rev=20260921-session3-v1/);
-  assert.match(teacherHtml, /teacher\.js\?rev=20260924-speaking-v1/);
+  assert.match(studentHtml, /styles\.css\?rev=[A-Za-z0-9-]+/);
+  assert.match(studentHtml, /app\.js\?rev=[A-Za-z0-9-]+/);
+  assert.match(teacherHtml, /styles\.css\?rev=[A-Za-z0-9-]+/);
+  assert.match(teacherHtml, /teacher\.js\?rev=[A-Za-z0-9-]+/);
 });

@@ -235,7 +235,12 @@ function selectedLibraryItems() {
 }
 
 function assignmentLabel(item) {
-  return `${item.class_name} · Buổi ${item.session_number} · ${item.title}`;
+  const originalTitle = String(item.title || '').trim();
+  const prefix = originalTitle.match(/^Buổi\s+(\d+)(?=\s|[-–—:·]|$)/iu);
+  const title = prefix && Number(prefix[1]) === Number(item.session_number)
+    ? originalTitle.slice(prefix[0].length).replace(/^[\s:·–—-]+/u, '').trim()
+    : originalTitle;
+  return [item.class_name, `Buổi ${item.session_number}`, title].filter(Boolean).join(' · ');
 }
 
 function refreshAssignmentSelect(selectedId = '') {
@@ -751,6 +756,16 @@ function buildStudentRow(student) {
   }
   copy.append(name, detail);
   const blocks = state.dashboard?.definition?.blocks || [];
+  const listeningBlock = blocks.find(block => (block.items || []).some(item =>
+    (item.skillCodes || []).includes('listening') && item.maxScore > 0));
+  const listeningScore = (student.checkpointScores || []).find(score =>
+    score.blockId === listeningBlock?.blockId);
+  if (listeningScore) {
+    const score = document.createElement('span');
+    score.className = 'student-listening-score';
+    score.textContent = `Listening ${listeningScore.correct}/${listeningScore.total} câu đúng`;
+    copy.insertBefore(score, detail);
+  }
   if (blocks.length) {
     const progress = document.createElement('div');
     progress.className = 'student-block-progress';

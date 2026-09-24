@@ -49,6 +49,7 @@
 .student-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--line); }
 .student-copy { display: grid; gap: 3px; }
 .student-copy small { color: var(--muted); }
+.student-listening-score { width: fit-content; padding: 4px 8px; border-radius: 8px; background: #e8f5ef; color: #17633e; font-size: 11px; font-weight: 800; }
 .student-block-progress { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .block-progress-pill { padding: 3px 7px; border: 1px solid #e7e3de; border-radius: 7px; background: #fbfaf8; color: var(--muted); font-size: 10px; font-weight: 700; }
 .block-progress-pill.submitted { border-color: #cce9da; background: #e8f5ef; color: #247957; }

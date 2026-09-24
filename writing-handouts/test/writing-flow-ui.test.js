@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { clampColumnWidth, dailyBreakdown, defaultColumnWidths, formatWritingDay, normalizeWritingDay,
   readColumnWidths, serializeSortRules } from '../js/writing-flow-ui.js';
+import * as writingUi from '../js/writing-flow-ui.js';
 
 test('ngày date-only và ISO cùng hiển thị ổn định theo lịch Việt Nam', () => {
   assert.equal(normalizeWritingDay('2026-09-21'), '2026-09-21');
@@ -40,4 +41,13 @@ test('sort chỉ gửi tối đa ba trường đã công khai', () => {
   assert.equal(serializeSortRules([
     { key: 'student', direction: 'asc' }, { key: 'student', direction: 'desc' },
   ]), 'student:asc');
+});
+
+test('bài Test trùng hiện hướng dẫn đối chiếu thay vì nút Retry', () => {
+  const duplicate = writingUi.writingReviewAction({
+    last_error_code: 'TEST_DOCUMENT_PAIR_ALREADY_REGISTERED',
+  });
+  assert.equal(duplicate.canRetry, false);
+  assert.match(duplicate.message, /đối chiếu/u);
+  assert.equal(writingUi.writingReviewAction({ error_code: 'STAGE_TIMEOUT' }).canRetry, true);
 });
