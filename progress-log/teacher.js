@@ -679,6 +679,16 @@ function buildStudentRow(student) {
   }
   copy.append(name, detail);
   const blocks = state.dashboard?.definition?.blocks || [];
+  const listeningBlock = blocks.find(block => (block.items || []).some(item =>
+    (item.skillCodes || []).includes('listening') && item.maxScore > 0));
+  const listeningScore = (student.checkpointScores || []).find(score =>
+    score.blockId === listeningBlock?.blockId);
+  if (listeningScore) {
+    const score = document.createElement('span');
+    score.className = 'student-listening-score';
+    score.textContent = `Listening ${listeningScore.correct}/${listeningScore.total} câu đúng`;
+    copy.insertBefore(score, detail);
+  }
   if (blocks.length) {
     const progress = document.createElement('div');
     progress.className = 'student-block-progress';

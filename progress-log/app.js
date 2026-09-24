@@ -611,6 +611,39 @@ function blockIsOpen(block) {
   return !release || release.status === 'open';
 }
 
+function showCheckpointFeedback(block) {
+  const result = state.checkpointSubmissions.get(block.blockId)?.result;
+  if (!result || result.answerRelease !== 'released' || !result.summary?.maxScore) return;
+  const score = document.createElement('p');
+  score.className = 'checkpoint-score';
+  const correct = result.items.filter(item => item.verdict === 'correct').length;
+  const total = result.items.filter(item => item.maxScore > 0).length;
+  score.textContent = `${block.title.split(' · ')[0]}: ${correct}/${total} câu đúng`;
+  elements.questionList.prepend(score);
+  for (const item of result.items) {
+    if (!item.expectedAnswer) continue;
+    const question = [...elements.questionList.querySelectorAll('.question')]
+      .find(node => node.dataset.itemVersionId === item.itemVersionId);
+    if (!question) continue;
+    for (const choice of question.querySelectorAll('.choice')) {
+      const input = choice.querySelector('input');
+      const selected = input.value === item.rawAnswer;
+      const expected = input.value === item.expectedAnswer;
+      input.checked = selected;
+      choice.classList.toggle('selected', selected);
+      choice.classList.toggle('feedback-correct', expected);
+      choice.classList.toggle('feedback-incorrect', selected && !expected);
+      choice.querySelector('.choice-key').textContent = expected ? '✓' : selected ? '✕' : choice.dataset.key;
+      if (expected || selected) {
+        const feedback = document.createElement('span');
+        feedback.className = 'choice-feedback';
+        feedback.textContent = expected ? (selected ? 'Em chọn đúng' : 'Đáp án đúng') : 'Em chọn sai';
+        choice.append(feedback);
+      }
+    }
+  }
+}
+
 function renderCheckpoint() {
   const blocks = allBlocks();
   const block = currentBlock();
@@ -627,6 +660,7 @@ function renderCheckpoint() {
   });
   if (state.checkpointSubmissions.has(block.blockId)) {
     for (const control of elements.questionList.querySelectorAll('input, textarea, select')) control.disabled = true;
+    showCheckpointFeedback(block);
   }
   elements.previousButton.hidden = state.checkpointIndex === 0;
   elements.nextButton.hidden = state.checkpointIndex === blocks.length - 1;
@@ -688,6 +722,7 @@ async function continueToNextCheckpoint() {
     renderCheckpoint();
   } catch (error) {
     setNotice(error.message, 'error');
+    if (state.checkpointSubmissions.has(block.blockId)) renderCheckpoint();
   } finally {
     state.submitting = false;
     elements.nextButton.disabled = false;

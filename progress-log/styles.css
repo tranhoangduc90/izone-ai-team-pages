@@ -118,6 +118,15 @@ select:focus, textarea:focus, input[type="text"]:focus { border-color: #dc7581; 
 }
 .choice.selected .choice-key { border-color: var(--red); background: var(--red); color: #fff; }
 .choice-text { line-height: 1.5; }
+.checkpoint-score { width: fit-content; margin: 13px 31px 0; padding: 7px 11px; border-radius: 9px; background: #e8f6ed; color: #17633e; font-size: 11px; font-weight: 800; }
+.choice.feedback-correct { border-color: #79bea0; background: #e8f6ed; color: #17633e; font-weight: 750; }
+.choice.feedback-correct .choice-key { border-color: #288458; background: #288458; color: #fff; }
+.choice.feedback-incorrect { border-color: #e9a3aa; background: #fff0f0; color: #a92737; font-weight: 750; }
+.choice.feedback-incorrect .choice-key { border-color: #ce4653; background: #ce4653; color: #fff; }
+.choice:has(input:disabled) { cursor: default; }
+.choice:has(input:disabled):hover { transform: none; }
+.choice:has(input:disabled):not(.feedback-correct):not(.feedback-incorrect):hover { border-color: #e4e2df; }
+.choice-feedback { margin-left: auto; white-space: nowrap; font-size: 10px; font-weight: 800; }
 
 .number-score { display: flex; align-items: center; gap: 13px; width: max-content; max-width: 100%; padding: 8px 14px; border: 1px solid var(--line); border-radius: 11px; background: #fbfaf8; }
 .number-score input { width: 76px; height: 46px; border: 0; border-right: 1px solid var(--line); background: transparent; font-size: 24px; font-weight: 850; }
