@@ -82,6 +82,26 @@ export function summarizeWritingTestDetail(test) {
       : 'Chưa có nhận xét chi tiết theo tiêu chí trong database.' };
 }
 
+// Nhận vào: một dòng Test đã được backend đánh dấu là kết quả hiện hành hoặc
+// kết quả cũ được khôi phục. Bài cũ có thể còn số thành phần của lượt chấm sai.
+// Việc chính: chỉ hiện điểm và tiến độ mới khi chúng thực sự là kết quả hiện hành.
+// Trả ra: nhãn ngắn cho bảng; nếu thiếu dữ liệu thì nói rõ phải xem Docs cũ.
+export function summarizeWritingTestRow(row) {
+  if (row?.source_type !== 'term_test') return null;
+  const task = `Task ${row.task_number || '?'}`;
+  if (row.result_origin === 'legacy_restored') {
+    return { progress: `${task} · Kết quả cũ trong Docs`,
+      overall: 'Xem điểm trong Docs cũ', lms: 'Không dùng' };
+  }
+  const expected = Number(row.task_number) === 1 ? 9 : 10;
+  return {
+    progress: `${row.test_config || 'Chưa rõ kỳ'} · ${task} · ${Number(row.component_count || 0)}/${expected} phần · `
+      + (row.task_score == null ? 'chưa có điểm' : `Band ${row.task_score}`),
+    overall: row.writing_score == null ? 'Chờ đủ Task' : `Band ${row.writing_score}`,
+    lms: 'Không dùng',
+  };
+}
+
 export function clampColumnWidth(value, fallback = 140) {
   const width = Number(value);
   return Number.isFinite(width) ? Math.min(640, Math.max(80, Math.round(width))) : fallback;

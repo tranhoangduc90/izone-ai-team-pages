@@ -5,7 +5,7 @@ import { coverageDescription, coverageStatusLabels } from './writing-flow-covera
 import { isBackdropClick } from './teacher-detail-core.js';
 import { clampColumnWidth, defaultColumnWidths, formatWritingDay, normalizeWritingDay, readColumnWidths,
   dailyBreakdown, saveColumnWidths, serializeSortRules, summarizeWritingTestDetail,
-  writingSortFields } from './writing-flow-ui.js?v=20260924-test-detail-v1';
+  summarizeWritingTestRow, writingSortFields } from './writing-flow-ui.js?v=20260924-test-row-v2';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 
@@ -57,17 +57,15 @@ const columns = {
   classroom: ['Classroom', row => externalLink(row.classroom_url, row.display_name || 'Mở Classroom', row.display_name || '—')],
   trcc: ['TRCC', row => row.tr_cc_check == null ? '—' : row.tr_cc_check ? 'Có' : 'Không'],
   sourceStatus: ['Trạng thái nguồn', row => row.source_status || '—'],
-  testProgress: ['Test / tiến độ', row => row.source_type === 'term_test'
-    ? `${row.test_config || 'Chưa rõ kỳ'} · Task ${row.task_number || '?'} · ${Number(row.component_count || 0)}/${Number(row.task_number) === 1 ? 9 : 10} phần · ${row.task_score == null ? 'chưa có điểm' : `Band ${row.task_score}`}`
-    : '—'],
-  testOverall: ['Điểm toàn Test', row => row.source_type === 'term_test'
-    ? row.writing_score == null ? 'Chờ đủ Task' : `Band ${row.writing_score}` : '—'],
+  testProgress: ['Test / tiến độ', row => summarizeWritingTestRow(row)?.progress || '—'],
+  testOverall: ['Điểm toàn Test', row => summarizeWritingTestRow(row)?.overall || '—'],
   finished: ['Thời điểm xong', row => formatTime(row.finished_at)],
   topic: ['Đề bài', row => row.topic || '—'],
   image: ['Ảnh biểu đồ', row => externalLink(row.image_url, 'Mở ảnh', '—')],
   created: ['Ngày tạo', row => formatTime(row.source_created_at || row.created_at)],
   content: ['Nội dung', row => contentPreview(row)],
-  lms: ['Link LMS', row => externalLink(row.lms_url, 'Mở bài chấm', 'Chưa có')],
+  lms: ['Link LMS', row => row.source_type === 'term_test'
+    ? summarizeWritingTestRow(row).lms : externalLink(row.lms_url, 'Mở bài chấm', 'Chưa có')],
   attempts: ['Số lần thử', row => Number(row.attempt_count || 0)],
   error: ['Lỗi gần nhất', row => row.last_error_code || '—'],
   actions: ['Thao tác', row => actionCell(row)],

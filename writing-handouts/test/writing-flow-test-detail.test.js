@@ -1,6 +1,27 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { summarizeWritingTestDetail } from '../js/writing-flow-ui.js';
+import { summarizeWritingTestDetail, summarizeWritingTestRow } from '../js/writing-flow-ui.js';
+
+test('dòng Test đã khôi phục chỉ dẫn xem Docs cũ, không hiển thị điểm và tiến độ lượt chấm sai', () => {
+  const row = summarizeWritingTestRow({ source_type: 'term_test', result_origin: 'legacy_restored',
+    test_config: null, task_number: 2, component_count: 10, task_score: null, writing_score: null });
+  assert.match(row.progress, /kết quả cũ.*Docs/iu);
+  assert.doesNotMatch(row.progress, /10\/10|Chưa rõ kỳ/iu);
+  assert.equal(row.overall, 'Xem điểm trong Docs cũ');
+  assert.equal(row.lms, 'Không dùng');
+});
+
+test('dòng Test hiện hành giữ điểm và đủ số thành phần', () => {
+  const row = summarizeWritingTestRow({ source_type: 'term_test', test_config: 'Term Test 1',
+    task_number: 2, component_count: 10, task_score: 6.5, writing_score: 6 });
+  assert.equal(row.progress, 'Term Test 1 · Task 2 · 10/10 phần · Band 6.5');
+  assert.equal(row.overall, 'Band 6');
+});
+
+test('dòng rỗng hoặc Homework không bị gắn nhãn Test', () => {
+  assert.equal(summarizeWritingTestRow(null), null);
+  assert.equal(summarizeWritingTestRow({ source_type: 'google_classroom', task_number: 2 }), null);
+});
 
 test('chi tiết Test cho thấy từng tiêu chí, thành phần và điểm đã lưu', () => {
   const detail = summarizeWritingTestDetail({
