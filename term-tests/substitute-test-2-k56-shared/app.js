@@ -13,7 +13,8 @@
     ? requestedDemo
     : '';
   const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
-  const durableWritingMode = serverGradingMode && appConfig?.DURABLE_WRITING_ENABLED === true;
+  const durableWritingMode = serverGradingMode && classCode === 'IC2264'
+    && appConfig?.DURABLE_WRITING_ENABLED === true;
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
   if (!testConfig || !appConfig || !root) return;

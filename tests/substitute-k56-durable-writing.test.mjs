@@ -211,3 +211,80 @@ test('lobby đổi sang người khác phải xóa bài và điểm cũ trước
   assert.equal(state.writingSubmitted, false);
   assert.equal(state.attemptToken, '');
 });
+
+test('thiết bị mới mở bài đã nộp ngay sau chọn tên, không tải lại audio', async () => {
+  const bootstrap = readFileSync(new URL(
+    '../term-tests/substitute-test-2-k56-computer-based/bootstrap.js', import.meta.url), 'utf8');
+  const from = bootstrap.indexOf('  async function prepareSelectedStudent()');
+  const to = bootstrap.indexOf('  function base64Bytes(', from);
+  assert.ok(from >= 0 && to > from);
+  const state = { identityConfirmed: true, annotationRunId: '' };
+  let statusReads = 0;
+  let entered = 0;
+  let downloads = 0;
+  const context = {
+    elements: { bootstrapStudent: { value: '1001', disabled: false },
+      bootstrapClass: { disabled: false } },
+    roster: [{ ref: '1001', name: 'Học viên giả' }],
+    preparing: false, state, localDemo: true, durableWritingMode: true,
+    classCode: 'IC2264', crypto: { randomUUID: () => 'synthetic-run' },
+    saveState: patch => Object.assign(state, patch),
+    readDurableWritingStatus: async () => {
+      statusReads += 1;
+      return { accepted: true, sections: { listening: {}, reading: {} },
+        submittedEssay: 'Synthetic essay.' };
+    },
+    enterExam: async () => { entered += 1; },
+    downloadLocalDemoAudio: async () => { downloads += 1; },
+    setStartAvailability() {}, showNotice() {},
+    window: { K56_SUBSTITUTE_TEST_2_CONTENT: {} },
+  };
+  await vm.runInNewContext(`${bootstrap.slice(from, to)}\nprepareSelectedStudent();`, context);
+  assert.equal(statusReads, 1);
+  assert.equal(entered, 1);
+  assert.equal(downloads, 0);
+  context.classCode = 'DEMO';
+  await vm.runInNewContext(`${bootstrap.slice(from, to)}\nprepareSelectedStudent();`, context);
+  assert.equal(statusReads, 1);
+  assert.equal(downloads, 1);
+});
+
+test('phòng chờ chỉ tin phiếu đúng cổng, không xem lỗi mạng là chưa nộp', async () => {
+  const bootstrap = readFileSync(new URL(
+    '../term-tests/substitute-test-2-k56-computer-based/bootstrap.js', import.meta.url), 'utf8');
+  const from = bootstrap.indexOf('  async function readDurableWritingStatus(student)');
+  const to = bootstrap.indexOf('  function formatBytes(', from);
+  assert.ok(from >= 0 && to > from);
+  let answer = { accepted: true, submittedEssay: 'Synthetic essay.',
+    sections: { listening: {}, reading: {} } };
+  const requests = [];
+  const context = { appConfig: { DURABLE_WRITING_API_BASE_URL:
+    'https://ducizone.ddns.net/webhook/substitute-test-2-k56-public-durable-test' },
+  classCode: 'IC2264', URL, AbortController,
+  window: { setTimeout: () => 1, clearTimeout() {} },
+  fetch: async (url, options) => {
+    requests.push({ url, body: JSON.parse(options.body) });
+    if (answer instanceof Error) throw answer;
+    return { ok: true, json: async () => answer };
+  } };
+  const read = vm.runInNewContext(`${bootstrap.slice(from, to)}\nreadDurableWritingStatus`, context);
+  const student = { ref: '1001' };
+  assert.equal((await read(student)).accepted, true);
+  assert.deepEqual(requests[0].body, { route: '/api/test/writing/status',
+    payload: { classCode: 'IC2264', studentRef: '1001' } });
+  answer = { accepted: false };
+  assert.equal((await read(student)).accepted, false);
+  answer = { accepted: true, sections: null };
+  await assert.rejects(read(student), /thiếu dữ liệu/u);
+  answer = new Error('Synthetic network failure');
+  await assert.rejects(read(student), /Synthetic network failure/u);
+  context.appConfig.DURABLE_WRITING_API_BASE_URL = 'https://wrong.example/webhook/test';
+  await assert.rejects(read(student), /chưa được cấu hình an toàn/u);
+});
+
+test('bộ audit K56 bắt buộc chạy hồi quy phiếu Writing bền vững', () => {
+  const manifest = JSON.parse(readFileSync(new URL(
+    './k56-product-audit-manifest.json', import.meta.url), 'utf8'));
+  assert.ok(manifest.groups.substitute_56_and_shared_67.includes(
+    'tests/substitute-k56-durable-writing.test.mjs'));
+});

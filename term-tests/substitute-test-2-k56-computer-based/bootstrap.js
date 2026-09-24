@@ -286,6 +286,45 @@
     }
   }
 
+  // Dữ liệu vào: tên vừa chọn ở phòng chờ lớp IC2264.
+  // Việc chính: hỏi cổng phiếu bền xem người này đã nộp Writing chưa, trước khi tải audio.
+  // Kết quả: có phiếu thì mở ngay kết quả; chưa có phiếu mới cho bắt đầu lượt thi.
+  // Khi lỗi: dừng ở phòng chờ, không mở lượt mới có thể trùng bài đã lưu.
+  async function readDurableWritingStatus(student) {
+    const base = appConfig.DURABLE_WRITING_API_BASE_URL;
+    if (!base) throw new Error('Cổng xem lại bài Writing chưa được cấu hình an toàn.');
+    const target = new URL(base);
+    if (target.origin !== 'https://ducizone.ddns.net'
+      || !target.pathname.startsWith('/webhook/substitute-test-2-k56-public-durable-')) {
+      throw new Error('Cổng xem lại bài Writing chưa được cấu hình an toàn.');
+    }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 30_000);
+    try {
+      const response = await fetch(base, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify({ route: '/api/test/writing/status',
+          payload: { classCode, studentRef: student.ref } }),
+        signal: controller.signal,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+      if (data.accepted === false) return data;
+      if (data.accepted !== true || !data.sections?.listening
+        || !data.sections?.reading || typeof data.submittedEssay !== 'string'
+        || !data.submittedEssay.trim()) {
+        throw new Error('Bài đã có nhưng thiếu dữ liệu để xem lại. Hãy liên hệ giáo viên.');
+      }
+      return data;
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('Chưa kiểm tra được bài đã lưu. Vui lòng thử lại.');
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
   function formatBytes(bytes) {
     return `${(Number(bytes || 0) / 1024 / 1024).toFixed(1)} MB`;
   }
@@ -458,6 +497,20 @@
     elements.bootstrapStudent.disabled = true;
     try {
       if (localDemo) {
+        if (durableWritingMode && classCode === 'IC2264') {
+          const existing = await readDurableWritingStatus(student);
+          if (existing.accepted) {
+            const serverNow = new Date().toISOString();
+            await enterExam({
+              content: window.K56_SUBSTITUTE_TEST_2_CONTENT,
+              serverNow,
+              listeningStartedAt: state.listeningStartedAt || serverNow,
+              listeningDeadlineAt: state.listeningDeadlineAt || serverNow,
+              listeningSubmitted: true,
+            });
+            return;
+          }
+        }
         if (state.attemptToken) {
           const serverNow = new Date().toISOString();
           await enterExam({
