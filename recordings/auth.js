@@ -19,11 +19,13 @@
     document.getElementById('recordingAuthStatus').textContent='Đang xác minh quyền…';
     try{
       const response=await fetch(window.RECORDING_NIGHTLY.actionUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'auth',idToken:candidate}),referrerPolicy:'no-referrer',cache:'no-store'});
-      const data=await response.json();if(current!==epoch)return;if(!response.ok||!data.ok||!data.actor?.verified||data.actor.expiresAt<=Date.now())throw new Error('DENIED');
+      if(response.status===401||response.status===403)throw new Error('DENIED');
+      if(!response.ok)throw new Error('AUTH_SERVICE_UNAVAILABLE');
+      const data=await response.json();if(current!==epoch)return;if(!data.ok||!data.actor?.verified||!Number.isFinite(data.actor.expiresAt)||data.actor.expiresAt<=Date.now())throw new Error('AUTH_SERVICE_UNAVAILABLE');
       idToken=candidate;actor=data.actor;document.getElementById('recordingAuthStatus').textContent='Đã đăng nhập — có quyền xem nội bộ và xác nhận đăng.';
       document.getElementById('recordingLogout').hidden=false;document.getElementById('recordingGoogleLogin').hidden=true;
       expiryTimer=setTimeout(()=>clear('Phiên đã hết hạn. Vui lòng đăng nhập lại.'),Math.max(0,actor.expiresAt-Date.now()));document.dispatchEvent(new Event('recording-auth-changed'));
-    }catch{if(current===epoch)clear('Tài khoản chưa được cấp quyền hoặc phiên Google không hợp lệ.');}
+    }catch(error){if(current===epoch)clear(error.message==='DENIED'?'Tài khoản chưa được cấp quyền hoặc phiên Google không hợp lệ.':'Dịch vụ xác thực đang gặp lỗi kết nối. Vui lòng thử đăng nhập lại sau ít phút.');}
   }
   function init(attempt=0){
     if(!window.google?.accounts?.id){if(attempt<50)return setTimeout(()=>init(attempt+1),200);return clear('Không tải được đăng nhập Google. Hãy mở trang bằng Chrome và thử lại.');}
