@@ -88,7 +88,15 @@
     "full_suite": "Toàn repo Pages có test live gọi dịch vụ và lớp khác ngoài phạm vi. Đã chạy toàn bộ suite kiểm thử Progress Log an toàn, gồm 22 test và trình duyệt sạch."
   },
   "cross_constraints": [],
-  "mutations": [],
+  "mutations": [
+    {
+      "id": "M-PAGES",
+      "target": "GitHub Pages Progress Log",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "PR #18 đã merge vào main tại 897b067; Pages build 35988152051 thành công. URL học viên và giảng viên trả HTTP 200 cùng revision mới."
+    }
+  ],
   "verification_runs": [
     {
       "id": "V-PROGRESS-LOG",
@@ -101,18 +109,36 @@
       "passed": 22,
       "failed": 0,
       "skipped": 0,
-      "evidence": "Toàn bộ test Progress Log an toàn đạt; màn link thiếu mã đã kiểm trên desktop và mobile."
+      "evidence": "Toàn bộ test Progress Log an toàn đạt trên commit chứa code; màn link thiếu mã đã kiểm trên desktop và mobile."
+    },
+    {
+      "id": "V-PRODUCTION",
+      "scope": "behavioral",
+      "command": "Playwright mở URL học viên Pages bằng trình duyệt sạch và đọc DOM/console; HTTP readback HTML và JavaScript giảng viên",
+      "tree_revision": "6c60ba2d84fd4ed1b58218a18d0c76e49bf60918",
+      "captured_at": "2026-09-24T10:38:03Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Trang học viên production trả 200, hiển thị hướng dẫn thiếu mã và không có page error; HTML/JS dashboard trả 200 với revision mới."
     }
   ],
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "deployed_awaiting_validation",
     "base_tree_revision": "908230bdd0b624b7ad4d134c1090fa39b2842c77",
     "current_tree_revision": "6c60ba2d84fd4ed1b58218a18d0c76e49bf60918",
     "production_authorized": true,
     "rollback": "Revert commit sửa Progress Log trên Pages và chờ GitHub Pages build lại.",
-    "deployment_readback": "pending",
-    "operational_observation": "Chưa phát hành tại thời điểm lập manifest.",
-    "open_risks": []
+    "deployment_readback": "verified",
+    "operational_observation": "Màn link thiếu mã đã được quan sát trên Pages; mục chọn phiếu sau Google Auth chưa được đọc lại bằng tài khoản giảng viên thật.",
+    "open_risks": [
+      {
+        "severity": "P2",
+        "summary": "Cần tải lại dashboard đã đăng nhập để xác nhận nhãn IC2304 hiện đúng trong phiên thật."
+      }
+    ]
   }
 }
