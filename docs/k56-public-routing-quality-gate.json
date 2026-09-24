@@ -7,8 +7,8 @@
   "risk": "high",
   "system_traits": ["stateful", "asynchronous", "concurrent", "external_side_effects", "authentication", "personal_data"],
   "requirements": [
-    {"id": "R-ROUTE", "statement": "Mọi lớp K56 thật đi API K56, lớp CODEXDEMO56 giữ API demo ở cả Term 1, Term 2 và Mini.", "test_ids": ["T-ROUTE", "T-FULL"]},
-    {"id": "R-CACHE", "statement": "Tám trang K56 nạp revision config mới để không dùng lại địa chỉ demo từ cache.", "test_ids": ["T-CACHE", "T-FULL"]},
+    {"id": "R-ROUTE", "statement": "Mọi lớp K56 thật đi API K56, lớp CODEXDEMO56 giữ API demo ở cả Term 1, Term 2 và Mini.", "test_ids": ["T-ROUTE", "T-FULL", "T-LIVE"]},
+    {"id": "R-CACHE", "statement": "Tám trang K56 nạp revision config mới để không dùng lại địa chỉ demo từ cache.", "test_ids": ["T-CACHE", "T-FULL", "T-LIVE"]},
     {"id": "R-SUB", "statement": "Sửa phản hồi Substitute nhưng không đổi hai gateway Substitute hoặc K67.", "test_ids": ["T-SUB", "T-FULL"]}
   ],
   "invariants": [
@@ -21,6 +21,7 @@
     {"id": "T-CACHE", "category": "lifecycle_time", "priority": "P0", "status": "passed", "evidence": "Cả tám trang K56 trỏ config revision 20260924-k56-all-classes; test focused 4/4."},
     {"id": "T-SUB", "category": "invalid_input", "priority": "P0", "status": "passed", "evidence": "Substitute 1/2 không mở feedback thiếu Task hoặc Task bài khác; ma trận kiểm K56/Substitute/K67 đạt."},
     {"id": "T-FULL", "category": "happy_path", "priority": "P0", "status": "passed", "evidence": "node scripts/run-k56-product-audit.mjs --all: 230/230, 0 fail/skip; 48 file K56/Substitute/K67."},
+    {"id": "T-LIVE", "category": "happy_path", "priority": "P0", "status": "passed", "evidence": "GitHub Pages build commit e88ca54 built; URL công khai tám trang có revision mới, ba config chọn demo-only, IC2322 và IC2326 có roster 200 ở cả ba đề (19 và 14 học viên)."},
     {"id": "T-PRIVACY", "category": "security_privacy", "priority": "P1", "status": "passed", "evidence": "Fixture giả; kiểm tên file staged và diff, không đưa hồ sơ học viên; OAuth client ID công khai đã có từ trước."},
     {"id": "T-ROLLBACK", "category": "rollback_recovery", "priority": "P1", "status": "passed", "evidence": "Pages là file tĩnh: có thể phục hồi config và revision từ commit trước; backend K56 giữ nguyên bài mới, không rollback DB."},
     {"id": "T-PARTIAL", "category": "external_partial", "priority": "P1", "status": "passed", "evidence": "API public `/mapping-api-demo` 404 IC2322 nhưng `/mapping-api-k56` 200/19; fix chỉ đổi chọn URL ở frontend, không mutate API."},
@@ -33,17 +34,22 @@
   "cross_constraints": [
     {"id": "ROUTE-REAL", "left": {"name": "real_k56_configs_expected", "value": 3}, "operator": "==", "right": {"name": "real_k56_configs_green", "value": 3}, "status": "passed", "evidence": "Term 1, Term 2 và Mini đều chọn API thật cho IC2264/IC2322/IC2326."}
   ],
-  "mutations": [],
+  "mutations": [
+    {"id": "M-PAGES", "target": "GitHub Pages main commit e88ca54", "outcome": "success", "readback": "verified", "evidence": "Pages builds/latest built e88ca54; đọc lại 8 trang/3 config công khai và 6 roster HTTP đúng lớp."}
+  ],
   "verification_runs": [
-    {"id": "V-FULL", "scope": "full_suite", "command": "node scripts/run-k56-product-audit.mjs --all", "tree_revision": "git-diff:f6f5ba26c85d656733f33d50e50c192ab60b119e", "captured_at": "2026-09-24T05:00:00Z", "exit_code": 0, "outcome": "passed", "passed": 230, "failed": 0, "skipped": 0, "evidence": "48 file K56/Substitute/K67; không gọi external requests trong ca UI memory."}
+    {"id": "V-FULL", "scope": "full_suite", "command": "node scripts/run-k56-product-audit.mjs --all", "tree_revision": "git-diff:f6f5ba26c85d656733f33d50e50c192ab60b119e", "captured_at": "2026-09-24T05:00:00Z", "exit_code": 0, "outcome": "passed", "passed": 230, "failed": 0, "skipped": 0, "evidence": "48 file K56/Substitute/K67; không gọi external requests trong ca UI memory."},
+    {"id": "V-LIVE", "scope": "behavioral", "command": "GET tám trang Pages, ba config và sáu roster K56 công khai", "tree_revision": "git-diff:f6f5ba26c85d656733f33d50e50c192ab60b119e", "captured_at": "2026-09-24T05:05:00Z", "exit_code": 0, "outcome": "passed", "passed": 17, "failed": 0, "skipped": 0, "evidence": "8+3+6 GET thành công; Pages build e88ca54; chỉ xuất số học viên."}
   ],
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "e966dd36e1b722fc157310b87056c06f22631688",
     "current_tree_revision": "git-diff:f6f5ba26c85d656733f33d50e50c192ab60b119e",
     "production_authorized": true,
     "rollback": "Nếu Pages lỗi, phục hồi đúng commit trước và revision config cũ; không đổi backend/kho bài đã nhận lượt mới. Ưu tiên sửa tiến tới nếu chỉ lỗi tuyến lớp thật.",
-    "open_risks": ["Cần đọc lại config công khai và thử lớp thật trên giao diện sau khi Pages build; hiện chỉ API public và test local đã được xác minh."]
+    "deployment_readback": "verified",
+    "operational_observation": "IC2322 19 học viên và IC2326 14 học viên hiện ở ba roster API công khai; lớp demo/K67 giữ tuyến riêng.",
+    "open_risks": ["Chưa có bài Writing K56 mới để xác minh chấm và Portal; đó là cổng riêng của toàn plan, không phải lỗi định tuyến Pages."]
   }
 }
