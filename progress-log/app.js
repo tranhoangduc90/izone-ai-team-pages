@@ -287,7 +287,10 @@ function responseFor(item) {
 function itemIsVisible(item) {
   const dependencyId = item.interactionConfig?.visibleWhenItemVersionId;
   if (!dependencyId) return true;
-  return state.responses[dependencyId] === item.interactionConfig.visibleWhenValue;
+  const selected = state.responses[dependencyId];
+  return Array.isArray(selected)
+    ? selected.includes(item.interactionConfig.visibleWhenValue)
+    : selected === item.interactionConfig.visibleWhenValue;
 }
 
 function itemIsRequired(item) {
@@ -489,6 +492,106 @@ function buildChoice(item, option, inputType, optionIndex) {
   return label;
 }
 
+function buildSpeakingIssueChecklist(item, questionLabel) {
+  const choices = document.createElement('div');
+  choices.className = 'choice-list speaking-checklist';
+  choices.setAttribute('role', 'group');
+  choices.setAttribute('aria-labelledby', questionLabel.id);
+  const children = currentBlock().items.filter(candidate =>
+    candidate.layoutType === 'inline_option_text'
+    && candidate.interactionConfig.visibleWhenItemVersionId === item.itemVersionId);
+  let selected = Array.isArray(responseFor(item)) ? [...responseFor(item)] : [];
+  const controls = [];
+  const sync = () => {
+    for (const control of controls) {
+      const checked = selected.includes(control.option.id);
+      control.checkbox.checked = checked;
+      control.card.classList.toggle('selected', checked);
+      control.label.classList.toggle('selected', checked);
+      control.key.textContent = checked ? '✓' : control.card.dataset.key;
+      if (control.textarea) {
+        control.textarea.required = checked;
+        control.textarea.disabled = !checked && selected.length >= item.interactionConfig.maxSelections;
+        if (!checked && control.textarea.value) {
+          control.textarea.value = '';
+          recordResponse(control.child.itemVersionId, undefined);
+        }
+      }
+    }
+  };
+  const setSelection = next => {
+    selected = next;
+    recordResponse(item.itemVersionId, selected.length ? selected : undefined);
+    sync();
+  };
+  for (const [index, option] of item.options.entries()) {
+    const card = document.createElement('div');
+    card.className = 'speaking-option';
+    card.dataset.key = String(index + 1);
+    const label = document.createElement('label');
+    label.className = 'choice';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = item.itemVersionId;
+    checkbox.value = option.id;
+    const key = document.createElement('span');
+    key.className = 'choice-key';
+    const title = document.createElement('span');
+    title.className = 'choice-text';
+    title.textContent = option.label;
+    label.append(checkbox, key, title);
+    card.append(label);
+    const child = children.find(candidate => candidate.interactionConfig.visibleWhenValue === option.id);
+    let textarea = null;
+    if (child) {
+      const field = document.createElement('div');
+      field.className = 'speaking-inline-field';
+      field.dataset.itemVersionId = child.itemVersionId;
+      textarea = document.createElement('textarea');
+      textarea.rows = 2;
+      textarea.maxLength = 2_000;
+      textarea.placeholder = option.id === 'OTHER' ? 'Nêu rõ vấn đề khác…' : 'Em hãy nêu cụ thể…';
+      textarea.value = String(responseFor(child));
+      textarea.setAttribute('aria-label', child.prompt);
+      field.append(textarea);
+      card.append(field);
+      textarea.addEventListener('input', () => {
+        if (textarea.value.trim() && !selected.includes(option.id)) {
+          if (selected.length >= item.interactionConfig.maxSelections) {
+            textarea.value = '';
+            setNotice('Em chỉ được chọn tối đa 2 mục. Hãy bỏ một mục trước khi nhập thêm.', 'error');
+            return;
+          }
+          setSelection([...selected.filter(id => id !== item.interactionConfig.exclusiveOptionId), option.id]);
+        }
+        recordResponse(child.itemVersionId, textarea.value || undefined);
+      });
+    }
+    controls.push({ option, card, label, checkbox, key, child, textarea });
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        if (option.id === item.interactionConfig.exclusiveOptionId) {
+          setSelection([option.id]);
+        } else {
+          const otherSelections = selected.filter(id => id !== item.interactionConfig.exclusiveOptionId);
+          if (otherSelections.length >= item.interactionConfig.maxSelections) {
+            setNotice('Em chỉ được chọn tối đa 2 mục. Hãy bỏ một mục trước khi chọn thêm.', 'error');
+            sync();
+            return;
+          }
+          setSelection([...otherSelections, option.id]);
+        }
+      } else {
+        setSelection(selected.filter(id => id !== option.id));
+      }
+      setNotice('');
+    });
+    choices.append(card);
+  }
+  sync();
+  return choices;
+}
+
 function buildQuestion(item) {
   const wrapper = document.createElement('div');
   wrapper.className = `question ${item.layoutType || 'plain_prompt'}`;
@@ -571,6 +674,8 @@ function buildQuestion(item) {
       group.append(row);
     }
     content.append(group);
+  } else if (item.layoutType === 'speaking_issue_checklist') {
+    content.append(buildSpeakingIssueChecklist(item, label));
   } else if (item.interactionType === 'short_text' || item.interactionType === 'long_text') {
     const input = document.createElement(item.interactionType === 'long_text' ? 'textarea' : 'input');
     if (input instanceof HTMLInputElement) input.type = 'text';
@@ -653,7 +758,8 @@ function renderCheckpoint() {
   elements.checkpointTitle.textContent = block.title;
   elements.checkpointInstructions.textContent = block.instructions || '';
   elements.checkpointInstructions.hidden = !block.instructions;
-  elements.questionList.replaceChildren(...block.items.map(buildQuestion));
+  elements.questionList.replaceChildren(...block.items
+    .filter(item => item.layoutType !== 'inline_option_text').map(buildQuestion));
   refreshConditionalQuestions();
   window.requestAnimationFrame(() => {
     for (const control of elements.questionList.querySelectorAll('.sentence-blank')) resizeSentenceBlank(control);

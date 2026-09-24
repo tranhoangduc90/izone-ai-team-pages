@@ -118,6 +118,14 @@ select:focus, textarea:focus, input[type="text"]:focus { border-color: #dc7581; 
 }
 .choice.selected .choice-key { border-color: var(--red); background: var(--red); color: #fff; }
 .choice-text { line-height: 1.5; }
+.speaking-checklist { gap: 9px; }
+.speaking-option { border: 1px solid #e4e2df; border-radius: 10px; background: #fff; }
+.speaking-option.selected { border-color: #dc7581; background: var(--red-soft); }
+.speaking-option .choice { border: 0; background: transparent; }
+.speaking-option .choice.selected { background: transparent; }
+.speaking-inline-field { padding: 0 11px 11px 42px; }
+.speaking-inline-field textarea { width: 100%; min-height: 58px; resize: vertical; font-size: 12px; }
+.speaking-inline-field textarea:disabled { opacity: .55; cursor: not-allowed; }
 .checkpoint-score { width: fit-content; margin: 13px 31px 0; padding: 7px 11px; border-radius: 9px; background: #e8f6ed; color: #17633e; font-size: 11px; font-weight: 800; }
 .choice.feedback-correct { border-color: #79bea0; background: #e8f6ed; color: #17633e; font-weight: 750; }
 .choice.feedback-correct .choice-key { border-color: #288458; background: #288458; color: #fff; }
