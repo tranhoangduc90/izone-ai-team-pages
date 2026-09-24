@@ -82,9 +82,7 @@ function youtubeState(record) {
 }
 
 function recordingSourceCell(record) {
-  const source=(nightlyState.snapshot?.records||[]).find(r=>r.kind==='recording'&&(r.id===record.id||(r.recordingFileId&&r.recordingFileId===record.recordingFileId&&r.source===record.source)));
-  const detail=source?.type==='MP4'&&!record.excluded?'<div class="subtext"><button type="button" class="source-link" data-action="preview" data-id="'+escapeHtml(record.id)+'">Xem recording gốc</button></div>':'';
-  return '<div data-source-link-id="'+escapeHtml(record.id)+'">'+(typeof sourceLinkMarkup==='function'?sourceLinkMarkup(record):'<span class="subtext">Đang kiểm tra nguồn Zoom…</span>')+'</div>'+detail;
+  return '<div data-source-link-id="'+escapeHtml(record.id)+'">'+(typeof sourceLinkMarkup==='function'?sourceLinkMarkup(record):'<span class="subtext">Đang kiểm tra nguồn Zoom…</span>')+'</div>';
 }
 function videoEditCell(record) {
   if(!record.videoId)return typeof manualUploadCell==='function'?manualUploadCell(record):'<span class="subtext">Chưa đăng video</span>';
@@ -94,7 +92,7 @@ function recordRow(record) {
   if (record.nightly && !record.videoId) return nightlyRow(record);
   const url = combinedVideoUrl(record);
   const linkLabel = record.playlistId ? 'Mở video trong playlist ↗' : 'Mở video ↗';
-  const link = url ? `<a class="video-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>` : '—';
+  const link = url ? `<a class="video-link external-link-icon" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(linkLabel)}" aria-label="${escapeHtml(linkLabel)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M10 6H5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-5M3 22h18"/></svg></a>` : '—';
   const thumbnail = record.thumbnailStatus === 'applied' ? '<span class="badge ok">Có thumbnail</span>' : '<span class="badge wait">Chưa có thumbnail</span>';
   const playlist = record.playlistId ? `<span class="badge ok">${escapeHtml(record.playlistTitle || 'Đã vào playlist')}</span>` : '<span class="badge wait">Chưa vào playlist</span>';
   const lesson = record.lessonNumber ? `Buổi ${escapeHtml(record.lessonNumber)}` : 'Chưa xác định buổi';

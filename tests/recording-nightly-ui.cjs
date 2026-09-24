@@ -9,7 +9,7 @@ const server=http.createServer((req,res)=>{
   if(pathname==='/recordings/nightly-config.js'){res.setHeader('Content-Type','application/javascript');return res.end("window.RECORDING_NIGHTLY={dataUrl:'https://fixture.invalid/nightly',actionUrl:'https://fixture.invalid/action',recheckUrl:'https://fixture.invalid/recheck'};");}
   const file=path.join(root,pathname);if(!file.startsWith(root+path.sep))return res.writeHead(403).end();
   if(!fs.existsSync(file))return res.writeHead(404).end();
-  res.setHeader('Content-Type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'image/png');res.end(fs.readFileSync(file));
+  res.setHeader('Content-Type',file.endsWith('.ttf')?'font/ttf':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'image/png');res.end(fs.readFileSync(file));
 });
 (async()=>{
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -45,6 +45,19 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('.pending tbody tr').first().locator('td').count(),7);
     assert.deepEqual(await page.locator('[data-edit-id="old"] option').allTextContents(),['Chọn thao tác','Đổi tên video','Đổi playlist']);
     assert.match(await page.locator('.video-link[href]:not(.zoom-source-link)').getAttribute('href'),/watch\?v=abcdefghijk&list=PLfixture$/);
+    await page.evaluate(()=>document.fonts.ready);
+    assert.ok(await page.evaluate(()=>document.fonts.check('400 16px "Source Sans Pro"')&&document.fonts.check('700 16px "Source Sans Pro"')));
+    assert.ok((await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily)).includes('Source Sans Pro'));
+    for(const link of await page.locator('.external-link-icon').all()) {assert.equal((await link.innerText()).trim(),'');assert.equal(await link.locator('svg').count(),1);assert.ok(await link.getAttribute('aria-label'));}
+    assert.equal(await page.locator('[data-edit-id="old"]').count(),1);
+    assert.equal(await page.locator('.manual-upload-disabled').isDisabled(),true);
+    if(process.env.RECORDING_UI_SCREENSHOT) {
+      await page.screenshot({path:process.env.RECORDING_UI_SCREENSHOT,fullPage:true});
+      await page.setViewportSize({width:390,height:844});
+      await page.screenshot({path:process.env.RECORDING_UI_SCREENSHOT.replace('.png','-mobile.png'),fullPage:true});
+      await page.setViewportSize({width:1280,height:720});
+    }
+
     await page.locator('[data-edit-id="old"]').selectOption('rename');
     assert.equal(await page.locator('#renameTitle').inputValue(),video.title);
     await page.locator('#renameDialog [data-close-dialog]').first().click();
@@ -54,21 +67,11 @@ const server=http.createServer((req,res)=>{
     assert.ok(await page.locator('.pending .table-wrap').evaluate(e=>e.scrollWidth>e.clientWidth));
     if(process.env.RECORDING_QA_DIR)await page.screenshot({path:process.env.RECORDING_QA_DIR+'/table-mobile.png',fullPage:true});
     await page.setViewportSize({width:1440,height:1000});
-    await page.getByRole('button',{name:'Xem recording gốc',exact:true}).click();
-    await page.waitForFunction(()=>!document.querySelector('#previewZoomLink').hidden);
-    assert.equal(await page.locator('#previewZoomLink').getAttribute('href'),'https://zoom.us/rec/play/fixture');
-    assert.equal(await page.locator('#previewZoomLink').getAttribute('target'),'_blank');
-    assert.equal(await page.locator('#publishForm').isVisible(),true);
-    assert.match(await page.locator('#previewMetadata').innerText(),/1 phút 0 giây/);
-    await page.locator('#privatePreviewButton').click();await page.waitForFunction(()=>document.querySelector('#privatePreviewVideo').src.startsWith('blob:'));
-    await page.evaluate(()=>window.recordingAuth.clear());assert.equal(await page.locator('.zoom-source-link').count(),0);assert.equal(await page.locator('#privatePreviewVideo').getAttribute('src'),null);assert.equal(await page.locator('#publishForm').isVisible(),false);
+    assert.equal(await page.getByRole('button',{name:'Xem recording gốc',exact:true}).count(),0);
+    assert.equal(await page.locator('.zoom-source-link svg').count(),1);
+    await page.evaluate(()=>window.recordingAuth.clear());assert.equal(await page.locator('.zoom-source-link').count(),0);
     await page.evaluate(()=>window.fixtureLogin({credential:'fixture-token'}));await page.waitForFunction(()=>window.recordingAuth.isAuthenticated());
-    await page.locator('#previewDialog [data-close-dialog]').click();
-    await page.getByRole('button',{name:'Xem recording gốc',exact:true}).click();
-    await page.waitForFunction(()=>document.querySelector('#previewStatus').textContent.includes('không còn truy cập'));
-    assert.equal(await page.locator('#previewZoomLink').isVisible(),false);
-    await page.locator('#previewDialog [data-close-dialog]').click();
-    assert.equal(previews,2);assert.equal(actions,0);
+    assert.equal(previews,0);assert.equal(actions,0);
     await page.getByRole('button',{name:'Làm mới',exact:true}).click();assert.equal(scans,0);
     await page.locator('[data-action="nightly-review"] + span').click();await page.waitForFunction(()=>document.querySelector('.approved [data-action="nightly-review"]')?.checked);assert.ok((await page.locator('.approved').innerText()).includes('DOWNLOAD_FAILED'));
     await page.locator('[data-action="nightly-review"] + span').click();await page.waitForFunction(()=>document.querySelector('.pending [data-action="nightly-review"]')&&!document.querySelector('.pending [data-action="nightly-review"]').disabled);

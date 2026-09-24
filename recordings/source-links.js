@@ -25,7 +25,7 @@ function sourceLinkMarkup(record) {
   if (!entry) return '<span class="subtext">Đang lấy link Zoom…</span>';
   const result = entry.result;
   if (result.status === 'available' && /^https:\/\/(?:[a-z0-9-]+\.)*zoom\.us\/rec\/(?:play|share)\/[a-zA-Z0-9_.~-]+$/i.test(result.url || '')) {
-    return `<a class="video-link zoom-source-link" href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Mở recording trên Zoom ↗</a>${result.scope === 'meeting' ? '<div class="subtext">Link recording của buổi</div>' : ''}`;
+    return `<a class="video-link zoom-source-link external-link-icon" href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" title="Mở recording trên Zoom" aria-label="Mở recording trên Zoom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M10 6H5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-5M3 22h18"/></svg></a>${result.scope === 'meeting' ? '<div class="subtext">Link recording của buổi</div>' : ''}`;
   }
   const message = result.error === 'ZOOM_ACCESS_DENIED' ? 'Chưa có quyền đọc recording trên Zoom' : SOURCE_MESSAGES[result.status] || SOURCE_MESSAGES.error;
   return `<span class="subtext">${escapeHtml(message)}</span>`;
