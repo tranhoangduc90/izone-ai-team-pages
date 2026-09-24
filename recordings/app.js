@@ -82,10 +82,9 @@ function youtubeState(record) {
 }
 
 function recordingSourceCell(record) {
-  if(record.excluded)return '<span class="subtext">Recording đã loại</span>';
   const source=(nightlyState.snapshot?.records||[]).find(r=>r.kind==='recording'&&(r.id===record.id||(r.recordingFileId&&r.recordingFileId===record.recordingFileId&&r.source===record.source)));
-  if(source?.type==='MP4')return '<button type="button" class="source-link" data-action="preview" data-id="'+escapeHtml(record.id)+'">Xem recording gốc</button>';
-  return '<span class="subtext">'+(record.kind==='session'?'Chưa có recording':record.type&&record.type!=='MP4'?'Không có link xem video':'Chưa có link Zoom')+'</span>';
+  const detail=source?.type==='MP4'&&!record.excluded?'<div class="subtext"><button type="button" class="source-link" data-action="preview" data-id="'+escapeHtml(record.id)+'">Xem recording gốc</button></div>':'';
+  return '<div data-source-link-id="'+escapeHtml(record.id)+'">'+(typeof sourceLinkMarkup==='function'?sourceLinkMarkup(record):'<span class="subtext">Đang kiểm tra nguồn Zoom…</span>')+'</div>'+detail;
 }
 function videoEditCell(record) {
   if(!record.videoId)return '<span class="subtext">Chưa đăng video</span>';
