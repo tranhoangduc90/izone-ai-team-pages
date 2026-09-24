@@ -81,6 +81,15 @@ function youtubeState(record) {
   return '<span class="badge wait">Đang chờ</span>';
 }
 
+function recordingSourceCell(record) {
+  const source=(nightlyState.snapshot?.records||[]).find(r=>r.kind==='recording'&&(r.id===record.id||(r.recordingFileId&&r.recordingFileId===record.recordingFileId&&r.source===record.source)));
+  const detail=source?.type==='MP4'&&!record.excluded?'<div class="subtext"><button type="button" class="source-link" data-action="preview" data-id="'+escapeHtml(record.id)+'">Xem recording gốc</button></div>':'';
+  return '<div data-source-link-id="'+escapeHtml(record.id)+'">'+(typeof sourceLinkMarkup==='function'?sourceLinkMarkup(record):'<span class="subtext">Đang kiểm tra nguồn Zoom…</span>')+'</div>'+detail;
+}
+function videoEditCell(record) {
+  if(!record.videoId)return typeof manualUploadCell==='function'?manualUploadCell(record):'<span class="subtext">Chưa đăng video</span>';
+  return '<select class="video-edit-select" data-edit-id="'+escapeHtml(record.id)+'" aria-label="Chỉnh sửa video"><option value="">Chọn thao tác</option><option value="rename">Đổi tên video</option><option value="playlist">Đổi playlist</option></select>';
+}
 function recordRow(record) {
   if (record.nightly && !record.videoId) return nightlyRow(record);
   const url = combinedVideoUrl(record);
@@ -97,10 +106,9 @@ function recordRow(record) {
     <td><span class="class-code">${escapeHtml(record.className || 'Chưa xác định')}</span><div class="subtext">${escapeHtml(record.source || '—')}</div></td>
     <td><div class="record-title">${escapeHtml(record.title || 'Zoom recording')}</div><div class="subtext">${lesson}${part} · ${escapeHtml(record.recordingFileId || '')}</div>${reason}</td>
     <td>${dateTime(record.recordingStart)}</td>
-    <td>${youtubeState(record)}<div class="status-stack">${thumbnail}${playlist}</div></td>
-    <td><div class="row-actions"><button type="button" class="action-button" data-action="rename" data-id="${escapeHtml(record.id)}">Sửa tên</button><button type="button" class="action-button" data-action="playlist" data-id="${escapeHtml(record.id)}">Đổi playlist</button></div></td>
+    <td>${recordingSourceCell(record)}</td>
+    <td>${videoEditCell(record)}</td>
     <td>${link}</td>
-    <td>${dateTime(record.updatedAt)}</td>
     <td class="approval-cell"><label class="approval-check"><input type="checkbox" data-action="review" data-id="${escapeHtml(record.id)}" ${isApproved(record) ? 'checked' : ''}><span aria-hidden="true">✓</span><em>${isApproved(record) ? 'Đã duyệt' : 'Duyệt'}</em></label></td>
   </tr>`;
 }
@@ -109,7 +117,7 @@ function renderSection(title, records, approved) {
   const rows = filteredRecords(records);
   return `<section class="review-section ${approved ? 'approved' : 'pending'}">
     ${!approved&&(nightlyState.error||['failed','partial'].includes(nightlyState.snapshot?.scanStatus))?'<div class="empty-inline" role="alert">Chưa đối soát đầy đủ: nguồn Portal hoặc Zoom đang gặp lỗi. Các bản ghi hiện có được giữ để kiểm tra.</div>':''}<div class="review-heading"><div><span class="section-dot"></span><h2>${title}</h2></div><span>${rows.length} recording</span></div>
-    ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Lớp / Zoom</th><th>Recording</th><th>Thời gian học</th><th>YouTube</th><th>Chỉnh sửa</th><th>Liên kết</th><th>Cập nhật</th><th>Đã duyệt</th></tr></thead><tbody>${rows.map(recordRow).join('')}</tbody></table></div>` : '<div class="section-empty">Không có recording trong mục này.</div>'}
+    ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Lớp / Zoom</th><th>Recording</th><th>Thời gian học</th><th>Link recording</th><th>Chỉnh sửa</th><th>Link YouTube</th><th>Đã duyệt</th></tr></thead><tbody>${rows.map(recordRow).join('')}</tbody></table></div>` : '<div class="section-empty">Không có recording trong mục này.</div>'}
   </section>`;
 }
 
@@ -205,19 +213,17 @@ $('refreshButton').addEventListener('click', loadData);
 
 document.querySelectorAll('[data-close-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
 
-document.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-action]');
-  if (!button || button.dataset.action === 'review') return;
-  const record = state.records.find((item) => String(item.id) === button.dataset.id);
+function openVideoEditor(action, id) {
+  const record = state.records.find((item) => String(item.id) === id);
   if (!record) return;
-  if (button.dataset.action === 'rename') {
+  if (action === 'rename') {
     $('renameRecordId').value = record.id;
     $('renameTitle').value = record.title || '';
     $('renameDialog').dataset.version=record.version||0;
     $('renameDialog').showModal();
     $('renameTitle').focus();
   }
-  if (button.dataset.action === 'playlist') {
+  if (action === 'playlist') {
     $('playlistRecordId').value = record.id;
     $('playlistVideoTitle').value = record.title || '';
     renderPlaylistOptions();
@@ -225,7 +231,8 @@ document.addEventListener('click', (event) => {
     $('playlistDialog').showModal();
     $('playlistSelect').focus();
   }
-});
+}
+document.addEventListener('change',event=>{const select=event.target.closest('[data-edit-id]');if(!select)return;const action=select.value;select.value='';if(['rename','playlist'].includes(action))openVideoEditor(action,select.dataset.editId);});
 
 document.addEventListener('change', async (event) => {
   const checkbox = event.target.closest('input[data-action="review"]');

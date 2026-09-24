@@ -39,8 +39,9 @@ async function loadNightly() {
 function nightlyRow(record) {
   const label=record.excluded?'Đã loại khỏi luồng đăng':NIGHTLY_LABELS[record.exceptionStatus || record.status] || 'Recording cần xác nhận';
   const issues=(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x).join(' · ');
-  const actions=record.kind==='session'?`<button class="action-button" data-action="exception" data-id="${escapeHtml(record.id)}">Xử lý ngoại lệ</button>`:record.type==='MP4'&&!record.excluded?`<button class="action-button" data-action="preview" data-id="${escapeHtml(record.id)}">Xem recording gốc</button>`:'—';
-  return `<tr><td><strong>${escapeHtml(record.className||'Chưa xác định')}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong><div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(record.errorCode||"Không ghi nhận lỗi kỹ thuật")}</div></td><td>${dateTime(record.recordingStart)}</td><td><span class="badge wait">${escapeHtml(label)}</span></td><td>${actions}</td><td>—</td><td>${dateTime(record.updatedAt)}</td><td>${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
+  const exception=record.kind==='session'?'<div class="subtext"><button class="action-button" data-action="exception" data-id="'+escapeHtml(record.id)+'">Xử lý ngoại lệ</button></div>':'';
+  return `<tr><td><strong>${escapeHtml(record.className||'Chưa xác định')}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong><div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(record.errorCode||"Không ghi nhận lỗi kỹ thuật")}</div>${exception}</td><td>${dateTime(record.recordingStart)}</td><td>${recordingSourceCell(record)}</td><td>${videoEditCell(record)}</td><td>—</td><td>${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
+
 }
 document.getElementById('dateFilter').addEventListener('change',()=>{state.version++;loadData(true);});
 
@@ -55,10 +56,12 @@ const PREVIEW_ERRORS={ZOOM_SOURCE_UNAVAILABLE:'Recording không còn truy cập 
 let previewGeneration=0;
 document.addEventListener('click',async(event)=>{
  const button=event.target.closest('[data-action="preview"]');if(!button)return;
- const record=state.records.find(r=>r.id===button.dataset.id);if(!record)return;
+ const displayed=state.records.find(r=>r.id===button.dataset.id);if(!displayed)return;
+ const source=nightlyState.snapshot?.records?.find(r=>r.id===displayed.id||(r.recordingFileId&&r.recordingFileId===displayed.recordingFileId&&r.source===displayed.source));
+ const record=source?{...displayed,...source,title:displayed.title}:displayed;
  const generation=++previewGeneration,dialog=document.getElementById('previewDialog');
  dialog.dataset.id=record.id;dialog.dataset.version=record.version;dialog.dataset.date=nightlyState.snapshot.date;
- document.getElementById('publishForm').reset();document.getElementById('publishForm').hidden=!window.recordingAuth?.isAuthenticated();
+ dialog.dataset.canPublish=displayed.videoId?'false':'true';document.getElementById('publishForm').reset();document.getElementById('publishForm').hidden=dialog.dataset.canPublish==='false'||!window.recordingAuth?.isAuthenticated();
  const sessions=(nightlyState.snapshot.records||[]).filter(r=>r.kind==='session'&&r.numberingVerified&&r.lessonNumber>0);
  document.getElementById('publishSession').innerHTML='<option value="">Chọn đúng lớp và buổi học</option>'+sessions.map(r=>`<option value="${escapeHtml(r.classSessionId)}">${escapeHtml(r.className)} — Buổi ${escapeHtml(r.lessonNumber)} — ${escapeHtml(dateTime(r.recordingStart))}</option>`).join('');
  document.getElementById('publishSubmit').disabled=!sessions.length||record.status!=='completed'||record.observationStale===true;
@@ -81,7 +84,7 @@ let privatePreviewObjectUrl='';
 function clearPrivatePreview(){const video=document.getElementById('privatePreviewVideo');video.pause();video.removeAttribute('src');video.load();video.hidden=true;if(privatePreviewObjectUrl)URL.revokeObjectURL(privatePreviewObjectUrl);privatePreviewObjectUrl='';}
 document.getElementById('previewDialog').addEventListener('close',clearPrivatePreview);
 document.addEventListener('recording-auth-changed',()=>{
- document.getElementById('publishForm').hidden=!window.recordingAuth.isAuthenticated();
+ document.getElementById('publishForm').hidden=document.getElementById('previewDialog').dataset.canPublish==='false'||!window.recordingAuth.isAuthenticated();
  if(!window.recordingAuth.isAuthenticated()){previewGeneration++;clearPrivatePreview();document.getElementById('previewZoomLink').hidden=true;}
 });
 document.getElementById('privatePreviewButton').addEventListener('click',async()=>{
