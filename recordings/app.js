@@ -82,9 +82,7 @@ function youtubeState(record) {
 }
 
 function recordingSourceCell(record) {
-  const source=(nightlyState.snapshot?.records||[]).find(r=>r.kind==='recording'&&(r.id===record.id||(r.recordingFileId&&r.recordingFileId===record.recordingFileId&&r.source===record.source)));
-  const detail=source?.type==='MP4'&&!record.excluded?'<div class="subtext"><button type="button" class="source-link" data-action="preview" data-id="'+escapeHtml(record.id)+'">Xem recording gốc</button></div>':'';
-  return '<div data-source-link-id="'+escapeHtml(record.id)+'">'+(typeof sourceLinkMarkup==='function'?sourceLinkMarkup(record):'<span class="subtext">Đang kiểm tra nguồn Zoom…</span>')+'</div>'+detail;
+  return '<div data-source-link-id="'+escapeHtml(record.id)+'">'+(typeof sourceLinkMarkup==='function'?sourceLinkMarkup(record):'<span class="subtext">Đang kiểm tra nguồn Zoom…</span>')+'</div>';
 }
 function videoEditCell(record) {
   if(!record.videoId)return typeof manualUploadCell==='function'?manualUploadCell(record):'<span class="subtext">Chưa đăng video</span>';
