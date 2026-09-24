@@ -8,6 +8,8 @@ import { createTeacherLoginPreference } from '../shared/teacher-login-preference
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
+const demoTeacherToken = config.DEMO_MODE
+  ? new URLSearchParams(window.location.hash.slice(1)).get('run') || '' : '';
 const sessionClient = createTeacherSessionClient({
   apiBaseUrl: config.API_BASE_URL,
   sessionPath: '/api/auth/session'
@@ -56,12 +58,16 @@ function setNotice(message, kind = '') {
 
 async function apiRequest(path, { method = 'GET', body } = {}) {
   if (!config.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
-  if (!state.authenticated) throw new Error('Bạn chưa đăng nhập Google.');
+  if (!state.authenticated) throw new Error(config.DEMO_MODE ? 'Link giảng viên thử không hợp lệ.' : 'Bạn chưa đăng nhập Google.');
   const generation = state.authGeneration;
   const response = await fetch(`${config.API_BASE_URL}/api/learning${path}`, teacherSessionRequestOptions({
     method,
     headers: {
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(config.DEMO_MODE ? {
+        'x-progress-log-demo': '1',
+        'x-demo-teacher-token': demoTeacherToken
+      } : {})
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: 'no-store'
@@ -256,12 +262,16 @@ async function loadWorkspace() {
   state.classes = options.classes || [];
   state.assignments = options.assignments || [];
   state.library = library.items || [];
-  elements.teacherName.textContent = state.reviewer.name || state.reviewer.email;
+  elements.teacherName.textContent = config.DEMO_MODE ? 'Giảng viên thử' : state.reviewer.name || state.reviewer.email;
   fillSelect(elements.teacherClassSelect, state.classes, 'class_id', item => item.class_name);
   refreshAssignmentSelect();
   renderLibrary();
   elements.teacherAccessView.hidden = true;
   elements.teacherWorkspace.hidden = false;
+  if (config.DEMO_MODE) {
+    elements.createTab.hidden = true;
+    elements.teacherLogoutButton.hidden = true;
+  }
   switchPanel('dashboard');
   setNotice(state.classes.length ? 'Sẵn sàng.' : 'Tài khoản chưa được cấp lớp nào.', state.classes.length ? '' : 'error');
 }
@@ -355,6 +365,8 @@ function openDraft(student) {
   if (!live) return;
   state.draftStudent = student;
   state.draftJourneyLink = '';
+  document.getElementById('openDraftJourneyLink').hidden = true;
+  document.getElementById('openDraftJourneyLink').removeAttribute('href');
   state.feedbackOperationId = crypto.randomUUID();
   elements.draftJourneyLinkStatus.textContent = 'Link cá nhân chỉ gửi đúng học viên. Tạo mới sẽ thay link cũ.';
   elements.copyDraftJourneyLinkButton.textContent = 'Tạo và sao chép link';
@@ -424,6 +436,10 @@ function openAttendance(student) {
 }
 
 function updateAttendanceSyncHint() {
+  if (config.DEMO_MODE) {
+    elements.attendanceSyncHint.textContent = 'Điểm danh ở bản thử chỉ được mô phỏng, không ghi vào Portal.';
+    return;
+  }
   elements.attendanceSyncHint.textContent = elements.attendanceStatus.value === 'teacher_confirmed'
     ? 'Có mặt: Progress Log sẽ gửi yêu cầu ghi Portal sau khi lưu. Nếu Portal đã có trạng thái khác, hệ thống dừng để kiểm tra, không tự ghi đè.'
     : 'Trạng thái này chỉ được lưu trong Progress Log; chưa thay đổi điểm danh trên Portal.';
@@ -460,6 +476,8 @@ function openReport(student) {
   const output = report.systemOutput || {};
   state.reportStudent = student;
   state.studentJourneyLink = '';
+  document.getElementById('openStudentJourneyLink').hidden = true;
+  document.getElementById('openStudentJourneyLink').removeAttribute('href');
   elements.studentJourneyLinkStatus.textContent = 'Mỗi lần tạo mới sẽ thay link cũ của học viên này.';
   elements.reportStudentName.textContent = student.discriminator
     ? `${student.name} · ${student.discriminator}`
@@ -495,6 +513,46 @@ function studentJourneyUrl(accessToken) {
   return url.toString();
 }
 
+async function previewInDemo() {
+  const items = selectedLibraryItems();
+  if (items.length < 2 || items.length > 3) {
+    setNotice('Hãy chọn từ 2 đến 3 câu hỏi để thử.', 'error');
+    return;
+  }
+  const popup = window.open('about:blank', '_blank');
+  const button = document.getElementById('previewDemoButton');
+  button.disabled = true;
+  setNotice('Đang tạo phiếu thử từ nội dung vừa chọn…');
+  try {
+    const preview = await apiRequest('/teacher/reflection-forms/preview', {
+      method: 'POST',
+      body: {
+        title: elements.formTitle.value.trim(), courseCode: '',
+        classId: elements.teacherClassSelect.value,
+        sessionNumber: Number(elements.sessionNumber.value),
+        opensAt: null, closesAt: null, items
+      }
+    });
+    const response = await fetch(`${config.DEMO_API_BASE_URL}/api/demo/runs/draft`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-progress-log-demo': '1' },
+      body: JSON.stringify({ source: preview.source }), cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'Chưa tạo được phiếu thử.');
+    const teacherUrl = new URL('demo/teacher.html', window.location.href);
+    teacherUrl.hash = new URLSearchParams({ run: payload.run.teacherToken }).toString();
+    if (popup) popup.location.assign(teacherUrl.toString());
+    else setNotice(`Phiếu thử đã sẵn sàng: ${teacherUrl}`, '');
+    if (popup) setNotice('Đã mở màn giảng viên thử ở tab mới. Tại đó bạn có thể mở phiếu học viên mẫu.', '');
+  } catch (error) {
+    popup?.close();
+    setNotice(error.message, 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function copyStudentJourneyLink() {
   const student = state.reportStudent;
   if (!student || !state.dashboard?.assignmentId) return;
@@ -508,7 +566,7 @@ async function copyStudentJourneyLink() {
           assignmentId: state.dashboard.assignmentId,
           studentRef: student.studentRef,
           accessToken,
-          expiresInDays: 90,
+          expiresInDays: config.DEMO_MODE ? 1 : 90,
           operationId: crypto.randomUUID()
         }
       });
@@ -517,8 +575,15 @@ async function copyStudentJourneyLink() {
       }
       state.studentJourneyLink = studentJourneyUrl(accessToken);
     }
+    if (config.DEMO_MODE) {
+      const link = document.getElementById('openStudentJourneyLink');
+      link.href = state.studentJourneyLink;
+      link.hidden = false;
+    }
     await navigator.clipboard.writeText(state.studentJourneyLink);
-    elements.studentJourneyLinkStatus.textContent = 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
+    elements.studentJourneyLinkStatus.textContent = config.DEMO_MODE
+      ? 'Đã sao chép link bản thử, hết hiệu lực khi đặt lại hoặc sau 24 giờ.'
+      : 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
     elements.copyStudentJourneyLinkButton.textContent = 'Sao chép lại';
   } catch (error) {
     elements.studentJourneyLinkStatus.textContent = state.studentJourneyLink
@@ -582,7 +647,7 @@ async function copyDraftJourneyLink() {
         method: 'POST',
         body: {
           assignmentId: state.dashboard.assignmentId, studentRef: student.studentRef,
-          accessToken, expiresInDays: 90, operationId: crypto.randomUUID()
+          accessToken, expiresInDays: config.DEMO_MODE ? 1 : 90, operationId: crypto.randomUUID()
         }
       });
       if (payload.link.studentRef !== student.studentRef) {
@@ -592,10 +657,17 @@ async function copyDraftJourneyLink() {
         || !elements.draftDialog.open) return;
       state.draftJourneyLink = studentJourneyUrl(accessToken);
     }
+    if (config.DEMO_MODE) {
+      const link = document.getElementById('openDraftJourneyLink');
+      link.href = state.draftJourneyLink;
+      link.hidden = false;
+    }
     if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
       || !elements.draftDialog.open) return;
     await navigator.clipboard.writeText(state.draftJourneyLink);
-    elements.draftJourneyLinkStatus.textContent = 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
+    elements.draftJourneyLinkStatus.textContent = config.DEMO_MODE
+      ? 'Đã sao chép link bản thử, hết hiệu lực khi đặt lại hoặc sau 24 giờ.'
+      : 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
     elements.copyDraftJourneyLinkButton.textContent = 'Sao chép lại';
   } catch (error) {
     elements.draftJourneyLinkStatus.textContent = state.draftJourneyLink
@@ -704,7 +776,7 @@ function buildStudentRow(student) {
   if (['self_confirmed', 'teacher_confirmed'].includes(student.attendanceStatus)) {
     const portal = document.createElement('small');
     portal.className = `portal-sync-status${student.portalSync?.status === 'complete' ? ' complete' : ''}`;
-    portal.textContent = {
+    portal.textContent = config.DEMO_MODE ? 'Điểm danh: mô phỏng, không gửi Portal' : {
       complete: 'Portal: đã ghi nhận',
       queued: 'Portal: đang chờ đồng bộ',
       leased: 'Portal: đang đồng bộ',
@@ -823,7 +895,7 @@ async function saveAttendance(event) {
     elements.attendanceDialog.close();
     state.attendanceOperationId = null;
     await loadDashboard();
-    setNotice(response.attendance.portalSyncQueued
+    setNotice(config.DEMO_MODE ? 'Đã lưu điểm danh trong bản thử; Portal không bị thay đổi.' : response.attendance.portalSyncQueued
       ? 'Đã lưu xác nhận. Portal đang được đồng bộ; xem trạng thái trong danh sách học viên.'
       : 'Đã lưu trong Progress Log. Trạng thái này không tự thay đổi Portal.');
   } catch (error) {
@@ -918,6 +990,7 @@ function clearTeacherLogin() {
 elements.createTab.addEventListener('click', () => switchPanel('create'));
 elements.dashboardTab.addEventListener('click', () => switchPanel('dashboard'));
 elements.publishForm.addEventListener('submit', event => void publishReflection(event));
+document.getElementById('previewDemoButton')?.addEventListener('click', () => void previewInDemo());
 elements.copyLinkButton.addEventListener('click', () => void copyStudentLink());
 elements.assignmentSelect.addEventListener('change', () => void loadDashboard());
 elements.refreshDashboardButton.addEventListener('click', () => void loadDashboard());
@@ -950,6 +1023,16 @@ elements.teacherLogoutButton.addEventListener('click', async () => {
 });
 
 async function initializeAuthentication() {
+  if (config.DEMO_MODE) {
+    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(demoTeacherToken)) {
+      setNotice('Link giảng viên thử thiếu mã lượt thử. Hãy mở lại từ link tạo bản thử.', 'error');
+      return;
+    }
+    state.authenticated = true;
+    try { await loadWorkspace(); }
+    catch (error) { clearTeacherLogin(); setNotice(error.message, 'error'); }
+    return;
+  }
   try {
     const restored = await sessionClient.restore();
     if (restored) {
@@ -963,6 +1046,37 @@ async function initializeAuthentication() {
     initializeGoogle();
   }
 }
+
+async function resetDemoRun() {
+  const button = document.getElementById('resetDemoButton');
+  if (!config.DEMO_MODE || !button) return;
+  button.disabled = true;
+  setNotice('Đang tạo lượt thử mới…');
+  try {
+    const response = await fetch(`${config.API_BASE_URL}/api/demo/runs/reset`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-progress-log-demo': '1',
+        'x-demo-teacher-token': demoTeacherToken
+      },
+      body: '{}', cache: 'no-store'
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'Chưa đặt lại được bản thử.');
+    const teacherUrl = new URL(window.location.href);
+    teacherUrl.hash = new URLSearchParams({ run: payload.run.teacherToken }).toString();
+    const studentUrl = studentLink(payload.run.publicToken);
+    await navigator.clipboard.writeText(studentUrl).catch(() => {});
+    window.history.replaceState(null, '', teacherUrl.toString());
+    window.location.reload();
+  } catch (error) {
+    setNotice(error.message, 'error');
+    button.disabled = false;
+  }
+}
+
+document.getElementById('resetDemoButton')?.addEventListener('click', () => void resetDemoRun());
 
 void initializeAuthentication();
 

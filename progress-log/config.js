@@ -4,6 +4,7 @@ const productionApi = 'https://ducizone.ddns.net/mapping-api';
 
 window.PROGRESS_LOG_CONFIG = Object.freeze({
   API_BASE_URL: productionApi,
+  DEMO_API_BASE_URL: 'https://ducizone.ddns.net/mapping-api-progress-log-demo',
   STUDENT_MEMORY: Object.freeze({ enabled: true, allClasses: true }),
   GOOGLE_CLIENT_ID: '235597750133-urmb86ktf5recnvvtbghf13bktfv5rkj.apps.googleusercontent.com'
 });

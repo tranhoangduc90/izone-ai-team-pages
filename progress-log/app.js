@@ -105,7 +105,11 @@ function clearRememberedSelection() {
 function installStudentMemory() {
   studentMemory.group = progressRosterGroup();
   studentMemory.enabled = Boolean(config.STUDENT_MEMORY?.enabled && allowedGroup(studentMemory.group, config.STUDENT_MEMORY));
-  if (!studentMemory.enabled) return;
+  if (!studentMemory.enabled) {
+    elements.rememberStudentRow.hidden = true;
+    elements.changeRememberedStudent.hidden = true;
+    return;
+  }
   studentMemory.key = memoryKey(config.API_BASE_URL, location.href);
   try { studentMemory.storage = window.localStorage; } catch { studentMemory.storage = null; }
   if (!studentMemory.installed) {
@@ -150,7 +154,10 @@ async function apiRequest(path, { method = 'POST', body } = {}) {
   if (!config.API_BASE_URL) throw new Error('Trang chưa được cấu hình địa chỉ API.');
   const response = await fetch(`${config.API_BASE_URL}/api/learning${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(config.DEMO_MODE ? { 'x-progress-log-demo': '1' } : {})
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: 'no-store'
   });

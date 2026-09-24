@@ -4,17 +4,23 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Tạo phiếu và theo dõi Progress Log dành cho giảng viên">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
-    <title>Progress Log · Giảng viên</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://127.0.0.1:8792 https://ducizone.ddns.net/mapping-api-progress-log-demo/ https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
+    <title>Bản thử · Progress Log · Giảng viên</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="styles.css?rev=20260921-session3-v1">
-    <link rel="stylesheet" href="teacher.css?rev=20260924-speaking-v1">
+    <link rel="stylesheet" href="../styles.css?rev=20260921-session3-v1">
+    <link rel="stylesheet" href="../teacher.css?rev=20260924-speaking-v1">
+      <link rel="stylesheet" href="demo.css?rev=20260924-v1">
   </head>
   <body>
     <header class="topbar teacher-header">
         <div class="brand"><span class="brand-mark" aria-hidden="true">I</span><div><b>IZONE</b><small>Progress Log · Giảng viên</small></div></div>
         <span class="teacher-name" id="teacherName">Chưa đăng nhập</span>
     </header>
+    <aside class="demo-banner" role="note">
+      <b>BẢN THỬ · CHỈ DỮ LIỆU MẪU</b>
+      <span>Nhận xét, bài làm và điểm danh không vào lớp thật; Portal được mô phỏng.</span>
+      <button class="button" id="resetDemoButton" type="button">Đặt lại lượt thử</button>
+    </aside>
     <main class="teacher-shell">
       <p class="notice" id="teacherNotice" role="status">Đăng nhập để bắt đầu.</p>
 
@@ -102,9 +108,7 @@
         <a id="openDraftJourneyLink" class="button" target="_blank" rel="noopener noreferrer" hidden>Mở trang học viên thử</a>
       </form>
     </dialog>
-
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="config.js?rev=20260829-learning-v2"></script>
-    <script type="module" src="teacher.js?rev=20260924-speaking-v1"></script>
+    <script src="config.js?rev=20260924-generic-demo-v1"></script>
+    <script type="module" src="../teacher.js?rev=20260924-speaking-v1"></script>
   </body>
 </html>

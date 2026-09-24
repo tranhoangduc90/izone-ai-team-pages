@@ -27,7 +27,10 @@ function readAccessToken() {
 async function apiRequest(token) {
   const response = await fetch(`${config.API_BASE_URL}/api/learning/student/course-journey`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(config.DEMO_MODE ? { 'x-progress-log-demo': '1' } : {})
+    },
     body: JSON.stringify({ accessToken: token }),
     cache: 'no-store',
     referrerPolicy: 'no-referrer'
