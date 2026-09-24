@@ -8,7 +8,7 @@
     <title>Progress Log · Giảng viên</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css?rev=20260921-session3-v1">
-    <link rel="stylesheet" href="teacher.css?rev=20260916-reference-theme-v1">
+    <link rel="stylesheet" href="teacher.css?rev=20260924-speaking-v1">
   </head>
   <body>
     <header class="topbar teacher-header">
@@ -91,11 +91,17 @@
         <div class="report-heading"><div><p class="eyebrow">BẢN LƯU GẦN NHẤT</p><h2 id="draftStudentName">—</h2></div><button class="button text-button" value="close">Đóng</button></div>
         <p class="muted" id="draftStatus">—</p>
         <div class="draft-answers" id="draftAnswers"></div>
+        <section class="human-note draft-feedback">
+          <p class="eyebrow">NHẬN XÉT SPEAKING RIÊNG CHO HỌC VIÊN</p>
+          <textarea id="draftSpeakingFeedback" maxlength="500" placeholder="Viết nhận xét cụ thể về phần Speaking của học viên."></textarea>
+          <div class="draft-feedback-actions"><small id="draftFeedbackStatus">Chưa gửi nhận xét.</small><button class="button primary" id="sendDraftFeedbackButton" type="button">Gửi nhận xét</button></div>
+        </section>
+        <section class="journey-share"><div><b>Link tổng hợp của học viên</b><small id="draftJourneyLinkStatus">Link cá nhân chỉ gửi đúng học viên. Tạo mới sẽ thay link cũ.</small></div><button class="button" id="copyDraftJourneyLinkButton" type="button">Tạo và sao chép link</button></section>
       </form>
     </dialog>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
-    <script type="module" src="teacher.js?rev=20260921-session3-v1"></script>
+    <script type="module" src="teacher.js?rev=20260924-speaking-v1"></script>
   </body>
 </html>

@@ -91,8 +91,7 @@ test('câu Writing 1 điền từ trong bốn câu, vẫn lưu đủ tám ô và
   assert.match(app, /Coherence and Cohesion:/);
   assert.match(app, /Lexical Resource:/);
   assert.match(app, /Grammatical Range and Accuracy:/);
-  assert.match(app, /templates\.length \* 2 !== expected/);
-  assert.match(app, /document\.createElement\('textarea'\)/);
+  assert.match(app, /templates\.reduce\(\(count, line\) => count \+ line\.parts\.length - 1, 0\) !== expected/);  assert.match(app, /document\.createElement\('textarea'\)/);
   assert.match(app, /input\.className = 'sentence-blank'/);
   assert.match(app, /resizeSentenceBlank\(input\)/);
   assert.match(app, /group\.querySelectorAll\('textarea'\)/);
