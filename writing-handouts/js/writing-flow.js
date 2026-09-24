@@ -4,7 +4,8 @@ import { teacherAuthFailure } from './teacher-auth-ui.js';
 import { coverageDescription, coverageStatusLabels } from './writing-flow-coverage.js';
 import { isBackdropClick } from './teacher-detail-core.js';
 import { clampColumnWidth, defaultColumnWidths, formatWritingDay, normalizeWritingDay, readColumnWidths,
-  dailyBreakdown, saveColumnWidths, serializeSortRules, writingSortFields } from './writing-flow-ui.js?v=20260924-daily-breakdown-v1';
+  dailyBreakdown, saveColumnWidths, serializeSortRules, summarizeWritingTestDetail,
+  writingSortFields } from './writing-flow-ui.js?v=20260924-test-detail-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 
@@ -14,6 +15,8 @@ const $ = id => document.getElementById(id);
 const stages = ['intake', 'precheck', 'main', 'critic', 'arbiter', 'render', 'deliver'];
 const stageNames = { intake: 'Tiếp nhận', precheck: 'Kiểm trước khi chấm', main: 'Chấm chính',
   critic: 'Phản biện', arbiter: 'Phân xử', render: 'Tạo trang kết quả', deliver: 'Ghi link vào homework' };
+const testStageNames = { ...stageNames, render: 'Tổng hợp nhận xét',
+  deliver: 'Ghi nhận xét vào Docs' };
 const stageWorkflowIds = { intake: 'zxSd0xBPJzMqQlWt', precheck: 'P2p5N7iZzwHFDufk',
   main: 'X0qzwWc5CgBzgOWT', critic: '4o6jEwyQM4U29XU6', arbiter: 'yFdVOEBVhLitToQD',
   render: 'o8uncH0TWsJybeS2', deliver: 'KqWtSbjkHDMSAgbN' };
@@ -43,8 +46,8 @@ viewMeta.test_review = ['Bài Test', 'Bài Test cần kiểm tra', 'Các bài Te
 viewMeta.test_skipped = ['Bài Test', 'Bài Test đã bỏ qua', 'Có thể khôi phục bài Test bị bỏ qua nhầm.', 'Đã bỏ qua'];
 viewMeta.test_delivered = ['Bài Test', 'Bài Test đã giao', 'Kết quả đã được ghi và đọc lại thành công.', 'Đã giao'];
 for (const [index, stage] of stages.entries()) viewMeta[`test_${stage}`] = ['7 giai đoạn Test',
-  `${index + 1}. ${stageNames[stage]}`, 'Mỗi bài Test ở đây đang ở đúng giai đoạn ghi trên tiêu đề.',
-  `Test đang ở bước: ${stageNames[stage]}`];
+  `${index + 1}. ${testStageNames[stage]}`, 'Mỗi bài Test ở đây đang ở đúng giai đoạn ghi trên tiêu đề.',
+  `Test đang ở bước: ${testStageNames[stage]}`];
 
 const columns = {
   student: ['Học viên / tên thủ công', row => sourceName(row)],
@@ -198,7 +201,7 @@ function detailButton(row, label) { return actionButton(label, () => void openRo
 function contentPreview(row) { const preview = makeText('button', row.essay_preview || 'Chưa có nội dung', 'flow-content-preview'); preview.type = 'button'; preview.title = 'Nhấn đúp hoặc nhấn Enter để xem đầy đủ'; preview.disabled = !row.essay_preview; const open = () => void openRowDetail(row); preview.addEventListener('dblclick', open); preview.addEventListener('click', event => { if (event.detail === 1) preview.focus(); }); preview.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } }); return preview; }
 async function skipPair(pair) { const reason = prompt('Lý do bỏ qua bài này:')?.trim(); if (!reason) return; try { await state.api.skipWritingPair(pair.pair_id, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa bỏ qua được bài: ${error.message}`); } }
 async function restorePair(pair) { const reason = prompt('Lý do khôi phục bài:', 'Bỏ qua nhầm')?.trim(); if (!reason) return; try { await state.api.restoreWritingPair(pair.pair_id, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa khôi phục được bài: ${error.message}`); } }
-async function retryPair(pair) { const stageKey = activeStage() || pair.stage_key; const reason = prompt(`Lý do chạy lại từ bước “${stageNames[stageKey] || stageKey}”:`, 'Kiểm tra và chạy lại')?.trim(); if (!reason) return; try { await state.api.retryWritingPairStage(pair.pair_id, stageKey, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa tạo được lượt retry: ${error.message}`); } }
+async function retryPair(pair) { const stageKey = activeStage() || pair.stage_key; const reason = prompt(`Lý do chạy lại từ bước “${(pair.source_type === 'term_test' ? testStageNames[stageKey] : stageNames[stageKey]) || stageKey}”:`, 'Kiểm tra và chạy lại')?.trim(); if (!reason) return; try { await state.api.retryWritingPairStage(pair.pair_id, stageKey, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa tạo được lượt retry: ${error.message}`); } }
 async function skipSourceIssue(issue) { const reason = prompt('Lý do bỏ qua lỗi nguồn này:')?.trim(); if (!reason) return; try { await state.api.skipWritingSourceIssue(issue.issue_key, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa bỏ qua được lỗi nguồn: ${error.message}`); } }
 async function restoreSourceIssue(issue) { const reason = prompt('Lý do khôi phục lỗi nguồn:', 'Bỏ qua nhầm')?.trim(); if (!reason) return; try { await state.api.restoreWritingSourceIssue(issue.issue_key, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa khôi phục được lỗi nguồn: ${error.message}`); } }
 function actionCell(row) {
@@ -303,7 +306,35 @@ function openRowDetail(row) {
 }
 
 function describeEvent(event) { const step = stageNames[event.stage_key] || event.stage_key || ''; if (event.kind === 'attempt') return `${step}: lần ${event.attempt_no}, ${event.status}`; if (event.kind === 'ai_call') return `${step}: gọi AI ${event.provider || ''}, ${event.status}`; if (event.kind === 'handoff') return `Chuyển ${stageNames[event.from_stage] || event.from_stage} → ${stageNames[event.to_stage] || event.to_stage}: ${event.status}`; if (event.kind === 'operator') return `Thao tác ${event.event_type}: ${event.reason || ''}`; return `${step}: ${event.status || event.kind}`; }
-async function openDetail(pair) { const dialog = $('flow-detail'); const content = $('flow-detail-content'); content.textContent = 'Đang tải đề bài, nội dung và nhật ký…'; dialog.showModal(); try { const [detailResponse, historyResponse] = await Promise.all([state.api.writingPairDetail(pair.pair_id), state.api.writingPairHistory(pair.pair_id)]); const detail = detailResponse.data.detail; const history = historyResponse.data.history; const topic = document.createElement('section'); topic.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-topic'; topic.append(makeText('h3', 'Đề bài'), makeText('p', detail.source.topic || '—')); if (detail.source.image) topic.append(externalLink(detail.source.image, 'Mở ảnh biểu đồ', '')); const essay = document.createElement('section'); essay.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-essay'; essay.append(makeText('h3', 'Nội dung học viên'), makeText('p', detail.source.essay || '—')); const metadata = document.createElement('section'); metadata.className = 'flow-detail-panel'; const trcc = detail.source.trCcCheck == null ? '—' : detail.source.trCcCheck ? 'Có' : 'Không'; const trccNote = detail.source.trCcSource === 'repair_override' ? ' · bổ sung sau khi cứu TR/CC' : ''; metadata.append(makeText('h3', 'Thông tin bài'), makeText('p', `Học viên: ${sourceName(detail.pair)}`), makeText('p', `Lớp: ${detail.pair.class_code || 'Ngoài lớp'}`), makeText('p', `TRCC: ${trcc}${trccNote}`), makeText('p', `Trạng thái nguồn: ${detail.pair.source_status || '—'}`), externalLink(detail.pair.file_url, 'Mở Docs', '')); const results = document.createElement('section'); results.className = 'flow-detail-panel'; results.append(makeText('h3', 'Kết quả và giai đoạn')); const renderStage = detail.stages.find(stage => stage.stage_key === 'render' && stage.result?.resultUrl); results.append(externalLink(renderStage?.result?.resultUrl, 'Mở bài chấm trên LMS', 'Chưa có Link LMS')); for (const stage of detail.stages) { const block = document.createElement('details'); block.append(makeText('summary', `${stageNames[stage.stage_key]} · ${statusNames[stage.status] || stage.status}`), makeText('pre', stage.result ? JSON.stringify(stage.result, null, 2) : 'Chưa có kết quả.')); results.append(block); } const log = document.createElement('section'); log.className = 'flow-detail-panel flow-detail-panel-wide'; log.append(makeText('h3', 'Nhật ký và lỗi')); for (const event of history.events || []) { const line = makeText('p', `${formatTime(event.at)} · ${describeEvent(event)}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`, 'flow-meta'); const workflowId = stageWorkflowIds[event.stage_key]; if (workflowId && event.n8n_execution_id) { const link = externalLink(`https://ducizone.ddns.net/workflow/${workflowId}/executions/${encodeURIComponent(event.n8n_execution_id)}`, 'Mở lượt chạy n8n', ''); line.append(' · ', link); } log.append(line); } const grid = document.createElement('div'); grid.className = 'flow-detail-grid'; grid.append(topic, essay, metadata, results, log); content.replaceChildren(makeText('h2', sourceName(detail.pair)), grid); } catch (error) { content.textContent = `Chưa đọc được chi tiết: ${error.message}`; } }
+// Nhận vào: kết quả Test đã được backend kiểm theo tiêu chí và thành phần.
+// Việc chính: hiện điểm và nhận xét thành các mục có thể mở, thay vì bắt người xem đọc JSON.
+// Kết quả: bài cũ đã khôi phục chỉ dẫn xem Google Docs; dữ liệu lỗi chỉ hiện trạng thái thiếu.
+function testDetailSection(test) {
+  const view = summarizeWritingTestDetail(test);
+  const section = document.createElement('section');
+  section.className = 'flow-detail-panel flow-detail-panel-wide';
+  section.append(makeText('h3', `Kết quả chấm Test · Task ${view.taskNumber || '?'}`));
+  if (view.scoreLabel) section.append(makeText('p', `Điểm Task: ${view.scoreLabel}`));
+  if (test.writing_score != null && test.result_origin !== 'legacy_restored') {
+    section.append(makeText('p', `Điểm Writing toàn bài: Band ${test.writing_score}`));
+  }
+  section.append(makeText('p', view.message, 'flow-meta'));
+  for (const criterion of view.criteria) {
+    const block = document.createElement('details');
+    block.append(makeText('summary', criterion.title));
+    if (criterion.feedback) block.append(makeText('p', criterion.feedback));
+    for (const component of criterion.components) {
+      const item = document.createElement('details');
+      item.append(makeText('summary', component.title));
+      if (component.summary) item.append(makeText('p', component.summary));
+      if (component.feedback) item.append(makeText('p', component.feedback));
+      block.append(item);
+    }
+    section.append(block);
+  }
+  return section;
+}
+async function openDetail(pair) { const dialog = $('flow-detail'); const content = $('flow-detail-content'); content.textContent = 'Đang tải đề bài, nội dung và nhật ký…'; dialog.showModal(); try { const [detailResponse, historyResponse] = await Promise.all([state.api.writingPairDetail(pair.pair_id), state.api.writingPairHistory(pair.pair_id)]); const detail = detailResponse.data.detail; const history = historyResponse.data.history; const topic = document.createElement('section'); topic.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-topic'; topic.append(makeText('h3', 'Đề bài'), makeText('p', detail.source.topic || '—')); if (detail.source.image) topic.append(externalLink(detail.source.image, 'Mở ảnh biểu đồ', '')); const essay = document.createElement('section'); essay.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-essay'; essay.append(makeText('h3', 'Nội dung học viên'), makeText('p', detail.source.essay || '—')); const metadata = document.createElement('section'); metadata.className = 'flow-detail-panel'; const trcc = detail.source.trCcCheck == null ? '—' : detail.source.trCcCheck ? 'Có' : 'Không'; const trccNote = detail.source.trCcSource === 'repair_override' ? ' · bổ sung sau khi cứu TR/CC' : ''; metadata.append(makeText('h3', 'Thông tin bài'), makeText('p', `Học viên: ${sourceName(detail.pair)}`), makeText('p', `Lớp: ${detail.pair.class_code || 'Ngoài lớp'}`), makeText('p', `TRCC: ${trcc}${trccNote}`), makeText('p', `Trạng thái nguồn: ${detail.pair.source_status || '—'}`), externalLink(detail.pair.file_url, 'Mở Docs', '')); const results = document.createElement('section'); results.className = 'flow-detail-panel'; results.append(makeText('h3', 'Kết quả và giai đoạn')); const renderStage = detail.stages.find(stage => stage.stage_key === 'render' && stage.result?.resultUrl); if (detail.pair.source_type !== 'term_test') results.append(externalLink(renderStage?.result?.resultUrl, 'Mở bài chấm trên LMS', 'Chưa có Link LMS')); for (const stage of detail.stages) { const block = document.createElement('details'); block.append(makeText('summary', `${detail.pair.source_type === 'term_test' ? testStageNames[stage.stage_key] : stageNames[stage.stage_key]} · ${statusNames[stage.status] || stage.status}`), makeText('pre', stage.result ? JSON.stringify(stage.result, null, 2) : 'Chưa có kết quả.')); results.append(block); } const log = document.createElement('section'); log.className = 'flow-detail-panel flow-detail-panel-wide'; log.append(makeText('h3', 'Nhật ký và lỗi')); for (const event of history.events || []) { const line = makeText('p', `${formatTime(event.at)} · ${describeEvent(event)}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`, 'flow-meta'); const workflowId = stageWorkflowIds[event.stage_key]; if (workflowId && event.n8n_execution_id) { const link = externalLink(`https://ducizone.ddns.net/workflow/${workflowId}/executions/${encodeURIComponent(event.n8n_execution_id)}`, 'Mở lượt chạy n8n', ''); line.append(' · ', link); } log.append(line); } const grid = document.createElement('div'); grid.className = 'flow-detail-grid'; grid.append(topic, essay, metadata); if (detail.test) grid.append(testDetailSection(detail.test)); grid.append(results, log); content.replaceChildren(makeText('h2', sourceName(detail.pair)), grid); } catch (error) { content.textContent = `Chưa đọc được chi tiết: ${error.message}`; } }
 
 async function retryReview(review, button) { if (!confirm(`Chạy lại từ bước “${stageNames[review.stage_key] || review.stage_key}”?`)) return; button.disabled = true; try { await state.api.retryWritingReview(review.review_id, createRequestId()); await refreshData(); } catch (error) { showError('flow-error', `Chưa gửi được yêu cầu: ${error.message}`); button.disabled = false; } }
 function renderReviews() { const root = $('flow-reviews'); root.replaceChildren(); if (!state.reviews.length) return root.append(makeText('p', 'Không có bài cần kiểm tra.', 'muted')); for (const review of state.reviews) { const row = document.createElement('article'); row.className = 'flow-row'; const body = document.createElement('div'); body.append(makeText('strong', `${stageNames[review.stage_key]} · đã thử ${review.attempt_count}/3`), makeText('p', `${sourceName(review)} · lớp ${review.class_code || 'ngoài lớp'} · lỗi ${review.error_code}`, 'flow-meta')); const button = actionButton('Chạy lại từ bước này', () => void retryReview(review, button), 'primary'); row.append(body, button); root.append(row); } }

@@ -53,6 +53,8 @@ test('dashboard có 7 giai đoạn, không gian lớp, tìm kiếm và retry đ�
   assert.match(html, /data-view="test_review"/u);
   assert.match(html, /data-view="test_skipped"/u);
   assert.match(html, /data-view="test_delivered"/u);
+  assert.match(html, /data-view="test_deliver">7\. Ghi nhận xét/u);
+  assert.match(script, /Ghi nhận xét vào Docs/u);
   assert.match(script, /sourceKind: activeSourceKind\(\)/u);
   assert.match(script, /addWritingManualSource/u);
   assert.match(script, /skipWritingPair/u);

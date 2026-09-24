@@ -52,6 +52,36 @@ export function dailyBreakdown(days = []) {
   }));
 }
 
+// Nhận vào: điểm Test và kết quả từng tiêu chí do backend đã kiểm và lưu.
+// Việc chính: chuẩn bị nhãn dễ đọc; không tự tính hoặc suy đoán điểm còn thiếu.
+// Trả ra: các tiêu chí và thành phần để cửa sổ chi tiết hiển thị. Bài cũ đã
+// khôi phục chỉ dẫn người xem về Google Docs, không hiện điểm lượt chấm sai.
+export function summarizeWritingTestDetail(test) {
+  if (!test || typeof test !== 'object') return null;
+  const taskNumber = Number(test.task_number);
+  if (test.result_origin === 'legacy_restored') {
+    return { taskNumber, scoreLabel: null, criteria: [],
+      message: 'Bài đã có kết quả cũ được khôi phục; xem nhận xét và điểm trong Google Docs.' };
+  }
+  const score = test.task_score == null ? null : Number(test.task_score);
+  const criteria = (Array.isArray(test.criteria) ? test.criteria : []).map(item => ({
+    title: `${item.criterion_code || 'Tiêu chí'} · ${item.name || item.criterion_code || 'Chưa có tên'}`
+      + (item.band_score == null ? '' : ` · Band ${item.band_score}`),
+    feedback: item.feedback || '',
+    components: (Array.isArray(item.components) ? item.components : []).map(component => ({
+      title: component.label || component.component_code || 'Thành phần chưa có tên',
+      summary: component.summary || '',
+      feedback: component.feedback || '',
+    })),
+  }));
+  const count = criteria.reduce((total, item) => total + item.components.length, 0);
+  const expected = taskNumber === 1 ? 9 : taskNumber === 2 ? 10 : null;
+  return { taskNumber, scoreLabel: Number.isFinite(score) ? `Band ${score}` : null,
+    criteria, message: criteria.length
+      ? `${count}/${expected || '?'} thành phần đã lưu theo ${criteria.length}/4 tiêu chí.`
+      : 'Chưa có nhận xét chi tiết theo tiêu chí trong database.' };
+}
+
 export function clampColumnWidth(value, fallback = 140) {
   const width = Number(value);
   return Number.isFinite(width) ? Math.min(640, Math.max(80, Math.round(width))) : fallback;
