@@ -45,7 +45,8 @@ const server=http.createServer((req,res)=>{
     assert.ok(!(await page.locator('.pending').innerText()).includes('Chưa thấy recording tại lần quét'));
     assert.equal(await page.getByRole('button',{name:'Xử lý ngoại lệ'}).count(),0);
     assert.equal(await page.locator('.pending tbody tr').count(),1);
-    assert.deepEqual(await page.locator('.pending thead th').allTextContents(),['Lớp / Zoom','Recording','Thời gian học','Link recording','Chỉnh sửa','Link YouTube','Đã duyệt']);
+    assert.deepEqual(await page.locator('.pending thead th').allTextContents(),['Lớp / Zoom','Recording','Thời gian học','Link recording','Chỉnh sửa','Youtube','Đã duyệt']);
+    assert.equal(await page.locator('.pending thead th').nth(4).evaluate(e=>getComputedStyle(e).textAlign),'center');
     assert.equal(await page.locator('.pending tbody tr').first().locator('td').count(),7);
     assert.deepEqual(await page.locator('[data-edit-id="old"] option').allTextContents(),['Chọn thao tác','Đổi tên video','Đổi playlist']);
     assert.match(await page.locator('.video-link[href]:not(.zoom-source-link)').getAttribute('href'),/watch\?v=abcdefghijk&list=PLfixture$/);

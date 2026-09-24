@@ -120,7 +120,7 @@ function renderSection(title, records, approved) {
   const rows = filteredRecords(records);
   return `<section class="review-section ${approved ? 'approved' : 'pending'}">
     ${!approved&&(nightlyState.error||['failed','partial'].includes(nightlyState.snapshot?.scanStatus))?'<div class="empty-inline" role="alert">Chưa đối soát đầy đủ: nguồn Portal hoặc Zoom đang gặp lỗi. Các bản ghi hiện có được giữ để kiểm tra.</div>':''}<div class="review-heading"><div><span class="section-dot"></span><h2>${title}</h2></div><span>${rows.length} recording</span></div>
-    ${rows.length ? `<div class="table-wrap"><table><colgroup><col class="column-class"><col class="column-recording"><col class="column-time"><col class="column-source"><col class="column-edit"><col class="column-youtube"><col class="column-review"></colgroup><thead><tr><th>Lớp / Zoom</th><th>Recording</th><th>Thời gian học</th><th>Link recording</th><th>Chỉnh sửa</th><th>Link YouTube</th><th>Đã duyệt</th></tr></thead><tbody>${rows.map(recordRow).join('')}</tbody></table></div>` : '<div class="section-empty">Không có recording trong mục này.</div>'}
+    ${rows.length ? `<div class="table-wrap"><table><colgroup><col class="column-class"><col class="column-recording"><col class="column-time"><col class="column-source"><col class="column-edit"><col class="column-youtube"><col class="column-review"></colgroup><thead><tr><th>Lớp / Zoom</th><th>Recording</th><th>Thời gian học</th><th>Link recording</th><th>Chỉnh sửa</th><th>Youtube</th><th>Đã duyệt</th></tr></thead><tbody>${rows.map(recordRow).join('')}</tbody></table></div>` : '<div class="section-empty">Không có recording trong mục này.</div>'}
   </section>`;
 }
 
