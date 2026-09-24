@@ -1346,7 +1346,9 @@
     headingCopy.append(eyebrow, title);
     const note = document.createElement('p');
     note.textContent = grading?.ready
-      ? 'Nhấn vào điểm Task 1 để xem bài chấm chi tiết.'
+      ? Array.isArray(grading.tasks) && grading.tasks.some(task => Number(task?.taskNumber) === 1)
+        ? 'Nhấn vào điểm Task 1 để xem bài chấm chi tiết.'
+        : 'Điểm đã có, nhưng bài chấm chi tiết chưa sẵn sàng. Hãy tải lại trang sau.'
       : grading?.status === 'review_required'
         ? 'Bài làm đã được giữ an toàn; một phần chấm cần giáo viên kiểm tra trước khi công bố.'
         : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
@@ -1364,11 +1366,12 @@
         const label = document.createElement('span');
         label.textContent = `Writing Task ${taskNumber}`;
         const score = document.createElement('strong');
-        score.textContent = `Band ${formatBand(taskResult?.taskScore)}`;
+        score.textContent = taskResult ? `Band ${formatBand(taskResult.taskScore)}` : 'Chưa có điểm Task 1';
         const action = document.createElement('small');
-        action.textContent = 'Xem bài chấm chi tiết →';
+        action.textContent = taskResult ? 'Xem bài chấm chi tiết →' : 'Chưa có bài chấm chi tiết';
         button.append(label, score, action);
-        button.addEventListener('click', () => openWritingFeedback(taskResult));
+        button.disabled = !taskResult;
+        if (taskResult) button.addEventListener('click', () => openWritingFeedback(taskResult));
         gradingArea.append(button);
       }
       const overall = document.createElement('article');

@@ -7,7 +7,6 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const workspace = path.resolve(root, '../..');
 
 async function read(relative, encoding = 'utf8') {
   return fs.readFile(path.join(root, relative), encoding);
@@ -41,22 +40,21 @@ test('ba Answer Sheet K56 dùng đúng config, app và backend K56', async () =>
 });
 
 test('ba trang Audio Backup trỏ tới bản audio K56 đúng nguồn', async () => {
+  // Nhận vào: hash SHA-256 của ba MP3 production công khai, xác minh ngày 23/09/2026.
+  // So file branch với mốc đã phát hành; khi khác, test báo lỗi trước khi phát hành lại.
   const pages = [
-    ['term-test-1-k56-audio', 'term-test-1-k56.mp3', 'term-tests/izone-term-tests-k56/term-test-1-k56-computer-based/assets/private/listening-k56.mp3'],
-    ['term-test-2-k56-audio', 'term-test-2-k56.mp3', 'term-tests/izone-term-test-2-k56/term-test-2-k56-computer-based/assets/private/listening-k56.mp3'],
-    ['mini-test-k56-audio', 'mini-test-k56.mp3', 'term-tests/izone-mini-test-k56/mini-test-k56-computer-based/assets/private/preston-park-run.mp3']
+    ['term-test-1-k56-audio', 'term-test-1-k56.mp3', 'c7766f97758ec5ecdd3b69dfd3f762567a50bdbb0fd38930a2b609879e8439fc'],
+    ['term-test-2-k56-audio', 'term-test-2-k56.mp3', '3600563c0af62fd5c9656be0d7b7f52a1bae281d6af1de80ba4fe0de523f92af'],
+    ['mini-test-k56-audio', 'mini-test-k56.mp3', '93a3901c37fb37a8eb2ec989ef8d382810d4dc99e6b6506a8377fac68dc756ab']
   ];
-  for (const [route, file, sourceRelative] of pages) {
+  for (const [route, file, productionHash] of pages) {
     const configSource = await read(`term-tests/${route}/audio-config.js`);
     const sandbox = { window: {} };
     vm.runInNewContext(configSource, sandbox, { timeout: 5_000 });
     assert.equal(sandbox.window.K56_AUDIO_BACKUP_CONFIG.src, `../k56-audio-assets/${file}`);
-    const [published, source] = await Promise.all([
-      read(`term-tests/k56-audio-assets/${file}`, null),
-      fs.readFile(path.join(workspace, sourceRelative))
-    ]);
+    const published = await read(`term-tests/k56-audio-assets/${file}`, null);
     const digest = value => createHash('sha256').update(value).digest('hex');
-    assert.equal(digest(published), digest(source));
+    assert.equal(digest(published), productionHash);
   }
 });
 
