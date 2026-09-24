@@ -9,7 +9,7 @@ const server=http.createServer((req,res)=>{
   if(pathname==='/recordings/nightly-config.js'){res.setHeader('Content-Type','application/javascript');return res.end("window.RECORDING_NIGHTLY={dataUrl:'https://fixture.invalid/nightly',actionUrl:'https://fixture.invalid/action',recheckUrl:'https://fixture.invalid/recheck'};");}
   const file=path.join(root,pathname);if(!file.startsWith(root+path.sep))return res.writeHead(403).end();
   if(!fs.existsSync(file))return res.writeHead(404).end();
-  res.setHeader('Content-Type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'image/png');res.end(fs.readFileSync(file));
+  res.setHeader('Content-Type',file.endsWith('.ttf')?'font/ttf':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'image/png');res.end(fs.readFileSync(file));
 });
 (async()=>{
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -45,6 +45,19 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('.pending tbody tr').first().locator('td').count(),7);
     assert.deepEqual(await page.locator('[data-edit-id="old"] option').allTextContents(),['Chọn thao tác','Đổi tên video','Đổi playlist']);
     assert.match(await page.locator('.video-link[href]:not(.zoom-source-link)').getAttribute('href'),/watch\?v=abcdefghijk&list=PLfixture$/);
+    await page.evaluate(()=>document.fonts.ready);
+    assert.ok(await page.evaluate(()=>document.fonts.check('400 16px "Source Sans Pro"')&&document.fonts.check('700 16px "Source Sans Pro"')));
+    assert.ok((await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily)).includes('Source Sans Pro'));
+    for(const link of await page.locator('.external-link-icon').all()) {assert.equal((await link.innerText()).trim(),'');assert.equal(await link.locator('svg').count(),1);assert.ok(await link.getAttribute('aria-label'));}
+    assert.equal(await page.locator('[data-edit-id="old"]').count(),1);
+    assert.equal(await page.locator('.manual-upload-disabled').isDisabled(),true);
+    if(process.env.RECORDING_UI_SCREENSHOT) {
+      await page.screenshot({path:process.env.RECORDING_UI_SCREENSHOT,fullPage:true});
+      await page.setViewportSize({width:390,height:844});
+      await page.screenshot({path:process.env.RECORDING_UI_SCREENSHOT.replace('.png','-mobile.png'),fullPage:true});
+      await page.setViewportSize({width:1280,height:720});
+    }
+
     await page.locator('[data-edit-id="old"]').selectOption('rename');
     assert.equal(await page.locator('#renameTitle').inputValue(),video.title);
     await page.locator('#renameDialog [data-close-dialog]').first().click();
