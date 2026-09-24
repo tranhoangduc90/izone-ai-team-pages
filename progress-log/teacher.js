@@ -234,7 +234,13 @@ function assignmentLabel(item) {
   const title = prefix && Number(prefix[1]) === Number(item.session_number)
     ? originalTitle.slice(prefix[0].length).replace(/^[\s:·–—-]+/u, '').trim()
     : originalTitle;
-  return [item.class_name, `Buổi ${item.session_number}`, title].filter(Boolean).join(' · ');
+  const className = String(item.class_name || '').trim();
+  const sessionLabel = `Buổi ${item.session_number}`;
+  const shortTitle = title.split(/\s*·\s*/u).filter(part => {
+    const label = part.trim().toLocaleLowerCase('vi');
+    return label !== className.toLocaleLowerCase('vi') && label !== sessionLabel.toLocaleLowerCase('vi');
+  }).join(' · ');
+  return [className, sessionLabel, shortTitle].filter(Boolean).join(' · ');
 }
 
 function refreshAssignmentSelect(selectedId = '') {
