@@ -5,6 +5,9 @@
 .journey-summary div { display: grid; gap: 3px; padding: 16px 12px; border-radius: 14px; background: var(--soft); text-align: center; }
 .journey-summary b { color: var(--navy); font-size: 1.55rem; }
 .journey-summary span { color: var(--muted); font-size: .78rem; line-height: 1.25; }
+.teacher-session-feedback { margin: 18px 0 26px; padding: 20px; border-left: 4px solid var(--red); border-radius: 12px; background: #fff5f6; }
+.teacher-session-feedback b { color: var(--navy); }
+.teacher-session-feedback p:last-child { margin-bottom: 0; white-space: pre-wrap; line-height: 1.55; }
 .latest-report { padding: 22px 0 26px; border-top: 1px solid var(--line); }
 .latest-report h2, .report-history h2 { margin: 0 0 8px; color: var(--navy-2); font-size: 1rem; }
 .report-block { margin: 20px 0; }
@@ -27,6 +30,9 @@
 .journey-status { color: var(--muted); font-size: .75rem; font-weight: 700; }
 .journey-status.good { color: var(--success); }
 .session-note { margin-top: 13px; padding: 12px; border-radius: 10px; background: var(--soft); color: var(--navy-2); font-size: .88rem; line-height: 1.45; }
+.session-speaking-feedback { margin-top: 13px; padding: 12px; border-radius: 10px; background: #fff5f6; border-left: 3px solid var(--red); }
+.session-speaking-feedback b { color: var(--red); font-size: .78rem; }
+.session-speaking-feedback p { margin: 6px 0 0; white-space: pre-wrap; line-height: 1.45; }
 .report-history { margin-top: 30px; }
 .history-report { padding: 15px 0; border-bottom: 1px solid var(--line); }
 .history-report p { margin: 7px 0 0; color: var(--muted); line-height: 1.5; }

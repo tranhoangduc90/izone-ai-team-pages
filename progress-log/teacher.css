@@ -68,10 +68,14 @@ dialog h2 { margin: 0; color: var(--navy); }
 .dialog-primary { width: auto; }
 .report-dialog { width: min(100% - 30px, 680px); }
 .draft-dialog { width: min(100% - 30px, 760px); }
-.draft-answers { display: grid; gap: 10px; max-height: min(65vh, 660px); overflow: auto; margin-top: 18px; padding-right: 4px; }
+.draft-answers { display: grid; gap: 10px; max-height: min(45vh, 460px); overflow: auto; margin-top: 18px; padding-right: 4px; }
 .draft-answers article { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
 .draft-answers b { display: block; color: var(--navy-2); line-height: 1.4; }
 .draft-answers p { margin: 8px 0 0; white-space: pre-wrap; line-height: 1.5; }
+.draft-feedback { margin-top: 18px; }
+.draft-feedback-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.draft-feedback-actions small { color: var(--muted); line-height: 1.4; }
+.draft-feedback-actions .button { flex: 0 0 auto; }
 .draft-verdict { display: inline-block; margin-top: 9px; padding: 4px 8px; border-radius: 999px; color: var(--muted); background: #e7ebef; font-weight: 800; }
 .draft-verdict.correct { color: var(--success); background: #dff2e9; }
 .draft-verdict.incorrect { color: #a51e2a; background: #fae6e8; }

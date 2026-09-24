@@ -6,7 +6,8 @@ const elements = Object.fromEntries([
   'attendedCount', 'submittedCount', 'reportCount', 'latestReport', 'latestReportScope',
   'progressPoints', 'recurringPoints', 'journeyNextAction', 'teacherMessage',
   'teacherMessageText', 'emptyReport', 'timelineToggle', 'timeline', 'timelineCount',
-  'sessionList', 'reportHistory', 'reportList', 'journeyError', 'journeyErrorMessage'
+  'sessionList', 'reportHistory', 'reportList', 'journeyError', 'journeyErrorMessage',
+  'latestSpeakingFeedback', 'latestSpeakingFeedbackScope', 'latestSpeakingFeedbackText'
 ].map(id => [id, document.getElementById(id)]));
 
 let accessToken = '';
@@ -107,6 +108,16 @@ function buildSession(session) {
   const attendance = document.createElement('small');
   attendance.textContent = attendanceLabel(session.attendanceStatus);
   item.append(heading, title, attendance);
+  if (session.teacherSessionFeedback?.noteText) {
+    const feedback = document.createElement('div');
+    feedback.className = 'session-speaking-feedback';
+    const label = document.createElement('b');
+    label.textContent = 'Nhận xét Speaking từ giảng viên';
+    const message = document.createElement('p');
+    message.textContent = session.teacherSessionFeedback.noteText;
+    feedback.append(label, message);
+    item.append(feedback);
+  }
   if (session.afterSessionReport) {
     const next = document.createElement('div');
     next.className = 'session-note';
@@ -137,6 +148,14 @@ function renderJourney(journey) {
   elements.submittedCount.textContent = journey.summary.submittedComplete;
   elements.reportCount.textContent = journey.summary.availableReports;
   renderLatestReport(journey.latestReport);
+  const latestFeedbackSession = [...journey.sessions]
+    .filter(session => session.teacherSessionFeedback?.noteText)
+    .sort((left, right) => Date.parse(left.teacherSessionFeedback.sentAt)
+      - Date.parse(right.teacherSessionFeedback.sentAt)).at(-1);
+  elements.latestSpeakingFeedback.hidden = !latestFeedbackSession;
+  elements.latestSpeakingFeedbackScope.textContent = latestFeedbackSession
+    ? `Buổi ${latestFeedbackSession.sessionNumber} · ${latestFeedbackSession.title}` : '';
+  elements.latestSpeakingFeedbackText.textContent = latestFeedbackSession?.teacherSessionFeedback.noteText || '';
   elements.timelineCount.textContent = `${journey.summary.totalSessions} buổi`;
   elements.sessionList.replaceChildren(...journey.sessions.map(buildSession));
   elements.reportHistory.hidden = !journey.reports.length;

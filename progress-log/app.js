@@ -343,9 +343,9 @@ function resizeSentenceBlank(control) {
 }
 
 function buildSentenceCompletion(item) {
-  const templates = SENTENCE_COMPLETION_LAYOUTS[item.itemVersionId];
+  const templates = item.interactionConfig?.sentenceLines || SENTENCE_COMPLETION_LAYOUTS[item.itemVersionId];
   const expected = Number(item.interactionConfig?.responseCount || 0);
-  if (!templates || templates.length * 2 !== expected) return null;
+  if (!templates || templates.reduce((count, line) => count + line.parts.length - 1, 0) !== expected) return null;
   const existing = Array.isArray(responseFor(item)) ? responseFor(item) : [];
   const group = document.createElement('div');
   group.className = 'sentence-group';
@@ -353,7 +353,7 @@ function buildSentenceCompletion(item) {
   for (const [rowIndex, template] of templates.entries()) {
     const row = document.createElement('div');
     row.className = 'sentence-row';
-    if (templates.length > 1) {
+    if (templates.length > 1 && !item.interactionConfig?.sentenceLines) {
       const marker = document.createElement('span');
       marker.className = 'sentence-index';
       marker.textContent = `${rowIndex + 1}.`;

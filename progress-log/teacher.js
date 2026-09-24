@@ -28,7 +28,10 @@ const state = {
   attendanceStudent: null,
   attendanceOperationId: null,
   reportStudent: null,
-  studentJourneyLink: ''
+  studentJourneyLink: '',
+  draftStudent: null,
+  draftJourneyLink: '',
+  feedbackOperationId: null
 };
 
 const elements = Object.fromEntries([
@@ -41,7 +44,9 @@ const elements = Object.fromEntries([
   'attendanceStatus', 'attendanceReason', 'attendanceSyncHint', 'saveAttendanceButton', 'reportDialog', 'reportStudentName',
   'reportScope', 'reportSystemContent', 'reportHumanNote', 'saveTeacherNoteButton', 'reportDeliveryStatus',
   'markReportDeliveredButton', 'copyStudentJourneyLinkButton', 'studentJourneyLinkStatus',
-  'draftDialog', 'draftStudentName', 'draftStatus', 'draftAnswers'
+  'draftDialog', 'draftStudentName', 'draftStatus', 'draftAnswers',
+  'draftSpeakingFeedback', 'draftFeedbackStatus', 'sendDraftFeedbackButton',
+  'draftJourneyLinkStatus', 'copyDraftJourneyLinkButton'
 ].map(id => [id, document.getElementById(id)]));
 
 function setNotice(message, kind = '') {
@@ -348,6 +353,15 @@ function verdictLabel(verdict) {
 function openDraft(student) {
   const live = state.liveByStudent.get(student.studentRef);
   if (!live) return;
+  state.draftStudent = student;
+  state.draftJourneyLink = '';
+  state.feedbackOperationId = crypto.randomUUID();
+  elements.draftJourneyLinkStatus.textContent = 'Link cá nhân chỉ gửi đúng học viên. Tạo mới sẽ thay link cũ.';
+  elements.copyDraftJourneyLinkButton.textContent = 'Tạo và sao chép link';
+  elements.draftSpeakingFeedback.value = student.teacherSessionFeedback?.noteText || '';
+  elements.draftFeedbackStatus.textContent = student.teacherSessionFeedback
+    ? `Đã gửi nhận xét · bản ${student.teacherSessionFeedback.revision}. Chỉnh sửa rồi gửi lại để cập nhật.`
+    : 'Chưa gửi nhận xét.';
   const responses = live.submissionId ? live.finalResponses : live.draftResponses;
   const resultByItem = new Map((live.gradingResult?.items || []).map(item => [item.itemVersionId, item]));
   elements.draftStudentName.textContent = student.discriminator
@@ -512,6 +526,82 @@ async function copyStudentJourneyLink() {
       : error.message;
   } finally {
     elements.copyStudentJourneyLinkButton.disabled = false;
+  }
+}
+
+async function sendDraftFeedback() {
+  const student = state.draftStudent;
+  const assignmentId = state.dashboard?.assignmentId;
+  const noteText = elements.draftSpeakingFeedback.value.trim();
+  if (!student || !assignmentId || !elements.draftDialog.open) return;
+  if (noteText && noteText === student.teacherSessionFeedback?.noteText) {
+    elements.draftFeedbackStatus.textContent = 'Nhận xét này đã được gửi.';
+    return;
+  }
+  if (!noteText || noteText.length > 500) {
+    elements.draftFeedbackStatus.textContent = 'Hãy viết nhận xét từ 1 đến 500 ký tự.';
+    return;
+  }
+  elements.sendDraftFeedbackButton.disabled = true;
+  elements.draftSpeakingFeedback.disabled = true;
+  elements.draftFeedbackStatus.textContent = 'Đang gửi nhận xét…';
+  try {
+    const payload = await apiRequest('/teacher/session-feedback', {
+      method: 'PUT',
+      body: {
+        assignmentId, studentRef: student.studentRef, noteText,
+        expectedRevision: Number(student.teacherSessionFeedback?.revision || 0),
+        operationId: state.feedbackOperationId
+      }
+    });
+    if (payload.feedback?.studentRef !== student.studentRef || payload.feedback.noteText !== noteText) {
+      throw new Error('Nhận xét lưu không khớp học viên; hãy tải lại trước khi gửi tiếp.');
+    }
+    student.teacherSessionFeedback = payload.feedback;
+    if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
+      || !elements.draftDialog.open) return;
+    state.feedbackOperationId = crypto.randomUUID();
+    elements.draftFeedbackStatus.textContent = `Đã gửi đến tổng hợp của học viên · bản ${payload.feedback.revision}.`;
+  } catch (error) {
+    elements.draftFeedbackStatus.textContent = `Chưa xác nhận đã gửi: ${error.message}`;
+  } finally {
+    elements.sendDraftFeedbackButton.disabled = false;
+    elements.draftSpeakingFeedback.disabled = false;
+  }
+}
+
+async function copyDraftJourneyLink() {
+  const student = state.draftStudent;
+  if (!student || !state.dashboard?.assignmentId) return;
+  elements.copyDraftJourneyLinkButton.disabled = true;
+  try {
+    const assignmentId = state.dashboard.assignmentId;
+    if (!state.draftJourneyLink) {
+      const accessToken = newStudentJourneyToken();
+      const payload = await apiRequest('/teacher/student-progress-links', {
+        method: 'POST',
+        body: {
+          assignmentId: state.dashboard.assignmentId, studentRef: student.studentRef,
+          accessToken, expiresInDays: 90, operationId: crypto.randomUUID()
+        }
+      });
+      if (payload.link.studentRef !== student.studentRef) {
+        throw new Error('Link trả về không khớp học viên; hệ thống đã dừng sao chép.');
+      }
+      if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
+        || !elements.draftDialog.open) return;
+      state.draftJourneyLink = studentJourneyUrl(accessToken);
+    }
+    if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
+      || !elements.draftDialog.open) return;
+    await navigator.clipboard.writeText(state.draftJourneyLink);
+    elements.draftJourneyLinkStatus.textContent = 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
+    elements.copyDraftJourneyLinkButton.textContent = 'Sao chép lại';
+  } catch (error) {
+    elements.draftJourneyLinkStatus.textContent = state.draftJourneyLink
+      ? `Không sao chép tự động được. Link: ${state.draftJourneyLink}` : error.message;
+  } finally {
+    elements.copyDraftJourneyLinkButton.disabled = false;
   }
 }
 
@@ -841,6 +931,9 @@ elements.skillFilter.addEventListener('change', renderLibrary);
 elements.markReportDeliveredButton.addEventListener('click', () => void markReportDelivered());
 elements.saveTeacherNoteButton.addEventListener('click', () => void saveTeacherHumanNote());
 elements.copyStudentJourneyLinkButton.addEventListener('click', () => void copyStudentJourneyLink());
+elements.sendDraftFeedbackButton.addEventListener('click', () => void sendDraftFeedback());
+elements.copyDraftJourneyLinkButton.addEventListener('click', () => void copyDraftJourneyLink());
+elements.draftSpeakingFeedback.addEventListener('input', () => { state.feedbackOperationId = crypto.randomUUID(); });
 elements.rememberTeacherLogin.checked = loginPreference.read();
 elements.rememberTeacherLogin.addEventListener('change', () => {
   if (loginPreference.set(elements.rememberTeacherLogin.checked)) return;
