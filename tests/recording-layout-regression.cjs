@@ -15,7 +15,8 @@ test('Ô tài khoản chỉ hiện nút; status giữ cho trình đọc màn hì
 });
 test('Bảng recording bỏ buổi Portal nhưng giữ nguồn Zoom chưa đăng hoặc đã xóa',()=>{
  const body=nightly.slice(nightly.indexOf('function mergeNightlyRecords'),nightly.indexOf('async function loadNightly'));
- const merge=new Function(body+';return mergeNightlyRecords;')();
+ const rules=fs.readFileSync(path.join(root,'recording-row-rules.js'),'utf8');
+ const merge=new Function(rules+'\n'+body+';return mergeNightlyRecords;')();
  const old={id:'old',kind:'recording',source:'Zoom 36',recordingFileId:'f1',title:'Đã đăng'};
  const portal={id:'session:s1',kind:'session',className:'IC9001',status:'missing_assignment'};
  const file={id:'new',kind:'recording',source:'Zoom 6',recordingFileId:'f2',status:'deleted'};

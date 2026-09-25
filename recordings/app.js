@@ -90,7 +90,10 @@ function recordingSourceCell(record) {
   return '<div data-source-link-id="'+escapeHtml(record.id)+'">'+(typeof sourceLinkMarkup==='function'?sourceLinkMarkup(record):'<span class="subtext">Đang kiểm tra nguồn Zoom…</span>')+'</div>';
 }
 function videoEditCell(record) {
-  if(!record.videoId)return typeof manualUploadCell==='function'?manualUploadCell(record):'<span class="subtext">Chưa đăng video</span>';
+  if(!record.videoId) {
+    if(canRefreshRecordingFile(record))return '<select class="video-edit-select" data-edit-id="'+escapeHtml(record.id)+'" aria-label="Chỉnh sửa recording"><option value="">Chọn thao tác</option><option value="refresh_file">Kiểm tra lại tệp</option></select>';
+    return typeof manualUploadCell==='function'?manualUploadCell(record):'<span class="subtext">Chưa đăng video</span>';
+  }
   return '<select class="video-edit-select" data-edit-id="'+escapeHtml(record.id)+'" aria-label="Chỉnh sửa video"><option value="">Chọn thao tác</option><option value="rename">Đổi tên video</option><option value="playlist">Đổi playlist</option></select>';
 }
 function recordRow(record) {
@@ -235,7 +238,7 @@ function openVideoEditor(action, id) {
     $('playlistSelect').focus();
   }
 }
-document.addEventListener('change',event=>{const select=event.target.closest('[data-edit-id]');if(!select)return;const action=select.value;select.value='';if(['rename','playlist'].includes(action))openVideoEditor(action,select.dataset.editId);});
+document.addEventListener('change',event=>{const select=event.target.closest('[data-edit-id]');if(!select)return;const action=select.value;select.value='';if(action==='refresh_file')return refreshKnownRecordingFile(select.dataset.editId,select);if(['rename','playlist'].includes(action))openVideoEditor(action,select.dataset.editId);});
 
 document.addEventListener('change', async (event) => {
   const checkbox = event.target.closest('input[data-action="review"]');

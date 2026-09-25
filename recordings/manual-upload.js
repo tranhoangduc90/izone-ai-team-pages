@@ -1,5 +1,30 @@
 // Lệnh đăng riêng biệt với tick đã duyệt. Không giữ token hoặc quyết định ở localStorage.
 const manualUploadPending = new Set();
+const refreshFilePending = new Set();
+async function refreshKnownRecordingFile(id, control) {
+  const record = nightlyState.snapshot?.records?.find(r => r.id === id);
+  if (!canRefreshRecordingFile(record)) { toast('Tệp này không còn cần kiểm tra lại.', 'error'); return; }
+  if (!window.recordingAuth?.isAuthenticated()) { toast('Vui lòng đăng nhập để kiểm tra lại tệp.', 'error'); return; }
+  if (refreshFilePending.has(id)) return;
+  refreshFilePending.add(id); control.disabled = true;
+  try {
+    const response = await window.recordingAuth.request({action:'refresh_file',date:nightlyState.snapshot.date,id,expectedVersion:record.version});
+    const result = await response.json();
+    if (!response.ok || result.ok !== true || result.record?.type !== 'MP4' || result.record?.status !== 'completed')
+      throw new Error(result.error || 'REFRESH_FAILED');
+    await loadData(true);
+    const saved = nightlyState.snapshot?.records?.find(r => r.id === result.record.id);
+    if (!saved || saved.version !== result.record.version || saved.type !== 'MP4' || saved.status !== 'completed')
+      throw new Error('READBACK_PENDING');
+    toast('Tệp đã sẵn sàng. Hãy kiểm tra video rồi chọn Đăng lên YouTube.');
+  } catch (error) {
+    if (error.message === 'COMPLETED_FILE_NOT_UNIQUE') toast('Zoom chưa trả về một video MP4 hoàn chỉnh duy nhất cho tệp này.', 'error');
+    else if (error.message === 'VERSION_CONFLICT' || error.message === 'REFRESH_BUSY') toast('Dữ liệu đang thay đổi. Hãy làm mới trang rồi thử lại.', 'error');
+    else toast('Chưa xác minh được tệp. Hãy làm mới dữ liệu trước khi thử lại.', 'error');
+  } finally {
+    refreshFilePending.delete(id); if (control.isConnected) control.disabled = false;
+  }
+}
 function manualUploadSource(record) {
   return nightlyState.snapshot?.records?.find(r => r.kind === 'recording' &&
     (r.id === record.id || (r.recordingFileId === record.recordingFileId && r.source === record.source)));

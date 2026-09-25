@@ -15,13 +15,18 @@ const NIGHTLY_LABELS = {
 };
 const nightlyState = {snapshot:null, generation:0};
 function mergeNightlyRecords(existing, snapshot) {
-  const isRecording=row=>row.kind!=='session'&&!String(row.id||'').startsWith('session:');
-  const records=existing.filter(isRecording);
+  const hiddenIds=new Set((snapshot?.records||[]).filter(row=>row.kind==='recording'&&!shouldShowRecordingRow(row)).map(row=>row.id));
+  const records=existing.filter(row=>shouldShowRecordingRow(row)&&!hiddenIds.has(row.id));
   for(const row of snapshot?.records || []) {
-    if(!isRecording(row)) continue;
+    if(!shouldShowRecordingRow(row)) continue;
     const index=records.findIndex(r=>r.source===row.source && r.recordingFileId && r.recordingFileId===row.recordingFileId);
     if(index<0)records.push({...row,title:row.proposedTitle || `${row.className || row.source} · ${row.kind==='session'?'Buổi '+(row.lessonNumber||'—'):'Recording chưa đăng'}`,nightly:true});
-    else records[index]={...row,...records[index],reasons:row.reasons || [],observedMatch:row.observedMatch};
+    else {
+      const merged={...row,...records[index],reasons:row.reasons || [],observedMatch:row.observedMatch};
+      if(row.sourceRefreshedAt && !merged.videoId) Object.assign(merged,{type:row.type,status:row.status,fileSize:row.fileSize,
+        recordingEnd:row.recordingEnd,observationStale:row.observationStale,version:row.version});
+      records[index]=merged;
+    }
   }
   return records;
 }
