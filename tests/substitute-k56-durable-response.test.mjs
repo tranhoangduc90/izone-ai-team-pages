@@ -46,7 +46,8 @@ test('phiếu đang chờ giữ đúng ba phần và không dựng điểm Writi
 test('phiếu hoàn tất hiển thị đúng điểm, bốn tiêu chí và trạng thái Portal', () => {
   const result = { taskNumber: 1, taskScore: 3.5,
     criteria: ['TA', 'CC', 'LR', 'GRA'].map(code => ({ code, bandScore: 3.5 })) };
-  const page = adapter.statusForPage(status({ submissionStatus: 'completed',
+  const page = adapter.statusForPage(status({ attemptStatus: 'completed',
+    submissionStatus: 'completed',
     taskScore: 3.5, result, portalSyncStatus: 'blocked_missing_first_scores' }));
   assert.equal(page.grading.ready, true);
   assert.equal(page.grading.writingScore, 3.5);
@@ -65,6 +66,7 @@ test('sai đề, Task, lượt, phần bài hoặc kết quả đều dừng tr�
     { attemptId: 'browser-generated' }, { submissionId: null },
     { submittedEssay: '' }, { sectionResults: null },
     { submissionStatus: 'unknown' },
+    { attemptStatus: 'completed', submissionStatus: 'pending' },
     { submissionStatus: 'completed', taskScore: 3.5, result: null },
     { submissionStatus: 'completed', taskScore: 4, result },
     { submissionStatus: 'completed', taskScore: 3.5,

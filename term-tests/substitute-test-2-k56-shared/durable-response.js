@@ -27,13 +27,15 @@
     if (status.attemptStatus === 'open' && status.submissionId === null
       && status.submissionStatus === null) return { accepted: false };
 
-    if (status.attemptStatus !== 'submitted'
+    const state = status.submissionStatus;
+    const expectedAttemptStatus = state === 'completed' || state === 'delivered'
+      ? 'completed' : 'submitted';
+    if (status.attemptStatus !== expectedAttemptStatus
       || !UUID.test(String(status.submissionId || ''))
       || typeof status.submittedEssay !== 'string' || !status.submittedEssay.trim()
       || !status.sectionResults?.listening || !status.sectionResults?.reading
       || typeof status.portalSyncStatus !== 'string') invalidReceipt();
 
-    const state = status.submissionStatus;
     let grading;
     if (state === 'pending' || state === 'running') {
       if (status.result !== null || status.taskScore !== null) invalidReceipt();
