@@ -1,5 +1,5 @@
 /* Dữ liệu nhận vào: tệp dữ liệu đã ẩn danh cùng thư mục trên GitHub Pages.
- * Việc chính: tách ca giống/khác, hiện hai nhãn chấm và chuẩn bị phản hồi Google Form.
+ * Việc chính: ca đồng thuận hiện một kết quả, ca bất đồng hiện hai kết quả và chuẩn bị phản hồi Google Form.
  * Kết quả: trang tải tự động; localStorage chỉ giữ lựa chọn và lý do.
  * Khi lỗi: báo lỗi tải/gửi rõ ràng, không coi phản hồi đã được ghi lên Form.
  */
@@ -119,7 +119,10 @@
     card.append(top);
 
     const grades = element('div', 'grades');
-    for (const [name, value] of [['Gemini 3.1 Flash-Lite', item.gemini], ['GPT‑6 Luna', item.luna]]) {
+    const gradeEntries = disputed
+      ? [['Gemini 3.1 Flash-Lite', item.gemini], ['GPT‑6 Luna', item.luna]]
+      : [['Kết quả chung của hai AI', item.gemini]];
+    for (const [name, value] of gradeEntries) {
       const block = element('div', 'grade');
       block.append(element('span', 'model-name', name), element('strong', value ? 'verdict right' : 'verdict wrong', verdict(value)));
       grades.append(block);
@@ -142,13 +145,24 @@
     card.append(criteria);
 
     const feedback = element('div', 'feedback');
-    feedback.append(element('h3', '', 'Bạn đánh giá hai kết luận này thế nào?'));
-    const controls = element('div', 'feedback-grid');
+    feedback.append(element('h3', '', disputed ? 'Bạn đánh giá hai kết luận này thế nào?' : 'Bạn đồng ý với kết quả này không?'));
+    const controls = element('div', disputed ? 'feedback-grid' : 'feedback-grid shared');
     const write = (field, value) => { reviews[item.key] = {...(reviews[item.key] || {}), [field]: value}; persistReviews(); updateSummary(); };
-    const geminiChange = (value) => write('gemini', value); geminiChange.key = item.key;
-    const lunaChange = (value) => write('luna', value); lunaChange.key = item.key;
-    controls.append(choiceField('Gemini 3.1 Flash-Lite', state.gemini, geminiChange));
-    controls.append(choiceField('GPT‑6 Luna', state.luna, lunaChange));
+    if (disputed) {
+      const geminiChange = (value) => write('gemini', value); geminiChange.key = item.key;
+      const lunaChange = (value) => write('luna', value); lunaChange.key = item.key;
+      controls.append(choiceField('Gemini 3.1 Flash-Lite', state.gemini, geminiChange));
+      controls.append(choiceField('GPT‑6 Luna', state.luna, lunaChange));
+    } else {
+      const sharedChange = (value) => {
+        reviews[item.key] = {...(reviews[item.key] || {}), gemini: value, luna: value};
+        persistReviews();
+        updateSummary();
+      };
+      sharedChange.key = item.key;
+      const sharedChoice = state.gemini === state.luna ? state.gemini : '';
+      controls.append(choiceField('Kết quả chung của hai AI', sharedChoice, sharedChange));
+    }
     feedback.append(controls);
     const humanLabel = element('label', 'human-label', 'Theo bạn, cả câu trả lời là');
     const human = element('select');
@@ -178,9 +192,9 @@
     const message = element('span', 'inline-status', '');
     send.addEventListener('click', (event) => {
       const latest = reviews[item.key] || {};
-      if (!latest.gemini || !latest.luna || !latest.human) {
+      if (!latest.gemini || !latest.luna || !latest.human || (!disputed && latest.gemini !== latest.luna)) {
         event.preventDefault();
-        message.textContent = 'Hãy đánh giá cả hai AI và chọn kết luận của bạn.';
+        message.textContent = disputed ? 'Hãy đánh giá cả hai AI và chọn kết luận của bạn.' : 'Hãy đánh giá kết quả chung và chọn kết luận của bạn.';
         return;
       }
       if ((latest.gemini === 'Không đồng ý' || latest.luna === 'Không đồng ý') && !String(latest.reason || '').trim()) {
@@ -201,7 +215,10 @@
   function updateSummary() {
     if (!bundle) return;
     const subset = bundle.items.filter((item) => view === 'all' || ((item.gemini === item.luna) === (view === 'same')));
-    const reviewed = subset.filter((item) => reviews[item.key]?.gemini && reviews[item.key]?.luna && reviews[item.key]?.human).length;
+    const reviewed = subset.filter((item) => {
+      const state = reviews[item.key];
+      return state?.gemini && state?.luna && state?.human && (item.gemini !== item.luna || state.gemini === state.luna);
+    }).length;
     const label = view === 'all' ? 'tất cả' : view === 'same' ? 'chấm giống nhau' : 'chấm khác nhau';
     $('summary').textContent = `${subset.length} ca ${label} · ${reviewed} ca đã chọn đánh giá trên máy này`;
   }
