@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
+import { runInNewContext } from 'node:vm';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'progress-log-ic2305-grading-review');
 const read = (name) => readFileSync(resolve(root, name), 'utf8');
@@ -55,4 +56,72 @@ test('gửi phản hồi qua Google Form chỉ có mã ca và ý kiến người
   for (const field of ['caseKey', 'gemini', 'luna', 'human', 'reason']) assert.match(js, new RegExp(`FORM_FIELDS\\.${field}`));
   assert.doesNotMatch(js.slice(js.indexOf('function formLink'), js.indexOf('function card')), /item\.answer|question\.criteria/);
   assert.match(js, /reason\.focus\(\)/);
+});
+
+test('97 ca đồng thuận chỉ hiện một kết quả và một đánh giá, ca bất đồng vẫn hiện hai', async () => {
+  class Element {
+    constructor(tag = 'div') { this.tag = tag; this.children = []; this.dataset = {}; this.listeners = {}; this.value = ''; this.className = ''; }
+    append(...nodes) { this.children.push(...nodes); }
+    replaceChildren(...nodes) { this.children = nodes; }
+    addEventListener(name, listener) { this.listeners[name] = listener; }
+    setAttribute() {}
+    removeAttribute() {}
+    get firstChild() { return this.children[0]; }
+  }
+  const elements = new Map();
+  const tabs = ['all', 'different', 'same'].map((name) => { const tab = new Element('button'); tab.dataset.tab = name; return tab; });
+  const stored = new Map();
+  const document = {
+    body: new Element('body'),
+    createElement: (tag) => new Element(tag),
+    createTextNode: (value) => ({textContent: value}),
+    getElementById: (id) => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); },
+    querySelectorAll: (selector) => selector === '[data-tab]' ? tabs : [],
+  };
+  const data = JSON.parse(read('data.json'));
+  const firstConsensus = data.items.find((item) => item.gemini === item.luna);
+  stored.set('ic2305:grading-review:v3', JSON.stringify({
+    [firstConsensus.key]: {gemini: 'Đồng ý', luna: 'Không đồng ý', human: 'Sai'},
+  }));
+  runInNewContext(read('review.js'), {
+    document, URL, setTimeout,
+    localStorage: {getItem: (key) => stored.get(key) || null, setItem: (key, value) => stored.set(key, value)},
+    fetch: async () => ({ok: true, json: async () => data}),
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  const walk = (node, className) => [
+    ...(node.className?.split(' ').includes(className) ? [node] : []),
+    ...((node.children || []).flatMap((child) => walk(child, className))),
+  ];
+  const cards = elements.get('cards').children;
+  assert.equal(cards.length, 98);
+  for (const card of cards) {
+    const disputed = card.className.includes('disputed');
+    assert.equal(walk(card, 'grade').length, disputed ? 2 : 1);
+    assert.equal(walk(card, 'choice-field').length, disputed ? 2 : 1);
+  }
+  const shared = cards.find((card) => !card.className.includes('disputed'));
+  const choices = walk(shared, 'choice-field')[0].children.filter((node) => node.tag === 'label');
+  assert.equal(choices.some((node) => node.children[0].checked), false);
+  const link = walk(shared, 'send-button')[0];
+  let blocked = false;
+  link.listeners.click({preventDefault: () => { blocked = true; }});
+  assert.equal(blocked, true);
+  const agree = choices[0]?.children.find((node) => node.value === 'Đồng ý');
+  assert.ok(agree);
+  agree.listeners.change();
+  const saved = JSON.parse(stored.get('ic2305:grading-review:v3'));
+  const key = walk(shared, 'case-key')[0].textContent.split(' · ').at(-1);
+  assert.equal(saved[key].gemini, 'Đồng ý');
+  assert.equal(saved[key].luna, 'Đồng ý');
+  const human = walk(shared, 'human-label')[0].children.find((node) => node.tag === 'select');
+  human.value = 'Sai';
+  human.listeners.change();
+  blocked = false;
+  link.listeners.click({preventDefault: () => { blocked = true; }});
+  assert.equal(blocked, false);
+  const form = new URL(link.href);
+  assert.equal(form.searchParams.get('entry.1631772558'), 'Đồng ý');
+  assert.equal(form.searchParams.get('entry.1902183348'), 'Đồng ý');
+  assert.equal(form.searchParams.get('entry.2023912036'), key);
 });

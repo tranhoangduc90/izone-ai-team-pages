@@ -59,6 +59,7 @@ h1{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.035em;line-height:1.12;margin
 .criteria pre{font:inherit;font-size:.87rem;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;color:#354e67}
 .feedback{border-top:1px solid #e9edf3;padding-top:17px}
 .feedback-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px}
+.feedback-grid.shared{grid-template-columns:1fr}
 .choice-field{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:7px 12px}
 .choice-field legend{font-size:.84rem;color:#40536a;font-weight:800;margin-bottom:6px}
 .choice{font-size:.86rem;display:inline-flex;gap:5px;align-items:center;cursor:pointer}

@@ -1,6 +1,6 @@
 # IC2305 — rà chấm thử Gemini và GPT-6 Luna
 
-Một trang `index.html` chứa giao diện rà cả 98 ca. Ca bất đồng được xếp đầu và có nhãn riêng; bộ lọc cho phép xem ca bất đồng hoặc 97 ca hai AI có cùng kết luận.
+Một trang `index.html` chứa giao diện rà cả 98 ca. Với 97 ca đồng thuận, trang chỉ hiện một kết quả và một lựa chọn đánh giá; lựa chọn này được ghi cho cả Gemini và Luna trong biểu mẫu phản hồi. Ca bất đồng được xếp đầu, hiện riêng kết quả và đánh giá của từng AI.
 
 Trang tự tải `data.json` cùng thư mục khi mở. Tệp này công khai 98 câu trả lời, câu hỏi và kết luận của hai AI theo quyền Đức đã cấp; mã ca được thay bằng mã ngẫu nhiên, không kèm mã học viên hoặc số thứ tự bài nộp. Bảng nối mã gốc với mã công khai nằm trong kho riêng ngoài Git. Dữ liệu công khai không chứa prompt hay tiêu chí chấm riêng.
 
