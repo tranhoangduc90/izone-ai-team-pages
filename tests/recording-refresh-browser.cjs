@@ -33,7 +33,7 @@ const server=http.createServer((req,res)=>{
       if(body.action==='confirm_publish'){uploads++;return route.fulfill({status:500,json:{ok:false}});}
       if(body.action==='refresh_file'){
         refreshes++;assert.equal(body.id,'Zoom 55:pending');assert.equal(body.expectedVersion,1);
-        Object.assign(pending,{type:'MP4',status:'completed',recordingEnd:'2026-09-24T21:00:00+07:00',fileSize:1000,version:2,sourceRefreshedAt:'2026-09-25T10:00:00+07:00'});
+        Object.assign(pending,{id:'Zoom 55:ready',recordingFileId:'ready',type:'MP4',status:'completed',recordingEnd:'2026-09-24T21:00:00+07:00',fileSize:1000,version:2,sourceRefreshedAt:'2026-09-25T10:00:00+07:00',audit:[{action:'refresh_processing_source',previousRecordId:'Zoom 55:pending'}]});
         return route.fulfill({json:{ok:true,record:{id:pending.id,version:2,type:'MP4',status:'completed',fileSize:1000}}});
       }
       return route.fulfill({json:{ok:false,error:'UNKNOWN_ACTION'}});
@@ -44,7 +44,7 @@ const server=http.createServer((req,res)=>{
     await page.evaluate(()=>window.fixtureLogin({credential:'fixture-token'}));
     await page.waitForFunction(()=>window.recordingAuth.isAuthenticated());
     await page.selectOption('[data-edit-id="Zoom 55:pending"]','refresh_file');
-    await page.waitForSelector('[data-action="manual-upload"][data-id="Zoom 55:pending"]');
+    await page.waitForSelector('[data-action="manual-upload"][data-id="Zoom 55:ready"]');
     assert.equal(refreshes,1);assert.equal(uploads,0);assert.equal(scans,0);
     assert.equal(await page.locator('#totalCount').innerText(),'2');
     assert.deepEqual(errors,[]);

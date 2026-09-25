@@ -16,6 +16,9 @@ const NIGHTLY_LABELS = {
 const nightlyState = {snapshot:null, generation:0};
 function mergeNightlyRecords(existing, snapshot) {
   const hiddenIds=new Set((snapshot?.records||[]).filter(row=>row.kind==='recording'&&!shouldShowRecordingRow(row)).map(row=>row.id));
+  for(const row of snapshot?.records||[]) if(row.kind==='recording'&&row.type==='MP4')
+    for(const event of row.audit||[]) if(event.action==='refresh_processing_source'&&event.previousRecordId)
+      hiddenIds.add(event.previousRecordId);
   const records=existing.filter(row=>shouldShowRecordingRow(row)&&!hiddenIds.has(row.id));
   for(const row of snapshot?.records || []) {
     if(!shouldShowRecordingRow(row)) continue;

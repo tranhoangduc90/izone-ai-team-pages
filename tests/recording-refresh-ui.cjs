@@ -36,3 +36,11 @@ test('Snapshot vừa kiểm tra lại thắng trạng thái file cũ từ danh s
   const [merged]=context.mergeNightlyRecords([previous],{records:[refreshed]});
   assert.equal(merged.type,'MP4');assert.equal(merged.status,'completed');assert.equal(merged.fileSize,2048);assert.equal(merged.version,2);
 });
+
+test('Zoom cấp file ID mới: ẩn placeholder cũ và chỉ hiển thị MP4 mới',()=>{
+  const old={id:'Zoom 55:pending',kind:'recording',source:'Zoom 55',recordingFileId:'pending',status:'processing',type:''};
+  const ready={id:'Zoom 55:ready',kind:'recording',source:'Zoom 55',recordingFileId:'ready',status:'completed',type:'MP4',
+    audit:[{action:'refresh_processing_source',previousRecordId:old.id}]};
+  const result=context.mergeNightlyRecords([old],{records:[ready]});
+  assert.deepEqual(Array.from(result,r=>r.id),['Zoom 55:ready']);
+});
