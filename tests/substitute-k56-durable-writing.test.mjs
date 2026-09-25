@@ -255,8 +255,15 @@ test('phòng chờ chỉ tin phiếu đúng cổng, không xem lỗi mạng là 
   const from = bootstrap.indexOf('  async function readDurableWritingStatus(student)');
   const to = bootstrap.indexOf('  function formatBytes(', from);
   assert.ok(from >= 0 && to > from);
-  let answer = { accepted: true, submittedEssay: 'Synthetic essay.',
-    sections: { listening: {}, reading: {} } };
+  let answer = { accepted: true, status: {
+    attemptId: '11111111-1111-4111-8111-111111111111',
+    submissionId: '33333333-3333-4333-8333-333333333333',
+    testSlug: 'substitute-test-2-k56', classId: 1252, taskNumber: 1,
+    attemptStatus: 'submitted', submissionStatus: 'pending',
+    submittedEssay: 'Synthetic essay.',
+    sectionResults: { listening: {}, reading: {} },
+    taskScore: null, result: null, portalSyncStatus: 'not_ready',
+  } };
   const requests = [];
   const context = { appConfig: { DURABLE_WRITING_API_BASE_URL:
     'https://ducizone.ddns.net/webhook/substitute-test-2-k56-public-durable-test' },
@@ -267,15 +274,18 @@ test('phòng chờ chỉ tin phiếu đúng cổng, không xem lỗi mạng là 
     if (answer instanceof Error) throw answer;
     return { ok: true, json: async () => answer };
   } };
+  const adapter = readFileSync(new URL(
+    '../term-tests/substitute-test-2-k56-shared/durable-response.js', import.meta.url), 'utf8');
+  vm.runInNewContext(adapter, context);
   const read = vm.runInNewContext(`${bootstrap.slice(from, to)}\nreadDurableWritingStatus`, context);
   const student = { ref: '1001' };
   assert.equal((await read(student)).accepted, true);
   assert.deepEqual(requests[0].body, { route: '/api/test/writing/status',
     payload: { classCode: 'IC2264', studentRef: '1001' } });
-  answer = { accepted: false };
+  answer = { accepted: false, status: null };
   assert.equal((await read(student)).accepted, false);
-  answer = { accepted: true, sections: null };
-  await assert.rejects(read(student), /thiếu dữ liệu/u);
+  answer = { accepted: true, status: { submissionStatus: 'pending' } };
+  await assert.rejects(read(student), /Chưa xác nhận được phiếu bài Writing/u);
   answer = new Error('Synthetic network failure');
   await assert.rejects(read(student), /Synthetic network failure/u);
   context.appConfig.DURABLE_WRITING_API_BASE_URL = 'https://wrong.example/webhook/test';
@@ -287,6 +297,8 @@ test('bộ audit K56 bắt buộc chạy hồi quy phiếu Writing bền vững'
     './k56-product-audit-manifest.json', import.meta.url), 'utf8'));
   assert.ok(manifest.groups.substitute_56_and_shared_67.includes(
     'tests/substitute-k56-durable-writing.test.mjs'));
+  assert.ok(manifest.groups.substitute_56_and_shared_67.includes(
+    'tests/substitute-k56-durable-response.test.mjs'));
 });
 
 test('Portal cần kiểm tra không được báo học viên là đã ghi điểm', () => {

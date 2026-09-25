@@ -310,13 +310,10 @@
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
-      if (data.accepted === false) return data;
-      if (data.accepted !== true || !data.sections?.listening
-        || !data.sections?.reading || typeof data.submittedEssay !== 'string'
-        || !data.submittedEssay.trim()) {
-        throw new Error('Bài đã có nhưng thiếu dữ liệu để xem lại. Hãy liên hệ giáo viên.');
+      if (!window.K56_SUBSTITUTE_DURABLE_RESPONSE) {
+        throw new Error('Chưa tải được bộ kiểm phiếu Writing. Hãy tải lại trang.');
       }
-      return data;
+      return window.K56_SUBSTITUTE_DURABLE_RESPONSE.statusForPage(data);
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('Chưa kiểm tra được bài đã lưu. Vui lòng thử lại.');
       throw error;

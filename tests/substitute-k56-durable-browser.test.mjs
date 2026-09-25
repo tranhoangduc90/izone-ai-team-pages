@@ -56,6 +56,7 @@ test('K56 Substitute 2 mở lại bài đã lưu bằng chọn tên, không tả
   const outside = [];
   const pageErrors = [];
   let statusUnavailable = false;
+  let completed = false;
   page.on('pageerror', error => pageErrors.push(error.message));
   const base = `http://127.0.0.1:${http.address().port}/`;
   await context.route('**/*', async route => {
@@ -82,12 +83,23 @@ test('K56 Substitute 2 mở lại bài đã lưu bằng chọn tên, không tả
       assert.equal(request.route, '/api/test/writing/status');
       assert.equal(request.payload.classCode, 'IC2264');
       assert.equal(request.payload.studentRef, studentRef);
-      return route.fulfill({ json: { accepted: true,
+      // Dữ liệu vào: phản hồi dạng status lồng của webhook n8n đã đọc lại trên môi trường thử.
+      // Việc chính: giữ hợp đồng thật thay vì dựng trường sections/grading ở tầng ngoài.
+      // Kết quả: browser phải mở lại được bài đang chờ; khi sai cấu trúc sẽ dừng ở phòng chờ.
+      const result = completed ? { taskNumber: 1, taskScore: 3.5,
+        criteria: ['TA', 'CC', 'LR', 'GRA'].map(code => ({
+          code, bandScore: 3.5, feedback: `Synthetic ${code} feedback.`,
+        })) } : null;
+      return route.fulfill({ json: { accepted: true, status: {
+        attemptId: studentRef,
+        submissionId: '33333333-3333-4333-8333-333333333333',
+        testSlug: 'substitute-test-2-k56', classId: 1252, taskNumber: 1,
+        attemptStatus: 'submitted', submissionStatus: completed ? 'completed' : 'pending',
         submittedEssay: 'Synthetic Task 1 report for browser readback.',
-        sections: { listening: section(26), reading: section(24) },
-        grading: { status: 'processing', ready: false },
-        portalSync: { status: 'not_ready' },
-      } });
+        sectionResults: { listening: section(26), reading: section(24) },
+        taskScore: completed ? 3.5 : null, result,
+        portalSyncStatus: completed ? 'blocked_missing_first_scores' : 'not_ready',
+      }, externalWrites: false } });
     }
     if (route.request().method() === 'GET' && route.request().url().startsWith(base)) {
       return route.continue();
@@ -129,6 +141,21 @@ test('K56 Substitute 2 mở lại bài đã lưu bằng chọn tên, không tả
     }).waitFor({ state: 'visible' });
     assert.equal(await reopened.locator('#resultView').count(), 0);
     assert.equal(await reopened.locator('#bootstrapStart').isDisabled(), true);
+    await reopened.close();
+    statusUnavailable = false;
+    completed = true;
+    const graded = await context.newPage();
+    graded.on('pageerror', error => pageErrors.push(error.message));
+    await graded.goto(`${base}term-tests/substitute-test-2-k56-computer-based/?class=IC2264&demo=exam&grading=server&reset=1`);
+    await graded.locator('#bootstrapClass').selectOption('IC2264');
+    await graded.locator(`#bootstrapStudent option[value="${studentRef}"]`).waitFor({ state: 'attached' });
+    await graded.locator('#bootstrapStudent').selectOption(studentRef);
+    await graded.locator('#identityConfirm').waitFor({ state: 'visible' });
+    await graded.locator('#confirmIdentity').click();
+    await graded.locator('#writingSubmissionResult').filter({ hasText: 'Band 3.5' })
+      .waitFor({ state: 'visible' });
+    assert.doesNotMatch(await graded.locator('#app').innerText(),
+      /điểm thi lại đã đồng bộ lên Portal/iu);
     assert.equal(outside.length, 0, `Yêu cầu ngoài fixture: ${outside.join(', ')}`);
     assert.equal(pageErrors.length, 0, `Lỗi trang: ${pageErrors.join('; ')}`);
   } finally {

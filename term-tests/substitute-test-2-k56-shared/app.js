@@ -547,6 +547,12 @@
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+      if (durableWritingMode && writingRoute) {
+        const adapter = window.K56_SUBSTITUTE_DURABLE_RESPONSE;
+        if (!adapter) throw new Error('Chưa tải được bộ kiểm phiếu Writing. Hãy tải lại trang.');
+        return path === '/api/test/writing/status'
+          ? adapter.statusForPage(data) : adapter.submittedReceipt(data);
+      }
       return data;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Vui lòng thử lại.');
