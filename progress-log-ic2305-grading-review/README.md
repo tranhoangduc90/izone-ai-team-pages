@@ -1,11 +1,9 @@
-# IC2305 — rà chấm thử Gemini và GPT-6 Luna
+# IC2305 — rà chấm từng ô với Gemini và GPT-6 Luna
 
-Một trang `index.html` chứa giao diện rà cả 98 ca. Với 97 ca đồng thuận, trang chỉ hiện một kết quả và một lựa chọn đánh giá; lựa chọn này được ghi cho cả Gemini và Luna trong biểu mẫu phản hồi. Ca bất đồng được xếp đầu, hiện riêng kết quả và đánh giá của từng AI.
+Trang công khai 98 bài làm ẩn danh của Buổi 2–4, gồm 308 ô trả lời. Gemini 3.1 Flash-Lite và GPT-6 Luna chấm độc lập từng ô. Nếu hai mô hình đồng thuận, ô chỉ hiện một kết luận; nếu bất đồng, ô hiện riêng kết luận của từng mô hình. Trang xếp 16 bài có ô bất đồng lên đầu và hiển thị số liệu lấy trực tiếp từ `data.json`.
 
-Trang tự tải `data.json` cùng thư mục khi mở. Tệp này công khai 98 câu trả lời, câu hỏi và kết luận của hai AI theo quyền Đức đã cấp; mã ca được thay bằng mã ngẫu nhiên, không kèm mã học viên hoặc số thứ tự bài nộp. Bảng nối mã gốc với mã công khai nằm trong kho riêng ngoài Git. Dữ liệu công khai không chứa prompt hay tiêu chí chấm riêng.
+Người rà có thể mở phần góp ý dưới từng ô, chọn Đồng ý/Không đồng ý, đưa ra kết luận của mình và ghi lý do. Nút gửi mở Google Form đã điền mã ca kèm số ô, ví dụ `IC-xxxxxxxx#2`; phản hồi chỉ được lưu tập trung sau khi người rà bấm **Gửi** trên Form. Bản tạm nằm trong `localStorage` theo phiên bản v4; tệp xuất phản hồi không chứa bài làm.
 
-Lựa chọn Đồng ý/Không đồng ý/Chưa chắc, kết luận của người rà và lý do được lưu tạm trong `localStorage`; tệp xuất phản hồi không chứa bài làm. Nút gửi mở Google Form đã điền sẵn những trường này. Phản hồi chỉ được lưu tập trung khi người rà bấm **Gửi** và thấy xác nhận trên Google Form.
+`data.json` chỉ chứa câu hỏi, bài làm đã được phép công khai và hai mảng kết luận boolean. Mã học viên, mã bài nộp, tiêu chí chấm riêng, prompt và credential nằm ngoài Git. Trang không ghi vào Progress Log hoặc điểm chính thức. Không dùng trang này cho bài làm có thông tin nhận dạng hay nội dung bí mật.
 
-`data.json` được tạo từ 98 kết quả chấm của sáu câu thuộc Buổi 2–4 bằng script riêng ngoài Git. Giao diện không dùng thư viện ngoài, chỉ tải tệp tĩnh cùng nguồn, không ghi Progress Log, điểm danh hay Portal. Vì nội dung câu trả lời đã công khai trên Pages, không dùng trang cho câu trả lời có dữ liệu nhận dạng hoặc thông tin bí mật.
-
-Kiểm thử: `node --test tests/ic2305-grading-review.mjs`, sau đó kiểm trang bằng trình duyệt ở desktop và màn hẹp, gồm cả lỗi tải dữ liệu.
+Kiểm thử: `node --test tests/ic2305-grading-review.mjs`, sau đó rà giao diện máy tính, điện thoại, bộ lọc, phản hồi và lỗi tải dữ liệu bằng trình duyệt.

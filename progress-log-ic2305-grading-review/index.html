@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>IC2305 · Đối chiếu kết quả chấm của hai AI</title>
+  <title>IC2305 · Rà kết quả chấm từng ô</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <script defer src="review.js"></script>
@@ -16,20 +16,20 @@
   </header>
   <main class="shell">
     <section class="hero">
-      <p class="eyebrow">BUỔI 2 · 3 · 4 / 98 CÂU TỰ LUẬN NGẮN</p>
-      <h1>Đối chiếu kết quả chấm của hai AI</h1>
-      <p class="lead">Gemini và GPT‑6 Luna chấm giống nhau 97/98 câu. Một ca bất đồng được đưa lên đầu để bạn phân xử; mỗi ca đều có chỗ ghi phản hồi.</p>
+      <p class="eyebrow">BUỔI 2 · 3 · 4 / 98 BÀI / 308 Ô TRẢ LỜI</p>
+      <h1>Rà kết quả chấm từng ô</h1>
+      <p class="lead">Mỗi ô có kết quả đúng hoặc sai riêng. Gemini và GPT‑6 Luna khác nhau ở 30 ô thuộc 16 bài; các bài này được đưa lên đầu để bạn phân xử.</p>
       <nav class="tabs" aria-label="Lọc kết quả">
         <button type="button" data-tab="all" aria-current="page">Tất cả <span>98</span></button>
-        <button type="button" data-tab="different">Khác nhau <span>1</span></button>
-        <button type="button" data-tab="same">Giống nhau <span>97</span></button>
+        <button type="button" data-tab="different">Có ô khác nhau <span>16</span></button>
+        <button type="button" data-tab="same">Giống nhau <span>82</span></button>
       </nav>
     </section>
     <section class="import-panel" aria-labelledby="import-title">
       <div>
         <p class="step">DỮ LIỆU CHẤM THỬ</p>
-        <h2 id="import-title">98 câu trả lời được tải tự động</h2>
-        <p>Bài làm đã bỏ mã học viên và số thứ tự bài nộp. Nội dung câu trả lời và hai kết luận chấm đang được công khai trên trang này để bạn rà soát.</p>
+        <h2 id="import-title">98 bài làm được tải tự động</h2>
+        <p>Bài làm đã bỏ mã học viên và số thứ tự bài nộp. Mỗi ô hiện một kết luận chung khi hai AI đồng thuận, hoặc hai kết luận có tên mô hình khi bất đồng.</p>
       </div>
       <button id="retry-load" type="button" class="secondary" hidden>Thử tải lại</button>
     </section>
@@ -41,7 +41,7 @@
         <label>Tìm mã ca<input id="case-search" type="search" placeholder="Ví dụ: IC-..." autocomplete="off"></label>
         <button id="export-feedback" type="button" class="secondary">Tải bản sao phản hồi</button>
       </div>
-      <p class="privacy-note">Chọn “Đồng ý/Không đồng ý” cho từng AI. Nút gửi mở Google Form đã điền sẵn; phản hồi chỉ được lưu tập trung khi Form báo đã gửi. Không chép nguyên bài làm hoặc tên học viên vào lý do.</p>
+      <p class="privacy-note">Mở “Góp ý kết quả” dưới đúng ô cần rà, chọn Đồng ý/Không đồng ý và kết luận của bạn. Google Form nhận mã ca kèm số ô; phản hồi chỉ được lưu tập trung sau khi bạn bấm Gửi trên Form. Không chép bài làm hoặc tên học viên vào lý do.</p>
       <div id="cards" class="cards"></div>
     </section>
   </main>
