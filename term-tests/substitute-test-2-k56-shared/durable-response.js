@@ -3,6 +3,7 @@
 
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
   const TEST_SLUG = 'substitute-test-2-k56';
+  const PILOT_CLASS_ID = 1252; // Lớp IC2264; các lớp khác chưa được bật nhánh lưu bài này.
 
   function invalidReceipt() {
     throw new Error('Chưa xác nhận được phiếu bài Writing. Hãy thử lại hoặc liên hệ giáo viên.');
@@ -20,7 +21,7 @@
     const status = response.status;
     if (!status || typeof status !== 'object' || status.testSlug !== TEST_SLUG
       || status.taskNumber !== 1 || !UUID.test(String(status.attemptId || ''))
-      || !Number.isSafeInteger(status.classId) || status.classId <= 0) invalidReceipt();
+      || status.classId !== PILOT_CLASS_ID) invalidReceipt();
 
     // Lượt đã mở nhưng chưa nộp Writing không được hiện như một bài đang chấm.
     if (status.attemptStatus === 'open' && status.submissionId === null

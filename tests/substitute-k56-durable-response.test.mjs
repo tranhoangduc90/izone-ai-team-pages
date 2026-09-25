@@ -61,6 +61,7 @@ test('sai đề, Task, lượt, phần bài hoặc kết quả đều dừng tr�
     criteria: ['TA', 'CC', 'LR', 'GRA'].map(code => ({ code })) };
   for (const changed of [
     { testSlug: 'substitute-test-2-k67' }, { taskNumber: 2 },
+    { classId: 1253 },
     { attemptId: 'browser-generated' }, { submissionId: null },
     { submittedEssay: '' }, { sectionResults: null },
     { submissionStatus: 'unknown' },
