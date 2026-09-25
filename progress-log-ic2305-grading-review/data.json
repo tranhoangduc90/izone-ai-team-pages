@@ -1,0 +1,1224 @@
+{
+  "schema_version": 1,
+  "demo_id": "IC2305-sessions-2-3-4-grading-public-v1",
+  "public_data": true,
+  "questions": {
+    "2-4": {
+      "title": "Buổi 2 · Câu 4 — 8 ô Writing Task 2",
+      "question": "Điền 8 ô theo thứ tự: Task Response (đáp ứng gì; còn phải làm gì với ý/lập luận), Coherence (liên kết về gì), Cohesion (liên kết bằng gì), Lexical Resource (tính gì; và gì), Grammar (tính gì; và gì).",
+      "mode": "ordered_slots",
+      "labels": [
+        "Yêu cầu đề bài",
+        "Phát triển ý/lập luận",
+        "Liên kết nội dung",
+        "Liên kết ngôn từ",
+        "Từ vựng đa dạng",
+        "Từ vựng chính xác",
+        "Ngữ pháp đa dạng",
+        "Ngữ pháp chính xác"
+      ]
+    },
+    "2-6": {
+      "title": "Buổi 2 · Câu 6 — 2 cách phát triển lập luận",
+      "question": "Dựa vào bài học, hãy nêu 2 cách cơ bản để làm rõ và chứng minh cho một lập luận.",
+      "mode": "unordered_set",
+      "labels": [
+        "Cách 1",
+        "Cách 2"
+      ]
+    },
+    "3-2": {
+      "title": "Buổi 3 · Câu 2 — mắt xích lập luận",
+      "question": "Hoàn thiện mắt xích: Các công ty xây dựng phòng gym ngay tại trụ sở làm việc → [câu trả lời] → Nhân viên cải thiện sức khỏe thể chất.",
+      "mode": "causal_bridge",
+      "labels": [
+        "Mắt xích"
+      ]
+    },
+    "3-8": {
+      "title": "Buổi 3 · Câu 8 — phát âm 15 và 50",
+      "question": "Phát âm 15 và 50 khác nhau ở 2 điểm nào?",
+      "mode": "unordered_set",
+      "labels": [
+        "Điểm 1",
+        "Điểm 2"
+      ]
+    },
+    "4-2": {
+      "title": "Buổi 4 · Phần 1 câu 2 — 3 bước Listening",
+      "question": "Các bước làm bài điền từ trong Listening Part 1: Bước 1 xác định [ô 1] cần điền; Bước 2 dự đoán [ô 2] cần điền; Bước 3 xác định các [ô 3] trong câu hỏi. Bước 4 nghe và điền đáp án.",
+      "mode": "ordered_slots",
+      "labels": [
+        "Bước 1",
+        "Bước 2",
+        "Bước 3"
+      ]
+    },
+    "4-3": {
+      "title": "Buổi 4 · Phần 2 câu 1 — 3 dấu hiệu Scanning",
+      "question": "Khi Scanning, ba loại thông tin bắt mắt dễ định vị trong bài đọc là gì?",
+      "mode": "unordered_set",
+      "labels": [
+        "Loại 1",
+        "Loại 2",
+        "Loại 3"
+      ]
+    }
+  },
+  "items": [
+    {
+      "key": "IC-bw1WII1K",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Yêu cầu đề bài",
+        "Đầy đủ về từ",
+        "Nội dung",
+        "Hình thức",
+        "Rộng",
+        "Đúng",
+        "Đúng",
+        "Đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-JcIsqoco",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "yêu cầu",
+        "đủ số từ",
+        "nội dung",
+        "ngôn từ",
+        "đa dạng",
+        "chính xác",
+        "đa dạng",
+        "chính xác"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-bGQiCe28",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Yêu cầu đề bài",
+        "Đủ số từ",
+        "Nội dung ",
+        "Hình thức ",
+        "Rộng ",
+        "Đúng",
+        "Đúng",
+        "Đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-FA0hJfPG",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Trọng tâm",
+        "Đầy đủ",
+        "Ý tưởng nội dung",
+        "Ngữ pháp từ ngữ",
+        "Đa dạng ",
+        "Chính xác",
+        "Đa dạng",
+        "Chính xác"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-rrGspeSn",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Đề bài",
+        "Câu hỏi",
+        "Nội dung",
+        "Hình thức",
+        "Phù hợp",
+        "Chính xác",
+        "Phù hợp",
+        "Chính xác"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-kGza8rm4",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "thông tin ",
+        "đầy đủ ",
+        "nghĩa",
+        "vẻ bề ngoài",
+        "học thuật",
+        "chính xác",
+        "đa dạng",
+        "chính xác"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-H2ZLi2GK",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "câu hỏi",
+        "đủ số lượng từ",
+        "nội dung",
+        "ngôn từ",
+        "đa dạng",
+        "chính xác",
+        "chính xác",
+        "đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-toz0xlFi",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Đề bài",
+        "Câu hỏi lập luận",
+        "Không nhớ",
+        "Không nhớ",
+        "Đa dạng",
+        "Cụ thể",
+        "Chính xác",
+        "Đa dạng "
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-VWmvyges",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "đề bài",
+        "phát triển ý tưởng theo đề bài",
+        "nội dung",
+        "hình thức",
+        "chính xác",
+        "đa dạng",
+        "chính xác ",
+        "đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-qmriQGxx",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Yêu cầu",
+        "Viết mạch lạc",
+        "Liên kết về nội dung",
+        "Ngôn ngữ",
+        "Đa dạng",
+        "Chính xác",
+        "Đúng đắn trong việc sử dụng câu",
+        "Đa dạng "
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-KpC0S9j1",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "yêu cầu ",
+        "phạm vi",
+        "Nội dung",
+        "Hình thức",
+        "đa dạng ",
+        "chính xác",
+        "đa dạng các loại câu",
+        "chính xác"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-bK2JgvYO",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Yêu cầu đề bài ",
+        "Đủ 250 từ ",
+        "Nội dung ",
+        "Hình thức ",
+        "Rộng",
+        "Chuẩn ",
+        "Đúng ",
+        "Đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-Az6y9uEw",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Đề bài",
+        "250 từ",
+        "Nội dung",
+        "Hình thức",
+        "Rộng",
+        "Chuẩn",
+        "Chính xác",
+        "Đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-UrwATPJ8",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "trọng tâm đề bài ",
+        "phát triển ý",
+        "mặt nội dung",
+        "mặt hình thức ",
+        "chính xác",
+        "linh hoạt",
+        "chính xác",
+        "đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-rchEGmBA",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "câu hỏi",
+        "đề bài",
+        "ý tưởng",
+        "ngôn ngữ",
+        "đa dạng",
+        "chính xác",
+        "chính xác",
+        "đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-H_GxqsYd",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "yêu cầu của đề bài",
+        "làm rõ cho lập luận của mình",
+        "tính mạch lạc",
+        "tính gắn kết",
+        "chính xác ",
+        "đa dạng",
+        "chính xác",
+        "đa dạng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-LCSaximB",
+      "session": 2,
+      "question_key": "2-4",
+      "answer": [
+        "Nội dung",
+        "Yêu cầu",
+        "Nội dung",
+        "Hình thức và mạch lạc",
+        "Tính chính xác",
+        "mạch lạc",
+        "Chính xác",
+        "Mach lạc"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-KXnftyTg",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Lấy ví dụ ",
+        "Làm rõ ý câu trước"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-pKwumm6D",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Làm rõ thông tin câu trước",
+        "Lấy ví dụ cụ thể"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-Ek0qfVX7",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Làm rõ thông tin nói ở câu trước",
+        "Lấy ví dụ cụ thể"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-WtL5kcoP",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Chứng minh làm rõ",
+        "Nêu ví dụ cụ thể"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-pCPa9MEX",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Làm rõ thông tin( giải thích keywords)",
+        "Nêu ví dụ cụ thể"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-OXCZVNiU",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "làm rõ chứng minh",
+        "nêu ví dụ"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-yKQ1UJiX",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Làm rõ thông tin ở câu trước",
+        "Nêu ví dụ"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-6c8PDBUA",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Nêu ví dụ",
+        "Dẫn chứng"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-7ltpupfJ",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "chứng minh lập luận",
+        "nêu ví dụ cụ thể"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-GQmi8GMe",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Nêu ví dụ",
+        "Làm rõ yêu cầu đề bài (keyword)"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-nYQQXXD0",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "làm rõ câu lập luận ",
+        "đưa ra ví dụ"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-gYm7DAT9",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Cụ thể hoá thông tin ",
+        "Làm rõ bằng cách nêu ví dụ "
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-zixEA3nb",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Cụ thể hoá thông tin",
+        "Làm rõ bằng cách nêu ví dụ"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-4QRYr3tE",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "làm rõ ý ",
+        "đưa ra ví dụ "
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-YWjTVehL",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "cụ thể hoá thông tin dc nhắc ở trước",
+        "nêu ví dụ trong một đơn vị câu độc lập"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC--hrJpm48",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "đưa ví dụ cụ thể",
+        "nêu "
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-GCmiRZU8",
+      "session": 2,
+      "question_key": "2-6",
+      "answer": [
+        "Lấy ví dụ",
+        "Làm rõ tt câu trước"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-LxMJph-d",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên sẽ tập thể dục trong giờ giải lao, hoặc ngay sau khi tan làm",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-HC05hTWC",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nó sẽ khiến cho mọi ngườI có tinh thần tập luyện hơn",
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-WQCboqWe",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên cảm thấy  tiện lợi cho việc đi lại ",
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-vUl3pcvU",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên có thể dễ dàng đến tập, tránh tốn thời gian đi lại đến phòng gym",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-vkjs0c8z",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "có ngay trong công ty nên nhân viên có thể tập bất cứ lúc nào",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-X4n-uYom",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên có thể luyện tập thể dục ngay tại công ty trong giờ nghỉ giải lao hoặc sau giờ làm.",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-0XxrBS0S",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên cảm thấy việc tập luyện thể thao trở nên thuận tiện hơn.",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-PLMMUT0M",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Các công ty có cơ hôi tập thể dục mọi lúc bất kể lúc nào",
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-C3SjzvrO",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên đến tập thường xuyên và thuận tiện ",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-XdMNH0FA",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "tiện lợi để tập",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-QCLnxI9k",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên có thể luyện tập khi có thời gian rảnh hoăc khi kết thúc một ngày làm việc dài",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-rk6HKkF4",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "nhân viên có cơ hội tập luyện thường xuyên ",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-Lx6-Je3r",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên có điều kiện luyện tập thường xuyên hơn",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-etOcQJgn",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên dễ vào phòng gym để tập luyện",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-SoQreH0P",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên có thể dễ dàng tiếp cận phòng gym và tập luyện trong khi rảnh",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-vd8-bgr1",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên trong công tỷ thuận tiện trong việc tập thể dục",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-7hzwmBOs",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên có thể tập gym mà không cần mất thời gian đi chuyển",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-hIgiSoH0",
+      "session": 3,
+      "question_key": "3-2",
+      "answer": "Nhân viên có cơ hội tập thể dục thường xuyên",
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-ctZFT1ty",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "trọng âm",
+        "âm cuối "
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-Jpz4Wk6N",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Ty",
+        "Teen"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-XHM9l2FM",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Âm đuôi",
+        "Nhấn âm "
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-EP5zBsXc",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "âm cuối",
+        "trọng âm"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-4iyDVTVy",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "âm cuối",
+        "trọng âm"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-vdLhQkSH",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Âm đuôi",
+        "Trọng âm"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-onqbwVhL",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Âm đuôi",
+        "Nhấn âm"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-f-pnCv_k",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Trọng âm",
+        "Cách đọc"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-TL6ldCon",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "trọng âm",
+        "ti:n và ti "
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-ex_DfmI7",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "teen",
+        "ty"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-pk-1Rc4J",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "âm cuối khác nhau",
+        "một cái nhấn mạnh âm tiết đầu, một cái nhấn mạnh âm tiết cuối"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-T0L3E3m8",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "15 trọng âm thứ hai , 50 trọng âm thứ nhất ",
+        "15 âm 1 dài hơn , 50 âm i ngắn "
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-detmG3FC",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Trọng âm 15 2 50 1",
+        "Âm dài n và âm ngắn "
+      ],
+      "gemini": true,
+      "luna": false
+    },
+    {
+      "key": "IC-u8oarBCl",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Đuôi",
+        "Mtrongj âm"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-2SOtq4Td",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Trọng âm",
+        "Teen và ty"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-_dapoFq2",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "Đuôi \"teen\" và đuôi \"ty\"",
+        "Trọng âm"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-ZXDeneoj",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "âm cuối kéo dài và âm cuối ngắn",
+        "trọng âm 2 và trọng âm 1"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-lmsxxI87",
+      "session": 3,
+      "question_key": "3-8",
+      "answer": [
+        "âm đuôi",
+        "ko biet"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-hWJYlvZE",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "fsdg",
+        "gdsg",
+        "gdsg"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-4aR6rrhn",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "Số lượng từ",
+        "Các từ ",
+        "Keyword"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-53WHw88e",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "Số chữ/ số ",
+        "Loại từ",
+        "Keywords"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-dvgBfx6T",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "thông tin",
+        "từ",
+        "keywords"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-uXFN-eOp",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "Dạng từ",
+        "Chữ hay số",
+        "Keyword"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-oK30Z_KZ",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "số lượng từ",
+        "từ",
+        "keywords"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-J0Kjpato",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "chỗ trống",
+        "thông tin",
+        "từ khoá"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-5EFAfEk4",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "thông tin ",
+        "loại từ ",
+        "keywords"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-8UQ3XthV",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "Từ",
+        "Từ",
+        "Câu"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-lHGcEMTJ",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "từ khoá",
+        "dạng từ ",
+        "từ cần điền "
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-7gRtaZh5",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "Các từ",
+        "Loại từ",
+        "Keyword "
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-9r49WFa6",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "Số từ , loại từ",
+        "Thông tin , loại từ ",
+        "Keywords"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-ycC4lXgt",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "loại từ",
+        "tên",
+        "yêu cầu"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-cbdghyhJ",
+      "session": 4,
+      "question_key": "4-2",
+      "answer": [
+        "Số từ",
+        "Loại từ",
+        "Keyword"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-5TSg4zQw",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "từ để hỏi ",
+        "từ khóa ",
+        "số "
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-lvGv8gZv",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "Tên riêng",
+        "Số ",
+        "Thuật ngữ"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-Q0wLNn6R",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "tên riêng",
+        "số",
+        "Thuật ngữ"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-rQlq_Zg4",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "tên riêng",
+        "số",
+        "nhx từ khó paraphrase"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-PoTi-GId",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "Tên riêng",
+        "Số",
+        "Những từ khó"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-R5LXUiMD",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "Tên riêng",
+        "số",
+        "thuật ngữ"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-yTp4b5ng",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "tên riêng",
+        "số",
+        "thuật ngữ"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-nAZJcgW9",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "tên riêng",
+        "số",
+        "những từ mang tính chuyên ngành"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-c1ABhXY4",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "Form of missing word",
+        "Keywords",
+        "Identify word limit "
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-yAoeTRuS",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "danh từ riêng",
+        "số",
+        "thuật ngữ"
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-UuxhrihT",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "Tên riêng",
+        "Số",
+        "Thuật ngữ "
+      ],
+      "gemini": true,
+      "luna": true
+    },
+    {
+      "key": "IC-c6sprq5Y",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "Tên riêng",
+        "Số",
+        "Từ dài khó paraphase"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-kk3FYEBo",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "số",
+        "tên riêng",
+        "khó paraphrase"
+      ],
+      "gemini": false,
+      "luna": false
+    },
+    {
+      "key": "IC-oq1MwU6Y",
+      "session": 4,
+      "question_key": "4-3",
+      "answer": [
+        "Tên riêng",
+        "Số ,chữ",
+        "Thuật ngữ"
+      ],
+      "gemini": true,
+      "luna": true
+    }
+  ]
+}
