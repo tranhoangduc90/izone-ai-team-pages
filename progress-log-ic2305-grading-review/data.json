@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "demo_id": "IC2305-sessions-2-3-4-grading-public-v1",
+  "schema_version": 2,
+  "demo_id": "IC2305-sessions-2-3-4-grading-public-v2",
   "public_data": true,
   "questions": {
     "2-4": {
@@ -80,8 +80,26 @@
         "Đúng",
         "Đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-JcIsqoco",
@@ -97,8 +115,26 @@
         "đa dạng",
         "chính xác"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-bGQiCe28",
@@ -114,8 +150,26 @@
         "Đúng",
         "Đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-FA0hJfPG",
@@ -131,8 +185,26 @@
         "Đa dạng",
         "Chính xác"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-rrGspeSn",
@@ -148,8 +220,26 @@
         "Phù hợp",
         "Chính xác"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        true
+      ],
+      "luna_parts": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        true
+      ]
     },
     {
       "key": "IC-kGza8rm4",
@@ -165,8 +255,26 @@
         "đa dạng",
         "chính xác"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-H2ZLi2GK",
@@ -182,8 +290,26 @@
         "chính xác",
         "đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-toz0xlFi",
@@ -199,8 +325,26 @@
         "Chính xác",
         "Đa dạng "
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-VWmvyges",
@@ -216,8 +360,26 @@
         "chính xác ",
         "đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-qmriQGxx",
@@ -233,8 +395,26 @@
         "Đúng đắn trong việc sử dụng câu",
         "Đa dạng "
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-KpC0S9j1",
@@ -250,8 +430,26 @@
         "đa dạng các loại câu",
         "chính xác"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-bK2JgvYO",
@@ -267,8 +465,26 @@
         "Đúng ",
         "Đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-Az6y9uEw",
@@ -284,8 +500,26 @@
         "Chính xác",
         "Đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-UrwATPJ8",
@@ -301,8 +535,26 @@
         "chính xác",
         "đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-rchEGmBA",
@@ -318,8 +570,26 @@
         "chính xác",
         "đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-H_GxqsYd",
@@ -335,8 +605,26 @@
         "chính xác",
         "đa dạng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-LCSaximB",
@@ -352,8 +640,26 @@
         "Chính xác",
         "Mach lạc"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-KXnftyTg",
@@ -363,8 +669,14 @@
         "Lấy ví dụ ",
         "Làm rõ ý câu trước"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-pKwumm6D",
@@ -374,8 +686,14 @@
         "Làm rõ thông tin câu trước",
         "Lấy ví dụ cụ thể"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-Ek0qfVX7",
@@ -385,8 +703,14 @@
         "Làm rõ thông tin nói ở câu trước",
         "Lấy ví dụ cụ thể"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-WtL5kcoP",
@@ -396,8 +720,14 @@
         "Chứng minh làm rõ",
         "Nêu ví dụ cụ thể"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true
+      ],
+      "luna_parts": [
+        false,
+        true
+      ]
     },
     {
       "key": "IC-pCPa9MEX",
@@ -407,8 +737,14 @@
         "Làm rõ thông tin( giải thích keywords)",
         "Nêu ví dụ cụ thể"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-OXCZVNiU",
@@ -418,8 +754,14 @@
         "làm rõ chứng minh",
         "nêu ví dụ"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true
+      ],
+      "luna_parts": [
+        false,
+        true
+      ]
     },
     {
       "key": "IC-yKQ1UJiX",
@@ -429,8 +771,14 @@
         "Làm rõ thông tin ở câu trước",
         "Nêu ví dụ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-6c8PDBUA",
@@ -440,8 +788,14 @@
         "Nêu ví dụ",
         "Dẫn chứng"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false
+      ]
     },
     {
       "key": "IC-7ltpupfJ",
@@ -451,8 +805,14 @@
         "chứng minh lập luận",
         "nêu ví dụ cụ thể"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true
+      ],
+      "luna_parts": [
+        false,
+        true
+      ]
     },
     {
       "key": "IC-GQmi8GMe",
@@ -462,8 +822,14 @@
         "Nêu ví dụ",
         "Làm rõ yêu cầu đề bài (keyword)"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false
+      ]
     },
     {
       "key": "IC-nYQQXXD0",
@@ -473,8 +839,14 @@
         "làm rõ câu lập luận ",
         "đưa ra ví dụ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-gYm7DAT9",
@@ -484,8 +856,14 @@
         "Cụ thể hoá thông tin ",
         "Làm rõ bằng cách nêu ví dụ "
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-zixEA3nb",
@@ -495,8 +873,14 @@
         "Cụ thể hoá thông tin",
         "Làm rõ bằng cách nêu ví dụ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-4QRYr3tE",
@@ -506,8 +890,14 @@
         "làm rõ ý ",
         "đưa ra ví dụ "
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-YWjTVehL",
@@ -517,8 +907,14 @@
         "cụ thể hoá thông tin dc nhắc ở trước",
         "nêu ví dụ trong một đơn vị câu độc lập"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC--hrJpm48",
@@ -528,8 +924,14 @@
         "đưa ví dụ cụ thể",
         "nêu "
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false
+      ]
     },
     {
       "key": "IC-GCmiRZU8",
@@ -539,152 +941,230 @@
         "Lấy ví dụ",
         "Làm rõ tt câu trước"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-LxMJph-d",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên sẽ tập thể dục trong giờ giải lao, hoặc ngay sau khi tan làm",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-HC05hTWC",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nó sẽ khiến cho mọi ngườI có tinh thần tập luyện hơn",
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false
+      ],
+      "luna_parts": [
+        false
+      ]
     },
     {
       "key": "IC-WQCboqWe",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên cảm thấy  tiện lợi cho việc đi lại ",
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false
+      ],
+      "luna_parts": [
+        false
+      ]
     },
     {
       "key": "IC-vUl3pcvU",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên có thể dễ dàng đến tập, tránh tốn thời gian đi lại đến phòng gym",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-vkjs0c8z",
       "session": 3,
       "question_key": "3-2",
       "answer": "có ngay trong công ty nên nhân viên có thể tập bất cứ lúc nào",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-X4n-uYom",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên có thể luyện tập thể dục ngay tại công ty trong giờ nghỉ giải lao hoặc sau giờ làm.",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-0XxrBS0S",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên cảm thấy việc tập luyện thể thao trở nên thuận tiện hơn.",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-PLMMUT0M",
       "session": 3,
       "question_key": "3-2",
       "answer": "Các công ty có cơ hôi tập thể dục mọi lúc bất kể lúc nào",
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false
+      ],
+      "luna_parts": [
+        false
+      ]
     },
     {
       "key": "IC-C3SjzvrO",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên đến tập thường xuyên và thuận tiện ",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-XdMNH0FA",
       "session": 3,
       "question_key": "3-2",
       "answer": "tiện lợi để tập",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-QCLnxI9k",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên có thể luyện tập khi có thời gian rảnh hoăc khi kết thúc một ngày làm việc dài",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-rk6HKkF4",
       "session": 3,
       "question_key": "3-2",
       "answer": "nhân viên có cơ hội tập luyện thường xuyên ",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-Lx6-Je3r",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên có điều kiện luyện tập thường xuyên hơn",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-etOcQJgn",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên dễ vào phòng gym để tập luyện",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-SoQreH0P",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên có thể dễ dàng tiếp cận phòng gym và tập luyện trong khi rảnh",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-vd8-bgr1",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên trong công tỷ thuận tiện trong việc tập thể dục",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-7hzwmBOs",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên có thể tập gym mà không cần mất thời gian đi chuyển",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-hIgiSoH0",
       "session": 3,
       "question_key": "3-2",
       "answer": "Nhân viên có cơ hội tập thể dục thường xuyên",
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true
+      ],
+      "luna_parts": [
+        true
+      ]
     },
     {
       "key": "IC-ctZFT1ty",
@@ -694,8 +1174,14 @@
         "trọng âm",
         "âm cuối "
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-Jpz4Wk6N",
@@ -705,8 +1191,14 @@
         "Ty",
         "Teen"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false
+      ]
     },
     {
       "key": "IC-XHM9l2FM",
@@ -716,8 +1208,14 @@
         "Âm đuôi",
         "Nhấn âm "
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-EP5zBsXc",
@@ -727,8 +1225,14 @@
         "âm cuối",
         "trọng âm"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-4iyDVTVy",
@@ -738,8 +1242,14 @@
         "âm cuối",
         "trọng âm"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-vdLhQkSH",
@@ -749,8 +1259,14 @@
         "Âm đuôi",
         "Trọng âm"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-onqbwVhL",
@@ -760,8 +1276,14 @@
         "Âm đuôi",
         "Nhấn âm"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-f-pnCv_k",
@@ -771,8 +1293,14 @@
         "Trọng âm",
         "Cách đọc"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false
+      ]
     },
     {
       "key": "IC-TL6ldCon",
@@ -782,8 +1310,14 @@
         "trọng âm",
         "ti:n và ti "
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-ex_DfmI7",
@@ -793,8 +1327,14 @@
         "teen",
         "ty"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false
+      ]
     },
     {
       "key": "IC-pk-1Rc4J",
@@ -804,8 +1344,14 @@
         "âm cuối khác nhau",
         "một cái nhấn mạnh âm tiết đầu, một cái nhấn mạnh âm tiết cuối"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-T0L3E3m8",
@@ -815,8 +1361,14 @@
         "15 trọng âm thứ hai , 50 trọng âm thứ nhất ",
         "15 âm 1 dài hơn , 50 âm i ngắn "
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        false
+      ]
     },
     {
       "key": "IC-detmG3FC",
@@ -826,8 +1378,14 @@
         "Trọng âm 15 2 50 1",
         "Âm dài n và âm ngắn "
       ],
-      "gemini": true,
-      "luna": false
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        false
+      ]
     },
     {
       "key": "IC-u8oarBCl",
@@ -837,8 +1395,14 @@
         "Đuôi",
         "Mtrongj âm"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-2SOtq4Td",
@@ -848,8 +1412,14 @@
         "Trọng âm",
         "Teen và ty"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-_dapoFq2",
@@ -859,8 +1429,14 @@
         "Đuôi \"teen\" và đuôi \"ty\"",
         "Trọng âm"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-ZXDeneoj",
@@ -870,8 +1446,14 @@
         "âm cuối kéo dài và âm cuối ngắn",
         "trọng âm 2 và trọng âm 1"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true
+      ]
     },
     {
       "key": "IC-lmsxxI87",
@@ -881,8 +1463,14 @@
         "âm đuôi",
         "ko biet"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false
+      ]
     },
     {
       "key": "IC-hWJYlvZE",
@@ -893,8 +1481,16 @@
         "gdsg",
         "gdsg"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-4aR6rrhn",
@@ -905,8 +1501,16 @@
         "Các từ ",
         "Keyword"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        true
+      ],
+      "luna_parts": [
+        true,
+        false,
+        true
+      ]
     },
     {
       "key": "IC-53WHw88e",
@@ -917,8 +1521,16 @@
         "Loại từ",
         "Keywords"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true,
+        true
+      ],
+      "luna_parts": [
+        false,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-dvgBfx6T",
@@ -929,8 +1541,16 @@
         "từ",
         "keywords"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        true
+      ],
+      "luna_parts": [
+        false,
+        false,
+        true
+      ]
     },
     {
       "key": "IC-uXFN-eOp",
@@ -941,8 +1561,16 @@
         "Chữ hay số",
         "Keyword"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true,
+        true
+      ],
+      "luna_parts": [
+        false,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-oK30Z_KZ",
@@ -953,8 +1581,16 @@
         "từ",
         "keywords"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        false,
+        true
+      ],
+      "luna_parts": [
+        true,
+        false,
+        true
+      ]
     },
     {
       "key": "IC-J0Kjpato",
@@ -965,8 +1601,16 @@
         "thông tin",
         "từ khoá"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        true
+      ],
+      "luna_parts": [
+        false,
+        false,
+        true
+      ]
     },
     {
       "key": "IC-5EFAfEk4",
@@ -977,8 +1621,16 @@
         "loại từ ",
         "keywords"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true,
+        true
+      ],
+      "luna_parts": [
+        false,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-8UQ3XthV",
@@ -989,8 +1641,16 @@
         "Từ",
         "Câu"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-lHGcEMTJ",
@@ -1001,8 +1661,16 @@
         "dạng từ ",
         "từ cần điền "
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true,
+        false
+      ],
+      "luna_parts": [
+        false,
+        true,
+        false
+      ]
     },
     {
       "key": "IC-7gRtaZh5",
@@ -1013,8 +1681,16 @@
         "Loại từ",
         "Keyword "
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        true,
+        true
+      ],
+      "luna_parts": [
+        false,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-9r49WFa6",
@@ -1025,8 +1701,16 @@
         "Thông tin , loại từ ",
         "Keywords"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-ycC4lXgt",
@@ -1037,8 +1721,16 @@
         "tên",
         "yêu cầu"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-cbdghyhJ",
@@ -1049,8 +1741,16 @@
         "Loại từ",
         "Keyword"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-5TSg4zQw",
@@ -1061,8 +1761,16 @@
         "từ khóa ",
         "số "
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        true
+      ],
+      "luna_parts": [
+        false,
+        false,
+        true
+      ]
     },
     {
       "key": "IC-lvGv8gZv",
@@ -1073,8 +1781,16 @@
         "Số ",
         "Thuật ngữ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-Q0wLNn6R",
@@ -1085,8 +1801,16 @@
         "số",
         "Thuật ngữ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-rQlq_Zg4",
@@ -1097,8 +1821,16 @@
         "số",
         "nhx từ khó paraphrase"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        true,
+        false
+      ]
     },
     {
       "key": "IC-PoTi-GId",
@@ -1109,8 +1841,16 @@
         "Số",
         "Những từ khó"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        true,
+        false
+      ]
     },
     {
       "key": "IC-R5LXUiMD",
@@ -1121,8 +1861,16 @@
         "số",
         "thuật ngữ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-yTp4b5ng",
@@ -1133,8 +1881,16 @@
         "số",
         "thuật ngữ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-nAZJcgW9",
@@ -1145,8 +1901,16 @@
         "số",
         "những từ mang tính chuyên ngành"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-c1ABhXY4",
@@ -1157,8 +1921,16 @@
         "Keywords",
         "Identify word limit "
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        false,
+        false,
+        false
+      ],
+      "luna_parts": [
+        false,
+        false,
+        false
+      ]
     },
     {
       "key": "IC-yAoeTRuS",
@@ -1169,8 +1941,16 @@
         "số",
         "thuật ngữ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-UuxhrihT",
@@ -1181,8 +1961,16 @@
         "Số",
         "Thuật ngữ "
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     },
     {
       "key": "IC-c6sprq5Y",
@@ -1193,8 +1981,16 @@
         "Số",
         "Từ dài khó paraphase"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        true,
+        false
+      ]
     },
     {
       "key": "IC-kk3FYEBo",
@@ -1205,8 +2001,16 @@
         "tên riêng",
         "khó paraphrase"
       ],
-      "gemini": false,
-      "luna": false
+      "gemini_parts": [
+        true,
+        true,
+        false
+      ],
+      "luna_parts": [
+        true,
+        true,
+        false
+      ]
     },
     {
       "key": "IC-oq1MwU6Y",
@@ -1217,8 +2021,16 @@
         "Số ,chữ",
         "Thuật ngữ"
       ],
-      "gemini": true,
-      "luna": true
+      "gemini_parts": [
+        true,
+        true,
+        true
+      ],
+      "luna_parts": [
+        true,
+        true,
+        true
+      ]
     }
   ]
 }

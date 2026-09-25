@@ -1,75 +1,98 @@
-// Dữ liệu nhận vào: trang rà chấm thử và dữ liệu công khai đã ẩn mã bài.
-// Việc chính: kiểm việc tải tự động, cấu trúc 98 ca và đường gửi phản hồi.
-// Kết quả: test thất bại nếu lộ mã bài, prompt riêng hoặc trang mất dữ liệu.
-// Khi lỗi: Node in tên invariant hỏng; không chạm vào dữ liệu thật.
+// Dữ liệu vào: trang và 98 bài công khai. Kiểm chấm từng ô, phản hồi đúng ô và riêng tư.
+// Khi lỗi: test nêu bất biến hỏng; không gọi AI hoặc sửa bài làm thật.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { resolve, dirname } from 'node:path';
-import { runInNewContext } from 'node:vm';
+import {readFileSync, readdirSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import {resolve, dirname} from 'node:path';
+import {runInNewContext} from 'node:vm';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'progress-log-ic2305-grading-review');
 const read = (name) => readFileSync(resolve(root, name), 'utf8');
+const data = JSON.parse(read('data.json'));
 
-test('một trang tự tải dữ liệu cùng nguồn và vẫn có bộ lọc', () => {
-  const html = read('index.html');
-  assert.match(html, /data-view="all"/);
-  for (const view of ['all', 'same', 'different']) assert.match(html, new RegExp(`data-tab="${view}"`));
-  assert.match(html, /Content-Security-Policy/);
-  assert.match(html, /connect-src 'self'/);
-  assert.match(html, /src="review\.js"/);
-  assert.match(html, /href="styles\.css"/);
-  assert.doesNotMatch(html, /type="file"|Chọn tệp JSON/);
-  assert.match(html, /id="retry-load"/);
-});
-
-test('dữ liệu công khai đúng 98 ca, không mang định danh và prompt riêng', () => {
-  const names = readdirSync(root);
-  assert.deepEqual(names.sort(), ['README.md', 'data.json', 'favicon.svg', 'index.html', 'review.js', 'styles.css'].sort());
-  const data = JSON.parse(read('data.json'));
+test('dữ liệu 98 bài có 308 kết luận từng ô từ đúng hai mô hình', () => {
+  assert.equal(data.schema_version, 2);
   assert.equal(data.public_data, true);
   assert.equal(data.items.length, 98);
   assert.equal(Object.keys(data.questions).length, 6);
-  assert.equal(data.items.filter((item) => item.gemini !== item.luna).length, 1);
   assert.equal(new Set(data.items.map((item) => item.key)).size, 98);
+  let slots = 0, differentSlots = 0, differentCases = 0;
   for (const item of data.items) {
     assert.match(item.key, /^IC-[A-Za-z0-9_-]{7,12}$/);
-    assert.deepEqual(Object.keys(item).sort(), ['answer', 'gemini', 'key', 'luna', 'question_key', 'session']);
+    assert.deepEqual(Object.keys(item).sort(), ['answer', 'gemini_parts', 'key', 'luna_parts', 'question_key', 'session']);
+    const answers = Array.isArray(item.answer) ? item.answer : [item.answer];
+    assert.equal(answers.length, data.questions[item.question_key].labels.length);
+    for (const parts of [item.gemini_parts, item.luna_parts]) {
+      assert.equal(parts.length, answers.length);
+      assert.ok(parts.every((value) => typeof value === 'boolean'));
+    }
+    slots += answers.length;
+    const differences = item.gemini_parts.filter((value, index) => value !== item.luna_parts[index]).length;
+    differentSlots += differences;
+    differentCases += differences > 0;
   }
-  for (const question of Object.values(data.questions)) {
-    assert.deepEqual(Object.keys(question).sort(), ['labels', 'mode', 'question', 'title']);
-  }
-  assert.equal(/"criteria"|"paper"|"private_data"|"prompt_hash_short"|"student_id"|"student_name"/.test(read('data.json')), false, 'Không xuất trường riêng tư');
-  assert.equal(/"key":\s*"[234]-(?:2|3|4|6|8)-\d+"/.test(read('data.json')), false, 'Không xuất mã ca gốc');
-  assert.equal(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?<!\d)(?:\+?84|0)\d{8,10}(?!\d)/i.test(read('data.json')), false, 'Không xuất email hoặc số điện thoại');
-  const js = read('review.js');
+  assert.equal(slots, 308);
+  assert.equal(differentSlots, 30);
+  assert.equal(differentCases, 16);
+});
+
+test('trang giữ dữ liệu riêng ngoài Git, tải tự động và ghi phản hồi theo ô', () => {
+  assert.deepEqual(readdirSync(root).sort(), ['README.md', 'data.json', 'favicon.svg', 'index.html', 'review.js', 'styles.css'].sort());
+  const html = read('index.html'), js = read('review.js'), raw = read('data.json');
+  assert.match(html, /Content-Security-Policy/);
+  assert.match(html, /data-tab="different"/);
   assert.match(js, /fetch\('\.\/data\.json'/);
-  assert.doesNotMatch(js, /file\.text\(\)|data-file|question\.criteria|item\.paper/);
-  assert.match(js, /item\.answer/);
-  assert.match(js, /textContent/);
+  assert.match(js, /slotKey = \(item, i\) => `\$\{item\.key\}#\$\{i \+ 1\}`/);
+  assert.match(js, /FORM_FIELDS\.caseKey/);
+  assert.doesNotMatch(raw, /"criteria"|"paper"|"private_data"|"prompt_hash_short"|"student_id"|"student_name"/);
+  assert.doesNotMatch(raw, /"key":\s*"[234]-(?:2|3|4|6|8)-\d+"/);
+  assert.doesNotMatch(raw, /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?<!\d)(?:\+?84|0)\d{8,10}(?!\d)/i);
+  assert.doesNotMatch(js, /question\.criteria|item\.paper|item\.answer.*searchParams/);
 });
 
-test('gửi phản hồi qua Google Form chỉ có mã ca và ý kiến người rà', () => {
-  const js = read('review.js');
-  assert.match(js, /docs\.google\.com\/forms/);
-  for (const field of ['caseKey', 'gemini', 'luna', 'human', 'reason']) assert.match(js, new RegExp(`FORM_FIELDS\\.${field}`));
-  assert.doesNotMatch(js.slice(js.indexOf('function formLink'), js.indexOf('function card')), /item\.answer|question\.criteria/);
-  assert.match(js, /reason\.focus\(\)/);
-});
-
-test('97 ca đồng thuận chỉ hiện một kết quả và một đánh giá, ca bất đồng vẫn hiện hai', async () => {
+test('dữ liệu thiếu một kết luận bị từ chối và hiện nút thử lại', async () => {
   class Element {
-    constructor(tag = 'div') { this.tag = tag; this.children = []; this.dataset = {}; this.listeners = {}; this.value = ''; this.className = ''; }
+    constructor() { this.children = []; this.dataset = {}; this.listeners = {}; this.value = ''; }
     append(...nodes) { this.children.push(...nodes); }
     replaceChildren(...nodes) { this.children = nodes; }
-    addEventListener(name, listener) { this.listeners[name] = listener; }
-    setAttribute() {}
-    removeAttribute() {}
+    addEventListener(name, callback) { this.listeners[name] = callback; }
     get firstChild() { return this.children[0]; }
   }
   const elements = new Map();
-  const tabs = ['all', 'different', 'same'].map((name) => { const tab = new Element('button'); tab.dataset.tab = name; return tab; });
+  const document = {
+    body: new Element(),
+    createElement: () => new Element(),
+    createTextNode: (value) => ({textContent: value}),
+    getElementById: (id) => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); },
+    querySelectorAll: () => [],
+  };
+  const invalid = structuredClone(data);
+  invalid.items[0].luna_parts.pop();
+  runInNewContext(read('review.js'), {
+    document, URL, setTimeout,
+    localStorage: {getItem: () => null, setItem: () => {}},
+    fetch: async () => ({ok: true, json: async () => invalid}),
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.match(elements.get('file-status').textContent, /Kết luận từng ô sai cấu trúc/);
+  assert.equal(elements.get('review-area').hidden, true);
+  assert.equal(elements.get('retry-load').hidden, false);
+});
+
+test('mỗi ô hiện kết luận riêng; ô đồng thuận hiện một, ô bất đồng hiện hai', async () => {
+  class Element {
+    constructor(tag = 'div') { this.tag = tag; this.children = []; this.dataset = {}; this.listeners = {}; this.className = ''; this.value = ''; this.textContent = ''; }
+    append(...nodes) { this.children.push(...nodes); }
+    replaceChildren(...nodes) { this.children = nodes; }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    setAttribute() {}
+    removeAttribute() {}
+    querySelector(tag) { return this.children.find((child) => child.tag === tag); }
+    get firstChild() { return this.children[0]; }
+  }
+  const elements = new Map();
+  const tabs = ['all', 'different', 'same'].map((name) => { const tab = new Element('button'); tab.dataset.tab = name; tab.append(new Element('span')); return tab; });
   const stored = new Map();
   const document = {
     body: new Element('body'),
@@ -78,50 +101,41 @@ test('97 ca đồng thuận chỉ hiện một kết quả và một đánh giá
     getElementById: (id) => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); },
     querySelectorAll: (selector) => selector === '[data-tab]' ? tabs : [],
   };
-  const data = JSON.parse(read('data.json'));
-  const firstConsensus = data.items.find((item) => item.gemini === item.luna);
-  stored.set('ic2305:grading-review:v3', JSON.stringify({
-    [firstConsensus.key]: {gemini: 'Đồng ý', luna: 'Không đồng ý', human: 'Sai'},
-  }));
   runInNewContext(read('review.js'), {
     document, URL, setTimeout,
     localStorage: {getItem: (key) => stored.get(key) || null, setItem: (key, value) => stored.set(key, value)},
     fetch: async () => ({ok: true, json: async () => data}),
   });
   await new Promise((resolve) => setImmediate(resolve));
-  const walk = (node, className) => [
-    ...(node.className?.split(' ').includes(className) ? [node] : []),
-    ...((node.children || []).flatMap((child) => walk(child, className))),
+  const walk = (node, cls) => [
+    ...(node.className?.split(' ').includes(cls) ? [node] : []),
+    ...((node.children || []).flatMap((child) => walk(child, cls))),
   ];
   const cards = elements.get('cards').children;
   assert.equal(cards.length, 98);
-  for (const card of cards) {
-    const disputed = card.className.includes('disputed');
-    assert.equal(walk(card, 'grade').length, disputed ? 2 : 1);
-    assert.equal(walk(card, 'choice-field').length, disputed ? 2 : 1);
-  }
-  const shared = cards.find((card) => !card.className.includes('disputed'));
-  const choices = walk(shared, 'choice-field')[0].children.filter((node) => node.tag === 'label');
-  assert.equal(choices.some((node) => node.children[0].checked), false);
-  const link = walk(shared, 'send-button')[0];
+  assert.equal(walk(elements.get('cards'), 'answer-row').length, 308);
+  assert.equal(walk(elements.get('cards'), 'disputed-slot').length, 30);
+  assert.equal(walk(elements.get('cards'), 'grade').length, 338);
+  assert.equal(walk(elements.get('cards'), 'slot-feedback').length, 308);
+  assert.equal(tabs[1].querySelector('span').textContent, '16');
+  assert.equal(tabs[2].querySelector('span').textContent, '82');
+  assert.match(elements.get('file-status').textContent, /30 ô của 16 bài/);
+  const first = cards[0];
+  assert.ok(first.className.includes('disputed'));
+  const row = walk(first, 'disputed-slot')[0], feedback = walk(row, 'slot-feedback')[0];
+  assert.equal(walk(row, 'grade').length, 2);
+  const link = walk(feedback, 'send-button')[0];
   let blocked = false;
   link.listeners.click({preventDefault: () => { blocked = true; }});
   assert.equal(blocked, true);
-  const agree = choices[0]?.children.find((node) => node.value === 'Đồng ý');
-  assert.ok(agree);
-  agree.listeners.change();
-  const saved = JSON.parse(stored.get('ic2305:grading-review:v3'));
-  const key = walk(shared, 'case-key')[0].textContent.split(' · ').at(-1);
-  assert.equal(saved[key].gemini, 'Đồng ý');
-  assert.equal(saved[key].luna, 'Đồng ý');
-  const human = walk(shared, 'human-label')[0].children.find((node) => node.tag === 'select');
-  human.value = 'Sai';
-  human.listeners.change();
-  blocked = false;
-  link.listeners.click({preventDefault: () => { blocked = true; }});
+  const fields = walk(feedback, 'choice-field');
+  for (const field of fields) field.children.find((node) => node.tag === 'label').children.find((node) => node.tag === 'input').listeners.change();
+  const human = walk(feedback, 'human-label')[0].children.find((node) => node.tag === 'select');
+  human.value = 'Đúng'; human.listeners.change();
+  blocked = false; link.listeners.click({preventDefault: () => { blocked = true; }});
   assert.equal(blocked, false);
   const form = new URL(link.href);
+  assert.match(form.searchParams.get('entry.2023912036'), /^IC-[A-Za-z0-9_-]{7,12}#\d+$/);
   assert.equal(form.searchParams.get('entry.1631772558'), 'Đồng ý');
   assert.equal(form.searchParams.get('entry.1902183348'), 'Đồng ý');
-  assert.equal(form.searchParams.get('entry.2023912036'), key);
 });
