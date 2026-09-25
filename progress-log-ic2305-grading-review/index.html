@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>IC2305 · Đối chiếu kết quả chấm của hai AI</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="review.js"></script>
+</head>
+<body data-view="all">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">IZ</span><span>IZONE · Progress Log</span></div>
+    <span class="top-label">Rà chấm thử · IC2305</span>
+  </header>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">BUỔI 2 · 3 · 4 / 98 CÂU TỰ LUẬN NGẮN</p>
+      <h1>Đối chiếu kết quả chấm của hai AI</h1>
+      <p class="lead">Gemini và GPT‑6 Luna chấm giống nhau 97/98 câu. Một ca bất đồng được đưa lên đầu để bạn phân xử; mỗi ca đều có chỗ ghi phản hồi.</p>
+      <nav class="tabs" aria-label="Lọc kết quả">
+        <button type="button" data-tab="all" aria-current="page">Tất cả <span>98</span></button>
+        <button type="button" data-tab="different">Khác nhau <span>1</span></button>
+        <button type="button" data-tab="same">Giống nhau <span>97</span></button>
+      </nav>
+    </section>
+    <section class="import-panel" aria-labelledby="import-title">
+      <div>
+        <p class="step">BƯỚC 1 · MỞ DỮ LIỆU RIÊNG</p>
+        <h2 id="import-title">Chọn tệp đối chiếu IC2305</h2>
+        <p>GitHub Pages không giữ bài làm học viên. Tệp được đọc ngay trong trình duyệt của bạn; nội dung bài làm không được gửi lên trang này.</p>
+      </div>
+      <label class="file-button">Chọn tệp JSON<input id="data-file" type="file" accept=".json,application/json"></label>
+    </section>
+    <p id="file-status" class="status" role="status">Chưa chọn tệp. Hãy chọn <strong>comparison.private.json</strong> trên máy của bạn.</p>
+    <section id="review-area" hidden>
+      <div class="summary" id="summary"></div>
+      <div class="toolbar">
+        <label>Câu hỏi<select id="question-filter"><option value="">Tất cả câu hỏi</option></select></label>
+        <label>Tìm mã ca<input id="case-search" type="search" placeholder="Ví dụ: 3-8-13" autocomplete="off"></label>
+        <button id="export-feedback" type="button" class="secondary">Tải bản sao phản hồi</button>
+      </div>
+      <p class="privacy-note">Chọn “Đồng ý/Không đồng ý” cho từng AI. Nút gửi mở Google Form đã điền sẵn; phản hồi chỉ được lưu tập trung khi Form báo đã gửi. Không chép nguyên bài làm hoặc tên học viên vào lý do.</p>
+      <div id="cards" class="cards"></div>
+    </section>
+  </main>
+  <footer>Chấm thử để rà tiêu chí · Không thay đổi điểm hoặc dữ liệu Progress Log chính thức.</footer>
+</body>
+</html>
