@@ -1,18 +1,18 @@
-/* Dữ liệu nhận vào: tệp đối chiếu riêng do Đức chọn trên máy.
+/* Dữ liệu nhận vào: tệp dữ liệu đã ẩn danh cùng thư mục trên GitHub Pages.
  * Việc chính: tách ca giống/khác, hiện hai nhãn chấm và chuẩn bị phản hồi Google Form.
- * Kết quả: bài làm chỉ nằm trong bộ nhớ tab; localStorage chỉ giữ lựa chọn và lý do.
- * Khi lỗi: báo lỗi nhập/gửi rõ ràng, không coi phản hồi đã được ghi lên Form.
+ * Kết quả: trang tải tự động; localStorage chỉ giữ lựa chọn và lý do.
+ * Khi lỗi: báo lỗi tải/gửi rõ ràng, không coi phản hồi đã được ghi lên Form.
  */
 (() => {
   'use strict';
 
-  const DEMO_ID = 'IC2305-sessions-2-3-4-grading-v2';
+  const DEMO_ID = 'IC2305-sessions-2-3-4-grading-public-v1';
   const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdqwkeqKb9eawvFPxxEu9Z8GOff01BqbmYqT-g2Ywpbpu8a3Q/viewform';
   const FORM_FIELDS = Object.freeze({caseKey: '2023912036', gemini: '1631772558', luna: '1902183348', human: '3129667', reason: '1863534216'});
-  const storageKey = 'ic2305:grading-review:v2';
+  const storageKey = 'ic2305:grading-review:v3';
   const $ = (id) => document.getElementById(id);
-  const fileInput = $('data-file');
   const fileStatus = $('file-status');
+  const retryLoad = $('retry-load');
   const reviewArea = $('review-area');
   const questionFilter = $('question-filter');
   const caseSearch = $('case-search');
@@ -41,12 +41,12 @@
   }
 
   function validate(value) {
-    if (!value || value.schema_version !== 1 || value.demo_id !== DEMO_ID || value.private_data !== true) throw new Error('Sai loại tệp đối chiếu.');
-    if (!value.questions || !Array.isArray(value.items) || value.items.length !== 98) throw new Error('Tệp không đủ 98 câu trả lời.');
+    if (!value || value.schema_version !== 1 || value.demo_id !== DEMO_ID || value.public_data !== true) throw new Error('Sai phiên bản dữ liệu chấm thử.');
+    if (!value.questions || !Array.isArray(value.items) || value.items.length !== 98) throw new Error('Dữ liệu không đủ 98 câu trả lời.');
     const keys = new Set();
     let different = 0;
     for (const item of value.items) {
-      if (!/^([234])-(2|3|4|6|8)-\d+$/.test(item.key || '') || keys.has(item.key)) throw new Error('Mã ca trùng hoặc sai định dạng.');
+      if (!/^IC-[A-Za-z0-9_-]{7,12}$/.test(item.key || '') || keys.has(item.key)) throw new Error('Mã ca trùng hoặc sai định dạng.');
       if (!value.questions[item.question_key] || typeof item.gemini !== 'boolean' || typeof item.luna !== 'boolean') throw new Error('Câu hỏi hoặc kết luận AI sai cấu trúc.');
       if (!(typeof item.answer === 'string' || Array.isArray(item.answer))) throw new Error('Câu trả lời sai cấu trúc.');
       keys.add(item.key);
@@ -113,7 +113,7 @@
     const disputed = item.gemini !== item.luna;
     const card = element('article', disputed ? 'card disputed' : 'card');
     const top = element('div', 'card-top');
-    top.append(element('span', 'case-key', `Buổi ${item.session} · Bài ${String(item.paper).padStart(2, '0')} · ${item.key}`));
+    top.append(element('span', 'case-key', `Buổi ${item.session} · ${item.key}`));
     if (disputed) top.append(element('span', 'dispute-tag', 'Cần phân xử'));
     top.append(element('span', 'question-tag', question.title));
     card.append(top);
@@ -137,9 +137,8 @@
     card.append(answers);
 
     const criteria = element('details', 'criteria');
-    criteria.append(element('summary', '', 'Xem câu hỏi và tiêu chí chấm'));
+    criteria.append(element('summary', '', 'Xem câu hỏi'));
     criteria.append(element('p', '', question.question));
-    criteria.append(element('pre', '', question.criteria));
     card.append(criteria);
 
     const feedback = element('div', 'feedback');
@@ -216,13 +215,14 @@
     else for (const item of items) cards.append(card(item));
   }
 
-  fileInput.addEventListener('change', async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
+  async function loadData() {
+    fileStatus.textContent = 'Đang tải 98 câu trả lời...';
+    retryLoad.hidden = true;
     try {
-      const parsed = validate(JSON.parse(await file.text()));
-      bundle = parsed;
-      fileStatus.textContent = `Đã mở ${file.name}: 98 câu, 97 giống nhau, 1 khác nhau. Bài làm chỉ được giữ trong tab này.`;
+      const response = await fetch('./data.json', {cache: 'no-store'});
+      if (!response.ok) throw new Error(`Máy chủ trả HTTP ${response.status}.`);
+      bundle = validate(await response.json());
+      fileStatus.textContent = 'Đã tải 98 câu trả lời: 97 ca giống nhau, 1 ca bất đồng.';
       reviewArea.hidden = false;
       questionFilter.replaceChildren(element('option', '', 'Tất cả câu hỏi'));
       questionFilter.firstChild.value = '';
@@ -235,9 +235,13 @@
     } catch (error) {
       bundle = null;
       reviewArea.hidden = true;
-      fileStatus.textContent = `Không mở được tệp: ${error.message}`;
+      retryLoad.hidden = false;
+      fileStatus.textContent = `Không tải được dữ liệu: ${error.message}`;
     }
-  });
+  }
+
+  retryLoad.addEventListener('click', loadData);
+  loadData();
 
   questionFilter.addEventListener('change', render);
   caseSearch.addEventListener('input', render);
