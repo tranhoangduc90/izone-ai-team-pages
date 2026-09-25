@@ -20,6 +20,7 @@
       "tests/k56-teacher-writing-bands.mjs",
       "tests/k56-term-test.mjs",
       "tests/k56-term1-live-writing-result.mjs",
+      "tests/k56-term-writing-browser.mjs",
       "tests/k56-test2-release.mjs",
       "tests/k56-test2-writing-result.mjs",
       "tests/k56-test2-writing-revision.mjs",
