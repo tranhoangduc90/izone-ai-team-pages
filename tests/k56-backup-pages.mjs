@@ -22,6 +22,12 @@ test('landing K56 chỉ hiện tên bài thi và đủ sáu link dự phòng', a
   ]) assert.match(html, new RegExp(`>${label}<`));
 });
 
+test('landing K56 không giới thiệu IC2264 như lớp duy nhất dùng dữ liệu thật', async () => {
+  const html = await read('term-tests/k56-demo/index.html');
+  assert.match(html, /Các lớp khóa 56 đã được mở bài dùng danh sách học viên thật/);
+  assert.doesNotMatch(html, /IC2264 dùng danh sách lớp thật/);
+});
+
 test('ba Answer Sheet K56 dùng đúng config, app và backend K56', async () => {
   const pages = [
     ['term-test-1-k56', 'k56-shared'],
