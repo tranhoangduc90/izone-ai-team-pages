@@ -24,7 +24,7 @@ test('dashboard có 7 giai đoạn, không gian lớp, tìm kiếm và retry đ�
   assert.match(script, /Chạy lại từ bước này/u);
   assert.match(script, /Đọc lại nguồn/u);
   assert.match(script, /retryWritingSourceIssue/u);
-  assert.match(script, /không sửa Lark Base/u);
+  assert.doesNotMatch(script, /confirm\('Đọc lại nguồn này/u);
   assert.match(html, /Lớp cần chú ý/u);
   assert.match(script, /writingClassCoverage/u);
   assert.match(html, /data-view="overview"/u);
