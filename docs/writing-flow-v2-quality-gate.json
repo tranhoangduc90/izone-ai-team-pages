@@ -504,7 +504,15 @@
       "evidence": "Playwright dispatch hai click đồng bộ; API giả ghi đúng một POST."
     }
   ],
-  "mutations": [],
+  "mutations": [
+    {
+      "id": "M-PAGES-RELEASE",
+      "target": "GitHub Pages main · writing-flow-v2.html",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Commit e0ec2d80320e567997aebd2d37a5cd3318092576; Pages build built; URL v2 và URL cũ HTTP 200; bốn asset public trùng byte với Git blob."
+    }
+  ],
   "verification_runs": [
     {
       "id": "V-FULL",
@@ -570,6 +578,19 @@
       "failed": 0,
       "skipped": 0,
       "evidence": "Mock API 403: dashboard bị ẩn, người dùng thấy thông báo từ chối."
+    },
+    {
+      "id": "V-PUBLIC",
+      "scope": "behavioral",
+      "command": "Playwright và HTTP readback trên GitHub Pages",
+      "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
+      "captured_at": "2026-09-27T16:43:18.082093Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Trang v2 có tiêu đề, form Google đăng nhập và asset đúng commit; trang cũ còn hoạt động. API phiên trả 401 ở trình duyệt chưa đăng nhập; CSP Google inline style cũng xuất hiện ở trang cũ."
     }
   ],
   "convergence": {
@@ -580,7 +601,7 @@
     "evidence": "Đối chiếu yêu cầu URL riêng, 7 bước hai luồng, lỗi nguồn, ba biểu đồ và bảng ngày với browser QA; source cũ không đổi."
   },
   "context_handoff": {
-    "summary": "Giao diện Writing v2 đạt kiểm thử cục bộ, sẵn sàng phát hành URL Pages riêng.",
+    "summary": "URL Writing v2 đã lên GitHub Pages và asset public khớp commit; chưa đối chiếu dữ liệu sau đăng nhập.",
     "decisions": [
       "Giữ trang cũ; URL mới dùng API/phiên chung.",
       "Mặc định chỉ hiện biểu đồ Chấm mới; hai biểu đồ còn lại bật theo nhu cầu."
@@ -589,19 +610,26 @@
       "TASK-BUILD",
       "TASK-VERIFY"
     ],
-    "next_step": "Commit, đưa URL mới lên Pages và đọc lại trang thật.",
-    "open_risks": [],
+    "next_step": "Dùng phiên giảng viên được phép để đối chiếu số đếm và một bài trên v2 với trang cũ.",
+    "open_risks": [
+      "Chưa có quan sát nghiệp vụ sau đăng nhập trên URL mới."
+    ],
     "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306"
   },
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "deployed_awaiting_validation",
     "base_tree_revision": "43becdcaed311673e2d24cfb1e4039a8a802a901",
     "current_tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
     "production_authorized": true,
     "rollback": "Revert commit chỉ chứa trang mới hoặc ngừng dùng URL mới; trang cũ giữ nguyên.",
-    "deployment_readback": "pending",
-    "operational_observation": "pending",
-    "open_risks": []
+    "deployment_readback": "verified",
+    "operational_observation": "Chưa đối chiếu dữ liệu và thao tác bằng phiên giảng viên thật trên URL mới.",
+    "open_risks": [
+      {
+        "severity": "P2",
+        "summary": "Chưa quan sát dữ liệu sau đăng nhập trên URL mới."
+      }
+    ]
   }
 }
