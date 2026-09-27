@@ -52,6 +52,13 @@ try {
   assert.match(page, /<section class="guide-card illustrated-guide"/);
   assert.doesNotMatch(page, /<details class="guide-card"/);
   assert.doesNotMatch(page, /Tình huống mô phỏng/);
+  const lesson3Response = await fetch(`${address}/speaking-homework/lesson-3.html?documentId=1hx2XF1bJtNCZZXbwo8PyAlYHFwY4udsDmiqhEwqrA18&class=IC2304&assignmentCode=67-speaking-lam_ro`);
+  assert.equal(lesson3Response.status, 200);
+  const lesson3Page = await lesson3Response.text();
+  assert.equal((lesson3Page.match(/\.\/assets\/[a-z-]+\.png/g) || []).length, 9);
+  assert.match(lesson3Page, /BỐN PHẦN · BỐN HỘI THOẠI/);
+  assert.equal((await fetch(`${address}/speaking-homework/lesson-3.js`)).status, 200);
+  assert.equal((await fetch(`${address}/speaking-homework/lesson-3.css`)).status, 200);
   assert.equal((await fetch(`${address}/speaking-homework/server.mjs`)).status, 404);
   assert.equal((await fetch(`${address}/speaking-homework/quality-gate.json`)).status, 404);
 } finally {

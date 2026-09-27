@@ -9,6 +9,9 @@ const mimeTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; char
 const staticFiles = new Map([
   ['/speaking-homework/', 'speaking-homework/index.html'],
   ['/speaking-homework/index.html', 'speaking-homework/index.html'],
+  ['/speaking-homework/lesson-3.html', 'speaking-homework/lesson-3.html'],
+  ['/speaking-homework/lesson-3.js', 'speaking-homework/lesson-3.js'],
+  ['/speaking-homework/lesson-3.css', 'speaking-homework/lesson-3.css'],
   ['/speaking-homework/styles.css', 'speaking-homework/styles.css'],
   ['/speaking-homework/guide.css', 'speaking-homework/guide.css'],
   ['/speaking-homework/app.js', 'speaking-homework/app.js'],

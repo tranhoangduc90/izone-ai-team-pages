@@ -1,0 +1,80 @@
+{
+  "schema_version": 3,
+  "product": "Bản xem thử Speaking Homework Lesson 3 · IC2304",
+  "change_id": "speaking-homework-lesson-3-preview-20260927",
+  "change_kind": "feature",
+  "escaped_user_defect": false,
+  "risk": "medium",
+  "system_traits": ["stateful", "asynchronous", "concurrent", "personal_data", "multi_service"],
+  "experience": {
+    "planning_mode": "standard",
+    "mode_reason": "Bốn lần kiểm ChatGPT Share, bản nháp và CTA Docs mẫu.",
+    "user": "Đức xem bản thử Lesson 3 trên máy này",
+    "problem": "Trang mẫu trước chỉ có hai ô của Lesson 2.",
+    "outcome": "Bốn phần theo bản cũ, đủ chín ảnh và link CTA vào trang mẫu.",
+    "out_of_scope": ["Chưa nhận bài thật hoặc ghi ô vàng Google Docs."],
+    "plain_language_summary": "Thử bốn link luyện riêng; mỗi link được đọc và kiểm nội dung khi xác nhận."
+  },
+  "change_package": {
+    "proposal": "Thêm trang Lesson 3 và bộ kiểm cho bốn phần.",
+    "behavior_baseline": "Bản xem trước chỉ có Paraphrase và Full Speaking Lesson 2.",
+    "deltas": [
+      {"id": "D-FOUR", "operation": "ADDED", "behavior": "Bốn ô nhận bốn hội thoại riêng.", "module_ids": ["M-UI", "M-CHECK"], "test_ids": ["T-FOUR", "T-HTTP"]},
+      {"id": "D-GUIDE", "operation": "ADDED", "behavior": "Hướng dẫn popup có đủ chín ảnh rộng.", "module_ids": ["M-UI"], "test_ids": ["T-HTTP"]},
+      {"id": "D-CTA", "operation": "ADDED", "behavior": "Docs mẫu mở trang local với Doc ID, lớp và mã bài.", "module_ids": ["M-UI"], "test_ids": ["T-CTA"]}
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "lesson-3-preview-v1",
+    "modules": [
+      {"id": "M-UI", "name": "Trang học viên mẫu", "responsibility": "Hiện hướng dẫn và kết quả kiểm từng link.", "owns_data": ["draft_urls", "preview_state"], "public_interfaces": ["lesson-3.html"], "depends_on": ["M-CHECK"], "boundary_rules": ["Không nói đã nộp bài thật."], "test_ids": ["T-HTTP", "T-CTA"]},
+      {"id": "M-CHECK", "name": "Kiểm ChatGPT Share", "responsibility": "Đọc hội thoại và đếm phần đã luyện.", "owns_data": ["transient_transcript"], "public_interfaces": ["POST /api/speaking/check"], "depends_on": [], "boundary_rules": ["Lỗi đọc hoặc AI thì không báo đạt."], "test_ids": ["T-FOUR", "T-ERROR"]}
+    ],
+    "integrations": [{"id": "I-CHECK", "producer": "M-CHECK", "consumer": "M-UI", "contract": "Kết quả pass, blocked, warning hoặc error theo phần.", "test_ids": ["T-FOUR", "T-ERROR"]}]
+  },
+  "operational_design": {
+    "plan_revision": "lesson-3-preview-v1",
+    "signals": ["multi_service"],
+    "critical_path": "Trang local → bộ đọc ChatGPT Share → AI → kết quả từng ô.",
+    "peak_load": {"value": 2, "unit": "concurrent_checks", "basis": "Máy chủ bản thử chỉ giữ hai lượt đang chạy."},
+    "user_wait_target": "Hiện trạng thái ngay; một lượt kiểm có thể đến 140 giây.",
+    "limits_and_cost": ["Bốn lượt kiểm AI cho mỗi bản thử hoàn chỉnh."],
+    "failure_and_recovery": ["Lỗi thì giữ nháp trên thiết bị và cho thử lại."],
+    "monitoring": ["Log thời gian kiểm không chứa URL hoặc transcript."],
+    "decision": "Chỉ mở ở localhost cho thử nghiệm; chưa phát cho lớp.",
+    "test_ids": ["T-HTTP", "T-ERROR"]
+  },
+  "requirements": [
+    {"id": "R-FOUR", "statement": "Cấp 1, 2, 3 và Freestyle có bốn link, ngưỡng riêng.", "test_ids": ["T-FOUR"]},
+    {"id": "R-CTA", "statement": "CTA mẫu mang đúng Doc ID, lớp và mã bài.", "test_ids": ["T-CTA"]}
+  ],
+  "invariants": [
+    {"id": "V-ERROR", "statement": "Không đọc được Share thì không báo đạt.", "test_ids": ["T-ERROR"]},
+    {"id": "V-PREVIEW", "statement": "Bản thử không tự ghi trạng thái hoàn tất vào Docs.", "test_ids": ["T-HTTP", "T-CTA"]}
+  ],
+  "tests": [
+    {"id": "T-FOUR", "category": "happy_path", "priority": "P0", "status": "passed", "evidence": "Kiểm giả lập cấp 1 đủ ba loại từ, cấp 2/3 hai câu, Freestyle hai chu trình."},
+    {"id": "T-ERROR", "category": "invalid_input", "priority": "P0", "status": "passed", "evidence": "Link /c/, Share chết, thiếu câu và AI lỗi bị chặn."},
+    {"id": "T-HTTP", "category": "security_privacy", "priority": "P1", "status": "passed", "evidence": "HTTP 200 cho trang, JS, CSS, chín ảnh; Host và Origin lạ bị chặn."},
+    {"id": "T-CTA", "category": "external_partial", "priority": "P1", "status": "passed", "evidence": "Docs API đọc lại hyperlink CTA đúng tham số và ô vàng còn trống."},
+    {"id": "T-BROWSER", "category": "regression", "priority": "P1", "status": "not_run", "evidence": "Chưa quan sát trực quan và thao tác popup trong browser."},
+    {"id": "T-LIFE", "category": "lifecycle_time", "priority": "P1", "status": "not_run", "evidence": "Chưa kiểm đóng tab và mở lại bản nháp trên browser."},
+    {"id": "T-CON", "category": "concurrency_idempotency", "priority": "P1", "status": "passed", "evidence": "Hai POST đồng thời cùng link chỉ một lượt kiểm."},
+    {"id": "T-ROLL", "category": "rollback_recovery", "priority": "P1", "status": "not_run", "evidence": "Chưa thử khôi phục CTA từ bản sao Docs."}
+  ],
+  "task_graph": {
+    "plan_revision": "lesson-3-preview-v1",
+    "tasks": [
+      {"id": "TASK-UI", "result": "Trang, CTA và bộ kiểm local.", "module_ids": ["M-UI", "M-CHECK"], "depends_on": [], "consumes": ["Docs cũ và Docs mẫu"], "produces": ["Bản thử local"], "contract": "Không ghi bài thật.", "test_ids": ["T-FOUR", "T-HTTP", "T-CTA"], "evidence_required": ["HTTP và Docs readback"], "decision_inputs": ["Bốn link riêng"], "affected_future_tasks": ["TASK-RELEASE"], "status": "done", "plan_revision": "lesson-3-preview-v1"},
+      {"id": "TASK-RELEASE", "result": "Kiểm browser và đổi CTA sang HTTPS.", "module_ids": ["M-UI"], "depends_on": ["TASK-UI"], "consumes": ["Bản thử"], "produces": ["Trang cho lớp"], "contract": "Phải nối API thật trước khi dùng.", "test_ids": ["T-BROWSER", "T-LIFE", "T-ROLL"], "evidence_required": ["Browser và HTTPS"], "decision_inputs": ["Quyền triển khai"], "affected_future_tasks": [], "status": "in_progress", "plan_revision": "lesson-3-preview-v1"}
+    ]
+  },
+  "risk_register": {"assessment": "CONCERNS", "risks": [{"id": "RISK-LOCAL", "description": "CTA local chỉ dùng trên máy Đức.", "probability": 2, "impact": 2, "score": 4, "severity": "P2", "status": "open", "owner": "Đức và Codex", "mitigation": "Thay HTTPS và đọc lại CTA trước pilot thật.", "test_ids": ["T-CTA"]}], "waivers": []},
+  "coverage_exemptions": {},
+  "cross_constraints": [{"id": "TIME-1", "left": {"name": "browser_timeout_seconds", "value": 150}, "operator": ">", "right": {"name": "reader_ai_seconds", "value": 140}, "status": "passed", "evidence": "Bộ đọc 95 giây cộng AI 45 giây; UI 150 giây."}],
+  "mutations": [{"id": "M-DOCS", "target": "Google Docs mẫu Lesson 3", "outcome": "success", "readback": "verified", "evidence": "CTA đúng link local, trạng thái vàng vẫn trống; bản sao Docs đã lưu."}],
+  "verification_runs": [{"id": "V-LOCAL", "scope": "full_suite", "command": "node tests/speaking-homework-demo.mjs; node tests/speaking-homework-real.mjs; node tests/speaking-homework-http.mjs", "tree_revision": "uncommitted", "captured_at": "2026-09-27T14:21:16Z", "exit_code": 0, "outcome": "passed", "passed": 3, "failed": 0, "skipped": 0, "evidence": "Ba suite local của Speaking Homework đạt sau khi thêm Lesson 3."}],
+  "convergence": {"status": "gaps", "tree_revision": "uncommitted", "gaps": ["Chưa kiểm browser; CTA còn là localhost; chưa nối backend thật."], "unrequested_work": [], "evidence": "HTTP, bộ kiểm và Docs API đã đọc lại; hành trình học viên thật chưa nghiệm thu."},
+  "release": {"target_environment": "local", "decision": "not_ready", "base_tree_revision": "acb78e7", "current_tree_revision": "uncommitted", "production_authorized": false, "rollback": "Khôi phục hyperlink từ bản sao Docs và dừng server thử.", "deployment_readback": "verified", "operational_observation": "HTTP local 8766 trả 200; cần QA browser.", "open_risks": [{"severity": "P2", "summary": "Chưa kiểm browser và chưa đổi sang HTTPS."}]}
+}

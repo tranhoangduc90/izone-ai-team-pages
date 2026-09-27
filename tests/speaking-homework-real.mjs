@@ -86,4 +86,35 @@ const wrongLink = await checkSubmission(
 );
 assert.equal(wrongLink.kind, 'blocked');
 
+// Lesson 3 có bốn link riêng; cấp 1 cần đủ ba loại từ, Freestyle cần hai chu trình.
+const levelOne = conversation(3);
+const categories = ['noun', 'verb', 'adjective'];
+const fullLevelOne = await checkSubmission(
+  { section: 'clarify_1', url: shareUrl },
+  { readShare: async () => levelOne, analyze: async () => ({
+    completed: levelOne.completed.map((item, index) => ({ ...item, category: categories[index] })),
+    confidence: 0.9, typingEvidence: [],
+  }) },
+);
+assert.equal(fullLevelOne.kind, 'pass');
+const missingAdjective = await checkSubmission(
+  { section: 'clarify_1', url: shareUrl },
+  { readShare: async () => levelOne, analyze: async () => ({
+    completed: levelOne.completed.map((item, index) => ({ ...item, category: categories[Math.min(index, 1)] })),
+    confidence: 0.9, typingEvidence: [],
+  }) },
+);
+assert.equal(missingAdjective.kind, 'blocked');
+assert.match(missingAdjective.message, /Tính từ/);
+for (const section of ['clarify_2', 'clarify_3']) {
+  const two = conversation(2);
+  const result = await checkSubmission({ section, url: shareUrl },
+    { readShare: async () => two, analyze: async () => ({ completed: two.completed, confidence: 0.9, typingEvidence: [] }) });
+  assert.equal(result.kind, 'pass', section);
+}
+const freestyle = conversation(2, true);
+const completeFreestyle = await checkSubmission({ section: 'freestyle', url: shareUrl },
+  { readShare: async () => freestyle, analyze: async () => ({ completed: freestyle.completed, confidence: 0.9, typingEvidence: [] }) });
+assert.equal(completeFreestyle.kind, 'pass');
+
 console.log('Speaking Homework: kiểm link thật, khối lượng, cảnh báo và lỗi đạt.');

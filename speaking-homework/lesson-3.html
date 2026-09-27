@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speaking Homework · Lesson 3 · IC2304</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./guide.css">
+  <link rel="stylesheet" href="./lesson-3.css">
+  <style>[hidden] { display: none !important; }</style>
+  <script type="module" src="./lesson-3.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="eyebrow"><span class="brand-mark">IZ</span> IZONE · SPEAKING HOMEWORK</div>
+      <span class="demo-badge">Bản xem giao diện · chưa nhận bài thật hoặc ghi Google Docs</span>
+      <h1>Nộp bài Speaking<br><span>Homework Lesson 3</span></h1>
+      <p class="hero-copy">Luyện bốn phần theo thứ tự và chia sẻ bốn hội thoại riêng. Bản xem giao diện này giúp bạn thử các bước và trạng thái; hệ thống nhận bài thật sẽ đọc ChatGPT Share khi bấm Xác nhận.</p>
+      <div class="hero-steps"><span><b>01</b> Luyện tập</span><span class="step-line"></span><span><b>02</b> Dán 4 link</span><span class="step-line"></span><span><b>03</b> Xác nhận</span></div>
+    </header>
+    <section class="identity-card" aria-labelledby="identity-title">
+      <div><span class="section-kicker">TRƯỚC KHI BẮT ĐẦU</span><h2 id="identity-title">Xác nhận người học</h2><p id="assignment-context"></p><p>Hai tên bên dưới là hồ sơ mẫu. Bản Pages chỉ mô phỏng kết quả để bạn xem giao diện, chưa kiểm hội thoại hay nhận bài chính thức.</p></div>
+      <div id="identity-form" class="identity-form">
+        <label for="class-select">Lớp</label><select id="class-select"><option value="IC2304">IC2304</option></select>
+        <label for="student-select">Học viên</label><select id="student-select"><option value="">Chọn học viên thử</option><option value="00000000-0000-4000-8000-000000000001">Học viên thử A</option><option value="00000000-0000-4000-8000-000000000002">Học viên thử B</option></select>
+        <label class="checkbox-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label>
+        <button id="open-homework" class="button button-primary" type="button">Mở bài nộp</button>
+      </div>
+      <div id="identity-confirmed" class="identity-confirmed" hidden><span>Đang làm bài với <strong id="active-student"></strong></span><button id="change-student" class="text-button" type="button">Đổi người học</button></div>
+      <p id="identity-message" class="inline-note" role="status" aria-live="polite"></p>
+    </section>
+    <main id="homework-content" hidden>
+      <div class="section-intro"><div><span class="section-kicker">BỐN PHẦN · BỐN HỘI THOẠI</span><h2>Làm lần lượt từng phần</h2></div><p>Link nộp phải có dạng <code>https://chatgpt.com/share/...</code>. Link <code>/c/...</code> chỉ mở trong tài khoản của bạn và không nộp được.</p></div>
+      <p id="draft-status" class="draft-status" role="status">Bản nháp giao diện được giữ trên thiết bị này. Không dùng trang này để nộp bài thật.</p>
+      <div id="parts"></div>
+      <section id="completion-card" class="completion-card" hidden aria-live="polite"><span class="completion-icon">✓</span><div><span class="section-kicker">ĐÃ XEM ĐỦ BỐN TRẠNG THÁI MẪU</span><h2>Giao diện mô phỏng đã hoàn tất</h2><p>Chưa có biên nhận hoặc dòng xác nhận trong Google Docs. Khi nhận bài thật, trang sẽ chỉ báo thành công sau khi máy chủ xác nhận đủ bốn link.</p></div><a id="return-homework" class="button button-primary" target="_blank" rel="noopener noreferrer">Quay lại Homework ↗</a></section>
+      <section class="doctor-preview" aria-labelledby="doctor-title"><span class="section-kicker">BÁC SĨ AI · DỮ LIỆU MINH HỌA</span><h2 id="doctor-title">Bài luyện cần ưu tiên</h2><p>Danh sách mẫu dưới đây giúp xem cách xếp theo <strong>Số lần đề xuất</strong>. Khi nối dữ liệu thật, mỗi bài nộp mới sẽ cập nhật gợi ý của riêng học viên.</p><ol id="doctor-list" class="doctor-list"></ol><button id="doctor-expand" class="button button-outline" type="button" aria-expanded="false">Xem tất cả bài cần luyện</button><div class="doctor-practice"><h3>Nộp hai link luyện bổ trợ</h3><p>Chọn một bài trong danh sách, luyện theo hướng dẫn rồi dán hai link ChatGPT Share riêng. Bản này chỉ mô phỏng thao tác.</p><label for="doctor-exercise">Bài đang luyện</label><select id="doctor-exercise"></select><label for="doctor-link-1">Link luyện lần 1</label><input id="doctor-link-1" type="url" inputmode="url" placeholder="https://chatgpt.com/share/..."><label for="doctor-link-2">Link luyện lần 2</label><input id="doctor-link-2" type="url" inputmode="url" placeholder="https://chatgpt.com/share/..."><button id="doctor-confirm" class="button button-primary" type="button">Xác nhận hai link luyện</button><p id="doctor-result" class="inline-note" role="status" aria-live="polite"></p></div></section>
+    </main>
+    <dialog class="share-guide-dialog" id="share-guide-dialog" aria-labelledby="guide-title">
+      <div class="guide-modal-bar"><span>HƯỚNG DẪN NỘP LINK</span><button id="close-share-guide-x" class="guide-close-x" type="button" aria-label="Đóng hướng dẫn">×</button></div>
+      <section class="guide-card illustrated-guide" id="share-guide"><div class="guide-heading"><span class="section-kicker">HƯỚNG DẪN CÓ HÌNH MINH HỌA</span><h2 id="guide-title">Lấy đúng link ChatGPT Share</h2><p>Bốn phần luyện cần bốn hội thoại riêng. Làm theo các hình trên điện thoại của bạn.</p></div>
+        <div class="guide-content">
+          <div class="guide-callout"><figure><img src="./assets/voice-input.png" alt="Nút micro để nói và nút voice chat khác nhau" loading="lazy"><figcaption>Hình 1 · Dùng nút micro khi luyện nói trên điện thoại.</figcaption></figure><p>Dùng <strong>nút micro</strong> được đánh dấu. Sau khi ChatGPT góp ý, hãy nói lại trọn câu trả lời.</p></div>
+          <div class="guide-columns"><div><h3>iPhone · 4 bước</h3><div class="guide-images">
+            <figure><img src="./assets/iphone-menu.png" alt="Mở danh sách hội thoại trên iPhone" loading="lazy"><figcaption>1. Mở danh sách hội thoại.</figcaption></figure>
+            <figure><img src="./assets/iphone-select-chat.png" alt="Chọn đúng hội thoại trên iPhone" loading="lazy"><figcaption>2. Chọn đúng buổi luyện.</figcaption></figure>
+            <figure><img src="./assets/iphone-share-chat.png" alt="Chọn Chia Sẻ Đoạn Chat trên iPhone" loading="lazy"><figcaption>3. Chọn “Chia Sẻ Đoạn Chat”.</figcaption></figure>
+            <figure><img src="./assets/iphone-share-link.png" alt="Sao chép liên kết chia sẻ trên iPhone" loading="lazy"><figcaption>4. Sao chép liên kết chia sẻ.</figcaption></figure>
+          </div></div><div><h3>Android · 3 bước</h3><div class="guide-images">
+            <figure><img src="./assets/android-menu.png" alt="Nhấn ba chấm trong hội thoại Android" loading="lazy"><figcaption>1. Mở hội thoại, nhấn ba chấm.</figcaption></figure>
+            <figure><img src="./assets/android-share.png" alt="Chọn Chia sẻ trên Android" loading="lazy"><figcaption>2. Chọn “Chia sẻ”.</figcaption></figure>
+            <figure><img src="./assets/android-share-link.png" alt="Sao chép link trên Android" loading="lazy"><figcaption>3. Sao chép liên kết chia sẻ.</figcaption></figure>
+          </div></div></div>
+          <div class="link-check-guide"><figure><img src="./assets/link-format.png" alt="So sánh link Share và link hội thoại riêng tư" loading="lazy"><figcaption>Hình 9 · Link đúng có <code>/share/</code>.</figcaption></figure><p>Trước khi Xác nhận, hãy nhìn lại link: đúng là <code>https://chatgpt.com/share/...</code>. Link <code>/c/...</code> chỉ mở trong tài khoản của bạn.</p></div>
+        </div>
+      </section><div class="guide-modal-footer"><button id="close-share-guide" class="button button-primary" type="button">Đóng hướng dẫn</button></div>
+    </dialog>
+    <footer>IZONE · Bản xem giao diện Lesson 3 · Không nhận bài thật</footer>
+  </div>
+</body>
+</html>
