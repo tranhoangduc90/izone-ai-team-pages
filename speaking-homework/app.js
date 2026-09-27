@@ -1,5 +1,5 @@
 import { memoryKey, readMemory, resolveRememberedStudent, writeMemory } from '../shared/student-memory.js';
-import { demoCheck, parseShareUrl, safeHomeworkUrl } from './logic.mjs';
+import { parseShareUrl, safeHomeworkUrl } from './logic.mjs';
 
 // Bản thử chỉ dùng hai hồ sơ giả. Không có dữ liệu học viên hoặc lần nộp thật trong mã nguồn.
 const roster = [{ classRef: 'IC2200', classCode: 'IC2200', students: [
@@ -22,8 +22,8 @@ const identityMessage = $('identity-message');
 const sections = ['paraphrase', 'speaking'];
 const state = {
   activeStudent: '',
-  paraphrase: { accepted: false, pending: false, checkedUrl: '', request: 0 },
-  speaking: { accepted: false, pending: false, checkedUrl: '', request: 0 },
+  paraphrase: { accepted: false, pending: false, checkedUrl: '', fingerprint: '', request: 0 },
+  speaking: { accepted: false, pending: false, checkedUrl: '', fingerprint: '', request: 0 },
 };
 
 // Chọn sẵn đúng mã giả đã nhớ; học viên vẫn phải bấm Mở bài nộp.
@@ -61,11 +61,10 @@ $('change-student').addEventListener('click', () => {
   }
   state.activeStudent = '';
   for (const section of sections) {
-    state[section] = { accepted: false, pending: false, checkedUrl: '', request: state[section].request + 1 };
+    state[section] = { accepted: false, pending: false, checkedUrl: '', fingerprint: '', request: state[section].request + 1 };
     $(`${section}-link`).value = '';
     $(`${section}-link`).disabled = false;
     $(`${section}-confirm`).disabled = false;
-    $(`${section}-scenario`).disabled = false;
     $(`${section}-result`).hidden = true;
     setStatus(section, 'Chưa kiểm tra', '');
   }
@@ -96,7 +95,7 @@ function showResult(section, result) {
   el.append(title, body);
   el.className = `check-result is-${result.kind}`;
   el.hidden = false;
-  const label = result.kind === 'pass' ? 'Đạt yêu cầu' : result.kind === 'warning' ? 'Cần xác nhận' : 'Chưa nhận bài';
+  const label = result.kind === 'pass' ? 'Đạt yêu cầu' : result.kind === 'warning' ? 'Cần xác nhận' : result.kind === 'loading' ? 'Đang kiểm tra' : 'Chưa nhận bài';
   setStatus(section, label, result.kind);
 }
 
@@ -104,6 +103,7 @@ function resetCheck(section) {
   if (state[section].pending) return;
   state[section].accepted = false;
   state[section].checkedUrl = '';
+  state[section].fingerprint = '';
   state[section].request += 1;
   $(`${section}-result`).hidden = true;
   setStatus(section, 'Chưa kiểm tra', '');
@@ -117,7 +117,6 @@ function resetCheck(section) {
 
 for (const section of sections) {
   $(`${section}-link`).addEventListener('input', () => resetCheck(section));
-  $(`${section}-scenario`).addEventListener('change', () => resetCheck(section));
   $(`${section}-confirm`).addEventListener('click', () => checkSection(section));
 }
 
@@ -137,24 +136,57 @@ async function checkSection(section) {
 
   const request = ++state[section].request;
   state[section].pending = true;
+  state[section].checkedUrl = '';
+  state[section].fingerprint = '';
+  if (section === 'speaking') {
+    $('voice-confirmation').hidden = true;
+    $('voice-checkbox').checked = false;
+    $('voice-continue').disabled = true;
+  }
   const button = $(`${section}-confirm`);
+  const input = $(`${section}-link`);
   button.disabled = true;
-  showResult(section, { kind: 'loading', title: 'Đang kiểm tra hội thoại', message: 'Bản thử đang mô phỏng việc đọc link và phân tích nội dung...' });
-  await new Promise((resolve) => setTimeout(resolve, 700));
+  input.disabled = true;
+  showResult(section, { kind: 'loading', title: 'Đang đọc và kiểm tra hội thoại', message: 'Hệ thống đang mở ChatGPT Share và kiểm các bước bạn đã luyện. Việc này có thể mất khoảng một phút.' });
+  let outcome;
+  try {
+    const response = await fetch('/api/speaking/check', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ section, url: parsed.url }),
+      signal: AbortSignal.timeout(150_000),
+    });
+    outcome = await response.json();
+    if (!response.ok && outcome.kind !== 'blocked') outcome.kind = 'error';
+  } catch {
+    outcome = { kind: 'error', title: 'Chưa kết nối được bộ kiểm', message: 'Bài chưa được nhận. Hãy mở bản thử bằng máy chủ kiểm ChatGPT Share rồi thử lại.' };
+  }
   state[section].pending = false;
   button.disabled = false;
+  input.disabled = false;
   if (request !== state[section].request || !state.activeStudent) return;
+  if (!['pass', 'warning', 'blocked', 'error'].includes(outcome?.kind)
+    || (['pass', 'warning'].includes(outcome.kind) && !/^[0-9a-f]{64}$/.test(outcome.fingerprint || ''))) {
+    outcome = { kind: 'error', title: 'Phản hồi kiểm tra chưa hợp lệ', message: 'Bài chưa được nhận. Hãy thử xác nhận lại sau.' };
+  }
 
-  const outcome = demoCheck(section, $(`${section}-scenario`).value);
+  if (['pass', 'warning'].includes(outcome.kind)
+    && outcome.fingerprint && outcome.fingerprint === state[otherSection].fingerprint) {
+    showResult(section, { kind: 'blocked', title: 'Hai phần là cùng một hội thoại', message: 'Dù hai link Share khác nhau, Paraphrase và Full Speaking đang dẫn tới cùng nội dung. Hãy dùng hai hội thoại riêng.' });
+    return;
+  }
   showResult(section, outcome);
-  state[section].checkedUrl = parsed.url;
   if (outcome.kind === 'warning') {
+    state[section].checkedUrl = parsed.url;
+    state[section].fingerprint = outcome.fingerprint || '';
     $('voice-confirmation').hidden = false;
     $('voice-checkbox').checked = false;
     $('voice-continue').disabled = true;
     return;
   }
   if (outcome.kind === 'pass') {
+    state[section].checkedUrl = parsed.url;
+    state[section].fingerprint = outcome.fingerprint || '';
     state[section].accepted = true;
     maybeComplete();
   }
@@ -176,7 +208,6 @@ function maybeComplete() {
   for (const section of sections) {
     $(`${section}-link`).disabled = true;
     $(`${section}-confirm`).disabled = true;
-    $(`${section}-scenario`).disabled = true;
   }
   const returnLink = $('return-homework');
   if (homeworkUrl) {

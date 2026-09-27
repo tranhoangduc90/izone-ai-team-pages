@@ -1,0 +1,92 @@
+{
+  "schema_version": 3,
+  "product": "Bản xem trước nộp Speaking Homework Lesson 2",
+  "change_id": "speaking-homework-real-share-20260927",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "medium",
+  "system_traits": ["stateful", "asynchronous", "concurrent", "personal_data", "multi_service"],
+  "experience": {
+    "planning_mode": "standard",
+    "mode_reason": "Trang học viên gọi hai dịch vụ bên ngoài và xử lý nội dung hội thoại.",
+    "user": "Học viên xem trước tại máy Đức",
+    "problem": "Bản cũ chỉ mô phỏng kiểm link và giấu ảnh hướng dẫn trong phần thu gọn.",
+    "outcome": "Học viên thấy đủ ảnh và kết quả kiểm nội dung thật ngay sau khi xác nhận từng link.",
+    "out_of_scope": ["Không nộp Classroom, chấm Speaking production, gửi email hoặc xác nhận trùng lịch sử."],
+    "plain_language_summary": "Hiện đầy đủ hướng dẫn, đọc link thật và báo rõ bài đã đủ hay cần làm thêm."
+  },
+  "change_package": {
+    "proposal": "Thay nút kiểm giả bằng kiểm Share thật trên máy chủ local và hiện 9 ảnh trực tiếp.",
+    "behavior_baseline": "Nút Xác nhận trả kết quả theo ô chọn tình huống; 9 ảnh nằm trong details đóng mặc định.",
+    "deltas": [
+      {"id": "D-IMAGES", "operation": "MODIFIED", "behavior": "Chín ảnh có chú thích luôn có thể xem khi làm bài.", "module_ids": ["M-UI"], "test_ids": ["T-IMAGES"]},
+      {"id": "D-CHECK", "operation": "MODIFIED", "behavior": "Xác nhận gọi máy chủ đọc đúng hội thoại và AI trả kết quả theo nội dung.", "module_ids": ["M-UI", "M-CHECK"], "test_ids": ["T-REAL", "T-ERROR", "T-REG"]}
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "plan-v1",
+    "modules": [
+      {"id": "M-UI", "name": "Trang học viên", "responsibility": "Hiện hướng dẫn, gửi link, hiển thị trạng thái đúng lượt.", "owns_data": ["input_link", "screen_state"], "public_interfaces": ["POST /api/speaking/check"], "depends_on": ["M-CHECK"], "boundary_rules": ["Không tự coi link đạt trước phản hồi máy chủ."], "test_ids": ["T-IMAGES", "T-REAL", "T-REG"]},
+      {"id": "M-CHECK", "name": "Kiểm hội thoại", "responsibility": "Đọc ChatGPT Share và phân tích chu trình luyện bằng AI.", "owns_data": ["transient_conversation", "check_result"], "public_interfaces": ["POST /api/speaking/check"], "depends_on": [], "boundary_rules": ["Không lưu nội dung hội thoại; lỗi thì không báo đạt."], "test_ids": ["T-REAL", "T-ERROR", "T-SEC"]}
+    ],
+    "integrations": [
+      {"id": "I-CHECK", "producer": "M-CHECK", "consumer": "M-UI", "contract": "Kết quả pass, blocked, warning hoặc error kèm dẫn chứng an toàn.", "test_ids": ["T-REAL", "T-ERROR"]}
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "plan-v1",
+    "signals": ["multi_service"],
+    "critical_path": "Trang học viên → máy chủ local → ChatGPT Share → Gemini dispatcher → kết quả trên trang.",
+    "peak_load": {"value": 2, "unit": "concurrent_checks", "basis": "Hai hồ sơ thử trong phạm vi được giao."},
+    "user_wait_target": "Hiện tiến độ ngay; báo lỗi rõ nếu đọc link hoặc AI quá thời gian.",
+    "limits_and_cost": ["Tối đa hai lượt AI đồng thời; mỗi lần xác nhận có thể phát sinh một lượt Gemini."],
+    "failure_and_recovery": ["Lỗi đọc hoặc AI không chuyển sang trạng thái đạt; học viên sửa link hoặc thử lại."],
+    "monitoring": ["Kết quả tại trang và log trạng thái không chứa URL/nội dung trong terminal local."],
+    "decision": "Máy chủ chỉ mở localhost cho bản xem trước, không ghi biên nhận thật.",
+    "test_ids": ["T-REAL", "T-ERROR", "T-SEC"]
+  },
+  "requirements": [
+    {"id": "R-IMAGES", "statement": "Đủ chín ảnh và chỉ dẫn từ Homework hiện ngay trên trang.", "test_ids": ["T-IMAGES"]},
+    {"id": "R-REAL", "statement": "Mỗi lần Xác nhận đọc nội dung ChatGPT Share thật và AI kiểm phần tương ứng.", "test_ids": ["T-REAL", "T-REG"]}
+  ],
+  "invariants": [
+    {"id": "V-FAIL", "statement": "Không đọc hoặc phân tích được thì không nhận bài.", "test_ids": ["T-ERROR"]},
+    {"id": "V-IDENTITY", "statement": "Kết quả của một link không áp vào link khác hoặc học viên khác.", "test_ids": ["T-REG"]},
+    {"id": "V-PRIVACY", "statement": "Không đưa nội dung hội thoại vào URL, repo hoặc log HTTP.", "test_ids": ["T-SEC"]}
+  ],
+  "tests": [
+    {"id": "T-IMAGES", "category": "happy_path", "priority": "P1", "status": "passed", "evidence": "HTTP test: 9/9 ảnh PNG 200, đủ 9 thẻ img và hướng dẫn là section mở sẵn."},
+    {"id": "T-REAL", "category": "happy_path", "priority": "P0", "status": "passed", "evidence": "Bốn link của hai ca thí điểm: 4/5 + 1/3 bị chặn, 5/5 + 3/3 đạt; HTTP thực cho 5/5."},
+    {"id": "T-ERROR", "category": "invalid_input", "priority": "P0", "status": "passed", "evidence": "Unit test: /c/, link lỗi và AI timeout đều không trả pass."},
+    {"id": "T-REG", "category": "regression", "priority": "P0", "status": "passed", "evidence": "Cùng test speaking-homework-real.mjs RED khi thiếu checker trên base, GREEN sau build."},
+    {"id": "T-SEC", "category": "security_privacy", "priority": "P1", "status": "passed", "evidence": "HTTP test: Origin và Host lạ 403, file backend/manifest không được phục vụ; kiểm repo không chứa link thí điểm."},
+    {"id": "T-LIFE", "category": "lifecycle_time", "priority": "P1", "status": "passed", "evidence": "HTTP test: lượt kiểm cùng link được dọn sau kết thúc và có thể thử lại."},
+    {"id": "T-CON", "category": "concurrency_idempotency", "priority": "P1", "status": "passed", "evidence": "HTTP test: hai POST đồng thời cùng link chỉ chạy một lần kiểm ngoài."}
+  ],
+  "task_graph": {
+    "plan_revision": "plan-v1",
+    "tasks": [
+      {"id": "TASK-1", "result": "Có regression RED và hợp đồng kiểm nội dung.", "module_ids": ["M-CHECK"], "depends_on": [], "consumes": ["Link Share và quy tắc Homework Lesson 2"], "produces": ["Test và hợp đồng kết quả"], "contract": "Không đọc được thì fail closed.", "test_ids": ["T-REG", "T-ERROR"], "evidence_required": ["RED trên base"], "decision_inputs": ["Dùng bộ đọc Share hiện có và Gemini dispatcher."], "affected_future_tasks": ["TASK-2"], "status": "done", "plan_revision": "plan-v1"},
+      {"id": "TASK-2", "result": "Trang hiển thị ảnh và gọi kiểm thật.", "module_ids": ["M-UI", "M-CHECK"], "depends_on": ["TASK-1"], "consumes": ["Hợp đồng kết quả"], "produces": ["Bản xem trước local"], "contract": "Chỉ hiện đạt khi máy chủ kiểm đúng link.", "test_ids": ["T-IMAGES", "T-REAL", "T-LIFE", "T-CON"], "evidence_required": ["GREEN, browser và thử link thật"], "decision_inputs": ["Bản thử local chưa ghi Classroom."], "affected_future_tasks": [], "status": "in_progress", "plan_revision": "plan-v1"}
+    ]
+  },
+  "risk_register": {"assessment": "CONCERNS", "risks": [{"id": "RISK-1", "description": "AI nhận nhầm số câu hoặc dấu hiệu gõ.", "probability": 2, "impact": 2, "score": 4, "severity": "P2", "status": "open", "owner": "Đức", "mitigation": "Đòi chỉ số lượt chat và quote thật; kết quả mơ hồ không báo đạt.", "test_ids": ["T-REAL", "T-ERROR"]}], "waivers": []},
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {"id": "TIME-1", "left": {"name": "browser_timeout_seconds", "value": 150}, "operator": ">", "right": {"name": "reader_plus_ai_timeout_seconds", "value": 140}, "status": "passed", "evidence": "Timeout mã nguồn: browser 150 giây, bộ đọc 95 giây và AI 45 giây."}
+  ],
+  "mutations": [
+    {"id": "M-LOCAL", "target": "Máy chủ local 127.0.0.1:8765", "outcome": "success", "readback": "verified", "evidence": "GET /health trả 200; POST kiểm link thật trả count=5, source=direct; không ghi bài nộp."}
+  ],
+  "red_green": {
+    "red_on_base": {"test_id": "T-REG", "command": "node tests/speaking-homework-real.mjs", "tree_revision": "785605f", "outcome": "failed", "exit_code": 1, "failed": 1, "evidence": "Node báo ERR_MODULE_NOT_FOUND checker.mjs trên base 785605f."},
+    "green_on_head": {"test_id": "T-REG", "command": "node tests/speaking-homework-real.mjs", "tree_revision": "783f663220a2c1184b6d06fc0990cc471a04ef54c83a8269b93a1e7ef54525a3", "outcome": "passed", "exit_code": 0, "passed": 1, "failed": 0, "skipped": 0, "evidence": "Test kiểm nội dung thật, câu thiếu, lỗi AI và dấu hiệu gõ đạt."}
+  },
+  "verification_runs": [
+    {"id": "V-SPEAKING", "scope": "full_suite", "command": "node tests/speaking-homework-demo.mjs; node tests/speaking-homework-real.mjs; node tests/speaking-homework-http.mjs", "tree_revision": "783f663220a2c1184b6d06fc0990cc471a04ef54c83a8269b93a1e7ef54525a3", "captured_at": "2026-09-27T08:51:26Z", "exit_code": 0, "outcome": "passed", "passed": 3, "failed": 0, "skipped": 0, "evidence": "Ba suite của Speaking Homework chạy trọn, không skip."},
+    {"id": "V-PILOT", "scope": "behavioral", "command": "Bộ kiểm local đọc bốn ChatGPT Share của hai ca IC2200", "tree_revision": "783f663220a2c1184b6d06fc0990cc471a04ef54c83a8269b93a1e7ef54525a3", "captured_at": "2026-09-27T08:51:26Z", "exit_code": 0, "outcome": "passed", "passed": 4, "failed": 0, "skipped": 0, "evidence": "Kết quả 4/5, 1/3, 5/5, 3/3; đọc trực tiếp, không lấy nội dung từ Lark."}
+  ],
+  "convergence": {"status": "gaps", "tree_revision": "783f663220a2c1184b6d06fc0990cc471a04ef54c83a8269b93a1e7ef54525a3", "gaps": ["Chưa xác minh trực quan trong trình duyệt vì chính sách chặn điều khiển URL localhost."], "unrequested_work": [], "evidence": "HTTP xác nhận tải đủ ảnh và link thật; cần Đức xem giao diện ở tab đang mở."},
+  "release": {"target_environment": "local", "decision": "not_ready", "base_tree_revision": "785605f", "current_tree_revision": "783f663220a2c1184b6d06fc0990cc471a04ef54c83a8269b93a1e7ef54525a3", "production_authorized": false, "rollback": "Dừng máy chủ local hoặc trở về commit 785605f.", "deployment_readback": "not_applicable", "operational_observation": "HTTP local đã kiểm; chờ kiểm trực quan.", "open_risks": [{"severity": "P2", "summary": "Chưa có QA trực quan trong trình duyệt."}]}
+}

@@ -1,0 +1,141 @@
+/* Hướng dẫn hiển thị toàn bộ chín hình ở kích thước dễ xem. */
+.illustrated-guide {
+  margin-top: 28px;
+  overflow: hidden;
+}
+
+.check-result.is-error {
+  background: #fff3eb;
+  border-color: #f0c4a9;
+  color: #874018;
+}
+
+.task-status.is-loading {
+  background: #e9f4f7;
+  color: #266176;
+}
+
+.task-status.is-error {
+  background: #fff3eb;
+  color: #874018;
+}
+
+.guide-heading {
+  padding: 27px 28px 18px;
+  border-bottom: 1px solid #e3ecee;
+}
+
+.guide-heading h2 {
+  margin: 8px 0;
+  font-size: 25px;
+  letter-spacing: -.025em;
+}
+
+.guide-heading p {
+  margin: 0;
+  color: #536874;
+  line-height: 1.55;
+}
+
+.illustrated-guide .guide-content {
+  padding: 22px 28px 28px;
+}
+
+.illustrated-guide figure {
+  margin: 0;
+  min-width: 0;
+}
+
+.illustrated-guide figcaption {
+  margin-top: 9px;
+  color: #355363;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+
+.illustrated-guide .guide-callout {
+  align-items: center;
+  gap: 25px;
+}
+
+.illustrated-guide .guide-callout figure {
+  flex: 0 0 min(55%, 430px);
+}
+
+.illustrated-guide .guide-callout img {
+  width: 100%;
+  height: auto;
+}
+
+.illustrated-guide .guide-columns {
+  align-items: start;
+}
+
+.illustrated-guide .guide-images {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  overflow: visible;
+}
+
+.illustrated-guide .guide-images figure {
+  padding: 12px;
+  border: 1px solid #dbe6e8;
+  border-radius: 13px;
+  background: #fbfdfd;
+}
+
+.illustrated-guide .guide-images img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+  border: 0;
+  object-fit: contain;
+  object-position: top;
+}
+
+.illustrated-guide .link-check-guide {
+  align-items: center;
+  margin-top: 25px;
+  padding: 22px 14px 0;
+}
+
+.illustrated-guide .link-check-guide figure {
+  flex: 0 0 min(47%, 490px);
+}
+
+.illustrated-guide .link-check-guide img {
+  max-width: 100%;
+  width: 100%;
+}
+
+@media (max-width: 820px) {
+  .illustrated-guide .guide-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .guide-heading {
+    padding: 21px 20px 16px;
+  }
+
+  .illustrated-guide .guide-content {
+    padding: 18px 20px 24px;
+  }
+
+  .illustrated-guide .guide-callout,
+  .illustrated-guide .link-check-guide {
+    display: block;
+  }
+
+  .illustrated-guide .guide-images {
+    grid-template-columns: 1fr;
+  }
+
+  .illustrated-guide .guide-images img {
+    max-height: none;
+  }
+}
