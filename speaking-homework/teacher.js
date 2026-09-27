@@ -20,6 +20,14 @@ function render(receipt) {
   addDetail(summary, 'Học viên', receipt.student_name);
   addDetail(summary, 'Thời gian nộp', receipt.submitted_at
     ? new Date(receipt.submitted_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—');
+  const grade = $('grade-summary'); grade.replaceChildren();
+  grade.hidden = !receipt.grade_summary;
+  if (receipt.grade_summary) {
+    const heading = document.createElement('h3'); heading.textContent = 'Tổng hợp bài luyện';
+    const counts = document.createElement('p');
+    counts.textContent = `Tổng số câu/chu trình được xác nhận: ${receipt.grade_summary.totalQuestions ?? '—'}.`;
+    grade.append(heading, counts);
+  }
   const parts = $('parts'); parts.replaceChildren();
   for (const [part, details] of Object.entries(receipt.links || {})) {
     const section = document.createElement('section'); section.className = 'part';
@@ -30,6 +38,8 @@ function render(receipt) {
     const link = document.createElement('a'); link.textContent = 'Mở hội thoại ChatGPT Share';
     if (/^https:\/\/chatgpt\.com\/share\/[a-z0-9-]+$/i.test(details.url || '')) {
       link.href = details.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    } else {
+      link.textContent = 'Link hội thoại không hợp lệ';
     }
     const count = document.createElement('p'); count.textContent = `Số câu/chu trình được ghi nhận: ${details.questionCount ?? '—'}`;
     section.append(heading, link, count);
@@ -45,7 +55,8 @@ function render(receipt) {
     doctor_analyze: 'Cập nhật Bác sĩ AI' };
   for (const [kind, state] of Object.entries(receipt.processing || {})) {
     const li = document.createElement('li');
-    li.textContent = `${labels[kind] || kind}: ${state.status === 'done' ? 'Hoàn tất' : 'Đang xử lý'}`;
+    li.textContent = `${labels[kind] || kind}: ${state.status === 'done' ? 'Hoàn tất'
+      : state.status === 'failed' ? 'Cần thử lại' : 'Đang xử lý'}`;
     processing.append(li);
   }
   $('login-panel').hidden = true;
