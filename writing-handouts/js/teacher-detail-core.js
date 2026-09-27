@@ -1,7 +1,23 @@
-// Dữ liệu nhận vào: Comment, artifacts từ vựng và tọa độ nhấp chuột trong dashboard.
-// Việc chính: lọc timeline theo section, lấy bảng từ vựng mới nhất, tạo thông báo lỗi chấm và nhận biết cú nhấp ngoài popup.
-// Kết quả: giao diện giảng viên hiển thị cùng dữ liệu với học viên và đóng popup đúng vùng tối.
+// Dữ liệu nhận vào: bản tổng hợp học viên, chi tiết phiên, Comment, artifacts từ vựng và tọa độ nhấp chuột trong dashboard.
+// Việc chính: ghép dữ liệu bài theo cả hợp đồng Task 1/Task 2, lọc timeline, lấy bảng từ vựng và nhận biết cú nhấp ngoài popup.
+// Kết quả: hộp chi tiết vẫn hiện bài đang làm kể cả khi API Comment lỗi hoặc backend trả các ô Task 1 ở cấp trên cùng.
 // Khi lỗi: trả mảng rỗng hoặc giữ popup mở; không sửa bài làm hay dữ liệu học viên.
+const task1ResponseKeys = ["overview", "body1", "body2", "draft1", "draft2"];
+
+export function mergeTeacherStudentDetail(summary = {}, session = {}, teacherComments) {
+  const responses = { ...(summary.responses || {}), ...(session.responses || {}) };
+  for (const key of task1ResponseKeys) {
+    if (typeof session[key] === "string") responses[key] = session[key];
+  }
+  return {
+    ...summary,
+    ...session,
+    responses,
+    sections: { ...(summary.sections || {}), ...(session.sections || {}) },
+    teacherComments: Array.isArray(teacherComments) ? teacherComments : (summary.teacherComments || []),
+  };
+}
+
 export function commentsForSection(comments = [], sectionKey = "") {
   return comments
     .filter((comment) => comment?.section === sectionKey)

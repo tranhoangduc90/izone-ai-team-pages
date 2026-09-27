@@ -1,5 +1,5 @@
 /*
- * Dữ liệu nhận vào: Google ID token và JSON kết quả lớp từ API đã phân quyền.
+ * Dữ liệu nhận vào: phiên đăng nhập ứng dụng và JSON kết quả lớp từ API đã phân quyền.
  * Xử lý: tải lớp/bài test được phép xem, tạo tab tổng quan và tab cá nhân, rồi dựng lại màn hình kết quả chi tiết.
  * Kết quả: giảng viên thấy Band cả lớp và từng câu đúng/sai mà không nhận ID ERP, email hay token lượt làm.
  * Khi lỗi: trang giữ nguyên dữ liệu cũ nếu có và hiện thông báo rõ để giảng viên đăng nhập lại hoặc thử tải lại.
@@ -12,18 +12,17 @@ import {
   writingStatusLabel,
   writingTaskStateLabel
 } from './model.js?rev=20260904-k56-demo-v1';
-import { createSessionStore } from './auth-session.js?rev=20260903-remember-login-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-k56-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
-const sessionStore = createSessionStore({
+const sessionClient = createTeacherSessionClient({
   apiBaseUrl: appConfig.API_BASE_URL,
-  clientId: appConfig.GOOGLE_CLIENT_ID,
-  getStorage: () => window.sessionStorage
+  sessionPath: '/api/auth/session'
 });
 let loginGeneration = 0;
 const initialParams = new URLSearchParams(window.location.search);
 const state = {
-  idToken: '',
+  authenticated: false,
   reviewer: null,
   classes: [],
   tests: [],
@@ -106,16 +105,9 @@ function updateUrl() {
 
 async function apiRequest(path) {
   if (!appConfig.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
-  if (!state.idToken) throw new Error('Bạn chưa đăng nhập Google.');
-  if (!sessionStore.usable(state.idToken)) {
-    resetLoginAfterError();
-    throw new Error('Phiên Google đã hết hạn; hãy đăng nhập lại.');
-  }
+  if (!state.authenticated) throw new Error('Bạn chưa đăng nhập Google.');
   const generation = loginGeneration;
-  const response = await fetch(`${appConfig.API_BASE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${state.idToken}` },
-    cache: 'no-store'
-  }).catch(error => {
+  const response = await fetch(`${appConfig.API_BASE_URL}${path}`, teacherSessionRequestOptions({ cache: 'no-store' })).catch(error => {
     if (generation !== loginGeneration) error.staleSession = true;
     throw error;
   });
@@ -126,7 +118,7 @@ async function apiRequest(path) {
   }
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) resetLoginAfterError();
-    if (response.status === 401) throw new Error('Phiên Google đã hết hạn; hãy đăng nhập lại.');
+    if (response.status === 401) throw new Error('Phiên đăng nhập đã hết hạn; hãy đăng nhập lại.');
     if (response.status === 403) throw new Error(payload?.message || 'Tài khoản chưa được cấp quyền cho lớp này.');
     throw new Error(payload?.message || `API trả về mã ${response.status}.`);
   }
@@ -869,16 +861,12 @@ async function loadResults({ quiet = false } = {}) {
 
 async function connectAfterGoogleLogin() {
   await loadOptions();
-  // Chỉ nhớ mã sau khi máy chủ đã xác nhận tài khoản và quyền truy cập.
-  const remembered = sessionStore.save(state.idToken);
   await loadResults();
-  if (!remembered) showNotice('Đã đăng nhập, nhưng trình duyệt đang chặn lưu phiên. Tải lại trang sẽ cần đăng nhập lại.');
 }
 
-function resetLoginAfterError({ clearSavedSession = true } = {}) {
+function resetLoginAfterError() {
   loginGeneration += 1;
-  if (clearSavedSession) sessionStore.clear();
-  state.idToken = '';
+  state.authenticated = false;
   state.connected = false;
   state.resultsLoading = false;
   state.reviewer = null;
@@ -905,16 +893,18 @@ function resetLoginAfterError({ clearSavedSession = true } = {}) {
 }
 
 async function restoreLogin() {
-  const token = sessionStore.read();
-  if (!token) return;
-  state.idToken = token;
   showNotice('Đang khôi phục phiên đăng nhập...');
   try {
+    const restored = await sessionClient.restore();
+    if (!restored) {
+      showNotice('Đăng nhập Google để xem kết quả lớp.');
+      return;
+    }
+    state.authenticated = true;
     await connectAfterGoogleLogin();
   } catch (error) {
     if (error.staleSession) return;
-    // Lỗi mạng tạm thời không xóa phiên còn hạn; 401/403 đã xóa trong apiRequest.
-    resetLoginAfterError({ clearSavedSession: false });
+    resetLoginAfterError();
     showNotice(`Không thể khôi phục phiên: ${error.message} Bạn có thể tải lại trang hoặc đăng nhập lại.`, 'error');
   }
 }
@@ -931,12 +921,13 @@ function setupGoogleSignIn() {
       auto_select: false,
       callback: async response => {
         resetLoginAfterError();
-        state.idToken = response.credential || '';
         try {
+          await sessionClient.login(response.credential || '');
+          state.authenticated = true;
           await connectAfterGoogleLogin();
         } catch (error) {
           if (error.staleSession) return;
-          resetLoginAfterError({ clearSavedSession: false });
+          resetLoginAfterError();
           showNotice(`Không thể đăng nhập: ${error.message}`, 'error');
         }
       }
@@ -991,9 +982,10 @@ elements.refreshButton.addEventListener('click', async () => {
   }
 });
 
-elements.logoutButton.addEventListener('click', () => {
+elements.logoutButton.addEventListener('click', async () => {
+  try { await sessionClient.logout(); } catch { /* Vẫn xóa trạng thái hiển thị trên máy dùng chung. */ }
   resetLoginAfterError();
-  window.google?.accounts?.id?.disableAutoSelect();
+  window.google?.accounts?.id?.disableAutoSelect?.();
   showNotice('Đã đăng xuất. Đăng nhập Google để xem kết quả lớp.');
 });
 
@@ -1032,16 +1024,10 @@ elements.studentView.addEventListener('click', event => {
   loadTeacherWritingDetail(student, Number(button.dataset.writingTask), button);
 });
 
-setupGoogleSignIn();
-restoreLogin();
+void restoreLogin().finally(setupGoogleSignIn);
 
 // Khi trang đang mở, tự lấy trạng thái mới để giảng viên thấy bài vừa chấm xong mà không phải bấm liên tục.
 window.setInterval(() => {
-  if (state.connected && !sessionStore.usable(state.idToken)) {
-    resetLoginAfterError();
-    showNotice('Phiên Google đã hết hạn; hãy đăng nhập lại.', 'error');
-    return;
-  }
   if (!state.connected || document.hidden) return;
   loadResults({ quiet: true }).catch(error => {
     if (error.staleSession) return;

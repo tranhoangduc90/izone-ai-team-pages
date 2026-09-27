@@ -1,21 +1,23 @@
-import { createTeacherApi } from "./api.js?v=20260903-reconciliation";
+import { createTeacherApi } from "./api.js?rev=20260920-server-session-v1";
 import { classQuery, resolveClassRef } from "./class-selection.js";
-import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js";
+import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js?v=20260921-draft-result-v1";
 import { sectionDefinitions } from "./lesson-core.js";
 import { appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
-import { commentsForSection, isBackdropClick, latestVocabularyRows, technicalRecoveryMessage } from "./teacher-detail-core.js?v=20260913-technical-error-copy";
+import { commentsForSection, isBackdropClick, latestVocabularyRows, mergeTeacherStudentDetail, technicalRecoveryMessage } from "./teacher-detail-core.js?v=20260920-student-detail-v1";
 import { groupStudents } from "./teacher-progress.js";
 import { teacherAuthFailure } from "./teacher-auth-ui.js";
 import { selectionOffsets, threadsForField } from "./teacher-comments-core.js";
 import { createTeacherCommentThreadCard, renderAnnotatedText } from "./teacher-comments-ui.js";
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
-import { createTeacherSessionStore } from "./library-core.js?v=20260912-sw-library-v1";
+import { createTeacherLoginPreference } from "../../shared/teacher-login-preference.js?rev=20260918-v1";
+import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20260920-v1";
 
 const $ = (id) => document.getElementById(id);
-const state = { token: "", api: null, manifest: null, activitySlug: "", students: [], pollTimer: null,
+const loginPreference = createTeacherLoginPreference(() => window.localStorage);
+const state = { authenticated: false, api: null, sessionClient: null, manifest: null, activitySlug: "", students: [], pollTimer: null,
   selectedStudent: null, detailRequestId: 0, focusSection: "", pending: [], canManage: false, draftResults: new Map(),
-  requestedClass: "", classQueryResolved: false, classQueryError: "", reconciliationSearches: new Map(), sessionStore: null };
+  requestedClass: "", classQueryResolved: false, classQueryError: "", reconciliationSearches: new Map(), loginGeneration: 0 };
 
 function teacherDefinitions() {
   const dynamic = sectionDefinitions(state.manifest);
@@ -167,10 +169,27 @@ function renderCommentTimeline(student, definition, loading) {
       const message = document.createElement("p"); message.className = "draft-result-message";
       message.textContent = result?.status === "error" ? "Chưa tải được các thẻ nhận xét từ LMS." : "Đang tải các thẻ nhận xét…";
       inline.append(message);
+      if (result?.status === "error") {
+        // Đọc lại đúng phiên đang xem; không gửi chấm lại bài của học viên.
+        const reload = document.createElement("button");
+        reload.type = "button"; reload.className = "secondary draft-result-reload";
+        reload.textContent = "Tải lại kết quả";
+        reload.addEventListener("click", () => {
+          state.draftResults.delete(key);
+          if (state.selectedStudent?.sessionRef === student.sessionRef) renderStudentDetail(state.selectedStudent);
+        });
+        inline.append(reload);
+      }
     }
     const link = document.createElement("a"); link.className = "lms-result-link lms-result-fallback"; link.href = lmsUrl; link.target = "_blank"; link.rel = "noopener noreferrer";
     link.textContent = result?.status === "error" ? "Mở kết quả trên LMS" : "Mở bản gốc trên LMS";
     item.append(link); list.append(item); timeline.append(list);
+    return timeline;
+  }
+  if (definition.key === "draft" && latest && latest.status !== "queued" && latest.status !== "technical_error") {
+    const message = document.createElement("p"); message.className = "draft-result-message";
+    message.textContent = "Chưa tải được kết quả chấm Draft vì đường dẫn không hợp lệ. Vui lòng báo người quản lý.";
+    timeline.append(message);
     return timeline;
   }
   for (const item of comments) {
@@ -381,25 +400,36 @@ async function loadStudentDetail(student) {
     return;
   }
   const requestId = ++state.detailRequestId;
-  try {
-    const [result, commentResult] = await Promise.all([state.api.liveSession(student.sessionRef), state.api.teacherComments(student.sessionRef)]);
-    if (requestId !== state.detailRequestId || !$("teacher-detail").open) return;
-    const session = result.data.session || result.data;
-    const sections = { ...(session.sections || {}), ...(student.sections || {}) };
-    state.selectedStudent = { ...student, ...session, sections, teacherComments: commentResult.data.threads || [] };
-    renderStudentDetail(state.selectedStudent);
-  } catch (error) {
-    if (requestId !== state.detailRequestId || !$("teacher-detail").open) return;
-    renderStudentDetail(student, { error: error.message || "Chưa thể tải dòng thời gian nhận xét." });
-  }
+  const [sessionResult, commentResult] = await Promise.allSettled([
+    state.api.liveSession(student.sessionRef),
+    state.api.teacherComments(student.sessionRef),
+  ]);
+  if (requestId !== state.detailRequestId || !$("teacher-detail").open) return;
+  const session = sessionResult.status === "fulfilled"
+    ? (sessionResult.value.data.session || sessionResult.value.data)
+    : {};
+  const teacherComments = commentResult.status === "fulfilled"
+    ? (commentResult.value.data.threads || [])
+    : undefined;
+  state.selectedStudent = mergeTeacherStudentDetail(student, session, teacherComments);
+  const unavailable = [];
+  if (sessionResult.status === "rejected") unavailable.push("chi tiết mới nhất");
+  if (commentResult.status === "rejected") unavailable.push("comment giảng viên");
+  const error = unavailable.length
+    ? `Bài đang hiển thị từ dữ liệu tổng hợp; tạm thời chưa tải được ${unavailable.join(" và ")}.`
+    : "";
+  renderStudentDetail(state.selectedStudent, { error });
 }
 
 function showStudentDetail(student, focusSection = "") {
+  const dialog = $("teacher-detail");
+  const resetScroll = !dialog.open || state.selectedStudent?.sessionRef !== student.sessionRef;
   state.selectedStudent = student;
   state.focusSection = focusSection;
+  if (resetScroll) dialog.scrollTop = 0;
   renderStudentDetail(student, { loading: Boolean(student.sessionRef) });
-  const dialog = $("teacher-detail");
   if (!dialog.open) dialog.showModal();
+  if (resetScroll) requestAnimationFrame(() => { dialog.scrollTop = 0; });
   void loadStudentDetail(student);
 }
 
@@ -474,13 +504,15 @@ function renderReconciliation() {
 
 async function refresh() {
   clearTimeout(state.pollTimer);
-  if (!state.token) return;
+  if (!state.authenticated) return;
+  const loginGeneration = state.loginGeneration;
   try {
     const selectedClassRef = $("teacher-class").value;
     const result = await state.api.liveActivity(state.activitySlug, selectedClassRef);
+    const pendingResult = await state.api.provisionalStudents(state.activitySlug, $("teacher-class").value);
+    if (loginGeneration !== state.loginGeneration) return;
     state.students = result.data.students || [];
     state.canManage = result.data.permissions?.canManage === true;
-    const pendingResult = await state.api.provisionalStudents(state.activitySlug, $("teacher-class").value);
     state.pending = pendingResult.data.students || [];
     const classes = populateClasses(state.students);
     if (!state.classQueryResolved) {
@@ -506,12 +538,10 @@ async function refresh() {
       if (updated) await loadStudentDetail({ ...state.selectedStudent, ...updated });
     }
   } catch (error) {
+    if (loginGeneration !== state.loginGeneration) return;
     const authFailure = teacherAuthFailure(error.status);
     if (authFailure) {
-      state.token = "";
-      state.sessionStore?.clear();
-      $("teacher-dashboard").hidden = true;
-      $("teacher-login").hidden = false;
+      clearTeacherLogin();
       $("teacher-updated").textContent = authFailure.header;
       showLoginError(authFailure.message);
       globalThis.google?.accounts?.id?.disableAutoSelect?.();
@@ -526,22 +556,29 @@ async function refresh() {
   state.pollTimer = setTimeout(refresh, 5_000);
 }
 
-function handleCredential(response) {
+async function handleCredential(response) {
   if (!response?.credential) return showLoginError("Không nhận được thông tin đăng nhập.");
-  state.token = response.credential;
-  state.sessionStore?.save(state.token);
+  state.loginGeneration += 1;
+  state.authenticated = false;
   $("teacher-login").hidden = false;
   $("teacher-dashboard").hidden = true;
   $("teacher-updated").textContent = "Đang xác minh quyền…";
   showLoginError("Đang xác minh quyền truy cập…");
-  void refresh();
+  try {
+    await state.sessionClient.login(response.credential);
+    state.authenticated = true;
+    await refresh();
+  } catch (error) {
+    clearTeacherLogin();
+    showLoginError(`Không thể đăng nhập: ${error.message}`);
+  }
 }
 
 async function waitForGoogle(clientId) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const accounts = globalThis.google?.accounts?.id;
     if (accounts) {
-      accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: false });
+      accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: loginPreference.read() });
       accounts.renderButton($("google-signin"), { theme: "outline", size: "large", text: "signin_with", locale: "vi" });
       return;
     }
@@ -562,13 +599,9 @@ async function init() {
     state.manifest = await manifestResponse.json();
     const config = await configResponse.json();
     if (!config.googleClientId) throw new Error("Dashboard chưa được cấu hình đăng nhập giảng viên.");
-    state.sessionStore = createTeacherSessionStore({
-      apiBase: config.apiBase || "",
-      clientId: config.googleClientId,
-      getStorage: () => window.sessionStorage,
-    });
+    state.sessionClient = createTeacherSessionClient({ apiBaseUrl: config.apiBase || "", sessionPath: "api/v1/auth/session" });
     state.activitySlug = state.manifest.activity?.slug || slug;
-    state.api = createTeacherApi(config.apiBase || "", () => state.token);
+    state.api = createTeacherApi(config.apiBase || "");
     $("teacher-title").textContent = state.manifest.activity?.title || "Theo dõi bài làm";
     $("teacher-class").addEventListener("change", () => {
       state.classQueryError = "";
@@ -583,12 +616,51 @@ async function init() {
       state.detailRequestId += 1;
       state.selectedStudent = null;
     });
+    const restored = await state.sessionClient.restore();
+    if (restored) {
+      state.authenticated = true;
+      await refresh();
+    }
     await waitForGoogle(config.googleClientId);
-    const rememberedToken = state.sessionStore.read();
-    if (rememberedToken) handleCredential({ credential: rememberedToken });
+    if (!state.authenticated && loginPreference.read()) globalThis.google.accounts.id.prompt();
   } catch (error) {
     showLoginError(error.message);
   }
 }
+
+function clearTeacherLogin() {
+  state.loginGeneration += 1;
+  state.authenticated = false;
+  state.students = [];
+  state.pending = [];
+  state.canManage = false;
+  state.draftResults.clear();
+  state.reconciliationSearches.clear();
+  state.selectedStudent = null;
+  if ($("teacher-detail").open) $("teacher-detail").close();
+  clearTimeout(state.pollTimer);
+  for (const id of ["teacher-students", "teacher-summary", "teacher-reconciliation-list", "teacher-class", "teacher-detail-content"]) $(id).replaceChildren();
+  $("teacher-reconciliation").hidden = true;
+  $("teacher-dashboard").hidden = true;
+  $("teacher-login").hidden = false;
+}
+
+$("remember-teacher-login").checked = loginPreference.read();
+$("remember-teacher-login").addEventListener("change", () => {
+  const input = $("remember-teacher-login");
+  if (loginPreference.set(input.checked)) return;
+  input.checked = loginPreference.read();
+  showLoginError("Trình duyệt chưa lưu được lựa chọn tự đăng nhập.");
+});
+
+$("teacher-logout").addEventListener("click", async () => {
+  try { await state.sessionClient?.logout(); } catch { /* Vẫn xóa dữ liệu đang hiển thị trên máy dùng chung. */ }
+  clearTeacherLogin();
+  globalThis.google?.accounts?.id?.disableAutoSelect?.();
+  const forgotten = loginPreference.set(false);
+  $("remember-teacher-login").checked = !forgotten;
+  $("teacher-updated").textContent = "Chưa đăng nhập";
+  showLoginError(forgotten ? "Đã đăng xuất." : "Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.");
+});
 
 init();

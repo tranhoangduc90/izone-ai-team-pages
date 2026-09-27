@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'sha256-CJ02OVqT7p9v9HDCMKiouj0TJ0ooW7ybXUHymIEqyeE=' https://accounts.google.com/gsi/style; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'sha256-CJ02OVqT7p9v9HDCMKiouj0TJ0ooW7ybXUHymIEqyeE=' 'sha256-RU4sU0AaS8IBGZx8XrGt/pa9A5SLA3dQszGeqT5L3Kw=' https://accounts.google.com/gsi/style; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests">
   <meta name="description" content="Dashboard vận hành Cổng AI Trung tâm">
   <title>Cổng AI Trung tâm — Đang vận hành</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./styles.css?v=20260830-google-auth-v1">
+  <link rel="stylesheet" href="./styles.css?v=20260922-dashboard-session-v1">
 </head>
 <body>
   <header class="topbar">
@@ -62,7 +62,7 @@
         <div class="section-body">
           <div class="accounts" id="billingAccounts"></div>
           <div class="charts">
-            <div class="chart-box"><div class="chart-title"><strong>Credit đã dùng từng ngày</strong><span>USD ước tính · xếp chồng theo tài khoản</span></div><canvas id="costChart" width="900" height="300"></canvas></div>
+            <div class="chart-box"><div class="chart-title"><strong>Credit đã dùng từng ngày</strong><span>VND ước tính · xếp chồng theo tài khoản</span></div><canvas id="costChart" width="900" height="300"></canvas></div>
             <div class="chart-box"><div class="chart-title"><strong>Yêu cầu AI từng ngày</strong><span>Tổng request và số lỗi</span></div><canvas id="requestChart" width="600" height="300"></canvas></div>
           </div>
           <div class="analysis-grid" id="usageInsights"></div>
@@ -75,14 +75,8 @@
       </section>
 
       <section class="section">
-        <div class="section-head"><div><h2>Tài khoản Google xử lý AI</h2><p>Thêm file JSON service account, kiểm tra kết nối rồi mới kích hoạt. Khóa riêng không bao giờ hiển thị lại.</p></div></div>
+        <div class="section-head"><div><h2>Tài khoản Google xử lý AI</h2><p>Bấm “Thay tài khoản Google” tại đúng máy ở phía trên. JSON được nhập trên trang bảo mật của gateway và khóa riêng không bao giờ hiển thị lại.</p></div></div>
         <div class="section-body">
-          <div class="credential-tools">
-            <label>Gắn với máy<select id="credentialWorker"></select></label>
-            <label>Tên dễ nhớ<input id="credentialName" value="Google service account"></label>
-            <label>File JSON<input id="credentialFile" type="file" accept="application/json,.json"></label>
-            <button id="uploadCredential">Tải lên bản mới</button>
-          </div>
           <div class="credentials" id="credentials"></div>
           <div class="empty" id="credentialEmpty">Chưa có credential để hiển thị.</div>
         </div>
@@ -124,6 +118,7 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="./config.js?v=20260830-google-auth-v1"></script>
-  <script type="module" src="./app.js?v=20260830-google-auth-v1"></script>
+  <script src="./session-client.js?v=20260922-dashboard-session-v1"></script>
+  <script type="module" src="./app.js?v=20260922-dashboard-vnd-v1"></script>
 </body>
 </html>

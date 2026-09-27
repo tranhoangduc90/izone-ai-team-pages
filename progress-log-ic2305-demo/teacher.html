@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bản mô phỏng dashboard Progress Log IC2305 buổi 2; không kết nối Portal">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'self'">
+  <title>IC2305 · Buổi 2 · Demo giảng viên</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../progress-log/styles.css">
+  <link rel="stylesheet" href="../progress-log/teacher.css">
+  <link rel="stylesheet" href="demo.css">
+</head>
+<body>
+  <header class="topbar teacher-header"><div class="brand"><span class="brand-mark" aria-hidden="true">I</span><div><b>IZONE</b><small>Progress Log · Giảng viên</small></div></div><span class="teacher-name">Giảng viên minh họa</span></header>
+  <div class="demo-ribbon"><strong>DEMO · DỮ LIỆU MÔ PHỎNG</strong><span>Mọi điều chỉnh chỉ lưu trong trình duyệt này; không ghi Portal.</span><a href="./">Xem giao diện học viên</a></div>
+  <main class="teacher-shell">
+    <p class="notice demo-notice" id="teacherNotice" role="status" aria-live="polite"></p>
+    <nav class="teacher-tabs" aria-label="Chức năng"><button class="tab active" id="dashboardTab" type="button">Theo dõi lớp</button><button class="tab" id="createTab" type="button">Tạo phiếu</button></nav>
+
+    <section class="card" id="dashboardPanel">
+      <div class="section-heading"><div><p class="eyebrow">TÌNH HÌNH LỚP</p><h1>IC2305 · Buổi 2</h1></div><button class="button text-button" id="refreshDashboardButton" type="button">Làm mới</button></div>
+      <label class="field"><span>Phiếu đang theo dõi</span><select id="assignmentSelect"><option>IC2305 · Buổi 2 · ENTRANCE TICKET • WRITING 1</option></select></label>
+      <section class="control-section dashboard-share"><div><b>Phiếu học viên</b><small id="liveUpdatedAt">Tự cập nhật mỗi 8 giây; dữ liệu đang nhập xuất hiện sau khi được lưu.</small></div><div class="dashboard-share-actions"><button class="button" id="openStudentFormButton" type="button">Mở phiếu</button><button class="button" id="copyCurrentLinkButton" type="button">Sao chép link</button></div></section>
+      <section class="control-section"><div class="library-heading"><b>Mở từng phần</b><small>Giảng viên quyết định đúng lúc học viên được đi tiếp.</small></div><div id="blockControls" class="block-controls"></div></section>
+      <div class="summary-row" id="dashboardSummary"></div>
+      <section class="control-section"><div class="library-heading"><b>Điều cần chú ý trong lớp</b><small>Phân tích của hệ thống; bấm làm mới để đọc dữ liệu mới nhất.</small></div><div id="classInsights" class="class-insights"><p class="muted compact">Chưa có đủ dữ liệu phân tích được phát hành để kết luận ở cấp lớp.</p></div></section>
+      <div class="demo-list-header"><b>18 học viên trong danh sách</b><label class="field"><span>Lọc theo trạng thái</span><select id="statusFilter"><option value="all">Tất cả</option><option value="submitted">Đã nộp đủ</option><option value="typing">Đang nhập</option><option value="missing">Chưa nộp</option></select></label></div>
+      <div class="student-list" id="studentList"></div>
+    </section>
+
+    <section class="card" id="createPanel" hidden>
+      <div class="section-heading"><div><p class="eyebrow">PHIẾU ĐÃ PHÁT HÀNH</p><h1>Nội dung buổi 2</h1></div><span class="effort-chip">6 câu · 3 phần</span></div>
+      <p class="muted">Bản demo cho xem cấu hình phiếu này; thao tác tạo phiếu mới chỉ có ở dashboard thật.</p>
+      <div id="questionLibrary" class="question-library"></div>
+      <button class="button primary" id="previewFormButton" type="button">Xem phiếu học viên</button>
+    </section>
+    <div class="demo-reset-wrap"><button class="button text-button" id="resetDemoButton" type="button">Đặt lại dữ liệu demo ban đầu</button></div>
+  </main>
+
+  <dialog id="attendanceDialog"><form method="dialog" id="attendanceForm"><p class="eyebrow">GIẢNG VIÊN XÁC NHẬN · DEMO</p><h2 id="attendanceStudentName">—</h2><label class="field"><span>Trạng thái</span><select id="attendanceStatus"><option value="teacher_confirmed">Có mặt</option><option value="pending_teacher">Chờ xác nhận</option><option value="not_eligible">Không đủ điều kiện</option></select></label><p class="attendance-sync-hint">Trong webapp thật, “Có mặt” tạo yêu cầu đồng bộ sang Portal. Bản demo này không gửi yêu cầu đó.</p><label class="field"><span>Lý do</span><input id="attendanceReason" type="text" minlength="3" maxlength="500" required></label><div class="dialog-actions"><button class="button text-button" value="cancel">Hủy</button><button class="button primary dialog-primary" id="saveAttendanceButton" value="default">Lưu</button></div></form></dialog>
+  <dialog id="draftDialog" class="draft-dialog"><form method="dialog"><div class="report-heading"><div><p class="eyebrow">BẢN LƯU GẦN NHẤT · DEMO</p><h2 id="draftStudentName">—</h2></div><button class="button text-button" value="close">Đóng</button></div><p class="muted" id="draftStatus">—</p><div class="draft-answers" id="draftAnswers"></div></form></dialog>
+  <script type="module" src="teacher.js"></script>
+</body>
+</html>

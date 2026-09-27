@@ -9,6 +9,12 @@
 .teacher-context { display: grid; gap: 6px; padding: 0 4px 5px; }
 .teacher-context span { color: var(--muted); font-size: 12px; font-weight: 800; }
 .teacher-context strong { color: var(--navy); }
+.teacher-role-badge { display: inline-flex; margin-left: 5px; padding: 3px 7px; color: #174ea6 !important; background: #e8f0fe; border-radius: 999px; font-size: 10px !important; }
+.teacher-access-notice { display: flex; gap: 12px; align-items: flex-start; margin: 14px 0 0; padding: 15px 17px; color: #713f12; background: #fffbeb; border: 1px solid #f6d365; border-radius: 13px; }
+.teacher-access-notice[hidden] { display: none; }
+.teacher-access-notice-icon { flex: 0 0 auto; font-size: 21px; line-height: 1.2; }
+.teacher-access-notice strong { display: block; color: #713f12; }
+.teacher-access-notice p { margin: 4px 0 0; line-height: 1.45; }
 .teacher-tabs-shell { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: stretch; gap: 5px; margin: 16px 0; padding: 5px; background: #dfe6ef; border-radius: 13px; }
 .teacher-tabs { display: flex; min-width: 0; gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-behavior: smooth; scrollbar-width: none; }
 .teacher-tabs::-webkit-scrollbar { display: none; }

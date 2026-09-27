@@ -1,13 +1,21 @@
 /*
- * Dữ liệu nhận vào: Google ID token, lớp được phân quyền và thư viện câu hỏi từ backend.
+ * Dữ liệu nhận vào: phiên đăng nhập ứng dụng, lớp được phân quyền và thư viện câu hỏi từ backend.
  * Xử lý: giảng viên chọn 2–3 câu, gán checkpoint, phát hành form bất biến và xem trạng thái nộp/điểm danh.
  * Kết quả: một link lớp để gửi cho học viên; mọi override điểm danh có lý do và operation ID riêng.
  * Khi lỗi: giao diện giữ dữ liệu đang chọn, không giả vờ đã lưu và hiện thông báo để thử lại.
  */
+import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
+const sessionClient = createTeacherSessionClient({
+  apiBaseUrl: config.API_BASE_URL,
+  sessionPath: '/api/auth/session'
+});
+const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = {
-  idToken: '',
+  authenticated: false,
+  authGeneration: 0,
   reviewer: null,
   classes: [],
   assignments: [],
@@ -20,11 +28,14 @@ const state = {
   attendanceStudent: null,
   attendanceOperationId: null,
   reportStudent: null,
-  studentJourneyLink: ''
+  studentJourneyLink: '',
+  draftStudent: null,
+  draftJourneyLink: '',
+  feedbackOperationId: null
 };
 
 const elements = Object.fromEntries([
-  'teacherName', 'teacherNotice', 'teacherAccessView', 'googleSignInButton', 'teacherWorkspace',
+  'teacherName', 'teacherNotice', 'teacherAccessView', 'googleSignInButton', 'rememberTeacherLogin', 'teacherWorkspace', 'teacherLogoutButton',
   'createTab', 'dashboardTab', 'createPanel', 'dashboardPanel', 'publishForm', 'teacherClassSelect',
   'sessionNumber', 'formTitle', 'skillFilter', 'questionLibrary', 'publishButton', 'publishResult', 'rosterCount',
   'studentLink', 'copyLinkButton', 'assignmentSelect', 'dashboardTitle', 'refreshDashboardButton',
@@ -33,7 +44,9 @@ const elements = Object.fromEntries([
   'attendanceStatus', 'attendanceReason', 'attendanceSyncHint', 'saveAttendanceButton', 'reportDialog', 'reportStudentName',
   'reportScope', 'reportSystemContent', 'reportHumanNote', 'saveTeacherNoteButton', 'reportDeliveryStatus',
   'markReportDeliveredButton', 'copyStudentJourneyLinkButton', 'studentJourneyLinkStatus',
-  'draftDialog', 'draftStudentName', 'draftStatus', 'draftAnswers'
+  'draftDialog', 'draftStudentName', 'draftStatus', 'draftAnswers',
+  'draftSpeakingFeedback', 'draftFeedbackStatus', 'sendDraftFeedbackButton',
+  'draftJourneyLinkStatus', 'copyDraftJourneyLinkButton'
 ].map(id => [id, document.getElementById(id)]));
 
 function setNotice(message, kind = '') {
@@ -43,22 +56,29 @@ function setNotice(message, kind = '') {
 
 async function apiRequest(path, { method = 'GET', body } = {}) {
   if (!config.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
-  if (!state.idToken) throw new Error('Bạn chưa đăng nhập Google.');
-  const response = await fetch(`${config.API_BASE_URL}/api/learning${path}`, {
+  if (!state.authenticated) throw new Error('Bạn chưa đăng nhập Google.');
+  const generation = state.authGeneration;
+  const response = await fetch(`${config.API_BASE_URL}/api/learning${path}`, teacherSessionRequestOptions({
     method,
     headers: {
-      Authorization: `Bearer ${state.idToken}`,
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: 'no-store'
-  });
+  }));
   const payload = await response.json().catch(() => null);
+  if (generation !== state.authGeneration) throw new Error('Lượt đăng nhập đã thay đổi.');
   if (!response.ok || !payload?.ok) {
     const message = response.status === 401
-      ? 'Phiên Google đã hết hạn; hãy tải lại trang và đăng nhập lại.'
+      ? 'Phiên đăng nhập đã hết hạn; hãy đăng nhập lại.'
       : payload?.message || `Hệ thống trả về mã ${response.status}.`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    if (response.status === 401 || response.status === 403) {
+      clearTeacherLogin();
+      setNotice(message, 'error');
+    }
+    throw error;
   }
   return payload;
 }
@@ -209,7 +229,18 @@ function selectedLibraryItems() {
 }
 
 function assignmentLabel(item) {
-  return `${item.class_name} · Buổi ${item.session_number} · ${item.title}`;
+  const originalTitle = String(item.title || '').trim();
+  const prefix = originalTitle.match(/^Buổi\s+(\d+)(?=\s|[-–—:·]|$)/iu);
+  const title = prefix && Number(prefix[1]) === Number(item.session_number)
+    ? originalTitle.slice(prefix[0].length).replace(/^[\s:·–—-]+/u, '').trim()
+    : originalTitle;
+  const className = String(item.class_name || '').trim();
+  const sessionLabel = `Buổi ${item.session_number}`;
+  const shortTitle = title.split(/\s*·\s*/u).filter(part => {
+    const label = part.trim().toLocaleLowerCase('vi');
+    return label !== className.toLocaleLowerCase('vi') && label !== sessionLabel.toLocaleLowerCase('vi');
+  }).join(' · ');
+  return [className, sessionLabel, shortTitle].filter(Boolean).join(' · ');
 }
 
 function refreshAssignmentSelect(selectedId = '') {
@@ -225,11 +256,13 @@ function refreshAssignmentSelect(selectedId = '') {
 }
 
 async function loadWorkspace() {
+  const generation = state.authGeneration;
   setNotice('Đang tải lớp và thư viện câu hỏi…');
   const [options, library] = await Promise.all([
     apiRequest('/teacher/options'),
     apiRequest('/teacher/question-library')
   ]);
+  if (generation !== state.authGeneration) return;
   state.reviewer = options.reviewer;
   state.classes = options.classes || [];
   state.assignments = options.assignments || [];
@@ -315,6 +348,12 @@ function answerText(item, value) {
   return option ? option.label : String(value || '').trim() || '—';
 }
 
+function itemApplies(item, responses) {
+  if (item.layoutType !== 'conditional_other_text') return true;
+  const dependencyId = item.interactionConfig?.visibleWhenItemVersionId;
+  return Boolean(dependencyId && responses?.[dependencyId] === item.interactionConfig.visibleWhenValue);
+}
+
 function verdictLabel(verdict) {
   return {
     correct: 'Đúng', incorrect: 'Chưa đúng', partial: 'Đúng một phần', pending: 'Đang chấm',
@@ -325,6 +364,15 @@ function verdictLabel(verdict) {
 function openDraft(student) {
   const live = state.liveByStudent.get(student.studentRef);
   if (!live) return;
+  state.draftStudent = student;
+  state.draftJourneyLink = '';
+  state.feedbackOperationId = crypto.randomUUID();
+  elements.draftJourneyLinkStatus.textContent = 'Link cá nhân chỉ gửi đúng học viên. Tạo mới sẽ thay link cũ.';
+  elements.copyDraftJourneyLinkButton.textContent = 'Tạo và sao chép link';
+  elements.draftSpeakingFeedback.value = student.teacherSessionFeedback?.noteText || '';
+  elements.draftFeedbackStatus.textContent = student.teacherSessionFeedback
+    ? `Đã gửi nhận xét · bản ${student.teacherSessionFeedback.revision}. Chỉnh sửa rồi gửi lại để cập nhật.`
+    : 'Chưa gửi nhận xét.';
   const responses = live.submissionId ? live.finalResponses : live.draftResponses;
   const resultByItem = new Map((live.gradingResult?.items || []).map(item => [item.itemVersionId, item]));
   elements.draftStudentName.textContent = student.discriminator
@@ -333,10 +381,12 @@ function openDraft(student) {
   elements.draftStatus.textContent = live.submissionId
     ? `Đã nộp lúc ${formatSavedAt(live.submittedAt)} · đây là bản cuối.`
     : `Bản lưu số ${live.draftRevision || 0} · lưu lúc ${formatSavedAt(live.draftUpdatedAt)}. Nội dung có thể chậm hơn thao tác gõ vài giây.`;
-  const cards = definitionItems().map(item => {
+  const cards = definitionItems().filter(item => itemApplies(item, responses)).map(item => {
     const card = document.createElement('article');
     const heading = document.createElement('b');
-    heading.textContent = `Câu ${item.position}. ${item.prompt}`;
+    heading.textContent = item.layoutType === 'conditional_other_text'
+      ? item.prompt
+      : `Câu ${item.displayNumber || item.position}. ${item.prompt}`;
     const answer = document.createElement('p');
     answer.textContent = answerText(item, responses?.[item.itemVersionId]);
     const result = resultByItem.get(item.itemVersionId);
@@ -490,6 +540,82 @@ async function copyStudentJourneyLink() {
   }
 }
 
+async function sendDraftFeedback() {
+  const student = state.draftStudent;
+  const assignmentId = state.dashboard?.assignmentId;
+  const noteText = elements.draftSpeakingFeedback.value.trim();
+  if (!student || !assignmentId || !elements.draftDialog.open) return;
+  if (noteText && noteText === student.teacherSessionFeedback?.noteText) {
+    elements.draftFeedbackStatus.textContent = 'Nhận xét này đã được gửi.';
+    return;
+  }
+  if (!noteText || noteText.length > 500) {
+    elements.draftFeedbackStatus.textContent = 'Hãy viết nhận xét từ 1 đến 500 ký tự.';
+    return;
+  }
+  elements.sendDraftFeedbackButton.disabled = true;
+  elements.draftSpeakingFeedback.disabled = true;
+  elements.draftFeedbackStatus.textContent = 'Đang gửi nhận xét…';
+  try {
+    const payload = await apiRequest('/teacher/session-feedback', {
+      method: 'PUT',
+      body: {
+        assignmentId, studentRef: student.studentRef, noteText,
+        expectedRevision: Number(student.teacherSessionFeedback?.revision || 0),
+        operationId: state.feedbackOperationId
+      }
+    });
+    if (payload.feedback?.studentRef !== student.studentRef || payload.feedback.noteText !== noteText) {
+      throw new Error('Nhận xét lưu không khớp học viên; hãy tải lại trước khi gửi tiếp.');
+    }
+    student.teacherSessionFeedback = payload.feedback;
+    if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
+      || !elements.draftDialog.open) return;
+    state.feedbackOperationId = crypto.randomUUID();
+    elements.draftFeedbackStatus.textContent = `Đã gửi đến tổng hợp của học viên · bản ${payload.feedback.revision}.`;
+  } catch (error) {
+    elements.draftFeedbackStatus.textContent = `Chưa xác nhận đã gửi: ${error.message}`;
+  } finally {
+    elements.sendDraftFeedbackButton.disabled = false;
+    elements.draftSpeakingFeedback.disabled = false;
+  }
+}
+
+async function copyDraftJourneyLink() {
+  const student = state.draftStudent;
+  if (!student || !state.dashboard?.assignmentId) return;
+  elements.copyDraftJourneyLinkButton.disabled = true;
+  try {
+    const assignmentId = state.dashboard.assignmentId;
+    if (!state.draftJourneyLink) {
+      const accessToken = newStudentJourneyToken();
+      const payload = await apiRequest('/teacher/student-progress-links', {
+        method: 'POST',
+        body: {
+          assignmentId: state.dashboard.assignmentId, studentRef: student.studentRef,
+          accessToken, expiresInDays: 90, operationId: crypto.randomUUID()
+        }
+      });
+      if (payload.link.studentRef !== student.studentRef) {
+        throw new Error('Link trả về không khớp học viên; hệ thống đã dừng sao chép.');
+      }
+      if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
+        || !elements.draftDialog.open) return;
+      state.draftJourneyLink = studentJourneyUrl(accessToken);
+    }
+    if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
+      || !elements.draftDialog.open) return;
+    await navigator.clipboard.writeText(state.draftJourneyLink);
+    elements.draftJourneyLinkStatus.textContent = 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
+    elements.copyDraftJourneyLinkButton.textContent = 'Sao chép lại';
+  } catch (error) {
+    elements.draftJourneyLinkStatus.textContent = state.draftJourneyLink
+      ? `Không sao chép tự động được. Link: ${state.draftJourneyLink}` : error.message;
+  } finally {
+    elements.copyDraftJourneyLinkButton.disabled = false;
+  }
+}
+
 async function saveTeacherHumanNote() {
   const student = state.reportStudent;
   const report = student?.latestReport;
@@ -564,6 +690,16 @@ function buildStudentRow(student) {
   }
   copy.append(name, detail);
   const blocks = state.dashboard?.definition?.blocks || [];
+  const listeningBlock = blocks.find(block => (block.items || []).some(item =>
+    (item.skillCodes || []).includes('listening') && item.maxScore > 0));
+  const listeningScore = (student.checkpointScores || []).find(score =>
+    score.blockId === listeningBlock?.blockId);
+  if (listeningScore) {
+    const score = document.createElement('span');
+    score.className = 'student-listening-score';
+    score.textContent = `Listening ${listeningScore.correct}/${listeningScore.total} câu đúng`;
+    copy.insertBefore(score, detail);
+  }
   if (blocks.length) {
     const progress = document.createElement('div');
     progress.className = 'student-block-progress';
@@ -762,14 +898,42 @@ function initializeGoogle(attempt = 0) {
   }
   window.google.accounts.id.initialize({
     client_id: config.GOOGLE_CLIENT_ID,
-    callback: response => {
-      state.idToken = response.credential || '';
-      if (state.idToken) void loadWorkspace().catch(error => setNotice(error.message, 'error'));
+    auto_select: loginPreference.read(),
+    callback: async response => {
+      if (!response.credential) return;
+      state.authGeneration += 1;
+      clearTeacherLogin();
+      try {
+        await sessionClient.login(response.credential);
+        state.authenticated = true;
+        await loadWorkspace();
+      } catch (error) {
+        if (state.authGeneration) setNotice(error.message, 'error');
+      }
     }
   });
   window.google.accounts.id.renderButton(elements.googleSignInButton, {
     theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'vi'
   });
+  if (loginPreference.read() && !state.authenticated) {
+    window.google.accounts.id.prompt();
+  }
+}
+
+function clearTeacherLogin() {
+  state.authGeneration += 1;
+  state.authenticated = false;
+  state.reviewer = null;
+  state.classes = [];
+  state.assignments = [];
+  state.library = [];
+  state.dashboard = null;
+  state.liveByStudent.clear();
+  elements.teacherName.textContent = 'Chưa đăng nhập';
+  elements.teacherAccessView.hidden = false;
+  elements.teacherWorkspace.hidden = true;
+  for (const id of ['studentList', 'questionLibrary', 'classInsights', 'dashboardSummary', 'draftAnswers']) elements[id].replaceChildren();
+  for (const id of ['attendanceDialog', 'reportDialog', 'draftDialog']) if (elements[id].open) elements[id].close();
 }
 
 elements.createTab.addEventListener('click', () => switchPanel('create'));
@@ -788,11 +952,43 @@ elements.skillFilter.addEventListener('change', renderLibrary);
 elements.markReportDeliveredButton.addEventListener('click', () => void markReportDelivered());
 elements.saveTeacherNoteButton.addEventListener('click', () => void saveTeacherHumanNote());
 elements.copyStudentJourneyLinkButton.addEventListener('click', () => void copyStudentJourneyLink());
+elements.sendDraftFeedbackButton.addEventListener('click', () => void sendDraftFeedback());
+elements.copyDraftJourneyLinkButton.addEventListener('click', () => void copyDraftJourneyLink());
+elements.draftSpeakingFeedback.addEventListener('input', () => { state.feedbackOperationId = crypto.randomUUID(); });
+elements.rememberTeacherLogin.checked = loginPreference.read();
+elements.rememberTeacherLogin.addEventListener('change', () => {
+  if (loginPreference.set(elements.rememberTeacherLogin.checked)) return;
+  elements.rememberTeacherLogin.checked = loginPreference.read();
+  setNotice('Trình duyệt chưa lưu được lựa chọn tự đăng nhập.', 'error');
+});
+elements.teacherLogoutButton.addEventListener('click', async () => {
+  try { await sessionClient.logout(); } catch { /* Vẫn xóa dữ liệu hiển thị trên máy dùng chung. */ }
+  clearTeacherLogin();
+  window.google?.accounts?.id?.disableAutoSelect();
+  const forgotten = loginPreference.set(false);
+  elements.rememberTeacherLogin.checked = !forgotten;
+  setNotice(forgotten ? 'Đã đăng xuất.' : 'Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.', forgotten ? '' : 'error');
+});
 
-initializeGoogle();
+async function initializeAuthentication() {
+  try {
+    const restored = await sessionClient.restore();
+    if (restored) {
+      state.authenticated = true;
+      await loadWorkspace();
+    }
+  } catch (error) {
+    clearTeacherLogin();
+    setNotice(`Không thể khôi phục phiên: ${error.message}`, 'error');
+  } finally {
+    initializeGoogle();
+  }
+}
+
+void initializeAuthentication();
 
 window.setInterval(() => {
-  if (!state.idToken || !state.dashboard || document.hidden || elements.dashboardPanel.hidden || state.dashboardLoading
+  if (!state.authenticated || !state.dashboard || document.hidden || elements.dashboardPanel.hidden || state.dashboardLoading
     || elements.attendanceDialog.open || elements.reportDialog.open || elements.draftDialog.open) return;
   void loadDashboard({ quiet: true });
 }, 8_000);

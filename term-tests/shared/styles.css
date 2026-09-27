@@ -60,6 +60,8 @@ button:disabled { cursor: wait; opacity: .62; }
 label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 800; }
 input, select { width: 100%; min-height: 44px; padding: 10px 11px; color: var(--ink); background: #fff; border: 1px solid #ced6e2; border-radius: 9px; outline: none; }
 input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 111, 237, .13); }
+.teacher-login-remember { display: inline-flex; align-items: center; gap: 8px; line-height: 1.35; }
+.teacher-login-remember input[type="checkbox"] { flex: 0 0 16px; width: 16px; height: 16px; min-height: 16px; padding: 0; margin: 0; accent-color: var(--blue); }
 
 /* Ô ghi nhớ dùng kích thước checkbox, không dùng chiều cao/rộng của ô nhập đáp án. */
 .identity-panel label.checkbox-row,
@@ -306,6 +308,7 @@ label.checkbox-row input[type="checkbox"] { flex: 0 0 20px; width: 20px; height:
 .landing-auth { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 18px; align-items: center; margin: 0 0 18px; padding: 14px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 12px; }
 .landing-auth strong { display: block; color: var(--navy); font-size: 13px; }
 .landing-auth p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.landing-auth .teacher-login-remember { grid-column: 1 / -1; }
 .landing-logout { min-height: 38px; padding: 8px 13px; }
 .landing-class-field { display: grid; gap: 7px; }
 .landing-class-help { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }

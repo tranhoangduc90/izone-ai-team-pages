@@ -32,6 +32,14 @@ Khi thêm một web mới, ưu tiên dùng thư mục con có tên ổn định;
 - Mini Test Buổi 5 answer sheet: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/mini-test-lesson-5/?class=<MÃ_LỚP>`
 - Kết quả giáo viên: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/teacher/?class=<MÃ_LỚP>&test=<MÃ_BÀI_TEST>`
 
+Trước khi tạo đề mới hoặc sửa Term Test 1/2 và Mini Test Buổi 5 khóa 67, chạy bộ hồi quy tập trung:
+
+```powershell
+node scripts/run-term-test-67-regression.mjs --all
+```
+
+Phạm vi và cách thêm ca mới nằm trong [bộ regression Term Test 67](docs/term-test-67-regression-suite.md).
+
 ## Link handout Writing
 
 - Task 1 · App users by age: `https://tranhoangduc90.github.io/izone-ai-team-pages/writing-handouts/?task=pie-app-users-by-age`

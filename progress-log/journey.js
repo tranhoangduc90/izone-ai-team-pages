@@ -6,7 +6,8 @@ const elements = Object.fromEntries([
   'attendedCount', 'submittedCount', 'reportCount', 'latestReport', 'latestReportScope',
   'progressPoints', 'recurringPoints', 'journeyNextAction', 'teacherMessage',
   'teacherMessageText', 'emptyReport', 'timelineToggle', 'timeline', 'timelineCount',
-  'sessionList', 'reportHistory', 'reportList', 'journeyError', 'journeyErrorMessage'
+  'sessionList', 'reportHistory', 'reportList', 'journeyError', 'journeyErrorMessage',
+  'latestSpeakingFeedback', 'latestSpeakingFeedbackScope', 'latestSpeakingFeedbackText'
 ].map(id => [id, document.getElementById(id)]));
 
 let accessToken = '';
@@ -107,6 +108,16 @@ function buildSession(session) {
   const attendance = document.createElement('small');
   attendance.textContent = attendanceLabel(session.attendanceStatus);
   item.append(heading, title, attendance);
+  if (session.teacherSessionFeedback?.noteText) {
+    const feedback = document.createElement('div');
+    feedback.className = 'session-speaking-feedback';
+    const label = document.createElement('b');
+    label.textContent = 'Nhận xét Speaking từ giảng viên';
+    const message = document.createElement('p');
+    message.textContent = session.teacherSessionFeedback.noteText;
+    feedback.append(label, message);
+    item.append(feedback);
+  }
   if (session.afterSessionReport) {
     const next = document.createElement('div');
     next.className = 'session-note';
@@ -137,6 +148,19 @@ function renderJourney(journey) {
   elements.submittedCount.textContent = journey.summary.submittedComplete;
   elements.reportCount.textContent = journey.summary.availableReports;
   renderLatestReport(journey.latestReport);
+  const latestFeedbackSession = [...journey.sessions]
+    .filter(session => session.teacherSessionFeedback?.noteText)
+    .sort((left, right) => Date.parse(left.teacherSessionFeedback.sentAt)
+      - Date.parse(right.teacherSessionFeedback.sentAt)).at(-1);
+  elements.latestSpeakingFeedback.hidden = !latestFeedbackSession;
+  const originalTitle = String(latestFeedbackSession?.title || '').trim();
+  const prefix = originalTitle.match(/^Buổi\s+(\d+)(?=\s|[-–—:·]|$)/iu);
+  const title = prefix && Number(prefix[1]) === Number(latestFeedbackSession.sessionNumber)
+    ? originalTitle.slice(prefix[0].length).replace(/^[\s:·–—-]+/u, '').trim()
+    : originalTitle;
+  elements.latestSpeakingFeedbackScope.textContent = latestFeedbackSession
+    ? [`Buổi ${latestFeedbackSession.sessionNumber}`, title].filter(Boolean).join(' · ') : '';
+  elements.latestSpeakingFeedbackText.textContent = latestFeedbackSession?.teacherSessionFeedback.noteText || '';
   elements.timelineCount.textContent = `${journey.summary.totalSessions} buổi`;
   elements.sessionList.replaceChildren(...journey.sessions.map(buildSession));
   elements.reportHistory.hidden = !journey.reports.length;

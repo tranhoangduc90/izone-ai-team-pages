@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { parseDocLinks, checkedResults, requestBody } from '../cta-link-67/model.mjs';
+
+const idA = 'A'.repeat(28), idB = 'B'.repeat(28);
+const url = (id) => 'https://docs.google.com/document/d/' + id + '/edit';
+const parsed = parseDocLinks(url(idA) + '\n' + url(idB) + '\n' + url(idA) + '\nhttps://evil.example/document/d/' + idA);
+assert.deepEqual(parsed.docs, [{ docId: idA }, { docId: idB }]);
+assert.deepEqual(parsed.errors.map((item) => item.status), ['duplicate', 'invalid_url']);
+assert.throws(() => parseDocLinks(''), /1 đến 20/);
+assert.throws(() => parseDocLinks(Array(21).fill(url(idA)).join('\n')), /1 đến 20/);
+const result = checkedResults({ ok: true, results: [{ docId: idA, status: 'queued' }, { docId: idB, status: 'registered', codes: ['67-reading-01'] }] }, parsed.docs);
+assert.equal(result[1].codes[0], '67-reading-01');
+assert.throws(() => checkedResults({ ok: true, results: [{ docId: idA, status: 'queued' }] }, parsed.docs), /thiếu file/);
+assert.throws(() => checkedResults({ ok: true, results: [{ docId: idA }, { docId: idA }] }, parsed.docs), /không khớp/);
+assert.deepEqual(JSON.parse(requestBody(parsed.docs)), { docs: parsed.docs });
+const html = readFileSync(new URL('../cta-link-67/index.html', import.meta.url), 'utf8');
+assert(!html.includes('accessKey'));
+assert(!html.includes('Mã truy cập'));
+console.log('Trang CTA khóa 67: link đầu vào và kết quả theo file đạt.');

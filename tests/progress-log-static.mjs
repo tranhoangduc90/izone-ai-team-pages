@@ -63,6 +63,7 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(app, /payload\.link\.studentRef !== student\.studentRef/);
   assert.match(html, /id="openStudentFormButton"/);
   assert.match(html, /id="copyCurrentLinkButton"/);
+  assert.match(html, /Sao chép link để gửi học viên; địa chỉ trang chung không mở được phiếu\./);
   assert.match(html, /id="draftDialog"/);
   assert.match(app, /\/teacher\/live-drafts/);
   assert.match(app, /payload\.live\.assignmentId !== assignmentId/);
@@ -77,9 +78,35 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(app, /void loadDashboard\(\{ quiet: true \}\)/);
 });
 
+test('link học viên thiếu mã phiếu hướng dẫn giảng viên lấy đúng link', async () => {
+  const app = await source('app.js');
+  assert.match(app, /nhờ giảng viên chọn phiếu trong dashboard rồi bấm “Sao chép link”/);
+});
+
+test('link sao chép từ dashboard mang mã phiếu để trang học viên mở được', async () => {
+  const [teacher, app] = await Promise.all([source('teacher.js'), source('app.js')]);
+  const token = '00000000-0000-4000-8000-000000000001';
+  const makeLink = vm.runInNewContext(
+    `${teacher.slice(teacher.indexOf('function studentLink('), teacher.indexOf('function selectedLibraryItems('))}\nstudentLink`,
+    { URL, URLSearchParams, window: { location: { href: 'https://example.test/progress-log/teacher.html' } } }
+  );
+  const link = new URL(makeLink(token));
+  assert.equal(link.pathname, '/progress-log/');
+  assert.equal(link.hash, `#assignment=${token}`);
+  const readToken = vm.runInNewContext(
+    `${app.slice(app.indexOf('function readPublicToken('), app.indexOf('async function apiRequest('))}\nreadPublicToken`,
+    { URLSearchParams, window: { location: link } }
+  );
+  assert.equal(readToken(), token);
+  link.hash = '';
+  assert.equal(readToken(), '');
+});
+
 test('câu Writing 1 điền từ trong bốn câu, vẫn lưu đủ tám ô và yêu cầu điền hết', async () => {
   const [html, app, css] = await Promise.all([source('index.html'), source('app.js'), source('styles.css')]);
-  assert.match(html, /Progress Log · Khóa 56/);
+  assert.match(html, /Progress Log · IZONE/);
+  assert.match(html, /id="brandLabel"/);
+  assert.match(app, /Progress Log · Khóa \$\{courseCode\}/);
   assert.doesNotMatch(html, /VIỆC TIẾP THEO/);
   assert.doesNotMatch(app, /nextActionResult/);
   assert.match(app, /layoutType === 'numbered_short_texts'/);
@@ -91,8 +118,7 @@ test('câu Writing 1 điền từ trong bốn câu, vẫn lưu đủ tám ô và
   assert.match(app, /Coherence and Cohesion:/);
   assert.match(app, /Lexical Resource:/);
   assert.match(app, /Grammatical Range and Accuracy:/);
-  assert.match(app, /templates\.length \* 2 !== expected/);
-  assert.match(app, /document\.createElement\('textarea'\)/);
+  assert.match(app, /templates\.reduce\(\(count, line\) => count \+ line\.parts\.length - 1, 0\) !== expected/);  assert.match(app, /document\.createElement\('textarea'\)/);
   assert.match(app, /input\.className = 'sentence-blank'/);
   assert.match(app, /resizeSentenceBlank\(input\)/);
   assert.match(app, /group\.querySelectorAll\('textarea'\)/);
@@ -105,7 +131,7 @@ test('câu Writing 1 điền từ trong bốn câu, vẫn lưu đủ tám ô và
   assert.match(css, /overflow-wrap: anywhere/);
   assert.match(css, /#identityView #sessionLabel \{ font-size: 14px/);
   assert.match(css, /#identityView #classLabel \{ margin-top: 9px; color: var\(--ink\); font-size: 16px/);
-  assert.match(html, /styles\.css\?rev=20260916-ic2305-v4/);
+  assert.match(html, /styles\.css\?rev=[A-Za-z0-9-]+/);
   assert.match(css, /--canvas: #f7f5ef/);
   assert.match(css, /--red: #db3e4b/);
 });

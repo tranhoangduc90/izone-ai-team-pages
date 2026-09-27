@@ -1,0 +1,102 @@
+{
+  "schema_version": 3,
+  "product": "Dashboard quản lý chấm Writing 56/67",
+  "change_id": "writing-retry-direct-20260926",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "medium",
+  "system_traits": ["asynchronous", "concurrent", "external_side_effects", "authentication", "multi_service"],
+  "experience": {
+    "planning_mode": "standard",
+    "mode_reason": "Nút quản trị gọi API và có thể khởi động chấm; cần chặn bấm lặp và phân biệt lỗi gửi với lỗi tải lại.",
+    "user": "Quản trị viên Writing 56/67",
+    "problem": "Hộp xác nhận hoặc nhập lý do làm nút Retry chậm và bị kẹt trong Chrome.",
+    "outcome": "Một lần bấm gửi ngay một yêu cầu; nút khóa khi đang gửi và báo lỗi rõ ràng.",
+    "out_of_scope": ["Không thay đổi backend, n8n hoặc quy tắc bài được phép Retry."],
+    "plain_language_summary": "Bấm Retry là chạy ngay; nếu gửi lỗi có thể bấm lại, còn đã gửi thì không gửi trùng khi màn hình tải lỗi."
+  },
+  "change_package": {
+    "proposal": "Bỏ ba hộp hỏi trước Retry và khóa nút khi yêu cầu chưa xong.",
+    "behavior_baseline": "Retry bài hỏi lý do, Retry cần kiểm tra và đọc lại nguồn hỏi xác nhận.",
+    "deltas": [
+      {"id":"D-PAIR","operation":"MODIFIED","behavior":"Retry bài gửi đúng bước ngay với lý do nhật ký cố định.","module_ids":["M-UI","M-API"],"test_ids":["T-HAPPY","T-CON","T-REG"]},
+      {"id":"D-REVIEW","operation":"MODIFIED","behavior":"Retry cần kiểm tra gửi ngay.","module_ids":["M-UI","M-API"],"test_ids":["T-HAPPY","T-REG"]},
+      {"id":"D-SOURCE","operation":"MODIFIED","behavior":"Đọc lại nguồn gửi ngay; lỗi tải lại không mở nút gây gửi trùng.","module_ids":["M-UI","M-API"],"test_ids":["T-PARTIAL","T-REG"]}
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "plan-v1",
+    "modules": [
+      {"id":"M-UI","name":"Giao diện Writing","responsibility":"Xử lý nút Retry và trạng thái khóa nút.","owns_data":["button.disabled"],"public_interfaces":["retryPair","retryReview","retrySourceIssue"],"depends_on":["M-API"],"boundary_rules":["Không cất token hoặc bài học viên trong source Pages."],"test_ids":["T-HAPPY","T-CON","T-PARTIAL","T-SEC"]},
+      {"id":"M-API","name":"API Writing hiện hành","responsibility":"Nhận yêu cầu idempotent và kiểm quyền, không đổi trong gói này.","owns_data":["requestId","trạng thái nguồn"],"public_interfaces":["retryWritingPairStage","retryWritingReview","retryWritingSourceIssue"],"depends_on":[],"boundary_rules":["Backend quyết định bài nào được chạy lại."],"test_ids":["T-BAD","T-SEC"]}
+    ],
+    "integrations": [
+      {"id":"I-RETRY","producer":"M-API","consumer":"M-UI","contract":"Giao diện gửi một yêu cầu; API trả trạng thái để nút biết có được bấm lại không.","test_ids":["T-HAPPY","T-CON","T-PARTIAL"]}
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "plan-v1",
+    "signals": ["multi_service"],
+    "critical_path": "Quản trị viên bấm Retry → Pages gọi API → backend kiểm quyền và trạng thái → n8n tiếp tục xử lý → bảng tải lại.",
+    "peak_load": {"value": 10, "unit": "operator_clicks_per_minute", "basis": "Thao tác thủ công một quản trị viên trên bảng phân trang 50 dòng; không thay đổi công suất backend."},
+    "user_wait_target": "Khóa nút ngay khi bấm; API phản hồi thì tải lại bảng, có thông báo nếu lỗi.",
+    "limits_and_cost": ["Mỗi yêu cầu retry có thể gọi AI; backend giữ quyền, giới hạn và idempotency hiện có."],
+    "failure_and_recovery": ["API từ chối: mở lại nút và báo lỗi. API nhận nhưng tải bảng lỗi: giữ nút khóa, yêu cầu người dùng Cập nhật trang."],
+    "monitoring": ["Xem Nhật ký thao tác và trạng thái từng bài trong dashboard; kiểm network/console ở URL production."],
+    "decision": "Chỉ sửa UI; giữ nguyên ba endpoint, quyền và bộ điều phối backend.",
+    "test_ids": ["T-HAPPY","T-CON","T-PARTIAL","T-SEC"]
+  },
+  "requirements": [
+    {"id":"REQ-DIRECT","statement":"Ba loại Retry bấm là gửi ngay, không hiện hộp hỏi.","test_ids":["T-HAPPY","T-REG"]},
+    {"id":"REQ-FEEDBACK","statement":"Bấm lặp hoặc lỗi tải lại không tạo yêu cầu thứ hai; lỗi API cho phép bấm lại.","test_ids":["T-CON","T-PARTIAL"]}
+  ],
+  "invariants": [
+    {"id":"INV-ELIGIBLE","statement":"Nguồn Test trùng và các bài không đủ điều kiện vẫn không được Retry.","test_ids":["T-BAD"]},
+    {"id":"INV-AUTH","statement":"Không đưa credential lên Pages; backend vẫn quyết định quyền và trạng thái.","test_ids":["T-SEC"]}
+  ],
+  "tests": [
+    {"id":"T-HAPPY","category":"happy_path","priority":"P0","status":"passed","evidence":"Test trực tiếp ba hàm Retry với API giả: gọi một lần không mở prompt/confirm."},
+    {"id":"T-BAD","category":"invalid_input","priority":"P1","status":"passed","evidence":"Nguồn Test trùng bị chặn trước API; suite Writing hiện hành đạt."},
+    {"id":"T-CON","category":"concurrency_idempotency","priority":"P0","status":"passed","evidence":"Bấm lặp khi yêu cầu chưa xong chỉ gọi API một lần."},
+    {"id":"T-PARTIAL","category":"external_partial","priority":"P0","status":"passed","evidence":"API đã nhận nhưng tải lại lỗi: nút vẫn khóa và báo đã gửi; API lỗi trước khi nhận: nút mở lại."},
+    {"id":"T-ROLL","category":"rollback_recovery","priority":"P1","status":"passed","evidence":"Base origin/main f28a593 vẫn nguyên; rollback là revert commit Pages, không cần đổi API/database."},
+    {"id":"T-SEC","category":"security_privacy","priority":"P1","status":"passed","evidence":"Full suite kiểm cấu hình public và phiên Google; diff chỉ sửa hàm UI và test giả."},
+    {"id":"T-REG","category":"regression","priority":"P0","status":"passed","evidence":"Cùng test Retry RED 0/3 trên base và GREEN 5/5 trên head."}
+  ],
+  "red_green": {
+    "red_on_base": {"test_id":"T-REG","command":"node --test writing-handouts/test/writing-flow-retry-direct.test.js","tree_revision":"f28a593081b7f7859d782569ba12083c8c80fff5","outcome":"failed","exit_code":1,"passed":0,"failed":3,"skipped":0,"evidence":"Ba test đầu tái hiện prompt/confirm trước khi API được gọi."},
+    "green_on_head": {"test_id":"T-REG","command":"node --test writing-handouts/test/writing-flow-retry-direct.test.js","tree_revision":"5e1295cbf1a995ee37bd8a76143729aea00ba9428fff486d814abc4eabb58a95","outcome":"passed","exit_code":0,"passed":5,"failed":0,"skipped":0,"evidence":"Năm test Retry đạt với API giả, không gọi production."}
+  },
+  "task_graph": {
+    "plan_revision": "plan-v1",
+    "tasks": [
+      {"id":"TASK-UI","result":"Ba nút Retry gửi ngay và chặn bấm lặp.","module_ids":["M-UI","M-API"],"depends_on":[],"consumes":["REQ-DIRECT","REQ-FEEDBACK"],"produces":["writing-flow.js"],"contract":"Không đổi endpoint hoặc điều kiện retry.","test_ids":["T-HAPPY","T-CON","T-PARTIAL","T-BAD"],"evidence_required":["RED/GREEN và diff"],"decision_inputs":["Giữ lý do nhật ký mặc định cho Retry bài."],"affected_future_tasks":["TASK-QA"],"status":"done","plan_revision":"plan-v1"},
+      {"id":"TASK-QA","result":"Regression và full suite đạt trên source mới.","module_ids":["M-UI"],"depends_on":["TASK-UI"],"consumes":["writing-flow.js"],"produces":["verification-evidence"],"contract":"Không dùng kết quả test từ revision khác.","test_ids":["T-REG","T-SEC","T-ROLL"],"evidence_required":["Full suite 140 ca và npm check"],"decision_inputs":["Phát hành Pages sau khi cổng pass."],"affected_future_tasks":[],"status":"done","plan_revision":"plan-v1"}
+    ]
+  },
+  "risk_register": {
+    "assessment": "PASS",
+    "risks": [
+      {"id":"R-DUP","description":"Bấm lặp làm chạy AI hai lần.","probability":2,"impact":3,"score":6,"severity":"P1","status":"mitigated","owner":"Nhóm vận hành Writing","mitigation":"Khóa nút đồng bộ và backend vẫn kiểm idempotency.","test_ids":["T-CON","T-PARTIAL"]}
+    ],
+    "waivers": []
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {
+      "id": "C-ONE-IN-FLIGHT",
+      "left": {"name":"số yêu cầu cùng lúc từ một nút", "value":1},
+      "operator": "<=",
+      "right": {"name":"giới hạn yêu cầu cùng lúc cho một nút", "value":1},
+      "status": "passed",
+      "evidence": "Test bấm lặp giữ đúng một lời gọi API khi nút đang khóa."
+    }
+  ],  "mutations": [],
+  "verification_runs": [
+    {"id":"V-FULL","scope":"full_suite","command":"npm.cmd test (writing-handouts)","tree_revision":"5e1295cbf1a995ee37bd8a76143729aea00ba9428fff486d814abc4eabb58a95","captured_at":"2026-09-26T19:26:00+07:00","exit_code":0,"outcome":"passed","passed":140,"failed":0,"skipped":0,"evidence":"Toàn bộ 140 ca Writing đạt; npm.cmd run check và git diff --check đạt."}
+  ],
+  "convergence": {"status":"passed","tree_revision":"5e1295cbf1a995ee37bd8a76143729aea00ba9428fff486d814abc4eabb58a95","gaps":[],"unrequested_work":[],"evidence":"Diff chỉ thay nút Retry, kiểm thử và manifest; không đổi backend/n8n."},
+  "context_handoff": {"summary":"Gói dashboard bỏ xác nhận Retry đã kiểm local, chờ Pages deploy.","decisions":["Dùng lý do nhật ký cố định Chạy lại từ dashboard."],"completed":["TASK-UI","TASK-QA"],"next_step":"Push Pages và đọc lại URL thật.","open_risks":[],"tree_revision":"5e1295cbf1a995ee37bd8a76143729aea00ba9428fff486d814abc4eabb58a95"},
+  "release": {"target_environment":"production","decision":"ready","base_tree_revision":"f28a593081b7f7859d782569ba12083c8c80fff5","current_tree_revision":"5e1295cbf1a995ee37bd8a76143729aea00ba9428fff486d814abc4eabb58a95","production_authorized":true,"rollback":"Revert commit Pages này rồi chờ build lại; backend và dữ liệu không đổi.","deployment_readback":"pending","operational_observation":"Chờ kiểm URL thật sau Pages build.","open_risks":[]}
+}

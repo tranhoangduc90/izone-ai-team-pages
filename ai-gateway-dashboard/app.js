@@ -1,6 +1,6 @@
 /*
- * Dữ liệu nhận vào: Google ID token và dữ liệu vận hành từ API production.
- * Việc chính: giữ token trong RAM, tải dashboard, lọc lịch sử và gửi các thay đổi có lý do/audit.
+ * Dữ liệu nhận vào: phiên HttpOnly và dữ liệu vận hành từ API production.
+ * Việc chính: khôi phục phiên, tải dashboard, lọc lịch sử và gửi các thay đổi có lý do/audit.
  * Kết quả: người vận hành xem và điều chỉnh hệ thống mà không phải nhập mã kỹ thuật.
  * Khi lỗi: giao diện giữ dữ liệu cũ, hiện thông báo rõ; phiên hết hạn sẽ quay về màn hình đăng nhập.
  */
@@ -8,7 +8,8 @@ const config = window.AI_GATEWAY_DASHBOARD_CONFIG || {};
 const $ = id => document.getElementById(id);
 const colors = { google_1:'#2878d0', google_2:'#16a085', google_3:'#f39c12', google_4:'#8e5bb7' };
 const statusText = { success:'Thành công', failed:'Thất bại', running:'Đang chạy' };
-const state = { idToken:'', operator:null, workers:[], billing:[], shares:{}, summary:{} };
+const state = { authenticated:false, operator:null, workers:[], billing:[], shares:{}, summary:{} };
+const sessionClient = window.AIGatewaySessionClient.create({ baseUrl:config.API_BASE_URL });
 
 function node(tag, className, textValue) {
   const element = document.createElement(tag);
@@ -18,7 +19,13 @@ function node(tag, className, textValue) {
 }
 
 function money(value) {
-  return new Intl.NumberFormat('vi-VN', { style:'currency', currency:'USD', maximumFractionDigits:2 }).format(Number(value || 0));
+  // Số Billing đã là Việt Nam đồng; chỉ làm tròn để hiển thị, không quy đổi tỷ giá.
+  const amount = Number(value);
+  const safeAmount = Number.isFinite(amount) && !Object.is(amount, -0) ? amount : 0;
+  return `${new Intl.NumberFormat('vi-VN', {
+    minimumFractionDigits:0,
+    maximumFractionDigits:0,
+  }).format(safeAmount)} đ`;
 }
 
 function when(value) {
@@ -40,37 +47,39 @@ function friendlyError(code, fallback) {
   const messages = {
     google_login_required:'Bạn cần đăng nhập Google.',
     google_token_invalid:'Phiên Google đã hết hạn. Hãy đăng nhập lại.',
+    dashboard_session_invalid:'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.',
+    dashboard_csrf_rejected:'Yêu cầu thay đổi không vượt qua kiểm tra an toàn. Hãy tải lại trang.',
+    google_credential_invalid:'Google không trả về thông tin đăng nhập hợp lệ.',
     google_account_not_allowed:'Tài khoản Google này chưa được cấp quyền.',
     dashboard_origin_forbidden:'Trang hiện tại không được phép gọi dashboard.',
     google_dashboard_auth_not_configured:'Backend chưa hoàn tất cấu hình Google Auth.',
+    worker_not_found:'Không tìm thấy máy cần thay tài khoản.',
   };
   return messages[code] || fallback || code || 'Không tải được dữ liệu.';
 }
 
 async function api(path, { method='GET', body, reason } = {}) {
-  if (!state.idToken) throw new Error('Bạn chưa đăng nhập Google.');
-  const headers = { Authorization:`Bearer ${state.idToken}` };
-  if (body !== undefined) headers['content-type'] = 'application/json';
+  if (!state.authenticated) throw new Error('Bạn chưa đăng nhập Google.');
+  const headers = {};
   if (reason) {
     headers['x-change-reason'] = encodeURIComponent(reason);
     headers['x-idempotency-key'] = crypto.randomUUID();
   }
-  const response = await fetch(`${config.API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const response = await sessionClient.request(path, { method, headers, body });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
     const code = payload?.error?.code;
-    if (response.status === 401) showLogin();
+    if (response.status === 401) {
+      showLogin();
+      initializeGoogle();
+    }
     throw new Error(friendlyError(code, `API trả về mã ${response.status}.`));
   }
   return payload;
 }
 
 function showLogin(message='') {
-  state.idToken = '';
+  state.authenticated = false;
   state.operator = null;
   $('dashboardView').hidden = true;
   $('operatorBadge').hidden = true;
@@ -99,16 +108,6 @@ function renderSummary(data) {
   $('kpiFallback').textContent = String(state.summary.fallback_count || 0);
   renderBilling(state.billing);
   renderWorkers(state.workers, state.shares);
-
-  const workerSelector = $('credentialWorker');
-  const selectedWorker = workerSelector.value;
-  workerSelector.replaceChildren();
-  for (const worker of state.workers) {
-    const option = node('option', '', worker.display_name);
-    option.value = worker.id;
-    workerSelector.append(option);
-  }
-  if (state.workers.some(worker => worker.id === selectedWorker)) workerSelector.value = selectedWorker;
 
   const accountSelector = $('usageAccount');
   const selectedAccount = accountSelector.value;
@@ -172,13 +171,18 @@ function renderWorkers(workers, shares) {
     enabled.dataset.enabled = worker.id;
     toggle.append(enabled, document.createTextNode(' Cho máy này nhận việc'));
     card.append(toggle);
+    const actions = node('div', 'actions');
     const save = node('button', '', 'Lưu trọng số');
     save.dataset.save = worker.id;
-    card.append(save);
+    const rotate = node('button', 'secondary', 'Thay tài khoản Google');
+    rotate.dataset.rotateWorker = worker.id;
+    actions.append(save, rotate);
+    card.append(actions);
     container.append(card);
   }
   container.querySelectorAll('input').forEach(input => input.addEventListener('input', previewShares));
   container.querySelectorAll('button[data-save]').forEach(button => button.addEventListener('click', event => void saveWorker(event)));
+  container.querySelectorAll('button[data-rotate-worker]').forEach(button => button.addEventListener('click', event => void openAccountRotation(event)));
 }
 
 function previewShares() {
@@ -211,6 +215,24 @@ async function saveWorker(event) {
   finally { button.disabled = false; }
 }
 
+async function openAccountRotation(event) {
+  const button = event.currentTarget;
+  const workerId = button.dataset.rotateWorker;
+  button.disabled = true;
+  try {
+    const session = await api('/rotation-sessions', {
+      method:'POST', body:{ worker_id:workerId }, reason:`Mở màn hình thay tài khoản Google cho ${workerId}`,
+    });
+    const base = new URL(config.API_BASE_URL.endsWith('/') ? config.API_BASE_URL : `${config.API_BASE_URL}/`);
+    const target = new URL(session.path, base);
+    target.hash = new URLSearchParams({ ticket:session.ticket }).toString();
+    window.location.assign(target.toString());
+  } catch (error) {
+    toast(`Lỗi: ${error.message}`);
+    button.disabled = false;
+  }
+}
+
 function renderCredentials(items) {
   const container = $('credentials');
   container.replaceChildren();
@@ -224,20 +246,8 @@ function renderCredentials(items) {
       node('div', 'meta', `Dấu vân tay ${item.private_key_fingerprint}`),
       node('div', 'meta', `Trạng thái: ${item.status} · kiểm tra: ${item.test_status}`),
     );
-    const actions = node('div', 'actions');
-    const testButton = node('button', 'secondary', 'Kiểm tra');
-    testButton.dataset.testCredential = item.id;
-    actions.append(testButton);
-    if (item.test_status === 'success' && item.status !== 'active') {
-      const activate = node('button', '', 'Kích hoạt');
-      activate.dataset.activateCredential = item.id;
-      actions.append(activate);
-    }
-    card.append(actions);
     container.append(card);
   }
-  container.querySelectorAll('[data-test-credential]').forEach(button => button.addEventListener('click', event => void testCredential(event)));
-  container.querySelectorAll('[data-activate-credential]').forEach(button => button.addEventListener('click', event => void activateCredential(event)));
 }
 
 async function loadCredentials() {
@@ -245,43 +255,7 @@ async function loadCredentials() {
   renderCredentials(data.items || []);
 }
 
-async function uploadCredential() {
-  const file = $('credentialFile').files[0];
-  if (!file) throw new Error('Hãy chọn file JSON service account.');
-  if (file.size > 1024 * 1024) throw new Error('File credential lớn bất thường; hãy kiểm tra lại.');
-  let credential;
-  try { credential = JSON.parse(await file.text()); }
-  catch { throw new Error('File credential không phải JSON hợp lệ.'); }
-  const worker = $('credentialWorker').value;
-  await api('/credentials', {
-    method:'POST',
-    body:{ worker_id:worker, display_name:$('credentialName').value.trim(), credential },
-    reason:`Tải credential mới cho ${worker}`,
-  });
-  $('credentialFile').value = '';
-  toast('Đã lưu bản credential mới; cần kiểm tra trước khi kích hoạt.');
-  await loadCredentials();
-}
-
-async function testCredential(event) {
-  const id = event.currentTarget.dataset.testCredential;
-  try {
-    const data = await api(`/credentials/${encodeURIComponent(id)}/test`, { method:'POST', body:{}, reason:'Kiểm tra credential trước khi kích hoạt' });
-    toast(data.ok ? 'Kết nối Google thành công.' : 'Kết nối Google thất bại.');
-    await loadCredentials();
-  } catch (error) { toast(`Lỗi: ${error.message}`); }
-}
-
-async function activateCredential(event) {
-  const id = event.currentTarget.dataset.activateCredential;
-  try {
-    await api(`/credentials/${encodeURIComponent(id)}/activate`, { method:'POST', body:{}, reason:'Kích hoạt credential đã kiểm tra' });
-    toast('Đã kích hoạt credential mới.');
-    await loadCredentials();
-  } catch (error) { toast(`Lỗi: ${error.message}`); }
-}
-
-function drawAxes(context, width, height, maxValue, labelFormatter) {
+function drawAxes(context, width, height, maxValue, labelFormatter, left=44) {
   context.clearRect(0, 0, width, height);
   context.strokeStyle = '#dce5ec';
   context.fillStyle = '#66788a';
@@ -289,7 +263,7 @@ function drawAxes(context, width, height, maxValue, labelFormatter) {
   context.lineWidth = 1;
   for (let index = 0; index <= 4; index += 1) {
     const y = 20 + (height - 55) * (index / 4);
-    context.beginPath(); context.moveTo(44, y); context.lineTo(width - 12, y); context.stroke();
+    context.beginPath(); context.moveTo(left, y); context.lineTo(width - 12, y); context.stroke();
     context.fillText(labelFormatter(maxValue * (1 - index / 4)), 4, y + 4);
   }
 }
@@ -304,13 +278,14 @@ function drawCostChart(rows) {
     byDate.get(row.date)[row.account_id] = Number(row.gross_cost);
   }
   const max = Math.max(1, ...dates.map(date => Object.values(byDate.get(date) || {}).reduce((a, b) => a + b, 0))) * 1.15;
-  drawAxes(context, canvas.width, canvas.height, max, value => `$${value.toFixed(1)}`);
+  const plotLeft = 88;
+  drawAxes(context, canvas.width, canvas.height, max, value => money(value), plotLeft);
   if (!dates.length) return;
-  const plotWidth = canvas.width - 62;
+  const plotWidth = canvas.width - plotLeft - 12;
   const barWidth = Math.max(4, Math.min(34, plotWidth / dates.length * .68));
   dates.forEach((date, index) => {
     let y = canvas.height - 35;
-    const x = 48 + (index + .5) * (plotWidth / dates.length) - barWidth / 2;
+    const x = plotLeft + (index + .5) * (plotWidth / dates.length) - barWidth / 2;
     for (const account of Object.keys(colors)) {
       const value = byDate.get(date)?.[account] || 0;
       const height = value / max * (canvas.height - 55);
@@ -471,9 +446,10 @@ async function refreshAll() {
   finally { button.disabled = false; }
 }
 
-async function connectAfterGoogleLogin() {
-  const me = await api('/me');
-  state.operator = me.operator;
+async function connectAfterGoogleLogin(credential) {
+  const session = await sessionClient.login(credential);
+  state.authenticated = true;
+  state.operator = session.operator;
   showDashboard();
   await refreshAll();
 }
@@ -493,26 +469,52 @@ function initializeGoogle(attempt = 0) {
     auto_select:false,
     cancel_on_tap_outside:false,
     callback:response => {
-      state.idToken = response.credential || '';
+      const credential = response.credential || '';
       $('loginNotice').textContent = '';
-      if (!state.idToken) { showLogin('Google không trả về phiên đăng nhập.'); return; }
-      void connectAfterGoogleLogin().catch(error => showLogin(error.message));
+      if (!credential) { showLogin('Google không trả về phiên đăng nhập.'); return; }
+      void connectAfterGoogleLogin(credential).catch(error => {
+        showLogin(friendlyError(error.code, error.message));
+        initializeGoogle();
+      });
     },
   });
+  $('googleSignInButton').replaceChildren();
   window.google.accounts.id.renderButton($('googleSignInButton'), { type:'standard', theme:'outline', size:'large', shape:'pill', text:'signin_with', locale:'vi' });
 }
 
 $('logoutButton').addEventListener('click', () => {
-  window.google?.accounts?.id?.disableAutoSelect();
-  showLogin('Bạn đã đăng xuất khỏi dashboard.');
+  const button = $('logoutButton');
+  button.disabled = true;
+  void sessionClient.logout().then(() => {
+    window.google?.accounts?.id?.disableAutoSelect();
+    showLogin('Bạn đã đăng xuất khỏi dashboard.');
+    initializeGoogle();
+  }).catch(error => toast(`Không thể đăng xuất: ${friendlyError(error.code, error.message)}`))
+    .finally(() => { button.disabled = false; });
 });
 $('refreshAll').addEventListener('click', () => void refreshAll());
 $('applyUsage').addEventListener('click', () => void loadUsage().catch(error => toast(`Lỗi: ${error.message}`)));
 $('applyHistory').addEventListener('click', () => void loadHistory().catch(error => toast(`Lỗi: ${error.message}`)));
 $('saveSource').addEventListener('click', () => void saveSourceMachine().catch(error => toast(`Lỗi: ${error.message}`)));
-$('uploadCredential').addEventListener('click', () => void uploadCredential().catch(error => toast(`Lỗi: ${error.message}`)));
 $('closeDialog').addEventListener('click', () => $('detailDialog').close());
-window.addEventListener('resize', () => { if (state.idToken) void loadUsage().catch(() => undefined); });
+window.addEventListener('resize', () => { if (state.authenticated) void loadUsage().catch(() => undefined); });
 
-showLogin();
-initializeGoogle();
+async function restoreSession() {
+  showLogin('Đang kiểm tra phiên đăng nhập…');
+  try {
+    const session = await sessionClient.restore();
+    if (session) {
+      state.authenticated = true;
+      state.operator = session.operator;
+      showDashboard();
+      await refreshAll();
+      return;
+    }
+    showLogin();
+  } catch (error) {
+    showLogin(friendlyError(error.code, 'Không kiểm tra được phiên đăng nhập.'));
+  }
+  initializeGoogle();
+}
+
+void restoreSession();

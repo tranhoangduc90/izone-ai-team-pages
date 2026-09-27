@@ -5,17 +5,17 @@
  * Khi lỗi: không mở thư viện, không lộ dữ liệu dashboard và hiển thị thông báo để đăng nhập lại.
  */
 
-import { createTeacherApi } from "./api.js?v=20260903-reconciliation";
+import { createTeacherApi } from "./api.js?rev=20260920-server-session-v1";
 import {
   classAvailable,
-  createTeacherSessionStore,
   dashboardUrl,
   sortHandoutsByWritingLesson,
   studentUrl,
 } from "./library-core.js?v=20260913-writing-sequence-v2";
+import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20260920-v1";
 
 const $ = (id) => document.getElementById(id);
-const state = { token: "", config: null, library: null, sessionStore: null, loginGeneration: 0 };
+const state = { authenticated: false, config: null, library: null, sessionClient: null, loginGeneration: 0 };
 
 function showAuthStatus(message, error = false) {
   const status = $("auth-status");
@@ -151,26 +151,24 @@ function hideLibrary() {
   $("google-signin").hidden = false;
 }
 
-async function verifyTeacher(token) {
-  const api = createTeacherApi(state.config.apiBase || "", () => token);
+async function verifyTeacher() {
+  const api = createTeacherApi(state.config.apiBase || "");
   await api.liveActivity(state.library.authProbeSlug);
 }
 
-async function connectWithToken(token, restoring = false) {
+async function connectSession(restoring = false) {
   const generation = ++state.loginGeneration;
-  state.token = token;
   hideLibrary();
   showAuthStatus(restoring ? "Đang khôi phục phiên giảng viên…" : "Đang xác minh quyền giảng viên…");
   try {
-    await verifyTeacher(token);
+    await verifyTeacher();
     if (generation !== state.loginGeneration) return;
-    state.sessionStore.save(token);
+    state.authenticated = true;
     showAuthStatus(`Đã đăng nhập · ${state.library.course.title}`);
     showLibrary();
   } catch (error) {
     if (generation !== state.loginGeneration) return;
-    if (error.status === 401 || error.status === 403) state.sessionStore.clear();
-    state.token = "";
+    state.authenticated = false;
     hideLibrary();
     showAuthStatus(error.status === 403
       ? "Tài khoản Google này chưa được cấp quyền xem dashboard Writing."
@@ -183,9 +181,13 @@ function setupGoogleSignIn() {
     globalThis.google.accounts.id.initialize({
       client_id: state.config.googleClientId,
       auto_select: false,
-      callback: (response) => {
-        state.sessionStore.clear();
-        void connectWithToken(response.credential || "");
+      callback: async (response) => {
+        try {
+          await state.sessionClient.login(response.credential || "");
+          await connectSession();
+        } catch (error) {
+          showAuthStatus(`Không thể đăng nhập: ${error.message}`, true);
+        }
       },
     });
     globalThis.google.accounts.id.renderButton($("google-signin"), {
@@ -196,8 +198,6 @@ function setupGoogleSignIn() {
       shape: "rectangular",
       locale: "vi",
     });
-    const remembered = state.sessionStore.read();
-    if (remembered) void connectWithToken(remembered, true);
   };
   if (globalThis.google?.accounts?.id) return render();
   let attempts = 0;
@@ -217,15 +217,11 @@ async function init() {
     if (!configResponse.ok || !libraryResponse.ok) throw new Error("Thiếu cấu hình thư viện.");
     state.config = await configResponse.json();
     state.library = await libraryResponse.json();
-    state.sessionStore = createTeacherSessionStore({
-      apiBase: state.config.apiBase,
-      clientId: state.config.googleClientId,
-      getStorage: () => window.sessionStorage,
-    });
-    $("logout-button").addEventListener("click", () => {
+    state.sessionClient = createTeacherSessionClient({ apiBaseUrl: state.config.apiBase, sessionPath: "api/v1/auth/session" });
+    $("logout-button").addEventListener("click", async () => {
+      try { await state.sessionClient.logout(); } catch { /* Vẫn khóa thư viện trên máy dùng chung. */ }
       state.loginGeneration += 1;
-      state.token = "";
-      state.sessionStore.clear();
+      state.authenticated = false;
       globalThis.google?.accounts?.id?.disableAutoSelect?.();
       hideLibrary();
       showAuthStatus("Đã đăng xuất. Hãy đăng nhập Google để mở lại thư viện.");
@@ -234,6 +230,8 @@ async function init() {
       showNotice("");
       renderLibrary();
     });
+    const restored = await state.sessionClient.restore();
+    if (restored) await connectSession(true);
     setupGoogleSignIn();
   } catch (error) {
     hideLibrary();

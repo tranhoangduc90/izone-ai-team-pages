@@ -1,3 +1,27 @@
+export function selectRequestedClass(classes, requestedClass) {
+  const availableClasses = Array.isArray(classes) ? classes : [];
+  const normalizedRequest = String(requestedClass || '').trim().toUpperCase();
+  if (!normalizedRequest) return availableClasses[0] || null;
+  return availableClasses.find(item => (
+    String(item?.name || '').trim().toUpperCase() === normalizedRequest
+    || String(item?.id || '').trim().toUpperCase() === normalizedRequest
+  )) || null;
+}
+
+export function classOptionLabel(classInfo) {
+  const name = String(classInfo?.name || '');
+  return classInfo?.accessMode === 'admin_override' ? `🛡 ${name}` : name;
+}
+
+export function buildClassAccessNotice(classInfo) {
+  const className = String(classInfo?.name || '').trim();
+  if (!className || classInfo?.accessMode !== 'admin_override' || classInfo?.isAssignedTeacher === true) return null;
+  return {
+    title: 'Đang xem bằng quyền quản trị viên',
+    message: `Bạn có quyền xem lớp ${className} vì là quản trị viên, nhưng không phải giảng viên phụ trách lớp này.`
+  };
+}
+
 export function getAverageBand(result) {
   if (typeof result?.summary?.averageBand === 'number' && Number.isFinite(result.summary.averageBand)) {
     return result.summary.averageBand;

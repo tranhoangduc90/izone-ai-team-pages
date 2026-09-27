@@ -33,7 +33,7 @@ const state = {
 
 const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'errorView'];
 const elements = Object.fromEntries([
-  'notice', ...viewIds, 'sessionLabel', 'assignmentTitle', 'classLabel', 'studentSelect',
+  'notice', ...viewIds, 'brandLabel', 'sessionLabel', 'assignmentTitle', 'classLabel', 'studentSelect',
   'chooseStudentButton', 'rememberStudentRow', 'rememberStudent', 'rememberStudentStatus', 'changeRememberedStudent',
   'confirmName', 'confirmContext', 'confirmButton', 'backToNamesButton',
   'studentNameLabel', 'formContextLabel', 'saveState', 'progressBar', 'reflectionForm',
@@ -284,6 +284,20 @@ function responseFor(item) {
   return state.responses[item.itemVersionId] ?? '';
 }
 
+function itemIsVisible(item) {
+  const dependencyId = item.interactionConfig?.visibleWhenItemVersionId;
+  if (!dependencyId) return true;
+  const selected = state.responses[dependencyId];
+  return Array.isArray(selected)
+    ? selected.includes(item.interactionConfig.visibleWhenValue)
+    : selected === item.interactionConfig.visibleWhenValue;
+}
+
+function itemIsRequired(item) {
+  if (item.required) return true;
+  return item.interactionConfig?.requiredWhenVisible === true && itemIsVisible(item);
+}
+
 function responseIsPresent(item, value) {
   if (item?.layoutType === 'numbered_short_texts') {
     const expected = Number(item.interactionConfig?.responseCount || 0);
@@ -320,7 +334,7 @@ const SENTENCE_COMPLETION_LAYOUTS = Object.freeze({
 const sentenceMeasureContext = document.createElement('canvas').getContext('2d');
 
 function resizeSentenceBlank(control) {
-  const sentence = control.closest('.sentence-text');
+  const sentence = control.closest('.sentence-text, .reasoning-chain');
   const availableWidth = Math.max(90, (sentence?.clientWidth || 420) - 8);
   if (sentenceMeasureContext) {
     sentenceMeasureContext.font = window.getComputedStyle(control).font;
@@ -332,9 +346,9 @@ function resizeSentenceBlank(control) {
 }
 
 function buildSentenceCompletion(item) {
-  const templates = SENTENCE_COMPLETION_LAYOUTS[item.itemVersionId];
+  const templates = item.interactionConfig?.sentenceLines || SENTENCE_COMPLETION_LAYOUTS[item.itemVersionId];
   const expected = Number(item.interactionConfig?.responseCount || 0);
-  if (!templates || templates.length * 2 !== expected) return null;
+  if (!templates || templates.reduce((count, line) => count + line.parts.length - 1, 0) !== expected) return null;
   const existing = Array.isArray(responseFor(item)) ? responseFor(item) : [];
   const group = document.createElement('div');
   group.className = 'sentence-group';
@@ -342,7 +356,7 @@ function buildSentenceCompletion(item) {
   for (const [rowIndex, template] of templates.entries()) {
     const row = document.createElement('div');
     row.className = 'sentence-row';
-    if (templates.length > 1) {
+    if (templates.length > 1 && !item.interactionConfig?.sentenceLines) {
       const marker = document.createElement('span');
       marker.className = 'sentence-index';
       marker.textContent = `${rowIndex + 1}.`;
@@ -361,7 +375,7 @@ function buildSentenceCompletion(item) {
       input.className = 'sentence-blank';
       input.rows = 1;
       input.maxLength = 2_000;
-      input.required = item.required;
+      input.required = itemIsRequired(item);
       input.value = existing[slot] || '';
       input.setAttribute('aria-label', item.interactionConfig.responseLabels?.[slot] || `${item.prompt} — ô ${slot + 1}`);
       input.addEventListener('input', event => {
@@ -379,6 +393,68 @@ function buildSentenceCompletion(item) {
     group.append(row);
   }
   return group;
+}
+
+function buildReasoningChain(item) {
+  const config = item.interactionConfig || {};
+  const chain = document.createElement('div');
+  chain.className = 'reasoning-chain';
+  const before = document.createElement('div');
+  before.className = 'reasoning-chain-node';
+  before.textContent = config.beforeText;
+  const firstArrow = document.createElement('span');
+  firstArrow.className = 'reasoning-chain-arrow';
+  firstArrow.setAttribute('aria-hidden', 'true');
+  firstArrow.textContent = '→';
+  const input = document.createElement('textarea');
+  input.className = 'sentence-blank reasoning-chain-input';
+  input.rows = 1;
+  input.maxLength = 2_000;
+  input.required = itemIsRequired(item);
+  input.value = String(responseFor(item));
+  input.placeholder = 'Điền mắt xích còn thiếu';
+  input.setAttribute('aria-label', item.prompt);
+  input.addEventListener('input', event => {
+    if (!event.isComposing) input.value = input.value.replace(/\s*[\r\n]+\s*/g, ' ');
+    resizeSentenceBlank(input);
+    recordResponse(item.itemVersionId, input.value);
+  });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.isComposing) event.preventDefault();
+  });
+  const secondArrow = firstArrow.cloneNode(true);
+  const after = document.createElement('div');
+  after.className = 'reasoning-chain-node';
+  after.textContent = config.afterText;
+  chain.append(before, firstArrow, input, secondArrow, after);
+  return chain;
+}
+
+function refreshConditionalQuestions() {
+  const block = currentBlock();
+  if (!block) return;
+  let removedHiddenAnswer = false;
+  for (const item of block.items.filter(candidate => candidate.layoutType === 'conditional_other_text')) {
+    const visible = itemIsVisible(item);
+    const wrapper = elements.questionList.querySelector(`[data-item-version-id="${item.itemVersionId}"]`);
+    if (wrapper) {
+      wrapper.hidden = !visible;
+      const requiredNow = visible && item.interactionConfig.requiredWhenVisible === true;
+      for (const control of wrapper.querySelectorAll('input, textarea, select')) {
+        control.required = requiredNow;
+      }
+      const marker = wrapper.querySelector('.required');
+      if (marker) marker.hidden = !requiredNow;
+    }
+    if (!visible && Object.hasOwn(state.responses, item.itemVersionId)) {
+      delete state.responses[item.itemVersionId];
+      removedHiddenAnswer = true;
+    }
+  }
+  if (removedHiddenAnswer) {
+    state.changeVersion += 1;
+    scheduleSave();
+  }
 }
 
 function buildChoice(item, option, inputType, optionIndex) {
@@ -402,6 +478,7 @@ function buildChoice(item, option, inputType, optionIndex) {
       choice.classList.toggle('selected', checked);
       choice.querySelector('.choice-key').textContent = checked ? '✓' : choice.dataset.key;
     }
+    refreshConditionalQuestions();
   });
   const key = document.createElement('span');
   key.className = 'choice-key';
@@ -415,21 +492,124 @@ function buildChoice(item, option, inputType, optionIndex) {
   return label;
 }
 
+function buildSpeakingIssueChecklist(item, questionLabel) {
+  const choices = document.createElement('div');
+  choices.className = 'choice-list speaking-checklist';
+  choices.setAttribute('role', 'group');
+  choices.setAttribute('aria-labelledby', questionLabel.id);
+  const children = currentBlock().items.filter(candidate =>
+    candidate.layoutType === 'inline_option_text'
+    && candidate.interactionConfig.visibleWhenItemVersionId === item.itemVersionId);
+  let selected = Array.isArray(responseFor(item)) ? [...responseFor(item)] : [];
+  const controls = [];
+  const sync = () => {
+    for (const control of controls) {
+      const checked = selected.includes(control.option.id);
+      control.checkbox.checked = checked;
+      control.card.classList.toggle('selected', checked);
+      control.label.classList.toggle('selected', checked);
+      control.key.textContent = checked ? '✓' : control.card.dataset.key;
+      if (control.textarea) {
+        control.textarea.required = checked;
+        control.textarea.disabled = !checked && selected.length >= item.interactionConfig.maxSelections;
+        if (!checked && control.textarea.value) {
+          control.textarea.value = '';
+          recordResponse(control.child.itemVersionId, undefined);
+        }
+      }
+    }
+  };
+  const setSelection = next => {
+    selected = next;
+    recordResponse(item.itemVersionId, selected.length ? selected : undefined);
+    sync();
+  };
+  for (const [index, option] of item.options.entries()) {
+    const card = document.createElement('div');
+    card.className = 'speaking-option';
+    card.dataset.key = String(index + 1);
+    const label = document.createElement('label');
+    label.className = 'choice';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = item.itemVersionId;
+    checkbox.value = option.id;
+    const key = document.createElement('span');
+    key.className = 'choice-key';
+    const title = document.createElement('span');
+    title.className = 'choice-text';
+    title.textContent = option.label;
+    label.append(checkbox, key, title);
+    card.append(label);
+    const child = children.find(candidate => candidate.interactionConfig.visibleWhenValue === option.id);
+    let textarea = null;
+    if (child) {
+      const field = document.createElement('div');
+      field.className = 'speaking-inline-field';
+      field.dataset.itemVersionId = child.itemVersionId;
+      textarea = document.createElement('textarea');
+      textarea.rows = 2;
+      textarea.maxLength = 2_000;
+      textarea.placeholder = option.id === 'OTHER' ? 'Nêu rõ vấn đề khác…' : 'Em hãy nêu cụ thể…';
+      textarea.value = String(responseFor(child));
+      textarea.setAttribute('aria-label', child.prompt);
+      field.append(textarea);
+      card.append(field);
+      textarea.addEventListener('input', () => {
+        if (textarea.value.trim() && !selected.includes(option.id)) {
+          if (selected.length >= item.interactionConfig.maxSelections) {
+            textarea.value = '';
+            setNotice('Em chỉ được chọn tối đa 2 mục. Hãy bỏ một mục trước khi nhập thêm.', 'error');
+            return;
+          }
+          setSelection([...selected.filter(id => id !== item.interactionConfig.exclusiveOptionId), option.id]);
+        }
+        recordResponse(child.itemVersionId, textarea.value || undefined);
+      });
+    }
+    controls.push({ option, card, label, checkbox, key, child, textarea });
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        if (option.id === item.interactionConfig.exclusiveOptionId) {
+          setSelection([option.id]);
+        } else {
+          const otherSelections = selected.filter(id => id !== item.interactionConfig.exclusiveOptionId);
+          if (otherSelections.length >= item.interactionConfig.maxSelections) {
+            setNotice('Em chỉ được chọn tối đa 2 mục. Hãy bỏ một mục trước khi chọn thêm.', 'error');
+            sync();
+            return;
+          }
+          setSelection([...otherSelections, option.id]);
+        }
+      } else {
+        setSelection(selected.filter(id => id !== option.id));
+      }
+      setNotice('');
+    });
+    choices.append(card);
+  }
+  sync();
+  return choices;
+}
+
 function buildQuestion(item) {
   const wrapper = document.createElement('div');
   wrapper.className = `question ${item.layoutType || 'plain_prompt'}`;
+  wrapper.dataset.itemVersionId = item.itemVersionId;
+  wrapper.hidden = !itemIsVisible(item);
   const number = document.createElement('span');
   number.className = 'question-number';
-  number.textContent = String(item.position);
+  number.textContent = item.displayNumber || String(item.position);
   const content = document.createElement('div');
   content.className = 'question-content';
   const label = document.createElement('h3');
   label.id = `question-${item.itemVersionId}`;
   label.textContent = item.prompt;
-  if (item.required) {
+  if (item.required || item.interactionConfig?.requiredWhenVisible === true) {
     const required = document.createElement('span');
     required.className = 'required';
     required.textContent = ' *';
+    required.hidden = !itemIsRequired(item);
     label.append(required);
   }
   wrapper.append(number, content);
@@ -450,7 +630,7 @@ function buildQuestion(item) {
     input.min = String(config.min ?? 0);
     input.max = String(config.max);
     input.step = String(config.step ?? 1);
-    input.required = item.required;
+    input.required = itemIsRequired(item);
     input.value = score && typeof score === 'object' ? String(score.correct) : '';
     input.setAttribute('aria-label', item.prompt);
     input.addEventListener('input', () => {
@@ -461,6 +641,8 @@ function buildQuestion(item) {
     total.textContent = `/ ${config.max} ${config.unit || ''}`.trim();
     row.append(input, total);
     content.append(row);
+  } else if (item.layoutType === 'reasoning_chain_completion') {
+    content.append(buildReasoningChain(item));
   } else if (item.layoutType === 'numbered_short_texts') {
     const sentence = buildSentenceCompletion(item);
     if (sentence) {
@@ -480,6 +662,7 @@ function buildQuestion(item) {
       const input = document.createElement('input');
       input.type = 'text';
       input.maxLength = 2_000;
+      input.required = itemIsRequired(item);
       input.value = existing[index] || '';
       input.setAttribute('aria-label', labels[index] || `${item.prompt} — ý ${index + 1}`);
       input.placeholder = labels[index] || `Ý ${index + 1}`;
@@ -491,11 +674,14 @@ function buildQuestion(item) {
       group.append(row);
     }
     content.append(group);
+  } else if (item.layoutType === 'speaking_issue_checklist') {
+    content.append(buildSpeakingIssueChecklist(item, label));
   } else if (item.interactionType === 'short_text' || item.interactionType === 'long_text') {
     const input = document.createElement(item.interactionType === 'long_text' ? 'textarea' : 'input');
     if (input instanceof HTMLInputElement) input.type = 'text';
     input.value = String(responseFor(item));
     input.maxLength = item.interactionType === 'long_text' ? 12_000 : 2_000;
+    input.required = itemIsRequired(item);
     input.setAttribute('aria-label', item.prompt);
     input.addEventListener('input', () => recordResponse(item.itemVersionId, input.value));
     content.append(input);
@@ -515,7 +701,7 @@ function buildQuestion(item) {
 
 function blockIsComplete(block) {
   return block.items.every(item => {
-    if (!item.required) return true;
+    if (!itemIsRequired(item)) return true;
     const value = responseFor(item);
     return responseIsPresent(item, value);
   });
@@ -530,6 +716,39 @@ function blockIsOpen(block) {
   return !release || release.status === 'open';
 }
 
+function showCheckpointFeedback(block) {
+  const result = state.checkpointSubmissions.get(block.blockId)?.result;
+  if (!result || result.answerRelease !== 'released' || !result.summary?.maxScore) return;
+  const score = document.createElement('p');
+  score.className = 'checkpoint-score';
+  const correct = result.items.filter(item => item.verdict === 'correct').length;
+  const total = result.items.filter(item => item.maxScore > 0).length;
+  score.textContent = `${block.title.split(' · ')[0]}: ${correct}/${total} câu đúng`;
+  elements.questionList.prepend(score);
+  for (const item of result.items) {
+    if (!item.expectedAnswer) continue;
+    const question = [...elements.questionList.querySelectorAll('.question')]
+      .find(node => node.dataset.itemVersionId === item.itemVersionId);
+    if (!question) continue;
+    for (const choice of question.querySelectorAll('.choice')) {
+      const input = choice.querySelector('input');
+      const selected = input.value === item.rawAnswer;
+      const expected = input.value === item.expectedAnswer;
+      input.checked = selected;
+      choice.classList.toggle('selected', selected);
+      choice.classList.toggle('feedback-correct', expected);
+      choice.classList.toggle('feedback-incorrect', selected && !expected);
+      choice.querySelector('.choice-key').textContent = expected ? '✓' : selected ? '✕' : choice.dataset.key;
+      if (expected || selected) {
+        const feedback = document.createElement('span');
+        feedback.className = 'choice-feedback';
+        feedback.textContent = expected ? (selected ? 'Em chọn đúng' : 'Đáp án đúng') : 'Em chọn sai';
+        choice.append(feedback);
+      }
+    }
+  }
+}
+
 function renderCheckpoint() {
   const blocks = allBlocks();
   const block = currentBlock();
@@ -539,12 +758,15 @@ function renderCheckpoint() {
   elements.checkpointTitle.textContent = block.title;
   elements.checkpointInstructions.textContent = block.instructions || '';
   elements.checkpointInstructions.hidden = !block.instructions;
-  elements.questionList.replaceChildren(...block.items.map(buildQuestion));
+  elements.questionList.replaceChildren(...block.items
+    .filter(item => item.layoutType !== 'inline_option_text').map(buildQuestion));
+  refreshConditionalQuestions();
   window.requestAnimationFrame(() => {
     for (const control of elements.questionList.querySelectorAll('.sentence-blank')) resizeSentenceBlank(control);
   });
   if (state.checkpointSubmissions.has(block.blockId)) {
     for (const control of elements.questionList.querySelectorAll('input, textarea, select')) control.disabled = true;
+    showCheckpointFeedback(block);
   }
   elements.previousButton.hidden = state.checkpointIndex === 0;
   elements.nextButton.hidden = state.checkpointIndex === blocks.length - 1;
@@ -606,6 +828,7 @@ async function continueToNextCheckpoint() {
     renderCheckpoint();
   } catch (error) {
     setNotice(error.message, 'error');
+    if (state.checkpointSubmissions.has(block.blockId)) renderCheckpoint();
   } finally {
     state.submitting = false;
     elements.nextButton.disabled = false;
@@ -625,13 +848,17 @@ function validateCurrentBlock() {
 async function openAssignment() {
   state.publicToken = readPublicToken();
   if (!state.publicToken) {
-    fail('Đường dẫn chưa đúng', 'Link cần có mã phiếu sau dấu #. Hãy mở lại link giảng viên đã gửi.');
+    fail('Đường dẫn chưa đúng', 'Đây là địa chỉ trang chung, chưa có mã phiếu. Hãy nhờ giảng viên chọn phiếu trong dashboard rồi bấm “Sao chép link” để gửi đường dẫn đầy đủ.');
     return;
   }
   try {
     setNotice('Đang mở phiếu…');
     const payload = await apiRequest('/assignments/open', { body: { publicToken: state.publicToken } });
     state.assignment = payload.assignment;
+    const courseCode = String(state.assignment.courseCode || '').trim();
+    elements.brandLabel.textContent = /^\d{2,3}$/.test(courseCode)
+      ? `Progress Log · Khóa ${courseCode}`
+      : 'Progress Log · IZONE';
     elements.sessionLabel.textContent = `BUỔI ${state.assignment.sessionNumber}`;
     elements.assignmentTitle.textContent = state.assignment.title;
     elements.classLabel.textContent = state.assignment.class.name;
@@ -700,7 +927,7 @@ async function startAttempt() {
 async function submitForm(event) {
   event.preventDefault();
   if (!validateCurrentBlock() || state.submitting) return;
-  const missing = allItems().filter(item => item.required && !responseIsPresent(item, responseFor(item)));
+  const missing = allItems().filter(item => itemIsRequired(item) && !responseIsPresent(item, responseFor(item)));
   if (missing.length) {
     const target = allBlocks().findIndex(block => block.items.some(item => missing.includes(item)));
     state.checkpointIndex = Math.max(0, target);

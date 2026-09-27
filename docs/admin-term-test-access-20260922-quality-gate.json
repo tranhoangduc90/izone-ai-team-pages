@@ -1,0 +1,111 @@
+{
+  "schema_version": 2,
+  "product": "Giao diện kết quả Term Test dành cho giảng viên",
+  "change_id": "admin-term-test-access-20260922-pages",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "high",
+  "system_traits": ["authentication", "personal_data"],
+  "requirements": [
+    {
+      "id": "REQ-BANNER",
+      "statement": "Quản trị viên không phụ trách lớp nhìn thấy tên lớp và lý do được xem bằng quyền quản trị.",
+      "test_ids": ["T-BANNER", "T-REG"]
+    },
+    {
+      "id": "REQ-NO-FALSE-BANNER",
+      "statement": "Không hiện cảnh báo sai cho giảng viên hoặc quản trị viên đồng thời phụ trách lớp.",
+      "test_ids": ["T-TEACHER", "T-SEC"]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-NO-LEAK",
+      "statement": "Banner không hiển thị email, ID nội bộ, token hoặc dữ liệu học viên.",
+      "test_ids": ["T-SEC"]
+    }
+  ],
+  "tests": [
+    {"id": "T-BANNER", "category": "happy_path", "priority": "P0", "status": "passed", "evidence": "Unit test và bản xem trước trình duyệt xác nhận banner ghi đúng IC2213 và lý do quyền quản trị."},
+    {"id": "T-BAD", "category": "invalid_input", "priority": "P1", "status": "passed", "evidence": "URL yêu cầu lớp không có trong danh sách trả null và không tự chuyển sang lớp đầu tiên; metadata lỗi không tạo banner sai."},
+    {"id": "T-TEACHER", "category": "security_privacy", "priority": "P0", "status": "passed", "evidence": "Giảng viên hoặc admin đồng thời phụ trách lớp không nhận banner quyền quản trị."},
+    {"id": "T-SEC", "category": "security_privacy", "priority": "P0", "status": "passed", "evidence": "Banner chỉ dùng tên lớp qua textContent; không dùng email, ID nội bộ, token hoặc dữ liệu học viên."},
+    {"id": "T-REG", "category": "regression", "priority": "P0", "status": "passed", "evidence": "Cùng test UI RED trên base vì thiếu export, GREEN trên head; suite ảnh hưởng đạt 26/26."}
+  ],
+  "red_green": {
+    "red_on_base": {
+      "test_id": "T-REG",
+      "command": "node --test tests/term-test-teacher-access-banner.mjs",
+      "tree_revision": "2e8cb92f25f29950823f99c998db0ccef3d99a46",
+      "outcome": "failed",
+      "exit_code": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "evidence": "Test RED vì model.js chưa export buildClassAccessNotice."
+    },
+    "green_on_head": {
+      "test_id": "T-REG",
+      "command": "node --test tests/term-test-teacher-access-banner.mjs",
+      "tree_revision": "85d797baf8127c8a5bdf59fbebf853d22a810963",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Bốn ca regression UI đạt, gồm banner admin và chống đổi lớp âm thầm."
+    }
+  },
+  "coverage_exemptions": {
+    "full_suite": "Không chạy toàn bộ kho vì có test live gọi POST vào production ngoài phạm vi; đã chạy trọn bảy suite bị ảnh hưởng và kiểm tra cú pháp hai file thay đổi."
+  },
+  "cross_constraints": [],
+  "mutations": [
+    {
+      "id": "M-PAGES-PRODUCTION",
+      "target": "GitHub Pages dashboard Term Test",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "GitHub Pages build đúng merge commit 9fb45c2; tệp công khai mới đã xuất hiện và giao diện thật hiển thị đầy đủ nhãn quyền."
+    }
+  ],
+  "verification_runs": [
+    {
+      "id": "V-PAGES-AFFECTED",
+      "scope": "focused",
+      "command": "node --test tests/term-test-teacher-session.mjs tests/term-test-teacher-access-banner.mjs tests/teacher-login-preference.mjs tests/term-test-reliability.mjs tests/term-test-landing.mjs tests/term-test-k67-live-results.mjs tests/term-teacher-feedback-links.mjs",
+      "tree_revision": "85d797baf8127c8a5bdf59fbebf853d22a810963",
+      "captured_at": "2026-09-22T15:00:00+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Toàn bộ suite dashboard Term Test bị ảnh hưởng đạt; node --check app.js/model.js đạt. Không chạy các test monorepo có POST production ngoài phạm vi."
+    },
+    {
+      "id": "V-PAGES-PRODUCTION-READBACK",
+      "scope": "behavioral",
+      "command": "Đọc trực tiếp DOM GitHub Pages bằng phiên quản trị viên thật",
+      "tree_revision": "85d797baf8127c8a5bdf59fbebf853d22a810963",
+      "captured_at": "2026-09-22T16:03:00+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "URL giữ class=IC2213; nhãn vai trò Quản trị viên, lớp 🛡 IC2213, tiêu đề và thông điệp banner đều hiển thị đúng; dashboard tải đúng lớp."
+    }
+  ],
+  "release": {
+    "target_environment": "production",
+    "decision": "verified",
+    "base_tree_revision": "2e8cb92f25f29950823f99c998db0ccef3d99a46",
+    "current_tree_revision": "85d797baf8127c8a5bdf59fbebf853d22a810963",
+    "production_authorized": true,
+    "rollback": "Revert commit giao diện và chờ GitHub Pages build lại.",
+    "deployment_readback": "verified",
+    "operational_observation": "GitHub Pages build merge commit 9fb45c2 thành công. Trên URL production, phiên quản trị viên thật giữ đúng IC2213, thấy nhãn 🛡 IC2213, vai trò Quản trị viên và banner giải thích không phải giảng viên phụ trách lớp.",
+    "open_risks": []
+  }
+}

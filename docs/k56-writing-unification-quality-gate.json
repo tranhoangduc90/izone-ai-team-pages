@@ -1,0 +1,105 @@
+{
+  "schema_version": 3,
+  "product": "Chấm Writing Term, Mini và Substitute Test K56/K67",
+  "change_id": "term-writing-unification-20260923",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "high",
+  "system_traits": ["stateful", "asynchronous", "concurrent", "external_side_effects", "authentication", "personal_data"],
+  "experience": {
+    "planning_mode": "controlled",
+    "mode_reason": "Bài thi, điểm, dữ liệu học viên và nhiều đường ghi kết quả đang chạy.",
+    "user": "Học viên, giảng viên và quản trị viên K56/K67",
+    "problem": "Các bài Writing đi qua nhiều đường chấm và có thể thiếu hoặc nhầm kết quả.",
+    "outcome": "Mỗi bài được nhận, chấm và hiển thị đúng Task/lượt thi qua một hợp đồng chung.",
+    "out_of_scope": ["Không chuyển production trước cổng duyệt và kiểm chứng riêng."],
+    "plain_language_summary": "Hợp nhất cách nhận và kiểm kết quả Writing mà vẫn giữ đúng bài và quyền từng lớp."
+  },
+  "change_package": {
+    "proposal": "Chuẩn hóa việc chấm Writing và chuyển từng loại bài sau kiểm chứng.",
+    "behavior_baseline": "K56, K67 và Substitute có các đường nhận, chấm và trả kết quả khác nhau.",
+    "deltas": [
+      {"id": "DELTA-UI", "operation": "MODIFIED", "behavior": "Không mở bài chấm Substitute khi kết quả thiếu Task.", "test_ids": ["T-UI"]},
+      {"id": "DELTA-ROUTE", "operation": "MODIFIED", "behavior": "Lớp K56 hợp lệ không rơi vào API demo.", "test_ids": ["T-ROUTE"]},
+      {"id": "DELTA-GRADE", "operation": "ADDED", "behavior": "Một hợp đồng chấm bảo toàn lớp, bài, lượt nộp, Task và phiên bản rubric.", "test_ids": ["T-IDENTITY", "T-RETRY", "T-QUALITY"]}
+    ],
+    "archive_status": "active"
+  },
+  "requirements": [
+    {"id": "REQ-1", "statement": "Học viên K56 hợp lệ nộp và xem đúng bài Writing.", "test_ids": ["T-ROUTE", "T-IDENTITY"]},
+    {"id": "REQ-2", "statement": "Substitute không hiển thị feedback rỗng.", "test_ids": ["T-UI"]},
+    {"id": "REQ-3", "statement": "Bộ chấm chung không giảm chất lượng hoặc làm ảnh hưởng bài đang chấm.", "test_ids": ["T-QUALITY", "T-LOAD", "T-RETRY"]}
+  ],
+  "invariants": [
+    {"id": "INV-IDENTITY", "statement": "Không ghi kết quả sang lớp, lượt nộp hoặc Task khác.", "test_ids": ["T-IDENTITY", "T-RETRY"]},
+    {"id": "INV-PORTAL", "statement": "Không ghi Portal khi thiếu cột hoặc đã có điểm khác.", "test_ids": ["T-PORTAL"]}
+  ],
+  "tests": [
+    {"id": "T-UI", "category": "regression", "priority": "P1", "status": "passed", "evidence": "RED trên Pages base 435019d: 2/6 ca lỗi; GREEN trên branch: 10/10 ca, gồm Task thiếu và sai số."},
+    {"id": "T-ROUTE", "category": "security_privacy", "priority": "P0", "status": "passed", "evidence": "RED trên Pages base 435019d; GREEN trên branch: ma trận chọn lớp ban đầu/đích; full Pages suite 221/221."},
+    {"id": "T-IDENTITY", "category": "concurrency_idempotency", "priority": "P0", "status": "not_run", "evidence": "Chờ backend hợp nhất và fixture nhiều lớp/Task."},
+    {"id": "T-RETRY", "category": "lifecycle_time", "priority": "P0", "status": "not_run", "evidence": "Chờ ca timeout, duplicate và callback muộn."},
+    {"id": "T-QUALITY", "category": "happy_path", "priority": "P0", "status": "not_run", "evidence": "Chờ so sánh chấm ẩn tên và kiểm rubric."},
+    {"id": "T-LOAD", "category": "external_partial", "priority": "P1", "status": "not_run", "evidence": "Chờ thử tải K56+K67+Substitute."},
+    {"id": "T-PORTAL", "category": "rollback_recovery", "priority": "P0", "status": "not_run", "evidence": "Chờ test ghi Portal và readback đúng lớp/cột."},
+    {"id": "T-BAD", "category": "invalid_input", "priority": "P1", "status": "not_run", "evidence": "Chờ test lớp và Task không hợp lệ."}
+  ],
+  "red_green": {
+    "red_on_base": {
+      "test_id": "T-UI", "command": "node --test tests/substitute-k56-writing-result-audit.mjs",
+      "tree_revision": "435019d", "outcome": "failed", "exit_code": 1, "failed": 2,
+      "evidence": "Bản base 4/6 đạt, hai ca nút feedback thiếu Task thất bại."
+    },
+    "green_on_head": {
+      "test_id": "T-UI", "command": "node --test tests/substitute-k56-writing-result-audit.mjs",
+      "tree_revision": "working-tree-after-435019d", "outcome": "passed", "exit_code": 0,
+      "passed": 10, "failed": 0, "skipped": 0,
+      "evidence": "Cùng suite trên branch đã sửa đạt 10/10."
+    }
+  },
+  "task_graph": {
+    "plan_revision": "k56-all-v1",
+    "tasks": [
+      {"id": "UI-1", "result": "Định tuyến và nút feedback K56 được sửa trên branch Pages.", "depends_on": [], "consumes": ["Audit 435019d"], "produces": ["Pages source, regression"], "contract": "Không chuyển lớp K56 thật sang demo và không mở feedback thiếu Task.", "test_ids": ["T-UI", "T-ROUTE"], "evidence_required": ["RED/GREEN và full suite"], "decision_inputs": ["Giữ demo riêng"], "affected_future_tasks": ["BE-1"], "status": "done", "plan_revision": "k56-all-v1"},
+      {"id": "BE-1", "result": "Backend nhiều lớp và hợp đồng chấm chung được kiểm chứng.", "depends_on": [], "consumes": ["Source K56 live, ERP cohort"], "produces": ["Backend candidate"], "contract": "Không làm mất bản K67 hoặc sai identity job.", "test_ids": ["T-IDENTITY", "T-RETRY", "T-PORTAL"], "evidence_required": ["Full suite, migration, Portal readback"], "decision_inputs": ["Đối chiếu live source"], "affected_future_tasks": ["REL-1"], "status": "in_progress", "plan_revision": "k56-all-v1"},
+      {"id": "REL-1", "result": "Chọn bộ chấm và chuyển từng luồng an toàn.", "depends_on": ["BE-1"], "consumes": ["Bài chấm ẩn tên, benchmark, phê duyệt"], "produces": ["Release evidence"], "contract": "Không chuyển production khi thiếu đối chứng chất lượng hoặc quyền phát hành.", "test_ids": ["T-QUALITY", "T-LOAD", "T-PORTAL"], "evidence_required": ["Đánh giá giảng viên, tải, readback"], "decision_inputs": ["Chuẩn chất lượng, Mini Portal"], "affected_future_tasks": [], "status": "planned", "plan_revision": "k56-all-v1"}
+    ]
+  },
+  "risk_register": {
+    "assessment": "FAIL",
+    "risks": [
+      {"id": "R-SOURCE", "description": "Source K56 live khác Git có thể làm mất chức năng K67 khi build.", "probability": 3, "impact": 3, "score": 9, "severity": "P0", "status": "open", "owner": "Nhóm phát triển", "mitigation": "Đối chiếu từng module, chạy đầy đủ regression và không deploy từ branch chưa hòa giải.", "test_ids": ["T-IDENTITY", "T-RETRY"]},
+      {"id": "R-QUALITY", "description": "Chưa có phép chấm mù; Đức chọn Codex tự đánh giá nên chưa có xác nhận của giảng viên.", "probability": 2, "impact": 3, "score": 6, "severity": "P1", "status": "open", "owner": "Nhóm phát triển", "mitigation": "Chạy cùng bài cũ đã ẩn danh, chấm mù theo rubric và ghi rõ giới hạn đánh giá AI trước khi chuyển luồng.", "test_ids": ["T-QUALITY"]}
+    ],
+    "waivers": []
+  },
+  "cross_constraints": [
+    {"id": "CAPACITY", "left": {"name": "K56 concurrent claim cap", "value": 4}, "operator": "<=", "right": {"name": "lease capacity cap", "value": 4}, "status": "passed", "evidence": "Giữ giới hạn bốn job; chưa tăng tải production."}
+  ],
+  "convergence": {
+    "status": "gaps", "tree_revision": "working-tree-after-435019d",
+    "gaps": ["Backend K56 live chưa hòa giải với Git.", "Chưa có benchmark chất lượng và Portal readback."],
+    "unrequested_work": [], "evidence": "Frontend 221/221 nhưng các test P0 backend/quality còn not_run."
+  },
+  "context_handoff": {
+    "summary": "Đã sửa và kiểm Pages; backend mới có lát chấm K56 trên branch, chưa đủ phát hành.",
+    "decisions": ["Giữ riêng demo và hai gateway Substitute cho đến khi có đối chứng."],
+    "completed": ["UI-1"], "next_step": "Hòa giải source backend và kiểm nhiều lớp trước khi xét phát hành.",
+    "open_risks": ["Source live lệch Git", "Chưa có vòng chấm mù và chỉ có đánh giá AI"],
+    "tree_revision": "working-tree-after-435019d"
+  },
+  "release": {
+    "target_environment": "local",
+    "decision": "not_ready",
+    "base_tree_revision": "435019d",
+    "current_tree_revision": "working-tree-after-435019d",
+    "production_authorized": false,
+    "rollback": "Giữ tuyến đang chạy; chỉ chuyển traffic sau đối soát job và bản chấm.",
+    "deployment_readback": "not_applicable",
+    "operational_observation": "not_run",
+    "open_risks": [
+      {"severity": "P0", "summary": "Backend K56 live lệch Git và mới map một lớp; Pages chưa được phát hành."},
+      {"severity": "P0", "summary": "Chưa chọn bộ chấm chung bằng phép thử chất lượng; đánh giá AI không thay thế xác nhận của giảng viên."}
+    ]
+  }
+}
