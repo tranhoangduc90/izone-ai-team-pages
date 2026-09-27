@@ -47,6 +47,21 @@ export function createPreviewServer({ check = checkSubmission } = {}) {
       sendJson(response, 200, { ok: true, preview: true });
       return;
     }
+    if (request.method === 'GET' && path === '/api/speaking/roster') {
+      // Máy thử lấy danh sách lớp thật qua máy chủ cục bộ vì API chỉ cho miền Pages đọc trực tiếp.
+      try {
+        const upstream = await fetch('https://ducizone.ddns.net/mapping-api/api/term-tests/roster?class=IC2304&test=term-test-2', {
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!upstream.ok) throw new Error('ROSTER_UPSTREAM_FAILED');
+        const data = await upstream.json();
+        if (data?.ok !== true || data.class?.name !== 'IC2304' || !Array.isArray(data.students)) throw new Error('ROSTER_INVALID');
+        sendJson(response, 200, data);
+      } catch {
+        sendJson(response, 502, { ok: false, error: 'ROSTER_UNAVAILABLE' });
+      }
+      return;
+    }
     if (request.method === 'POST' && path === '/api/speaking/check') {
       const origin = request.headers.origin;
       if ((origin && origin !== `http://${request.headers.host}`)
