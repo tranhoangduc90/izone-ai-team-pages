@@ -9,19 +9,19 @@
   <link rel="stylesheet" href="./guide.css">
   <link rel="stylesheet" href="./lesson-3.css">
   <style>[hidden] { display: none !important; }</style>
-  <script type="module" src="./lesson-3.js"></script>
+  <script type="module" src="./lesson-3-live.js"></script>
 </head>
 <body>
   <div class="page-shell">
     <header class="hero">
       <div class="eyebrow"><span class="brand-mark">IZ</span> IZONE · SPEAKING HOMEWORK</div>
-      <span class="demo-badge">Bản xem giao diện · chưa nhận bài thật hoặc ghi Google Docs</span>
+      <span class="demo-badge">IC2304 · Lesson 3</span>
       <h1>Nộp bài Speaking<br><span>Homework Lesson 3</span></h1>
-      <p class="hero-copy">Luyện bốn phần theo thứ tự và chia sẻ bốn hội thoại riêng. Bản xem giao diện này giúp bạn thử các bước và trạng thái; hệ thống nhận bài thật sẽ đọc ChatGPT Share khi bấm Xác nhận.</p>
+      <p class="hero-copy">Luyện bốn phần theo thứ tự và chia sẻ bốn hội thoại riêng. Khi bạn bấm Xác nhận, hệ thống đọc ChatGPT Share và báo kết quả cho từng phần.</p>
       <div class="hero-steps"><span><b>01</b> Luyện tập</span><span class="step-line"></span><span><b>02</b> Dán 4 link</span><span class="step-line"></span><span><b>03</b> Xác nhận</span></div>
     </header>
     <section class="identity-card" aria-labelledby="identity-title">
-      <div><span class="section-kicker">TRƯỚC KHI BẮT ĐẦU</span><h2 id="identity-title">Xác nhận người học</h2><p id="assignment-context"></p><p>Danh sách học viên IC2304 được tải từ hệ thống lớp đang dùng cho Term Test. Bản xem này chưa nhận bài chính thức; trên GitHub Pages, kết quả kiểm link chỉ là mô phỏng giao diện.</p></div>
+      <div><span class="section-kicker">TRƯỚC KHI BẮT ĐẦU</span><h2 id="identity-title">Xác nhận người học</h2><p id="assignment-context"></p><p>Chọn đúng tên trong bản Homework riêng của bạn. Hệ thống kiểm bốn hội thoại và giữ tiến trình nếu bạn mở lại trang.</p></div>
       <div id="identity-form" class="identity-form">
         <label for="class-select">Lớp</label><select id="class-select"><option value="IC2304">IC2304</option></select>
         <label for="student-select">Học viên</label><select id="student-select" disabled><option value="">Đang tải danh sách học viên…</option></select>
@@ -34,9 +34,9 @@
     </section>
     <main id="homework-content" hidden>
       <div class="section-intro"><div><span class="section-kicker">BỐN PHẦN · BỐN HỘI THOẠI</span><h2>Làm lần lượt từng phần</h2></div><p>Link nộp phải có dạng <code>https://chatgpt.com/share/...</code>. Link <code>/c/...</code> chỉ mở trong tài khoản của bạn và không nộp được.</p></div>
-      <p id="draft-status" class="draft-status" role="status">Bản nháp giao diện được giữ trên thiết bị này. Không dùng trang này để nộp bài thật.</p>
+      <p id="draft-status" class="draft-status" role="status">Các link đã xác nhận được giữ trên máy chủ. Link đang gõ được giữ trên thiết bị này.</p>
       <div id="parts"></div>
-      <section id="completion-card" class="completion-card" hidden aria-live="polite"><span class="completion-icon">✓</span><div><span class="section-kicker">ĐÃ XEM ĐỦ BỐN TRẠNG THÁI MẪU</span><h2>Giao diện mô phỏng đã hoàn tất</h2><p>Chưa có biên nhận hoặc dòng xác nhận trong Google Docs. Khi nhận bài thật, trang sẽ chỉ báo thành công sau khi máy chủ xác nhận đủ bốn link.</p></div><a id="return-homework" class="button button-primary" target="_blank" rel="noopener noreferrer">Quay lại Homework ↗</a></section>
+      <section id="completion-card" class="completion-card" hidden aria-live="polite"><span class="completion-icon">✓</span><div><span class="section-kicker">ĐÃ NỘP BÀI</span><h2>Nộp bài thành công</h2><p id="completion-message">Biên nhận đã lưu. Dòng xác nhận trong Google Docs có thể cần thêm ít phút để cập nhật.</p></div><a id="return-homework" class="button button-primary" target="_blank" rel="noopener noreferrer">Quay lại Homework ↗</a></section>
     </main>
     <dialog class="share-guide-dialog" id="share-guide-dialog" aria-labelledby="guide-title">
       <div class="guide-modal-bar"><span>HƯỚNG DẪN NỘP LINK</span><button id="close-share-guide-x" class="guide-close-x" type="button" aria-label="Đóng hướng dẫn">×</button></div>
@@ -57,7 +57,7 @@
         </div>
       </section><div class="guide-modal-footer"><button id="close-share-guide" class="button button-primary" type="button">Đóng hướng dẫn</button></div>
     </dialog>
-    <footer>IZONE · Bản xem giao diện Lesson 3 · Không nhận bài thật</footer>
+    <footer>IZONE · Speaking Homework Lesson 3 · IC2304</footer>
   </div>
 </body>
 </html>

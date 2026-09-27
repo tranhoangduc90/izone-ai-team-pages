@@ -1,10 +1,10 @@
-# Bản xem Speaking Homework · IC2304
+# Speaking Homework · IC2304
 
 ## Lesson 3 trên GitHub Pages
 
-Mở `lesson-3.html` để xem bốn phần của Homework Lesson 3: Làm rõ cấp 1, 2, 3 và Freestyle. Trang tải danh sách học viên IC2304 thật qua API danh sách lớp hiện dùng cho Term Test và dùng cùng khóa ghi nhớ UUID với Writing/Term Test. Nếu không tải được danh sách, trang không cho chọn hồ sơ mẫu. Kết quả kiểm link vẫn là mô phỏng; giao diện có đủ hình hướng dẫn và cảnh báo voice chat. **Lesson 3 không có khu Bác sĩ AI hoặc ô nộp link luyện bổ trợ.** Trang **không gửi link đi kiểm, không nhận bài thật, không tạo biên nhận và không ghi Google Docs**. Lesson 3 chưa được giao trong Classroom IC2304.
+Mở `lesson-3.html` từ nút trong đúng file Homework của học viên. URL phải chứa `documentId`, `class=IC2304` và `assignmentCode=67-speaking-lam_ro`. Trang tải danh sách học viên đã duyệt từ API Speaking và dùng khóa ghi nhớ UUID chung với Writing/Term Test. Bốn phần của Lesson 3 là Làm rõ cấp 1, 2, 3 và Freestyle. Mỗi phần có ô link riêng; bấm **Xác nhận** sẽ gửi link ChatGPT Share đến API để đọc và kiểm nội dung. Chỉ khi bốn link được xác nhận hợp lệ, API mới tạo biên nhận và đưa việc ghi Google Docs/chấm bài vào hàng chờ. **Lesson 3 không có Bác sĩ AI.**
 
-Muốn kiểm nội dung ChatGPT Share bằng bộ đọc local, chạy server bên dưới rồi mở `lesson-3.html` qua localhost. Đây vẫn là bản thử và không ghi bài nộp.
+Nếu bài Classroom chưa mở hoặc bản Google Doc của học viên chưa được gắn vào bài, API sẽ từ chối mở phiên và không nhận bài. Học viên vẫn có thể xem giao diện công khai trên GitHub Pages; việc xem trang không có nghĩa là bài đã mở nộp.
 
 ## Bản thử Lesson 2 trên máy
 
@@ -25,12 +25,8 @@ Kế hoạch xây dựng kết nối thật và thí điểm IC2304: [PLAN-IC230
 
 Khi mở trang bằng `?returnUrl=<URL-được-mã-hóa>`, nút **Quay lại Homework** chỉ nhận URL HTTPS của một Google Doc hoặc trang Classroom. Tham số được xóa khỏi thanh địa chỉ sau khi trang đọc. Nếu chưa có URL an toàn, nút không hoạt động; bản vận hành sẽ nhận link bản Homework của đúng học viên từ máy chủ sau khi xác thực.
 
-## Việc cần nối trước khi dùng thật
+## Vận hành Lesson 3
 
-1. Xác thực tài khoản Google và đối chiếu đúng học viên, lớp, bài Classroom; danh sách nhớ trên thiết bị chỉ giúp chọn sẵn.
-2. Đưa bộ kiểm hiện chạy local lên backend có xác thực, hạn mức, lưu trạng thái và kiểm sức chịu tải; kiểm lại độ chính xác AI trên bộ ca thật trước khi mở cho học viên. Không coi lỗi chính tả hay việc thiếu metadata âm thanh là bằng chứng chắc chắn học viên gõ.
-3. Đối chiếu URL và nội dung hội thoại với lịch sử nộp ở mọi bài; bản thử mới chỉ so hai phần trong cùng phiên. Lưu biên nhận nộp, xác nhận voice và khóa chống nộp/chấm trùng.
-4. Sau khi cả hai phần hợp lệ, khởi chạy chấm ngay. Chỉ báo hoàn thành sau khi đọc lại kết quả ghi đích. Nút quay lại mở đúng file Homework của học viên.
-5. Nhánh email theo lịch chỉ tổng hợp bài Classroom hiện `TURNED_IN` nhưng chưa có biên nhận webapp hợp lệ; cùng ca không báo lặp. Email dẫn tới `StudentSubmission.alternateLink` của đúng bài.
+API lưu trạng thái kiểm link và biên nhận trong database mapping. Tác vụ nền đọc ChatGPT Share, kiểm khối lượng và dấu hiệu nhập chữ; cảnh báo nhập chữ cho phép học viên xác nhận đã luyện nói. Luồng n8n ghi biên nhận vào đúng bản Google Doc sau khi đối chiếu Doc ID. Luồng theo lịch chỉ gom các bài Classroom còn ở trạng thái **Đã nộp** mà chưa có biên nhận Speaking, rồi gửi một email cho giảng viên. Trang `teacher.html?receipt=<UUID>` dùng phiên đăng nhập Google của giảng viên để mở bản chỉ đọc.
 
-Hội thoại đi qua Gemini dispatcher theo yêu cầu kiểm AI; mỗi lần thử có thể tốn quota. Không đưa link, nội dung hội thoại, tên hoặc mã học viên thật vào repository, ảnh kiểm thử hay bản phát hành công khai.
+Trang hiện biên nhận sau khi API đã lưu bốn link; trạng thái ghi Google Docs và chấm bài được cập nhật bất đồng bộ. Nếu tác vụ nền lỗi, trang giảng viên hiện trạng thái cần thử lại. Không đưa link hội thoại, nội dung học viên hoặc credential vào repository công khai.
