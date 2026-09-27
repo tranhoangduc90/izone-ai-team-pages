@@ -2,7 +2,7 @@ import { memoryKey, readMemory, resolveRememberedStudent, writeMemory } from '..
 import { parseShareUrl, safeHomeworkUrl } from './logic.mjs';
 
 // Bản thử chỉ dùng hai hồ sơ giả. Không có dữ liệu học viên hoặc lần nộp thật trong mã nguồn.
-const roster = [{ classRef: 'IC2200', classCode: 'IC2200', students: [
+const roster = [{ classRef: 'IC2304', classCode: 'IC2304', students: [
   { studentRef: '00000000-0000-4000-8000-000000000001', name: 'Học viên thử A' },
   { studentRef: '00000000-0000-4000-8000-000000000002', name: 'Học viên thử B' },
 ] }];
@@ -28,9 +28,59 @@ const state = {
 
 // Chọn sẵn đúng mã giả đã nhớ; học viên vẫn phải bấm Mở bài nộp.
 const remembered = readMemory(localStorage, demoMemoryKey);
-const match = resolveRememberedStudent(roster, remembered.studentRef, 'IC2200', { enabled: true, allClasses: true });
+const match = resolveRememberedStudent(roster, remembered.studentRef, 'IC2304', { enabled: true, allClasses: true });
 if (match) identitySelect.value = match.studentRef;
 if (remembered.status === 'unavailable') identityMessage.textContent = 'Trình duyệt không cho đọc bộ nhớ. Bạn vẫn có thể chọn học viên bằng tay.';
+
+// Bản thử chỉ lưu hai URL theo học viên giả; xác nhận đạt phải kiểm lại sau khi mở trang.
+function draftKey(studentRef) {
+  return `speaking-homework-demo:IC2304:lesson-2:${studentRef}`;
+}
+
+function saveDraft() {
+  if (!state.activeStudent) return;
+  try {
+    localStorage.setItem(draftKey(state.activeStudent), JSON.stringify({
+      paraphrase: $('paraphrase-link').value,
+      speaking: $('speaking-link').value,
+    }));
+    $('draft-status').textContent = 'Đã giữ hai ô link trên thiết bị này. Khi mở lại, bạn cần bấm Xác nhận để kiểm lại. Bản thử chưa đối chiếu lịch sử nộp trong khóa.';
+  } catch {
+    $('draft-status').textContent = 'Không lưu được link trên thiết bị này. Hãy giữ lại link trước khi rời trang.';
+  }
+}
+
+function restoreDraft(studentRef) {
+  try {
+    const draft = JSON.parse(localStorage.getItem(draftKey(studentRef)) || '{}');
+    $('paraphrase-link').value = typeof draft.paraphrase === 'string' ? draft.paraphrase : '';
+    $('speaking-link').value = typeof draft.speaking === 'string' ? draft.speaking : '';
+    if ($('paraphrase-link').value || $('speaking-link').value) {
+      $('draft-status').textContent = 'Đã khôi phục link từng nhập trên thiết bị này. Hãy bấm Xác nhận ở cả hai phần để kiểm lại.';
+    }
+  } catch {
+    $('draft-status').textContent = 'Không đọc được bản nháp trên thiết bị này. Bạn vẫn có thể dán lại hai link.';
+  }
+}
+
+const shareGuide = $('share-guide-dialog');
+$('open-share-guide').addEventListener('click', () => shareGuide.showModal());
+$('close-share-guide-x').addEventListener('click', () => shareGuide.close());
+$('close-share-guide').addEventListener('click', () => shareGuide.close());
+shareGuide.addEventListener('click', (event) => {
+  if (event.target !== shareGuide) return;
+  const box = shareGuide.getBoundingClientRect();
+  if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) {
+    shareGuide.close();
+  }
+});
+
+window.addEventListener('beforeunload', (event) => {
+  if (!state.activeStudent || sections.every((section) => state[section].accepted)) return;
+  saveDraft();
+  event.preventDefault();
+  event.returnValue = '';
+});
 
 $('open-homework').addEventListener('click', () => {
   const student = roster[0].students.find((item) => item.studentRef === identitySelect.value);
@@ -42,11 +92,12 @@ $('open-homework').addEventListener('click', () => {
   const saved = writeMemory(localStorage, demoMemoryKey, rememberCheckbox.checked ? student.studentRef : '');
   identityMessage.textContent = saved ? '' : 'Không lưu được lựa chọn trên thiết bị này. Bạn vẫn có thể làm bài trong phiên hiện tại.';
   state.activeStudent = student.studentRef;
+  restoreDraft(student.studentRef);
   $('active-student').textContent = student.name;
   $('identity-form').hidden = true;
   $('identity-confirmed').hidden = false;
   $('homework-content').hidden = false;
-  $('paraphrase-link').focus();
+  $('open-share-guide').focus();
 });
 
 $('change-student').addEventListener('click', () => {
@@ -71,6 +122,7 @@ $('change-student').addEventListener('click', () => {
   $('voice-checkbox').checked = false;
   $('voice-confirmation').hidden = true;
   $('completion-card').hidden = true;
+  $('draft-status').textContent = 'Link bạn nhập sẽ được giữ trên thiết bị này để tiếp tục lần sau. Bản thử chưa đối chiếu lịch sử nộp trong khóa.';
   identitySelect.value = '';
   $('identity-confirmed').hidden = true;
   $('identity-form').hidden = false;
@@ -113,6 +165,7 @@ function resetCheck(section) {
     $('voice-continue').disabled = true;
   }
   $('completion-card').hidden = true;
+  saveDraft();
 }
 
 for (const section of sections) {

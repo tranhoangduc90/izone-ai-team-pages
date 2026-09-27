@@ -15,7 +15,7 @@
   <div class="page-shell">
     <header class="hero">
       <div class="eyebrow"><span class="brand-mark">IZ</span> IZONE · SPEAKING HOMEWORK</div>
-      <span class="demo-badge">Bản thử · đọc và kiểm ChatGPT Share thật</span>
+      <span class="demo-badge">Bản thử IC2304 · đọc và kiểm ChatGPT Share thật</span>
       <h1>Nộp bài Speaking<br><span>Homework Lesson 2</span></h1>
       <p class="hero-copy">Luyện tập trong ChatGPT, chia sẻ từng hội thoại rồi bấm Xác nhận. Hệ thống đọc nội dung link ngay và báo rõ phần đã đủ hoặc cần luyện thêm.</p>
       <div class="hero-steps" aria-label="Ba bước nộp bài">
@@ -29,7 +29,7 @@
       <div>
         <span class="section-kicker">TRƯỚC KHI BẮT ĐẦU</span>
         <h2 id="identity-title">Xác nhận người học</h2>
-        <p>Bản thử dùng hồ sơ giả. Khi vận hành, hệ thống sẽ đối chiếu tài khoản Google Classroom với học viên của bài này.</p>
+        <p>Bản thử dùng hồ sơ giả của IC2304. Bản vận hành sẽ dùng bước chọn học viên và ghi nhớ chung với Term Test, handout Writing.</p>
       </div>
       <div class="identity-form" id="identity-form">
         <label for="student-select">Học viên</label>
@@ -53,6 +53,7 @@
         <div><span class="section-kicker">HAI PHẦN · HAI HỘI THOẠI</span><h2>Làm lần lượt từng phần</h2></div>
         <p>Mỗi link cần là link <strong>Chia sẻ</strong> của ChatGPT có dạng <code>chatgpt.com/share/...</code>. Link <code>/c/...</code> chỉ mở trong tài khoản của bạn và không nộp được.</p>
       </div>
+      <p id="draft-status" class="draft-status" role="status" aria-live="polite">Link bạn nhập sẽ được giữ trên thiết bị này để tiếp tục lần sau. Bản thử chưa đối chiếu lịch sử nộp trong khóa.</p>
 
       <section class="task-card" id="paraphrase-card" aria-labelledby="paraphrase-title">
         <div class="task-header"><div class="task-number">01</div><div><span class="section-kicker">PHẦN 1</span><h2 id="paraphrase-title">Luyện tập Paraphrase</h2></div><span class="task-status" id="paraphrase-status">Chưa kiểm tra</span></div>
@@ -64,9 +65,10 @@
               <li>Mở bài luyện Paraphrase và làm theo các bước chatbot hướng dẫn cho ít nhất 5 câu hỏi.</li>
               <li>Sau khi luyện xong, tạo link chia sẻ của chính hội thoại đó rồi dán vào ô bên phải.</li>
             </ol>
-            <a class="practice-link" href="https://ducizone.short.gy/paraphrase_cau_hoi" target="_blank" rel="noopener noreferrer">Mở bài luyện Paraphrase <span aria-hidden="true">↗</span></a>
           </div>
           <div class="submission-panel">
+            <button id="open-share-guide" class="button button-outline guide-button" type="button">Xem hướng dẫn lấy link có hình minh họa <span aria-hidden="true">?</span></button>
+            <a class="button button-primary practice-button" href="https://ducizone.short.gy/paraphrase_cau_hoi" target="_blank" rel="noopener noreferrer">Mở bài luyện Paraphrase <span aria-hidden="true">↗</span></a>
             <label for="paraphrase-link">Link luyện tập Paraphrase</label>
             <input id="paraphrase-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://chatgpt.com/share/...">
             <p class="field-hint">Bấm Xác nhận sau khi dán link. Hệ thống mở đúng hội thoại này và kiểm số câu đã luyện ngay.</p>
@@ -88,9 +90,9 @@
               <li><strong>Nói lại câu trả lời hoàn chỉnh</strong> sau khi nhận góp ý.</li>
             </ol>
             <p class="voice-note">Khi luyện trên điện thoại, hãy dùng nút micro để nói. Nút trò chuyện bằng giọng nói là chế độ khác với nút micro được chỉ trong hướng dẫn gốc.</p>
-            <a class="practice-link" href="https://ducizone.short.gy/freestyle" target="_blank" rel="noopener noreferrer">Mở bài luyện Full Speaking <span aria-hidden="true">↗</span></a>
           </div>
           <div class="submission-panel">
+            <a class="button button-primary practice-button" href="https://ducizone.short.gy/freestyle" target="_blank" rel="noopener noreferrer">Mở bài luyện Full Speaking <span aria-hidden="true">↗</span></a>
             <label for="speaking-link">Link luyện tập Full Speaking</label>
             <input id="speaking-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://chatgpt.com/share/...">
             <p class="field-hint">Hãy chia sẻ đúng hội thoại có đủ 3 câu và phần nói lại sau góp ý. Bấm Xác nhận để kiểm nội dung ngay.</p>
@@ -104,6 +106,8 @@
         </div>
       </section>
 
+      <dialog class="share-guide-dialog" id="share-guide-dialog" aria-labelledby="guide-title">
+        <div class="guide-modal-bar"><span>HƯỚNG DẪN NỘP LINK</span><button id="close-share-guide-x" class="guide-close-x" type="button" aria-label="Đóng hướng dẫn">×</button></div>
       <section class="guide-card illustrated-guide" id="share-guide" aria-labelledby="guide-title">
         <div class="guide-heading"><span class="section-kicker">HƯỚNG DẪN CÓ HÌNH MINH HỌA</span><h2 id="guide-title">Lấy đúng link ChatGPT Share</h2><p>Xem từng hình rồi làm theo trên điện thoại của bạn. Hai phần luyện cần hai hội thoại riêng.</p></div>
         <div class="guide-content">
@@ -124,6 +128,8 @@
           <div class="link-check-guide"><figure><img src="./assets/link-format.png" alt="So sánh link ChatGPT Share hợp lệ với link /c/ riêng tư" loading="lazy"><figcaption>Hình 9 · Link nộp đúng có <code>/share/</code>.</figcaption></figure><p>Trước khi Xác nhận, nhìn lại link: dạng đúng bắt đầu bằng <code>https://chatgpt.com/share/</code>. Link <code>https://chatgpt.com/c/</code> chỉ mở trong tài khoản của bạn; hãy tạo link qua nút Chia sẻ.</p></div>
         </div>
       </section>
+        <div class="guide-modal-footer"><button id="close-share-guide" class="button button-primary" type="button">Đóng hướng dẫn</button></div>
+      </dialog>
 
       <section class="completion-card" id="completion-card" hidden aria-live="polite">
         <span class="completion-icon" aria-hidden="true">✓</span><div><span class="section-kicker">ĐÃ KIỂM TRA HAI HỘI THOẠI</span><h2>Hai link đã qua bước kiểm</h2><p>Bạn có thể quay lại file Homework để làm tiếp. Khi bản vận hành được kết nối, bước này sẽ tạo biên nhận và bắt đầu chấm ngay.</p><p class="demo-disclaimer">Bản xem trước đã đọc và phân tích link thật, nhưng chưa ghi bài nộp hoặc chạy chấm production.</p></div><a id="return-homework" class="button button-primary" aria-disabled="true" tabindex="-1">Quay lại Homework <span aria-hidden="true">↗</span></a>

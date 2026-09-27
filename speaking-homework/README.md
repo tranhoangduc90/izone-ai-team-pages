@@ -1,15 +1,17 @@
-# Bản thử webapp nộp Speaking Homework Lesson 2
+# Bản thử webapp nộp Speaking Homework Lesson 2 · giao diện IC2304
 
 Tại gốc repository, chạy `node speaking-homework/server.mjs`, rồi mở `http://127.0.0.1:8765/speaking-homework/`. Máy chủ chỉ nghe trên `127.0.0.1`. Không mở riêng `index.html` hoặc chạy server tĩnh: nút **Xác nhận** cần tuyến kiểm nội dung.
 
 ## Phạm vi bản thử
 
-- Có hai phần độc lập: Paraphrase và Full Speaking. Mỗi phần có hướng dẫn, link mở chatbot, ô nhập ChatGPT Share và nút **Xác nhận**.
-- Nội dung hướng dẫn và đủ chín ảnh từ mẫu Homework Lesson 2 luôn hiện trên trang: tối thiểu 5 câu Paraphrase; tối thiểu 3 câu Speaking có hỏi, trả lời, nhận góp ý và nói lại câu hoàn chỉnh. Có hướng dẫn iPhone, Android và phân biệt `/share/` với `/c/`.
+- Có hai phần độc lập: Paraphrase và Full Speaking. Nút mở chatbot được đặt ngay trên ô nhập của từng phần. Nút hướng dẫn trên ô Paraphrase mở hộp thoại, đóng bằng X, nút Đóng, Escape hoặc bấm ngoài.
+- Hộp hướng dẫn có đủ chín ảnh từ mẫu Homework Lesson 2, mỗi ảnh rộng bằng vùng hướng dẫn; iPhone xếp trước Android. Nội dung bài: tối thiểu 5 câu Paraphrase; tối thiểu 3 câu Speaking có hỏi, trả lời, nhận góp ý và nói lại câu hoàn chỉnh.
 - Sau khi bấm **Xác nhận** ở mỗi phần, máy chủ gọi bộ đọc ChatGPT Share có sẵn trên máy và gửi hội thoại đã đọc tới Gemini 3.1 Flash Lite. Kết quả dựa trên các lượt chat có dẫn chứng bằng chỉ số, không dùng lựa chọn tình huống mô phỏng. Lỗi đọc hoặc lỗi AI đều không được nhận bài.
 - Nếu hai link có nội dung hội thoại giống hệt, trang chặn việc dùng cùng hội thoại cho hai phần.
 - Nghi vấn gõ là cảnh báo mềm: học viên xác nhận đã voice chat thì phần Speaking được nhận. Khi hai phần qua bước kiểm, trang hiện thông báo đã kiểm và nút quay lại Homework; bản xem trước chưa chấm thật.
-- Dùng hai hồ sơ giả và module ghi nhớ học viên chung, nhưng khóa demo tách riêng. Có đọc ChatGPT Share và gọi Gemini dispatcher; không đọc roster thật, không gọi Google Classroom, không gửi email hoặc ghi kết quả/chạy chấm production.
+- Dùng hai hồ sơ giả IC2304 và module ghi nhớ học viên chung, nhưng khóa demo tách riêng. Link nhập dở được giữ cục bộ theo hồ sơ giả; khi mở lại cần bấm Xác nhận để kiểm lại. Trình duyệt cảnh báo nếu rời trang khi chưa đủ hai phần, tùy khả năng hỗ trợ của browser. Có đọc ChatGPT Share và gọi Gemini dispatcher; không đọc roster thật, không tra trùng lịch sử, không gọi Google Classroom, không gửi email hoặc ghi kết quả/chạy chấm production.
+
+Kế hoạch xây dựng kết nối thật và thí điểm IC2304: [PLAN-IC2304.md](PLAN-IC2304.md).
 
 ## Link quay lại Homework
 

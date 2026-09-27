@@ -139,3 +139,134 @@
     max-height: none;
   }
 }
+
+/* Bản xem trước IC2304: hướng dẫn mở theo yêu cầu và từng ảnh chiếm trọn bề ngang. */
+.practice-button,
+.guide-button {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.guide-button {
+  margin-bottom: 12px;
+}
+
+.draft-status {
+  margin: -3px 2px 18px;
+  color: #526c77;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.share-guide-dialog {
+  width: min(1100px, calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  border: 1px solid #dbe6e8;
+  border-radius: 18px;
+  box-shadow: 0 24px 90px #10233766;
+  overflow-y: auto;
+}
+
+.share-guide-dialog::backdrop {
+  background: #102337a8;
+}
+
+.guide-modal-bar,
+.guide-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 25px;
+  background: white;
+}
+
+.guide-modal-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid #dbe6e8;
+  color: #087e74;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.guide-modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid #dbe6e8;
+}
+
+.guide-close-x {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: #edf4f4;
+  color: #173849;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.share-guide-dialog .illustrated-guide {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.share-guide-dialog .guide-callout,
+.share-guide-dialog .link-check-guide {
+  display: block;
+}
+
+.share-guide-dialog .guide-callout figure,
+.share-guide-dialog .link-check-guide figure {
+  width: 100%;
+}
+
+.share-guide-dialog .guide-callout img,
+.share-guide-dialog .link-check-guide img,
+.share-guide-dialog .guide-images img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: auto;
+  object-fit: contain;
+}
+
+.share-guide-dialog .guide-callout p,
+.share-guide-dialog .link-check-guide p {
+  margin: 14px 0 0;
+}
+
+.share-guide-dialog .guide-columns,
+.share-guide-dialog .guide-images {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+}
+
+.share-guide-dialog .guide-columns > div + div {
+  margin-top: 8px;
+}
+
+.share-guide-dialog .guide-images figure {
+  padding: 18px;
+}
+
+@media (max-width: 560px) {
+  .share-guide-dialog {
+    width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+  }
+
+  .guide-modal-bar,
+  .guide-modal-footer {
+    padding: 11px 16px;
+  }
+}
