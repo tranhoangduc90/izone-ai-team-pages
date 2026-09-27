@@ -19,9 +19,9 @@
     "problem": "Nút mở chatbot chưa đủ nổi bật; ảnh hướng dẫn nhỏ và chiếm trang; link nhập dở mất khi tải lại.",
     "outcome": "Hai nút luyện nổi bật, hướng dẫn mở dạng hộp thoại với chín ảnh rộng, bản nháp link được giữ và cảnh báo khi rời trang chưa đủ.",
     "out_of_scope": [
-      "Bản xem trước chưa nối roster/phiên thật, lịch sử nộp, Google Docs, Classroom, email hoặc chấm production."
+      "Bản xem trước chưa nối roster/phiên thật, lịch sử nộp, Google Docs, Classroom, email, chấm production hoặc Bác sĩ AI."
     ],
-    "plain_language_summary": "Dễ mở bài luyện và xem ảnh; giữ link nhập dở trên thiết bị; kế hoạch triển khai thật cho IC2304 đã được viết."
+    "plain_language_summary": "Giao diện xem trước IC2304; kế hoạch gồm nộp Speaking và Bác sĩ AI với 5 bài ưu tiên, xem tất cả và hai ô luyện bổ trợ."
   },
   "change_package": {
     "proposal": "Điều chỉnh giao diện theo bảy góp ý và viết kế hoạch IC2304.",
@@ -66,6 +66,17 @@
         "id": "D-PLAN",
         "operation": "ADDED",
         "behavior": "Kế hoạch kết nối database mapping, CTA Docs, chấm và email cho pilot IC2304.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-PLAN"
+        ]
+      },
+      {
+        "id": "D-DOCTOR-PLAN",
+        "operation": "ADDED",
+        "behavior": "Kế hoạch Bác sĩ AI phân tích bài Speaking mới, xếp bài ưu tiên và nhận hai link luyện bổ trợ.",
         "module_ids": [
           "M-UI"
         ],
@@ -206,6 +217,13 @@
         "T-REAL",
         "T-ERROR"
       ]
+    },
+    {
+      "id": "R-DOCTOR-PLAN",
+      "statement": "Kế hoạch có UI 5 bài/xem tất cả, hai ô luyện bổ trợ, cập nhật sau bài mới, dữ liệu bền và nghiệm thu riêng.",
+      "test_ids": [
+        "T-PLAN"
+      ]
     }
   ],
   "invariants": [
@@ -308,7 +326,7 @@
       "category": "happy_path",
       "priority": "P2",
       "status": "passed",
-      "evidence": "PLAN-IC2304.md có đủ đường đi, migration, API/DB, CTA, chấm, email, test và rollback."
+      "evidence": "PLAN-IC2304.md có mục Bác sĩ AI: bố cục, quy tắc xếp ưu tiên, cập nhật sau mỗi receipt, hai ô link, migration, API, test và rollback riêng."
     }
   ],
   "task_graph": {
@@ -413,19 +431,19 @@
       "id": "V-IC2304",
       "scope": "full_suite",
       "command": "node --check speaking-homework/app.js; node tests/speaking-homework-demo.mjs; node tests/speaking-homework-real.mjs; node tests/speaking-homework-http.mjs",
-      "tree_revision": "0f5d88066df961813f3ea875334c3394d75ea4fe31bc80fc459542db44995b02",
-      "captured_at": "2026-09-27T12:15:13.703307Z",
+      "tree_revision": "bbb2968936ad66800ba09065e6363fd0405866d58ff3e001ba73f1ee4af1b7e0",
+      "captured_at": "2026-09-27T12:58:00.550235Z",
       "exit_code": 0,
       "outcome": "passed",
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "evidence": "Bốn lệnh đạt trên source hiện tại; HTTP local /health, page và app đều 200."
+      "evidence": "Bốn lệnh mã/HTTP đạt trên revision hiện tại; kiểm kế hoạch Bác sĩ AI và bảng Markdown đạt."
     }
   ],
   "convergence": {
     "status": "gaps",
-    "tree_revision": "0f5d88066df961813f3ea875334c3394d75ea4fe31bc80fc459542db44995b02",
+    "tree_revision": "bbb2968936ad66800ba09065e6363fd0405866d58ff3e001ba73f1ee4af1b7e0",
     "gaps": [
       "Chưa kiểm popup, ảnh và bản nháp trong browser sau sửa.",
       "Kết nối lịch sử/DB/Docs/chấm nằm trong kế hoạch, chưa thuộc phần xem trước."
@@ -437,7 +455,7 @@
     "target_environment": "local",
     "decision": "not_ready",
     "base_tree_revision": "acb78e7",
-    "current_tree_revision": "0f5d88066df961813f3ea875334c3394d75ea4fe31bc80fc459542db44995b02",
+    "current_tree_revision": "bbb2968936ad66800ba09065e6363fd0405866d58ff3e001ba73f1ee4af1b7e0",
     "production_authorized": false,
     "rollback": "Quay về commit acb78e7 hoặc dừng máy chủ local.",
     "deployment_readback": "not_applicable",
