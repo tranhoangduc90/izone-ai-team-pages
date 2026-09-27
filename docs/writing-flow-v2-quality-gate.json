@@ -1,0 +1,607 @@
+{
+  "schema_version": 3,
+  "product": "Dashboard chấm Writing 56/67, giao diện mới",
+  "change_id": "writing-flow-v2-production-20260927",
+  "change_kind": "feature",
+  "escaped_user_defect": false,
+  "risk": "high",
+  "system_traits": [
+    "stateful",
+    "asynchronous",
+    "external_side_effects",
+    "authentication",
+    "personal_data",
+    "multi_user",
+    "multi_service"
+  ],
+  "experience": {
+    "planning_mode": "controlled",
+    "acceptance_mode": "small_complete",
+    "mode_reason": "Trang mới hiển thị dữ liệu thật, đăng nhập và có thao tác ghi qua API hiện hành.",
+    "user": "Người vận hành Writing 56/67",
+    "problem": "Bản hiện tại dàn nhiều tab và dồn ba số ngày vào một biểu đồ, khó thấy bài kẹt ở từng bước.",
+    "outcome": "Người vận hành chọn Homework hoặc Test, thấy số bài theo bảy bước, mở đúng danh sách cần cứu, xem ba biểu đồ ngày riêng và bảng số liệu.",
+    "out_of_scope": [
+      "Không đổi backend hoặc quy tắc chấm.",
+      "Không thay URL dashboard cũ."
+    ],
+    "plain_language_summary": "Mở một địa chỉ mới để theo dõi và cứu bài rõ hơn, dùng cùng dữ liệu và quyền hiện có."
+  },
+  "change_package": {
+    "proposal": "Tạo trang production riêng với bố cục theo hành trình và biểu đồ ngày tách biệt.",
+    "behavior_baseline": "Dashboard hiện tại có API và thao tác đủ nhưng điều hướng nhiều tab, biểu đồ gộp ba hoạt động.",
+    "deltas": [
+      {
+        "id": "D-ROUTE",
+        "operation": "ADDED",
+        "behavior": "URL mới cùng xác thực và dữ liệu, URL cũ giữ nguyên.",
+        "module_ids": [
+          "M-PAGE",
+          "M-FLOW"
+        ],
+        "test_ids": [
+          "T-ROUTE",
+          "T-AUTH",
+          "T-REG"
+        ]
+      },
+      {
+        "id": "D-JOURNEY",
+        "operation": "ADDED",
+        "behavior": "Homework và Test có bản đồ bảy bước, danh sách và lọc bài kẹt.",
+        "module_ids": [
+          "M-FLOW"
+        ],
+        "test_ids": [
+          "T-JOURNEY",
+          "T-TEST"
+        ]
+      },
+      {
+        "id": "D-DAILY",
+        "operation": "ADDED",
+        "behavior": "Ba biểu đồ ngày độc lập, bật tắt riêng, bảng ngày luôn hiện.",
+        "module_ids": [
+          "M-FLOW"
+        ],
+        "test_ids": [
+          "T-DAILY"
+        ]
+      },
+      {
+        "id": "D-ACTIONS",
+        "operation": "ADDED",
+        "behavior": "Thao tác bài, nguồn và lớp tiếp tục dùng API, quyền và thông báo hiện hành.",
+        "module_ids": [
+          "M-FLOW",
+          "M-API"
+        ],
+        "test_ids": [
+          "T-ACTIONS",
+          "T-PARTIAL",
+          "T-SEC"
+        ]
+      }
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "plan-v1",
+    "modules": [
+      {
+        "id": "M-PAGE",
+        "name": "Trang và bố cục mới",
+        "responsibility": "Hiển thị điều hướng và các vùng nội dung.",
+        "owns_data": [
+          "HTML/CSS của URL mới"
+        ],
+        "public_interfaces": [
+          "writing-flow-v2.html"
+        ],
+        "depends_on": [
+          "M-FLOW"
+        ],
+        "boundary_rules": [
+          "Không chứa dữ liệu riêng, token hoặc đáp án."
+        ],
+        "test_ids": [
+          "T-ROUTE",
+          "T-JOURNEY",
+          "T-DAILY"
+        ]
+      },
+      {
+        "id": "M-FLOW",
+        "name": "Điều khiển giao diện mới",
+        "responsibility": "Nạp và trình bày dữ liệu, trạng thái và thao tác.",
+        "owns_data": [
+          "trạng thái tab, biểu đồ, bảng"
+        ],
+        "public_interfaces": [
+          "writing-flow-v2.js"
+        ],
+        "depends_on": [
+          "M-API"
+        ],
+        "boundary_rules": [
+          "Không tự quyết định điểm, quyền hoặc trạng thái nghiệp vụ."
+        ],
+        "test_ids": [
+          "T-JOURNEY",
+          "T-TEST",
+          "T-DAILY",
+          "T-ACTIONS",
+          "T-PARTIAL"
+        ]
+      },
+      {
+        "id": "M-API",
+        "name": "API dùng chung",
+        "responsibility": "Đăng nhập và gọi endpoint hiện hành.",
+        "owns_data": [
+          "hợp đồng request/response"
+        ],
+        "public_interfaces": [
+          "api.js",
+          "teacher-session-client.js"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Backend là nguồn sự thật."
+        ],
+        "test_ids": [
+          "T-AUTH",
+          "T-SEC",
+          "T-ACTIONS"
+        ]
+      }
+    ],
+    "integrations": [
+      {
+        "id": "I-PAGE-FLOW",
+        "producer": "M-FLOW",
+        "consumer": "M-PAGE",
+        "contract": "Các ID giao diện có đủ để hiển thị mọi view và trạng thái lỗi.",
+        "test_ids": [
+          "T-ROUTE",
+          "T-JOURNEY"
+        ]
+      },
+      {
+        "id": "I-FLOW-API",
+        "producer": "M-API",
+        "consumer": "M-FLOW",
+        "contract": "Chỉ gọi endpoint hiện hành qua phiên giảng viên, giữ requestId cho mutation.",
+        "test_ids": [
+          "T-AUTH",
+          "T-ACTIONS",
+          "T-PARTIAL"
+        ]
+      }
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "plan-v1",
+    "signals": [
+      "multi_user",
+      "multi_service"
+    ],
+    "critical_path": "Giảng viên mở URL mới → xác thực Google/phiên API → chọn Homework/Test → đọc số bước và bài → mở chi tiết hoặc thao tác → API xác nhận và tải lại.",
+    "peak_load": {
+      "value": 20,
+      "unit": "concurrent_operators",
+      "basis": "Giả định bảo thủ cho nhóm vận hành nội bộ; trang chỉ đọc theo nhịp 30 giây như dashboard cũ."
+    },
+    "user_wait_target": "Hiện thông báo khi API lỗi; tải lại dữ liệu theo nhịp 30 giây sau khi đăng nhập.",
+    "limits_and_cost": [
+      "Mỗi lần tải chung gọi counts, hai danh sách lớp và view; phân trang 50 bài như bản cũ.",
+      "Không gọi AI trực tiếp từ trình duyệt."
+    ],
+    "failure_and_recovery": [
+      "API lỗi giữ màn hình đang có và hiện thông báo.",
+      "Phiên hết hạn trả về màn đăng nhập.",
+      "Thao tác ghi thất bại hiển thị lỗi; backend giữ idempotency theo requestId.",
+      "Trang cũ là đường quay lại UI."
+    ],
+    "monitoring": [
+      "Quan sát console/network khi mở URL production.",
+      "Đối chiếu số đếm và một bài trên trang mới với trang cũ bằng phiên thật."
+    ],
+    "decision": "Dùng URL độc lập trong Pages, tái dùng API và cơ chế phiên hiện hành; không đổi backend.",
+    "test_ids": [
+      "T-ROUTE",
+      "T-AUTH",
+      "T-JOURNEY",
+      "T-TEST",
+      "T-DAILY",
+      "T-PARTIAL",
+      "T-SEC"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "R-URL",
+      "statement": "Trang mới ở URL khác và trang cũ vẫn dùng được.",
+      "test_ids": [
+        "T-ROUTE",
+        "T-REG"
+      ]
+    },
+    {
+      "id": "R-JOURNEY",
+      "statement": "Thấy số bài ở từng bước và mở đúng danh sách Homework/Test cần cứu.",
+      "test_ids": [
+        "T-JOURNEY",
+        "T-TEST"
+      ]
+    },
+    {
+      "id": "R-DAILY",
+      "statement": "Ba biểu đồ ngày độc lập có bật tắt; bảng ngày giữ đủ ba cột.",
+      "test_ids": [
+        "T-DAILY"
+      ]
+    },
+    {
+      "id": "R-ACTIONS",
+      "statement": "Chi tiết, tìm, lọc và thao tác tiếp tục dùng dữ liệu/quyền thật.",
+      "test_ids": [
+        "T-ACTIONS",
+        "T-AUTH",
+        "T-SEC"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "I-OLD",
+      "statement": "URL và source dashboard cũ không đổi.",
+      "test_ids": [
+        "T-ROUTE",
+        "T-REG"
+      ]
+    },
+    {
+      "id": "I-CLASSIFY",
+      "statement": "Homework và Test không trộn; lỗi nguồn cần xem xét khác đã cảnh báo.",
+      "test_ids": [
+        "T-TEST",
+        "T-JOURNEY"
+      ]
+    },
+    {
+      "id": "I-DATA",
+      "statement": "Chỉ backend quyết định quyền, điểm, trạng thái; UI không suy diễn dữ liệu thiếu.",
+      "test_ids": [
+        "T-SEC",
+        "T-DAILY",
+        "T-ACTIONS"
+      ]
+    },
+    {
+      "id": "I-WRITE",
+      "statement": "Thao tác ghi không bị bấm lặp và phản hồi lỗi được báo đúng.",
+      "test_ids": [
+        "T-CON",
+        "T-PARTIAL"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-ROUTE",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Playwright mở URL v2, theo link quay lại URL cũ; git diff ba file dashboard cũ rỗng."
+    },
+    {
+      "id": "T-AUTH",
+      "category": "security_privacy",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Playwright giả API 403: chỉ hiện màn đăng nhập và thông báo không có quyền, dashboard bị ẩn."
+    },
+    {
+      "id": "T-JOURNEY",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Playwright API giả: bảy thẻ Homework, mở Phản biện và nút lọc bài cần kiểm tra."
+    },
+    {
+      "id": "T-TEST",
+      "category": "regression",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Playwright API giả: bảy bước Test, deep link #stage/test/critic giữ đúng sau reload."
+    },
+    {
+      "id": "T-DAILY",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Playwright API giả: 3 toggle độc lập, mặc định 1 biểu đồ, bảng ngày 2 dòng không mất khi tắt/bật, mở danh sách Đã giao."
+    },
+    {
+      "id": "T-ACTIONS",
+      "category": "external_partial",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Playwright API giả: Retry đúng một POST; thêm file Test thủ công đúng kind và đóng form khi API nhận."
+    },
+    {
+      "id": "T-CON",
+      "category": "concurrency_idempotency",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Hai click đồng bộ vào Retry tạo đúng một POST trong lúc nút đang khóa."
+    },
+    {
+      "id": "T-PARTIAL",
+      "category": "external_partial",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "API đọc lại nguồn giả trả 500: trang báo lỗi đúng và mở lại nút, không báo đã gửi."
+    },
+    {
+      "id": "T-SEC",
+      "category": "security_privacy",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Từ chối 403 ẩn dashboard; quét source/manifest không thấy mẫu secret hoặc credential gán cứng."
+    },
+    {
+      "id": "T-REG",
+      "category": "regression",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "npm test đạt 140/140; URL cũ và ba file dashboard cũ không đổi."
+    },
+    {
+      "id": "T-BAD",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Ngày từ 27/09 lớn hơn ngày đến 26/09: trang báo lỗi và không tải thêm bài."
+    },
+    {
+      "id": "T-TIME",
+      "category": "lifecycle_time",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Tải lại deep link #stage/test/critic vẫn giữ đúng luồng Test và danh sách bước."
+    },
+    {
+      "id": "T-ROLL",
+      "category": "rollback_recovery",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Playwright mở link giao diện trước và nhận đúng writing-flow.html; diff source cũ rỗng."
+    }
+  ],
+  "task_graph": {
+    "plan_revision": "plan-v1",
+    "tasks": [
+      {
+        "id": "TASK-BUILD",
+        "result": "Trang riêng có hành trình và biểu đồ mới.",
+        "module_ids": [
+          "M-PAGE",
+          "M-FLOW"
+        ],
+        "depends_on": [],
+        "consumes": [
+          "API và giao diện hiện hành"
+        ],
+        "produces": [
+          "writing-flow-v2.html",
+          "writing-flow-v2.css",
+          "writing-flow-v2.js"
+        ],
+        "contract": "Không sửa trang cũ hay backend.",
+        "test_ids": [
+          "T-ROUTE",
+          "T-JOURNEY",
+          "T-TEST",
+          "T-DAILY"
+        ],
+        "evidence_required": [
+          "diff",
+          "browser QA"
+        ],
+        "decision_inputs": [
+          "URL riêng cùng thư mục Writing."
+        ],
+        "affected_future_tasks": [
+          "TASK-VERIFY"
+        ],
+        "status": "done",
+        "plan_revision": "plan-v1"
+      },
+      {
+        "id": "TASK-VERIFY",
+        "result": "API giả, full suite và điều kiện phát hành Pages đã được kiểm.",
+        "module_ids": [
+          "M-PAGE",
+          "M-FLOW",
+          "M-API"
+        ],
+        "depends_on": [
+          "TASK-BUILD"
+        ],
+        "consumes": [
+          "trang mới"
+        ],
+        "produces": [
+          "bằng chứng kiểm thử và quyết định sẵn sàng phát hành"
+        ],
+        "contract": "Chỉ gọi verified sau khi URL thật được quan sát.",
+        "test_ids": [
+          "T-ROUTE",
+          "T-AUTH",
+          "T-JOURNEY",
+          "T-TEST",
+          "T-DAILY",
+          "T-ACTIONS",
+          "T-CON",
+          "T-PARTIAL",
+          "T-SEC",
+          "T-REG",
+          "T-BAD",
+          "T-TIME",
+          "T-ROLL"
+        ],
+        "evidence_required": [
+          "full suite",
+          "browser mock",
+          "kiểm source cũ"
+        ],
+        "decision_inputs": [
+          "Giữ trang cũ để quay lại."
+        ],
+        "affected_future_tasks": [],
+        "status": "done",
+        "plan_revision": "plan-v1"
+      }
+    ]
+  },
+  "risk_register": {
+    "assessment": "PASS",
+    "risks": [
+      {
+        "id": "R-DRIFT",
+        "description": "Bản mới sao chép logic có thể lệch API cũ sau này.",
+        "probability": 2,
+        "impact": 3,
+        "score": 6,
+        "severity": "P1",
+        "status": "mitigated",
+        "owner": "Người phát triển trang",
+        "mitigation": "Dùng chung api.js và phiên giảng viên; URL cũ còn nguyên để quay lại. Bộ test trình duyệt kiểm contract mới, full suite giữ route cũ.",
+        "test_ids": [
+          "T-REG",
+          "T-ACTIONS"
+        ]
+      }
+    ],
+    "waivers": []
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {
+      "id": "C-RETRY-ONCE",
+      "left": {
+        "name": "số POST Retry từ hai click khi nút đang khóa",
+        "value": 1
+      },
+      "operator": "<=",
+      "right": {
+        "name": "giới hạn POST cho một thao tác",
+        "value": 1
+      },
+      "status": "passed",
+      "evidence": "Playwright dispatch hai click đồng bộ; API giả ghi đúng một POST."
+    }
+  ],
+  "mutations": [],
+  "verification_runs": [
+    {
+      "id": "V-FULL",
+      "scope": "full_suite",
+      "command": "npm.cmd test (writing-handouts)",
+      "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
+      "captured_at": "2026-09-27T23:14:20+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 140,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "140/140 bài test Writing đạt trên mã nguồn v2 hiện tại."
+    },
+    {
+      "id": "V-CHECK",
+      "scope": "build",
+      "command": "npm.cmd run check (writing-handouts)",
+      "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
+      "captured_at": "2026-09-27T23:14:20+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Node syntax check có writing-flow-v2.js."
+    },
+    {
+      "id": "V-BROWSER",
+      "scope": "behavioral",
+      "command": "playwright-cli run-code E:/Codex-Data/writing-v2-browser-qa-20260927.js",
+      "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
+      "captured_at": "2026-09-27T23:14:20+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Mock API: Homework/Test, bảy bước, reload, lỗi nguồn, ba toggle, bảng ngày, mobile 390px, link trang cũ."
+    },
+    {
+      "id": "V-ACTIONS",
+      "scope": "behavioral",
+      "command": "playwright-cli run-code E:/Codex-Data/writing-v2-actions-qa-20260927.js",
+      "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
+      "captured_at": "2026-09-27T23:14:20+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Mock API: double-click Retry 1 POST, source 500 thông báo lỗi, thêm Test 1 POST, ngày sai bị chặn."
+    },
+    {
+      "id": "V-AUTH",
+      "scope": "behavioral",
+      "command": "playwright-cli run-code E:/Codex-Data/writing-v2-auth-qa-20260927.js",
+      "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
+      "captured_at": "2026-09-27T23:14:20+07:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Mock API 403: dashboard bị ẩn, người dùng thấy thông báo từ chối."
+    }
+  ],
+  "convergence": {
+    "status": "passed",
+    "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
+    "gaps": [],
+    "unrequested_work": [],
+    "evidence": "Đối chiếu yêu cầu URL riêng, 7 bước hai luồng, lỗi nguồn, ba biểu đồ và bảng ngày với browser QA; source cũ không đổi."
+  },
+  "context_handoff": {
+    "summary": "Giao diện Writing v2 đạt kiểm thử cục bộ, sẵn sàng phát hành URL Pages riêng.",
+    "decisions": [
+      "Giữ trang cũ; URL mới dùng API/phiên chung.",
+      "Mặc định chỉ hiện biểu đồ Chấm mới; hai biểu đồ còn lại bật theo nhu cầu."
+    ],
+    "completed": [
+      "TASK-BUILD",
+      "TASK-VERIFY"
+    ],
+    "next_step": "Commit, đưa URL mới lên Pages và đọc lại trang thật.",
+    "open_risks": [],
+    "tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306"
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "ready",
+    "base_tree_revision": "43becdcaed311673e2d24cfb1e4039a8a802a901",
+    "current_tree_revision": "sha256:2772ab97eed2618c320be185dcc152f68d235f895d87ca440a6835f115854306",
+    "production_authorized": true,
+    "rollback": "Revert commit chỉ chứa trang mới hoặc ngừng dùng URL mới; trang cũ giữ nguyên.",
+    "deployment_readback": "pending",
+    "operational_observation": "pending",
+    "open_risks": []
+  }
+}
