@@ -326,7 +326,7 @@
       "category": "happy_path",
       "priority": "P2",
       "status": "passed",
-      "evidence": "PLAN-IC2304.md có mục Bác sĩ AI: bố cục, quy tắc xếp ưu tiên, cập nhật sau mỗi receipt, hai ô link, migration, API, test và rollback riêng."
+      "evidence": "PLAN-IC2304.md đã đối chiếu source webapp lark-view hiện có, proxy Lark, luồng đề xuất 1.0 và đề án Bác sĩ AI 2.0; nêu tái dùng top 5/mở rộng, tách backlog với 1–2 bài active, hai ô link, migration, API, test và rollback riêng."
     }
   ],
   "task_graph": {
