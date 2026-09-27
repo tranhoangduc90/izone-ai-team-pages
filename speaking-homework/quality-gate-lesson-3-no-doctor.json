@@ -270,7 +270,14 @@
   },
   "coverage_exemptions": {},
   "cross_constraints": [],
-  "mutations": [],
+  "mutations": [
+    {
+      "id": "M-PAGES-DEPLOY",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "PR #26 đã merge thành e615fd89dc9624abbea677eed72d7feacf2dc382; Pages build cùng commit báo built; browser công khai hiển thị 4 phần Speaking, 9 hình, 16 lựa chọn học viên và không có khu Bác sĩ AI."
+    }
+  ],
   "verification_runs": [
     {
       "id": "V-NO-DOCTOR",
@@ -284,6 +291,19 @@
       "failed": 0,
       "skipped": 0,
       "evidence": "Bài kiểm gỡ Doctor và ba suite Speaking đạt; cú pháp ba file JS đạt trên nguồn hiện tại."
+    },
+    {
+      "id": "V-PAGES",
+      "scope": "behavioral",
+      "command": "Đọc trạng thái Pages build và DOM trang công khai trên Codex In-app Browser",
+      "tree_revision": "20d8cbd4d0c53eeb2acbdc3c1a8e0178f9a7ed3eb373898bbf0611b6e06e63dd",
+      "captured_at": "2026-09-27T17:13:40Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Pages build e615fd8 đã built; DOM có 4 task-card, 9 ảnh hướng dẫn, 16 học viên và không có doctor-preview hay ô doctor-link."
     }
   ],
   "convergence": {
@@ -302,19 +322,19 @@
     "completed": [
       "TASK-PAGE"
     ],
-    "next_step": "Kiểm Pages sau phát hành; backend nhận bài thật là pha riêng.",
+    "next_step": "Đức xem giao diện Pages; backend nhận bài thật và Docs/Classroom là pha riêng.",
     "open_risks": [],
     "tree_revision": "20d8cbd4d0c53eeb2acbdc3c1a8e0178f9a7ed3eb373898bbf0611b6e06e63dd"
   },
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "85b130f2105c8cec03e7a5a295e0c246aa09acf8",
     "current_tree_revision": "20d8cbd4d0c53eeb2acbdc3c1a8e0178f9a7ed3eb373898bbf0611b6e06e63dd",
     "production_authorized": true,
     "rollback": "Revert bản sửa Lesson 3 để trở về Pages trước PR này; không ảnh hưởng dữ liệu server vì bản xem không nhận bài thật.",
-    "deployment_readback": "pending",
-    "operational_observation": "Chờ kiểm bản Pages sau merge.",
+    "deployment_readback": "verified",
+    "operational_observation": "Pages build e615fd8 đã built; trình duyệt công khai tải 16 học viên IC2304, bốn phần Speaking và chín hình, không có Bác sĩ AI. Nhãn bản xem giao diện cho biết chưa nhận bài thật.",
     "open_risks": []
   },
   "red_green": {
