@@ -56,6 +56,11 @@
 .flow-row p { margin: 0.18rem 0; }
 .flow-meta { color: #667085; font-size: 0.86rem; }
 .flow-warning { color: #9a5b00; font-weight: 700; }
+.flow-source-groups { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0; }
+.flow-source-groups[hidden] { display: none; }
+.flow-source-groups button { border: 1px solid var(--flow-border); border-radius: 999px; background: #fff; color: #24345a; padding: 0.55rem 0.9rem; cursor: pointer; }
+.flow-source-groups button[aria-pressed="true"] { border-color: #175cd3; background: #eaf2ff; color: #0b4cb8; font-weight: 700; }
+.flow-source-groups span { margin-left: 0.3rem; font-variant-numeric: tabular-nums; }
 .flow-class-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.7rem; }
 .flow-class-card { padding: 0.9rem; border: 1px solid var(--flow-border); border-radius: 0.8rem; background: #fff; }
 .flow-class-card h3 { margin: 0 0 0.25rem; }
