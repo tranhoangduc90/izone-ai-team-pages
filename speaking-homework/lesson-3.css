@@ -1,16 +1,3 @@
 #parts { display: grid; gap: 20px; }
-.doctor-preview { margin: 30px 0; padding: 28px; border: 1px solid #dbe6e8; border-radius: 20px; background: #fff; }
-.doctor-preview h2 { margin: 10px 0; }
-.doctor-preview p { line-height: 1.6; }
 .identity-card select { width: 100%; }
 .scenario-select { width: 100%; margin: 0 0 12px; }
-.doctor-list { display: grid; gap: 10px; margin: 20px 0; padding-left: 26px; }
-.doctor-item { padding: 12px 14px; border: 1px solid #dbe6e8; border-radius: 12px; background: #f7fbfb; }
-.doctor-item strong, .doctor-item span { display: block; }
-.doctor-item span { margin-top: 5px; color: #526c77; font-size: 13px; }
-.doctor-practice { display: grid; gap: 10px; margin-top: 26px; padding-top: 20px; border-top: 1px solid #dbe6e8; }
-.doctor-practice h3, .doctor-practice p { margin: 0; }
-.doctor-practice input, .doctor-practice select { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #bfd0d4; border-radius: 10px; background: white; font: inherit; }
-.doctor-practice label { margin-top: 10px; font-weight: 700; }
-.doctor-practice button { margin-top: 12px; }
-@media (max-width: 700px) { .doctor-preview { padding: 20px; } }

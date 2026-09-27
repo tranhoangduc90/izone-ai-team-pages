@@ -1,0 +1,342 @@
+{
+  "schema_version": 3,
+  "product": "Bản xem Speaking Homework Lesson 3 IC2304 không có Bác sĩ AI",
+  "change_id": "speaking-homework-lesson-3-remove-doctor-20260928",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "low",
+  "system_traits": [
+    "stateful",
+    "multi_service",
+    "personal_data"
+  ],
+  "experience": {
+    "planning_mode": "standard",
+    "mode_reason": "Trang có bốn phần, hướng dẫn hình, danh sách học viên thật tải từ API và bản nháp cục bộ.",
+    "user": "Đức xem giao diện trước khi giao Lesson 3 cho IC2304",
+    "problem": "Bản Pages Lesson 3 đang hiển thị Bác sĩ AI dù bài này chỉ cần bốn link Speaking.",
+    "outcome": "Trang công khai giữ đăng nhập lớp thật và bốn phần Speaking, không hiện Bác sĩ AI hay ô luyện bổ trợ.",
+    "out_of_scope": [
+      "Không kiểm hội thoại thật, lưu biên nhận, ghi Google Docs, gửi email hay tạo bài Classroom."
+    ],
+    "plain_language_summary": "Bỏ phần luyện bổ trợ khỏi riêng Homework Lesson 3; mọi kết quả kiểm link trên Pages vẫn là mô phỏng."
+  },
+  "delivery_scope": {
+    "mode": "small_complete",
+    "release_slice": "Giao diện Lesson 3 có danh sách học viên IC2304 thật và bốn phần Speaking; không có Bác sĩ AI."
+  },
+  "change_package": {
+    "proposal": "Gỡ khu Bác sĩ AI khỏi riêng bản xem Lesson 3 trên Pages.",
+    "behavior_baseline": "Bản Pages hiện đã có danh sách học viên thật và bốn phần Speaking, nhưng còn khu Bác sĩ AI ở cuối trang.",
+    "deltas": [
+      {
+        "id": "D-NO-DOCTOR",
+        "operation": "REMOVED",
+        "behavior": "Gỡ danh sách Bác sĩ AI, nút mở rộng và hai ô luyện bổ trợ khỏi Lesson 3.",
+        "module_ids": [
+          "M-PAGE"
+        ],
+        "test_ids": [
+          "T-NO-DOCTOR"
+        ]
+      }
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "lesson-3-pages-no-doctor-v2",
+    "modules": [
+      {
+        "id": "M-PAGE",
+        "name": "Trang Lesson 3 mẫu",
+        "responsibility": "Tải danh sách học viên thật, hiện bốn phần Speaking, hướng dẫn và trạng thái mẫu; giữ nháp cục bộ.",
+        "owns_data": [
+          "demo_draft",
+          "remembered_student_uuid"
+        ],
+        "public_interfaces": [
+          "speaking-homework/lesson-3.html",
+          "GET /mapping-api/api/term-tests/roster"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Không gọi API nhận bài thật hoặc báo đã nộp.",
+          "Không dùng hồ sơ giả khi API danh sách lỗi.",
+          "Lesson 3 không có Bác sĩ AI hoặc ô luyện bổ trợ."
+        ],
+        "test_ids": [
+          "T-FOUR",
+          "T-GUIDE",
+          "T-LIFE",
+          "T-INVALID",
+          "T-ROSTER",
+          "T-NO-DOCTOR"
+        ]
+      }
+    ],
+    "integrations": []
+  },
+  "operational_design": {
+    "plan_revision": "lesson-3-pages-no-doctor-v2",
+    "signals": [
+      "multi_service"
+    ],
+    "critical_path": "Mở Pages → tải danh sách IC2304 → chọn tên thật → xem bốn phần Speaking, hướng dẫn và trạng thái mẫu.",
+    "peak_load": {
+      "value": 1,
+      "unit": "preview_browser",
+      "basis": "Đợt đầu một người duyệt; mỗi lần mở trang gọi một lượt API danh sách, không gửi link tới API."
+    },
+    "user_wait_target": "Danh sách lớp trong 12 giây; kết quả mô phỏng hiện ngay sau thao tác.",
+    "limits_and_cost": [
+      "Một lượt GET danh sách lớp mỗi lần mở; API giới hạn 240 lượt/phút; không gọi AI.",
+      "Máy thử cục bộ lấy danh sách qua server.mjs do API chỉ cho miền Pages đọc trực tiếp."
+    ],
+    "failure_and_recovery": [
+      "Nếu API lỗi hoặc quá 12 giây, chặn chọn học viên và hiện nút tải lại; không dùng tên giả.",
+      "Nếu Pages lỗi, mở lại sau; bản nháp mẫu trong browser có thể nhập lại."
+    ],
+    "monitoring": [
+      "Kiểm HTTP và dropdown đủ học viên trên Pages sau phát hành."
+    ],
+    "decision": "Phát hành bản xem Lesson 3 chỉ có bốn phần Speaking.",
+    "test_ids": [
+      "T-FOUR",
+      "T-LIFE",
+      "T-ROSTER",
+      "T-SEC",
+      "T-NO-DOCTOR"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "R-FOUR",
+      "statement": "Bốn ô, nút mở bài và nội dung luyện Lesson 3 hiển thị đúng.",
+      "test_ids": [
+        "T-FOUR"
+      ]
+    },
+    {
+      "id": "R-GUIDE",
+      "statement": "Hướng dẫn mở bằng popup và đủ hình lớn ở desktop/mobile.",
+      "test_ids": [
+        "T-GUIDE"
+      ]
+    },
+    {
+      "id": "R-ROSTER",
+      "statement": "Dropdown tải danh sách học viên IC2304 thật và khôi phục UUID đã nhớ khi còn trong danh sách.",
+      "test_ids": [
+        "T-ROSTER"
+      ]
+    },
+    {
+      "id": "R-NO-DOCTOR",
+      "statement": "Lesson 3 không hiện Bác sĩ AI, danh sách ưu tiên hoặc hai ô link luyện bổ trợ.",
+      "test_ids": [
+        "T-NO-DOCTOR"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "V-DEMO",
+      "statement": "Bản Pages không nhận bài thật hoặc nói đã nộp thành công.",
+      "test_ids": [
+        "T-FOUR",
+        "T-INVALID"
+      ]
+    },
+    {
+      "id": "V-DRAFT",
+      "statement": "Nháp mẫu được khôi phục khi mở lại trang trên cùng thiết bị.",
+      "test_ids": [
+        "T-LIFE"
+      ]
+    },
+    {
+      "id": "V-NO-FAKE",
+      "statement": "Lỗi tải danh sách không dẫn tới hồ sơ giả hoặc cho mở bài.",
+      "test_ids": [
+        "T-ROSTER"
+      ]
+    },
+    {
+      "id": "V-FOUR-ONLY",
+      "statement": "Trang vẫn giữ bốn phần Speaking và hướng dẫn hình khi bỏ Bác sĩ AI.",
+      "test_ids": [
+        "T-FOUR",
+        "T-NO-DOCTOR"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-FOUR",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Browser local hiện bốn phần; source Pages dùng nhãn kết quả mô phỏng và không gọi API ở nhánh github.io."
+    },
+    {
+      "id": "T-GUIDE",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Browser desktop và mobile: popup có chín ảnh, ảnh chiếm ngang, iPhone trên Android; nút X đóng."
+    },
+    {
+      "id": "T-LIFE",
+      "category": "lifecycle_time",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Browser local: chọn học viên thật và mở tab mới cùng link; trang tự mở lại đúng UUID từ danh sách API."
+    },
+    {
+      "id": "T-INVALID",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Bộ kiểm định dạng và ba suite Speaking đã chạy; /c/ và hai URL trùng bị chặn trong hàm dùng chung."
+    },
+    {
+      "id": "T-ROLL",
+      "category": "rollback_recovery",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Đã kiểm Git object của bản trước còn nguyên và chưa có lesson-3.html; có thể revert commit giao diện, không có trạng thái server cần hoàn tác."
+    },
+    {
+      "id": "T-ROSTER",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "API trả 16 hồ sơ IC2304 và cho phép CORS từ Pages; browser local qua proxy hiện đúng 16 tên và mở bài bằng một UUID thật. Khi endpoint cũ không có proxy, trang khóa chọn tên và hiện lỗi, không dùng hồ sơ giả."
+    },
+    {
+      "id": "T-SEC",
+      "category": "security_privacy",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Tên học viên không được chép vào source; UI tải runtime từ API. Bộ nhớ chung chỉ lưu UUID, bản nháp tách theo UUID và trang Pages không gửi link bài tới backend."
+    },
+    {
+      "id": "T-NO-DOCTOR",
+      "category": "regression",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Cùng test RED trên base Pages đang có Bác sĩ AI và GREEN trên head; nguồn không còn section Doctor, JavaScript không tham chiếu phần đã gỡ."
+    }
+  ],
+  "task_graph": {
+    "plan_revision": "lesson-3-pages-no-doctor-v2",
+    "tasks": [
+      {
+        "id": "TASK-PAGE",
+        "result": "Bản xem Lesson 3 chỉ còn bốn phần Speaking.",
+        "module_ids": [
+          "M-PAGE"
+        ],
+        "depends_on": [],
+        "consumes": [
+          "Nội dung Docs cũ và góp ý giao diện"
+        ],
+        "produces": [
+          "Trang Pages mẫu"
+        ],
+        "contract": "Không nhận bài thật.",
+        "test_ids": [
+          "T-FOUR",
+          "T-GUIDE",
+          "T-LIFE",
+          "T-NO-DOCTOR"
+        ],
+        "evidence_required": [
+          "Browser và HTTP Pages"
+        ],
+        "decision_inputs": [
+          "Chỉ thử giao diện trước"
+        ],
+        "affected_future_tasks": [],
+        "status": "done",
+        "plan_revision": "lesson-3-pages-no-doctor-v2"
+      }
+    ]
+  },
+  "risk_register": {
+    "assessment": "PASS",
+    "risks": [],
+    "waivers": []
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [],
+  "mutations": [],
+  "verification_runs": [
+    {
+      "id": "V-NO-DOCTOR",
+      "scope": "full_suite",
+      "command": "node tests/speaking-homework-lesson3-no-doctor.mjs; node tests/speaking-homework-demo.mjs; node tests/speaking-homework-real.mjs; node tests/speaking-homework-http.mjs; node --check speaking-homework/lesson-3.js; node --check speaking-homework/server.mjs; node --check speaking-homework/teacher.js",
+      "tree_revision": "20d8cbd4d0c53eeb2acbdc3c1a8e0178f9a7ed3eb373898bbf0611b6e06e63dd",
+      "captured_at": "2026-09-27T17:06:04Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Bài kiểm gỡ Doctor và ba suite Speaking đạt; cú pháp ba file JS đạt trên nguồn hiện tại."
+    }
+  ],
+  "convergence": {
+    "status": "passed",
+    "tree_revision": "20d8cbd4d0c53eeb2acbdc3c1a8e0178f9a7ed3eb373898bbf0611b6e06e63dd",
+    "gaps": [],
+    "unrequested_work": [],
+    "evidence": "Bốn phần Speaking, roster thật và hình hướng dẫn còn nguyên; khu Doctor đã gỡ khỏi Lesson 3."
+  },
+  "context_handoff": {
+    "summary": "Lesson 3 chỉ có bốn phần Speaking, không có Bác sĩ AI.",
+    "decisions": [
+      "Đức chọn chỉ thử giao diện trước khi tạo Classroom Lesson 3.",
+      "Đức yêu cầu danh sách học viên thật cho bản xem."
+    ],
+    "completed": [
+      "TASK-PAGE"
+    ],
+    "next_step": "Kiểm Pages sau phát hành; backend nhận bài thật là pha riêng.",
+    "open_risks": [],
+    "tree_revision": "20d8cbd4d0c53eeb2acbdc3c1a8e0178f9a7ed3eb373898bbf0611b6e06e63dd"
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "ready",
+    "base_tree_revision": "85b130f2105c8cec03e7a5a295e0c246aa09acf8",
+    "current_tree_revision": "20d8cbd4d0c53eeb2acbdc3c1a8e0178f9a7ed3eb373898bbf0611b6e06e63dd",
+    "production_authorized": true,
+    "rollback": "Revert bản sửa Lesson 3 để trở về Pages trước PR này; không ảnh hưởng dữ liệu server vì bản xem không nhận bài thật.",
+    "deployment_readback": "pending",
+    "operational_observation": "Chờ kiểm bản Pages sau merge.",
+    "open_risks": []
+  },
+  "red_green": {
+    "red_on_base": {
+      "test_id": "T-NO-DOCTOR",
+      "command": "node tests/speaking-homework-lesson3-no-doctor.mjs",
+      "tree_revision": "85b130f2105c8cec03e7a5a295e0c246aa09acf8",
+      "outcome": "failed",
+      "exit_code": 1,
+      "failed": 1,
+      "evidence": "Test báo Lesson 3 vẫn còn khu Bác sĩ AI trên base của Pages."
+    },
+    "green_on_head": {
+      "test_id": "T-NO-DOCTOR",
+      "command": "node tests/speaking-homework-lesson3-no-doctor.mjs",
+      "tree_revision": "20d8cbd4d0c53eeb2acbdc3c1a8e0178f9a7ed3eb373898bbf0611b6e06e63dd",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Test đạt sau khi xóa section, mã xử lý và CSS Doctor khỏi Lesson 3."
+    }
+  }
+}
