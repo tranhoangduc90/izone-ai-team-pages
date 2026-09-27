@@ -1,0 +1,35 @@
+{
+  "description": "Dữ liệu giả chỉ đọc cho E-02: tên lớp dài có dấu và phản hồi quyền teacher/admin.",
+  "allowed": {
+    "options": {
+      "ok": true,
+      "reviewer": {
+        "displayName": "Giảng viên kiểm thử"
+      },
+      "classes": [
+        {
+          "id": "fixture-long-vietnamese-class",
+          "name": "K56 · Lớp Viết học thuật nâng cao — Đà Nẵng · Cô giáo Nguyễn Thị Hồng Ánh"
+        }
+      ],
+      "tests": [
+        {
+          "slug": "term-test-1",
+          "title": "Term Test 1",
+          "writingTasks": [2]
+        }
+      ]
+    },
+    "results": {
+      "ok": true,
+      "students": [],
+      "updatedAt": "2026-09-27T00:00:00Z"
+    }
+  },
+  "denied": {
+    "options": {
+      "ok": false,
+      "message": "Tài khoản chưa được cấp quyền cho lớp này."
+    }
+  }
+}
