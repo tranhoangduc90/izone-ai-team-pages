@@ -2,7 +2,7 @@
 
 ## Lesson 3 trên GitHub Pages
 
-Mở `lesson-3.html` để xem bốn phần của Homework Lesson 3: Làm rõ cấp 1, 2, 3 và Freestyle. Trang tải danh sách học viên IC2304 thật qua API danh sách lớp hiện dùng cho Term Test và dùng cùng khóa ghi nhớ UUID với Writing/Term Test. Nếu không tải được danh sách, trang không cho chọn hồ sơ mẫu. Kết quả kiểm link và Bác sĩ AI vẫn là mô phỏng; giao diện có đủ hình hướng dẫn, cảnh báo voice chat, năm bài Bác sĩ AI đầu và nút xem tất cả, cùng hai ô link luyện bổ trợ. Trang **không gửi link đi kiểm, không nhận bài thật, không tạo biên nhận và không ghi Google Docs**. Lesson 3 chưa được giao trong Classroom IC2304.
+Mở `lesson-3.html` để xem bốn phần của Homework Lesson 3: Làm rõ cấp 1, 2, 3 và Freestyle. Trang tải danh sách học viên IC2304 thật qua API danh sách lớp hiện dùng cho Term Test và dùng cùng khóa ghi nhớ UUID với Writing/Term Test. Nếu không tải được danh sách, trang không cho chọn hồ sơ mẫu. Kết quả kiểm link vẫn là mô phỏng; giao diện có đủ hình hướng dẫn và cảnh báo voice chat. **Lesson 3 không có khu Bác sĩ AI hoặc ô nộp link luyện bổ trợ.** Trang **không gửi link đi kiểm, không nhận bài thật, không tạo biên nhận và không ghi Google Docs**. Lesson 3 chưa được giao trong Classroom IC2304.
 
 Muốn kiểm nội dung ChatGPT Share bằng bộ đọc local, chạy server bên dưới rồi mở `lesson-3.html` qua localhost. Đây vẫn là bản thử và không ghi bài nộp.
 

@@ -2,13 +2,15 @@
 
 Ngày lập: 27/09/2026; mở rộng phạm vi Bác sĩ AI: 27/09/2026. Trạng thái: **kế hoạch để rà soát**, chưa triển khai lên học viên. Bản xem trước hiện chỉ đọc ChatGPT Share bằng máy chủ trên máy Đức; chưa có dữ liệu nộp bền, đối chiếu lịch sử, CTA Google Docs, chấm production hoặc danh sách Bác sĩ AI.
 
+Cập nhật 28/09/2026: phần Bác sĩ AI dưới đây là thiết kế chung cho các bài Speaking sau này, **không áp dụng cho Homework Lesson 3 IC2304**. Trang Lesson 3 chỉ nhận bốn link Speaking; kế hoạch cụ thể ở `PLAN-LESSON-3-PILOT.md` được ưu tiên cho bài này.
+
 ## 1. Học viên và giảng viên sẽ thấy gì
 
 Học viên mở nút trong file Homework của chính mình, chọn đúng hồ sơ IC2304 theo cơ chế đang dùng ở Term Test và handout Writing, luyện Paraphrase và Full Speaking trong **hai hội thoại khác nhau**, rồi xác nhận từng link. Trang kiểm được link chia sẻ có mở được hay không, khối lượng luyện, dấu hiệu nghi gõ và lịch sử trùng. Chỉ khi **cả hai phần đạt** thì hệ thống tạo biên nhận, khởi chạy chấm và ghi vào đúng file Homework: `Đã nộp bài đầy đủ lúc …` theo giờ Việt Nam. Học viên thấy nút quay lại file Homework để làm tiếp.
 
 Giảng viên chỉ nhận **một email tổng hợp theo kỳ quét** về những học viên đã bấm nộp bài Classroom nhưng không có biên nhận Speaking hợp lệ, khi bài Classroom vẫn ở trạng thái **Đã nộp** (`TURNED_IN`). Không gửi email riêng cho nghi vấn gõ. Cảnh báo gõ và bằng chứng hiện cho học viên; nếu học viên xác nhận đã voice chat thì vẫn cho đi tiếp và lưu lời xác nhận.
 
-Ngay dưới khu nộp hai link Speaking sẽ có **Bác sĩ AI** dùng cùng hồ sơ học viên. Trang này tiếp nối webapp **Luyện tập bổ trợ** đã có: giữ cách chia **Bài cần luyện tập / Bài đã luyện**, mặc định hiện **5 bài đầu**, có nút mở rộng và thu gọn. Bên dưới danh sách có **hai ô nộp link luyện tập bổ trợ**; từng link được kiểm và ghi nhận riêng. Sau mỗi bài Speaking mới, hệ thống phân tích hai hội thoại rồi cập nhật bài cần luyện. Phần bổ trợ không làm mất biên nhận Homework đã nộp.
+Với bài Speaking được mở Bác sĩ AI sau này, khu này sẽ dùng cùng hồ sơ học viên. Trang đó tiếp nối webapp **Luyện tập bổ trợ** đã có: giữ cách chia **Bài cần luyện tập / Bài đã luyện**, mặc định hiện **5 bài đầu**, có nút mở rộng và thu gọn. Bên dưới danh sách có **hai ô nộp link luyện tập bổ trợ**; từng link được kiểm và ghi nhận riêng. Sau mỗi bài Speaking mới thuộc phạm vi này, hệ thống phân tích hội thoại rồi cập nhật bài cần luyện. Phần bổ trợ không làm mất biên nhận Homework đã nộp.
 
 ## 2. Căn cứ hiện có và ranh giới
 
