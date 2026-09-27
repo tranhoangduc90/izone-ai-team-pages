@@ -16,7 +16,8 @@ test('API dashboard truyền đủ bộ lọc ngày và nhật ký thao tác', a
     dateFrom: '2026-09-19', dateTo: '2026-09-19', stageKey: 'precheck',
     stageStatus: 'running', view: 'delivered' });
   await api.writingOperatorEvents({ classCode: 'IC2200', eventType: 'class_mapping_changed', limit: 25 });
-  await api.writingSourceIssues({ classCode: 'IC2172', status: 'skipped', limit: 100 });
+  await api.writingSourceIssues({ classCode: 'IC2172', status: 'open',
+    warningGroup: 'review', limit: 51, offset: 50 });
   await api.skipWritingSourceIssue('a'.repeat(64), 'Không phải bài Writing',
     '11111111-1111-4111-8111-111111111111');
   await api.restoreWritingSourceIssue('a'.repeat(64), 'Bỏ qua nhầm',
@@ -30,7 +31,10 @@ test('API dashboard truyền đủ bộ lọc ngày và nhật ký thao tác', a
   assert.equal(calls[1].pathname, '/writing-api/api/v1/admin/writing-flow/operator-events');
   assert.equal(calls[1].searchParams.get('classCode'), 'IC2200');
   assert.equal(calls[1].searchParams.get('eventType'), 'class_mapping_changed');
-  assert.equal(calls[2].searchParams.get('status'), 'skipped');
+  assert.equal(calls[2].searchParams.get('status'), 'open');
+  assert.equal(calls[2].searchParams.get('warningGroup'), 'review');
+  assert.equal(calls[2].searchParams.get('limit'), '51');
+  assert.equal(calls[2].searchParams.get('offset'), '50');
   assert.match(calls[3].pathname, /source-issues\/[a-f0-9]{64}\/skip$/u);
   assert.match(calls[4].pathname, /source-issues\/[a-f0-9]{64}\/restore$/u);
   assert.equal(calls.every(call => call.origin === 'https://example.invalid'), true);
@@ -45,6 +49,8 @@ test('dashboard giữ đủ điều khiển xóa lọc, đổi thứ tự cột 
   assert.match(html, /data-view="audit"/u);
   assert.match(html, /data-view="mapping"/u);
   assert.match(html, /id="flow-stage-status"/u);
+  assert.match(html, /data-warning-group="review"/u);
+  assert.match(html, /data-warning-group="warned"/u);
   assert.match(html, /id="flow-class-stage-summary"/u);
   assert.match(html, /id="flow-class-daily-chart"/u);
   assert.match(script, /line\.draggable = state\.visibleColumns\.includes\(key\)/u);
@@ -62,6 +68,8 @@ test('dashboard giữ đủ điều khiển xóa lọc, đổi thứ tự cột 
   assert.match(script, /source: \['flow-pairs-section'\]/u);
   assert.match(script, /legacy: \['flow-pairs-section'\]/u);
   assert.match(script, /sourceIssueRow/u);
+  assert.match(script, /rows\.slice\(0, 50\)/u);
+  assert.match(script, /source_issues_review/u);
   assert.match(script, /legacyRow/u);
   assert.match(script, /skipWritingSourceIssue/u);
   assert.match(script, /restoreWritingSourceIssue/u);
