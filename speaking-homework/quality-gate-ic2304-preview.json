@@ -1,0 +1,470 @@
+{
+  "schema_version": 3,
+  "product": "Bản xem trước giao diện nộp Speaking Homework Lesson 2 cho IC2304",
+  "change_id": "speaking-homework-ic2304-preview-ui-20260927",
+  "change_kind": "feature",
+  "escaped_user_defect": false,
+  "risk": "medium",
+  "system_traits": [
+    "stateful",
+    "asynchronous",
+    "concurrent",
+    "personal_data",
+    "multi_service"
+  ],
+  "experience": {
+    "planning_mode": "standard",
+    "mode_reason": "Trang học viên gọi hai dịch vụ bên ngoài và xử lý nội dung hội thoại.",
+    "user": "Học viên xem bản thử IC2304 trên máy Đức",
+    "problem": "Nút mở chatbot chưa đủ nổi bật; ảnh hướng dẫn nhỏ và chiếm trang; link nhập dở mất khi tải lại.",
+    "outcome": "Hai nút luyện nổi bật, hướng dẫn mở dạng hộp thoại với chín ảnh rộng, bản nháp link được giữ và cảnh báo khi rời trang chưa đủ.",
+    "out_of_scope": [
+      "Bản xem trước chưa nối roster/phiên thật, lịch sử nộp, Google Docs, Classroom, email, chấm production hoặc Bác sĩ AI."
+    ],
+    "plain_language_summary": "Giao diện xem trước IC2304; kế hoạch gồm nộp Speaking và Bác sĩ AI với 5 bài ưu tiên, xem tất cả và hai ô luyện bổ trợ."
+  },
+  "change_package": {
+    "proposal": "Điều chỉnh giao diện theo bảy góp ý và viết kế hoạch IC2304.",
+    "behavior_baseline": "Link luyện là chữ nhỏ ở cột trái; hướng dẫn nằm trên trang với ảnh nhỏ; bản nháp không được giữ.",
+    "deltas": [
+      {
+        "id": "D-PRACTICE",
+        "operation": "MODIFIED",
+        "behavior": "Hai nút mở bài luyện nổi bật trên ô nhập từng phần.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-UI-STATIC",
+          "T-UI-BROWSER"
+        ]
+      },
+      {
+        "id": "D-GUIDE",
+        "operation": "MODIFIED",
+        "behavior": "Hướng dẫn chín ảnh trong hộp thoại; ảnh rộng và iPhone trước Android.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-UI-STATIC",
+          "T-UI-BROWSER"
+        ]
+      },
+      {
+        "id": "D-DRAFT",
+        "operation": "ADDED",
+        "behavior": "Giữ URL nhập dở theo hồ sơ giả và cảnh báo rời trang khi chưa đủ hai phần.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-DRAFT-BROWSER"
+        ]
+      },
+      {
+        "id": "D-PLAN",
+        "operation": "ADDED",
+        "behavior": "Kế hoạch kết nối database mapping, CTA Docs, chấm và email cho pilot IC2304.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-PLAN"
+        ]
+      },
+      {
+        "id": "D-DOCTOR-PLAN",
+        "operation": "ADDED",
+        "behavior": "Kế hoạch Bác sĩ AI phân tích bài Speaking mới, xếp bài ưu tiên và nhận hai link luyện bổ trợ.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-PLAN"
+        ]
+      }
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "plan-ic2304-v1",
+    "modules": [
+      {
+        "id": "M-UI",
+        "name": "Trang học viên",
+        "responsibility": "Hiện hướng dẫn, gửi link, hiển thị trạng thái đúng lượt.",
+        "owns_data": [
+          "input_link",
+          "screen_state"
+        ],
+        "public_interfaces": [
+          "POST /api/speaking/check"
+        ],
+        "depends_on": [
+          "M-CHECK"
+        ],
+        "boundary_rules": [
+          "Không tự coi link đạt trước phản hồi máy chủ."
+        ],
+        "test_ids": [
+          "T-UI-STATIC",
+          "T-UI-BROWSER",
+          "T-DRAFT-BROWSER",
+          "T-REAL"
+        ]
+      },
+      {
+        "id": "M-CHECK",
+        "name": "Kiểm hội thoại",
+        "responsibility": "Đọc ChatGPT Share và phân tích chu trình luyện bằng AI.",
+        "owns_data": [
+          "transient_conversation",
+          "check_result"
+        ],
+        "public_interfaces": [
+          "POST /api/speaking/check"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Không lưu nội dung hội thoại; lỗi thì không báo đạt."
+        ],
+        "test_ids": [
+          "T-REAL",
+          "T-ERROR",
+          "T-SEC"
+        ]
+      }
+    ],
+    "integrations": [
+      {
+        "id": "I-CHECK",
+        "producer": "M-CHECK",
+        "consumer": "M-UI",
+        "contract": "Kết quả pass, blocked, warning hoặc error kèm dẫn chứng an toàn.",
+        "test_ids": [
+          "T-REAL",
+          "T-ERROR"
+        ]
+      }
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "plan-ic2304-v1",
+    "signals": [
+      "multi_service"
+    ],
+    "critical_path": "Trang xem trước → máy chủ local → ChatGPT Share → Gemini dispatcher → kết quả theo phần; URL nhập dở ở localStorage demo.",
+    "peak_load": {
+      "value": 2,
+      "unit": "concurrent_checks",
+      "basis": "Hai hồ sơ thử trong phạm vi được giao."
+    },
+    "user_wait_target": "Hiện tiến độ ngay; báo lỗi rõ nếu đọc link hoặc AI quá thời gian.",
+    "limits_and_cost": [
+      "Tối đa hai lượt AI đồng thời; mỗi lần xác nhận có thể phát sinh một lượt Gemini."
+    ],
+    "failure_and_recovery": [
+      "Lỗi đọc hoặc AI không chuyển sang trạng thái đạt; học viên sửa link hoặc thử lại.",
+      "Nếu bộ nhớ thiết bị lỗi, học viên được báo phải giữ link; không báo đã lưu."
+    ],
+    "monitoring": [
+      "Kết quả tại trang và log trạng thái không chứa URL/nội dung trong terminal local."
+    ],
+    "decision": "Máy chủ chỉ mở localhost cho bản xem trước, không ghi biên nhận thật.",
+    "test_ids": [
+      "T-REAL",
+      "T-ERROR",
+      "T-SEC",
+      "T-DRAFT-BROWSER"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "R-PRACTICE",
+      "statement": "Nút mở bài luyện nổi bật ngay trước ô nhập của cả hai phần.",
+      "test_ids": [
+        "T-UI-STATIC",
+        "T-UI-BROWSER"
+      ]
+    },
+    {
+      "id": "R-GUIDE",
+      "statement": "Hướng dẫn ở hộp thoại đóng được bốn cách, đủ chín ảnh rộng, iPhone trước Android.",
+      "test_ids": [
+        "T-UI-STATIC",
+        "T-UI-BROWSER"
+      ]
+    },
+    {
+      "id": "R-DRAFT",
+      "statement": "Link nhập dở không biến mất khi mở lại cùng hồ sơ thử và rời trang chưa đủ có cảnh báo.",
+      "test_ids": [
+        "T-DRAFT-BROWSER"
+      ]
+    },
+    {
+      "id": "R-PLAN",
+      "statement": "Kế hoạch pilot IC2304 nêu nguồn chuẩn, đường ghi, chống trùng, nghiệm thu và rollback.",
+      "test_ids": [
+        "T-PLAN"
+      ]
+    },
+    {
+      "id": "R-REAL",
+      "statement": "Xác nhận tiếp tục đọc ChatGPT Share thật.",
+      "test_ids": [
+        "T-REAL",
+        "T-ERROR"
+      ]
+    },
+    {
+      "id": "R-DOCTOR-PLAN",
+      "statement": "Kế hoạch có UI 5 bài/xem tất cả, hai ô luyện bổ trợ, cập nhật sau bài mới, dữ liệu bền và nghiệm thu riêng.",
+      "test_ids": [
+        "T-PLAN"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "V-FAIL",
+      "statement": "Không đọc hoặc phân tích được thì không nhận bài.",
+      "test_ids": [
+        "T-ERROR"
+      ]
+    },
+    {
+      "id": "V-IDENTITY",
+      "statement": "Kết quả của một link không áp vào link khác hoặc học viên khác.",
+      "test_ids": [
+        "T-REG"
+      ]
+    },
+    {
+      "id": "V-PRIVACY",
+      "statement": "Không đưa nội dung hội thoại vào URL, repo hoặc log HTTP.",
+      "test_ids": [
+        "T-SEC"
+      ]
+    },
+    {
+      "id": "V-NO-FALSE-SUBMIT",
+      "statement": "Bản xem trước không tự tuyên bố đã ghi Google Docs hay đối chiếu lịch sử khóa.",
+      "test_ids": [
+        "T-UI-STATIC",
+        "T-PLAN"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-REAL",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Bốn link của hai ca thí điểm: 4/5 + 1/3 bị chặn, 5/5 + 3/3 đạt; HTTP thực cho 5/5."
+    },
+    {
+      "id": "T-ERROR",
+      "category": "invalid_input",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Unit test: /c/, link lỗi và AI timeout đều không trả pass."
+    },
+    {
+      "id": "T-REG",
+      "category": "regression",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Cùng test speaking-homework-real.mjs RED khi thiếu checker trên base, GREEN sau build."
+    },
+    {
+      "id": "T-SEC",
+      "category": "security_privacy",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "HTTP test: Origin và Host lạ 403, file backend/manifest không được phục vụ; kiểm repo không chứa link thí điểm."
+    },
+    {
+      "id": "T-LIFE",
+      "category": "lifecycle_time",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "HTTP test: lượt kiểm cùng link được dọn sau kết thúc và có thể thử lại."
+    },
+    {
+      "id": "T-CON",
+      "category": "concurrency_idempotency",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "HTTP test: hai POST đồng thời cùng link chỉ chạy một lần kiểm ngoài."
+    },
+    {
+      "id": "T-UI-STATIC",
+      "category": "happy_path",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "HTMLParser tại revision hiện tại: hai nút luyện, chín ảnh trong dialog, iPhone trước Android, đủ nút X/Đóng; HTTP trang, app và chín ảnh 200."
+    },
+    {
+      "id": "T-UI-BROWSER",
+      "category": "regression",
+      "priority": "P1",
+      "status": "not_run",
+      "evidence": "Chưa kiểm tương tác/ảnh sau sửa trong browser; công cụ điều khiển localhost đã bị chính sách browser từ chối ở lượt trước."
+    },
+    {
+      "id": "T-DRAFT-BROWSER",
+      "category": "lifecycle_time",
+      "priority": "P1",
+      "status": "not_run",
+      "evidence": "Node --check đạt; chưa quan sát lưu/khôi phục và hộp thoại rời trang trong browser."
+    },
+    {
+      "id": "T-PLAN",
+      "category": "happy_path",
+      "priority": "P2",
+      "status": "passed",
+      "evidence": "PLAN-IC2304.md đã đối chiếu source webapp lark-view hiện có, proxy Lark, luồng đề xuất 1.0 và đề án Bác sĩ AI 2.0; nêu tái dùng top 5/mở rộng, tách backlog với 1–2 bài active, hai ô link, migration, API, test và rollback riêng."
+    }
+  ],
+  "task_graph": {
+    "plan_revision": "plan-ic2304-v1",
+    "tasks": [
+      {
+        "id": "TASK-UI",
+        "result": "Giao diện xem trước và kế hoạch IC2304 đã lưu.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "depends_on": [],
+        "consumes": [
+          "Bảy góp ý và source hiện có"
+        ],
+        "produces": [
+          "Trang local, PLAN-IC2304.md"
+        ],
+        "contract": "Không báo đã nộp thật khi chưa có DB/Docs.",
+        "test_ids": [
+          "T-UI-STATIC",
+          "T-UI-BROWSER",
+          "T-DRAFT-BROWSER",
+          "T-PLAN"
+        ],
+        "evidence_required": [
+          "HTTP, static, browser readback"
+        ],
+        "decision_inputs": [
+          "Pilot IC2304; bản local không ghi production."
+        ],
+        "affected_future_tasks": [],
+        "status": "in_progress",
+        "plan_revision": "plan-ic2304-v1"
+      }
+    ]
+  },
+  "risk_register": {
+    "assessment": "CONCERNS",
+    "risks": [
+      {
+        "id": "RISK-1",
+        "description": "AI nhận nhầm số câu hoặc dấu hiệu gõ.",
+        "probability": 2,
+        "impact": 2,
+        "score": 4,
+        "severity": "P2",
+        "status": "open",
+        "owner": "Đức",
+        "mitigation": "Đòi chỉ số lượt chat và quote thật; kết quả mơ hồ không báo đạt.",
+        "test_ids": [
+          "T-REAL",
+          "T-ERROR"
+        ]
+      },
+      {
+        "id": "RISK-UI",
+        "description": "Bố cục ảnh lớn hoặc hộp thoại rời trang chưa được kiểm trong browser.",
+        "probability": 2,
+        "impact": 2,
+        "score": 4,
+        "severity": "P2",
+        "status": "open",
+        "owner": "Đức và Codex",
+        "mitigation": "Đức xem tab local; kiểm browser trước phát hành.",
+        "test_ids": [
+          "T-UI-BROWSER",
+          "T-DRAFT-BROWSER"
+        ]
+      }
+    ],
+    "waivers": []
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {
+      "id": "TIME-1",
+      "left": {
+        "name": "browser_timeout_seconds",
+        "value": 150
+      },
+      "operator": ">",
+      "right": {
+        "name": "reader_plus_ai_timeout_seconds",
+        "value": 140
+      },
+      "status": "passed",
+      "evidence": "Timeout mã nguồn: browser 150 giây, bộ đọc 95 giây và AI 45 giây."
+    }
+  ],
+  "mutations": [
+    {
+      "id": "M-LOCAL",
+      "target": "Máy chủ local 127.0.0.1:8765",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Sau sửa, GET /health, /speaking-homework/ và /speaking-homework/app.js đều 200; HTML có IC2304, 2 nút luyện, dialog và 9 ảnh."
+    }
+  ],
+  "verification_runs": [
+    {
+      "id": "V-IC2304",
+      "scope": "full_suite",
+      "command": "node --check speaking-homework/app.js; node tests/speaking-homework-demo.mjs; node tests/speaking-homework-real.mjs; node tests/speaking-homework-http.mjs",
+      "tree_revision": "bbb2968936ad66800ba09065e6363fd0405866d58ff3e001ba73f1ee4af1b7e0",
+      "captured_at": "2026-09-27T12:58:00.550235Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Bốn lệnh mã/HTTP đạt trên revision hiện tại; kiểm kế hoạch Bác sĩ AI và bảng Markdown đạt."
+    }
+  ],
+  "convergence": {
+    "status": "gaps",
+    "tree_revision": "bbb2968936ad66800ba09065e6363fd0405866d58ff3e001ba73f1ee4af1b7e0",
+    "gaps": [
+      "Chưa kiểm popup, ảnh và bản nháp trong browser sau sửa.",
+      "Kết nối lịch sử/DB/Docs/chấm nằm trong kế hoạch, chưa thuộc phần xem trước."
+    ],
+    "unrequested_work": [],
+    "evidence": "Source, static parser và HTTP đạt; cần quan sát tương tác browser trước phát hành."
+  },
+  "release": {
+    "target_environment": "local",
+    "decision": "not_ready",
+    "base_tree_revision": "acb78e7",
+    "current_tree_revision": "bbb2968936ad66800ba09065e6363fd0405866d58ff3e001ba73f1ee4af1b7e0",
+    "production_authorized": false,
+    "rollback": "Quay về commit acb78e7 hoặc dừng máy chủ local.",
+    "deployment_readback": "not_applicable",
+    "operational_observation": "HTTP local đạt; chờ kiểm tương tác giao diện.",
+    "open_risks": [
+      {
+        "severity": "P2",
+        "summary": "Chưa có QA tương tác trong browser."
+      }
+    ]
+  }
+}
