@@ -1,12 +1,11 @@
-import { createSessionStore } from '../term-tests/teacher/auth-session.js';
+import { createTeacherSessionClient } from '../shared/teacher-session-client.js';
 
 const config = window.TERM_TEST_APP_CONFIG || {};
 const receiptId = new URL(location.href).searchParams.get('receipt') || '';
 const validReceipt = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(receiptId);
-const store = createSessionStore({ apiBaseUrl: config.API_BASE_URL,
-  clientId: config.GOOGLE_CLIENT_ID, getStorage: () => sessionStorage });
+const sessionClient = createTeacherSessionClient({ apiBaseUrl: config.API_BASE_URL,
+  sessionPath: '/api/auth/session' });
 const $ = id => document.getElementById(id);
-let idToken = '';
 
 function notice(text) { $('notice').textContent = text; }
 function addDetail(list, term, value) {
@@ -56,18 +55,15 @@ function render(receipt) {
 
 async function load() {
   if (!validReceipt) { notice('Link xem bài không hợp lệ.'); return; }
-  if (!idToken) { $('login-panel').hidden = false; notice('Đăng nhập Google để xem bài.'); return; }
   notice('Đang tải bài và kiểm quyền lớp…');
   const response = await fetch(`${config.API_BASE_URL}/api/speaking-homework/teacher/receipts/${receiptId}`,
-    { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' });
+    { credentials: 'include', cache: 'no-store' });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.ok) {
-    if (response.status === 401 || response.status === 403) { store.clear(); idToken = ''; }
     $('receipt-panel').hidden = true;
     $('login-panel').hidden = false;
     throw new Error(data.message || 'Chưa xem được bài. Kiểm tra quyền lớp hoặc thử lại sau.');
   }
-  store.save(idToken);
   render(data.receipt);
 }
 
@@ -81,8 +77,8 @@ function setupGoogle() {
   script.onload = () => {
     window.google.accounts.id.initialize({ client_id: config.GOOGLE_CLIENT_ID,
       auto_select: false, callback: async response => {
-        idToken = response.credential || '';
-        try { await load(); } catch (error) { notice(error.message); }
+        try { await sessionClient.login(response.credential || ''); await load(); }
+        catch (error) { notice(error.message); }
       } });
     window.google.accounts.id.renderButton($('google-sign-in'),
       { type: 'standard', theme: 'outline', size: 'large', text: 'signin_with' });
@@ -91,14 +87,18 @@ function setupGoogle() {
   document.head.append(script);
 }
 
-$('logout').addEventListener('click', () => {
-  store.clear(); idToken = ''; $('receipt-panel').hidden = true;
+$('logout').addEventListener('click', async () => {
+  try { await sessionClient.logout(); } catch { /* Giữ giao diện ở trạng thái đăng xuất nếu mạng lỗi. */ }
+  $('receipt-panel').hidden = true;
   $('login-panel').hidden = false; notice('Đã đăng xuất.');
   window.google?.accounts?.id?.disableAutoSelect();
 });
 
-idToken = store.read();
-if (idToken) load().catch(error => notice(error.message));
-else { $('login-panel').hidden = validReceipt ? false : true; notice(validReceipt
-  ? 'Đăng nhập Google để xem bài.' : 'Link xem bài không hợp lệ.'); }
+if (validReceipt) {
+  sessionClient.restore().then(session => {
+    if (session) return load();
+    $('login-panel').hidden = false;
+    notice('Đăng nhập Google để xem bài.');
+  }).catch(error => { $('login-panel').hidden = false; notice(error.message); });
+} else notice('Link xem bài không hợp lệ.');
 setupGoogle();

@@ -1,4 +1,12 @@
-# Bản thử webapp nộp Speaking Homework Lesson 2 · giao diện IC2304
+# Bản xem Speaking Homework · IC2304
+
+## Lesson 3 trên GitHub Pages
+
+Mở `lesson-3.html` để xem bốn phần của Homework Lesson 3: Làm rõ cấp 1, 2, 3 và Freestyle. Bản Pages chỉ dùng hai hồ sơ giả và kết quả kiểm mô phỏng, có đủ hình hướng dẫn, cảnh báo voice chat, danh sách Bác sĩ AI mẫu (năm bài đầu và nút xem tất cả) và hai ô link luyện bổ trợ. Trang **không gửi link đi kiểm, không nhận bài thật, không tạo biên nhận và không ghi Google Docs**. Lesson 3 chưa được giao trong Classroom IC2304.
+
+Muốn kiểm nội dung ChatGPT Share bằng bộ đọc local, chạy server bên dưới rồi mở `lesson-3.html` qua localhost. Đây vẫn là bản thử và không ghi bài nộp.
+
+## Bản thử Lesson 2 trên máy
 
 Tại gốc repository, chạy `node speaking-homework/server.mjs`, rồi mở `http://127.0.0.1:8765/speaking-homework/`. Máy chủ chỉ nghe trên `127.0.0.1`. Không mở riêng `index.html` hoặc chạy server tĩnh: nút **Xác nhận** cần tuyến kiểm nội dung.
 
