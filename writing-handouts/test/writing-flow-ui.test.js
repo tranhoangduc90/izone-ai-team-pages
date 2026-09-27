@@ -51,3 +51,25 @@ test('bài Test trùng hiện hướng dẫn đối chiếu thay vì nút Retry'
   assert.match(duplicate.message, /đối chiếu/u);
   assert.equal(writingUi.writingReviewAction({ error_code: 'STAGE_TIMEOUT' }).canRetry, true);
 });
+
+// Nhận vào: dòng Test đã giao và nguồn thứ hai báo điểm/báo cáo khác.
+// Việc chính: giữ cảnh báo trên cả hai hồ sơ, chặn Retry/Bỏ qua khi chưa đối chiếu.
+// Trả ra: không trình bày điểm cũ như điểm đã chốt; Homework không đổi.
+test('D03: tranh chấp lịch sử giữ dấu đã giao nhưng không cho chấm lại hoặc chọn điểm', () => {
+  const row = { source_type: 'term_test', status: 'delivered', task_number: 2,
+    task_score: 7, writing_score: 7,
+    historical_review_code: 'TEST_HISTORICAL_EVIDENCE_CONFLICT',
+    historical_peer_pair_ids: ['22222222-2222-4222-8222-222222222222'] };
+  const action = writingUi.writingReviewAction(row);
+  assert.equal(action.canRetry, false);
+  assert.equal(action.canSkip, false);
+  assert.match(writingUi.historicalReviewMessage(row), /đã được giao trước/u);
+  assert.match(writingUi.historicalReviewMessage(row), /22222222/u);
+  assert.deepEqual(writingUi.summarizeWritingTestRow(row), {
+    progress: 'Task 2 · Cần đối chiếu hai nguồn', overall: 'Chưa chốt điểm', lms: 'Không dùng',
+  });
+  assert.equal(writingUi.historicalReviewMessage({ source_type: 'lark_homework',
+    historical_review_code: row.historical_review_code }), '');
+  assert.equal(writingUi.writingReviewAction({ status: 'needs_review',
+    last_error_code: 'TEST_DOCUMENT_PAIR_ALREADY_REGISTERED' }).canSkip, true);
+});
