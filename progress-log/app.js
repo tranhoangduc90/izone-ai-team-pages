@@ -1003,10 +1003,15 @@ async function submitForm(event) {
     });
     clearLocalDraft();
     const receipt = payload.receipt;
-    elements.resultTitle.textContent = receipt.message;
-    elements.attendanceResult.textContent = receipt.attendanceStatus === 'self_confirmed'
-      ? 'Đã tự động ghi nhận'
-      : 'Chờ giảng viên xác nhận';
+    const isDemo = state.assignment.courseCode === 'DEMO-56';
+    elements.resultTitle.textContent = isDemo
+      ? 'Bản dùng thử đã nhận phiếu. Không ghi điểm danh lớp thật.'
+      : receipt.message;
+    elements.attendanceResult.textContent = isDemo
+      ? 'Chỉ ghi nhận trong bản dùng thử'
+      : receipt.attendanceStatus === 'self_confirmed'
+        ? 'Đã tự động ghi nhận'
+        : 'Chờ giảng viên xác nhận';
     elements.completenessResult.textContent = receipt.completeness === 'complete' ? 'Đã đủ nội dung' : 'Còn thiếu mục bắt buộc';
     renderFinalFeedback(payload.result);
     setNotice('Hoàn tất. Bạn có thể đóng trang này.');
