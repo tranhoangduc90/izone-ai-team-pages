@@ -113,6 +113,15 @@ function renderLinks() {
     && $('freestyle-link').value.trim() === freestyle.share_url && !state.submitted;
   $('voice-confirmation').hidden = !needsVoice;
   $('voice-continue').disabled = !$('voice-checkbox').checked;
+  const confirmed = state.submitted ? parts.length : parts.filter(part => {
+    const link = state.links.get(part.key);
+    return link?.check_status === 'accepted'
+      && $(`${part.key}-link`).value.trim() === link.share_url
+      && (!link.typing_warning || link.voice_confirmed || (part.key === 'freestyle' && $('voice-checkbox').checked));
+  }).length;
+  $('progress-count').textContent = `Đã xác nhận ${confirmed}/4 phần`;
+  $('progress-bar').setAttribute('aria-valuenow', String(confirmed));
+  $('progress-fill').style.width = `${confirmed * 25}%`;
   if (state.submitted) {
     $('completion-card').hidden = false;
     $('completion-message').textContent = 'Biên nhận đã lưu. Google Docs có thể cần thêm ít phút để hiện dòng xác nhận.';
@@ -207,7 +216,7 @@ async function loadAssignment() {
       roster.set(ref, student.name);
       select.add(new Option(nameCounts.get(student.name) > 1 ? `${student.name} · ${ref.slice(-4)}` : student.name, ref));
     }
-    $('class-select').replaceChildren(new Option(assignment.classCode, assignment.classCode));
+    $('class-code').textContent = assignment.classCode;
     $('assignment-context').textContent = `${assignment.title} · ${assignment.classCode}. Bài trong file Homework đã được nhận đúng lớp.`;
     $('student-select').disabled = false;
     $('open-homework').disabled = false;

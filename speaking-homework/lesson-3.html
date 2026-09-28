@@ -23,7 +23,7 @@
     <section class="identity-card" aria-labelledby="identity-title">
       <div><span class="section-kicker">TRƯỚC KHI BẮT ĐẦU</span><h2 id="identity-title">Xác nhận người học</h2><p id="assignment-context"></p><p>Chọn đúng tên trong bản Homework riêng của bạn. Hệ thống kiểm bốn hội thoại và giữ tiến trình nếu bạn mở lại trang.</p></div>
       <div id="identity-form" class="identity-form">
-        <label for="class-select">Lớp</label><select id="class-select"><option value="IC2304">IC2304</option></select>
+        <div class="class-context"><span>Lớp của bài này</span><strong id="class-code">IC2304</strong></div>
         <label for="student-select">Học viên</label><select id="student-select" disabled><option value="">Đang tải danh sách học viên…</option></select>
         <button id="reload-roster" class="button button-outline" type="button" hidden>Tải lại danh sách học viên</button>
         <label class="checkbox-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label>
@@ -35,6 +35,7 @@
     <main id="homework-content" hidden>
       <div class="section-intro"><div><span class="section-kicker">BỐN PHẦN · BỐN HỘI THOẠI</span><h2>Làm lần lượt từng phần</h2></div><p>Link nộp phải có dạng <code>https://chatgpt.com/share/...</code>. Link <code>/c/...</code> chỉ mở trong tài khoản của bạn và không nộp được.</p></div>
       <p id="draft-status" class="draft-status" role="status">Các link đã xác nhận được giữ trên máy chủ. Link đang gõ được giữ trên thiết bị này.</p>
+      <div class="submission-progress" aria-label="Tiến độ nộp bài"><strong id="progress-count" aria-live="polite">Đã xác nhận 0/4 phần</strong><div id="progress-bar" role="progressbar" aria-label="Số phần đã xác nhận" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0"><span id="progress-fill"></span></div></div>
       <div id="parts"></div>
       <section id="completion-card" class="completion-card" hidden aria-live="polite"><span class="completion-icon">✓</span><div><span class="section-kicker">ĐÃ NỘP BÀI</span><h2>Nộp bài thành công</h2><p id="completion-message">Biên nhận đã lưu. Dòng xác nhận trong Google Docs có thể cần thêm ít phút để cập nhật.</p></div><a id="return-homework" class="button button-primary" target="_blank" rel="noopener noreferrer">Quay lại Homework ↗</a></section>
     </main>
