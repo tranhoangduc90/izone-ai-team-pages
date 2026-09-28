@@ -16,7 +16,7 @@ const parts = [
   { key: 'clarify_3', title: 'Làm rõ · Cấp 3', url: 'https://ducizone.short.gy/lam_ro_lv3', lead: 'Luyện ít nhất 2 câu hỏi ở cấp 3.', steps: ['Mở bài Làm rõ cấp 3.', 'Làm theo các bước của chatbot cho ít nhất hai câu hỏi.', 'Tạo link Chia sẻ riêng của hội thoại cấp 3.'] },
   { key: 'freestyle', title: 'Full câu Speaking · Freestyle', url: 'https://ducizone.short.gy/freestyle', lead: 'Luyện đủ 2 câu Speaking. Mỗi câu cần một chu trình hoàn chỉnh.', steps: ['Yêu cầu ChatGPT hỏi một câu. Nếu cần, xin gợi ý về ý tưởng hoặc từ vựng.', 'Trả lời và xem ChatGPT nhận xét, sửa lỗi, nâng cấp câu trả lời.', 'Nói lại toàn bộ câu trả lời sau góp ý. Lặp lại với câu hỏi thứ hai.', 'Tạo link Chia sẻ riêng của hội thoại Freestyle.'] },
 ];
-const state = { studentRef: '', accessToken: '', assignment: null, links: new Map(), pending: new Set(), submitted: false, finishing: false, polling: null };
+const state = { studentRef: '', accessToken: '', assignment: null, links: new Map(), localFeedback: new Map(), pending: new Set(), submitted: false, finishing: false, polling: null };
 const roster = new Map();
 
 // Dữ liệu vào: URL của đúng file Homework. Việc chính: gọi API thật và giữ lỗi HTTP có mã.
@@ -63,6 +63,13 @@ function showResult(key, kind, title, message) {
   el.hidden = false;
   setStatus(key, kind === 'pass' ? 'Đạt yêu cầu' : kind === 'warning' ? 'Cần xác nhận' : kind === 'loading' ? 'Đang kiểm tra' : 'Chưa nhận bài', kind);
 }
+// Dữ liệu vào: cảnh báo của link học viên đang gõ.
+// Việc chính: giữ cảnh báo qua các lượt tự cập nhật từ máy chủ.
+// Kết quả: học viên thấy lý do bị chặn cho tới khi sửa link hoặc xác nhận lại.
+function showLocalFeedback(key, title, message) {
+  state.localFeedback.set(key, { value: $(`${key}-link`).value.trim(), title, message });
+  showResult(key, 'blocked', title, message);
+}
 function reasonFor(link, part) {
   if (link.check_code === 'SHARE_UNAVAILABLE' || link.check_code === 'SHARE_CONTENT_INVALID') return 'Người khác chưa mở được hội thoại này. Hãy tạo lại link ChatGPT Share rồi xác nhận.';
   if (link.check_code === 'CHECK_SERVICE_UNAVAILABLE') return 'Bộ kiểm đang gặp lỗi. Bài chưa được nhận; hãy xác nhận lại sau hoặc báo giảng viên.';
@@ -78,6 +85,8 @@ function renderLinks() {
     const input = $(`${part.key}-link`);
     if (!input.value && link?.share_url) input.value = link.share_url;
     const changed = link && input.value.trim() !== link.share_url;
+    const localFeedback = state.localFeedback.get(part.key);
+    if (localFeedback && input.value.trim() !== localFeedback.value) state.localFeedback.delete(part.key);
     input.disabled = state.submitted;
     $(`${part.key}-confirm`).disabled = state.submitted || state.pending.has(part.key);
     if (state.submitted || (link?.check_status === 'accepted' && !changed)) {
@@ -91,6 +100,9 @@ function renderLinks() {
       showResult(part.key, 'loading', 'Đang đọc hội thoại', 'Hệ thống đang kiểm nội dung link bạn đã dán. Kết quả sẽ tự cập nhật.');
     } else if (link?.check_status === 'rejected' && !changed) {
       showResult(part.key, 'blocked', 'Chưa nhận link này', reasonFor(link, part));
+    } else if (state.localFeedback.has(part.key)) {
+      const feedback = state.localFeedback.get(part.key);
+      showResult(part.key, 'blocked', feedback.title, feedback.message);
     } else if (changed || !link) {
       $(`${part.key}-result`).hidden = true;
       setStatus(part.key, 'Chưa kiểm tra');
@@ -234,13 +246,14 @@ for (const part of parts) {
   $(`${part.key}-confirm`).addEventListener('click', async () => {
     if (!state.accessToken || state.pending.has(part.key) || state.submitted) return;
     const parsed = parseShareUrl($(`${part.key}-link`).value);
-    if (!parsed.ok) { showResult(part.key, 'blocked', 'Link chưa đúng', parsed.reason); return; }
+    if (!parsed.ok) { showLocalFeedback(part.key, 'Link chưa đúng', parsed.reason); return; }
     for (const other of parts) {
       if (other.key !== part.key && parseShareUrl($(`${other.key}-link`).value).url === parsed.url) {
-        showResult(part.key, 'blocked', 'Trùng hội thoại', `Bạn đã dùng link này cho ${other.title}. Mỗi phần cần một hội thoại riêng.`);
+        showLocalFeedback(part.key, 'Trùng hội thoại', `Bạn đã dùng link này cho ${other.title}. Mỗi phần cần một hội thoại riêng.`);
         return;
       }
     }
+    state.localFeedback.delete(part.key);
     state.pending.add(part.key);
     $(`${part.key}-confirm`).disabled = true;
     showResult(part.key, 'loading', 'Đang nhận link', 'Hệ thống đang gửi link đi kiểm. Kết quả sẽ tự cập nhật.');
@@ -248,7 +261,7 @@ for (const part of parts) {
       await post('/checks/request', { ...identity(), part: part.key, url: parsed.url });
       saveDraft();
       await refresh();
-    } catch (error) { showResult(part.key, 'blocked', 'Chưa nhận link', error.message); }
+    } catch (error) { showLocalFeedback(part.key, 'Chưa nhận link', error.message); }
     finally { state.pending.delete(part.key); $(`${part.key}-confirm`).disabled = false; }
   });
 }
@@ -265,6 +278,7 @@ $('open-homework').addEventListener('click', async () => {
 $('change-student').addEventListener('click', () => {
   if (state.polling) clearInterval(state.polling);
   state.polling = null; state.studentRef = ''; state.accessToken = ''; state.links.clear(); state.submitted = false;
+  state.localFeedback.clear();
   writeMemory(localStorage, memory, '');
   $('student-select').value = '';
   $('identity-form').hidden = false; $('identity-confirmed').hidden = true; $('homework-content').hidden = true;
