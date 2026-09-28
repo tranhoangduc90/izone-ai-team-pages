@@ -677,6 +677,36 @@ function buildQuestion(item) {
     content.append(group);
   } else if (item.layoutType === 'speaking_issue_checklist') {
     content.append(buildSpeakingIssueChecklist(item, label));
+  } else if (item.layoutType === 'matching_heading_dropdown'
+    && item.interactionType === 'single_choice') {
+    const select = document.createElement('select');
+    select.className = 'matching-heading-select';
+    select.required = itemIsRequired(item);
+    select.setAttribute('aria-labelledby', label.id);
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Chọn heading';
+    select.append(placeholder);
+    for (const option of item.options) {
+      const choice = document.createElement('option');
+      choice.value = option.id;
+      choice.textContent = option.id + '. ' + option.label;
+      select.append(choice);
+    }
+    select.value = String(responseFor(item) || '');
+    const preview = document.createElement('p');
+    preview.className = 'heading-choice-preview';
+    const showSelection = () => {
+      const selected = item.options.find(option => option.id === select.value);
+      preview.textContent = selected ? selected.id + '. ' + selected.label : '';
+      preview.hidden = !selected;
+    };
+    showSelection();
+    select.addEventListener('change', () => {
+      recordResponse(item.itemVersionId, select.value || undefined);
+      showSelection();
+    });
+    content.append(select, preview);
   } else if (item.interactionType === 'short_text' || item.interactionType === 'long_text') {
     const input = document.createElement(item.interactionType === 'long_text' ? 'textarea' : 'input');
     if (input instanceof HTMLInputElement) input.type = 'text';
@@ -731,6 +761,17 @@ function showCheckpointFeedback(block) {
     const question = [...elements.questionList.querySelectorAll('.question')]
       .find(node => node.dataset.itemVersionId === item.itemVersionId);
     if (!question) continue;
+    const dropdown = question.querySelector('.matching-heading-select');
+    if (dropdown) {
+      dropdown.value = String(item.rawAnswer || '');
+      const feedback = document.createElement('p');
+      feedback.className = 'heading-feedback ' + (item.verdict === 'correct' ? 'is-correct' : 'is-incorrect');
+      feedback.textContent = (item.verdict === 'correct' ? 'Em chọn đúng.' : 'Em chọn sai.')
+        + ' Đáp án đúng: ' + answerLabel(block.items.find(candidate =>
+          candidate.itemVersionId === item.itemVersionId), item.expectedAnswer);
+      question.querySelector('.question-content').append(feedback);
+      continue;
+    }
     for (const choice of question.querySelectorAll('.choice')) {
       const input = choice.querySelector('input');
       const selected = input.value === item.rawAnswer;
@@ -919,7 +960,7 @@ async function openAssignment() {
     elements.studentSelect.replaceChildren(new Option('Chọn tên của bạn', ''), ...options);
     elements.chooseStudentButton.disabled = true;
     installStudentMemory();
-    setNotice(courseCode === 'DEMO-56'
+    setNotice(['DEMO-56', 'DEMO-67'].includes(courseCode)
       ? 'Mỗi tên demo dùng để nộp một lượt. Nếu tên đã hoàn tất, hãy chọn tên demo khác.'
       : 'Chọn đúng tên để bắt đầu.');
     showView('identityView');
@@ -1005,7 +1046,7 @@ async function submitForm(event) {
     });
     clearLocalDraft();
     const receipt = payload.receipt;
-    const isDemo = state.assignment.courseCode === 'DEMO-56';
+    const isDemo = ['DEMO-56', 'DEMO-67'].includes(state.assignment.courseCode);
     elements.resultTitle.textContent = isDemo
       ? 'Bản dùng thử đã nhận phiếu. Không ghi điểm danh lớp thật.'
       : receipt.message;
