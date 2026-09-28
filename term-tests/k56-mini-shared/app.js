@@ -1322,66 +1322,80 @@
     const section = document.createElement('section');
     section.className = 'writing-result-section';
     const grading = state.result?.writing?.grading || null;
+    const legacyTask = grading?.ready && grading?.mode === 'legacy'
+      ? grading.tasks?.find(task => Number(task.taskNumber) === 2) || null
+      : null;
+    const lmsUrl = (() => {
+      try {
+        const url = new URL(String(grading?.lmsUrl || ''));
+        return url.protocol === 'https:' && url.hostname === 'ducizone.ddns.net'
+          && !url.username && !url.password && !url.port && !url.hash
+          && /^\/writing\/shared\/writing-essays\/[a-f0-9]{48}\/view$/.test(url.pathname)
+          && /^[1-9]\d*$/.test(url.searchParams.get('v') || '')
+          && [...url.searchParams.keys()].every(key => key === 'v') ? url.href : '';
+      } catch { return ''; }
+    })();
     const heading = document.createElement('header');
     heading.className = 'writing-result-heading';
     const headingCopy = document.createElement('div');
     const eyebrow = document.createElement('span');
-    eyebrow.textContent = grading?.ready ? 'Kết quả Writing' : 'Bài Writing đã nộp';
+    eyebrow.textContent = lmsUrl || legacyTask ? 'Bài Writing đã chấm' : 'Bài Writing đã nộp';
     const title = document.createElement('h3');
-    title.textContent = grading?.ready
-      ? 'Điểm và bài chấm Writing'
+    title.textContent = lmsUrl
+      ? 'Xem bài chữa từng câu'
+      : legacyTask
+        ? 'Xem bản chấm Mini trước cập nhật'
       : grading?.status === 'review_required'
         ? 'Đã nhận bài Writing demo'
-        : 'Bài Writing của bạn đang được chấm';
+        : grading?.ready
+          ? 'Bài đã chấm nhưng chưa có Link LMS'
+          : 'Bài Writing của bạn đang được chấm';
     headingCopy.append(eyebrow, title);
     const note = document.createElement('p');
-    note.textContent = grading?.ready
-      ? 'Nhấn vào điểm Paragraph để xem bài chấm chi tiết.'
+    note.textContent = lmsUrl
+      ? 'Mở Link LMS để xem từng câu, phần sửa và nhận xét bài viết.'
+      : legacyTask
+        ? 'Bản chấm cũ được giữ nguyên để tra cứu. Bài nộp mới sẽ có Link LMS chữa từng câu.'
       : grading?.status === 'review_required'
         ? 'Bài viết đã được lưu trên máy chủ và cần giáo viên kiểm tra lại kết quả chấm.'
-        : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
+        : grading?.ready
+          ? 'Bản chấm cũ chưa có Link LMS. Vui lòng báo giáo viên; bài làm của bạn vẫn được lưu.'
+          : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
     heading.append(headingCopy, note);
 
     const gradingArea = document.createElement('div');
-    if (grading?.ready) {
-      gradingArea.className = 'writing-score-grid';
-      const tasksByNumber = new Map(Array.from(grading.tasks || []).map(task => [Number(task.taskNumber), task]));
-      for (const taskNumber of [2]) {
-        const taskResult = tasksByNumber.get(taskNumber);
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'writing-score-card is-action';
-        const label = document.createElement('span');
-        label.textContent = 'Đoạn văn';
-        const score = document.createElement('strong');
-        score.textContent = `Điểm đoạn văn ${formatBand(taskResult?.taskScore)}`;
-        const action = document.createElement('small');
-        action.textContent = 'Xem bài chấm chi tiết →';
-        button.append(label, score, action);
-        button.addEventListener('click', () => openWritingFeedback(taskResult));
-        gradingArea.append(button);
-      }
-      const overall = document.createElement('article');
-      overall.className = 'writing-score-card is-overall';
-      const overallLabel = document.createElement('span');
-      overallLabel.textContent = 'Writing tổng';
-      const overallScore = document.createElement('strong');
-      overallScore.textContent = `Điểm đoạn văn ${formatBand(grading.writingScore)}`;
-      const formula = document.createElement('small');
-      formula.textContent = 'Điểm Writing = điểm Paragraph';
-      overall.append(overallLabel, overallScore, formula);
-      gradingArea.append(overall);
+    if (lmsUrl) {
+      gradingArea.className = 'writing-grading-status';
+      const link = document.createElement('a');
+      link.className = 'button button-primary';
+      link.href = lmsUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Mở bài chữa trên LMS';
+      gradingArea.append(link);
+    } else if (legacyTask) {
+      gradingArea.className = 'writing-grading-status';
+      const button = document.createElement('button');
+      button.className = 'button button-secondary';
+      button.type = 'button';
+      button.textContent = 'Xem bản chấm cũ';
+      button.addEventListener('click', () => openWritingFeedback(legacyTask));
+      gradingArea.append(button);
     } else {
       gradingArea.className = `writing-grading-status${grading?.status === 'review_required' ? ' needs-review' : ''}`;
       const statusCopy = document.createElement('div');
       const statusTitle = document.createElement('strong');
-      statusTitle.textContent = grading?.status === 'review_required'
+      statusTitle.textContent = grading?.ready
+        ? 'Chưa có Link LMS'
+        : grading?.status === 'review_required'
         ? 'Cần giáo viên kiểm tra'
-        : 'Đang chấm Paragraph';
+        : 'Đang chữa từng câu';
       const statusText = document.createElement('p');
-      statusText.textContent = grading?.status === 'review_required'
-        ? 'Listening và Reading đã được chấm. Chưa thể xác nhận điểm đoạn văn tự động; bài làm vẫn được giữ trên máy chủ.'
-        : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
+      statusText.textContent = grading?.ready
+        ? 'Bản chấm này chưa trả về đường dẫn để học viên xem bài chữa.'
+        : grading?.status === 'review_required'
+          ? 'Listening và Reading đã được chấm. Bài Writing cần giáo viên kiểm tra; bài làm vẫn được giữ trên máy chủ.'
+          : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
       statusCopy.append(statusTitle, statusText);
       const refresh = document.createElement('button');
       refresh.type = 'button';
@@ -1575,10 +1589,12 @@
     );
     elements.resultStatus.textContent = hasReading
       ? payload.writing?.grading?.ready
-        ? 'Listening và Reading được phân tích riêng; điểm Writing · Paragraph đã hoàn tất và có bài chấm chi tiết.'
+        ? payload.writing?.grading?.mode === 'legacy'
+          ? 'Listening và Reading được phân tích riêng. Bản chấm Writing cũ vẫn được giữ để tra cứu.'
+          : 'Listening và Reading được phân tích riêng. Xem bài Writing đã chữa qua Link LMS khi có sẵn.'
         : payload.writing?.grading?.status === 'review_required'
           ? 'Listening và Reading đã chấm xong. Writing đã được nhận nhưng workflow chấm K56 yêu cầu giáo viên kiểm tra.'
-          : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
+          : 'Listening và Reading được phân tích riêng. Writing đang được chữa từng câu.'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
     elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
     renderWritingSubmission();

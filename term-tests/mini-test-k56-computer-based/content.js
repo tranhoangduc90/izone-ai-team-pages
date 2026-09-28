@@ -43,7 +43,7 @@
     variant:'semantic-html',baseTestSlug:'mini-test-k56',
     audio:{src:'',label:'Mini Test · Preston Park Run',durationLabel:'Part 1'},
     listening:{instructions:['Bài nghe gồm 1 phần và 10 câu.','Hoàn thành kiểm tra âm thanh trước khi bắt đầu.'],sections:[{label:'Part 1',range:'Questions 1–10',html:listening}]},
-    reading:{instructions:['Bạn có 20 phút để hoàn thành 13 câu.','Passage và câu hỏi có khung cuộn riêng.'],sections:[{
+    reading:{instructions:['Bạn có 25 phút để hoàn thành 13 câu.','Passage và câu hỏi có khung cuộn riêng.'],sections:[{
       label:'Passage 1',title:p.title,range:'Questions 1–13',
       passageHtml:`<article class="cbt-passage"><p><em>${p.subtitle}</em></p>${p.paragraphs.map(t=>'<p>'+t+'</p>').join('')}</article>`,questionsHtml:reading}]},
     writing:{totalMinutes:15,planningMinutes:3,tasks:[{id:'task2',label:'Đoạn văn',recommendedMinutes:15,minimumWords:100,initialSplit:50,

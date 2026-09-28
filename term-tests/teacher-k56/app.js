@@ -74,6 +74,18 @@ function writingScoreLabel() {
   return state.selectedTestSlug === 'mini-test-k56' ? 'Điểm đoạn văn' : 'Band';
 }
 
+function miniHomeworkLmsUrl(writing) {
+  if (state.selectedTestSlug !== 'mini-test-k56') return '';
+  try {
+    const url = new URL(String(writing?.lmsUrl || ''));
+    return url.protocol === 'https:' && url.hostname === 'ducizone.ddns.net'
+      && !url.username && !url.password && !url.port && !url.hash
+      && /^\/writing\/shared\/writing-essays\/[a-f0-9]{48}\/view$/.test(url.pathname)
+      && /^[1-9]\d*$/.test(url.searchParams.get('v') || '')
+      && [...url.searchParams.keys()].every(key => key === 'v') ? url.href : '';
+  } catch { return ''; }
+}
+
 function configuredWritingTasks() {
   const configured = getSelectedTest()?.writingTasks;
   if (Array.isArray(configured)) return configured.map(Number).filter(number => [1, 2].includes(number));
@@ -267,8 +279,12 @@ function renderOverviewRows() {
     const writing = student.writing || { status: 'not_submitted' };
     const taskNumbers = configuredWritingTasks();
     const writingCell = document.createElement('td');
+    const isMini = state.selectedTestSlug === 'mini-test-k56';
+    const isMiniLegacy = isMini && writing.mode === 'legacy' && writing.status === 'ready';
     const writingMain = taskNumbers.length === 0
       ? 'Không có Writing'
+      : isMini && writing.status === 'ready' && !isMiniLegacy
+      ? miniHomeworkLmsUrl(writing) ? 'Đã có bài chữa trên LMS' : 'Chưa có Link LMS'
       : writing.status === 'ready'
       ? `${writingScoreLabel()} ${formatBand(Number(writing.writingScore))}`
       : writingStatusLabel(writing.status);
@@ -277,7 +293,9 @@ function renderOverviewRows() {
       createNode(
         'small',
         'teacher-writing-tasks',
-        taskNumbers.map(taskNumber => writing.status === 'ready'
+        taskNumbers.map(taskNumber => isMini && !isMiniLegacy
+          ? `${writingTaskLabel(taskNumber)}: ${writing.status === 'ready' ? 'Đã chấm' : writingTaskStateLabel(writing[`task${taskNumber}State`])}`
+          : writing.status === 'ready'
           ? `${writingTaskLabel(taskNumber)}: ${formatBand(Number(writing[`task${taskNumber}Score`]))}`
           : `${writingTaskLabel(taskNumber)}: ${writingTaskStateLabel(writing[`task${taskNumber}State`])}`
         ).join(' · ')
@@ -751,6 +769,9 @@ function renderStudentResult(student) {
 
   const result = student.result;
   const writing = student.writing || { status: 'not_submitted' };
+  const isMini = state.selectedTestSlug === 'mini-test-k56';
+  const miniLmsUrl = miniHomeworkLmsUrl(writing);
+  const isMiniLegacy = isMini && writing.mode === 'legacy' && writing.status === 'ready';
   const panel = createNode('section', 'panel result-panel teacher-result-panel');
   const heading = createNode('div', 'result-heading');
   const headingCopy = document.createElement('div');
@@ -767,7 +788,11 @@ function renderStudentResult(student) {
   heading.append(headingCopy, reviewButton);
 
   const summaryGrid = createNode('div', 'summary-grid');
-  const writingSummaryCards = configuredWritingTasks().map(taskNumber => addWritingResultSummaryButton(
+  const writingSummaryCards = configuredWritingTasks().map(taskNumber => isMini && !isMiniLegacy
+    ? addResultSummaryCard(writingTaskLabel(taskNumber), writing.status === 'ready'
+      ? miniLmsUrl ? 'Đã có bài chữa trên LMS' : 'Chưa có Link LMS'
+      : writingTaskStateLabel(writing[`task${taskNumber}State`]))
+    : addWritingResultSummaryButton(
     student,
     taskNumber,
     writing.status === 'ready'
@@ -784,9 +809,19 @@ function renderStudentResult(student) {
       : `${result.reading.correct}/${result.reading.total} · Band ${result.reading.band}`),
     ...writingSummaryCards,
     ...(configuredWritingTasks().length
-      ? [addResultSummaryCard('Writing', writing.status === 'ready' ? `${writingScoreLabel()} ${formatBand(Number(writing.writingScore))}` : writingStatusLabel(writing.status))]
+      ? [addResultSummaryCard('Writing', isMini && writing.status === 'ready' && !isMiniLegacy
+        ? miniLmsUrl ? 'Đã có bài chữa trên LMS' : 'Chưa có Link LMS'
+        : writing.status === 'ready' ? `${writingScoreLabel()} ${formatBand(Number(writing.writingScore))}` : writingStatusLabel(writing.status))]
       : [])
   );
+
+  if (miniLmsUrl) {
+    const link = createNode('a', 'button button-secondary', 'Mở bài chữa từng câu trên LMS');
+    link.href = miniLmsUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    summaryGrid.append(link);
+  }
 
   const questionDetails = document.createElement('div');
   questionDetails.append(

@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-const modules=['k56-shared','k56-test2-shared','k56-mini-shared'];
+// Mini K56 hiện hiển thị bài chữa Homework qua Link LMS, không mở bảng điểm Writing.
+const modules=['k56-shared','k56-test2-shared'];
 class Element {
   constructor(tag){this.tag=tag;this.children=[];this.events={};this.textContent='';}
   append(...items){this.children.push(...items);}
@@ -31,7 +32,7 @@ for(const module of modules) {
     const {nodes}=fixture(module,{classCode});
     const summary=nodes.find(n=>n.className==='writing-band-summary');
     const grid=summary;assert.equal(grid.children.length,4);
-    const label=module==='k56-mini-shared'?'Điểm đoạn văn':'Band';
+    const label='Band';
     assert.ok(nodes.some(n=>n.tag==='h2' && n.textContent.endsWith(label+' 7.5')));
     assert.equal(grid.children[0].children[1].textContent,label+' 7.0');
     assert.deepEqual(grid.children.map(n=>n.children[0].textContent),['TA','CC','LR','GRA']);
@@ -59,9 +60,11 @@ for(const module of modules) {
 test('cả hai nhánh bootstrap và HTML dùng bản cửa sổ học viên mới',()=>{
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']){
     const bootstrap=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    assert.equal((bootstrap.match(/app\.js\?v=[^'"]*student-feedback-v1/g)||[]).length,2);
+    const version = slug === 'mini-test-k56' ? /app\.js\?v=[^'"]*mini-homework-25m/g : /app\.js\?v=[^'"]*student-feedback-v1/g;
+    assert.equal((bootstrap.match(version)||[]).length,2);
     const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');
-    assert.match(html,/bootstrap\.js\?v=[^"]*student-feedback-v1/);
+    if (slug === 'mini-test-k56') assert.match(html,/bootstrap\.js\?v=[^"]*mini-homework-25m/);
+    else assert.match(html,/bootstrap\.js\?v=[^"]*student-feedback-v1/);
     assert.match(html,/k56-writing-feedback\/styles.css\?rev=20260914-student-feedback-v1/);
   }
 });
