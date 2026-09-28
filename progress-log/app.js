@@ -39,6 +39,7 @@ const elements = Object.fromEntries([
   'studentNameLabel', 'formContextLabel', 'saveState', 'progressBar', 'reflectionForm',
   'checkpointLabel', 'checkpointTitle', 'checkpointInstructions', 'questionList', 'previousButton',
   'nextButton', 'submitButton', 'resultTitle', 'attendanceResult', 'completenessResult',
+  'gradedResults', 'gradedSummary', 'gradedItemList',
   'errorTitle', 'errorMessage', 'retryButton'
 ].map(id => [id, document.getElementById(id)]));
 
@@ -749,6 +750,42 @@ function showCheckpointFeedback(block) {
   }
 }
 
+function answerLabel(item, answer) {
+  const selected = Array.isArray(answer) ? answer : [answer];
+  return selected.map(value => {
+    const option = item.options?.find(candidate => candidate.id === value);
+    return option ? `${option.id}. ${option.label}` : String(value ?? '—');
+  }).join(', ');
+}
+
+function renderFinalFeedback(result) {
+  const scored = result?.answerRelease === 'released'
+    ? (result.items || []).filter(item => item.maxScore > 0 && item.expectedAnswer != null)
+    : [];
+  elements.gradedResults.hidden = scored.length === 0;
+  elements.gradedItemList.replaceChildren();
+  if (!scored.length) return;
+  const correct = scored.filter(item => item.verdict === 'correct').length;
+  elements.gradedSummary.textContent = `${correct}/${scored.length} câu đúng`;
+  for (const grade of scored) {
+    const block = allBlocks().find(candidate => candidate.items.some(item => item.itemVersionId === grade.itemVersionId));
+    const item = block?.items.find(candidate => candidate.itemVersionId === grade.itemVersionId);
+    if (!item) continue;
+    const card = document.createElement('article');
+    card.className = `graded-item ${grade.verdict === 'correct' ? 'is-correct' : 'is-incorrect'}`;
+    const heading = document.createElement('h3');
+    heading.textContent = `Phần ${block.checkpoint} · Câu ${item.displayNumber || item.position}: ${grade.verdict === 'correct' ? 'Đúng' : 'Sai'}`;
+    const prompt = document.createElement('p');
+    prompt.textContent = item.prompt;
+    const chosen = document.createElement('p');
+    chosen.textContent = `Em chọn: ${answerLabel(item, grade.rawAnswer)}`;
+    const expected = document.createElement('p');
+    expected.textContent = `Đáp án đúng: ${answerLabel(item, grade.expectedAnswer)}`;
+    card.append(heading, prompt, chosen, expected);
+    elements.gradedItemList.append(card);
+  }
+}
+
 function renderCheckpoint() {
   const blocks = allBlocks();
   const block = currentBlock();
@@ -774,6 +811,8 @@ function renderCheckpoint() {
   const nextBlock = blocks[state.checkpointIndex + 1];
   if (nextBlock && state.checkpointSubmissions.has(block.blockId) && !blockIsOpen(nextBlock)) {
     elements.nextButton.textContent = 'Kiểm tra phần tiếp theo';
+  } else if (state.checkpointSubmissions.has(block.blockId)) {
+    elements.nextButton.textContent = 'Tiếp tục phần tiếp theo';
   } else {
     elements.nextButton.textContent = 'Nộp phần và tiếp tục';
   }
@@ -813,11 +852,20 @@ async function continueToNextCheckpoint() {
   state.submitting = true;
   elements.nextButton.disabled = true;
   try {
+    let justSubmitted = false;
     if (!state.checkpointSubmissions.has(block.blockId)) {
       setNotice('Đang ghi nhận phần này…');
       await submitCurrentCheckpoint();
+      justSubmitted = true;
     }
     await refreshBlockReleases();
+    if (justSubmitted && state.checkpointSubmissions.get(block.blockId)?.result?.answerRelease === 'released') {
+      setNotice(blockIsOpen(nextBlock)
+        ? 'Phần này đã được chấm. Xem kết quả rồi bấm “Tiếp tục phần tiếp theo”.'
+        : 'Phần này đã được chấm. Xem kết quả và chờ giảng viên mở phần tiếp theo.');
+      renderCheckpoint();
+      return;
+    }
     if (!blockIsOpen(nextBlock)) {
       setNotice('Phần này đã được ghi nhận. Hãy chờ giảng viên mở phần tiếp theo.');
       renderCheckpoint();
@@ -960,12 +1008,14 @@ async function submitForm(event) {
       ? 'Đã tự động ghi nhận'
       : 'Chờ giảng viên xác nhận';
     elements.completenessResult.textContent = receipt.completeness === 'complete' ? 'Đã đủ nội dung' : 'Còn thiếu mục bắt buộc';
+    renderFinalFeedback(payload.result);
     setNotice('Hoàn tất. Bạn có thể đóng trang này.');
     showView('resultView');
   } catch (error) {
     state.submitting = false;
     elements.submitButton.disabled = false;
     setNotice(`${error.message} Chưa có xác nhận điểm danh.`, 'error');
+    if (state.checkpointSubmissions.has(currentBlock().blockId)) renderCheckpoint();
   }
 }
 
