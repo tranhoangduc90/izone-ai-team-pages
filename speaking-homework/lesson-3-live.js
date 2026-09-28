@@ -163,7 +163,7 @@ async function finish() {
 async function openStudent(ref) {
   if (!roster.has(ref)) return;
   $('open-homework').disabled = true;
-  $('identity-message').textContent = 'Đang mở bản Homework của bạn…';
+  $('identity-message').textContent = 'Đang mở bài nộp Speaking…';
   try {
     const response = await post('/session/start', { documentId, assignmentCode, studentRef: ref, identityConfirmed: true });
     state.studentRef = ref;
