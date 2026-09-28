@@ -919,7 +919,9 @@ async function openAssignment() {
     elements.studentSelect.replaceChildren(new Option('Chọn tên của bạn', ''), ...options);
     elements.chooseStudentButton.disabled = true;
     installStudentMemory();
-    setNotice('Chọn đúng tên để bắt đầu.');
+    setNotice(courseCode === 'DEMO-56'
+      ? 'Mỗi tên demo dùng để nộp một lượt. Nếu tên đã hoàn tất, hãy chọn tên demo khác.'
+      : 'Chọn đúng tên để bắt đầu.');
     showView('identityView');
   } catch (error) {
     fail('Phiếu chưa sẵn sàng', error.message);
