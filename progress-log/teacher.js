@@ -455,16 +455,6 @@ function addReportSection(container, title, values) {
   container.append(section);
 }
 
-function evidenceSourceLabel(source) {
-  return {
-    progress_form: 'phiếu trên lớp',
-    progress_log: 'phiếu trên lớp',
-    term_test: 'Term Test',
-    homework: 'bài tập về nhà',
-    teacher_note: 'ghi chú giảng viên'
-  }[source] || 'nguồn học tập khác';
-}
-
 function openReport(student) {
   const report = student.latestReport;
   if (!report) return;
@@ -475,8 +465,7 @@ function openReport(student) {
   elements.reportStudentName.textContent = student.discriminator
     ? `${student.name} · ${student.discriminator}`
     : student.name;
-  const sources = (student.evidenceSources || []).map(evidenceSourceLabel);
-  elements.reportScope.textContent = `Buổi ${report.fromSessionNumber}–${report.toSessionNumber} · ${student.evidenceCount || 0} bằng chứng từ ${sources.join(', ') || 'chưa xác định nguồn'}`;
+  elements.reportScope.textContent = `Buổi ${report.fromSessionNumber}–${report.toSessionNumber}`;
   elements.reportSystemContent.replaceChildren();
   addReportSection(elements.reportSystemContent, 'Điều đã tiến bộ', output.progress);
   addReportSection(elements.reportSystemContent, 'Điều còn lặp lại', output.recurringIssues);
@@ -682,7 +671,7 @@ function buildStudentRow(student) {
   const submissionText = student.submissionId
     ? (student.completeness === 'complete' ? 'Đã nộp đủ' : 'Đã nộp nhưng còn thiếu')
     : 'Chưa nộp';
-  detail.textContent = `${submissionText} · ${student.evidenceCount || 0} bằng chứng`;
+  detail.textContent = submissionText;
   if (!student.submissionId && student.checkpoints?.length) {
     detail.textContent = `Đã nộp ${student.checkpoints.length} phần · chưa nộp phiếu cuối`;
   } else if (!student.submissionId && live?.draftRevision > 0) {
