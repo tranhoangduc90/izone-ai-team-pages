@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { needsTeacherEmail, parseShareUrl, safeHomeworkUrl } from '../speaking-homework/logic.mjs';
 
 // Dữ liệu giả kiểm đúng ranh giới giữa link hợp lệ, cảnh báo mềm và chặn nộp.
-const a = parseShareUrl(' https://www.chatgpt.com/share/example-id?x=1#part ');
-assert.deepEqual(a, { ok: true, url: 'https://chatgpt.com/share/example-id' });
+const a = parseShareUrl(' https://www.chatgpt.com/share/12345678-1234-1234-1234-123456789abc?x=1#part ');
+assert.deepEqual(a, { ok: true, url: 'https://chatgpt.com/share/12345678-1234-1234-1234-123456789abc' });
 assert.equal(parseShareUrl('https://chatgpt.com/c/private-id').ok, false);
 assert.equal(parseShareUrl('https://evil.example/share/example-id').ok, false);
 assert.equal(parseShareUrl('http://chatgpt.com/share/example-id').ok, false);
