@@ -1,6 +1,8 @@
 # Speaking Homework buổi 4 — IC2304
 
-Nguồn: Google Docs cũ `1ndj3S00OxlwJ39HxrQIgZVnGa5hI1hkz8Fy4hHzPUnk`, đã đọc ngày 29/09/2026. Phạm vi: trang nộp và API/database; chưa gắn vào Classroom khi chưa có bài giao và bản sao Docs mới.
+Nguồn hướng dẫn: Google Docs cũ `1ndj3S00OxlwJ39HxrQIgZVnGa5hI1hkz8Fy4hHzPUnk`. Mẫu nộp mới `1XUV5k6PjAAFjAwD8t_HdWRgVfjUF3WaUb2eZMh20Ivs` có CTA chữ trắng và ô tình trạng. Bài Classroom IC2304 `888120053939` đã tạo ở trạng thái nháp, chưa có bản sao học viên. Mã bài chuẩn theo mẫu là `67-speaking-diem_giua`.
+
+Ngày 30/09, bốn ChatGPT Share thật của Đức đã được đọc và kiểm riêng từng phần: Chèn điểm giữa đạt ba giai đoạn, Freestyle đạt ba câu, hai bài bổ trợ tương ứng với “Thiếu / thừa giới từ” và “Dạng từ sau linking verb” trong kho đang hoạt động. Bài giới từ có dấu hiệu nhập chữ và cần học viên xác nhận đã luyện nói. Trên bản sao Docs nội bộ `1GHzDQNRPF8kctqgQxLBQqq_gjY8RGRSy3nT3zm3xkqY`, CTA đã gắn đúng Doc ID/lớp/mã bài mà vẫn giữ chữ trắng không gạch dưới; dòng xác nhận thử ghi đúng ô tình trạng và đọc lại được. Bản sao này không thuộc Classroom và biên nhận trong đó là giả, chỉ để kiểm đường ghi Docs.
 
 ## Trải nghiệm
 
