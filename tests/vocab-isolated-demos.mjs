@@ -113,6 +113,7 @@ try {
     );
     assert.equal(response?.status(), 200);
     await page.getByRole('heading', { name: 'Bài đã được chấm xong' }).waitFor({ timeout: 15000 });
+    if (await page.locator('#page-title').innerText() !== 'Đã xong!') throw new Error(`Tiêu đề Vocab ${demo.padded} chưa báo hoàn tất.`);
     assert.equal(new URL(page.url()).search, '');
     assert.equal((await page.locator('.step.done').count()), 3);
     assert.equal(calls[0].path, demo.startPath);
