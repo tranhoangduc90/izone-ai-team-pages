@@ -28,17 +28,22 @@ const state = {
   checkpointSubmissions: new Map(),
   submitting: false,
   confirmedStudent: null,
-  startingAttempt: false
+  startingAttempt: false,
+  journeyReturnView: 'confirmView',
+  journeyLoading: false,
+  journeyOnly: false
 };
 
-const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'errorView'];
+const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'journeyView', 'errorView'];
 const elements = Object.fromEntries([
   'notice', ...viewIds, 'brandLabel', 'sessionLabel', 'assignmentTitle', 'classLabel', 'studentSelect',
   'chooseStudentButton', 'rememberStudentRow', 'rememberStudent', 'rememberStudentStatus', 'changeRememberedStudent',
-  'confirmName', 'confirmContext', 'confirmButton', 'backToNamesButton',
+  'confirmName', 'confirmContext', 'confirmButton', 'journeyButton', 'backToNamesButton',
   'studentNameLabel', 'formContextLabel', 'saveState', 'progressBar', 'reflectionForm',
   'checkpointLabel', 'checkpointTitle', 'checkpointInstructions', 'questionList', 'previousButton',
   'nextButton', 'submitButton', 'resultTitle', 'attendanceResult', 'completenessResult',
+  'journeyResultButton', 'journeyStudentName', 'journeyClassName', 'attendedCount', 'submittedCount',
+  'reportCount', 'journeyStatus', 'journeySessions', 'journeyReports', 'journeyReportList', 'journeyBackButton',
   'gradedResults', 'gradedSummary', 'gradedItemList',
   'errorTitle', 'errorMessage', 'retryButton'
 ].map(id => [id, document.getElementById(id)]));
@@ -941,6 +946,152 @@ function validateCurrentBlock() {
   return false;
 }
 
+// Nhận Journey đã lọc theo lớp và học viên; tạo DOM an toàn, không đưa nội dung học viên vào HTML.
+// Khi chưa có dữ liệu hoặc request lỗi, phiếu hiện tại vẫn giữ nguyên và học viên có thể quay lại.
+function journeyText(tag, value, className = '') {
+  const node = document.createElement(tag);
+  node.textContent = String(value ?? '');
+  if (className) node.className = className;
+  return node;
+}
+
+function journeyPortalMessage(status) {
+  if (status === 'complete') return 'Luồng điểm danh Portal đã xử lý; kết quả thực tế cần được đối chiếu trên Portal.';
+  if (status === 'review_required') return 'Portal báo điểm danh cần giảng viên kiểm tra.';
+  if (status === 'failed') return 'Đồng bộ Portal chưa thành công; giảng viên cần kiểm tra.';
+  if (['queued', 'processing', 'retry_wait'].includes(status)) return 'Yêu cầu điểm danh đang chờ đồng bộ sang Portal.';
+  return 'Chưa có trạng thái đồng bộ Portal để đối chiếu.';
+}
+
+function renderIntegratedJourney(journey) {
+  elements.journeyStudentName.textContent = journey.student.name;
+  elements.journeyClassName.textContent = journey.class.name;
+  elements.attendedCount.textContent = journey.summary.attendedSessions;
+  elements.submittedCount.textContent = journey.summary.submittedComplete;
+  elements.reportCount.textContent = journey.summary.availableReports;
+  const sessions = (journey.sessions || []).map(session => {
+    const item = document.createElement('article');
+    item.className = 'session-item';
+    const heading = document.createElement('div');
+    heading.className = 'session-heading';
+    heading.append(journeyText('b', `Buổi ${session.sessionNumber}`),
+      journeyText('span', session.testResult
+        ? 'Đã có kết quả Test'
+        : session.assignmentId
+        ? session.completeness === 'complete' ? 'Đã nộp đủ phiếu' : 'Chưa có bài nộp đủ'
+        : session.dataOrigin === 'test_evidence'
+          ? 'Có dữ liệu Test · chưa hiển thị kết quả'
+          : session.sessionKind === 'test' && session.dataOrigin === 'confirmed_plan'
+            ? 'Buổi Test theo kế hoạch · chưa có kết quả'
+            : session.dataOrigin === 'confirmed_plan'
+              ? 'Theo kế hoạch lớp · chưa có Progress Log'
+              : 'Chưa có dữ liệu cho buổi này', 'journey-status'));
+    item.append(heading, journeyText('p', session.title || `Buổi ${session.sessionNumber}`));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(session.sessionDate || '')) {
+      const [year, month, day] = session.sessionDate.split('-');
+      item.append(journeyText('small', `Ngày học đã được giảng viên xác nhận: ${day}/${month}/${year}`));
+    }
+    if (session.testResult) {
+      const result = document.createElement('div');
+      result.className = 'session-test-result';
+      result.append(journeyText('b', session.testResult.title || 'Kết quả Test'));
+      for (const [name, score] of [['Listening', session.testResult.listening],
+        ['Reading', session.testResult.reading]]) {
+        if (!score) continue;
+        result.append(journeyText('small', name + ': ' + score.correct + '/' + score.total
+          + (score.band === null ? '' : ' · Band ' + score.band)));
+      }
+      if (session.testResult.writing?.status === 'ready') {
+        result.append(journeyText('small', 'Writing: ' + session.testResult.writing.score));
+      } else if (session.testResult.writing?.status === 'pending') {
+        result.append(journeyText('small', 'Writing: đã nộp, đang chờ điểm.'));
+      }
+      item.append(result);
+    }
+    if (session.assignmentId) {
+      const confirmed = ['self_confirmed', 'teacher_confirmed'].includes(session.attendanceStatus);
+      const portalStatus = session.portalSync?.status;
+      item.append(journeyText('small', confirmed
+        ? 'Đã xác nhận điểm danh trong Progress Log.'
+        : portalStatus
+          ? 'Progress Log hiện chưa xác nhận; đã từng có yêu cầu đồng bộ Portal.'
+          : 'Chưa xác nhận điểm danh trong Progress Log.'));
+      if (confirmed || portalStatus) item.append(journeyText('small', journeyPortalMessage(portalStatus)));
+    }
+    if (session.teacherSessionFeedback?.noteText) {
+      const feedback = document.createElement('div');
+      feedback.className = 'session-speaking-feedback';
+      feedback.append(journeyText('b', 'Nhận xét Speaking từ giảng viên'),
+        journeyText('p', session.teacherSessionFeedback.noteText));
+      item.append(feedback);
+    }
+    const nextAction = session.afterSessionReport?.systemOutput?.nextAction?.text;
+    if (nextAction) item.append(journeyText('div', nextAction, 'session-note'));
+    return item;
+  });
+  elements.journeySessions.replaceChildren(...(sessions.length ? sessions
+    : [journeyText('p', 'Chưa có buổi học nào được ghi nhận.', 'muted')]));
+  const reports = (journey.reports || []).map(report => {
+    const item = document.createElement('article');
+    item.className = 'history-report';
+    item.append(journeyText('b', `Tổng kết đến buổi ${report.toSessionNumber}`),
+      journeyText('p', report.systemOutput?.progress?.[0]?.text
+        || report.systemMarkdown || 'Chưa có nội dung tổng kết.'));
+    if (report.humanNote) item.append(journeyText('p', report.humanNote));
+    return item;
+  });
+  elements.journeyReports.hidden = reports.length === 0;
+  elements.journeyReportList.replaceChildren(...reports);
+  const inferredCount = (journey.sessions || []).filter(session => session.dataOrigin === 'inferred_gap'
+    || (!session.dataOrigin && !session.assignmentId && session.sessionKind !== 'test')).length;
+  elements.journeyStatus.textContent = journey.coverage?.planOutdated
+    ? 'Kế hoạch ' + journey.coverage.plannedSessions + ' buổi cần được giảng viên kiểm lại: '
+      + 'đã có dữ liệu đến buổi ' + journey.coverage.knownThroughSession + '.'
+    : journey.coverage?.schedule === 'teacher_confirmed'
+      ? 'Giảng viên đã xác nhận kế hoạch ' + journey.coverage.plannedSessions
+        + ' buổi. Ngày học chỉ hiện ở buổi đã được xác nhận. '
+        + (journey.coverage.testResults === 'connected'
+          ? 'Kết quả Test tự cập nhật khi bài hoàn tất; điểm Writing có thể đến sau.'
+          : journey.coverage.testResults === 'temporarily_unavailable'
+            ? 'Nguồn kết quả Test tạm thời chưa đọc được.'
+            : 'Chưa ghép nguồn kết quả Test cho lớp.')
+    : sessions.length
+      ? 'Có dữ liệu đến buổi ' + (journey.coverage?.knownThroughSession || sessions.at(-1).sessionNumber)
+        + '. ' + inferredCount + ' ô buổi chưa có nguồn xác nhận; lịch đầy đủ và điểm Test chưa được nối vào Journey.'
+      : 'Chưa có dữ liệu buổi học trong Journey; lịch lớp và kết quả Test chưa được nối.';
+}
+
+async function openIntegratedJourney(returnView) {
+  if (state.journeyLoading || !state.assignment) return;
+  const studentRef = returnView === 'resultView'
+    ? state.attempt?.identity?.studentRef : state.confirmedStudent?.studentRef;
+  if (!studentRef) return;
+  state.journeyLoading = true;
+  state.journeyReturnView = returnView;
+  elements.journeyButton.disabled = true;
+  elements.journeyResultButton.disabled = true;
+  setNotice('Đang tải hành trình…');
+  try {
+    const payload = await apiRequest('/student/course-journey', {
+      body: { publicToken: state.publicToken, studentRef, identityConfirmed: true }
+    });
+    const journey = payload.journey;
+    if (journey.student?.studentRef !== studentRef
+      || journey.class?.classId !== state.assignment.class.id) {
+      throw new Error('Dữ liệu trả về không khớp người học và lớp đã chọn.');
+    }
+    renderIntegratedJourney(journey);
+    showView('journeyView');
+    setNotice('Hành trình của bạn đã được cập nhật.');
+  } catch (error) {
+    setNotice(`Chưa tải được hành trình: ${error.message}`, 'error');
+  } finally {
+    state.journeyLoading = false;
+    elements.journeyButton.disabled = false;
+    elements.journeyResultButton.disabled = false;
+  }
+}
+
 async function openAssignment() {
   state.publicToken = readPublicToken();
   if (!state.publicToken) {
@@ -949,8 +1100,20 @@ async function openAssignment() {
   }
   try {
     setNotice('Đang mở phiếu…');
-    const payload = await apiRequest('/assignments/open', { body: { publicToken: state.publicToken } });
-    state.assignment = payload.assignment;
+    let assignment;
+    state.journeyOnly = false;
+    try {
+      const payload = await apiRequest('/assignments/open', { body: { publicToken: state.publicToken } });
+      assignment = payload.assignment;
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      const payload = await apiRequest('/student/journey-context', {
+        body: { publicToken: state.publicToken }
+      });
+      assignment = payload.assignment;
+      state.journeyOnly = true;
+    }
+    state.assignment = assignment;
     const courseCode = String(state.assignment.courseCode || '').trim();
     elements.brandLabel.textContent = /^\d{2,3}$/.test(courseCode)
       ? `Progress Log · Khóa ${courseCode}`
@@ -968,7 +1131,9 @@ async function openAssignment() {
     elements.chooseStudentButton.disabled = true;
     installStudentMemory();
     const legacyDemo = ['DEMO-56', 'DEMO-67'].includes(courseCode);
-    setNotice(config.DEMO_MODE
+    setNotice(state.journeyOnly
+      ? 'Phiếu buổi này đã đóng. Chọn đúng tên để xem hành trình.'
+      : config.DEMO_MODE
       ? 'Chọn một học viên mẫu để thử. Có thể làm lại bằng nút phía trên.'
       : legacyDemo
       ? 'Mỗi tên demo dùng để nộp một lượt. Nếu tên đã hoàn tất, hãy chọn tên demo khác.'
@@ -981,7 +1146,7 @@ async function openAssignment() {
 
 async function startAttempt() {
   try {
-    if (!state.confirmedStudent || state.startingAttempt) return;
+    if (!state.confirmedStudent || state.startingAttempt || state.journeyOnly) return;
     state.startingAttempt = true;
     elements.confirmButton.disabled = true;
     elements.backToNamesButton.disabled = true;
@@ -1092,6 +1257,7 @@ elements.chooseStudentButton.addEventListener('click', () => {
   elements.confirmName.textContent = displayStudent(state.confirmedStudent);
   elements.confirmContext.textContent = `${state.assignment.class.name} · Buổi ${state.assignment.sessionNumber}`;
   elements.confirmButton.disabled = false;
+  elements.confirmButton.hidden = state.journeyOnly;
   setNotice('Kiểm tra kỹ trước khi xác nhận.');
   showView('confirmView');
 });
@@ -1105,6 +1271,12 @@ elements.backToNamesButton.addEventListener('click', () => {
   syncStudentMemoryControls();
 });
 elements.confirmButton.addEventListener('click', () => void startAttempt());
+elements.journeyButton.addEventListener('click', () => void openIntegratedJourney('confirmView'));
+elements.journeyResultButton.addEventListener('click', () => void openIntegratedJourney('resultView'));
+elements.journeyBackButton.addEventListener('click', () => {
+  showView(state.journeyReturnView);
+  setNotice('Bạn có thể tiếp tục với Progress Log.');
+});
 elements.previousButton.addEventListener('click', () => {
   state.checkpointIndex = Math.max(0, state.checkpointIndex - 1);
   setNotice('');

@@ -16,6 +16,9 @@ for (const name of pages) {
   html = html.replace(/\s*<script src="https:\/\/accounts\.google\.com\/gsi\/client" async defer><\/script>/, '');
   if (name === 'index.html') {
     html = html.replace('src="../app.js?', 'src="boot.js?');
+    // API bản thử chưa có Journey; giữ phiếu thử hoạt động và ẩn hai nút đọc hành trình.
+    html = html.replace('id="journeyButton" type="button"', 'id="journeyButton" type="button" hidden');
+    html = html.replace('id="journeyResultButton" type="button"', 'id="journeyResultButton" type="button" hidden');
     html = html.replace('<main class="shell">', `<aside class="demo-banner" role="note">
       <b>BẢN THỬ · KHÔNG GHI BÀI THẬT</b>
       <span>Nội dung phiếu thật; bài làm và điểm danh chỉ lưu trong bản thử.</span>

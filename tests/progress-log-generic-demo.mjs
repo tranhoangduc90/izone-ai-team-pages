@@ -17,6 +17,8 @@ test('trang học viên mẫu dùng cùng giao diện và chỉ được nối �
   assert.doesNotMatch(html, /https:\/\/ducizone\.ddns\.net\/mapping-api(?:\s|;|"|\/)/);
   assert.match(html, /src="config\.js\?/);
   assert.match(html, /id="resetDemoButton"/);
+  assert.match(html, /id="journeyButton" type="button" hidden/);
+  assert.match(html, /id="journeyResultButton" type="button" hidden/);
   assert.match(html, /id="openDemoBlocksButton"/);
   const config = read('progress-log/demo/config.js');
   assert.match(config, /mapping-api-progress-log-demo/);

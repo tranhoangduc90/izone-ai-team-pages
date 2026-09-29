@@ -8,7 +8,7 @@
     <title>Progress Log · Giảng viên</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css?rev=20260924-listening-feedback-v1">
-    <link rel="stylesheet" href="teacher.css?rev=20260924-listening-feedback-v1">
+    <link rel="stylesheet" href="teacher.css?rev=20260930-journey-erp-v3">
   </head>
   <body>
     <header class="topbar teacher-header">
@@ -55,6 +55,20 @@
         <section class="card" id="dashboardPanel">
           <div class="section-heading"><div><p class="eyebrow">TÌNH HÌNH LỚP</p><h1 id="dashboardTitle">Chọn một phiếu</h1></div><button class="button text-button" id="refreshDashboardButton" type="button">Làm mới</button></div>
           <label class="field"><span>Phiếu đang theo dõi</span><select id="assignmentSelect"></select></label>
+          <section class="control-section journey-plan-section">
+            <div class="library-heading"><b>Kế hoạch buổi học của lớp</b><small id="journeyPlanStatus">Chọn phiếu để tải kế hoạch.</small></div>
+            <form id="journeyPlanForm" hidden>
+              <div class="journey-plan-fields">
+                <label class="field"><span>Tổng số buổi của lớp</span><input id="journeyPlanTotal" type="number" min="1" max="100" required></label>
+                <label class="field"><span>Số thứ tự buổi Test</span><input id="journeyPlanTests" type="text" placeholder="Ví dụ: 16, 30" inputmode="numeric"></label>
+              </div>
+              <p class="muted compact">Giảng viên xác nhận thứ tự buổi cho cả lớp. Buổi Test có thể không có Progress Log. Khi ghép đúng bài Test, kết quả hoàn tất sẽ tự hiện; điểm Writing có thể đến sau.</p>
+              <div class="journey-plan-erp-actions"><button class="button" id="loadJourneyTestSourcesButton" type="button">Đọc nguồn bài Test</button><small id="journeyTestSourcesStatus">Chưa đọc nguồn Test.</small></div>
+              <div id="journeyPlanTestSources" class="journey-plan-date-grid"></div>
+              <details class="journey-plan-dates"><summary>Xác nhận ngày của từng buổi (tùy chọn)</summary><p class="muted compact">Chọn đúng dòng lịch ERP cho từng buổi, hoặc nhập ngày thủ công nếu chưa có lịch. Buổi Test có thể không có Progress Log.</p><div class="journey-plan-erp-actions"><button class="button" id="loadJourneyErpScheduleButton" type="button">Đọc lịch ERP của lớp</button><small id="journeyErpScheduleStatus">Chưa đọc lịch ERP.</small></div><div id="journeyPlanDates" class="journey-plan-date-grid"></div></details>
+              <div class="journey-plan-actions"><button class="button primary" id="saveJourneyPlanButton" type="submit">Xác nhận kế hoạch lớp</button><button class="button" id="reloadJourneyPlanButton" type="button">Tải lại kế hoạch</button></div>
+            </form>
+          </section>
           <section class="control-section dashboard-share"><div><b>Phiếu học viên</b><small>Sao chép link để gửi học viên; địa chỉ trang chung không mở được phiếu.</small><small id="liveUpdatedAt">Tự cập nhật mỗi 8 giây; nội dung đang gõ hiện sau khi máy chủ lưu bản nháp.</small></div><div class="dashboard-share-actions"><button class="button" id="previewStudentButton" type="button">Xem thử như học viên</button><button class="button" id="openStudentFormButton" type="button">Mở phiếu</button><button class="button" id="copyCurrentLinkButton" type="button">Sao chép link</button></div></section>
           <section class="control-section"><div class="library-heading"><b>Mở từng phần</b><small>Giảng viên quyết định đúng lúc học viên được đi tiếp.</small></div><div id="blockControls" class="block-controls"></div></section>
           <div class="summary-row" id="dashboardSummary"></div>
@@ -81,7 +95,7 @@
         <p class="muted" id="reportScope"></p>
         <div class="report-system" id="reportSystemContent"></div>
         <section class="human-note"><p class="eyebrow">LỜI NHẮN THẬT TỪ GIẢNG VIÊN</p><textarea id="reportHumanNote" maxlength="500" placeholder="Ví dụ: Cô thấy em đã chủ động hơn nhiều ở phần này nhé."></textarea><button class="button" id="saveTeacherNoteButton" type="button">Lưu lời nhắn</button></section>
-        <section class="journey-share"><div><b>Link hành trình của học viên</b><small id="studentJourneyLinkStatus">Mỗi lần tạo mới sẽ thay link cũ của học viên này.</small></div><button class="button" id="copyStudentJourneyLinkButton" type="button">Tạo và sao chép link</button></section>
+        <section class="journey-share" hidden><div><b>Link hành trình của học viên</b><small id="studentJourneyLinkStatus">Mỗi lần tạo mới sẽ thay link cũ của học viên này.</small></div><button class="button" id="copyStudentJourneyLinkButton" type="button">Tạo và sao chép link</button></section>
         <div class="report-delivery"><small id="reportDeliveryStatus">Chưa xác nhận đã gửi.</small><button class="button primary" id="markReportDeliveredButton" type="button">Đánh dấu đã gửi</button></div>
       </form>
     </dialog>
@@ -96,12 +110,12 @@
           <textarea id="draftSpeakingFeedback" maxlength="500" placeholder="Viết nhận xét cụ thể về phần Speaking của học viên."></textarea>
           <div class="draft-feedback-actions"><small id="draftFeedbackStatus">Chưa gửi nhận xét.</small><button class="button primary" id="sendDraftFeedbackButton" type="button">Gửi nhận xét</button></div>
         </section>
-        <section class="journey-share"><div><b>Link tổng hợp của học viên</b><small id="draftJourneyLinkStatus">Link cá nhân chỉ gửi đúng học viên. Tạo mới sẽ thay link cũ.</small></div><button class="button" id="copyDraftJourneyLinkButton" type="button">Tạo và sao chép link</button></section>
+        <section class="journey-share" hidden><div><b>Link tổng hợp của học viên</b><small id="draftJourneyLinkStatus">Link cá nhân chỉ gửi đúng học viên. Tạo mới sẽ thay link cũ.</small></div><button class="button" id="copyDraftJourneyLinkButton" type="button">Tạo và sao chép link</button></section>
       </form>
     </dialog>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
-    <script type="module" src="teacher.js?rev=20260929-student-preview-v1"></script>
+    <script type="module" src="teacher.js?rev=20260930-journey-test-v4"></script>
   </body>
 </html>
