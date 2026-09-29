@@ -48,6 +48,7 @@ try {
     const documentId = '1Abcdefghijklmnopqrstuvwxyz0123456789';
     await page.goto(`http://127.0.0.1:4174/check-now-56.html?documentId=${documentId}&assignmentCode=${assignmentCode}`);
     await page.getByRole('heading', { name: 'Bài đã được chấm xong' }).waitFor({ timeout: 15000 });
+    if (await page.locator('#page-title').innerText() !== 'Đã xong!') throw new Error(`Tiêu đề ${assignmentCode} chưa báo hoàn tất.`);
     if (payload?.documentId !== documentId || payload?.assignmentCode !== assignmentCode) throw new Error('Payload khóa 56 bị sai.');
     if (new URL(page.url()).search) throw new Error('Trang chưa xóa query nhạy cảm khỏi thanh địa chỉ.');
     await page.close();
@@ -82,6 +83,7 @@ try {
   await delayed.goto('http://127.0.0.1:4174/check-now-56.html?documentId=1Abcdefghijklmnopqrstuvwxyz0123456789&assignmentCode=56-vocab-07');
   await delayed.getByText('Hệ thống vẫn đang hoàn tất việc ghi và xác minh kết quả. Bạn vui lòng tiếp tục chờ.').waitFor();
   await delayed.getByRole('heading', { name: 'Bài đã được chấm xong' }).waitFor();
+  if (await delayed.locator('#page-title').innerText() !== 'Đã xong!') throw new Error('Tiêu đề sau khi chấm chậm chưa báo hoàn tất.');
   await delayed.close();
 
   const invalid = await browser.newPage();

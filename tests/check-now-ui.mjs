@@ -75,6 +75,7 @@ try {
     throw new Error(`Giao diện không hoàn tất. Nội dung đang thấy: ${visibleText}`, { cause: error });
   }
 
+  if (await page.locator('#page-title').innerText() !== 'Đã xong!') throw new Error('Tiêu đề khóa 67 chưa báo hoàn tất.');
   if (new URL(page.url()).search) throw new Error('Giao diện chưa xóa query khỏi thanh địa chỉ');
   if (await page.locator('.brand-row').count()) throw new Error('Dòng tiêu đề bài riêng vẫn còn trên giao diện dùng chung');
   if (startPayload?.documentId !== documentId || startPayload?.assignmentCode !== '67-reading-02') {
