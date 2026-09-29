@@ -61,6 +61,7 @@ try {
     const response = await page.goto(`http://127.0.0.1:4174/vocab.html?documentId=${documentId}&homework=${homework}`);
     if (response?.status() !== 200) throw new Error(`Trang Vocab ${homework} trả ${response?.status()}`);
     await page.getByRole('heading', { name: 'Bài đã được chấm xong' }).waitFor({ timeout: 10000 });
+    if (await page.locator('#page-title').innerText() !== 'Đã xong!') throw new Error(`Tiêu đề Vocab ${homework} chưa báo hoàn tất.`);
     if (startPayload?.documentId !== documentId || startPayload?.homework !== homework) {
       throw new Error(`Payload Vocab ${homework} không đúng`);
     }
@@ -82,6 +83,7 @@ try {
   });
   await legacy.goto(`http://127.0.0.1:4174/vocab-03.html?documentId=${documentId}`);
   await legacy.getByRole('heading', { name: 'Bài đã được chấm xong' }).waitFor({ timeout: 10000 });
+  if (await legacy.locator('#page-title').innerText() !== 'Đã xong!') throw new Error('Tiêu đề Vocab 03 chưa báo hoàn tất.');
   if (legacyPayload?.homework !== 3) throw new Error('Link Vocab 03 cũ không tự dùng homework=3');
 
   const invalid = await browser.newPage();
