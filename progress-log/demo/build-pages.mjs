@@ -16,9 +16,7 @@ for (const name of pages) {
   html = html.replace(/\s*<script src="https:\/\/accounts\.google\.com\/gsi\/client" async defer><\/script>/, '');
   if (name === 'index.html') {
     html = html.replace('src="../app.js?', 'src="boot.js?');
-    // API bản thử chưa có Journey; giữ phiếu thử hoạt động và ẩn hai nút đọc hành trình.
-    html = html.replace('id="journeyButton" type="button"', 'id="journeyButton" type="button" hidden');
-    html = html.replace('id="journeyResultButton" type="button"', 'id="journeyResultButton" type="button" hidden');
+    // Bản thử dùng cùng API Journey trong kho demo, nên giữ hai nút của trang chính.
     html = html.replace('<main class="shell">', `<aside class="demo-banner" role="note">
       <b>BẢN THỬ · KHÔNG GHI BÀI THẬT</b>
       <span>Nội dung phiếu thật; bài làm và điểm danh chỉ lưu trong bản thử.</span>
@@ -30,7 +28,7 @@ for (const name of pages) {
   html = html.replace('<title>', '<title>Bản thử · ');
   html = html.replace(/src="config\.js\?rev=[^"]+"/, 'src="config.js?rev=20260924-generic-demo-v1"');
   if (name === 'index.html') {
-    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20260924-generic-demo-v1"');
+    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20260930-journey-v1"');
   }
   html = html.replace('</head>', '    <link rel="stylesheet" href="demo.css?rev=20260924-v1">\n  </head>');
   const output = new URL(name, import.meta.url);
