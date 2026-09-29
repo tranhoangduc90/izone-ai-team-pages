@@ -39,7 +39,7 @@ const elements = Object.fromEntries([
   'createTab', 'dashboardTab', 'createPanel', 'dashboardPanel', 'publishForm', 'teacherClassSelect',
   'sessionNumber', 'formTitle', 'skillFilter', 'questionLibrary', 'publishButton', 'publishResult', 'rosterCount',
   'studentLink', 'copyLinkButton', 'assignmentSelect', 'dashboardTitle', 'refreshDashboardButton',
-  'openStudentFormButton', 'copyCurrentLinkButton', 'liveUpdatedAt',
+  'previewStudentButton', 'openStudentFormButton', 'copyCurrentLinkButton', 'liveUpdatedAt',
   'blockControls', 'classInsights', 'dashboardSummary', 'studentList', 'attendanceDialog', 'attendanceForm', 'attendanceStudentName',
   'attendanceStatus', 'attendanceReason', 'attendanceSyncHint', 'saveAttendanceButton', 'reportDialog', 'reportStudentName',
   'reportScope', 'reportSystemContent', 'reportHumanNote', 'saveTeacherNoteButton', 'reportDeliveryStatus',
@@ -863,6 +863,27 @@ function openCurrentStudentForm() {
   if (link) window.open(link, '_blank', 'noopener,noreferrer');
 }
 
+async function previewAsStudent() {
+  const assignmentId = state.dashboard?.assignmentId;
+  if (!assignmentId) return;
+  const tab = window.open('about:blank', '_blank');
+  elements.previewStudentButton.disabled = true;
+  try {
+    const payload = await apiRequest('/teacher/demo-grants', {
+      method: 'POST', body: { assignmentId }
+    });
+    const url = new URL('./demo/', window.location.href);
+    url.hash = new URLSearchParams({ grant: payload.grant }).toString();
+    if (tab) { tab.opener = null; tab.location.replace(url.toString()); }
+    else window.location.assign(url.toString());
+  } catch (error) {
+    if (tab) tab.close();
+    setNotice(error.message, 'error');
+  } finally {
+    elements.previewStudentButton.disabled = false;
+  }
+}
+
 async function copyCurrentStudentLink() {
   const link = currentStudentLink();
   if (!link) return;
@@ -932,6 +953,7 @@ elements.copyLinkButton.addEventListener('click', () => void copyStudentLink());
 elements.assignmentSelect.addEventListener('change', () => void loadDashboard());
 elements.refreshDashboardButton.addEventListener('click', () => void loadDashboard());
 elements.openStudentFormButton.addEventListener('click', openCurrentStudentForm);
+elements.previewStudentButton.addEventListener('click', () => void previewAsStudent());
 elements.copyCurrentLinkButton.addEventListener('click', () => void copyCurrentStudentLink());
 elements.attendanceForm.addEventListener('submit', event => void saveAttendance(event));
 elements.attendanceStatus.addEventListener('change', updateAttendanceSyncHint);

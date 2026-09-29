@@ -106,7 +106,11 @@ function clearRememberedSelection() {
 function installStudentMemory() {
   studentMemory.group = progressRosterGroup();
   studentMemory.enabled = Boolean(config.STUDENT_MEMORY?.enabled && allowedGroup(studentMemory.group, config.STUDENT_MEMORY));
-  if (!studentMemory.enabled) return;
+  if (!studentMemory.enabled) {
+    elements.rememberStudentRow.hidden = true;
+    elements.changeRememberedStudent.hidden = true;
+    return;
+  }
   studentMemory.key = memoryKey(config.API_BASE_URL, location.href);
   try { studentMemory.storage = window.localStorage; } catch { studentMemory.storage = null; }
   if (!studentMemory.installed) {
@@ -151,7 +155,10 @@ async function apiRequest(path, { method = 'POST', body } = {}) {
   if (!config.API_BASE_URL) throw new Error('Trang chưa được cấu hình địa chỉ API.');
   const response = await fetch(`${config.API_BASE_URL}/api/learning${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(config.DEMO_MODE ? { 'x-progress-log-demo': '1' } : {})
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: 'no-store'
   });
@@ -960,7 +967,10 @@ async function openAssignment() {
     elements.studentSelect.replaceChildren(new Option('Chọn tên của bạn', ''), ...options);
     elements.chooseStudentButton.disabled = true;
     installStudentMemory();
-    setNotice(['DEMO-56', 'DEMO-67'].includes(courseCode)
+    const legacyDemo = ['DEMO-56', 'DEMO-67'].includes(courseCode);
+    setNotice(config.DEMO_MODE
+      ? 'Chọn một học viên mẫu để thử. Có thể làm lại bằng nút phía trên.'
+      : legacyDemo
       ? 'Mỗi tên demo dùng để nộp một lượt. Nếu tên đã hoàn tất, hãy chọn tên demo khác.'
       : 'Chọn đúng tên để bắt đầu.');
     showView('identityView');
@@ -1046,7 +1056,7 @@ async function submitForm(event) {
     });
     clearLocalDraft();
     const receipt = payload.receipt;
-    const isDemo = ['DEMO-56', 'DEMO-67'].includes(state.assignment.courseCode);
+    const isDemo = config.DEMO_MODE || ['DEMO-56', 'DEMO-67'].includes(state.assignment.courseCode);
     elements.resultTitle.textContent = isDemo
       ? 'Bản dùng thử đã nhận phiếu. Không ghi điểm danh lớp thật.'
       : receipt.message;

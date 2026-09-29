@@ -1,0 +1,17 @@
+.demo-banner {
+  max-width: 960px;
+  margin: 16px auto 0;
+  padding: 13px 16px;
+  border: 2px solid #b85a1b;
+  border-radius: 12px;
+  background: #fff2e5;
+  color: #713409;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  justify-content: space-between;
+}
+.demo-banner b { letter-spacing: .04em; }
+.demo-banner a { color: #713409; font-weight: 700; }
+.demo-banner .button { background: #fff; border: 1px solid #b85a1b; }
