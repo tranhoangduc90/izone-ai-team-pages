@@ -84,6 +84,9 @@ test('giảng viên xác nhận số buổi và Test của lớp qua dashboard',
   elements.journeyPlanDates.inputs[1].value = '2026-09-15';
   await actions.loadJourneyErpSchedule();
   assert.match(elements.journeyErpScheduleStatus.textContent, /1 buổi cần đối chiếu lại/);
+  await actions.saveJourneyPlan({ preventDefault() {} });
+  assert.match(elements.journeyPlanStatus.textContent, /không khớp lịch ERP/);
+  assert.equal(calls.filter(call => call.path === '/teacher/journey-plan').length, 0);
   const refreshedSelect = elements.journeyPlanDates.rows[1].children[2];
   refreshedSelect.value = '35811';
   actions.onJourneyPlanDateChange({ target: refreshedSelect });
