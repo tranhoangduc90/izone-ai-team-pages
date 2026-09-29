@@ -33,7 +33,8 @@ function render(receipt) {
     const section = document.createElement('section'); section.className = 'part';
     const labels = { paraphrase: 'Luyện Paraphrase', speaking: 'Luyện Speaking',
       clarify_1: 'Làm rõ · Cấp 1', clarify_2: 'Làm rõ · Cấp 2',
-      clarify_3: 'Làm rõ · Cấp 3', freestyle: 'Full câu Speaking · Freestyle' };
+      clarify_3: 'Làm rõ · Cấp 3', freestyle: 'Full câu Speaking · Freestyle',
+      insert_middle: 'Chèn điểm giữa trong Speaking' };
     const heading = document.createElement('h3'); heading.textContent = labels[part] || part;
     const link = document.createElement('a'); link.textContent = 'Mở hội thoại ChatGPT Share';
     if (/^https:\/\/chatgpt\.com\/share\/[a-z0-9-]+$/i.test(details.url || '')) {
@@ -46,6 +47,27 @@ function render(receipt) {
     if (details.typingWarning) {
       const flag = document.createElement('p'); flag.className = 'flag';
       flag.textContent = `${details.typingWarning.summary || 'Có cảnh báo về cách nhập.'} Học viên ${details.voiceConfirmed ? 'đã xác nhận luyện bằng giọng nói' : 'chưa xác nhận luyện bằng giọng nói'}.`;
+      section.append(flag);
+    }
+    parts.append(section);
+  }
+  for (const practice of receipt.practice_links || []) {
+    const section = document.createElement('section'); section.className = 'part';
+    const heading = document.createElement('h3');
+    heading.textContent = `${Number(practice.slot) <= 2 ? 'Bài bổ trợ bắt buộc' : 'Bài luyện thêm'} ${practice.slot}: ${practice.exerciseTitle || 'Bài cá nhân'}`;
+    const link = document.createElement('a');
+    link.textContent = 'Mở hội thoại ChatGPT Share';
+    if (/^https:\/\/(?:www\.)?chatgpt\.com\/share\/[a-z0-9-]+$/i.test(practice.url || '')) {
+      link.href = practice.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    } else link.textContent = 'Link hội thoại không hợp lệ';
+    const status = document.createElement('p');
+    status.textContent = practice.status === 'accepted'
+      ? practice.analysisStatus === 'done' ? 'Đã nhận và phân tích lỗi.' : 'Đã nhận; đang phân tích lỗi.'
+      : 'Chưa đạt yêu cầu.';
+    section.append(heading, link, status);
+    if (practice.typingWarning) {
+      const flag = document.createElement('p'); flag.className = 'flag';
+      flag.textContent = `${practice.typingWarning.summary || 'Có cảnh báo về cách nhập.'} Học viên ${practice.voiceConfirmed ? 'đã xác nhận luyện bằng giọng nói' : 'chưa xác nhận luyện bằng giọng nói'}.`;
       section.append(flag);
     }
     parts.append(section);

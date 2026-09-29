@@ -3,13 +3,17 @@
 export function parseShareUrl(value) {
   let url;
   try { url = new URL(String(value || '').trim()); } catch { return { ok: false, reason: 'Hãy dán một đường link ChatGPT Share.' }; }
-  if (url.protocol !== 'https:' || !['chatgpt.com', 'www.chatgpt.com', 'chat.openai.com'].includes(url.hostname)) {
+  if (url.protocol !== 'https:' || url.port || url.username || url.password
+    || !['chatgpt.com', 'www.chatgpt.com'].includes(url.hostname)) {
     return { ok: false, reason: 'Link cần bắt đầu bằng https://chatgpt.com/share/.' };
   }
   if (/^\/c\//i.test(url.pathname)) {
     return { ok: false, reason: 'Đây là link /c/ chỉ mở trong tài khoản của bạn. Hãy tạo link bằng nút Chia sẻ trong ChatGPT.' };
   }
-  if (!/^\/share\/[0-9a-z-]+\/?$/i.test(url.pathname)) {
+  if (/^\/s\//i.test(url.pathname)) {
+    return { ok: false, reason: 'Đây chỉ là link chia sẻ một phản hồi. Hãy chia sẻ toàn bộ hội thoại để lấy link chatgpt.com/share/...' };
+  }
+  if (!/^\/share\/[0-9a-z-]{16,120}\/?$/i.test(url.pathname)) {
     return { ok: false, reason: 'Hãy dùng link Chia sẻ hội thoại có dạng chatgpt.com/share/...' };
   }
   url.hostname = 'chatgpt.com';
