@@ -80,7 +80,13 @@
   "risk_register": {"assessment": "PASS", "risks": [], "waivers": []},
   "coverage_exemptions": {"full_suite": "Thay đổi CSS riêng của Lesson 3, không đổi JS/API; chạy toàn bộ suite Speaking và browser regression thay cho suite mọi sản phẩm Pages."},
   "cross_constraints": [],
-  "mutations": [],
+  "mutations": [{
+    "id": "M-PAGES-COLOR",
+    "target": "GitHub Pages Speaking Lesson 3",
+    "outcome": "success",
+    "readback": "verified",
+    "evidence": "PR #33 merge 2004f229; Pages build built; trang và CSS HTTP 200, computed colors đúng bốn vùng."
+  }],
   "verification_runs": [{
     "id": "V-BROWSER",
     "scope": "behavioral",
@@ -105,6 +111,18 @@
     "failed": 0,
     "skipped": 0,
     "evidence": "Bốn suite Speaking đạt trên CSS hiện tại."
+  }, {
+    "id": "V-PRODUCTION",
+    "scope": "behavioral",
+    "command": "Playwright CLI mở trang Pages mới, đọc computed style, network và viewport 390 px",
+    "tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472",
+    "captured_at": "2026-09-29T00:35:18Z",
+    "exit_code": 0,
+    "outcome": "passed",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "Hero navy, brand đỏ, practice xanh và confirm navy trên Pages; scrollWidth 390/390; HTML/CSS/JS HTTP 200."
   }],
   "convergence": {
     "status": "passed",
@@ -117,19 +135,19 @@
     "summary": "Đổi màu Lesson 3 theo bộ token IZONE.",
     "decisions": [],
     "completed": ["TASK-BRAND"],
-    "next_step": "Kiểm trang Pages sau build.",
+    "next_step": "Theo dõi phản hồi học viên về giao diện khi họ mở bản Homework thật.",
     "open_risks": [],
     "tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472"
   },
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "c2fca6e4f21535d41816689165e7ab4e13af7559",
     "current_tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472",
     "production_authorized": true,
     "rollback": "Revert commit CSS và để Pages xây lại; không có dữ liệu máy chủ cần hoàn tác.",
-    "deployment_readback": "pending",
-    "operational_observation": "Chờ đọc lại trang công khai sau khi Pages build.",
+    "deployment_readback": "verified",
+    "operational_observation": "Pages build commit 2004f229 thành công; trình duyệt mới thấy đúng màu IZONE và không tràn ngang ở 390 px; tài nguyên trang HTTP 200.",
     "open_risks": []
   },
   "red_green": {
