@@ -18,7 +18,7 @@
     "problem": "Phiếu theo từng buổi và Journey riêng khiến học viên khó xem lại quá trình.",
     "outcome": "Cùng link phiếu có nút xem Journey; buổi không có phiếu vẫn có vị trí.",
     "out_of_scope": [
-      "Chưa phát hành production",
+      "Chưa thay cơ chế chọn tên hiện tại",
       "Chưa xác minh kết nối và dữ liệu thật từ backend production",
       "Chưa tự kiểm lịch ERP thay đổi sau khi giảng viên ghép"
     ],
@@ -1014,18 +1014,45 @@
       "failed": 0,
       "skipped": 0,
       "evidence": "Trang demo gọi API PGlite local, Journey hiện 4 buổi, 3 ô chưa có nguồn; mobile không tràn ngang; console 0 lỗi."
+    },
+    {
+      "id": "V-OVERLAY-FULL-20260930",
+      "scope": "full_suite",
+      "command": "npm test trên cây source ghép từ image production và module Journey",
+      "tree_revision": "pages:5262a0c;backend:66bbd51;live-image:speaking-docs-event:20260929-fix2",
+      "captured_at": "2026-09-29T21:25:38Z",
+      "exit_code": 1,
+      "outcome": "failed",
+      "passed": 255,
+      "failed": 1,
+      "skipped": 0,
+      "evidence": "Test Term Test teacher-options đòi accessMode/isAssignedTeacher của branch; image production hiện chỉ trả id/name. Không coi full suite image cuối là đạt."
+    },
+    {
+      "id": "V-PROD-READONLY-PRECHECK-20260930",
+      "scope": "focused",
+      "command": "Kiểm chỉ đọc từ container production: bảng Test, một lịch ERP, hàng chờ và hàng Portal",
+      "tree_revision": "live-image:speaking-docs-event:20260929-fix2",
+      "captured_at": "2026-09-29T21:25:38Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Bảng Test đọc được; lịch ERP một lớp có 29 dòng trong 1,1 giây; 102 job điểm danh complete; job gần nhất đối chiếu được một hàng Portal có mặt. Đây là baseline trước phát hành."
     }
   ],
   "convergence": {
     "status": "gaps",
-    "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
+    "tree_revision": "pages:5262a0c;backend:66bbd51;live-image:speaking-docs-event:20260929-fix2",
     "gaps": [
-      "Chưa kiểm kết nối/quyền và độ trễ ERP/Test từ container backend production; chưa có lớp thật để đối chiếu ánh xạ học viên/bài Test.",
+      "Đã đọc thử một lịch ERP và quyền bảng Test từ container, nhưng ba biến Metabase chưa được cấu hình; chưa ghép lớp thật và đọc điểm Test theo học viên.",
+      "Full suite trên cây overlay chưa đạt: 255/256 do hợp đồng dashboard Term Test của branch khác image production.",
       "Workflow Portal còn fallback theo thứ tự ngày class_sessions; cần đối chiếu ánh xạ giảng viên và kết quả Portal đúng buổi trên lớp thật.",
       "Chưa áp migration, phát hành, quan sát production hoặc diễn tập rollback cho ứng viên tích hợp."
     ],
     "unrequested_work": [],
-    "evidence": "Ứng viên backend/Pages đã gộp, backend 256/256, Pages 29/29, demo browser mobile/desktop và kiểm cú pháp đạt; phần production chưa nghiệm thu."
+    "evidence": "Hai branch đã push; ứng viên backend 256/256 và Pages 29/29. Overlay image live 255/256; production chưa đổi hoặc được nghiệm thu."
   },
   "context_handoff": {
     "summary": "S1/S2/S3A/S3B1/S3B2A và ERP/Test S3B2B local đã làm, gồm demo Journey; S3B2B3/S4 cần lớp thật và cổng phát hành.",
@@ -1056,14 +1083,14 @@
     "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f"
   },
   "release": {
-    "target_environment": "local",
+    "target_environment": "production",
     "decision": "not_ready",
     "base_tree_revision": "pages:46abd0e;backend:8fab5d3",
-    "current_tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
-    "production_authorized": false,
-    "rollback": "Quay về hai base commit nếu cần; bảng kế hoạch chỉ thêm dữ liệu, giữ lại khi rollback code.",
-    "deployment_readback": "not_applicable",
-    "operational_observation": "Ứng viên local đã kiểm; chưa kiểm ERP/Test từ container production, chưa áp migration, phát hành hoặc quan sát Portal trên lớp thật.",
+    "current_tree_revision": "pages:5262a0c;backend:66bbd51;live-image:speaking-docs-event:20260929-fix2",
+    "production_authorized": true,
+    "rollback": "Giữ container/image API đang chạy và revision Pages main hiện hành để quay lại; migration chỉ thêm bảng nên giữ dữ liệu khi rollback code.",
+    "deployment_readback": "not_run",
+    "operational_observation": "Đã kiểm chỉ đọc nguồn ERP/Test và baseline Portal; chưa áp migration, chuyển production hoặc quan sát event mới sau chuyển bản.",
     "open_risks": [
       {
         "severity": "P1",
