@@ -37,3 +37,11 @@ Runtime browser của suite: `C:/Users/ADMIN/.cache/codex-runtimes/codex-primary
 ## Quay lui
 
 Root phát hành lại Pages revision trước nếu giao diện lỗi. API additive phải giữ tương thích. Không sửa hoặc xóa Docs/biên nhận học viên để quay lui. Giữ evidence và trạng thái các phần chưa nghiệm thu trong manifest tổng.
+
+## Pages thật sau phát hành — 30/09/2026
+
+PR #40 đã tích hợp vào main `468465aa`; Pages build `36738900098` thành công. Đã đọc lại 9 HTML/JS/CSS đang phục vụ, khớp nguồn sau chuẩn hóa xuống dòng. Năm ca browser thật dùng API/roster thật đạt: buổi2 chọn lớp/tên trên desktop, buổi2 ghi nhớ trên mobile, buổi3 ghi nhớ trên desktop, buổi3 CTA trên mobile, buổi4 giữ nháp. Không lỗi console, request hoặc tạo phiên trước nút Mở bài.
+
+Đã mở lại một bài buổi3 có biên nhận sẵn: đúng lớp/UUID/Doc, đủ4 phần và nút quay về đúng Docs, không hiện Bác sĩ AI. Không nộp link mới. Đọc lại hash hồ sơ phiên/bài/biên nhận trước/sau đều không đổi. Ảnh và bằng chứng thật giữ riêng ở thư mục frontend-evidence; không đưa danh tính hoặc token vào Git.
+
+Phần T2/T3 được xác minh cho đăng nhập và mở lại bài. T4/T5/T6, nộp mới lớp thứhai, nhúng CTA toàn khóa và kết quả điểm danh mới vẫn theo cổng tổng riêng. Chưa gọi toàn khóa nhận bài thành công. Các lớp chưa có mẫu Docs tương thích tiếp tục hiển thị chưa sẵn sàng; buổi4 pilot giữ nháp.
