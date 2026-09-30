@@ -474,7 +474,20 @@
       "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence\\suite-results.json"
     }
   ],
-  "mutations": [],
+  "mutations": [
+    {
+      "id": "PAGES",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "PR40/main468465aa/action36738900098; live-browser-results.json:9assets/5cases."
+    },
+    {
+      "id": "EXISTING-OPEN",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "live-existing-open-results.json +existing-open-readback.json:oneexistinggrant,unchangedgrant/submission/receipt,nonewlinks."
+    }
+  ],
   "verification_runs": [
     {
       "id": "PAGES-FULL",
@@ -498,7 +511,7 @@
     "evidence": "T2/T3 local đã đối chiếu12 source/test files với PLAN, full suite và ảnh. T5/live nằm cổng tổng riêng, chưa verified."
   },
   "context_handoff": {
-    "summary": "T2/T3 ready; user đã cho phép triển khai trong full plan, root kiểm URL thật sau Pages build.",
+    "summary": "T2/T3 Pages đã phát hành và kiểm UI/API thật; T5 toàn bộ nộp mới lớp thứhai vẫn là cổng tổng.",
     "decisions": [
       "Kế thừa PLAN large_phased, UUID shared memory chỉ chọn sẵn, phiên bất biến, đổi lớp bỏ Doc."
     ],
@@ -507,27 +520,22 @@
       "T3",
       "16 lệnh full suite trên hash17fec; identity26, closed15; RED/GREEN adapter trước/sau sửa."
     ],
-    "next_step": "Root kiểm candidate API/workflow mới, deploy Pages trong phạm vi được phép, đọc lại UI thật và bổ sung mutation/observation.",
+    "next_step": "Giữ T4/T5/T6 và Portal outcome mới chưa xác nhận trong manifest tổng.",
     "open_risks": [
-      "Browser/API production và Docs/biên nhận thật chưa là bằng chứng local của manifest này."
+      "Lớp chưa có Docs chuẩn chưa ready; buổi4 vẫn nháp."
     ],
     "tree_revision": "sha256:17fec2495a3191b07b93a1294e2bd124ff90e1d3b6a3ff9ab1f3d3b6188fed92"
   },
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "954087f9690946f2e4cb1deccf180bcc3d6c060b",
     "current_tree_revision": "sha256:17fec2495a3191b07b93a1294e2bd124ff90e1d3b6a3ff9ab1f3d3b6188fed92",
     "production_authorized": true,
     "rollback": "Root redeploy Pages revision trước; API additive vẫn giữ tương thích. Không sửa/xóa Docs hoặc biên nhận để quay lui.",
-    "deployment_readback": "not_applicable",
-    "operational_observation": "",
-    "open_risks": [
-      {
-        "severity": "P2",
-        "summary": "Chờ root đọc lại Pages/browser thật sau deploy; manifest ready không phải deployed/verified."
-      }
-    ]
+    "deployment_readback": "verified",
+    "operational_observation": "Pages build36738900098 success/main468465aa;9assets match source,5 browser live cases/no consoleerrors/no requestfail. Reopen prior submitted CTA exactUUID/class/Doc:4parts,readonlyDoctorhidden,receiptshown; grant/submission/receipt hashes unchanged.",
+    "open_risks": []
   },
   "release_scope": {
     "acceptance_mode": "large_phased",
@@ -553,7 +561,7 @@
     "tests/speaking-homework-lesson2-live.mjs",
     "tests/speaking-homework-closed-cta.mjs"
   ],
-  "evidence_boundary": "Chỉ frontend local/mock được kiểm bởi Mèo. Không dùng backend279 hoặc refresh ERP thành bằng chứng browser/Docs thật.",
+  "evidence_boundary": "Bộ chọn tên/roster/ghi nhớ đã kiểm bằng API thật và mở lại bài có biên nhận; chưa kiểm nộp mới lớp thứhai hoặc Portal.",
   "live_api_readback": {
     "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence\\catalog-live.json",
     "captured_at": "2026-09-30T15:32:41.204533+00:00",
