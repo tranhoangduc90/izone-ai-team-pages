@@ -70,9 +70,12 @@ try {
     assert.equal(extra.length, 1);
     assert.equal(await page.locator('.guide-content img').count(), 9);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true);
+    await page.reload();
+    await page.locator('#identity-confirmed').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#active-student').innerText(), 'Học viên thử');
     await context.close();
   }
-  process.stdout.write('Lesson 2 live: desktop + mobile, link sai, 2 link đạt, biên nhận, Bác sĩ AI, 9 ảnh: PASS\n');
+  process.stdout.write('Lesson 2 live: desktop + mobile, link sai, 2 link đạt, biên nhận, Bác sĩ AI, ghi nhớ học viên, 9 ảnh: PASS\n');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));
