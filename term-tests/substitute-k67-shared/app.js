@@ -1065,6 +1065,69 @@
       .trim();
   }
 
+  function writingReportSummary(value) {
+    const cleaned = cleanWritingFeedback(value);
+    const markerIndex = cleaned.search(/Nhận xét từng tiêu chí/iu);
+    if (markerIndex < 0) return cleaned;
+    const separatorIndex = cleaned.lastIndexOf('---', markerIndex);
+    const headingIndex = cleaned.lastIndexOf('#', markerIndex);
+    const cutIndex = separatorIndex >= 0
+      ? separatorIndex
+      : headingIndex >= 0
+        ? headingIndex
+        : markerIndex;
+    return cleaned.slice(0, cutIndex).trim();
+  }
+
+  function looksLikeWritingHtml(value) {
+    return /<\/?[a-z][a-z0-9-]*(?:\s[^>]*)?>/i.test(String(value || ''));
+  }
+
+  function appendSanitizedWritingHtml(target, value) {
+    const allowedTags = new Set([
+      'p', 'div', 'span', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'br',
+      'blockquote', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td'
+    ]);
+    const blockedTags = new Set([
+      'script', 'style', 'template', 'iframe', 'object', 'embed', 'svg', 'math',
+      'form', 'input', 'button', 'textarea', 'select', 'option', 'link', 'meta'
+    ]);
+    // Template giữ HTML nguồn bất hoạt; chỉ đưa các node đã lọc vào giao diện.
+    // Bỏ thuộc tính thông thường trước, rồi dùng allowlist khi sao chép để chặn cả HTML méo dạng.
+    const inertHtml = String(value || '')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+      .replace(/<([a-z][a-z0-9-]*)(?:\s+(?:[^"'<>]|"[^"]*"|'[^']*')*)?\s*\/?>/gi, '<$1>');
+    const parsed = document.createElement('template');
+    parsed.innerHTML = inertHtml;
+
+    const cloneSafeNode = node => {
+      if (node.nodeType === 3) return document.createTextNode(node.textContent || '');
+      if (node.nodeType !== 1) return null;
+      const sourceTag = String(node.tagName || '').toLowerCase();
+      if (blockedTags.has(sourceTag)) return null;
+      const outputTag = /^h[1-6]$/.test(sourceTag)
+        ? 'h5'
+        : sourceTag === 'b'
+          ? 'strong'
+          : sourceTag === 'i'
+            ? 'em'
+            : allowedTags.has(sourceTag)
+              ? sourceTag
+              : null;
+      const output = outputTag ? document.createElement(outputTag) : document.createDocumentFragment();
+      for (const child of Array.from(node.childNodes || [])) {
+        const safeChild = cloneSafeNode(child);
+        if (safeChild) output.append(safeChild);
+      }
+      return output;
+    };
+
+    for (const child of Array.from(parsed.content.childNodes || [])) {
+      const safeChild = cloneSafeNode(child);
+      if (safeChild) target.append(safeChild);
+    }
+  }
+
   function appendSafeWritingFeedback(target, value) {
     const appendInline = (parent, source) => {
       const text = String(source || '');
@@ -1094,7 +1157,13 @@
       if (cursor < text.length) parent.append(document.createTextNode(text.slice(cursor)));
     };
 
-    const normalized = cleanWritingFeedback(value || 'Chưa có nhận xét tổng hợp.')
+    const cleaned = cleanWritingFeedback(value || 'Chưa có nhận xét tổng hợp.');
+    if (looksLikeWritingHtml(cleaned)) {
+      appendSanitizedWritingHtml(target, cleaned);
+      return;
+    }
+
+    const normalized = cleaned
       .replace(/[ \t]+(?=#{2,4}\s+\*\*)/g, '\n');
     const lines = normalized.split('\n');
     let index = 0;
@@ -1148,6 +1217,12 @@
       appendInline(paragraph, paragraphLines.join(' '));
       target.append(paragraph);
     }
+  }
+
+  function writingCriterionConclusion(value) {
+    const cleaned = cleanWritingFeedback(value);
+    const marker = /^#{2,5}\s+(?:\*\*)?KẾT LUẬN(?:\*\*)?\s*$/im.exec(cleaned);
+    return marker ? cleaned.slice(marker.index + marker[0].length).trim() : '';
   }
 
   function writingCriterionSections(value) {
@@ -1273,7 +1348,8 @@
       followUp.textContent = task.followUp;
       sourcePane.append(followUp);
     }
-    if (task.image) {
+    // Chỉ Task 1 có hình đề; Task 2 bỏ hoàn toàn phần ảnh, kể cả dữ liệu cũ có giá trị.
+    if (taskNumber === 1 && (typeof task.image === 'object' ? task.image?.src : task.image)) {
       const image = document.createElement('img');
       image.src = typeof task.image === 'object' ? task.image.src : task.image;
       image.alt = typeof task.image === 'object' && task.image.alt
@@ -1282,6 +1358,22 @@
       image.className = 'writing-feedback-image';
       sourcePane.append(image);
     }
+    const reportSummary = writingReportSummary(taskResult.report);
+    if (reportSummary) {
+      const reportTitle = document.createElement('h3');
+      reportTitle.textContent = 'Nhận xét tổng hợp';
+      const report = document.createElement('div');
+      report.className = 'writing-feedback-text writing-feedback-richtext';
+      appendSafeWritingFeedback(report, reportSummary);
+      sourcePane.append(reportTitle, report);
+    }
+    const essayTitle = document.createElement('h3');
+    essayTitle.textContent = 'Bài viết của học viên';
+    const essay = document.createElement('div');
+    essay.className = `writing-feedback-essay${essayValue.trim() ? '' : ' is-empty'}`;
+    essay.lang = 'en';
+    essay.textContent = essayValue.trim() || 'Chưa có nội dung bài viết.';
+    sourcePane.append(essayTitle, essay);
     const scorePane = document.createElement('section');
     scorePane.className = 'writing-feedback-scores';
     const scoreTitle = document.createElement('h3');
@@ -1304,7 +1396,10 @@
         const componentList = document.createElement('div');
         componentList.className = 'writing-component-list';
         for (let index = 0; index < componentCount; index += 1) {
-          appendWritingComponent(componentList, components[index], sections[index], index, criterion.code, taskNumber);
+          const section = sections[index] || (components.length === 1
+            ? { body: writingCriterionFallbackSummary(criterion.feedback) }
+            : null);
+          appendWritingComponent(componentList, components[index], section, index, criterion.code, taskNumber);
         }
         card.append(componentList);
       } else {
@@ -1312,6 +1407,18 @@
         feedback.className = 'writing-feedback-text writing-feedback-richtext';
         appendSafeWritingFeedback(feedback, writingCriterionFallbackSummary(criterion.feedback));
         card.append(feedback);
+      }
+      {
+        const conclusion = writingCriterionConclusion(criterion.feedback);
+        if (conclusion) {
+          const conclusionBlock = document.createElement('div');
+          conclusionBlock.className = 'writing-feedback-text writing-feedback-richtext';
+          const conclusionTitle = document.createElement('h5');
+          conclusionTitle.textContent = 'Kết luận và giới hạn điểm';
+          conclusionBlock.append(conclusionTitle);
+          appendSafeWritingFeedback(conclusionBlock, conclusion);
+          card.append(conclusionBlock);
+        }
       }
       scorePane.append(card);
     }
