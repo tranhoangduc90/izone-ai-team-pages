@@ -10,6 +10,8 @@ Nếu bài Classroom chưa mở hoặc bản Google Doc của học viên chưa 
 
 Tại gốc repository, chạy `node speaking-homework/server.mjs`, rồi mở `http://127.0.0.1:8765/speaking-homework/`. Máy chủ chỉ nghe trên `127.0.0.1`. Không mở riêng `index.html` hoặc chạy server tĩnh: nút **Xác nhận** cần tuyến kiểm nội dung.
 
+Trang Lesson 2 và Lesson 3 cùng nạp lớp màu IZONE trong `lesson-3.css`; Lesson 4 có lớp màu tương ứng trong `lesson-4.css`. Cả ba dùng `logic.mjs` để chặn link `/c/` riêng tư, link `/s/t_` chỉ chia sẻ một phản hồi, HTTP và tên miền giả. Link đúng dạng `https://chatgpt.com/share/...` mới đi tiếp tới bước đọc hội thoại. Kiểm định dạng không tự xác nhận rằng hội thoại mở được hoặc đã luyện đủ. Trang Lesson 2 trên GitHub Pages vẫn là bản thử giao diện; nút kiểm nội dung của nó chỉ chạy khi mở bằng máy chủ local nói trên.
+
 ## Phạm vi bản thử
 
 - Có hai phần độc lập: Paraphrase và Full Speaking. Nút mở chatbot được đặt ngay trên ô nhập của từng phần. Nút hướng dẫn trên ô Paraphrase mở hộp thoại, đóng bằng X, nút Đóng, Escape hoặc bấm ngoài.

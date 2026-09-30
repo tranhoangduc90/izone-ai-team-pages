@@ -2,7 +2,7 @@
 .identity-card select { width: 100%; }
 .scenario-select { width: 100%; margin: 0 0 12px; }
 
-/* Buổi 2 và 3: giữ bước chọn học viên và tiến độ hiện sớm trên màn hình nhỏ. */
+/* Lesson 3: giữ bước chọn học viên và tiến độ hiện sớm trên màn hình nhỏ. */
 .hero { padding: 24px 36px 26px; }
 .hero .demo-badge { margin-top: 13px; }
 .hero h1 { margin: 11px 0 8px; font-size: clamp(30px, 3.6vw, 44px); }
@@ -26,7 +26,7 @@
   .submission-progress [role="progressbar"] { width: 100%; }
 }
 
-/* Nhận diện IZONE dùng chung cho hai trang Speaking buổi 2 và 3. */
+/* Nhận diện IZONE cho riêng Lesson 3; các trang Speaking khác vẫn dùng CSS chung. */
 :root {
   --iz-navy: #152b4e;
   --iz-blue: #2156a0;
@@ -146,3 +146,31 @@ footer { color: var(--iz-muted); }
   .button, .submission-progress [role="progressbar"] span { transition: none; }
   .button:hover:not(:disabled) { transform: none; }
 }
+
+.doctor-section,.doctor-extra{background:#fff;border:1px solid #dce4ee;border-radius:11px;margin:26px 0;padding:28px;color:#182b45}
+.doctor-heading{display:flex;justify-content:space-between;gap:18px;align-items:start}
+.doctor-heading h2,.doctor-extra h2{margin:4px 0 0;color:#152b4e}
+.doctor-heading p{font-size:.9rem;color:#526276;margin:0}
+.doctor-intro{max-width:68ch;color:#526276}
+.doctor-fallback{border-left:4px solid #db0829;background:#fff4f5;color:#702032;padding:12px 15px;border-radius:4px;max-width:72ch}
+.doctor-list{list-style:none;counter-reset:exercise;padding:0;margin:18px 0 10px}
+.doctor-list li{counter-increment:exercise;display:flex;align-items:center;gap:14px;border-top:1px solid #dce4ee;padding:13px 0}
+.doctor-list li::before{content:counter(exercise, decimal-leading-zero);color:#db0829;font-weight:700;min-width:2.5ch}
+.doctor-list a{color:#2156a0;font-weight:650}
+.doctor-list small{color:#526276;margin-left:auto}
+.doctor-required{border-top:2px solid #152b4e;margin-top:22px;padding-top:22px}
+.doctor-required h3,.doctor-extra h3{margin:0 0 7px;color:#152b4e}
+.doctor-required>p,.doctor-extra>p{margin-top:0;max-width:66ch;color:#526276}
+.practice-slot{border:1px solid #dce4ee;border-radius:8px;padding:18px;margin-top:14px;display:grid;gap:10px}
+.practice-slot h4{margin:0;color:#152b4e}
+.practice-slot label,.extra-fields label{font-weight:650}
+.practice-slot input,.practice-slot select,.extra-fields input,.extra-fields select{width:100%;min-height:46px;border:1px solid #b7c8d9;border-radius:8px;padding:10px;background:white;color:#182b45}
+.practice-slot .button,.extra-fields .button{width:100%}
+.practice-slot .text-button,.extra-fields .text-button{display:inline-block;width:max-content;font-weight:650}
+.practice-slot .text-button[hidden],.extra-fields .text-button[hidden],.doctor-fallback[hidden]{display:none}
+.doctor-extra{border-top:4px solid #db0829}
+.extra-fields{display:grid;gap:10px;max-width:700px}
+.extra-history{padding-left:22px}
+.extra-history li{margin-bottom:8px}
+.doctor-expand{color:#2156a0}
+@media(max-width:700px){.doctor-section,.doctor-extra{padding:20px 16px}.doctor-heading{display:block}.doctor-list li{align-items:flex-start;flex-wrap:wrap}.doctor-list small{width:100%;margin-left:30px}}

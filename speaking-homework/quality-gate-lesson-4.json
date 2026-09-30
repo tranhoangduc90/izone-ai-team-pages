@@ -1,0 +1,148 @@
+{
+  "schema_version": 3,
+  "product": "Speaking Homework buổi 4 IC2304",
+  "change_id": "speaking-lesson4-20260929",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "high",
+  "system_traits": [
+    "stateful",
+    "asynchronous",
+    "concurrent",
+    "external_side_effects",
+    "authentication",
+    "multi_user",
+    "multi_service",
+    "personal_data"
+  ],
+  "experience": {
+    "planning_mode": "controlled",
+    "mode_reason": "Nhiều học viên nộp bài qua Pages, API, Share, AI và database; kết quả ghi Docs.",
+    "user": "Học viên và giảng viên IC2304",
+    "problem": "Buổi 4 chưa có trang nộp tích hợp bài bổ trợ và link /s/ chưa có lời chặn riêng.",
+    "outcome": "Bốn link được kiểm; bài bổ trợ cập nhật Bác sĩ AI; luyện thêm sau biên nhận.",
+    "out_of_scope": [
+      "Chưa phát bài Classroom cho học viên hoặc sửa Doc nguồn cũ."
+    ],
+    "plain_language_summary": "Nộp hai bài Speaking và hai bài cá nhân; danh sách luyện cập nhật sau từng bài.",
+    "acceptance_scope": "Phát hành theo giai đoạn; phần lõi phải qua kiểm thử trước khi mở bài thật."
+  },
+  "delivery_scope": {
+    "mode": "large_phased",
+    "release_slice": "Trang buổi 4, API kiểm bốn link, hàng phân tích bài bổ trợ và cập nhật Bác sĩ AI. Bài Classroom đã tạo ở trạng thái nháp; tiếp tục thử trên bản sao Docs riêng."
+  },
+  "change_package": {
+    "proposal": "Dùng trang riêng cho buổi 4 và mở rộng API Speaking hiện hành, giữ chung danh sách Bác sĩ AI.",
+    "behavior_baseline": "Buổi 3 có bốn link Speaking và cập nhật Bác sĩ AI sau biên nhận; chưa có đường luyện bổ trợ buổi 4.",
+    "deltas": [
+      {"id": "D-LINK", "operation": "MODIFIED", "behavior": "Chặn riêng link /s/t_ chỉ chia sẻ một phản hồi ở trang và API.", "module_ids": ["M-WEB", "M-API"], "test_ids": ["T-LINK"]},
+      {"id": "D-LESSON4", "operation": "ADDED", "behavior": "Hai bài Speaking và hai bài bổ trợ khác nhau được kiểm trước biên nhận.", "module_ids": ["M-WEB", "M-API"], "test_ids": ["T-MAIN", "T-PRACTICE"]},
+      {"id": "D-DOCTOR", "operation": "ADDED", "behavior": "Phân tích từng bài bổ trợ và cập nhật thứ tự danh sách; nhận lượt luyện thêm sau biên nhận.", "module_ids": ["M-WORKER", "M-API", "M-WEB"], "test_ids": ["T-DOCTOR", "T-EXTRA"]}
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "lesson4-1",
+    "modules": [
+      {"id": "M-WEB", "name": "Trang nộp buổi 4", "responsibility": "Hướng dẫn, chọn học viên, gửi bốn link và luyện thêm.", "owns_data": ["draft_local"], "public_interfaces": ["lesson-4.html"], "depends_on": ["M-API"], "boundary_rules": ["Không tự kết luận hội thoại đã đạt."], "test_ids": ["T-LINK", "T-UI", "T-EXTRA"]},
+      {"id": "M-API", "name": "API nộp Speaking", "responsibility": "Khóa Doc ID, lưu link, xác nhận đủ bài, cấp biên nhận.", "owns_data": ["submission", "practice_link", "receipt"], "public_interfaces": ["/api/speaking-homework"], "depends_on": ["M-WORKER"], "boundary_rules": ["Không cấp biên nhận khi thiếu bài bổ trợ."], "test_ids": ["T-LINK", "T-MAIN", "T-PRACTICE", "T-SEC"]},
+      {"id": "M-WORKER", "name": "Kiểm và phân tích bài bổ trợ", "responsibility": "Đọc Share, đánh giá bước thực hành, ghi lỗi vào Bác sĩ AI.", "owns_data": ["practice_check_job", "practice_analysis_job", "doctor_event"], "public_interfaces": ["startSpeakingPracticeWorker"], "depends_on": [], "boundary_rules": ["Một link không được cộng lượt luyện hoặc đề xuất hai lần."], "test_ids": ["T-PRACTICE", "T-DOCTOR", "T-EXTRA"]}
+    ],
+    "integrations": [
+      {"id": "I-SHARE", "producer": "M-WEB", "consumer": "M-API", "contract": "Một link Share đầy đủ được chuẩn hóa rồi lưu.", "test_ids": ["T-LINK", "T-PRACTICE"]},
+      {"id": "I-API-WEB", "producer": "M-API", "consumer": "M-WEB", "contract": "Trả trạng thái đã lưu, phân tích và biên nhận đúng học viên.", "test_ids": ["T-MAIN", "T-UI"]},
+      {"id": "I-DOCTOR", "producer": "M-WORKER", "consumer": "M-API", "contract": "Lỗi có dẫn chứng tăng số lần đề xuất đúng học viên, idempotent.", "test_ids": ["T-DOCTOR"]}
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "lesson4-1",
+    "signals": [
+      "multi_user",
+      "multi_service"
+    ],
+    "critical_path": "Pages → API → database → kiểm Share/AI → Bác sĩ AI → biên nhận → Docs",
+    "peak_load": {
+      "value": 15,
+      "unit": "người dùng đồng thời",
+      "basis": "Lớp thử IC2304 khoảng 15 học viên; giả định cần đo trước khi mở rộng."
+    },
+    "user_wait_target": "Phản hồi đã lưu tức thì, trang đọc lại mỗi 10 giây; timeout AI 45 giây, retry rõ trạng thái.",
+    "limits_and_cost": ["Tối đa bốn link bắt buộc mỗi học viên; API Speaking giới hạn 360 yêu cầu/phút/IP cho lớp dùng chung mạng; AI và ChatGPT Share dùng hàng việc."],
+    "failure_and_recovery": ["Giữ link bền, idempotency theo link/job, retry lease; không phát receipt khi chưa đủ."],
+    "monitoring": ["Theo dõi job pending/failed/quá hạn, đọc lại recommendation và Docs."],
+    "decision": "Một API và hàng việc hiện có; mở rộng slot luyện thêm và phân tích bài bổ trợ.",
+    "test_ids": [
+      "T-LINK",
+      "T-MAIN",
+      "T-PRACTICE",
+      "T-EXTRA",
+      "T-DOCTOR",
+      "T-UI"
+    ]
+  },
+  "requirements": [
+    {"id": "R-LINK", "statement": "Link /s/t_ bị chặn với lời giải thích riêng tại ô nhập và API.", "test_ids": ["T-LINK"]},
+    {"id": "R-FOUR", "statement": "Nộp đủ hai bài Speaking và hai bài bổ trợ khác nhau mới có biên nhận.", "test_ids": ["T-MAIN", "T-PRACTICE"]},
+    {"id": "R-DOCTOR", "statement": "Danh sách ưu tiên đúng luật Lark và cập nhật sau từng bài bổ trợ đã đạt.", "test_ids": ["T-DOCTOR"]},
+    {"id": "R-EXTRA", "statement": "Luyện thêm sau biên nhận tạo lượt riêng, giữ biên nhận cũ.", "test_ids": ["T-EXTRA"]}
+  ],
+  "invariants": [
+    {"id": "V-IDENTITY", "statement": "Doc ID quyết định file ghi; student_ref quyết định hồ sơ Bác sĩ AI; không trộn hai nguồn.", "test_ids": ["T-SEC", "T-PRACTICE"]},
+    {"id": "V-NO-DUP", "statement": "Hội thoại hoặc retry trùng không tăng bài nộp/lượt đề xuất.", "test_ids": ["T-PRACTICE", "T-DOCTOR", "T-EXTRA"]},
+    {"id": "V-ATTENDANCE", "statement": "Phát hành API chung giữ cấu hình và worker điểm danh Progress Log.", "test_ids": ["T-REG", "T-RELEASE"]}
+  ],
+  "tests": [
+    {"id": "T-LINK", "category": "regression", "priority": "P0", "status": "passed", "evidence": "Cùng test đỏ trên base và xanh trên head; browser mock chặn /s/t_ với thông báo một phản hồi."},
+    {"id": "T-INVALID", "category": "invalid_input", "priority": "P1", "status": "passed", "evidence": "Front và API chặn /c/, HTTP, link ngắn; query URL được chuẩn hóa."},
+    {"id": "T-MAIN", "category": "happy_path", "priority": "P0", "status": "passed", "evidence": "PostgreSQL trong RAM: kiểm ba giai đoạn Chèn điểm giữa, ba câu Freestyle và chặn biên nhận thiếu link."},
+    {"id": "T-PRACTICE", "category": "external_partial", "priority": "P0", "status": "passed", "evidence": "PostgreSQL trong RAM: một bài cá nhân, một bài Kho chung, hàng kiểm Share, phân tích lỗi và retry AI."},
+    {"id": "T-DOCTOR", "category": "concurrency_idempotency", "priority": "P0", "status": "passed", "evidence": "Đối chiếu số lần đề xuất, Chờ luyện, luật 5 ngày và cập nhật một lần theo source key."},
+    {"id": "T-EXTRA", "category": "lifecycle_time", "priority": "P1", "status": "passed", "evidence": "Sau biên nhận thêm slot thứ ba; khi Homework đóng chỉ người đã nộp được vào lại và thêm slot thứ tư."},
+    {"id": "T-UI", "category": "happy_path", "priority": "P1", "status": "passed", "evidence": "Browser desktop/mobile: top 5, xem toàn bộ, hướng dẫn hình, Kho chung có nhãn riêng và nút mở bài."},
+    {"id": "T-SEC", "category": "security_privacy", "priority": "P0", "status": "passed", "evidence": "Teacher receipt cần quyền lớp; Doc ID và student_ref kiểm riêng, link chặn ở API."},
+    {"id": "T-REG", "category": "regression", "priority": "P0", "status": "passed", "evidence": "Full suite API sau khi thêm Kho bài chung đạt 230/230."},
+    {"id": "T-RELEASE", "category": "rollback_recovery", "priority": "P1", "status": "passed", "evidence": "Fixture PostgreSQL đóng sau test; catalog đổi giữa đọc và ghi hủy transaction, không phát sinh đề xuất sai."},
+    {"id": "T-DOC", "category": "external_partial", "priority": "P1", "status": "passed", "evidence": "Bản sao Docs thử 1GHzDQNRPF8kctqgQxLBQqq_gjY8RGRSy3nT3zm3xkqY: gắn CTA đúng Doc ID, lớp, mã bài, chữ trắng không gạch dưới; ghi đúng ô tình trạng, đọc lại và chạy lần hai không lỗi."},
+    {"id": "T-SHARE", "category": "external_partial", "priority": "P1", "status": "passed", "evidence": "Bốn Share thật được đọc và phân tích cục bộ: hai phần Speaking đạt, hai bài bổ trợ khớp danh mục và đạt; bài giới từ có cảnh báo kiểu nhập chữ cần học viên xác nhận."},
+    {"id": "T-LIVE", "category": "happy_path", "priority": "P0", "status": "not_run", "evidence": "Classroom Lesson 4 đang DRAFT, chưa có bản sao học viên; chưa thử biên nhận và cập nhật Bác sĩ AI trên production."}
+  ],
+  "task_graph": {
+    "plan_revision": "lesson4-1",
+    "tasks": [
+      {"id": "TASK-WEB", "result": "Trang buổi 4 có bốn ô và Bác sĩ AI.", "module_ids": ["M-WEB"], "depends_on": [], "consumes": ["Docs cũ"], "produces": ["lesson-4.html"], "contract": "Chỉ kết luận đạt theo API.", "test_ids": ["T-LINK", "T-UI"], "evidence_required": ["Browser desktop/mobile"], "decision_inputs": ["Hai bài bổ trợ bắt buộc"], "affected_future_tasks": ["TASK-RELEASE"], "status": "done", "plan_revision": "lesson4-1"},
+      {"id": "TASK-API", "result": "API kiểm link, cấp biên nhận, nhận lượt luyện thêm.", "module_ids": ["M-API", "M-WORKER"], "depends_on": [], "consumes": ["Luồng Speaking hiện hành"], "produces": ["migration", "API"], "contract": "Không ghi trùng hoặc sai student_ref.", "test_ids": ["T-MAIN", "T-PRACTICE", "T-DOCTOR", "T-EXTRA", "T-SEC"], "evidence_required": ["Full suite", "PostgreSQL integration"], "decision_inputs": ["Số lần đề xuất theo Lark"], "affected_future_tasks": ["TASK-RELEASE"], "status": "done", "plan_revision": "lesson4-1"},
+      {"id": "TASK-RELEASE", "result": "Bản Docs mới được nhúng CTA và học viên thật nộp được.", "module_ids": ["M-WEB", "M-API", "M-WORKER"], "depends_on": ["TASK-WEB", "TASK-API"], "consumes": ["Mẫu Docs mới và Classroom Lesson 4"], "produces": ["Bài công khai, readback Docs/database"], "contract": "Giữ worker điểm danh chung.", "test_ids": ["T-DOC", "T-SHARE", "T-RELEASE", "T-REG", "T-LIVE"], "evidence_required": ["Production readback"], "decision_inputs": ["Bài Classroom giữ DRAFT để thử trước"], "affected_future_tasks": [], "status": "in_progress", "plan_revision": "lesson4-1"}
+    ]
+  },
+  "risk_register": {"assessment": "CONCERNS", "risks": [
+    {"id": "R-DOC", "description": "Bài Classroom đang DRAFT nên chưa có bản sao học viên để thử biên nhận và Bác sĩ AI trên production.", "probability": 3, "impact": 2, "score": 6, "severity": "P1", "status": "open", "owner": "Đức và Codex", "mitigation": "Giữ nháp theo yêu cầu; thử bản sao nội bộ, sau khi phát bài đọc lại từng bản sao và thử một lượt an toàn.", "test_ids": ["T-LIVE"]}
+  ], "waivers": []},
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {"id": "LEASE", "left": {"name": "job_lease_seconds", "value": 300}, "operator": ">", "right": {"name": "ai_timeout_plus_margin_seconds", "value": 90}, "status": "passed", "evidence": "Lease 5 phút, AI timeout 45 giây và biên 45 giây."}
+  ],
+  "mutations": [
+    {"id": "M-LOCAL-DB", "target": "PostgreSQL trong RAM", "outcome": "success", "readback": "verified", "evidence": "Tạo ba link bổ trợ, đọc lại phân tích, biên nhận và teacher view."}
+  ],
+  "verification_runs": [
+    {"id": "V-BACKEND", "scope": "full_suite", "command": "npm test", "tree_revision": "worktree-lesson4-current", "captured_at": "2026-09-30T02:05:55+07:00", "exit_code": 0, "outcome": "passed", "passed": 230, "failed": 0, "skipped": 0, "evidence": "Bản đã ghép luồng thông báo Docs, Kho bài chung và luyện thêm khi Homework đóng đạt 230/230."},
+    {"id": "V-WEB", "scope": "behavioral", "command": "Sáu suite Speaking Homework; node --check lesson-4-live.js và teacher.js; Playwright local", "tree_revision": "worktree-lesson4-current", "captured_at": "2026-09-30T02:10:00+07:00", "exit_code": 0, "outcome": "passed", "passed": 8, "failed": 0, "skipped": 0, "evidence": "Sáu suite và hai syntax check đạt; trình duyệt desktop/mobile hiện top 5/mở rộng, Kho chung, chặn /s/t_, chuẩn hóa URL và giữ lựa chọn."}
+  ],
+  "convergence": {"status": "gaps", "tree_revision": "worktree-lesson4-current", "gaps": ["Classroom Lesson 4 còn DRAFT; chưa có production readback cho biên nhận và Bác sĩ AI."], "unrequested_work": [], "evidence": "Bốn Share và bản sao Docs thử đã qua; đường học viên thật chờ phát bài."},
+  "context_handoff": {"summary": "Trang và API buổi 4 đã xây trong worktree; Classroom Lesson 4 ở trạng thái DRAFT.", "decisions": ["Giữ luật Số lần đề xuất hiện hành của Bác sĩ AI.", "Học viên thiếu hai đề xuất cá nhân được chọn bài còn thiếu từ Kho bài chung.", "Sau biên nhận, dùng cùng trang để nộp lượt luyện thêm kể cả khi Homework đóng.", "Giữ bài Classroom ở bản nháp để thử trước."], "completed": ["TASK-WEB", "TASK-API", "T-DOC", "T-SHARE"], "next_step": "Đưa backend và Pages lên production an toàn, nối sự kiện CTA buổi 4, rồi chờ phát Classroom để đọc lại bài thật.", "open_risks": ["R-DOC"], "tree_revision": "worktree-lesson4-current"},
+  "red_green": {
+    "red_on_base": {"test_id": "T-LINK", "command": "SPEAKING_LOGIC_BASE_PATH=E:/Codex-Data/speaking-lesson4-base-logic.mjs node tests/speaking-homework-single-reply-link.mjs", "tree_revision": "46abd0e004ec1a24fee43622518e331425db868d", "outcome": "failed", "exit_code": 1, "failed": 1, "evidence": "Base chỉ trả lỗi link chung, không giải thích link một phản hồi."},
+    "green_on_head": {"test_id": "T-LINK", "command": "node tests/speaking-homework-single-reply-link.mjs", "tree_revision": "worktree-lesson4-current", "outcome": "passed", "exit_code": 0, "passed": 1, "failed": 0, "skipped": 0, "evidence": "Head trả lỗi riêng chứa 'một phản hồi'."}
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "not_ready",
+    "base_tree_revision": "46abd0e004ec1a24fee43622518e331425db868d",
+    "current_tree_revision": "worktree-lesson4-current",
+    "production_authorized": true,
+    "rollback": "Revert branch; giữ dữ liệu và ngừng assignment mới.",
+    "deployment_readback": "unknown",
+    "operational_observation": "unknown",
+    "open_risks": [{"severity": "P1", "summary": "Classroom Lesson 4 còn DRAFT nên chưa thể nghiệm thu đường học viên thật."}]
+  }
+}

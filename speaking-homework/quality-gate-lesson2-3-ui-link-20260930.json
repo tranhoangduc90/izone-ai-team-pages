@@ -1,0 +1,154 @@
+{
+  "schema_version": 3,
+  "product": "Speaking Homework buổi 2 và 3",
+  "change_id": "speaking-lesson2-3-ui-link-20260930",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "low",
+  "system_traits": ["multi_user", "multi_service"],
+  "experience": {
+    "planning_mode": "quick",
+    "mode_reason": "Chỉ đổi CSS và lời hướng dẫn của hai trang; không đổi API, dữ liệu nộp hay quy tắc phân tích.",
+    "user": "Học viên xem Homework Speaking buổi 2 hoặc 3",
+    "problem": "Buổi 2 vẫn có màu cũ; hai trang chưa giải thích link chỉ chia sẻ một phản hồi như buổi 4.",
+    "outcome": "Hai trang dùng màu IZONE, chỉ rõ link Share toàn hội thoại và chặn các dạng link sai như buổi 4.",
+    "out_of_scope": ["Không mở nộp bài thật cho bản thử buổi 2; không đổi backend hoặc bài buổi 4."],
+    "plain_language_summary": "Đồng bộ giao diện và hướng dẫn kiểm link của buổi 2, 3 theo buổi 4."
+  },
+  "delivery_scope": {
+    "mode": "small_complete",
+    "release_slice": "CSS và hướng dẫn link của hai trang Speaking buổi 2, 3."
+  },
+  "change_package": {
+    "proposal": "Buổi 2 nạp lớp CSS IZONE đang dùng ở buổi 3; hai trang giải thích thêm link /s/t_ và giữ bộ kiểm chung của buổi 4.",
+    "behavior_baseline": "Buổi 2 có nút xanh ngọc; cả buổi 2, 3 chỉ giải thích link /c/ trong hướng dẫn.",
+    "archive_status": "active",
+    "deltas": [
+      {
+        "id": "D-COLOR",
+        "operation": "MODIFIED",
+        "behavior": "Buổi 2 có hero navy, dấu thương hiệu đỏ, nút luyện xanh và nút Xác nhận navy như buổi 3, 4.",
+        "test_ids": ["T-VISUAL", "T-REG"]
+      },
+      {
+        "id": "D-LINK-HELP",
+        "operation": "MODIFIED",
+        "behavior": "Hai trang hướng dẫn link /share/ toàn hội thoại, giải thích /c/ và /s/t_ ngay gần bài và trong hộp hình minh họa.",
+        "test_ids": ["T-REG", "T-INVALID"]
+      }
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "lesson2-3-parity-v1",
+    "signals": ["multi_user", "multi_service"],
+    "critical_path": "Trang Pages → kiểm định dạng trong trình duyệt → bộ kiểm cũ của từng bài → trạng thái tại ô link.",
+    "peak_load": {"value": 15, "unit": "học viên cùng lớp", "basis": "Lớp thí điểm IC2304 có khoảng 15 học viên; CSS và hướng dẫn không tăng số lần gọi API."},
+    "user_wait_target": "Link sai định dạng báo ngay; trạng thái kiểm nội dung vẫn dùng thời gian chờ và retry hiện hành.",
+    "limits_and_cost": ["Không thêm request mạng hoặc lời gọi AI; chỉ thêm một stylesheet vào bản thử buổi 2."],
+    "failure_and_recovery": ["Nếu CSS không tải, nội dung vẫn đọc được; nếu bộ kiểm nội dung lỗi, bài chưa được nhận và link đang gõ vẫn còn."],
+    "monitoring": ["Kiểm URL Pages, network/console và phản hồi lỗi tại ô link sau phát hành."],
+    "decision": "Giữ bộ kiểm link dùng chung của ba buổi, chỉ sửa lớp trình bày và lời hướng dẫn bị thiếu.",
+    "test_ids": ["T-REG", "T-VISUAL", "T-INVALID", "T-SUITE"]
+  },
+  "requirements": [
+    {"id": "R-COLOR", "statement": "Hai trang có màu IZONE đúng trên trình duyệt desktop và điện thoại.", "test_ids": ["T-VISUAL", "T-REG"]},
+    {"id": "R-LINK", "statement": "Hướng dẫn hai trang giải thích đúng link /share/, /c/ và /s/t_; parser chỉ cho đúng tên miền ChatGPT đi tiếp.", "test_ids": ["T-REG", "T-INVALID"]}
+  ],
+  "invariants": [
+    {"id": "I-SCOPE", "statement": "Bản buổi 2 vẫn là bản thử; buổi 3 vẫn có bốn ô, không thêm Bác sĩ AI trên trang; buổi 4 không đổi.", "test_ids": ["T-SUITE"]},
+    {"id": "I-GUIDE", "statement": "Chín ảnh và thao tác đóng hộp hướng dẫn vẫn hoạt động.", "test_ids": ["T-VISUAL", "T-SUITE"]}
+  ],
+  "tests": [
+    {"id": "T-REG", "category": "regression", "priority": "P1", "status": "passed", "evidence": "Cùng tests/speaking-homework-lesson2-3-parity.mjs lỗi trên base vì buổi 2 chưa nạp màu; đạt trên head và cả hai trang có hướng dẫn /s/t_."},
+    {"id": "T-VISUAL", "category": "happy_path", "priority": "P1", "status": "passed", "evidence": "Playwright local: buổi 2 hero rgb(21,43,78), brand rgb(219,8,41), practice rgb(33,86,160), confirm rgb(21,43,78); hai trang 390 px không tràn ngang."},
+    {"id": "T-INVALID", "category": "invalid_input", "priority": "P1", "status": "passed", "evidence": "Parser chung chặn /c/, /s/t_ và tên miền giả; buổi 2, 3 import cùng logic.mjs như buổi 4."},
+    {"id": "T-SUITE", "category": "regression", "priority": "P1", "status": "passed", "evidence": "Bảy bộ kiểm Speaking đạt, gồm demo, HTTP, buổi 3 không có Bác sĩ AI, buổi 4 và link một phản hồi."}
+  ],
+  "task_graph": {
+    "plan_revision": "lesson2-3-parity-v1",
+    "tasks": [{
+      "id": "TASK-UI-LINK",
+      "result": "Hai trang cùng màu và cùng hướng dẫn link buổi 4.",
+      "depends_on": [],
+      "consumes": ["Màu IZONE trong DESIGN.md", "CSS và parser Speaking hiện hành"],
+      "produces": ["HTML cập nhật", "Regression test", "Bằng chứng trình duyệt"],
+      "contract": "Không đổi API hoặc trạng thái bài nộp.",
+      "test_ids": ["T-REG", "T-VISUAL", "T-INVALID", "T-SUITE"],
+      "evidence_required": ["RED/GREEN cùng test", "Pages readback"],
+      "status": "done",
+      "plan_revision": "lesson2-3-parity-v1"
+    }]
+  },
+  "risk_register": {"assessment": "PASS", "risks": [], "waivers": []},
+  "cross_constraints": [],
+  "mutations": [{
+    "id": "M-SOURCE",
+    "target": "Trang buổi 2 và 3 trong worktree task",
+    "outcome": "success",
+    "readback": "verified",
+    "evidence": "Đọc lại HTML/CSS; Playwright local thấy màu đúng và hướng dẫn /s/t_."
+  }],
+  "verification_runs": [{
+    "id": "V-SPEAKING",
+    "scope": "full_suite",
+    "command": "Chạy lần lượt bảy file tests/speaking-homework*.mjs bằng node",
+    "tree_revision": "aa34d01c92eafd60cff456eb19bd3c77a191611b351d762f7e58bb63a779c6b0",
+    "captured_at": "2026-09-30T01:38:47Z",
+    "exit_code": 0,
+    "outcome": "passed",
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "Đạt 7/7 bộ kiểm Speaking trên worktree task."
+  }, {
+    "id": "V-BROWSER",
+    "scope": "behavioral",
+    "command": "Playwright CLI local desktop và viewport 390 px; mở hướng dẫn, đếm ảnh, Escape",
+    "tree_revision": "aa34d01c92eafd60cff456eb19bd3c77a191611b351d762f7e58bb63a779c6b0",
+    "captured_at": "2026-09-30T01:38:47Z",
+    "exit_code": 0,
+    "outcome": "passed",
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "Buổi 2 và 3 không tràn ngang ở 390 px; buổi 2 đủ chín ảnh, Escape đóng hộp; buổi 3 đủ bốn thẻ phần."
+  }],
+  "convergence": {
+    "status": "passed",
+    "tree_revision": "aa34d01c92eafd60cff456eb19bd3c77a191611b351d762f7e58bb63a779c6b0",
+    "gaps": [],
+    "unrequested_work": [],
+    "evidence": "Diff chỉ đổi màu/hướng dẫn của buổi 2, 3, test liên quan và README; không đổi luồng nộp."
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "ready",
+    "base_tree_revision": "7c2276e33099739db3397013724ee718ac75028f",
+    "current_tree_revision": "aa34d01c92eafd60cff456eb19bd3c77a191611b351d762f7e58bb63a779c6b0",
+    "production_authorized": true,
+    "rollback": "Revert commit Pages của task này, chờ Pages build và đọc lại hai URL; không có dữ liệu học viên cần hoàn tác.",
+    "open_risks": []
+  },
+  "red_green": {
+    "red_on_base": {
+      "test_id": "T-REG",
+      "command": "node tests/speaking-homework-lesson2-3-parity.mjs trên mã base sau khi thêm test",
+      "tree_revision": "7c2276e33099739db3397013724ee718ac75028f",
+      "outcome": "failed",
+      "exit_code": 1,
+      "failed": 1,
+      "evidence": "Assertion Buổi 2 cần nạp màu IZONE như buổi 4."
+    },
+    "green_on_head": {
+      "test_id": "T-REG",
+      "command": "node tests/speaking-homework-lesson2-3-parity.mjs trên mã head",
+      "tree_revision": "aa34d01c92eafd60cff456eb19bd3c77a191611b351d762f7e58bb63a779c6b0",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Trang buổi 2 nạp CSS IZONE và hai trang cùng giải thích /s/t_; parser chung chặn link sai."
+    }
+  }
+}
