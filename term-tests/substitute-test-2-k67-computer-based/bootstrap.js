@@ -433,6 +433,24 @@
     }
   }
 
+  // Phòng chờ và app dùng hai namespace khác nhau; chỉ nối lại đúng học viên/lớp.
+  function hasSavedGradedProgress() {
+    if (!localDemo || !state.identityConfirmed || !state.listeningStartedAt) return false;
+    const key = `izone-test:${testConfig.slug}:${classCode}:server-grade`;
+    for (const storage of [sessionStorage, localStorage]) {
+      try {
+        const saved = JSON.parse(storage.getItem(key) || '{}');
+        if (!saved || !Object.keys(saved).length) continue;
+        return saved.studentRef === state.studentRef
+          && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(saved.attemptToken || ''))
+          && Boolean(saved.testGrades?.listening);
+      } catch {
+        // Nếu vùng lưu bị chặn/hỏng thì thử bản dự phòng, không xóa dữ liệu.
+      }
+    }
+    return false;
+  }
+
   async function prepareSelectedStudent() {
     const studentRef = elements.bootstrapStudent.value;
     const student = roster.find(item => item.ref === studentRef);
@@ -442,7 +460,7 @@
     elements.bootstrapStudent.disabled = true;
     try {
       if (localDemo) {
-        if (state.attemptToken) {
+        if (state.attemptToken || hasSavedGradedProgress()) {
           const serverNow = new Date().toISOString();
           await enterExam({
             content: window.K67_SUBSTITUTE_TEST_2_CONTENT,
