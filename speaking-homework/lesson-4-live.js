@@ -1,15 +1,16 @@
-import { memoryKey, readMemory, writeMemory } from '../shared/student-memory.js';
+import { createSpeakingIdentity } from './speaking-identity.js';
+import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
 
 const apiBase = 'https://ducizone.ddns.net/mapping-api/api/speaking-homework';
 const identityBase = 'https://ducizone.ddns.net/mapping-api';
 const query = new URLSearchParams(location.search);
-const documentId = query.get('documentId') || '';
-const assignmentCode = query.get('assignmentCode') || '';
-const classCode = query.get('class') || '';
+const originalDocumentId = query.get('documentId') || '';
+let documentId = '';
+let classCode = '';
+const assignmentCode = query.get('assignmentCode') || '67-speaking-diem_giua';
+const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);
-const memory = memoryKey(identityBase, location.href);
-const remembered = readMemory(localStorage, memory);
 const parts = [
   { key: 'insert_middle', title: 'Chèn điểm giữa trong Speaking',
     url: 'https://ducizone.short.gy/chen_diem_giua_speak',
@@ -27,12 +28,15 @@ const parts = [
 const state = {
   studentRef: '', accessToken: '', assignment: null, links: new Map(),
   practice: new Map(), doctor: null, localFeedback: new Map(),
-  pending: new Set(), submitted: false, finishing: false, polling: null,
+  pending: new Set(), submitted: false, finishing: false,
   expanded: false, extraPending: false
 };
-const roster = new Map();
 
 async function post(path, body, timeout = 20_000) {
+  const changeButton = $('change-student');
+  state.requestCount = (state.requestCount || 0) + 1;
+  changeButton.disabled = true;
+  try {
   const response = await fetch(`${apiBase}${path}`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body), cache: 'no-store', signal: AbortSignal.timeout(timeout)
@@ -44,6 +48,10 @@ async function post(path, body, timeout = 20_000) {
     throw error;
   }
   return data;
+  } finally {
+    state.requestCount -= 1;
+    changeButton.disabled = state.requestCount > 0;
+  }
 }
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
 function draftKey() { return `speaking-homework:lesson-4:${documentId}:${state.studentRef}`; }
@@ -285,15 +293,18 @@ function render() {
 }
 async function refresh() {
   if (!state.accessToken) return;
+  const token = state.accessToken;
   const [data, doctor] = await Promise.all([
     post('/open', identity()), post('/doctor/list', identity())
   ]);
+  if (token !== state.accessToken) return;
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.practice = new Map((data.practiceLinks || []).map(link => [Number(link.slot), link]));
   state.doctor = doctor;
   state.submitted = data.status === 'submitted' && Boolean(data.receipt?.id);
   render();
   if (!state.submitted && allAccepted()) await finish();
+  poller.settled();
 }
 async function finish() {
   if (state.submitted || state.finishing || !allAccepted()) return;
@@ -309,85 +320,6 @@ async function finish() {
   } catch (error) {
     $('draft-status').textContent = `Chưa nộp xong: ${error.message} Tiến trình vẫn được giữ.`;
   } finally { state.finishing = false; }
-}
-async function openStudent(ref) {
-  if (!roster.has(ref)) return;
-  $('open-homework').disabled = true;
-  $('identity-message').textContent = 'Đang mở bài Speaking…';
-  try {
-    const response = await post('/session/start', {
-      documentId, assignmentCode, studentRef: ref, identityConfirmed: true
-    });
-    state.studentRef = ref;
-    state.accessToken = response.session.accessToken;
-    restoreDraft();
-    $('active-student').textContent = roster.get(ref);
-    $('identity-form').hidden = true;
-    $('identity-confirmed').hidden = false;
-    $('homework-content').hidden = false;
-    $('identity-message').textContent = '';
-    $('return-homework').href =
-      `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit?tab=t.0`;
-    await refresh();
-    state.polling = setInterval(() => refresh().catch(() => {
-      $('doctor-sync').textContent = 'Tạm mất kết nối; bài đã gửi vẫn được giữ. Trang sẽ tự thử lại.';
-    }), 10_000);
-    $('open-share-guide').focus();
-  } catch (error) {
-    state.studentRef = '';
-    state.accessToken = '';
-    $('identity-form').hidden = false;
-    $('identity-confirmed').hidden = true;
-    $('homework-content').hidden = true;
-    $('identity-message').textContent = error.message;
-  } finally { $('open-homework').disabled = false; }
-}
-async function loadAssignment() {
-  $('student-select').disabled = true;
-  $('open-homework').disabled = true;
-  $('reload-roster').hidden = true;
-  if (!documentId || !assignmentCode) {
-    $('identity-message').textContent = 'Hãy mở trang từ nút trong file Homework của bạn.';
-    return;
-  }
-  $('identity-message').textContent = 'Đang tải danh sách học viên…';
-  try {
-    const { assignment } = await post('/assignment/open', {
-      documentId, assignmentCode, ...(classCode ? { classCode } : {})
-    });
-    if (!assignment || assignment.parts?.length !== 2
-      || assignment.parts[0]?.part_key !== 'insert_middle'
-      || assignment.parts[1]?.part_key !== 'freestyle'
-      || Number(assignment.requiredPracticeCount) !== 2 || !assignment.doctorEnabled) {
-      throw new Error('Bài buổi 4 chưa được cấu hình đủ hai bài Speaking và hai bài bổ trợ.');
-    }
-    state.assignment = assignment;
-    roster.clear();
-    const select = $('student-select');
-    select.replaceChildren(new Option('Chọn tên của bạn', ''));
-    const counts = new Map();
-    for (const student of assignment.students) counts.set(student.name, (counts.get(student.name) || 0) + 1);
-    for (const student of assignment.students) {
-      roster.set(student.student_ref, student.name);
-      select.add(new Option(counts.get(student.name) > 1
-        ? `${student.name} · ${student.student_ref.slice(-4)}` : student.name,
-      student.student_ref));
-    }
-    $('class-code').textContent = assignment.classCode;
-    $('assignment-context').textContent = `${assignment.title} · ${assignment.classCode}`;
-    select.disabled = false;
-    $('open-homework').disabled = false;
-    $('identity-message').textContent = assignment.assignmentStatus === 'closed'
-      ? 'Homework đã đóng. Học viên đã nộp vẫn có thể vào luyện thêm.'
-      : `Đã tải ${roster.size} học viên của lớp.`;
-    if (remembered.status === 'ok' && roster.has(remembered.studentRef)) {
-      select.value = remembered.studentRef;
-      await openStudent(remembered.studentRef);
-    }
-  } catch (error) {
-    $('identity-message').textContent = `Chưa mở được bài: ${error.message}`;
-    $('reload-roster').hidden = false;
-  }
 }
 for (const [index, part] of parts.entries()) {
   const section = document.createElement('section');
@@ -433,10 +365,11 @@ for (const part of parts) {
     state.pending.add(part.key);
     showResult(`${part.key}-result`, 'loading', 'Đang nhận link', 'Hệ thống đang đọc hội thoại.');
     try {
+      poller.expect();
       await post('/checks/request', { ...identity(), part: part.key, url: parsed.url });
       saveDraft(); await refresh();
     } catch (error) { localError(`${part.key}-result`, input, 'Chưa nhận link', error.message); }
-    finally { state.pending.delete(part.key); render(); }
+    finally { poller.update(); state.pending.delete(part.key); render(); }
   });
 }
 for (const slot of [1, 2]) {
@@ -464,7 +397,8 @@ for (const slot of [1, 2]) {
     state.pending.add(`practice-${slot}`);
     showResult(`practice-${slot}-result`, 'loading', 'Đang nhận bài', 'Hệ thống đang kiểm bài bổ trợ.');
     try {
-      await post('/doctor/practice/request', {
+      poller.expect();
+    await post('/doctor/practice/request', {
         ...identity(), slot, exerciseId: select.value, url: parsed.url
       });
       saveDraft(); await refresh();
@@ -494,6 +428,7 @@ $('extra-confirm').addEventListener('click', async () => {
   state.extraPending = true;
   showResult('extra-result', 'loading', 'Đang nhận bài luyện thêm', 'Hệ thống đang lưu lượt mới.');
   try {
+    poller.expect();
     await post('/doctor/practice/extra/request', {
       ...identity(), exerciseId: $('extra-exercise').value, url: parsed.url
     });
@@ -506,37 +441,63 @@ $('extra-voice-confirm').addEventListener('click', async () => {
     .sort((a, b) => Number(b.slot) - Number(a.slot))[0];
   if (row?.status !== 'needs_voice_confirmation') return;
   try {
+    poller.expect();
     await post('/doctor/practice/confirm-voice', { ...identity(), linkId: row.id });
     await refresh();
   } catch (error) {
     showResult('extra-result', 'blocked', 'Chưa xác nhận', error.message);
   }
 });
-$('reload-roster').addEventListener('click', loadAssignment);
-$('open-homework').addEventListener('click', async () => {
-  const ref = $('student-select').value;
-  if (!roster.has(ref)) { $('identity-message').textContent = 'Hãy chọn tên của bạn.'; return; }
-  writeMemory(localStorage, memory, $('remember-student').checked ? ref : '');
-  await openStudent(ref);
+// Chỉ tự tải khi máy chủ đang kiểm/phân tích; lỗi mạng tăng thời gian chờ.
+const poller = createPendingPoller({
+  refresh,
+  hasSession: () => Boolean(state.accessToken),
+  isPending: () => (!state.submitted && allAccepted()) || [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status))
+    || [...state.practice.values()].some(link => link.status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
+  onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
 });
-$('change-student').addEventListener('click', () => {
-  if (state.polling) clearInterval(state.polling);
-  state.polling = null; state.studentRef = ''; state.accessToken = '';
-  state.links.clear(); state.practice.clear(); state.doctor = null; state.submitted = false;
-  state.localFeedback.clear();
-  writeMemory(localStorage, memory, '');
-  $('student-select').value = '';
-  $('identity-form').hidden = false; $('identity-confirmed').hidden = true;
-  $('homework-content').hidden = true;
-  for (const part of parts) $(`${part.key}-link`).value = '';
-  for (const slot of [1, 2]) {
-    $(`practice-${slot}-link`).value = '';
-    $(`practice-${slot}-exercise`).value = '';
-  }
-  $('extra-link').value = '';
+
+// Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
+const identityController = createSpeakingIdentity({
+  apiBase, identityBase, assignmentCode, lessonNumber: 4, originalDocumentId, classHint,
+  validateAssignment: assignment => assignment.parts?.length === 2 && assignment.parts[0]?.part_key === 'insert_middle' && assignment.parts[1]?.part_key === 'freestyle' && Number(assignment.requiredPracticeCount) === 2 && assignment.doctorEnabled === true,
+  async onOpened(context) {
+    state.studentRef = context.studentRef;
+    state.accessToken = context.session.accessToken;
+    state.assignment = context.assignment;
+    documentId = context.documentId;
+    classCode = context.classCode;
+    restoreDraft();
+    $('return-homework').href = `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit?tab=t.0`;
+    try { await refresh(); }
+    catch (error) {
+      $('draft-status').textContent = `Đã mở phiên, nhưng chưa tải được tiến trình: ${error.message} Trang sẽ tự thử lại.`;
+      poller.retry();
+    }
+    $('open-share-guide').focus();
+  },
+  onReset() {
+    poller.stop();
+    saveDraft();
+    state.studentRef = ''; state.accessToken = '';
+    state.links.clear(); state.practice.clear(); state.doctor = null; state.submitted = false;
+    state.localFeedback.clear();
+    for (const part of parts) $(`${part.key}-link`).value = '';
+    for (const slot of [1, 2]) {
+      $(`practice-${slot}-link`).value = '';
+      $(`practice-${slot}-exercise`).value = '';
+    }
+    $('extra-link').value = '';
+    state.pending.clear(); state.finishing = false;
+    if ('extraPending' in state) state.extraPending = false;
+    documentId = ''; classCode = '';
+    $('draft-status').textContent = '';
+    if ($('voice-checkbox')) $('voice-checkbox').checked = false;
+    for (const part of parts) if ($(`${part.key}-voice`)) $(`${part.key}-voice`).checked = false;
+  },
 });
 window.addEventListener('beforeunload', event => {
   if (!state.studentRef || state.submitted) return;
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
-loadAssignment();
+identityController.start();

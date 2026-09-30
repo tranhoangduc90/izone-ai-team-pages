@@ -1,0 +1,564 @@
+{
+  "schema_version": 3,
+  "product": "Speaking 67: giao diện chọn lớp và tên, phần T2/T3",
+  "change_id": "speaking-course67-20260930-pages",
+  "change_kind": "feature",
+  "escaped_user_defect": false,
+  "risk": "high",
+  "system_traits": [
+    "stateful",
+    "asynchronous",
+    "concurrent",
+    "external_side_effects",
+    "authentication",
+    "multi_user",
+    "multi_service"
+  ],
+  "experience": {
+    "planning_mode": "controlled",
+    "mode_reason": "Ba trang dùng danh tính chung, phiên và nhiều API bất đồng bộ.",
+    "user": "Học viên khóa 67",
+    "problem": "Ba trang Speaking chỉ gắn lớp pilot và chưa xác nhận lớp/tên trước mở bài.",
+    "outcome": "Chọn đúng lớp/tên, xác nhận mở bài, giữ đúng phiên và Docs xuyên suốt lượt học.",
+    "out_of_scope": [
+      "Đồng bộ ERP, đăng ký Classroom và workflow là phần khác của PLAN.",
+      "T5 kiểm Docs thật, biên nhận thật và toàn bộ lớp chưa được nghiệm thu trong manifest này.",
+      "Nội dung bài học, hình, Doctor và practice của Lesson 4 giữ nguyên."
+    ],
+    "plain_language_summary": "Nhớ tên để chọn sẵn; học viên vẫn nhấn Mở bài. Đổi lớp bỏ Docs cũ; phiên đã mở giữ nguyên học viên."
+  },
+  "change_package": {
+    "proposal": "Hoàn thiện phần T2/T3 của PLAN đã duyệt.",
+    "behavior_baseline": "Ba trang và live adapter hiện hành chưa có lựa chọn đa lớp.",
+    "deltas": [
+      {
+        "id": "D-ID",
+        "operation": "ADDED",
+        "behavior": "Chọn lớp/tên và nhớ UUID để chọn sẵn, nhấn Mở bài xác nhận.",
+        "module_ids": [
+          "M-ID",
+          "M-LIVE"
+        ],
+        "test_ids": [
+          "F-HP",
+          "F-MEM",
+          "F-BAD"
+        ]
+      },
+      {
+        "id": "D-CTX",
+        "operation": "MODIFIED",
+        "behavior": "Giữ ngữ cảnh phiên/CTA, hỗ trợ lịch sử closed có biên nhận qua server.",
+        "module_ids": [
+          "M-ID",
+          "M-LIVE"
+        ],
+        "test_ids": [
+          "F-CTX",
+          "F-CLOSED",
+          "F-REG",
+          "F-REC"
+        ]
+      },
+      {
+        "id": "D-POLL",
+        "operation": "MODIFIED",
+        "behavior": "Chỉ cập nhật bài pending và giãn nhịp sau lỗi.",
+        "module_ids": [
+          "M-POLL",
+          "M-LIVE"
+        ],
+        "test_ids": [
+          "F-POLL",
+          "F-PART"
+        ]
+      }
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "plan-v1",
+    "modules": [
+      {
+        "id": "M-ID",
+        "name": "Chọn lớp và tên",
+        "responsibility": "Hiển thị lựa chọn, nhận UUID nhớ sẵn và xác nhận ngữ cảnh server.",
+        "owns_data": [
+          "selection_state",
+          "original_document_hint",
+          "request_generation"
+        ],
+        "public_interfaces": [
+          "createSpeakingIdentity(options).start()",
+          "onOpened(frozenContext)",
+          "onReset()"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Bộ nhớ chỉ là gợi ý; không tự mở phiên.",
+          "Class/UUID/Doc phản hồi phải khớp trước onOpened."
+        ],
+        "test_ids": [
+          "F-HP",
+          "F-BAD",
+          "F-MEM",
+          "F-CTX",
+          "F-CLOSED",
+          "F-REG",
+          "F-PART"
+        ]
+      },
+      {
+        "id": "M-POLL",
+        "name": "Chờ phản hồi bài đang xử lý",
+        "responsibility": "Chỉ gọi cập nhật khi còn pending và giãn chờ sau lỗi.",
+        "owns_data": [
+          "poll_timer",
+          "poll_backoff"
+        ],
+        "public_interfaces": [
+          "createPendingPoller(options): expect/retry/update/settled/stop"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Không tạo phiên hoặc đổi danh tính.",
+          "Một yêu cầu cập nhật đang chạy; settled thì dừng."
+        ],
+        "test_ids": [
+          "F-POLL",
+          "F-PART"
+        ]
+      },
+      {
+        "id": "M-LIVE",
+        "name": "Bài Speaking đã mở",
+        "responsibility": "Gắn phiên cố định vào bài, biên nhận và draft theo lớp/Doc/UUID.",
+        "owns_data": [
+          "opened_session_context",
+          "lesson_draft_state"
+        ],
+        "public_interfaces": [
+          "Lesson 2/3/4 live onOpened/onReset",
+          "refreshHomework(context)"
+        ],
+        "depends_on": [
+          "M-ID",
+          "M-POLL"
+        ],
+        "boundary_rules": [
+          "Tab khác không đổi người học của phiên đã mở.",
+          "Không thay nội dung/hình hoặc bật Doctor ở Lesson 3."
+        ],
+        "test_ids": [
+          "F-HP",
+          "F-CTX",
+          "F-CLOSED",
+          "F-REC",
+          "F-CONTENT"
+        ]
+      }
+    ],
+    "integrations": [
+      {
+        "id": "I-ID-LIVE",
+        "producer": "M-ID",
+        "consumer": "M-LIVE",
+        "contract": "onOpened chỉ phát ngữ cảnh đã xác nhận và bất biến; onReset xóa trạng thái phiên hiện tại.",
+        "test_ids": [
+          "F-CTX",
+          "F-MEM",
+          "F-CLOSED"
+        ]
+      },
+      {
+        "id": "I-POLL-LIVE",
+        "producer": "M-POLL",
+        "consumer": "M-LIVE",
+        "contract": "Chỉ refresh ngữ cảnh hiện tại; lỗi backoff, đổi phiên thì bỏ phản hồi cũ.",
+        "test_ids": [
+          "F-POLL",
+          "F-CTX"
+        ]
+      }
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "plan-v1",
+    "signals": [
+      "multi_user",
+      "multi_service"
+    ],
+    "critical_path": "Pages → danh mục lớp/nhớ UUID → roster → xác nhận phiên → bài/biên nhận.",
+    "peak_load": {
+      "value": 30,
+      "unit": "concurrent_users",
+      "basis": "Tình huống 30 học viên chung IP trong PLAN; tính ngân sách poll, không là benchmark production."
+    },
+    "user_wait_target": "API login hủy sau 10 giây và báo thử lại; poll pending mỗi15 giây.",
+    "limits_and_cost": [
+      "Giới hạn API hiện hành360 request/phút/IP; 30 phiên pending có120 poll/phút, chưa tính login/submit và lưu lượng dịch vụ khác.",
+      "429/lỗi dùng backoff30/60 giây; không tự tăng limiter."
+    ],
+    "failure_and_recovery": [
+      "Không đoán lớp/Doc/UUID khi sai hoặc mơ hồ; thử lại giữ lựa chọn hợp lệ.",
+      "Storage bị chặn: vẫn chọn lớp/tên thủ công. Đổi lớp bỏ Doc cũ."
+    ],
+    "monitoring": [
+      "Root kiểm lỗi429, roster, pending và đúng danh tính/Doc sau Pages deploy.",
+      "Portal/worker/Docs outcome vẫn thuộc cổng tổng PLAN."
+    ],
+    "decision": "Giữ adapter nhận diện và timer dùng chung; không đổi API, nội dung hoặc worker trong phần Pages.",
+    "test_ids": [
+      "F-HP",
+      "F-PART",
+      "F-POLL",
+      "F-CTX"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "REQ-LOGIN",
+      "statement": "Chọn lớp/tên bằng UUID, xác nhận mở bài, memory không tự tạo phiên.",
+      "test_ids": [
+        "F-HP",
+        "F-BAD",
+        "F-MEM"
+      ]
+    },
+    {
+      "id": "REQ-CONTEXT",
+      "statement": "Cùng lớp giữ originalDoc; đổi lớp bỏ Doc; callback cũ không thay phiên; closed lịch sử được kiểm quyền ở server.",
+      "test_ids": [
+        "F-CTX",
+        "F-CLOSED",
+        "F-REG"
+      ]
+    },
+    {
+      "id": "REQ-LESSON",
+      "statement": "Giữ nội dung, hình và L4Doctor/practice; L3 không Doctor; chỉ poll pending.",
+      "test_ids": [
+        "F-CONTENT",
+        "F-POLL",
+        "F-REC"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-CONTEXT",
+      "statement": "Không thay học viên/lớp/Docs của phiên đã mở; memory chỉ là gợi ý trước phiên.",
+      "test_ids": [
+        "F-MEM",
+        "F-CTX",
+        "F-BAD"
+      ]
+    },
+    {
+      "id": "INV-HISTORY",
+      "statement": "CTA closed không mở generic/new session tùy ý; server quyết định quyền prior receipt.",
+      "test_ids": [
+        "F-CLOSED",
+        "F-REG"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "F-HP",
+      "category": "happy_path",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Mở Lessons 2/3/4 với hai lớp giả, bàn phím và màn hình di động; identity-results.json 26 ca."
+    },
+    {
+      "id": "F-BAD",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Danh sách rỗng/trùng, UUID/Doc/lớp phản hồi sai, resolve missing/ambiguous bị chặn; identity-results.json."
+    },
+    {
+      "id": "F-MEM",
+      "category": "security_privacy",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Shared memory chỉ UUID, chọn sẵn không tự mở; đổi bộ nhớ tab khác không thay phiên; suite-05.log và identity-results.json."
+    },
+    {
+      "id": "F-CTX",
+      "category": "concurrency_idempotency",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Roster cũ đến sau đổi lớp/xóa bị bỏ; cùng lớp giữ originalDoc, đổi lớp bỏ Doc, freeze phiên; identity-results.json."
+    },
+    {
+      "id": "F-CLOSED",
+      "category": "lifecycle_time",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/15 ca closed CTA active/inactive có biên nhận, server từ chối chưa nộp, generic closed bị chặn và đổi lớp bỏ Doc; closed-cta-results.json. API giả."
+    },
+    {
+      "id": "F-REG",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Cùng closed CTA test RED trên adapter trước sửa SHA00b7b418..., GREEN trên adapter9fe10d5b...; closed-red/run.json, closed-cta-results.json. Base là WIP trước sửa, không phải Git HEAD."
+    },
+    {
+      "id": "F-PART",
+      "category": "external_partial",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Storage đọc/ghi bị chặn vẫn dùng được; API lỗi hiển thị lỗi/thử lại đúng lớp, 429 backoff; identity-results.json."
+    },
+    {
+      "id": "F-REC",
+      "category": "rollback_recovery",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Retry roster giữ lớp, xóa memory trước mở không giữ tên cũ, draft L2 không lan lớp/CTA; identity-results.json. Không mô phỏng rollback production."
+    },
+    {
+      "id": "F-POLL",
+      "category": "lifecycle_time",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Chỉ poll pending, 15 giây và backoff30/60; idle/resolved dừng; identity-results.json."
+    },
+    {
+      "id": "F-CONTENT",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence/Parity L2/3, L3 không Doctor, L4 main/practice/receipt, single reply, demo/real/http; suite-09..15.log. API real test dùng fixture cục bộ."
+    }
+  ],
+  "task_graph": {
+    "plan_revision": "plan-v1",
+    "tasks": [
+      {
+        "id": "T2",
+        "result": "Bộ chọn lớp/tên cho ba trang",
+        "module_ids": [
+          "M-ID"
+        ],
+        "depends_on": [],
+        "consumes": [
+          "PLAN.md plan-v1 và API contract root"
+        ],
+        "produces": [
+          "Bộ chọn lớp/tên cho ba trang"
+        ],
+        "contract": "Kiểm đúng UUID/lớp/Doc, chỉ dùng bằng chứng local thật.",
+        "test_ids": [
+          "F-HP",
+          "F-BAD",
+          "F-MEM",
+          "F-CTX",
+          "F-CLOSED",
+          "F-REG",
+          "F-PART"
+        ],
+        "evidence_required": [
+          "Full suite16 lệnh, identity26 ca, closed15 ca và screenshot."
+        ],
+        "decision_inputs": [
+          "PLAN đã duyệt; không mở rộng phạm vi phát hành tổng."
+        ],
+        "affected_future_tasks": [
+          "T3"
+        ],
+        "status": "done",
+        "plan_revision": "plan-v1"
+      },
+      {
+        "id": "T3",
+        "result": "Ngữ cảnh live, draft và polling an toàn",
+        "module_ids": [
+          "M-LIVE",
+          "M-POLL"
+        ],
+        "depends_on": [
+          "T2"
+        ],
+        "consumes": [
+          "PLAN.md plan-v1 và API contract root"
+        ],
+        "produces": [
+          "Ngữ cảnh live, draft và polling an toàn"
+        ],
+        "contract": "Kiểm đúng UUID/lớp/Doc, chỉ dùng bằng chứng local thật.",
+        "test_ids": [
+          "F-CTX",
+          "F-REC",
+          "F-POLL",
+          "F-CONTENT"
+        ],
+        "evidence_required": [
+          "Full suite16 lệnh, identity26 ca, closed15 ca và screenshot."
+        ],
+        "decision_inputs": [
+          "PLAN đã duyệt; không mở rộng phạm vi phát hành tổng."
+        ],
+        "affected_future_tasks": [],
+        "status": "done",
+        "plan_revision": "plan-v1"
+      }
+    ]
+  },
+  "risk_register": {
+    "assessment": "PASS",
+    "risks": [
+      {
+        "id": "R-CTX",
+        "description": "Mang Doc hoặc UUID cũ sang lớp/phiên khác.",
+        "probability": 2,
+        "impact": 3,
+        "score": 6,
+        "severity": "P1",
+        "status": "mitigated",
+        "owner": "Mèo / root review",
+        "mitigation": "Đổi lớp bỏ Doc, freeze context, kiểm phản hồi và stale generation; fake hai lớp cùng tên.",
+        "test_ids": [
+          "F-CTX",
+          "F-MEM",
+          "F-BAD"
+        ]
+      },
+      {
+        "id": "R-LOAD",
+        "description": "Polling mỗi5 giây khiến30 người chung IP chạm giới hạn API.",
+        "probability": 2,
+        "impact": 2,
+        "score": 4,
+        "severity": "P2",
+        "status": "mitigated",
+        "owner": "Mèo / root",
+        "mitigation": "Pending15 giây, idle dừng, lỗi backoff; production quan sát vẫn chờ root.",
+        "test_ids": [
+          "F-POLL",
+          "F-PART"
+        ]
+      }
+    ],
+    "waivers": []
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {
+      "id": "POLL-BUDGET",
+      "left": {
+        "name": "30_users_pending_poll_requests_per_minute",
+        "value": 120
+      },
+      "operator": "<",
+      "right": {
+        "name": "current_IP_limit_requests_per_minute",
+        "value": 360
+      },
+      "status": "passed",
+      "evidence": "30×60/15=120; chỉ ngân sách poll theo code và test, không tuyên bố tổng tải production."
+    },
+    {
+      "id": "SUITE-REVISION",
+      "left": {
+        "value": 16
+      },
+      "operator": "==",
+      "right": {
+        "value": 16
+      },
+      "status": "passed",
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence\\suite-results.json"
+    }
+  ],
+  "mutations": [],
+  "verification_runs": [
+    {
+      "id": "PAGES-FULL",
+      "scope": "full_suite",
+      "command": "node E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence\\run-suite.mjs",
+      "tree_revision": "sha256:17fec2495a3191b07b93a1294e2bd124ff90e1d3b6a3ff9ab1f3d3b6188fed92",
+      "captured_at": "2026-09-30T14:41:58.930Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence\\suite-results.json; 16 lệnh áp dụng, không phải16 ca browser; API mocked local."
+    }
+  ],
+  "convergence": {
+    "status": "passed",
+    "tree_revision": "sha256:17fec2495a3191b07b93a1294e2bd124ff90e1d3b6a3ff9ab1f3d3b6188fed92",
+    "gaps": [],
+    "unrequested_work": [],
+    "evidence": "T2/T3 local đã đối chiếu12 source/test files với PLAN, full suite và ảnh. T5/live nằm cổng tổng riêng, chưa verified."
+  },
+  "context_handoff": {
+    "summary": "T2/T3 ready; user đã cho phép triển khai trong full plan, root kiểm URL thật sau Pages build.",
+    "decisions": [
+      "Kế thừa PLAN large_phased, UUID shared memory chỉ chọn sẵn, phiên bất biến, đổi lớp bỏ Doc."
+    ],
+    "completed": [
+      "T2",
+      "T3",
+      "16 lệnh full suite trên hash17fec; identity26, closed15; RED/GREEN adapter trước/sau sửa."
+    ],
+    "next_step": "Root kiểm candidate API/workflow mới, deploy Pages trong phạm vi được phép, đọc lại UI thật và bổ sung mutation/observation.",
+    "open_risks": [
+      "Browser/API production và Docs/biên nhận thật chưa là bằng chứng local của manifest này."
+    ],
+    "tree_revision": "sha256:17fec2495a3191b07b93a1294e2bd124ff90e1d3b6a3ff9ab1f3d3b6188fed92"
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "ready",
+    "base_tree_revision": "954087f9690946f2e4cb1deccf180bcc3d6c060b",
+    "current_tree_revision": "sha256:17fec2495a3191b07b93a1294e2bd124ff90e1d3b6a3ff9ab1f3d3b6188fed92",
+    "production_authorized": true,
+    "rollback": "Root redeploy Pages revision trước; API additive vẫn giữ tương thích. Không sửa/xóa Docs hoặc biên nhận để quay lui.",
+    "deployment_readback": "not_applicable",
+    "operational_observation": "",
+    "open_risks": [
+      {
+        "severity": "P2",
+        "summary": "Chờ root đọc lại Pages/browser thật sau deploy; manifest ready không phải deployed/verified."
+      }
+    ]
+  },
+  "release_scope": {
+    "acceptance_mode": "large_phased",
+    "active_phase": "T2/T3 Pages: đăng nhập chọn lớp/tên và live adapter",
+    "plan_reference": "E:/Codex-Data/speaking-course67-plan-20260930/PLAN.md",
+    "isolated_future": [
+      "T4 workflow/registry và T5 kiểm toàn bộ lớp/Docs thật giữ trạng thái trong manifest tổng.",
+      "Root bổ sung Pages deployment readback, browser thật dùng roster/UUID thật, mutation và observation; không cấp grant/nộp giả.",
+      "Portal outcome sau API chuyển vẫn pending theo cổng tổng."
+    ]
+  },
+  "source_hash_scope": [
+    "speaking-homework/index.html",
+    "speaking-homework/lesson-3.html",
+    "speaking-homework/lesson-4.html",
+    "speaking-homework/identity-login.css",
+    "speaking-homework/speaking-identity.js",
+    "speaking-homework/pending-poller.js",
+    "speaking-homework/lesson-2-live.js",
+    "speaking-homework/lesson-3-live.js",
+    "speaking-homework/lesson-4-live.js",
+    "tests/speaking-homework-identity.mjs",
+    "tests/speaking-homework-lesson2-live.mjs",
+    "tests/speaking-homework-closed-cta.mjs"
+  ],
+  "evidence_boundary": "Chỉ frontend local/mock được kiểm bởi Mèo. Không dùng backend279 hoặc refresh ERP thành bằng chứng browser/Docs thật.",
+  "live_api_readback": {
+    "evidence": "E:\\Codex-Data\\speaking-course67-plan-20260930\\frontend-evidence\\catalog-live.json",
+    "captured_at": "2026-09-30T15:32:41.204533+00:00",
+    "source": "Root HTTP readback; Mèo đã đọc lại artifact",
+    "outcome": "3 mã HTTP200, mỗi mã9 lớp. IC2304L2/L3 open ready; L4draft notready; 8 lớp còn lại missing notready.",
+    "limitation": "Chưa là Pages browser, session grant, Docs hoặc biên nhận thật."
+  }
+}

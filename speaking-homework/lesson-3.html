@@ -4,34 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'none'; form-action 'none'">
-  <title>Speaking Homework · Lesson 3 · IC2304</title>
+  <title>Speaking Homework · Lesson 3</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./guide.css">
   <link rel="stylesheet" href="./lesson-3.css">
+  <link rel="stylesheet" href="./identity-login.css">
   <style>[hidden] { display: none !important; }</style>
   <script type="module" src="./lesson-3-live.js"></script>
 </head>
 <body>
   <div class="page-shell">
-    <header class="hero">
+    <section id="login-screen" class="login-screen">
+      <header class="login-header"><div class="login-brand" aria-label="IZONE">IZONE<span>IELTS TRAINING ACADEMY</span></div><div class="login-course">Speaking · Khóa 6.0–7.0</div></header>
+      <div class="login-layout">
+        <div class="login-intro"><p class="login-lesson">Homework buổi 3</p><h1>Luyện cách làm rõ.<br>Nộp bài tại đây.</h1><p class="login-copy">Chọn lớp và tên của bạn để mở bốn phần luyện. Mỗi phần dùng một hội thoại riêng.</p><ol class="login-tasks"><li><span class="login-task-number">01</span><div><strong>Làm rõ cấp 1–3</strong><p>Luyện đúng từng cấp theo thứ tự.</p></div></li><li><span class="login-task-number">02</span><div><strong>Freestyle</strong><p>Áp dụng vào câu trả lời Speaking hoàn chỉnh.</p></div></li></ol></div>
+        <section class="identity-card" aria-labelledby="identity-title"><h2 id="identity-title">Bạn học lớp nào?</h2><p class="identity-subtitle">Chọn đúng lớp và tên trước khi bắt đầu.</p><div id="remembered-identity" class="remembered-identity" hidden><span aria-hidden="true">✓</span><span>Đã chọn sẵn lớp và tên từ lần trước.</span></div><div id="identity-form" class="identity-form"><label for="class-select">Lớp</label><select id="class-select" disabled><option value="">Đang tải danh sách lớp…</option></select><label for="student-select">Học viên</label><select id="student-select" disabled><option value="">Chọn lớp trước để xem danh sách</option></select><button id="reload-roster" class="button button-outline" type="button" hidden>Tải lại danh sách</button><label class="checkbox-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label><p class="memory-help">Lần sau sẽ chọn sẵn lớp và tên của bạn.<br>Bỏ tick nếu bạn đang dùng thiết bị chung.</p><button id="open-homework" class="button button-primary" type="button" disabled><span>Mở bài Speaking</span><span aria-hidden="true">→</span></button><button id="forget-remembered" class="text-button" type="button" hidden>Đổi người học</button></div><p id="identity-message" class="inline-note" role="status" aria-live="polite"></p><p class="login-support">Không thấy lớp hoặc tên? <span>Nhờ giảng viên kiểm tra.</span></p></section>
+      </div><footer class="login-footer"><span>IZONE · Speaking Homework</span><span>Chọn đúng lớp để mở đúng bài</span></footer>
+    </section>
+    <header id="lesson-hero" class="hero" hidden>
       <div class="eyebrow"><span class="brand-mark">IZ</span> IZONE · SPEAKING HOMEWORK</div>
-      <span class="demo-badge">IC2304 · Lesson 3</span>
+      <span id="lesson-badge" class="demo-badge">Lesson 3</span>
       <h1>Nộp bài Speaking<br><span>Homework Lesson 3</span></h1>
       <p class="hero-copy">Luyện bốn phần theo thứ tự và chia sẻ bốn hội thoại riêng. Khi bạn bấm Xác nhận, hệ thống đọc ChatGPT Share và báo kết quả cho từng phần.</p>
       <div class="hero-steps"><span><b>01</b> Luyện tập</span><span class="step-line"></span><span><b>02</b> Dán 4 link</span><span class="step-line"></span><span><b>03</b> Xác nhận</span></div>
     </header>
-    <section class="identity-card" aria-labelledby="identity-title">
-      <div><span class="section-kicker">TRƯỚC KHI BẮT ĐẦU</span><h2 id="identity-title">Xác nhận người học</h2><p id="assignment-context"></p><p>Chọn đúng tên của bạn trong lớp. Hệ thống kiểm bốn hội thoại và giữ tiến trình nếu bạn mở lại trang.</p></div>
-      <div id="identity-form" class="identity-form">
-        <div class="class-context"><span>Lớp của bài này</span><strong id="class-code">IC2304</strong></div>
-        <label for="student-select">Học viên</label><select id="student-select" disabled><option value="">Đang tải danh sách học viên…</option></select>
-        <button id="reload-roster" class="button button-outline" type="button" hidden>Tải lại danh sách học viên</button>
-        <label class="checkbox-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label>
-        <button id="open-homework" class="button button-primary" type="button" disabled>Mở bài nộp</button>
-      </div>
-      <div id="identity-confirmed" class="identity-confirmed" hidden><span>Đang làm bài với <strong id="active-student"></strong></span><button id="change-student" class="text-button" type="button">Đổi người học</button></div>
-      <p id="identity-message" class="inline-note" role="status" aria-live="polite"></p>
-    </section>
+    <p id="memory-status" class="inline-note" role="status" aria-live="polite" hidden></p>
+    <div id="identity-confirmed" class="active-identity-bar" hidden><span>Đang làm bài với <strong id="active-student"></strong> · lớp <strong id="active-class"></strong></span><button id="change-student" class="text-button" type="button">Đổi người học</button></div>
+    <p id="assignment-context" hidden></p><strong id="class-code" hidden></strong>
     <main id="homework-content" hidden>
       <div class="section-intro"><div><span class="section-kicker">BỐN PHẦN · BỐN HỘI THOẠI</span><h2>Làm lần lượt từng phần</h2></div><p>Link nộp phải có dạng <code>https://chatgpt.com/share/...</code>. Link <code>/c/...</code> chỉ mở trong tài khoản của bạn; link <code>/s/t_...</code> chỉ chia sẻ một phản hồi. Cả hai đều không nộp được.</p></div>
       <p id="draft-status" class="draft-status" role="status">Các link đã xác nhận được giữ trên máy chủ. Link đang gõ được giữ trên thiết bị này.</p>
@@ -58,7 +57,7 @@
         </div>
       </section><div class="guide-modal-footer"><button id="close-share-guide" class="button button-primary" type="button">Đóng hướng dẫn</button></div>
     </dialog>
-    <footer>IZONE · Speaking Homework Lesson 3 · IC2304</footer>
+    <footer id="page-footer">IZONE · Speaking Homework Lesson 3</footer>
   </div>
 </body>
 </html>
