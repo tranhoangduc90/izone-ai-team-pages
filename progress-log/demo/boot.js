@@ -56,7 +56,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; openBlocksButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20260929-teacher-preview-v1');
+  await import('../app.js?rev=20260930-journey-test-v2');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });

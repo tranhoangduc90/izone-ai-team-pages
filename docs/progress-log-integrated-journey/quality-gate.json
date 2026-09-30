@@ -1,0 +1,1140 @@
+{
+  "schema_version": 3,
+  "product": "Progress Log IZONE — Journey trong cùng webapp",
+  "change_id": "progress-log-integrated-journey-20260929",
+  "change_kind": "feature",
+  "escaped_user_defect": false,
+  "risk": "high",
+  "system_traits": [
+    "stateful",
+    "personal_data",
+    "multi_user",
+    "multi_service"
+  ],
+  "experience": {
+    "planning_mode": "controlled",
+    "mode_reason": "API dùng chung, dữ liệu nhiều học viên và phụ thuộc Portal ở luồng điểm danh.",
+    "user": "Học viên khóa 56/67",
+    "problem": "Phiếu theo từng buổi và Journey riêng khiến học viên khó xem lại quá trình.",
+    "outcome": "Cùng link phiếu có nút xem Journey; buổi không có phiếu vẫn có vị trí.",
+    "out_of_scope": [
+      "Chưa thay cơ chế chọn tên hiện tại",
+      "Chưa xác minh kết nối và dữ liệu thật từ backend production",
+      "Chưa tự kiểm lịch ERP thay đổi sau khi giảng viên ghép"
+    ],
+    "plain_language_summary": "Chọn tên một lần trong Progress Log để xem phiếu và hành trình."
+  },
+  "change_package": {
+    "proposal": "Thêm Journey ngay trong Progress Log, cho link buổi cũ mở phần xem và xếp buổi không có phiếu.",
+    "behavior_baseline": "Journey ở trang/link riêng; timeline chỉ lấy buổi có assignment.",
+    "deltas": [
+      {
+        "id": "D-UI",
+        "operation": "ADDED",
+        "behavior": "Nút Journey trong trang phiếu và màn đọc cùng trang.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-UI"
+        ]
+      },
+      {
+        "id": "D-API",
+        "operation": "MODIFIED",
+        "behavior": "API đọc Journey theo link phiếu + học viên và link cũ đã đóng.",
+        "module_ids": [
+          "M-API"
+        ],
+        "test_ids": [
+          "T-HAPPY",
+          "T-BAD",
+          "T-TIME",
+          "T-SEC"
+        ]
+      },
+      {
+        "id": "D-SLOT",
+        "operation": "MODIFIED",
+        "behavior": "Buổi không có assignment không mang nhãn thiếu phiếu.",
+        "module_ids": [
+          "M-API",
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-SOURCE",
+          "T-UI"
+        ]
+      },
+      {
+        "id": "D-SOURCE-STATUS",
+        "operation": "MODIFIED",
+        "behavior": "Mỗi ô buổi phân biệt nguồn thật với khoảng trống suy ra; điểm danh Progress Log tách khỏi trạng thái job Portal.",
+        "module_ids": [
+          "M-API",
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-SOURCE",
+          "T-PORTAL-LOCAL",
+          "T-UI"
+        ]
+      },
+      {
+        "id": "D-PLAN",
+        "operation": "ADDED",
+        "behavior": "Giảng viên xác nhận tổng số buổi và vị trí Test theo lớp; Journey hiện cả buổi chưa có phiếu mà không suy đã học hay đã điểm danh.",
+        "module_ids": [
+          "M-TEACHER",
+          "M-API",
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-PLAN",
+          "T-SOURCE",
+          "T-UI"
+        ]
+      },
+      {
+        "id": "D-DATE",
+        "operation": "ADDED",
+        "behavior": "Giảng viên xác nhận ngày theo từng buổi; Journey chỉ hiện ngày đã lưu, kể cả buổi Test không phiếu.",
+        "module_ids": [
+          "M-TEACHER",
+          "M-API",
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-DATE",
+          "T-UI"
+        ]
+      },
+      {
+        "id": "D-TEST-RESULT",
+        "operation": "ADDED",
+        "behavior": "Giảng viên ghép nguồn bài Test trước khi có điểm; Journey đọc Listening/Reading khi bài hoàn tất và bổ sung Writing khi chấm xong.",
+        "module_ids": [
+          "M-TEACHER",
+          "M-API",
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-SOURCE",
+          "T-SEC",
+          "T-UI"
+        ]
+      },
+      {
+        "id": "D-DEMO-JOURNEY",
+        "operation": "MODIFIED",
+        "behavior": "Bản thử Progress Log cho mở Journey trong cùng phiếu với dữ liệu giả ở kho demo.",
+        "module_ids": [
+          "M-UI"
+        ],
+        "test_ids": [
+          "T-UI",
+          "T-REG"
+        ]
+      }
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "plan-v6",
+    "modules": [
+      {
+        "id": "M-UI",
+        "name": "Progress Log học viên",
+        "responsibility": "Chọn tên, mở phiếu và trình bày Journey.",
+        "owns_data": [
+          "trạng thái màn hình",
+          "lựa chọn tên trong tab"
+        ],
+        "public_interfaces": [
+          "POST /student/course-journey",
+          "POST /student/journey-context"
+        ],
+        "depends_on": [
+          "M-API"
+        ],
+        "boundary_rules": [
+          "Không tự suy kết quả Portal từ Progress Log.",
+          "Không lưu token Journey riêng."
+        ],
+        "test_ids": [
+          "T-UI",
+          "T-HAPPY",
+          "T-TIME"
+        ]
+      },
+      {
+        "id": "M-API",
+        "name": "API learning",
+        "responsibility": "Lọc Journey đúng lớp/học viên, lưu kế hoạch và đọc nguồn ERP/Test đã được giảng viên xác nhận.",
+        "owns_data": [
+          "truy vấn Journey",
+          "learning.class_journey_plan"
+        ],
+        "public_interfaces": [
+          "POST /student/course-journey",
+          "POST /student/journey-context",
+          "GET /teacher/journey-plan",
+          "PUT /teacher/journey-plan",
+          "GET /teacher/erp-schedule",
+          "GET /teacher/test-sources"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Đọc dữ liệu, không ghi điểm danh.",
+          "Không xuất payload evidence chưa công bố."
+        ],
+        "test_ids": [
+          "T-HAPPY",
+          "T-BAD",
+          "T-SOURCE",
+          "T-SEC",
+          "T-REG",
+          "T-PLAN"
+        ]
+      },
+      {
+        "id": "M-TEACHER",
+        "name": "Dashboard giảng viên",
+        "responsibility": "Xác nhận tổng buổi, buổi Test và ngày đã đối chiếu theo từng buổi.",
+        "owns_data": [
+          "bản nháp form trên trình duyệt"
+        ],
+        "public_interfaces": [
+          "GET /teacher/journey-plan",
+          "PUT /teacher/journey-plan"
+        ],
+        "depends_on": [
+          "M-API"
+        ],
+        "boundary_rules": [
+          "Chỉ giảng viên có quyền lớp được sửa.",
+          "Ngày là xác nhận thủ công, chưa tự đối chiếu ERP; kế hoạch không tạo điểm hay điểm danh."
+        ],
+        "test_ids": [
+          "T-PLAN",
+          "T-SEC",
+          "T-UI"
+        ]
+      }
+    ],
+    "integrations": [
+      {
+        "id": "I-UI-API",
+        "producer": "M-API",
+        "consumer": "M-UI",
+        "contract": "Trả cùng classId/studentRef đã chọn; lỗi rõ khi không khớp.",
+        "test_ids": [
+          "T-HAPPY",
+          "T-SEC",
+          "T-UI"
+        ]
+      },
+      {
+        "id": "I-TEACHER-API",
+        "producer": "M-API",
+        "consumer": "M-TEACHER",
+        "contract": "Giảng viên gửi tổng buổi, Test, ngày theo buổi và revision; API kiểm quyền, chặn ghi đè, đọc lại; client cũ không gửi ngày thì giữ ngày đã lưu.",
+        "test_ids": [
+          "T-PLAN",
+          "T-SEC"
+        ]
+      }
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "plan-v6",
+    "signals": [
+      "multi_user",
+      "multi_service"
+    ],
+    "critical_path": "Link Progress Log → chọn tên → API read-only → PostgreSQL learning và kết quả Test đã ghép → cùng trang hiển thị Journey. Nộp phiếu → outbox → Portal là đường khác, phải giữ nguyên. Dashboard giảng viên → API ghi kế hoạch theo lớp → PostgreSQL learning; đây là thao tác xác nhận có revision. Ngày buổi học được lưu cùng kế hoạch giảng viên; không gọi ERP khi học viên mở Journey.",
+    "peak_load": {
+      "value": 1650,
+      "unit": "active_students",
+      "basis": "Thiết kế Progress Log hiện hành: 110 lớp × 15 học viên; cần đo lượt mở Journey thực tế."
+    },
+    "user_wait_target": "Mở Journey trong vài giây; khi API lỗi giữ phiếu và báo thử lại.",
+    "limits_and_cost": [
+      "Rate limit endpoint Journey 30 yêu cầu/phút theo token/học viên; ngữ cảnh phiếu cũ hiện tính theo IP, cần tải thử trước phát hành.",
+      "Truy vấn 1 lần khi bấm, không polling hoặc gọi AI.",
+      "Kế hoạch lớp tối đa 100 buổi; dashboard đọc khi đổi phiếu/làm mới, không gọi AI."
+    ],
+    "failure_and_recovery": [
+      "API lỗi: giữ màn hiện tại, không nộp/điểm danh giả.",
+      "Rollback bằng revision Pages/API trước đó; endpoint đọc không cần đảo dữ liệu.",
+      "Ghi kế hoạch lỗi hoặc revision cũ: giữ nội dung giảng viên đang nhập; chỉ tải lại khi họ chọn.",
+      "Client cũ không gửi ngày thì giữ ngày đã lưu; ngày trùng/sai hoặc vượt tổng buổi bị từ chối.",
+      "Nguồn Test lỗi hoặc chưa có bài hoàn tất: Journey vẫn hiện các buổi khác; Writing chỉ bổ sung khi chấm cuối sẵn sàng."
+    ],
+    "monitoring": [
+      "Theo dõi tỷ lệ 4xx/5xx, p95 latency, số lượt mở và số buổi thiếu nguồn.",
+      "Sau phát hành đối chiếu nộp đủ → job → Portal readback.",
+      "Theo dõi lỗi 409/5xx của lưu kế hoạch và số lớp chưa có xác nhận.",
+      "Sau phát hành theo dõi số buổi có ngày giảng viên xác nhận và số lần kế hoạch bị từ chối vì ngày vượt phạm vi.",
+      "Khi mở kế hoạch giảng viên, đối chiếu lại dòng ERP đã ghép và báo dòng thiếu hoặc ngày đổi."
+    ],
+    "decision": "Journey chỉ đọc dữ liệu Progress Log đã có; mỗi ô ghi rõ nguồn và trạng thái Portal chỉ phản ánh hàng đồng bộ, chưa tự nhận đã điểm danh.",
+    "test_ids": [
+      "T-HAPPY",
+      "T-BAD",
+      "T-TIME",
+      "T-SOURCE",
+      "T-REG",
+      "T-PLAN",
+      "T-DATE"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "R-1",
+      "statement": "Xem Journey trong cùng trang/link Progress Log sau khi xác nhận tên.",
+      "test_ids": [
+        "T-HAPPY",
+        "T-UI"
+      ]
+    },
+    {
+      "id": "R-2",
+      "statement": "Buổi không có phiếu, kể cả Test, không bị coi là chưa nộp.",
+      "test_ids": [
+        "T-SOURCE",
+        "T-UI"
+      ]
+    },
+    {
+      "id": "R-3",
+      "statement": "Link phiếu đã đóng vẫn mở Journey và không mở form làm bài.",
+      "test_ids": [
+        "T-TIME",
+        "T-UI"
+      ]
+    },
+    {
+      "id": "R-4",
+      "statement": "Journey chỉ nêu nguồn và tiến trình đồng bộ Portal đã quan sát, không suy điểm Test hay điểm danh Portal hoàn tất.",
+      "test_ids": [
+        "T-SOURCE",
+        "T-PORTAL-LOCAL",
+        "T-UI"
+      ]
+    },
+    {
+      "id": "R-5",
+      "statement": "Giảng viên xác nhận kế hoạch 1…N và các buổi Test theo lớp; Journey hiện cả Test không có Progress Log, không suy ngày/điểm/điểm danh.",
+      "test_ids": [
+        "T-PLAN",
+        "T-SOURCE",
+        "T-UI"
+      ]
+    },
+    {
+      "id": "R-6",
+      "statement": "Chỉ hiển thị ngày được giảng viên xác nhận cho đúng buổi; buổi Test không phiếu vẫn có thể có ngày.",
+      "test_ids": [
+        "T-DATE",
+        "T-UI"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "I-1",
+      "statement": "Journey chỉ trả học viên thuộc roster đúng lớp của link phiếu.",
+      "test_ids": [
+        "T-SEC",
+        "T-BAD"
+      ]
+    },
+    {
+      "id": "I-2",
+      "statement": "Xem Journey không ghi điểm danh; nộp đủ mới tạo job Portal và phải đọc lại Portal.",
+      "test_ids": [
+        "T-REG",
+        "T-PORTAL"
+      ]
+    },
+    {
+      "id": "I-3",
+      "statement": "Dữ liệu evidence analysis_allowed không lộ payload bài Test.",
+      "test_ids": [
+        "T-SOURCE"
+      ]
+    },
+    {
+      "id": "I-4",
+      "statement": "Ô buổi suy ra không mang kết luận đã học/chưa nộp; job Portal hoàn tất hoặc trạng thái nội bộ bị đổi vẫn cần đối chiếu Portal.",
+      "test_ids": [
+        "T-SOURCE",
+        "T-PORTAL-LOCAL",
+        "T-UI"
+      ]
+    },
+    {
+      "id": "I-5",
+      "statement": "Chỉ người có quyền lớp ghi kế hoạch; tổng buổi bao trùm mốc đã có dữ liệu; revision chặn ghi đè và readback xác nhận bản lưu. Dữ liệu mới vượt kế hoạch vẫn hiện và báo cần kiểm lại.",
+      "test_ids": [
+        "T-PLAN",
+        "T-SEC"
+      ]
+    },
+    {
+      "id": "I-6",
+      "statement": "Ngày trống không được suy từ ERP hay báo buổi đã diễn ra; client cũ không được xóa ngày đã lưu.",
+      "test_ids": [
+        "T-DATE"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-HAPPY",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "PGlite journey demo và API context; frontend VM mở Journey trong cùng trang."
+    },
+    {
+      "id": "T-BAD",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "learning-routes.test.js: token sai và thiếu identityConfirmed bị chặn trước DB."
+    },
+    {
+      "id": "T-TIME",
+      "category": "lifecycle_time",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "PGlite đóng phiếu rồi mở Journey; frontend VM fallback sang ngữ cảnh phiếu cũ."
+    },
+    {
+      "id": "T-SOURCE",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "PGlite kiểm assignment, Test evidence và ô suy ra; payload analysis_allowed không lộ. ERP chỉ đọc cho thấy số dòng lịch không ổn định. S3B2B1: test đọc ID/ngày đúng lớp, kiểm ánh xạ và readback kế hoạch."
+    },
+    {
+      "id": "T-SEC",
+      "category": "security_privacy",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Sai studentRef bị 404; frontend từ chối response sai classId/studentRef. API lịch ERP chỉ cho giảng viên có quyền lớp; input/query sai bị chặn trước database."
+    },
+    {
+      "id": "T-REG",
+      "category": "regression",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "learning-database.test.js: nộp thiếu không tự điểm danh, teacher override/outbox và Portal retry vẫn đạt."
+    },
+    {
+      "id": "T-UI",
+      "category": "happy_path",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "Browser fixture local sau lát 3A: desktop 1280×720, mobile 390×844, chọn tên → Journey; nguồn và Portal hiện đúng; console 0 lỗi."
+    },
+    {
+      "id": "T-PORTAL",
+      "category": "regression",
+      "priority": "P0",
+      "status": "not_run",
+      "evidence": "Chưa deploy; cần readback Portal sau phát hành."
+    },
+    {
+      "id": "T-PORTAL-LOCAL",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "PGlite kiểm queued/review_required theo assignment/student; frontend và browser kiểm complete vẫn cần đối chiếu, kể cả khi xác nhận nội bộ bị đổi sau đó."
+    },
+    {
+      "id": "T-PLAN",
+      "category": "regression",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "PGlite: kế hoạch vắng/mới/replay/xung đột, dữ liệu xuất hiện vượt kế hoạch, Test không assignment, quyền lớp và readback; route validation; frontend VM lưu kế hoạch. Ngày trong kế hoạch lưu bằng revision và đọc lại sau JSONB chuẩn hóa."
+    },
+    {
+      "id": "T-DATE",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "PGlite lưu/readback ngày buổi 1 và Test buổi 7 không phiếu, ngày trống null; client cũ không gửi sessionDates vẫn giữ ngày; route chặn ngày trùng/sai/vượt tổng; frontend VM và browser fixture mobile/desktop. Form giữ ngày khi tổng buổi tạm giảm rồi tăng lại; chặn lưu nếu còn ngày ngoài tổng."
+    }
+  ],
+  "task_graph": {
+    "plan_revision": "plan-v6",
+    "tasks": [
+      {
+        "id": "S1",
+        "result": "Journey trong trang phiếu với API đọc theo link + học viên.",
+        "module_ids": [
+          "M-UI",
+          "M-API"
+        ],
+        "depends_on": [],
+        "consumes": [
+          "Link phiếu và roster hiện có"
+        ],
+        "produces": [
+          "API và màn Journey local"
+        ],
+        "contract": "Chỉ đọc, không đổi submit/attendance.",
+        "test_ids": [
+          "T-HAPPY",
+          "T-BAD",
+          "T-SEC"
+        ],
+        "evidence_required": [
+          "Targeted tests"
+        ],
+        "decision_inputs": [
+          "Giữ chọn tên hiện tại theo Đức"
+        ],
+        "affected_future_tasks": [
+          "S2",
+          "S3A"
+        ],
+        "status": "done",
+        "plan_revision": "plan-v6"
+      },
+      {
+        "id": "S2",
+        "result": "Buổi thiếu assignment và link phiếu cũ được xử lý.",
+        "module_ids": [
+          "M-UI",
+          "M-API"
+        ],
+        "depends_on": [
+          "S1"
+        ],
+        "consumes": [
+          "Assignment/evidence/report đã có"
+        ],
+        "produces": [
+          "Timeline đến buổi cao nhất có bằng chứng"
+        ],
+        "contract": "Không gắn nhãn thiếu phiếu cho buổi không có assignment.",
+        "test_ids": [
+          "T-SOURCE",
+          "T-TIME"
+        ],
+        "evidence_required": [
+          "PGlite và frontend VM"
+        ],
+        "decision_inputs": [
+          "Không tự điền đủ 30 buổi khi chưa có nguồn"
+        ],
+        "affected_future_tasks": [
+          "S3A"
+        ],
+        "status": "done",
+        "plan_revision": "plan-v6"
+      },
+      {
+        "id": "S3A",
+        "result": "Rà nguồn ERP/Test và hiện mức dữ liệu cùng trạng thái hàng đồng bộ Portal.",
+        "module_ids": [
+          "M-UI",
+          "M-API"
+        ],
+        "depends_on": [
+          "S2"
+        ],
+        "consumes": [
+          "Assignment/evidence/report, ERP read-only, outbox status"
+        ],
+        "produces": [
+          "Data-origin và coverage contract, UI không khẳng định quá nguồn"
+        ],
+        "contract": "Không tự suy lịch, điểm Test hay Portal đã điểm danh.",
+        "test_ids": [
+          "T-SOURCE",
+          "T-PORTAL-LOCAL",
+          "T-UI"
+        ],
+        "evidence_required": [
+          "PGlite, frontend VM, browser fixture, ERP aggregate"
+        ],
+        "decision_inputs": [
+          "ERP thiếu session_number trong class_sessions; adapter Test chưa có caller"
+        ],
+        "affected_future_tasks": [
+          "S3B1"
+        ],
+        "status": "done",
+        "plan_revision": "plan-v6"
+      },
+      {
+        "id": "S3B1",
+        "result": "Giảng viên xác nhận tổng buổi và các buổi Test theo lớp; Journey hiện các ô theo kế hoạch.",
+        "module_ids": [
+          "M-TEACHER",
+          "M-API",
+          "M-UI"
+        ],
+        "depends_on": [
+          "S3A"
+        ],
+        "consumes": [
+          "Lựa chọn của Đức: giảng viên xác nhận trên dashboard; assignment/evidence/report hiện có"
+        ],
+        "produces": [
+          "Bảng kế hoạch theo lớp, API có quyền/revision/readback, UI xác nhận và Journey dùng kế hoạch"
+        ],
+        "contract": "Không suy ngày học, điểm Test hoặc điểm danh từ kế hoạch.",
+        "test_ids": [
+          "T-PLAN",
+          "T-SOURCE",
+          "T-SEC",
+          "T-UI"
+        ],
+        "evidence_required": [
+          "PGlite, route validation, frontend VM, browser fixture"
+        ],
+        "decision_inputs": [
+          "Tổng số buổi và vị trí Test do giảng viên có quyền lớp nhập"
+        ],
+        "affected_future_tasks": [
+          "S3B2A"
+        ],
+        "status": "done",
+        "plan_revision": "plan-v6"
+      },
+      {
+        "id": "S3B2A",
+        "result": "Giảng viên xác nhận ngày theo buổi; Journey chỉ hiện ngày đã lưu.",
+        "module_ids": [
+          "M-TEACHER",
+          "M-API",
+          "M-UI"
+        ],
+        "depends_on": [
+          "S3B1"
+        ],
+        "consumes": [
+          "Kế hoạch lớp và ngày giảng viên đã đối chiếu"
+        ],
+        "produces": [
+          "Ngày xác nhận trên timeline; ngày trống giữ unknown"
+        ],
+        "contract": "Không suy ngày từ thứ tự class_sessions; Test không phiếu có thể có ngày.",
+        "test_ids": [
+          "T-DATE",
+          "T-UI"
+        ],
+        "evidence_required": [
+          "PGlite readback, client cũ, mobile/desktop fixture"
+        ],
+        "decision_inputs": [
+          "Giảng viên xác nhận ngày theo từng buổi trên dashboard; chưa có ERP row ID."
+        ],
+        "affected_future_tasks": [
+          "S3B2B"
+        ],
+        "status": "done",
+        "plan_revision": "plan-v6"
+      },
+      {
+        "id": "S3B2B",
+        "result": "Đối chiếu dòng lịch ERP với số buổi và nối điểm Test được phép công bố.",
+        "module_ids": [
+          "M-TEACHER",
+          "M-API",
+          "M-UI"
+        ],
+        "depends_on": [
+          "S3B2A"
+        ],
+        "consumes": [
+          "Lịch ERP, nguồn Test và chính sách công bố đã kiểm"
+        ],
+        "produces": [
+          "Nguồn lịch/điểm đúng identity và trạng thái thiếu dữ liệu"
+        ],
+        "contract": "Thiếu ánh xạ hoặc quyền công bố thì giữ unknown; không lấy thứ tự dòng lịch làm số buổi.",
+        "test_ids": [
+          "T-SOURCE",
+          "T-SEC",
+          "T-UI"
+        ],
+        "evidence_required": [
+          "PGlite và giao diện local đã đạt; còn readback nguồn ERP/Test/Portal trên lớp thật"
+        ],
+        "decision_inputs": [
+          "ERP và Test đã ghép local; dashboard rà lịch đổi. Cần kiểm quyền/kết nối từ backend thật và Portal trên lớp thật."
+        ],
+        "affected_future_tasks": [
+          "S4"
+        ],
+        "status": "in_progress",
+        "plan_revision": "plan-v6"
+      },
+      {
+        "id": "S4",
+        "result": "Kiểm liên dịch vụ, phát hành và đọc lại kết quả người dùng.",
+        "module_ids": [
+          "M-UI",
+          "M-API"
+        ],
+        "depends_on": [
+          "S3B2B"
+        ],
+        "consumes": [
+          "Journey đủ nguồn và quyền phát hành"
+        ],
+        "produces": [
+          "Release evidence và Portal readback"
+        ],
+        "contract": "Giữ điểm danh, phiên giảng viên và rollback.",
+        "test_ids": [
+          "T-PORTAL",
+          "T-REG",
+          "T-UI"
+        ],
+        "evidence_required": [
+          "Final full suite, canary, Portal readback"
+        ],
+        "decision_inputs": [
+          "Cổng phát hành riêng"
+        ],
+        "affected_future_tasks": [],
+        "status": "planned",
+        "plan_revision": "plan-v6"
+      }
+    ]
+  },
+  "risk_register": {
+    "assessment": "CONCERNS",
+    "risks": [
+      {
+        "id": "K-IDENTITY",
+        "description": "Chọn tên không xác thực người học; người có link có thể chọn tên khác.",
+        "probability": 2,
+        "impact": 3,
+        "score": 6,
+        "severity": "P1",
+        "status": "open",
+        "owner": "Đức / nhóm sản phẩm",
+        "mitigation": "Giữ đúng cơ chế hiện hành theo lựa chọn của Đức; không quảng bá là riêng tư theo tài khoản; xem lại trước pilot thật.",
+        "test_ids": [
+          "T-SEC"
+        ]
+      },
+      {
+        "id": "K-SOURCE",
+        "description": "ERP không có session_number; lịch có thể đổi. Nguồn Test có thể chưa có điểm hoặc chưa chứng minh thuộc lớp.",
+        "probability": 3,
+        "impact": 2,
+        "score": 6,
+        "severity": "P1",
+        "status": "open",
+        "owner": "Nhóm Progress Log",
+        "mitigation": "Giảng viên ghép đúng dòng ERP và bài Test; nguồn cho biết mức bằng chứng lớp. Kiểm dữ liệu, độ trễ và quyền từ backend thật trước phát hành.",
+        "test_ids": [
+          "T-SOURCE",
+          "T-UI"
+        ]
+      }
+    ],
+    "waivers": []
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {
+      "id": "C-SESSION",
+      "left": {
+        "name": "session_number_max_allowed",
+        "value": 100
+      },
+      "operator": ">=",
+      "right": {
+        "name": "maximum_course_sessions_observed",
+        "value": 31
+      },
+      "status": "passed",
+      "evidence": "ERP courses/course_classes ngày 29/09/2026: khóa 56 có 31 buổi, khóa 67 có 30; schema Learning cho 1–100."
+    }
+  ],
+  "mutations": [
+    {
+      "id": "M-LOCAL-PAGES",
+      "target": "Branch worktree Pages local",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Progress Log 31/31, browser desktop/mobile với kế hoạch 8 buổi, demo --check và git diff --check đạt."
+    },
+    {
+      "id": "M-LOCAL-API",
+      "target": "Branch worktree backend local",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Backend full suite 223/223, npm run check, PGlite kế hoạch/Portal và git diff --check đạt."
+    },
+    {
+      "id": "M-LOCAL-DATES",
+      "target": "Branch worktree Pages/API local",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "PGlite lưu/readback ngày với revision và client cũ; browser fixture đọc ngày ở Test; chưa ghi ERP, Portal hay production. Form giữ ngày khi đổi tổng buổi tạm thời."
+    },
+    {
+      "id": "M-LOCAL-TEST",
+      "target": "Branch worktree Pages/API local",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "PGlite ghép bài trước khi có điểm và đọc lại sau khi hoàn tất; Writing pending rồi ready; frontend 29/29; chưa ghi production."
+    }
+  ],
+  "verification_runs": [
+    {
+      "id": "V-API-FULL",
+      "scope": "full_suite",
+      "command": "npm test (backend)",
+      "tree_revision": "e9898c8cec938de6734392b352f6d695ccf30b539b2c094123dbfc602b3dfb85",
+      "captured_at": "2026-09-29T09:27:01.796973+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 223,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Backend full suite 223/223 gồm kế hoạch lớp, Journey, outbox/Portal và quyền giảng viên."
+    },
+    {
+      "id": "V-API-CHECK",
+      "scope": "build",
+      "command": "npm run check (backend)",
+      "tree_revision": "e9898c8cec938de6734392b352f6d695ccf30b539b2c094123dbfc602b3dfb85",
+      "captured_at": "2026-09-29T09:27:01.796973+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Node syntax check các module backend đạt."
+    },
+    {
+      "id": "V-PAGES-FOCUSED",
+      "scope": "focused",
+      "command": "node --test 10 file progress-log không gọi production",
+      "tree_revision": "e9898c8cec938de6734392b352f6d695ccf30b539b2c094123dbfc602b3dfb85",
+      "captured_at": "2026-09-29T09:27:01.796973+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 31,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Progress Log 31/31 gồm form kế hoạch giảng viên và trạng thái Test theo kế hoạch."
+    },
+    {
+      "id": "V-BROWSER",
+      "scope": "behavioral",
+      "command": "Playwright CLI với API fixture localhost",
+      "tree_revision": "e9898c8cec938de6734392b352f6d695ccf30b539b2c094123dbfc602b3dfb85",
+      "captured_at": "2026-09-29T09:27:01.796973+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Playwright CLI localhost: chọn tên → Journey 8 buổi, Test không phiếu, desktop/mobile, console 0 lỗi; ảnh ở E:/Codex-Data/progress-log-journey-qa. Sau đó VM/PGlite kiểm cảnh báo kế hoạch cũ."
+    },
+    {
+      "id": "V-API-DATES",
+      "scope": "full_suite",
+      "command": "npm test (backend)",
+      "tree_revision": "9ebb12b39237b0935dc421dcbce368e01bfa64dee6a1a569d6cb653df2b42653",
+      "captured_at": "2026-09-29T19:05:42.870388+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 224,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "224/224, gồm migration JSONB, Journey, route validation, Portal/outbox regression."
+    },
+    {
+      "id": "V-PAGES-DATES",
+      "scope": "focused",
+      "command": "node --test tests/progress-log-*.mjs",
+      "tree_revision": "2f38bfa70881812fc94c39a4adf53ac35b323936caeafb1f9f73ed36cef713be",
+      "captured_at": "2026-09-29T19:09:03.599663+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "28/28 sau sửa giữ bản nháp ngày; demo --check, Node syntax và git diff --check đạt."
+    },
+    {
+      "id": "V-BROWSER-DATES",
+      "scope": "behavioral",
+      "command": "playwright-cli localhost fixture",
+      "tree_revision": "9ebb12b39237b0935dc421dcbce368e01bfa64dee6a1a569d6cb653df2b42653",
+      "captured_at": "2026-09-29T19:05:42.870388+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Student Journey desktop/mobile đọc ngày Test buổi 7; teacher form CSS mobile/desktop bằng fixture DOM; backend auth không được mô phỏng."
+    },
+    {
+      "id": "V-API-ERP",
+      "scope": "full_suite",
+      "command": "npm test (backend)",
+      "tree_revision": "9e9b6d02e446acbda37e3b43a203587c4f56c3167d257fafa3f328e2ef08e7f1",
+      "captured_at": "2026-09-29T19:44:17.062344+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 228,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "228/228 gồm đọc ERP, phân quyền, kiểm ID/ngày, PGlite readback và regression Portal."
+    },
+    {
+      "id": "V-PAGES-ERP",
+      "scope": "focused",
+      "command": "node --test 7 file progress-log*.mjs",
+      "tree_revision": "9e9b6d02e446acbda37e3b43a203587c4f56c3167d257fafa3f328e2ef08e7f1",
+      "captured_at": "2026-09-29T19:44:17.062344+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "28/28 gồm chọn dòng ERP, ngày nhập tay và cảnh báo lịch đổi trong dashboard VM."
+    },
+    {
+      "id": "V-CHECK-ERP",
+      "scope": "build",
+      "command": "npm run check; node --check src/learning-erp-schedule.js; node --check progress-log/teacher.js; git diff --check",
+      "tree_revision": "9e9b6d02e446acbda37e3b43a203587c4f56c3167d257fafa3f328e2ef08e7f1",
+      "captured_at": "2026-09-29T19:44:17.062344+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Syntax backend/frontend và diff check đạt."
+    },
+    {
+      "id": "V-API-TEST-CURRENT",
+      "scope": "full_suite",
+      "command": "npm test (backend)",
+      "tree_revision": "533989eda72a1c940811983097f73d554b35f15066ee93bfd2e332a0932cece2",
+      "captured_at": "2026-09-29T20:20:53.792941+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 234,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "234/234 gồm nguồn Test trước khi có điểm, Writing đến muộn, phân lớp/học viên, Portal/outbox."
+    },
+    {
+      "id": "V-PAGES-TEST-CURRENT",
+      "scope": "focused",
+      "command": "node --test tests/progress-log-*.mjs",
+      "tree_revision": "533989eda72a1c940811983097f73d554b35f15066ee93bfd2e332a0932cece2",
+      "captured_at": "2026-09-29T20:20:53.792985+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "29/29 gồm Journey trong phiếu, Test không assignment, Writing bổ sung sau và form ghép nguồn."
+    },
+    {
+      "id": "V-CHECK-CURRENT",
+      "scope": "build",
+      "command": "npm run check (backend); node --check frontend; demo --check; git diff --check",
+      "tree_revision": "533989eda72a1c940811983097f73d554b35f15066ee93bfd2e332a0932cece2",
+      "captured_at": "2026-09-29T20:20:53.792998+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Kiểm cú pháp backend/frontend, demo tạo đúng bản nguồn và diff không lỗi whitespace."
+    },
+    {
+      "id": "V-API-INTEGRATED-256",
+      "scope": "full_suite",
+      "command": "npm test (backend)",
+      "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
+      "captured_at": "2026-09-29T20:55:22.404578+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 256,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "256/256 trên ứng viên đã gộp bản xem thử GV; gồm Journey, Test/Writing đến muộn, outbox/Portal và phiên GV."
+    },
+    {
+      "id": "V-PAGES-INTEGRATED-29",
+      "scope": "focused",
+      "command": "node --test tests/progress-log-*.mjs",
+      "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
+      "captured_at": "2026-09-29T20:55:22.404578+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 29,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "29/29 gồm trang demo hiện nút Journey, học viên chọn tên, buổi Test không phiếu và form ghép nguồn."
+    },
+    {
+      "id": "V-CHECK-INTEGRATED",
+      "scope": "build",
+      "command": "npm run check; npm run check:demo; demo build --check; node --check frontend; git diff --check",
+      "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
+      "captured_at": "2026-09-29T20:55:22.404578+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Kiểm cú pháp, bản demo sinh từ trang chính và whitespace đạt trên ứng viên."
+    },
+    {
+      "id": "V-BROWSER-DEMO-JOURNEY",
+      "scope": "focused",
+      "command": "Playwright CLI localhost: chọn tên mẫu → Journey; 390x844; console error",
+      "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
+      "captured_at": "2026-09-29T20:55:22.404578+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Trang demo gọi API PGlite local, Journey hiện 4 buổi, 3 ô chưa có nguồn; mobile không tràn ngang; console 0 lỗi."
+    },
+    {
+      "id": "V-OVERLAY-FULL-20260930",
+      "scope": "full_suite",
+      "command": "npm test trên cây source ghép từ image production và module Journey",
+      "tree_revision": "pages:5262a0c;backend:66bbd51;live-image:speaking-docs-event:20260929-fix2",
+      "captured_at": "2026-09-29T21:25:38Z",
+      "exit_code": 1,
+      "outcome": "failed",
+      "passed": 255,
+      "failed": 1,
+      "skipped": 0,
+      "evidence": "Test Term Test teacher-options đòi accessMode/isAssignedTeacher của branch; image production hiện chỉ trả id/name. Không coi full suite image cuối là đạt."
+    },
+    {
+      "id": "V-PROD-READONLY-PRECHECK-20260930",
+      "scope": "focused",
+      "command": "Kiểm chỉ đọc từ container production: bảng Test, một lịch ERP, hàng chờ và hàng Portal",
+      "tree_revision": "live-image:speaking-docs-event:20260929-fix2",
+      "captured_at": "2026-09-29T21:25:38Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Bảng Test đọc được; lịch ERP một lớp có 29 dòng trong 1,1 giây; 102 job điểm danh complete; job gần nhất đối chiếu được một hàng Portal có mặt. Đây là baseline trước phát hành."
+    },
+    {
+      "id": "V-BRANCH-MERGED-263-20260930",
+      "scope": "full_suite",
+      "command": "npm test trên backend branch sau khi ghép main Speaking buổi 4",
+      "tree_revision": "backend:5f58ec0",
+      "captured_at": "2026-09-29T21:41:57Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 263,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "263/263; npm run check, check:demo, npm ci dry-run và git diff --check cũng đạt."
+    },
+    {
+      "id": "V-OVERLAY-LIVE-263-20260930",
+      "scope": "full_suite",
+      "command": "npm test trên source nguyên từ speaking-lesson4:20260930-v1 cộng tám module Journey",
+      "tree_revision": "backend:43e109a;live-image:speaking-lesson4:20260930-v1",
+      "captured_at": "2026-09-29T21:41:57Z",
+      "exit_code": 1,
+      "outcome": "failed",
+      "passed": 260,
+      "failed": 3,
+      "skipped": 0,
+      "evidence": "Ba ca Term Test khác source branch: giới hạn job 6/4 (chạy riêng cũng lỗi), fixture thiếu class_started_at, dashboard thiếu accessMode/isAssignedTeacher."
+    },
+    {
+      "id": "V-LIVE-READERS-20260930",
+      "scope": "focused",
+      "command": "docker run image ứng viên, đọc ERP/Test thật ở chế độ chỉ đọc",
+      "tree_revision": "candidate-image:izone-progress-log-journey:20260930-rc1",
+      "captured_at": "2026-09-29T21:41:57Z",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "ERP reader 29 dòng/0,8 giây; Test source reader ba bài; Test result reader một kết quả đúng học viên/lớp/bài, Writing chưa nộp. Chưa ghi dữ liệu thật."
+    }
+  ],
+  "convergence": {
+    "status": "gaps",
+    "tree_revision": "pages:48bd953;backend:43e109a;live-image:speaking-lesson4:20260930-v1",
+    "gaps": [
+      "Đã chạy ba nguồn đọc ERP/Test từ image ứng viên trên dữ liệu thật, nhưng ba biến Metabase chưa được cấu hình cho API; chưa ghép lớp thật trên dashboard.",
+      "Full suite trên source image live cộng Journey chưa đạt: 260/263 do ba chênh lệch Term Test giữa image và Git/fixture.",
+      "Workflow Portal còn fallback theo thứ tự ngày class_sessions; cần đối chiếu ánh xạ giảng viên và kết quả Portal đúng buổi trên lớp thật.",
+      "Chưa áp migration, phát hành, quan sát production hoặc diễn tập rollback cho ứng viên tích hợp."
+    ],
+    "unrequested_work": [],
+    "evidence": "Hai branch/PR nháp đã push; backend branch 263/263 và Pages 29/29. Image ứng viên build và đọc được ERP/Test thật, nhưng full suite image live 260/263; production chưa đổi hoặc được nghiệm thu."
+  },
+  "context_handoff": {
+    "summary": "S1/S2/S3A/S3B1/S3B2A và ERP/Test S3B2B local đã làm, gồm demo Journey; S3B2B3/S4 cần lớp thật và cổng phát hành.",
+    "decisions": [
+      "Journey nằm trong Progress Log, không tạo link mới.",
+      "Giữ cách chọn tên hiện tại theo Đức.",
+      "Không suy session_number từ thứ tự class_sessions hoặc điểm Test từ adapter chưa được gọi.",
+      "Giảng viên xác nhận tổng buổi và vị trí Test trên dashboard; kế hoạch dùng chung cho lớp."
+    ],
+    "completed": [
+      "S1",
+      "S2",
+      "S3A",
+      "S3B1",
+      "S3B2A",
+      "demo fallback",
+      "S3B2B1 local",
+      "S3B2B2 local",
+      "dashboard rà lịch ERP đổi local",
+      "gộp teacher preview",
+      "demo Journey local"
+    ],
+    "next_step": "Chọn lớp thật có ánh xạ học viên và Test rõ ràng; kiểm ERP/Test từ container, đối chiếu Portal theo buổi, áp migration rồi canary sau khi có quyền phát hành.",
+    "open_risks": [
+      "K-IDENTITY",
+      "K-SOURCE"
+    ],
+    "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f"
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "not_ready",
+    "base_tree_revision": "pages:46abd0e;backend:8fab5d3",
+    "current_tree_revision": "pages:48bd953;backend:43e109a;live-image:speaking-lesson4:20260930-v1",
+    "production_authorized": true,
+    "rollback": "Giữ container/image API đang chạy và revision Pages main hiện hành để quay lại; migration chỉ thêm bảng nên giữ dữ liệu khi rollback code.",
+    "deployment_readback": "not_run",
+    "operational_observation": "Image ứng viên đã build và chạy nguồn ERP/Test ở chế độ chỉ đọc; baseline Portal đọc được. Chưa áp migration, chuyển production hoặc quan sát event mới sau chuyển bản.",
+    "open_risks": [
+      {
+        "severity": "P1",
+        "summary": "Nguồn lịch/Test và xác thực theo chọn tên còn giới hạn."
+      }
+    ]
+  }
+}
