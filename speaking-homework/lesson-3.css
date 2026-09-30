@@ -2,7 +2,7 @@
 .identity-card select { width: 100%; }
 .scenario-select { width: 100%; margin: 0 0 12px; }
 
-/* Lesson 3: giữ bước chọn học viên và tiến độ hiện sớm trên màn hình nhỏ. */
+/* Buổi 2 và 3: giữ bước chọn học viên và tiến độ hiện sớm trên màn hình nhỏ. */
 .hero { padding: 24px 36px 26px; }
 .hero .demo-badge { margin-top: 13px; }
 .hero h1 { margin: 11px 0 8px; font-size: clamp(30px, 3.6vw, 44px); }
@@ -26,7 +26,7 @@
   .submission-progress [role="progressbar"] { width: 100%; }
 }
 
-/* Nhận diện IZONE cho riêng Lesson 3; các trang Speaking khác vẫn dùng CSS chung. */
+/* Nhận diện IZONE dùng chung cho hai trang Speaking buổi 2 và 3. */
 :root {
   --iz-navy: #152b4e;
   --iz-blue: #2156a0;
