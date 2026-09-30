@@ -5,6 +5,7 @@ const PLAYLIST_API_URL = 'https://ducizone.ddns.net/webhook/recording-playlist-8
 const REFRESH_MS = 60_000;
 
 const state = { records: [], yesterdayClasses: [], playlists: [], loading: false, playlistQuery: '', version: 0 };
+const selectedSessions = new Set();
 const $ = (id) => document.getElementById(id);
 const controls = ['dateFilter', 'accountFilter', 'searchFilter'].map($);
 
@@ -72,13 +73,25 @@ function renderStats() {
 }
 
 function renderYesterday() {
-  const cards = state.yesterdayClasses.map((item) => `<article class="class-card">
+  const cards = state.yesterdayClasses.map((item) => {
+    const key = String(item.classSessionId || item.id || `${item.className}:${item.sessionStart}`);
+    return `<button type="button" class="class-card${selectedSessions.has(key) ? ' is-selected' : ''}" data-session-key="${escapeHtml(key)}" aria-pressed="${selectedSessions.has(key)}" aria-label="${escapeHtml(`${item.className || 'Chưa rõ lớp'}, Buổi ${item.lessonNumber || '—'}`)}">
     <div><span class="class-code">${escapeHtml(item.className || 'Chưa rõ lớp')}</span><span class="badge zoom">${escapeHtml(item.zoomAccount || 'Chưa phân bổ Zoom')}</span></div>
     <strong>Buổi ${escapeHtml(item.lessonNumber || '—')}</strong>
     <span>${item.normalizedTime?dateTime(item.sessionStart):portalTime(item.sessionStart)+" · "+displayDate(item.sessionStart)}</span>
-  </article>`).join('');
+  </button>`;
+  }).join('');
   $('yesterdayClasses').innerHTML = cards || (nightlyState.error||['failed','partial'].includes(nightlyState.snapshot?.scanStatus)?'<div class="empty-inline">Chưa đọc đủ dữ liệu lịch học; chưa thể kết luận ngày này không có lớp.</div>':'<div class="empty-inline">Không có lớp dùng các tài khoản Zoom đang theo dõi trong ngày này.</div>');
 }
+$('yesterdayClasses').addEventListener('click', (event) => {
+  const card = event.target.closest('.class-card');
+  if (!card || !event.currentTarget.contains(card)) return;
+  const key = card.dataset.sessionKey;
+  if (selectedSessions.has(key)) selectedSessions.delete(key);
+  else selectedSessions.add(key);
+  card.classList.toggle('is-selected', selectedSessions.has(key));
+  card.setAttribute('aria-pressed', String(selectedSessions.has(key)));
+});
 
 function youtubeState(record) {
   if (record.youtubeStatus === 'uploaded') return '<span class="badge ok">Đã đăng</span>';
