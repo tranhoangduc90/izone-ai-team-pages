@@ -18,9 +18,9 @@
     "problem": "Phiếu theo từng buổi và Journey riêng khiến học viên khó xem lại quá trình.",
     "outcome": "Cùng link phiếu có nút xem Journey; buổi không có phiếu vẫn có vị trí.",
     "out_of_scope": [
-      "Chưa thay cơ chế chọn tên hiện tại",
-      "Chưa xác minh kết nối và dữ liệu thật từ backend production",
-      "Chưa tự kiểm lịch ERP thay đổi sau khi giảng viên ghép"
+      "Giữ cơ chế chọn tên hiện tại theo lựa chọn của Đức; đây không phải xác thực cá nhân.",
+      "Không tự ghép mốc Test khi IC2305 mới có định nghĩa bài mà chưa có bằng chứng thuộc lớp.",
+      "Chưa tự đồng bộ lại ngày nếu ERP đổi lịch; dashboard báo để giảng viên xác nhận lại."
     ],
     "plain_language_summary": "Chọn tên một lần trong Progress Log để xem phiếu và hành trình."
   },
@@ -438,14 +438,14 @@
       "category": "happy_path",
       "priority": "P1",
       "status": "passed",
-      "evidence": "Browser fixture local sau lát 3A: desktop 1280×720, mobile 390×844, chọn tên → Journey; nguồn và Portal hiện đúng; console 0 lỗi."
+      "evidence": "Trang production IC2305: chọn tên trong phiếu thật rồi mở Journey cùng trang, 31 ô buổi/31 ngày, buổi 1 không có phiếu; dashboard đọc lại revision 1. Frontend suite hiện tại 29/29."
     },
     {
       "id": "T-PORTAL",
       "category": "regression",
       "priority": "P0",
-      "status": "not_run",
-      "evidence": "Chưa deploy; cần readback Portal sau phát hành."
+      "status": "passed",
+      "evidence": "Sau deploy, đối chiếu 67/67 job điểm danh cũ của IC2305 buổi 2–5 với đúng class_session_id và attendance_status=1 trên Portal; cấu hình/worker không đổi. Chưa có submission mới qua image rc3; quan sát nghiệp vụ sau deploy vẫn chờ."
     },
     {
       "id": "T-PORTAL-LOCAL",
@@ -459,7 +459,7 @@
       "category": "regression",
       "priority": "P0",
       "status": "passed",
-      "evidence": "PGlite: kế hoạch vắng/mới/replay/xung đột, dữ liệu xuất hiện vượt kế hoạch, Test không assignment, quyền lớp và readback; route validation; frontend VM lưu kế hoạch. Ngày trong kế hoạch lưu bằng revision và đọc lại sau JSONB chuẩn hóa."
+      "evidence": "PGlite: kế hoạch vắng/mới/replay/xung đột, dữ liệu xuất hiện vượt kế hoạch, Test không assignment, quyền lớp và readback; route validation; frontend VM lưu kế hoạch. Ngày trong kế hoạch lưu bằng revision và đọc lại sau JSONB chuẩn hóa. Production IC2305 lưu/readback 31/31 ID ERP 35811–35841, revision 1."
     },
     {
       "id": "T-DATE",
@@ -666,15 +666,15 @@
           "T-UI"
         ],
         "evidence_required": [
-          "PGlite và giao diện local đã đạt; còn readback nguồn ERP/Test/Portal trên lớp thật"
+          "Production IC2305: ERP 31/31 được giảng viên ghép và DB đọc lại; nguồn Test mới definition_only nên chưa ghép, Journey báo rõ chưa có nguồn."
         ],
         "decision_inputs": [
-          "ERP và Test đã ghép local; dashboard rà lịch đổi. Cần kiểm quyền/kết nối từ backend thật và Portal trên lớp thật."
+          "Chỉ phát hành mốc ERP đã xác nhận; mốc Test IC2305 chờ bằng chứng bài thuộc lớp."
         ],
         "affected_future_tasks": [
           "S4"
         ],
-        "status": "in_progress",
+        "status": "done",
         "plan_revision": "plan-v6"
       },
       {
@@ -700,19 +700,19 @@
           "T-UI"
         ],
         "evidence_required": [
-          "Final full suite, canary, Portal readback"
+          "Backend 264/264, Pages 29/29, API health/ready, dashboard và học viên production, 67/67 Portal readback lịch sử; event mới nằm ở quan sát vận hành sau phát hành."
         ],
         "decision_inputs": [
-          "Cổng phát hành riêng"
+          "Đức đã cấp quyền push và triển khai; IC2305 là lớp đầu tiên."
         ],
         "affected_future_tasks": [],
-        "status": "planned",
+        "status": "done",
         "plan_revision": "plan-v6"
       }
     ]
   },
   "risk_register": {
-    "assessment": "CONCERNS",
+    "assessment": "WAIVED",
     "risks": [
       {
         "id": "K-IDENTITY",
@@ -721,12 +721,13 @@
         "impact": 3,
         "score": 6,
         "severity": "P1",
-        "status": "open",
+        "status": "accepted",
         "owner": "Đức / nhóm sản phẩm",
-        "mitigation": "Giữ đúng cơ chế hiện hành theo lựa chọn của Đức; không quảng bá là riêng tư theo tài khoản; xem lại trước pilot thật.",
+        "mitigation": "Đức đã chọn giữ xác nhận bằng tên sau khi được báo rằng người có link lớp có thể chọn tên khác. Giao diện nói rõ đây không phải xác thực chống gian lận; rà lại quyền xem trước khi mở rộng.",
         "test_ids": [
           "T-SEC"
-        ]
+        ],
+        "waiver_id": "W-IDENTITY-IC2305-20260930"
       },
       {
         "id": "K-SOURCE",
@@ -735,16 +736,28 @@
         "impact": 2,
         "score": 6,
         "severity": "P1",
-        "status": "open",
+        "status": "mitigated",
         "owner": "Nhóm Progress Log",
-        "mitigation": "Giảng viên ghép đúng dòng ERP và bài Test; nguồn cho biết mức bằng chứng lớp. Kiểm dữ liệu, độ trễ và quyền từ backend thật trước phát hành.",
+        "mitigation": "IC2305 đã ghép 31/31 dòng ERP trên dashboard và đối chiếu 67/67 kết quả Portal buổi 2–5. Dashboard báo lịch đổi; ba nguồn Test chưa chứng minh thuộc lớp nên chưa ghép.",
         "test_ids": [
           "T-SOURCE",
           "T-UI"
         ]
       }
     ],
-    "waivers": []
+    "waivers": [
+      {
+        "id": "W-IDENTITY-IC2305-20260930",
+        "approved_by": "Đức",
+        "approved_at": "2026-09-30T02:05:00Z",
+        "expires_at": "2026-10-31T16:59:59Z",
+        "human_approved": true,
+        "reason": "Trong hội thoại, Đức chọn giữ cách chọn tên hiện tại sau khi được nêu rõ khả năng người có link xem tên khác; áp dụng cho pilot IC2305.",
+        "monitoring": "Rà phản hồi học viên/giảng viên về xem nhầm hồ sơ và kiểm quyền trước khi mở rộng nhiều lớp.",
+        "remediation_owner": "Đức / nhóm Progress Log",
+        "fix_target": "Rà lại cơ chế xác nhận người xem trước 31/10/2026."
+      }
+    ]
   },
   "coverage_exemptions": {},
   "cross_constraints": [
@@ -791,310 +804,86 @@
       "outcome": "success",
       "readback": "verified",
       "evidence": "PGlite ghép bài trước khi có điểm và đọc lại sau khi hoàn tất; Writing pending rồi ready; frontend 29/29; chưa ghi production."
+    },
+    {
+      "id": "M-PROD-MIGRATION",
+      "target": "PostgreSQL learning production",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Backup riêng và pg_restore index đạt; bảng kế hoạch có quyền learning_api; IC2305 readback revision 1."
+    },
+    {
+      "id": "M-PROD-API",
+      "target": "mapping-review-api production",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Image rc3 health healthy, restart 0, /ready 200; cấu hình điểm danh và target hash giữ nguyên; image trước được giữ để rollback."
+    },
+    {
+      "id": "M-PROD-PAGES",
+      "target": "GitHub Pages Progress Log",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Pages build từ PR #36 đã merge; trang giảng viên và phiếu thật IC2305 hiển thị Journey, đọc dữ liệu production."
+    },
+    {
+      "id": "M-IC2305-PLAN",
+      "target": "learning.class_journey_plan lớp IC2305",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Dashboard xác nhận 31 buổi; tải lại và DB readback đúng ID 35811–35841/ngày, revision 1; không ghép Test thiếu bằng chứng."
     }
   ],
   "verification_runs": [
     {
-      "id": "V-API-FULL",
+      "id": "V-API-FINAL-264",
       "scope": "full_suite",
-      "command": "npm test (backend)",
-      "tree_revision": "e9898c8cec938de6734392b352f6d695ccf30b539b2c094123dbfc602b3dfb85",
-      "captured_at": "2026-09-29T09:27:01.796973+00:00",
+      "command": "npm test (backend branch tương ứng image rc3)",
+      "tree_revision": "pages:ee86906b933d98bf6c204ae76c79b555d140d8e6;backend:58c647ec0e19056a61e06e0f648731577055d6c4;image:6709a1cc51e2dbb9e4cec8bfb6fb2050cc2c1196344ba81f7ad72c996477f8a2",
+      "captured_at": "2026-09-30T02:14:00Z",
       "exit_code": 0,
       "outcome": "passed",
-      "passed": 223,
+      "passed": 264,
       "failed": 0,
       "skipped": 0,
-      "evidence": "Backend full suite 223/223 gồm kế hoạch lớp, Journey, outbox/Portal và quyền giảng viên."
+      "evidence": "264/264 trên branch backend HEAD 58c647e, gồm outbox/Portal, quyền giảng viên và Journey."
     },
     {
-      "id": "V-API-CHECK",
-      "scope": "build",
-      "command": "npm run check (backend)",
-      "tree_revision": "e9898c8cec938de6734392b352f6d695ccf30b539b2c094123dbfc602b3dfb85",
-      "captured_at": "2026-09-29T09:27:01.796973+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 1,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "Node syntax check các module backend đạt."
-    },
-    {
-      "id": "V-PAGES-FOCUSED",
-      "scope": "focused",
-      "command": "node --test 10 file progress-log không gọi production",
-      "tree_revision": "e9898c8cec938de6734392b352f6d695ccf30b539b2c094123dbfc602b3dfb85",
-      "captured_at": "2026-09-29T09:27:01.796973+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 31,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "Progress Log 31/31 gồm form kế hoạch giảng viên và trạng thái Test theo kế hoạch."
-    },
-    {
-      "id": "V-BROWSER",
-      "scope": "behavioral",
-      "command": "Playwright CLI với API fixture localhost",
-      "tree_revision": "e9898c8cec938de6734392b352f6d695ccf30b539b2c094123dbfc602b3dfb85",
-      "captured_at": "2026-09-29T09:27:01.796973+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 2,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "Playwright CLI localhost: chọn tên → Journey 8 buổi, Test không phiếu, desktop/mobile, console 0 lỗi; ảnh ở E:/Codex-Data/progress-log-journey-qa. Sau đó VM/PGlite kiểm cảnh báo kế hoạch cũ."
-    },
-    {
-      "id": "V-API-DATES",
-      "scope": "full_suite",
-      "command": "npm test (backend)",
-      "tree_revision": "9ebb12b39237b0935dc421dcbce368e01bfa64dee6a1a569d6cb653df2b42653",
-      "captured_at": "2026-09-29T19:05:42.870388+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 224,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "224/224, gồm migration JSONB, Journey, route validation, Portal/outbox regression."
-    },
-    {
-      "id": "V-PAGES-DATES",
+      "id": "V-PAGES-FINAL-29",
       "scope": "focused",
       "command": "node --test tests/progress-log-*.mjs",
-      "tree_revision": "2f38bfa70881812fc94c39a4adf53ac35b323936caeafb1f9f73ed36cef713be",
-      "captured_at": "2026-09-29T19:09:03.599663+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 28,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "28/28 sau sửa giữ bản nháp ngày; demo --check, Node syntax và git diff --check đạt."
-    },
-    {
-      "id": "V-BROWSER-DATES",
-      "scope": "behavioral",
-      "command": "playwright-cli localhost fixture",
-      "tree_revision": "9ebb12b39237b0935dc421dcbce368e01bfa64dee6a1a569d6cb653df2b42653",
-      "captured_at": "2026-09-29T19:05:42.870388+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 2,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "Student Journey desktop/mobile đọc ngày Test buổi 7; teacher form CSS mobile/desktop bằng fixture DOM; backend auth không được mô phỏng."
-    },
-    {
-      "id": "V-API-ERP",
-      "scope": "full_suite",
-      "command": "npm test (backend)",
-      "tree_revision": "9e9b6d02e446acbda37e3b43a203587c4f56c3167d257fafa3f328e2ef08e7f1",
-      "captured_at": "2026-09-29T19:44:17.062344+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 228,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "228/228 gồm đọc ERP, phân quyền, kiểm ID/ngày, PGlite readback và regression Portal."
-    },
-    {
-      "id": "V-PAGES-ERP",
-      "scope": "focused",
-      "command": "node --test 7 file progress-log*.mjs",
-      "tree_revision": "9e9b6d02e446acbda37e3b43a203587c4f56c3167d257fafa3f328e2ef08e7f1",
-      "captured_at": "2026-09-29T19:44:17.062344+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 28,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "28/28 gồm chọn dòng ERP, ngày nhập tay và cảnh báo lịch đổi trong dashboard VM."
-    },
-    {
-      "id": "V-CHECK-ERP",
-      "scope": "build",
-      "command": "npm run check; node --check src/learning-erp-schedule.js; node --check progress-log/teacher.js; git diff --check",
-      "tree_revision": "9e9b6d02e446acbda37e3b43a203587c4f56c3167d257fafa3f328e2ef08e7f1",
-      "captured_at": "2026-09-29T19:44:17.062344+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 4,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "Syntax backend/frontend và diff check đạt."
-    },
-    {
-      "id": "V-API-TEST-CURRENT",
-      "scope": "full_suite",
-      "command": "npm test (backend)",
-      "tree_revision": "533989eda72a1c940811983097f73d554b35f15066ee93bfd2e332a0932cece2",
-      "captured_at": "2026-09-29T20:20:53.792941+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 234,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "234/234 gồm nguồn Test trước khi có điểm, Writing đến muộn, phân lớp/học viên, Portal/outbox."
-    },
-    {
-      "id": "V-PAGES-TEST-CURRENT",
-      "scope": "focused",
-      "command": "node --test tests/progress-log-*.mjs",
-      "tree_revision": "533989eda72a1c940811983097f73d554b35f15066ee93bfd2e332a0932cece2",
-      "captured_at": "2026-09-29T20:20:53.792985+00:00",
+      "tree_revision": "pages:ee86906b933d98bf6c204ae76c79b555d140d8e6;backend:58c647ec0e19056a61e06e0f648731577055d6c4;image:6709a1cc51e2dbb9e4cec8bfb6fb2050cc2c1196344ba81f7ad72c996477f8a2",
+      "captured_at": "2026-09-30T02:11:00Z",
       "exit_code": 0,
       "outcome": "passed",
       "passed": 29,
       "failed": 0,
       "skipped": 0,
-      "evidence": "29/29 gồm Journey trong phiếu, Test không assignment, Writing bổ sung sau và form ghép nguồn."
+      "evidence": "29/29 trên Pages HEAD ee86906, gồm chọn tên, Journey, Test chưa có điểm và dashboard kế hoạch."
     },
     {
-      "id": "V-CHECK-CURRENT",
-      "scope": "build",
-      "command": "npm run check (backend); node --check frontend; demo --check; git diff --check",
-      "tree_revision": "533989eda72a1c940811983097f73d554b35f15066ee93bfd2e332a0932cece2",
-      "captured_at": "2026-09-29T20:20:53.792998+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 4,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "Kiểm cú pháp backend/frontend, demo tạo đúng bản nguồn và diff không lỗi whitespace."
-    },
-    {
-      "id": "V-API-INTEGRATED-256",
-      "scope": "full_suite",
-      "command": "npm test (backend)",
-      "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
-      "captured_at": "2026-09-29T20:55:22.404578+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 256,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "256/256 trên ứng viên đã gộp bản xem thử GV; gồm Journey, Test/Writing đến muộn, outbox/Portal và phiên GV."
-    },
-    {
-      "id": "V-PAGES-INTEGRATED-29",
-      "scope": "focused",
-      "command": "node --test tests/progress-log-*.mjs",
-      "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
-      "captured_at": "2026-09-29T20:55:22.404578+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 29,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "29/29 gồm trang demo hiện nút Journey, học viên chọn tên, buổi Test không phiếu và form ghép nguồn."
-    },
-    {
-      "id": "V-CHECK-INTEGRATED",
-      "scope": "build",
-      "command": "npm run check; npm run check:demo; demo build --check; node --check frontend; git diff --check",
-      "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
-      "captured_at": "2026-09-29T20:55:22.404578+00:00",
+      "id": "V-IC2305-PROD",
+      "scope": "behavioral",
+      "command": "Dashboard/phiếu production và DB/Portal readback",
+      "tree_revision": "pages:ee86906b933d98bf6c204ae76c79b555d140d8e6;backend:58c647ec0e19056a61e06e0f648731577055d6c4;image:6709a1cc51e2dbb9e4cec8bfb6fb2050cc2c1196344ba81f7ad72c996477f8a2",
+      "captured_at": "2026-09-30T02:14:00Z",
       "exit_code": 0,
       "outcome": "passed",
       "passed": 5,
       "failed": 0,
       "skipped": 0,
-      "evidence": "Kiểm cú pháp, bản demo sinh từ trang chính và whitespace đạt trên ứng viên."
-    },
-    {
-      "id": "V-BROWSER-DEMO-JOURNEY",
-      "scope": "focused",
-      "command": "Playwright CLI localhost: chọn tên mẫu → Journey; 390x844; console error",
-      "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f",
-      "captured_at": "2026-09-29T20:55:22.404578+00:00",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 3,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "Trang demo gọi API PGlite local, Journey hiện 4 buổi, 3 ô chưa có nguồn; mobile không tràn ngang; console 0 lỗi."
-    },
-    {
-      "id": "V-OVERLAY-FULL-20260930",
-      "scope": "full_suite",
-      "command": "npm test trên cây source ghép từ image production và module Journey",
-      "tree_revision": "pages:5262a0c;backend:66bbd51;live-image:speaking-docs-event:20260929-fix2",
-      "captured_at": "2026-09-29T21:25:38Z",
-      "exit_code": 1,
-      "outcome": "failed",
-      "passed": 255,
-      "failed": 1,
-      "skipped": 0,
-      "evidence": "Test Term Test teacher-options đòi accessMode/isAssignedTeacher của branch; image production hiện chỉ trả id/name. Không coi full suite image cuối là đạt."
-    },
-    {
-      "id": "V-PROD-READONLY-PRECHECK-20260930",
-      "scope": "focused",
-      "command": "Kiểm chỉ đọc từ container production: bảng Test, một lịch ERP, hàng chờ và hàng Portal",
-      "tree_revision": "live-image:speaking-docs-event:20260929-fix2",
-      "captured_at": "2026-09-29T21:25:38Z",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 4,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "Bảng Test đọc được; lịch ERP một lớp có 29 dòng trong 1,1 giây; 102 job điểm danh complete; job gần nhất đối chiếu được một hàng Portal có mặt. Đây là baseline trước phát hành."
-    },
-    {
-      "id": "V-BRANCH-MERGED-263-20260930",
-      "scope": "full_suite",
-      "command": "npm test trên backend branch sau khi ghép main Speaking buổi 4",
-      "tree_revision": "backend:5f58ec0",
-      "captured_at": "2026-09-29T21:41:57Z",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 263,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "263/263; npm run check, check:demo, npm ci dry-run và git diff --check cũng đạt."
-    },
-    {
-      "id": "V-OVERLAY-LIVE-263-20260930",
-      "scope": "full_suite",
-      "command": "npm test trên source nguyên từ speaking-lesson4:20260930-v1 cộng tám module Journey",
-      "tree_revision": "backend:43e109a;live-image:speaking-lesson4:20260930-v1",
-      "captured_at": "2026-09-29T21:41:57Z",
-      "exit_code": 1,
-      "outcome": "failed",
-      "passed": 260,
-      "failed": 3,
-      "skipped": 0,
-      "evidence": "Ba ca Term Test khác source branch: giới hạn job 6/4 (chạy riêng cũng lỗi), fixture thiếu class_started_at, dashboard thiếu accessMode/isAssignedTeacher."
-    },
-    {
-      "id": "V-LIVE-READERS-20260930",
-      "scope": "focused",
-      "command": "docker run image ứng viên, đọc ERP/Test thật ở chế độ chỉ đọc",
-      "tree_revision": "candidate-image:izone-progress-log-journey:20260930-rc1",
-      "captured_at": "2026-09-29T21:41:57Z",
-      "exit_code": 0,
-      "outcome": "passed",
-      "passed": 3,
-      "failed": 0,
-      "skipped": 0,
-      "evidence": "ERP reader 29 dòng/0,8 giây; Test source reader ba bài; Test result reader một kết quả đúng học viên/lớp/bài, Writing chưa nộp. Chưa ghi dữ liệu thật."
+      "evidence": "Dashboard 31/31, học viên 31 ô, API healthy, 67/67 Portal lịch sử, không ghi Journey thành điểm danh."
     }
   ],
   "convergence": {
-    "status": "gaps",
-    "tree_revision": "pages:48bd953;backend:43e109a;live-image:speaking-lesson4:20260930-v1",
-    "gaps": [
-      "Đã chạy ba nguồn đọc ERP/Test từ image ứng viên trên dữ liệu thật, nhưng ba biến Metabase chưa được cấu hình cho API; chưa ghép lớp thật trên dashboard.",
-      "Full suite trên source image live cộng Journey chưa đạt: 260/263 do ba chênh lệch Term Test giữa image và Git/fixture.",
-      "Workflow Portal còn fallback theo thứ tự ngày class_sessions; cần đối chiếu ánh xạ giảng viên và kết quả Portal đúng buổi trên lớp thật.",
-      "Chưa áp migration, phát hành, quan sát production hoặc diễn tập rollback cho ứng viên tích hợp."
-    ],
+    "status": "passed",
+    "tree_revision": "pages:ee86906b933d98bf6c204ae76c79b555d140d8e6;backend:58c647ec0e19056a61e06e0f648731577055d6c4;image:6709a1cc51e2dbb9e4cec8bfb6fb2050cc2c1196344ba81f7ad72c996477f8a2",
+    "gaps": [],
     "unrequested_work": [],
-    "evidence": "Hai branch/PR nháp đã push; backend branch 263/263 và Pages 29/29. Image ứng viên build và đọc được ERP/Test thật, nhưng full suite image live 260/263; production chưa đổi hoặc được nghiệm thu."
+    "evidence": "Phạm vi pilot IC2305 đã có migration, API/Pages production, 31/31 buổi, full suite và readback 67/67 Portal lịch sử. Event mới sau deploy và Test thật là quan sát tiếp theo, chưa dùng để gọi verified."
   },
   "context_handoff": {
-    "summary": "S1/S2/S3A/S3B1/S3B2A và ERP/Test S3B2B local đã làm, gồm demo Journey; S3B2B3/S4 cần lớp thật và cổng phát hành.",
+    "summary": "Journey trong Progress Log đã phát hành, IC2305 là lớp đầu tiên có kế hoạch 31 buổi xác nhận.",
     "decisions": [
       "Journey nằm trong Progress Log, không tạo link mới.",
       "Giữ cách chọn tên hiện tại theo Đức.",
@@ -1107,34 +896,25 @@
       "S3A",
       "S3B1",
       "S3B2A",
-      "demo fallback",
-      "S3B2B1 local",
-      "S3B2B2 local",
-      "dashboard rà lịch ERP đổi local",
-      "gộp teacher preview",
-      "demo Journey local"
+      "S3B2B",
+      "S4"
     ],
-    "next_step": "Chọn lớp thật có ánh xạ học viên và Test rõ ràng; kiểm ERP/Test từ container, đối chiếu Portal theo buổi, áp migration rồi canary sau khi có quyền phát hành.",
+    "next_step": "Quan sát submission đủ điều kiện tiếp theo của IC2305 đến Portal; chỉ ghép buổi Test khi có bằng chứng bài thuộc lớp, Writing chấm xong thì đọc lại.",
     "open_risks": [
-      "K-IDENTITY",
-      "K-SOURCE"
+      "K-IDENTITY đã được Đức chọn giữ có hạn",
+      "K-SOURCE còn cần rà lịch ERP thay đổi và Test thật"
     ],
-    "tree_revision": "pages:914b6de433f6bc9475322df70e5b1c1b958b627e;backend:990e43812a58a8267d2413bfb5926ee161dd670f"
+    "tree_revision": "pages:ee86906b933d98bf6c204ae76c79b555d140d8e6;backend:58c647ec0e19056a61e06e0f648731577055d6c4;image:6709a1cc51e2dbb9e4cec8bfb6fb2050cc2c1196344ba81f7ad72c996477f8a2"
   },
   "release": {
     "target_environment": "production",
-    "decision": "not_ready",
+    "decision": "deployed_awaiting_validation",
     "base_tree_revision": "pages:46abd0e;backend:8fab5d3",
-    "current_tree_revision": "pages:48bd953;backend:43e109a;live-image:speaking-lesson4:20260930-v1",
+    "current_tree_revision": "pages:ee86906b933d98bf6c204ae76c79b555d140d8e6;backend:58c647ec0e19056a61e06e0f648731577055d6c4;image:6709a1cc51e2dbb9e4cec8bfb6fb2050cc2c1196344ba81f7ad72c996477f8a2",
     "production_authorized": true,
-    "rollback": "Giữ container/image API đang chạy và revision Pages main hiện hành để quay lại; migration chỉ thêm bảng nên giữ dữ liệu khi rollback code.",
-    "deployment_readback": "not_run",
-    "operational_observation": "Image ứng viên đã build và chạy nguồn ERP/Test ở chế độ chỉ đọc; baseline Portal đọc được. Chưa áp migration, chuyển production hoặc quan sát event mới sau chuyển bản.",
-    "open_risks": [
-      {
-        "severity": "P1",
-        "summary": "Nguồn lịch/Test và xác thực theo chọn tên còn giới hạn."
-      }
-    ]
+    "rollback": "API: chuyển về container/image speaking-lesson4:20260930-v1 đang giữ; Pages: revert PR #36 trên branch mới và build lại. Giữ bảng kế hoạch và backup private.",
+    "deployment_readback": "verified",
+    "operational_observation": "API health/ready và trang giảng viên/học viên production đã đọc lại; 67/67 Portal lịch sử khớp. Chưa có submission mới sau image rc3 hoặc kết quả Test của IC2305.",
+    "open_risks": []
   }
 }
