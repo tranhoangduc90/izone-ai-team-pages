@@ -16,15 +16,15 @@ function renderCourse() {
   document.querySelector('#metric-scale-note').textContent = isK67 ? 'Listening · Reading · Writing' : 'theo từng bài';
   document.querySelector('#metric-classes').textContent = isAll ? '03' : '02';
   document.querySelector('#metric-class-note').textContent = isAll
-    ? 'DEMO · IC2264 · IC2139'
-    : isK67 ? 'DEMO và IC2139' : 'DEMO và IC2264';
+    ? 'DEMO · IC2264 · IC2063'
+    : isK67 ? 'DEMO và IC2063' : 'DEMO và IC2264';
   document.querySelector('#portal-badge').textContent = isAll
     ? 'Bản online · K56 + K67'
     : `Bản online · Khóa ${isK67 ? '67' : '56'}`;
   document.querySelector('#privacy-note').textContent = isAll
-    ? 'DEMO không gửi Portal; K56 dùng lớp IC2264, còn đồng bộ Portal K67 lớp IC2139 đang chờ hoàn thiện.'
+    ? 'DEMO không gửi Portal; K56 dùng lớp IC2264, K67 đồng bộ lớp IC2063 vào các cột Phase thi lại.'
     : isK67
-      ? 'DEMO không gửi Portal; đồng bộ Portal lớp IC2139 đang chờ hoàn thiện.'
+      ? 'DEMO không gửi Portal; lớp IC2063 đồng bộ vào các cột Phase thi lại.'
       : 'DEMO không gửi Portal; lớp IC2264 áp dụng quy tắc điểm thi lại.';
   const next = new URL(location.href);
   if (isAll) next.searchParams.delete('course');

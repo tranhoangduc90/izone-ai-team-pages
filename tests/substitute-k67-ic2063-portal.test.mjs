@@ -20,3 +20,11 @@ test('Giao diện K67 hướng dẫn đúng mã lớp IC2063', () => {
   assert.match(app, /\?class=IC2063/u);
   assert.doesNotMatch(app, /IC2139/u);
 });
+
+test('Trang tổng hợp không còn hướng người học K67 đến IC2139', () => {
+  for (const name of ['app.js', 'index.html']) {
+    const text = fs.readFileSync(path.join(root, 'term-tests/substitute-test-1-k56-dashboard', name), 'utf8');
+    assert.match(text, /IC2063/u);
+    assert.doesNotMatch(text, /IC2139/u);
+  }
+});
