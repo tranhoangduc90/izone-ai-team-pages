@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20260922-task2-results-writing-complete'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20260930-ic2063'))
       .then(() => loadScript('enhance.js'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -63,8 +63,8 @@
       name: 'DEMO · Chỉ kiểm tra, không gửi Portal'
     },
     {
-      code: 'IC2139',
-      name: 'IC2139 · Lớp K67'
+      code: 'IC2063',
+      name: 'IC2063 · Lớp K67'
     }
   ]);
 
@@ -560,7 +560,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20260922-task2-results-writing-complete');
+    await loadScript('../substitute-k67-shared/app.js?v=20260930-ic2063');
     await loadScript('enhance.js');
     await loadScript('annotations.js');
   }
@@ -718,7 +718,12 @@
   async function loadDemoRoster(selectedClass) {
     if (!selectedClass) return [];
     if (selectedClass.code === 'DEMO') return [{ ref: 'demo-k67-sub2-01', name: 'Học viên Demo K67' }];
-    const response = await fetch(`https://ducizone.ddns.net/mapping-api/api/term-tests/roster?class=${encodeURIComponent(selectedClass.code)}&test=term-test-2`, { cache: 'no-store' });
+    const response = await fetch(appConfig.API_BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ route: '/api/test/roster', payload: { classCode: selectedClass.code } }),
+      cache: 'no-store'
+    });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Không tải được danh sách lớp từ Portal.');
     return Array.isArray(data.students) ? data.students : [];

@@ -2293,7 +2293,7 @@
 
     if (!/^[A-Z0-9_-]{2,32}$/.test(classCode)) {
       elements.loadingView.hidden = true;
-      showNotice('Link chưa có mã lớp hợp lệ. Hãy dùng dạng ?class=IC2139.', 'error');
+      showNotice('Link chưa có mã lớp hợp lệ. Hãy dùng dạng ?class=IC2063.', 'error');
       return;
     }
 
