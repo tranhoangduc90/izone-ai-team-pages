@@ -87,6 +87,12 @@
     "outcome": "success",
     "readback": "verified",
     "evidence": "Đọc lại HTML/CSS; Playwright local thấy màu đúng và hướng dẫn /s/t_."
+  }, {
+    "id": "M-PAGES",
+    "target": "GitHub Pages Speaking Homework buổi 2 và 3",
+    "outcome": "success",
+    "readback": "verified",
+    "evidence": "Commit b3398d5 đã lên main, Pages run 36656911983 thành công; hai HTML và CSS công khai HTTP 200, màu thực đo đúng."
   }],
   "verification_runs": [{
     "id": "V-SPEAKING",
@@ -112,6 +118,18 @@
     "failed": 0,
     "skipped": 0,
     "evidence": "Buổi 2 và 3 không tràn ngang ở 390 px; buổi 2 đủ chín ảnh, Escape đóng hộp; buổi 3 đủ bốn thẻ phần."
+  }, {
+    "id": "V-PRODUCTION",
+    "scope": "behavioral",
+    "command": "Playwright CLI mở hai URL Pages và thử link /s/t_ ở buổi 2; HTTP GET hai HTML cùng CSS",
+    "tree_revision": "aa34d01c92eafd60cff456eb19bd3c77a191611b351d762f7e58bb63a779c6b0",
+    "captured_at": "2026-09-30T02:01:00Z",
+    "exit_code": 0,
+    "outcome": "passed",
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "Hai HTML/CSS HTTP 200 và có hướng dẫn /s/t_; buổi 2/3 đúng màu IZONE, 390 px không tràn ngang; buổi 2 chặn /s/t_ với chữ Chưa nhận bài."
   }],
   "convergence": {
     "status": "passed",
@@ -122,10 +140,12 @@
   },
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "7c2276e33099739db3397013724ee718ac75028f",
     "current_tree_revision": "aa34d01c92eafd60cff456eb19bd3c77a191611b351d762f7e58bb63a779c6b0",
     "production_authorized": true,
+    "deployment_readback": "verified",
+    "operational_observation": "Pages build thành công; trình duyệt mới đọc được màu/hướng dẫn của cả hai trang và thử link /s/t_ trên bản public buổi 2 không nhận bài. Buổi 3 chưa nộp thử bài thật vì thay đổi chỉ ở lời hướng dẫn.",
     "rollback": "Revert commit Pages của task này, chờ Pages build và đọc lại hai URL; không có dữ liệu học viên cần hoàn tác.",
     "open_risks": []
   },
