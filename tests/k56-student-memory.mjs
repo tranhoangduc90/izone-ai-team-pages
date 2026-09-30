@@ -57,7 +57,7 @@ test('K56 chọn học viên thủ công, không hiện điều khiển ghi nh�
         { ref: studentA, name: 'Học viên A' }, { ref: studentB, name: 'Học viên B' }
       ] }) });
     }
-    if (url.pathname.endsWith('/session/prepare')) {
+    if (url.pathname.endsWith('/attempt/prepare')) {
       prepares += 1;
       return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'Fixture chặn chuẩn bị bài.' }) });
     }
@@ -115,7 +115,7 @@ test('K56 tự mở khóa chọn học viên khi lượt cũ đã bị quản tr
         { ref: studentA, name: 'Học viên A' }, { ref: studentB, name: 'Học viên B' }
       ] }) });
     }
-    if (url.pathname.endsWith('/session/resume-attempt')) {
+    if (url.pathname.endsWith('/attempt/prepare')) {
       return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({
         ok: false, error: 'ATTEMPT_NOT_FOUND', message: 'Không tìm thấy lượt thi đã lưu.'
       }) });

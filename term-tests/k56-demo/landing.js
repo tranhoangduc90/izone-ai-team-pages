@@ -23,6 +23,44 @@ const sessionClients = new Map(apiBaseUrls.map(apiBaseUrl => [apiBaseUrl, create
 })]));
 const authenticatedApiUrls = new Set();
 let loginGeneration = 0;
+const landingQuery = new URLSearchParams(location.search);
+let examMode = landingQuery.get('mode') === 'read_first' ? 'read_first' : 'lis_first';
+function updateLandingUrl() {
+  landingQuery.set('mode', examMode);
+  const classCode = selectedClassCode();
+  if (validClassCode(classCode)) landingQuery.set('class', classCode);
+  window.history.replaceState(window.history.state, '', `?${landingQuery.toString()}`);
+}
+function testLink(destination, classCode) {
+  const params = new URLSearchParams({ class: classCode });
+  if (!destination.endsWith('-audio')) params.set('mode', examMode);
+  return `../${destination}/?${params.toString()}`;
+}
+document.querySelectorAll('[data-mode]').forEach(button => {
+  const refresh = () => {
+    const selected = button.dataset.mode === examMode;
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  };
+  refresh();
+  button.addEventListener('click', () => {
+    examMode = button.dataset.mode;
+    updateLandingUrl();
+    document.querySelectorAll('[data-mode]').forEach(item => {
+      const selected = item.dataset.mode === examMode;
+      item.classList.toggle('is-selected', selected);
+      item.setAttribute('aria-pressed', String(selected));
+    });
+  });
+});
+document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
+  const classCode = selectedClassCode();
+  if (!validClassCode(classCode)) { input.reportValidity(); return; }
+  const link = new URL(testLink(button.dataset.copy, classCode), window.location.href).href;
+  const status = document.getElementById('copyLinkStatus');
+  try { await navigator.clipboard.writeText(link); status.textContent = 'Đã sao chép link đúng lớp và thứ tự.'; }
+  catch { status.textContent = `Trình duyệt chưa cho sao chép; hãy sao chép link này: ${link}`; }
+}));
 
 function selectLandingButton(selectedButton) {
   document.querySelectorAll('.landing-choice').forEach(button => {
@@ -180,7 +218,8 @@ document.querySelectorAll('[data-test]').forEach(button => {
       const payload = await response.json();
       if (!response.ok || !payload.ok) throw new Error(payload.message || 'Lớp này chưa được mở bài test trên hệ thống K56.');
       if (!Array.isArray(payload.students) || !payload.students.length) throw new Error('Lớp chưa có danh sách học viên cho bài test này.');
-      window.location.href = `../${button.dataset.test}/?class=${encodeURIComponent(classCode)}`;
+      updateLandingUrl();
+      window.location.href = testLink(button.dataset.test, classCode);
     } catch (error) {
       classHelp.textContent = `Không mở được bài test: ${error.message}`;
     } finally { button.disabled = false; }
@@ -197,7 +236,8 @@ document.querySelectorAll('[data-destination]').forEach(button => {
       return;
     }
     input.setCustomValidity('');
-    window.location.href = `../${button.dataset.destination}/?class=${encodeURIComponent(classCode)}`;
+    updateLandingUrl();
+    window.location.href = testLink(button.dataset.destination, classCode);
   });
 });
 

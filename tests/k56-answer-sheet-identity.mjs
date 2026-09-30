@@ -11,11 +11,13 @@ for (const app of apps) {
     const elements = Object.fromEntries(['identityView', 'loadingView', 'listeningView', 'listeningSavedView', 'readingView', 'writingPrepView', 'writingView', 'resultReadyView', 'resultView', 'studentSelect'].map(name => [name, { hidden: true, disabled: false }]));
     const context = {
       state: { studentRef, attemptToken }, demoMode: '', writingConfig: null,
-      elements, views: Object.values(elements), progressSteps: [],
+      elements, views: Object.values(elements), URL, URLSearchParams,
+      progressSteps: ['listening', 'reading', 'result'].map(skill => ({ dataset: { progress: skill }, parentElement: { append() {} }, classList: { toggle() {} } })),
       stopWritingGradingPolling() {},
-      document: { body: { classList: { contains: () => cbt } } },
-      window: { scrollTo() {} }
+      document: { getElementById() {return null;}, body: { classList: { contains: () => cbt } } },
+      window: { scrollTo() {}, setInterval() {return 1;}, location: {search: ''} }
     };
+    vm.runInNewContext(fs.readFileSync(new URL('../term-tests/k56-exam-order.js', import.meta.url), 'utf8'), context);
     vm.runInNewContext(stageCode + '\nsetStage(' + JSON.stringify(current) + ');', context);
     return elements;
   }

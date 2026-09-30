@@ -33,7 +33,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-shared/app.js?v=20260912-load-guard-v1-student-feedback-v1-html-v2-teacher-parity-v1-live-writing-result-v1'))
+      .then(() => loadScript('../k56-shared/app.js?v=20260912-load-guard-v1-student-feedback-v1-html-v2-teacher-parity-v1-live-writing-result-v1-k56-order-v1'))
       .then(() => loadScript('enhance.js?v=20260912-load-guard-v1'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -150,6 +150,16 @@
     'bootstrapStart', 'bootstrapNotice', 'bootstrapRememberStudent', 'bootstrapConfirmPrefilled', 'bootstrapChangeStudent'
   ].map(id => [id, document.getElementById(id)]));
   const previewAudio = document.createElement('audio');
+  function showLobby(skill) {
+    const reading = skill === 'reading';
+    document.querySelector('.cbt-lobby-steps').hidden = reading;
+    document.querySelector('.cbt-lobby-badge').textContent = reading ? 'Chuẩn bị Reading' : 'Phòng chờ Listening';
+    document.getElementById('securePrepTitle').textContent = reading ? 'Xác nhận học viên trước khi bắt đầu Reading' : 'Kiểm tra âm thanh trước khi bắt đầu';
+    document.querySelector('.cbt-lobby-header > p').textContent = reading
+      ? 'Sau khi xác nhận, bạn tự bấm bắt đầu Reading. Audio chỉ mở khi chuyển sang Listening.'
+      : 'Audio chính được tải dưới dạng mã hóa và chỉ mở khi bạn bấm Bắt đầu.';
+  }
+  showLobby((state.examMode || window.K56_EXAM_ORDER.requested()) === 'read_first' && !state.readingSubmitted ? 'reading' : 'listening');
   previewAudio.hidden = true;
   document.body.append(previewAudio);
   const identityDialog = document.getElementById('identityConfirm');
@@ -568,43 +578,52 @@
         await downloadLocalDemoAudio();
         return;
       }
-      if (state.attemptToken) {
-        await resumeAfterListening();
-        return;
-      }
-      const prepared = await apiRequest(`/api/term-tests/${testConfig.slug}/session/prepare`, {
+      const prepared = await apiRequest(`/api/term-tests/${testConfig.slug}/attempt/prepare`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           classCode,
           studentRef,
+          mode: window.K56_EXAM_ORDER.requested(),
+          attemptToken: state.attemptToken || undefined,
           examSessionToken: state.examSessionToken || undefined,
           legacyElapsedSeconds: legacyListeningResume ? legacyUiState.audioTime : 0
         })
       });
+      const sameAttempt = !state.attemptToken || state.attemptToken === prepared.attemptToken;
+      const keepLocal = skill => sameAttempt && Number(state.draftRevisions?.[skill] || 0) > Number(prepared[skill + 'DraftRevision'] || 0);
+      const draftPatch = {
+        listening: keepLocal('listening') ? state.drafts.listening : prepared.listeningDraft || {},
+        reading: keepLocal('reading') ? state.drafts.reading : prepared.readingDraft || {}
+      };
+      const revisionPatch = {
+        listening: keepLocal('listening') ? state.draftRevisions.listening : prepared.listeningDraftRevision || 0,
+        reading: keepLocal('reading') ? state.draftRevisions.reading : prepared.readingDraftRevision || 0
+      };
+      const modeChanged = window.K56_EXAM_ORDER.apply(state, prepared);
+      showLobby(prepared.nextSection === 'reading' ? 'reading' : 'listening');
+      saveState({
+        ...state,
+        preparedAttempt: prepared,
+        drafts: {
+          ...(state.drafts || {}),
+          ...draftPatch
+        },
+        draftRevisions: revisionPatch,
+        draftAckRevisions: { listening: prepared.listeningDraftRevision || 0, reading: prepared.readingDraftRevision || 0 }
+      });
+      if (modeChanged) showNotice('Lượt đang làm giữ thứ tự đã chọn trước đó; link đã được cập nhật.');
       saveState({
         examSessionToken: prepared.examSessionToken,
         listeningStartedAt: prepared.listeningStartedAt,
         listeningDeadlineAt: prepared.listeningDeadlineAt,
         attemptToken: prepared.attemptToken || state.attemptToken || '',
-        drafts: {
-          ...(state.drafts || {}),
-          listening: { ...(prepared.listeningDraft || state.drafts?.listening || {}) },
-          reading: { ...(prepared.readingDraft || state.drafts?.reading || {}) }
-        },
-        draftRevisions: {
-          ...(state.draftRevisions || {}),
-          listening: Number(prepared.listeningDraftRevision) || Number(state.draftRevisions?.listening) || 0,
-          reading: Number(prepared.readingDraftRevision) || Number(state.draftRevisions?.reading) || 0
-        },
-        draftAckRevisions: {
-          ...(state.draftAckRevisions || {}),
-          listening: Number(prepared.listeningDraftRevision) || Number(state.draftAckRevisions?.listening) || 0,
-          reading: Number(prepared.readingDraftRevision) || Number(state.draftAckRevisions?.reading) || 0
-        }
+        drafts: { ...(state.drafts || {}), ...draftPatch },
+        draftRevisions: revisionPatch,
+        draftAckRevisions: { listening: prepared.listeningDraftRevision || 0, reading: prepared.readingDraftRevision || 0 }
       });
-      if (state.attemptToken || prepared.listeningSubmitted) {
-        await resumeAfterListening();
+      if (prepared.nextSection !== 'listening') {
+        await enterExam(prepared);
         return;
       }
       await downloadForSession(prepared);
@@ -652,12 +671,19 @@
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: Boolean(state.attemptToken || started.listeningSubmitted),
+      skipListeningAudio: Boolean(started.listeningSubmitted || started.nextSection === 'reading' || started.completed),
+      preparedAttempt: state.preparedAttempt ? {
+        ...state.preparedAttempt,
+        listeningStartedAt: started.listeningStartedAt || state.listeningStartedAt || '',
+        listeningDeadlineAt: started.listeningDeadlineAt || state.listeningDeadlineAt || '',
+        serverNow: started.serverNow,
+        modeMismatch: state.preparedAttempt.modeMismatch
+      } : null,
       annotationRunId: state.annotationRunId
     });
     previewAudio.remove();
     revokePreview();
-        await loadScript('../k56-shared/app.js?v=20260912-load-guard-v1-student-feedback-v1-html-v2-teacher-parity-v1-live-writing-result-v1');
+        await loadScript('../k56-shared/app.js?v=20260912-load-guard-v1-student-feedback-v1-html-v2-teacher-parity-v1-live-writing-result-v1-k56-order-v1');
     await loadScript('enhance.js?v=20260912-load-guard-v1');
     await loadScript('annotations.js');
   }

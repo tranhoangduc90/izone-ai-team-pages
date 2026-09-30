@@ -99,10 +99,11 @@ for (const { slug, taskNumber } of [
         calls.push(request.postDataJSON());
         return route.fulfill({ json: resultPayload({ slug, taskNumber, ready }) });
       }
-      if (url.pathname === `/mapping-api/api/term-tests/${slug}/session/resume-attempt`) {
+      if (url.pathname === `/mapping-api/api/term-tests/${slug}/attempt/prepare`) {
         return page.evaluate(() => window.K56_TERM_TEST_CONTENT).then(content => route.fulfill({ json: {
           content, serverNow: new Date().toISOString(),
-          attemptToken, listeningSubmitted: true
+          attemptToken, examMode: 'lis_first', nextSection: 'result', completed: true,
+          listeningSubmitted: true, readingSubmitted: true, writingSubmittedAt: new Date().toISOString()
         } }));
       }
       if (url.pathname === '/mapping-api/api/term-tests/result/stream') {

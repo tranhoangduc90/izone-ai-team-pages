@@ -116,6 +116,10 @@
       clientSubmissionId: state.clientSubmissionId,
       examSessionToken: state.examSessionToken,
       attemptToken: state.attemptToken,
+      examMode: state.examMode,
+      listeningSubmitted: state.listeningSubmitted,
+      readingSubmitted: state.readingSubmitted,
+      nextSection: state.nextSection,
       listeningStartedAt: state.listeningStartedAt,
       readingStartedAt: state.readingStartedAt,
       writingStartedAt: state.writingStartedAt,
@@ -340,7 +344,81 @@
     elements.notice.className = 'notice';
   }
 
+  async function prepareK56Attempt() {
+    if (!state.studentRef) return;
+    const response = await apiRequest(`/api/term-tests/${testConfig.slug}/attempt/prepare`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classCode, studentRef: state.studentRef, mode: window.K56_EXAM_ORDER.requested() })
+    });
+    await showPreparedAttempt(response);
+  }
+
+  async function showPreparedAttempt(response) {
+    const sameAttempt = !state.attemptToken || state.attemptToken === response.attemptToken;
+    const modeChanged = window.K56_EXAM_ORDER.apply(state, response);
+    for (const skill of ['listening', 'reading']) {
+      if (!sameAttempt || Number(response[skill + 'DraftRevision'] || 0) >= Number(state.draftRevisions[skill] || 0)) {
+        applySectionDraft(skill, response[skill + 'Draft'], response[skill + 'DraftRevision']);
+      }
+    }
+    saveSession();
+    if (response.completed) {
+      await restoreAttemptFromServer();
+      if (writingConfig && !state.writingSubmitted) setStage(state.writingStarted ? 'writing' : 'writing-prep');
+      else { setStage('result-ready'); if (state.writingSubmitted) await loadResult(elements.viewResult); }
+    } else if (response.nextSection === 'reading' && response.readingStartedAt) {
+      elements.readingStudentName.textContent = state.studentName;
+      setStage('reading');
+    } else if (response.nextSection === 'listening' && response.listeningStartedAt) {
+      setStage('listening');
+    } else {
+      showSectionReady(response.nextSection);
+    }
+    if (modeChanged || response.modeMismatch) showNotice('Lượt thi giữ thứ tự đã chọn trước đó. Link đã được cập nhật cho đúng lượt.', 'success');
+    else hideNotice();
+  }
+
+  function showSectionReady(skill) {
+    let panel = document.getElementById('k56SectionReady');
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = 'k56SectionReady';
+      panel.className = 'panel transition-card';
+      const title = document.createElement('h2');
+      const help = document.createElement('p');
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'button button-primary';
+      panel.append(title, help, button);
+      document.querySelector('.page-shell').append(panel);
+    }
+    const label = skill === 'reading' ? 'Reading' : 'Listening';
+    panel.querySelector('h2').textContent = `Chuẩn bị phần ${label}`;
+    panel.querySelector('p').textContent = 'Thông tin học viên đã xác nhận. Đồng hồ chỉ bắt đầu khi bạn bấm bắt đầu phần này.';
+    const button = panel.querySelector('button');
+    button.textContent = `Bắt đầu ${label}`;
+    button.onclick = async () => {
+      if (skill === 'reading') return startOrResumeReading(button);
+      if (document.body.classList.contains('cbt-mode')) { window.location.reload(); return; }
+      setBusy(button, true, 'Đang mở Listening...', 'Bắt đầu Listening');
+      try {
+        const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ examSessionToken: state.examSessionToken })
+        });
+        state.listeningStartedAt = started.listeningStartedAt;
+        state.listeningDeadlineAt = started.listeningDeadlineAt;
+        state.serverTimeOffsetMs = Date.parse(started.serverNow) - Date.now();
+        saveSession(); hideNotice(); setStage('listening');
+      } catch (error) { showNotice(`Chưa thể mở Listening: ${error.message}`, 'error'); }
+      finally { setBusy(button, false, '', 'Bắt đầu Listening'); }
+    };
+    setStage('section-ready'); panel.hidden = false;
+  }
+
   function setStage(stage) {
+    if (!demoMode) window.K56_EXAM_ORDER.deadlineGuard(state, elements);
+    const ready = document.getElementById('k56SectionReady');
+    if (ready) ready.hidden = stage !== 'section-ready';
     state.stage = stage;
     if (stage !== 'result') stopWritingGradingPolling();
     for (const view of views) view.hidden = true;
@@ -355,20 +433,25 @@
       // Lượt đã nộp phải tiếp tục gắn với cùng học viên, không đổi người giữa các kỹ năng.
       elements.studentSelect.disabled = Boolean(state.attemptToken);
     }
-    const activeProgress = stage === 'listening' || stage === 'listening-saved'
+    const activeProgress = stage === 'section-ready' ? state.nextSection : stage === 'listening' || stage === 'listening-saved'
       ? 'listening'
       : stage === 'reading' ? 'reading'
         : stage === 'writing-prep' || stage === 'writing' ? 'writing'
           : stage === 'result-ready' || stage === 'result' ? 'result' : '';
-    const order = writingConfig ? ['listening', 'reading', 'writing', 'result'] : ['listening', 'reading', 'result'];
+    const order = [...window.K56_EXAM_ORDER.skills(state.examMode || window.K56_EXAM_ORDER.requested()), ...(writingConfig ? ['writing'] : []), 'result'];
+    for (const [index, skill] of order.entries()) {
+      const step = Array.from(progressSteps).find(item => item.dataset.progress === skill);
+      step.textContent = `${index + 1}. ${skill === 'result' ? 'Kết quả' : skill[0].toUpperCase() + skill.slice(1)}`;
+      step.parentElement.append(step);
+    }
     const activeIndex = order.indexOf(activeProgress);
     for (const step of progressSteps) {
       const index = order.indexOf(step.dataset.progress);
       step.classList.toggle('active', index === activeIndex);
       const completed = step.dataset.progress === 'listening'
-        ? Boolean(state.attemptToken || state.result?.result?.listening)
+        ? Boolean(state.listeningSubmitted || state.result?.result?.listening)
         : step.dataset.progress === 'reading'
-          ? Boolean(state.completed || state.result?.result?.reading)
+          ? Boolean(state.readingSubmitted || state.completed || state.result?.result?.reading)
           : step.dataset.progress === 'writing'
             ? Boolean(state.writingSubmitted)
             : false;
@@ -1877,6 +1960,10 @@
     state.studentRef = student?.ref || '';
     state.studentName = student?.name || '';
     saveSession();
+    if (!demoMode && state.studentRef && !document.body.classList.contains('cbt-mode')) {
+      if (!window.confirm(`Xác nhận học viên ${state.studentName} · lớp ${classCode}?`)) return;
+      prepareK56Attempt().catch(error => showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, 'error'));
+    }
   });
 
   elements.listeningView.addEventListener('submit', async event => {
@@ -1942,6 +2029,7 @@
       state.attemptToken = response.attemptToken;
       state.studentName = response.studentName;
       state.completed = Boolean(response.completed);
+      state.listeningSubmitted = true;
       state.frozenAnswers.listening = null;
       state.draftAckRevisions.listening = Math.max(
         Number(state.draftAckRevisions.listening) || 0,
@@ -1991,6 +2079,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attemptToken: state.attemptToken })
       });
+      state.readingStartedAt = response.readingStartedAt;
       state.readingDeadlineAt = response.readingDeadlineAt;
       state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
       if (response.readingDraft || response.readingDraftRevision) {
@@ -2063,7 +2152,9 @@
           answers
         })
       });
-      state.completed = true;
+      state.completed = Boolean(response.completed);
+      state.readingSubmitted = true;
+      state.nextSection = response.nextSection;
       state.frozenAnswers.reading = null;
       state.draftAckRevisions.reading = Math.max(
         Number(state.draftAckRevisions.reading) || 0,
@@ -2072,6 +2163,12 @@
       saveSession();
       submitted = true;
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
+      if (!state.completed) {
+        showNotice('Reading đã được lưu và khóa. Tiếp theo là Listening.', 'success');
+        if (document.body.classList.contains('cbt-mode')) window.location.reload();
+        else showSectionReady('listening');
+        return;
+      }
       if (writingConfig) {
         setStage('writing-prep');
         const portalMessage = portalNotice(response.portalSyncStatus, true);
@@ -2408,6 +2505,17 @@
     try {
       const roster = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
       populateRoster(roster);
+      if (!demoMode) {
+        if (window.TERM_TEST_BOOTSTRAP?.preparedAttempt) {
+          await showPreparedAttempt(window.TERM_TEST_BOOTSTRAP.preparedAttempt);
+          return;
+        }
+        if (!document.body.classList.contains('cbt-mode')) {
+          if (state.studentRef) await prepareK56Attempt();
+          else { setStage('identity-ready'); hideNotice(); }
+          return;
+        }
+      }
       if (!state.roster.length) throw new Error('Lớp chưa có học viên trong hệ thống matching.');
       if (state.attemptToken) {
         try {
