@@ -25,6 +25,18 @@ const state = {
   dashboardGeneration: 0,
   dashboardLoading: 0,
   liveLoadingFor: '',
+  journeyPlan: null,
+  journeyPlanAssignmentId: '',
+  journeyPlanGeneration: 0,
+  journeyPlanDirty: false,
+  journeyPlanDateDraft: new Map(),
+  journeyTestSourceDraft: new Map(),
+  journeyErpSchedule: null,
+  journeyErpScheduleAssignmentId: '',
+  journeyErpScheduleGeneration: 0,
+  journeyTestSources: null,
+  journeyTestSourcesAssignmentId: '',
+  journeyTestSourcesGeneration: 0,
   attendanceStudent: null,
   attendanceOperationId: null,
   reportStudent: null,
@@ -39,6 +51,9 @@ const elements = Object.fromEntries([
   'createTab', 'dashboardTab', 'createPanel', 'dashboardPanel', 'publishForm', 'teacherClassSelect',
   'sessionNumber', 'formTitle', 'skillFilter', 'questionLibrary', 'publishButton', 'publishResult', 'rosterCount',
   'studentLink', 'copyLinkButton', 'assignmentSelect', 'dashboardTitle', 'refreshDashboardButton',
+  'journeyPlanForm', 'journeyPlanTotal', 'journeyPlanTests', 'journeyPlanDates', 'journeyPlanStatus', 'saveJourneyPlanButton', 'reloadJourneyPlanButton',
+  'loadJourneyErpScheduleButton', 'journeyErpScheduleStatus',
+  'loadJourneyTestSourcesButton', 'journeyTestSourcesStatus', 'journeyPlanTestSources',
   'previewStudentButton', 'openStudentFormButton', 'copyCurrentLinkButton', 'liveUpdatedAt',
   'blockControls', 'classInsights', 'dashboardSummary', 'studentList', 'attendanceDialog', 'attendanceForm', 'attendanceStudentName',
   'attendanceStatus', 'attendanceReason', 'attendanceSyncHint', 'saveAttendanceButton', 'reportDialog', 'reportStudentName',
@@ -777,6 +792,294 @@ async function loadLiveDrafts({ quiet = false } = {}) {
   }
 }
 
+function currentJourneyPlanDates() {
+  const dates = new Map(state.journeyPlanDateDraft || []);
+  for (const input of elements.journeyPlanDates.querySelectorAll('input[data-session-number]')) {
+    const number = Number(input.dataset.sessionNumber);
+    if (input.value) dates.set(number, {
+      sessionNumber: number, date: input.value,
+      ...(input.dataset.erpSessionId ? { erpSessionId: input.dataset.erpSessionId } : {})
+    });
+    else dates.delete(number);
+  }
+  state.journeyPlanDateDraft = dates;
+  return [...dates].sort(([left], [right]) => left - right)
+    .map(([, item]) => item);
+}
+
+function renderJourneyPlanDateInputs(totalSessions, sessionDates) {
+  const total = Math.min(100, Math.max(1, Number(totalSessions) || 1));
+  const dates = new Map(sessionDates.map(item => [item.sessionNumber, item]));
+  const tests = new Set(elements.journeyPlanTests.value.split(/[\s,;]+/).map(Number));
+  const available = state.journeyErpScheduleAssignmentId === elements.assignmentSelect.value
+    ? state.journeyErpSchedule : null;
+  const rows = Array.from({ length: total }, (_, index) => {
+    const number = index + 1;
+    const label = document.createElement('label');
+    const title = document.createElement('span');
+    title.textContent = 'Buổi ' + number + (tests.has(number) ? ' · Test' : '');
+    const input = document.createElement('input');
+    input.type = 'date';
+    input.dataset.sessionNumber = String(number);
+    const saved = dates.get(number);
+    input.value = saved?.date || '';
+    if (saved?.erpSessionId) input.dataset.erpSessionId = saved.erpSessionId;
+    const select = document.createElement('select');
+    select.dataset.erpForSession = String(number);
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = 'Ngày nhập tay · chưa ghép ERP';
+    select.append(empty);
+    if (saved?.erpSessionId && !available?.sessions.some(item => item.erpSessionId === saved.erpSessionId)) {
+      const missing = document.createElement('option');
+      missing.value = saved.erpSessionId;
+      missing.textContent = 'Dòng ' + saved.erpSessionId + ' · cần đối chiếu lại';
+      select.append(missing);
+    }
+    for (const item of available?.sessions || []) {
+      const option = document.createElement('option');
+      option.value = item.erpSessionId;
+      option.textContent = item.startsAt + ' · dòng ' + item.erpSessionId;
+      select.append(option);
+    }
+    select.value = saved?.erpSessionId || '';
+    label.append(title, input, select);
+    return label;
+  });
+  elements.journeyPlanDates.replaceChildren(...rows);
+}
+
+function currentJourneyTestSources() {
+  const draft = new Map(state.journeyTestSourceDraft || []);
+  for (const select of elements.journeyPlanTestSources.querySelectorAll('select[data-test-session]')) {
+    const number = Number(select.dataset.testSession);
+    if (select.value) draft.set(number, select.value);
+    else draft.delete(number);
+  }
+  state.journeyTestSourceDraft = draft;
+  return [...draft].sort(([left], [right]) => left - right)
+    .map(([sessionNumber, testSlug]) => ({ sessionNumber, testSlug }));
+}
+
+function renderJourneyTestSourceInputs(testSources) {
+  const numbers = [...new Set(elements.journeyPlanTests.value.split(/[\s,;]+/)
+    .map(Number).filter(number => Number.isInteger(number) && number > 0))].sort((a, b) => a - b);
+  const byNumber = new Map(testSources.map(item => [item.sessionNumber, item.testSlug]));
+  const available = state.journeyTestSourcesAssignmentId === elements.assignmentSelect.value
+    ? state.journeyTestSources : null;
+  const rows = numbers.map(number => {
+    const label = document.createElement('label');
+    const title = document.createElement('span');
+    title.textContent = 'Buổi Test ' + number;
+    const select = document.createElement('select');
+    select.dataset.testSession = String(number);
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = 'Chưa ghép bài Test';
+    select.append(empty);
+    const selected = byNumber.get(number) || '';
+    if (selected && !available?.tests.some(item => item.testSlug === selected)) {
+      const missing = document.createElement('option');
+      missing.value = selected;
+      missing.textContent = selected + ' · cần đối chiếu lại';
+      select.append(missing);
+    }
+    for (const item of available?.tests || []) {
+      const option = document.createElement('option');
+      option.value = item.testSlug;
+      const evidence = item.classEvidence === 'result'
+        ? item.studentsWithResult + ' học viên có kết quả'
+        : item.classEvidence === 'roster'
+          ? 'đã có danh sách lớp, chưa có kết quả'
+          : 'chưa có dấu hiệu của lớp này';
+      option.textContent = item.title + ' · ' + evidence;
+      select.append(option);
+    }
+    select.value = selected;
+    label.append(title, select);
+    return label;
+  });
+  elements.journeyPlanTestSources.replaceChildren(...rows);
+}
+
+async function loadJourneyErpSchedule() {
+  const assignmentId = elements.assignmentSelect.value;
+  if (!assignmentId || !state.journeyPlan || state.journeyPlanAssignmentId !== assignmentId) return;
+  const generation = ++state.journeyErpScheduleGeneration;
+  elements.loadJourneyErpScheduleButton.disabled = true;
+  elements.journeyErpScheduleStatus.textContent = 'Đang đọc lịch ERP…';
+  try {
+    const payload = await apiRequest('/teacher/erp-schedule?assignment=' + encodeURIComponent(assignmentId));
+    if (generation !== state.journeyErpScheduleGeneration
+      || elements.assignmentSelect.value !== assignmentId) return;
+    const draft = currentJourneyPlanDates();
+    state.journeyErpSchedule = payload.schedule;
+    state.journeyErpScheduleAssignmentId = assignmentId;
+    renderJourneyPlanDateInputs(elements.journeyPlanTotal.value, draft);
+    const byId = new Map(payload.schedule.sessions.map(item => [item.erpSessionId, item]));
+    const changed = draft.filter(item => item.erpSessionId
+      && byId.get(item.erpSessionId)?.date !== item.date).length;
+    elements.journeyErpScheduleStatus.textContent = 'Đã đọc ' + payload.schedule.sessions.length
+      + ' dòng lịch. Hãy tự ghép đúng thứ tự buổi.'
+      + (changed ? ' Có ' + changed + ' buổi cần đối chiếu lại vì dòng ERP thiếu hoặc ngày đã đổi.' : '');
+  } catch (error) {
+    if (generation !== state.journeyErpScheduleGeneration
+      || elements.assignmentSelect.value !== assignmentId) return;
+    elements.journeyErpScheduleStatus.textContent = error.message + ' Bạn vẫn có thể nhập ngày thủ công.';
+  } finally {
+    if (generation === state.journeyErpScheduleGeneration) elements.loadJourneyErpScheduleButton.disabled = false;
+  }
+}
+
+async function loadJourneyTestSources() {
+  const assignmentId = elements.assignmentSelect.value;
+  if (!assignmentId || !state.journeyPlan || state.journeyPlanAssignmentId !== assignmentId) return;
+  const generation = ++state.journeyTestSourcesGeneration;
+  elements.loadJourneyTestSourcesButton.disabled = true;
+  elements.journeyTestSourcesStatus.textContent = 'Đang đọc nguồn Test…';
+  try {
+    const payload = await apiRequest('/teacher/test-sources?assignment=' + encodeURIComponent(assignmentId));
+    if (generation !== state.journeyTestSourcesGeneration
+      || elements.assignmentSelect.value !== assignmentId) return;
+    const draft = currentJourneyTestSources();
+    state.journeyTestSources = payload.sources;
+    state.journeyTestSourcesAssignmentId = assignmentId;
+    renderJourneyTestSourceInputs(draft);
+    elements.journeyTestSourcesStatus.textContent = 'Có ' + payload.sources.tests.length
+      + ' bài Test có thể ghép. Bài chưa có kết quả cần giảng viên kiểm đúng nguồn của lớp trước khi chọn.';
+  } catch (error) {
+    if (generation !== state.journeyTestSourcesGeneration
+      || elements.assignmentSelect.value !== assignmentId) return;
+    elements.journeyTestSourcesStatus.textContent = 'Chưa đọc được nguồn Test: ' + error.message;
+  } finally {
+    if (generation === state.journeyTestSourcesGeneration) elements.loadJourneyTestSourcesButton.disabled = false;
+  }
+}
+
+function onJourneyPlanDateInput(event) {
+  if (!event.target?.matches?.('input[data-session-number]')) return;
+  delete event.target.dataset.erpSessionId;
+  const select = event.target.parentElement?.querySelector('select[data-erp-for-session]');
+  if (select) select.value = '';
+}
+
+function onJourneyPlanDateChange(event) {
+  if (!event.target?.matches?.('select[data-erp-for-session]')) return;
+  const input = event.target.parentElement?.querySelector('input[data-session-number]');
+  if (!input) return;
+  const selected = state.journeyErpSchedule?.sessions.find(item => item.erpSessionId === event.target.value);
+  if (selected) {
+    input.value = selected.date;
+    input.dataset.erpSessionId = selected.erpSessionId;
+  } else if (!event.target.value) {
+    delete input.dataset.erpSessionId;
+  }
+  state.journeyPlanDirty = true;
+  elements.journeyPlanStatus.textContent = 'Có thay đổi chưa lưu.';
+}
+
+function renderJourneyPlan(plan) {
+  const assignmentId = elements.assignmentSelect.value;
+  if (state.journeyPlanAssignmentId !== assignmentId) {
+    state.journeyErpSchedule = null;
+    state.journeyErpScheduleAssignmentId = '';
+    state.journeyErpScheduleGeneration += 1;
+    state.journeyTestSources = null;
+    state.journeyTestSourcesAssignmentId = '';
+    state.journeyTestSourcesGeneration += 1;
+  }
+  state.journeyPlan = plan;
+  state.journeyPlanAssignmentId = assignmentId;
+  state.journeyPlanDirty = false;
+  elements.journeyPlanTotal.value = plan.totalSessions || Math.max(plan.highestKnownSession, 1);
+  elements.journeyPlanTests.value = plan.testSessionNumbers.join(', ');
+  state.journeyPlanDateDraft = new Map((plan.sessionDates || []).map(item => [item.sessionNumber, item]));
+  state.journeyTestSourceDraft = new Map((plan.testSources || []).map(item => [item.sessionNumber, item.testSlug]));
+  renderJourneyPlanDateInputs(elements.journeyPlanTotal.value, plan.sessionDates || []);
+  renderJourneyTestSourceInputs(plan.testSources || []);
+  elements.journeyErpScheduleStatus.textContent = 'Chưa đối chiếu lại lịch ERP.';
+  elements.journeyTestSourcesStatus.textContent = 'Chưa đọc nguồn Test.';
+  elements.journeyPlanForm.hidden = false;
+  elements.journeyPlanStatus.textContent = plan.revision
+    ? 'Đã xác nhận ' + plan.totalSessions + ' buổi · sửa lần ' + plan.revision
+    : 'Chưa xác nhận; Journey chỉ hiện các mốc đã có bằng chứng.';
+}
+
+async function loadJourneyPlan({ force = false } = {}) {
+  const assignmentId = elements.assignmentSelect.value;
+  if (!assignmentId || (state.journeyPlanDirty && !force
+    && state.journeyPlanAssignmentId === assignmentId)) return;
+  const generation = ++state.journeyPlanGeneration;
+  if (state.journeyPlanAssignmentId !== assignmentId) {
+    elements.journeyPlanForm.hidden = true;
+    elements.journeyPlanStatus.textContent = 'Đang tải kế hoạch lớp…';
+  }
+  try {
+    const payload = await apiRequest('/teacher/journey-plan?assignment='
+      + encodeURIComponent(assignmentId));
+    if (generation !== state.journeyPlanGeneration || elements.assignmentSelect.value !== assignmentId) return;
+    renderJourneyPlan(payload.plan);
+    if (payload.plan.sessionDates?.some(item => item.erpSessionId)) void loadJourneyErpSchedule();
+  } catch (error) {
+    if (generation !== state.journeyPlanGeneration || elements.assignmentSelect.value !== assignmentId) return;
+    elements.journeyPlanForm.hidden = true;
+    elements.journeyPlanStatus.textContent = 'Chưa tải được kế hoạch: ' + error.message;
+  }
+}
+
+async function saveJourneyPlan(event) {
+  event.preventDefault();
+  const plan = state.journeyPlan;
+  if (!plan || state.journeyPlanAssignmentId !== elements.assignmentSelect.value) return;
+  const raw = elements.journeyPlanTests.value.trim();
+  if (raw && !/^\d+(?:[\s,;]+\d+)*$/.test(raw)) {
+    elements.journeyPlanTests.setCustomValidity('Nhập số buổi Test, cách nhau bằng dấu phẩy.');
+    elements.journeyPlanTests.reportValidity();
+    return;
+  }
+  const testSessionNumbers = raw ? [...new Set(raw.split(/[\s,;]+/).map(Number))]
+    .sort((a, b) => a - b) : [];
+  const totalSessions = Number(elements.journeyPlanTotal.value);
+  if (!Number.isInteger(totalSessions) || totalSessions < plan.highestKnownSession
+    || testSessionNumbers.some(number => number < 1 || number > totalSessions)) {
+    elements.journeyPlanStatus.textContent = 'Tổng số buổi phải bao gồm mọi mốc đã có dữ liệu và mọi buổi Test.';
+    return;
+  }
+  const sessionDates = currentJourneyPlanDates();
+  const testSources = currentJourneyTestSources()
+    .filter(item => testSessionNumbers.includes(item.sessionNumber));
+  if (state.journeyErpScheduleAssignmentId === elements.assignmentSelect.value) {
+    const byId = new Map((state.journeyErpSchedule?.sessions || [])
+      .map(item => [item.erpSessionId, item.date]));
+    if (sessionDates.some(item => item.erpSessionId && byId.get(item.erpSessionId) !== item.date)) {
+      elements.journeyPlanStatus.textContent = 'Có ngày đã ghép không khớp lịch ERP. Hãy chọn lại dòng hoặc chuyển sang ngày nhập tay.';
+      return;
+    }
+  }
+  if (sessionDates.some(item => item.sessionNumber > totalSessions)) {
+    elements.journeyPlanStatus.textContent = 'Còn ngày đã nhập ở buổi ngoài tổng số buổi. Hãy tăng tổng số buổi hoặc xóa ngày đó trước khi lưu.';
+    return;
+  }
+  const assignmentId = state.journeyPlanAssignmentId;
+  elements.saveJourneyPlanButton.disabled = true;
+  try {
+    const payload = await apiRequest('/teacher/journey-plan', {
+      method: 'PUT',
+      body: { assignmentId, totalSessions,
+        testSessionNumbers, testSources, sessionDates, expectedRevision: plan.revision }
+    });
+    if (elements.assignmentSelect.value !== assignmentId) return;
+    renderJourneyPlan(payload.plan);
+    setNotice('Đã xác nhận kế hoạch buổi học cho cả lớp.');
+  } catch (error) {
+    if (elements.assignmentSelect.value !== assignmentId) return;
+    elements.journeyPlanStatus.textContent = 'Chưa lưu: ' + error.message;
+    if (error.status === 409) setNotice('Kế hoạch lớp đã thay đổi. Sao chép phần bạn vừa nhập rồi bấm “Tải lại kế hoạch”.', 'error');
+  } finally {
+    elements.saveJourneyPlanButton.disabled = false;
+  }
+}
+
 async function loadDashboard({ quiet = false } = {}) {
   const assignmentId = elements.assignmentSelect.value;
   if (!assignmentId) {
@@ -796,7 +1099,10 @@ async function loadDashboard({ quiet = false } = {}) {
     if (generation !== state.dashboardGeneration) return;
     const previousAssignmentId = state.dashboard?.assignmentId;
     state.dashboard = payload.dashboard;
-    if (previousAssignmentId !== assignmentId) state.liveByStudent.clear();
+    if (previousAssignmentId !== assignmentId) {
+      state.liveByStudent.clear();
+      void loadJourneyPlan();
+    }
     elements.dashboardTitle.textContent = `${state.dashboard.className} · Buổi ${state.dashboard.sessionNumber}`;
     elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
     elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));
@@ -939,6 +1245,19 @@ function clearTeacherLogin() {
   state.library = [];
   state.dashboard = null;
   state.liveByStudent.clear();
+  state.journeyPlan = null;
+  state.journeyPlanAssignmentId = '';
+  state.journeyPlanGeneration += 1;
+  state.journeyPlanDirty = false;
+  state.journeyPlanDateDraft = new Map();
+  state.journeyTestSourceDraft = new Map();
+  state.journeyErpSchedule = null;
+  state.journeyErpScheduleAssignmentId = '';
+  state.journeyErpScheduleGeneration += 1;
+  state.journeyTestSources = null;
+  state.journeyTestSourcesAssignmentId = '';
+  state.journeyTestSourcesGeneration += 1;
+  elements.journeyPlanForm.hidden = true;
   elements.teacherName.textContent = 'Chưa đăng nhập';
   elements.teacherAccessView.hidden = false;
   elements.teacherWorkspace.hidden = true;
@@ -951,7 +1270,37 @@ elements.dashboardTab.addEventListener('click', () => switchPanel('dashboard'));
 elements.publishForm.addEventListener('submit', event => void publishReflection(event));
 elements.copyLinkButton.addEventListener('click', () => void copyStudentLink());
 elements.assignmentSelect.addEventListener('change', () => void loadDashboard());
-elements.refreshDashboardButton.addEventListener('click', () => void loadDashboard());
+elements.journeyPlanForm.addEventListener('submit', event => void saveJourneyPlan(event));
+elements.loadJourneyErpScheduleButton.addEventListener('click', () => void loadJourneyErpSchedule());
+elements.loadJourneyTestSourcesButton.addEventListener('click', () => void loadJourneyTestSources());
+elements.reloadJourneyPlanButton.addEventListener('click', () => {
+  if (state.journeyPlanDirty && !window.confirm('Bỏ thay đổi chưa lưu và tải kế hoạch mới nhất?')) return;
+  state.journeyPlanDirty = false;
+  void loadJourneyPlan({ force: true });
+});
+for (const id of ['journeyPlanTotal', 'journeyPlanTests']) {
+  elements[id].addEventListener('input', () => {
+    state.journeyPlanDirty = true;
+    elements.journeyPlanStatus.textContent = 'Có thay đổi chưa lưu.';
+    elements.journeyPlanTests.setCustomValidity('');
+    renderJourneyPlanDateInputs(elements.journeyPlanTotal.value, currentJourneyPlanDates());
+    renderJourneyTestSourceInputs(currentJourneyTestSources());
+  });
+}
+elements.journeyPlanDates.addEventListener('input', event => {
+  onJourneyPlanDateInput(event);
+  state.journeyPlanDirty = true;
+  elements.journeyPlanStatus.textContent = 'Có thay đổi chưa lưu.';
+});
+elements.journeyPlanDates.addEventListener('change', onJourneyPlanDateChange);
+elements.journeyPlanTestSources.addEventListener('change', () => {
+  state.journeyPlanDirty = true;
+  elements.journeyPlanStatus.textContent = 'Có thay đổi chưa lưu.';
+});
+elements.refreshDashboardButton.addEventListener('click', () => {
+  void loadDashboard();
+  if (!state.journeyPlanDirty) void loadJourneyPlan({ force: true });
+});
 elements.openStudentFormButton.addEventListener('click', openCurrentStudentForm);
 elements.previewStudentButton.addEventListener('click', () => void previewAsStudent());
 elements.copyCurrentLinkButton.addEventListener('click', () => void copyCurrentStudentLink());

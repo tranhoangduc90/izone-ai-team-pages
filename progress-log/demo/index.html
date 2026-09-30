@@ -8,6 +8,7 @@
     <title>Bản thử · Phiếu điểm danh</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="../styles.css?rev=20260928-matching-dropdown-v1">
+    <link rel="stylesheet" href="../journey.css?rev=20260930-journey-test-v2">
       <link rel="stylesheet" href="demo.css?rev=20260924-v1">
   </head>
   <body>
@@ -49,7 +50,8 @@
         <p class="eyebrow">XÁC NHẬN</p>
         <h1 id="confirmName">—</h1>
         <p class="muted" id="confirmContext">—</p>
-        <button class="button primary" id="confirmButton" type="button">Đúng là em</button>
+        <button class="button primary" id="confirmButton" type="button">Đúng là em · làm phiếu</button>
+        <button class="button" id="journeyButton" type="button">Xem hành trình của em</button>
         <button class="button text-button" id="backToNamesButton" type="button">Chọn lại tên</button>
         <p class="fine-print">Đây là xác nhận của học viên, không phải xác thực chống gian lận.</p>
       </section>
@@ -87,6 +89,26 @@
           <div id="gradedItemList"></div>
           <p class="graded-note">Câu tự luận và phần tự đánh giá đã được ghi nhận, chưa chấm tự động.</p>
         </section>
+        <button class="button" id="journeyResultButton" type="button">Xem hành trình của em</button>
+      </section>
+
+      <section class="card journey-content" id="journeyView" hidden>
+        <p class="eyebrow">HÀNH TRÌNH HỌC TẬP</p>
+        <h1 id="journeyStudentName">—</h1>
+        <p class="muted journey-class" id="journeyClassName">—</p>
+        <p class="muted">Hành trình dùng dữ liệu đang có trong Progress Log. Ô buổi trống chưa xác nhận buổi đó đã diễn ra hay học viên chưa nộp bài.</p>
+        <div class="journey-summary" aria-label="Tóm tắt hành trình">
+          <div><b id="attendedCount">0</b><span>buổi xác nhận trong Progress Log</span></div>
+          <div><b id="submittedCount">0</b><span>phiếu hoàn tất</span></div>
+          <div><b id="reportCount">0</b><span>lần tổng kết</span></div>
+        </div>
+        <p class="muted" id="journeyStatus" role="status"></p>
+        <div class="session-list" id="journeySessions"></div>
+        <section class="report-history" id="journeyReports" hidden>
+          <h2>Các lần tổng kết</h2>
+          <div id="journeyReportList"></div>
+        </section>
+        <button class="button text-button" id="journeyBackButton" type="button">Quay lại Progress Log</button>
       </section>
 
       <section class="card error-card" id="errorView" hidden>
@@ -97,6 +119,6 @@
       </section>
     </main>
     <script src="config.js?rev=20260924-generic-demo-v1"></script>
-    <script type="module" src="boot.js?rev=20260924-generic-demo-v1"></script>
+    <script type="module" src="boot.js?rev=20260930-journey-v1"></script>
   </body>
 </html>
