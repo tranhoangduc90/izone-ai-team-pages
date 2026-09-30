@@ -53,15 +53,6 @@ document.querySelectorAll('[data-mode]').forEach(button => {
     });
   });
 });
-document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
-  const classCode = selectedClassCode();
-  if (!validClassCode(classCode)) { input.reportValidity(); return; }
-  const link = new URL(testLink(button.dataset.copy, classCode), window.location.href).href;
-  const status = document.getElementById('copyLinkStatus');
-  try { await navigator.clipboard.writeText(link); status.textContent = 'Đã sao chép link đúng lớp và thứ tự.'; }
-  catch { status.textContent = `Trình duyệt chưa cho sao chép; hãy sao chép link này: ${link}`; }
-}));
-
 function selectLandingButton(selectedButton) {
   document.querySelectorAll('.landing-choice').forEach(button => {
     const selected = button === selectedButton;
