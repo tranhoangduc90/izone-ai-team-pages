@@ -1,24 +1,29 @@
-import { memoryKey, readMemory, writeMemory } from '../shared/student-memory.js';
+import { createSpeakingIdentity } from './speaking-identity.js';
+import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
 
 const apiBase = 'https://ducizone.ddns.net/mapping-api/api/speaking-homework';
 const identityBase = 'https://ducizone.ddns.net/mapping-api';
 const assignmentCode = '67-speaking-paraphrase';
-const classCode = 'IC2304';
+const query = new URLSearchParams(location.search);
+const originalDocumentId = query.get('documentId') || '';
+const classHint = query.get('class') || '';
 let documentId = '';
+let classCode = '';
 const $ = (id) => document.getElementById(id);
-const memory = memoryKey(identityBase, location.href);
-const remembered = readMemory(localStorage, memory);
 const parts = [
   { key: 'paraphrase', title: 'Luyện tập Paraphrase', url: 'https://ducizone.short.gy/paraphrase_cau_hoi', lead: 'Luyện ít nhất 5 câu hỏi theo hướng dẫn của ChatGPT.', steps: ['Đăng nhập ChatGPT và mở bài luyện Paraphrase.', 'Làm theo các bước chatbot hướng dẫn với ít nhất 5 câu hỏi.', 'Tạo link Chia sẻ của chính hội thoại Paraphrase.'] },
   { key: 'speaking', title: 'Luyện full câu Speaking', url: 'https://ducizone.short.gy/freestyle', lead: 'Luyện đủ 3 câu Speaking trong một hội thoại.', steps: ['Yêu cầu ChatGPT hỏi một câu; nếu cần, hỏi thêm câu phụ hoặc xin gợi ý ý tưởng và từ vựng.', 'Trả lời và xem ChatGPT nhận xét, sửa lỗi, nâng cấp câu trả lời.', 'Nói lại câu trả lời hoàn chỉnh sau góp ý. Lặp lại với hai câu hỏi khác.', 'Tạo link Chia sẻ riêng của hội thoại Full Speaking.'] },
 ];
-const state = { studentRef: '', accessToken: '', assignment: null, links: new Map(), practice: [], doctor: null, expanded: false, extraPending: false, localFeedback: new Map(), pending: new Set(), submitted: false, finishing: false, polling: null };
-const roster = new Map();
+const state = { studentRef: '', accessToken: '', assignment: null, links: new Map(), practice: [], doctor: null, expanded: false, extraPending: false, localFeedback: new Map(), pending: new Set(), submitted: false, finishing: false };
 
 // Dữ liệu vào: URL của đúng file Homework. Việc chính: gọi API thật và giữ lỗi HTTP có mã.
 // Kết quả: dữ liệu máy chủ hoặc thông báo dễ hiểu; lỗi không được biến thành bài đã nộp.
 async function post(path, body, timeout = 20_000) {
+  const changeButton = $('change-student');
+  state.requestCount = (state.requestCount || 0) + 1;
+  changeButton.disabled = true;
+  try {
   const response = await fetch(`${apiBase}${path}`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body), cache: 'no-store', signal: AbortSignal.timeout(timeout),
@@ -30,10 +35,14 @@ async function post(path, body, timeout = 20_000) {
     throw error;
   }
   return data;
+  } finally {
+    state.requestCount -= 1;
+    changeButton.disabled = state.requestCount > 0;
+  }
 }
 
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
-function draftKey() { return `speaking-homework:lesson-2:${state.studentRef}`; }
+function draftKey() { return `speaking-homework:lesson-2:${classCode}:${documentId}:${state.studentRef}`; }
 function saveDraft() {
   if (!state.studentRef) return;
   try {
@@ -42,7 +51,10 @@ function saveDraft() {
 }
 function restoreDraft() {
   try {
-    const draft = JSON.parse(localStorage.getItem(draftKey()) || '{}');
+    // Bản cũ chỉ mở trực tiếp IC2304. Khôi phục link cũ đúng ngữ cảnh đó; lớp khác/CTA không dùng chung draft.
+    const raw = localStorage.getItem(draftKey())
+      || (!originalDocumentId && classCode === 'IC2304' ? localStorage.getItem(`speaking-homework:lesson-2:${state.studentRef}`) : null);
+    const draft = JSON.parse(raw || '{}');
     for (const part of parts) if (typeof draft[part.key] === 'string') $(`${part.key}-link`).value = draft[part.key];
   } catch { $('draft-status').textContent = 'Không đọc được link đang gõ; các link đã xác nhận vẫn ở trên máy chủ.'; }
 }
@@ -185,13 +197,16 @@ function renderDoctor() {
 
 async function refresh() {
   if (!state.accessToken) return;
+  const token = state.accessToken;
   const [data, doctor] = await Promise.all([post('/open', identity()), post('/doctor/list', identity())]);
+  if (token !== state.accessToken) return;
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.practice = data.practiceLinks || [];
   state.doctor = doctor;
   state.submitted = data.status === 'submitted' && Boolean(data.receipt?.id);
   renderLinks();
   if (!state.submitted && allAccepted()) await finish();
+  poller.settled();
 }
 function allAccepted() {
   return parts.every(part => {
@@ -214,75 +229,6 @@ async function finish() {
   } catch (error) {
     $('draft-status').textContent = `Chưa nộp xong: ${error.message} Tiến trình đã xác nhận vẫn được giữ.`;
   } finally { state.finishing = false; }
-}
-
-async function openStudent(ref) {
-  if (!roster.has(ref)) return;
-  $('open-homework').disabled = true;
-  $('identity-message').textContent = 'Đang mở bài nộp Speaking…';
-  try {
-    const response = await post('/session/direct-start', { classCode, assignmentCode, studentRef: ref, identityConfirmed: true });
-    state.studentRef = ref;
-    state.accessToken = response.session.accessToken;
-    documentId = response.session.documentId;
-    restoreDraft();
-    $('active-student').textContent = roster.get(ref);
-    $('identity-form').hidden = true;
-    $('identity-confirmed').hidden = false;
-    $('homework-content').hidden = false;
-    $('identity-message').textContent = '';
-    $('return-homework').href = `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit?tab=t.0`;
-    await refresh();
-    state.polling = setInterval(() => refresh().catch(() => {
-      $('draft-status').textContent = 'Tạm chưa kết nối được bộ kiểm; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.';
-    }), 5000);
-    $('open-share-guide').focus();
-  } catch (error) {
-    state.studentRef = '';
-    state.accessToken = '';
-    documentId = '';
-    $('identity-form').hidden = false;
-    $('identity-confirmed').hidden = true;
-    $('homework-content').hidden = true;
-    $('completion-card').hidden = true;
-    $('identity-message').textContent = error.message;
-  } finally { $('open-homework').disabled = false; }
-}
-
-// Dữ liệu vào: mã lớp và mã bài đã duyệt. Việc chính: lấy roster thật từ API Speaking.
-// Kết quả: chỉ hiện học viên hợp lệ; nếu bài chưa mở thì không cho nộp bằng dữ liệu mẫu.
-async function loadAssignment() {
-  $('student-select').disabled = true;
-  $('open-homework').disabled = true;
-  $('reload-roster').hidden = true;
-  $('identity-message').textContent = 'Đang tải danh sách học viên…';
-  try {
-    const { assignment } = await post('/assignment/direct-open', { classCode, assignmentCode });
-    if (!assignment || !Array.isArray(assignment.students) || assignment.parts?.length !== 2) throw new Error('Cấu hình bài chưa sẵn sàng.');
-    state.assignment = assignment;
-    roster.clear();
-    const select = $('student-select');
-    select.replaceChildren(new Option('Chọn tên của bạn', ''));
-    const nameCounts = new Map();
-    for (const student of assignment.students) nameCounts.set(student.name, (nameCounts.get(student.name) || 0) + 1);
-    for (const student of assignment.students) {
-      const ref = student.student_ref;
-      roster.set(ref, student.name);
-      select.add(new Option(nameCounts.get(student.name) > 1 ? `${student.name} · ${ref.slice(-4)}` : student.name, ref));
-    }
-    $('class-code').textContent = assignment.classCode;
-    $('assignment-context').textContent = `${assignment.title} · ${assignment.classCode}. Chọn tên để mở đúng bài đã giao trong Classroom.`;
-    $('student-select').disabled = false;
-    $('open-homework').disabled = false;
-    $('identity-message').textContent = `Đã tải ${roster.size} học viên của lớp.`;
-    if (remembered.status === 'ok' && roster.has(remembered.studentRef)) {
-      select.value = remembered.studentRef;
-      await openStudent(remembered.studentRef);
-    }
-  } catch (error) {
-    $('identity-message').textContent = `Chưa mở được bài: ${error.message}`;
-    $('reload-roster').hidden = false;
-  }
 }
 
 const container = $('parts');
@@ -322,11 +268,12 @@ for (const part of parts) {
     $(`${part.key}-confirm`).disabled = true;
     showResult(part.key, 'loading', 'Đang nhận link', 'Hệ thống đang gửi link đi kiểm. Kết quả sẽ tự cập nhật.');
     try {
+      poller.expect();
       await post('/checks/request', { ...identity(), part: part.key, url: parsed.url });
       saveDraft();
       await refresh();
     } catch (error) { showLocalFeedback(part.key, 'Chưa nhận link', error.message); }
-    finally { state.pending.delete(part.key); $(`${part.key}-confirm`).disabled = false; }
+    finally { poller.update(); state.pending.delete(part.key); $(`${part.key}-confirm`).disabled = false; }
   });
 }
 $('voice-checkbox').addEventListener('change', () => {
@@ -348,13 +295,14 @@ $('extra-confirm').addEventListener('click', async () => {
   state.extraPending = true; renderDoctor();
   try {
     $('extra-link').value = parsed.url;
+    poller.expect();
     await post('/doctor/practice/extra/request', { ...identity(), exerciseId, url: parsed.url });
     result.textContent = 'Đã gửi bài luyện, đang kiểm tra hội thoại.';
     result.className = 'check-result is-loading'; result.hidden = false;
     await refresh();
   } catch (error) {
     result.textContent = error.message; result.className = 'check-result is-blocked'; result.hidden = false;
-  } finally { state.extraPending = false; renderDoctor(); }
+  } finally { poller.update(); state.extraPending = false; renderDoctor(); }
 });
 $('extra-voice-confirm').addEventListener('click', async () => {
   const last = state.practice.at(-1);
@@ -362,30 +310,55 @@ $('extra-voice-confirm').addEventListener('click', async () => {
   try { await post('/doctor/practice/confirm-voice', { ...identity(), linkId: last.id }); await refresh(); }
   catch (error) { $('extra-result').textContent = error.message; $('extra-result').hidden = false; }
 });
-$('reload-roster').addEventListener('click', loadAssignment);
-$('open-homework').addEventListener('click', async () => {
-  const ref = $('student-select').value;
-  if (!roster.has(ref)) { $('identity-message').textContent = 'Hãy chọn đúng tên của bạn.'; return; }
-  if ($('remember-student').checked) writeMemory(localStorage, memory, ref);
-  else writeMemory(localStorage, memory, '');
-  await openStudent(ref);
+// Chỉ tự tải khi máy chủ đang kiểm/phân tích; lỗi mạng tăng thời gian chờ.
+const poller = createPendingPoller({
+  refresh,
+  hasSession: () => Boolean(state.accessToken),
+  isPending: () => (!state.submitted && allAccepted()) || [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status))
+    || state.practice.some(link => link.status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
+  onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
 });
-$('change-student').addEventListener('click', () => {
-  if (state.polling) clearInterval(state.polling);
-  state.polling = null; state.studentRef = ''; state.accessToken = ''; documentId = '';
-  state.links.clear(); state.practice = []; state.doctor = null; state.expanded = false; state.submitted = false;
-  state.localFeedback.clear();
-  writeMemory(localStorage, memory, '');
-  $('student-select').value = '';
-  $('identity-form').hidden = false; $('identity-confirmed').hidden = true; $('homework-content').hidden = true;
-  $('completion-card').hidden = true;
-  $('extra-practice').hidden = true;
-  $('doctor-list').replaceChildren(); $('doctor-sync').textContent = 'Đang tải danh sách…';
-  $('extra-link').value = ''; $('extra-result').hidden = true;
-  for (const part of parts) { $(`${part.key}-link`).value = ''; $(`${part.key}-result`).hidden = true; setStatus(part.key, 'Chưa kiểm tra'); }
+
+// Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
+const identityController = createSpeakingIdentity({
+  apiBase, identityBase, assignmentCode, lessonNumber: 2, originalDocumentId, classHint,
+  validateAssignment: assignment => assignment.parts?.length === 2,
+  async onOpened(context) {
+    state.studentRef = context.studentRef;
+    state.accessToken = context.session.accessToken;
+    state.assignment = context.assignment;
+    documentId = context.documentId;
+    classCode = context.classCode;
+    restoreDraft();
+    $('return-homework').href = `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit?tab=t.0`;
+    try { await refresh(); }
+    catch (error) {
+      $('draft-status').textContent = `Đã mở phiên, nhưng chưa tải được tiến trình: ${error.message} Trang sẽ tự thử lại.`;
+      poller.retry();
+    }
+    $('open-share-guide').focus();
+  },
+  onReset() {
+    poller.stop();
+    saveDraft();
+    state.studentRef = ''; state.accessToken = ''; documentId = '';
+    state.links.clear(); state.practice = []; state.doctor = null; state.expanded = false; state.submitted = false;
+    state.localFeedback.clear();
+    $('completion-card').hidden = true;
+    $('extra-practice').hidden = true;
+    $('doctor-list').replaceChildren(); $('doctor-sync').textContent = 'Đang tải danh sách…';
+    $('extra-link').value = ''; $('extra-result').hidden = true;
+    for (const part of parts) { $(`${part.key}-link`).value = ''; $(`${part.key}-result`).hidden = true; setStatus(part.key, 'Chưa kiểm tra'); }
+    state.pending.clear(); state.finishing = false;
+    if ('extraPending' in state) state.extraPending = false;
+    documentId = ''; classCode = '';
+    $('draft-status').textContent = '';
+    if ($('voice-checkbox')) $('voice-checkbox').checked = false;
+    for (const part of parts) if ($(`${part.key}-voice`)) $(`${part.key}-voice`).checked = false;
+  },
 });
 window.addEventListener('beforeunload', event => {
   if (!state.studentRef || state.submitted) return;
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
-loadAssignment();
+identityController.start();

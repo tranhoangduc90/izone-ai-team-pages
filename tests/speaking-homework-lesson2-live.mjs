@@ -40,8 +40,10 @@ try {
       const path = new URL(route.request().url()).pathname.split('/api/speaking-homework')[1];
       const body = route.request().postDataJSON();
       let data;
-      if (path === '/assignment/direct-open') data = { assignment: { title: 'Homework Lesson 2', classCode: 'IC2304', students: [{ student_ref: studentRef, name: 'Học viên thử' }], parts: [{ part_key: 'paraphrase' }, { part_key: 'speaking' }] } };
-      else if (path === '/session/direct-start') data = { session: { accessToken: 'A'.repeat(40), documentId: docId } };
+      if (path === '/classes') data = { classes: [{ classCode: 'IC2304', ready: true, assignmentStatus: 'open' }] };
+      else if (path === '/identity/resolve') data = { status: 'unique', classCode: 'IC2304', studentRef };
+      else if (path === '/assignment/roster') data = { assignment: { title: 'Homework Lesson 2', classCode: 'IC2304', students: [{ student_ref: studentRef, name: 'Học viên thử' }], parts: [{ part_key: 'paraphrase' }, { part_key: 'speaking' }] } };
+      else if (path === '/session/start-selected') data = { session: { accessToken: 'A'.repeat(40), studentRef, classCode: 'IC2304', documentId: docId } };
       else if (path === '/open') data = { status: submitted ? 'submitted' : 'draft', receipt: submitted ? { id: 'receipt' } : null, links: [...links.values()], practiceLinks: extra };
       else if (path === '/doctor/list') data = { needed: [{ exercise_id: 'exercise-1', title: 'Luyện phát âm', exercise_url: 'https://example.org/exercise', recommendation_count: 3, practice_count: 0 }], allNeeded: [{ exercise_id: 'exercise-1', title: 'Luyện phát âm', exercise_url: 'https://example.org/exercise', recommendation_count: 3, practice_count: 0 }], practiced: [], neededCount: 1, personalCount: 1 };
       else if (path === '/checks/request') { links.set(body.part, { part: body.part, share_url: body.url, check_status: 'accepted', question_count: body.part === 'paraphrase' ? 5 : 3 }); data = { check: { status: 'pending' } }; }
@@ -51,8 +53,9 @@ try {
       await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ ok: true, ...data }) });
     });
     await page.goto(`http://127.0.0.1:${address.port}/speaking-homework/`);
+    await page.locator('#class-select').selectOption('IC2304');
     await page.locator('#student-select').selectOption(studentRef);
-    await page.getByRole('button', { name: 'Mở bài nộp' }).click();
+    await page.getByRole('button', { name: 'Mở bài Speaking' }).click();
     await page.locator('#paraphrase-link').fill('https://chatgpt.com/s/t_6ab7c876892881919d9c9cfff0af4c32');
     await page.locator('#paraphrase-confirm').click();
     assert.match(await page.locator('#paraphrase-result').innerText(), /một phản hồi/i);
@@ -71,6 +74,9 @@ try {
     assert.equal(await page.locator('.guide-content img').count(), 9);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true);
     await page.reload();
+    await page.locator('#student-select').selectOption(studentRef);
+    assert.equal(await page.locator('#identity-confirmed').isVisible(), false, 'Nhớ tên chỉ chọn sẵn, không tự mở phiên');
+    await page.locator('#open-homework').click();
     await page.locator('#identity-confirmed').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#active-student').innerText(), 'Học viên thử');
     await context.close();
