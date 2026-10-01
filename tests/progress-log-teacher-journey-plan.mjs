@@ -12,11 +12,11 @@ test('giảng viên xác nhận số buổi và Test của lớp qua dashboard',
   const assignmentId = '11111111-1111-4111-8111-111111111111';
   const elements = Object.fromEntries([
     'assignmentSelect', 'journeyPlanTotal', 'journeyPlanTests', 'journeyPlanDates',
-    'journeyPlanForm', 'journeyPlanStatus', 'saveJourneyPlanButton',
+    'journeyPlanForm', 'journeyPlanConflict', 'journeyPlanStatus', 'saveJourneyPlanButton',
     'loadJourneyErpScheduleButton', 'journeyErpScheduleStatus',
-    'loadJourneyTestSourcesButton', 'journeyTestSourcesStatus', 'journeyPlanTestSources'
+    'loadJourneyTestSourcesButton', 'journeyTestSourcesStatus', 'journeyPlanTestSources', 'journeyPlanDatesDetails'
   ].map(id => [id, { value: '', hidden: false, disabled: false,
-    setCustomValidity() {}, reportValidity() {} }]));
+    setCustomValidity() {}, reportValidity() {},replaceChildren() {} }]));
   elements.assignmentSelect.value = assignmentId;
   elements.journeyPlanDates.inputs = [];
   elements.journeyPlanDates.replaceChildren = (...rows) => {
@@ -29,6 +29,7 @@ test('giảng viên xác nhận số buổi và Test của lớp qua dashboard',
   };
   elements.journeyPlanTestSources.querySelectorAll = () => elements.journeyPlanTestSources.selects || [];
   const state = {
+    assignments:[{assignment_id:assignmentId,class_id:'123'}],journeyPlanDrafts:new Map(),
     journeyPlan: null, journeyPlanAssignmentId: '',
     journeyPlanGeneration: 0, journeyPlanDirty: false,
     journeyErpSchedule: null, journeyErpScheduleAssignmentId: '', journeyErpScheduleGeneration: 0,
@@ -40,6 +41,7 @@ test('giảng viên xác nhận số buổi và Test của lớp qua dashboard',
     totalSessions: null, testSessionNumbers: [], revision: 0
   };
   const context = {
+    AbortController, setTimeout, clearTimeout,
     elements, state, window: { confirm: () => true },
     document: { createElement: tag => ({
       tag, dataset: {}, children: [], append(...children) {
@@ -49,12 +51,16 @@ test('giảng viên xác nhận số buổi và Test của lớp qua dashboard',
         return this.children.find(child => selector.startsWith(child.tag)) || null;
       },
       matches(selector) { return selector.startsWith(this.tag); }
+      ,addEventListener() {}
     }) },
     setNotice: message => calls.push({ notice: message }),
     apiRequest: async (path, options) => {
       calls.push({ path, options });
       if (path.includes('/erp-schedule?')) return { schedule: {
-        sessions: [{ erpSessionId: '35811', startsAt: '2026-09-14 18:00:00', date: '2026-09-14' }]
+        classId:'123',
+        fingerprint: 'a'.repeat(64),
+        sessions: [{ erpSessionId: '35811', erpSessionNumber: 2, numberSource: 'teacher_confirmed',
+          startsAt: '2026-09-14 18:00:00', date: '2026-09-14' }]
       } };
       if (path.includes('/test-sources?')) return { sources: { tests: [
         { testSlug: 'mini-test-lesson-5', title: 'Mini Test',
@@ -72,28 +78,30 @@ test('giảng viên xác nhận số buổi và Test của lớp qua dashboard',
   assert.equal(elements.journeyPlanTotal.value, 6);
   elements.journeyPlanTotal.value = '8';
   actions.renderJourneyPlanDateInputs(8, []);
-  elements.journeyPlanDates.inputs[6].value = '2026-09-30';
+  elements.journeyPlanDates.inputs[6].dataset.date = '2026-09-30';
   actions.renderJourneyPlanDateInputs(6, actions.currentJourneyPlanDates());
   actions.renderJourneyPlanDateInputs(8, actions.currentJourneyPlanDates());
-  assert.equal(elements.journeyPlanDates.inputs[6].value, '2026-09-30');
+  assert.equal(elements.journeyPlanDates.inputs[6].dataset.date, '2026-09-30');
+  state.journeyPlanDirty = true;
   await actions.loadJourneyErpSchedule();
-  assert.match(elements.journeyErpScheduleStatus.textContent, /1 dòng lịch/);
-  const erpSelect = elements.journeyPlanDates.rows[1].children[2];
+  assert.match(elements.journeyErpScheduleStatus.textContent, /1 buổi ERP/);
+  const erpSelect = elements.journeyPlanDates.rows[1].children[1];
   erpSelect.value = '35811';
   actions.onJourneyPlanDateChange({ target: erpSelect });
-  elements.journeyPlanDates.inputs[1].value = '2026-09-15';
+  elements.journeyPlanDates.inputs[1].dataset.date = '2026-09-15';
   await actions.loadJourneyErpSchedule();
   assert.match(elements.journeyErpScheduleStatus.textContent, /1 buổi cần đối chiếu lại/);
   await actions.saveJourneyPlan({ preventDefault() {} });
   assert.match(elements.journeyPlanStatus.textContent, /không khớp lịch ERP/);
   assert.equal(calls.filter(call => call.path === '/teacher/journey-plan').length, 0);
-  const refreshedSelect = elements.journeyPlanDates.rows[1].children[2];
+  const refreshedSelect = elements.journeyPlanDates.rows[1].children[1];
   refreshedSelect.value = '35811';
   actions.onJourneyPlanDateChange({ target: refreshedSelect });
-  assert.equal(elements.journeyPlanDates.inputs[1].value, '2026-09-14');
-  assert.equal(elements.journeyPlanDates.inputs[1].dataset.erpSessionId, '35811');
-  actions.onJourneyPlanDateInput({ target: elements.journeyPlanDates.inputs[1] });
-  assert.equal(elements.journeyPlanDates.inputs[1].dataset.erpSessionId, undefined);
+  assert.equal(elements.journeyPlanDates.inputs[1].dataset.date, '2026-09-14');
+  assert.equal(elements.journeyPlanDates.inputs[1].value, '35811');
+  refreshedSelect.value = '';
+  actions.onJourneyPlanDateChange({ target: refreshedSelect });
+  assert.equal(elements.journeyPlanDates.inputs[1].dataset.date, '');
   assert.equal(refreshedSelect.value, '');
   refreshedSelect.value = '35811';
   actions.onJourneyPlanDateChange({ target: refreshedSelect });

@@ -8,7 +8,7 @@
     <title>Phiếu điểm danh</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css?rev=20260928-matching-dropdown-v1">
-    <link rel="stylesheet" href="journey.css?rev=20260930-journey-test-v2">
+    <link rel="stylesheet" href="journey.css?rev=20261001-journey-loading-v1">
   </head>
   <body>
     <header class="topbar">
@@ -85,6 +85,14 @@
         <button class="button" id="journeyResultButton" type="button">Xem hành trình của em</button>
       </section>
 
+      <section class="card" id="journeyLoadingView" hidden aria-busy="false">
+        <p class="eyebrow">HÀNH TRÌNH HỌC TẬP</p>
+        <span class="journey-spinner" id="journeySpinner" aria-hidden="true" hidden></span>
+        <h1 id="journeyLoadingStatus" role="status" aria-live="polite">Đang tải hành trình…</h1>
+        <div class="journey-skeleton" aria-hidden="true"></div>
+        <button class="button primary" id="journeyRetryButton" type="button" hidden>Thử lại</button>
+        <button class="button text-button" id="journeyLoadingBackButton" type="button">Quay lại phiếu</button>
+      </section>
       <section class="card journey-content" id="journeyView" hidden>
         <p class="eyebrow">HÀNH TRÌNH HỌC TẬP</p>
         <h1 id="journeyStudentName">—</h1>
@@ -112,6 +120,6 @@
       </section>
     </main>
     <script src="config.js?rev=20260905-memory-v3"></script>
-    <script type="module" src="app.js?rev=20260930-journey-test-v2"></script>
+    <script type="module" src="app.js?rev=20261001-journey-loading-v1"></script>
   </body>
 </html>

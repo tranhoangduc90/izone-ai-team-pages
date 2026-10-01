@@ -10,7 +10,7 @@ async (page) => {
   };
   const key = 'izone:remembered-writing-student:v1:https://ducizone.ddns.net/writing-api';
   const ensure = (value, message) => { if (!value) throw Error(message); };
-  const calls = { start: [], draft: [], submit: [] };
+  const calls = { start: [], draft: [], checkpoint: [], submit: [] };
   const external = [], pageErrors = [];
   let failStart = false;
   const assignment = {
@@ -21,7 +21,7 @@ async (page) => {
       { studentRef: ids.invalid, name: 'Hồ sơ không chính thức', provisional: true },
       { studentRef: ids.temporary, name: 'Hồ sơ tạm thử', provisional: true }
     ],
-    definition: { blocks: [{ title: 'Ghi nhận', instructions: '', items: [
+    definition: { blocks: [{ blockId:'block-1',checkpoint:1,title: 'Ghi nhận', instructions: '', items: [
       { itemVersionId: 'item-1', prompt: 'Bạn học được gì?', interactionType: 'long_text', required: true, options: [] }
     ] }] }
   };
@@ -42,6 +42,11 @@ async (page) => {
     if (url.includes('/api/learning/attempts/draft')) {
       const body = request.postDataJSON(); calls.draft.push(body);
       return json({ ok: true, draft: { revision: body.revision } });
+    }
+    if (url.includes('/api/learning/attempts/checkpoints/submit')) {
+      const body=request.postDataJSON();calls.checkpoint.push(body);
+      return json({ok:true,checkpoint:{blockId:body.blockId,checkpoint:body.checkpoint,
+        completeness:'complete',missingRequired:[],submittedAt:'2026-10-01T01:00:00Z'}});
     }
     if (url.includes('/api/learning/attempts/submit')) { calls.submit.push(request.postDataJSON()); return json({ ok: true, receipt: { message: 'Đã nhận', attendanceStatus: 'self_confirmed', completeness: 'complete', nextAction: 'Xong' } }); }
     if (request.method() === 'GET' && url.startsWith(site + '/')) return route.continue();
@@ -94,9 +99,11 @@ async (page) => {
   ensure(await page.evaluate(() => Object.values(sessionStorage).some(value => String(value).includes('Bản nháp chỉ ở session.'))), 'Bản nháp không nằm ở sessionStorage.');
   await page.locator('#submitButton').click();
   await page.locator('#resultView').waitFor({ state: 'visible', timeout: 3_000 }).catch(async () => {
-    throw Error('Nộp fixture không xong: ' + await page.locator('#notice').innerText());
+      throw Error('Nộp fixture không xong: ' + await page.locator('#notice').innerText() + ' · API ngoài fixture: ' + external.join(', '));
   });
   ensure(calls.draft.at(-1).attemptToken === `attempt-${ids.a}`, 'Tab khác đã đổi đích lưu của phiên đang mở.');
+  ensure(calls.checkpoint.at(-1).attemptToken===`attempt-${ids.a}`, 'Tab khác đã đổi đích nộp từng phần.');
+  ensure(calls.submit.at(-1).attemptToken===`attempt-${ids.a}`, 'Tab khác đã đổi đích nộp cuối.');
   await page.reload();
   await page.locator('#studentSelect option[value="' + ids.a + '"]').waitFor({ state: 'attached' });
   await page.locator('#changeRememberedStudent').click();

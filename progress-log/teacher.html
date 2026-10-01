@@ -8,7 +8,7 @@
     <title>Progress Log · Giảng viên</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css?rev=20260924-listening-feedback-v1">
-    <link rel="stylesheet" href="teacher.css?rev=20260930-journey-erp-v3">
+    <link rel="stylesheet" href="teacher.css?rev=20261001-authoring-v1">
   </head>
   <body>
     <header class="topbar teacher-header">
@@ -30,10 +30,13 @@
         <button class="button" id="teacherLogoutButton" type="button">Đăng xuất</button>
         <nav class="teacher-tabs" aria-label="Chức năng">
           <button class="tab active" id="dashboardTab" type="button">Theo dõi lớp</button>
+          <button class="tab" id="overviewTab" type="button">Hành trình lớp</button>
           <button class="tab" id="createTab" type="button">Tạo phiếu</button>
         </nav>
 
         <section class="card" id="createPanel" hidden>
+          <div id="formDraftEditor"></div>
+          <details><summary>Tạo phiếu nhìn lại bài học từ thư viện hiện có</summary>
           <div class="section-heading"><div><p class="eyebrow">PHIẾU MỚI</p><h1>Chọn nội dung cần hỏi</h1></div><span class="effort-chip">≈ 1 phút</span></div>
           <form id="publishForm">
             <div class="field-grid">
@@ -46,18 +49,31 @@
             <div id="questionLibrary" class="question-library"></div>
             <button class="button primary" id="publishButton" type="submit">Tạo link cho lớp</button>
           </form>
+          </details>
           <div class="publish-result" id="publishResult" hidden>
             <p><b>Link đã sẵn sàng</b><span id="rosterCount"></span></p>
             <div class="copy-row"><input id="studentLink" type="text" readonly><button class="button" id="copyLinkButton" type="button">Sao chép</button></div>
           </div>
         </section>
 
+        <section class="card" id="overviewPanel" hidden>
+          <div class="section-heading"><div><p class="eyebrow">TOÀN BỘ KHÓA HỌC</p><h1>Hành trình lớp</h1></div><button class="button" id="refreshOverviewButton" type="button">Làm mới hành trình</button></div>
+          <div class="field-grid"><label class="field"><span>Lớp</span><select id="overviewClassSelect"></select></label><label class="field"><span>Lọc học viên theo tình trạng buổi</span><select id="overviewFilter"><option value="">Tất cả</option><option value="not_submitted">Có buổi chưa nộp phiếu</option><option value="incomplete">Có phiếu nộp thiếu</option><option value="test_result">Có điểm Test</option><option value="needs_review">Cần đối chiếu</option></select></label></div>
+          <p id="overviewStatus" role="status">Chọn lớp để xem hành trình.</p>
+          <p class="muted compact">Buổi Test, buổi chưa có phiếu và buổi sắp tới được hiển thị riêng. Nộp Progress Log là điều kiện gửi yêu cầu điểm danh; trạng thái đồng bộ Portal được ghi riêng.</p>
+          <div id="courseOverview"></div>
+          <div id="overviewPlanHost"></div>
+        </section>
+
         <section class="card" id="dashboardPanel">
           <div class="section-heading"><div><p class="eyebrow">TÌNH HÌNH LỚP</p><h1 id="dashboardTitle">Chọn một phiếu</h1></div><button class="button text-button" id="refreshDashboardButton" type="button">Làm mới</button></div>
           <label class="field"><span>Phiếu đang theo dõi</span><select id="assignmentSelect"></select></label>
-          <section class="control-section journey-plan-section">
+          <button class="button" id="openClassOverviewButton" type="button">Xem hành trình toàn lớp</button>
+          <div id="dashboardPlanHost">
+          <section class="control-section journey-plan-section" id="journeyPlanSection">
             <div class="library-heading"><b>Kế hoạch buổi học của lớp</b><small id="journeyPlanStatus">Chọn phiếu để tải kế hoạch.</small></div>
             <form id="journeyPlanForm" hidden>
+              <section id="journeyPlanConflict" class="editor-conflict" hidden aria-live="polite"></section>
               <div class="journey-plan-fields">
                 <label class="field"><span>Tổng số buổi của lớp</span><input id="journeyPlanTotal" type="number" min="1" max="100" required></label>
                 <label class="field"><span>Số thứ tự buổi Test</span><input id="journeyPlanTests" type="text" placeholder="Ví dụ: 16, 30" inputmode="numeric"></label>
@@ -65,18 +81,27 @@
               <p class="muted compact">Giảng viên xác nhận thứ tự buổi cho cả lớp. Buổi Test có thể không có Progress Log. Khi ghép đúng bài Test, kết quả hoàn tất sẽ tự hiện; điểm Writing có thể đến sau.</p>
               <div class="journey-plan-erp-actions"><button class="button" id="loadJourneyTestSourcesButton" type="button">Đọc nguồn bài Test</button><small id="journeyTestSourcesStatus">Chưa đọc nguồn Test.</small></div>
               <div id="journeyPlanTestSources" class="journey-plan-date-grid"></div>
-              <details class="journey-plan-dates"><summary>Xác nhận ngày của từng buổi (tùy chọn)</summary><p class="muted compact">Chọn đúng dòng lịch ERP cho từng buổi, hoặc nhập ngày thủ công nếu chưa có lịch. Buổi Test có thể không có Progress Log.</p><div class="journey-plan-erp-actions"><button class="button" id="loadJourneyErpScheduleButton" type="button">Đọc lịch ERP của lớp</button><small id="journeyErpScheduleStatus">Chưa đọc lịch ERP.</small></div><div id="journeyPlanDates" class="journey-plan-date-grid"></div></details>
+              <details class="journey-plan-dates" id="journeyPlanDatesDetails"><summary>Xác nhận ngày của từng buổi</summary><p class="muted compact">Lịch ERP được đọc khi mở. Kiểm các buổi đề xuất rồi xác nhận; buổi Test có thể không có Progress Log. Đọc lại lịch không tự đổi bản đã chốt.</p><div class="journey-plan-erp-actions"><button class="button" id="loadJourneyErpScheduleButton" type="button">Đọc lại lịch học của lớp</button><small id="journeyErpScheduleStatus">Chưa đọc lịch ERP.</small></div><div id="journeyPlanDates" class="journey-plan-date-grid"></div></details>
               <div class="journey-plan-actions"><button class="button primary" id="saveJourneyPlanButton" type="submit">Xác nhận kế hoạch lớp</button><button class="button" id="reloadJourneyPlanButton" type="button">Tải lại kế hoạch</button></div>
             </form>
           </section>
+          </div>
           <section class="control-section dashboard-share"><div><b>Phiếu học viên</b><small>Sao chép link để gửi học viên; địa chỉ trang chung không mở được phiếu.</small><small id="liveUpdatedAt">Tự cập nhật mỗi 8 giây; nội dung đang gõ hiện sau khi máy chủ lưu bản nháp.</small></div><div class="dashboard-share-actions"><button class="button" id="previewStudentButton" type="button">Xem thử như học viên</button><button class="button" id="openStudentFormButton" type="button">Mở phiếu</button><button class="button" id="copyCurrentLinkButton" type="button">Sao chép link</button></div></section>
           <section class="control-section"><div class="library-heading"><b>Mở từng phần</b><small>Giảng viên quyết định đúng lúc học viên được đi tiếp.</small></div><div id="blockControls" class="block-controls"></div></section>
           <div class="summary-row" id="dashboardSummary"></div>
           <section class="control-section" id="classInsightSection"><div class="library-heading"><b>Điều cần chú ý trong lớp</b><small>Phân tích của hệ thống; bấm làm mới để đọc dữ liệu mới nhất.</small></div><div id="classInsights" class="class-insights"></div></section>
+          <section class="control-section"><div class="library-heading"><b>Trả lời theo từng câu</b><small id="questionAnalyticsStatus" role="status">Chưa đọc bài nộp.</small></div><div id="questionAnalytics"></div></section>
           <div class="student-list" id="studentList"></div>
         </section>
       </section>
     </main>
+
+    <dialog id="journeyDetailDialog" class="draft-dialog">
+      <form method="dialog"><div class="report-heading"><b>Chi tiết buổi học</b><button class="button text-button" value="close">Đóng</button></div></form>
+      <p id="journeyDetailStatus" role="status"></p>
+      <div id="journeyDetailContent" class="draft-answers"></div>
+      <button id="retryJourneyDetailButton" class="button" type="button" hidden>Thử lại</button>
+    </dialog>
 
     <dialog id="attendanceDialog">
       <form method="dialog" id="attendanceForm">
@@ -116,6 +141,6 @@
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
-    <script type="module" src="teacher.js?rev=20260930-journey-test-v5"></script>
+    <script type="module" src="teacher.js?rev=20261001-authoring-v1"></script>
   </body>
 </html>
