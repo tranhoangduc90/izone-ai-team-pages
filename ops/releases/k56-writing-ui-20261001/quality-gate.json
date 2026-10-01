@@ -1,0 +1,61 @@
+{
+  "schema_version": 3,
+  "product": "Giao diện Writing K56",
+  "change_id": "k56-writing-pending-and-phase-ui-20261001",
+  "change_kind": "feature",
+  "escaped_user_defect": false,
+  "risk": "low",
+  "system_traits": [],
+  "experience": {
+    "planning_mode": "quick",
+    "mode_reason": "Chỉ đổi thông báo sau khi kiểm tra và bỏ nhãn pha Writing ở frontend; không đổi API, thời hạn hay chấm bài.",
+    "user": "Học viên làm ba bài K56",
+    "problem": "Nút kiểm tra chưa giải thích rõ lúc chấm đang chờ; nhãn lập dàn ý chiếm chỗ không cần thiết.",
+    "outcome": "Nhấn kiểm tra khi chưa có kết quả sẽ thấy đúng thông báo; Writing còn đồng hồ tổng và tự nộp nhưng không có nhãn pha.",
+    "out_of_scope": ["K67", "Backend, database, rubric, đồng bộ Portal và dữ liệu học viên"],
+    "plain_language_summary": "Thông báo rõ khi chưa chấm xong và giao diện Writing gọn hơn."
+  },
+  "change_package": {
+    "proposal": "Hai chỉnh sửa giao diện Writing trong ba bài K56.",
+    "behavior_baseline": "Nút chỉ làm mới kết quả; màn Writing có nhãn Lập dàn ý/Viết bài bên cạnh đồng hồ tổng.",
+    "deltas": [
+      {"id": "D-PENDING", "operation": "MODIFIED", "behavior": "Khi kiểm tra trả về đang chấm, hiện câu thông báo đã duyệt ngay trong khối Writing.", "module_ids": ["M-RESULT"], "test_ids": ["T-PENDING", "T-READY"]},
+      {"id": "D-PHASE", "operation": "REMOVED", "behavior": "Bỏ nhãn pha lập dàn ý/viết bài, giữ đồng hồ tổng và tự nộp.", "module_ids": ["M-EXAM"], "test_ids": ["T-TIMER", "T-REG"]}
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "plan-v1",
+    "modules": [
+      {"id": "M-RESULT", "name": "K56 Writing result", "responsibility": "Làm mới và hiển thị trạng thái chấm ba bài", "owns_data": ["Trạng thái hiển thị cục bộ"], "public_interfaces": ["renderWritingSubmission", "refreshWritingGrading"], "depends_on": [], "boundary_rules": ["API là nguồn kết quả thật"], "test_ids": ["T-PENDING", "T-READY"]},
+      {"id": "M-EXAM", "name": "K56 Writing exam", "responsibility": "Hiển thị đồng hồ Writing và tự nộp trên ba trang", "owns_data": ["Nhịp đồng hồ giao diện"], "public_interfaces": ["setupWritingTimer"], "depends_on": [], "boundary_rules": ["Deadline máy chủ và hành vi tự nộp giữ nguyên"], "test_ids": ["T-TIMER", "T-REG"]}
+    ],
+    "integrations": []
+  },
+  "requirements": [
+    {"id": "REQ-PENDING", "statement": "Nhấn Kiểm tra kết quả ngay khi còn chờ sẽ hiển thị câu thông báo đã duyệt; khi sẵn sàng vẫn mở bài chấm.", "test_ids": ["T-PENDING", "T-READY"]},
+    {"id": "REQ-PHASE", "statement": "Ba bài CBT K56 không còn nhãn Lập dàn ý · còn ... phút hoặc Viết bài · còn ... phút.", "test_ids": ["T-TIMER"]}
+  ],
+  "invariants": [
+    {"id": "INV-TIME", "statement": "Đồng hồ tổng, deadline và tự nộp Writing vẫn hoạt động; K67 giữ nguyên.", "test_ids": ["T-TIMER", "T-REG"]}
+  ],
+  "tests": [
+    {"id": "T-PENDING", "category": "happy_path", "priority": "P1", "status": "passed", "evidence": "Term 1/2 Chrome và Mini fixture: bấm kiểm tra khi pending thấy đúng câu đã duyệt; Term browser test RED trước sửa, GREEN sau sửa."},
+    {"id": "T-READY", "category": "happy_path", "priority": "P1", "status": "passed", "evidence": "Term 1/2 Chrome mở bài đã chấm đúng Task; Mini fixture giữ Link LMS và không lộ điểm."},
+    {"id": "T-TIMER", "category": "regression", "priority": "P1", "status": "passed", "evidence": "Ba enhance.js không còn nhãn pha, vẫn có writingTimer.deadline, đồng hồ tổng và requestSubmit tự nộp."},
+    {"id": "T-REG", "category": "regression", "priority": "P1", "status": "passed", "evidence": "185/185 ca K56 và bảo vệ K67 đạt trên fixture local, không gọi API học viên thật."}
+  ],
+  "task_graph": {
+    "plan_revision": "plan-v1",
+    "tasks": [
+      {"id": "TASK-RESULT", "classification": "bounded", "result": "Thông báo pending cho Term 1/2/Mini", "module_ids": ["M-RESULT"], "depends_on": [], "consumes": ["Trạng thái kết quả hiện hành"], "produces": ["K56 result UI"], "contract": "Chỉ thông báo pending sau phản hồi còn chờ; ready/error không báo sai", "test_ids": ["T-PENDING", "T-READY"], "evidence_required": ["Browser fixture ba bài"], "decision_inputs": ["Câu chữ đã duyệt"], "affected_future_tasks": ["TASK-RELEASE"], "status": "done", "plan_revision": "plan-v1"},
+      {"id": "TASK-EXAM", "classification": "bounded", "result": "Bỏ nhãn pha ba bài", "module_ids": ["M-EXAM"], "depends_on": [], "consumes": ["Đồng hồ Writing hiện hành"], "produces": ["K56 exam UI"], "contract": "Chỉ bỏ nhãn; giữ đồng hồ và tự nộp", "test_ids": ["T-TIMER"], "evidence_required": ["Browser/structure và timer regression"], "decision_inputs": ["Không đổi hạn nộp"], "affected_future_tasks": ["TASK-RELEASE"], "status": "done", "plan_revision": "plan-v1"},
+      {"id": "TASK-RELEASE", "classification": "bounded", "result": "Gói Pages K56 đã kiểm và sẵn sàng phát hành", "module_ids": ["M-RESULT", "M-EXAM"], "depends_on": ["TASK-RESULT", "TASK-EXAM"], "consumes": ["Hai lát giao diện"], "produces": ["Staged tree đã kiểm"], "contract": "Chỉ các file K56; giữ K67 và bài làm", "test_ids": ["T-PENDING", "T-READY", "T-TIMER", "T-REG"], "evidence_required": ["Test và diff allowlist; online readback là cổng sau deploy"], "decision_inputs": ["Fast-forward Pages main"], "affected_future_tasks": [], "status": "done", "plan_revision": "plan-v1"}
+    ]
+  },
+  "risk_register": {"assessment": "PASS", "risks": [{"id": "R-TIME", "description": "Ẩn nhầm đồng hồ tổng hoặc mất tự nộp", "probability": 1, "impact": 2, "score": 2, "severity": "P3", "status": "mitigated", "owner": "Codex", "mitigation": "Chỉ bỏ phase DOM, kiểm clock và autoSubmit", "test_ids": ["T-TIMER"]}], "waivers": []},
+  "mutations": [{"id": "M-LOCAL", "target": "Git staged tree của gói K56", "outcome": "success", "readback": "verified", "evidence": "git diff --cached --check sạch; git write-tree = 8d93a32de8cfb6f4076bf2bcfa2bf6ceee6179cf."}],
+  "verification_runs": [{"id": "V-FULL", "scope": "full_suite", "command": "node --test --test-concurrency=1 [K56 audit + K67 guard manifests]; NODE_PATH và CHROME_BIN trỏ runtime local", "tree_revision": "8d93a32de8cfb6f4076bf2bcfa2bf6ceee6179cf", "captured_at": "2026-10-01T16:39:00+07:00", "exit_code": 0, "outcome": "passed", "passed": 185, "failed": 0, "skipped": 0, "evidence": "185/185 trên latest 496ac2a + gói K56 staged; test dùng roster/API giả và Chrome local, không ghi dữ liệu học viên."}],
+  "convergence": {"status": "passed", "tree_revision": "8d93a32de8cfb6f4076bf2bcfa2bf6ceee6179cf", "gaps": [], "unrequested_work": [], "evidence": "Hai thay đổi giao diện, ba bài K56, cache revision, test và guard K67 đã đối chiếu; không có file K67 runtime trong diff."},
+  "release": {"target_environment": "production", "decision": "ready", "base_tree_revision": "496ac2abcac75a3e55b8d8c33b92f997a16900ca", "current_tree_revision": "8d93a32de8cfb6f4076bf2bcfa2bf6ceee6179cf", "production_authorized": true, "rollback": "Revert riêng commit giao diện Writing K56; không khôi phục database.", "deployment_readback": "pending", "operational_observation": "Chờ đọc lại bản Pages online", "open_risks": []}
+}

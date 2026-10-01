@@ -31,8 +31,8 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?v=20260929-mini-homework-25m-k56-order-v1'))
-      .then(() => loadScript('enhance.js?v=20260910-audio-recovery-v1'))
+      .then(() => loadScript('../k56-mini-shared/app.js?v=20260929-mini-homework-25m-k56-order-v1-20261001-writing-ui-v1'))
+      .then(() => loadScript('enhance.js?v=20260910-audio-recovery-v1-20261001-writing-ui-v1'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -599,8 +599,8 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?v=20260929-mini-homework-25m-k56-order-v1');
-    await loadScript('enhance.js?v=20260910-audio-recovery-v1');
+    await loadScript('../k56-mini-shared/app.js?v=20260929-mini-homework-25m-k56-order-v1-20261001-writing-ui-v1');
+    await loadScript('enhance.js?v=20260910-audio-recovery-v1-20261001-writing-ui-v1');
     await loadScript('annotations.js');
   }
 

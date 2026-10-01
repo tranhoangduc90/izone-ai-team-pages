@@ -130,6 +130,13 @@ for (const { slug, taskNumber } of [
       assert.ok(calls.length >= 2, 'Chưa đi qua cả khôi phục lượt và tải kết quả');
       assert.ok(calls.every(call => call.attemptToken === attemptToken), 'Lượt kết quả bị đổi định danh');
 
+      await status.getByRole('button', { name: 'Kiểm tra kết quả ngay' }).click();
+      assert.equal(
+        await status.locator('p').innerText(),
+        'Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.'
+      );
+      assert.equal(await page.locator('.writing-score-card.is-action').count(), 0);
+
       ready = true;
       await status.getByRole('button', { name: 'Kiểm tra kết quả ngay' }).click();
       const score = page.locator('#writingSubmissionResult .writing-score-card.is-action');

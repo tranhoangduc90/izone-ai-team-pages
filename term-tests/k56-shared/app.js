@@ -821,7 +821,7 @@
     if (demoMode || !state.attemptToken) return;
     if (writingGradingPollInFlight) {
       writingGradingRefreshRequested = true;
-      return;
+      return 'checking';
     }
     writingGradingRefreshRequested = false;
     writingGradingPollInFlight = true;
@@ -833,13 +833,16 @@
         body: JSON.stringify({ attemptToken: state.attemptToken })
       });
       applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
+      if (payload.writing?.grading?.ready) state.manualPendingWritingAttemptToken = '';
       renderResult(payload);
       if (payload.writing?.grading?.ready) {
         stopWritingGradingPolling();
         if (!wasReady) showNotice('Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.', 'success');
       }
+      return payload.writing?.grading?.ready ? 'ready' : 'pending';
     } catch {
       // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
+      return 'unavailable';
     } finally {
       writingGradingPollInFlight = false;
       if (writingGradingRefreshRequested && !state.result?.writing?.grading?.ready) {
@@ -1607,6 +1610,7 @@
   }
 
   function renderWritingSubmission() {
+    const pendingMessage = 'Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.';
     if (!writingConfig || !elements.writingSubmissionResult) return;
     elements.writingSubmissionResult.hidden = !state.writingSubmitted;
     if (!state.writingSubmitted) {
@@ -1677,6 +1681,7 @@
       statusText.textContent = grading?.status === 'review_required'
         ? 'Bạn có thể đóng trang; kết quả vẫn được lưu và sẽ hiện khi hoàn chỉnh.'
         : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
+      if (state.manualPendingWritingAttemptToken && state.manualPendingWritingAttemptToken === state.attemptToken) statusText.textContent = pendingMessage;
       statusCopy.append(statusTitle, statusText);
       const refresh = document.createElement('button');
       refresh.type = 'button';
@@ -1685,7 +1690,14 @@
       refresh.addEventListener('click', async () => {
         refresh.disabled = true;
         refresh.textContent = 'Đang kiểm tra...';
-        await refreshWritingGrading();
+        const check = await refreshWritingGrading();
+        if (check === 'pending' || (check === 'checking' && !state.result?.writing?.grading?.ready)) {
+          state.manualPendingWritingAttemptToken = state.attemptToken;
+          const currentStatus = elements.writingSubmissionResult.querySelector('.writing-grading-status p');
+          if (currentStatus) currentStatus.textContent = pendingMessage;
+        } else if (check === 'unavailable') {
+          showNotice('Chưa kiểm tra được kết quả Writing. Vui lòng thử lại sau.', 'error');
+        }
         if (refresh.isConnected) {
           refresh.disabled = false;
           refresh.textContent = 'Kiểm tra kết quả ngay';

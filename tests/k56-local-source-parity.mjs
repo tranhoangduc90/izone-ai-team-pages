@@ -34,9 +34,10 @@ for (const { route, content, layout } of productionBaseline) {
   assert.match(readFileSync(path.join(root, directory, 'index.html'), 'utf8'), /layout-updates\.css/);
 }
 
+// Mốc mới chỉ phản ánh việc gỡ CSS nhãn pha Writing K56; nội dung đề và layout gốc vẫn theo 23/09.
 assert.equal(
   normalizedDigest('term-tests/term-test-1-k56-computer-based/styles.css'),
-  'af915a1cfb8c67740764f21c78f3754c37368be417a262df61b9e40d54428699',
+  'ed33106da8cbd5f750721c7d23b5a22490393052c487eade4802a36ca38d56f6',
   'Term Test 1 K56: styles khác mốc production',
 );
 

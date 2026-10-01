@@ -11,6 +11,7 @@
       "tests/k56-landing.mjs",
       "tests/k56-local-source-parity.mjs",
       "tests/k56-mini-release.mjs",
+      "tests/k56-mini-homework-result.mjs",
       "tests/k56-mini-writing-revision.mjs",
       "tests/k56-product-matrix-audit.mjs",
       "tests/k56-public-api-routing.mjs",
@@ -28,6 +29,7 @@
       "tests/k56-writing-auto-result.mjs",
       "tests/k56-writing-html-feedback.mjs",
       "tests/k56-writing-teacher-student-parity.mjs",
+      "tests/k56-writing-timer-ui.mjs",
       "tests/term-test-k56-audio-recovery.mjs",
       "tests/term-test-teacher-access-banner.mjs"
     ],

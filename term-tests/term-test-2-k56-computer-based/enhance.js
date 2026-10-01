@@ -1416,9 +1416,6 @@
     const header = form?.querySelector('.writing-exam-header');
     if (!form || !header) return;
     const totalMinutes = Number(testConfig.writing?.durationMinutes) || Number(contentConfig.writing?.totalMinutes) || 30;
-    const planningMinutes = Number(testConfig.writing?.planningMinutes) || Number(contentConfig.writing?.planningMinutes) || 15;
-    const essayMinutes = Math.max(1, totalMinutes - planningMinutes);
-    const essaySeconds = essayMinutes * 60;
 
     const retryDelayMs = 15 * 1000;
     const clock = document.createElement('div');
@@ -1433,12 +1430,7 @@
     const clockTotal = document.createElement('span');
     clockTotal.textContent = '/ ' + totalMinutes + ' phút';
     clock.append(clockLabel, clockValue, clockTotal);
-    const phase = document.createElement('span');
-    phase.className = 'cbt-writing-phase';
-    phase.textContent = 'Lập dàn ý · còn ' + planningMinutes + ' phút';
-    phase.setAttribute('role', 'status');
     header.insertBefore(clock, document.getElementById('submitWriting'));
-    header.insertBefore(phase, clock);
 
     const autoSubmitButton = makeButton('cbt-writing-auto-submit', 'Tự nộp bài Writing');
     autoSubmitButton.type = 'submit';
@@ -1450,7 +1442,6 @@
     let intervalId = 0;
     let lastRenderedSecond = null;
     let lastAutoSubmitAttempt = 0;
-    let essayPhaseAnnounced = false;
 
     function readAttemptToken() {
       for (const storage of [sessionStorage, localStorage]) {
@@ -1491,15 +1482,6 @@
         clock.setAttribute('aria-label', remainingSeconds > 0
           ? 'Còn ' + formatMinutes(remainingSeconds) + ' trên ' + totalMinutes + ' phút làm bài Writing'
           : 'Đã hết ' + totalMinutes + ' phút làm bài Writing; hệ thống đang tự nộp bài');
-        const planningPhase = remainingSeconds > essaySeconds;
-        phase.textContent = planningPhase
-          ? 'Lập dàn ý · còn ' + formatMinutes(remainingSeconds - essaySeconds) + ' phút'
-          : 'Viết bài Task 1 · còn ' + formatMinutes(remainingSeconds) + ' phút';
-        phase.classList.toggle('is-essay', !planningPhase);
-        if (!planningPhase && !essayPhaseAnnounced && remainingSeconds > 0) {
-          essayPhaseAnnounced = true;
-          phase.setAttribute('aria-live', 'polite');
-        }
       }
       if (remainingMs === 0) submitExpiredWriting(now);
     }

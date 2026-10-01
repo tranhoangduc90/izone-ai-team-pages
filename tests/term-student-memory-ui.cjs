@@ -170,7 +170,7 @@ async function main() {
   // chỉ để chạy fixture local, vẫn giữ mọi request API trong route giả.
   const browser = await chromium.launch({
     headless: true,
-    executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'
+    executablePath: process.env.CHROME_BIN || 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'
   });
   try {
     const context = await browser.newContext();
