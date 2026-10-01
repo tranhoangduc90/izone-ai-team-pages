@@ -8,7 +8,8 @@ const pages = ['index.html'];
 const check = process.argv.includes('--check');
 
 for (const name of pages) {
-  let html = await readFile(new URL(`../${name}`, import.meta.url), 'utf8');
+  // Chuẩn hóa xuống dòng để checkout Windows và Linux tạo cùng một trang xem thử.
+  let html = (await readFile(new URL(`../${name}`, import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
   html = html.replaceAll('https://ducizone.ddns.net', 'https://ducizone.ddns.net/mapping-api-progress-log-demo/');
   html = html.replace('connect-src \'self\' ', 'connect-src \'self\' http://127.0.0.1:8792 ');
   html = html.replaceAll(/(?:href|src)="(styles\.css|teacher\.css|journey\.css|app\.js|teacher\.js|journey\.js)/g,
@@ -33,7 +34,7 @@ for (const name of pages) {
   html = html.replace('</head>', '    <link rel="stylesheet" href="demo.css?rev=20260924-v1">\n  </head>');
   const output = new URL(name, import.meta.url);
   if (check) {
-    const current = await readFile(output, 'utf8');
+    const current = (await readFile(output, 'utf8')).replaceAll('\r\n', '\n');
     if (current !== html) throw new Error(`${name} chưa đồng bộ với trang chính.`);
   } else {
     await writeFile(output, html, 'utf8');
