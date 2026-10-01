@@ -30,6 +30,16 @@ test('Zoom 55 processing vẫn hiện và có thao tác kiểm tra lại tệp',
   assert.equal(context.videoEditCell({...row,type:'MP4',status:'completed',fileSize:100}), 'UPLOAD');
 });
 
+test('Zoom 26 và Zoom 47 processing có thể kiểm tra lại đúng tệp, không mở đăng sớm', () => {
+  for (const account of ['Zoom 26', 'Zoom 47']) {
+    const row = {id:`${account}:pending`,kind:'recording',source:account,account,meetingUuid:'meeting',type:'',status:'processing',fileSize:0,reviewStatus:'pending'};
+    assert.equal(context.canRefreshRecordingFile(row), true);
+    assert.match(context.videoEditCell(row), /Kiểm tra lại tệp/);
+    assert.equal(context.canRefreshRecordingFile({...row,meetingUuid:''}), false);
+    assert.equal(context.canRefreshRecordingFile({...row,videoId:'already-posted'}), false);
+  }
+});
+
 test('Snapshot vừa kiểm tra lại thắng trạng thái file cũ từ danh sách tổng hợp',()=>{
   const previous={id:'Zoom 55:pending',kind:'recording',source:'Zoom 55',recordingFileId:'pending',type:'',status:'processing',fileSize:0,version:1};
   const refreshed={...previous,type:'MP4',status:'completed',fileSize:2048,version:2,sourceRefreshedAt:'now'};

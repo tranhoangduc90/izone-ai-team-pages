@@ -121,9 +121,11 @@ function recordRow(record) {
     ? ` · Phần ${escapeHtml(record.partNumber)}/${escapeHtml(record.totalParts)}`
     : '';
   const reason = [record.matchReason, record.playlistReason].filter(Boolean).map((text) => `<div class="subtext">${escapeHtml(text)}</div>`).join('');
+  const processingNote = !record.videoId && record.status === 'processing'
+    ? '<div class="subtext">Zoom đang xử lý, chưa có MP4 hoàn chỉnh. Chọn Kiểm tra lại tệp.</div>' : '';
   return `<tr data-record-id="${escapeHtml(record.id)}">
     <td><span class="class-code">${escapeHtml(displayClassName(record))}</span><div class="subtext">${escapeHtml(record.source || '—')}</div></td>
-    <td><div class="record-title">${escapeHtml(record.title || 'Zoom recording')}</div><div class="subtext">${lesson}${part} · ${escapeHtml(record.recordingFileId || '')}</div>${reason}</td>
+    <td><div class="record-title">${escapeHtml(record.title || 'Zoom recording')}</div><div class="subtext">${lesson}${part} · ${escapeHtml(record.recordingFileId || '')}</div>${reason}${processingNote}</td>
     <td>${dateTime(record.recordingStart)}</td>
     <td>${recordingSourceCell(record)}</td>
     <td>${videoEditCell(record)}</td>

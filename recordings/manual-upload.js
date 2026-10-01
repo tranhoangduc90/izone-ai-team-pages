@@ -35,7 +35,7 @@ function manualUploadUnavailable(record) {
   if (source.excluded) return 'Recording đã bị loại khỏi luồng';
   if (typeof sourceLinks !== 'undefined' && sourceLinks.get(sourceLinkKey(record))?.result?.status === 'deleted') return 'Recording đã được xóa trong Zoom';
   if (source.type !== 'MP4' || source.status !== 'completed' || source.observationStale || !(source.fileSize > 0)) return 'File chưa sẵn sàng để đăng';
-  if (source.fileSize > 512 * 1024 * 1024) return 'File vượt giới hạn 512 MiB của luồng hiện tại';
+  if (source.fileSize > 640 * 1024 * 1024) return 'File vượt giới hạn 640 MiB của luồng hiện tại';
   const terminalError = Boolean(record.errorCode) || ['needs_attention','hold'].includes(record.stage);
   if (terminalError) manualUploadPending.delete(source.id);
   if (!terminalError && (manualUploadPending.has(source.id) || ['uploading','processing'].includes(record.youtubeStatus) || (source.manualDecision?.manualUpload && source.autoPublish))) return 'Đã gửi yêu cầu đăng — đang xử lý';
