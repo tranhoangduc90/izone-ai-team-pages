@@ -34,7 +34,7 @@ const state = {
   journeyOnly: false
 };
 
-const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'journeyView', 'errorView'];
+const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'journeyLoadingView', 'journeyView', 'errorView'];
 const elements = Object.fromEntries([
   'notice', ...viewIds, 'brandLabel', 'sessionLabel', 'assignmentTitle', 'classLabel', 'studentSelect',
   'chooseStudentButton', 'rememberStudentRow', 'rememberStudent', 'rememberStudentStatus', 'changeRememberedStudent',
@@ -44,6 +44,7 @@ const elements = Object.fromEntries([
   'nextButton', 'submitButton', 'resultTitle', 'attendanceResult', 'completenessResult',
   'journeyResultButton', 'journeyStudentName', 'journeyClassName', 'attendedCount', 'submittedCount',
   'reportCount', 'journeyStatus', 'journeySessions', 'journeyReports', 'journeyReportList', 'journeyBackButton',
+  'journeyLoadingStatus', 'journeyRetryButton', 'journeyLoadingBackButton', 'journeySpinner',
   'gradedResults', 'gradedSummary', 'gradedItemList',
   'errorTitle', 'errorMessage', 'retryButton'
 ].map(id => [id, document.getElementById(id)]));
@@ -156,7 +157,7 @@ function readPublicToken() {
   return /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(token) ? token : '';
 }
 
-async function apiRequest(path, { method = 'POST', body } = {}) {
+async function apiRequest(path, { method = 'POST', body, signal } = {}) {
   if (!config.API_BASE_URL) throw new Error('Trang chưa được cấu hình địa chỉ API.');
   const response = await fetch(`${config.API_BASE_URL}/api/learning${path}`, {
     method,
@@ -165,7 +166,8 @@ async function apiRequest(path, { method = 'POST', body } = {}) {
       ...(config.DEMO_MODE ? { 'x-progress-log-demo': '1' } : {})
     },
     body: body === undefined ? undefined : JSON.stringify(body),
-    cache: 'no-store'
+    cache: 'no-store',
+    signal
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok || !payload?.ok) {
@@ -1066,30 +1068,72 @@ async function openIntegratedJourney(returnView) {
   const studentRef = returnView === 'resultView'
     ? state.attempt?.identity?.studentRef : state.confirmedStudent?.studentRef;
   if (!studentRef) return;
+  const assignment = state.assignment;
+  const publicToken = state.publicToken;
+  const generation = (state.journeyGeneration || 0) + 1;
+  state.journeyGeneration = generation;
+  const controller = new AbortController();
+  state.journeyController = controller;
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
+  const current = () => generation === state.journeyGeneration
+    && assignment === state.assignment && publicToken === state.publicToken
+    && studentRef === (returnView === 'resultView'
+      ? state.attempt?.identity?.studentRef : state.confirmedStudent?.studentRef);
   state.journeyLoading = true;
   state.journeyReturnView = returnView;
   elements.journeyButton.disabled = true;
   elements.journeyResultButton.disabled = true;
+  elements.journeyButton.textContent = elements.journeyResultButton.textContent = 'Đang tải hành trình…';
+  elements.journeyLoadingView.setAttribute('aria-busy', 'true');
+  elements.journeyLoadingStatus.textContent = 'Đang tải hành trình…';
+  elements.journeySpinner.hidden = false;
+  elements.journeyRetryButton.hidden = true;
+  showView('journeyLoadingView');
   setNotice('Đang tải hành trình…');
   try {
     const payload = await apiRequest('/student/course-journey', {
-      body: { publicToken: state.publicToken, studentRef, identityConfirmed: true }
+      body: { publicToken, studentRef, identityConfirmed: true }, signal: controller.signal
     });
+    if (!current()) return;
     const journey = payload.journey;
     if (journey.student?.studentRef !== studentRef
-      || journey.class?.classId !== state.assignment.class.id) {
+      || journey.class?.classId !== assignment.class.id) {
       throw new Error('Dữ liệu trả về không khớp người học và lớp đã chọn.');
     }
     renderIntegratedJourney(journey);
     showView('journeyView');
     setNotice('Hành trình của bạn đã được cập nhật.');
   } catch (error) {
-    setNotice(`Chưa tải được hành trình: ${error.message}`, 'error');
+    if (!current()) return;
+    const message = timedOut ? 'Kết nối mất nhiều thời gian. Bạn có thể thử lại.' : error.message;
+    elements.journeyLoadingStatus.textContent = `Chưa tải được hành trình: ${message}`;
+    elements.journeyRetryButton.hidden = false;
+    setNotice(`Chưa tải được hành trình: ${message}`, 'error');
   } finally {
-    state.journeyLoading = false;
-    elements.journeyButton.disabled = false;
-    elements.journeyResultButton.disabled = false;
+    clearTimeout(timeout);
+    if (generation === state.journeyGeneration) {
+      state.journeyLoading = false;
+      state.journeyController = null;
+      elements.journeyLoadingView.setAttribute('aria-busy', 'false');
+      elements.journeySpinner.hidden = true;
+      elements.journeyButton.disabled = false;
+      elements.journeyResultButton.disabled = false;
+      elements.journeyButton.textContent = elements.journeyResultButton.textContent = 'Xem hành trình của em';
+    }
   }
+}
+
+// Hủy lượt đọc khi quay về; câu trả lời và danh tính của phiếu giữ nguyên.
+function backFromJourney() {
+  state.journeyGeneration = (state.journeyGeneration || 0) + 1;
+  state.journeyController?.abort();
+  state.journeyController = null;
+  state.journeyLoading = false;
+  elements.journeyButton.disabled = elements.journeyResultButton.disabled = false;
+  elements.journeyButton.textContent = elements.journeyResultButton.textContent = 'Xem hành trình của em';
+  showView(state.journeyReturnView);
+  setNotice('Bạn có thể tiếp tục với Progress Log.');
 }
 
 async function openAssignment() {
@@ -1273,10 +1317,9 @@ elements.backToNamesButton.addEventListener('click', () => {
 elements.confirmButton.addEventListener('click', () => void startAttempt());
 elements.journeyButton.addEventListener('click', () => void openIntegratedJourney('confirmView'));
 elements.journeyResultButton.addEventListener('click', () => void openIntegratedJourney('resultView'));
-elements.journeyBackButton.addEventListener('click', () => {
-  showView(state.journeyReturnView);
-  setNotice('Bạn có thể tiếp tục với Progress Log.');
-});
+elements.journeyBackButton.addEventListener('click', backFromJourney);
+elements.journeyLoadingBackButton.addEventListener('click', backFromJourney);
+elements.journeyRetryButton.addEventListener('click', () => void openIntegratedJourney(state.journeyReturnView));
 elements.previousButton.addEventListener('click', () => {
   state.checkpointIndex = Math.max(0, state.checkpointIndex - 1);
   setNotice('');

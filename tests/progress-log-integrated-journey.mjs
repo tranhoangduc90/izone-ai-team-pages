@@ -7,6 +7,7 @@ class Node {
   constructor() { this.children = []; this.textContent = ''; this.hidden = false; }
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }
+  setAttribute() {}
 }
 
 const app = await readFile(new URL('../progress-log/app.js', import.meta.url), 'utf8');
@@ -19,7 +20,8 @@ function contextFor(journey) {
   const names = [
     'journeyStudentName', 'journeyClassName', 'attendedCount', 'submittedCount',
     'reportCount', 'journeyStatus', 'journeySessions', 'journeyReports',
-    'journeyReportList', 'journeyButton', 'journeyResultButton'
+    'journeyReportList', 'journeyButton', 'journeyResultButton', 'journeyLoadingView',
+    'journeyLoadingStatus', 'journeySpinner', 'journeyRetryButton'
   ];
   const elements = Object.fromEntries(names.map(name => [name, new Node()]));
   const state = {
@@ -29,6 +31,7 @@ function contextFor(journey) {
   };
   const calls = [];
   const context = {
+    AbortController, setTimeout, clearTimeout,
     document: { createElement: () => new Node() }, elements, state,
     apiRequest: async (path, options) => { calls.push({ path, options }); return { journey }; },
     showView: view => calls.push({ view }),
@@ -58,7 +61,7 @@ test('học viên xem Journey cùng link phiếu, buổi Test không bị coi l�
   await ui.openIntegratedJourney('confirmView');
   assert.equal(ui.calls.find(call => call.path)?.options.body.publicToken, ui.state.publicToken);
   assert.equal(ui.calls.find(call => call.path)?.options.body.identityConfirmed, true);
-  assert.equal(ui.calls.find(call => call.view)?.view, 'journeyView');
+  assert.equal(ui.calls.filter(call => call.view).at(-1)?.view, 'journeyView');
   assert.equal(ui.elements.journeySessions.children.length, 3);
   const testHeading = ui.elements.journeySessions.children[1].children[0];
   assert.match(testHeading.children[1].textContent, /Có dữ liệu Test · chưa hiển thị kết quả/);

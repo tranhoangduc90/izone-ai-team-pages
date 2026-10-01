@@ -166,3 +166,45 @@ dialog h2 { margin: 8px 0 25px; font-size: 28px; font-weight: 500; letter-spacin
   dialog { padding: 26px 20px 28px; border-radius: 18px; }
   .student-row .button { grid-column: auto; }
 }
+/* Hành trình lớp: bảng có vùng cuộn riêng; điện thoại xem từng học viên. */
+.overview-table-scroll { overflow: auto; max-height: 70vh; margin-top: 1rem; }
+.overview-table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+.overview-table th, .overview-table td { padding: .5rem; border: 1px solid #e2e8f0; min-width: 10rem; vertical-align: top; }
+.overview-table thead th { position: sticky; top: 0; background: #f8fafc; z-index: 2; }
+.overview-table tr > th:first-child { position: sticky; left: 0; background: #f8fafc; max-width: 15rem; z-index: 1; }
+.overview-table thead th:first-child { z-index: 3; }
+.overview-table th small, .overview-cell small, .analytics-question summary small { display: block; margin-top: .35rem; font-weight: 400; }
+.overview-cell { border: 1px solid #cbd5e1; border-radius: .5rem; background: #fff; padding: .65rem; width: 100%; cursor: pointer; text-align: left; color: #24334a; }
+.overview-cell.complete, .overview-cell.test_result { background: #ecfdf5; }
+.overview-cell.incomplete, .overview-cell.needs_review { background: #fff7ed; }
+.overview-mobile-list { display: none; }
+.analytics-question { padding: .75rem; border: 1px solid #e2e8f0; border-radius: .6rem; margin-top: .75rem; overflow-wrap: anywhere; }
+.analytics-question summary { cursor: pointer; }
+.analytics-question .button { display: inline-flex; margin: .25rem; }
+@media (max-width: 600px) {
+  .overview-table-scroll { display: none; }
+  .overview-mobile-list { display: grid; gap: .75rem; }
+  .overview-mobile-list details { border: 1px solid #e2e8f0; border-radius: .5rem; padding: .75rem; }
+  .overview-mobile-session { display: grid; gap: .35rem; margin: .75rem 0; }
+  .teacher-tabs { flex-wrap: wrap; }
+}
+/* Bộ soạn dùng các trường có nhãn; xuống một cột trên điện thoại, không ép chiều ngang. */
+#formDraftEditor { margin-bottom: 2rem; overflow-wrap: anywhere; }
+.editor-toolbar, .editor-block, .editor-item, .editor-conflict { padding: 1rem; margin: 1rem 0; border: 1px solid #dbe3ec; border-radius: 12px; }
+.editor-conflict { background: #fff8e8; border-color: #e4bc64; }
+.editor-actions { display:flex; flex-wrap:wrap; gap:.6rem; position:sticky; top:0; background:#fff; padding:.8rem 0; z-index:2; }
+#formDraftEditor .field { margin: .7rem 0; }
+#formDraftEditor textarea { width:100%; min-height:5rem; resize:vertical; }
+#formDraftEditor fieldset { min-width:0; }
+#formDraftEditor button { margin: .25rem; }
+#formDraftEditor legend { max-width:100%; white-space:normal; }
+#formDraftEditor input, #formDraftEditor select { min-width:0; max-width:100%; }
+@media(max-width:640px) { .editor-toolbar,.editor-block,.editor-item { padding:.6rem; } .editor-actions {position:static;} }
+.editor-structure { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 16px; align-items: start; }
+.editor-outline { position: sticky; top: 12px; display: grid; gap: 8px; min-width: 0; }
+.editor-outline .button { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.editor-sections { min-width: 0; }
+@media (max-width: 700px) {
+  .editor-structure { grid-template-columns: minmax(0, 1fr); }
+  .editor-outline { position: static; }
+}

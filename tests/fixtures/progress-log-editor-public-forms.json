@@ -1,0 +1,2057 @@
+[
+  {
+    "label": "IC2304 · Buổi 2",
+    "definition": {
+      "schemaVersion": "FormDefinitionV1",
+      "formVersionId": "a0000000-0000-4000-8000-000000000001",
+      "title": "Progress Log · IC2304 · Buổi 2",
+      "kind": "mixed",
+      "answerReleasePolicy": "immediate",
+      "blocks": [
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000002",
+          "checkpoint": 1,
+          "title": "Listening · Scandinavian Studies",
+          "instructions": "Questions 21–25. Choose the correct letter, A, B or C.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000004",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000003",
+              "position": 1,
+              "displayNumber": "21",
+              "prompt": "James chose to take Scandinavian Studies because when he was a child",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "listening_mcq",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "he was often taken to Denmark."
+                },
+                {
+                  "id": "B",
+                  "label": "his mother spoke to him in Danish."
+                },
+                {
+                  "id": "C",
+                  "label": "a number of Danish people visited his family."
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000006",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000005",
+              "position": 2,
+              "displayNumber": "22",
+              "prompt": "When he graduates, James would like to",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "listening_mcq",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "take a postgraduate course."
+                },
+                {
+                  "id": "B",
+                  "label": "work in the media."
+                },
+                {
+                  "id": "C",
+                  "label": "become a translator."
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000008",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000007",
+              "position": 3,
+              "displayNumber": "23",
+              "prompt": "Which course will end this term?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "listening_mcq",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Swedish cinema"
+                },
+                {
+                  "id": "B",
+                  "label": "Danish television programmes"
+                },
+                {
+                  "id": "C",
+                  "label": "Scandinavian literature"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000010",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000009",
+              "position": 4,
+              "displayNumber": "24",
+              "prompt": "They agree that James’s literature paper this term will be on",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "listening_mcq",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "19th century playwrights."
+                },
+                {
+                  "id": "B",
+                  "label": "the Icelandic sagas."
+                },
+                {
+                  "id": "C",
+                  "label": "modern Scandinavian novels."
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000012",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000011",
+              "position": 5,
+              "displayNumber": "25",
+              "prompt": "Beth recommends that James’s paper should be",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "listening_mcq",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "a historical overview of the genre."
+                },
+                {
+                  "id": "B",
+                  "label": "an in-depth analysis of a single writer."
+                },
+                {
+                  "id": "C",
+                  "label": "a study of the social background to the literature."
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000013",
+          "checkpoint": 2,
+          "title": "Writing",
+          "instructions": "",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000015",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000014",
+              "position": 6,
+              "displayNumber": "1",
+              "prompt": "Với quan điểm Agree:\nGiả sử có nội dung sau:\n“Tăng giá đồ ăn gây béo” gây ra hệ quả XXX, rồi hệ quả XXX dẫn đến “Giảm vấn nạn béo phì”\n=> XXX có thể là những gì?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000017",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000016",
+              "position": 7,
+              "displayNumber": "2",
+              "prompt": "Với quan điểm Disagree:\n“Tăng giá đồ ăn gây béo” liệu có khả thi?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000019",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000018",
+              "position": 8,
+              "displayNumber": "3",
+              "prompt": "Kể cả có tăng giá được, liệu có thật là nạn béo phì sẽ được giải quyết?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000021",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000020",
+              "position": 9,
+              "displayNumber": "4",
+              "prompt": "Kể cả việc “Tăng giá đồ ăn gây béo” có thể “Giảm vấn nạn béo phì”, thì khi tăng giá có hậu quả/tác hại gì kèm theo (đến mức mà kể cả việc này có giảm được béo phì thì vẫn không đáng làm) không?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000022",
+          "checkpoint": 3,
+          "title": "Speaking",
+          "instructions": "",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000024",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000023",
+              "position": 10,
+              "displayNumber": "1",
+              "prompt": "Em nhận thấy, hoặc partner speaking của em nhận xét, mình đang gặp vấn đề gì lớn nhất trong buổi luyện tập speaking hôm nay?",
+              "helpText": "Chọn tối đa 2 mục. Với mục có ô nhập, em hãy nêu rõ vấn đề; gõ vào ô sẽ tự chọn mục đó.",
+              "interactionType": "multi_choice_group",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "speaking_issue_checklist",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [
+                {
+                  "id": "IDEAS",
+                  "label": "Khó phát triển ý và nói đủ dài"
+                },
+                {
+                  "id": "VOCABULARY",
+                  "label": "Thiếu từ vựng để diễn đạt ý"
+                },
+                {
+                  "id": "FLUENCY",
+                  "label": "Nói ngắt quãng hoặc dừng quá lâu"
+                },
+                {
+                  "id": "PRONUNCIATION",
+                  "label": "Phát âm chưa rõ hoặc sai trọng âm"
+                },
+                {
+                  "id": "GRAMMAR",
+                  "label": "Dùng ngữ pháp chưa chính xác"
+                },
+                {
+                  "id": "COHERENCE",
+                  "label": "Câu trả lời chưa liên kết, thiếu mạch lạc"
+                },
+                {
+                  "id": "NO_MAJOR_ISSUE",
+                  "label": "Em chưa nhận thấy vấn đề lớn"
+                },
+                {
+                  "id": "OTHER",
+                  "label": "Vấn đề khác. Nêu rõ"
+                }
+              ],
+              "interactionConfig": {
+                "maxSelections": 2,
+                "exclusiveOptionId": "NO_MAJOR_ISSUE"
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000026",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000025",
+              "position": 11,
+              "prompt": "Em gặp khó khăn cụ thể gì khi phát triển ý và nói đủ dài?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "inline_option_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000023",
+                "visibleWhenValue": "IDEAS",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000028",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000027",
+              "position": 12,
+              "prompt": "Em thiếu từ vựng nào để diễn đạt ý?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "inline_option_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000023",
+                "visibleWhenValue": "VOCABULARY",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000030",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000029",
+              "position": 13,
+              "prompt": "Vấn đề khác. Nêu rõ.",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "inline_option_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000023",
+                "visibleWhenValue": "OTHER",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "IC2304 · Buổi 3",
+    "definition": {
+      "schemaVersion": "FormDefinitionV1",
+      "formVersionId": "a0000000-0000-4000-8000-000000000031",
+      "title": "Progress Log · IC2304 · Buổi 3",
+      "kind": "mixed",
+      "answerReleasePolicy": "immediate",
+      "blocks": [
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000032",
+          "checkpoint": 1,
+          "title": "Reading · Matching Headings",
+          "instructions": "Chọn một heading phù hợp cho mỗi đoạn A–B của bài The Desolenator: producing clean water.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000034",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000033",
+              "position": 1,
+              "displayNumber": "A",
+              "prompt": "Đoạn A",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "reading_matching_headings",
+              "layoutType": "matching_heading_dropdown",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "i",
+                  "label": "Getting the finance for production"
+                },
+                {
+                  "id": "ii",
+                  "label": "An unexpected benefit"
+                },
+                {
+                  "id": "iii",
+                  "label": "From initial inspiration to new product"
+                },
+                {
+                  "id": "iv",
+                  "label": "The range of potential customers for the device"
+                },
+                {
+                  "id": "v",
+                  "label": "What makes the device different from alternatives"
+                },
+                {
+                  "id": "vi",
+                  "label": "Cleaning water from a range of sources"
+                },
+                {
+                  "id": "vii",
+                  "label": "Overcoming production difficulties"
+                },
+                {
+                  "id": "viii",
+                  "label": "Profit not the primary goal"
+                },
+                {
+                  "id": "ix",
+                  "label": "A warm welcome for the device"
+                },
+                {
+                  "id": "x",
+                  "label": "The number of people affected by water shortages"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "reading"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000036",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000035",
+              "position": 2,
+              "displayNumber": "B",
+              "prompt": "Đoạn B",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "reading_matching_headings",
+              "layoutType": "matching_heading_dropdown",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "i",
+                  "label": "Getting the finance for production"
+                },
+                {
+                  "id": "ii",
+                  "label": "An unexpected benefit"
+                },
+                {
+                  "id": "iii",
+                  "label": "From initial inspiration to new product"
+                },
+                {
+                  "id": "iv",
+                  "label": "The range of potential customers for the device"
+                },
+                {
+                  "id": "v",
+                  "label": "What makes the device different from alternatives"
+                },
+                {
+                  "id": "vi",
+                  "label": "Cleaning water from a range of sources"
+                },
+                {
+                  "id": "vii",
+                  "label": "Overcoming production difficulties"
+                },
+                {
+                  "id": "viii",
+                  "label": "Profit not the primary goal"
+                },
+                {
+                  "id": "ix",
+                  "label": "A warm welcome for the device"
+                },
+                {
+                  "id": "x",
+                  "label": "The number of people affected by water shortages"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "reading"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000037",
+          "checkpoint": 2,
+          "title": "Writing",
+          "instructions": "Chọn các idea từ bảng brainstorm trong Homework Lesson 2, rồi viết theo thứ tự Body 1, Body 2 và Thesis statement.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000039",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000038",
+              "position": 3,
+              "displayNumber": "1",
+              "prompt": "Body 1 · Idea 1",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000041",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000040",
+              "position": 4,
+              "displayNumber": "2",
+              "prompt": "Body 1 · Idea 2",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000043",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000042",
+              "position": 5,
+              "displayNumber": "3",
+              "prompt": "Body 1 · Ý chung của đoạn (Topic sentence)",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000045",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000044",
+              "position": 6,
+              "displayNumber": "4",
+              "prompt": "Body 2 · Idea 1",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000047",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000046",
+              "position": 7,
+              "displayNumber": "5",
+              "prompt": "Body 2 · Idea 2",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000049",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000048",
+              "position": 8,
+              "displayNumber": "6",
+              "prompt": "Body 2 · Ý chung của đoạn (Topic sentence)",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000051",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000050",
+              "position": 9,
+              "displayNumber": "7",
+              "prompt": "Thesis statement của mở bài",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000052",
+          "checkpoint": 3,
+          "title": "Speaking",
+          "instructions": "",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000054",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000053",
+              "position": 10,
+              "displayNumber": "1",
+              "prompt": "Em nhận thấy, hoặc partner speaking của em nhận xét, mình đang gặp vấn đề gì lớn nhất trong buổi luyện tập speaking hôm nay?",
+              "helpText": "Chọn tối đa 2 mục. Với mục có ô nhập, em hãy nêu rõ vấn đề; gõ vào ô sẽ tự chọn mục đó.",
+              "interactionType": "multi_choice_group",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "speaking_issue_checklist",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [
+                {
+                  "id": "IDEAS",
+                  "label": "Khó phát triển ý và nói đủ dài"
+                },
+                {
+                  "id": "VOCABULARY",
+                  "label": "Thiếu từ vựng để diễn đạt ý"
+                },
+                {
+                  "id": "FLUENCY",
+                  "label": "Nói ngắt quãng hoặc dừng quá lâu"
+                },
+                {
+                  "id": "PRONUNCIATION",
+                  "label": "Phát âm chưa rõ hoặc sai trọng âm"
+                },
+                {
+                  "id": "GRAMMAR",
+                  "label": "Dùng ngữ pháp chưa chính xác"
+                },
+                {
+                  "id": "COHERENCE",
+                  "label": "Câu trả lời chưa liên kết, thiếu mạch lạc"
+                },
+                {
+                  "id": "NO_MAJOR_ISSUE",
+                  "label": "Em chưa nhận thấy vấn đề lớn"
+                },
+                {
+                  "id": "OTHER",
+                  "label": "Vấn đề khác. Nêu rõ"
+                }
+              ],
+              "interactionConfig": {
+                "maxSelections": 2,
+                "exclusiveOptionId": "NO_MAJOR_ISSUE"
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000056",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000055",
+              "position": 11,
+              "prompt": "Em gặp khó khăn cụ thể gì khi phát triển ý và nói đủ dài?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "inline_option_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000053",
+                "visibleWhenValue": "IDEAS",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000058",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000057",
+              "position": 12,
+              "prompt": "Em thiếu từ vựng nào để diễn đạt ý?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "inline_option_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000053",
+                "visibleWhenValue": "VOCABULARY",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000060",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000059",
+              "position": 13,
+              "prompt": "Vấn đề khác. Nêu rõ.",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "inline_option_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000053",
+                "visibleWhenValue": "OTHER",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "IC2305 · Buổi 2",
+    "definition": {
+      "schemaVersion": "FormDefinitionV1",
+      "formVersionId": "a0000000-0000-4000-8000-000000000061",
+      "courseCode": "56",
+      "title": "ENTRANCE TICKET • WRITING 1",
+      "kind": "mixed",
+      "estimatedMinutes": 5,
+      "answerReleasePolicy": "hidden",
+      "blocks": [
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000062",
+          "checkpoint": 1,
+          "title": "Nhìn lại bài học trước",
+          "instructions": "Trả lời ngắn gọn theo trải nghiệm thật của em.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000064",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000063",
+              "position": 1,
+              "prompt": "Trong phần bài tập về nhà của bài trước, bài, câu hoặc dạng bài nào khiến em gặp khó khăn nhất? Theo em, điều gì khiến phần đó khó với em?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "reflection",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000066",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000065",
+              "position": 2,
+              "prompt": "Em thấy nội dung nào trong buổi học trước hữu ích nhất đối với việc học hoặc làm bài của mình? Hãy nêu rõ kiến thức đó là gì.",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "reflection",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000067",
+          "checkpoint": 2,
+          "title": "Kiến thức tổng quan Writing Task 2",
+          "instructions": "Chọn hoặc điền đủ nội dung theo bài học.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000069",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000068",
+              "position": 3,
+              "prompt": "Đâu là thời gian và số lượng từ tối thiểu được yêu cầu để hoàn thành một bài Writing Task 2?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "writing_task2_overview",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "20 phút – 150 từ"
+                },
+                {
+                  "id": "B",
+                  "label": "40 phút – 250 từ"
+                },
+                {
+                  "id": "C",
+                  "label": "40 phút – 150 từ"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000071",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000070",
+              "position": 4,
+              "prompt": "Hãy điền các từ khóa chính để hoàn thiện phần giải thích 4 tiêu chí chấm điểm của bài thi Writing Task 2.",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "writing_task2_band_descriptors",
+              "layoutType": "numbered_short_texts",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "responseCount": 8,
+                "responseLabels": [
+                  "Task Response · trả lời đúng ...",
+                  "Task Response · và ...",
+                  "Coherence · liên kết về ...",
+                  "Cohesion · liên kết về ...",
+                  "Lexical Resource · tính ...",
+                  "Lexical Resource · và ...",
+                  "Grammar · tính ...",
+                  "Grammar · và ..."
+                ],
+                "sentenceLines": [
+                  {
+                    "title": "Task Response:",
+                    "parts": [
+                      "Yêu cầu người viết phải trả lời đúng ",
+                      " và ",
+                      "."
+                    ]
+                  },
+                  {
+                    "title": "Coherence and Cohesion:",
+                    "parts": [
+                      "Đảm bảo sự liên kết về ",
+                      " (Coherence) và liên kết về ",
+                      " (Cohesion)."
+                    ]
+                  },
+                  {
+                    "title": "Lexical Resource:",
+                    "parts": [
+                      "Sử dụng từ vựng đảm bảo tính ",
+                      " và ",
+                      "."
+                    ]
+                  },
+                  {
+                    "title": "Grammatical Range and Accuracy:",
+                    "parts": [
+                      "Sử dụng cấu trúc ngữ pháp đảm bảo tính ",
+                      " và ",
+                      "."
+                    ]
+                  }
+                ]
+              },
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000073",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000072",
+              "position": 5,
+              "prompt": "Theo nguyên tắc chung khi lập luận, nhận định sau là ĐÚNG hay SAI? “Có những lập luận là nghiễm nhiên đúng nên người viết không cần phải làm rõ hay chứng minh thêm.”",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "writing_argument_development",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "DUNG",
+                  "label": "Đúng"
+                },
+                {
+                  "id": "SAI",
+                  "label": "Sai"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000074",
+          "checkpoint": 3,
+          "title": "Cách phát triển ý",
+          "instructions": "Hoàn thành câu cuối rồi nộp phiếu để xác nhận tham gia.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000076",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000075",
+              "position": 6,
+              "prompt": "Dựa vào bài học, hãy nêu 2 cách cơ bản để làm rõ và chứng minh cho một lập luận.",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "writing_idea_development",
+              "layoutType": "numbered_short_texts",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "responseCount": 2,
+                "responseLabels": [
+                  "Cách thứ nhất",
+                  "Cách thứ hai"
+                ],
+                "sentenceLines": [
+                  {
+                    "title": "",
+                    "parts": [
+                      "",
+                      " và ",
+                      "."
+                    ]
+                  }
+                ]
+              },
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "IC2305 · Buổi 3",
+    "definition": {
+      "schemaVersion": "FormDefinitionV1",
+      "formVersionId": "a0000000-0000-4000-8000-000000000077",
+      "courseCode": "56",
+      "title": "ENTRANCE TICKET • LISTENING 1 + SPEAKING 2",
+      "kind": "mixed",
+      "answerReleasePolicy": "hidden",
+      "blocks": [
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000078",
+          "checkpoint": 1,
+          "title": "Nhìn lại bài học trước",
+          "instructions": "Hoàn thành hai câu ôn tập Writing trước khi tiếp tục.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000080",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000079",
+              "position": 1,
+              "displayNumber": "1",
+              "prompt": "Trong IELTS Writing Task 2, loại ví dụ nào sau đây là những điều chúng ta KHÔNG nên làm để tránh làm giảm tính thuyết phục của bài viết?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "writing_example_selection",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Lấy ví dụ về các quốc gia cụ thể và lấy ví dụ về các tập đoàn lớn."
+                },
+                {
+                  "id": "B",
+                  "label": "Lấy ví dụ mang tính cá nhân (bản thân, người quen) và lấy kết quả/số liệu từ một nghiên cứu cụ thể."
+                },
+                {
+                  "id": "C",
+                  "label": "Lấy ví dụ về người nổi tiếng và lấy ví dụ về các kiến thức phổ thông."
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000082",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000081",
+              "position": 2,
+              "displayNumber": "2",
+              "prompt": "Để tránh lỗi nhảy cóc, hãy hoàn thiện thông tin còn thiếu trong lập luận sau:",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "writing_argument_development",
+              "layoutType": "reasoning_chain_completion",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "beforeText": "Các công ty xây dựng phòng gym ngay tại trụ sở làm việc",
+                "afterText": "Nhân viên cải thiện sức khỏe thể chất"
+              },
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000083",
+          "checkpoint": 2,
+          "title": "Buổi học hôm nay · Speaking",
+          "instructions": "Chọn vấn đề nổi bật nhất và ghi lại nhận xét em nhận được nếu có.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000085",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000084",
+              "position": 3,
+              "displayNumber": "1",
+              "prompt": "Em nhận thấy, hoặc partner speaking của em nhận xét, mình đang gặp vấn đề gì lớn nhất trong buổi luyện tập speaking hôm nay?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "choice_cards",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [
+                {
+                  "id": "IDEAS",
+                  "label": "Khó phát triển ý và nói đủ dài"
+                },
+                {
+                  "id": "VOCABULARY",
+                  "label": "Thiếu từ vựng để diễn đạt ý"
+                },
+                {
+                  "id": "FLUENCY",
+                  "label": "Nói ngắt quãng hoặc dừng quá lâu"
+                },
+                {
+                  "id": "PRONUNCIATION",
+                  "label": "Phát âm chưa rõ hoặc sai trọng âm"
+                },
+                {
+                  "id": "GRAMMAR",
+                  "label": "Dùng ngữ pháp chưa chính xác"
+                },
+                {
+                  "id": "COHERENCE",
+                  "label": "Câu trả lời chưa liên kết, thiếu mạch lạc"
+                },
+                {
+                  "id": "NO_MAJOR_ISSUE",
+                  "label": "Em chưa nhận thấy vấn đề lớn"
+                },
+                {
+                  "id": "OTHER",
+                  "label": "Vấn đề khác"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000087",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000086",
+              "position": 4,
+              "prompt": "Nêu rõ vấn đề khác.",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "conditional_other_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000084",
+                "visibleWhenValue": "OTHER",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000089",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000088",
+              "position": 5,
+              "displayNumber": "2",
+              "prompt": "Giáo viên nhận xét gì cho em ở buổi speaking hôm nay?",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "speaking_teacher_feedback_recall",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_reported_teacher_feedback",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000090",
+          "checkpoint": 3,
+          "title": "Buổi học hôm nay · Listening",
+          "instructions": "Hoàn thành phần Listening rồi nộp phiếu để xác nhận tham gia.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000092",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000091",
+              "position": 6,
+              "displayNumber": "1",
+              "prompt": "Khi làm bài Listening Part 1 và nghe đọc tên riêng, chiến thuật nào sau đây là ĐÚNG nhất?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "listening_names_and_spelling",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Phải viết hoa toàn bộ các chữ cái hoặc bắt buộc viết hoa chữ cái đầu tiên."
+                },
+                {
+                  "id": "B",
+                  "label": "Đợi audio đọc xong từ đó, bắt đầu đánh vần từng chữ cái rồi mới viết."
+                },
+                {
+                  "id": "C",
+                  "label": "Viết ngay phác thảo từ đó ra nháp ngay khi nghe tên riêng được nhắc đến, không đợi đến lúc đánh vần."
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000094",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000093",
+              "position": 7,
+              "displayNumber": "2",
+              "prompt": "Mục tiêu để đạt 6.0 Listening là làm đúng bao nhiêu câu?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "listening_score_target",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "20-22"
+                },
+                {
+                  "id": "B",
+                  "label": "23-26"
+                },
+                {
+                  "id": "C",
+                  "label": "30-32"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000096",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000095",
+              "position": 8,
+              "displayNumber": "3",
+              "prompt": "Phát âm 15 và 50 khác nhau ở 2 điểm nào?",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "listening_number_pronunciation",
+              "layoutType": "numbered_short_texts",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "responseCount": 2,
+                "responseLabels": [
+                  "Điểm khác nhau thứ nhất",
+                  "Điểm khác nhau thứ hai"
+                ]
+              },
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000098",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000097",
+              "position": 9,
+              "displayNumber": "4",
+              "prompt": "Số câu em làm đúng trong bài luyện tập hôm nay là:",
+              "helpText": "",
+              "interactionType": "number_score",
+              "pedagogicalTypeCode": "listening_practice_score",
+              "layoutType": "score_fraction",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "min": 0,
+                "max": 6,
+                "step": 1,
+                "unit": "câu"
+              },
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "IC2305 · Buổi 4",
+    "definition": {
+      "schemaVersion": "FormDefinitionV1",
+      "formVersionId": "a0000000-0000-4000-8000-000000000099",
+      "courseCode": "56",
+      "title": "Buổi 4 - Listening 1 + Speaking 2",
+      "kind": "mixed",
+      "answerReleasePolicy": "hidden",
+      "blocks": [
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000100",
+          "checkpoint": 1,
+          "title": "Phần 1: Nhìn lại bài học trước",
+          "instructions": "Ghi lại điều hữu ích và hoàn thiện các bước Listening Part 1.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000102",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000101",
+              "position": 1,
+              "displayNumber": "1",
+              "prompt": "Em thấy nội dung nào trong buổi học trước hữu ích nhất đối với việc học hoặc làm bài của mình? Hãy nêu rõ kiến thức đó là gì.",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "reflection",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "reflection"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000104",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000103",
+              "position": 2,
+              "displayNumber": "2",
+              "prompt": "Các bước làm bài điền từ trong Listening Part 1:",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "listening_part1_steps",
+              "layoutType": "numbered_short_texts",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "responseCount": 3,
+                "responseLabels": [
+                  "Bước 1: số lượng cần điền",
+                  "Bước 2: loại cần điền",
+                  "Bước 3: thông tin trong câu hỏi"
+                ],
+                "sentenceLines": [
+                  {
+                    "title": "Bước 1:",
+                    "parts": [
+                      "Xác định ",
+                      " cần điền"
+                    ]
+                  },
+                  {
+                    "title": "Bước 2:",
+                    "parts": [
+                      "Dự đoán ",
+                      " cần điền"
+                    ]
+                  },
+                  {
+                    "title": "Bước 3:",
+                    "parts": [
+                      "Xác định các ",
+                      " trong câu hỏi"
+                    ]
+                  },
+                  {
+                    "title": "Bước 4:",
+                    "parts": [
+                      "Nghe và điền đáp án"
+                    ]
+                  }
+                ]
+              },
+              "skillCodes": [
+                "listening"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000105",
+          "checkpoint": 2,
+          "title": "Phần 2: Buổi học hôm nay",
+          "instructions": "Hoàn thành phần Reading và tự nhìn lại buổi luyện Speaking.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000107",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000106",
+              "position": 3,
+              "displayNumber": "1",
+              "prompt": "Khi áp dụng kỹ năng Scanning (Đọc quét) để tìm thông tin, có 3 loại thông tin \"bắt mắt\" nhất mà chúng ta có thể dễ dàng định vị trên bài đọc. Đó là:",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "reading_scanning_cues",
+              "layoutType": "numbered_short_texts",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "responseCount": 3,
+                "responseLabels": [
+                  "Loại thông tin thứ nhất",
+                  "Loại thông tin thứ hai",
+                  "Loại thông tin thứ ba"
+                ]
+              },
+              "skillCodes": [
+                "reading"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000109",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000108",
+              "position": 4,
+              "displayNumber": "2",
+              "prompt": "Xác định nhận định sau đây về dạng bài Sentence Completion (Điền từ vào câu) là ĐÚNG hay SAI? \"Khi tìm được từ trong bài đọc, người thi cần phải linh hoạt thay đổi từ loại (Word form) hoặc thì (Tense) của từ đó sao cho đúng ngữ pháp với câu hỏi.\"",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "reading_sentence_completion_rule",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "TRUE",
+                  "label": "ĐÚNG"
+                },
+                {
+                  "id": "FALSE",
+                  "label": "SAI"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "reading"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000111",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000110",
+              "position": 5,
+              "displayNumber": "3",
+              "prompt": "Số câu em làm đúng trong bài luyện tập hôm nay là: Sentence Completion",
+              "helpText": "",
+              "interactionType": "number_score",
+              "pedagogicalTypeCode": "reading_practice_score",
+              "layoutType": "score_fraction",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "min": 0,
+                "max": 6,
+                "step": 1,
+                "unit": "câu"
+              },
+              "skillCodes": [
+                "reading"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000113",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000112",
+              "position": 6,
+              "displayNumber": "3",
+              "prompt": "Số câu em làm đúng trong bài luyện tập hôm nay là: T/F/NG",
+              "helpText": "",
+              "interactionType": "number_score",
+              "pedagogicalTypeCode": "reading_practice_score",
+              "layoutType": "score_fraction",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "min": 0,
+                "max": 7,
+                "step": 1,
+                "unit": "câu"
+              },
+              "skillCodes": [
+                "reading"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000115",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000114",
+              "position": 7,
+              "displayNumber": "4",
+              "prompt": "Em nhận thấy, hoặc partner speaking của em nhận xét, mình đang gặp vấn đề gì lớn nhất trong buổi luyện tập speaking hôm nay?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "choice_cards",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [
+                {
+                  "id": "IDEAS",
+                  "label": "Khó phát triển ý và nói đủ dài"
+                },
+                {
+                  "id": "VOCABULARY",
+                  "label": "Thiếu từ vựng để diễn đạt ý"
+                },
+                {
+                  "id": "FLUENCY",
+                  "label": "Nói ngắt quãng hoặc dừng quá lâu"
+                },
+                {
+                  "id": "PRONUNCIATION",
+                  "label": "Phát âm chưa rõ hoặc sai trọng âm"
+                },
+                {
+                  "id": "GRAMMAR",
+                  "label": "Dùng ngữ pháp chưa chính xác"
+                },
+                {
+                  "id": "COHERENCE",
+                  "label": "Câu trả lời chưa liên kết, thiếu mạch lạc"
+                },
+                {
+                  "id": "NO_MAJOR_ISSUE",
+                  "label": "Em chưa nhận thấy vấn đề lớn"
+                },
+                {
+                  "id": "OTHER",
+                  "label": "Vấn đề khác"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000117",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000116",
+              "position": 8,
+              "prompt": "Vấn đề khác. Nêu rõ",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "conditional_other_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000114",
+                "visibleWhenValue": "OTHER",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "IC2305 · Buổi 5",
+    "definition": {
+      "schemaVersion": "FormDefinitionV1",
+      "formVersionId": "a0000000-0000-4000-8000-000000000118",
+      "courseCode": "56",
+      "title": "Buổi 5 - Reading, Writing và Speaking",
+      "kind": "mixed",
+      "answerReleasePolicy": "hidden",
+      "blocks": [
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000119",
+          "checkpoint": 1,
+          "title": "Phần 1: Nhìn lại bài học trước",
+          "instructions": "Nhớ lại kiến thức đã học và chọn phương án đúng nhất.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000121",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000120",
+              "position": 1,
+              "displayNumber": "1",
+              "prompt": "Em thấy nội dung nào trong buổi học trước hữu ích nhất đối với việc học hoặc làm bài của mình? Hãy nêu rõ kiến thức đó là gì.",
+              "helpText": "",
+              "interactionType": "long_text",
+              "pedagogicalTypeCode": "reflection",
+              "layoutType": "plain_prompt",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {},
+              "skillCodes": [
+                "reflection"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000123",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000122",
+              "position": 2,
+              "displayNumber": "2",
+              "prompt": "Khi đọc câu hỏi và vận dụng kỹ năng Scanning để tìm từ khóa, em nên ưu tiên scan thuật ngữ vì sao, hãy chọn phương án đúng nhất.",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "reading_scanning_terms",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Vì từ đó dài, dễ thấy hơi các từ ngắn"
+                },
+                {
+                  "id": "B",
+                  "label": "Vì từ đó khó bị paraphrase"
+                },
+                {
+                  "id": "C",
+                  "label": "Vì từ đó chắc chắn sẽ xuất hiện y hệt trong bài đọc"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "reading"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000125",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000124",
+              "position": 3,
+              "displayNumber": "3",
+              "prompt": "Deciding keywords là gì?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "reading_deciding_keywords",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Deciding keywords là các từ khóa dễ scan như số, tên riêng, hay thuật ngữ"
+                },
+                {
+                  "id": "B",
+                  "label": "Deciding keywords là các từ khóa sẽ bị paraphrase trong bài đọc nên cần phải hiểu nghĩa thì mới tìm đúng được"
+                },
+                {
+                  "id": "C",
+                  "label": "Deciding keywords giúp phân định một khẳng định (statement) là True, False hay Not given"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "reading"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        },
+        {
+          "blockId": "a0000000-0000-4000-8000-000000000126",
+          "checkpoint": 2,
+          "title": "Phần 2: Bài học hôm nay",
+          "instructions": "Hoàn thành phần Writing và nhìn lại buổi luyện Speaking.",
+          "items": [
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000128",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000127",
+              "position": 4,
+              "displayNumber": "1",
+              "prompt": "(Xác định điểm cuối) Đọc câu Topic Sentence dưới đây và chọn cụm từ thể hiện đúng \"Điểm cuối\" mà đoạn văn cần phải hướng tới để tránh lỗi lập luận (lỗi dừng lại giữa chừng / chưa khớp điểm cuối):\nTopic Sentence: \"Khuyến khích người dân đi xe đạp thay vì lái xe ô tô sẽ giúp cải thiện sức khỏe cộng đồng.\"",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "writing_endpoint",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Giảm lượng khí thải độc hại ra môi trường."
+                },
+                {
+                  "id": "B",
+                  "label": "Người dân được vận động cơ thể nhiều hơn."
+                },
+                {
+                  "id": "C",
+                  "label": "Giảm nguy cơ mắc các bệnh về tim mạch."
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000130",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000129",
+              "position": 5,
+              "displayNumber": "2",
+              "prompt": "(Trắc nghiệm) Theo cấu trúc đã học, một đoạn văn Body tiêu chuẩn trong bài thi sẽ gồm 5 câu. Vai trò của 5 câu này được phân bổ như thế nào?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "writing_body_structure",
+              "layoutType": "choice_cards",
+              "graderType": "exact_option",
+              "groupId": null,
+              "required": true,
+              "maxScore": 1,
+              "options": [
+                {
+                  "id": "A",
+                  "label": "1 câu Topic Sentence + 4 câu liên tục để đưa ra ví dụ (Examples)."
+                },
+                {
+                  "id": "B",
+                  "label": "1 câu Topic Sentence + 2 ý nhỏ (mỗi ý nhỏ được phát triển thành 2 câu làm rõ/chứng minh)."
+                },
+                {
+                  "id": "C",
+                  "label": "2 câu Topic Sentence + 3 câu làm rõ/chứng minh."
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000132",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000131",
+              "position": 6,
+              "displayNumber": "3",
+              "prompt": "(Hedging) \"Hedging\" là kỹ thuật vô cùng quan trọng giúp làm giảm độ chắc chắn tuyệt đối, tăng tính khách quan cho lập luận.\nTrong các cách Hedging đã học, các em cảm thấy 02 kỹ thuật nào là dễ nhớ và dễ áp dụng nhất đối với bản thân khi viết bài? Hãy liệt kê:",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "writing_hedging_reflection",
+              "layoutType": "numbered_short_texts",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "responseCount": 2,
+                "responseLabels": [
+                  "Kỹ thuật 1",
+                  "Kỹ thuật 2"
+                ]
+              },
+              "skillCodes": [
+                "writing"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000134",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000133",
+              "position": 7,
+              "displayNumber": "4",
+              "prompt": "Em nhận thấy, hoặc partner speaking của em nhận xét, mình đang gặp vấn đề gì lớn nhất trong buổi luyện tập speaking hôm nay?",
+              "helpText": "",
+              "interactionType": "single_choice",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "choice_cards",
+              "graderType": "none",
+              "groupId": null,
+              "required": true,
+              "maxScore": 0,
+              "options": [
+                {
+                  "id": "IDEAS",
+                  "label": "Khó phát triển ý và nói đủ dài"
+                },
+                {
+                  "id": "VOCABULARY",
+                  "label": "Thiếu từ vựng để diễn đạt ý"
+                },
+                {
+                  "id": "FLUENCY",
+                  "label": "Nói ngắt quãng hoặc dừng quá lâu"
+                },
+                {
+                  "id": "PRONUNCIATION",
+                  "label": "Phát âm chưa rõ hoặc sai trọng âm"
+                },
+                {
+                  "id": "GRAMMAR",
+                  "label": "Dùng ngữ pháp chưa chính xác"
+                },
+                {
+                  "id": "COHERENCE",
+                  "label": "Câu trả lời chưa liên kết, thiếu mạch lạc"
+                },
+                {
+                  "id": "NO_MAJOR_ISSUE",
+                  "label": "Em chưa nhận thấy vấn đề lớn"
+                },
+                {
+                  "id": "OTHER",
+                  "label": "Vấn đề khác. Nêu rõ"
+                }
+              ],
+              "interactionConfig": {},
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            },
+            {
+              "itemFamilyId": "a0000000-0000-4000-8000-000000000136",
+              "itemVersionId": "a0000000-0000-4000-8000-000000000135",
+              "position": 8,
+              "prompt": "Vấn đề khác. Nêu rõ",
+              "helpText": "",
+              "interactionType": "short_text",
+              "pedagogicalTypeCode": "speaking_self_assessment",
+              "layoutType": "conditional_other_text",
+              "graderType": "none",
+              "groupId": null,
+              "required": false,
+              "maxScore": 0,
+              "options": [],
+              "interactionConfig": {
+                "visibleWhenItemVersionId": "a0000000-0000-4000-8000-000000000133",
+                "visibleWhenValue": "OTHER",
+                "requiredWhenVisible": true
+              },
+              "skillCodes": [
+                "speaking"
+              ],
+              "evidenceSource": "student_self_report",
+              "releasePolicy": "inherit"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
