@@ -57,7 +57,7 @@ test('E01/E02/O01/O04: Hành trình lớp, lịch ERP và chi tiết trên 390/7
       calls.push({path:url.pathname,method:req.method(),query:url.search});
       if(url.pathname.endsWith('/api/auth/session')) return json({ok:true,reviewer:{email:'teacher@example.test'}});
       if(url.pathname.endsWith('/teacher/options')) return json({ok:true,reviewer:{name:'Giảng viên thử'},
-        classes:[{class_id:'1294',class_name:'IC2305 · Lớp giả'},{class_id:'2139',class_name:'Lớp mới chưa có phiếu'}],assignments:[]});
+        classes:[{class_id:'-8062028',class_name:'Lớp thử mã âm'},{class_id:'1294',class_name:'IC2305 · Lớp giả'},{class_id:'2139',class_name:'Lớp mới chưa có phiếu'}],assignments:[]});
       if(url.pathname.endsWith('/teacher/question-library')) return json({ok:true,items:[]});
       if(url.pathname.includes('/teacher/form-drafts'))return json({ok:true,drafts:[]});
       if(url.pathname.endsWith('/journey-plan')) {
@@ -83,6 +83,12 @@ test('E01/E02/O01/O04: Hành trình lớp, lịch ERP và chi tiết trên 390/7
     });
     await page.goto(base+'/progress-log/teacher.html');
     await page.locator('#teacherWorkspace').waitFor({state:'visible'});
+    // Lớp thử mã âm từ inventory admin không được chọn hoặc gửi vào API lớp thật.
+    assert.equal(await page.locator('#overviewClassSelect').inputValue(),'1294','Overview chọn sẵn lớp ERP hợp lệ');
+    assert.equal(await page.locator('#teacherClassSelect').inputValue(),'1294','Tạo phiếu thư viện chọn lớp hợp lệ');
+    assert.equal(await page.locator('#formDraftEditor select').first().inputValue(),'1294','Bộ soạn chọn lớp hợp lệ');
+    assert.equal(calls.filter(c=>c.path.includes('-8062028')||c.query.includes('-8062028')).length,0,'Không đọc dữ liệu bằng mã lớp không hợp lệ');
+
     await page.getByRole('button',{name:'Hành trình lớp',exact:true}).click();
     await page.locator('#overviewStatus').filter({hasText:'IC2305'}).waitFor();
     assert.equal(await page.locator('.overview-table tbody tr').count(),2);

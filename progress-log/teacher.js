@@ -393,7 +393,8 @@ async function loadWorkspace() {
   ]);
   if (generation !== state.authGeneration) return;
   state.reviewer = options.reviewer;
-  state.classes = options.classes || [];
+  // Chỉ đưa lớp có mã ERP hợp lệ vào bộ chọn; lớp thử mã âm không thuộc API lớp thật.
+  state.classes = (options.classes || []).filter(item => /^[1-9]\d{0,17}$/u.test(String(item.class_id)));
   state.assignments = options.assignments || [];
   state.library = library.items || [];
   formEditor.setWorkspace({classes:state.classes,assignments:state.assignments});
