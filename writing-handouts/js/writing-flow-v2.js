@@ -5,7 +5,8 @@ import { coverageDescription, coverageStatusLabels } from './writing-flow-covera
 import { isBackdropClick } from './teacher-detail-core.js';
 import { clampColumnWidth, defaultColumnWidths, formatWritingDay, normalizeWritingDay, readColumnWidths,
   dailyBreakdown, saveColumnWidths, serializeSortRules, summarizeWritingTestDetail,
-  summarizeWritingTestRow, writingSortFields, writingReviewAction } from './writing-flow-ui.js?v=20260924-test-review-v1';
+  summarizeWritingTestRow, writingSortFields, writingReviewAction,
+  historicalReviewMessage } from './writing-flow-ui.js?v=20261002-d03-review-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 
@@ -72,7 +73,7 @@ const columns = {
   lms: ['Link LMS', row => row.source_type === 'term_test'
     ? summarizeWritingTestRow(row).lms : externalLink(row.lms_url, 'Mở bài chấm', 'Chưa có')],
   attempts: ['Số lần thử', row => Number(row.attempt_count || 0)],
-  error: ['Lỗi gần nhất', row => row.last_error_code || '—'],
+  error: ['Lỗi gần nhất', row => row.historical_review_code || row.last_error_code || '—'],
   actions: ['Thao tác', row => actionCell(row)],
 };
 const defaultColumns = ['student', 'class', 'teacher', 'file', 'classroom', 'trcc',
@@ -185,7 +186,8 @@ function renderStageQuick() {
 function renderCounts() {
   const values = { overview: 0, classes: state.activeClasses.length, completed_classes: state.completedClasses.length,
     mapping: state.coverage.filter(row => !['covered', 'completed', 'excluded'].includes(row.status)).length,
-    review: Number(state.counts?.support?.reviews || 0), source: Number(state.counts?.support?.source_issues || 0),
+    review: Number(state.counts?.support?.reviews || 0)
+      + Number(state.counts?.support?.historical_reviews || 0), source: Number(state.counts?.support?.source_issues || 0),
     skipped: 0, delivered: 0 };
   for (const stage of stages) values[stage] = 0;
   for (const row of state.counts?.stages || []) { const count = Number(row.pair_count || 0); values.overview += count; if (row.skipped) values.skipped += count; else { values[row.stage_key] = (values[row.stage_key] || 0) + count; if (row.stage_key === 'deliver' && row.stage_status === 'succeeded') values.delivered += count; } }
@@ -207,7 +209,7 @@ function renderCounts() {
     if (node) node.textContent = String(values[key] || 0);
   }
 }
-function renderSummary() { const root = $('flow-summary'); root.replaceChildren(); const stageRows = state.counts?.stages || []; const skipped = stageRows.filter(row => row.skipped).reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const delivered = stageRows.filter(row => !row.skipped && row.stage_key === 'deliver' && row.stage_status === 'succeeded').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const running = stageRows.filter(row => !row.skipped && row.stage_status === 'running').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const attention = Number(state.counts?.support?.reviews || 0) + Number(state.counts?.support?.source_issues_review || 0); for (const item of [{ key: 'running', label: 'Đang xử lý', value: running }, { key: 'needs_review', label: 'Cần xử lý', value: attention }, { key: 'delivered', label: 'Đã giao', value: delivered }, { key: 'skipped', label: 'Đã bỏ qua', value: skipped }]) { const card = document.createElement('article'); card.dataset.status = item.key; card.append(makeText('strong', item.value), makeText('span', item.label)); root.append(card); } }
+function renderSummary() { const root = $('flow-summary'); root.replaceChildren(); const stageRows = state.counts?.stages || []; const skipped = stageRows.filter(row => row.skipped).reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const delivered = stageRows.filter(row => !row.skipped && row.stage_key === 'deliver' && row.stage_status === 'succeeded').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const running = stageRows.filter(row => !row.skipped && row.stage_status === 'running').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const attention = Number(state.counts?.support?.reviews || 0) + Number(state.counts?.support?.historical_reviews || 0) + Number(state.counts?.support?.source_issues_review || 0); for (const item of [{ key: 'running', label: 'Đang xử lý', value: running }, { key: 'needs_review', label: 'Cần xử lý', value: attention }, { key: 'delivered', label: 'Đã giao', value: delivered }, { key: 'skipped', label: 'Đã bỏ qua', value: skipped }]) { const card = document.createElement('article'); card.dataset.status = item.key; card.append(makeText('strong', item.value), makeText('span', item.label)); root.append(card); } }
 
 function populateFilters(filters) { const currentClass = $('flow-class').value; const currentTeacher = $('flow-teacher').value; const active = (filters.classes || []).filter(row => row.enabled && row.mapping_status === 'approved'); $('flow-class').replaceChildren(new Option('Tất cả lớp đang học', '')); for (const row of active) $('flow-class').append(new Option(`${row.class_code}${row.classroom_name ? ` · ${row.classroom_name}` : ''}`, row.class_code)); $('flow-class').value = active.some(row => row.class_code === currentClass) ? currentClass : ''; $('flow-teacher').replaceChildren(new Option('Tất cả giảng viên', '')); for (const name of filters.teachers || []) $('flow-teacher').append(new Option(name, name)); $('flow-teacher').value = (filters.teachers || []).includes(currentTeacher) ? currentTeacher : ''; }
 
@@ -281,8 +283,11 @@ function actionCell(row) {
     cell.append(retry);
   }
   else cell.append(makeText('span', 'Đối chiếu nguồn trùng', 'flow-meta'));
-  cell.append(row.skipped_at ? actionButton('Khôi phục', () => void restorePair(row))
-    : actionButton('Bỏ qua', () => void skipPair(row)));
+  if (reviewAction.canSkip) {
+    cell.append(row.skipped_at ? actionButton('Khôi phục', () => void restorePair(row))
+      : actionButton('Bỏ qua', () => void skipPair(row)));
+  }
+  if (row.historical_review_code) cell.title = historicalReviewMessage(row);
   return cell;
 }
 function appendCell(row, key, content) { const cell = document.createElement('td'); cell.dataset.column = key; cell.style.width = `${state.columnWidths[key]}px`; if (content instanceof Node) cell.append(content); else cell.textContent = String(content ?? ''); row.append(cell); }
@@ -401,7 +406,82 @@ function testDetailSection(test) {
   }
   return section;
 }
-async function openDetail(pair) { const dialog = $('flow-detail'); const content = $('flow-detail-content'); content.textContent = 'Đang tải đề bài, nội dung và nhật ký…'; dialog.showModal(); try { const [detailResponse, historyResponse] = await Promise.all([state.api.writingPairDetail(pair.pair_id), state.api.writingPairHistory(pair.pair_id)]); const detail = detailResponse.data.detail; const history = historyResponse.data.history; const topic = document.createElement('section'); topic.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-topic'; topic.append(makeText('h3', 'Đề bài'), makeText('p', detail.source.topic || '—')); if (detail.source.image) topic.append(externalLink(detail.source.image, 'Mở ảnh biểu đồ', '')); const essay = document.createElement('section'); essay.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-essay'; essay.append(makeText('h3', 'Nội dung học viên'), makeText('p', detail.source.essay || '—')); const metadata = document.createElement('section'); metadata.className = 'flow-detail-panel'; const trcc = detail.source.trCcCheck == null ? '—' : detail.source.trCcCheck ? 'Có' : 'Không'; const trccNote = detail.source.trCcSource === 'repair_override' ? ' · bổ sung sau khi cứu TR/CC' : ''; metadata.append(makeText('h3', 'Thông tin bài'), makeText('p', `Học viên: ${sourceName(detail.pair)}`), makeText('p', `Lớp: ${detail.pair.class_code || 'Ngoài lớp'}`), makeText('p', `TRCC: ${trcc}${trccNote}`), makeText('p', `Trạng thái nguồn: ${detail.pair.source_status || '—'}`), externalLink(detail.pair.file_url, 'Mở Docs', '')); const results = document.createElement('section'); results.className = 'flow-detail-panel'; results.append(makeText('h3', 'Kết quả và giai đoạn')); const renderStage = detail.stages.find(stage => stage.stage_key === 'render' && stage.result?.resultUrl); if (detail.pair.source_type !== 'term_test') results.append(externalLink(renderStage?.result?.resultUrl, 'Mở bài chấm trên LMS', 'Chưa có Link LMS')); for (const stage of detail.stages) { const block = document.createElement('details'); block.append(makeText('summary', `${detail.pair.source_type === 'term_test' ? testStageNames[stage.stage_key] : stageNames[stage.stage_key]} · ${statusNames[stage.status] || stage.status}`), makeText('pre', stage.result ? JSON.stringify(stage.result, null, 2) : 'Chưa có kết quả.')); results.append(block); } const log = document.createElement('section'); log.className = 'flow-detail-panel flow-detail-panel-wide'; log.append(makeText('h3', 'Nhật ký và lỗi')); for (const event of history.events || []) { const line = makeText('p', `${formatTime(event.at)} · ${describeEvent(event)}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`, 'flow-meta'); const workflowId = stageWorkflowIds[event.stage_key]; if (workflowId && event.n8n_execution_id) { const link = externalLink(`https://ducizone.ddns.net/workflow/${workflowId}/executions/${encodeURIComponent(event.n8n_execution_id)}`, 'Mở lượt chạy n8n', ''); line.append(' · ', link); } log.append(line); } const grid = document.createElement('div'); grid.className = 'flow-detail-grid'; grid.append(topic, essay, metadata); if (detail.test) grid.append(testDetailSection(detail.test)); grid.append(results, log); content.replaceChildren(makeText('h2', sourceName(detail.pair)), grid); } catch (error) { content.textContent = `Chưa đọc được chi tiết: ${error.message}`; } }
+async function openDetail(pair) {
+  const dialog = $('flow-detail');
+  const content = $('flow-detail-content');
+  const reviewMessage = historicalReviewMessage(pair);
+  content.textContent = 'Đang tải đề bài, nội dung và nhật ký…';
+  dialog.showModal();
+  try {
+    const [detailResponse, historyResponse] = await Promise.all([
+      state.api.writingPairDetail(pair.pair_id), state.api.writingPairHistory(pair.pair_id),
+    ]);
+    const detail = detailResponse.data.detail;
+    const history = historyResponse.data.history;
+    const topic = document.createElement('section');
+    topic.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-topic';
+    topic.append(makeText('h3', 'Đề bài'), makeText('p', detail.source.topic || '—'));
+    if (detail.source.image) topic.append(externalLink(detail.source.image, 'Mở ảnh biểu đồ', ''));
+    const essay = document.createElement('section');
+    essay.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-essay';
+    essay.append(makeText('h3', 'Nội dung học viên'), makeText('p', detail.source.essay || '—'));
+    const metadata = document.createElement('section');
+    metadata.className = 'flow-detail-panel';
+    const trcc = detail.source.trCcCheck == null ? '—' : detail.source.trCcCheck ? 'Có' : 'Không';
+    const trccNote = detail.source.trCcSource === 'repair_override' ? ' · bổ sung sau khi cứu TR/CC' : '';
+    metadata.append(makeText('h3', 'Thông tin bài'),
+      makeText('p', `Học viên: ${sourceName(detail.pair)}`),
+      makeText('p', `Lớp: ${detail.pair.class_code || 'Ngoài lớp'}`),
+      makeText('p', `TRCC: ${trcc}${trccNote}`),
+      makeText('p', `Trạng thái nguồn: ${detail.pair.source_status || '—'}`),
+      externalLink(detail.pair.file_url, 'Mở Docs', ''));
+    const results = document.createElement('section');
+    results.className = 'flow-detail-panel';
+    results.append(makeText('h3', 'Kết quả và giai đoạn'));
+    const renderStage = detail.stages.find(stage => stage.stage_key === 'render'
+      && stage.result?.resultUrl);
+    if (detail.pair.source_type !== 'term_test') {
+      results.append(externalLink(renderStage?.result?.resultUrl,
+        'Mở bài chấm trên LMS', 'Chưa có Link LMS'));
+    }
+    for (const stage of detail.stages) {
+      const block = document.createElement('details');
+      block.append(makeText('summary',
+        `${detail.pair.source_type === 'term_test' ? testStageNames[stage.stage_key]
+          : stageNames[stage.stage_key]} · ${statusNames[stage.status] || stage.status}`),
+      makeText('pre', stage.result ? JSON.stringify(stage.result, null, 2) : 'Chưa có kết quả.'));
+      results.append(block);
+    }
+    const log = document.createElement('section');
+    log.className = 'flow-detail-panel flow-detail-panel-wide';
+    log.append(makeText('h3', 'Nhật ký và lỗi'));
+    for (const event of history.events || []) {
+      const line = makeText('p', `${formatTime(event.at)} · ${describeEvent(event)}`
+        + `${event.error_code ? ` · lỗi ${event.error_code}` : ''}`, 'flow-meta');
+      const workflowId = stageWorkflowIds[event.stage_key];
+      if (workflowId && event.n8n_execution_id) {
+        const link = externalLink(`https://ducizone.ddns.net/workflow/${workflowId}`
+          + `/executions/${encodeURIComponent(event.n8n_execution_id)}`,
+        'Mở lượt chạy n8n', '');
+        line.append(' · ', link);
+      }
+      log.append(line);
+    }
+    const grid = document.createElement('div');
+    grid.className = 'flow-detail-grid';
+    grid.append(topic, essay, metadata);
+    if (reviewMessage) {
+      const warning = document.createElement('section');
+      warning.className = 'flow-detail-panel flow-detail-panel-wide';
+      warning.append(makeText('h3', 'Cần đối chiếu hai nguồn'), makeText('p', reviewMessage));
+      grid.append(warning);
+    } else if (detail.test) grid.append(testDetailSection(detail.test));
+    grid.append(results, log);
+    content.replaceChildren(makeText('h2', sourceName(detail.pair)), grid);
+  } catch (error) {
+    content.textContent = `Chưa đọc được chi tiết: ${error.message}`;
+  }
+}
 
 async function retryReview(review, button) {
   if (button.disabled) return;
@@ -658,5 +738,15 @@ document.querySelector('.flow-skip').addEventListener('click', event => { event.
 window.addEventListener('hashchange', () => { const next = hashToView(); if (next !== state.activeView) selectView(next); });
 $('remember-flow-login').checked = loginPreference.read();
 $('remember-flow-login').addEventListener('change', () => { const input = $('remember-flow-login'); if (!loginPreference.set(input.checked)) input.checked = loginPreference.read(); });
-$('flow-logout').addEventListener('click', () => { clearLogin(); globalThis.google?.accounts?.id?.disableAutoSelect?.(); loginPreference.set(false); $('remember-flow-login').checked = false; });
+$('flow-logout').addEventListener('click', async () => {
+  // Nhận vào: nút đăng xuất; thu hồi cookie phía máy chủ rồi khóa dữ liệu trên màn hình.
+  // Khi mạng lỗi: vẫn khóa giao diện và báo chưa xác nhận thu hồi phiên để người dùng biết.
+  let logoutError;
+  try { await state.sessionClient.logout(); } catch (error) { logoutError = error; }
+  clearLogin();
+  globalThis.google?.accounts?.id?.disableAutoSelect?.();
+  loginPreference.set(false);
+  $('remember-flow-login').checked = false;
+  if (logoutError) showError('flow-login-error', 'Đã khóa giao diện nhưng chưa xác nhận thu hồi phiên. Hãy kiểm tra mạng và đăng xuất lại.');
+});
 void init();

@@ -19,10 +19,30 @@ export const writingSortFields = Object.freeze([
 // Việc chính: phân biệt nguồn Test trùng, vốn không được chấm lại bằng Retry.
 // Kết quả: giao diện hiện hướng dẫn đối chiếu; lỗi khác vẫn dùng Retry bình thường.
 export function writingReviewAction(row) {
-  const code = row?.last_error_code || row?.error_code;
-  return code === 'TEST_DOCUMENT_PAIR_ALREADY_REGISTERED'
-    ? { canRetry: false, message: 'Nguồn Test trùng: đối chiếu hai bài tập rồi Bỏ qua nguồn trùng.' }
-    : { canRetry: true, message: '' };
+  const code = row?.historical_review_code || row?.last_error_code || row?.error_code;
+  if (code === 'TEST_HISTORICAL_EVIDENCE_CONFLICT') {
+    return { canRetry: false, canSkip: false,
+      message: 'Hai nguồn kết quả cũ trái nhau: cần đối chiếu, không chấm lại hoặc tự chọn điểm.' };
+  }
+  if (code === 'TEST_DOCUMENT_PAIR_ALREADY_REGISTERED') {
+    return { canRetry: false, canSkip: row?.status !== 'delivered',
+      message: 'Nguồn Test trùng: đối chiếu hai bài tập rồi Bỏ qua nguồn trùng.' };
+  }
+  return { canRetry: true, canSkip: true, message: '' };
+}
+
+// Nhận vào: cờ đối chiếu của đúng bài Test và mã các hồ sơ cùng Docs/Task/phiên bản.
+// Việc chính: diễn đạt trạng thái chưa chốt và giữ dấu đã giao trước đó.
+// Trả ra: cảnh báo dành cho giáo viên; không suy đoán điểm hoặc nguồn thắng.
+export function historicalReviewMessage(row) {
+  if (row?.source_type !== 'term_test' || !row.historical_review_code) return '';
+  const reason = row.historical_review_code === 'TEST_HISTORICAL_EVIDENCE_CONFLICT'
+    ? 'Hai nguồn lịch sử báo điểm hoặc báo cáo khác nhau.'
+    : 'Hai nguồn cùng trỏ đến bài Test này; chưa đủ bằng chứng kết luận hai kết quả khớp.';
+  const delivered = row.status === 'delivered' ? ' Bài này đã được giao trước khi phát hiện.' : '';
+  const peers = Array.isArray(row.historical_peer_pair_ids)
+    ? row.historical_peer_pair_ids.join(', ') : '';
+  return `${reason}${delivered} Cần đối chiếu hồ sơ liên quan${peers ? `: ${peers}` : ''}.`;
 }
 
 export function normalizeWritingDay(value) {
@@ -99,6 +119,10 @@ export function summarizeWritingTestDetail(test) {
 export function summarizeWritingTestRow(row) {
   if (row?.source_type !== 'term_test') return null;
   const task = `Task ${row.task_number || '?'}`;
+  if (row.historical_review_code) {
+    return { progress: `${task} · Cần đối chiếu hai nguồn`,
+      overall: 'Chưa chốt điểm', lms: 'Không dùng' };
+  }
   if (row.result_origin === 'legacy_restored') {
     return { progress: `${task} · Kết quả cũ trong Docs`,
       overall: 'Xem điểm trong Docs cũ', lms: 'Không dùng' };
