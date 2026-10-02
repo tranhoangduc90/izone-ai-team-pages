@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {sortClassesNewestFirst} from '../term-tests/k56-demo/landing-model.js';
+import {sortClassesNewestFirst,buildK56LandingClasses} from '../term-tests/k56-demo/landing-model.js';
 const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
 function element(){return {value:'',hidden:false,dataset:{},handlers:{},classList:{toggle(){}},setAttribute(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){},append(){}};}
 const elements=Object.fromEntries(['classCode','classSelect','classHelp','loginBadge','loginStatus','googleSignInButton','logoutButton','teacherDashboard'].map(id=>[id,element()]));
@@ -15,7 +15,7 @@ const destinationButtons=['term-test-1-k56-audio','term-test-2-k56-audio','mini-
 let response={ok:true,students:[{ref:'synthetic',name:'Học viên giả lập'}]};
 const context=vm.createContext({
   window:{TERM_TEST_APP_CONFIG:{API_BASE_URL:'https://example.test/mapping-api-demo',API_FOR_CLASS:classCode=>classCode==='CODEXDEMO56'?'https://example.test/mapping-api-demo':'https://example.test/mapping-api-k56',GOOGLE_CLIENT_ID:'synthetic'},location:{href:'https://example.test/term-tests/k56-demo/?class=CODEXDEMO56'},history:{replaceState(_state,_title,url){history.push(url)}},sessionStorage:{}},
-  location:{search:'?class=CODEXDEMO56'},URLSearchParams,URL,AbortSignal,sortClassesNewestFirst,
+  location:{search:'?class=CODEXDEMO56'},URLSearchParams,URL,AbortSignal,sortClassesNewestFirst,buildK56LandingClasses,
   document:{getElementById:id=>elements[id],createElement:()=>element(),head:{append(){}},querySelectorAll:selector=>selector==='[data-test]'?buttons:selector==='[data-mode]'?modes:destinationButtons},
   createTeacherSessionClient:()=>({login:async()=>({ok:true}),restore:async()=>false,logout:async()=>({ok:true})}),
   teacherSessionRequestOptions:options=>({...options,credentials:'include'}),
