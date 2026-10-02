@@ -16,6 +16,11 @@ test('Chrome desktop/mobile: nguồn demo lỗi vẫn chọn56, loại806, mở 
     const path = new URL(req.url, 'http://127.0.0.1').pathname;
     const target = resolve(root, `.${path.endsWith('/') ? path + 'index.html' : path}`);
     if (!target.startsWith(root + sep)) return res.writeHead(403).end();
+    // Ranh giới test là điều hướng landing, không chạy lại toàn app thi ở mỗi link.
+    if (path.endsWith('-computer-based/')) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      return res.end('<!doctype html><html><body><h1>Đích bài thi giả lập</h1></body></html>');
+    }
     try {
       res.writeHead(200, { 'Content-Type': { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' }[extname(target)] || 'application/octet-stream' });
       res.end(await readFile(target));
@@ -66,8 +71,7 @@ test('Chrome desktop/mobile: nguồn demo lỗi vẫn chọn56, loại806, mở 
       }
     }
     const rosters = requests.filter(item => item.path.endsWith('/roster'));
-    // Sau điều hướng, trang thi có thể tự đọc roster; tất cả vẫn chỉ dùng demo và GET.
-    assert.ok(rosters.length >= 12);
+    assert.equal(rosters.length, 12);
     assert.ok(rosters.every(item => item.path.includes('/mapping-api-demo/') && item.method === 'GET'));
     assert.deepEqual(errors, []);
   } finally {

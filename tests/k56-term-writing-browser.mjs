@@ -131,6 +131,8 @@ for (const { slug, taskNumber } of [
       assert.ok(calls.every(call => call.attemptToken === attemptToken), 'Lượt kết quả bị đổi định danh');
 
       await status.getByRole('button', { name: 'Kiểm tra kết quả ngay' }).click();
+      // Click chưa đợi callback async/API; chờ kết quả UI, không đọc nhầm thông báo cũ.
+      await status.getByText('Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.', { exact: true }).waitFor({ state: 'visible' });
       assert.equal(
         await status.locator('p').innerText(),
         'Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.'
