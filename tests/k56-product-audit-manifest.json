@@ -23,6 +23,7 @@
       "tests/k56-term1-live-writing-result.mjs",
       "tests/k56-term-writing-browser.mjs",
       "tests/k56-remaining-edge-cases.mjs",
+      "tests/k56-fixture-lifecycle.mjs",
       "tests/k56-test2-release.mjs",
       "tests/k56-test2-writing-result.mjs",
       "tests/k56-test2-writing-revision.mjs",

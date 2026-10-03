@@ -134,7 +134,11 @@ export async function createCompletedResultFixture({ backendRoot, pagesRoot, fix
         (run_id, job_type, idempotency_key) VALUES ($1::uuid, 'dispatch', 'E03-probe-extra-job')`, [run.rows[0].id]);
     },
     async close() {
-      await new Promise((done, fail) => server.close(error => error ? fail(error) : done()));
+      // Đóng cổng trước rồi ngắt kết nối tải audio còn mở của fixture localhost.
+      // Không áp dụng cho server thật; giúp teardown kết thúc sau khi browser đã đóng.
+      const closed = new Promise((done, fail) => server.close(error => error ? fail(error) : done()));
+      server.closeAllConnections();
+      await closed;
       await database.close();
     }
   };
