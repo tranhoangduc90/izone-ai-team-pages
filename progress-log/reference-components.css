@@ -236,3 +236,6 @@
 .referenceRegion .sectionAccessRow>.previewCell{min-width:96px;min-height:34px;display:grid;place-items:center;border:1px solid #d5dcd9;background:white;font-size:9px;font-weight:850}
 @media(max-width:520px){.referenceRegion .sectionAccessRow{flex-direction:column;align-items:flex-start}.referenceRegion .sectionAccessRow>.previewCell{width:100%}}
 .referenceRegion .portalStudentPicker small,.referenceRegion .portalStudentPicker strong{display:block}.referenceRegion .portalStudentPicker small{font-size:11px;letter-spacing:.08em;color:#c7d8e1}.referenceRegion .portalStudentPicker strong{font-size:15px;margin-top:7px}.referenceRegion .portalStudentPicker{padding:18px;border:1px solid #ffffff40;border-radius:18px;background:#ffffff0a}
+
+/* Giữ ô bảng nhìn thấy khi cuộn dưới thanh đầu trang cố định. */
+html:has(#teacherWorkspace){scroll-behavior:auto;scroll-padding-top:84px}#courseOverview button{scroll-margin-top:90px;scroll-margin-bottom:30px}

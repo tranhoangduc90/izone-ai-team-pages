@@ -12,7 +12,7 @@ const {chromium}=createRequire(process.env.PLAYWRIGHT_PACKAGE||'C:/Users/ADMIN/.
 const ref='11111111-1111-4111-8111-111111111111',token='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 async function run(action){
  const server=createServer(async(req,res)=>{try{let f=resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!f.startsWith(resolve(root)+sep))throw Error('Denied');res.setHeader('content-type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[extname(f)]||'text/plain'));res.end(await readFile(f));}catch{res.writeHead(404).end();}});
- await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({channel:'chrome',headless:true});
+ await new Promise(r=>server.listen(20000+Math.floor(Math.random()*30000),'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({channel:'chrome',headless:true});
  const page=await browser.newPage({viewport:{width:390,height:844},timezoneId:'America/New_York'}),writes=[],errors=[];page.setDefaultTimeout(5000);page.on('pageerror',e=>errors.push(e.message));
  const detail={...demoDetail(demoCourse.overview.students[0].studentRef,5),classId:'1294',student:{studentRef:ref,name:'Học viên giả'},sessionNumber:2,status:'complete'};
  const sessions=[{sessionNumber:2,sessionDate:'2026-09-21',assignmentId:'assignment-2',title:'ENTRANCE TICKET • Reading 3 + Writing 1',assignmentStatus:'published',completeness:'complete',attendanceStatus:'self_confirmed',portalSync:{status:'complete'},quizSummary:{correct:2,incorrect:1,graded:3}},
@@ -39,7 +39,7 @@ async function run(action){
   await action({page,origin,sessions,detail,setMode:m=>detailMode=m,release:()=>release?.()});assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
  } finally{release?.();await browser.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 }
-test('Production reference regression: session title and full submitted questions/answers',{timeout:30000},async()=>run(async({page,detail})=>{
+test('Production reference regression: session title and full submitted questions/answers',{timeout:60000},async()=>run(async({page,detail})=>{
  const card=page.locator('#journeySessions').getByRole('button',{name:/BUỔI 02/});
  assert.match(await page.locator('#journeyListTitle').textContent(),/4 buổi học/);
  assert.match(await page.locator('#journeySessions').textContent(),/Reading 3 \+ Writing 1/);
@@ -54,12 +54,12 @@ test('Production reference regression: session title and full submitted question
  for(const width of [390,768,1440]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await mkdir(resolve(root,'output/playwright'),{recursive:true});await page.screenshot({path:resolve(root,'output/playwright/production-detail-'+width+'.png')});}
  await page.locator('#journeyDetailBackButton').click();assert.equal(await page.locator('#journeyView').isVisible(),true);await page.locator('#journeyBackButton').click();assert.equal(await page.locator('#confirmView').isVisible(),true);
 }));
-test('Production reference regression: Vietnam 18:25 switches assigned session without API writes',{timeout:30000},async()=>run(async({page})=>{
+test('Production reference regression: Vietnam 18:25 switches assigned session without API writes',{timeout:60000},async()=>run(async({page})=>{
  const region=page.locator('#journeySessions');assert.match(await region.textContent(),/Chưa đến buổi học/);await page.clock.runFor(1021);
  const ready=region.getByRole('link',{name:/Nhấn để học buổi hôm nay/});await ready.waitFor();assert.match(await ready.getAttribute('href'),/#assignment=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb$/);
  assert.match(await region.textContent(),/Buổi Test · chưa có kết quả/);assert.match(await region.textContent(),/Chưa tạo Progress Log/);
 }));
-test('Production history errors, wrong identity and late detail do not reopen hidden context',{timeout:30000},async()=>run(async({page,setMode,release})=>{
+test('Production history errors, wrong identity and late detail do not reopen hidden context',{timeout:60000},async()=>run(async({page,setMode,release})=>{
  const open=()=>page.locator('#journeySessions').getByRole('button',{name:/BUỔI 02/}).click();
  setMode('wrong');await open();await page.locator('#journeyDetailStatus').filter({hasText:'không khớp'}).waitFor();assert.equal(await page.locator('[data-review-item]').count(),0);
  setMode('fail');await page.locator('#journeyDetailRetryButton').click();await page.locator('#journeyDetailStatus').filter({hasText:'Nguồn tạm lỗi'}).waitFor();

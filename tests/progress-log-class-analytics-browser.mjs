@@ -12,7 +12,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 test('Whole-class basic analysis drills into exact student/session, keeps sparse course and clears on forbidden',{timeout:60000},async()=>{
  const server=createServer(async(req,res)=>{try{const f=resolve(root,'.'+new URL(req.url,'http://localhost').pathname);assert.ok(f.startsWith(root));res.setHeader('content-type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[extname(f)]||'text/plain'));res.end(await readFile(f));}catch{res.writeHead(404).end();}});
- await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
+ await new Promise(r=>server.listen(20000+Math.floor(Math.random()*30000),'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
  const browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage(),errors=[],writes=[],detailCalls=[];let forbidden=false,hold=false,release;
  page.setDefaultTimeout(6000);page.on('pageerror',e=>errors.push(e.message));
  const course=structuredClone(demoCourse);course.classId='1294';course.overview.classId='1294';
