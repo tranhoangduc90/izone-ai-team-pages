@@ -2,7 +2,14 @@
 // Đồng hồ chỉ chọn nhãn/đường vào; máy chủ vẫn quyết định quyền và mở từng phần.
 export function contentTitle(slot,form){
   const raw=String(form?.title||slot?.assignments?.[0]?.title||'').trim();
-  const title=raw.replace(/^ENTRANCE\s+TICKET\s*[•:·–—-]\s*/iu,'').replace(/^Progress\s*Log\s*(?:[-–—:·]\s*)?(?:buổi\s*\d+\s*(?:[-–—:·]\s*)?)?/iu,'').replace(/^Buổi\s*\d+\s*[-–—:·]\s*/iu,'').trim().replace(/\b(Listening|Reading|Writing|Speaking)\b/gi,m=>m[0].toUpperCase()+m.slice(1).toLowerCase());
+  // Các title cũ chứa mã lớp/buổi/Progress Log; bỏ nhãn để không lặp tiêu đề.
+  let title=raw;
+  for(let i=0;i<4;i++){
+    const cleaned=title.replace(/^IC\d+\s*(?:[-–—:·]\s*|$)/iu,'').replace(/^ENTRANCE\s+TICKET\s*[•:·–—-]\s*/iu,'').replace(/^Progress\s*Log\s*(?:[-–—:·]\s*)?/iu,'').replace(/^Buổi\s*\d+\s*(?:[-–—:·]\s*|$)/iu,'').trim();
+    if(cleaned===title)break;
+    title=cleaned;
+  }
+  title=title.replace(/\b(Listening|Reading|Writing|Speaking)\b/gi,m=>m[0].toUpperCase()+m.slice(1).toLowerCase());
   return title|| (slot?.sessionKind==='test'?'Buổi Test':'Nội dung chưa được xác nhận');
 }
 export function skillsLabel(title){return [...title.matchAll(/\b(Listening|Reading|Writing|Speaking)\b/gi)].map(m=>m[1][0].toUpperCase()+m[1].slice(1).toLowerCase()).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');}
