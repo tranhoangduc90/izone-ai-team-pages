@@ -60,11 +60,11 @@ for(const module of modules) {
 test('cả hai nhánh bootstrap và HTML dùng bản cửa sổ học viên mới',()=>{
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']){
     const bootstrap=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    const version = slug === 'mini-test-k56' ? /app\.js\?v=[^'"]*mini-homework-25m/g : /app\.js\?v=[^'"]*student-feedback-v1/g;
+    const version = /app\.js\?(?:rev|v)=20261003-writing-save-cas-v1/g;
     assert.equal((bootstrap.match(version)||[]).length,2);
     const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');
-    if (slug === 'mini-test-k56') assert.match(html,/bootstrap\.js\?v=[^"]*mini-homework-25m/);
-    else assert.match(html,/bootstrap\.js\?v=[^"]*student-feedback-v1/);
+    assert.match(html,/bootstrap\.js\?(?:rev|v)=20261003-writing-save-cas-v1/);
+
     assert.match(html,/k56-writing-feedback\/styles.css\?rev=20260914-student-feedback-v1/);
   }
 });

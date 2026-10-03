@@ -5,12 +5,12 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const releaseRevision = '20260826-term-test-reliability-v1';
-const allStudentConfirmationRevision = '20260829-all-student-confirmation-v2';
+const releaseRevision = '20261003-writing-save-cas-v1';
+const allStudentConfirmationRevision = '20261003-writing-save-cas-v1';
 const computerBasedLayoutRevision = '20260904-compact-layout-v7';
 const loadGuardRevision = '20260912-load-guard-v1';
-const liveResultsRevision = '20260914-live-results-v1';
-const resetRecoveryRevision = '20260914-reset-recovery-v1';
+const liveResultsRevision = '20261003-writing-save-cas-v1';
+const resetRecoveryRevision = '20261003-writing-save-cas-v1';
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
@@ -31,7 +31,7 @@ test('mọi trang Term/Mini Test nạp đúng bản reliability và không thi�
     if (relativeEntry.includes('computer-based')) {
       assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${resetRecoveryRevision}`), relativeEntry);
     } else {
-      const scriptRevision = relativeEntry.includes('mini-test') ? loadGuardRevision : liveResultsRevision;
+      const scriptRevision = liveResultsRevision;
       assert.match(html, new RegExp(`shared/app\\.js\\?rev=${scriptRevision}`), relativeEntry);
     }
     const localAssets = [...html.matchAll(/(?:src|href)="([^"#?]+)(?:\?[^"#]*)?"/g)]
