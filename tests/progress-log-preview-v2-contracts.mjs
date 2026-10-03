@@ -1,0 +1,42 @@
+// Kiểm độc lập mốc giờ Việt Nam và toàn bộ dạng câu, không chấm lại bài học viên.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {sessionState,startsAt,contentTitle,sessionHeading} from '../progress-log/reference-preview-v2/session-ui.js';
+import {reviewItems} from '../progress-log/reference-preview-v2/review.js';
+import {demoDetail} from '../progress-log/reference-preview-v2/fixture.js';
+test('V2 lifecycle: trước/đúng18:25 Việt Nam, priority và lịch sai',()=>{
+  const slot={sessionNumber:7,sessionDate:'2026-10-03',assignments:[{}]},cell={assignmentId:'assigned',status:'not_submitted'},form={status:'published',title:'Buổi 7 - Reading 3 + Writing 1'};
+  const at=v=>sessionState(slot,cell,form,Date.parse(v));
+  assert.equal(startsAt(slot.sessionDate),Date.parse('2026-10-03T11:25:00Z'));
+  assert.equal(at('2026-10-03T18:24:59+07:00').label,'Chưa đến buổi học');
+  assert.equal(at('2026-10-03T18:25:00+07:00').label,'Nhấn để học buổi hôm nay');
+  assert.deepEqual(at('2026-10-03T11:25:00Z'),at('2026-10-03T18:25:00+07:00'));
+  assert.equal(at('2026-10-02T23:59:59+07:00').canLearn,false);
+  assert.equal(at('2026-10-04T00:00:00+07:00').label,'Mở Progress Log của buổi học');
+  assert.equal(sessionState(slot,{...cell,status:'complete'},form,Date.parse('2026-10-03T11:25:00Z')).label,'✓ Đã hoàn thành');
+  assert.equal(sessionState(slot,cell,{...form,status:'closed'},Date.parse('2026-10-03T11:25:00Z')).canLearn,false);
+  assert.equal(sessionState({...slot,sessionDate:null},cell,form).label,'Chưa xác nhận lịch học');
+  assert.equal(startsAt('2026-02-30'),null);assert.equal(startsAt('03/10/2026'),null);
+  assert.equal(sessionState(slot,{status:'no_assignment'},null).label,'Chưa tạo Progress Log');
+  assert.equal(sessionState({...slot,sessionKind:'test'},{status:'test_pending'},null).label,'Buổi Test · chưa có kết quả');
+  assert.equal(sessionState({...slot,assignments:[{},{}]},cell,form).canLearn,false);
+  assert.equal(sessionState(slot,{...cell,status:'not_assigned'},form).canLearn,false);
+  assert.throws(()=>sessionState(slot,cell,form,NaN),/Thời gian/);
+  assert.equal(contentTitle(slot,form),'Reading 3 + Writing 1');
+  assert.equal(contentTitle(slot,{title:'ENTRANCE TICKET • LISTENING 1 + SPEAKING 2'}),'Listening 1 + Speaking 2');
+  assert.equal(sessionHeading(slot,form),'Buổi 07 · Reading 3 + Writing 1');
+  assert.equal(contentTitle({sessionNumber:1},null),'Nội dung chưa được xác nhận');
+});
+test('V2 review: giữ prompt/help/options/inline/array/multiline/tự khai/điều kiện',()=>{
+  const detail=demoDetail('demo-student-0',5),html=reviewItems(detail);
+  assert.equal((html.match(/data-review-item=/g)||[]).length,10);
+  for(const text of ['The benefits of reading','A change in learning habits','Em cần tìm','trước khi quyết định','Câu chủ đề phải nêu ý chính.','Ý chính','Lựa chọn của em','6/10','Em cần đọc lại cả câu chứa bằng chứng.','Chưa chấm đúng/sai'])assert.ok(html.includes(text),text);
+  const first=detail.definition.blocks[0].items[0];first.helpText='Giữ nguyên <chỉ dẫn> & dấu.';first.displayNumber='1a';
+  detail.responses[first.itemVersionId]='<img src=x onerror=alert(1)>\nDòng thứ hai có dấu.';
+  const escaped=reviewItems(detail);assert.ok(escaped.includes('&lt;img'));assert.ok(!escaped.includes('<img'));
+  assert.ok(escaped.includes('Giữ nguyên &lt;chỉ dẫn&gt; &amp; dấu.'));assert.ok(escaped.includes('1a'));
+  detail.responses['demo-speaking']=['vocab'];
+  assert.match(reviewItems(detail),/Không áp dụng cho lựa chọn của em/);
+  detail.responses['demo-self']={correct:0,total:10};assert.match(reviewItems(detail),/0\/10/);
+  detail.responses['demo-dropdown']='';assert.match(reviewItems(detail),/Chưa trả lời/);
+});

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
+  <title>Progress Log · Bản xem thử chi tiết</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../../progress-log-567-demo/_next/static/css/index.B4GAfqfn.css">
+  <link rel="stylesheet" href="preview.css">
+  <script src="../config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="app.js" type="module"></script>
+</head>
+<body class="referencePreview">
+  <main class="siteShell">
+    <header class="topbar">
+      <div class="brand"><span class="brandMark" aria-hidden="true">PL</span><div><strong>Progress Log</strong><small>Phiếu học tập &amp; xác nhận tham gia</small></div></div>
+      <div class="previewHeaderActions"><span id="sourceLabel" class="previewSource">DỮ LIỆU MINH HỌA</span><nav class="roleToggle" aria-label="Góc nhìn"><button id="studentView" type="button">Học viên</button><button id="teacherView" type="button" class="roleActive">Giáo viên</button></nav></div>
+    </header>
+    <div class="previewToolbar">
+      <span>Bản xem thử chi tiết</span>
+      <button id="realData" type="button">Dữ liệu lớp của tôi</button>
+      <button id="demoData" type="button" hidden>Dùng dữ liệu minh họa</button>
+      <button id="refresh" type="button" hidden>Đọc lại dữ liệu</button>
+      <a href="../teacher.html" target="_blank" rel="noopener">Mở hệ thống đang vận hành ↗</a>
+    </div>
+    <p id="notice" class="previewNotice" role="status" aria-live="polite"></p>
+    <section id="access" class="previewAccess" hidden><h2>Đăng nhập giảng viên</h2><p>Xem lớp thuộc quyền của bạn, bằng phiên đăng nhập của hệ thống Progress Log.</p><div id="googleSignIn"></div><button id="retrySession" type="button">Thử khôi phục phiên</button></section>
+    <div id="workspace"></div>
+    <p class="previewFootnote">Bản xem thử chỉ đọc. Các thao tác soạn phiếu, mở phần, điểm danh và gửi nhận xét vẫn thực hiện trong hệ thống đang vận hành.</p>
+  </main>
+  <dialog id="detailDialog" class="previewDialog"><form method="dialog"><button class="previewClose" aria-label="Đóng chi tiết">Đóng ×</button></form><div id="detailContent"></div></dialog>
+</body>
+</html>
