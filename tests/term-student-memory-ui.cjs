@@ -111,7 +111,9 @@ async function confirmPrefilled(page) {
   const dialog = page.locator('.cbt-identity-confirmation-dialog');
   await dialog.waitFor({ state: 'visible' });
   await dialog.getByRole('button', { name: 'Xác nhận, tiếp tục' }).click();
-  await page.waitForTimeout(40);
+  // Chờ lượt giả đã thực sự khôi phục; 40 ms không đủ trên máy đang tải nặng.
+  // Nếu khôi phục lỗi, điều kiện này hết thời gian thay vì âm thầm kiểm quá sớm.
+  await page.waitForFunction(() => Boolean(JSON.parse(localStorage.getItem('izone-test:term-test-1:CS.070626') || '{}').attemptToken));
 }
 
 async function verifyCbtRoute(browser, classCode, slug, screenshot = false) {
@@ -140,15 +142,17 @@ async function verifyCbtRoute(browser, classCode, slug, screenshot = false) {
   if (screenshot) await opened.page.screenshot({ path: join(root, 'output', 'playwright', 'term-memory-cbt.png'), fullPage: true });
   await opened.page.locator('#bootstrap-confirm-remembered-student').click();
   const dialog = opened.page.locator('.cbt-identity-confirmation-dialog');
+  await dialog.waitFor({ state: 'visible' });
   const otherTab = await context.newPage();
   await otherTab.goto(siteBase + 'writing-handouts/config.json');
   await otherTab.evaluate(({ key, ref }) => localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: ref })), { key: memoryKey, ref: uuidB });
   assert.equal(await picker.inputValue(), uuidA, 'Storage event trong dialog đã đổi UUID đang xác nhận');
   await opened.page.bringToFront();
   await dialog.getByRole('button', { name: 'Quay lại chọn tên' }).click();
-  await opened.page.waitForTimeout(30);
+  await opened.page.waitForFunction(() => !document.querySelector('.cbt-bootstrap-identity')?.inert);
   assert.equal(prepared.count, 0, 'Hủy xác nhận CBT vẫn gọi prepare');
   await picker.selectOption(uuidA);
+  await opened.page.locator('.cbt-identity-confirmation-dialog').waitFor({ state: 'visible' });
   await otherTab.evaluate(({ key, ref }) => {
     localStorage.removeItem(key);
     localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: ref }));
