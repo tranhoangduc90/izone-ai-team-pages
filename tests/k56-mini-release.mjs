@@ -7,8 +7,10 @@ const sandbox={window:{}};
 for(const file of ['mini-test-k56/test-config.js','mini-test-k56-computer-based/passages.js','mini-test-k56-computer-based/content.js'])vm.runInNewContext(read(file),sandbox,{timeout:5000});
 const config=sandbox.window.TERM_TEST_CONFIG;
 assert.equal(config.slug,'mini-test-k56');
+assert.equal(config.reading.durationMinutes,25);
+assert.match(config.reading.description.join(' '),/25 phút/);
 assert.equal(config.listening.controls.length,10);assert.equal(config.reading.controls.length,13);
-assert.equal(config.listening.durationSeconds,446);assert.equal(config.reading.durationMinutes,20);assert.equal(config.writing.durationMinutes,15);
+assert.equal(config.listening.durationSeconds,446);assert.equal(config.reading.durationMinutes,25);assert.equal(config.writing.durationMinutes,15);
 const content=sandbox.window.K56_TERM_TEST_CONTENT;
 assert.equal(content.writing.tasks.length,1);assert.equal(content.writing.tasks[0].id,'task2');assert.equal(content.writing.tasks[0].label,'Đoạn văn');assert.equal(content.audio.src,'');
 assert.match(content.writing.tasks[0].prompt,/uniforms/);
@@ -21,4 +23,4 @@ assert.ok(app.includes('Điểm đoạn văn'));assert.ok(read('k56-mini-shared/
 assert.ok(read('mini-test-k56-computer-based/bootstrap.js').includes('../k56-mini-shared/app.js'));
 for(const name of ['server-private','assets/private'])assert.equal(fs.existsSync(new URL('mini-test-k56-computer-based/'+name,root)),false);
 for(const file of ['k56-mini-shared/app.js','mini-test-k56-computer-based/bootstrap.js'])assert.ok(read(file).includes('location.hostname'));
-console.log('Mini K56: 10/13, 446s/20m/15m, đoạn văn, protected audio, API demo và 3 bài trên landing đều đạt.');
+console.log('Mini K56: 10/13, 446s/25m/15m, đoạn văn, protected audio, API demo và 3 bài trên landing đều đạt.');

@@ -18,9 +18,9 @@ const server=http.createServer((req,res)=>{
     await page.route('https://accounts.google.com/gsi/client',route=>route.fulfill({contentType:'application/javascript',body:"window.google={accounts:{id:{initialize:o=>window.fixtureLogin=o.callback,renderButton:()=>{},disableAutoSelect:()=>{}}}};"}));
     const date='2026-09-24',time='2026-09-24T19:00:00+07:00';
     const zoom57=['MP4','CHAT','TRANSCRIPT','TIMELINE','CC'].map((type,i)=>({id:'Zoom 57:file'+i,kind:'recording',source:'Zoom 57',account:'Zoom 57',recordingFileId:'file'+i,type,status:'completed',recordingStart:time,recordingEnd:'2026-09-24T21:00:00+07:00',fileSize:1000,reviewStatus:'pending',version:1,...(type==='MP4'?{videoId:'fixture-video',youtubeStatus:'uploaded'}:{})}));
-    const pending={id:'Zoom 55:pending',kind:'recording',source:'Zoom 55',account:'Zoom 55',meetingUuid:'known-meeting',recordingFileId:'pending',type:'',status:'processing',recordingStart:time,recordingEnd:'',fileSize:0,className:'IC2303',lessonNumber:2,reviewStatus:'pending',version:1,reasons:['processing']};
+    const pending={id:'Zoom 26:pending',kind:'recording',source:'Zoom 26',account:'Zoom 26',meetingUuid:'known-meeting',recordingFileId:'pending',type:'',status:'processing',recordingStart:time,recordingEnd:'',fileSize:0,className:'IC2271',lessonNumber:19,reviewStatus:'pending',version:1,reasons:['processing']};
     const staleLegacy={...pending};
-    const snapshot={date,scannedAt:'2026-09-24T23:00:00+07:00',scanStatus:'completed',accounts:[{account:'Zoom 55',status:'success'},{account:'Zoom 57',status:'success'}],records:[...zoom57,pending]};
+    const snapshot={date,scannedAt:'2026-09-24T23:00:00+07:00',scanStatus:'completed',accounts:[{account:'Zoom 26',status:'success'},{account:'Zoom 57',status:'success'}],records:[...zoom57,pending]};
     let refreshes=0,uploads=0,scans=0;
     await page.route('https://ducizone.ddns.net/**',route=>route.fulfill({json:{ok:true,records:[staleLegacy],playlists:[],yesterdayClasses:[],yesterdayDate:date}}));
     await page.route('https://fixture.invalid/**',route=>{
@@ -32,8 +32,8 @@ const server=http.createServer((req,res)=>{
       if(body.action==='source_link')return route.fulfill({json:{ok:true,status:'processing'}});
       if(body.action==='confirm_publish'){uploads++;return route.fulfill({status:500,json:{ok:false}});}
       if(body.action==='refresh_file'){
-        refreshes++;assert.equal(body.id,'Zoom 55:pending');assert.equal(body.expectedVersion,1);
-        Object.assign(pending,{id:'Zoom 55:ready',recordingFileId:'ready',type:'MP4',status:'completed',recordingEnd:'2026-09-24T21:00:00+07:00',fileSize:1000,version:2,sourceRefreshedAt:'2026-09-25T10:00:00+07:00',audit:[{action:'refresh_processing_source',previousRecordId:'Zoom 55:pending'}]});
+        refreshes++;assert.equal(body.id,'Zoom 26:pending');assert.equal(body.expectedVersion,1);
+        Object.assign(pending,{id:'Zoom 26:ready',recordingFileId:'ready',type:'MP4',status:'completed',recordingEnd:'2026-09-24T21:00:00+07:00',fileSize:1000,version:2,sourceRefreshedAt:'2026-09-25T10:00:00+07:00',audit:[{action:'refresh_processing_source',previousRecordId:'Zoom 26:pending'}]});
         return route.fulfill({json:{ok:true,record:{id:pending.id,version:2,type:'MP4',status:'completed',fileSize:1000}}});
       }
       return route.fulfill({json:{ok:false,error:'UNKNOWN_ACTION'}});
@@ -43,11 +43,12 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#totalCount').innerText(),'2');
     await page.evaluate(()=>window.fixtureLogin({credential:'fixture-token'}));
     await page.waitForFunction(()=>window.recordingAuth.isAuthenticated());
-    await page.selectOption('[data-edit-id="Zoom 55:pending"]','refresh_file');
-    await page.waitForSelector('[data-action="manual-upload"][data-id="Zoom 55:ready"]');
+    assert.match(await page.locator('[data-edit-id="Zoom 26:pending"]').locator('xpath=ancestor::tr').innerText(),/Zoom đang xử lý, chưa có MP4 hoàn chỉnh/);
+    await page.selectOption('[data-edit-id="Zoom 26:pending"]','refresh_file');
+    await page.waitForSelector('[data-action="manual-upload"][data-id="Zoom 26:ready"]');
     assert.equal(refreshes,1);assert.equal(uploads,0);assert.equal(scans,0);
     assert.equal(await page.locator('#totalCount').innerText(),'2');
     assert.deepEqual(errors,[]);
-    console.log('PASS: Zoom 57 một video, Zoom 55 kiểm tra lại tệp rồi mở nút đăng, không quét lại hay tự đăng');
+    console.log('PASS: Zoom 57 một video, Zoom 26 kiểm tra lại tệp rồi mở nút đăng, không quét lại hay tự đăng');
   }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

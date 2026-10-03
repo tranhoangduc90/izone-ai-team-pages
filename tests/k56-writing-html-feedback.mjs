@@ -47,7 +47,11 @@ for(const module of modules) {
 test('bump cache HTML ở cả ba bộ nạp và trang CBT',()=>{
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']){
     const b=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    assert.equal(b.split('\n').filter(line=>line.includes('app.js?v=')&&line.includes('student-feedback-v1-html-v2')).length,2);
-    assert.match(fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8'),/student-feedback-v1-html-v2/);
+    const revision=slug==='mini-test-k56'?'20260929-mini-homework-25m':'student-feedback-v1-html-v2';
+    const loaders=b.split('\n').filter(line=>line.includes('app.js?v='));
+    assert.equal(loaders.length,2);
+    assert.ok(loaders.every(line=>line.includes(revision)&&line.includes('k56-order-v1')));
+    const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');
+    assert.ok(html.includes(revision)&&html.includes('k56-order-v1'));
   }
 });

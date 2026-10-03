@@ -1,0 +1,324 @@
+{
+  "schema_version": 3,
+  "product": "Term Test 1/2 K56 — mạng chậm, nhận xét dài/in và zoom",
+  "change_id": "k56-edge-20261003",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "medium",
+  "system_traits": [],
+  "experience": {
+    "planning_mode": "standard",
+    "mode_reason": "Sửa CSS riêng hai trang Term, không đổi trạng thái nghiệp vụ, quyền, API hoặc n8n.",
+    "user": "Học viên và người vận hành Term Test K56",
+    "problem": "Bản in mất cuối nhận xét và trang tràn ngang khi zoom 200%.",
+    "outcome": "Ba ca E-04/05/06 có bằng chứng trên cả hai Term, giữ nguyên bài và điểm.",
+    "acceptance_strategy": "small_complete",
+    "release_scope": "CSS/cache riêng hai route Term và bộ kiểm ba ca hiếm.",
+    "out_of_scope": [
+      "Chấm/ghi điểm mới",
+      "Sửa backend/n8n",
+      "Nghiệm thu toàn Term",
+      "Dọn canary Portal cũ"
+    ],
+    "plain_language_summary": "Cho nhận xét dài in đủ và cho cửa sổ zoom hẹp đọc/cuộn được; kiểm mạng chậm bằng bài giả."
+  },
+  "change_package": {
+    "proposal": "Sửa hai lỗi hiển thị tìm được khi giải quyết ba ca hiếm.",
+    "behavior_baseline": "Source main 6190953 có dialog giới hạn chiều cao khi in và body rộng tối thiểu 320px.",
+    "deltas": [
+      {
+        "id": "D-EDGE",
+        "operation": "MODIFIED",
+        "behavior": "In đủ bài/nhận xét và bố cục kết quả không tràn khi zoom native 200%.",
+        "test_ids": [
+          "E05-T1",
+          "E05-T2",
+          "E06-T1",
+          "E06-T2"
+        ],
+        "module_ids": [
+          "TERM-UI"
+        ]
+      }
+    ],
+    "archive_status": "active"
+  },
+  "requirements": [
+    {
+      "id": "R-SLOW",
+      "statement": "Một lần đọc chậm tự hồi phục, tải lại đúng kết quả.",
+      "test_ids": [
+        "E04-T1",
+        "E04-T2"
+      ]
+    },
+    {
+      "id": "R-FEEDBACK",
+      "statement": "Màn hình nhỏ và bản in có đủ nội dung cả bốn tiêu chí và bài nguồn.",
+      "test_ids": [
+        "E05-T1",
+        "E05-T2"
+      ]
+    },
+    {
+      "id": "R-ZOOM",
+      "statement": "Chrome zoom native 200%, cửa sổ 640px, đọc/cuộn/mở/đóng bài chấm được.",
+      "test_ids": [
+        "E06-T1",
+        "E06-T2"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-READ",
+      "statement": "Giữ đúng người/lượt/Task/điểm; không thay kho/thêm job/gọi writer/mạng production.",
+      "test_ids": [
+        "E04-T1",
+        "E04-T2",
+        "E05-T1",
+        "E05-T2",
+        "E06-T1",
+        "E06-T2",
+        "T-INVALID"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "E04-T1",
+      "category": "happy_path",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "output/playwright/k56-edge/E04-term-test-1-k56.json"
+    },
+    {
+      "id": "E04-T2",
+      "category": "happy_path",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "output/playwright/k56-edge/E04-term-test-2-k56.json"
+    },
+    {
+      "id": "E05-T1",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "output/playwright/k56-edge/E05-term-test-1-k56.json"
+    },
+    {
+      "id": "E05-T2",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "output/playwright/k56-edge/E05-term-test-2-k56.json"
+    },
+    {
+      "id": "E06-T1",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "output/playwright/k56-edge/E06-term-test-1-k56.json"
+    },
+    {
+      "id": "E06-T2",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "output/playwright/k56-edge/E06-term-test-2-k56.json"
+    },
+    {
+      "id": "T-INVALID",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "output/playwright/k56-edge/T-INVALID.json"
+    }
+  ],
+  "task_graph": {
+    "plan_revision": "edge-v1",
+    "tasks": [
+      {
+        "id": "TASK-EDGE",
+        "result": "Bản sửa CSS cùng bộ bằng chứng ba ca.",
+        "depends_on": [],
+        "consumes": [
+          "E04",
+          "E05",
+          "E06"
+        ],
+        "produces": [
+          "edge_evidence"
+        ],
+        "contract": "Chỉ đóng khi đủ hai Term, PDF/zoom thật, audit và readback phát hành.",
+        "test_ids": [
+          "E04-T1",
+          "E04-T2",
+          "E05-T1",
+          "E05-T2",
+          "E06-T1",
+          "E06-T2",
+          "T-INVALID"
+        ],
+        "evidence_required": [
+          "RED/GREEN",
+          "Audit đầy đủ",
+          "Ảnh/PDF đã xem",
+          "Live bytes"
+        ],
+        "decision_inputs": [
+          "Bài giả không nối production"
+        ],
+        "affected_future_tasks": [],
+        "status": "done",
+        "plan_revision": "edge-v1",
+        "module_ids": [
+          "TERM-UI"
+        ]
+      }
+    ]
+  },
+  "risk_register": {
+    "assessment": "PASS",
+    "waivers": [],
+    "risks": [
+      {
+        "id": "R-UI",
+        "description": "Quy tắc in hoặc zoom có thể che nội dung khi đổi chiều rộng/nhận xét dài.",
+        "probability": 1,
+        "impact": 2,
+        "score": 2,
+        "severity": "P3",
+        "status": "mitigated",
+        "owner": "Codex",
+        "mitigation": "CSS chỉ hai route; cùng test RED/GREEN, PDF đủ bốn tiêu chí, zoom native và audit toàn bộ.",
+        "test_ids": [
+          "E05-T1",
+          "E05-T2",
+          "E06-T1",
+          "E06-T2"
+        ]
+      }
+    ]
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [],
+  "mutations": [
+    {
+      "id": "PAGES-ASSETS",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Pages build built cho 8385e17; published-readback.json: 4/4 HTTP 200/hash khớp; published-browser-final 7/7; live-url-smoke 2/2 với API giả/handler RAM, không dữ liệu thật."
+    }
+  ],
+  "verification_runs": [
+    {
+      "id": "AUDIT-ALL",
+      "scope": "full_suite",
+      "command": "node scripts/run-k56-product-audit.mjs --all",
+      "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+      "captured_at": "2026-10-03T10:48:50.727812+00:00",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 242,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "output/playwright/k56-edge/full-suite-final.log; final-summary.json"
+    },
+    {
+      "id": "LIVE-ASSETS-BROWSER",
+      "scope": "behavioral",
+      "command": "EDGE_SOURCE_OVERRIDES=published-source node --test tests/k56-remaining-edge-cases.mjs",
+      "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+      "captured_at": "2026-10-03T10:48:51.630293+00:00",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "output/playwright/k56-edge/published-browser-final.log"
+    },
+    {
+      "id": "LIVE-URL-SMOKE",
+      "scope": "behavioral",
+      "command": "node E:/Codex-Data/k56-edge-20261003/live-smoke.mjs",
+      "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+      "captured_at": "2026-10-03T10:48:51.630293+00:00",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "output/playwright/k56-edge/live-url-smoke.json"
+    }
+  ],
+  "convergence": {
+    "status": "passed",
+    "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+    "gaps": [],
+    "unrequested_work": [],
+    "evidence": "Ba ca x hai Term; PDF/ảnh native đã xem; kho RAM không đổi. CSS/HTML thật khớp source, chạy lại 7/7 trên asset tải từ live; trực tiếp URL Pages đạt 2/2, console/network sạch với API giả. Probe thêm job trả failure đúng assertion."
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "verified",
+    "base_tree_revision": "61909536cce51bfa7e15d475579b87b3f1a166cf",
+    "current_tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+    "production_authorized": true,
+    "rollback": "Revert đúng commit CSS/cache; không đổi backend/kho bài.",
+    "deployment_readback": "verified",
+    "operational_observation": "Hai URL Pages thật HTTP 200; bài giả đọc đúng, mở/đóng bài chấm và in đủ bốn tiêu chí; console errors 0, API ghi production 0. Ba ca browser với byte live đạt 7/7. Chỉ verified phạm vi CSS/ba ca, không toàn Term.",
+    "open_risks": [],
+    "application_commit": "8385e172aa54694b5a7b1c071016352e48f8d6de"
+  },
+  "module_map": {
+    "revision": "edge-v1",
+    "modules": [
+      {
+        "id": "TERM-UI",
+        "name": "Giao diện Term 1/2 K56",
+        "responsibility": "Hiển thị, in và zoom bài chấm đã lưu; không sở hữu dữ liệu điểm.",
+        "owns_data": [],
+        "public_interfaces": [
+          "Hai route Term computer-based, CSS dialog Writing"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Chỉ bốn asset route Term thay đổi; không sửa shared/backend/n8n."
+        ],
+        "test_ids": [
+          "E04-T1",
+          "E04-T2",
+          "E05-T1",
+          "E05-T2",
+          "E06-T1",
+          "E06-T2",
+          "T-INVALID"
+        ]
+      }
+    ],
+    "integrations": []
+  },
+  "red_green": {
+    "red_on_base": {
+      "test_id": "E05-T1",
+      "tree_revision": "61909536cce51bfa7e15d475579b87b3f1a166cf",
+      "command": "EDGE_SOURCE_OVERRIDES=red/source node --test --test-name-pattern E05|E06 tests/k56-remaining-edge-cases.mjs",
+      "outcome": "failed",
+      "exit_code": 1,
+      "failed": 4,
+      "evidence": "output/playwright/k56-edge/red-final.log; red/source chứa bốn file base hash đã lưu"
+    },
+    "green_on_head": {
+      "test_id": "E05-T1",
+      "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+      "command": "node scripts/run-k56-product-audit.mjs --all",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 242,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Cùng runner E05/E06 đạt cả hai Term trong full-suite-final.log"
+    }
+  }
+}

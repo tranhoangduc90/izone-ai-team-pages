@@ -33,6 +33,7 @@
   const stageProgress = { reading: 18, grading: 52, writing: 82, done: 100 };
   const progressFill = document.querySelector('#progress-fill');
   const lead = document.querySelector('#lead');
+  const pageTitle = document.querySelector('#page-title');
   const result = document.querySelector('#result');
   const errorBox = document.querySelector('#error-box');
   const errorMessage = document.querySelector('#error-message');
@@ -68,6 +69,7 @@
 
   function showDone() {
     stopped = true;
+    pageTitle.textContent = 'Đã xong!';
     setStage('done');
     lead.textContent = 'Kết quả đã được ghi trực tiếp vào bài làm của bạn.';
     result.hidden = false;

@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_1_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20260922-task2-results'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20260930-ic2063'))
       .then(() => loadScript('enhance.js'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -63,8 +63,8 @@
       name: 'DEMO · Chỉ kiểm tra, không gửi Portal'
     },
     {
-      code: 'IC2139',
-      name: 'IC2139 · Lớp K67'
+      code: 'IC2063',
+      name: 'IC2063 · Lớp K67'
     }
   ]);
 
@@ -433,6 +433,24 @@
     }
   }
 
+  // Phòng chờ và app dùng hai namespace khác nhau; chỉ nối lại đúng học viên/lớp.
+  function hasSavedGradedProgress() {
+    if (!localDemo || !state.identityConfirmed || !state.listeningStartedAt) return false;
+    const key = `izone-test:${testConfig.slug}:${classCode}:server-grade`;
+    for (const storage of [sessionStorage, localStorage]) {
+      try {
+        const saved = JSON.parse(storage.getItem(key) || '{}');
+        if (!saved || !Object.keys(saved).length) continue;
+        return saved.studentRef === state.studentRef
+          && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(saved.attemptToken || ''))
+          && Boolean(saved.testGrades?.listening);
+      } catch {
+        // Nếu vùng lưu bị chặn/hỏng thì thử bản dự phòng, không xóa dữ liệu.
+      }
+    }
+    return false;
+  }
+
   async function prepareSelectedStudent() {
     const studentRef = elements.bootstrapStudent.value;
     const student = roster.find(item => item.ref === studentRef);
@@ -442,7 +460,7 @@
     elements.bootstrapStudent.disabled = true;
     try {
       if (localDemo) {
-        if (state.attemptToken) {
+        if (state.attemptToken || hasSavedGradedProgress()) {
           const serverNow = new Date().toISOString();
           await enterExam({
             content: window.K67_SUBSTITUTE_TEST_1_CONTENT,
@@ -542,7 +560,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20260922-task2-results');
+    await loadScript('../substitute-k67-shared/app.js?v=20260930-ic2063');
     await loadScript('enhance.js');
     await loadScript('annotations.js');
   }
@@ -700,7 +718,12 @@
   async function loadDemoRoster(selectedClass) {
     if (!selectedClass) return [];
     if (selectedClass.code === 'DEMO') return [{ ref: 'demo-k67-sub1-01', name: 'Học viên Demo K67' }];
-    const response = await fetch(`https://ducizone.ddns.net/mapping-api/api/term-tests/roster?class=${encodeURIComponent(selectedClass.code)}&test=term-test-1`, { cache: 'no-store' });
+    const response = await fetch(appConfig.API_BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ route: '/api/test/roster', payload: { classCode: selectedClass.code } }),
+      cache: 'no-store'
+    });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Không tải được danh sách lớp từ Portal.');
     return Array.isArray(data.students) ? data.students : [];

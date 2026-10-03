@@ -1,0 +1,175 @@
+{
+  "schema_version": 3,
+  "product": "Speaking Homework Lesson 3 · màu IZONE",
+  "change_id": "speaking-lesson3-izone-colors-20260929",
+  "change_kind": "bugfix",
+  "escaped_user_defect": true,
+  "risk": "low",
+  "system_traits": [],
+  "experience": {
+    "planning_mode": "quick",
+    "mode_reason": "Chỉ sửa lớp CSS riêng của Lesson 3; không đổi dữ liệu hoặc API.",
+    "user": "Học viên IC2304 mở bài Speaking Lesson 3",
+    "problem": "Trang vẫn dùng tông xanh lá dù đã được báo là rà theo nhận diện IZONE.",
+    "outcome": "Trang dùng navy, xanh hành động và đỏ IZONE; học viên vẫn thấy đủ bốn phần và hướng dẫn.",
+    "out_of_scope": ["Không đổi logic nộp bài, backend hoặc màu Homework Lesson 2."],
+    "plain_language_summary": "Sửa màu Lesson 3 theo nhận diện IZONE và kiểm lại trên điện thoại."
+  },
+  "delivery_scope": {
+    "mode": "small_complete",
+    "release_slice": "Riêng giao diện màu và trạng thái nhìn thấy của Speaking Homework Lesson 3."
+  },
+  "change_package": {
+    "proposal": "Áp token IZONE trong CSS chỉ được Lesson 3 nạp.",
+    "behavior_baseline": "Hero xanh đậm lệch chuẩn, dấu thương hiệu và hai nút chính xanh lá.",
+    "deltas": [{
+      "id": "D-BRAND",
+      "operation": "MODIFIED",
+      "behavior": "Hero và nút Xác nhận navy, dấu IZONE đỏ, nút mở bài xanh hành động; hướng dẫn và tiến độ cùng hệ màu.",
+      "module_ids": ["M-CSS"],
+      "test_ids": ["T-BRAND", "T-MOBILE", "T-GUIDE"]
+    }],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "lesson3-brand-v1",
+    "modules": [{
+      "id": "M-CSS",
+      "name": "Màu riêng của Lesson 3",
+      "responsibility": "Định dạng trang nộp và hộp hướng dẫn theo nhận diện IZONE.",
+      "owns_data": [],
+      "public_interfaces": ["speaking-homework/lesson-3.css"],
+      "depends_on": [],
+      "boundary_rules": ["Không sửa hành vi nộp bài.", "Không đổi CSS dùng chung của Homework Lesson 2."],
+      "test_ids": ["T-BRAND", "T-MOBILE", "T-GUIDE", "T-SCOPE"]
+    }],
+    "integrations": []
+  },
+  "requirements": [
+    {"id": "R-COLOR", "statement": "Bốn vùng nhận diện chính có đúng màu IZONE trên trang render thật.", "test_ids": ["T-BRAND"]},
+    {"id": "R-MOBILE", "statement": "Trang rộng 390 px không tràn ngang và vẫn có bốn phần.", "test_ids": ["T-MOBILE"]}
+  ],
+  "invariants": [
+    {"id": "I-GUIDE", "statement": "Hướng dẫn vẫn có chín ảnh và đóng bằng Escape.", "test_ids": ["T-GUIDE"]},
+    {"id": "I-SCOPE", "statement": "Chỉ Lesson 3 nạp CSS màu mới; không sửa logic nộp bài.", "test_ids": ["T-SCOPE"]}
+  ],
+  "tests": [
+    {"id": "T-BRAND", "category": "regression", "priority": "P1", "status": "passed", "evidence": "Cùng assertion computed style: Pages trước sửa fail, local sau sửa pass; hero #152B4E, brand #DB0829, practice #2156A0, confirm #152B4E."},
+    {"id": "T-MOBILE", "category": "happy_path", "priority": "P1", "status": "passed", "evidence": "Trình duyệt Edge 390 px: scrollWidth bằng 390 px, bốn phần và nút nhập còn nguyên; ảnh desktop 1280 px đã xem."},
+    {"id": "T-GUIDE", "category": "regression", "priority": "P1", "status": "passed", "evidence": "Trình duyệt Edge mở hộp hướng dẫn, đếm chín ảnh và đóng bằng Escape."},
+    {"id": "T-SCOPE", "category": "regression", "priority": "P1", "status": "passed", "evidence": "Diff chỉ có lesson-3.css, báo cáo rà và manifest; HTML chỉ Lesson 3 nạp lớp CSS này."}
+  ],
+  "task_graph": {
+    "plan_revision": "lesson3-brand-v1",
+    "tasks": [{
+      "id": "TASK-BRAND",
+      "result": "Giao diện Lesson 3 theo màu IZONE.",
+      "module_ids": ["M-CSS"],
+      "depends_on": [],
+      "consumes": ["IZONE DESIGN.md", "Lesson 3 hiện hành"],
+      "produces": ["CSS Lesson 3", "bằng chứng trình duyệt"],
+      "contract": "Không đổi đường nộp bài hoặc màu trang khác.",
+      "test_ids": ["T-BRAND", "T-MOBILE", "T-GUIDE", "T-SCOPE"],
+      "evidence_required": ["RED/GREEN cùng assertion", "Pages readback"],
+      "decision_inputs": ["Yêu cầu sửa nhận diện IZONE"],
+      "affected_future_tasks": [],
+      "status": "done",
+      "plan_revision": "lesson3-brand-v1"
+    }]
+  },
+  "risk_register": {"assessment": "PASS", "risks": [], "waivers": []},
+  "coverage_exemptions": {"full_suite": "Thay đổi CSS riêng của Lesson 3, không đổi JS/API; chạy toàn bộ suite Speaking và browser regression thay cho suite mọi sản phẩm Pages."},
+  "cross_constraints": [],
+  "mutations": [{
+    "id": "M-PAGES-COLOR",
+    "target": "GitHub Pages Speaking Lesson 3",
+    "outcome": "success",
+    "readback": "verified",
+    "evidence": "PR #33 merge 2004f229; Pages build built; trang và CSS HTTP 200, computed colors đúng bốn vùng."
+  }],
+  "verification_runs": [{
+    "id": "V-BROWSER",
+    "scope": "behavioral",
+    "command": "Playwright Edge: cùng assertion computed style trên Pages cũ và local mới; kiểm 390 px, 9 hình, Escape",
+    "tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472",
+    "captured_at": "2026-09-29T00:30:25Z",
+    "exit_code": 0,
+    "outcome": "passed",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "Base exit 1 vì màu xanh lá; local exit 0, không tràn ngang ở 390 px, đủ 9 hình và đóng hộp bằng Escape."
+  }, {
+    "id": "V-SPEAKING-SUITE",
+    "scope": "full_suite",
+    "command": "node tests/speaking-homework-lesson3-no-doctor.mjs; node tests/speaking-homework-demo.mjs; node tests/speaking-homework-real.mjs; node tests/speaking-homework-http.mjs",
+    "tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472",
+    "captured_at": "2026-09-29T00:32:25Z",
+    "exit_code": 0,
+    "outcome": "passed",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "Bốn suite Speaking đạt trên CSS hiện tại."
+  }, {
+    "id": "V-PRODUCTION",
+    "scope": "behavioral",
+    "command": "Playwright CLI mở trang Pages mới, đọc computed style, network và viewport 390 px",
+    "tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472",
+    "captured_at": "2026-09-29T00:35:18Z",
+    "exit_code": 0,
+    "outcome": "passed",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "Hero navy, brand đỏ, practice xanh và confirm navy trên Pages; scrollWidth 390/390; HTML/CSS/JS HTTP 200."
+  }],
+  "convergence": {
+    "status": "passed",
+    "tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472",
+    "gaps": [],
+    "unrequested_work": [],
+    "evidence": "CSS chỉ nạp ở Lesson 3; chín hình, bốn phần và luồng nộp không đổi."
+  },
+  "context_handoff": {
+    "summary": "Đổi màu Lesson 3 theo bộ token IZONE.",
+    "decisions": [],
+    "completed": ["TASK-BRAND"],
+    "next_step": "Theo dõi phản hồi học viên về giao diện khi họ mở bản Homework thật.",
+    "open_risks": [],
+    "tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472"
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "verified",
+    "base_tree_revision": "c2fca6e4f21535d41816689165e7ab4e13af7559",
+    "current_tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472",
+    "production_authorized": true,
+    "rollback": "Revert commit CSS và để Pages xây lại; không có dữ liệu máy chủ cần hoàn tác.",
+    "deployment_readback": "verified",
+    "operational_observation": "Pages build commit 2004f229 thành công; trình duyệt mới thấy đúng màu IZONE và không tràn ngang ở 390 px; tài nguyên trang HTTP 200.",
+    "open_risks": []
+  },
+  "red_green": {
+    "red_on_base": {
+      "test_id": "T-BRAND",
+      "command": "Playwright Edge computed style assertion trên Pages trước sửa",
+      "tree_revision": "c2fca6e4f21535d41816689165e7ab4e13af7559",
+      "outcome": "failed",
+      "exit_code": 1,
+      "failed": 1,
+      "evidence": "Hero rgb(17,42,60), brand rgb(18,166,149), hai nút rgb(8,126,116)."
+    },
+    "green_on_head": {
+      "test_id": "T-BRAND",
+      "command": "Playwright Edge computed style assertion trên bản local sau sửa",
+      "tree_revision": "8b482c195e9334e969aa4d6d77d1af13d6c79472",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Hero rgb(21,43,78), brand rgb(219,8,41), practice rgb(33,86,160), confirm rgb(21,43,78)."
+    }
+  }
+}

@@ -5,7 +5,8 @@ import { coverageDescription, coverageStatusLabels } from './writing-flow-covera
 import { isBackdropClick } from './teacher-detail-core.js';
 import { clampColumnWidth, defaultColumnWidths, formatWritingDay, normalizeWritingDay, readColumnWidths,
   dailyBreakdown, saveColumnWidths, serializeSortRules, summarizeWritingTestDetail,
-  summarizeWritingTestRow, writingSortFields, writingReviewAction } from './writing-flow-ui.js?v=20260924-test-review-v1';
+  summarizeWritingTestRow, writingSortFields, writingReviewAction,
+  historicalReviewMessage } from './writing-flow-ui.js?v=20261002-d03-review-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 
@@ -67,14 +68,15 @@ const columns = {
   lms: ['Link LMS', row => row.source_type === 'term_test'
     ? summarizeWritingTestRow(row).lms : externalLink(row.lms_url, 'Mở bài chấm', 'Chưa có')],
   attempts: ['Số lần thử', row => Number(row.attempt_count || 0)],
-  error: ['Lỗi gần nhất', row => row.last_error_code || '—'],
+  error: ['Lỗi gần nhất', row => row.historical_review_code || row.last_error_code || '—'],
   actions: ['Thao tác', row => actionCell(row)],
 };
 const defaultColumns = ['student', 'class', 'teacher', 'file', 'classroom', 'trcc',
   'finished', 'topic', 'content', 'lms', 'testProgress', 'testOverall', 'actions'];
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = { authenticated: false, api: null, timer: null, searchTimer: null, sessionClient: null,
-  loginGeneration: 0, activeView: 'overview', pairs: [], nextCursor: null, nextOffset: null,
+  loginGeneration: 0, activeView: 'overview', sourceWarningGroup: 'review',
+  pairs: [], nextCursor: null, nextOffset: null,
   loadingMore: false,
   counts: null, summary: [], coverage: [], reviews: [], issues: [], failures: [], events: [], legacy: [],
   activeClasses: [], completedClasses: [], daily: [], filtersLoaded: false,
@@ -159,17 +161,28 @@ function renderSortControls() {
   $('flow-sort-clear').onclick = () => { state.sortRules = []; saveSortRules(); renderSortControls(); state.pairs = []; state.nextCursor = null; state.nextOffset = null; $('flow-sort').open = false; void refreshData(); };
 }
 
-function renderHeading() { const meta = viewMeta[state.activeView]; const view = baseView(); $('flow-view-kicker').textContent = meta[0]; $('flow-view-title').textContent = meta[1]; $('flow-view-help').textContent = meta[2]; const badge = $('flow-view-status'); badge.textContent = meta[3]; badge.dataset.tone = ['review', 'source', 'logs'].includes(view) ? 'danger' : ['delivered', 'completed_classes'].includes(view) ? 'success' : ''; const breakdown = $('flow-stage-breakdown'); breakdown.replaceChildren(); breakdown.hidden = !stages.includes(view); if (!breakdown.hidden) { const rows = (state.counts?.stages || []).filter(row => row.stage_key === view && !row.skipped); const totals = new Map(rows.map(row => [row.stage_status, Number(row.pair_count || 0)])); for (const key of ['pending', 'running', 'needs_review', 'succeeded']) breakdown.append(makeText('span', `${statusNames[key]}: ${totals.get(key) || 0}`)); } for (const button of document.querySelectorAll('#flow-views [data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === state.activeView)); }
-function setViewVisibility() { const view = baseView(); const map = { overview: ['flow-overview-section'], daily: ['flow-daily-section'], classes: ['flow-classes-section', 'flow-pairs-section'], completed_classes: ['flow-classes-section'], mapping: ['flow-mapping-section'], review: ['flow-pairs-section'], source: ['flow-pairs-section'], logs: ['flow-technical-section'], audit: ['flow-audit-section'], legacy: ['flow-pairs-section'] }; const visible = [...(map[view] || ['flow-pairs-section'])]; if (state.activeView === 'test_overview') visible.push('flow-pairs-section'); for (const id of ['flow-overview-section', 'flow-daily-section', 'flow-classes-section', 'flow-reviews-section', 'flow-source-section', 'flow-technical-section', 'flow-audit-section', 'flow-mapping-section', 'flow-pairs-section', 'flow-legacy-section']) $(id).hidden = !visible.includes(id); if (view === 'classes' && !$('flow-class').value) $('flow-pairs-section').hidden = true; $('flow-stage-status-filter').hidden = !stages.includes(view); renderHeading(); }
+function renderHeading() { const meta = viewMeta[state.activeView]; const view = baseView(); $('flow-view-kicker').textContent = meta[0]; $('flow-view-title').textContent = meta[1]; $('flow-view-help').textContent = view === 'source' ? 'Cần xem xét: chưa có cảnh báo được đọc lại. Đã cảnh báo: cảnh báo đã hiện trong Google Docs; có thể đọc lại nguồn sau khi file được sửa.' : meta[2]; const badge = $('flow-view-status'); badge.textContent = view === 'source' ? (state.sourceWarningGroup === 'warned' ? 'Đã cảnh báo' : 'Cần xem xét') : meta[3]; badge.dataset.tone = ['review', 'source', 'logs'].includes(view) ? 'danger' : ['delivered', 'completed_classes'].includes(view) ? 'success' : ''; const breakdown = $('flow-stage-breakdown'); breakdown.replaceChildren(); breakdown.hidden = !stages.includes(view); if (!breakdown.hidden) { const rows = (state.counts?.stages || []).filter(row => row.stage_key === view && !row.skipped); const totals = new Map(rows.map(row => [row.stage_status, Number(row.pair_count || 0)])); for (const key of ['pending', 'running', 'needs_review', 'succeeded']) breakdown.append(makeText('span', `${statusNames[key]}: ${totals.get(key) || 0}`)); } for (const button of document.querySelectorAll('#flow-views [data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === state.activeView)); }
+function setViewVisibility() { const view = baseView(); const map = { overview: ['flow-overview-section'], daily: ['flow-daily-section'], classes: ['flow-classes-section', 'flow-pairs-section'], completed_classes: ['flow-classes-section'], mapping: ['flow-mapping-section'], review: ['flow-pairs-section'], source: ['flow-pairs-section'], logs: ['flow-technical-section'], audit: ['flow-audit-section'], legacy: ['flow-pairs-section'] }; const visible = [...(map[view] || ['flow-pairs-section'])]; if (state.activeView === 'test_overview') visible.push('flow-pairs-section'); for (const id of ['flow-overview-section', 'flow-daily-section', 'flow-classes-section', 'flow-reviews-section', 'flow-source-section', 'flow-technical-section', 'flow-audit-section', 'flow-mapping-section', 'flow-pairs-section', 'flow-legacy-section']) $(id).hidden = !visible.includes(id); $('flow-source-groups').hidden = view !== 'source'; if (view === 'classes' && !$('flow-class').value) $('flow-pairs-section').hidden = true; $('flow-stage-status-filter').hidden = !stages.includes(view); renderHeading(); }
 
 function renderCounts() {
   const values = { overview: 0, classes: state.activeClasses.length, completed_classes: state.completedClasses.length,
     mapping: state.coverage.filter(row => !['covered', 'completed', 'excluded'].includes(row.status)).length,
-    review: Number(state.counts?.support?.reviews || 0), source: Number(state.counts?.support?.source_issues || 0),
+    review: Number(state.counts?.support?.reviews || 0)
+      + Number(state.counts?.support?.historical_reviews || 0),
+    source: Number(state.counts?.support?.source_issues || 0),
     skipped: 0, delivered: 0 };
   for (const stage of stages) values[stage] = 0;
   for (const row of state.counts?.stages || []) { const count = Number(row.pair_count || 0); values.overview += count; if (row.skipped) values.skipped += count; else { values[row.stage_key] = (values[row.stage_key] || 0) + count; if (row.stage_key === 'deliver' && row.stage_status === 'succeeded') values.delivered += count; } }
   for (const [key, value] of Object.entries(values)) { const node = document.querySelector(`[data-count="${key}"]`); if (node) node.textContent = String(value); }
+  const warned = Number(state.counts?.support?.source_issues_warned || 0);
+  const review = Number(state.counts?.support?.source_issues_review || 0);
+  for (const [group, count] of [['warned', warned], ['review', review]]) {
+    const node = document.querySelector(`[data-source-count="${group}"]`);
+    if (node) node.textContent = String(count);
+  }
+  for (const button of document.querySelectorAll('[data-warning-group]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.warningGroup === state.sourceWarningGroup));
+  }
   const prefix = isTestView() ? 'test_' : '';
   const overviewNode = document.querySelector(`[data-count="${prefix}overview"]`);
   if (overviewNode) overviewNode.textContent = String(values.overview);
@@ -178,7 +191,7 @@ function renderCounts() {
     if (node) node.textContent = String(values[key] || 0);
   }
 }
-function renderSummary() { const root = $('flow-summary'); root.replaceChildren(); const stageRows = state.counts?.stages || []; const skipped = stageRows.filter(row => row.skipped).reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const delivered = stageRows.filter(row => !row.skipped && row.stage_key === 'deliver' && row.stage_status === 'succeeded').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const running = stageRows.filter(row => !row.skipped && row.stage_status === 'running').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const attention = Number(state.counts?.support?.reviews || 0) + Number(state.counts?.support?.source_issues || 0); for (const item of [{ key: 'running', label: 'Đang xử lý', value: running }, { key: 'needs_review', label: 'Cần xử lý', value: attention }, { key: 'delivered', label: 'Đã giao', value: delivered }, { key: 'skipped', label: 'Đã bỏ qua', value: skipped }]) { const card = document.createElement('article'); card.dataset.status = item.key; card.append(makeText('strong', item.value), makeText('span', item.label)); root.append(card); } }
+function renderSummary() { const root = $('flow-summary'); root.replaceChildren(); const stageRows = state.counts?.stages || []; const skipped = stageRows.filter(row => row.skipped).reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const delivered = stageRows.filter(row => !row.skipped && row.stage_key === 'deliver' && row.stage_status === 'succeeded').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const running = stageRows.filter(row => !row.skipped && row.stage_status === 'running').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const attention = Number(state.counts?.support?.reviews || 0) + Number(state.counts?.support?.historical_reviews || 0) + Number(state.counts?.support?.source_issues_review || 0); for (const item of [{ key: 'running', label: 'Đang xử lý', value: running }, { key: 'needs_review', label: 'Cần xử lý', value: attention }, { key: 'delivered', label: 'Đã giao', value: delivered }, { key: 'skipped', label: 'Đã bỏ qua', value: skipped }]) { const card = document.createElement('article'); card.dataset.status = item.key; card.append(makeText('strong', item.value), makeText('span', item.label)); root.append(card); } }
 
 function populateFilters(filters) { const currentClass = $('flow-class').value; const currentTeacher = $('flow-teacher').value; const active = (filters.classes || []).filter(row => row.enabled && row.mapping_status === 'approved'); $('flow-class').replaceChildren(new Option('Tất cả lớp đang học', '')); for (const row of active) $('flow-class').append(new Option(`${row.class_code}${row.classroom_name ? ` · ${row.classroom_name}` : ''}`, row.class_code)); $('flow-class').value = active.some(row => row.class_code === currentClass) ? currentClass : ''; $('flow-teacher').replaceChildren(new Option('Tất cả giảng viên', '')); for (const name of filters.teachers || []) $('flow-teacher').append(new Option(name, name)); $('flow-teacher').value = (filters.teachers || []).includes(currentTeacher) ? currentTeacher : ''; }
 
@@ -251,8 +264,11 @@ function actionCell(row) {
     cell.append(retry);
   }
   else cell.append(makeText('span', 'Đối chiếu nguồn trùng', 'flow-meta'));
-  cell.append(row.skipped_at ? actionButton('Khôi phục', () => void restorePair(row))
-    : actionButton('Bỏ qua', () => void skipPair(row)));
+  if (reviewAction.canSkip) {
+    cell.append(row.skipped_at ? actionButton('Khôi phục', () => void restorePair(row))
+      : actionButton('Bỏ qua', () => void skipPair(row)));
+  }
+  if (row.historical_review_code) cell.title = historicalReviewMessage(row);
   return cell;
 }
 function appendCell(row, key, content) { const cell = document.createElement('td'); cell.dataset.column = key; cell.style.width = `${state.columnWidths[key]}px`; if (content instanceof Node) cell.append(content); else cell.textContent = String(content ?? ''); row.append(cell); }
@@ -286,7 +302,7 @@ function sourceIssueRow(issue) {
     source_created_at: issue.first_seen_at, finished_at: null,
     teacher_names: issue.teacher_names || [], task_type: null,
     topic: sourceIssueLabel(issue.reason_code), image_url: null, tr_cc_check: null,
-    essay_preview: `Lỗi nguồn: ${sourceIssueLabel(issue.reason_code)}. Mở chi tiết để xem link và số lần gặp.`,
+    essay_preview: `${issue.warning_confirmed_at ? 'Đã cảnh báo trong Docs' : 'Cần xem xét'}: ${sourceIssueLabel(issue.reason_code)}. Mở chi tiết để xem link và số lần gặp.`,
     lms_url: null, attempt_count: issue.occurrence_count || 0,
     last_error_code: issue.reason_code };
 }
@@ -305,6 +321,9 @@ function openSourceIssueDetail(issue) {
   const main = document.createElement('section'); main.className = 'flow-detail-panel flow-detail-panel-wide';
   main.append(makeText('h3', 'Lỗi nguồn'), makeText('p', sourceIssueLabel(issue.reason_code)),
     makeText('p', `Đã gặp ${issue.occurrence_count || 1} lần · gần nhất ${formatTime(issue.last_seen_at)}`, 'flow-meta'));
+  main.append(makeText('p', issue.warning_confirmed_at
+    ? `Đã cảnh báo trong Google Docs lúc ${formatTime(issue.warning_confirmed_at)}.`
+    : 'Cần xem xét: chưa có biên nhận cảnh báo đã được đọc lại.'));
   const source = document.createElement('section'); source.className = 'flow-detail-panel';
   source.append(makeText('h3', 'Thông tin nguồn'), makeText('p', `Học viên: ${sourceName(issue)}`),
     makeText('p', `Lớp: ${issue.class_code || 'Ngoài lớp'}`),
@@ -368,7 +387,82 @@ function testDetailSection(test) {
   }
   return section;
 }
-async function openDetail(pair) { const dialog = $('flow-detail'); const content = $('flow-detail-content'); content.textContent = 'Đang tải đề bài, nội dung và nhật ký…'; dialog.showModal(); try { const [detailResponse, historyResponse] = await Promise.all([state.api.writingPairDetail(pair.pair_id), state.api.writingPairHistory(pair.pair_id)]); const detail = detailResponse.data.detail; const history = historyResponse.data.history; const topic = document.createElement('section'); topic.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-topic'; topic.append(makeText('h3', 'Đề bài'), makeText('p', detail.source.topic || '—')); if (detail.source.image) topic.append(externalLink(detail.source.image, 'Mở ảnh biểu đồ', '')); const essay = document.createElement('section'); essay.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-essay'; essay.append(makeText('h3', 'Nội dung học viên'), makeText('p', detail.source.essay || '—')); const metadata = document.createElement('section'); metadata.className = 'flow-detail-panel'; const trcc = detail.source.trCcCheck == null ? '—' : detail.source.trCcCheck ? 'Có' : 'Không'; const trccNote = detail.source.trCcSource === 'repair_override' ? ' · bổ sung sau khi cứu TR/CC' : ''; metadata.append(makeText('h3', 'Thông tin bài'), makeText('p', `Học viên: ${sourceName(detail.pair)}`), makeText('p', `Lớp: ${detail.pair.class_code || 'Ngoài lớp'}`), makeText('p', `TRCC: ${trcc}${trccNote}`), makeText('p', `Trạng thái nguồn: ${detail.pair.source_status || '—'}`), externalLink(detail.pair.file_url, 'Mở Docs', '')); const results = document.createElement('section'); results.className = 'flow-detail-panel'; results.append(makeText('h3', 'Kết quả và giai đoạn')); const renderStage = detail.stages.find(stage => stage.stage_key === 'render' && stage.result?.resultUrl); if (detail.pair.source_type !== 'term_test') results.append(externalLink(renderStage?.result?.resultUrl, 'Mở bài chấm trên LMS', 'Chưa có Link LMS')); for (const stage of detail.stages) { const block = document.createElement('details'); block.append(makeText('summary', `${detail.pair.source_type === 'term_test' ? testStageNames[stage.stage_key] : stageNames[stage.stage_key]} · ${statusNames[stage.status] || stage.status}`), makeText('pre', stage.result ? JSON.stringify(stage.result, null, 2) : 'Chưa có kết quả.')); results.append(block); } const log = document.createElement('section'); log.className = 'flow-detail-panel flow-detail-panel-wide'; log.append(makeText('h3', 'Nhật ký và lỗi')); for (const event of history.events || []) { const line = makeText('p', `${formatTime(event.at)} · ${describeEvent(event)}${event.error_code ? ` · lỗi ${event.error_code}` : ''}`, 'flow-meta'); const workflowId = stageWorkflowIds[event.stage_key]; if (workflowId && event.n8n_execution_id) { const link = externalLink(`https://ducizone.ddns.net/workflow/${workflowId}/executions/${encodeURIComponent(event.n8n_execution_id)}`, 'Mở lượt chạy n8n', ''); line.append(' · ', link); } log.append(line); } const grid = document.createElement('div'); grid.className = 'flow-detail-grid'; grid.append(topic, essay, metadata); if (detail.test) grid.append(testDetailSection(detail.test)); grid.append(results, log); content.replaceChildren(makeText('h2', sourceName(detail.pair)), grid); } catch (error) { content.textContent = `Chưa đọc được chi tiết: ${error.message}`; } }
+async function openDetail(pair) {
+  const dialog = $('flow-detail');
+  const content = $('flow-detail-content');
+  const reviewMessage = historicalReviewMessage(pair);
+  content.textContent = 'Đang tải đề bài, nội dung và nhật ký…';
+  dialog.showModal();
+  try {
+    const [detailResponse, historyResponse] = await Promise.all([
+      state.api.writingPairDetail(pair.pair_id), state.api.writingPairHistory(pair.pair_id),
+    ]);
+    const detail = detailResponse.data.detail;
+    const history = historyResponse.data.history;
+    const topic = document.createElement('section');
+    topic.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-topic';
+    topic.append(makeText('h3', 'Đề bài'), makeText('p', detail.source.topic || '—'));
+    if (detail.source.image) topic.append(externalLink(detail.source.image, 'Mở ảnh biểu đồ', ''));
+    const essay = document.createElement('section');
+    essay.className = 'flow-detail-panel flow-detail-panel-wide flow-detail-essay';
+    essay.append(makeText('h3', 'Nội dung học viên'), makeText('p', detail.source.essay || '—'));
+    const metadata = document.createElement('section');
+    metadata.className = 'flow-detail-panel';
+    const trcc = detail.source.trCcCheck == null ? '—' : detail.source.trCcCheck ? 'Có' : 'Không';
+    const trccNote = detail.source.trCcSource === 'repair_override' ? ' · bổ sung sau khi cứu TR/CC' : '';
+    metadata.append(makeText('h3', 'Thông tin bài'),
+      makeText('p', `Học viên: ${sourceName(detail.pair)}`),
+      makeText('p', `Lớp: ${detail.pair.class_code || 'Ngoài lớp'}`),
+      makeText('p', `TRCC: ${trcc}${trccNote}`),
+      makeText('p', `Trạng thái nguồn: ${detail.pair.source_status || '—'}`),
+      externalLink(detail.pair.file_url, 'Mở Docs', ''));
+    const results = document.createElement('section');
+    results.className = 'flow-detail-panel';
+    results.append(makeText('h3', 'Kết quả và giai đoạn'));
+    const renderStage = detail.stages.find(stage => stage.stage_key === 'render'
+      && stage.result?.resultUrl);
+    if (detail.pair.source_type !== 'term_test') {
+      results.append(externalLink(renderStage?.result?.resultUrl,
+        'Mở bài chấm trên LMS', 'Chưa có Link LMS'));
+    }
+    for (const stage of detail.stages) {
+      const block = document.createElement('details');
+      block.append(makeText('summary',
+        `${detail.pair.source_type === 'term_test' ? testStageNames[stage.stage_key]
+          : stageNames[stage.stage_key]} · ${statusNames[stage.status] || stage.status}`),
+      makeText('pre', stage.result ? JSON.stringify(stage.result, null, 2) : 'Chưa có kết quả.'));
+      results.append(block);
+    }
+    const log = document.createElement('section');
+    log.className = 'flow-detail-panel flow-detail-panel-wide';
+    log.append(makeText('h3', 'Nhật ký và lỗi'));
+    for (const event of history.events || []) {
+      const line = makeText('p', `${formatTime(event.at)} · ${describeEvent(event)}`
+        + `${event.error_code ? ` · lỗi ${event.error_code}` : ''}`, 'flow-meta');
+      const workflowId = stageWorkflowIds[event.stage_key];
+      if (workflowId && event.n8n_execution_id) {
+        const link = externalLink(`https://ducizone.ddns.net/workflow/${workflowId}`
+          + `/executions/${encodeURIComponent(event.n8n_execution_id)}`,
+        'Mở lượt chạy n8n', '');
+        line.append(' · ', link);
+      }
+      log.append(line);
+    }
+    const grid = document.createElement('div');
+    grid.className = 'flow-detail-grid';
+    grid.append(topic, essay, metadata);
+    if (reviewMessage) {
+      const warning = document.createElement('section');
+      warning.className = 'flow-detail-panel flow-detail-panel-wide';
+      warning.append(makeText('h3', 'Cần đối chiếu hai nguồn'), makeText('p', reviewMessage));
+      grid.append(warning);
+    } else if (detail.test) grid.append(testDetailSection(detail.test));
+    grid.append(results, log);
+    content.replaceChildren(makeText('h2', sourceName(detail.pair)), grid);
+  } catch (error) {
+    content.textContent = `Chưa đọc được chi tiết: ${error.message}`;
+  }
+}
 
 async function retryReview(review, button) {
   if (button.disabled) return;
@@ -480,6 +574,18 @@ function renderDaily() {
 function renderAll() { renderHeading(); renderCounts(); renderSummary(); renderCoverage(); renderAttention(); renderClasses(); renderPairs(); renderReviews(); renderIssues(); renderFailures(); renderOperatorEvents(); renderLegacy(); renderDaily(); setViewVisibility(); }
 
 async function loadPairs(reset = true) { const page = reset ? {} : state.nextCursor || (state.nextOffset == null ? {} : { offset: state.nextOffset }); const response = await state.api.writingPairsPage(currentFilters({ ...pairViewFilters(), ...page })); const rows = response.data.pairs || []; state.pairs = reset ? rows : [...state.pairs, ...rows]; state.nextCursor = response.data.nextCursor || null; state.nextOffset = response.data.nextOffset ?? null; }
+async function loadSourceIssues(reset = true) {
+  const offset = reset ? 0 : state.nextOffset;
+  if (offset == null) return;
+  const response = await state.api.writingSourceIssues({ ...currentFilters(), status: 'open',
+    warningGroup: state.sourceWarningGroup, offset, limit: 51 });
+  const rows = response.data.issues || [];
+  const visible = rows.slice(0, 50);
+  state.issues = reset ? visible : [...state.issues, ...visible];
+  state.pairs = state.issues.map(sourceIssueRow);
+  state.nextCursor = null;
+  state.nextOffset = rows.length > 50 ? offset + 50 : null;
+}
 async function loadCommon() { const [counts, activeClasses, completedClasses] = await Promise.all([state.api.writingCounts($('flow-class').value, $('flow-teacher').value, activeSourceKind()), state.api.writingClasses('active'), state.api.writingClasses('completed')]); state.counts = counts.data.counts || null; state.activeClasses = activeClasses.data.classes || []; state.completedClasses = completedClasses.data.classes || []; if (!state.filtersLoaded) { const response = await state.api.writingFilterOptions(); populateFilters(response.data.filters || {}); state.filtersLoaded = true; } }
 async function loadView() {
   const filters = currentFilters();
@@ -488,7 +594,7 @@ async function loadView() {
     if (isTestView()) { await loadPairs(true); state.coverage = []; state.reviews = []; state.issues = []; return; }
     const [coverage, reviews, issues] = await Promise.all([
       state.api.writingClassCoverage(), state.api.writingReviews({ ...filters, limit: 8 }),
-      state.api.writingSourceIssues({ ...filters, status: 'open', limit: 8 }),
+      state.api.writingSourceIssues({ ...filters, status: 'open', warningGroup: 'review', limit: 8 }),
     ]);
     state.coverage = coverage.data.classes || []; state.reviews = reviews.data.reviews || [];
     state.issues = issues.data.issues || []; return;
@@ -499,9 +605,7 @@ async function loadView() {
   if (view === 'completed_classes') return;
   if (view === 'review') { await loadPairs(true); return; }
   if (view === 'source') {
-    const response = await state.api.writingSourceIssues({ ...filters, status: 'open', limit: 100 });
-    state.issues = response.data.issues || []; state.pairs = state.issues.map(sourceIssueRow);
-    state.nextCursor = null; state.nextOffset = null; return;
+    await loadSourceIssues(true); return;
   }
   if (view === 'skipped') {
     await loadPairs(true);
@@ -557,10 +661,26 @@ async function handleCredential(response) { if (!response?.credential) return sh
 async function waitForGoogle(clientId) { for (let attempt = 0; attempt < 100; attempt += 1) { const accounts = globalThis.google?.accounts?.id; if (accounts) { accounts.initialize({ client_id: clientId, callback: handleCredential, auto_select: loginPreference.read() }); accounts.renderButton($('google-signin'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'vi' }); return; } await new Promise(resolve => setTimeout(resolve, 100)); } throw new Error('Không tải được dịch vụ đăng nhập Google.'); }
 function clearLogin() { state.loginGeneration += 1; state.authenticated = false; clearTimeout(state.timer); $('flow-dashboard').hidden = true; $('flow-login').hidden = false; }
 function selectView(view) { state.activeView = view; $('flow-stage-status').value = ''; state.pairs = []; state.nextCursor = null; state.nextOffset = null; void refreshData(); }
+function selectSourceWarningGroup(group) {
+  if (!['review', 'warned'].includes(group) || state.sourceWarningGroup === group) return;
+  state.sourceWarningGroup = group;
+  state.pairs = []; state.issues = []; state.nextCursor = null; state.nextOffset = null;
+  void refreshData();
+}
 function clearFilters() { $('flow-search').value = ''; $('flow-search-scope').value = 'all'; $('flow-class').value = ''; $('flow-teacher').value = ''; $('flow-task-type').value = ''; $('flow-stage-status').value = ''; $('flow-date-from').value = ''; $('flow-date-to').value = ''; state.pairs = []; state.nextCursor = null; state.nextOffset = null; void refreshData(); }
-async function init() { try { const response = await fetch('./writing-flow-config.json', { cache: 'no-store' }); if (!response.ok) throw new Error('Thiếu cấu hình trang chấm bài.'); const config = await response.json(); state.sessionClient = createTeacherSessionClient({ apiBaseUrl: config.apiBase || '', sessionPath: 'api/v1/auth/session' }); state.api = createTeacherApi(config.apiBase || ''); renderColumnChoices(); renderSortControls(); $('flow-manual-form').addEventListener('submit', event => void submitManual(event)); $('flow-manual-kind').addEventListener('change', () => { $('flow-manual-test-fields').hidden = $('flow-manual-kind').value !== 'test'; }); $('flow-manual-open').addEventListener('click', () => $('flow-manual-dialog').showModal()); $('flow-detail-close').addEventListener('click', () => $('flow-detail').close()); $('flow-detail').addEventListener('click', event => { const dialog = $('flow-detail'); if (event.target === dialog && isBackdropClick(event, dialog.getBoundingClientRect())) dialog.close(); }); $('flow-reset-widths').addEventListener('click', resetColumnWidths); $('flow-class').addEventListener('change', () => { if ($('flow-class').value) rememberClass($('flow-class').value); void refreshData(); }); for (const id of ['flow-teacher', 'flow-task-type', 'flow-stage-status', 'flow-date-from', 'flow-date-to']) $(id).addEventListener('change', () => void refreshData()); $('flow-search-button').addEventListener('click', () => void refreshData()); $('flow-search').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); void refreshData(); } }); for (const button of document.querySelectorAll('#flow-views [data-view]')) button.addEventListener('click', () => selectView(button.dataset.view)); $('flow-clear-filters').addEventListener('click', clearFilters); $('flow-refresh').addEventListener('click', () => void refreshData()); $('flow-more').addEventListener('click', async () => { if ((!state.nextCursor && state.nextOffset == null) || state.loadingMore) return; state.loadingMore = true; try { await loadPairs(false); renderPairs(); } finally { state.loadingMore = false; } }); const restored = await state.sessionClient.restore(); if (restored) { state.authenticated = true; await refreshData(); } await waitForGoogle(config.googleClientId); if (!state.authenticated && loginPreference.read()) globalThis.google.accounts.id.prompt(); } catch (error) { showError('flow-login-error', error.message); } }
+async function init() { try { const response = await fetch('./writing-flow-config.json', { cache: 'no-store' }); if (!response.ok) throw new Error('Thiếu cấu hình trang chấm bài.'); const config = await response.json(); state.sessionClient = createTeacherSessionClient({ apiBaseUrl: config.apiBase || '', sessionPath: 'api/v1/auth/session' }); state.api = createTeacherApi(config.apiBase || ''); renderColumnChoices(); renderSortControls(); $('flow-manual-form').addEventListener('submit', event => void submitManual(event)); $('flow-manual-kind').addEventListener('change', () => { $('flow-manual-test-fields').hidden = $('flow-manual-kind').value !== 'test'; }); $('flow-manual-open').addEventListener('click', () => $('flow-manual-dialog').showModal()); $('flow-detail-close').addEventListener('click', () => $('flow-detail').close()); $('flow-detail').addEventListener('click', event => { const dialog = $('flow-detail'); if (event.target === dialog && isBackdropClick(event, dialog.getBoundingClientRect())) dialog.close(); }); $('flow-reset-widths').addEventListener('click', resetColumnWidths); $('flow-class').addEventListener('change', () => { if ($('flow-class').value) rememberClass($('flow-class').value); void refreshData(); }); for (const id of ['flow-teacher', 'flow-task-type', 'flow-stage-status', 'flow-date-from', 'flow-date-to']) $(id).addEventListener('change', () => void refreshData()); $('flow-search-button').addEventListener('click', () => void refreshData()); $('flow-search').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); void refreshData(); } }); for (const button of document.querySelectorAll('#flow-views [data-view]')) button.addEventListener('click', () => selectView(button.dataset.view)); for (const button of document.querySelectorAll('[data-warning-group]')) button.addEventListener('click', () => selectSourceWarningGroup(button.dataset.warningGroup)); $('flow-clear-filters').addEventListener('click', clearFilters); $('flow-refresh').addEventListener('click', () => void refreshData()); $('flow-more').addEventListener('click', async () => { if ((!state.nextCursor && state.nextOffset == null) || state.loadingMore) return; state.loadingMore = true; try { if (baseView() === 'source') await loadSourceIssues(false); else await loadPairs(false); renderPairs(); } finally { state.loadingMore = false; } }); const restored = await state.sessionClient.restore(); if (restored) { state.authenticated = true; await refreshData(); } await waitForGoogle(config.googleClientId); if (!state.authenticated && loginPreference.read()) globalThis.google.accounts.id.prompt(); } catch (error) { showError('flow-login-error', error.message); } }
 
 $('remember-flow-login').checked = loginPreference.read();
 $('remember-flow-login').addEventListener('change', () => { const input = $('remember-flow-login'); if (!loginPreference.set(input.checked)) input.checked = loginPreference.read(); });
-$('flow-logout').addEventListener('click', () => { clearLogin(); globalThis.google?.accounts?.id?.disableAutoSelect?.(); loginPreference.set(false); $('remember-flow-login').checked = false; });
+$('flow-logout').addEventListener('click', async () => {
+  // Nhận vào: nút đăng xuất; thu hồi cookie phía máy chủ rồi khóa dữ liệu trên màn hình.
+  // Khi mạng lỗi: vẫn khóa giao diện và báo chưa xác nhận thu hồi phiên để người dùng biết.
+  let logoutError;
+  try { await state.sessionClient.logout(); } catch (error) { logoutError = error; }
+  clearLogin();
+  globalThis.google?.accounts?.id?.disableAutoSelect?.();
+  loginPreference.set(false);
+  $('remember-flow-login').checked = false;
+  if (logoutError) showError('flow-login-error', 'Đã khóa giao diện nhưng chưa xác nhận thu hồi phiên. Hãy kiểm tra mạng và đăng xuất lại.');
+});
 void init();

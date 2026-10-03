@@ -111,6 +111,10 @@
           </section>
           <section id="flow-reviews-section" class="flow-section" hidden><div id="flow-reviews" class="flow-list"></div></section>
           <section id="flow-source-section" class="flow-section" hidden><div id="flow-source-issues" class="flow-list"></div></section>
+          <div id="flow-source-groups" class="flow-source-groups" hidden role="group" aria-label="Phân loại lỗi nguồn">
+            <button type="button" data-warning-group="review">Cần xem xét <span data-source-count="review">0</span></button>
+            <button type="button" data-warning-group="warned">Đã cảnh báo <span data-source-count="warned">0</span></button>
+          </div>
           <section id="flow-technical-section" class="flow-section" hidden><div id="flow-technical-errors" class="flow-list"></div></section>
           <section id="flow-audit-section" class="flow-section" hidden><div id="flow-operator-events" class="flow-list"></div></section>
           <section id="flow-mapping-section" class="flow-section" hidden><div id="flow-mapping-coverage" class="flow-list"></div></section>
@@ -141,6 +145,6 @@
     </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/writing-flow.js?v=20260926-retry-direct-v1"></script>
+    <script type="module" src="./js/writing-flow.js?v=20261002-d03-review-v1"></script>
   </body>
 </html>

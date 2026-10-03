@@ -175,26 +175,6 @@
   line-height: 1.55;
 }
 
-.cbt-writing-phase {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 6px 10px;
-  color: #745400;
-  background: #fff0b8;
-  border: 1px solid #dfbf55;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 850;
-  white-space: nowrap;
-}
-
-.cbt-writing-phase.is-essay {
-  color: #174f3a;
-  background: #dff5e8;
-  border-color: #77bf98;
-}
-
 @media (max-width: 760px) {
   .cbt-form-row {
     grid-template-columns: 1fr;

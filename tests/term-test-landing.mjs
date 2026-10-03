@@ -138,7 +138,7 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     }
   });
   await new Promise(resolve => server.listen(4180, '127.0.0.1', resolve));
-  const browser = await chromium.launch({ headless: true, executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_BIN || 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' });
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const browserErrors = [];

@@ -36,3 +36,6 @@
     grid-template-columns: 1fr;
   }
 }
+.landing-order { border: 0; padding: 0; margin: 0 0 24px; }
+.landing-order legend { font-weight: 700; margin-bottom: 12px; }
+.order-choice.is-selected { background: #2f6df1; color: white; border-color: #2f6df1; }

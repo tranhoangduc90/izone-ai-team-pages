@@ -175,26 +175,6 @@
   line-height: 1.55;
 }
 
-.cbt-writing-phase {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 6px 10px;
-  color: #745400;
-  background: #fff0b8;
-  border: 1px solid #dfbf55;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 850;
-  white-space: nowrap;
-}
-
-.cbt-writing-phase.is-essay {
-  color: #174f3a;
-  background: #dff5e8;
-  border-color: #77bf98;
-}
-
 @media (max-width: 760px) {
   .cbt-form-row {
     grid-template-columns: 1fr;
@@ -3128,4 +3108,43 @@ button.writing-score-card:focus-visible {
   .cbt-volume input {
     width: min(180px, 55vw);
   }
+}
+
+/* Cửa sổ zoom 200% có thể còn dưới 320 CSS px; giữ kết quả trong chiều rộng thực. */
+@media screen and (max-width: 319px) {
+  body { min-width: 0; }
+}
+
+@media print {
+  /* In bài chấm đang mở: bỏ nền app, chiều cao cố định và vùng cuộn để in đủ nhận xét. */
+  body:has(.writing-feedback-dialog[open]) { min-width: 0; }
+  body:has(.writing-feedback-dialog[open]) > :not(.writing-feedback-dialog) { display: none; }
+  body .writing-feedback-dialog[open] {
+    position: static;
+    inset: auto;
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    margin: 0;
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  body .writing-feedback-shell,
+  body .writing-feedback-layout,
+  body .writing-feedback-source,
+  body .writing-feedback-scores {
+    display: block;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  body .writing-feedback-source > .writing-feedback-text { display: block; }
+  body .writing-feedback-dialog::backdrop,
+  body .writing-feedback-close,
+  body .writing-component-toggle { display: none; }
+  body .writing-component-detail[hidden] { display: block; }
+  body .writing-criterion-card { break-inside: auto; }
 }

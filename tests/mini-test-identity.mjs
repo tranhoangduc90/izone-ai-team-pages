@@ -49,7 +49,7 @@ const server = createServer(async (request, response) => {
 await new Promise((resolve) => server.listen(4174, '127.0.0.1', resolve));
 const browser = await chromium.launch({
   headless: true,
-  executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  executablePath: process.env.CHROME_BIN || 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
 });
 
 try {

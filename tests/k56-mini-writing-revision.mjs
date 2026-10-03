@@ -70,7 +70,7 @@ test('revision được lưu vào session và chỉ khôi phục số nguyên kh
 test('cả bootstrap chính/dự phòng và answer sheet đều dùng revision cache mới', () => {
   for (const path of ['term-tests/mini-test-k56-computer-based/bootstrap.js','term-tests/mini-test-k56-computer-based/index.html','term-tests/mini-test-k56/index.html']) {
     const text = fs.readFileSync(path,'utf8');
-    assert.match(text,/mini-writing-revision-v1/);
+    assert.match(text,/20260929-mini-homework-25m/);
     assert.doesNotMatch(text,/app\.js\?[^'"\s]*20260910-audio-recovery-v1/);
   }
 });

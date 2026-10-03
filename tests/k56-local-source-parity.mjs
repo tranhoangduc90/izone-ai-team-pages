@@ -34,9 +34,10 @@ for (const { route, content, layout } of productionBaseline) {
   assert.match(readFileSync(path.join(root, directory, 'index.html'), 'utf8'), /layout-updates\.css/);
 }
 
+// Mốc 03/10 thêm quy tắc in/zoom riêng Term; nội dung đề và layout gốc vẫn theo 23/09.
 assert.equal(
   normalizedDigest('term-tests/term-test-1-k56-computer-based/styles.css'),
-  'af915a1cfb8c67740764f21c78f3754c37368be417a262df61b9e40d54428699',
+  '583f5f2ddffe55ddda43928bdad1d892683b08abe5d6f612d4f30924c73b160f',
   'Term Test 1 K56: styles khác mốc production',
 );
 

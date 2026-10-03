@@ -52,7 +52,9 @@ h1 { font-size: clamp(34px, 5vw, 58px); line-height: 1; margin: 18px 0 14px; }
 .section-kicker { color: var(--red); }
 .date-pill { padding: 7px 11px; color: var(--red-dark); background: #fff1f3; border-radius: 999px; font-size: 13px; font-weight: 700; }
 .class-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; padding: 15px; }
-.class-card { padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: #fafbfc; }
+.class-card { display: block; width: 100%; padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: #fafbfc; color: var(--navy); text-align: left; cursor: pointer; }
+.class-card.is-selected { border-color: var(--green); background: var(--green-bg); }
+.class-card:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .class-card > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .class-card strong { display: block; margin: 17px 0 3px; font-size: 19px; }
 .class-card > span { color: var(--muted); font-size: 13px; }

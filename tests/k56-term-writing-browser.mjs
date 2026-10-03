@@ -99,10 +99,11 @@ for (const { slug, taskNumber } of [
         calls.push(request.postDataJSON());
         return route.fulfill({ json: resultPayload({ slug, taskNumber, ready }) });
       }
-      if (url.pathname === `/mapping-api/api/term-tests/${slug}/session/resume-attempt`) {
+      if (url.pathname === `/mapping-api/api/term-tests/${slug}/attempt/prepare`) {
         return page.evaluate(() => window.K56_TERM_TEST_CONTENT).then(content => route.fulfill({ json: {
           content, serverNow: new Date().toISOString(),
-          attemptToken, listeningSubmitted: true
+          attemptToken, examMode: 'lis_first', nextSection: 'result', completed: true,
+          listeningSubmitted: true, readingSubmitted: true, writingSubmittedAt: new Date().toISOString()
         } }));
       }
       if (url.pathname === '/mapping-api/api/term-tests/result/stream') {
@@ -128,6 +129,15 @@ for (const { slug, taskNumber } of [
       assert.equal(await page.locator('.writing-score-card.is-action').count(), 0);
       assert.ok(calls.length >= 2, 'Chưa đi qua cả khôi phục lượt và tải kết quả');
       assert.ok(calls.every(call => call.attemptToken === attemptToken), 'Lượt kết quả bị đổi định danh');
+
+      await status.getByRole('button', { name: 'Kiểm tra kết quả ngay' }).click();
+      // Click chưa đợi callback async/API; chờ kết quả UI, không đọc nhầm thông báo cũ.
+      await status.getByText('Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.', { exact: true }).waitFor({ state: 'visible' });
+      assert.equal(
+        await status.locator('p').innerText(),
+        'Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.'
+      );
+      assert.equal(await page.locator('.writing-score-card.is-action').count(), 0);
 
       ready = true;
       await status.getByRole('button', { name: 'Kiểm tra kết quả ngay' }).click();

@@ -40,6 +40,18 @@ const server=http.createServer((req,res)=>{
     });
     await page.goto(`http://127.0.0.1:${server.address().port}/recordings/index.html`);
     await page.waitForFunction(()=>document.querySelectorAll('.review-section').length===2&&window.fixtureLogin);await page.evaluate(()=>window.fixtureLogin({credential:'fixture-token'}));await page.waitForFunction(()=>window.recordingAuth.isAuthenticated());
+    const classCard=page.getByRole('button',{name:'IC9001, Buổi 3'});
+    await classCard.waitFor();
+    assert.equal(await classCard.getAttribute('aria-pressed'),'false');
+    await classCard.click();
+    assert.equal(await classCard.getAttribute('aria-pressed'),'true');
+    assert.equal(await classCard.evaluate(element=>getComputedStyle(element).backgroundColor),'rgb(236, 253, 243)');
+    await page.evaluate(()=>{state.yesterdayClasses.push({...state.yesterdayClasses[0],classSessionId:'s2',className:'IC9002'});renderYesterday();});
+    assert.equal(await page.getByRole('button',{name:'IC9002, Buổi 3'}).getAttribute('aria-pressed'),'false');
+    await page.getByRole('button',{name:'Làm mới',exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector('.class-card')?.getAttribute('aria-pressed')==='true');
+    await classCard.press('Enter');
+    assert.equal(await classCard.getAttribute('aria-pressed'),'false');
     await page.waitForSelector('.zoom-source-link');assert.equal(await page.locator('.zoom-source-link').getAttribute('href'),'https://zoom.us/rec/play/fixture-source');assert.ok((await page.locator('.pending').innerText()).includes('Recording đã được xóa trong Zoom'));
     assert.equal(await page.locator('.class-folder').count(),0);assert.equal(await page.locator('.scan-panel').count(),0);assert.equal(await page.locator('#recordingDecisionDialog').count(),0);assert.equal(await page.getByRole('button',{name:'Xử lý recording',exact:true}).count(),0);assert.ok((await page.locator('.pending').innerText()).includes('Lý do cần duyệt:'));assert.ok((await page.locator('.pending').innerText()).includes('DOWNLOAD_FAILED'));
     assert.ok(!(await page.locator('.pending').innerText()).includes('Chưa thấy recording tại lần quét'));

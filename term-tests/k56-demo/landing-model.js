@@ -33,3 +33,19 @@ export function sortClassesNewestFirst(classes) {
     });
   });
 }
+
+// Demo giả lập không phụ thuộc quyền/danh sách lớp thật. Không thêm bất kỳ lớp thật nào.
+export function buildK56LandingClasses(classes) {
+  const byName = new Map();
+  for (const item of Array.isArray(classes) ? classes : []) {
+    if (typeof item?.name !== 'string') continue;
+    const name = item.name.trim().toUpperCase();
+    if (!/^[A-Z0-9_-]{2,32}$/.test(name)) continue;
+    if (name.startsWith('CODEXDEMO') && name !== 'CODEXDEMO56') continue;
+    if (!byName.has(name)) byName.set(name, { ...item, name });
+  }
+  if (!byName.has('CODEXDEMO56')) {
+    byName.set('CODEXDEMO56', { name: 'CODEXDEMO56', accessMode: 'demo_only' });
+  }
+  return sortClassesNewestFirst([...byName.values()]);
+}

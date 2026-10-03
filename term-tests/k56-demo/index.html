@@ -32,6 +32,14 @@
         </div>
         <p>CODEXDEMO56 dùng dữ liệu giả lập. Các lớp khóa 56 đã được mở bài dùng danh sách học viên thật và đồng bộ điểm sang Portal.</p>
         <section class="landing-link-group" aria-labelledby="onlineTestsHeading">
+          <fieldset class="landing-order">
+            <legend>Thứ tự làm bài</legend>
+            <div class="landing-actions">
+              <button class="button button-secondary order-choice" type="button" data-mode="lis_first" aria-pressed="true">Listening trước</button>
+              <button class="button button-secondary order-choice" type="button" data-mode="read_first" aria-pressed="false">Reading trước</button>
+            </div>
+            <p>Cùng thứ tự cho cả ba bài và Answer Sheet. Writing sau Listening và Reading.</p>
+          </fieldset>
           <h2 id="onlineTestsHeading">Bài thi</h2>
           <div class="landing-actions landing-actions-three">
             <button class="button button-secondary landing-choice" type="button" data-test="term-test-1-k56-computer-based" data-slug="term-test-1-k56" aria-pressed="false">Term Test 1</button>
@@ -62,6 +70,6 @@
       </section>
     </main>
     <script src="../k56-shared/config.js?rev=20260924-k56-all-classes"></script>
-    <script type="module" src="landing.js?rev=20260920-teacher-session-v1"></script>
+    <script type="module" src="landing.js?rev=20261002-k56-demo-picker-v1"></script>
   </body>
 </html>

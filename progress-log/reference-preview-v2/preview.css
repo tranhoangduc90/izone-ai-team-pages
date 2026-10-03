@@ -1,0 +1,35 @@
+/* Dùng đúng CSS nguồn cho thẻ buổi và hero; phần mở rộng full bài giới hạn trong route mới. */
+@import url('../reference-preview/preview.css');
+.referencePreview .studentSessionCard{cursor:pointer;overflow-wrap:anywhere}
+.referencePreview .studentSessionBottom i{max-width:85%;line-height:1.5}
+.referencePreview .session-locked .studentSessionBottom i,.referencePreview .session-empty .studentSessionBottom i{color:#6d747b}
+.referencePreview .previewClock{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 16px;font-size:12px;padding:12px 16px;border:1px solid #d2e1dd;border-radius:12px;background:#eef6f2}
+.referencePreview .previewClock button{padding:7px 10px;border:1px solid #b7d8cf;border-radius:8px;background:white;cursor:pointer}
+.referencePreview .previewClock small{flex-basis:100%;color:#6d747b}
+.referencePreview .reviewPerson{margin-top:12px;font-size:13px;color:#6d747b}
+.referencePreview .studentAnswerReview{max-width:none}
+.referencePreview .reviewQuestionTop{display:flex;align-items:flex-start;gap:12px}
+.referencePreview .reviewQuestionNumber{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:9px;background:#fdecef;color:#db3e4b;font-size:13px;font-weight:850}
+.referencePreview .reviewQuestionTop>div{min-width:0}
+.referencePreview .reviewQuestionTop small{font-size:10px;font-weight:800;letter-spacing:.05em}
+.referencePreview .reviewQuestionTop h3{font-size:17px;line-height:1.5;margin:5px 0 0;font-weight:650;white-space:pre-wrap;overflow-wrap:anywhere}
+.referencePreview .reviewInstructions{font-size:13px;color:#6d747b;white-space:pre-wrap;margin:12px 0}
+.referencePreview .reviewOptions{display:grid;gap:8px;margin-top:16px}
+.referencePreview .reviewOption{display:flex;gap:10px;padding:12px 14px;border:1px solid #dde3e1;border-radius:10px;background:white;font-size:14px;align-items:flex-start}
+.referencePreview .reviewOption.isSelected{background:#eff9f6;border-color:#64b9a2}
+.referencePreview .reviewOption>span:nth-child(2){flex:1;white-space:pre-wrap;overflow-wrap:anywhere}
+.referencePreview .reviewOption b{font-size:10px;color:#137a60}
+.referencePreview .reviewAnswer{margin:16px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.referencePreview .reviewAnswer strong,.referencePreview .reviewAnswerList strong{white-space:pre-wrap;overflow-wrap:anywhere}
+.referencePreview .reviewAnswerList{margin:16px 0 0;padding-left:20px}
+.referencePreview .reviewAnswerList li{margin:12px 0}
+.referencePreview .reviewSentence{line-height:2.4;margin-top:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+.referencePreview .reviewBlank{display:inline;padding:3px 8px;border-bottom:2px solid #64b9a2;background:#e8f5f1;border-radius:5px;font-weight:700;color:#137a60;white-space:pre-wrap;overflow-wrap:anywhere}
+.referencePreview .reviewVerdict{display:inline-block;margin:16px 0 0;padding:6px 10px;border-radius:8px;background:#eef3f6;color:#6d747b;font-size:12px;font-weight:750}
+.referencePreview .reviewVerdict.correct{background:#e5f6f0;color:#137a60}.referencePreview .reviewVerdict.incorrect{background:#fdecef;color:#c32e40}
+.referencePreview .reviewLearnLink{display:block;margin-top:18px;padding:16px 20px;background:#db3e4b;color:white;border-radius:12px;text-decoration:none;font-weight:800}
+.referencePreview .previewEmpty button{display:block;margin-top:12px;padding:10px 14px;border:1px solid #dce2e0;border-radius:9px;background:white;cursor:pointer}
+.referencePreview .previewTable th small{white-space:normal;max-width:210px;display:block}.referencePreview .previewTable th{max-width:260px;white-space:normal;min-width:150px}
+@media(max-width:560px){.referencePreview .reviewOption{flex-wrap:wrap}.referencePreview .reviewOption b{margin-left:26px}.referencePreview .studentDetailHeader h1{overflow-wrap:anywhere}.referencePreview .studentAnswerReview article{padding:16px}.referencePreview .reviewQuestionTop h3{font-size:16px}}
+
+.referencePreview a.studentSessionCard{text-decoration:none}

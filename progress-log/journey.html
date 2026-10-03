@@ -10,6 +10,7 @@
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css?rev=20260915-journey-v1">
     <link rel="stylesheet" href="journey.css?rev=20260924-speaking-v1">
+    <link rel="stylesheet" href="reference-components.css?rev=20261003">
   </head>
   <body>
     <main class="shell journey-shell">
@@ -20,7 +21,7 @@
 
       <p class="notice" id="journeyNotice" role="status">Đang mở hành trình của bạn…</p>
 
-      <section class="card journey-content" id="journeyView" hidden>
+      <section class="card journey-content referenceRegion" id="journeyView" hidden>
         <p class="eyebrow">TÌNH HÌNH CỦA BẠN</p>
         <h1 id="journeyStudentName">—</h1>
         <p class="muted journey-class" id="journeyClassName">—</p>
@@ -66,7 +67,7 @@
             <p class="eyebrow">TỪNG BUỔI HỌC</p>
             <span id="timelineCount"></span>
           </div>
-          <div class="session-list" id="sessionList"></div>
+          <div class="studentSessionGrid" id="sessionList"></div>
           <section class="report-history" id="reportHistory" hidden>
             <h2>Các lần tổng kết</h2>
             <div id="reportList"></div>
@@ -81,6 +82,6 @@
       </section>
     </main>
     <script src="config.js?rev=20260905-memory-v3"></script>
-    <script src="journey.js?rev=20260924-session-label-v1"></script>
+    <script type="module" src="journey.js?rev=20261003-reference-production"></script>
   </body>
 </html>

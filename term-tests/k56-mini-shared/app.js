@@ -76,6 +76,8 @@
       listening: restoredSession.frozenAnswers?.listening || null,
       reading: restoredSession.frozenAnswers?.reading || null
     },
+    draftRevisions: { listening: Number(restoredSession.draftRevisions?.listening) || 0, reading: Number(restoredSession.draftRevisions?.reading) || 0 },
+    draftAckRevisions: { listening: Number(restoredSession.draftAckRevisions?.listening) || 0, reading: Number(restoredSession.draftAckRevisions?.reading) || 0 },
     testGrades: {
       listening: restoredSession.testGrades?.listening || null,
       reading: restoredSession.testGrades?.reading || null,
@@ -102,6 +104,10 @@
       clientSubmissionId: state.clientSubmissionId,
       examSessionToken: state.examSessionToken,
       attemptToken: state.attemptToken,
+      examMode: state.examMode,
+      listeningSubmitted: state.listeningSubmitted,
+      readingSubmitted: state.readingSubmitted,
+      nextSection: state.nextSection,
       listeningStartedAt: state.listeningStartedAt,
       readingStartedAt: state.readingStartedAt,
       writingStartedAt: state.writingStartedAt,
@@ -118,6 +124,8 @@
       writingDirty: state.writingDirty,
       writingRevision,
       drafts: state.drafts,
+      draftRevisions: state.draftRevisions,
+      draftAckRevisions: state.draftAckRevisions,
       writingLayout: state.writingLayout,
       frozenAnswers: state.frozenAnswers,
       testGrades: state.testGrades
@@ -323,7 +331,81 @@
     elements.notice.className = 'notice';
   }
 
+  async function prepareK56Attempt() {
+    if (!state.studentRef) return;
+    const response = await apiRequest(`/api/term-tests/${testConfig.slug}/attempt/prepare`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classCode, studentRef: state.studentRef, mode: window.K56_EXAM_ORDER.requested() })
+    });
+    await showPreparedAttempt(response);
+  }
+
+  async function showPreparedAttempt(response) {
+    const sameAttempt = !state.attemptToken || state.attemptToken === response.attemptToken;
+    const modeChanged = window.K56_EXAM_ORDER.apply(state, response);
+    for (const skill of ['listening', 'reading']) {
+      if (!sameAttempt || Number(response[skill + 'DraftRevision'] || 0) >= Number(state.draftRevisions[skill] || 0)) {
+        applySectionDraft(skill, response[skill + 'Draft'], response[skill + 'DraftRevision']);
+      }
+    }
+    saveSession();
+    if (response.completed) {
+      await restoreAttemptFromServer();
+      if (writingConfig && !state.writingSubmitted) setStage(state.writingStarted ? 'writing' : 'writing-prep');
+      else { setStage('result-ready'); if (state.writingSubmitted) await loadResult(elements.viewResult); }
+    } else if (response.nextSection === 'reading' && response.readingStartedAt) {
+      elements.readingStudentName.textContent = state.studentName;
+      setStage('reading');
+    } else if (response.nextSection === 'listening' && response.listeningStartedAt) {
+      setStage('listening');
+    } else {
+      showSectionReady(response.nextSection);
+    }
+    if (modeChanged || response.modeMismatch) showNotice('Lượt thi giữ thứ tự đã chọn trước đó. Link đã được cập nhật cho đúng lượt.', 'success');
+    else hideNotice();
+  }
+
+  function showSectionReady(skill) {
+    let panel = document.getElementById('k56SectionReady');
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = 'k56SectionReady';
+      panel.className = 'panel transition-card';
+      const title = document.createElement('h2');
+      const help = document.createElement('p');
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'button button-primary';
+      panel.append(title, help, button);
+      document.querySelector('.page-shell').append(panel);
+    }
+    const label = skill === 'reading' ? 'Reading' : 'Listening';
+    panel.querySelector('h2').textContent = `Chuẩn bị phần ${label}`;
+    panel.querySelector('p').textContent = 'Thông tin học viên đã xác nhận. Đồng hồ chỉ bắt đầu khi bạn bấm bắt đầu phần này.';
+    const button = panel.querySelector('button');
+    button.textContent = `Bắt đầu ${label}`;
+    button.onclick = async () => {
+      if (skill === 'reading') return startOrResumeReading(button);
+      if (document.body.classList.contains('cbt-mode')) { window.location.reload(); return; }
+      setBusy(button, true, 'Đang mở Listening...', 'Bắt đầu Listening');
+      try {
+        const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ examSessionToken: state.examSessionToken })
+        });
+        state.listeningStartedAt = started.listeningStartedAt;
+        state.listeningDeadlineAt = started.listeningDeadlineAt;
+        state.serverTimeOffsetMs = Date.parse(started.serverNow) - Date.now();
+        saveSession(); hideNotice(); setStage('listening');
+      } catch (error) { showNotice(`Chưa thể mở Listening: ${error.message}`, 'error'); }
+      finally { setBusy(button, false, '', 'Bắt đầu Listening'); }
+    };
+    setStage('section-ready'); panel.hidden = false;
+  }
+
   function setStage(stage) {
+    if (!demoMode) window.K56_EXAM_ORDER.deadlineGuard(state, elements);
+    const ready = document.getElementById('k56SectionReady');
+    if (ready) ready.hidden = stage !== 'section-ready';
     state.stage = stage;
     if (stage !== 'result') stopWritingGradingPolling();
     for (const view of views) view.hidden = true;
@@ -338,20 +420,25 @@
       // Lượt đã nộp phải tiếp tục gắn với cùng học viên, không đổi người giữa các kỹ năng.
       elements.studentSelect.disabled = Boolean(state.attemptToken);
     }
-    const activeProgress = stage === 'listening' || stage === 'listening-saved'
+    const activeProgress = stage === 'section-ready' ? state.nextSection : stage === 'listening' || stage === 'listening-saved'
       ? 'listening'
       : stage === 'reading' ? 'reading'
         : stage === 'writing-prep' || stage === 'writing' ? 'writing'
           : stage === 'result-ready' || stage === 'result' ? 'result' : '';
-    const order = writingConfig ? ['listening', 'reading', 'writing', 'result'] : ['listening', 'reading', 'result'];
+    const order = [...window.K56_EXAM_ORDER.skills(state.examMode || window.K56_EXAM_ORDER.requested()), ...(writingConfig ? ['writing'] : []), 'result'];
+    for (const [index, skill] of order.entries()) {
+      const step = Array.from(progressSteps).find(item => item.dataset.progress === skill);
+      step.textContent = `${index + 1}. ${skill === 'result' ? 'Kết quả' : skill[0].toUpperCase() + skill.slice(1)}`;
+      step.parentElement.append(step);
+    }
     const activeIndex = order.indexOf(activeProgress);
     for (const step of progressSteps) {
       const index = order.indexOf(step.dataset.progress);
       step.classList.toggle('active', index === activeIndex);
       const completed = step.dataset.progress === 'listening'
-        ? Boolean(state.attemptToken || state.result?.result?.listening)
+        ? Boolean(state.listeningSubmitted || state.result?.result?.listening)
         : step.dataset.progress === 'reading'
-          ? Boolean(state.completed || state.result?.result?.reading)
+          ? Boolean(state.readingSubmitted || state.completed || state.result?.result?.reading)
           : step.dataset.progress === 'writing'
             ? Boolean(state.writingSubmitted)
             : false;
@@ -402,6 +489,7 @@
           pairField.value = state.drafts?.[skill]?.[key] || '';
           pairField.addEventListener('input', () => {
             state.drafts[skill][key] = pairField.value;
+            state.draftRevisions[skill] = Math.max(state.draftRevisions[skill], state.draftAckRevisions[skill]) + 1;
             saveSession();
             updateAnswerCount(skill);
             scheduleSectionDraft(skill);
@@ -434,6 +522,7 @@
       field.value = state.drafts?.[skill]?.[String(control.number)] || '';
       field.addEventListener('input', () => {
         state.drafts[skill][String(control.number)] = field.value;
+        state.draftRevisions[skill] = Math.max(state.draftRevisions[skill], state.draftAckRevisions[skill]) + 1;
         saveSession();
         updateAnswerCount(skill);
         scheduleSectionDraft(skill);
@@ -487,6 +576,15 @@
 
   const sectionDraftTimers = { listening: 0, reading: 0 };
 
+  function applySectionDraft(skill, answers, revision) {
+    state.drafts[skill] = { ...(answers || {}) };
+    state.draftRevisions[skill] = Number(revision) || 0;
+    state.draftAckRevisions[skill] = Number(revision) || 0;
+    const container = skill === 'listening' ? elements.listeningQuestions : elements.readingQuestions;
+    for (const field of container.querySelectorAll('[data-number]')) field.value = state.drafts[skill][field.dataset.number] || '';
+    updateAnswerCount(skill); saveSession();
+  }
+
   async function saveSectionDraft(skill) {
     if (demoMode) return null;
     const container = skill === 'listening' ? elements.listeningQuestions : elements.readingQuestions;
@@ -501,8 +599,10 @@
     const response = await apiRequest(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...token, answers })
+      body: JSON.stringify({ ...token, answers, revision: state.draftRevisions[skill] })
     });
+    state.draftAckRevisions[skill] = Math.max(state.draftAckRevisions[skill], Number(response.revision) || 0);
+    if (response.accepted === false && state.draftRevisions[skill] <= Number(response.revision)) applySectionDraft(skill, response.draft, response.revision);
     if (response.deadlineAt) {
       if (skill === 'listening') state.listeningDeadlineAt = response.deadlineAt;
       else state.readingDeadlineAt = response.deadlineAt;
@@ -555,7 +655,8 @@
   }
 
   async function refreshWritingGrading() {
-    if (demoMode || !state.attemptToken || writingGradingPollInFlight) return;
+    if (demoMode || !state.attemptToken) return;
+    if (writingGradingPollInFlight) return 'checking';
     writingGradingPollInFlight = true;
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
@@ -565,13 +666,16 @@
         body: JSON.stringify({ attemptToken: state.attemptToken })
       });
       applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
+      if (payload.writing?.grading?.ready) state.manualPendingWritingAttemptToken = '';
       renderResult(payload);
       if (payload.writing?.grading?.ready) {
         stopWritingGradingPolling();
         if (!wasReady) showNotice('Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.', 'success');
       }
+      return payload.writing?.grading?.ready ? 'ready' : 'pending';
     } catch {
       // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
+      return 'unavailable';
     } finally {
       writingGradingPollInFlight = false;
       if (!state.result?.writing?.grading?.ready) scheduleWritingGradingRefresh();
@@ -1312,6 +1416,7 @@
   }
 
   function renderWritingSubmission() {
+    const pendingMessage = 'Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.';
     if (!writingConfig || !elements.writingSubmissionResult) return;
     elements.writingSubmissionResult.hidden = !state.writingSubmitted;
     if (!state.writingSubmitted) {
@@ -1322,66 +1427,81 @@
     const section = document.createElement('section');
     section.className = 'writing-result-section';
     const grading = state.result?.writing?.grading || null;
+    const legacyTask = grading?.ready && grading?.mode === 'legacy'
+      ? grading.tasks?.find(task => Number(task.taskNumber) === 2) || null
+      : null;
+    const lmsUrl = (() => {
+      try {
+        const url = new URL(String(grading?.lmsUrl || ''));
+        return url.protocol === 'https:' && url.hostname === 'ducizone.ddns.net'
+          && !url.username && !url.password && !url.port && !url.hash
+          && /^\/writing\/shared\/writing-essays\/[a-f0-9]{48}\/view$/.test(url.pathname)
+          && /^[1-9]\d*$/.test(url.searchParams.get('v') || '')
+          && [...url.searchParams.keys()].every(key => key === 'v') ? url.href : '';
+      } catch { return ''; }
+    })();
     const heading = document.createElement('header');
     heading.className = 'writing-result-heading';
     const headingCopy = document.createElement('div');
     const eyebrow = document.createElement('span');
-    eyebrow.textContent = grading?.ready ? 'Kết quả Writing' : 'Bài Writing đã nộp';
+    eyebrow.textContent = lmsUrl || legacyTask ? 'Bài Writing đã chấm' : 'Bài Writing đã nộp';
     const title = document.createElement('h3');
-    title.textContent = grading?.ready
-      ? 'Điểm và bài chấm Writing'
+    title.textContent = lmsUrl
+      ? 'Xem bài chữa từng câu'
+      : legacyTask
+        ? 'Xem bản chấm Mini trước cập nhật'
       : grading?.status === 'review_required'
         ? 'Đã nhận bài Writing demo'
-        : 'Bài Writing của bạn đang được chấm';
+        : grading?.ready
+          ? 'Bài đã chấm nhưng chưa có Link LMS'
+          : 'Bài Writing của bạn đang được chấm';
     headingCopy.append(eyebrow, title);
     const note = document.createElement('p');
-    note.textContent = grading?.ready
-      ? 'Nhấn vào điểm Paragraph để xem bài chấm chi tiết.'
+    note.textContent = lmsUrl
+      ? 'Mở Link LMS để xem từng câu, phần sửa và nhận xét bài viết.'
+      : legacyTask
+        ? 'Bản chấm cũ được giữ nguyên để tra cứu. Bài nộp mới sẽ có Link LMS chữa từng câu.'
       : grading?.status === 'review_required'
         ? 'Bài viết đã được lưu trên máy chủ và cần giáo viên kiểm tra lại kết quả chấm.'
-        : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
+        : grading?.ready
+          ? 'Bản chấm cũ chưa có Link LMS. Vui lòng báo giáo viên; bài làm của bạn vẫn được lưu.'
+          : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
     heading.append(headingCopy, note);
 
     const gradingArea = document.createElement('div');
-    if (grading?.ready) {
-      gradingArea.className = 'writing-score-grid';
-      const tasksByNumber = new Map(Array.from(grading.tasks || []).map(task => [Number(task.taskNumber), task]));
-      for (const taskNumber of [2]) {
-        const taskResult = tasksByNumber.get(taskNumber);
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'writing-score-card is-action';
-        const label = document.createElement('span');
-        label.textContent = 'Đoạn văn';
-        const score = document.createElement('strong');
-        score.textContent = `Điểm đoạn văn ${formatBand(taskResult?.taskScore)}`;
-        const action = document.createElement('small');
-        action.textContent = 'Xem bài chấm chi tiết →';
-        button.append(label, score, action);
-        button.addEventListener('click', () => openWritingFeedback(taskResult));
-        gradingArea.append(button);
-      }
-      const overall = document.createElement('article');
-      overall.className = 'writing-score-card is-overall';
-      const overallLabel = document.createElement('span');
-      overallLabel.textContent = 'Writing tổng';
-      const overallScore = document.createElement('strong');
-      overallScore.textContent = `Điểm đoạn văn ${formatBand(grading.writingScore)}`;
-      const formula = document.createElement('small');
-      formula.textContent = 'Điểm Writing = điểm Paragraph';
-      overall.append(overallLabel, overallScore, formula);
-      gradingArea.append(overall);
+    if (lmsUrl) {
+      gradingArea.className = 'writing-grading-status';
+      const link = document.createElement('a');
+      link.className = 'button button-primary';
+      link.href = lmsUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Mở bài chữa trên LMS';
+      gradingArea.append(link);
+    } else if (legacyTask) {
+      gradingArea.className = 'writing-grading-status';
+      const button = document.createElement('button');
+      button.className = 'button button-secondary';
+      button.type = 'button';
+      button.textContent = 'Xem bản chấm cũ';
+      button.addEventListener('click', () => openWritingFeedback(legacyTask));
+      gradingArea.append(button);
     } else {
       gradingArea.className = `writing-grading-status${grading?.status === 'review_required' ? ' needs-review' : ''}`;
       const statusCopy = document.createElement('div');
       const statusTitle = document.createElement('strong');
-      statusTitle.textContent = grading?.status === 'review_required'
+      statusTitle.textContent = grading?.ready
+        ? 'Chưa có Link LMS'
+        : grading?.status === 'review_required'
         ? 'Cần giáo viên kiểm tra'
-        : 'Đang chấm Paragraph';
+        : 'Đang chữa từng câu';
       const statusText = document.createElement('p');
-      statusText.textContent = grading?.status === 'review_required'
-        ? 'Listening và Reading đã được chấm. Chưa thể xác nhận điểm đoạn văn tự động; bài làm vẫn được giữ trên máy chủ.'
-        : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
+      statusText.textContent = grading?.ready
+        ? 'Bản chấm này chưa trả về đường dẫn để học viên xem bài chữa.'
+        : grading?.status === 'review_required'
+          ? 'Listening và Reading đã được chấm. Bài Writing cần giáo viên kiểm tra; bài làm vẫn được giữ trên máy chủ.'
+          : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
+      if (!grading?.ready && state.manualPendingWritingAttemptToken && state.manualPendingWritingAttemptToken === state.attemptToken) statusText.textContent = pendingMessage;
       statusCopy.append(statusTitle, statusText);
       const refresh = document.createElement('button');
       refresh.type = 'button';
@@ -1391,7 +1511,14 @@
       refresh.addEventListener('click', async () => {
         refresh.disabled = true;
         refresh.textContent = 'Đang kiểm tra...';
-        await refreshWritingGrading();
+        const check = await refreshWritingGrading();
+        if (check === 'pending' || (check === 'checking' && !state.result?.writing?.grading?.ready)) {
+          state.manualPendingWritingAttemptToken = state.attemptToken;
+          const currentStatus = elements.writingSubmissionResult.querySelector('.writing-grading-status p');
+          if (currentStatus) currentStatus.textContent = pendingMessage;
+        } else if (check === 'unavailable') {
+          showNotice('Chưa kiểm tra được kết quả Writing. Vui lòng thử lại sau.', 'error');
+        }
         if (refresh.isConnected) {
           refresh.disabled = false;
           refresh.textContent = 'Kiểm tra kết quả ngay';
@@ -1575,10 +1702,12 @@
     );
     elements.resultStatus.textContent = hasReading
       ? payload.writing?.grading?.ready
-        ? 'Listening và Reading được phân tích riêng; điểm Writing · Paragraph đã hoàn tất và có bài chấm chi tiết.'
+        ? payload.writing?.grading?.mode === 'legacy'
+          ? 'Listening và Reading được phân tích riêng. Bản chấm Writing cũ vẫn được giữ để tra cứu.'
+          : 'Listening và Reading được phân tích riêng. Xem bài Writing đã chữa qua Link LMS khi có sẵn.'
         : payload.writing?.grading?.status === 'review_required'
           ? 'Listening và Reading đã chấm xong. Writing đã được nhận nhưng workflow chấm K56 yêu cầu giáo viên kiểm tra.'
-          : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
+          : 'Listening và Reading được phân tích riêng. Writing đang được chữa từng câu.'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
     elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
     renderWritingSubmission();
@@ -1661,6 +1790,10 @@
     state.studentRef = student?.ref || '';
     state.studentName = student?.name || '';
     saveSession();
+    if (!demoMode && state.studentRef && !document.body.classList.contains('cbt-mode')) {
+      if (!window.confirm(`Xác nhận học viên ${state.studentName} · lớp ${classCode}?`)) return;
+      prepareK56Attempt().catch(error => showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, 'error'));
+    }
   });
 
   elements.listeningView.addEventListener('submit', async event => {
@@ -1718,12 +1851,14 @@
           studentRef: state.studentRef,
           clientSubmissionId: state.clientSubmissionId,
           examSessionToken: state.examSessionToken || undefined,
+          draftRevision: state.draftRevisions.listening,
           answers
         })
       });
       state.attemptToken = response.attemptToken;
       state.studentName = response.studentName;
       state.completed = Boolean(response.completed);
+      state.listeningSubmitted = true;
       state.frozenAnswers.listening = null;
       saveSession();
       submitted = true;
@@ -1768,6 +1903,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attemptToken: state.attemptToken })
       });
+      state.readingStartedAt = response.readingStartedAt;
       state.readingDeadlineAt = response.readingDeadlineAt;
       state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
       saveSession();
@@ -1830,13 +1966,21 @@
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/reading`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptToken: state.attemptToken, answers })
+        body: JSON.stringify({ attemptToken: state.attemptToken, answers, draftRevision: state.draftRevisions.reading })
       });
-      state.completed = true;
+      state.completed = Boolean(response.completed);
+      state.readingSubmitted = true;
+      state.nextSection = response.nextSection;
       state.frozenAnswers.reading = null;
       saveSession();
       submitted = true;
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
+      if (!state.completed) {
+        showNotice('Reading đã được lưu và khóa. Tiếp theo là Listening.', 'success');
+        if (document.body.classList.contains('cbt-mode')) window.location.reload();
+        else showSectionReady('listening');
+        return;
+      }
       if (writingConfig) {
         setStage('writing-prep');
         const portalMessage = portalNotice(response.portalSyncStatus, true);
@@ -2177,6 +2321,17 @@
     try {
       const roster = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
       populateRoster(roster);
+      if (!demoMode) {
+        if (window.TERM_TEST_BOOTSTRAP?.preparedAttempt) {
+          await showPreparedAttempt(window.TERM_TEST_BOOTSTRAP.preparedAttempt);
+          return;
+        }
+        if (!document.body.classList.contains('cbt-mode')) {
+          if (state.studentRef) await prepareK56Attempt();
+          else { setStage('identity-ready'); hideNotice(); }
+          return;
+        }
+      }
       if (!state.roster.length) throw new Error('Lớp chưa có học viên trong hệ thống matching.');
       if (state.attemptToken) {
         try {

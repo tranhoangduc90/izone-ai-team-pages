@@ -62,7 +62,7 @@
   function showDone(message) {
     stopped = true;
     card.classList.remove('is-warning');
-    pageTitle.textContent = 'Đang chấm bài của bạn';
+    pageTitle.textContent = 'Đã xong!';
     setStage('done');
     lead.textContent = message || 'Kết quả đã được ghi trực tiếp vào bài làm của bạn.';
     result.hidden = false;
