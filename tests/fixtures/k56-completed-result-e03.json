@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "classCode": "E03K56",
+  "studentName": "Học viên giả E-03",
+  "completedAt": "2026-09-26T08:00:00.000Z",
+  "cases": [
+    {
+      "slug": "term-test-1-k56",
+      "title": "Term Test 1 · Khóa 56",
+      "studentRef": "00000000-0000-4000-8000-000000000301",
+      "attemptToken": "00000000-0000-4000-8000-000000000311",
+      "taskNumber": 2,
+      "score": 6.5,
+      "listeningCorrect": 30,
+      "readingCorrect": 21,
+      "readingTotal": 26,
+      "essay": "This synthetic Task 2 answer belongs only to the completed E-03 Term Test 1 attempt.",
+      "feedback": "Nhận xét giả Term 1: lập luận rõ, cần phát triển ví dụ."
+    },
+    {
+      "slug": "term-test-2-k56",
+      "title": "Term Test 2 · Khóa 56",
+      "studentRef": "00000000-0000-4000-8000-000000000302",
+      "attemptToken": "00000000-0000-4000-8000-000000000312",
+      "taskNumber": 1,
+      "score": 7,
+      "listeningCorrect": 32,
+      "readingCorrect": 28,
+      "readingTotal": 40,
+      "essay": "This synthetic Task 1 answer belongs only to the completed E-03 Term Test 2 attempt.",
+      "feedback": "Nhận xét giả Term 2: nhận xét lớn rõ, cần đối chiếu số liệu."
+    }
+  ]
+}
