@@ -138,6 +138,17 @@
       "statement": "In many countries, English is used as the main language of instruction in schools and universities. Do the advantages of this policy outweigh the disadvantages?",
       "studentPath": "./lesson.html",
       "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-13",
+      "writingLesson": 13,
+      "taskNumber": 1,
+      "slug": "average-earnings-by-sector-2000-2010",
+      "title": "Thu nhập theo ngành, 2000–2010",
+      "type": "Writing Task 1 · Biểu đồ cột và bảng",
+      "statement": "The chart below shows the average earnings of people in various areas of work in one country in 2000 and 2010. The table shows the average salary for all sectors in the same years. Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+      "studentPath": "./index.html",
+      "classes": ["CS.070626", "CS.160826"]
     }
   ]
 }

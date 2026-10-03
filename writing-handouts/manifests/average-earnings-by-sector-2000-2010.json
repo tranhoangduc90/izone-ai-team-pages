@@ -1,0 +1,339 @@
+{
+  "schema_version": "task1-web-manifest-v1",
+  "activity": {
+    "version": "task1-web-activity-v1",
+    "id": "ed8162c1-2d54-4998-96a8-458fa75d26aa",
+    "slug": "average-earnings-by-sector-2000-2010",
+    "title": "Luyện Task 1: Thu nhập theo ngành, 2000–2010",
+    "type": "ielts_writing_task_1_preparation",
+    "locale": "vi-VN"
+  },
+  "task": {
+    "statement": "The chart below shows the average earnings of people in various areas of work in one country in 2000 and 2010. The table shows the average salary for all sectors in the same years. Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+    "chart_image": {
+      "kind": "reference",
+      "available": true,
+      "mime_type": "image/png",
+      "file_name": "task1-average-earnings-by-sector-2000-2010.png",
+      "url": "assets/task1-average-earnings-by-sector-2000-2010.png",
+      "alt_text": "Biểu đồ lương trung bình hằng năm theo sáu ngành trong năm 2000 và 2010, đơn vị nghìn USD; bảng mức trung bình toàn bộ ngành 44.000 và 50.000 USD."
+    }
+  },
+  "decoding": {
+    "what": "Lương trung bình hằng năm của nhân viên toàn thời gian theo sáu ngành và mức trung bình của toàn bộ ngành",
+    "unit": "Biểu đồ: nghìn USD; bảng: USD. Số trên biểu đồ là xấp xỉ vì không ghi nhãn đầu cột.",
+    "categories": [
+      "Sáu ngành: Administration, Financial Services, Telecommunications, Tourism, Transport, Retail/Shops",
+      "Hai năm: 2000 và 2010",
+      "Một quốc gia không nêu tên; bảng Average salary for all sectors"
+    ]
+  },
+  "analysis": {
+    "bullets": [
+      "Financial Services có mức lương cao nhất và Tourism thấp nhất ở cả hai năm; Telecommunications đứng thứ hai.",
+      "Năm trong sáu ngành tăng từ 2000 đến 2010; Tourism là ngoại lệ duy nhất và giảm nhẹ.",
+      "Mức bình quân toàn bộ ngành trong bảng tăng chính xác từ 44.000 lên 50.000 USD, tức thêm 6.000 USD.",
+      "Financial Services tăng khoảng 20 nghìn USD, nổi bật hơn các ngành khác; Transport và Retail/Shops cũng tăng rõ. Số đọc từ đầu cột chỉ là xấp xỉ.",
+      "Khi đối chiếu hai phần hình, hãy đổi 44.000/50.000 USD thành 44/50 nghìn USD; không tự lấy trung bình cộng sáu ngành để thay bảng."
+    ]
+  },
+  "routes": [
+    {
+      "id": "A",
+      "name": "Tầng thu nhập",
+      "rank": 1,
+      "recommended": true,
+      "body": {
+        "body_1": "Financial Services và Telecommunications: hai ngành thu nhập cao; tài chính vượt trội và tăng mạnh, viễn thông đứng thứ hai nhưng tăng nhẹ. Đối chiếu mức chung 44.000 → 50.000 USD.",
+        "body_2": "Administration, Transport, Retail/Shops và Tourism: ba ngành đầu quanh mức trung bình và tăng; Tourism thấp nhất, giảm nhẹ. Gom nhóm và chọn số neo thay vì kể bốn ngành lần lượt.",
+        "strengths": "Hai tầng lương rõ, nối biểu đồ với bảng mức chung một cách tự nhiên.",
+        "tradeoffs": "Body 2 có bốn ngành; cần nhóm ba ngành quanh mức chung trước khi nêu Tourism.",
+        "best_for": "Học viên muốn so sánh mức lương nổi bật và tránh liệt kê."
+      }
+    },
+    {
+      "id": "B",
+      "name": "Mức và chiều thay đổi",
+      "rank": 2,
+      "recommended": false,
+      "body": {
+        "body_1": "Financial Services, Transport và Retail/Shops: ba ngành tăng rõ; tài chính tăng khoảng 20 nghìn USD, vận tải và bán lẻ khoảng 10–12 nghìn USD.",
+        "body_2": "Administration và Telecommunications tăng nhẹ khoảng 5 nghìn USD; Tourism giảm nhẹ. Đặt mức chung tăng chính xác 6.000 USD vào mạch đối chiếu.",
+        "strengths": "Tập trung vào khác biệt về mức tăng và ngoại lệ.",
+        "tradeoffs": "Cần giữ thứ hạng/tầng lương khi đối chiếu, không biến hai nhóm thành danh sách mức thay đổi.",
+        "best_for": "Học viên muốn kể câu chuyện thay đổi giữa hai năm."
+      }
+    },
+    {
+      "id": "C",
+      "name": "Theo hai năm",
+      "rank": 3,
+      "recommended": false,
+      "body": {
+        "body_1": "Bức tranh 2000: tài chính cao nhất, viễn thông thứ hai, du lịch thấp nhất, ba ngành còn lại khoảng 40–45 nghìn USD; bình quân chung 44.000 USD.",
+        "body_2": "Bức tranh 2010: hai cực trị giữ nguyên; tài chính tăng rõ, phần lớn ngành tăng, du lịch giảm; bình quân chung lên 50.000 USD. So trực tiếp với năm 2000.",
+        "strengths": "Dễ giữ mốc năm và thứ hạng của từng bức tranh.",
+        "tradeoffs": "Dễ lặp thành hai danh sách nếu Body 2 thiếu so sánh chéo năm.",
+        "best_for": "Học viên muốn tổ chức theo trình tự thời gian và biết chọn lọc."
+      }
+    }
+  ],
+  "vocabulary": {
+    "overview": {
+      "naming": [
+        {
+          "vi": "Lương trung bình hằng năm",
+          "en": "average annual salary"
+        },
+        {
+          "vi": "Nhân viên toàn thời gian",
+          "en": "full-time employee"
+        },
+        {
+          "vi": "Sáu lĩnh vực làm việc",
+          "en": "six employment sectors"
+        },
+        {
+          "vi": "Bình quân toàn bộ ngành",
+          "en": "the average across all sectors"
+        },
+        {
+          "vi": "Năm 2000 và 2010",
+          "en": "2000 and 2010"
+        },
+        {
+          "vi": "Đơn vị nghìn đô la Mỹ",
+          "en": "in thousands of US dollars"
+        }
+      ],
+      "insights": [
+        {
+          "vi": "Cao nhất trong cả hai năm",
+          "en": "remain the highest in both years"
+        },
+        {
+          "vi": "Thấp nhất trong cả hai năm",
+          "en": "remain the lowest in both years"
+        },
+        {
+          "vi": "Phần lớn ngành",
+          "en": "most sectors"
+        },
+        {
+          "vi": "Ngành ngoại lệ",
+          "en": "the exception"
+        },
+        {
+          "vi": "Tăng từ ... lên ...",
+          "en": "rise from ... to ..."
+        },
+        {
+          "vi": "Giảm nhẹ",
+          "en": "decline slightly"
+        },
+        {
+          "vi": "Tăng 6.000 USD",
+          "en": "increase by $6,000"
+        },
+        {
+          "vi": "Trong khi / trái lại",
+          "en": "while / whereas / by contrast"
+        }
+      ]
+    },
+    "routes": [
+      {
+        "id": "A",
+        "name": "Tầng thu nhập",
+        "rank": 1,
+        "recommended": true,
+        "naming": [
+          {
+            "vi": "Hai ngành có mức lương cao",
+            "en": "the two higher-paying sectors"
+          },
+          {
+            "vi": "Lương trung bình hằng năm",
+            "en": "average annual salary"
+          },
+          {
+            "vi": "Nhân viên toàn thời gian",
+            "en": "full-time employee"
+          },
+          {
+            "vi": "Mức bình quân chung",
+            "en": "the average across all sectors"
+          },
+          {
+            "vi": "Các ngành còn lại",
+            "en": "the remaining sectors"
+          }
+        ],
+        "story": [
+          {
+            "vi": "Cao hơn gấp đôi mức chung",
+            "en": "more than double the overall average"
+          },
+          {
+            "vi": "Đứng ở vị trí thứ hai",
+            "en": "rank second"
+          },
+          {
+            "vi": "Quanh mức bình quân",
+            "en": "around the overall average"
+          },
+          {
+            "vi": "Thấp hơn rõ rệt",
+            "en": "considerably lower"
+          },
+          {
+            "vi": "Trong khi đó",
+            "en": "whereas / by contrast"
+          }
+        ]
+      },
+      {
+        "id": "B",
+        "name": "Mức và chiều thay đổi",
+        "rank": 2,
+        "recommended": false,
+        "naming": [
+          {
+            "vi": "Nhóm tăng rõ",
+            "en": "sectors with larger increases"
+          },
+          {
+            "vi": "Nhóm tăng nhẹ",
+            "en": "sectors with modest rises"
+          },
+          {
+            "vi": "Ngành giảm",
+            "en": "the declining sector"
+          },
+          {
+            "vi": "Mức tăng bằng tiền",
+            "en": "the increase in dollar terms"
+          },
+          {
+            "vi": "Từ năm 2000 đến 2010",
+            "en": "between 2000 and 2010"
+          }
+        ],
+        "story": [
+          {
+            "vi": "Tăng khoảng 20 nghìn USD",
+            "en": "rise by about $20,000"
+          },
+          {
+            "vi": "Tăng nhẹ",
+            "en": "increase slightly"
+          },
+          {
+            "vi": "Giảm nhẹ",
+            "en": "fall slightly"
+          },
+          {
+            "vi": "Trái với",
+            "en": "in contrast to"
+          },
+          {
+            "vi": "Mức chung tăng 6.000 USD",
+            "en": "the overall average rose by $6,000"
+          }
+        ]
+      },
+      {
+        "id": "C",
+        "name": "Theo hai năm",
+        "rank": 3,
+        "recommended": false,
+        "naming": [
+          {
+            "vi": "Trong năm 2000",
+            "en": "in 2000"
+          },
+          {
+            "vi": "Đến năm 2010",
+            "en": "by 2010"
+          },
+          {
+            "vi": "Số liệu tương ứng",
+            "en": "the corresponding figure"
+          },
+          {
+            "vi": "Hai cực trị",
+            "en": "the highest and lowest figures"
+          },
+          {
+            "vi": "Ở cả hai năm",
+            "en": "in both years"
+          }
+        ],
+        "story": [
+          {
+            "vi": "Giữ vị trí dẫn đầu",
+            "en": "remain the highest"
+          },
+          {
+            "vi": "Vẫn ở mức thấp nhất",
+            "en": "remain the lowest"
+          },
+          {
+            "vi": "So với mức của năm 2000",
+            "en": "compared with its 2000 figure"
+          },
+          {
+            "vi": "Phần lớn ngành",
+            "en": "most sectors"
+          },
+          {
+            "vi": "Mức chung tăng",
+            "en": "the overall average increased"
+          }
+        ]
+      }
+    ]
+  },
+  "chatbots": {
+    "data_walk": {
+      "label": "Chatbot 1: đọc đề và rà dữ liệu",
+      "href": null,
+      "status": "pending_link"
+    },
+    "insight_and_routes": {
+      "label": "Chatbot 2: tìm nhận xét lớn và chọn hướng thân bài",
+      "href": null,
+      "status": "pending_link"
+    }
+  },
+  "feedback": {
+    "overview": {
+      "enabled": true,
+      "section": "overview",
+      "prompt_version": "1"
+    },
+    "outline": {
+      "enabled": true,
+      "section": "outline",
+      "prompt_version": "1"
+    },
+    "draft": {
+      "enabled": true,
+      "section": "draft",
+      "prompt_version": "1"
+    }
+  },
+  "metadata": {
+    "factory_version": "task1-factory-v1",
+    "activity_version": "task1-web-activity-v1",
+    "source_contract": "reported-exam-talkfirst-2026-07-21",
+    "source_contract_version": "2026-09-27",
+    "prompt_versions": {
+      "chatbot_1": "1",
+      "chatbot_2": "1",
+      "overview": "1",
+      "outline": "1",
+      "draft": "1"
+    }
+  }
+}
