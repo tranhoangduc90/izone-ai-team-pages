@@ -9,6 +9,7 @@
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="../styles.css?rev=20260928-matching-dropdown-v1">
     <link rel="stylesheet" href="../journey.css?rev=20261001-journey-loading-v1">
+    <link rel="stylesheet" href="../reference-components.css?rev=20261003">
       <link rel="stylesheet" href="demo.css?rev=20260924-v1">
   </head>
   <body>
@@ -100,23 +101,32 @@
         <button class="button primary" id="journeyRetryButton" type="button" hidden>Thử lại</button>
         <button class="button text-button" id="journeyLoadingBackButton" type="button">Quay lại phiếu</button>
       </section>
-      <section class="card journey-content" id="journeyView" hidden>
-        <p class="eyebrow">HÀNH TRÌNH HỌC TẬP</p>
-        <h1 id="journeyStudentName">—</h1>
-        <p class="muted journey-class" id="journeyClassName">—</p>
-        <p class="muted">Hành trình dùng dữ liệu đang có trong Progress Log. Ô buổi trống chưa xác nhận buổi đó đã diễn ra hay học viên chưa nộp bài.</p>
-        <div class="journey-summary" aria-label="Tóm tắt hành trình">
-          <div><b id="attendedCount">0</b><span>buổi xác nhận trong Progress Log</span></div>
-          <div><b id="submittedCount">0</b><span>phiếu hoàn tất</span></div>
-          <div><b id="reportCount">0</b><span>lần tổng kết</span></div>
+      <section class="referenceRegion studentPortal" id="journeyView" hidden>
+        <div class="studentPortalHero"><div><p class="studentPortalEyebrow">PORTAL HỌC VIÊN</p><h1 id="journeyStudentName">Hành trình học tập của em</h1><p id="journeyClassName"></p></div><div class="portalStudentPicker"><span>HÀNH TRÌNH CÁ NHÂN</span><b>Bài làm từ các phiếu đã có</b></div></div>
+        <div class="studentPortalMetrics">
+          <div><small>Đã hoàn thành</small><strong id="submittedCount">0</strong><span>Phiếu Progress Log nộp đủ</span></div>
+          <div><small>Progress Log đã có</small><strong id="journeyAssignedCount">0</strong><span id="journeyPlanCount">Trong kế hoạch khóa học</span></div>
+          <div><small>Câu trả lời đúng</small><strong id="journeyCorrectCount">0</strong><span>Trong các câu đã chấm</span></div>
+          <div><small>Câu trả lời sai</small><strong id="journeyIncorrectCount">0</strong><span>Câu mở không tính đúng/sai</span></div>
         </div>
+        <button id="journeySummaryButton" class="studentCumulativeReport" type="button"><span class="cumulativeReportIcon">▤</span><span class="cumulativeReportCopy"><small>TỔNG KẾT TỪ CÁC PHIẾU ĐÃ CÓ</small><strong>Nhìn lại kết quả của em</strong><em>Bài đã nộp, câu đúng và những câu cần xem lại</em></span><span class="cumulativeReportAction">Xem kết quả →</span></button>
+        <p class="muted compact"><span id="attendedCount">0</span> buổi xác nhận trong Progress Log · <span id="reportCount">0</span> lần tổng kết đã công bố</p>
+        <section class="studentJourney"><div class="studentJourneyHeading"><div><p class="studentPortalEyebrow">HÀNH TRÌNH CỦA EM</p><h2 id="journeyListTitle">Các buổi học, từng bước rõ ràng</h2></div></div>
+        <p class="journey-normal-note">Buổi chưa tạo Progress Log là bình thường. Các buổi này vẫn nằm trong kế hoạch khóa học.</p>
         <p class="muted" id="journeyStatus" role="status"></p>
-        <div class="session-list" id="journeySessions"></div>
+        <div class="studentSessionGrid" id="journeySessions"></div>
         <section class="report-history" id="journeyReports" hidden>
           <h2>Các lần tổng kết</h2>
           <div id="journeyReportList"></div>
         </section>
-        <button class="button text-button" id="journeyBackButton" type="button">Quay lại Progress Log</button>
+        </section><button class="button text-button" id="journeyBackButton" type="button">Quay lại Progress Log</button>
+      </section>
+
+      <section id="journeyDetailView" class="referenceRegion" hidden>
+        <button id="journeyDetailBackButton" class="button text-button" type="button">← Hành trình của em</button>
+        <p id="journeyDetailStatus" role="status"></p>
+        <div id="journeyDetailContent"></div>
+        <button id="journeyDetailRetryButton" class="button" type="button" hidden>Thử lại</button>
       </section>
 
       <section class="card error-card" id="errorView" hidden>
@@ -126,7 +136,8 @@
         <button class="button primary" id="retryButton" type="button">Thử lại</button>
       </section>
     </main>
+    <dialog id="journeySummaryDialog" class="draft-dialog referenceRegion"><form method="dialog"><button class="button text-button" value="close">Đóng tổng kết</button></form><h2>Kết quả từ các phiếu đã có</h2><p class="muted">Chỉ tính câu có kết quả chấm đúng/sai; câu mở và điểm tự khai không tính.</p><div id="journeySummaryContent" class="basicStudentScores"></div></dialog>
     <script src="config.js?rev=20260924-generic-demo-v1"></script>
-    <script type="module" src="boot.js?rev=20261001-journey-loading-v1"></script>
+    <script type="module" src="boot.js?rev=20261003-reference-production"></script>
   </body>
 </html>

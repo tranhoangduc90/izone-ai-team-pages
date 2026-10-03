@@ -56,7 +56,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; openBlocksButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261001-journey-loading-v1');
+  await import('../app.js?rev=20261003-reference-production');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });
