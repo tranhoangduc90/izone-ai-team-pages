@@ -1,3 +1,5 @@
+import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
+import {renderSessionReview} from './session-review.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
 
@@ -34,7 +36,7 @@ const state = {
   journeyOnly: false
 };
 
-const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'journeyLoadingView', 'journeyView', 'errorView'];
+const viewIds = ['identityView', 'confirmView', 'formView', 'resultView', 'journeyLoadingView', 'journeyView', 'journeyDetailView', 'errorView'];
 const elements = Object.fromEntries([
   'notice', ...viewIds, 'brandLabel', 'sessionLabel', 'assignmentTitle', 'classLabel', 'studentSelect',
   'chooseStudentButton', 'rememberStudentRow', 'rememberStudent', 'rememberStudentStatus', 'changeRememberedStudent',
@@ -45,6 +47,8 @@ const elements = Object.fromEntries([
   'journeyResultButton', 'journeyStudentName', 'journeyClassName', 'attendedCount', 'submittedCount',
   'reportCount', 'journeyStatus', 'journeySessions', 'journeyReports', 'journeyReportList', 'journeyBackButton',
   'journeyLoadingStatus', 'journeyRetryButton', 'journeyLoadingBackButton', 'journeySpinner',
+  'journeyAssignedCount', 'journeyPlanCount', 'journeyCorrectCount', 'journeyIncorrectCount', 'journeyListTitle', 'journeySummaryButton', 'journeySummaryDialog', 'journeySummaryContent',
+  'journeyDetailContent', 'journeyDetailStatus', 'journeyDetailBackButton', 'journeyDetailRetryButton',
   'gradedResults', 'gradedSummary', 'gradedItemList',
   'errorTitle', 'errorMessage', 'retryButton'
 ].map(id => [id, document.getElementById(id)]));
@@ -966,69 +970,52 @@ function journeyPortalMessage(status) {
 }
 
 function renderIntegratedJourney(journey) {
-  elements.journeyStudentName.textContent = journey.student.name;
+  elements.journeyStudentName.textContent = 'Chào '+journey.student.name+', đây là hành trình học của em';
   elements.journeyClassName.textContent = journey.class.name;
   elements.attendedCount.textContent = journey.summary.attendedSessions;
   elements.submittedCount.textContent = journey.summary.submittedComplete;
   elements.reportCount.textContent = journey.summary.availableReports;
+  if(elements.journeyAssignedCount) {
+    elements.journeyAssignedCount.textContent=(journey.sessions||[]).filter(s=>s.assignmentId).length;
+    elements.journeyPlanCount.textContent='Trong kế hoạch '+journey.summary.totalSessions+' buổi';
+    elements.journeyCorrectCount.textContent=(journey.sessions||[]).reduce((n,s)=>n+(s.quizSummary?.correct||0),0);
+    elements.journeyIncorrectCount.textContent=(journey.sessions||[]).reduce((n,s)=>n+(s.quizSummary?.incorrect||0),0);
+    elements.journeyListTitle.textContent=journey.summary.totalSessions+' buổi học, từng bước rõ ràng';
+  }
+  state.journeyData = journey;
   const sessions = (journey.sessions || []).map(session => {
-    const item = document.createElement('article');
-    item.className = 'session-item';
-    const heading = document.createElement('div');
-    heading.className = 'session-heading';
-    heading.append(journeyText('b', `Buổi ${session.sessionNumber}`),
-      journeyText('span', session.testResult
-        ? 'Đã có kết quả Test'
-        : session.assignmentId
-        ? session.completeness === 'complete' ? 'Đã nộp đủ phiếu' : 'Chưa có bài nộp đủ'
-        : session.dataOrigin === 'test_evidence'
-          ? 'Có dữ liệu Test · chưa hiển thị kết quả'
-          : session.sessionKind === 'test' && session.dataOrigin === 'confirmed_plan'
-            ? 'Buổi Test theo kế hoạch · chưa có kết quả'
-            : session.dataOrigin === 'confirmed_plan'
-              ? 'Theo kế hoạch lớp · chưa có Progress Log'
-              : 'Chưa có dữ liệu cho buổi này', 'journey-status'));
-    item.append(heading, journeyText('p', session.title || `Buổi ${session.sessionNumber}`));
-    if (/^\d{4}-\d{2}-\d{2}$/.test(session.sessionDate || '')) {
-      const [year, month, day] = session.sessionDate.split('-');
-      item.append(journeyText('small', `Ngày học đã được giảng viên xác nhận: ${day}/${month}/${year}`));
+    const status = sessionState(session, {assignmentId:session.assignmentId,
+      status:session.completeness==='complete'?'complete':session.testResult?'test_result':session.completeness==='incomplete'?'incomplete':session.conflict?'needs_review':'not_submitted'},
+      session.assignmentId?{title:session.title,status:session.assignmentStatus}:null);
+    const learn = status.canLearn && /^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
+    const completed = session.completeness === 'complete';
+    const item = document.createElement(learn?'a':completed?'button':'article');
+    item.className = 'studentSessionCard session-'+status.kind;
+    if (learn) {
+      item.href='./index.html#assignment='+encodeURIComponent(session.publicToken);
+      item.addEventListener('click',event=>{
+        if(new URL(item.href).pathname===window.location.pathname){event.preventDefault();window.location.hash='assignment='+encodeURIComponent(session.publicToken);window.location.reload();}
+      });
     }
-    if (session.testResult) {
-      const result = document.createElement('div');
-      result.className = 'session-test-result';
-      result.append(journeyText('b', session.testResult.title || 'Kết quả Test'));
-      for (const [name, score] of [['Listening', session.testResult.listening],
-        ['Reading', session.testResult.reading]]) {
-        if (!score) continue;
-        result.append(journeyText('small', name + ': ' + score.correct + '/' + score.total
-          + (score.band === null ? '' : ' · Band ' + score.band)));
-      }
-      if (session.testResult.writing?.status === 'ready') {
-        result.append(journeyText('small', 'Writing: ' + session.testResult.writing.score));
-      } else if (session.testResult.writing?.status === 'pending') {
-        result.append(journeyText('small', 'Writing: đã nộp, đang chờ điểm.'));
+    if (completed) {item.type='button';item.addEventListener('click',()=>void openStudentJourneyDetail(session));}
+    const heading = document.createElement('div'); heading.className='studentSessionTop';
+    const number='BUỔI '+String(session.sessionNumber).padStart(2,'0');
+    const date=/^\d{4}-\d{2}-\d{2}$/u.test(session.sessionDate||'')?session.sessionDate.split('-').reverse().join('/'):'Chưa xác nhận ngày';
+    heading.append(journeyText('b',number),journeyText('span',date));
+    const title=contentTitle(session,{title:session.assignmentId||session.sessionKind==='test'?session.title:''});
+    const bottom=document.createElement('div');bottom.className='studentSessionBottom';
+    bottom.append(journeyText('i',status.label));
+    if(session.quizSummary?.graded>0)bottom.append(journeyText('b',session.quizSummary.correct+'/'+session.quizSummary.graded));
+    item.append(heading,journeyText('strong',title),journeyText('small',skillsLabel(title)||'Trong kế hoạch khóa học'),bottom);
+    if(session.testResult){
+      const result=journeyText('div','', 'sessionTestScore');
+      for(const skill of ['listening','reading','writing']){
+        const score=session.testResult[skill];if(!score)continue;
+        result.append(journeyText('small',skill==='writing'?'Writing: '+(score.status==='ready'?score.score:score.status==='pending'?'đã nộp, đang chờ điểm':'chưa có bài nộp')
+          :skill[0].toUpperCase()+skill.slice(1)+': '+score.correct+'/'+score.total));
       }
       item.append(result);
     }
-    if (session.assignmentId) {
-      const confirmed = ['self_confirmed', 'teacher_confirmed'].includes(session.attendanceStatus);
-      const portalStatus = session.portalSync?.status;
-      item.append(journeyText('small', confirmed
-        ? 'Đã xác nhận điểm danh trong Progress Log.'
-        : portalStatus
-          ? 'Progress Log hiện chưa xác nhận; đã từng có yêu cầu đồng bộ Portal.'
-          : 'Chưa xác nhận điểm danh trong Progress Log.'));
-      if (confirmed || portalStatus) item.append(journeyText('small', journeyPortalMessage(portalStatus)));
-    }
-    if (session.teacherSessionFeedback?.noteText) {
-      const feedback = document.createElement('div');
-      feedback.className = 'session-speaking-feedback';
-      feedback.append(journeyText('b', 'Nhận xét Speaking từ giảng viên'),
-        journeyText('p', session.teacherSessionFeedback.noteText));
-      item.append(feedback);
-    }
-    const nextAction = session.afterSessionReport?.systemOutput?.nextAction?.text;
-    if (nextAction) item.append(journeyText('div', nextAction, 'session-note'));
     return item;
   });
   elements.journeySessions.replaceChildren(...(sessions.length ? sessions
@@ -1061,6 +1048,47 @@ function renderIntegratedJourney(journey) {
       ? 'Có dữ liệu đến buổi ' + (journey.coverage?.knownThroughSession || sessions.at(-1).sessionNumber)
         + '. ' + inferredCount + ' ô buổi chưa có nguồn xác nhận; lịch đầy đủ và điểm Test chưa được nối vào Journey.'
       : 'Chưa có dữ liệu buổi học trong Journey; lịch lớp và kết quả Test chưa được nối.';
+}
+
+// Cập nhật nhãn tại đầu phút theo đồng hồ Việt Nam; không đọc/ghi API để mở khóa.
+function scheduleJourneyClock() {
+  clearTimeout(state.journeyClock);
+  if (!state.journeyData || elements.journeyView?.hidden !== false) return;
+  state.journeyClock = setTimeout(() => {
+    if (elements.journeyView?.hidden === false) renderIntegratedJourney(state.journeyData);
+    scheduleJourneyClock();
+  }, 60_000 - Date.now() % 60_000 + 20);
+}
+
+async function openStudentJourneyDetail(session) {
+  state.journeyDetailController?.abort();
+  const generation = (state.journeyDetailGeneration || 0) + 1;
+  state.journeyDetailGeneration = generation;state.journeyDetailSession = session;
+  const controller = new AbortController();state.journeyDetailController = controller;
+  const studentRef = state.journeyData?.student.studentRef, publicToken = state.publicToken;
+  const classId = state.assignment.class.id;
+  const current=()=>generation===state.journeyDetailGeneration&&publicToken===state.publicToken
+    &&studentRef===state.journeyData?.student.studentRef&&elements.journeyDetailView.hidden===false;
+  const timer=setTimeout(()=>controller.abort(),15_000);
+  elements.journeyDetailContent.replaceChildren();elements.journeyDetailRetryButton.hidden=true;
+  elements.journeyDetailStatus.textContent='Đang tải toàn bộ bài làm…';showView('journeyDetailView');
+  try {
+    const payload=await apiRequest('/student/course-session-detail', {body:{publicToken,studentRef,
+      identityConfirmed:true,sessionNumber:session.sessionNumber},signal:controller.signal});
+    if (!current()) return;
+    const detail=payload.detail;
+    if (detail.student?.studentRef!==studentRef||String(detail.classId)!==String(classId)
+      ||detail.sessionNumber!==session.sessionNumber) throw new Error('Dữ liệu bài làm không khớp học viên và buổi đã chọn.');
+    renderSessionReview(elements.journeyDetailContent,detail,{session});elements.journeyDetailStatus.textContent='Bài đã nộp · chỉ để xem lại.';
+  } catch(error) {
+    if (!current()) return;
+    elements.journeyDetailStatus.textContent='Chưa đọc được bài làm: '+(controller.signal.aborted?'Quá thời gian chờ; bạn có thể thử lại.':error.message);
+    elements.journeyDetailRetryButton.hidden=false;
+  } finally {clearTimeout(timer);}
+}
+function backToJourneyList() {
+  state.journeyDetailGeneration=(state.journeyDetailGeneration||0)+1;state.journeyDetailController?.abort();
+  elements.journeyDetailContent.replaceChildren();showView('journeyView');scheduleJourneyClock();
 }
 
 async function openIntegratedJourney(returnView) {
@@ -1103,6 +1131,7 @@ async function openIntegratedJourney(returnView) {
     }
     renderIntegratedJourney(journey);
     showView('journeyView');
+    scheduleJourneyClock();
     setNotice('Hành trình của bạn đã được cập nhật.');
   } catch (error) {
     if (!current()) return;
@@ -1126,6 +1155,8 @@ async function openIntegratedJourney(returnView) {
 
 // Hủy lượt đọc khi quay về; câu trả lời và danh tính của phiếu giữ nguyên.
 function backFromJourney() {
+  clearTimeout(state.journeyClock);state.journeyData=null;
+  state.journeyDetailGeneration=(state.journeyDetailGeneration||0)+1;state.journeyDetailController?.abort();
   state.journeyGeneration = (state.journeyGeneration || 0) + 1;
   state.journeyController?.abort();
   state.journeyController = null;
@@ -1163,7 +1194,7 @@ async function openAssignment() {
       ? `Progress Log · Khóa ${courseCode}`
       : 'Progress Log · IZONE';
     elements.sessionLabel.textContent = `BUỔI ${state.assignment.sessionNumber}`;
-    elements.assignmentTitle.textContent = state.assignment.title;
+    elements.assignmentTitle.textContent = contentTitle(state.assignment,state.assignment);
     elements.classLabel.textContent = state.assignment.class.name;
     const options = state.assignment.roster.map(student => {
       const option = document.createElement('option');
@@ -1211,7 +1242,7 @@ async function startAttempt() {
     state.changeVersion = 0;
     state.savedVersion = 0;
     elements.studentNameLabel.textContent = state.attempt.identity.studentName;
-    elements.formContextLabel.textContent = `${state.attempt.identity.className} · Buổi ${state.attempt.identity.sessionNumber}`;
+    elements.formContextLabel.textContent = state.attempt.identity.className+' · '+sessionHeading({sessionNumber:state.attempt.identity.sessionNumber},state.assignment);
     setSaveState(state.attempt.draftRevision ? 'Đã khôi phục bản lưu' : 'Chưa có thay đổi', state.attempt.draftRevision ? 'saved' : '');
     setNotice('Bạn có thể điền mỗi phần ngay sau hoạt động tương ứng.');
     state.checkpointIndex = 0;
@@ -1299,7 +1330,7 @@ elements.chooseStudentButton.addEventListener('click', () => {
   state.confirmedStudent = state.selectedStudent;
   studentMemory.busy = true;
   elements.confirmName.textContent = displayStudent(state.confirmedStudent);
-  elements.confirmContext.textContent = `${state.assignment.class.name} · Buổi ${state.assignment.sessionNumber}`;
+  elements.confirmContext.textContent = state.assignment.class.name+" · "+sessionHeading(state.assignment,state.assignment);
   elements.confirmButton.disabled = false;
   elements.confirmButton.hidden = state.journeyOnly;
   setNotice('Kiểm tra kỹ trước khi xác nhận.');
@@ -1337,3 +1368,21 @@ window.addEventListener('pagehide', () => {
 });
 
 void openAssignment();
+
+elements.journeyDetailBackButton.addEventListener('click',backToJourneyList);
+elements.journeyDetailRetryButton.addEventListener('click',()=>void openStudentJourneyDetail(state.journeyDetailSession));
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!elements.journeyDetailView.hidden)backToJourneyList();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.journeyData&&!elements.journeyView.hidden)renderIntegratedJourney(state.journeyData);});
+
+elements.journeySummaryButton.addEventListener('click',()=>{
+  const table=document.createElement('table'),head=document.createElement('tr');
+  for(const label of ['Buổi học','Tình trạng','Đúng','Sai'])head.append(journeyText('th',label));
+  const thead=document.createElement('thead');thead.append(head);table.append(thead);const body=document.createElement('tbody');
+  for(const session of state.journeyData.sessions.filter(s=>s.assignmentId)){
+    const row=document.createElement('tr'),name=document.createElement('td');
+    if(session.completeness==='complete'){const button=journeyText('button',sessionHeading(session,session),'button text-button');button.type='button';button.addEventListener('click',()=>{elements.journeySummaryDialog.close();void openStudentJourneyDetail(session);});name.append(button);}
+    else name.textContent=sessionHeading(session,session);
+    row.append(name,journeyText('td',session.completeness==='complete'?'Đã hoàn thành':'Chưa nộp đủ'),journeyText('td',session.quizSummary?.graded?session.quizSummary.correct:'—'),journeyText('td',session.quizSummary?.graded?session.quizSummary.incorrect:'—'));body.append(row);
+  }
+  table.append(body);elements.journeySummaryContent.replaceChildren(table);elements.journeySummaryDialog.showModal();
+});

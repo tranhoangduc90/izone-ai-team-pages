@@ -12,7 +12,7 @@ for (const name of pages) {
   let html = (await readFile(new URL(`../${name}`, import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
   html = html.replaceAll('https://ducizone.ddns.net', 'https://ducizone.ddns.net/mapping-api-progress-log-demo/');
   html = html.replace('connect-src \'self\' ', 'connect-src \'self\' http://127.0.0.1:8792 ');
-  html = html.replaceAll(/(?:href|src)="(styles\.css|teacher\.css|journey\.css|app\.js|teacher\.js|journey\.js)/g,
+  html = html.replaceAll(/(?:href|src)="(reference-components\.css|styles\.css|teacher\.css|journey\.css|app\.js|teacher\.js|journey\.js)/g,
     match => match.replace('="', '="../'));
   html = html.replace(/\s*<script src="https:\/\/accounts\.google\.com\/gsi\/client" async defer><\/script>/, '');
   if (name === 'index.html') {
@@ -29,7 +29,7 @@ for (const name of pages) {
   html = html.replace('<title>', '<title>Bản thử · ');
   html = html.replace(/src="config\.js\?rev=[^"]+"/, 'src="config.js?rev=20260924-generic-demo-v1"');
   if (name === 'index.html') {
-    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261001-journey-loading-v1"');
+    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261003-reference-production"');
   }
   html = html.replace('</head>', '    <link rel="stylesheet" href="demo.css?rev=20260924-v1">\n  </head>');
   const output = new URL(name, import.meta.url);

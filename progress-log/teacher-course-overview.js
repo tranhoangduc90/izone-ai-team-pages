@@ -1,3 +1,5 @@
+import {contentTitle,sessionHeading} from './session-presentation.js';
+import {renderSessionReview} from './session-review.js';
 // Nhận DTO đã kiểm quyền; tạo bảng lớp và thống kê câu bằng DOM an toàn.
 // Không suy điểm danh từ ô trống; lỗi đọc được caller hiện ở vùng trạng thái.
 const labels={complete:'Đã nộp đủ',incomplete:'Nộp thiếu',not_submitted:'Chưa nộp',
@@ -12,10 +14,10 @@ function dateLabel(value) {
   const weekday=new Date(Date.UTC(Number(year),Number(month)-1,Number(day))).getUTCDay();
   return (weekday?'T'+(weekday+1):'CN')+' '+day+'/'+month+'/'+year;
 }
-function cellButton(student,cell,onOpen) {
+function cellButton(student,cell,onOpen,session={sessionNumber:cell.sessionNumber}) {
   const button=text('button',labels[cell.status]||'Chưa xác nhận','overview-cell '+cell.status);
   button.type='button';
-  button.setAttribute('aria-label',student.name+' · Buổi '+cell.sessionNumber+' · '+button.textContent);
+  button.setAttribute('aria-label',student.name+' · '+sessionHeading(session,session.assignments?.[0])+' · '+button.textContent);
   button.addEventListener('click',()=>onOpen(student,cell));
   if (cell.portalSync) {
     const portal=text('small',cell.portalSync.status==='complete'
@@ -26,12 +28,13 @@ function cellButton(student,cell,onOpen) {
   return button;
 }
 export function renderCourseOverview(root,overview,{filter='',onOpen}) {
+  root.classList.add('referenceRegion');
   const students=overview.students.filter(s=>!filter||s.cells.some(c=>c.status===filter));
   const table=document.createElement('table');table.className='overview-table';
   const head=document.createElement('thead'),headRow=document.createElement('tr');
   headRow.append(text('th','Học viên'));
   for (const session of overview.sessions) {
-    const cell=text('th','Buổi '+session.sessionNumber+(session.sessionKind==='test'?' · Test':''));
+    const cell=text('th',sessionHeading(session,session.assignments?.[0]));
     cell.append(text('small',dateLabel(session.sessionDate)));headRow.append(cell);
   }
   head.append(headRow);table.append(head);
@@ -41,7 +44,7 @@ export function renderCourseOverview(root,overview,{filter='',onOpen}) {
     row.append(text('th',student.name+(student.discriminator?' · '+student.discriminator:'')
       +(student.current?'':' · roster lịch sử')));
     for (const cell of student.cells) {
-      const td=document.createElement('td');td.append(cellButton(student,cell,onOpen));row.append(td);
+      const td=document.createElement('td');td.append(cellButton(student,cell,onOpen,overview.sessions.find(s=>s.sessionNumber===cell.sessionNumber)));row.append(td);
     }
     body.append(row);
   }
@@ -52,7 +55,7 @@ export function renderCourseOverview(root,overview,{filter='',onOpen}) {
     const card=document.createElement('details');card.append(text('summary',student.name+(student.discriminator?' · '+student.discriminator:'')+' · '+student.completeCount+' phiếu hoàn tất'));
     for (const [index,cell] of student.cells.entries()) {
       const row=document.createElement('div');row.className='overview-mobile-session';
-      row.append(text('b','Buổi '+cell.sessionNumber+' · '+dateLabel(overview.sessions[index].sessionDate)),cellButton(student,cell,onOpen));
+      row.append(text('b',sessionHeading(overview.sessions[index],overview.sessions[index].assignments?.[0])+' · '+dateLabel(overview.sessions[index].sessionDate)),cellButton(student,cell,onOpen,overview.sessions[index]));
       card.append(row);
     }
     mobile.append(card);
@@ -61,7 +64,8 @@ export function renderCourseOverview(root,overview,{filter='',onOpen}) {
 }
 
 export function renderQuestionAnalytics(root,analytics,{onStudent}) {
-  const cards=analytics.items.map(item=>{
+  root.classList.add('referenceRegion');
+  const cards=[...analytics.items].sort((a,b)=>(b.counts.incorrect||0)-(a.counts.incorrect||0)).map(item=>{
     const card=document.createElement('details');card.className='analytics-question';
     const summary=text('summary','Câu '+item.position+'. '+item.prompt);
     const counts=item.counts;
@@ -80,31 +84,30 @@ export function renderQuestionAnalytics(root,analytics,{onStudent}) {
     }
     return card;
   });
-  root.replaceChildren(...cards);
+  const scores=new Map();
+  for(const item of analytics.items) for(const student of item.students) {
+    if(!scores.has(student.studentRef)) scores.set(student.studentRef,{...student,correct:0,incorrect:0,ungraded:0});
+    const total=scores.get(student.studentRef);
+    if(item.objective&&['correct','incorrect'].includes(student.verdict))total[student.verdict]++;
+    else total.ungraded++;
+  }
+  const correct=analytics.items.reduce((n,i)=>n+(i.objective?i.counts.correct:0),0),incorrect=analytics.items.reduce((n,i)=>n+(i.objective?i.counts.incorrect:0),0);
+  const summary=document.createElement('div');summary.className='basicAnalyticsSummary';
+  for(const [label,value] of [['Bài nộp hiện hành',analytics.submittedCount],['Câu trả lời đúng',correct],['Câu trả lời sai',incorrect]]){
+    const card=document.createElement('article');card.append(text('small',label),text('strong',value));summary.append(card);
+  }
+  const people=document.createElement('section');people.className='basicStudentScores';people.append(text('h3','Đúng và sai của từng học viên'));
+  const table=document.createElement('table'),head=document.createElement('tr');for(const label of ['Học viên','Đúng','Sai','Chưa chấm / không áp dụng'])head.append(text('th',label));
+  const thead=document.createElement('thead');thead.append(head);table.append(thead);const tbody=document.createElement('tbody');
+  for(const person of scores.values()){
+    const row=document.createElement('tr'),name=document.createElement('td'),button=text('button',person.name+(person.discriminator?' · '+person.discriminator:''),'button text-button');
+    button.type='button';button.addEventListener('click',()=>onStudent(person));name.append(button);row.append(name);
+    for(const value of [person.correct,person.incorrect,person.ungraded])row.append(text('td',value));tbody.append(row);
+  }
+  table.append(tbody);people.append(table);
+  root.replaceChildren(summary,people,text('h3','Câu có nhiều học viên sai nhất'),text('p','Xếp theo số câu trả lời sai đã chấm; câu mở và điểm tự khai không tính đúng/sai.','muted'),...cards);
 }
 
-export function renderSessionDetail(root,detail) {
-  const content=[text('h2',detail.student.name+' · Buổi '+detail.sessionNumber)];
-  content.push(text('p',labels[detail.status]||'Dữ liệu hiện có','muted'));
-  if (detail.testResult) {
-    const result=detail.testResult;content.push(text('h3',result.title));
-    for(const skill of ['listening','reading']) if(result[skill]) content.push(text('p',skill==='listening'?'Listening: '+result[skill].correct+'/'+result[skill].total:'Reading: '+result[skill].correct+'/'+result[skill].total));
-    if(result.writing) content.push(text('p',result.writing.status==='ready'?'Writing: '+result.writing.score
-      :result.writing.status==='pending'?'Writing: đã nộp, đang chờ điểm':'Writing: chưa có bài nộp'));
-  }
-  if (detail.testCoverage==='temporarily_unavailable') content.push(text('p','Chưa đọc được kết quả Test; có thể thử lại.','muted'));
-  if (detail.teacherSessionFeedback) content.push(text('p','Nhận xét của giảng viên: '+detail.teacherSessionFeedback.noteText));
-  for(const item of detail.definition?.blocks?.flatMap(block=>block.items)||[]) {
-    const config=item.interactionConfig||{},selection=detail.responses?.[config.visibleWhenItemVersionId];
-    if (config.visibleWhenItemVersionId&&!(Array.isArray(selection)?selection.includes(config.visibleWhenValue):selection===config.visibleWhenValue)) continue;
-    const value=detail.responses?.[item.itemVersionId];
-    const choice=item.options?.find(o=>o.id===value);
-    const answer=choice?.label||(Array.isArray(value)?value.map(v=>item.options?.find(o=>o.id===v)?.label||String(v)).join(' · ')
-      :value&&typeof value==='object'?'Tự khai: '+value.correct+'/'+value.total:String(value??'').trim()||'Chưa trả lời');
-    const article=document.createElement('article');article.append(text('b',item.prompt),text('p',answer));
-    const result=detail.gradingItems?.find(g=>g.itemVersionId===item.itemVersionId);
-    if(result) article.append(text('small',{correct:'Đúng',incorrect:'Sai',pending:'Đang chờ chấm',manual_review:'Cần kiểm tra',ungraded:'Chưa chấm đúng/sai'}[result.verdict]||'Chưa có điểm'));
-    content.push(article);
-  }
-  root.replaceChildren(...content);
+export function renderSessionDetail(root,detail,options={}) {
+  renderSessionReview(root,detail,options);
 }
