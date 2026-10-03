@@ -1,3 +1,4 @@
+import {sessionHeading} from '../progress-log/session-presentation.js';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
@@ -42,7 +43,7 @@ test('giảng viên xác nhận số buổi và Test của lớp qua dashboard',
   };
   const context = {
     AbortController, setTimeout, clearTimeout,
-    elements, state, window: { confirm: () => true },
+    sessionHeading,elements, state, window: { confirm: () => true },
     document: { createElement: tag => ({
       tag, dataset: {}, children: [], append(...children) {
         for (const child of children) { child.parentElement = this; this.children.push(child); }

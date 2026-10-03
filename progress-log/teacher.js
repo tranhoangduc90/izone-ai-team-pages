@@ -1,3 +1,5 @@
+import {renderClassAnalytics,renderStudentClassSummary} from './class-analytics-view.js';
+import {contentTitle,sessionHeading} from './session-presentation.js';
 /*
  * Dữ liệu nhận vào: phiên đăng nhập ứng dụng, lớp được phân quyền và thư viện câu hỏi từ backend.
  * Xử lý: giảng viên chọn 2–3 câu, gán checkpoint, phát hành form bất biến và xem trạng thái nộp/điểm danh.
@@ -6,7 +8,7 @@
  */
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
-import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261001-v1';
+import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261003';
 import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261001-authoring-v1';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
@@ -60,7 +62,7 @@ const state = {
 const elements = Object.fromEntries([
   'teacherName', 'teacherNotice', 'teacherAccessView', 'googleSignInButton', 'rememberTeacherLogin', 'teacherWorkspace', 'teacherLogoutButton',
   'createTab', 'dashboardTab', 'createPanel', 'dashboardPanel', 'publishForm', 'teacherClassSelect',
-  'overviewTab', 'overviewPanel', 'overviewClassSelect', 'overviewFilter', 'overviewStatus', 'courseOverview',
+  'overviewTab', 'overviewPanel', 'overviewClassSelect', 'overviewFilter', 'overviewStatus', 'courseOverview', 'courseAnalytics', 'courseAnalyticsStatus',
   'refreshOverviewButton', 'openClassOverviewButton', 'questionAnalyticsStatus', 'questionAnalytics',
   'journeyDetailDialog', 'journeyDetailStatus', 'journeyDetailContent', 'retryJourneyDetailButton',
   'journeyPlanSection', 'overviewPlanHost', 'dashboardPlanHost',
@@ -156,7 +158,7 @@ async function loadCourseOverview() {
   state.overviewController?.abort();
   const generation=++state.overviewGeneration;
   state.overview=null;
-  elements.courseOverview.replaceChildren();
+  elements.courseOverview.replaceChildren();elements.courseAnalytics.replaceChildren();elements.courseAnalyticsStatus.textContent='';
   if (!classId) { elements.overviewStatus.textContent='Chưa có lớp được cấp quyền.';return; }
   const controller=new AbortController();state.overviewController=controller;
   const timer=setTimeout(()=>controller.abort(),15000);
@@ -174,12 +176,40 @@ async function loadCourseOverview() {
       +(state.overview.planOutdated?' · Kế hoạch cần giảng viên xác nhận lại.':'');
     if(state.overview.rosterCoverage==='mapping_unverified') elements.overviewStatus.textContent+=' · Danh sách chưa được đối chiếu snapshot ERP mới nhất.';
     paintCourseOverview();
+    await loadClassBasicAnalytics(classId,generation,controller.signal);
   } catch(error) {
     if (generation===state.overviewGeneration) elements.overviewStatus.textContent='Chưa tải được hành trình: '
       +(controller.signal.aborted?'Thời gian chờ đã hết. Hãy làm mới để thử lại.':error.message);
   } finally {
     clearTimeout(timer);
     if(generation===state.overviewGeneration) elements.courseOverview.setAttribute('aria-busy','false');
+  }
+}
+
+// Chỉ đọc các phiếu của lớp, tối đa ba request cùng lúc; không xử lý hàng chờ AI.
+async function loadClassBasicAnalytics(classId,generation,signal) {
+  elements.courseAnalyticsStatus.textContent='Đang đọc kết quả từ các Progress Log đã có…';
+  const forms=[],assignments=state.assignments.filter(a=>String(a.class_id)===String(classId)&&['published','closed'].includes(a.status));
+  try {
+    for(let offset=0;offset<assignments.length;offset+=3){
+      const rows=await Promise.all(assignments.slice(offset,offset+3).map(async a=>{
+        const data=await apiRequest('/teacher/assignments/'+encodeURIComponent(a.assignment_id)+'/question-analytics',{signal});
+        if(data.analytics.assignmentId!==a.assignment_id)throw Error('Thống kê không khớp phiếu của lớp.');
+        return {id:a.assignment_id,sessionNumber:Number(a.session_number),title:a.title,analytics:data.analytics};
+      }));
+      if(generation!==state.overviewGeneration||classId!==elements.overviewClassSelect.value)return;forms.push(...rows);
+    }
+    const course={classId,className:state.overview.className,overview:state.overview,assignments:forms};
+    const onOpen=(studentRef,sessionNumber)=>void openJourneyDetail({classId,studentRef,sessionNumber});
+    renderClassAnalytics(elements.courseAnalytics,course,{onOpen,onSummary:person=>{
+      state.detailController?.abort();state.detailGeneration++;state.detailTarget=null;
+      elements.retryJourneyDetailButton.hidden=true;elements.journeyDetailStatus.textContent='Kết quả từ '+forms.length+' phiếu đã có · chỉ đọc.';
+      renderStudentClassSummary(elements.journeyDetailContent,course,person,{onOpen});
+      if(!elements.journeyDetailDialog.open)elements.journeyDetailDialog.showModal();
+    }});
+    elements.courseAnalyticsStatus.textContent='Đã đọc '+forms.length+' Progress Log của '+course.className+'. Buổi chưa có phiếu là bình thường.';
+  } catch(error) {
+    if(generation===state.overviewGeneration&&classId===elements.overviewClassSelect.value)elements.courseAnalyticsStatus.textContent='Chưa đọc được thống kê lớp: '+(signal.aborted?'Quá thời gian chờ; hãy làm mới để thử lại.':error.message);
   }
 }
 
@@ -201,7 +231,7 @@ async function openJourneyDetail(target) {
     const detail=payload.detail;
     if(String(detail.classId)!==String(target.classId)||detail.student.studentRef!==target.studentRef
       ||detail.sessionNumber!==target.sessionNumber) throw new Error('Dữ liệu buổi học không khớp học viên đã chọn.');
-    renderSessionDetail(elements.journeyDetailContent,detail);
+    renderSessionDetail(elements.journeyDetailContent,detail,{session:state.overview?.sessions.find(s=>s.sessionNumber===target.sessionNumber)||{}});
     elements.journeyDetailStatus.textContent='Bản dữ liệu hiện hành; chi tiết chỉ để xem lại.';
   } catch(error) {
     if(generation===state.detailGeneration&&elements.journeyDetailDialog.open) {
@@ -964,7 +994,7 @@ function renderJourneyPlanDateInputs(totalSessions, sessionDates) {
     const number = index + 1;
     const label = document.createElement('label');
     const title = document.createElement('span');
-    title.textContent = 'Buổi ' + number + (tests.has(number) ? ' · Test' : '');
+    title.textContent = sessionHeading({sessionNumber:number,sessionKind:tests.has(number)?'test':'lesson'},(state.assignments||[]).find(a=>String(a.class_id)===String(state.journeyPlan?.classId||state.dashboard?.classId||elements.overviewClassSelect?.value)&&Number(a.session_number)===number));
     const saved = dates.get(number);
     const select = document.createElement('select');
     select.dataset.erpForSession = String(number);
@@ -1351,7 +1381,7 @@ async function loadDashboard({ quiet = false } = {}) {
       state.liveByStudent.clear();
       void loadJourneyPlan();
     }
-    elements.dashboardTitle.textContent = `${state.dashboard.className} · Buổi ${state.dashboard.sessionNumber}`;
+    elements.dashboardTitle.textContent = state.dashboard.className+' · '+sessionHeading(state.dashboard,{title:state.dashboard.title||state.dashboard.definition?.title});
     elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
     elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));
     renderClassInsights(state.dashboard.classInsights || []);
@@ -1492,7 +1522,7 @@ function clearTeacherLogin() {
   state.overviewGeneration+=1;state.analyticsGeneration+=1;state.detailGeneration+=1;
   state.overviewController?.abort();state.detailController?.abort();
   state.overview=null;state.detailTarget=null;
-  elements.courseOverview.replaceChildren();elements.questionAnalytics.replaceChildren();
+  elements.courseOverview.replaceChildren();elements.questionAnalytics.replaceChildren();elements.courseAnalytics.replaceChildren();elements.courseAnalyticsStatus.textContent="";elements.journeyDetailContent.replaceChildren();
   if(elements.journeyDetailDialog.open) elements.journeyDetailDialog.close();
   state.authGeneration += 1;
   state.authenticated = false;

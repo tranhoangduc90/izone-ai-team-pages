@@ -1,3 +1,4 @@
+import {contentTitle,skillsLabel,sessionHeading,sessionState} from '../progress-log/session-presentation.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
@@ -20,7 +21,7 @@ function fixture(request) {
   const state = { assignment:{class:{id:'class-1'}}, publicToken:'token-1',
     confirmedStudent:{studentRef:'student-1'}, responses:{text:'Bài đang viết'}, journeyLoading:false };
   const views = [], timers = [];
-  const context = { elements,state,AbortController,
+  const context = { contentTitle,skillsLabel,sessionHeading,sessionState,elements,state,AbortController,
     setTimeout: fn => { timers.push(fn); return timers.length; }, clearTimeout() {},
     document:{createElement:node}, showView:id=>views.push(id), setNotice() {}, apiRequest:request };
   vm.createContext(context);

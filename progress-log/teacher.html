@@ -9,6 +9,7 @@
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css?rev=20260924-listening-feedback-v1">
     <link rel="stylesheet" href="teacher.css?rev=20261001-authoring-v1">
+    <link rel="stylesheet" href="reference-components.css?rev=20261003">
   </head>
   <body>
     <header class="topbar teacher-header">
@@ -56,17 +57,18 @@
           </div>
         </section>
 
-        <section class="card" id="overviewPanel" hidden>
+        <section class="card referenceRegion" id="overviewPanel" hidden>
           <div class="section-heading"><div><p class="eyebrow">TOÀN BỘ KHÓA HỌC</p><h1>Hành trình lớp</h1></div><button class="button" id="refreshOverviewButton" type="button">Làm mới hành trình</button></div>
           <div class="field-grid"><label class="field"><span>Lớp</span><select id="overviewClassSelect"></select></label><label class="field"><span>Lọc học viên theo tình trạng buổi</span><select id="overviewFilter"><option value="">Tất cả</option><option value="not_submitted">Có buổi chưa nộp phiếu</option><option value="incomplete">Có phiếu nộp thiếu</option><option value="test_result">Có điểm Test</option><option value="needs_review">Cần đối chiếu</option></select></label></div>
           <p id="overviewStatus" role="status">Chọn lớp để xem hành trình.</p>
           <p class="muted compact">Buổi Test, buổi chưa có phiếu và buổi sắp tới được hiển thị riêng. Nộp Progress Log là điều kiện gửi yêu cầu điểm danh; trạng thái đồng bộ Portal được ghi riêng.</p>
+          <p id="courseAnalyticsStatus" role="status"></p><div id="courseAnalytics"></div>
           <div id="courseOverview"></div>
           <div id="overviewPlanHost"></div>
         </section>
 
-        <section class="card" id="dashboardPanel">
-          <div class="section-heading"><div><p class="eyebrow">TÌNH HÌNH LỚP</p><h1 id="dashboardTitle">Chọn một phiếu</h1></div><button class="button text-button" id="refreshDashboardButton" type="button">Làm mới</button></div>
+        <section class="card referenceRegion" id="dashboardPanel">
+          <div class="section-heading teacherReferenceHero"><div><p class="eyebrow">TÌNH HÌNH LỚP</p><h1 id="dashboardTitle">Chọn một phiếu</h1></div><button class="button text-button" id="refreshDashboardButton" type="button">Làm mới</button></div>
           <label class="field"><span>Phiếu đang theo dõi</span><select id="assignmentSelect"></select></label>
           <button class="button" id="openClassOverviewButton" type="button">Xem hành trình toàn lớp</button>
           <div id="dashboardPlanHost">
@@ -141,6 +143,6 @@
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
-    <script type="module" src="teacher.js?rev=20261001-valid-classes-v2"></script>
+    <script type="module" src="teacher.js?rev=20261003-reference-production"></script>
   </body>
 </html>

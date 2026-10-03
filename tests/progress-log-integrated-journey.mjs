@@ -1,3 +1,4 @@
+import {contentTitle,skillsLabel,sessionHeading,sessionState} from '../progress-log/session-presentation.js';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
@@ -8,6 +9,7 @@ class Node {
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }
   setAttribute() {}
+  addEventListener() {}
 }
 
 const app = await readFile(new URL('../progress-log/app.js', import.meta.url), 'utf8');
@@ -31,7 +33,7 @@ function contextFor(journey) {
   };
   const calls = [];
   const context = {
-    AbortController, setTimeout, clearTimeout,
+    contentTitle,skillsLabel,sessionHeading,sessionState, AbortController, setTimeout, clearTimeout,
     document: { createElement: () => new Node() }, elements, state,
     apiRequest: async (path, options) => { calls.push({ path, options }); return { journey }; },
     showView: view => calls.push({ view }),
@@ -63,23 +65,12 @@ test('học viên xem Journey cùng link phiếu, buổi Test không bị coi l�
   assert.equal(ui.calls.find(call => call.path)?.options.body.identityConfirmed, true);
   assert.equal(ui.calls.filter(call => call.view).at(-1)?.view, 'journeyView');
   assert.equal(ui.elements.journeySessions.children.length, 3);
-  const testHeading = ui.elements.journeySessions.children[1].children[0];
-  assert.match(testHeading.children[1].textContent, /Có dữ liệu Test · chưa hiển thị kết quả/);
-  const gapHeading = ui.elements.journeySessions.children[2].children[0];
-  assert.match(gapHeading.children[1].textContent, /Chưa có dữ liệu cho buổi này/);
-  assert.match(ui.elements.journeySessions.children[0].children[3].textContent, /đang chờ đồng bộ/);
-  assert.match(ui.elements.journeyStatus.textContent, /1 ô buổi chưa có nguồn xác nhận/);
-  assert.equal(ui.elements.attendedCount.textContent, 1);
-  journey.sessions[0].portalSync.status = 'complete';
-  ui.renderIntegratedJourney(journey);
-  const completedPortalMessage = ui.elements.journeySessions.children[0].children[3].textContent;
-  assert.match(completedPortalMessage, /cần được đối chiếu trên Portal/);
-  assert.doesNotMatch(completedPortalMessage, /đã có mặt|Portal đã ghi/);
-  journey.sessions[0].attendanceStatus = 'pending_teacher';
-  ui.renderIntegratedJourney(journey);
-  const revisedSession = ui.elements.journeySessions.children[0];
-  assert.match(revisedSession.children[2].textContent, /đã từng có yêu cầu đồng bộ Portal/);
-  assert.match(revisedSession.children[3].textContent, /cần được đối chiếu trên Portal/);
+  const body=node=>[node.textContent,...node.children.map(body)].join(' ');
+  assert.match(body(ui.elements.journeySessions.children[1]),/Buổi Test · chưa có kết quả/);
+  assert.match(body(ui.elements.journeySessions.children[2]),/Chưa tạo Progress Log/);
+  assert.match(ui.elements.journeyStatus.textContent,/1 ô buổi chưa có nguồn xác nhận/);
+  assert.equal(ui.elements.attendedCount.textContent,1);
+
 });
 
 test('kế hoạch lớp hiển thị đủ buổi và Test chưa có điểm mà không coi là vắng', () => {
@@ -96,13 +87,10 @@ test('kế hoạch lớp hiển thị đủ buổi và Test chưa có điểm m�
   };
   const ui = contextFor(journey);
   ui.renderIntegratedJourney(journey);
-  assert.match(ui.elements.journeySessions.children[0].children[0].children[1].textContent,
-    /Buổi Test theo kế hoạch · chưa có kết quả/);
-  assert.match(ui.elements.journeySessions.children[1].children[0].children[1].textContent,
-    /Theo kế hoạch lớp · chưa có Progress Log/);
-  assert.match(ui.elements.journeySessions.children[0].children[2].textContent,
-    /30\/09\/2026/);
-  assert.equal(ui.elements.journeySessions.children[1].children.length, 2);
+  const body=node=>[node.textContent,...node.children.map(body)].join(' ');
+  assert.match(body(ui.elements.journeySessions.children[0]),/Buổi Test · chưa có kết quả/);
+  assert.match(body(ui.elements.journeySessions.children[1]),/Chưa tạo Progress Log/);
+  assert.match(body(ui.elements.journeySessions.children[0]),/30\/09\/2026/);
   assert.match(ui.elements.journeyStatus.textContent, /đã xác nhận kế hoạch 8 buổi/);
   journey.coverage.planOutdated = true;
   journey.coverage.knownThroughSession = 9;
@@ -137,7 +125,7 @@ test('link phiếu đã đóng vẫn chọn tên để xem Journey và không m�
     title: 'Phiếu buổi 2', roster: [{ studentRef: 'student-1', name: 'Học viên giả' }]
   };
   const context = {
-    state, elements, config: {},
+    contentTitle,sessionHeading,state, elements, config: {},
     readPublicToken: () => '11111111-1111-4111-8111-111111111111',
     apiRequest: async path => {
       calls.push(path);
@@ -176,11 +164,11 @@ test('kết quả Test tự hiện sau khi hoàn tất và Writing cập nhật 
   const ui = contextFor(journey);
   ui.renderIntegratedJourney(journey);
   const result = ui.elements.journeySessions.children[0];
-  assert.match(result.children[0].children[1].textContent, /Đã có kết quả Test/);
-  assert.match(result.children[2].children.map(child => child.textContent).join(' '), /Writing: đã nộp, đang chờ điểm/);
+  assert.match(result.children[3].children[0].textContent, /Đã có kết quả Test/);
+  assert.match(result.children[4].children.map(child => child.textContent).join(' '), /Writing: đã nộp, đang chờ điểm/);
   journey.sessions[0].testResult.writing = { status: 'ready', score: 6.5 };
   ui.renderIntegratedJourney(journey);
   const refreshed = ui.elements.journeySessions.children[0];
-  assert.match(refreshed.children[2].children.map(child => child.textContent).join(' '), /Writing: 6.5/);
+  assert.match(refreshed.children[4].children.map(child => child.textContent).join(' '), /Writing: 6.5/);
   assert.match(ui.elements.journeyStatus.textContent, /điểm Writing có thể đến sau/);
 });

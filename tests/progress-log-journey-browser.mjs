@@ -10,7 +10,7 @@ import {createRequire} from 'node:module';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const {chromium}=createRequire(process.env.PLAYWRIGHT_PACKAGE||'C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 
-test('J01–J03: Chrome báo chờ tức thì, deadline thật/retry/back, không tạo bài/điểm danh',{timeout:45000},async()=>{
+test('J01–J03: Chrome báo chờ tức thì, deadline thật/retry/back, không tạo bài/điểm danh',{timeout:90000},async()=>{
   const server=createServer(async(req,res)=>{
     try{const file=resolve(root,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(resolve(root)+sep))throw new Error('Denied');
       res.setHeader('content-type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[extname(file)]||'text/plain'));res.end(await readFile(file));

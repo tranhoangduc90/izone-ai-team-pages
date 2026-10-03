@@ -1,3 +1,4 @@
+import {sessionHeading} from '../progress-log/session-presentation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -20,7 +21,7 @@ function fixture() {
       {erpSessionId:'12',erpSessionNumber:2,numberSource:'teacher_confirmed',date:'2026-09-17',startsAt:'2026-09-17 18:30:00',proposalEligible:true},
       {erpSessionId:'13',erpSessionNumber:3,numberSource:'proposal',date:'2026-09-21',startsAt:'2026-09-21 18:30:00',proposalEligible:true}
     ],assignmentSessionNumbers:[1]}};
-  const context={state,elements,document:{createElement:node}};vm.createContext(context);vm.runInContext(code,context);
+  const context={sessionHeading,state,elements,document:{createElement:node}};vm.createContext(context);vm.runInContext(code,context);
   return {state,elements,run:expression=>vm.runInContext(expression,context)};
 }
 test('E01: mỗi buổi chỉ có một dropdown, nhãn thứ/ngày/số buổi không giờ hoặc mã dòng',()=>{
