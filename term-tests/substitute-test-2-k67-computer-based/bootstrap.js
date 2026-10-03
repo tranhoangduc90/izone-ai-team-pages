@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20260930-ic2063'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?rev=20261003-writing-save-cas-v1'))
       .then(() => loadScript('enhance.js'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -560,7 +560,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20260930-ic2063');
+    await loadScript('../substitute-k67-shared/app.js?rev=20261003-writing-save-cas-v1');
     await loadScript('enhance.js');
     await loadScript('annotations.js');
   }

@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20260930-writing-complete'))
+      .then(() => loadScript('../substitute-test-2-k56-shared/app.js?rev=20261003-writing-save-cas-v1'))
       .then(() => loadScript('enhance.js'))
       .then(() => loadScript('annotations.js'))
       .catch(error => {
@@ -575,7 +575,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-test-2-k56-shared/app.js?v=20260930-writing-complete');
+    await loadScript('../substitute-test-2-k56-shared/app.js?rev=20261003-writing-save-cas-v1');
     await loadScript('enhance.js');
     await loadScript('annotations.js');
   }

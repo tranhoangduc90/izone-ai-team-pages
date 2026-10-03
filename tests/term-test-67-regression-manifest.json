@@ -17,7 +17,8 @@
     "browser": [
       "tests/mini-test-identity.mjs",
       "tests/term-student-memory-ui.cjs",
-      "tests/term-test-landing.mjs"
+      "tests/term-test-landing.mjs",
+      "tests/term-writing-save-clients.cjs"
     ]
   }
 }

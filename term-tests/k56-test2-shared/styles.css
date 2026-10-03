@@ -147,3 +147,12 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
   .question { grid-template-columns: 58px 1fr; }
   .landing-actions { flex-direction: column; }
 }
+
+/* Xung đột lưu bài giữ hai bản có thể đọc được; ô phục hồi không sửa bài đang làm. */
+.writing-save-conflict { margin: 16px 0; padding: 16px; border: 2px solid #b34d20; border-radius: 12px; background: #fff8ef; }
+.writing-save-conflict[hidden], .writing-recovery[hidden] { display: none; }
+.writing-save-conflict h3, .writing-save-conflict h4 { margin: 0 0 8px; }
+.writing-save-conflict label, .writing-recovery label { display: block; margin: 8px 0; font-weight: 600; }
+.writing-save-conflict textarea, .writing-recovery textarea { display: block; width: 100%; min-height: 100px; margin-top: 4px; padding: 8px; font: inherit; resize: vertical; }
+.writing-save-conflict .form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.writing-recovery summary { cursor: pointer; font-weight: 700; }
