@@ -203,39 +203,73 @@
   },
   "coverage_exemptions": {},
   "cross_constraints": [],
-  "mutations": [],
+  "mutations": [
+    {
+      "id": "PAGES-ASSETS",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Pages build built cho 8385e17; published-readback.json: 4/4 HTTP 200/hash khớp; published-browser-final 7/7; live-url-smoke 2/2 với API giả/handler RAM, không dữ liệu thật."
+    }
+  ],
   "verification_runs": [
     {
       "id": "AUDIT-ALL",
       "scope": "full_suite",
       "command": "node scripts/run-k56-product-audit.mjs --all",
-      "tree_revision": "sha256:a5ef45f4c256f7974b0a3a6ec4fc651915db49f18d5f987b577656b74ca273d8",
-      "captured_at": "2026-10-03T10:32:38.173662+00:00",
+      "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+      "captured_at": "2026-10-03T10:48:50.727812+00:00",
       "outcome": "passed",
       "exit_code": 0,
       "passed": 242,
       "failed": 0,
       "skipped": 0,
       "evidence": "output/playwright/k56-edge/full-suite-final.log; final-summary.json"
+    },
+    {
+      "id": "LIVE-ASSETS-BROWSER",
+      "scope": "behavioral",
+      "command": "EDGE_SOURCE_OVERRIDES=published-source node --test tests/k56-remaining-edge-cases.mjs",
+      "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+      "captured_at": "2026-10-03T10:48:51.630293+00:00",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "output/playwright/k56-edge/published-browser-final.log"
+    },
+    {
+      "id": "LIVE-URL-SMOKE",
+      "scope": "behavioral",
+      "command": "node E:/Codex-Data/k56-edge-20261003/live-smoke.mjs",
+      "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
+      "captured_at": "2026-10-03T10:48:51.630293+00:00",
+      "outcome": "passed",
+      "exit_code": 0,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "output/playwright/k56-edge/live-url-smoke.json"
     }
   ],
   "convergence": {
     "status": "passed",
-    "tree_revision": "sha256:a5ef45f4c256f7974b0a3a6ec4fc651915db49f18d5f987b577656b74ca273d8",
+    "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
     "gaps": [],
     "unrequested_work": [],
-    "evidence": "Ba ca x hai Term; PDF/ảnh native đã xem; kho RAM không đổi; source ngoài hai route không đổi. Chờ readback live để nâng verified."
+    "evidence": "Ba ca x hai Term; PDF/ảnh native đã xem; kho RAM không đổi. CSS/HTML thật khớp source, chạy lại 7/7 trên asset tải từ live; trực tiếp URL Pages đạt 2/2, console/network sạch với API giả. Probe thêm job trả failure đúng assertion."
   },
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "61909536cce51bfa7e15d475579b87b3f1a166cf",
-    "current_tree_revision": "sha256:a5ef45f4c256f7974b0a3a6ec4fc651915db49f18d5f987b577656b74ca273d8",
+    "current_tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
     "production_authorized": true,
     "rollback": "Revert đúng commit CSS/cache; không đổi backend/kho bài.",
-    "deployment_readback": "not_run",
-    "operational_observation": "Fixture backend thật trong RAM: đọc chậm hồi phục, nhận xét dài/zoom thao tác được; không gọi production.",
-    "open_risks": []
+    "deployment_readback": "verified",
+    "operational_observation": "Hai URL Pages thật HTTP 200; bài giả đọc đúng, mở/đóng bài chấm và in đủ bốn tiêu chí; console errors 0, API ghi production 0. Ba ca browser với byte live đạt 7/7. Chỉ verified phạm vi CSS/ba ca, không toàn Term.",
+    "open_risks": [],
+    "application_commit": "8385e172aa54694b5a7b1c071016352e48f8d6de"
   },
   "module_map": {
     "revision": "edge-v1",
@@ -277,7 +311,7 @@
     },
     "green_on_head": {
       "test_id": "E05-T1",
-      "tree_revision": "sha256:a5ef45f4c256f7974b0a3a6ec4fc651915db49f18d5f987b577656b74ca273d8",
+      "tree_revision": "sha256:a41f12754786b745e7c40ebd55fd4038b19fa573bf12644d5c76d59844874b1d",
       "command": "node scripts/run-k56-product-audit.mjs --all",
       "outcome": "passed",
       "exit_code": 0,

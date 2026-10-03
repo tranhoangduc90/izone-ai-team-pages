@@ -152,7 +152,10 @@ for(const itemBase of fixture.cases) for(const edge of ['E04','E05','E06']) {
      assert.equal(observations.screenMedia.print,false);
      await screenshot(resolve(output,`${edge}-${item.slug}-feedback-end.png`));
     }
-    await dialog.getByRole('button',{name:'Đóng bài chấm Writing'}).click();await assert.equal(await page.locator('.writing-feedback-dialog').count(),0);
+    await dialog.getByRole('button',{name:'Đóng bài chấm Writing'}).click();
+    // Chrome phát sự kiện close ở lượt event tiếp theo; phải chờ remove thật.
+    await dialog.waitFor({state:'detached'});
+    assert.equal(await page.locator('.writing-feedback-dialog').count(),0);
    }
    if(process.env.EDGE_EXTRA_JOB_PROBE==='1') await server.injectExtraJobForProbe();
    assert.deepEqual(await server.audit(),before,'Đọc/zoom/in làm đổi kho hoặc thêm job');
