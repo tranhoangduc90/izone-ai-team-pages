@@ -98,12 +98,7 @@ function renderLinks() {
     input.disabled = state.submitted;
     $(`${part.key}-confirm`).disabled = state.submitted || state.pending.has(part.key);
     if (state.submitted || (link?.check_status === 'accepted' && !changed)) {
-      if (link?.typing_warning && !link.voice_confirmed && !state.submitted) {
-        const details = [link.typing_warning.summary, ...(link.typing_warning.evidence || [])].filter(Boolean).join(' ');
-        showResult(part.key, 'warning', 'Cần xác nhận cách luyện nói', details || 'Hệ thống thấy dấu hiệu cần hỏi thêm về cách bạn luyện nói.');
-      } else {
         showResult(part.key, 'pass', 'Đã xác nhận hội thoại', `Đã kiểm được ${link?.question_count ?? 'đủ'} câu/lượt luyện cho phần này.`);
-      }
     } else if (link?.check_status === 'pending' && !changed) {
       showResult(part.key, 'loading', 'Đang đọc hội thoại', 'Hệ thống đang kiểm nội dung link bạn đã dán. Kết quả sẽ tự cập nhật.');
     } else if (link?.check_status === 'rejected' && !changed) {
@@ -116,16 +111,10 @@ function renderLinks() {
       setStatus(part.key, 'Chưa kiểm tra');
     }
   }
-  const freestyle = state.links.get('freestyle');
-  const needsVoice = freestyle?.check_status === 'accepted' && freestyle.typing_warning && !freestyle.voice_confirmed
-    && $('freestyle-link').value.trim() === freestyle.share_url && !state.submitted;
-  $('voice-confirmation').hidden = !needsVoice;
-  $('voice-continue').disabled = !$('voice-checkbox').checked;
   const confirmed = state.submitted ? parts.length : parts.filter(part => {
     const link = state.links.get(part.key);
     return link?.check_status === 'accepted'
-      && $(`${part.key}-link`).value.trim() === link.share_url
-      && (!link.typing_warning || link.voice_confirmed || (part.key === 'freestyle' && $('voice-checkbox').checked));
+      && $(`${part.key}-link`).value.trim() === link.share_url;
   }).length;
   $('progress-count').textContent = `Đã xác nhận ${confirmed}/4 phần`;
   $('progress-bar').setAttribute('aria-valuenow', String(confirmed));
@@ -150,8 +139,7 @@ async function refresh() {
 function allAccepted() {
   return parts.every(part => {
     const link = state.links.get(part.key);
-    return link?.check_status === 'accepted' && $(`${part.key}-link`).value.trim() === link.share_url
-      && (!link.typing_warning || link.voice_confirmed || (part.key === 'freestyle' && $('voice-checkbox').checked));
+    return link?.check_status === 'accepted' && $(`${part.key}-link`).value.trim() === link.share_url;
   });
 }
 
@@ -159,8 +147,7 @@ async function finish() {
   if (state.submitted || state.finishing || !allAccepted()) return;
   state.finishing = true;
   try {
-    const voiceConfirmedParts = parts.filter(part => state.links.get(part.key)?.typing_warning).map(part => part.key);
-    const response = await post('/finish', { ...identity(), voiceConfirmedParts }, 30_000);
+    const response = await post('/finish', identity(), 30_000);
     if (!response.receipt?.id) throw new Error('Máy chủ chưa trả biên nhận.');
     state.submitted = true;
     renderLinks();
@@ -175,7 +162,7 @@ for (const [index, part] of parts.entries()) {
   const section = document.createElement('section');
   section.className = 'task-card';
   section.id = `${part.key}-card`;
-  section.innerHTML = `<div class="task-header"><div class="task-number">${String(index + 1).padStart(2, '0')}</div><div><span class="section-kicker">PHẦN ${index + 1}</span><h2>${part.title}</h2></div><span class="task-status" id="${part.key}-status">Chưa kiểm tra</span></div><div class="task-body"><div class="instructions"><p class="instruction-lead">${part.lead}</p><ol>${part.steps.map(step => `<li>${step}</li>`).join('')}</ol>${part.key === 'freestyle' ? '<p class="voice-note">Trên điện thoại hãy dùng nút micro để nói; sau khi nhận góp ý, nói lại câu trả lời đầy đủ.</p>' : ''}</div><div class="submission-panel">${index === 0 ? '<button id="open-share-guide" class="button button-outline guide-button" type="button">Xem hướng dẫn lấy link có hình minh họa <span aria-hidden="true">?</span></button>' : ''}<a class="button button-primary practice-button" href="${part.url}" target="_blank" rel="noopener noreferrer">Mở bài luyện ${part.title} <span aria-hidden="true">↗</span></a><label for="${part.key}-link">Link luyện tập ${part.title}</label><input id="${part.key}-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://chatgpt.com/share/..."><p class="field-hint">Dán link Chia sẻ rồi bấm Xác nhận. Hệ thống sẽ đọc hội thoại và kiểm khối lượng luyện.</p><button id="${part.key}-confirm" class="button button-primary confirm-button" type="button">Xác nhận link ${part.title} <span aria-hidden="true">→</span></button><div id="${part.key}-result" class="check-result" role="status" aria-live="polite" hidden></div>${part.key === 'freestyle' ? '<div id="voice-confirmation" class="voice-confirmation" hidden><label class="checkbox-line"><input id="voice-checkbox" type="checkbox"> Tôi đã voice chat chứ không phải gõ câu trả lời</label><button id="voice-continue" class="button button-outline" type="button" disabled>Xác nhận để nộp</button></div>' : ''}</div></div>`;
+  section.innerHTML = `<div class="task-header"><div class="task-number">${String(index + 1).padStart(2, '0')}</div><div><span class="section-kicker">PHẦN ${index + 1}</span><h2>${part.title}</h2></div><span class="task-status" id="${part.key}-status">Chưa kiểm tra</span></div><div class="task-body"><div class="instructions"><p class="instruction-lead">${part.lead}</p><ol>${part.steps.map(step => `<li>${step}</li>`).join('')}</ol>${part.key === 'freestyle' ? '<p class="voice-note">Trên điện thoại hãy dùng nút micro để nói; sau khi nhận góp ý, nói lại câu trả lời đầy đủ.</p>' : ''}</div><div class="submission-panel">${index === 0 ? '<button id="open-share-guide" class="button button-outline guide-button" type="button">Xem hướng dẫn lấy link có hình minh họa <span aria-hidden="true">?</span></button>' : ''}<a class="button button-primary practice-button" href="${part.url}" target="_blank" rel="noopener noreferrer">Mở bài luyện ${part.title} <span aria-hidden="true">↗</span></a><label for="${part.key}-link">Link luyện tập ${part.title}</label><input id="${part.key}-link" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://chatgpt.com/share/..."><p class="field-hint">Dán link Chia sẻ rồi bấm Xác nhận. Hệ thống sẽ đọc hội thoại và kiểm khối lượng luyện.</p><button id="${part.key}-confirm" class="button button-primary confirm-button" type="button">Xác nhận link ${part.title} <span aria-hidden="true">→</span></button><div id="${part.key}-result" class="check-result" role="status" aria-live="polite" hidden></div></div></div>`;
   container.append(section);
 }
 
@@ -214,8 +201,6 @@ for (const part of parts) {
     finally { poller.update(); state.pending.delete(part.key); $(`${part.key}-confirm`).disabled = false; }
   });
 }
-$('voice-checkbox').addEventListener('change', () => { $('voice-continue').disabled = !$('voice-checkbox').checked; });
-$('voice-continue').addEventListener('click', finish);
 // Chỉ tự tải khi máy chủ đang kiểm/phân tích; lỗi mạng tăng thời gian chờ.
 const poller = createPendingPoller({
   refresh,
@@ -254,8 +239,6 @@ const identityController = createSpeakingIdentity({
     if ('extraPending' in state) state.extraPending = false;
     documentId = ''; classCode = '';
     $('draft-status').textContent = '';
-    if ($('voice-checkbox')) $('voice-checkbox').checked = false;
-    for (const part of parts) if ($(`${part.key}-voice`)) $(`${part.key}-voice`).checked = false;
   },
 });
 window.addEventListener('beforeunload', event => {
