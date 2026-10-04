@@ -41,7 +41,7 @@
       <p id="draft-status" class="draft-status" role="status">Các link đã xác nhận được giữ trên máy chủ. Link đang gõ được giữ trên thiết bị này.</p>
       <div class="submission-progress" aria-label="Tiến độ nộp bài"><strong id="progress-count" aria-live="polite">Đã xác nhận 0/2 phần</strong><div id="progress-bar" role="progressbar" aria-label="Số phần đã xác nhận" aria-valuemin="0" aria-valuemax="2" aria-valuenow="0"><span id="progress-fill"></span></div></div>
       <div id="parts"></div>
-      <div id="voice-confirmation" class="voice-confirmation" hidden><label class="checkbox-line"><input id="voice-checkbox" type="checkbox"> Tôi đã luyện bằng giọng nói chứ không gõ câu trả lời</label><button id="voice-continue" class="button button-outline" type="button" disabled>Xác nhận để nộp</button></div>
+
       <section id="completion-card" class="completion-card" hidden aria-live="polite"><span class="completion-icon">✓</span><div><span class="section-kicker">ĐÃ NỘP BÀI</span><h2>Nộp bài thành công</h2><p id="completion-message">Biên nhận đã lưu trong hệ thống. Bạn có thể quay lại file Homework để làm tiếp.</p></div><a id="return-homework" class="button button-primary" target="_blank" rel="noopener noreferrer">Quay lại Homework ↗</a></section>
       <section id="doctor-section" class="doctor-section" aria-labelledby="doctor-title">
         <div class="doctor-heading"><div><span class="section-kicker">BÁC SĨ AI · BÀI LUYỆN CÁ NHÂN</span><h2 id="doctor-title">Bài bạn nên luyện tiếp</h2></div><p id="doctor-sync" role="status">Đang tải danh sách…</p></div>
@@ -51,7 +51,7 @@
       </section>
       <section id="extra-practice" class="doctor-extra" hidden aria-labelledby="extra-title">
         <h2 id="extra-title">Luyện thêm khi bạn muốn</h2><p>Chọn bài trong danh sách cá nhân, luyện bằng hội thoại mới rồi dán link để cập nhật Bác sĩ AI.</p>
-        <div class="extra-fields"><label for="extra-exercise">Bài luyện thêm</label><select id="extra-exercise"></select><a id="extra-open" class="text-button" target="_blank" rel="noopener noreferrer" hidden>Mở bài đã chọn ↗</a><label for="extra-link">Link ChatGPT Share mới</label><input id="extra-link" type="url" inputmode="url" autocomplete="off" placeholder="https://chatgpt.com/share/..."><button id="extra-confirm" class="button button-primary" type="button">Xác nhận bài luyện thêm →</button><div id="extra-result" class="check-result" role="status" aria-live="polite" hidden></div><button id="extra-voice-confirm" class="button button-outline" type="button" hidden>Tôi đã luyện bằng giọng nói, tiếp tục nộp</button></div>
+        <div class="extra-fields"><label for="extra-exercise">Bài luyện thêm</label><select id="extra-exercise"></select><a id="extra-open" class="text-button" target="_blank" rel="noopener noreferrer" hidden>Mở bài đã chọn ↗</a><label for="extra-link">Link ChatGPT Share mới</label><input id="extra-link" type="url" inputmode="url" autocomplete="off" placeholder="https://chatgpt.com/share/..."><button id="extra-confirm" class="button button-primary" type="button">Xác nhận bài luyện thêm →</button><div id="extra-result" class="check-result" role="status" aria-live="polite" hidden></div></div>
         <ul id="extra-history"></ul>
       </section>
     </main>
@@ -59,7 +59,7 @@
       <div class="guide-modal-bar"><span>HƯỚNG DẪN NỘP LINK</span><button id="close-share-guide-x" class="guide-close-x" type="button" aria-label="Đóng hướng dẫn">×</button></div>
       <section class="guide-card illustrated-guide" id="share-guide"><div class="guide-heading"><span class="section-kicker">HƯỚNG DẪN CÓ HÌNH MINH HỌA</span><h2 id="guide-title">Lấy đúng link ChatGPT Share</h2><p>Hai phần luyện cần hai hội thoại riêng. Làm theo các hình trên điện thoại của bạn.</p></div>
         <div class="guide-content">
-          <div class="guide-callout"><figure><img src="./assets/voice-input.png" alt="Nút micro để nói và nút voice chat khác nhau" loading="lazy"><figcaption>Hình 1 · Dùng nút micro khi luyện nói trên điện thoại.</figcaption></figure><p>Dùng <strong>nút micro</strong> được đánh dấu. Sau khi ChatGPT góp ý, hãy nói lại trọn câu trả lời.</p></div>
+          <div class="guide-callout"><figure><img src="./assets/voice-input.png" alt="Nút micro để nói và nút voice chat khác nhau" loading="lazy"><figcaption>Hình 1 · Dùng nút micro khi luyện nói trên điện thoại.</figcaption></figure><p>Bạn có thể dùng <strong>nút micro</strong> được đánh dấu; cách nhập không ảnh hưởng việc nhận bài. Sau khi ChatGPT góp ý, hãy nói lại trọn câu trả lời.</p></div>
           <div class="guide-columns"><div><h3>iPhone · 4 bước</h3><div class="guide-images">
             <figure><img src="./assets/iphone-menu.png" alt="Mở danh sách hội thoại trên iPhone" loading="lazy"><figcaption>1. Mở danh sách hội thoại.</figcaption></figure>
             <figure><img src="./assets/iphone-select-chat.png" alt="Chọn đúng hội thoại trên iPhone" loading="lazy"><figcaption>2. Chọn đúng buổi luyện.</figcaption></figure>

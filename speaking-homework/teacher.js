@@ -44,11 +44,6 @@ function render(receipt) {
     }
     const count = document.createElement('p'); count.textContent = `Số câu/chu trình được ghi nhận: ${details.questionCount ?? '—'}`;
     section.append(heading, link, count);
-    if (details.typingWarning) {
-      const flag = document.createElement('p'); flag.className = 'flag';
-      flag.textContent = `${details.typingWarning.summary || 'Có cảnh báo về cách nhập.'} Học viên ${details.voiceConfirmed ? 'đã xác nhận luyện bằng giọng nói' : 'chưa xác nhận luyện bằng giọng nói'}.`;
-      section.append(flag);
-    }
     parts.append(section);
   }
   for (const practice of receipt.practice_links || []) {
@@ -65,11 +60,6 @@ function render(receipt) {
       ? practice.analysisStatus === 'done' ? 'Đã nhận và phân tích lỗi.' : 'Đã nhận; đang phân tích lỗi.'
       : 'Chưa đạt yêu cầu.';
     section.append(heading, link, status);
-    if (practice.typingWarning) {
-      const flag = document.createElement('p'); flag.className = 'flag';
-      flag.textContent = `${practice.typingWarning.summary || 'Có cảnh báo về cách nhập.'} Học viên ${practice.voiceConfirmed ? 'đã xác nhận luyện bằng giọng nói' : 'chưa xác nhận luyện bằng giọng nói'}.`;
-      section.append(flag);
-    }
     parts.append(section);
   }
   const processing = $('processing'); processing.replaceChildren();

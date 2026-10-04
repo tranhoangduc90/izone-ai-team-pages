@@ -59,8 +59,8 @@ const warning = await checkSubmission(
   { section: 'speaking', url: shareUrl },
   { readShare: async () => speaking, analyze: async () => ({ completed: speaking.completed, confidence: 0.88, typingEvidence: [{ quote: 'spekaing', reason: 'Lỗi chữ lặp lại' }] }) },
 );
-assert.equal(warning.kind, 'warning');
-assert.match(warning.message, /spekaing/);
+assert.equal(warning.kind, 'pass');
+assert.doesNotMatch(warning.message, /giọng nói|spekaing/);
 
 const inventedEvidence = await checkSubmission(
   { section: 'speaking', url: shareUrl },

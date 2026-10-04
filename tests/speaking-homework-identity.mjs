@@ -74,7 +74,7 @@ async function setup(lesson, options = {}) {
       else data = { assignment: { title: `Homework Lesson ${lesson.number}`, classCode: code, assignmentCode: lesson.code,
         students: options.empty ? [] : options.duplicate ? [{ student_ref: refA, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }]
           : code === 'IC2304' ? [{ student_ref: refOther, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }] : [{ student_ref: refB, name: 'Học viên lớp B' }],
-        parts: lesson.parts.map(part_key => ({ part_key })), requiredPracticeCount: lesson.number === 4 ? 2 : 0, assignmentStatus: 'open', doctorEnabled: lesson.number !== 3 } };
+        parts: lesson.parts.map(part_key => ({ part_key, min_questions: part_key === 'freestyle' && lesson.number === 4 && code === 'IC2304' ? 1 : 3 })), requiredPracticeCount: lesson.number === 4 ? 2 : 0, assignmentStatus: 'open', doctorEnabled: lesson.number !== 3 } };
     } else if (path === '/session/start-selected') data = { session: { accessToken: `${code}-${body.studentRef}`, classCode: options.badSession ? 'IC9999' : code, studentRef: body.studentRef, documentId: body.documentId || `own-${code}-${body.studentRef}` } };
     else if (path === '/open') {
       opens += 1;
