@@ -1,7 +1,7 @@
-# Lesson 5 · IC2304
+# Lesson5 · IC2304
 
-Trang học viên: ./; dashboard giảng viên: ./teacher.html. Giảng viên đăng nhập Google bằng tài khoản được cấp quyền lớp. Dashboard xem7bước, bài/nhận xét AI, từ vựng và gửi góp ý từng phần. Góp ý không tự mở bước hay thay đánh giá AI.
+Đã mở16học viên. TrangHV: ./; dashboardGV: ./teacher.html. GV đăng nhậpGoogle bằng tài khoản được cấp quyền lớp, xem tiến độ7bước, bài/CommentAI, từ vựng và gửi góp ý từng phần. Góp ý không đổi trạng tháiAI.
 
-Backend/database/n8n riêng của Handout67. Chỉ IC2304 được mở; danh sách đăng ký16 người và quyền GV lưu riêng tư trên máy chủ, không nằm trong Git. Khi lớp đổi người, Đức cập nhật snapshot riêng; rà lại trước mở lớp tiếp, mốc12/10/2026.
+Backend/database/queue/workflow riêng. Roster16 và ACL3 là snapshot đăng ký riêng, không nằm trongGit; Đức cập nhật khi lớp đổi người. Rà12/10/2026 trước mở thêm lớp; giữ dữ liệu, không tự xóa.
 
-Quality gate giữ trạng thái chờ canary cho đến khi Google thật, phiên học viên rỗng và góp ý fixture đã readback. Giữ Docs và trang thử; không chuyển bài hay gửi thông báo.
+Kiểm37ca source, nativeGoogle/cookie, canaryHVrỗng, GVđọc đúng16, góp ýfixture thấy ởHV, currentAIcallback, tải30kết nối đã thiết lập,40consumer cũ không đổi và8assetGitHTTP readback. Kết nối mới từng chậm10s; không cam kếtSLAAI. Docs và trang thử giữ riêng.
