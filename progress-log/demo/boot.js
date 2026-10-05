@@ -1,11 +1,10 @@
 // Dữ liệu nhận vào: link cấp từ dashboard hoặc mã lượt thử còn hiệu lực.
-// Việc chính: tạo/mở lại lượt thử và cho phép mở phần, làm lại trong kho riêng.
+// Việc chính: tạo/mở lại lượt thử, tự mở mọi phần cho giảng viên và cho làm lại trong kho riêng.
 // Kết quả: tải cùng giao diện học viên với dữ liệu mẫu.
 // Khi lỗi: hiện thông báo, không chuyển sang API thật.
 const config = window.PROGRESS_LOG_CONFIG;
 const notice = document.getElementById('notice');
 const resetButton = document.getElementById('resetDemoButton');
-const openBlocksButton = document.getElementById('openDemoBlocksButton');
 const parameters = new URLSearchParams(window.location.hash.slice(1));
 const grant = parameters.get('grant') || '';
 const runToken = parameters.get('assignment') || '';
@@ -37,7 +36,8 @@ async function boot() {
   window.history.replaceState(null, '', studentUrl);
   if (teacherToken) {
     resetButton.hidden = false;
-    openBlocksButton.hidden = false;
+    // Mở phần trong lượt demo trước khi tải phiếu; lỗi hiện ở notice và dừng tải.
+    await demoRequest('runs/open-blocks', {}, teacherToken);
     resetButton.addEventListener('click', async () => {
       resetButton.disabled = true;
       try {
@@ -47,13 +47,6 @@ async function boot() {
         window.history.replaceState(null, '', `#assignment=${encodeURIComponent(next.run.publicToken)}`);
         window.location.reload();
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
-    });
-    openBlocksButton.addEventListener('click', async () => {
-      openBlocksButton.disabled = true;
-      try {
-        await demoRequest('runs/open-blocks', {}, teacherToken);
-        window.location.reload();
-      } catch (error) { notice.textContent = error.message; openBlocksButton.disabled = false; }
     });
   }
   await import('../app.js?rev=20261003-reference-production');

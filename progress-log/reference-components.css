@@ -239,3 +239,23 @@
 
 /* Giữ ô bảng nhìn thấy khi cuộn dưới thanh đầu trang cố định. */
 html:has(#teacherWorkspace){scroll-behavior:auto;scroll-padding-top:84px}#courseOverview button{scroll-margin-top:90px;scroll-margin-bottom:30px}
+
+/* Dashboard giảng viên: thu gọn vùng đã duyệt và đồng đều chữ bảng; giữ thao tác mở bài. */
+#teacherWorkspace .teacher-disclosure{padding:0;border:1px solid #e5e3df;border-radius:16px;overflow:hidden;background:#fff}
+#teacherWorkspace .teacher-disclosure>summary{display:flex;align-items:center;gap:14px;cursor:pointer;list-style:none;padding:20px}
+#teacherWorkspace .teacher-disclosure>summary::-webkit-details-marker{display:none}
+#teacherWorkspace .teacher-disclosure>summary:after{content:'＋';font-size:24px;color:#db3e4b;margin-left:auto}
+#teacherWorkspace .teacher-disclosure[open]>summary:after{content:'−'}
+#teacherWorkspace .teacher-disclosure[open]>summary{border-bottom:1px solid #e5e3df}
+#teacherWorkspace .teacher-disclosure-summary{display:flex;flex-direction:column;gap:5px}
+#teacherWorkspace .teacher-disclosure-summary small{color:#677787;font-size:13px}
+#teacherWorkspace .teacher-disclosure>summary:focus-visible{outline:3px solid #db3e4b;outline-offset:-4px}
+#teacherWorkspace #journeyPlanForm,#teacherWorkspace .teacher-disclosure-body{padding:20px}
+#teacherWorkspace .teacher-insight-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+#teacherWorkspace .teacher-insight-tabs button{font:inherit;font-size:14px;border:1px solid #d9e1e7;border-radius:10px;padding:10px 16px;background:#fff;color:#617386;cursor:pointer}
+#teacherWorkspace .teacher-insight-tabs button[aria-selected=true]{background:#edf3f7;color:#123451;font-weight:700;border-color:#b5c9d6}
+#teacherWorkspace #courseOverview .overview-table,#teacherWorkspace #courseOverview .overview-cell,#teacherWorkspace #courseOverview .overview-cell small{font-size:13px}
+#teacherWorkspace #courseAnalytics .previewTable{font-size:13px}
+#teacherWorkspace #courseAnalytics .previewTable button{font:inherit;color:inherit;background:transparent;border:0;padding:0;text-decoration:none;cursor:pointer;text-align:left}
+#teacherWorkspace #courseAnalytics .previewTable button:focus-visible{outline:2px solid #123451;outline-offset:3px;border-radius:3px}
+@media(max-width:700px){#teacherWorkspace .teacher-disclosure>summary{padding:16px}#teacherWorkspace #journeyPlanForm,#teacherWorkspace .teacher-disclosure-body{padding:16px}}

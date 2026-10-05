@@ -20,7 +20,7 @@ test('trang học viên mẫu dùng cùng giao diện và chỉ được nối �
   assert.match(html, /id="journeyButton" type="button"/);
   assert.match(html, /id="journeyResultButton" type="button"/);
   assert.doesNotMatch(html, /id="journey(?:Result)?Button" type="button" hidden/);
-  assert.match(html, /id="openDemoBlocksButton"/);
+  assert.doesNotMatch(html, /id="openDemoBlocksButton"/);
   const config = read('progress-log/demo/config.js');
   assert.match(config, /mapping-api-progress-log-demo/);
   assert.match(config, /enabled: false/);

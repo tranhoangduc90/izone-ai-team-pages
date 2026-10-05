@@ -9,7 +9,7 @@
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css?rev=20260924-listening-feedback-v1">
     <link rel="stylesheet" href="teacher.css?rev=20261001-authoring-v1">
-    <link rel="stylesheet" href="reference-components.css?rev=20261003">
+    <link rel="stylesheet" href="reference-components.css?rev=20261005-compact-v1">
   </head>
   <body>
     <header class="topbar teacher-header">
@@ -72,8 +72,8 @@
           <label class="field"><span>Phiếu đang theo dõi</span><select id="assignmentSelect"></select></label>
           <button class="button" id="openClassOverviewButton" type="button">Xem hành trình toàn lớp</button>
           <div id="dashboardPlanHost">
-          <section class="control-section journey-plan-section" id="journeyPlanSection">
-            <div class="library-heading"><b>Kế hoạch buổi học của lớp</b><small id="journeyPlanStatus">Chọn phiếu để tải kế hoạch.</small></div>
+          <details class="control-section journey-plan-section teacher-disclosure" id="journeyPlanSection">
+            <summary><span class="teacher-disclosure-summary"><b>Kế hoạch buổi học của lớp</b><small id="journeyPlanStatus">Chọn phiếu để tải kế hoạch.</small></span></summary>
             <form id="journeyPlanForm" hidden>
               <section id="journeyPlanConflict" class="editor-conflict" hidden aria-live="polite"></section>
               <div class="journey-plan-fields">
@@ -86,13 +86,25 @@
               <details class="journey-plan-dates" id="journeyPlanDatesDetails"><summary>Xác nhận ngày của từng buổi</summary><p class="muted compact">Lịch ERP được đọc khi mở. Kiểm các buổi đề xuất rồi xác nhận; buổi Test có thể không có Progress Log. Đọc lại lịch không tự đổi bản đã chốt.</p><div class="journey-plan-erp-actions"><button class="button" id="loadJourneyErpScheduleButton" type="button">Đọc lại lịch học của lớp</button><small id="journeyErpScheduleStatus">Chưa đọc lịch ERP.</small></div><div id="journeyPlanDates" class="journey-plan-date-grid"></div></details>
               <div class="journey-plan-actions"><button class="button primary" id="saveJourneyPlanButton" type="submit">Xác nhận kế hoạch lớp</button><button class="button" id="reloadJourneyPlanButton" type="button">Tải lại kế hoạch</button></div>
             </form>
-          </section>
+          </details>
           </div>
           <section class="control-section dashboard-share"><div><b>Phiếu học viên</b><small>Sao chép link để gửi học viên; địa chỉ trang chung không mở được phiếu.</small><small id="liveUpdatedAt">Tự cập nhật mỗi 8 giây; nội dung đang gõ hiện sau khi máy chủ lưu bản nháp.</small></div><div class="dashboard-share-actions"><button class="button" id="previewStudentButton" type="button">Xem thử như học viên</button><button class="button" id="openStudentFormButton" type="button">Mở phiếu</button><button class="button" id="copyCurrentLinkButton" type="button">Sao chép link</button></div></section>
           <section class="control-section"><div class="library-heading"><b>Mở từng phần</b><small>Giảng viên quyết định đúng lúc học viên được đi tiếp.</small></div><div id="blockControls" class="block-controls"></div></section>
           <div class="summary-row" id="dashboardSummary"></div>
-          <section class="control-section" id="classInsightSection"><div class="library-heading"><b>Điều cần chú ý trong lớp</b><small>Phân tích của hệ thống; bấm làm mới để đọc dữ liệu mới nhất.</small></div><div id="classInsights" class="class-insights"></div></section>
-          <section class="control-section"><div class="library-heading"><b>Trả lời theo từng câu</b><small id="questionAnalyticsStatus" role="status">Chưa đọc bài nộp.</small></div><div id="questionAnalytics"></div></section>
+          <section class="control-section" id="classInsightSection">
+            <div class="library-heading"><b>Điều cần chú ý trong lớp</b><small>Thống kê từ bài đã chấm và nhận định hiện hành của hệ thống.</small></div>
+            <div class="teacher-insight-tabs" role="tablist" aria-label="Điều cần chú ý trong lớp">
+              <button id="scoresTab" type="button" role="tab" aria-selected="true" aria-controls="scoresPanel">Đúng / sai của từng học viên</button>
+              <button id="insightTab" type="button" role="tab" aria-selected="false" aria-controls="insightPanel" tabindex="-1">Nhận định của hệ thống</button>
+            </div>
+            <div id="scoresPanel" role="tabpanel" aria-labelledby="scoresTab">
+              <details class="teacher-disclosure" id="analyticsToggle">
+                <summary><span class="teacher-disclosure-summary"><b>Thống kê đúng / sai và câu nhiều học viên sai nhất</b><small id="questionAnalyticsStatus" role="status">Chưa đọc bài nộp.</small></span></summary>
+                <div class="teacher-disclosure-body" id="questionAnalytics"></div>
+              </details>
+            </div>
+            <div id="insightPanel" role="tabpanel" aria-labelledby="insightTab" hidden><div id="classInsights" class="class-insights"></div></div>
+          </section>
           <div class="student-list" id="studentList"></div>
         </section>
       </section>
@@ -143,6 +155,6 @@
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
-    <script type="module" src="teacher.js?rev=20261003-reference-production"></script>
+    <script type="module" src="teacher.js?rev=20261005-compact-v1"></script>
   </body>
 </html>

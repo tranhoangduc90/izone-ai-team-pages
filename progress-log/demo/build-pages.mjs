@@ -21,15 +21,14 @@ for (const name of pages) {
     html = html.replace('<main class="shell">', `<aside class="demo-banner" role="note">
       <b>BẢN THỬ · KHÔNG GHI BÀI THẬT</b>
       <span>Nội dung phiếu thật; bài làm và điểm danh chỉ lưu trong bản thử.</span>
-      <span class="demo-actions"><button class="button" id="openDemoBlocksButton" type="button" hidden>Mở các phần để thử</button>
-      <button class="button" id="resetDemoButton" type="button" hidden>Làm lại từ đầu</button></span>
+      <span class="demo-actions"><button class="button" id="resetDemoButton" type="button" hidden>Làm lại từ đầu</button></span>
     </aside>
     <main class="shell">`);
   }
   html = html.replace('<title>', '<title>Bản thử · ');
   html = html.replace(/src="config\.js\?rev=[^"]+"/, 'src="config.js?rev=20260924-generic-demo-v1"');
   if (name === 'index.html') {
-    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261003-reference-production"');
+    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261005-compact-v1"');
   }
   html = html.replace('</head>', '    <link rel="stylesheet" href="demo.css?rev=20260924-v1">\n  </head>');
   const output = new URL(name, import.meta.url);
