@@ -2,6 +2,7 @@ import { createSpeakingIdentity } from './speaking-identity.js';
 import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
 import { freestyleInstructions } from './assignment-instructions.js';
+import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
 
 const apiBase = 'https://ducizone.ddns.net/mapping-api/api/speaking-homework';
 const identityBase = 'https://ducizone.ddns.net/mapping-api';
@@ -9,10 +10,12 @@ const query = new URLSearchParams(location.search);
 const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
 let classCode = '';
-const assignmentCode = query.get('assignmentCode') || '67-speaking-diem_giua';
+const lessonNumber = document.body.dataset.speakingLesson === '5' ? 5 : 4;
+const expectedAssignmentCode = lessonNumber === 5 ? lesson5Code : '67-speaking-diem_giua';
+const assignmentCode = query.get('assignmentCode') || expectedAssignmentCode;
 const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);
-const parts = [
+const parts = lessonNumber === 5 ? lesson5Parts : [
   { key: 'insert_middle', title: 'Chèn điểm giữa trong Speaking',
     url: 'https://ducizone.short.gy/chen_diem_giua_speak',
     lead: 'Luyện đủ ba giai đoạn trong một hội thoại.',
@@ -55,7 +58,7 @@ async function post(path, body, timeout = 20_000) {
   }
 }
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
-function draftKey() { return `speaking-homework:lesson-4:${documentId}:${state.studentRef}`; }
+function draftKey() { return `speaking-homework:lesson-${lessonNumber}:${documentId}:${state.studentRef}`; }
 function saveDraft() {
   if (!state.studentRef) return;
   const draft = Object.fromEntries(parts.map(part => [part.key, $(`${part.key}-link`).value]));
@@ -426,8 +429,11 @@ const poller = createPendingPoller({
 
 // Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
 const identityController = createSpeakingIdentity({
-  apiBase, identityBase, assignmentCode, lessonNumber: 4, originalDocumentId, classHint,
-  validateAssignment: assignment => assignment.parts?.length === 2 && assignment.parts[0]?.part_key === 'insert_middle' && assignment.parts[1]?.part_key === 'freestyle' && Number(assignment.requiredPracticeCount) === 2 && assignment.doctorEnabled === true,
+  apiBase, identityBase, assignmentCode, lessonNumber, originalDocumentId, classHint,
+  validateAssignment: assignment => assignmentCode === expectedAssignmentCode
+    && assignment.parts?.length === 2 && parts.every((part,index) => assignment.parts[index]?.part_key === part.key)
+    && (lessonNumber !== 5 || (Number(assignment.parts[0].min_questions) === 3 && Number(assignment.parts[1].min_questions) === 1))
+    && Number(assignment.requiredPracticeCount) === 2 && assignment.doctorEnabled === true,
   async onOpened(context) {
     state.studentRef = context.studentRef;
     state.accessToken = context.session.accessToken;
