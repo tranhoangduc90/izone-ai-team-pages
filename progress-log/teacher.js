@@ -64,6 +64,7 @@ const elements = Object.fromEntries([
   'createTab', 'dashboardTab', 'createPanel', 'dashboardPanel', 'publishForm', 'teacherClassSelect',
   'overviewTab', 'overviewPanel', 'overviewClassSelect', 'overviewFilter', 'overviewStatus', 'courseOverview', 'courseAnalytics', 'courseAnalyticsStatus',
   'refreshOverviewButton', 'openClassOverviewButton', 'questionAnalyticsStatus', 'questionAnalytics',
+  'scoresTab', 'insightTab', 'scoresPanel', 'insightPanel',
   'journeyDetailDialog', 'journeyDetailStatus', 'journeyDetailContent', 'retryJourneyDetailButton',
   'journeyPlanSection', 'overviewPlanHost', 'dashboardPlanHost',
   'sessionNumber', 'formTitle', 'skillFilter', 'questionLibrary', 'publishButton', 'publishResult', 'rosterCount',
@@ -1603,6 +1604,25 @@ elements.journeyPlanTestSources.addEventListener('change', () => {
   state.journeyPlanDirty = true;
   elements.journeyPlanStatus.textContent = 'Có thay đổi chưa lưu.';
 });
+// Chỉ chuyển vùng hiển thị của thống kê; dữ liệu và bộ đọc bài giữ nguyên.
+function switchInsightTab(scores, focus = false) {
+  elements.scoresPanel.hidden = !scores;
+  elements.insightPanel.hidden = scores;
+  for (const [button, selected] of [[elements.scoresTab, scores], [elements.insightTab, !scores]]) {
+    button.setAttribute('aria-selected', String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    if (focus && selected) button.focus();
+  }
+}
+elements.scoresTab.addEventListener('click', () => switchInsightTab(true));
+elements.insightTab.addEventListener('click', () => switchInsightTab(false));
+for (const button of [elements.scoresTab, elements.insightTab]) {
+  button.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    switchInsightTab(event.key === 'Home' || (event.key !== 'End' && button === elements.insightTab), true);
+  });
+}
 elements.refreshDashboardButton.addEventListener('click', () => {
   void loadDashboard();
   if (!state.journeyPlanDirty) void loadJourneyPlan({ force: true });

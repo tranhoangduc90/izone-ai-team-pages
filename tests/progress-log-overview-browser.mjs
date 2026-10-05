@@ -89,12 +89,16 @@ test('E01/E02/O01/O04: Hành trình lớp, lịch ERP và chi tiết trên 390/7
     assert.equal(await page.locator('#formDraftEditor select').first().inputValue(),'1294','Bộ soạn chọn lớp hợp lệ');
     assert.equal(calls.filter(c=>c.path.includes('-8062028')||c.query.includes('-8062028')).length,0,'Không đọc dữ liệu bằng mã lớp không hợp lệ');
 
+    assert.equal(await page.locator('#journeyPlanSection').evaluate(e=>e.open),false);
     await page.getByRole('button',{name:'Hành trình lớp',exact:true}).click();
     await page.locator('#overviewStatus').filter({hasText:'IC2305'}).waitFor();
     await page.locator('#courseAnalyticsStatus').filter({hasText:'Đã đọc 0'}).waitFor();
     assert.equal(await page.locator('.overview-table tbody tr').count(),2);
     assert.equal(await page.locator('.overview-table tbody td').count(),62);
     assert.equal(await page.locator('.overview-table th').filter({hasText:'Buổi 31'}).count(),1);
+    await page.locator('#journeyPlanSection>summary').focus();
+    await page.keyboard.press('Enter');
+    await page.locator('#journeyPlanForm').waitFor({state:'visible'});
     await page.locator('#journeyPlanDatesDetails summary').click();
     await page.locator('#journeyErpScheduleStatus').filter({hasText:'Đã đọc 31'}).waitFor();
     assert.equal(await page.locator('#journeyPlanDates select').count(),31);

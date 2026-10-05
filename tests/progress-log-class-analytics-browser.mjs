@@ -48,6 +48,16 @@ test('Whole-class basic analysis drills into exact student/session, keeps sparse
   assert.equal(await page.locator('#courseAnalytics .previewTable tbody tr').count(),4);
   assert.equal(await page.locator('.overview-table th').filter({hasText:'Buổi 31'}).count(),1);
   assert.match(await page.locator('#courseAnalytics').textContent(),/Reading 3 \+ Writing 1/);
+  // Hai phản hồi thật: tên giữ thao tác mở bài nhưng trông như chữ thường; bảng cùng cỡ chữ.
+  const appearance=await page.locator('#courseAnalytics [data-summary]').first().evaluate(e=>{
+   const name=getComputedStyle(e),cell=getComputedStyle(e.parentElement);
+   const header=getComputedStyle(document.querySelector('#courseOverview .overview-table th'));
+   const content=getComputedStyle(document.querySelector('#courseOverview .overview-cell'));
+   return {underline:name.textDecorationLine,border:name.borderTopWidth,background:name.backgroundColor,
+    colorMatches:name.color===cell.color,nameFont:name.fontSize,headerFont:header.fontSize,cellFont:content.fontSize};
+  });
+  assert.deepEqual(appearance,{underline:'none',border:'0px',background:'rgba(0, 0, 0, 0)',
+   colorMatches:true,nameFont:'13px',headerFont:'13px',cellFont:'13px'});
   const wrong=page.locator('#courseAnalytics [data-student]').first(),ref=await wrong.getAttribute('data-student'),n=Number(await wrong.getAttribute('data-session'));
   await wrong.click();await page.locator('#journeyDetailStatus').filter({hasText:'hiện hành'}).waitFor();assert.deepEqual(detailCalls.at(-1),{n,ref});assert.ok(await page.locator('[data-review-item]').count());await page.keyboard.press('Escape');
   const summary=page.locator('#courseAnalytics [data-summary]').first(),person=await summary.getAttribute('data-summary');await summary.click();assert.equal(await page.locator('#journeyDetailContent tbody tr').count(),4);
