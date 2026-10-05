@@ -421,6 +421,12 @@
       "outcome": "success",
       "readback": "verified",
       "evidence": "N8N_AI_PROOF, transport/expiry/restart/DB browser receipts, chỉ bài giả."
+    },
+    {
+      "id": "PUBLIC-PAGES",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Pages build commit 4d6990711509cde9e241b4d8544b03c2b4e073bf built; actual public UI/API/native7+2 + six asset Git blobs read back."
     }
   ],
   "verification_runs": [
@@ -462,6 +468,22 @@
         "N-BROWSER"
       ],
       "evidence": "BROWSER-NATIVE-HEAD/BROWSER-COMPLETE, actual AI Comment and screenshot desktop/mobile đã xem."
+    },
+    {
+      "id": "PUBLIC-BROWSER-READBACK",
+      "scope": "behavioral",
+      "command": "playwright-cli -s=handout67-published run-code browser-published.js; verify-published-files.py",
+      "tree_revision": "sha256:04dc4e0dd20a28ff8c76a23dc01c88199880f60f16d8e35f67bf2a84d8b224d6",
+      "captured_at": "2026-10-05T10:51:39.672418+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "test_ids": [
+        "N-BROWSER"
+      ],
+      "evidence": "BROWSER-PUBLISHED.log/PUBLISHED_FILE_READBACK.json: actual public CORS/native results, 0console/error, 6Git blobs matched."
     }
   ],
   "convergence": {
@@ -479,21 +501,22 @@
     "completed": [
       "N1"
     ],
-    "next_step": "Xuất bản route thử đã kiểm, đọc URL thật; mở lớp thật sau cổng backend.",
+    "next_step": "Đức xem bản thử; mở lớp thật theo cổng backend sau roster/tải30/canary/owner/quota/retention.",
     "open_risks": [],
     "tree_revision": "sha256:04dc4e0dd20a28ff8c76a23dc01c88199880f60f16d8e35f67bf2a84d8b224d6"
   },
   "release": {
     "target_environment": "production",
-    "decision": "ready",
+    "decision": "verified",
     "base_tree_revision": "6d4ef78be047b66c55d74bd0b2ec5173ac774140",
     "current_tree_revision": "sha256:04dc4e0dd20a28ff8c76a23dc01c88199880f60f16d8e35f67bf2a84d8b224d6",
     "production_authorized": true,
     "authorization_scope": "Đức đã duyệt bản thử VPS; quyền Pages trong agent-web-and-publishing.md cho đúng thay đổi được giao, chỉ lớp giả.",
     "rollback": "Bỏ route thử mới hoặc stop riêng Handout67; giữ database/bài; giữ URL demo/Docs cũ.",
-    "deployment_readback": "not_done",
-    "operational_observation": "Native API/AI/browser localhost thật đã quan sát; public route readback sau Pages build.",
-    "open_risks": []
+    "deployment_readback": "verified",
+    "operational_observation": "Public Pages login/confirm → scoped native session, 7 passed steps/2 vocab displayed; 0 console/HTTP error, mobile390 without overflow. Served6 assets match Git blobs commit 4d6990711509cde9e241b4d8544b03c2b4e073bf",
+    "open_risks": [],
+    "public_url": "https://tranhoangduc90.github.io/izone-ai-team-pages/writing-handouts/lesson5-thu/"
   },
   "source_revision": {
     "algorithm": "sha256",
@@ -518,7 +541,16 @@
       "README.md (documentation, no executable behavior)",
       "client.test.mjs (superseded by 8 portable UI cases; not published)"
     ],
-    "value": "sha256:04dc4e0dd20a28ff8c76a23dc01c88199880f60f16d8e35f67bf2a84d8b224d6"
+    "value": "sha256:04dc4e0dd20a28ff8c76a23dc01c88199880f60f16d8e35f67bf2a84d8b224d6",
+    "publication_transform": "Git normalizes tracked line endings to LF; artifact bytes matched canonical Git blobs, source-code/VM tests use recorded working-tree input hashes.",
+    "published_git_blob_hashes": {
+      "writing-handouts/lesson5-thu/index.html": "b6baae1bc735f63aa7767b1d4bda50fbf61b816a7d7c54a2cf70ac0046d7c128",
+      "writing-handouts/lesson5-thu/app.js": "b2c58234c2b7679e315d2a1ea2315ee375db1f614108163847ea30b19c89291e",
+      "writing-handouts/lesson5-thu/client.mjs": "455d0a4c51d6f88f1a30fd4d6d79f998ff397c17898da92c849ebd62828d70bb",
+      "writing-handouts/lesson5-thu/ui-races.test.mjs": "5c03ce612639edc7b26fc167fa912ee3c49ca675193de53ddbffea8311796f6c",
+      "writing-handouts/lesson5-demo/theme.css": "85a1abae656a26efd8424fb4daff419829227217eb30a97affc1b7d8f2e795c7",
+      "writing-handouts/lesson5-demo/core.mjs": "87e82e4613051e0332d29b08cfdf9def496c9d060352403f9fe4d30552a2aabe"
+    }
   },
   "backend_runtime_pin": {
     "revision": "a5a1e578f21e69a2c0ae89e5174cb9081f95351e",
