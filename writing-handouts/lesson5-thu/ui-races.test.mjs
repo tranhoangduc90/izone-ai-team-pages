@@ -62,3 +62,17 @@ test('R-UI-DRAFT · khôi phục chỉ phần chưa lưu, giữ trường máy c
  h.storage.set('izone-handout67:draft:a-ref',JSON.stringify({ref:'a-ref',changes:{idea1:'Unsaved idea one'},responses:{idea1:'Unsaved idea one',idea2:'Old server idea two'}}));
  h.el('restore-draft').handlers.click();await h.run('serial');assert.equal(h.run('state.responses.idea1'),'Unsaved idea one');assert.equal(h.run('state.responses.idea2'),'New server idea two');
 });
+
+test('R-UI-CLASS · trang lớp thật chỉ nạp tên trong đúng lớp của route',async()=>{
+ const h=fixture({roster:async()=>({classes:[{classRef:'handout67-thu',className:'Lớp giả',students:[{studentRef:'fake',displayName:'Tên giả'}]},{classRef:'IC2304',className:'IC2304',students:[{studentRef:'actual-fixture',displayName:'Tên kiểm lớp'}]}]})});
+ h.run("document.body={dataset:{classRef:'IC2304'}};");await h.run('bootstrap()');
+ assert.equal(h.run('classes.length'),1);assert.equal(h.run('classes[0].classRef'),'IC2304');
+ assert.equal(h.run('names.fake'),undefined);assert.equal(h.run("names['actual-fixture']"),'Tên kiểm lớp');
+ assert.ok(!h.el('class-select').innerHTML.includes('handout67-thu'));
+});
+
+test('R-UI-CLASS-CLOSED · không fallback lớp khác khi lớp route chưa mở',async()=>{
+ const h=fixture({roster:async()=>({classes:[{classRef:'handout67-thu',className:'Lớp giả',students:[]}]})});
+ h.run("document.body={dataset:{classRef:'IC2304'}};");await h.run('bootstrap()');
+ assert.equal(h.run('classes.length'),0);assert.equal(h.run('Object.keys(names).length'),0);
+});

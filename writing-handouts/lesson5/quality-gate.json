@@ -1,0 +1,606 @@
+{
+  "schema_version": 3,
+  "product": "Handout Writing 67 · Học viên và giảng viên IC2304",
+  "change_id": "handout67-ic2304-teacher-20261005",
+  "change_kind": "feature",
+  "escaped_user_defect": false,
+  "risk": "high",
+  "system_traits": [
+    "stateful",
+    "asynchronous",
+    "concurrent",
+    "external_side_effects",
+    "authentication",
+    "multi_user",
+    "multi_service"
+  ],
+  "experience": {
+    "planning_mode": "controlled",
+    "mode_reason": "Route gọi API lưu bài và AI thật; đã được Đức duyệt dựng/kiểm bản thử riêng.",
+    "user": "16 học viên IC2304 và giảng viên được duyệt",
+    "problem": "Demo mô phỏng chưa chứng minh backend/n8n thật và hồi phục nháp.",
+    "outcome": "Học viên làm đủ hành trình; giảng viên xem tiến độ và gửi góp ý đúng phiên/phần.",
+    "out_of_scope": [
+      "Không chuyển bài Docs, không gửi thông báo, không mở lớp khác hoặc đổi sản phẩm khác."
+    ],
+    "plain_language_summary": "Một bản thử có máy xử lý riêng, bài giả được lưu và chấm thật."
+  },
+  "release_scope": {
+    "acceptance_mode": "small_complete",
+    "description": "Mở IC2304/16 học viên và dashboard Google có quyền lớp riêng. Phát hành frontend trước để canary Google trên đúng origin; chỉ bật roster thật sau kiểm Google/góp ý trên fixture giả."
+  },
+  "change_package": {
+    "proposal": "Thêm route riêng bên cạnh demo mô phỏng, nối API Handout67 đã ghim.",
+    "behavior_baseline": "lesson5-demo mô phỏng, backend Docs/consumer cũ giữ nguyên.",
+    "deltas": [
+      {
+        "id": "LIVE-UI",
+        "operation": "ADDED",
+        "behavior": "UI dùng trạng thái server và chấm thật; xử lý mất ACK, nháp/hai tab/phản hồi muộn.",
+        "module_ids": [
+          "UI",
+          "CLIENT"
+        ],
+        "test_ids": [
+          "R-UI-IDENTITY",
+          "R-UI-POLL",
+          "R-UI-TYPING",
+          "R-UI-CHECK",
+          "R-UI-READ-SINGLE",
+          "R-UI-ACK",
+          "R-UI-409",
+          "R-UI-DRAFT",
+          "N-FLOW",
+          "N-EXPIRY",
+          "N-PARTIAL",
+          "N-RESTART",
+          "N-ISOLATION",
+          "N-BROWSER"
+        ]
+      }
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "native-test-v1",
+    "modules": [
+      {
+        "id": "CLIENT",
+        "name": "Gửi yêu cầu cùng định danh",
+        "responsibility": "Gửi yêu cầu cùng định danh",
+        "owns_data": [
+          "in_memory_capability"
+        ],
+        "public_interfaces": [
+          "HTTPS open/save/check/read"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Backend riêng giữ phiên/bước/history; giao diện không tự gán điểm đạt."
+        ],
+        "test_ids": [
+          "R-UI-ACK",
+          "R-UI-409",
+          "N-PARTIAL",
+          "N-ISOLATION"
+        ]
+      },
+      {
+        "id": "UI",
+        "name": "Bài học và nháp học viên",
+        "responsibility": "Bài học và nháp học viên",
+        "owns_data": [
+          "draft_changes"
+        ],
+        "public_interfaces": [
+          "render/readLatest/poll"
+        ],
+        "depends_on": [
+          "CLIENT"
+        ],
+        "boundary_rules": [
+          "Backend riêng giữ phiên/bước/history; giao diện không tự gán điểm đạt."
+        ],
+        "test_ids": [
+          "R-UI-IDENTITY",
+          "R-UI-POLL",
+          "R-UI-TYPING",
+          "R-UI-CHECK",
+          "R-UI-READ-SINGLE",
+          "R-UI-DRAFT",
+          "N-FLOW",
+          "N-EXPIRY",
+          "N-PARTIAL",
+          "N-RESTART",
+          "N-ISOLATION",
+          "N-BROWSER"
+        ]
+      }
+    ],
+    "integrations": [
+      {
+        "id": "CLIENT-UI",
+        "producer": "CLIENT",
+        "consumer": "UI",
+        "contract": "Phiên/version từ backend; header token, retry giữ requestId; UI giữ nháp và guard người học/version.",
+        "test_ids": [
+          "R-UI-IDENTITY",
+          "R-UI-POLL",
+          "R-UI-ACK",
+          "N-FLOW",
+          "N-BROWSER"
+        ]
+      }
+    ]
+  },
+  "operational_design": {
+    "plan_revision": "native-test-v1",
+    "signals": [
+      "multi_user",
+      "multi_service"
+    ],
+    "critical_path": "Pages→API riêng→PostgreSQL riêng→n8n riêng→AI→callback/readback→UI",
+    "peak_load": {
+      "value": 3,
+      "unit": "synthetic sessions simultaneously submitting checks",
+      "basis": "Native transport test ba phiên/ba concurrent claim, không phải bằng chứng tải30 học viên."
+    },
+    "user_wait_target": "Lưu mục tiêu3s, poll4s, wake30s, AI180s và lease300s; UI báo chờ.",
+    "limits_and_cost": [
+      "Runtime0,5CPU/256MB, pool5, tối đa2 lease toàn sản phẩm, một job/execution.",
+      "Chỉ10 danh tính giả trong scope; không mở roster thật hoặc nâng quota AI."
+    ],
+    "failure_and_recovery": [
+      "Nháp khi mất mạng/409; retry cùng requestId, không mất Comment.",
+      "Hết lease cấp lại prompt/opkey không đổi; kỹ thuật không tạo Comment cần sửa.",
+      "Dừng riêng Handout67 khi lỗi; không restart hệ cũ."
+    ],
+    "monitoring": [
+      "Execution n8n lưu all/all/manual; lỗi giữ workflow riêng.",
+      "Workflow thử ở trạng thái theo dõi đến12/10/2026; cần người vận hành chốt trước mở lớp."
+    ],
+    "decision": "Bản thử giả được duyệt; mở lớp thật là phạm vi tiếp theo.",
+    "test_ids": [
+      "N-FLOW",
+      "N-EXPIRY",
+      "N-PARTIAL",
+      "N-RESTART",
+      "N-ISOLATION",
+      "N-BROWSER"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "REQ-WEB",
+      "statement": "Đủ login/confirm, 7 bước và từ vựng từng ý, kết quả thật.",
+      "test_ids": [
+        "N-FLOW",
+        "N-BROWSER"
+      ]
+    },
+    {
+      "id": "REQ-DRAFT",
+      "statement": "Không trộn người học, mất nháp hoặc ghi đè khi hai tab/mất mạng.",
+      "test_ids": [
+        "R-UI-IDENTITY",
+        "R-UI-POLL",
+        "R-UI-TYPING",
+        "R-UI-CHECK",
+        "R-UI-READ-SINGLE",
+        "R-UI-ACK",
+        "R-UI-409",
+        "R-UI-DRAFT"
+      ]
+    },
+    {
+      "id": "REQ-TEACHER",
+      "statement": "Google subject đúng tài khoản, ACL lớp riêng; góp ý đúng tác giả/version, học viên đọc được.",
+      "test_ids": [
+        "T-NATIVE-TEACHER"
+      ]
+    },
+    {
+      "id": "REQ-CLASS",
+      "statement": "Chỉ mở IC2304/16 học viên; route thử chỉ hiện fixture.",
+      "test_ids": [
+        "T-NATIVE-CLASS"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-SERVER",
+      "statement": "Chỉ trạng thái backend mở bước và từ vựng; mỗi callback đúng người/ý/job/hash/lease.",
+      "test_ids": [
+        "N-FLOW",
+        "N-EXPIRY",
+        "N-PARTIAL"
+      ]
+    },
+    {
+      "id": "INV-IDENTITY",
+      "statement": "Phản hồi cũ không áp vào học viên mới hoặc ghi đè version mới.",
+      "test_ids": [
+        "R-UI-IDENTITY",
+        "R-UI-POLL",
+        "R-UI-DRAFT"
+      ]
+    },
+    {
+      "id": "INV-ISOLATION",
+      "statement": "Phát hành và restart Handout67 riêng giữ consumer cũ.",
+      "test_ids": [
+        "N-ISOLATION",
+        "N-RESTART"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "R-UI-IDENTITY",
+      "category": "security_privacy",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "ui-races.test.mjs; UI-RELEASE-FULL.log, 8/8 native IDs; đúng hash source trong source_revision."
+    },
+    {
+      "id": "R-UI-POLL",
+      "category": "concurrency_idempotency",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "ui-races.test.mjs; UI-RELEASE-FULL.log, 8/8 native IDs; đúng hash source trong source_revision."
+    },
+    {
+      "id": "R-UI-TYPING",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "ui-races.test.mjs; UI-RELEASE-FULL.log, 8/8 native IDs; đúng hash source trong source_revision."
+    },
+    {
+      "id": "R-UI-CHECK",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "ui-races.test.mjs; UI-RELEASE-FULL.log, 8/8 native IDs; đúng hash source trong source_revision."
+    },
+    {
+      "id": "R-UI-READ-SINGLE",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "ui-races.test.mjs; UI-RELEASE-FULL.log, 8/8 native IDs; đúng hash source trong source_revision."
+    },
+    {
+      "id": "R-UI-ACK",
+      "category": "external_partial",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "ui-races.test.mjs; UI-RELEASE-FULL.log, 8/8 native IDs; đúng hash source trong source_revision."
+    },
+    {
+      "id": "R-UI-409",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "ui-races.test.mjs; UI-RELEASE-FULL.log, 8/8 native IDs; đúng hash source trong source_revision."
+    },
+    {
+      "id": "R-UI-DRAFT",
+      "category": "rollback_recovery",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "ui-races.test.mjs; UI-RELEASE-FULL.log, 8/8 native IDs; đúng hash source trong source_revision."
+    },
+    {
+      "id": "N-FLOW",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "N8N_AI_PROOF.json: 7 bước đạt, 2 vocab, 11 job/nhận xét thực có callback/hash readback."
+    },
+    {
+      "id": "N-EXPIRY",
+      "category": "lifecycle_time",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "NATIVE_LEASE.json: đợi hơn 300 giây thật, từ chối lượt cũ, cấp lại giữ prompt/opkey, đúng một Comment."
+    },
+    {
+      "id": "N-PARTIAL",
+      "category": "external_partial",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "NATIVE_TRANSPORT.json: đóng socket sau header commit trước đọc body ACK; replay/readback đúng hash và một Comment."
+    },
+    {
+      "id": "N-RESTART",
+      "category": "rollback_recovery",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "NATIVE_RESTART.json: chỉ restart container riêng, payload SQL giữ nguyên, các container khác không đổi."
+    },
+    {
+      "id": "N-ISOLATION",
+      "category": "security_privacy",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "DB_PROOF/DB_WRITE_PROOF/ISOLATION_AFTER/NATIVE_ROUTE_PROOF/LEGACY_X_UNCHANGED: không có quyền nghiệp vụ hệ cũ; 40 container cũ không đổi."
+    },
+    {
+      "id": "N-BROWSER",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "passed",
+      "evidence": "Browser native: login/confirm, tự lưu, hai tab409, restore phần chưa lưu, offline giữ nháp, pending khóa, Comment AI thật và reload; bài hoàn tất, viewport1440/390/360 đã nhìn ảnh."
+    },
+    {
+      "id": "T-NATIVE-TEACHER",
+      "category": "security_privacy",
+      "priority": "P0",
+      "status": "not_run",
+      "evidence": "Google thật, đọc đúng lớp và góp ý fixture/readback còn pending."
+    },
+    {
+      "id": "T-NATIVE-CLASS",
+      "category": "happy_path",
+      "priority": "P0",
+      "status": "not_run",
+      "evidence": "IC2304 16 learners và canary phiên rỗng còn pending."
+    }
+  ],
+  "task_graph": {
+    "plan_revision": "native-test-v1",
+    "tasks": [
+      {
+        "id": "N1",
+        "result": "Bản thử riêng có readback thật và route review được.",
+        "module_ids": [
+          "CLIENT",
+          "UI"
+        ],
+        "depends_on": [],
+        "consumes": [
+          "Đức đã duyệt dựng/kiểm bản thử riêng; source/rubric đã rà."
+        ],
+        "produces": [
+          "Route thử",
+          "native/AI/browser receipts",
+          "README",
+          "quality-gate.json"
+        ],
+        "contract": "Chỉ fixture giả; giữ cổng mở lớp thật riêng.",
+        "test_ids": [
+          "R-UI-IDENTITY",
+          "R-UI-POLL",
+          "R-UI-TYPING",
+          "R-UI-CHECK",
+          "R-UI-READ-SINGLE",
+          "R-UI-ACK",
+          "R-UI-409",
+          "R-UI-DRAFT",
+          "N-FLOW",
+          "N-EXPIRY",
+          "N-PARTIAL",
+          "N-RESTART",
+          "N-ISOLATION",
+          "N-BROWSER"
+        ],
+        "evidence_required": [
+          "8native UI tests, AI/SQL/lease/restart/readback, browser, metadata consumer"
+        ],
+        "decision_inputs": [
+          "Scope bản thử đã duyệt; 30 người/canary thuộc gói mở lớp thật."
+        ],
+        "affected_future_tasks": [],
+        "status": "done",
+        "plan_revision": "native-test-v1"
+      }
+    ]
+  },
+  "risk_register": {
+    "assessment": "PASS",
+    "risks": [
+      {
+        "id": "R-ASYNC",
+        "description": "Phản hồi muộn/mất ACK hoặc nháp hai tab làm trộn bài.",
+        "probability": 2,
+        "impact": 3,
+        "score": 6,
+        "severity": "P1",
+        "status": "mitigated",
+        "owner": "Codex",
+        "mitigation": "Epoch/ref/version guards, chỉ restore dirty changes, retry cùng requestId, backend CAS.",
+        "test_ids": [
+          "R-UI-IDENTITY",
+          "R-UI-POLL",
+          "R-UI-TYPING",
+          "R-UI-CHECK",
+          "R-UI-READ-SINGLE",
+          "R-UI-ACK",
+          "R-UI-409",
+          "R-UI-DRAFT"
+        ]
+      }
+    ],
+    "waivers": []
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {
+      "id": "LEASE-AI",
+      "left": {
+        "name": "lease_seconds",
+        "value": 300
+      },
+      "operator": ">",
+      "right": {
+        "name": "AI180_callback20_margin60",
+        "value": 260
+      },
+      "status": "passed",
+      "evidence": "Runtime/config + actual NATIVE_LEASE, không thay cho SLA tải30."
+    }
+  ],
+  "mutations": [
+    {
+      "id": "NATIVE-FIXTURE",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "N8N_AI_PROOF, transport/expiry/restart/DB browser receipts, chỉ bài giả."
+    },
+    {
+      "id": "PUBLIC-PAGES",
+      "outcome": "success",
+      "readback": "verified",
+      "evidence": "Pages build commit 4d6990711509cde9e241b4d8544b03c2b4e073bf built; actual public UI/API/native7+2 + six asset Git blobs read back."
+    }
+  ],
+  "verification_runs": [
+    {
+      "id": "UI-NATIVE-FULL",
+      "scope": "full_suite",
+      "command": "node --test --test-reporter=tap ui-races.test.mjs",
+      "tree_revision": "sha256:04dc4e0dd20a28ff8c76a23dc01c88199880f60f16d8e35f67bf2a84d8b224d6",
+      "captured_at": "2026-10-05T10:38:42.007213+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "test_ids": [
+        "R-UI-IDENTITY",
+        "R-UI-POLL",
+        "R-UI-TYPING",
+        "R-UI-CHECK",
+        "R-UI-READ-SINGLE",
+        "R-UI-ACK",
+        "R-UI-409",
+        "R-UI-DRAFT"
+      ],
+      "evidence": "UI-RELEASE-FULL.log; input hashes trước/sau khớp, portable test8 không gọi dịch vụ."
+    },
+    {
+      "id": "ACTUAL-BROWSER",
+      "scope": "behavioral",
+      "command": "playwright-cli native login/two-tabs/offline + browser-readback.js/browser-complete.js",
+      "tree_revision": "sha256:04dc4e0dd20a28ff8c76a23dc01c88199880f60f16d8e35f67bf2a84d8b224d6",
+      "captured_at": "2026-10-05T10:42:16.722916+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "test_ids": [
+        "N-BROWSER"
+      ],
+      "evidence": "BROWSER-NATIVE-HEAD/BROWSER-COMPLETE, actual AI Comment and screenshot desktop/mobile đã xem."
+    },
+    {
+      "id": "PUBLIC-BROWSER-READBACK",
+      "scope": "behavioral",
+      "command": "playwright-cli -s=handout67-published run-code browser-published.js; verify-published-files.py",
+      "tree_revision": "sha256:04dc4e0dd20a28ff8c76a23dc01c88199880f60f16d8e35f67bf2a84d8b224d6",
+      "captured_at": "2026-10-05T10:51:39.672418+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "test_ids": [
+        "N-BROWSER"
+      ],
+      "evidence": "BROWSER-PUBLISHED.log/PUBLISHED_FILE_READBACK.json: actual public CORS/native results, 0console/error, 6Git blobs matched."
+    },
+    {
+      "id": "UI-12-FINAL",
+      "scope": "full_suite",
+      "command": "node --test ui-races.test.mjs teacher.test.mjs",
+      "tree_revision": "28099ab6b270ec833a033e41e98739cbcbd7b4a9e06d210836ad1ce3c167536f",
+      "captured_at": "2026-10-05T12:25:27.216756+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "test_ids": [
+        "R-UI-IDENTITY",
+        "R-UI-POLL",
+        "R-UI-TYPING",
+        "R-UI-CHECK",
+        "R-UI-READ-SINGLE",
+        "R-UI-ACK",
+        "R-UI-409",
+        "R-UI-DRAFT",
+        "R-UI-CLASS",
+        "R-UI-CLASS-CLOSED",
+        "T-TEACHER-UI-IDENTITY",
+        "T-TEACHER-UI-LATE"
+      ],
+      "evidence": "UI_RECEIPT.json et UI_FULL.log; input hashes capturés."
+    }
+  ],
+  "convergence": {
+    "status": "gaps",
+    "tree_revision": "28099ab6b270ec833a033e41e98739cbcbd7b4a9e06d210836ad1ce3c167536f",
+    "gaps": [
+      "Native Google et class canary pending"
+    ],
+    "unrequested_work": [],
+    "evidence": "Đúng scope bản thử; 8 native UI IDs, real7+2, expiry/restart/rights và browser đều có readback. Cổng mở lớp thật giữ riêng not_ready."
+  },
+  "context_handoff": {
+    "summary": "Backend25/UI12 đạt; source review không còn P0/P1; lớp thật chưa bật ở candidate.",
+    "decisions": [
+      "Đức duyệt bản thử, không mở lớp thật và không ghi DECISIONS."
+    ],
+    "completed": [
+      "N1"
+    ],
+    "next_step": "Canary Google/góp ý trên fixture, bật roster riêng IC2304, đọc lại cả hai giao diện và metadata consumer.",
+    "open_risks": [],
+    "tree_revision": "28099ab6b270ec833a033e41e98739cbcbd7b4a9e06d210836ad1ce3c167536f"
+  },
+  "release": {
+    "target_environment": "production",
+    "decision": "deployed_awaiting_validation",
+    "base_tree_revision": "6d4ef78be047b66c55d74bd0b2ec5173ac774140",
+    "current_tree_revision": "28099ab6b270ec833a033e41e98739cbcbd7b4a9e06d210836ad1ce3c167536f",
+    "production_authorized": true,
+    "authorization_scope": "Đức yêu cầu mở IC2304 và tạo dashboard giảng viên; frontend candidate cần origin Pages thật để kiểm Google trước bật lớp.",
+    "rollback": "Bỏ route thử mới hoặc stop riêng Handout67; giữ database/bài; giữ URL demo/Docs cũ.",
+    "deployment_readback": "not_done",
+    "operational_observation": "Candidate runtime riêng đã readback; Google browser và roster IC2304 còn chờ canary.",
+    "open_risks": [
+      "Canary Google và lớp thật chưa hoàn tất; không gọi verified."
+    ],
+    "public_url": "https://tranhoangduc90.github.io/izone-ai-team-pages/writing-handouts/lesson5-thu/"
+  },
+  "source_revision": {
+    "algorithm": "sha256",
+    "files": [
+      "index.html",
+      "teacher.html",
+      "teacher.css",
+      "teacher.js",
+      "teacher.test.mjs"
+    ],
+    "file_hashes": {
+      "index.html": "f3bc1c6969af8b1d7d78239093bf463b820252087de66e99bdf769c5d49d58a3",
+      "teacher.html": "9bab729f9670b1e466c02db52ed95b87716ee7ca31c559304fb16144a2250332",
+      "teacher.css": "e091276adce88dbc551e5ff075bc5f8ecd6b6d31db8e2805724bf3b98acf2b9a",
+      "teacher.js": "caf07736ae6d8bf1957fbc17cfa9afa6e2d633fb3fd2caf7c45c767a0e37e3ae",
+      "teacher.test.mjs": "8ff76e270d86759274af3afcae7ad98862bfc763ef7cd17f10cc7d0b1d61bd9e"
+    },
+    "excludes": [
+      "README.md",
+      "quality-gate.json"
+    ],
+    "value": "28099ab6b270ec833a033e41e98739cbcbd7b4a9e06d210836ad1ce3c167536f"
+  },
+  "backend_runtime_pin": {
+    "revision": "698c623ea584222aee1029fa8cb34ac8f25ce120",
+    "image_digest": "sha256:0be8599fcc2168eb4bef1f7498e986312433904b21be137a592cecc336d0b886",
+    "prompt_version": "lesson5-rubric-v3"
+  }
+}

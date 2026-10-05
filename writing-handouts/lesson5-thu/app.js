@@ -23,6 +23,8 @@ function comments(key){
   let body=hist.length?hist.map((h,index)=>index===0?`<article class="comment"><div class="comment-header"><span>Comment lần ${h.number}</span><span class="badge ${h.status}">${statusLabels[h.status]}</span></div><div class="comment-body"><p>${escape(h.feedback)}</p><details><summary>Xem nội dung đã gửi</summary><div class="snapshot">${escape(snapshot(h,key))}</div></details></div></article>`:`<details class="comment history"><summary>Comment lần ${h.number} · ${statusLabels[h.status]}</summary><div class="comment-body"><p>${escape(h.feedback)}</p><div class="snapshot">${escape(snapshot(h,key))}</div></div></details>`).join(''):'<p class="empty-comments">Nhận xét sẽ xuất hiện ở đây sau khi bạn nhấn Check.<br>Mỗi lần sửa đều được giữ lại.</p>';
   if(step.status==='pending')body='<p class="empty-comments" role="status">Đang đọc nội dung bạn vừa gửi…<br>Giữ trang mở, bạn không cần bấm lại.</p>'+body;
   if(step.status==='technical_error')body=`<p class="error" role="alert">${escape(step.error)} Thử lại bằng nút Check ở ô bên cạnh.</p>`+body;
+  const teacherNotes=(state.teacherComments||[]).filter(c=>c.section===key).reverse();
+  body=teacherNotes.map(c=>`<article class="comment"><div class="comment-header"><span>Giảng viên · ${escape(c.authorName)}</span></div><div class="comment-body"><p>${escape(c.feedback)}</p><details><summary>Xem nội dung lúc góp ý</summary><div class="snapshot">${escape(snapshot(c,key))}</div></details></div></article>`).join('')+body;
   const fails=step.history.filter(h=>h.status==='revision').length;
   if(fails>0&&fails%3===0&&step.status!=='passed')body+='<p class="support">Bạn đã sửa 3 lần trong vòng này. Hãy nhờ giảng viên giúp làm rõ điểm đang vướng trước khi thử tiếp.</p>';
   return `<aside class="comments" aria-label="Nhận xét ${escape(key)}"><div class="comments-heading"><h3>Dòng thời gian · Comment</h3><span>${hist.length} lượt</span></div><div aria-live="polite">${body}</div></aside>`;
@@ -123,7 +125,9 @@ function students(){
 }
 async function bootstrap(){
  try {
-  classes=(await api.roster()).classes;
+  const classRef=document.body?.dataset?.classRef;
+  classes=(await api.roster()).classes.filter(c=>!classRef||c.classRef===classRef);
+  if(!classes.length)throw new Error('CLASS_NOT_OPEN');
   for(const c of classes)for(const s of c.students)names[s.studentRef]=s.displayName;
   $('class-select').innerHTML=classes.map(c=>`<option value="${escape(c.classRef)}">${escape(c.className)}</option>`).join('');students();
   try{const remembered=JSON.parse(localStorage.getItem('izone-handout67:identity'));if(classes.some(c=>c.classRef===remembered?.classRef)){$('class-select').value=remembered.classRef;students();$('student-select').value=remembered.studentRef;}}catch{}

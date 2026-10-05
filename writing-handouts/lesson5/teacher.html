@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#152B4E"><link rel="icon" href="data:,">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'sha256-CJ02OVqT7p9v9HDCMKiouj0TJ0ooW7ybXUHymIEqyeE=' 'sha256-RU4sU0AaS8IBGZx8XrGt/pa9A5SLA3dQszGeqT5L3Kw=' https://accounts.google.com/gsi/style; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://lh3.googleusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Theo dõi Lesson 5 · IZONE Writing</title>
+  <link rel="stylesheet" href="../lesson5-demo/theme.css?v=20261005-2"><link rel="stylesheet" href="./teacher.css?v=20261005-1">
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="./teacher.html"><span class="logo">i<span>ZONE</span><small>IELTS TRAINING ACADEMY</small></span><span class="brand-divider"></span><span class="brand-product">Writing<span>Dành cho giảng viên</span></span></a><a class="text-button" href="./">Mở trang học viên ↗</a></header>
+  <main class="teacher-shell">
+    <section id="login" class="login-card"><p class="kicker red">Writing · Lesson 5</p><h1>Theo dõi bài làm của lớp</h1><p>Đăng nhập bằng tài khoản Google đã được cấp quyền giảng viên.</p><div id="google-signin"></div><p id="login-error" class="error" role="alert" hidden></p></section>
+    <section id="dashboard" hidden>
+      <div class="teacher-heading"><div><p class="kicker red">Mua đồ không cần thiết · Thân bài 2</p><h1>Theo dõi Lesson 5</h1><p id="updated" class="fine-print" role="status">Đang tải lớp…</p></div><div class="teacher-actions"><label>Lớp<select id="class-select"></select></label><button id="refresh" class="secondary">Cập nhật</button><button id="logout" class="text-button">Đăng xuất</button></div></div>
+      <p id="error" class="error" role="alert" hidden></p>
+      <p id="summary" class="summary-line"></p>
+      <div class="teacher-filters"><label>Tìm học viên<input id="search" type="search" placeholder="Nhập tên…"></label><label>Trạng thái<select id="status-filter"><option value="all">Tất cả</option><option value="not_started">Chưa bắt đầu</option><option value="working">Đang làm</option><option value="revision">Cần sửa</option><option value="pending">Đang chấm</option><option value="technical_error">Chấm gặp lỗi</option><option value="complete">Đã xong</option></select></label></div>
+      <div class="table-scroll"><table><caption class="fine-print">Bấm tên để xem bài làm và góp ý. Số bước đạt không bao gồm từ vựng.</caption><thead><tr><th>Học viên</th><th>Tiến độ</th><th>Topic</th><th>B1</th><th>A1</th><th>X1</th><th>B2</th><th>A2</th><th>X2</th><th>Góp ý GV</th></tr></thead><tbody id="students"></tbody></table></div>
+      <section id="detail" class="detail-panel" hidden aria-labelledby="detail-name"><div class="teacher-heading"><h2 id="detail-name"></h2><button id="close-detail" class="text-button">Đóng bài làm</button></div><div id="detail-content"></div><form id="comment-form"><h3>Góp ý của giảng viên</h3><label>Phần bài<select id="comment-section"><option value="topic">Topic sentence và idea</option><option value="b1">Điểm B · Ý 1</option><option value="a1">Điểm A · Ý 1</option><option value="x1">Cầu nối X · Ý 1</option><option value="b2">Điểm B · Ý 2</option><option value="a2">Điểm A · Ý 2</option><option value="x2">Cầu nối X · Ý 2</option></select></label><label>Nhận xét<textarea id="comment-text" required maxlength="4000" rows="4" placeholder="Gợi ý để học viên tự sửa…"></textarea></label><button id="comment-submit" class="primary">Gửi góp ý</button><p id="comment-status" role="status"></p></form></section>
+    </section>
+  </main>
+  <script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="./teacher.js?v=20261005-1"></script>
+</body>
+</html>
