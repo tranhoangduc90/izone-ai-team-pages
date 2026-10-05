@@ -29,6 +29,7 @@ const lessons = [
   { number: 2, file: '', code: '67-speaking-paraphrase', parts: ['paraphrase', 'speaking'] },
   { number: 3, file: 'lesson-3.html', code: '67-speaking-lam_ro', parts: ['clarify_1', 'clarify_2', 'clarify_3', 'freestyle'] },
   { number: 4, file: 'lesson-4.html', code: '67-speaking-diem_giua', parts: ['insert_middle', 'freestyle'] },
+  { number: 5, file: 'lesson-5.html', code: '67-speaking-on_tap_lam_ro_diem_giua', parts: ['review_clarify_middle', 'freestyle'] },
 ];
 const results = [];
 let browser;
@@ -74,7 +75,7 @@ async function setup(lesson, options = {}) {
       else data = { assignment: { title: `Homework Lesson ${lesson.number}`, classCode: code, assignmentCode: lesson.code,
         students: options.empty ? [] : options.duplicate ? [{ student_ref: refA, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }]
           : code === 'IC2304' ? [{ student_ref: refOther, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }] : [{ student_ref: refB, name: 'Học viên lớp B' }],
-        parts: lesson.parts.map(part_key => ({ part_key, min_questions: part_key === 'freestyle' && lesson.number === 4 && code === 'IC2304' ? 1 : 3 })), requiredPracticeCount: lesson.number === 4 ? 2 : 0, assignmentStatus: 'open', doctorEnabled: lesson.number !== 3 } };
+        parts: lesson.parts.map(part_key => ({ part_key, min_questions: part_key === 'freestyle' && (lesson.number === 5 || lesson.number === 4 && code === 'IC2304') ? 1 : 3 })), requiredPracticeCount: lesson.number >= 4 ? 2 : 0, assignmentStatus: 'open', doctorEnabled: lesson.number !== 3 } };
     } else if (path === '/session/start-selected') data = { session: { accessToken: `${code}-${body.studentRef}`, classCode: options.badSession ? 'IC9999' : code, studentRef: body.studentRef, documentId: body.documentId || `own-${code}-${body.studentRef}` } };
     else if (path === '/open') {
       opens += 1;
@@ -231,13 +232,20 @@ try {
     assert.equal(await test.page.locator('#open-homework').isDisabled(), true);
     await test.context.close();
   });
-  await scenario('Lesson 4: two main + two distinct practice links / receipt / extra practice', async () => {
-    const test = await setup(lessons[2], { completeFlow: true });
+  for (const lesson of lessons.filter(item => item.number >= 4)) {
+  await scenario(`Lesson ${lesson.number}: two main + two distinct practice links / receipt / extra practice`, async () => {
+    const test = await setup(lesson, { completeFlow: true, query:'?documentId=canary-doc&class=IC2304' });
     const { page, requests } = test;
-    await choose(page, 'IC2305', refB);
+    await choose(page, 'IC2304', refA);
     await open(page);
+    if (lesson.number === 5) {
+      assert.match(await page.locator('#review_clarify_middle-card .instruction-lead').innerText(),/3 câu.*một hoặc cả hai/);
+      assert.match(await page.locator('#freestyle-card .instruction-lead').innerText(),/1 câu/);
+      assert.equal(await page.locator('#review_clarify_middle-card .practice-button').getAttribute('href'),
+        'https://ducizone.short.gy/luyen_tap_lam_ro_chen_diem_giua');
+    }
     const share = index => `https://chatgpt.com/share/00000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
-    for (const [index, part] of lessons[2].parts.entries()) {
+    for (const [index, part] of lesson.parts.entries()) {
       await page.locator(`#${part}-link`).fill(share(index + 1));
       await page.locator(`#${part}-confirm`).click();
       await page.locator(`#${part}-result`).getByText('Đã xác nhận hội thoại').waitFor();
@@ -256,6 +264,8 @@ try {
     await page.locator('#practice-2-confirm').click();
     await page.locator('#completion-card').waitFor({ state: 'visible' });
     assert.equal(requests.filter(r => r.path === '/finish').length, 1);
+    assert.equal(await page.locator('#return-homework').getAttribute('href'),'https://docs.google.com/document/d/canary-doc/edit?tab=t.0');
+    await page.screenshot({path:join(output,`lesson-${lesson.number}-completed.png`),fullPage:true});
     await page.locator('#extra-exercise').selectOption('exercise-1');
     await page.locator('#extra-link').fill(share(5));
     await page.locator('#extra-confirm').click();
@@ -263,6 +273,7 @@ try {
     assert.deepEqual(test.errors, []);
     await test.context.close();
   });
+  }
   await scenario('CTA without class hint resolves Doc class and UUID name duplicates stay exact', async () => {
     const test = await setup(lessons[1], { remembered: refA, query: '?documentId=original-doc' });
     assert.equal(await test.page.locator('#class-select').inputValue(), 'IC2304');
