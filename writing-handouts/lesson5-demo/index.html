@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#152B4E">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Lesson 5 · Writing · IZONE</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./theme.css?v=20261005-2">
+</head>
+<body>
+  <a class="skip" href="#main">Đi tới nội dung</a>
+  <header class="topbar">
+    <a class="brand" href="./index.html" aria-label="IZONE Writing Lesson 5"><span class="logo">i<span>ZONE</span><small>IELTS TRAINING ACADEMY</small></span><span class="brand-divider"></span><span class="brand-product">Writing<span>Handout trên lớp</span></span></a>
+    <span class="preview-label">Bản xem thử</span>
+  </header>
+  <main id="main" tabindex="-1">
+    <section id="identity" class="login-shell" aria-labelledby="login-title">
+      <div class="login-card">
+        <p class="kicker red">Khóa 6–7 · Writing lesson 5</p>
+        <h1 id="login-title">Bắt đầu bài học</h1>
+        <p class="login-description">Xây lập luận cho thân bài 2,<br>từng bước từ ý tưởng đến A–X–B.</p>
+        <form id="login-form">
+          <label>Lớp của bạn<select id="class-select" required><option value="demo67">Khóa 67 · Lớp xem thử</option></select></label>
+          <label>Tên của bạn<select id="student-select" required><option value="">Chọn tên của bạn</option><option value="student-a">Học viên mẫu A</option><option value="student-b">Học viên mẫu B</option><option value="student-c">Học viên mẫu C</option></select></label>
+          <label class="checkbox"><input id="remember" type="checkbox" checked><span>Ghi nhớ tôi trên thiết bị này</span></label>
+          <button class="primary wide" type="submit">Tiếp tục <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="fine-print">Tên học viên và kết quả chấm trong bản xem thử là dữ liệu giả.</p>
+      </div>
+      <div class="login-footer"><span>Muốn xem nhanh giao diện bài làm?</span><button class="text-button" id="sample">Xem bài mẫu →</button></div>
+    </section>
+    <section id="confirm" class="login-shell" hidden aria-labelledby="confirm-title">
+      <div class="login-card confirm-card"><p class="kicker red">Xác nhận người học</p><div class="avatar" aria-hidden="true">HV</div><h1 id="confirm-title">Học viên mẫu A</h1><p>Khóa 67 · Lớp xem thử<br><strong>Writing · Lesson 5</strong></p><button id="confirm-button" class="primary wide">Đúng là tôi · mở bài làm →</button><button id="back" class="text-button">Chọn lại tên</button><p class="fine-print">Chọn tên và xác nhận như Progress Log.</p></div>
+    </section>
+    <section id="workspace" hidden>
+      <div class="context"><div><b id="learner-label"></b><span>Khóa 67 · Lesson 5</span></div><div class="context-actions"><span id="save-state" role="status">Chưa có thay đổi</span><button id="logout" class="text-button">Đổi người học</button></div></div>
+      <details class="demo-tools"><summary>Chọn tình huống xem thử</summary><div class="demo-controls"><label>Đến màn<select id="scenario"><option value="blank">Bài trống</option><option value="sample">Đã nhập idea và Topic</option><option value="revision">Topic cần sửa</option><option value="idea1">Ý 1 đã đạt · mở từ vựng</option><option value="complete">Cả hai ý đã hoàn tất</option></select></label><button id="load-case" class="secondary">Mở tình huống</button><label>Kết quả của nút Check<select id="demo-result"><option value="script">Lần đầu cần sửa, lần sau đạt</option><option value="passed">Đạt</option><option value="revision">Cần sửa</option><option value="technical_error">Lỗi kỹ thuật</option></select></label><p>Nhận xét mô phỏng để thử hành trình; không phải đánh giá AI. Mở tình huống sẽ thay nháp demo của người đang chọn.</p></div></details>
+      <div class="layout">
+        <aside class="journey"><p class="kicker">Bài học của bạn</p><h2>Thân bài 2</h2><nav id="journey-nav" aria-label="Tiến độ bài làm"></nav><div class="journey-note"><span>A → X → B</span><p>Chốt B trước, tìm A bám đề,<br>rồi xây cầu nối X.</p></div></aside>
+        <div class="work-content">
+          <div class="page-title"><div><p class="kicker red">Writing · Lesson 5</p><h1>Mua đồ không cần thiết</h1><p>Hoàn thiện từng ý. Chỉ chuyển tiếp khi lập luận đã rõ.</p></div><span class="lesson-tag">Thân bài 2</span></div>
+          <article id="prompt" class="prompt"><div class="prompt-heading"><span class="number">?</span><h2>Đề bài</h2></div><p lang="en">Many people buy products that they do not really need and replace old products with new ones unnecessarily. Why do people buy things they do not need? Do you think this is a good thing?</p></article>
+          <div id="sections"></div>
+          <div id="completion" hidden></div>
+          <footer class="page-footer">IZONE · Xây lập luận rõ trước khi tìm cách diễn đạt.</footer>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div id="toast" role="status" class="toast" hidden></div>
+  <script type="module" src="./app.js?v=20261005-2"></script>
+</body>
+</html>

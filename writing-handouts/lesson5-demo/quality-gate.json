@@ -1,0 +1,397 @@
+{
+  "schema_version": 3,
+  "product": "Lesson 5 · HTML demo local",
+  "change_id": "lesson5-web-demo-20261005",
+  "change_kind": "feature",
+  "escaped_user_defect": false,
+  "risk": "medium",
+  "system_traits": [
+    "stateful",
+    "asynchronous"
+  ],
+  "experience": {
+    "planning_mode": "standard",
+    "mode_reason": "Demo local có trạng thái và kết quả mô phỏng bất đồng bộ; không nối dịch vụ thật.",
+    "user": "Học viên khóa 67 và Đức xem thử",
+    "problem": "Docs chưa hỗ trợ hành trình từng ý.",
+    "outcome": "Xem và thử luồng B–A–X ý 1 rồi ý 2.",
+    "out_of_scope": [
+      "Backend, n8n và đăng nhập thật; production."
+    ],
+    "plain_language_summary": "Demo thay ô Docs bằng giao diện web và thể hiện luật mở khóa."
+  },
+  "change_package": {
+    "proposal": "Tạo route demo độc lập theo kế hoạch.",
+    "behavior_baseline": "Docs chấm A/X hai ý; chưa có frontend Lesson 5.",
+    "deltas": [
+      {
+        "id": "DELTA-DEMO",
+        "operation": "ADDED",
+        "behavior": "Demo chọn tên, xác nhận, ô vàng, Comment và khóa tuần tự từng ý.",
+        "module_ids": [
+          "MOD-STATE",
+          "MOD-UI"
+        ],
+        "test_ids": [
+          "T-FLOW",
+          "T-LOCK",
+          "T-INVALID",
+          "T-HISTORY",
+          "T-ASYNC",
+          "T-RESTORE",
+          "T-UI",
+          "T-ERROR",
+          "T-VOCAB"
+        ]
+      }
+    ],
+    "archive_status": "active"
+  },
+  "module_map": {
+    "revision": "plan-v1",
+    "modules": [
+      {
+        "id": "MOD-STATE",
+        "name": "Tiến độ mô phỏng",
+        "responsibility": "Quyết định bước được mở và lưu kết quả fixture.",
+        "owns_data": [
+          "demo_state"
+        ],
+        "public_interfaces": [
+          "createState",
+          "canEdit",
+          "beginCheck",
+          "finishCheck",
+          "restore"
+        ],
+        "depends_on": [],
+        "boundary_rules": [
+          "Không gọi API thật."
+        ],
+        "test_ids": [
+          "T-FLOW",
+          "T-LOCK",
+          "T-INVALID",
+          "T-HISTORY",
+          "T-ASYNC",
+          "T-RESTORE",
+          "T-ERROR",
+          "T-VOCAB"
+        ]
+      },
+      {
+        "id": "MOD-UI",
+        "name": "Giao diện học viên",
+        "responsibility": "Hiển thị login, bài và nhận xét.",
+        "owns_data": [],
+        "public_interfaces": [
+          "render"
+        ],
+        "depends_on": [
+          "MOD-STATE"
+        ],
+        "boundary_rules": [
+          "Không tự gán passed từ nội dung nhận xét."
+        ],
+        "test_ids": [
+          "T-UI",
+          "T-FLOW",
+          "T-VOCAB"
+        ]
+      }
+    ],
+    "integrations": [
+      {
+        "id": "INT-STATE-UI",
+        "producer": "MOD-STATE",
+        "consumer": "MOD-UI",
+        "contract": "UI dùng canEdit/status từ state và gửi command, nhận lại state.",
+        "test_ids": [
+          "T-FLOW",
+          "T-LOCK",
+          "T-UI"
+        ]
+      }
+    ]
+  },
+  "requirements": [
+    {
+      "id": "REQ-DEMO",
+      "statement": "Đủ màn login/confirm và từng bước yêu cầu trong demo.",
+      "test_ids": [
+        "T-FLOW",
+        "T-LOCK",
+        "T-INVALID",
+        "T-HISTORY",
+        "T-ASYNC",
+        "T-RESTORE",
+        "T-UI",
+        "T-ERROR",
+        "T-VOCAB"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-LOCK",
+      "statement": "Không mở ý2 hay vocab trước đủ bước đúng ý.",
+      "test_ids": [
+        "T-LOCK",
+        "T-VOCAB"
+      ]
+    },
+    {
+      "id": "INV-HISTORY",
+      "statement": "Không mất lịch sử hoặc nhận kết quả cũ sau reset.",
+      "test_ids": [
+        "T-HISTORY",
+        "T-ASYNC",
+        "T-RESTORE"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-FLOW",
+      "category": "happy_path",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    },
+    {
+      "id": "T-LOCK",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    },
+    {
+      "id": "T-INVALID",
+      "category": "invalid_input",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    },
+    {
+      "id": "T-HISTORY",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    },
+    {
+      "id": "T-ASYNC",
+      "category": "concurrency_idempotency",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    },
+    {
+      "id": "T-RESTORE",
+      "category": "lifecycle_time",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    },
+    {
+      "id": "T-UI",
+      "category": "happy_path",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    },
+    {
+      "id": "T-ERROR",
+      "category": "regression",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    },
+    {
+      "id": "T-VOCAB",
+      "category": "happy_path",
+      "priority": "P1",
+      "status": "passed",
+      "evidence": "QA.md; core.test.mjs 8/8 hoặc T-UI browser 15 assertion PASS và responsive9 viewport."
+    }
+  ],
+  "task_graph": {
+    "plan_revision": "plan-v1",
+    "tasks": [
+      {
+        "id": "D1",
+        "result": "Demo và plan có thể xem thử.",
+        "module_ids": [
+          "MOD-STATE",
+          "MOD-UI"
+        ],
+        "depends_on": [],
+        "consumes": [
+          "Docs nguồn",
+          "mẫu UI",
+          "yêu cầu"
+        ],
+        "produces": [
+          "PLAN.md",
+          "index.html",
+          "core.mjs",
+          "app.js",
+          "theme.css"
+        ],
+        "contract": "Dữ liệu giả và route độc lập.",
+        "test_ids": [
+          "T-FLOW",
+          "T-LOCK",
+          "T-INVALID",
+          "T-HISTORY",
+          "T-ASYNC",
+          "T-RESTORE",
+          "T-UI",
+          "T-ERROR",
+          "T-VOCAB"
+        ],
+        "evidence_required": [
+          "Native tests",
+          "Browser desktop/mobile",
+          "cổng chất lượng"
+        ],
+        "decision_inputs": [
+          "Luật tuần tự người dùng"
+        ],
+        "affected_future_tasks": [],
+        "status": "done",
+        "plan_revision": "plan-v1"
+      }
+    ]
+  },
+  "risk_register": {
+    "assessment": "PASS",
+    "risks": [
+      {
+        "id": "R-LOCK",
+        "description": "Mở bước sai hoặc nhận kết quả của bài trước.",
+        "probability": 2,
+        "impact": 2,
+        "score": 4,
+        "severity": "P2",
+        "status": "mitigated",
+        "owner": "Codex",
+        "mitigation": "State duy nhất và request generation guard.",
+        "test_ids": [
+          "T-LOCK",
+          "T-ASYNC"
+        ]
+      }
+    ],
+    "waivers": []
+  },
+  "coverage_exemptions": {},
+  "cross_constraints": [
+    {
+      "id": "ORDER",
+      "left": {
+        "name": "idea1_required_passes",
+        "value": 3
+      },
+      "operator": "==",
+      "right": {
+        "name": "vocabulary_unlock_passes",
+        "value": 3
+      },
+      "status": "passed",
+      "evidence": "Yêu cầu B/A/X cả ba thông qua; T-LOCK/T-VOCAB sẽ kiểm implementation."
+    }
+  ],
+  "mutations": [],
+  "verification_runs": [
+    {
+      "id": "V-DEMO-FULL",
+      "scope": "full_suite",
+      "command": "node --test writing-handouts/lesson5-demo/core.test.mjs",
+      "tree_revision": "sha256:ad12a116e06369c0db3d2ba8a5255b1ea2d42d29139145176a69938926400013",
+      "captured_at": "2026-10-05T05:24:13.773512+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "Native demo: 8/8; T-UI kiểm browser riêng trong QA.md."
+    },
+    {
+      "id": "V-UI",
+      "scope": "behavioral",
+      "command": "playwright-cli -s=lesson5-final run-code (QA.md)",
+      "tree_revision": "sha256:ad12a116e06369c0db3d2ba8a5255b1ea2d42d29139145176a69938926400013",
+      "captured_at": "2026-10-05T05:24:13.773512+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "15 assertion browser + 9 viewport; 0 lỗi console; ảnh đã nhìn."
+    },
+    {
+      "id": "V-WRITING-BASELINE",
+      "scope": "full_suite",
+      "command": "npm test (cwd writing-handouts) và npm run check",
+      "tree_revision": "sha256:ad12a116e06369c0db3d2ba8a5255b1ea2d42d29139145176a69938926400013",
+      "captured_at": "2026-10-05T05:24:13.773512+00:00",
+      "exit_code": 0,
+      "outcome": "passed",
+      "passed": 149,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "E:/Codex-Data/lesson5-existing-writing-tests-20261005.log; shared files không đổi."
+    }
+  ],
+  "convergence": {
+    "status": "passed",
+    "tree_revision": "sha256:ad12a116e06369c0db3d2ba8a5255b1ea2d42d29139145176a69938926400013",
+    "gaps": [],
+    "unrequested_work": [],
+    "evidence": "Đối chiếu từng yêu cầu trong QA.md và PLAN.md; diff chỉ thêm route demo."
+  },
+  "context_handoff": {
+    "summary": "Plan và demo local đã kiểm.",
+    "decisions": [
+      "Đề xuất trong PLAN.md; không ghi DECISIONS."
+    ],
+    "completed": [
+      "D1"
+    ],
+    "next_step": "Đức xem HTML và nội dung plan; backend/n8n thật theo P1–P5.",
+    "open_risks": [],
+    "tree_revision": "sha256:ad12a116e06369c0db3d2ba8a5255b1ea2d42d29139145176a69938926400013"
+  },
+  "release": {
+    "target_environment": "local",
+    "decision": "ready",
+    "base_tree_revision": "6d4ef78be047b66c55d74bd0b2ec5173ac774140",
+    "current_tree_revision": "sha256:ad12a116e06369c0db3d2ba8a5255b1ea2d42d29139145176a69938926400013",
+    "production_authorized": false,
+    "rollback": "Bỏ route demo riêng; sản phẩm thật không thay đổi.",
+    "deployment_readback": "not_applicable",
+    "operational_observation": "Browser local thử đủ7 bước, đọc lại nháp, nhận xét và vocab; chưa triển khai thật.",
+    "open_risks": []
+  },
+  "release_scope": {
+    "acceptance_mode": "small_complete",
+    "description": "HTML demo và plan; không bao gồm backend/n8n production."
+  },
+  "source_revision": {
+    "algorithm": "sha256",
+    "files": [
+      "PLAN.md",
+      "QA.md",
+      "index.html",
+      "theme.css",
+      "app.js",
+      "core.mjs",
+      "core.test.mjs"
+    ],
+    "excludes": [
+      "quality-gate.json (hồ sơ bằng chứng tự tham chiếu)"
+    ],
+    "value": "sha256:ad12a116e06369c0db3d2ba8a5255b1ea2d42d29139145176a69938926400013"
+  }
+}
