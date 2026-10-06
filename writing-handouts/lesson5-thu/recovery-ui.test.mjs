@@ -5,6 +5,8 @@ import vm from 'node:vm';
 import {ORDER,FIELDS,createState} from '../lesson5-demo/core.mjs';
 import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs';
 import {renderActivityList,renderActivityDetail} from '../lesson5/activity-ui.mjs';
+import {savedContent,threadsView,approvalLabel,selectionOffsets,fieldHash} from './features.mjs';
+const featureGlobals={savedContent,threadsView,approvalLabel,selectionOffsets,fieldHash,installStyles(){}};
 
 // Dùng dữ liệu giả để kiểm nội dung người học nhìn thấy và chống phản hồi muộn.
 // Không gọi lớp thật; lỗi assertion trả trạng thái hỏng cho bộ kiểm Node.
@@ -65,7 +67,7 @@ test('V-PROCESSING · chờ retry và lỗi giữ bài có thông báo rõ',()=>
 test('V-AUDIT · nhật ký giảng viên giữ đúng phiên và trạng thái lỗi',async()=>{
  const nodes=new Map();const get=id=>{if(!nodes.has(id))nodes.set(id,{addEventListener(){},insertAdjacentHTML(){},textContent:'',innerHTML:'',value:'',hidden:false,dataset:{}});return nodes.get(id);};
  let resolve;const pending=new Promise(r=>resolve=r);
- const context=vm.createContext({ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async()=>({ok:true,status:200,json:()=>pending}),document:{getElementById:get},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
+ const context=vm.createContext({...featureGlobals,ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async()=>({ok:true,status:200,json:()=>pending}),document:{getElementById:get,querySelectorAll:()=>[]},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
  const source=fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('void boot();','');vm.runInContext(source,context);
  vm.runInContext("selected={ref:'A'};",context);const read=vm.runInContext("readActivity('A')",context);
  vm.runInContext("selected={ref:'B'};",context);resolve({ok:true,events:[{kind:'session_opened',event_at:'2026-10-06T00:00:00Z'}],nextCursor:null});await read;
@@ -80,7 +82,7 @@ test('V-COMMENT · góp ý được lưu và nhật ký vẫn hiện sau ACK',as
  const session=complete();session.ref='fixture-session';session.version=2;
  const nodes=new Map();const get=id=>{if(!nodes.has(id))nodes.set(id,{handlers:{},addEventListener(k,f){this.handlers[k]=f;},textContent:'',innerHTML:'',value:'',hidden:false,dataset:{}});return nodes.get(id);};
  let activityCalls=0;
- const context=vm.createContext({ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async url=>({ok:true,status:200,json:async()=>url.includes('/activity?')?(activityCalls++,{ok:true,events:[],nextCursor:null}):url.includes('/students?')?{ok:true,students:[]}:{ok:true,session}}),document:{getElementById:get,hidden:false},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
+ const context=vm.createContext({...featureGlobals,ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async url=>({ok:true,status:200,json:async()=>url.includes('/activity?')?(activityCalls++,{ok:true,events:[],nextCursor:null}):url.includes('/students?')?{ok:true,students:[]}:{ok:true,session}}),document:{getElementById:get,querySelectorAll:()=>[],hidden:false},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
  vm.runInContext(fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('void boot();',''),context);
  vm.runInContext("selected={ref:'fixture-session'};detailVersion=1;actorEmail='fixture@example.edu';",context);
  get('comment-text').value='Góp ý fixture';get('comment-section').value='topic';get('class-select').value='IC2304';
@@ -104,7 +106,7 @@ test('V-AUDIT-REOPEN · mở lại cùng bài bỏ phản hồi nhật ký trư�
   }
   return nodes.get(id);
  };
- const context=vm.createContext({ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async url=>({ok:true,status:200,json:async()=>url.includes('/activity?')?(++activityCalls===1?oldResponse:{ok:true,events:[],nextCursor:null}):detailResponse}),document:{getElementById:get,hidden:false},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
+ const context=vm.createContext({...featureGlobals,ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async url=>({ok:true,status:200,json:async()=>url.includes('/activity?')?(++activityCalls===1?oldResponse:{ok:true,events:[],nextCursor:null}):detailResponse}),document:{getElementById:get,querySelectorAll:()=>[],hidden:false},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
  vm.runInContext(fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('void boot();',''),context);
  vm.runInContext("selected={ref:'fixture-session'};rows=[{studentRef:'fixture-student',sessionRef:'fixture-session',displayName:'Học viên fixture'}];",context);
  const oldRead=vm.runInContext("readActivity('fixture-session')",context);
