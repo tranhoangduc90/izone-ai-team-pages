@@ -22,8 +22,9 @@ test('Chrome desktop/mobile: nguồn demo lỗi vẫn chọn56, loại806, mở 
       return res.end('<!doctype html><html><body><h1>Đích bài thi giả lập</h1></body></html>');
     }
     try {
+      const content = await readFile(target);
       res.writeHead(200, { 'Content-Type': { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' }[extname(target)] || 'application/octet-stream' });
-      res.end(await readFile(target));
+      res.end(content);
     } catch { res.writeHead(404).end(); }
   });
   await new Promise(done => server.listen(0, '127.0.0.1', done));

@@ -125,22 +125,24 @@ for (const { slug, taskNumber } of [
           calls: calls.length, blocked, errors
         })}`, { cause: error });
       }
-      assert.match(await status.innerText(), new RegExp(`Đang chấm Task ${taskNumber}`));
+      assert.equal(await status.innerText(), 'Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau');
       assert.equal(await page.locator('.writing-score-card.is-action').count(), 0);
       assert.ok(calls.length >= 2, 'Chưa đi qua cả khôi phục lượt và tải kết quả');
       assert.ok(calls.every(call => call.attemptToken === attemptToken), 'Lượt kết quả bị đổi định danh');
 
-      await status.getByRole('button', { name: 'Kiểm tra kết quả ngay' }).click();
-      // Click chưa đợi callback async/API; chờ kết quả UI, không đọc nhầm thông báo cũ.
-      await status.getByText('Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.', { exact: true }).waitFor({ state: 'visible' });
-      assert.equal(
-        await status.locator('p').innerText(),
-        'Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.'
-      );
+      assert.equal(await page.getByRole('button', { name: 'Kiểm tra kết quả ngay' }).count(), 0);
+      const details = page.locator('#questionDetails details');
+      await details.nth(0).locator('summary').click();
+      const callsBeforePolling = calls.length;
+      await page.waitForFunction(() => document.querySelector('#questionDetails details')?.open);
+      await page.waitForTimeout(12_000);
+      assert.ok(calls.length > callsBeforePolling, 'Chưa có cập nhật tự động Writing');
+      assert.equal(await details.nth(0).evaluate(node => node.open), true, 'Polling làm đóng Listening');
+      assert.equal(await details.nth(1).evaluate(node => node.open), false, 'Polling làm đổi Reading');
       assert.equal(await page.locator('.writing-score-card.is-action').count(), 0);
 
       ready = true;
-      await status.getByRole('button', { name: 'Kiểm tra kết quả ngay' }).click();
+      // API fixture đã công bố sau hạn server; nhận qua polling, không cần nút kiểm tra.
       const score = page.locator('#writingSubmissionResult .writing-score-card.is-action');
       await score.waitFor({ state: 'visible' });
       assert.match(await score.innerText(), new RegExp(`Writing Task ${taskNumber}[\\s\\S]*Band 7.5`));
@@ -173,3 +175,87 @@ for (const { slug, taskNumber } of [
     }
   });
 }
+
+for (const slug of ['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56']) {
+  test(`${slug}: Writing gọn, Nộp bài và giữ dàn ý/editor trên desktop/mobile`, async () => {
+    const server = await servePages();
+    const base = `http://127.0.0.1:${server.address().port}/`;
+    const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+    const context = await browser.newContext(); const page = await context.newPage(); const blocked = [];
+    await context.route('**/*', route => {
+      if (route.request().url().startsWith(base)) return route.continue();
+      blocked.push(route.request().url()); return route.abort();
+    });
+    try {
+      await page.goto(`${base}term-tests/${slug}-computer-based/?class=CODEXDEMO56&demo=writing`);
+      await page.locator('#writingView').waitFor({ state: 'visible' });
+      for (const width of [1280, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        assert.equal(await page.locator('#submitWriting').innerText(), 'Nộp bài');
+        assert.equal(await page.locator('#writingTaskTabs').isVisible(), false);
+        assert.equal(await page.locator('#writingView .cbt-notes-open').count(), 0);
+        assert.equal(await page.locator('#writingView .writing-pane-header span').count(), 0);
+        assert.equal(await page.locator('#writingView .writing-outline-card header span').count(), 0);
+        // demo=writing là preview offline: từ trước đã không chạy đồng hồ. Timer thật có suite riêng.
+        assert.equal(await page.locator('#writingView .cbt-writing-clock').count(), 0);
+        await page.locator('[data-writing-outline]').fill('Dàn ý giả để kiểm lưu');
+        await page.locator('[data-writing-task]').first().fill('Synthetic essay for editor and word count.');
+        assert.equal(await page.locator('[data-writing-outline]').inputValue(), 'Dàn ý giả để kiểm lưu');
+        assert.match(await page.locator('.writing-editor-meta').first().innerText(), /7 từ/);
+      }
+      assert.deepEqual(blocked, [], 'Test Writing offline không được gọi hệ thống thật');
+    } finally { await browser.close(); await new Promise(done => server.close(done)); }
+  });
+}
+
+test('Mini: bảng L/R giữ mở, chỉ nhận Link LMS qua API sau 2 giờ và reload giữ kết quả', async () => {
+  const server = await servePages(); const base = `http://127.0.0.1:${server.address().port}/`;
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  const context = await browser.newContext(); const page = await context.newPage();
+  const blocked = []; let published = false; let calls = 0;
+  const now = Date.parse('2026-10-04T10:00:00Z');
+  const lmsUrl = 'https://ducizone.ddns.net/writing/shared/writing-essays/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/view?v=1';
+  await page.clock.install({ time: new Date(now) });
+  await page.clock.pauseAt(new Date(now + 60_000));
+  await page.addInitScript(({ ref, token }) => {
+    localStorage.setItem('izone-test:mini-test-k56:IC5601', JSON.stringify({ studentRef: ref, studentName: 'Học viên giả A', attemptToken: token, completed: true, writingStarted: true, writingSubmitted: true }));
+  }, { ref: studentRef, token: attemptToken });
+  await context.route('**/*', async route => {
+    const request = route.request(), url = new URL(request.url());
+    if (url.pathname.endsWith('/k56-mini-shared/config.js')) return route.fulfill({ contentType: 'text/javascript', body: "window.TERM_TEST_APP_CONFIG={API_BASE_URL:'https://ducizone.ddns.net/mapping-api'};" });
+    if (url.pathname.endsWith('/api/term-tests/roster')) return route.fulfill({ json: { class: { name: classCode }, students: [{ ref: studentRef, name: 'Học viên giả A' }] } });
+    if (url.pathname.endsWith('/mini-test-k56/attempt/prepare')) {
+      const content = await request.frame().evaluate(() => window.K56_TERM_TEST_CONTENT);
+      return route.fulfill({ json: { content, attemptToken, examMode: 'lis_first', nextSection: 'result', completed: true, listeningSubmitted: true, readingSubmitted: true, writingSubmittedAt: new Date(now).toISOString() } });
+    }
+    if (url.pathname.endsWith('/api/term-tests/result')) {
+      calls++;
+      const payload = resultPayload({ slug: 'mini-test-k56', taskNumber: 2, ready: false });
+      payload.writing.grading = published ? { ready: true, status: 'ready', mode: 'homework', lmsUrl }
+        : { ready: false, status: 'awaiting_release', availableAt: new Date(now + 7200000).toISOString(), tasks: [] };
+      return route.fulfill({ json: payload });
+    }
+    if (request.url().startsWith(base)) return route.continue();
+    blocked.push(url.pathname); return route.abort();
+  });
+  try {
+    await page.goto(`${base}term-tests/mini-test-k56-computer-based/?class=${classCode}`);
+    await page.locator('#writingSubmissionResult .writing-grading-status').waitFor({ state: 'visible' });
+    const details = page.locator('#questionDetails details');
+    await details.nth(0).locator('summary').click(); await details.nth(1).locator('summary').click();
+    const before = calls;
+    await page.clock.runFor(7139999);
+    assert.equal(await page.locator('#writingSubmissionResult a').count(), 0);
+    assert.equal(calls, before, 'Không polling liên tục trong khoảng chờ công bố');
+    published = true; await page.clock.runFor(1);
+    const link = page.locator('#writingSubmissionResult a');
+    await link.waitFor({ state: 'visible' }); assert.equal(await link.getAttribute('href'), lmsUrl);
+    assert.equal(await details.nth(0).evaluate(node => node.open), true);
+    assert.equal(await details.nth(1).evaluate(node => node.open), true);
+    assert.doesNotMatch(await page.locator('#writingSubmissionResult').innerText(), /Band \d|Writing tổng/);
+    await page.reload(); await link.waitFor({ state: 'visible' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    assert.deepEqual(blocked, []);
+  } finally { await browser.close(); await new Promise(done => server.close(done)); }
+});

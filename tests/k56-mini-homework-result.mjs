@@ -38,16 +38,14 @@ function renderContext(grading, { serverGradingMode = true, refreshWritingGradin
 
 function render(grading) { return flatten(renderContext(grading).root); }
 
-test('Mini: kiểm tra khi Writing chưa xong hiện thông báo đã duyệt và không hiện điểm', async () => {
+test('Mini: Writing chưa xong hiện thông báo đã duyệt, không có nút kiểm tra hay điểm', () => {
   const { root } = renderContext({ ready: false, status: 'processing' }, {
     serverGradingMode: false,
     refreshWritingGrading: async () => 'pending'
   });
-  const refresh = flatten(root).find(node => node.tag === 'button' && node.textContent === 'Kiểm tra kết quả ngay');
-  assert.ok(refresh);
-  await refresh.listeners.click();
-  assert.equal(root.querySelector('.writing-grading-status p')?.textContent,
-    'Phần Writing của bạn đang được giáo viên chấm điểm. Kết quả sẽ được hiển thị sau.');
+  assert.equal(flatten(root).some(node => node.tag === 'button'), false);
+  assert.ok(flatten(root).some(node => node.textContent ===
+    'Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau'));
   assert.doesNotMatch(flatten(root).map(node => node.textContent).join(' '), /Writing tổng|Band \d/);
 });
 

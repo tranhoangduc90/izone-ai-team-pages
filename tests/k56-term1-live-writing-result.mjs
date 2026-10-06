@@ -25,9 +25,9 @@ test('K56 nhận tín hiệu ready an toàn và vẫn giữ polling dự phòng'
 });
 
 test('mọi nhánh Term Test 1 K56 tải cùng revision mới', async () => {
-  const revision = '20261003-writing-save-cas-v1';
+  const revision = '20261005-k56-writing-results-v1';
   const bootstrap = await read('term-tests/term-test-1-k56-computer-based/bootstrap.js');
-  assert.equal((bootstrap.match(new RegExp(revision, 'g')) || []).length, 2);
+  assert.equal((bootstrap.match(new RegExp('app\\.js\\?(?:rev|v)=' + revision, 'g')) || []).length, 2);
   assert.match(await read('term-tests/term-test-1-k56-computer-based/index.html'), new RegExp(revision));
   assert.match(await read('term-tests/term-test-1-k56/index.html'), new RegExp(revision));
 });

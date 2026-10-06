@@ -190,6 +190,10 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
     }
   });
   test(title('bootstrap chính/dự phòng và answer sheet đều nạp app cache D08'), () => {
+    // Ba client K56 giữ cơ chế D08 nhưng có bản giao diện mới; K67 giữ revision cũ.
+    const cacheRevision = /^term-tests\/k56-(?:mini-|test2-)?shared\/app\.js$/.test(sourcePath)
+      ? '20261005-k56-writing-results-v1' : '20261003-writing-save-cas-v1';
+    const revisionOf = url => { const query = new URL(url, 'https://fixture.invalid').searchParams; return query.get('rev') || query.get('v'); };
     for (const path of cachePaths) {
       const text = fs.readFileSync(path, 'utf8');
       const appUrls = [...text.matchAll(/[.\/\w-]*app\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
@@ -199,11 +203,11 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
         // Trang CBT chỉ nạp bootstrap; bootstrap chính/dự phòng đã kiểm đúng app ở ca cùng bảng.
         const bootstrapUrls = [...text.matchAll(/bootstrap\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
         assert.ok(bootstrapUrls.length > 0, `Thiếu bootstrap trong ${path}`);
-        for (const url of bootstrapUrls) assert.match(url, /(?:rev|v)=20261003-writing-save-cas-v1(?:&|$)/, path);
+        for (const url of bootstrapUrls) assert.equal(revisionOf(url), cacheRevision, path);
       } else {
         assert.ok(writingUrls.length > 0, `Thiếu đúng Writing app ${writingApp} trong ${path}`);
       }
-      for (const url of writingUrls) assert.match(url, /(?:rev|v)=20261003-writing-save-cas-v1(?:&|$)/, path);
+      for (const url of writingUrls) assert.equal(revisionOf(url), cacheRevision, path);
       for (const url of appUrls) assert.doesNotMatch(url, /20260910-audio-recovery-v1|20260913-writing-revision-v1|20260929-mini-homework-25m/);
     }
   });

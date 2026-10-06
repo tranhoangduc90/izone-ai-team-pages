@@ -14,7 +14,7 @@ test('fixture đóng được khi kết nối tải vẫn mở, không phát sin
   let server, socket, closed, timer;
   try {
     await writeFile(join(root, 'large-fixture.bin'), Buffer.alloc(16 * 1024 * 1024));
-    server = await createCompletedResultFixture({ backendRoot: 'E:/wt/k56-e03-backend-20261002',
+    server = await createCompletedResultFixture({ backendRoot: process.env.K56_EDGE_BACKEND_ROOT || 'E:/wt/k56-e03-backend-20261002',
       pagesRoot: root, fixture, item: fixture.cases[0] });
     const before = await server.audit();
     const url = new URL(server.url);

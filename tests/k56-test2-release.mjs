@@ -17,7 +17,7 @@ assert.ok(html.includes('data-test="term-test-1-k56-computer-based"'));
 assert.ok(html.includes('data-test="term-test-2-k56-computer-based"'));
 assert.ok(!html.includes('127.0.0.1'));
 const app=read('k56-test2-shared/app.js');
-assert.ok(app.includes('Nộp bài & chấm Writing tự động'));
+assert.ok(app.includes('Nộp bài'));
 assert.ok(!app.includes('viewListeningResult'));assert.ok(!app.includes('Xem kết quả Listening'));
 assert.ok(app.includes('bandFromCorrect'));assert.ok(app.includes('sectionScoreText'));
 assert.match(app,/\[39, 9\].*\[37, 8\.5\].*\[35, 8\]/s);

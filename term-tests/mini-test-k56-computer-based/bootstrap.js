@@ -31,9 +31,9 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?rev=20261003-writing-save-cas-v1'))
+      .then(() => loadScript('../k56-mini-shared/app.js?rev=20261005-k56-writing-results-v1'))
       .then(() => loadScript('enhance.js?v=20260910-audio-recovery-v1-20261001-writing-ui-v1'))
-      .then(() => loadScript('annotations.js'))
+      .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
       });
@@ -599,9 +599,9 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?rev=20261003-writing-save-cas-v1');
+    await loadScript('../k56-mini-shared/app.js?rev=20261005-k56-writing-results-v1');
     await loadScript('enhance.js?v=20260910-audio-recovery-v1-20261001-writing-ui-v1');
-    await loadScript('annotations.js');
+    await loadScript('annotations.js?rev=20261005-k56-writing-results-v1');
   }
 
   async function resumeAfterListening() {

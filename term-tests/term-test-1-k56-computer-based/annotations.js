@@ -345,7 +345,7 @@
     }
   });
   document.querySelectorAll('#listeningView, #readingView, #writingView, .cbt-listening-section, .cbt-reading-section').forEach(view => viewObserver.observe(view, { attributes: true, attributeFilter: ['hidden'] }));
-  document.querySelectorAll('.cbt-toolbar-controls, .writing-exam-header').forEach(toolbar => {
+  document.querySelectorAll('.cbt-toolbar-controls').forEach(toolbar => {
     const opener = button('cbt-tool-button cbt-notes-open', 'Notes', showAllNotes);
     opener.setAttribute('aria-controls', 'cbtNotesPanel');
     toolbar.append(opener);

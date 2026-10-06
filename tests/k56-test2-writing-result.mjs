@@ -28,11 +28,11 @@ test('Task 1 có điểm và nút xem đúng bài chấm cho cả hai lớp',()=
 });
 test('đang chấm không tạo thẻ điểm giả',()=>{
  const {target}=fixture({ready:false,status:'processing',tasks:[]});const nodes=flatten(target);
- assert.ok(nodes.some(n=>n.textContent==='Đang chấm Task 1'));assert.ok(!nodes.some(n=>n.className==='writing-score-card is-action'));
+ assert.ok(nodes.some(n=>n.textContent==='Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau'));assert.ok(!nodes.some(n=>n.className==='writing-score-card is-action'));
 });
 test('chưa nộp ẩn và xóa phần kết quả Writing',()=>{
  const {target}=fixture(null,false);assert.equal(target.hidden,true);assert.equal(target.children.length,0);
 });
 test('bộ nạp và Answer Sheet dùng cache mới cho thẻ Task 1',()=>{
- for(const file of ['term-tests/term-test-2-k56-computer-based/bootstrap.js','term-tests/term-test-2-k56-computer-based/index.html','term-tests/term-test-2-k56/index.html'])assert.match(fs.readFileSync(file,'utf8'),/20261003-writing-save-cas-v1/);
+ for(const file of ['term-tests/term-test-2-k56-computer-based/bootstrap.js','term-tests/term-test-2-k56-computer-based/index.html','term-tests/term-test-2-k56/index.html'])assert.match(fs.readFileSync(file,'utf8'),/20261005-k56-writing-results-v1/);
 });

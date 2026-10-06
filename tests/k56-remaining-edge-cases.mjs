@@ -12,7 +12,8 @@ import test,{after} from 'node:test';
 import {createCompletedResultFixture} from './fixtures/k56-completed-result-e03-server.mjs';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
-const backendRoot='E:/wt/k56-e03-backend-20261002';
+// Máy khác có thể đặt checkout ở vị trí riêng; vẫn bắt buộc đúng commit phía dưới.
+const backendRoot=process.env.K56_EDGE_BACKEND_ROOT||'E:/wt/k56-e03-backend-20261002';
 const runtime=resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const {chromium}=createRequire(pathToFileURL(resolve(runtime,'playwright/package.json')))('playwright');
 const fixture=JSON.parse(await readFile(new URL('./fixtures/k56-completed-result-e03.json',import.meta.url),'utf8'));
@@ -138,7 +139,7 @@ for(const itemBase of fixture.cases) for(const edge of ['E04','E05','E06']) {
      await screenshot(resolve(output,`${edge}-${item.slug}-feedback-end.png`));
      // Dùng chế độ in thật của Chrome; đọc PDF bằng thư viện độc lập để bắt cắt nội dung.
      const pdfPath=resolve(output,`${edge}-${item.slug}.pdf`);await page.pdf({path:pdfPath,format:'A4',printBackground:true});
-     const pdf=JSON.parse(execFileSync('python',['-c',"import fitz,json,sys;d=fitz.open(sys.argv[1]);print(json.dumps({'pages':len(d),'text':' '.join(p.get_text() for p in d)}))",pdfPath],{encoding:'utf8'}));
+     const pdf=JSON.parse(execFileSync('python',['-c',"from pypdf import PdfReader;import json,sys;d=PdfReader(sys.argv[1]);print(json.dumps({'pages':len(d.pages),'text':' '.join(p.extract_text() or '' for p in d.pages)}))",pdfPath],{encoding:'utf8'}));
      const flat=pdf.text.replace(/\s/gu,'');
      observations.printPages=pdf.pages;observations.printMarkersPresent=['E05-BEGIN',...feedbackLines.map(l=>l.slice(0,7)),'E05-END'].filter(m=>flat.includes(m)).length;
      assert.equal(observations.printMarkersPresent,14,'Bản in cắt nhận xét dài');
