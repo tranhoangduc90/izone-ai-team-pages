@@ -1,6 +1,7 @@
+import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261006-3';
 import {ORDER,FIELDS} from '../lesson5-demo/core.mjs';
 import {renderActivityList,renderActivityDetail} from './activity-ui.mjs?v=20261006-2';
-import {savedContent,threadsView,approvalLabel,selectionOffsets,fieldHash,installStyles} from '../lesson5-thu/features.mjs?v=20261006-2';
+import {savedContent,threadsView,selectionOffsets,fieldHash,installStyles} from '../lesson5-thu/features.mjs?v=20261006-2';
 installStyles();
 // Nhận cookie giảng viên riêng, đọc tiến độ/bài và ghi góp ý vào đúng phiên/phần.
 // Không lưu credential Google trong localStorage. Lỗi giữ lời góp ý để thử lại.
@@ -12,6 +13,7 @@ const statuses={draft:'Chưa check',passed:'Đạt',revision:'Cần sửa',pendi
 let epoch=0,rows=[],selected=null,timer=null,loading=false,sending=false,detailSequence=0,detailVersion=null,authBusy=false,actorEmail='';
 let activitySequence=0,activityRef=null,activityEvents=[],activityCursor=null;
 let detailSession=null,composer=null,activeClass='';
+let readGeneration=0;
 const hasThreadDraft=()=>!!composer||!!$('comment-text').value.trim()||[...document.querySelectorAll('[data-thread-reply] textarea')].some(el=>el.value.trim());
 async function request(path,method='GET',body){
  const payload=body===undefined?undefined:JSON.stringify(body);
@@ -26,41 +28,58 @@ async function request(path,method='GET',body){
 }
 function errorText(error){return error.message==='COMMENT_VERSION_CONFLICT'?'Trao đổi vừa thay đổi. Kiểm tra trạng thái mới trước khi xác nhận lại; lời trả lời đang nhập được giữ.':error.status===409?'Học viên vừa sửa bài. Nhấn Cập nhật để đọc bài mới rồi gửi lại góp ý; lời góp ý đang nhập được giữ.':error.status===401?'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.':error.status===403?'Tài khoản của bạn chưa có quyền xem lớp hoặc thao tác này.':'Chưa tải được dữ liệu. Hãy thử lại khi kết nối ổn định.';}
 function report(error,target='error'){const node=$(target);node.textContent=errorText(error);node.hidden=false;}
-function rowStatus(row){const s=Object.values(row.steps);return !row.sessionRef?'not_started':row.passed===7?'complete':s.includes('technical_error')?'technical_error':s.includes('pending')?'pending':s.includes('revision')?'revision':'working';}
 function renderRows(){
  const q=$('search').value.trim().toLocaleLowerCase('vi'),filter=$('status-filter').value;
- const filtered=rows.filter(r=>r.displayName.toLocaleLowerCase('vi').includes(q)&&(filter==='all'||rowStatus(r)===filter));
- $('students').innerHTML=filtered.map(r=>`<tr><td><button type="button" data-student="${escape(r.studentRef)}">${escape(r.displayName)}</button><small>${r.sessionRef?'Đã mở bài':'Chưa bắt đầu'}</small></td><td>${r.passed}/7</td>${ORDER.map(k=>`<td><span class="step-status ${escape(r.steps[k]||'draft')}">${r.steps[k]?statuses[r.steps[k]]:'—'}</span></td>`).join('')}<td>${r.comments}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">Không có học viên phù hợp.</td></tr>';
- $('summary').textContent=`${rows.length} học viên · ${rows.filter(r=>!r.sessionRef).length} chưa bắt đầu · ${rows.filter(r=>r.passed===7).length} đã xong · ${rows.filter(r=>rowStatus(r)==='revision').length} cần sửa`;
+ const filtered=ordered(rows.filter(r=>r.displayName.toLocaleLowerCase('vi').includes(q)&&(filter==='all'||rowState(r)===filter)),$('order').value);
+ $('summary').innerHTML=Object.entries(states).map(([key,label])=>`<button class="teacher-summary-card" data-filter="${key}" data-state="${key}" aria-pressed="${filter===key}"><span>${label}</span><strong>${rows.filter(r=>rowState(r)===key).length}</strong></button>`).join('');
+ const focused=document.activeElement?.dataset.student;
+ const groups=new Map();for(const r of filtered){const key=r.sessionRef?r.dashboard?.priority??3:5;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
+ $('students').innerHTML=[...groups].map(([key,list])=>`<section class="group"><div class="group-heading"><h2>${['Cần hỗ trợ','Lỗi hoặc chờ quá hạn','Bài đã sửa và HV trả lời','Đang làm bài','Đã thông qua','Chưa bắt đầu'][key]} <span class="group-count">${list.length}</span></h2></div><div class="teacher-students">${list.map(card).join('')}</div></section>`).join('')||'<p class="empty">Không có học viên phù hợp.</p>';
+ if(focused)$('students').querySelector(`[data-student="${CSS.escape(focused)}"]`)?.focus({preventScroll:true});
+ $('list-description').textContent=`${filtered.length}/${rows.length} học viên · hỗ trợ và bài đáng chú ý lên trước`;
 }
+function schedule(){clearTimeout(timer);if(!$('dashboard').hidden&&!document.hidden)timer=setTimeout(()=>refresh(),5000);}
 async function refresh(forceDetail=false){
- if(loading||document.hidden)return;loading=true;const current=epoch,classRef=$('class-select').value;
- try{const value=await request('/students?class='+encodeURIComponent(classRef));if(current!==epoch||classRef!==$('class-select').value)return;rows=value.students;renderRows();$('updated').textContent='Đã cập nhật '+new Date().toLocaleTimeString('vi-VN');$('error').hidden=true;if(selected?.ref&&!sending&&!hasThreadDraft()&&(forceDetail||!$('comment-text').value.trim()))await readDetail(selected.ref);}catch(e){if(current===epoch)report(e);}finally{loading=false;}
+ if(loading||document.hidden||$('dashboard').hidden)return;clearTimeout(timer);loading=true;const generation=++readGeneration,current=epoch,classRef=$('class-select').value;
+ try{const value=await request('/students?class='+encodeURIComponent(classRef));if(current!==epoch||classRef!==$('class-select').value)return;rows=value.students;renderRows();$('updated').textContent='Đã cập nhật '+new Date().toLocaleTimeString('vi-VN')+' · đọc lại sau 5 giây';$('error').hidden=true;if(selected?.ref&&!sending)await readDetail(selected.ref,{activity:forceDetail});}catch(e){if(current===epoch)report(e);}finally{if(generation===readGeneration){loading=false;if(current===epoch)schedule();}}
 }
 function snapshot(note){return Object.entries(note.snapshot||{}).map(([k,v])=>(labels[k]||k)+': '+v).join('\n\n');}
 function renderDetail(session){
- const drafts=new Map([...document.querySelectorAll('[data-thread-reply]')].map(f=>[f.dataset.threadReply,{body:f.elements.body.value,id:f.dataset.requestId,sentBody:f.dataset.requestBody}]));
- detailSession=session;composer=null;
- detailVersion=session.version;
+ detailSession=session;detailVersion=session.version;
  $('comment-form').hidden=false;if(!sending)$('comment-submit').disabled=false;
- $('detail-content').innerHTML=ORDER.map(key=>{
-  const s=session.steps[key];
-  const fields=FIELDS[key].map(f=>`<b>${labels[f]||labels[key]}</b>${savedContent(session,f,{teacher:true})}`).join('');
-  const ai=[...s.history].reverse().map((h,i)=>`<details class="detail-comments" ${i===0?'open':''}><summary>AI · Comment lần ${h.number} · ${statuses[h.status]}</summary><p>${escape(h.feedback)}</p><details><summary>Nội dung đã gửi</summary><pre>${escape(snapshot(h))}</pre></details></details>`).join('');
-  const teacher=(session.teacherComments||[]).filter(c=>c.section===key).reverse().map(c=>`<details class="detail-comments teacher-note" open><summary>Giảng viên · ${escape(c.authorName)}</summary><p>${escape(c.feedback)}</p><details><summary>Nội dung lúc góp ý</summary><pre>${escape(snapshot(c))}</pre></details></details>`).join('');
-  return `<section class="detail-step"><header><h3>${labels[key]}</h3><span class="step-status ${escape(s.status)}">${statuses[s.status]}</span></header>${approvalLabel(s)?`<p class="approval-note">${approvalLabel(s)}</p>`:''}${s.editedAfterApproval?'<p class="edited-note">HV đã chỉnh nội dung sau khi thông qua.</p>':''}${fields}${threadsView((session.commentThreads||[]).filter(t=>t.section===key),{teacher:true})}${teacher}${ai}${s.status==='technical_error'?'<p class="error">Chấm gặp lỗi kỹ thuật. Học viên có thể gửi Check lại; nội dung đã lưu được giữ.</p>':''}</section>`;
- }).join('')+Object.entries(session.vocabulary||{}).map(([idea,v])=>`<div class="vocab-read"><h3>Từ vựng · Ý ${escape(idea)}</h3>${v.status==='ready'?Object.entries(v.groups).map(([k,list])=>`<p><b>${k}</b> · ${list.map(x=>escape(x.phrase)+' — '+escape(x.meaningVi)).join('; ')}</p>`).join(''):`<p>${v.status==='failed'?'Gợi ý gặp lỗi, học viên có thể thử lại.':'Đang chuẩn bị gợi ý.'}</p>`}</div>`).join('')+'<section class="activity-panel"><h3>Nhật ký hoạt động · Giữ hai tháng</h3><p class="fine-print">Gồm sự kiện, nội dung gửi chấm và phản hồi AI. Các lượt trước khi bật tính năng có thể chưa đủ nhật ký.</p><p id="activity-state" role="status">Đang tải nhật ký…</p><div id="activity-list"></div><div id="activity-job"></div></section>';
- for(const f of document.querySelectorAll('[data-thread-reply]'))if(drafts.has(f.dataset.threadReply)){
-  const d=drafts.get(f.dataset.threadReply);f.elements.body.value=d.body;
-  if(d.id)f.dataset.requestId=d.id;if(d.sentBody!==undefined)f.dataset.requestBody=d.sentBody;
+ const content=$('detail-content');
+ if(content.dataset.session!==session.ref){
+  content.dataset.session=session.ref;
+  const field=f=>`<div class="teacher-response-field" data-field-box="${f}"><strong>${names[f]}</strong><div data-field-read="${f}"></div><div data-keywords="${f}"></div></div>`;
+  content.innerHTML=`<section class="recap"><h3>Bài hiện tại · A → X → B</h3><p class="fine-print">Thứ tự Check vẫn B → A → X. Bôi đen để góp ý đoạn hoặc chọn Comment cả phần.</p>${['idea1','idea2','topicSentence'].map(field).join('')}<div class="recap-scroll"><table class="recap-table"><thead><tr><th>Ý</th><th>Điểm đầu A</th><th>Cầu nối X</th><th>Điểm cuối B</th></tr></thead><tbody>${[1,2].map(n=>`<tr><th>Ý ${n}</th>${['a','x','b'].map(k=>`<td>${field(k+n)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div id="recap-status"></div></section><div class="teacher-detail-section-layout"><section><h3>Tiến độ và nhận xét AI</h3>${ORDER.map(k=>`<section class="teacher-detail-section"><h4>${labels[k]}</h4><div data-step-read="${k}"></div><details class="history-details"><summary>Các nhận xét AI</summary><div data-history-read="${k}"></div></details><div data-legacy-read="${k}"></div></section>`).join('')}<section class="teacher-detail-vocabulary"><h3>Từ vựng từng ý</h3><div id="vocabulary-read"></div></section><details class="activity-panel"><summary>Nhật ký hoạt động · Giữ hai tháng</summary><p class="fine-print">Lượt trước khi bật tính năng có thể thiếu nhật ký. Mở lượt chấm để xem nội dung và phản hồi AI.</p><p id="activity-state" role="status">Đang tải nhật ký…</p><div id="activity-list"></div><div id="activity-job"></div></details></section><aside class="teacher-note"><h3>Trao đổi GV–HV</h3><p class="fine-print">Đã xử lý chỉ đổi trạng thái trao đổi; không cho qua Check.</p><div id="threads-read"></div></aside></div>`;
  }
+ const d=session.dashboard;
+ $('detail-meta').textContent=d?`${d.filled}/9 ô · ${d.passed}/7 phần thông qua · ${d.checks} Check · ${d.openThreads} trao đổi mở`:'';
+ for(const f of Object.keys(session.responses)){
+  // Comment đang soạn giữ hash/range gốc; bài mới vẫn cập nhật tiến độ và các vùng khác.
+  const node=content.querySelector(`[data-field-read="${f}"]`);
+  if(composer?.field!==f)patchHTML(node,savedContent(session,f,{teacher:true}));
+  else if(composer.fieldHash){const note=composer.form.querySelector('.thread-status');if(node.dataset.currentText!==undefined&&node.dataset.currentText!==session.responses[f])note.textContent='HV vừa sửa phần này. Bản nháp/đoạn chọn được giữ trên bản trước; chọn lại đoạn trước khi gửi nếu nội dung đã đổi.';}
+  if(node)node.dataset.currentText=session.responses[f];
+ }
+ patchHTML($('recap-status'),`<p class="fine-print">${d?.passed===7?'7/7 phần đã thông qua.':'Tiến độ theo các phần Check.'} ${d?.attested?d.attested+' phần do HV xác nhận được GV đồng ý.':''}</p>`);
+ for(const key of ORDER){
+  const step=session.steps[key],job=session.processing?.[key];
+  patchHTML(content.querySelector(`[data-step-read="${key}"]`),`<span class="step-status ${step.status}">${stepLabel(d?.stepStates[key]||step)}</span>${approval(step)?`<p class="approval-note">${escape(approval(step))} · ${stamp(step.approval?.at)}</p>`:''}${step.editedAfterApproval?`<p class="attention-line">Đã sửa sau khi thông qua · ${stamp(step.editedAt)}. Tiến độ giữ nguyên; nhận xét cũ chưa đánh giá nội dung mới.</p>`:''}${job?`<p class="job-line">${escape(jobText(key,job))}</p>`:''}`);
+  patchHTML(content.querySelector(`[data-history-read="${key}"]`),[...step.history].reverse().map(h=>`<details class="detail-comments" data-history="${escape(h.jobRef||h.number)}"><summary>AI · Lần ${h.number} · ${statuses[h.status]}${FIELDS[key].some(f=>(h.snapshot?.[f]||'')!==(session.responses[f]||''))?' · Nhận xét bản trước':''}</summary><p>${escape(h.feedback)}</p><details><summary>Nội dung đã gửi</summary><pre>${escape(snapshot(h))}</pre></details></details>`).join('')||'<p class="fine-print">Chưa có nhận xét AI.</p>');
+  patchHTML(content.querySelector(`[data-legacy-read="${key}"]`),(session.teacherComments||[]).filter(c=>c.section===key).reverse().map(c=>`<details class="detail-comments"><summary>Giảng viên · ${escape(c.authorName)}</summary><p>${escape(c.feedback)}</p><details><summary>Nội dung lúc góp ý</summary><pre>${escape(snapshot(c))}</pre></details></details>`).join(''));
+ }
+ patchThreads($('threads-read'),(session.commentThreads||[]).map(t=>threadsView([t],{teacher:true}).replace('Trao đổi với giảng viên','Trao đổi · '+escape(names[t.field]||t.field))).join('')||'<p class="empty">Chưa có trao đổi.</p>');
+ patchHTML($('vocabulary-read'),[1,2].map(n=>{const v=session.vocabulary[n],status=v?.status==='ready'?'Đã có, khớp bản hiện tại':v?.status==='failed'?'Gặp lỗi; tiến độ vẫn giữ':v?'Đang tạo lại gợi ý':'Chưa mở — chờ B/A/X thông qua';return `<p><strong>Ý ${n}:</strong> ${status}${session.processing?.['vocab'+n]?'<br>'+escape(jobText('vocab'+n,session.processing['vocab'+n])):''}</p>`;}).join(''));
+ for(const n of [1,2])for(const k of ['a','x','b']){const v=session.vocabulary[n];patchHTML(content.querySelector(`[data-keywords="${k+n}"]`),v?.status==='ready'?`<div class="vocab">${(v.groups?.[k.toUpperCase()]||[]).map(w=>`<span>${escape(w.phrase)} · ${escape(w.meaningVi)}</span>`).join('')}</div>`:'');}
 }
-async function readDetail(ref){
+async function readDetail(ref,{activity=false}={}){
  const current=epoch,sequence=++detailSequence;
  const value=await request('/sessions/'+ref);
- if(current===epoch&&selected?.ref===ref&&sequence===detailSequence&&!hasThreadDraft()){
+ if(current===epoch&&selected?.ref===ref&&sequence===detailSequence){
+  const initial=$('detail-content').dataset.session!==ref;
   renderDetail(value.session);
-  await readActivity(ref);
+  if(initial||activity)await readActivity(ref);
  }
 }
 async function readActivity(ref,{more=false,job=null}={}){
@@ -85,9 +104,9 @@ async function openDetail(studentRef){
  // Hủy lượt đọc nhật ký trước khi thay DOM, kể cả khi mở lại cùng một bài.
  if(hasThreadDraft()&&!window.confirm('Có lời góp ý chưa gửi. Bỏ bản nháp này để mở bài khác?'))return;
  composer=null;detailSession=null;
- const current=epoch;detailVersion=null;detailSequence++;activitySequence++;selected={studentRef,ref:row.sessionRef};$('detail').hidden=false;$('detail-name').textContent=row.displayName;$('detail-content').textContent=row.sessionRef?'Đang tải bài…':'Học viên chưa bắt đầu bài làm.';$('comment-form').hidden=true;$('comment-submit').disabled=true;$('comment-text').value='';$('comment-status').textContent='';
+ const current=epoch;detailVersion=null;detailSequence++;activitySequence++;selected={studentRef,ref:row.sessionRef};$('detail').hidden=false;if(!$('detail').open)$('detail').showModal();$('detail-name').textContent=row.displayName;delete $('detail-content').dataset.session;$('detail-content').textContent=row.sessionRef?'Đang tải bài…':'Học viên chưa bắt đầu bài làm.';$('comment-form').hidden=true;$('comment-submit').disabled=true;$('comment-text').value='';$('comment-status').textContent='';
  if(row.sessionRef){try{await readDetail(row.sessionRef);}catch(e){if(current===epoch&&selected?.ref===row.sessionRef)report(e);}}
- $('detail').scrollIntoView({behavior:'smooth',block:'start'});
+ $('detail').scrollTop=0;
 }
 async function enter(){
  const current=++epoch;
@@ -95,16 +114,17 @@ async function enter(){
  $('class-select').innerHTML=result.classes.map(c=>`<option value="${escape(c.classRef)}">${escape(c.className)}</option>`).join('');
  activeClass=$('class-select').value;
  if(!result.classes.length)throw Object.assign(new Error('TEACHER_FORBIDDEN'),{status:403});
- $('login').hidden=true;$('dashboard').hidden=false;await refresh();if(current!==epoch)return;clearInterval(timer);timer=setInterval(refresh,15000);
+ $('login').hidden=true;$('dashboard').hidden=false;await refresh();if(current!==epoch)return;schedule();
 }
 async function login(response){if(authBusy)return;authBusy=true;try{const result=await request('/session','POST',{credential:response.credential});actorEmail=result.reviewer.email;await enter();$('login-error').hidden=true;}catch(e){report(e,'login-error');}finally{authBusy=false;}}
-$('refresh').addEventListener('click',()=>refresh(true));$('search').addEventListener('input',renderRows);$('status-filter').addEventListener('change',renderRows);
+$('refresh').addEventListener('click',()=>refresh(true));$('search').addEventListener('input',renderRows);$('status-filter').addEventListener('change',renderRows);$('order').addEventListener('change',renderRows);$('summary').addEventListener('click',event=>{const b=event.target.closest('[data-filter]');if(b){$('status-filter').value=$('status-filter').value===b.dataset.filter?'all':b.dataset.filter;renderRows();}});
+$('detail-refresh').addEventListener('click',()=>refresh(true));
 $('class-select').addEventListener('change',()=>{
  if(sending||hasThreadDraft()&&!window.confirm('Có lời góp ý chưa gửi. Bỏ bản nháp này để chuyển lớp?')){$('class-select').value=activeClass;return;}
- activeClass=$('class-select').value;epoch++;selected=null;composer=null;detailSession=null;detailVersion=null;$('comment-text').value='';$('detail-content').innerHTML='';$('detail').hidden=true;void refresh();
+ activeClass=$('class-select').value;epoch++;readGeneration++;loading=false;clearTimeout(timer);rows=[];renderRows();selected=null;composer=null;detailSession=null;detailVersion=null;$('comment-text').value='';$('detail-content').innerHTML='';delete $('detail-content').dataset.session;$('detail').close();$('detail').hidden=true;void refresh();
 });
 $('students').addEventListener('click',event=>{const b=event.target.closest('[data-student]');if(b)void openDetail(b.dataset.student);});
-$('close-detail').addEventListener('click',()=>{if(sending)return;if(hasThreadDraft()&&!window.confirm('Bỏ lời góp ý chưa gửi và đóng bài?'))return;selected=null;detailSession=null;composer=null;detailVersion=null;detailSequence++;$('detail-content').innerHTML='';$('detail').hidden=true;});
+$('close-detail').addEventListener('click',()=>{if(sending)return;if(hasThreadDraft()&&!window.confirm('Bỏ lời góp ý chưa gửi và đóng bài?'))return;selected=null;detailSession=null;composer=null;detailVersion=null;detailSequence++;$('detail-content').innerHTML='';delete $('detail-content').dataset.session;$('detail').close();$('detail').hidden=true;});
 $('detail').addEventListener('click',event=>{
  const marked=event.target.closest('[data-threads]');if(marked){showThreads(marked.dataset.threads);return;}
  const button=event.target.closest('button');if(!button||!selected?.ref)return;
@@ -156,11 +176,11 @@ $('detail-content').addEventListener('submit',async event=>{
  try{
   const value=await request('/sessions/'+ref+'/threads','POST',input);
   if(current!==epoch||selected?.ref!==ref)return;
-  form.elements.body.value='';delete form.dataset.requestId;delete form.dataset.requestBody;composer=null;renderDetail(value.session);await readActivity(ref);$('comment-status').textContent='Đã lưu trao đổi; học viên đọc được trên bài của mình.';
+  form.elements.body.value='';status.textContent='Đã lưu trao đổi.';delete form.dataset.requestId;delete form.dataset.requestBody;composer?.form.remove();composer=null;renderDetail(value.session);await readActivity(ref);$('comment-status').textContent='Đã lưu trao đổi; học viên đọc được trên bài của mình.';
  }catch(e){if(current===epoch&&selected?.ref===ref)status.textContent=e.message==='COMMENT_CONTENT_CHANGED'?'Nội dung trích đã thay đổi. Lời góp ý vẫn giữ; sao chép rồi hủy, cập nhật bài và chọn lại đoạn.':errorText(e);}
  finally{sending=false;button.disabled=false;form.elements.body.disabled=false;}
 });
-$('logout').addEventListener('click',async()=>{if(authBusy)return;if(hasThreadDraft()&&!window.confirm('Bỏ lời trao đổi chưa gửi và đăng xuất?'))return;authBusy=true;epoch++;clearInterval(timer);selected=null;composer=null;detailSession=null;actorEmail='';rows=[];$('detail-content').innerHTML='';$('detail').hidden=true;$('dashboard').hidden=true;$('login').hidden=true;$('students').innerHTML='';$('comment-text').value='';try{await request('/session','DELETE');}catch(e){report(e,'login-error');}finally{authBusy=false;$('login').hidden=false;}window.google?.accounts.id.disableAutoSelect();});
+$('logout').addEventListener('click',async()=>{if(authBusy)return;if(hasThreadDraft()&&!window.confirm('Bỏ lời trao đổi chưa gửi và đăng xuất?'))return;authBusy=true;epoch++;clearTimeout(timer);selected=null;composer=null;detailSession=null;actorEmail='';rows=[];$('detail-content').innerHTML='';delete $('detail-content').dataset.session;$('detail').close();$('detail').hidden=true;$('dashboard').hidden=true;$('login').hidden=true;$('students').innerHTML='';$('comment-text').value='';try{await request('/session','DELETE');}catch(e){report(e,'login-error');}finally{authBusy=false;$('login').hidden=false;}window.google?.accounts.id.disableAutoSelect();});
 $('comment-form').addEventListener('submit',async event=>{
  event.preventDefault();if(sending||!selected?.ref||!Number.isSafeInteger(detailVersion))return;
  if(composer){$('comment-status').textContent='Hãy gửi hoặc hủy comment đang soạn trước khi gửi góp ý theo phần; bản nháp đang được giữ.';return;}
@@ -172,4 +192,6 @@ async function boot(){
  try{const result=await request('/session');actorEmail=result.reviewer.email;await enter();}catch(e){if(e.status!==401)report(e,'login-error');}
  try{const {clientId}=await request('/config');let attempts=0;const setup=()=>{if(window.google?.accounts?.id){window.google.accounts.id.initialize({client_id:clientId,callback:login,auto_select:false});window.google.accounts.id.renderButton($('google-signin'),{theme:'outline',size:'large',text:'signin_with',locale:'vi'});}else if(attempts++<100)setTimeout(setup,100);else $('login-error').textContent='Chưa tải được nút Google. Hãy tải lại trang.';};setup();}catch(e){report(e,'login-error');}
 }
+$('detail').addEventListener('cancel',e=>{e.preventDefault();$('close-detail').click();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(timer);else if(!$('dashboard').hidden)void refresh();});
 void boot();

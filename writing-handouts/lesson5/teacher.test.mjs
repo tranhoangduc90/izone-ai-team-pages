@@ -7,7 +7,7 @@ import {ORDER,FIELDS,createState} from '../lesson5-demo/core.mjs';
 function fixture(fetcher){
  const elements=new Map();
  const get=id=>{if(!elements.has(id))elements.set(id,{handlers:{},addEventListener(k,f){this.handlers[k]=f;},hidden:false,textContent:'',innerHTML:'',value:'',dataset:{}});return elements.get(id);};
- const context=vm.createContext({ORDER,FIELDS,installStyles(){},savedContent:()=>'',approvalLabel:()=>'',threadsView:()=>'',fetch:fetcher,document:{getElementById:get,querySelectorAll:()=>[]},AbortSignal,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
+ const context=vm.createContext({ORDER,FIELDS,installStyles(){},savedContent:()=>'',approvalLabel:()=>'',threadsView:()=>'',fetch:fetcher,document:{getElementById:get,querySelectorAll:()=>[],addEventListener(){}},AbortSignal,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearTimeout,clearInterval,setInterval,window:{}});
  const source=fs.readFileSync(new URL('./teacher.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('void boot();','');vm.runInContext(source,context);
  return {run:code=>vm.runInContext(code,context),context,get};
 }
@@ -41,16 +41,11 @@ test('T-TEACHER-UI-STATUS-CONFLICT · đọc trạng thái mới, không tự gh
  const h=fixture(async(_url,options)=>{calls.push(options.method);return options.method==='POST'?{ok:false,status:409,json:async()=>({ok:false,error:'COMMENT_VERSION_CONFLICT'})}:{ok:true,status:200,json:async()=>({ok:true,session:next})};}),r=replyForm('Nháp cần giữ');
  r.form.dataset.requestId='stable-id';r.form.dataset.requestBody=r.form.elements.body.value;
  h.context.document.querySelectorAll=()=>[r.form];
- h.run("selected={ref:'same-session'};detailSession={commentVersion:7};");
+ h.run("selected={ref:'same-session'};detailSession={commentVersion:7};renderDetail=s=>{detailSession=s;};");
  h.context.statusButton={dataset:{threadStatus:'thread-one',status:'addressed'},disabled:false};await h.run('sendStatus(statusButton)');
  assert.deepEqual(calls,['POST','GET']);assert.equal(h.run('detailSession.commentVersion'),9);assert.equal(r.form.elements.body.value,'Nháp cần giữ');assert.equal(r.form.dataset.requestId,'stable-id');
 });
-test('T-TEACHER-UI-REPLY-RENDER · thử lại sau dựng DOM dùng mã gửi cũ',()=>{
- const h=fixture(),old=replyForm(),fresh=replyForm('');old.form.dataset.requestId='stable-id';old.form.dataset.requestBody=old.form.elements.body.value;
- let calls=0;h.context.document.querySelectorAll=s=>s==='[data-thread-reply]'?(calls++===0?[old.form]:[fresh.form]):[];
- h.context.nextSession=createState();h.run('renderDetail(nextSession)');
- assert.equal(fresh.form.dataset.requestId,'stable-id');assert.equal(fresh.form.dataset.requestBody,old.form.dataset.requestBody);assert.equal(fresh.form.elements.body.value,old.form.elements.body.value);
-});
+// Kiểm giữ form/requestId khi cập nhật DOM đã chuyển sang browser-dashboard.js trên DOM thật.
 test('T-TEACHER-UI-COMPOSER · góp ý cũ và reply khác không xóa comment đang soạn',async()=>{
  let calls=0;const h=fixture(async()=>{calls++;return {ok:true,status:200,json:async()=>({ok:true,session:createState()})};}),r=replyForm();
  h.run("selected={ref:'same-session'};detailVersion=1;composer={field:'a1',form:{draft:'Nháp comment cần giữ'}};renderDetail=()=>{composer=null;};readActivity=async()=>{};refresh=async()=>{};");
