@@ -1,5 +1,6 @@
 import {ORDER,FIELDS,createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs';
 import {createClient} from './client.mjs';
+import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs';
 
 // Nhận bài của người đã xác nhận, lưu ở backend riêng và hiển thị nhận xét đọc lại.
 // Backend quyết định khóa/mở bước. Lỗi mạng giữ nháp; lỗi hai tab yêu cầu đọc bản mới.
@@ -21,8 +22,7 @@ function snapshot(history,key){return FIELDS[key].map(f=>labels[f]+': '+history.
 function comments(key){
   const step=state.steps[key],hist=[...step.history].reverse();
   let body=hist.length?hist.map((h,index)=>index===0?`<article class="comment"><div class="comment-header"><span>Comment lần ${h.number}</span><span class="badge ${h.status}">${statusLabels[h.status]}</span></div><div class="comment-body"><p>${escape(h.feedback)}</p><details><summary>Xem nội dung đã gửi</summary><div class="snapshot">${escape(snapshot(h,key))}</div></details></div></article>`:`<details class="comment history"><summary>Comment lần ${h.number} · ${statusLabels[h.status]}</summary><div class="comment-body"><p>${escape(h.feedback)}</p><div class="snapshot">${escape(snapshot(h,key))}</div></div></details>`).join(''):'<p class="empty-comments">Nhận xét sẽ xuất hiện ở đây sau khi bạn nhấn Check.<br>Mỗi lần sửa đều được giữ lại.</p>';
-  if(step.status==='pending')body='<p class="empty-comments" role="status">Đang đọc nội dung bạn vừa gửi…<br>Giữ trang mở, bạn không cần bấm lại.</p>'+body;
-  if(step.status==='technical_error')body=`<p class="error" role="alert">${escape(step.error)} Thử lại bằng nút Check ở ô bên cạnh.</p>`+body;
+  body=renderProcessing(state,key)+body;
   const teacherNotes=(state.teacherComments||[]).filter(c=>c.section===key).reverse();
   body=teacherNotes.map(c=>`<article class="comment"><div class="comment-header"><span>Giảng viên · ${escape(c.authorName)}</span></div><div class="comment-body"><p>${escape(c.feedback)}</p><details><summary>Xem nội dung lúc góp ý</summary><div class="snapshot">${escape(snapshot(c,key))}</div></details></div></article>`).join('')+body;
   const fails=step.history.filter(h=>h.status==='revision').length;
@@ -32,6 +32,7 @@ function comments(key){
 function chain(key){
   if(key==='topic')return '';
   const n=key.at(-1),type=key[0];
+  if(type==='a'||type==='x')return renderJourney(state,key);
   const items=type==='b'?[['Idea',state.responses['idea'+n]],...(n==='2'?[['B1',state.responses.b1]]:[])]:type==='a'?[['Đề','Mua đồ không cần thiết'],['B',state.responses['b'+n]]]:[['A',state.responses['a'+n]],['B',state.responses['b'+n]]];
   return `<div class="context-chain">${items.map(([label,value])=>`<div><b>${label}</b><span>${escape(value)}</span></div>`).join('')}</div>`;
 }
@@ -46,6 +47,7 @@ function stepCard(key){
   return step.status==='passed'?`<details class="prior-step" id="step-${key}" data-status="passed"><summary><span>${title}</span><span class="badge passed">✓ Đã đạt</span><span class="prior-chevron">Xem bài & Comment ↓</span></summary>${current}</details>`:`<section id="step-${key}" class="step" data-status="${step.status}" aria-label="${title}">${current}</section>`;
 }
 function vocabulary(n){
+  if(n===2)return ''; // Bảng cuối nằm trong recap, gồm từ vựng của cả hai ý.
   if(!ideaPassed(state,n))return '';
   const value=state.vocabulary?.[n];
   const content=value?.status==='ready'?`<div class="vocab-grid">${Object.entries(value.groups).map(([point,entries])=>`<div class="vocab-col"><h4>${point} words · ${point==='A'?'Điểm đầu':point==='X'?'Cầu nối':'Điểm cuối'}</h4>${entries.map(entry=>`<div class="vocab-entry"><strong lang="en">${escape(entry.phrase)}</strong><span>${escape(entry.meaningVi)}</span></div>`).join('')}</div>`).join('')}</div>`:value?.status==='failed'?`<p class="error">Chưa lấy được từ vựng. Ba điểm đã đạt vẫn được giữ.</p><button class="secondary" data-vocab-retry="${n}">Thử lấy từ vựng lại</button>`:'<p role="status">Đang tìm cụm từ phù hợp với chính ý của bạn…</p>';
@@ -57,7 +59,7 @@ function render(){
   const topicDone=state.steps.topic.status==='passed',oneDone=ideaPassed(state,1),twoDone=ideaPassed(state,2);
   $('journey-nav').innerHTML=[['prompt','Đề bài','Đọc đề','?',false,true],['topic','Ý tưởng & Topic','Chốt cả hai idea','1',topicDone,true],['idea1','Lập luận ý 1','B → A → X','2',oneDone,topicDone],['idea2','Lập luận ý 2','B → A → X','3',twoDone,state.idea2Open]].map(([id,title,sub,num,done,enabled])=>`<button class="nav-item ${done?'done':''} ${id==='topic'&&!topicDone||id==='idea1'&&topicDone&&!oneDone||id==='idea2'&&state.idea2Open?'active':''}" data-target="${id}" ${enabled?'':'disabled'}><span>${done?'✓':num}</span><span>${title}<small>${sub}</small></span></button>`).join('');
   $('completion').hidden=!twoDone;
-  if(twoDone)$('completion').innerHTML=`<article class="completed"><span class="badge passed">✓ Cả hai ý đã đạt</span><h2>Bạn đã hoàn thiện khung lập luận.</h2><p>Topic sentence và hai chuỗi A–X–B đã sẵn sàng để bạn tự viết thân bài 2.</p><details><summary>Xem toàn bộ khung lập luận của bạn</summary><div class="context-chain"><div><b>TS</b><span>${escape(state.responses.topicSentence)}</span></div></div>${[1,2].map(n=>`<h3>Ý ${n}</h3><div class="context-chain">${['a','x','b'].map(k=>`<div><b>${k.toUpperCase()}</b><span>${escape(state.responses[k+n])}</span></div>`).join('')}</div>`).join('')}</details></article>`;
+  if(twoDone)$('completion').innerHTML=renderRecap(state);
 }
 function focusSection(key){const el=$('step-'+key)||$(key);if(el){el.scrollIntoView({behavior:'auto',block:'start'});const text=el.querySelector('textarea:not(:disabled)');text?.focus({preventScroll:true});}}
 
