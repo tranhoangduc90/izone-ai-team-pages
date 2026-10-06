@@ -24,7 +24,7 @@ async function request(path,method='GET',body){
  if(requestEpoch!==epoch)throw Object.assign(new Error('IDENTITY_CHANGED'),{status:401});
  if(!response.ok||value.ok!==true)throw Object.assign(new Error(value.error||'TECHNICAL_FAILURE'),{status:response.status});return value;
 }
-function errorText(error){return error.status===409?'Học viên vừa sửa bài. Nhấn Cập nhật để đọc bài mới rồi gửi lại góp ý; lời góp ý đang nhập được giữ.':error.status===401?'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.':error.status===403?'Tài khoản của bạn chưa có quyền xem lớp hoặc thao tác này.':'Chưa tải được dữ liệu. Hãy thử lại khi kết nối ổn định.';}
+function errorText(error){return error.message==='COMMENT_VERSION_CONFLICT'?'Trao đổi vừa thay đổi. Kiểm tra trạng thái mới trước khi xác nhận lại; lời trả lời đang nhập được giữ.':error.status===409?'Học viên vừa sửa bài. Nhấn Cập nhật để đọc bài mới rồi gửi lại góp ý; lời góp ý đang nhập được giữ.':error.status===401?'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.':error.status===403?'Tài khoản của bạn chưa có quyền xem lớp hoặc thao tác này.':'Chưa tải được dữ liệu. Hãy thử lại khi kết nối ổn định.';}
 function report(error,target='error'){const node=$(target);node.textContent=errorText(error);node.hidden=false;}
 function rowStatus(row){const s=Object.values(row.steps);return !row.sessionRef?'not_started':row.passed===7?'complete':s.includes('technical_error')?'technical_error':s.includes('pending')?'pending':s.includes('revision')?'revision':'working';}
 function renderRows(){
@@ -39,7 +39,7 @@ async function refresh(forceDetail=false){
 }
 function snapshot(note){return Object.entries(note.snapshot||{}).map(([k,v])=>(labels[k]||k)+': '+v).join('\n\n');}
 function renderDetail(session){
- const drafts=new Map([...document.querySelectorAll('[data-thread-reply]')].map(f=>[f.dataset.threadReply,f.elements.body.value]));
+ const drafts=new Map([...document.querySelectorAll('[data-thread-reply]')].map(f=>[f.dataset.threadReply,{body:f.elements.body.value,id:f.dataset.requestId,sentBody:f.dataset.requestBody}]));
  detailSession=session;composer=null;
  detailVersion=session.version;
  $('comment-form').hidden=false;if(!sending)$('comment-submit').disabled=false;
@@ -50,7 +50,10 @@ function renderDetail(session){
   const teacher=(session.teacherComments||[]).filter(c=>c.section===key).reverse().map(c=>`<details class="detail-comments teacher-note" open><summary>Giảng viên · ${escape(c.authorName)}</summary><p>${escape(c.feedback)}</p><details><summary>Nội dung lúc góp ý</summary><pre>${escape(snapshot(c))}</pre></details></details>`).join('');
   return `<section class="detail-step"><header><h3>${labels[key]}</h3><span class="step-status ${escape(s.status)}">${statuses[s.status]}</span></header>${approvalLabel(s)?`<p class="approval-note">${approvalLabel(s)}</p>`:''}${s.editedAfterApproval?'<p class="edited-note">HV đã chỉnh nội dung sau khi thông qua.</p>':''}${fields}${threadsView((session.commentThreads||[]).filter(t=>t.section===key),{teacher:true})}${teacher}${ai}${s.status==='technical_error'?'<p class="error">Chấm gặp lỗi kỹ thuật. Học viên có thể gửi Check lại; nội dung đã lưu được giữ.</p>':''}</section>`;
  }).join('')+Object.entries(session.vocabulary||{}).map(([idea,v])=>`<div class="vocab-read"><h3>Từ vựng · Ý ${escape(idea)}</h3>${v.status==='ready'?Object.entries(v.groups).map(([k,list])=>`<p><b>${k}</b> · ${list.map(x=>escape(x.phrase)+' — '+escape(x.meaningVi)).join('; ')}</p>`).join(''):`<p>${v.status==='failed'?'Gợi ý gặp lỗi, học viên có thể thử lại.':'Đang chuẩn bị gợi ý.'}</p>`}</div>`).join('')+'<section class="activity-panel"><h3>Nhật ký hoạt động · Giữ hai tháng</h3><p class="fine-print">Gồm sự kiện, nội dung gửi chấm và phản hồi AI. Các lượt trước khi bật tính năng có thể chưa đủ nhật ký.</p><p id="activity-state" role="status">Đang tải nhật ký…</p><div id="activity-list"></div><div id="activity-job"></div></section>';
- for(const f of document.querySelectorAll('[data-thread-reply]'))if(drafts.has(f.dataset.threadReply))f.elements.body.value=drafts.get(f.dataset.threadReply);
+ for(const f of document.querySelectorAll('[data-thread-reply]'))if(drafts.has(f.dataset.threadReply)){
+  const d=drafts.get(f.dataset.threadReply);f.elements.body.value=d.body;
+  if(d.id)f.dataset.requestId=d.id;if(d.sentBody!==undefined)f.dataset.requestBody=d.sentBody;
+ }
 }
 async function readDetail(ref){
  const current=epoch,sequence=++detailSequence;
@@ -118,7 +121,7 @@ async function startComposer(root,range){
  if(!root||!detailSession||sending||composer)return;
  const field=root.dataset.selectField,text=detailSession.responses[field],ref=selected?.ref,current=epoch;
  if(!text?.trim())return;
- const hash=await fieldHash(text);if(current!==epoch||selected?.ref!==ref||!root.isConnected||composer)return;
+ const hash=await fieldHash(text);if(current!==epoch||selected?.ref!==ref||!root.isConnected||composer||sending)return;
  const form=document.createElement('form');form.className='comment-composer';form.dataset.commentCreate='1';
  form.innerHTML=`<strong>Comment · ${escape(labels[field]||field)}</strong>${range?`<blockquote>${escape(text.slice(range.start,range.end))}</blockquote>`:'<p>Nhận xét cả phần nội dung này.</p>'}<label>Lời góp ý<textarea name="body" required maxlength="5000" placeholder="Nhập nhận xét cho học viên…"></textarea></label><button class="primary" type="submit">Gửi comment</button><button class="secondary" type="button" data-cancel-comment>Hủy</button><p class="thread-status" role="status"></p>`;
  composer={form,field,fieldHash:hash,range,ref,epoch:current};root.closest('.saved-field').append(form);form.elements.body.focus();
@@ -132,28 +135,35 @@ $('detail-content').addEventListener('keydown',event=>{if(['Enter',' '].includes
 async function sendStatus(button){
  if(sending||composer||!selected?.ref)return;const ref=selected.ref,current=epoch;
  sending=true;button.disabled=true;detailSequence++;
- try{const value=await request('/sessions/'+ref+'/threads','POST',{action:'status',threadRef:button.dataset.threadStatus,status:button.dataset.status,requestId:crypto.randomUUID(),expectedActor:actorEmail});if(current===epoch&&selected?.ref===ref)renderDetail(value.session);}
- catch(e){if(current===epoch)report(e);}
+ try{const value=await request('/sessions/'+ref+'/threads','POST',{action:'status',threadRef:button.dataset.threadStatus,status:button.dataset.status,expectedCommentVersion:detailSession.commentVersion||0,requestId:crypto.randomUUID(),expectedActor:actorEmail});if(current===epoch&&selected?.ref===ref)renderDetail(value.session);}
+ catch(e){if(current===epoch){
+  report(e);
+  if(e.message==='COMMENT_VERSION_CONFLICT')try{
+   const latest=await request('/sessions/'+ref);if(current===epoch&&selected?.ref===ref)renderDetail(latest.session);
+  }catch(readError){if(current===epoch)report(readError);}
+ }}
  finally{sending=false;button.disabled=false;}
 }
 $('detail-content').addEventListener('submit',async event=>{
  const form=event.target.closest('[data-thread-reply],[data-comment-create]');if(!form)return;event.preventDefault();
  if(sending||!selected?.ref)return;const body=form.elements.body.value.trim();if(!body)return;
  const creation=!!form.dataset.commentCreate,c=creation?composer:null,ref=selected.ref,current=epoch;
+ if(!creation&&composer){$('comment-status').textContent='Hãy gửi hoặc hủy comment đang soạn trước khi trả lời trao đổi khác; bản nháp đang được giữ.';return;}
  if(creation&&(!c||c.ref!==ref||c.epoch!==current))return;
  if(form.dataset.requestBody!==body){form.dataset.requestBody=body;form.dataset.requestId=crypto.randomUUID();}
  const input={action:creation?'create':'reply',body,requestId:form.dataset.requestId,expectedActor:actorEmail,...(creation?{field:c.field,fieldHash:c.fieldHash,...(c.range?{range:c.range}:{})}:{threadRef:form.dataset.threadReply})};
- const button=form.querySelector('button[type="submit"]'),status=form.querySelector('.thread-status');sending=true;detailSequence++;button.disabled=true;status.textContent='Đang gửi…';
+ const button=form.querySelector('button[type="submit"]'),status=form.querySelector('.thread-status');sending=true;detailSequence++;button.disabled=true;form.elements.body.disabled=true;status.textContent='Đang gửi…';
  try{
   const value=await request('/sessions/'+ref+'/threads','POST',input);
   if(current!==epoch||selected?.ref!==ref)return;
-  form.elements.body.value='';composer=null;renderDetail(value.session);await readActivity(ref);$('comment-status').textContent='Đã lưu trao đổi; học viên đọc được trên bài của mình.';
+  form.elements.body.value='';delete form.dataset.requestId;delete form.dataset.requestBody;composer=null;renderDetail(value.session);await readActivity(ref);$('comment-status').textContent='Đã lưu trao đổi; học viên đọc được trên bài của mình.';
  }catch(e){if(current===epoch&&selected?.ref===ref)status.textContent=e.message==='COMMENT_CONTENT_CHANGED'?'Nội dung trích đã thay đổi. Lời góp ý vẫn giữ; sao chép rồi hủy, cập nhật bài và chọn lại đoạn.':errorText(e);}
- finally{sending=false;button.disabled=false;}
+ finally{sending=false;button.disabled=false;form.elements.body.disabled=false;}
 });
 $('logout').addEventListener('click',async()=>{if(authBusy)return;if(hasThreadDraft()&&!window.confirm('Bỏ lời trao đổi chưa gửi và đăng xuất?'))return;authBusy=true;epoch++;clearInterval(timer);selected=null;composer=null;detailSession=null;actorEmail='';rows=[];$('detail-content').innerHTML='';$('detail').hidden=true;$('dashboard').hidden=true;$('login').hidden=true;$('students').innerHTML='';$('comment-text').value='';try{await request('/session','DELETE');}catch(e){report(e,'login-error');}finally{authBusy=false;$('login').hidden=false;}window.google?.accounts.id.disableAutoSelect();});
 $('comment-form').addEventListener('submit',async event=>{
  event.preventDefault();if(sending||!selected?.ref||!Number.isSafeInteger(detailVersion))return;
+ if(composer){$('comment-status').textContent='Hãy gửi hoặc hủy comment đang soạn trước khi gửi góp ý theo phần; bản nháp đang được giữ.';return;}
  const ref=selected.ref,current=epoch,feedback=$('comment-text').value.trim(),section=$('comment-section').value;if(!feedback)return;
  sending=true;detailSequence++;$('comment-submit').disabled=true;$('comment-status').textContent='Đang gửi góp ý…';
  try{const value=await request('/sessions/'+ref+'/comments','POST',{section,feedback,expectedActor:actorEmail,expectedVersion:detailVersion,requestId:crypto.randomUUID()});if(current!==epoch||selected?.ref!==ref)return;detailSequence++;renderDetail(value.session);if($('comment-text').value.trim()===feedback)$('comment-text').value='';$('comment-status').textContent='Đã lưu góp ý; học viên sẽ thấy ở đúng phần bài.';await readActivity(ref);await refresh();}catch(e){if(current===epoch&&selected?.ref===ref)$('comment-status').textContent=errorText(e);}finally{sending=false;$('comment-submit').disabled=false;}

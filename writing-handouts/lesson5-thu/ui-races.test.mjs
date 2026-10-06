@@ -17,8 +17,50 @@ function fixture(api={}){
  vm.runInContext(source,context);
  const run=code=>vm.runInContext(code,context);
  run("render=()=>{};state.ref='a-ref';state.responses.idea1='Old draft';student='A';");
- return {run,el,textarea,storage};
+ return {run,el,textarea,storage,context};
 }
+
+function replyForm(body='Lời trả lời'){
+ const button={disabled:false},status={textContent:''};
+ const form={dataset:{threadReply:'thread-one'},elements:{body:{value:body,disabled:false}},querySelector:s=>s==='button'?button:status};
+ return {form,button,status,event:{target:{closest:()=>form},preventDefault(){}}};
+}
+test('R-UI-REPLY-LOCK · giữ ô trả lời trong lúc gửi, không mất chữ nhập thêm',async()=>{
+ const ack=deferred(),h=fixture({thread:()=>ack.promise}),r=replyForm();
+ const pending=h.el('workspace').handlers.submit(r.event);await Promise.resolve();await Promise.resolve();
+ assert.equal(r.form.elements.body.disabled,true);
+ ack.resolve({session:h.run('structuredClone(state)')});await pending;
+});
+test('R-UI-REPLY-SAVE · lưu nháp trước khi gửi trao đổi, ACK không hạ bản đã lưu',async()=>{
+ const sent=[],h=fixture({save:async()=>({session:{version:2}}),thread:async()=>{sent.push(h.run('state.version'));return {session:h.run('structuredClone(state)')};}}),r=replyForm();
+ h.run("dirty={idea1:'Bài vừa nhập'};state.responses.idea1='Bài vừa nhập';");
+ await h.el('workspace').handlers.submit(r.event);
+ assert.deepEqual(sent,[2]);assert.equal(h.run('state.version'),2);assert.equal(h.run('Object.keys(dirty).length'),0);
+});
+test('R-UI-REPLY-ORDER · đang lưu thì chưa gửi reply, khóa input và giữ phiên bản mới',async()=>{
+ const save=deferred(),ack=deferred();let replies=0;const h=fixture({save:()=>save.promise,thread:()=>{replies++;return ack.promise;}}),r=replyForm();
+ h.run("dirty={idea1:'Nháp cần lưu'};state.responses.idea1='Nháp cần lưu';");
+ const pending=h.el('workspace').handlers.submit(r.event);await Promise.resolve();await Promise.resolve();
+ assert.equal(replies,0);assert.equal(h.textarea.disabled,true);
+ h.textarea.value='Nhập lúc đang chờ';h.el('workspace').handlers.input({target:h.textarea});assert.equal(h.run('state.responses.idea1'),'Nháp cần lưu');
+ save.resolve({session:{version:2}});await h.run('serial');await Promise.resolve();assert.equal(replies,1);
+ assert.equal(h.run('busy'),true);assert.equal(h.run('editingLocked'),true);
+ ack.resolve({session:h.run('structuredClone(state)')});await pending;
+ assert.equal(h.run('state.version'),2);assert.equal(h.run('state.responses.idea1'),'Nháp cần lưu');assert.equal(h.run('editingLocked'),false);
+});
+test('R-UI-REPLY-SAVE-FAIL · lưu bài thất bại giữ nháp reply và chưa gửi trao đổi',async()=>{
+ let replies=0;const h=fixture({save:async()=>{throw new Error('Offline');},thread:async()=>{replies++;}}),r=replyForm();
+ h.run("dirty={idea1:'Nháp chưa lưu'};");await h.el('workspace').handlers.submit(r.event);
+ assert.equal(replies,0);assert.equal(r.form.elements.body.value,'Lời trả lời');assert.equal(r.form.elements.body.disabled,false);assert.equal(h.run('dirty.idea1'),'Nháp chưa lưu');
+});
+test('R-UI-REPLY-RENDER · mất ACK rồi dựng lại trang vẫn giữ requestId để thử lại',async()=>{
+ const h=fixture(),old=replyForm(),fresh=replyForm('');old.form.dataset.replyId='stable-id';old.form.dataset.replyBody=old.form.elements.body.value;
+ let calls=0;h.context.document.querySelectorAll=s=>s==='[data-thread-reply]'?(calls++===0?[old.form]:[fresh.form]):[];
+ h.context.savedContent=()=>'';h.context.approvalLabel=()=>'';h.context.threadsView=()=>'';h.context.renderJourney=()=>'';h.context.renderProcessing=()=>'';
+ const source=fs.readFileSync(root+'/lesson5-thu/app.js','utf8');const start=source.indexOf('function render(){'),end=source.indexOf('function hasReplyDraft()',start);
+ vm.runInContext(source.slice(start,end),h.context);h.run('render()');
+ assert.equal(fresh.form.dataset.replyId,'stable-id');assert.equal(fresh.form.dataset.replyBody,old.form.dataset.replyBody);assert.equal(fresh.form.elements.body.value,old.form.elements.body.value);
+});
 test('R-UI-IDENTITY · read-latest cũ không áp bài A vào phiên B',async()=>{
  const read=deferred(),h=fixture({read:()=>read.promise});
  const pending=h.el('read-latest').handlers.click();

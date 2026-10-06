@@ -64,14 +64,17 @@ function vocabulary(n){
 }
 
 function render(){
-  const replyDrafts=new Map([...document.querySelectorAll('[data-thread-reply]')].map(f=>[f.dataset.threadReply,f.elements.body.value]));
+  const replyDrafts=new Map([...document.querySelectorAll('[data-thread-reply]')].map(f=>[f.dataset.threadReply,{body:f.elements.body.value,id:f.dataset.replyId,sentBody:f.dataset.replyBody}]));
   const openSteps=[...document.querySelectorAll('details.prior-step[open]')].map(d=>d.id);
   $('sections').innerHTML=`<section class="section-group" id="topic"><div class="group-header"><div><h2>01. Ý tưởng & Topic sentence</h2><p>Chốt cả hai idea trước khi phát triển từng ý.</p></div></div>${stepCard('topic')}</section><section class="section-group" id="idea1"><div class="group-header"><div><h2>02. Hoàn thiện ý 1</h2><p>Chốt B → kiểm A → xây X → mở từ vựng.</p></div><span class="badge ${ideaPassed(state,1)?'passed':''}">${ideaPassed(state,1)?'✓ Đã đạt':'Làm từng bước'}</span></div>${['b1','a1','x1'].map(stepCard).join('')}${vocabulary(1)}${ideaPassed(state,1)&&!state.idea2Open?'<div class="next-idea"><div><strong>Ý 1 đã hoàn thiện.</strong><p>Giữ nguyên ba điểm đã đạt và bắt đầu ý tiếp theo.</p></div><button class="primary" id="next-idea">Tiếp tục với ý 2 →</button></div>':''}</section>${state.idea2Open?`<section class="section-group" id="idea2"><div class="group-header"><div><h2>03. Hoàn thiện ý 2</h2><p>Tiếp tục quy trình B → A → X với idea thứ hai.</p></div></div>${['b2','a2','x2'].map(stepCard).join('')}${vocabulary(2)}</section>`:'<div id="idea2" class="lock-note">◌ &nbsp; Ý 2 sẽ mở sau khi bạn hoàn thiện ý 1 và nhấn tiếp tục.</div>'}`;
   const topicDone=state.steps.topic.status==='passed',oneDone=ideaPassed(state,1),twoDone=ideaPassed(state,2);
   $('journey-nav').innerHTML=[['prompt','Đề bài','Đọc đề','?',false,true],['topic','Ý tưởng & Topic','Chốt cả hai idea','1',topicDone,true],['idea1','Lập luận ý 1','B → A → X','2',oneDone,topicDone],['idea2','Lập luận ý 2','B → A → X','3',twoDone,state.idea2Open]].map(([id,title,sub,num,done,enabled])=>`<button class="nav-item ${done?'done':''} ${id==='topic'&&!topicDone||id==='idea1'&&topicDone&&!oneDone||id==='idea2'&&state.idea2Open?'active':''}" data-target="${id}" ${enabled?'':'disabled'}><span>${done?'✓':num}</span><span>${title}<small>${sub}</small></span></button>`).join('');
   $('completion').hidden=!twoDone;
   if(twoDone)$('completion').innerHTML=renderRecap(state);
-  for(const f of document.querySelectorAll('[data-thread-reply]'))if(replyDrafts.has(f.dataset.threadReply))f.elements.body.value=replyDrafts.get(f.dataset.threadReply);
+  for(const f of document.querySelectorAll('[data-thread-reply]'))if(replyDrafts.has(f.dataset.threadReply)){
+   const d=replyDrafts.get(f.dataset.threadReply);f.elements.body.value=d.body;
+   if(d.id)f.dataset.replyId=d.id;if(d.sentBody!==undefined)f.dataset.replyBody=d.sentBody;
+  }
   for(const id of openSteps)if($(id))$(id).open=true;
 }
 function hasReplyDraft(){return [...document.querySelectorAll('[data-thread-reply] textarea')].some(el=>el.value.trim());}
@@ -189,7 +192,7 @@ $('class-select').addEventListener('change',students);
 $('login-form').addEventListener('submit',event=>{event.preventDefault();const val=$('student-select').value;if(!names[val])return;student=val;$('confirm-title').textContent=names[val];$('confirm-class').textContent=classes.find(c=>c.classRef===$('class-select').value)?.className;show('confirm');$('confirm-button').focus();});
 $('back').addEventListener('click',()=>show('identity'));
 $('confirm-button').addEventListener('click',enter);
-$('logout').addEventListener('click',async()=>{await flush();generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');student='';dirty={};state=createState();show('identity');});
+$('logout').addEventListener('click',async()=>{if(busy||editingLocked)return;await flush();generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');student='';dirty={};state=createState();show('identity');});
 $('read-latest').addEventListener('click',async()=>{
  if(busy||editingLocked)return;
  const epoch=generation,ref=state.ref;keepDraft();busy=true;editingLocked=true;mutationVersion++;
@@ -198,7 +201,7 @@ $('read-latest').addEventListener('click',async()=>{
  catch(error){if(epoch===generation&&ref===state.ref)failure(error);}
  finally{if(epoch===generation&&ref===state.ref){busy=false;editingLocked=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});}}
 });
-$('restore-draft').addEventListener('click',()=>{try{const saved=JSON.parse(localStorage.getItem(draftKey()));for(const [field,value] of Object.entries(saved.changes||saved.responses)){const key=ORDER.find(k=>FIELDS[k].includes(field));if(typeof value==='string'&&canEdit(state,key)&&state.responses[field]!==value){state.responses[field]=value;dirty[field]=value;}}render();$('restore-draft').hidden=true;if(Object.keys(dirty).length){keepDraft();void flush();}}catch{message('Chưa đọc được nháp trên thiết bị.');}});
+$('restore-draft').addEventListener('click',()=>{if(busy||editingLocked)return;try{const saved=JSON.parse(localStorage.getItem(draftKey()));for(const [field,value] of Object.entries(saved.changes||saved.responses)){const key=ORDER.find(k=>FIELDS[k].includes(field));if(typeof value==='string'&&canEdit(state,key)&&state.responses[field]!==value){state.responses[field]=value;dirty[field]=value;}}render();$('restore-draft').hidden=true;if(Object.keys(dirty).length){keepDraft();void flush();}}catch{message('Chưa đọc được nháp trên thiết bị.');}});
 $('workspace').addEventListener('input',event=>{
  const field=event.target.dataset.field,key=ORDER.find(k=>FIELDS[k].includes(field));if(!field||editingLocked||conflict||!canEdit(state,key))return;
  state.responses[field]=event.target.value;dirty[field]=event.target.value;keepDraft();$('save-state').textContent='Đang lưu…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>void flush(),600);
@@ -226,14 +229,22 @@ $('workspace').addEventListener('click',async event=>{
 $('workspace').addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)&&event.target.dataset.threads){event.preventDefault();revealThreads(event.target.dataset.threads);}});
 $('workspace').addEventListener('submit',async event=>{
  const form=event.target.closest('[data-thread-reply]');if(!form)return;event.preventDefault();
- if(busy||conflict)return;const body=form.elements.body.value.trim();if(!body)return;
+ if(busy||conflict||editingLocked)return;const body=form.elements.body.value.trim();if(!body)return;
  const ref=state.ref,epoch=generation,button=form.querySelector('button'),status=form.querySelector('.thread-status');
  const signature=form.dataset.replyBody;
  if(signature!==body){form.dataset.replyId=crypto.randomUUID();form.dataset.replyBody=body;}
- busy=true;mutationVersion++;button.disabled=true;status.textContent='Đang gửi trả lời…';
- try{const result=await api.thread(ref,{action:'reply',threadRef:form.dataset.threadReply,body,requestId:form.dataset.replyId});if(epoch!==generation||ref!==state.ref)return;form.elements.body.value='';apply({...result.session,responses:{...result.session.responses,...dirty}});message('Đã lưu trả lời trong cùng luồng trao đổi.');}
+ // Lưu xong bài trước khi gửi trao đổi; khóa nhập trong thời gian chờ để ACK không làm mất chữ.
+ editingLocked=true;button.disabled=true;form.elements.body.disabled=true;mutationVersion++;
+ document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);status.textContent='Đang lưu bài và gửi trả lời…';
+ try{
+  if(!await flush()||epoch!==generation||ref!==state.ref){status.textContent='Chưa lưu được bài; lời trả lời vẫn giữ. Hãy xử lý kết nối rồi thử lại.';return;}
+  busy=true;mutationVersion++;
+  const result=await api.thread(ref,{action:'reply',threadRef:form.dataset.threadReply,body,requestId:form.dataset.replyId});if(epoch!==generation||ref!==state.ref)return;
+  form.elements.body.value='';delete form.dataset.replyId;delete form.dataset.replyBody;
+  apply({...result.session,responses:{...result.session.responses,...dirty}});message('Đã lưu trả lời trong cùng luồng trao đổi.');
+ }
  catch(e){if(epoch===generation)status.textContent=e.status===401?'Phiên hết hạn. Lời trả lời vẫn được giữ.':'Chưa gửi được; lời trả lời được giữ để thử lại.';}
- finally{if(epoch===generation){busy=false;button.disabled=false;schedulePoll();}}
+ finally{if(epoch===generation){busy=false;editingLocked=false;button.disabled=false;form.elements.body.disabled=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});schedulePoll();}}
 });
 window.addEventListener('pagehide',()=>{if(student&&Object.keys(dirty).length)keepDraft();});
 window.addEventListener('beforeunload',event=>{if(Object.keys(dirty).length){keepDraft();event.preventDefault();event.returnValue='';}});
