@@ -59,7 +59,7 @@ async function openTestPage(context, { remembered = uuidA, classCode = 'CS.07062
     sessionStorage.clear();
     if (ref) localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: ref }));
   }, { key: memoryKey, ref: remembered, storageDenied });
-  await page.route('**/term-tests/shared/config.js*', route => route.fulfill({
+  await page.route('**/term-tests/k67-shared/config.js*', route => route.fulfill({
     status: 200,
     contentType: 'text/javascript; charset=utf-8',
     body: "window.TERM_TEST_APP_CONFIG=Object.freeze({API_BASE_URL:'https://ducizone.ddns.net/mapping-api'});"

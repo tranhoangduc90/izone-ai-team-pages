@@ -147,7 +147,7 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
       contentType: 'application/javascript',
       body: `globalThis.google={accounts:{id:{initialize(options){this.options=options;},renderButton(element){const button=document.createElement('button');button.textContent='Đăng nhập thử';button.onclick=()=>this.options.callback({credential:'${token}'});element.append(button);}}}};`
     }));
-    await page.route('**/term-tests/shared/config.js*', route => route.fulfill({
+    await page.route('**/term-tests/k67-shared/config.js*', route => route.fulfill({
       contentType: 'application/javascript',
       body: "window.TERM_TEST_APP_CONFIG=Object.freeze({API_BASE_URL:'http://127.0.0.1:4180',GOOGLE_CLIENT_ID:'fixture-client-id'});"
     }));
