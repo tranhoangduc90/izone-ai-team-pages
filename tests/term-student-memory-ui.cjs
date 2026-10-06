@@ -66,6 +66,8 @@ async function openTestPage(context, { remembered = uuidA, classCode = 'CS.07062
   }));
   await page.route('https://ducizone.ddns.net/mapping-api/api/term-tests/*/client-event', route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  await page.route('**/answer-sheet/classes',route=>route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({ok:true,classes:[{name:classCode}]})}));
   await page.route('https://ducizone.ddns.net/mapping-api/api/term-tests/roster*', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -209,23 +211,19 @@ async function main() {
     const tempContext = await browser.newContext();
     const tempPage = await openTestPage(tempContext, { slug: 'mini-test-lesson-5', activeAttempt: false });
     const tempPicker = tempPage.page.locator('#studentSelect');
-    const tempCheckbox = tempPage.page.locator('#remember-student');
-    await tempPicker.selectOption('__temporary__');
-    await tempPage.page.locator('#temporaryStudentForm').waitFor({ state: 'visible' });
-    await tempPage.page.waitForFunction(() => document.querySelector('#remember-student')?.disabled === true);
-    assert.equal(await tempCheckbox.isDisabled(), true, 'Hồ sơ tạm vẫn bật ghi nhớ');
-    await tempPicker.selectOption(uuidA);
-    await tempPage.page.waitForTimeout(20);
-    assert.equal(await tempCheckbox.isChecked(), true, 'Temporary làm mất preference tick mặc định');
-    await tempCheckbox.uncheck();
+    // Mini nhập giấy có màn riêng. Bộ nhớ Writing/Term không được tự chọn danh tính cho nó.
+    assert.equal(await tempPicker.inputValue(),'');
+    assert.equal(await tempPage.page.locator('#listeningView').isVisible(),false);
+    assert.equal(await tempPage.page.locator('#remember-student').count(),0);
     await tempPicker.selectOption('__temporary__');
     await tempPage.page.locator('#temporaryStudentForm').waitFor({ state: 'visible' });
     await tempPicker.selectOption(uuidA);
-    await tempPage.page.waitForTimeout(20);
-    assert.equal(await tempCheckbox.isChecked(), false, 'Temporary không giữ preference opt-out');
+    assert.equal(await tempPage.page.locator('#temporaryStudentForm').isVisible(),false);
+    assert.equal(await tempPage.page.locator('#listeningView').isVisible(),false);
+    assert.equal(tempPage.requests.active,0);
     await tempContext.close();
 
-    const answerRoutes = ['term-test-1', 'term-test-2', 'mini-test-lesson-5'];
+    const answerRoutes = ['term-test-1', 'term-test-2'];
     const deniedContext = await browser.newContext();
     const denied = await openTestPage(deniedContext, { storageDenied: true });
     assert.equal(await denied.page.locator('#studentSelect').isEnabled(), true, 'Storage bị chặn làm hỏng chọn tay Term');
@@ -268,9 +266,9 @@ async function main() {
       'Xác nhận hiện có là cổng trước khi ghi nhớ và resume',
       'Storage event không đổi danh tính active attempt',
       'UUID không thuộc roster và untick đều fail-closed',
-      'Cả 3 answer sheet và 3 CBT trên 4 lớp CS/IC/lớp mới không tự mở lượt làm; demo không đụng bộ nhớ thật',
+      'Hai answer sheet Term và ba CBT trên bốn lớp không tự mở lượt làm; Mini nhập giấy giữ màn chọn tên riêng; demo không đụng bộ nhớ thật',
       'Bộ nhớ đổi trong dialog vẫn chuẩn bị đúng UUID; lỗi xóa không báo đã quên',
-      'Hồ sơ tạm → chính thức giữ đúng tick mặc định và lựa chọn bỏ tick'
+      'Mini chọn hồ sơ tạm rồi chính thức vẫn cần xác nhận trước khi nhập'
     ] }, null, 2));
   } finally {
     await browser.close();

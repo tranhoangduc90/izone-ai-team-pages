@@ -20,8 +20,8 @@ test('K67 nhận tín hiệu chấm xong nhưng vẫn giữ polling dự phòng'
 });
 
 test('bốn trang Term Test K67 nạp đúng revision cho kết quả trực tiếp và phục hồi lượt', async () => {
-  const liveResultsRevision = '20261003-writing-save-cas-v1';
-  const resetRecoveryRevision = '20261003-writing-save-cas-v1';
+  const liveResultsRevision = '20261007-mini-login-v1';
+  const resetRecoveryRevision = '20261007-mini-login-v1';
   for (const entry of [
     'term-tests/term-test-1/index.html',
     'term-tests/term-test-2/index.html'

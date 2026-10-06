@@ -344,3 +344,7 @@ label.checkbox-row input[type="checkbox"] { flex: 0 0 20px; width: 20px; height:
 .writing-save-conflict textarea, .writing-recovery textarea { display: block; width: 100%; min-height: 100px; margin-top: 4px; padding: 8px; font: inherit; resize: vertical; }
 .writing-save-conflict .form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .writing-recovery summary { cursor: pointer; font-weight: 700; }
+
+/* Tên đã xác nhận luôn hiện phía trên phần nhập đáp án để học viên kiểm lại. */
+.mini-active-user { padding: 16px 20px; }
+.mini-active-user strong { display: block; margin-bottom: 10px; }

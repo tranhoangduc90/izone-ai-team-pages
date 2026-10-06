@@ -18,7 +18,7 @@
     slug: 'mini-test-lesson-5',
     title: 'Mini Test Buổi 5',
     allowTemporaryStudents: true,
-    intro: 'Chọn đúng họ tên, làm Listening trước rồi chuyển sang Reading. Hệ thống lưu và chấm bài ngay sau khi bạn hoàn tất Reading.',
+    intro: 'Chọn lớp và họ tên, xác nhận rồi nhập đáp án từ bài giấy. Trang này không giới hạn thời gian; giảng viên tổ chức thời gian với lớp.',
     listening: {
       title: 'Listening - Câu 11–30',
       description: [

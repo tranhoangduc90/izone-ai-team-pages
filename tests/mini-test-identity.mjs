@@ -63,6 +63,15 @@ try {
   const temporaryStudentRef = '00000000-0000-4000-8000-000000000021';
   let registrationPayload = null;
   let listeningPayload = null;
+  await page.route('**/answer-sheet/classes',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,classes:[{name:'IC2238'}]})}));
+  await page.route('**/answer-sheet/open',async route=>{
+    const ref=route.request().postDataJSON().studentRef;
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,studentRef:ref,
+      studentName:ref===temporaryStudentRef?'Học viên mã tạm':'Học viên thử nghiệm',className:'IC2238',
+      attemptMode:'answer_sheet',policy:{timed:false,autoSubmit:false},generation:0,
+      examSessionToken:'00000000-0000-4000-8000-000000000022',attemptToken:null,listeningSubmitted:false,
+      completed:false,listeningDraft:{},readingDraft:{},listeningDeadlineAt:null,readingDeadlineAt:null})});
+  });
 
   // Dữ liệu vào: API roster của lớp IC2238 với một học viên giả lập.
   // Việc chính: không gọi hệ thống thật và không dùng dữ liệu học viên thật.
@@ -96,7 +105,7 @@ try {
       }),
     });
   });
-  await page.route('**/api/term-tests/mini-test-lesson-5/listening', async (route) => {
+  await page.route('**/api/term-tests/mini-test-lesson-5/answer-sheet/listening', async (route) => {
     listeningPayload = route.request().postDataJSON();
     await route.fulfill({
       status: 200,
@@ -106,6 +115,7 @@ try {
         attemptToken: '00000000-0000-4000-8000-000000000031',
         studentName: 'Học viên mã tạm',
         completed: false,
+        generation: 0,
         portalSyncStatus: 'not_applicable',
       }),
     });
@@ -133,15 +143,19 @@ try {
   await studentSelect.waitFor({ state: 'visible' });
 
   if (!(await identity.isVisible())) throw new Error('Khối chọn học viên đang bị ẩn');
-  if (!(await listening.isVisible())) throw new Error('Phần Listening không hiển thị cùng bộ chọn tên');
+  if (await listening.isVisible()) throw new Error('Listening mở trước khi xác nhận lớp và tên');
   if ((await studentSelect.locator('option').count()) !== 3) throw new Error('Dropdown thiếu lựa chọn học viên tạm');
 
   await studentSelect.selectOption('11111111-1111-4111-8111-111111111111');
   if ((await studentSelect.inputValue()) !== '11111111-1111-4111-8111-111111111111') throw new Error('Không chọn được học viên');
+  await page.locator('#miniEnter').click();
+  await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
+  await listening.waitFor({state:'visible'});
 
   await page.reload();
   await studentSelect.waitFor({ state: 'visible' });
   if ((await studentSelect.inputValue()) !== '11111111-1111-4111-8111-111111111111') throw new Error('Tên đã chọn không được giữ sau khi tải lại');
+  if (await listening.isVisible()) throw new Error('Tải lại tự mở bài trước xác nhận');
 
   await studentSelect.selectOption('__temporary__');
   const temporaryForm = page.locator('#temporaryStudentForm');
@@ -158,8 +172,11 @@ try {
   }
   if (await temporaryForm.isVisible()) throw new Error('Biểu mẫu mã tạm chưa đóng sau khi xác nhận');
   if (await page.locator('#temporaryStudentCode').inputValue()) throw new Error('Ô mã tạm chưa được xóa');
+  await page.locator('#miniEnter').click();
+  await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
+  await listening.waitFor({state:'visible'});
 
-  const storedIdentity = await page.evaluate(() => `${localStorage.getItem('izone-test:mini-test-lesson-5:IC2238') || ''}${sessionStorage.getItem('izone-test:mini-test-lesson-5:IC2238') || ''}`);
+  const storedIdentity = await page.evaluate(() => JSON.stringify({...localStorage,...sessionStorage}));
   if (storedIdentity.includes('T01') || storedIdentity.toLowerCase().includes('temporarycode')) {
     throw new Error('Mã tạm bị lưu trong bộ nhớ trình duyệt');
   }

@@ -6,7 +6,12 @@
   const root = document.getElementById('app');
   const clientBuild = '20260829-all-student-confirmation-v2';
   const query = new URLSearchParams(window.location.search);
-  const classCode = (query.get('class') || '').trim().toUpperCase();
+  let classCode = (query.get('class') || '').trim().toUpperCase();
+  const miniAnswerSheet = testConfig?.slug === 'mini-test-lesson-5' && !window.TERM_TEST_CONTENT;
+  let miniConfirmed = false;
+  let miniGeneration = 0;
+  let miniEpoch = 0;
+  const miniPrefix = '/api/term-tests/mini-test-lesson-5/answer-sheet';
   const requestedDemo = query.get('demo') || '';
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
   const listeningOnly = retakeConfig.mode === 'listening-only';
@@ -24,8 +29,8 @@
   if (!testConfig || !appConfig || !root) return;
 
   const storageScope = listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '';
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
-  const restoredSession = readSession();
+  let storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
+  const restoredSession = miniAnswerSheet ? {} : readSession();
   const state = {
     stage: 'loading',
     roster: [],
@@ -112,7 +117,9 @@
   }
 
   function saveSession() {
+    if (miniAnswerSheet && !miniConfirmed) return;
     const serialized = JSON.stringify({
+      generation: miniGeneration,
       studentRef: state.studentRef,
       studentName: state.studentName,
       studentIdentitySource: state.studentIdentitySource,
@@ -640,6 +647,7 @@
   }
 
   function setStage(stage) {
+    if (miniAnswerSheet && !miniConfirmed && stage !== 'loading') stage = 'identity';
     if (!resultsUnlocked() && (stage === 'result-ready' || stage === 'result')) {
       stage = stageBeforeResults();
     }
@@ -649,7 +657,7 @@
     // Khi học viên đang làm Listening, luôn hiện bộ chọn tên để họ xác nhận
     // đúng danh tính trước khi nộp. Ở giao diện thi đầy đủ, tiếp tục hiện tên
     // đã xác nhận ở các bước sau như hành vi hiện có.
-    const showIdentity = stage === 'listening'
+    const showIdentity = miniAnswerSheet ? stage === 'identity' : stage === 'listening'
       || (document.body.classList.contains('cbt-mode')
         && Boolean(state.studentRef)
         && stage !== 'loading');
@@ -769,6 +777,18 @@
   }
 
   async function apiRequest(path, options = {}) {
+    const ownerKey = storageKey;
+    const requestEpoch = miniEpoch;
+    if (miniAnswerSheet) {
+      const sectionPath = `/api/term-tests/${testConfig.slug}/`;
+      if (path.startsWith(sectionPath) && /^(listening|reading)(\/draft|\/start)?$/.test(path.slice(sectionPath.length))) {
+        if (!miniConfirmed) throw new Error('Hãy xác nhận lớp và tên trước khi nhập bài.');
+        path = miniPrefix + '/' + path.slice(sectionPath.length);
+      } else if (path === '/api/term-tests/result') path = miniPrefix + '/result';
+      if (path.startsWith(miniPrefix) && options.body && !path.endsWith('/open')) {
+        options = {...options,body:JSON.stringify({...JSON.parse(options.body),generation:miniGeneration})};
+      }
+    }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 45_000);
     try {
@@ -778,6 +798,7 @@
         headers: { ...(options.headers || {}) }
       });
       const data = await response.json().catch(() => ({}));
+      if (miniAnswerSheet && (ownerKey !== storageKey || requestEpoch !== miniEpoch)) throw new Error('Bạn đã đổi người học. Phản hồi cũ không được áp dụng.');
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
         requestError.code = String(data.error || 'HTTP_ERROR');
@@ -963,6 +984,8 @@
 
   function queueSectionDraft(skill) {
     if (demoMode) return Promise.resolve(null);
+    const queuedOwner = storageKey;
+    const queuedEpoch = miniEpoch;
     const flow = sectionDraftFlows[skill];
     window.clearTimeout(flow.timer);
     window.clearTimeout(flow.forceTimer);
@@ -971,6 +994,8 @@
     const revision = Number(state.draftRevisions[skill]) || 0;
     const answers = { ...(state.drafts[skill] || {}) };
     const operation = flow.promise.catch(() => undefined).then(async () => {
+      // Nháp xếp hàng phải giữ đúng người; đổi người không được gửi nháp này bằng token mới.
+      if (miniAnswerSheet && (!miniConfirmed || queuedOwner !== storageKey || queuedEpoch !== miniEpoch)) return null;
       setSectionSaveStatus(skill, 'Đang lưu trên hệ thống...', 'saving');
       const response = await saveSectionDraftSnapshot(skill, answers, revision);
       const acknowledgedRevision = Number(response?.revision) || revision;
@@ -994,6 +1019,7 @@
       return response;
     });
     flow.promise = operation.catch(error => {
+      if (miniAnswerSheet && (!miniConfirmed || queuedOwner !== storageKey || queuedEpoch !== miniEpoch)) return null;
       if (error.code === 'LISTENING_LOCKED' || error.code === 'READING_LOCKED') {
         setSectionSaveStatus(skill, 'Đã khóa khi hết giờ', 'locked');
         return null;
@@ -1012,6 +1038,7 @@
 
   function scheduleSectionDraft(skill, delay = null) {
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
+    if (miniAnswerSheet && (!miniConfirmed || state.completed || (skill === 'listening' && state.listeningSubmitted))) return;
     const flow = sectionDraftFlows[skill];
     window.clearTimeout(flow.timer);
     window.clearTimeout(flow.retryTimer);
@@ -1039,6 +1066,7 @@
   }
 
   function isSectionExpired(skill) {
+    if (miniAnswerSheet) return false;
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const deadline = Date.parse(deadlineValue || '');
     return Number.isFinite(deadline) && Date.now() + (Number(state.serverTimeOffsetMs) || 0) >= deadline;
@@ -1075,6 +1103,7 @@
   // Kết quả: answer sheet và computer-based dùng chung một cơ chế tự nộp, không phụ thuộc lớp giao diện.
   // Khi lỗi: snapshot đã khóa vẫn nằm trong localStorage và retry tiếp tục cho tới khi server xác nhận.
   function startSectionDeadlineGuard(skill) {
+    if (miniAnswerSheet) return;
     const guard = sectionDeadlineGuards[skill];
     const form = skill === 'listening' ? elements.listeningView : elements.readingView;
     const submitButton = skill === 'listening' ? elements.submitListening : elements.submitReading;
@@ -1560,6 +1589,16 @@
   // Kết quả: thay đổi cuối cùng có thêm cơ hội tới server trước khi trang biến mất; submit cuối vẫn là đường chốt chính thức.
   // Khi lỗi mạng: localStorage vẫn giữ bản mới nhất để lần mở sau gửi lại.
   function flushDraftsOnPageHide() {
+    if (miniAnswerSheet) {
+      if (!miniConfirmed) return;
+      saveSession();
+      const section = state.listeningSubmitted ? 'reading' : 'listening';
+      if (state.completed || (section === 'reading' && state.stage !== 'reading')) return;
+      void apiRequest(`${miniPrefix}/${section}/draft`, {method:'POST',keepalive:true,
+        headers:{'Content-Type':'application/json'},body:JSON.stringify({examSessionToken:state.examSessionToken,
+          attemptToken:state.attemptToken,answers:state.drafts[section],revision:state.draftRevisions[section]})}).catch(()=>{});
+      return;
+    }
     const post = (path, payload) => fetch(`${appConfig.API_BASE_URL}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2556,6 +2595,7 @@
     elements.continueReadingFromResult.hidden = listeningOnly || hasReading || Boolean(demoMode);
     elements.viewFullAttempt.hidden = !(
       !listeningOnly
+      && (!miniAnswerSheet || Boolean(window.TERM_TEST_ATTEMPT_REVIEW?.open))
       && state.attemptToken
       && payload.completed
       && (!writingConfig || payload.writing?.submitted)
@@ -2657,6 +2697,10 @@
   }
 
   async function selectStudentIdentity({ requireConfirmation = false } = {}) {
+    if (miniAnswerSheet) {
+      selectMiniCandidate();
+      return;
+    }
     if (identitySelectionBusy) return;
     identitySelectionBusy = true;
     setIdentityControlsBusy(true);
@@ -2777,6 +2821,10 @@
       saveSession();
       forgetForTemporaryStudent();
       refreshRememberedStudent();
+      if (miniAnswerSheet) {
+        showNotice('Tên tạm đã được tạo. Nhấn “Tiếp tục” để xác nhận trước khi mở bài.', 'success');
+        return;
+      }
       showNotice(`Đã xác nhận ${student.name}. Bạn có thể bắt đầu làm bài.`, 'success');
     } catch (error) {
       showNotice(`Chưa xác nhận được học viên: ${error.message}`, 'error');
@@ -2858,6 +2906,10 @@
         })
       });
       state.attemptToken = response.attemptToken;
+      if (miniAnswerSheet) {
+        storageKey = `izone-mini-answer:v2:${testConfig.slug}:${classCode}:${state.studentRef}:${state.attemptToken}`;
+        miniGeneration = Number(response.generation) || 0;
+      }
       state.studentName = response.studentName;
       state.listeningSubmitted = true;
       state.completed = Boolean(response.completed);
@@ -2934,6 +2986,7 @@
       elements.readingStudentName.textContent = state.studentName;
       hideNotice();
       setStage('reading');
+      if (miniAnswerSheet && state.draftRevisions.reading > state.draftAckRevisions.reading) scheduleSectionDraft('reading', 0);
       startSectionDeadlineGuard('reading');
     } catch (error) {
       showNotice(`Chưa thể mở Reading: ${error.message}`, 'error');
@@ -3250,6 +3303,132 @@
     };
   }
 
+  function selectMiniCandidate() {
+    const student=state.roster.find(item=>item.ref===elements.studentSelect.value);
+    state.studentRef=student?.ref||'';state.studentName=student?.name||'';
+    state.studentIdentitySource=student?.temporary?'temporary':'';
+    if(elements.temporaryStudentForm)elements.temporaryStudentForm.hidden=elements.studentSelect.value!=='__temporary__';
+  }
+
+  // Đầu vào là lớp/tên vừa chọn, chính sách máy chủ và bản nháp đúng chủ.
+  // Chỉ mở vùng nhập sau xác nhận; lỗi mạng giữ màn chọn tên và mọi bản nháp cũ.
+  async function initializeMiniIdentity() {
+    const classLabel = document.createElement('label'); classLabel.textContent = 'Lớp';
+    const classSelect = document.createElement('select'); classSelect.id = 'miniClass';
+    classLabel.append(classSelect); elements.studentSelect.closest('label').before(classLabel);
+    const enter = document.createElement('button'); enter.type='button'; enter.id='miniEnter';
+    enter.className='button button-primary'; enter.textContent='Tiếp tục'; elements.identityView.append(enter);
+    const current = document.createElement('section'); current.className='panel mini-active-user'; current.hidden=true;
+    const name = document.createElement('strong');
+    const change = document.createElement('button'); change.type='button'; change.className='button button-secondary';
+    change.textContent='Đổi người học'; current.append(name,document.createTextNode(' '),change);
+    elements.identityView.before(current);
+    elements.startReading.textContent='Nhập đáp án Reading'; elements.startReading.dataset.normalText='Nhập đáp án Reading';
+    let remembered={}; try {remembered=JSON.parse(localStorage.getItem('izone-mini-identity:v2')||'{}');} catch {}
+    const requestedClass=classCode||remembered.classCode||'';
+    change.addEventListener('click',()=>{
+      saveSession(); ++miniEpoch; miniConfirmed=false; current.hidden=true;
+      for(const section of ['listening','reading']) {stopSectionDraftFlow(section);stopSectionDeadlineGuard(section);}
+      state.attemptToken=''; state.examSessionToken=''; state.clientSubmissionId='';
+      state.listeningSubmitted=false; state.completed=false; state.result=null;
+      state.attemptReview=null;
+      state.drafts={listening:{},reading:{},writing:{task1:'',task2:''}};
+      state.frozenAnswers={listening:null,reading:null};state.readingDeadlineAt='';state.listeningDeadlineAt='';
+      state.draftRevisions={listening:0,reading:0};state.draftAckRevisions={listening:0,reading:0};
+      storageKey='izone-mini-answer:v2:login';setStage('identity');
+      showNotice('Chọn đúng lớp và tên rồi xác nhận để tiếp tục.');
+    });
+    async function loadClass() {
+      ++miniEpoch;classCode=classSelect.value;state.className=classCode;state.studentRef='';state.studentName='';
+      state.studentIdentitySource='';
+      const loadingEpoch=miniEpoch;state.roster=[];elements.studentSelect.replaceChildren(new Option('Đang tải tên...',''));
+      enter.disabled=true;elements.studentSelect.disabled=true;
+      try {
+        if(!classCode){elements.studentSelect.replaceChildren(new Option('Chọn lớp trước',''));return;}
+        const roster=await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${testConfig.slug}`);
+        if(remembered.classCode===classCode && remembered.temporary && remembered.studentRef && remembered.studentName) {
+          state.studentRef=remembered.studentRef;state.studentName=remembered.studentName;state.studentIdentitySource='temporary';
+        }
+        populateRoster(roster);
+        if(remembered.classCode===classCode&&state.roster.some(s=>s.ref===remembered.studentRef)) {
+          elements.studentSelect.value=remembered.studentRef;state.studentRef=remembered.studentRef;
+          state.studentName=state.roster.find(s=>s.ref===remembered.studentRef).name;
+        }
+        showNotice('Chọn lớp và tên. Bài chỉ mở sau khi bạn xác nhận.');
+      }catch(error){if(loadingEpoch===miniEpoch)showNotice(`Chưa tải được danh sách: ${error.message}. Hãy chọn lại lớp để thử lại.`,'error');}
+      finally {if(loadingEpoch===miniEpoch){enter.disabled=!state.roster.length;elements.studentSelect.disabled=false;}}
+    }
+    classSelect.addEventListener('change',()=>void loadClass());
+    enter.addEventListener('click',async()=>{
+      const student=state.roster.find(s=>s.ref===elements.studentSelect.value);
+      if(!student){showNotice('Hãy chọn đúng họ và tên.','error');return;}
+      if(!await confirmStudentIdentity(student))return;
+      const epoch=miniEpoch;setBusy(enter,true,'Đang mở bài...','Tiếp tục');
+      classSelect.disabled=true;elements.studentSelect.disabled=true;
+      try {
+        const response=await apiRequest(`${miniPrefix}/open`,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({classCode,studentRef:student.ref,identityConfirmed:true})});
+        if(epoch!==miniEpoch||response.studentRef!==student.ref||response.policy?.timed!==false) throw new Error('Chưa xác nhận được đúng người và cách nhập bài.');
+        state.studentRef=student.ref;state.studentName=response.studentName;state.className=response.className;
+        state.attemptToken=response.attemptToken||'';state.examSessionToken=response.examSessionToken||'';
+        state.attemptReview=null;
+        miniGeneration=response.generation;storageKey=`izone-mini-answer:v2:${testConfig.slug}:${classCode}:${student.ref}:${state.attemptToken||state.examSessionToken}`;
+        const cached=readSession();miniConfirmed=true;
+        state.listeningSubmitted=Boolean(response.listeningSubmitted);state.completed=Boolean(response.completed);
+        state.listeningDeadlineAt='';state.readingDeadlineAt='';state.frozenAnswers={listening:null,reading:null};
+        state.drafts.listening={...(response.listeningDraft||{})};state.drafts.reading={...(response.readingDraft||{})};
+        state.draftRevisions={listening:Number(response.listeningDraftRevision)||0,reading:Number(response.readingDraftRevision)||0};
+        state.draftAckRevisions={...state.draftRevisions};
+        // Chỉ nối nháp cùng người/lượt/thế hệ. Bản cũ khác chủ vẫn nằm nguyên trong kho cũ.
+        let recovery=cached.studentRef===student.ref&&cached.generation===miniGeneration?cached:null;
+        if (!recovery && cached.studentRef===student.ref && cached.generation!==miniGeneration && !state.completed
+          && Object.values(cached.drafts||{}).some(v=>v&&Object.values(v).some(Boolean))
+          && window.confirm('Lượt bài đã được mở lại. Nháp trước đó vẫn còn trên máy. Bạn muốn phục hồi nháp này vào lượt hiện tại?')) recovery=cached;
+        if(!recovery) {
+          for(const storage of availableStorages()) {
+            try {
+              const old=JSON.parse(storage.getItem(`izone-test:${testConfig.slug}:${classCode}`)||'{}');
+              const hasAnswers=Object.values(old.drafts||{}).some(v=>v&&Object.values(v).some(a=>String(a||'').trim()));
+              const sameOwner=old.studentRef===student.ref&&(!old.attemptToken||old.attemptToken===state.attemptToken)&&!old.examSessionToken;
+              if(hasAnswers&&!state.completed&&(sameOwner||(!old.studentRef&&!old.attemptToken&&!old.examSessionToken))
+                &&window.confirm('Có đáp án cũ trên thiết bị này. Bạn xác nhận đây là bài của mình và muốn phục hồi?')) recovery=old;
+            }catch {}
+            if(recovery)break;
+          }
+        }
+        if(recovery&&!state.completed) for(const section of ['listening','reading']) {
+          if(section==='listening'&&state.listeningSubmitted)continue;
+          if(Number(recovery.draftRevisions?.[section])>state.draftRevisions[section]||!Object.keys(state.drafts[section]).length) {
+            state.drafts[section]={...(recovery.drafts?.[section]||state.drafts[section])};
+            state.draftRevisions[section]=Math.max(state.draftRevisions[section]+1,Number(recovery.draftRevisions?.[section])||0);
+          }
+        }
+        renderQuestionControls(testConfig.listening,elements.listeningQuestions,'listening');
+        renderQuestionControls(testConfig.reading,elements.readingQuestions,'reading');
+        for(const section of ['listening','reading']) {setAnswerControlsLocked(section,false);delete elements[`${section}View`].dataset[`${section}TimeExpired`];updateAnswerCount(section);}
+        elements.readingStudentName.textContent=state.studentName;name.textContent=`${state.className} · ${state.studentName}`;current.hidden=false;
+        try {localStorage.setItem('izone-mini-identity:v2',JSON.stringify({classCode,studentRef:student.ref,
+          studentName:student.name,temporary:student.temporary===true}));}catch {}
+        saveSession();
+        if(state.completed){renderResult(response);setStage('result');}
+        else if(state.listeningSubmitted)setStage(response.readingStartedAt?'reading':'listening-saved');
+        else setStage('listening');
+        const activeSection=state.listeningSubmitted?'reading':'listening';
+        if (!state.completed && (!state.listeningSubmitted || response.readingStartedAt)
+          && state.draftRevisions[activeSection]>state.draftAckRevisions[activeSection]) scheduleSectionDraft(activeSection,0);
+        showNotice('Đây là trang nhập đáp án từ bài giấy. Giảng viên tổ chức thời gian; bạn chủ động nhấn nộp.','success');
+      }catch(error){miniConfirmed=false;setStage('identity');showNotice(`Chưa mở được bài: ${error.message}`,'error');}
+      finally{classSelect.disabled=false;elements.studentSelect.disabled=false;setBusy(enter,false,'Đang mở bài...','Tiếp tục');}
+    });
+    setStage('identity');elements.identityTitle.textContent='Chọn lớp và họ tên';
+    try{
+      const response=await apiRequest(`${miniPrefix}/classes`);
+      classSelect.replaceChildren(new Option('Nhấn để chọn lớp',''),...response.classes.map(c=>new Option(c.name,c.name)));
+      if(response.classes.some(c=>c.name===requestedClass))classSelect.value=requestedClass;
+      await loadClass();
+    }catch(error){showNotice(`Chưa tải được lớp: ${error.message}. Tải lại trang để thử lại.`,'error');}
+  }
+
   async function initialize() {
     elements.listeningTitle.textContent = testConfig.listening.title;
     elements.readingTitle.textContent = testConfig.reading.title;
@@ -3262,6 +3441,10 @@
     setupWritingExam();
     // Khôi phục cả cảnh báo và bản sao khi đọc server lỗi hoặc trả bản cũ.
     renderWritingConflict(); renderWritingRecovery();
+    if (miniAnswerSheet) {
+      await initializeMiniIdentity();
+      return;
+    }
     await initializeStudentMemory();
 
     if (demoMode) {
