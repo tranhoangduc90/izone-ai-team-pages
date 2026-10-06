@@ -97,6 +97,9 @@ test('kế hoạch lớp hiển thị đủ buổi và Test chưa có điểm m�
   ui.renderIntegratedJourney(journey);
   assert.match(ui.elements.journeyStatus.textContent, /cần được giảng viên kiểm lại/);
   assert.equal(ui.elements.attendedCount.textContent, 0);
+  journey.scheduleStatus = 'needs_review';
+  ui.renderIntegratedJourney(journey);
+  assert.match(ui.elements.journeyStatus.textContent, /cần đối soát; giữ nguyên buổi đã ghi/);
 });
 
 test('API trả sai lớp hoặc học viên thì Journey không hiện', async () => {
@@ -135,6 +138,7 @@ test('link phiếu đã đóng vẫn chọn tên để xem Journey và không m�
     document: { createElement: () => new Node() },
     Option: class { constructor(text, value) { this.textContent = text; this.value = value; } },
     displayStudent: student => student.name,
+    updateSubmissionWindow: () => {},
     installStudentMemory: () => {},
     setNotice: message => calls.push(message),
     showView: view => calls.push(view),

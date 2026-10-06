@@ -1,5 +1,6 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {renderSessionReview} from './session-review.js';
+import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
 
@@ -147,6 +148,38 @@ function setNotice(message = '', kind = '') {
   elements.notice.textContent = message;
   elements.notice.className = `notice${kind ? ` ${kind}` : ''}`;
 }
+
+let observedWindow = null;
+function updateSubmissionWindow(value) {
+  observedWindow = observeSubmissionWindow(value, performance.now());
+  renderSubmissionWindow();
+}
+
+function renderSubmissionWindow() {
+  const now = performance.now();
+  const host = document.getElementById('submissionWindowNotice');
+  if (host) {
+    host.textContent = submissionWindowMessage(observedWindow, now);
+    host.hidden = !host.textContent;
+  }
+  if (!windowCanSubmit(observedWindow, now)) {
+    state.journeyOnly = true;
+    elements.confirmButton.hidden = true;
+    elements.submitButton.disabled = true;
+    elements.nextButton.disabled = !state.checkpointSubmissions.has(currentBlock()?.blockId);
+  }
+}
+
+// Trang mở sẵn cập nhật bằng đồng hồ máy chủ; khi mất mạng giữ hạn đã biết và draft.
+setInterval(renderSubmissionWindow, 1000);
+setInterval(async () => {
+  if (!state.assignment?.definition || state.submitting || state.journeyOnly) return;
+  try {
+    const payload = await apiRequest('/assignments/open', { body: { publicToken: state.publicToken },
+      signal: AbortSignal.timeout(7000) });
+    updateSubmissionWindow(payload.assignment.submissionWindow);
+  } catch { /* Lỗi mạng không xóa draft hoặc thay hạn đã nhận. Backend vẫn kiểm khi nộp. */ }
+}, 15000);
 
 function fail(title, message) {
   elements.errorTitle.textContent = title;
@@ -877,14 +910,21 @@ function renderCheckpoint() {
   }
   elements.progressBar.style.width = `${((state.checkpointIndex + 1) / blocks.length) * 100}%`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  renderSubmissionWindow();
 }
 
 async function refreshBlockReleases() {
   const payload = await apiRequest('/assignments/open', { body: { publicToken: state.publicToken } });
   state.assignment.blockReleases = payload.assignment.blockReleases || [];
+  updateSubmissionWindow(payload.assignment.submissionWindow);
 }
 
 async function submitCurrentCheckpoint() {
+  if (!windowCanSubmit(observedWindow, performance.now())) {
+    const error = new Error('Phiếu đã khóa nhận bài. Câu trả lời đang làm vẫn được giữ lại.');
+    error.code = 'ASSIGNMENT_CLOSED';
+    throw error;
+  }
   const block = currentBlock();
   if (!blockIsOpen(block)) throw new Error('Phần này chưa được giảng viên mở.');
   await flushDraft();
@@ -1048,6 +1088,11 @@ function renderIntegratedJourney(journey) {
       ? 'Có dữ liệu đến buổi ' + (journey.coverage?.knownThroughSession || sessions.at(-1).sessionNumber)
         + '. ' + inferredCount + ' ô buổi chưa có nguồn xác nhận; lịch đầy đủ và điểm Test chưa được nối vào Journey.'
       : 'Chưa có dữ liệu buổi học trong Journey; lịch lớp và kết quả Test chưa được nối.';
+  if (journey.scheduleStatus === 'needs_review') {
+    elements.journeyStatus.textContent += ' Có điểm danh cần đối soát; giữ nguyên buổi đã ghi. Giảng viên cần kiểm tra.';
+  } else if (journey.scheduleStatus === 'temporarily_unavailable') {
+    elements.journeyStatus.textContent += ' Chưa đọc được lịch Portal hiện hành; đang giữ dữ liệu đã lưu.';
+  }
 }
 
 // Cập nhật nhãn tại đầu phút theo đồng hồ Việt Nam; không đọc/ghi API để mở khóa.
@@ -1189,6 +1234,7 @@ async function openAssignment() {
       state.journeyOnly = true;
     }
     state.assignment = assignment;
+    updateSubmissionWindow(assignment.submissionWindow);
     const courseCode = String(state.assignment.courseCode || '').trim();
     elements.brandLabel.textContent = /^\d{2,3}$/.test(courseCode)
       ? `Progress Log · Khóa ${courseCode}`
@@ -1265,8 +1311,28 @@ async function startAttempt() {
   }
 }
 
+function showSubmissionReceipt(payload) {
+  clearLocalDraft();
+  const receipt = payload.receipt;
+  if (payload.submissionWindow) updateSubmissionWindow(payload.submissionWindow);
+  const isDemo = config.DEMO_MODE || ['DEMO-56', 'DEMO-67'].includes(state.assignment.courseCode);
+  elements.resultTitle.textContent = isDemo
+    ? 'Bản dùng thử đã nhận phiếu. Không ghi điểm danh lớp thật.' : receipt.message;
+  elements.attendanceResult.textContent = isDemo ? 'Chỉ ghi nhận trong bản dùng thử'
+    : receipt.attendanceStatus === 'self_confirmed'
+      ? 'Đã nhận trong Progress Log; Portal đang được đồng bộ' : 'Chờ giảng viên xác nhận';
+  elements.completenessResult.textContent = receipt.completeness === 'complete' ? 'Đã đủ nội dung' : 'Còn thiếu mục bắt buộc';
+  renderFinalFeedback(payload.result);
+  setNotice('Đã nhận phiếu. Bạn có thể đóng trang này.');
+  showView('resultView');
+}
+
 async function submitForm(event) {
   event.preventDefault();
+  if (!windowCanSubmit(observedWindow, performance.now())) {
+    setNotice('Phiếu đã khóa nhận bài. Câu trả lời đang làm vẫn được giữ lại.', 'error');
+    return;
+  }
   if (!validateCurrentBlock() || state.submitting) return;
   const missing = allItems().filter(item => itemIsRequired(item) && !responseIsPresent(item, responseFor(item)));
   if (missing.length) {
@@ -1294,24 +1360,22 @@ async function submitForm(event) {
         responses: state.responses
       }
     });
-    clearLocalDraft();
-    const receipt = payload.receipt;
-    const isDemo = config.DEMO_MODE || ['DEMO-56', 'DEMO-67'].includes(state.assignment.courseCode);
-    elements.resultTitle.textContent = isDemo
-      ? 'Bản dùng thử đã nhận phiếu. Không ghi điểm danh lớp thật.'
-      : receipt.message;
-    elements.attendanceResult.textContent = isDemo
-      ? 'Chỉ ghi nhận trong bản dùng thử'
-      : receipt.attendanceStatus === 'self_confirmed'
-        ? 'Đã tự động ghi nhận'
-        : 'Chờ giảng viên xác nhận';
-    elements.completenessResult.textContent = receipt.completeness === 'complete' ? 'Đã đủ nội dung' : 'Còn thiếu mục bắt buộc';
-    renderFinalFeedback(payload.result);
-    setNotice('Hoàn tất. Bạn có thể đóng trang này.');
-    showView('resultView');
+    showSubmissionReceipt(payload);
   } catch (error) {
+    // Lệnh nộp có thể đã lưu trước khi mạng đứt. Đọc biên nhận cũ, không tạo bài mới.
+    if (state.attempt?.attemptToken) {
+      try {
+        const saved = await apiRequest('/attempts/result', { body: { attemptToken: state.attempt.attemptToken },
+          signal: AbortSignal.timeout(7000) });
+        showSubmissionReceipt(saved);
+        return;
+      } catch { /* Chưa có biên nhận: giữ draft và hiển thị lỗi gốc. */ }
+    }
     state.submitting = false;
     elements.submitButton.disabled = false;
+    if (error.code === 'ASSIGNMENT_CLOSED') {
+      updateSubmissionWindow({ ...observedWindow, canSubmit: false, reason: 'assignment_closed' });
+    }
     setNotice(`${error.message} Chưa có xác nhận điểm danh.`, 'error');
     if (state.checkpointSubmissions.has(currentBlock().blockId)) renderCheckpoint();
   }

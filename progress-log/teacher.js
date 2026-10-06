@@ -1,5 +1,6 @@
 import {renderClassAnalytics,renderStudentClassSummary} from './class-analytics-view.js';
 import {contentTitle,sessionHeading} from './session-presentation.js';
+import {observeSubmissionWindow, submissionWindowMessage} from './submission-window.js';
 /*
  * Dữ liệu nhận vào: phiên đăng nhập ứng dụng, lớp được phân quyền và thư viện câu hỏi từ backend.
  * Xử lý: giảng viên chọn 2–3 câu, gán checkpoint, phát hành form bất biến và xem trạng thái nộp/điểm danh.
@@ -176,6 +177,8 @@ async function loadCourseOverview() {
       +(state.overview.testCoverage==='temporarily_unavailable'?' · Chưa đọc được nguồn Test.':'')
       +(state.overview.planOutdated?' · Kế hoạch cần giảng viên xác nhận lại.':'');
     if(state.overview.rosterCoverage==='mapping_unverified') elements.overviewStatus.textContent+=' · Danh sách chưa được đối chiếu snapshot ERP mới nhất.';
+    if(state.overview.scheduleStatus==='needs_review') elements.overviewStatus.textContent+=' · Có điểm danh cần đối soát; giữ nguyên đích đã ghi.';
+    if(state.overview.scheduleStatus==='temporarily_unavailable') elements.overviewStatus.textContent+=' · Chưa đọc được lịch hiện hành; đang giữ dữ liệu đã lưu.';
     paintCourseOverview();
     await loadClassBasicAnalytics(classId,generation,controller.signal);
   } catch(error) {
@@ -878,13 +881,17 @@ function buildStudentRow(student) {
     const portal = document.createElement('small');
     portal.className = `portal-sync-status${student.portalSync?.status === 'complete' ? ' complete' : ''}`;
     portal.textContent = {
-      complete: 'Portal: đã ghi nhận',
+      complete: student.portalSync?.readbackAt ? 'Portal: đã đối chiếu Có mặt' : 'Portal: trạng thái cũ cần đối chiếu',
       queued: 'Portal: đang chờ đồng bộ',
-      leased: 'Portal: đang đồng bộ',
+      processing: 'Portal: đang đồng bộ',
       retry_wait: 'Portal: đang thử lại',
-      review_required: 'Portal: cần kiểm tra xung đột',
+      review_required: 'Portal: cần đối soát buổi điểm danh',
       failed: 'Portal: đồng bộ lỗi'
     }[student.portalSync?.status] || 'Portal: chưa có xác nhận đồng bộ';
+    if (student.portalSync?.reviewRequired) portal.textContent = student.portalSync.reviewReason === 'write_outcome_unknown'
+      ? 'Portal: chưa xác định kết quả lần ghi trước; cần đối soát, chưa ghi lại.'
+      : 'Portal: cần đối soát buổi điểm danh; giữ nguyên đích đã ghi.';
+    if (student.portalSync?.targetSessionId) portal.textContent += ` · Buổi ERP ${student.portalSync.targetSessionId}`;
     copy.append(portal);
   }
   const status = document.createElement('span');
@@ -958,6 +965,7 @@ function currentJourneyPlanDates() {
 function journeyErpLabel(item) {
   const [year, month, day] = item.date.split('-');
   const weekday = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).getUTCDay();
+  if (item.statusCode === 2) return 'Buổi đã hủy · ' + day + '/' + month + '/' + year;
   return 'Buổi ERP ' + (item.numberSource === 'proposal' ? 'dự kiến ' : '')
     + item.erpSessionNumber + ' · ' + (weekday ? 'T' + (weekday + 1) : 'CN')
     + ' ' + day + '/' + month + '/' + year;
@@ -966,17 +974,16 @@ function journeyErpLabel(item) {
 // Chỉ tạo đề xuất trên màn hình. Lịch lệch số dòng/mốc hoặc trạng thái chưa rõ cần người dạy ghép.
 function proposeJourneyPlanDates(total, draft, schedule) {
   const dates = new Map(draft.map(item => [item.sessionNumber, { ...item }]));
-  const sessions = schedule.sessions || [];
+  const sessions = (schedule.sessions || []).filter(item => item.proposalEligible);
   const used = new Set(draft.map(item => item.erpSessionId).filter(Boolean));
   const ambiguous = schedule.ambiguous || sessions.length !== Number(total)
     || new Set(sessions.map(item => item.erpSessionId)).size !== sessions.length
-    || new Set(sessions.map(item => item.date)).size !== sessions.length
     || draft.some(item => item.erpSessionId
-      && sessions.findIndex(s => s.erpSessionId === item.erpSessionId) !== item.sessionNumber - 1);
+      && sessions.find(s => s.erpSessionId === item.erpSessionId)?.erpSessionNumber !== item.sessionNumber);
   if (ambiguous) return {dates:[...dates.values()],added:0,message:'Lịch hoặc mốc đã chốt cần đối chiếu; hãy chọn từng buổi ERP.'};
   let added = 0;
-  sessions.forEach((item,index) => {
-    const number = index + 1;
+  sessions.forEach(item => {
+    const number = item.erpSessionNumber;
     if (dates.has(number) || used.has(item.erpSessionId) || !item.proposalEligible) return;
     dates.set(number,{sessionNumber:number,date:item.date,erpSessionId:item.erpSessionId});
     used.add(item.erpSessionId); added += 1;
@@ -1135,7 +1142,8 @@ async function loadJourneyErpSchedule() {
     state.journeyErpSchedule = payload.schedule;
     state.journeyErpScheduleAssignmentId = assignmentId;
     if (!state.journeyPlan.totalSessions && !state.journeyPlanDirty && payload.schedule.sessions.length) {
-      elements.journeyPlanTotal.value = Math.max(state.journeyPlan.highestKnownSession, payload.schedule.sessions.length);
+      elements.journeyPlanTotal.value = Math.max(state.journeyPlan.highestKnownSession,
+        payload.schedule.sessions.filter(item => item.proposalEligible).length);
     }
     const proposal = proposeJourneyPlanDates(elements.journeyPlanTotal.value, draft, payload.schedule);
     state.journeyPlanDateDraft = new Map(proposal.dates.map(item=>[item.sessionNumber,item]));
@@ -1378,6 +1386,11 @@ async function loadDashboard({ quiet = false } = {}) {
     if (generation !== state.dashboardGeneration) return;
     const previousAssignmentId = state.dashboard?.assignmentId;
     state.dashboard = payload.dashboard;
+    const deadlineHost = document.getElementById('teacherSubmissionWindow');
+    if (deadlineHost) {
+      deadlineHost.textContent = submissionWindowMessage(observeSubmissionWindow(state.dashboard.submissionWindow, performance.now()), performance.now());
+      deadlineHost.hidden = !deadlineHost.textContent;
+    }
     if (previousAssignmentId !== assignmentId) {
       state.liveByStudent.clear();
       void loadJourneyPlan();
