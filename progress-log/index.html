@@ -20,6 +20,7 @@
     </header>
     <main class="shell">
       <p class="notice" id="notice" role="status">Đang mở phiếu…</p>
+      <p class="muted" id="submissionWindowNotice" role="status" hidden></p>
 
       <section class="card" id="identityView" hidden>
         <p class="eyebrow" id="sessionLabel">BUỔI HỌC</p>
@@ -131,6 +132,6 @@
     </main>
     <dialog id="journeySummaryDialog" class="draft-dialog referenceRegion"><form method="dialog"><button class="button text-button" value="close">Đóng tổng kết</button></form><h2>Kết quả từ các phiếu đã có</h2><p class="muted">Chỉ tính câu có kết quả chấm đúng/sai; câu mở và điểm tự khai không tính.</p><div id="journeySummaryContent" class="basicStudentScores"></div></dialog>
     <script src="config.js?rev=20260905-memory-v3"></script>
-    <script type="module" src="app.js?rev=20261003-reference-production"></script>
+    <script type="module" src="app.js?rev=20261006-ordinal-deadline"></script>
   </body>
 </html>
