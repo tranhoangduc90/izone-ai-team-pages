@@ -1,0 +1,30 @@
+/* Chỉ dùng cho Handout67 thật/thử; không sửa theme hoặc giao diện sản phẩm khác. */
+.argument-reminder{margin:24px 0;padding:20px;border:1px solid #d6e1ee;border-radius:12px;background:#f5f8fc;color:#152b4e}
+.argument-reminder h4{font-size:14px;margin:0 0 14px;color:#466386}
+.reminder-prompt{display:grid;grid-template-columns:80px 1fr;gap:10px;padding-bottom:16px;border-bottom:1px solid #d6e1ee}
+.argument-points{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.argument-point{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:14px;border:1px solid #d6e1ee;border-radius:10px;background:white}
+.point-marker{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#e9eff7;font-weight:800;color:#152b4e}
+.point-title{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.argument-point p{margin:8px 0 0;font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.argument-point.is-current{border:2px solid #c82c38;padding:13px;background:#fff9f5;box-shadow:0 0 0 3px #c82c380a}
+.is-current .point-marker{background:#c82c38;color:white}.current-label{padding:3px 8px;border-radius:5px;background:#c82c38;color:white;font-size:11px;font-weight:800}
+.confirmed-label{color:#007769;font-size:11px}.argument-point.is-empty:not(.is-current){border-style:dashed;background:#f9fbfd}
+.empty-point{color:#64758a;font-style:italic}.empty-point small{display:block;font-size:12px;font-style:normal;margin-top:3px}
+.grading-message{display:flex;gap:12px;padding:16px;margin:0 0 16px;border:1px solid #d6e1ee;border-radius:10px;background:#f4f7fc;color:#152b4e;font-size:14px;line-height:1.6}
+.grading-message p{margin:6px 0}.grading-message small{display:block;color:#526c88}.grading-error{display:block;background:#fff5ed;border-color:#efc6a4}
+.grading-error details{margin-top:8px;font-size:12px}.grading-spinner{display:block;flex-shrink:0;width:18px;height:18px;margin-top:3px;border:2px solid #d1dae7;border-top-color:#c82c38;border-radius:50%;animation:grading-spin 1s linear infinite}
+@keyframes grading-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.grading-spinner{animation:none}}
+.argument-recap{margin:24px 0;padding:28px;border:1px solid #d6e1ee;border-radius:16px;background:white;color:#152b4e}
+.argument-recap h2{margin:14px 0 8px;font-size:25px}.argument-recap>p{color:#526c88;line-height:1.7}
+.recap-topic{margin:22px 0;padding:20px;border-left:4px solid #c82c38;border-radius:8px;background:#f4f7fc}.recap-topic h3{font-size:14px;margin:0 0 8px}.recap-topic p{margin:0;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+.recap-scroll{max-width:100%;overflow-x:auto;border:1px solid #d6e1ee;border-radius:12px}.recap-scroll:focus-visible{outline:3px solid #c82c38;outline-offset:3px}
+.recap-table{width:100%;min-width:820px;border-collapse:collapse;table-layout:fixed}.recap-table caption{padding:12px;background:#f4f7fc;text-align:left;font-size:13px;color:#526c88}
+.recap-table th,.recap-table td{padding:18px;text-align:left;vertical-align:top;border-top:1px solid #d6e1ee;border-right:1px solid #d6e1ee}.recap-table tr>*:last-child{border-right:0}.recap-table thead th{background:#152b4e;color:white;position:relative;font-size:14px}
+.recap-table th:first-child{width:60px;padding:18px 12px}.recap-table tbody th{background:#f4f7fc;font-size:14px}
+.recap-marker{display:inline-grid;place-items:center;width:28px;height:28px;margin-right:10px;border-radius:50%;background:#fff2;color:#fff;font-weight:800}.recap-arrow{position:absolute;right:14px;top:22px;color:#b8c7db}
+.recap-label{display:block;color:#526c88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.confirmed-content{margin:8px 0 20px;font-size:14px;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}
+.recap-keywords{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:10px}.recap-keywords li{padding:10px 12px;background:#fff8db;border:1px solid #f0e2a0;border-radius:8px}.recap-keywords strong{display:block;font-size:14px;font-weight:700;color:#152b4e}.recap-keywords span{display:block;font-size:12px;color:#526c88;margin-top:4px;line-height:1.5}
+.recap-keyword-note{color:#64758a;font-size:13px;line-height:1.6}.recap-scroll-hint{display:none;font-size:12px}.recap-retry{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:14px}.recap-footer{margin:20px 0 0;font-size:13px}
+@media(max-width:760px){.argument-recap{padding:18px}.argument-recap h2{font-size:22px}.recap-scroll-hint{display:block}.argument-reminder{padding:14px}.reminder-prompt{grid-template-columns:66px 1fr}.argument-point{padding:12px;gap:8px}.argument-point.is-current{padding:11px}.argument-point p{font-size:14px}}
