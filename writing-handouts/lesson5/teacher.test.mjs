@@ -7,7 +7,7 @@ import {ORDER,FIELDS} from '../lesson5-demo/core.mjs';
 function fixture(fetcher){
  const elements=new Map();
  const get=id=>{if(!elements.has(id))elements.set(id,{addEventListener(){},hidden:false,textContent:'',innerHTML:'',value:'',dataset:{}});return elements.get(id);};
- const context=vm.createContext({ORDER,FIELDS,fetch:fetcher,document:{getElementById:get},AbortSignal,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
+ const context=vm.createContext({ORDER,FIELDS,installStyles(){},fetch:fetcher,document:{getElementById:get,querySelectorAll:()=>[]},AbortSignal,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearInterval,setInterval,window:{}});
  const source=fs.readFileSync(new URL('./teacher.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('void boot();','');vm.runInContext(source,context);
  return {run:code=>vm.runInContext(code,context),context};
 }

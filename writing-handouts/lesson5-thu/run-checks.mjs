@@ -8,7 +8,7 @@ import os from 'node:os';
 // Giữ ID, stdout/stderr và revision thật; lỗi hoặc thiếu inventory không được báo đạt.
 const root=process.cwd(),runId=process.argv[2];
 if(!/^[a-zA-Z0-9_-]+$/.test(runId||''))throw new Error('Cần tên lượt kiểm hợp lệ.');
-const files=['writing-handouts/lesson5-demo/core.test.mjs','writing-handouts/lesson5-thu/client.test.mjs','writing-handouts/lesson5-thu/ui-races.test.mjs','writing-handouts/lesson5/teacher.test.mjs','writing-handouts/lesson5-thu/recovery-ui.test.mjs'];
+const files=['writing-handouts/lesson5-demo/core.test.mjs','writing-handouts/lesson5-thu/client.test.mjs','writing-handouts/lesson5-thu/ui-races.test.mjs','writing-handouts/lesson5/teacher.test.mjs','writing-handouts/lesson5-thu/recovery-ui.test.mjs','writing-handouts/lesson5-thu/features.test.mjs'];
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const fingerprint=()=>{
  const p=spawnSync('C:/Python314/python.exe',['-X','utf8','C:/Users/ADMIN/.codex/hooks/enforce_product_process.py','fingerprint','--root',root,'--manifest',root+'/.codex/product-quality-gate.json'],{encoding:'utf8'});

@@ -12,7 +12,7 @@ function deferred(){let resolve;const promise=new Promise(r=>resolve=r);return {
 function fixture(api={}){
  const elements=new Map(),storage=new Map(),textarea={dataset:{field:'idea1'},value:'',disabled:false};
  const el=id=>{if(!elements.has(id))elements.set(id,{hidden:false,disabled:false,dataset:{},textContent:'',innerHTML:'',value:'',handlers:{},addEventListener(k,f){this.handlers[k]=f;},querySelector(){return null;},scrollIntoView(){},focus(){}});return elements.get(id);};
- const context=vm.createContext({...core,createClient:()=>({setToken(){},...api}),document:{getElementById:el,querySelector:()=>null,querySelectorAll:()=>[textarea]},window:{addEventListener(){},scrollTo(){}},localStorage:{setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k),getItem:k=>storage.get(k)||null},crypto:{randomUUID:()=> 'fixture-request'},setTimeout:()=>0,clearTimeout(){},Promise,JSON,Date,Number,String,Object,structuredClone});
+ const context=vm.createContext({...core,installStyles(){},createClient:()=>({setToken(){},...api}),document:{getElementById:el,querySelector:()=>null,querySelectorAll:s=>s==='textarea[data-field]'?[textarea]:[]},window:{addEventListener(){},scrollTo(){}},localStorage:{setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k),getItem:k=>storage.get(k)||null},crypto:{randomUUID:()=> 'fixture-request'},setTimeout:()=>0,clearTimeout(){},Promise,JSON,Date,Number,String,Object,structuredClone});
  const source=fs.readFileSync(root+'/lesson5-thu/app.js','utf8').replace(/^import .*\r?\n/gm,'').replace('void bootstrap();','');
  vm.runInContext(source,context);
  const run=code=>vm.runInContext(code,context);
@@ -41,7 +41,7 @@ test('R-UI-TYPING · input trong autosave được giữ trong state và nháp',
 test('R-UI-CHECK · khóa nhập ngay trước đợi flush',async()=>{
  const save=deferred(),h=fixture({save:()=>save.promise,check:async()=>({session:h.run('structuredClone(state)')})});
  h.run("dirty={idea1:'Old draft'};state.responses.idea2='Idea two';state.responses.topicSentence='Topic sentence';");
- const button={dataset:{check:'topic'},disabled:false};const pending=h.el('workspace').handlers.click({target:{closest:()=>button}});
+ const button={dataset:{check:'topic'},disabled:false};const pending=h.el('workspace').handlers.click({target:{closest:s=>s==='button'?button:null}});
  assert.equal(h.textarea.disabled,true);assert.equal(h.run('editingLocked'),true);save.resolve({session:{version:2}});await pending;
 });
 test('R-UI-READ-SINGLE · doubleclick read-latest chỉ tạo một read',async()=>{
