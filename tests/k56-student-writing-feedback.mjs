@@ -60,10 +60,10 @@ for(const module of modules) {
 test('cả hai nhánh bootstrap và HTML dùng bản cửa sổ học viên mới',()=>{
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']){
     const bootstrap=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    const version = /app\.js\?(?:rev|v)=20261005-k56-writing-results-v1/g;
+    const version = /app\.js\?(?:rev|v)=20261006-class-reset-v1/g;
     assert.equal((bootstrap.match(version)||[]).length,2);
     const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');
-    assert.match(html,/bootstrap\.js\?(?:rev|v)=20261005-k56-writing-results-v1/);
+    assert.match(html,/bootstrap\.js\?(?:rev|v)=20261006-class-reset-v1/);
 
     assert.match(html,/k56-writing-feedback\/styles.css\?rev=20260914-student-feedback-v1/);
   }

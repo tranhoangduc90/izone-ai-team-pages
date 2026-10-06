@@ -30,7 +30,7 @@ test('chặn đúng Ctrl hoặc Command + F/G và F3', async () => {
 
 test('nút reset demo không thay đổi grid/flex của header bài thi', async () => {
   const css = await readFile(path.join(root, 'term-tests/k56-demo-reset/styles.css'), 'utf8');
-  assert.match(css, /\.topbar > \.k56-reset-button \{[\s\S]*position: fixed;/);
+  assert.match(css, /\.k56-reset-header > \.k56-reset-button \{[\s\S]*position: fixed;/);
   assert.doesNotMatch(css, /\.topbar\.k56-reset-header[\s\S]*display:\s*flex/);
   assert.doesNotMatch(css, /\.k56-reset-header \.cbt-identity-panel/);
 });
