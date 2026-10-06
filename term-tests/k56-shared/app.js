@@ -17,8 +17,8 @@
   if (!testConfig || !appConfig || !root) return;
 
   const storageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
-  if (serverGradingMode && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
-    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}:server-grade`;
+  if (classCode === 'CODEXDEMO56' && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
+    const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
     for (const storage of [sessionStorage, localStorage]) {
       try {
         storage.removeItem(storageKey);
@@ -117,6 +117,7 @@
   }
 
   function saveSession() {
+    if (window.K56_DEMO_RESETTING) return;
     const serialized = JSON.stringify({
       studentRef: state.studentRef,
       studentName: state.studentName,
@@ -612,6 +613,7 @@
   }
 
   async function apiRequest(path, options = {}) {
+    if (window.K56_DEMO_RESETTING) throw new Error('Lượt demo đang được reset. Hãy chọn lại học viên sau khi tải trang.');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
     try {
@@ -621,6 +623,7 @@
         headers: { ...(options.headers || {}) }
       });
       const data = await response.json().catch(() => ({}));
+      if (window.K56_DEMO_RESETTING) throw new Error('Phản hồi thuộc lượt demo vừa reset đã được bỏ qua.');
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
         requestError.code = String(data.error || 'HTTP_ERROR'); requestError.status = response.status;

@@ -1,4 +1,4 @@
-.topbar > .k56-reset-button {
+.k56-reset-header > .k56-reset-button {
   position: fixed;
   right: 18px;
   bottom: 18px;
@@ -14,22 +14,22 @@
   box-shadow: 0 10px 26px rgba(15, 35, 65, .2);
 }
 
-.topbar > .k56-reset-button:hover:not(:disabled) {
+.k56-reset-header > .k56-reset-button:hover:not(:disabled) {
   background: #eaf2ff;
 }
 
-.topbar > .k56-reset-button:focus-visible {
+.k56-reset-header > .k56-reset-button:focus-visible {
   outline: 3px solid #67a6ff;
   outline-offset: 3px;
 }
 
-.topbar > .k56-reset-button:disabled {
+.k56-reset-header > .k56-reset-button:disabled {
   opacity: .58;
   cursor: not-allowed;
 }
 
 @media (max-width: 620px) {
-  .topbar > .k56-reset-button {
+  .k56-reset-header > .k56-reset-button {
     right: 10px;
     bottom: 10px;
     padding: 8px 11px;

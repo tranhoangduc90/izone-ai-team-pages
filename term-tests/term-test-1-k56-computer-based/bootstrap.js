@@ -33,7 +33,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-shared/app.js?rev=20261005-k56-writing-results-v1'))
+      .then(() => loadScript('../k56-shared/app.js?rev=20261006-class-reset-v1'))
       .then(() => loadScript('enhance.js?v=20260912-load-guard-v1-20261001-writing-ui-v1'))
       .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
       .catch(error => {
@@ -45,7 +45,7 @@
   const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageSuffix}`;
   const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageSuffix}`;
   const annotationStorageKey = `izone-test-annotations:${testConfig.slug}:${classCode}${storageSuffix}`;
-  if (localDemo && query.get('reset') === '1') {
+  if (classCode === 'CODEXDEMO56' && query.get('reset') === '1') {
     for (const storage of availableStorages()) {
       try {
         storage.removeItem(storageKey);
@@ -343,6 +343,7 @@
   }
 
   function saveState(patch = {}) {
+    if (window.K56_DEMO_RESETTING) return;
     state = { ...state, ...patch };
     const serialized = JSON.stringify(state);
     for (const storage of availableStorages()) {
@@ -364,11 +365,13 @@
   }
 
   async function apiRequest(path, options = {}, timeoutMs = 30_000) {
+    if (window.K56_DEMO_RESETTING) throw new Error('Lượt demo đang được reset. Hãy chọn lại học viên sau khi tải trang.');
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(appConfig.API_BASE_URL + path, { ...options, signal: controller.signal });
       const data = await response.json().catch(() => ({}));
+      if (window.K56_DEMO_RESETTING) throw new Error('Phản hồi thuộc lượt demo vừa reset đã được bỏ qua.');
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
         requestError.status = response.status;
@@ -683,7 +686,7 @@
     });
     previewAudio.remove();
     revokePreview();
-        await loadScript('../k56-shared/app.js?rev=20261005-k56-writing-results-v1');
+        await loadScript('../k56-shared/app.js?rev=20261006-class-reset-v1');
     await loadScript('enhance.js?v=20260912-load-guard-v1-20261001-writing-ui-v1');
     await loadScript('annotations.js?rev=20261005-k56-writing-results-v1');
   }

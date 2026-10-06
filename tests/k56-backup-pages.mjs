@@ -68,7 +68,8 @@ test('nút reset online chỉ áp dụng CODEXDEMO56 và gọi endpoint reset m�
   const source = await read('term-tests/k56-demo-reset/app.js');
   assert.match(source, /classCode !== 'CODEXDEMO56'/);
   assert.match(source, /\/api\/term-tests\/demo\/reset/);
-  assert.match(source, /confirmation: 'RESET_DEMO_STUDENT'/);
+  assert.match(source, /confirmation: 'RESET_DEMO_CLASS'/);
+  assert.match(source, /\/api\/term-tests\/demo\/reset-class/);
   assert.match(source, /window\.setTimeout\(\(\) => controller\.abort\(\), 30000\)/);
   assert.equal(/retry|setInterval/.test(source), false);
   for (const route of [
