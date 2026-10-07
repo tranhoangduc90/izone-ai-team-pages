@@ -81,6 +81,13 @@ async function openAttempt(attempt){
    content.append(node('h3',`Writing Task ${task.taskNumber} · ${task.result?number(task.result.taskScore)+'/9':task.status==='missing'?'Chưa có bài làm':'Đang chấm'}`));
    if(task.result){
     const criteria=node('div',undefined,'criterion-grid');for(const item of task.result.criteria||[]){const detail=node('details',undefined,'criterion-card');detail.append(node('summary',`${item.key||item.code} · ${number(item.score??item.bandScore)}/9`));appendFeedback(detail,item.feedback);if(item.components)appendFeedback(detail,item.components);criteria.append(detail);}content.append(criteria,node('h3',`Báo cáo Writing Task ${task.taskNumber}`));appendFeedback(content,task.result.report);
+    if(task.taskNumber===1&&data.requiredTasks?.length===2&&Array.isArray(task.result.details)){
+     const links=node('ul');for(const stage of task.result.details){
+      if(!/^[0-9]{2}-[a-z-]+$/.test(stage.stageKey))continue;
+      const url=new URL(location.href);url.search='';for(const [key,value]of Object.entries({test:attempt.testSlug,class:attempt.classCode,student:attempt.studentRef,attempt:attempt.attemptToken,task:1,stage:stage.stageKey}))url.searchParams.set(key,value);
+      const item=node('li'),link=node('a',stage.name||stage.stageKey);link.href=url.href;link.target='_blank';link.rel='noopener';link.dataset.taskStage=stage.stageKey;item.append(link);links.append(item);
+     }content.append(node('h4','Mở từng báo cáo phân tích Task 1 (yêu cầu quyền giáo viên)'),links);
+    }
    }else content.append(node('p',task.status==='missing'?'Hết giờ nhưng chưa có bài viết ở Task này; không tạo điểm 0 hoặc điểm tổng.':'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
   }
  }catch(error){if(detailGeneration===state.detailGeneration&&state.selectedAttempt===attempt.attemptToken)handleError(error,generation);}
@@ -98,7 +105,7 @@ async function loadResults(){
  }catch(error){handleError(error,generation);}finally{if(generation===state.generation)$('load-results').disabled=false;}
 }
 async function signIn(response){
- cancel();clearResults();state.scopes=[];$('filter-section').hidden=true;$('roster-section').hidden=true;state.token=typeof response?.credential==='string'?response.credential:null;const generation=state.generation;
+ cancel();clearResults();state.scopes=[];$('filter-section').hidden=true;$('roster-section').hidden=true;state.token=typeof response?.credential==='string'?response.credential:null;let generation=state.generation;
  if(!state.token){message('Chưa nhận được xác nhận đăng nhập từ Google.','error');return;}
  $('login-status').textContent='Đang kiểm tra quyền xem Substitute…';$('logout').hidden=false;
  try{
@@ -107,6 +114,9 @@ async function signIn(response){
   const tests=[...new Set(state.scopes.map(scope=>scope.testSlug))];$('test-select').replaceChildren(...tests.map(slug=>new Option(TITLES[slug],slug)));
   $('test-select').value=tests.includes(initial.get('test')||pageTest)?initial.get('test')||pageTest:tests[0];renderClasses((initial.get('class')||'ALL').toUpperCase());
   $('filter-section').hidden=false;$('roster-section').hidden=false;$('google-signin').hidden=true;$('login-status').textContent='Đã đăng nhập · chỉ hiển thị các bài/lớp được cấp quyền.';state.offset=0;await loadResults();
+  // loadResults tạo generation mới. Deep link tiếp tục theo generation đó,
+  // nhưng không được hiện lại báo cáo nếu đã logout hoặc đổi tài khoản.
+  if(state.token!==response.credential)return;generation=state.generation;
   if(initial.has('attempt')&&initial.has('student')&&classesForTest().includes(initial.get('class'))){
    const id={testSlug:selectedTest(),classCode:initial.get('class'),studentRef:initial.get('student'),attemptToken:initial.get('attempt')};
    if(initial.has('stage')){
@@ -117,7 +127,7 @@ async function signIn(response){
     $('attempt-content').replaceChildren();appendFeedback($('attempt-content'),data.report);
    }else await openAttempt(id);
   }
- }catch(error){if(generation===state.generation){state.token=null;$('login-status').textContent='Chưa mở được quyền xem kết quả.';message(error.message,'error');}}
+ }catch(error){if(generation===state.generation){logout();if(error.status!==401)$('login-status').textContent='Chưa mở được quyền xem kết quả.';message(error.message,'error');}}
 }
 async function initialize(){
  logout();
