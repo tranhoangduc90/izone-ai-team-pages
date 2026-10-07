@@ -23,7 +23,7 @@ function fixture(module) {
   const source=fs.readFileSync(new URL('../term-tests/'+module+'/app.js',import.meta.url),'utf8');
   const elements=Object.fromEntries(['resultStudentName','resultMeta','summaryGrid','resultStatus','continueReadingFromResult','writingSubmissionResult','questionDetails','skillPerformanceSections'].map(k=>[k,new Element('div')]));
   const context=vm.createContext({document:{createElement:t=>new Element(t),hidden:false,addEventListener(){}},navigator:{onLine:true},elements,promptVersion:'fixture-v1',
-    serverGradingMode:true,demoMode:'exam',storageKey:'fixture-own-attempt',classCode:'DEMO',
+    twoTaskWriting:false,serverGradingMode:true,demoMode:'exam',storageKey:'fixture-own-attempt',classCode:'DEMO',
     writingConfig:{tasks:[{id:module.includes('test-2-k56')?'task1':'task2'}]},testConfig:{title:'Bài giả'},
     state:{studentRef:'fictional-A',attemptToken:'fictional-run-A',writingSubmitted:true,resultDetailsOpen:{}},
     resultDetailSignature:'',renderSkillPerformance:()=>new Element('section'),sectionScore:()=>'',

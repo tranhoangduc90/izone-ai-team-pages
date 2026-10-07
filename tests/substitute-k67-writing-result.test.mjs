@@ -11,11 +11,12 @@ class Element {
   replaceChildren(...children) { this.children = children; }
   addEventListener(name, callback) { this.listeners[name] = callback; }
 }
-function render(grading) {
+function render(grading, twoTaskWriting = false) {
   const target = new Element();
   let opened;
   const context = {
-    writingConfig: {tasks: [{id: 'task2', label: 'Writing Task 2'}]},
+    twoTaskWriting,
+    writingConfig: {tasks: twoTaskWriting ? [{id:'task1',label:'Writing Task 1'},{id:'task2',label:'Writing Task 2'}] : [{id: 'task2', label: 'Writing Task 2'}]},
     state: {writingSubmitted: true, result: {writing: {grading}}},
     elements: {writingSubmissionResult: target},
     document: {createElement: () => new Element()},
@@ -44,6 +45,16 @@ test('K67 incomplete grading cannot open an undefined feedback result', () => {
 test('K67 pending status names Task 2', () => {
   const result = render({ready: false, status: 'processing'});
   assert.ok(result.nodes.some(node => node.textContent === 'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
+});
+test('K67 hai Task: từng nút mở đúng kết quả, tổng không lấy nhầm Task 2', () => {
+  const tasks=[{taskNumber:2,taskScore:8},{taskNumber:1,taskScore:6}];
+  const result=render({ready:true,writingScore:7,tasks},true);
+  const buttons=result.nodes.filter(node=>node.className==='writing-score-card is-action');
+  assert.deepEqual(buttons.map(b=>b.children[0].textContent),['Writing Task 1','Writing Task 2']);
+  buttons[0].listeners.click();assert.equal(result.opened(),tasks[1]);
+  buttons[1].listeners.click();assert.equal(result.opened(),tasks[0]);
+  const total=result.nodes.find(n=>n.className==='writing-score-card is-overall');
+  assert.equal(total.children[0].textContent,'Writing tổng');assert.equal(total.children[1].textContent,'Band 7');
 });
 test('K67 result title derives from this exam config instead of K56 template', () => {
   assert.doesNotMatch(source, /Substitute Test 2 · Khóa 56/);

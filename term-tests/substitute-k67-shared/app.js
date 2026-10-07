@@ -9,6 +9,8 @@
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const requestedDemo = query.get('demo') || '';
   const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
+  const twoTaskWriting = testConfig?.slug === 'substitute-test-2-k67'
+    && writingConfig?.examVersion === 'substitute-k67-test2-two-task-20261007-v1';
   const demoMode = window.TERM_TEST_CONTENT?.variant === 'semantic-html'
     && ['complete', 'listening-only', 'writing-prep', 'writing', 'exam'].includes(requestedDemo)
     ? requestedDemo
@@ -75,6 +77,7 @@
         outline: String(restoredSession.drafts?.writing?.outline || ''),
         task1: String(restoredSession.drafts?.writing?.task1 || ''),
         task2: String(restoredSession.drafts?.writing?.task2 || '')
+        ,...(twoTaskWriting?{outlines:{...(restoredSession.drafts?.writing?.outlines||{})}}:{})
       }
     },
     writingLayout: {
@@ -219,7 +222,7 @@
         <p>Kết quả Listening và Reading đang được giữ kín. Khi sẵn sàng, hãy bắt đầu Writing ${writingConfig.tasks?.[0]?.label || ''}.</p>
         <ul class="writing-prep-list">
           <li>Tổng thời gian: ${writingConfig.totalMinutes || 30} phút${writingConfig.planningMinutes ? `, gồm ${writingConfig.planningMinutes} phút lập dàn ý và ${writingConfig.writingMinutes || (writingConfig.totalMinutes - writingConfig.planningMinutes)} phút viết bài` : ''}.</li>
-          <li>${writingConfig.tasks?.[0]?.label || 'Writing'}: viết ít nhất ${writingConfig.tasks?.[0]?.minimumWords || 150} từ.</li>
+          ${writingConfig.tasks.map(task=>`<li>${task.label}: viết ít nhất ${task.minimumWords} từ.${twoTaskWriting?` Khoảng ${task.recommendedMinutes} phút (gợi ý, không khóa thời gian riêng).`:''}</li>`).join('')}
           <li>Bài viết được tự lưu trên hệ thống; đóng tab rồi mở lại vẫn có thể tiếp tục.</li>
         </ul>
         <button class="button button-primary" id="startWriting" type="button">Bắt đầu Writing</button>
@@ -723,7 +726,7 @@
       (demoMode && !serverGradingMode)
       || !state.writingSubmitted
       || grading?.ready
-      || ['review_required', 'failed'].includes(grading?.status)
+      || ['review_required', 'failed', 'incomplete'].includes(grading?.status)
       || writingGradingPollTimer
     ) return;
     if (!writingGradingPollStartedAt) writingGradingPollStartedAt = Date.now();
@@ -745,7 +748,7 @@
   // Chỉ đọc trạng thái khi quay lại tab/mạng; không nộp lại bài hoặc gọi AI.
   function resumeWritingGrading() {
     if (!state.writingSubmitted || state.result?.writing?.grading?.ready
-      || ['review_required', 'failed'].includes(state.result?.writing?.grading?.status)) return;
+      || ['review_required', 'failed', 'incomplete'].includes(state.result?.writing?.grading?.status)) return;
     window.clearTimeout(writingGradingPollTimer);
     writingGradingPollTimer = 0;
     refreshWritingGrading();
@@ -754,9 +757,9 @@
   window.addEventListener('online', resumeWritingGrading);
 
   function syncWritingEditors() {
-    const outlineEditor = document.querySelector('[data-writing-outline]');
-    if (outlineEditor && outlineEditor.value !== state.drafts.writing.outline) {
-      outlineEditor.value = state.drafts.writing.outline || '';
+    for(const editor of document.querySelectorAll('[data-writing-outline]')){
+      const value=(twoTaskWriting?state.drafts.writing.outlines?.[editor.dataset.writingOutline]:state.drafts.writing.outline)||'';
+      if(editor.value!==value)editor.value=value;
     }
     for (const editor of document.querySelectorAll('[data-writing-task]')) {
       const value = state.drafts.writing[editor.dataset.writingTask] || '';
@@ -1137,12 +1140,13 @@
       outlineHeader.append(outlineTitle);
       const outlineEditor = document.createElement('textarea');
       outlineEditor.className = 'writing-outline-editor';
-      outlineEditor.dataset.writingOutline = 'true';
-      outlineEditor.value = state.drafts.writing.outline || '';
+      outlineEditor.dataset.writingOutline = twoTaskWriting?task.id:'true';
+      outlineEditor.value = (twoTaskWriting?state.drafts.writing.outlines?.[task.id]:state.drafts.writing.outline) || '';
       outlineEditor.spellcheck = false;
       outlineEditor.setAttribute('aria-label', `Dàn ý Writing ${task.label || 'Task 2'}`);
       outlineEditor.addEventListener('input', () => {
-        state.drafts.writing.outline = outlineEditor.value;
+        if(twoTaskWriting)(state.drafts.writing.outlines||={})[task.id]=outlineEditor.value;
+        else state.drafts.writing.outline = outlineEditor.value;
         state.writingDirty = true;
         state.writingRevision += 1;
         saveSession();
@@ -1693,7 +1697,7 @@
     headingCopy.append(eyebrow, title);
     const note = document.createElement('p');
     note.textContent = grading?.ready
-      ? 'Nhấn vào điểm Task 2 để xem bài chấm chi tiết.'
+      ? (twoTaskWriting?'Nhấn vào điểm từng Task để xem bài chấm chi tiết.':'Nhấn vào điểm Task 2 để xem bài chấm chi tiết.')
       : grading?.status === 'review_required'
         ? 'Bài làm đã được giữ an toàn; một phần chấm cần giáo viên kiểm tra trước khi công bố.'
         : 'Kết quả sẽ hiển thị sớm. Bạn có thể tắt trang web và quay lại sau bằng đúng đường dẫn này.';
@@ -1726,19 +1730,20 @@
       const overallScore = document.createElement('strong');
       overallScore.textContent = `Band ${formatBand(grading.writingScore)}`;
       const formula = document.createElement('small');
-      formula.textContent = 'Điểm Writing = điểm Task 2';
+      formula.textContent = twoTaskWriting?'(Task 1 + 2 × Task 2) / 3, làm tròn xuống 0,5 band':'Điểm Writing = điểm Task 2';
       overall.append(overallLabel, overallScore, formula);
       gradingArea.append(overall);
     } else {
       const needsReview = ['review_required', 'failed'].includes(grading?.status);
+      const incomplete=grading?.status==='incomplete';
       gradingArea.className = `writing-grading-status${needsReview ? ' needs-review' : ''}`;
       const statusCopy = document.createElement('div');
       const statusTitle = document.createElement('strong');
-      statusTitle.textContent = needsReview
+      statusTitle.textContent = incomplete?'Có Task chưa được viết; chưa có điểm Writing tổng':needsReview
         ? 'Bài chấm đang được kiểm tra'
         : 'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau';
       const statusText = document.createElement('p');
-      statusText.textContent = needsReview
+      statusText.textContent = incomplete?'Hệ thống đã lưu phần bài hiện có khi hết giờ. Không tạo điểm 0 hoặc đồng bộ Writing tổng khi thiếu Task.':needsReview
         ? 'Bạn có thể đóng trang; kết quả vẫn được lưu và sẽ hiện khi hoàn chỉnh.'
         : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
       statusCopy.append(statusTitle, statusText);
@@ -2282,6 +2287,11 @@
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
       const automatic = event.submitter?.dataset.autoSubmit === 'true'
         || elements.writingView.dataset.writingTimeExpired === 'true';
+      if(twoTaskWriting&&!automatic){
+        const missing=writingConfig.tasks.find(task=>!state.drafts.writing[task.id]?.trim());
+        if(missing){elements.writingTaskTabs.children[writingConfig.tasks.indexOf(missing)]?.click();showNotice(`Bạn chưa viết ${missing.label}. Bản nháp vẫn được giữ; hãy hoàn thành cả hai Task trước khi nộp.`, 'error');
+          elements.writingView.querySelector(`[data-writing-task="${missing.id}"]`)?.focus();return;}
+      }
       const belowMinimum = Array.from(writingConfig.tasks || []).map(task => ({
         label: task.label,
         words: countWords(state.drafts.writing[task.id]),
@@ -2304,6 +2314,7 @@
                 studentRef: state.studentRef,
                 attemptToken: state.attemptToken,
                 promptVersion,
+                ...(twoTaskWriting?{examVersion:writingConfig.examVersion,automatic}:{}),
                 listeningAnswers: state.drafts.listening,
                 readingAnswers: state.drafts.reading,
                 outline: state.drafts.writing.outline,
@@ -2417,7 +2428,7 @@
       grading: state.testGrades.writing?.grading || {
         status: 'processing',
         ready: false,
-        taskStates: { task2: 'processing' }
+        taskStates: twoTaskWriting?{task1:'processing',task2:'processing'}:{task2:'processing'}
       }
     } : mode === 'complete' ? {
       task1: state.drafts.writing.task1,

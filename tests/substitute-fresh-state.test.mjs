@@ -23,7 +23,7 @@ test('dashboard: đủ bốn số riêng khi xem tất cả',()=>{
 
 if(!process.env.REGRESSION_BASE)for(const app of apps)test(app+': chưa có grade không dựng điểm 0, nhưng giữ điểm 0 thật',()=>{
  const source=read('term-tests/'+app+'/app.js');const start=source.indexOf('  function pendingSection('),end=source.indexOf('  async function initialize()',start);
- const state={testGrades:{},drafts:{writing:{task1:'',task2:''}}};const context=vm.createContext({serverGradingMode:true,state,testConfig:{reading:{totalQuestions:40}},classCode:'DEMO',countWords:()=>0});
+ const state={testGrades:{},drafts:{writing:{task1:'',task2:''}}};const context=vm.createContext({twoTaskWriting:false,serverGradingMode:true,state,testConfig:{reading:{totalQuestions:40}},classCode:'DEMO',countWords:()=>0});
  vm.runInContext(source.slice(start,end),context);const pending=vm.runInContext("buildDemoPayload('complete')",context);assert.equal(pending.result.listening.correct,null);assert.equal(pending.result.reading.correct,null);
  state.testGrades={listening:{correct:0,total:40,typeStats:[],details:[]},reading:{correct:0,total:40,typeStats:[],details:[]}};const zero=vm.runInContext("buildDemoPayload('complete')",context);assert.equal(zero.result.listening.correct,0);assert.equal(zero.result.reading.correct,0);
 });

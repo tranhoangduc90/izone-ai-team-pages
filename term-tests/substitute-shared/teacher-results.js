@@ -6,7 +6,7 @@ const state={token:null,generation:0,detailGeneration:0,controller:null,scopes:[
 const initial=new URLSearchParams(location.search);
 const pageTest=Object.keys(TITLES).find(slug=>location.pathname.includes(slug+'-results'));
 const selectedTest=()=>$('test-select').value;
-const statusText=value=>({queued:'Chờ chấm Writing',processing:'Đang chấm Writing',ready:'Đã chấm Writing',failed:'Cần kiểm tra bài chấm'}[value]||'Chưa xác nhận');
+const statusText=value=>({queued:'Chờ chấm Writing',processing:'Đang chấm Writing',ready:'Đã chấm Writing',incomplete:'Thiếu bài Writing; chưa có điểm tổng',failed:'Cần kiểm tra bài chấm'}[value]||'Chưa xác nhận');
 const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',unknown:'Chưa xác nhận Portal',synced:'Đã xác nhận đồng bộ Portal'}[value]||'Chưa xác nhận Portal');
 const number=value=>typeof value==='number'&&Number.isFinite(value)?String(value):'—';
 const time=value=>value&&!Number.isNaN(Date.parse(value))?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'—';
@@ -42,7 +42,7 @@ function renderRows(){
  for(const attempt of state.rows){
   const row=node('tr');row.dataset.attempt=attempt.attemptToken;
   const who=node('td',undefined,'student-cell');who.append(node('strong',attempt.studentName),node('span',attempt.classCode+' · '+time(attempt.submittedAt)));
-  row.append(who,node('td',score('listening',attempt),'score-cell'),node('td',score('reading',attempt),'score-cell'),node('td',attempt.result?number(attempt.result.taskScore)+'/9':'—','score-cell'),node('td',statusText(attempt.status)),node('td',portalText(attempt.portalStatus)));
+  row.append(who,node('td',score('listening',attempt),'score-cell'),node('td',score('reading',attempt),'score-cell'),node('td',attempt.result?number(attempt.result.writingScore??attempt.result.taskScore)+'/9':'—','score-cell'),node('td',statusText(attempt.status)),node('td',portalText(attempt.portalStatus)));
   const actions=node('td'),button=node('button','Chi tiết','open-student');button.type='button';button.addEventListener('click',()=>openAttempt(attempt));actions.append(button);row.append(actions);$('student-rows').append(row);
  }
  if(!state.rows.length){const row=node('tr'),cell=node('td','Chưa có lượt nộp trong phạm vi này.','empty-cell');cell.colSpan=7;row.append(cell);$('student-rows').append(row);}
@@ -72,11 +72,17 @@ async function openAttempt(attempt){
   const data=await request('/teacher/result',{test:attempt.testSlug,class:attempt.classCode,student:attempt.studentRef,attempt:attempt.attemptToken},state.controller?.signal);
   if(generation!==state.generation||detailGeneration!==state.detailGeneration||state.selectedAttempt!==attempt.attemptToken)return;
   if(data.attemptToken!==attempt.attemptToken||data.testSlug!==attempt.testSlug||data.classCode!==attempt.classCode||data.studentRef!==attempt.studentRef)throw new Error('Kết quả trả về không khớp lượt đã chọn.');
+  $('student-name').textContent=data.studentName;
   const content=$('attempt-content');content.replaceChildren(node('p',statusText(data.status)+' · '+portalText(data.portalStatus)));
-  content.append(node('h3',`Writing Task ${data.taskNumber} · ${data.result?number(data.result.taskScore)+'/9':'Chưa có điểm'}`));
-  if(data.result){
-   const criteria=node('div',undefined,'criterion-grid');for(const item of data.result.criteria||[]){const detail=node('details',undefined,'criterion-card');detail.append(node('summary',`${item.key||item.code} · ${number(item.score??item.bandScore)}/9`));appendFeedback(detail,item.feedback);if(item.components)appendFeedback(detail,item.components);criteria.append(detail);}content.append(criteria,node('h3','Báo cáo Writing cuối cùng'));appendFeedback(content,data.result.report);
-  }else content.append(node('p','Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
+  if(data.requiredTasks?.length===2)content.append(node('h3','Writing tổng · '+(data.result?number(data.result.writingScore)+'/9':'Chưa có điểm tổng')),
+    node('p','(Task 1 + 2 × Task 2) / 3, làm tròn xuống 0,5 band.'));
+  const tasks=data.tasks||[{taskNumber:data.taskNumber,status:data.status,result:data.result}];
+  for(const task of tasks){
+   content.append(node('h3',`Writing Task ${task.taskNumber} · ${task.result?number(task.result.taskScore)+'/9':task.status==='missing'?'Chưa có bài làm':'Đang chấm'}`));
+   if(task.result){
+    const criteria=node('div',undefined,'criterion-grid');for(const item of task.result.criteria||[]){const detail=node('details',undefined,'criterion-card');detail.append(node('summary',`${item.key||item.code} · ${number(item.score??item.bandScore)}/9`));appendFeedback(detail,item.feedback);if(item.components)appendFeedback(detail,item.components);criteria.append(detail);}content.append(criteria,node('h3',`Báo cáo Writing Task ${task.taskNumber}`));appendFeedback(content,task.result.report);
+   }else content.append(node('p',task.status==='missing'?'Hết giờ nhưng chưa có bài viết ở Task này; không tạo điểm 0 hoặc điểm tổng.':'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
+  }
  }catch(error){if(detailGeneration===state.detailGeneration&&state.selectedAttempt===attempt.attemptToken)handleError(error,generation);}
 }
 async function loadResults(){
@@ -101,6 +107,16 @@ async function signIn(response){
   const tests=[...new Set(state.scopes.map(scope=>scope.testSlug))];$('test-select').replaceChildren(...tests.map(slug=>new Option(TITLES[slug],slug)));
   $('test-select').value=tests.includes(initial.get('test')||pageTest)?initial.get('test')||pageTest:tests[0];renderClasses((initial.get('class')||'ALL').toUpperCase());
   $('filter-section').hidden=false;$('roster-section').hidden=false;$('google-signin').hidden=true;$('login-status').textContent='Đã đăng nhập · chỉ hiển thị các bài/lớp được cấp quyền.';state.offset=0;await loadResults();
+  if(initial.has('attempt')&&initial.has('student')&&classesForTest().includes(initial.get('class'))){
+   const id={testSlug:selectedTest(),classCode:initial.get('class'),studentRef:initial.get('student'),attemptToken:initial.get('attempt')};
+   if(initial.has('stage')){
+    const data=await request('/teacher/result',{test:id.testSlug,class:id.classCode,student:id.studentRef,attempt:id.attemptToken,stage:initial.get('stage')});
+    if(generation!==state.generation)return;
+    if(data.attemptToken!==id.attemptToken||data.studentRef!==id.studentRef||data.classCode!==id.classCode||data.testSlug!==id.testSlug||data.stageKey!==initial.get('stage'))throw new Error('Báo cáo không khớp lượt nộp.');
+    $('student-detail').hidden=false;$('student-name').textContent='Báo cáo Writing Task 1';$('student-status').textContent=id.classCode+' · '+data.stageKey;
+    $('attempt-content').replaceChildren();appendFeedback($('attempt-content'),data.report);
+   }else await openAttempt(id);
+  }
  }catch(error){if(generation===state.generation){state.token=null;$('login-status').textContent='Chưa mở được quyền xem kết quả.';message(error.message,'error');}}
 }
 async function initialize(){

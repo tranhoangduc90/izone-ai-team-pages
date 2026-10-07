@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261007-live-results-v1'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261007-two-task-v1'))
       .then(() => loadScript('enhance.js?v=20261007-fresh-v2'))
       .then(() => loadScript('annotations.js?v=20261007-fresh-v2'))
       .catch(error => {
@@ -238,7 +238,11 @@
   function saveState(patch = {}) {
     state = { ...state, ...patch };
     if(state.studentRef){
-      state.clientRunId ||= crypto.randomUUID();
+      if(!state.clientRunId){
+        state.clientRunId=crypto.randomUUID();
+        const version=window.SUBSTITUTE_STATE.meta.writingVersions?.[state.classCode||classCode];
+        if(version==='substitute-k67-test2-two-task-20261007-v1')state.examVersion=version;
+      }
       window.SUBSTITUTE_STATE.bind(state);
     }
     state=window.SUBSTITUTE_STATE.stamp(state);
@@ -553,11 +557,17 @@
   }
 
   async function enterExam(started, audioElement = null) {
-    window.TERM_TEST_CONTENT = Object.freeze(started.content);
+    const source=window.K67_SUBSTITUTE_TEST_2_CONTENT.writing;
+    const twoTasks=state.examVersion===source.examVersion;
+    // Lượt đang làm trước phát hành không tự nhận thêm Task hoặc đổi đồng hồ.
+    const writing=twoTasks?source:{...source,examVersion:undefined,tasks:source.tasks.filter(t=>t.id==='task2')};
+    window.TERM_TEST_CONTENT = Object.freeze({...started.content,writing});
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
       classCode: state.classCode || classCode,
       studentRef: state.studentRef,
       clientRunId: state.clientRunId,
+      ...(state.writingSessionId?{writingSessionId:state.writingSessionId}:{}),
+      ...(state.examVersion?{examVersion:state.examVersion}:{}),
       attemptToken: state.attemptToken,
       historyEpoch: window.SUBSTITUTE_STATE.meta.historyEpoch,
       listeningStartedAt: state.listeningStartedAt,
@@ -573,7 +583,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261007-live-results-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261007-two-task-v1');
     await loadScript('enhance.js?v=20261007-fresh-v2');
     await loadScript('annotations.js?v=20261007-fresh-v2');
   }
@@ -648,6 +658,13 @@
     previewAudio.pause();
     try {
       if (localDemo) {
+        if(!state.writingSessionId&&!state.listeningStartedAt){
+          const response=await fetch(appConfig.API_BASE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},
+            body:JSON.stringify({route:'/api/test/writing/session',payload:window.SUBSTITUTE_STATE.payload({classCode:state.classCode||classCode,studentRef:state.studentRef,clientRunId:state.clientRunId})}),cache:'no-store'});
+          const session=await response.json();
+          if(!response.ok||session.testSlug!==testConfig.slug||session.studentRef!==state.studentRef||session.classCode!==(state.classCode||classCode)||session.clientRunId!==state.clientRunId||session.historyEpoch!==window.SUBSTITUTE_STATE.meta.historyEpoch)throw new Error('Không xác nhận được phiên bản Writing của lượt này.');
+          saveState({writingSessionId:session.writingSessionId,examVersion:session.examVersion});
+        }
         officialObjectUrl = URL.createObjectURL(encryptedAudio);
         const officialAudio = document.createElement('audio');
         officialAudio.hidden = true;

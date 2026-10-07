@@ -68,10 +68,21 @@ window.K67_SUBSTITUTE_TEST_2_CONTENT = Object.freeze({
     ]
   },
   "writing": {
+    "examVersion": "substitute-k67-test2-two-task-20261007-v1",
     "totalMinutes": 60,
     "planningMinutes": 0,
     "writingMinutes": 60,
     "tasks": [
+      {
+        "id": "task1",
+        "label": "Task 1",
+        "recommendedMinutes": 20,
+        "minimumWords": 150,
+        "initialSplit": 46,
+        "prompt": "The graph below shows the number of enquiries received by the Tourist Information Office in one city over a six-month period in 2011.",
+        "followUp": "Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
+        "image": { "src": "assets/tourist-information-2011-v2.png", "alt": "Number of enquiries received by the Tourist Information Office, January–June 2011: in person, by letter/email and by telephone." }
+      },
       {
         "id": "task2",
         "label": "Task 2",

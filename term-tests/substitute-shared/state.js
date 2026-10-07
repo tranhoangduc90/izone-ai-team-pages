@@ -22,7 +22,10 @@
   function bind(value){
     if(!meta||blocked)throw new Error('Phiên làm bài không còn hợp lệ.');
     binding={testSlug:meta.testSlug,historyEpoch:meta.historyEpoch,classCode:String(value.classCode||'').toUpperCase(),
-      studentRef:String(value.studentRef||''),clientRunId:String(value.clientRunId||''),attemptToken:String(value.attemptToken||'')};
+      studentRef:String(value.studentRef||''),clientRunId:String(value.clientRunId||''),attemptToken:String(value.attemptToken||''),
+      ...(value.examVersion?{examVersion:value.examVersion}:{})};
+    if(meta.testSlug==='substitute-test-2-k67'&&value.writingSessionId)binding.writingSessionId=value.writingSessionId;
+    if(binding.examVersion&&(binding.testSlug!=='substitute-test-2-k67'||binding.examVersion!=='substitute-k67-test2-two-task-20261007-v1'))throw new Error('Phiên bản Writing không hợp lệ.');
     if(!uuid.test(binding.clientRunId)||!binding.studentRef)throw new Error('Thiếu định danh lượt làm bài.');
     return {...binding};
   }
@@ -36,6 +39,7 @@
     if(blocked||!meta||!b||b.version!==2||b.testSlug!==meta.testSlug||b.historyEpoch!==meta.historyEpoch)return false;
     if(expected&&['classCode','studentRef','clientRunId'].some(k=>String(b[k]||'')!==String(expected[k]||'')))return false;
     if(expected?.attemptToken&&b.attemptToken!==expected.attemptToken)return false;
+    if((b.examVersion||'')!==(expected?.examVersion||''))return false;
     return ['classCode','studentRef','clientRunId','attemptToken'].every(k=>!value[k]||String(value[k])===String(b[k]||''));
   }
   function stamp(value){
@@ -55,7 +59,7 @@
     }
     history.replaceState(null,'',location.href);
   }
-  function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch};}
+  function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch,...(binding?.examVersion?{examVersion:binding.examVersion}:{}),...(binding?.writingSessionId?{writingSessionId:binding.writingSessionId}:{})};}
   function track(controller){if(blocked)controller.abort();else controllers.add(controller);return ()=>controllers.delete(controller);}
   window.addEventListener('storage',event=>{if(meta&&event.key==='izone-demo-reset:'+meta.testSlug+':RETAKE-LOBBY:server-grade'&&event.newValue)stop();});
   window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,key,accept,stamp,clear,payload,track,stop,get blocked(){return blocked;},get meta(){return meta;}});

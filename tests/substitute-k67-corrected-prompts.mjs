@@ -8,10 +8,16 @@ const prompts=[
  'Some people feel that the private lives of celebrities should not be openly shared by the media. To what extent do you agree or disagree?',
  'Many cities are becoming increasingly crowded, and traffic congestion is getting worse. What problems does this cause, and what measures can be taken to solve them?'
 ];
-for(const n of [1,2])test(`Sub ${n}: only the user-specified Writing Task 2`,()=>{
- const d=load(n); assert.equal(d.writing.tasks.length,1);assert.equal(d.writing.tasks[0].id,'task2');
- assert.equal([d.writing.tasks[0].prompt,d.writing.tasks[0].followUp].filter(Boolean).join(' '),prompts[n-1]);
+for(const n of [1,2])test(`Sub ${n}: giữ đề Task 2; chỉ Sub 2 bổ sung Task 1`,()=>{
+ const d=load(n); assert.equal(d.writing.tasks.length,n===2?2:1);const t2=d.writing.tasks.find(t=>t.id==='task2');assert.ok(t2);
+ assert.equal([t2.prompt,t2.followUp].filter(Boolean).join(' '),prompts[n-1]);
  const c={window:{}};vm.runInNewContext(read(`term-tests/substitute-test-${n}-k67/test-config.js`),c);assert.equal(c.window.TERM_TEST_CONFIG.writing.totalQuestions,1);
+});
+test('Sub 2: Task 1 đúng ảnh Tourist mới và thời gian chung 60 phút',()=>{
+ const writing=load(2).writing,t1=writing.tasks.find(t=>t.id==='task1');
+ assert.equal(t1.minimumWords,150);assert.match(t1.prompt,/Tourist Information Office/);
+ assert.match(JSON.stringify(t1),/tourist-information-2011-v2\.png/);
+ assert.equal(writing.tasks.find(t=>t.id==='task2').minimumWords,250);assert.equal(writing.totalMinutes,60);
 });
 for(const [n,p,start,end,last]of [[1,2,33,36,'I'],[2,1,19,23,'C'],[2,2,31,35,'G']])test(`Sub ${n} Reading ${start}-${end}: questions left, separate options right`,()=>{
  const html=load(n).reading.sections[p].questionsHtml;
