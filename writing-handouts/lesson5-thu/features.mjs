@@ -16,7 +16,7 @@ export function threadsView(threads,{teacher=false}={}){
  return threads.map(t=>`<article class="h67-thread" id="thread-${esc(t.ref)}"><header><strong>Trao đổi với giảng viên</strong><span>${t.status==='addressed'?'Đã xử lý':'Đang trao đổi'}</span></header>${t.quote?`<blockquote>${esc(t.quote)}</blockquote>`:'<small>Nhận xét cả phần</small>'}${t.anchor?.detached?'<p class="old-version">Trích đoạn thuộc bản bài cũ. Nội dung gốc và trao đổi vẫn được giữ.</p>':''}${t.originalContent?`<details class="original-content"><summary>Xem nội dung lúc GV góp ý</summary><p>${esc(t.originalContent)}</p></details>`:''}${t.messages.map(m=>`<div class="thread-message ${m.role}"><strong>${m.role==='teacher'?'GV':'HV'} · ${esc(m.authorName)}</strong><time>${esc(new Date(m.createdAt).toLocaleString('vi-VN'))}</time><p>${esc(m.body)}</p></div>`).join('')}<form data-thread-reply="${esc(t.ref)}"><label>Trả lời trong cùng luồng<textarea name="body" maxlength="5000" required placeholder="Nhập lời trả lời…"></textarea></label><button type="submit" class="secondary">Gửi trả lời</button><p class="thread-status" role="status"></p></form>${teacher?`<button type="button" class="edit-content" data-thread-status="${esc(t.ref)}" data-status="${t.status==='addressed'?'open':'addressed'}">${t.status==='addressed'?'Mở lại trao đổi':'Đánh dấu đã xử lý'}</button>`:''}</article>`).join('');
 }
 export function approvalLabel(step){
- return step.approval?.source==='student_attested_teacher_permission'?'HV xác nhận GV đã đồng ý miệng':step.status==='passed'?'AI thông qua':'';
+ return step.approval?.source==='student_attested_teacher_permission'?'HV xác nhận GV đã đồng ý miệng':step.approval?.source==='ai'?'AI thông qua':'';
 }
 export function selectionOffsets(root,selection){
  if(!selection?.rangeCount||selection.isCollapsed)return null;
@@ -31,5 +31,6 @@ export async function fieldHash(text){
 }
 export function installStyles(){
  if(document.querySelector('[data-handout67-features]'))return;
- const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./features.css?v=20261006-2',import.meta.url).href;link.dataset.handout67Features='1';document.head.append(link);
+ const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./features.css?v=20261007-1',import.meta.url).href;link.dataset.handout67Features='1';document.head.append(link);
+ const approved=document.createElement('link');approved.rel='stylesheet';approved.href=new URL('./approved-ui.css?v=20261007-1',import.meta.url).href;approved.dataset.handout67Approved='1';document.head.append(approved);
 }
