@@ -2532,8 +2532,12 @@
   async function initialize() {
     elements.listeningTitle.textContent = testConfig.listening.title;
     elements.readingTitle.textContent = testConfig.reading.title;
-    appendInstructions(elements.listeningInstructions, testConfig.listening.description);
-    appendInstructions(elements.readingInstructions, testConfig.reading.description);
+    appendInstructions(elements.listeningInstructions, paperMini
+      ? ['Nhập đáp án từ bài giấy. Trang chỉ nộp Listening khi bạn bấm “Nộp bài Listening”.']
+      : testConfig.listening.description);
+    appendInstructions(elements.readingInstructions, paperMini
+      ? ['Nhập đáp án từ bài giấy. Trang không giới hạn giờ và chỉ nộp Reading khi bạn bấm “Nộp bài Reading”.']
+      : testConfig.reading.description);
     renderQuestionControls(testConfig.listening, elements.listeningQuestions, 'listening');
     renderQuestionControls(testConfig.reading, elements.readingQuestions, 'reading');
     updateAnswerCount('listening');
