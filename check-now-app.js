@@ -10,12 +10,21 @@
 (() => {
   const config = window.GRADER_CONFIG;
   const params = new URLSearchParams(window.location.search);
+  // Nhận lại đúng bài/lượt trong cùng tab khi tải lại; DB vẫn là nguồn tiến độ.
+  const sessionKey = 'checknow67:current';
+  let tracked = null;
+  try {
+    const value = JSON.parse(window.sessionStorage.getItem(sessionKey) || 'null');
+    if (value && Date.now() - value.savedAt < 86400000 && Date.now() >= value.savedAt) tracked = value;
+  } catch { /* Trình duyệt chặn lưu phiên: giữ khả năng chấm trong bộ nhớ tab. */ }
+  const hasIncoming = ['documentId','docId','document_id','assignmentCode','assignment_code','code'].some(key => params.has(key));
   const documentId = String(
     params.get('documentId') ?? params.get('docId') ?? params.get('document_id') ?? '',
-  ).trim();
+  ).trim() || (!hasIncoming ? String(tracked?.documentId || '') : '');
   const assignmentCode = String(
     params.get('assignmentCode') ?? params.get('assignment_code') ?? params.get('code') ?? '',
-  ).trim().toLowerCase();
+  ).trim().toLowerCase() || (!hasIncoming ? String(tracked?.assignmentCode || '') : '');
+  if (tracked?.documentId !== documentId || tracked?.assignmentCode !== assignmentCode || (hasIncoming && tracked?.terminal)) tracked = null;
   const localPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname)
     ? params.get('preview')
     : null;
@@ -41,11 +50,17 @@
 
   let activeJobId = '';
   let stopped = false;
+  let pollGeneration = 0;
+  function saveTracked(update) {
+    if (localPreview) return;
+    tracked = { ...(tracked || {}), documentId, assignmentCode, ...update, savedAt: Date.now() };
+    try { window.sessionStorage.setItem(sessionKey, JSON.stringify(tracked)); } catch { /* Không làm mất lượt DB khi lưu phiên lỗi. */ }
+  }
 
   warningThreshold.textContent = `${minimumCompletionPercent}%`;
 
   // Hai mã chỉ cần ở lần tải đầu; xóa khỏi thanh địa chỉ để hạn chế bị sao chép hoặc lưu lại ngoài ý muốn.
-  if ((documentId || assignmentCode) && !localPreview) {
+  if (/^[A-Za-z0-9_-]{20,200}$/.test(documentId) && /^67-(reading-0[1-6]|listening-0[1-5])$/.test(assignmentCode) && !localPreview) {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 
@@ -61,6 +76,7 @@
 
   function showDone(message) {
     stopped = true;
+    saveTracked({ terminal: true });
     card.classList.remove('is-warning');
     pageTitle.textContent = 'Đã xong!';
     setStage('done');
@@ -76,6 +92,7 @@
 
   function showWarning(status) {
     stopped = true;
+    saveTracked({ terminal: true });
     document.querySelectorAll('.step.active').forEach((element) => element.classList.remove('active'));
     card.classList.add('is-warning');
     pageTitle.textContent = 'Bài chưa đủ điều kiện chấm';
@@ -106,13 +123,25 @@
     backLink.hidden = false;
     backLink.textContent = 'Quay lại bài làm';
   }
+  function showWaiting(message) {
+    stopped = true;
+    pageTitle.textContent = 'Đang chờ kết quả chấm';
+    lead.textContent = message || 'Việc chấm đang kéo dài. Lượt đã nhận vẫn được lưu.';
+    result.hidden = true;
+    warningBox.hidden = true;
+    errorBox.hidden = true;
+    retryButton.hidden = false;
+    retryButton.textContent = 'Xem lại tiến độ';
+    backLink.hidden = false;
+    backLink.textContent = 'Quay lại bài làm';
+  }
 
   function safeJson(text) {
     try { return JSON.parse(text); } catch { return null; }
   }
 
   async function requestJson(url, options = {}) {
-    const response = await fetch(url, { cache: 'no-store', ...options });
+    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(12000), ...options });
     const text = await response.text();
     const data = safeJson(text);
     if (!response.ok) {
@@ -126,10 +155,10 @@
     return data;
   }
 
-  async function pollStatus(startedAt) {
-    if (stopped) return;
+  async function pollStatus(startedAt, generation) {
+    if (stopped || generation !== pollGeneration) return;
     if (Date.now() - startedAt > config.timeoutMs) {
-      showError('Việc chấm bài mất nhiều thời gian hơn dự kiến. Vui lòng thử lại.');
+      showWaiting();
       return;
     }
 
@@ -137,6 +166,7 @@
       const url = new URL(config.statusUrl);
       url.searchParams.set('jobId', activeJobId);
       const status = await requestJson(url.toString());
+      if (stopped || generation !== pollGeneration) return;
       if (status.status === 'done') {
         showDone(status.message);
         return;
@@ -146,24 +176,32 @@
         return;
       }
       if (status.status === 'failed') {
+        saveTracked({ terminal: true });
         showError(status.message, status.retryable !== false);
+        return;
+      }
+      if (status.status === 'needs_review') {
+        saveTracked({ terminal: true });
+        showError(status.message || 'Cần đối chiếu kết quả trong Docs trước khi thử lại.', false);
         return;
       }
       if (stages.includes(status.stage)) setStage(status.stage);
     } catch (error) {
+      if (stopped || generation !== pollGeneration) return;
       // Lỗi mạng tạm thời được thử lại; lỗi kéo dài sẽ chạm ngưỡng thời gian ở trên.
       if (Date.now() - startedAt > config.timeoutMs / 2) {
-        showError(error.message, error.retryable !== false);
+        showWaiting('Chưa đọc được tiến độ. Bạn có thể kiểm tra lại cùng lượt chấm.');
         return;
       }
     }
 
-    window.setTimeout(() => pollStatus(startedAt), config.pollEveryMs);
+    window.setTimeout(() => pollStatus(startedAt, generation), config.pollEveryMs);
   }
 
-  async function startGrading() {
+  async function startGrading(resumeCompleted = false) {
+    const generation = ++pollGeneration;
     stopped = false;
-    activeJobId = '';
+    activeJobId = tracked?.jobId && (!tracked.terminal || resumeCompleted) ? String(tracked.jobId) : '';
     card.classList.remove('is-warning');
     pageTitle.textContent = 'Đang chấm bài của bạn';
     result.hidden = true;
@@ -180,27 +218,35 @@
       showError('Trang chấm bài chưa được cấu hình đầy đủ.', false);
       return;
     }
-    if (!/^[A-Za-z0-9_-]{20,}$/.test(documentId)) {
+    if (!/^[A-Za-z0-9_-]{20,200}$/.test(documentId)) {
       showError('Liên kết bài làm không hợp lệ. Hãy quay lại Google Docs và bấm nút chấm bài lần nữa.', false);
       return;
     }
-    if (!/^67-(reading|listening)-\d{2}$/.test(assignmentCode)) {
+    if (!/^67-(reading-0[1-6]|listening-0[1-5])$/.test(assignmentCode)) {
       showError('Mã bài trong liên kết không hợp lệ. Hãy quay lại Google Docs và bấm đúng nút chấm bài.', false);
+      return;
+    }
+    if (/^[A-Za-z0-9_-]{1,80}$/.test(activeJobId)) {
+      window.setTimeout(() => pollStatus(Date.now(), generation), 100);
       return;
     }
 
     try {
+      const requestId = !tracked?.terminal && /^[A-Za-z0-9_-]{1,80}$/.test(tracked?.requestId || '')
+        ? tracked.requestId : window.crypto.randomUUID();
+      saveTracked({ requestId, jobId: '', terminal: false });
       const accepted = await requestJson(config.startUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body: JSON.stringify({ documentId, assignmentCode }),
+        body: JSON.stringify({ documentId, assignmentCode, requestId }),
       });
       activeJobId = String(accepted.job_id ?? '');
-      if (!/^[A-Za-z0-9_-]{1,100}$/.test(activeJobId)) {
+      if (!/^[A-Za-z0-9_-]{1,80}$/.test(activeJobId)) {
         throw new Error('Không nhận được mã lượt chấm hợp lệ.');
       }
+      saveTracked({ jobId: activeJobId, terminal: false });
       if (stages.includes(accepted.stage)) setStage(accepted.stage);
-      window.setTimeout(() => pollStatus(Date.now()), 400);
+      window.setTimeout(() => pollStatus(Date.now(), generation), 400);
     } catch (error) {
       showError(error.message, error.retryable !== false);
     }
@@ -233,12 +279,12 @@
     else if (localPreview === 'failed') showError('Hệ thống chưa thể đọc bài làm. Vui lòng thử lại.');
     else setStage(localPreview);
   } else {
-    startGrading();
+    startGrading(!hasIncoming);
   }
 
   backLink.href = documentId
     ? `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit`
     : 'https://docs.google.com/';
   backLink.addEventListener('click', returnToOpenDocument);
-  retryButton.addEventListener('click', startGrading);
+  retryButton.addEventListener('click', () => { void startGrading(); });
 })();
