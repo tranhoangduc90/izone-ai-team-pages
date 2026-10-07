@@ -59,8 +59,9 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(html, /LỜI NHẮN THẬT TỪ GIẢNG VIÊN/);
   assert.match(app, /student\.latestReport/);
   assert.match(html, /id="copyStudentJourneyLinkButton"/);
-  assert.match(app, /\/teacher\/student-progress-links/);
-  assert.match(app, /payload\.link\.studentRef !== student\.studentRef/);
+  const links=await source('teacher-session-comments.js');
+  assert.match(links, /\/teacher\/student-progress-links\/resolve/);
+  assert.match(links, /data\.link\.studentRef!==target\.studentRef/);
   assert.match(html, /id="openStudentFormButton"/);
   assert.match(html, /id="copyCurrentLinkButton"/);
   assert.match(html, /Sao chép link để gửi học viên; địa chỉ trang chung không mở được phiếu\./);
@@ -144,7 +145,7 @@ test('hành trình dùng link cá nhân trong fragment và chỉ mở timeline k
   assert.match(html, /PHÂN TÍCH|TỔNG KẾT GẦN NHẤT/);
   assert.match(html, /LỜI NHẮN TỪ GIẢNG VIÊN/);
   assert.match(app, /window\.location\.hash/);
-  assert.match(app, /history\.replaceState/);
+  assert.doesNotMatch(app, /history\.replaceState/); // Giữ fragment để reload vẫn mở đúng link riêng.
   assert.match(app, /\/student\/course-journey/);
   assert.match(app, /referrerPolicy:\s*'no-referrer'/);
   assert.doesNotMatch(app, /searchParams\.get\(['"]access/);

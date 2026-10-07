@@ -19,12 +19,13 @@ async function run(action){
  {sessionNumber:3,sessionDate:'2026-10-03',assignmentId:'assignment-3',title:'Reading 4 + Writing 2',assignmentStatus:'published',publicToken:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'},
  {sessionNumber:4,sessionDate:'2026-10-05',sessionKind:'test',dataOrigin:'confirmed_plan',title:'Buổi Test'},
  {sessionNumber:5,sessionDate:'2026-10-08',dataOrigin:'confirmed_plan'}];
- let detailMode='ok',release;
+ let detailMode='ok',release,comments=[];
  await page.route('**/*',async route=>{
   const req=route.request(),url=new URL(req.url()),json=value=>route.fulfill({contentType:'application/json',body:JSON.stringify(value)});
   if(url.pathname.endsWith('/progress-log/config.js'))return route.fulfill({contentType:'text/javascript',body:`window.PROGRESS_LOG_CONFIG={API_BASE_URL:'${origin}'};`});
   if(url.pathname.endsWith('/assignments/open'))return json({ok:true,assignment:{assignmentId:'assignment-2',sessionNumber:2,title:'ENTRANCE TICKET • Reading 3 + Writing 1',class:{id:'1294',name:'IC2305 · Lớp thử'},roster:[{studentRef:ref,name:'Học viên giả'}],definition:{blocks:[]}}});
   if(url.pathname.endsWith('/student/course-journey'))return json({ok:true,journey:{student:{studentRef:ref,name:'Học viên giả'},class:{classId:'1294',name:'IC2305 · Lớp thử'},summary:{totalSessions:4,attendedSessions:1,submittedComplete:1,availableReports:0},sessions,reports:[],coverage:{schedule:'teacher_confirmed',plannedSessions:4}}});
+  if(url.pathname.endsWith('/student/session-comments'))return json({ok:true,classId:'1294',studentRef:ref,comments});
   if(url.pathname.endsWith('/student/course-session-detail')){
    assert.equal(req.postDataJSON().studentRef,ref);assert.equal(req.postDataJSON().sessionNumber,2);assert.equal(req.postDataJSON().identityConfirmed,true);
    if(detailMode==='hold')await new Promise(r=>release=r);
@@ -36,7 +37,7 @@ async function run(action){
  try{
   await page.clock.install({time:new Date('2026-10-03T11:24:58Z')});await page.clock.pauseAt(new Date('2026-10-03T11:24:59Z'));
   await page.goto(origin+'/progress-log/index.html#assignment='+token);await page.locator('#studentSelect').selectOption(ref);await page.locator('#chooseStudentButton').click();await page.locator('#journeyButton').click();await page.locator('#journeyView').waitFor({state:'visible'});
-  await action({page,origin,sessions,detail,setMode:m=>detailMode=m,release:()=>release?.()});assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
+  await action({page,origin,sessions,detail,setComments:value=>comments=value,setMode:m=>detailMode=m,release:()=>release?.()});assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
  } finally{release?.();await browser.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 }
 test('Production reference regression: session title and full submitted questions/answers',{timeout:60000},async()=>run(async({page,detail})=>{
@@ -64,4 +65,16 @@ test('Production history errors, wrong identity and late detail do not reopen hi
  setMode('wrong');await open();await page.locator('#journeyDetailStatus').filter({hasText:'không khớp'}).waitFor();assert.equal(await page.locator('[data-review-item]').count(),0);
  setMode('fail');await page.locator('#journeyDetailRetryButton').click();await page.locator('#journeyDetailStatus').filter({hasText:'Nguồn tạm lỗi'}).waitFor();
  setMode('hold');await page.locator('#journeyDetailRetryButton').click();await page.locator('#journeyDetailBackButton').click();release();await page.waitForTimeout(100);assert.equal(await page.locator('#journeyView').isVisible(),true);assert.equal(await page.locator('[data-review-item]').count(),0);
+}));
+test('Nhận xét chung hiện trong Journey của phiếu, thẻ/chi tiết và biến mất sau khi ẩn',{timeout:60000},async()=>run(async({page,setComments})=>{
+ const note={studentRef:ref,sessionNumber:2,noteText:'Em đọc tốt hơn.\nDòng thứ hai.',revision:1,visibility:'visible',authorDisplayName:'Cô thử nghiệm',updatedAt:'2026-10-03T11:24:00Z'};
+ setComments([note]);await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+ await page.locator('.latest-session-comment').waitFor();await page.getByLabel('Lọc buổi học theo nhận xét').selectOption('comments');
+ assert.equal(await page.locator('#journeySessions > :visible').count(),1);
+ await page.locator('#journeySessions [data-session-number="2"]').click();await page.locator('#journeyDetailView').waitFor({state:'visible'});
+ await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#journeyDetailContent .session-comment').waitFor();
+ assert.match(await page.locator('#journeyDetailContent .session-comment').textContent(),/Dòng thứ hai/);
+ const answers=await page.locator('[data-review-item]').count();assert.ok(answers>0);
+ setComments([]);await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#journeyDetailContent .session-comment').waitFor({state:'hidden'});
+ assert.equal(await page.locator('[data-review-item]').count(),answers);
 }));

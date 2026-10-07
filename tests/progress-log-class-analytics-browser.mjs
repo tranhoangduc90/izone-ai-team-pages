@@ -49,6 +49,8 @@ test('Whole-class basic analysis drills into exact student/session, keeps sparse
   assert.equal(await page.locator('.overview-table th').filter({hasText:'Buổi 31'}).count(),1);
   assert.match(await page.locator('#courseAnalytics').textContent(),/Reading 3 \+ Writing 1/);
   // Hai phản hồi thật: tên giữ thao tác mở bài nhưng trông như chữ thường; bảng cùng cỡ chữ.
+  await page.locator('#courseAnalytics .comment-disclosure > summary').first().click();
+  await page.locator('#courseAnalytics .comment-disclosure > summary').nth(1).click();
   const appearance=await page.locator('#courseAnalytics [data-summary]').first().evaluate(e=>{
    const name=getComputedStyle(e),cell=getComputedStyle(e.parentElement);
    const header=getComputedStyle(document.querySelector('#courseOverview .overview-table th'));

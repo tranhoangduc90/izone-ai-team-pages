@@ -49,7 +49,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261003-reference-production');
+  await import('../app.js?rev=20261007-journey-comments');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });

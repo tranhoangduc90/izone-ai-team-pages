@@ -1,4 +1,6 @@
-import {renderClassAnalytics,renderStudentClassSummary} from './class-analytics-view.js';
+import {renderClassAnalytics,renderStudentClassSummary} from './class-analytics-view.js?rev=20261007-comments';
+import {commentPanel,bindDialogDismiss} from './session-comments.js?rev=20261007-comments';
+import {commentEditor,journeyLinkManager,openStudentJourney,clearCommentDrafts} from './teacher-session-comments.js';
 import {contentTitle,sessionHeading} from './session-presentation.js';
 import {observeSubmissionWindow, submissionWindowMessage} from './submission-window.js';
 /*
@@ -9,7 +11,7 @@ import {observeSubmissionWindow, submissionWindowMessage} from './submission-win
  */
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
-import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261003';
+import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261007-comments';
 import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261001-authoring-v1';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
@@ -152,7 +154,30 @@ function paintCourseOverview() {
   if (!state.overview) return;
   renderCourseOverview(elements.courseOverview,state.overview,{filter:elements.overviewFilter.value,
     onOpen:(student,cell)=>void openJourneyDetail({classId:state.overview.classId,
-      studentRef:student.studentRef,sessionNumber:cell.sessionNumber})});
+      studentRef:student.studentRef,sessionNumber:cell.sessionNumber}),
+    onComment:state.overview.journeyCommentsEnabled?(student,cell)=>void openJourneyDetail({classId:state.overview.classId,
+      studentRef:student.studentRef,sessionNumber:cell.sessionNumber,focusComment:true}):undefined,
+    onJourney:state.overview.journeyCommentsEnabled?student=>viewJourney({classId:state.overview.classId,studentRef:student.studentRef},student.name):undefined});
+}
+function viewJourney(target,studentName){const generation=state.authGeneration;void openStudentJourney({request:apiRequest,target,studentName,current:()=>state.authenticated&&generation===state.authGeneration});}
+function manageJourney(target,studentName) {
+  const generation=state.authGeneration;
+  journeyLinkManager({request:apiRequest,target,studentName,current:()=>state.authenticated&&generation===state.authGeneration});
+}
+function mountCommentEditor(root,dialog,target,studentName,comment,focus=false) {
+  const generation=state.authGeneration;
+  const editor=commentEditor({target,studentName,comment,reviewerKey:state.reviewer.email,request:apiRequest,
+    current:()=>dialog.open&&state.authenticated&&generation===state.authGeneration,
+    onSaved:note=>{
+      const person=state.dashboard?.classId===target.classId&&state.dashboard?.sessionNumber===target.sessionNumber
+        ?state.dashboard.students.find(s=>s.studentRef===target.studentRef):null;
+      if(person)person.sessionComment=note;
+      const cell=String(state.overview?.classId)===String(target.classId)?state.overview.students.find(s=>s.studentRef===target.studentRef)?.cells.find(c=>c.sessionNumber===target.sessionNumber):null;
+      if(cell)cell.sessionComment=note;renderStudentList();paintCourseOverview();
+    }});
+  const links=document.createElement('button');links.type='button';links.className='mini-action';links.textContent='Quản lý link Hành trình riêng';
+  links.addEventListener('click',()=>manageJourney({classId:target.classId,studentRef:target.studentRef},studentName));editor.element.append(links);
+  root.append(editor.element);if(focus)editor.focus();return editor;
 }
 
 async function loadCourseOverview() {
@@ -236,6 +261,9 @@ async function openJourneyDetail(target) {
     if(String(detail.classId)!==String(target.classId)||detail.student.studentRef!==target.studentRef
       ||detail.sessionNumber!==target.sessionNumber) throw new Error('Dữ liệu buổi học không khớp học viên đã chọn.');
     renderSessionDetail(elements.journeyDetailContent,detail,{session:state.overview?.sessions.find(s=>s.sessionNumber===target.sessionNumber)||{}});
+    if(state.overview?.journeyCommentsEnabled||state.dashboard?.journeyCommentsEnabled)mountCommentEditor(elements.journeyDetailContent,elements.journeyDetailDialog,
+      {classId:String(target.classId),studentRef:target.studentRef,sessionNumber:target.sessionNumber},
+      detail.student.name,detail.sessionComment,target.focusComment);
     elements.journeyDetailStatus.textContent='Bản dữ liệu hiện hành; chi tiết chỉ để xem lại.';
   } catch(error) {
     if(generation===state.detailGeneration&&elements.journeyDetailDialog.open) {
@@ -527,14 +555,17 @@ function verdictLabel(verdict) {
   }[verdict] || '';
 }
 
-function openDraft(student) {
+function openDraft(student,focusComment=false) {
   const live = state.liveByStudent.get(student.studentRef);
-  if (!live) return;
+  if (!live?.attemptId) {
+    return void openJourneyDetail({classId:state.dashboard.classId,studentRef:student.studentRef,
+      sessionNumber:state.dashboard.sessionNumber,focusComment});
+  }
   state.draftStudent = student;
   state.draftJourneyLink = '';
   state.feedbackOperationId = crypto.randomUUID();
-  elements.draftJourneyLinkStatus.textContent = 'Link cá nhân chỉ gửi đúng học viên. Tạo mới sẽ thay link cũ.';
-  elements.copyDraftJourneyLinkButton.textContent = 'Tạo và sao chép link';
+  elements.draftJourneyLinkStatus.textContent = 'Link không hết hạn, chỉ mất hiệu lực khi được thay hoặc thu hồi.';
+  elements.copyDraftJourneyLinkButton.textContent = 'Lấy link Hành trình riêng';
   elements.draftSpeakingFeedback.value = student.teacherSessionFeedback?.noteText || '';
   elements.draftFeedbackStatus.textContent = student.teacherSessionFeedback
     ? `Đã gửi nhận xét · bản ${student.teacherSessionFeedback.revision}. Chỉnh sửa rồi gửi lại để cập nhật.`
@@ -568,6 +599,9 @@ function openDraft(student) {
   });
   elements.draftAnswers.replaceChildren(...cards);
   elements.draftDialog.showModal();
+  if(state.dashboard.journeyCommentsEnabled) mountCommentEditor(elements.draftAnswers,elements.draftDialog,
+    {classId:state.dashboard.classId,studentRef:student.studentRef,sessionNumber:state.dashboard.sessionNumber},
+    student.name,student.sessionComment,focusComment);
 }
 
 function buildSummary(students) {
@@ -627,7 +661,7 @@ function openReport(student) {
   const output = report.systemOutput || {};
   state.reportStudent = student;
   state.studentJourneyLink = '';
-  elements.studentJourneyLinkStatus.textContent = 'Mỗi lần tạo mới sẽ thay link cũ của học viên này.';
+  elements.studentJourneyLinkStatus.textContent = 'Link không hết hạn. Chỉ mất hiệu lực khi được thay hoặc thu hồi.';
   elements.reportStudentName.textContent = student.discriminator
     ? `${student.name} · ${student.discriminator}`
     : student.name;
@@ -651,10 +685,6 @@ function openReport(student) {
   elements.reportDialog.showModal();
 }
 
-function newStudentJourneyToken() {
-  return `${crypto.randomUUID().replaceAll('-', '')}${crypto.randomUUID().replaceAll('-', '')}`;
-}
-
 function studentJourneyUrl(accessToken) {
   const url = new URL('journey.html', window.location.href);
   url.hash = new URLSearchParams({ access: accessToken }).toString();
@@ -663,36 +693,7 @@ function studentJourneyUrl(accessToken) {
 
 async function copyStudentJourneyLink() {
   const student = state.reportStudent;
-  if (!student || !state.dashboard?.assignmentId) return;
-  elements.copyStudentJourneyLinkButton.disabled = true;
-  try {
-    if (!state.studentJourneyLink) {
-      const accessToken = newStudentJourneyToken();
-      const payload = await apiRequest('/teacher/student-progress-links', {
-        method: 'POST',
-        body: {
-          assignmentId: state.dashboard.assignmentId,
-          studentRef: student.studentRef,
-          accessToken,
-          expiresInDays: 90,
-          operationId: crypto.randomUUID()
-        }
-      });
-      if (payload.link.studentRef !== student.studentRef) {
-        throw new Error('Link trả về không khớp học viên; hệ thống đã dừng sao chép.');
-      }
-      state.studentJourneyLink = studentJourneyUrl(accessToken);
-    }
-    await navigator.clipboard.writeText(state.studentJourneyLink);
-    elements.studentJourneyLinkStatus.textContent = 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
-    elements.copyStudentJourneyLinkButton.textContent = 'Sao chép lại';
-  } catch (error) {
-    elements.studentJourneyLinkStatus.textContent = state.studentJourneyLink
-      ? `Không sao chép tự động được. Link: ${state.studentJourneyLink}`
-      : error.message;
-  } finally {
-    elements.copyStudentJourneyLinkButton.disabled = false;
-  }
+  if(student&&state.dashboard?.classId)manageJourney({classId:state.dashboard.classId,studentRef:student.studentRef},student.name);
 }
 
 async function sendDraftFeedback() {
@@ -738,37 +739,7 @@ async function sendDraftFeedback() {
 
 async function copyDraftJourneyLink() {
   const student = state.draftStudent;
-  if (!student || !state.dashboard?.assignmentId) return;
-  elements.copyDraftJourneyLinkButton.disabled = true;
-  try {
-    const assignmentId = state.dashboard.assignmentId;
-    if (!state.draftJourneyLink) {
-      const accessToken = newStudentJourneyToken();
-      const payload = await apiRequest('/teacher/student-progress-links', {
-        method: 'POST',
-        body: {
-          assignmentId: state.dashboard.assignmentId, studentRef: student.studentRef,
-          accessToken, expiresInDays: 90, operationId: crypto.randomUUID()
-        }
-      });
-      if (payload.link.studentRef !== student.studentRef) {
-        throw new Error('Link trả về không khớp học viên; hệ thống đã dừng sao chép.');
-      }
-      if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
-        || !elements.draftDialog.open) return;
-      state.draftJourneyLink = studentJourneyUrl(accessToken);
-    }
-    if (state.draftStudent !== student || state.dashboard?.assignmentId !== assignmentId
-      || !elements.draftDialog.open) return;
-    await navigator.clipboard.writeText(state.draftJourneyLink);
-    elements.draftJourneyLinkStatus.textContent = 'Đã sao chép link cá nhân, có hiệu lực trong 90 ngày.';
-    elements.copyDraftJourneyLinkButton.textContent = 'Sao chép lại';
-  } catch (error) {
-    elements.draftJourneyLinkStatus.textContent = state.draftJourneyLink
-      ? `Không sao chép tự động được. Link: ${state.draftJourneyLink}` : error.message;
-  } finally {
-    elements.copyDraftJourneyLinkButton.disabled = false;
-  }
+  if(student&&state.dashboard?.classId)manageJourney({classId:state.dashboard.classId,studentRef:student.studentRef},student.name);
 }
 
 async function saveTeacherHumanNote() {
@@ -833,6 +804,10 @@ function buildStudentRow(student) {
   copy.className = 'student-copy';
   const name = document.createElement('b');
   name.textContent = student.discriminator ? `${student.name} · ${student.discriminator}` : student.name;
+  const heading=document.createElement('div');heading.className='student-name-heading';heading.append(name);
+  if(state.dashboard.journeyCommentsEnabled){const journey=document.createElement('button');journey.type='button';
+    journey.className='mini-action';journey.textContent='Hành trình riêng ↗';
+    journey.addEventListener('click',()=>viewJourney({classId:state.dashboard.classId,studentRef:student.studentRef},student.name));heading.append(journey);}
   const detail = document.createElement('small');
   const submissionText = student.submissionId
     ? (student.completeness === 'complete' ? 'Đã nộp đủ' : 'Đã nộp nhưng còn thiếu')
@@ -843,7 +818,7 @@ function buildStudentRow(student) {
   } else if (!student.submissionId && live?.draftRevision > 0) {
     detail.textContent = `Đang nhập · bản lưu ${live.draftRevision} lúc ${formatSavedAt(live.draftUpdatedAt)}`;
   }
-  copy.append(name, detail);
+  copy.append(heading, detail);
   const blocks = state.dashboard?.definition?.blocks || [];
   const listeningBlock = blocks.find(block => (block.items || []).some(item =>
     (item.skillCodes || []).includes('listening') && item.maxScore > 0));
@@ -899,12 +874,12 @@ function buildStudentRow(student) {
   status.textContent = attendanceLabel(student.attendanceStatus);
   const actions = document.createElement('div');
   actions.className = 'student-actions';
-  if (live?.attemptId) {
+  if (state.dashboard.journeyCommentsEnabled) {
     const draftButton = document.createElement('button');
     draftButton.className = 'button draft-button';
     draftButton.type = 'button';
-    draftButton.textContent = live.submissionId ? 'Xem bài nộp' : 'Xem đang gõ';
-    draftButton.addEventListener('click', () => openDraft(student));
+    draftButton.textContent = student.sessionComment?.visibility==='visible' ? 'Nhận xét' : 'Thêm nhận xét';
+    draftButton.addEventListener('click', () => openDraft(student,true));
     actions.append(draftButton);
   }
   if (student.latestReport) {
@@ -922,6 +897,10 @@ function buildStudentRow(student) {
   attendanceButton.addEventListener('click', () => openAttendance(student));
   actions.append(attendanceButton);
   row.append(copy, status, actions);
+  const note=commentPanel(student.sessionComment,{compact:true});if(note)row.append(note);
+  row.tabIndex=0;row.setAttribute('role','group');row.setAttribute('aria-label','Bài làm của '+student.name);
+  row.addEventListener('click',event=>{if(event.target.closest('button,a,input,textarea,select,summary')||window.getSelection()?.toString())return;openDraft(student);});
+  row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();openDraft(student);}});
   return row;
 }
 
@@ -938,6 +917,7 @@ async function loadLiveDrafts({ quiet = false } = {}) {
     const payload = await apiRequest(`/teacher/live-drafts?assignment=${encodeURIComponent(assignmentId)}`);
     if (generation !== state.dashboardGeneration || payload.live.assignmentId !== assignmentId) return;
     state.liveByStudent = new Map((payload.live.students || []).map(student => [student.studentRef, student]));
+    for(const student of state.dashboard.students){const live=state.liveByStudent.get(student.studentRef);if(live&&Object.hasOwn(live,'sessionComment'))student.sessionComment=live.sessionComment;}
     elements.liveUpdatedAt.textContent = `Tự cập nhật mỗi 8 giây · bản lưu lúc ${formatSavedAt(payload.live.generatedAt)}`;
     renderStudentList();
   } catch (error) {
@@ -1530,6 +1510,8 @@ function initializeGoogle(attempt = 0) {
 }
 
 function clearTeacherLogin() {
+  if(state.reviewer?.email)clearCommentDrafts(state.reviewer.email);
+  document.querySelectorAll('.journey-link-dialog').forEach(dialog=>dialog.close());
   formEditor.clear();
   state.journeyPlanDrafts.clear();state.journeyPlanConflict=null;elements.journeyPlanConflict.hidden=true;
   state.analyticsController?.abort();state.journeyErpScheduleController?.abort();
@@ -1581,6 +1563,7 @@ elements.retryJourneyDetailButton.addEventListener('click',()=>{
   if(state.detailTarget) void openJourneyDetail(state.detailTarget);
 });
 elements.journeyDetailDialog.addEventListener('close',()=>{
+  if(elements.journeyDetailDialog.open)return; // Sự kiện đóng cũ không hủy lần mở nhanh tiếp theo.
   state.detailGeneration+=1;state.detailController?.abort();state.detailTarget=null;
   elements.journeyDetailContent.replaceChildren();
 });
@@ -1653,6 +1636,7 @@ elements.saveTeacherNoteButton.addEventListener('click', () => void saveTeacherH
 elements.copyStudentJourneyLinkButton.addEventListener('click', () => void copyStudentJourneyLink());
 elements.sendDraftFeedbackButton.addEventListener('click', () => void sendDraftFeedback());
 elements.copyDraftJourneyLinkButton.addEventListener('click', () => void copyDraftJourneyLink());
+for(const dialog of document.querySelectorAll('dialog'))bindDialogDismiss(dialog);
 elements.draftSpeakingFeedback.addEventListener('input', () => { state.feedbackOperationId = crypto.randomUUID(); });
 elements.rememberTeacherLogin.checked = loginPreference.read();
 elements.rememberTeacherLogin.addEventListener('change', () => {

@@ -1,5 +1,6 @@
 import {contentTitle,sessionHeading} from './session-presentation.js';
-import {renderSessionReview} from './session-review.js';
+import {renderSessionReview} from './session-review.js?rev=20261007-comments';
+import {commentPanel} from './session-comments.js?rev=20261007-comments';
 // Nhận DTO đã kiểm quyền; tạo bảng lớp và thống kê câu bằng DOM an toàn.
 // Không suy điểm danh từ ô trống; lỗi đọc được caller hiện ở vùng trạng thái.
 const labels={complete:'Đã nộp đủ',incomplete:'Nộp thiếu',not_submitted:'Chưa nộp',
@@ -19,15 +20,9 @@ function cellButton(student,cell,onOpen,session={sessionNumber:cell.sessionNumbe
   button.type='button';
   button.setAttribute('aria-label',student.name+' · '+sessionHeading(session,session.assignments?.[0])+' · '+button.textContent);
   button.addEventListener('click',()=>onOpen(student,cell));
-  if (cell.portalSync) {
-    const portal=text('small',cell.portalSync.status==='complete'
-      ?'Portal: chờ bằng chứng đọc lại':cell.portalSync.status==='queued'||cell.portalSync.status==='processing'
-        ?'Portal: đang đồng bộ':'Portal: cần kiểm tra');
-    button.append(portal);
-  }
   return button;
 }
-export function renderCourseOverview(root,overview,{filter='',onOpen}) {
+export function renderCourseOverview(root,overview,{filter='',onOpen,onComment,onJourney}) {
   root.classList.add('referenceRegion');
   const students=overview.students.filter(s=>!filter||s.cells.some(c=>c.status===filter));
   const table=document.createElement('table');table.className='overview-table';
@@ -41,10 +36,12 @@ export function renderCourseOverview(root,overview,{filter='',onOpen}) {
   const body=document.createElement('tbody');
   for (const student of students) {
     const row=document.createElement('tr');
-    row.append(text('th',student.name+(student.discriminator?' · '+student.discriminator:'')
-      +(student.current?'':' · roster lịch sử')));
+    const name=text('th',student.name+(student.discriminator?' · '+student.discriminator:'')+(student.current?'':' · roster lịch sử'));
+    if(onJourney){const button=text('button','Hành trình riêng ↗','mini-action');button.type='button';button.addEventListener('click',()=>onJourney(student));name.append(button);}row.append(name);
     for (const cell of student.cells) {
-      const td=document.createElement('td');td.append(cellButton(student,cell,onOpen,overview.sessions.find(s=>s.sessionNumber===cell.sessionNumber)));row.append(td);
+      const td=document.createElement('td');td.append(cellButton(student,cell,onOpen,overview.sessions.find(s=>s.sessionNumber===cell.sessionNumber)));
+      const preview=commentPanel(cell.sessionComment,{compact:true});if(preview)td.append(preview);
+      if(onComment){const button=text('button',preview?'Nhận xét':'Thêm nhận xét','mini-action');button.type='button';button.addEventListener('click',()=>onComment(student,cell));td.append(button);}row.append(td);
     }
     body.append(row);
   }
@@ -53,9 +50,12 @@ export function renderCourseOverview(root,overview,{filter='',onOpen}) {
   const mobile=document.createElement('div');mobile.className='overview-mobile-list';
   for (const student of students) {
     const card=document.createElement('details');card.append(text('summary',student.name+(student.discriminator?' · '+student.discriminator:'')+' · '+student.completeCount+' phiếu hoàn tất'));
+    if(onJourney){const button=text('button','Hành trình riêng ↗','mini-action');button.type='button';button.addEventListener('click',()=>onJourney(student));card.append(button);}
     for (const [index,cell] of student.cells.entries()) {
       const row=document.createElement('div');row.className='overview-mobile-session';
       row.append(text('b',sessionHeading(overview.sessions[index],overview.sessions[index].assignments?.[0])+' · '+dateLabel(overview.sessions[index].sessionDate)),cellButton(student,cell,onOpen,overview.sessions[index]));
+      const preview=commentPanel(cell.sessionComment,{compact:true});if(preview)row.append(preview);
+      if(onComment){const button=text('button',preview?'Nhận xét':'Thêm nhận xét','mini-action');button.type='button';button.addEventListener('click',()=>onComment(student,cell));row.append(button);}
       card.append(row);
     }
     mobile.append(card);

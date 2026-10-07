@@ -61,6 +61,7 @@ test('B10/B13/B18: Chrome giữ draft sau hạn, phiếu đóng xem Journey; m�
         }
         if (url.pathname.endsWith('/attempts/result') && received) return json({ ok: true, receipt: {
           message: 'Đã nhận phiếu.', completeness: 'complete', attendanceStatus: 'self_confirmed' }, result: null });
+        if(url.pathname.endsWith('/student/session-comments'))return json({ok:true,classId:'1294',studentRef,comments:[{studentRef,sessionNumber:6,revision:1,visibility:'visible',noteText:'Em đã làm tốt phần ôn tập.',authorDisplayName:'Cô thử nghiệm',updatedAt:'2026-10-06T14:00:00Z'}]});
         if (url.pathname.endsWith('/student/course-journey')) return json({ ok: true, journey: {
           student: { studentRef, name: 'Học viên giả' }, class: { classId: '1294', name: 'Lớp thử' },
           summary: { attendedSessions: 0, submittedComplete: 0, availableReports: 0, totalSessions: 18 }, sessions: [], reports: [],
@@ -94,6 +95,7 @@ test('B10/B13/B18: Chrome giữ draft sau hạn, phiếu đóng xem Journey; m�
         } else {
           await page.locator('#submitButton').click();
           await page.locator('#resultView').waitFor({ state: 'visible' });
+          await page.locator('#resultView .session-comment').waitFor();assert.match(await page.locator('#resultView .session-comment').textContent(),/Em đã làm tốt phần ôn tập/);
           assert.match(await page.locator('#attendanceResult').textContent(), /Portal đang được đồng bộ/);
           assert.equal(calls.filter(c => c.mode === mode && c.path.endsWith('/attempts/submit')).length, 1);
           assert.equal(calls.filter(c => c.mode === mode && c.path.endsWith('/attempts/result')).length, 1);

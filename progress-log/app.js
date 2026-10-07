@@ -1,5 +1,6 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
-import {renderSessionReview} from './session-review.js';
+import {renderSessionReview} from './session-review.js?rev=20261007-comments';
+import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
@@ -140,8 +141,10 @@ function installStudentMemory() {
   applyStudentMemory();
 }
 
+let commentPoller=null;
 function showView(id) {
   for (const viewId of viewIds) elements[viewId].hidden = viewId !== id;
+  commentPoller?.refresh();
 }
 
 function setNotice(message = '', kind = '') {
@@ -1027,9 +1030,10 @@ function renderIntegratedJourney(journey) {
     const status = sessionState(session, {assignmentId:session.assignmentId,
       status:session.completeness==='complete'?'complete':session.testResult?'test_result':session.completeness==='incomplete'?'incomplete':session.conflict?'needs_review':'not_submitted'},
       session.assignmentId?{title:session.title,status:session.assignmentStatus}:null);
-    const learn = status.canLearn && /^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
-    const completed = session.completeness === 'complete';
+    const completed = session.completeness === 'complete'||Boolean(session.sessionComment?.noteText);
+    const learn = !completed&&status.canLearn && /^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
     const item = document.createElement(learn?'a':completed?'button':'article');
+    item.dataset.sessionNumber=String(session.sessionNumber);
     item.className = 'studentSessionCard session-'+status.kind;
     if (learn) {
       item.href='./index.html#assignment='+encodeURIComponent(session.publicToken);
@@ -1047,6 +1051,7 @@ function renderIntegratedJourney(journey) {
     bottom.append(journeyText('i',status.label));
     if(session.quizSummary?.graded>0)bottom.append(journeyText('b',session.quizSummary.correct+'/'+session.quizSummary.graded));
     item.append(heading,journeyText('strong',title),journeyText('small',skillsLabel(title)||'Trong kế hoạch khóa học'),bottom);
+    const comment=commentPanel(session.sessionComment);if(comment)item.append(comment);
     if(session.testResult){
       const result=journeyText('div','', 'sessionTestScore');
       for(const skill of ['listening','reading','writing']){
@@ -1060,6 +1065,7 @@ function renderIntegratedJourney(journey) {
   });
   elements.journeySessions.replaceChildren(...(sessions.length ? sessions
     : [journeyText('p', 'Chưa có buổi học nào được ghi nhận.', 'muted')]));
+  paintJourneyComments(elements.journeyView,elements.journeySessions,journey.sessions,session=>void openStudentJourneyDetail(session));
   const reports = (journey.reports || []).map(report => {
     const item = document.createElement('article');
     item.className = 'history-report';
@@ -1431,6 +1437,24 @@ window.addEventListener('pagehide', () => {
   clearSaveTimers();
 });
 
+commentPoller=createCommentPoller({request:apiRequest,context:()=>{
+  if(config.DEMO_MODE)return null;
+  if(!elements.resultView.hidden&&state.attempt?.attemptToken)return {attemptToken:state.attempt.attemptToken};
+  if((!elements.journeyView.hidden||!elements.journeyDetailView.hidden)&&state.journeyData)
+    return {publicToken:state.publicToken,studentRef:state.journeyData.student.studentRef,identityConfirmed:true};
+  return null;
+},onData:(data,context)=>{
+  const person=context.studentRef||state.attempt?.identity?.studentRef;
+  if(data.studentRef!==person||String(data.classId)!==String(state.assignment?.class.id))return;
+  const byNumber=new Map(data.comments.map(note=>[note.sessionNumber,note]));
+  if(state.journeyData?.student.studentRef===person){state.journeyData.sessions=state.journeyData.sessions.map(session=>({...session,sessionComment:byNumber.get(session.sessionNumber)||null}));
+    if(!elements.journeyView.hidden)renderIntegratedJourney(state.journeyData);}
+  if(!elements.journeyDetailView.hidden){elements.journeyDetailContent.querySelectorAll('[data-session-comment]').forEach(box=>box.remove());
+    const panel=commentPanel(byNumber.get(state.journeyDetailSession?.sessionNumber));if(panel)elements.journeyDetailContent.append(panel);}
+  elements.resultView.querySelectorAll('[data-session-comment]').forEach(box=>box.remove());
+  const receipt=commentPanel(byNumber.get(state.assignment.sessionNumber));if(receipt)elements.resultView.append(receipt);
+}});
+bindDialogDismiss(elements.journeySummaryDialog);
 void openAssignment();
 
 elements.journeyDetailBackButton.addEventListener('click',backToJourneyList);

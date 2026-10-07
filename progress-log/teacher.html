@@ -135,7 +135,7 @@
         <p class="muted" id="reportScope"></p>
         <div class="report-system" id="reportSystemContent"></div>
         <section class="human-note"><p class="eyebrow">LỜI NHẮN THẬT TỪ GIẢNG VIÊN</p><textarea id="reportHumanNote" maxlength="500" placeholder="Ví dụ: Cô thấy em đã chủ động hơn nhiều ở phần này nhé."></textarea><button class="button" id="saveTeacherNoteButton" type="button">Lưu lời nhắn</button></section>
-        <section class="journey-share" hidden><div><b>Link hành trình của học viên</b><small id="studentJourneyLinkStatus">Mỗi lần tạo mới sẽ thay link cũ của học viên này.</small></div><button class="button" id="copyStudentJourneyLinkButton" type="button">Tạo và sao chép link</button></section>
+        <section class="journey-share" hidden><div><b>Link hành trình của học viên</b><small id="studentJourneyLinkStatus">Link không hết hạn, chỉ mất hiệu lực khi được thay hoặc thu hồi.</small></div><button class="button" id="copyStudentJourneyLinkButton" type="button">Quản lý link Hành trình</button></section>
         <div class="report-delivery"><small id="reportDeliveryStatus">Chưa xác nhận đã gửi.</small><button class="button primary" id="markReportDeliveredButton" type="button">Đánh dấu đã gửi</button></div>
       </form>
     </dialog>
@@ -150,12 +150,13 @@
           <textarea id="draftSpeakingFeedback" maxlength="500" placeholder="Viết nhận xét cụ thể về phần Speaking của học viên."></textarea>
           <div class="draft-feedback-actions"><small id="draftFeedbackStatus">Chưa gửi nhận xét.</small><button class="button primary" id="sendDraftFeedbackButton" type="button">Gửi nhận xét</button></div>
         </section>
-        <section class="journey-share" hidden><div><b>Link tổng hợp của học viên</b><small id="draftJourneyLinkStatus">Link cá nhân chỉ gửi đúng học viên. Tạo mới sẽ thay link cũ.</small></div><button class="button" id="copyDraftJourneyLinkButton" type="button">Tạo và sao chép link</button></section>
+        <section class="journey-share" hidden><div><b>Hành trình riêng của học viên</b><small id="draftJourneyLinkStatus">Link không hết hạn, chỉ mất hiệu lực khi được thay hoặc thu hồi.</small></div><button class="button" id="copyDraftJourneyLinkButton" type="button">Quản lý link Hành trình</button></section>
       </form>
     </dialog>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
-    <script type="module" src="teacher.js?rev=20261006-ordinal-deadline"></script>
+    <link rel="stylesheet" href="session-comments.css?rev=20261007">
+    <script type="module" src="teacher.js?rev=20261007-journey-comments"></script>
   </body>
 </html>

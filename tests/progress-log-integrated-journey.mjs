@@ -5,7 +5,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 
 class Node {
-  constructor() { this.children = []; this.textContent = ''; this.hidden = false; }
+  constructor() { this.children = []; this.textContent = ''; this.hidden = false; this.dataset={}; }
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }
   setAttribute() {}
@@ -33,7 +33,7 @@ function contextFor(journey) {
   };
   const calls = [];
   const context = {
-    contentTitle,skillsLabel,sessionHeading,sessionState, AbortController, setTimeout, clearTimeout,
+    contentTitle,skillsLabel,sessionHeading,sessionState,commentPanel:()=>null,paintJourneyComments:()=>{}, AbortController, setTimeout, clearTimeout,
     document: { createElement: () => new Node() }, elements, state,
     apiRequest: async (path, options) => { calls.push({ path, options }); return { journey }; },
     showView: view => calls.push({ view }),

@@ -1,5 +1,6 @@
 import {contentTitle,sessionHeading,sessionState,skillsLabel} from './session-presentation.js';
-import {renderSessionReview} from './session-review.js';
+import {renderSessionReview} from './session-review.js?rev=20261007-comments';
+import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments';
 'use strict';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
@@ -22,23 +23,25 @@ function setNotice(message = '', kind = '') {
 function readAccessToken() {
   const params = new URLSearchParams(window.location.hash.slice(1));
   const token = params.get('access') || '';
-  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
   return token;
 }
 
 async function apiRequest(token) {
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+  try {
   const response = await fetch(`${config.API_BASE_URL}/api/learning/student/course-journey`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken: token }),
     cache: 'no-store',
-    referrerPolicy: 'no-referrer'
+    referrerPolicy: 'no-referrer',signal:controller.signal
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok || !payload?.ok) {
     throw new Error(payload?.message || 'Link không còn sử dụng được.');
   }
   return payload.journey;
+  } finally {clearTimeout(timeout);}
 }
 
 function addPoints(container, points, emptyText) {
@@ -98,11 +101,13 @@ function submissionLabel(session) {
 function buildSession(session) {
   const view=sessionState(session,{assignmentId:session.assignmentId,status:session.completeness==='complete'?'complete':session.testResult?'test_result':'not_submitted'},
     session.assignmentId?{title:session.title,status:session.assignmentStatus}:null);
-  const learn=view.canLearn&&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
-  const item=document.createElement(learn?'a':session.completeness==='complete'?'button':'article');
+  const read=session.completeness==='complete'||Boolean(session.sessionComment?.noteText);
+  const learn=!read&&view.canLearn&&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
+  const item=document.createElement(learn?'a':read?'button':'article');
+  item.dataset.sessionNumber=String(session.sessionNumber);
   item.className='studentSessionCard session-'+view.kind;
   if(learn)item.href='./index.html#assignment='+encodeURIComponent(session.publicToken);
-  if(session.completeness==='complete'){item.type='button';item.addEventListener('click',()=>void openHistory(session));}
+  if(read){item.type='button';item.addEventListener('click',()=>void openHistory(session));}
   const top=document.createElement('div');top.className='studentSessionTop';
   const b=document.createElement('b');b.textContent='BUỔI '+String(session.sessionNumber).padStart(2,'0');
   const d=document.createElement('span');d.textContent=session.sessionDate?.split('-').reverse().join('/')||'Chưa xác nhận ngày';top.append(b,d);
@@ -111,6 +116,7 @@ function buildSession(session) {
   const bottom=document.createElement('div');bottom.className='studentSessionBottom';const status=document.createElement('i');status.textContent=view.label;bottom.append(status);
   if(session.quizSummary?.graded>0){const score=document.createElement('b');score.textContent=session.quizSummary.correct+'/'+session.quizSummary.graded;bottom.append(score);}
   item.append(top,title,skills,bottom);
+  const comment=commentPanel(session.sessionComment);if(comment)item.append(comment);
   if(session.testResult){const p=document.createElement('p');p.className='sessionTestScore';p.textContent=Object.entries(session.testResult).filter(([k,v])=>['listening','reading','writing'].includes(k)&&v).map(([k,v])=>k==='writing'?'Writing: '+(v.status==='ready'?v.score:v.status==='pending'?'đã nộp, đang chờ điểm':'chưa có bài'):k[0].toUpperCase()+k.slice(1)+': '+v.correct+'/'+v.total).join(' · ');item.append(p);}
   return item;
 }
@@ -119,8 +125,9 @@ const historyDialog=document.createElement('dialog');historyDialog.className='dr
 const close=document.createElement('button');close.type='button';close.className='button';close.textContent='Đóng chi tiết';close.addEventListener('click',()=>historyDialog.close());
 const historyStatus=document.createElement('p');historyStatus.setAttribute('role','status');
 const historyContent=document.createElement('div'),retry=document.createElement('button');retry.textContent='Thử lại';retry.className='button';retry.hidden=true;
+bindDialogDismiss(historyDialog);
 let historySession=null;retry.addEventListener('click',()=>void openHistory(historySession));historyDialog.append(close,historyStatus,historyContent,retry);document.body.append(historyDialog);
-historyDialog.addEventListener('close',()=>{historyGeneration++;historyController?.abort();historyContent.replaceChildren();});
+historyDialog.addEventListener('close',()=>{if(historyDialog.open)return;historyGeneration++;historyController?.abort();historyContent.replaceChildren();});
 async function openHistory(session){
   historyController?.abort();const generation=++historyGeneration;historySession=session;
   const controller=new AbortController();historyController=controller;const timeout=setTimeout(()=>controller.abort(),15000);
@@ -148,6 +155,7 @@ function buildReport(report) {
 
 function renderJourney(journey) {
   journeyData=journey;
+  commentPoller?.refresh();
   elements.journeyStudentName.textContent = journey.student.name;
   elements.journeyClassName.textContent = journey.class.name;
   elements.attendedCount.textContent = journey.summary.attendedSessions;
@@ -169,6 +177,7 @@ function renderJourney(journey) {
   elements.latestSpeakingFeedbackText.textContent = latestFeedbackSession?.teacherSessionFeedback.noteText || '';
   elements.timelineCount.textContent = `${journey.summary.totalSessions} buổi`;
   elements.sessionList.replaceChildren(...journey.sessions.map(buildSession));
+  paintJourneyComments(elements.journeyView,elements.sessionList,journey.sessions,session=>void openHistory(session));
   elements.reportHistory.hidden = !journey.reports.length;
   elements.reportList.replaceChildren(...journey.reports.map(buildReport));
   elements.journeyView.hidden = false;
@@ -202,9 +211,17 @@ elements.timelineToggle.addEventListener('click', () => {
   elements.timelineToggle.setAttribute('aria-expanded', String(opening));
 });
 
+let commentPoller=createCommentPoller({context:()=>journeyData&&accessToken?{accessToken}:null,
+  request:async(path,options)=>{const response=await fetch(config.API_BASE_URL+'/api/learning'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(options.body),signal:options.signal,cache:'no-store',referrerPolicy:'no-referrer'});const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'Chưa đọc được nhận xét.');return data;},
+  onData:data=>{if(!journeyData||data.studentRef!==journeyData.student.studentRef||String(data.classId)!==String(journeyData.class.classId))return;
+    const byNumber=new Map(data.comments.map(note=>[note.sessionNumber,note]));journeyData.sessions=journeyData.sessions.map(session=>({...session,sessionComment:byNumber.get(session.sessionNumber)||null}));
+    elements.sessionList.replaceChildren(...journeyData.sessions.map(buildSession));paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session));
+    if(historyDialog.open&&historySession){historyContent.querySelectorAll('[data-session-comment]').forEach(box=>box.remove());const panel=commentPanel(byNumber.get(historySession.sessionNumber));if(panel)historyContent.append(panel);}
+  }});
 void start();
 
 // Đồng hồ chỉ làm mới thẻ; không gọi API và không thay quyền mở phần.
-function refreshClock(){if(journeyData)elements.sessionList.replaceChildren(...journeyData.sessions.map(buildSession));setTimeout(refreshClock,60000-Date.now()%60000+20);}
+function repaintSessionCards(){if(!journeyData)return;elements.sessionList.replaceChildren(...journeyData.sessions.map(buildSession));paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session));}
+function refreshClock(){repaintSessionCards();setTimeout(refreshClock,60000-Date.now()%60000+20);}
 setTimeout(refreshClock,60000-Date.now()%60000+20);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&journeyData)elements.sessionList.replaceChildren(...journeyData.sessions.map(buildSession));});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)repaintSessionCards();});

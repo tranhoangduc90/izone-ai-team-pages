@@ -34,6 +34,7 @@ test('J01–J03: Chrome báo chờ tức thì, deadline thật/retry/back, khôn
         return json({ok:true,journey:{student:{studentRef,name:'Học viên giả'},class:{classId:'1294',name:'IC2305 · Lớp thử'},
           summary:{attendedSessions:0,submittedComplete:0,availableReports:0},sessions:[],reports:[],coverage:{}}});
       }
+      if(url.pathname.endsWith('/student/session-comments'))return json({ok:true,classId:'1294',studentRef,comments:[]});
       if(url.origin===origin&&req.method()==='GET')return route.continue();
       unexpected.push(url.pathname);return route.abort();
     });
