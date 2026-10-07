@@ -14,8 +14,8 @@ test('đổi playlist tải lại cả nhóm và thông báo đã sửa tên', (
   assert.match(html, /chuyển playlist rồi sửa tên video/);
 });
 
-test('chỉ đưa playlist có mã lớp vào danh sách chọn', () => {
-  assert.match(source, /\[A-Z\]\{1,4\}\\d\{3,5\}/);
+test('playlist tìm trên toàn bộ danh sách, không cắt 250 kết quả', () => {
+  assert.match(source, /recordingPublication.playlistResults/);assert.doesNotMatch(source,/\.slice\(0, 250\)/);
 });
 
 test('Portal local DATETIME giữ 19 giờ ngày học theo giờ Việt Nam',()=>{

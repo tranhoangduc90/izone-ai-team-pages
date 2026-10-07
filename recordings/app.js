@@ -120,7 +120,7 @@ function recordRow(record) {
   const part = Number(record.totalParts) > 1 && Number(record.partNumber) > 0
     ? ` · Phần ${escapeHtml(record.partNumber)}/${escapeHtml(record.totalParts)}`
     : '';
-  const reason = [record.matchReason, record.playlistReason].filter(Boolean).map((text) => `<div class="subtext">${escapeHtml(text)}</div>`).join('');
+  const reason = [record.matchReason, record.playlistReason, !record.videoId && typeof manualUploadUnavailable==='function'?manualUploadUnavailable(record):''].filter(Boolean).map((text) => `<div class="subtext">${escapeHtml(text)}</div>`).join('');
   const processingNote = !record.videoId && record.status === 'processing'
     ? '<div class="subtext">Zoom đang xử lý, chưa có MP4 hoàn chỉnh. Chọn Kiểm tra lại tệp.</div>' : '';
   return `<tr data-record-id="${escapeHtml(record.id)}">
@@ -155,14 +155,18 @@ function populateAccounts() {
   $('accountFilter').innerHTML = '<option value="">Tất cả</option>' + accounts.map((name) => `<option value="${escapeHtml(name)}" ${name === current ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
 }
 
-function renderPlaylistOptions(query = '') {
-  const record = state.records.find((item) => String(item.id) === $('playlistRecordId').value);
-  const normalized = query.trim().toLowerCase();
-  const playlists = state.playlists
-    .filter((item) => /\b[A-Z]{1,4}\d{3,5}\b/i.test(item.title || ''))
-    .filter((item) => !normalized || item.title.toLowerCase().includes(normalized))
-    .slice(0, 250);
-  $('playlistSelect').innerHTML = '<option value="">Chọn playlist</option>' + playlists.map((item) => `<option value="${escapeHtml(item.id)}" data-title="${escapeHtml(item.title)}" ${item.id === record?.playlistId ? 'selected' : ''}>${escapeHtml(item.title)}</option>`).join('');
+function playlistOptions(select, query='', preferred='') {
+  const selected=select.value || select.dataset.selected || preferred;
+  if(selected)select.dataset.selected=selected;
+  const results=recordingPublication.playlistResults(state.playlists,query);
+  const retained=state.playlists.find(p=>p.id===selected);
+  if(retained&&!results.some(p=>p.id===selected))results.unshift(retained);
+  select.innerHTML='<option value="">Chọn playlist</option>'+results.map(p=>`<option value="${escapeHtml(p.id)}" data-title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</option>`).join('');
+  select.value=selected||'';
+}
+function renderPlaylistOptions(query='') {
+  const record=state.records.find(r=>String(r.id)===$('playlistRecordId').value);
+  playlistOptions($('playlistSelect'),query,record?.playlistId||'');
 }
 
 function replaceRecord(updated) {
@@ -247,7 +251,7 @@ function openVideoEditor(action, id) {
   if (action === 'playlist') {
     $('playlistRecordId').value = record.id;
     $('playlistVideoTitle').value = record.title || '';
-    renderPlaylistOptions();
+    $('playlistSearch').value='';$('playlistSelect').dataset.selected=record.playlistId||'';$('playlistSelect').value='';renderPlaylistOptions();
     $('playlistDialog').dataset.version=record.version||0;
     $('playlistDialog').showModal();
     $('playlistSelect').focus();
@@ -322,3 +326,6 @@ $('playlistForm').addEventListener('submit', async (event) => {
 
 window.addEventListener('DOMContentLoaded',()=>{loadData();setInterval(loadData, REFRESH_MS);});
 
+
+$('playlistSearch').addEventListener('input',()=>renderPlaylistOptions($('playlistSearch').value));
+$('playlistSelect').addEventListener('change',()=>{$('playlistSelect').dataset.selected=$('playlistSelect').value;});
