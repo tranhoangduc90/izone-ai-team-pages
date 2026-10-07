@@ -52,7 +52,7 @@ function updateManualUploadTitle() {
   const record=nightlyState.snapshot?.records?.find(r=>r.id===dialog.dataset.id);
   const metadata={className:document.getElementById('manualUploadClass').value.trim().toUpperCase(),lessonNumber:Number(document.getElementById('manualUploadLesson').value),recordingDate:document.getElementById('manualUploadDate').value};
   const keepsGroup=record && metadata.className===record.className && metadata.lessonNumber===Number(record.lessonNumber) && metadata.recordingDate===recordingPublication.date(record.recordingStart);
-  const parts=keepsGroup?recordingPublication.parts(record,nightlyState.snapshot?.records):{totalParts:1,partNumber:null};
+  const parts=recordingPublication.parts({...record,...metadata,classSessionId:keepsGroup?record.classSessionId:'',partNumber:keepsGroup?record.partNumber:null,totalParts:keepsGroup?record.totalParts:1},nightlyState.snapshot?.records);
   document.getElementById('manualUploadPartsLabel').hidden=!parts.requiresConfirmation;
   document.getElementById('manualUploadParts').required=Boolean(parts.requiresConfirmation);
   try {
