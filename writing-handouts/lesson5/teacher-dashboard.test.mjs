@@ -8,7 +8,7 @@ test('H67-GV-SORT · hỗ trợ/lỗi/bài sửa trước; thời gian thực v�
  rows[0].updatedAt='2099-01-01';assert.equal(ordered(rows).at(-1).studentRef,'old');
 });
 test('H67-GV-SOURCE · nguồn cũ không giả AI; HV xác nhận giữ đúng ý nghĩa',()=>{
- assert.match(approval({status:'passed'}),/chưa có dữ liệu/);
+ assert.equal(approval({status:'passed'}),''); // Giao diện đã duyệt bỏ metadata không có nguồn.
  assert.match(approval({status:'passed',approval:{source:'student_attested_teacher_permission'}}),/HV xác nhận/);
  assert.equal(approval({status:'passed',approval:{source:'ai'}}),'AI chấm đạt');
 });

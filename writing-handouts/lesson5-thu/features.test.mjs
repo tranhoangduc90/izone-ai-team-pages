@@ -11,6 +11,8 @@ test('H67-UI-CONTENT · Edit ở nội dung chuẩn và nhãn phê chuẩn khôn
  const session={responses:{a1:'Nội dung mới'},commentThreads:[]};assert.match(savedContent(session,'a1',{editable:true}),/data-edit="a1"/);assert.match(savedContent(session,'a1',{teacher:true}),/data-select-field="a1"/);
  assert.match(approvalLabel({status:'passed',approval:{source:'student_attested_teacher_permission'}}),/HV xác nhận/);
  assert.equal(approvalLabel({status:'pending'}),'');
+ assert.equal(approvalLabel({status:'passed'}),'');
+ assert.equal(approvalLabel({status:'passed',approval:{source:'ai'}}),'AI thông qua');
 });
 test('H67-UI-THREAD · trích bản cũ, HV reply, GV xử lý giữ nội dung an toàn',()=>{
  const t={ref:'one',status:'open',quote:'<script>',originalContent:'Bản gốc có <script> và câu trước đó.',anchor:{detached:true},messages:[{role:'teacher',authorName:'GV',createdAt:'2026-10-06T00:00:00Z',body:'<img>'}]};

@@ -68,7 +68,7 @@ test('V-AUDIT · nhật ký giảng viên giữ đúng phiên và trạng thái 
  const nodes=new Map();const get=id=>{if(!nodes.has(id))nodes.set(id,{addEventListener(){},insertAdjacentHTML(){},textContent:'',innerHTML:'',value:'',hidden:false,dataset:{}});return nodes.get(id);};
  let resolve;const pending=new Promise(r=>resolve=r);
  const context=vm.createContext({...featureGlobals,ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async()=>({ok:true,status:200,json:()=>pending}),document:{addEventListener(){},getElementById:get,querySelectorAll:()=>[]},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearTimeout,clearInterval,setInterval,window:{}});
- const source=fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('void boot();','');vm.runInContext(source,context);
+ const source=fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,'').replace('void boot();','');vm.runInContext(source,context);
  vm.runInContext("selected={ref:'A'};",context);const read=vm.runInContext("readActivity('A')",context);
  vm.runInContext("selected={ref:'B'};",context);resolve({ok:true,events:[{kind:'session_opened',event_at:'2026-10-06T00:00:00Z'}],nextCursor:null});await read;
  assert.equal(get('activity-list').innerHTML,'');
@@ -83,7 +83,7 @@ test('V-COMMENT · góp ý được lưu và nhật ký vẫn hiện sau ACK',as
  const nodes=new Map();const get=id=>{if(!nodes.has(id))nodes.set(id,{handlers:{},addEventListener(k,f){this.handlers[k]=f;},textContent:'',innerHTML:'',value:'',hidden:false,dataset:{}});return nodes.get(id);};
  let activityCalls=0;
  const context=vm.createContext({...featureGlobals,ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async url=>({ok:true,status:200,json:async()=>url.includes('/activity?')?(activityCalls++,{ok:true,events:[],nextCursor:null}):url.includes('/students?')?{ok:true,students:[]}:{ok:true,session}}),document:{addEventListener(){},getElementById:get,querySelectorAll:()=>[],hidden:false},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearTimeout,clearInterval,setInterval,window:{}});
- vm.runInContext(fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('void boot();',''),context);
+ vm.runInContext(fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,'').replace('void boot();',''),context);
  vm.runInContext("selected={ref:'fixture-session'};detailVersion=1;actorEmail='fixture@example.edu';renderDetail=s=>{detailSession=s;detailVersion=s.version;$('detail-content').innerHTML='<div id=\"activity-list\"></div>';};refresh=async()=>{};",context);
  get('comment-text').value='Góp ý fixture';get('comment-section').value='topic';get('class-select').value='IC2304';
  await get('comment-form').handlers.submit({preventDefault(){}});
@@ -107,7 +107,7 @@ test('V-AUDIT-REOPEN · mở lại cùng bài bỏ phản hồi nhật ký trư�
   return nodes.get(id);
  };
  const context=vm.createContext({...featureGlobals,ORDER,FIELDS,renderActivityList,renderActivityDetail,fetch:async url=>({ok:true,status:200,json:async()=>url.includes('/activity?')?(++activityCalls===1?oldResponse:{ok:true,events:[],nextCursor:null}):detailResponse}),document:{addEventListener(){},getElementById:get,querySelectorAll:()=>[],hidden:false},AbortSignal,URLSearchParams,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearTimeout,clearInterval,setInterval,window:{}});
- vm.runInContext(fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('void boot();',''),context);
+ vm.runInContext(fs.readFileSync(new URL('../lesson5/teacher.js',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,'').replace('void boot();',''),context);
  vm.runInContext("renderDetail=s=>{$('detail-content').innerHTML='<div id=\"activity-list\"></div>';};selected={ref:'fixture-session'};rows=[{studentRef:'fixture-student',sessionRef:'fixture-session',displayName:'Học viên fixture'}];",context);
  const oldRead=vm.runInContext("readActivity('fixture-session')",context);
  const reopening=vm.runInContext("openDetail('fixture-student')",context);
