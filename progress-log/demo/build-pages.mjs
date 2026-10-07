@@ -28,7 +28,7 @@ for (const name of pages) {
   html = html.replace('<title>', '<title>Bản thử · ');
   html = html.replace(/src="config\.js\?rev=[^"]+"/, 'src="config.js?rev=20260924-generic-demo-v1"');
   if (name === 'index.html') {
-    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261007-journey-comments"');
+    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261007-journey-comments-v2"');
   }
   html = html.replace('</head>', '    <link rel="stylesheet" href="demo.css?rev=20260924-v1">\n  </head>');
   const output = new URL(name, import.meta.url);

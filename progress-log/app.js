@@ -1,6 +1,6 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {renderSessionReview} from './session-review.js?rev=20261007-comments';
-import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments';
+import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';

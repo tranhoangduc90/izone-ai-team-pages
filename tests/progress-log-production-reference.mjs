@@ -69,7 +69,9 @@ test('Production history errors, wrong identity and late detail do not reopen hi
 test('Nhận xét chung hiện trong Journey của phiếu, thẻ/chi tiết và biến mất sau khi ẩn',{timeout:60000},async()=>run(async({page,setComments})=>{
  const note={studentRef:ref,sessionNumber:2,noteText:'Em đọc tốt hơn.\nDòng thứ hai.',revision:1,visibility:'visible',authorDisplayName:'Cô thử nghiệm',updatedAt:'2026-10-03T11:24:00Z'};
  setComments([note]);await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
- await page.locator('.latest-session-comment').waitFor();await page.getByLabel('Lọc buổi học theo nhận xét').selectOption('comments');
+ await page.locator('.latest-session-comment').waitFor();
+ assert.equal(await page.locator('.latest-session-comment h2').textContent(),'Buổi 02 · Reading 3 + Writing 1');
+ await page.getByLabel('Lọc buổi học theo nhận xét').selectOption('comments');
  assert.equal(await page.locator('#journeySessions > :visible').count(),1);
  await page.locator('#journeySessions [data-session-number="2"]').click();await page.locator('#journeyDetailView').waitFor({state:'visible'});
  await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#journeyDetailContent .session-comment').waitFor();

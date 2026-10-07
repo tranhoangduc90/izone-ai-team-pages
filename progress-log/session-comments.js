@@ -1,3 +1,4 @@
+import {sessionHeading} from './session-presentation.js';
 // Nhận xét đã được server kiểm người/lớp/buổi. Chỉ dựng chữ; không thực thi HTML từ GV.
 export function node(tag,value='',className='') {
   const element=document.createElement(tag);element.textContent=value;element.className=className;return element;
@@ -17,7 +18,7 @@ export function latestComment(sessions,onOpen) {
   if(!session) return null;
   const box=commentPanel(session.sessionComment);box.classList.add('latest-session-comment');
   box.prepend(node('small','LỜI NHẮN MỚI NHẤT TỪ GIÁO VIÊN','studentPortalEyebrow'),
-    node('h2',`Buổi ${String(session.sessionNumber).padStart(2,'0')} · ${session.title||'Trong kế hoạch lớp'}`));
+    node('h2',sessionHeading(session,{title:session.title})));
   const button=node('button','Xem lại buổi học này →','mini-action');button.type='button';
   button.addEventListener('click',()=>onOpen(session));box.append(button);return box;
 }
