@@ -10,10 +10,10 @@ const browser=await chromium.launch({channel:'msedge',headless:true}),results=[]
 const gis="window.google={accounts:{id:{initialize(o){this.callback=o.callback},disableAutoSelect(){},renderButton(el){const b=document.createElement('button');b.textContent='Đăng nhập bằng Google';b.onclick=()=>this.callback({credential:'fictional-token'});el.append(b)}}}}";
 try{
  for(const width of [1440,390]){
-  const context=await browser.newContext({viewport:{width,height:900}});let expired=false,delayDetail=false,failOldDetail=false,releaseDetail,oldRequested;const unauthorized=[],errors=[];
+  const context=await browser.newContext({viewport:{width,height:900}});let expired=false,delayDetail=false,failOldDetail=false,releaseDetail,oldRequested;const unauthorized=[],errors=[],googleReferrers=[];
   await context.route('**/*',async route=>{
    const url=new URL(route.request().url());if(url.origin===base)return route.continue();
-   if(url.href==='https://accounts.google.com/gsi/client')return route.fulfill({contentType:'text/javascript',body:gis});
+   if(url.href==='https://accounts.google.com/gsi/client'){googleReferrers.push(route.request().headers().referer);return route.fulfill({contentType:'text/javascript',body:gis});}
    if(url.pathname.startsWith('/substitute-teacher-api/teacher/')){
     const name=url.pathname.split('/').pop(),slug=url.searchParams.get('test'),classCode=url.searchParams.get('class');let status=200,body;
     if(name==='config')body={googleClientId:'fictional.apps.googleusercontent.com'};
@@ -52,7 +52,7 @@ try{
   assert.equal(await page.locator('#student-detail').isVisible(),false);assert.equal(await page.locator('.criterion-card').count(),0);
   await page.getByRole('button',{name:'Đăng nhập bằng Google'}).click();await page.locator('#student-rows .open-student').first().waitFor();expired=true;
   await page.locator('#load-results').click();await page.waitForFunction(()=>document.querySelector('#login-status').textContent.includes('Chỉ giáo viên'));
-  assert.equal(await page.locator('#roster-section').isVisible(),false);assert.deepEqual(unauthorized,[]);assert.deepEqual(errors,[]);
+  assert.equal(await page.locator('#roster-section').isVisible(),false);assert.deepEqual(unauthorized,[]);assert.deepEqual(errors,[]);assert.deepEqual(googleReferrers,slugs.map(()=>base+'/'));
   await context.close();
  }
  console.log(JSON.stringify({ok:true,results,screenshots:out,aiCalls:0,portalWrites:0}));
