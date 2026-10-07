@@ -31,8 +31,12 @@ var recordingPublication = (() => {
   function eligiblePart(record) {
     return !record.excluded && record.type==='MP4' && record.status==='completed' && record.fileSize>0 && !record.observationStale && !durationBlock(record);
   }
+  function sameSession(left,right) {
+    if(left.classSessionId&&right.classSessionId)return left.classSessionId===right.classSessionId;
+    return /^[A-Z]{1,4}\d{3,5}$/.test(left.className||'') && left.className===right.className && Number(left.lessonNumber)>0 && Number(left.lessonNumber)===Number(right.lessonNumber);
+  }
   function parts(record,records) {
-    const published=(records||[]).filter(r=>r.id!==record.id && record.classSessionId && r.classSessionId===record.classSessionId && r.videoId);
+    const published=(records||[]).filter(r=>r.id!==record.id && sameSession(record,r) && r.videoId);
     if(!published.length)return {partNumber:record.partNumber,totalParts:record.totalParts||1,requiresConfirmation:false};
     const minimum=Math.max(...published.map(r=>Number(r.partNumber)||1))+1;
     const partNumber=Math.max(Number(record.partNumber)||0,minimum);
@@ -52,5 +56,5 @@ var recordingPublication = (() => {
     const exact=p=>String(p.title||'').toUpperCase().match(/\b[A-Z]{1,4}\d{3,5}\b/g)?.includes(code);
     return (playlists||[]).filter(p=>!key||String(p.title||'').toLocaleLowerCase('vi').includes(key)).sort((a,b)=>Number(Boolean(exact(b)))-Number(Boolean(exact(a)))||String(a.title).localeCompare(String(b.title),'vi')||String(a.id).localeCompare(String(b.id)));
   }
-  return {minimumSeconds,duration,date,validDate,title,durationBlock,eligiblePart,parts,metadata,messages,playlistResults};
+  return {minimumSeconds,duration,date,validDate,title,durationBlock,eligiblePart,sameSession,parts,metadata,messages,playlistResults};
 })();
