@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title>Nộp bài bổ trợ · IZONE</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <main>
+    <header><span class="brand">IZONE</span><span>Bác sĩ AI · Bài tập bổ trợ</span></header>
+    <h1>Nộp bài bổ trợ</h1>
+    <p class="intro">Luyện xong với chatbot, dán link chia sẻ cuộc trò chuyện để gửi bài.</p>
+    <form id="submission">
+      <div class="identity">
+        <div><label for="class">Lớp</label><input id="class" required readonly></div>
+        <div><label for="student">Họ và tên</label><input id="student" autocomplete="name" maxlength="96" required aria-describedby="name-help"></div>
+      </div>
+      <p id="name-help" class="help">Dùng đúng họ tên trong bảng bài tập của bạn. Link nộp bài cá nhân sẽ điền sẵn tên.</p>
+      <label for="links">Link chia sẻ bài luyện</label>
+      <textarea id="links" rows="5" required spellcheck="false" placeholder="https://chatgpt.com/share/…" aria-describedby="links-help"></textarea>
+      <p id="links-help" class="help">Trong ChatGPT, chọn Chia sẻ → Tạo liên kết → Sao chép liên kết. Có thể gửi tối đa 10 link, mỗi link một dòng.</p>
+      <p id="preview" class="help" aria-live="polite"></p>
+      <button id="send" type="submit">Gửi bài bổ trợ</button>
+      <p id="result" role="status" aria-live="polite"></p>
+    </form>
+    <footer>Kết quả phân tích và bài được đề xuất sẽ xuất hiện trong bảng luyện tập cá nhân của bạn.</footer>
+  </main>
+</body>
+</html>
