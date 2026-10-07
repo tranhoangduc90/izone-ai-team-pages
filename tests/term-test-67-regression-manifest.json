@@ -15,6 +15,7 @@
       "tests/term-test-writing-parity-feedback.mjs"
     ],
     "browser": [
+      "tests/term-demo-reopen.cjs",
       "tests/mini-test-identity.mjs",
       "tests/term-student-memory-ui.cjs",
       "tests/term-test-landing.mjs",

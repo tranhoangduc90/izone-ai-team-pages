@@ -996,6 +996,15 @@
     try {
       const data = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`, {}, 12_000);
       roster = data.students || [];
+      if (classCode === 'CODEXDEMO806' && !listeningOnly && !demoStudentRef && !demoAttemptToken) {
+        // Link demo chung nhận bộ nhớ của lượt trước: bỏ khóa cục bộ để chọn lại người.
+        // Bài/phiên trên máy chủ vẫn được giữ và tìm lại theo học viên vừa xác nhận.
+        // Link kết quả có mã lượt và lượt thi bù tiếp tục giữ cơ chế khôi phục riêng.
+        const audioVolume = Number(state.audioVolume) || 1;
+        clearAllLocalAttemptData();
+        state = { audioVolume };
+        legacyListeningResume = false;
+      }
       if (testConfig.allowTemporaryStudents
         && state.studentIdentitySource === 'temporary'
         && state.studentRef
