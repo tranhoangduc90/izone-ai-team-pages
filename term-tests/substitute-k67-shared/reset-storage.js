@@ -2,8 +2,9 @@
   'use strict';
   // Chỉ xóa bản nháp trên trình duyệt của đúng bài Substitute K67.
   // Không phụ thuộc mã lớp hoặc hậu tố phiên bản; không gọi API/backend.
-  function clear(slug) {
+  function clear(slug,options) {
     if (!/^substitute-test-[12]-k67$/.test(slug)) throw new Error('INVALID_RESET_SCOPE');
+    if(window.SUBSTITUTE_STATE){window.SUBSTITUTE_STATE.clear(slug,options);return;}
     const prefixes = ['izone-test:', 'izone-test-ui:', 'izone-test-annotations:']
       .map(prefix => prefix + slug + ':');
     for (const storage of [sessionStorage, localStorage]) {

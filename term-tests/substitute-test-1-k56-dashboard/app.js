@@ -7,17 +7,15 @@ if (allowedCourses.has(requested)) courseFilter.value = requested;
 
 function renderCourse() {
   const course = courseFilter.value;
-  for (const row of rows) row.hidden = !(course === 'all' || row.dataset.course === course);
+  let visible=0;
+  rows.forEach((row,index)=>{
+    row.hidden=!(course==='all'||row.dataset.course===course);
+    if(!row.hidden)visible++;
+    row.querySelector('.test-number').textContent=String(course==='all'?index+1:visible).padStart(2,'0');
+  });
   const isAll = course === 'all';
   const isK67 = course === 'k67';
-  document.querySelector('#metric-tests').textContent = isAll ? '04' : '02';
   document.querySelector('#record-count').textContent = isAll ? '4 bài' : '2 bài';
-  document.querySelector('#metric-scale').textContent = isK67 ? '9 / 9 / 9' : 'Theo bài';
-  document.querySelector('#metric-scale-note').textContent = isK67 ? 'Listening · Reading · Writing' : 'theo từng bài';
-  document.querySelector('#metric-classes').textContent = isAll ? '03' : '02';
-  document.querySelector('#metric-class-note').textContent = isAll
-    ? 'DEMO · IC2264 · IC2063'
-    : isK67 ? 'DEMO và IC2063' : 'DEMO và IC2264';
   document.querySelector('#portal-badge').textContent = isAll
     ? 'Bản online · K56 + K67'
     : `Bản online · Khóa ${isK67 ? '67' : '56'}`;

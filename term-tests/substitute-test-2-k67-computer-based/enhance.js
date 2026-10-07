@@ -17,8 +17,8 @@
   }, true);
 
   const storageSuffix = serverGradingMode ? ':server-grade' : '';
-  const uiStorageKey = 'izone-test-ui:' + testConfig.slug + ':' + classCode + storageSuffix;
-  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageSuffix;
+  const uiStorageKey = serverGradingMode ? window.SUBSTITUTE_STATE.key('izone-test-ui:',classCode) : 'izone-test-ui:' + testConfig.slug + ':' + classCode + ':preview:' + query.get('demo');
+  const submissionStorageKey = serverGradingMode ? window.SUBSTITUTE_STATE.key('izone-test:',classCode) : 'izone-test:' + testConfig.slug + ':' + classCode + ':preview:' + query.get('demo');
   const uiState = readUiState();
 
   // Dữ liệu vào: phần đang mở, câu đánh dấu, cỡ chữ, vị trí audio và hạn giờ Reading/Writing trên máy hiện tại.
@@ -30,7 +30,8 @@
     for (const storage of [sessionStorage, localStorage]) {
       try {
         stored = JSON.parse(storage.getItem(uiStorageKey) || '{}');
-        if (Object.keys(stored).length) break;
+        if (Object.keys(stored).length && (!serverGradingMode || window.SUBSTITUTE_STATE.accept(stored))) break;
+        stored={};
       } catch {
         stored = {};
       }
@@ -65,7 +66,8 @@
   }
 
   function saveUiState() {
-    const serialized = JSON.stringify(uiState);
+    if(window.SUBSTITUTE_STATE?.blocked)return;
+    const serialized = JSON.stringify(serverGradingMode ? window.SUBSTITUTE_STATE.stamp(uiState) : uiState);
     for (const storage of [sessionStorage, localStorage]) {
       try {
         storage.setItem(uiStorageKey, serialized);
@@ -1238,7 +1240,7 @@
       for (const storage of [sessionStorage, localStorage]) {
         try {
           const parsed = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
-          if (parsed.listeningDeadlineAt) return parsed;
+          if ((!serverGradingMode || window.SUBSTITUTE_STATE.accept(parsed)) && parsed.listeningStartedAt && parsed.listeningDeadlineAt) return parsed;
         } catch {
           // Tiếp tục với nguồn bộ nhớ còn lại.
         }
@@ -1253,10 +1255,11 @@
       for (const control of listeningForm.form.querySelectorAll('input, select, textarea, .cbt-choice input')) {
         control.disabled = true;
       }
-      listeningForm.form.requestSubmit(autoSubmit);
+      if(!window.SUBSTITUTE_STATE?.blocked)listeningForm.form.requestSubmit(autoSubmit);
     }
 
     function render() {
+      if(window.SUBSTITUTE_STATE?.blocked){window.clearInterval(intervalId);return;}
       const exam = readExamState();
       const deadline = Date.parse(exam.listeningDeadlineAt || '');
       if (!Number.isFinite(deadline)) return;
@@ -1328,10 +1331,11 @@
       if (now - lastAutoSubmitAttempt < retryDelayMs) return;
       lastAutoSubmitAttempt = now;
       readingForm.form.dataset.readingTimeExpired = 'true';
-      readingForm.form.requestSubmit(autoSubmitButton);
+      if(!window.SUBSTITUTE_STATE?.blocked)readingForm.form.requestSubmit(autoSubmitButton);
     }
 
     function renderTimer() {
+      if(window.SUBSTITUTE_STATE?.blocked){stopTimer();return;}
       if (readingForm.form.hidden || !uiState.readingTimer.deadline) return;
       const now = Date.now();
       const remainingMs = Math.max(0, uiState.readingTimer.deadline - now);
@@ -1414,7 +1418,7 @@
     phase.textContent = planningMinutes > 0 ? 'Lập dàn ý · còn ' + planningMinutes + ' phút' : 'Viết bài · còn ' + totalMinutes + ' phút';
     phase.setAttribute('role', 'status');
     header.insertBefore(clock, document.getElementById('submitWriting'));
-    header.insertBefore(phase, clock);
+    // Không hiển thị nhãn lập dàn ý; giữ nguyên đồng hồ tổng và hạn giờ.
 
     const autoSubmitButton = makeButton('cbt-writing-auto-submit', 'Tự nộp bài Writing');
     autoSubmitButton.type = 'submit';
@@ -1446,15 +1450,16 @@
     }
 
     function submitExpiredWriting(now) {
-      if (form.hidden || form.dataset.writingSubmitting === 'true') return;
+      if (window.SUBSTITUTE_STATE?.blocked || form.hidden || form.dataset.writingSubmitting === 'true') return;
       if (now - lastAutoSubmitAttempt < retryDelayMs) return;
       lastAutoSubmitAttempt = now;
       form.dataset.writingTimeExpired = 'true';
-      form.requestSubmit(autoSubmitButton);
+      if(!window.SUBSTITUTE_STATE?.blocked)form.requestSubmit(autoSubmitButton);
     }
 
     function renderTimer() {
-      if (form.hidden || !uiState.writingTimer.deadline) return;
+      if(window.SUBSTITUTE_STATE?.blocked){stopTimer();return;}
+      if (window.SUBSTITUTE_STATE?.blocked || form.hidden || !uiState.writingTimer.deadline) return;
       const now = Date.now();
       const remainingMs = Math.max(0, uiState.writingTimer.deadline - now);
       const remainingSeconds = Math.ceil(remainingMs / 1000);

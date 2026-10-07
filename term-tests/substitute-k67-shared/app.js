@@ -18,7 +18,8 @@
 
   if (!testConfig || !appConfig || !root) return;
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}:${promptVersion}`;
+  if(serverGradingMode)window.SUBSTITUTE_STATE.bind({...window.TERM_TEST_BOOTSTRAP,classCode});
+  const storageKey = serverGradingMode ? window.SUBSTITUTE_STATE.key('izone-test:',classCode) : `izone-test:${testConfig.slug}:${classCode}:preview:${demoMode}`;
   if (serverGradingMode && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
     const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}:server-grade`;
     for (const storage of [sessionStorage, localStorage]) {
@@ -101,13 +102,15 @@
     state.studentName = String(window.TERM_TEST_BOOTSTRAP.studentName || 'Học viên Demo');
     state.className = String(window.TERM_TEST_BOOTSTRAP.classCode || classCode);
     state.identityConfirmed = true;
+    state.listeningStartedAt ||= window.TERM_TEST_BOOTSTRAP.listeningStartedAt || '';
+    state.listeningDeadlineAt ||= window.TERM_TEST_BOOTSTRAP.listeningDeadlineAt || '';
   }
 
   function readSession() {
     for (const storage of [sessionStorage, localStorage]) {
       try {
         const restored = JSON.parse(storage.getItem(storageKey) || '{}');
-        if (Object.keys(restored).length) return restored;
+        if (Object.keys(restored).length && (!serverGradingMode || window.SUBSTITUTE_STATE.accept(restored,window.TERM_TEST_BOOTSTRAP))) return restored;
       } catch {
         // Bộ nhớ trình duyệt có thể bị chặn; tiếp tục với nguồn còn lại.
       }
@@ -142,7 +145,10 @@
   }
 
   function saveSession() {
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
+    if(serverGradingMode)window.SUBSTITUTE_STATE.bind({...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP.clientRunId});
     const serialized = JSON.stringify({
+      ...(serverGradingMode ? {_substitute:window.SUBSTITUTE_STATE.stamp({})._substitute,clientRunId:window.TERM_TEST_BOOTSTRAP.clientRunId,classCode}:{}),
       studentRef: state.studentRef,
       studentName: state.studentName,
       clientSubmissionId: state.clientSubmissionId,
@@ -225,7 +231,7 @@
             <h2>${writingConfig.tasks?.[0]?.label || 'Writing'}</h2>
           </div>
           <nav class="writing-task-tabs" id="writingTaskTabs" aria-label="Chọn Writing Task"></nav>
-          <button class="button button-primary writing-submit" id="submitWriting" type="submit">Nộp bài Writing</button>
+          <button class="button button-primary writing-submit" id="submitWriting" type="submit">Nộp bài</button>
         </header>
         <section class="writing-save-conflict" id="writingConflict" role="status" hidden>
           <h3>Có hai bản bài viết khác nhau</h3>
@@ -299,7 +305,7 @@
       <section class="panel transition-card" id="listeningSavedView" hidden>
         <div class="transition-icon">✓</div>
         <p class="eyebrow">Đã chấm bài Listening</p>
-        <h2>Điểm Listening đã được ghi độc lập</h2>
+        <h2>Bài Listening đã được ghi nhận</h2>
         <p>Bài Listening đã được lưu. Khi sẵn sàng, hãy tiếp tục làm Reading.</p>
         <div class="form-actions transition-actions">
           <button class="button button-primary" id="startReading" type="button">Bắt đầu bài Reading</button>
@@ -531,6 +537,7 @@
 
   async function apiRequest(path, options = {}) {
     const controller = new AbortController();
+    const untrack=window.SUBSTITUTE_STATE?.track(controller) || (()=>{});
     const timeout = setTimeout(() => controller.abort(), 20_000);
     try {
       const requestUrl = new URL(path, window.location.origin);
@@ -541,14 +548,15 @@
       }
       const response = await fetch(appConfig.API_BASE_URL, {
         method: 'POST',
-        body: JSON.stringify({ route: requestUrl.pathname, payload }),
+        body: JSON.stringify({ route: requestUrl.pathname, payload:serverGradingMode ? window.SUBSTITUTE_STATE.payload(payload) : payload }),
         signal: controller.signal,
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
-        requestError.code = String(data.error || 'HTTP_ERROR'); requestError.status = response.status;
+        requestError.code = String(data.code || data.error || 'HTTP_ERROR'); requestError.status = response.status;
+        if(requestError.code==='HISTORY_EPOCH_CONFLICT')window.SUBSTITUTE_STATE.stop();
         throw requestError;
       }
       return data;
@@ -557,6 +565,7 @@
       throw error;
     } finally {
       clearTimeout(timeout);
+      untrack();
     }
   }
 
@@ -578,6 +587,7 @@
   });
 
   const sectionDraftTimers = { listening: 0, reading: 0 };
+  window.addEventListener('substitute:stopped',()=>{stopWritingGradingPolling();for(const value of Object.values(sectionDraftTimers))clearTimeout(value);clearTimeout(writingSaveTimer);clearTimeout(writingRetryTimer);clearTimeout(writingForceSaveTimer);for(const form of document.querySelectorAll('form'))for(const control of form.querySelectorAll('input,textarea,select,button'))control.disabled=true;showNotice('Lượt này đã được reset ở tab khác. Hãy tải lại trang.','error');});
 
   async function saveSectionDraft(skill) {
     if (demoMode) return null;
@@ -699,6 +709,7 @@
   }
 
   function scheduleWritingGradingRefresh() {
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
     const grading = state.result?.writing?.grading;
     if (
       (demoMode && !serverGradingMode)
@@ -1094,7 +1105,7 @@
       promptLabel.textContent = task.label;
       const promptTitle = document.createElement('strong');
       promptTitle.textContent = 'Đề bài';
-      promptHeader.append(promptLabel, promptTitle);
+      promptHeader.append(promptTitle);
       const promptBody = document.createElement('div');
       promptBody.className = 'writing-prompt-body';
       const outline = document.createElement('section');
@@ -1104,7 +1115,7 @@
       outlineTitle.textContent = 'Dàn ý';
       const outlineHint = document.createElement('span');
       outlineHint.textContent = writingConfig.planningMinutes ? `${writingConfig.planningMinutes} phút` : 'Tùy chọn';
-      outlineHeader.append(outlineTitle, outlineHint);
+      outlineHeader.append(outlineTitle);
       const outlineEditor = document.createElement('textarea');
       outlineEditor.className = 'writing-outline-editor';
       outlineEditor.dataset.writingOutline = 'true';
@@ -1166,7 +1177,7 @@
       answerLabel.textContent = task.label;
       const answerTitle = document.createElement('strong');
       answerTitle.textContent = 'Bài làm của bạn';
-      answerHeader.append(answerLabel, answerTitle);
+      answerHeader.append(answerTitle);
       const editor = document.createElement('textarea');
       editor.className = 'writing-editor';
       editor.dataset.writingTask = task.id;
@@ -1227,6 +1238,7 @@
         else if (event.key === 'End') applySplit(70);
         else return;
         event.preventDefault();
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
       });
       applySplit(initialSplit);
       return panel;
@@ -1890,14 +1902,15 @@
   }
 
   function renderResult(payload) {
+    if(serverGradingMode && !state.writingSubmitted)return;
     const result = payload.result;
     const hasReading = Boolean(result.reading);
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
     elements.summaryGrid.replaceChildren(
-      addSummaryCard('Listening', `${result.listening.correct}/${result.listening.total} câu đúng`),
-      addSummaryCard('Reading', hasReading ? `${result.reading.correct}/${result.reading.total} câu đúng` : 'Chưa nộp')
+      addSummaryCard('Listening', sectionScore(result.listening)),
+      addSummaryCard('Reading', hasReading ? sectionScore(result.reading) : 'Chưa nộp')
     );
     elements.resultStatus.textContent = hasReading
       ? payload.writing?.grading?.ready
@@ -2018,6 +2031,7 @@
 
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
       showNotice('Hãy chọn đúng họ và tên trước khi nộp Listening.', 'error');
@@ -2042,6 +2056,7 @@
     let submitted = false;
     try {
       if (demoMode === 'exam') {
+        if(serverGradingMode && (!window.TERM_TEST_BOOTSTRAP?.clientRunId || !window.TERM_TEST_BOOTSTRAP?.listeningStartedAt)){showNotice('Hãy bắt đầu lượt thi từ phòng chờ.','error');return;}
         if (serverGradingMode) {
           const grade = await apiRequest('/api/test/grade', {
             method: 'POST',
@@ -2058,7 +2073,7 @@
         submitted = true;
         elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
         showNotice(serverGradingMode
-          ? `Backend test đã chấm Listening: ${state.testGrades.listening.correct}/40 câu đúng.`
+          ? 'Đã nhận bài Listening.'
           : 'Bản demo: Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
         setStage('listening-saved');
         return;
@@ -2141,6 +2156,7 @@
 
   elements.readingView.addEventListener('submit', async event => {
     event.preventDefault();
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.readingView.dataset.readingTimeExpired === 'true';
     let answers = state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
@@ -2175,7 +2191,7 @@
         submitted = true;
         elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
         showNotice(serverGradingMode
-          ? `Backend test đã chấm Reading: ${state.testGrades.reading.correct}/${testConfig.reading.totalQuestions} câu đúng. Kết quả sẽ mở sau Writing.`
+          ? 'Đã nhận bài Reading. Hãy tiếp tục phần Writing.'
           : 'Bản demo: Reading đã được lưu. Kết quả sẽ mở sau Writing.', 'success');
         setStage('writing-prep');
         return;
@@ -2244,6 +2260,7 @@
 
     elements.writingView.addEventListener('submit', async event => {
       event.preventDefault();
+    if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
       const automatic = event.submitter?.dataset.autoSubmit === 'true'
         || elements.writingView.dataset.writingTimeExpired === 'true';
       const belowMinimum = Array.from(writingConfig.tasks || []).map(task => ({
@@ -2294,7 +2311,7 @@
       window.clearTimeout(writingSaveTimer);
       window.clearTimeout(writingRetryTimer);
       elements.writingView.dataset.writingSubmitting = 'true';
-      setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài Writing');
+      setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài');
       for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
       if (automatic) showNotice(`Đã hết ${writingConfig.totalMinutes || 30} phút. Hệ thống đang tự lưu và thu bài Writing...`);
       try {
@@ -2322,7 +2339,7 @@
         delete elements.writingView.dataset.writingSubmitting;
         const timeExpired = elements.writingView.dataset.writingTimeExpired === 'true';
         for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = timeExpired;
-        setBusy(elements.submitWriting, false, 'Đang lưu và nộp...', 'Nộp bài Writing');
+        setBusy(elements.submitWriting, false, 'Đang lưu và nộp...', 'Nộp bài');
       }
     });
   }
@@ -2350,13 +2367,15 @@
     };
   }
 
+  function pendingSection(total){return {correct:null,total,details:[],typeStats:[]};}
+  function sectionScore(section){return section?.correct == null ? 'Chờ kết quả' : `${section.correct}/${section.total} câu đúng`;}
   function buildDemoPayload(mode) {
     const listening = serverGradingMode
-      ? state.testGrades.listening || makeDemoSection('Listening', 0, 40)
+      ? state.testGrades.listening || pendingSection(40)
       : makeDemoSection('Listening', 31, 40);
     const reading = mode === 'complete'
       ? serverGradingMode
-        ? state.testGrades.reading || makeDemoSection('Reading', 0, testConfig.reading.totalQuestions)
+        ? state.testGrades.reading || pendingSection(testConfig.reading.totalQuestions)
         : makeDemoSection('Reading', 30, testConfig.reading.totalQuestions)
       : null;
     const mergedStats = new Map();
@@ -2424,7 +2443,7 @@
         listening,
         reading,
         summary: {
-          totalCorrect: listening.correct + (reading?.correct || 0),
+          totalCorrect: listening.correct == null || (reading && reading.correct == null) ? null : listening.correct + (reading?.correct || 0),
           totalQuestions: listening.total + (reading?.total || 0),
           averageBand: null
         },
@@ -2510,7 +2529,7 @@
         }
         saveSession();
         if (serverGradingMode) {
-          showNotice('Backend test đang bật: Listening và Reading sẽ chấm đúng đáp án bạn nộp; không ghi Portal.', 'success');
+          hideNotice();
         } else {
           hideNotice();
         }

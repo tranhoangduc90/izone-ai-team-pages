@@ -7,12 +7,12 @@ test('K56 Sub 2 roster reaches the POST gateway with query payload', async () =>
   const src = read('term-tests/substitute-test-2-k56-computer-based/bootstrap.js');
   const fn = src.slice(src.indexOf('  async function apiRequest('), src.indexOf('  function formatBytes('));
   let request;
-  const context = { URL, AbortController, appConfig: { API_BASE_URL: 'https://example.test/webhook' }, window: { location: { origin: 'https://example.test' }, setTimeout, clearTimeout }, fetch: async (...args) => { request = args; return { ok: true, json: async () => ({ students: [{ ref: 'demo' }] }) }; } };
+  const context = { URL, AbortController, appConfig: { API_BASE_URL: 'https://example.test/webhook' }, window: { SUBSTITUTE_STATE:{track:()=>()=>{},payload:value=>({...value,historyEpoch:'fixture-epoch'})},location: { origin: 'https://example.test' }, setTimeout, clearTimeout }, fetch: async (...args) => { request = args; return { ok: true, json: async () => ({ students: [{ ref: 'demo' }] }) }; } };
   vm.createContext(context);
   await vm.runInContext(fn + ';apiRequest("/api/test/roster?class=DEMO")', context);
   assert.equal(request[0], 'https://example.test/webhook');
   assert.equal(request[1].method, 'POST');
-  assert.deepEqual(JSON.parse(request[1].body), { route: '/api/test/roster', payload: { class: 'DEMO' } });
+  assert.deepEqual(JSON.parse(request[1].body), { route: '/api/test/roster', payload: { class: 'DEMO',historyEpoch:'fixture-epoch' } });
 });
 for (const t of [1, 2]) test(`K67 Sub ${t}: every answer is located within its question, with real choice controls`, () => {
   const context = { window: {} }; vm.runInNewContext(read(`term-tests/substitute-test-${t}-k67-computer-based/content.js`), context);

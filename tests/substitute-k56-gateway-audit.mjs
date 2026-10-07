@@ -18,7 +18,7 @@ function harness(number, response = { ok: true, status: 200, json: async () => (
   const context = {
     URL, AbortController,
     appConfig: { API_BASE_URL: `https://example.test/webhook/substitute-${number}` },
-    window: { location: { origin: 'https://example.test' }, setTimeout: () => 1, clearTimeout: () => { cleared += 1; } },
+    window: { SUBSTITUTE_STATE:{track:()=>()=>{},payload:value=>({...value,historyEpoch:'fictional-epoch'})}, location: { origin: 'https://example.test' }, setTimeout: () => 1, clearTimeout: () => { cleared += 1; } },
     fetch: async (...args) => { sent = args; return response; }
   };
   vm.createContext(context);
@@ -32,13 +32,13 @@ for (const number of [1, 2]) {
     await h.invoke('/api/test/roster?class=K56A');
     assert.equal(h.sent()[0], `https://example.test/webhook/substitute-${number}`);
     assert.equal(h.sent()[1].method, 'POST');
-    assert.deepEqual(JSON.parse(h.sent()[1].body), { route: '/api/test/roster', payload: { class: 'K56A' } });
+    assert.deepEqual(JSON.parse(h.sent()[1].body), { route: '/api/test/roster', payload: { class: 'K56A',historyEpoch:'fictional-epoch' } });
     await h.invoke(`/api/term-tests/substitute-test-${number}-k56/writing?class=K56A`, {
       body: JSON.stringify({ class: 'K56B', attemptToken: 'synthetic-attempt', taskNumber: number === 1 ? 2 : 1 })
     });
     assert.deepEqual(JSON.parse(h.sent()[1].body), {
       route: `/api/term-tests/substitute-test-${number}-k56/writing`,
-      payload: { class: 'K56B', attemptToken: 'synthetic-attempt', taskNumber: number === 1 ? 2 : 1 }
+      payload: { class: 'K56B', attemptToken: 'synthetic-attempt', taskNumber: number === 1 ? 2 : 1,historyEpoch:'fictional-epoch' }
     });
     assert.equal(h.cleared(), 2);
   });

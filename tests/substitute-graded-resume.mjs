@@ -13,7 +13,7 @@ async function run(slug,{record,blocked=false,localDemo=true,confirmed=true}={})
  roster:[{ref:'demo-01',name:'DEMO'}],elements:{bootstrapStudent:{value:'demo-01'},bootstrapClass:{}},preparing:false,legacyListeningResume:false,
  saveState:delta=>Object.assign(c.state,delta),enterExam:async value=>calls.push({kind:'enter',value}),downloadLocalDemoAudio:async()=>calls.push({kind:'audio'}),
  apiRequest:async()=>{calls.push({kind:'server'});return{};},downloadForSession:async()=>{},resumeAfterListening:async()=>{},showNotice:()=>{},setStartAvailability:()=>{},
- window:{K56_SUBSTITUTE_TEST_CONTENT:{},K56_SUBSTITUTE_TEST_2_CONTENT:{},K67_SUBSTITUTE_TEST_1_CONTENT:{},K67_SUBSTITUTE_TEST_2_CONTENT:{}}
+ window:{SUBSTITUTE_STATE:{key:()=>`izone-test:${slug}:DEMO:server-grade`,accept:value=>value.studentRef==='demo-01'},K56_SUBSTITUTE_TEST_CONTENT:{},K56_SUBSTITUTE_TEST_2_CONTENT:{},K67_SUBSTITUTE_TEST_1_CONTENT:{},K67_SUBSTITUTE_TEST_2_CONTENT:{}}
  });
  for(const name of ['hasSavedGradedProgress','prepareSelectedStudent']){
   const prefix=name==='prepareSelectedStudent'?'  async function ':'  function ';

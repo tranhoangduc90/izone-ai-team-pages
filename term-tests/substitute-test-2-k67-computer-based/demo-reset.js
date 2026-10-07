@@ -39,14 +39,15 @@
   cancel.addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => button.focus());
   function clearAndReload(broadcast) {
-    window.K67_RESET_STORAGE.clear(config.slug);
+    window.K67_RESET_STORAGE.clear(config.slug,{broadcast});
     // Reset các tab cùng bài để bản nháp cũ không ghi trở lại dữ liệu vừa xóa.
-    if (broadcast) localStorage.setItem(signalKey, String(Date.now()) + ':' + Math.random());
+
     const url = new URL(location.href);
     url.searchParams.delete('demoStudent');
     url.searchParams.delete('demoAttempt');
     url.searchParams.delete('class');
     url.searchParams.set('reset', '1');
+    url.searchParams.set('resetOwner','done');
     history.replaceState(null, '', location.href);
     location.replace(url.href);
   }

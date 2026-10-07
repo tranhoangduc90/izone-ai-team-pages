@@ -41,9 +41,9 @@ test('dashboard mặc định tổng hợp đồng thời bốn bài của K56 v
   assert.match(html, /option value="all" selected>Tất cả khóa học<\/option>/u);
   assert.equal((html.match(/class="test-row" data-course=/gu) || []).length, 4);
   assert.doesNotMatch(html, /data-course="k67" hidden/u);
-  assert.match(html, /id="metric-tests">04</u);
+  assert.doesNotMatch(html, /id="metric-tests"/u);
   assert.match(html, /id="record-count">4 bài</u);
   assert.match(app, /const allowedCourses = new Set\(\['all', 'k56', 'k67'\]\)/u);
-  assert.match(app, /course === 'all' \|\| row\.dataset\.course === course/u);
+  assert.match(app, /course\s*===\s*'all'\s*\|\|\s*row\.dataset\.course\s*===\s*course/u);
   assert.match(app, /next\.searchParams\.delete\('course'\)/u);
 });

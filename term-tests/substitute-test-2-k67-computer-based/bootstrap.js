@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   'use strict';
 
   const testConfig = window.TERM_TEST_CONFIG;
@@ -24,29 +24,29 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?rev=20261003-writing-save-cas-v1'))
-      .then(() => loadScript('enhance.js'))
-      .then(() => loadScript('annotations.js'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261007-fresh-v2'))
+      .then(() => loadScript('enhance.js?v=20261007-fresh-v2'))
+      .then(() => loadScript('annotations.js?v=20261007-fresh-v2'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
       });
     return;
   }
 
-  const storageNamespace = localDemo ? 'RETAKE-LOBBY' : classCode;
-  const storageKey = `izone-test:${testConfig.slug}:${storageNamespace}${storageSuffix}:substitute-k67-task2-20260922-v2`;
-  const uiStorageKey = `izone-test-ui:${testConfig.slug}:${storageNamespace}${storageSuffix}`;
-  const annotationStorageKey = `izone-test-annotations:${testConfig.slug}:${storageNamespace}${storageSuffix}`;
-  if (localDemo && query.get('reset') === '1') {
-    try {
-      window.K67_RESET_STORAGE.clear(testConfig.slug);
-    } catch {
-      root.innerHTML = '<main class="page-shell"><section class="panel"><h1>Chưa reset được dữ liệu.</h1><p>Hãy cho phép lưu trữ của trang rồi tải lại. Bài làm cũ chưa được mở lại.</p></section></main>';
-      return;
+  if(!localDemo){query.set('demo','exam');query.set('grading','server');location.replace(location.pathname+'?'+query.toString());return;}
+  try {
+    if(query.get('reset')==='1'){
+      window.SUBSTITUTE_STATE.clear(testConfig.slug,{broadcast:query.get('resetOwner')!=='done'});query.delete('reset');query.delete('resetOwner');
+      location.replace(location.pathname+'?'+query.toString());return;
     }
-    query.delete('reset');
-    history.replaceState(null, '', `${location.pathname}?${query.toString()}`);
+    await window.SUBSTITUTE_STATE.initialize(testConfig,appConfig);
+  } catch(error) {
+    root.textContent=error.message||'Không mở được phiên thi. Hãy tải lại trang.';return;
   }
+  const storageNamespace = localDemo ? 'RETAKE-LOBBY' : classCode;
+  const storageKey = window.SUBSTITUTE_STATE.key('izone-test:',storageNamespace,{lobby:true});
+  const uiStorageKey = window.SUBSTITUTE_STATE.key('izone-test-ui:',storageNamespace,{lobby:true});
+  const annotationStorageKey = window.SUBSTITUTE_STATE.key('izone-test-annotations:',storageNamespace,{lobby:true});
   let state = readState();
   const legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
@@ -203,23 +203,25 @@
   }
 
   function readState() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of [sessionStorage]) {
       try {
         const parsed = JSON.parse(storage.getItem(storageKey) || '{}');
-        if (Object.keys(parsed).length) return parsed;
+        if (window.SUBSTITUTE_STATE.accept(parsed,null)) {
+          if(parsed.studentRef)window.SUBSTITUTE_STATE.bind(parsed);
+          return parsed;
+        }
       } catch {
         // Tiếp tục với nguồn bộ nhớ còn lại.
       }
     }
-    if (localDemo && history.state?.k67DemoState) return { ...history.state.k67DemoState };
     return {};
   }
 
   function readLegacyUiState() {
     for (const storage of [sessionStorage, localStorage]) {
       try {
-        const parsed = JSON.parse(storage.getItem(uiStorageKey) || '{}');
-        if (Object.keys(parsed).length) {
+        const parsed = JSON.parse(storage.getItem(state.studentRef ? window.SUBSTITUTE_STATE.key('izone-test-ui:',state.classCode || classCode) : uiStorageKey) || '{}');
+        if (window.SUBSTITUTE_STATE.accept(parsed)) {
           return {
             audioStarted: Boolean(parsed.audio?.started),
             audioTime: Math.min(7200, Math.max(0, Number(parsed.audio?.time) || 0)),
@@ -235,8 +237,13 @@
 
   function saveState(patch = {}) {
     state = { ...state, ...patch };
+    if(state.studentRef){
+      state.clientRunId ||= crypto.randomUUID();
+      window.SUBSTITUTE_STATE.bind(state);
+    }
+    state=window.SUBSTITUTE_STATE.stamp(state);
     const serialized = JSON.stringify(state);
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of [sessionStorage]) {
       try {
         storage.setItem(storageKey, serialized);
       } catch {
@@ -256,6 +263,7 @@
 
   async function apiRequest(path, options = {}, timeoutMs = 30_000) {
     const controller = new AbortController();
+    const untrack=window.SUBSTITUTE_STATE.track(controller);
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(appConfig.API_BASE_URL + path, { ...options, signal: controller.signal });
@@ -267,6 +275,7 @@
       throw error;
     } finally {
       window.clearTimeout(timeout);
+      untrack();
     }
   }
 
@@ -436,11 +445,11 @@
   // Phòng chờ và app dùng hai namespace khác nhau; chỉ nối lại đúng học viên/lớp.
   function hasSavedGradedProgress() {
     if (!localDemo || !state.identityConfirmed || !state.listeningStartedAt) return false;
-    const key = `izone-test:${testConfig.slug}:${classCode}:server-grade`;
+    const key = window.SUBSTITUTE_STATE.key('izone-test:',state.classCode || classCode);
     for (const storage of [sessionStorage, localStorage]) {
       try {
         const saved = JSON.parse(storage.getItem(key) || '{}');
-        if (!saved || !Object.keys(saved).length) continue;
+        if (!saved || !Object.keys(saved).length || !window.SUBSTITUTE_STATE.accept(saved,state)) continue;
         return saved.studentRef === state.studentRef
           && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(saved.attemptToken || ''))
           && Boolean(saved.testGrades?.listening);
@@ -548,6 +557,10 @@
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
       classCode: state.classCode || classCode,
       studentRef: state.studentRef,
+      clientRunId: state.clientRunId,
+      attemptToken: state.attemptToken,
+      historyEpoch: window.SUBSTITUTE_STATE.meta.historyEpoch,
+      listeningStartedAt: state.listeningStartedAt,
       studentName: state.studentName,
       examSessionToken: state.examSessionToken,
       listeningDeadlineAt: started.listeningDeadlineAt,
@@ -560,9 +573,9 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?rev=20261003-writing-save-cas-v1');
-    await loadScript('enhance.js');
-    await loadScript('annotations.js');
+    await loadScript('../substitute-k67-shared/app.js?v=20261007-fresh-v2');
+    await loadScript('enhance.js?v=20261007-fresh-v2');
+    await loadScript('annotations.js?v=20261007-fresh-v2');
   }
 
   async function resumeAfterListening() {

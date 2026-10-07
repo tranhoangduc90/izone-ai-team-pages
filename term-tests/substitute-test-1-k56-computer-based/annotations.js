@@ -6,8 +6,8 @@
   const slug = window.TERM_TEST_CONFIG.slug;
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const suffix = query.get('demo') === 'exam' && query.get('grading') === 'server' ? ':server-grade' : '';
-  const storageKey = `izone-test-annotations:${slug}:${classCode}${suffix}`;
-  const sessionKey = `izone-test:${slug}:${classCode}${suffix}`;
+  const storageKey = suffix ? window.SUBSTITUTE_STATE.key('izone-test-annotations:',classCode) : `izone-test-annotations:${slug}:${classCode}:preview:${query.get('demo')}`;
+  const sessionKey = suffix ? window.SUBSTITUTE_STATE.key('izone-test:',classCode) : `izone-test:${slug}:${classCode}:preview:${query.get('demo')}`;
   const previewMode = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
   const session = readStored(sessionKey) || {};
   // Mã ngẫu nhiên của lượt thi, không dùng tên học viên hoặc token truy cập.
@@ -29,7 +29,7 @@
     for (const storage of [sessionStorage, localStorage]) {
       try {
         const value = JSON.parse(storage.getItem(key) || 'null');
-        if (value) values.push(value);
+        if (value && (!suffix || window.SUBSTITUTE_STATE.accept(value))) values.push(value);
       } catch { /* Không dùng dữ liệu hỏng. */ }
     }
     // Một bộ nhớ có thể hết dung lượng; ưu tiên bản mới nhất đã ghi thành công.
@@ -122,10 +122,11 @@
   });
 
   function persist() {
+    if(window.SUBSTITUTE_STATE?.blocked){clearTimeout(saveTimer);return;}
     clearTimeout(saveTimer);
     saveTimer = 0;
     if (!dirty) return;
-    const serialized = JSON.stringify({ version: 1, runId, revision: ++revision, records });
+    const serialized = JSON.stringify(suffix ? window.SUBSTITUTE_STATE.stamp({version:1,runId,revision:++revision,records}) : {version:1,runId,revision:++revision,records});
     let saved = false;
     for (const storage of [sessionStorage, localStorage]) {
       try { storage.setItem(storageKey, serialized); saved = true; } catch { /* Hiện lỗi nếu cả hai bộ nhớ không ghi được. */ }
@@ -345,7 +346,7 @@
     }
   });
   document.querySelectorAll('#listeningView, #readingView, #writingView, .cbt-listening-section, .cbt-reading-section').forEach(view => viewObserver.observe(view, { attributes: true, attributeFilter: ['hidden'] }));
-  document.querySelectorAll('.cbt-toolbar-controls, .writing-exam-header').forEach(toolbar => {
+  document.querySelectorAll('.cbt-toolbar-controls').forEach(toolbar => {
     const opener = button('cbt-tool-button cbt-notes-open', 'Notes', showAllNotes);
     opener.setAttribute('aria-controls', 'cbtNotesPanel');
     toolbar.append(opener);

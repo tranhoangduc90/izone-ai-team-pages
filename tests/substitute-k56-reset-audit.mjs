@@ -12,6 +12,7 @@ function storage(entries) {
     getItem: key => data.get(key) ?? null,
     setItem: (key, value) => data.set(key, value),
     removeItem: key => data.delete(key)
+    ,key:index=>[...data.keys()][index],get length(){return data.size;}
   };
 }
 function harness(number, blocked = false) {
@@ -37,7 +38,8 @@ function harness(number, blocked = false) {
   const dialog = element();
   const body = { append() {} };
   const context = {
-    window: { TERM_TEST_CONFIG: { slug, title: 'Bài thử' }, TERM_TEST_APP_CONFIG: { AUTH_MODE: 'online-demo' }, addEventListener(name, callback) { listeners[name] = callback; } },
+    window: { TERM_TEST_CONFIG: { slug, title: 'Bài thử' }, TERM_TEST_APP_CONFIG: { AUTH_MODE: 'online-demo' }, dispatchEvent(){},addEventListener(name, callback) { listeners[name] = callback; } },
+    Event,crypto:{randomUUID:()=> 'fake-reset-id'},
     URL, URLSearchParams, Date, Math,
     location: { search: '?demo=exam&grading=server&class=K56A&demoStudent=x&demoAttempt=y', href: 'https://example.test/?demo=exam&grading=server&class=K56A&demoStudent=x&demoAttempt=y', replace(url) { context.replaced = url; } },
     history: { replaceState() {} },
@@ -46,7 +48,9 @@ function harness(number, blocked = false) {
     MutationObserver: class { observe() {} }
   };
   if (blocked) context.sessionStorage.removeItem = () => { throw new Error('blocked'); };
-  vm.runInNewContext(read(number), context);
+  vm.createContext(context);
+  vm.runInContext(readFileSync(new URL('../term-tests/substitute-shared/state.js',import.meta.url),'utf8'),context);
+  vm.runInContext(read(number), context);
   return { context, dialog, own, unrelated, listeners, confirm: () => dialog.querySelector('[data-reset-confirm]').listeners.click() };
 }
 

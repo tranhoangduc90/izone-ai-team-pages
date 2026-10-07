@@ -35,24 +35,22 @@
   button.addEventListener('click', () => {
     error.hidden = true;
     confirm.disabled = false;
-    dialog.querySelector('.k56-reset-summary').textContent = config.title + ' · Toàn bộ 3 lớp demo';
+    dialog.querySelector('.k56-reset-summary').textContent = config.title + ' · Dữ liệu trên trình duyệt của bài này';
     dialog.showModal();
     cancel.focus();
   });
   cancel.addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => button.focus());
   function clearAndReload(broadcast) {
-    for (const storage of [sessionStorage, localStorage]) {
-      for (const key of keys) storage.removeItem(key);
-      if (keys.some(key => storage.getItem(key) !== null)) throw new Error('STORAGE_NOT_CLEARED');
-    }
+    window.SUBSTITUTE_STATE.clear(config.slug,{broadcast});
     // Reset các tab cùng bài để bản nháp cũ không ghi trở lại dữ liệu vừa xóa.
-    if (broadcast) localStorage.setItem(signalKey, String(Date.now()) + ':' + Math.random());
+
     const url = new URL(location.href);
     url.searchParams.delete('demoStudent');
     url.searchParams.delete('demoAttempt');
     url.searchParams.delete('class');
     url.searchParams.set('reset', '1');
+    url.searchParams.set('resetOwner','done');
     history.replaceState(null, '', location.href);
     location.replace(url.href);
   }
