@@ -51,6 +51,7 @@ const server=http.createServer((req,res)=>{
     await page.getByRole('button',{name:'Làm mới',exact:true}).click();
     await page.waitForFunction(()=>document.querySelector('.class-card')?.getAttribute('aria-pressed')==='true');
     await classCard.press('Enter');
+    await page.waitForFunction(()=>document.querySelector('.class-card')?.getAttribute('aria-pressed')==='false');
     assert.equal(await classCard.getAttribute('aria-pressed'),'false');
     await page.waitForSelector('.zoom-source-link');assert.equal(await page.locator('.zoom-source-link').getAttribute('href'),'https://zoom.us/rec/play/fixture-source');assert.ok((await page.locator('.pending').innerText()).includes('Recording đã được xóa trong Zoom'));
     assert.equal(await page.locator('.class-folder').count(),0);assert.equal(await page.locator('.scan-panel').count(),0);assert.equal(await page.locator('#recordingDecisionDialog').count(),0);assert.equal(await page.getByRole('button',{name:'Xử lý recording',exact:true}).count(),0);assert.ok((await page.locator('.pending').innerText()).includes('Lý do cần duyệt:'));assert.ok((await page.locator('.pending').innerText()).includes('DOWNLOAD_FAILED'));
@@ -107,7 +108,7 @@ const server=http.createServer((req,res)=>{
     await page.locator('[data-action="nightly-review"] + span').click();await page.waitForFunction(()=>document.querySelector('.pending [data-action="nightly-review"]')&&!document.querySelector('.pending [data-action="nightly-review"]').disabled);
     assert.equal(actions,0);assert.equal(await page.locator('.approved tbody tr').count(),1);
     await page.locator('[data-edit-id="old"]').selectOption('playlist');
-    const labels=await page.locator('#playlistForm > label').allTextContents();assert.ok(labels[0].startsWith('Playlist chuyển vào'));assert.ok(labels[1].startsWith('Tên video sau khi chuyển'));
+    const labels=await page.locator('#playlistForm > label').allTextContents();assert.ok(labels[0].startsWith('Tìm playlist')&&labels[1].startsWith('Playlist chuyển vào'));assert.ok(labels[2].startsWith('Tên video sau khi chuyển'));
     await page.locator('#playlistSelect').selectOption('PLnew');await page.locator('#playlistVideoTitle').fill('IC9003 - Buổi 2');
     await page.locator('#playlistSubmit').click();await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('chưa lưu được tên'));assert.deepEqual(mutations,['playlist','rename']);assert.equal(await page.locator('#playlistDialog').evaluate(e=>e.open),true);
     await page.locator('#playlistSubmit').click();await page.waitForFunction(()=>!document.querySelector('#playlistDialog').open);assert.deepEqual(mutations,['playlist','rename','rename']);assert.equal(video.title,'IC9003 - Buổi 2');assert.equal(scans,0);

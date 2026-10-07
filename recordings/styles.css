@@ -157,3 +157,8 @@ dialog button.secondary { color: var(--navy); background: #fff; border: 1px soli
 .external-link-icon:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .manual-upload-disabled:disabled { cursor: not-allowed; }
 textarea { font: inherit; }
+
+#manualUploadPartsLabel[hidden] { display:none; }
+#manualUploadPartsLabel { display:flex; align-items:flex-start; gap:8px; font-size:14px; }
+#manualUploadParts { width:auto; margin-top:3px; }
+#manualUploadDialog { max-height:90vh; overflow-y:auto; }

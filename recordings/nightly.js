@@ -5,7 +5,7 @@ const NIGHTLY_LABELS = {
   missing_assignment:'Chưa xác định phân bổ Zoom', unmatched_files:'Có file chưa xác định',
   recordings_found:'Đã tìm thấy recording', audio_only:'Có ghi âm, chưa có video',
   asked_teacher:'Đã hỏi giảng viên', awaiting_file:'Chờ file bổ sung', cancelled:'Buổi đã hủy', accepted_missing:'Chấp nhận thiếu',
-  ambiguous_session:'Nhiều buổi phù hợp', no_matching_session:'Chưa khớp buổi Portal', short_clip:'Clip dưới 3 phút',
+  ambiguous_session:'Nhiều buổi phù hợp', no_matching_session:'Chưa khớp buổi Portal', short_clip:'Video dưới 10 phút — không đăng YouTube',
   overlapping_layouts:'Nhiều bản ghi trùng khoảng thời gian', unverified_assignment_history:'Chưa xác minh phân bổ tại ngày học',
   starts_too_early:'Ghi sớm hơn lịch trên 30 phút', ends_too_late:'Ghi quá giờ trên 30 phút',
   possible_partial_recording:'Có thể thiếu đoạn đầu/cuối', new_file_in_approved_group:'Có clip bổ sung cho nhóm đã duyệt',
@@ -47,7 +47,7 @@ async function loadNightly() {
 }
 function nightlyRow(record) {
   const label=record.excluded?'Đã loại khỏi luồng đăng':NIGHTLY_LABELS[record.exceptionStatus || record.status] || 'Recording cần xác nhận';
-  const issues=(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x).join(' · ');
+  const issues=[...(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x), typeof manualUploadUnavailable==='function'?manualUploadUnavailable(record):''].filter((x,i,all)=>x&&all.indexOf(x)===i).join(' · ');
   const currentIssue=record.errorCode||(record.status==='processing'?'Zoom đang xử lý, chưa có MP4 hoàn chỉnh. Chọn Kiểm tra lại tệp.':'Không ghi nhận lỗi kỹ thuật');
   const exception=record.kind==='session'?'<div class="subtext"><button class="action-button" data-action="exception" data-id="'+escapeHtml(record.id)+'">Xử lý ngoại lệ</button></div>':'';
   return `<tr><td><strong>${escapeHtml(displayClassName(record))}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong>${record.kind==='session'?'<div class="subtext">Buổi học từ Portal · Chưa gắn recording</div>':''}<div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(currentIssue)}</div>${exception}</td><td>${dateTime(record.recordingStart)}</td><td>${recordingSourceCell(record)}</td><td>${videoEditCell(record)}</td><td>—</td><td class="approval-cell">${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
@@ -74,7 +74,9 @@ document.addEventListener('click',async(event)=>{
  dialog.dataset.canPublish=displayed.videoId?'false':'true';document.getElementById('publishForm').reset();document.getElementById('publishForm').hidden=dialog.dataset.canPublish==='false'||!window.recordingAuth?.isAuthenticated();
  const sessions=(nightlyState.snapshot.records||[]).filter(r=>r.kind==='session'&&r.numberingVerified&&r.lessonNumber>0);
  document.getElementById('publishSession').innerHTML='<option value="">Chọn đúng lớp và buổi học</option>'+sessions.map(r=>`<option value="${escapeHtml(r.classSessionId)}">${escapeHtml(r.className)} — Buổi ${escapeHtml(r.lessonNumber)} — ${escapeHtml(dateTime(r.recordingStart))}</option>`).join('');
- document.getElementById('publishSubmit').disabled=!sessions.length||record.status!=='completed'||record.observationStale===true;
+ const publicationBlocked=typeof manualUploadUnavailable==='function'?manualUploadUnavailable(record):'';
+ document.getElementById('publishSubmit').disabled=!sessions.length||Boolean(publicationBlocked);
+ document.getElementById('publishSubmit').title=publicationBlocked;
  const status=document.getElementById('previewStatus'),link=document.getElementById('previewZoomLink');
  document.getElementById('previewTitle').textContent=record.title;
  const seconds=Math.max(0,Math.round((Date.parse(record.recordingEnd)-Date.parse(record.recordingStart))/1000));
