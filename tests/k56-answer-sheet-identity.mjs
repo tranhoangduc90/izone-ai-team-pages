@@ -11,6 +11,7 @@ for (const app of apps) {
     const elements = Object.fromEntries(['identityView', 'loadingView', 'listeningView', 'listeningSavedView', 'readingView', 'writingPrepView', 'writingView', 'resultReadyView', 'resultView', 'studentSelect'].map(name => [name, { hidden: true, disabled: false }]));
     const context = {
       state: { studentRef, attemptToken }, demoMode: '', writingConfig: null,
+      paperMini:app==='k56-mini-shared'&&!cbt,paperConfirmed:Boolean(studentRef),
       elements, views: Object.values(elements), URL, URLSearchParams,
       progressSteps: ['listening', 'reading', 'result'].map(skill => ({ dataset: { progress: skill }, parentElement: { append() {} }, classList: { toggle() {} } })),
       stopWritingGradingPolling() {},

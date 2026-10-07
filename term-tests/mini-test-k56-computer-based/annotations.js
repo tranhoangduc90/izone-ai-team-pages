@@ -7,7 +7,7 @@
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const suffix = query.get('demo') === 'exam' && query.get('grading') === 'server' ? ':server-grade' : '';
   const storageKey = `izone-test-annotations:${slug}:${classCode}${suffix}`;
-  const sessionKey = `izone-test:${slug}:${classCode}${suffix}`;
+  const sessionKey = `izone-test:${slug}:${classCode}${suffix}:cbt`;
   const previewMode = ['complete', 'listening-only', 'writing-prep', 'writing', 'reading', 'listening'].includes(query.get('demo'));
   const session = readStored(sessionKey) || {};
   // Mã ngẫu nhiên của lượt thi, không dùng tên học viên hoặc token truy cập.

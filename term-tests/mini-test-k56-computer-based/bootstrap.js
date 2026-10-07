@@ -31,8 +31,8 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?rev=20261006-class-reset-v1'))
-      .then(() => loadScript('enhance.js?v=20260910-audio-recovery-v1-20261001-writing-ui-v1'))
+      .then(() => loadScript('../k56-mini-shared/app.js?rev=20261007-mini-paper-v1'))
+      .then(() => loadScript('enhance.js?rev=20261007-mini-paper-v1'))
       .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -40,7 +40,7 @@
     return;
   }
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageSuffix}`;
+  const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageSuffix}:cbt`;
   const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageSuffix}`;
   const annotationStorageKey = `izone-test-annotations:${testConfig.slug}:${classCode}${storageSuffix}`;
   if (classCode === 'CODEXDEMO56' && query.get('reset') === '1') {
@@ -156,6 +156,7 @@
   document.body.append(previewAudio);
   const identityDialog = document.getElementById('identityConfirm');
   let pendingStudent = null;
+  let confirmedCurrentTab = localDemo;
 
   function resetPreparation() {
     downloadController?.abort();
@@ -206,17 +207,19 @@
   document.getElementById('cancelIdentity').addEventListener('click', cancelIdentity);
   identityDialog.addEventListener('cancel', event => { event.preventDefault(); cancelIdentity(); });
   document.getElementById('confirmIdentity').addEventListener('click', () => {
-    if (!pendingStudent || preparing || state.listeningStartedAt) return;
+    if (!pendingStudent || preparing) return;
     const student = pendingStudent;
+    const resumingSameStudent=state.studentRef===student.ref&&Boolean(state.examSessionToken||state.attemptToken||state.listeningStartedAt||legacyListeningResume);
     pendingStudent = null;
     identityDialog.close();
-    for (const storage of [sessionStorage, localStorage]) {
+    if(!resumingSameStudent) for (const storage of [sessionStorage, localStorage]) {
       try { storage.removeItem(annotationStorageKey); storage.removeItem(uiStorageKey); } catch { /* Lượt mới vẫn có mã riêng nếu storage bị chặn. */ }
     }
-    state = { audioVolume: state.audioVolume };
-    saveState({ studentRef: student.ref, studentName: student.name, identityConfirmed: true, annotationRunId: crypto.randomUUID() });
+    if(!resumingSameStudent) state = { audioVolume: state.audioVolume };
+    confirmedCurrentTab=true;
+    saveState({ studentRef: student.ref, studentName: student.name, identityConfirmed: true, annotationRunId: state.annotationRunId || crypto.randomUUID() });
     elements.bootstrapStudent.value = student.ref;
-    legacyListeningResume = false;
+    if(!resumingSameStudent)legacyListeningResume = false;
     prepareSelectedStudent();
   });
 
@@ -238,6 +241,12 @@
       } catch {
         // Tiếp tục với nguồn bộ nhớ còn lại.
       }
+    }
+    // Kho cũ dùng chung Paper/CBT: chỉ đọc làm ứng viên, không tự mở bài.
+    // Sau xác nhận, API kiểm mode và giữ nguyên thời gian của lượt CBT cũ.
+    for(const storage of [sessionStorage,localStorage]) {
+      try{const old=JSON.parse(storage.getItem(`izone-test:${testConfig.slug}:${classCode}${storageSuffix}`)||'{}');
+        if(old.studentRef && old.attemptMode!=='answer_sheet')return old;}catch{}
     }
     if (localDemo && history.state?.k56MiniDemoState) return { ...history.state.k56MiniDemoState };
     return {};
@@ -472,7 +481,7 @@
   async function prepareSelectedStudent() {
     const studentRef = elements.bootstrapStudent.value;
     const student = roster.find(item => item.ref === studentRef);
-    if (!student || preparing || (!state.identityConfirmed && !state.listeningStartedAt && !state.attemptToken && !legacyListeningResume)) return;
+    if (!student || preparing || !confirmedCurrentTab) return;
     preparing = true;
     saveState({ studentRef, studentName: student.name, annotationRunId: state.annotationRunId || crypto.randomUUID() });
     elements.bootstrapStudent.disabled = true;
@@ -507,11 +516,13 @@
           classCode,
           studentRef,
           mode: window.K56_EXAM_ORDER.requested(),
+          attemptMode:'cbt',
           attemptToken: state.attemptToken || undefined,
           examSessionToken: state.examSessionToken || undefined,
           legacyElapsedSeconds: legacyListeningResume ? legacyUiState.audioTime : 0
         })
       });
+      if(prepared.attemptMode!=='cbt'||prepared.policy?.timed!==true) throw new Error('Máy chủ chưa xác nhận lượt thi CBT. Bài chưa được mở.');
       const sameAttempt = !state.attemptToken || state.attemptToken === prepared.attemptToken;
       const keepLocal = skill => sameAttempt && Number(state.draftRevisions?.[skill] || 0) > Number(prepared[skill + 'DraftRevision'] || 0);
       const draftPatch = {
@@ -602,9 +613,9 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?rev=20261006-class-reset-v1');
-    await loadScript('enhance.js?v=20260910-audio-recovery-v1-20261001-writing-ui-v1');
-    await loadScript('annotations.js?rev=20261005-k56-writing-results-v1');
+    await loadScript('../k56-mini-shared/app.js?rev=20261007-mini-paper-v1');
+    await loadScript('enhance.js?rev=20261007-mini-paper-v1');
+    await loadScript('annotations.js?rev=20261007-mini-paper-v1');
   }
 
   async function resumeAfterListening() {
@@ -763,7 +774,7 @@
   });
   elements.bootstrapRetry.addEventListener('click', prepareSelectedStudent);
   elements.bootstrapStudent.addEventListener('change', () => {
-    if (preparing || state.listeningStartedAt || state.attemptToken) {
+    if (preparing || ((state.listeningStartedAt || state.attemptToken) && (confirmedCurrentTab || elements.bootstrapStudent.value!==state.studentRef))) {
       elements.bootstrapStudent.value = state.studentRef || '';
       return;
     }
@@ -831,7 +842,10 @@
       }
       if (state.studentRef && (state.listeningStartedAt || state.attemptToken || legacyListeningResume) && roster.some(student => student.ref === state.studentRef)) {
         elements.bootstrapStudent.value = state.studentRef;
-        await prepareSelectedStudent();
+        pendingStudent=roster.find(student=>student.ref===state.studentRef);
+        document.getElementById('confirmStudentName').textContent=pendingStudent.name;
+        document.getElementById('confirmClassName').textContent=data.class.name;
+        identityDialog.showModal();document.getElementById('confirmIdentity').focus();
       } else {
         elements.bootstrapDownloadStatus.textContent = 'Hãy chọn họ và tên để bắt đầu tải audio.';
         elements.bootstrapDownloadStep.dataset.state = 'active';

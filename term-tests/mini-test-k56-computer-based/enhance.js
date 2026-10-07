@@ -12,7 +12,7 @@
 
   const storageSuffix = serverGradingMode ? ':server-grade' : '';
   const uiStorageKey = 'izone-test-ui:' + testConfig.slug + ':' + classCode + storageSuffix;
-  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageSuffix;
+  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageSuffix + ':cbt';
   const uiState = readUiState();
 
   // Dữ liệu vào: phần đang mở, câu đánh dấu, cỡ chữ, vị trí audio và hạn giờ Reading/Writing trên máy hiện tại.

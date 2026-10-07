@@ -8,6 +8,9 @@
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const requestedDemo = ['localhost', '127.0.0.1'].includes(location.hostname) ? (query.get('demo') || '') : '';
   const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
+  const paperMini = testConfig?.slug === 'mini-test-k56' && !document.body.classList.contains('cbt-mode') && !window.TERM_TEST_CONTENT;
+  let paperConfirmed = false, paperEpoch = 0, paperBusy = 0;
+  let paperEnter, paperChange;
   const demoMode = window.TERM_TEST_CONTENT?.variant === 'semantic-html'
     && ['complete', 'listening-only', 'writing-prep', 'writing', 'reading', 'listening', 'exam'].includes(requestedDemo)
     ? requestedDemo
@@ -16,7 +19,8 @@
 
   if (!testConfig || !appConfig || !root) return;
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
+  const legacyStorageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
+  let storageKey = paperMini ? `${legacyStorageKey}:paper:login` : `${legacyStorageKey}:cbt`;
   if (classCode === 'CODEXDEMO56' && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
     const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
     for (const storage of [sessionStorage, localStorage]) {
@@ -31,7 +35,7 @@
     const nextQuery = query.toString();
     window.history.replaceState({}, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`);
   }
-  const restoredSession = readSession();
+  const restoredSession = paperMini ? {} : readSession();
   const state = {
     stage: 'loading',
     roster: [],
@@ -110,7 +114,10 @@
 
   function saveSession() {
     if (window.K56_DEMO_RESETTING) return;
+    if (paperMini && !paperConfirmed) return;
     const serialized = JSON.stringify({
+      attemptMode: state.attemptMode,
+      generation: state.generation,
       studentRef: state.studentRef,
       studentName: state.studentName,
       clientSubmissionId: state.clientSubmissionId,
@@ -372,10 +379,44 @@
     try {
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/attempt/prepare`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ classCode, studentRef, mode: window.K56_EXAM_ORDER.requested() })
+        body: JSON.stringify({ classCode, studentRef, mode: window.K56_EXAM_ORDER.requested(), identityConfirmed:paperConfirmed })
       });
       if (studentRef !== state.studentRef) throw new Error('Thông tin học viên đã thay đổi; không dùng lượt của người trước.');
+      if (paperMini) {
+        if(response.attemptMode!=='answer_sheet' || response.policy?.timed!==false || response.policy?.autoSubmit!==false
+          || !Number.isSafeInteger(response.generation)) throw new Error('Máy chủ chưa xác nhận lượt nhập bài giấy. Bài chưa được mở.');
+        state.attemptMode='answer_sheet';state.generation=response.generation;
+        storageKey=`${legacyStorageKey}:paper:${studentRef}:${response.attemptToken}:${response.generation}`;
+        const cached=readSession();
+        // Chỉ đọc nháp đúng chủ/lượt/thế hệ. Không dùng token hoặc giờ từ kho cũ.
+        if(cached.studentRef===studentRef && cached.attemptToken===response.attemptToken && cached.generation===response.generation) {
+          for(const skill of ['listening','reading']) if(!response[skill+'Submitted']
+            && Number(cached.draftRevisions?.[skill])>Number(response[skill+'DraftRevision'])) {
+            state.drafts[skill]={...(cached.drafts?.[skill]||{})};state.draftRevisions[skill]=Number(cached.draftRevisions[skill]);
+          }
+        } else {
+          let old={};try{old=JSON.parse(localStorage.getItem(legacyStorageKey)||'{}');}catch{}
+          const unbound=!old.studentRef&&!old.attemptToken&&!old.examSessionToken;
+          const sameOwner=old.studentRef===studentRef&&old.attemptToken===response.attemptToken;
+          if((unbound||sameOwner)&&!response.completed&&Object.values(old.drafts||{}).some(d=>d&&Object.values(d).some(Boolean))
+            &&window.confirm('Có nháp cũ trên thiết bị. Bạn xác nhận đây là bài của mình và muốn phục hồi?')) {
+            for(const skill of ['listening','reading']) if(!response[skill+'Submitted']&&old.drafts?.[skill]) {
+              state.drafts[skill]={...old.drafts[skill]};state.draftRevisions[skill]=Math.max(Number(response[skill+'DraftRevision'])||0,Number(old.draftRevisions?.[skill])||0)+1;
+            }
+          }
+        }
+      }
       await showPreparedAttempt(response);
+      if(paperMini) {
+        for(const skill of ['listening','reading']) {
+          const container=elements[skill+'Questions'];
+          for(const field of container.querySelectorAll('[data-number]'))field.value=state.drafts[skill][field.dataset.number]||'';
+          updateAnswerCount(skill);
+          if(state.draftRevisions[skill]>state.draftAckRevisions[skill]&&response[skill+'StartedAt']&&!response[skill+'Submitted'])scheduleSectionDraft(skill,0);
+        }
+        paperEnter.hidden=true;paperChange.hidden=false;
+        showNotice('Nhập đáp án từ bài giấy. Giảng viên tổ chức thời gian; bạn chủ động nhấn nộp.','success');
+      }
     } finally {
       elements.studentSelect.disabled = isWritingIdentityBound();
     }
@@ -421,9 +462,9 @@
     }
     const label = skill === 'reading' ? 'Reading' : 'Listening';
     panel.querySelector('h2').textContent = `Chuẩn bị phần ${label}`;
-    panel.querySelector('p').textContent = 'Thông tin học viên đã xác nhận. Đồng hồ chỉ bắt đầu khi bạn bấm bắt đầu phần này.';
+    panel.querySelector('p').textContent = paperMini ? 'Thông tin đã xác nhận. Nhập đáp án khi giảng viên hướng dẫn; trang này không tự thu bài.' : 'Thông tin học viên đã xác nhận. Đồng hồ chỉ bắt đầu khi bạn bấm bắt đầu phần này.';
     const button = panel.querySelector('button');
-    button.textContent = `Bắt đầu ${label}`;
+    button.textContent = paperMini ? `Nhập đáp án ${label}` : `Bắt đầu ${label}`;
     button.onclick = async () => {
       if (skill === 'reading') return startOrResumeReading(button);
       if (document.body.classList.contains('cbt-mode')) { window.location.reload(); return; }
@@ -444,9 +485,10 @@
   }
 
   function setStage(stage) {
+    if(paperMini && !paperConfirmed && stage!=='loading') stage='identity-ready';
     elements.studentSelect.disabled = Boolean(state.studentRef && (state.attemptToken || state.examSessionToken
       || state.listeningStartedAt || state.listeningDeadlineAt));
-    if (!demoMode) window.K56_EXAM_ORDER.deadlineGuard(state, elements);
+    if (!demoMode && !paperMini) window.K56_EXAM_ORDER.deadlineGuard(state, elements);
     const ready = document.getElementById('k56SectionReady');
     if (ready) ready.hidden = stage !== 'section-ready';
     state.stage = stage;
@@ -602,6 +644,12 @@
     if (window.K56_DEMO_RESETTING) throw new Error('Lượt demo đang được reset. Hãy chọn lại học viên sau khi tải trang.');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
+    const epoch=paperEpoch,owner=storageKey;
+    const mutating=paperMini&&options.method==='POST'&&!path.endsWith('/draft');
+    if(paperMini&&options.method==='POST'&&path.startsWith('/api/term-tests/')) {
+      options={...options,body:JSON.stringify({...JSON.parse(options.body||'{}'),attemptMode:'answer_sheet',generation:state.generation||0})};
+    }
+    if(mutating){++paperBusy;if(paperChange)paperChange.disabled=true;}
     try {
       const response = await fetch(`${appConfig.API_BASE_URL}${path}`, {
         ...options,
@@ -609,6 +657,7 @@
         headers: { ...(options.headers || {}) }
       });
       const data = await response.json().catch(() => ({}));
+      if(paperMini&&(epoch!==paperEpoch||owner!==storageKey)) throw new Error('Bạn đã đổi người học. Phản hồi cũ không được dùng.');
       if (window.K56_DEMO_RESETTING) throw new Error('Phản hồi thuộc lượt demo vừa reset đã được bỏ qua.');
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
@@ -621,6 +670,7 @@
       throw error;
     } finally {
       clearTimeout(timeout);
+      if(mutating){--paperBusy;if(paperChange)paperChange.disabled=paperBusy>0;}
     }
   }
 
@@ -664,8 +714,10 @@
 
   function scheduleSectionDraft(skill, delay = 600) {
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
+    const epoch=paperEpoch;
     window.clearTimeout(sectionDraftTimers[skill]);
     sectionDraftTimers[skill] = window.setTimeout(() => {
+      if(paperMini&&(!paperConfirmed||epoch!==paperEpoch))return;
       saveSectionDraft(skill).catch(() => {
         // Bản trên máy vẫn còn; lần thay đổi hoặc nộp tiếp theo sẽ thử lại.
       });
@@ -682,6 +734,7 @@
   }
 
   function isSectionExpired(skill) {
+    if(paperMini)return false;
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const deadline = Date.parse(deadlineValue || '');
     return Number.isFinite(deadline) && Date.now() + (Number(state.serverTimeOffsetMs) || 0) >= deadline;
@@ -2025,6 +2078,7 @@
   }
 
   elements.studentSelect.addEventListener('change', () => {
+    if(paperMini) return; // Chỉ nút xác nhận mới được gắn danh tính và mở lượt.
     const previousStudentRef = state.studentRef;
     if (elements.studentSelect.value !== previousStudentRef
       && (isWritingIdentityBound() || (previousStudentRef && elements.studentSelect.disabled))) {
@@ -2046,6 +2100,7 @@
 
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
+    if(paperMini&&(!paperConfirmed||paperBusy||event.submitter?.dataset.autoSubmit==='true'))return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
       showNotice('Hãy chọn đúng họ và tên trước khi nộp Listening.', 'error');
@@ -2172,6 +2227,7 @@
 
   elements.readingView.addEventListener('submit', async event => {
     event.preventDefault();
+    if(paperMini&&(!paperConfirmed||paperBusy||event.submitter?.dataset.autoSubmit==='true'))return;
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.readingView.dataset.readingTimeExpired === 'true';
     let answers = state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
@@ -2573,6 +2629,40 @@
     try {
       const roster = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
       populateRoster(roster);
+      if(paperMini) {
+        paperEnter=document.createElement('button');paperEnter.type='button';paperEnter.id='miniPaperEnter';
+        paperEnter.className='button button-primary';paperEnter.textContent='Xác nhận và tiếp tục';
+        paperChange=document.createElement('button');paperChange.type='button';paperChange.id='miniPaperChange';
+        paperChange.className='button button-secondary';paperChange.textContent='Đổi người học';paperChange.hidden=true;
+        elements.identityView.append(paperEnter,paperChange);
+        paperEnter.onclick=async()=>{
+          const student=state.roster.find(s=>s.ref===elements.studentSelect.value);
+          if(!student){showNotice('Hãy chọn đúng họ và tên.','error');return;}
+          if(!window.confirm(`Xác nhận học viên ${student.name} · lớp ${classCode}?`))return;
+          ++paperEpoch;paperConfirmed=true;state.studentRef=student.ref;state.studentName=student.name;
+          paperEnter.disabled=true;
+          try{await prepareK56Attempt();}
+          catch(error){paperConfirmed=false;state.attemptToken='';state.examSessionToken='';setStage('identity-ready');showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`,'error');}
+          finally{paperEnter.disabled=false;}
+        };
+        paperChange.onclick=()=>{
+          if(paperBusy)return;
+          saveSession();++paperEpoch;paperConfirmed=false;
+          for(const skill of ['listening','reading']){clearTimeout(sectionDraftTimers[skill]);setAnswerControlsLocked(skill,false);}
+          state.attemptToken='';state.examSessionToken='';state.studentRef='';state.studentName='';state.clientSubmissionId='';
+          state.listeningSubmitted=false;state.readingSubmitted=false;state.completed=false;state.result=null;
+          state.listeningStartedAt='';state.readingStartedAt='';state.listeningDeadlineAt='';state.readingDeadlineAt='';
+          state.drafts.listening={};state.drafts.reading={};state.frozenAnswers={listening:null,reading:null};
+          state.draftRevisions={listening:0,reading:0};state.draftAckRevisions={listening:0,reading:0};
+          storageKey=`${legacyStorageKey}:paper:login`;
+          renderQuestionControls(testConfig.listening,elements.listeningQuestions,'listening');
+          renderQuestionControls(testConfig.reading,elements.readingQuestions,'reading');
+          elements.studentSelect.value='';paperEnter.hidden=false;paperChange.hidden=true;setStage('identity-ready');
+          showNotice('Chọn đúng tên và xác nhận để tiếp tục. Nháp của người trước vẫn được giữ trên máy.');
+        };
+        elements.startReading.textContent='Nhập đáp án Reading';elements.startReading.dataset.normalText='Nhập đáp án Reading';
+        setStage('identity-ready');showNotice('Chọn lớp và tên đúng người. Bài chỉ mở sau khi bạn xác nhận.');return;
+      }
       if (!demoMode) {
         if (window.TERM_TEST_BOOTSTRAP?.preparedAttempt) {
           await showPreparedAttempt(window.TERM_TEST_BOOTSTRAP.preparedAttempt);
