@@ -177,6 +177,7 @@
       writingRecovery: state.writingRecovery,
       drafts: state.drafts,
       writingLayout: state.writingLayout,
+      resultDetailsOpen: state.resultDetailsOpen,
       frozenAnswers: state.frozenAnswers,
       testGrades: state.testGrades
     });
@@ -647,6 +648,7 @@
   let writingGradingPollStartedAt = 0;
   let writingGradingPollCount = 0;
   let writingGradingPollInFlight = false;
+  let resultDetailSignature = '';
 
   function stopWritingGradingPolling() {
     window.clearTimeout(writingGradingPollTimer);
@@ -657,6 +659,9 @@
 
   async function refreshWritingGrading() {
     if ((demoMode && !serverGradingMode) || !state.attemptToken || writingGradingPollInFlight) return;
+    if (document.hidden || navigator.onLine === false || (serverGradingMode && window.SUBSTITUTE_STATE.blocked)) return;
+    const requestedAttempt = state.attemptToken;
+    const requestedStudent = state.studentRef;
     writingGradingPollInFlight = true;
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
@@ -680,6 +685,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ attemptToken: state.attemptToken })
         });
+      if (state.attemptToken !== requestedAttempt || state.studentRef !== requestedStudent
+        || (serverGradingMode && window.SUBSTITUTE_STATE.blocked)) return;
       if (serverGradingMode) {
         state.testGrades.writing = payload;
         saveSession();
@@ -710,17 +717,18 @@
 
   function scheduleWritingGradingRefresh() {
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
+    if (document.hidden || navigator.onLine === false) return;
     const grading = state.result?.writing?.grading;
     if (
       (demoMode && !serverGradingMode)
       || !state.writingSubmitted
       || grading?.ready
-      || grading?.status === 'review_required'
+      || ['review_required', 'failed'].includes(grading?.status)
       || writingGradingPollTimer
     ) return;
     if (!writingGradingPollStartedAt) writingGradingPollStartedAt = Date.now();
-    if (Date.now() - writingGradingPollStartedAt > 45 * 60 * 1000) return;
-    const delay = Math.min(30_000, 8_000 + (writingGradingPollCount * 2_000));
+    const delay = Date.now() - writingGradingPollStartedAt > 45 * 60 * 1000
+      ? 60_000 : Math.min(30_000, 8_000 + (writingGradingPollCount * 2_000));
     writingGradingPollCount += 1;
     writingGradingPollTimer = window.setTimeout(() => {
       writingGradingPollTimer = 0;
@@ -733,6 +741,17 @@
       label.textContent = message;
     }
   }
+
+  // Chỉ đọc trạng thái khi quay lại tab/mạng; không nộp lại bài hoặc gọi AI.
+  function resumeWritingGrading() {
+    if (!state.writingSubmitted || state.result?.writing?.grading?.ready
+      || ['review_required', 'failed'].includes(state.result?.writing?.grading?.status)) return;
+    window.clearTimeout(writingGradingPollTimer);
+    writingGradingPollTimer = 0;
+    refreshWritingGrading();
+  }
+  document.addEventListener('visibilitychange', resumeWritingGrading);
+  window.addEventListener('online', resumeWritingGrading);
 
   function syncWritingEditors() {
     const outlineEditor = document.querySelector('[data-writing-outline]');
@@ -1711,31 +1730,19 @@
       overall.append(overallLabel, overallScore, formula);
       gradingArea.append(overall);
     } else {
-      gradingArea.className = `writing-grading-status${grading?.status === 'review_required' ? ' needs-review' : ''}`;
+      const needsReview = ['review_required', 'failed'].includes(grading?.status);
+      gradingArea.className = `writing-grading-status${needsReview ? ' needs-review' : ''}`;
       const statusCopy = document.createElement('div');
       const statusTitle = document.createElement('strong');
-      statusTitle.textContent = grading?.status === 'review_required'
+      statusTitle.textContent = needsReview
         ? 'Bài chấm đang được kiểm tra'
-        : 'Đang chấm Task 2';
+        : 'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau';
       const statusText = document.createElement('p');
-      statusText.textContent = grading?.status === 'review_required'
+      statusText.textContent = needsReview
         ? 'Bạn có thể đóng trang; kết quả vẫn được lưu và sẽ hiện khi hoàn chỉnh.'
         : 'Bài làm và tiến độ chấm đã được lưu trên hệ thống. Nếu vẫn mở trang, kết quả sẽ tự cập nhật khi chấm xong.';
       statusCopy.append(statusTitle, statusText);
-      const refresh = document.createElement('button');
-      refresh.type = 'button';
-      refresh.className = 'button button-secondary';
-      refresh.textContent = 'Kiểm tra kết quả ngay';
-      refresh.addEventListener('click', async () => {
-        refresh.disabled = true;
-        refresh.textContent = 'Đang kiểm tra...';
-        await refreshWritingGrading();
-        if (refresh.isConnected) {
-          refresh.disabled = false;
-          refresh.textContent = 'Kiểm tra kết quả ngay';
-        }
-      });
-      gradingArea.append(statusCopy, refresh);
+      gradingArea.append(statusCopy);
     }
 
     section.append(heading, gradingArea);
@@ -1847,6 +1854,13 @@
   function renderDetailBlock(title, details) {
     const block = document.createElement('details');
     block.className = 'detail-block';
+    const skill = title.toLowerCase();
+    block.dataset.resultSkill = skill;
+    block.open = state.resultDetailsOpen?.[skill] === true;
+    block.addEventListener('toggle', () => {
+      state.resultDetailsOpen = { ...state.resultDetailsOpen, [skill]: block.open };
+      saveSession();
+    });
     const summary = document.createElement('summary');
     const detailRows = details || [];
     summary.textContent = detailRows.length
@@ -1921,12 +1935,17 @@
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
     elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
     renderWritingSubmission();
-    const detailBlocks = [renderDetailBlock('Listening', result.listening.details)];
-    if (hasReading) detailBlocks.push(renderDetailBlock('Reading', result.reading.details));
-    elements.questionDetails.replaceChildren(...detailBlocks);
-    const performanceSections = [renderSkillPerformance('Listening', result.listening)];
-    if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
-    elements.skillPerformanceSections.replaceChildren(...performanceSections);
+    // Polling Writing không dựng lại các khối đang đọc, giữ focus/scroll và lựa chọn mở.
+    const detailSignature = JSON.stringify([storageKey, state.studentRef, state.attemptToken, result.listening, result.reading]);
+    if (detailSignature !== resultDetailSignature) {
+      const detailBlocks = [renderDetailBlock('Listening', result.listening.details)];
+      if (hasReading) detailBlocks.push(renderDetailBlock('Reading', result.reading.details));
+      elements.questionDetails.replaceChildren(...detailBlocks);
+      const performanceSections = [renderSkillPerformance('Listening', result.listening)];
+      if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
+      elements.skillPerformanceSections.replaceChildren(...performanceSections);
+      resultDetailSignature = detailSignature;
+    }
     if (payload.writing?.grading?.ready) stopWritingGradingPolling();
   }
 

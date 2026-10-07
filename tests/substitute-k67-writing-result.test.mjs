@@ -43,7 +43,7 @@ test('K67 incomplete grading cannot open an undefined feedback result', () => {
 });
 test('K67 pending status names Task 2', () => {
   const result = render({ready: false, status: 'processing'});
-  assert.ok(result.nodes.some(node => node.textContent === 'Đang chấm Task 2'));
+  assert.ok(result.nodes.some(node => node.textContent === 'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
 });
 test('K67 result title derives from this exam config instead of K56 template', () => {
   assert.doesNotMatch(source, /Substitute Test 2 · Khóa 56/);

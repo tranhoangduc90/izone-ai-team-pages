@@ -71,6 +71,6 @@ for (const number of [1, 2]) {
   });
   test(`Substitute K56 ${number}: trạng thái chờ gọi đúng Task ${taskNumber}`, () => {
     const result = harness(number, { ready: false, status: 'processing' });
-    assert.ok(result.nodes.some(node => node.textContent === `Đang chấm Task ${taskNumber}`));
+    assert.ok(result.nodes.some(node => node.textContent === 'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
   });
 }

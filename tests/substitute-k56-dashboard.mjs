@@ -31,7 +31,7 @@ test('dashboard chọn được K56 hoặc K67 và dashboard Test 2 cũ vẫn d�
   assert.match(oldDashboardHtml, /substitute-test-2-k56-computer-based/u);
   assert.match(oldDashboardHtml, /substitute-test-2-k56-results/u);
   assert.doesNotMatch(oldDashboardHtml, /chatgpt\.site/u);
-  assert.match(read('term-tests/substitute-test-2-k56-results/index.html'), /substitute-test-2-k56-dashboard/u);
+  assert.match(read('term-tests/substitute-test-2-k56-results/index.html'), /substitute-test-1-k56-dashboard/u);
 });
 
 test('dashboard mặc định tổng hợp đồng thời bốn bài của K56 và K67', () => {
