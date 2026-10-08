@@ -23,7 +23,7 @@ async function requestJson(base, path, body, signal) {
 // Tải lại lớp/tên từ máy chủ, yêu cầu bấm Mở bài và khóa danh tính sau khi mở phiên.
 // Lỗi roster hoặc bộ nhớ có thông báo; kết quả tải cũ không thay lựa chọn mới.
 export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, lessonNumber,
-  originalDocumentId = '', classHint = '', validateAssignment, onOpened, onReset }) {
+  originalDocumentId = '', classHint = '', allowWebReceipt = false, validateAssignment, onOpened, onReset }) {
   const key = memoryKey(identityBase, location.href);
   let storage;
   try { storage = window.localStorage; } catch { storage = null; }
@@ -165,6 +165,30 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
         originalAssignment = doc.assignment;
         originalClass = originalAssignment?.classCode || '';
         if (!originalClass) throw new Error('Chưa xác định được lớp của file Homework.');
+        if (allowWebReceipt && originalAssignment.intakeMode === 'document') {
+          if(validateAssignment(originalAssignment)!==true || originalAssignment.students?.length!==1)
+            throw new Error('Bản Docs chưa có duy nhất cấu hình bài riêng.');
+          const profile=originalAssignment.students[0];
+          const opened=await requestJson(apiBase,'/session/start-selected',{
+            assignmentCode,classCode:originalClass,documentId:originalDocumentId,
+            studentRef:refOf(profile),identityConfirmed:true
+          },controller.signal);
+          if(current!==revision||active)return;
+          const session=opened.session;
+          if(!session?.accessToken || session.studentRef!==refOf(profile) || session.documentId!==originalDocumentId || !session.workUnitId)
+            throw new Error('Phiên bài riêng chưa khớp bản Docs.');
+          active=true;
+          $('login-screen').hidden=true;
+          $('lesson-hero').hidden=false;
+          $('identity-confirmed').hidden=true;
+          $('homework-content').hidden=false;
+          $('lesson-badge').textContent=`Bài riêng · Lesson ${lessonNumber}`;
+          $('memory-status').textContent='Bài đang được lưu theo bản Docs này và chưa gắn lớp. Hồ sơ lớp đã ghi nhớ trên thiết bị được giữ nguyên.';
+          $('memory-status').hidden=false;
+          await onOpened(Object.freeze({session:Object.freeze({...session}),assignment:originalAssignment,
+            studentRef:session.studentRef,studentName:profile.name,classCode:originalClass,documentId:session.documentId}));
+          return;
+        }
         if (originalAssignment.assignmentStatus === 'closed') {
           let option = [...classSelect.options].find(item => item.value === originalClass);
           if (!option) { option = new Option('', originalClass); classSelect.add(option); }
@@ -233,7 +257,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       if (useDocument(code)) body.documentId = originalDocumentId;
       const data = await requestJson(apiBase, '/session/start-selected', body);
       const session = data.session;
-      if (!session?.accessToken || session.studentRef !== studentRef || session.classCode !== code || !session.documentId
+      if (!session?.accessToken || session.studentRef !== studentRef || session.classCode !== code || (!session.documentId && !(allowWebReceipt && session.workUnitId))
         || (body.documentId && session.documentId !== body.documentId)) {
         throw new Error('Phiên trả về chưa khớp người, lớp hoặc file Homework. Hãy thử lại.');
       }

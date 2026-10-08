@@ -60,8 +60,8 @@ async function setup(lesson, options = {}) {
       Storage.prototype.removeItem = function () { throw new DOMException('Quota', 'QuotaExceededError'); };
     }
   }, { key, remembered: options.remembered, unavailable: options.unavailable, writeBlocked: options.writeBlocked, legacyDraft: options.legacyDraft });
-  await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework/**', async route => {
-    const path = new URL(route.request().url()).pathname.split('/api/speaking-homework')[1];
+  await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework*/**', async route => {
+    const path = new URL(route.request().url()).pathname.split(/\/api\/speaking-homework(?:-independent)?/)[1];
     const body = route.request().postDataJSON();
     requests.push({ path, body });
     let data;

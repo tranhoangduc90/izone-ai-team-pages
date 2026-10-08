@@ -2,6 +2,8 @@ import { createTeacherSessionClient } from '../shared/teacher-session-client.js'
 
 const config = window.TERM_TEST_APP_CONFIG || {};
 const receiptId = new URL(location.href).searchParams.get('receipt') || '';
+const receiptApi = new URL(location.href).searchParams.get('system') === 'independent'
+  ? '/api/speaking-homework-independent' : '/api/speaking-homework';
 const validReceipt = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(receiptId);
 const sessionClient = createTeacherSessionClient({ apiBaseUrl: config.API_BASE_URL,
   sessionPath: '/api/auth/session' });
@@ -34,7 +36,8 @@ function render(receipt) {
     const labels = { paraphrase: 'Luyện Paraphrase', speaking: 'Luyện Speaking',
       clarify_1: 'Làm rõ · Cấp 1', clarify_2: 'Làm rõ · Cấp 2',
       clarify_3: 'Làm rõ · Cấp 3', freestyle: 'Full câu Speaking · Freestyle',
-      insert_middle: 'Chèn điểm giữa trong Speaking' };
+      insert_middle: 'Chèn điểm giữa trong Speaking', benefit_harm: 'Lợi ích – Tác hại',
+      reason_action: 'Lý do làm một việc' };
     const heading = document.createElement('h3'); heading.textContent = labels[part] || part;
     const link = document.createElement('a'); link.textContent = 'Mở hội thoại ChatGPT Share';
     if (/^https:\/\/chatgpt\.com\/share\/[a-z0-9-]+$/i.test(details.url || '')) {
@@ -42,7 +45,9 @@ function render(receipt) {
     } else {
       link.textContent = 'Link hội thoại không hợp lệ';
     }
-    const count = document.createElement('p'); count.textContent = `Số câu/chu trình được ghi nhận: ${details.questionCount ?? '—'}`;
+    const count = document.createElement('p'); count.textContent = part === 'benefit_harm'
+      ? 'Đã nhận link; phần này không yêu cầu khối lượng luyện tập.'
+      : `Số câu/chu trình được ghi nhận: ${details.questionCount ?? '—'}`;
     section.append(heading, link, count);
     parts.append(section);
   }
@@ -64,11 +69,12 @@ function render(receipt) {
   }
   const processing = $('processing'); processing.replaceChildren();
   const labels = { write_doc: 'Ghi biên nhận vào Google Docs', grade_speaking: 'Chấm bài Speaking',
-    doctor_analyze: 'Cập nhật Bác sĩ AI' };
+    doctor_analyze: 'Cập nhật Bác sĩ AI', analyze_homework: 'Cập nhật Bác sĩ AI từ Homework',
+    analyze_practice: 'Cập nhật Bác sĩ AI từ bài bổ trợ' };
   for (const [kind, state] of Object.entries(receipt.processing || {})) {
     const li = document.createElement('li');
     li.textContent = `${labels[kind] || kind}: ${state.status === 'done' ? 'Hoàn tất'
-      : state.status === 'failed' ? 'Cần thử lại' : 'Đang xử lý'}`;
+      : state.status === 'review' ? 'Cần kiểm tra lại' : state.status === 'failed' ? 'Cần thử lại' : 'Đang xử lý'}`;
     processing.append(li);
   }
   $('login-panel').hidden = true;
@@ -79,7 +85,7 @@ function render(receipt) {
 async function load() {
   if (!validReceipt) { notice('Link xem bài không hợp lệ.'); return; }
   notice('Đang tải bài và kiểm quyền lớp…');
-  const response = await fetch(`${config.API_BASE_URL}/api/speaking-homework/teacher/receipts/${receiptId}`,
+  const response = await fetch(`${config.API_BASE_URL}${receiptApi}/teacher/receipts/${receiptId}`,
     { credentials: 'include', cache: 'no-store' });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.ok) {

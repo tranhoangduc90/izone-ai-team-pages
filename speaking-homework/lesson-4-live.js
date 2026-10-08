@@ -5,11 +5,15 @@ import { freestyleInstructions } from './assignment-instructions.js';
 import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
 import { lesson6Code, lesson6Parts } from './lesson-6-parts.js';
 
-const apiBase = 'https://ducizone.ddns.net/mapping-api/api/speaking-homework';
+const independent = document.body.dataset.speakingIntake === 'independent';
+const apiBase = independent
+  ? 'https://ducizone.ddns.net/mapping-api/api/speaking-homework-independent'
+  : 'https://ducizone.ddns.net/mapping-api/api/speaking-homework';
 const identityBase = 'https://ducizone.ddns.net/mapping-api';
 const query = new URLSearchParams(location.search);
 const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
+let workUnitId = '';
 let classCode = '';
 const lessonNumber = ['5', '6'].includes(document.body.dataset.speakingLesson)
   ? Number(document.body.dataset.speakingLesson) : 4;
@@ -61,7 +65,7 @@ async function post(path, body, timeout = 20_000) {
   }
 }
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
-function draftKey() { return `speaking-homework:lesson-${lessonNumber}:${documentId}:${state.studentRef}`; }
+function draftKey() { return `speaking-homework:lesson-${lessonNumber}:${independent ? workUnitId : documentId}:${state.studentRef}`; }
 function saveDraft() {
   if (!state.studentRef) return;
   const draft = Object.fromEntries(parts.map(part => [part.key, $(`${part.key}-link`).value]));
@@ -136,6 +140,7 @@ function renderMain() {
       showResult(resultId, 'blocked', 'Chưa nhận link',
         link.check_code === 'REUSED_CONVERSATION'
           ? 'Hội thoại này đã dùng cho bài khác trong khóa. Hãy tạo hội thoại mới.'
+          : link.check_code === 'CHECK_REVIEW_REQUIRED' ? 'Hệ thống chưa kiểm được hội thoại sau nhiều lần thử. Bài vẫn được giữ; hãy nhờ giảng viên kiểm tra.'
           : 'Hội thoại chưa đủ bước luyện hoặc chưa mở được. Hãy hoàn thành bài rồi chia sẻ lại.');
     } else if (state.localFeedback.has(resultId)) {
       const note = state.localFeedback.get(resultId);
@@ -299,6 +304,7 @@ async function refresh() {
   state.practice = new Map((data.practiceLinks || []).map(link => [Number(link.slot), link]));
   state.doctor = doctor;
   state.submitted = data.status === 'submitted' && Boolean(data.receipt?.id);
+  if (independent && state.submitted && !documentId) $('completion-message').textContent = `Biên nhận ${data.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
   render();
   if (!state.submitted && allAccepted()) await finish();
   poller.settled();
@@ -310,6 +316,7 @@ async function finish() {
     const response = await post('/finish', identity(), 30_000);
     if (!response.receipt?.id) throw new Error('Máy chủ chưa trả biên nhận.');
     state.submitted = true;
+    if (independent && !documentId) $('completion-message').textContent = `Biên nhận ${response.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
     render();
     $('completion-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
@@ -436,7 +443,7 @@ const poller = createPendingPoller({
 
 // Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
 const identityController = createSpeakingIdentity({
-  apiBase, identityBase, assignmentCode, lessonNumber, originalDocumentId, classHint,
+  apiBase, identityBase, assignmentCode, lessonNumber, originalDocumentId, classHint, allowWebReceipt: independent,
   validateAssignment: assignment => assignmentCode === expectedAssignmentCode
     && assignment.parts?.length === parts.length && parts.every((part,index) => assignment.parts[index]?.part_key === part.key)
     && (lessonNumber !== 5 || (Number(assignment.parts[0].min_questions) === 3 && Number(assignment.parts[1].min_questions) === 1))
@@ -451,9 +458,12 @@ const identityController = createSpeakingIdentity({
     $('freestyle-card').querySelector('.instruction-lead').textContent = instructions.lead;
     $('freestyle-card').querySelectorAll('.instructions li')[2].textContent = instructions.repeat;
     documentId = context.documentId;
+    workUnitId = context.session.workUnitId || '';
     classCode = context.classCode;
     restoreDraft();
-    $('return-homework').href = `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit?tab=t.0`;
+    $('return-homework').hidden = !documentId;
+    if (documentId) $('return-homework').href = `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit?tab=t.0`;
+    if (independent && !documentId) $('completion-message').textContent = 'Biên nhận đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.';
     try { await refresh(); }
     catch (error) {
       $('draft-status').textContent = `Đã mở phiên, nhưng chưa tải được tiến trình: ${error.message} Trang sẽ tự thử lại.`;
@@ -475,7 +485,7 @@ const identityController = createSpeakingIdentity({
     $('extra-link').value = '';
     state.pending.clear(); state.finishing = false;
     if ('extraPending' in state) state.extraPending = false;
-    documentId = ''; classCode = '';
+    documentId = ''; workUnitId = ''; classCode = '';
     $('draft-status').textContent = '';
   },
 });
