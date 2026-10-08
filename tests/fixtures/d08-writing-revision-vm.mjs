@@ -196,7 +196,7 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
   });
   test(title('bootstrap chính/dự phòng và answer sheet đều nạp app cache D08'), () => {
     // Ba client K56 giữ cơ chế D08 nhưng có bản giao diện mới; K67 giữ revision cũ.
-    const cacheRevision = sourcePath==='term-tests/k56-mini-shared/app.js' ? '20261008-mini-draft-recovery-v1'
+    const cacheRevision = sourcePath==='term-tests/k56-mini-shared/app.js' ? '20261008-mini-draft-recovery-v2'
       : /^term-tests\/k56-(?:test2-)?shared\/app\.js$/.test(sourcePath)
         ? '20261006-class-reset-v1' : '20261003-writing-save-cas-v1';
     const revisionOf = url => { const query = new URL(url, 'https://fixture.invalid').searchParams; return query.get('rev') || query.get('v'); };

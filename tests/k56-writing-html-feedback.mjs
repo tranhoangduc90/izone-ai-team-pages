@@ -47,7 +47,7 @@ for(const module of modules) {
 test('bump cache HTML ở cả ba bộ nạp và trang CBT',()=>{
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']){
     const b=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    const revision=slug==='mini-test-k56'?'20261008-mini-draft-recovery-v1':'20261006-class-reset-v1';
+    const revision=slug==='mini-test-k56'?'20261008-mini-draft-recovery-v2':'20261006-class-reset-v1';
     const loaders=b.split('\n').filter(line=>/app\.js\?(?:rev|v)=/.test(line));
     assert.equal(loaders.length,2);
     assert.ok(loaders.every(line=>line.includes(revision)));
