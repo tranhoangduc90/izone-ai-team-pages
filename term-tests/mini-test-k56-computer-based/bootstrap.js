@@ -31,7 +31,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?rev=20261008-mini-draft-recovery-v1'))
+      .then(() => loadScript('../k56-mini-shared/app.js?rev=20261008-mini-draft-recovery-v2'))
       .then(() => loadScript('enhance.js?rev=20261007-mini-paper-v1'))
       .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
       .catch(error => {
@@ -524,7 +524,9 @@
       });
       if(prepared.attemptMode!=='cbt'||prepared.policy?.timed!==true) throw new Error('Máy chủ chưa xác nhận lượt thi CBT. Bài chưa được mở.');
       const sameAttempt = !state.attemptToken || state.attemptToken === prepared.attemptToken;
-      const keepLocal = skill => sameAttempt && Number(state.draftRevisions?.[skill] || 0) > Number(prepared[skill + 'DraftRevision'] || 0);
+      const keepLocal = skill => sameAttempt && !prepared[skill + 'Submitted'] && !prepared.completed
+        && (Number(state.draftRevisions?.[skill] || 0) > Number(prepared[skill + 'DraftRevision'] || 0)
+          || Number(state.draftRevisions?.[skill] || 0) > Number(state.draftAckRevisions?.[skill] || 0));
       const draftPatch = {
         listening: keepLocal('listening') ? state.drafts.listening : prepared.listeningDraft || {},
         reading: keepLocal('reading') ? state.drafts.reading : prepared.readingDraft || {}
@@ -543,7 +545,10 @@
           ...draftPatch
         },
         draftRevisions: revisionPatch,
-        draftAckRevisions: { listening: prepared.listeningDraftRevision || 0, reading: prepared.readingDraftRevision || 0 }
+        draftAckRevisions: {
+          listening: keepLocal('listening') ? state.draftAckRevisions?.listening || 0 : prepared.listeningDraftRevision || 0,
+          reading: keepLocal('reading') ? state.draftAckRevisions?.reading || 0 : prepared.readingDraftRevision || 0
+        }
       });
       if (modeChanged) showNotice('Lượt đang làm giữ thứ tự đã chọn trước đó; link đã được cập nhật.');
       saveState({
@@ -613,7 +618,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?rev=20261008-mini-draft-recovery-v1');
+    await loadScript('../k56-mini-shared/app.js?rev=20261008-mini-draft-recovery-v2');
     await loadScript('enhance.js?rev=20261007-mini-paper-v1');
     await loadScript('annotations.js?rev=20261007-mini-paper-v1');
   }

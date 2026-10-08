@@ -390,9 +390,11 @@
         const cached=readSession();
         // Chỉ đọc nháp đúng chủ/lượt/thế hệ. Không dùng token hoặc giờ từ kho cũ.
         if(cached.studentRef===studentRef && cached.attemptToken===response.attemptToken && cached.generation===response.generation) {
-          for(const skill of ['listening','reading']) if(!response[skill+'Submitted']
-            && Number(cached.draftRevisions?.[skill])>Number(response[skill+'DraftRevision'])) {
+          for(const skill of ['listening','reading']) if(!response[skill+'Submitted'] && !response.completed
+            && (Number(cached.draftRevisions?.[skill])>Number(response[skill+'DraftRevision'])
+              || Number(cached.draftRevisions?.[skill])>Number(cached.draftAckRevisions?.[skill] || 0))) {
             state.drafts[skill]={...(cached.drafts?.[skill]||{})};state.draftRevisions[skill]=Number(cached.draftRevisions[skill]);
+            state.draftAckRevisions[skill]=Number(cached.draftAckRevisions?.[skill] || 0);
           }
         } else {
           let old={};try{old=JSON.parse(localStorage.getItem(legacyStorageKey)||'{}');}catch{}
@@ -426,7 +428,9 @@
     const sameAttempt = !state.attemptToken || state.attemptToken === response.attemptToken;
     const modeChanged = window.K56_EXAM_ORDER.apply(state, response);
     for (const skill of ['listening', 'reading']) {
-      if (!sameAttempt || Number(response[skill + 'DraftRevision'] || 0) >= Number(state.draftRevisions[skill] || 0)) {
+      const dirtyLocal = sameAttempt && !response[skill + 'Submitted'] && !response.completed
+        && Number(state.draftRevisions[skill] || 0) > Number(state.draftAckRevisions[skill] || 0);
+      if (!dirtyLocal && (!sameAttempt || Number(response[skill + 'DraftRevision'] || 0) >= Number(state.draftRevisions[skill] || 0))) {
         applySectionDraft(skill, response[skill + 'Draft'], response[skill + 'DraftRevision']);
       }
     }
@@ -677,6 +681,7 @@
   }
 
   const sectionDraftTimers = { listening: 0, reading: 0 };
+  const sectionDraftConflicts = { listening: false, reading: false };
   const sectionDraftRequests = { listening: null, reading: null };
   const sectionDraftFailures = { listening: 0, reading: 0 };
 
@@ -722,12 +727,18 @@
     const sameDraft = validDraft && Object.keys(answers).length === Object.keys(ackDraft).length
       && Object.keys(answers).every(key => ackDraft[key] === answers[key]);
     if (typeof response?.accepted !== 'boolean' || !Number.isSafeInteger(ackRevision)
-      || ackRevision < sentRevision || !validDraft
-      || (response.accepted && (ackRevision !== sentRevision || !sameDraft))) {
+      || ackRevision !== sentRevision || !validDraft || !sameDraft) {
+      if (response?.accepted === false && validDraft && Number.isSafeInteger(ackRevision) && ackRevision >= sentRevision) {
+        sectionDraftConflicts[skill] = true;
+        showNotice('Nháp trên máy khác bản đã lưu từ tab khác. Nháp trên máy vẫn được giữ và chưa đồng bộ; hãy kiểm lại các tab trước khi tiếp tục sửa bài.', 'error');
+      }
       throw new Error('Máy chủ chưa xác nhận đúng bản nháp. Bản trên máy vẫn được giữ để gửi lại.');
     }
     state.draftAckRevisions[skill] = Math.max(state.draftAckRevisions[skill], ackRevision);
-    if (response.accepted === false && state.draftRevisions[skill] <= Number(response.revision)) applySectionDraft(skill, response.draft, response.revision);
+    if (sectionDraftConflicts[skill]) {
+      sectionDraftConflicts[skill] = false;
+      showNotice('Máy chủ đã xác nhận đúng bản nháp vừa gửi.', 'success');
+    }
     if (response.deadlineAt) {
       if (skill === 'listening') state.listeningDeadlineAt = response.deadlineAt;
       else state.readingDeadlineAt = response.deadlineAt;
@@ -754,10 +765,11 @@
         failed = true; sectionDraftFailures[skill] = Math.min(sectionDraftFailures[skill] + 1, 5);
       } finally {
         if (sectionDraftRequests[skill] === request) sectionDraftRequests[skill] = null;
-        if (epoch === paperEpoch && studentRef === state.studentRef && attemptToken === state.attemptToken
-          && navigator.onLine !== false && sectionDraftPending(skill)) {
+        const sameOwner = epoch === paperEpoch && studentRef === state.studentRef && attemptToken === state.attemptToken;
+        if (!sameOwner) { sectionDraftFailures[skill] = 0; sectionDraftConflicts[skill] = false; }
+        if (!sectionDraftRequests[skill] && navigator.onLine !== false && sectionDraftPending(skill)) {
           // Một request/skill; lỗi lặp giãn tới 15 giây, giữ nguyên nháp trên máy.
-          scheduleSectionDraft(skill, failed ? Math.min(15000, 1000 * 2 ** (sectionDraftFailures[skill] - 1)) : 600);
+          scheduleSectionDraft(skill, failed && sameOwner ? Math.min(15000, 1000 * 2 ** (sectionDraftFailures[skill] - 1)) : 600);
         }
       }
     }, delay);

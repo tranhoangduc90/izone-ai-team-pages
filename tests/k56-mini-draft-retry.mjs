@@ -19,7 +19,7 @@ function fixture() {
     testConfig: { slug: 'mini-test-k56' }, elements: { listeningQuestions: node('listening'), readingQuestions: node('reading') },
     navigator: { get onLine() { return online; } },
     window: { clearTimeout(id) { timers.delete(id); }, setTimeout(fn, delay) { timers.set(++next, { fn, delay }); return next; } },
-    collectAnswers: node => ({ ...state.drafts[node.skill] }), saveSession() {}, updateAnswerCount() {},
+    collectAnswers: node => ({ ...state.drafts[node.skill] }), saveSession() {}, updateAnswerCount() {}, showNotice() {},
     async apiRequest(path, options) { const body = JSON.parse(options.body); requests.push({ path, body }); return transport(body); }
   });
   vm.runInContext(source.slice(start, end), context);
@@ -33,6 +33,39 @@ test('D02 Mini: lỗi mạng tự gửi lại mà không cần gõ thêm', async
   h.reply(async body => { if (++calls === 1) throw Error('offline'); return { accepted: true, revision: body.revision, draft: body.answers }; });
   h.run("scheduleSectionDraft('reading',0)"); await h.tick(); await h.tick();
   assert.equal(h.requests.length,2); assert.equal(h.state.draftAckRevisions.reading,3); assert.equal(h.timers.size,0);
+});
+
+test('D04 Mini: canonical khác nội dung không xóa nháp; replay cùng nội dung được ACK', async () => {
+  for (const skill of ['listening','reading']) {
+    for (const revision of [3,4]) {
+      const h=fixture(), before={...h.state.drafts[skill]};
+      h.reply(async()=>({accepted:false,revision,draft:{1:'SERVER-OTHER'}}));
+      h.run(`scheduleSectionDraft('${skill}',0)`);await h.tick();
+      assert.deepEqual(h.state.drafts[skill],before);
+      assert.equal(h.state.draftAckRevisions[skill],1);
+      assert.ok(h.timers.size>0,'Nháp chưa được xác nhận phải còn pending');
+    }
+    const h=fixture();
+    h.reply(async body=>({accepted:false,revision:body.revision,draft:body.answers}));
+    h.run(`scheduleSectionDraft('${skill}',0)`);await h.tick();
+    assert.equal(h.state.draftAckRevisions[skill],3);assert.equal(h.timers.size,0);
+  }
+});
+
+test('D02 Mini: request owner cũ kết thúc đánh thức autosave owner mới, không dùng ACK cũ', async () => {
+  for (const skill of ['listening','reading']) {
+    const h=fixture();let finish;
+    h.reply(body=>new Promise(r=>finish=()=>r({accepted:true,revision:body.revision,draft:body.answers})));
+    h.run(`scheduleSectionDraft('${skill}',0)`);await h.tick();
+    h.state.studentRef='fake-b';h.state.attemptToken='attempt-b';h.state.examSessionToken='session-b';
+    h.state.drafts[skill]={1:'OWNER-B'};h.state.draftRevisions[skill]=4;h.state.draftAckRevisions[skill]=0;
+    h.run('paperEpoch += 1');h.run(`scheduleSectionDraft('${skill}',0)`);await h.tick();
+    finish();for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));
+    assert.equal(h.state.draftAckRevisions[skill],0);assert.ok(h.timers.size>0,'Owner mới phải được gửi lại');
+    h.reply(async body=>({accepted:true,revision:body.revision,draft:body.answers}));await h.tick();
+    assert.equal(h.requests[1].body[skill==='listening'?'examSessionToken':'attemptToken'],skill==='listening'?'session-b':'attempt-b');assert.equal(h.requests[1].body.answers[1],'OWNER-B');
+    assert.equal(h.state.draftAckRevisions[skill],4);assert.equal(h.timers.size,0);
+  }
 });
 test('D02 Mini: chỉ gửi một request mỗi skill, ACK muộn không bỏ mất chỉnh sửa mới', async () => {
   const h = fixture(); let finish;
