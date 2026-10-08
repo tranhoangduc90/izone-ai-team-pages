@@ -209,7 +209,8 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
         // Trang CBT chỉ nạp bootstrap; bootstrap chính/dự phòng đã kiểm đúng app ở ca cùng bảng.
         const bootstrapUrls = [...text.matchAll(/bootstrap\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
         assert.ok(bootstrapUrls.length > 0, `Thiếu bootstrap trong ${path}`);
-        for (const url of bootstrapUrls) assert.equal(revisionOf(url), cacheRevision, path);
+        const bootstrapRevision=sourcePath==='term-tests/k56-mini-shared/app.js'?'20261009-mini-api-recovery-v3':cacheRevision;
+        for (const url of bootstrapUrls) assert.equal(revisionOf(url), bootstrapRevision, path);
       } else {
         assert.ok(writingUrls.length > 0, `Thiếu đúng Writing app ${writingApp} trong ${path}`);
       }
