@@ -99,7 +99,6 @@
               <p>Chọn họ tên rồi chờ thanh tải đạt 100%.</p>
               <strong class="cbt-audio-status cbt-lobby-download-status" id="bootstrapDownloadStatus" role="status">Đang tải danh sách lớp...</strong>
               <progress class="cbt-audio-progress" id="bootstrapDownloadProgress" max="1" value="0"></progress>
-              <button class="button button-secondary" id="bootstrapRetry" type="button" hidden>Thử tải lại</button>
             </div>
           </section>
           <section class="cbt-lobby-step" id="bootstrapPreviewStep" data-state="locked">
@@ -123,6 +122,7 @@
             </div>
           </section>
         </div>
+        <button class="button button-secondary" id="bootstrapRetry" type="button" hidden>Thử tải lại</button>
         <div class="notice" id="bootstrapNotice" role="status" hidden></div>
       </section>
     </main>
@@ -564,7 +564,10 @@
       await downloadForSession(prepared);
     } catch (error) {
       elements.bootstrapStudent.disabled = false;
-      if (!recoverFromServerReset(error)) showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, true);
+      if (!recoverFromServerReset(error)) {
+        elements.bootstrapRetry.hidden = false;
+        showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, true);
+      }
     } finally {
       preparing = false;
       elements.bootstrapStudent.disabled = Boolean(state.listeningStartedAt);
@@ -777,7 +780,7 @@
       preparing = false;
     }
   });
-  elements.bootstrapRetry.addEventListener('click', prepareSelectedStudent);
+  elements.bootstrapRetry.addEventListener('click', () => roster.length ? prepareSelectedStudent() : initialize());
   elements.bootstrapStudent.addEventListener('change', () => {
     if (preparing || ((state.listeningStartedAt || state.attemptToken) && (confirmedCurrentTab || elements.bootstrapStudent.value!==state.studentRef))) {
       elements.bootstrapStudent.value = state.studentRef || '';
@@ -818,6 +821,8 @@
         return;
       }
       const data = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
+      elements.bootstrapRetry.hidden = true;
+      elements.bootstrapNotice.hidden = true;
       roster = data.students || [];
       elements.bootstrapClass.textContent = `Lớp ${data.class.name}`;
       const options = [new Option('Nhấn để chọn', '')];
@@ -856,6 +861,7 @@
         elements.bootstrapDownloadStep.dataset.state = 'active';
       }
     } catch (error) {
+      elements.bootstrapRetry.hidden = false;
       showNotice(`Không thể mở phòng chờ: ${error.message}`, true);
     }
   }
