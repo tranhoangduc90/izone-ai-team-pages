@@ -5,7 +5,7 @@ import test from 'node:test';
 
 // Nhận source thật, chỉ thay DOM/storage/HTTP bằng dụng cụ quan sát không ghi ra ngoài.
 // Chạy nguyên initializer và helper Writing; lỗi hợp đồng hiện thành assertion có tên ca.
-function fixture(source, restored = {}) {
+export function fixture(source, restored = {}) {
   const initializerStart = source.indexOf('  const state = {');
   const initializerEnd = source.indexOf('  function readSession()', initializerStart);
   const saveStart = source.indexOf('  function saveSession()');
@@ -33,7 +33,11 @@ function fixture(source, restored = {}) {
     scheduleWritingSave(delay) { scheduled.push(delay); },
     async apiRequest(path, options) {
       const request = { path, body: JSON.parse(options.body) }; requests.push(request);
-      return transport(request, requests.length);
+      const response = await transport(request, requests.length);
+      // API Mini mới trả dàn ý riêng; fixture cũ chỉ khai báo hai Task được bổ sung field canonical.
+      if (source.includes("outline: String(value?.outline") && response?.writing
+        && !Object.hasOwn(response.writing, 'outline')) response.writing.outline = 'local outline';
+      return response;
     }
   });
   const initial = { studentRef: 'synthetic-student', attemptToken: '00000000-0000-4000-8000-000000000002',
@@ -62,7 +66,7 @@ function fixture(source, restored = {}) {
   };
 }
 function canonical(overrides = {}) {
-  return { revision: 6, task1: 'server task 1', task2: 'server task 2', started: true, submitted: false, ...overrides };
+  return { revision: 6, outline: 'local outline', task1: 'server task 1', task2: 'server task 2', started: true, submitted: false, ...overrides };
 }
 
 // Kỳ vọng lấy từ hợp đồng độc lập: server version khác local counter, chỉ ACK đúng hai Task.
@@ -192,7 +196,7 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
   });
   test(title('bootstrap chính/dự phòng và answer sheet đều nạp app cache D08'), () => {
     // Ba client K56 giữ cơ chế D08 nhưng có bản giao diện mới; K67 giữ revision cũ.
-    const cacheRevision = sourcePath==='term-tests/k56-mini-shared/app.js' ? '20261007-mini-paper-v2'
+    const cacheRevision = sourcePath==='term-tests/k56-mini-shared/app.js' ? '20261008-mini-draft-recovery-v1'
       : /^term-tests\/k56-(?:test2-)?shared\/app\.js$/.test(sourcePath)
         ? '20261006-class-reset-v1' : '20261003-writing-save-cas-v1';
     const revisionOf = url => { const query = new URL(url, 'https://fixture.invalid').searchParams; return query.get('rev') || query.get('v'); };

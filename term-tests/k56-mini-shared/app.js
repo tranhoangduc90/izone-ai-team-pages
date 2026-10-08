@@ -445,6 +445,8 @@
     }
     if (modeChanged || response.modeMismatch) showNotice('Lượt thi giữ thứ tự đã chọn trước đó. Link đã được cập nhật cho đúng lượt.', 'success');
     else hideNotice();
+    // Nháp local mới hơn bản máy chủ phải được gửi lại sau khi xác nhận đúng lượt CBT.
+    for (const skill of ['listening', 'reading']) scheduleSectionDraft(skill, 0);
   }
 
   function showSectionReady(skill) {
@@ -675,6 +677,15 @@
   }
 
   const sectionDraftTimers = { listening: 0, reading: 0 };
+  const sectionDraftRequests = { listening: null, reading: null };
+  const sectionDraftFailures = { listening: 0, reading: 0 };
+
+  function sectionDraftPending(skill) {
+    return !demoMode && !window.K56_DEMO_RESETTING && (!paperMini || paperConfirmed)
+      && !state.completed && !state[skill + 'Submitted'] && Boolean(state[skill + 'StartedAt'])
+      && Boolean(skill === 'listening' ? state.examSessionToken : state.attemptToken)
+      && state.draftRevisions[skill] > state.draftAckRevisions[skill];
+  }
 
   function applySectionDraft(skill, answers, revision) {
     state.drafts[skill] = { ...(answers || {}) };
@@ -696,12 +707,26 @@
       ? { examSessionToken: state.examSessionToken }
       : { attemptToken: state.attemptToken };
     if (!Object.values(token)[0]) return null;
+    const studentRef = state.studentRef, attemptToken = state.attemptToken, epoch = paperEpoch;
+    const sentRevision = Number(state.draftRevisions[skill]);
     const response = await apiRequest(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...token, answers, revision: state.draftRevisions[skill] })
+      body: JSON.stringify({ ...token, answers, revision: sentRevision })
     });
-    state.draftAckRevisions[skill] = Math.max(state.draftAckRevisions[skill], Number(response.revision) || 0);
+    if (studentRef !== state.studentRef || attemptToken !== state.attemptToken || epoch !== paperEpoch
+      || Object.values(token)[0] !== (skill === 'listening' ? state.examSessionToken : state.attemptToken)) return null;
+    const ackRevision = response?.revision, ackDraft = response?.draft;
+    const validDraft = ackDraft && typeof ackDraft === 'object' && !Array.isArray(ackDraft)
+      && Object.values(ackDraft).every(value => typeof value === 'string');
+    const sameDraft = validDraft && Object.keys(answers).length === Object.keys(ackDraft).length
+      && Object.keys(answers).every(key => ackDraft[key] === answers[key]);
+    if (typeof response?.accepted !== 'boolean' || !Number.isSafeInteger(ackRevision)
+      || ackRevision < sentRevision || !validDraft
+      || (response.accepted && (ackRevision !== sentRevision || !sameDraft))) {
+      throw new Error('Máy chủ chưa xác nhận đúng bản nháp. Bản trên máy vẫn được giữ để gửi lại.');
+    }
+    state.draftAckRevisions[skill] = Math.max(state.draftAckRevisions[skill], ackRevision);
     if (response.accepted === false && state.draftRevisions[skill] <= Number(response.revision)) applySectionDraft(skill, response.draft, response.revision);
     if (response.deadlineAt) {
       if (skill === 'listening') state.listeningDeadlineAt = response.deadlineAt;
@@ -713,14 +738,28 @@
   }
 
   function scheduleSectionDraft(skill, delay = 600) {
-    if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
-    const epoch=paperEpoch;
+    if (!sectionDraftPending(skill)) return;
+    const epoch = paperEpoch, studentRef = state.studentRef, attemptToken = state.attemptToken;
     window.clearTimeout(sectionDraftTimers[skill]);
-    sectionDraftTimers[skill] = window.setTimeout(() => {
-      if(paperMini&&(!paperConfirmed||epoch!==paperEpoch))return;
-      saveSectionDraft(skill).catch(() => {
-        // Bản trên máy vẫn còn; lần thay đổi hoặc nộp tiếp theo sẽ thử lại.
-      });
+    sectionDraftTimers[skill] = window.setTimeout(async () => {
+      sectionDraftTimers[skill] = 0;
+      if (!sectionDraftPending(skill) || epoch !== paperEpoch || studentRef !== state.studentRef
+        || attemptToken !== state.attemptToken || navigator.onLine === false || sectionDraftRequests[skill]) return;
+      const request = saveSectionDraft(skill);
+      sectionDraftRequests[skill] = request;
+      let failed = false;
+      try {
+        await request; sectionDraftFailures[skill] = 0;
+      } catch {
+        failed = true; sectionDraftFailures[skill] = Math.min(sectionDraftFailures[skill] + 1, 5);
+      } finally {
+        if (sectionDraftRequests[skill] === request) sectionDraftRequests[skill] = null;
+        if (epoch === paperEpoch && studentRef === state.studentRef && attemptToken === state.attemptToken
+          && navigator.onLine !== false && sectionDraftPending(skill)) {
+          // Một request/skill; lỗi lặp giãn tới 15 giây, giữ nguyên nháp trên máy.
+          scheduleSectionDraft(skill, failed ? Math.min(15000, 1000 * 2 ** (sectionDraftFailures[skill] - 1)) : 600);
+        }
+      }
     }, delay);
   }
 
@@ -837,12 +876,12 @@
 
   // Nhận snapshot hai Task; so nguyên văn để xác nhận đúng bài, không suy từ số HTTP.
   function writingSnapshot(value = state.drafts.writing) {
-    return { task1: String(value?.task1 || ''), task2: String(value?.task2 || '') };
+    return { outline: String(value?.outline || ''), task1: String(value?.task1 || ''), task2: String(value?.task2 || '') };
   }
 
   function sameWriting(left, right) {
     const a = writingSnapshot(left), b = writingSnapshot(right);
-    return a.task1 === b.task1 && a.task2 === b.task2;
+    return a.outline === b.outline && a.task1 === b.task1 && a.task2 === b.task2;
   }
 
   function validWritingRevision(value) {
@@ -872,7 +911,7 @@
       label.append(text); container.append(label);
     }
     if (draft?.outline) {
-      const label = document.createElement('label'); label.textContent = 'Dàn ý giữ trên máy';
+      const label = document.createElement('label'); label.textContent = 'Dàn ý';
       const text = document.createElement('textarea'); text.readOnly = true; text.value = String(draft.outline);
       text.setAttribute('aria-label', `${title} · Dàn ý`); label.append(text); container.append(label);
     }
@@ -938,7 +977,7 @@
     if (hasRevision && validWritingRevision(knownRevision) && writing.revision < knownRevision) return;
     // Bản cũ chưa có confirmed snapshot vẫn giữ bài local khác canonical để người học chọn rõ.
     if (!state.writingConfirmedDraft && !sameWriting(state.drafts.writing, writing)
-      && (state.drafts.writing.task1 || state.drafts.writing.task2)) state.writingDirty = true;
+      && (state.drafts.writing.outline || state.drafts.writing.task1 || state.drafts.writing.task2)) state.writingDirty = true;
     state.writingStarted = Boolean(writing.started || state.writingStarted);
     state.writingDeadlineAt = writing.deadlineAt || state.writingDeadlineAt;
     if (writing.serverNow) state.serverTimeOffsetMs = Date.parse(writing.serverNow) - Date.now();
@@ -954,7 +993,7 @@
     }
     const useServerDraft = forceDrafts || writing.submitted || !state.writingDirty;
     if (useServerDraft) {
-      // Backend xác nhận hai Task; dàn ý vẫn thuộc bản lưu local của client này.
+      // Backend xác nhận cả essay và dàn ý riêng trong cùng phiên bản lưu.
       state.drafts.writing = { ...state.drafts.writing, ...writingSnapshot(writing) };
       state.writingDirty = false;
       state.writingConflict = null;
@@ -1006,7 +1045,7 @@
       }
       const writing = response.writing;
       if (response.ok !== true || !writing || !validWritingRevision(writing.revision)
-        || typeof writing.accepted !== 'boolean') {
+        || typeof writing.accepted !== 'boolean' || typeof writing.outline !== 'string') {
         throw new Error('Chưa có xác nhận lưu bài hợp lệ. Bài vẫn được giữ trên máy.');
       }
       const knownRevision = state.writingConflict?.revision ?? state.writingServerRevision;
@@ -2720,6 +2759,9 @@
   }
 
   initialize();
+  window.addEventListener('online', () => {
+    for (const skill of ['listening', 'reading']) scheduleSectionDraft(skill, 0);
+  });
   // Khi đóng tab, gửi đúng base đã biết; không ACK local hay tự vượt xung đột khi chưa có phản hồi.
   window.addEventListener('pagehide', () => {
     saveSession();
