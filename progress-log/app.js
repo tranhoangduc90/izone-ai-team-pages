@@ -816,6 +816,60 @@ function buildQuestion(item) {
   return wrapper;
 }
 
+function buildCheckpointQuestions(items) {
+  const questions = [];
+  for (let index = 0; index < items.length; index += 1) {
+    const first = items[index];
+    const group = [first];
+    // Chỉ gộp các ô chọn cùng nhóm và nguyên văn câu hỏi/lựa chọn giống nhau.
+    // Mỗi ô vẫn dùng item riêng để giữ nháp, required và phản hồi chấm hiện hành.
+    if (first.layoutType === 'matching_heading_dropdown'
+      && first.interactionType === 'single_choice'
+      && first.graderType === 'unordered_group_slot' && first.groupId) {
+      while (index + group.length < items.length) {
+        const next = items[index + group.length];
+        if (next.groupId !== first.groupId || next.layoutType !== first.layoutType
+          || next.interactionType !== first.interactionType || next.graderType !== first.graderType
+          || next.prompt !== first.prompt || next.helpText !== first.helpText
+          || JSON.stringify(next.options) !== JSON.stringify(first.options)) break;
+        group.push(next);
+      }
+    }
+    if (group.length === 1) {
+      questions.push(buildQuestion(first));
+      continue;
+    }
+    const section = document.createElement('div');
+    section.className = 'answer-dropdown-group';
+    const heading = document.createElement('h3');
+    heading.id = `answer-group-${first.itemVersionId}`;
+    heading.textContent = first.prompt;
+    section.setAttribute('role', 'group');
+    section.setAttribute('aria-labelledby', heading.id);
+    section.append(heading);
+    if (first.helpText) {
+      const help = document.createElement('p');
+      help.className = 'help';
+      help.textContent = first.helpText;
+      section.append(help);
+    }
+    for (const item of group) {
+      const row = buildQuestion(item);
+      row.classList.add('answer-dropdown-row');
+      const content = row.querySelector('.question-content');
+      content.querySelector('h3').remove();
+      content.querySelector('.help')?.remove();
+      const number = row.querySelector('.question-number');
+      number.id = `answer-number-${item.itemVersionId}`;
+      row.querySelector('select').setAttribute('aria-labelledby', `${heading.id} ${number.id}`);
+      section.append(row);
+    }
+    questions.push(section);
+    index += group.length - 1;
+  }
+  return questions;
+}
+
 function blockIsComplete(block) {
   return block.items.every(item => {
     if (!itemIsRequired(item)) return true;
@@ -922,8 +976,8 @@ function renderCheckpoint() {
   elements.checkpointTitle.textContent = block.title;
   elements.checkpointInstructions.textContent = block.instructions || '';
   elements.checkpointInstructions.hidden = !block.instructions;
-  elements.questionList.replaceChildren(...block.items
-    .filter(item => item.layoutType !== 'inline_option_text').map(buildQuestion));
+  elements.questionList.replaceChildren(...buildCheckpointQuestions(block.items
+    .filter(item => item.layoutType !== 'inline_option_text')));
   refreshConditionalQuestions();
   window.requestAnimationFrame(() => {
     for (const control of elements.questionList.querySelectorAll('.sentence-blank')) resizeSentenceBlank(control);

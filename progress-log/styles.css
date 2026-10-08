@@ -114,6 +114,10 @@ select:focus, textarea:focus, input[type="text"]:focus { border-color: #dc7581; 
 .matching-heading-select { min-width: 0; }
 .answer-option-dropdown .question-content { grid-template-columns: minmax(0, 1fr); }
 .answer-option-dropdown .matching-heading-select { width: 100%; }
+.answer-dropdown-group { padding: 22px 31px; border-top: 1px solid #efede9; }
+.answer-dropdown-group > h3 { margin: 0 0 13px; font-size: 14px; font-weight: 400; line-height: 1.45; letter-spacing: -.015em; }
+.answer-dropdown-group .answer-dropdown-row { padding: 0; border: 0; margin-top: 8px; }
+.answer-dropdown-row .question-number { margin-top: 10px; }
 .question-content h3.sentence-text { line-height: 2.7; }
 .heading-choice-preview { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .heading-feedback { margin: 2px 0 0; font-size: 12px; font-weight: 750; }
@@ -217,6 +221,7 @@ select:focus, textarea:focus, input[type="text"]:focus { border-color: #dc7581; 
   .panel-heading { padding: 24px 18px 18px; }
   .panel-heading h1 { font-size: 25px; }
   .question { padding: 20px 18px; }
+  .answer-dropdown-group { padding: 20px 18px; }
   .form-actions { padding: 16px 18px 25px; }
   .form-actions .primary { min-width: 0; }
   #identityView #sessionLabel { font-size: 13px; }
