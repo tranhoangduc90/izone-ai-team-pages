@@ -39,8 +39,11 @@
     if(blocked||!meta||!b||b.version!==2||b.testSlug!==meta.testSlug||b.historyEpoch!==meta.historyEpoch)return false;
     if(expected&&['classCode','studentRef','clientRunId'].some(k=>String(b[k]||'')!==String(expected[k]||'')))return false;
     if(expected?.attemptToken&&b.attemptToken!==expected.attemptToken)return false;
-    if((b.examVersion||'')!==(expected?.examVersion||''))return false;
-    return ['classCode','studentRef','clientRunId','attemptToken'].every(k=>!value[k]||String(value[k])===String(b[k]||''));
+    if(b.examVersion&&(b.testSlug!=='substitute-test-2-k67'||b.examVersion!=='substitute-k67-test2-two-task-20261007-v1'))return false;
+    // Lobby reload validates the saved version before a specific run is rebound.
+    if(expected&&(b.examVersion||'')!==(expected.examVersion||''))return false;
+    if(expected?.writingSessionId&&b.writingSessionId!==expected.writingSessionId)return false;
+    return ['classCode','studentRef','clientRunId','attemptToken','examVersion','writingSessionId'].every(k=>!value[k]||String(value[k])===String(b[k]||''));
   }
   function stamp(value){
     if(blocked)throw new Error('Lượt làm bài đã được reset.');

@@ -14,3 +14,38 @@ test('Sub 2 K67: phiên đề là một phần định danh, không khôi phục
  assert.equal(api.accept(legacy),false);const current=api.stamp({});assert.equal(api.accept(current),true);
  assert.equal(api.payload({}).examVersion,'substitute-k67-test2-two-task-20261007-v1');
 });
+test('Sub 2 K67: reload lobby hai Task nhận đúng phiên đã lưu, không nhận phiên không hợp lệ',async()=>{
+ const {api,c}=await setup('substitute-test-2-k67');
+ const identity={classCode:'DEMO',studentRef:'fictional-A',clientRunId:run,examVersion:'substitute-k67-test2-two-task-20261007-v1',writingSessionId:epoch};
+ api.bind(identity);const saved=api.stamp({...identity,identityConfirmed:true});
+ c.storageKey='fixture-lobby';c.sessionStorage.setItem(c.storageKey,JSON.stringify(saved));
+ const src=fs.readFileSync(new URL('../term-tests/substitute-test-2-k67-computer-based/bootstrap.js',import.meta.url),'utf8');
+ vm.runInContext(src.slice(src.indexOf('  function readState()'),src.indexOf('  function readLegacyUiState()')),c);
+ const restored=vm.runInContext('readState()',c);
+ assert.equal(restored.examVersion,identity.examVersion);assert.equal(restored.writingSessionId,epoch);
+ assert.equal(api.accept({...saved,_substitute:{...saved._substitute,examVersion:'unknown'}},null),false);
+});
+test('Sub 2 K67: lưu nháp trong chế độ server giữ phiên đề/session và hai bài khi tải lại',async()=>{
+ const {api,c}=await setup('substitute-test-2-k67');
+ const identity={classCode:'DEMO',studentRef:'fictional-A',clientRunId:run,examVersion:'substitute-k67-test2-two-task-20261007-v1',writingSessionId:epoch};
+ api.bind(identity);c.window.TERM_TEST_BOOTSTRAP=identity;
+ Object.assign(c,{serverGradingMode:true,classCode:'DEMO',storageKey:'fixture-app',promptVersion:'fixture',demoMode:'exam',localSaveStatus:'',showLocalSaveWarning(){},setWritingSaveStatus(){},state:{studentRef:'fictional-A',drafts:{writing:{task1:'Chart draft',task2:'Essay draft'}},writingDeadlineAt:'2026-10-07T12:00:00Z'}});
+ const src=fs.readFileSync(new URL('../term-tests/substitute-k67-shared/app.js',import.meta.url),'utf8');
+ vm.runInContext(src.slice(src.indexOf('  function saveSession()'),src.indexOf('  const progressMarkup')),c);
+ vm.runInContext('saveSession()',c);const saved=JSON.parse(c.sessionStorage.getItem(c.storageKey));
+ assert.equal(api.accept(saved,identity),true);assert.equal(api.payload({}).writingSessionId,epoch);
+ assert.equal(saved._substitute.examVersion,identity.examVersion);
+ assert.deepEqual(saved.drafts.writing,{task1:'Chart draft',task2:'Essay draft'});
+ assert.equal(saved.writingDeadlineAt,'2026-10-07T12:00:00Z');
+});
+test('Sub 2 K67: lượt một Task cũ giữ session đã pin dù không có examVersion',async()=>{
+ const {api,c}=await setup('substitute-test-2-k67');
+ const identity={classCode:'DEMO',studentRef:'fictional-A',clientRunId:run,writingSessionId:epoch};
+ api.bind(identity);c.window.TERM_TEST_BOOTSTRAP=identity;
+ Object.assign(c,{serverGradingMode:true,classCode:'DEMO',storageKey:'fixture-legacy-app',promptVersion:'fixture',demoMode:'exam',localSaveStatus:'',showLocalSaveWarning(){},setWritingSaveStatus(){},state:{studentRef:'fictional-A',drafts:{writing:{task2:'Legacy essay'}}}});
+ const src=fs.readFileSync(new URL('../term-tests/substitute-k67-shared/app.js',import.meta.url),'utf8');
+ vm.runInContext(src.slice(src.indexOf('  function saveSession()'),src.indexOf('  const progressMarkup')),c);
+ vm.runInContext('saveSession()',c);const saved=JSON.parse(c.sessionStorage.getItem(c.storageKey));
+ assert.equal(api.accept(saved,identity),true);assert.equal(api.payload({}).writingSessionId,epoch);
+ assert.equal(saved._substitute.examVersion,undefined);assert.equal(saved.writingSessionId,epoch);
+});

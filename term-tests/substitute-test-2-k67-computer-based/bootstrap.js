@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261007-two-task-v1'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261007-two-task-v2'))
       .then(() => loadScript('enhance.js?v=20261007-fresh-v2'))
       .then(() => loadScript('annotations.js?v=20261007-fresh-v2'))
       .catch(error => {
@@ -583,7 +583,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261007-two-task-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261007-two-task-v2');
     await loadScript('enhance.js?v=20261007-fresh-v2');
     await loadScript('annotations.js?v=20261007-fresh-v2');
   }

@@ -35,6 +35,10 @@ function fixture(module) {
   return context;
 }
 const payload=ready=>({studentName:'Học viên giả',className:'DEMO',result:{listening:{details:[{number:1,studentAnswer:'x',correctAnswer:'x',result:'correct'}]},reading:{details:[{number:1,studentAnswer:'',correctAnswer:'y',result:'blank'}]}},writing:{grading:ready?{ready:true,writingScore:7,tasks:[]}:{ready:false,status:'processing'}}});
+test('Sub 2 K67 hai Task: thông báo kết quả gọi đúng cả hai Task và điểm tổng',()=>{
+ const c=fixture('substitute-k67-shared');c.twoTaskWriting=true;c.renderResult(payload(true));
+ assert.match(c.elements.resultStatus.textContent,/Task 1.*Task 2.*điểm tổng/);
+});
 for(const module of modules) {
   test(module+': cập nhật Writing không thay DOM hoặc đóng Listening/Reading',()=>{
     const c=fixture(module);c.renderResult(payload(false));

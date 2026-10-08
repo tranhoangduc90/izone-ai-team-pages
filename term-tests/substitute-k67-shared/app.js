@@ -149,9 +149,14 @@
 
   function saveSession() {
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
-    if(serverGradingMode)window.SUBSTITUTE_STATE.bind({...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP.clientRunId});
+    const pinnedWriting = serverGradingMode
+      ? {...(window.TERM_TEST_BOOTSTRAP.examVersion?{examVersion:window.TERM_TEST_BOOTSTRAP.examVersion}:{}),
+        ...(window.TERM_TEST_BOOTSTRAP.writingSessionId?{writingSessionId:window.TERM_TEST_BOOTSTRAP.writingSessionId}:{})}
+      : {};
+    if(serverGradingMode)window.SUBSTITUTE_STATE.bind({...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP.clientRunId,...pinnedWriting});
     const serialized = JSON.stringify({
       ...(serverGradingMode ? {_substitute:window.SUBSTITUTE_STATE.stamp({})._substitute,clientRunId:window.TERM_TEST_BOOTSTRAP.clientRunId,classCode}:{}),
+      ...pinnedWriting,
       studentRef: state.studentRef,
       studentName: state.studentName,
       clientSubmissionId: state.clientSubmissionId,
@@ -1933,7 +1938,9 @@
     );
     elements.resultStatus.textContent = hasReading
       ? payload.writing?.grading?.ready
-        ? 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.'
+        ? (twoTaskWriting
+          ? 'Listening và Reading được phân tích riêng; Writing Task 1, Task 2 và điểm tổng đã hoàn tất, có bài chấm chi tiết.'
+          : 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.')
         : payload.writing?.grading?.status === 'review_required'
           ? 'Listening và Reading đã chấm xong. Writing đã được nhận nhưng chưa có điểm từ workflow chấm K67.'
           : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
