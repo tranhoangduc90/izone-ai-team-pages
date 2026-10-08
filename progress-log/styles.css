@@ -112,6 +112,9 @@ select:focus, textarea:focus, input[type="text"]:focus { border-color: #dc7581; 
 .matching_heading_dropdown .heading-choice-preview,
 .matching_heading_dropdown .heading-feedback { grid-column: 1 / -1; }
 .matching-heading-select { min-width: 0; }
+.answer-option-dropdown .question-content { grid-template-columns: minmax(0, 1fr); }
+.answer-option-dropdown .matching-heading-select { width: 100%; }
+.question-content h3.sentence-text { line-height: 2.7; }
 .heading-choice-preview { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .heading-feedback { margin: 2px 0 0; font-size: 12px; font-weight: 750; }
 .heading-feedback.is-correct { color: #267756; }

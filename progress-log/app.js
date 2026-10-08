@@ -450,6 +450,34 @@ function buildSentenceCompletion(item) {
   return group;
 }
 
+// Nhận câu điền một từ: đặt ô ngay tại dấu chấm, giữ đáp án là chuỗi đơn để lưu/chấm như cũ.
+// Dùng cùng ô tự giãn của khóa 56; câu không có đúng một chỗ trống giữ cách nhập hiện hành.
+function buildSingleSentenceCompletion(item, label) {
+  if (item.interactionType !== 'short_text' || item.pedagogicalTypeCode !== 'sentence_completion') return false;
+  const parts = item.prompt.split(/\.{3,}|…+/u);
+  if (parts.length !== 2) return false;
+  const required = label.querySelector('.required');
+  const input = document.createElement('textarea');
+  input.className = 'sentence-blank';
+  input.rows = 1;
+  input.maxLength = 2_000;
+  input.required = itemIsRequired(item);
+  input.value = String(responseFor(item));
+  input.setAttribute('aria-label', item.prompt);
+  input.addEventListener('input', event => {
+    if (!event.isComposing) input.value = input.value.replace(/\s*[\r\n]+\s*/g, ' ');
+    resizeSentenceBlank(input);
+    recordResponse(item.itemVersionId, input.value);
+  });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.isComposing) event.preventDefault();
+  });
+  label.classList.add('sentence-text');
+  label.replaceChildren(document.createTextNode(parts[0]), input, document.createTextNode(parts[1]));
+  if (required) label.append(required);
+  return true;
+}
+
 function buildReasoningChain(item) {
   const config = item.interactionConfig || {};
   const chain = document.createElement('div');
@@ -650,6 +678,9 @@ function buildSpeakingIssueChecklist(item, questionLabel) {
 function buildQuestion(item) {
   const wrapper = document.createElement('div');
   wrapper.className = `question ${item.layoutType || 'plain_prompt'}`;
+  if (item.layoutType === 'matching_heading_dropdown' && item.graderType === 'unordered_group_slot') {
+    wrapper.classList.add('answer-option-dropdown');
+  }
   wrapper.dataset.itemVersionId = item.itemVersionId;
   wrapper.hidden = !itemIsVisible(item);
   const number = document.createElement('span');
@@ -675,6 +706,7 @@ function buildQuestion(item) {
     help.textContent = item.helpText;
     content.append(help);
   }
+  if (buildSingleSentenceCompletion(item, label)) return wrapper;
   if (item.interactionType === 'number_score') {
     const score = responseFor(item);
     const config = item.interactionConfig || {};
@@ -739,7 +771,7 @@ function buildQuestion(item) {
     select.setAttribute('aria-labelledby', label.id);
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = 'Chọn heading';
+    placeholder.textContent = item.graderType === 'unordered_group_slot' ? 'Chọn' : 'Chọn heading';
     select.append(placeholder);
     for (const option of item.options) {
       const choice = document.createElement('option');
