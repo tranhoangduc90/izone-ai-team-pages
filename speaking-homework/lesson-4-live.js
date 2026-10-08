@@ -3,6 +3,7 @@ import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
 import { freestyleInstructions } from './assignment-instructions.js';
 import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
+import { lesson6Code, lesson6Parts } from './lesson-6-parts.js';
 
 const apiBase = 'https://ducizone.ddns.net/mapping-api/api/speaking-homework';
 const identityBase = 'https://ducizone.ddns.net/mapping-api';
@@ -10,12 +11,14 @@ const query = new URLSearchParams(location.search);
 const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
 let classCode = '';
-const lessonNumber = document.body.dataset.speakingLesson === '5' ? 5 : 4;
-const expectedAssignmentCode = lessonNumber === 5 ? lesson5Code : '67-speaking-diem_giua';
+const lessonNumber = ['5', '6'].includes(document.body.dataset.speakingLesson)
+  ? Number(document.body.dataset.speakingLesson) : 4;
+const expectedAssignmentCode = lessonNumber === 6 ? lesson6Code
+  : lessonNumber === 5 ? lesson5Code : '67-speaking-diem_giua';
 const assignmentCode = query.get('assignmentCode') || expectedAssignmentCode;
 const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);
-const parts = lessonNumber === 5 ? lesson5Parts : [
+const parts = lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
   { key: 'insert_middle', title: 'Chèn điểm giữa trong Speaking',
     url: 'https://ducizone.short.gy/chen_diem_giua_speak',
     lead: 'Luyện đủ ba giai đoạn trong một hội thoại.',
@@ -125,7 +128,8 @@ function renderMain() {
     $(`${part.key}-confirm`).disabled = state.submitted || state.pending.has(part.key);
     if (link?.check_status === 'accepted' && !changed) {
       showResult(resultId, 'pass', 'Đã xác nhận hội thoại',
-        `Đã kiểm đủ ${link.question_count} giai đoạn/câu luyện.`);
+        part.linkOnly ? 'Đã nhận link. Phần này không yêu cầu số lượng luyện tập.'
+          : `Đã kiểm đủ ${link.question_count} giai đoạn/câu luyện.`);
     } else if (link?.check_status === 'pending' && !changed) {
       showResult(resultId, 'loading', 'Đang kiểm nội dung', 'Hệ thống đang đọc và phân tích hội thoại.');
     } else if (link?.check_status === 'rejected' && !changed) {
@@ -275,11 +279,13 @@ function render() {
   renderMain();
   renderDoctor();
   renderPractice();
-  const count = state.submitted ? 4
+  const total = parts.length + 2;
+  const count = state.submitted ? total
     : parts.filter(mainAccepted).length + [1, 2].filter(practiceAccepted).length;
-  $('progress-count').textContent = `Đã xác nhận ${count}/4 hội thoại`;
+  $('progress-count').textContent = `Đã xác nhận ${count}/${total} hội thoại`;
+  $('progress-bar').setAttribute('aria-valuemax', String(total));
   $('progress-bar').setAttribute('aria-valuenow', String(count));
-  $('progress-fill').style.width = `${count * 25}%`;
+  $('progress-fill').style.width = `${count / total * 100}%`;
   $('completion-card').hidden = !state.submitted;
 }
 async function refresh() {
@@ -351,7 +357,8 @@ for (const part of parts) {
     }
     state.localFeedback.delete(`${part.key}-result`);
     state.pending.add(part.key);
-    showResult(`${part.key}-result`, 'loading', 'Đang nhận link', 'Hệ thống đang đọc hội thoại.');
+    showResult(`${part.key}-result`, 'loading', 'Đang nhận link', part.linkOnly
+      ? 'Hệ thống đang lưu link; phần này không kiểm số lượng luyện tập.' : 'Hệ thống đang đọc hội thoại.');
     try {
       poller.expect();
       await post('/checks/request', { ...identity(), part: part.key, url: parsed.url });
@@ -431,8 +438,9 @@ const poller = createPendingPoller({
 const identityController = createSpeakingIdentity({
   apiBase, identityBase, assignmentCode, lessonNumber, originalDocumentId, classHint,
   validateAssignment: assignment => assignmentCode === expectedAssignmentCode
-    && assignment.parts?.length === 2 && parts.every((part,index) => assignment.parts[index]?.part_key === part.key)
+    && assignment.parts?.length === parts.length && parts.every((part,index) => assignment.parts[index]?.part_key === part.key)
     && (lessonNumber !== 5 || (Number(assignment.parts[0].min_questions) === 3 && Number(assignment.parts[1].min_questions) === 1))
+    && (lessonNumber !== 6 || assignment.parts.every((part, index) => Number(part.min_questions) === [0, 2, 1][index]))
     && Number(assignment.requiredPracticeCount) === 2 && assignment.doctorEnabled === true,
   async onOpened(context) {
     state.studentRef = context.studentRef;
