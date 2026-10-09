@@ -1,0 +1,335 @@
+{
+  "schema_version": "task1-web-manifest-v1",
+  "activity": {
+    "version": "task1-web-activity-v1",
+    "id": "d1c65cfc-dff7-5679-bfeb-cdba0af18d02",
+    "slug": "mobile-phone-market-share-1994-2004",
+    "title": "Luyện Task 1: Thị phần điện thoại, 1994–2004",
+    "type": "ielts_writing_task_1_preparation",
+    "locale": "vi-VN"
+  },
+  "task": {
+    "statement": "The line graph below illustrates the proportion of mobile phone sales by three manufacturers (Motorola, Nokia and Sony Ericsson) between 1994 and 2004. Summarise the information by selecting and reporting the main features and make comparisons where relevant.",
+    "chart_image": {
+      "kind": "reference",
+      "available": true,
+      "mime_type": "image/png",
+      "file_name": "task1-mobile-phone-market-share-1994-2004.png",
+      "url": "assets/task1-mobile-phone-market-share-1994-2004.png",
+      "alt_text": "Biểu đồ đường thị phần điện thoại Motorola, Nokia và Sony Ericsson theo từng năm 1994–2004; đơn vị phần trăm, số đọc từ trục là xấp xỉ."
+    }
+  },
+  "decoding": {
+    "what": "Thị phần doanh số điện thoại di động của ba nhà sản xuất",
+    "unit": "Phần trăm (%); chênh lệch dùng điểm phần trăm. Số trên đường là xấp xỉ vì không có nhãn số trực tiếp.",
+    "categories": [
+      "Ba hãng: Motorola, Nokia và Sony Ericsson",
+      "11 mốc năm từ 1994 đến 2004",
+      "Cùng thị trường không nêu quốc gia; hình không cho doanh số tuyệt đối"
+    ]
+  },
+  "analysis": {
+    "bullets": [
+      "Nokia có thị phần cuối kỳ cao hơn đầu kỳ, trong khi Motorola giảm rõ; Sony Ericsson thay đổi ròng nhỏ hơn nhưng có tăng và giảm ở các năm giữa.",
+      "Vị trí dẫn đầu trong ba hãng chuyển từ Motorola sang Nokia: Motorola cao hơn ở các mốc 1994–1997; Nokia cao hơn ở các mốc 1998–2004.",
+      "Sony Ericsson thấp nhất trong ba hãng ở tất cả 11 mốc năm; không gọi Nokia là chiếm đa số thị trường vì cả ba đường đều dưới 50%.",
+      "Nokia đạt đỉnh khoảng 37% năm 2002 rồi giảm về khoảng 30%; Motorola chạm đáy khoảng 14% năm 2000 rồi phục hồi có dao động.",
+      "Biểu đồ không ghi nhãn số trực tiếp. Khi viết chi tiết, dùng khoảng/xấp xỉ; phép trừ hai tỷ lệ cho điểm phần trăm, không phải mức tăng tương đối."
+    ]
+  },
+  "routes": [
+    {
+      "id": "A",
+      "name": "Nokia so với hai hãng còn lại",
+      "rank": 1,
+      "recommended": true,
+      "body": {
+        "body_1": "Nokia: khoảng 21% năm 1994 → dao động và xuống khoảng 19% năm 1997 → vượt Motorola giữa các mốc 1997–1998 → tăng đến khoảng 37% năm 2002 → giảm về khoảng 30% năm 2004. Kể quá trình giành vị trí dẫn đầu, không nói tăng suốt kỳ.",
+        "body_2": "Motorola: khoảng 32% → giảm đến khoảng 14% năm 2000 → phục hồi có dao động lên khoảng 18%; Sony Ericsson thấp hơn Motorola tại mọi mốc, khoảng 11% → đỉnh khoảng 15% năm 1998 → đáy khoảng 7% năm 2003 → khoảng 10%. So sánh hai mức giảm ròng khác nhau.",
+        "strengths": "Làm rõ sự tương phản tăng ròng/giảm ròng; dễ kiểm soát từng chuỗi.",
+        "tradeoffs": "Body 2 chứa hai hãng; cần gom theo vai trò và so sánh, không chép 22 điểm.",
+        "best_for": "Học viên muốn theo dõi từng hãng và giữ câu chuyện rõ."
+      }
+    },
+    {
+      "id": "B",
+      "name": "Hai hãng cạnh tranh dẫn đầu và hãng thấp nhất",
+      "rank": 2,
+      "recommended": false,
+      "body": {
+        "body_1": "Motorola và Nokia: xuất phát khoảng 32% so với 21%; đến 1997 khoảng 24% so với 19%, đến 1998 khoảng 21% so với 22%; sau đó Nokia đạt khoảng 37% năm 2002, Motorola xuống khoảng 14% năm 2000; cuối kỳ khoảng 30% so với 18%. Gom thành thu hẹp khoảng cách → đổi ngôi → Nokia giữ lợi thế.",
+        "body_2": "Sony Ericsson: luôn thấp nhất trong ba hãng; khoảng 11% đầu kỳ, giảm nhẹ rồi tăng đến khoảng 15% năm 1998, giảm đến khoảng 7% năm 2003 và trở lại khoảng 10% năm 2004. Liên hệ mức thấp và biên độ nhỏ hơn với hai hãng Body 1.",
+        "strengths": "Đặt hai đường đổi ngôi cạnh nhau; dành đoạn riêng cho đường có vị thế khác.",
+        "tradeoffs": "Body 1 nhiều điểm ngoặt; cần chọn mốc và cân đối độ dài.",
+        "best_for": "Học viên ưu tiên phép so sánh trực tiếp giữa hai hãng dẫn đầu."
+      }
+    },
+    {
+      "id": "C",
+      "name": "Trước và sau khi đổi vị trí dẫn đầu",
+      "rank": 3,
+      "recommended": false,
+      "body": {
+        "body_1": "Các mốc 1994–1998: Motorola giảm khoảng 32% xuống 21%; Nokia khoảng 21% → 23% → 19% → 22%; Sony Ericsson khoảng 11% → 10% → 15%. Làm rõ khoảng cách Motorola–Nokia thu hẹp rồi đổi bên, Sony Ericsson vẫn thấp hơn.",
+        "body_2": "Các mốc 1999–2004: Nokia khoảng 28% → đỉnh 37% năm 2002 → 30%; Motorola 19% → đáy 14% năm 2000 → 18%; Sony Ericsson 12% → đáy 7% năm 2003 → 10%. Nối tiếp trạng thái Nokia vừa vượt lên và giữ hạng đầu trong ba hãng.",
+        "strengths": "Cho thấy diễn biến chung quanh bước chuyển vị trí dẫn đầu.",
+        "tradeoffs": "Mỗi Body có ba đường; dễ thành kể từng năm nếu thiếu nhóm chặng.",
+        "best_for": "Học viên muốn theo trình tự giai đoạn và biết gom ba đường để đối chiếu."
+      }
+    }
+  ],
+  "vocabulary": {
+    "overview": {
+      "naming": [
+        {
+          "vi": "Thị phần doanh số điện thoại",
+          "en": "market share of mobile phone sales"
+        },
+        {
+          "vi": "Ba nhà sản xuất",
+          "en": "three mobile phone manufacturers"
+        },
+        {
+          "vi": "Trong giai đoạn 1994–2004",
+          "en": "over the period from 1994 to 2004"
+        },
+        {
+          "vi": "Tỷ trọng trong tổng doanh số thị trường",
+          "en": "a proportion of total market sales"
+        },
+        {
+          "vi": "Tỷ lệ của hãng",
+          "en": "the company’s share"
+        }
+      ],
+      "insights": [
+        {
+          "vi": "Tăng xét từ đầu đến cuối kỳ",
+          "en": "an overall increase"
+        },
+        {
+          "vi": "Giảm xét từ đầu đến cuối kỳ",
+          "en": "an overall decline"
+        },
+        {
+          "vi": "Trở thành hãng dẫn đầu trong ba hãng",
+          "en": "become the leading manufacturer among the three"
+        },
+        {
+          "vi": "Giữ thị phần thấp nhất",
+          "en": "remain the smallest of the three"
+        },
+        {
+          "vi": "Trong khi / trái lại",
+          "en": "while / whereas / by contrast"
+        },
+        {
+          "vi": "Biến động trong khoảng tương đối hẹp",
+          "en": "fluctuate within a relatively narrow range"
+        }
+      ]
+    },
+    "routes": [
+      {
+        "id": "A",
+        "name": "Nokia so với hai hãng còn lại",
+        "rank": 1,
+        "recommended": true,
+        "naming": [
+          {
+            "vi": "Thị phần của Nokia",
+            "en": "Nokia’s market share"
+          },
+          {
+            "vi": "Thị phần của Motorola",
+            "en": "Motorola’s share"
+          },
+          {
+            "vi": "Con số tương ứng của Sony Ericsson",
+            "en": "the corresponding figure for Sony Ericsson"
+          },
+          {
+            "vi": "Hai hãng còn lại",
+            "en": "the other two manufacturers"
+          }
+        ],
+        "story": [
+          {
+            "vi": "Ban đầu ở khoảng 21%",
+            "en": "initially at about 21%"
+          },
+          {
+            "vi": "Giảm xuống khoảng 19%",
+            "en": "dip to approximately 19%"
+          },
+          {
+            "vi": "Vượt Motorola",
+            "en": "overtake Motorola"
+          },
+          {
+            "vi": "Đạt đỉnh khoảng 37%",
+            "en": "peak at roughly 37%"
+          },
+          {
+            "vi": "Giảm trở lại khoảng 30%",
+            "en": "fall back to around 30%"
+          },
+          {
+            "vi": "Chạm đáy rồi phục hồi một phần",
+            "en": "reach a low before a partial recovery"
+          },
+          {
+            "vi": "Giảm khoảng 14 điểm phần trăm",
+            "en": "a fall of around 14 percentage points"
+          }
+        ]
+      },
+      {
+        "id": "B",
+        "name": "Hai hãng cạnh tranh dẫn đầu và hãng thấp nhất",
+        "rank": 2,
+        "recommended": false,
+        "naming": [
+          {
+            "vi": "Hai hãng có thị phần cao hơn",
+            "en": "the two manufacturers with larger shares"
+          },
+          {
+            "vi": "Khoảng cách thị phần",
+            "en": "the gap in market share"
+          },
+          {
+            "vi": "Hãng có thị phần thấp nhất",
+            "en": "the manufacturer with the smallest share"
+          },
+          {
+            "vi": "Thứ hạng trong ba hãng",
+            "en": "the ranking among the three manufacturers"
+          }
+        ],
+        "story": [
+          {
+            "vi": "Khoảng cách thu hẹp",
+            "en": "a narrowing gap"
+          },
+          {
+            "vi": "Nokia vượt lên vào mốc 1998",
+            "en": "Nokia ahead by 1998"
+          },
+          {
+            "vi": "Giữ lợi thế sau đó",
+            "en": "maintain its lead thereafter"
+          },
+          {
+            "vi": "Khoảng 32% so với 21%",
+            "en": "approximately 32%, compared with 21%"
+          },
+          {
+            "vi": "Ở mức thấp hơn cả hai hãng",
+            "en": "below both other manufacturers"
+          },
+          {
+            "vi": "Đỉnh rồi giảm và phục hồi cuối kỳ",
+            "en": "a peak, a decline and a final recovery"
+          }
+        ]
+      },
+      {
+        "id": "C",
+        "name": "Trước và sau khi đổi vị trí dẫn đầu",
+        "rank": 3,
+        "recommended": false,
+        "naming": [
+          {
+            "vi": "Trong giai đoạn đầu",
+            "en": "during the first part of the period"
+          },
+          {
+            "vi": "Từ năm 1999 trở đi",
+            "en": "from 1999 onwards"
+          },
+          {
+            "vi": "Đến năm 1998",
+            "en": "by 1998"
+          },
+          {
+            "vi": "Trong các năm còn lại",
+            "en": "over the remaining years"
+          },
+          {
+            "vi": "Vào cuối kỳ",
+            "en": "at the end of the period"
+          }
+        ],
+        "story": [
+          {
+            "vi": "Từ khoảng 32% xuống 21%",
+            "en": "from around 32% to approximately 21%"
+          },
+          {
+            "vi": "Thu hẹp khoảng cách rồi đổi vị trí",
+            "en": "a narrowing gap followed by a reversal in ranking"
+          },
+          {
+            "vi": "Tăng đến đỉnh năm 2002",
+            "en": "rise to a peak in 2002"
+          },
+          {
+            "vi": "Giảm về mức cuối kỳ",
+            "en": "fall to its final level"
+          },
+          {
+            "vi": "Phục hồi có dao động",
+            "en": "a fluctuating recovery"
+          },
+          {
+            "vi": "Hãng vẫn ở vị trí thấp nhất",
+            "en": "the consistently lowest-ranked manufacturer"
+          }
+        ]
+      }
+    ]
+  },
+  "chatbots": {
+    "data_walk": {
+      "label": "Chatbot 1: đọc đề và rà dữ liệu",
+      "href": null,
+      "status": "pending_link"
+    },
+    "insight_and_routes": {
+      "label": "Chatbot 2: tìm nhận xét lớn và chọn hướng thân bài",
+      "href": null,
+      "status": "pending_link"
+    }
+  },
+  "feedback": {
+    "overview": {
+      "enabled": true,
+      "section": "overview",
+      "prompt_version": "1"
+    },
+    "outline": {
+      "enabled": true,
+      "section": "outline",
+      "prompt_version": "1"
+    },
+    "draft": {
+      "enabled": true,
+      "section": "draft",
+      "prompt_version": "1"
+    }
+  },
+  "metadata": {
+    "factory_version": "task1-factory-v1",
+    "activity_version": "task1-web-activity-v1",
+    "source_contract": "reported-exam-talkfirst-2026-07-16",
+    "source_contract_version": "2026-10-09",
+    "prompt_versions": {
+      "chatbot_1": "1",
+      "chatbot_2": "1",
+      "overview": "1",
+      "outline": "1",
+      "draft": "1"
+    }
+  }
+}
