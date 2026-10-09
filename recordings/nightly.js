@@ -51,7 +51,7 @@ function nightlyRow(record) {
   const issues=[...(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x), typeof manualUploadUnavailable==='function'?manualUploadUnavailable(record):''].filter((x,i,all)=>x&&all.indexOf(x)===i).join(' · ');
   const currentIssue=QUEUE_MESSAGES[record.errorCode]||QUEUE_MESSAGES[record.queueState]||QUEUE_MESSAGES[record.stage]||record.errorCode||(record.status==='processing'?'Zoom đang xử lý, chưa có MP4 hoàn chỉnh. Chọn Kiểm tra lại tệp.':'Không ghi nhận lỗi kỹ thuật');
   const exception=record.kind==='session'?'<div class="subtext"><button class="action-button" data-action="exception" data-id="'+escapeHtml(record.id)+'">Xử lý ngoại lệ</button></div>':'';
-  return `<tr><td><strong>${escapeHtml(displayClassName(record))}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong>${record.kind==='session'?'<div class="subtext">Buổi học từ Portal · Chưa gắn recording</div>':''}<div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(currentIssue)}</div>${exception}</td><td>${dateTime(record.recordingStart)}</td><td>${recordingSourceCell(record)}</td><td>${videoEditCell(record)}</td><td>—</td><td class="approval-cell">${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
+  return `<tr><td><strong>${escapeHtml(displayClassName(record))}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong>${record.kind==='session'?'<div class="subtext">Buổi học từ Portal · Chưa gắn recording</div>':''}<div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(currentIssue)}</div>${exception}</td><td>${dateTime(record.recordingStart)}</td><td>${recordingSourceCell(record)}</td><td>${videoEditCell(record)}</td><td>—</td><td class="approval-cell">${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${typeof recordingReviewAttributes==='function'?recordingReviewAttributes(record):isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
 
 }
 document.getElementById('dateFilter').addEventListener('change',()=>{state.version++;loadData(true);});
@@ -126,13 +126,4 @@ document.getElementById('exceptionForm').addEventListener('submit',async(event)=
     replaceRecord({...record,nightly:true});dialog.close();toast('Đã lưu và đọc lại trạng thái ngoại lệ.');await loadData(true);
   }catch(error){toast(error.message.includes('VERSION_CONFLICT')?'Dữ liệu đã thay đổi. Hãy tải lại rồi thực hiện.':'Chưa lưu được. Khi đóng ngoại lệ, cần nhập lý do.','error');}
   finally{button.disabled=false;}
-});
-
-document.addEventListener('change',async(event)=>{
- const checkbox=event.target.closest('input[data-action="nightly-review"]');if(!checkbox)return;
- const row=state.records.find(r=>r.id===checkbox.dataset.id);checkbox.disabled=true;
- try {
-  const record=await postAction(window.RECORDING_NIGHTLY.actionUrl,{date:nightlyState.snapshot.date,id:row.id,expectedVersion:row.version,action:'acknowledge_review',approved:checkbox.checked});
-  replaceRecord({...row,...record,nightly:true,title:record.proposedTitle||row.title});toast(checkbox.checked?'Đã xác nhận kiểm tra. Lý do/lỗi được giữ nguyên.':'Đã chuyển về Cần duyệt.');
- }catch{checkbox.checked=!checkbox.checked;checkbox.disabled=false;toast('Chưa lưu được xác nhận. Hãy làm mới và thử lại.','error');}
 });
