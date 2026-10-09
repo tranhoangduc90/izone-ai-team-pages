@@ -20,6 +20,48 @@ const sessionClient = createTeacherSessionClient({
   sessionPath: '/api/auth/session'
 });
 let loginGeneration = 0;
+
+// Chỉ giữ ý định đăng xuất theo API, không giữ cookie hoặc dữ liệu giảng viên.
+const logoutApi = String(appConfig.API_BASE_URL || '');
+const logoutIntentKey = 'izone:teacher-k56:logout-pending:' + logoutApi;
+let logoutRequest = null;
+let sessionOperation = Promise.resolve();
+function hasLogoutIntent() {
+  if (logoutApi && new URL(window.location.href).searchParams.get('signed_out') === logoutApi) return true;
+  try { return window.localStorage.getItem(logoutIntentKey) === '1'; } catch { return false; }
+}
+function rememberLogoutIntent() {
+  try { window.localStorage.setItem(logoutIntentKey, '1'); } catch { /* URL giữ ý định khi storage bị chặn. */ }
+  const url = new URL(window.location.href); url.searchParams.set('signed_out', logoutApi);
+  window.history.replaceState({}, '', url);
+}
+function clearLogoutIntent() {
+  try { window.localStorage.removeItem(logoutIntentKey); }
+  catch { try { window.localStorage.setItem(logoutIntentKey, '0'); } catch { /* Storage chỉ đọc vẫn giữ ý định an toàn. */ } }
+  const url = new URL(window.location.href);
+  if (url.searchParams.get('signed_out') === logoutApi) url.searchParams.delete('signed_out');
+  window.history.replaceState({}, '', url);
+}
+function enqueueSessionOperation(operation) {
+  const pending = sessionOperation.then(operation);
+  sessionOperation = pending.catch(() => undefined);
+  return pending;
+}
+function requestLogout() {
+  // DELETE chờ POST đang chạy xong, tránh phản hồi login cũ đặt lại cookie sau logout.
+  if (!logoutRequest) logoutRequest = enqueueSessionOperation(() => sessionClient.logout())
+    .finally(() => { logoutRequest = null; });
+  return logoutRequest;
+}
+function requestLogin(credential, generation) {
+  return enqueueSessionOperation(async () => {
+    if (generation !== loginGeneration) throw { staleSession: true };
+    const result = await sessionClient.login(credential);
+    if (generation !== loginGeneration) throw { staleSession: true };
+    return result;
+  });
+}
+
 const initialParams = new URLSearchParams(window.location.search);
 const state = {
   authenticated: false,
@@ -930,6 +972,12 @@ function resetLoginAfterError() {
 }
 
 async function restoreLogin() {
+  if (hasLogoutIntent()) {
+    resetLoginAfterError();
+    try { await requestLogout(); clearLogoutIntent(); showNotice('Đã đăng xuất. Đăng nhập Google để xem kết quả lớp.'); }
+    catch { showNotice('Máy chủ chưa xác nhận đăng xuất. Dữ liệu vẫn được ẩn; hãy kết nối lại hoặc chủ động đăng nhập Google.', 'error'); }
+    return;
+  }
   showNotice('Đang khôi phục phiên đăng nhập...');
   try {
     const restored = await sessionClient.restore();
@@ -958,12 +1006,15 @@ function setupGoogleSignIn() {
       auto_select: false,
       callback: async response => {
         resetLoginAfterError();
+        const generation = loginGeneration;
         try {
-          await sessionClient.login(response.credential || '');
+          await requestLogin(response.credential || '', generation);
+          if (generation !== loginGeneration) return;
+          clearLogoutIntent();
           state.authenticated = true;
           await connectAfterGoogleLogin();
         } catch (error) {
-          if (error.staleSession) return;
+          if (error.staleSession || generation !== loginGeneration) return;
           resetLoginAfterError();
           showNotice(`Không thể đăng nhập: ${error.message}`, 'error');
         }
@@ -1020,10 +1071,18 @@ elements.refreshButton.addEventListener('click', async () => {
 });
 
 elements.logoutButton.addEventListener('click', async () => {
-  try { await sessionClient.logout(); } catch { /* Vẫn xóa trạng thái hiển thị trên máy dùng chung. */ }
-  resetLoginAfterError();
+  rememberLogoutIntent(); resetLoginAfterError();
+  const generation = loginGeneration;
   window.google?.accounts?.id?.disableAutoSelect?.();
-  showNotice('Đã đăng xuất. Đăng nhập Google để xem kết quả lớp.');
+  showNotice('Đang đăng xuất; dữ liệu trên máy đã được ẩn.');
+  try {
+    await requestLogout();
+    if (generation !== loginGeneration) return;
+    clearLogoutIntent(); showNotice('Đã đăng xuất. Đăng nhập Google để xem kết quả lớp.');
+  } catch {
+    if (generation !== loginGeneration) return;
+    showNotice('Máy chủ chưa xác nhận đăng xuất. Dữ liệu vẫn được ẩn; hãy kết nối lại hoặc chủ động đăng nhập Google.', 'error');
+  }
 });
 
 elements.teacherTabs.addEventListener('click', event => {
