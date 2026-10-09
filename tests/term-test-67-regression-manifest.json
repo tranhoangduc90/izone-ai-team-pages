@@ -6,6 +6,7 @@
       "tests/substitute-k67.test.mjs",
       "tests/teacher-login-preference.mjs",
       "tests/term-teacher-feedback-links.mjs",
+      "tests/term-writing-encoded-feedback-links.mjs",
       "tests/term-test-audio-recovery.mjs",
       "tests/term-test-k67-live-results.mjs",
       "tests/term-test-k67-writing-update.mjs",

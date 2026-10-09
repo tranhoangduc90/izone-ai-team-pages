@@ -1936,7 +1936,8 @@
       .replace(/\r/g, '')
       .replace(/^.*\]\(https:\/\/(?:docs|drive)\.google\.com\/[^)]+\).*$/gim, '')
       .replace(/https:\/\/(?:docs|drive)\.google\.com\/\S+/gi, '')
-      .replace(/^\s*\[\(?Xem phân tích chi tiết[^\n]*\]\(\s*\*?(?:\.\/)?#[a-z_]+\*?\s*\)\s*$/gim, '')
+      // Link do bộ chấm sinh có thể mã hóa # thành %23; nút mở chi tiết đã có riêng.
+      .replace(/\[\s*\(?\s*Xem phân tích chi tiết[^\]]*\]\(\s*\*?(?:\.\/)?(?:#|%23)[a-z0-9_-]+\*?\s*\)/gi, '')
       .replace(/^\s*\(?\s*Xem phân tích chi tiết[^\n]*\)?\s*$/gim, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
