@@ -36,6 +36,7 @@ const parts = lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Pa
       'Trả lời, đọc góp ý và phần sửa lỗi của ChatGPT.',
       'Nói lại toàn bộ câu trả lời sau góp ý. Làm tương tự với hai câu nữa.'] }
 ];
+const draftFields = new Set();
 const state = {
   studentRef: '', accessToken: '', assignment: null, links: new Map(),
   practice: new Map(), doctor: null, localFeedback: new Map(),
@@ -66,6 +67,14 @@ async function post(path, body, timeout = 20_000) {
 }
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
 function draftKey() { return `speaking-homework:lesson-${lessonNumber}:${independent ? workUnitId : documentId}:${state.studentRef}`; }
+// Chỉ nạp link máy chủ khi trường chưa có nháp; chuỗi rỗng là lựa chọn đã lưu.
+// Sau nộp, hiện lại link của biên nhận và khóa sửa như trước.
+function hydrateField(input, savedValue) {
+  if (state.submitted || !draftFields.has(input.id)) {
+    if (state.submitted || !input.value) input.value = savedValue || '';
+    draftFields.add(input.id);
+  }
+}
 function saveDraft() {
   if (!state.studentRef) return;
   const draft = Object.fromEntries(parts.map(part => [part.key, $(`${part.key}-link`).value]));
@@ -81,10 +90,22 @@ function saveDraft() {
 function restoreDraft() {
   try {
     const draft = JSON.parse(localStorage.getItem(draftKey()) || '{}');
-    for (const part of parts) if (typeof draft[part.key] === 'string') $(`${part.key}-link`).value = draft[part.key];
+    for (const part of parts) if (typeof draft[part.key] === 'string') {
+      const input = $(`${part.key}-link`);
+      input.value = draft[part.key];
+      draftFields.add(input.id);
+    }
     for (const slot of [1, 2]) {
-      if (typeof draft[`practice_${slot}_exercise`] === 'string') $(`practice-${slot}-exercise`).dataset.draft = draft[`practice_${slot}_exercise`];
-      if (typeof draft[`practice_${slot}_link`] === 'string') $(`practice-${slot}-link`).value = draft[`practice_${slot}_link`];
+      if (typeof draft[`practice_${slot}_exercise`] === 'string') {
+        const select = $(`practice-${slot}-exercise`);
+        select.dataset.draft = draft[`practice_${slot}_exercise`];
+        draftFields.add(select.id);
+      }
+      if (typeof draft[`practice_${slot}_link`] === 'string') {
+        const input = $(`practice-${slot}-link`);
+        input.value = draft[`practice_${slot}_link`];
+        draftFields.add(input.id);
+      }
     }
     if (typeof draft.extraExercise === 'string') $('extra-exercise').dataset.draft = draft.extraExercise;
     if (typeof draft.extraLink === 'string') $('extra-link').value = draft.extraLink;
@@ -109,7 +130,8 @@ function currentPractice(slot) { return state.practice.get(slot); }
 function practiceAccepted(slot) {
   const link = currentPractice(slot);
   return link?.status === 'accepted'
-    && $(`practice-${slot}-link`).value.trim() === link.share_url;
+    && $(`practice-${slot}-link`).value.trim() === link.share_url
+    && $(`practice-${slot}-exercise`).value === link.exercise_id;
 }
 function mainAccepted(part) {
   const link = state.links.get(part.key);
@@ -124,7 +146,7 @@ function renderMain() {
     const link = state.links.get(part.key);
     const input = $(`${part.key}-link`);
     const resultId = `${part.key}-result`;
-    if (!input.value && link?.share_url) input.value = link.share_url;
+    hydrateField(input, link?.share_url);
     const changed = link && input.value.trim() !== link.share_url;
     const local = state.localFeedback.get(resultId);
     if (local && input.value.trim() !== local.value) state.localFeedback.delete(resultId);
@@ -218,10 +240,12 @@ function renderDoctor() {
   }
   for (const slot of [1, 2]) {
     const row = currentPractice(slot);
-    if (row && !$(`practice-${slot}-exercise`).value
+    const select = $(`practice-${slot}-exercise`);
+    if (row && (state.submitted || !draftFields.has(select.id))
       && choices.some(item => item.exercise_id === row.exercise_id)) {
-      $(`practice-${slot}-exercise`).value = row.exercise_id;
+      select.value = row.exercise_id;
     }
+    draftFields.add(select.id);
   }
   updateExerciseLinks();
 }
@@ -231,8 +255,7 @@ function renderPractice() {
     const input = $(`practice-${slot}-link`);
     const select = $(`practice-${slot}-exercise`);
     const resultId = `practice-${slot}-result`;
-    if (!input.value && row?.share_url) input.value = row.share_url;
-    if (row?.exercise_id && !select.value) select.value = row.exercise_id;
+    hydrateField(input, row?.share_url);
     const changed = row && (input.value.trim() !== row.share_url
       || select.value !== row.exercise_id);
     input.disabled = state.submitted;
@@ -477,6 +500,7 @@ const identityController = createSpeakingIdentity({
     state.studentRef = ''; state.accessToken = '';
     state.links.clear(); state.practice.clear(); state.doctor = null; state.submitted = false;
     state.localFeedback.clear();
+    draftFields.clear();
     for (const part of parts) $(`${part.key}-link`).value = '';
     for (const slot of [1, 2]) {
       $(`practice-${slot}-link`).value = '';

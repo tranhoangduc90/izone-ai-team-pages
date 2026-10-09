@@ -15,6 +15,7 @@ const parts = [
   { key: 'paraphrase', title: 'Luyện tập Paraphrase', url: 'https://ducizone.short.gy/paraphrase_cau_hoi', lead: 'Luyện ít nhất 5 câu hỏi theo hướng dẫn của ChatGPT.', steps: ['Đăng nhập ChatGPT và mở bài luyện Paraphrase.', 'Làm theo các bước chatbot hướng dẫn với ít nhất 5 câu hỏi.', 'Tạo link Chia sẻ của chính hội thoại Paraphrase.'] },
   { key: 'speaking', title: 'Luyện full câu Speaking', url: 'https://ducizone.short.gy/freestyle', lead: 'Luyện đủ 3 câu Speaking trong một hội thoại.', steps: ['Yêu cầu ChatGPT hỏi một câu; nếu cần, hỏi thêm câu phụ hoặc xin gợi ý ý tưởng và từ vựng.', 'Trả lời và xem ChatGPT nhận xét, sửa lỗi, nâng cấp câu trả lời.', 'Nói lại câu trả lời hoàn chỉnh sau góp ý. Lặp lại với hai câu hỏi khác.', 'Tạo link Chia sẻ riêng của hội thoại Full Speaking.'] },
 ];
+const draftFields = new Set();
 const state = { studentRef: '', accessToken: '', assignment: null, links: new Map(), practice: [], doctor: null, expanded: false, extraPending: false, localFeedback: new Map(), pending: new Set(), submitted: false, finishing: false };
 
 // Dữ liệu vào: URL của đúng file Homework. Việc chính: gọi API thật và giữ lỗi HTTP có mã.
@@ -43,6 +44,14 @@ async function post(path, body, timeout = 20_000) {
 
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
 function draftKey() { return `speaking-homework:lesson-2:${classCode}:${documentId}:${state.studentRef}`; }
+// Chỉ nạp link máy chủ khi trường chưa có nháp; chuỗi rỗng là lựa chọn đã lưu.
+// Sau nộp, hiện lại link của biên nhận và khóa sửa như trước.
+function hydrateField(input, savedValue) {
+  if (state.submitted || !draftFields.has(input.id)) {
+    if (state.submitted || !input.value) input.value = savedValue || '';
+    draftFields.add(input.id);
+  }
+}
 function saveDraft() {
   if (!state.studentRef) return;
   try {
@@ -55,7 +64,11 @@ function restoreDraft() {
     const raw = localStorage.getItem(draftKey())
       || (!originalDocumentId && classCode === 'IC2304' ? localStorage.getItem(`speaking-homework:lesson-2:${state.studentRef}`) : null);
     const draft = JSON.parse(raw || '{}');
-    for (const part of parts) if (typeof draft[part.key] === 'string') $(`${part.key}-link`).value = draft[part.key];
+    for (const part of parts) if (typeof draft[part.key] === 'string') {
+      const input = $(`${part.key}-link`);
+      input.value = draft[part.key];
+      draftFields.add(input.id);
+    }
   } catch { $('draft-status').textContent = 'Không đọc được link đang gõ; các link đã xác nhận vẫn ở trên máy chủ.'; }
 }
 function setStatus(key, label, kind = '') {
@@ -92,7 +105,7 @@ function renderLinks() {
   for (const part of parts) {
     const link = state.links.get(part.key);
     const input = $(`${part.key}-link`);
-    if (!input.value && link?.share_url) input.value = link.share_url;
+    hydrateField(input, link?.share_url);
     const changed = link && input.value.trim() !== link.share_url;
     const localFeedback = state.localFeedback.get(part.key);
     if (localFeedback && input.value.trim() !== localFeedback.value) state.localFeedback.delete(part.key);
@@ -317,6 +330,7 @@ const identityController = createSpeakingIdentity({
     state.studentRef = ''; state.accessToken = ''; documentId = '';
     state.links.clear(); state.practice = []; state.doctor = null; state.expanded = false; state.submitted = false;
     state.localFeedback.clear();
+    draftFields.clear();
     $('completion-card').hidden = true;
     $('extra-practice').hidden = true;
     $('doctor-list').replaceChildren(); $('doctor-sync').textContent = 'Đang tải danh sách…';
