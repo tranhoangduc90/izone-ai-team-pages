@@ -151,7 +151,7 @@ function renderSections() {
 
 function populateAccounts() {
   const current = $('accountFilter').value;
-  const accounts = [...new Set([...state.records.map((record) => record.source), ...(nightlyState.snapshot?.accounts || []).map(item => item.account)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  const accounts = [...new Set([...(window.RECORDING_ACCOUNTS || []), ...state.records.map((record) => record.source), ...(nightlyState.snapshot?.accounts || []).map(item => item.account)].filter(Boolean))].sort((a, b) => Number(a.split(' ')[1])-Number(b.split(' ')[1]) || a.localeCompare(b, 'vi'));
   $('accountFilter').innerHTML = '<option value="">Tất cả</option>' + accounts.map((name) => `<option value="${escapeHtml(name)}" ${name === current ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
 }
 
