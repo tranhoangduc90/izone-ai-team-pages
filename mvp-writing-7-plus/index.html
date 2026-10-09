@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Demo hành trình học viên Writing Task 2 khóa 7+: học trên lớp, làm homework và xem điểm cùng nhận xét chi tiết.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Hành trình Writing Task 2 khóa 7+ | IZONE</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#screen-title">Đến màn hình minh họa</a>
+  <header class="site-header">
+    <a class="brand" href="#buoc=1" aria-label="IZONE, về đầu hành trình"><span class="brand-symbol">i</span><span>IZONE <small>Writing 7+</small></span></a>
+    <div class="header-right"><span class="demo-label">Demo trình bày</span><button id="restart" class="text-button" type="button">Xem từ đầu</button></div>
+  </header>
+  <div class="page-layout">
+    <aside class="journey-nav" aria-label="Các chặng học">
+      <p class="eyebrow">Hành trình học viên</p>
+      <h1>Từ nghĩ ý<br>đến bài viết</h1>
+      <p class="nav-description">Đúng nội dung.<br>Triển khai kịp khi thi.</p>
+      <nav id="chapters"></nav>
+      <div class="jump"><label for="step-select">Đến một bước cụ thể</label><select id="step-select"></select></div>
+      <p class="demo-note">Bài làm, lời thoại và điểm đều là minh họa. Demo không nộp bài hoặc gọi AI thật.</p>
+    </aside>
+    <main id="main-content">
+      <div class="step-heading"><div><p id="chapter-label" class="eyebrow"></p><h2 id="screen-title" tabindex="-1"></h2><p id="screen-intro" class="intro"></p></div><span id="step-count" class="step-count" aria-live="polite"></span></div>
+      <section class="student-screen" aria-label="Màn hình minh họa"><div class="screen-bar"><span class="screen-dot"></span><span id="screen-context"></span><span class="example-tag">Minh họa</span></div><div id="screen-body"></div></section>
+      <section class="explanation" aria-label="Vai trò ở bước này"><div><h3>Học viên làm gì</h3><p id="student-note"></p></div><div><h3>Giảng viên can thiệp</h3><p id="teacher-note"></p></div><div><h3>AI hỗ trợ</h3><p id="ai-note"></p></div></section>
+      <p id="outcome" class="outcome"></p>
+    </main>
+  </div>
+  <footer class="navigation"><div class="navigation-inner"><button id="previous" class="button secondary" type="button">← Previous <span>Bước trước</span></button><div class="navigation-progress"><label id="progress-label" for="progress">Tiến độ xem demo</label><progress id="progress" max="1" value="0"></progress></div><button id="next" class="button primary" type="button">Next → <span>Bước tiếp</span></button></div></footer>
+  <noscript><p class="no-script">Hãy bật JavaScript để dùng Next/Previous và xem các màn hình minh họa.</p></noscript>
+</body>
+</html>
