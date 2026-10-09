@@ -1,0 +1,26 @@
+/* Chỉ nạp trong Substitute, không thay stylesheet của sản phẩm khác. */
+@font-face{font-family:'Source Sans Pro';src:url('../../recordings/assets/fonts/SourceSansPro-Regular.ttf') format('truetype');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:'Source Sans Pro';src:url('../../recordings/assets/fonts/SourceSansPro-Bold.ttf') format('truetype');font-style:normal;font-weight:600 900;font-display:swap}
+:root{--navy:#174266;--blue:#db0829;--primary:#db0829;--accent:#db0829;--ink:#174266;--line:#d7e1e9;--brand-navy:#174266;--brand-red:#db0829}
+html,body,body *,button,input,select,textarea{font-family:'Source Sans Pro',sans-serif!important;font-synthesis:none}
+body{color:#174266;font-weight:400;line-height:1.6;--cbt-navy:#174266;--cbt-blue:#db0829}
+h1,h2,h3,h4,h5,h6,strong,b,button,summary,label{font-weight:700}
+.hub-header,.results-header,.dashboard-header,.page-header,.exam-header,.writing-header,.writing-topbar{background:#174266!important;color:white}
+.cbt-mode .topbar,.cbt-passage-header,.writing-exam-header,.writing-feedback-header,.cbt-lobby-header,.cbt-section-instructions,.cbt-note-heading{background:#174266!important;color:white}
+.cbt-part-button.is-active,.cbt-question-button.is-active,.writing-task-tab.is-active,.cbt-lobby-step[data-state="active"]{background:#db0829!important;color:white!important}
+.button-primary,.primary-button,.btn-primary,.step.active,.step-tab.active,.test-number,.question-badge{background:#db0829!important;color:white!important;box-shadow:none}
+.button-secondary,.open-student{color:#174266;background:#eef3f7}
+.button,button,select,input{min-height:44px}
+.test-meta,.test-actions,.test-title-line,.auth-actions,.form-actions{gap:12px}
+.test-meta span,.badge,.pill{padding:6px 10px;line-height:1.5}
+label{line-height:1.5}label select,label input{margin-top:6px}
+.filter-bar,.extra-filters{gap:16px}
+.results-table th,.results-table td{padding:16px;line-height:1.5}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible,textarea:focus-visible{outline:3px solid #db0829;outline-offset:3px}
+.feedback-rich{font-size:16px;line-height:1.75;overflow-wrap:anywhere;margin-block:16px}
+.feedback-rich h3,.feedback-rich h4{color:#174266;margin:24px 0 12px;line-height:1.4}
+.feedback-rich p{margin:12px 0}.feedback-rich li{margin:8px 0}.feedback-rich table{border-collapse:collapse;max-width:100%;display:block;overflow-x:auto}
+.feedback-rich td,.feedback-rich th{border:1px solid #d7e1e9;padding:10px}.feedback-rich blockquote{margin:16px 0;padding-left:16px;border-left:3px solid #db0829}
+.extra-filters{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));padding:20px;border-bottom:1px solid #d7e1e9}
+.extra-filters label{display:flex;flex-direction:column;gap:6px}.filter-actions{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+@media(max-width:700px){.extra-filters{grid-template-columns:1fr;padding:16px}.section-title{flex-wrap:wrap;gap:16px}.criterion-grid{grid-template-columns:1fr}.test-title-line,.test-actions{flex-wrap:wrap}.feedback-rich{font-size:16px}}
