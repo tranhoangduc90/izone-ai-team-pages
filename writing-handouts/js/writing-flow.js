@@ -105,12 +105,14 @@ function currentFilters(extra = {}) { return { classCode: $('flow-class').value,
   taskType: $('flow-task-type').value, search: $('flow-search').value.trim(), searchScope: $('flow-search-scope').value,
   stageStatus: activeStage() ? $('flow-stage-status').value : '', sourceKind: activeSourceKind(),
   dateFrom: $('flow-date-from').value, dateTo: $('flow-date-to').value,
+  // Bài đã xử lý và lớp được mở riêng vẫn giữ lịch sử khi lớp hoàn thành.
+  includeCompleted: ['delivered', 'skipped'].includes(baseView()) || Boolean($('flow-class').value),
   sort: serializeSortRules(state.sortRules), limit: 50, ...extra }; }
 function pairViewFilters() { const view = baseView(); if (stages.includes(view)) return { stageKey: view };
   if (view === 'review') return { view: 'review' };
   if (view === 'skipped') return { view: 'skipped' };
   if (view === 'delivered') return { view: 'delivered' };
-  return view === 'classes' ? {} : { view: 'unfinished' }; }
+  return ['classes', 'completed_classes'].includes(view) ? {} : { view: 'unfinished' }; }
 
 function renderColumnChoices() {
   const root = $('flow-field-choices'); root.replaceChildren(makeText('legend', 'Cột hiển thị'));
@@ -162,7 +164,7 @@ function renderSortControls() {
 }
 
 function renderHeading() { const meta = viewMeta[state.activeView]; const view = baseView(); $('flow-view-kicker').textContent = meta[0]; $('flow-view-title').textContent = meta[1]; $('flow-view-help').textContent = view === 'source' ? 'Cần xem xét: chưa có cảnh báo được đọc lại. Đã cảnh báo: cảnh báo đã hiện trong Google Docs; có thể đọc lại nguồn sau khi file được sửa.' : meta[2]; const badge = $('flow-view-status'); badge.textContent = view === 'source' ? (state.sourceWarningGroup === 'warned' ? 'Đã cảnh báo' : 'Cần xem xét') : meta[3]; badge.dataset.tone = ['review', 'source', 'logs'].includes(view) ? 'danger' : ['delivered', 'completed_classes'].includes(view) ? 'success' : ''; const breakdown = $('flow-stage-breakdown'); breakdown.replaceChildren(); breakdown.hidden = !stages.includes(view); if (!breakdown.hidden) { const rows = (state.counts?.stages || []).filter(row => row.stage_key === view && !row.skipped); const totals = new Map(rows.map(row => [row.stage_status, Number(row.pair_count || 0)])); for (const key of ['pending', 'running', 'needs_review', 'succeeded']) breakdown.append(makeText('span', `${statusNames[key]}: ${totals.get(key) || 0}`)); } for (const button of document.querySelectorAll('#flow-views [data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === state.activeView)); }
-function setViewVisibility() { const view = baseView(); const map = { overview: ['flow-overview-section'], daily: ['flow-daily-section'], classes: ['flow-classes-section', 'flow-pairs-section'], completed_classes: ['flow-classes-section'], mapping: ['flow-mapping-section'], review: ['flow-pairs-section'], source: ['flow-pairs-section'], logs: ['flow-technical-section'], audit: ['flow-audit-section'], legacy: ['flow-pairs-section'] }; const visible = [...(map[view] || ['flow-pairs-section'])]; if (state.activeView === 'test_overview') visible.push('flow-pairs-section'); for (const id of ['flow-overview-section', 'flow-daily-section', 'flow-classes-section', 'flow-reviews-section', 'flow-source-section', 'flow-technical-section', 'flow-audit-section', 'flow-mapping-section', 'flow-pairs-section', 'flow-legacy-section']) $(id).hidden = !visible.includes(id); $('flow-source-groups').hidden = view !== 'source'; if (view === 'classes' && !$('flow-class').value) $('flow-pairs-section').hidden = true; $('flow-stage-status-filter').hidden = !stages.includes(view); renderHeading(); }
+function setViewVisibility() { const view = baseView(); const map = { overview: ['flow-overview-section'], daily: ['flow-daily-section'], classes: ['flow-classes-section', 'flow-pairs-section'], completed_classes: ['flow-classes-section', 'flow-pairs-section'], mapping: ['flow-mapping-section'], review: ['flow-pairs-section'], source: ['flow-pairs-section'], logs: ['flow-technical-section'], audit: ['flow-audit-section'], legacy: ['flow-pairs-section'] }; const visible = [...(map[view] || ['flow-pairs-section'])]; if (state.activeView === 'test_overview') visible.push('flow-pairs-section'); for (const id of ['flow-overview-section', 'flow-daily-section', 'flow-classes-section', 'flow-reviews-section', 'flow-source-section', 'flow-technical-section', 'flow-audit-section', 'flow-mapping-section', 'flow-pairs-section', 'flow-legacy-section']) $(id).hidden = !visible.includes(id); $('flow-source-groups').hidden = view !== 'source'; if (['classes', 'completed_classes'].includes(view) && !$('flow-class').value) $('flow-pairs-section').hidden = true; $('flow-stage-status-filter').hidden = !stages.includes(view); renderHeading(); }
 
 function renderCounts() {
   const values = { overview: 0, classes: state.activeClasses.length, completed_classes: state.completedClasses.length,
@@ -241,6 +243,7 @@ function classCard(item, completed = false) {
     actions.append(show, scan, pin);
     card.append(actions);
   }
+  if (completed && classCode) card.append(actionButton('Xem bài lớp', () => chooseClass(classCode)));
   return card;
 }
 function orderedClasses(rows) { const rank = code => { const pinned = state.pinnedClasses.indexOf(code); if (pinned >= 0) return pinned; const recent = state.recentClasses.indexOf(code); return recent >= 0 ? 100 + recent : 1000; }; return [...rows].sort((a, b) => rank(a.class_code) - rank(b.class_code) || String(a.class_code).localeCompare(String(b.class_code), 'vi')); }
@@ -645,7 +648,7 @@ async function loadView() {
   if (view === 'mapping') { const response = await state.api.writingClassCoverage(); state.coverage = response.data.classes || []; return; }
   if (view === 'daily') { const response = await state.api.writingDailyStats(filters); state.daily = response.data.days || []; return; }
   if (view === 'classes') { if ($('flow-class').value) { const [stats] = await Promise.all([state.api.writingDailyStats(filters), loadPairs(true)]); state.daily = stats.data.days || []; } else { state.pairs = []; state.daily = []; state.nextCursor = null; state.nextOffset = null; } return; }
-  if (view === 'completed_classes') return;
+  if (view === 'completed_classes') { if ($('flow-class').value) await loadPairs(true); else state.pairs = []; return; }
   if (view === 'review') { await loadPairs(true); return; }
   if (view === 'source') {
     await loadSourceIssues(true); return;
