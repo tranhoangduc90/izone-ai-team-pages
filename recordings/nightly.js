@@ -13,6 +13,7 @@ const NIGHTLY_LABELS = {
   processing:'Zoom đang xử lý', empty_file:'File rỗng', no_video:'Chưa có video', invalid_recording_time:'Thiếu thời gian ghi',
   missing_session_time:'Thiếu giờ học', not_observed_in_latest_scan:'Chưa quan sát lại được file',
 };
+const QUEUE_MESSAGES={queued:'Đang chờ hàng đợi truyền file',waiting:'Đang chờ hàng đợi truyền file',running:'Đang truyền file',blocked_disk:'Thiếu dung lượng VPS; giữ tác vụ chờ kiểm tra',blocked_quota:'Đã hết quota YouTube; cần kiểm tra trước khi thử lại',LOCAL_SPACE_INSUFFICIENT:'Thiếu dung lượng VPS; giữ tác vụ chờ kiểm tra',LOCAL_SPACE_UNKNOWN:'Chưa xác minh dung lượng trống VPS',YOUTUBE_QUOTA_EXCEEDED:'Đã hết quota YouTube',WORKER_EXECUTION_FAILED:'Tác vụ truyền file bị lỗi; cần kiểm tra',UPLOAD_OUTCOME_UNKNOWN:'Chưa xác định kết quả upload; không gửi lại để tránh đăng trùng'};
 const nightlyState = {snapshot:null, generation:0};
 function mergeNightlyRecords(existing, snapshot) {
   const hiddenIds=new Set((snapshot?.records||[]).filter(row=>row.kind==='recording'&&!shouldShowRecordingRow(row)).map(row=>row.id));
@@ -48,7 +49,7 @@ async function loadNightly() {
 function nightlyRow(record) {
   const label=record.excluded?'Đã loại khỏi luồng đăng':NIGHTLY_LABELS[record.exceptionStatus || record.status] || 'Recording cần xác nhận';
   const issues=[...(record.reasons||[]).map(x=>NIGHTLY_LABELS[x]||x), typeof manualUploadUnavailable==='function'?manualUploadUnavailable(record):''].filter((x,i,all)=>x&&all.indexOf(x)===i).join(' · ');
-  const currentIssue=record.errorCode||(record.status==='processing'?'Zoom đang xử lý, chưa có MP4 hoàn chỉnh. Chọn Kiểm tra lại tệp.':'Không ghi nhận lỗi kỹ thuật');
+  const currentIssue=QUEUE_MESSAGES[record.errorCode]||QUEUE_MESSAGES[record.queueState]||QUEUE_MESSAGES[record.stage]||record.errorCode||(record.status==='processing'?'Zoom đang xử lý, chưa có MP4 hoàn chỉnh. Chọn Kiểm tra lại tệp.':'Không ghi nhận lỗi kỹ thuật');
   const exception=record.kind==='session'?'<div class="subtext"><button class="action-button" data-action="exception" data-id="'+escapeHtml(record.id)+'">Xử lý ngoại lệ</button></div>':'';
   return `<tr><td><strong>${escapeHtml(displayClassName(record))}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong>${record.kind==='session'?'<div class="subtext">Buổi học từ Portal · Chưa gắn recording</div>':''}<div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(currentIssue)}</div>${exception}</td><td>${dateTime(record.recordingStart)}</td><td>${recordingSourceCell(record)}</td><td>${videoEditCell(record)}</td><td>—</td><td class="approval-cell">${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
 

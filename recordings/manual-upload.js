@@ -43,6 +43,7 @@ function manualUploadUnavailable(record) {
   if (source.fileSize > 640 * 1024 * 1024) return `Dung lượng ${(source.fileSize/1024/1024).toFixed(1)} MiB vượt giới hạn 640 MiB`;
   const terminalError = Boolean(record.errorCode) || ['needs_attention','hold'].includes(record.stage);
   if (terminalError) manualUploadPending.delete(source.id);
+  if(record.stage==='queued'||record.queueState==='waiting')return 'Đang chờ hàng đợi truyền file';
   const activeStage=['download','downloading','upload','uploading','processing','queued','postprocess_handoff'].includes(record.stage);
   if (activeStage || (!terminalError && (manualUploadPending.has(source.id) || ['uploading','processing'].includes(record.youtubeStatus) || record.downloadStatus==='downloading' || (source.manualDecision?.manualUpload && source.autoPublish)))) return 'Đã gửi yêu cầu đăng — đang xử lý';
   return '';

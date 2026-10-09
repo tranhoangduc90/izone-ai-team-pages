@@ -8,8 +8,14 @@ const rulesPath = path.join(__dirname, '../recordings/recording-row-rules.js');
 const source = fs.existsSync(rulesPath) ? fs.readFileSync(rulesPath, 'utf8') : '';
 const nightly = fs.readFileSync(path.join(__dirname, '../recordings/nightly.js'), 'utf8');
 const app = fs.readFileSync(path.join(__dirname, '../recordings/app.js'), 'utf8');
-const context = vm.createContext({});
+const context = vm.createContext({window:{}});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../recordings/recording-accounts.js'),'utf8'),context);
 vm.runInContext(source, context);
+test('Cả 27 nick có thể kiểm tra tệp processing; nick ngoài danh mục bị chặn',()=>{
+ assert.equal(context.window.RECORDING_ACCOUNTS.length,27);
+ for(const source of context.window.RECORDING_ACCOUNTS)assert.equal(context.canRefreshRecordingFile({kind:'recording',source,account:source,status:'processing',meetingUuid:'fixture'}),true);
+ assert.equal(context.canRefreshRecordingFile({kind:'recording',source:'Zoom 99',account:'Zoom 99',status:'processing',meetingUuid:'fixture'}),false);
+});
 vm.runInContext(nightly.slice(0, nightly.indexOf('async function loadNightly')), context);
 vm.runInContext('function escapeHtml(v){return String(v)}; function manualUploadCell(){return "UPLOAD"}', context);
 vm.runInContext(app.slice(app.indexOf('function videoEditCell'), app.indexOf('function recordRow')), context);
