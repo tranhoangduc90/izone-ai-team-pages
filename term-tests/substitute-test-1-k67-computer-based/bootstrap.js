@@ -57,7 +57,7 @@
   let previewHeard = false;
   let preparing = false;
   let downloadController = null;
-  const localDemoClasses = Object.freeze([
+  const localDemoClasses = Object.freeze(window.SUBSTITUTE_STATE.meta.classes || [
     {
       code: 'DEMO',
       name: 'DEMO · Chỉ kiểm tra, không gửi Portal'
