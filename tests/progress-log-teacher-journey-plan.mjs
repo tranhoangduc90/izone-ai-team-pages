@@ -42,6 +42,7 @@ test('giảng viên xác nhận số buổi và Test của lớp qua dashboard',
     totalSessions: null, testSessionNumbers: [], revision: 0
   };
   const context = {
+    crypto:globalThis.crypto,
     AbortController, setTimeout, clearTimeout,
     sessionHeading,elements, state, window: { confirm: () => true },
     document: { createElement: tag => ({
