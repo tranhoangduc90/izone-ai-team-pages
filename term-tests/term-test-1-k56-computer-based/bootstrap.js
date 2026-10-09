@@ -33,7 +33,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-shared/app.js?rev=20261006-class-reset-v1'))
+      .then(() => loadScript('../k56-shared/app.js?rev=20261009-term-outline-v1'))
       .then(() => loadScript('enhance.js?v=20260912-load-guard-v1-20261001-writing-ui-v1'))
       .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
       .catch(error => {
@@ -686,7 +686,7 @@
     });
     previewAudio.remove();
     revokePreview();
-        await loadScript('../k56-shared/app.js?rev=20261006-class-reset-v1');
+        await loadScript('../k56-shared/app.js?rev=20261009-term-outline-v1');
     await loadScript('enhance.js?v=20260912-load-guard-v1-20261001-writing-ui-v1');
     await loadScript('annotations.js?rev=20261005-k56-writing-results-v1');
   }

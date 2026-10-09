@@ -10,7 +10,8 @@ export function fixture(source, restored = {}) {
   const initializerEnd = source.indexOf('  function readSession()', initializerStart);
   const saveStart = source.indexOf('  function saveSession()');
   const saveEnd = source.indexOf('  // Nhận deadline Listening', saveStart);
-  const bodyStart = source.indexOf('  function writingSnapshot(');
+  const outlineStart=source.indexOf('  function serverWritingOutlineSupported(');
+  const bodyStart = outlineStart >= 0 ? outlineStart : source.indexOf('  function writingSnapshot(');
   const bodyEnd = source.indexOf('  function scheduleWritingSave(', bodyStart);
   for (const [start, end] of [[initializerStart, initializerEnd], [saveStart, saveEnd], [bodyStart, bodyEnd]]) {
     assert.ok(start >= 0 && end > start, 'Không lấy được block Writing thật; không chạy fixture thay thế.');
@@ -198,7 +199,7 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
     // Ba client K56 giữ cơ chế D08 nhưng có bản giao diện mới; K67 giữ revision cũ.
     const cacheRevision = sourcePath==='term-tests/k56-mini-shared/app.js' ? '20261008-mini-draft-recovery-v2'
       : /^term-tests\/k56-(?:test2-)?shared\/app\.js$/.test(sourcePath)
-        ? '20261006-class-reset-v1' : '20261003-writing-save-cas-v1';
+        ? '20261009-term-outline-v1' : '20261003-writing-save-cas-v1';
     const revisionOf = url => { const query = new URL(url, 'https://fixture.invalid').searchParams; return query.get('rev') || query.get('v'); };
     for (const path of cachePaths) {
       const text = fs.readFileSync(path, 'utf8');

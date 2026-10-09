@@ -31,5 +31,5 @@ test('bài chấm K56 có bài viết nguyên gốc, 4 band tiêu chí và nhậ
 test('dashboard K56 giữ CSS Writing và tải JavaScript phiên mới',()=>{
   const html=fs.readFileSync('term-tests/teacher-k56/index.html','utf8');
   assert.equal((html.match(/20260914-writing-bands-v1/g)||[]).length,1);
-  assert.equal((html.match(/20260929-mini-homework-25m/g)||[]).length,1);
+  assert.equal((html.match(/20261009-term1-feedback-v1/g)||[]).length,1);
 });

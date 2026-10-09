@@ -347,6 +347,8 @@ function cleanWritingFeedback(value) {
     .replace(/\r/g, '')
     .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
     .replace(/https:\/\/(?:docs|drive)\.google\.com\/\S+/gi, '')
+    // Bỏ liên kết điều hướng thừa do bộ chấm sinh; nút chi tiết đã có riêng.
+    .replace(/\[\s*\(?\s*Xem phân tích chi tiết[^\]]*\]\(\s*\*?(?:\.\/)?(?:#|%23)[a-z0-9_-]+\*?\s*\)/gi, '')
     .replace(/^\s*\(?\s*Xem phân tích chi tiết[^\n]*\)?\s*$/gim, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();

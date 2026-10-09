@@ -952,13 +952,18 @@
   }
 
   // Nhận snapshot hai Task; so nguyên văn để xác nhận đúng bài, không suy từ số HTTP.
+  function serverWritingOutlineSupported() {
+    return typeof testConfig !== 'undefined' && ['term-test-1-k56','term-test-2-k56'].includes(testConfig.slug);
+  }
+
   function writingSnapshot(value = state.drafts.writing) {
-    return { task1: String(value?.task1 || ''), task2: String(value?.task2 || '') };
+    return { task1: String(value?.task1 || ''), task2: String(value?.task2 || ''),
+      ...(serverWritingOutlineSupported() ? { outline: String(value?.outline || '') } : {}) };
   }
 
   function sameWriting(left, right) {
     const a = writingSnapshot(left), b = writingSnapshot(right);
-    return a.task1 === b.task1 && a.task2 === b.task2;
+    return a.task1 === b.task1 && a.task2 === b.task2 && (!serverWritingOutlineSupported() || a.outline === b.outline);
   }
 
   function validWritingRevision(value) {
@@ -1054,7 +1059,8 @@
     if (hasRevision && validWritingRevision(knownRevision) && writing.revision < knownRevision) return;
     // Bản cũ chưa có confirmed snapshot vẫn giữ bài local khác canonical để người học chọn rõ.
     if (!state.writingConfirmedDraft && !sameWriting(state.drafts.writing, writing)
-      && (state.drafts.writing.task1 || state.drafts.writing.task2)) state.writingDirty = true;
+      && (state.drafts.writing.task1 || state.drafts.writing.task2
+        || (serverWritingOutlineSupported() && state.drafts.writing.outline))) state.writingDirty = true;
     state.writingStarted = Boolean(writing.started || state.writingStarted);
     state.writingDeadlineAt = writing.deadlineAt || state.writingDeadlineAt;
     if (writing.serverNow) state.serverTimeOffsetMs = Date.parse(writing.serverNow) - Date.now();
@@ -1070,7 +1076,7 @@
     }
     const useServerDraft = forceDrafts || writing.submitted || !state.writingDirty;
     if (useServerDraft) {
-      // Backend xác nhận hai Task; dàn ý vẫn thuộc bản lưu local của client này.
+      // Term 1/2 khôi phục dàn ý cùng revision; bài khác giữ hành vi hiện có.
       state.drafts.writing = { ...state.drafts.writing, ...writingSnapshot(writing) };
       state.writingDirty = false;
       state.writingConflict = null;
@@ -1122,7 +1128,8 @@
       }
       const writing = response.writing;
       if (response.ok !== true || !writing || !validWritingRevision(writing.revision)
-        || typeof writing.accepted !== 'boolean') {
+        || typeof writing.accepted !== 'boolean'
+        || (serverWritingOutlineSupported() && typeof writing.outline !== 'string')) {
         throw new Error('Chưa có xác nhận lưu bài hợp lệ. Bài vẫn được giữ trên máy.');
       }
       const knownRevision = state.writingConflict?.revision ?? state.writingServerRevision;
@@ -1485,6 +1492,8 @@
       .replace(/\r/g, '')
       .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
       .replace(/https:\/\/(?:docs|drive)\.google\.com\/\S+/gi, '')
+      // Bỏ liên kết điều hướng thừa do bộ chấm sinh; nút chi tiết đã có riêng.
+      .replace(/\[\s*\(?\s*Xem phân tích chi tiết[^\]]*\]\(\s*\*?(?:\.\/)?(?:#|%23)[a-z0-9_-]+\*?\s*\)/gi, '')
       .replace(/^\s*\(?\s*Xem phân tích chi tiết[^\n]*\)?\s*$/gim, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();

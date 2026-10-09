@@ -34,5 +34,5 @@ test('chưa nộp ẩn và xóa phần kết quả Writing',()=>{
  const {target}=fixture(null,false);assert.equal(target.hidden,true);assert.equal(target.children.length,0);
 });
 test('bộ nạp và Answer Sheet dùng cache mới cho thẻ Task 1',()=>{
- for(const file of ['term-tests/term-test-2-k56-computer-based/bootstrap.js','term-tests/term-test-2-k56-computer-based/index.html','term-tests/term-test-2-k56/index.html'])assert.match(fs.readFileSync(file,'utf8'),/20261006-class-reset-v1/);
+ for(const file of ['term-tests/term-test-2-k56-computer-based/bootstrap.js','term-tests/term-test-2-k56-computer-based/index.html','term-tests/term-test-2-k56/index.html'])assert.match(fs.readFileSync(file,'utf8'),/20261009-term-outline-v1/);
 });
