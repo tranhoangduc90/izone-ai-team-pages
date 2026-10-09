@@ -42,9 +42,10 @@ try{
    assert.ok((await page.locator('#student-rows').innerText()).includes('7.5/9'));assert.equal(await page.locator('#student-rows img').count(),0);
    await page.locator('.open-student').first().click();await page.locator('.criterion-card').first().waitFor();assert.equal(await page.locator('.criterion-card').count(),4);
    await page.locator('.feedback-rich h3').getByText('Báo cáo giả',{exact:true}).waitFor({timeout:3000});assert.equal(await page.locator('.feedback-rich strong').getByText('Kết luận giả',{exact:true}).count(),1);assert.equal(await page.locator('.feedback-rich li').getByText('Mục giả',{exact:true}).count(),1);assert.equal(await page.locator('.feedback-rich iframe,.feedback-rich script,.feedback-rich img,.feedback-rich pre').count(),0);assert.equal(await page.locator('body').getAttribute('data-exploited'),null);assert.ok(!(await page.locator('#attempt-content').innerText()).includes('```'));assert.ok(!(await page.locator('#attempt-content').innerText()).includes('## '));
+   await page.locator('.criterion-card summary').first().click();await page.screenshot({path:path.join(out,slug+'-feedback-'+width+'.png'),fullPage:true});
    await page.locator('#toggle-filters').click();assert.equal(await page.locator('#extra-filters').isVisible(),true);await page.locator('#name-filter').fill('Học viên giả');await page.locator('#writing-filter').selectOption('ready');await page.locator('#portal-filter').selectOption('not_applicable');await page.locator('#from-filter').fill('2026-10-07');await page.locator('#to-filter').fill('2026-10-09');
    const filtered=page.waitForRequest(r=>r.url().includes('/teacher/results')&&new URL(r.url()).searchParams.get('from')==='2026-10-07');await page.locator('#apply-filters').click();const filterUrl=new URL((await filtered).url());assert.equal(filterUrl.searchParams.get('name'),'Học viên giả');assert.equal(filterUrl.searchParams.get('to'),'2026-10-09');assert.equal(filterUrl.searchParams.get('writing'),'ready');await page.locator('#reset-filters').click();
-   await page.evaluate(()=>document.fonts.ready);assert.match(await page.locator('body').evaluate(e=>getComputedStyle(e).fontFamily),/Source Sans Pro/);assert.equal(await page.locator('#load-results').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(219, 8, 41)');
+   await page.evaluate(()=>document.fonts.ready);assert.match(await page.locator('body').evaluate(e=>getComputedStyle(e).fontFamily),/Source Sans Pro/);assert.equal(await page.evaluate(()=>document.fonts.check('16px "Source Sans Pro"')&&document.fonts.check('700 16px "Source Sans Pro"')),true);assert.equal(await page.locator('#load-results').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(219, 8, 41)');
    const stored=await page.evaluate(()=>({local:Object.keys(localStorage),session:Object.keys(sessionStorage)}));assert.deepEqual(stored,{local:[],session:[]});
    await page.screenshot({path:path.join(out,slug+'-'+width+'.png'),fullPage:true});results.push({slug,width,login:true,realAttemptShape:true,fourCriteria:true,reportSandboxed:true});
   }
@@ -76,7 +77,8 @@ try{
   allClassFixture=false;await page.locator('#logout').click();
   await page.getByRole('button',{name:'Đăng nhập bằng Google'}).click();await page.locator('#student-rows .open-student').first().waitFor();expired=true;
   await page.locator('#load-results').click();await page.waitForFunction(()=>document.querySelector('#login-status').textContent.includes('Chỉ giáo viên'));
-  assert.equal(await page.locator('#roster-section').isVisible(),false);assert.deepEqual(unauthorized,[]);assert.deepEqual(errors,[]);assert.deepEqual(googleReferrers,[...slugs.map(()=>base+'/'),base+'/',base+'/',...slugs.map(()=>base+'/')]);
+  const origin=new URL(base).origin+'/';
+  assert.equal(await page.locator('#roster-section').isVisible(),false);assert.deepEqual(unauthorized,[]);assert.deepEqual(errors,[]);assert.deepEqual(googleReferrers,[...slugs.map(()=>origin),origin,origin,...slugs.map(()=>origin)]);
   await context.close();
  }
  console.log(JSON.stringify({ok:true,results,screenshots:out,aiCalls:0,portalWrites:0}));
