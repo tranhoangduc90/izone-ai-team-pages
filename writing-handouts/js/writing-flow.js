@@ -199,7 +199,50 @@ async function requestClassScan(classCode, button) { const reason = prompt(`Lý 
 function rememberClass(classCode) { state.recentClasses = [classCode, ...state.recentClasses.filter(item => item !== classCode)].slice(0, 8); saveClassList('writing-flow:recent-classes:v1', state.recentClasses); }
 function chooseClass(classCode) { $('flow-class').value = classCode; rememberClass(classCode); void refreshData(); }
 function togglePinnedClass(classCode) { state.pinnedClasses = state.pinnedClasses.includes(classCode) ? state.pinnedClasses.filter(item => item !== classCode) : [classCode, ...state.pinnedClasses].slice(0, 12); saveClassList('writing-flow:pinned-classes:v1', state.pinnedClasses); renderClasses(); }
-function classCard(item, completed = false) { const classCode = item.class_code || ''; const pinned = state.pinnedClasses.includes(classCode); const active = item.operational_state === 'active'; const card = document.createElement('article'); card.className = 'flow-class-card'; card.dataset.pinned = String(pinned); card.append(makeText('h3', classCode || item.class_name || 'Chưa rõ mã lớp'), makeText('p', item.classroom_name || item.class_name || 'Chưa có tên Classroom', 'flow-meta')); if (item.class_info) card.append(makeText('p', item.class_info, 'flow-meta')); if (!completed && !active) card.append(makeText('p', 'Thiếu hoặc xung đột trạng thái nguồn · vẫn giữ trong danh sách đang học', 'flow-meta flow-warning')); card.append(makeText('p', `Giảng viên: ${(item.teacher_names || []).join(', ') || '—'}`, 'flow-meta'), makeText('p', completed ? 'Đã hoàn thành · không quét tự động' : `Quét: ${statusNames[item.scan_status] || item.scan_status || 'chưa có'} · lần lỗi ${item.scan_attempt_count || 0}/3`, 'flow-meta'), makeText('p', `Lần quét gần nhất: ${formatTime(item.last_scan_at)}`, 'flow-meta')); if (!completed && classCode) { const actions = document.createElement('div'); actions.className = 'flow-class-card-actions'; const scan = actionButton('Quét lớp ngay', () => void requestClassScan(classCode, scan)); const show = actionButton('Xem bài lớp', () => chooseClass(classCode)); const pin = actionButton(pinned ? 'Bỏ ghim' : 'Ghim lớp', () => togglePinnedClass(classCode)); actions.append(show, scan, pin); card.append(actions); } return card; }
+// Nhận trạng thái lớp từ API, hiển thị lỗi và lịch thử lại để biết lớp đang bỏ lỡ bài.
+// Chỉ tạo chữ trong DOM; không gọi chấm, không tự mở lại lớp đã hoàn thành.
+function classCard(item, completed = false) {
+  const classCode = item.class_code || '';
+  const pinned = state.pinnedClasses.includes(classCode);
+  const active = item.operational_state === 'active';
+  const card = document.createElement('article');
+  card.className = 'flow-class-card';
+  card.dataset.pinned = String(pinned);
+  card.append(makeText('h3', classCode || item.class_name || 'Chưa rõ mã lớp'),
+    makeText('p', item.classroom_name || item.class_name || 'Chưa có tên Classroom', 'flow-meta'));
+  if (item.class_info) card.append(makeText('p', item.class_info, 'flow-meta'));
+  if (!completed && !active) card.append(makeText('p',
+    'Thiếu hoặc xung đột trạng thái nguồn · vẫn giữ trong danh sách đang học', 'flow-meta flow-warning'));
+  card.append(makeText('p', `Giảng viên: ${(item.teacher_names || []).join(', ') || '—'}`, 'flow-meta'),
+    makeText('p', completed ? 'Đã hoàn thành · không quét tự động'
+      : `Quét: ${statusNames[item.scan_status] || item.scan_status || 'chưa có'} · lần lỗi ${item.scan_attempt_count || 0}/3`, 'flow-meta'),
+    makeText('p', `Lần quét được ghi nhận gần nhất: ${formatTime(item.last_scan_at)}`, 'flow-meta'));
+  if (!completed) {
+    const last = Date.parse(item.last_scan_at || '');
+    const days = Number.isFinite(last) ? Math.floor((Date.now() - last) / 86400000) : null;
+    if (days >= 1) card.append(makeText('p',
+      `Đã ${days} ngày chưa ghi nhận lượt quét mới; có thể còn bài chưa được tiếp nhận.`, 'flow-meta flow-warning'));
+    if (['needs_review', 'failed'].includes(item.scan_status)) {
+      const next = Date.parse(item.next_scan_at || '');
+      const scheduled = Number.isFinite(next) && next <= Date.now() + 86400000;
+      card.append(makeText('p', scheduled
+        ? `Đã bỏ lỡ lượt quét. Thử lại: ${formatTime(item.next_scan_at)}.`
+        : 'Đang dừng quét; cần kiểm tra quyền và định danh lớp.', 'flow-meta flow-warning'));
+      if (item.last_error_code) card.append(makeText('p',
+        `Mã lỗi để tra cứu: ${item.last_error_code}`, 'flow-meta'));
+    }
+  }
+  if (!completed && classCode) {
+    const actions = document.createElement('div');
+    actions.className = 'flow-class-card-actions';
+    const scan = actionButton('Quét lớp ngay', () => void requestClassScan(classCode, scan));
+    const show = actionButton('Xem bài lớp', () => chooseClass(classCode));
+    const pin = actionButton(pinned ? 'Bỏ ghim' : 'Ghim lớp', () => togglePinnedClass(classCode));
+    actions.append(show, scan, pin);
+    card.append(actions);
+  }
+  return card;
+}
 function orderedClasses(rows) { const rank = code => { const pinned = state.pinnedClasses.indexOf(code); if (pinned >= 0) return pinned; const recent = state.recentClasses.indexOf(code); return recent >= 0 ? 100 + recent : 1000; }; return [...rows].sort((a, b) => rank(a.class_code) - rank(b.class_code) || String(a.class_code).localeCompare(String(b.class_code), 'vi')); }
 function renderClassWorkspace() { const workspace = $('flow-class-workspace'); const classCode = $('flow-class').value; workspace.hidden = state.activeView !== 'classes' || !classCode; if (workspace.hidden) return; $('flow-class-workspace-title').textContent = `Tình hình lớp ${classCode}`; const summary = $('flow-class-stage-summary'); summary.replaceChildren(); const rows = (state.counts?.stages || []).filter(row => !row.skipped); for (const stage of stages) { const count = rows.filter(row => row.stage_key === stage).reduce((total, row) => total + Number(row.pair_count || 0), 0); const card = document.createElement('article'); card.append(makeText('strong', count), makeText('span', stageNames[stage])); summary.append(card); } renderDailyBars($('flow-class-daily-chart'), state.daily, true, 120); }
 function renderClasses() { const root = $('flow-classes'); root.replaceChildren(); const completed = state.activeView === 'completed_classes'; const rows = orderedClasses(completed ? state.completedClasses : state.activeClasses); if (!rows.length) root.append(makeText('p', completed ? 'Chưa có lớp đã hoàn thành.' : 'Chưa có lớp đang vận hành.', 'muted')); else for (const item of rows) root.append(classCard(item, completed)); renderClassWorkspace(); }
