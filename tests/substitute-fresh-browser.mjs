@@ -10,7 +10,7 @@ try{
   const context=await browser.newContext({viewport:size});
   await context.route('**/*',async route=>{const u=route.request().url();if(u.startsWith(base))return route.continue();
    if(u.includes('/webhook/')){let body={};try{body=route.request().postDataJSON();}catch{}const slug=body?.testSlug||u.match(/substitute-test-[12]-k(?:56|67)/)?.[0];let response={};
-    if(body.route==='/api/test/history')response={testSlug:slug,historyEpoch:'11111111-1111-4111-8111-111111111111',stateVersion:2,maintenance:false};
+    if(body.route==='/api/test/history')response={testSlug:slug,historyEpoch:'11111111-1111-4111-8111-111111111111',stateVersion:2,maintenance:false,classes:[{code:'DEMO',name:'DEMO · Kiểm thử'},{code:'IC9001',name:'IC9001'},{code:'IC9002',name:'IC9002'}]};
     else if(body.route==='/api/test/roster')response={students:[{ref:'fictional-01',name:'Học viên kiểm thử'}]};
     return route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(response)});
    }return route.abort();});
@@ -29,6 +29,10 @@ try{
    await page.screenshot({path:path.join(out,slug+'-writing-'+size.width+'.png'),fullPage:true});
    await page.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server&class=DEMO');
    await page.locator('#bootstrapStudent').waitFor({state:'visible'});
+   assert.equal(await page.locator('#bootstrapStudent').inputValue(),'');
+   assert.deepEqual(await page.locator('#bootstrapClass option').evaluateAll(options=>options.map(o=>o.value).filter(Boolean)),['DEMO','IC9001','IC9002']);
+   await page.locator('#bootstrapClass').selectOption('IC9002');
+   await page.locator('#bootstrapStudent option[value="fictional-01"]').waitFor({state:'attached'});
    assert.equal(await page.locator('#bootstrapStudent').inputValue(),'');
    assert.equal(await page.locator('textarea').count(),0);
    assert.equal(await page.locator('body').filter({hasText:/Backend test đã chấm Listening:|\/40 câu đúng/}).count(),0);

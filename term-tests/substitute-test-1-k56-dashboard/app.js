@@ -20,10 +20,10 @@ function renderCourse() {
     ? 'Bản online · K56 + K67'
     : `Bản online · Khóa ${isK67 ? '67' : '56'}`;
   document.querySelector('#privacy-note').textContent = isAll
-    ? 'DEMO không gửi Portal; K56 dùng lớp IC2264, K67 đồng bộ lớp IC2063 vào các cột Phase thi lại.'
+    ? 'Danh sách lớp được tải từ hệ thống Substitute. DEMO không gửi Portal; giáo viên chỉ xem lớp phụ trách, quản trị xem toàn bộ.'
     : isK67
-      ? 'DEMO không gửi Portal; lớp IC2063 đồng bộ vào các cột Phase thi lại.'
-      : 'DEMO không gửi Portal; lớp IC2264 áp dụng quy tắc điểm thi lại.';
+      ? 'Các lớp Khóa 67 đồng bộ vào cột Phase thi lại tương ứng. DEMO không gửi Portal.'
+      : 'Các lớp Khóa 56 đồng bộ vào cột Term Test thi lại tương ứng. DEMO không gửi Portal.';
   const next = new URL(location.href);
   if (isAll) next.searchParams.delete('course');
   else next.searchParams.set('course', course);

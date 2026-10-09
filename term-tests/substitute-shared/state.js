@@ -16,6 +16,7 @@
       const value=await response.json();
       if(!response.ok||value.testSlug!==config.slug||!uuid.test(value.historyEpoch)||value.stateVersion!==2)throw new Error('Không xác nhận được phiên dữ liệu. Hãy tải lại trang.');
       if(value.maintenance)throw new Error('Bài thi đang bảo trì. Vui lòng quay lại sau.');
+      if(value.classes!==undefined&&(!Array.isArray(value.classes)||!value.classes.length||new Set(value.classes.map(c=>c?.code)).size!==value.classes.length||!value.classes.some(c=>c.code==='DEMO')||value.classes.some(c=>!c||! /^(?:DEMO|IC\d{3,8})$/.test(c.code)||typeof c.name!=='string'||!c.name.trim())))throw new Error('Danh sách lớp không hợp lệ. Hãy tải lại trang.');
       meta=value;return value;
     }finally{clearTimeout(timer);controllers.delete(controller);}
   }
