@@ -4,6 +4,7 @@ import { parseShareUrl } from './logic.mjs';
 import { freestyleInstructions } from './assignment-instructions.js';
 import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
 import { lesson6Code, lesson6Parts } from './lesson-6-parts.js';
+import { lesson7Code, lesson7Parts } from './lesson-7-parts.js';
 
 const independent = document.body.dataset.speakingIntake === 'independent';
 const apiBase = independent
@@ -15,14 +16,15 @@ const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
 let workUnitId = '';
 let classCode = '';
-const lessonNumber = ['5', '6'].includes(document.body.dataset.speakingLesson)
+const lessonNumber = ['5', '6', '7'].includes(document.body.dataset.speakingLesson)
   ? Number(document.body.dataset.speakingLesson) : 4;
-const expectedAssignmentCode = lessonNumber === 6 ? lesson6Code
+const expectedAssignmentCode = lessonNumber === 7 ? lesson7Code
+  : lessonNumber === 6 ? lesson6Code
   : lessonNumber === 5 ? lesson5Code : '67-speaking-diem_giua';
 const assignmentCode = query.get('assignmentCode') || expectedAssignmentCode;
 const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);
-const parts = lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
+const parts = lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
   { key: 'insert_middle', title: 'Chèn điểm giữa trong Speaking',
     url: 'https://ducizone.short.gy/chen_diem_giua_speak',
     lead: 'Luyện đủ ba giai đoạn trong một hội thoại.',
@@ -471,15 +473,18 @@ const identityController = createSpeakingIdentity({
     && assignment.parts?.length === parts.length && parts.every((part,index) => assignment.parts[index]?.part_key === part.key)
     && (lessonNumber !== 5 || (Number(assignment.parts[0].min_questions) === 3 && Number(assignment.parts[1].min_questions) === 1))
     && (lessonNumber !== 6 || assignment.parts.every((part, index) => Number(part.min_questions) === [0, 2, 1][index]))
+    && (lessonNumber !== 7 || Number(assignment.parts[0].min_questions) === 4)
     && Number(assignment.requiredPracticeCount) === 2 && assignment.doctorEnabled === true,
   async onOpened(context) {
     state.studentRef = context.studentRef;
     state.accessToken = context.session.accessToken;
     state.assignment = context.assignment;
     // Dùng ngưỡng của bài đang mở, không áp yêu cầu IC2304 cho lớp khác.
-    const instructions = freestyleInstructions(context.assignment);
-    $('freestyle-card').querySelector('.instruction-lead').textContent = instructions.lead;
-    $('freestyle-card').querySelectorAll('.instructions li')[2].textContent = instructions.repeat;
+    if (parts.some(part => part.key === 'freestyle')) {
+      const instructions = freestyleInstructions(context.assignment);
+      $('freestyle-card').querySelector('.instruction-lead').textContent = instructions.lead;
+      $('freestyle-card').querySelectorAll('.instructions li')[2].textContent = instructions.repeat;
+    }
     documentId = context.documentId;
     workUnitId = context.session.workUnitId || '';
     classCode = context.classCode;
