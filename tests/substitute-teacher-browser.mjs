@@ -6,7 +6,7 @@ const {chromium}=createRequire('C:/Users/vukha/.cache/codex-runtimes/codex-prima
 const slugs=['substitute-test-1-k56','substitute-test-2-k56','substitute-test-1-k67','substitute-test-2-k67'];
 const server=createServer((req,res)=>{const u=new URL(req.url,'http://localhost'),p=path.resolve(root,'.'+u.pathname+(u.pathname.endsWith('/')?'index.html':''));if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'})[path.extname(p)]||'application/octet-stream');res.end(fs.readFileSync(p));}catch{res.writeHead(404).end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));const base=process.argv.includes('--online')?'https://tranhoangduc90.github.io/izone-ai-team-pages':'http://127.0.0.1:'+server.address().port;
-const browser=await chromium.launch({channel:'msedge',headless:true}),results=[],out=path.join(root,'output/playwright/substitute-teacher');fs.mkdirSync(out,{recursive:true});
+const browser=await chromium.launch({channel:'msedge',headless:true}),results=[],out=process.env.SUBSTITUTE_BROWSER_OUTPUT||path.join(root,'output/playwright/substitute-teacher');fs.mkdirSync(out,{recursive:true});
 const gis="window.google={accounts:{id:{initialize(o){this.callback=o.callback},disableAutoSelect(){},renderButton(el){const b=document.createElement('button');b.textContent='Đăng nhập bằng Google';b.onclick=()=>this.callback({credential:'fictional-token'});el.append(b)}}}}";
 try{
  for(const width of [1440,390]){
@@ -36,9 +36,16 @@ try{
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   for(const slug of slugs){
    await page.goto(base+'/term-tests/'+slug+'-results/');await page.getByRole('button',{name:'Đăng nhập bằng Google'}).waitFor();
+   const logo=page.locator('.substitute-brandbar img');assert.equal(await logo.count(),1);assert.equal(await logo.evaluate(e=>e.complete&&e.naturalWidth>0),true);
+   assert.ok((await logo.boundingBox()).height>=(width<760?36:44));
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+   await page.screenshot({path:path.join(out,slug+'-login-'+width+'.png'),fullPage:true});
    assert.equal(await page.locator('#roster-section').isVisible(),false);assert.equal(await page.locator('#student-detail').isVisible(),false);
    await page.getByRole('button',{name:'Đăng nhập bằng Google'}).click();await page.locator('#student-rows .open-student').first().waitFor();
    assert.equal(await page.locator('#test-select').inputValue(),slug);assert.equal(await page.locator('#student-rows tr').count(),2);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+   const actions=await page.locator('.open-student').evaluateAll(es=>es.map(e=>({width:e.getBoundingClientRect().width,align:getComputedStyle(e.parentElement).textAlign})));
+   assert.ok(actions.every(e=>e.width===96&&e.align==='center'));
    assert.ok((await page.locator('#student-rows').innerText()).includes('7.5/9'));assert.equal(await page.locator('#student-rows img').count(),0);
    await page.locator('.open-student').first().click();await page.locator('.criterion-card').first().waitFor();assert.equal(await page.locator('.criterion-card').count(),4);
    await page.locator('.feedback-rich h3').getByText('Báo cáo giả',{exact:true}).waitFor({timeout:3000});assert.equal(await page.locator('.feedback-rich strong').getByText('Kết luận giả',{exact:true}).count(),1);assert.equal(await page.locator('.feedback-rich li').getByText('Mục giả',{exact:true}).count(),1);assert.equal(await page.locator('.feedback-rich iframe,.feedback-rich script,.feedback-rich img,.feedback-rich pre').count(),0);assert.equal(await page.locator('body').getAttribute('data-exploited'),null);assert.ok(!(await page.locator('#attempt-content').innerText()).includes('```'));assert.ok(!(await page.locator('#attempt-content').innerText()).includes('## '));

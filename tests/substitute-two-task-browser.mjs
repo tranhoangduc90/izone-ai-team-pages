@@ -4,7 +4,7 @@ const root=path.resolve(new URL('../',import.meta.url).pathname.replace(/^\/([A-
 const {chromium}=createRequire('C:/Users/vukha/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const server=createServer((req,res)=>{const u=new URL(req.url,'http://localhost'),p=path.resolve(root,'.'+u.pathname+(u.pathname.endsWith('/')?'index.html':''));if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png'})[path.extname(p)]||'application/octet-stream');res.end(fs.readFileSync(p));}catch{res.writeHead(404).end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));const base=process.argv.includes('--online')?'https://tranhoangduc90.github.io/izone-ai-team-pages':'http://127.0.0.1:'+server.address().port;
-const browser=await chromium.launch({channel:'msedge',headless:true}),out=path.join(root,'output/playwright/substitute-two-task');fs.mkdirSync(out,{recursive:true});
+const browser=await chromium.launch({channel:'msedge',headless:true}),out=process.env.SUBSTITUTE_BROWSER_OUTPUT||path.join(root,'output/playwright/substitute-two-task');fs.mkdirSync(out,{recursive:true});
 try{for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
  const context=await browser.newContext({viewport});await context.route('**/*',r=>r.request().url().startsWith(base)?r.continue():r.abort());
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -22,6 +22,9 @@ try{for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
  await page.locator('#writingTaskTabs button').nth(0).click();assert.equal(await page.locator('[data-writing-task="task1"]').inputValue(),'Fictional chart report.');assert.equal(await page.locator('[data-writing-outline="task1"]').inputValue(),'Fictional chart plan.');
  // Bàn phím kích hoạt Task 2, không phụ thuộc chuột.
  await page.locator('#writingTaskTabs button').nth(1).focus();await page.keyboard.press('Enter');assert.equal(await page.locator('[data-writing-task="task2"]').isVisible(),true);
+ await page.keyboard.press('Tab');await page.locator('#writingTaskTabs button').nth(1).focus();
+ assert.equal(await page.locator('#writingTaskTabs button').nth(1).evaluate(e=>getComputedStyle(e).outlineColor),'rgb(219, 8, 41)');
+ assert.equal(await page.locator('#writingTaskTabs button').nth(1).evaluate(e=>getComputedStyle(e).borderBottomWidth),'3px');
  assert.deepEqual(errors,[]);await context.close();
 }console.log(JSON.stringify({ok:true,desktopMobile:true,twoDraftsReload:true,blankManualBlocked:true,keyboard:true,aiCalls:0,portalWrites:0,screenshots:out}));}
 finally{await browser.close();await new Promise(r=>server.close(r));}
