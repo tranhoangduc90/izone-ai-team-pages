@@ -40,7 +40,7 @@ function manualUploadUnavailable(record) {
   if (!(source.fileSize > 0)) return 'Dung lượng tệp không hợp lệ';
   const durationBlock=recordingPublication.durationBlock(source);
   if(durationBlock)return recordingPublication.messages[durationBlock];
-  if (source.fileSize > 640 * 1024 * 1024) return `Dung lượng ${(source.fileSize/1024/1024).toFixed(1)} MiB vượt giới hạn 640 MiB`;
+  if (source.fileSize > 1024 * 1024 * 1024) return `Dung lượng ${(source.fileSize/1024/1024).toFixed(1)} MiB vượt giới hạn 1 GiB`;
   const terminalError = Boolean(record.errorCode) || ['needs_attention','hold'].includes(record.stage);
   if (terminalError) manualUploadPending.delete(source.id);
   if(record.stage==='queued'||record.queueState==='waiting')return 'Đang chờ hàng đợi truyền file';
