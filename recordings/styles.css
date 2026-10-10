@@ -162,3 +162,18 @@ textarea { font: inherit; }
 #manualUploadPartsLabel { display:flex; align-items:flex-start; gap:8px; font-size:14px; }
 #manualUploadParts { width:auto; margin-top:3px; }
 #manualUploadDialog { max-height:90vh; overflow-y:auto; }
+
+/* Bảng lưu trữ chỉ hiển thị dữ liệu đã đọc lại; cuộn ngang trong bảng trên mobile. */
+.storage-panel{margin:20px 0;padding:18px;background:#fff;border:1px solid #dce4ee;border-radius:11px}
+.storage-panel summary{font-size:1.1rem;font-weight:700;color:#152b4e;cursor:pointer}
+.storage-controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.storage-controls button{font:inherit;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#152b4e;cursor:pointer}
+.storage-controls button:hover:enabled{background:#eef4ff}
+.storage-controls button:disabled{color:#667085;background:#f2f4f7;cursor:not-allowed}
+.storage-controls #storageCleanup:enabled{color:#fff;background:#bd0028;border-color:#bd0028}
+.storage-table-wrap{max-width:100%;overflow:auto}
+.storage-table-wrap table{width:100%;border-collapse:collapse;font-size:14px}
+.storage-table-wrap th,.storage-table-wrap td{text-align:left;padding:10px;border-bottom:1px solid #dce4ee;vertical-align:top}
+.storage-error{color:#b42332}
+#storagePreview ul{max-height:260px;overflow:auto;padding-left:22px}
+@media(max-width:480px){.storage-panel{padding:12px}.storage-controls button{flex:1 1 150px}}

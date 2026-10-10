@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>IZONE Recording Automation</title>
   <link rel="icon" href="assets/izone-recording-thumbnail.png">
-  <link rel="stylesheet" href="styles.css?v=23">
+  <link rel="stylesheet" href="styles.css?v=32">
 </head>
 <body>
   <div class="shell">
@@ -40,6 +40,23 @@
       </div>
       <div id="yesterdayClasses" class="class-grid"><div class="loading-inline">Đang tải lịch học…</div></div>
     </section>
+
+    <details id="recordingStorage" class="storage-panel">
+      <summary>Lưu trữ VPS</summary>
+      <p id="storageSummary">Chưa có lần đo trong phiên này.</p>
+      <div class="storage-controls">
+        <button id="storageRefresh" type="button">Kiểm tra lại</button>
+        <button id="storagePreviewButton" type="button">Xem trước danh sách dọn</button>
+        <button id="storageCleanup" type="button" disabled>Dọn theo danh sách đã xem</button>
+        <button id="storageHistory" type="button">Xem lịch sử</button>
+      </div>
+      <p id="storageStatus" role="status" aria-live="polite">Đăng nhập để kiểm tra lưu trữ VPS.</p>
+      <div class="storage-table-wrap"><table>
+        <thead><tr><th>Recording</th><th>MP4</th><th>Khối tạm</th><th>Dung lượng</th><th>Lý do</th><th>Giữ đến</th><th>Kiểm gần nhất</th></tr></thead>
+        <tbody id="storageRows"></tbody>
+      </table></div>
+      <div id="storagePreview"></div><div id="storageRunResult" aria-live="polite"></div>
+    </details>
 
     <section class="toolbar">
       <label>Ngày recording<input id="dateFilter" type="date"></label>
@@ -127,5 +144,6 @@
 <script src="source-links.js?v=20"></script>
   <script src="manual-upload.js?v=28" defer></script>
   <script src="review.js?v=review-20261009" defer></script>
+  <script src="storage.js?v=2" defer></script>
 </body>
 </html>
