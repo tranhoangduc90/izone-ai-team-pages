@@ -149,6 +149,17 @@
       "statement": "The chart below shows the average earnings of people in various areas of work in one country in 2000 and 2010. The table shows the average salary for all sectors in the same years. Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
       "studentPath": "./index.html",
       "classes": ["CS.070626", "CS.160826"]
+    },
+    {
+      "lessonId": "cs070626-writing-14",
+      "writingLesson": 14,
+      "taskNumber": 1,
+      "slug": "mobile-phone-market-share-1994-2004",
+      "title": "Thị phần điện thoại, 1994–2004",
+      "type": "Writing Task 1 · Biểu đồ đường",
+      "statement": "The line graph below illustrates the proportion of mobile phone sales by three manufacturers (Motorola, Nokia and Sony Ericsson) between 1994 and 2004. Summarise the information by selecting and reporting the main features and make comparisons where relevant.",
+      "studentPath": "./index.html",
+      "classes": ["CS.070626", "CS.160826"]
     }
   ]
 }
