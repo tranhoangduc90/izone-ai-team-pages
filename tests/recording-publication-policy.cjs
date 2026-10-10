@@ -9,7 +9,7 @@ test('Nút đăng dùng giây chưa làm tròn: 599 khóa, 600/601 mở; tooltip
  for(const seconds of [599,600,601,null]){const r=source(seconds);ctx.nightlyState.snapshot.records=[r];const html=ctx.manualUploadCell(r);assert.equal(/disabled/.test(html),seconds===null||seconds<600);assert.doesNotMatch(html,/<div|subtext/);if(seconds===599)assert.match(html,/Video dưới 10 phút/);if(seconds===null)assert.match(html,/Chưa xác minh thời lượng/);}
 });
 test('Lý do khóa riêng cho processing, metadata, dung lượng và tác vụ đang xử lý',()=>{
- for(const [patch,expected]of [[{status:'processing'},/processing/],[{observationStale:true},/Metadata/],[{fileSize:0},/Dung lượng/],[{fileSize:641*1024*1024},/641.0 MiB.*640 MiB/],[{youtubeStatus:'uploading'},/đang xử lý/]]){const r={...source(600),...patch};ctx.nightlyState.snapshot.records=[r];assert.match(ctx.manualUploadUnavailable(r),expected);}
+ for(const [patch,expected]of [[{status:'processing'},/processing/],[{observationStale:true},/Metadata/],[{fileSize:0},/Dung lượng/],[{fileSize:1024*1024*1024+1},/1024.0 MiB.*1 GiB/],[{youtubeStatus:'uploading'},/đang xử lý/]]){const r={...source(600),...patch};ctx.nightlyState.snapshot.records=[r];assert.match(ctx.manualUploadUnavailable(r),expected);}
 });
 test('Tìm đủ playlist cuối danh sách; mã lớp chính xác trước mã dài hơn và giữ tên ổn định',()=>{
  const playlists=Array.from({length:310},(_,i)=>({id:'p'+i,title:'IC'+(9000+i)}));playlists.push({id:'exact',title:'IC2253 - GV B'},{id:'similar',title:'IC22530 - GV A'},{id:'duplicate',title:'IC2253 - GV A'});
