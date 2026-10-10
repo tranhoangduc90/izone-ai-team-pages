@@ -130,7 +130,7 @@ function recordRow(record) {
     <td>${recordingSourceCell(record)}</td>
     <td>${videoEditCell(record)}</td>
     <td>${link}</td>
-    <td class="approval-cell"><label class="approval-check"><input type="checkbox" data-action="review" data-id="${escapeHtml(record.id)}" ${isApproved(record) ? 'checked' : ''}><span aria-hidden="true">✓</span><em>${isApproved(record) ? 'Đã duyệt' : 'Duyệt'}</em></label></td>
+    <td class="approval-cell"><label class="approval-check"><input type="checkbox" data-action="review" data-id="${escapeHtml(record.id)}" ${typeof recordingReviewAttributes==='function'?recordingReviewAttributes(record):isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record) ? 'Đã duyệt' : 'Duyệt'}</em></label></td>
   </tr>`;
 }
 
@@ -258,21 +258,6 @@ function openVideoEditor(action, id) {
   }
 }
 document.addEventListener('change',event=>{const select=event.target.closest('[data-edit-id]');if(!select)return;const action=select.value;select.value='';if(action==='refresh_file')return refreshKnownRecordingFile(select.dataset.editId,select);if(['rename','playlist'].includes(action))openVideoEditor(action,select.dataset.editId);});
-
-document.addEventListener('change', async (event) => {
-  const checkbox = event.target.closest('input[data-action="review"]');
-  if (!checkbox) return;
-  checkbox.disabled = true;
-  try {
-    const record = await postAction(REVIEW_API_URL, { id: checkbox.dataset.id, expectedVersion: Number(state.records.find(r=>String(r.id)===checkbox.dataset.id)?.version||0), approved: checkbox.checked });
-    replaceRecord(record);
-    toast(checkbox.checked ? 'Đã chuyển recording sang mục Đã duyệt.' : 'Đã chuyển recording về mục Cần duyệt.');
-  } catch {
-    checkbox.checked = !checkbox.checked;
-    checkbox.disabled = false;
-    toast('Không cập nhật được trạng thái duyệt.', 'error');
-  }
-});
 
 $('renameForm').addEventListener('submit', async (event) => {
   event.preventDefault();

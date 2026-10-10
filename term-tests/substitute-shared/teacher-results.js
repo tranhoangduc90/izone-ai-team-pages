@@ -1,4 +1,5 @@
 // Chỉ dùng trong Substitute. Token Google ở RAM; không dùng session/DB của Term Test.
+import {appendWritingFeedback as appendFeedback} from './feedback-renderer.js?rev=20261009-results-v2';
 const API='https://ducizone.ddns.net/substitute-teacher-api';
 const TITLES={'substitute-test-1-k56':'Substitute Test 1 · Khóa 56','substitute-test-2-k56':'Substitute Test 2 · Khóa 56','substitute-test-1-k67':'Substitute Test 1 · Khóa 67','substitute-test-2-k67':'Substitute Test 2 · Khóa 67'};
 const $=id=>document.getElementById(id);
@@ -7,7 +8,7 @@ const initial=new URLSearchParams(location.search);
 const pageTest=Object.keys(TITLES).find(slug=>location.pathname.includes(slug+'-results'));
 const selectedTest=()=>$('test-select').value;
 const statusText=value=>({queued:'Chờ chấm Writing',processing:'Đang chấm Writing',ready:'Đã chấm Writing',incomplete:'Thiếu bài Writing; chưa có điểm tổng',failed:'Cần kiểm tra bài chấm'}[value]||'Chưa xác nhận');
-const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',unknown:'Chưa xác nhận Portal',synced:'Đã xác nhận đồng bộ Portal'}[value]||'Chưa xác nhận Portal');
+const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',blocked:'Đồng bộ bị chặn · chưa ghi Portal',unknown:'Cần đối soát Portal · chưa xác nhận',synced:'Đã xác nhận đồng bộ Portal'}[value]||'Chưa xác nhận Portal');
 const number=value=>typeof value==='number'&&Number.isFinite(value)?String(value):'—';
 const time=value=>value&&!Number.isNaN(Date.parse(value))?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'—';
 function node(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
@@ -18,7 +19,7 @@ function clearResults(text='Đăng nhập để xem kết quả của những l�
  $('updated-at').textContent='';$('previous-page').disabled=true;$('next-page').disabled=true;$('page-range').textContent='';
 }
 function cancel(){state.generation++;state.controller?.abort();state.controller=null;}
-function logout(){cancel();state.token=null;state.scopes=[];clearResults();$('filter-section').hidden=true;$('roster-section').hidden=true;$('logout').hidden=true;$('login-status').textContent='Chỉ giáo viên/quản trị được cấp quyền mới xem được kết quả.';$('google-signin').hidden=false;message('');window.google?.accounts?.id.disableAutoSelect();}
+function logout(){cancel();state.token=null;state.scopes=[];state.filters={};$('extra-filters').reset();$('extra-filters').hidden=true;$('toggle-filters').setAttribute('aria-expanded','false');clearResults();$('filter-section').hidden=true;$('roster-section').hidden=true;$('logout').hidden=true;$('login-status').textContent='Chỉ giáo viên/quản trị được cấp quyền mới xem được kết quả.';$('google-signin').hidden=false;message('');window.google?.accounts?.id.disableAutoSelect();}
 async function request(route,params={},signal,authenticated=true){
  const url=new URL(API+route);for(const [k,v]of Object.entries(params))url.searchParams.set(k,String(v));
  const controller=new AbortController(),abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});
@@ -49,21 +50,6 @@ function renderRows(){
  $('page-range').textContent=state.rows.length?`Lượt ${state.offset+1}–${state.offset+state.rows.length}`:'0 lượt nộp';
  $('previous-page').disabled=state.offset===0;$('next-page').disabled=!state.hasMore;
 }
-// HTML từ bài chấm chỉ hiển thị trong iframe không có quyền script, mạng, form hay điều hướng trang chính.
-function appendFeedback(parent,value){
- if(value==null)return;
- if(typeof value==='object'){
-  if(Array.isArray(value)){for(const part of value)appendFeedback(parent,part);}
-  else for(const [key,part]of Object.entries(value)){parent.append(node('h4',({summary:'Nhận xét tổng hợp',strengths:'Điểm mạnh',improvements:'Cần cải thiện',annotations:'Ghi chú',text:'Nội dung',reason:'Lý do'}[key]||key)));appendFeedback(parent,part);}
-  return;
- }
- const text=String(value);
- if(/<(?:p|div|table|h[1-6]|html)\b/i.test(text)){
-  const frame=node('iframe');frame.title='Nhận xét Writing';frame.className='feedback-frame';frame.setAttribute('sandbox','');frame.referrerPolicy='no-referrer';
-  frame.srcdoc='<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><style>body{font:16px/1.6 system-ui;color:#182b45;margin:16px;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%}td,th{border:1px solid #dce4ee;padding:8px}img,iframe,object,embed,form,script{display:none}</style></head><body>'+text+'</body></html>';
-  parent.append(frame);
- }else parent.append(node('p',text,'feedback-text'));
-}
 async function openAttempt(attempt){
  const generation=state.generation,detailGeneration=++state.detailGeneration;$('student-detail').hidden=false;$('student-name').textContent=attempt.studentName;
  $('student-status').textContent=attempt.classCode+' · Nộp lúc '+time(attempt.submittedAt);$('attempt-content').replaceChildren(node('p','Đang tải đúng lượt nộp…'));
@@ -81,13 +67,6 @@ async function openAttempt(attempt){
    content.append(node('h3',`Writing Task ${task.taskNumber} · ${task.result?number(task.result.taskScore)+'/9':task.status==='missing'?'Chưa có bài làm':'Đang chấm'}`));
    if(task.result){
     const criteria=node('div',undefined,'criterion-grid');for(const item of task.result.criteria||[]){const detail=node('details',undefined,'criterion-card');detail.append(node('summary',`${item.key||item.code} · ${number(item.score??item.bandScore)}/9`));appendFeedback(detail,item.feedback);if(item.components)appendFeedback(detail,item.components);criteria.append(detail);}content.append(criteria,node('h3',`Báo cáo Writing Task ${task.taskNumber}`));appendFeedback(content,task.result.report);
-    if(task.taskNumber===1&&data.requiredTasks?.length===2&&Array.isArray(task.result.details)){
-     const links=node('ul');for(const stage of task.result.details){
-      if(!/^[0-9]{2}-[a-z-]+$/.test(stage.stageKey))continue;
-      const url=new URL(location.href);url.search='';for(const [key,value]of Object.entries({test:attempt.testSlug,class:attempt.classCode,student:attempt.studentRef,attempt:attempt.attemptToken,task:1,stage:stage.stageKey}))url.searchParams.set(key,value);
-      const item=node('li'),link=node('a',stage.name||stage.stageKey);link.href=url.href;link.target='_blank';link.rel='noopener';link.dataset.taskStage=stage.stageKey;item.append(link);links.append(item);
-     }content.append(node('h4','Mở từng báo cáo phân tích Task 1 (yêu cầu quyền giáo viên)'),links);
-    }
    }else content.append(node('p',task.status==='missing'?'Hết giờ nhưng chưa có bài viết ở Task này; không tạo điểm 0 hoặc điểm tổng.':'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
   }
  }catch(error){if(detailGeneration===state.detailGeneration&&state.selectedAttempt===attempt.attemptToken)handleError(error,generation);}
@@ -97,7 +76,7 @@ async function loadResults(){
  const test=selectedTest(),classCode=$('class-filter').value;
  clearResults('Đang tải kết quả…');message('');$('load-results').disabled=true;
  try{
-  const data=await request('/teacher/results',{test,class:classCode,limit:50,offset:state.offset},state.controller.signal);
+  const data=await request('/teacher/results',{test,class:classCode,limit:50,offset:state.offset,...state.filters},state.controller.signal);
   if(generation!==state.generation)return;
   if(data.testSlug!==test||data.classCode!==classCode||!Array.isArray(data.results))throw new Error('Dữ liệu kết quả không đúng phạm vi đã chọn.');
   state.rows=data.results;state.hasMore=data.hasMore===true;renderRows();$('updated-at').textContent='Cập nhật '+time(new Date().toISOString());
@@ -141,4 +120,7 @@ async function initialize(){
 $('logout').addEventListener('click',logout);$('load-results').addEventListener('click',()=>{state.offset=0;loadResults();});
 $('test-select').addEventListener('change',()=>{renderClasses();state.offset=0;loadResults();});$('class-filter').addEventListener('change',()=>{state.offset=0;loadResults();});
 $('previous-page').addEventListener('click',()=>{state.offset=Math.max(0,state.offset-50);loadResults();});$('next-page').addEventListener('click',()=>{state.offset+=50;loadResults();});
+$('toggle-filters').addEventListener('click',()=>{const panel=$('extra-filters');panel.hidden=!panel.hidden;$('toggle-filters').setAttribute('aria-expanded',String(!panel.hidden));});
+$('extra-filters').addEventListener('submit',event=>{event.preventDefault();const from=$('from-filter').value,to=$('to-filter').value;if(from&&to&&from>to){message('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.','error');return;}state.filters={name:$('name-filter').value.trim(),writing:$('writing-filter').value,portal:$('portal-filter').value,from,to};state.offset=0;loadResults();});
+$('reset-filters').addEventListener('click',()=>{$('extra-filters').reset();state.filters={};state.offset=0;loadResults();});
 initialize();

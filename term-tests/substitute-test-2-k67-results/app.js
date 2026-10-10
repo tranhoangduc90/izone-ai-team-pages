@@ -1,1 +1,1 @@
-import '../substitute-shared/teacher-results.js?rev=20261007-two-task-v2';
+import '../substitute-shared/teacher-results.js?rev=20261009-results-v2';

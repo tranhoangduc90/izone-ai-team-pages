@@ -60,6 +60,7 @@
         <section class="card referenceRegion" id="overviewPanel" hidden>
           <div class="section-heading"><div><p class="eyebrow">TOÀN BỘ KHÓA HỌC</p><h1>Hành trình lớp</h1></div><button class="button" id="refreshOverviewButton" type="button">Làm mới hành trình</button></div>
           <div class="field-grid"><label class="field"><span>Lớp</span><select id="overviewClassSelect"></select></label><label class="field"><span>Lọc học viên theo tình trạng buổi</span><select id="overviewFilter"><option value="">Tất cả</option><option value="not_submitted">Có buổi chưa nộp phiếu</option><option value="incomplete">Có phiếu nộp thiếu</option><option value="test_result">Có điểm Test</option><option value="needs_review">Cần đối chiếu</option></select></label></div>
+          <label class="muted compact"><input type="checkbox" id="showAllJourneyClasses"> Hiện cả lớp được cấp quyền chưa có Progress Log</label>
           <p id="overviewStatus" role="status">Chọn lớp để xem hành trình.</p>
           <p class="muted compact">Buổi Test, buổi chưa có phiếu và buổi sắp tới được hiển thị riêng. Nộp Progress Log là điều kiện gửi yêu cầu điểm danh; trạng thái đồng bộ Portal được ghi riêng.</p>
           <p id="courseAnalyticsStatus" role="status"></p><div id="courseAnalytics"></div>
@@ -157,6 +158,6 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="config.js?rev=20260829-learning-v2"></script>
     <link rel="stylesheet" href="session-comments.css?rev=20261007">
-    <script type="module" src="teacher.js?rev=20261007-journey-comments"></script>
+    <script type="module" src="teacher.js?rev=20261009-confirmed-schedule"></script>
   </body>
 </html>

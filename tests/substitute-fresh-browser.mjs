@@ -22,6 +22,10 @@ try{
   for(const slug of ['substitute-test-1-k56','substitute-test-2-k56','substitute-test-1-k67','substitute-test-2-k67']){
    await page.goto(base+'/term-tests/'+slug+'-computer-based/?demo=writing&class=DEMO');
    await page.locator('#writingView').waitFor({state:'visible'});
+   await page.evaluate(()=>document.fonts.ready);
+   assert.match(await page.locator('.writing-exam-header').evaluate(e=>getComputedStyle(e).fontFamily),/Source Sans Pro/);
+   assert.equal(await page.locator('.writing-exam-header').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(23, 66, 102)');
+   assert.equal(await page.locator('#submitWriting').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(219, 8, 41)');
    assert.equal(await page.locator('.writing-task-label').count(),0);
    assert.equal(await page.locator('#writingView button').filter({hasText:'Nộp bài'}).count(),1);
    assert.equal(await page.locator('.writing-toolbar button').filter({hasText:'Notes'}).count(),0);
