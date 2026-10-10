@@ -49,7 +49,7 @@ var recordingPublication = (() => {
     if(!/^[A-Z]{1,4}\d{3,5}$/.test(className)||!Number.isInteger(lessonNumber)||lessonNumber<1||!validDate(recordingDate))throw Error('INVALID_PUBLISH_METADATA');
     return {className,lessonNumber,recordingDate};
   }
-  const messages={DURATION_UNVERIFIED:'Chưa xác minh thời lượng',VIDEO_UNDER_TEN_MINUTES:'Video dưới 10 phút — không đăng YouTube',FILE_NOT_READY:'Chưa có MP4 hoàn chỉnh',STALE_METADATA:'Metadata chưa được xác minh lại',EMPTY_FILE:'Dung lượng tệp không hợp lệ',FILE_TOO_LARGE_FOR_PILOT:'File vượt giới hạn 640 MiB',RECORDING_DELETED:'Recording đã được xóa trong Zoom'};
+  const messages={DURATION_UNVERIFIED:'Chưa xác minh thời lượng',VIDEO_UNDER_TEN_MINUTES:'Video dưới 10 phút — không đăng YouTube',FILE_NOT_READY:'Chưa có MP4 hoàn chỉnh',STALE_METADATA:'Metadata chưa được xác minh lại',EMPTY_FILE:'Dung lượng tệp không hợp lệ',FILE_TOO_LARGE_FOR_PILOT:'File vượt giới hạn 1 GiB',RECORDING_DELETED:'Recording đã được xóa trong Zoom'};
   function playlistResults(playlists,query='') {
     const key=String(query).trim().toLocaleLowerCase('vi');
     const code=String(query).trim().toUpperCase();
