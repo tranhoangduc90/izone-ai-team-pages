@@ -37,6 +37,17 @@ async function setup(mode,{completed=false}={}){
     makeItem(24,{prompt:'An undesirable trait such as loss of .......... may be caused by a mutation in a tomato gene.'}),
     makeItem(25,{prompt:'By modifying one gene in a tomato plant, researchers made the tomato three times its original ..........'}),
     makeItem(26,{prompt:'A type of tomato which was not badly affected by .........., and was rich in vitamin C, was produced by a team of researchers in China.'})];
+  // Sáu item riêng, một dòng có hai dropdown: bảo vệ đúng nháp, nhóm câu và vị trí ô 22–23.
+  if(mode==='dropdown-flowchart') {
+    const shared='Interview site 22 ............, visitors or city 23 ............';
+    const texts=['Read articles and note 21 ............\nIdentify a need',shared,shared,
+      'Prepare interviews\nCheck whether 24 ............ can be used',
+      'Identify 25 ............\nChoose visuals','Give some background\nDo NOT end with 26 ............'];
+    items.splice(0,items.length,...[21,22,23,24,25,26].map((n,i)=>makeItem(n,{...optionItems[0],
+      itemVersionId:uid(n),position:i+1,displayNumber:String(n),graderType:'exact_option',
+      groupId:'flowchart-'+(i<4?'research':i===4?'analysis':'writing'),
+      helpText:i<4?'RESEARCH':i===4?'ANALYSIS':'WRITING THE CASE STUDY',prompt:texts[i]})));
+  }
   const block={blockId:uid(200),checkpoint:1,title:dropdown?'Listening':'Reading',instructions:'',items};
   await page.route('**/*',async route=>{
     const req=route.request(),url=new URL(req.url());
@@ -149,6 +160,49 @@ test('Reading: nguyên câu bao quanh ô điền, bắt buộc trả lời và n
       const box=await input.evaluate(el=>({h:el.clientHeight,scroll:el.scrollHeight}));assert.ok(box.h>=box.scroll-3);
       await mkdir(resolve(root,'output/playwright'),{recursive:true});
       await s.page.screenshot({path:resolve(root,`output/playwright/answer-gapfill-${width}.png`)});
+    }
+    assert.deepEqual(s.errors,[]);
+  }finally{await s.close();}
+});
+
+test('Listening sơ đồ: sáu dropdown nội tuyến, hai ô cùng câu và nháp đúng từng item qua reload',{timeout:30000},async()=>{
+  const s=await setup('dropdown-flowchart');try{
+    assert.equal(await s.page.locator('.flowchart-stage').count(),3);
+    assert.equal(await s.page.locator('.flowchart-option-bank').count(),1);
+    assert.equal(await s.page.locator('.flowchart-select').count(),6);
+    assert.equal(await s.page.locator('textarea').count(),0);
+    assert.equal(await s.page.locator('.flowchart-line').filter({hasText:'Interview site'}).count(),1);
+    assert.equal(await s.page.locator('.flowchart-line').filter({hasText:'Interview site'}).locator('select').count(),2);
+    await s.page.locator('#submitButton').click();
+    assert.equal(await s.page.locator('#formView').isVisible(),true);
+    assert.match(await s.page.locator('#notice').textContent(),/câu bắt buộc|đủ/i);
+    const selects=s.page.locator('.flowchart-select');
+    for(let i=0;i<6;i++){
+      assert.equal(await selects.nth(i).getAttribute('required'),'');
+      await selects.nth(i).selectOption(i%2?'B':'A');
+    }
+    const draft=await s.page.evaluate(()=>Object.values(sessionStorage).map(v=>{try{return JSON.parse(v)}catch{return null}}).find(v=>v?.responses));
+    for(let i=0;i<6;i++)assert.equal(draft.responses[s.items[i].itemVersionId],i%2?'B':'A');
+    for(const width of [1440,768,390]){
+      await s.page.setViewportSize({width,height:1000});
+      assert.equal(await s.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      for(const select of await selects.all()) assert.ok(await select.evaluate(el=>el.getBoundingClientRect().right<=innerWidth));
+    }
+    await s.page.reload();await s.page.locator('#studentSelect').selectOption(uid(400));
+    await s.page.locator('#chooseStudentButton').click();await s.page.locator('#confirmButton').click();
+    await s.page.locator('#formView').waitFor({state:'visible'});
+    for(let i=0;i<6;i++)assert.equal(await s.page.locator('.flowchart-select').nth(i).inputValue(),i%2?'B':'A');
+    assert.deepEqual(s.errors,[]);
+  }finally{await s.close();}
+});
+
+test('Listening sơ đồ đã nộp: khóa sáu dropdown và phản hồi chấm đúng từng số câu',{timeout:15000},async()=>{
+  const s=await setup('dropdown-flowchart',{completed:true});try{
+    assert.equal(await s.page.locator('.flowchart-select').count(),6);
+    assert.equal(await s.page.locator('.flowchart-feedback .heading-feedback').count(),6);
+    for(let i=0;i<6;i++){
+      assert.ok(await s.page.locator('.flowchart-select').nth(i).isDisabled());
+      assert.match(await s.page.locator('.flowchart-feedback .heading-feedback').nth(i).textContent(),new RegExp('Câu '+(21+i)+':'));
     }
     assert.deepEqual(s.errors,[]);
   }finally{await s.close();}

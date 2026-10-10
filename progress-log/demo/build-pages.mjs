@@ -28,7 +28,7 @@ for (const name of pages) {
   html = html.replace('<title>', '<title>Bản thử · ');
   html = html.replace(/src="config\.js\?rev=[^"]+"/, 'src="config.js?rev=20260924-generic-demo-v1"');
   if (name === 'index.html') {
-    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261008-answer-pairs-v1"');
+    html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261010-flowchart-v1"');
   }
   html = html.replace('</head>', '    <link rel="stylesheet" href="demo.css?rev=20260924-v1">\n  </head>');
   const output = new URL(name, import.meta.url);
