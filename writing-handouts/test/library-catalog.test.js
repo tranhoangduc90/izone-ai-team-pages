@@ -5,18 +5,18 @@ import { sortHandoutsByWritingLesson } from "../js/library-core.js";
 
 const root = new URL("../", import.meta.url);
 
-test("danh mục chứa đủ 13 buổi Writing theo đúng thứ tự", async () => {
+test("danh mục chứa đủ 14 buổi Writing theo đúng thứ tự", async () => {
   const library = JSON.parse(await readFile(new URL("library.json", root), "utf8"));
   assert.equal(library.course.id, "speaking-writing-chuyen-sau");
   assert.deepEqual(library.course.classCodes, ["CS.070626", "CS.160826"]);
-  assert.equal(library.handouts.length, 13);
+  assert.equal(library.handouts.length, 14);
   assert.deepEqual(
     sortHandoutsByWritingLesson(library.handouts).map((item) => item.lessonId),
     library.handouts.map((item) => item.lessonId),
   );
-  assert.deepEqual(library.handouts.map((item) => item.writingLesson), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
-  assert.equal(new Set(library.handouts.map((item) => item.lessonId)).size, 13);
-  assert.equal(new Set(library.handouts.map((item) => item.slug)).size, 13);
+  assert.deepEqual(library.handouts.map((item) => item.writingLesson), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+  assert.equal(new Set(library.handouts.map((item) => item.lessonId)).size, 14);
+  assert.equal(new Set(library.handouts.map((item) => item.slug)).size, 14);
   assert.equal(library.handouts.some((item) => item.classes.includes("IC2200")), false);
   assert.ok(library.handouts.every((item) => [1, 2].includes(item.taskNumber)));
   assert.ok(library.handouts.every((item) => JSON.stringify(item.classes) === JSON.stringify(["CS.070626", "CS.160826"])));
@@ -33,6 +33,10 @@ test("danh mục chứa đủ 13 buổi Writing theo đúng thứ tự", async (
   assert.equal(lesson13?.slug, "average-earnings-by-sector-2000-2010");
   assert.equal(lesson13?.type, "Writing Task 1 · Biểu đồ cột và bảng");
   assert.equal(lesson13?.studentPath, "./index.html");
+  const lesson14 = library.handouts.find((item) => item.writingLesson === 14);
+  assert.equal(lesson14?.slug, "mobile-phone-market-share-1994-2004");
+  assert.equal(lesson14?.type, "Writing Task 1 · Biểu đồ đường");
+  assert.equal(lesson14?.studentPath, "./index.html");
 });
 
 test("mỗi mục thư viện khớp manifest công khai và chỉ dùng lớp của đúng khóa", async () => {
