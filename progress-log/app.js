@@ -1,5 +1,6 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {renderSessionReview} from './session-review.js?rev=20261007-comments';
+import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
@@ -817,6 +818,10 @@ function buildQuestion(item) {
 }
 
 function buildCheckpointQuestions(items) {
+  const flowchart = buildDropdownFlowchart(items, {
+    valueFor: responseFor, requiredFor: itemIsRequired, onChange: recordResponse
+  });
+  if (flowchart) return flowchart;
   const questions = [];
   for (let index = 0; index < items.length; index += 1) {
     const first = items[index];
@@ -898,7 +903,7 @@ function showCheckpointFeedback(block) {
   elements.questionList.prepend(score);
   for (const item of result.items) {
     if (!item.expectedAnswer) continue;
-    const question = [...elements.questionList.querySelectorAll('.question')]
+    const question = [...elements.questionList.querySelectorAll('[data-item-version-id]')]
       .find(node => node.dataset.itemVersionId === item.itemVersionId);
     if (!question) continue;
     const dropdown = question.querySelector('.matching-heading-select');
@@ -909,7 +914,10 @@ function showCheckpointFeedback(block) {
       feedback.textContent = (item.verdict === 'correct' ? 'Em chọn đúng.' : 'Em chọn sai.')
         + ' Đáp án đúng: ' + answerLabel(block.items.find(candidate =>
           candidate.itemVersionId === item.itemVersionId), item.expectedAnswer);
-      question.querySelector('.question-content').append(feedback);
+      if (question.classList.contains('flowchart-answer')) {
+        feedback.textContent = `Câu ${block.items.find(candidate => candidate.itemVersionId === item.itemVersionId).displayNumber}: ` + feedback.textContent;
+        question.closest('.flowchart-stage').querySelector('.flowchart-feedback').append(feedback);
+      } else question.querySelector('.question-content').append(feedback);
       continue;
     }
     for (const choice of question.querySelectorAll('.choice')) {
