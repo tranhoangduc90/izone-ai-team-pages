@@ -69,12 +69,13 @@ async function setup(lesson, options = {}) {
     const code = body?.classCode || 'IC2304';
     if (path === '/classes') data = { classes: [{ classCode: 'IC2304', classRef: 'class-a', assignmentStatus: 'open', ready: true }, { classCode: 'IC2305', classRef: 'class-b', assignmentStatus: 'open', ready: true }, { classCode: 'IC2306', ready: false, assignmentStatus: 'draft' }] };
     else if (path === '/identity/resolve') data = { status: options.resolveStatus || 'unique', classCode: body.studentRef === refB ? 'IC2305' : 'IC2304', studentRef: body.studentRef };
-    else if (path === '/assignment/open') data = { assignment: { classCode: 'IC2304' } };
+    else if (path === '/assignment/open') data = { assignment: { classCode: 'IC2304',...(options.unmatched?{intakeMode:'unmatched'}:{}) } };
     else if (path === '/assignment/roster') {
       if (options.delayA && code === 'IC2304') await new Promise(resolve => setTimeout(resolve, 250));
       if (rosterError) { status = 503; data = { ok: false, message: 'Mạng lớp tạm lỗi' }; }
       else data = { assignment: { title: `Homework Lesson ${lesson.number}`, classCode: code, assignmentCode: lesson.code,
-        students: options.empty ? [] : options.duplicate ? [{ student_ref: refA, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }]
+        ...(options.unmatched?{intakeMode:'unmatched',selectedStudentRef:options.selected||''}:{}),
+        students: options.unmatched ? [{student_ref:refA,name:'Tên ERP chưa ghép'},{student_ref:refOther,name:'Học viên ERP khác'}] : options.empty ? [] : options.duplicate ? [{ student_ref: refA, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }]
           : code === 'IC2304' ? [{ student_ref: refOther, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }] : [{ student_ref: refB, name: 'Học viên lớp B' }],
         parts: lesson.parts.map((part_key, index) => ({ part_key, min_questions: lesson.number === 6 ? [0, 2, 1][index] : part_key === 'freestyle' && (lesson.number === 5 || lesson.number === 4 && code === 'IC2304') ? 1 : 3 })), requiredPracticeCount: lesson.number >= 4 ? 2 : 0, assignmentStatus: 'open', doctorEnabled: lesson.number !== 3 } };
     } else if (path === '/session/start-selected') data = { session: { intakeMode: lesson.number < 6 ? 'legacy' : 'independent', accessToken: `${code}-${body.studentRef}`, classCode: options.badSession ? 'IC9999' : code, studentRef: body.studentRef, documentId: body.documentId || `own-${code}-${body.studentRef}` } };
@@ -293,6 +294,20 @@ try {
     assert.equal(await test.page.locator('#student-select').inputValue(), refA);
     assert.equal(test.requests.some(r => r.path === '/session/start-selected'), false);
     await test.context.close();
+  });
+  for(const width of [390,1440]) await scenario(`L6 unmatched Docs ${width}: ERP roster, exact Doc, saved selection`,async()=>{
+    const t=await setup(lessons[4],{width,unmatched:true,selected:refA,query:'?documentId=unmatched-fixture&class=IC2304'});
+    assert.equal(await t.page.locator('#login-screen').isVisible(),true);
+    assert.equal(await t.page.locator('#student-select option').count(),3);
+    assert.equal(await t.page.locator('#student-select').inputValue(),refA);
+    assert.equal(t.requests.some(r=>r.path==='/session/start-selected'),false);
+    await t.page.screenshot({path:join(output,`unmatched-${width}.png`),fullPage:true});
+    await t.page.locator('#student-select').selectOption(refOther);await open(t.page);
+    const request=t.requests.find(r=>r.path==='/session/start-selected');
+    assert.equal(request.body.documentId,'unmatched-fixture');assert.equal(request.body.studentRef,refOther);
+    assert.equal(await t.page.locator('#active-student').innerText(),'Học viên ERP khác');
+    assert.equal(await t.page.locator('#return-homework').getAttribute('href'),'https://docs.google.com/document/d/unmatched-fixture/edit?tab=t.0');
+    assert.deepEqual(t.errors,[]);await t.context.close();
   });
   await scenario('Pending polling only / 429 exponential backoff / stop after resolved', async () => {
     const { page, context, requests } = await setup(lessons[0], { clock: true, failPoll: true });

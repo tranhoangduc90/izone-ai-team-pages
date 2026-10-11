@@ -114,7 +114,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
         studentSelect.add(new Option(student.name + (counts.get(student.name) > 1 ? ` · ${ref.slice(-4)}` : ''), ref));
       }
       studentSelect.disabled = !roster.size;
-      studentSelect.value = roster.has(preferred) ? preferred : '';
+      const suggested = next.selectedStudentRef || preferred;
+      studentSelect.value = roster.has(suggested) ? suggested : '';
       button.disabled = !studentSelect.value;
       $('remembered-identity').hidden = !studentSelect.value;
       $('forget-remembered').hidden = !studentSelect.value;
