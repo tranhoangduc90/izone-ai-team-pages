@@ -27,7 +27,7 @@ function complete(){
 test('V-CHAIN · nhắc đủ Đề A X B và đánh dấu phần đang làm',()=>{
  const s=complete();s.responses.a1='';s.responses.x1='';s.steps.a1.status='draft';s.steps.x1.status='draft';
  for(const k of ['a1','x1']){
-  const html=renderJourney(s,k),point=k[0].toUpperCase();
+  const html=renderJourney(s,k,'','Mua đồ không cần thiết'),point=k[0].toUpperCase();
   assert.match(html,/Mua đồ không cần thiết/);
   assert.ok(html.indexOf('data-point="A"')<html.indexOf('data-point="X"'));
   assert.ok(html.indexOf('data-point="X"')<html.indexOf('data-point="B"'));

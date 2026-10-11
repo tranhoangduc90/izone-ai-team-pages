@@ -6,6 +6,7 @@ installStyles();
 // Nhận cookie giảng viên riêng, đọc tiến độ/bài và ghi góp ý vào đúng phiên/phần.
 // Không lưu credential Google trong localStorage. Lỗi giữ lời góp ý để thử lại.
 const base='https://ducizone.ddns.net/api/handout67/v1/teacher';
+const lessonActivity=globalThis.handout67Lesson?.activity||'lesson5';
 const $=id=>document.getElementById(id);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={topic:'Topic sentence và idea',b1:'Điểm B · Ý 1',a1:'Điểm A · Ý 1',x1:'Cầu nối X · Ý 1',b2:'Điểm B · Ý 2',a2:'Điểm A · Ý 2',x2:'Cầu nối X · Ý 2',idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic sentence'};
@@ -41,7 +42,7 @@ function renderRows(){
 function schedule(){clearTimeout(timer);if(!$('dashboard').hidden&&!document.hidden)timer=setTimeout(()=>refresh(),5000);}
 async function refresh(forceDetail=false){
  if(loading||document.hidden||$('dashboard').hidden)return;clearTimeout(timer);loading=true;const generation=++readGeneration,current=epoch,classRef=$('class-select').value;
- try{const value=await request('/students?class='+encodeURIComponent(classRef));if(current!==epoch||classRef!==$('class-select').value)return;rows=value.students;renderRows();$('updated').textContent='Đã cập nhật '+new Date().toLocaleTimeString('vi-VN')+' · đọc lại sau 5 giây';$('error').hidden=true;if(selected?.ref&&!sending)await readDetail(selected.ref,{activity:forceDetail});}catch(e){if(current===epoch)report(e);}finally{if(generation===readGeneration){loading=false;if(current===epoch)schedule();}}
+ try{const value=await request('/students?class='+encodeURIComponent(classRef)+'&activity='+encodeURIComponent(lessonActivity));if(current!==epoch||classRef!==$('class-select').value)return;rows=value.students;renderRows();$('updated').textContent='Đã cập nhật '+new Date().toLocaleTimeString('vi-VN')+' · đọc lại sau 5 giây';$('error').hidden=true;if(selected?.ref&&!sending)await readDetail(selected.ref,{activity:forceDetail});}catch(e){if(current===epoch)report(e);}finally{if(generation===readGeneration){loading=false;if(current===epoch)schedule();}}
 }
 function snapshot(note){return Object.entries(note.snapshot||{}).map(([k,v])=>(labels[k]||k)+': '+v).join('\n\n');}
 function renderDetail(session){
@@ -116,7 +117,7 @@ async function openDetail(studentRef){
 }
 async function enter(){
  const current=++epoch;
- const result=await request('/classes');if(current!==epoch)return;
+ const result=await request('/classes?activity='+encodeURIComponent(lessonActivity));if(current!==epoch)return;
  $('class-select').innerHTML=result.classes.map(c=>`<option value="${escape(c.classRef)}">${escape(c.className)}</option>`).join('');
  activeClass=$('class-select').value;
  if(!result.classes.length)throw Object.assign(new Error('TEACHER_FORBIDDEN'),{status:403});
