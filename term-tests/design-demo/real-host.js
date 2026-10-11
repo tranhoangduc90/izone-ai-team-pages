@@ -1,8 +1,8 @@
-// Phiên Google và quyền lớp ở API hiện hành. Đề, bài viết, nhận xét chỉ ở bộ nhớ tab.
+// Phiên Google riêng cho demo, mở cho mọi tài khoản Google đã xác minh. Đề, bài viết, nhận xét chỉ ở bộ nhớ tab.
 // Đổi bài/hết phiên hủy yêu cầu cũ; iframe riêng không có quyền gửi bài học viên.
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js';
 const config = window.TERM_TEST_APP_CONFIG;
-const session = createTeacherSessionClient({ apiBaseUrl: config.API_BASE_URL, sessionPath:'/api/auth/session' });
+const session = createTeacherSessionClient({ apiBaseUrl: config.API_BASE_URL, sessionPath:'/api/term-tests/teacher/design-demo/session' });
 const endpoint = config.API_BASE_URL + '/api/term-tests/teacher/design-demo';
 const el = Object.fromEntries(['access','workspace','logout','restore','mode','attempt','attempt-label','screen','reset-trial','source-note','frame-slot','real-status'].map(id=>[id,document.getElementById(id)]));
 let generation=0, controller=new AbortController(), authenticated=false, content=null, snapshot=null, audioUrl=null;
