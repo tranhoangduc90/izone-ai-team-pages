@@ -26,6 +26,7 @@ Nếu test lỗi, Node trả mã khác 0 và nêu đúng ca không đạt. Test 
 | Mất mạng, autoplay, checkpoint và phục hồi audio | `term-test-audio-recovery.mjs` |
 | Thi lại riêng Listening và cách ly phiên | `term-test-listening-retake.mjs` |
 | Kết quả Writing trực tiếp, polling dự phòng và cache revision | `term-test-k67-live-results.mjs` |
+| Giữ mở/đóng bảng từng câu khi cập nhật Writing, nhận câu mới và đổi lượt thi | `term-test-k67-result-details.mjs` |
 | Dàn ý Writing, thời gian chuẩn bị, kết luận và phản hồi đầy đủ | `term-test-k67-writing-update.mjs`, `term-test-writing-parity-feedback.mjs` |
 | Link phản hồi trên dashboard giảng viên | `term-teacher-feedback-links.mjs` |
 | Phiên đăng nhập giảng viên, logout và chống CSRF | `teacher-login-preference.mjs`, `term-test-teacher-session.mjs` |

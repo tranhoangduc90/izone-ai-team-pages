@@ -2603,9 +2603,29 @@
       && !demoMode
     );
     renderWritingSubmission();
-    const detailBlocks = [renderDetailBlock('Listening', result.listening.details)];
-    if (hasReading) detailBlocks.push(renderDetailBlock('Reading', result.reading.details));
-    elements.questionDetails.replaceChildren(...detailBlocks);
+    // Cập nhật Writing giữ bảng L/R và focus; lượt thi mới có trạng thái mở riêng.
+    const identity = JSON.stringify([
+      testConfig.slug, payload.className, payload.studentRef || state.studentRef || payload.studentName,
+      payload.attemptToken || state.attemptToken
+    ]);
+    const previousBlocks = state.resultDetailsIdentity === identity
+      ? Array.from(elements.questionDetails.children) : [];
+    const skills = [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const detailBlocks = skills.map(([title, skill]) => {
+      const fingerprint = JSON.stringify(skill.details || []);
+      const previous = previousBlocks.find(block => block.dataset.skill === title);
+      if (previous?.dataset.details === fingerprint) return previous;
+      const block = renderDetailBlock(title, skill.details);
+      block.dataset.skill = title;
+      block.dataset.details = fingerprint;
+      block.open = previous?.open || false;
+      return block;
+    });
+    if (detailBlocks.length !== elements.questionDetails.children.length
+      || detailBlocks.some((block, index) => block !== elements.questionDetails.children[index])) {
+      elements.questionDetails.replaceChildren(...detailBlocks);
+    }
+    state.resultDetailsIdentity = identity;
     const performanceSections = [renderSkillPerformance('Listening', result.listening)];
     if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
     elements.skillPerformanceSections.replaceChildren(...performanceSections);

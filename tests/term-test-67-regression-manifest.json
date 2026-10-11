@@ -16,6 +16,7 @@
       "tests/term-test-writing-parity-feedback.mjs"
     ],
     "browser": [
+      "tests/term-test-k67-result-details.mjs",
       "tests/term-demo-reopen.cjs",
       "tests/mini-test-identity.mjs",
       "tests/term-student-memory-ui.cjs",
