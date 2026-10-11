@@ -4,9 +4,9 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const points=['A','X','B'];
 import {savedContent} from './features.mjs?v=20261007-1';
 const names={A:'Điểm đầu',X:'Cầu nối',B:'Điểm cuối'};
-export function renderJourney(session,key,currentContent=''){
+export function renderJourney(session,key,currentContent='',shortTitle=''){
   const n=key.at(-1),active=key[0].toUpperCase();
-  return `<section class="argument-reminder" aria-label="Nhắc lại hành trình ý ${n}"><h4>Nhắc lại các nội dung đã có</h4><div class="reminder-prompt"><b>Đề bài</b><span>Mua đồ không cần thiết</span></div><ol class="argument-points">${points.map(point=>{
+  return `<section class="argument-reminder" aria-label="Nhắc lại hành trình ý ${n}"><h4>Nhắc lại các nội dung đã có</h4><div class="reminder-prompt"><b>Đề bài</b><span>${esc(shortTitle)}</span></div><ol class="argument-points">${points.map(point=>{
     const field=point.toLowerCase()+n,value=session.responses[field],current=point===active,done=session.steps[field]?.status==='passed';
     return `<li data-point="${point}" class="argument-point ${current?'is-current':''} ${value?'':'is-empty'}" ${current?'aria-current="step"':''}><span class="point-marker" aria-hidden="true">${point}</span><div><div class="point-title"><strong>${point} · ${names[point]}</strong>${current?`<span class="current-label">${done?'Đang xem':'Đang làm'}</span>`:done?'<span class="confirmed-label">✓ Đã chốt</span>':''}</div>${current?currentContent:value?savedContent(session,field,{editable:done||!current}):`<p><span class="empty-point">${current?'Bạn đang xác định điểm '+point:'Chưa có nội dung'}<small>${current?'Nhập ý của bạn vào ô màu vàng bên dưới.':'Sẽ bổ sung ở bước tương ứng.'}</small></span></p>`}</div></li>`;
   }).join('')}</ol></section>`;

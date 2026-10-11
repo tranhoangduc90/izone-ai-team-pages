@@ -1,6 +1,6 @@
 import {ORDER,FIELDS,createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs';
-import {createClient} from './client.mjs?v=20261007-1';
-import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261007-1';
+import {createClient} from './client.mjs?v=20261011-1';
+import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261011-1';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 installStyles();
 
@@ -9,19 +9,20 @@ installStyles();
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api=createClient('https://ducizone.ddns.net/api/handout67/v1');
+let lesson=globalThis.handout67Lesson||{activity:'lesson5'};
 const names={};let classes=[],state=createState(),student='',generation=0,busy=false,conflict=false,editingLocked=false;
 let mutationVersion=0;
 let featureDialog=null;
 let dirty={},saveTimer,pollTimer,toastTimer,serial=Promise.resolve();
 const labels={idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic sentence của thân bài 2',b1:'Điểm cuối B · Ý 1',a1:'Điểm đầu A · Ý 1',x1:'Cầu nối X · Ý 1',b2:'Điểm cuối B · Ý 2',a2:'Điểm đầu A · Ý 2',x2:'Cầu nối X · Ý 2'};
-const descriptions={topic:{title:'Chốt idea và Topic sentence',kicker:'01 · Chuẩn bị thân bài 2',instruction:'Topic sentence = Trọng tâm bàn luận + Tóm tắt ngắn gọn toàn bộ idea của đoạn văn.',button:'Check chất lượng Topic Sentence'},b:{title:'Chốt điểm cuối (B)',instruction:'Có cụ thể không? Nêu kết quả cuối cùng mà ý này muốn chứng minh, để người đọc hình dung rõ.',button:'Check chất lượng Điểm cuối'},a:{title:'Check điểm đầu (A)',instruction:'Có bám sát đề không? Tả rõ việc mua đồ không cần thiết hoặc tình tiết xảy ra ngay sau việc mua.',button:'Check chất lượng điểm đầu A'},x:{title:'Xây X · Cầu nối từ A sang B',instruction:'Vì sao A dẫn đến B? Giải thích một cơ chế nối hai điểm đã đạt; không chỉ diễn đạt lại A hoặc B.',button:'Check chất lượng cầu nối X'}};
+const descriptions={topic:{title:'Chốt idea và Topic sentence',kicker:'01 · Chuẩn bị thân bài 2',instruction:'Topic sentence = Trọng tâm bàn luận + Tóm tắt ngắn gọn toàn bộ idea của đoạn văn.',button:'Check chất lượng Topic Sentence'},b:{title:'Chốt điểm cuối (B)',instruction:'Có cụ thể không? Nêu kết quả cuối cùng mà ý này muốn chứng minh, để người đọc hình dung rõ.',button:'Check chất lượng Điểm cuối'},a:{title:'Check điểm đầu (A)',instruction:lesson.aInstruction||'',button:'Check chất lượng điểm đầu A'},x:{title:'Xây X · Cầu nối từ A sang B',instruction:'Vì sao A dẫn đến B? Giải thích một cơ chế nối hai điểm đã đạt; không chỉ diễn đạt lại A hoặc B.',button:'Check chất lượng cầu nối X'}};
 const statusLabels={draft:'Chưa check',revision:'Cần sửa',passed:'Đã đạt',pending:'Đang chấm…',technical_error:'Chưa chấm xong'};
 function field(name,disabled){
   const isTopic=name==='topicSentence',idea=/^idea/.test(name);
   const placeholder=idea?'Ghi ngắn gọn ý bạn muốn triển khai…':isTopic?'Viết câu chủ đề bao quát cả hai idea…':'Bạn có thể ghi ý bằng tiếng Việt hoặc tiếng Anh…';
   const section=ORDER.find(k=>FIELDS[k].includes(name));
-  if(disabled&&state.responses[name]&&available(state,section))return `<div class="student-field"><span>${labels[name]}</span>${savedContent(state,name,{editable:true})}${idea?'<small>Chọn tác hại bạn sẽ bàn luận trong thân bài này.</small>':''}</div>`;
-  return `<label class="student-field">${labels[name]}<textarea id="field-${name}" data-field="${name}" maxlength="4000" ${disabled?'disabled':''} placeholder="${placeholder}" ${isTopic?'lang="en"':''}>${escape(state.responses[name])}</textarea>${idea?'<small>Chọn tác hại bạn sẽ bàn luận trong thân bài này.</small>':''}</label>`;
+  if(disabled&&state.responses[name]&&available(state,section))return `<div class="student-field"><span>${labels[name]}</span>${savedContent(state,name,{editable:true})}${idea?'<small>'+escape(lesson.ideaHint)+'</small>':''}</div>`;
+  return `<label class="student-field">${labels[name]}<textarea id="field-${name}" data-field="${name}" maxlength="4000" ${disabled?'disabled':''} placeholder="${placeholder}" ${isTopic?'lang="en"':''}>${escape(state.responses[name])}</textarea>${idea?'<small>'+escape(lesson.ideaHint)+'</small>':''}</label>`;
 }
 function snapshot(history,key){return FIELDS[key].map(f=>labels[f]+': '+history.snapshot[f]).join('\n\n');}
 function comments(key){
@@ -40,8 +41,8 @@ function comments(key){
 function chain(key){
   if(key==='topic')return '';
   const n=key.at(-1),type=key[0];
-  if(type==='a'||type==='x')return renderJourney(state,key,field(key,!canEdit(state,key)));
-  const items=type==='b'?[['Idea',state.responses['idea'+n]],...(n==='2'?[['B1',state.responses.b1]]:[])]:type==='a'?[['Đề','Mua đồ không cần thiết'],['B',state.responses['b'+n]]]:[['A',state.responses['a'+n]],['B',state.responses['b'+n]]];
+  if(type==='a'||type==='x')return renderJourney(state,key,field(key,!canEdit(state,key)),lesson.shortTitle);
+  const items=[['Idea',state.responses['idea'+n]],...(n==='2'?[['B1',state.responses.b1]]:[])];
   return `<div class="context-chain">${items.map(([label,value])=>`<div><b>${label}</b><span>${label==='Idea'?savedContent(state,'idea'+n,{editable:true}):label==='B1'?savedContent(state,'b1',{editable:true}):escape(value)}</span></div>`).join('')}</div>`;
 }
 function stepCard(key){
@@ -167,7 +168,7 @@ async function poll(){
 async function enter(){
  const epoch=++generation;const button=$('confirm-button');button.disabled=true;
  try {
-  const result=await api.open({activity:'lesson5',classRef:$('class-select').value,studentRef:student});
+  const result=await api.open({activity:lesson.activity,classRef:$('class-select').value,studentRef:student});
   if(epoch!==generation)return;
   api.setToken(result.token);dirty={};conflict=false;busy=false;editingLocked=false;serial=Promise.resolve();state=result.session;
   if($('remember').checked){try{localStorage.setItem('izone-handout67:identity',JSON.stringify({classRef:state.classRef,studentRef:student}));}catch{}}
@@ -185,8 +186,9 @@ function students(){
 }
 async function bootstrap(){
  try {
+  if(!lesson.topic&&api.lesson){lesson=(await api.lesson(lesson.activity)).lesson;descriptions.a.instruction=lesson.aInstruction;}
   const classRef=document.body?.dataset?.classRef;
-  classes=(await api.roster()).classes.filter(c=>!classRef||c.classRef===classRef);
+  classes=(await api.roster(lesson.activity)).classes.filter(c=>!classRef||c.classRef===classRef);
   if(!classes.length)throw new Error('CLASS_NOT_OPEN');
   for(const c of classes)for(const s of c.students)names[s.studentRef]=s.displayName;
   $('class-select').innerHTML=classes.map(c=>`<option value="${escape(c.classRef)}">${escape(c.className)}</option>`).join('');students();

@@ -1,0 +1,42 @@
+<a class="skip" href="#main">Đi tới nội dung</a>
+  <header class="topbar">
+    <a class="brand" href="./index.html" data-lesson-brand><span class="logo">i<span>ZONE</span><small>IELTS TRAINING ACADEMY</small></span><span class="brand-divider"></span><span class="brand-product">Writing<span>Handout trên lớp</span></span></a>
+    <span class="preview-label" data-lesson-text="classLesson"></span>
+  </header>
+  <main id="main" tabindex="-1">
+    <section id="identity" class="login-shell" aria-labelledby="login-title">
+      <div class="login-card">
+        <p class="kicker red" data-lesson-text="courseLesson"></p>
+        <h1 id="login-title">Bắt đầu bài học</h1>
+        <p class="login-description">Xây lập luận cho thân bài 2,<br>từng bước từ ý tưởng đến A–X–B.</p>
+        <form id="login-form">
+          <label>Lớp của bạn<select id="class-select" required><option value="">Đang tải lớp…</option></select></label>
+          <label>Tên của bạn<select id="student-select" required><option value="">Chọn tên của bạn</option></select></label>
+          <label class="checkbox"><input id="remember" type="checkbox" checked><span>Ghi nhớ tôi trên thiết bị này</span></label>
+          <button class="primary wide" type="submit">Tiếp tục <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="fine-print">Chọn đúng tên của bạn. Bài làm và các lần nhận xét được lưu để bạn tiếp tục khi quay lại.</p>
+      </div>
+
+    </section>
+    <section id="confirm" class="login-shell" hidden aria-labelledby="confirm-title">
+      <div class="login-card confirm-card"><p class="kicker red">Xác nhận người học</p><div class="avatar" aria-hidden="true">HV</div><h1 id="confirm-title">Học viên mẫu A</h1><p><span id="confirm-class"></span><br><strong data-lesson-text="writingLesson"></strong></p><button id="confirm-button" class="primary wide">Đúng là tôi · mở bài làm →</button><button id="back" class="text-button">Chọn lại tên</button><p class="fine-print">Chọn tên và xác nhận như Progress Log.</p></div>
+    </section>
+    <section id="workspace" hidden>
+      <div class="context"><div><b id="learner-label"></b><span data-lesson-text="contextLesson"></span></div><div class="context-actions"><span id="save-state" role="status">Chưa có thay đổi</span><button id="logout" class="text-button">Đổi người học</button></div></div>
+      <p id="connection-note" class="error" role="alert" hidden></p>
+      <button id="read-latest" class="secondary" hidden>Đọc bản đã lưu trên máy chủ</button>
+      <button id="restore-draft" class="secondary" hidden>Khôi phục nháp chưa lưu trên thiết bị này</button>
+      <div class="layout">
+        <aside class="journey"><p class="kicker">Bài học của bạn</p><h2>Thân bài 2</h2><nav id="journey-nav" aria-label="Tiến độ bài làm"></nav><div class="journey-note"><span>A → X → B</span><p>Chốt B trước, tìm A bám đề,<br>rồi xây cầu nối X.</p></div></aside>
+        <div class="work-content">
+          <div class="page-title"><div><p class="kicker red" data-lesson-text="writingLesson"></p><h1 data-lesson-text="title"></h1><p>Hoàn thiện từng ý. Chỉ chuyển tiếp khi lập luận đã rõ.</p></div><span class="lesson-tag">Thân bài 2</span></div>
+          <article id="prompt" class="prompt"><div class="prompt-heading"><span class="number">?</span><h2>Đề bài</h2></div><p lang="en" data-lesson-text="topic"></p></article>
+          <div id="sections"></div>
+          <div id="completion" hidden></div>
+          <footer class="page-footer">IZONE · Xây lập luận rõ trước khi tìm cách diễn đạt.</footer>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div id="toast" role="status" class="toast" hidden></div>
