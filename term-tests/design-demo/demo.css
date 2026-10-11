@@ -1,0 +1,6 @@
+.design-preview-label{position:fixed;bottom:0;left:0;right:0;z-index:9999;display:flex;justify-content:space-between;gap:12px;background:#152b4e;color:white;padding:5px 18px;font:11px/18px sans-serif}
+.design-preview-label a{color:white;text-decoration:underline;text-underline-offset:3px}
+.demo-options{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}
+.demo-options a{padding:10px 16px;border:1px solid #bbc8da;border-radius:8px;color:#152b4e;background:#edf1f6;text-decoration:none;font-weight:700}
+.design-demo-index .color-dot.rose{background:var(--lab-roseText)}
+@media(max-width:600px){.design-preview-label{font-size:10px;padding:4px 9px;gap:7px}.design-preview-label a{white-space:nowrap}}
