@@ -1,18 +1,19 @@
-# Demo màu Term / Mini Test 67
+# Demo Term Test 2 · IC2200
 
-Bản công khai để xem và thử phối màu trên các màn Term Test 1, Term Test 2 và Mini Test buổi 5. Mở `index.html`; chọn một màn hoặc một bộ màu. Xanh sương là mặc định, tiếp theo là Sage dịu, Kem cát và Tím xám; các preset lịch sử nằm phía sau.
+Entry công khai giữ nguyên `/term-tests/design-demo/`. `real.html` là alias; URL `exam.html` cũ chuyển về entry mới. Demo Term Test 1, Mini Test và toàn bộ fixture minh họa cũ đã bỏ theo yêu cầu.
 
-## Dữ liệu và tương tác
+## Hai phiên bản
 
-- Nội dung đọc/nghe, biểu đồ, bài viết, điểm và nhận xét được tự soạn để minh họa. Không chứa đề riêng, đáp án thật hay snapshot học viên.
-- `demo-runtime.js` mô phỏng API ngay trong trình duyệt. Nút lưu/nộp chỉ đổi dữ liệu trong RAM của tab; tải lại khởi tạo tình huống mẫu. Không dùng demo để làm bài thi thật.
-- Bộ màu lưu trong localStorage riêng của demo. Tham số `labOption` giữ bốn phương án độc lập khi so sánh. Màu tồn tại sau tải lại; bài làm thử không có cam kết lưu lâu dài.
-- CSP giới hạn kết nối cùng nguồn; runtime chặn API ngoài mock. Audio là âm thử tự tạo, không phải bài nghe IELTS.
+- **Làm thử đề trống:** nội dung thật được tải sau đăng nhập; bài thử chỉ ở RAM. Reading/Listening gọi bộ chấm hiện hành qua endpoint chỉ đọc, không tạo attempt hay ghi điểm. Writing thử không gửi chấm AI.
+- **Xem bài đã chấm:** chọn bài đã nộp của IC2200; dùng đúng đáp án, bài viết và lần chấm được final result tham chiếu. Tất cả điều khiển nộp/lưu bài thật bị khóa.
+- Google session và quyền lớp dùng API K67 hiện hành. Không nhúng đề, đáp án, bài làm, nhận xét hoặc token học viên vào source/Pages. Logout, hết phiên hoặc đổi bài hủy yêu cầu cũ và gỡ iframe chứa dữ liệu.
 
-## Source và cách phát hành
+## Bảng màu
 
-Demo tái dùng renderer `../shared/` và `../term-test-2-computer-based/`, không sao chép hoặc sửa logic thi. `skin.css`, `presentation.js`, `preview.css`, `header.css` và `color-lab.*` chỉ được nạp bởi các entry trong thư mục này. Các URL bài thi đang dùng không nạp lớp demo.
+Xanh sương mặc định, tiếp theo Sage dịu, Kem cát và Tím xám. Chỉ bộ màu được lưu lâu dài trong localStorage. Chọn trường màu tự cuộn vùng đang chỉnh vào màn hình và vẽ viền tạm thời; hoạt động cả trong hộp nhận xét. Trên điện thoại bảng thu thành dải chỉnh màu. Không tạo đáp án/cờ giả nếu màn chưa có trạng thái cần tìm.
 
-Mỗi trang dùng đường dẫn tương đối để chạy dưới prefix GitHub Pages. Đường công khai: `/izone-ai-team-pages/term-tests/design-demo/`.
+## Ranh giới triển khai
 
-Kiểm trước phát hành: các entry trên máy tĩnh với prefix Pages; desktop/mobile; đổi và nhớ màu, thứ tự preset; mở nhận xét và mở rộng nhận xét; phiếu Mini hai cột; phòng chờ; Console/network và không gọi API thật. Quay lui bằng revert commit thêm thư mục demo; không khôi phục backend hoặc database.
+Tái dùng renderer `../shared/` và `../term-test-2-computer-based/`; các trang thi thật không nạp adapter hoặc lớp màu demo. `real-runtime.js` giữ dữ liệu RAM và chặn các API ghi; `real-host.js` là cầu nối có đăng nhập tới `/api/term-tests/teacher/design-demo`.
+
+API mới phải được phát hành trước entry Pages. Không có migration database. Quay lui frontend bằng revert commit; quay lui API bằng image/config đã sao lưu. Các kiểm tra cần thiết: quyền lớp, phiên hết hạn/đăng xuất, lineage lần chấm, bài trống không ghi dữ liệu, audio có quyền, đọc thực tế trên desktop/mobile và bảng màu tự cuộn.

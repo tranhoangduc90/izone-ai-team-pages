@@ -56,3 +56,13 @@ html[data-lab-option] .design67 :is(.cbt-lobby-header,.cbt-review-panel>header,.
 html[data-lab-option] .design67 :is(.cbt-review-panel,.cbt-note-panel){border-color:var(--lab-line)}
 html[data-lab-option] .design67 .analysis-card.improve h4{color:var(--lab-roseText)}
 html[data-lab-option] .design67 .result-status{border-left-color:var(--lab-edge)}
+
+/* Dò vị trí dùng viền rỗng để không làm sai màu đang xem. */
+.lab-located{outline:3px dashed #426c95!important;outline-offset:5px;scroll-margin:80px 20px 120px}
+#demo-color-lab.lab-on-left{left:18px;right:auto}
+#demo-color-lab .lab-location{border-bottom:1px solid #dce3eb;padding-bottom:9px;margin-bottom:9px}
+#demo-color-lab .lab-location-status{font-size:12px;line-height:1.4;margin:0 0 7px;color:#354760}
+#demo-color-lab .lab-location-tools{display:flex;gap:6px}
+#demo-color-lab .lab-location-tools button{font-size:11px;min-height:34px;padding:5px 8px}
+#demo-color-lab .lab-mini-adjust{border:1px solid #bdcddd;border-radius:12px;background:white;padding:10px;box-shadow:0 6px 26px #152b4e25}
+@media(max-width:600px){#demo-color-lab.lab-on-left{left:auto;right:12px}#demo-color-lab.lab-is-mini #lab-panel,#demo-color-lab.lab-is-mini .lab-launch{display:none}#demo-color-lab .lab-mini-adjust .lab-row{margin:0 0 6px}}
