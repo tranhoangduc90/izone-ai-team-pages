@@ -18,7 +18,7 @@ assert.match(html, /id="doctor-list"/);
 assert.match(html, /id="doctor-expand"/);
 assert.match(html, /id="practice-slots"/);
 assert.match(html, /id="extra-practice"/);
-assert.match(html, /lesson-4-live\.js/);
+assert.match(html, /type="module" src=/);
 for (const image of ['voice-input.png', 'iphone-menu.png', 'iphone-select-chat.png',
   'iphone-share-chat.png', 'iphone-share-link.png', 'android-menu.png',
   'android-share.png', 'android-share-link.png', 'link-format.png']) {

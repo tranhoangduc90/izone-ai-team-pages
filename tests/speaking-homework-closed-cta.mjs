@@ -38,8 +38,8 @@ try {
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.addInitScript(({ key, ref }) => localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: ref })), { key, ref });
-      await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework/**', async route => {
-        const path = new URL(route.request().url()).pathname.split('/api/speaking-homework')[1];
+      await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework*/**', async route => {
+        const path = new URL(route.request().url()).pathname.split(/\/api\/speaking-homework(?:-independent)?/)[1];
         const body = route.request().postDataJSON();
         requests.push({ path, body });
         let data; let status = 200;

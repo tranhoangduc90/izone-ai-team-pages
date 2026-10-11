@@ -101,6 +101,7 @@ try {
     });
   }
   for (const lesson of lessons) await run(`L${lesson.number}: submitted receipt overrides stale empty draft`, lesson, { status: 'accepted', submitted: true }, async ({ page, fixture, open }) => {
+    await page.locator('#completion-card').waitFor({state:'visible'});
     assert.equal(await page.locator(`#${lesson.parts[0]}-link`).inputValue(), share(1));
     assert.equal(await page.locator(`#${lesson.parts[0]}-link`).isDisabled(), true);
     assert.equal(await page.locator('#completion-card').isVisible(), true);

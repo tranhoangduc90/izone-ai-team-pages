@@ -1,0 +1,155 @@
+@import url('./fonts/nunito.css');
+/* Bố cục học tập cho Speaking; màu IZONE giữ từ source, các lớp cũ chỉ làm điểm nối. */
+:root{--navy:#152b4e;--red:#db0829;--ink:#202b3b;--muted:#586477;--line:#dce1e7;--paper:#fff;--canvas:#f5f6f8}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body.speaking-design{margin:0;background:var(--canvas);color:var(--ink);font-family:'Segoe UI',sans-serif;font-size:16px;line-height:1.6}
+.speaking-design *{box-sizing:border-box}
+.speaking-design button,.speaking-design input,.speaking-design select{font:inherit}
+.pilot-banner{padding:8px 28px;background:#e9edf2;display:flex;justify-content:center;gap:24px;font-size:12px;color:#435168;letter-spacing:.04em}
+.pilot-banner a{color:var(--navy);text-underline-offset:3px}
+.speaking-design .page-shell{max-width:1240px;padding:0 40px 48px;margin:auto}
+.studio-header{display:flex;justify-content:space-between;align-items:center;padding:26px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
+.studio-header i{font-style:normal;color:#b0b8c3;margin:0 12px}
+.studio-brand{display:flex;align-items:center;gap:18px;color:var(--red);text-decoration:none;font-weight:850;font-size:29px;letter-spacing:-1px}
+.studio-brand span{font-size:10px;letter-spacing:.14em;font-weight:600;color:var(--muted);border-left:1px solid #cbd1da;padding-left:18px}
+.speaking-design .hero{position:relative;background:none;color:var(--ink);border:0;border-radius:0;box-shadow:none;padding:32px 0 24px;display:flex;justify-content:space-between;gap:24px;overflow:visible}
+.speaking-design .hero h1{font-size:clamp(32px,3.7vw,48px);line-height:1.18;font-weight:650;letter-spacing:-1.5px;margin:10px 0 16px;color:var(--navy)}
+.speaking-design .hero h1 .heading-dot,.heading-dot{color:var(--red)}
+.speaking-design .hero::after{display:none}
+.pilot-banner button{border:0;background:none;color:var(--navy);padding:0;text-decoration:underline;cursor:pointer;font-size:inherit;min-height:24px}
+.pilot-banner{flex-wrap:wrap;gap:6px 20px}
+.speaking-design .hero-copy{color:var(--muted);font-size:17px;line-height:1.65;max-width:660px;margin:0}
+.lesson-index{font-size:100px;font-weight:300;line-height:1;color:#d6dce5;letter-spacing:-8px;align-self:center;padding-right:8px}
+.speaking-design .section-kicker{font-size:11px;letter-spacing:.12em;font-weight:700;color:var(--muted)}
+.speaking-design .active-identity-bar{margin:0 0 14px;padding:0;min-height:40px;background:none;border:0;gap:20px;font-size:14px;color:var(--muted)}
+.speaking-design .text-button{color:var(--navy);text-underline-offset:4px;min-height:40px;font-weight:600}
+.lesson-nav{display:flex;gap:30px;align-items:center;border-bottom:1px solid #cbd3df;margin-bottom:20px}
+.lesson-nav a{padding:12px 0;color:var(--navy);text-decoration:none;font-size:15px;font-weight:600}
+.lesson-nav a:first-child{border-bottom:2px solid var(--red)}
+.lesson-nav b{color:var(--red);font-size:12px;margin-right:8px}
+.lesson-nav>span{margin-left:auto;font-size:13px;color:var(--muted)}
+.speaking-design .submission-progress{border:0;border-radius:0;background:none;padding:0;margin:0 0 22px;gap:24px;font-size:13px}
+.speaking-design .submission-progress strong{font-weight:500;color:var(--muted)}
+.speaking-design #progress-bar{height:4px;width:180px;background:#dce2e9}
+.speaking-design #progress-fill{background:var(--navy)}
+.speaking-design .task-card{border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 24px #152b4e05;overflow:hidden;margin:0;background:var(--paper)}
+.speaking-design .task-header{padding:26px 32px 22px;border:0;gap:16px;align-items:center}
+.speaking-design .task-number{width:38px;height:38px;border-radius:50%;background:#fcecf0;color:var(--red);font-size:14px;font-weight:650}
+.speaking-design .task-header h2{font-size:25px;line-height:1.3;font-weight:650;letter-spacing:-.5px;margin:3px 0 0}
+.speaking-design .task-status{border:1px solid var(--line);background:white;color:var(--muted);font-size:12px;padding:5px 10px;border-radius:30px;white-space:nowrap}
+.speaking-design .task-body{grid-template-columns:1.2fr 1fr;gap:0;border-top:1px solid #edf0f3}
+.speaking-design .instructions{padding:28px 32px 32px;background:white}
+.speaking-design .instruction-lead{font-size:16px;font-weight:500;line-height:1.65;margin:0 0 16px;color:var(--ink)}
+.speaking-design .instructions ol{padding-left:21px;margin:0 0 24px;color:var(--muted);font-size:14px;line-height:1.75}
+.speaking-design .instructions li{margin-bottom:10px;padding-left:4px}
+.speaking-design .submission-panel{padding:28px 32px;background:#f8f9fb;border:0;border-left:1px solid #edf0f3;display:flex;flex-direction:column;justify-content:flex-start}
+.submission-panel h3{font-size:19px;line-height:1.4;margin:0 0 20px;font-weight:650;letter-spacing:-.3px}
+.speaking-design .button{display:inline-flex;justify-content:center;align-items:center;min-height:46px;padding:11px 18px;border-radius:7px;font-size:14px;font-weight:600;line-height:1.45;box-shadow:none;gap:12px;text-decoration:none}
+.speaking-design .button-primary{background:var(--navy);border:1px solid var(--navy);color:white}
+.speaking-design .button-primary:hover{background:#23416a}
+.speaking-design .practice-button{background:var(--red);border-color:var(--red);width:auto;margin:0}
+.speaking-design .practice-button:hover{background:#b80723}
+.speaking-design button:disabled{opacity:.5;cursor:default}
+.speaking-design input[type=url],.speaking-design select{width:100%;min-width:0;min-height:48px;padding:11px 12px;font-size:15px;border:1px solid #8994a4;border-radius:7px;background:white;color:var(--ink)}
+.speaking-design label{font-size:13px;font-weight:600;line-height:1.5;margin-bottom:8px;color:var(--ink)}
+.speaking-design .field-hint{font-size:12px;line-height:1.65;color:var(--muted);margin:8px 0 16px}
+.speaking-design .guide-button{order:initial;padding:8px 0;min-height:40px;text-decoration:underline;text-underline-offset:4px;border:0;background:none;font-size:12px;color:var(--muted);margin:8px 0 0;font-weight:500}
+.speaking-design .check-result{border-radius:7px;padding:12px 14px;line-height:1.55;font-size:14px;margin-top:14px}
+.speaking-design .doctor-section{display:grid;grid-template-columns:280px minmax(0,1fr);gap:38px;background:none;border:0;border-top:1px solid #ccd4df;border-radius:0;padding:36px 0 0;margin:40px 0 0}
+.speaking-design .doctor-heading{display:block}
+.speaking-design .doctor-heading h2{font-size:23px;line-height:1.35;letter-spacing:-.4px;margin:7px 0 12px;font-weight:650}
+.speaking-design #doctor-sync{font-size:13px;margin:0;color:var(--muted)}
+.speaking-design .doctor-intro{font-size:13px;line-height:1.7;color:var(--muted);margin:14px 0 20px}
+.speaking-design .doctor-list{padding-left:20px;margin:0}
+.speaking-design .doctor-list li{padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.speaking-design .doctor-list a{font-weight:600;color:var(--navy);text-underline-offset:3px}
+.speaking-design .doctor-list small{display:block;font-size:12px;margin-top:4px;color:var(--muted)}
+.speaking-design .doctor-required{margin:0;padding:0;border:0}
+.speaking-design .doctor-required h3{font-size:21px;margin:0 0 6px;font-weight:650;letter-spacing:-.3px}
+.speaking-design .doctor-required>p{font-size:14px;color:var(--muted);line-height:1.65;margin:0 0 22px}
+.speaking-design #practice-slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.speaking-design .practice-slot{background:white;border:1px solid var(--line);border-radius:12px;padding:22px;min-width:0;margin:0}
+.speaking-design .practice-slot h4{font-size:17px;font-weight:650;margin:0 0 20px}
+.speaking-design .practice-slot label{margin-top:16px}
+.speaking-design .practice-slot .button{width:100%;margin-top:16px}
+.speaking-design .practice-slot .text-button{font-size:13px;padding:8px 0;display:inline-flex;align-items:center}
+.speaking-design .doctor-fallback{font-size:13px;line-height:1.6}
+.speaking-design .draft-status{background:none;border:0;color:var(--muted);font-size:12px;margin:30px 0 8px;padding:0}
+.link-help{font-size:13px;color:var(--muted);max-width:800px}
+.link-help summary{cursor:pointer;min-height:40px;display:list-item;align-content:center}
+.link-help p{line-height:1.7;overflow-wrap:anywhere}
+.speaking-design .completion-card{margin:32px 0 0;padding:28px;background:#eef7f2;border:1px solid #c7ddcf;border-radius:12px;align-items:center}
+.speaking-design .completion-card h2{font-size:24px}
+.speaking-design .doctor-extra{background:white;border:1px solid var(--line);border-radius:12px;margin:24px 0;padding:28px;max-width:760px}
+.speaking-design #page-footer{border-top:1px solid var(--line);padding:24px 0;margin:28px 0 0;text-align:left;font-size:12px;color:var(--muted)}
+.speaking-design .login-screen{background:none;border:0;box-shadow:none}
+.speaking-design .login-header{display:none}
+.speaking-design .login-layout{padding:64px 0;gap:100px;grid-template-columns:1.1fr 1fr;align-items:center}
+.speaking-design .login-intro h1{color:var(--navy);font-size:46px;line-height:1.18;font-weight:650;letter-spacing:-1.8px}
+.speaking-design .login-lesson{color:var(--red);font-size:12px;letter-spacing:.08em}
+.speaking-design .login-copy{font-size:17px;color:var(--muted);line-height:1.7}
+.speaking-design .login-tasks{margin-top:32px}
+.speaking-design .identity-card{padding:32px;background:white;border:1px solid var(--line);box-shadow:0 12px 40px #152b4e06;border-radius:16px}
+.speaking-design .identity-card h2{font-weight:650;font-size:26px;letter-spacing:-.5px}
+.speaking-design .login-footer{padding:0;border:0}
+.speaking-design :focus-visible{outline:3px solid #2156a0;outline-offset:3px}
+.speaking-design .share-guide-dialog{border-radius:14px}
+@media(max-width:1000px){.speaking-design .page-shell{padding:0 28px 32px}.speaking-design .doctor-section{grid-template-columns:1fr;gap:28px}.speaking-design .doctor-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.speaking-design .login-layout{gap:40px}.speaking-design .login-intro h1{font-size:38px}}
+@media(max-width:760px){.speaking-design .page-shell{padding:0 20px 24px}.pilot-banner{font-size:10px;gap:12px;padding:7px 12px}.studio-header{padding:18px 0;font-size:12px}.studio-brand{font-size:25px}.studio-brand span{display:none}.speaking-design .hero{padding:30px 0 20px}.speaking-design .hero h1{font-size:34px;letter-spacing:-1px}.speaking-design .hero-copy{font-size:15px}.lesson-index{display:none}.speaking-design .active-identity-bar{align-items:flex-start;margin-bottom:16px;font-size:12px;gap:12px}.speaking-design .active-identity-bar .text-button{font-size:12px;flex-shrink:0}.lesson-nav{gap:22px}.lesson-nav>span{display:none}.speaking-design .task-body{grid-template-columns:1fr}.speaking-design .task-header{padding:22px 20px;gap:12px;flex-wrap:wrap}.speaking-design .task-header h2{font-size:22px}.speaking-design .task-number{display:none}.speaking-design .task-status{margin-left:0}.speaking-design .instructions{padding:22px 20px}.speaking-design .submission-panel{padding:24px 20px;border-left:0;border-top:1px solid var(--line)}.speaking-design .doctor-section{margin-top:30px;padding-top:26px}.speaking-design .doctor-list{display:block}.speaking-design #practice-slots{grid-template-columns:1fr}.speaking-design .login-layout{grid-template-columns:1fr;padding:30px 0;gap:28px}.speaking-design .login-intro h1{font-size:36px}.speaking-design .login-tasks{display:none}.speaking-design .identity-card{padding:24px}.speaking-design .login-copy{font-size:15px}.speaking-design .submission-progress{flex-direction:row;align-items:center}.speaking-design #progress-bar{width:90px}.speaking-design .completion-card{padding:22px}.speaking-design .button{max-width:100%;white-space:normal}.speaking-design .check-result{overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* Hoàn thiện danh sách hẹp và nhịp trường sau khi xem ảnh desktop/mobile. */
+.speaking-design .doctor-list{padding-left:0}
+.speaking-design .doctor-list li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:3px 8px;border-top:0}
+.speaking-design .doctor-list li::before{grid-row:1/3;align-self:start}
+.speaking-design .doctor-list small{grid-column:2;margin:0;width:auto}
+.speaking-design .practice-slot{display:flex;flex-direction:column;gap:0}
+.speaking-design .practice-slot h4{margin-bottom:8px}
+.speaking-design:not(.is-learning) #page-footer{display:none}
+
+/* Nunito Sans thống nhất tiêu đề, nội dung và thao tác; phân cấp bằng cỡ và độ đậm. */
+
+body.speaking-design{font-family:'Nunito Sans','Segoe UI',sans-serif;font-weight:400;font-optical-sizing:auto;font-synthesis:none}
+.speaking-design .hero h1,.speaking-design .login-intro h1{font-family:'Nunito Sans',sans-serif;font-weight:600;font-size:clamp(34px,3.7vw,48px);line-height:1.22;letter-spacing:-.025em}
+.speaking-design .lesson-index{font-family:'Nunito Sans',sans-serif;font-weight:400;letter-spacing:-.05em}
+.speaking-design .hero-copy,.speaking-design .login-copy{font-size:18px;line-height:1.7;font-weight:400}
+.speaking-design .task-header h2,.speaking-design .doctor-heading h2,.speaking-design .doctor-required h3,.speaking-design .identity-card h2{font-weight:600;letter-spacing:-.025em}
+.speaking-design .submission-panel h3,.speaking-design .practice-slot h4{font-weight:600;letter-spacing:-.015em}
+.speaking-design .section-kicker{font-size:12px;font-weight:600;letter-spacing:.07em}
+.speaking-design .instruction-lead{font-size:17px;line-height:1.7;font-weight:500}
+.speaking-design .instructions ol{font-size:16px;line-height:1.7}
+.speaking-design .instructions li{margin-bottom:12px}
+.speaking-design .button{font-size:15px;font-weight:600}
+.speaking-design input[type=url],.speaking-design select{font-size:16px}
+.speaking-design label{font-size:14px;font-weight:600}
+.speaking-design .field-hint,.speaking-design .guide-button{font-size:13px}
+.speaking-design .doctor-intro,.speaking-design .doctor-required>p{font-size:15px;line-height:1.7}
+.speaking-design .doctor-list a{font-size:15px;font-weight:600}
+.speaking-design .doctor-list small{font-size:13px;line-height:1.6}
+.speaking-design .active-identity-bar{font-size:14px}
+.speaking-design .studio-brand{font-family:'Nunito Sans',sans-serif;font-weight:700}
+@media(max-width:760px){
+ .speaking-design .hero h1,.speaking-design .login-intro h1{font-size:34px;line-height:1.28;letter-spacing:-.025em}
+ .speaking-design .hero-copy,.speaking-design .login-copy{font-size:16px;line-height:1.7}
+ .speaking-design .task-header h2{font-size:23px;line-height:1.4}
+ .speaking-design .instructions ol{font-size:16px}
+ .speaking-design .active-identity-bar{font-size:13px;line-height:1.6}
+ .speaking-design .active-identity-bar .text-button{font-size:13px}
+ .speaking-design .task-status{font-size:12px}
+}
+
+.speaking-design .share-field-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 12px;margin:0 0 9px}
+.speaking-design .share-field-heading label{margin:0;font-size:14px}
+.speaking-design .share-help-button{appearance:none;border:0;background:none;color:#2156a0;font:inherit;font-size:13px;font-weight:600;padding:4px 0;min-height:32px;line-height:1.5;text-decoration:underline;text-underline-offset:3px;text-align:left;cursor:pointer}
+.speaking-design .journey-note{font-size:14px;line-height:1.65;color:var(--muted);margin:-8px 0 4px;max-width:760px}
+.speaking-design #draft-status{margin:0 0 22px;font-size:12px;line-height:1.6}
+.speaking-design .return-hint{font-size:13px;line-height:1.65;color:var(--muted);margin:12px 0 0;max-width:44ch}
+.speaking-design .practice-slot .share-field-heading{margin-top:14px}
+.speaking-design .practice-slot .field-hint{margin:8px 0 0}
+.speaking-design .practice-slot .text-button{min-height:44px;margin:8px 0 0;padding:8px 0}
+.speaking-design .next-step{display:block;min-height:44px;padding:12px 0 0;color:var(--navy);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:4px}
+.speaking-design .guide-platforms{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+.speaking-design .guide-platforms button{background:white;color:var(--navy);border:1px solid #8994a4}
+@media(max-width:760px){.speaking-design .share-field-heading{display:block}.speaking-design .share-field-heading label{display:block}.speaking-design .share-help-button{min-height:40px}.speaking-design .journey-note{font-size:13px}}
+
+.speaking-design #parts{display:grid;gap:24px}.speaking-design .doctor-section.without-required{display:block;max-width:760px}.speaking-design .hero h1{max-width:900px}.speaking-design .next-step[hidden]{display:none}

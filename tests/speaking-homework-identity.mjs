@@ -63,7 +63,7 @@ async function setup(lesson, options = {}) {
   await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework*/**', async route => {
     const path = new URL(route.request().url()).pathname.split(/\/api\/speaking-homework(?:-independent)?/)[1];
     const body = route.request().postDataJSON();
-    requests.push({ path, body });
+    requests.push({ path, body, api: new URL(route.request().url()).pathname });
     let data;
     let status = 200;
     const code = body?.classCode || 'IC2304';
@@ -77,7 +77,7 @@ async function setup(lesson, options = {}) {
         students: options.empty ? [] : options.duplicate ? [{ student_ref: refA, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }]
           : code === 'IC2304' ? [{ student_ref: refOther, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }] : [{ student_ref: refB, name: 'Học viên lớp B' }],
         parts: lesson.parts.map((part_key, index) => ({ part_key, min_questions: lesson.number === 6 ? [0, 2, 1][index] : part_key === 'freestyle' && (lesson.number === 5 || lesson.number === 4 && code === 'IC2304') ? 1 : 3 })), requiredPracticeCount: lesson.number >= 4 ? 2 : 0, assignmentStatus: 'open', doctorEnabled: lesson.number !== 3 } };
-    } else if (path === '/session/start-selected') data = { session: { accessToken: `${code}-${body.studentRef}`, classCode: options.badSession ? 'IC9999' : code, studentRef: body.studentRef, documentId: body.documentId || `own-${code}-${body.studentRef}` } };
+    } else if (path === '/session/start-selected') data = { session: { intakeMode: lesson.number < 6 ? 'legacy' : 'independent', accessToken: `${code}-${body.studentRef}`, classCode: options.badSession ? 'IC9999' : code, studentRef: body.studentRef, documentId: body.documentId || `own-${code}-${body.studentRef}` } };
     else if (path === '/open') {
       opens += 1;
       if (options.failPoll && opens === 3) { status = 429; data = { ok: false, message: 'Đợi rồi thử lại' }; }
@@ -117,6 +117,7 @@ try {
       await page.locator('#homework-content').waitFor({ state: 'visible' });
       assert.equal(requests.filter(r => r.path === '/session/start-selected').length, 1);
       assert.equal(await page.locator('#active-class').innerText(), 'IC2305');
+      assert.match(requests.find(r=>r.path==='/open').api,lesson.number<6 ? /speaking-homework\/open$/ : /speaking-homework-independent\/open$/);
       assert.equal(await page.locator('#return-homework').getAttribute('href'), `https://docs.google.com/document/d/own-IC2305-${refB}/edit?tab=t.0`);
       await page.evaluate(({ key, refA }) => { localStorage.setItem(key, JSON.stringify({ version: 1, studentRef: refA })); window.dispatchEvent(new StorageEvent('storage', { key })); }, { key, refA });
       assert.equal(await page.locator('#active-student').innerText(), 'Học viên lớp B');

@@ -1,3 +1,4 @@
+import { focusSpeakingStart } from './journey-focus.js';
 import { createSpeakingIdentity } from './speaking-identity.js';
 import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
@@ -6,10 +7,12 @@ import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
 import { lesson6Code, lesson6Parts } from './lesson-6-parts.js';
 import { lesson7Code, lesson7Parts } from './lesson-7-parts.js';
 
-const independent = document.body.dataset.speakingIntake === 'independent';
-const apiBase = independent
+const independentRequested = document.body.dataset.speakingIntake === 'independent';
+let independent = independentRequested;
+const identityApi = independentRequested
   ? 'https://ducizone.ddns.net/mapping-api/api/speaking-homework-independent'
   : 'https://ducizone.ddns.net/mapping-api/api/speaking-homework';
+let apiBase = identityApi;
 const identityBase = 'https://ducizone.ddns.net/mapping-api';
 const query = new URLSearchParams(location.search);
 const originalDocumentId = query.get('documentId') || '';
@@ -468,7 +471,7 @@ const poller = createPendingPoller({
 
 // Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
 const identityController = createSpeakingIdentity({
-  apiBase, identityBase, assignmentCode, lessonNumber, originalDocumentId, classHint, allowWebReceipt: independent,
+  apiBase: identityApi, identityBase, assignmentCode, lessonNumber, originalDocumentId, classHint, allowWebReceipt: independentRequested,
   validateAssignment: assignment => assignmentCode === expectedAssignmentCode
     && assignment.parts?.length === parts.length && parts.every((part,index) => assignment.parts[index]?.part_key === part.key)
     && (lessonNumber !== 5 || (Number(assignment.parts[0].min_questions) === 3 && Number(assignment.parts[1].min_questions) === 1))
@@ -476,6 +479,9 @@ const identityController = createSpeakingIdentity({
     && (lessonNumber !== 7 || Number(assignment.parts[0].min_questions) === 4)
     && Number(assignment.requiredPracticeCount) === 2 && assignment.doctorEnabled === true,
   async onOpened(context) {
+    independent = Boolean(context.session.workUnitId);
+    apiBase = context.session.intakeMode === 'legacy' ? 'https://ducizone.ddns.net/mapping-api/api/speaking-homework' : identityApi;
+    workUnitId = context.session.workUnitId || '';
     state.studentRef = context.studentRef;
     state.accessToken = context.session.accessToken;
     state.assignment = context.assignment;
@@ -497,7 +503,7 @@ const identityController = createSpeakingIdentity({
       $('draft-status').textContent = `Đã mở phiên, nhưng chưa tải được tiến trình: ${error.message} Trang sẽ tự thử lại.`;
       poller.retry();
     }
-    $('open-share-guide').focus();
+    focusSpeakingStart(state.submitted);
   },
   onReset() {
     poller.stop();

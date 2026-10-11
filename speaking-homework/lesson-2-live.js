@@ -1,8 +1,12 @@
+import { focusSpeakingStart } from './journey-focus.js';
 import { createSpeakingIdentity } from './speaking-identity.js';
 import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
 
-const apiBase = 'https://ducizone.ddns.net/mapping-api/api/speaking-homework';
+const independentApi = 'https://ducizone.ddns.net/mapping-api/api/speaking-homework-independent';
+let apiBase = independentApi;
+let workUnitId = '';
+let independent = true;
 const identityBase = 'https://ducizone.ddns.net/mapping-api';
 const assignmentCode = '67-speaking-paraphrase';
 const query = new URLSearchParams(location.search);
@@ -43,7 +47,7 @@ async function post(path, body, timeout = 20_000) {
 }
 
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
-function draftKey() { return `speaking-homework:lesson-2:${classCode}:${documentId}:${state.studentRef}`; }
+function draftKey() { return `speaking-homework:lesson-2:${classCode}:${independent ? workUnitId : documentId}:${state.studentRef}`; }
 // Chỉ nạp link máy chủ khi trường chưa có nháp; chuỗi rỗng là lựa chọn đã lưu.
 // Sau nộp, hiện lại link của biên nhận và khóa sửa như trước.
 function hydrateField(input, savedValue) {
@@ -135,7 +139,7 @@ function renderLinks() {
   $('progress-fill').style.width = `${confirmed * 100 / parts.length}%`;
   if (state.submitted) {
     $('completion-card').hidden = false;
-    $('completion-message').textContent = 'Biên nhận đã lưu trong hệ thống. Bạn có thể quay lại file Homework để làm tiếp.';
+    $('completion-message').textContent = documentId ? 'Biên nhận đã lưu trong hệ thống. Bạn có thể quay lại file Homework để làm tiếp.' : 'Biên nhận đã lưu trên web. Bạn có thể đóng trang và quay lại để xem bài.';
   }
   $('completion-card').hidden = !state.submitted;
   renderDoctor();
@@ -222,6 +226,7 @@ async function finish() {
     if (!response.receipt?.id) throw new Error('Máy chủ chưa trả biên nhận.');
     state.submitted = true;
     renderLinks();
+    if(!documentId) $('completion-message').textContent = 'Biên nhận đã lưu trên web. Bạn có thể đóng trang và quay lại để xem bài.';
     $('completion-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
     $('draft-status').textContent = `Chưa nộp xong: ${error.message} Tiến trình đã xác nhận vẫn được giữ.`;
@@ -307,22 +312,26 @@ const poller = createPendingPoller({
 
 // Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
 const identityController = createSpeakingIdentity({
-  apiBase, identityBase, assignmentCode, lessonNumber: 2, originalDocumentId, classHint,
+  apiBase: independentApi, identityBase, assignmentCode, lessonNumber: 2, originalDocumentId, classHint, allowWebReceipt: true,
   validateAssignment: assignment => assignment.parts?.length === 2,
   async onOpened(context) {
+    independent = Boolean(context.session.workUnitId);
+    apiBase = context.session.intakeMode === 'legacy' ? 'https://ducizone.ddns.net/mapping-api/api/speaking-homework' : independentApi;
+    workUnitId = context.session.workUnitId || '';
     state.studentRef = context.studentRef;
     state.accessToken = context.session.accessToken;
     state.assignment = context.assignment;
     documentId = context.documentId;
     classCode = context.classCode;
     restoreDraft();
-    $('return-homework').href = `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit?tab=t.0`;
+    $('return-homework').hidden = !documentId;
+    if(documentId) $('return-homework').href = `https://docs.google.com/document/d/${encodeURIComponent(documentId)}/edit?tab=t.0`;
     try { await refresh(); }
     catch (error) {
       $('draft-status').textContent = `Đã mở phiên, nhưng chưa tải được tiến trình: ${error.message} Trang sẽ tự thử lại.`;
       poller.retry();
     }
-    $('open-share-guide').focus();
+    focusSpeakingStart(state.submitted);
   },
   onReset() {
     poller.stop();
