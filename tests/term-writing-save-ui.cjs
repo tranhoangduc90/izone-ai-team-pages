@@ -6,18 +6,23 @@ const assert = require('node:assert/strict');
 const { createServer } = require('node:http');
 const { readFile } = require('node:fs/promises');
 const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
+const { join, basename, dirname } = require('node:path');
 const { createRequire } = require('node:module');
 const { chromium } = createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const root = join(__dirname, '..');
 const sourceApp = process.env.D08_SOURCE_APP || join(root,'term-tests/shared/app.js');
 const sourceText = readFileSync(sourceApp,'utf8');
 const promptVersion = /const promptVersion = '([^']+)'/.exec(sourceText)?.[1];
-const key = 'izone-test:term-test-1:CODEXDEMO806' + (promptVersion && /const storageKey = .*promptVersion/.test(sourceText) ? ':'+promptVersion : '');
+// Fixture dùng kho phiên của đúng biến thể; kho cũ không còn được Mini/thi thay thế đọc.
+const clientName = basename(dirname(sourceApp));
+const storageSuffix = { 'k56-mini-shared': ':cbt', 'substitute-k67-shared': ':preview:' }[clientName]
+  ?? (promptVersion && /const storageKey = .*promptVersion/.test(sourceText) ? ':'+promptVersion : '');
+const key = 'izone-test:term-test-1:CODEXDEMO806' + storageSuffix;
 const token = '44444444-4444-4444-8444-444444444444';
 let server, browser, base;
 const errors = [];
-const canonical = (extra = {}) => ({ task1: 'Bài đã lưu Task 1', task2: 'Bài đã lưu Task 2', revision: 5,
+// API hiện trả cả dàn ý; thiếu trường này phải bị client Mini từ chối xác nhận lưu.
+const canonical = (extra = {}) => ({ task1: 'Bài đã lưu Task 1', task2: 'Bài đã lưu Task 2', outline: '', revision: 5,
   started: true, submitted: false, deadlineAt: new Date(Date.now() + 3_600_000).toISOString(), serverNow: new Date().toISOString(), ...extra });
 const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"></head><body class="cbt-mode"><div id="app"></div><script>
 window.TERM_TEST_APP_CONFIG={API_BASE_URL:location.origin+'/fixture-api'};
