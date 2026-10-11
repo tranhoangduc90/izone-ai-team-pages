@@ -6,7 +6,7 @@ Entry công khai giữ nguyên `/term-tests/design-demo/`. `real.html` là alias
 
 - **Làm thử đề trống:** nội dung thật được tải sau đăng nhập; bài thử chỉ ở RAM. Reading/Listening gọi bộ chấm hiện hành qua endpoint chỉ đọc, không tạo attempt hay ghi điểm. Writing thử không gửi chấm AI.
 - **Xem bài đã chấm:** chọn bài đã nộp của IC2200; dùng đúng đáp án, bài viết và lần chấm được final result tham chiếu. Tất cả điều khiển nộp/lưu bài thật bị khóa.
-- Google session và quyền lớp dùng API K67 hiện hành. Không nhúng đề, đáp án, bài làm, nhận xét hoặc token học viên vào source/Pages. Logout, hết phiên hoặc đổi bài hủy yêu cầu cũ và gỡ iframe chứa dữ liệu.
+- Mọi tài khoản Google đã xác minh được mở demo IC2200 qua cookie riêng, tối đa theo hạn Google (1 giờ). Không tạo quyền giáo viên hoặc mở hệ thống quản lý lớp. Không nhúng đề, đáp án, bài làm, nhận xét hoặc token học viên vào source/Pages. Logout, hết phiên hoặc đổi bài hủy yêu cầu cũ và gỡ iframe chứa dữ liệu.
 
 ## Bảng màu
 
