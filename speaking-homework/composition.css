@@ -14,7 +14,7 @@ body.speaking-design{margin:0;background:var(--canvas);color:var(--ink);font-fam
 .studio-brand span{font-size:10px;letter-spacing:.14em;font-weight:600;color:var(--muted);border-left:1px solid #cbd1da;padding-left:18px}
 .speaking-design .hero{position:relative;background:none;color:var(--ink);border:0;border-radius:0;box-shadow:none;padding:32px 0 24px;display:flex;justify-content:space-between;gap:24px;overflow:visible}
 .speaking-design .hero h1{font-size:clamp(32px,3.7vw,48px);line-height:1.18;font-weight:650;letter-spacing:-1.5px;margin:10px 0 16px;color:var(--navy)}
-.speaking-design .hero h1 .heading-dot,.heading-dot{color:var(--red)}
+.speaking-design .hero h1 .heading-dot,.heading-dot{color:inherit}
 .speaking-design .hero::after{display:none}
 .pilot-banner button{border:0;background:none;color:var(--navy);padding:0;text-decoration:underline;cursor:pointer;font-size:inherit;min-height:24px}
 .pilot-banner{flex-wrap:wrap;gap:6px 20px}
