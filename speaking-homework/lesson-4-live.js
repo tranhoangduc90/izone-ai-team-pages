@@ -42,6 +42,7 @@ const parts = lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Pa
       'Nói lại toàn bộ câu trả lời sau góp ý. Làm tương tự với hai câu nữa.'] }
 ];
 const draftFields = new Set();
+const editedDraftFields = new Set();
 const state = {
   studentRef: '', accessToken: '', assignment: null, links: new Map(),
   practice: new Map(), doctor: null, localFeedback: new Map(),
@@ -72,7 +73,7 @@ async function post(path, body, timeout = 20_000) {
 }
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
 function draftKey() { return `speaking-homework:lesson-${lessonNumber}:${independent ? workUnitId : documentId}:${state.studentRef}`; }
-// Chỉ nạp link máy chủ khi trường chưa có nháp; chuỗi rỗng là lựa chọn đã lưu.
+// Chỉ giữ ô rỗng khi người dùng đã sửa ô; nháp rỗng tự sinh vẫn nạp link máy chủ.
 // Sau nộp, hiện lại link của biên nhận và khóa sửa như trước.
 function hydrateField(input, savedValue) {
   if (state.submitted || !draftFields.has(input.id)) {
@@ -89,27 +90,35 @@ function saveDraft() {
   }
   draft.extraExercise = $('extra-exercise').value;
   draft.extraLink = $('extra-link').value;
+  draft.editedFields = [...editedDraftFields];
   try { localStorage.setItem(draftKey(), JSON.stringify(draft)); }
   catch { $('draft-status').textContent = 'Thiết bị chưa lưu được link đang gõ. Các link đã xác nhận vẫn được giữ trên máy chủ.'; }
 }
 function restoreDraft() {
   try {
     const draft = JSON.parse(localStorage.getItem(draftKey()) || '{}');
-    for (const part of parts) if (typeof draft[part.key] === 'string') {
+    // Nháp cũ không có dấu sửa: giữ nội dung đang nhập, cho ô trống nhận lại dữ liệu đã lưu.
+    const edited = new Set(Array.isArray(draft.editedFields) ? draft.editedFields : []);
+    const hasDraft = (key, id) => typeof draft[key] === 'string'
+      && (draft[key].trim() !== '' || edited.has(id));
+    for (const part of parts) if (hasDraft(part.key, `${part.key}-link`)) {
       const input = $(`${part.key}-link`);
       input.value = draft[part.key];
       draftFields.add(input.id);
+      if (edited.has(input.id)) editedDraftFields.add(input.id);
     }
     for (const slot of [1, 2]) {
-      if (typeof draft[`practice_${slot}_exercise`] === 'string') {
+      if (hasDraft(`practice_${slot}_exercise`, `practice-${slot}-exercise`)) {
         const select = $(`practice-${slot}-exercise`);
         select.dataset.draft = draft[`practice_${slot}_exercise`];
         draftFields.add(select.id);
+        if (edited.has(select.id)) editedDraftFields.add(select.id);
       }
-      if (typeof draft[`practice_${slot}_link`] === 'string') {
+      if (hasDraft(`practice_${slot}_link`, `practice-${slot}-link`)) {
         const input = $(`practice-${slot}-link`);
         input.value = draft[`practice_${slot}_link`];
         draftFields.add(input.id);
+        if (edited.has(input.id)) editedDraftFields.add(input.id);
       }
     }
     if (typeof draft.extraExercise === 'string') $('extra-exercise').dataset.draft = draft.extraExercise;
@@ -375,7 +384,11 @@ guide.addEventListener('click', event => {
     || event.clientY < rect.top || event.clientY > rect.bottom) guide.close();
 });
 for (const part of parts) {
-  $(`${part.key}-link`).addEventListener('input', () => { saveDraft(); render(); });
+  $(`${part.key}-link`).addEventListener('input', event => {
+    // Đánh dấu thao tác nhập/xóa thật trước khi lưu và cập nhật tiến độ.
+    draftFields.add(event.target.id); editedDraftFields.add(event.target.id);
+    saveDraft(); render();
+  });
   $(`${part.key}-confirm`).addEventListener('click', async () => {
     if (!state.accessToken || state.pending.has(part.key) || state.submitted) return;
     const input = $(`${part.key}-link`);
@@ -405,8 +418,14 @@ for (const part of parts) {
 for (const slot of [1, 2]) {
   const input = $(`practice-${slot}-link`);
   const select = $(`practice-${slot}-exercise`);
-  input.addEventListener('input', () => { saveDraft(); render(); });
-  select.addEventListener('change', () => { saveDraft(); updateExerciseLinks(); render(); });
+  input.addEventListener('input', () => {
+    draftFields.add(input.id); editedDraftFields.add(input.id);
+    saveDraft(); render();
+  });
+  select.addEventListener('change', () => {
+    draftFields.add(select.id); editedDraftFields.add(select.id);
+    saveDraft(); updateExerciseLinks(); render();
+  });
   $(`practice-${slot}-confirm`).addEventListener('click', async () => {
     if (!state.accessToken || state.submitted || state.pending.has(`practice-${slot}`)) return;
     if (!select.value) { showResult(`practice-${slot}-result`, 'blocked', 'Chưa chọn bài', 'Hãy chọn một bài trong danh sách cá nhân hoặc Kho bài chung.'); return; }
@@ -512,6 +531,7 @@ const identityController = createSpeakingIdentity({
     state.links.clear(); state.practice.clear(); state.doctor = null; state.submitted = false;
     state.localFeedback.clear();
     draftFields.clear();
+    editedDraftFields.clear();
     for (const part of parts) $(`${part.key}-link`).value = '';
     for (const slot of [1, 2]) {
       $(`practice-${slot}-link`).value = '';

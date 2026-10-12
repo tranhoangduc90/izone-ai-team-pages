@@ -36,14 +36,15 @@ try {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     const page = await context.newPage();
     const links = new Map(); let submitted = false; let extra = [];
-    await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework/**', async route => {
-      const path = new URL(route.request().url()).pathname.split('/api/speaking-homework')[1];
+    // Trang mở qua API độc lập; phiên Docs có lịch sử tiếp tục dùng API cũ.
+    await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework*/**', async route => {
+      const path = new URL(route.request().url()).pathname.split(/\/api\/speaking-homework(?:-independent)?/)[1];
       const body = route.request().postDataJSON();
       let data;
       if (path === '/classes') data = { classes: [{ classCode: 'IC2304', ready: true, assignmentStatus: 'open' }] };
       else if (path === '/identity/resolve') data = { status: 'unique', classCode: 'IC2304', studentRef };
       else if (path === '/assignment/roster') data = { assignment: { title: 'Homework Lesson 2', classCode: 'IC2304', students: [{ student_ref: studentRef, name: 'Học viên thử' }], parts: [{ part_key: 'paraphrase' }, { part_key: 'speaking' }] } };
-      else if (path === '/session/start-selected') data = { session: { accessToken: 'A'.repeat(40), studentRef, classCode: 'IC2304', documentId: docId } };
+      else if (path === '/session/start-selected') data = { session: { accessToken: 'A'.repeat(40), studentRef, classCode: 'IC2304', documentId: docId, intakeMode: 'legacy' } };
       else if (path === '/open') data = { status: submitted ? 'submitted' : 'draft', receipt: submitted ? { id: 'receipt' } : null, links: [...links.values()], practiceLinks: extra };
       else if (path === '/doctor/list') data = { needed: [{ exercise_id: 'exercise-1', title: 'Luyện phát âm', exercise_url: 'https://example.org/exercise', recommendation_count: 3, practice_count: 0 }], allNeeded: [{ exercise_id: 'exercise-1', title: 'Luyện phát âm', exercise_url: 'https://example.org/exercise', recommendation_count: 3, practice_count: 0 }], practiced: [], neededCount: 1, personalCount: 1 };
       else if (path === '/checks/request') { links.set(body.part, { part: body.part, share_url: body.url, check_status: 'accepted', question_count: body.part === 'paraphrase' ? 5 : 3 }); data = { check: { status: 'pending' } }; }

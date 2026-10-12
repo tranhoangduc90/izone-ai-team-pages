@@ -21,6 +21,11 @@ async function run(name, lesson, options, test) {
   page.on('pageerror', error => errors.push(error.message));
   page.on('dialog', dialog => dialog.accept());
   await page.clock.install();
+  if (options.initialDraft) await page.addInitScript(({ lesson, ref, draft }) => {
+    const key = `speaking-homework:lesson-${lesson.number}:fixture-${lesson.number}-${ref}:${ref}`;
+    // Nháp cũ dùng hồ sơ giả; chỉ khởi tạo lần đầu, không che bản nháp của lượt sửa sau.
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify(draft));
+  }, { lesson, ref: learners[0], draft: options.initialDraft });
   if (options.submitted) await page.addInitScript(({ lesson, ref }) => {
     const doc = `fixture-${lesson.number}-${ref}`;
     const key = lesson.number === 2 ? `speaking-homework:lesson-2:IC2304:${doc}:${ref}`
@@ -49,6 +54,33 @@ async function run(name, lesson, options, test) {
   } finally { await context.close(); await fixture.close(); }
 }
 try {
+  for (const lesson of lessons.filter(item => item.number >= 4)) {
+    const emptyDraft = Object.fromEntries(lesson.parts.map(part => [part, '']));
+    Object.assign(emptyDraft, { practice_1_link: '', practice_1_exercise: '', practice_2_link: '', practice_2_exercise: '' });
+    for (const format of ['legacy', 'untouched']) {
+      const draft = format === 'legacy' ? emptyDraft : { ...emptyDraft, editedFields: [] };
+      await run(`L${lesson.number}: ${format} empty draft shows saved progress`, lesson,
+        { status: 'accepted', seedAll: true, missingLast: true, initialDraft: draft }, async ({ page, fixture, open }) => {
+          for (const [index, part] of lesson.parts.entries()) assert.equal(await page.locator(`#${part}-link`).inputValue(), share(index + 1));
+          assert.equal(await page.locator('#practice-1-link').inputValue(), share(11));
+          assert.equal(await page.locator('#practice-1-exercise').inputValue(), 'exercise-1');
+          assert.equal(await page.locator('#progress-bar').getAttribute('aria-valuenow'), String(lesson.parts.length + 1));
+          assert.equal(await page.locator('#completion-card').isVisible(), false);
+          assert.equal(fixture.requests.some(r => r.path === '/finish'), false);
+          await page.reload(); await open();
+          assert.equal(await page.locator(`#${lesson.parts[0]}-link`).inputValue(), share(1));
+          assert.equal(await page.locator('#progress-bar').getAttribute('aria-valuenow'), String(lesson.parts.length + 1));
+        });
+    }
+    await run(`L${lesson.number}: partial draft preserves edit and loads untouched server links`, lesson,
+      { status: 'accepted', seedAll: true, missingLast: true, initialDraft: { ...emptyDraft, [lesson.parts[0]]: share(99) } }, async ({ page, fixture }) => {
+        assert.equal(await page.locator(`#${lesson.parts[0]}-link`).inputValue(), share(99));
+        assert.equal(await page.locator('#practice-1-link').inputValue(), share(11));
+        assert.equal(await page.locator('#practice-1-exercise').inputValue(), 'exercise-1');
+        assert.equal(await page.locator('#progress-bar').getAttribute('aria-valuenow'), String(lesson.parts.length));
+        assert.equal(fixture.requests.some(r => r.path === '/finish'), false);
+      });
+  }
   for (const lesson of lessons) for (const status of ['rejected', 'pending', 'accepted']) {
     await run(`L${lesson.number}: clear ${status}, poll, reload, learner isolation`, lesson, { status }, async ({ page, fixture, open }) => {
       const first = page.locator(`#${lesson.parts[0]}-link`);
@@ -71,7 +103,7 @@ try {
         await page.locator('#practice-1-exercise').selectOption('');
         assert.equal(await page.locator('#practice-1-exercise').inputValue(), '', 'Chọn trống không khôi phục bài cũ');
       }
-      await page.locator(`#${lesson.parts[1]}-link`).fill(share(22));
+      if (lesson.parts[1]) await page.locator(`#${lesson.parts[1]}-link`).fill(share(22));
       const current = fixture.record(lesson, learners[0]);
       current.links.get(lesson.parts[0]).check_status = 'accepted';
       if (status === 'pending') {
