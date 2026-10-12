@@ -2,7 +2,7 @@
 (()=>{
  if(document.getElementById('demo-color-lab'))return;
  const requestedOption=new URLSearchParams(location.search).get('labOption');
- const option=['sage','mist','sand','lavender'].includes(requestedOption)?requestedOption:null;
+ const option=['sage','mist','sand','lavender','reading'].includes(requestedOption)?requestedOption:null;
  const key='izone-demo-color-lab-v2'+(option?'-'+option:'');
  const groups=[
  ['Thẻ tiêu đề', [['header','Nền quanh nhãn','#edf1f6'],['badge','Nền nhãn Questions','#152b4e'],['badgeText','Chữ trên nhãn','#ffffff'],['hint','Chữ hướng dẫn','#273d5c'],['edge','Đường nhấn phía trên','#e8839a'],['line','Viền nhóm câu','#bbc8da']]],
@@ -22,12 +22,14 @@
  ['warm','Xám ấm · bản gần nhất',{...base,header:'#f1f0ec',hint:'#354760',edge:'#8c9caf',line:'#d7d8d5'}]
  ];
  const alternatives=[
+ // Mẫu Reading Homework buổi 7: xám trung tính, giấy trắng, navy và điểm nhấn đỏ nhỏ.
+ ['reading','Reading · xám sáng–đỏ',{...base,header:'#f5f6f8',badge:'#152b4e',badgeText:'#ffffff',hint:'#586477',edge:'#db0829',line:'#dce1e7',surface:'#ffffff',ink:'#202b3b',primary:'#152b4e',primaryText:'#ffffff',selected:'#edf1f7',selectedText:'#152b4e',selectedLine:'#152b4e',rose:'#f8f9fb',roseText:'#db0829',success:'#edf8f2',successText:'#136f4a',flag:'#fff4d9',flagText:'#915900'}],
  ['sage','Sage dịu',{...base,header:'#e3ebe5',hint:'#304d40',edge:'#789b8a',line:'#bdccc2',rose:'#eaf0eb',roseText:'#345d4c',selected:'#e9f0ec',selectedLine:'#8ca799'}],
  ['mist','Xanh sương · mặc định ★',{...base,header:'#e4edf5',hint:'#304b66',edge:'#7895b5',line:'#bdcddd',rose:'#eaf0f7',roseText:'#315475',selected:'#e8eff7',selectedLine:'#8fa5bf'}],
  ['sand','Kem cát',{...base,header:'#eee7da',hint:'#554b3c',edge:'#b09873',line:'#d1c6b3',rose:'#f2ede3',roseText:'#6a5435',selected:'#eaeef3',selectedLine:'#94a3b6'}],
  ['lavender','Tím xám',{...base,header:'#eae7f1',hint:'#4e465f',edge:'#9a8aad',line:'#cdc5da',rose:'#f0edf6',roseText:'#594672',selected:'#edeaf3',selectedLine:'#aaa0bc'}]
  ];
- presets.unshift(...['mist','sage','sand','lavender'].map(id=>alternatives.find(p=>p[0]===id)));
+ presets.unshift(...['mist','sage','sand','lavender','reading'].map(id=>alternatives.find(p=>p[0]===id)));
  const starting=alternatives.find(p=>p[0]===(option||'mist'));
  const initialColors=starting?starting[2]:base,initialPreset=starting?starting[0]:'blue';
  document.documentElement.dataset.labOption=option||'mist';
