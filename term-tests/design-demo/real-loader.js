@@ -4,8 +4,9 @@
  try{
   window.REAL_DEMO=parent.getRealDemoContext(window);
   await load('../term-test-2/test-config.js');await load('real-runtime.js');
+  if(window.REAL_DEMO.screen==='lobby'){await load('real-lobby.js');await load('color-lab.js');await load('color-locator.js');return;}
   await load('../shared/attempt-review.js');await load('../shared/writing-planning.js');await load('../shared/app.js');
   await load('../term-test-2-computer-based/enhance.js');await load('../term-test-2-computer-based/interaction-tools.js');
   await load('presentation.js');await load('real-ui.js');await load('color-lab.js');await load('color-locator.js');
- }catch(e){document.getElementById('app').textContent='Hãy mở demo từ màn đăng nhập. '+e.message;}
+ }catch(e){document.getElementById('app').textContent='Hãy mở demo từ trang chính. '+e.message;}
 })();

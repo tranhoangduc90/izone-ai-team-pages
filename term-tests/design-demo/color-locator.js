@@ -2,14 +2,14 @@
 // Chỉ cuộn khi đổi trường hoặc bấm tìm lại; nhập/đổi preset không kéo trang liên tục.
 (()=>{
  const root=document.getElementById('demo-color-lab');if(!root||root.dataset.locator)return;root.dataset.locator='true';
- const header='.design-question-group>.cbt-subsection-heading,.design-question-group>.cbt-section-intro,.writing-pane-header,.writing-criterion-card>header,.sample-heading';
- const badge='.design-question-group>.cbt-subsection-heading>:is(h3,h4),.design-question-group>.cbt-section-intro>:is(h3,h4),.sample-heading h3';
+ const header='.demo-lobby-header,.design-question-group>.cbt-subsection-heading,.design-question-group>.cbt-section-intro,.writing-pane-header,.writing-criterion-card>header,.sample-heading';
+ const badge='.demo-lobby-badge,.design-question-group>.cbt-subsection-heading>:is(h3,h4),.design-question-group>.cbt-section-intro>:is(h3,h4),.sample-heading h3';
  const primary='.button-primary,.button.primary,.cbt-heading-submit,.cbt-review-open';
  const selected='.cbt-choice:has(input:checked),.cbt-inline-answer.is-answered input,.cbt-select-answer.is-answered select,.question [data-design-filled=true],.sample-field input';
- const rose='.cbt-part-button.is-active,.writing-task-tab.is-active,.writing-component-toggle,.cbt-section-page-button,.sample-actions a';
- const success='.notice.success,.design-feedback-status,.analysis-card.best,.sample-success';
+ const rose='.demo-lobby-step .button-secondary,.cbt-part-button.is-active,.writing-task-tab.is-active,.writing-component-toggle,.cbt-section-page-button,.sample-actions a';
+ const success='.demo-lobby-step[data-state=complete] .demo-lobby-status,.notice.success,.design-feedback-status,.analysis-card.best,.sample-success';
  const flag='.cbt-flag-button.is-flagged,.sample-flag';
- const selectors={header,badge,badgeText:badge,hint:header,edge:'.design-question-group,.writing-criterion-card,.sample-group',line:'.design-question-group,.writing-criterion-card,.sample-group',surface:'.design-question-content,.cbt-passage-body,.writing-prompt-body,.writing-feedback-essay,.sample-body',ink:'.design-question-content,.cbt-passage-body,.writing-feedback-essay,.sample-body',primary,primaryText:primary,selected,selectedText:selected,selectedLine:selected,rose,roseText:rose,success,successText:success,flag,flagText:flag};
+ const selectors={header,badge,badgeText:badge,hint:header,edge:'.demo-lobby-card,.design-question-group,.writing-criterion-card,.sample-group',line:'.demo-lobby-card,.design-question-group,.writing-criterion-card,.sample-group',surface:'.demo-lobby-steps,.design-question-content,.cbt-passage-body,.writing-prompt-body,.writing-feedback-essay,.sample-body',ink:'.demo-lobby-steps,.design-question-content,.cbt-passage-body,.writing-feedback-essay,.sample-body',primary,primaryText:primary,selected,selectedText:selected,selectedLine:selected,rose,roseText:rose,success,successText:success,flag,flagText:flag};
  const note=document.createElement('p');note.className='lab-location-status';note.setAttribute('role','status');
  const again=document.createElement('button');again.type='button';again.textContent='Tìm lại vị trí';
  const next=document.createElement('button');next.type='button';next.textContent='Vị trí tiếp theo';
