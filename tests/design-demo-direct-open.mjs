@@ -7,7 +7,7 @@ const source=fs.readFileSync(new URL('../term-tests/design-demo/real-host.js',im
 function harness(fetcher,search=''){
  const elements=new Map(),events={},requests=[];
  const element=()=>({hidden:false,value:'blank',listeners:{},dataset:{},replaceChildren(...c){this.children=c;this.firstElementChild=c[0];},addEventListener(n,f){this.listeners[n]=f;}});
- const document={getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element};
+ const document={body:{dataset:{}},getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element};
  const window={TERM_TEST_APP_CONFIG:{API_BASE_URL:'https://example.test'},addEventListener(n,f){events[n]=f;}};
  vm.runInNewContext(source,{window,document,location:{search},URLSearchParams,AbortController,URL,DOMException,Date,fetch:async(url,options)=>{requests.push({url,options});return fetcher(url,options);}});
  return {elements,events,requests};
