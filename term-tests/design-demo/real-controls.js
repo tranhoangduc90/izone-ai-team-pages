@@ -5,6 +5,8 @@
  const panel=document.getElementById('demo-controls');
  const toolbar=document.getElementById('demo-toolbar');
  if(!button||!panel||!toolbar)return;
+ // Lớp nổi của trình duyệt giúp nút không giữ chỗ trong hàng bố cục của demo.
+ if(typeof button.showPopover==='function')button.showPopover();
  button.addEventListener('click',()=>{
   const expanded=button.getAttribute('aria-expanded')!=='true';
   panel.hidden=!expanded;
