@@ -3,6 +3,7 @@
 // Audit kho trước/sau, chặn mạng ngoài; JSON/PNG/PDF giữ ở output/playwright/k56-edge.
 // Assertion lỗi trả exit 1, không chuyển unknown thành đạt hoặc gửi dữ liệu thật.
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
@@ -19,7 +20,10 @@ const {chromium}=createRequire(pathToFileURL(resolve(runtime,'playwright/package
 const fixture=JSON.parse(await readFile(new URL('./fixtures/k56-completed-result-e03.json',import.meta.url),'utf8'));
 const output=resolve(root,'output/playwright/k56-edge',process.env.EDGE_EVIDENCE_VARIANT||'.');
 await mkdir(output,{recursive:true});
-assert.equal(execFileSync('git',['-C',backendRoot,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),'6bc48163029fef9a7ebbffb4d50a16167801bcd7');
+if(process.env.K56_EDGE_BACKEND_APP_SHA256) {
+ const actual=createHash('sha256').update(await readFile(resolve(backendRoot,'backend/src/app.js'))).digest('hex');
+ assert.equal(actual,process.env.K56_EDGE_BACKEND_APP_SHA256,'Source backend đổi sau khi runner khóa revision');
+} else assert.equal(execFileSync('git',['-C',backendRoot,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),'6bc48163029fef9a7ebbffb4d50a16167801bcd7');
 const feedbackLines=Array.from({length:12},(_,i)=>`E05-L${String(i+1).padStart(2,'0')} Nhận xét giả có dấu: lập luận cần thêm ví dụ, so sánh và giải thích rõ ý. ${'dữ-liệu-giả-'.repeat(5)}`);
 const longFeedback=['E05-BEGIN',...feedbackLines,'E05-END'].join('\n\n');
 // Mỗi Term giữ một kho RAM dùng chung ba phép đọc; tránh biên dịch WASM sáu lần.
@@ -96,7 +100,7 @@ for(const itemBase of fixture.cases) for(const edge of ['E04','E05','E06']) {
     try {
      const shot=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
      await writeFile(path,Buffer.from(shot.data,'base64'));
-     const pixels=JSON.parse(execFileSync('python',['-c',"from PIL import Image;import json,sys;im=Image.open(sys.argv[1]).convert('RGB');print(json.dumps({'width':im.width,'height':im.height,'colors':len(im.getcolors(im.width*im.height) or [])}))",path],{encoding:'utf8'}));
+     const pixels=JSON.parse(execFileSync(process.env.K56_PYTHON_BIN||'python',['-c',"from PIL import Image;import json,sys;im=Image.open(sys.argv[1]).convert('RGB');print(json.dumps({'width':im.width,'height':im.height,'colors':len(im.getcolors(im.width*im.height) or [])}))",path],{encoding:'utf8'}));
      assert.equal(pixels.width,observations.zoomBaseline.innerWidth,'Ảnh phải chứa đủ chiều rộng surface Chrome');
      assert.ok(pixels.colors>20,'Ảnh trống không đủ bằng chứng hiển thị');
      observations.nativeScreenshots=(observations.nativeScreenshots||[]).concat(pixels);
@@ -139,7 +143,7 @@ for(const itemBase of fixture.cases) for(const edge of ['E04','E05','E06']) {
      await screenshot(resolve(output,`${edge}-${item.slug}-feedback-end.png`));
      // Dùng chế độ in thật của Chrome; đọc PDF bằng thư viện độc lập để bắt cắt nội dung.
      const pdfPath=resolve(output,`${edge}-${item.slug}.pdf`);await page.pdf({path:pdfPath,format:'A4',printBackground:true});
-     const pdf=JSON.parse(execFileSync('python',['-c',"from pypdf import PdfReader;import json,sys;d=PdfReader(sys.argv[1]);print(json.dumps({'pages':len(d.pages),'text':' '.join(p.extract_text() or '' for p in d.pages)}))",pdfPath],{encoding:'utf8'}));
+     const pdf=JSON.parse(execFileSync(process.env.K56_PYTHON_BIN||'python',['-c',"from pypdf import PdfReader;import json,sys;d=PdfReader(sys.argv[1]);print(json.dumps({'pages':len(d.pages),'text':' '.join(p.extract_text() or '' for p in d.pages)}))",pdfPath],{encoding:'utf8'}));
      const flat=pdf.text.replace(/\s/gu,'');
      observations.printPages=pdf.pages;observations.printMarkersPresent=['E05-BEGIN',...feedbackLines.map(l=>l.slice(0,7)),'E05-END'].filter(m=>flat.includes(m)).length;
      assert.equal(observations.printMarkersPresent,14,'Bản in cắt nhận xét dài');

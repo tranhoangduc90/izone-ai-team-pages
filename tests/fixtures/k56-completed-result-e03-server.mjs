@@ -24,9 +24,14 @@ export async function createCompletedResultFixture({ backendRoot, pagesRoot, fix
   };
   // Kho trống này chỉ cần các cột mà handler kết quả và dịch vụ chấm thật sử dụng.
   await database.exec(`CREATE SCHEMA assessment_k56;
-    CREATE TABLE assessment_k56.test_definition (slug text, title text, version int);
+    CREATE TABLE assessment_k56.test_definition (slug text, title text, version int, listening_definition jsonb, reading_definition jsonb, listening_band_adjustment numeric default 0);
+    CREATE TABLE assessment_k56.term_test_exam_session (
+      id uuid PRIMARY KEY, listening_started_at timestamptz, listening_deadline_at timestamptz,
+      listening_draft jsonb, listening_draft_revision bigint default 0, listening_audio_checkpoint_seconds float8,
+      attempt_mode text default 'cbt', generation bigint default 0);
+    CREATE TABLE assessment_k56.k56_portal_field_dispatch (attempt_id uuid, status text);
     CREATE TABLE assessment_k56.term_test_attempt (
-      id uuid PRIMARY KEY, test_slug text, definition_version int,
+      id uuid PRIMARY KEY, test_slug text, definition_version int, superseded_at timestamptz, attempt_mode text default 'cbt', generation bigint default 0, exam_mode text default 'lis_first',
       erp_course_class_id bigint, erp_student_contact_id bigint,
       class_name_snapshot text, student_name_snapshot text, exam_session_id uuid,
       listening_submitted_at timestamptz, reading_started_at timestamptz,
@@ -44,7 +49,7 @@ export async function createCompletedResultFixture({ backendRoot, pagesRoot, fix
     listening: { correct: item.listeningCorrect, total: 40, details: [], typeStats: [] },
     reading: { correct: item.readingCorrect, total: item.readingTotal, details: [], typeStats: [] }
   };
-  await database.query('INSERT INTO assessment_k56.test_definition VALUES ($1, $2, 1)', [item.slug, item.title]);
+  await database.query('INSERT INTO assessment_k56.test_definition (slug,title,version) VALUES ($1, $2, 1)', [item.slug, item.title]);
   await database.query(`INSERT INTO assessment_k56.term_test_attempt (
     id, test_slug, definition_version, erp_course_class_id, erp_student_contact_id,
     class_name_snapshot, student_name_snapshot, listening_submitted_at,
@@ -74,7 +79,7 @@ export async function createCompletedResultFixture({ backendRoot, pagesRoot, fix
   // PGlite có một kết nối; giữ transaction tuần tự để mô phỏng khóa cùng một attempt của pg.
   let transactionTail = Promise.resolve();
   const query = async (sql, params) => {
-    const result = await database.query(sql, params);
+    const result = await database.query(sql, params).catch(error=>{console.error('SYNTHETIC_FIXTURE_SQL',error.message);throw error;});
     return { ...result, rowCount: result.rows.length };
   };
   const pool = createAssessmentSchemaPool({

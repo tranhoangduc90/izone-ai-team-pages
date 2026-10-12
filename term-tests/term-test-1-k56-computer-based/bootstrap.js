@@ -23,6 +23,10 @@
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   document.body.classList.add('cbt-mode');
+  if ('serviceWorker' in navigator && !localDemo) {
+    navigator.serviceWorker.register('../k56-listening-offline-worker.js?rev=20261012-audio-v2', { scope: './' })
+      .catch(() => { /* Nháp vẫn được lưu; trình duyệt có thể không hỗ trợ mở vỏ trang offline. */ });
+  }
 
   // Demo phải hoạt động không cần mã lớp hoặc backend. Đây cũng là đường QA
   // an toàn cho đồng nghiệp trước khi kết nối môi trường Portal thật.
@@ -33,8 +37,9 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-shared/app.js?rev=20261009-term-outline-v1'))
-      .then(() => loadScript('enhance.js?v=20260912-load-guard-v1-20261001-writing-ui-v1'))
+      .then(() => loadScript('../k56-shared/app.js?rev=20261012-audio-v2'))
+      .then(() => loadScript('../k56-audio-recovery.js?rev=20261012-audio-v2'))
+      .then(() => loadScript('enhance.js?rev=20261012-audio-v2'))
       .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -618,6 +623,7 @@
       if (modeChanged) showNotice('Lượt đang làm giữ thứ tự đã chọn trước đó; link đã được cập nhật.');
       saveState({
         examSessionToken: prepared.examSessionToken,
+        generation: Number(prepared.generation) || 0,
         listeningStartedAt: prepared.listeningStartedAt,
         listeningDeadlineAt: prepared.listeningDeadlineAt,
         attemptToken: prepared.attemptToken || state.attemptToken || '',
@@ -656,6 +662,7 @@
   }
 
   function loadScript(src) {
+    if (src.includes('k56-audio-recovery.js') && window.K56AudioRecovery) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = src;
@@ -669,6 +676,9 @@
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
       examSessionToken: state.examSessionToken,
+      studentRef: state.studentRef,
+      generation: Number(started.generation ?? state.generation) || 0,
+      audioRecoveryInitial: started,
       listeningDeadlineAt: started.listeningDeadlineAt,
       serverNow: started.serverNow,
       audioVolume: Number(state.audioVolume) || 1,
@@ -686,8 +696,9 @@
     });
     previewAudio.remove();
     revokePreview();
-        await loadScript('../k56-shared/app.js?rev=20261009-term-outline-v1');
-    await loadScript('enhance.js?v=20260912-load-guard-v1-20261001-writing-ui-v1');
+        await loadScript('../k56-shared/app.js?rev=20261012-audio-v2');
+    await loadScript('../k56-audio-recovery.js?rev=20261012-audio-v2');
+    await loadScript('enhance.js?rev=20261012-audio-v2');
     await loadScript('annotations.js?rev=20261005-k56-writing-results-v1');
   }
 
@@ -758,6 +769,7 @@
     preparing = true;
     elements.bootstrapStart.disabled = true;
     elements.bootstrapStart.textContent = 'Đang mở đề và audio...';
+    let startingAudio = null, entered = false;
     previewAudio.pause();
     try {
       if (localDemo) {
@@ -769,7 +781,7 @@
         document.body.append(officialAudio);
         await waitForAudioMetadata(officialAudio);
         const existingStart = Date.parse(state.listeningStartedAt || '');
-        const elapsedSeconds = Number.isFinite(existingStart) ? Math.max(0, (Date.now() - existingStart) / 1000) : 0;
+        const elapsedSeconds = Number.isFinite(existingStart) && legacyUiState.audioStarted ? Math.max(0, legacyUiState.audioTime) : 0;
         officialAudio.currentTime = Math.min(elapsedSeconds, Math.max(0, officialAudio.duration - 0.05));
         await officialAudio.play();
         const serverNow = new Date();
@@ -798,46 +810,74 @@
         await enterExam(started, officialAudio);
         return;
       }
-      const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
-        ? legacyUiState.audioTime
-        : undefined;
+      await loadScript('../k56-audio-recovery.js?rev=20261012-audio-v2');
+      const recovery = await window.K56AudioRecovery.prepare({ apiBase: appConfig.API_BASE_URL, classCode,
+        slug: testConfig.slug, studentRef: state.studentRef, token: state.examSessionToken, generation: state.generation });
+      const savedHeardSeconds = recovery.heardSeconds;
       const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           examSessionToken: state.examSessionToken,
-          heardSeconds: savedHeardSeconds
+          heardSeconds: savedHeardSeconds,
+          recoveryId: recovery.recoveryId,
+          audioOwnerId: recovery.ownerId, audioStateRevision: recovery.revision, generation: Number(state.generation) || 0
         })
       });
+      if (started.audioRecoveryVersion !== 2 || !Number.isFinite(started.listeningResumeAtSeconds)
+          || !Number.isFinite(Date.parse(started.listeningHardDeadlineAt))) {
+        throw new Error('API chưa hỗ trợ đúng phiên bản khôi phục audio. Nháp được giữ; chưa thể tự tua theo đồng hồ.');
+      }
+      const loading = window.K56AudioRecovery.beginLoading({ apiBase: appConfig.API_BASE_URL, classCode,
+        slug: testConfig.slug, studentRef: state.studentRef, token: state.examSessionToken, generation: started.generation }, started);
+      const loadingResponse = await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-progress`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examSessionToken: state.examSessionToken, state: 'pause',
+          heardSeconds: started.listeningResumeAtSeconds, recoveryId: loading.recoveryId,
+          audioOwnerId: window.K56AudioRecovery.ownerId, audioStateRevision: started.audioStateRevision, generation: started.generation })
+      });
+      Object.assign(started, loadingResponse);
       const decrypted = await decryptOfficialAudio(encryptedAudio, started);
       officialObjectUrl = URL.createObjectURL(new Blob([decrypted], { type: 'audio/mpeg' }));
       const officialAudio = document.createElement('audio');
+      startingAudio = officialAudio;
       officialAudio.hidden = true;
       officialAudio.src = officialObjectUrl;
       officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       document.body.append(officialAudio);
-      const serverElapsed = Math.max(0, (Date.parse(started.serverNow) - Date.parse(started.listeningStartedAt)) / 1000);
-      const serverResumeAt = Number(started.listeningResumeAtSeconds);
-      const resumeAt = Number.isFinite(serverResumeAt)
-        ? Math.min(serverElapsed, Math.max(0, serverResumeAt))
-        : serverElapsed;
+      const resumeAt = Math.max(0, started.listeningResumeAtSeconds);
       await new Promise((resolve, reject) => {
-        officialAudio.addEventListener('loadedmetadata', resolve, { once: true });
-        officialAudio.addEventListener('error', () => reject(new Error('Trình duyệt không đọc được audio chính.')), { once: true });
+        const timeout = setTimeout(() => reject(new Error('Chưa đọc được audio. Hãy thử lại để giữ đúng mốc.')), 15000);
+        officialAudio.addEventListener('loadedmetadata', () => { clearTimeout(timeout); resolve(); }, { once: true });
+        officialAudio.addEventListener('error', () => { clearTimeout(timeout); reject(new Error('Trình duyệt không đọc được audio chính.')); }, { once: true });
         officialAudio.load();
       });
-      officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
-      if (resumeAt < officialAudio.duration) await officialAudio.play();
+      officialAudio.currentTime = Math.min(resumeAt, officialAudio.duration);
+      if (!loading.manual && resumeAt < officialAudio.duration) {
+        try { await officialAudio.play(); }
+        catch (error) {
+          if (error?.name !== 'NotAllowedError') throw error;
+          started.audioAutoplayBlocked = true;
+        }
+      }
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
         listeningRecoverySeconds: Number(started.listeningRecoverySeconds) || 0,
+        generation: Number(started.generation) || 0,
         serverTimeOffsetMs: Date.parse(started.serverNow) - Date.now(),
         audioVolume: officialAudio.volume
       });
       legacyListeningResume = false;
       await enterExam(started, officialAudio);
+      entered = true;
     } catch (error) {
+      if (startingAudio && !entered) {
+        window.K56_LISTENING_AUDIO?.dispose();
+        startingAudio.pause(); startingAudio.remove();
+        if (officialObjectUrl) URL.revokeObjectURL(officialObjectUrl);
+        officialObjectUrl = '';
+      }
       showNotice(`Chưa thể bắt đầu: ${error.message}. Đề vẫn đang khóa.`, true);
       elements.bootstrapStart.textContent = state.listeningStartedAt ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
       elements.bootstrapStart.disabled = false;
@@ -893,11 +933,15 @@
     elements.bootstrapConfirmPrefilled.hidden = false;
   });
 
+  let initializing = false;
+  let initializeAgain = false;
   async function initialize() {
+    if (initializing) { initializeAgain = true; return; }
     if (!/^[A-Z0-9_-]{2,32}$/.test(classCode)) {
       showNotice('Link chưa có mã lớp hợp lệ.', true);
       return;
     }
+    initializing = true;
     try {
       await initializeStudentMemory();
       if (localDemo) {
@@ -962,7 +1006,13 @@
         elements.bootstrapDownloadStep.dataset.state = 'active';
       }
     } catch (error) {
-      showNotice(`Không thể mở phòng chờ: ${error.message}`, true);
+      showNotice(navigator.onLine ? `Không thể mở phòng chờ: ${error.message}`
+        : 'Chưa có kết nối. Nháp và mốc nghe trên máy được giữ. Chờ có mạng để lấy lại khóa audio và tiếp tục.', true);
+    } finally {
+      initializing = false;
+      const retry = initializeAgain && navigator.onLine && !roster.length && !encryptedAudio && !preparing;
+      initializeAgain = false;
+      if (retry) initialize();
     }
   }
 
@@ -970,6 +1020,13 @@
     downloadController?.abort();
     previewAudio.pause();
     revokePreview();
+  });
+  window.addEventListener('online', () => {
+    if (window.TERM_TEST_BOOTSTRAP) return;
+    if (encryptedAudio || preparing) return;
+    if (initializing) { initializeAgain = true; return; }
+    if (roster.length) prepareSelectedStudent();
+    else initialize();
   });
   initialize();
 }());

@@ -202,6 +202,7 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
         ? '20261009-term-outline-v1' : '20261003-writing-save-cas-v1';
     const revisionOf = url => { const query = new URL(url, 'https://fixture.invalid').searchParams; return query.get('rev') || query.get('v'); };
     for (const path of cachePaths) {
+      const currentRevision = path.includes('-computer-based/') ? '20261012-audio-v2' : cacheRevision;
       const text = fs.readFileSync(path, 'utf8');
       const appUrls = [...text.matchAll(/[.\/\w-]*app\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
       const writingApp = sourcePath.slice(sourcePath.indexOf('/') + 1);
@@ -210,12 +211,12 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
         // Trang CBT chỉ nạp bootstrap; bootstrap chính/dự phòng đã kiểm đúng app ở ca cùng bảng.
         const bootstrapUrls = [...text.matchAll(/bootstrap\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
         assert.ok(bootstrapUrls.length > 0, `Thiếu bootstrap trong ${path}`);
-        const bootstrapRevision=sourcePath==='term-tests/k56-mini-shared/app.js'?'20261009-mini-api-recovery-v3':cacheRevision;
+        const bootstrapRevision=currentRevision;
         for (const url of bootstrapUrls) assert.equal(revisionOf(url), bootstrapRevision, path);
       } else {
         assert.ok(writingUrls.length > 0, `Thiếu đúng Writing app ${writingApp} trong ${path}`);
       }
-      for (const url of writingUrls) assert.equal(revisionOf(url), cacheRevision, path);
+      for (const url of writingUrls) assert.equal(revisionOf(url), currentRevision, path);
       for (const url of appUrls) assert.doesNotMatch(url, /20260910-audio-recovery-v1|20260913-writing-revision-v1|20260929-mini-homework-25m/);
     }
   });

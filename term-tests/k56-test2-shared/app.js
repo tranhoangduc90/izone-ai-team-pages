@@ -157,13 +157,31 @@
   }
 
   // Nhận deadline Listening đã được máy chủ bù sau một sự cố audio hợp lệ.
+  let listeningAudioRevision = -1;
   window.addEventListener('term-test:listening-timing-updated', event => {
+    const detail = event.detail || {};
+    if (window.K56_LISTENING_AUDIO && detail.audioRecoveryVersion !== 2) return;
+    if (detail.audioRecoveryVersion === 2) {
+      if (!Number.isSafeInteger(detail.audioStateRevision) || detail.audioStateRevision < listeningAudioRevision) return;
+    }
+    if (detail.audioRecoveryVersion === 2 && (detail.examSessionToken !== state.examSessionToken
+        || detail.studentRef !== state.studentRef || detail.classCode !== classCode
+        || detail.testSlug !== testConfig.slug || detail.apiBase !== appConfig.API_BASE_URL
+        || Number(detail.generation) !== Number(window.TERM_TEST_BOOTSTRAP?.generation || 0))) return;
     const deadlineAt = String(event.detail?.listeningDeadlineAt || '');
     const serverNow = String(event.detail?.serverNow || '');
     if (!Number.isFinite(Date.parse(deadlineAt))) return;
+    if (detail.audioRecoveryVersion === 2) listeningAudioRevision = detail.audioStateRevision;
     state.listeningDeadlineAt = deadlineAt;
     if (Number.isFinite(Date.parse(serverNow))) {
       state.serverTimeOffsetMs = Date.parse(serverNow) - Date.now();
+    }
+    if (detail.audioRecoveryVersion === 2 && !state.listeningSubmitted
+        && elements.listeningView.dataset.listeningSubmitting !== 'true'
+        && Date.now() + state.serverTimeOffsetMs < Date.parse(state.listeningDeadlineAt)) {
+      delete elements.listeningView.dataset.listeningTimeExpired;
+      state.frozenAnswers.listening = null;
+      setAnswerControlsLocked('listening', false);
     }
     saveSession();
   });
@@ -2057,6 +2075,7 @@
 
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
+    if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
       showNotice('Hãy chọn đúng họ và tên trước khi nộp Listening.', 'error');
@@ -2064,6 +2083,18 @@
     }
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.listeningView.dataset.listeningTimeExpired === 'true';
+    if (automatic && window.K56_LISTENING_AUDIO) {
+      const decision = await window.K56_LISTENING_AUDIO.beforeAutoSubmit();
+      if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
+      if (!decision.submit) {
+        if (decision.deadlineChanged) {
+          delete elements.listeningView.dataset.listeningTimeExpired;
+          state.frozenAnswers.listening = null;
+          setAnswerControlsLocked('listening', false);
+        }
+        return;
+      }
+    }
     let answers = state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
     if (automatic && !state.frozenAnswers.listening) {
       state.frozenAnswers.listening = Object.freeze({ ...answers });
@@ -2075,6 +2106,7 @@
     state.drafts.listening = answers;
     saveSession();
     elements.listeningView.dataset.listeningSubmitting = 'true';
+    window.K56_LISTENING_AUDIO?.submitting();
     setAnswerControlsLocked('listening', true);
     setBusy(elements.submitListening, true, 'Đang lưu Listening...', 'Nộp bài Listening');
     if (automatic) showNotice('Đã hết giờ. Hệ thống đang tự thu và chấm bài Listening...');
@@ -2134,6 +2166,7 @@
         : `Không thể lưu Listening: ${error.message}`, 'error');
     } finally {
       delete elements.listeningView.dataset.listeningSubmitting;
+      if (!submitted) window.K56_LISTENING_AUDIO?.submitFailed();
       if (!submitted && isSectionExpired('listening')) {
         elements.listeningView.dataset.listeningTimeExpired = 'true';
         state.frozenAnswers.listening ||= { ...answers };

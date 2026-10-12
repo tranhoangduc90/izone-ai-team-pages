@@ -776,6 +776,32 @@
     examCard.append(examCopy, examControls);
     listeningForm.source.toolbar.append(examCard);
 
+    if (protectedBootstrap?.officialAudioElement && !query.get('demo') && window.K56AudioRecovery) {
+      const appConfig = window.TERM_TEST_APP_CONFIG;
+      const manualButton = makeButton('cbt-audio-incident', 'Tôi không nghe được');
+      examControls.append(manualButton);
+      examRetryButton.hidden = true;
+      setListeningVisible(true);
+      const player = protectedBootstrap.officialAudioElement;
+      player.volume = uiState.audio.volume;
+      const controller = window.K56AudioRecovery.create({ audio: player,
+        token: protectedBootstrap.examSessionToken, slug: testConfig.slug,
+        studentRef: protectedBootstrap.studentRef, generation: protectedBootstrap.generation,
+        apiBase: appConfig.API_BASE_URL, classCode, initial: protectedBootstrap.audioRecoveryInitial,
+        resumeButton, manualButton,
+        render(prefix, current, duration) {
+          playbackProgress.max = duration || 1; playbackProgress.value = current || 0;
+          examStatus.textContent = prefix + ' · ' + formatTime(current) + ' / ' + formatTime(duration);
+          uiState.audio.started = true; uiState.audio.time = Number(current) || 0; saveUiState();
+        }
+      });
+      examVolumeInput.addEventListener('input', () => {
+        player.volume = Number(examVolumeInput.value); uiState.audio.volume = player.volume; saveUiState();
+      });
+      listeningForm.form.addEventListener('term-test:listening-submitted', () => controller.finish());
+      return;
+    }
+
     const audio = protectedBootstrap?.officialAudioElement || document.createElement('audio');
     audio.preload = 'auto';
     audio.volume = uiState.audio.volume;
@@ -1261,6 +1287,7 @@
     listeningForm.form.append(autoSubmit);
     let intervalId = 0;
     let lastAttempt = 0;
+    let listeningFinished = false;
 
     function readExamState() {
       for (const storage of [sessionStorage, localStorage]) {
@@ -1285,7 +1312,12 @@
     }
 
     function render() {
+      if (listeningFinished) return;
+      if (window.TERM_TEST_BOOTSTRAP?.officialAudioElement
+          && window.TERM_TEST_BOOTSTRAP?.audioRecoveryInitial?.audioRecoveryVersion === 2
+          && !window.K56_LISTENING_AUDIO) return;
       const exam = readExamState();
+      if (exam.listeningSubmitted) { listeningFinished = true; window.clearInterval(intervalId); intervalId = 0; return; }
       const deadline = Date.parse(exam.listeningDeadlineAt || '');
       if (!Number.isFinite(deadline)) return;
       const serverOffset = Number(exam.serverTimeOffsetMs) || 0;
@@ -1294,8 +1326,11 @@
     }
     render();
     intervalId = window.setInterval(render, 1000);
-    listeningForm.form.addEventListener('term-test:listening-submitted', () => window.clearInterval(intervalId));
-    window.addEventListener('pagehide', () => window.clearInterval(intervalId));
+    listeningForm.form.addEventListener('term-test:listening-submitted', () => { listeningFinished = true; window.clearInterval(intervalId); intervalId = 0; });
+    window.addEventListener('pagehide', () => { window.clearInterval(intervalId); intervalId = 0; });
+    window.addEventListener('pageshow', event => {
+      if (event.persisted && !listeningFinished && !readExamState().listeningSubmitted && !intervalId) { intervalId = window.setInterval(render, 1000); render(); }
+    });
   }
 
   // Dữ liệu vào: form Reading, mốc kết thúc đã lưu và trạng thái gửi bài của shared/app.js.

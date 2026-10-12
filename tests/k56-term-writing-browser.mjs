@@ -204,7 +204,7 @@ for (const slug of ['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56']) {
         assert.match(await page.locator('.writing-editor-meta').first().innerText(), /7 từ/);
       }
       assert.deepEqual(blocked, [], 'Test Writing offline không được gọi hệ thống thật');
-    } finally { await browser.close(); await new Promise(done => server.close(done)); }
+    } finally { await browser.close(); await new Promise(done => { server.close(done); server.closeAllConnections(); }); }
   });
 }
 
@@ -216,9 +216,9 @@ test('Mini: bảng L/R giữ mở, chỉ nhận Link LMS qua API sau 2 giờ và
   const now = Date.parse('2026-10-04T10:00:00Z');
   const lmsUrl = 'https://ducizone.ddns.net/writing/shared/writing-essays/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/view?v=1';
   await page.clock.install({ time: new Date(now) });
-  await page.clock.pauseAt(new Date(now + 60_000));
+
   await page.addInitScript(({ ref, token }) => {
-    localStorage.setItem('izone-test:mini-test-k56:IC5601', JSON.stringify({ studentRef: ref, studentName: 'Học viên giả A', attemptToken: token, completed: true, writingStarted: true, writingSubmitted: true }));
+    localStorage.setItem('izone-test:mini-test-k56:IC5601:cbt', JSON.stringify({ studentRef: ref, studentName: 'Học viên giả A', attemptToken: token, completed: true, writingStarted: true, writingSubmitted: true }));
   }, { ref: studentRef, token: attemptToken });
   await context.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url());
@@ -226,7 +226,7 @@ test('Mini: bảng L/R giữ mở, chỉ nhận Link LMS qua API sau 2 giờ và
     if (url.pathname.endsWith('/api/term-tests/roster')) return route.fulfill({ json: { class: { name: classCode }, students: [{ ref: studentRef, name: 'Học viên giả A' }] } });
     if (url.pathname.endsWith('/mini-test-k56/attempt/prepare')) {
       const content = await request.frame().evaluate(() => window.K56_TERM_TEST_CONTENT);
-      return route.fulfill({ json: { content, attemptToken, examMode: 'lis_first', nextSection: 'result', completed: true, listeningSubmitted: true, readingSubmitted: true, writingSubmittedAt: new Date(now).toISOString() } });
+      return route.fulfill({ json: { content, attemptToken, attemptMode:'cbt',generation:0,policy:{timed:true},examMode: 'lis_first', nextSection: 'result', completed: true, listeningSubmitted: true, readingSubmitted: true, writingSubmittedAt: new Date(now).toISOString() } });
     }
     if (url.pathname.endsWith('/api/term-tests/result')) {
       calls++;
@@ -240,7 +240,9 @@ test('Mini: bảng L/R giữ mở, chỉ nhận Link LMS qua API sau 2 giờ và
   });
   try {
     await page.goto(`${base}term-tests/mini-test-k56-computer-based/?class=${classCode}`);
+    await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
     await page.locator('#writingSubmissionResult .writing-grading-status').waitFor({ state: 'visible' });
+    await page.clock.pauseAt(new Date(now + 60_000));
     const details = page.locator('#questionDetails details');
     await details.nth(0).locator('summary').click(); await details.nth(1).locator('summary').click();
     const before = calls;
@@ -253,9 +255,9 @@ test('Mini: bảng L/R giữ mở, chỉ nhận Link LMS qua API sau 2 giờ và
     assert.equal(await details.nth(0).evaluate(node => node.open), true);
     assert.equal(await details.nth(1).evaluate(node => node.open), true);
     assert.doesNotMatch(await page.locator('#writingSubmissionResult').innerText(), /Band \d|Writing tổng/);
-    await page.reload(); await link.waitFor({ state: 'visible' });
+    await page.reload(); await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click(); await link.waitFor({ state: 'visible' });
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.deepEqual(blocked, []);
-  } finally { await browser.close(); await new Promise(done => server.close(done)); }
+  } finally { await browser.close(); await new Promise(done => { server.close(done); server.closeAllConnections(); }); }
 });

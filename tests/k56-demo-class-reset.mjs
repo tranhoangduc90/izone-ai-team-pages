@@ -69,7 +69,7 @@ for(const group of ['k56-shared','k56-test2-shared','k56-mini-shared','term-test
   test(`${group}: bỏ phản hồi API trả về muộn`,async()=>{
     let resolveData;const gate=new Promise(resolve=>resolveData=resolve);
     const context={window:{K56_DEMO_RESETTING:false,setTimeout:()=>1,clearTimeout(){}},
-      appConfig:{API_BASE_URL:'https://demo.test'},AbortController,setTimeout:()=>1,clearTimeout(){},
+      appConfig:{API_BASE_URL:'https://demo.test'},paperEpoch:0,storageKey:'synthetic',paperMini:false,AbortController,setTimeout:()=>1,clearTimeout(){},
       fetch:async()=>({ok:true,json:()=>gate})};
     const fn=vm.runInNewContext(`(${actualFunction(group,'apiRequest')})`,context);
     const pending=fn('/prepare');await Promise.resolve();context.window.K56_DEMO_RESETTING=true;

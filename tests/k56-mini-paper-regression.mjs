@@ -18,7 +18,7 @@ before(async()=>{
  browser=await chromium.launch({headless:true,channel:'chrome'});
 });
 after(async()=>{await browser?.close();await new Promise(r=>server?.close(r));});
-async function fixture({reading=false,legacy=null,mobile=false,offline=false,delayDraft=false,openError=false,offlineDraft=false}={}){
+async function fixture({cbt=false,reading=false,legacy=null,mobile=false,offline=false,delayDraft=false,openError=false,offlineDraft=false}={}){
  const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1280,height:900}}),page=await context.newPage();
  page.setDefaultTimeout(6000);let rejectSubmission=offline,releaseDraft,seenDraft;const draftSeen=new Promise(r=>seenDraft=r);
  const writes=[],drafts=[],opens=[],errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -28,6 +28,7 @@ async function fixture({reading=false,legacy=null,mobile=false,offline=false,del
  listeningStartedAt:reading?null:'2026-10-07T02:00:00Z',listeningDeadlineAt:null,
  readingStartedAt:reading?'2026-10-07T02:00:00Z':null,readingDeadlineAt:null,completed:false,serverNow:'2026-10-07T02:00:00Z',
  listeningDraft:{},listeningDraftRevision:0,readingDraft:{},readingDraftRevision:0};
+ if(cbt)Object.assign(response,{attemptMode:'cbt',policy:{timed:true,autoSubmit:true},readingDeadlineAt:'2026-10-07T02:01:00Z'});
  await page.route('**/api/**',async route=>{
  const u=route.request().url(),body=route.request().method()==='POST'?route.request().postDataJSON():{};
  let out={ok:true};
@@ -109,7 +110,7 @@ test('CBT chỉ dùng tên/lượt cũ sau xác nhận; hủy rồi xác nhận 
  }finally{await f.context.close();}
 });
 test('CBT mới đọc đúng kho riêng và tự thu Reading theo hạn máy chủ',async()=>{
- const f=await fixture({reading:true});try{
+ const f=await fixture({reading:true,cbt:true});try{
  await f.page.route('**/api/**/attempt/prepare',async route=>{
   f.opens.push(route.request().postDataJSON());
   await route.fulfill({json:{ok:true,attemptMode:'cbt',policy:{timed:true,autoSubmit:true},generation:0,
@@ -122,7 +123,9 @@ test('CBT mới đọc đúng kho riêng và tự thu Reading theo hạn máy ch
  await f.page.locator('#bootstrapStudent').selectOption(ref);await f.page.locator('#confirmIdentity').click();
  await f.page.locator('#readingView').waitFor({state:'visible'});await f.page.clock.runFor(1000);
  assert.equal(await f.page.locator('#readingView .cbt-reading-clock').getAttribute('data-seconds'),'59');
+ const submitted=f.page.waitForResponse(response=>response.url().endsWith('/reading')&&response.request().method()==='POST');
  await f.page.clock.fastForward(61*1000);await f.page.clock.runFor(1000);
+ await submitted;
  assert.equal(f.writes.length,1);assert.equal(f.writes[0].attemptToken,token);assert.notEqual(f.writes[0].attemptMode,'answer_sheet');
  assert.deepEqual(f.errors,[]);
  }finally{await f.context.close();}
