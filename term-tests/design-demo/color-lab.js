@@ -3,7 +3,7 @@
  if(document.getElementById('demo-color-lab'))return;
  const requestedOption=new URLSearchParams(location.search).get('labOption');
  const option=['sage','mist','sand','lavender','reading'].includes(requestedOption)?requestedOption:null;
- const key='izone-demo-color-lab-v2'+(option?'-'+option:'');
+ const key='izone-demo-color-lab-v2-'+(option||'reading');
  const groups=[
  ['Thẻ tiêu đề', [['header','Nền quanh nhãn','#edf1f6'],['badge','Nền nhãn Questions','#152b4e'],['badgeText','Chữ trên nhãn','#ffffff'],['hint','Chữ hướng dẫn','#273d5c'],['edge','Đường nhấn phía trên','#e8839a'],['line','Viền nhóm câu','#bbc8da']]],
  ['Nội dung', [['surface','Nền vùng bài làm','#fffefa'],['ink','Chữ nội dung','#303947']]],
@@ -23,16 +23,16 @@
  ];
  const alternatives=[
  // Mẫu Reading Homework buổi 7: xám trung tính, giấy trắng, navy và điểm nhấn đỏ nhỏ.
- ['reading','Reading · xám sáng–đỏ',{...base,header:'#f5f6f8',badge:'#152b4e',badgeText:'#ffffff',hint:'#586477',edge:'#db0829',line:'#dce1e7',surface:'#ffffff',ink:'#202b3b',primary:'#152b4e',primaryText:'#ffffff',selected:'#edf1f7',selectedText:'#152b4e',selectedLine:'#152b4e',rose:'#f8f9fb',roseText:'#db0829',success:'#edf8f2',successText:'#136f4a',flag:'#fff4d9',flagText:'#915900'}],
+ ['reading','Reading · xám sáng–đỏ · mặc định ★',{...base,header:'#f5f6f8',badge:'#152b4e',badgeText:'#ffffff',hint:'#586477',edge:'#db0829',line:'#dce1e7',surface:'#ffffff',ink:'#202b3b',primary:'#152b4e',primaryText:'#ffffff',selected:'#edf1f7',selectedText:'#152b4e',selectedLine:'#152b4e',rose:'#f8f9fb',roseText:'#db0829',success:'#edf8f2',successText:'#136f4a',flag:'#fff4d9',flagText:'#915900'}],
  ['sage','Sage dịu',{...base,header:'#e3ebe5',hint:'#304d40',edge:'#789b8a',line:'#bdccc2',rose:'#eaf0eb',roseText:'#345d4c',selected:'#e9f0ec',selectedLine:'#8ca799'}],
- ['mist','Xanh sương · mặc định ★',{...base,header:'#e4edf5',hint:'#304b66',edge:'#7895b5',line:'#bdcddd',rose:'#eaf0f7',roseText:'#315475',selected:'#e8eff7',selectedLine:'#8fa5bf'}],
+ ['mist','Xanh sương',{...base,header:'#e4edf5',hint:'#304b66',edge:'#7895b5',line:'#bdcddd',rose:'#eaf0f7',roseText:'#315475',selected:'#e8eff7',selectedLine:'#8fa5bf'}],
  ['sand','Kem cát',{...base,header:'#eee7da',hint:'#554b3c',edge:'#b09873',line:'#d1c6b3',rose:'#f2ede3',roseText:'#6a5435',selected:'#eaeef3',selectedLine:'#94a3b6'}],
  ['lavender','Tím xám',{...base,header:'#eae7f1',hint:'#4e465f',edge:'#9a8aad',line:'#cdc5da',rose:'#f0edf6',roseText:'#594672',selected:'#edeaf3',selectedLine:'#aaa0bc'}]
  ];
- presets.unshift(...['mist','sage','sand','lavender','reading'].map(id=>alternatives.find(p=>p[0]===id)));
- const starting=alternatives.find(p=>p[0]===(option||'mist'));
+ presets.unshift(...['reading','mist','sage','sand','lavender'].map(id=>alternatives.find(p=>p[0]===id)));
+ const starting=alternatives.find(p=>p[0]===(option||'reading'));
  const initialColors=starting?starting[2]:base,initialPreset=starting?starting[0]:'blue';
- document.documentElement.dataset.labOption=option||'mist';
+ document.documentElement.dataset.labOption=option||'reading';
  if(option){document.title=starting[1]+' · '+document.title;
   document.addEventListener('click',event=>{const a=event.target.closest('a[href]');if(!a)return;const url=new URL(a.href,location.href);if(url.origin!==location.origin||!(/\/term-tests\/|design-demo\.html|real-results\.html/.test(url.pathname)))return;if(!url.searchParams.has('labOption'))url.searchParams.set('labOption',option);a.href=url.href;},true);
  }
@@ -41,7 +41,7 @@
  function read(raw){try{const x=JSON.parse(raw);if(x?.version!==1)return;colors={...initialColors};for(const [id]of fields)if(normalize(x.colors?.[id]))colors[id]=normalize(x.colors[id]);preset=presets.some(p=>p[0]===x.preset)?x.preset:'custom';}catch{}}
  try{read(localStorage.getItem(key));expanded=localStorage.getItem(key+'-open')!=='0';}catch{}
  const root=document.createElement('aside');root.id='demo-color-lab';root.setAttribute('aria-label','Thử màu giao diện');root.setAttribute('popover','manual');
- root.innerHTML='<button type="button" class="lab-launch" aria-controls="lab-panel">◉ Màu giao diện</button><section id="lab-panel"><header><div><strong>Thử màu giao diện</strong><p>Đổi màu · xem ngay trên demo</p></div><button type="button" class="lab-collapse" aria-label="Thu nhỏ bảng màu">−</button></header><div class="lab-scroll"><label class="lab-preset-label" for="lab-preset">Bộ màu đã thử</label><select id="lab-preset"></select><p class="lab-note">★ Tôi đề xuất · giữ bố cục hiện tại, chỉ đổi màu.</p><div class="lab-groups"></div></div><footer><p class="lab-status" role="status" aria-live="polite"></p><button type="button" class="lab-reset">Về Xanh sương mặc định</button><small>Tự nhớ trên trình duyệt này · chỉ áp dụng demo</small></footer></section>';
+ root.innerHTML='<button type="button" class="lab-launch" aria-controls="lab-panel">◉ Màu giao diện</button><section id="lab-panel"><header><div><strong>Thử màu giao diện</strong><p>Đổi màu · xem ngay trên demo</p></div><button type="button" class="lab-collapse" aria-label="Thu nhỏ bảng màu">−</button></header><div class="lab-scroll"><label class="lab-preset-label" for="lab-preset">Bộ màu đã thử</label><select id="lab-preset"></select><p class="lab-note">★ Tôi đề xuất · giữ bố cục hiện tại, chỉ đổi màu.</p><div class="lab-groups"></div></div><footer><p class="lab-status" role="status" aria-live="polite"></p><button type="button" class="lab-reset">Về Reading mặc định</button><small>Tự nhớ trên trình duyệt này · chỉ áp dụng demo</small></footer></section>';
  document.body.append(root);
  const launcher=root.querySelector('.lab-launch'),panel=root.querySelector('#lab-panel'),select=root.querySelector('#lab-preset'),status=root.querySelector('.lab-status');
  for(const [id,name]of [...presets,['custom','Đang tùy chỉnh']]){const o=document.createElement('option');o.value=id;o.textContent=name;if(id==='custom')o.disabled=true;select.append(o);}
