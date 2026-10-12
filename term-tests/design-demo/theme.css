@@ -24,4 +24,3 @@ html[data-lab-option] .design67 :is(.cbt-lobby-header,.cbt-review-panel>header,.
 html[data-lab-option] .design67 :is(.cbt-review-panel,.cbt-note-panel){border-color:var(--lab-line)}
 html[data-lab-option] .design67 .analysis-card.improve h4{color:var(--lab-roseText)}
 html[data-lab-option] .design67 .result-status{border-left-color:var(--lab-edge)}
-
