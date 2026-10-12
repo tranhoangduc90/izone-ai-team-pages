@@ -1,6 +1,6 @@
 // Nhãn trạng thái demo và khóa bài gốc; không đổi câu trả lời/điểm mà renderer nhận.
 (()=>{
- const ctx=window.REAL_DEMO,saved=ctx.mode==='saved';
+ const ctx=window.REAL_DEMO,saved=ctx.mode==='saved',tools=ctx.toolsEnabled;
  let audioBox=null;
  const label=document.createElement('div');label.className='design-preview-label';label.textContent=saved?'BÀI THẬT · Chỉ đọc · Mọi màu chỉ áp dụng demo':'ĐỀ THẬT · Làm thử riêng · Không gửi bài vào hệ thống';document.body.append(label);
  function apply(){
@@ -11,10 +11,23 @@
   if(saved){for(const timer of document.querySelectorAll('[role=timer]'))timer.hidden=true;}
   if(!saved){
    const h=document.querySelector('.writing-result-heading h3');if(h&&h.textContent!=='Bài Writing thử · chưa chấm AI')h.textContent='Bài Writing thử · chưa chấm AI';
-   for(const n of document.querySelectorAll('.writing-result-heading p')){const text='Bài thử được giữ riêng trong tab. Chọn bài thật để xem nhận xét đã chấm.';if(n.textContent!==text)n.textContent=text;}
+   for(const n of document.querySelectorAll('.writing-result-heading p')){const text=(tools?'Bài thử được giữ riêng trong tab. Chọn bài thật để xem nhận xét đã chấm.':'Bài Writing thử chỉ giữ trong tab, không gửi chấm AI.');if(n.textContent!==text)n.textContent=text;}
   }
   for(const n of document.querySelectorAll('.notice,.writing-grading-status')){
-   if(!saved&&(/Portal|đang.*chấm|cần.*kiểm tra|chấm và phân tích đầy đủ/i.test(n.textContent))){const text='Bản thử riêng — chưa chấm AI. Chọn “Bài thật + chấm thật” ở phía trên để xem nhận xét đã lưu.';if(n.textContent!==text)n.textContent=text;}
+   if(!saved&&(/Portal|đang.*chấm|cần.*kiểm tra|đang.*kiểm tra|đang chờ|quay lại sau|chấm và phân tích đầy đủ/i.test(n.textContent))){const text=(tools?'Bản thử riêng — chưa chấm AI. Chọn “Bài thật + chấm thật” trong Điều hướng demo để xem nhận xét đã lưu.':'Bản thử riêng — không gửi bài vào hệ thống và không chấm AI.');if(n.textContent!==text)n.textContent=text;}
+  }
+
+  if(!saved){
+   const resultStatus=document.getElementById('resultStatus');
+   const resultCopy='Listening và Reading là kết quả chấm thử; Writing không gửi chấm AI. Bài thử chỉ giữ trong tab này.';
+   if(resultStatus&&ctx.trial.result&&resultStatus.textContent!==resultCopy)resultStatus.textContent=resultCopy;
+   // Bản thử ở RAM: không hứa lưu server hoặc khôi phục sau đóng/tải lại tab.
+   for(const n of document.querySelectorAll('#listeningSavedView p'))if(n.textContent.includes('Hệ thống đã ghi bài Listening.'))n.textContent='Bài Listening thử được giữ trong tab này. Khi sẵn sàng, mở Reading để tiếp tục.';
+   for(const n of document.querySelectorAll('#writingPrepView li'))if(n.textContent.includes('đóng tab rồi mở lại'))n.textContent='Bài viết chỉ giữ trong tab này. Tải lại hoặc đóng tab sẽ bắt đầu bản thử mới.';
+   for(const n of document.querySelectorAll('#listeningSaveStatus,#readingSaveStatus,.writing-outline-status')){
+    const text=n.textContent.replace('Đã khôi phục bản lưu trên hệ thống','Đã mở bản thử trong tab').replace('Đã lưu trên hệ thống','Đã giữ trong tab này').replace('Đã lưu trên máy','Đã giữ trong tab này');
+    if(text!==n.textContent)n.textContent=text;
+   }
   }
   if(saved){
    for(const field of document.querySelectorAll('#app [data-writing-task],#app .question input,#app .question select,#app .cbt-choice input,#app .cbt-inline-answer input,#app .cbt-select-answer select')){if(field.tagName==='TEXTAREA'||field.type==='text')field.readOnly=true;else field.disabled=true;}
@@ -29,6 +42,6 @@
   button.addEventListener('click',loadAudio);if(ctx.trial.audioPrepared)loadAudio();
  }
  if(!saved&&ctx.screen==='result'&&!ctx.trial.result){
-  const note=document.createElement('div');note.className='real-trial-empty';note.textContent='Bản thử chưa có điểm Listening / Reading. Bạn có thể làm bài rồi nộp thử, hoặc chuyển sang bài thật đã chấm.';document.body.prepend(note);
+  const note=document.createElement('div');note.className='real-trial-empty';note.textContent=(tools?'Bản thử chưa có điểm Listening / Reading. Bạn có thể làm bài rồi nộp thử, hoặc chuyển sang bài thật đã chấm.':'Bản thử chưa có điểm Listening / Reading. Hãy làm bài rồi nộp thử để xem kết quả.');document.body.prepend(note);
  }
 })();

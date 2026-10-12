@@ -22,10 +22,10 @@ test('navigation opens fully, toggles repeatedly and does not recreate the exam'
 });
 test('both entry pages expose the toggle and share the responsive frame sizing',()=>{
  for(const page of ['index.html','real.html']){
-  assert.match(read(page),/id="demo-controls-toggle" aria-expanded="true" aria-controls="demo-toolbar demo-controls"/);
-  assert.match(read(page),/id="demo-controls" class="real-controls"/);
-  assert.match(read(page),/src="real-controls.js\?v=reading-floating-20261012"/);
-  assert.match(read(page),/id="demo-toolbar"/);
+  assert.match(fs.readFileSync(new URL('../term-tests/design-lab/'+page,import.meta.url),'utf8'),/id="demo-controls-toggle" aria-expanded="true" aria-controls="demo-toolbar demo-controls"/);
+  assert.match(fs.readFileSync(new URL('../term-tests/design-lab/'+page,import.meta.url),'utf8'),/id="demo-controls" class="real-controls"/);
+  assert.match(fs.readFileSync(new URL('../term-tests/design-lab/'+page,import.meta.url),'utf8'),/src="\.\.\/design-demo\/real-controls.js\?v=split-demo-20261012"/);
+  assert.match(fs.readFileSync(new URL('../term-tests/design-lab/'+page,import.meta.url),'utf8'),/id="demo-toolbar"/);
  }
  assert.match(read('real.css'),/#frame-slot\{flex:1;min-height:0\}/);
  assert.doesNotMatch(read('real.css'),/height:calc\(100dvh -/);

@@ -1,0 +1,27 @@
+/* Biến chỉnh bằng CSSOM để giữ CSP hiện có; bảng màu có giao diện cố định riêng. */
+:root{--lab-header:#f5f6f8;--lab-badge:#152b4e;--lab-badgeText:#ffffff;--lab-hint:#586477;--lab-edge:#db0829;--lab-line:#dce1e7;--lab-surface:#ffffff;--lab-ink:#202b3b;--lab-primary:#152b4e;--lab-primaryText:#ffffff;--lab-selected:#edf1f7;--lab-selectedText:#152b4e;--lab-selectedLine:#152b4e;--lab-rose:#f8f9fb;--lab-roseText:#db0829;--lab-success:#edf8f2;--lab-successText:#136f4a;--lab-flag:#fff4d9;--lab-flagText:#915900;}
+.design67 .design-question-group,.design-demo-index .sample-group{border-color:var(--lab-line);border-top-color:var(--lab-edge);background:var(--lab-surface)}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro),.design67 .writing-pane-header,.design67 .writing-criterion-card>header,.design67:not(.cbt-mode) .section-heading,.design-demo-index .sample-heading{background:var(--lab-header);border-bottom-color:var(--lab-line);color:var(--lab-hint)}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro)>:is(h3,h4),.design-demo-index .sample-heading h3{background:var(--lab-badge);color:var(--lab-badgeText)}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro)>p,.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro) strong,.design67 .design-question-group>.cbt-section-intro>.cbt-kicker,.design67 .writing-pane-header>strong,.design67 .writing-criterion-card>header h4,.design67:not(.cbt-mode) .section-heading h2,.design-demo-index .sample-heading :is(p,strong){color:var(--lab-hint)}
+.design67 .writing-criterion-card,.design67:not(.cbt-mode) .section-heading{border-color:var(--lab-line);border-top-color:var(--lab-edge)}
+.design67 :is(.design-question-content,.cbt-passage-body,.writing-prompt-body,.cbt-notes-card,.writing-feedback-essay,.writing-component-summary,.summary-card),.design-demo-index .sample-body{background:var(--lab-surface);color:var(--lab-ink)}
+.design67 :is(.button-primary,.button.primary,.cbt-heading-submit,.cbt-review-open),.design67 :is(.button-primary,.cbt-review-open):hover:not(:disabled){background:var(--lab-primary);border-color:var(--lab-primary);color:var(--lab-primaryText)}
+.design67 .cbt-choice:has(input:checked),.design67 :is(.cbt-inline-answer,.cbt-select-answer).is-answered :is(input,select),.design67 :is(.cbt-question-button,.cbt-review-question).is-answered,.design67 .question :is(input,select)[data-design-filled=true],.design-demo-index .sample-field input{background:var(--lab-selected);border-color:var(--lab-selectedLine);color:var(--lab-selectedText)}
+.design67 :is(.cbt-inline-answer,.cbt-select-answer).is-answered .cbt-blank-number{background:var(--lab-selected);color:var(--lab-selectedText)}
+.design67 input:is([type=radio],[type=checkbox]){accent-color:var(--lab-selectedText)}
+.design67 :is(.cbt-part-button,.writing-task-tab,.cbt-review-filter).is-active,.design67 :is(.reading-view-switch,.writing-view-switch) button[aria-pressed=true],.design67 .writing-component-toggle,.design67 .writing-component-toggle[aria-expanded=true],.design67 .cbt-section-page-button,.design67 .cbt-section-page-button:hover:not(:disabled),.design67 .cbt-lobby-badge,.design67 .analysis-card.improve,.design67 .detail-block summary,.design-demo-index .sample-actions a{background:var(--lab-rose);color:var(--lab-roseText);border-color:var(--lab-roseText)}
+.design67 .notice.success,.design67 .writing-feedback-header .design-feedback-status,.design67 .analysis-card.best,.design67 .mini-active-user,.design-demo-index .sample-success{background:var(--lab-success);color:var(--lab-successText)}
+.design67 .autosave-status[data-status=saved],.design67 [data-design-status=saved],.design67 .analysis-card.best h4,.design67 .mini-active-user strong{color:var(--lab-successText)}
+.design67 .cbt-flag-button.is-flagged,.design-demo-index .sample-flag{background:var(--lab-flag);color:var(--lab-flagText);border-color:var(--lab-flagText)}
+/* Bốn phương án so sánh: thay các mảng hồng trang trí còn lại bằng màu điều hướng. */
+html[data-lab-option] body.design67{--design-rose:var(--lab-roseText);--design-rose-soft:var(--lab-rose);--design-rose-line:var(--lab-line)}
+html[data-lab-option] .design67 :is(.writing-result-section,.cbt-bootstrap-identity,.cbt-identity-confirmation-details>div,.writing-outline-card,.cbt-note-panel>header,.cbt-note-back,.cbt-review-close,.cbt-notes-launcher[aria-expanded=true]){background:var(--lab-rose);border-color:var(--lab-line)}
+html[data-lab-option] .design67 :is(.cbt-instruction-block,.cbt-subsection-heading){background:var(--lab-header);border-left-color:var(--lab-edge)}
+html[data-lab-option] .design67 :is(.cbt-tool-button,.cbt-note-list-item,.writing-score-card.is-action):hover{background:var(--lab-rose);color:var(--lab-roseText);border-color:var(--lab-line)}
+html[data-lab-option] .design67 .cbt-lobby-step[data-state=active] .cbt-lobby-download-status.cbt-audio-status{background:var(--lab-rose);color:var(--lab-roseText);border-color:var(--lab-line)}
+html[data-lab-option] .design67 :is(.cbt-lobby-header,.cbt-review-panel>header,.skill-performance-heading){border-bottom-color:var(--lab-line)}
+html[data-lab-option] .design67 :is(.cbt-review-panel,.cbt-note-panel){border-color:var(--lab-line)}
+html[data-lab-option] .design67 .analysis-card.improve h4{color:var(--lab-roseText)}
+html[data-lab-option] .design67 .result-status{border-left-color:var(--lab-edge)}
+

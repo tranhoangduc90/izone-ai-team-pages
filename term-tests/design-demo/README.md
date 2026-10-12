@@ -1,23 +1,10 @@
-# Demo Term Test 2 · IC2200
+# Hai bản demo Term Test 2 IC2200
 
-Entry công khai giữ nguyên `/term-tests/design-demo/`. `real.html` là alias; URL `exam.html` cũ chuyển về entry mới. Demo Term Test 1, Mini Test và toàn bộ fixture minh họa cũ đã bỏ theo yêu cầu.
+- `/term-tests/design-demo/`: bản sạch. Luôn mở/reload từ phòng chờ Listening, khóa đủ 19 token preset Reading · xám sáng–đỏ, không panel/nút Điều hướng demo hoặc Màu giao diện. Không đọc màu/query đã lưu; bản thử đi tiếp bằng nút nghiệp vụ Listening → Reading → Writing → kết quả.
+- `/term-tests/design-lab/`: bản thử đầy đủ. Giữ chọn phiên bản đề trống/bài thật đã chấm, người học/màn, thu/mở điều hướng, bảng màu, mọi preset và tự cuộn/highlight vùng chỉnh.
 
-## Hai phiên bản
+Cả hai dùng cùng host/iframe/renderer, audio và API demo công khai cố định Term Test 2 IC2200. `real.html` là alias ở mỗi route. Không fork trang thi thật, đổi API/database, tạo lượt thi hoặc ghi điểm học viên. Bài thử ở RAM; bài thật ở lab chỉ đọc; Writing thử không gửi chấm AI.
 
-- **Làm thử đề trống:** nội dung thật được tải ngay khi mở trang; bài thử chỉ ở RAM. Reading/Listening gọi bộ chấm hiện hành qua endpoint chỉ đọc, không tạo attempt hay ghi điểm. Writing thử không gửi chấm AI.
-- **Xem bài đã chấm:** chọn bài đã nộp của IC2200; dùng đúng đáp án, bài viết và lần chấm được final result tham chiếu. Tất cả điều khiển nộp/lưu bài thật bị khóa.
-- Demo mở trực tiếp, không đăng nhập hoặc tạo phiên Google. API chỉ phục vụ phạm vi IC2200/Term Test 2. Không nhúng đề, đáp án, bài làm, nhận xét hoặc token học viên vào source/Pages. Đổi bài hoặc đóng trang hủy yêu cầu cũ và gỡ iframe chứa dữ liệu.
+`theme.js` là nguồn chung của preset và 19 token; `theme.css` áp dụng chúng trên mọi màn, kể cả nhận xét. Bản sạch không nạp `real-controls.js`, `color-lab.js/css` hoặc `color-locator.js`. Lab chỉ có entry HTML riêng, nạp cùng asset qua đường tương đối. Theme độc lập với giao diện thử màu.
 
-## Phòng chờ Listening
-
-Mặc định mở phòng chờ: tải audio thật → nghe thử tối đa 30 giây → mở bài Listening. Có tải lại khi lỗi, chỉnh âm lượng và giữ âm lượng qua màn làm bài. Khi rời phòng chờ, bản nghe thử dừng. Bài đã chấm vẫn chỉ đọc; phòng chờ không tạo phiên thi hoặc ghi vào database. Bảng màu áp dụng cả nền tiêu đề, nhãn, nội dung, nút và trạng thái tải/nghe.
-
-## Bảng màu
-
-Xanh sương mặc định, tiếp theo Sage dịu, Kem cát và Tím xám. Chỉ bộ màu được lưu lâu dài trong localStorage. Chọn trường màu tự cuộn vùng đang chỉnh vào màn hình và vẽ viền tạm thời; hoạt động cả trong hộp nhận xét. Trên điện thoại bảng thu thành dải chỉnh màu. Không tạo đáp án/cờ giả nếu màn chưa có trạng thái cần tìm.
-
-## Ranh giới triển khai
-
-Tái dùng renderer `../shared/` và `../term-test-2-computer-based/`; các trang thi thật không nạp adapter hoặc lớp màu demo. `real-runtime.js` giữ dữ liệu RAM và chặn các API ghi; `real-host.js` là cầu nối demo tới `/api/term-tests/teacher/design-demo`.
-
-API mới phải được phát hành trước entry Pages. Không có migration database. Quay lui frontend bằng revert commit; quay lui API bằng image/config đã sao lưu. Các kiểm tra cần thiết: scope cố định, tải dữ liệu không cần phiên, lineage lần chấm, bài trống không ghi dữ liệu, audio thật, đọc thực tế trên desktop/mobile và bảng màu tự cuộn.
+Giữ test adapter/lobby, kiểm hai route, theme không bị query/Storage tác động, hành trình nghiệp vụ và đọc lại sau Pages build. Quay lui bằng revert commit frontend; không có deploy backend trong gói này.
