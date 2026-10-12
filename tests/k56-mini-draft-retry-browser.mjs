@@ -86,11 +86,18 @@ test('D04 CBT: reload giữ nháp offline khi tab khác lưu cùng revision, ch�
   revision=requests.at(-1).revision;draft={1:'OTHER-TAB'};fail=false;
   await page.reload();await page.locator('#confirmIdentity').click();await page.locator('#readingView').waitFor({state:'visible'});
   assert.equal(await page.locator('#readingQuestions [data-number]').first().inputValue(),'LOCAL-OFFLINE');
-  await page.clock.runFor(2000);await assertEventually(()=>requests.length>1);
+  await page.clock.runFor(2000);await assertEventually(()=>requests.length>1,page);
   assert.equal(draft[1],'OTHER-TAB');
   assert.equal(await page.locator('#readingQuestions [data-number]').first().inputValue(),'LOCAL-OFFLINE');
   await page.locator('#readingQuestions [data-number]').first().fill('LOCAL-EXPLICIT-EDIT');await page.clock.runFor(1000);
   await assertEventually(()=>draft[1]==='LOCAL-EXPLICIT-EDIT');assert.deepEqual(errors,[]);
  }finally{await context.close();}
 });
-async function assertEventually(check){for(let i=0;i<40&&!check();i++)await new Promise(r=>setTimeout(r,50));assert.ok(check(),'Bản mới phải được lưu trên API giả trước khi mở browser sạch');}
+async function assertEventually(check,page){
+ for(let i=0;i<40&&!check();i++){
+  await new Promise(r=>setTimeout(r,50));
+  // Timer được tạo sau phản hồi bất đồng bộ cũng cần đồng hồ thử nghiệm tiếp tục chạy.
+  if(page&&!check())await page.clock.runFor(100);
+ }
+ assert.ok(check(),'Bản mới phải được lưu trên API giả trước khi mở browser sạch');
+}
