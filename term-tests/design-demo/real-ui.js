@@ -1,8 +1,12 @@
 // Nhãn trạng thái demo và khóa bài gốc; không đổi câu trả lời/điểm mà renderer nhận.
 (()=>{
  const ctx=window.REAL_DEMO,saved=ctx.mode==='saved';
+ let audioBox=null;
  const label=document.createElement('div');label.className='design-preview-label';label.textContent=saved?'BÀI THẬT · Chỉ đọc · Mọi màu chỉ áp dụng demo':'ĐỀ THẬT · Làm thử riêng · Không gửi bài vào hệ thống';document.body.append(label);
  function apply(){
+  // Renderer có thể dựng lại vùng câu hỏi; đặt audio vào toolbar Listening mà không tạo player mới.
+  const audioHost=document.querySelector('#listeningView .cbt-toolbar');
+  if(audioBox&&audioHost&&audioBox.parentElement!==audioHost)audioHost.append(audioBox);
   const classLabel=document.getElementById('classLabel');if(classLabel&&classLabel.textContent!=='Lớp IC2200 · Demo')classLabel.textContent='Lớp IC2200 · Demo';
   if(saved){for(const timer of document.querySelectorAll('[role=timer]'))timer.hidden=true;}
   if(!saved){
@@ -20,7 +24,7 @@
  }
  new MutationObserver(apply).observe(document.getElementById('app'),{subtree:true,childList:true});apply();
  if(ctx.screen==='listening'){
-  const box=document.createElement('section');box.className='real-audio';const button=document.createElement('button');button.type='button';button.textContent='Tải audio đề thật';const audio=document.createElement('audio');audio.controls=true;audio.hidden=true;const status=document.createElement('span');status.setAttribute('role','status');box.append(button,audio,status);document.body.prepend(box);
+  const box=document.createElement('section');box.className='real-audio';const button=document.createElement('button');button.type='button';button.textContent='Tải audio đề thật';const audio=document.createElement('audio');audio.controls=true;audio.hidden=true;const status=document.createElement('span');status.setAttribute('role','status');box.setAttribute('aria-label','Audio của Term Test 2');box.append(button,audio,status);audioBox=box;apply();
   const loadAudio=async()=>{button.disabled=true;status.textContent='Đang tải audio…';try{audio.src=await ctx.audio();audio.volume=Number(ctx.trial.audioVolume)||1;audio.hidden=false;button.hidden=true;status.textContent='Audio của Term Test 2';}catch(e){button.disabled=false;status.textContent=e.message;}};
   button.addEventListener('click',loadAudio);if(ctx.trial.audioPrepared)loadAudio();
  }

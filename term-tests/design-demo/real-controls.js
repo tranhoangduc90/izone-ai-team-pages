@@ -3,11 +3,14 @@
 (()=>{
  const button=document.getElementById('demo-controls-toggle');
  const panel=document.getElementById('demo-controls');
- if(!button||!panel)return;
+ const toolbar=document.getElementById('demo-toolbar');
+ if(!button||!panel||!toolbar)return;
  button.addEventListener('click',()=>{
   const expanded=button.getAttribute('aria-expanded')!=='true';
   panel.hidden=!expanded;
+  toolbar.hidden=!expanded;
+  document.body.dataset.navigationCollapsed=String(!expanded);
   button.setAttribute('aria-expanded',String(expanded));
-  button.textContent=expanded?'Thu gọn điều hướng ↑':'Mở điều hướng ↓';
+  button.textContent=expanded?'Thu gọn điều hướng ↑':'☰ Điều hướng demo';
  });
 })();
