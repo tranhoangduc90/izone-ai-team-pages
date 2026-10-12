@@ -38,6 +38,19 @@ function renderClasses(requested='ALL'){
  $('class-filter').value=classes.includes(requested)?requested:'ALL';
 }
 function score(skill,row){const value=row.scores?.[skill];if(!value)return'—';return row.testSlug==='substitute-test-1-k56'?`${number(value.raw)}/${number(value.max)}`:`${number(value.band)}/9 (${number(value.raw)}/${number(value.max)} câu)`;}
+function appendPortalProjection(content,data){
+ const p=data.portalProjection;if(!p)return;
+ const skills=['listening','reading','writing'],maxima=data.testSlug.endsWith('k67')?[9,9,9]:[40,data.testSlug==='substitute-test-1-k56'?26:40,9];
+ if(!skills.every(s=>typeof p.actualScores?.[s]==='number'&&Number.isFinite(p.actualScores[s])&&typeof p.portalScores?.[s]==='number'&&Number.isFinite(p.portalScores[s]))){content.append(node('p','Chưa xác nhận được điểm dự kiến Portal.'));return;}
+ const synced=data.portalStatus==='synced',demo=data.classCode==='DEMO',section=node('section',undefined,'portal-projection');
+ section.append(node('h3','Điểm thực tế và điểm Thi lại'),node('p',demo?'DEMO · Chỉ đối chiếu quy tắc, không gửi Portal.':synced?'Đã xác nhận ba điểm Thi lại trên Portal.':'Điểm Portal dưới đây là dự kiến; chưa xác nhận đã ghi.'));
+ const wrap=node('div',undefined,'table-wrap'),table=node('table',undefined,'results-table'),head=node('thead'),headers=node('tr');
+ headers.append(node('th','Kỹ năng'),node('th','Điểm thực tế'),node('th',synced&&!demo?'Điểm Thi lại đã xác nhận':'Điểm Portal dự kiến'));head.append(headers);const body=node('tbody');
+ skills.forEach((s,i)=>{const row=node('tr');row.append(node('th',['Listening','Reading','Writing'][i]),node('td',number(p.actualScores[s]).replace('.',',')+'/'+maxima[i]),node('td',number(p.portalScores[s]).replace('.',',')+'/'+maxima[i]));body.append(row);});
+ table.append(head,body);wrap.append(table);section.append(wrap,node('p','Kết quả bài thực tế: '+(p.actualPassed===true?'Đạt':p.actualPassed===false?'Chưa đạt':'Chưa xác nhận')+'.'));
+ if(typeof p.displayAverageBand==='number')section.append(node('p','Band trung bình hiển thị theo quy tắc: '+number(p.displayAverageBand).replace('.',',')+'/9.'));
+ content.append(section);
+}
 function renderRows(){
  $('student-rows').replaceChildren();
  for(const attempt of state.rows){
@@ -60,6 +73,7 @@ async function openAttempt(attempt){
   if(data.attemptToken!==attempt.attemptToken||data.testSlug!==attempt.testSlug||data.classCode!==attempt.classCode||data.studentRef!==attempt.studentRef)throw new Error('Kết quả trả về không khớp lượt đã chọn.');
   $('student-name').textContent=data.studentName;
   const content=$('attempt-content');content.replaceChildren(node('p',statusText(data.status)+' · '+portalText(data.portalStatus)));
+  appendPortalProjection(content,data);
   if(data.requiredTasks?.length===2)content.append(node('h3','Writing tổng · '+(data.result?number(data.result.writingScore)+'/9':'Chưa có điểm tổng')),
     node('p','(Task 1 + 2 × Task 2) / 3, làm tròn xuống 0,5 band.'));
   const tasks=data.tasks||[{taskNumber:data.taskNumber,status:data.status,result:data.result}];
