@@ -34,7 +34,7 @@ function renderFrame(){
 window.getRealDemoContext=child=>{
  if(!ready||child!==el['frame-slot'].firstElementChild?.contentWindow)throw new Error('Phiên demo không còn hiệu lực.');
  return {content:content.content,timing:content.timing,snapshot,trial,mode:el.mode.value,screen:el.screen.value,
-  navigate(screen){if(['listening','reading','writing','result'].includes(screen)){el.screen.value=screen;renderFrame();}},
+  navigate(screen){if(['lobby','listening','reading','writing','result'].includes(screen)){el.screen.value=screen;renderFrame();}},
   async grade(){const data=await request('/grade'+scope,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({definitionVersion:content.definitionVersion,listening:trial.listening,reading:trial.reading})});trial.result=data.result;return data.result;},
   async audio(){if(audioUrl)return audioUrl;const ticket=generation;const response=await fetch(endpoint+'/audio'+scope,{credentials:'omit',cache:'no-store',signal:controller.signal});if(!response.ok){if([401,403].includes(response.status))clearPrivate();throw new Error('Không tải được audio đề thật.');}const blob=await response.blob();if(ticket!==generation)throw new DOMException('Yêu cầu cũ','AbortError');audioUrl=URL.createObjectURL(blob);return audioUrl;}
  };

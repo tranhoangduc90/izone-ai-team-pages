@@ -21,7 +21,8 @@
  new MutationObserver(apply).observe(document.getElementById('app'),{subtree:true,childList:true});apply();
  if(ctx.screen==='listening'){
   const box=document.createElement('section');box.className='real-audio';const button=document.createElement('button');button.type='button';button.textContent='Tải audio đề thật';const audio=document.createElement('audio');audio.controls=true;audio.hidden=true;const status=document.createElement('span');status.setAttribute('role','status');box.append(button,audio,status);document.body.prepend(box);
-  button.addEventListener('click',async()=>{button.disabled=true;status.textContent='Đang tải audio…';try{audio.src=await ctx.audio();audio.hidden=false;button.hidden=true;status.textContent='Audio của Term Test 2';}catch(e){button.disabled=false;status.textContent=e.message;}});
+  const loadAudio=async()=>{button.disabled=true;status.textContent='Đang tải audio…';try{audio.src=await ctx.audio();audio.volume=Number(ctx.trial.audioVolume)||1;audio.hidden=false;button.hidden=true;status.textContent='Audio của Term Test 2';}catch(e){button.disabled=false;status.textContent=e.message;}};
+  button.addEventListener('click',loadAudio);if(ctx.trial.audioPrepared)loadAudio();
  }
  if(!saved&&ctx.screen==='result'&&!ctx.trial.result){
   const note=document.createElement('div');note.className='real-trial-empty';note.textContent='Bản thử chưa có điểm Listening / Reading. Bạn có thể làm bài rồi nộp thử, hoặc chuyển sang bài thật đã chấm.';document.body.prepend(note);

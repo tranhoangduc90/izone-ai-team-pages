@@ -8,6 +8,10 @@ Entry công khai giữ nguyên `/term-tests/design-demo/`. `real.html` là alias
 - **Xem bài đã chấm:** chọn bài đã nộp của IC2200; dùng đúng đáp án, bài viết và lần chấm được final result tham chiếu. Tất cả điều khiển nộp/lưu bài thật bị khóa.
 - Demo mở trực tiếp, không đăng nhập hoặc tạo phiên Google. API chỉ phục vụ phạm vi IC2200/Term Test 2. Không nhúng đề, đáp án, bài làm, nhận xét hoặc token học viên vào source/Pages. Đổi bài hoặc đóng trang hủy yêu cầu cũ và gỡ iframe chứa dữ liệu.
 
+## Phòng chờ Listening
+
+Mặc định mở phòng chờ: tải audio thật → nghe thử tối đa 30 giây → mở bài Listening. Có tải lại khi lỗi, chỉnh âm lượng và giữ âm lượng qua màn làm bài. Khi rời phòng chờ, bản nghe thử dừng. Bài đã chấm vẫn chỉ đọc; phòng chờ không tạo phiên thi hoặc ghi vào database. Bảng màu áp dụng cả nền tiêu đề, nhãn, nội dung, nút và trạng thái tải/nghe.
+
 ## Bảng màu
 
 Xanh sương mặc định, tiếp theo Sage dịu, Kem cát và Tím xám. Chỉ bộ màu được lưu lâu dài trong localStorage. Chọn trường màu tự cuộn vùng đang chỉnh vào màn hình và vẽ viền tạm thời; hoạt động cả trong hộp nhận xét. Trên điện thoại bảng thu thành dải chỉnh màu. Không tạo đáp án/cờ giả nếu màn chưa có trạng thái cần tìm.
