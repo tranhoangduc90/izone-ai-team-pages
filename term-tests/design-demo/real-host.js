@@ -28,6 +28,9 @@ function renderFrame(){
  el['attempt-label'].hidden=!saved;el['reset-trial'].hidden=saved;
  el['source-note'].textContent=saved?'Chỉ đọc · đề v'+snapshot.definitionVersion+' · lần chấm '+(snapshot.grading?.gradingVersion??'chưa có'):'Bản thử riêng · không ghi điểm hoặc gửi chấm AI';
  const frame=document.createElement('iframe');frame.title='Demo Term Test 2';frame.src='real-exam.html?test=term-test-2&class=DEMO67&screen='+el.screen.value;
+ // Giữ preset được chọn từ link xem demo khi chuyển giữa các màn.
+ const palette=new URLSearchParams(location.search).get('labOption');
+ if(['mist','sage','sand','lavender','reading'].includes(palette))frame.src+='&labOption='+palette;
  el['frame-slot'].replaceChildren(frame);
 }
 // Chỉ iframe cùng nguồn đang được hiển thị được nhận dữ liệu; không dùng postMessage wildcard.
