@@ -8,7 +8,7 @@
   const keys = ['RETAKE-LOBBY', 'K56A', 'K56B', 'K56C'].flatMap(namespace =>
     ['izone-test:', 'izone-test-ui:', 'izone-test-annotations:']
       .map(prefix => prefix + config.slug + ':' + namespace + suffix));
-  const signalKey = 'izone-demo-reset:' + config.slug + ':RETAKE-LOBBY' + suffix;
+  const signalKey = 'izone-demo-reset:' + config.slug + ':DEMO' + suffix;
   const root = document.getElementById('app');
   const button = document.createElement('button');
   button.type = 'button';

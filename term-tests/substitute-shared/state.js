@@ -64,7 +64,7 @@
     if(!allowed(slug))throw new Error('INVALID_RESET_SCOPE');
     if(!canReset(slug))throw new Error('RESET_DEMO_ONLY');
     stop();
-    if(broadcast)localStorage.setItem('izone-demo-reset:'+slug+':RETAKE-LOBBY:server-grade',crypto.randomUUID());
+    if(broadcast)localStorage.setItem('izone-demo-reset:'+slug+':DEMO:server-grade',crypto.randomUUID());
     const prefixes=['izone-test:','izone-test-ui:','izone-test-annotations:'].map(p=>p+slug+':');
     for(const storage of stores()){
       const keys=[];for(let i=0;i<storage.length;i++){
@@ -83,6 +83,6 @@
   }
   function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch,...(binding?.examVersion?{examVersion:binding.examVersion}:{}),...(binding?.writingSessionId?{writingSessionId:binding.writingSessionId}:{})};}
   function track(controller){if(blocked)controller.abort();else controllers.add(controller);return ()=>controllers.delete(controller);}
-  window.addEventListener('storage',event=>{if(meta&&canReset(meta.testSlug)&&event.key==='izone-demo-reset:'+meta.testSlug+':RETAKE-LOBBY:server-grade'&&event.newValue)stop();});
+  window.addEventListener('storage',event=>{if(meta&&canReset(meta.testSlug)&&event.key==='izone-demo-reset:'+meta.testSlug+':DEMO:server-grade'&&event.newValue)stop();});
   window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,key,accept,stamp,canReset,clear,payload,track,stop,get blocked(){return blocked;},get meta(){return meta;}});
 }());

@@ -76,7 +76,7 @@ for (const number of [1, 2]) {
   });
   test(`Substitute K56 ${number}: reset từ tab khác cũng xóa bản cũ`, () => {
     const h = harness(number);
-    const key = `izone-demo-reset:substitute-test-${number}-k56:RETAKE-LOBBY:server-grade`;
+    const key = `izone-demo-reset:substitute-test-${number}-k56:DEMO:server-grade`;
     h.listeners.storage({ key, newValue: '1' });
     for (const ownKey of h.own) assert.equal(h.context.sessionStorage.getItem(ownKey), null, ownKey);
   });
