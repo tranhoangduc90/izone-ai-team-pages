@@ -226,6 +226,28 @@
 .flow-v2 .flow-extra-filters[open] > summary::after { transform:rotate(225deg); margin-bottom:0; }
 .flow-v2 .flow-actions-compact { display:grid; gap:8px; justify-content:stretch; }
 .flow-v2 .flow-action-select { width:100%; min-width:0; min-height:36px; padding:6px 4px; font-size:14px; color:var(--flow-navy); }
+
+/* Tổng quan theo khoảng ngày: ba hoạt động rõ nghĩa, mở chi tiết khi cần. */
+.flow-v2 .flow-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.flow-v2 .flow-summary-link { display:block; width:100%; min-height:96px; border:0; padding:0; text-align:left; background:transparent; }
+.flow-v2 .flow-summary-link:hover { background:#F6F7FB; }
+.flow-v2 .flow-summary-link span { color:var(--flow-navy); font-size:18px; font-weight:600; }
+.flow-v2 .flow-summary-link small { display:block; color:var(--flow-muted); font-size:14px; font-weight:400; margin-top:4px; }
+.flow-v2 .flow-period-note, .flow-v2 .flow-result-note { color:var(--flow-muted); font-size:15px; line-height:1.6; }
+.flow-v2 .flow-result-note:empty { display:none; }
+@media (max-width:600px) {
+  .flow-v2 .flow-toolbar { display:block; }
+  .flow-v2 .flow-toolbar-line { grid-template-columns:repeat(2,minmax(0,1fr)); overflow:visible; }
+  .flow-v2 .flow-toolbar-line > label:nth-child(3),
+  .flow-v2 .flow-toolbar-line > button:last-child { grid-column:1 / -1; }
+  .flow-v2 .flow-extra-filters { margin-top:8px; }
+  .flow-v2 .flow-extra-filters > summary { justify-content:space-between; }
+  .flow-v2 .flow-summary { grid-template-columns:1fr; }
+  .flow-v2 .flow-summary article { border-right:0; border-bottom:1px solid var(--flow-border); padding:16px 20px; }
+  .flow-v2 .flow-summary article:nth-last-child(2) { border-bottom:1px solid var(--flow-border); }
+  .flow-v2 .flow-summary article:last-child { border-bottom:0; }
+  .flow-v2 .flow-summary-link { min-height:76px; }
+}
 .flow-v2 .flow-actions-compact button { width:100%; font-size:14px; padding:6px 8px; white-space:nowrap; }
 .flow-v2 .flow-table th[data-column=actions] { text-align:center; }
 .flow-v2 .flow-class-cards { grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr)); gap:16px; }

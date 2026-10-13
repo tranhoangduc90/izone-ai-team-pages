@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./writing-flow.css?v=20260924-daily-breakdown-v1" />
     <link rel="preload" href="./assets/fonts/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./writing-flow-v2.css?v=20261012-izone-design-v2" />
+    <link rel="stylesheet" href="./writing-flow-v2.css?v=20261013-doc-feedback-v1" />
   </head>
   <body class="teacher-page flow-page flow-v2" data-kind="homework">
     <a class="flow-skip" href="#flow-main">Đến nội dung chính</a>
@@ -36,40 +36,20 @@
           <div class="flow-kind-switch" role="group" aria-label="Loại bài"><button type="button" data-kind-select="homework" aria-pressed="true">Homework</button><button type="button" data-kind-select="test" aria-pressed="false">Bài Test</button></div>
           <nav id="flow-views" class="flow-views">
             <p class="flow-nav-label">Theo dõi</p>
-            <button type="button" data-view="overview" aria-pressed="true">Tổng quan <span data-count="overview">0</span></button>
+            <button type="button" data-view="overview" aria-pressed="true">Tổng quan</button>
             <button type="button" data-view="daily">Thống kê theo ngày</button>
-            <button type="button" data-view="classes">Không gian lớp <span data-count="classes">0</span></button>
-            <button type="button" data-view="completed_classes">Lớp đã hoàn thành <span data-count="completed_classes">0</span></button>
-            <button type="button" data-view="mapping">Lớp cần kiểm tra <span data-count="mapping">0</span></button>
-            <p class="flow-nav-label">7 giai đoạn</p>
-            <button type="button" data-view="intake">1. Tiếp nhận <span data-count="intake">0</span></button>
-            <button type="button" data-view="precheck">2. Kiểm trước <span data-count="precheck">0</span></button>
-            <button type="button" data-view="main">3. Chấm chính <span data-count="main">0</span></button>
-            <button type="button" data-view="critic">4. Phản biện <span data-count="critic">0</span></button>
-            <button type="button" data-view="arbiter">5. Phân xử <span data-count="arbiter">0</span></button>
-            <button type="button" data-view="render">6. Tạo trang <span data-count="render">0</span></button>
-            <button type="button" data-view="deliver">7. Ghi link <span data-count="deliver">0</span></button>
-            <p class="flow-nav-label">Xử lý và tra cứu</p>
-            <button type="button" data-view="review">Cần kiểm tra <span data-count="review">0</span></button>
-            <button type="button" data-view="source">Lỗi nguồn <span data-count="source">0</span></button>
-            <button type="button" data-view="skipped">Đã bỏ qua <span data-count="skipped">0</span></button>
-            <button type="button" data-view="delivered">Đã giao <span data-count="delivered">0</span></button>
-            <button type="button" data-view="legacy">Lịch sử cũ</button>
-            <button type="button" data-view="logs">Nhật ký lỗi</button>
-            <button type="button" data-view="audit">Nhật ký thao tác</button>
+            <button type="button" data-view="classes">Không gian lớp</button>
+            <button type="button" data-view="intake">Tiếp nhận</button>
+            <button type="button" data-view="processing">Đang xử lý</button>
+            <button type="button" data-view="delivered">Đã giao</button>
+            <button type="button" data-view="skipped">Đã bỏ qua</button>
             <p class="flow-nav-label">Bài Test</p>
-            <button type="button" data-view="test_overview">Tổng quan Test <span data-count="test_overview">0</span></button>
-            <button type="button" data-view="test_daily">Test theo ngày</button>
-            <button type="button" data-view="test_intake">1. Tiếp nhận <span data-count="test_intake">0</span></button>
-            <button type="button" data-view="test_precheck">2. Kiểm trước <span data-count="test_precheck">0</span></button>
-            <button type="button" data-view="test_main">3. Chấm chính <span data-count="test_main">0</span></button>
-            <button type="button" data-view="test_critic">4. Phản biện <span data-count="test_critic">0</span></button>
-            <button type="button" data-view="test_arbiter">5. Phân xử <span data-count="test_arbiter">0</span></button>
-            <button type="button" data-view="test_render">6. Tạo trang <span data-count="test_render">0</span></button>
-            <button type="button" data-view="test_deliver">7. Ghi nhận xét <span data-count="test_deliver">0</span></button>
-            <button type="button" data-view="test_review">Test cần kiểm tra <span data-count="test_review">0</span></button>
-            <button type="button" data-view="test_skipped">Test đã bỏ qua <span data-count="test_skipped">0</span></button>
-            <button type="button" data-view="test_delivered">Test đã giao <span data-count="test_delivered">0</span></button>
+            <button type="button" data-view="test_overview">Tổng quan</button>
+            <button type="button" data-view="test_daily">Thống kê theo ngày</button>
+            <button type="button" data-view="test_intake">Tiếp nhận</button>
+            <button type="button" data-view="test_processing">Đang xử lý</button>
+            <button type="button" data-view="test_delivered">Đã giao</button>
+            <button type="button" data-view="test_skipped">Đã bỏ qua</button>
           </nav>
           <p class="flow-sidebar-note">Tự cập nhật mỗi 30 giây</p>
         </aside>
@@ -87,6 +67,7 @@
             <label><span>Lớp</span><select id="flow-class"><option value="">Tất cả lớp</option></select></label>
             <label><span>Giảng viên</span><select id="flow-teacher"><option value="">Tất cả giảng viên</option></select></label>
             <label><span>Loại bài</span><select id="flow-task-type"><option value="">Cả Task 1 và Task 2</option><option value="task_1">Task 1</option><option value="task_2">Task 2</option></select></label>
+            <label id="flow-list-status-filter" hidden><span>Danh sách</span><select id="flow-list-status"><option value="">Tất cả đang xử lý</option><option value="needs_review">Chỉ bài mắc lỗi</option></select></label>
             <label id="flow-stage-status-filter" hidden><span>Trạng thái trong bước</span><select id="flow-stage-status"><option value="">Tất cả trong bước</option><option value="pending">Đang chờ</option><option value="running">Đang xử lý</option><option value="needs_review">Cần kiểm tra</option><option value="succeeded">Đã xong</option></select></label>
             <label><span>Từ ngày</span><input id="flow-date-from" type="date" /></label>
             <label><span>Đến ngày</span><input id="flow-date-to" type="date" /></label>
@@ -101,11 +82,7 @@
 
           <section id="flow-overview-section" class="flow-section">
             <div id="flow-summary" class="flow-summary"></div>
-            <div id="flow-journey" class="flow-journey" aria-label="Bảy bước chấm bài"></div>
-            <div class="flow-overview-grid">
-              <article class="card flow-attention-panel"><p class="eyebrow">Ưu tiên kiểm tra</p><h2>Việc cần xử lý</h2><p class="muted">Bài lỗi sau ba lần hoặc tài liệu cần xem xét.</p><div id="flow-attention" class="flow-list flow-list-compact"></div></article>
-              <article class="card flow-coverage-panel"><p class="eyebrow">Nguồn lớp</p><h2>Lớp cần chú ý</h2><p class="muted">Lớp thiếu liên kết, bị trùng hoặc quét lỗi.</p><div id="flow-class-coverage" class="flow-list flow-list-compact"></div></article>
-            </div>
+            <p id="flow-period-note" class="flow-period-note"></p>
           </section>
 
           <section id="flow-daily-section" class="flow-section" hidden>
@@ -119,22 +96,20 @@
             <div id="flow-classes" class="flow-class-cards"></div>
             <section id="flow-class-workspace" class="flow-class-workspace" hidden>
               <h2 id="flow-class-workspace-title">Tình hình lớp</h2>
-              <div id="flow-class-stage-summary" class="flow-summary"></div>
+              <div hidden id="flow-class-stage-summary" class="flow-summary"></div>
               <h3>Số bài đã giao theo ngày</h3>
               <div id="flow-class-daily-chart" class="flow-chart flow-chart-compact"></div>
             </section>
           </section>
           <section id="flow-reviews-section" class="flow-section" hidden><div id="flow-reviews" class="flow-list"></div></section>
           <section id="flow-source-section" class="flow-section" hidden><div id="flow-source-issues" class="flow-list"></div></section>
-          <div id="flow-source-groups" class="flow-source-groups" hidden role="group" aria-label="Phân loại lỗi nguồn">
-            <button type="button" data-warning-group="review">Cần xem xét <span data-source-count="review">0</span></button>
-            <button type="button" data-warning-group="warned">Đã cảnh báo <span data-source-count="warned">0</span></button>
-          </div>
+          <div id="flow-source-groups" hidden></div>
           <section id="flow-technical-section" class="flow-section" hidden><div id="flow-technical-errors" class="flow-list"></div></section>
           <section id="flow-audit-section" class="flow-section" hidden><div id="flow-operator-events" class="flow-list"></div></section>
           <section id="flow-mapping-section" class="flow-section" hidden><div id="flow-mapping-coverage" class="flow-list"></div></section>
           <section id="flow-pairs-section" class="flow-section" hidden>
             <div id="flow-stage-quick" class="flow-stage-quick" hidden></div>
+            <p id="flow-result-note" class="flow-result-note" role="status"></p>
             <p class="flow-table-note">Mỗi trang tải 50 bài. Cuộn ngang để xem thêm cột; kéo mép tiêu đề để đổi độ rộng. Ô Nội dung chỉ hiện phần đầu; nhấn đúp để xem toàn bộ. Tìm nội dung chỉ chạy khi bấm “Tìm kiếm”.</p>
             <div class="flow-table-wrap"><table id="flow-pairs-table" class="flow-table"><thead><tr id="flow-table-head"></tr></thead><tbody id="flow-pairs"></tbody></table></div>
             <button id="flow-more" class="secondary" type="button" hidden>Xem 50 bài tiếp theo</button>
@@ -161,6 +136,6 @@
     </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/writing-flow-v2.js?v=20261012-izone-design-v2"></script>
+    <script type="module" src="./js/writing-flow-v2.js?v=20261013-doc-feedback-v1"></script>
   </body>
 </html>
