@@ -31,6 +31,7 @@ const state = {
   maxTimer: 0,
   saveChain: Promise.resolve(),
   checkpointSubmissions: new Map(),
+  submissionPayload: null,
   submitting: false,
   confirmedStudent: null,
   startingAttempt: false,
@@ -162,6 +163,12 @@ function updateSubmissionWindow(value) {
 function renderSubmissionWindow() {
   const now = performance.now();
   const host = document.getElementById('submissionWindowNotice');
+  // Bài đã chốt: nút chỉ mở biên nhận đã lưu, kể cả phiếu vừa hết hạn.
+  if (state.submissionPayload) {
+    if (host) host.hidden = true;
+    elements.submitButton.disabled = false;
+    return;
+  }
   if (host) {
     host.textContent = submissionWindowMessage(observedWindow, now);
     host.hidden = !host.textContent;
@@ -227,6 +234,7 @@ function draftStorageKey() {
 }
 
 function storeLocalDraft() {
+  if (state.submissionPayload) return;
   const key = draftStorageKey();
   if (!key) return;
   const payload = {
@@ -296,6 +304,7 @@ function clearSaveTimers() {
 
 function flushDraft() {
   clearSaveTimers();
+  if (state.submissionPayload) return state.saveChain;
   if (!state.attempt || state.savedVersion === state.changeVersion) return state.saveChain;
   const requestedVersion = state.changeVersion;
   state.saveChain = state.saveChain.then(async () => {
@@ -994,9 +1003,11 @@ function renderCheckpoint() {
     for (const control of elements.questionList.querySelectorAll('input, textarea, select')) control.disabled = true;
     showCheckpointFeedback(block);
   }
-  elements.previousButton.hidden = state.checkpointIndex === 0;
+  elements.previousButton.hidden = state.checkpointIndex === 0 || Boolean(state.submissionPayload);
   elements.nextButton.hidden = state.checkpointIndex === blocks.length - 1;
   elements.submitButton.hidden = state.checkpointIndex !== blocks.length - 1;
+  elements.submitButton.textContent = state.submissionPayload
+    ? 'Xem xác nhận điểm danh' : 'Nộp phiếu & điểm danh';
   const nextBlock = blocks[state.checkpointIndex + 1];
   if (nextBlock && state.checkpointSubmissions.has(block.blockId) && !blockIsOpen(nextBlock)) {
     elements.nextButton.textContent = 'Kiểm tra phần tiếp theo';
@@ -1400,6 +1411,15 @@ async function startAttempt() {
     state.confirmedStudent = null;
     renderCheckpoint();
     showView('formView');
+    // Khôi phục bài đã chốt bằng đường đọc; không gửi lại checkpoint hoặc điểm danh.
+    if (allBlocks().every(block => state.checkpointSubmissions.has(block.blockId))) {
+      try {
+        const saved = await apiRequest('/attempts/result', { body: { attemptToken: state.attempt.attemptToken } });
+        if (saved.receipt) showSubmittedOutcome(saved);
+      } catch (error) {
+        if (error.code !== 'RESULT_NOT_READY') setNotice(error.message, 'error');
+      }
+    }
   } catch (error) {
     setNotice(error.message, 'error');
     elements.confirmButton.disabled = false;
@@ -1409,6 +1429,35 @@ async function startAttempt() {
     studentMemory.busy = Boolean(state.confirmedStudent && !state.attempt);
     syncStudentMemoryControls();
   }
+}
+
+// Nhận bài và biên nhận đã được máy chủ chốt; chữa phần cuối bằng renderer hiện có.
+// Điểm danh đã ghi nhận trước màn chữa; nút tiếp theo chỉ đổi màn, không nộp lần nữa.
+function showSubmittedOutcome(payload) {
+  state.submissionPayload = payload;
+  state.submitting = false;
+  clearSaveTimers();
+  clearLocalDraft();
+  if (payload.submissionWindow) updateSubmissionWindow(payload.submissionWindow);
+  const block = allBlocks().at(-1);
+  const result = payload.result;
+  const items = (result?.items || []).filter(item => block?.items.some(question => question.itemVersionId === item.itemVersionId));
+  if (result?.answerRelease !== 'released' || !items.some(item => item.maxScore > 0 && item.expectedAnswer != null)) {
+    showSubmissionReceipt(payload);
+    return;
+  }
+  for (const item of result.items) state.responses[item.itemVersionId] = item.rawAnswer;
+  state.checkpointSubmissions.set(block.blockId, {
+    ...state.checkpointSubmissions.get(block.blockId), blockId: block.blockId, result: { ...result, items }
+  });
+  state.checkpointIndex = allBlocks().length - 1;
+  setSaveState('Đã nộp phiếu', 'saved');
+  renderCheckpoint();
+  showView('formView');
+  const isDemo = config.DEMO_MODE || ['DEMO-56', 'DEMO-67'].includes(state.assignment.courseCode);
+  setNotice((isDemo ? 'Bản dùng thử đã nhận phiếu. Không ghi điểm danh lớp thật.'
+    : 'Đã nhận phiếu và ghi nhận điểm danh trong Progress Log.')
+    + ' Xem đúng/sai rồi bấm “Xem xác nhận điểm danh”.');
 }
 
 function showSubmissionReceipt(payload) {
@@ -1429,6 +1478,10 @@ function showSubmissionReceipt(payload) {
 
 async function submitForm(event) {
   event.preventDefault();
+  if (state.submissionPayload) {
+    showSubmissionReceipt(state.submissionPayload);
+    return;
+  }
   if (!windowCanSubmit(observedWindow, performance.now())) {
     setNotice('Phiếu đã khóa nhận bài. Câu trả lời đang làm vẫn được giữ lại.', 'error');
     return;
@@ -1460,14 +1513,14 @@ async function submitForm(event) {
         responses: state.responses
       }
     });
-    showSubmissionReceipt(payload);
+    showSubmittedOutcome(payload);
   } catch (error) {
     // Lệnh nộp có thể đã lưu trước khi mạng đứt. Đọc biên nhận cũ, không tạo bài mới.
     if (state.attempt?.attemptToken) {
       try {
         const saved = await apiRequest('/attempts/result', { body: { attemptToken: state.attempt.attemptToken },
           signal: AbortSignal.timeout(7000) });
-        showSubmissionReceipt(saved);
+        showSubmittedOutcome(saved);
         return;
       } catch { /* Chưa có biên nhận: giữ draft và hiển thị lỗi gốc. */ }
     }
