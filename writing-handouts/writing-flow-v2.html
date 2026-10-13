@@ -4,18 +4,26 @@
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'self' https://accounts.google.com" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Theo dõi bài Writing 56/67 · Giao diện mới</title>
+    <title>Theo dõi chấm Writing 56/67 · IZONE</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./writing-flow.css?v=20260924-daily-breakdown-v1" />
-    <link rel="stylesheet" href="./writing-flow-v2.css?v=20260927-v1" />
+    <link rel="preload" href="./assets/fonts/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="./writing-flow-v2.css?v=20261012-izone-design-v2" />
   </head>
   <body class="teacher-page flow-page flow-v2" data-kind="homework">
     <a class="flow-skip" href="#flow-main">Đến nội dung chính</a>
-    <p id="flow-updated" class="flow-updated">Chưa đăng nhập</p>
+    <header class="flow-product-header">
+      <div class="flow-product-brand">
+        <img class="flow-logo" src="../term-tests/substitute-shared/izone-logo-color.png" alt="IZONE – IELTS chiến lược" width="120" height="44" />
+        <span class="flow-brand-divider" aria-hidden="true"></span>
+        <div class="flow-product-name"><strong>Theo dõi chấm Writing</strong><span>Khóa 56 / 67</span></div>
+      </div>
+      <div class="flow-header-actions"><p id="flow-updated" class="flow-updated" role="status">Chưa đăng nhập</p><a href="./writing-flow.html" class="flow-old-link">Giao diện trước</a><button id="flow-logout" class="secondary" type="button">Đăng xuất</button></div>
+    </header>
     <main class="page-shell flow-shell">
       <section id="flow-login" class="card teacher-login" aria-labelledby="flow-login-title">
-        <p class="eyebrow">Dành cho quản trị viên</p>
+        <p class="eyebrow">Không gian vận hành</p>
         <h1 id="flow-login-title">Theo dõi chấm Writing 56/67</h1>
         <p>Đăng nhập để xem từng bài, lỗi và thao tác chạy lại.</p>
         <div id="google-signin"></div>
@@ -24,7 +32,6 @@
       </section>
 
       <section id="flow-dashboard" class="flow-app" hidden>
-        <header class="flow-product-header"><div class="flow-product-brand"><span class="flow-brand-mark" aria-hidden="true"></span><strong>IZONE</strong><span class="flow-brand-divider" aria-hidden="true"></span><span>Theo dõi chấm Writing 56/67</span></div><a href="./writing-flow.html" class="flow-old-link">Mở giao diện trước</a></header>
         <aside class="flow-sidebar" aria-label="Khu vực quản lý">
           <div class="flow-kind-switch" role="group" aria-label="Loại bài"><button type="button" data-kind-select="homework" aria-pressed="true">Homework</button><button type="button" data-kind-select="test" aria-pressed="false">Bài Test</button></div>
           <nav id="flow-views" class="flow-views">
@@ -32,8 +39,8 @@
             <button type="button" data-view="overview" aria-pressed="true">Tổng quan <span data-count="overview">0</span></button>
             <button type="button" data-view="daily">Thống kê theo ngày</button>
             <button type="button" data-view="classes">Không gian lớp <span data-count="classes">0</span></button>
-            <button type="button" data-view="completed_classes">Các lớp đã hoàn thành <span data-count="completed_classes">0</span></button>
-            <button type="button" data-view="mapping">Lớp cần ghép/kiểm tra <span data-count="mapping">0</span></button>
+            <button type="button" data-view="completed_classes">Lớp đã hoàn thành <span data-count="completed_classes">0</span></button>
+            <button type="button" data-view="mapping">Lớp cần kiểm tra <span data-count="mapping">0</span></button>
             <p class="flow-nav-label">7 giai đoạn</p>
             <button type="button" data-view="intake">1. Tiếp nhận <span data-count="intake">0</span></button>
             <button type="button" data-view="precheck">2. Kiểm trước <span data-count="precheck">0</span></button>
@@ -64,6 +71,7 @@
             <button type="button" data-view="test_skipped">Test đã bỏ qua <span data-count="test_skipped">0</span></button>
             <button type="button" data-view="test_delivered">Test đã giao <span data-count="test_delivered">0</span></button>
           </nav>
+          <p class="flow-sidebar-note">Tự cập nhật mỗi 30 giây</p>
         </aside>
 
         <div class="flow-main" id="flow-main" tabindex="-1">
@@ -73,10 +81,10 @@
           </header>
 
           <div class="flow-toolbar" aria-label="Tìm kiếm và bộ lọc">
-            <label class="flow-search"><span>Tìm bài</span><input id="flow-search" type="search" placeholder="Link Docs, Docs ID, tên học viên hoặc nội dung" /></label>
+            <label class="flow-search"><span>Tìm bài</span><input id="flow-search" type="search" placeholder="Học viên, link Docs, nội dung" /></label>
             <label><span>Tìm trong</span><select id="flow-search-scope"><option value="all">Mọi trường</option><option value="identity">Tên học viên</option><option value="docs">Link / Docs ID</option><option value="content">Nội dung bài</option></select></label>
-            <button id="flow-search-button" type="button">Tìm kiếm</button>
-            <label><span>Lớp</span><select id="flow-class"><option value="">Tất cả lớp đang học</option></select></label>
+            <button id="flow-search-button" class="flow-primary" type="button">Tìm kiếm</button>
+            <label><span>Lớp</span><select id="flow-class"><option value="">Tất cả lớp</option></select></label>
             <label><span>Giảng viên</span><select id="flow-teacher"><option value="">Tất cả giảng viên</option></select></label>
             <label><span>Loại bài</span><select id="flow-task-type"><option value="">Cả Task 1 và Task 2</option><option value="task_1">Task 1</option><option value="task_2">Task 2</option></select></label>
             <label id="flow-stage-status-filter" hidden><span>Trạng thái trong bước</span><select id="flow-stage-status"><option value="">Tất cả trong bước</option><option value="pending">Đang chờ</option><option value="running">Đang xử lý</option><option value="needs_review">Cần kiểm tra</option><option value="succeeded">Đã xong</option></select></label>
@@ -88,16 +96,15 @@
             <button id="flow-clear-filters" class="secondary" type="button">Xóa bộ lọc</button>
             <button id="flow-manual-open" class="secondary" type="button">Thêm file ngoài lớp</button>
             <button id="flow-refresh" class="secondary" type="button">Cập nhật</button>
-            <button id="flow-logout" class="secondary" type="button">Đăng xuất</button>
           </div>
           <p id="flow-error" class="notice" role="alert" hidden></p>
 
           <section id="flow-overview-section" class="flow-section">
-            <div id="flow-journey" class="flow-journey" aria-label="Bảy bước chấm bài"></div>
             <div id="flow-summary" class="flow-summary"></div>
+            <div id="flow-journey" class="flow-journey" aria-label="Bảy bước chấm bài"></div>
             <div class="flow-overview-grid">
-              <article class="card"><h2>Việc cần xử lý</h2><p class="muted">Bài lỗi sau ba lần hoặc tài liệu sai.</p><div id="flow-attention" class="flow-list flow-list-compact"></div></article>
-              <article class="card"><h2>Lớp cần chú ý</h2><p class="muted">Lớp thiếu mapping, trùng hoặc quét lỗi.</p><div id="flow-class-coverage" class="flow-list flow-list-compact"></div></article>
+              <article class="card flow-attention-panel"><p class="eyebrow">Ưu tiên kiểm tra</p><h2>Việc cần xử lý</h2><p class="muted">Bài lỗi sau ba lần hoặc tài liệu cần xem xét.</p><div id="flow-attention" class="flow-list flow-list-compact"></div></article>
+              <article class="card flow-coverage-panel"><p class="eyebrow">Nguồn lớp</p><h2>Lớp cần chú ý</h2><p class="muted">Lớp thiếu liên kết, bị trùng hoặc quét lỗi.</p><div id="flow-class-coverage" class="flow-list flow-list-compact"></div></article>
             </div>
           </section>
 
@@ -154,6 +161,6 @@
     </dialog>
     <dialog id="flow-detail" class="flow-detail"><button id="flow-detail-close" class="secondary flow-detail-close" type="button">Đóng</button><div id="flow-detail-content"></div></dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/writing-flow-v2.js?v=20261002-d03-review-v1"></script>
+    <script type="module" src="./js/writing-flow-v2.js?v=20261012-izone-design-v2"></script>
   </body>
 </html>

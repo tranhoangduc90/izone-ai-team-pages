@@ -16,6 +16,7 @@ const $ = id => document.getElementById(id);
 const chartKeys = ['new', 'history', 'delivered'];
 const chartLabels = { new: 'Chấm mới', history: 'Ghi nhận kết quả cũ', delivered: 'Đã giao' };
 const chartVisible = { new: true, history: false, delivered: false };
+const actionSelections = new Map();
 function hashToView() { const path = location.hash.slice(1).split('/'); if (path[0] === 'stage' && ['homework', 'test'].includes(path[1]) && ['intake','precheck','main','critic','arbiter','render','deliver'].includes(path[2])) return path[1] === 'test' ? `test_${path[2]}` : path[2]; if (path[0] === 'daily') return path[1] === 'test' ? 'test_daily' : 'daily'; if (path[0] === 'overview') return path[1] === 'test' ? 'test_overview' : 'overview'; const value = path[0]; return ['classes','completed_classes','mapping','review','source','skipped','delivered','legacy','logs','audit','test_review','test_skipped','test_delivered'].includes(value) ? value : 'overview'; }
 function viewToHash(view) { const test = view.startsWith('test_'); const base = test ? view.slice(5) : view; if (['intake','precheck','main','critic','arbiter','render','deliver'].includes(base)) return `#stage/${test ? 'test' : 'homework'}/${base}`; if (base === 'daily' || base === 'overview') return `#${base}/${test ? 'test' : 'homework'}`; return `#${view}`; }
 const stages = ['intake', 'precheck', 'main', 'critic', 'arbiter', 'render', 'deliver'];
@@ -74,7 +75,7 @@ const columns = {
     ? summarizeWritingTestRow(row).lms : externalLink(row.lms_url, 'Mở bài chấm', 'Chưa có')],
   attempts: ['Số lần thử', row => Number(row.attempt_count || 0)],
   error: ['Lỗi gần nhất', row => row.historical_review_code || row.last_error_code || '—'],
-  actions: ['Thao tác', row => actionCell(row)],
+  actions: ['Thao tác', row => compactActionCell(actionCell(row), row)],
 };
 const defaultColumns = ['student', 'class', 'teacher', 'file', 'classroom', 'trcc',
   'finished', 'topic', 'content', 'lms', 'testProgress', 'testOverall', 'actions'];
@@ -213,7 +214,7 @@ function renderCounts() {
 }
 function renderSummary() { const root = $('flow-summary'); root.replaceChildren(); const stageRows = state.counts?.stages || []; const skipped = stageRows.filter(row => row.skipped).reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const delivered = stageRows.filter(row => !row.skipped && row.stage_key === 'deliver' && row.stage_status === 'succeeded').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const running = stageRows.filter(row => !row.skipped && row.stage_status === 'running').reduce((sum, row) => sum + Number(row.pair_count || 0), 0); const attention = Number(state.counts?.support?.reviews || 0) + Number(state.counts?.support?.historical_reviews || 0) + Number(state.counts?.support?.source_issues_review || 0); for (const item of [{ key: 'running', label: 'Đang xử lý', value: running }, { key: 'needs_review', label: 'Cần xử lý', value: attention }, { key: 'delivered', label: 'Đã giao', value: delivered }, { key: 'skipped', label: 'Đã bỏ qua', value: skipped }]) { const card = document.createElement('article'); card.dataset.status = item.key; card.append(makeText('strong', item.value), makeText('span', item.label)); root.append(card); } }
 
-function populateFilters(filters) { const currentClass = $('flow-class').value; const currentTeacher = $('flow-teacher').value; const active = (filters.classes || []).filter(row => row.enabled && row.mapping_status === 'approved'); $('flow-class').replaceChildren(new Option('Tất cả lớp đang học', '')); for (const row of active) $('flow-class').append(new Option(`${row.class_code}${row.classroom_name ? ` · ${row.classroom_name}` : ''}`, row.class_code)); $('flow-class').value = active.some(row => row.class_code === currentClass) ? currentClass : ''; $('flow-teacher').replaceChildren(new Option('Tất cả giảng viên', '')); for (const name of filters.teachers || []) $('flow-teacher').append(new Option(name, name)); $('flow-teacher').value = (filters.teachers || []).includes(currentTeacher) ? currentTeacher : ''; }
+function populateFilters(filters) { const currentClass = $('flow-class').value; const currentTeacher = $('flow-teacher').value; const active = (filters.classes || []).filter(row => row.enabled && row.mapping_status === 'approved'); $('flow-class').replaceChildren(new Option('Tất cả lớp', '')); for (const row of active) { const option = new Option(row.class_code, row.class_code); option.title = row.classroom_name || row.class_code; $('flow-class').append(option); } $('flow-class').value = active.some(row => row.class_code === currentClass) ? currentClass : ''; $('flow-teacher').replaceChildren(new Option('Tất cả giảng viên', '')); for (const name of filters.teachers || []) $('flow-teacher').append(new Option(name, name)); $('flow-teacher').value = (filters.teachers || []).includes(currentTeacher) ? currentTeacher : ''; }
 
 async function requestClassScan(classCode, button) { const reason = prompt(`Lý do quét lại lớp ${classCode}:`, 'Kiểm tra bài mới')?.trim(); if (!reason) return; button.disabled = true; try { await state.api.requestWritingClassScan(classCode, reason); showError('flow-error', `Đã xếp lớp ${classCode} vào hàng quét. Workflow điều phối sẽ nhận trong tối đa một phút.`); await refreshData(); } catch (error) { showError('flow-error', `Chưa quét được lớp: ${error.message}`); } finally { button.disabled = false; } }
 function rememberClass(classCode) { state.recentClasses = [classCode, ...state.recentClasses.filter(item => item !== classCode)].slice(0, 8); saveClassList('writing-flow:recent-classes:v1', state.recentClasses); }
@@ -238,7 +239,9 @@ function renderAttention() {
       : writingReviewAction(item).canRetry
         ? `${stageNames[item.stage_key]} · lỗi sau ${item.attempt_count}/3 lần`
         : 'Nguồn Test trùng · cần đối chiếu';
-    row.append(makeText('div', `${title}\n${sourceName(item)} · ${item.class_code || 'ngoài lớp'}`));
+    const description = document.createElement('div'); description.className = 'flow-attention-body';
+    description.append(makeText('strong', title), makeText('p', `${sourceName(item)} · ${item.class_code || 'ngoài lớp'}`, 'flow-meta'));
+    row.append(description);
     row.append(actionButton('Xem bài', () => void openRowDetail(kind === 'issue' ? sourceIssueRow(item) : item)));
     root.append(row);
   }
@@ -268,6 +271,32 @@ async function retryPair(pair, button) {
 }
 async function skipSourceIssue(issue) { const reason = prompt('Lý do bỏ qua lỗi nguồn này:')?.trim(); if (!reason) return; try { await state.api.skipWritingSourceIssue(issue.issue_key, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa bỏ qua được lỗi nguồn: ${error.message}`); } }
 async function restoreSourceIssue(issue) { const reason = prompt('Lý do khôi phục lỗi nguồn:', 'Bỏ qua nhầm')?.trim(); if (!reason) return; try { await state.api.restoreWritingSourceIssue(issue.issue_key, reason); await refreshData(); } catch (error) { showError('flow-error', `Chưa khôi phục được lỗi nguồn: ${error.message}`); } }
+function compactActionCell(cell, row) {
+  const buttons = [...cell.children].filter(node => node.tagName === 'BUTTON');
+  const selectionKey = row.issue_key ? 'source:' + row.issue_key
+    : row.pair_id ? 'pair:' + row.pair_id : null;
+  const select = document.createElement('select');
+  select.className = 'flow-action-select';
+  select.setAttribute('aria-label', 'Thao tác cho ' + sourceName(row));
+  select.append(new Option('Thao tác', ''));
+  buttons.forEach(button => {
+    select.append(new Option(button.textContent, button.textContent));
+  });
+  const saved = selectionKey && actionSelections.get(selectionKey);
+  select.value = buttons.some(button => button.textContent === saved) ? saved : '';
+  const showSelection = () => {
+    buttons.forEach(button => { button.hidden = select.value !== button.textContent; });
+  };
+  showSelection();
+  // Chọn chỉ hiện nút tương ứng; giữ nguyên handler và trạng thái chống bấm lặp.
+  select.addEventListener('change', () => {
+    if (selectionKey) actionSelections.set(selectionKey, select.value);
+    showSelection();
+  });
+  cell.prepend(select);
+  cell.classList.add('flow-actions-compact');
+  return cell;
+}
 function actionCell(row) {
   const cell = document.createElement('div'); cell.className = 'flow-actions';
   cell.append(actionButton('Xem', () => void openRowDetail(row)));
@@ -627,14 +656,18 @@ function renderJourney() {
 function setupV2Filters() {
   const toolbar = document.querySelector('.flow-toolbar');
   const details = document.createElement('details'); details.className = 'flow-extra-filters';
-  details.append(makeText('summary', 'Thêm bộ lọc và công cụ'));
+  const summary = makeText('summary', 'Bộ lọc');
+  summary.title = 'Thêm bộ lọc và công cụ';
+  details.append(summary);
   const content = document.createElement('div'); content.className = 'flow-extra-filter-content';
-  for (const id of ['flow-search-scope','flow-teacher','flow-task-type','flow-stage-status-filter','flow-field-choices','flow-sort','flow-reset-widths','flow-clear-filters','flow-manual-open','flow-logout']) {
+  for (const id of ['flow-search-scope','flow-teacher','flow-task-type','flow-stage-status-filter','flow-field-choices','flow-sort','flow-reset-widths','flow-clear-filters','flow-manual-open']) {
     const node = $(id); if (!node) continue;
     const move = id === 'flow-field-choices' ? node.closest('details') : node.closest('label') || node;
     content.append(move);
   }
-  details.append(content); toolbar.append(details);
+  const line = document.createElement('div'); line.className = 'flow-toolbar-line';
+  line.append(...toolbar.children);
+  details.append(content); toolbar.append(line, details);
 }
 
 function renderAll() { renderHeading(); renderJourney(); renderCounts(); renderSummary(); renderCoverage(); renderAttention(); renderClasses(); renderPairs(); renderReviews(); renderIssues(); renderFailures(); renderOperatorEvents(); renderLegacy(); renderDaily(); setViewVisibility(); }
