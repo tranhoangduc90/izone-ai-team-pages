@@ -56,7 +56,8 @@ for(const mode of ['one','multi','hidden','lost-receipt','reload','closed-after-
         definitionHash:'a'.repeat(64),definition:{title:'Phiếu kiểm luồng cuối',blocks},
         blockReleases:blocks.map(block=>({blockId:block.blockId,status:'open'}))}});
       if(url.pathname.endsWith('/attempts/start'))return json({attempt:{attemptToken:uid(500),draft,draftRevision:1,
-        identity:{studentName:'Học viên giả',className:'Lớp giả',sessionNumber:7},checkpointSubmissions:[...checkpoints.values()]}});
+        identity:{studentRef:uid(400),studentName:'Học viên giả',className:'Lớp giả',sessionNumber:7},
+        checkpointSubmissions:received?[]:[...checkpoints.values()]}});
       if(url.pathname.endsWith('/attempts/draft')){draft=req.postDataJSON().responses;return json({draft:{revision:req.postDataJSON().revision}});}
       if(url.pathname.endsWith('/checkpoints/submit')){
         const blockId=req.postDataJSON().blockId;
@@ -69,7 +70,7 @@ for(const mode of ['one','multi','hidden','lost-receipt','reload','closed-after-
         return json(saved);
       }
       if(url.pathname.endsWith('/attempts/result'))return received?json(saved):route.fulfill({status:404,
-        contentType:'application/json',body:'{"ok":false,"code":"RESULT_NOT_READY","message":"Chưa nộp cuối"}'});
+        contentType:'application/json',body:'{"ok":false,"error":"RESULT_NOT_READY","message":"Chưa nộp cuối"}'});
       if(url.pathname.endsWith('/student/session-comments'))return json({comments:[]});
       return route.abort();
     });
@@ -105,6 +106,7 @@ for(const mode of ['one','multi','hidden','lost-receipt','reload','closed-after-
           await page.reload();await selectStudent();
           await page.locator('.checkpoint-score').filter({hasText:'4/6'}).waitFor();
           assert.equal(await page.locator('.heading-feedback').count(),6);
+          assert.equal(calls.filter(path=>path.endsWith('/attempts/start')).length,1,'Tải lại bài đã chốt không mở lượt mới');
         }
         for(const width of [390,1440]){
           await page.setViewportSize({width,height:900});
