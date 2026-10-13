@@ -1,21 +1,11 @@
 (function () {
   'use strict';
   // Chỉ xóa bản nháp trên trình duyệt của đúng bài Substitute K67.
-  // Không phụ thuộc mã lớp hoặc hậu tố phiên bản; không gọi API/backend.
+  // Quyền và phạm vi DEMO do state.js sở hữu; không gọi API/backend.
   function clear(slug,options) {
     if (!/^substitute-test-[12]-k67$/.test(slug)) throw new Error('INVALID_RESET_SCOPE');
-    if(window.SUBSTITUTE_STATE){window.SUBSTITUTE_STATE.clear(slug,options);return;}
-    const prefixes = ['izone-test:', 'izone-test-ui:', 'izone-test-annotations:']
-      .map(prefix => prefix + slug + ':');
-    for (const storage of [sessionStorage, localStorage]) {
-      const keys = [];
-      for (let i = 0; i < storage.length; i++) {
-        const key = storage.key(i);
-        if (key && prefixes.some(prefix => key.startsWith(prefix))) keys.push(key);
-      }
-      for (const key of keys) storage.removeItem(key);
-      if (keys.some(key => storage.getItem(key) !== null)) throw new Error('STORAGE_NOT_CLEARED');
-    }
+    if(!window.SUBSTITUTE_STATE)throw new Error('RESET_DEMO_ONLY');
+    window.SUBSTITUTE_STATE.clear(slug,options);
   }
   window.K67_RESET_STORAGE = Object.freeze({ clear });
 }());

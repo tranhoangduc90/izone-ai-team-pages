@@ -36,7 +36,8 @@
   if(!localDemo){query.set('demo','exam');query.set('grading','server');location.replace(location.pathname+'?'+query.toString());return;}
   try {
     if(query.get('reset')==='1'){
-      window.SUBSTITUTE_STATE.clear(testConfig.slug,{broadcast:query.get('resetOwner')!=='done'});query.delete('reset');query.delete('resetOwner');
+      if(query.get('resetOwner')!=='done'&&window.SUBSTITUTE_STATE.canReset(testConfig.slug))window.SUBSTITUTE_STATE.clear(testConfig.slug);
+      query.delete('reset');query.delete('resetOwner');
       location.replace(location.pathname+'?'+query.toString());return;
     }
     await window.SUBSTITUTE_STATE.initialize(testConfig,appConfig);

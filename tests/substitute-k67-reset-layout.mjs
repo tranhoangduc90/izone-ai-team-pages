@@ -14,8 +14,8 @@ function storage(entries) {
 function harness(n, fail = false) {
   const slug = `substitute-test-${n}-k67`;
   const own = ['izone-test:', 'izone-test-ui:', 'izone-test-annotations:'].flatMap(p =>
-    ['RETAKE-LOBBY','DEMO','IC2139'].flatMap(c => ['',':substitute-k67-task2-20260922-v2',':future-version'].map(v=>p+slug+':'+c+':server-grade'+v)));
-  const other = ['izone-test:substitute-test-2-k56:DEMO:server-grade', `izone-test:${slug}-other:DEMO:server-grade`, 'unrelated'];
+    ['DEMO'].flatMap(c => ['',':substitute-k67-task2-20260922-v2',':future-version'].map(v=>p+slug+':'+c+':server-grade'+v)));
+  const other = [`izone-test:${slug}:IC2063:server-grade`, 'izone-test:substitute-test-2-k56:DEMO:server-grade', `izone-test:${slug}-other:DEMO:server-grade`, 'unrelated'];
   const listeners = {}, elements = [];
   function element(){const children={};const e={hidden:true,disabled:false,addEventListener:(k,f)=>{e[k]=f;},setAttribute(){},focus(){},append(){},classList:{add(){}},querySelector:s=>children[s]??=(element()),showModal(){e.open=true;},close(){e.open=false;}};elements.push(e);return e;}
   const root=element();
@@ -23,6 +23,11 @@ function harness(n, fail = false) {
   if(fail)ctx.sessionStorage.removeItem=()=>{throw new Error('blocked');};
   let helper='';
   try { helper=read('term-tests/substitute-k67-shared/reset-storage.js'); } catch { /* Missing on the unfixed base. */ }
+  ctx.document.addEventListener=()=>{};
+  ctx.Event=Event;ctx.crypto={randomUUID:()=> 'fixture-reset-signal'};
+  ctx.window.dispatchEvent=()=>{};
+  ctx.document.getElementById=id=>id==='app'?root:null;
+  vm.runInNewContext(read('term-tests/substitute-shared/state.js'),ctx);
   if(helper)vm.runInNewContext(helper,ctx);
   vm.runInNewContext(read(`term-tests/substitute-test-${n}-k67-computer-based/demo-reset.js`),ctx);
   const dialog=elements.find(e=>e.className==='k56-reset-dialog');
@@ -35,7 +40,8 @@ for(const n of [1,2]) {
       for(const k of h.own)assert.equal(s.getItem(k),null,k);
       for(const k of h.other)assert.equal(s.getItem(k),'synthetic',k);
     }
-    const url=new URL(h.ctx.replaced);for(const k of ['class','demoStudent','demoAttempt'])assert.equal(url.searchParams.has(k),false);
+    const url=new URL(h.ctx.replaced);for(const k of ['demoStudent','demoAttempt'])assert.equal(url.searchParams.has(k),false);
+    assert.equal(url.searchParams.get('class'),'DEMO');
     assert.equal(url.searchParams.get('reset'),'1');
     h.confirm();assert.ok(h.ctx.replaced,'Reset remains idempotent');
   });
@@ -50,8 +56,8 @@ for(const n of [1,2]) {
   });
   test(`Sub ${n} reload reset uses the same cleanup before restoring state`,()=>{
     const b=read(`term-tests/substitute-test-${n}-k67-computer-based/bootstrap.js`);
-    assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug,')>0);
-    assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug,')<b.indexOf('let state = readState()'));
+    assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug)')>0);
+    assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug)')<b.indexOf('let state = readState()'));
     const html=read(`term-tests/substitute-test-${n}-k67-computer-based/index.html`);
     assert.ok(html.indexOf('reset-storage.js')<html.indexOf('src="bootstrap.js'));
   });

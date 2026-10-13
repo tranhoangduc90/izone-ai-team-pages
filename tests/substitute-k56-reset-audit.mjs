@@ -17,9 +17,9 @@ function storage(entries) {
 }
 function harness(number, blocked = false) {
   const slug = `substitute-test-${number}-k56`;
-  const own = ['RETAKE-LOBBY', 'K56A', 'K56B', 'K56C'].flatMap(namespace =>
+  const own = ['DEMO'].flatMap(namespace =>
     ['izone-test:', 'izone-test-ui:', 'izone-test-annotations:'].map(prefix => `${prefix}${slug}:${namespace}:server-grade`));
-  const unrelated = [`izone-test:substitute-test-${3 - number}-k56:K56A:server-grade`, 'unrelated'];
+  const unrelated = [`izone-test:${slug}:IC2264:server-grade`, `izone-test:substitute-test-${3 - number}-k56:K56A:server-grade`, 'unrelated'];
   const entries = [...own, ...unrelated].map(key => [key, 'synthetic']);
   const listeners = {};
   const dialogChildren = {};
@@ -41,10 +41,10 @@ function harness(number, blocked = false) {
     window: { TERM_TEST_CONFIG: { slug, title: 'Bài thử' }, TERM_TEST_APP_CONFIG: { AUTH_MODE: 'online-demo' }, dispatchEvent(){},addEventListener(name, callback) { listeners[name] = callback; } },
     Event,crypto:{randomUUID:()=> 'fake-reset-id'},
     URL, URLSearchParams, Date, Math,
-    location: { search: '?demo=exam&grading=server&class=K56A&demoStudent=x&demoAttempt=y', href: 'https://example.test/?demo=exam&grading=server&class=K56A&demoStudent=x&demoAttempt=y', replace(url) { context.replaced = url; } },
+    location: { search: '?demo=exam&grading=server&class=DEMO&demoStudent=x&demoAttempt=y', href: 'https://example.test/?demo=exam&grading=server&class=DEMO&demoStudent=x&demoAttempt=y', replace(url) { context.replaced = url; } },
     history: { replaceState() {} },
     sessionStorage: storage(entries), localStorage: storage(entries),
-    document: { getElementById: () => root, createElement(tag) { return tag === 'dialog' ? dialog : element(); }, body },
+    document: { addEventListener(){}, getElementById: id => id==='app'?root:null, createElement(tag) { return tag === 'dialog' ? dialog : element(); }, body },
     MutationObserver: class { observe() {} }
   };
   if (blocked) context.sessionStorage.removeItem = () => { throw new Error('blocked'); };
@@ -63,7 +63,8 @@ for (const number of [1, 2]) {
       for (const key of h.unrelated) assert.equal(storageArea.getItem(key), 'synthetic', key);
     }
     const next = new URL(h.context.replaced);
-    for (const field of ['class', 'demoStudent', 'demoAttempt']) assert.equal(next.searchParams.has(field), false);
+    for (const field of ['demoStudent', 'demoAttempt']) assert.equal(next.searchParams.has(field), false);
+    assert.equal(next.searchParams.get('class'),'DEMO');
     assert.equal(next.searchParams.get('reset'), '1');
   });
   test(`Substitute K56 ${number}: storage bị chặn phải báo lỗi và không tải lại`, () => {
