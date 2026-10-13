@@ -5,7 +5,7 @@
   if (!config || window.TERM_TEST_APP_CONFIG?.AUTH_MODE !== 'online-demo'
       || query.get('demo') !== 'exam' || query.get('grading') !== 'server') return;
   const suffix = query.get('grading') === 'server' ? ':server-grade' : '';
-  const signalKey = 'izone-demo-reset:' + config.slug + ':RETAKE-LOBBY' + suffix;
+  const signalKey = 'izone-demo-reset:' + config.slug + ':DEMO' + suffix;
   const root = document.getElementById('app');
   const button = document.createElement('button');
   button.type = 'button';

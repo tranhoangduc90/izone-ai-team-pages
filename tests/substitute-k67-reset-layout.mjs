@@ -51,7 +51,7 @@ for(const n of [1,2]) {
     assert.equal(h.dialog.querySelector('[data-reset-confirm]').disabled,false);
   });
   test(`Sub ${n} another-tab reset clears versioned identity`,()=>{
-    const h=harness(n);h.listeners.storage({key:`izone-demo-reset:substitute-test-${n}-k67:RETAKE-LOBBY:server-grade`,newValue:'1'});
+    const h=harness(n);h.listeners.storage({key:`izone-demo-reset:substitute-test-${n}-k67:DEMO:server-grade`,newValue:'1'});
     for(const k of h.own)assert.equal(h.ctx.sessionStorage.getItem(k),null);
   });
   test(`Sub ${n} reload reset uses the same cleanup before restoring state`,()=>{
