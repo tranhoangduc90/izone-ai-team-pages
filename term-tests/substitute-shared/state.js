@@ -51,13 +51,31 @@
     const b=binding||{classCode:value.classCode||'',studentRef:value.studentRef||'',clientRunId:value.clientRunId||''};
     return {...value,_substitute:{...b,version:2,testSlug:meta.testSlug,historyEpoch:meta.historyEpoch}};
   }
+  function canReset(slug){
+    if(!allowed(slug)||slug!==(meta?.testSlug||window.TERM_TEST_CONFIG?.slug))return false;
+    const selected=typeof document!=='undefined'?document.getElementById('bootstrapClass'):null;
+    if(selected&&selected.value!=='DEMO')return false;
+    // Định danh đã xác nhận thắng URL/DOM; không đổi lớp để reset lượt thật.
+    const current=binding?.classCode||window.TERM_TEST_BOOTSTRAP?.classCode;
+    if(current)return current==='DEMO';
+    return (selected?selected.value:new URL(location.href).searchParams.get('class'))==='DEMO';
+  }
   function clear(slug,{broadcast=true}={}){
     if(!allowed(slug))throw new Error('INVALID_RESET_SCOPE');
+    if(!canReset(slug))throw new Error('RESET_DEMO_ONLY');
     stop();
     if(broadcast)localStorage.setItem('izone-demo-reset:'+slug+':RETAKE-LOBBY:server-grade',crypto.randomUUID());
     const prefixes=['izone-test:','izone-test-ui:','izone-test-annotations:'].map(p=>p+slug+':');
     for(const storage of stores()){
-      const keys=[];for(let i=0;i<storage.length;i++){const k=storage.key(i);if(k&&prefixes.some(p=>k.startsWith(p)))keys.push(k);}
+      const keys=[];for(let i=0;i<storage.length;i++){
+        const k=storage.key(i),prefix=k&&prefixes.find(p=>k.startsWith(p));if(!prefix)continue;
+        const namespace=k.slice(prefix.length).split(':')[0];
+        if(namespace==='DEMO')keys.push(k);
+        else if(namespace==='RETAKE-LOBBY'){
+          // Lobby dùng chung: chỉ xóa khi xác định được nó thuộc DEMO.
+          try{const v=JSON.parse(storage.getItem(k));if((v.classCode||v._substitute?.classCode)==='DEMO'&&(!v._substitute?.classCode||v._substitute.classCode==='DEMO'))keys.push(k);}catch{/* Dữ liệu không rõ chủ được giữ nguyên. */}
+        }
+      }
       for(const k of keys)storage.removeItem(k);
       if(keys.some(k=>storage.getItem(k)!==null))throw new Error('STORAGE_NOT_CLEARED');
     }
@@ -65,6 +83,6 @@
   }
   function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch,...(binding?.examVersion?{examVersion:binding.examVersion}:{}),...(binding?.writingSessionId?{writingSessionId:binding.writingSessionId}:{})};}
   function track(controller){if(blocked)controller.abort();else controllers.add(controller);return ()=>controllers.delete(controller);}
-  window.addEventListener('storage',event=>{if(meta&&event.key==='izone-demo-reset:'+meta.testSlug+':RETAKE-LOBBY:server-grade'&&event.newValue)stop();});
-  window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,key,accept,stamp,clear,payload,track,stop,get blocked(){return blocked;},get meta(){return meta;}});
+  window.addEventListener('storage',event=>{if(meta&&canReset(meta.testSlug)&&event.key==='izone-demo-reset:'+meta.testSlug+':RETAKE-LOBBY:server-grade'&&event.newValue)stop();});
+  window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,key,accept,stamp,canReset,clear,payload,track,stop,get blocked(){return blocked;},get meta(){return meta;}});
 }());

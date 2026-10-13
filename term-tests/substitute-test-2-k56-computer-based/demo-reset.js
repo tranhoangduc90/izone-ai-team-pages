@@ -24,6 +24,7 @@
   const cancel = dialog.querySelector('[data-reset-cancel]');
   const error = dialog.querySelector('.k56-reset-error');
   function mount() {
+    button.hidden = !window.SUBSTITUTE_STATE?.canReset(config.slug);
     const header = root.querySelector('.topbar') || root.querySelector('header');
     if (header) {
       header.classList.add('k56-reset-header');
@@ -32,7 +33,9 @@
   }
   mount();
   new MutationObserver(mount).observe(root, {childList:true, subtree:true});
+  document.addEventListener('change', mount);
   button.addEventListener('click', () => {
+    if(!window.SUBSTITUTE_STATE?.canReset(config.slug))return;
     error.hidden = true;
     confirm.disabled = false;
     dialog.querySelector('.k56-reset-summary').textContent = config.title + ' · Dữ liệu trên trình duyệt của bài này';
@@ -48,7 +51,7 @@
     const url = new URL(location.href);
     url.searchParams.delete('demoStudent');
     url.searchParams.delete('demoAttempt');
-    url.searchParams.delete('class');
+    url.searchParams.set('class','DEMO');
     url.searchParams.set('reset', '1');
     url.searchParams.set('resetOwner','done');
     history.replaceState(null, '', location.href);
@@ -64,7 +67,7 @@
     }
   });
   window.addEventListener('storage', event => {
-    if (event.key !== signalKey || !event.newValue) return;
+    if (event.key !== signalKey || !event.newValue || !window.SUBSTITUTE_STATE?.canReset(config.slug)) return;
     try { clearAndReload(false); }
     catch {
       if (!dialog.open) dialog.showModal();
