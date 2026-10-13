@@ -130,7 +130,7 @@
         </tbody>
       </table>
     </div>
-    <header class="cbt-section-intro is-compact"><span class="cbt-kicker">QUESTIONS 34–36</span><p>Choose the correct letter, A, B or C.</p></header>
+    <header class="cbt-section-intro is-compact"><span class="cbt-kicker">QUESTIONS 34–36</span><h3>Longfield Park</h3><p>Choose the correct letter, A, B or C.</p></header>
     ${choiceQuestion(34, 'As part of Monday’s activity, visitors will', [['A', 'prepare food with herbs.'], ['B', 'meet a well-known herbalist.'], ['C', 'dye cloth with herbs.']])}
     ${choiceQuestion(35, 'For the activity on Wednesday,', [['A', 'only group bookings are accepted.'], ['B', 'visitors should book in advance.'], ['C', 'attendance is free.']])}
     ${choiceQuestion(36, 'For the activity on Saturday, visitors should', [['A', 'come in suitable clothing.'], ['B', 'make sure they are able to stay for the whole day.'], ['C', 'tell the rangers before the event what they wish to do.']])}
@@ -190,6 +190,7 @@
 
   const setiQuestions = `
     <header class="cbt-section-intro"><span>Questions 14–17</span><p>Choose the correct heading for paragraphs B–E from the list below.</p></header>
+    <p class="cbt-heading-example"><strong>Example:</strong> Paragraph A → v</p>
     <div class="k56-side-layout k56-answers-left"><div class="cbt-option-bank cbt-heading-bank">
       <p><strong>i</strong> Seeking the transmission of radio signals from planets</p>
       <p><strong>ii</strong> Appropriate responses to signals from other civilisations</p>
