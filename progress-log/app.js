@@ -270,6 +270,33 @@ function clearLocalDraft() {
   if (key) sessionStorage.removeItem(key);
 }
 
+// Chỉ giữ mã lượt đã nộp trong tab, tách theo dịch vụ/phiếu/học viên/version.
+// Khi tải lại vẫn xác nhận tên và đọc máy chủ; không lưu đáp án hoặc tự mở lượt mới nếu đọc lỗi.
+function submittedAttemptKey(studentRef) {
+  return `progress-log:submitted:${config.API_BASE_URL}:${state.assignment.assignmentId}:${studentRef}`;
+}
+
+function readSubmittedAttempt(studentRef) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(submittedAttemptKey(studentRef)) || 'null');
+    if (saved?.definitionHash !== state.assignment.definitionHash
+      || saved?.attempt?.identity?.studentRef !== studentRef
+      || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(saved.attempt.attemptToken)) return null;
+    return saved.attempt;
+  } catch { return null; }
+}
+
+function rememberSubmittedAttempt() {
+  const attempt = state.attempt;
+  if (!attempt?.identity?.studentRef) return;
+  try {
+    sessionStorage.setItem(submittedAttemptKey(attempt.identity.studentRef), JSON.stringify({
+      definitionHash: state.assignment.definitionHash,
+      attempt: { attemptToken: attempt.attemptToken, draftRevision: attempt.draftRevision, identity: attempt.identity }
+    }));
+  } catch { /* Trình duyệt chặn lưu: màn chữa hiện tại vẫn hoạt động. */ }
+}
+
 function setSaveState(label, kind = '') {
   elements.saveState.textContent = label;
   elements.saveState.className = `save-state${kind ? ` ${kind}` : ''}`;
@@ -1383,7 +1410,12 @@ async function startAttempt() {
     elements.confirmButton.disabled = true;
     elements.backToNamesButton.disabled = true;
     setNotice('Đang mở phần ghi nhận…');
-    const payload = await apiRequest('/attempts/start', {
+    const remembered = readSubmittedAttempt(state.confirmedStudent.studentRef);
+    const savedOutcome = remembered ? await apiRequest('/attempts/result', {
+      body: { attemptToken: remembered.attemptToken }, signal: AbortSignal.timeout(15000)
+    }) : null;
+    if (remembered && !savedOutcome?.receipt) throw new Error('Chưa đọc lại được bài đã nộp. Hãy thử lại.');
+    const payload = remembered ? { attempt: remembered } : await apiRequest('/attempts/start', {
       body: {
         publicToken: state.publicToken,
         studentRef: state.confirmedStudent.studentRef,
@@ -1412,7 +1444,9 @@ async function startAttempt() {
     renderCheckpoint();
     showView('formView');
     // Khôi phục bài đã chốt bằng đường đọc; không gửi lại checkpoint hoặc điểm danh.
-    if (allBlocks().every(block => state.checkpointSubmissions.has(block.blockId))) {
+    if (savedOutcome) {
+      showSubmittedOutcome(savedOutcome);
+    } else if (allBlocks().every(block => state.checkpointSubmissions.has(block.blockId))) {
       try {
         const saved = await apiRequest('/attempts/result', { body: { attemptToken: state.attempt.attemptToken } });
         if (saved.receipt) showSubmittedOutcome(saved);
@@ -1435,6 +1469,7 @@ async function startAttempt() {
 // Điểm danh đã ghi nhận trước màn chữa; nút tiếp theo chỉ đổi màn, không nộp lần nữa.
 function showSubmittedOutcome(payload) {
   state.submissionPayload = payload;
+  rememberSubmittedAttempt();
   state.submitting = false;
   clearSaveTimers();
   clearLocalDraft();
