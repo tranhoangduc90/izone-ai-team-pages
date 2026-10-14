@@ -1,8 +1,5 @@
 /* Chỉ nạp cho demo sạch: audio cùng hàng Listening, không có hàng player riêng. */
 .design67 #listeningView .clean-listening-audio{display:flex;align-items:center;gap:7px;flex:0 0 auto;position:relative;min-height:38px;color:var(--lab-primary,#152b4e)}
-.design67 #listeningView .clean-audio-play{display:grid;place-items:center;flex:0 0 32px;width:32px;min-height:32px;padding:0;border:1px solid var(--lab-line,#dce1e7);border-radius:6px;background:var(--lab-header,#f5f6f8);color:var(--lab-primary,#152b4e);font-size:12px;cursor:pointer}
-.design67 #listeningView .clean-audio-play:focus-visible{outline:2px solid var(--lab-primary,#152b4e);outline-offset:2px}
-.design67 #listeningView .clean-audio-play:disabled{opacity:.5;cursor:wait}
 .design67 #listeningView .clean-audio-clock{font-size:8px;line-height:1;white-space:nowrap;min-width:48px;font-variant-numeric:tabular-nums;color:var(--lab-hint,#586477)}
 .design67 #listeningView .clean-audio-volume{display:flex;align-items:center;gap:4px;margin:0;font-size:12px}
 .design67 #listeningView .clean-audio-volume input{width:68px;min-height:22px;height:22px;padding:0;margin:0;border:0;box-shadow:none;accent-color:var(--lab-primary,#152b4e);cursor:pointer}

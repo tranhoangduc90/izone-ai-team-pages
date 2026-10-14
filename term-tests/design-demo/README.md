@@ -7,6 +7,6 @@ Cả hai dùng cùng host/iframe/renderer, audio và API demo công khai cố đ
 
 `theme.js` là nguồn chung của preset và 19 token; `theme.css` áp dụng chúng trên mọi màn, kể cả nhận xét. Bản sạch không nạp `real-controls.js`, `color-lab.js/css` hoặc `color-locator.js`. Lab chỉ có entry HTML riêng, nạp cùng asset qua đường tương đối. Theme độc lập với giao diện thử màu.
 
-Từ 14/10/2026, chỉ bản sạch nạp `clean-audio.js/css`: nút phát, đồng hồ 8 px và thanh âm lượng cạnh tiêu đề Listening. Audio giữ vị trí khi đổi Part; lab giữ nguyên player native ở hàng riêng.
+Từ 14/10/2026, chỉ bản sạch nạp `clean-audio.js/css`: đồng hồ 8 px và thanh âm lượng cạnh tiêu đề Listening. Từ bản sửa cùng ngày, audio tự phát từ click Bắt đầu ở phòng chờ, chạy liên tục, không có nút phát/tạm dừng/nghe lại. Audio giữ vị trí khi đổi Part; lab giữ nguyên player native ở hàng riêng.
 
 Giữ test adapter/lobby, kiểm hai route, theme không bị query/Storage tác động, hành trình nghiệp vụ và đọc lại sau Pages build. Quay lui bằng revert commit frontend; không có deploy backend trong gói này.

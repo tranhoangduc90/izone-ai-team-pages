@@ -8,9 +8,11 @@ const config = window.TERM_TEST_APP_CONFIG;
 const endpoint = config.API_BASE_URL + '/api/term-tests/teacher/design-demo';
 const el = Object.fromEntries(['workspace','mode','attempt','attempt-label','screen','reset-trial','source-note','frame-slot','real-status'].map(id=>[id,document.getElementById(id)]));
 let generation=0, controller=new AbortController(), ready=false, content=null, snapshot=null, audioUrl=null;
+let listeningAudio=null;
+function stopListeningAudio(){if(listeningAudio){listeningAudio.dataset.stopped='true';listeningAudio.pause();listeningAudio.removeAttribute('src');listeningAudio.load();listeningAudio.remove();listeningAudio=null;}}
 let trial={ listening:{}, reading:{}, task1:'', task2:'', plans:{}, result:null, writingSubmitted:false };
 const status=(message,error=false)=>{el['real-status'].textContent=message;el['real-status'].dataset.error=String(error);};
-function clearPrivate(){generation++;controller.abort();controller=new AbortController();ready=false;content=null;snapshot=null;trial={listening:{},reading:{},task1:'',task2:'',plans:{},result:null,writingSubmitted:false};el['frame-slot'].replaceChildren();el.attempt?.replaceChildren();if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=null;el.workspace.hidden=false;}
+function clearPrivate(){stopListeningAudio();generation++;controller.abort();controller=new AbortController();ready=false;content=null;snapshot=null;trial={listening:{},reading:{},task1:'',task2:'',plans:{},result:null,writingSubmitted:false};el['frame-slot'].replaceChildren();el.attempt?.replaceChildren();if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=null;el.workspace.hidden=false;}
 async function request(path,options={}){
  const ticket=generation;const response=await fetch(endpoint+path,{...options,credentials:'omit',cache:'no-store',signal:controller.signal});
  const data=await response.json();if(ticket!==generation)throw new DOMException('Yêu cầu cũ','AbortError');
@@ -31,7 +33,7 @@ function renderFrame(){
  const saved=mode()==='saved';if(saved&&!snapshot)return;
  if(el['attempt-label'])el['attempt-label'].hidden=!saved;if(el['reset-trial'])el['reset-trial'].hidden=saved;
  if(el['source-note'])el['source-note'].textContent=saved?'Chỉ đọc · đề v'+snapshot.definitionVersion+' · lần chấm '+(snapshot.grading?.gradingVersion??'chưa có'):'Bản thử riêng · không ghi điểm hoặc gửi chấm AI';
- const frame=document.createElement('iframe');frame.title='Demo Term Test 2';frame.src=assetBase+'/real-exam.html?v=split-demo-20261012&test=term-test-2&class=DEMO67&screen='+currentScreen;
+ const frame=document.createElement('iframe');frame.title='Demo Term Test 2';frame.src=assetBase+'/real-exam.html?v='+(toolsEnabled?'split-demo-20261012':'continuous-audio-20261014')+'&test=term-test-2&class=DEMO67&screen='+currentScreen;
  // Giữ preset được chọn từ link xem demo khi chuyển giữa các màn.
  const palette=toolsEnabled?new URLSearchParams(location.search).get('labOption'):null;
  if(['mist','sage','sand','lavender','reading'].includes(palette))frame.src+='&labOption='+palette;
@@ -41,6 +43,15 @@ function renderFrame(){
 window.getRealDemoContext=child=>{
  if(!ready||child!==el['frame-slot'].firstElementChild?.contentWindow)throw new Error('Phiên demo không còn hiệu lực.');
  return {content:content.content,timing:content.timing,snapshot,trial,mode:mode(),screen:currentScreen,toolsEnabled,
+  getListeningAudio(){return listeningAudio;},
+  startListeningAudio(volume){
+   // Gọi ngay từ click Bắt đầu, trước khi đổi iframe: giữ quyền phát của trình duyệt.
+   if(toolsEnabled||!audioUrl)throw new Error('Audio chưa sẵn sàng.');
+   if(listeningAudio)return listeningAudio.ended?Promise.reject(new Error('Audio đã kết thúc, không phát lại.')):Promise.resolve();
+   const audio=document.createElement('audio');audio.hidden=true;audio.preload='auto';audio.src=audioUrl;audio.volume=volume;document.body.append(audio);listeningAudio=audio;
+   return audio.play().catch(error=>{stopListeningAudio();throw error;});
+  },
+  stopListeningAudio,
   navigate(screen){if(['lobby','listening','reading','writing','result'].includes(screen)){currentScreen=screen;if(el.screen)el.screen.value=screen;renderFrame();}},
   async grade(){const data=await request('/grade'+scope,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({definitionVersion:content.definitionVersion,listening:trial.listening,reading:trial.reading})});trial.result=data.result;return data.result;},
   async audio(){if(audioUrl)return audioUrl;const ticket=generation;const response=await fetch(endpoint+'/audio'+scope,{credentials:'omit',cache:'no-store',signal:controller.signal});if(!response.ok){if([401,403].includes(response.status))clearPrivate();throw new Error('Không tải được audio đề thật.');}const blob=await response.blob();if(ticket!==generation)throw new DOMException('Yêu cầu cũ','AbortError');audioUrl=URL.createObjectURL(blob);return audioUrl;}
