@@ -1927,6 +1927,33 @@
     return block;
   }
 
+  function renderScoreSummary(payload) {
+    const table=document.createElement('table');table.className='substitute-score-table';
+    const caption=document.createElement('caption');caption.textContent='Tổng hợp điểm thực tế';table.append(caption);
+    const head=document.createElement('thead'),header=document.createElement('tr');
+    for(const text of ['Kỹ năng','Điểm thực tế','Trạng thái']){const th=document.createElement('th');th.scope='col';th.textContent=text;header.append(th);}head.append(header);table.append(head);
+    const body=document.createElement('tbody'),grading=payload.writing?.grading;
+    for(const [skill,title] of [['listening','Listening'],['reading','Reading'],['writing','Writing']]){
+      const section=payload.result?.[skill],ready=skill==='writing'?grading?.ready===true&&Number.isFinite(grading.writingScore):section?.correct!=null;
+      const score=skill==='writing'?(ready?formatBand(grading.writingScore)+'/9':'—'):
+        ready?(testConfig.slug==='substitute-test-1-k56'?sectionScore(section):
+          (Number.isFinite(section.band)?formatBand(section.band)+'/9 · ':'')+sectionScore(section)):'—';
+      const row=document.createElement('tr');
+      for(const text of [title,score,ready?'Đã chấm':skill==='writing'&&state.writingSubmitted?'Đang chấm':'Chưa nộp']){const td=document.createElement('td');td.textContent=text;row.append(td);}body.append(row);
+    }
+    table.append(body);elements.summaryGrid.replaceChildren(table);
+    if(grading?.ready&&Array.isArray(grading.tasks)){
+      const criteria=document.createElement('table');criteria.className='substitute-score-table';
+      const cap=document.createElement('caption');cap.textContent='Điểm Writing theo tiêu chí';criteria.append(cap);
+      const thead=document.createElement('thead'),tr=document.createElement('tr');
+      for(const text of ['Task','TA / TR','CC','LR','GRA','Band']){const th=document.createElement('th');th.scope='col';th.textContent=text;tr.append(th);}thead.append(tr);criteria.append(thead);
+      const tbody=document.createElement('tbody');
+      for(const task of grading.tasks){const row=document.createElement('tr'),points=['TA','CC','LR','GRA'].map(key=>{const c=task.criteria?.find(c=>(c.code||c.key)===(key==='TA'&&task.taskNumber===2?'TR':key));return c?formatBand(c.bandScore??c.score):'—';});
+        for(const text of ['Task '+task.taskNumber,...points,formatBand(task.taskScore)]){const td=document.createElement('td');td.textContent=text;row.append(td);}tbody.append(row);}
+      criteria.append(tbody);elements.summaryGrid.append(criteria);
+    }
+  }
+
   function renderResult(payload) {
     if(serverGradingMode && !state.writingSubmitted)return;
     const result = payload.result;
@@ -1934,10 +1961,7 @@
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
-    elements.summaryGrid.replaceChildren(
-      addSummaryCard('Listening', sectionScore(result.listening)),
-      addSummaryCard('Reading', hasReading ? sectionScore(result.reading) : 'Chưa nộp')
-    );
+    renderScoreSummary(payload);
     elements.resultStatus.textContent = hasReading
       ? payload.writing?.grading?.ready
         ? (twoTaskWriting
@@ -1999,9 +2023,9 @@
     if (status === 'failed_response') {
       return 'Bài đã được chấm nhưng webhook trả lỗi. Giáo viên cần kiểm tra lịch sử gửi điểm và Portal trước khi retry.';
     }
-    return completed
-      ? 'Cả Listening và Reading đã được chấm và ghi vào Portal.'
-      : 'Listening đã được chấm, phân tích và ghi vào Portal.';
+    return status === 'synced'
+      ? 'Đã xác nhận ba điểm Thi lại trên Portal.'
+      : 'Kết quả đã được lưu; chưa xác nhận đồng bộ Portal.';
   }
 
   function writingGradingNotice(grading) {
@@ -2585,7 +2609,7 @@
           setStage(state.readingDeadlineAt ? 'reading' : 'listening-saved');
           return;
         }
-        if (!state.listeningDeadlineAt) {
+        if (!state.listeningDeadlineAt && !window.TERM_TEST_BOOTSTRAP?.examSessionId) {
           state.listeningDeadlineAt = new Date(Date.now() + (Number(testConfig.listening.durationSeconds) || 1848) * 1000).toISOString();
         }
         saveSession();

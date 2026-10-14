@@ -74,16 +74,36 @@ async function openAttempt(attempt){
   $('student-name').textContent=data.studentName;
   const content=$('attempt-content');content.replaceChildren(node('p',statusText(data.status)+' · '+portalText(data.portalStatus)));
   appendPortalProjection(content,data);
+  appendStudentSource(content,data.source);
   if(data.requiredTasks?.length===2)content.append(node('h3','Writing tổng · '+(data.result?number(data.result.writingScore)+'/9':'Chưa có điểm tổng')),
     node('p','(Task 1 + 2 × Task 2) / 3, làm tròn xuống 0,5 band.'));
   const tasks=data.tasks||[{taskNumber:data.taskNumber,status:data.status,result:data.result}];
   for(const task of tasks){
    content.append(node('h3',`Writing Task ${task.taskNumber} · ${task.result?number(task.result.taskScore)+'/9':task.status==='missing'?'Chưa có bài làm':'Đang chấm'}`));
+   const review=node('section',undefined,'writing-review-grid'),original=node('section',undefined,'student-source-writing'),feedback=node('section',undefined,'writing-review-feedback');
+   const source=data.source?.writing?.find(t=>t.taskNumber===task.taskNumber);
+   original.append(node('h4',`Bài viết đã nộp · Task ${task.taskNumber}`),node('div',source?.availability==='available'?source.essay||'Task này chưa có bài viết.':'Chưa có nguồn bài viết của lượt này.','student-essay'));
+   review.append(original,feedback);content.append(review);
    if(task.result){
-    const criteria=node('div',undefined,'criterion-grid');for(const item of task.result.criteria||[]){const detail=node('details',undefined,'criterion-card');detail.append(node('summary',`${item.key||item.code} · ${number(item.score??item.bandScore)}/9`));appendFeedback(detail,item.feedback);if(item.components)appendFeedback(detail,item.components);criteria.append(detail);}content.append(criteria,node('h3',`Báo cáo Writing Task ${task.taskNumber}`));appendFeedback(content,task.result.report);
-   }else content.append(node('p',task.status==='missing'?'Hết giờ nhưng chưa có bài viết ở Task này; không tạo điểm 0 hoặc điểm tổng.':'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
+    const criteria=node('div',undefined,'criterion-grid');for(const item of task.result.criteria||[]){const detail=node('details',undefined,'criterion-card');detail.append(node('summary',`${item.key||item.code} · ${number(item.score??item.bandScore)}/9`));appendFeedback(detail,item.feedback);if(item.components)appendFeedback(detail,item.components);criteria.append(detail);}feedback.append(criteria,node('h3',`Báo cáo Writing Task ${task.taskNumber}`));appendFeedback(feedback,task.result.report);
+   }else feedback.append(node('p',task.status==='missing'?'Hết giờ nhưng chưa có bài viết ở Task này; không tạo điểm 0 hoặc điểm tổng.':'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
   }
  }catch(error){if(detailGeneration===state.detailGeneration&&state.selectedAttempt===attempt.attemptToken)handleError(error,generation);}
+}
+function appendStudentSource(content,source){
+ const block=node('section',undefined,'student-source');block.append(node('h3','Bài làm gốc của học viên'));
+ for(const [skill,title]of [['listening','Listening'],['reading','Reading']]){
+  const part=node('details',undefined,'student-source-section');part.append(node('summary',`${title} · đáp án đã nộp`));
+  const saved=source?.[skill];
+  if(saved?.availability==='available'&&Array.isArray(saved.section?.details)){
+   const wrap=node('div',undefined,'table-wrap'),table=node('table',undefined,'results-table'),head=node('thead'),row=node('tr'),body=node('tbody');
+   for(const label of ['Câu','Đáp án đã nộp','Đáp án đúng','Kết quả'])row.append(node('th',label));head.append(row);
+   for(const detail of saved.section.details){const tr=node('tr');for(const text of [detail.number,detail.studentAnswer||'—',detail.correctAnswer||'—',({correct:'Đúng',incorrect:'Sai',blank:'Bỏ trống'})[detail.result]||'Chưa xác nhận'])tr.append(node('td',String(text)));body.append(tr);}
+   table.append(head,body);wrap.append(table);part.append(wrap);
+  }else part.append(node('p','Lượt cũ chưa lưu đáp án từng câu. Không thể suy ra bài làm từ tổng điểm.','source-unavailable'));
+  block.append(part);
+ }
+ content.append(block);
 }
 async function loadResults(){
  if(!state.token)return;cancel();state.controller=new AbortController();const generation=state.generation;

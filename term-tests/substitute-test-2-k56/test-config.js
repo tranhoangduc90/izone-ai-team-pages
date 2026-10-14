@@ -22,7 +22,7 @@
       description: [
         'Bài nghe gồm 4 phần và 40 câu.',
         'Audio dài khoảng 28 phút 28 giây và chỉ phát sau khi hoàn thành bước nghe thử.',
-        'Không có thời gian kiểm tra riêng sau khi audio kết thúc.'
+        'Sau khi audio chính kết thúc, bạn có 5 phút để điền và kiểm tra đáp án; có thể nộp sớm.'
       ],
       controls: [
         ...range(1, 10),

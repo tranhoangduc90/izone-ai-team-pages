@@ -24,8 +24,8 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20261014-result-details-v1'))
-      .then(() => loadScript('enhance.js?v=20261007-fresh-v2'))
+      .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20261014-exam-source-v1'))
+      .then(() => loadScript('enhance.js?v=20261014-exam-source-v1'))
       .then(() => loadScript('annotations.js?v=20261007-fresh-v2'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -564,11 +564,17 @@
   }
 
   async function enterExam(started, audioElement = null) {
+    window.addEventListener('term-test:listening-timing-updated',event=>{
+      if(state.examSessionId&&event.detail?.audioEndedAt)saveState({audioEndedAt:event.detail.audioEndedAt,listeningDeadlineAt:event.detail.listeningDeadlineAt});
+    });
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
       classCode: state.classCode || classCode,
       studentRef: state.studentRef,
       clientRunId: state.clientRunId,
+      examSessionId:state.examSessionId,
+      audioEndedAt:state.audioEndedAt,
+      serverTimeOffsetMs:state.serverTimeOffsetMs,
       attemptToken: state.attemptToken,
       historyEpoch: window.SUBSTITUTE_STATE.meta.historyEpoch,
       listeningStartedAt: state.listeningStartedAt,
@@ -584,9 +590,10 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-test-2-k56-shared/app.js?v=20261014-result-details-v1');
-    await loadScript('enhance.js?v=20261007-fresh-v2');
+    await loadScript('../substitute-test-2-k56-shared/app.js?v=20261014-exam-source-v1');
+    await loadScript('enhance.js?v=20261014-exam-source-v1');
     await loadScript('annotations.js?v=20261007-fresh-v2');
+    if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
 
   async function resumeAfterListening() {
@@ -666,8 +673,17 @@
         officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
         document.body.append(officialAudio);
         await waitForAudioMetadata(officialAudio);
+        const timing=await window.SUBSTITUTE_EXAM?.start(state);
+        if(timing)saveState({...timing,serverTimeOffsetMs:Date.parse(timing.serverNow)-Date.now()});
+        // Bắt mốc trước play: audio có thể kết thúc trong lúc app/enhance đang tải khi resume.
+        officialAudio.addEventListener('ended',()=>{
+          if(!state.examSessionId||state.audioEndedAt||window.SUBSTITUTE_STATE.blocked)return;
+          const audioEndedAt=new Date(Date.now()+(Number(state.serverTimeOffsetMs)||0)).toISOString();
+          saveState({audioEndedAt,listeningDeadlineAt:new Date(Date.parse(audioEndedAt)+300000).toISOString()});
+          if(window.TERM_TEST_BOOTSTRAP?.clientRunId===state.clientRunId)window.SUBSTITUTE_EXAM?.ended(officialAudio,audioEndedAt);
+        },{once:true});
         const existingStart = Date.parse(state.listeningStartedAt || '');
-        const elapsedSeconds = Number.isFinite(existingStart) ? Math.max(0, (Date.now() - existingStart) / 1000) : 0;
+        const elapsedSeconds = Number.isFinite(existingStart) ? Math.max(0, (Date.now()+(Number(state.serverTimeOffsetMs)||0) - existingStart) / 1000) : 0;
         officialAudio.currentTime = Math.min(elapsedSeconds, Math.max(0, officialAudio.duration - 0.05));
         await officialAudio.play();
         const serverNow = new Date();
@@ -678,15 +694,15 @@
           : new Date(listeningStartedAt.getTime() + Number(testConfig.listening.durationSeconds || 1848) * 1000);
         const started = {
           content: window.K56_SUBSTITUTE_TEST_2_CONTENT,
-          serverNow: serverNow.toISOString(),
+          serverNow: timing?.serverNow||serverNow.toISOString(),
           listeningStartedAt: listeningStartedAt.toISOString(),
-          listeningDeadlineAt: listeningDeadlineAt.toISOString(),
+          listeningDeadlineAt: state.examSessionId ? (state.listeningDeadlineAt||'') : listeningDeadlineAt.toISOString(),
           listeningSubmitted: false
         };
         saveState({
           listeningStartedAt: started.listeningStartedAt,
           listeningDeadlineAt: started.listeningDeadlineAt,
-          serverTimeOffsetMs: 0,
+          serverTimeOffsetMs:state.examSessionId?Date.parse(started.serverNow)-Date.now():0,
           audioVolume: officialAudio.volume
         });
         legacyListeningResume = false;
