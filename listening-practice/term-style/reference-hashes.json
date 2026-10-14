@@ -1,0 +1,26 @@
+{
+  "shared.css": {
+    "source": "E:\\wt\\tt2-reading-floating-20261012\\pages\\term-tests\\shared\\styles.css",
+    "sha256": "3223fe6a48e0866b9a4489288c0522630d7c34845680d4b5578ce50d4c8a1ec9"
+  },
+  "computer-based.css": {
+    "source": "E:\\wt\\tt2-reading-floating-20261012\\pages\\term-tests\\term-test-2-computer-based\\styles.css",
+    "sha256": "7ee6de4804c7166e6574fe325ed80aee4abfe4904b562848de3bab82ff737334"
+  },
+  "skin.css": {
+    "source": "E:\\wt\\tt2-reading-floating-20261012\\pages\\term-tests\\design-demo\\skin.css",
+    "sha256": "3b24105901b931407298711784d10c58a6d219fdf1ebe19bbe3cbc5d9077aec4"
+  },
+  "header.css": {
+    "source": "E:\\wt\\tt2-reading-floating-20261012\\pages\\term-tests\\design-demo\\header.css",
+    "sha256": "1ad76818e2751c94428cce4946f45cc50e531482d239271e20c8a1b3eca7de7b"
+  },
+  "color-lab.css": {
+    "source": "E:\\wt\\tt2-reading-floating-20261012\\pages\\term-tests\\design-demo\\color-lab.css",
+    "sha256": "fdcc12a960bcad55ae60fda53f9f43adbdbc5308a9f59b5f4470048df30db939"
+  },
+  "real-exam.css": {
+    "source": "E:\\wt\\tt2-reading-floating-20261012\\pages\\term-tests\\design-demo\\real-exam.css",
+    "sha256": "8e8f59905ab179739c1ce252fd513b5d10d7a738cc7a129c30a0551e903b0eaf"
+  }
+}

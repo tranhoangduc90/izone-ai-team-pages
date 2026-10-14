@@ -4,7 +4,7 @@ const lesson=Number(document.body.dataset.speakingLesson);
 await import(lesson===2?'./lesson-2-live.js':lesson===3?'./lesson-3-live.js':'./lesson-4-live.js');
 const $=id=>document.getElementById(id);
 document.body.classList.add('speaking-design');
-const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc'};
+const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh'};
 const header=document.createElement('header');header.className='studio-header';
 header.innerHTML='<a href="./index.html" class="studio-brand" aria-label="IZONE">IZONE<span>HỌC MỖI NGÀY</span></a><span>Speaking <i>/</i> Khóa 6.0–7.0</span>';
 document.querySelector('.page-shell').prepend(header);

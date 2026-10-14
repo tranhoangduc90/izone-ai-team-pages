@@ -1,0 +1,68 @@
+/* Biến chỉnh bằng CSSOM để giữ CSP hiện có; bảng màu có giao diện cố định riêng. */
+:root{--lab-header:#edf1f6;--lab-badge:#152b4e;--lab-badgeText:#fff;--lab-hint:#273d5c;--lab-edge:#e8839a;--lab-line:#bbc8da;--lab-surface:#fffefa;--lab-ink:#303947;--lab-primary:#152b4e;--lab-primaryText:#fff;--lab-selected:#eaf0f7;--lab-selectedText:#152b4e;--lab-selectedLine:#8fa3bd;--lab-rose:#fff1f3;--lab-roseText:#9d2340;--lab-success:#edf8f2;--lab-successText:#176b4b;--lab-flag:#fff4cd;--lab-flagText:#795600}
+.design67 .design-question-group,.design-demo-index .sample-group{border-color:var(--lab-line);border-top-color:var(--lab-edge);background:var(--lab-surface)}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro),.design67 .writing-pane-header,.design67 .writing-criterion-card>header,.design67:not(.cbt-mode) .section-heading,.design-demo-index .sample-heading{background:var(--lab-header);border-bottom-color:var(--lab-line);color:var(--lab-hint)}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro)>:is(h3,h4),.design-demo-index .sample-heading h3{background:var(--lab-badge);color:var(--lab-badgeText)}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro)>p,.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro) strong,.design67 .design-question-group>.cbt-section-intro>.cbt-kicker,.design67 .writing-pane-header>strong,.design67 .writing-criterion-card>header h4,.design67:not(.cbt-mode) .section-heading h2,.design-demo-index .sample-heading :is(p,strong){color:var(--lab-hint)}
+.design67 .writing-criterion-card,.design67:not(.cbt-mode) .section-heading{border-color:var(--lab-line);border-top-color:var(--lab-edge)}
+.design67 :is(.design-question-content,.cbt-passage-body,.writing-prompt-body,.cbt-notes-card,.writing-feedback-essay,.writing-component-summary,.summary-card),.design-demo-index .sample-body{background:var(--lab-surface);color:var(--lab-ink)}
+.design67 :is(.button-primary,.button.primary,.cbt-heading-submit,.cbt-review-open),.design67 :is(.button-primary,.cbt-review-open):hover:not(:disabled){background:var(--lab-primary);border-color:var(--lab-primary);color:var(--lab-primaryText)}
+.design67 .cbt-choice:has(input:checked),.design67 :is(.cbt-inline-answer,.cbt-select-answer).is-answered :is(input,select),.design67 :is(.cbt-question-button,.cbt-review-question).is-answered,.design67 .question :is(input,select)[data-design-filled=true],.design-demo-index .sample-field input{background:var(--lab-selected);border-color:var(--lab-selectedLine);color:var(--lab-selectedText)}
+.design67 :is(.cbt-inline-answer,.cbt-select-answer).is-answered .cbt-blank-number{background:var(--lab-selected);color:var(--lab-selectedText)}
+.design67 input:is([type=radio],[type=checkbox]){accent-color:var(--lab-selectedText)}
+.design67 :is(.cbt-part-button,.writing-task-tab,.cbt-review-filter).is-active,.design67 :is(.reading-view-switch,.writing-view-switch) button[aria-pressed=true],.design67 .writing-component-toggle,.design67 .writing-component-toggle[aria-expanded=true],.design67 .cbt-section-page-button,.design67 .cbt-section-page-button:hover:not(:disabled),.design67 .cbt-lobby-badge,.design67 .analysis-card.improve,.design67 .detail-block summary,.design-demo-index .sample-actions a{background:var(--lab-rose);color:var(--lab-roseText);border-color:var(--lab-roseText)}
+.design67 .notice.success,.design67 .writing-feedback-header .design-feedback-status,.design67 .analysis-card.best,.design67 .mini-active-user,.design-demo-index .sample-success{background:var(--lab-success);color:var(--lab-successText)}
+.design67 .autosave-status[data-status=saved],.design67 [data-design-status=saved],.design67 .analysis-card.best h4,.design67 .mini-active-user strong{color:var(--lab-successText)}
+.design67 .cbt-flag-button.is-flagged,.design-demo-index .sample-flag{background:var(--lab-flag);color:var(--lab-flagText);border-color:var(--lab-flagText)}
+#demo-color-lab{position:fixed;inset:auto 18px 40px auto;margin:0;padding:0;border:0;background:transparent;color:#152b4e;width:350px;max-width:calc(100vw - 24px);overflow:visible;z-index:2147483647;font:14px/1.45 'Segoe UI',sans-serif;text-align:left;letter-spacing:normal;box-sizing:border-box}
+#demo-color-lab::backdrop{background:transparent;pointer-events:none}
+#demo-color-lab *{box-sizing:border-box}
+#demo-color-lab [hidden]{display:none!important}
+#demo-color-lab button,#demo-color-lab select,#demo-color-lab input{font:inherit;letter-spacing:normal;min-width:0;box-shadow:none}
+#demo-color-lab button{cursor:pointer;text-decoration:none;min-height:42px;border:1px solid #c8d2df;border-radius:8px;padding:8px 12px;background:#fff;color:#152b4e;font-weight:600}
+#demo-color-lab :is(button,input,select,summary):focus-visible{outline:3px solid #427bb8;outline-offset:2px}
+#demo-color-lab .lab-launch{display:block;margin-left:auto;background:#152b4e;color:#fff;box-shadow:0 6px 24px #152b4e30;padding:12px 18px;border-color:#fff;border-radius:24px}
+#demo-color-lab #lab-panel{background:#fff;border:1px solid #c2cddd;border-radius:16px;box-shadow:0 16px 56px #14274630;overflow:hidden;display:flex;flex-direction:column;max-height:min(780px,calc(100dvh - 100px))}
+#demo-color-lab header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:#f0f4f8;border-bottom:1px solid #dce3eb;gap:10px}
+#demo-color-lab header strong{font-size:17px;color:#152b4e}
+#demo-color-lab header p{font-size:12px;color:#526278;margin:4px 0 0}
+#demo-color-lab .lab-collapse{font-size:23px;width:42px;flex-shrink:0;padding:0}
+#demo-color-lab .lab-scroll{overflow:auto;overscroll-behavior:contain;padding:16px 18px;min-height:0}
+#demo-color-lab .lab-preset-label{display:block;font-size:12px;font-weight:700;margin-bottom:7px}
+#demo-color-lab select{width:100%;height:44px;border:1px solid #9cacbf;border-radius:8px;background:#fff;color:#152b4e;padding:0 8px}
+#demo-color-lab .lab-note{font-size:11px;color:#617085;margin:8px 0 14px}
+#demo-color-lab details{border-top:1px solid #e4e9ef;padding:6px 0}
+#demo-color-lab summary{font-size:13px;font-weight:700;cursor:pointer;padding:9px 0;min-height:38px;color:#152b4e}
+#demo-color-lab .lab-row{display:grid;grid-template-columns:1fr 36px 89px;gap:8px;align-items:center;margin:8px 0}
+#demo-color-lab .lab-row label{font-size:12px;color:#354760;margin:0;line-height:1.35}
+#demo-color-lab input[type=color]{padding:3px;width:36px;height:36px;border:1px solid #b4c0cf;border-radius:7px;background:#fff;cursor:pointer}
+#demo-color-lab input[type=text]{width:89px;height:36px;padding:5px 7px;border:1px solid #c6d0dd;border-radius:6px;background:#fff;color:#152b4e;font:12px/1.4 Consolas,monospace}
+#demo-color-lab input[aria-invalid=true]{border-color:#b42342}
+#demo-color-lab .lab-error{grid-column:1/-1;color:#a32442;font-size:11px}
+#demo-color-lab footer{padding:10px 18px 14px;border-top:1px solid #dce3eb;background:#fbfcfe;flex-shrink:0}
+#demo-color-lab .lab-status{font-size:11px;margin:0 0 8px;color:#176b4b;min-height:16px}
+#demo-color-lab .lab-status[data-warning=true]{color:#9c3e16}
+#demo-color-lab .lab-reset{width:100%;font-size:12px;min-height:38px}
+#demo-color-lab footer small{display:block;font-size:10px;color:#64748b;text-align:center;margin-top:7px}
+@media(max-width:600px){#demo-color-lab{right:12px;bottom:36px;width:350px}#demo-color-lab #lab-panel{max-height:65dvh}#demo-color-lab header{padding:12px 16px}#demo-color-lab .lab-scroll{padding:12px 16px}}
+
+/* Bốn phương án so sánh: thay các mảng hồng trang trí còn lại bằng màu điều hướng. */
+html[data-lab-option] body.design67{--design-rose:var(--lab-roseText);--design-rose-soft:var(--lab-rose);--design-rose-line:var(--lab-line)}
+html[data-lab-option] .design67 :is(.writing-result-section,.cbt-bootstrap-identity,.cbt-identity-confirmation-details>div,.writing-outline-card,.cbt-note-panel>header,.cbt-note-back,.cbt-review-close,.cbt-notes-launcher[aria-expanded=true]){background:var(--lab-rose);border-color:var(--lab-line)}
+html[data-lab-option] .design67 :is(.cbt-instruction-block,.cbt-subsection-heading){background:var(--lab-header);border-left-color:var(--lab-edge)}
+html[data-lab-option] .design67 :is(.cbt-tool-button,.cbt-note-list-item,.writing-score-card.is-action):hover{background:var(--lab-rose);color:var(--lab-roseText);border-color:var(--lab-line)}
+html[data-lab-option] .design67 .cbt-lobby-step[data-state=active] .cbt-lobby-download-status.cbt-audio-status{background:var(--lab-rose);color:var(--lab-roseText);border-color:var(--lab-line)}
+html[data-lab-option] .design67 :is(.cbt-lobby-header,.cbt-review-panel>header,.skill-performance-heading){border-bottom-color:var(--lab-line)}
+html[data-lab-option] .design67 :is(.cbt-review-panel,.cbt-note-panel){border-color:var(--lab-line)}
+html[data-lab-option] .design67 .analysis-card.improve h4{color:var(--lab-roseText)}
+html[data-lab-option] .design67 .result-status{border-left-color:var(--lab-edge)}
+
+/* Dò vị trí dùng viền rỗng để không làm sai màu đang xem. */
+.lab-located{outline:3px dashed #426c95!important;outline-offset:5px;scroll-margin:80px 20px 120px}
+#demo-color-lab.lab-on-left{left:18px;right:auto}
+#demo-color-lab .lab-location{border-bottom:1px solid #dce3eb;padding-bottom:9px;margin-bottom:9px}
+#demo-color-lab .lab-location-status{font-size:12px;line-height:1.4;margin:0 0 7px;color:#354760}
+#demo-color-lab .lab-location-tools{display:flex;gap:6px}
+#demo-color-lab .lab-location-tools button{font-size:11px;min-height:34px;padding:5px 8px}
+#demo-color-lab .lab-mini-adjust{border:1px solid #bdcddd;border-radius:12px;background:white;padding:10px;box-shadow:0 6px 26px #152b4e25}
+@media(max-width:600px){#demo-color-lab.lab-on-left{left:auto;right:12px}#demo-color-lab.lab-is-mini #lab-panel,#demo-color-lab.lab-is-mini .lab-launch{display:none}#demo-color-lab .lab-mini-adjust .lab-row{margin:0 0 6px}}

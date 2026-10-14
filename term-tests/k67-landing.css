@@ -1,0 +1,11 @@
+/* Bố cục riêng landing K67, theo mẫu K56; không đổi CSS bài thi khác. */
+.k67-landing .landing-card { width:min(820px,100%); }
+.k67-landing .landing-link-group { margin-top:24px; }
+.k67-landing .landing-link-group h2 { margin:0; color:var(--navy); font-size:18px; }
+.k67-landing .landing-actions-three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.k67-landing .landing-actions-three .button { min-height:56px; }
+.k67-landing .landing-order { border:0; padding:0; margin:24px 0; }
+.k67-landing .landing-order legend { font-weight:700; margin-bottom:12px; }
+.k67-landing .order-choice[aria-pressed="true"] { background:#2f6df1; color:white; border-color:#2f6df1; }
+.k67-landing .landing-result-action { margin-top:28px; }
+@media(max-width:700px) { .k67-landing .landing-actions-three { grid-template-columns:1fr; } }

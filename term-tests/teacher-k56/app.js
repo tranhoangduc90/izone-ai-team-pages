@@ -546,6 +546,7 @@ function criterionTitle(code, taskNumber) {
 
 function safeWritingImageUrl(value) {
   const raw = String(value || '').trim();
+  if (!raw) return '';
   if (/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=\s]+$/i.test(raw)) return raw;
   try {
     const apiOrigin = new URL(appConfig.API_BASE_URL).origin;
@@ -712,6 +713,19 @@ async function loadTeacherWritingDetail(student, taskNumber, button) {
   }
 }
 
+function resolveTeacherAttemptReviewImages(dialog, testSlug) {
+  if (!dialog || !['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56'].includes(testSlug)) return;
+  // Ảnh tương đối thuộc thư mục đề CBT, không thuộc dashboard giảng viên.
+  // Lấy slug từ payload đã tải để không ghép ảnh theo một lựa chọn test mới hơn.
+  const base = new URL(`../${testSlug}-computer-based/`, window.location.href);
+  dialog.querySelectorAll('img[src]').forEach(image => {
+    const source = String(image.getAttribute('src') || '').trim();
+    if (/^assets\/[A-Za-z0-9._/-]+$/.test(source) && !source.split('/').includes('..')) {
+      image.setAttribute('src', new URL(source, base).href);
+    }
+  });
+}
+
 async function openTeacherAttemptReview(student, button) {
   const selectedClass = getSelectedClass();
   if (!selectedClass || !student?.ref) return;
@@ -730,7 +744,9 @@ async function openTeacherAttemptReview(student, button) {
       state.attemptReviewCache.set(cacheKey, payload.review);
     }
     if (!window.TERM_TEST_ATTEMPT_REVIEW?.open) throw new Error('Chưa tải được giao diện xem lại bài làm.');
-    window.TERM_TEST_ATTEMPT_REVIEW.open(state.attemptReviewCache.get(cacheKey));
+    const review = state.attemptReviewCache.get(cacheKey);
+    const dialog = window.TERM_TEST_ATTEMPT_REVIEW.open(review);
+    resolveTeacherAttemptReviewImages(dialog, review?.testSlug);
   } catch (error) {
     if (error.staleSession) return;
     showNotice(`Không thể tải bài chi tiết: ${error.message}`, 'error');
