@@ -681,8 +681,8 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1');
-    await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1-20261014-order-v1'));
+    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1-20261014-audio-recovery-v1');
+    await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
 
@@ -778,7 +778,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           examSessionToken: state.examSessionToken,
-          heardSeconds: savedHeardSeconds
+          heardSeconds: savedHeardSeconds,
+          audioEventId: crypto.randomUUID()
         })
       });
       const decrypted = await decryptOfficialAudio(encryptedAudio, started);
@@ -1100,6 +1101,15 @@
     downloadController?.abort();
     previewAudio.pause();
     revokePreview();
+  });
+  // Vào lại bài đang chạy: cảnh báo ngay cả khi còn ở phòng tải audio, trước khi shared/app.js mở đề.
+  window.addEventListener('beforeunload',event=>{
+    if(!document.getElementById('bootstrapStart'))return;
+    const current=readState();
+    const active=Boolean((current.listeningStartedAt&&!current.listeningSubmitted)
+      ||(current.readingStartedAt&&!current.readingSubmitted&&!current.completed)
+      ||(current.writingStarted&&!current.writingSubmitted));
+    if(active){event.preventDefault();event.returnValue=true;}
   });
   initialize();
 }());

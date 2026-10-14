@@ -3,6 +3,7 @@
 
   const contentConfig = window.TERM_TEST_CONTENT;
   const testConfig = window.TERM_TEST_CONFIG;
+  const appConfig = window.TERM_TEST_APP_CONFIG;
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const isDemo = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
@@ -852,6 +853,7 @@
     let lastRecoveryAttemptAt = 0;
     let audioWatchdog = 0;
     let audioProgressQueue = Promise.resolve();
+    let playingCheckpointPending=false;
 
     function readSavedStudentRef() {
       for (const storage of [sessionStorage, localStorage]) {
@@ -980,19 +982,22 @@
       if (!examSessionToken || !examStarted || !['term-test-1', 'term-test-2', 'mini-test-lesson-5'].includes(testConfig.slug)) return Promise.resolve(null);
       const heardSeconds = rememberActualHeardPosition(true);
       if (playbackState === 'playing') {
+        if(playingCheckpointPending)return Promise.resolve(null);
         // Mỗi phiên có một pha cố định 0–5 giây để các máy không cùng checkpoint đúng một nhịp.
         const currentBucket = Math.floor(((heardSeconds * 1_000) + checkpointPhaseMs) / 5_000);
         if (currentBucket <= lastProgressReportedBucket) return Promise.resolve(null);
         lastProgressReportedBucket = currentBucket;
+        playingCheckpointPending=true;
       }
       const send = async () => {
-        const response = await fetch(`${appConfig.API_BASE_URL}/api/term-tests/${testConfig.slug}/session/audio-progress`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ examSessionToken, heardSeconds, state: playbackState }),
-          keepalive,
-          signal: AbortSignal.timeout(8000)
+        // Chốt dữ liệu khi đến lượt gửi; lần retry giữ cùng mã và cùng mốc để chống bù lặp.
+        const body=JSON.stringify({examSessionToken,heardSeconds:rememberActualHeardPosition(true),state:playbackState,eventId:crypto.randomUUID()});
+        const request=()=>fetch(`${appConfig.API_BASE_URL}/api/term-tests/${testConfig.slug}/session/audio-progress`, {
+          method:'POST',headers:{'Content-Type':'application/json'},body,keepalive,signal:AbortSignal.timeout(8000)
         });
+        let response;
+        try {response=await request();}
+        catch(error){if(keepalive||playbackState==='playing')throw error;response=await request();}
         if (!response.ok) return null;
         const payload = await response.json();
         if (payload.listeningDeadlineAt) {
@@ -1003,7 +1008,7 @@
       if (keepalive) return send().catch(() => null);
       const operation = audioProgressQueue.catch(() => null).then(send);
       audioProgressQueue = operation.catch(() => null);
-      return operation;
+      return operation.finally(()=>{if(playbackState==='playing')playingCheckpointPending=false;});
     }
 
     async function recoverInterruptedAudio(trigger, force = false) {

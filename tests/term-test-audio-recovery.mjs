@@ -15,7 +15,7 @@ function harness({ blocked = false, offline = false, slug = 'term-test-2' } = {}
   const context = vm.createContext({
     audio, uiState: { audio: { time: 60 } }, examStarted: true, ready: true, allowPause: false,
     examCard: { hidden: false }, recoveryInFlight: false, lastRecoveryAttemptAt: 0,
-    lastSavedSecond: 0, lastProgressReportedSecond: 0, audioProgressQueue: Promise.resolve(),
+    lastSavedSecond: 0, lastProgressReportedBucket:-1,checkpointPhaseMs:0,audioProgressQueue: Promise.resolve(),playingCheckpointPending:false,crypto:globalThis.crypto,
     protectedBootstrap: { examSessionToken: '00000000-0000-4000-8000-000000000091' },
     appConfig: { API_BASE_URL: 'https://synthetic.invalid' }, testConfig: { slug },
     resumeButton: { hidden: true }, examRetryButton: { hidden: true },
