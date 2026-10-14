@@ -784,8 +784,15 @@ function renderAll() {
   else if (view === 'classes') renderClasses();
   if (!$('flow-pairs-section').hidden) renderPairs();
 }
-function invalidateReadState(reason) {
-  if (reason === 'auth') return;
+function invalidateReadState(reason, error) {
+  if (reason === 'auth') {
+    const failure = teacherAuthFailure(error?.status);
+    if (failure) {
+      clearLogin(); showError('flow-login-error', failure.message);
+      globalThis.google?.accounts?.id?.disableAutoSelect?.();
+    }
+    return;
+  }
   state.refreshGeneration += 1; state.sourcePairCache.clear();
   if (reason === 'mutation' && state.authenticated) {
     clearTimeout(state.timer); state.viewLoading = false; state.loadingMore = false; renderAll();

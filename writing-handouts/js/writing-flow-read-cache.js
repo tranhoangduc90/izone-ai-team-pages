@@ -14,11 +14,15 @@ export function createWritingReadCache(api, { now = Date.now, ttl = 30_000,
   const entries = new Map();
   const pending = new Map();
   let epoch = 0;
-  function clear(reason = 'reset') {
+  function clear(reason = 'reset', error) {
     epoch += 1;
     entries.clear();
     pending.clear();
-    onInvalidate(reason);
+    onInvalidate(reason, error);
+  }
+  function failure(error, startedEpoch) {
+    if (startedEpoch === epoch && [401, 403].includes(error.status)) clear('auth', error);
+    throw error;
   }
   const wrapped = {};
   for (const [method, operation] of Object.entries(api)) {
@@ -26,11 +30,18 @@ export function createWritingReadCache(api, { now = Date.now, ttl = 30_000,
     if (!reads.has(method)) {
       wrapped[method] = (...args) => {
         if (!/^(add|request|retry|skip|restore|update|save)/u.test(method)) {
-          return operation.apply(api, args);
+          const startedEpoch = epoch;
+          try {
+            const result = operation.apply(api, args);
+            return result && typeof result.then === 'function'
+              ? Promise.resolve(result).catch(error => failure(error, startedEpoch)) : result;
+          } catch (error) { return failure(error, startedEpoch); }
         }
         // Xóa cả khi thao tác thất bại: không giữ bản cũ như một biên nhận thành công.
         clear('mutation');
-        return Promise.resolve().then(() => operation.apply(api, args)).finally(() => clear('mutation'));
+        const startedEpoch = epoch;
+        return Promise.resolve().then(() => operation.apply(api, args))
+          .catch(error => failure(error, startedEpoch)).finally(() => clear('mutation'));
       };
       continue;
     }
@@ -48,10 +59,7 @@ export function createWritingReadCache(api, { now = Date.now, ttl = 30_000,
           while (entries.size > maxEntries) entries.delete(entries.keys().next().value);
         }
         return value;
-      }).catch(error => {
-        if (startedEpoch === epoch && [401, 403].includes(error.status)) clear('auth');
-        throw error;
-      }).finally(() => {
+      }).catch(error => failure(error, startedEpoch)).finally(() => {
         if (pending.get(key) === promise) pending.delete(key);
       });
       pending.set(key, promise);

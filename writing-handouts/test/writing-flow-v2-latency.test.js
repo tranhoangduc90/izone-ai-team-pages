@@ -239,3 +239,37 @@ test('mutation lỗi mở lại Xem thêm sau khi vô hiệu hóa page đang t�
   assert.equal(app.subject.state.loadingMore,false);
   assert.equal(app.subject.state.pairs.some(p=>p.pair_id==='page-stale'),false);
 });
+
+for(const status of [401,403])test('chi tiết trả '+status+' khóa phiên và xóa cache đọc ngay',async()=>{
+  const app=await harness({writingPairDetail:async()=>{throw Object.assign(new Error('Auth giả'),{status});}});
+  await app.boot;
+  const countsArgs=app.calls.find(c=>c.method==='writingCounts').args;
+  await app.subject.openDetail({pair_id:'fake'});
+  assert.equal(app.subject.state.authenticated,false);
+  assert.equal(app.subject.state.pairs.length,0);
+  assert.equal(app.node('flow-dashboard').hidden,true);
+  await app.subject.state.api.writingCounts(...countsArgs);
+  assert.equal(app.calls.filter(c=>c.method==='writingCounts').length,2);
+});
+
+test('mutation trả 403 khóa phiên dù invalidation làm refresh context cũ',async()=>{
+  const app=await harness({skipWritingPair:async()=>{throw Object.assign(new Error('Auth giả'),{status:403});}});
+  await app.boot;await app.subject.skipPair({pair_id:'fake'});
+  assert.equal(app.subject.state.authenticated,false);
+  assert.equal(app.subject.state.pairs.length,0);
+  assert.equal(app.node('flow-dashboard').hidden,true);
+});
+
+test('401 chi tiết cũ sau đổi phiên không khóa tài khoản mới',async()=>{
+  const old=deferred();
+  const detail=id=>({data:{detail:{source:{topic:'Đề giả',essay:'Bài giả'},
+    pair:{pair_id:id,student_name:id,source_type:'homework'},stages:[]}}});
+  const app=await harness({writingPairDetail:id=>id==='old'?old.promise:Promise.resolve(detail(id))});
+  await app.boot;
+  const pending=app.subject.openDetail({pair_id:'old'});
+  app.subject.clearLogin();app.subject.state.authenticated=true;
+  await app.subject.openDetail({pair_id:'new'});
+  old.reject(Object.assign(new Error('Auth cũ'),{status:401}));await pending;
+  assert.equal(app.subject.state.authenticated,true);
+  assert.match(app.node('flow-detail-content').textContent,/new/u);
+});
