@@ -26,6 +26,13 @@ const sessionClient = createTeacherSessionClient({
 
 let authenticated = false;
 let loginGeneration = 0;
+let examMode = new URLSearchParams(location.search).get('mode') === 'read_first' ? 'read_first' : 'lis_first';
+const orderButtons = [...document.querySelectorAll('[data-exam-mode]')];
+function showOrder() {
+  orderButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.examMode === examMode)));
+}
+orderButtons.forEach(button => button.addEventListener('click', () => { examMode = button.dataset.examMode; showOrder(); }));
+showOrder();
 
 function selectedClassCode() {
   const value = classSelect.hidden ? input.value : classSelect.value;
@@ -148,7 +155,7 @@ document.querySelectorAll('[data-test]').forEach(button => {
       return;
     }
     input.setCustomValidity('');
-    window.location.href = `${button.dataset.test}/?class=${encodeURIComponent(classCode)}`;
+    window.location.href = `${button.dataset.test}/?class=${encodeURIComponent(classCode)}&mode=${examMode}`;
   });
 });
 

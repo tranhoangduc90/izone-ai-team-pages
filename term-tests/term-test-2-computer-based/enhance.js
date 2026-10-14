@@ -1588,7 +1588,9 @@
   const loadingLabel = document.querySelector('#loadingView strong');
   const listeningSavedCopy = document.querySelector('#listeningSavedView > p:not(.eyebrow)');
   if (loadingLabel) loadingLabel.textContent = 'Đang chuẩn bị đề thi HTML...';
-  if (listeningSavedCopy) listeningSavedCopy.textContent = 'Hệ thống đã ghi bài Listening. Kết quả đang được giữ kín; khi sẵn sàng, mở Reading để tiếp tục làm bài.';
+  if (listeningSavedCopy) listeningSavedCopy.textContent = window.K67_EXAM_ORDER?.requested() === 'read_first'
+    ? 'Đồng hồ chỉ bắt đầu khi bạn nhấn Bắt đầu Reading. Listening sẽ mở sau khi nộp Reading.'
+    : 'Hệ thống đã ghi bài Listening. Kết quả đang được giữ kín; khi sẵn sàng, mở Reading để tiếp tục làm bài.';
 
   const listeningInstructions = document.getElementById('listeningInstructions');
   const readingInstructions = document.getElementById('readingInstructions');
