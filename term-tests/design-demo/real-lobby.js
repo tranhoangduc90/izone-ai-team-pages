@@ -35,6 +35,7 @@
    <p class="demo-lobby-note">Bản thử giao diện · không tạo lượt thi, không ghi điểm học viên. Audio chính có nút phát riêng trong màn làm bài.</p>
   </section>
  </main>`;
+ if(ctx.toolsEnabled===false)root.querySelector('.demo-lobby-note').textContent='Bản thử giao diện · không tạo lượt thi, không ghi điểm học viên. Audio tự chạy khi bắt đầu; không tạm dừng hoặc nghe lại trong bài.';
  const el=Object.fromEntries(['download-step','download-status','retry','preview-step','preview','volume','volume-value','preview-status','start-step','start-status','start'].map(id=>[id,document.getElementById('lobby-'+id)]));
  const audio=document.createElement('audio');audio.hidden=true;document.body.append(audio);
  let disposed=false,loading=false,ready=false,heard=false,playing=false,stopTimer=0;
@@ -82,7 +83,14 @@
  });
  el.volume.addEventListener('input',()=>{audio.volume=Number(el.volume.value);ctx.trial.audioVolume=audio.volume;el['volume-value'].textContent=Math.round(audio.volume*100)+'%';});
  el.retry.addEventListener('click',prepare);
- el.start.addEventListener('click',()=>{if(!ready||!heard||disposed)return;stopPreview();ctx.trial.audioVolume=audio.volume;ctx.trial.audioPrepared=true;ctx.navigate('listening');});
+ el.start.addEventListener('click',async()=>{
+  if(!ready||!heard||disposed)return;stopPreview();el.start.disabled=true;
+  ctx.trial.audioVolume=audio.volume;ctx.trial.audioPrepared=true;
+  try{
+   if(ctx.toolsEnabled===false)await ctx.startListeningAudio(audio.volume);
+   if(!disposed)ctx.navigate('listening');
+  }catch{if(!disposed){el['start-status'].textContent='Chưa phát được audio. Nhấn Bắt đầu để thử lại.';el.start.disabled=false;}}
+ });
  window.addEventListener('pagehide',()=>{disposed=true;stopPreview();audio.removeAttribute('src');audio.load();},{once:true});
  prepare();
 })();

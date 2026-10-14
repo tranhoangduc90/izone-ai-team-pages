@@ -6,12 +6,12 @@
   const tools=window.REAL_DEMO.toolsEnabled;
   async function lab(){if(!tools)return;const css=document.createElement('link');css.rel='stylesheet';css.href='color-lab.css?v=split-demo-20261012';document.head.append(css);await load('color-lab.js?v=split-demo-20261012');await load('color-locator.js?v=split-demo-20261012');}
   await load('../term-test-2/test-config.js');await load('real-runtime.js');
-  if(window.REAL_DEMO.screen==='lobby'){await load('real-lobby.js');await lab();return;}
+  if(window.REAL_DEMO.screen==='lobby'){await load('real-lobby.js?v=continuous-audio-20261014');await lab();return;}
   await load('../shared/attempt-review.js');await load('../shared/writing-planning.js');await load('../shared/app.js');
   await load('../term-test-2-computer-based/enhance.js');await load('../term-test-2-computer-based/interaction-tools.js');
-  await load('presentation.js');await load('real-ui.js?v=clean-audio-20261014');await load('real-compact.js?v=split-demo-20261012');
+  await load('presentation.js');await load('real-ui.js?v=continuous-audio-20261014');await load('real-compact.js?v=split-demo-20261012');
   // Chỉ demo sạch có audio gọn; lab giữ player và bảng màu hiện tại.
-  if(!tools&&window.REAL_DEMO.screen==='listening'){const css=document.createElement('link');css.rel='stylesheet';css.href='clean-audio.css?v=clean-audio-20261014';document.head.append(css);await load('clean-audio.js?v=clean-audio-20261014');}
+  if(!tools&&window.REAL_DEMO.screen==='listening'){const css=document.createElement('link');css.rel='stylesheet';css.href='clean-audio.css?v=continuous-audio-20261014';document.head.append(css);await load('clean-audio.js?v=continuous-audio-20261014');}
   await lab();
  }catch(e){document.getElementById('app').textContent='Hãy mở demo từ trang chính. '+e.message;}
 })();
