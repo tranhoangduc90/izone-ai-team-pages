@@ -3,6 +3,7 @@
 
   const contentConfig = window.TERM_TEST_CONTENT;
   const testConfig = window.TERM_TEST_CONFIG;
+  const appConfig = window.TERM_TEST_APP_CONFIG;
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const isDemo = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
@@ -1032,6 +1033,7 @@
         return;
       }
       uiState.audio.time = audio.duration || uiState.audio.time;
+      window.SUBSTITUTE_EXAM?.ended(audio);
       resumeButton.hidden = true;
       updateExamStatus('Đã phát xong');
       saveUiState();
@@ -1249,6 +1251,9 @@
       return {};
     }
 
+    const transferClock=document.createElement('div');
+    transferClock.className='cbt-reading-clock';transferClock.setAttribute('role','timer');transferClock.hidden=true;
+    listeningForm.form.querySelector('.cbt-heading-actions')?.prepend(transferClock);
     function lockAndSubmit(now) {
       if (listeningForm.form.dataset.listeningSubmitting === 'true' || now - lastAttempt < 15_000) return;
       lastAttempt = now;
@@ -1266,6 +1271,11 @@
       if (!Number.isFinite(deadline)) return;
       const serverOffset = Number(exam.serverTimeOffsetMs) || 0;
       const remaining = Math.max(0, deadline - (Date.now() + serverOffset));
+      if(window.TERM_TEST_BOOTSTRAP?.examSessionId){
+        transferClock.hidden=false;const seconds=Math.ceil(remaining/1000);
+        transferClock.textContent='Điền đáp án · '+String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+        transferClock.setAttribute('aria-label','Còn '+seconds+' giây để điền đáp án Listening');
+      }
       if (remaining === 0) lockAndSubmit(Date.now());
     }
     render();

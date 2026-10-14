@@ -29,6 +29,7 @@ try{
      body={testSlug:slug,classCode,studentRef:url.searchParams.get('student'),attemptToken:url.searchParams.get('attempt'),status:'ready',portalStatus:'not_applicable',taskNumber:slug==='substitute-test-2-k56'?1:2,result:{taskScore:7.5,criteria:['TR','CC','LR','GRA'].map(key=>({key,score:7.5,feedback:'## Nhận xét giả\n\n**Điểm mạnh**\n\n- Nội dung giả'})),report:'```html\n<pre>## Báo cáo giả\n\n**Kết luận giả**\n\n- Mục giả</pre><script>parent.document.body.dataset.exploited="yes"</script><img src="https://evil.invalid/leak"><p>### Tiêu đề trong HTML</p>\n```'}};
      body.portalProjection={policyRevision:'substitute-threshold-20261012-v2',actualScores:{listening:slug.endsWith('k56')?30:7,reading:slug.endsWith('k56')?20:7,writing:7.5},portalScores:{listening:slug.endsWith('k56')?22:6.5,reading:slug.endsWith('k56')?(slug==='substitute-test-1-k56'?15:22):6.5,writing:slug.endsWith('k56')?5.5:6.5},actualPassed:true,portalPassed:true};
      if(twoTaskFixture){const tasks=[1,2].map(taskNumber=>({taskNumber,status:'ready',result:{taskScore:taskNumber===1?7:8,criteria:(taskNumber===1?['TA','CC','LR','GRA']:['TR','CC','LR','GRA']).map(key=>({key,score:7,feedback:'Nhận xét giả'})),report:'Báo cáo giả cho Task '+taskNumber,...(taskNumber===1?{details:Array.from({length:9},(_,i)=>({stageKey:String(i+1).padStart(2,'0')+'-fixture',name:'Phân tích '+(i+1),url:'https://evil.invalid/redirect'}))}:{})}}));body={...body,requiredTasks:[1,2],tasks,result:{writingScore:7.5}};}
+     body.source={writing:(body.requiredTasks?.length===2?[1,2]:[body.taskNumber]).map(taskNumber=>({taskNumber,availability:'available',essay:'Bài viết gốc giả <script>không thực thi</script> Task '+taskNumber})),listening:{availability:'available',section:{total:40,details:[{number:1,studentAnswer:'Đáp án gốc giả',correctAnswer:'Đáp án chuẩn giả',result:'incorrect'}]}},reading:{availability:'unavailable'}};
     }else throw Error('UNKNOWN_FIXTURE_ROUTE');
     return route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':'*','access-control-allow-headers':'Authorization'},body:JSON.stringify(body)}).catch(()=>{});
    }
@@ -64,6 +65,10 @@ try{
   }
   twoTaskFixture=true;await page.goto(base+'/term-tests/substitute-test-2-k67-results/');await page.getByRole('button',{name:'Đăng nhập bằng Google'}).click();await page.locator('.open-student').first().click();await page.locator('.criterion-card').first().waitFor();
   assert.equal(await page.locator('.criterion-card').count(),8);assert.equal(await page.locator('[data-task-stage]').count(),0);assert.ok((await page.locator('#attempt-content').innerText()).includes('Writing tổng · 7.5/9'));
+  assert.equal(await page.locator('.student-source-writing').count(),2);
+  await page.locator('.student-source-section summary').nth(0).click();await page.locator('.student-source-section summary').nth(1).click();
+  assert.ok((await page.locator('.student-source').innerText()).includes('Đáp án gốc giả'));
+  assert.equal(await page.locator('.student-source script').count(),0);assert.ok((await page.locator('.student-source').innerText()).includes('Lượt cũ chưa lưu đáp án từng câu'));
   twoTaskFixture=false;
   // Liên kết thật của từng stage phải mở báo cáo sau khi login/loadResults đổi generation.
   await page.goto(base+'/term-tests/substitute-test-2-k67-results/?test=substitute-test-2-k67&class=DEMO&student=fictional-student&attempt=fictional-attempt-1&stage=01-ta-overview');
