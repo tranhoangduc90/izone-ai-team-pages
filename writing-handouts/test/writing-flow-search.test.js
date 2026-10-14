@@ -35,10 +35,12 @@ for (const customRange of [false, true]) {
 
 test('phản hồi tìm kiếm cũ về chậm không đổi bài và con trỏ của lần tìm mới', async () => {
   const replies = [];
-  const state = { refreshGeneration: 1, pairs: [], nextCursor: null, nextOffset: null,
+  const state = { authenticated: true, loginGeneration: 1, refreshGeneration: 1,
+    pairs: [], nextCursor: null, nextOffset: null,
     api: { writingPairsPage: () => new Promise(resolve => replies.push(resolve)) } };
   const context = { state, currentFilters: extra => extra, pairViewFilters: () => ({}) };
-  vm.runInNewContext(functionCode('async function loadPairs(', '\nasync function loadSourceIssues('), context);
+  vm.runInNewContext(functionCode('function captureLoad(', '\nfunction loadFailure(')
+    + '\n' + functionCode('async function loadPairs(', '\nasync function loadSourceIssues('), context);
   const old = context.loadPairs(true);
   state.refreshGeneration = 2;
   const current = context.loadPairs(true);

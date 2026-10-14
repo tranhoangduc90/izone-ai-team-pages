@@ -17,9 +17,14 @@ test('Cập nhật tổng quan dựng lại thanh tiến trình từ số liệu
   const context = Object.fromEntries(['renderHeading', 'renderCounts', 'renderSummary',
     'renderClasses', 'renderPairs', 'renderDaily', 'renderStageQuick', 'setViewVisibility'].map(name => [name, () => {}]));
   context.renderJourney = () => { renders += 1; };
+  context.baseView = () => 'overview';
+  context.$ = () => ({ hidden: true });
   vm.runInNewContext(code('function renderAll()', '\nasync function loadPairs('), context);
   context.renderAll(); context.renderAll();
   assert.equal(renders, 2);
+  context.baseView = () => 'main';
+  context.renderAll();
+  assert.equal(renders, 2, 'Tab khác không dựng lại thanh đang ẩn của Tổng quan');
 });
 
 test('Link từng bước mở và tải lại đúng bước cho Homework và Test', () => {
