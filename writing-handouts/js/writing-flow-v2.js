@@ -26,12 +26,14 @@ function hashToView() {
   const base = path[0] === 'stage' ? path[2] : path[0].replace(/^test_/u, '');
   const prefix = test ? 'test_' : '';
   if (base === 'source') return 'intake';
-  if (['precheck','main','critic','arbiter','render','deliver','review'].includes(base)) return prefix + 'processing';
+  if (base === 'review') return prefix + 'processing';
+  if (stages.includes(base)) return prefix + base;
   if (['overview','daily','intake','processing','search','skipped','delivered'].includes(base)) return prefix + base;
   return base === 'classes' ? 'classes' : 'overview';
 }
 function viewToHash(view) {
   const test = view.startsWith('test_'); const base = test ? view.slice(5) : view;
+  if (stages.includes(base)) return '#stage/' + (test ? 'test' : 'homework') + '/' + base;
   return ['overview','daily','search'].includes(base) ? '#' + base + '/' + (test ? 'test' : 'homework') : '#' + view;
 }
 const stages = ['intake', 'precheck', 'main', 'critic', 'arbiter', 'render', 'deliver'];
@@ -147,7 +149,7 @@ function pairViewFilters() {
   if (view === 'review') return { view: 'review' };
   if (view === 'skipped') return { view: 'skipped' };
   if (view === 'delivered') return { view: 'delivered' };
-  if (view === 'intake') return { stageKey: 'intake' };
+  if (stages.includes(view)) return { stageKey: view };
   return {};
 }
 function renderColumnChoices() {
@@ -214,8 +216,8 @@ function setViewVisibility() {
   for (const id of ['flow-overview-section','flow-daily-section','flow-classes-section','flow-reviews-section','flow-source-section','flow-technical-section','flow-audit-section','flow-mapping-section','flow-pairs-section','flow-legacy-section']) {
     const node = $(id); if (node) node.hidden = !visible.includes(id);
   }
-  $('flow-source-groups').hidden = true; $('flow-stage-status-filter').hidden = true;
-  $('flow-list-status-filter').hidden = view !== 'processing'; $('flow-stage-quick').hidden = true;
+  $('flow-source-groups').hidden = true; $('flow-stage-status-filter').hidden = !activeStage();
+  $('flow-list-status-filter').hidden = view !== 'processing'; renderStageQuick();
   if (view === 'classes' && !$('flow-class').value) $('flow-pairs-section').hidden = true;
   $('flow-result-note').textContent = view === 'search'
     ? state.searchUsesAllDates ? 'Tìm trong mọi ngày và mọi trạng thái. Bạn có thể chọn khoảng ngày để thu hẹp kết quả.' : 'Kết quả theo các bộ lọc đang chọn, trong mọi trạng thái.'
@@ -699,7 +701,7 @@ function renderDaily() {
 function renderJourney() {
   const root = $('flow-journey'); root.replaceChildren();
   const head = document.createElement('div'); head.className = 'flow-journey-head';
-  head.append(makeText('h2', 'Bài đang ở bước nào?'), makeText('p', 'Chọn một bước để xem bài và xử lý đúng chỗ.', 'flow-meta'));
+  head.append(makeText('h2', 'Bài đang ở bước nào?'), makeText('p', 'Số bài hiện tại, không giới hạn ngày. Bấm từng bước để xem bài theo bộ lọc đã chọn.', 'flow-meta'));
   root.append(head);
   const list = document.createElement('ol'); list.className = 'flow-journey-grid';
   for (const [index, stage] of stages.entries()) {
@@ -712,15 +714,6 @@ function renderJourney() {
     if (review) button.dataset.attention = 'true'; item.append(button); list.append(item);
   }
   root.append(list);
-  if (!isTestView()) {
-    const support = document.createElement('div'); support.className = 'flow-source-summary';
-    const review = Number(state.counts?.support?.source_issues_review || 0);
-    const warned = Number(state.counts?.support?.source_issues_warned || 0);
-    const link = actionButton(`Lỗi nguồn cần xem xét · ${review}`, () => { state.sourceWarningGroup = 'review'; selectView('source'); });
-    const detail = document.createElement('details'); detail.append(makeText('summary', `Đã cảnh báo trong Docs · ${warned}`), makeText('p', 'Chờ file được sửa hoặc giảng viên tự chấm; có thể đọc lại nguồn sau khi file đã sửa.'));
-    const warnedLink = actionButton('Mở danh sách đã cảnh báo', () => { state.sourceWarningGroup = 'warned'; selectView('source'); }); detail.append(warnedLink);
-    support.append(link, detail); root.append(support);
-  }
 }
 function setupV2Filters() {
   const toolbar = document.querySelector('.flow-toolbar');
@@ -739,7 +732,7 @@ function setupV2Filters() {
   details.append(content); toolbar.append(line, details);
 }
 
-function renderAll() { renderHeading(); renderCounts(); renderSummary(); renderClasses(); renderPairs(); renderDaily(); setViewVisibility(); }
+function renderAll() { renderHeading(); renderCounts(); renderSummary(); renderJourney(); renderClasses(); renderPairs(); renderDaily(); setViewVisibility(); }
 async function loadPairs(reset = true) {
   const generation = state.refreshGeneration;
   const page = reset ? {} : state.nextCursor || (state.nextOffset == null ? {} : { offset: state.nextOffset });
