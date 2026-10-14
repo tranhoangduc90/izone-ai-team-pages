@@ -36,7 +36,7 @@
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
       .then(() => loadScript('../k56-test2-shared/app.js?rev=20261014-result-details-v1'))
-      .then(() => loadScript('../k56-audio-recovery.js?rev=20261012-audio-v2'))
+      .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1'))
       .then(() => loadScript('enhance.js?rev=20261012-audio-v2'))
       .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
       .catch(error => {
@@ -613,7 +613,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../k56-test2-shared/app.js?rev=20261014-result-details-v1');
-    await loadScript('../k56-audio-recovery.js?rev=20261012-audio-v2');
+    await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1');
     await loadScript('enhance.js?rev=20261012-audio-v2');
     await loadScript('annotations.js?rev=20261005-k56-writing-results-v1');
   }
@@ -726,7 +726,7 @@
         await enterExam(started, officialAudio);
         return;
       }
-      await loadScript('../k56-audio-recovery.js?rev=20261012-audio-v2');
+      await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1');
       const recovery = await window.K56AudioRecovery.prepare({ apiBase: appConfig.API_BASE_URL, classCode,
         slug: testConfig.slug, studentRef: state.studentRef, token: state.examSessionToken, generation: state.generation });
       const savedHeardSeconds = recovery.heardSeconds;

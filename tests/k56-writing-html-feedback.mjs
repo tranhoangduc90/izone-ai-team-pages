@@ -52,7 +52,7 @@ test('bump cache HTML ở cả ba bộ nạp và trang CBT',()=>{
     assert.equal(loaders.length,2);
     assert.ok(loaders.every(line=>line.includes(revision)));
     const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');
-    const bootstrapRevision=revision;
+    const bootstrapRevision='20261014-audio-terminal-v1';
     assert.ok(html.includes('bootstrap.js?rev='+bootstrapRevision));
     assert.match(html, /k56-exam-order\.js\?rev=20260930-k56-order-v1/);
   }

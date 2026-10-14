@@ -28,7 +28,7 @@ test('mọi nhánh Term Test 1 K56 tải cùng revision mới', async () => {
   const revision = '20261014-result-details-v1';
   const bootstrap = await read('term-tests/term-test-1-k56-computer-based/bootstrap.js');
   assert.equal((bootstrap.match(new RegExp('app\\.js\\?(?:rev|v)=' + revision, 'g')) || []).length, 2);
-  assert.match(await read('term-tests/term-test-1-k56-computer-based/index.html'), new RegExp(revision));
+  assert.match(await read('term-tests/term-test-1-k56-computer-based/index.html'), /bootstrap\.js\?rev=20261014-audio-terminal-v1/);
   assert.match(await read('term-tests/term-test-1-k56/index.html'), new RegExp(revision));
 });
 

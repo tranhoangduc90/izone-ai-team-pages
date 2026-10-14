@@ -61,6 +61,7 @@
     let hardDeadline = Date.parse(options.initial.listeningHardDeadlineAt);
     let offset = Date.parse(options.initial.serverNow) - Date.now();
     const phaseOffset = Array.from(token).reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381) % 5000;
+    function terminal() { return disposed || destroyed || ['submitting', 'submitted', 'ended'].includes(phase); }
     function save() {
       const latest = read(bound);
       if (latest.ownerId && latest.ownerId !== ownerId) return;
@@ -77,7 +78,7 @@
       manualButton.disabled = ['submitting', 'submitted', 'ended'].includes(phase);
     }
     function emit(event, extra = {}) {
-      const payload = { examSessionToken: token, event, section: 'listening', build: '20261012-audio-v2',
+      const payload = { examSessionToken: token, event, section: 'listening', build: '20261014-audio-terminal-v1',
         online: navigator.onLine, occurredAt: new Date().toISOString(), revision,
         navigationType: performance.getEntriesByType('navigation')[0]?.type || 'navigate',
         heardSeconds: Math.max(0, Number(audio.currentTime) || 0), ...extra };
@@ -85,7 +86,7 @@
         body: JSON.stringify(payload), signal: AbortSignal.timeout(8000) }).catch(() => null);
     }
     function apply(payload) {
-      if (disposed || navigating || ['submitted', 'submitting'].includes(phase)) return payload;
+      if (terminal() || navigating) return payload;
       if (payload.audioRecoveryVersion !== VERSION || !Number.isSafeInteger(payload.audioStateRevision)
           || !Number.isFinite(payload.listeningResumeAtSeconds) || !Number.isFinite(Date.parse(payload.listeningDeadlineAt))
           || !Number.isFinite(Date.parse(payload.listeningHardDeadlineAt))
@@ -129,7 +130,7 @@
       save();
     }
     function failed(error) {
-      if (phase === 'submitted' || phase === 'submitting' || disposed) return;
+      if (terminal()) return;
       episode(memory.reason || 'network', memory.manual);
       phase = 'sync_failed';
       if (error.code === 'AUDIO_OWNER_CONFLICT') audio.pause();
@@ -139,8 +140,9 @@
       emit('audio_sync_failed', { errorCode: String(error.code || 'AUDIO_NETWORK_ERROR').slice(0, 80), recoveryId: memory.recoveryId });
     }
     async function recover(reason, { force = false, keepPaused = false } = {}) {
+      if (terminal() || navigating) return;
       if (recoveryPromise) return recoveryPromise;
-      if (disposed || navigating || ['submitting', 'submitted'].includes(phase) || phase === 'awaiting_user' && !force) return;
+      if (phase === 'awaiting_user' && !force) return;
       if (memory.manual && !force) return;
       episode(reason, memory.manual && keepPaused);
       const episodeId = memory.recoveryId;
@@ -149,7 +151,7 @@
       phase = 'recovering'; notice('Đang khôi phục audio...');
       recoveryPromise = (async () => {
         const payload = await send('recovered');
-        if (disposed || navigating || ['submitting', 'submitted'].includes(phase) || memory.recoveryId !== episodeId) return null;
+        if (terminal() || navigating || memory.recoveryId !== episodeId) return null;
         retryCount = 0;
         if (Date.now() + offset >= Date.parse(payload.listeningHardDeadlineAt)) {
           phase = 'sync_failed'; notice('Đã hết mức bù thời gian Listening.'); return payload;
@@ -168,11 +170,11 @@
         } else {
           try {
             if (wasPaused) await audio.play();
-            if (disposed || navigating || ['submitting', 'submitted'].includes(phase) || memory.recoveryId !== episodeId) { audio.pause(); return null; }
+            if (terminal() || navigating || memory.recoveryId !== episodeId) { audio.pause(); return null; }
             phase = 'playing'; observed = audio.currentTime; lastAdvance = performance.now();
             notice(payload.recoveryLimitReached ? 'Đang phát · đã hết mức bù 15 phút' : 'Đang phát bài thi');
           } catch (error) {
-            if (disposed || navigating || ['submitting', 'submitted'].includes(phase) || memory.recoveryId !== episodeId) return null;
+            if (terminal() || navigating || memory.recoveryId !== episodeId) return null;
             if (error?.name !== 'NotAllowedError') throw Object.assign(new Error('Chưa đọc được audio. Hãy tải lại trang để lấy lại audio; nháp và mốc nghe được giữ.'), { code: 'AUDIO_BLOB_UNAVAILABLE', retryable: false });
             episode('autoplay'); phase = 'awaiting_user';
             await send('pause').catch(() => null); notice('Trình duyệt chưa cho phát · nhấn Tiếp tục audio');
@@ -195,7 +197,7 @@
     function startWatch() { if (!timer) timer = window.setInterval(tick, 500); }
     function stopWatch() { if (timer) window.clearInterval(timer); timer = 0; }
     audio.addEventListener('timeupdate', () => {
-      if (disposed || navigating || ['submitting', 'submitted'].includes(phase)) return;
+      if (terminal() || navigating) return;
       save();
       if (phase !== 'playing') return;
       notice('Đang phát bài thi');
@@ -205,16 +207,17 @@
     audio.addEventListener('pause', () => { if (phase === 'playing' && !navigating && !audio.ended) recover('pause'); });
     audio.addEventListener('waiting', () => { if (phase === 'playing') window.setTimeout(tick, 1800); });
     audio.addEventListener('stalled', tick);
-    audio.addEventListener('error', () => { if (!disposed) { episode('blob'); retryable = false; phase = 'sync_failed'; notice('Không thể đọc audio. Hãy nhấn Tiếp tục audio để tải lại đúng mốc.'); } });
-    audio.addEventListener('ended', () => { save(); phase = 'ended'; stopWatch(); notice('Đã phát xong audio'); });
+    audio.addEventListener('error', () => { if (!terminal() && !navigating) { episode('blob'); retryable = false; phase = 'sync_failed'; notice('Không thể đọc audio. Hãy nhấn Tiếp tục audio để tải lại đúng mốc.'); } });
+    audio.addEventListener('ended', () => { if (terminal() || navigating) return; memory.pending = false; memory.manual = false; phase = 'ended'; save(); stopWatch(); notice('Đã phát xong audio'); });
     manualButton.addEventListener('click', () => {
-      if (['submitting', 'submitted', 'ended'].includes(phase)) return;
+      if (terminal() || navigating) return;
       if (recoveryPromise) memory.recoveryId = uuid();
       episode('manual', true); phase = 'technical_pause'; audio.pause();
       send('pause').catch(failed); notice('Audio đang dừng do sự cố. Nhấn Tiếp tục audio khi nghe được.');
       emit('audio_manual_pause', { recoveryId: memory.recoveryId });
     });
     resumeButton.addEventListener('click', () => {
+      if (terminal() || navigating) return;
       if (audio.error || audio.readyState === 0) { save(); window.location.reload(); return; }
       recover('user', { force: true });
     });
@@ -240,15 +243,24 @@
       async beforeAutoSubmit() {
         if (['submitted','submitting'].includes(phase) || destroyed) return { submit: false };
         if (Date.now() + offset >= hardDeadline) return { submit: true };
+        if (phase === 'ended') return { submit: Date.now() + offset >= deadline, deadlineChanged: Date.now() + offset < deadline };
         if (memory.pending || recoveryPromise) await recover('deadline', { force: true, keepPaused: memory.manual || phase === 'awaiting_user' });
         if (['submitted','submitting'].includes(phase) || destroyed) return { submit: false };
         return { submit: !memory.pending && Date.now() + offset >= deadline, deadlineChanged: Date.now() + offset < deadline };
       },
       submitting() { phase = 'submitting'; stopWatch(); audio.pause(); save(); },
-      submitFailed() { if (phase !== 'submitting') return; phase = memory.manual ? 'technical_pause' : 'playing'; startWatch(); if (!memory.manual) recover('submit-failed', { force: true }); },
+      submitFailed() {
+        if (phase !== 'submitting') return;
+        if (audio.ended || Number.isFinite(audio.duration) && audio.duration > 0 && audio.currentTime >= audio.duration) {
+          phase = 'ended'; memory.pending = false; memory.manual = false; stopWatch(); save(); notice('Đã phát xong audio'); return;
+        }
+        phase = memory.manual ? 'technical_pause' : 'playing'; startWatch();
+        if (!memory.manual) recover('submit-failed', { force: true });
+      },
       finish() { phase = 'submitted'; memory.pending = false; memory.manual = false; stopWatch(); audio.pause(); save(); },
       dispose() {
         if (disposed) return;
+        if (terminal()) { disposed = true; destroyed = true; stopWatch(); audio.pause(); channel?.close(); return; }
         if (recoveryPromise) memory.recoveryId = uuid();
         episode('load-error', memory.manual); phase = 'sync_failed'; stopWatch(); audio.pause();
         send('pause').catch(() => null); disposed = true; destroyed = true; channel?.close();
