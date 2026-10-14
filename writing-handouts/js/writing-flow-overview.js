@@ -9,7 +9,7 @@ export function writingLocalDay(value) {
 
 export function defaultWritingRange(now = new Date()) {
   const to = writingLocalDay(now);
-  return { from: new Date(Date.parse(to) - 6 * 86400000).toISOString().slice(0, 10), to };
+  return { from: new Date(Date.parse(to) - 86400000).toISOString().slice(0, 10), to };
 }
 
 export function withinWritingRange(value, from, to) {

@@ -3,9 +3,15 @@ import assert from 'node:assert/strict';
 import { defaultWritingRange, withinWritingRange, sourceIssueAlreadyDelivered,
   writingPeriodMetrics, collectWritingPairs } from '../js/writing-flow-overview.js';
 
-test('khoảng mặc định gồm bảy ngày theo giờ Việt Nam, kể cả khi qua tháng', () => {
+test('khoảng mặc định gồm hôm qua và hôm nay theo giờ Việt Nam, kể cả khi qua tháng/năm', () => {
   assert.deepEqual(defaultWritingRange(new Date('2026-09-30T18:00:00Z')),
-    { from: '2026-09-25', to: '2026-10-01' });
+    { from: '2026-09-30', to: '2026-10-01' });
+  assert.deepEqual(defaultWritingRange(new Date('2026-10-14T02:00:00Z')),
+    { from: '2026-10-13', to: '2026-10-14' });
+  assert.deepEqual(defaultWritingRange(new Date('2026-12-31T17:00:00Z')),
+    { from: '2026-12-31', to: '2027-01-01' });
+  assert.deepEqual(defaultWritingRange(new Date('2026-12-31T16:59:59Z')),
+    { from: '2026-12-30', to: '2026-12-31' });
   assert.equal(withinWritingRange('2026-09-30T18:00:00Z', '2026-10-01', '2026-10-01'), true);
   assert.equal(withinWritingRange('2026-09-30T16:00:00Z', '2026-10-01', '2026-10-01'), false);
   assert.equal(withinWritingRange(null, '2026-10-01', '2026-10-01'), true);

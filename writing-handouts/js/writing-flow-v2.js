@@ -11,7 +11,7 @@ import { createTeacherLoginPreference } from '../../shared/teacher-login-prefere
 import { createTeacherSessionClient } from '../../shared/teacher-session-client.js?rev=20260920-v1';
 
 import { defaultWritingRange, withinWritingRange, sourceIssueAlreadyDelivered, sourceIssueMatchesPair,
-  writingPeriodMetrics, collectWritingPairs } from './writing-flow-overview.js?v=20261013-doc-feedback-v1';
+  writingPeriodMetrics, collectWritingPairs } from './writing-flow-overview.js?v=20261014-two-day-default-v1';
 
 // Trang tải xem trước ngắn; toàn bộ nội dung và log chỉ tải khi mở một dòng.
 // Mọi thao tác retry/bỏ qua đều ghi yêu cầu qua API; trang không ghi Lark Base.
