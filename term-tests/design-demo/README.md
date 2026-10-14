@@ -1,12 +1,24 @@
-# Hai bản demo Term Test 2 IC2200
+# Demo Term/Mini K67 dùng bộ xử lý thi gốc
 
-- `/term-tests/design-demo/`: bản sạch. Luôn mở/reload từ phòng chờ Listening, khóa đủ 19 token preset Reading · xám sáng–đỏ, không panel/nút Điều hướng demo hoặc Màu giao diện. Không đọc màu/query đã lưu; bản thử đi tiếp bằng nút nghiệp vụ Listening → Reading → Writing → kết quả.
-- `/term-tests/design-lab/`: bản thử đầy đủ. Giữ chọn phiên bản đề trống/bài thật đã chấm, người học/màn, thu/mở điều hướng, bảng màu, mọi preset và tự cuộn/highlight vùng chỉnh.
+Từ bản nâng cấp 14/10/2026, các entry sạch dùng bootstrap/app/audio-loader và bộ xử lý K67 hiện hành. Bản làm thử lưu vào PostgreSQL qua API gốc, không dùng adapter RAM của bản thử màu.
 
-Cả hai dùng cùng host/iframe/renderer, audio và API demo công khai cố định Term Test 2 IC2200. `real.html` là alias ở mỗi route. Không fork trang thi thật, đổi API/database, tạo lượt thi hoặc ghi điểm học viên. Bài thử ở RAM; bài thật ở lab chỉ đọc; Writing thử không gửi chấm AI.
+| Link | Nội dung |
+| --- | --- |
+| `/term-tests/term-test-1-design-demo/` | Term1: 40 Listening, 40 Reading, chỉ Writing Task2 |
+| `/term-tests/design-demo/` | Term2: 40 Listening, 40 Reading, Writing Task1 và Task2; giữ link cũ |
+| `/term-tests/mini-test-lesson-5-design-demo/` | Mini CBT: Listening 11–30, Reading 14–26, không Writing |
+| `/term-tests/mini-test-lesson-5-paper-design-demo/` | Phiếu Mini: hai cột desktop, nộp thủ công, không timer CBT |
 
-`theme.js` là nguồn chung của preset và 19 token; `theme.css` áp dụng chúng trên mọi màn, kể cả nhận xét. Bản sạch không nạp `real-controls.js`, `color-lab.js/css` hoặc `color-locator.js`. Lab chỉ có entry HTML riêng, nạp cùng asset qua đường tương đối. Theme độc lập với giao diện thử màu.
+Mỗi entry có link **Bài đã chấm** (`?mode=saved`). Đường này chỉ đọc bài thật IC2200 đúng đề/lượt/lần chấm; khóa các thao tác ghi và không gửi token học viên vào renderer. Nếu không có bài hoàn tất thì báo rõ. Term1 và Term2 dùng đúng renderer nhận xét và xem toàn bài gốc.
 
-Từ 14/10/2026, chỉ bản sạch nạp `clean-audio.js/css`: đồng hồ 8 px và thanh âm lượng cạnh tiêu đề Listening. Từ bản sửa cùng ngày, audio tự phát từ click Bắt đầu ở phòng chờ, chạy liên tục, không có nút phát/tạm dừng/nghe lại. Audio giữ vị trí khi đổi Part; lab giữ nguyên player native ở hàng riêng.
+## Giao diện và nghiệp vụ
 
-Giữ test adapter/lobby, kiểm hai route, theme không bị query/Storage tác động, hành trình nghiệp vụ và đọc lại sau Pages build. Quay lui bằng revert commit frontend; không có deploy backend trong gói này.
+`../design-full/native.js/css` chỉ gom node gốc và đổi lớp trình bày. Audio gốc nằm cạnh tiêu đề Listening, đồng hồ 8px, volume; không có nút pause/tua/nghe lại thông thường. Nút cứu audio của engine vẫn có khi thực sự gián đoạn. Theme Reading · xám sáng–đỏ giữ đủ 19 token, Nunito Sans, navy lựa chọn/hành động, xanh thành công, vàng cần rà.
+
+Danh tính thử là CODEXDEMO806, tám người thử mới riêng theo bài/chế độ. Cổng API demo chuyển tiếp nguyên request tới handler K67 và kiểm chủ token; không ghi IC2200 hoặc reset dữ liệu demo cũ. Mã tạm dùng DESIGNC (CBT) và DESIGNP (phiếu) để tránh trộn hai chế độ. Bài Writing thử dùng chính luồng hàng chấm hiện hành khi nộp, cần API K67 được phát hành trước. Demo không gửi điểm CODEXDEMO806 vào Portal theo chính sách gốc.
+
+## Bảng màu và quay lui
+
+`/term-tests/design-lab/` giữ nguyên host/adapter/bảng màu/preset/cuộn tới vùng chỉnh của bản trước. Các asset `real-host.js`, `real-runtime.js`, `real-loader.js`, `clean-audio.js` còn lại phục vụ lab hoặc tham chiếu cũ; không phải engine của các entry sạch mới. Bản lịch sử chỉ đọc dùng adapter giới hạn riêng ở `design-full/saved-runtime.js`.
+
+Quay lui giao diện bằng revert gói entry/lớp trình bày; không xóa bài/lượt thử. Backend có bản quay lui riêng, giữ env/volumes/secret/audio/hàng chấm hiện tại. Không thay các trang thi chính, công thức điểm, prompt hay workflow AI.
