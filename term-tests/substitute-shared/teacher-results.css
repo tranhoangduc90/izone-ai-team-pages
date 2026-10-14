@@ -10,5 +10,11 @@
 .criterion-card{border:1px solid var(--line);border-radius:8px;padding:16px}.criterion-card summary{font-weight:700;cursor:pointer}
 .feedback-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}.feedback-frame{display:block;width:100%;min-height:440px;border:1px solid var(--line);margin-block:12px}
 .student-heading{scroll-margin-top:12px}button:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #2156a0;outline-offset:3px}
+.student-source{margin:24px 0;padding-block:20px;border-block:1px solid var(--line)}
+.student-source-section{margin:16px 0}.student-source-section>summary{font-weight:700;cursor:pointer;padding:12px 0}
+.student-source-writing{margin-top:20px}.student-essay{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;max-width:80ch;font-size:16px}
+.student-source .results-table{min-width:560px}.student-source td{white-space:normal;overflow-wrap:anywhere}.source-unavailable{color:var(--muted)}
+.writing-review-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:28px;margin:20px 0 36px;align-items:start}.writing-review-grid>section{min-width:0}.writing-review-grid .student-source-writing{margin-top:0;padding:20px;background:#f6f7fb;border:1px solid var(--line);border-radius:12px}.writing-review-grid h4{margin:0 0 16px}.writing-review-feedback>.criterion-grid{margin-top:0}
+@media(max-width:900px){.writing-review-grid{grid-template-columns:minmax(0,1fr);gap:20px}}
 .portal-projection .results-table{min-width:0;table-layout:fixed}.portal-projection .results-table th,.portal-projection .results-table td{padding:12px 8px;font-size:15px;overflow-wrap:anywhere}.portal-projection .results-table td{text-align:center}
 @media(max-width:700px){.filter-bar,.criterion-grid{grid-template-columns:1fr}.auth-actions{width:100%}.results-header{padding:24px 16px}.results-shell{width:calc(100% - 24px)}#attempt-content{padding:16px}.filter-bar .button{width:100%}}

@@ -22,9 +22,12 @@
   }
   function bind(value){
     if(!meta||blocked)throw new Error('Phiên làm bài không còn hợp lệ.');
+    const previous=binding;
     binding={testSlug:meta.testSlug,historyEpoch:meta.historyEpoch,classCode:String(value.classCode||'').toUpperCase(),
       studentRef:String(value.studentRef||''),clientRunId:String(value.clientRunId||''),attemptToken:String(value.attemptToken||''),
       ...(value.examVersion?{examVersion:value.examVersion}:{})};
+    if(value.examSessionId)binding.examSessionId=value.examSessionId;
+    else if(previous?.examSessionId&&['classCode','studentRef','clientRunId'].every(key=>previous[key]===binding[key]))binding.examSessionId=previous.examSessionId;
     if(meta.testSlug==='substitute-test-2-k67'&&value.writingSessionId)binding.writingSessionId=value.writingSessionId;
     if(binding.examVersion&&(binding.testSlug!=='substitute-test-2-k67'||binding.examVersion!=='substitute-k67-test2-two-task-20261007-v1'))throw new Error('Phiên bản Writing không hợp lệ.');
     if(!uuid.test(binding.clientRunId)||!binding.studentRef)throw new Error('Thiếu định danh lượt làm bài.');
@@ -81,7 +84,7 @@
     }
     history.replaceState(null,'',location.href);
   }
-  function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch,...(binding?.examVersion?{examVersion:binding.examVersion}:{}),...(binding?.writingSessionId?{writingSessionId:binding.writingSessionId}:{})};}
+  function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch,...(binding?{classCode:binding.classCode,studentRef:binding.studentRef,clientRunId:binding.clientRunId}:{}),...(binding?.examSessionId?{examSessionId:binding.examSessionId}:{}),...(binding?.examVersion?{examVersion:binding.examVersion}:{}),...(binding?.writingSessionId?{writingSessionId:binding.writingSessionId}:{})};}
   function track(controller){if(blocked)controller.abort();else controllers.add(controller);return ()=>controllers.delete(controller);}
   window.addEventListener('storage',event=>{if(meta&&canReset(meta.testSlug)&&event.key==='izone-demo-reset:'+meta.testSlug+':DEMO:server-grade'&&event.newValue)stop();});
   window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,key,accept,stamp,canReset,clear,payload,track,stop,get blocked(){return blocked;},get meta(){return meta;}});

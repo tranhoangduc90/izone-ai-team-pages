@@ -31,7 +31,7 @@ function fixture(module) {
     window:{SUBSTITUTE_STATE:{blocked:false},addEventListener(){},clearTimeout(){},setTimeout:()=>{context.timers++;return 1;}},
     timers:0,writingGradingPollTimer:0,writingGradingPollStartedAt:Date.now()-46*60*1000,writingGradingPollCount:100,writingGradingPollInFlight:false,
     refreshWritingGrading:()=>{},Date});
-  for(const name of ['renderWritingSubmission','addSummaryCard','renderDetailBlock','renderResult','scheduleWritingGradingRefresh'])vm.runInContext(sourceFunction(source,name),context);
+  for(const name of ['renderWritingSubmission','addSummaryCard','renderDetailBlock','renderScoreSummary','renderResult','scheduleWritingGradingRefresh'])vm.runInContext(sourceFunction(source,name),context);
   return context;
 }
 const payload=ready=>({studentName:'Học viên giả',className:'DEMO',result:{listening:{details:[{number:1,studentAnswer:'x',correctAnswer:'x',result:'correct'}]},reading:{details:[{number:1,studentAnswer:'',correctAnswer:'y',result:'blank'}]}},writing:{grading:ready?{ready:true,writingScore:7,tasks:[]}:{ready:false,status:'processing'}}});
