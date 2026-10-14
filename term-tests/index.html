@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Answer sheet Listening và Reading cho các bài kiểm tra IZONE">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://ducizone.ddns.net:18869 https://accounts.google.com; frame-src https://accounts.google.com; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; script-src 'self' https://accounts.google.com; base-uri 'none'; form-action 'self'">
-    <title>IZONE Tests</title>
+    <title>Bài test Khóa 67 · IZONE</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="shared/styles.css?rev=20261003-writing-save-cas-v1">
+    <link rel="stylesheet" href="k67-landing.css?rev=20261014-order-v1">
   </head>
-  <body>
+  <body class="k67-landing">
     <main class="landing-shell">
       <section class="panel landing-card">
         <p class="eyebrow">IZONE · IELTS 6–7</p>
-        <h1>IELTS Tests</h1>
+        <h1>Danh sách bài test · Khóa 67</h1>
         <p>Nhập mã lớp để mở đúng danh sách học viên, sau đó chọn bài test.</p>
         <section class="landing-auth" aria-label="Đăng nhập giảng viên">
           <div>
@@ -30,21 +31,38 @@
           <select id="classSelect" aria-labelledby="classCodeLabel" hidden></select>
           <p class="landing-class-help" id="classHelp">Bạn vẫn có thể nhập mã lớp khi chưa đăng nhập.</p>
         </div>
-        <div class="landing-actions">
-          <button class="button button-primary" data-test="term-test-1-computer-based">Term Test 1 · Computer-based</button>
-          <button class="button button-secondary" data-test="term-test-1">Term Test 1 · Answer sheet</button>
-          <a class="button button-audio" href="term-test-1-audio.html">Term Test 1 · Listening audio</a>
-          <button class="button button-secondary" data-test="term-test-2-computer-based">Term Test 2 · Computer-based</button>
-          <button class="button button-secondary" data-test="term-test-2">Term Test 2 · Answer sheet</button>
-          <a class="button button-audio" href="term-test-2-audio.html">Term Test 2 · Listening audio</a>
-          <button class="button button-secondary" data-test="mini-test-lesson-5-computer-based">Mini Test Buổi 5 · Computer-based</button>
-          <button class="button button-secondary" data-test="mini-test-lesson-5">Mini Test Buổi 5 · Answer sheet</button>
-          <a class="button button-audio" href="mini-test-listening-audio.html">Mini Test Buổi 5 · Listening audio</a>
-          <button class="button button-secondary" id="teacherDashboard" type="button">Giảng viên xem kết quả</button>
-        </div>
+        <fieldset class="landing-order">
+          <legend>Thứ tự làm bài</legend>
+          <div class="landing-actions">
+            <button class="button button-secondary order-choice" type="button" data-exam-mode="lis_first" aria-pressed="true">Listening trước</button>
+            <button class="button button-secondary order-choice" type="button" data-exam-mode="read_first" aria-pressed="false">Reading trước</button>
+          </div>
+        </fieldset>
+        <section class="landing-link-group"><h2>Bài thi trên máy</h2>
+          <div class="landing-actions landing-actions-three">
+            <button class="button button-primary" data-test="term-test-1-computer-based">Term Test 1</button>
+            <button class="button button-primary" data-test="term-test-2-computer-based">Term Test 2</button>
+            <button class="button button-primary" data-test="mini-test-lesson-5-computer-based">Mini Test Buổi 5</button>
+          </div>
+        </section>
+        <section class="landing-link-group"><h2>Audio Backup</h2>
+          <div class="landing-actions landing-actions-three">
+            <a class="button button-secondary" href="term-test-1-audio.html">Term Test 1 · Audio</a>
+            <a class="button button-secondary" href="term-test-2-audio.html">Term Test 2 · Audio</a>
+            <a class="button button-secondary" href="mini-test-listening-audio.html">Mini Test Buổi 5 · Audio</a>
+          </div>
+        </section>
+        <section class="landing-link-group"><h2>Answer Sheet dự phòng</h2>
+          <div class="landing-actions landing-actions-three">
+            <button class="button button-secondary" data-test="term-test-1">Term Test 1</button>
+            <button class="button button-secondary" data-test="term-test-2">Term Test 2</button>
+            <button class="button button-secondary" data-test="mini-test-lesson-5">Mini Test Buổi 5</button>
+          </div>
+        </section>
+        <div class="landing-result-action"><button class="button button-secondary" id="teacherDashboard" type="button">Giảng viên xem kết quả</button></div>
       </section>
     </main>
     <script src="k67-shared/config.js?rev=20261006-k67-backend"></script>
-    <script type="module" src="shared/landing.js?rev=20260920-server-session-v1"></script>
+    <script type="module" src="shared/landing.js?rev=20261014-order-v1"></script>
   </body>
 </html>

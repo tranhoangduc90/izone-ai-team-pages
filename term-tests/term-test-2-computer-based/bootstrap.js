@@ -446,6 +446,7 @@
   }
 
   async function apiRequest(path, options = {}, timeoutMs = 30_000) {
+    options = window.K67_EXAM_ORDER?.request(options) || options;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -597,7 +598,10 @@
         listeningStartedAt: prepared.listeningStartedAt,
         listeningDeadlineAt: prepared.listeningDeadlineAt,
         attemptToken: prepared.attemptToken || state.attemptToken || '',
-        listeningSubmitted: Boolean(prepared.listeningSubmitted || prepared.attemptToken),
+        examMode: prepared.examMode || 'lis_first',
+        readingSubmitted: Boolean(prepared.readingSubmitted),
+        nextSection: prepared.nextSection,
+        listeningSubmitted: prepared.examMode ? Boolean(prepared.listeningSubmitted) : Boolean(prepared.listeningSubmitted || prepared.attemptToken),
         drafts: {
           ...(state.drafts || {}),
           listening: { ...(prepared.listeningDraft || state.drafts?.listening || {}) },
@@ -614,6 +618,7 @@
           reading: Number(prepared.readingDraftRevision) || Number(state.draftAckRevisions?.reading) || 0
         }
       });
+      window.K67_EXAM_ORDER?.apply(state, prepared);
       if (state.attemptToken || prepared.listeningSubmitted) {
         await resumeAfterListening();
         return;
@@ -622,6 +627,8 @@
     } catch (error) {
       elements.bootstrapStudent.disabled = false;
       showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, true);
+      elements.bootstrapRetry.textContent = 'Thử chuẩn bị lại';
+      elements.bootstrapRetry.hidden = false;
     } finally {
       preparing = false;
       elements.bootstrapStudent.disabled = Boolean(state.listeningStartedAt);
@@ -668,14 +675,14 @@
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: Boolean(state.attemptToken || started.listeningSubmitted)
+      skipListeningAudio: started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted)
     });
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1');
-    await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1'));
+    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1');
+    await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1-20261014-order-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
 
@@ -689,6 +696,7 @@
         attemptToken: state.attemptToken
       })
     });
+    const orderDrafts=started.examMode==='read_first'?window.K67_EXAM_ORDER.restoreDrafts(state,started):null;
     saveState({
       examSessionToken: started.examSessionToken || state.examSessionToken || '',
       listeningStartedAt: started.listeningStartedAt || state.listeningStartedAt || '',
@@ -699,7 +707,11 @@
       writingDeadlineAt: started.writingDeadlineAt || state.writingDeadlineAt || '',
       serverTimeOffsetMs: Date.parse(started.serverNow) - Date.now(),
       attemptToken: started.attemptToken || state.attemptToken || '',
-      listeningSubmitted: true,
+      examMode: started.examMode || 'lis_first',
+      nextSection: started.nextSection,
+      readingSubmitted: Boolean(started.readingSubmitted),
+      completed: Boolean(started.completed || started.completedAt),
+      listeningSubmitted: started.examMode ? Boolean(started.listeningSubmitted) : true,
       drafts: {
         ...(state.drafts || {}),
         reading: { ...(started.readingDraft || state.drafts?.reading || {}) }
@@ -713,6 +725,12 @@
         reading: Number(started.readingDraftRevision) || Number(state.draftAckRevisions?.reading) || 0
       }
     });
+    window.K67_EXAM_ORDER?.apply(state, started);
+    if(orderDrafts)saveState(orderDrafts);
+    if (started.examMode === 'read_first' && started.nextSection === 'listening') {
+      await downloadForSession({...started, encryptedAudioUrl:`/api/term-tests/${testConfig.slug}/session/${state.examSessionToken}/audio`,previewAudioUrl:`/api/term-tests/${testConfig.slug}/session/${state.examSessionToken}/preview`});
+      return;
+    }
     await enterExam(started);
   }
 
@@ -789,6 +807,7 @@
         serverTimeOffsetMs: Date.parse(started.serverNow) - Date.now(),
         audioVolume: officialAudio.volume
       });
+      if(started.examMode==='read_first')saveState(window.K67_EXAM_ORDER.restoreDrafts(state,started));
       legacyListeningResume = false;
       await enterExam(started, officialAudio);
     } catch (error) {

@@ -20,13 +20,13 @@ const { chromium } = require('playwright');
 test('các bài test có đủ computer-based, answer sheet và Listening audio', async () => {
   const html = await readFile(join(repoRoot, 'term-tests/index.html'), 'utf8');
   const styles = await readFile(join(repoRoot, 'term-tests/shared/styles.css'), 'utf8');
-  const computer = 'data-test="term-test-2-computer-based">Term Test 2 · Computer-based';
-  const answer = 'data-test="term-test-2">Term Test 2 · Answer sheet';
+  const computer = 'data-test="term-test-2-computer-based">Term Test 2';
+  const answer = 'data-test="term-test-2">Term Test 2';
   assert.ok(html.indexOf(computer) >= 0 && html.indexOf(computer) < html.indexOf(answer));
   for (const [href, label] of [
-    ['term-test-1-audio.html', 'Term Test 1 · Listening audio'],
-    ['term-test-2-audio.html', 'Term Test 2 · Listening audio'],
-    ['mini-test-listening-audio.html', 'Mini Test Buổi 5 · Listening audio']
+    ['term-test-1-audio.html', 'Term Test 1 · Audio'],
+    ['term-test-2-audio.html', 'Term Test 2 · Audio'],
+    ['mini-test-listening-audio.html', 'Mini Test Buổi 5 · Audio']
   ]) {
     assert.match(html, new RegExp(`href="${href}">${label}`));
   }
@@ -157,8 +157,10 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     await page.locator('#classSelect').waitFor({ state: 'visible' });
     assert.deepEqual(await page.locator('#classSelect option').allTextContents(), ['IC2172', 'IC3000', 'IC9999']);
     assert.match(receivedCookie, /fixture_teacher_session=active/u);
-    const heights = await page.locator('.landing-actions .button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().height));
-    assert.equal(new Set(heights.map(Math.round)).size, 1);
+    for(const group of await page.locator('.landing-actions').all()) {
+      const heights = await group.locator('.button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().height));
+      assert.equal(new Set(heights.map(Math.round)).size, 1, 'Nút trong cùng nhóm phải cao bằng nhau');
+    }
     await page.getByRole('button', { name: 'Đăng xuất' }).click();
     await page.locator('#loginStatus').filter({ hasText: 'Đã đăng xuất' }).waitFor();
     assert.equal(await page.locator('#classCode').isVisible(), true);
