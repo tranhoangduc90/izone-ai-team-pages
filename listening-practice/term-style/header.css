@@ -1,0 +1,15 @@
+/* Bản thử riêng: nền hướng dẫn trung tính ấm, nhãn navy giữ cỡ 20 px. */
+.design67 .design-question-group{border-color:#d7d8d5;border-top-color:#8c9caf}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro){background:#f1f0ec;border-bottom-color:#dadbd6}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro)>:is(h3,h4){background:#152b4e;color:#fff}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro)>p{color:#354760}
+.design67 .design-question-group>.cbt-section-intro>.cbt-kicker{color:#53647b}
+.design67 .design-question-group>:is(.cbt-subsection-heading,.cbt-section-intro) strong{color:#152b4e;font-weight:800}
+.design67 .writing-pane-header,.design67 .writing-criterion-card>header,.design67:not(.cbt-mode) .section-heading{background:#f1f0ec;border-bottom-color:#dadbd6}
+.design67 .writing-criterion-card{border-color:#d7d8d5;border-top-color:#8c9caf}
+.design67:not(.cbt-mode) .section-heading{border-top-color:#8c9caf}
+.design-demo-index .sample-group{border-color:#d7d8d5;border-top-color:#8c9caf}
+.design-demo-index .sample-heading{background:#f1f0ec;border-bottom-color:#dadbd6}
+.design-demo-index .sample-heading h3{background:#152b4e;color:#fff}
+.design-demo-index .sample-heading p{color:#354760}
+.design-demo-index .sample-heading strong{color:#152b4e}
