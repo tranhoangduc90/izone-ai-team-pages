@@ -111,7 +111,7 @@ const state = { authenticated: false, api: null, timer: null, searchTimer: null,
   pairs: [], nextCursor: null, nextOffset: null,
   loadingMore: false,
   searchQuery: '', rangeIsDefault: true, searchUsesAllDates: false,
-  periodMetrics: null, overviewReviews: [], sourcePairCache: new Map(), intakeRows: null, intakeVisible: 50,
+  periodMetrics: null, overviewReviews: [], journeyIssues: [], sourcePairCache: new Map(), intakeRows: null, intakeVisible: 50,
   counts: null, summary: [], coverage: [], reviews: [], issues: [], failures: [], events: [], legacy: [],
   activeClasses: [], completedClasses: [], daily: [], filtersLoaded: false,
   visibleColumns: readColumns(), columnWidths: { ...readColumnWidths(window.localStorage), stage: 170 },
@@ -224,12 +224,25 @@ function setViewVisibility() {
     : view === 'intake' ? 'Nguồn đã giao đúng bài được loại khỏi danh sách này sau khi đối chiếu trạng thái và link kết quả.' : '';
   renderHeading();
 }
+function stageCounts(stage) {
+  const rows = (state.counts?.stages || []).filter(row => row.stage_key === stage && !row.skipped);
+  // Lỗi nguồn chưa tạo được cặp đề–bài cũng đang dừng ở bước tiếp nhận.
+  // Giữ đầy đủ khóa nguồn/Docs/link/ô để không gộp nhầm hoặc đếm cảnh báo lặp.
+  const sourceCount = stage === 'intake'
+    ? new Set((state.journeyIssues || []).map(issue => JSON.stringify(
+      ['source_app_id','source_table_id','source_record_id','homework_file_id','source_link_index','essay_slot']
+        .map(key => String(issue[key] ?? ''))))).size : 0;
+  return {
+    total: rows.reduce((sum, row) => sum + Number(row.pair_count || 0), 0) + sourceCount,
+    review: rows.filter(row => row.stage_status === 'needs_review')
+      .reduce((sum, row) => sum + Number(row.pair_count || 0), 0) + sourceCount,
+  };
+}
 function renderStageQuick() {
   const root = $('flow-stage-quick'); root.replaceChildren();
   const stage = activeStage(); root.hidden = !stage;
   if (!stage) return;
-  const review = (state.counts?.stages || []).filter(row => row.stage_key === stage && row.stage_status === 'needs_review' && !row.skipped)
-    .reduce((sum, row) => sum + Number(row.pair_count || 0), 0);
+  const { review } = stageCounts(stage);
   root.append(makeText('strong', `${review} bài cần kiểm tra ở bước này`));
   const needsReview = actionButton('Chỉ xem bài cần kiểm tra', () => { $('flow-stage-status').value = 'needs_review'; void refreshData(); });
   const all = actionButton('Xem tất cả', () => { $('flow-stage-status').value = ''; void refreshData(); });
@@ -701,13 +714,11 @@ function renderDaily() {
 function renderJourney() {
   const root = $('flow-journey'); root.replaceChildren();
   const head = document.createElement('div'); head.className = 'flow-journey-head';
-  head.append(makeText('h2', 'Bài đang ở bước nào?'), makeText('p', 'Số bài hiện tại, không giới hạn ngày. Bấm từng bước để xem bài theo bộ lọc đã chọn.', 'flow-meta'));
+  head.append(makeText('h2', 'Bài đang ở bước nào?'), makeText('p', 'Số bài hiện tại, không giới hạn ngày. Tiếp nhận gồm cả tài liệu lỗi nguồn; bấm từng bước để xem theo bộ lọc.', 'flow-meta'));
   root.append(head);
   const list = document.createElement('ol'); list.className = 'flow-journey-grid';
   for (const [index, stage] of stages.entries()) {
-    const rows = (state.counts?.stages || []).filter(row => row.stage_key === stage && !row.skipped);
-    const total = rows.reduce((sum, row) => sum + Number(row.pair_count || 0), 0);
-    const review = rows.filter(row => row.stage_status === 'needs_review').reduce((sum, row) => sum + Number(row.pair_count || 0), 0);
+    const { total, review } = stageCounts(stage);
     const item = document.createElement('li');
     const button = actionButton('', () => selectView(isTestView() ? `test_${stage}` : stage), 'flow-journey-card');
     button.replaceChildren(makeText('small', `Bước ${index + 1}`), makeText('strong', (isTestView() ? testStageNames : stageNames)[stage]), makeText('span', `${total} bài ở bước`), makeText('em', review ? `${review} cần kiểm tra` : 'Chưa có bài cần kiểm tra'));
@@ -755,13 +766,15 @@ async function loadSourceIssues(reset = true) {
   state.nextOffset = rows.length > 50 ? offset + 50 : null;
 }
 async function loadCommon() { const generation = state.refreshGeneration; const [counts, activeClasses, completedClasses] = await Promise.all([state.api.writingCounts($('flow-class').value, $('flow-teacher').value, activeSourceKind()), state.api.writingClasses('active'), state.api.writingClasses('completed')]); if (generation !== state.refreshGeneration) return; state.counts = counts.data.counts || null; state.activeClasses = activeClasses.data.classes || []; state.completedClasses = completedClasses.data.classes || []; if (!state.filtersLoaded) { const response = await state.api.writingFilterOptions(); if (generation !== state.refreshGeneration) return; populateFilters(response.data.filters || {}); state.filtersLoaded = true; } }
-async function visibleSourceIssues(filters) {
-  if (filters.sourceKind === 'test') return [];
+async function visibleSourceIssues(filters, grouped = false) {
+  const generation = state.refreshGeneration;
   const issues = [];
   for (let page = 0; page < 100; page += 1) {
     const response = await state.api.writingSourceIssues({ ...filters, status: 'open', offset: page * 100, limit: 100 });
     const rows = response.data.issues || [];
-    issues.push(...rows.filter(issue => withinWritingRange(issue.first_seen_at, filters.dateFrom, filters.dateTo)));
+    issues.push(...rows.filter(issue => (filters.sourceKind === 'test'
+      ? issue.source_type === 'term_test' : issue.source_type !== 'term_test')
+      && withinWritingRange(issue.first_seen_at, filters.dateFrom, filters.dateTo)));
     if (rows.length < 100) break;
     if (page === 99) throw new Error('Danh sách nguồn quá lớn. Hãy chọn lớp để thu hẹp.');
   }
@@ -772,27 +785,33 @@ async function visibleSourceIssues(filters) {
       const key = filters.sourceKind + ':' + docId;
       const cached = state.sourcePairCache.get(key);
       let pairs;
-      if (cached && Date.now() - cached.at < 60_000) pairs = cached.rows;
+      if (cached?.generation === generation) pairs = cached.rows;
       else {
         pairs = await collectWritingPairs(params => state.api.writingPairsPage(params), {
           search: docId, searchScope: 'docs', sourceKind: filters.sourceKind, includeCompleted: true });
-        state.sourcePairCache.set(key, { at: Date.now(), rows: pairs });
+        if (generation === state.refreshGeneration) state.sourcePairCache.set(key, { generation, rows: pairs });
       }
       pairsByDoc.set(docId, pairs);
     }));
   }
-  return issues.filter(issue => !sourceIssueAlreadyDelivered(issue, pairsByDoc.get(issue.homework_file_id) || []));
+  const visible = issues.filter(issue => !sourceIssueAlreadyDelivered(issue, pairsByDoc.get(issue.homework_file_id) || []));
+  // Cặp đã có bản ghi được đếm ở bước hiện tại của nó; chỉ thêm nguồn chưa có cặp.
+  const unpaired = visible.filter(issue => !(pairsByDoc.get(issue.homework_file_id) || [])
+    .some(pair => sourceIssueMatchesPair(issue, pair)));
+  return grouped ? { visible, unpaired } : visible;
 }
 async function loadView() {
   const generation = state.refreshGeneration;
   const filters = currentFilters(); const view = baseView(); state.intakeRows = null;
   if (view === 'overview') {
-    const [daily, reviews, issues] = await Promise.all([
+    const [daily, reviews, sourceGroups] = await Promise.all([
       state.api.writingDailyStats(filters),
       collectWritingPairs(params => state.api.writingPairsPage(params), { ...filters, view: 'review' }),
-      visibleSourceIssues(filters),
+      visibleSourceIssues({ ...filters, dateFrom: null, dateTo: null }, true),
     ]);
     if (generation !== state.refreshGeneration) return;
+    const issues = sourceGroups.visible.filter(issue => withinWritingRange(issue.first_seen_at, filters.dateFrom, filters.dateTo));
+    state.journeyIssues = sourceGroups.unpaired;
     state.daily = daily.data.days || []; state.overviewReviews = reviews; state.issues = issues;
     state.periodMetrics = writingPeriodMetrics(state.daily, reviews, issues); return;
   }
@@ -802,12 +821,15 @@ async function loadView() {
     else { state.pairs = []; state.daily = []; state.nextCursor = null; state.nextOffset = null; } return;
   }
   if (view === 'intake' || view === 'processing' && $('flow-list-status').value === 'needs_review') {
-    const [pairs, issues] = await Promise.all([
+    const [pairs, sourceGroups] = await Promise.all([
       collectWritingPairs(params => state.api.writingPairsPage(params), { ...filters, ...pairViewFilters() }),
-      visibleSourceIssues(filters),
+      visibleSourceIssues({ ...filters, dateFrom: null, dateTo: null }, true),
     ]);
     if (generation !== state.refreshGeneration) return;
-    state.issues = issues;
+    const sourceStatus = activeStage() ? $('flow-stage-status').value : '';
+    const issues = sourceGroups.visible.filter(issue => (!sourceStatus || sourceStatus === 'needs_review')
+      && withinWritingRange(issue.first_seen_at, filters.dateFrom, filters.dateTo));
+    state.journeyIssues = sourceGroups.unpaired; state.issues = issues;
     const extras = issues.filter(issue => !pairs.some(pair => sourceIssueMatchesPair(issue, pair))).map(sourceIssueRow);
     state.intakeRows = [...pairs, ...extras]; state.intakeVisible = 50;
     state.pairs = state.intakeRows.slice(0, state.intakeVisible); state.nextCursor = null;

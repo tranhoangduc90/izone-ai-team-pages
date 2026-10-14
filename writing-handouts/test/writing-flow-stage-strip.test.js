@@ -59,7 +59,8 @@ test('Thanh có bảy nút đúng số bài và mở đúng bước; loại bài
       testStageNames: Object.fromEntries(stages.map(stage => [stage, 'Test ' + stage])),
       isTestView: () => isTest, selectView: view => opened.push(view),
       makeText: (tag, text) => ({ tag, text }), actionButton: (text, click) => ({ ...node(), click }) };
-    vm.runInNewContext(code('function renderJourney()', '\nfunction setupV2Filters('), context);
+    const counts = source.includes('function stageCounts(') ? code('function stageCounts(', '\nfunction renderStageQuick()') : '';
+    vm.runInNewContext(counts + '\n' + code('function renderJourney()', '\nfunction setupV2Filters('), context);
     context.renderJourney();
     const list = root.children.find(item => item.className === 'flow-journey-grid');
     assert.equal(list.children.length, 7);
