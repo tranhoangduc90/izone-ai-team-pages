@@ -1,0 +1,27 @@
+/* Giữ nguyên preset Reading; phần mới chỉ dành cho audio và sơ đồ Listening. */
+.design67 .cbt-semantic-pane{grid-template-rows:auto auto minmax(0,1fr)}
+.listening-audio-bar{padding:12px 18px;border-bottom:1px solid var(--lab-line);background:var(--lab-header);flex:none;color:var(--lab-ink)}
+.audio-heading,.audio-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px}
+.audio-heading strong{color:var(--lab-primary)}
+.audio-heading span{white-space:nowrap;color:var(--lab-hint)}
+.listening-audio-bar progress{display:block;width:100%;height:7px;margin:10px 0;accent-color:var(--lab-edge)}
+.audio-controls{font-size:12px;color:var(--lab-hint)}
+.audio-controls label{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:12px;margin:0}
+.audio-controls input{width:100px;padding:0;min-height:20px;margin:0;accent-color:var(--lab-primary)}
+.design67 .cbt-question-nav{grid-template-columns:repeat(10,minmax(28px,1fr))}
+.design67 .cbt-reading-passage .design-question-group{margin:0}
+.design67 .listening-bank{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:22px}
+.design67 .listening-bank h4{grid-column:1/-1}
+.design67 .listening-flow{display:flex;flex-direction:column;gap:0}
+.design67 .flow-step{border:1px solid var(--lab-line);border-radius:8px;padding:16px;background:var(--lab-surface);line-height:1.8}
+.design67 .flow-step p{margin:0;font-size:inherit;line-height:1.9}
+.design67 .flow-step .cbt-select-answer{display:inline-flex;vertical-align:middle;gap:6px;max-width:100%;margin:5px 0}
+.design67 .flow-step .cbt-select-answer [data-answer-slot]{width:132px}
+.design67 .flow-arrow{text-align:center;color:var(--lab-primary);font-size:25px;line-height:1.6}
+.design67 .flow-step.is-active{border-color:var(--lab-primary)}
+.design67 .flow-step.is-answered{background:var(--lab-selected)}
+.design67 .cbt-reading-passage .cbt-choice-list{margin-left:0}
+.design67 .cbt-reading-passage .cbt-question-card{margin:0 0 22px}
+.design67 .type-scores{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:980px){.audio-controls{flex-wrap:wrap}.audio-heading strong{font-size:12px}.listening-audio-bar{padding:10px 12px}.audio-controls label{margin-left:auto}}
+@media(max-width:420px){.audio-heading{align-items:flex-start}.audio-heading strong{max-width:190px}.audio-controls input{width:80px}.design67 .flow-step{padding:12px}.design67 .listening-bank{grid-template-columns:repeat(2,minmax(0,1fr))}}
