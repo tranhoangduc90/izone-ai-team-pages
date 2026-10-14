@@ -27,6 +27,7 @@
     : '';
 
   if (!testConfig || !appConfig || !root) return;
+  let allowExamNavigation=false;
 
   const storageScope = listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '';
   let storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
@@ -2940,6 +2941,7 @@
         })
       });
       clearAllLocalAttemptData();
+      allowExamNavigation=true;
       window.location.reload();
     } catch (error) {
       showNotice(`Không thể reset dữ liệu: ${error.message}`, 'error');
@@ -3136,7 +3138,7 @@
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
       if (response.examMode === 'read_first' && !response.completed) {
         showNotice('Reading đã được lưu. Tiếp tục Listening khi bạn sẵn sàng.', 'success');
-        if (document.body.classList.contains('cbt-mode')) { window.location.reload(); return; }
+        if (document.body.classList.contains('cbt-mode')) { allowExamNavigation=true;window.location.reload();return; }
         setStage('listening');
       } else if (writingConfig) {
         setStage('writing-prep');
@@ -3632,6 +3634,17 @@
     }
   }
 
+  // Cảnh báo do trình duyệt hiển thị khi rời/tải lại bài đang làm; chọn ở lại không đổi trạng thái.
+  // Chuyển kỹ năng tự động sau nộp thành công được miễn để không cản hành trình thi.
+  window.addEventListener('beforeunload',event=>{
+    if(allowExamNavigation||demoMode)return;
+    const listeningActive=Boolean(state.examSessionToken&&state.listeningDeadlineAt&&!state.listeningSubmitted);
+    const readingActive=Boolean(state.attemptToken&&state.readingDeadlineAt&&!state.readingSubmitted&&!state.completed);
+    const writingActive=Boolean(state.writingStarted&&!state.writingSubmitted);
+    const answerSheetActive=Boolean(!window.TERM_TEST_CONTENT&&state.studentRef&&!state.completed&&['listening','reading'].includes(state.stage));
+    if(!(listeningActive||readingActive||writingActive||answerSheetActive))return;
+    event.preventDefault();event.returnValue=true;
+  });
   window.addEventListener('pagehide', flushDraftsOnPageHide);
   initialize();
 })();

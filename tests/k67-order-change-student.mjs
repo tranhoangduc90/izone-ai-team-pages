@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import {writeFile} from 'node:fs/promises';
+import {writeFile,mkdir} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 const require=createRequire('file:///C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json');
-const {chromium}=require('playwright'),base='http://127.0.0.1:8878',out=process.env.K67_ORDER_EVIDENCE_DIR||'E:/Codex-Data/k67-two-orders-official-20261014/browser-evidence';
+const {chromium}=require('playwright'),base=process.env.K67_PREVIEW_URL||'http://127.0.0.1:8878',out=process.env.K67_ORDER_EVIDENCE_DIR||'E:/Codex-Data/k67-two-orders-official-20261014/browser-evidence';
+assert.equal(new URL(base).hostname,'127.0.0.1');assert.equal(new URL(base).protocol,'http:');
+await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'}),ctx=await browser.newContext();
 await ctx.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
 const page=await ctx.newPage();page.on('dialog',d=>d.accept());const errors=[];page.on('pageerror',e=>errors.push(e.message));

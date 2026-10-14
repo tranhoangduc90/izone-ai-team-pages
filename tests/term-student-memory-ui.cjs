@@ -45,6 +45,8 @@ async function openTestPage(context, { remembered = uuidA, classCode = 'CS.07062
     return route.abort();
   });
   const page = await context.newPage();
+  // Ca kiểm bộ nhớ chủ động điều hướng; đồng ý hộp cảnh báo native như người dùng chọn rời trang.
+  page.on('dialog',dialog=>dialog.accept());
   page.setDefaultTimeout(8_000);
   const requests = { active: 0, listening: 0 };
   const observed = [];
@@ -66,6 +68,9 @@ async function openTestPage(context, { remembered = uuidA, classCode = 'CS.07062
   }));
   await page.route('https://ducizone.ddns.net/mapping-api/api/term-tests/*/client-event', route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  // Handshake thứ tự thi hiện hành: ca này giữ LF để kiểm riêng danh tính và bộ nhớ.
+  await page.route('https://ducizone.ddns.net/mapping-api/api/term-tests/*/order/open',route=>
+    route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,examMode:'lis_first'})}));
   await page.route('**/answer-sheet/classes',route=>route.fulfill({status:200,contentType:'application/json',
     body:JSON.stringify({ok:true,classes:[{name:classCode}]})}));
   await page.route('https://ducizone.ddns.net/mapping-api/api/term-tests/roster*', route => route.fulfill({
