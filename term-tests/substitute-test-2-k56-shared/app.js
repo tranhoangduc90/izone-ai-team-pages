@@ -1856,6 +1856,8 @@
     block.dataset.resultSkill = skill;
     block.open = state.resultDetailsOpen?.[skill] === true;
     block.addEventListener('toggle', () => {
+      // Bỏ event trễ của bảng đã bị thay thế hoặc thuộc lượt trước.
+      if (!Array.from(elements.questionDetails.children).includes(block)) return;
       state.resultDetailsOpen = { ...state.resultDetailsOpen, [skill]: block.open };
       saveSession();
     });
@@ -1933,12 +1935,34 @@
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
     elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
     renderWritingSubmission();
-    // Polling Writing không dựng lại các khối đang đọc, giữ focus/scroll và lựa chọn mở.
-    const detailSignature = JSON.stringify([storageKey, state.studentRef, state.attemptToken, result.listening, result.reading]);
-    if (detailSignature !== resultDetailSignature) {
-      const detailBlocks = [renderDetailBlock('Listening', result.listening.details)];
-      if (hasReading) detailBlocks.push(renderDetailBlock('Reading', result.reading.details));
+    // Cùng lượt thi giữ DOM từng bảng khi dữ liệu câu không đổi, như renderer K67.
+    const identity = JSON.stringify([
+      storageKey, testConfig.slug, payload.className || classCode,
+      payload.studentRef || state.studentRef || payload.studentName,
+      payload.attemptToken || state.attemptToken
+    ]);
+    const sameAttempt = state.resultDetailsIdentity === identity;
+    if (state.resultDetailsIdentity && !sameAttempt) state.resultDetailsOpen = {};
+    const previousBlocks = sameAttempt ? Array.from(elements.questionDetails.children) : [];
+    const skills = [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const detailBlocks = skills.map(([title, skill]) => {
+      const fingerprint = JSON.stringify(skill.details || []);
+      const previous = previousBlocks.find(block => block.dataset.skill === title);
+      if (previous?.dataset.details === fingerprint) return previous;
+      const block = renderDetailBlock(title, skill.details);
+      block.dataset.skill = title;
+      block.dataset.details = fingerprint;
+      if (previous) block.open = previous.open;
+      return block;
+    });
+    if (detailBlocks.length !== elements.questionDetails.children.length
+      || detailBlocks.some((block, index) => block !== elements.questionDetails.children[index])) {
       elements.questionDetails.replaceChildren(...detailBlocks);
+    }
+    state.resultDetailsIdentity = identity;
+    // Phần tổng hợp vẫn nhận điểm mới, độc lập với bảng từng câu.
+    const detailSignature = JSON.stringify([identity, result.listening, result.reading]);
+    if (detailSignature !== resultDetailSignature) {
       const performanceSections = [renderSkillPerformance('Listening', result.listening)];
       if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
       elements.skillPerformanceSections.replaceChildren(...performanceSections);

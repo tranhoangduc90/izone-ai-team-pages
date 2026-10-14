@@ -197,12 +197,11 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
   });
   test(title('bootstrap chính/dự phòng và answer sheet đều nạp app cache D08'), () => {
     // Ba client K56 giữ cơ chế D08 nhưng có bản giao diện mới; K67 giữ revision cũ.
-    const cacheRevision = sourcePath==='term-tests/k56-mini-shared/app.js' ? '20261008-mini-draft-recovery-v2'
-      : /^term-tests\/k56-(?:test2-)?shared\/app\.js$/.test(sourcePath)
-        ? '20261009-term-outline-v1' : '20261003-writing-save-cas-v1';
+    const k56 = sourcePath.startsWith('term-tests/k56-');
+    const cacheRevision = k56 ? '20261014-result-details-v1' : '20261003-writing-save-cas-v1';
     const revisionOf = url => { const query = new URL(url, 'https://fixture.invalid').searchParams; return query.get('rev') || query.get('v'); };
     for (const path of cachePaths) {
-      const currentRevision = path.includes('-computer-based/') ? '20261012-audio-v2' : cacheRevision;
+      const currentRevision = k56 ? cacheRevision : path.includes('-computer-based/') ? '20261012-audio-v2' : cacheRevision;
       const text = fs.readFileSync(path, 'utf8');
       const appUrls = [...text.matchAll(/[.\/\w-]*app\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
       const writingApp = sourcePath.slice(sourcePath.indexOf('/') + 1);

@@ -63,6 +63,10 @@ try {
   const temporaryStudentRef = '00000000-0000-4000-8000-000000000021';
   let registrationPayload = null;
   let listeningPayload = null;
+  // Telemetry của Mini hiện hành cũng phải giả lập, không gửi sự kiện ra server thật.
+  await page.route('**/api/term-tests/mini-test-lesson-5/client-event', route => route.fulfill({
+    status: 202, contentType: 'application/json', body: JSON.stringify({ ok: true })
+  }));
   await page.route('**/answer-sheet/classes',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,classes:[{name:'IC2238'}]})}));
   await page.route('**/answer-sheet/open',async route=>{
     const ref=route.request().postDataJSON().studentRef;

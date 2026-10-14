@@ -2041,7 +2041,7 @@
     elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
     renderWritingSubmission();
     // Polling Writing không làm thay DOM/focus của bảng L/R đang được học viên xem.
-    const identity = JSON.stringify([payload.className, payload.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);
+    const identity = JSON.stringify([payload.className, payload.studentRef || state.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);
     const previousBlocks = state.resultDetailsIdentity === identity
       ? Array.from(elements.questionDetails.children) : [];
     const skills = [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];

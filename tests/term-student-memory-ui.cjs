@@ -162,8 +162,9 @@ async function verifyCbtRoute(browser, classCode, slug, screenshot = false) {
   await opened.page.waitForTimeout(50);
   assert.equal(await picker.inputValue(), uuidA, 'Trong dialog, tab khác đổi UUID sắp xác nhận');
   await opened.page.bringToFront();
+  const preparation = opened.page.waitForResponse(response => response.url().endsWith('/session/prepare'));
   await opened.page.locator('.cbt-identity-confirmation-dialog').getByRole('button', { name: 'Xác nhận, tiếp tục' }).click();
-  await opened.page.waitForTimeout(30);
+  await preparation;
   assert.equal(prepared.count, 1, 'Xác nhận CBT không gọi đúng một prepare');
   assert.equal(prepared.payload?.studentRef, uuidA, 'Prepare nhận UUID khác UUID đã xác nhận');
   await otherTab.close();
