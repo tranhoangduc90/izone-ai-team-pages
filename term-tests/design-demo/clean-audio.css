@@ -1,0 +1,29 @@
+/* Chỉ nạp cho demo sạch: audio cùng hàng Listening, không có hàng player riêng. */
+.design67 #listeningView .clean-listening-audio{display:flex;align-items:center;gap:7px;flex:0 0 auto;position:relative;min-height:38px;color:var(--lab-primary,#152b4e)}
+.design67 #listeningView .clean-audio-play{display:grid;place-items:center;flex:0 0 32px;width:32px;min-height:32px;padding:0;border:1px solid var(--lab-line,#dce1e7);border-radius:6px;background:var(--lab-header,#f5f6f8);color:var(--lab-primary,#152b4e);font-size:12px;cursor:pointer}
+.design67 #listeningView .clean-audio-play:focus-visible{outline:2px solid var(--lab-primary,#152b4e);outline-offset:2px}
+.design67 #listeningView .clean-audio-play:disabled{opacity:.5;cursor:wait}
+.design67 #listeningView .clean-audio-clock{font-size:8px;line-height:1;white-space:nowrap;min-width:48px;font-variant-numeric:tabular-nums;color:var(--lab-hint,#586477)}
+.design67 #listeningView .clean-audio-volume{display:flex;align-items:center;gap:4px;margin:0;font-size:12px}
+.design67 #listeningView .clean-audio-volume input{width:68px;min-height:22px;height:22px;padding:0;margin:0;border:0;box-shadow:none;accent-color:var(--lab-primary,#152b4e);cursor:pointer}
+.design67 #listeningView .clean-audio-error{position:absolute;top:100%;left:0;z-index:10;width:250px;padding:8px;border:1px solid var(--lab-line,#dce1e7);border-radius:6px;background:white;color:var(--lab-rose-text,#db0829);font-size:12px;box-shadow:0 3px 10px #152b4e18}
+.design67 #listeningView .clean-listening-audio [hidden]{display:none!important}
+@media(min-width:1201px) and (max-width:1450px){
+ .design67 #listeningView .cbt-test-heading{gap:8px}
+ .design67 #listeningView .cbt-test-heading .autosave-status{display:none}
+ .design67 #listeningView .cbt-part-button{padding:6px;font-size:11px}
+}
+@media(max-width:1200px){
+ .design67 #listeningView .cbt-test-heading{flex-wrap:wrap;gap:8px}
+ .design67 #listeningView .cbt-test-heading>div:first-child{flex:0 0 auto}
+ .design67 #listeningView .clean-listening-audio{margin-left:auto}
+ .design67 #listeningView .cbt-toolbar-controls,.design67 #listeningView .cbt-heading-actions{display:contents}
+ .design67 #listeningView .cbt-part-nav{flex-basis:100%;width:100%}
+ .design67 #listeningView .cbt-heading-submit{margin-left:auto}
+}
+@media(max-width:420px){
+ .design67 #listeningView .cbt-test-heading h2{font-size:16px}
+ .design67 #listeningView .clean-listening-audio{gap:4px}
+ .design67 #listeningView .clean-audio-volume input{width:52px}
+ .design67 #listeningView .cbt-test-heading .autosave-status{display:none}
+}
