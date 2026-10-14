@@ -546,6 +546,7 @@ function criterionTitle(code, taskNumber) {
 
 function safeWritingImageUrl(value) {
   const raw = String(value || '').trim();
+  if (!raw) return '';
   if (/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=\s]+$/i.test(raw)) return raw;
   try {
     const apiOrigin = new URL(appConfig.API_BASE_URL).origin;
