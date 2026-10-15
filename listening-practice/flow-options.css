@@ -1,0 +1,67 @@
+/* Giới hạn thay đổi ở bảng phương án và ô chọn flowchart; CSS Reading gốc giữ nguyên. */
+.design67 #question-scroll .flow-reference-group{overflow:clip}
+.design67 .flow-reference-layout{display:grid;grid-template-columns:minmax(0,1fr) 168px;align-items:start;gap:16px}
+.design67 .flow-reference-layout>.listening-bank{position:sticky;top:14px;grid-template-columns:1fr;gap:7px;margin:0;padding:14px;order:2;border-radius:8px;box-shadow:none}
+.design67 .flow-reference-layout>.listening-bank h4{font-size:16px;margin-bottom:5px}
+.design67 .flow-reference-layout>.listening-bank>div{gap:8px;font-size:15px;align-items:center}
+.design67 .flow-reference-layout .flow-step{padding:14px}
+.design67 .flow-step .cbt-select-answer [data-answer-slot]{position:relative;width:169px}
+.design67 .flow-native-select{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;border:0!important;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+.design67 .flow-answer-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:38px;margin:0;border:1px solid #939eae;border-radius:6px;background:var(--lab-surface,#fff);color:var(--lab-ink,#152b4e);padding:7px 10px;font:600 14px 'Google Sans',Arial,sans-serif;line-height:1.45;text-align:left;cursor:pointer}
+.flow-answer-label{min-width:0;overflow-wrap:anywhere}
+.design67 .flow-answer-trigger:focus-visible,.design67 .flow-answer-trigger[aria-expanded=true]{outline:2px solid var(--lab-primary,#152b4e);outline-offset:2px}
+.flow-picker-chevron{font-size:13px;color:var(--lab-hint,#536780);flex:none}
+.design67 .flow-option-picker{position:fixed;inset:auto;margin:0;z-index:1000;width:290px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);display:none;grid-template-rows:auto auto minmax(0,1fr) auto;border:1px solid #c5cfdd;border-radius:10px;background:#fff;box-shadow:0 12px 36px #152b4e25;padding:8px;color:#152b4e;box-sizing:border-box;font:400 15px 'Google Sans',Arial,sans-serif;overflow:hidden}
+.design67 .flow-option-picker[open]{display:grid}
+.flow-option-picker::backdrop{background:transparent}
+.flow-picker-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 8px 10px;font-size:14px;border-bottom:1px solid #e0e5ee;margin-bottom:4px}
+.design67 .flow-picker-close{border:0;background:none;color:#536780;font-size:23px;line-height:1;min-height:28px;min-width:28px;padding:0 4px;cursor:pointer}
+.flow-picker-context{margin:0 8px 8px;font-size:14px;line-height:1.6;color:#536780;max-height:28dvh;overflow:auto;grid-row:2}
+.flow-picker-list{overflow:auto;overscroll-behavior:contain;min-height:0;grid-row:3}
+.design67 .flow-picker-option{display:flex;align-items:center;gap:12px;width:100%;text-align:left;min-height:38px;padding:5px 10px;margin:0;background:white;border:0;border-radius:5px;color:#152b4e;font:400 15px 'Google Sans',Arial,sans-serif;line-height:1.5;cursor:pointer}
+.flow-picker-option strong{display:inline-grid;place-items:center;flex:none;min-width:27px;height:27px;border:1px solid #cbd6e5;border-radius:6px;font-size:13px;font-weight:500}
+.flow-picker-option>span{min-width:0;overflow-wrap:anywhere}
+.flow-picker-option .flow-picker-check{margin-left:auto;flex:none}
+.design67 .flow-picker-option:hover,.design67 .flow-picker-option:focus-visible{background:#edf1f7;outline:2px solid #152b4e;outline-offset:-2px}
+.design67 .flow-picker-option[aria-selected=true]{background:#edf1f7}
+.design67 .flow-picker-clear{display:block;color:#536780;border:0;border-top:1px solid #e0e5ee;background:white;padding:10px 8px 4px;margin:4px 0 0;width:100%;text-align:left;font:400 13px 'Google Sans',Arial,sans-serif;grid-row:4;cursor:pointer}
+.design67 .flow-bank-toggle{display:none}
+@media(max-width:1200px){
+ .design67 .flow-reference-layout{grid-template-columns:minmax(0,1fr)}
+ .design67 .flow-reference-layout>.listening-bank{display:none}
+ .design67 .flow-bank-toggle{display:block;background:#f5f7fa;color:#152b4e;border:1px solid #d7dfeb;border-radius:6px;padding:10px 12px;margin:0 0 18px;font:500 14px 'Google Sans',Arial,sans-serif;cursor:pointer}
+}
+@media(max-width:600px){
+ .design67 .flow-option-picker{inset:auto 0 0!important;width:100%;max-width:100%;max-height:92dvh;border-radius:16px 16px 0 0;padding:8px 14px max(18px,env(safe-area-inset-bottom));}
+ .flow-option-picker::backdrop{background:#152b4e1c}
+ .flow-picker-heading{font-size:16px;padding-block:9px 13px}
+ .design67 .flow-picker-option{min-height:44px;font-size:16px}
+ .design67 .flow-picker-close{min-width:36px;min-height:36px}
+ .design67 .flow-picker-clear{min-height:44px}
+}
+/* Màn rất thấp: giữ chỗ đọc đề và cho trang cuộn, thay vì ép vùng đề còn vài px. */
+@media(max-height:500px){
+ .design67.reading #app:has(.flow-reference-layout){min-height:720px}
+}
+/* Gộp audio thành một hàng: tên phần → tiến độ → âm lượng → đồng hồ. */
+.design67 #readingView .listening-audio-bar{display:grid;grid-template-columns:auto minmax(30px,1fr) auto auto;align-items:center;gap:8px 16px;padding:8px 18px}
+.design67 #readingView .audio-heading,.design67 #readingView .audio-controls{display:contents}
+.design67 #readingView #audio-phase{grid-column:1;grid-row:1;font-size:13px;white-space:nowrap;max-width:none}
+.design67 #readingView #audio-progress{grid-column:2;grid-row:1;margin:0}
+.design67 #readingView .audio-controls label{grid-column:3;grid-row:1;margin:0;font-size:12px}
+.design67 #readingView #audio-position{grid-column:4;grid-row:1;font-size:12px;white-space:nowrap}
+.design67 #readingView #audio-status{grid-column:1/-1;grid-row:2;font-size:12px;color:var(--lab-hint)}
+.design67 #readingView #audio-status.is-routine-audio-status{display:none}
+.design67 #readingView #audio-play:not([hidden]){grid-column:2;grid-row:1;justify-self:start}
+.design67 #readingView .listening-audio-bar:has(#audio-play:not([hidden])) #audio-progress{visibility:hidden}
+/* Bỏ đúng đệm phía trên vùng phải, giữ khoảng cách ngang và nội dung của hai nhóm. */
+.design67 #readingView #question-scroll{padding-top:0}
+@media(max-width:600px){
+ .design67 #readingView .listening-audio-bar{grid-template-columns:minmax(30px,1fr) auto auto;gap:6px 10px;padding:8px 12px}
+ .design67 #readingView #audio-phase{display:none}
+ .design67 #readingView #audio-progress{grid-column:1}
+ .design67 #readingView .audio-controls label{grid-column:2;font-size:0;gap:0}
+ .design67 #readingView .audio-controls input{width:64px}
+ .design67 #readingView #audio-position{grid-column:3;font-size:11px}
+ .design67 #readingView #audio-play:not([hidden]){grid-column:1}
+}

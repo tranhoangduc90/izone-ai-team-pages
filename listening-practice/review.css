@@ -1,0 +1,20 @@
+/* Chỉ bổ sung nút nghe và trạng thái của bản thử; CSS popup Reading giữ nguyên. */
+.demo-intro { max-width:1000px; margin:32px auto; padding:0 20px; }
+.demo-intro .card { padding:24px; }
+.demo-intro p { line-height:1.65; }
+.demo-note { font-size:13px; color:var(--lab-hint,#586477); }
+.replay-button { display:block; width:100%; margin:12px 0 6px; padding:11px 12px; border:0; border-radius:7px; background:var(--lab-primary,#152b4e); color:white; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; min-height:44px; }
+.replay-button:focus-visible { outline:3px solid #719ed5; outline-offset:3px; }
+.replay-button[aria-pressed="true"] { background:#a92135; }
+.replay-meta, .replay-status { display:block; font-size:12px; line-height:1.6; color:var(--lab-hint,#586477); }
+.replay-status { min-height:20px; margin-top:5px; }
+.replay-status.is-error { color:#a02a37; }
+.replay-evidence + .replay-evidence { margin-top:15px; padding-top:14px; border-top:1px solid var(--lab-line,#dce1e7); }
+.transcript-segment { margin-bottom:20px; scroll-margin-top:18px; }
+.transcript-time { display:block; margin-bottom:3px; font-size:11px; color:var(--lab-hint,#586477); font-variant-numeric:tabular-nums; }
+.transcript-segment p { margin:0; }
+.transcript-segment .is-current-evidence { scroll-margin-top:24px; }
+.transcript-segment mark { color:inherit; }
+.transcript-segment.is-playing { border-left-color:#a92135 !important; }
+#explanation-dialog .replay-evidence p { white-space:normal; }
+@media(max-width:800px) { .demo-intro { margin:20px auto; padding:0 12px; } }
