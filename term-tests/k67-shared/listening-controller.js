@@ -247,6 +247,9 @@
     environment=window.K67_AUDIO_ENVIRONMENT?.({audio,report,isHeld:()=>held||ownerLost||stopped,notify:copy=>{lastMessage=copy;render();}});
     function stop() { stopped = true; pause(); stopSample(); environment?.stop();clearInterval(watchdog); clearInterval(progress); window.removeEventListener('online', online); window.removeEventListener('pagehide', leaving);window.removeEventListener('k67:audio-owner-lost',lost); }
     if (held) pause();
-    return {attach, report, stop, arm: () => {armed = true; lastAdvance = performance.now();}, isHeld: () => held, getSnapshot: () => ({held, ...snapshot})};
+    return {attach, report, stop,
+      // Bắt đầu đã nghe thử ở phòng chờ: xác nhận player tiến trước khi mở thời gian/đáp án.
+      start: async () => {if(snapshot.activeIncident?.startup)await resume(true);},
+      arm: () => {armed = true; lastAdvance = performance.now();}, isHeld: () => held, getSnapshot: () => ({held, ...snapshot})};
   };
 }());

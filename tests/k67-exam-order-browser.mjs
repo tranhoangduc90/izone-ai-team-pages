@@ -25,6 +25,14 @@ async function answer(page,skill){const fields=page.locator(`#${skill}View [data
   if(await first.evaluate(el=>el.tagName)==='SELECT'){const value=await first.locator('option').nth(1).getAttribute('value');await first.selectOption(value);}
   else await first.fill('A');}
 async function listening(page,cbt,file){if(cbt){await page.locator('#bootstrapPreview').click();await page.locator('#bootstrapStart').click();}
+  if(cbt&&process.env.K67_START_RESPONSE_LOSS==='true'){
+    // Start thật đã commit rồi mất response: giữ bài trước retry và đi tiếp đến kết quả cuối.
+    await page.locator('#bootstrapNotice').filter({hasText:'Mất phản hồi start mô phỏng'}).waitFor();
+    const data=await page.evaluate(()=>({examSessionToken:window.K67_AUDIO_OWNER.token,...window.K67_AUDIO_OWNER.fields()}));
+    const response=await page.context().request.post(base+`/api/term-tests/${new URL(page.url()).pathname.split('/').filter(Boolean).at(-1).replace('-computer-based','')}/session/audio-access`,{data});
+    assert.equal(response.status(),200);const held=await response.json();assert.ok(held.listeningStartedAt);assert.ok(held.activeIncident?.startup);
+    await page.waitForTimeout(1500);await page.locator('#bootstrapStart').click();
+  }
   await page.locator('#listeningView').waitFor({state:'visible'});await answer(page,'listening');
   if(cbt&&process.env.K67_AUDIO_ACCEPTANCE==='true'){
     // Đi bằng nút thật: giữ bài, đóng/mở lại trang, nghe thử, xác nhận rồi mới nộp.
@@ -64,6 +72,12 @@ try{
     const name=`${slug}-${delivery}-${mode}`;if(process.env.K67_BROWSER_CASE&&!name.includes(process.env.K67_BROWSER_CASE))continue;
     const reset=await fetch(new URL('/preview/reset',base),{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal((await reset.json()).fixtureOnly,true);
     const ctx=await context(),page=await ctx.newPage(),errors=[];
+    if(delivery==='cbt'&&process.env.K67_START_RESPONSE_LOSS==='true'){
+      let lost=false;await page.route('**/session/start',async route=>{
+        if(lost)return route.continue();lost=true;const response=await route.fetch();assert.equal(response.status(),200);
+        return route.fulfill({status:500,contentType:'application/json',body:'{"ok":false,"error":"START_RESPONSE_LOST","message":"Mất phản hồi start mô phỏng"}'});
+      });
+    }
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
     try{
       const cbt=delivery==='cbt',mini=slug==='mini-test-lesson-5'&&!cbt;

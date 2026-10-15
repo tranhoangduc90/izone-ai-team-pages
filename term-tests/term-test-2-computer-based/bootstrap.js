@@ -862,7 +862,7 @@
     previewAudio.pause();
     let started = null, officialAudio = null;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261015-incident-v1-20261015-cache-v1');
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261015-start-guard-v1');
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
@@ -872,6 +872,7 @@
         body: JSON.stringify({
           examSessionToken: state.examSessionToken,
           audioProtocolVersion: 1,
+          audioStartGuardVersion: 1,
           generation: Number(state.generation) || 0,
           heardSeconds: savedHeardSeconds,
           audioEventId: crypto.randomUUID()
@@ -913,6 +914,8 @@
       });
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
       if (resumeAt < officialAudio.duration) window.K67_ACTIVE_LISTENING?.arm();
+      await window.K67_ACTIVE_LISTENING?.start();
+      if(window.K67_ACTIVE_LISTENING)started={...started,...window.K67_ACTIVE_LISTENING.getSnapshot()};
       if (!window.K67_ACTIVE_LISTENING?.isHeld() && resumeAt < officialAudio.duration) await officialAudio.play();
       saveState({
         listeningStartedAt: started.listeningStartedAt,

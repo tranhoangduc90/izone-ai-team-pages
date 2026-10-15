@@ -30,7 +30,7 @@ before(async()=>{
     await new Promise(resolve=>setTimeout(resolve,100));
   }
   assert.equal((await fetch(base+'/preview/status')).status,200);
-  browser=await chromium.launch({headless:true,channel:process.env.K67_BROWSER_CHANNEL||'chrome'});
+  browser=await chromium.launch({headless:process.env.K67_BROWSER_HEADED!=='true',channel:process.env.K67_BROWSER_CHANNEL||'chrome'});
 });
 after(async()=>{await browser?.close();fixture?.kill();await writeFile(path.join(evidence,'fixture.log'),fixtureLog,'utf8');});
 async function open(slug='term-test-1',mode='lis_first',init){
@@ -58,6 +58,36 @@ async function sampleAndResume(page){
   await page.locator('#k67TestSound').click();await page.locator('#k67ResumeAudio').click();
   await page.waitForFunction(()=>window.K67_ACTIVE_LISTENING&&!window.K67_ACTIVE_LISTENING.isHeld());
 }
+
+for(const mode of ['lis_first','read_first'])for(const fault of ['500','abort-reload'])test(`${mode}/${fault}: start mất phản hồi vẫn giữ thời gian; vào lại phát đúng mốc và bù một lần`,async()=>{
+  const context=await browser.newContext(),page=await context.newPage();page.setDefaultTimeout(15000);page.on('dialog',d=>d.accept());
+  await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
+  try{
+    assert.equal((await context.request.post(base+'/preview/reset',{data:{}})).status(),200);
+    let lost=false;
+    await page.route('**/term-test-1/session/start',async route=>{
+      if(lost)return route.continue();lost=true;const response=await route.fetch();assert.equal(response.status(),200);
+      if(fault==='500')return route.fulfill({status:500,contentType:'application/json',body:'{"ok":false,"error":"START_RESPONSE_LOST","message":"Mô phỏng mất phản hồi start"}'});
+      return route.abort();
+    });
+    await page.goto(base+`/term-tests/term-test-1-computer-based/?class=IC2304&mode=${mode}`);
+    await page.locator('#bootstrapStudent').selectOption('11111111-1111-4111-8111-111111111111');await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
+    if(mode==='read_first'){await page.locator('#startReading').click();await page.locator('#readingView').waitFor({state:'visible'});await page.locator('#submitReading').click();}
+    await page.locator('#bootstrapPreview').click();await page.locator('#bootstrapStart').click();
+    await page.locator('#bootstrapNotice').filter({hasText:'Chưa thể bắt đầu'}).waitFor();
+    const token=await page.evaluate(()=>JSON.parse(localStorage.getItem('izone-test:term-test-1:IC2304')).examSessionToken);
+    const read=()=>context.request.get(base+'/preview/audio-state?id='+token).then(r=>r.json());
+    const held=await read();assert.ok(held.listening_started_at);assert.ok(held.listening_audio_incident_id,'Mất response phải có hold đã ghi');
+    assert.equal(await page.locator('#listeningView').isVisible(),false);await page.waitForTimeout(1500);
+    if(fault==='abort-reload')await page.reload();
+    await page.locator('#bootstrapStart').click();await page.locator('#listeningView').waitFor({state:'visible'});
+    await page.waitForFunction(()=>!window.K67_ACTIVE_LISTENING.isHeld());
+    const after=await read();assert.equal(after.listening_audio_incident_id,null);assert.ok(Number(after.listening_recovery_seconds)>=1);
+    assert.equal(new Date(after.listening_deadline_at)-new Date(held.listening_deadline_at),Number(after.listening_recovery_seconds)*1000);
+    assert.ok(await page.evaluate(()=>!window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused&&window.TERM_TEST_BOOTSTRAP.officialAudioElement.currentTime<3));
+    await page.screenshot({path:path.join(evidence,`start-${mode}-${fault}.png`),fullPage:true});
+  }finally{await context.close();}
+});
 
 // IndexedDB thật qua trình duyệt: đọc byte đã lưu; không dùng mock làm thay việc ghi cache.
 async function cacheRecords(page) {
