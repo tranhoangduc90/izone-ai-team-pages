@@ -590,7 +590,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261014-exam-source-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261015-submit-ack-v1');
     await loadScript('enhance.js?v=20261014-exam-source-v1');
     await loadScript('annotations.js?v=20261007-fresh-v2');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);

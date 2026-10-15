@@ -1,0 +1,87 @@
+// Browser thật + kho SQLite trong RAM. Không kết nối AI, Portal hoặc database production.
+import {createServer} from 'node:http';import fs from 'node:fs';import path from 'node:path';
+import {createRequire} from 'node:module';import {pathToFileURL,fileURLToPath} from 'node:url';
+import {randomBytes} from 'node:crypto';import assert from 'node:assert/strict';
+const root=path.resolve(fileURLToPath(new URL('../',import.meta.url)));
+if(!process.env.SUBSTITUTE_BACKEND_ROOT)throw Error('Cần SUBSTITUTE_BACKEND_ROOT trỏ tới backend đang kiểm');
+const backend=process.env.SUBSTITUTE_BACKEND_ROOT;
+const {SubstituteStore}=await import(pathToFileURL(path.join(backend,'src/store.mjs')));
+const {TESTS}=await import(pathToFileURL(path.join(backend,'src/contract.mjs')));
+const {gradingFromReadback}=await import(pathToFileURL(path.join(backend,'src/transport-bridge.mjs')));
+const {chromium}=createRequire('C:/Users/vukha/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
+const server=createServer((req,res)=>{const p=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{const file=fs.statSync(p).isDirectory()?path.join(p,'index.html'):p;res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+const browser=await chromium.launch({channel:'msedge',headless:true});
+try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TEST_SLUG||slug===process.env.SUBSTITUTE_TEST_SLUG)){
+ const store=new SubstituteStore({encryptionKey:randomBytes(32)});store.configureWritingRelease('substitute-test-2-k67','open');
+ const context=await browser.newContext({viewport:{width:slug.endsWith('k67')?390:1440,height:1000}}),errors=[];
+ let fault=null,acceptedWriting=0;
+ await context.addInitScript(()=>{
+  for(const[key,value]of [['duration',1800],['readyState',4]])Object.defineProperty(HTMLMediaElement.prototype,key,{get:()=>value,configurable:true});
+  HTMLMediaElement.prototype.play=function(){this._paused=false;this.dispatchEvent(new Event('play'));this.dispatchEvent(new Event('playing'));return Promise.resolve();};
+  HTMLMediaElement.prototype.pause=function(){this._paused=true;};HTMLMediaElement.prototype.load=function(){queueMicrotask(()=>this.dispatchEvent(new Event('loadedmetadata')));};
+  Object.defineProperty(HTMLMediaElement.prototype,'paused',{get(){return this._paused!==false;},configurable:true});
+ });
+ await context.route('**/*',async route=>{
+  const request=route.request(),url=request.url();if(url.startsWith(base))return route.continue();
+  if(!url.includes('/webhook/'))return route.abort();
+  const {route:api,payload={}}=request.postDataJSON(),id={...payload,testSlug:slug};let response={},status=200;
+  if(fault&&['/api/test/grade','/api/test/writing'].includes(api)){
+   const value=fault;fault=null;return route.fulfill({status:value==='http'?502:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:value==='empty'?'':JSON.stringify(value==='http'?{ok:false,code:'SUBSTITUTE_SAVE_UNCONFIRMED',message:'Lỗi thử có kiểm soát'}:{accepted:true})});
+  }
+  try{
+   if(api==='/api/test/history')response={...store.historyState(id),examTimingVersion:'substitute-audio-transfer-20261014-v1',classes:[{code:'DEMO',name:'DEMO'}],...(slug==='substitute-test-2-k67'?{writingVersions:{DEMO:'substitute-k67-test2-two-task-20261007-v1'}}:{})};
+   else if(api==='/api/test/roster')response={students:[{ref:'fictional-01',name:'Học viên giả'}]};
+   else if(api==='/api/test/exam/session')response=store.startExamSession(id);
+   else if(api==='/api/test/writing/session')response=store.startWritingSession(id);
+   else if(api==='/api/test/grade'){
+    const total=payload.examId==='listening'?40:TESTS[slug].readingMax;
+    const section={correct:1,total,band:2.5,typeStats:[{type:'Fixture',correct:1,total,percentage:1/total}],details:Array.from({length:total},(_,i)=>({number:i+1,studentAnswer:String(payload.answers?.[i+1]||''),correctAnswer:'Fixture',result:i===0?'correct':'blank'}))};
+    response=store.saveSectionSubmission({...id,clientRunId:payload.examSessionId,skill:payload.examId,section});
+   }else if(api==='/api/test/writing'){
+    const taskNumber=TESTS[slug].taskNumber,writing={...id,taskNumber,studentName:'Học viên giả',scores:{listening:{raw:1,max:40,band:2.5},reading:{raw:1,max:TESTS[slug].readingMax,band:2.5}},
+     ...(payload.examVersion?{tasks:[1,2].map(taskNumber=>({taskNumber,essay:payload['task'+taskNumber]}))}:{essay:payload['task'+taskNumber]})};
+    const saved=store.submit(writing);acceptedWriting++;response={accepted:true,grading:gradingFromReadback(saved),portalSync:{status:'not_applicable'}};
+   }else if(api==='/api/test/writing/status')response={accepted:true,grading:gradingFromReadback(store.read(id)),portalSync:{status:'not_applicable'}};
+   else throw Error('UNEXPECTED_FIXTURE_ROUTE');
+  }catch(error){status=error.status||500;response={ok:false,code:error.code||'FIXTURE_FAILED'};}
+  return route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(response)});
+ });
+ const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ try{
+  await page.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server&class=DEMO');
+  await page.locator('#bootstrapClass').selectOption('DEMO');await page.locator('#bootstrapStudent option:not([value=""])').first().waitFor({state:'attached'});
+  const selectedStudent=await page.locator('#bootstrapStudent option:not([value=""])').first().getAttribute('value');
+  await page.locator('#bootstrapStudent').selectOption(selectedStudent);await page.locator('#confirmIdentity').click();await page.locator('#bootstrapPreview:enabled').click();await page.locator('#bootstrapStart:enabled').click();
+  await page.locator('#listeningView').waitFor({state:'visible'});
+  for(const[skill,button]of [['listening','#submitListening'],['reading','#submitReading']]){
+   const view=page.locator('#'+skill+'View'),textAnswer=view.locator('input[type="text"]:visible').first();
+   const answer=await textAnswer.count()?textAnswer:view.locator('select:visible').first();
+   const isSelect=await answer.evaluate(e=>e.tagName==='SELECT');
+   if(isSelect)await answer.selectOption({index:1});else await answer.fill('Fixture');
+   const originalAnswer=await answer.inputValue();
+   for(const failure of ['http','empty','malformed']){
+    fault=failure;const response=page.waitForResponse(r=>r.request().postData()?.includes('/api/test/grade'));await page.locator(button).click();await response;
+    await page.waitForFunction(selector=>!document.querySelector(selector).disabled,button);
+    assert.equal(await view.isVisible(),true);assert.equal(await answer.inputValue(),originalAnswer);
+   }
+   await page.locator(button).click();await view.waitFor({state:'hidden'});
+   if(skill==='listening'){assert.equal(store.db.prepare('SELECT audio_ended_at FROM exam_session').get().audio_ended_at,null);await page.locator('#startReading').click();await page.locator('#readingView').waitFor({state:'visible'});}
+  }
+  await page.locator('#startWriting').click();await page.locator('#writingView').waitFor({state:'visible'});
+  const ids=slug==='substitute-test-2-k67'?['task1','task2']:['task'+TESTS[slug].taskNumber];
+  for(const [index,task]of ids.entries()){const editor=page.locator(`textarea[data-writing-task="${task}"]`);if(!await editor.isVisible())await page.locator('#writingTaskTabs button').nth(index).click();await editor.fill('Fictional original essay. '.repeat(85));}
+  for(const failure of ['http','empty','malformed']){
+   fault=failure;const response=page.waitForResponse(r=>r.request().postData()?.includes('/api/test/writing'));await page.locator('#submitWriting').click();await response;
+   await page.waitForFunction(()=>document.querySelector('#notice')?.textContent.includes('Writing'));
+   assert.equal(await page.locator('#writingView').isVisible(),true);assert.equal(acceptedWriting,0);
+  }
+  await page.locator('#submitWriting').click();await page.locator('#resultView').waitFor({state:'visible'});
+  const summary=await page.locator('#summaryGrid').innerText();assert.match(summary,/Listening/);assert.match(summary,/Reading/);assert.match(summary,/1\/40/);
+  assert.equal(await page.locator('#questionDetails details').count(),2);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);
+  await page.reload();await page.locator('#resultView').waitFor({state:'visible'});assert.match(await page.locator('#summaryGrid').innerText(),/1\/40/);
+  assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({slug,ok:true,earlyBeforeAudioEnd:true,failuresKeepDrafts:true,resultsAfterWriting:true,reloadNoDuplicate:true,realAI:false,portalWrites:0}));
+ }finally{await context.unrouteAll({behavior:'ignoreErrors'});await context.close();store.close();}
+}}finally{await browser.close();await new Promise(r=>server.close(r));}
