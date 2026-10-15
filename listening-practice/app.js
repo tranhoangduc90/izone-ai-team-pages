@@ -348,21 +348,28 @@ function explanationContent(e) {
     return `<article class="explanation-question evidence" data-explanation-question="${n}" aria-label="Giải thích câu ${n}">${e.prompt?`<div class="explanation-prompt">${explanationRuns(e.prompt.runs)}</div>`:''}<div class="explanation-body"><section class="explanation-analysis">${analysis}</section><aside class="explanation-evidence"><h4>Bằng chứng · ${e.paragraph}</h4><blockquote>${explanationParagraphs(evidence)}</blockquote><p class="explanation-evidence-hint">Từ cùng màu liên kết ý trong câu hỏi với bằng chứng; chữ đỏ giữ phần đối chiếu trong tài liệu.</p></aside></div></article>`;
   }
 
+// Chỉ thay điểm mở lời giải; lấy đúng lượt đang xem, giữ mọi luồng làm bài gốc.
 function toggleExplanation(number,button) {
-    const row=document.getElementById(`explanation-${number}`);
-    if(!row)return;
-    row.hidden=!row.hidden;
-    button.setAttribute('aria-expanded',String(!row.hidden));
-    button.textContent=row.hidden?'Xem giải thích':'Ẩn giải thích';
-  }
+ const id=button.closest('[data-attempt-id]')?.dataset.attemptId;
+ const data=resultCache.get(id),attempt=record()?.attempts.find(a=>a.id===id)||data?.attempt;
+ if(!data||!attempt)return;
+ if(!data.review){
+  const row=document.getElementById(`explanation-${number}`);if(!row)return;
+  row.hidden=!row.hidden;button.setAttribute('aria-expanded',String(!row.hidden));
+  button.textContent=row.hidden?'Xem giải thích':'Ẩn giải thích';return;
+ }
+ window.ListeningReview.open({number,attempt,data,trigger:button,
+  renderParagraphs:explanationParagraphs,renderContent:explanationContent,
+  token:location.pathname.endsWith('/teacher.html')?sessionStorage.getItem('listening-teacher-token'):sessionToken});
+}
 
 function resultTable(a) {
     const data=resultCache.get(a.id)?.explanations;
-    return `<section class="card section answer-explanations" aria-labelledby="explanations-title"><div class="section-heading"><h2 id="explanations-title">Đáp án và giải thích</h2><span class="pill">10 câu</span></div><div class="table-wrap detail-table-wrap"><table class="result-table detail-table"><thead><tr><th scope="col">Câu</th><th scope="col">Bài làm</th><th scope="col">Đáp án đúng</th><th scope="col">Kết quả</th><th scope="col">Giải thích</th></tr></thead><tbody>${Object.keys(KEY).map(n=>{
+    return `<section class="card section answer-explanations" data-attempt-id="${escape(a.id)}" aria-labelledby="explanations-title"><div class="section-heading"><h2 id="explanations-title">Đáp án và giải thích</h2><span class="pill">10 câu</span></div><div class="table-wrap detail-table-wrap"><table class="result-table detail-table"><thead><tr><th scope="col">Câu</th><th scope="col">Bài làm</th><th scope="col">Đáp án đúng</th><th scope="col">Kết quả</th><th scope="col">Giải thích</th></tr></thead><tbody>${Object.keys(KEY).map(n=>{
       const row=a.result.rows.find(r=>r.number===+n),correct=row.state==='correct',blank=row.state==='blank';
       const state=correct?'correct':blank?'blank':'incorrect';
       const answers=resultCache.get(a.id).key[n];const key=n>=21&&n<=23?answers[0].toUpperCase():answers.join(' / ');
-      return `<tr class="detail-row detail-row-${state}" data-result-question="${n}"><td>${String(n).padStart(2,'0')}.</td><td data-label="Bài làm">${escape(a.answers[n]||'—')}</td><td data-label="Đáp án đúng">${key}</td><td class="${correct?'mark-good':blank?'muted':'mark-bad'}"><span class="detail-result-cell result-${state}"><span class="detail-result-icon" aria-hidden="true">${correct?'✓':blank?'–':'✕'}</span>${correct?'Đúng':blank?'Bỏ trống':'Sai'}</span></td><td><button type="button" class="explanation-button" data-action="explanation-toggle" data-question="${n}" aria-expanded="false" aria-controls="explanation-${n}">Xem giải thích</button></td></tr><tr class="inline-explanation-row" id="explanation-${n}" hidden><td colspan="5">${explanationContent(data?.entries?.[n])}</td></tr>`;
+      return `<tr class="detail-row detail-row-${state}" data-result-question="${n}"><td>${String(n).padStart(2,'0')}.</td><td data-label="Bài làm">${escape(a.answers[n]||'—')}</td><td data-label="Đáp án đúng">${key}</td><td class="${correct?'mark-good':blank?'muted':'mark-bad'}"><span class="detail-result-cell result-${state}"><span class="detail-result-icon" aria-hidden="true">${correct?'✓':blank?'–':'✕'}</span>${correct?'Đúng':blank?'Bỏ trống':'Sai'}</span></td><td><button type="button" class="explanation-button" data-action="explanation-toggle" data-question="${n}" aria-haspopup="dialog">Xem giải thích</button></td></tr><tr class="inline-explanation-row" id="explanation-${n}" hidden><td colspan="5">${explanationContent(data?.entries?.[n])}</td></tr>`;
     }).join('')}</tbody></table></div></section>`;
   }
 
