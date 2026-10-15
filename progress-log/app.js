@@ -1,6 +1,7 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {renderSessionReview} from './session-review.js?rev=20261007-comments';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
+import {buildCompactExercises} from './compact-exercises.js?rev=20261015-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
@@ -854,6 +855,10 @@ function buildQuestion(item) {
 }
 
 function buildCheckpointQuestions(items) {
+  const compact = buildCompactExercises(items, {
+    valueFor: responseFor, requiredFor: itemIsRequired, onChange: recordResponse, resizeInput: resizeSentenceBlank
+  });
+  if (compact) return compact;
   const flowchart = buildDropdownFlowchart(items, {
     valueFor: responseFor, requiredFor: itemIsRequired, onChange: recordResponse
   });
@@ -942,6 +947,15 @@ function showCheckpointFeedback(block) {
     const question = [...elements.questionList.querySelectorAll('[data-item-version-id]')]
       .find(node => node.dataset.itemVersionId === item.itemVersionId);
     if (!question) continue;
+    // Notes có ô nhập riêng từng câu: hiện chữa bài bằng kết quả máy chủ, không chấm ở trình duyệt.
+    if (question.classList.contains('compact-exercise-answer')) {
+      const feedback = document.createElement('p');
+      feedback.className = 'heading-feedback ' + (item.verdict === 'correct' ? 'is-correct' : 'is-incorrect');
+      const source = block.items.find(candidate => candidate.itemVersionId === item.itemVersionId);
+      feedback.textContent = `Câu ${source.displayNumber}: ${item.verdict === 'correct' ? 'Đúng' : 'Sai'}. Đáp án đúng: ${answerLabel(source, item.expectedAnswer)}`;
+      question.append(feedback);
+      continue;
+    }
     const dropdown = question.querySelector('.matching-heading-select');
     if (dropdown) {
       dropdown.value = String(item.rawAnswer || '');
