@@ -451,6 +451,7 @@
 
   async function apiRequest(path, options = {}, timeoutMs = 30_000) {
     options = window.K67_EXAM_ORDER?.request(options) || options;
+    options = window.K67_AUDIO_OWNER?.request(options) || options;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -510,6 +511,12 @@
     elements.bootstrapDownloadProgress.value = 0;
     try {
       // Quyền phải đến từ server ở lượt trang này; không lấy khóa/metadata từ storage để tự mở offline.
+      if(session.audioOwnerSupported&&!window.K67_CREATE_AUDIO_OWNER)await loadScript('../k67-shared/audio-owner.js?rev=20261015-owner-v1');
+      if(session.audioOwnerSupported&&window.K67_AUDIO_OWNER?.token!==state.examSessionToken){
+        if(window.K67_AUDIO_OWNER){await window.K67_AUDIO_OWNER.release();window.K67_AUDIO_OWNER.stop();}
+        window.K67_AUDIO_OWNER=await window.K67_CREATE_AUDIO_OWNER({apiBase:appConfig.API_BASE_URL,slug:testConfig.slug,
+          token:state.examSessionToken,generation:Number(state.generation)||0});
+      }
       try {
         audioAccess = await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-access`, {
           method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -738,7 +745,7 @@
   function loadScript(src) {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = src;
+      script.src = src + (src.includes('?') ? '&' : '?') + 'k67rev=20261015-owner-v1';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error(`Không nạp được ${src}.`)), { once: true });
       document.body.append(script);
@@ -874,6 +881,8 @@
       officialAudio = document.createElement('audio');
       officialAudio.hidden = true;
       document.body.append(officialAudio);
+      window.K67_AUDIO_OWNER?.bindAudio(officialAudio);
+      if(!window.K67_AUDIO_ENVIRONMENT)await loadScript('../k67-shared/audio-environment.js?rev=20261015-owner-v1');
       window.K67_ACTIVE_LISTENING?.stop();
       window.K67_ACTIVE_LISTENING = window.K67_LISTENING_PROTECTION({audio: officialAudio,
         session: started, slug: testConfig.slug, apiBase: appConfig.API_BASE_URL, generation: Number(started.generation) || 0});
@@ -917,7 +926,8 @@
       await enterExam(started, officialAudio);
       if (audioScope) {
         const status = document.createElement('p'); status.id = 'k67AudioCacheStatus'; status.textContent = audioCacheStatus;
-        document.getElementById('listeningView')?.append(status);
+        status.className='k67-cache-status';status.title=audioCacheStatus;
+        document.querySelector('#listeningView .k67-inline-audio')?.append(status);
       }
     } catch (error) {
       if (started && officialAudio && window.K67_ACTIVE_LISTENING) {
@@ -938,6 +948,7 @@
   });
   window.addEventListener('online', () => { if (document.getElementById('bootstrapStart') && !preparing && elements.bootstrapRetry.hidden === false) { if (!roster.length) initialize(); else prepareSelectedStudent(); } });
   window.addEventListener('term-test:listening-submitted', () => { if (audioScope) window.K67_AUDIO_STORE?.remove(audioScope).catch(() => {}); }, true);
+  window.addEventListener('term-test:listening-submitted', () => window.K67_AUDIO_OWNER?.stop(), true);
   elements.bootstrapDemoReset.addEventListener('click', async () => {
     const studentRef = elements.bootstrapStudent.value;
     const student = roster.find(item => item.ref === studentRef);

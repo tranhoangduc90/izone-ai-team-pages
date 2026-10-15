@@ -806,6 +806,7 @@
 
   async function apiRequest(path, options = {}) {
     options = window.K67_EXAM_ORDER?.request(options) || options;
+    options = window.K67_AUDIO_OWNER?.request(options) || options;
     const ownerKey = storageKey;
     const requestEpoch = miniEpoch;
     if (miniAnswerSheet) {

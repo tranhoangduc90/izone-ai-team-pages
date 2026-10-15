@@ -3417,3 +3417,29 @@ mark.cbt-annotation-mark:focus-visible {
 @media (max-width: 600px) {
   .cbt-audio-incident .cbt-audio-controls { align-items: stretch; flex-direction: column; }
 }
+
+/* K67: giữ tiêu đề và tất cả thao tác trên một hàng; màn hẹp cuộn trong thanh, không đẩy đề xuống. */
+.k67-single-row.cbt-toolbar { flex-wrap: nowrap; gap: 8px; overflow-x: auto; min-height: 48px; }
+.k67-single-row .cbt-test-heading { flex: 0 0 auto; border: 0; padding: 0; margin: 0; white-space: nowrap; }
+.k67-single-row .autosave-status { flex: 0 0 100px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k67-single-row .cbt-toolbar-controls { flex: 0 0 auto; flex-wrap: nowrap; }
+.k67-single-row .k67-inline-audio { display: flex; flex: 0 0 auto; min-width: 0; gap: 8px; padding: 0; margin: 0; border-radius: 0; background: transparent; color: #152b4e; }
+.k67-single-row .k67-inline-audio .cbt-audio-copy { display: block; }
+.k67-single-row .k67-inline-audio .cbt-audio-copy strong { display: none; }
+.k67-single-row .k67-inline-audio .cbt-audio-status { display: block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #586477; }
+.k67-single-row .k67-inline-audio .cbt-audio-controls { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 6px; }
+.k67-single-row .k67-inline-audio .cbt-audio-progress { width: 50px; }
+.k67-single-row .k67-inline-audio .cbt-volume { display: flex; white-space: nowrap; }
+.k67-single-row .k67-inline-audio .cbt-volume input { width: 60px; }
+.k67-single-row .k67-inline-audio button { flex: 0 0 auto; padding: 6px 9px; min-height: 32px; border: 1px solid #152b4e; border-radius: 5px; background: #fff; color: #152b4e; font: inherit; font-size: 12px; white-space: nowrap; }
+.k67-single-row .cbt-audio-incident { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; background: transparent; }
+.k67-single-row .cbt-audio-incident[hidden] { display: none; }
+.k67-single-row .cbt-audio-incident h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.k67-single-row .cbt-audio-incident p { flex: 0 0 160px; max-width: 160px; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #694b00; font-size: 12px; }
+.k67-single-row .k67-cache-status { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.k67-single-row #k67EnvironmentStatus { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.k67-single-row .k67-inline-audio .cbt-volume { color: #586477; }
+.k67-single-row .k67-holding .cbt-audio-copy,
+.k67-single-row .k67-holding .cbt-audio-progress,
+.k67-single-row .k67-holding #k67ReportAudio,
+.k67-single-row .k67-holding .k67-cache-status { display: none; }

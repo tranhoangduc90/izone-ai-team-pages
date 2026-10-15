@@ -17,6 +17,7 @@
       "tests/term-test-writing-parity-feedback.mjs"
     ],
     "browser": [
+      "tests/k67-audio-owner-browser.mjs",
       "tests/k67-audio-incidents-browser.mjs",
       "tests/term-test-k67-result-details.mjs",
       "tests/term-test-result-details.mjs",
