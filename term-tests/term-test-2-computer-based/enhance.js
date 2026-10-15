@@ -830,10 +830,12 @@
     listeningForm.source.toolbar.append(examCard);
 
     const audio = protectedBootstrap?.officialAudioElement || document.createElement('audio');
+    const protection = window.K67_ACTIVE_LISTENING || null;
     audio.preload = 'auto';
     audio.volume = uiState.audio.volume;
     audio.hidden = true;
     lobby.append(audio);
+    protection?.attach(examCard);
 
     let lastSavedSecond = Math.floor(uiState.audio.time);
     let examStarted = Boolean(protectedBootstrap?.officialAudioElement || uiState.audio.started);
@@ -978,6 +980,7 @@
     // Kết quả: refresh dùng đúng mốc đã nghe; mỗi khoảng gián đoạn chỉ được cộng một lần trên máy chủ.
     // Khi lỗi mạng: giữ checkpoint cục bộ và thử lại ở nhịp sau, không làm dừng audio đang phát.
     function reportAudioProgress(playbackState, keepalive = false) {
+      if (protection) return Promise.resolve(null);
       const examSessionToken = protectedBootstrap?.examSessionToken;
       if (!examSessionToken || !examStarted || !['term-test-1', 'term-test-2', 'mini-test-lesson-5'].includes(testConfig.slug)) return Promise.resolve(null);
       const heardSeconds = rememberActualHeardPosition(true);
@@ -1012,6 +1015,7 @@
     }
 
     async function recoverInterruptedAudio(trigger, force = false) {
+      if (protection) return protection.report(trigger);
       if (!examStarted || !ready || audio.ended || allowPause || examCard.hidden || recoveryInFlight) return;
       const now = Date.now();
       if (!force && now - lastRecoveryAttemptAt < 750) return;
@@ -1120,6 +1124,7 @@
     });
     audio.addEventListener('stalled', () => recoverInterruptedAudio('stalled'));
     audio.addEventListener('error', () => {
+      if (protection) return;
       if (!ready) {
         failDownload('File audio tải xong nhưng trình duyệt không đọc được. Hãy nhấn “Tải lại audio”.');
       } else if (examStarted) {
@@ -1263,6 +1268,7 @@
       new MutationObserver(updateStartAvailability).observe(studentSelect, { childList: true });
     }
     listeningForm.form.addEventListener('submit', () => {
+      if (protection?.isHeld()) return;
       allowPause = true;
       window.clearInterval(audioWatchdog);
       audio.pause();
@@ -1292,6 +1298,7 @@
       downloadFullAudio();
     }
     audioWatchdog = window.setInterval(() => {
+      if (protection) return;
       if (!examStarted || !ready || audio.ended || allowPause || examCard.hidden) return;
       const current = Number(audio.currentTime) || 0;
       if (current > lastObservedAudioTime + 0.05) {
@@ -1335,6 +1342,7 @@
     }
 
     function lockAndSubmit(now) {
+      if (window.K67_ACTIVE_LISTENING?.isHeld()) return;
       if (window.TERM_TEST_DEADLINE_GUARD_ACTIVE) return;
       if (listeningForm.form.dataset.listeningSubmitting === 'true' || now - lastAttempt < 15_000) return;
       lastAttempt = now;

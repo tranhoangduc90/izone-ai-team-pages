@@ -3391,3 +3391,29 @@ mark.cbt-annotation-mark:focus-visible {
     width: min(180px, 55vw);
   }
 }
+.cbt-audio-incident {
+  margin: 12px 0;
+  padding: 16px;
+  border: 1px solid #d9b65f;
+  border-radius: 8px;
+  background: #fff9e8;
+  color: #24344c;
+}
+.cbt-audio-incident[hidden] { display: none; }
+.cbt-audio-incident h3 { margin: 0 0 8px; font-size: 1rem; }
+.cbt-audio-incident p { margin: 0 0 12px; line-height: 1.5; }
+.cbt-audio-incident .cbt-audio-controls { flex-wrap: wrap; gap: 8px; }
+.cbt-audio-incident button, #k67ReportAudio {
+  padding: 10px 14px;
+  border: 1px solid #152b4e;
+  border-radius: 6px;
+  background: #fff;
+  color: #152b4e;
+  font: inherit;
+  cursor: pointer;
+}
+#k67ResumeAudio:not(:disabled) { background: #152b4e; color: #fff; }
+.cbt-audio-incident button:disabled, #k67ReportAudio:disabled { opacity: .55; cursor: default; }
+@media (max-width: 600px) {
+  .cbt-audio-incident .cbt-audio-controls { align-items: stretch; flex-direction: column; }
+}

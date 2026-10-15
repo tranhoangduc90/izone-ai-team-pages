@@ -583,7 +583,7 @@
           studentRef,
           retakeGrant: retakeGrant || undefined,
           examSessionToken: state.examSessionToken || undefined,
-          legacyElapsedSeconds: legacyListeningResume ? legacyUiState.audioTime : 0
+          legacyElapsedSeconds: legacyListeningResume ? Math.floor(legacyUiState.audioTime) : 0
         })
       });
       let prepared;
@@ -681,8 +681,8 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1-20261014-audio-recovery-v1');
-    await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1'));
+    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1');
+    await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
 
@@ -769,38 +769,47 @@
     elements.bootstrapStart.disabled = true;
     elements.bootstrapStart.textContent = 'Đang mở đề và audio...';
     previewAudio.pause();
+    let started = null, officialAudio = null;
     try {
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261015-incident-v1');
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
-      const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
+      started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           examSessionToken: state.examSessionToken,
+          audioProtocolVersion: 1,
           heardSeconds: savedHeardSeconds,
           audioEventId: crypto.randomUUID()
         })
       });
+      saveState({listeningStartedAt: started.listeningStartedAt, listeningDeadlineAt: started.listeningDeadlineAt});
+      officialAudio = document.createElement('audio');
+      officialAudio.hidden = true;
+      document.body.append(officialAudio);
+      window.K67_ACTIVE_LISTENING?.stop();
+      window.K67_ACTIVE_LISTENING = window.K67_LISTENING_PROTECTION({audio: officialAudio,
+        session: started, slug: testConfig.slug, apiBase: appConfig.API_BASE_URL, generation: Number(started.generation) || 0});
       const decrypted = await decryptOfficialAudio(encryptedAudio, started);
       officialObjectUrl = URL.createObjectURL(new Blob([decrypted], { type: 'audio/mpeg' }));
-      const officialAudio = document.createElement('audio');
-      officialAudio.hidden = true;
       officialAudio.src = officialObjectUrl;
       officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
-      document.body.append(officialAudio);
       const serverElapsed = Math.max(0, (Date.parse(started.serverNow) - Date.parse(started.listeningStartedAt)) / 1000);
       const serverResumeAt = Number(started.listeningResumeAtSeconds);
       const resumeAt = Number.isFinite(serverResumeAt)
         ? Math.min(serverElapsed, Math.max(0, serverResumeAt))
         : serverElapsed;
       await new Promise((resolve, reject) => {
-        officialAudio.addEventListener('loadedmetadata', resolve, { once: true });
-        officialAudio.addEventListener('error', () => reject(new Error('Trình duyệt không đọc được audio chính.')), { once: true });
+        const timeout = setTimeout(() => reject(new Error('Audio chưa sẵn sàng sau 10 giây.')), 10000);
+        officialAudio.addEventListener('loadedmetadata', () => {clearTimeout(timeout);resolve();}, { once: true });
+        officialAudio.addEventListener('error', () => {clearTimeout(timeout);reject(new Error('Trình duyệt không đọc được audio chính.'));}, { once: true });
         officialAudio.load();
       });
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
-      if (resumeAt < officialAudio.duration) await officialAudio.play();
+      window.K67_ACTIVE_LISTENING?.arm();
+      if (!window.K67_ACTIVE_LISTENING?.isHeld() && resumeAt < officialAudio.duration) await officialAudio.play();
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
@@ -812,6 +821,11 @@
       legacyListeningResume = false;
       await enterExam(started, officialAudio);
     } catch (error) {
+      if (started && officialAudio && window.K67_ACTIVE_LISTENING) {
+        await window.K67_ACTIVE_LISTENING.report('startup_failed');
+        await enterExam(started, officialAudio);
+        return;
+      }
       showNotice(`Chưa thể bắt đầu: ${error.message}. Đề vẫn đang khóa.`, true);
       elements.bootstrapStart.textContent = state.listeningStartedAt ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
       elements.bootstrapStart.disabled = false;

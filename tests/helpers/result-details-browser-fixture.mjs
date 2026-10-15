@@ -41,7 +41,8 @@ export async function completedPage(browser,base,routeName){
    else if(route.endsWith('/attempt/prepare')||route.endsWith('/session/resume-attempt'))data={...payload,attemptMode:paperMini?'answer_sheet':'cbt',generation:1,policy:{timed:cbt,autoSubmit:cbt},nextSection:'complete',examMode:body?.mode||'lis_first',listeningSubmitted:true,readingSubmitted:true,writingStartedAt:paperMini?'':now,writingSubmittedAt:paperMini?'':now,serverNow:now,content:{variant:'semantic-html',timing:{},listening:{sections:[]},reading:{passages:[]},writing:{tasks:[{id:slug==='term-test-2-k56'?'task1':'task2',label:'Writing giả',prompt:'Đề giả',minimumWords:0}]}}};
    else if(route==='/api/term-tests/result/stream'){status=404;data={};}
    else if(route==='/api/term-tests/result'){polls++;data=structuredClone(payload);if(data.writing)data.writing.grading=phase==='ready'?{ready:true,status:'ready',writingScore:7,tasks:[]}:payload.writing.grading;}
-   else if(route==='/api/test/writing/status'){polls++;data={grading:phase==='ready'?{ready:true,status:'ready',writingScore:7,tasks:[]}:writing.grading};}
+   // Biên nhận accepted là contract hiện hành của Substitute; thiếu nó UI phải giữ trạng thái chưa xác nhận.
+   else if(route==='/api/test/writing/status'){polls++;data={accepted:true,grading:phase==='ready'?{ready:true,status:'ready',writingScore:7,tasks:[]}:writing.grading};}
    else {errors.push('API ngoài fixture: '+route);status=400;data={};}
    return r.fulfill({status,headers,contentType:'application/json',body:JSON.stringify(data)}).catch(()=>{});
   }
