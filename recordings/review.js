@@ -40,7 +40,13 @@ document.addEventListener('change',async event=>{
  const t=recordingReviewTarget(row),requestId=crypto.randomUUID().replaceAll('-','');let reload=false;
  recordingReviewPending.set(row.id,approved);checkbox.disabled=true;
  try{
-  const response=await recordingAuth.request({action:'acknowledge_review',date:t.date,id:t.source.id,expectedVersion:Number(t.source.version||0),expectedReviewVersion:Number(row.reviewVersion||0),expectedMetadata:recordingReviewMetadata(row),approved,requestId});
+  // Bảng lịch sử có thể giữ phiên bản cũ; đọc nguồn hiện tại trước lệnh ghi, vẫn giữ CAS ở backend.
+  const metadata={...recordingReviewMetadata(row)};
+  const fresh=(await readRecordingReviews([row])).find(r=>r.id===row.id);
+  if(!fresh||!Number.isSafeInteger(fresh.version)||fresh.version<0||!Number.isSafeInteger(fresh.reviewVersion)||fresh.reviewVersion<0)throw Error('REVIEW_READ_FAILED');
+  const visible=state.records.find(r=>r.id===row.id),visibleMetadata=visible&&recordingReviewMetadata(visible);
+  if(fresh.reviewMetadata?.title!==metadata.title||fresh.reviewMetadata?.className!==metadata.className||visibleMetadata?.title!==metadata.title||visibleMetadata?.className!==metadata.className)throw Error('REVIEW_METADATA_CONFLICT');
+  const response=await recordingAuth.request({action:'acknowledge_review',date:t.date,id:t.source.id,expectedVersion:fresh.version,expectedReviewVersion:fresh.reviewVersion,expectedMetadata:metadata,approved,requestId});
   const result=await response.json();if(!response.ok||result.ok!==true||!result.record)throw Error(result.error||'REVIEW_SAVE_UNKNOWN');
   const actual=(await readRecordingReviews([row])).find(r=>r.id===row.id);
   if(!actual||actual.reviewStatus!==(approved?'approved':'pending'))throw Error('REVIEW_READBACK_PENDING');
