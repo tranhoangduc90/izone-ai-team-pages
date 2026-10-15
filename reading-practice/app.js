@@ -20,6 +20,7 @@ let saveError=false,simulatedOffline=false,toastTimeout,modalAction=null,fontSiz
 let activeMs=0,leaseBaseline=0,lastPulse=0,checkpointKey='',pendingOperation=null,pulsePending=false,activating=false;
 const resultCache=new Map();
 let explanationAttempt=null,explanationNumber=14,explanationTrigger=null;
+let teacherGoogleScript;
 const student=()=>({name:identity?.name});
 const record=()=>db.students[studentId];
 const current=()=>record()?.attempts.at(-1);
@@ -49,8 +50,12 @@ function apply(response,{preserve=false}={}){
 }
 function snapshotFrom(a){return{answers:a.answers,flags:a.flags,notes:a.notes,annotations:a.annotations,scroll:a.scroll,activeQuestion:a.activeQuestion,tab:a.tab,mobilePane:a.mobilePane,notesOpen:a.notesOpen,highlighted:a.highlighted,sequence:a.sequence};}
 async function request(path,body,teacher=false,keepalive=false){
- const token=teacher?sessionStorage.getItem('reading-teacher-token'):sessionToken;
- let response;try{response=await fetch(`${API}${path}`,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000),keepalive});}
+ let token=sessionToken;
+ if(teacher){try{token=sessionStorage.getItem('reading-teacher-token');}catch{token='';}}
+ let response;try{
+  let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000),keepalive};
+  if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
+  response=await fetch(`${API}${path}`,options);}
  catch{networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
  const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{code:value.error.code});networkFailed=false;return value;
 }
@@ -129,16 +134,36 @@ function render(){
  if(route==='result'){const a=record()?.attempts.find(x=>x.no===+(routeParams.get('attempt')||current()?.no));if(a?.status==='submitted'&&!resultCache.has(a.id)){loadResult(a.no);return;}}
  ({docs,login,prep,resume:resumeScreen,exercise,result:resultScreen,teacher:teacherScreen}[route]||login)();if(route!=='exercise')window.scrollTo(0,0);
 }
-async function teacherScreen(){
+async function teacherScreen(afterLogin=false){
  const submissionId=new URLSearchParams(location.hash.slice(1)).get('submission')||routeParams.get('submission');
  if(!submissionId){app.innerHTML='<section class="card card-pad"><h1>Mở bài từ link kết quả</h1><p>Giảng viên mở link trong tài liệu homework của học viên.</p></section>';return;}
  try{const response=await request(`/teacher/result/${encodeURIComponent(submissionId)}`,undefined,true);apply(response);resultCache.set(response.attempt.id,response);MCQ=response.definition.mcq;
-  const a=response.attempt;app.innerHTML='<div class="teacher-banner">Giảng viên xem bài · Chỉ xem</div>'+hero('BUỔI 7 · KẾT QUẢ READING','The steam car',`${escape(identity.name)} · ${escape(identity.classCode)} · Lần làm ${a.no}`)+`<section class="card card-pad"><h2>${a.finalScore}/13 câu đúng</h2><p>${completionCopy(a)}</p><p>Bắt đầu: ${dateLabel(a.startedAt)} · Nộp bài: ${dateLabel(a.completedAt)}</p><p>${a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Học viên chủ động nộp bài'} · ${a.no-1} lần reset trước lượt này</p></section>`+teacherHistory(response,a)+resultTable(a)+`<section class="card card-pad"><h3>Ghi chú học viên</h3><p style="white-space:pre-wrap">${escape(a.notes||'Chưa có ghi chú.')}</p></section>`+footer();
+  const a=response.attempt;app.innerHTML='<div class="teacher-banner">Giảng viên xem bài · Chỉ xem '+textBtn('Đăng xuất','teacher-logout')+'</div>'+hero('BUỔI 7 · KẾT QUẢ READING','The steam car',`${escape(identity.name)} · ${escape(identity.classCode)} · Lần làm ${a.no}`)+`<section class="card card-pad"><h2>${a.finalScore}/13 câu đúng</h2><p>${completionCopy(a)}</p><p>Bắt đầu: ${dateLabel(a.startedAt)} · Nộp bài: ${dateLabel(a.completedAt)}</p><p>${a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Học viên chủ động nộp bài'} · ${a.no-1} lần reset trước lượt này</p></section>`+teacherHistory(response,a)+resultTable(a)+`<section class="card card-pad"><h3>Ghi chú học viên</h3><p style="white-space:pre-wrap">${escape(a.notes||'Chưa có ghi chú.')}</p></section>`+footer();
  }catch(e){if(e.code!=='TEACHER_LOGIN_REQUIRED'){app.innerHTML=`<section class="card card-pad"><h1>Chưa mở được kết quả</h1><p>${escape(e.message)}</p></section>`;return;}
-  app.innerHTML=hero('BUỔI 7 · GIẢNG VIÊN','Đăng nhập để xem kết quả','Dùng tài khoản Google đã có quyền lớp.')+'<section class="card card-pad"><div id="google-signin"></div><p id="teacher-error" role="status"></p></section>';
+  app.innerHTML=hero('BUỔI 7 · GIẢNG VIÊN','Đăng nhập để xem kết quả','Dùng tài khoản Google đã có quyền lớp.')+'<section class="card card-pad"><label class="teacher-login-remember"><input id="teacher-remember" type="checkbox" checked> Tự đăng nhập Google trên thiết bị này</label><div id="google-signin"></div><p id="teacher-error" role="status"></p></section>';
+  if(afterLogin)document.querySelector('#teacher-error').textContent='Trình duyệt chưa giữ được phiên. Hãy cho phép cookie cho trang này rồi đăng nhập lại.';
   const config=await request('/config');if(!config.googleClientId){document.querySelector('#teacher-error').textContent='Chưa cấu hình đăng nhập Google.';return;}
-  const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=()=>{google.accounts.id.initialize({client_id:config.googleClientId,callback:async response=>{try{const result=await request('/teacher/login',{credential:response.credential},true);sessionStorage.setItem('reading-teacher-token',result.token);teacherScreen();}catch(e){document.querySelector('#teacher-error').textContent=e.message;}}});google.accounts.id.renderButton(document.querySelector('#google-signin'),{theme:'outline',size:'large',text:'signin_with'});};document.head.append(script);
+  try{
+   if(!window.google?.accounts?.id){
+    teacherGoogleScript ||= new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=resolve;script.onerror=()=>{teacherGoogleScript=null;reject(new Error('Không tải được đăng nhập Google. Hãy tải lại trang để thử lại.'));};document.head.append(script);});
+    await teacherGoogleScript;
+   }
+   google.accounts.id.initialize({client_id:config.googleClientId,callback:async response=>{try{
+    await request('/teacher/login',{credential:response.credential,remember:document.querySelector('#teacher-remember').checked},true);
+    try{sessionStorage.removeItem('reading-teacher-token');}catch{}
+    await teacherScreen(true);
+   }catch(error){const status=document.querySelector('#teacher-error');if(status)status.textContent=error.message;}}});
+   google.accounts.id.renderButton(document.querySelector('#google-signin'),{theme:'outline',size:'large',text:'signin_with'});
+  }catch(error){document.querySelector('#teacher-error').textContent=error.message;}
  }
+}
+async function teacherLogout(){
+ try{
+  await request('/teacher/logout',{},true);
+  try{sessionStorage.removeItem('reading-teacher-token');localStorage.setItem('reading-teacher-logout',crypto.randomUUID());}catch{}
+  window.google?.accounts?.id?.disableAutoSelect();resultCache.clear();db={students:{}};identity=null;
+  await teacherScreen();
+ }catch(error){notify(error.message);}
 }
 function teacherHistory(response,selected){
  return '<section class="section"><h2>Lịch sử làm bài</h2><p class="small muted">Lần hoàn thành đầu tiên: '+(response.firstCompleted||'Chưa có')+'</p><div class="history">'+response.attempts.map(a=>a.status==='submitted'?`<button type="button" data-action="teacher-result" data-submission="${a.submissionId}" class="${a.id===selected.id?'selected':''}">Lần ${a.no}<span>${a.finalScore}/13 · Đã nộp</span></button>`:`<details class="card card-pad"><summary>Lần ${a.no} · ${a.status==='reset'?'Đã reset':'Chưa nộp'} · ${countAnswered(a)}/13 đã nhập</summary><p>Bắt đầu: ${dateLabel(a.startedAt)} · Còn ${timeLabel(a.remainingMs)}</p><div class="table-wrap"><table><thead><tr><th>Câu</th><th>Bài làm đã lưu</th></tr></thead><tbody>${Object.keys(KEY).map(n=>`<tr><td>${n}</td><td>${escape(a.answers[n]||'—')}</td></tr>`).join('')}</tbody></table></div><p style="white-space:pre-wrap">${escape(a.notes||'Chưa có ghi chú.')}</p></details>`).join('')+'</div></section>';
@@ -387,6 +412,7 @@ document.addEventListener('click',event=>{
   highlight:()=>{if(!writable())return;const letter=document.querySelector('.paragraph.spot')?.dataset.paragraph;if(!letter)return;a.highlighted=a.highlighted.includes(letter)?a.highlighted.filter(x=>x!==letter):[...a.highlighted,letter];persist();document.querySelector(`#paragraph-${letter}`).classList.toggle('highlighted',a.highlighted.includes(letter));},
   'result-attempt':()=>loadResult(target.dataset.attempt),'check-network':async()=>{try{await request('/state');networkFailed=false;render();notify('Đã kết nối. Nhấn Tiếp tục để làm bài.');}catch(e){notify(e.message);}},
   'teacher-result':()=>{location.hash=`submission=${target.dataset.submission}`;},
+  'teacher-logout':teacherLogout,
   'retry-save':()=>{saveError=false;if(persist(false))render();}
  };
  actions[target.dataset.action]?.();document.querySelector('.homework-options[open]')?.removeAttribute('open');
@@ -426,6 +452,10 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('hidd
 window.addEventListener('pagehide',()=>pause('closed',false));
 window.addEventListener('beforeunload',()=>pause('closed',false));
 window.addEventListener('storage',event=>{
+ if(event.key==='reading-teacher-logout'&&location.pathname.endsWith('/teacher.html')){
+  try{sessionStorage.removeItem('reading-teacher-token');}catch{}
+  resultCache.clear();db={students:{}};identity=null;app.replaceChildren();teacherScreen();return;
+ }
  if(event.key!==checkpointKey||!event.newValue||!current())return;
  try{const fresh=JSON.parse(event.newValue);if(fresh.attemptId!==current().id||fresh.lease?.id!==lease?.id){lastTick=0;current().status='paused';current().pauseReason='conflict';lease=null;navigate('resume');}}catch{}
 });
