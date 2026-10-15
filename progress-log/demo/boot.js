@@ -49,7 +49,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261013-final-feedback-v2');
+  await import('../app.js?rev=20261015-compact-exercises-v1');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });

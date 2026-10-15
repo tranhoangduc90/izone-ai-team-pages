@@ -189,6 +189,23 @@ select:focus, textarea:focus, input[type="text"]:focus { border-color: #dc7581; 
 .flowchart-answer { display:inline-block; max-width:100%; }
 .flowchart-stage .flowchart-select { display:inline-block; width:150px; max-width:100%; min-height:34px; margin:0 3px; padding:5px 24px 5px 8px; border:1px solid #9aaabb; border-radius:6px; background-color:#fbfaf8; color:var(--ink); font:inherit; vertical-align:middle; cursor:pointer; }
 .flowchart-feedback .heading-feedback { margin-top:10px; }
+/* Notes giữ ô điền trong câu; answer sheet dùng cùng số câu và dropdown hiện hành. */
+.compact-exercises { margin:0 31px 24px; padding:22px; border:1px solid var(--line); border-radius:12px; background:#fff; overflow-wrap:anywhere; }
+.listening-notes section + section { margin-top:22px; }
+.listening-notes h3, .matching-names-bank h3 { margin:0 0 12px; font-size:15px; color:var(--ink); }
+.listening-notes section:first-child h3 { text-align:center; font-size:20px; }
+.listening-notes .sentence-text { margin:7px 0; font-size:14px; font-weight:400; line-height:2.4; }
+.notes-gap { display:inline-flex; align-items:center; max-width:100%; vertical-align:middle; }
+.notes-gap b { color:var(--navy); font-size:13px; }
+.listening-notes .sentence-blank { width:150px; min-width:0; flex:0 1 auto; font-size:14px; }
+.compact-exercise-answer .heading-feedback { margin:4px 0 12px; }
+.matching-names-bank { margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid var(--line); }
+.matching-names-bank p { margin:7px 0; font-size:14px; }
+.matching-names-bank b { display:inline-block; width:23px; color:var(--red); }
+.matching-names-row { display:grid; grid-template-columns:30px minmax(0,1fr); align-items:start; gap:12px; margin:12px 0; }
+.matching-names-row .question-number { margin-top:10px; }
+.matching-names-row .matching-heading-select { width:100%; max-width:350px; }
+@media(max-width:640px) { .compact-exercises { margin:0 18px 18px; padding:16px; } .listening-notes .sentence-text { font-size:13px; } }
 @media(max-width:640px) { .flowchart-option-bank { grid-template-columns:repeat(2,minmax(0,1fr)); margin:0 18px 18px; } }
 .reasoning-chain {
   display: grid; grid-template-columns: minmax(120px, 1fr) 18px minmax(130px, 1fr) 18px minmax(120px, 1fr);
