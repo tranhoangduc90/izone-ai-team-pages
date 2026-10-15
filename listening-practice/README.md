@@ -1,5 +1,7 @@
 # Listening thực chiến · Buổi 8
 
+Giảng viên dùng phiên cookie HttpOnly riêng của Listening, theo mẫu Reading: ghi nhớ mặc định 90 ngày không hoạt động, tối đa 365 ngày; bỏ ghi nhớ còn một giờ. Mở tab/link kết quả mới vẫn nhận diện, mỗi lần xem vẫn kiểm quyền lớp. Đăng xuất xóa kết quả/audio đang xem ở các tab giảng viên. Helper gửi cookie dùng lại ../shared/teacher-session-client.js, không giữ token mới trong JavaScript.
+
 Giao diện giữ bộ Reading gốc. app.js chỉ thay điểm mở lời giải để nhận cửa sổ transcript/giải thích; các phần làm bài, lưu, thời gian và chấm vẫn dùng handler hiện có.
 
 - `explanation-dialog.css`: CSS cửa sổ Reading dùng lại nguyên bản.
