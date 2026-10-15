@@ -35,7 +35,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-test2-shared/app.js?rev=20261014-result-details-v1'))
+      .then(() => loadScript('../k56-test2-shared/app.js?v=20261015-issue127-audio-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1'))
       .then(() => loadScript('enhance.js?rev=20261012-audio-v2'))
       .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
@@ -612,7 +612,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-test2-shared/app.js?rev=20261014-result-details-v1');
+    await loadScript('../k56-test2-shared/app.js?v=20261015-issue127-audio-v1');
     await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1');
     await loadScript('enhance.js?rev=20261012-audio-v2');
     await loadScript('annotations.js?rev=20261005-k56-writing-results-v1');
@@ -903,5 +903,17 @@
     if (roster.length) prepareSelectedStudent();
     else initialize();
   });
+
+  // Phòng tải lại audio vẫn giữ cảnh báo khi lượt thi đã bắt đầu.
+  window.addEventListener('beforeunload', event => {
+    if (window.TERM_TEST_LEAVE_GUARD_READY || window.TERM_TEST_ALLOW_NAVIGATION || ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'))) return;
+    const active = state.studentRef && !state.completed && (
+      (state.listeningStartedAt && !state.listeningSubmitted)
+      || (state.readingStartedAt && !state.readingSubmitted)
+      || (state.writingStarted && !state.writingSubmitted));
+    if (!active) return;
+    event.preventDefault(); event.returnValue = true;
+  });
+
   initialize();
 }());
