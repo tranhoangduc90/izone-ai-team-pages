@@ -66,6 +66,7 @@
   let roster = [];
   let activeClassName = classCode;
   let encryptedAudio = null;
+  let audioAccess = null, audioScope = null, audioFromCache = false, audioCacheStatus = '';
   let previewObjectUrl = '';
   let officialObjectUrl = '';
   let previewHeard = false;
@@ -153,6 +154,9 @@
   const previewAudio = document.createElement('audio');
   previewAudio.hidden = true;
   document.body.append(previewAudio);
+  const cacheStatus = document.createElement('p');
+  cacheStatus.id = 'bootstrapAudioCacheStatus'; cacheStatus.setAttribute('role', 'status');
+  elements.bootstrapDownloadProgress.after(cacheStatus);
 
   function memoryEnabled() {
     return studentMemoryForAllClasses && Boolean(studentMemory.api && studentMemory.storage && studentMemory.key);
@@ -491,6 +495,8 @@
     downloadController?.abort();
     downloadController = new AbortController();
     encryptedAudio = null;
+    audioAccess = null; audioScope = null; audioFromCache = false; audioCacheStatus = '';
+    cacheStatus.textContent = 'Đang xác thực quyền tải hoặc khôi phục audio...';
     const resuming = Boolean(session.listeningStartedAt || legacyListeningResume);
     previewHeard = resuming;
     elements.bootstrapDownloadStep.dataset.state = 'active';
@@ -503,10 +509,56 @@
     elements.bootstrapDownloadProgress.max = 1;
     elements.bootstrapDownloadProgress.value = 0;
     try {
+      // Quyền phải đến từ server ở lượt trang này; không lấy khóa/metadata từ storage để tự mở offline.
+      try {
+        audioAccess = await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-access`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({examSessionToken: state.examSessionToken, generation: Number(state.generation) || 0})
+        });
+      } catch (error) {
+        if (error.status !== 404 || error.code) throw error; // Backend cũ chưa có endpoint: vẫn phải online start.
+      }
+      if (audioAccess?.audioCacheSupported) {
+        if (!window.K67_AUDIO_STORE) {
+          try { await loadScript('../k67-shared/audio-store.js?rev=20261015-cache-v1'); }
+          catch { audioCacheStatus = 'Audio chưa được lưu để khôi phục qua tải lại. Giữ trang này trong khi làm bài.'; }
+        }
+        if (window.K67_AUDIO_STORE && !window.K67_AUDIO_STORE.validManifest(audioAccess.audioManifest)) throw new Error('Định danh audio từ máy chủ không hợp lệ.');
+        audioScope = {apiBase: appConfig.API_BASE_URL, slug: testConfig.slug,
+          examSessionToken: audioAccess.examSessionToken, generation: audioAccess.generation};
+        if (resuming && audioAccess.audioProtocolVersion === 1) {
+          // Reload không được chạy đồng hồ âm thầm trong lúc tải/xác thực lại.
+          // Dùng journal cùng controller để retry nguyên sự cố và giữ nháp hiện có.
+          const journalKey = `izone-k67-audio-incident:v1:${testConfig.slug}:${state.examSessionToken}:${audioAccess.generation}`;
+          let journal = null;
+          try { journal = JSON.parse(localStorage.getItem(journalKey) || 'null'); } catch {}
+          const duration = Number(audioAccess.listeningDurationSeconds);
+          let reviewOnly = !audioAccess.activeIncident && Number(audioAccess.listeningResumeAtSeconds) >= duration;
+          if (!reviewOnly && !audioAccess.activeIncident && Number(legacyUiState.audioTime) >= duration - 0.5) {
+            const progress = await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-progress`, {
+              method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+                examSessionToken: state.examSessionToken, generation: audioAccess.generation, heardSeconds: duration, state: 'playing'})
+            });
+            reviewOnly = !progress.activeIncident && Number(progress.listeningResumeAtSeconds) >= duration;
+          }
+          if ((!audioAccess.activeIncident && !reviewOnly) || journal?.pending) {
+            const id = crypto.randomUUID();
+            const pending = journal?.pending || {eventId: id, incidentId: id, reason: 'reload',
+              heardSeconds: Math.max(Number(audioAccess.listeningResumeAtSeconds) || 0, Number(legacyUiState.audioTime) || 0),
+              answers: {...(state.drafts?.listening || {})}, draftRevision: Number(state.draftRevisions?.listening) || 0};
+            try { localStorage.setItem(journalKey, JSON.stringify({...journal, pending})); } catch {}
+            await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-incident`, {
+              method: 'POST', headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({examSessionToken: state.examSessionToken, generation: audioAccess.generation, ...pending})
+            });
+            try { localStorage.setItem(journalKey, JSON.stringify({...journal, pending: null})); } catch {}
+          }
+        }
+      }
       const audioUrl = appConfig.API_BASE_URL + session.encryptedAudioUrl;
       const previewUrl = appConfig.API_BASE_URL + session.previewAudioUrl;
       const [encrypted, previewResponse] = await Promise.all([
-        audioLoader.downloadAudio(audioUrl, {
+        loadEncryptedAudio(audioUrl, {
           signal: downloadController.signal,
           onProgress: ({ loaded, total, complete }) => {
             if (total > 0) {
@@ -520,18 +572,20 @@
             }
           }
         }),
-        fetch(previewUrl, { cache: 'no-store', signal: downloadController.signal })
+        resuming ? null : fetch(previewUrl, { cache: 'no-store', signal: downloadController.signal })
       ]);
-      if (!previewResponse.ok) throw new Error('Không tải được bản nghe thử.');
+      if (previewResponse && !previewResponse.ok) throw new Error('Không tải được bản nghe thử.');
       encryptedAudio = encrypted;
-      const previewBlob = await previewResponse.blob();
       revokePreview();
-      previewObjectUrl = URL.createObjectURL(previewBlob);
-      previewAudio.src = previewObjectUrl;
+      if (previewResponse) {
+        previewObjectUrl = URL.createObjectURL(await previewResponse.blob());
+        previewAudio.src = previewObjectUrl;
+      }
       previewAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       elements.bootstrapDownloadProgress.max = 1;
       elements.bootstrapDownloadProgress.value = 1;
       elements.bootstrapDownloadStatus.textContent = `Đã tải đủ audio mã hóa · 100% · ${formatBytes(encrypted.size)}`;
+      cacheStatus.textContent = audioCacheStatus;
       elements.bootstrapDownloadStep.dataset.state = 'complete';
       elements.bootstrapVolume.disabled = false;
       if (resuming) {
@@ -552,7 +606,28 @@
       elements.bootstrapRetry.textContent = 'Thử tải lại audio';
       elements.bootstrapRetry.hidden = false;
       showNotice(error.message, true);
+      cacheStatus.textContent = 'Chưa xác thực hoặc tải đủ audio. Giữ trang này; kiểm tra mạng rồi thử lại.';
     }
+  }
+
+  async function loadEncryptedAudio(url, options, skipCache = false) {
+    const store = window.K67_AUDIO_STORE;
+    if (audioScope && store && !skipCache) {
+      try {
+        const cached = await store.get(audioScope, audioAccess.audioManifest, audioAccess.serverNow);
+        if (cached) { audioFromCache = true; audioCacheStatus = 'Đã xác thực online và khôi phục audio mã hóa từ bản lưu.'; return cached; }
+      } catch { audioCacheStatus = 'Audio chưa được lưu để khôi phục qua tải lại. Giữ trang này trong khi làm bài.'; }
+    }
+    const blob = await audioLoader.downloadAudio(url, options);
+    if (audioScope) {
+      if (blob.size !== audioAccess.audioManifest.encryptedByteLength) throw new Error('File audio tải chưa đủ theo định danh máy chủ.');
+      try {
+        if (!store) throw new Error('AUDIO_STORE_UNAVAILABLE');
+        await store.put(audioScope, audioAccess.audioManifest, blob, audioAccess.cacheExpiresAt, audioAccess.serverNow);
+        audioCacheStatus = 'Đã lưu audio mã hóa để khôi phục sau tải lại. Khi vào lại vẫn cần mạng để xác thực.';
+      } catch { audioCacheStatus = 'Audio chưa được lưu để khôi phục qua tải lại. Giữ trang này trong khi làm bài.'; }
+    }
+    return blob;
   }
 
   async function prepareSelectedStudent() {
@@ -593,8 +668,10 @@
         if (!recoverFromServerReset(error, student)) throw error;
         prepared = await prepareSession();
       }
+      const localListeningNewer = Number(state.draftRevisions?.listening || 0) > Number(prepared.listeningDraftRevision || 0);
       saveState({
         examSessionToken: prepared.examSessionToken,
+        generation: Number(prepared.generation) || 0,
         listeningStartedAt: prepared.listeningStartedAt,
         listeningDeadlineAt: prepared.listeningDeadlineAt,
         attemptToken: prepared.attemptToken || state.attemptToken || '',
@@ -604,12 +681,12 @@
         listeningSubmitted: prepared.examMode ? Boolean(prepared.listeningSubmitted) : Boolean(prepared.listeningSubmitted || prepared.attemptToken),
         drafts: {
           ...(state.drafts || {}),
-          listening: { ...(prepared.listeningDraft || state.drafts?.listening || {}) },
+          listening: { ...((localListeningNewer ? state.drafts?.listening : prepared.listeningDraft) || state.drafts?.listening || {}) },
           reading: { ...(prepared.readingDraft || state.drafts?.reading || {}) }
         },
         draftRevisions: {
           ...(state.draftRevisions || {}),
-          listening: Number(prepared.listeningDraftRevision) || Number(state.draftRevisions?.listening) || 0,
+          listening: localListeningNewer ? Number(state.draftRevisions.listening) : Number(prepared.listeningDraftRevision) || Number(state.draftRevisions?.listening) || 0,
           reading: Number(prepared.readingDraftRevision) || Number(state.draftRevisions?.reading) || 0
         },
         draftAckRevisions: {
@@ -642,13 +719,20 @@
   }
 
   async function decryptOfficialAudio(blob, response) {
+    if (audioScope && (!response.audioManifest || !['assetVersion','sha256','byteLength','encryptedByteLength','envelopeVersion']
+      .every(field => response.audioManifest[field] === audioAccess.audioManifest[field]))) throw new Error('Phiên bản audio không khớp phiên đã xác thực.');
     const envelope = new Uint8Array(await blob.arrayBuffer());
     const magic = new TextDecoder().decode(envelope.subarray(0, 5));
     if (magic !== response.audioEnvelope.magic) throw new Error('Gói audio mã hóa không hợp lệ.');
     const ivStart = 5;
     const ivEnd = ivStart + response.audioEnvelope.ivBytes;
     const key = await crypto.subtle.importKey('raw', base64Bytes(response.audioKey), 'AES-GCM', false, ['decrypt']);
-    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: envelope.subarray(ivStart, ivEnd) }, key, envelope.subarray(ivEnd));
+    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: envelope.subarray(ivStart, ivEnd) }, key, envelope.subarray(ivEnd));
+    if (response.audioManifest) {
+      const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', plaintext)), byte => byte.toString(16).padStart(2, '0')).join('');
+      if (plaintext.byteLength !== response.audioManifest.byteLength || hash !== response.audioManifest.sha256) throw new Error('Nội dung audio không khớp bản được máy chủ cấp.');
+    }
+    return plaintext;
   }
 
   function loadScript(src) {
@@ -771,7 +855,7 @@
     previewAudio.pause();
     let started = null, officialAudio = null;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261015-incident-v1');
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261015-incident-v1-20261015-cache-v1');
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
@@ -781,6 +865,7 @@
         body: JSON.stringify({
           examSessionToken: state.examSessionToken,
           audioProtocolVersion: 1,
+          generation: Number(state.generation) || 0,
           heardSeconds: savedHeardSeconds,
           audioEventId: crypto.randomUUID()
         })
@@ -792,7 +877,17 @@
       window.K67_ACTIVE_LISTENING?.stop();
       window.K67_ACTIVE_LISTENING = window.K67_LISTENING_PROTECTION({audio: officialAudio,
         session: started, slug: testConfig.slug, apiBase: appConfig.API_BASE_URL, generation: Number(started.generation) || 0});
-      const decrypted = await decryptOfficialAudio(encryptedAudio, started);
+      let decrypted;
+      try { decrypted = await decryptOfficialAudio(encryptedAudio, started); }
+      catch (error) {
+        if (!audioScope) throw error;
+        if (window.K67_AUDIO_STORE) await window.K67_AUDIO_STORE.remove(audioScope).catch(() => {});
+        // Bản lưu sai/hỏng chỉ tải lại một lần với quyền vừa được xác thực, không đổi phiên bản đề.
+        if (!audioFromCache) throw error;
+        audioFromCache = false;
+        encryptedAudio = await loadEncryptedAudio(appConfig.API_BASE_URL + `/api/term-tests/${testConfig.slug}/session/${state.examSessionToken}/audio`, {}, true);
+        decrypted = await decryptOfficialAudio(encryptedAudio, started);
+      }
       officialObjectUrl = URL.createObjectURL(new Blob([decrypted], { type: 'audio/mpeg' }));
       officialAudio.src = officialObjectUrl;
       officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
@@ -808,7 +903,7 @@
         officialAudio.load();
       });
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
-      window.K67_ACTIVE_LISTENING?.arm();
+      if (resumeAt < officialAudio.duration) window.K67_ACTIVE_LISTENING?.arm();
       if (!window.K67_ACTIVE_LISTENING?.isHeld() && resumeAt < officialAudio.duration) await officialAudio.play();
       saveState({
         listeningStartedAt: started.listeningStartedAt,
@@ -820,6 +915,10 @@
       if(started.examMode==='read_first')saveState(window.K67_EXAM_ORDER.restoreDrafts(state,started));
       legacyListeningResume = false;
       await enterExam(started, officialAudio);
+      if (audioScope) {
+        const status = document.createElement('p'); status.id = 'k67AudioCacheStatus'; status.textContent = audioCacheStatus;
+        document.getElementById('listeningView')?.append(status);
+      }
     } catch (error) {
       if (started && officialAudio && window.K67_ACTIVE_LISTENING) {
         await window.K67_ACTIVE_LISTENING.report('startup_failed');
@@ -837,6 +936,8 @@
     if (!roster.length) initialize();
     else prepareSelectedStudent();
   });
+  window.addEventListener('online', () => { if (document.getElementById('bootstrapStart') && !preparing && elements.bootstrapRetry.hidden === false) { if (!roster.length) initialize(); else prepareSelectedStudent(); } });
+  window.addEventListener('term-test:listening-submitted', () => { if (audioScope) window.K67_AUDIO_STORE?.remove(audioScope).catch(() => {}); }, true);
   elements.bootstrapDemoReset.addEventListener('click', async () => {
     const studentRef = elements.bootstrapStudent.value;
     const student = roster.find(item => item.ref === studentRef);

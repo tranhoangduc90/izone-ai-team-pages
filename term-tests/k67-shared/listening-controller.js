@@ -44,7 +44,7 @@
       for (let attempt = 0; ; attempt++) {
         try {
           const response = await fetch(`${apiBase}/api/term-tests/${slug}/session/${suffix}`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body, signal: AbortSignal.timeout(2500)
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body, keepalive: suffix === 'audio-incident', signal: AbortSignal.timeout(2500)
           });
           const payload = await response.json();
           if (!response.ok) throw Object.assign(new Error(payload.message || 'Chưa kết nối được máy chủ.'), {status: response.status});
@@ -191,6 +191,9 @@
     audio.addEventListener('waiting', () => { waitSince ||= performance.now(); });
     audio.addEventListener('stalled', () => { waitSince ||= performance.now(); });
     audio.addEventListener('error', () => automatic('error'));
+    audio.addEventListener('ended', () => {
+      if (armed && !held && !stopped) request('audio-progress', {heardSeconds: audio.currentTime, state: 'playing'}, false).then(apply).catch(() => {});
+    });
     const watchdog = setInterval(() => {
       if (!armed || held || stopped || recovering || audio.ended || document.getElementById('listeningView')?.hidden) return;
       if (audio.currentTime > lastPosition + 0.05) { lastPosition = audio.currentTime; lastAdvance = performance.now(); waitSince = 0; }
@@ -208,7 +211,9 @@
     }, 5000);
     const online = () => { if (held) synchronize().catch(() => render()); };
     window.addEventListener('online', online);
-    function stop() { stopped = true; pause(); stopSample(); clearInterval(watchdog); clearInterval(progress); window.removeEventListener('online', online); }
+    const leaving = () => { if (armed && !held && !stopped && !audio.ended) report('reload'); };
+    window.addEventListener('pagehide', leaving);
+    function stop() { stopped = true; pause(); stopSample(); clearInterval(watchdog); clearInterval(progress); window.removeEventListener('online', online); window.removeEventListener('pagehide', leaving); }
     if (held) pause();
     return {attach, report, stop, arm: () => {armed = true; lastAdvance = performance.now();}, isHeld: () => held, getSnapshot: () => ({held, ...snapshot})};
   };
