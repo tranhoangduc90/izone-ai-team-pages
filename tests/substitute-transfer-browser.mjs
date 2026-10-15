@@ -33,7 +33,8 @@ try{
      response={...s,serverNow:new Date(fixtureNow).toISOString()};
     }else if(api==='/api/test/grade'){
      grades.push(payload);const total=payload.examId==='reading'&&slug==='substitute-test-1-k56'?26:40;
-     response={persisted:true,section:{correct:0,total,band:0,details:[]}};
+     response={persisted:true,snapshotHash:'a'.repeat(64),submittedAt:new Date(fixtureNow).toISOString(),
+      section:{correct:0,total,band:0,typeStats:[],details:Array.from({length:total},(_,i)=>({number:i+1,studentAnswer:'',correctAnswer:'Fixture',result:'blank'}))}};
     }
     return route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(response)});
    }

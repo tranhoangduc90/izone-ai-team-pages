@@ -562,11 +562,36 @@
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
+      if (!response.ok || data?.ok === false) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
         requestError.code = String(data.code || data.error || 'HTTP_ERROR'); requestError.status = response.status;
         if(requestError.code==='HISTORY_EPOCH_CONFLICT')window.SUBSTITUTE_STATE.stop();
         throw requestError;
+      }
+      // HTTP 2xx không đủ: workflow có thể dừng trước khi trả biên nhận lưu bài.
+      if (serverGradingMode && requestUrl.pathname === '/api/test/grade') {
+        const section = data?.section;
+        const expectedTotal = payload.examId === 'listening' ? 40 : testConfig.slug === 'substitute-test-1-k56' ? 26 : 40;
+        const durable = !window.TERM_TEST_BOOTSTRAP?.examSessionId || (data.persisted === true
+          && /^[a-f0-9]{64}$/.test(data.snapshotHash || '') && Number.isFinite(Date.parse(data.submittedAt)));
+        if (!durable || !section || section.total !== expectedTotal || !Number.isInteger(section.correct)
+          || section.correct < 0 || section.correct > expectedTotal || !Array.isArray(section.details)
+          || section.details.length !== expectedTotal || !Array.isArray(section.typeStats)
+          || section.details.some(detail => !detail || !Number.isInteger(detail.number) || detail.number < 1
+            || detail.number > expectedTotal || typeof detail.studentAnswer !== 'string' || typeof detail.correctAnswer !== 'string'
+            || !['correct', 'incorrect', 'blank'].includes(detail.result))
+          || new Set(section.details.map(detail => detail.number)).size !== expectedTotal
+          || section.details.filter(detail => detail.result === 'correct').length !== section.correct
+          || section.typeStats.some(stat => !stat || typeof stat.type !== 'string' || !Number.isInteger(stat.total)
+            || stat.total < 1 || !Number.isInteger(stat.correct) || stat.correct < 0 || stat.correct > stat.total
+            || !Number.isFinite(stat.percentage) || stat.percentage < 0 || stat.percentage > 1)) {
+          throw new Error('Máy chủ chưa xác nhận lưu phần thi. Bài nháp được giữ nguyên; vui lòng thử nộp lại.');
+        }
+      }
+      if (serverGradingMode && ['/api/test/writing', '/api/test/writing/status'].includes(requestUrl.pathname)
+        && (data?.accepted !== true || !data.grading || typeof data.grading.ready !== 'boolean'
+          || typeof data.grading.status !== 'string')) {
+        throw new Error('Máy chủ chưa xác nhận nhận bài Writing. Bài nháp được giữ nguyên; vui lòng thử lại.');
       }
       return data;
     } catch (error) {
