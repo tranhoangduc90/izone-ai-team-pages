@@ -102,5 +102,7 @@ window.ListeningReview = (() => {
     };
     if(!dialog().open)dialog().showModal();render();
   }
-  return {open,close,debug:()=>({player,number,attemptId:context?.attempt.id})};
+  // Đăng xuất phải xóa cả dữ liệu/audio đang xem, kể cả từ tab khác.
+  function reset(){close();context=null;dialog().replaceChildren();if(blobUrl)URL.revokeObjectURL(blobUrl);blobUrl=blobKey='';if(player){player.audio.removeAttribute('src');player.audio.load();}}
+  return {open,close,reset,debug:()=>({player,number,attemptId:context?.attempt.id})};
 })();
