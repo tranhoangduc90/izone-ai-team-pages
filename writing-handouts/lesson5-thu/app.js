@@ -1,6 +1,6 @@
 import {ORDER,FIELDS,createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs';
 import {createClient} from './client.mjs?v=20261011-1';
-import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261011-1';
+import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261017-1';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 installStyles();
 
@@ -223,7 +223,7 @@ $('workspace').addEventListener('click',async event=>{
  const key=button.dataset.check;
  if(!key&&button.id!=='next-idea'&&!button.dataset.vocabRetry)return;
  if(busy||conflict||button.disabled)return;
- if(key){const empty=FIELDS[key].find(f=>!state.responses[f].trim());if(empty){const el=$('error-'+key);el.hidden=false;el.textContent='Hãy nhập nội dung vào các ô màu vàng trước khi Check.';$('field-'+empty)?.focus();return;}}
+ if(key){const empty=FIELDS[key].find(f=>!state.responses[f].trim());if(empty){const el=$('error-'+key);el.hidden=false;el.textContent='Hãy nhập đủ nội dung vào các ô trước khi Check.';$('field-'+empty)?.focus();return;}}
  button.disabled=true;editingLocked=true;const epoch=generation;
  document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);
  if(!await flush()||epoch!==generation){if(epoch===generation){editingLocked=false;button.disabled=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});}return;}
