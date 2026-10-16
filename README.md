@@ -23,6 +23,8 @@ Khi thêm một web mới, ưu tiên dùng thư mục con có tên ổn định;
 
 ## Link Term Test và Mini Test
 
+Writing trắng khóa 67: đọc [bản cập nhật 17/10/2026](docs/k67-blank-writing-20261017.md), áp dụng cả hai Term và cả hai thứ tự thi.
+
 - Term Test 1 computer-based: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-1-computer-based/?class=<MÃ_LỚP>`
 - Term Test 1 thi bù riêng Listening: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-1-listening-retake/?class=<MÃ_LỚP>&student=<UUID_HỌC_VIÊN>&retake=<VÉ_THI_BÙ>`
 - Term Test 1 answer sheet: `https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/term-test-1/?class=<MÃ_LỚP>`

@@ -16,14 +16,14 @@ export async function serve(root=new URL('../../',import.meta.url)){
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  return {base:`http://127.0.0.1:${server.address().port}/`,close:()=>new Promise(r=>server.close(r))};
 }
-export async function completedPage(browser,base,routeName){
+export async function completedPage(browser,base,routeName,{writingResult=null,examMode='lis_first',waitTimeout=60000}={}){
  const substitute=routeName.startsWith('substitute'),slug=routeName.replace('-computer-based',''),cbt=routeName.endsWith('-computer-based'),paperMini=slug==='mini-test-k56'&&!cbt;
  const classCode='IC9999',now=new Date().toISOString(),row={number:1,studentAnswer:'OLD-RUN',correctAnswer:'A',result:'incorrect'};
  const section=()=>({correct:0,total:40,details:Array.from({length:40},(_,i)=>({...row,number:i+1})),typeStats:[]});
- const writing={submitted:true,started:true,revision:1,outline:'',task1:'Bài giả Task 1',task2:'Bài giả Task 2',grading:{ready:false,status:'processing',tasks:[]}};
+ const writing={submitted:true,started:true,revision:1,outline:'',task1:writingResult?'':'Bài giả Task 1',task2:writingResult?'':'Bài giả Task 2',grading:writingResult||{ready:false,status:'processing',tasks:[]}};
  const payload={studentRef:id,studentName:'Học viên giả A',className:classCode,attemptToken:token,completed:true,portalSyncStatus:'not_applicable',exam:{serverNow:now},writing,result:{listening:section(),reading:section(),typeStats:[],performance:{best:[],needsImprovement:[],other:[]}}};
  if(paperMini)delete payload.writing;
- const session={classCode,className:classCode,studentRef:id,studentName:payload.studentName,attemptToken:token,clientRunId:run,identityConfirmed:true,listeningStartedAt:now,completed:true,writingStarted:!paperMini,writingSubmitted:!paperMini,writingDirty:false,drafts:{listening:{},reading:{},writing:{task1:'Bài giả Task 1',task2:'Bài giả Task 2',outline:''}},testGrades:{listening:section(),reading:section(),writing:{grading:writing.grading}}};
+ const session={classCode,className:classCode,studentRef:id,studentName:payload.studentName,attemptToken:token,clientRunId:run,examMode,identityConfirmed:true,listeningStartedAt:now,completed:true,writingStarted:!paperMini,writingSubmitted:!paperMini,writingDirty:false,drafts:{listening:{},reading:{},writing:{task1:writing.task1,task2:writing.task2,outline:''}},testGrades:{listening:section(),reading:section(),writing:{grading:writing.grading}}};
  if(substitute)session._substitute={version:2,testSlug:slug,historyEpoch:epoch,classCode,studentRef:id,clientRunId:run,attemptToken:token};
  const keys=substitute?[`izone-test:${slug}:RETAKE-LOBBY:server-grade:state-v2:${epoch}:lobby`,`izone-test:${slug}:${classCode}:server-grade:state-v2:${epoch}:${id}:${run}`]:[`izone-test:${slug}:${classCode}`,`izone-test:${slug}:${classCode}:cbt`];
  const context=await browser.newContext({serviceWorkers:'block',viewport:{width:1440,height:900}}),errors=[],requests=[];
@@ -40,30 +40,32 @@ export async function completedPage(browser,base,routeName){
    else if(route.includes('roster'))data={class:{name:payload.className,code:payload.className},students:[{ref:payload.studentRef,name:payload.studentName}]};
    else if(route.endsWith('/attempt/prepare')||route.endsWith('/session/resume-attempt'))data={...payload,attemptMode:paperMini?'answer_sheet':'cbt',generation:1,policy:{timed:cbt,autoSubmit:cbt},nextSection:'complete',examMode:body?.mode||'lis_first',listeningSubmitted:true,readingSubmitted:true,writingStartedAt:paperMini?'':now,writingSubmittedAt:paperMini?'':now,serverNow:now,content:{variant:'semantic-html',timing:{},listening:{sections:[]},reading:{passages:[]},writing:{tasks:[{id:slug==='term-test-2-k56'?'task1':'task2',label:'Writing giả',prompt:'Đề giả',minimumWords:0}]}}};
    else if(route==='/api/term-tests/result/stream'){status=404;data={};}
-   else if(route==='/api/term-tests/result'){polls++;data=structuredClone(payload);if(data.writing)data.writing.grading=phase==='ready'?{ready:true,status:'ready',writingScore:7,tasks:[]}:payload.writing.grading;}
+   else if(route==='/api/term-tests/result'){polls++;data=structuredClone(payload);if(data.writing)data.writing.grading=writingResult||(phase==='ready'?{ready:true,status:'ready',writingScore:7,tasks:[]}:payload.writing.grading);}
    // Biên nhận accepted là contract hiện hành của Substitute; thiếu nó UI phải giữ trạng thái chưa xác nhận.
    else if(route==='/api/test/writing/status'){polls++;data={accepted:true,grading:phase==='ready'?{ready:true,status:'ready',writingScore:7,tasks:[]}:writing.grading};}
    else {errors.push('API ngoài fixture: '+route);status=400;data={};}
+   if(writingResult&&data?.content?.writing)data.content.writing.tasks=writingResult.tasks.map(t=>({id:`task${t.taskNumber}`,label:`Writing Task ${t.taskNumber}`,prompt:'Đề giả',minimumWords:0}));
+   if(writingResult&&data?.examMode)data.examMode=examMode;
    return r.fulfill({status,headers,contentType:'application/json',body:JSON.stringify(data)}).catch(()=>{});
   }
   if(u.href.startsWith(base))return r.continue();
   return r.abort();
  });
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
- const url=base+'term-tests/'+routeName+'/?class='+classCode+(substitute?'&demo=exam&grading=server':'');
+ const url=base+'term-tests/'+routeName+'/?class='+classCode+(substitute?'&demo=exam&grading=server':'')+'&mode='+examMode;
  async function waitForDetails(){
   // Đợi DOM kết quả hoặc nút sẵn sàng; không click nút đang tải rồi bị ẩn.
   await page.waitForFunction(()=>{
    const detail=document.querySelector('#questionDetails > details');
    const button=document.querySelector('#viewResult');
    return Boolean(detail?.getClientRects().length || (button?.getClientRects().length && !button.disabled));
-  },null,{timeout:60000});
+  },null,{timeout:waitTimeout});
   const details=page.locator('#questionDetails > details');
   if(!(await details.first().isVisible()))await page.evaluate(()=>{
    const button=document.querySelector('#viewResult');
    if(button?.getClientRects().length && !button.disabled)button.click();
   });
-  await details.first().waitFor({state:'visible',timeout:60000});return details;
+  await details.first().waitFor({state:'visible',timeout:waitTimeout});return details;
  }
  async function enter(){
   await page.goto(url,{waitUntil:'domcontentloaded'});
