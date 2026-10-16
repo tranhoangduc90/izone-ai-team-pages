@@ -1,5 +1,6 @@
 import * as memory from '../../shared/student-memory.js';
 import {reading,writing} from './practice-content.js';
+import {createWebChecks} from './web-checks.js';
 
 // Bài làm quen dùng phiên/API riêng. Bộ nhớ chỉ giữ nháp và token thử; khóa audio chỉ ở RAM.
 // Lưu/nộp phải được server đọc lại. Lỗi mạng giữ nháp, không báo thành công hoặc tự mở bài thi.
@@ -14,6 +15,32 @@ let roster=[],session=null,token='',local={},audio=null,audioUrl='',scope=null,e
 let cacheState='not_checked',heard=0,revision=0,ackRevision=0,saveQueue=Promise.resolve(),saveTimer,progressTimer,unlock;
 let sampleReady=false,busy=false,serverAvailable=false,unloading=false,sessionUnlock,readOnly=false;
 let activeSkill='',practiceRevision=0,practiceAck=0,practiceQueue=Promise.resolve();
+let diagnostics,playerChecks,checkTimer,checkRevision=0,checkQueue=Promise.resolve(),checksOpen=false,checkSyncState='pending';
+function startChecks(){
+  clearTimeout(checkTimer);diagnostics?.dispose();checkRevision=session?.checkRevision||0;checkQueue=Promise.resolve();checkSyncState='pending';
+  diagnostics=createWebChecks({onChange:()=>{diagnostics?.paint();clearTimeout(checkTimer);if(sessionUnlock)checkTimer=setTimeout(flushChecks,1500);},
+    onRisk:()=>{const yes=app.querySelector('[name=heard][value=yes]');if(yes)yes.checked=false;updateSubmit();}});
+}
+function checksPanel(){let html=diagnostics.html();
+  if(session?.checkUpdatedAt&&session.checkReport?.runId!==diagnostics.report().runId)html=html.replace('<p id="checkSaved"','<p class="readiness-muted">Máy chủ còn kết quả kiểm của lần trước. Các mục phía trên là lượt đang mở; không dùng nhãn đạt cũ để bỏ kiểm lại sau tải lại.</p><p id="checkSaved"');
+  const savedText=checkSyncState==='failed'?'Chưa xác nhận đồng bộ được kết quả kiểm. Trạng thái lưu/nộp bài thử được ghi riêng.':checkSyncState==='saved'?'Đã ghi và đọc lại kết quả kiểm trên máy chủ. Đây là quan sát từ web, không phải chứng nhận máy.':'';
+  html=html.replace('id="checkSaved" class="readiness-muted" role="status"></p>',`id="checkSaved" class="readiness-muted" role="status">${savedText}</p>`);
+  return html.replace('id="webChecks"','id="webChecks"'+(checksOpen?'':' hidden'));}
+function flushChecks(){
+  if(!session||!sessionUnlock||readOnly)return Promise.resolve(false);
+  clearTimeout(checkTimer);checkRevision=Math.max(checkRevision,session.checkRevision||0)+1;
+  const owner=diagnostics,generation=epoch,snapshot={token,revision:checkRevision,report:diagnostics.report()};
+  checkQueue=checkQueue.catch(()=>false).then(async()=>{
+    if(diagnostics!==owner||epoch!==generation)return false;
+    try{const r=await request('/checks',snapshot);if(diagnostics!==owner||epoch!==generation)return false;
+      checkRevision=Math.max(checkRevision,r.session.checkRevision||0);
+      if(r.session.checkRevision!==snapshot.revision||r.session.checkReport?.runId!==snapshot.report.runId)throw Error('CHECK_CONFLICT');
+      session={...session,checkReport:r.session.checkReport,checkRevision:r.session.checkRevision,checkUpdatedAt:r.session.checkUpdatedAt};
+      checkSyncState='saved';
+      const n=document.getElementById('checkSaved');if(n)n.textContent='Đã ghi và đọc lại kết quả kiểm trên máy chủ. Đây là quan sát từ web, không phải chứng nhận máy.';return true;
+    }catch{if(diagnostics===owner){checkSyncState='failed';const n=document.getElementById('checkSaved');if(n)n.textContent='Chưa xác nhận đồng bộ được kết quả kiểm. Việc lưu/nộp bài thử vẫn có trạng thái riêng.';}return false;}
+  });return checkQueue;
+}
 const fields=()=>Object.fromEntries([...app.querySelectorAll('input[data-answer]')].map(n=>[n.dataset.answer,n.value]));
 const initialAnswers=()=>session?.answers||{};
 function readLocal(){try{return JSON.parse(localStorage.getItem(storageKey)||'{}');}catch{return{};}}
@@ -25,25 +52,31 @@ function persist(patch={}){
 function notice(text,error=false){const n=document.getElementById('notice');if(n){n.textContent=text;n.dataset.error=String(error);n.hidden=!text;}}
 function status(text){const n=document.getElementById('saveStatus');if(n)n.textContent=text;}
 async function request(path,body){
+  const began=performance.now();
+  try{
   const signal=AbortSignal.any([abort.signal,AbortSignal.timeout(10000)]);
   const response=await fetch(api+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store',signal});
   const result=await response.json();
   if(!response.ok||!result.ok){const e=new Error(result.message||'Chưa xử lý được yêu cầu.');e.code=result.error;throw e;}
+  if(path!=='/checks')diagnostics?.network(performance.now()-began);
   return result;
+  }catch(e){if(path!=='/checks')diagnostics?.network(0,false);throw e;}
 }
 function header(exercise=false,controls=''){return `<header class="readiness-header" tabindex="0" aria-label="Tiêu đề và điều khiển bài làm quen">
   <h1>${exercise?'Listening thử':activeSkill?skillLabel(activeSkill)+' thử':'Làm quen K67'}</h1>
   <span class="readiness-person">${escape(session?.studentName||'')} · ${escape(classCode)}</span>
   ${exercise?'<button id="play" class="button button-primary" type="button" disabled>Đang tải audio…</button><span id="audioTime">0:00</span><label class="volume">Âm lượng <input id="volume" type="range" min="0.1" max="1" step="0.1" value="0.7"></label><button id="soundIssue" class="button button-secondary" type="button">Tôi không nghe rõ</button><button id="submit" class="button button-primary" type="button" disabled>Nộp bài thử</button>':''}
-  ${controls}<button id="change" class="button button-secondary" type="button">Đổi người học</button>
+  ${controls}${session?`<button id="webCheckToggle" class="button button-secondary" type="button" aria-expanded="${checksOpen}">Kiểm thiết bị</button>`:''}<button id="change" class="button button-secondary" type="button">Đổi người học</button>
   </header><div id="notice" class="readiness-status" role="status" hidden></div>`;}
-function bindChange(){document.getElementById('change')?.addEventListener('click',()=>changePerson());}
-function stop(){audio?.pause();unlock?.();unlock=null;sessionUnlock?.();sessionUnlock=null;clearTimeout(saveTimer);clearInterval(progressTimer);if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl='';audio=null;sampleReady=false;}
+function bindChange(){document.getElementById('change')?.addEventListener('click',()=>changePerson());
+  document.getElementById('webCheckToggle')?.addEventListener('click',()=>{checksOpen=!checksOpen;const n=document.getElementById('webChecks');if(n)n.hidden=!checksOpen;document.getElementById('webCheckToggle').setAttribute('aria-expanded',String(checksOpen));});}
+function stop(){playerChecks?.expectedPause();audio?.pause();diagnostics?.detach();unlock?.();unlock=null;sessionUnlock?.();sessionUnlock=null;clearTimeout(saveTimer);clearTimeout(checkTimer);clearInterval(progressTimer);if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl='';audio=null;sampleReady=false;}
 async function changePerson(retry=false){
   if(busy)return;
   if(!retry&&session&&(!session.submittedAt||activeSkill&&!session.practice[activeSkill].submittedAt)&&!confirm('Rời lượt làm quen này để đổi người học? Bản chưa đồng bộ có thể bị mất.'))return;
   stop();epoch++;abort.abort();abort=new AbortController();session=null;token='';local={};revision=ackRevision=heard=0;saveQueue=Promise.resolve();readOnly=false;
   activeSkill='';practiceQueue=Promise.resolve();
+  checksOpen=false;startChecks();
   try{localStorage.removeItem(storageKey);}catch{}
   if(!retry)try{memory.writeMemory(localStorage,memoryKey,'');}catch{}
   if(!roster.length)await initialize(false);else renderLogin();
@@ -74,14 +107,14 @@ async function openSession(studentRef,remember){
   try{
     if(local.pending?.studentRef!==studentRef)persist({pending:{studentRef,requestId:crypto.randomUUID(),openingProof:Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join('')}});
     const r=await request('/sessions',{classCode,...local.pending});if(generation!==epoch)return;
-    token=r.token;session=r.session;local={};const durable=persist({token,studentRef:session.studentRef});
+    token=r.token;session=r.session;local={};const durable=persist({token,studentRef:session.studentRef});startChecks();diagnostics.set('session','pass','RESPONDED');
     try{memory.writeMemory(localStorage,memoryKey,remember?studentRef:'');}catch{}
     renderDevice();if(!durable)notice('Không lưu được phiên trên máy. Tải lại có thể phải vào lại bài làm quen.',true);
   }catch(e){if(generation===epoch){renderLogin();notice(e.message+' Bạn có thể nhấn xác nhận để thử lại.',true);}}
   finally{busy=false;}
 }
 function renderDevice(){
-  app.innerHTML=`<main class="readiness-shell">${header()}<section class="readiness-card"><h2>Xác nhận máy và tai nghe</h2>
+  app.innerHTML=`<main class="readiness-shell">${header()}${checksPanel()}<section class="readiness-card"><h2>Xác nhận máy và tai nghe</h2>
   <p>Hãy đeo tai nghe, chọn đúng đầu ra và chỉnh âm lượng thoải mái. Đóng ứng dụng gọi/họp không cần thiết.</p>
   <label class="readiness-check"><input id="sameComputer" type="checkbox">Tôi đang dùng đúng máy sẽ dùng để thi.</label>
   <label class="readiness-check"><input id="sameHeadphones" type="checkbox">Tôi đang dùng đúng tai nghe sẽ dùng để thi.</label>
@@ -95,7 +128,7 @@ function renderDevice(){
   });
 }
 function renderExercise(){
-  app.innerHTML=`<main class="readiness-shell">${header(true)}<div class="readiness-layout"><section class="readiness-card"><h2>Nghe và thử thao tác</h2>
+  app.innerHTML=`<main class="readiness-shell">${header(true)}${checksPanel()}<div class="readiness-layout"><section class="readiness-card"><h2>Nghe và thử thao tác</h2>
     <p>Đây là thông báo về một câu lạc bộ tưởng tượng. Nghe rồi điền vài thông tin để thử nhập, sửa và lưu đáp án.</p>
     <p>Bạn có thể dừng và nghe lại trong bài làm quen. Bài thi thật áp dụng quy định riêng.</p>
     <p id="checks" role="status">Đang kiểm audio, bản lưu và khả năng khôi phục…</p><p id="saveStatus" class="readiness-muted" role="status">Đang lấy bản nháp từ máy chủ…</p>
@@ -113,8 +146,9 @@ function renderExercise(){
   });
   document.getElementById('play').addEventListener('click',()=>togglePlayback());
   document.getElementById('soundIssue').addEventListener('click',()=>{
+    playerChecks?.expectedPause();const repeated=diagnostics.issue();
     audio?.pause();const n=app.querySelector('[name=heard][value=no]');n.checked=true;updateSubmit();
-    notice('Hãy kiểm âm lượng Windows và âm lượng riêng của trình duyệt, chọn đúng loa/tai nghe rồi nghe lại. Nếu vẫn lỗi, trao đổi với giảng viên qua chat hoặc trực tiếp.',true);
+    notice((repeated?'Bạn đã báo không nghe rõ nhiều lần. Hãy trao đổi với giảng viên để đổi thiết bị hoặc hình thức phù hợp. ':'')+'Hãy kiểm âm lượng Windows và âm lượng riêng của trình duyệt, chọn đúng loa/tai nghe rồi nghe lại. Nếu vẫn lỗi, trao đổi với giảng viên qua chat hoặc trực tiếp.',true);
   });
   document.getElementById('volume').addEventListener('input',e=>{if(audio)audio.volume=Number(e.target.value);});
   app.querySelectorAll('[name=heard]').forEach(n=>n.addEventListener('change',updateSubmit));
@@ -131,8 +165,9 @@ function saveDraft(){
       const r=await request('/draft',snapshot);if(epoch!==generation||token!==expectedToken)return false;
       if(r.session.revision>snapshot.revision||JSON.stringify(r.session.answers)!==JSON.stringify(snapshot.answers))throw new Error('Bản nháp đã đổi ở tab khác. Hãy tải lại trước khi tiếp tục.');
       ackRevision=Math.max(ackRevision,r.session.revision);session={...session,...r.session};serverAvailable=true;
+      diagnostics.set('draftSync','pass','READBACK_OK');
       status(ackRevision===revision?'Đã lưu và đọc lại đáp án trên máy chủ.':'Đang lưu thay đổi mới…');updateSubmit();return true;
-    }catch(e){if(epoch===generation){serverAvailable=false;status('Chưa đồng bộ. Nháp hiện giữ trên máy; hãy thử lại khi có mạng.');notice(e.message,true);updateSubmit();}return false;}
+    }catch(e){if(epoch===generation){diagnostics.set('draftSync','fail','FAILED');serverAvailable=false;status('Chưa đồng bộ. Nháp hiện giữ trên máy; hãy thử lại khi có mạng.');notice(e.message,true);updateSubmit();}return false;}
   });return saveQueue;
 }
 async function prepareAudio(){
@@ -145,9 +180,11 @@ async function prepareAudio(){
           if(!lock){resolve(false);return;}const released=new Promise(done=>{sessionUnlock=done;});resolve(true);await released;
         }).catch(reject);
       });
-      if(!acquired){readOnly=true;for(const n of app.querySelectorAll('input, #play, #submit'))n.disabled=true;
-        notice('Lượt làm quen đang mở ở tab khác. Hãy dùng tab đó, hoặc đóng tab đó rồi tải lại trang này.',true);return;}
+      if(!acquired){diagnostics.set('environment','fail',navigator.locks?.request?'OWNER_CONFLICT':'CORE_MISSING');readOnly=true;for(const n of app.querySelectorAll('input, #play, #submit'))n.disabled=true;
+        notice(navigator.locks?.request?'Lượt làm quen đang mở ở tab khác. Hãy dùng tab đó, hoặc đóng tab đó rồi tải lại trang này.':'Trình duyệt thiếu tính năng bảo vệ tab. Hãy dùng Chrome/Edge cập nhật hoặc trao đổi với giảng viên.',true);return;}
     }
+    flushChecks();
+    await diagnostics.checkFormat();if(generation!==epoch)return;
     const access=await request('/audio-access',{token});if(generation!==epoch)return;
     scope={apiBase:api,slug:'readiness-listening-v1',examSessionToken:token,generation:0};
     let encrypted;
@@ -163,6 +200,8 @@ async function prepareAudio(){
     if(hash!==access.manifest.sha256)throw new Error('Audio thử không khớp phiên bản.');
     if(generation!==epoch||expectedToken!==token)return;
     audioUrl=URL.createObjectURL(new Blob([plain],{type:access.mime}));audio=new Audio(audioUrl);audio.volume=0.7;sampleReady=true;serverAvailable=true;
+    diagnostics.set('audio','pass','VERIFIED');diagnostics.set('cache',cacheState==='saved'?'pass':'warn',cacheState==='saved'?'READBACK_OK':'UNAVAILABLE');
+    playerChecks=diagnostics.attach(audio);
     const player=audio,active=()=>epoch===generation&&audio===player;
     player.addEventListener('loadedmetadata',()=>{if(!active())return;if(heard>0&&heard<player.duration-0.3)player.currentTime=heard;updateTime();});
     player.addEventListener('timeupdate',()=>{if(!active())return;heard=Math.max(heard,player.currentTime);updateTime();});
@@ -177,6 +216,8 @@ async function prepareAudio(){
     // Bản mã tải hỏng vẫn có thể có checksum cache hợp lệ. Bỏ đúng bản của phiên thử để lần sau tải mới.
     if(scope)try{await window.K67_AUDIO_STORE.remove(scope);}catch{}
     cacheState='not_checked';
+    diagnostics.set('audio','fail','FAILED');
+    diagnostics.set('cache','unknown','UNAVAILABLE');
     const message=e.name==='OperationError'?'Audio thử bị hỏng hoặc không giải mã được.':e.message;
     notice(message+' Nhấn tải lại audio để thử lại.',true);
     const button=document.getElementById('play');if(button){button.textContent='Tải lại audio';button.disabled=false;}
@@ -184,7 +225,7 @@ async function prepareAudio(){
 }
 async function togglePlayback(){
   if(!sampleReady){if(!busy){busy=true;try{await prepareAudio();}finally{busy=false;}}return;}
-  if(!audio.paused){audio.pause();return;}
+  if(!audio.paused){playerChecks?.expectedPause();audio.pause();return;}
   const generation=epoch;
   // Web Locks chỉ khóa các tab làm quen; quan sát khóa K67 hiện có để tránh nghe chồng bài thật.
   if(!navigator.locks?.request){notice('Trình duyệt chưa hỗ trợ bảo vệ nhiều tab. Hãy dùng Chrome hoặc Edge đã cập nhật.',true);return;}
@@ -193,19 +234,25 @@ async function togglePlayback(){
   navigator.locks.request('k67-readiness-audio:'+apiBase,{ifAvailable:true},async lock=>{
     if(!lock){notice('Bài làm quen đang phát ở tab khác. Hãy dừng bên đó rồi thử lại.',true);return;}
     if(generation!==epoch)return;
-    try{const released=new Promise(resolve=>{unlock=resolve;});await audio.play();await released;}
-    catch{unlock?.();unlock=null;notice('Trình duyệt chưa phát được tiếng. Hãy kiểm âm lượng/đầu ra rồi bấm nghe lại.',true);}
+    try{const released=new Promise(resolve=>{unlock=resolve;});await audio.play();diagnostics.holdWake();await released;}
+    catch(e){diagnostics.set('playback','fail',e.name==='NotAllowedError'?'BLOCKED':'ERROR');unlock?.();unlock=null;notice('Trình duyệt chưa phát được tiếng. Hãy kiểm âm lượng/đầu ra rồi bấm nghe lại.',true);}
   }).catch(()=>notice('Chưa giữ được quyền phát. Hãy thử lại.',true));
 }
 function updateTime(){const n=document.getElementById('audioTime');if(n)n.textContent=`${Math.floor((audio?.currentTime||heard)/60)}:${String(Math.floor((audio?.currentTime||heard)%60)).padStart(2,'0')}`;updateSubmit();}
 function updateSubmit(){const b=document.getElementById('submit'),choice=app.querySelector('[name=heard]:checked');
-  if(b)b.disabled=busy||!sampleReady||!choice||(choice.value==='yes'&&(!audio?.duration||heard<audio.duration-0.5));}
+  const finished=audio?.duration&&heard>=audio.duration-0.5;
+  if(choice?.value==='yes'){
+    if(audio?.muted||audio?.volume===0){choice.checked=false;diagnostics?.set('hearing','warn','RECONFIRM');}
+    else if(finished)diagnostics?.hearing(true);else diagnostics?.set('hearing','pending','PENDING');
+  }else if(choice?.value==='no')diagnostics?.hearing(false);
+  if(b)b.disabled=busy||readOnly||!sampleReady||!choice?.checked||(choice.value==='yes'&&!finished);}
 async function submit(){
-  if(busy)return;busy=true;heard=Math.max(heard,audio?.currentTime||0);audio?.pause();clearTimeout(saveTimer);revision++;const generation=epoch;
+  if(busy)return;busy=true;heard=Math.max(heard,audio?.currentTime||0);playerChecks?.expectedPause();audio?.pause();clearTimeout(saveTimer);revision++;const generation=epoch;
   for(const n of app.querySelectorAll('input,#play,#change,#soundIssue'))n.disabled=true;
   updateSubmit();notice('Đang lưu bản cuối trước khi nộp…');
   try{
     if(!await saveDraft())throw new Error('Chưa lưu được bản cuối; bài chưa được nộp.');
+    await flushChecks();
     const r=await request('/submit',{token,revision:ackRevision,heardConfirmed:app.querySelector('[name=heard]:checked')?.value==='yes'});
     if(generation!==epoch)return;session=r.session;renderResult();
   }catch(e){
@@ -222,7 +269,7 @@ function renderResult(){
   activeSkill='';persist({activeSkill:''});
   stop();persist({token,studentRef:session.studentRef,revision:session.revision,answers:session.answers});
   const rightDevice=session.sameComputer&&session.sameHeadphones;
-  app.innerHTML=`<main class="readiness-shell">${header(false,`<button id="openReading" class="button button-secondary" type="button">${practiceAction('reading')}</button><button id="openWriting" class="button button-secondary" type="button">${practiceAction('writing')}</button><button id="retryExercise" class="button button-secondary" type="button">Làm lại bài thử</button>`)}<section class="readiness-card"><h2>Đã nộp bài làm quen</h2><div class="readiness-result">
+  app.innerHTML=`<main class="readiness-shell">${header(false,`<button id="openReading" class="button button-secondary" type="button">${practiceAction('reading')}</button><button id="openWriting" class="button button-secondary" type="button">${practiceAction('writing')}</button><button id="retryExercise" class="button button-secondary" type="button">Làm lại bài thử</button>`)}${checksPanel()}<section class="readiness-card"><h2>Đã nộp bài làm quen</h2><div class="readiness-result">
     <p><strong>Âm thanh:</strong> ${session.heardConfirmed?'Bạn xác nhận đã nghe rõ đoạn thử.':'Bạn chưa nghe rõ. Hãy kiểm đầu ra/tai nghe và trao đổi với giảng viên qua chat hoặc trực tiếp.'}</p>
     <p><strong>Thiết bị:</strong> ${rightDevice?'Bạn xác nhận đang dùng đúng máy và tai nghe thi.':'Bạn làm quen trên thiết bị khác; cần kiểm lại trên máy và tai nghe thi.'}</p>
     <p><strong>Lưu/nộp:</strong> Đã đọc lại bài nộp từ máy chủ.</p><p><strong>Audio sau tải lại:</strong> ${session.cacheState==='saved'?'Đã lưu bản mã trên máy; khi vào lại vẫn cần mạng để xác thực.':'Chưa có bản lưu bền; có thể cần tải audio lại.'}</p>
@@ -251,7 +298,7 @@ async function renderPractice(skill){
   const data=useLocal?draft.data:p.data;
   practiceRevision=useLocal?draft.revision:p.revision;practiceAck=p.revision;persist({activeSkill:skill});
   const controls=`<button id="practiceSave" class="button button-secondary" type="button" disabled>Lưu nháp</button><button id="practiceSubmit" class="button button-primary" type="button" disabled>Nộp ${skillLabel(skill)} thử</button><button id="practiceResult" class="button button-secondary" type="button">Kết quả</button>`;
-  app.innerHTML=`<main class="readiness-shell">${header(false,controls)}<div class="readiness-layout"><section class="readiness-card readiness-passage"><h2>${escape(skill==='reading'?reading.title:writing.title)}</h2>
+  app.innerHTML=`<main class="readiness-shell">${header(false,controls)}${checksPanel()}<div class="readiness-layout"><section class="readiness-card readiness-passage"><h2>${escape(skill==='reading'?reading.title:writing.title)}</h2>
     ${skill==='reading'?reading.paragraphs.map(text=>`<p>${escape(text)}</p>`).join(''):`<p>${escape(writing.prompt)}</p>`}
     <p class="readiness-muted">${skill==='reading'?'Gợi ý khoảng 2 phút. Đọc bên trái, điền câu trả lời bên phải.':'Gợi ý 1–2 phút. Viết 2–3 câu để thử gõ, sửa, lưu và nộp.'} Không tự thu bài, không tính điểm.</p></section>
     <section class="readiness-card"><h2>${p.submittedAt?'Xem lại bài đã nộp':skill==='reading'?'Đáp án Reading thử':'Bài viết thử'}</h2>
@@ -328,9 +375,21 @@ async function initialize(resume=true){
     if(!response.ok||!r.ok)throw new Error(r.message||'Chưa tải được danh sách.');
     if(generation!==epoch)return;roster=r.students;
     renderLogin();
-  }catch(e){if(generation===epoch){token='';session=null;renderLogin(e.message+' Giữ nguyên trang và tải lại danh sách khi có mạng.');}}
+  }catch(e){if(generation===epoch){
+    token='';session=null;
+    if(['READINESS_SESSION_EXPIRED','READINESS_SESSION_REQUIRED'].includes(e.code)){
+      // Chỉ bỏ quyền thử đã bị server từ chối. Lỗi mạng giữ token/nháp để còn khôi phục.
+      persist({token:'',pending:undefined});
+      try{await initialize(false);if(generation===epoch)notice('Phiên làm quen cũ không còn hiệu lực. Hãy chọn đúng tên và xác nhận để mở lượt mới. Bài thi thật không bị thay đổi.',true);}
+      catch{if(generation===epoch)renderLogin('Phiên làm quen cũ không còn hiệu lực. Hãy tải lại danh sách khi có mạng.');}
+    }else renderLogin(e.message+' Giữ nguyên trang và tải lại danh sách khi có mạng.');
+  }}
 }
 window.addEventListener('pagehide',()=>{unloading=true;if(activeSkill)persistPractice();else if(session&&!session.submittedAt)persistDraft();stop();abort.abort();});
 window.addEventListener('pageshow',event=>{if(event.persisted||unloading)location.reload();});
 window.addEventListener('online',()=>{if(activeSkill)savePractice();else if(session&&!session.submittedAt&&sampleReady)saveDraft();});
-await initialize();
+if(!window.K67_READINESS_BOOT_ERROR){
+  startChecks();
+  window.dispatchEvent(new Event('k67-readiness-started'));
+  await initialize();
+}
