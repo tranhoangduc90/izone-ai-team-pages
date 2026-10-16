@@ -19,6 +19,8 @@ Danh tính thử là CODEXDEMO806, tám người thử mới riêng theo bài/ch
 
 ## Bảng màu và quay lui
 
+Bản thu gọn 16/10/2026 áp dụng cho bốn entry sạch trong bảng trên: bỏ thanh bước kỹ năng, bảng/nút Rà soát bài và chú giải màu dưới số câu. Listening chỉ hiện nhãn Part, giữ mô tả khoảng câu trong tên truy cập/tooltip. Các Part sát trái; thanh số câu giữ trạng thái, cờ và thao tác chuyển câu. Khung làm bài dùng chiều cao màn hình còn lại, không giữ khoảng trống chân trang. Phiếu Mini vẫn giữ hai cột desktop và nộp thủ công. Thay đổi nằm ở `design-full/native.js/css`; engine, timer, audio, lưu/nộp và API giữ phiên bản hiện hành. Các entry đổi mã phiên bản asset để trình duyệt nhận giao diện mới.
+
 `/term-tests/design-lab/` giữ nguyên host/adapter/bảng màu/preset/cuộn tới vùng chỉnh của bản trước. Các asset `real-host.js`, `real-runtime.js`, `real-loader.js`, `clean-audio.js` còn lại phục vụ lab hoặc tham chiếu cũ; không phải engine của các entry sạch mới. Bản lịch sử chỉ đọc dùng adapter giới hạn riêng ở `design-full/saved-runtime.js`.
 
 Quay lui giao diện bằng revert gói entry/lớp trình bày; không xóa bài/lượt thử. Backend có bản quay lui riêng, giữ env/volumes/secret/audio/hàng chấm hiện tại. Không thay các trang thi chính, công thức điểm, prompt hay workflow AI.
