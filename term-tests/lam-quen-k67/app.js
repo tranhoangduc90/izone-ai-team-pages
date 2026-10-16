@@ -1,4 +1,5 @@
 import * as memory from '../../shared/student-memory.js';
+import {reading,writing} from './practice-content.js';
 
 // Bài làm quen dùng phiên/API riêng. Bộ nhớ chỉ giữ nháp và token thử; khóa audio chỉ ở RAM.
 // Lưu/nộp phải được server đọc lại. Lỗi mạng giữ nháp, không báo thành công hoặc tự mở bài thi.
@@ -12,6 +13,7 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 let roster=[],session=null,token='',local={},audio=null,audioUrl='',scope=null,epoch=0,abort=new AbortController();
 let cacheState='not_checked',heard=0,revision=0,ackRevision=0,saveQueue=Promise.resolve(),saveTimer,progressTimer,unlock;
 let sampleReady=false,busy=false,serverAvailable=false,unloading=false,sessionUnlock,readOnly=false;
+let activeSkill='',practiceRevision=0,practiceAck=0,practiceQueue=Promise.resolve();
 const fields=()=>Object.fromEntries([...app.querySelectorAll('input[data-answer]')].map(n=>[n.dataset.answer,n.value]));
 const initialAnswers=()=>session?.answers||{};
 function readLocal(){try{return JSON.parse(localStorage.getItem(storageKey)||'{}');}catch{return{};}}
@@ -29,18 +31,19 @@ async function request(path,body){
   if(!response.ok||!result.ok){const e=new Error(result.message||'Chưa xử lý được yêu cầu.');e.code=result.error;throw e;}
   return result;
 }
-function header(exercise=false){return `<header class="readiness-header" tabindex="0" aria-label="Tiêu đề và điều khiển bài làm quen">
-  <h1>${exercise?'Listening thử':'Làm quen K67'}</h1>
+function header(exercise=false,controls=''){return `<header class="readiness-header" tabindex="0" aria-label="Tiêu đề và điều khiển bài làm quen">
+  <h1>${exercise?'Listening thử':activeSkill?skillLabel(activeSkill)+' thử':'Làm quen K67'}</h1>
   <span class="readiness-person">${escape(session?.studentName||'')} · ${escape(classCode)}</span>
   ${exercise?'<button id="play" class="button button-primary" type="button" disabled>Đang tải audio…</button><span id="audioTime">0:00</span><label class="volume">Âm lượng <input id="volume" type="range" min="0.1" max="1" step="0.1" value="0.7"></label><button id="soundIssue" class="button button-secondary" type="button">Tôi không nghe rõ</button><button id="submit" class="button button-primary" type="button" disabled>Nộp bài thử</button>':''}
-  <button id="change" class="button button-secondary" type="button">Đổi người học</button>
+  ${controls}<button id="change" class="button button-secondary" type="button">Đổi người học</button>
   </header><div id="notice" class="readiness-status" role="status" hidden></div>`;}
 function bindChange(){document.getElementById('change')?.addEventListener('click',()=>changePerson());}
 function stop(){audio?.pause();unlock?.();unlock=null;sessionUnlock?.();sessionUnlock=null;clearTimeout(saveTimer);clearInterval(progressTimer);if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl='';audio=null;sampleReady=false;}
 async function changePerson(retry=false){
   if(busy)return;
-  if(!retry&&session&&!session.submittedAt&&!confirm('Rời lượt làm quen này để đổi người học? Bài thi thật không bị thay đổi.'))return;
+  if(!retry&&session&&(!session.submittedAt||activeSkill&&!session.practice[activeSkill].submittedAt)&&!confirm('Rời lượt làm quen này để đổi người học? Bản chưa đồng bộ có thể bị mất.'))return;
   stop();epoch++;abort.abort();abort=new AbortController();session=null;token='';local={};revision=ackRevision=heard=0;saveQueue=Promise.resolve();readOnly=false;
+  activeSkill='';practiceQueue=Promise.resolve();
   try{localStorage.removeItem(storageKey);}catch{}
   if(!retry)try{memory.writeMemory(localStorage,memoryKey,'');}catch{}
   if(!roster.length)await initialize(false);else renderLogin();
@@ -216,17 +219,99 @@ async function submit(){
   finally{busy=false;for(const n of app.querySelectorAll('input,#play,#change,#soundIssue'))n.disabled=readOnly;updateSubmit();}
 }
 function renderResult(){
+  activeSkill='';persist({activeSkill:''});
   stop();persist({token,studentRef:session.studentRef,revision:session.revision,answers:session.answers});
   const rightDevice=session.sameComputer&&session.sameHeadphones;
-  app.innerHTML=`<main class="readiness-shell">${header()}<section class="readiness-card"><h2>Đã nộp bài làm quen</h2><div class="readiness-result">
+  app.innerHTML=`<main class="readiness-shell">${header(false,`<button id="openReading" class="button button-secondary" type="button">${practiceAction('reading')}</button><button id="openWriting" class="button button-secondary" type="button">${practiceAction('writing')}</button><button id="retryExercise" class="button button-secondary" type="button">Làm lại bài thử</button>`)}<section class="readiness-card"><h2>Đã nộp bài làm quen</h2><div class="readiness-result">
     <p><strong>Âm thanh:</strong> ${session.heardConfirmed?'Bạn xác nhận đã nghe rõ đoạn thử.':'Bạn chưa nghe rõ. Hãy kiểm đầu ra/tai nghe và trao đổi với giảng viên qua chat hoặc trực tiếp.'}</p>
     <p><strong>Thiết bị:</strong> ${rightDevice?'Bạn xác nhận đang dùng đúng máy và tai nghe thi.':'Bạn làm quen trên thiết bị khác; cần kiểm lại trên máy và tai nghe thi.'}</p>
     <p><strong>Lưu/nộp:</strong> Đã đọc lại bài nộp từ máy chủ.</p><p><strong>Audio sau tải lại:</strong> ${session.cacheState==='saved'?'Đã lưu bản mã trên máy; khi vào lại vẫn cần mạng để xác thực.':'Chưa có bản lưu bền; có thể cần tải audio lại.'}</p>
-    <p><strong>Reading / Writing:</strong> Chưa thử trong lát làm quen này.</p></div>
+    ${['reading','writing'].map(skill=>`<p><strong>${skillLabel(skill)}:</strong> ${practiceState(skill)}</p>`).join('')}</div>
     <h3>Đáp án bạn đã nộp</h3><div class="readiness-answers">${[1,2,3,4].map(i=>`${i}. ${escape(session.answers[i]||'(chưa nhập)')}`).join('\n')}</div>
     <p class="readiness-muted">Không tính điểm thi. Kết quả này chỉ phản ánh lượt kiểm vừa rồi; không bảo đảm thiết bị không phát sinh gián đoạn sau đó.</p>
-    <button id="retryExercise" class="button button-secondary" type="button">Làm lại bài thử</button></section></main>`;
+    <p class="readiness-muted">Reading và Writing là tùy chọn. Bạn có thể làm tiếp hoặc xem lại bằng nút trên tiêu đề.</p></section></main>`;
   bindChange();document.getElementById('retryExercise').addEventListener('click',()=>changePerson(true));
+  document.getElementById('openReading').addEventListener('click',()=>renderPractice('reading'));
+  document.getElementById('openWriting').addEventListener('click',()=>renderPractice('writing'));
+}
+const skillLabel=skill=>skill==='reading'?'Reading':'Writing';
+function practiceAction(skill){const p=session.practice[skill];return (p.submittedAt?'Xem lại ':p.revision?'Tiếp tục ':'Thử ')+skillLabel(skill);}
+function practiceState(skill){const p=session.practice[skill];return p.submittedAt?'Đã nộp và đọc lại trên máy chủ.':p.revision?'Đã lưu nháp, chưa nộp.':'Chưa thử (tùy chọn).';}
+function practiceFields(){return activeSkill==='writing'?{text:document.getElementById('writingText')?.value||''}:fields();}
+function persistPractice(){
+  if(!activeSkill||readOnly||session.practice[activeSkill].submittedAt)return;
+  persist({activeSkill,practiceDrafts:{...local.practiceDrafts,[activeSkill]:{revision:practiceRevision,data:practiceFields()}}});
+}
+function wordCount(){const text=document.getElementById('writingText')?.value.trim()||'';const n=document.getElementById('wordCount');if(n)n.textContent=String(text?text.split(/\s+/u).length:0);}
+async function renderPractice(skill){
+  if(busy)return;
+  stop();activeSkill=skill;readOnly=false;const generation=++epoch;practiceQueue=Promise.resolve();
+  const p=session.practice[skill],draft=local.practiceDrafts?.[skill];
+  const useLocal=!p.submittedAt&&draft?.revision>p.revision;
+  const data=useLocal?draft.data:p.data;
+  practiceRevision=useLocal?draft.revision:p.revision;practiceAck=p.revision;persist({activeSkill:skill});
+  const controls=`<button id="practiceSave" class="button button-secondary" type="button" disabled>Lưu nháp</button><button id="practiceSubmit" class="button button-primary" type="button" disabled>Nộp ${skillLabel(skill)} thử</button><button id="practiceResult" class="button button-secondary" type="button">Kết quả</button>`;
+  app.innerHTML=`<main class="readiness-shell">${header(false,controls)}<div class="readiness-layout"><section class="readiness-card readiness-passage"><h2>${escape(skill==='reading'?reading.title:writing.title)}</h2>
+    ${skill==='reading'?reading.paragraphs.map(text=>`<p>${escape(text)}</p>`).join(''):`<p>${escape(writing.prompt)}</p>`}
+    <p class="readiness-muted">${skill==='reading'?'Gợi ý khoảng 2 phút. Đọc bên trái, điền câu trả lời bên phải.':'Gợi ý 1–2 phút. Viết 2–3 câu để thử gõ, sửa, lưu và nộp.'} Không tự thu bài, không tính điểm.</p></section>
+    <section class="readiness-card"><h2>${p.submittedAt?'Xem lại bài đã nộp':skill==='reading'?'Đáp án Reading thử':'Bài viết thử'}</h2>
+    ${skill==='reading'?reading.questions.map((q,i)=>`<label class="readiness-question">${i+1}. ${escape(q)}<input data-answer="${i+1}" id="answer${i+1}" maxlength="120" autocomplete="off" value="${escape(data[i+1]||'')}" disabled></label>`).join(''):`<label for="writingText">Bài viết của bạn</label><textarea id="writingText" class="writing-editor readiness-editor" maxlength="12000" spellcheck="false" disabled>${escape(data.text||'')}</textarea><div class="writing-editor-meta">Số từ: <strong id="wordCount">0</strong> · Tối đa 12.000 ký tự</div>`}
+    <p id="saveStatus" class="readiness-muted" role="status">${p.submittedAt?'Đã đọc lại bài nộp từ máy chủ.':'Đang kiểm quyền sửa của tab…'}</p></section></div></main>`;
+  bindChange();wordCount();
+  document.getElementById('practiceResult').addEventListener('click',async()=>{
+    if(busy)return;busy=true;
+    if(!p.submittedAt&&!readOnly){clearTimeout(saveTimer);await savePractice();}
+    busy=false;if(epoch===generation)renderResult();
+  });
+  if(p.submittedAt){document.getElementById('practiceSave').hidden=true;document.getElementById('practiceSubmit').hidden=true;return;}
+  try{
+    const acquired=await new Promise((resolve,reject)=>{
+      if(!navigator.locks?.request){resolve(false);return;}
+      navigator.locks.request('k67-readiness-session:'+token,{ifAvailable:true},async lock=>{
+        if(!lock){resolve(false);return;}
+        if(epoch!==generation){resolve(false);return;}
+        const released=new Promise(done=>{sessionUnlock=done;});resolve(true);await released;
+      }).catch(reject);
+    });
+    if(epoch!==generation)return;
+    if(!acquired){readOnly=true;notice('Lượt làm quen đang mở ở tab khác. Hãy dùng tab đó, hoặc đóng tab đó rồi tải lại trang này.',true);return;}
+    for(const n of app.querySelectorAll('[data-answer],#writingText,#practiceSave,#practiceSubmit'))n.disabled=false;
+    status(useLocal?'Có nháp trên máy đang chờ đồng bộ.':'Đã đọc lại bản nháp từ máy chủ.');
+    for(const n of app.querySelectorAll('[data-answer],#writingText'))n.addEventListener('input',()=>{
+      practiceRevision++;persistPractice();wordCount();status('Đang chờ lưu…');clearTimeout(saveTimer);saveTimer=setTimeout(savePractice,450);
+    });
+    document.getElementById('practiceSave').addEventListener('click',savePractice);
+    document.getElementById('practiceSubmit').addEventListener('click',submitPractice);
+    if(useLocal)await savePractice();
+  }catch(e){if(epoch===generation)notice(e.message,true);}
+}
+function savePractice(){
+  if(!activeSkill||readOnly||!sessionUnlock||session.practice[activeSkill].submittedAt)return Promise.resolve(false);
+  const skill=activeSkill,generation=epoch,snapshot={token,revision:Math.max(1,practiceRevision),data:practiceFields()};
+  practiceRevision=snapshot.revision;persistPractice();
+  practiceQueue=practiceQueue.catch(()=>false).then(async()=>{
+    if(epoch!==generation)return false;
+    try{
+      const r=await request('/practice/'+skill+'/draft',snapshot);if(epoch!==generation)return false;
+      const saved=r.session.practice[skill];
+      if(saved.revision!==snapshot.revision||JSON.stringify(saved.data)!==JSON.stringify(snapshot.data))throw new Error('Bản nháp đã đổi ở tab khác. Hãy tải lại trước khi tiếp tục.');
+      session=r.session;practiceAck=saved.revision;
+      status(practiceAck===practiceRevision?'Đã lưu và đọc lại bản nháp trên máy chủ.':'Đang lưu thay đổi mới…');notice('');return true;
+    }catch(e){if(epoch===generation){status('Chưa đồng bộ. Nháp hiện giữ trên máy; hãy thử lại khi có mạng.');notice(e.message,true);}return false;}
+  });return practiceQueue;
+}
+async function submitPractice(){
+  if(busy||readOnly)return;busy=true;clearTimeout(saveTimer);const generation=epoch,skill=activeSkill;
+  for(const n of app.querySelectorAll('input,textarea,button'))n.disabled=true;
+  try{
+    if(!await savePractice())throw new Error('Chưa lưu được bản cuối; phần này chưa được nộp.');
+    const r=await request('/practice/'+skill+'/submit',{token,revision:practiceAck});
+    if(epoch!==generation)return;session=r.session;renderResult();
+  }catch(e){
+    if(epoch!==generation)return;
+    try{const r=await request('/session',{token});if(epoch!==generation)return;if(r.session.practice[skill].submittedAt){session=r.session;renderResult();return;}}catch{}
+    notice(e.message+' Giữ nguyên trang và thử lại khi có mạng.',true);
+  }finally{busy=false;for(const n of app.querySelectorAll('input,textarea,button'))n.disabled=readOnly;}
 }
 async function initialize(resume=true){
   const generation=epoch;
@@ -237,7 +322,7 @@ async function initialize(resume=true){
       token=local.token;const restored=await request('/session',{token});if(generation!==epoch)return;
       session=restored.session;
       if(local.studentRef!==session.studentRef)throw new Error('Danh tính bản lưu không khớp phiên. Hãy chọn lại người học.');
-      if(session.submittedAt)renderResult();else if(session.sameComputer===null)renderDevice();else{renderExercise();await prepareAudio();}return;
+      if(session.submittedAt){if(['reading','writing'].includes(local.activeSkill))await renderPractice(local.activeSkill);else renderResult();}else if(session.sameComputer===null)renderDevice();else{renderExercise();await prepareAudio();}return;
     }
     const response=await fetch(api+'/roster?class='+encodeURIComponent(classCode),{cache:'no-store',signal:AbortSignal.timeout(10000)}),r=await response.json();
     if(!response.ok||!r.ok)throw new Error(r.message||'Chưa tải được danh sách.');
@@ -245,7 +330,7 @@ async function initialize(resume=true){
     renderLogin();
   }catch(e){if(generation===epoch){token='';session=null;renderLogin(e.message+' Giữ nguyên trang và tải lại danh sách khi có mạng.');}}
 }
-window.addEventListener('pagehide',()=>{unloading=true;if(session&&!session.submittedAt)persistDraft();stop();abort.abort();});
+window.addEventListener('pagehide',()=>{unloading=true;if(activeSkill)persistPractice();else if(session&&!session.submittedAt)persistDraft();stop();abort.abort();});
 window.addEventListener('pageshow',event=>{if(event.persisted||unloading)location.reload();});
-window.addEventListener('online',()=>{if(session&&!session.submittedAt&&sampleReady)saveDraft();});
+window.addEventListener('online',()=>{if(activeSkill)savePractice();else if(session&&!session.submittedAt&&sampleReady)saveDraft();});
 await initialize();
