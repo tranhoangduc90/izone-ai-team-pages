@@ -7,8 +7,8 @@
 .design67 .cbt-test-heading>div:first-child{flex:0 0 auto}
 .design67 .cbt-test-heading h2{font-size:18px;white-space:nowrap}
 .design67 .cbt-toolbar-controls{display:flex;flex:1 1 0;width:auto;min-width:0;gap:8px;flex-wrap:nowrap;justify-content:initial}
-.design67 .cbt-part-nav{display:flex;flex:1 1 0;min-width:70px;flex-wrap:nowrap;overflow-x:auto;gap:4px;padding:3px}
-.design67 .cbt-part-button{flex-shrink:0;white-space:nowrap;padding:7px;min-height:36px;font-size:12px}
+.design67 .cbt-part-nav{display:flex;flex:1 1 0;min-width:70px;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;gap:5px;padding:3px}
+.design67 .cbt-part-button{flex-shrink:0;white-space:nowrap;padding:8px 12px;min-height:36px;font-size:12px}
 .design67 .cbt-test-heading .cbt-heading-actions{display:flex;flex-wrap:nowrap;gap:7px}
 .design67 .cbt-test-heading .autosave-status{font-size:10px;max-width:115px}
 .design67 .cbt-text-size{gap:4px;flex-shrink:0}
@@ -25,8 +25,20 @@
 .design67 #listeningView .cbt-volume input{width:62px;min-height:22px;height:22px;padding:0;margin:0}
 .design67 #listeningView :is(.cbt-audio-play,.cbt-audio-retry){font-size:11px;min-height:30px;padding:5px 7px}
 .design67 #listeningView :is(.cbt-audio-play,.cbt-audio-retry)[hidden]{display:none!important}
-.design67 .progress{min-height:35px;gap:18px}
-.design67 .progress-step{padding:6px 2px;font-size:12px}
+/* Điều hướng câu hỏi là vùng duy nhất rà trạng thái trong khi làm bài. */
+.design67 :is(.progress,.cbt-review-bar,.cbt-review-panel,.cbt-nav-legend){display:none!important}
+/* Dành chiều cao còn lại cho đề; không giữ chỗ cho thanh bước/chú giải cũ. */
+.design67.cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) #app{display:flex;flex-direction:column;height:100dvh;min-height:0;padding-bottom:0;overflow:hidden}
+.design67.cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) .topbar{flex:0 0 auto}
+.design67.cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) .page-shell{display:flex;flex-direction:column;flex:1 1 0;min-height:0;width:calc(100% - 32px);margin:10px auto 0;padding:0}
+.design67.cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) .test-panel:not([hidden]){flex:1 1 0;height:auto;min-height:0;max-height:none;margin:0}
+.design67 .cbt-question-nav-wrap{padding:9px 12px;margin:0}
+.design67 .cbt-question-nav{padding:0}
+@media(min-width:1201px){
+ .design67 .cbt-question-nav{grid-template-columns:repeat(40,minmax(0,1fr));gap:5px}
+ .design67[data-full-demo=mini-test-lesson-5] .cbt-question-nav{grid-template-columns:repeat(20,minmax(0,1fr))}
+ .design67 .cbt-question-button{min-width:0;height:34px;padding:0}
+}
 .design67[data-demo-paper=true] .questions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;max-width:none}
 .design67[data-demo-paper=true] .question{min-width:0;width:100%}
 .design67[data-demo-paper=true] .question :is(input,select){width:100%}

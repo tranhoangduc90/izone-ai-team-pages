@@ -1,4 +1,4 @@
-// Lớp vỏ demo: nạp trước bootstrap, chỉ gom node gốc; không thay API/Storage/đồng hồ.
+// Lớp vỏ demo: định tuyến API thử riêng và trình bày; giữ Storage, đồng hồ và handler thi gốc.
 (()=>{
  const params=new URLSearchParams(location.search);
  const original=window.TERM_TEST_APP_CONFIG;
@@ -20,6 +20,11 @@
    const title=document.getElementById(skill+'Title'),label=skill==='listening'?'Listening':'Reading';
    if(title&&count&&title.textContent!==label+' – '+count+' câu')title.textContent=label+' – '+count+' câu';
    if(skill==='listening'&&heading){
+    // Chỉ rút nhãn nhìn thấy; giữ mô tả đầy đủ và chính nút có handler gốc.
+    for(const button of form.querySelectorAll('.cbt-part-button')){
+     const full=button.textContent,short=full.split(' · ')[0];
+     if(/^Part \d+$/.test(short)&&full!==short){button.setAttribute('aria-label',full);button.title=full;button.textContent=short;}
+    }
     const card=form.querySelector('.cbt-audio-card');
     if(card&&card.parentElement!==heading)heading.insertBefore(card,controls||actions);
    }
