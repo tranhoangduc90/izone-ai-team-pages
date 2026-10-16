@@ -957,10 +957,16 @@
     function updateExamStatus(prefix) {
       if (!ready || !examStarted) return;
       const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
-      const current = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+      const snapshot = protection?.getSnapshot();
+      const confirmedDuration = Number(snapshot?.listeningDurationSeconds ?? snapshot?.timing?.listeningDurationSeconds);
+      // Sau reload, player có thể dừng trước đuôi file 0,05 giây; mốc máy chủ mới xác nhận đã nghe hết.
+      // Chỉ hiện hoàn tất khi không còn giữ bài/sự cố; không thay mốc phát, hạn nộp hoặc thời gian bù.
+      const finished = !snapshot?.held && !snapshot?.activeIncident && (audio.ended
+        || (confirmedDuration > 0 && Number(snapshot?.listeningResumeAtSeconds) >= confirmedDuration));
+      const current = finished ? duration : Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
       playbackProgress.max = duration || 1;
       playbackProgress.value = current;
-      examStatus.textContent = prefix + ' · ' + formatTime(current) + ' / '
+      examStatus.textContent = (finished ? 'Đã phát xong' : prefix) + ' · ' + formatTime(current) + ' / '
         + (duration ? formatTime(duration) : contentConfig.audio.durationLabel);
     }
 

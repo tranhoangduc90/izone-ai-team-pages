@@ -63,13 +63,21 @@ test('Tiếng thử cùng đầu ra bài thi; phím play/seek không thoát gi�
 });
 test('Audio kết thúc tự nhiên: mute/freeze/resume/media/output không khóa phần kiểm tra đáp án',async()=>{
   const f=await open('term-test-1','lis_first',()=>{window.testMediaActions={};Object.defineProperty(navigator,'mediaSession',{value:{setActionHandler:(a,fn)=>window.testMediaActions[a]=fn}});});try{
+    await f.p.getByRole('textbox',{name:'Câu 1',exact:true}).fill('A');
     // Nghe hết fixture theo đồng hồ thật để checkpoint server cũng tới cuối bài.
     await f.p.waitForFunction(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.ended,null,{timeout:105000});
     await f.p.evaluate(()=>{document.dispatchEvent(new Event('freeze'));document.dispatchEvent(new Event('resume'));window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));window.TERM_TEST_BOOTSTRAP.officialAudioElement.muted=true;window.testMediaActions.pause();window.testMediaActions.seekto();navigator.mediaDevices.dispatchEvent(new Event('devicechange'));});await f.p.waitForTimeout(250);
     assert.equal(await f.p.evaluate(()=>window.K67_ACTIVE_LISTENING.isHeld()),false);assert.equal((await f.read()).listening_audio_incident_id,null);
+    const finished=await f.read();
     await f.p.reload();await f.p.locator('#bootstrapStart').click();await f.p.locator('#listeningView').waitFor({state:'visible'});
     const beforeSignal=await f.p.evaluate(()=>{const s=window.K67_ACTIVE_LISTENING.getSnapshot();return{held:s.held,checkpoint:s.listeningResumeAtSeconds,duration:s.timing?.listeningDurationSeconds};});
     await f.p.evaluate(()=>{document.dispatchEvent(new Event('resume'));window.TERM_TEST_BOOTSTRAP.officialAudioElement.muted=true;window.testMediaActions.pause();});await f.p.waitForTimeout(250);
+    // Mốc máy chủ đã hết bài phải hiện đủ thời lượng, dù player mới còn paused sau reload.
+    assert.equal(await f.p.locator('.k67-inline-audio .cbt-audio-status').innerText(),'Đã phát xong · 01:30 / 01:30');
+    assert.equal(await f.p.locator('.k67-inline-audio .cbt-audio-progress').evaluate(n=>n.value),90);
+    assert.equal(await f.p.getByRole('textbox',{name:'Câu 1',exact:true}).inputValue(),'A');
+    assert.equal((await f.read()).listening_recovery_seconds,finished.listening_recovery_seconds);
+    assert.equal((await f.read()).listening_deadline_at,finished.listening_deadline_at);
     assert.equal(await f.p.evaluate(()=>window.K67_ACTIVE_LISTENING.isHeld()),false,JSON.stringify(beforeSignal));assert.equal((await f.read()).listening_audio_incident_id,null);assert.equal(await f.p.locator('#submitListening').isDisabled(),false);await f.p.locator('#submitListening').click();await f.p.waitForFunction(()=>document.getElementById('listeningView').hidden);assert.ok((await f.read()).listening_submitted_at);
   }finally{await f.c.close();}
 });
@@ -139,7 +147,8 @@ test('Wake Lock bị từ chối không dừng audio; media pause đi qua giữ 
 for(const width of [1440,390])test(`Giao diện ${width}px: tất cả nút audio cùng dòng tiêu đề khi nghe và giữ bài`,async()=>{
   const f=await open();try{
     await f.p.setViewportSize({width,height:900});
-    const measure=()=>f.p.evaluate(()=>{const bar=document.querySelector('#listeningView .k67-single-row'),r=bar.getBoundingClientRect();const controls=[...bar.querySelectorAll('button')].filter(n=>!n.hidden&&n.getBoundingClientRect().height).map(n=>({id:n.id,y:n.getBoundingClientRect().y+n.getBoundingClientRect().height/2}));return{height:r.height,delta:Math.max(...controls.map(x=>x.y))-Math.min(...controls.map(x=>x.y)),bodyWidth:document.documentElement.scrollWidth,controls};});
+    // Edge hiện cửa sổ có thể dùng scrollbar Windows chiếm chỗ; đo hàng nội dung riêng, giữ ngưỡng 70px.
+    const measure=()=>f.p.evaluate(()=>{const bar=document.querySelector('#listeningView .k67-single-row'),r=bar.getBoundingClientRect(),style=getComputedStyle(bar);const controls=[...bar.querySelectorAll('button')].filter(n=>!n.hidden&&n.getBoundingClientRect().height).map(n=>({id:n.id,y:n.getBoundingClientRect().y+n.getBoundingClientRect().height/2}));return{height:bar.clientHeight+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth),outerHeight:r.height,delta:Math.max(...controls.map(x=>x.y))-Math.min(...controls.map(x=>x.y)),bodyWidth:document.documentElement.scrollWidth,controls};});
     let m=await measure();assert.ok(m.delta<=3,JSON.stringify(m));assert.ok(m.height<=70,JSON.stringify(m));assert.ok(m.bodyWidth<=width,JSON.stringify(m));
     await f.p.locator('#k67ReportAudio').click();await f.p.waitForFunction(()=>window.K67_ACTIVE_LISTENING.getSnapshot().activeIncident);m=await measure();assert.ok(m.delta<=3,JSON.stringify(m));assert.ok(m.height<=70,JSON.stringify(m));
     await f.p.screenshot({path:path.join(evidence,`toolbar-${width}.png`),fullPage:true});
