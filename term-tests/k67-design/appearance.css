@@ -1,0 +1,26 @@
+/* Bổ sung phạm vi production cho lớp vỏ đã duyệt; không dùng định danh demo. */
+@media (min-width: 1201px) {
+  .design67[data-k67-design='mini-test-lesson-5'] #listeningView .cbt-question-nav {
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+  }
+  .design67[data-k67-design='mini-test-lesson-5'] #readingView .cbt-question-nav {
+    grid-template-columns: repeat(13, minmax(0, 1fr));
+  }
+}
+
+.design67[data-k67-paper='true'] .questions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  max-width: none;
+}
+.design67[data-k67-paper='true'] .question { min-width: 0; width: 100%; }
+.design67[data-k67-paper='true'] .question :is(input, select) { width: 100%; }
+/* Bỏ số hàng cố định khi xếp một cột, tránh grid tự tạo thêm cột hẹp trên điện thoại. */
+@media (max-width: 700px) {
+  .design67:not(.cbt-mode) .questions-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-flow: row;
+  }
+}
