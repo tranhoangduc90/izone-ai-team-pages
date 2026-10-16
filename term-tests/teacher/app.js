@@ -522,7 +522,7 @@ function openTeacherWritingFeedback(studentName, writing) {
   headerCopy.append(
     createNode('span', '', `${studentName} · Kết quả Writing`),
     createNode('h2', '', `Task ${taskNumber} · Band ${formatBand(Number(writing.taskScore))}`),
-    createNode('p', '', `${Number(writing.wordCount || 0)} từ · Chấm theo 4 tiêu chí IELTS`)
+    createNode('p', '', `${Number(writing.wordCount || 0)} từ · ${writing.gradingMethod==='blank_rule'?'Điểm theo quy tắc bài trắng':'Chấm theo 4 tiêu chí IELTS'}`)
   );
   headerCopy.querySelector('h2').id = `teacherWritingTitle${taskNumber}`;
   const closeButton = createNode('button', 'writing-feedback-close', '×');
@@ -562,7 +562,9 @@ function openTeacherWritingFeedback(studentName, writing) {
   sourcePane.append(essay);
 
   const scorePane = createNode('section', 'writing-feedback-scores');
-  scorePane.append(createNode('h3', '', 'Nhận xét theo tiêu chí'));
+  scorePane.append(createNode('h3', '', writing.gradingMethod==='blank_rule'?'Quy tắc tính điểm':'Nhận xét theo tiêu chí'));
+  if (writing.gradingMethod==='blank_rule') scorePane.append(createNode('p','',
+    'Không có nội dung bài làm. Task bắt buộc đã nộp nhận Band 0; điểm này vẫn được tính vào Writing tổng. Không sử dụng AI để nhận xét bài trắng.'));
   for (const criterion of Array.from(writing.criteria || [])) {
     const card = createNode('article', 'writing-criterion-card');
     const criterionHeader = document.createElement('header');

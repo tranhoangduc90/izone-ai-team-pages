@@ -2283,7 +2283,7 @@
     title.id = `writingFeedbackTitle${taskNumber}`;
     title.textContent = `${task.label} · Band ${formatBand(taskResult.taskScore)}`;
     const meta = document.createElement('p');
-    meta.textContent = `${Number(taskResult.wordCount || countWords(essayValue))} từ · Chấm theo 4 tiêu chí IELTS`;
+    meta.textContent = `${Number(taskResult.wordCount || countWords(essayValue))} từ · ${taskResult.gradingMethod==='blank_rule'?'Điểm theo quy tắc bài trắng':'Chấm theo 4 tiêu chí IELTS'}`;
     headerCopy.append(eyebrow, title, meta);
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
@@ -2340,8 +2340,13 @@
     const scorePane = document.createElement('section');
     scorePane.className = 'writing-feedback-scores';
     const scoreTitle = document.createElement('h3');
-    scoreTitle.textContent = 'Nhận xét theo tiêu chí';
+    scoreTitle.textContent = taskResult.gradingMethod==='blank_rule'?'Quy tắc tính điểm':'Nhận xét theo tiêu chí';
     scorePane.append(scoreTitle);
+    if (taskResult.gradingMethod==='blank_rule') {
+      const explanation=document.createElement('p');
+      explanation.textContent='Không có nội dung bài làm. Task bắt buộc đã nộp nhận Band 0; điểm này vẫn được tính vào Writing tổng. Không sử dụng AI để nhận xét bài trắng.';
+      scorePane.append(explanation);
+    }
     for (const criterion of Array.from(taskResult.criteria || [])) {
       const card = document.createElement('article');
       card.className = 'writing-criterion-card';
