@@ -156,7 +156,7 @@
   document.body.append(previewAudio);
   const cacheStatus = document.createElement('p');
   cacheStatus.id = 'bootstrapAudioCacheStatus'; cacheStatus.setAttribute('role', 'status');
-  elements.bootstrapDownloadProgress.after(cacheStatus);
+  // Giữ nguyên phòng chờ thật; trạng thái cache được dùng nội bộ, không thêm hàng UI.
 
   function memoryEnabled() {
     return studentMemoryForAllClasses && Boolean(studentMemory.api && studentMemory.storage && studentMemory.key);
@@ -862,7 +862,7 @@
     previewAudio.pause();
     let started = null, officialAudio = null;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261015-start-guard-v1');
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1');
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;

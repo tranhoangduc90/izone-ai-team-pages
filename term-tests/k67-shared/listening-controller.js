@@ -16,7 +16,7 @@
     let anchor = Number(session.activeIncident?.anchorSeconds ?? pending?.heardSeconds ?? audio.currentTime) || 0;
     let recovering = false, opening = null, sampleHeard = false, ownerLost = false, environment = null;
     let panel, message, sampleButton, continueButton, reportButton, helpButton;
-    let inlineContainer,unmuteButton,environmentNotice;
+    let inlineContainer,unmuteButton,environmentNotice,outputButton,transferButton;
     let sampleAudio = null, sampleUrl = '', storageFailed = false, progressPending = false;
     let lastPosition = Number(audio.currentTime) || 0, lastAdvance = performance.now(), waitSince = 0;
     let resumeRequest = stored?.resumeRequest || null, lastMessage = '';
@@ -63,6 +63,9 @@
       if (copy !== undefined) lastMessage = copy;
       panel.hidden = !held;
       inlineContainer?.classList.toggle('k67-holding',held);
+      // Chỉ mở công cụ xử lý khi đã giữ bài; phục hồi xong trả thanh về một nút báo lỗi.
+      if(outputButton)outputButton.hidden=!held;
+      if(transferButton)transferButton.hidden=!held;
       if(unmuteButton)unmuteButton.hidden=!(audio.muted||audio.volume===0);
       if(environmentNotice){environmentNotice.textContent=held?'':lastMessage;environmentNotice.title=lastMessage;}
       reportButton.disabled = held || stopped || ownerLost || reviewOnly();
@@ -174,10 +177,10 @@
       continueButton = button('k67ResumeAudio', 'Đã nghe được · Tiếp tục');
       helpButton = button('k67AudioHelp', 'Giáo viên');helpButton.setAttribute('aria-label','Cần giáo viên hỗ trợ');
       panel.append(title, message, controls); container.append(panel);
-      const outputButton=document.createElement('button');outputButton.type='button';outputButton.className='cbt-button';outputButton.id='k67SelectOutput';outputButton.textContent='Đầu ra';
+      outputButton=document.createElement('button');outputButton.type='button';outputButton.className='cbt-button';outputButton.id='k67SelectOutput';outputButton.textContent='Đầu ra';outputButton.hidden=true;
       outputButton.addEventListener('click',()=>environment?.selectOutput());container.append(outputButton);
       if(window.K67_AUDIO_OWNER){
-        const transfer=document.createElement('button');transfer.type='button';transfer.className='cbt-button';transfer.id='k67StopForTransfer';transfer.textContent='Dừng để chuyển';
+        const transfer=document.createElement('button');transferButton=transfer;transfer.type='button';transfer.className='cbt-button';transfer.id='k67StopForTransfer';transfer.textContent='Chuyển thiết bị';transfer.hidden=true;
         transfer.addEventListener('click',async()=>{if(!window.confirm('Dừng audio và giữ bài tại đây trước khi chuyển tab hoặc thiết bị?'))return;
           await report('manual');try{await window.K67_AUDIO_OWNER.release();transfer.disabled=true;}catch(error){render(error.message+' Giữ nguyên trang và báo giáo viên.');}});container.append(transfer);
       }

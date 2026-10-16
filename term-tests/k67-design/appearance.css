@@ -24,3 +24,24 @@
     grid-auto-flow: row;
   }
 }
+
+/* Chỉ gom điều khiển khi đang làm CBT; phòng chờ không chịu các quy tắc này. */
+.design67 .k67-single-row.cbt-toolbar { display: block; overflow-x: auto; padding: 10px 12px; }
+.design67 .k67-single-row .cbt-test-heading { display: flex; flex-wrap: nowrap; gap: 7px; width: max-content; min-width: 100%; }
+.design67 .k67-single-row .cbt-test-heading > * { flex: 0 0 auto; }
+.design67 .k67-single-row .cbt-test-heading h2 { font-size: 17px; }
+.design67 .k67-single-row .cbt-toolbar-controls,
+.design67 .k67-single-row .cbt-heading-actions { display: flex !important; flex-wrap: nowrap; flex: 0 0 auto; gap: 6px; }
+.design67 .k67-single-row .cbt-part-nav { flex: 0 0 auto; min-width: 0; width: auto; gap: 4px; padding: 0; overflow: visible; }
+.design67 .k67-single-row .cbt-part-button { padding: 6px 8px; min-height: 32px; font-size: 11px; }
+.design67 .k67-single-row .cbt-audio-card { margin-left: 0 !important; gap: 5px; }
+.design67 .k67-single-row .k67-inline-audio button { font-size: 11px; padding: 6px 7px; min-height: 32px; }
+.design67 .k67-single-row .k67-inline-audio button[hidden] { display: none !important; }
+.design67 .k67-single-row .cbt-audio-incident { gap: 5px; }
+.design67 .k67-single-row .cbt-audio-incident p { flex-basis: 105px; max-width: 105px; font-size: 10px; }
+.design67 .k67-single-row .k67-holding .cbt-audio-copy,
+.design67 .k67-single-row .k67-holding #k67ReportAudio,
+.design67 .k67-single-row .k67-holding .k67-cache-status { display: none !important; }
+.design67 .k67-single-row .cbt-heading-actions { margin-left: auto; }
+.design67 .k67-single-row .autosave-status { flex: 0 0 70px; max-width: 70px; }
+.design67 .k67-single-row .answer-count { display: none; }

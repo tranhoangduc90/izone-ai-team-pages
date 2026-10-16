@@ -1,3 +1,4 @@
+@import url('../../speaking-homework/fonts/nunito.css');
 /* Dùng nền, nút và bố cục đăng nhập Term Test; phần bài thử giữ một hàng tiêu đề. */
 [hidden]{display:none!important}
 .readiness-shell{max-width:1180px;margin:24px auto;padding:0 18px 40px}
@@ -45,3 +46,23 @@
 #hearing input[type=radio]{width:20px;height:20px;margin:0;flex:0 0 20px}
 .readiness-header:focus-visible,.button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #3974e9;outline-offset:3px}
 @media(max-width:700px){.readiness-layout{grid-template-columns:1fr}.readiness-shell{padding:0 10px 28px;margin-top:12px}.readiness-card{padding:18px}.readiness-header{gap:10px}.readiness-header h1{font-size:18px}.cbt-bootstrap-identity{display:block}.cbt-bootstrap-identity>*{margin-bottom:12px}}
+/* Bài làm quen riêng kế thừa Reading xám sáng–đỏ; không áp CSS sang phòng chờ thi thật. */
+body{background:#f5f6f8;color:#202b3b;font-family:'Nunito Sans','Segoe UI',sans-serif;font-synthesis:none}
+button,input,select,textarea{font-family:inherit}
+.readiness-shell{max-width:1392px}
+.readiness-header{border-color:#dce1e7;border-top:3px solid #db0829;border-radius:10px}
+.readiness-header h1,.readiness-card h2{color:#152b4e}
+.readiness-header .button{font-size:12px;padding:8px 11px;min-height:36px}
+.readiness-person{font-size:12px;max-width:130px}
+.readiness-card{border-color:#dce1e7;border-radius:10px;box-shadow:none}
+.button-primary{background:#152b4e;border-color:#152b4e;box-shadow:none}
+.button-secondary{background:white;border:1px solid #abb5c2;color:#152b4e;box-shadow:none}
+.readiness-status{background:#f8f9fb;border-left:3px solid #db0829;border-radius:0 7px 7px 0;color:#202b3b}
+.readiness-status[data-error=true]{background:#fff4d9;color:#71500a}
+input[type=range],input[type=radio],input[type=checkbox]{accent-color:#152b4e}
+.readiness-question input{border-color:#a7b1bf;color:#152b4e;border-radius:7px}
+.readiness-web-checks h2{font-size:20px}
+#checkRows>div{border-radius:6px;background:#f8f9fb;border-color:#dce1e7}
+#checkRows>[data-state=warn]{background:#fff4d9}
+#checkRows>[data-state=fail]{border-left:3px solid #db0829}
+.readiness-header:focus-visible,.button:focus-visible,input:focus-visible,select:focus-visible{outline-color:#152b4e}

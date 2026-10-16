@@ -10,7 +10,7 @@ import {fileURLToPath} from 'node:url';
 const require=createRequire('file:///C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json');
 const {chromium}=require('playwright'),pages=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const backend=process.env.K67_BACKEND_FIXTURE_ROOT||path.resolve(pages,'../classroom-mapping-review/products/term-mini-k67');
-const evidence=path.join(pages,'output/playwright/k67-audio-owner');
+const evidence=process.env.K67_OWNER_EVIDENCE||path.join(pages,'output/playwright/k67-audio-owner');
 let fixture,browser,base,log='';
 before(async()=>{
   await mkdir(evidence,{recursive:true});const probe=createServer();probe.listen(0,'127.0.0.1');await once(probe,'listening');const port=probe.address().port;await new Promise(r=>probe.close(r));base=`http://127.0.0.1:${port}`;
@@ -56,6 +56,7 @@ test('Tiếng thử cùng đầu ra bài thi; phím play/seek không thoát gi�
     Object.defineProperty(HTMLMediaElement.prototype,'sinkId',{get(){return this.testSink||'';}});HTMLMediaElement.prototype.setSinkId=async function(id){this.testSink=id;};
     navigator.mediaDevices.selectAudioOutput=async()=>({deviceId:'headset'});window.sampleSinks=[];const play=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){if(this.src?.startsWith('blob:')&&this!==window.TERM_TEST_BOOTSTRAP?.officialAudioElement)window.sampleSinks.push(this.sinkId);return play.call(this);};
   });try{
+    await f.p.locator('#k67ReportAudio').click();
     await f.p.locator('#k67SelectOutput').click();await f.p.waitForFunction(()=>window.K67_ACTIVE_LISTENING.getSnapshot().activeIncident);
     await f.p.evaluate(()=>window.testMediaActions.seekforward());await f.p.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.play().catch(()=>{}));await f.p.waitForTimeout(150);assert.equal(await f.p.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),true);
     await f.p.evaluate(()=>{window.sampleSinks=[];});await f.p.locator('#k67TestSound').click();assert.deepEqual(await f.p.evaluate(()=>window.sampleSinks),['headset']);await f.p.locator('#k67ResumeAudio').click();await f.p.waitForFunction(()=>!window.K67_ACTIVE_LISTENING.isHeld());
@@ -100,7 +101,7 @@ test('Khác profile mô phỏng thiết bị: không chiếm khi chủ offline; 
     await cloneState(f.p,other);await f.c.setOffline(true);const p2=await pageIn(other);await p2.goto(f.url);await p2.locator('#bootstrapRetry').waitFor({state:'visible'});
     assert.equal(await f.p.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),false);
     assert.equal(await p2.evaluate(()=>Boolean(window.TERM_TEST_BOOTSTRAP?.officialAudioElement)),false);
-    await f.c.setOffline(false);await f.p.locator('#k67StopForTransfer').click();await f.p.waitForFunction(()=>!window.K67_AUDIO_OWNER.canPlay());
+    await f.c.setOffline(false);await f.p.locator('#k67ReportAudio').click();await f.p.locator('#k67StopForTransfer').click();await f.p.waitForFunction(()=>!window.K67_AUDIO_OWNER.canPlay());
     assert.equal(await f.p.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),true);
     await p2.locator('#bootstrapRetry').click();await p2.locator('#bootstrapStart').click();await p2.locator('#listeningView').waitFor({state:'visible'});await resume(p2);
     const stale=await f.p.evaluate(async()=>{const r=await fetch(`/api/term-tests/term-test-1/session/audio-progress`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({examSessionToken:window.TERM_TEST_BOOTSTRAP.examSessionToken,...window.K67_AUDIO_OWNER.fields(),state:'playing',heardSeconds:0})});return r.status;});assert.equal(stale,409);
@@ -147,10 +148,19 @@ test('Wake Lock bị từ chối không dừng audio; media pause đi qua giữ 
 for(const width of [1440,390])test(`Giao diện ${width}px: tất cả nút audio cùng dòng tiêu đề khi nghe và giữ bài`,async()=>{
   const f=await open();try{
     await f.p.setViewportSize({width,height:900});
+    assert.equal(await f.p.locator('#k67ReportAudio').isVisible(),true);
+    assert.equal(await f.p.locator('#k67SelectOutput').isVisible(),false);
+    assert.equal(await f.p.locator('#k67StopForTransfer').isVisible(),false);
     // Edge hiện cửa sổ có thể dùng scrollbar Windows chiếm chỗ; đo hàng nội dung riêng, giữ ngưỡng 70px.
     const measure=()=>f.p.evaluate(()=>{const bar=document.querySelector('#listeningView .k67-single-row'),r=bar.getBoundingClientRect(),style=getComputedStyle(bar);const controls=[...bar.querySelectorAll('button')].filter(n=>!n.hidden&&n.getBoundingClientRect().height).map(n=>({id:n.id,y:n.getBoundingClientRect().y+n.getBoundingClientRect().height/2}));return{height:bar.clientHeight+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth),outerHeight:r.height,delta:Math.max(...controls.map(x=>x.y))-Math.min(...controls.map(x=>x.y)),bodyWidth:document.documentElement.scrollWidth,controls};});
     let m=await measure();assert.ok(m.delta<=3,JSON.stringify(m));assert.ok(m.height<=70,JSON.stringify(m));assert.ok(m.bodyWidth<=width,JSON.stringify(m));
     await f.p.locator('#k67ReportAudio').click();await f.p.waitForFunction(()=>window.K67_ACTIVE_LISTENING.getSnapshot().activeIncident);m=await measure();assert.ok(m.delta<=3,JSON.stringify(m));assert.ok(m.height<=70,JSON.stringify(m));
+    assert.equal(await f.p.locator('#k67SelectOutput').isVisible(),true);
+    assert.equal(await f.p.locator('#k67StopForTransfer').innerText(),'Chuyển thiết bị');
     await f.p.screenshot({path:path.join(evidence,`toolbar-${width}.png`),fullPage:true});
+    await resume(f.p);
+    assert.equal(await f.p.locator('#k67SelectOutput').isVisible(),false);
+    assert.equal(await f.p.locator('#k67StopForTransfer').isVisible(),false);
+    assert.equal(await f.p.locator('#k67ReportAudio').isVisible(),true);
   }finally{await f.c.close();}
 });
