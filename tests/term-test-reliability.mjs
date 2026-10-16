@@ -10,7 +10,7 @@ const allStudentConfirmationRevision = '20261003-writing-save-cas-v1';
 const computerBasedLayoutRevision = '20261015-owner-v1';
 const loadGuardRevision = '20260912-load-guard-v1';
 const liveResultsRevision = '20261007-mini-login-v1';
-const resetRecoveryRevision = '20261016-audio-reading-v1';
+const resetRecoveryRevision = '20261017-pages-audio-v1';
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
