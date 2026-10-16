@@ -13,7 +13,7 @@ function harness({ blocked = false, offline = false, slug = 'term-test-2' } = {}
     pause() { this.paused = true; },
     async play() { calls.push('play'); if (blocked) throw new Error('Autoplay bị chặn'); this.paused = false; } };
   const context = vm.createContext({
-    audio, uiState: { audio: { time: 60 } }, examStarted: true, ready: true, allowPause: false,
+    audio, protection: null, uiState: { audio: { time: 60 } }, examStarted: true, ready: true, allowPause: false,
     examCard: { hidden: false }, recoveryInFlight: false, lastRecoveryAttemptAt: 0,
     lastSavedSecond: 0, lastProgressReportedBucket:-1,checkpointPhaseMs:0,audioProgressQueue: Promise.resolve(),playingCheckpointPending:false,crypto:globalThis.crypto,
     protectedBootstrap: { examSessionToken: '00000000-0000-4000-8000-000000000091' },

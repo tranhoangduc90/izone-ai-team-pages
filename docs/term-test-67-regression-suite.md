@@ -24,6 +24,7 @@ Nếu test lỗi, Node trả mã khác 0 và nêu đúng ca không đạt. Test 
 | Substitute Test 1/2 K67 tách route, đủ 40 câu và không lộ đáp án/secret | `substitute-k67.test.mjs` |
 | Xác nhận đúng học viên, hồ sơ tạm và không tự mở lượt | `mini-test-identity.mjs`, `term-student-memory-ui.cjs`, `term-test-reliability.mjs` |
 | Mất mạng, autoplay, checkpoint và phục hồi audio | `term-test-audio-recovery.mjs` |
+| Báo lỗi → giữ bài → thử nghe → phục hồi/bù → nộp qua UI/API/SQL thật local | `k67-audio-incidents-browser.mjs` |
 | Thi lại riêng Listening và cách ly phiên | `term-test-listening-retake.mjs` |
 | Kết quả Writing trực tiếp, polling dự phòng và cache revision | `term-test-k67-live-results.mjs` |
 | Giữ mở/đóng bảng từng câu khi cập nhật Writing, nhận câu mới và đổi lượt thi | `term-test-k67-result-details.mjs` |

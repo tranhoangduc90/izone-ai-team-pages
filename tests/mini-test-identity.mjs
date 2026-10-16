@@ -206,6 +206,10 @@ try {
   });
   let cbtRegistrationPayload = null;
   let preparePayload = null;
+  // Fixture danh tính dùng server chưa bật cache; không gọi endpoint thật ngoài máy local.
+  await cbtPage.route('**/api/term-tests/mini-test-lesson-5/session/audio-access', route => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ok: true, audioCacheSupported: false}),
+  }));
   await cbtPage.route('**/api/term-tests/roster?*', async route => route.fulfill({
     status: 200,
     contentType: 'application/json',

@@ -43,6 +43,7 @@
     clientSubmissionStudentRef: '',
     examSessionToken: '',
     attemptToken: '',
+    listeningStartedAt: '',
     listeningDeadlineAt: '',
     readingDeadlineAt: '',
     writingDeadlineAt: '',
@@ -130,6 +131,7 @@
       clientSubmissionStudentRef: state.clientSubmissionStudentRef,
       examSessionToken: state.examSessionToken,
       attemptToken: state.attemptToken,
+      listeningStartedAt: state.listeningStartedAt,
       listeningDeadlineAt: state.listeningDeadlineAt,
       readingDeadlineAt: state.readingDeadlineAt,
       writingDeadlineAt: state.writingDeadlineAt,
@@ -804,6 +806,7 @@
 
   async function apiRequest(path, options = {}) {
     options = window.K67_EXAM_ORDER?.request(options) || options;
+    options = window.K67_AUDIO_OWNER?.request(options) || options;
     const ownerKey = storageKey;
     const requestEpoch = miniEpoch;
     if (miniAnswerSheet) {
@@ -1011,6 +1014,7 @@
   }
 
   function queueSectionDraft(skill) {
+    if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return Promise.resolve(null);
     if (demoMode) return Promise.resolve(null);
     const queuedOwner = storageKey;
     const queuedEpoch = miniEpoch;
@@ -1024,6 +1028,7 @@
     const revision = Number(state.draftRevisions[skill]) || 0;
     const answers = { ...(state.drafts[skill] || {}) };
     const operation = flow.promise.catch(() => undefined).then(async () => {
+      if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return null;
       // Nháp xếp hàng phải giữ đúng người; đổi người không được gửi nháp này bằng token mới.
       if (miniAnswerSheet && (!miniConfirmed || queuedOwner !== storageKey || queuedEpoch !== miniEpoch)) return null;
       if (window.K67_EXAM_ORDER && (queuedStudent !== state.studentRef
@@ -1052,6 +1057,7 @@
       return response;
     });
     flow.promise = operation.catch(error => {
+      if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return null;
       if (miniAnswerSheet && (!miniConfirmed || queuedOwner !== storageKey || queuedEpoch !== miniEpoch)) return null;
       if (error.code === 'LISTENING_LOCKED' || error.code === 'READING_LOCKED') {
         setSectionSaveStatus(skill, 'Đã khóa khi hết giờ', 'locked');
@@ -1070,6 +1076,7 @@
   }
 
   function scheduleSectionDraft(skill, delay = null) {
+    if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return;
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
     if (window.K67_EXAM_ORDER && state[skill + 'Submitted']) return;
     if (miniAnswerSheet && (!miniConfirmed || state.completed || (skill === 'reading' && state.readingSubmitted) || (skill === 'listening' && state.listeningSubmitted))) return;
@@ -1100,6 +1107,7 @@
   }
 
   function isSectionExpired(skill) {
+    if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return false;
     if (miniAnswerSheet) return false;
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const deadline = Date.parse(deadlineValue || '');
@@ -1110,6 +1118,40 @@
     listening: { interval: 0, lastSubmitAttempt: 0, reportedDeadline: false },
     reading: { interval: 0, lastSubmitAttempt: 0, reportedDeadline: false }
   };
+
+  // Nhận mốc/nháp lúc báo lỗi; khóa ngay tại máy và giữ nguyên revision qua retry/reload.
+  // Chỉ ACK phục hồi có hạn mới hợp lệ mới mở lại đáp án. Consumer cũ không có controller giữ luồng cũ.
+  if (window.K67_ACTIVE_LISTENING) {
+    window.K67_LISTENING_ADAPTER = {capture() {
+      const answers = state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
+      const draftRevision = (Number(state.draftRevisions.listening) || 0) + 1;
+      state.drafts.listening = {...answers}; state.draftRevisions.listening = draftRevision;
+      saveSession();
+      return {answers: {...answers}, draftRevision};
+    }};
+    const applyProtection = detail => {
+      if (detail.listeningDeadlineAt) state.listeningDeadlineAt = detail.listeningDeadlineAt;
+      if (detail.serverNow) state.serverTimeOffsetMs = Date.parse(detail.serverNow) - Date.now();
+      if (detail.held) {
+        state.frozenAnswers.listening ||= {...collectAnswers(elements.listeningQuestions)};
+        stopSectionDraftFlow('listening'); setAnswerControlsLocked('listening', true);
+        elements.submitListening.disabled = true;
+      } else if (!state.listeningSubmitted) {
+        state.frozenAnswers.listening = null;
+        delete elements.listeningView.dataset.listeningTimeExpired;
+        setAnswerControlsLocked('listening', isSectionExpired('listening'));
+        elements.submitListening.disabled = false;
+        scheduleSectionDraft('listening', 0);
+      }
+      saveSession();
+    };
+    window.addEventListener('term-test:listening-protection-updated', event => applyProtection(event.detail));
+    elements.listeningView.addEventListener('submit', event => {
+      if (window.K67_ACTIVE_LISTENING.isHeld()) {event.preventDefault();event.stopImmediatePropagation();}
+    }, true);
+    elements.listeningView.addEventListener('term-test:listening-submitted', () => window.K67_ACTIVE_LISTENING.stop());
+    queueMicrotask(() => applyProtection(window.K67_ACTIVE_LISTENING.getSnapshot()));
+  }
 
   // Dữ liệu vào: deadline mới do endpoint phục hồi audio trả về sau một lần ngắt thực tế.
   // Việc chính: cập nhật nguồn thời gian dùng chung và lưu lại để cả hai bộ khóa deadline đọc cùng một mốc.
@@ -1151,6 +1193,7 @@
     });
     const tick = () => {
       if (form.hidden || form.dataset[`${skill}Submitting`] === 'true') return;
+      if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return;
       if ((skill === 'reading' && (state.readingSubmitted || state.completed)) || (skill === 'listening' && state.listeningSubmitted)) {
         stopSectionDeadlineGuard(skill);
         return;
@@ -3047,7 +3090,12 @@
         : `Không thể lưu Listening: ${error.message}`, 'error');
     } finally {
       delete elements.listeningView.dataset.listeningSubmitting;
-      if (!submitted && isSectionExpired('listening')) {
+      if (!submitted && window.K67_ACTIVE_LISTENING?.isHeld()) {
+        state.frozenAnswers.listening ||= {...answers};
+        setAnswerControlsLocked('listening', true);
+        stopSectionDraftFlow('listening');
+        saveSession();
+      } else if (!submitted && isSectionExpired('listening')) {
         elements.listeningView.dataset.listeningTimeExpired = 'true';
         state.frozenAnswers.listening ||= { ...answers };
         saveSession();
@@ -3057,6 +3105,7 @@
       }
       if (!submitted && isSectionExpired('listening')) startSectionDeadlineGuard('listening');
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
+      if (!submitted && window.K67_ACTIVE_LISTENING?.isHeld()) elements.submitListening.disabled = true;
     }
   });
 
