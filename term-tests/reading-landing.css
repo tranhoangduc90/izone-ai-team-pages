@@ -1,0 +1,120 @@
+/* Preset Reading · xám sáng–đỏ, chỉ dành cho hai trang chọn bài K67. */
+@import url('../speaking-homework/fonts/nunito.css');
+
+body.reading-landing {
+  --ink: #202B3B;
+  --muted: #586477;
+  --line: #DCE1E7;
+  --surface: #FFFFFF;
+  --surface-soft: #F8F9FB;
+  --navy: #152B4E;
+  --blue: #152B4E;
+  --red: #DB0829;
+  --green: #136F4A;
+  --shadow: none;
+  color: var(--ink);
+  background: #F5F6F8;
+  font-family: 'Nunito Sans', 'Segoe UI', sans-serif;
+  font-synthesis: none;
+}
+
+.reading-landing .landing-shell {
+  padding: 36px 24px;
+  background: #F5F6F8;
+}
+
+.reading-landing .landing-card {
+  padding: 32px 36px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--red);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.reading-landing .eyebrow {
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.reading-landing .landing-card h1 {
+  margin: 9px 0 12px;
+  color: var(--navy);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+}
+
+.reading-landing .landing-card > p:not(.eyebrow) {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.reading-landing .landing-auth,
+.reading-landing .demo-class {
+  background: var(--surface-soft);
+  border-color: var(--line);
+  border-radius: 8px;
+}
+
+.reading-landing .landing-auth { padding: 16px; }
+.reading-landing .landing-auth strong { font-size: 14px; }
+.reading-landing .landing-auth p { font-size: 13px; line-height: 1.5; }
+.reading-landing .landing-class-field > label { color: var(--ink); font-size: 14px; font-weight: 700; }
+.reading-landing .landing-class-help { font-size: 12px; line-height: 1.5; }
+.reading-landing .teacher-login-remember { font-size: 13px; font-weight: 500; }
+.reading-landing input,
+.reading-landing select { border-color: #939EAE; border-radius: 8px; }
+.reading-landing input:focus,
+.reading-landing select:focus { border-color: var(--navy); box-shadow: none; }
+
+.reading-landing .button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.reading-landing .landing-actions .button { min-height: 56px; }
+.reading-landing .button-primary,
+.reading-landing .order-choice[aria-pressed='true'] {
+  color: #FFFFFF;
+  background: var(--navy);
+  border-color: var(--navy);
+}
+
+.reading-landing .button-secondary {
+  color: var(--navy);
+  background: #FFFFFF;
+  border-color: var(--line);
+}
+
+.reading-landing .button:hover:not(:disabled) { transform: none; }
+.reading-landing .button-primary:hover:not(:disabled),
+.reading-landing .order-choice[aria-pressed='true']:hover { background: #244365; }
+.reading-landing .button-secondary:hover:not(:disabled):not([aria-pressed='true']) {
+  background: #EDF1F7;
+  border-color: var(--navy);
+}
+
+.reading-landing :is(a, button, input, select):focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 3px;
+}
+
+.reading-landing .landing-link-group h2 { color: var(--navy); font-size: 18px; font-weight: 700; }
+.reading-landing .landing-order legend { color: var(--ink); font-size: 15px; }
+.reading-landing .landing-result-action { padding-top: 20px; border-top: 1px solid var(--line); }
+.reading-landing .demo-class { color: var(--muted); }
+.reading-landing .demo-class strong { color: var(--navy); }
+
+@media (max-width: 600px) {
+  .reading-landing .landing-shell { padding: 16px 12px; }
+  .reading-landing .landing-card { padding: 24px 20px; }
+  .reading-landing .landing-card h1 { font-size: 26px; }
+  .reading-landing .landing-auth { padding: 14px; }
+}

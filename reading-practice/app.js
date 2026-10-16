@@ -2,7 +2,7 @@
 'use strict';
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 const CODE='67-practice-reading_matching_heading_mcq',FULL_TIME=1200000,TAB=crypto.randomUUID();
-const app=document.querySelector('#app'),modal=document.querySelector('#modal');
+const app=document.querySelector('#app'),modal=document.querySelector('#modal'),explanationDialog=document.querySelector('#explanation-dialog');
 const API=window.READING_CONFIG.apiBase.replace(/\/$/,'');
 const MEMORY='reading-practice67-identity';
 const docId=new URLSearchParams(location.search).get('documentId')||'entry';
@@ -19,6 +19,8 @@ let db={students:{}},studentId='',route='',routeParams=new URLSearchParams(),las
 let saveError=false,simulatedOffline=false,toastTimeout,modalAction=null,fontSize=17,lease=null,queue=Promise.resolve(),debounce,networkFailed=false,busy=false,ready=false;
 let activeMs=0,leaseBaseline=0,lastPulse=0,checkpointKey='',pendingOperation=null,pulsePending=false,activating=false;
 const resultCache=new Map();
+let explanationAttempt=null,explanationNumber=14,explanationTrigger=null;
+let teacherGoogleScript;
 const student=()=>({name:identity?.name});
 const record=()=>db.students[studentId];
 const current=()=>record()?.attempts.at(-1);
@@ -48,8 +50,12 @@ function apply(response,{preserve=false}={}){
 }
 function snapshotFrom(a){return{answers:a.answers,flags:a.flags,notes:a.notes,annotations:a.annotations,scroll:a.scroll,activeQuestion:a.activeQuestion,tab:a.tab,mobilePane:a.mobilePane,notesOpen:a.notesOpen,highlighted:a.highlighted,sequence:a.sequence};}
 async function request(path,body,teacher=false,keepalive=false){
- const token=teacher?sessionStorage.getItem('reading-teacher-token'):sessionToken;
- let response;try{response=await fetch(`${API}${path}`,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000),keepalive});}
+ let token=sessionToken;
+ if(teacher){try{token=sessionStorage.getItem('reading-teacher-token');}catch{token='';}}
+ let response;try{
+  let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000),keepalive};
+  if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
+  response=await fetch(`${API}${path}`,options);}
  catch{networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
  const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{code:value.error.code});networkFailed=false;return value;
 }
@@ -121,23 +127,43 @@ function render(){
  if(saveError)return showStorageError();if(!ready)return;
  const [name,query]=location.hash.slice(1).split('?');const next=name||'login';
  if(route==='exercise'&&next!=='exercise'&&current()?.status==='running')pause('leave',false);
- route=next;routeParams=new URLSearchParams(query||'');document.body.classList.toggle('reading',route==='exercise');document.body.classList.toggle('cbt-mode',route==='exercise');closeModal();
+ route=next;routeParams=new URLSearchParams(query||'');document.body.classList.toggle('reading',route==='exercise');document.body.classList.toggle('cbt-mode',route==='exercise');closeModal();closeExplanation();
  if(!['login','docs','teacher'].includes(route)&&!studentId)return navigate('login');
  if(route==='prep'&&['running','paused'].includes(current()?.status))return navigate('resume');
  if(route==='exercise'&&!Object.keys(PASSAGE).length)return navigate('resume');
  if(route==='result'){const a=record()?.attempts.find(x=>x.no===+(routeParams.get('attempt')||current()?.no));if(a?.status==='submitted'&&!resultCache.has(a.id)){loadResult(a.no);return;}}
  ({docs,login,prep,resume:resumeScreen,exercise,result:resultScreen,teacher:teacherScreen}[route]||login)();if(route!=='exercise')window.scrollTo(0,0);
 }
-async function teacherScreen(){
+async function teacherScreen(afterLogin=false){
  const submissionId=new URLSearchParams(location.hash.slice(1)).get('submission')||routeParams.get('submission');
  if(!submissionId){app.innerHTML='<section class="card card-pad"><h1>Mở bài từ link kết quả</h1><p>Giảng viên mở link trong tài liệu homework của học viên.</p></section>';return;}
  try{const response=await request(`/teacher/result/${encodeURIComponent(submissionId)}`,undefined,true);apply(response);resultCache.set(response.attempt.id,response);MCQ=response.definition.mcq;
-  const a=response.attempt;app.innerHTML='<div class="teacher-banner">Giảng viên xem bài · Chỉ xem</div>'+hero('BUỔI 7 · KẾT QUẢ READING','The steam car',`${escape(identity.name)} · ${escape(identity.classCode)} · Lần làm ${a.no}`)+`<section class="card card-pad"><h2>${a.finalScore}/13 câu đúng</h2><p>${completionCopy(a)}</p><p>Bắt đầu: ${dateLabel(a.startedAt)} · Nộp bài: ${dateLabel(a.completedAt)}</p><p>${a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Học viên chủ động nộp bài'} · ${a.no-1} lần reset trước lượt này</p></section>`+teacherHistory(response,a)+resultTable(a)+`<section class="card card-pad"><h3>Ghi chú học viên</h3><p style="white-space:pre-wrap">${escape(a.notes||'Chưa có ghi chú.')}</p></section>`+footer();
- }catch(e){if(e.code!=='TEACHER_LOGIN_REQUIRED'){app.innerHTML=`<section class="card card-pad"><h1>Chưa mở được kết quả</h1><p>${escape(e.message)}</p></section>`;return;}
-  app.innerHTML=hero('BUỔI 7 · GIẢNG VIÊN','Đăng nhập để xem kết quả','Dùng tài khoản Google đã có quyền lớp.')+'<section class="card card-pad"><div id="google-signin"></div><p id="teacher-error" role="status"></p></section>';
+  const a=response.attempt;app.innerHTML='<div class="teacher-banner">Giảng viên xem bài · Chỉ xem '+textBtn('Đăng xuất','teacher-logout')+'</div>'+hero('BUỔI 7 · KẾT QUẢ READING','The steam car',`${escape(identity.name)} · ${escape(identity.classCode)} · Lần làm ${a.no}`)+`<section class="card card-pad"><h2>${a.finalScore}/13 câu đúng</h2><p>${completionCopy(a)}</p><p>Bắt đầu: ${dateLabel(a.startedAt)} · Nộp bài: ${dateLabel(a.completedAt)}</p><p>${a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Học viên chủ động nộp bài'} · ${a.no-1} lần reset trước lượt này</p></section>`+teacherHistory(response,a)+resultTable(a)+`<section class="card card-pad"><h3>Ghi chú học viên</h3><p style="white-space:pre-wrap">${escape(a.notes||'Chưa có ghi chú.')}</p></section>`+footer();
+ }catch(e){if(e.code!=='TEACHER_LOGIN_REQUIRED'){app.innerHTML=`<section class="card card-pad"><h1>Chưa mở được kết quả</h1><p>${escape(e.message)}</p>${e.code==='ACCESS_DENIED'?btn('Đăng xuất và đổi tài khoản','teacher-logout'):''}</section>`;return;}
+  app.innerHTML=hero('BUỔI 7 · GIẢNG VIÊN','Đăng nhập để xem kết quả','Dùng tài khoản Google đã có quyền lớp.')+'<section class="card card-pad"><label class="teacher-login-remember"><input id="teacher-remember" type="checkbox" checked> Tự đăng nhập Google trên thiết bị này</label><div id="google-signin"></div><p id="teacher-error" role="status"></p></section>';
+  if(afterLogin)document.querySelector('#teacher-error').textContent='Trình duyệt chưa giữ được phiên. Hãy cho phép cookie cho trang này rồi đăng nhập lại.';
   const config=await request('/config');if(!config.googleClientId){document.querySelector('#teacher-error').textContent='Chưa cấu hình đăng nhập Google.';return;}
-  const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=()=>{google.accounts.id.initialize({client_id:config.googleClientId,callback:async response=>{try{const result=await request('/teacher/login',{credential:response.credential},true);sessionStorage.setItem('reading-teacher-token',result.token);teacherScreen();}catch(e){document.querySelector('#teacher-error').textContent=e.message;}}});google.accounts.id.renderButton(document.querySelector('#google-signin'),{theme:'outline',size:'large',text:'signin_with'});};document.head.append(script);
+  try{
+   if(!window.google?.accounts?.id){
+    teacherGoogleScript ||= new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=resolve;script.onerror=()=>{teacherGoogleScript=null;reject(new Error('Không tải được đăng nhập Google. Hãy tải lại trang để thử lại.'));};document.head.append(script);});
+    await teacherGoogleScript;
+   }
+   google.accounts.id.initialize({client_id:config.googleClientId,callback:async response=>{try{
+    await request('/teacher/login',{credential:response.credential,remember:document.querySelector('#teacher-remember').checked},true);
+    try{sessionStorage.removeItem('reading-teacher-token');}catch{}
+    await teacherScreen(true);
+   }catch(error){const status=document.querySelector('#teacher-error');if(status)status.textContent=error.message;}}});
+   google.accounts.id.renderButton(document.querySelector('#google-signin'),{theme:'outline',size:'large',text:'signin_with'});
+  }catch(error){document.querySelector('#teacher-error').textContent=error.message;}
  }
+}
+async function teacherLogout(){
+ try{
+  await request('/teacher/logout',{},true);
+  try{sessionStorage.removeItem('reading-teacher-token');localStorage.setItem('reading-teacher-logout',crypto.randomUUID());}catch{}
+  window.google?.accounts?.id?.disableAutoSelect();resultCache.clear();db={students:{}};identity=null;
+  await teacherScreen();
+ }catch(error){notify(error.message);}
 }
 function teacherHistory(response,selected){
  return '<section class="section"><h2>Lịch sử làm bài</h2><p class="small muted">Lần hoàn thành đầu tiên: '+(response.firstCompleted||'Chưa có')+'</p><div class="history">'+response.attempts.map(a=>a.status==='submitted'?`<button type="button" data-action="teacher-result" data-submission="${a.submissionId}" class="${a.id===selected.id?'selected':''}">Lần ${a.no}<span>${a.finalScore}/13 · Đã nộp</span></button>`:`<details class="card card-pad"><summary>Lần ${a.no} · ${a.status==='reset'?'Đã reset':'Chưa nộp'} · ${countAnswered(a)}/13 đã nhập</summary><p>Bắt đầu: ${dateLabel(a.startedAt)} · Còn ${timeLabel(a.remainingMs)}</p><div class="table-wrap"><table><thead><tr><th>Câu</th><th>Bài làm đã lưu</th></tr></thead><tbody>${Object.keys(KEY).map(n=>`<tr><td>${n}</td><td>${escape(a.answers[n]||'—')}</td></tr>`).join('')}</tbody></table></div><p style="white-space:pre-wrap">${escape(a.notes||'Chưa có ghi chú.')}</p></details>`).join('')+'</div></section>';
@@ -282,7 +308,7 @@ function explanationRuns(runs) {
 function explanationParagraphs(paragraphs) {
     return paragraphs.map(p=>`<p class="${p.bullet?'explanation-bullet':''}">${explanationRuns(p.runs)}</p>`).join('');
   }
-  // Lời giải nằm ngay dưới hàng kết quả, giữ mọi đoạn chữ và màu từ Docs.
+  // Lời giải gốc giữ mọi đoạn chữ và màu từ Docs để dùng lại trong popup.
 
 function explanationContent(e) {
     if(!e)return '<p class="note warning">Chưa tải được phần giải thích. Hãy tải lại trang.</p>';
@@ -300,21 +326,60 @@ function explanationContent(e) {
     return `<article class="explanation-question evidence" data-explanation-question="${n}" aria-label="Giải thích câu ${n}">${e.prompt?`<div class="explanation-prompt">${explanationRuns(e.prompt.runs)}</div>`:''}<div class="explanation-body"><section class="explanation-analysis">${analysis}</section><aside class="explanation-evidence"><h4>Bằng chứng · Đoạn ${e.paragraph}</h4><blockquote>${explanationParagraphs(evidence)}</blockquote><p class="explanation-evidence-hint">Từ cùng màu liên kết ý trong câu hỏi với bằng chứng; chữ đỏ giữ phần đối chiếu trong tài liệu.</p></aside></div></article>`;
   }
 
-function toggleExplanation(number,button) {
-    const row=document.getElementById(`explanation-${number}`);
-    if(!row)return;
-    row.hidden=!row.hidden;
-    button.setAttribute('aria-expanded',String(!row.hidden));
-    button.textContent=row.hidden?'Xem giải thích':'Ẩn giải thích';
+// Chỉ lớp giải thích thay đổi: lấy đúng kết quả của lượt đang xem, kể cả lịch sử và màn giảng viên.
+function closeExplanation(){if(explanationDialog.open)explanationDialog.close();}
+function alignExplanationEvidence(){
+ if(!explanationDialog.open)return;
+ const pane=explanationDialog.querySelector('.explanation-dialog-passage-scroll');
+ const paragraph=explanationDialog.querySelector('.explanation-active-paragraph');
+ const target=paragraph?.querySelector('mark')||paragraph;
+ if(pane&&target)pane.scrollTop+=target.getBoundingClientRect().top-pane.getBoundingClientRect().top-pane.clientHeight*.25;
+}
+function passageWithEvidence(e){
+ const source=e.kind==='mcq'?e.options.find(option=>option.correct)?.evidence:e.evidence;
+ const safeColor=value=>/^#[0-9a-f]{6}$/i.test(value||'')?value:null;
+ const colored=(source||[]).flatMap(p=>p.runs).filter(run=>((run.background&&run.background!=='#ffffff')||run.foreground)&&run.text.trim());
+ return Object.entries(PASSAGE).map(([letter,passage])=>{
+  const marks=[];
+  for(const run of colored){
+   const term=run.text.trim().replace(/[\u2018\u2019]/g,"'");
+   if(term.length<3)continue;
+   const start=passage.toLowerCase().indexOf(term.toLowerCase());
+   if(start>=0&&letter===e.paragraph&&!marks.some(mark=>start<mark.end&&start+term.length>mark.start))marks.push({start,end:start+term.length,background:safeColor(run.background),foreground:safeColor(run.foreground)});
   }
+  marks.sort((a,b)=>a.start-b.start);let cursor=0,body='';
+  for(const mark of marks){const style=[mark.background&&mark.background!=='#ffffff'?`background-color:${mark.background}`:'background-color:transparent',mark.foreground?`color:${mark.foreground}`:''].filter(Boolean).join(';');body+=escape(passage.slice(cursor,mark.start))+`<mark style="${style}">${escape(passage.slice(mark.start,mark.end))}</mark>`;cursor=mark.end;}
+  body+=escape(passage.slice(cursor));
+  return `<div class="cbt-passage-paragraph paragraph ${letter===e.paragraph?'explanation-active-paragraph':''}" id="explanation-paragraph-${letter}"><span class="cbt-paragraph-label">${letter}</span><p>${body}</p></div>`;
+ }).join('');
+}
+function renderExplanation(){
+ const a=explanationAttempt,e=resultCache.get(a.id)?.explanations?.entries?.[explanationNumber];
+ if(!e){explanationDialog.innerHTML='<p>Chưa tải được phần giải thích.</p>';return;}
+ const raw=document.createElement('template');raw.innerHTML=explanationContent(e);
+ const analysis=raw.content.querySelector('.explanation-analysis')?.innerHTML||'';
+ const evidence=e.kind==='mcq'?e.options.find(option=>option.correct)?.evidence:e.evidence;
+ const prompt=e.heading?[e.heading]:e.prompt?[e.prompt]:[];
+ const row=a.result.rows.find(item=>item.number===explanationNumber),answer=e.answer.join(' / ');
+ explanationDialog.innerHTML=`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI 7 · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${explanationNumber} · ${e.kind==='headings'?'Matching Headings':e.kind==='mcq'?'Multiple Choice':'Summary Completion'}</h2></div><button type="button" class="explanation-dialog-close" data-action="explanation-close" aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Toàn bài đọc"><div class="explanation-dialog-pane-head"><strong>Bài đọc · The steam car</strong><span>Đoạn ${escape(e.paragraph)}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">The successes and failures of the Doble brothers and their steam cars</p>${passageWithEvidence(e)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[explanationNumber]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và bài đọc</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>${e.kind==='headings'?'Heading cần chọn':'Nội dung đề bài'}</h4>${explanationParagraphs(prompt)}</section><section><h4>Bằng chứng · Đoạn ${escape(e.paragraph)}</h4>${explanationParagraphs(evidence||[])}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${explanationNumber - 13}/13</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-action="explanation-prev" ${explanationNumber===14?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-action="explanation-next" ${explanationNumber===26?'disabled':''}>Câu sau →</button></nav></footer></div>`;
+ explanationDialog.querySelector('[data-action="explanation-close"]').focus({preventScroll:true});
+ setTimeout(alignExplanationEvidence,60);
+}
+function toggleExplanation(number,button){
+ const attemptId=button.closest('[data-attempt-id]')?.dataset.attemptId;
+ const attempt=record()?.attempts.find(item=>item.id===attemptId)||resultCache.get(attemptId)?.attempt;
+ if(!attempt||!resultCache.get(attempt.id))return;
+ explanationAttempt=attempt;explanationNumber=number;explanationTrigger=button;
+ explanationDialog.showModal();renderExplanation();
+}
 
 function resultTable(a) {
     const data=resultCache.get(a.id)?.explanations;
-    return `<section class="card section answer-explanations" aria-labelledby="explanations-title"><div class="section-heading"><h2 id="explanations-title">Đáp án và giải thích</h2><span class="pill">13 câu</span></div><div class="table-wrap detail-table-wrap"><table class="result-table detail-table"><thead><tr><th scope="col">Câu</th><th scope="col">Bài làm</th><th scope="col">Đáp án đúng</th><th scope="col">Kết quả</th><th scope="col">Giải thích</th></tr></thead><tbody>${Object.keys(KEY).map(n=>{
+    return `<section class="card section answer-explanations" data-attempt-id="${escape(a.id)}" aria-labelledby="explanations-title"><div class="section-heading"><h2 id="explanations-title">Đáp án và giải thích</h2><span class="pill">13 câu</span></div><div class="table-wrap detail-table-wrap"><table class="result-table detail-table"><thead><tr><th scope="col">Câu</th><th scope="col">Bài làm</th><th scope="col">Đáp án đúng</th><th scope="col">Kết quả</th><th scope="col">Giải thích</th></tr></thead><tbody>${Object.keys(KEY).map(n=>{
       const row=a.result.rows.find(r=>r.number===+n),correct=row.state==='correct',blank=row.state==='blank';
       const state=correct?'correct':blank?'blank':'incorrect';
       const answers=resultCache.get(a.id).key[n];const key=n>=21&&n<=23?answers[0].toUpperCase():answers.join(' / ');
-      return `<tr class="detail-row detail-row-${state}" data-result-question="${n}"><td>${String(n).padStart(2,'0')}.</td><td data-label="Bài làm">${escape(a.answers[n]||'—')}</td><td data-label="Đáp án đúng">${key}</td><td class="${correct?'mark-good':blank?'muted':'mark-bad'}"><span class="detail-result-cell result-${state}"><span class="detail-result-icon" aria-hidden="true">${correct?'✓':blank?'–':'✕'}</span>${correct?'Đúng':blank?'Bỏ trống':'Sai'}</span></td><td><button type="button" class="explanation-button" data-action="explanation-toggle" data-question="${n}" aria-expanded="false" aria-controls="explanation-${n}">Xem giải thích</button></td></tr><tr class="inline-explanation-row" id="explanation-${n}" hidden><td colspan="5">${explanationContent(data?.entries?.[n])}</td></tr>`;
+      return `<tr class="detail-row detail-row-${state}" data-result-question="${n}"><td>${String(n).padStart(2,'0')}.</td><td data-label="Bài làm">${escape(a.answers[n]||'—')}</td><td data-label="Đáp án đúng">${key}</td><td class="${correct?'mark-good':blank?'muted':'mark-bad'}"><span class="detail-result-cell result-${state}"><span class="detail-result-icon" aria-hidden="true">${correct?'✓':blank?'–':'✕'}</span>${correct?'Đúng':blank?'Bỏ trống':'Sai'}</span></td><td><button type="button" class="explanation-button" data-action="explanation-toggle" data-question="${n}" aria-haspopup="dialog">Xem giải thích</button></td></tr>`;
     }).join('')}</tbody></table></div>${data?.source?.url?`<div class="explanation-source"><a href="${escape(data.source.url)}" target="_blank" rel="noopener noreferrer">Tài liệu giải thích ↗</a></div>`:''}</section>`;
   }
 
@@ -343,9 +408,11 @@ document.addEventListener('click',event=>{
   'review-jump':()=>{document.querySelector('#review-panel').hidden=true;jump(n);},'mobile-pane':()=>setMobilePane(target.dataset.pane),
   notes:()=>{window.ReadingAnnotations?.closeNotePanel();window.ReadingAnnotations?.refreshNotes();const p=document.querySelector('#notes-panel');p.hidden=!p.hidden;a.notesOpen=!p.hidden;persist();if(!p.hidden)document.querySelector('#notes').focus();},
   'font-up':()=>changeFont(10),'font-down':()=>changeFont(-10),'explanation-toggle':()=>toggleExplanation(n,target),
+  'explanation-close':closeExplanation,'explanation-prev':()=>{explanationNumber--;renderExplanation();},'explanation-next':()=>{explanationNumber++;renderExplanation();},
   highlight:()=>{if(!writable())return;const letter=document.querySelector('.paragraph.spot')?.dataset.paragraph;if(!letter)return;a.highlighted=a.highlighted.includes(letter)?a.highlighted.filter(x=>x!==letter):[...a.highlighted,letter];persist();document.querySelector(`#paragraph-${letter}`).classList.toggle('highlighted',a.highlighted.includes(letter));},
   'result-attempt':()=>loadResult(target.dataset.attempt),'check-network':async()=>{try{await request('/state');networkFailed=false;render();notify('Đã kết nối. Nhấn Tiếp tục để làm bài.');}catch(e){notify(e.message);}},
   'teacher-result':()=>{location.hash=`submission=${target.dataset.submission}`;},
+  'teacher-logout':teacherLogout,
   'retry-save':()=>{saveError=false;if(persist(false))render();}
  };
  actions[target.dataset.action]?.();document.querySelector('.homework-options[open]')?.removeAttribute('open');
@@ -385,10 +452,17 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('hidd
 window.addEventListener('pagehide',()=>pause('closed',false));
 window.addEventListener('beforeunload',()=>pause('closed',false));
 window.addEventListener('storage',event=>{
+ if(event.key==='reading-teacher-logout'&&location.pathname.endsWith('/teacher.html')){
+  try{sessionStorage.removeItem('reading-teacher-token');}catch{}
+  resultCache.clear();db={students:{}};identity=null;app.replaceChildren();teacherScreen();return;
+ }
  if(event.key!==checkpointKey||!event.newValue||!current())return;
  try{const fresh=JSON.parse(event.newValue);if(fresh.attemptId!==current().id||fresh.lease?.id!==lease?.id){lastTick=0;current().status='paused';current().pauseReason='conflict';lease=null;navigate('resume');}}catch{}
 });
 modal.addEventListener('cancel',()=>modalAction=null);
+explanationDialog.addEventListener('click',event=>{if(event.target===explanationDialog)closeExplanation();});
+explanationDialog.addEventListener('close',()=>{explanationTrigger?.focus();explanationTrigger=null;});
+window.addEventListener('resize',()=>{if(explanationDialog.open)setTimeout(alignExplanationEvidence,60);});
 window.ReadingInteractionBridge={current,scope:()=>`${identity?.bindingId}:${current()?.id||''}`,writable,
  save:()=>{if(!writable())return false;consumeTime();return persist();},showPane:setMobilePane,
  closeGeneralNotes:()=>{const panel=document.querySelector('#notes-panel');if(panel)panel.hidden=true;if(current())current().notesOpen=false;}};

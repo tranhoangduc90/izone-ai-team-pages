@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261014-exam-source-v1'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261015-issue127-audio-v1'))
       .then(() => loadScript('enhance.js?v=20261014-exam-source-v1'))
       .then(() => loadScript('annotations.js?v=20261007-fresh-v2'))
       .catch(error => {
@@ -590,7 +590,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261015-submit-ack-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261015-issue127-audio-v1');
     await loadScript('enhance.js?v=20261014-exam-source-v1');
     await loadScript('annotations.js?v=20261007-fresh-v2');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
@@ -690,9 +690,11 @@
           if(window.TERM_TEST_BOOTSTRAP?.clientRunId===state.clientRunId)window.SUBSTITUTE_EXAM?.ended(officialAudio,audioEndedAt);
         },{once:true});
         const existingStart = Date.parse(state.listeningStartedAt || '');
-        const elapsedSeconds = Number.isFinite(existingStart) ? Math.max(0, (Date.now()+(Number(state.serverTimeOffsetMs)||0) - existingStart) / 1000) : 0;
-        officialAudio.currentTime = Math.min(elapsedSeconds, Math.max(0, officialAudio.duration - 0.05));
-        await officialAudio.play();
+        // Bookmark đã được kiểm đúng người/lượt/epoch; thời gian gián đoạn không phải đoạn đã nghe.
+        const heardSeconds = readLegacyUiState().audioTime;
+        officialAudio.currentTime = state.audioEndedAt ? officialAudio.duration
+          : Math.min(Math.max(0, heardSeconds), Math.max(0, officialAudio.duration - 0.05));
+        if (!state.audioEndedAt) await officialAudio.play();
         const serverNow = new Date();
         const listeningStartedAt = Number.isFinite(existingStart) ? new Date(existingStart) : serverNow;
         const existingDeadline = Date.parse(state.listeningDeadlineAt || '');
@@ -904,5 +906,17 @@
     previewAudio.pause();
     revokePreview();
   });
+
+  // Phòng tải lại audio vẫn giữ cảnh báo khi lượt thi đã bắt đầu.
+  window.addEventListener('beforeunload', event => {
+    if (window.TERM_TEST_LEAVE_GUARD_READY || window.TERM_TEST_ALLOW_NAVIGATION || ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'))) return;
+    const active = state.studentRef && !state.completed && (
+      (state.listeningStartedAt && !state.listeningSubmitted && !state.attemptToken)
+      || (state.readingStartedAt && !state.readingSubmitted)
+      || (state.writingStarted && !state.writingSubmitted));
+    if (!active) return;
+    event.preventDefault(); event.returnValue = true;
+  });
+
   initialize();
 }());

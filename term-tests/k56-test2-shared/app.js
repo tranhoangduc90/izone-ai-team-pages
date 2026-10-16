@@ -444,7 +444,7 @@
     button.textContent = `Bắt đầu ${label}`;
     button.onclick = async () => {
       if (skill === 'reading') return startOrResumeReading(button);
-      if (document.body.classList.contains('cbt-mode')) { window.location.reload(); return; }
+      if (document.body.classList.contains('cbt-mode')) { window.TERM_TEST_ALLOW_NAVIGATION = true; window.location.reload(); return; }
       setBusy(button, true, 'Đang mở Listening...', 'Bắt đầu Listening');
       try {
         const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
@@ -2269,7 +2269,7 @@
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
       if (!state.completed) {
         showNotice('Reading đã được lưu và khóa. Tiếp theo là Listening.', 'success');
-        if (document.body.classList.contains('cbt-mode')) window.location.reload();
+        if (document.body.classList.contains('cbt-mode')) { window.TERM_TEST_ALLOW_NAVIGATION = true; window.location.reload(); }
         else showSectionReady('listening');
         return;
       }
@@ -2669,6 +2669,22 @@
       showNotice(`Không thể mở bài test: ${error.message}`, 'error');
     }
   }
+
+
+  // Cảnh báo chỉ bảo vệ thao tác rời trang; việc lưu nháp và khóa bài vẫn do luồng hiện hành xử lý.
+  window.addEventListener('beforeunload', event => {
+    if (window.TERM_TEST_ALLOW_NAVIGATION || (demoMode && !serverGradingMode)) return;
+    const listeningActive = !state.completed && !state.listeningSubmitted && !state.testGrades?.listening
+      && Boolean((state.examSessionToken && state.listeningDeadlineAt) || (serverGradingMode && state.listeningStartedAt));
+    const readingActive = !state.completed && !state.readingSubmitted && !state.testGrades?.reading
+      && Boolean(state.readingStartedAt || (state.attemptToken && state.readingDeadlineAt));
+    const writingActive = Boolean(state.writingStarted && !state.writingSubmitted);
+    const paperActive = !window.TERM_TEST_CONTENT && state.studentRef && !state.completed
+      && ['listening', 'reading'].includes(state.stage);
+    if (!(listeningActive || readingActive || writingActive || paperActive)) return;
+    event.preventDefault(); event.returnValue = true;
+  });
+  window.TERM_TEST_LEAVE_GUARD_READY = true;
 
   initialize();
   // Khi đóng tab, gửi đúng base đã biết; không ACK local hay tự vượt xung đột khi chưa có phản hồi.
