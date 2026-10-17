@@ -47,12 +47,12 @@ for(const module of modules) {
 test('bump cache HTML ở cả ba bộ nạp và trang CBT',()=>{
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']){
     const b=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    const revision='20261015-issue127-audio-v1';
+    const revision=slug==='term-test-1-k56'?'20261017-result-stream-r45':'20261017-restored-draft-r44';
     const loaders=b.split('\n').filter(line=>/app\.js\?(?:rev|v)=/.test(line));
     assert.equal(loaders.length,2);
     assert.ok(loaders.every(line=>line.includes(revision)));
     const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');
-    const bootstrapRevision=slug==='mini-test-k56'?'20261017-mini-back-to-roster-v1':'20261017-retained-resume-r3';
+    const bootstrapRevision=revision;
     assert.match(html,new RegExp('bootstrap\\.js\\?(?:rev|v)='+bootstrapRevision));
     assert.match(html, /k56-exam-order\.js\?rev=20260930-k56-order-v1/);
   }

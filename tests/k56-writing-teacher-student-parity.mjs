@@ -67,7 +67,7 @@ test('CSS cửa sổ học viên sao chép đúng mẫu giáo viên, không nạ
   assert.ok(!student.includes('.teacher-'));
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']) {
     const bootstrap=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    const revision='20261015-issue127-audio-v1';
+    const revision=slug==='term-test-1-k56'?'20261017-result-stream-r45':'20261017-restored-draft-r44';
     assert.equal(bootstrap.split('\n').filter(line=>/app\.js\?(?:rev|v)=/.test(line)&&line.includes(revision)).length,2);
     assert.match(fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8'),/styles.css\?rev=[^"\s]*teacher-parity-v1/);
   }
