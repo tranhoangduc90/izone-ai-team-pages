@@ -17,7 +17,8 @@ const lessons=[
   {n:5,file:'lesson-5.html',code:'67-speaking-on_tap_lam_ro_diem_giua',parts:['review_clarify_middle','freestyle'],mins:[3,1],practice:2},
   {n:6,file:'lesson-6.html',code:'67-speaking-ly_do_hanh_vi',parts:['benefit_harm','reason_action','freestyle'],mins:[0,2,1],practice:2},
   {n:7,file:'lesson-7.html',code:'67-speaking-cach_lam_mot_viec',parts:['how_to_do'],mins:[4],practice:2},
-  {n:8,file:'lesson-8.html',code:'67-speaking-so_sanh',parts:['comparison_direct','comparison_extended','freestyle'],mins:[6,6,1],practice:2}
+  {n:8,file:'lesson-8.html',code:'67-speaking-so_sanh',parts:['comparison_direct','comparison_extended','freestyle'],mins:[6,6,1],practice:2},
+  {n:9,file:'lesson-9.html',code:'67-speaking-freestyle_on_tap',parts:['freestyle'],mins:[1],practice:2}
 ];
 const exercises=[1,2,3].map(n=>({exercise_id:`exercise-${n}`,title:'Bài mẫu '+n,exercise_url:'https://example.invalid/'+n,recommendation_count:4-n,practice_count:n}));
 const server=createServer(async(req,res)=>{try{
