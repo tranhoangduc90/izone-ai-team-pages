@@ -851,6 +851,7 @@
       !shouldWaitForWritingGrading()
       || writingGradingStreamUnsupported
       || writingGradingStreamController
+      || writingGradingStreamReconnectTimer
     ) return;
 
     const controller = new AbortController();

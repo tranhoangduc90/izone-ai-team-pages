@@ -63,3 +63,19 @@ test('Term1 EOF/ngắt mạng: polling giữ nguyên, stream hẹn nối lại m
  const f=fixture();f.setTransport(async()=>({ok:true,status:200,body:{getReader:()=>({read:async()=>({done:true})})}}));
  await f.call('scheduleWritingGradingRefresh');assert.deepEqual(f.delays().sort((a,b)=>a-b),[1000,8000]);assert.equal(f.renders.length,0);
 });
+
+test('Term1 polling không vượt lịch nối lại stream503, vẫn đọc kết quả và dừng khi ready',async()=>{
+ const f=fixture();await f.call('startWritingGradingStream');
+ assert.equal(f.streams.length,1);assert.deepEqual(f.delays(),[1000]);
+ await f.call('scheduleWritingGradingRefresh');
+ assert.equal(f.streams.length,1,'Polling không được mở stream khi backoff đang chờ');
+ assert.deepEqual(f.delays().sort((a,b)=>a-b),[1000,8000]);
+ await f.fire(8000);
+ assert.equal(f.polls.length,1,'Polling vẫn phải kiểm tra kết quả trong thời gian stream chờ');
+ assert.equal(f.streams.length,1,'Kết quả pending không được nối lại stream sớm');
+ assert.deepEqual(f.delays().sort((a,b)=>a-b),[1000,10000]);
+ await f.fire(1000);assert.equal(f.streams.length,2);
+ assert.deepEqual(f.delays().sort((a,b)=>a-b),[2000,10000]);
+ f.setResult(()=>({attemptToken:'synthetic-attempt-A',writing:{submitted:true,grading:{ready:true,status:'ready'}}}));
+ await f.fire(10000);assert.equal(f.renders.length,2);assert.equal(f.timers.size,0);
+});
