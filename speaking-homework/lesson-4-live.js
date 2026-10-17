@@ -1,5 +1,5 @@
 import { focusSpeakingStart } from './journey-focus.js';
-import { createSpeakingIdentity } from './speaking-identity.js';
+import { createSpeakingIdentity } from './speaking-identity.js?rev=20261017-login-cache-v1';
 import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
 import { freestyleInstructions } from './assignment-instructions.js';
