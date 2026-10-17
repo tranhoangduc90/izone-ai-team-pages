@@ -1515,6 +1515,17 @@
       .trim();
   }
 
+  function writingCriterionContext(value) {
+    const text = cleanWritingFeedback(value);
+    const marker = /^[ \t]*#{2,5}\s+(?:\*\*)?KẾT LUẬN(?:\*\*)?\s*$/im.exec(text);
+    const overview = (marker ? text.slice(0, marker.index) : text)
+      .split(/^[ \t]*#{2,5}\s+(?:\*\*)?\d+\.\s+/m)[0]
+      .replace(/^[ \t]*#{1,5}\s+.*$/gm, '')
+      .replace(/^\s*\*\*[^\n]*Band[^\n]*\*\*\s*$/gim, '')
+      .trim();
+    return { overview, conclusion: marker ? text.slice(marker.index + marker[0].length).trim() : '' };
+  }
+
   function appendWritingComponent(parent, component, section, index, criterionCode, taskNumber) {
     const aspect = document.createElement('section');
     aspect.className = 'writing-component';
@@ -1672,12 +1683,29 @@
       const sections = writingCriterionSections(criterion.feedback);
       const componentCount = Math.max(components.length, sections.length);
       if (componentCount) {
+        // Giữ phản hồi cấp tiêu chí; component không thay thế nhận xét chung hoặc kết luận.
+        const context = writingCriterionContext(criterion.feedback);
+        if (context.overview) {
+          const overview = document.createElement('div');
+          overview.className = 'writing-feedback-text writing-feedback-richtext';
+          appendSafeWritingFeedback(overview, context.overview);
+          card.append(overview);
+        }
         const componentList = document.createElement('div');
         componentList.className = 'writing-component-list';
         for (let index = 0; index < componentCount; index += 1) {
           appendWritingComponent(componentList, components[index], sections[index], index, criterion.code, taskNumber);
         }
         card.append(componentList);
+        if (context.conclusion) {
+          const conclusion = document.createElement('div');
+          conclusion.className = 'writing-feedback-text writing-feedback-richtext';
+          const heading = document.createElement('h5');
+          heading.textContent = 'Kết luận';
+          conclusion.append(heading);
+          appendSafeWritingFeedback(conclusion, context.conclusion);
+          card.append(conclusion);
+        }
       } else {
         const feedback = document.createElement('div');
         feedback.className = 'writing-feedback-text writing-feedback-richtext';
