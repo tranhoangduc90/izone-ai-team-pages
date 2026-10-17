@@ -469,6 +469,11 @@
     else hideNotice();
     // Nháp local mới hơn bản máy chủ phải được gửi lại sau khi xác nhận đúng lượt CBT.
     for (const skill of ['listening', 'reading']) scheduleSectionDraft(skill, 0);
+    if (sameAttempt && response.completed && writingConfig && state.writingStarted
+      && !state.writingSubmitted && state.writingDirty && !state.writingConflict
+      && validWritingRevision(state.writingServerRevision) && !writingTimeExpired()) {
+      scheduleWritingSave(0);
+    }
   }
 
   function showSectionReady(skill) {

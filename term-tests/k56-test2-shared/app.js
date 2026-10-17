@@ -422,6 +422,19 @@
     }
     if (modeChanged || response.modeMismatch) showNotice('Lượt thi giữ thứ tự đã chọn trước đó. Link đã được cập nhật cho đúng lượt.', 'success');
     else hideNotice();
+    // Nháp mới trên máy cần được gửi lại sau khi xác minh lượt, kể cả không gõ thêm.
+    const resumedSkill = response.nextSection;
+    if (sameAttempt && !response.completed && ['listening', 'reading'].includes(resumedSkill)
+      && response[resumedSkill + 'StartedAt'] && !state[resumedSkill + 'Submitted']
+      && !isSectionExpired(resumedSkill)
+      && Number(state.draftRevisions[resumedSkill] || 0) > Number(state.draftAckRevisions[resumedSkill] || 0)) {
+      scheduleSectionDraft(resumedSkill, 0);
+    }
+    if (sameAttempt && response.completed && writingConfig && state.writingStarted
+      && !state.writingSubmitted && state.writingDirty && !state.writingConflict
+      && validWritingRevision(state.writingServerRevision) && !writingTimeExpired()) {
+      scheduleWritingSave(0);
+    }
   }
 
   function showSectionReady(skill) {
