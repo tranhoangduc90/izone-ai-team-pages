@@ -776,16 +776,22 @@
         || attemptToken !== state.attemptToken || navigator.onLine === false || sectionDraftRequests[skill]) return;
       const request = saveSectionDraft(skill);
       sectionDraftRequests[skill] = request;
-      let failed = false;
+      let failed = false, readingLocked = false;
       try {
         await request; sectionDraftFailures[skill] = 0;
-      } catch {
+      } catch (error) {
         failed = true; sectionDraftFailures[skill] = Math.min(sectionDraftFailures[skill] + 1, 5);
+        readingLocked = skill === 'reading' && error.code === 'READING_LOCKED'
+          && epoch === paperEpoch && studentRef === state.studentRef && attemptToken === state.attemptToken;
+        if (readingLocked && !state.readingSubmitted && !state.completed) {
+          showNotice('Reading không còn nhận nháp. Thay đổi trên máy chưa được lưu vào bài thi; hãy tải lại trang để kiểm tra trạng thái mới nhất.', 'error');
+          elements.notice.scrollIntoView({ block: 'nearest' });
+        }
       } finally {
         if (sectionDraftRequests[skill] === request) sectionDraftRequests[skill] = null;
         const sameOwner = epoch === paperEpoch && studentRef === state.studentRef && attemptToken === state.attemptToken;
         if (!sameOwner) { sectionDraftFailures[skill] = 0; sectionDraftConflicts[skill] = false; }
-        if (!sectionDraftRequests[skill] && navigator.onLine !== false && sectionDraftPending(skill)) {
+        if (!readingLocked && !sectionDraftRequests[skill] && navigator.onLine !== false && sectionDraftPending(skill)) {
           // Một request/skill; lỗi lặp giãn tới 15 giây, giữ nguyên nháp trên máy.
           scheduleSectionDraft(skill, failed && sameOwner ? Math.min(15000, 1000 * 2 ** (sectionDraftFailures[skill] - 1)) : 600);
         }

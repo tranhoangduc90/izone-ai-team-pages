@@ -710,6 +710,7 @@
     flow.forceTimer = 0;
     const revision = Number(state.draftRevisions[skill]) || 0;
     const answers = { ...(state.drafts[skill] || {}) };
+    const studentRef = state.studentRef, attemptToken = state.attemptToken;
     const operation = flow.promise.catch(() => undefined).then(async () => {
       const response = await saveSectionDraftSnapshot(skill, answers, revision);
       const acknowledgedRevision = Number(response?.revision) || revision;
@@ -727,7 +728,17 @@
       if ((Number(state.draftRevisions[skill]) || 0) > state.draftAckRevisions[skill]) scheduleSectionDraft(skill, 0);
       return response;
     });
-    flow.promise = operation.catch(() => {
+    flow.promise = operation.catch(error => {
+      if (skill === 'reading' && error.code === 'READING_LOCKED') {
+        if (studentRef === state.studentRef && attemptToken === state.attemptToken) {
+          stopSectionDraftFlow(skill);
+          if (!state.readingSubmitted && !state.completed) {
+            showNotice('Reading không còn nhận nháp. Thay đổi trên máy chưa được lưu vào bài thi; hãy tải lại trang để kiểm tra trạng thái mới nhất.', 'error');
+            elements.notice.scrollIntoView({ block: 'nearest' });
+          }
+        }
+        return null;
+      }
       window.clearTimeout(flow.retryTimer);
       flow.retryTimer = window.setTimeout(() => scheduleSectionDraft(skill, 0), randomDelay(4_000, 8_000));
       return null;

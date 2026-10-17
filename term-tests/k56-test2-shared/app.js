@@ -684,7 +684,14 @@
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
     window.clearTimeout(sectionDraftTimers[skill]);
     sectionDraftTimers[skill] = window.setTimeout(() => {
-      saveSectionDraft(skill).catch(() => {
+      const studentRef = state.studentRef, attemptToken = state.attemptToken;
+      saveSectionDraft(skill).catch(error => {
+        if (skill === 'reading' && error.code === 'READING_LOCKED'
+          && !state.readingSubmitted && !state.completed
+          && studentRef === state.studentRef && attemptToken === state.attemptToken) {
+          showNotice('Reading không còn nhận nháp. Thay đổi trên máy chưa được lưu vào bài thi; hãy tải lại trang để kiểm tra trạng thái mới nhất.', 'error');
+          elements.notice.scrollIntoView({ block: 'nearest' });
+        }
         // Bản trên máy vẫn còn; lần thay đổi hoặc nộp tiếp theo sẽ thử lại.
       });
     }, delay);
