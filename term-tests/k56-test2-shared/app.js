@@ -2664,7 +2664,14 @@
     }
 
     try {
-      const roster = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
+      // Dùng lại danh tính vừa được máy chủ xác nhận trong lần mở trang này.
+      const restored = window.TERM_TEST_BOOTSTRAP?.restoredIdentity;
+      const canReuseIdentity = restored?.testSlug === testConfig.slug && restored.classCode === classCode
+        && restored.studentRef === state.studentRef && restored.attemptToken === state.attemptToken
+        && Boolean(state.attemptToken);
+      const roster = canReuseIdentity
+        ? {class:{name:classCode},students:[{ref:restored.studentRef,name:restored.studentName}]}
+        : await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
       populateRoster(roster);
       if (!demoMode) {
         if (window.TERM_TEST_BOOTSTRAP?.preparedAttempt) {

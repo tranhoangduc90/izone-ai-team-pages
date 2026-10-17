@@ -786,7 +786,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261017-blank-zero-v1-20261017-explanations-v1-20261017-login-cache-v1');
+    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261017-blank-zero-v1-20261017-explanations-v1-20261017-login-cache-v2');
     await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
@@ -801,10 +801,9 @@
         attemptToken: state.attemptToken
       })
     });
-    // Term 1 chỉ bỏ tải danh sách sau khi máy chủ trả đúng mã lượt vừa yêu cầu.
-    if(testConfig.slug==='term-test-1'&&started.attemptToken!==state.attemptToken)throw new Error('Mã lượt trả về không khớp bài đang lưu.');
-    const orderDrafts=(started.examMode==='read_first'||testConfig.slug==='term-test-1')
-      ?window.K67_EXAM_ORDER?.restoreDrafts(state,started):null;
+    // Chỉ bỏ tải danh sách sau khi máy chủ trả đúng mã lượt vừa yêu cầu.
+    if(started.attemptToken!==state.attemptToken)throw new Error('Mã lượt trả về không khớp bài đang lưu.');
+    const orderDrafts=window.K67_EXAM_ORDER?.restoreDrafts(state,started);
     saveState({
       studentName: started.studentName || state.studentName,
       examSessionToken: started.examSessionToken || state.examSessionToken || '',
@@ -836,7 +835,7 @@
     });
     window.K67_EXAM_ORDER?.apply(state, started);
     if(orderDrafts)saveState(orderDrafts);
-    if(testConfig.slug==='term-test-1'&&classCode!=='CODEXDEMO806'&&!listeningOnly) {
+    if(classCode!=='CODEXDEMO806'&&!listeningOnly) {
       restoredIdentity=Object.freeze({testSlug:testConfig.slug,classCode,className:activeClassName,
         studentRef:state.studentRef,studentName:state.studentName,attemptToken:state.attemptToken});
     }
@@ -1176,7 +1175,7 @@
     let restoreError=null;
     // Có mã lượt: xác minh trực tiếp, không dựng lại danh sách cả lớp để mở lại bài.
     // Lỗi giữ nguyên token/nháp và không tự tạo lượt mới hoặc bắt đầu đồng hồ.
-    if(testConfig.slug==='term-test-1'&&classCode!=='CODEXDEMO806'&&!listeningOnly
+    if(classCode!=='CODEXDEMO806'&&!listeningOnly
       &&isUuid(state.studentRef)&&isUuid(state.attemptToken)) {
       const identity=elements.bootstrapStudent.closest('.cbt-bootstrap-identity');
       identity.hidden=true;

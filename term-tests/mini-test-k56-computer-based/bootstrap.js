@@ -35,7 +35,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?v=20261017-writing-conclusion-r50'))
+      .then(() => loadScript('../k56-mini-shared/app.js?v=20261017-writing-conclusion-r50-cache-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1'))
       .then(() => loadScript('enhance.js?rev=20261012-audio-v2'))
       .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
@@ -200,6 +200,21 @@
     elements.bootstrapStudent.value = '';
     resetPreparation();
     showNotice('Lượt làm trước đã được reset. Hãy chọn lại học viên để bắt đầu lượt mới.', false);
+    // Lượt khôi phục có thể chỉ giữ một tên; sau reset phải đọc lại danh sách mới.
+    roster = [];
+    queueMicrotask(async () => {
+      try {
+        const data = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
+        if (state.studentRef || state.attemptToken) return;
+        roster = data.students || [];
+        elements.bootstrapStudent.replaceChildren(new Option('Nhấn để chọn', ''),
+          ...roster.map(student => new Option(student.name, student.ref)));
+        elements.bootstrapStudent.disabled = false;
+      } catch (error) {
+        showNotice(`Chưa tải lại được danh sách sau reset: ${error.message}. Hãy thử lại.`, true);
+        elements.bootstrapRetry.hidden = false;
+      }
+    });
     return true;
   }
 
@@ -627,6 +642,12 @@
   async function enterExam(started, audioElement = null) {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
+      // Chỉ chuyển danh tính từ phản hồi máy chủ khớp mã lượt; không tin tên lưu cục bộ.
+      restoredIdentity: !localDemo && classCode !== 'CODEXDEMO56'
+        && isUuid(state.studentRef) && isUuid(state.attemptToken)
+        && started.attemptToken === state.attemptToken && started.studentName
+        ? Object.freeze({testSlug:testConfig.slug,classCode,studentRef:state.studentRef,
+          studentName:started.studentName,attemptToken:state.attemptToken}) : null,
       examSessionToken: state.examSessionToken,
       studentRef: state.studentRef,
       generation: Number(started.generation ?? state.generation) || 0,
@@ -648,7 +669,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?v=20261017-writing-conclusion-r50');
+    await loadScript('../k56-mini-shared/app.js?v=20261017-writing-conclusion-r50-cache-v1');
     await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1');
     await loadScript('enhance.js?rev=20261012-audio-v2');
     await loadScript('annotations.js?rev=20261007-mini-paper-v1');
