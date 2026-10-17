@@ -6,13 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
-// Đầu vào: SHA-256 nội dung production Pages đã đọc lại ngày 23/09/2026.
+// Đầu vào: mốc 23/09; riêng content Term 1 cập nhật cue nguồn đã phát hành 13/10,
+// xác minh vẫn nguyên byte trong Pages 3848e82 (15/10) và 85b0d97 (17/10).
 // Việc chính: so bản branch sau khi chuẩn hóa CRLF/LF; không tải bài hay âm thanh riêng.
 // Kết quả: báo đúng tệp lệch; khi lỗi, test dừng trước khi có thể phát hành.
 const productionBaseline = [
   {
     route: 'term-test-1-k56-computer-based',
-    content: '21a73e069ff239af7bf185cbc67fa507efa5f330570bee10659dc5985858e782',
+    content: '498e78b7e9490fc75bda0f7c47826ba69abfca64f0e46d6f0319833c7060aec3',
     layout: 'e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351',
   },
   {

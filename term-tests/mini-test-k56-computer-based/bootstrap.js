@@ -837,6 +837,39 @@
 
   let initializing = false;
   let initializeAgain = false;
+  // Chỉ khôi phục lượt đã bắt đầu bằng token đang lưu; không dựa vào roster mở lượt mới.
+  async function restoreStartedAttempt() {
+    if ((!isUuid(state.attemptToken) && !isUuid(state.examSessionToken)) || !isUuid(state.studentRef)
+      || !(state.listeningStartedAt || state.readingStartedAt || state.writingStartedAt)
+      || demoStudentRef || demoAttemptToken) return false;
+    const token=state.attemptToken, sessionToken=state.examSessionToken, studentRef=state.studentRef;
+    const identity=await apiRequest(`/api/term-tests/${testConfig.slug}/attempt/active`, {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({classCode,studentRef,...(isUuid(token)?{attemptToken:token}:{}),
+        ...(isUuid(sessionToken)?{examSessionToken:sessionToken}:{}),attemptMode:'cbt',identityOnly:true})
+    });
+    // Bỏ phản hồi cũ nếu tab đã đổi người/lượt trong lúc đang chờ.
+    if (state.attemptToken!==token || state.examSessionToken!==sessionToken || state.studentRef!==studentRef) return true;
+    if (!identity.found || !isUuid(identity.attemptToken) || !isUuid(identity.examSessionToken)
+      || (isUuid(token) && identity.attemptToken!==token)
+      || (isUuid(sessionToken) && identity.examSessionToken!==sessionToken) || !identity.studentName) {
+      throw new Error('Không xác minh được lượt đang làm. Nháp được giữ; hãy báo giảng viên kiểm tra.');
+    }
+    const student={ref:studentRef,name:identity.studentName};
+    roster=[student];
+    elements.bootstrapClass.textContent=`Lớp ${classCode}`;
+    elements.bootstrapStudent.replaceChildren(new Option('Nhấn để chọn',''),new Option(student.name,student.ref));
+    elements.bootstrapStudent.value=student.ref;
+    saveState({studentName:student.name,attemptToken:identity.attemptToken,examSessionToken:identity.examSessionToken});
+    elements.bootstrapRetry.hidden=true;elements.bootstrapNotice.hidden=true;
+    // Mini luôn xác nhận lại tên trong tab mới trước khi prepare/nạp nội dung.
+    pendingStudent=student;
+    document.getElementById('confirmStudentName').textContent=student.name;
+    document.getElementById('confirmClassName').textContent=classCode;
+    identityDialog.showModal();document.getElementById('confirmIdentity').focus();
+    return true;
+  }
+
   async function initialize() {
     if (initializing) { initializeAgain = true; return; }
     if (!/^[A-Z0-9_-]{2,32}$/.test(classCode)) {
@@ -864,6 +897,7 @@
         }
         return;
       }
+      if (await restoreStartedAttempt()) return;
       const data = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
       elements.bootstrapRetry.hidden = true;
       elements.bootstrapNotice.hidden = true;
