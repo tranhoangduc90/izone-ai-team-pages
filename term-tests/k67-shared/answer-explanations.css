@@ -1,0 +1,93 @@
+/* Chỉ cửa sổ lời giải; toàn bộ stylesheet của màn gốc được giữ nguyên. */
+#explanation-dialog{
+  width:min(1240px,calc(100vw - 32px));max-width:none;
+  height:min(900px,calc(100dvh - 32px));max-height:none;
+  padding:0;border-top:4px solid var(--lab-edge,#db0829);overflow:hidden;
+}
+#explanation-dialog .explanation-dialog-shell{display:flex;flex-direction:column;height:100%;min-height:0}
+#explanation-dialog .explanation-dialog-header{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:16px 24px;border-bottom:1px solid var(--lab-line,#dce1e7);flex:none}
+#explanation-dialog .explanation-dialog-header .kicker{margin:0 0 3px}
+#explanation-dialog .explanation-dialog-header h2{margin:0;font-size:23px}
+#explanation-dialog .explanation-dialog-close{display:grid;place-items:center;flex:none;width:42px;height:42px;border:1px solid var(--lab-line,#dce1e7);border-radius:7px;background:#fff;font-size:26px;line-height:1}
+#explanation-dialog .explanation-dialog-columns{display:grid;grid-template-columns:minmax(0,38%) minmax(0,62%);flex:1;min-height:0}
+#explanation-dialog .explanation-dialog-passage{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--lab-line,#dce1e7)}
+#explanation-dialog .explanation-dialog-pane-head{display:flex;justify-content:space-between;gap:10px;padding:11px 20px;border-bottom:1px solid var(--lab-line,#dce1e7);background:var(--lab-header,#f8f9fb);font-size:13px;color:var(--lab-primary,#152b4e)}
+#explanation-dialog .explanation-dialog-pane-head span{color:var(--lab-hint,#586477)}
+#explanation-dialog .explanation-dialog-passage-scroll,#explanation-dialog .explanation-dialog-detail-scroll{min-height:0;overflow:auto;overscroll-behavior:contain}
+#explanation-dialog .explanation-dialog-passage-scroll{padding:20px 22px;font-size:15px;line-height:1.75}
+#explanation-dialog .passage-subtitle{font-size:13px;color:var(--lab-hint,#586477);margin:0 0 20px}
+#explanation-dialog .cbt-passage-paragraph{margin-bottom:21px;scroll-margin-top:16px}
+#explanation-dialog .explanation-active-paragraph{background:#fffdf6;border-left:3px solid #d6a440;border-radius:0 7px 7px 0;margin-left:-10px;padding:8px 8px 8px 7px}
+#explanation-dialog .explanation-active-paragraph mark{padding:1px 2px;border-radius:2px}
+#explanation-dialog .explanation-dialog-detail{min-height:0}
+#explanation-dialog .explanation-dialog-detail-scroll{height:100%;padding:20px 24px 26px}
+#explanation-dialog .explanation-dialog-answer{display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;padding:12px 14px;margin-bottom:20px;border:1px solid var(--lab-line,#dce1e7);border-radius:8px;background:var(--lab-header,#f8f9fb);font-size:13px}
+#explanation-dialog .explanation-dialog-answer strong{color:var(--lab-primary,#152b4e);font-size:18px;margin-left:5px}
+#explanation-dialog .explanation-dialog-answer [class^="result-"]{font-weight:700;color:var(--lab-successText,#136f4a)}
+#explanation-dialog .explanation-dialog-answer .result-incorrect{color:#a02a37}
+#explanation-dialog .explanation-dialog-answer .result-blank{color:#875c0e}
+#explanation-dialog .explanation-dialog-detail h3{font-size:18px;margin:0 0 5px}
+#explanation-dialog .explanation-dialog-hint{font-size:13px;color:var(--lab-hint,#586477);margin:0 0 14px}
+#explanation-dialog .explanation-dialog-compare{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#explanation-dialog .explanation-dialog-compare>section{min-width:0;padding:14px 16px;border:1px solid var(--lab-line,#dce1e7);border-radius:9px}
+#explanation-dialog .explanation-dialog-compare>section:last-child{background:#fcfcfd}
+#explanation-dialog .explanation-dialog-compare h4{font-size:13px;color:var(--lab-primary,#152b4e);margin:0 0 10px}
+#explanation-dialog .explanation-dialog-compare p{font-size:14px;line-height:1.65;color:var(--lab-ink,#202b3b);margin:0 0 9px}
+#explanation-dialog .explanation-dialog-compare mark{padding:1px 2px;border-radius:2px}
+#explanation-dialog .explanation-dialog-analysis{margin-top:22px;padding-top:18px;border-top:1px solid var(--lab-line,#dce1e7)}
+#explanation-dialog .explanation-dialog-analysis h3{margin-bottom:12px}
+#explanation-dialog .explanation-dialog-analysis h4{font-size:16px;margin:0 0 12px}
+#explanation-dialog .explanation-dialog-analysis p{font-size:14px;line-height:1.75;margin:0 0 12px;color:var(--lab-ink,#202b3b)}
+#explanation-dialog .explanation-dialog-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 20px;border-top:1px solid var(--lab-line,#dce1e7);font-size:13px;color:var(--lab-hint,#586477);flex:none}
+#explanation-dialog .explanation-dialog-footer nav{display:flex;gap:7px}
+#explanation-dialog .explanation-dialog-footer .button{min-height:38px;padding:6px 12px;font-size:13px}
+@media(max-width:800px){
+ #explanation-dialog{width:calc(100vw - 16px);height:calc(100dvh - 16px)}
+ #explanation-dialog .explanation-dialog-columns{grid-template-columns:1fr;grid-template-rows:minmax(160px,32%) minmax(0,68%)}
+ #explanation-dialog .explanation-dialog-passage{border-right:0;border-bottom:1px solid var(--lab-line,#dce1e7)}
+ #explanation-dialog .explanation-dialog-header{padding:12px 16px}
+ #explanation-dialog .explanation-dialog-header h2{font-size:19px}
+ #explanation-dialog .explanation-dialog-detail-scroll{padding:16px}
+ #explanation-dialog .explanation-dialog-passage-scroll{padding:14px 18px}
+ #explanation-dialog .explanation-dialog-compare{grid-template-columns:1fr}
+ #explanation-dialog .explanation-dialog-footer{padding:8px 12px}
+}
+
+/* Nền và chữ riêng cho cửa sổ K67; giữ kích thước và bố cục từ mẫu thực chiến. */
+#explanation-dialog{box-sizing:border-box;margin:auto;border:1px solid #dce1e7;border-top:4px solid #db0829;border-radius:12px;background:#fff;color:#202b3b;font-family:Arial,sans-serif;box-shadow:0 24px 80px #081d3740}
+#explanation-dialog::backdrop{background:rgb(8 29 55 / 65%)}
+#explanation-dialog .kicker{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;color:#586477}
+#explanation-dialog .outline{background:#fff;color:#152b4e;border:1px solid #dce1e7}
+#explanation-dialog .explanation-source-block{padding:0 0 16px;margin-bottom:16px;border-bottom:1px solid #eef1f5}
+#explanation-dialog blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid #dce1e7;background:#f8f9fb}
+#explanation-dialog p{white-space:pre-wrap}
+#explanation-dialog .ex-bold{font-weight:700}
+#explanation-dialog .ex-italic{font-style:italic}
+#explanation-dialog .explanation-option-quote summary{cursor:pointer;font-size:13px;color:#586477}
+.explanation-open{padding:7px 10px;min-height:36px;border:1px solid #dce1e7;border-radius:7px;background:#fff;color:#152b4e;font:inherit;font-size:13px;font-weight:700;white-space:nowrap}
+.explanation-open:focus-visible,#explanation-dialog button:focus-visible{outline:3px solid #3168a8;outline-offset:2px}
+.explanation-load-status{display:block;max-width:230px;font-size:12px;color:#a02a37;white-space:normal}
+#explanation-dialog .ex-bg-ffff00{background-color:#ffff00}
+#explanation-dialog .ex-bg-00ffff{background-color:#00ffff}
+#explanation-dialog .ex-bg-d5a6bd{background-color:#d5a6bd}
+#explanation-dialog .ex-fg-ff0000{color:#ff0000}
+#explanation-dialog .ex-bg-ff00ff{background-color:#ff00ff}
+#explanation-dialog .ex-bg-ff9900{background-color:#ff9900}
+#explanation-dialog .ex-bg-e69138{background-color:#e69138}
+#explanation-dialog .ex-bg-a4c2f4{background-color:#a4c2f4}
+#explanation-dialog .ex-bg-00ff00{background-color:#00ff00}
+#explanation-dialog .ex-bg-6fa8dc{background-color:#6fa8dc}
+#explanation-dialog .ex-fg-333333{color:#333333}
+#explanation-dialog .ex-fg-282828{color:#282828}
+#explanation-dialog .ex-bg-e06666{background-color:#e06666}
+#explanation-dialog .ex-bg-b6d7a8{background-color:#b6d7a8}
+#explanation-dialog .ex-bg-9fc5e8{background-color:#9fc5e8}
+#explanation-dialog .ex-bg-ffe599{background-color:#ffe599}
+#explanation-dialog .ex-bg-a2c4c9{background-color:#a2c4c9}
+#explanation-dialog .ex-bg-ead1dc{background-color:#ead1dc}
+#explanation-dialog .ex-bg-cfe2f3{background-color:#cfe2f3}
+#explanation-dialog .ex-bg-dd7e6b{background-color:#dd7e6b}
+#explanation-dialog .ex-bg-e6b8af{background-color:#e6b8af}
+#explanation-dialog .ex-bg-f9cb9c{background-color:#f9cb9c}
+#explanation-dialog .ex-bg-ea9999{background-color:#ea9999}
+#explanation-dialog .ex-bg-ffd966{background-color:#ffd966}
