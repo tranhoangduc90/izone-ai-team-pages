@@ -198,7 +198,7 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
   test(title('bootstrap chính/dự phòng và answer sheet đều nạp app cache D08'), () => {
     // Ba client K56 giữ cơ chế D08 nhưng có bản giao diện mới; K67 giữ revision cũ.
     const k56 = sourcePath.startsWith('term-tests/k56-');
-    const cacheRevision = k56 ? '20261017-restored-draft-r44' : '20261003-writing-save-cas-v1';
+    const cacheRevision = sourcePath === 'term-tests/k56-shared/app.js' ? '20261017-result-stream-r45' : k56 ? '20261017-restored-draft-r44' : '20261003-writing-save-cas-v1';
     const revisionOf = url => { const query = new URL(url, 'https://fixture.invalid').searchParams; return query.get('rev') || query.get('v'); };
     for (const path of cachePaths) {
       const currentRevision = k56 ? cacheRevision : path.includes('-computer-based/') ? '20261012-audio-v2' : cacheRevision;
@@ -210,7 +210,7 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
         // Trang CBT chỉ nạp bootstrap; bootstrap chính/dự phòng đã kiểm đúng app ở ca cùng bảng.
         const bootstrapUrls = [...text.matchAll(/bootstrap\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
         assert.ok(bootstrapUrls.length > 0, `Thiếu bootstrap trong ${path}`);
-        const bootstrapRevision=k56?'20261017-restored-draft-r44':currentRevision;
+        const bootstrapRevision=k56?cacheRevision:currentRevision;
         for (const url of bootstrapUrls) assert.equal(revisionOf(url), bootstrapRevision, path);
       } else {
         assert.ok(writingUrls.length > 0, `Thiếu đúng Writing app ${writingApp} trong ${path}`);

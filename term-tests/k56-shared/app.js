@@ -878,7 +878,8 @@
       while (shouldWaitForWritingGrading()) {
         const { value, done } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+        buffer += decoder.decode(value, { stream: true });
+        buffer = buffer.replace(/\r\n/g, '\n');
         if (buffer.length > 64 * 1024) throw new Error('RESULT_STREAM_TOO_LARGE');
         let boundary = buffer.indexOf('\n\n');
         while (boundary >= 0) {

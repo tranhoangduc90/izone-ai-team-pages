@@ -60,8 +60,8 @@ for(const module of modules) {
 test('cả hai nhánh bootstrap và HTML dùng bản cửa sổ học viên mới',()=>{
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']){
     const bootstrap=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    const appVersion='20261017-restored-draft-r44';
-    const bootstrapVersion='20261017-restored-draft-r44';
+    const appVersion=slug==='term-test-1-k56'?'20261017-result-stream-r45':'20261017-restored-draft-r44';
+    const bootstrapVersion=appVersion;
     const version=new RegExp('app\\.js\\?(?:rev|v)='+appVersion,'g');
     assert.equal((bootstrap.match(version)||[]).length,2);
     const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');
