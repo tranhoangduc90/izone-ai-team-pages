@@ -73,7 +73,7 @@ async function fixture({slug='term-test-2', classCode='CODEXDEMO806', query='', 
   },{slug,classCode,A,OLD,retake});
   const route=retake?'term-test-1-listening-retake':`${slug}-computer-based`;
   await page.goto(`${site}term-tests/${route}/?class=${classCode}${query}`);
-  await page.locator(`#bootstrapStudent option[value="${B}"]`).waitFor({state:'attached'});
+  if(classCode==='CODEXDEMO806')await page.locator(`#bootstrapStudent option[value="${B}"]`).waitFor({state:'attached'});
   return {page,context,requests,unexpected,errors};
 }
 
@@ -104,11 +104,10 @@ for(const slug of ['term-test-1','term-test-2','mini-test-lesson-5']) {
 test('lớp thật giữ phiên cũ và chặn đổi học viên dù API tạm lỗi',async()=>{
   const f=await fixture({classCode:'SYNTHETIC67'});
   try{
-    await f.page.getByText('Chưa chuẩn bị được bài thi:',{exact:false}).waitFor();
-    assert.equal(await f.page.locator('#bootstrapStudent').inputValue(),A);
+    await f.page.getByText('Chưa xác nhận được lượt đã lưu:',{exact:false}).waitFor();
     assert.equal(f.requests.find(r=>r.path.endsWith('/session/resume-attempt')).body.attemptToken,OLD);
-    assert.equal(await f.page.locator('#bootstrapStudent').isEnabled(),false,'Lớp thật cho đổi danh tính khi Listening đã bắt đầu');
-    assert.equal(await f.page.locator('#bootstrapStudent').inputValue(),A);
+    assert.equal(await f.page.locator('#bootstrapStudent option').count(),1,'Không dựng danh sách đổi người khi chưa xác minh phiên');
+    assert.equal(await f.page.evaluate(key=>JSON.parse(localStorage.getItem(key)).studentRef,'izone-test:term-test-2:SYNTHETIC67'),A);
     assert.deepEqual(f.unexpected,[]);assert.deepEqual(f.errors,[]);
   }finally{await f.context.close();}
 });

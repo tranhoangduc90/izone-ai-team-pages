@@ -42,6 +42,10 @@ async function fixture({cached,reset=false,prepareError=false,rosterError=false,
    if(rosterErrorPending){rosterErrorPending=false;await route.fulfill({status:503,json:{error:'UNAVAILABLE',message:'Roster fixture tạm lỗi'}});return;}
    out={ok:true,class:{name:'IC2264'},students:refs.map((ref,i)=>({ref,name:longName?'Người giả có tên rất dài để kiểm hiển thị trên màn hình nhỏ của bài Mini số '+i:'Người giả '+i}))};
   }
+  else if(url.endsWith('/attempt/active')){
+   const i=refs.indexOf(body.studentRef);assert.ok(i>=0);
+   out={ok:true,found:true,attemptToken:tokens[i],examSessionToken:sessions[i],studentName:'Người giả '+i};
+  }
   else if(url.endsWith('/attempt/prepare')){
    if(resetPending){resetPending=false;await route.fulfill({status:404,json:{ok:false,error:'ATTEMPT_NOT_FOUND',message:'Lượt cũ đã reset trong fixture'}});return;}
    if(prepareErrorPending){prepareErrorPending=false;await route.fulfill({status:503,json:{error:'UNAVAILABLE',message:'Prepare fixture tạm lỗi'}});return;}

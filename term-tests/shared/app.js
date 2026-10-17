@@ -3643,7 +3643,7 @@
       // Danh tính này chỉ do bootstrap vừa xác minh với máy chủ trong lần mở trang này.
       // Không đọc từ localStorage như bằng chứng quyền; tên đã nhớ riêng vẫn tải roster.
       const restored=window.TERM_TEST_BOOTSTRAP?.restoredIdentity;
-      const canReuseIdentity=testConfig.slug==='term-test-1'&&!listeningOnly&&classCode!=='CODEXDEMO806'
+      const canReuseIdentity=!listeningOnly&&classCode!=='CODEXDEMO806'
         &&restored?.testSlug===testConfig.slug&&restored.classCode===classCode
         &&restored.studentRef===state.studentRef&&restored.attemptToken===state.attemptToken
         &&Boolean(state.attemptToken);

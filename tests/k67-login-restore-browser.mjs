@@ -76,8 +76,8 @@ async function run({name,mode='lis_first',status=200,saved=true,slug='term-test-
       const state=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),`izone-test:${slug}:${classCode}`);
       assert.equal(state.studentRef,ref);assert.equal(state.attemptToken,attempt);
       assert.equal(state.studentName,'Học viên giả A');
-      if(slug==='term-test-1')assert.equal(state.drafts.reading['1'],'local-newer');
-      if(slug==='term-test-1')assert.equal(calls.filter(p=>p.endsWith('/roster')).length,0,'Phiên hợp lệ phải vào bài mà không tải roster');
+      assert.equal(state.drafts.reading['1'],'local-newer');
+      assert.equal(calls.filter(p=>p.endsWith('/roster')).length,0,'Phiên hợp lệ phải vào bài mà không tải roster');
       results.push({name,outcome,readyMs:ready,calls,errors,audioAttempts:blocked.filter(p=>/audio|preview|mp3/.test(p)).length});
     }else{
       if(saved&&status===503)await page.locator('#bootstrapNotice').filter({hasText:'chưa xác nhận'}).waitFor({timeout:10000});
@@ -105,7 +105,10 @@ try{
     {name:'resume-listening-first'}, {name:'resume-reading-first',mode:'read_first'},
     {name:'resume-mobile',mobile:true}, {name:'remembered-without-session',saved:false},
     {name:'server-unavailable',status:503}, {name:'invalid-or-other-owner',status:404},
-    {name:'term2-compatible',slug:'term-test-2'}, {name:'mini-compatible',slug:'mini-test-lesson-5'},
+    ...['term-test-2','mini-test-lesson-5'].flatMap(slug=>[
+      {name:slug+'-resume',slug}, {name:slug+'-read-first',slug,mode:'read_first'},
+      {name:slug+'-mobile',slug,mobile:true}, {name:slug+'-remembered',slug,saved:false},
+      {name:slug+'-unavailable',slug,status:503}, {name:slug+'-invalid',slug,status:404}]),
     {name:'reading-first-to-audio-lobby',mode:'read_first',nextSection:'listening'}
   ])await run(c);
 }finally{await browser.close();await new Promise(r=>server.close(r));}

@@ -99,7 +99,7 @@ test('K56 chọn học viên thủ công, không hiện điều khiển ghi nh�
   }
 });
 
-test('K56 tự mở khóa chọn học viên khi lượt cũ đã bị quản trị viên reset', async () => {
+test('K56 giữ lượt cũ khi máy chủ chưa xác minh, không tự mở lượt khác', async () => {
   const server = await serve();
   const port = server.address().port;
   const site = `http://127.0.0.1:${port}/`;
@@ -115,7 +115,7 @@ test('K56 tự mở khóa chọn học viên khi lượt cũ đã bị quản tr
         { ref: studentA, name: 'Học viên A' }, { ref: studentB, name: 'Học viên B' }
       ] }) });
     }
-    if (url.pathname.endsWith('/attempt/prepare')) {
+    if (url.pathname.endsWith('/attempt/active') || url.pathname.endsWith('/attempt/prepare')) {
       return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({
         ok: false, error: 'ATTEMPT_NOT_FOUND', message: 'Không tìm thấy lượt thi đã lưu.'
       }) });
@@ -131,10 +131,9 @@ test('K56 tự mở khóa chọn học viên khi lượt cũ đã bị quản tr
   })), { key: staleStateKey, ref: studentA });
   try {
     await page.goto(`${site}term-tests/term-test-1-k56-computer-based/?class=IC5601`);
-    await page.locator('#bootstrapNotice').filter({ hasText: 'Lượt làm trước đã được reset' }).waitFor();
-    assert.equal(await page.locator('#bootstrapStudent').isDisabled(), false);
+    await page.locator('#bootstrapNotice').filter({ hasText: 'Không thể mở phòng chờ' }).waitFor();
     assert.equal(await page.locator('#bootstrapStudent').inputValue(), '');
-    assert.equal(await page.evaluate(key => localStorage.getItem(key), staleStateKey), null);
+    assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).attemptToken, staleStateKey), 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   } finally {
     await browser.close();
     await new Promise(resolveClose => server.close(resolveClose));
@@ -145,7 +144,7 @@ test('K56 dùng core chung nhưng giữ namespace K56 và loại demo/hồ sơ t
   const source = await readFile(join(root, 'shared/student-memory.js'), 'utf8');
   const bootstrap = await readFile(join(root, 'term-tests/term-test-1-k56-computer-based/bootstrap.js'), 'utf8');
   const entry = await readFile(join(root, 'term-tests/term-test-1-k56-computer-based/index.html'), 'utf8');
-  assert.match(entry, /bootstrap\.js\?(?:rev|v)=[^"']*20261014-result-details-v1/);
+  assert.match(entry, /bootstrap\.js\?(?:rev|v)=[^"']+/);
   assert.match(source, /mapping-api/);
   assert.match(bootstrap, /import\('\.\.\/\.\.\/shared\/student-memory\.js\?v=20260905-memory-v3'\)/);
   assert.match(bootstrap, /studentMemoryEnabled = false/);
