@@ -7,6 +7,7 @@ import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
 import { lesson6Code, lesson6Parts } from './lesson-6-parts.js';
 import { lesson7Code, lesson7Parts } from './lesson-7-parts.js';
 import { lesson8Code, lesson8Parts } from './lesson-8-parts.js';
+import { lesson9Code, lesson9Parts } from './lesson-9-parts.js';
 
 const independentRequested = document.body.dataset.speakingIntake === 'independent';
 let independent = independentRequested;
@@ -20,16 +21,17 @@ const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
 let workUnitId = '';
 let classCode = '';
-const lessonNumber = ['5', '6', '7', '8'].includes(document.body.dataset.speakingLesson)
+const lessonNumber = ['5', '6', '7', '8', '9'].includes(document.body.dataset.speakingLesson)
   ? Number(document.body.dataset.speakingLesson) : 4;
-const expectedAssignmentCode = lessonNumber === 8 ? lesson8Code
+const expectedAssignmentCode = lessonNumber === 9 ? lesson9Code
+  : lessonNumber === 8 ? lesson8Code
   : lessonNumber === 7 ? lesson7Code
   : lessonNumber === 6 ? lesson6Code
   : lessonNumber === 5 ? lesson5Code : '67-speaking-diem_giua';
 const assignmentCode = query.get('assignmentCode') || expectedAssignmentCode;
 const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);
-const parts = lessonNumber === 8 ? lesson8Parts : lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
+const parts = lessonNumber === 9 ? lesson9Parts : lessonNumber === 8 ? lesson8Parts : lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
   { key: 'insert_middle', title: 'Chèn điểm giữa trong Speaking',
     url: 'https://ducizone.short.gy/chen_diem_giua_speak',
     lead: 'Luyện đủ ba giai đoạn trong một hội thoại.',
@@ -499,6 +501,7 @@ const identityController = createSpeakingIdentity({
     && (lessonNumber !== 6 || assignment.parts.every((part, index) => Number(part.min_questions) === [0, 2, 1][index]))
     && (lessonNumber !== 7 || Number(assignment.parts[0].min_questions) === 4)
     && (lessonNumber !== 8 || assignment.parts.every((part, index) => Number(part.min_questions) === [6, 6, 1][index]))
+    && (lessonNumber !== 9 || Number(assignment.parts[0].min_questions) === 1)
     && Number(assignment.requiredPracticeCount) === 2 && assignment.doctorEnabled === true,
   async onOpened(context) {
     independent = Boolean(context.session.workUnitId);
