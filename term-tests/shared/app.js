@@ -2713,6 +2713,12 @@
       elements.questionDetails.replaceChildren(...detailBlocks);
     }
     state.resultDetailsIdentity = identity;
+    if (!writingConfig || payload.writing?.submitted) {
+      window.K67_ANSWER_EXPLANATIONS?.attach({
+        container: elements.questionDetails, payload, attemptToken: state.attemptToken,
+        testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
+      });
+    }
     const performanceSections = [renderSkillPerformance('Listening', result.listening)];
     if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
     elements.skillPerformanceSections.replaceChildren(...performanceSections);
