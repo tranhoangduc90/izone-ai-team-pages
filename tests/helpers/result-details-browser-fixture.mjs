@@ -38,6 +38,8 @@ export async function completedPage(browser,base,routeName,{writingResult=null,e
    requests.push(route);let data,status=200;
    if(route==='/api/test/history')data={testSlug:slug,stateVersion:2,historyEpoch:epoch,classes:[{code:'DEMO',name:'Lớp giả DEMO'},{code:'IC9999',name:'Lớp giả A'},{code:'IC9998',name:'Lớp giả B'}]};
    else if(route.includes('roster'))data={class:{name:payload.className,code:payload.className},students:[{ref:payload.studentRef,name:payload.studentName}]};
+   // K56 xác minh lượt đã lưu trước khi chuẩn bị; dữ liệu giả trả đúng hai token hiện hành.
+   else if(route.endsWith('/attempt/active'))data={found:true,attemptToken:payload.attemptToken,examSessionToken:epoch,studentName:payload.studentName};
    else if(route.endsWith('/attempt/prepare')||route.endsWith('/session/resume-attempt'))data={...payload,attemptMode:paperMini?'answer_sheet':'cbt',generation:1,policy:{timed:cbt,autoSubmit:cbt},nextSection:'complete',examMode:body?.mode||'lis_first',listeningSubmitted:true,readingSubmitted:true,writingStartedAt:paperMini?'':now,writingSubmittedAt:paperMini?'':now,serverNow:now,content:{variant:'semantic-html',timing:{},listening:{sections:[]},reading:{passages:[]},writing:{tasks:[{id:slug==='term-test-2-k56'?'task1':'task2',label:'Writing giả',prompt:'Đề giả',minimumWords:0}]}}};
    else if(route==='/api/term-tests/result/stream'){status=404;data={};}
    else if(route==='/api/term-tests/result'){polls++;data=structuredClone(payload);if(data.writing)data.writing.grading=writingResult||(phase==='ready'?{ready:true,status:'ready',writingScore:7,tasks:[]}:payload.writing.grading);}
@@ -67,10 +69,18 @@ export async function completedPage(browser,base,routeName,{writingResult=null,e
   });
   await details.first().waitFor({state:'visible',timeout:waitTimeout});return details;
  }
+ async function confirmMiniIfNeeded(){
+  // Lượt đã xác minh có thể tự mở kết quả; chỉ bấm xác nhận khi trang thực sự yêu cầu.
+  await page.waitForFunction(()=>{
+   const button=document.querySelector('#confirmIdentity'),detail=document.querySelector('#questionDetails > details'),result=document.querySelector('#viewResult');
+   return Boolean(button?.getClientRects().length||detail?.getClientRects().length||(result?.getClientRects().length&&!result.disabled));
+  },null,{timeout:waitTimeout});
+  if(await page.locator('#confirmIdentity').isVisible())await page.locator('#confirmIdentity').click();
+ }
  async function enter(){
   await page.goto(url,{waitUntil:'domcontentloaded'});
   if(paperMini){await page.locator('#studentSelect').selectOption(payload.studentRef);await page.locator('#miniPaperEnter').click();}
-  else if(slug==='mini-test-k56'&&cbt){await page.locator('#confirmIdentity').waitFor({state:'visible'});await page.locator('#confirmIdentity').click();}
+  else if(slug==='mini-test-k56'&&cbt)await confirmMiniIfNeeded();
   const details=await waitForDetails();
   await page.evaluate(()=>document.fonts.ready);return details;
  }
@@ -87,7 +97,7 @@ export async function completedPage(browser,base,routeName,{writingResult=null,e
   phase='ready';
   await page.goto(url.replace('class='+classCode,'class='+nextClass),{waitUntil:'domcontentloaded'});
   if(paperMini){await page.locator('#studentSelect').selectOption(nextId);await page.locator('#miniPaperEnter').click();}
-  else if(slug==='mini-test-k56'&&cbt){await page.locator('#confirmIdentity').waitFor({state:'visible'});await page.locator('#confirmIdentity').click();}
+  else if(slug==='mini-test-k56'&&cbt)await confirmMiniIfNeeded();
   await waitForDetails();
  }
  return {context,page,details,paperMini,payload,errors,requests,polls:()=>polls,ready:()=>{phase='ready';},switchSession,close:()=>context.close()};
