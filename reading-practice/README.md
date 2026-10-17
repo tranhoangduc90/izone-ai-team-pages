@@ -1,6 +1,8 @@
-# Reading Homework · Buổi 7
+# Reading Homework · Khóa 67
 
-Frontend của bài `67-practice-reading_matching_heading_mcq`. Giữ giao diện demo đã được Đức duyệt ngày 12/10/2026: preset Reading xám sáng–đỏ, Matching Headings, MCQ, Summary Completion, highlight/note và một bảng Đáp án và giải thích.
+Frontend dùng chung cho buổi 7 (`67-practice-reading_matching_heading_mcq`, câu 14–26) và buổi 9 (`67-practice-reading_matching_names_sentence_endings_mcq`, câu 27–40). API trả metadata bài trước khi bắt đầu, đề khi mở lượt và lời giải sau khi nộp. Metadata quyết định tiêu đề, số câu, điều hướng và nhóm điểm; API cũ thiếu metadata vẫn hiển thị buổi 7.
+
+Giữ preset Reading xám sáng–đỏ, highlight/note và popup đối chiếu 38% bài đọc / 62% lời giải. Buổi 9 thêm Matching Names, Sentence Endings, bốn MCQ và nhiều dẫn chứng trong cùng popup; các màu nội dung giữ theo nguồn, độc lập với màu giao diện. `lesson9.css` chỉ áp dụng khi API xác định bài mới.
 
 - Đề chỉ tải từ API sau khi bắt đầu; không có khóa chấm hoặc lời giải trong thư mục public.
 - Nháp trên thiết bị giúp phục hồi; máy chủ giữ lượt làm, thời gian và điểm chính thức.
