@@ -54,7 +54,7 @@
 }
 
 /* Nền và chữ riêng cho cửa sổ K67; giữ kích thước và bố cục từ mẫu thực chiến. */
-#explanation-dialog{box-sizing:border-box;margin:auto;border:1px solid #dce1e7;border-top:4px solid #db0829;border-radius:12px;background:#fff;color:#202b3b;font-family:Arial,sans-serif;box-shadow:0 24px 80px #081d3740}
+#explanation-dialog{box-sizing:border-box;margin:auto;border:1px solid #dce1e7;border-top:4px solid #db0829;border-radius:12px;background:#fff;color:#202b3b;font-family:'Nunito Sans',sans-serif;box-shadow:0 24px 80px #081d3740}
 #explanation-dialog::backdrop{background:rgb(8 29 55 / 65%)}
 #explanation-dialog .kicker{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;color:#586477}
 #explanation-dialog .outline{background:#fff;color:#152b4e;border:1px solid #dce1e7}
@@ -64,8 +64,9 @@
 #explanation-dialog .ex-bold{font-weight:700}
 #explanation-dialog .ex-italic{font-style:italic}
 #explanation-dialog .explanation-option-quote summary{cursor:pointer;font-size:13px;color:#586477}
-.explanation-open{padding:7px 10px;min-height:36px;border:1px solid #dce1e7;border-radius:7px;background:#fff;color:#152b4e;font:inherit;font-size:13px;font-weight:700;white-space:nowrap}
-.explanation-open:focus-visible,#explanation-dialog button:focus-visible{outline:3px solid #3168a8;outline-offset:2px}
+.explanation-open{display:inline-flex;align-items:center;justify-content:center;min-height:40px;width:140px;padding:8px 12px;margin:0;border:1px solid #152b4e;border-radius:6px;background:#152b4e;color:#fff;font:700 13px/1.4 'Nunito Sans',sans-serif;text-decoration:none;white-space:nowrap;cursor:pointer}
+.explanation-open:hover:not(:disabled){background:#223e65;border-color:#223e65}
+.explanation-open:focus-visible,#explanation-dialog button:focus-visible{outline:3px solid #db0829;outline-offset:2px}
 .explanation-load-status{display:block;max-width:230px;font-size:12px;color:#a02a37;white-space:normal}
 #explanation-dialog .ex-bg-ffff00{background-color:#ffff00}
 #explanation-dialog .ex-bg-00ffff{background-color:#00ffff}
@@ -91,3 +92,8 @@
 #explanation-dialog .ex-bg-f9cb9c{background-color:#f9cb9c}
 #explanation-dialog .ex-bg-ea9999{background-color:#ea9999}
 #explanation-dialog .ex-bg-ffd966{background-color:#ffd966}
+
+/* Ô kết quả vẫn là ô bảng, phủ đủ hàng khi có nút lời giải cao hơn. */
+.detail-table[data-explanations-attached] td.detail-result-cell{display:table-cell;vertical-align:middle;white-space:nowrap}
+.detail-table[data-explanations-attached] .detail-result-icon{vertical-align:middle;margin-inline-end:7px}
+body.teacher-reading #explanation-dialog{font-family:inherit}
