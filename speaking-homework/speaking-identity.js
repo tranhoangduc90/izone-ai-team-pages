@@ -140,7 +140,13 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     if (remembered.status === 'unavailable') { remember.checked = false; remember.disabled = true; }
     message('Đang tải danh sách lớp…');
     try {
-      const data = await requestJson(apiBase, `/classes?assignmentCode=${encodeURIComponent(assignmentCode)}`, null, controller.signal);
+      const classesRead = requestJson(apiBase, `/classes?assignmentCode=${encodeURIComponent(assignmentCode)}`, null, controller.signal);
+      // Hai lượt chỉ đọc không phụ thuộc nhau; bắt lỗi ngay để không có promise lỗi bỏ ngỏ.
+      // Kết quả vẫn phải qua kiểm lớp/người và revision như trước, không tự mở phiên.
+      const identityRead = remembered.status === 'ok'
+        ? requestJson(apiBase, '/identity/resolve', { assignmentCode, studentRef: remembered.studentRef }, controller.signal)
+          .then(data => ({ data }), error => ({ error })) : null;
+      const data = await classesRead;
       if (current !== revision || active) return;
       classes = Array.isArray(data.classes) ? data.classes : [];
       classSelect.replaceChildren(new Option('Chọn lớp của bạn', ''));
@@ -152,7 +158,10 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       let resolved = null;
       if (remembered.status === 'ok') {
         try {
-          resolved = await requestJson(apiBase, '/identity/resolve', { assignmentCode, studentRef: remembered.studentRef }, controller.signal);
+          const result = await identityRead;
+          if (current !== revision || active) return;
+          if (result.error) throw result.error;
+          resolved = result.data;
           if (resolved.status !== 'unique') {
             memoryNotice = resolved.status === 'ambiguous' ? 'Hồ sơ đã nhớ khớp nhiều lớp. Hãy chọn đúng lớp và tên.' : 'Hồ sơ đã nhớ chưa có bài phù hợp. Hãy chọn lớp và tên.';
             resolved = null;

@@ -1,7 +1,7 @@
 // Nhận các node của renderer thật; thay cách trình bày, giữ sự kiện và nghiệp vụ.
 // Không tạo kết quả, biên nhận hoặc dữ liệu học viên mẫu trên trang phát hành.
 const lesson=Number(document.body.dataset.speakingLesson);
-await import(lesson===2?'./lesson-2-live.js':lesson===3?'./lesson-3-live.js':'./lesson-4-live.js');
+await import(lesson===2?'./lesson-2-live.js?rev=20261017-login-cache-v1':lesson===3?'./lesson-3-live.js?rev=20261017-login-cache-v1':'./lesson-4-live.js?rev=20261017-login-cache-v1');
 const $=id=>document.getElementById(id);
 document.body.classList.add('speaking-design');
 const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh',9:'Full câu với ChatGPT · Freestyle'};
