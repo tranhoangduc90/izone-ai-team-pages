@@ -1,5 +1,6 @@
 // Dữ liệu nhận vào là bài demo; quản lý luật mở khóa và kết quả giả, không gọi dịch vụ.
 // Lỗi nhập/lượt cũ trả mã để giao diện báo rõ, không biến lỗi thành bài cần sửa.
+import {workflowFor,isWhole,available as policyAvailable,ideaPassed as policyIdeaPassed} from '../shared/workflow.mjs';
 export const ORDER = ['topic', 'b1', 'a1', 'x1', 'b2', 'a2', 'x2'];
 export const FIELDS = {topic:['idea1','idea2','topicSentence'], b1:['b1'], a1:['a1'], x1:['x1'], b2:['b2'], a2:['a2'], x2:['x2']};
 export const EXAMPLE = {
@@ -17,24 +18,24 @@ export const VOCAB = {
   1:{ A:[['buy unnecessary products','mua sản phẩm không cần thiết'],['replace working devices','thay thiết bị vẫn hoạt động']], X:[['reduce available savings','làm giảm khoản tiết kiệm còn lại'],['spend beyond their needs','chi tiêu vượt nhu cầu']], B:[['cover essential expenses','trang trải chi phí thiết yếu'],['face financial pressure','chịu áp lực tài chính']] },
   2:{ A:[['discard usable products','vứt bỏ sản phẩm còn dùng được'],['replace items unnecessarily','thay đồ không cần thiết']], X:[['increase household waste','tăng rác thải sinh hoạt'],['shorten product lifespans','rút ngắn vòng đời sản phẩm']], B:[['put pressure on landfills','gây áp lực lên bãi rác'],['harm the environment','gây hại môi trường']] }
 };
-export function createState(generation = 0) {
-  return {version:1,generation,responses:Object.fromEntries(Object.keys(EXAMPLE).map(k=>[k,''])),steps:Object.fromEntries(ORDER.map(k=>[k,{status:'draft',history:[],pending:null,error:''}])),idea2Open:false};
+export function createState(generation = 0,lesson={}) {
+  const policy=workflowFor(lesson);
+  return {version:1,generation,...(lesson.workflowMode?{workflowMode:lesson.workflowMode}:{}),responses:Object.fromEntries(Object.keys(EXAMPLE).map(k=>[k,''])),steps:Object.fromEntries(policy.order.map(k=>[k,{status:'draft',history:[],pending:null,error:''}])),idea2Open:false};
 }
-export function ideaPassed(s, n) { return ['b','a','x'].every(k=>s.steps[k+n].status==='passed'); }
+export function ideaPassed(s, n) { return policyIdeaPassed(s,n); }
 export function available(s, key) {
-  const pos=ORDER.indexOf(key);
-  return pos>=0 && (pos===0 || s.steps[ORDER[pos-1]].status==='passed') && (pos<4 || s.idea2Open);
+  return policyAvailable(s,key);
 }
 export function canEdit(s,key) { return available(s,key) && !['passed','pending'].includes(s.steps[key].status); }
 export function setField(s,key,field,value) {
-  if(!canEdit(s,key)||!FIELDS[key]?.includes(field))return false;
+  if(!canEdit(s,key)||!workflowFor(s).fields[key]?.includes(field))return false;
   s.responses[field]=String(value).slice(0,4000); return true;
 }
 export function beginCheck(s,key,requestId) {
   if(!canEdit(s,key)) return {ok:false,error:'LOCKED'};
-  const empty=FIELDS[key].find(k=>!s.responses[k].trim());
+  const empty=workflowFor(s).fields[key].find(k=>!s.responses[k].trim());
   if(empty)return {ok:false,error:'EMPTY',field:empty};
-  if(ORDER.some(k=>s.steps[k].pending))return {ok:false,error:'BUSY'};
+  if(workflowFor(s).order.some(k=>s.steps[k].pending))return {ok:false,error:'BUSY'};
   const ticket={requestId,key,generation:s.generation,snapshot:{...s.responses}};
   s.steps[key].status='pending'; s.steps[key].pending=ticket; s.steps[key].error='';
   return {ok:true,ticket};
