@@ -72,6 +72,7 @@
   let previewHeard = false;
   let preparing = false;
   let bootstrapSelectionBusy = false;
+  let restoredIdentity = null;
   let downloadController = null;
   const studentMemoryForAllClasses = classCode !== 'CODEXDEMO806';
   const studentMemory = { api: null, storage: null, key: '', checkbox: null, status: null, confirm: null, change: null, candidateRef: '', preferred: true };
@@ -772,6 +773,7 @@
   async function enterExam(started, audioElement = null) {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
+      restoredIdentity,
       examSessionToken: state.examSessionToken,
       listeningDeadlineAt: started.listeningDeadlineAt,
       serverNow: started.serverNow,
@@ -784,7 +786,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261017-blank-zero-v1-20261017-explanations-v1');
+    await loadScript('../shared/app.js?rev=20261007-mini-login-v1-20261009-feedback-v1-20261011-toggle-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261017-blank-zero-v1-20261017-explanations-v1-20261017-login-cache-v1');
     await loadScript(cbtAssetUrl('enhance.js', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
@@ -799,8 +801,12 @@
         attemptToken: state.attemptToken
       })
     });
-    const orderDrafts=started.examMode==='read_first'?window.K67_EXAM_ORDER.restoreDrafts(state,started):null;
+    // Term 1 chỉ bỏ tải danh sách sau khi máy chủ trả đúng mã lượt vừa yêu cầu.
+    if(testConfig.slug==='term-test-1'&&started.attemptToken!==state.attemptToken)throw new Error('Mã lượt trả về không khớp bài đang lưu.');
+    const orderDrafts=(started.examMode==='read_first'||testConfig.slug==='term-test-1')
+      ?window.K67_EXAM_ORDER?.restoreDrafts(state,started):null;
     saveState({
+      studentName: started.studentName || state.studentName,
       examSessionToken: started.examSessionToken || state.examSessionToken || '',
       listeningStartedAt: started.listeningStartedAt || state.listeningStartedAt || '',
       listeningDeadlineAt: started.listeningDeadlineAt || state.listeningDeadlineAt || '',
@@ -830,7 +836,18 @@
     });
     window.K67_EXAM_ORDER?.apply(state, started);
     if(orderDrafts)saveState(orderDrafts);
+    if(testConfig.slug==='term-test-1'&&classCode!=='CODEXDEMO806'&&!listeningOnly) {
+      restoredIdentity=Object.freeze({testSlug:testConfig.slug,classCode,className:activeClassName,
+        studentRef:state.studentRef,studentName:state.studentName,attemptToken:state.attemptToken});
+    }
     if (started.examMode === 'read_first' && started.nextSection === 'listening') {
+      if(restoredIdentity) {
+        roster=[{ref:restoredIdentity.studentRef,name:restoredIdentity.studentName}];
+        renderRosterOptions();
+        elements.bootstrapStudent.value=restoredIdentity.studentRef;
+        elements.bootstrapStudent.disabled=true;
+        elements.bootstrapStudent.closest('.cbt-bootstrap-identity').hidden=false;
+      }
       await downloadForSession({...started, encryptedAudioUrl:`/api/term-tests/${testConfig.slug}/session/${state.examSessionToken}/audio`,previewAudioUrl:`/api/term-tests/${testConfig.slug}/session/${state.examSessionToken}/preview`});
       return;
     }
@@ -1156,6 +1173,27 @@
       showNotice('Không thể mở lượt thi bù bằng liên kết này.', true);
       return;
     }
+    let restoreError=null;
+    // Có mã lượt: xác minh trực tiếp, không dựng lại danh sách cả lớp để mở lại bài.
+    // Lỗi giữ nguyên token/nháp và không tự tạo lượt mới hoặc bắt đầu đồng hồ.
+    if(testConfig.slug==='term-test-1'&&classCode!=='CODEXDEMO806'&&!listeningOnly
+      &&isUuid(state.studentRef)&&isUuid(state.attemptToken)) {
+      const identity=elements.bootstrapStudent.closest('.cbt-bootstrap-identity');
+      identity.hidden=true;
+      elements.bootstrapDownloadStatus.textContent='Đang tiếp tục bài đã lưu...';
+      try {await resumeAfterListening();return;}
+      catch(error) {
+        restoreError=error;
+        identity.hidden=false;
+        if(![400,404,409].includes(error.status)) {
+          showNotice(`Chưa xác nhận được lượt đã lưu: ${error.message}. Bài trên máy vẫn được giữ.`,true);
+          elements.bootstrapDownloadStatus.textContent='Chưa mở được bài đã lưu. Hãy thử lại.';
+          elements.bootstrapRetry.textContent='Thử mở lại bài';
+          elements.bootstrapRetry.hidden=false;
+          return;
+        }
+      }
+    }
     await initializeStudentMemory();
     elements.bootstrapDownloadStep.dataset.state = 'active';
     elements.bootstrapDownloadStatus.textContent = 'Đang tải danh sách lớp...';
@@ -1187,6 +1225,14 @@
         : `Lớp ${activeClassName}`;
       renderRosterOptions();
       refreshRememberedBootstrapStudent();
+      if(restoreError) {
+        elements.bootstrapStudent.value=roster.some(s=>s.ref===state.studentRef)?state.studentRef:'';
+        showNotice(`Chưa xác nhận được lượt đã lưu: ${restoreError.message}. Giữ nguyên nháp và nhờ giáo viên kiểm tra nếu lỗi tiếp diễn.`,true);
+        elements.bootstrapDownloadStatus.textContent='Lượt đã lưu cần được kiểm tra trước khi tiếp tục.';
+        elements.bootstrapRetry.textContent='Thử mở lại bài';
+        elements.bootstrapRetry.hidden=false;
+        return;
+      }
       if (demoStudentRef || demoAttemptToken) {
         const demoStudent = roster.find(student => student.ref === demoStudentRef);
         if (!demoStudent || !isUuid(demoStudentRef) || !isUuid(demoAttemptToken)) {
