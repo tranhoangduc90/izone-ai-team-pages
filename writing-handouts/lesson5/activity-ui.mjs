@@ -3,7 +3,7 @@
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const eventNames={session_opened:'Mở bài làm',responses_saved:'Lưu nội dung',content_edited:'Chỉnh nội dung đã chốt',student_attested_teacher_permission:'HV xác nhận GV đồng ý cho qua',comment_teacher:'GV góp ý trong luồng trao đổi',comment_student:'HV trả lời góp ý',comment_status_changed:'GV đổi trạng thái trao đổi',job_superseded:'Lượt xử lý cũ đã được thay thế',idea2_opened:'Mở ý 2',teacher_comment:'Góp ý của giảng viên',check_queued:'Gửi yêu cầu xử lý',processing_started:'Bắt đầu xử lý',ai_response_received:'Đã lưu phản hồi AI',job_completed:'Đã nhận kết quả',job_queued:'Chuẩn bị thử lại',job_failed:'Dừng lượt chấm'};
 const statuses={processing:'Đang xử lý',response_received:'Đã giữ phản hồi',completed:'Đã nhận kết quả',queued:'Cần thử lại',failed:'Đã dừng',timed_out:'Hết thời gian của lượt này'};
-const fields={idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic Sentence',a1:'A · Ý 1',x1:'X · Ý 1',b1:'B · Ý 1',a2:'A · Ý 2',x2:'X · Ý 2',b2:'B · Ý 2'};
+const fields={topic:'Topic Sentence',si1:'Cả chuỗi ý 1',si2:'Cả chuỗi ý 2',idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic Sentence',a1:'A · Ý 1',x1:'X · Ý 1',b1:'B · Ý 1',a2:'A · Ý 2',x2:'X · Ý 2',b2:'B · Ý 2'};
 const date=value=>Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'Chưa có thời gian';
 function eventDetail(e){
  const d=e.details||{};
@@ -12,7 +12,7 @@ function eventDetail(e){
  return '';
 }
 export function renderActivityList(events,nextCursor){
-  const rows=events.map(e=>`<li class="activity-event ${e.kind==='job_failed'?'activity-failed':''}"><div><strong>${esc(eventNames[e.kind]||e.kind)}</strong><time>${esc(date(e.event_at))}</time></div><p>${(e.section||e.details?.section||e.details?.field)?esc(fields[e.section||e.details?.section||e.details?.field]||'Topic Sentence'):e.idea_index?'Từ vựng · Ý '+esc(e.idea_index):''}${e.attempt_index?' · Lượt '+esc(e.attempt_index):''}${e.details?.error?' · Mã lỗi: '+esc(e.details.error):''}</p>${eventDetail(e)}${e.job_ref?`<button class="text-button" data-log-job="${esc(e.job_ref)}">Xem nội dung gửi chấm và phản hồi AI</button>`:''}</li>`).join('');
+  const rows=events.map(e=>`<li class="activity-event ${e.kind==='job_failed'?'activity-failed':''}"><div><strong>${esc(eventNames[e.kind]||e.kind)}</strong><time>${esc(date(e.event_at))}</time></div><p>${(e.section||e.details?.section||e.details?.field)?esc(fields[e.section||e.details?.section||e.details?.field]||'Topic Sentence'):e.idea_index===0?'Từ vựng chung · Cả hai ý':e.idea_index?'Từ vựng · Ý '+esc(e.idea_index):''}${e.attempt_index?' · Lượt '+esc(e.attempt_index):''}${e.details?.error?' · Mã lỗi: '+esc(e.details.error):''}</p>${eventDetail(e)}${e.job_ref?`<button class="text-button" data-log-job="${esc(e.job_ref)}">Xem nội dung gửi chấm và phản hồi AI</button>`:''}</li>`).join('');
   return `<ol class="activity-events">${rows||'<li class="empty">Chưa có nhật ký được lưu cho phiên này. Lượt trước khi bật tính năng có thể không còn đủ dữ liệu.</li>'}</ol>${nextCursor?'<button class="secondary" data-log-more="1">Xem sự kiện trước đó</button>':''}`;
 }
 export function renderActivityDetail(detail){
