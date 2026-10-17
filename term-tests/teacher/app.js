@@ -668,6 +668,7 @@ function renderAnalysisList(container, items, emptyText) {
 
 function renderDetailBlock(title, details) {
   const block = createNode('details', 'detail-block');
+  block.dataset.skill = title;
   const detailRows = details || [];
   const summary = createNode(
     'summary',
@@ -716,6 +717,7 @@ function formatCompletedAt(value) {
 
 function renderStudentResult(student) {
   if (!student || student.status !== 'completed' || !student.result) {
+    window.K67_ANSWER_EXPLANATIONS?.reset();
     const empty = createNode('section', 'panel teacher-empty');
     empty.append(
       createNode('p', 'eyebrow', 'Kết quả cá nhân'),
@@ -729,8 +731,13 @@ function renderStudentResult(student) {
   }
 
   const result = student.result;
+  const previousPanel = elements.studentView.querySelector('.teacher-result-panel');
+  const viewKey = JSON.stringify([state.selectedClassId, state.selectedTestSlug, student.ref]);
+  const expandedSkills = previousPanel?.dataset.viewKey === viewKey
+    ? new Set([...previousPanel.querySelectorAll('.detail-block[open]')].map(block => block.dataset.skill)) : new Set();
   const writing = student.writing || { status: 'not_submitted' };
   const panel = createNode('section', 'panel result-panel teacher-result-panel');
+  panel.dataset.viewKey = viewKey;
   const heading = createNode('div', 'result-heading');
   const headingCopy = document.createElement('div');
   headingCopy.append(
@@ -768,6 +775,34 @@ function renderStudentResult(student) {
     renderDetailBlock('Listening', result.listening.details),
     renderDetailBlock('Reading', result.reading.details)
   );
+  questionDetails.querySelectorAll('.detail-block').forEach(block => { block.open = expandedSkills.has(block.dataset.skill); });
+  const selectedClass = getSelectedClass();
+  const selectedTestSlug = state.selectedTestSlug;
+  window.K67_ANSWER_EXPLANATIONS?.attach({
+    container: questionDetails, payload: { completed: true, result },
+    reviewKey: JSON.stringify([selectedClass?.id, selectedTestSlug, student.ref, student.completedAt, result]),
+    testSlug: selectedTestSlug, title: `${result.testTitle || getSelectedTest()?.title || ''} · ${student.name}`,
+    answerLabel: 'Bài làm của học viên',
+    loadReview: async () => {
+      const query = new URLSearchParams({ class: selectedClass.name, test: selectedTestSlug, student: student.ref });
+      if (student.completedAt) query.set('completedAt', student.completedAt);
+      const payload = await apiRequest(`/api/term-tests/teacher/explanations?${query}`);
+      const identity = payload.review?.identity;
+      if (identity?.studentRef !== student.ref || identity.testSlug !== selectedTestSlug
+        || identity.className !== selectedClass.name
+        || (student.completedAt && Date.parse(identity.completedAt) !== Date.parse(student.completedAt))) {
+        throw new Error('Lời giải chưa khớp học viên và kết quả đang xem. Hãy làm mới dữ liệu.');
+      }
+      const detailStamp = details => JSON.stringify((details || []).map(d =>
+        [Number(d.number), d.studentAnswer || '', d.correctAnswer || '', d.result || '']
+      ).sort((a, b) => a[0] - b[0]));
+      if (['listening', 'reading'].some(skill =>
+        detailStamp(payload.review.result?.[skill]?.details) !== detailStamp(result[skill]?.details))) {
+        throw new Error('Kết quả đã thay đổi. Hãy làm mới dữ liệu rồi mở lại lời giải.');
+      }
+      return payload;
+    }
+  });
 
   const analysisGrid = createNode('div', 'analysis-grid');
   const bestCard = createNode('article', 'analysis-card best');
@@ -806,7 +841,9 @@ function renderActiveView() {
   renderTabs();
   elements.overviewView.hidden = state.selectedTab !== 'overview';
   elements.studentView.hidden = state.selectedTab === 'overview';
-  if (state.selectedTab === 'overview') renderOverview();
+  if (state.selectedTab === 'overview') {
+    window.K67_ANSWER_EXPLANATIONS?.reset(); renderOverview();
+  }
   else renderStudentResult(selectedStudent);
   updateUrl();
 }
@@ -845,6 +882,7 @@ async function connectAuthenticatedSession() {
 
 function resetLoginAfterError() {
   loginGeneration += 1;
+  window.K67_ANSWER_EXPLANATIONS?.reset();
   state.authenticated = false;
   state.connected = false;
   state.resultsLoading = false;
@@ -934,6 +972,7 @@ function setupGoogleSignIn() {
 }
 
 elements.classSelect.addEventListener('change', async () => {
+  window.K67_ANSWER_EXPLANATIONS?.reset();
   state.selectedClassId = elements.classSelect.value;
   state.selectedTab = 'overview';
   renderClassAccessNotice(getSelectedClass());
@@ -946,6 +985,7 @@ elements.classSelect.addEventListener('change', async () => {
 });
 
 elements.testSelect.addEventListener('change', async () => {
+  window.K67_ANSWER_EXPLANATIONS?.reset();
   state.selectedTestSlug = elements.testSelect.value;
   state.selectedTab = 'overview';
   try {

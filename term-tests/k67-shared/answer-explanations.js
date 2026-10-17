@@ -100,7 +100,7 @@
     const sectionTitle = section.title || section.label;
     const correctAnswer = row?.correctAnswer || entry.answers.join(entry.pairNumbers ? ' + ' : ' / ');
     const studentAnswer = row?.studentAnswer ?? review.answers?.[skill]?.[number] ?? '';
-    const outcome = ['correct', 'incorrect', 'blank'].includes(row?.result) ? row.result : 'blank';
+    const outcome = ['correct', 'incorrect', 'blank'].includes(row?.result) ? row.result : 'unknown';
     const evidenceText = new Set(entry.evidence.map(p => text([p])));
     const excerptMap = new Map();
     Object.values(entries).filter(e => e.section === entry.section).forEach(e => e.blocks.forEach(b => {
@@ -116,7 +116,7 @@
     }).join('');
     const index = numbers.indexOf(number);
     const d = ensureDialog();
-    d.innerHTML = `<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">${escape(context.title)} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(entry.type.replace(/^(Reading|Listening) - /, ''))}</h2></div><button type="button" class="explanation-dialog-close" data-explanation-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="${isReading ? 'Bài đọc' : 'Trích transcript'}"><div class="explanation-dialog-pane-head"><strong>${isReading ? 'Bài đọc' : 'Trích transcript'} · ${escape(section.label)}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(sectionTitle)}</p>${left}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(correctAnswer)}</strong></span><span>Bài làm của bạn <strong>${escape(studentAnswer || '—')}</strong></span><span class="result-${outcome}">${outcome === 'correct' ? 'Đúng' : outcome === 'blank' ? 'Bỏ trống' : 'Sai'}</span></div>${entry.pairNumbers ? `<p class="explanation-dialog-hint">Câu ${entry.pairNumbers.join('–')} dùng chung lời giải; hai đáp án đúng không xét thứ tự. Kết quả từng câu giữ theo bài đã chấm.</p>` : ''}<h3>Đối chiếu ý trong đề và ${isReading ? 'bài đọc' : 'transcript'}</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${paragraphs(entry.prompt)}</section><section><h4>Bằng chứng trong ${isReading ? 'bài đọc' : 'transcript'}</h4>${paragraphs(entry.evidence)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index + 1}/${numbers.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-explanation-prev ${index === 0 ? 'disabled' : ''}>← Câu trước</button><button type="button" class="button outline" data-explanation-next ${index === numbers.length - 1 ? 'disabled' : ''}>Câu sau →</button></nav></footer></div>`;
+    d.innerHTML = `<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">${escape(context.title)} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(entry.type.replace(/^(Reading|Listening) - /, ''))}</h2></div><button type="button" class="explanation-dialog-close" data-explanation-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="${isReading ? 'Bài đọc' : 'Trích transcript'}"><div class="explanation-dialog-pane-head"><strong>${isReading ? 'Bài đọc' : 'Trích transcript'} · ${escape(section.label)}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(sectionTitle)}</p>${left}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(correctAnswer)}</strong></span><span>${escape(context.answerLabel || 'Bài làm của bạn')} <strong>${escape(studentAnswer || '—')}</strong></span><span class="result-${outcome}">${outcome === 'correct' ? 'Đúng' : outcome === 'blank' ? 'Bỏ trống' : outcome === 'incorrect' ? 'Sai' : 'Chưa có dữ liệu từng câu'}</span></div>${entry.pairNumbers ? `<p class="explanation-dialog-hint">Câu ${entry.pairNumbers.join('–')} dùng chung lời giải; hai đáp án đúng không xét thứ tự. Kết quả từng câu giữ theo bài đã chấm.</p>` : ''}<h3>Đối chiếu ý trong đề và ${isReading ? 'bài đọc' : 'transcript'}</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${paragraphs(entry.prompt)}</section><section><h4>Bằng chứng trong ${isReading ? 'bài đọc' : 'transcript'}</h4>${paragraphs(entry.evidence)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index + 1}/${numbers.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-explanation-prev ${index === 0 ? 'disabled' : ''}>← Câu trước</button><button type="button" class="button outline" data-explanation-next ${index === numbers.length - 1 ? 'disabled' : ''}>Câu sau →</button></nav></footer></div>`;
     d.querySelector('[data-explanation-close]').onclick = () => d.close();
     d.querySelector('[data-explanation-prev]').onclick = () => { number = numbers[index - 1]; render(); };
     d.querySelector('[data-explanation-next]').onclick = () => { number = numbers[index + 1]; render(); };
@@ -128,10 +128,11 @@
       else { const first = pane.querySelector('.explanation-active-paragraph'); if (first) pane.scrollTop = first.offsetTop - pane.offsetTop - 20; }
     });
   }
-  function attach({ container, payload, attemptToken, testSlug, title, request }) {
-    if (!supported.has(testSlug) || !payload.completed || !attemptToken) return;
-    if (activeAttempt !== attemptToken) {
-      activeAttempt = attemptToken; cached = null; generation++;
+  function attach({ container, payload, attemptToken, reviewKey = attemptToken, testSlug, title, request,
+    loadReview, answerLabel = 'Bài làm của bạn' }) {
+    if (!supported.has(testSlug) || !payload.completed || !reviewKey || (!attemptToken && !loadReview)) return;
+    if (activeAttempt !== reviewKey) {
+      activeAttempt = reviewKey; cached = null; generation++;
       if (dialog?.open) dialog.close();
     }
     container.querySelectorAll('.detail-block').forEach(block => {
@@ -148,17 +149,18 @@
         button.type = 'button'; button.className = 'explanation-open'; button.textContent = 'Xem giải thích';
         button.setAttribute('aria-label', `${skill === 'reading' ? 'Reading' : 'Listening'} câu ${rows[i].number}: Xem giải thích`);
         status.className = 'explanation-load-status'; status.setAttribute('role', 'status');
+        if (dialog?.open && context?.skill === skill && Number(rows[i].number) === number) trigger = button;
         button.onclick = async () => {
           const epoch = generation;
           button.disabled = true; status.textContent = 'Đang tải lời giải…';
           try {
-            if (!cached) cached = request('/api/term-tests/result/explanations', { method: 'POST',
+            if (!cached) cached = loadReview ? loadReview() : request('/api/term-tests/result/explanations', { method: 'POST',
               headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attemptToken }) });
             const response = await cached;
             if (epoch !== generation) return;
             const review = response.review;
             if (review?.bundle?.testSlug !== testSlug || !review.bundle.skills?.[skill]?.entries?.[rows[i].number]) throw new Error('Lời giải chưa khớp câu hỏi.');
-            trigger = button; context = { review, skill, title }; number = Number(rows[i].number);
+            trigger = button; context = { review, skill, title, answerLabel }; number = Number(rows[i].number);
             status.textContent = ''; render();
           } catch (error) {
             if (epoch !== generation) return;
@@ -169,5 +171,10 @@
       });
     });
   }
-  window.K67_ANSWER_EXPLANATIONS = Object.freeze({ attach });
+  function reset() {
+    generation++; activeAttempt = ''; cached = null; context = null;
+    if (dialog?.open) dialog.close();
+    dialog?.replaceChildren(); trigger = null;
+  }
+  window.K67_ANSWER_EXPLANATIONS = Object.freeze({ attach, reset });
 }());
