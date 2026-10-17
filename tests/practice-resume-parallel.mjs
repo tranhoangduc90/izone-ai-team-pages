@@ -15,6 +15,7 @@ async function boot(kind,{mode='same',n=0}={}){
  const context={app:{innerHTML:''},location:{pathname:`/${kind}-practice/`,hash:'#login',search:''},
   history:{replaceState(){}},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
   ENTRY:'entry',SESSION:'session',entryToken:'',sessionToken:'',studentId:'',identity:null,entryInfo:null,STUDENTS:[],ready:false,
+  sharedEntry:false,entryQuery:new URLSearchParams('documentId=fixture-document'),requestedLesson:'9',CLASSES:[],selectedClassId:'',
   URLSearchParams,Promise,escape:String,
   async request(path,body){
    events.push({path,body,at:performance.now(),phase:'start'});await new Promise(r=>setTimeout(r,20));
