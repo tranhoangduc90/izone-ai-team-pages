@@ -487,8 +487,13 @@ async function bootstrap(){
   const entry=new URLSearchParams(location.hash.split('?')[1]).get('entry');
   if(entry){sessionStorage.setItem(ENTRY,entry);history.replaceState(null,'',location.pathname+location.search+'#login');}
   entryToken=entry||sessionStorage.getItem(ENTRY)||'';sessionToken=sessionStorage.getItem(SESSION)||'';
-  if(sessionToken){try{const response=await request('/state');apply(response);recoverLocal();}catch(e){if(e.code==='UNAUTHORIZED'){sessionToken='';sessionStorage.removeItem(SESSION);}else throw e;}}
-  if(entryToken){entryInfo=await request('/open',{entryToken});STUDENTS=entryInfo.students;
+  // Hai bước chỉ đọc chạy song song; vẫn kiểm phiên và link trước khi hiện bài.
+  const [savedState,openedEntry]=await Promise.allSettled([
+   sessionToken?request('/state'):Promise.resolve(null),
+   entryToken?request('/open',{entryToken}):Promise.resolve(null)
+  ]);
+  if(sessionToken){try{if(savedState.status==='rejected')throw savedState.reason;apply(savedState.value);recoverLocal();}catch(e){if(e.code==='UNAUTHORIZED'){sessionToken='';sessionStorage.removeItem(SESSION);}else throw e;}}
+  if(entryToken){if(openedEntry.status==='rejected')throw openedEntry.reason;entryInfo=openedEntry.value;STUDENTS=entryInfo.students;
    if(sessionToken&&identity.bindingId!==entryInfo.bindingId){sessionToken='';studentId='';identity=null;sessionStorage.removeItem(SESSION);}}
   if(!sessionToken&&!entryToken)throw new Error('Hãy mở bài bằng nút CTA trong bản Homework của bạn.');
   ready=true;
