@@ -1,3 +1,6 @@
+/* Ảnh đề Listening/Reading giữ trọn khung khi giảng viên xem lại bài. */
+.attempt-review-semantic-content img { display: block; max-width: 100%; height: auto; }
+
 .teacher-topbar { display: flex; justify-content: space-between; gap: 24px; align-items: center; }
 .teacher-topbar-actions { display: flex; gap: 10px; align-items: center; flex: 0 0 auto; }
 .teacher-login-badge { padding: 9px 12px; color: #d7e5f5; border: 1px solid rgba(255, 255, 255, .28); border-radius: 999px; font-size: 12px; font-weight: 800; }
