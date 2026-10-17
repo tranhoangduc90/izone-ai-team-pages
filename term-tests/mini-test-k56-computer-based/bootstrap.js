@@ -203,10 +203,27 @@
     return true;
   }
 
-  function cancelIdentity() {
+  async function cancelIdentity() {
+    const retainedStudent = !confirmedCurrentTab && roster.length === 1
+      && roster[0].ref === state.studentRef
+      && (isUuid(state.attemptToken) || isUuid(state.examSessionToken)) ? roster[0] : null;
     pendingStudent = null;
     identityDialog.close();
     elements.bootstrapStudent.value = '';
+    resetPreparation();
+    if (retainedStudent) {
+      elements.bootstrapStudent.disabled = true;
+      elements.bootstrapDownloadStatus.textContent = 'Đang tải lại danh sách lớp...';
+      try {
+        await loadRosterChoices(retainedStudent);
+        elements.bootstrapDownloadStatus.textContent = 'Hãy chọn và xác nhận học viên để tiếp tục.';
+      } catch (error) {
+        elements.bootstrapRetry.hidden = false;
+        showNotice(`Chưa tải được danh sách lớp: ${error.message}. Bạn vẫn có thể chọn lại tên cũ để tiếp tục; nháp được giữ.`, true);
+      } finally {
+        elements.bootstrapStudent.disabled = false;
+      }
+    }
     elements.bootstrapStudent.focus();
   }
   document.getElementById('cancelIdentity').addEventListener('click', cancelIdentity);
@@ -820,9 +837,9 @@
       preparing = false;
     }
   });
-  elements.bootstrapRetry.addEventListener('click', () => roster.length ? prepareSelectedStudent() : initialize());
+  elements.bootstrapRetry.addEventListener('click', () => confirmedCurrentTab && roster.length ? prepareSelectedStudent() : initialize());
   elements.bootstrapStudent.addEventListener('change', () => {
-    if (preparing || ((state.listeningStartedAt || state.attemptToken) && (confirmedCurrentTab || elements.bootstrapStudent.value!==state.studentRef))) {
+    if (preparing || ((state.listeningStartedAt || state.attemptToken) && confirmedCurrentTab)) {
       elements.bootstrapStudent.value = state.studentRef || '';
       return;
     }
@@ -837,6 +854,19 @@
 
   let initializing = false;
   let initializeAgain = false;
+  async function loadRosterChoices(retainedStudent = null) {
+    const data = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
+    elements.bootstrapRetry.hidden = true;
+    elements.bootstrapNotice.hidden = true;
+    const students = data.students || [];
+    // Tên canonical đã xác minh vẫn mở được lượt cũ dù roster ngừng nhận người đó.
+    roster = retainedStudent && !students.some(student => student.ref === retainedStudent.ref)
+      ? [retainedStudent, ...students] : students;
+    elements.bootstrapClass.textContent = `Lớp ${data.class.name}`;
+    elements.bootstrapStudent.replaceChildren(new Option('Nhấn để chọn', ''),
+      ...roster.map(student => new Option(student.name, student.ref)));
+    return data;
+  }
   // Chỉ khôi phục lượt đã bắt đầu bằng token đang lưu; không dựa vào roster mở lượt mới.
   async function restoreStartedAttempt() {
     if ((!isUuid(state.attemptToken) && !isUuid(state.examSessionToken)) || !isUuid(state.studentRef)
@@ -898,14 +928,7 @@
         return;
       }
       if (await restoreStartedAttempt()) return;
-      const data = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
-      elements.bootstrapRetry.hidden = true;
-      elements.bootstrapNotice.hidden = true;
-      roster = data.students || [];
-      elements.bootstrapClass.textContent = `Lớp ${data.class.name}`;
-      const options = [new Option('Nhấn để chọn', '')];
-      for (const student of roster) options.push(new Option(student.name, student.ref));
-      elements.bootstrapStudent.replaceChildren(...options);
+      const data = await loadRosterChoices();
       if (demoStudentRef || demoAttemptToken) {
         const demoStudent = roster.find(student => student.ref === demoStudentRef);
         if (!demoStudent || !isUuid(demoStudentRef) || !isUuid(demoAttemptToken)) {

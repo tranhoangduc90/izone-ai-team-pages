@@ -61,7 +61,7 @@ test('cả hai nhánh bootstrap và HTML dùng bản cửa sổ học viên mớ
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']){
     const bootstrap=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
     const appVersion='20261015-issue127-audio-v1';
-    const bootstrapVersion='20261017-retained-resume-r3';
+    const bootstrapVersion=slug==='mini-test-k56'?'20261017-mini-back-to-roster-v1':'20261017-retained-resume-r3';
     const version=new RegExp('app\\.js\\?(?:rev|v)='+appVersion,'g');
     assert.equal((bootstrap.match(version)||[]).length,2);
     const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');

@@ -52,7 +52,7 @@ test('bump cache HTML ở cả ba bộ nạp và trang CBT',()=>{
     assert.equal(loaders.length,2);
     assert.ok(loaders.every(line=>line.includes(revision)));
     const html=fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8');
-    const bootstrapRevision='20261017-retained-resume-r3';
+    const bootstrapRevision=slug==='mini-test-k56'?'20261017-mini-back-to-roster-v1':'20261017-retained-resume-r3';
     assert.match(html,new RegExp('bootstrap\\.js\\?(?:rev|v)='+bootstrapRevision));
     assert.match(html, /k56-exam-order\.js\?rev=20260930-k56-order-v1/);
   }

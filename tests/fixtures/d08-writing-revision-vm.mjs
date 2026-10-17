@@ -210,7 +210,7 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
         // Trang CBT chỉ nạp bootstrap; bootstrap chính/dự phòng đã kiểm đúng app ở ca cùng bảng.
         const bootstrapUrls = [...text.matchAll(/bootstrap\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
         assert.ok(bootstrapUrls.length > 0, `Thiếu bootstrap trong ${path}`);
-        const bootstrapRevision=k56?'20261017-retained-resume-r3':currentRevision;
+        const bootstrapRevision=k56?(path.includes('mini-test-k56-computer-based/')?'20261017-mini-back-to-roster-v1':'20261017-retained-resume-r3'):currentRevision;
         for (const url of bootstrapUrls) assert.equal(revisionOf(url), bootstrapRevision, path);
       } else {
         assert.ok(writingUrls.length > 0, `Thiếu đúng Writing app ${writingApp} trong ${path}`);
