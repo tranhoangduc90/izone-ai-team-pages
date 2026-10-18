@@ -8,5 +8,5 @@ if (match && location.pathname.includes('-computer-based/')) {
   const onlineUrl = new URL(location.href);
   if (!onlineUrl.searchParams.has('demo')) onlineUrl.searchParams.set('demo', 'exam');
   if (!onlineUrl.searchParams.has('grading')) onlineUrl.searchParams.set('grading', 'server');
-  history.replaceState(null, '', onlineUrl.href);
+  history.replaceState(history.state, '', onlineUrl.href);
 }

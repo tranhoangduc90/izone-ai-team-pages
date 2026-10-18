@@ -21,7 +21,7 @@
   const storageKey = serverGradingMode ? window.SUBSTITUTE_STATE.key('izone-test:',classCode) : `izone-test:${testConfig.slug}:${classCode}${demoMode ? ':preview:'+demoMode : ''}`;
   if (serverGradingMode && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
     const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}:server-grade`;
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try {
         storage.removeItem(storageKey);
         storage.removeItem(uiStorageKey);
@@ -33,7 +33,13 @@
     const nextQuery = query.toString();
     window.history.replaceState({}, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`);
   }
-  const restoredSession = readSession();
+  const persistedSession = readSession();
+  const incomingSession = window.TERM_TEST_BOOTSTRAP?.sessionState;
+  // Nhận state RAM chỉ khi cùng người/lượt/lịch sử đã được bootstrap kiểm.
+  // Bộ nhớ bị chặn vẫn mở được bài; không lấy người từ bộ nhớ chung để cấp quyền.
+  const restoredSession = serverGradingMode && incomingSession
+    && window.SUBSTITUTE_STATE.accept(incomingSession, window.TERM_TEST_BOOTSTRAP)
+    ? { ...incomingSession, ...persistedSession } : persistedSession;
   const state = {
     stage: 'loading',
     roster: [],
@@ -106,7 +112,7 @@
   }
 
   function readSession() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try {
         const restored = JSON.parse(storage.getItem(storageKey) || '{}');
         if (Object.keys(restored).length && (!serverGradingMode || window.SUBSTITUTE_STATE.accept(restored,window.TERM_TEST_BOOTSTRAP))) return restored;
@@ -180,7 +186,7 @@
       testGrades: state.testGrades
     });
     let saved = 0;
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try {
         storage.setItem(storageKey, serialized);
         if (storage.getItem(storageKey) === serialized) saved += 1;
@@ -372,6 +378,15 @@
   ].map(id => [id, document.getElementById(id)]));
 
   const progressSteps = [...document.querySelectorAll('[data-progress]')];
+  if (typeof window.TERM_TEST_CHANGE_STUDENT === 'function') {
+    const change = document.createElement('button'); change.type = 'button';
+    change.id = 'termTestChangeStudent'; change.className = 'button button-secondary'; change.textContent = 'Đổi người học';
+    change.addEventListener('click', async () => {
+      if (!saveSession()) { showLocalSaveWarning('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.'); return; }
+      if (!await window.TERM_TEST_CHANGE_STUDENT()) showNotice('Chưa đổi được lựa chọn chung. Bài hiện tại vẫn được giữ.', 'error');
+    });
+    root.querySelector('.topbar').append(change);
+  }
   const views = [
     elements.loadingView,
     elements.identityView,

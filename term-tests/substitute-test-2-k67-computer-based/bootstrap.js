@@ -24,9 +24,9 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261015-issue127-audio-v1'))
-      .then(() => loadScript('enhance.js?v=20261014-exam-source-v1'))
-      .then(() => loadScript('annotations.js?v=20261007-fresh-v2'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261018-identity-v1'))
+      .then(() => loadScript('enhance.js?v=20261018-identity-v1'))
+      .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
       });
@@ -44,12 +44,23 @@
   } catch(error) {
     root.textContent=error.message||'Không mở được phiên thi. Hãy tải lại trang.';return;
   }
+  let sharedIdentity;
+  try {
+    const module = await import('../../shared/substitute-student-identity.js?v=20261018-identity-v1');
+    sharedIdentity = module.createSubstituteStudentIdentity({ testSlug: testConfig.slug,
+      historyEpoch: window.SUBSTITUTE_STATE.meta.historyEpoch });
+    await sharedIdentity.migrateLegacy();
+  } catch {
+    root.textContent = 'Chưa tải đủ phần mở bài. Hãy tải lại; nháp và lượt thi cũ vẫn được giữ.';
+    return;
+  }
+  let selectionSnapshot = null, classLoadGeneration = 0;
   const storageNamespace = localDemo ? 'RETAKE-LOBBY' : classCode;
   const storageKey = window.SUBSTITUTE_STATE.key('izone-test:',storageNamespace,{lobby:true});
   const uiStorageKey = window.SUBSTITUTE_STATE.key('izone-test-ui:',storageNamespace,{lobby:true});
   const annotationStorageKey = window.SUBSTITUTE_STATE.key('izone-test-annotations:',storageNamespace,{lobby:true});
   let state = readState();
-  const legacyUiState = readLegacyUiState();
+  let legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
   let encryptedAudio = null;
@@ -92,6 +103,7 @@
             </select>
           </label>
           <p class="cbt-roster-note">Danh sách chỉ hiển thị học viên được xếp tham gia bài thi lại của lớp đã chọn.</p>
+          <button class="button button-secondary" id="bootstrapChangeStudent" type="button">Đổi người học</button>
         </div>
         <div class="cbt-lobby-steps">
           <section class="cbt-lobby-step" id="bootstrapDownloadStep" data-state="locked">
@@ -182,15 +194,64 @@
     const student = pendingStudent;
     pendingStudent = null;
     identityDialog.close();
-    for (const storage of [sessionStorage, localStorage]) {
-      try { storage.removeItem(annotationStorageKey); storage.removeItem(uiStorageKey); } catch { /* Lượt mới vẫn có mã riêng nếu storage bị chặn. */ }
+    bindSelectedStudent(student);
+    prepareSelectedStudent();
+    return;
+  });
+
+  function studentPointer(studentRef, selectedClass = classCode) {
+    return `izone-substitute-lobby-v1:${testConfig.slug}:${window.SUBSTITUTE_STATE.meta.historyEpoch}:${selectedClass}:${studentRef}`;
+  }
+
+  function bindSelectedStudent(student) {
+    const selectedClass = elements.bootstrapClass.value || classCode;
+    let restored = null;
+    // Chỉ đọc con trỏ đúng người/lớp/lịch sử; nháp đầy đủ vẫn nằm trong khóa theo lượt.
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
+      try {
+        const candidate = JSON.parse(storage.getItem(studentPointer(student.ref, selectedClass)) || 'null');
+        if (candidate?.studentRef === student.ref && candidate.classCode === selectedClass
+            && window.SUBSTITUTE_STATE.accept(candidate, null)) { restored = candidate; break; }
+      } catch { /* Không xóa nháp hỏng hoặc dữ liệu chưa xác định chủ. */ }
     }
-    state = { audioVolume: state.audioVolume, classCode: elements.bootstrapClass.value || classCode };
-    saveState({ studentRef: student.ref, studentName: student.name, identityConfirmed: true, annotationRunId: crypto.randomUUID() });
+    if (restored) {
+      window.SUBSTITUTE_STATE.bind(restored);
+      const ownKey = window.SUBSTITUTE_STATE.key('izone-test:', selectedClass);
+      for (const storage of window.SUBSTITUTE_STATE.storages()) {
+        try {
+          const latest = JSON.parse(storage.getItem(ownKey) || 'null');
+          if (latest?.studentRef === student.ref && window.SUBSTITUTE_STATE.accept(latest)) {
+            restored = { ...restored, ...latest }; break;
+          }
+        } catch { /* Giữ bản phòng chờ của cùng lượt nếu bản đầy đủ không đọc được. */ }
+      }
+    }
+    state = restored || { audioVolume: state.audioVolume, classCode: selectedClass };
+    saveState({ classCode: selectedClass, studentRef: student.ref, studentName: student.name,
+      identityConfirmed: true, annotationRunId: state.annotationRunId || crypto.randomUUID() });
     elements.bootstrapClass.disabled = true;
     elements.bootstrapStudent.value = student.ref;
-    legacyListeningResume = false;
-    prepareSelectedStudent();
+    legacyUiState = readLegacyUiState();
+    legacyListeningResume = Boolean(state.listeningStartedAt);
+    void Promise.resolve(sharedIdentity.rememberSelected(selectedClass, student, selectionSnapshot)).then(result => {
+    if (!['ok', 'demo'].includes(result.status)) showNotice('Bài vẫn giữ đúng người. Chưa ghi nhớ được người học để dùng ở bài khác.');
+    }).catch(() => showNotice('Bài vẫn giữ đúng người. Chưa ghi nhớ được người học để dùng ở bài khác.'));
+  }
+
+  async function changeSharedStudent() {
+    if ((await sharedIdentity.forget()).status !== 'empty') return false;
+    window.SUBSTITUTE_STATE.stop();
+    window.TERM_TEST_ALLOW_NAVIGATION = true;
+    location.reload();
+    return true;
+  }
+  window.TERM_TEST_CHANGE_STUDENT = changeSharedStudent;
+  document.getElementById('bootstrapChangeStudent').addEventListener('click', async () => {
+    if (preparing) { showNotice('Đang chuẩn bị audio. Hãy chờ xong trước khi đổi người học.'); return; }
+    if (!await changeSharedStudent()) showNotice('Chưa đổi được lựa chọn chung. Nháp vẫn được giữ.', true);
+  });
+  sharedIdentity.subscribe(() => {
+    if (state.studentRef) showNotice('Lựa chọn chung trên trình duyệt đã đổi. Lượt thi trong tab này vẫn giữ đúng người đã chọn.');
   });
 
   function escapeText(value) {
@@ -204,10 +265,10 @@
   }
 
   function readState() {
-    for (const storage of [sessionStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages(['sessionStorage'])) {
       try {
         const parsed = JSON.parse(storage.getItem(storageKey) || '{}');
-        if (window.SUBSTITUTE_STATE.accept(parsed,null)) {
+        if (window.SUBSTITUTE_STATE.accept(parsed,null) && sharedIdentity.mayRestore(parsed)) {
           if(parsed.studentRef)window.SUBSTITUTE_STATE.bind(parsed);
           return parsed;
         }
@@ -219,7 +280,7 @@
   }
 
   function readLegacyUiState() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try {
         const parsed = JSON.parse(storage.getItem(state.studentRef ? window.SUBSTITUTE_STATE.key('izone-test-ui:',state.classCode || classCode) : uiStorageKey) || '{}');
         if (window.SUBSTITUTE_STATE.accept(parsed)) {
@@ -247,12 +308,19 @@
       window.SUBSTITUTE_STATE.bind(state);
     }
     state=window.SUBSTITUTE_STATE.stamp(state);
+    if (state.studentRef) sharedIdentity.pin(state);
     const serialized = JSON.stringify(state);
-    for (const storage of [sessionStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages(['sessionStorage'])) {
       try {
         storage.setItem(storageKey, serialized);
       } catch {
         // Phiên thi chính vẫn nằm trên máy chủ nếu bộ nhớ trình duyệt bị chặn.
+      }
+    }
+    if (state.studentRef && state.classCode) {
+      for (const storage of window.SUBSTITUTE_STATE.storages()) {
+        try { storage.setItem(studentPointer(state.studentRef, state.classCode), serialized); }
+        catch { /* Không xóa con trỏ/bài cũ khi bộ nhớ hết chỗ. */ }
       }
     }
     if (localDemo) {
@@ -451,7 +519,7 @@
   function hasSavedGradedProgress() {
     if (!localDemo || !state.identityConfirmed || !state.listeningStartedAt) return false;
     const key = window.SUBSTITUTE_STATE.key('izone-test:',state.classCode || classCode);
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try {
         const saved = JSON.parse(storage.getItem(key) || '{}');
         if (!saved || !Object.keys(saved).length || !window.SUBSTITUTE_STATE.accept(saved,state)) continue;
@@ -586,13 +654,14 @@
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
       skipListeningAudio: Boolean(state.attemptToken || started.listeningSubmitted),
+      sessionState: Object.freeze({ ...state }),
       annotationRunId: state.annotationRunId
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261015-issue127-audio-v1');
-    await loadScript('enhance.js?v=20261014-exam-source-v1');
-    await loadScript('annotations.js?v=20261007-fresh-v2');
+    await loadScript('../substitute-k67-shared/app.js?v=20261018-identity-v1');
+    await loadScript('enhance.js?v=20261018-identity-v1');
+    await loadScript('annotations.js?v=20261018-identity-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
 
@@ -784,14 +853,18 @@
       return;
     }
     resetPreparation();
+    const generation = ++classLoadGeneration;
     const selectedClass = localDemoClasses.find(item => item.code === elements.bootstrapClass.value);
     classCode = selectedClass?.code || '';
     if (classCode) query.set('class', classCode);
     else query.delete('class');
     history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);
     try {
-      roster = await loadDemoRoster(selectedClass);
+      const loaded = await loadDemoRoster(selectedClass);
+      if (generation !== classLoadGeneration) return;
+      roster = loaded;
     } catch (error) {
+      if (generation !== classLoadGeneration) return;
       roster = [];
       showNotice(`Không tải được danh sách lớp: ${error.message}`, true);
     }
@@ -806,6 +879,7 @@
       ? 'Hãy chọn đúng họ và tên của bạn trong lớp này.'
       : 'Hãy chọn lớp trước khi chọn học viên.';
     elements.bootstrapDownloadStep.dataset.state = selectedClass ? 'active' : 'locked';
+    if (selectedClass) await selectRememberedFromCurrentRoster();
   });
   elements.bootstrapStudent.addEventListener('change', () => {
     if (preparing || state.listeningStartedAt || state.attemptToken) {
@@ -815,11 +889,41 @@
     resetPreparation();
     pendingStudent = roster.find(item => item.ref === elements.bootstrapStudent.value) || null;
     if (!pendingStudent) return;
+    selectionSnapshot = sharedIdentity.read();
     document.getElementById('confirmStudentName').textContent = pendingStudent.name;
     document.getElementById('confirmClassName').textContent = elements.bootstrapClass.selectedOptions[0]?.textContent || classCode;
     identityDialog.showModal();
     document.getElementById('confirmIdentity').focus();
   });
+
+  async function selectRememberedFromCurrentRoster() {
+    const result = sharedIdentity.selectFromRoster(classCode, roster);
+    if (result.status !== 'unique' || !sharedIdentity.isCurrent(result.snapshot)) return false;
+    selectionSnapshot = result.snapshot;
+    bindSelectedStudent(result.student);
+    await prepareSelectedStudent();
+    return true;
+  }
+
+  async function findRememberedClass() {
+    if (classCode && localDemoClasses.some(item => item.code === classCode && item.code !== 'DEMO')) return classCode;
+    const snapshot = sharedIdentity.read();
+    if (snapshot.status !== 'ok') return '';
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch('https://ducizone.ddns.net/mapping-api/api/student-identity/resolve', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+        body: JSON.stringify({ identity: snapshot.identity })
+      });
+      const data = await response.json();
+      if (!response.ok || data.ok !== true || data.status !== 'unique' || data.identity?.id !== snapshot.identity.id
+          || data.identity?.authority !== 'erp-contact' || !Array.isArray(data.aliases) || !sharedIdentity.isCurrent(snapshot)) return '';
+      const classes = [...new Set(data.aliases.map(item => item.classCode)
+        .filter(code => localDemoClasses.some(item => item.code === code && code !== 'DEMO')))];
+      return classes.length === 1 ? classes[0] : '';
+    } catch { return ''; }
+    finally { clearTimeout(timer); }
+  }
 
   async function initialize() {
     if (!localDemo && !/^[A-Z0-9_-]{2,32}$/.test(classCode)) {
@@ -846,6 +950,22 @@
           elements.bootstrapStudent.value = savedStudent.ref;
           await prepareSelectedStudent();
         } else {
+          const generation = classLoadGeneration;
+          const rememberedClass = await findRememberedClass();
+          if (generation !== classLoadGeneration) return;
+          if (rememberedClass && sharedIdentity.read().status === 'ok') {
+            classCode = rememberedClass;
+            elements.bootstrapClass.value = classCode;
+            const loaded = await loadDemoRoster(localDemoClasses.find(item => item.code === classCode));
+            if (generation !== classLoadGeneration) return;
+            roster = loaded;
+            elements.bootstrapStudent.replaceChildren(new Option('Nhấn để chọn đúng tên', ''),
+              ...roster.map(student => new Option(student.name, student.ref)));
+            elements.bootstrapStudent.disabled = false;
+            if (await selectRememberedFromCurrentRoster()) return;
+            showNotice('Người đã nhớ chưa có tên trong danh sách thi lại của lớp này. Hãy kiểm tra link hoặc dùng Đổi người học.');
+            return;
+          }
           roster = [];
           elements.bootstrapClass.value = '';
           elements.bootstrapStudent.replaceChildren(new Option('Chọn lớp trước', ''));
