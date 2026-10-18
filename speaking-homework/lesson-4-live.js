@@ -176,15 +176,12 @@ function renderMain() {
     if (link?.check_status === 'accepted' && !changed) {
       showResult(resultId, 'pass', 'Đã xác nhận hội thoại',
         part.linkOnly ? 'Đã nhận link. Phần này không yêu cầu số lượng luyện tập.'
-          : `Đã kiểm đủ ${link.question_count} giai đoạn/câu luyện.`);
+          : acceptanceMessage(link, `Đã xác nhận ${link.question_count} giai đoạn/câu luyện theo tiêu chuẩn của phần này.`));
     } else if (link?.check_status === 'pending' && !changed) {
       showResult(resultId, 'loading', 'Đang kiểm nội dung', 'Hệ thống đang đọc và phân tích hội thoại.');
     } else if (link?.check_status === 'rejected' && !changed) {
       showResult(resultId, 'blocked', 'Chưa nhận link',
-        link.check_code === 'REUSED_CONVERSATION'
-          ? 'Hội thoại này đã dùng cho bài khác trong khóa. Hãy tạo hội thoại mới.'
-          : link.check_code === 'CHECK_REVIEW_REQUIRED' ? 'Hệ thống chưa kiểm được hội thoại sau nhiều lần thử. Bài vẫn được giữ; hãy nhờ giảng viên kiểm tra.'
-          : 'Hội thoại chưa đủ bước luyện hoặc chưa mở được. Hãy hoàn thành bài rồi chia sẻ lại.');
+        checkReason(link));
     } else if (state.localFeedback.has(resultId)) {
       const note = state.localFeedback.get(resultId);
       showResult(resultId, 'blocked', note.title, note.message);
@@ -284,17 +281,15 @@ function renderPractice() {
     $(`practice-${slot}-confirm`).disabled = state.submitted || state.pending.has(`practice-${slot}`);
     if (row && !changed) {
       if (row.status === 'accepted') {
-        showResult(resultId, row.analysis_status === 'done' ? 'pass' : 'loading',
-          'Đã nhận bài bổ trợ', row.analysis_status === 'done'
-            ? 'Lỗi đã được phân tích; danh sách bài cần luyện đã cập nhật.'
-            : 'Bài đã đạt. Bác sĩ AI đang phân tích lỗi để cập nhật danh sách.');
+        showResult(resultId, 'pass', 'Đã nhận bài bổ trợ',
+          acceptanceMessage(row) + (row.analysis_status === 'done'
+            ? ' Danh sách bài cần luyện đã cập nhật.'
+            : ' Việc phân tích lỗi được xử lý riêng, không ảnh hưởng kết quả công nhận.'));
       } else if (row.status === 'pending') {
         showResult(resultId, 'loading', 'Đang kiểm bài bổ trợ',
           'Hệ thống đang đọc hội thoại và bước áp dụng vào câu Speaking.');
       } else showResult(resultId, 'blocked', 'Chưa nhận bài bổ trợ',
-        row.check_code === 'REUSED_CONVERSATION'
-          ? 'Hội thoại này đã dùng cho bài khác trong khóa.'
-          : 'Bài chưa đúng kỹ năng đã chọn hoặc chưa đủ bước áp dụng vào Speaking.');
+        checkReason(row));
     } else if (state.localFeedback.has(resultId)) {
       const note = state.localFeedback.get(resultId);
       if (input.value.trim() === note.value) showResult(resultId, 'blocked', note.title, note.message);
@@ -336,6 +331,7 @@ function render() {
   $('progress-bar').setAttribute('aria-valuenow', String(count));
   $('progress-fill').style.width = `${count / total * 100}%`;
   $('completion-card').hidden = !state.submitted;
+  updateSubmitControl({ ready: allAccepted(), submitted: state.submitted, finishing: state.finishing, onSubmit: finish });
 }
 async function refresh() {
   if (!state.accessToken) return;
@@ -350,14 +346,16 @@ async function refresh() {
   state.submitted = data.status === 'submitted' && Boolean(data.receipt?.id);
   if (independent && state.submitted && !documentId) $('completion-message').textContent = `Biên nhận ${data.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
   render();
-  if (!state.submitted && allAccepted()) await finish();
   poller.settled();
 }
 async function finish() {
   if (state.submitted || state.finishing || !allAccepted()) return;
   state.finishing = true;
+  const token = state.accessToken;
+  render();
   try {
-    const response = await post('/finish', identity(), 30_000);
+    const response = await post('/finish', { ...identity(), manualSubmit: true }, 30_000);
+    if (token !== state.accessToken) return;
     if (!response.receipt?.id) throw new Error('Máy chủ chưa trả biên nhận.');
     state.submitted = true;
     if (independent && !documentId) $('completion-message').textContent = `Biên nhận ${response.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
@@ -365,7 +363,7 @@ async function finish() {
     $('completion-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
     $('draft-status').textContent = `Chưa nộp xong: ${error.message} Tiến trình vẫn được giữ.`;
-  } finally { state.finishing = false; }
+  } finally { if (token === state.accessToken) { state.finishing = false; render(); } }
 }
 for (const [index, part] of parts.entries()) {
   const section = document.createElement('section');
@@ -490,7 +488,7 @@ $('extra-confirm').addEventListener('click', async () => {
 const poller = createPendingPoller({
   refresh,
   hasSession: () => Boolean(state.accessToken),
-  isPending: () => (!state.submitted && allAccepted()) || [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status))
+  isPending: () => [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status))
     || [...state.practice.values()].some(link => link.status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
   onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
 });
@@ -511,6 +509,7 @@ const identityController = createSpeakingIdentity({
     independent = Boolean(context.session.workUnitId);
     apiBase = context.session.intakeMode === 'legacy' ? 'https://ducizone.ddns.net/mapping-api/api/speaking-homework' : identityApi;
     workUnitId = context.session.workUnitId || '';
+    if (state.accessToken !== context.session.accessToken) state.finishing = false;
     state.studentRef = context.studentRef;
     state.accessToken = context.session.accessToken;
     state.assignment = context.assignment;
@@ -560,3 +559,4 @@ window.addEventListener('beforeunload', event => {
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
 identityController.start();
+import { acceptanceMessage, checkReason, updateSubmitControl } from './check-feedback.js?v=20261018-speaking-fairness-v1';
