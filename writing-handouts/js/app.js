@@ -1,5 +1,5 @@
 import { createApi } from "./api.js?v=20260911-load-guard-v1";
-import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v3";
+import { installStudentMemory } from "./shared-student-memory-ui.js?v=20261018-identity-v1";
 import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelayWithJitter, randomDelay, rebaseLocalProgress, retryDelay, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260921-draft-result-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
@@ -551,15 +551,23 @@ async function openSession(event) {
     const accessCode = student.requiresAccessCode ? $("access-code").value : undefined;
     if (student.requiresAccessCode && !/^\d{4}$/.test(accessCode)) throw new Error("Hãy nhập đúng mã 4 số của hồ sơ tạm.");
     const result = await app.api.createSession(app.activitySlug, classRef, student.studentRef, accessCode); const payload = result.data.session || result.data;
+    if (app.studentMemory && !app.studentMemory.isCurrent()) throw new Error('Người đã nhớ vừa đổi. Chưa mở bằng phản hồi cũ; hãy chọn lại người học.');
     app.sessionRef = payload.sessionRef || payload.ref || payload.id;
     if (!app.sessionRef) throw new Error("API không trả mã phiên làm bài.");
-    const session = await app.api.session(app.sessionRef); app.state = normalizeProgress(session.data.session || session.data); app.state.updatedAt = session.data.updatedAt || session.data.session?.updatedAt || null; await restoreLocal();
+    if (payload.studentRef !== student.studentRef || payload.classRef !== classRef || payload.activitySlug !== app.activitySlug)
+      throw new Error('Phiên trả về chưa khớp đúng bài, lớp và người học. Bài cũ được giữ.');
+    const session = await app.api.session(app.sessionRef);
+    if (app.studentMemory && !app.studentMemory.isCurrent()) throw new Error('Người đã nhớ vừa đổi. Chưa mở bằng phản hồi cũ; hãy chọn lại người học.');
+    const owner = session.data.session || session.data;
+    if (owner.studentRef !== student.studentRef || owner.classRef !== classRef || owner.activitySlug !== app.activitySlug)
+      throw new Error('Bản bài trả về chưa khớp người học. Chưa hiển thị bài của người khác.');
+    app.state = normalizeProgress(session.data.session || session.data); app.state.updatedAt = session.data.updatedAt || session.data.session?.updatedAt || null; await restoreLocal();
+    await app.studentMemory?.complete(app.identity);
     // Mã chỉ dùng để mở phiên hồ sơ tạm; xóa khỏi DOM ngay sau khi xác thực thành công.
     $("access-code").value = ""; $("provisional-pin").value = ""; $("provisional-pin-confirm").value = "";
     $("student-label").textContent = `${student.label} · ${$("class-id").selectedOptions[0].textContent}`; $("setup-card").hidden = true; $("workspace").hidden = false; renderAll(); setSaveState(app.dirty ? "Đã khôi phục bản lưu cục bộ" : "Đã tải bài làm");
     renderTaskContent(); for (const attempt of app.state.attempts) registerAttempt(attempt); schedulePoll(); void refreshTeacherComments(true);
     schedulePresence(); startPresenceHeartbeat();
-    app.studentMemory?.complete(app.identity);
   } catch (requestError) { app.identity = null; app.sessionRef = null; error.hidden = false; error.textContent = requestError.message; }
   finally { app.studentMemory?.end(); }
 }
