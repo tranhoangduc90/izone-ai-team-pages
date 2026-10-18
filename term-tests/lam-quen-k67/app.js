@@ -1,4 +1,6 @@
-import * as memory from '../../shared/student-memory.js';
+import {createTestStudentIdentity} from '../../shared/test-student-identity.js?v=20261018-identity-v1';
+import {createStudentIdentityMemory} from '../../shared/student-identity.js?v=20261018-identity-v1';
+import {migrateLegacyStudentIdentity,requestLegacyStudentIdentity} from '../../shared/student-identity-migration.js?v=20261018-identity-v1';
 import {reading,writing} from './practice-content.js';
 import {createWebChecks} from './web-checks.js';
 
@@ -8,8 +10,32 @@ const app=document.getElementById('app');
 const apiBase=window.TERM_TEST_APP_CONFIG.API_BASE_URL.replace(/\/$/,'');
 const api=apiBase+'/api/k67-readiness/v1';
 const classCode=(new URLSearchParams(location.search).get('class')||'').trim().toUpperCase();
-const storageKey=`izone:k67-readiness:v1:${apiBase}:${classCode}`;
-const memoryKey=memory.memoryKey(apiBase,location.href);
+const legacyStorageKey=`izone:k67-readiness:v1:${apiBase}:${classCode}`;
+const navigationType=performance.getEntriesByType('navigation')[0]?.type;
+const identityMemory=createStudentIdentityMemory();
+const sharedIdentity=createTestStudentIdentity({product:'k67-readiness',classCode,
+  memory:identityMemory,legacyKeys:{state:legacyStorageKey},getStorages:()=>[localStorage],requestIdentity:requestK67Identity});
+async function requestK67Identity(input){
+  // Chỉ quy đổi mã người học K67; không mở bài thi, cấp audio hoặc lấy token bài khác.
+  const response=await fetch(apiBase+'/api/term-tests/term-test-1/student-identity',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input),
+    cache:'no-store',signal:AbortSignal.timeout(5000)});
+  if(!response.ok)throw new Error('Chưa kiểm được danh tính chung.');return response.json();
+}
+async function resolveRememberedStudent(){
+  const before=identityMemory.read();
+  if(before.status==='empty'&&before.revision===null){
+    // Nguồn chung có thể không biết UUID riêng K67. Chỉ thử nguồn K67 khi đã
+    // xác nhận không tìm thấy; vẫn đối chiếu toàn bộ tên cũ để phát hiện nhiều người.
+    const migrated=await migrateLegacyStudentIdentity({memory:identityMemory,requestIdentity:async input=>{
+      const value=await requestLegacyStudentIdentity(input);
+      return value?.ok&&value.status==='missing'&&input.studentRef?requestK67Identity(input):value;
+    }});
+    if(['legacy_conflict','legacy_unresolved'].includes(migrated.status))return{status:migrated.status};
+  }
+  return sharedIdentity.resolveRemembered();
+}
+let storageKey='',loginVersion=0;
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let roster=[],session=null,token='',local={},audio=null,audioUrl='',scope=null,epoch=0,abort=new AbortController();
 let cacheState='not_checked',heard=0,revision=0,ackRevision=0,saveQueue=Promise.resolve(),saveTimer,progressTimer,unlock;
@@ -43,7 +69,12 @@ function flushChecks(){
 }
 const fields=()=>Object.fromEntries([...app.querySelectorAll('input[data-answer]')].map(n=>[n.dataset.answer,n.value]));
 const initialAnswers=()=>session?.answers||{};
-function readLocal(){try{return JSON.parse(localStorage.getItem(storageKey)||'{}');}catch{return{};}}
+function readLocal(key=storageKey){try{return JSON.parse(localStorage.getItem(key)||'{}');}catch{return{};}}
+function bindStudent(studentRef,options={}){
+  const previous=sharedIdentity.current().studentRef===studentRef?local:{};
+  const binding=sharedIdentity.select({ref:studentRef},options);
+  storageKey=binding.keys.state;local=Object.keys(binding.state).length?binding.state:previous;
+}
 function persist(patch={}){
   local={...local,...patch};
   try{localStorage.setItem(storageKey,JSON.stringify(local));return localStorage.getItem(storageKey)===JSON.stringify(local);}
@@ -73,12 +104,31 @@ function bindChange(){document.getElementById('change')?.addEventListener('click
 function stop(){playerChecks?.expectedPause();audio?.pause();diagnostics?.detach();unlock?.();unlock=null;sessionUnlock?.();sessionUnlock=null;clearTimeout(saveTimer);clearTimeout(checkTimer);clearInterval(progressTimer);if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl='';audio=null;sampleReady=false;}
 async function changePerson(retry=false){
   if(busy)return;
-  if(!retry&&session&&(!session.submittedAt||activeSkill&&!session.practice[activeSkill].submittedAt)&&!confirm('Rời lượt làm quen này để đổi người học? Bản chưa đồng bộ có thể bị mất.'))return;
+  if(!retry&&session&&(!session.submittedAt||activeSkill&&!session.practice[activeSkill].submittedAt)&&!confirm('Rời lượt làm quen này để đổi người học? Nháp sẽ được giữ riêng theo từng người.'))return;
+  busy=true;
+  try{
+    // Giữ nháp đúng chủ trước khi rời. Không xóa phiên/nháp của người trước.
+    if(session){
+      if(activeSkill)persistPractice();else if(!session.submittedAt)persistDraft();
+      const durable=persist();
+      const synced=activeSkill?await savePractice():session.submittedAt||await saveDraft();
+      if(!durable&&!synced){notice('Chưa giữ được bản nháp. Hãy lưu lại hoặc khôi phục mạng trước khi đổi người học.',true);return;}
+    }
+    if(!retry){
+      const forgotten=await sharedIdentity.forget();
+      if(forgotten.status!=='empty'){notice('Chưa bỏ được danh tính đã nhớ. Hãy thử đổi người học lại; bài và nháp vẫn được giữ.',true);return;}
+    }
+  }finally{busy=false;}
+  loginVersion++;sharedIdentity.invalidate();
   stop();epoch++;abort.abort();abort=new AbortController();session=null;token='';local={};revision=ackRevision=heard=0;saveQueue=Promise.resolve();readOnly=false;
   activeSkill='';practiceQueue=Promise.resolve();
   checksOpen=false;startChecks();
-  try{localStorage.removeItem(storageKey);}catch{}
-  if(!retry)try{memory.writeMemory(localStorage,memoryKey,'');}catch{}
+  if(retry){
+    // Làm lại chỉ mở lượt mới của cùng người; bản gốc vẫn giữ để khôi phục khi cần.
+    const binding=sharedIdentity.current();
+    if(binding.studentRef)persist({token:'',pending:undefined,studentRef:binding.studentRef});
+  }
+  storageKey='';
   if(!roster.length)await initialize(false);else renderLogin();
 }
 function renderLogin(message=''){
@@ -91,12 +141,20 @@ function renderLogin(message=''){
     <p class="readiness-muted">Chưa có tên trong danh sách? Hãy trao đổi với giảng viên.</p></section></main>`;
   bindChange();
   const picker=document.getElementById('student'),confirmButton=document.getElementById('confirmPerson');
-  let remembered={};try{remembered=memory.readMemory(localStorage,memoryKey);}catch{}
-  const candidate=roster.filter(s=>memory.officialStudent({...s,studentRef:s.ref})&&s.ref===remembered.studentRef);
-  if(candidate.length===1){picker.value=candidate[0].ref;document.getElementById('memoryStatus').textContent='Đã chọn sẵn tên của bạn. Hãy xác nhận trước khi vào bài làm quen.';}
-  if(remembered.status==='unavailable')document.getElementById('memoryStatus').textContent='Trình duyệt không ghi nhớ được. Bạn vẫn có thể chọn tên và vào bài.';
+  const version=++loginVersion;let changed=false;
+  if(sharedIdentity.read().status==='unavailable')document.getElementById('memoryStatus').textContent='Trình duyệt không ghi nhớ được. Bạn vẫn có thể chọn tên và vào bài.';
+  resolveRememberedStudent().then(selected=>{
+    if(version!==loginVersion||changed||busy||session||!picker.isConnected)return;
+    const snapshot=selected.resolution?.snapshot;
+    if(snapshot?.status==='ok'&&snapshot.revision!==sharedIdentity.read().revision)return;
+    const candidate=roster.filter(s=>s.ref===selected.student?.ref);
+    if(selected.status==='unique'&&candidate.length===1){
+      picker.value=candidate[0].ref;confirmButton.disabled=false;
+      document.getElementById('memoryStatus').textContent='Đã chọn sẵn tên của bạn từ đăng nhập chung. Hãy xác nhận trước khi vào bài làm quen.';
+    }
+  }).catch(()=>{if(version===loginVersion&&picker.isConnected&&!changed)document.getElementById('memoryStatus').textContent='Chưa kiểm được danh tính chung. Bạn vẫn có thể chọn tên và xác nhận.';});
   confirmButton.disabled=!picker.value;
-  picker.addEventListener('change',()=>{confirmButton.disabled=!picker.value;});
+  picker.addEventListener('change',()=>{changed=true;confirmButton.disabled=!picker.value;});
   confirmButton.addEventListener('click',()=>openSession(picker.value,document.getElementById('remember').checked));
   document.getElementById('retryRoster').addEventListener('click',()=>initialize(true));
   if(message)notice(message,true);
@@ -105,13 +163,35 @@ async function openSession(studentRef,remember){
   if(busy||!roster.some(s=>s.ref===studentRef))return;busy=true;const generation=epoch;
   document.getElementById('confirmPerson').disabled=true;document.getElementById('student').disabled=true;notice('Đang xác nhận người học…');
   try{
-    if(local.pending?.studentRef!==studentRef)persist({pending:{studentRef,requestId:crypto.randomUUID(),openingProof:Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join('')}});
+    // Chụp lựa chọn trước khi chờ API; kết quả đến muộn không ghi đè người ở tab khác.
+    bindStudent(studentRef,{remember});
+    if(local.token){
+      token=local.token;const restored=await request('/session',{token});if(generation!==epoch)return;
+      checkSessionOwner(restored.session,studentRef);session=restored.session;
+      const remembered=await sharedIdentity.prepared(studentRef);if(generation!==epoch)return;
+      await renderRestored();showMemoryResult(remembered);return;
+    }
+    if(local.pending?.studentRef!==studentRef)persist({studentRef,pending:{studentRef,requestId:crypto.randomUUID(),openingProof:Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join('')}});
     const r=await request('/sessions',{classCode,...local.pending});if(generation!==epoch)return;
+    checkSessionOwner(r.session,studentRef);
     token=r.token;session=r.session;local={};const durable=persist({token,studentRef:session.studentRef});startChecks();diagnostics.set('session','pass','RESPONDED');
-    try{memory.writeMemory(localStorage,memoryKey,remember?studentRef:'');}catch{}
-    renderDevice();if(!durable)notice('Không lưu được phiên trên máy. Tải lại có thể phải vào lại bài làm quen.',true);
-  }catch(e){if(generation===epoch){renderLogin();notice(e.message+' Bạn có thể nhấn xác nhận để thử lại.',true);}}
+    const remembered=await sharedIdentity.prepared(studentRef);if(generation!==epoch)return;
+    renderDevice();showMemoryResult(remembered);if(!durable)notice('Không lưu được phiên trên máy. Tải lại có thể phải vào lại bài làm quen.',true);
+  }catch(e){if(generation===epoch){
+    if(['READINESS_SESSION_EXPIRED','READINESS_SESSION_REQUIRED'].includes(e.code))persist({token:'',pending:undefined});
+    session=null;token='';renderLogin();notice(e.message+' Bạn có thể nhấn xác nhận để thử lại.',true);}}
   finally{busy=false;}
+}
+function checkSessionOwner(value,studentRef){
+  if(value?.studentRef!==studentRef||value.classCode!==classCode)throw new Error('Danh tính bản lưu không khớp phiên. Hãy chọn lại người học.');
+}
+function showMemoryResult(result){
+  // Lỗi ghi nhớ không cản phiên đã được máy chủ xác nhận, cũng không tự đổi người khác.
+  if(!['ok','empty'].includes(result.status))notice('Đã xác nhận người học; chưa cập nhật được ghi nhớ chung. Nháp vẫn gắn với người đang mở.',true);
+}
+async function renderRestored(){
+  if(session.submittedAt){if(['reading','writing'].includes(local.activeSkill))await renderPractice(local.activeSkill,true);else renderResult();}
+  else if(session.sameComputer===null)renderDevice();else{renderExercise();await prepareAudio();}
 }
 function renderDevice(){
   app.innerHTML=`<main class="readiness-shell">${header()}${checksPanel()}<section class="readiness-card"><h2>Xác nhận máy và tai nghe</h2>
@@ -290,8 +370,8 @@ function persistPractice(){
   persist({activeSkill,practiceDrafts:{...local.practiceDrafts,[activeSkill]:{revision:practiceRevision,data:practiceFields()}}});
 }
 function wordCount(){const text=document.getElementById('writingText')?.value.trim()||'';const n=document.getElementById('wordCount');if(n)n.textContent=String(text?text.split(/\s+/u).length:0);}
-async function renderPractice(skill){
-  if(busy)return;
+async function renderPractice(skill,restoring=false){
+  if(busy&&!restoring)return;
   stop();activeSkill=skill;readOnly=false;const generation=++epoch;practiceQueue=Promise.resolve();
   const p=session.practice[skill],draft=local.practiceDrafts?.[skill];
   const useLocal=!p.submittedAt&&draft?.revision>p.revision;
@@ -361,15 +441,21 @@ async function submitPractice(){
   }finally{busy=false;for(const n of app.querySelectorAll('input,textarea,button'))n.disabled=readOnly;}
 }
 async function initialize(resume=true){
-  const generation=epoch;
+  const generation=epoch;loginVersion++;
   try{
     if(!classCode)throw new Error('Link chưa có lớp. Hãy dùng link làm quen giảng viên gửi.');
-    local=readLocal();
+    const pinned=sharedIdentity.current();
+    if(resume&&pinned.studentRef){storageKey=pinned.keys.state;local=pinned.state;}
+    else if(resume&&!history.state?.izoneStudentProductStateV1?.cleared&&['reload','back_forward'].includes(navigationType)){
+      const old=readLocal(legacyStorageKey);
+      if(old.token&&/^[0-9a-f-]{36}$/i.test(old.studentRef||''))bindStudent(old.studentRef);
+      else{storageKey='';local={};}
+    }else{storageKey='';local={};}
     if(resume&&local.token){
       token=local.token;const restored=await request('/session',{token});if(generation!==epoch)return;
-      session=restored.session;
-      if(local.studentRef!==session.studentRef)throw new Error('Danh tính bản lưu không khớp phiên. Hãy chọn lại người học.');
-      if(session.submittedAt){if(['reading','writing'].includes(local.activeSkill))await renderPractice(local.activeSkill);else renderResult();}else if(session.sameComputer===null)renderDevice();else{renderExercise();await prepareAudio();}return;
+      checkSessionOwner(restored.session,local.studentRef);session=restored.session;
+      // Khôi phục tab không xuất lại danh tính A vào bộ nhớ chung đang là B hoặc đã quên.
+      await renderRestored();return;
     }
     const response=await fetch(api+'/roster?class='+encodeURIComponent(classCode),{cache:'no-store',signal:AbortSignal.timeout(10000)}),r=await response.json();
     if(!response.ok||!r.ok)throw new Error(r.message||'Chưa tải được danh sách.');
