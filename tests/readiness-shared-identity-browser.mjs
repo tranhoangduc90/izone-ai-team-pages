@@ -77,6 +77,11 @@ async function setup(options = {}) {
       if (options.identityFailure) return send({ ok: false, message: 'Nguồn nhận diện giả tạm lỗi' }, 503);
       const id = body.identity?.id || (body.studentRef === b ? '900002' : '900001');
       const ref = body.studentRef || (id === '900002' ? b : a);
+      if (options.termNamespaceDifferent && u.pathname.endsWith('/student-identity')) {
+        if (body.studentRef) return send({ ok: true, status: 'missing', identity: null, aliases: [] });
+        return send({ ok: true, status: 'unique', identity: { authority: 'erp-contact', id }, aliases: [
+          { classId: '1293', classCode: 'IC2304', studentRef: id === '900002' ? '66666666-6666-4666-8666-666666666666' : '33333333-3333-4333-8333-333333333333', studentName: 'Mã riêng trong Term Test' }] });
+      }
       if (options.mappingMissingForUuid && body.studentRef && u.pathname === '/mapping-api/api/student-identity/resolve') return send({ ok: true, status: 'missing', identity: null, aliases: [] });
       if (options.missingIdentity) return send({ ok: true, status: 'missing', identity: null, aliases: [] });
       return send({ ok: true, status: 'unique', identity: { authority: 'erp-contact', id }, aliases: [
@@ -132,6 +137,13 @@ try {
   for (const legacy of [undefined, b]) await run('prefill-common-A-' + (legacy ? 'over-old-B' : 'only'), { id: '900001', legacy }, async ({ page, requests }) => {
     await page.goto(target); await selected(page, a); assert.equal(await page.locator('#confirmPerson').isVisible(), true);
     assert.equal(requests.some(r => /\/(sessions|device|audio-access)$/.test(r.path)), false);
+  });
+  await run('namespace-readiness-prefill-uses-mapping-not-term-roster', { id: '900001', termNamespaceDifferent: true }, async ({ page }) => {
+    await page.goto(target); await selected(page, a); assert.equal(await page.locator('#confirmPerson').isVisible(), true);
+  });
+  await run('namespace-readiness-first-selection-produces-common-identity', { termNamespaceDifferent: true }, async ({ page }) => {
+    await page.goto(target); await choose(page, a); await page.locator('#sameComputer').waitFor();
+    assert.equal(await currentIdentity(page), '900001');
   });
   await run('first-selection-publishes-after-session', {}, async ({ page, ctx, requests }) => {
     await page.goto(target); await choose(page, b); await page.locator('#sameComputer').waitFor();

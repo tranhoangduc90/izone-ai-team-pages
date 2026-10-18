@@ -13,8 +13,10 @@ const classCode=(new URLSearchParams(location.search).get('class')||'').trim().t
 const legacyStorageKey=`izone:k67-readiness:v1:${apiBase}:${classCode}`;
 const navigationType=performance.getEntriesByType('navigation')[0]?.type;
 const identityMemory=createStudentIdentityMemory();
+// Danh sách Làm quen lấy mapping.student_mapping_review.public_id, khác mã roster
+// Term/Mini. Dùng nguồn Mapping để nhận và ghi đúng danh tính của danh sách này.
 const sharedIdentity=createTestStudentIdentity({product:'k67-readiness',classCode,
-  memory:identityMemory,legacyKeys:{state:legacyStorageKey},getStorages:()=>[localStorage],requestIdentity:requestK67Identity});
+  memory:identityMemory,legacyKeys:{state:legacyStorageKey},getStorages:()=>[localStorage],requestIdentity:requestLegacyStudentIdentity});
 async function requestK67Identity(input){
   // Chỉ quy đổi mã người học K67; không mở bài thi, cấp audio hoặc lấy token bài khác.
   const response=await fetch(apiBase+'/api/term-tests/term-test-1/student-identity',{
