@@ -2,7 +2,7 @@
 
 Trang `term-tests/lam-quen-k67/` nhận người đã nhớ từ các sản phẩm cùng địa chỉ gốc của website. Trang chỉ chọn sẵn tên có trong danh sách lớp được mở Làm quen; người học vẫn xác nhận rồi đi qua bước kiểm máy/tai nghe. Nhớ danh tính không cấp quyền mở bài hoặc tự tải audio.
 
-Trang dùng `shared/test-student-identity.js` đã ghim phiên bản. Việc quy đổi mã thực hiện qua đường nhận diện K67 hiện có; phiên Làm quen vẫn do API `/api/k67-readiness/v1` kiểm và cấp riêng. Không gửi token Làm quen sang dịch vụ quy đổi.
+Trang dùng `shared/test-student-identity.js` đã ghim phiên bản. Việc quy đổi danh tính hiện tại thực hiện qua nguồn Mapping vì danh sách Làm quen dùng `mapping.student_mapping_review.public_id`; mã này có thể khác mã trong danh sách Term/Mini. Phiên Làm quen vẫn do API `/api/k67-readiness/v1` kiểm và cấp riêng. Không gửi token Làm quen sang dịch vụ quy đổi.
 
 Với bộ nhớ cũ, dùng bộ chuyển đổi chung để đối chiếu mọi người đang được nhớ. Nếu nguồn Mapping xác nhận không biết một UUID, trang tra tiếp qua nguồn K67 để giữ tương thích mã riêng của khóa. Nguồn lỗi hoặc nhiều người khác nhau thì yêu cầu chọn lại; không lấy một tên cũ tùy ý để tự đăng nhập.
 
