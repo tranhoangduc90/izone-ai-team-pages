@@ -81,6 +81,8 @@ async function setup(options = {}) {
     const body = route.request().postDataJSON();
     if (address.pathname === '/mapping-api/api/student-identity/resolve') {
       requests.push({ path: '/shared-identity', body });
+      if (options.documentIntake && body.classCode === 'DOCS') return send({ status: 'missing', identity: null, aliases: [] });
+      if (options.missingA && body.studentRef === refA) return send({ status: 'missing', identity: null, aliases: [] });
       const identity = body.identity || (body.studentRef === refB ? b : a);
       return send({ status: 'unique', identity: options.wrongIdentity ? b : identity,
         aliases: aliases(options.wrongIdentity ? b : identity) });
@@ -94,6 +96,11 @@ async function setup(options = {}) {
       { classCode: 'IC2305', classRef: '222', ready: true, assignmentStatus: 'open' },
     ] });
     if (endpoint === '/identity/resolve') return send({ status: 'unique', classCode: body.studentRef === refB ? 'IC2305' : 'IC2304' });
+    if (endpoint === '/assignment/open' && options.documentIntake) return send({ assignment: {
+      classCode: 'DOCS', assignmentCode, intakeMode: 'document', assignmentStatus: 'open',
+      students: [{ student_ref: refA, name: 'Chủ Docs thử' }],
+      parts: lessonParts.map(([part_key, min_questions]) => ({ part_key, min_questions })), requiredPracticeCount: 2, doctorEnabled: true,
+    } });
     if (endpoint === '/assignment/open') return send({ assignment: { classCode: 'IC2305',
       assignmentStatus: 'open', selectedStudentRef: refB } });
     if (endpoint === '/assignment/roster') return send({ assignment: {
@@ -106,9 +113,12 @@ async function setup(options = {}) {
     } });
     if (endpoint === '/session/start-selected') return send({ session: {
       accessToken: 'fixture-token-' + body.studentRef, studentRef: body.studentRef, classCode: code,
-      documentId: body.documentId || 'fixture-doc-' + body.studentRef, intakeMode: 'legacy',
+      ...(options.independent || options.documentIntake ? { workUnitId: 'fixture-work-' + body.studentRef,
+        ...(body.documentId ? { documentId: body.documentId } : {}), intakeMode: 'independent' }
+        : { documentId: body.documentId || 'fixture-doc-' + body.studentRef, intakeMode: 'legacy' }),
     } });
-    if (endpoint === '/open') return send({ status: 'draft', links: [], practiceLinks: [] });
+    if (endpoint === '/open') return send({ status: 'draft', links: options.serverLink ? [{ part: firstPart,
+      share_url: 'https://chatgpt.com/share/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', check_status: 'accepted', question_count: 30 }] : [], practiceLinks: [] });
     if (endpoint === '/doctor/list') return send({ needed: [], allNeeded: [], practiced: [], sharedCatalog: [], neededCount: 0, personalCount: 0 });
     if (endpoint === '/checks/request') return send({ check: { status: 'pending' } });
     unexpected.push(endpoint);
@@ -116,7 +126,7 @@ async function setup(options = {}) {
   });
   const page = await context.newPage();
   await page.goto(`${origin}/speaking-homework/${pageFile}${options.query || ''}`);
-  return { context, page, requests, errors, unexpected, blocked,
+  return { context, page, requests, errors, unexpected, blocked, options,
     memory: () => page.evaluate(key => JSON.parse(localStorage.getItem(key)), key),
     sessionRequests: () => requests.filter(item => item.path === '/session/start-selected') };
 }
@@ -191,6 +201,135 @@ try {
     assert.equal(f.sessionRequests().length, 0);
     assert.equal((await f.memory()).identity.id, a.id);
     assert.equal(await f.page.locator('#forget-remembered').isVisible(), true);
+  });
+  await scenario('Tải lại tab A sau khi tab khác đổi B: giữ chủ và nháp A, tab mới nhận B', { identity: a }, async f => {
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    const draft = 'https://chatgpt.com/share/66666666-6666-4666-8666-666666666666';
+    await f.page.locator(`#${firstPart}-link`).fill(draft);
+    const next = await f.context.newPage();
+    await next.goto(`${origin}/speaking-homework/${pageFile}`);
+    await next.locator('#homework-content').waitFor({ state: 'visible' });
+    await next.locator('#change-student').click();
+    await choose(next, 'IC2305', refB);
+    await f.page.reload();
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(await f.page.locator('#active-class').innerText(), 'IC2304');
+    assert.equal(await f.page.locator(`#${firstPart}-link`).inputValue(), draft);
+    assert.equal(f.sessionRequests().at(-1).body.studentRef, refA);
+    assert.equal((await f.memory()).identity.id, b.id, 'Khôi phục A không ghi đè người chung B');
+    const fresh = await f.context.newPage();
+    await fresh.goto(`${origin}/speaking-homework/${pageFile}`);
+    await fresh.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(f.sessionRequests().at(-1).body.studentRef, refB);
+  });
+  await scenario('Đổi A/B/A và tải lại: nháp riêng từng người còn nguyên', { identity: a }, async f => {
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    const draftA = 'https://chatgpt.com/share/77777777-7777-4777-8777-777777777777';
+    const draftB = 'https://chatgpt.com/share/88888888-8888-4888-8888-888888888888';
+    await f.page.locator(`#${firstPart}-link`).fill(draftA);
+    await f.page.locator('#change-student').click();
+    await choose(f.page, 'IC2305', refB);
+    assert.notEqual(await f.page.locator(`#${firstPart}-link`).inputValue(), draftA);
+    await f.page.locator(`#${firstPart}-link`).fill(draftB);
+    await f.page.reload();
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(await f.page.locator(`#${firstPart}-link`).inputValue(), draftB);
+    await f.page.locator('#change-student').click();
+    await choose(f.page, 'IC2304', refA);
+    assert.equal(await f.page.locator(`#${firstPart}-link`).inputValue(), draftA);
+    await f.page.reload();
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(await f.page.locator(`#${firstPart}-link`).inputValue(), draftA);
+    assert.equal(f.sessionRequests().at(-1).body.studentRef, refA);
+  });
+  await scenario('Tab khác quên danh tính: tải lại vẫn giữ A, không tự nhớ lại toàn trình duyệt', { identity: a }, async f => {
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    const next = await f.context.newPage();
+    await next.goto(`${origin}/speaking-homework/${pageFile}`);
+    await next.locator('#homework-content').waitFor({ state: 'visible' });
+    await next.locator('#change-student').click();
+    await f.page.reload();
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(f.sessionRequests().at(-1).body.studentRef, refA);
+    assert.equal((await f.memory()).identity, null);
+  });
+  await scenario('Hồ sơ ghim không còn hợp lệ: không rơi sang B và vẫn đổi người thủ công được', { identity: a }, async f => {
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    const next = await f.context.newPage();
+    await next.goto(`${origin}/speaking-homework/${pageFile}`);
+    await next.locator('#homework-content').waitFor({ state: 'visible' });
+    await next.locator('#change-student').click();
+    await choose(next, 'IC2305', refB);
+    f.options.missingA = true;
+    const opens = f.sessionRequests().length;
+    await f.page.reload();
+    await f.page.locator('#identity-message').filter({ hasText: 'chưa còn hợp lệ' }).waitFor();
+    assert.equal(f.sessionRequests().length, opens);
+    assert.equal((await f.memory()).identity.id, b.id);
+    await f.page.locator('#forget-remembered').click();
+    await choose(f.page, 'IC2305', refB);
+    assert.equal(f.sessionRequests().at(-1).body.studentRef, refB);
+  });
+  await scenario('Đã bấm đổi người: tải lại màn chọn không tự quay về người ghim hoặc B ở tab khác', { identity: a }, async f => {
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    await f.page.locator('#change-student').click();
+    // Đợi thao tác quên ghi xong; click không tự chờ phần async của bộ xử lý sự kiện.
+    await f.page.waitForFunction(key => JSON.parse(localStorage.getItem(key))?.identity === null, key);
+    const next = await f.context.newPage();
+    await next.goto(`${origin}/speaking-homework/${pageFile}`);
+    await choose(next, 'IC2305', refB);
+    const opens = f.sessionRequests().length;
+    await f.page.reload();
+    await f.page.waitForFunction(() => !document.getElementById('class-select').disabled);
+    assert.equal(await f.page.locator('#homework-content').isHidden(), true);
+    assert.equal(f.sessionRequests().length, opens);
+    await choose(f.page, 'IC2304', refA);
+    assert.equal(f.sessionRequests().at(-1).body.studentRef, refA);
+  });
+  await scenario('Phiên web không có Docs: tải lại A sau đổi B vẫn khôi phục đúng nháp A', { identity: a, independent: true }, async f => {
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    const draft = 'https://chatgpt.com/share/99999999-9999-4999-8999-999999999999';
+    await f.page.locator(`#${firstPart}-link`).fill(draft);
+    const next = await f.context.newPage();
+    await next.goto(`${origin}/speaking-homework/${pageFile}`);
+    await next.locator('#homework-content').waitFor({ state: 'visible' });
+    await next.locator('#change-student').click();
+    await choose(next, 'IC2305', refB);
+    await f.page.reload();
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(await f.page.locator(`#${firstPart}-link`).inputValue(), draft);
+    assert.equal(f.sessionRequests().at(-1).body.studentRef, refA);
+    assert.equal((await f.memory()).identity.id, b.id);
+  });
+  await scenario('Khôi phục tab giữ xóa chủ động, không tự điền lại link máy chủ hoặc nhận nháp B', { identity: a, serverLink: true }, async f => {
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    const field = f.page.locator(`#${firstPart}-link`);
+    await field.filter({ visible: true }).waitFor();
+    await f.page.waitForFunction(id => document.getElementById(id).value.includes('aaaaaaaa'), `${firstPart}-link`);
+    await field.fill('');
+    await f.page.reload();
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(await field.inputValue(), '');
+    await f.page.locator('#change-student').click();
+    await choose(f.page, 'IC2305', refB);
+    await field.fill('https://chatgpt.com/share/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    await f.page.locator('#change-student').click();
+    await choose(f.page, 'IC2304', refA);
+    assert.equal(await field.inputValue(), '');
+    await f.page.reload();
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(await field.inputValue(), '');
+  });
+  await scenario('Docs riêng chưa gắn lớp vẫn mở và tải lại được khi chưa có nhận diện ERP', { documentIntake: true, query: '?documentId=fixture-private-doc-a' }, async f => {
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(f.sessionRequests().at(-1).body.studentRef, refA);
+    const draft = 'https://chatgpt.com/share/eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    await f.page.locator(`#${firstPart}-link`).fill(draft);
+    await f.page.reload();
+    await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+    assert.equal(f.sessionRequests().length, 2);
+    assert.equal(f.sessionRequests().at(-1).body.documentId, 'fixture-private-doc-a');
+    assert.equal(await f.page.locator(`#${firstPart}-link`).inputValue(), draft);
   });
   await scenario('Link Docs của B không tự đăng nhập B khi trình duyệt nhớ A',
     { identity: a, query: '?documentId=fixture-owned-by-b' }, async f => {
