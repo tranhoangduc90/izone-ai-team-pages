@@ -1,5 +1,5 @@
 import { focusSpeakingStart } from './journey-focus.js';
-import { createSpeakingIdentity } from './speaking-identity.js?rev=20261017-login-cache-v1';
+import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-identity-v1';
 import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
 
@@ -57,10 +57,11 @@ function hydrateField(input, savedValue) {
   }
 }
 function saveDraft() {
-  if (!state.studentRef) return;
+  if (!state.studentRef) return true;
   try {
     localStorage.setItem(draftKey(), JSON.stringify(Object.fromEntries(parts.map(part => [part.key, $(`${part.key}-link`).value]))));
-  } catch { $('draft-status').textContent = 'Không lưu được link đang gõ trên thiết bị này; hãy giữ link trước khi rời trang.'; }
+    return true;
+  } catch { $('draft-status').textContent = 'Không lưu được link đang gõ trên thiết bị này; hãy giữ link trước khi rời trang.'; return false; }
 }
 function restoreDraft() {
   try {
@@ -312,6 +313,7 @@ const poller = createPendingPoller({
 
 // Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
 const identityController = createSpeakingIdentity({
+  sharedIdentityEnabled: true,
   apiBase: independentApi, identityBase, assignmentCode, lessonNumber: 2, originalDocumentId, classHint, allowWebReceipt: true,
   validateAssignment: assignment => assignment.parts?.length === 2,
   async onOpened(context) {
@@ -334,8 +336,8 @@ const identityController = createSpeakingIdentity({
     focusSpeakingStart(state.submitted);
   },
   onReset() {
+    if (saveDraft() === false) return false;
     poller.stop();
-    saveDraft();
     state.studentRef = ''; state.accessToken = ''; documentId = '';
     state.links.clear(); state.practice = []; state.doctor = null; state.expanded = false; state.submitted = false;
     state.localFeedback.clear();
