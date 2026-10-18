@@ -1,5 +1,5 @@
 import { focusSpeakingStart } from './journey-focus.js';
-import { createSpeakingIdentity } from './speaking-identity.js?rev=20261017-login-cache-v1';
+import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-identity-v1';
 import { createPendingPoller } from './pending-poller.js';
 import { parseShareUrl } from './logic.mjs';
 import { freestyleInstructions } from './assignment-instructions.js';
@@ -86,7 +86,7 @@ function hydrateField(input, savedValue) {
   }
 }
 function saveDraft() {
-  if (!state.studentRef) return;
+  if (!state.studentRef) return true;
   const draft = Object.fromEntries(parts.map(part => [part.key, $(`${part.key}-link`).value]));
   for (const slot of [1, 2]) {
     draft[`practice_${slot}_exercise`] = $(`practice-${slot}-exercise`).value;
@@ -95,8 +95,11 @@ function saveDraft() {
   draft.extraExercise = $('extra-exercise').value;
   draft.extraLink = $('extra-link').value;
   draft.editedFields = [...editedDraftFields];
-  try { localStorage.setItem(draftKey(), JSON.stringify(draft)); }
-  catch { $('draft-status').textContent = 'Thiết bị chưa lưu được link đang gõ. Các link đã xác nhận vẫn được giữ trên máy chủ.'; }
+  try { localStorage.setItem(draftKey(), JSON.stringify(draft)); return true; }
+  catch {
+    $('draft-status').textContent = 'Thiết bị chưa lưu được link đang gõ. Hãy giữ link hoặc thử lưu lại trước khi đổi người học. Các link đã xác nhận vẫn được giữ trên máy chủ.';
+    return false;
+  }
 }
 function restoreDraft() {
   try {
@@ -494,6 +497,7 @@ const poller = createPendingPoller({
 
 // Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
 const identityController = createSpeakingIdentity({
+  sharedIdentityEnabled: true,
   apiBase: identityApi, identityBase, assignmentCode, lessonNumber, originalDocumentId, classHint, allowWebReceipt: independentRequested,
   validateAssignment: assignment => assignmentCode === expectedAssignmentCode
     && assignment.parts?.length === parts.length && parts.every((part,index) => assignment.parts[index]?.part_key === part.key)
@@ -531,8 +535,9 @@ const identityController = createSpeakingIdentity({
     focusSpeakingStart(state.submitted);
   },
   onReset() {
+    // Chưa giữ được nháp thì giữ nguyên người và nội dung đang gõ; không chuyển sang màn chọn người.
+    if (saveDraft() === false) return false;
     poller.stop();
-    saveDraft();
     state.studentRef = ''; state.accessToken = '';
     state.links.clear(); state.practice.clear(); state.doctor = null; state.submitted = false;
     state.localFeedback.clear();
