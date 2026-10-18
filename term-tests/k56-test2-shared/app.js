@@ -644,6 +644,9 @@
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
         requestError.code = String(data.error || 'HTTP_ERROR'); requestError.status = response.status;
+        const retryAfter = response.headers?.get('Retry-After');
+        requestError.retryAfterMs = retryAfter == null ? 0 : /^\d+(?:\.\d+)?$/.test(retryAfter)
+          ? Number(retryAfter) * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now()) || 0;
         throw requestError;
       }
       return data;
@@ -656,6 +659,18 @@
   }
 
   const sectionDraftTimers = { listening: 0, reading: 0 };
+  const sectionDraftRequests = { listening: null, reading: null };
+  const sectionDraftFailures = { listening: 0, reading: 0 };
+  const sectionDraftNotBefore = { listening: 0, reading: 0 };
+  const sectionDraftOwners = { listening: '', reading: '' };
+  const sectionDraftLocked = { listening: false, reading: false };
+
+  function sectionDraftPending(skill) {
+    return !demoMode && !window.K56_DEMO_RESETTING && !sectionDraftLocked[skill] && !state.completed && !state[skill + 'Submitted']
+      && Boolean(state[skill + 'StartedAt'])
+      && Boolean(skill === 'listening' ? state.examSessionToken : state.attemptToken)
+      && state.draftRevisions[skill] > state.draftAckRevisions[skill];
+  }
 
   function applySectionDraft(skill, answers, revision) {
     state.drafts[skill] = { ...(answers || {}) };
@@ -677,11 +692,14 @@
       ? { examSessionToken: state.examSessionToken }
       : { attemptToken: state.attemptToken };
     if (!Object.values(token)[0]) return null;
+    const studentRef = state.studentRef, attemptToken = state.attemptToken;
     const response = await apiRequest(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...token, answers, revision: state.draftRevisions[skill] })
     });
+    if (studentRef !== state.studentRef || attemptToken !== state.attemptToken
+      || Object.values(token)[0] !== (skill === 'listening' ? state.examSessionToken : state.attemptToken)) return null;
     state.draftAckRevisions[skill] = Math.max(state.draftAckRevisions[skill], Number(response.revision) || 0);
     if (response.accepted === false && state.draftRevisions[skill] <= Number(response.revision)) applySectionDraft(skill, response.draft, response.revision);
     if (response.deadlineAt) {
@@ -694,20 +712,48 @@
   }
 
   function scheduleSectionDraft(skill, delay = 600) {
-    if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
+    const owner = JSON.stringify([state.studentRef, state.attemptToken]);
+    if (sectionDraftOwners[skill] !== owner) {
+      sectionDraftOwners[skill] = owner; sectionDraftNotBefore[skill] = 0; sectionDraftFailures[skill] = 0;
+      sectionDraftLocked[skill] = false;
+    }
+    if (!sectionDraftPending(skill)) return;
+    const studentRef = state.studentRef, attemptToken = state.attemptToken;
+    const sameOwner = () => studentRef === state.studentRef && attemptToken === state.attemptToken;
     window.clearTimeout(sectionDraftTimers[skill]);
-    sectionDraftTimers[skill] = window.setTimeout(() => {
-      const studentRef = state.studentRef, attemptToken = state.attemptToken;
-      saveSectionDraft(skill).catch(error => {
-        if (skill === 'reading' && error.code === 'READING_LOCKED'
-          && !state.readingSubmitted && !state.completed
-          && studentRef === state.studentRef && attemptToken === state.attemptToken) {
+    sectionDraftTimers[skill] = window.setTimeout(async () => {
+      sectionDraftTimers[skill] = 0;
+      if (!sameOwner() || !sectionDraftPending(skill) || sectionDraftRequests[skill]) return;
+      const request = saveSectionDraft(skill);
+      sectionDraftRequests[skill] = request;
+      let failed = false, readingLocked = false;
+      try {
+        await request; sectionDraftFailures[skill] = 0;
+      } catch (error) {
+        if (!sameOwner()) return;
+        failed = true;
+        sectionDraftFailures[skill] = Math.min(sectionDraftFailures[skill] + 1, 5);
+        sectionDraftNotBefore[skill] = Date.now() + Math.max(
+          Math.min(15000, 1000 * 2 ** (sectionDraftFailures[skill] - 1)), Number(error.retryAfterMs) || 0
+        ) + Math.floor(Math.random() * 1001);
+        readingLocked = skill === 'reading' && error.code === 'READING_LOCKED';
+        if (readingLocked) {
+          sectionDraftLocked[skill] = true;
+          window.clearTimeout(sectionDraftTimers[skill]); sectionDraftTimers[skill] = 0;
+        }
+        if (readingLocked && !state.readingSubmitted && !state.completed) {
           showNotice('Reading không còn nhận nháp. Thay đổi trên máy chưa được lưu vào bài thi; hãy tải lại trang để kiểm tra trạng thái mới nhất.', 'error');
           elements.notice.scrollIntoView({ block: 'nearest' });
         }
-        // Bản trên máy vẫn còn; lần thay đổi hoặc nộp tiếp theo sẽ thử lại.
-      });
-    }, delay);
+      } finally {
+        if (sectionDraftRequests[skill] === request) sectionDraftRequests[skill] = null;
+        if (!sameOwner()) { sectionDraftFailures[skill] = 0; sectionDraftNotBefore[skill] = 0; }
+        const currentOwnerScheduled = sectionDraftOwners[skill] === JSON.stringify([state.studentRef, state.attemptToken]);
+        if ((sameOwner() || currentOwnerScheduled) && !readingLocked && sectionDraftPending(skill)) {
+          scheduleSectionDraft(skill, failed ? 0 : 600);
+        }
+      }
+    }, Math.max(delay, sectionDraftNotBefore[skill] - Date.now()));
   }
 
   function setAnswerControlsLocked(skill, locked) {

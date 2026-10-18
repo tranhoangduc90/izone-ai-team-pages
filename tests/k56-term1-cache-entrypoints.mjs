@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 // Cùng phiên bản công khai cho đường CBT chính/dự phòng và bản giấy.
 // RED trên bản441: trang giấy vẫn dùng URL cũ, có thể giữ app cũ trong cache.
 test('Term1: bản giấy và hai đường bootstrap cùng nạp phiên bản cache đang phát hành', () => {
-  const revision = '20261018-stream-backoff-r67';
+  const revision = '20261018-draft-network-r87';
   const read = path => fs.readFileSync(path, 'utf8');
   const version = url => new URL(url, 'https://fixture.invalid').searchParams.get('v');
   const bootstrap = read('term-tests/term-test-1-k56-computer-based/bootstrap.js');

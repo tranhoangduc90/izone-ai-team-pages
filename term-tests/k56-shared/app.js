@@ -658,6 +658,9 @@
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
         requestError.code = String(data.error || 'HTTP_ERROR'); requestError.status = response.status;
+        const retryAfter = response.headers?.get('Retry-After');
+        requestError.retryAfterMs = retryAfter == null ? 0 : /^\d+(?:\.\d+)?$/.test(retryAfter)
+          ? Number(retryAfter) * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now()) || 0;
         throw requestError;
       }
       return data;
@@ -674,9 +677,20 @@
   }
 
   const sectionDraftFlows = {
-    listening: { timer: 0, forceTimer: 0, retryTimer: 0, promise: Promise.resolve() },
-    reading: { timer: 0, forceTimer: 0, retryTimer: 0, promise: Promise.resolve() }
+    listening: { timer: 0, forceTimer: 0, retryTimer: 0, notBefore: 0, promise: Promise.resolve() },
+    reading: { timer: 0, forceTimer: 0, retryTimer: 0, notBefore: 0, promise: Promise.resolve() }
   };
+
+  function currentSectionDraftFlow(skill) {
+    const flow = sectionDraftFlows[skill];
+    const owner = JSON.stringify([state.studentRef, state.attemptToken]);
+    if (flow.owner !== owner) {
+      window.clearTimeout(flow.timer); window.clearTimeout(flow.forceTimer); window.clearTimeout(flow.retryTimer);
+      flow.owner = owner; flow.epoch = (flow.epoch || 0) + 1;
+      flow.notBefore = 0; flow.timer = 0; flow.forceTimer = 0; flow.retryTimer = 0;
+    }
+    return flow;
+  }
 
   async function saveSectionDraftSnapshot(skill, answers, revision) {
     if (demoMode) return null;
@@ -687,11 +701,13 @@
       ? { examSessionToken: state.examSessionToken }
       : { attemptToken: state.attemptToken };
     if (!Object.values(token)[0]) return null;
+    const studentRef = state.studentRef, attemptToken = state.attemptToken;
     const response = await apiRequest(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...token, answers, revision })
     });
+    if (studentRef !== state.studentRef || attemptToken !== state.attemptToken) return null;
     if (response.deadlineAt) {
       if (skill === 'listening') state.listeningDeadlineAt = response.deadlineAt;
       else state.readingDeadlineAt = response.deadlineAt;
@@ -716,7 +732,7 @@
 
   function queueSectionDraft(skill) {
     if (demoMode) return Promise.resolve(null);
-    const flow = sectionDraftFlows[skill];
+    const flow = currentSectionDraftFlow(skill);
     window.clearTimeout(flow.timer);
     window.clearTimeout(flow.forceTimer);
     flow.timer = 0;
@@ -724,8 +740,16 @@
     const revision = Number(state.draftRevisions[skill]) || 0;
     const answers = { ...(state.drafts[skill] || {}) };
     const studentRef = state.studentRef, attemptToken = state.attemptToken;
+    const epoch = flow.epoch;
+    const sameOwner = () => studentRef === state.studentRef && attemptToken === state.attemptToken && epoch === flow.epoch;
     const operation = flow.promise.catch(() => undefined).then(async () => {
+      if (!sameOwner()) return null;
+      if (flow.notBefore > Date.now()) {
+        scheduleSectionDraft(skill, flow.notBefore - Date.now());
+        return null;
+      }
       const response = await saveSectionDraftSnapshot(skill, answers, revision);
+      if (!sameOwner()) return null;
       const acknowledgedRevision = Number(response?.revision) || revision;
       if (response?.accepted === false) {
         if ((Number(state.draftRevisions[skill]) || 0) <= acknowledgedRevision) {
@@ -742,6 +766,7 @@
       return response;
     });
     flow.promise = operation.catch(error => {
+      if (!sameOwner()) return null;
       if (skill === 'reading' && error.code === 'READING_LOCKED') {
         if (studentRef === state.studentRef && attemptToken === state.attemptToken) {
           stopSectionDraftFlow(skill);
@@ -753,7 +778,11 @@
         return null;
       }
       window.clearTimeout(flow.retryTimer);
-      flow.retryTimer = window.setTimeout(() => scheduleSectionDraft(skill, 0), randomDelay(4_000, 8_000));
+      const retryDelay = Math.max(4000, Number(error.retryAfterMs) || 0) + randomDelay(0, 4000);
+      flow.notBefore = Date.now() + retryDelay;
+      flow.retryTimer = window.setTimeout(() => {
+        if (sameOwner() && !state.completed && !state[skill + 'Submitted']) scheduleSectionDraft(skill, 0);
+      }, retryDelay);
       return null;
     });
     return flow.promise;
@@ -761,13 +790,18 @@
 
   function scheduleSectionDraft(skill, delay = null) {
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
-    const flow = sectionDraftFlows[skill];
+    const flow = currentSectionDraftFlow(skill);
+    const studentRef = state.studentRef, attemptToken = state.attemptToken;
+    const send = () => {
+      if (studentRef === state.studentRef && attemptToken === state.attemptToken
+        && !state.completed && !state[skill + 'Submitted']) return queueSectionDraft(skill);
+    };
     window.clearTimeout(flow.timer);
     window.clearTimeout(flow.retryTimer);
-    const idleDelay = Number.isFinite(delay) ? Math.max(0, delay) : randomDelay(2_000, 5_000);
-    flow.timer = window.setTimeout(() => queueSectionDraft(skill), idleDelay);
+    const idleDelay = Math.max(flow.notBefore - Date.now(), Number.isFinite(delay) ? Math.max(0, delay) : randomDelay(2_000, 5_000));
+    flow.timer = window.setTimeout(send, idleDelay);
     if (!flow.forceTimer && idleDelay > 0) {
-      flow.forceTimer = window.setTimeout(() => queueSectionDraft(skill), randomDelay(10_000, 15_000));
+      flow.forceTimer = window.setTimeout(send, Math.max(idleDelay, randomDelay(10_000, 15_000)));
     }
   }
 
@@ -776,6 +810,8 @@
     window.clearTimeout(flow.timer);
     window.clearTimeout(flow.forceTimer);
     window.clearTimeout(flow.retryTimer);
+    flow.epoch = (flow.epoch || 0) + 1;
+    flow.timer = 0; flow.forceTimer = 0; flow.retryTimer = 0;
   }
 
   function setAnswerControlsLocked(skill, locked) {
