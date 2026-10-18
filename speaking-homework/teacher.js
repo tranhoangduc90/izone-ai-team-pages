@@ -28,6 +28,9 @@ function render(receipt) {
     const heading = document.createElement('h3'); heading.textContent = 'Tổng hợp bài luyện';
     const counts = document.createElement('p');
     counts.textContent = `Tổng số câu/chu trình được xác nhận: ${receipt.grade_summary.totalQuestions ?? '—'}.`;
+    if (Object.values(receipt.links || {}).some(l => l.evidence?.countVerified === false)) {
+      counts.textContent += ' Có phần được công nhận theo chatbot nhưng chưa xác minh số câu; tổng này chỉ gồm số đã kiểm được.';
+    }
     grade.append(heading, counts);
   }
   const parts = $('parts'); parts.replaceChildren();
@@ -37,7 +40,8 @@ function render(receipt) {
       clarify_1: 'Làm rõ · Cấp 1', clarify_2: 'Làm rõ · Cấp 2',
       clarify_3: 'Làm rõ · Cấp 3', freestyle: 'Full câu Speaking · Freestyle',
       insert_middle: 'Chèn điểm giữa trong Speaking', benefit_harm: 'Lợi ích – Tác hại',
-      reason_action: 'Lý do làm một việc' };
+      reason_action: 'Lý do làm một việc', how_to_do: 'Cách làm một việc',
+      comparison_direct: 'So sánh trực tiếp', comparison_extended: 'So sánh mở rộng' };
     const heading = document.createElement('h3'); heading.textContent = labels[part] || part;
     const link = document.createElement('a'); link.textContent = 'Mở hội thoại ChatGPT Share';
     if (/^https:\/\/chatgpt\.com\/share\/[a-z0-9-]+$/i.test(details.url || '')) {
@@ -49,6 +53,13 @@ function render(receipt) {
       ? 'Đã nhận link; phần này không yêu cầu khối lượng luyện tập.'
       : `Số câu/chu trình được ghi nhận: ${details.questionCount ?? '—'}`;
     section.append(heading, link, count);
+    if (details.evidence?.acceptanceBasis === 'chatbot_completion') {
+      const basis = document.createElement('p');
+      basis.textContent = 'Đã công nhận theo lời chatbot xác nhận hoàn thành. '
+        + (details.evidence.countVerified === false ? 'Số câu chưa được xác minh. ' : '')
+        + (details.evidence.completionEvidence?.quote || '');
+      section.append(basis);
+    }
     parts.append(section);
   }
   for (const practice of receipt.practice_links || []) {
@@ -65,6 +76,11 @@ function render(receipt) {
       ? practice.analysisStatus === 'done' ? 'Đã nhận và phân tích lỗi.' : 'Đã nhận; đang phân tích lỗi.'
       : 'Chưa đạt yêu cầu.';
     section.append(heading, link, status);
+    if (practice.evidence?.acceptanceBasis === 'chatbot_completion') {
+      const basis = document.createElement('p');
+      basis.textContent = 'Đã công nhận theo lời chatbot: ' + (practice.evidence.completionEvidence?.quote || 'Đã hoàn thành bài luyện.');
+      section.append(basis);
+    }
     parts.append(section);
   }
   const processing = $('processing'); processing.replaceChildren();

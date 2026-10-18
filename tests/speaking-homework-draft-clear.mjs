@@ -36,10 +36,20 @@ async function run(name, lesson, options, test) {
     Storage.prototype.setItem = () => { throw new DOMException('Quota', 'QuotaExceededError'); };
   });
   async function open(ref = learners[0]) {
+    // Luồng danh tính hiện hành tự phục hồi đúng người của tab sau reload.
+    await page.waitForFunction(() => !document.getElementById('class-select').disabled
+      || !document.getElementById('homework-content').hidden);
+    if (await page.locator('#homework-content').isVisible()) {
+      assert.equal(fixture.requests.findLast(r => r.path === '/session/start-selected')?.body.studentRef, ref);
+      await page.waitForFunction(() => !document.getElementById('change-student').disabled);
+      if (options.submitted) await page.locator('#completion-card').waitFor({ state: 'visible' });
+      return;
+    }
     await page.locator('#class-select').selectOption('IC2304');
     await page.locator('#student-select').selectOption(ref);
     await page.locator('#open-homework').click();
     await page.locator('#homework-content').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => !document.getElementById('change-student').disabled);
   }
   try {
     await page.goto(`${fixture.origin}/speaking-homework/${lesson.file}`);
@@ -67,7 +77,9 @@ try {
           assert.equal(await page.locator('#progress-bar').getAttribute('aria-valuenow'), String(lesson.parts.length + 1));
           assert.equal(await page.locator('#completion-card').isVisible(), false);
           assert.equal(fixture.requests.some(r => r.path === '/finish'), false);
-          await page.reload(); await open();
+          await page.reload();
+          await page.locator('#homework-content').waitFor({ state: 'visible' });
+          await open();
           assert.equal(await page.locator(`#${lesson.parts[0]}-link`).inputValue(), share(1));
           assert.equal(await page.locator('#progress-bar').getAttribute('aria-valuenow'), String(lesson.parts.length + 1));
         });
@@ -114,7 +126,9 @@ try {
       }
       assert.equal(await first.inputValue(), '');
       assert.equal(fixture.requests.some(r => r.path === '/finish'), false);
-      await page.reload(); await open();
+      await page.reload();
+      await page.locator('#homework-content').waitFor({ state: 'visible' });
+      await open();
       assert.equal(await first.inputValue(), '', 'Tải lại phải giữ nháp rỗng');
       if (lesson.number >= 4) {
         assert.equal(await page.locator('#practice-1-link').inputValue(), '');
@@ -137,7 +151,9 @@ try {
     assert.equal(await page.locator(`#${lesson.parts[0]}-link`).inputValue(), share(1));
     assert.equal(await page.locator(`#${lesson.parts[0]}-link`).isDisabled(), true);
     assert.equal(await page.locator('#completion-card').isVisible(), true);
-    await page.reload(); await open();
+    await page.reload();
+    await page.locator('#homework-content').waitFor({ state: 'visible' });
+    await open();
     assert.equal(await page.locator(`#${lesson.parts[0]}-link`).inputValue(), share(1));
     assert.equal(fixture.requests.some(r => r.path === '/finish'), false);
   });

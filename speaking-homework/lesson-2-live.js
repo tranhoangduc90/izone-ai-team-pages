@@ -98,12 +98,7 @@ function showLocalFeedback(key, title, message) {
   showResult(key, 'blocked', title, message);
 }
 function reasonFor(link, part) {
-  if (link.check_code === 'SHARE_UNAVAILABLE' || link.check_code === 'SHARE_CONTENT_INVALID') return 'Người khác chưa mở được hội thoại này. Hãy tạo lại link ChatGPT Share rồi xác nhận.';
-  if (link.check_code === 'CHECK_SERVICE_UNAVAILABLE') return 'Bộ kiểm đang gặp lỗi. Bài chưa được nhận; hãy xác nhận lại sau hoặc báo giảng viên.';
-  if (link.check_code === 'REUSED_CONVERSATION') return 'Hội thoại này đã dùng ở bài khác trong khóa. Hãy tạo hội thoại mới.';
-  if (link.check_code === 'MISSING_CLARIFICATION_CATEGORY') return 'Cấp 1 cần có đủ Danh từ, Động từ và Tính từ.';
-  if (link.check_code === 'INSUFFICIENT_PRACTICE') return `Hội thoại chưa đủ số câu hoặc các bước luyện của ${part.title}. Hãy luyện thêm rồi tạo link Chia sẻ mới.`;
-  return 'Link này chưa đạt yêu cầu. Hãy xem lại hội thoại và thử lại.';
+  return checkReason(link);
 }
 
 function renderLinks() {
@@ -117,7 +112,7 @@ function renderLinks() {
     input.disabled = state.submitted;
     $(`${part.key}-confirm`).disabled = state.submitted || state.pending.has(part.key);
     if (state.submitted || (link?.check_status === 'accepted' && !changed)) {
-        showResult(part.key, 'pass', 'Đã xác nhận hội thoại', `Đã kiểm được ${link?.question_count ?? 'đủ'} câu/lượt luyện cho phần này.`);
+        showResult(part.key, 'pass', 'Đã xác nhận hội thoại', acceptanceMessage(link, `Đã xác nhận ${link?.question_count ?? 'đủ'} câu/lượt luyện cho phần này.`));
     } else if (link?.check_status === 'pending' && !changed) {
       showResult(part.key, 'loading', 'Đang đọc hội thoại', 'Hệ thống đang kiểm nội dung link bạn đã dán. Kết quả sẽ tự cập nhật.');
     } else if (link?.check_status === 'rejected' && !changed) {
@@ -143,6 +138,7 @@ function renderLinks() {
     $('completion-message').textContent = documentId ? 'Biên nhận đã lưu trong hệ thống. Bạn có thể quay lại file Homework để làm tiếp.' : 'Biên nhận đã lưu trên web. Bạn có thể đóng trang và quay lại để xem bài.';
   }
   $('completion-card').hidden = !state.submitted;
+  updateSubmitControl({ ready: allAccepted(), submitted: state.submitted, finishing: state.finishing, onSubmit: finish });
   renderDoctor();
 }
 
@@ -209,7 +205,6 @@ async function refresh() {
   state.doctor = doctor;
   state.submitted = data.status === 'submitted' && Boolean(data.receipt?.id);
   renderLinks();
-  if (!state.submitted && allAccepted()) await finish();
   poller.settled();
 }
 function allAccepted() {
@@ -222,8 +217,11 @@ function allAccepted() {
 async function finish() {
   if (state.submitted || state.finishing || !allAccepted()) return;
   state.finishing = true;
+  const token = state.accessToken;
+  renderLinks();
   try {
-    const response = await post('/finish', identity(), 30_000);
+    const response = await post('/finish', { ...identity(), manualSubmit: true }, 30_000);
+    if (token !== state.accessToken) return;
     if (!response.receipt?.id) throw new Error('Máy chủ chưa trả biên nhận.');
     state.submitted = true;
     renderLinks();
@@ -231,7 +229,7 @@ async function finish() {
     $('completion-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
     $('draft-status').textContent = `Chưa nộp xong: ${error.message} Tiến trình đã xác nhận vẫn được giữ.`;
-  } finally { state.finishing = false; }
+  } finally { if (token === state.accessToken) { state.finishing = false; renderLinks(); } }
 }
 
 const container = $('parts');
@@ -306,7 +304,7 @@ $('extra-confirm').addEventListener('click', async () => {
 const poller = createPendingPoller({
   refresh,
   hasSession: () => Boolean(state.accessToken),
-  isPending: () => (!state.submitted && allAccepted()) || [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status))
+  isPending: () => [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status))
     || state.practice.some(link => link.status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
   onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
 });
@@ -321,6 +319,7 @@ const identityController = createSpeakingIdentity({
     apiBase = context.session.intakeMode === 'legacy' ? 'https://ducizone.ddns.net/mapping-api/api/speaking-homework' : independentApi;
     workUnitId = context.session.workUnitId || '';
     state.studentRef = context.studentRef;
+    if (state.accessToken !== context.session.accessToken) state.finishing = false;
     state.accessToken = context.session.accessToken;
     state.assignment = context.assignment;
     documentId = context.documentId;
@@ -358,3 +357,4 @@ window.addEventListener('beforeunload', event => {
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
 identityController.start();
+import { acceptanceMessage, checkReason, updateSubmitControl } from './check-feedback.js?v=20261018-speaking-fairness-v1';
