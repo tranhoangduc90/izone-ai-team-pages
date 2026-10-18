@@ -591,6 +591,10 @@ button.writing-score-card:focus-visible {
   }
 }
 
+body.cbt-mode {
+  min-width: 0;
+}
+
 .cbt-mode {
   background: #e8edf3;
 }
@@ -3107,5 +3111,21 @@ button.writing-score-card:focus-visible {
 
   .cbt-volume input {
     width: min(180px, 55vw);
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .cbt-mode .topbar.cbt-topbar-with-identity,
+  .cbt-lobby-step-body,
+  .cbt-lobby-preview-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cbt-lobby-volume {
+    flex-wrap: wrap;
+  }
+
+  .cbt-lobby-volume input {
+    max-width: 100%;
   }
 }

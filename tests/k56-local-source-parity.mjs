@@ -35,10 +35,10 @@ for (const { route, content, layout } of productionBaseline) {
   assert.match(readFileSync(path.join(root, directory, 'index.html'), 'utf8'), /layout-updates\.css/);
 }
 
-// Mốc 03/10 thêm quy tắc in/zoom riêng Term; nội dung đề và layout gốc vẫn theo 23/09.
+// Mốc CSS 18/10: sửa chiều rộng CBT và xếp đầu trang hẹp; nội dung đề/layout gốc vẫn giữ nguyên.
 assert.equal(
   normalizedDigest('term-tests/term-test-1-k56-computer-based/styles.css'),
-  '583f5f2ddffe55ddda43928bdad1d892683b08abe5d6f612d4f30924c73b160f',
+  '395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042',
   'Term Test 1 K56: styles khác mốc production',
 );
 

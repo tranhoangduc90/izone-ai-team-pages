@@ -591,6 +591,10 @@ button.writing-score-card:focus-visible {
   }
 }
 
+body.cbt-mode {
+  min-width: 0;
+}
+
 .cbt-mode {
   background: #e8edf3;
 }
@@ -3113,6 +3117,22 @@ button.writing-score-card:focus-visible {
 /* Cửa sổ zoom 200% có thể còn dưới 320 CSS px; giữ kết quả trong chiều rộng thực. */
 @media screen and (max-width: 319px) {
   body { min-width: 0; }
+}
+
+@media screen and (max-width: 360px) {
+  .cbt-mode .topbar.cbt-topbar-with-identity,
+  .cbt-lobby-step-body,
+  .cbt-lobby-preview-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cbt-lobby-volume {
+    flex-wrap: wrap;
+  }
+
+  .cbt-lobby-volume input {
+    max-width: 100%;
+  }
 }
 
 @media print {
