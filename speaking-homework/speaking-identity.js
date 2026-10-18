@@ -5,6 +5,7 @@ import { createStudentIdentityClient, selectStudentIdentityAlias } from '../shar
 const $ = id => document.getElementById(id);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const refOf = student => student.student_ref || student.studentRef || '';
+const tabOwnerKey = 'izoneSpeakingTabOwnerV1';
 
 async function requestJson(base, path, body, signal) {
   const response = await fetch(base + path, {
@@ -53,7 +54,35 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   let selectionGeneration = 0;
   let sharedResolution = null;
   let activeIdentity = null;
-  let requireManualSelection = false;
+  // Giữ mã người/lớp theo chính lượt trang này qua reload; không lưu token hoặc quyền.
+  // Tab mới vẫn lấy danh tính chung; máy chủ phải kiểm lại roster và cấp phiên mới.
+  const entry = location.pathname + location.search;
+  let tabBinding = null;
+  try {
+    const saved = sharedIdentityEnabled && window.history.state?.[tabOwnerKey];
+    if (saved?.assignmentCode === assignmentCode && saved.entry === entry
+        && (saved.cleared === true || (uuid.test(saved.studentRef || '')
+          && typeof saved.classCode === 'string' && saved.classCode.length > 0 && saved.classCode.length <= 128)))
+      tabBinding = saved;
+  } catch { /* Không có history thì đường chọn người hiện hành vẫn dùng được. */ }
+  if (tabBinding && !tabBinding.cleared) documentDropped = tabBinding.documentDropped === true;
+  let requireManualSelection = tabBinding?.cleared === true;
+  function bindTab(studentRef, classCode) {
+    if (!sharedIdentityEnabled) return true;
+    tabBinding = { assignmentCode, entry, ...(studentRef ? { studentRef, classCode, documentDropped } : { cleared: true }) };
+    try {
+      window.history.replaceState({ ...(window.history.state || {}), [tabOwnerKey]: tabBinding }, '');
+      return true;
+    } catch { return false; }
+  }
+  function resolutionIsCurrent(result) {
+    if (!result?.restoredFromTab) return sharedClient.isCurrent(result);
+    const current = sharedMemory.read();
+    return !requireManualSelection && !tabBinding?.cleared
+      && result.tabStudentRef === tabBinding?.studentRef && result.tabClassCode === tabBinding?.classCode
+      && current.status === result.snapshot?.status && current.revision === result.snapshot?.revision
+      && current.identity?.id === result.snapshot?.identity?.id;
+  }
   if (sharedIdentityEnabled) {
     $('forget-remembered').textContent = 'Đổi người học';
     const help = document.querySelector('#login-screen .memory-help');
@@ -155,6 +184,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     if(sharedClient)await sharedClient.migrateLegacy();
     const sharedSnapshot = sharedMemory?.read();
     const hasShared = sharedSnapshot?.status === 'ok';
+    const restore = !requireManualSelection && tabBinding && !tabBinding.cleared ? tabBinding : null;
     if(sharedClient&&!hasShared)remembered={status:'empty',studentRef:''};
     // Đã chủ động quên danh tính chung thì không chọn lại từ bộ nhớ UUID cũ.
     if (sharedSnapshot?.status === 'empty' && sharedSnapshot.revision !== null)
@@ -166,11 +196,18 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     message('Đang tải danh sách lớp…');
     try {
       const classesRead = requestJson(apiBase, `/classes?assignmentCode=${encodeURIComponent(assignmentCode)}`, null, controller.signal);
-      const sharedRead = hasShared ? sharedClient.resolveRemembered()
-        .then(data => ({ data }), error => ({ error })) : null;
+      const sharedRead = restore
+        ? sharedClient.resolveSelection({ studentRef: restore.studentRef, classHint: restore.classCode }).then(data => {
+          const choice = selectStudentIdentityAlias(data, { studentRef: restore.studentRef, classHint: restore.classCode });
+          if (choice.status !== 'unique') throw new Error('Hồ sơ của tab này chưa còn hợp lệ. Hãy dùng Đổi người học để chọn lại.');
+          return { data: { ...data, snapshot: sharedSnapshot, restoredFromTab: true,
+            tabStudentRef: restore.studentRef, tabClassCode: restore.classCode } };
+        }, error => ({ error })).catch(error => ({ error }))
+        : hasShared && !requireManualSelection ? sharedClient.resolveRemembered()
+          .then(data => ({ data }), error => ({ error })) : null;
       // Hai lượt chỉ đọc không phụ thuộc nhau; bắt lỗi ngay để không có promise lỗi bỏ ngỏ.
       // Kết quả vẫn phải qua kiểm lớp/người và revision như trước, không tự mở phiên.
-      const identityRead = !hasShared && remembered.status === 'ok'
+      const identityRead = !sharedRead && !requireManualSelection && remembered.status === 'ok'
         ? requestJson(apiBase, '/identity/resolve', { assignmentCode, studentRef: remembered.studentRef }, controller.signal)
           .then(data => ({ data }), error => ({ error })) : null;
       const data = await classesRead;
@@ -183,7 +220,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
         classSelect.add(option);
       }
       let resolved = null;
-      if (!hasShared && remembered.status === 'ok') {
+      if (identityRead) {
         try {
           const result = await identityRead;
           if (current !== revision || active) return;
@@ -195,9 +232,10 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
           }
         } catch (error) { memoryNotice = `Chưa kiểm tra được hồ sơ đã nhớ: ${error.message}`; }
       }
-      if (hasShared) {
+      if (sharedRead) {
         const result = await sharedRead;
         if (current !== revision || active || generation !== selectionGeneration) return;
+        if (result.error && restore) throw result.error;
         if (result.error) memoryNotice = `Chưa kiểm được người học đã nhớ: ${result.error.message}`;
         else if (result.data.status === 'unique') sharedResolution = result.data;
         else if (result.data.status === 'changed') return;
@@ -214,7 +252,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
           if(validateAssignment(originalAssignment)!==true || originalAssignment.students?.length!==1)
             throw new Error('Bản Docs chưa có duy nhất cấu hình bài riêng.');
           const profile=originalAssignment.students[0];
-          if (hasShared && (!sharedResolution || !sharedClient.isCurrent(sharedResolution)
+          if ((hasShared || restore) && (!sharedResolution || !resolutionIsCurrent(sharedResolution)
               || !sharedResolution.aliases.some(alias => alias.studentRef === refOf(profile))))
             throw new Error('Link bài riêng chưa khớp người học đã nhớ. Hãy dùng Đổi người học hoặc mở đúng link bài của bạn.');
           const opened=await requestJson(apiBase,'/session/start-selected',{
@@ -227,6 +265,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
             throw new Error('Phiên bài riêng chưa khớp bản Docs.');
           active=true;
           activeIdentity=sharedResolution?.identity || null;
+          // Docs chưa gắn lớp không có mã ERP để quy đổi; URL Docs đã giữ đúng chủ.
+          if (sharedResolution) bindTab(session.studentRef, originalClass);
           $('login-screen').hidden=true;
           $('lesson-hero').hidden=false;
           $('identity-confirmed').hidden=!sharedIdentityEnabled;
@@ -255,7 +295,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
         const allowedClassCodes = classes.filter(item => canOpenClass(item.classCode)).map(item => item.classCode);
         if (originalClass && useDocument(originalClass) && canOpenClass(originalClass)) allowedClassCodes.push(originalClass);
         const choice = selectStudentIdentityAlias(sharedResolution, {
-          classHint: useDocument(originalClass) ? originalClass : itemFor(classHint)?.classCode || '', allowedClassCodes,
+          classHint: useDocument(originalClass) ? originalClass : restore?.classCode || itemFor(classHint)?.classCode || '', allowedClassCodes,
+          ...(restore ? { studentRef: restore.studentRef } : {}),
         });
         if (choice.status === 'unique') { code=choice.alias.classCode; preferred=choice.alias.studentRef; }
         else memoryNotice = choice.status === 'ambiguous'
@@ -278,10 +319,11 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       if (current !== revision || error.name === 'AbortError') return;
       message(`Chưa tải được bài: ${error.message}`, 'error');
       $('reload-roster').hidden = false;
+      if (restore) $('forget-remembered').hidden = false;
     }
   }
   async function tryAutoOpen(generation) {
-    if (!sharedResolution || !sharedClient.isCurrent(sharedResolution) || active
+    if (requireManualSelection || !sharedResolution || !resolutionIsCurrent(sharedResolution) || active
         || generation !== selectionGeneration || !assignment || !canOpenClass(selectedCode)) return;
     const choice = selectStudentIdentityAlias(sharedResolution, { classHint: selectedCode });
     if (choice.status !== 'unique' || !roster.has(choice.alias.studentRef)) return;
@@ -320,6 +362,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     ++revision;
     controller?.abort();
     requireManualSelection = true;
+    bindTab();
     sharedResolution = null;
     const forgotten = sharedMemory ? await sharedMemory.forgetAtomic(sharedMemory.read().revision) : null;
     memoryNotice = (sharedMemory ? forgotten.status === 'empty' : writeMemory(storage, key, ''))
@@ -335,7 +378,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   $('reload-roster').addEventListener('click', () => classes.length && selectedCode ? loadRoster(selectedCode) : start());
   async function openSelected({ automatic = false, resolution = null } = {}) {
     if (active || !assignment || !roster.has(studentSelect.value)) return;
-    if (automatic && (!resolution || !sharedClient.isCurrent(resolution)
+    if (automatic && (!resolution || !resolutionIsCurrent(resolution)
         || !resolution.aliases.some(alias => alias.classCode === selectedCode && alias.studentRef === studentSelect.value))) return;
     const studentRef = studentSelect.value;
     const code = selectedCode;
@@ -376,6 +419,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
           sharedNotice = 'Chưa quên được danh tính chung trên trình duyệt. Hãy kiểm lại trước khi dùng chung thiết bị.';
       }
       const notice = $('memory-status');
+      if (!bindTab(studentRef, code)) sharedNotice = 'Bài vẫn thuộc đúng người vừa mở, nhưng trình duyệt chưa giữ được người của tab khi tải lại.';
       notice.textContent = sharedNotice || (stored ? '' : 'Đã mở bài, nhưng trình duyệt không lưu hoặc xóa được hồ sơ ghi nhớ. Không dùng thiết bị chung nếu hồ sơ cũ chưa được xóa.');
       notice.hidden = !notice.textContent;
       $('active-student').textContent = studentName;
@@ -399,6 +443,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     if ($('change-student').disabled) return;
     const beforeReset = sharedMemory?.read();
     if (await onReset?.() === false) return;
+    bindTab();
     active = false;
     activeIdentity = null;
     ++selectionGeneration;
