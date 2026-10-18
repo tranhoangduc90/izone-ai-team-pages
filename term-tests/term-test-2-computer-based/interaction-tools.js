@@ -16,7 +16,17 @@
   const storageScope = retakeConfig.mode === 'listening-only'
     ? String(retakeConfig.storageScope || ':listening-retake:missing')
     : '';
-  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageScope;
+  // Ghi chú đã có khóa theo token lượt thi: giữ khóa cũ để không mất ghi chú.
+  // Chỉ đổi nơi đọc phiên sang vùng của người đang làm, từ đó lấy đúng token.
+  const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageScope
+    + (window.TERM_TEST_STORAGE_SCOPE || '');
+  function availableStorages() {
+    const stores = [];
+    for (const name of ['sessionStorage', 'localStorage']) {
+      try { if (window[name]) stores.push(window[name]); } catch { /* Giữ bài khi bộ nhớ ghi chú bị chặn. */ }
+    }
+    return stores;
+  }
   const rootSelector = [
     '.cbt-listening-section',
     '.cbt-reading-passage',
@@ -29,7 +39,7 @@
   ].join(',');
 
   function readSubmission() {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         const value = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
         if (Object.keys(value).length) return value;
@@ -77,7 +87,7 @@
   }
 
   function readState(storageKey = activeStorageKey) {
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         const parsed = JSON.parse(storage.getItem(storageKey) || '{}');
         const annotations = Array.isArray(parsed.annotations)
@@ -107,7 +117,7 @@
 
   function saveState() {
     const serialized = JSON.stringify({ annotations: state.annotations });
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.setItem(activeStorageKey, serialized);
       } catch {

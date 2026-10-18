@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   'use strict';
 
   const testConfig = window.TERM_TEST_CONFIG;
@@ -27,11 +27,50 @@
     : '';
 
   if (!testConfig || !appConfig || !root) return;
+
+  if (!classCode && !window.TERM_TEST_CONTENT && !demoMode) {
+    const { redirectRememberedTestClass } = await import('../../shared/test-student-class.js?v=20261018-identity-v1');
+    if (await redirectRememberedTestClass({ root, apiBase: appConfig.API_BASE_URL, testSlug: testConfig.slug })) return;
+  }
   let allowExamNavigation=false;
 
-  const storageScope = listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '';
-  let storageKey = `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
-  const restoredSession = miniAnswerSheet ? {} : readSession();
+  let paperIdentity = null, createPaperIdentity = null;
+  if (!window.TERM_TEST_CONTENT && !demoMode && classCode !== 'CODEXDEMO806') {
+    try {
+      const module = await import('../../shared/test-student-identity.js?v=20261018-identity-v1');
+      createPaperIdentity = () => module.createTestStudentIdentity({ product: testConfig.slug, classCode,
+        ...(miniAnswerSheet ? { suffix: ':paper:login' } : {}), getStorages: availableStorages,
+        requestIdentity: input => apiRequest(`/api/term-tests/${testConfig.slug}/student-identity`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input)
+        }) });
+      paperIdentity = createPaperIdentity();
+      window.TERM_TEST_STORAGE_SCOPE = paperIdentity.current().scope;
+      window.TERM_TEST_SHARED_IDENTITY_ENABLED = true;
+      window.TERM_TEST_CHANGE_STUDENT = async () => {
+        if ((await paperIdentity.forget()).status !== 'empty') return false;
+        allowExamNavigation = true; location.reload(); return true;
+      };
+    } catch {
+      root.textContent = 'Chưa tải đủ phần mở bài. Hãy tải lại; nháp và lượt thi đã lưu vẫn được giữ.';
+      return;
+    }
+  }
+  let storageScope = (listeningOnly ? String(retakeConfig.storageScope || ':listening-retake:missing') : '')
+    + (window.TERM_TEST_STORAGE_SCOPE || '');
+  let paperPointerKey = paperIdentity?.current().keys?.state || '';
+  let storageKey = paperIdentity ? paperPointerKey : `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
+  const persistedSession = paperIdentity ? paperIdentity.current().state : miniAnswerSheet ? {} : readSession();
+  const incoming = window.TERM_TEST_BOOTSTRAP?.sessionState;
+  const incomingIdentity = window.TERM_TEST_BOOTSTRAP?.verifiedIdentity || window.TERM_TEST_BOOTSTRAP?.restoredIdentity;
+  const canUseIncoming = incoming && incomingIdentity?.testSlug === testConfig.slug && incomingIdentity.classCode === classCode
+    && incomingIdentity.studentRef === incoming.studentRef
+    && ((incomingIdentity.attemptToken && incomingIdentity.attemptToken === incoming.attemptToken)
+      || (incomingIdentity.examSessionToken && incomingIdentity.examSessionToken === incoming.examSessionToken));
+  const restoredSession = canUseIncoming
+    ? { ...incoming, ...(persistedSession.studentRef === incoming.studentRef
+      && persistedSession.attemptToken === incoming.attemptToken
+      && persistedSession.examSessionToken === incoming.examSessionToken ? persistedSession : {}) }
+    : persistedSession;
   const state = {
     stage: 'loading',
     roster: [],
@@ -121,7 +160,8 @@
   }
 
   function saveSession() {
-    if (miniAnswerSheet && !miniConfirmed) return;
+    if (miniAnswerSheet && !miniConfirmed) return true;
+    if (!storageKey) return !state.studentRef;
     const serialized = JSON.stringify({
       generation: miniGeneration,
       studentRef: state.studentRef,
@@ -158,13 +198,27 @@
       writingPlanning: state.writingPlanning,
       frozenAnswers: state.frozenAnswers
     });
+    let saved = false;
     for (const storage of availableStorages()) {
       try {
         storage.setItem(storageKey, serialized);
+        if (storage.getItem(storageKey) === serialized) {
+          saved = true;
+          if (miniAnswerSheet && paperPointerKey) storage.setItem(paperPointerKey, serialized);
+        }
       } catch {
         // Bản Writing vẫn được lưu qua API; không làm gián đoạn bài thi nếu bộ nhớ máy đầy.
       }
     }
+    let warning = document.getElementById('termLocalDraftWarning');
+    if (!saved && !warning) {
+      warning = document.createElement('aside'); warning.id = 'termLocalDraftWarning';
+      warning.className = 'notice error'; warning.setAttribute('role', 'alert');
+      warning.textContent = 'Trình duyệt chưa giữ được bản nháp trên thiết bị. Đừng đóng hoặc tải lại trang khi bài chưa lưu lên máy chủ; hãy sao chép nội dung cần giữ trước khi rời.';
+      root.prepend(warning);
+    }
+    if (warning) warning.hidden = saved;
+    return saved;
   }
 
   function clearAllLocalAttemptData() {
@@ -560,6 +614,7 @@
   }
 
   async function initializeStudentMemory() {
+    if (window.TERM_TEST_SHARED_IDENTITY_ENABLED) return;
     if (!studentMemoryForAllClasses) return;
     try {
       const api = await import('../../shared/student-memory.js?v=20260905-memory-v3');
@@ -618,6 +673,15 @@
   }
 
   const progressSteps = [...document.querySelectorAll('[data-progress]')];
+  if (typeof window.TERM_TEST_CHANGE_STUDENT === 'function') {
+    const change = document.createElement('button'); change.type = 'button';
+    change.id = 'termTestChangeStudent'; change.className = 'button button-secondary'; change.textContent = 'Đổi người học';
+    change.addEventListener('click', async () => {
+      if (!saveSession()) { showNotice('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.', 'error'); return; }
+      if (!await window.TERM_TEST_CHANGE_STUDENT()) showNotice('Chưa đổi được lựa chọn chung. Bài hiện tại vẫn được giữ.', 'error');
+    });
+    root.querySelector('.topbar').append(change);
+  }
   const views = [
     elements.loadingView,
     elements.identityView,
@@ -641,6 +705,30 @@
     elements.notice.textContent = '';
     elements.notice.className = 'notice';
   }
+
+  function bindPaperStudent(student, resolution = null, pinned = false) {
+    if (!paperIdentity || pinned) return;
+    const binding = paperIdentity.select(student, { resolution, remember: !student.temporary });
+    storageScope = binding.scope; window.TERM_TEST_STORAGE_SCOPE = binding.scope;
+    paperPointerKey = binding.keys.state; storageKey = paperPointerKey;
+    Object.assign(state, binding.state, { studentRef: student.ref, studentName: student.name,
+      studentIdentitySource: student.temporary ? 'temporary' : 'roster' });
+  }
+  function rememberPaperStudent(studentRef) {
+    paperIdentity?.prepared(studentRef).then(result => {
+      if (['ok', 'empty', 'not_selected'].includes(result.status)) return;
+      let notice = document.getElementById('termIdentityMemoryNotice');
+      if (!notice) { notice = document.createElement('p'); notice.id = 'termIdentityMemoryNotice';
+        notice.className = 'notice'; notice.setAttribute('role', 'status'); root.before(notice); }
+      notice.textContent = 'Bài vẫn giữ đúng người. Trình duyệt chưa ghi nhớ được cho bài khác; lần sau bạn có thể cần chọn lại tên.';
+    }).catch(() => {});
+  }
+  paperIdentity?.subscribe(() => {
+    let notice = document.getElementById('termIdentityOtherTabNotice');
+    if (!notice) { notice = document.createElement('p'); notice.id = 'termIdentityOtherTabNotice';
+      notice.className = 'notice'; notice.setAttribute('role', 'status'); root.before(notice); }
+    notice.textContent = 'Lựa chọn chung đã đổi ở tab khác. Bài tại đây vẫn giữ nguyên người và nháp; dùng Đổi người học nếu cần đổi tab này.';
+  });
 
   let listeningSavedCopy;
   function resultsUnlocked() {
@@ -805,8 +893,11 @@
   }
 
   async function apiRequest(path, options = {}) {
-    options = window.K67_EXAM_ORDER?.request(options) || options;
-    options = window.K67_AUDIO_OWNER?.request(options) || options;
+    // Tra mã người học không phải yêu cầu ghi bài hoặc giữ quyền phát audio.
+    if (!path.endsWith('/student-identity')) {
+      options = window.K67_EXAM_ORDER?.request(options) || options;
+      options = window.K67_AUDIO_OWNER?.request(options) || options;
+    }
     const ownerKey = storageKey;
     const requestEpoch = miniEpoch;
     if (miniAnswerSheet) {
@@ -828,7 +919,7 @@
         headers: { ...(options.headers || {}) }
       });
       const data = await response.json().catch(() => ({}));
-      if (miniAnswerSheet && (ownerKey !== storageKey || requestEpoch !== miniEpoch)) throw new Error('Bạn đã đổi người học. Phản hồi cũ không được áp dụng.');
+      if (miniAnswerSheet && !path.endsWith('/student-identity') && (ownerKey !== storageKey || requestEpoch !== miniEpoch)) throw new Error('Bạn đã đổi người học. Phản hồi cũ không được áp dụng.');
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
         requestError.code = String(data.error || 'HTTP_ERROR');
@@ -2810,7 +2901,7 @@
     }
   }
 
-  async function selectStudentIdentity({ requireConfirmation = false } = {}) {
+  async function selectStudentIdentity({ requireConfirmation = false, automatic = false, resolution = null, pinned = false } = {}) {
     if (miniAnswerSheet) {
       selectMiniCandidate();
       return;
@@ -2830,7 +2921,7 @@
       const student = selectingTemporary ? null : state.roster.find(item => item.ref === selectedValue);
       // Term Test vốn có popup xác nhận. Với tên được điền sẵn, nút Xác nhận cũng
       // đi qua chính popup này; chỉ sau đó mới có thể ghi nhớ hoặc kiểm lượt dở.
-      if (student && (testConfig.slug.startsWith('term-test-') || requireConfirmation)) {
+      if (student && !automatic && (testConfig.slug.startsWith('term-test-') || requireConfirmation)) {
         const confirmed = await confirmStudentIdentity(student);
         if (!confirmed) {
           elements.studentSelect.value = state.roster.some(item => item.ref === previousStudentRef)
@@ -2841,6 +2932,7 @@
           return;
         }
       }
+      if (student && paperIdentity) bindPaperStudent(student, resolution, pinned);
       state.studentRef = student?.ref || '';
       state.studentName = student?.name || '';
       state.studentIdentitySource = selectingTemporary ? 'temporary' : (student?.temporary ? 'temporary' : (student ? 'roster' : ''));
@@ -2884,6 +2976,7 @@
       }
       if (student && window.K67_EXAM_ORDER && !document.body.classList.contains('cbt-mode')) {
         const opened=await apiRequest(`/api/term-tests/${testConfig.slug}/order/open`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({classCode,studentRef:student.ref,identityConfirmed:true})});
+        rememberPaperStudent(student.ref);
         if(opened.examMode==='read_first') {
           state.attemptToken=opened.attemptToken;state.examSessionToken=opened.examSessionToken;
           Object.assign(state, window.K67_EXAM_ORDER.restoreDrafts(state, opened));
@@ -2905,7 +2998,8 @@
       saveSession();
       if (state.studentRef && !state.attemptToken) {
         try {
-          await resumeActiveAttemptForSelectedStudent();
+          const resumed = await resumeActiveAttemptForSelectedStudent();
+          if (!resumed && paperIdentity) { setStage('listening'); hideNotice(); }
         } catch (error) {
           showNotice(`Chưa kiểm tra được lượt đang dở: ${error.message}. Bạn vẫn có thể tiếp tục trên máy này.`, 'error');
         }
@@ -2929,6 +3023,7 @@
   }
 
   elements.studentSelect.addEventListener('change', () => {
+    paperIdentity?.invalidate();
     void selectStudentIdentity();
   });
 
@@ -3475,10 +3570,13 @@
     const current = document.createElement('section'); current.className='panel mini-active-user'; current.hidden=true;
     const name = document.createElement('strong');
     const change = document.createElement('button'); change.type='button'; change.className='button button-secondary';
-    change.textContent='Đổi người học'; current.append(name,document.createTextNode(' '),change);
+    change.textContent='Đổi người học'; change.hidden = Boolean(paperIdentity);
+    current.append(name,document.createTextNode(' '),change);
     elements.identityView.before(current);
     elements.startReading.textContent='Nhập đáp án Reading'; elements.startReading.dataset.normalText='Nhập đáp án Reading';
-    let remembered={}; try {remembered=JSON.parse(localStorage.getItem('izone-mini-identity:v2')||'{}');} catch {}
+    let remembered={};
+    if (!paperIdentity) try {remembered=JSON.parse(localStorage.getItem('izone-mini-identity:v2')||'{}');} catch {}
+    const pinnedMini = paperIdentity?.current().studentRef ? { ...state } : null;
     const requestedClass=classCode||remembered.classCode||'';
     change.addEventListener('click',()=>{
       saveSession(); ++miniEpoch; miniConfirmed=false; current.hidden=true;
@@ -3495,6 +3593,10 @@
     async function loadClass() {
       ++miniEpoch;classCode=classSelect.value;state.className=classCode;state.studentRef='';state.studentName='';
       state.studentIdentitySource='';
+      if (createPaperIdentity) {
+        paperIdentity = createPaperIdentity();
+        paperPointerKey = paperIdentity.current().keys?.state || '';
+      }
       const loadingEpoch=miniEpoch;state.roster=[];elements.studentSelect.replaceChildren(new Option('Đang tải tên...',''));
       enter.disabled=true;elements.studentSelect.disabled=true;
       try {
@@ -3504,6 +3606,19 @@
           state.studentRef=remembered.studentRef;state.studentName=remembered.studentName;state.studentIdentitySource='temporary';
         }
         populateRoster(roster);
+        if (paperIdentity) {
+          const pinned = pinnedMini && pinnedMini.studentRef === paperIdentity.current().studentRef
+            ? state.roster.find(s => s.ref === pinnedMini.studentRef) : null;
+          const selected = pinned ? null : await paperIdentity.resolveRemembered();
+          if (loadingEpoch !== miniEpoch) return;
+          if (pinned || selected.status === 'unique') {
+            const student = pinned || selected.student;
+            if (!state.roster.some(s => s.ref === student.ref)) throw new Error('Người đã nhớ không có quyền nhập bài này.');
+            elements.studentSelect.value = student.ref;
+            await openMiniStudent(student, { automatic: true, resolution: selected?.resolution, pinned: Boolean(pinned) });
+            return;
+          }
+        }
         if(remembered.classCode===classCode&&state.roster.some(s=>s.ref===remembered.studentRef)) {
           elements.studentSelect.value=remembered.studentRef;state.studentRef=remembered.studentRef;
           state.studentName=state.roster.find(s=>s.ref===remembered.studentRef).name;
@@ -3513,16 +3628,16 @@
       finally {if(loadingEpoch===miniEpoch){enter.disabled=!state.roster.length;elements.studentSelect.disabled=false;}}
     }
     classSelect.addEventListener('change',()=>void loadClass());
-    enter.addEventListener('click',async()=>{
-      const student=state.roster.find(s=>s.ref===elements.studentSelect.value);
-      if(!student){showNotice('Hãy chọn đúng họ và tên.','error');return;}
-      if(!await confirmStudentIdentity(student))return;
+    async function openMiniStudent(student, { automatic = false, resolution = null, pinned = false } = {}) {
+      if(!automatic && !await confirmStudentIdentity(student))return;
       const epoch=miniEpoch;setBusy(enter,true,'Đang mở bài...','Tiếp tục');
       classSelect.disabled=true;elements.studentSelect.disabled=true;
+      bindPaperStudent(student, resolution, pinned);
       try {
         const response=await apiRequest(`${miniPrefix}/open`,{method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({classCode,studentRef:student.ref,identityConfirmed:true})});
         if(epoch!==miniEpoch||response.studentRef!==student.ref||response.policy?.timed!==false) throw new Error('Chưa xác nhận được đúng người và cách nhập bài.');
+        rememberPaperStudent(student.ref);
         state.studentRef=student.ref;state.studentName=response.studentName;state.className=response.className;
         state.attemptToken=response.attemptToken||'';state.examSessionToken=response.examSessionToken||'';
         state.attemptReview=null;
@@ -3561,7 +3676,7 @@
         renderQuestionControls(testConfig.reading,elements.readingQuestions,'reading');
         for(const section of ['listening','reading']) {setAnswerControlsLocked(section,false);delete elements[`${section}View`].dataset[`${section}TimeExpired`];updateAnswerCount(section);}
         elements.readingStudentName.textContent=state.studentName;name.textContent=`${state.className} · ${state.studentName}`;current.hidden=false;
-        try {localStorage.setItem('izone-mini-identity:v2',JSON.stringify({classCode,studentRef:student.ref,
+        if (!paperIdentity) try {localStorage.setItem('izone-mini-identity:v2',JSON.stringify({classCode,studentRef:student.ref,
           studentName:student.name,temporary:student.temporary===true}));}catch {}
         saveSession();
         if(state.completed){renderResult(response);setStage('result');}
@@ -3574,6 +3689,11 @@
         showNotice('Đây là trang nhập đáp án từ bài giấy. Giảng viên tổ chức thời gian; bạn chủ động nhấn nộp.','success');
       }catch(error){miniConfirmed=false;setStage('identity');showNotice(`Chưa mở được bài: ${error.message}`,'error');}
       finally{classSelect.disabled=false;elements.studentSelect.disabled=false;setBusy(enter,false,'Đang mở bài...','Tiếp tục');}
+    }
+    enter.addEventListener('click',async()=>{
+      const student=state.roster.find(item=>item.ref===elements.studentSelect.value);
+      if(!student){showNotice('Hãy chọn đúng họ và tên.','error');return;}
+      await openMiniStudent(student);
     });
     setStage('identity');elements.identityTitle.textContent='Chọn lớp và họ tên';
     try{
@@ -3640,6 +3760,17 @@
     }
 
     try {
+      if (paperIdentity && !state.studentRef) {
+        try {
+          const selected = await paperIdentity.resolveRemembered();
+          if (selected.status === 'unique') {
+            populateRoster({ class: { name: classCode }, students: [selected.student] });
+            elements.studentSelect.value = selected.student.ref;
+            await selectStudentIdentity({ automatic: true, resolution: selected.resolution });
+            return;
+          }
+        } catch { showNotice('Chưa kiểm được người đã nhớ. Bạn vẫn có thể chọn tên; danh tính cũ được giữ.'); }
+      }
       // Danh tính này chỉ do bootstrap vừa xác minh với máy chủ trong lần mở trang này.
       // Không đọc từ localStorage như bằng chứng quyền; tên đã nhớ riêng vẫn tải roster.
       const restored=window.TERM_TEST_BOOTSTRAP?.restoredIdentity;
@@ -3647,10 +3778,21 @@
         &&restored?.testSlug===testConfig.slug&&restored.classCode===classCode
         &&restored.studentRef===state.studentRef&&restored.attemptToken===state.attemptToken
         &&Boolean(state.attemptToken);
-      const roster = canReuseIdentity
+      const verified = window.TERM_TEST_BOOTSTRAP?.verifiedIdentity;
+      const canReuseVerified = verified?.testSlug === testConfig.slug && verified.classCode === classCode
+        && verified.studentRef === state.studentRef && verified.examSessionToken === state.examSessionToken
+        && Boolean(state.examSessionToken) && Boolean(verified.studentName);
+      const roster = canReuseVerified
+        ? { class: { name: classCode }, students: [{ ref: verified.studentRef, name: verified.studentName }] }
+        : canReuseIdentity
         ?{class:{name:restored.className||classCode},students:[{ref:restored.studentRef,name:restored.studentName}]}
         :await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
       populateRoster(roster);
+      if (paperIdentity && state.studentRef && !state.attemptToken) {
+        elements.studentSelect.value = state.studentRef;
+        await selectStudentIdentity({ automatic: true, pinned: true });
+        return;
+      }
       if (!state.roster.length && !testConfig.allowTemporaryStudents) {
         throw new Error('Lớp chưa có học viên trong hệ thống matching.');
       }
