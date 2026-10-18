@@ -17,6 +17,7 @@ async function boot(kind,{mode='same',n=0}={}){
   ENTRY:'entry',SESSION:'session',entryToken:'',sessionToken:'',studentId:'',identity:null,entryInfo:null,STUDENTS:[],ready:false,
   sharedEntry:false,entryQuery:new URLSearchParams('documentId=fixture-document'),requestedLesson:'9',CLASSES:[],selectedClassId:'',
   URLSearchParams,Promise,escape:String,
+  courseIdentity:{canRestoreSession:()=>true,pin(){}},autoLoginRemembered:async()=>false,notify(){},
   async request(path,body){
    events.push({path,body,at:performance.now(),phase:'start'});await new Promise(r=>setTimeout(r,20));
    events.push({path,at:performance.now(),phase:'end'});
