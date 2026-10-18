@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   'use strict';
 
   const testConfig = window.TERM_TEST_CONFIG;
@@ -6,7 +6,7 @@
   const audioLoader = window.TERM_TEST_AUDIO_LOADER;
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
-  const classCode = (query.get('class') || '').trim().toUpperCase();
+  let classCode = (query.get('class') || '').trim().toUpperCase();
   const localPreview = ['127.0.0.1', 'localhost'].includes(location.hostname);
   if (!localPreview && (query.has('demo') || query.has('grading'))) {
     query.delete('demo');
@@ -37,19 +37,64 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-shared/app.js?v=20261018-draft-network-r87'))
+      .then(() => loadScript('../k56-shared/app.js?v=20261018-identity-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1'))
-      .then(() => loadScript('enhance.js?rev=20261012-audio-v2'))
-      .then(() => loadScript('annotations.js?rev=20261005-k56-writing-results-v1'))
+      .then(() => loadScript('enhance.js?v=20261018-identity-v1'))
+      .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
       });
     return;
   }
 
-  const storageKey = `izone-test:${testConfig.slug}:${classCode}${storageSuffix}`;
-  const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageSuffix}`;
-  const annotationStorageKey = `izone-test-annotations:${testConfig.slug}:${classCode}${storageSuffix}`;
+  let storageKey = `izone-test:${testConfig.slug}:${classCode}${storageSuffix}`;
+  let uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageSuffix}`;
+  let annotationStorageKey = `izone-test-annotations:${testConfig.slug}:${classCode}${storageSuffix}`;
+  let sharedMemory = null, sharedClient = null, selectAlias = null, productState = null;
+  let selectionContext = null, selectionGeneration = 0, activeIdentityId = '';
+  let entryResolution = null, rememberedClasses = [];
+  const sharedIdentityEnabled = !localDemo && classCode !== 'CODEXDEMO56';
+  if (sharedIdentityEnabled) {
+    try {
+      const [core, client, drafts] = await Promise.all([
+        import('../../shared/student-identity.js?v=20261018-identity-v1'),
+        import('../../shared/student-identity-client.js?v=20261018-identity-v1'),
+        import('../../shared/student-product-state.js?v=20261018-identity-v1')
+      ]);
+      sharedMemory = core.createStudentIdentityMemory();
+      sharedClient = client.createStudentIdentityClient({ memory: sharedMemory,
+        requestIdentity: input => apiRequest(`/api/term-tests/${testConfig.slug}/student-identity`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input)
+        }) });
+      selectAlias = client.selectStudentIdentityAlias;
+      await sharedClient.migrateLegacy();
+      if (!classCode && sharedMemory.read().status === 'ok') {
+        root.innerHTML = '<main class="page-shell"><section class="panel" role="status">Đang tìm lớp của bạn trong bài test...</section></main>';
+        entryResolution = await sharedClient.resolveRemembered();
+        const selected = selectAlias(entryResolution);
+        if (selected.status === 'unique' && sharedClient.isCurrent(entryResolution)) {
+          classCode = selected.alias.classCode;
+          query.set('class', classCode);
+          history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);
+        } else if (entryResolution.status === 'unique' && sharedClient.isCurrent(entryResolution)) {
+          rememberedClasses = [...new Set(entryResolution.aliases.map(alias => alias.classCode))];
+        }
+      }
+      productState = drafts.createStudentProductState({ product: testConfig.slug, classCode,
+        suffix: storageSuffix, getStorages: availableStorages });
+      applyStorageBinding(productState.current());
+    } catch {
+      // Không tự dùng lại nháp theo lớp khi chưa tách được chủ. Giữ nguyên dữ liệu cũ.
+      root.innerHTML = '<main class="page-shell"><section class="panel"><h1>Chưa tải đủ phần mở bài.</h1><p>Hãy tải lại trang. Nháp và lượt thi đã lưu vẫn được giữ.</p></section></main>';
+      return;
+    }
+  }
+  function applyStorageBinding(binding) {
+    window.TERM_TEST_STORAGE_SCOPE = binding.scope;
+    storageKey = binding.keys?.state || '';
+    uiStorageKey = binding.keys?.ui || '';
+    annotationStorageKey = binding.keys?.annotations || '';
+  }
   if (classCode === 'CODEXDEMO56' && query.get('reset') === '1') {
     for (const storage of availableStorages()) {
       try {
@@ -63,8 +108,8 @@
     query.delete('reset');
     history.replaceState(null, '', `${location.pathname}?${query.toString()}`);
   }
-  let state = readState();
-  const legacyUiState = readLegacyUiState();
+  let state = productState ? productState.current().state : readState();
+  let legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
   let encryptedAudio = null;
@@ -176,6 +221,60 @@
     elements.bootstrapChangeStudent.hidden = !available;
   }
   setMemoryAvailability(false);
+  if (sharedMemory) {
+    setMemoryAvailability(true);
+    elements.bootstrapChangeStudent.closest('.cbt-identity-memory-actions').hidden = false;
+    sharedMemory.subscribe(record => {
+      if (record.status === 'ok' && record.identity.id === activeIdentityId) return;
+      if (state.studentRef || preparing || identityDialog.open) {
+        showNotice('Lựa chọn chung trên trình duyệt đã thay đổi. Lượt thi trong tab này vẫn giữ đúng người đã chọn.');
+      } else if (!initializing) initialize();
+    });
+  }
+
+  function bindStudent(student) {
+    if (!productState) return;
+    const binding = productState.bind(student.ref);
+    applyStorageBinding(binding);
+    state = binding.state;
+    legacyUiState = readLegacyUiState();
+    legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
+  }
+
+  function startSelection(student, resolution = null) {
+    const snapshot = resolution?.snapshot || sharedClient?.captureSelection();
+    const generation = ++selectionGeneration;
+    const lookup = resolution ? Promise.resolve(resolution)
+      : sharedClient?.resolveSelection({ studentRef: student.ref, classHint: classCode });
+    // Bắt lỗi ngay, kể cả yêu cầu chuẩn bị phiên thất bại trước khi chờ tra mã.
+    const resolved = lookup ? lookup.then(value => ({ value }), error => ({ error })) : null;
+    if (resolution?.identity) activeIdentityId = resolution.identity.id;
+    bindStudent(student);
+    selectionContext = { snapshot, resolved, generation, studentRef: student.ref, automatic: Boolean(resolution),
+      remember: elements.bootstrapRememberStudent.checked };
+    saveState({ studentRef: student.ref, studentName: student.name, identityConfirmed: true,
+      annotationRunId: state.annotationRunId || crypto.randomUUID() });
+    elements.bootstrapStudent.value = student.ref;
+  }
+
+  async function rememberPreparedSelection(studentRef, context) {
+    if (!sharedClient || !context?.resolved || context.automatic) return;
+    const result = context.remember ? await context.resolved : {};
+    if (context.generation !== selectionGeneration || state.studentRef !== studentRef) return;
+    if (result.value?.status === 'unique') activeIdentityId = result.value.identity.id;
+    const saved = result.error ? { status: 'unavailable' } : context.remember
+      ? await sharedClient.rememberResolvedSelection(result.value, context.snapshot)
+      : await sharedMemory.forgetAtomic(context.snapshot?.revision);
+    if (saved.status !== 'ok' && saved.status !== 'empty') {
+      const status = document.getElementById('bootstrapMemoryStatus');
+      const message = 'Lượt thi vẫn giữ đúng người. Trình duyệt chưa ghi nhớ được cho bài khác; bạn có thể cần chọn lại tên.';
+      if (status) { status.hidden = false; status.textContent = message; }
+      let notice = document.getElementById('termIdentityMemoryNotice');
+      if (!notice) { notice = document.createElement('p'); notice.id = 'termIdentityMemoryNotice';
+        notice.className = 'notice'; notice.setAttribute('role', 'status'); root.before(notice); }
+      notice.textContent = message;
+    }
+  }
 
   async function initializeStudentMemory() {
     if (!studentMemoryEnabled || localDemo || classCode === 'CODEXDEMO56') return;
@@ -299,6 +398,11 @@
     const student = pendingStudent;
     pendingStudent = null;
     identityDialog.close();
+    if (sharedClient) {
+      startSelection(student);
+      prepareSelectedStudent();
+      return;
+    }
     for (const storage of availableStorages()) {
       try { storage.removeItem(annotationStorageKey); storage.removeItem(uiStorageKey); } catch { /* Lượt mới vẫn có mã riêng nếu storage bị chặn. */ }
     }
@@ -332,6 +436,7 @@
   }
 
   function readState() {
+    if (!storageKey) return {};
     for (const storage of availableStorages()) {
       try {
         const parsed = JSON.parse(storage.getItem(storageKey) || '{}');
@@ -345,6 +450,7 @@
   }
 
   function readLegacyUiState() {
+    if (!uiStorageKey) return { audioStarted: false, audioTime: 0, audioVolume: 1 };
     for (const storage of availableStorages()) {
       try {
         const parsed = JSON.parse(storage.getItem(uiStorageKey) || '{}');
@@ -365,6 +471,7 @@
   function saveState(patch = {}) {
     if (window.K56_DEMO_RESETTING) return;
     state = { ...state, ...patch };
+    if (!storageKey) return;
     const serialized = JSON.stringify(state);
     for (const storage of availableStorages()) {
       try {
@@ -575,6 +682,7 @@
     const student = roster.find(item => item.ref === studentRef);
     if (!student || preparing || (!state.identityConfirmed && !state.listeningStartedAt && !state.attemptToken && !legacyListeningResume)) return;
     preparing = true;
+    const context = selectionContext;
     saveState({ studentRef, studentName: student.name, annotationRunId: state.annotationRunId || crypto.randomUUID() });
     elements.bootstrapStudent.disabled = true;
     try {
@@ -613,6 +721,12 @@
           legacyElapsedSeconds: legacyListeningResume ? legacyUiState.audioTime : 0
         })
       });
+      if (!isUuid(prepared.attemptToken) || !isUuid(prepared.examSessionToken)
+          || (prepared.studentRef && prepared.studentRef !== studentRef)
+          || (state.attemptToken && state.attemptToken !== prepared.attemptToken)
+          || (state.examSessionToken && state.examSessionToken !== prepared.examSessionToken)) {
+        throw new Error('Thông tin phiên chưa khớp người học. Bài cũ được giữ nguyên.');
+      }
       const sameAttempt = !state.attemptToken || state.attemptToken === prepared.attemptToken;
       const keepLocal = skill => sameAttempt && Number(state.draftRevisions?.[skill] || 0) > Number(prepared[skill + 'DraftRevision'] || 0);
       const draftPatch = {
@@ -635,6 +749,8 @@
         draftRevisions: revisionPatch,
         draftAckRevisions: { listening: prepared.listeningDraftRevision || 0, reading: prepared.readingDraftRevision || 0 }
       });
+      // Tra danh tính không chặn tải audio; chỉ ghi bộ nhớ sau phiên đã được xác minh.
+      rememberPreparedSelection(studentRef, context).catch(() => {});
       if (modeChanged) showNotice('Lượt đang làm giữ thứ tự đã chọn trước đó; link đã được cập nhật.');
       saveState({
         examSessionToken: prepared.examSessionToken,
@@ -698,6 +814,8 @@
           studentName:started.studentName,attemptToken:state.attemptToken}) : null,
       examSessionToken: state.examSessionToken,
       studentRef: state.studentRef,
+      // Bàn giao trong RAM khi trình duyệt chặn storage; không cần đọc lại nháp để nhận chủ.
+      sessionState: sharedClient ? structuredClone(state) : null,
       generation: Number(started.generation ?? state.generation) || 0,
       audioRecoveryInitial: started,
       listeningDeadlineAt: started.listeningDeadlineAt,
@@ -717,10 +835,10 @@
     });
     previewAudio.remove();
     revokePreview();
-        await loadScript('../k56-shared/app.js?v=20261018-draft-network-r87');
+        await loadScript('../k56-shared/app.js?v=20261018-identity-v1');
     await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1');
-    await loadScript('enhance.js?rev=20261012-audio-v2');
-    await loadScript('annotations.js?rev=20261005-k56-writing-results-v1');
+    await loadScript('enhance.js?v=20261018-identity-v1');
+    await loadScript('annotations.js?v=20261018-identity-v1');
   }
 
   async function resumeAfterListening() {
@@ -910,7 +1028,32 @@
   elements.bootstrapConfirmPrefilled.addEventListener('click', () => {
     showIdentityConfirmation(roster.find(item => item.ref === elements.bootstrapStudent.value));
   });
-  elements.bootstrapChangeStudent.addEventListener('click', () => {
+  elements.bootstrapChangeStudent.addEventListener('click', async () => {
+    if (sharedMemory) {
+      if (preparing) { showNotice('Đang kiểm phiên. Hãy chờ xong trước khi đổi người học.'); return; }
+      const snapshot = sharedMemory.read();
+      const cleared = await sharedMemory.forgetAtomic(snapshot.revision);
+      if (cleared.status !== 'empty') { showNotice('Chưa xóa được lựa chọn chung. Bài và nháp vẫn được giữ.', true); return; }
+      ++selectionGeneration;
+      selectionContext = null;
+      // Bài cũ giữ theo chủ, đồng hồ máy chủ không dừng hoặc cấp lại thời gian.
+      if (state.listeningStartedAt || state.readingStartedAt || state.writingStartedAt) {
+        productState.unbind();
+        window.TERM_TEST_ALLOW_NAVIGATION = true;
+        location.reload();
+        return;
+      }
+      productState.unbind();
+      applyStorageBinding(productState.current());
+      state = {};
+      legacyListeningResume = false;
+      elements.bootstrapStudent.disabled = false;
+      elements.bootstrapStudent.value = '';
+      resetPreparation();
+      roster = [];
+      initialize();
+      return;
+    }
     if (hasActiveExam()) {
       showNotice('Lượt thi đang giữ danh tính đã xác nhận; chưa thể đổi người học.', true);
       return;
@@ -927,12 +1070,23 @@
       showNotice(`Chưa thể đổi học viên: ${error.message}`, true);
     }
   });
+  // Engine gọi sau khi đã giữ nháp thành công; không đổi chủ bài đang có.
+  if (sharedMemory) window.TERM_TEST_CHANGE_STUDENT = async () => {
+    const snapshot = sharedMemory.read();
+    if ((await sharedMemory.forgetAtomic(snapshot.revision)).status !== 'empty') return false;
+    ++selectionGeneration;
+    productState.unbind();
+    window.TERM_TEST_ALLOW_NAVIGATION = true;
+    location.reload();
+    return true;
+  };
   elements.bootstrapStudent.addEventListener('change', () => {
     if (hasActiveExam()) {
       elements.bootstrapStudent.value = state.studentRef || '';
       return;
     }
     resetPreparation();
+    ++selectionGeneration;
     elements.bootstrapConfirmPrefilled.hidden = true;
     showIdentityConfirmation(roster.find(item => item.ref === elements.bootstrapStudent.value));
   });
@@ -988,7 +1142,21 @@
   async function initialize() {
     if (initializing) { initializeAgain = true; return; }
     if (!/^[A-Z0-9_-]{2,32}$/.test(classCode)) {
-      showNotice('Link chưa có mã lớp hợp lệ.', true);
+      if (rememberedClasses.length > 1) {
+        document.getElementById('bootstrapRememberedClass')?.remove();
+        elements.bootstrapClass.textContent = 'Chọn lớp của bài muốn mở';
+        const picker = document.createElement('select'); picker.id = 'bootstrapRememberedClass';
+        picker.setAttribute('aria-label', 'Lớp của bài muốn mở');
+        picker.replaceChildren(new Option('Nhấn để chọn lớp', ''), ...rememberedClasses.map(code => new Option(code, code)));
+        picker.addEventListener('change', () => {
+          if (!rememberedClasses.includes(picker.value)) return;
+          query.set('class', picker.value);
+          location.assign(`${location.pathname}?${query.toString()}${location.hash}`);
+        });
+        elements.bootstrapClass.after(picker);
+        elements.bootstrapStudent.disabled = true;
+        showNotice('Trình duyệt đã nhớ bạn. Hãy chọn lớp của bài muốn mở; không cần chọn lại tên.');
+      } else showNotice('Link chưa có mã lớp hợp lệ. Hãy mở link bài của lớp được giao.', true);
       return;
     }
     initializing = true;
@@ -1014,6 +1182,32 @@
         return;
       }
       if (await restoreStartedAttempt()) return;
+      if (sharedClient && !state.studentRef) {
+        const generation = selectionGeneration;
+        try {
+          const resolved = entryResolution && sharedClient.isCurrent(entryResolution)
+            ? entryResolution : await sharedClient.resolveRemembered({ classHint: classCode });
+          entryResolution = null;
+          const selected = selectAlias(resolved, { classHint: classCode });
+          if (selected.status === 'unique' && generation === selectionGeneration && sharedClient.isCurrent(resolved)) {
+            const student = { ref: selected.alias.studentRef, name: selected.alias.studentName };
+            roster = [student];
+            elements.bootstrapClass.textContent = `Lớp ${selected.alias.classCode}`;
+            elements.bootstrapStudent.replaceChildren(new Option(student.name, student.ref));
+            startSelection(student, resolved);
+            await prepareSelectedStudent();
+            return;
+          }
+          if (resolved.snapshot?.status === 'ok' && ['missing', 'ambiguous'].includes(selected.status)) {
+            showNotice(selected.status === 'missing'
+              ? 'Người đã nhớ chưa có quyền làm bài test của lớp này. Hãy kiểm tra link hoặc dùng Đổi người học; danh tính cũ vẫn được giữ.'
+              : 'Chưa tìm được duy nhất một hồ sơ của bạn trong bài này. Nhờ giảng viên kiểm tra; danh tính đã nhớ vẫn được giữ.', true);
+          }
+        } catch {
+          showNotice('Chưa kiểm được người đã nhớ. Bạn có thể chọn tên bên dưới; lựa chọn cũ vẫn được giữ.');
+        }
+      }
+      if (identityDialog.open) return;
       const data = await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
       roster = data.students || [];
       elements.bootstrapClass.textContent = `Lớp ${data.class.name}`;

@@ -3168,3 +3168,17 @@ body.cbt-mode {
   body .writing-component-detail[hidden] { display: block; }
   body .writing-criterion-card { break-inside: auto; }
 }
+
+/* Ô nhớ người học vừa được bật: giữ cỡ ô chọn thay vì cỡ trường nhập tên. */
+.cbt-bootstrap-identity .cbt-remember-student {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cbt-bootstrap-identity .cbt-remember-student input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  padding: 0;
+}
