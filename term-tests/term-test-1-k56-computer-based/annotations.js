@@ -5,7 +5,15 @@
   const query = new URLSearchParams(location.search);
   const slug = window.TERM_TEST_CONFIG.slug;
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const suffix = query.get('demo') === 'exam' && query.get('grading') === 'server' ? ':server-grade' : '';
+  const suffix = (query.get('demo') === 'exam' && query.get('grading') === 'server' ? ':server-grade' : '')
+    + (window.TERM_TEST_STORAGE_SCOPE || '');
+  function availableStorages() {
+    const result = [];
+    for (const name of ['sessionStorage', 'localStorage']) {
+      try { if (window[name]) result.push(window[name]); } catch { /* Vẫn mở bài khi storage bị chặn. */ }
+    }
+    return result;
+  }
   const storageKey = `izone-test-annotations:${slug}:${classCode}${suffix}`;
   const sessionKey = `izone-test:${slug}:${classCode}${suffix}`;
   const previewMode = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
@@ -26,7 +34,7 @@
 
   function readStored(key) {
     const values = [];
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         const value = JSON.parse(storage.getItem(key) || 'null');
         if (value) values.push(value);
@@ -127,7 +135,7 @@
     if (!dirty) return;
     const serialized = JSON.stringify({ version: 1, runId, revision: ++revision, records });
     let saved = false;
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try { storage.setItem(storageKey, serialized); saved = true; } catch { /* Hiện lỗi nếu cả hai bộ nhớ không ghi được. */ }
     }
     dirty = !saved;
