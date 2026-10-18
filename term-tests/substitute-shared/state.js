@@ -3,7 +3,8 @@
   const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let meta=null,binding=null,blocked=false;
   const controllers=new Set();
-  const stores=()=>[sessionStorage,localStorage];
+  // Từng getter có thể bị chặn; vẫn dùng nơi còn truy cập được, hoặc giữ lượt trong RAM.
+  const stores=(names=['sessionStorage','localStorage'])=>names.flatMap(name=>{try{return window[name]?[window[name]]:[];}catch{return [];}});
   const allowed=slug=>/^substitute-test-[12]-k(?:56|67)$/.test(slug);
   function stop(){blocked=true;for(const controller of controllers)controller.abort();controllers.clear();window.dispatchEvent(new Event('substitute:stopped'));}
   async function initialize(config,app){
@@ -87,5 +88,5 @@
   function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch,...(binding?{classCode:binding.classCode,studentRef:binding.studentRef,clientRunId:binding.clientRunId}:{}),...(binding?.examSessionId?{examSessionId:binding.examSessionId}:{}),...(binding?.examVersion?{examVersion:binding.examVersion}:{}),...(binding?.writingSessionId?{writingSessionId:binding.writingSessionId}:{})};}
   function track(controller){if(blocked)controller.abort();else controllers.add(controller);return ()=>controllers.delete(controller);}
   window.addEventListener('storage',event=>{if(meta&&canReset(meta.testSlug)&&event.key==='izone-demo-reset:'+meta.testSlug+':DEMO:server-grade'&&event.newValue)stop();});
-  window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,key,accept,stamp,canReset,clear,payload,track,stop,get blocked(){return blocked;},get meta(){return meta;}});
+  window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,key,accept,stamp,canReset,clear,payload,track,stop,storages:stores,get blocked(){return blocked;},get meta(){return meta;}});
 }());

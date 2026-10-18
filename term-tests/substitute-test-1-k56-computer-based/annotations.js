@@ -26,7 +26,7 @@
 
   function readStored(key) {
     const values = [];
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try {
         const value = JSON.parse(storage.getItem(key) || 'null');
         if (value && (!suffix || window.SUBSTITUTE_STATE.accept(value))) values.push(value);
@@ -128,7 +128,7 @@
     if (!dirty) return;
     const serialized = JSON.stringify(suffix ? window.SUBSTITUTE_STATE.stamp({version:1,runId,revision:++revision,records}) : {version:1,runId,revision:++revision,records});
     let saved = false;
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try { storage.setItem(storageKey, serialized); saved = true; } catch { /* Hiện lỗi nếu cả hai bộ nhớ không ghi được. */ }
     }
     dirty = !saved;
