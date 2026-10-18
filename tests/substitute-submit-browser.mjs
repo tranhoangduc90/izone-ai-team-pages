@@ -3,18 +3,23 @@ import {createServer} from 'node:http';import fs from 'node:fs';import path from
 import {createRequire} from 'node:module';import {pathToFileURL,fileURLToPath} from 'node:url';
 import {randomBytes} from 'node:crypto';import assert from 'node:assert/strict';
 const root=path.resolve(fileURLToPath(new URL('../',import.meta.url)));
-if(!process.env.SUBSTITUTE_BACKEND_ROOT)throw Error('Cần SUBSTITUTE_BACKEND_ROOT trỏ tới backend đang kiểm');
 const backend=process.env.SUBSTITUTE_BACKEND_ROOT;
-const {SubstituteStore}=await import(pathToFileURL(path.join(backend,'src/store.mjs')));
-const {TESTS}=await import(pathToFileURL(path.join(backend,'src/contract.mjs')));
-const {gradingFromReadback}=await import(pathToFileURL(path.join(backend,'src/transport-bridge.mjs')));
-const {chromium}=createRequire('C:/Users/vukha/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
+// Chế độ nhận diện kiểm UI với biên nhận giả; không giả rằng SQLite cũ là production mới.
+const fixture = process.env.SUBSTITUTE_IDENTITY_UI_FIXTURE === 'true';
+if(!fixture&&!backend)throw Error('Cần backend đã đối chiếu hoặc chọn fixture UI giả.');
+const {SubstituteStore,TESTS,gradingFromReadback}=fixture
+ ?await import('./fixtures/substitute-identity-store.mjs')
+ :{...(await import(pathToFileURL(path.join(backend,'src/store.mjs')))),
+   ...(await import(pathToFileURL(path.join(backend,'src/contract.mjs')))),
+   ...(await import(pathToFileURL(path.join(backend,'src/transport-bridge.mjs'))))};
+if(!process.env.PLAYWRIGHT_MODULE)throw new Error('Cần đường dẫn Playwright đã cài.');
+const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const server=createServer((req,res)=>{const p=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{const file=fs.statSync(p).isDirectory()?path.join(p,'index.html'):p;res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'msedge',headless:true});
 try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TEST_SLUG||slug===process.env.SUBSTITUTE_TEST_SLUG)){
  const store=new SubstituteStore({encryptionKey:randomBytes(32)});store.configureWritingRelease('substitute-test-2-k67','open');
- const context=await browser.newContext({viewport:{width:slug.endsWith('k67')?390:1440,height:1000}}),errors=[];
+ const context=await browser.newContext({serviceWorkers:'block',viewport:{width:slug.endsWith('k67')?390:1440,height:1000}}),errors=[];
  let fault=null,acceptedWriting=0;
  await context.addInitScript(()=>{
   for(const[key,value]of [['duration',1800],['readyState',4]])Object.defineProperty(HTMLMediaElement.prototype,key,{get:()=>value,configurable:true});
@@ -23,7 +28,10 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
   Object.defineProperty(HTMLMediaElement.prototype,'paused',{get(){return this._paused!==false;},configurable:true});
  });
  await context.route('**/*',async route=>{
-  const request=route.request(),url=request.url();if(url.startsWith(base))return route.continue();
+  const request=route.request(),url=request.url();
+  if(/\.(mp3|wav|m4a|ogg|enc)(?:\?|$)/i.test(url))return route.fulfill({status:200,body:Buffer.alloc(64),contentType:'audio/mpeg'});
+  if(url.startsWith(base))return route.continue();
+  if(/googleusercontent|drive\.google|\/audio/.test(url))return route.fulfill({status:200,body:Buffer.alloc(64),contentType:'audio/mpeg'});
   if(!url.includes('/webhook/'))return route.abort();
   const {route:api,payload={}}=request.postDataJSON(),id={...payload,testSlug:slug};let response={},status=200;
   if(fault&&['/api/test/grade','/api/test/writing'].includes(api)){

@@ -1,13 +1,15 @@
 // Giao diện thật; media/API giả, không AI và không ghi Portal.
 import {createServer} from 'node:http';import fs from 'node:fs';import path from 'node:path';import {createRequire} from 'node:module';import assert from 'node:assert/strict';
+import {pathToFileURL} from 'node:url';
 const root=path.resolve(new URL('../',import.meta.url).pathname.replace(/^\/([A-Z]:)/,'$1'));
-const {chromium}=createRequire('C:/Users/vukha/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
+if(!process.env.PLAYWRIGHT_MODULE)throw new Error('Cần đường dẫn Playwright đã cài.');
+const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const server=createServer((req,res)=>{const p=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{const file=fs.statSync(p).isDirectory()?path.join(p,'index.html'):p;res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'msedge',headless:true}),results=[];
 try{
  for(const slug of ['substitute-test-1-k56','substitute-test-2-k56','substitute-test-1-k67','substitute-test-2-k67']){
-  const context=await browser.newContext(),sessions=new Map(),grades=[];let page,offlineEnd=false,fixtureNow=Date.parse('2026-10-14T00:00:00Z');
+  const context=await browser.newContext({serviceWorkers:'block'}),sessions=new Map(),grades=[];let page,offlineEnd=false,fixtureNow=Date.parse('2026-10-14T00:00:00Z');
   await context.addInitScript(()=>{
    // Giữ các sự kiện DOM/media của ứng dụng; không chờ 30 phút audio trong test.
    for(const [key,value]of [['duration',1800],['readyState',4]])Object.defineProperty(HTMLMediaElement.prototype,key,{get:()=>value,configurable:true});
@@ -18,7 +20,9 @@ try{
    Object.defineProperty(HTMLMediaElement.prototype,'ended',{get(){return this._fixtureEnded===true;},configurable:true});
   });
   await context.route('**/*',async route=>{
-   const req=route.request(),url=req.url();if(url.startsWith(base))return route.continue();
+   const req=route.request(),url=req.url();
+   if(/\.(mp3|wav|m4a|ogg|enc)(?:\?|$)/i.test(url))return route.fulfill({status:200,body:Buffer.alloc(64),contentType:'audio/mpeg'});
+   if(url.startsWith(base))return route.continue();
    if(url.includes('/webhook/')){
     const {route:api,payload={}}=req.postDataJSON();let response={};
     if(api==='/api/test/history')response={testSlug:slug,historyEpoch:'11111111-1111-4111-8111-111111111111',stateVersion:2,maintenance:false,examTimingVersion:'substitute-audio-transfer-20261014-v1',...(slug==='substitute-test-2-k67'?{writingVersions:{DEMO:'substitute-k67-test2-two-task-20261007-v1'}}:{}),classes:[{code:'DEMO',name:'DEMO'}]};

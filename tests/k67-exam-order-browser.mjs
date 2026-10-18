@@ -116,7 +116,7 @@ try{
       }
       assert.deepEqual(errors,[]);
       await page.reload();
-      if(mini){await page.locator('#studentSelect').selectOption(ref);await page.locator('#miniEnter').click();await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();await page.locator('#resultView').waitFor({state:'visible'});}
+      if(mini){await page.locator('#resultView').waitFor({state:'visible'});}
       else await page.locator('#resultReadyView:visible, #resultView:visible').first().waitFor({state:'visible'});
       assert.deepEqual(errors,[]);results.push({case:name,status:'passed'});console.log('Đạt:',name);
     }catch(e){await page.screenshot({path:path.join(out,name+'-failure.png'),fullPage:true});await writeFile(path.join(out,name+'-failure.html'),await page.content(),'utf8');results.push({case:name,status:'failed',error:e.message,pageErrors:errors});throw e;}
