@@ -1,4 +1,4 @@
-(() => {
+(async () => {
 'use strict';
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 const FULL_TIME=1200000,TAB=crypto.randomUUID();
@@ -9,6 +9,8 @@ const entryQuery=new URLSearchParams(location.search),requestedLesson=entryQuery
 const docId=entryQuery.get('documentId')||`lesson:${requestedLesson}`;
 let sharedEntry=false,CLASSES=[],selectedClassId='',rosterGeneration=0;
 const SESSION=`reading-practice67-session:${docId}`,ENTRY=`reading-practice67-entry:${docId}`;
+const {createCourseStudentIdentity,requestMappingStudentIdentity}=await import('../shared/course-student-identity.js?v=20261018-identity-v1');
+const courseIdentity=createCourseStudentIdentity({product:'reading-practice',entry:docId,requestIdentity:requestMappingStudentIdentity});
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const btn=(label,action,style='',extra='')=>`<button type="button" class="button ${style}" data-action="${action}" ${extra}>${label}</button>`;
 const textBtn=(label,action,extra='')=>`<button type="button" class="text-button" data-action="${action}" ${extra}>${label}</button>`;
@@ -43,6 +45,45 @@ const resultFor=(a,start,end)=>a.result.rows.filter(r=>r.number>=start&&r.number
 const isOnline=()=>navigator.onLine&&!networkFailed;
 function notify(message){const t=document.querySelector('#toast');t.textContent=message;t.hidden=false;clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.hidden=true,4000);}
 function footer(){return `<footer class="page-footer">IZONE · Reading Homework · Buổi ${LESSON.lesson}</footer>`;}
+courseIdentity.subscribe(()=>{if(identity)notify('Người đã nhớ ở tab khác vừa đổi. Bài tại đây vẫn giữ nguyên người và nháp.');});
+async function loginSelected(id,classCode,{selection=null,remember=true}={}){
+ const context=selection?courseIdentity.automaticContext(selection):courseIdentity.prepare(id,sharedEntry?CLASSES.find(c=>c.id===classCode)?.classCode:classCode);
+ const response=sharedEntry?await request('/shared-login',{code:LESSON.code,classId:classCode,studentRef:id}):await request('/login',{entryToken,studentRef:id,classCode});
+ const expectedClass=sharedEntry?CLASSES.find(c=>c.id===classCode)?.classCode:classCode;
+ if(selection&&!courseIdentity.isCurrent(selection))throw new Error('Người đã nhớ vừa đổi. Chưa dùng phản hồi cũ; hãy mở lại bài.');
+ if(!response.token||response.identity?.studentRef!==id||response.identity.classCode!==expectedClass
+   ||(entryInfo?.bindingId&&response.identity.bindingId!==entryInfo.bindingId))throw new Error('Phiên trả về chưa khớp người và bài; chưa mở bài của người khác.');
+ sessionToken=response.token;try{sessionStorage.setItem(SESSION,sessionToken);}catch{}
+ apply(response);recoverLocal();
+ courseIdentity.pin(id);
+ await courseIdentity.commit(context,{automatic:Boolean(selection),remember}).then(remembered=>{
+  if(!['ok','empty'].includes(remembered.status))notify('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài tiếp theo.');
+ }).catch(()=>notify('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài tiếp theo.'));
+ navigate(['running','paused'].includes(current()?.status)?'resume':'prep');
+}
+async function autoLoginRemembered(){
+ if(sessionToken)return true;
+ let selected;
+ if(sharedEntry&&!selectedClassId){
+  selected=await courseIdentity.resolve({allowedClassCodes:CLASSES.map(c=>c.classCode)});
+  if(selected.status!=='unique')return false;
+  selectedClassId=CLASSES.find(c=>c.classCode===selected.alias.classCode)?.id||'';
+  if(!selectedClassId)return false;
+  STUDENTS=(await request(`/library/${encodeURIComponent(requestedLesson)}/classes/${encodeURIComponent(selectedClassId)}`)).students;
+ }
+ const classCode=sharedEntry?CLASSES.find(c=>c.id===selectedClassId)?.classCode:entryInfo?.classCode;
+ selected=await courseIdentity.resolve({classCode,studentRefs:STUDENTS.map(s=>s.id||s.studentRef),expectedRef:sharedEntry?'':entryInfo?.selectedStudentRef});
+ if(selected.status==='wrong_owner'){notify('Link bài thuộc người khác với người đã nhớ. Hãy kiểm tra link hoặc dùng Đổi người học.');return false;}
+ if(selected.status!=='unique')return false;
+ await loginSelected(selected.alias.studentRef,sharedEntry?selectedClassId:classCode,{selection:selected});return true;
+}
+async function changeStudent(){
+ if(current()&&!persist(false))return;
+ pause('identity',false);await queue;
+ if((await courseIdentity.forget()).status!=='empty'){notify('Chưa đổi được người học. Bài và nháp vẫn được giữ.');return;}
+ try{sessionStorage.removeItem(SESSION);}catch{}
+ sessionToken='';studentId='';identity=null;navigate('login');
+}
 
 function completionCopy(a){const first=record()?.firstCompleted;return a.no===1?'Hoàn thành ngay từ lần đầu.':first&&first!==a.no?`Kết quả lượt luyện lại số ${a.no} · Lần hoàn thành đầu tiên: lượt ${first}.`:`Hoàn thành sau ${a.no-1} lần reset · Kết quả của lần làm bài số ${a.no}.`;}
 function identityBar(){return `<div class="identity-bar"><span><strong>${escape(identity?.name)}</strong> <span>· Lớp ${escape(identity?.classCode)}</span></span>${textBtn('Đổi người học','change-student')}</div>`;}
@@ -135,7 +176,7 @@ async function loadResult(no){
 function docsNotice(a){if(identity?.entryMode==='shared')return `<div class="note success">✓ Kết quả đã được lưu riêng cho bạn. <a href="teacher.html#submission=${encodeURIComponent(a.submissionId)}" target="_blank" rel="noopener noreferrer">Giảng viên xem kết quả ↗</a></div>`;const e=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed'),verified=e?.docs==='verified';return `<div class="note ${verified?'success':'warning'}">${verified?'✓ Đã cập nhật tình trạng trong tài liệu bài tập.':e?.docs==='blocked'?'Bài đã nộp. Chưa cập nhật được Docs; giảng viên cần kiểm tra ô trạng thái.':'Bài đã nộp và được lưu trên máy chủ. Đang cập nhật tình trạng trong Docs.'} <a href="${escape(identity.documentUrl)}" target="_blank" rel="noopener noreferrer">Mở tài liệu ↗</a></div>`;}
 function docs(){app.innerHTML=hero(`BUỔI ${LESSON.lesson} · READING HOMEWORK`,LESSON.title,`Cambridge IELTS ${LESSON.book} · Test ${LESSON.test} · Passage ${LESSON.passage} · ${total()} câu · 20 phút`)+`<section class="card card-pad"><h2>Làm bài thực chiến</h2><p>Chọn đúng lớp và tên trước khi bắt đầu. Bài đang làm được lưu để bạn tiếp tục bằng thời gian còn lại.</p>${btn('Mở bài Reading →','open-assignment')}${identity?.documentUrl?`<p><a target="_blank" rel="noopener noreferrer" href="${escape(identity.documentUrl)}">Mở tài liệu bài tập ↗</a></p>`:''}</section>`+footer();}
 function login(){
- const memory=(()=>{try{return JSON.parse(localStorage.getItem(MEMORY))||{};}catch{return {};}})();
+ const memory={}; // Bộ nhớ cũ được chuyển riêng; không lấy tên cũ để lấn danh tính chung.
  const selected=STUDENTS.some(s=>s.id===memory.studentId)&&(!sharedEntry||CLASSES.find(c=>c.id===selectedClassId)?.classCode===memory.classCode)?memory.studentId:'';
  const classOptions=sharedEntry?CLASSES.map(c=>`<option value="${escape(c.id)}" ${c.id===selectedClassId?'selected':''}>${escape(c.classCode)}</option>`).join(''):`<option value="${escape(entryInfo?.classCode)}" ${selected?'selected':''}>${escape(entryInfo?.classCode)}</option>`;
  app.innerHTML=`<div class="login-layout"><section><span class="kicker">BUỔI ${LESSON.lesson} · READING HOMEWORK</span><h1>${escape(LESSON.title)}</h1><p class="login-copy">Luyện trọn một passage trong 20 phút.<br>Đọc kỹ, chốt ý và chọn đáp án.</p><ul class="login-tasks"><li><span>01</span><div><strong>Chuẩn bị</strong><p>${isRobots()?'Nhắc nhanh cách ghép tên, ghép vế câu và MCQ.':'Nhắc nhanh cách làm Headings và MCQ.'}</p></div></li><li><span>02</span><div><strong>Làm bài</strong><p>${total()} câu · Tự lưu · Có thể tiếp tục lần đang làm.</p></div></li><li><span>03</span><div><strong>Xem kết quả</strong><p>Điểm, đáp án và số lần làm bài.</p></div></li></ul></section><section class="card login-card"><h2>Bạn học lớp nào?</h2><p class="muted">Chọn đúng lớp và tên trước khi bắt đầu.</p><form id="login-form"><label for="class-select">Lớp</label><select id="class-select" required><option value="">Chọn lớp của bạn</option>${classOptions}</select><label for="student-select">Học viên</label><select id="student-select" required ${(sharedEntry?selectedClassId:selected)?'':'disabled'}><option value="">Chọn tên của bạn</option>${STUDENTS.map(s=>`<option value="${escape(s.id)}" ${s.id===selected?'selected':''}>${escape(s.name)}</option>`).join('')}</select><label class="check-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label><p class="memory-help">Lần sau sẽ chọn sẵn lớp và tên của bạn.<br>Bỏ tick nếu bạn đang dùng thiết bị chung.</p><button class="button full" id="login-submit" ${selected?'':'disabled'}><span>Mở bài Reading</span><span>→</span></button><p class="form-error" role="status" id="login-error"></p></form></section></div>`;
@@ -150,6 +191,7 @@ async function selectSharedClass(classId){
   const roster=await request(`/library/${encodeURIComponent(requestedLesson)}/classes/${encodeURIComponent(classId)}`);
   if(generation!==rosterGeneration||document.querySelector('#class-select')?.value!==classId)return;
   STUDENTS=roster.students;select.innerHTML='<option value="">Chọn tên của bạn</option>'+STUDENTS.map(s=>`<option value="${escape(s.id)}">${escape(s.name)}</option>`).join('');select.disabled=false;
+  try{await autoLoginRemembered();}catch(error){notify(error.message);}
  }catch(error){if(generation===rosterGeneration){select.innerHTML='<option value="">Chưa tải được danh sách</option>';notify(error.message);}}
 }
 
@@ -164,6 +206,7 @@ function render(){
  if(route==='exercise'&&!Object.keys(PASSAGE).length)return navigate('resume');
  if(route==='result'){const a=record()?.attempts.find(x=>x.no===+(routeParams.get('attempt')||current()?.no));if(a?.status==='submitted'&&!resultCache.has(a.id)){loadResult(a.no);return;}}
  ({docs,login,prep,resume:resumeScreen,exercise,result:resultScreen,teacher:teacherScreen}[route]||login)();if(route!=='exercise')window.scrollTo(0,0);
+ if(route==='login'&&!app.querySelector('[data-action="change-student"]'))app.insertAdjacentHTML('beforeend',textBtn('Đổi người học','change-student'));
 }
 async function teacherScreen(afterLogin=false){
  const submissionId=new URLSearchParams(location.hash.slice(1)).get('submission')||routeParams.get('submission');
@@ -491,7 +534,7 @@ document.addEventListener('click',event=>{
  const a=current(),n=+target.dataset.question;
  const actions={
   'open-assignment':()=>navigate('login'),'show-docs':()=>identity?.documentUrl?window.open(identity.documentUrl,'_blank','noopener'):navigate('docs'),
-  'change-student':()=>{pause('identity',false);sessionStorage.removeItem(SESSION);sessionToken='';studentId='';navigate('login');},
+  'change-student':changeStudent,
   begin,resume,pause:()=>pause(),'request-reset':requestReset,'request-submit':requestSubmit,'show-result':()=>loadResult(a.no),
   'close-modal':closeModal,'confirm-modal':()=>{const fn=modalAction;closeModal();fn?.();},
   tab:()=>switchTab(target.dataset.tab),jump:()=>jump(n),
@@ -526,13 +569,11 @@ function saveAnswer(input){if(!writable())return;current().answers[input.dataset
 document.addEventListener('submit',async event=>{
  if(event.target.id!=='login-form')return;event.preventDefault();const button=document.querySelector('#login-submit');button.disabled=true;
  try{const id=document.querySelector('#student-select').value,classCode=document.querySelector('#class-select').value;
-  const response=sharedEntry?await request('/shared-login',{code:LESSON.code,classId:classCode,studentRef:id}):await request('/login',{entryToken,studentRef:id,classCode});sessionToken=response.token;sessionStorage.setItem(SESSION,sessionToken);apply(response);
-  if(document.querySelector('#remember-student').checked)localStorage.setItem(MEMORY,JSON.stringify({studentId:id,classCode:response.identity.classCode,...(sharedEntry?{classId:classCode}:{})}));else localStorage.removeItem(MEMORY);
-  recoverLocal();navigate(['running','paused'].includes(current()?.status)?'resume':'prep');
- }catch(e){document.querySelector('#login-error').textContent=e.message;}finally{button.disabled=false;}
+  await loginSelected(id,classCode,{remember:document.querySelector('#remember-student').checked});
+ }catch(e){const error=document.querySelector('#login-error');if(error)error.textContent=e.message;else notify(e.message);}finally{button.disabled=false;}
 });
 function recoverLocal(){
- const a=current();pendingOperation=JSON.parse(sessionStorage.getItem(`reading-operation:${identity.bindingId}`)||'null');if(!a||!['running','paused'].includes(a.status))return;
+ const a=current();try{pendingOperation=JSON.parse(sessionStorage.getItem(`reading-operation:${identity.bindingId}`)||'null');}catch{pendingOperation=null;}if(!a||!['running','paused'].includes(a.status))return;
  try{const local=JSON.parse(localStorage.getItem(cacheKey()));
   if(local?.attemptId===a.id&&local.lease?.id===a.leaseId&&local.snapshot.sequence>=a.sequence){Object.assign(a,local.snapshot);a.remainingMs=Math.min(a.remainingMs,local.remainingMs);lease=local.lease;activeMs=local.snapshot.activeMs;pendingOperation=pendingOperation||local.pendingOperation||null;}
   else{lease=null;activeMs=0;}
@@ -566,8 +607,9 @@ async function bootstrap(){
  try{
   if(location.pathname.endsWith('/teacher.html')){ready=true;route='teacher';await teacherScreen();return;}
   const entry=new URLSearchParams(location.hash.split('?')[1]).get('entry');
-  if(entry){sessionStorage.setItem(ENTRY,entry);history.replaceState(null,'',location.pathname+location.search+'#login');}
-  entryToken=entry||sessionStorage.getItem(ENTRY)||'';sessionToken=sessionStorage.getItem(SESSION)||'';sharedEntry=!entryToken&&!entryQuery.has('documentId');
+  if(entry){try{sessionStorage.setItem(ENTRY,entry);}catch{}history.replaceState(history.state,'',location.pathname+location.search+'#login');}
+  try{entryToken=entry||sessionStorage.getItem(ENTRY)||'';sessionToken=courseIdentity.canRestoreSession()?sessionStorage.getItem(SESSION)||'':'';}catch{entryToken=entry||'';sessionToken='';}
+  sharedEntry=!entryToken&&!entryQuery.has('documentId');
   // Hai bước chỉ đọc chạy song song; vẫn kiểm phiên và link trước khi hiện bài.
   const [savedState,openedEntry]=await Promise.allSettled([
    sessionToken?request('/state'):Promise.resolve(null),
@@ -582,12 +624,13 @@ async function bootstrap(){
    try{catalog=await request(`/library/${encodeURIComponent(requestedLesson)}`);}catch(e){if(e.code!=='LESSON_NOT_OPEN'||!sessionToken)throw e;}
    if(catalog){CLASSES=catalog.classes;entryInfo=catalog;setLesson(catalog.lesson);}
    let memory={};try{memory=JSON.parse(localStorage.getItem(MEMORY))||{};}catch{}
-   selectedClassId=CLASSES.find(c=>c.classCode===(identity?.classCode||memory.classCode))?.id||'';
+   selectedClassId=CLASSES.find(c=>c.classCode===(identity?.classCode||(courseIdentity.read().status==='ok'?'':memory.classCode)))?.id||'';
    if(selectedClassId){const roster=await request(`/library/${encodeURIComponent(requestedLesson)}/classes/${encodeURIComponent(selectedClassId)}`);STUDENTS=roster.students;}
   }
   if(!sharedEntry&&!sessionToken&&!entryToken)throw new Error('Hãy mở bài bằng nút CTA trong bản Homework của bạn.');
   ready=true;
-  if(sessionToken)navigate(['running','paused'].includes(current()?.status)?'resume':'prep');else navigate('login');
+  if(sessionToken){courseIdentity.pin(identity.studentRef);navigate(['running','paused'].includes(current()?.status)?'resume':'prep');}
+  else{let automatic=false;try{automatic=await autoLoginRemembered();}catch(e){notify(e.message);}if(!automatic)navigate('login');}
  }catch(e){app.innerHTML=`<section class="card card-pad"><h1>Chưa mở được bài Reading</h1><p>${escape(e.message)}</p><p>Giữ nguyên link và thử tải lại khi kết nối ổn định.</p></section>`;}
 }
 bootstrap();

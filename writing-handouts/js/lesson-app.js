@@ -1,5 +1,5 @@
 import { createLessonApi } from "./api.js?v=20260911-load-guard-v1";
-import { installStudentMemory } from "./student-memory-ui.js?v=20260905-memory-v3";
+import { installStudentMemory } from "./shared-student-memory-ui.js?v=20261018-identity-v1";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, isConflict, pollingDelayWithJitter, randomDelay, retryDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js?v=20260921-draft-result-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
@@ -792,11 +792,20 @@ async function openSession(event) {
     const accessCode = student.requiresAccessCode ? $("lesson-access-code").value : undefined;
     if (student.requiresAccessCode && !/^\d{4}$/.test(accessCode)) throw new Error("Hãy nhập đúng mã 4 số của hồ sơ tạm.");
     const opened = await app.api.createSession(app.activitySlug, classRef, student.studentRef, accessCode);
+    if (app.studentMemory && !app.studentMemory.isCurrent()) throw new Error('Người đã nhớ vừa đổi. Chưa mở bằng phản hồi cũ; hãy chọn lại người học.');
     app.sessionRef = (opened.data.session || opened.data).sessionRef;
+    const openedOwner = opened.data.session || opened.data;
+    if (openedOwner.studentRef !== student.studentRef || openedOwner.classRef !== classRef || openedOwner.activitySlug !== app.activitySlug)
+      throw new Error('Phiên trả về chưa khớp đúng bài, lớp và người học. Bài cũ được giữ.');
     app.draftResult = { key: null, status: "idle", data: null, pageIndex: 0 };
     const result = await app.api.session(app.sessionRef);
+    if (app.studentMemory && !app.studentMemory.isCurrent()) throw new Error('Người đã nhớ vừa đổi. Chưa mở bằng phản hồi cũ; hãy chọn lại người học.');
+    const readOwner = result.data.session || result.data;
+    if (readOwner.studentRef !== student.studentRef || readOwner.classRef !== classRef || readOwner.activitySlug !== app.activitySlug)
+      throw new Error('Bản bài trả về chưa khớp người học. Chưa hiển thị bài của người khác.');
     app.state = normalizeLessonProgress(result.data.session || result.data, app.manifest);
     await restoreLocal();
+    await app.studentMemory?.complete(app.identity);
     $("lesson-access-code").value = ""; $("lesson-provisional-pin").value = ""; $("lesson-provisional-pin-confirm").value = "";
     $("lesson-student-label").textContent = `${student.label} · ${$("lesson-class").selectedOptions[0].textContent}`;
     $("lesson-setup").hidden = true;
@@ -807,7 +816,6 @@ async function openSession(event) {
     for (const attempt of app.state.attempts) registerAttempt(attempt);
     schedulePresence();
     startPresenceHeartbeat();
-    app.studentMemory?.complete(app.identity);
   } catch (error) {
     app.identity = null; app.sessionRef = null;
     errorNode.hidden = false;

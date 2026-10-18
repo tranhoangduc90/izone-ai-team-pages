@@ -4,6 +4,7 @@ import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 import {workflowFor,isWhole} from '../shared/workflow.mjs';
 import {wholeSections} from '../shared/whole-chain-ui.mjs';
+import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../../shared/course-student-identity.js?v=20261018-identity-v1';
 installStyles();
 
 // Nhận bài của người đã xác nhận, lưu ở backend riêng và hiển thị nhận xét đọc lại.
@@ -12,6 +13,7 @@ const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api=createClient(globalThis.handout67ApiBase||'https://ducizone.ddns.net/api/handout67/v1');
 let lesson=globalThis.handout67Lesson||{activity:'lesson5'};
+const courseIdentity=createCourseStudentIdentity({product:'handout67',entry:lesson.activity,requestIdentity:requestMappingStudentIdentity});
 const {order:ORDER,fields:FIELDS}=workflowFor(lesson);
 const names={};let classes=[],state=createState(0,lesson),student='',generation=0,busy=false,conflict=false,editingLocked=false;
 let mutationVersion=0;
@@ -131,7 +133,7 @@ function message(text){clearTimeout(toastTimer);$('toast').textContent=text;$('t
 function note(text){$('connection-note').textContent=text;$('connection-note').hidden=!text;}
 function show(view){for(const id of ['identity','confirm','workspace'])$(id).hidden=id!==view;window.scrollTo({top:0});}
 function draftKey(){return 'izone-handout67:draft:'+state.ref;}
-function keepDraft(){try{localStorage.setItem(draftKey(),JSON.stringify({ref:state.ref,changes:{...dirty},responses:{...state.responses},savedAt:Date.now()}));}catch{message('Thiết bị chưa giữ được nháp. Hãy sao chép nội dung trước khi đóng trang.');}}
+function keepDraft(){try{localStorage.setItem(draftKey(),JSON.stringify({ref:state.ref,changes:{...dirty},responses:{...state.responses},savedAt:Date.now()}));return true;}catch{message('Thiết bị chưa giữ được nháp. Hãy sao chép nội dung trước khi đóng trang.');return false;}}
 function enqueue(action){const result=serial.then(action);serial=result.catch(()=>{});return result;}
 function apply(value){state=value;render();}
 function failure(error){
@@ -171,14 +173,20 @@ async function poll(){
  }catch(error){if(epoch===generation){note('Kết nối đang gián đoạn. Bài đã gửi vẫn được giữ; trang sẽ kiểm lại.');}}
  finally{if(epoch===generation)schedulePoll();}
 }
-async function enter(){
+async function enter({selection=null,pinned=false}={}){
  const epoch=++generation;const button=$('confirm-button');button.disabled=true;
+ const selectedStudent=student,classRef=$('class-select').value;
+ const context=selection?courseIdentity.automaticContext(selection):courseIdentity.prepare(selectedStudent,'');
  try {
-  const result=await api.open({activity:lesson.activity,classRef:$('class-select').value,studentRef:student});
-  if(epoch!==generation)return;
+  const result=await api.open({activity:lesson.activity,classRef,studentRef:selectedStudent});
+  if(epoch!==generation||student!==selectedStudent||$('class-select').value!==classRef)return;
+  if(selection&&!courseIdentity.isCurrent(selection))throw new Error('IDENTITY_CHANGED');
+  if(!result.token||result.session?.activity!==lesson.activity||result.session.classRef!==classRef||result.session.studentRef!==selectedStudent)throw new Error('SESSION_OWNER_MISMATCH');
   api.setToken(result.token);dirty={};conflict=false;busy=false;editingLocked=false;serial=Promise.resolve();state=result.session;
-  if($('remember').checked){try{localStorage.setItem('izone-handout67:identity',JSON.stringify({classRef:state.classRef,studentRef:student}));}catch{}}
-  else {try{localStorage.removeItem('izone-handout67:identity');}catch{}}
+  if(!pinned)await courseIdentity.commit(context,{automatic:Boolean(selection),remember:$('remember').checked}).then(value=>{
+   if(!['ok','empty'].includes(value.status))message('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.');
+  }).catch(()=>message('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.'));
+  courseIdentity.pin(selectedStudent,{classRef});
   $('learner-label').textContent=names[student];show('workspace');render();note('');$('read-latest').hidden=true;
   $('save-state').textContent='Đã mở bài từ máy chủ';
   try{$('restore-draft').hidden=!localStorage.getItem(draftKey());}catch{$('restore-draft').hidden=true;}
@@ -190,6 +198,33 @@ function students(){
  const row=classes.find(c=>c.classRef===$('class-select').value);
  $('student-select').innerHTML='<option value="">Chọn tên của bạn</option>'+(row?.students||[]).map(s=>`<option value="${escape(s.studentRef)}">${escape(s.displayName)}</option>`).join('');
 }
+courseIdentity.subscribe(()=>{if(student&&state.ref)message('Người đã nhớ vừa đổi ở tab khác. Bài tại đây vẫn giữ nguyên người và nháp.');});
+async function autoSelectStudent(classOnly=''){
+ const selectionVersion=generation;
+ const own=courseIdentity.getPinned();
+ if(own?.studentRef){
+  const matches=classes.filter(c=>!own.classRef||c.classRef===own.classRef).flatMap(c=>c.students.filter(s=>s.studentRef===own.studentRef).map(s=>({c,s})));
+  if(matches.length!==1){message('Chưa xác minh được người của tab này. Bài cũ được giữ.');return;}
+  $('class-select').value=matches[0].c.classRef;students();student=own.studentRef;$('student-select').value=student;
+  await enter({pinned:true});return;
+ }
+ const resolved=await courseIdentity.resolveAliases();
+ if(selectionVersion!==generation)return;
+ if(resolved.status!=='unique')return;
+ const matches=classes.filter(c=>!classOnly||c.classRef===classOnly).flatMap(c=>c.students.flatMap(s=>resolved.aliases
+  .filter(alias=>alias.studentRef===s.studentRef).map(alias=>({c,s,alias}))));
+ if(matches.length!==1){message(matches.length?'Trình duyệt đã nhớ bạn. Chọn lớp của bài muốn mở; không cần chọn lại tên.':'Chưa có đúng hồ sơ được phép trong bài này. Danh tính đã nhớ được giữ; hãy kiểm tra link hoặc dùng Đổi người học.');return;}
+ const {c,s,alias}=matches[0];$('class-select').value=c.classRef;students();student=s.studentRef;$('student-select').value=student;
+ await enter({selection:{alias,resolution:resolved}});
+}
+async function changeStudent(){
+ if(document.querySelector('.inline-edit-box')){message('Hãy lưu hoặc hủy nội dung đang chỉnh trước khi đổi người học.');return;}
+ if(busy||editingLocked)return;
+ if(!await flush()||Object.keys(dirty).length){message('Chưa lưu xong nháp; bài vẫn giữ nguyên người.');return;}
+ if((await courseIdentity.forget()).status!=='empty'){message('Chưa bỏ được ghi nhớ. Bài và nháp vẫn được giữ.');return;}
+ generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');student='';dirty={};state=createState(0,lesson);
+ $('student-select').value='';show('identity');
+}
 async function bootstrap(){
  try {
   if(!lesson.topic&&api.lesson){lesson=(await api.lesson(lesson.activity)).lesson;descriptions.a.instruction=lesson.aInstruction;}
@@ -198,14 +233,16 @@ async function bootstrap(){
   if(!classes.length)throw new Error('CLASS_NOT_OPEN');
   for(const c of classes)for(const s of c.students)names[s.studentRef]=s.displayName;
   $('class-select').innerHTML=classes.map(c=>`<option value="${escape(c.classRef)}">${escape(c.className)}</option>`).join('');students();
-  try{const remembered=JSON.parse(localStorage.getItem('izone-handout67:identity'));if(classes.some(c=>c.classRef===remembered?.classRef)){$('class-select').value=remembered.classRef;students();$('student-select').value=remembered.studentRef;}}catch{}
+  try{await autoSelectStudent();}catch{message('Chưa kiểm được người đã nhớ. Bạn vẫn có thể chọn lớp và tên.');}
  }catch{message('Chưa tải được lớp. Hãy tải lại trang khi kết nối ổn định.');}
 }
-$('class-select').addEventListener('change',students);
+$('class-select').addEventListener('change',()=>{generation++;courseIdentity.invalidate();students();void autoSelectStudent($('class-select').value).catch(()=>message('Chưa kiểm được người đã nhớ; bạn có thể chọn tên.'));});
+$('student-select').addEventListener('change',()=>{generation++;courseIdentity.invalidate();});
 $('login-form').addEventListener('submit',event=>{event.preventDefault();const val=$('student-select').value;if(!names[val])return;student=val;$('confirm-title').textContent=names[val];$('confirm-class').textContent=classes.find(c=>c.classRef===$('class-select').value)?.className;show('confirm');$('confirm-button').focus();});
 $('back').addEventListener('click',()=>show('identity'));
 $('confirm-button').addEventListener('click',enter);
-$('logout').addEventListener('click',async()=>{if(document.querySelector('.inline-edit-box')){message('Hãy lưu hoặc hủy nội dung đang chỉnh trước khi đổi người học.');return;}if(busy||editingLocked)return;await flush();generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');student='';dirty={};state=createState(0,lesson);show('identity');});
+$('logout').addEventListener('click',changeStudent);
+for(const view of ['identity','confirm']){const change=document.createElement('button');change.type='button';change.className='secondary';change.textContent='Đổi người học';change.addEventListener('click',changeStudent);$(view).append(change);}
 $('read-latest').addEventListener('click',async()=>{
  if(busy||editingLocked)return;
  const epoch=generation,ref=state.ref;keepDraft();busy=true;editingLocked=true;mutationVersion++;
