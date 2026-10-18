@@ -1,5 +1,5 @@
 // Chính sách thuần được nhúng nguyên nguồn vào Code node và dashboard; không chứa credential.
-var recordingPublication = (() => {
+const recordingPublication = (() => {
   const minimumSeconds = 600;
   function timestamp(value) {
     let text=String(value ?? '').trim();
@@ -33,10 +33,10 @@ var recordingPublication = (() => {
   }
   function sameSession(left,right) {
     if(left.classSessionId&&right.classSessionId)return left.classSessionId===right.classSessionId;
-    return /^[A-Z]{1,4}\d{3,5}$/.test(left.className||'') && left.className===right.className && Number(left.lessonNumber)>0 && Number(left.lessonNumber)===Number(right.lessonNumber);
+    return /^(?:[A-Z]{1,4}\d{3,5}|(?:NT|CS)\.?\d{6})$/.test(left.className||'') && left.className===right.className && Number(left.lessonNumber)>0 && Number(left.lessonNumber)===Number(right.lessonNumber);
   }
   function parts(record,records) {
-    const published=(records||[]).filter(r=>r.id!==record.id && sameSession(record,r) && r.videoId);
+    const published=(records||[]).filter(r=>r.id!==record.id && sameSession(record,r) && (r.videoId||r.publicationStarted));
     if(!published.length)return {partNumber:record.partNumber,totalParts:record.totalParts||1,requiresConfirmation:false};
     const minimum=Math.max(...published.map(r=>Number(r.partNumber)||1))+1;
     const partNumber=Math.max(Number(record.partNumber)||0,minimum);
@@ -46,7 +46,7 @@ var recordingPublication = (() => {
     const className=String(input.className??record.className??'').trim().toUpperCase();
     const lessonNumber=Number(input.lessonNumber??record.lessonNumber);
     const recordingDate=String(input.recordingDate??record.recordingDate??date(record.recordingStart));
-    if(!/^[A-Z]{1,4}\d{3,5}$/.test(className)||!Number.isInteger(lessonNumber)||lessonNumber<1||!validDate(recordingDate))throw Error('INVALID_PUBLISH_METADATA');
+    if(!/^(?:[A-Z]{1,4}\d{3,5}|(?:NT|CS)\.?\d{6})$/.test(className)||!Number.isInteger(lessonNumber)||lessonNumber<1||!validDate(recordingDate))throw Error('INVALID_PUBLISH_METADATA');
     return {className,lessonNumber,recordingDate};
   }
   const messages={DURATION_UNVERIFIED:'Chưa xác minh thời lượng',VIDEO_UNDER_TEN_MINUTES:'Video dưới 10 phút — không đăng YouTube',FILE_NOT_READY:'Chưa có MP4 hoàn chỉnh',STALE_METADATA:'Metadata chưa được xác minh lại',EMPTY_FILE:'Dung lượng tệp không hợp lệ',FILE_TOO_LARGE_FOR_PILOT:'File vượt giới hạn 1 GiB',RECORDING_DELETED:'Recording đã được xóa trong Zoom'};

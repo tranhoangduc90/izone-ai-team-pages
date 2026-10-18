@@ -8,9 +8,8 @@ async function refreshKnownRecordingFile(id, control) {
   if (refreshFilePending.has(id)) return;
   refreshFilePending.add(id); control.disabled = true;
   try {
-    const response = await window.recordingAuth.request({action:'refresh_file',date:nightlyState.snapshot.date,id,expectedVersion:record.version});
-    const result = await response.json();
-    if (!response.ok || result.ok !== true || result.record?.type !== 'MP4' || result.record?.status !== 'completed')
+    const result = await window.recordingRequests.submit({action:'refresh_file',date:nightlyState.snapshot.date,id,expectedVersion:record.version});
+    if (result.ok !== true || result.record?.type !== 'MP4' || result.record?.status !== 'completed')
       throw new Error(result.error || 'REFRESH_FAILED');
     await loadData(true);
     const saved = nightlyState.snapshot?.records?.find(r => r.id === result.record.id);
@@ -53,7 +52,8 @@ function updateManualUploadTitle() {
   const record=nightlyState.snapshot?.records?.find(r=>r.id===dialog.dataset.id);
   const metadata={className:document.getElementById('manualUploadClass').value.trim().toUpperCase(),lessonNumber:Number(document.getElementById('manualUploadLesson').value),recordingDate:document.getElementById('manualUploadDate').value};
   const keepsGroup=record && metadata.className===record.className && metadata.lessonNumber===Number(record.lessonNumber) && metadata.recordingDate===recordingPublication.date(record.recordingStart);
-  const parts=recordingPublication.parts({...record,...metadata,classSessionId:keepsGroup?record.classSessionId:'',partNumber:keepsGroup?record.partNumber:null,totalParts:keepsGroup?record.totalParts:1},nightlyState.snapshot?.records);
+  const group=(nightlyState.snapshot?.records||[]).map(r=>({...r,publicationStarted:['queued','download','downloading','upload','uploading','processing','postprocess_handoff'].includes(state.records.find(s=>s.id===r.id)?.stage)}));
+  const parts=recordingPublication.parts({...record,...metadata,classSessionId:keepsGroup?record.classSessionId:'',partNumber:keepsGroup?record.partNumber:null,totalParts:keepsGroup?record.totalParts:1},group);
   document.getElementById('manualUploadPartsLabel').hidden=!parts.requiresConfirmation;
   document.getElementById('manualUploadParts').required=Boolean(parts.requiresConfirmation);
   try {
@@ -116,16 +116,24 @@ document.getElementById('manualUploadForm').addEventListener('submit', async eve
   button.disabled = true; manualUploadPending.add(id);
   document.getElementById('manualUploadStatus').textContent = 'Đang gửi yêu cầu đăng…';
   try {
-    const row = await postAction(window.RECORDING_NIGHTLY.actionUrl, body);
+    const receipt = await window.recordingRequests.submit(body),row=receipt.record;
+    if(receipt.accepted!==true||!row)throw Error('ACTION_RECEIPT_UNKNOWN');
     replaceRecord({...row, nightly:true, title:row.proposedTitle || row.title});
-    dialog.close(); toast('Đã gửi yêu cầu đăng. Link YouTube sẽ xuất hiện khi xử lý hoàn tất.');
+    const source=nightlyState.snapshot?.records?.find(r=>r.id===row.id);if(source)Object.assign(source,row);
+    if(dialog.dataset.id===id)dialog.close();
+    toast('Đã nhận yêu cầu và xếp hàng. Bạn có thể đăng video khác hoặc kiểm tra lại tệp.');
     await loadData(true);
   } catch (error) {
-    if (/VERSION_CONFLICT|INVALID_|AUTH_REQUIRED|FILE_NOT_READY|FILE_TOO_LARGE|DURATION_UNVERIFIED|VIDEO_UNDER_TEN_MINUTES|RECORDING_EXCLUDED|VIDEO_ALREADY_UPLOADED/.test(error.message)) manualUploadPending.delete(id);
+    if (window.recordingRequests.rejected(error)) manualUploadPending.delete(id);
     // Phản hồi lỗi có thể xảy ra sau khi máy chủ đã nhận: yêu cầu tải lại, không gửi lặp tự động.
-    document.getElementById('manualUploadStatus').textContent = error.message.includes('VERSION_CONFLICT')
+    const message = error.message.includes('VERSION_CONFLICT')
       ? 'Dữ liệu đã thay đổi. Đóng hộp thoại và làm mới trước khi đăng.'
       : Object.entries(recordingPublication.messages).find(([code])=>error.message.includes(code))?.[1] || 'Chưa xác nhận được kết quả yêu cầu. Đóng hộp thoại, làm mới và kiểm tra tiến độ trước khi thử lại.';
+    if(dialog.dataset.id===id){document.getElementById('manualUploadStatus').textContent=message;dialog.close();}
+    toast(message,'error');
+    loadData(true);
+  } finally {
+    if(dialog.dataset.id===id)button.disabled=false;
   }
 });
 
