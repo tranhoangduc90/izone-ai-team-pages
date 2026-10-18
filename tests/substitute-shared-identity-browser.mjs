@@ -118,6 +118,8 @@ try {
     assert.equal(await f.memory(), null);
     await f.page.locator('#confirmIdentity').click();
     await f.page.locator('#bootstrapDownloadStatus').filter({ hasText: '100%' }).waitFor();
+    // Audio giả có thể xong trước lượt ghi nhận danh tính bất đồng bộ; chờ đúng kết quả cần kiểm.
+    await f.page.waitForFunction(({ key, id }) => JSON.parse(localStorage.getItem(key) || 'null')?.identity?.id === id, { key, id: b.id });
     assert.equal((await f.memory()).identity.id, b.id);
     const other = await f.context.newPage(); await f.open(other);
     await other.locator('#bootstrapDownloadStatus').filter({ hasText: '100%' }).waitFor();

@@ -9,15 +9,17 @@
   function stop(){blocked=true;for(const controller of controllers)controller.abort();controllers.clear();window.dispatchEvent(new Event('substitute:stopped'));}
   async function initialize(config,app){
     if(!allowed(config.slug))throw new Error('Bài thi không hợp lệ.');
+    // Chỉ link lớp thử yêu cầu thêm hai hồ sơ giả; link lớp thật gửi payload cũ.
+    const testClass=/(?:^|[?&])class=CODEXID261018(?:&|$)/.test(location.search||'');
     const controller=new AbortController();controllers.add(controller);
     const timer=setTimeout(()=>controller.abort(),20000);
     try{
       const response=await fetch(app.API_BASE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},
-        body:JSON.stringify({route:'/api/test/history',payload:{}}),signal:controller.signal,cache:'no-store'});
+        body:JSON.stringify({route:'/api/test/history',payload:testClass?{qaClass:'CODEXID261018'}:{}}),signal:controller.signal,cache:'no-store'});
       const value=await response.json();
       if(!response.ok||value.testSlug!==config.slug||!uuid.test(value.historyEpoch)||value.stateVersion!==2)throw new Error('Không xác nhận được phiên dữ liệu. Hãy tải lại trang.');
       if(value.maintenance)throw new Error('Bài thi đang bảo trì. Vui lòng quay lại sau.');
-      if(value.classes!==undefined&&(!Array.isArray(value.classes)||!value.classes.length||new Set(value.classes.map(c=>c?.code)).size!==value.classes.length||!value.classes.some(c=>c.code==='DEMO')||value.classes.some(c=>!c||! /^(?:DEMO|IC\d{3,8})$/.test(c.code)||typeof c.name!=='string'||!c.name.trim())))throw new Error('Danh sách lớp không hợp lệ. Hãy tải lại trang.');
+      if(value.classes!==undefined&&(!Array.isArray(value.classes)||!value.classes.length||new Set(value.classes.map(c=>c?.code)).size!==value.classes.length||!value.classes.some(c=>c.code==='DEMO')||value.classes.some(c=>!c||!(/^(?:DEMO|IC\d{3,8})$/.test(c.code)||testClass&&c.code==='CODEXID261018')||typeof c.name!=='string'||!c.name.trim())))throw new Error('Danh sách lớp không hợp lệ. Hãy tải lại trang.');
       meta=value;return value;
     }finally{clearTimeout(timer);controllers.delete(controller);}
   }
