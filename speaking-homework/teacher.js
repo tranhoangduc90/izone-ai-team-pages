@@ -29,7 +29,7 @@ function render(receipt) {
     const counts = document.createElement('p');
     counts.textContent = `Tổng số câu/chu trình được xác nhận: ${receipt.grade_summary.totalQuestions ?? '—'}.`;
     if (Object.values(receipt.links || {}).some(l => l.evidence?.countVerified === false)) {
-      counts.textContent += ' Có phần được công nhận theo chatbot nhưng chưa xác minh số câu; tổng này chỉ gồm số đã kiểm được.';
+      counts.textContent += ' Có phần được công nhận theo chatbot nhưng chưa xác minh số câu; tổng trên là giá trị đang lưu, chưa phản ánh đầy đủ khối lượng đã luyện.';
     }
     grade.append(heading, counts);
   }
