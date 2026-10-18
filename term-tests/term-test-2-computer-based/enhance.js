@@ -8,13 +8,20 @@
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const isDemo = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
-  const storageScope = retakeConfig.mode === 'listening-only'
+  const storageScope = (retakeConfig.mode === 'listening-only'
     ? String(retakeConfig.storageScope || ':listening-retake:missing')
-    : '';
+    : '') + (window.TERM_TEST_STORAGE_SCOPE || '');
 
   if (!contentConfig || !testConfig || contentConfig.baseTestSlug !== testConfig.slug) return;
 
   const uiStorageKey = 'izone-test-ui:' + testConfig.slug + ':' + classCode + storageScope;
+  function availableStorages() {
+    const stores = [];
+    for (const name of ['sessionStorage', 'localStorage']) {
+      try { if (window[name]) stores.push(window[name]); } catch { /* Vẫn mở bài khi một kho bị chặn. */ }
+    }
+    return stores;
+  }
   const submissionStorageKey = 'izone-test:' + testConfig.slug + ':' + classCode + storageScope;
   const readingMinutes = Math.max(1, Number(contentConfig.timing?.readingMinutes) || 60);
   const writingMinutes = Math.max(1, Number(contentConfig.timing?.writingMinutes) || 60);
@@ -26,7 +33,7 @@
   // Khi lỗi: dùng cấu hình mặc định; luồng lưu bài của shared/app.js không bị ảnh hưởng.
   function readUiState() {
     let stored = {};
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         stored = JSON.parse(storage.getItem(uiStorageKey) || '{}');
         if (Object.keys(stored).length) break;
@@ -65,7 +72,7 @@
 
   function saveUiState() {
     const serialized = JSON.stringify(uiState);
-    for (const storage of [sessionStorage, localStorage]) {
+    for (const storage of availableStorages()) {
       try {
         storage.setItem(uiStorageKey, serialized);
       } catch {
@@ -858,7 +865,7 @@
     let playingCheckpointPending=false;
 
     function readSavedStudentRef() {
-      for (const storage of [sessionStorage, localStorage]) {
+      for (const storage of availableStorages()) {
         try {
           const ref = String(JSON.parse(storage.getItem(submissionStorageKey) || '{}').studentRef || '');
           if (ref) return ref;
@@ -1336,7 +1343,7 @@
     let lastAttempt = 0;
 
     function readExamState() {
-      for (const storage of [sessionStorage, localStorage]) {
+      for (const storage of availableStorages()) {
         try {
           const parsed = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
           if (parsed.listeningDeadlineAt) return parsed;
@@ -1409,7 +1416,7 @@
     let lastAutoSubmitAttempt = 0;
 
     function readAttemptToken() {
-      for (const storage of [sessionStorage, localStorage]) {
+      for (const storage of availableStorages()) {
         try {
           const token = String(JSON.parse(storage.getItem(submissionStorageKey) || '{}').attemptToken || '');
           if (token) return token;
@@ -1459,7 +1466,7 @@
         uiState.readingTimer.deadline = 0;
         uiState.readingTimer.attemptToken = attemptToken;
       }
-      for (const storage of [sessionStorage, localStorage]) {
+      for (const storage of availableStorages()) {
         try {
           const session = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
           const deadline = Date.parse(session.readingDeadlineAt || '');
@@ -1522,7 +1529,7 @@
     let lastAutoSubmitAttempt = 0;
 
     function readAttemptToken() {
-      for (const storage of [sessionStorage, localStorage]) {
+      for (const storage of availableStorages()) {
         try {
           const token = String(JSON.parse(storage.getItem(submissionStorageKey) || '{}').attemptToken || '');
           if (token) return token;
@@ -1572,7 +1579,7 @@
         uiState.writingTimer.deadline = 0;
         uiState.writingTimer.attemptToken = attemptToken;
       }
-      for (const storage of [sessionStorage, localStorage]) {
+      for (const storage of availableStorages()) {
         try {
           const session = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
           const deadline = Date.parse(session.writingDeadlineAt || '');
