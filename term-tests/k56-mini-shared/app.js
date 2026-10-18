@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   'use strict';
 
   const testConfig = window.TERM_TEST_CONFIG;
@@ -19,8 +19,34 @@
 
   if (!testConfig || !appConfig || !root) return;
 
+  if (!classCode && paperMini && !demoMode) {
+    const { redirectRememberedTestClass } = await import('../../shared/test-student-class.js?v=20261018-identity-v1');
+    if (await redirectRememberedTestClass({ root, apiBase: appConfig.API_BASE_URL, testSlug: testConfig.slug })) return;
+  }
+
   const legacyStorageKey = `izone-test:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
-  let storageKey = paperMini ? `${legacyStorageKey}:paper:login` : `${legacyStorageKey}:cbt`;
+  let paperIdentity = null;
+  if (paperMini && !demoMode && classCode !== 'CODEXDEMO56') {
+    try {
+      const module = await import('../../shared/test-student-identity.js?v=20261018-identity-v1');
+      paperIdentity = module.createTestStudentIdentity({ product: testConfig.slug, classCode,
+        getStorages: availableStorages, legacyKeys: { state: `${legacyStorageKey}:paper:login`,
+          ui: `izone-test-ui:${testConfig.slug}:${classCode}:paper`,
+          annotations: `izone-test-annotations:${testConfig.slug}:${classCode}:paper` },
+        requestIdentity: input => apiRequest(`/api/term-tests/${testConfig.slug}/student-identity`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input)
+        }) });
+      window.TERM_TEST_CHANGE_STUDENT = async () => {
+        if (paperBusy || (await paperIdentity.forget()).status !== 'empty') return false;
+        ++paperEpoch; window.TERM_TEST_ALLOW_NAVIGATION = true; location.reload(); return true;
+      };
+    } catch {
+      root.textContent = 'Chưa tải đủ phần mở bài. Hãy tải lại; nháp và lượt thi đã lưu vẫn được giữ.';
+      return;
+    }
+  }
+  let storageKey = paperIdentity ? paperIdentity.current().keys?.state || '' : paperMini ? `${legacyStorageKey}:paper:login`
+    : `${legacyStorageKey}:cbt${window.TERM_TEST_STORAGE_SCOPE || ''}`;
   if (classCode === 'CODEXDEMO56' && query.get('reset') === '1' && !window.TERM_TEST_BOOTSTRAP) {
     const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${serverGradingMode ? ':server-grade' : ''}`;
     for (const storage of [sessionStorage, localStorage]) {
@@ -35,7 +61,16 @@
     const nextQuery = query.toString();
     window.history.replaceState({}, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`);
   }
-  const restoredSession = paperMini ? {} : readSession();
+  const persistedSession = paperIdentity ? paperIdentity.current().state : paperMini ? {} : readSession();
+  const incoming = window.TERM_TEST_BOOTSTRAP?.sessionState;
+  const incomingIdentity = window.TERM_TEST_BOOTSTRAP?.restoredIdentity;
+  const canUseIncoming = !paperMini && incoming && incomingIdentity?.testSlug === testConfig.slug
+    && incomingIdentity.classCode === classCode && incomingIdentity.studentRef === incoming.studentRef
+    && incomingIdentity.attemptToken === incoming.attemptToken;
+  const restoredSession = canUseIncoming
+    ? { ...incoming, ...(persistedSession.studentRef === incoming.studentRef
+      && persistedSession.attemptToken === incoming.attemptToken ? persistedSession : {}) }
+    : persistedSession;
   const state = {
     stage: 'loading',
     roster: [],
@@ -101,7 +136,8 @@
   };
 
   function readSession() {
-    for (const storage of [sessionStorage, localStorage]) {
+    if (!storageKey) return {};
+    for (const storage of availableStorages()) {
       try {
         const restored = JSON.parse(storage.getItem(storageKey) || '{}');
         if (Object.keys(restored).length) return restored;
@@ -112,9 +148,18 @@
     return {};
   }
 
+  function availableStorages() {
+    const stores = [];
+    for (const name of ['sessionStorage', 'localStorage']) {
+      try { if (window[name]) stores.push(window[name]); } catch { /* Giữ chọn tay khi một kho bị chặn. */ }
+    }
+    return stores;
+  }
+
   function saveSession() {
     if (window.K56_DEMO_RESETTING) return;
     if (paperMini && !paperConfirmed) return;
+    if (!storageKey) return false;
     const serialized = JSON.stringify({
       attemptMode: state.attemptMode,
       generation: state.generation,
@@ -154,13 +199,28 @@
       frozenAnswers: state.frozenAnswers,
       testGrades: state.testGrades
     });
-    for (const storage of [sessionStorage, localStorage]) {
+    let saved = false;
+    for (const storage of availableStorages()) {
       try {
         storage.setItem(storageKey, serialized);
+        if (storage.getItem(storageKey) === serialized) saved = true;
       } catch {
         // Bản Writing vẫn được lưu qua API; không làm gián đoạn bài thi nếu bộ nhớ máy đầy.
       }
     }
+    let warning = document.getElementById('termLocalDraftWarning');
+    if (!saved && !warning) {
+      warning = document.createElement('aside'); warning.id = 'termLocalDraftWarning';
+      warning.className = 'notice error'; warning.setAttribute('role', 'alert');
+      warning.textContent = 'Trình duyệt chưa giữ được bản nháp trên thiết bị. Đừng đóng hoặc tải lại trang khi bài chưa lưu lên máy chủ; hãy sao chép nội dung cần giữ trước khi rời.';
+      root.prepend(warning);
+    }
+    if (warning) warning.hidden = saved;
+    const pointer = paperIdentity?.current().keys?.state;
+    if (pointer && pointer !== storageKey) for (const storage of availableStorages()) {
+      try { storage.setItem(pointer, serialized); } catch { /* Bản theo lượt vẫn giữ riêng; không xóa bản cũ. */ }
+    }
+    return saved;
   }
 
   // Nhận deadline Listening đã được máy chủ bù sau một sự cố audio hợp lệ.
@@ -365,6 +425,22 @@
   ].map(id => [id, document.getElementById(id)]));
 
   const progressSteps = [...document.querySelectorAll('[data-progress]')];
+  paperIdentity?.subscribe(() => {
+    if (!state.studentRef) return;
+    let notice = document.getElementById('termIdentityOtherTabNotice');
+    if (!notice) { notice = document.createElement('p'); notice.id = 'termIdentityOtherTabNotice';
+      notice.className = 'notice'; notice.setAttribute('role', 'status'); root.before(notice); }
+    notice.textContent = 'Lựa chọn chung đã đổi ở tab khác. Bài tại đây vẫn giữ nguyên người và nháp; dùng Đổi người học nếu cần đổi tab này.';
+  });
+  if (typeof window.TERM_TEST_CHANGE_STUDENT === 'function') {
+    const change = document.createElement('button'); change.type = 'button';
+    change.id = 'termTestChangeStudent'; change.className = 'button button-secondary'; change.textContent = 'Đổi người học';
+    change.addEventListener('click', async () => {
+      if (!saveSession()) { showNotice('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.', 'error'); return; }
+      if (!await window.TERM_TEST_CHANGE_STUDENT()) showNotice('Chưa đổi được lựa chọn chung. Bài hiện tại vẫn được giữ.', 'error');
+    });
+    root.querySelector('.topbar').append(change);
+  }
   const views = [
     elements.loadingView,
     elements.identityView,
@@ -387,6 +463,34 @@
     elements.notice.hidden = true;
     elements.notice.textContent = '';
     elements.notice.className = 'notice';
+  }
+
+  function bindPaperStudent(student, resolution = null) {
+    const binding = paperIdentity.select(student, { resolution });
+    storageKey = binding.keys.state;
+    Object.assign(state, binding.state, { studentRef: student.ref, studentName: student.name, identityConfirmed: true });
+    elements.studentSelect.value = student.ref;
+    renderQuestionControls(testConfig.listening, elements.listeningQuestions, 'listening');
+    renderQuestionControls(testConfig.reading, elements.readingQuestions, 'reading');
+  }
+  async function paperEntryRoster() {
+    if (!paperIdentity) return null;
+    if (state.studentRef && state.attemptToken) {
+      const identity = await apiRequest(`/api/term-tests/${testConfig.slug}/attempt/active`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classCode, studentRef: state.studentRef, attemptToken: state.attemptToken,
+          ...(state.examSessionToken ? { examSessionToken: state.examSessionToken } : {}), identityOnly: true })
+      });
+      if (!identity.found || identity.attemptToken !== state.attemptToken || !identity.studentName
+          || (state.examSessionToken && identity.examSessionToken !== state.examSessionToken))
+        throw new Error('Chưa xác minh được lượt đang làm. Nháp được giữ; hãy thử lại.');
+      return { roster: { class: { name: classCode }, students: [{ ref: state.studentRef, name: identity.studentName }] }, selection: null };
+    }
+    const selected = await paperIdentity.resolveRemembered();
+    if (selected.status === 'unique') return { roster: { class: { name: classCode }, students: [selected.student] }, selection: selected };
+    if (paperIdentity.read().status === 'ok' && ['missing', 'ambiguous'].includes(selected.status))
+      showNotice('Chưa tìm được duy nhất hồ sơ có quyền làm bài này. Danh tính đã nhớ vẫn được giữ; hãy kiểm tra link hoặc dùng Đổi người học.', 'error');
+    return null;
   }
 
   async function prepareK56Attempt() {
@@ -426,6 +530,14 @@
           }
         }
       }
+      if (paperIdentity) {
+        const token = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!token.test(response.attemptToken || '') || !token.test(response.examSessionToken || '')
+            || (response.studentRef && response.studentRef !== studentRef)) throw new Error('Phiên trả về chưa khớp người học.');
+        paperIdentity.prepared(studentRef).then(result => {
+          if (!['ok', 'empty', 'not_selected'].includes(result.status)) showNotice('Lượt thi đã mở đúng người. Trình duyệt chưa ghi nhớ được cho bài khác.');
+        }).catch(() => {});
+      }
       await showPreparedAttempt(response);
       if(paperMini) {
         for(const skill of ['listening','reading']) {
@@ -434,7 +546,7 @@
           updateAnswerCount(skill);
           if(state.draftRevisions[skill]>state.draftAckRevisions[skill]&&response[skill+'StartedAt']&&!response[skill+'Submitted'])scheduleSectionDraft(skill,0);
         }
-        paperEnter.hidden=true;paperChange.hidden=false;
+        paperEnter.hidden=true;paperChange.hidden=Boolean(paperIdentity);
         showNotice('Nhập đáp án từ bài giấy. Giảng viên tổ chức thời gian; bạn chủ động nhấn nộp.','success');
       }
     } finally {
@@ -674,8 +786,9 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
     const epoch=paperEpoch,owner=storageKey;
-    const mutating=paperMini&&options.method==='POST'&&!path.endsWith('/draft');
-    if(paperMini&&options.method==='POST'&&path.startsWith('/api/term-tests/')) {
+    const identityRead = path.endsWith('/student-identity');
+    const mutating=paperMini&&options.method==='POST'&&!path.endsWith('/draft')&&!identityRead;
+    if(paperMini&&options.method==='POST'&&path.startsWith('/api/term-tests/')&&!identityRead) {
       options={...options,body:JSON.stringify({...JSON.parse(options.body||'{}'),attemptMode:'answer_sheet',generation:state.generation||0})};
     }
     if(mutating){++paperBusy;if(paperChange)paperChange.disabled=true;}
@@ -686,7 +799,7 @@
         headers: { ...(options.headers || {}) }
       });
       const data = await response.json().catch(() => ({}));
-      if(paperMini&&(epoch!==paperEpoch||owner!==storageKey)) throw new Error('Bạn đã đổi người học. Phản hồi cũ không được dùng.');
+      if(paperMini&&!identityRead&&(epoch!==paperEpoch||owner!==storageKey)) throw new Error('Bạn đã đổi người học. Phản hồi cũ không được dùng.');
       if (window.K56_DEMO_RESETTING) throw new Error('Phản hồi thuộc lượt demo vừa reset đã được bỏ qua.');
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
@@ -2780,9 +2893,15 @@
       const canReuseIdentity = restored?.testSlug === testConfig.slug && restored.classCode === classCode
         && restored.studentRef === state.studentRef && restored.attemptToken === state.attemptToken
         && Boolean(state.attemptToken);
-      const roster = canReuseIdentity
+      let paperEntry = null;
+      try { paperEntry = await paperEntryRoster(); }
+      catch (error) {
+        if (state.studentRef) throw error;
+        showNotice('Chưa kiểm được người đã nhớ. Bạn có thể chọn tên; danh tính cũ vẫn được giữ.');
+      }
+      const roster = paperEntry?.roster || (canReuseIdentity
         ? {class:{name:classCode},students:[{ref:restored.studentRef,name:restored.studentName}]}
-        : await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`);
+        : await apiRequest(`/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(testConfig.slug)}`));
       populateRoster(roster);
       if(paperMini) {
         paperEnter=document.createElement('button');paperEnter.type='button';paperEnter.id='miniPaperEnter';
@@ -2795,13 +2914,18 @@
           if(!student){showNotice('Hãy chọn đúng họ và tên.','error');return;}
           if(!window.confirm(`Xác nhận học viên ${student.name} · lớp ${classCode}?`))return;
           ++paperEpoch;paperConfirmed=true;state.studentRef=student.ref;state.studentName=student.name;
+          if (paperIdentity) bindPaperStudent(student);
           paperEnter.disabled=true;
           try{await prepareK56Attempt();}
           catch(error){paperConfirmed=false;state.attemptToken='';state.examSessionToken='';setStage('identity-ready');showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`,'error');}
           finally{paperEnter.disabled=false;}
         };
-        paperChange.onclick=()=>{
+        paperChange.onclick=async()=>{
           if(paperBusy)return;
+          if (paperIdentity) {
+            if (!saveSession()) { showNotice('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.', 'error'); return; }
+            await window.TERM_TEST_CHANGE_STUDENT(); return;
+          }
           saveSession();++paperEpoch;paperConfirmed=false;
           for(const skill of ['listening','reading']){clearTimeout(sectionDraftTimers[skill]);setAnswerControlsLocked(skill,false);}
           state.attemptToken='';state.examSessionToken='';state.studentRef='';state.studentName='';state.clientSubmissionId='';
@@ -2816,6 +2940,11 @@
           showNotice('Chọn đúng tên và xác nhận để tiếp tục. Nháp của người trước vẫn được giữ trên máy.');
         };
         elements.startReading.textContent='Nhập đáp án Reading';elements.startReading.dataset.normalText='Nhập đáp án Reading';
+        if (paperEntry) {
+          ++paperEpoch; paperConfirmed = true;
+          if (paperEntry.selection) bindPaperStudent(paperEntry.selection.student, paperEntry.selection.resolution);
+          await prepareK56Attempt(); return;
+        }
         setStage('identity-ready');showNotice('Chọn lớp và tên đúng người. Bài chỉ mở sau khi bạn xác nhận.');return;
       }
       if (!demoMode) {
