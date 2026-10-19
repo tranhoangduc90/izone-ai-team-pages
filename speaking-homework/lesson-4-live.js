@@ -1,6 +1,7 @@
 import { focusSpeakingStart } from './journey-focus.js';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-speaking-tab-v2';
 import { createPendingPoller } from './pending-poller.js';
+import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
 import { parseShareUrl } from './logic.mjs';
 import { freestyleInstructions } from './assignment-instructions.js';
 import { lesson5Code, lesson5Parts } from './lesson-5-parts.js';
@@ -68,12 +69,16 @@ async function post(path, body, timeout = 20_000) {
   if (!response.ok || data.ok !== true) {
     const error = new Error(data.message || 'Hệ thống chưa xử lý được yêu cầu. Hãy thử lại.');
     error.code = data.error || `HTTP_${response.status}`;
+    error.status = response.status;
+    const retryAfter = response.headers.get('retry-after');
+    error.retryAfterMs = retryAfter && /^\d+$/.test(retryAfter)
+      ? Number(retryAfter) * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now()) || 0;
     throw error;
   }
   return data;
   } finally {
     state.requestCount -= 1;
-    changeButton.disabled = state.requestCount > 0;
+    changeButton.disabled = state.requestCount > 0 || state.finishing;
   }
 }
 function identity() { return { accessToken: state.accessToken, studentRef: state.studentRef }; }
@@ -172,8 +177,8 @@ function renderMain() {
     const changed = link && input.value.trim() !== link.share_url;
     const local = state.localFeedback.get(resultId);
     if (local && input.value.trim() !== local.value) state.localFeedback.delete(resultId);
-    input.disabled = state.submitted;
-    $(`${part.key}-confirm`).disabled = state.submitted || state.pending.has(part.key);
+    input.disabled = state.submitted || state.finishing;
+    $(`${part.key}-confirm`).disabled = state.submitted || state.finishing || state.pending.has(part.key);
     if (link?.check_status === 'accepted' && !changed) {
       showResult(resultId, 'pass', 'Đã xác nhận hội thoại',
         part.linkOnly ? 'Đã nhận link. Phần này không yêu cầu số lượng luyện tập.'
@@ -275,11 +280,21 @@ function renderPractice() {
     const select = $(`practice-${slot}-exercise`);
     const resultId = `practice-${slot}-result`;
     hydrateField(input, row?.share_url);
+    // Danh sách Doctor tạm lỗi không làm mất lựa chọn đã được máy chủ công nhận.
+    // Chỉ khôi phục ô chưa sửa; không thay nháp hoặc tự công nhận bài mới.
+    if (!state.doctor && row?.status === 'accepted'
+      && (state.submitted || !draftFields.has(select.id))) {
+      if (![...select.options].some(option => option.value === row.exercise_id)) {
+        select.add(new Option(row.exercise_title || `Bài bổ trợ ${slot} đã xác nhận`, row.exercise_id));
+      }
+      select.value = row.exercise_id;
+      draftFields.add(select.id);
+    }
     const changed = row && (input.value.trim() !== row.share_url
       || select.value !== row.exercise_id);
-    input.disabled = state.submitted;
-    select.disabled = state.submitted;
-    $(`practice-${slot}-confirm`).disabled = state.submitted || state.pending.has(`practice-${slot}`);
+    input.disabled = state.submitted || state.finishing;
+    select.disabled = state.submitted || state.finishing;
+    $(`practice-${slot}-confirm`).disabled = state.submitted || state.finishing || state.pending.has(`practice-${slot}`);
     if (row && !changed) {
       if (row.status === 'accepted') {
         showResult(resultId, 'pass', 'Đã nhận bài bổ trợ',
@@ -332,40 +347,51 @@ function render() {
   $('progress-bar').setAttribute('aria-valuenow', String(count));
   $('progress-fill').style.width = `${count / total * 100}%`;
   $('completion-card').hidden = !state.submitted;
-  updateSubmitControl({ ready: allAccepted(), submitted: state.submitted, finishing: state.finishing, onSubmit: finish });
+  updateSubmitControl({ ready: allAccepted(), submitted: state.submitted, phase: state.submitPhase, error: state.submitError, onSubmit: () => autoSubmit.retry() });
 }
 async function refresh() {
   if (!state.accessToken) return;
   const token = state.accessToken;
+  const revision = state.refreshRevision = (state.refreshRevision || 0) + 1;
   const [data, doctor] = await Promise.all([
-    post('/open', identity()), post('/doctor/list', identity())
+    post('/open', identity()), post('/doctor/list', identity()).catch(() => null)
   ]);
-  if (token !== state.accessToken) return;
+  if (token !== state.accessToken || revision !== state.refreshRevision) return;
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.practice = new Map((data.practiceLinks || []).map(link => [Number(link.slot), link]));
-  state.doctor = doctor;
-  state.submitted = data.status === 'submitted' && Boolean(data.receipt?.id);
-  if (independent && state.submitted && !documentId) $('completion-message').textContent = `Biên nhận ${data.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
+  if (doctor) state.doctor = doctor;
+  state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
+  if (independent && data.status === 'submitted' && data.receipt?.id && !documentId) $('completion-message').textContent = `Biên nhận ${data.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
   render();
   poller.settled();
+  autoSubmit.consider();
 }
-async function finish() {
-  if (state.submitted || state.finishing || !allAccepted()) return;
-  state.finishing = true;
-  const token = state.accessToken;
-  render();
-  try {
-    const response = await post('/finish', { ...identity(), manualSubmit: true }, 30_000);
-    if (token !== state.accessToken) return;
-    if (!response.receipt?.id) throw new Error('Máy chủ chưa trả biên nhận.');
+// Nhận kết quả đủ phần của đúng phiên; khóa sửa trong lúc gửi/đọc lại biên nhận.
+// Dữ liệu lỗi mạng vẫn được giữ, nút thử lại dùng cùng bộ chống gửi đôi.
+const autoSubmit = createAutoSubmit({
+  key: () => state.accessToken && JSON.stringify([state.accessToken,
+    ...parts.map(part => $(`${part.key}-link`).value.trim()),
+    ...[1, 2].flatMap(slot => [$(`practice-${slot}-link`).value.trim(), $(`practice-${slot}-exercise`).value])]),
+  ready: allAccepted,
+  submitted: () => state.submitted,
+  busy: () => state.pending.size > 0 || state.requestCount > 0,
+  send: () => post('/finish', identity(), 30_000),
+  readBack: refresh,
+  onSubmitted() {
     state.submitted = true;
-    if (independent && !documentId) $('completion-message').textContent = `Biên nhận ${response.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
+    state.finishing = false;
+    $('change-student').disabled = state.requestCount > 0;
     render();
-    $('completion-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } catch (error) {
-    $('draft-status').textContent = `Chưa nộp xong: ${error.message} Tiến trình vẫn được giữ.`;
-  } finally { if (token === state.accessToken) { state.finishing = false; render(); } }
-}
+    $('completion-card').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
+  },
+  onState(phase, error) {
+    state.submitPhase = phase;
+    state.submitError = phase === 'failed' ? error?.message || '' : '';
+    state.finishing = ['sending', 'verifying'].includes(phase);
+    $('change-student').disabled = state.finishing || state.requestCount > 0;
+    render();
+  },
+});
 for (const [index, part] of parts.entries()) {
   const section = document.createElement('section');
   section.className = 'task-card';
@@ -393,7 +419,7 @@ for (const part of parts) {
   $(`${part.key}-link`).addEventListener('input', event => {
     // Đánh dấu thao tác nhập/xóa thật trước khi lưu và cập nhật tiến độ.
     draftFields.add(event.target.id); editedDraftFields.add(event.target.id);
-    saveDraft(); render();
+    saveDraft(); render(); autoSubmit.consider();
   });
   $(`${part.key}-confirm`).addEventListener('click', async () => {
     if (!state.accessToken || state.pending.has(part.key) || state.submitted) return;
@@ -418,7 +444,7 @@ for (const part of parts) {
       await post('/checks/request', { ...identity(), part: part.key, url: parsed.url });
       saveDraft(); await refresh();
     } catch (error) { localError(`${part.key}-result`, input, 'Chưa nhận link', error.message); }
-    finally { poller.update(); state.pending.delete(part.key); render(); }
+    finally { poller.update(); state.pending.delete(part.key); render(); autoSubmit.consider(); }
   });
 }
 for (const slot of [1, 2]) {
@@ -426,11 +452,11 @@ for (const slot of [1, 2]) {
   const select = $(`practice-${slot}-exercise`);
   input.addEventListener('input', () => {
     draftFields.add(input.id); editedDraftFields.add(input.id);
-    saveDraft(); render();
+    saveDraft(); render(); autoSubmit.consider();
   });
   select.addEventListener('change', () => {
     draftFields.add(select.id); editedDraftFields.add(select.id);
-    saveDraft(); updateExerciseLinks(); render();
+    saveDraft(); updateExerciseLinks(); render(); autoSubmit.consider();
   });
   $(`practice-${slot}-confirm`).addEventListener('click', async () => {
     if (!state.accessToken || state.submitted || state.pending.has(`practice-${slot}`)) return;
@@ -458,7 +484,7 @@ for (const slot of [1, 2]) {
       });
       saveDraft(); await refresh();
     } catch (error) { localError(`practice-${slot}-result`, input, 'Chưa nhận bài', error.message); }
-    finally { state.pending.delete(`practice-${slot}`); render(); }
+    finally { state.pending.delete(`practice-${slot}`); render(); autoSubmit.consider(); }
   });
 }
 $('doctor-expand').addEventListener('click', () => { state.expanded = !state.expanded; renderDoctor(); });
@@ -537,6 +563,7 @@ const identityController = createSpeakingIdentity({
   onReset() {
     // Chưa giữ được nháp thì giữ nguyên người và nội dung đang gõ; không chuyển sang màn chọn người.
     if (saveDraft() === false) return false;
+    autoSubmit.reset();
     poller.stop();
     state.studentRef = ''; state.accessToken = '';
     state.links.clear(); state.practice.clear(); state.doctor = null; state.submitted = false;
@@ -560,4 +587,4 @@ window.addEventListener('beforeunload', event => {
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
 identityController.start();
-import { acceptanceMessage, checkReason, updateSubmitControl } from './check-feedback.js?v=20261018-speaking-fairness-v1';
+import { acceptanceMessage, checkReason, updateSubmitControl } from './check-feedback.js?v=20261019-auto-submit-v1';

@@ -36,6 +36,7 @@ try {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     const page = await context.newPage();
     const links = new Map(); let submitted = false; let extra = [];
+    await page.route('https://ducizone.ddns.net/mapping-api/api/student-identity/resolve', route => route.fulfill({ json: { ok: true, status: 'unique', identity: { authority: 'erp-contact', id: '12345' }, aliases: [{ classId: '111', classCode: 'IC2304', studentRef, studentName: 'Học viên thử' }] } }));
     // Trang mở qua API độc lập; phiên Docs có lịch sử tiếp tục dùng API cũ.
     await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework*/**', async route => {
       const path = new URL(route.request().url()).pathname.split(/\/api\/speaking-homework(?:-independent)?/)[1];
@@ -75,9 +76,7 @@ try {
     assert.equal(await page.locator('.guide-content img').count(), 9);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true);
     await page.reload();
-    await page.locator('#student-select').selectOption(studentRef);
-    assert.equal(await page.locator('#identity-confirmed').isVisible(), false, 'Nhớ tên chỉ chọn sẵn, không tự mở phiên');
-    await page.locator('#open-homework').click();
+    await page.locator('#completion-card').waitFor({ state: 'visible' });
     await page.locator('#identity-confirmed').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#active-student').innerText(), 'Học viên thử');
     await context.close();

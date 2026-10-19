@@ -20,14 +20,15 @@ export function checkReason(link) {
   return 'Chưa xác nhận được đủ các bước của phần này. Link đã được giữ; hãy nhờ giảng viên kiểm tra nếu chatbot đã báo hoàn thành.';
 }
 
-export function updateSubmitControl({ ready, submitted, finishing, onSubmit }) {
+export function updateSubmitControl({ ready, submitted, phase = 'idle', error = '', onSubmit }) {
   let card = document.getElementById('ready-submit-card');
   if (!card) {
     card = document.createElement('section');
     card.id = 'ready-submit-card'; card.className = 'completion-card';
     const content = document.createElement('div');
-    const title = document.createElement('h2'); title.textContent = 'Đã đủ các phần bắt buộc';
-    const message = document.createElement('p'); message.textContent = 'Bấm Nộp bài để lưu bài và nhận biên nhận.';
+    card.setAttribute('role', 'status'); card.setAttribute('aria-live', 'polite');
+    const title = document.createElement('h2'); title.id = 'submit-status-title';
+    const message = document.createElement('p'); message.id = 'submit-status-message';
     const button = document.createElement('button');
     button.id = 'submit-homework'; button.type = 'button'; button.className = 'button button-primary';
     button.addEventListener('click', onSubmit);
@@ -36,5 +37,15 @@ export function updateSubmitControl({ ready, submitted, finishing, onSubmit }) {
   }
   card.hidden = !ready || submitted;
   const button = document.getElementById('submit-homework');
-  button.disabled = Boolean(finishing); button.textContent = finishing ? 'Đang lưu bài…' : 'Nộp bài →';
+  const failed = phase === 'failed';
+  button.hidden = !failed; button.disabled = !failed; button.textContent = 'Thử nộp lại';
+  card.setAttribute('aria-busy', String(['sending', 'verifying'].includes(phase)));
+  document.getElementById('submit-status-title').textContent = failed ? 'Chưa nộp xong'
+    : phase === 'verifying' ? 'Đang kiểm tra trạng thái nộp bài…'
+    : phase === 'waiting' ? 'Đang chờ kết nối để nộp lại…' : 'Đang nộp bài…';
+  document.getElementById('submit-status-message').textContent = failed
+    ? `${error ? error + ' ' : ''}Các hội thoại đã xác nhận vẫn được giữ. Hãy kiểm tra kết nối rồi thử nộp lại; nếu vẫn lỗi, hãy báo giảng viên.`
+    : phase === 'sending' || phase === 'idle'
+      ? 'Bạn đã xác nhận đủ các phần bắt buộc. Hệ thống đang lưu bài và tạo biên nhận.'
+      : 'Tiến độ vẫn được giữ. Hệ thống sẽ kiểm tra biên nhận trước khi gửi lại.';
 }
