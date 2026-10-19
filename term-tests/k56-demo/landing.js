@@ -1,12 +1,12 @@
 /*
  * Dữ liệu nhận vào: mã lớp nhập tay hoặc danh sách lớp API trả sau khi Google xác thực giảng viên.
- * Xử lý: lớp thật theo quyền backend; demo56 giả lập luôn có, không nhận demo của khóa khác.
+ * Xử lý: chỉ nhận lớp thật theo quyền backend; không tự tạo lựa chọn lớp giả.
  * Kết quả: giảng viên chọn lớp rồi mở bản computer-based, answer sheet hoặc trang kết quả.
  * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
  */
 
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-k56-v1';
-import { buildK56LandingClasses } from './landing-model.js?rev=20261002-k56-demo-picker-v1';
+import { buildK56LandingClasses } from './landing-model.js?rev=20261019-cleanup-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const input = document.getElementById('classCode');
@@ -29,6 +29,7 @@ function updateLandingUrl() {
   landingQuery.set('mode', examMode);
   const classCode = selectedClassCode();
   if (validClassCode(classCode)) landingQuery.set('class', classCode);
+  else landingQuery.delete('class');
   window.history.replaceState(window.history.state, '', `?${landingQuery.toString()}`);
 }
 function testLink(destination, classCode) {
@@ -64,13 +65,13 @@ function selectLandingButton(selectedButton) {
 function selectedClassCode() {
   const value = classSelect.hidden ? input.value : classSelect.value;
   const normalized = String(value || '').trim().toUpperCase();
-  const classCode = normalized === 'CODEXDEMO806' ? 'CODEXDEMO56' : normalized;
+  const classCode = normalized;
   if (classSelect.hidden) input.value = classCode;
   return classCode;
 }
 
 function validClassCode(value) {
-  return /^[A-Z0-9_-]{2,32}$/.test(value);
+  return /^[A-Z0-9_-]{2,32}$/.test(value) && !value.startsWith('CODEXDEMO') && value !== 'CODEXID261018';
 }
 
 function showManualEntry(message = 'Bạn vẫn có thể nhập mã lớp khi chưa đăng nhập.') {
@@ -85,6 +86,12 @@ function showManualEntry(message = 'Bạn vẫn có thể nhập mã lớp khi c
 
 function showAuthorizedClasses(payload) {
   const classes = buildK56LandingClasses(payload.classes);
+  if (!classes.length) {
+    showManualEntry('Tài khoản chưa được cấp lớp. Bạn có thể nhập mã lớp đã được mở bài.');
+    loginStatus.textContent = 'Đã đăng nhập, chưa có lớp được cấp quyền.';
+    logoutButton.hidden = false;
+    return;
+  }
   const requested = selectedClassCode();
   classSelect.replaceChildren(...classes.map(item => {
     const option = document.createElement('option');
@@ -98,7 +105,7 @@ function showAuthorizedClasses(payload) {
   classSelect.hidden = false;
   input.value = classSelect.value;
   updateLandingUrl();
-  classHelp.textContent = 'CODEXDEMO56 là lớp thử. Các lớp thật chỉ hiển thị theo quyền tài khoản; lớp mới hơn nằm trên.';
+  classHelp.textContent = 'Các lớp chỉ hiển thị theo quyền tài khoản; lớp mới hơn nằm trên.';
   const reviewerName = payload.reviewer?.displayName || payload.reviewer?.email || 'Giảng viên';
   loginBadge.textContent = `Đã đăng nhập: ${reviewerName}`;
   loginStatus.textContent = `Đã tải ${classes.length} lớp.`;
@@ -128,7 +135,7 @@ async function loadAuthorizedClasses() {
   const classes = Array.from(new Map(accepted.flatMap(item => item.payload.classes || []).map(item => [item.name, item])).values());
   showAuthorizedClasses({ reviewer: accepted[0].payload.reviewer, classes });
   if (accepted.length < results.length) {
-    loginStatus.textContent += ' Một nguồn danh sách lớp chưa tải được; lớp demo vẫn có thể sử dụng.';
+    loginStatus.textContent += ' Một nguồn danh sách lớp chưa tải được. Bạn có thể nhập mã lớp đã được mở bài.';
   }
 }
 
@@ -255,7 +262,7 @@ logoutButton.addEventListener('click', async () => {
 
 const requestedClass = new URLSearchParams(location.search).get('class');
 const initialClass = String(requestedClass || '').trim().toUpperCase();
-input.value = initialClass === 'CODEXDEMO806' ? 'CODEXDEMO56' : validClassCode(initialClass) ? initialClass : 'CODEXDEMO56';
+input.value = validClassCode(initialClass) ? initialClass : '';
 showManualEntry();
 updateLandingUrl();
 classSelect.addEventListener('change', () => {
@@ -269,7 +276,7 @@ void Promise.allSettled(Array.from(sessionClients, async ([apiBaseUrl, client]) 
   .then(async results => {
     if (authenticatedApiUrls.size) await connectSession(true);
     if (results.some(item => item.status === 'rejected')) {
-      loginStatus.textContent += ' Một nguồn đăng nhập chưa khôi phục được; lớp demo vẫn có thể sử dụng.';
+      loginStatus.textContent += ' Một nguồn đăng nhập chưa khôi phục được. Bạn có thể đăng nhập lại hoặc nhập mã lớp.';
     }
   })
   .catch(error => { loginStatus.textContent = `Không thể khôi phục phiên: ${error.message}`; })
