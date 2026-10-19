@@ -38,75 +38,49 @@ async function fixture({query='?class=CODEXDEMO56&mode=lis_first',classes=fakeCl
  return {elements,tests,modes,destinations,location,calls,history,context,names:()=>elements.classSelect.children.map(x=>x.value)};
 }
 
-test('regression: demo options HTTP500, live có806 vẫn hiện56 và mở cả3bài/2mode đúngAPI',async()=>{
- const f=await fixture();
- assert.equal(f.elements.classSelect.hidden,false);
- assert.ok(f.names().includes('CODEXDEMO56'),'Demo56 must remain selectable when its teacher/options fails');
- assert.ok(!f.names().includes('CODEXDEMO806'),'K67 demo must not appear in K56 picker');
- assert.equal(f.elements.classSelect.value,'CODEXDEMO56');
- for(const mode of ['lis_first','read_first']) {
-  f.modes.find(x=>x.dataset.mode===mode).handlers.click();
-  for(const button of f.tests){await button.handlers.click();assert.equal(f.location.href,`../${button.dataset.test}/?class=CODEXDEMO56&mode=${mode}`);}
- }
- const rosterCalls=f.calls.filter(x=>x.url.includes('/roster?'));
- assert.equal(rosterCalls.length,6);assert.ok(rosterCalls.every(x=>x.url.startsWith('https://example.invalid/demo/')));
+// Sau dọn production: không tự tạo lớp giả, vẫn giữ hành trình lớp thật và nháp/phiên.
+test('chỉ hiện lớp được cấp quyền, nguồn cũ lỗi không tự sinh demo',async()=>{
+ const f=await fixture();assert.deepEqual(f.names(),['IC2305','IC2264']);
+ assert.equal(f.elements.classSelect.value,'IC2305');
+ assert.ok(!f.names().some(x=>x.startsWith('CODEX')));
 });
-test('một options source lỗi mạng không làm mất lớp được source còn lại cấp',async()=>{
- const f=await fixture({demoError:'network'});
- assert.deepEqual(f.names().sort(),['CODEXDEMO56','IC2264','IC2305']);
- assert.match(f.elements.loginStatus.textContent,/không tải được|chưa tải được/i);
-});
-test('một nguồn restore lỗi không làm mất phiên và lớp nguồn còn lại',async()=>{
- const f=await fixture({restoreError:true});
- assert.equal(f.elements.classSelect.hidden,false);assert.ok(f.names().includes('IC2305'));assert.ok(f.names().includes('CODEXDEMO56'));
- assert.match(f.elements.loginStatus.textContent,/chưa khôi phục được/i);
-});
-test('nhập tay mã demo806 sau boot cũng chuẩn hóa56 cho mọi link',async()=>{
- const f=await fixture({authenticated:false,query:'?class=IC2264&mode=read_first'});
- for(const b of [...f.tests,...f.destinations,f.elements.teacherDashboard]) {
-  f.elements.classCode.value=' codexdemo806 ';
-  await b.handlers.click();
-  assert.match(f.location.href,/class=CODEXDEMO56(?:&|$)/);
-  assert.equal(f.elements.classCode.value,'CODEXDEMO56');
+test('link lớp giả cũ bị bỏ lựa chọn và không tạo yêu cầu mở bài',async()=>{
+ for(const code of ['CODEXDEMO56','CODEXDEMO806','CODEXID261018']){
+  const f=await fixture({query:'?class='+code,authenticated:false});
+  assert.equal(f.elements.classCode.value,'');assert.equal(new URLSearchParams(f.location.search).has('class'),false);
+  const n=f.calls.length;await f.tests[0].handlers.click();assert.equal(f.calls.length,n);
  }
 });
-test('URL806 cũ được chuẩn hóa56 và giữ thứ tự, cả khi chưa đăng nhập',async()=>{
- for(const mode of ['lis_first','read_first']) {
-  const f=await fixture({query:`?class=CODEXDEMO806&mode=${mode}`,authenticated:false});
-  assert.equal(f.elements.classCode.value,'CODEXDEMO56');
-  assert.equal(new URLSearchParams(f.location.search).get('class'),'CODEXDEMO56');
-  assert.equal(new URLSearchParams(f.location.search).get('mode'),mode);
-  await f.tests[0].handlers.click();assert.equal(f.location.href,`../term-test-1-k56-computer-based/?class=CODEXDEMO56&mode=${mode}`);
+test('lớp thật mở đúng ba bài và hai thứ tự, chỉ đọc roster',async()=>{
+ const f=await fixture({query:'?class=IC2264'});
+ for(const mode of ['lis_first','read_first'])for(const b of f.tests){
+  f.modes.find(x=>x.dataset.mode===mode).handlers.click();await b.handlers.click();
+  assert.equal(f.location.href,`../${b.dataset.test}/?class=IC2264&mode=${mode}`);
  }
+ assert.equal(f.calls.filter(x=>x.url.includes('/roster?')).length,6);
+ assert.ok(f.calls.filter(x=>x.url.includes('/roster?')).every(x=>x.url.startsWith('https://example.invalid/live/')));
+ assert.ok(f.calls.every(x=>!x.opts?.method||x.opts.method==='GET'));
 });
-test('realallowlist giữ nguyên, demo được dedup/canonical, không thêm lớp thật lạ',async()=>{
- const f=await fixture({demoError:false,classes:[{name:'IC2305'},{name:' codexdemo56 '},{name:'CODEXDEMO806'}]});
- assert.deepEqual(f.names().sort(),['CODEXDEMO56','IC2305']);assert.ok(!f.names().includes('IC2264'));
+test('tài khoản không được cấp lớp giữ ô nhập tay, không lỗi hoặc thêm lớp',async()=>{
+ const f=await fixture({classes:[],demoError:false});
+ assert.equal(f.elements.classSelect.hidden,true);assert.equal(f.elements.classCode.hidden,false);
+ assert.match(f.elements.loginStatus.textContent,/chưa có lớp/);
 });
-test('chọn lớp được lưu vàoURL, reload giữ lớp thật được cấp vàmode',async()=>{
- const f=await fixture({query:'?class=CODEXDEMO56&mode=read_first'});
- f.elements.classSelect.value='IC2305';await f.elements.classSelect.handlers.change();
- assert.equal(new URLSearchParams(f.location.search).get('class'),'IC2305');
- const resumed=await fixture({query:f.location.search});
- assert.equal(resumed.elements.classSelect.value,'IC2305');await resumed.tests[0].handlers.click();
- assert.equal(resumed.location.href,'../term-test-1-k56-computer-based/?class=IC2305&mode=read_first');
+test('một nguồn khôi phục lỗi vẫn giữ lớp thật của nguồn còn lại',async()=>{
+ const f=await fixture({restoreError:true});assert.deepEqual(f.names(),['IC2305','IC2264']);
+ assert.match(f.elements.loginStatus.textContent,/chưa khôi phục được/);
 });
-test('AnswerSheet giữmode, audio/dashboard không thêmmode hoặc đổiAPI',async()=>{
- const f=await fixture({query:'?class=CODEXDEMO56&mode=read_first'});
- for(const b of f.destinations){b.handlers.click();assert.equal(f.location.href,`../${b.dataset.destination}/?class=CODEXDEMO56${b.dataset.destination.endsWith('-audio')?'':'&mode=read_first'}`);}
- f.elements.teacherDashboard.handlers.click();assert.equal(f.location.href,'../teacher-k56/?class=CODEXDEMO56');
+test('roster lỗi giữ trang và cho thử lại, không mở bài',async()=>{
+ const f=await fixture({query:'?class=IC2264',rosterOk:false}),before=f.location.href;
+ await f.tests[0].handlers.click();assert.equal(f.location.href,before);
+ assert.match(f.elements.classHelp.textContent,/Synthetic roster missing/);assert.equal(f.tests[0].disabled,false);
 });
-test('mọi options lỗi vẫn mở demo bằng ômãlớp, không hiện các lớp thật bịtừchối',async()=>{
- const f=await fixture({liveError:true});
- assert.equal(f.elements.classSelect.hidden,true);assert.equal(f.elements.classCode.value,'CODEXDEMO56');
- await f.tests[2].handlers.click();assert.equal(f.location.href,'../mini-test-k56-computer-based/?class=CODEXDEMO56&mode=lis_first');
+test('Answer Sheet, audio và dashboard giữ lớp thật và thứ tự tương ứng',async()=>{
+ const f=await fixture({query:'?class=IC2264&mode=read_first'});
+ for(const b of f.destinations){b.handlers.click();assert.equal(f.location.href,`../${b.dataset.destination}/?class=IC2264${b.dataset.destination.endsWith('-audio')?'':'&mode=read_first'}`);}
+ f.elements.teacherDashboard.handlers.click();assert.equal(f.location.href,'../teacher-k56/?class=IC2264');
 });
-test('roster lỗi giữ trang/thứtự và báo lỗi, không mở bài hoặc tạoattempt',async()=>{
- const f=await fixture({rosterOk:false});const before=f.location.href;
- await f.tests[0].handlers.click();assert.equal(f.location.href,before);assert.match(f.elements.classHelp.textContent,/Synthetic roster missing/);assert.equal(f.tests[0].disabled,false);
- assert.ok(f.calls.every(c=>!c.opts?.method||c.opts.method==='GET'));
-});
-test('mãlớp không hợp lệ bịchặn trướcrequest, classselect rỗng không điều hướng',async()=>{
- const f=await fixture({authenticated:false});f.elements.classCode.value='<bad>';
- const before=f.calls.length;await f.tests[0].handlers.click();assert.equal(f.calls.length,before);assert.ok(f.elements.classCode.validation);
+test('lớp thật không được API cấp không được tự bổ sung vào danh sách',async()=>{
+ const f=await fixture({classes:[{name:'IC2305'},{name:'CODEXDEMO56'},{name:'CODEXID261018'}],demoError:false});
+ assert.deepEqual(f.names(),['IC2305']);
 });

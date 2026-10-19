@@ -11,7 +11,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const modules = process.env.CODEX_NODE_MODULES || resolve(process.env.USERPROFILE || '', '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const { chromium } = createRequire(pathToFileURL(resolve(modules, 'playwright/package.json')))('playwright');
 
-test('Chrome desktop/mobile: nguồn demo lỗi vẫn chọn56, loại806, mở ba bài đúng mode', async () => {
+test('Chrome desktop/mobile: không còn lớp giả, mở ba bài của lớp thật đúng mode', async () => {
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://127.0.0.1').pathname;
     const target = resolve(root, `.${path.endsWith('/') ? path + 'index.html' : path}`);
@@ -57,23 +57,22 @@ test('Chrome desktop/mobile: nguồn demo lỗi vẫn chọn56, loại806, mở 
           await page.goto(`${base}/term-tests/k56-demo/?class=CODEXDEMO806&mode=${mode}`);
           const select = page.locator('#classSelect');
           await select.waitFor({ state: 'visible' });
-          assert.equal(await select.inputValue(), 'CODEXDEMO56');
+          assert.equal(await select.inputValue(), 'IC2305');
           assert.equal(await select.locator('option[value="CODEXDEMO806"]').count(), 0);
-          assert.equal(await select.locator('option[value="CODEXDEMO56"]').count(), 1);
-          assert.equal(new URL(page.url()).searchParams.get('class'), 'CODEXDEMO56');
+          assert.equal(await select.locator('option[value="CODEXDEMO56"]').count(), 0);
+          assert.equal(new URL(page.url()).searchParams.get('class'), 'IC2305');
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-          assert.match(await page.locator('#loginStatus').innerText(), /chưa tải được/);
           await select.selectOption('IC2305');
           assert.equal(new URL(page.url()).searchParams.get('class'), 'IC2305');
-          await select.selectOption('CODEXDEMO56');
+          await select.selectOption('IC2264');
           await page.locator(`[data-slug="${slug}"]`).click();
-          await page.waitForURL(`**/${slug}-computer-based/?class=CODEXDEMO56&mode=${mode}`);
+          await page.waitForURL(`**/${slug}-computer-based/?class=IC2264&mode=${mode}`);
         }
       }
     }
     const rosters = requests.filter(item => item.path.endsWith('/roster'));
     assert.equal(rosters.length, 12);
-    assert.ok(rosters.every(item => item.path.includes('/mapping-api-demo/') && item.method === 'GET'));
+    assert.ok(rosters.every(item => item.path.includes('/mapping-api-k56/') && item.method === 'GET'));
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();
