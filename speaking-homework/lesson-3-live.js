@@ -1,6 +1,7 @@
 import { focusSpeakingStart } from './journey-focus.js';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-speaking-tab-v2';
 import { createPendingPoller } from './pending-poller.js';
+import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
 import { parseShareUrl } from './logic.mjs';
 
 const independentApi = 'https://ducizone.ddns.net/mapping-api/api/speaking-homework-independent';
@@ -40,12 +41,16 @@ async function post(path, body, timeout = 20_000) {
   if (!response.ok || data.ok !== true) {
     const error = new Error(data.message || 'Hệ thống chưa xử lý được yêu cầu. Hãy thử lại.');
     error.code = data.error || `HTTP_${response.status}`;
+    error.status = response.status;
+    const retryAfter = response.headers.get('retry-after');
+    error.retryAfterMs = retryAfter && /^\d+$/.test(retryAfter)
+      ? Number(retryAfter) * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now()) || 0;
     throw error;
   }
   return data;
   } finally {
     state.requestCount -= 1;
-    changeButton.disabled = state.requestCount > 0;
+    changeButton.disabled = state.requestCount > 0 || state.finishing;
   }
 }
 
@@ -109,8 +114,8 @@ function renderLinks() {
     const changed = link && input.value.trim() !== link.share_url;
     const localFeedback = state.localFeedback.get(part.key);
     if (localFeedback && input.value.trim() !== localFeedback.value) state.localFeedback.delete(part.key);
-    input.disabled = state.submitted;
-    $(`${part.key}-confirm`).disabled = state.submitted || state.pending.has(part.key);
+    input.disabled = state.submitted || state.finishing;
+    $(`${part.key}-confirm`).disabled = state.submitted || state.finishing || state.pending.has(part.key);
     if (state.submitted || (link?.check_status === 'accepted' && !changed)) {
         showResult(part.key, 'pass', 'Đã xác nhận hội thoại', acceptanceMessage(link, `Đã xác nhận ${link?.question_count ?? 'đủ'} câu/lượt luyện cho phần này.`));
     } else if (link?.check_status === 'pending' && !changed) {
@@ -133,7 +138,8 @@ function renderLinks() {
   $('progress-count').textContent = `Đã xác nhận ${confirmed}/4 phần`;
   $('progress-bar').setAttribute('aria-valuenow', String(confirmed));
   $('progress-fill').style.width = `${confirmed * 25}%`;
-  updateSubmitControl({ ready: allAccepted(), submitted: state.submitted, finishing: state.finishing, onSubmit: finish });
+  updateSubmitControl({ ready: allAccepted(), submitted: state.submitted, phase: state.submitPhase, error: state.submitError, onSubmit: () => autoSubmit.retry() });
+  $('completion-card').hidden = !state.submitted;
   if (state.submitted) {
     $('completion-card').hidden = false;
     $('completion-message').textContent = documentId ? 'Biên nhận đã lưu. Google Docs có thể cần thêm ít phút để hiện dòng xác nhận.' : 'Biên nhận đã lưu trên web. Bạn có thể đóng trang và quay lại để xem bài.';
@@ -143,12 +149,14 @@ function renderLinks() {
 async function refresh() {
   if (!state.accessToken) return;
   const token = state.accessToken;
+  const revision = state.refreshRevision = (state.refreshRevision || 0) + 1;
   const data = await post('/open', identity());
-  if (token !== state.accessToken) return;
+  if (token !== state.accessToken || revision !== state.refreshRevision) return;
   state.links = new Map((data.links || []).map(link => [link.part, link]));
-  state.submitted = data.status === 'submitted' && Boolean(data.receipt?.id);
+  state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
   renderLinks();
   poller.settled();
+  autoSubmit.consider();
 }
 function allAccepted() {
   return parts.every(part => {
@@ -157,23 +165,30 @@ function allAccepted() {
   });
 }
 
-async function finish() {
-  if (state.submitted || state.finishing || !allAccepted()) return;
-  state.finishing = true;
-  const token = state.accessToken;
-  renderLinks();
-  try {
-    const response = await post('/finish', { ...identity(), manualSubmit: true }, 30_000);
-    if (token !== state.accessToken) return;
-    if (!response.receipt?.id) throw new Error('Máy chủ chưa trả biên nhận.');
+// Nhận phiên và các link đã công nhận; tự nộp một lượt, lỗi mạng đọc lại trước retry.
+const autoSubmit = createAutoSubmit({
+  key: () => state.accessToken && JSON.stringify([state.accessToken, ...parts.map(part => $(`${part.key}-link`).value.trim())]),
+  ready: allAccepted,
+  submitted: () => state.submitted,
+  busy: () => state.pending.size > 0 || state.requestCount > 0,
+  send: () => post('/finish', identity(), 30_000),
+  readBack: refresh,
+  onSubmitted() {
     state.submitted = true;
+    state.finishing = false;
+    $('change-student').disabled = state.requestCount > 0;
     renderLinks();
     if(!documentId) $('completion-message').textContent = 'Biên nhận đã lưu trên web. Bạn có thể đóng trang và quay lại để xem bài.';
-    $('completion-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } catch (error) {
-    $('draft-status').textContent = `Chưa nộp xong: ${error.message} Tiến trình đã xác nhận vẫn được giữ.`;
-  } finally { if (token === state.accessToken) { state.finishing = false; renderLinks(); } }
-}
+    $('completion-card').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
+  },
+  onState(phase, error) {
+    state.submitPhase = phase;
+    state.submitError = phase === 'failed' ? error?.message || '' : '';
+    state.finishing = ['sending', 'verifying'].includes(phase);
+    $('change-student').disabled = state.finishing || state.requestCount > 0;
+    renderLinks();
+  },
+});
 
 const container = $('parts');
 for (const [index, part] of parts.entries()) {
@@ -195,7 +210,7 @@ guide.addEventListener('click', event => {
 });
 
 for (const part of parts) {
-  $(`${part.key}-link`).addEventListener('input', () => { saveDraft(); renderLinks(); });
+  $(`${part.key}-link`).addEventListener('input', () => { saveDraft(); renderLinks(); autoSubmit.consider(); });
   $(`${part.key}-confirm`).addEventListener('click', async () => {
     if (!state.accessToken || state.pending.has(part.key) || state.submitted) return;
     const parsed = parseShareUrl($(`${part.key}-link`).value);
@@ -216,7 +231,7 @@ for (const part of parts) {
       saveDraft();
       await refresh();
     } catch (error) { showLocalFeedback(part.key, 'Chưa nhận link', error.message); }
-    finally { poller.update(); state.pending.delete(part.key); $(`${part.key}-confirm`).disabled = false; }
+    finally { poller.update(); state.pending.delete(part.key); renderLinks(); autoSubmit.consider(); }
   });
 }
 // Chỉ tự tải khi máy chủ đang kiểm/phân tích; lỗi mạng tăng thời gian chờ.
@@ -255,6 +270,7 @@ const identityController = createSpeakingIdentity({
   onReset() {
     if (saveDraft() === false) return false;
     poller.stop();
+    autoSubmit.reset();
     state.studentRef = ''; state.accessToken = ''; state.links.clear(); state.submitted = false;
     state.localFeedback.clear();
     draftFields.clear();
@@ -271,4 +287,4 @@ window.addEventListener('beforeunload', event => {
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
 identityController.start();
-import { acceptanceMessage, checkReason, updateSubmitControl } from './check-feedback.js?v=20261018-speaking-fairness-v1';
+import { acceptanceMessage, checkReason, updateSubmitControl } from './check-feedback.js?v=20261019-auto-submit-v1';

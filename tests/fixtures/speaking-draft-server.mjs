@@ -14,6 +14,7 @@ export const lessons = [
   { number: 6, file: 'lesson-6.html', code: '67-speaking-ly_do_hanh_vi', parts: ['benefit_harm', 'reason_action', 'freestyle'] },
   { number: 7, file: 'lesson-7.html', code: '67-speaking-cach_lam_mot_viec', parts: ['how_to_do'] },
   { number: 8, file: 'lesson-8.html', code: '67-speaking-so_sanh', parts: ['comparison_direct', 'comparison_extended', 'freestyle'] },
+  { number: 9, file: 'lesson-9.html', code: '67-speaking-freestyle_on_tap', parts: ['freestyle'] },
 ];
 export const share = index => `https://chatgpt.com/share/00000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
 

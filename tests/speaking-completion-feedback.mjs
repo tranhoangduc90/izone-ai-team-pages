@@ -20,6 +20,9 @@ try {
     const first=record.links.get(part);
     first.question_count=0;first.evidence={acceptanceBasis:'chatbot_completion',countVerified:false,recoveryId:'fixture'};
     if(lesson.number>=4) record.practice.get(1).evidence=first.evidence;
+    const last=lesson.number>=4?'practice-2':lesson.parts.at(-1);
+    if(lesson.number>=4)record.practice.get(2).status='pending';
+    else record.links.get(last).check_status='pending';
     const context=await browser.newContext({viewport:{width,height:1000}});
     const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
     try {
@@ -31,17 +34,16 @@ try {
       const result=page.locator(`#${part}-result`);
       assert.match(await result.innerText(),/Chatbot đã xác nhận|Chatbot đã xác nhận/i);
       assert.doesNotMatch(await result.innerText(),/0.*câu|0\/|chưa đủ/iu);
-      assert.equal(fixture.requests.some(r=>r.path==='/finish'),false,'Không tự nộp hộ');
+      assert.equal(fixture.requests.some(r=>r.path==='/finish'),false,'Chưa đủ phần thì không tự nộp');
       if(lesson.number===8) await page.locator(`#${part}-card`).screenshot({path:join(output,`accepted-card-${width}.png`)});
       if(lesson.number>=4) assert.match(await page.locator('#practice-1-result').innerText(),/không cần làm thêm/);
       await page.locator(`#${part}-link`).fill('https://chatgpt.com/share/00000000-0000-4000-8000-000000000099');
       assert.equal(await result.isVisible(),false,'Đổi link không giữ kết quả nhận của link cũ');
       await page.locator(`#${part}-link`).fill(first.share_url);
-      assert.equal(await page.locator('#ready-submit-card').isVisible(),true);
-      await page.locator('#submit-homework').click();
+      await page.locator(`#${last}-confirm`).click();
       await page.locator('#completion-card').waitFor({state:'visible'});
-      assert.equal(fixture.requests.filter(r=>r.path==='/finish').length,1,'Chỉ nộp khi học viên bấm nút');
-      assert.equal(fixture.requests.find(r=>r.path==='/finish').body.manualSubmit,true,'Gửi ý định nộp rõ ràng cho API');
+      assert.equal(fixture.requests.filter(r=>r.path==='/finish').length,1,'Tự nộp sau xác nhận phần cuối');
+      assert.equal(fixture.requests.find(r=>r.path==='/finish').body.manualSubmit,undefined,'Không giả thao tác nộp thủ công');
       assert.deepEqual(errors,[]);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
       if(lesson.number===7) await page.screenshot({path:join(output,`completion-${width}.png`),fullPage:true});

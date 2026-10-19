@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { join, resolve } from 'node:path';
 import { startFixture, learners, lessons, share } from './fixtures/speaking-draft-server.mjs';
@@ -11,8 +11,11 @@ const root = resolve(process.env.SPEAKING_PAGES_ROOT || fileURLToPath(new URL('.
 const output = process.env.SPEAKING_EVIDENCE_DIR || join(root, 'output/playwright/speaking-draft-clear');
 await mkdir(output, { recursive: true });
 const results = [];
+const failedNames = process.env.SPEAKING_FAILED_CASES_FILE
+  ? new Set(JSON.parse(await readFile(process.env.SPEAKING_FAILED_CASES_FILE, 'utf8')).cases.filter(row => row.outcome === 'failed').map(row => row.name)) : null;
 const browser = await chromium.launch({ executablePath: process.env.SPEAKING_BROWSER_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 async function run(name, lesson, options, test) {
+  if (failedNames && !failedNames.has(name)) return;
   const fixture = await startFixture(root, options);
   const context = await browser.newContext({ viewport: { width: lesson.number % 2 ? 390 : 1440, height: 900 } });
   const page = await context.newPage();
@@ -134,10 +137,14 @@ try {
         assert.equal(await page.locator('#practice-1-link').inputValue(), '');
         assert.equal(await page.locator('#practice-1-exercise').inputValue(), '');
       }
-      await page.locator('#change-student').click(); await open(learners[1]);
+      await page.locator('#change-student').click();
+      await page.locator('#login-screen').waitFor({ state: 'visible' });
+      await open(learners[1]);
       assert.equal(await first.inputValue(), '', 'Không lấy nháp hoặc link của người trước');
       await first.fill(share(40));
-      await page.locator('#change-student').click(); await open();
+      await page.locator('#change-student').click();
+      await page.locator('#login-screen').waitFor({ state: 'visible' });
+      await open();
       assert.equal(await first.inputValue(), '', 'Quay lại đúng nháp rỗng của hồ sơ đầu');
       await first.fill(share(30));
       await page.locator(`#${lesson.parts[0]}-confirm`).click();
