@@ -6,12 +6,13 @@
     <meta name="description" content="Phiếu điểm danh và ghi nhận tiến bộ trong buổi học">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'">
     <title>Phiếu điểm danh</title>
+    <link rel="stylesheet" href="../shared/teacher-entry.css?v=20261019-v1">
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css?rev=20261015-compact-exercises-v1">
     <link rel="stylesheet" href="journey.css?rev=20261001-journey-loading-v1">
     <link rel="stylesheet" href="reference-components.css?rev=20261003">
   </head>
-  <body>
+  <body data-teacher-product="progress-log" data-teacher-path="./teacher.html">
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">PL</span>
@@ -133,6 +134,7 @@
     <dialog id="journeySummaryDialog" class="draft-dialog referenceRegion"><form method="dialog"><button class="button text-button" value="close">Đóng tổng kết</button></form><h2>Kết quả từ các phiếu đã có</h2><p class="muted">Chỉ tính câu có kết quả chấm đúng/sai; câu mở và điểm tự khai không tính.</p><div id="journeySummaryContent" class="basicStudentScores"></div></dialog>
     <script src="config.js?rev=20260905-memory-v3"></script>
     <link rel="stylesheet" href="session-comments.css?rev=20261007">
+    <script type="module" src="../shared/teacher-entry.js?v=20261019-v1"></script>
     <script type="module" src="app.js?v=20261018-identity-v1"></script>
   </body>
 </html>

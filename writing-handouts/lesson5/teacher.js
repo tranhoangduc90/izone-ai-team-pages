@@ -1,5 +1,6 @@
 import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261017-l9-1';
 import {workflowFor,isWhole} from '../shared/workflow.mjs';
+import {classQuery,resolveClassRef} from '../js/class-selection.js';
 const whole=isWhole(globalThis.handout67Lesson||{});
 const {order:ORDER,fields:FIELDS}=workflowFor(globalThis.handout67Lesson||{});
 import {renderActivityList,renderActivityDetail} from './activity-ui.mjs?v=20261017-l9-1';
@@ -122,8 +123,13 @@ async function enter(){
  const current=++epoch;
  const result=await request('/classes?activity='+encodeURIComponent(lessonActivity));if(current!==epoch)return;
  $('class-select').innerHTML=result.classes.map(c=>`<option value="${escape(c.classRef)}">${escape(c.className)}</option>`).join('');
- activeClass=$('class-select').value;
  if(!result.classes.length)throw Object.assign(new Error('TEACHER_FORBIDDEN'),{status:403});
+ // Mã từ link chỉ chọn trong danh sách máy chủ đã cấp quyền, không tự mở thêm lớp.
+ const requested=classQuery(location.search)||document.body.dataset.classRef||'';
+ const matched=resolveClassRef(result.classes,requested);
+ if(requested&&!matched)throw Object.assign(new Error('TEACHER_FORBIDDEN'),{status:403});
+ if(matched)$('class-select').value=matched;
+ activeClass=$('class-select').value;
  $('login').hidden=true;$('dashboard').hidden=false;await refresh();if(current!==epoch)return;schedule();
 }
 async function login(response){if(authBusy)return;authBusy=true;try{const result=await request('/session','POST',{credential:response.credential});actorEmail=result.reviewer.email;await enter();$('login-error').hidden=true;}catch(e){report(e,'login-error');}finally{authBusy=false;}}

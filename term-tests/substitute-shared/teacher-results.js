@@ -1,5 +1,6 @@
 // Chỉ dùng trong Substitute. Token Google ở RAM; không dùng session/DB của Term Test.
 import {appendWritingFeedback as appendFeedback} from './feedback-renderer.js?rev=20261009-results-v2';
+import {createProgressPanel} from './teacher-progress-panel.js?rev=20261019-v1';
 const API='https://ducizone.ddns.net/substitute-teacher-api';
 const TITLES={'substitute-test-1-k56':'Substitute Test 1 · Khóa 56','substitute-test-2-k56':'Substitute Test 2 · Khóa 56','substitute-test-1-k67':'Substitute Test 1 · Khóa 67','substitute-test-2-k67':'Substitute Test 2 · Khóa 67'};
 const $=id=>document.getElementById(id);
@@ -14,6 +15,7 @@ const time=value=>value&&!Number.isNaN(Date.parse(value))?new Date(value).toLoca
 function node(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
 function message(text,type=''){const el=$('page-message');el.hidden=!text;el.textContent=text;el.className='notice '+type;}
 function clearResults(text='Đăng nhập để xem kết quả của những lượt nộp thật.'){
+ progress.clear();
  state.rows=[];$('student-detail').hidden=true;$('attempt-content').replaceChildren();$('student-rows').replaceChildren();
  const row=node('tr'),cell=node('td',text,'empty-cell');cell.colSpan=7;row.append(cell);$('student-rows').append(row);
  $('updated-at').textContent='';$('previous-page').disabled=true;$('next-page').disabled=true;$('page-range').textContent='';
@@ -125,7 +127,11 @@ async function signIn(response){
   const data=await request('/teacher/scopes');if(generation!==state.generation)return;
   state.scopes=(data.scopes||[]).filter(scope=>TITLES[scope.testSlug]);if(!state.scopes.length)throw new Error('Tài khoản này chưa được cấp quyền xem Substitute.');
   const tests=[...new Set(state.scopes.map(scope=>scope.testSlug))];$('test-select').replaceChildren(...tests.map(slug=>new Option(TITLES[slug],slug)));
-  $('test-select').value=tests.includes(initial.get('test')||pageTest)?initial.get('test')||pageTest:tests[0];renderClasses((initial.get('class')||'ALL').toUpperCase());
+  const requestedTest=initial.get('test')||pageTest,requestedClass=(initial.get('class')||'ALL').toUpperCase();
+  if(requestedTest&&!tests.includes(requestedTest))throw new Error('Bạn chưa có quyền xem bài trong link này. Hãy mở lại từ bài được giao.');
+  $('test-select').value=requestedTest||tests[0];
+  if(requestedClass!=='ALL'&&!classesForTest().includes(requestedClass))throw new Error('Bạn chưa có quyền xem lớp trong link này. Hãy mở lại từ bài được giao.');
+  renderClasses(requestedClass);
   $('filter-section').hidden=false;$('roster-section').hidden=false;$('google-signin').hidden=true;$('login-status').textContent='Đã đăng nhập · chỉ hiển thị các bài/lớp được cấp quyền.';state.offset=0;await loadResults();
   // loadResults tạo generation mới. Deep link tiếp tục theo generation đó,
   // nhưng không được hiện lại báo cáo nếu đã logout hoặc đổi tài khoản.
@@ -142,6 +148,11 @@ async function signIn(response){
   }
  }catch(error){if(generation===state.generation){logout();if(error.status!==401)$('login-status').textContent='Chưa mở được quyền xem kết quả.';message(error.message,'error');}}
 }
+const progress=createProgressPanel({host:$('roster-section'),request,
+ isCurrent:scope=>!!state.token&&scope.generation===state.generation&&scope.test===selectedTest()&&scope.class===$('class-filter').value,
+ onAuthError:error=>{if(error.status===401)logout();else{clearResults();message('Quyền xem lớp đã thay đổi. Hãy kiểm tra lại lớp được cấp.','error');}}});
+const progressButton=node('button','Tiến trình đã lưu','button button-secondary');progressButton.type='button';
+$('load-results').after(progressButton);progressButton.addEventListener('click',()=>progress.show({test:selectedTest(),class:$('class-filter').value,generation:state.generation}));
 async function initialize(){
  logout();
  try{

@@ -28,6 +28,7 @@ const expectedAssignmentCode = lessonNumber === 9 ? lesson9Code
   : lessonNumber === 7 ? lesson7Code
   : lessonNumber === 6 ? lesson6Code
   : lessonNumber === 5 ? lesson5Code : '67-speaking-diem_giua';
+document.body.dataset.teacherCode = expectedAssignmentCode;
 const assignmentCode = query.get('assignmentCode') || expectedAssignmentCode;
 const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net https://ducizone.ddns.net:18869 https://accounts.google.com; script-src 'self' https://accounts.google.com; frame-src https://accounts.google.com; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Giảng viên · Làm quen K67</title><link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../../shared/teacher-progress.css?v=20261019-v1">
+  <script src="../k67-shared/config.js"></script><script type="module" src="teacher.js?v=20261019-v1"></script>
+</head>
+<body>
+  <header class="teacher-topbar"><a class="teacher-brand" href="./index.html">IZONE</a><span>Không gian giảng viên</span><nav><a id="student-return" href="./index.html">Về trang học viên</a><button id="logout" class="text" type="button">Đăng xuất</button></nav></header>
+  <main class="teacher-workspace">
+    <p id="notice" class="teacher-notice" role="status" aria-live="polite">Đang kiểm quyền lớp…</p>
+    <section id="auth" class="teacher-auth" hidden><h1>Theo dõi Làm quen K67</h1><p>Dùng tài khoản Google được cấp quyền lớp.</p><div id="google-signin"></div></section>
+    <section id="workspace" hidden>
+      <div class="teacher-heading"><div><p class="teacher-kicker">Làm quen K67</p><h1>Thiết bị và bài luyện đã lưu</h1><p class="muted">Chỉ đọc dữ liệu đã có; không chạy lại kiểm âm thanh hoặc mở bài thi.</p></div><button id="refresh" class="secondary" type="button">Cập nhật</button></div>
+      <div class="teacher-filters"><div><label for="class-select">Lớp được cấp quyền</label><select id="class-select"></select></div><div><label for="search">Tìm học viên</label><input id="search" type="search" placeholder="Nhập tên học viên"></div></div>
+      <section id="list-panel"><div class="teacher-list"><table><thead><tr><th>Học viên</th><th>Lượt đã lưu</th><th>Kiểm âm thanh</th><th>Bài luyện</th><th></th></tr></thead><tbody id="rows"></tbody></table></div><p id="list-count" class="small muted"></p></section>
+      <section id="detail" class="teacher-detail" hidden></section>
+    </section>
+    <button id="retry" class="text" type="button">Tải lại và kiểm quyền</button>
+  </main>
+  <footer class="teacher-footer">Kết quả thiết bị do trình duyệt và học viên báo lại. Phần chưa gửi từ thiết bị chưa xuất hiện ở đây.</footer>
+</body>
+</html>

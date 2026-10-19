@@ -13,6 +13,7 @@ import {
   writingTaskStateLabel
 } from './model.js?rev=20260904-k56-demo-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-k56-v1';
+import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261019-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const sessionClient = createTeacherSessionClient({
@@ -841,16 +842,24 @@ function formatCompletedAt(value) {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('vi-VN');
 }
 
+function savedProgressButton(student){
+  const button=createNode('button','button button-secondary','Xem tiến trình đã lưu');button.type='button';
+  button.addEventListener('click',()=>{
+    const generation=loginGeneration,classId=state.selectedClassId,testSlug=state.selectedTestSlug;
+    openTeacherSavedProgress({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,request:apiRequest,
+      isCurrent:()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref});
+  });return button;
+}
+
 function renderStudentResult(student) {
   if (!student || student.status !== 'completed' || !student.result) {
     const empty = createNode('section', 'panel teacher-empty');
     empty.append(
       createNode('p', 'eyebrow', 'Kết quả cá nhân'),
       createNode('h2', '', student?.name || 'Học viên'),
-      createNode('p', '', student?.status === 'incomplete'
-        ? 'Học viên đã gửi Listening nhưng chưa hoàn tất Reading.'
-        : 'Học viên chưa nộp bài test này.')
+      createNode('p', '', 'Chưa có kết quả tổng hợp. Bạn có thể xem phần học viên đã lưu lên hệ thống.')
     );
+    if(student)empty.append(savedProgressButton(student));
     elements.studentView.replaceChildren(empty);
     return;
   }
@@ -873,7 +882,7 @@ function renderStudentResult(student) {
   reviewButton.dataset.fullAttemptStudent = student.ref;
   reviewButton.hidden = configuredWritingTasks().length > 0 && writing.status === 'not_submitted';
   reviewButton.addEventListener('click', () => openTeacherAttemptReview(student, reviewButton));
-  heading.append(headingCopy, reviewButton);
+  heading.append(headingCopy, savedProgressButton(student), reviewButton);
 
   const summaryGrid = createNode('div', 'summary-grid');
   const writingSummaryCards = configuredWritingTasks().map(taskNumber => isMini && !isMiniLegacy
@@ -988,6 +997,7 @@ async function connectAfterGoogleLogin() {
 }
 
 function resetLoginAfterError() {
+  clearTeacherSavedProgress();
   loginGeneration += 1;
   state.authenticated = false;
   state.connected = false;
@@ -1084,6 +1094,7 @@ function setupGoogleSignIn() {
 }
 
 elements.classSelect.addEventListener('change', async () => {
+  clearTeacherSavedProgress();
   state.selectedClassId = elements.classSelect.value;
   state.selectedTab = 'overview';
   try {
@@ -1095,6 +1106,7 @@ elements.classSelect.addEventListener('change', async () => {
 });
 
 elements.testSelect.addEventListener('change', async () => {
+  clearTeacherSavedProgress();
   state.selectedTestSlug = elements.testSelect.value;
   state.selectedTab = 'overview';
   try {

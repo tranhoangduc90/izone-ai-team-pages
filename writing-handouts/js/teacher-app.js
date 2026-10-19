@@ -516,14 +516,20 @@ async function refresh() {
     state.pending = pendingResult.data.students || [];
     const classes = populateClasses(state.students);
     if (!state.classQueryResolved) {
-      state.classQueryResolved = true;
       const classRef = resolveClassRef(classes, state.requestedClass);
       if (state.requestedClass && !classRef) {
-        state.classQueryError = `Không tìm thấy lớp “${state.requestedClass}”. Dashboard đang hiển thị tất cả lớp.`;
+        // Link giao bài chọn một lớp cụ thể: không đổi ngầm sang toàn bộ lớp khác.
+        state.students = [];state.pending = [];
+        $("teacher-students").replaceChildren();$("teacher-summary").replaceChildren();
+        $("teacher-dashboard").hidden = true;$("teacher-login").hidden = false;
+        showLoginError(`Không tìm thấy lớp “${state.requestedClass}” trong phạm vi được xem. Hãy kiểm tra lớp trong link hoặc đổi tài khoản Google.`);
+        return;
       } else if (classRef && classRef !== selectedClassRef) {
+        state.classQueryResolved = true;
         $("teacher-class").value = classRef;
         return refresh();
       }
+      state.classQueryResolved = true;
     }
     renderSummary(state.students);
     renderStudents(state.students);
@@ -560,6 +566,7 @@ async function handleCredential(response) {
   if (!response?.credential) return showLoginError("Không nhận được thông tin đăng nhập.");
   state.loginGeneration += 1;
   state.authenticated = false;
+  state.classQueryResolved = false;state.classQueryError = "";
   $("teacher-login").hidden = false;
   $("teacher-dashboard").hidden = true;
   $("teacher-updated").textContent = "Đang xác minh quyền…";
@@ -631,6 +638,7 @@ async function init() {
 function clearTeacherLogin() {
   state.loginGeneration += 1;
   state.authenticated = false;
+  state.classQueryResolved = false;state.classQueryError = "";
   state.students = [];
   state.pending = [];
   state.canManage = false;

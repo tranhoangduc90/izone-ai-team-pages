@@ -13,6 +13,7 @@ const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
 let classCode = '';
 const assignmentCode = query.get('assignmentCode') || '67-speaking-lam_ro';
+document.body.dataset.teacherCode = assignmentCode;
 const classHint = query.get('class') || '';
 const $ = (id) => document.getElementById(id);
 const parts = [

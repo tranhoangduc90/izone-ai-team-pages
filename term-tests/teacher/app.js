@@ -17,6 +17,7 @@ import {
 } from './model.js?rev=20260922-admin-access-v1';
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-v1';
+import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261019-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const sessionClient = createTeacherSessionClient({
@@ -715,6 +716,15 @@ function formatCompletedAt(value) {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('vi-VN');
 }
 
+function savedProgressButton(student){
+  const button=createNode('button','button button-secondary','Xem tiến trình đã lưu');button.type='button';
+  button.addEventListener('click',()=>{
+    const generation=loginGeneration,classId=state.selectedClassId,testSlug=state.selectedTestSlug;
+    openTeacherSavedProgress({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,request:apiRequest,
+      isCurrent:()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref});
+  });return button;
+}
+
 function renderStudentResult(student) {
   if (!student || student.status !== 'completed' || !student.result) {
     window.K67_ANSWER_EXPLANATIONS?.reset();
@@ -722,10 +732,9 @@ function renderStudentResult(student) {
     empty.append(
       createNode('p', 'eyebrow', 'Kết quả cá nhân'),
       createNode('h2', '', student?.name || 'Học viên'),
-      createNode('p', '', student?.status === 'incomplete'
-        ? 'Học viên đã gửi Listening nhưng chưa hoàn tất Reading.'
-        : 'Học viên chưa nộp bài test này.')
+      createNode('p', '', 'Chưa có kết quả tổng hợp. Bạn có thể xem phần học viên đã lưu lên hệ thống.')
     );
+    if(student)empty.append(savedProgressButton(student));
     elements.studentView.replaceChildren(empty);
     return;
   }
@@ -750,7 +759,7 @@ function renderStudentResult(student) {
   reviewButton.dataset.fullAttemptStudent = student.ref;
   reviewButton.hidden = configuredWritingTasks().length > 0 && writing.status === 'not_submitted';
   reviewButton.addEventListener('click', () => openTeacherAttemptReview(student, reviewButton));
-  heading.append(headingCopy, reviewButton);
+  heading.append(headingCopy, savedProgressButton(student), reviewButton);
 
   const summaryGrid = createNode('div', 'summary-grid');
   const writingSummaryCards = configuredWritingTasks().map(taskNumber => addWritingResultSummaryButton(
@@ -881,6 +890,7 @@ async function connectAuthenticatedSession() {
 }
 
 function resetLoginAfterError() {
+  clearTeacherSavedProgress();
   loginGeneration += 1;
   window.K67_ANSWER_EXPLANATIONS?.reset();
   state.authenticated = false;
@@ -972,6 +982,7 @@ function setupGoogleSignIn() {
 }
 
 elements.classSelect.addEventListener('change', async () => {
+  clearTeacherSavedProgress();
   window.K67_ANSWER_EXPLANATIONS?.reset();
   state.selectedClassId = elements.classSelect.value;
   state.selectedTab = 'overview';
@@ -985,6 +996,7 @@ elements.classSelect.addEventListener('change', async () => {
 });
 
 elements.testSelect.addEventListener('change', async () => {
+  clearTeacherSavedProgress();
   window.K67_ANSWER_EXPLANATIONS?.reset();
   state.selectedTestSlug = elements.testSelect.value;
   state.selectedTab = 'overview';

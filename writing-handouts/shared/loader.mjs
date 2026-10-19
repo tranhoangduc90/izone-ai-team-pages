@@ -3,6 +3,7 @@
 // Chỉ máy xem thử tại loopback dùng API cùng origin; trang phát hành giữ API HTTPS.
 const localPreview=['127.0.0.1','localhost'].includes(location.hostname)&&location.port==='3199';
 import {lessonEntryClass} from './test-class-entry.mjs?v=20261018-test-class-v1';
+import {installTeacherEntry} from '../../shared/teacher-entry.js?v=20261019-v1';
 const apiBase=localPreview?location.origin+'/api/handout67/v1':'https://ducizone.ddns.net/api/handout67/v1';
 if(localPreview)globalThis.handout67ApiBase=apiBase;
 async function boot(){
@@ -17,6 +18,7 @@ async function boot(){
   const entryClass=lessonEntryClass(lesson,location.search);
   if(entryClass)document.body.dataset.classRef=entryClass;
   document.body.innerHTML=await template.text();
+  if(view==='student')installTeacherEntry({product:'handout67',teacherPath:'./teacher.html',context:{class:entryClass},hosts:[document.querySelector('.topbar')]});
   if(lesson.workflowMode==='whole-chain-v1'&&view==='student'){
    document.querySelector('.login-description').textContent='Giải thích vì sao người ta theo thời trang. Nhập cả A–X–B và Check chung từng ý.';
    document.querySelector('.journey h2').textContent='Thân bài 1 · WHY';document.querySelector('.lesson-tag').textContent='Thân bài 1';
@@ -31,7 +33,7 @@ async function boot(){
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':'Lesson '+lesson.number+' · Writing · IZONE';
-  await import(view==='teacher'?'../lesson5/teacher.js?v=20261017-l9-1':'../lesson5-thu/app.js?v=20261017-l9-1');
+  await import(view==='teacher'?'../lesson5/teacher.js?v=20261019-entry-v1':'../lesson5-thu/app.js?v=20261017-l9-1');
  }catch{
   document.body.textContent='Chưa mở được bài học. Hãy tải lại trang khi kết nối ổn định; bài đã lưu vẫn được giữ.';
  }

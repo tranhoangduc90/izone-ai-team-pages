@@ -9,6 +9,7 @@ let workUnitId = '';
 let independent = true;
 const identityBase = 'https://ducizone.ddns.net/mapping-api';
 const assignmentCode = '67-speaking-paraphrase';
+document.body.dataset.teacherCode = assignmentCode;
 const query = new URLSearchParams(location.search);
 const originalDocumentId = query.get('documentId') || '';
 const classHint = query.get('class') || '';
