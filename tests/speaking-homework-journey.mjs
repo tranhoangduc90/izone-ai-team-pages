@@ -35,6 +35,7 @@ for(const lesson of lessons.filter(l=>!process.env.SPEAKING_LESSON_FILTER||proce
   const context=await browser.newContext({viewport:{width,height:1000}}),page=await context.newPage();
   const errors=[],requests=[];page.on('console',m=>{if(m.type()==='error')console.error(m.text());});let links=[],practice=[],submitted=false;
   page.on('pageerror',e=>errors.push(e.message));
+  await page.route('https://ducizone.ddns.net/mapping-api/api/student-identity/resolve', route => route.fulfill({json:{ok:true,status:'unique',identity:{authority:'erp-contact',id:'12345'},aliases:[{classId:'111',classCode:'LOPMAU',studentRef:ref,studentName:'Học viên mẫu'}]}}));
   await page.route('https://ducizone.ddns.net/mapping-api/api/speaking-homework*/**',async route=>{
     const url=new URL(route.request().url()),path=url.pathname.split(/speaking-homework(?:-independent)?/)[1];
     const body=route.request().postDataJSON()||{};requests.push({path,body,url:url.pathname});
@@ -69,7 +70,7 @@ for(const lesson of lessons.filter(l=>!process.env.SPEAKING_LESSON_FILTER||proce
     await input.fill(share(i+1));await page.locator('#'+part+'-confirm').click();await card.getByText('Đã xác nhận hội thoại',{exact:true}).waitFor();
     if(i===0&&lesson.parts.length+lesson.practice>1){
       await input.fill('');assert.equal(await input.inputValue(),'');assert.equal(await page.locator('#completion-card').isVisible(),false);
-      await page.reload();await page.locator('#open-homework').click();await page.waitForFunction(()=>document.activeElement?.matches('#lesson-hero h1'));assert.equal(await input.inputValue(),'');
+      await page.reload();await page.waitForFunction(()=>document.activeElement?.matches('#lesson-hero h1'));assert.equal(await input.inputValue(),'');
       await input.fill(share(i+1));await page.locator('#'+part+'-confirm').click();await card.getByText('Đã xác nhận hội thoại',{exact:true}).waitFor();
     }
   }
@@ -82,7 +83,7 @@ for(const lesson of lessons.filter(l=>!process.env.SPEAKING_LESSON_FILTER||proce
   await page.locator('#completion-card').waitFor({state:'visible'});assert.equal(requests.filter(r=>r.path==='/finish').length,1);
   assert.equal(await page.locator('#return-homework').isVisible(),false);assert.doesNotMatch(await page.locator('#completion-message').innerText(),/quay lại file Homework/);
   if(width!==768)await page.screenshot({path:`${out}/lesson-${lesson.n}-${width}-submitted.png`,fullPage:true});
-  await page.reload();await page.locator('#open-homework').click();await page.waitForFunction(()=>document.activeElement?.matches('#completion-card h2'));
+  await page.reload();await page.waitForFunction(()=>document.activeElement?.matches('#completion-card h2'));
   assert.equal(requests.filter(r=>r.path==='/finish').length,1);assert.deepEqual(errors,[]);
   results.push({lesson:lesson.n,width,outcome:'passed'});await context.close();
 }

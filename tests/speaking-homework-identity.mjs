@@ -4,7 +4,9 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-// Nhận trang thật và API giả hai lớp; kiểm đường chọn tên, CTA, bộ nhớ và phiên bất biến.
+// Giữ kiểm tương thích bộ chọn UUID cũ: fixture chọn sharedIdentityEnabled=false.
+// Cấu hình thật bật nhận diện ERP được kiểm riêng ở speaking-shared-identity-browser.mjs.
+// API giả hai lớp kiểm đường chọn tên, CTA, bộ nhớ cũ và phiên bất biến.
 // Kỳ vọng dựa vào request/đích Docs và trạng thái học viên nhìn thấy; lỗi in tên ca kiểm.
 const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -16,7 +18,9 @@ const server = createServer(async (req, res) => {
     const path = resolve(root, '.' + (pathname.endsWith('/') ? pathname + 'index.html' : pathname));
     if (!path.startsWith(root)) throw Error('Outside root');
     res.writeHead(200, { 'content-type': ({ '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png' })[extname(path)] || 'application/octet-stream' });
-    res.end(await readFile(path));
+    const content = await readFile(path);
+    res.end(/lesson-[234]-live\.js$/.test(path)
+      ? content.toString('utf8').replace('sharedIdentityEnabled: true', 'sharedIdentityEnabled: false') : content);
   } catch { res.writeHead(404); res.end(); }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
