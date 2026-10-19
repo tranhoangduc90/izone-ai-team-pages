@@ -5,8 +5,10 @@ import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
-const root = path.resolve(fileURLToPath(new URL('../', import.meta.url))), out = process.env.IDENTITY_EVIDENCE_DIR;
+import {createRequire} from 'node:module';
+const { chromium } = process.env.PLAYWRIGHT_MODULE ? await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href)
+  : createRequire(process.env.PLAYWRIGHT_PACKAGE || 'C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
+const root = path.resolve(fileURLToPath(new URL('../', import.meta.url))), out = process.env.IDENTITY_EVIDENCE_DIR || path.join(root,'output/playwright/progress-log-identity');
 assert.ok(out); await mkdir(out, { recursive: true });
 const a = '11111111-1111-4111-8111-111111111111', b = '22222222-2222-4222-8222-222222222222';
 const assignmentId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', blockId = '33333333-3333-4333-8333-333333333333';

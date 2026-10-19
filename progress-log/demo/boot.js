@@ -49,7 +49,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?v=20261018-identity-v1');
+  await import('../app.js?v=20261019-quoted-notes-v1');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });

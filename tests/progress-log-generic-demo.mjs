@@ -21,6 +21,7 @@ test('trang học viên mẫu dùng cùng giao diện và chỉ được nối �
   assert.match(html, /id="journeyResultButton" type="button"/);
   assert.doesNotMatch(html, /id="journey(?:Result)?Button" type="button" hidden/);
   assert.doesNotMatch(html, /id="openDemoBlocksButton"/);
+  assert.doesNotMatch(html,/teacher-entry\.(?:js|css)|data-teacher-product/);
   const config = read('progress-log/demo/config.js');
   assert.match(config, /mapping-api-progress-log-demo/);
   assert.match(config, /enabled: false/);

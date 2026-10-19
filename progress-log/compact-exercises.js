@@ -6,7 +6,7 @@ function noteGroups(items) {
   const groups = [];
   const numbers = new Set();
   for (const item of items) {
-    const gaps = [...item.prompt.matchAll(/(\d{1,3})\s+\.{3,}/g)];
+    const gaps = [...item.prompt.matchAll(/(\d{1,3})\s+([‘'“"]?)\.{3,}/g)];
     if (gaps.length !== 1 || gaps[0][1] !== item.displayNumber || numbers.has(item.displayNumber)) return null;
     numbers.add(item.displayNumber);
     let group = groups.at(-1);
@@ -38,7 +38,7 @@ export function buildCompactExercises(items, {valueFor, requiredFor, onChange, r
         for (const line of item.prompt.split('\n')) {
           const paragraph = document.createElement('p');
           paragraph.className = 'sentence-text';
-          const gap = /(\d{1,3})\s+\.{3,}/.exec(line);
+          const gap = /(\d{1,3})\s+([‘'“"]?)\.{3,}/.exec(line);
           if (!gap) paragraph.textContent = line;
           else {
             const label = document.createElement('label');
@@ -60,7 +60,10 @@ export function buildCompactExercises(items, {valueFor, requiredFor, onChange, r
             input.addEventListener('keydown', event => {
               if (event.key === 'Enter' && !event.isComposing) event.preventDefault();
             });
-            label.append(number, input);
+            // Giữ dấu mở nháy của câu gốc ngay trước ô, dấu đóng nằm trong phần chữ sau ô.
+            label.append(number);
+            if (gap[2]) label.append(document.createTextNode(' ' + gap[2]));
+            label.append(input);
             paragraph.append(document.createTextNode(line.slice(0, gap.index)), label,
               document.createTextNode(line.slice(gap.index + gap[0].length)));
           }

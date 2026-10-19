@@ -1,7 +1,7 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {renderSessionReview} from './session-review.js?rev=20261007-comments';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
-import {buildCompactExercises} from './compact-exercises.js?rev=20261015-v1';
+import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';

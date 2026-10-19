@@ -7,6 +7,7 @@ import {readFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {resolve,extname,sep} from 'node:path';
+import {retiredProgressLogHtml} from './fixtures/progress-log-retired-html.mjs';
 import {demoCourse} from '../progress-log/reference-preview/fixture.js';
 import {summarizeClass,sessionLabel} from '../progress-log/reference-preview/analytics.js';
 const runtime=process.env.PLAYWRIGHT_PACKAGE||'C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json';
@@ -47,6 +48,10 @@ test('Preview Chrome: bảng, drilldown, 31 buổi và quyền chỉ đọc trê
       const pathname=new URL(req.url,'http://localhost').pathname;
       const name=resolve(root,'.'+decodeURIComponent(pathname)+(pathname.endsWith('/')?'index.html':''));
       if(!name.startsWith(resolve(root)+sep)){res.writeHead(403);res.end();return;}
+      if(pathname==='/progress-log/reference-preview/'){
+        res.setHeader('content-type','text/html; charset=utf-8');
+        res.end(retiredProgressLogHtml('progress-log/reference-preview/index.html'));return;
+      }
       const body=await readFile(name);res.setHeader('content-type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[extname(name)]||'application/octet-stream'));res.end(body);
     }catch{res.writeHead(404);res.end();}
   });

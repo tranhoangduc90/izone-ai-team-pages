@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
-for(const mode of ['notes','names']) {
+for(const mode of ['notes','notes-quoted','names']) {
   test(`Bố cục gọn ${mode}: giữ ID, required, Unicode, màn hẹp và dữ liệu không phù hợp`,{timeout:30000},async()=>{
     const server=createServer(async(req,res)=>{
       try {
@@ -31,9 +31,10 @@ for(const mode of ['notes','names']) {
         window.values={};window.changed=[];
         const callbacks={valueFor:item=>window.values[item.itemVersionId]||'',requiredFor:item=>item.required,
           onChange:(id,value)=>{window.values[id]=value;window.changed.push(id);},resizeInput:()=>{}};
-        const items=mode==='notes'?[31,32].map(n=>({itemVersionId:'item-'+n,displayNumber:String(n),
+        const items=mode.startsWith('notes')?[31,32].map(n=>({itemVersionId:'item-'+n,displayNumber:String(n),
           groupId:'notes-intro',interactionType:'short_text',pedagogicalTypeCode:'sentence_completion',
-          helpText:'Notes <script>window.unsafe=true</script>',prompt:`Text before ${n} ............ text after.`,required:true}))
+          helpText:'Notes <script>window.unsafe=true</script>',
+          prompt:mode==='notes-quoted'?`Text before ${n} ${n===31?"'............'":'‘............’'} text after.`:`Text before ${n} ............ text after.`,required:true}))
           :[19,20].map(n=>({itemVersionId:'item-'+n,displayNumber:String(n),groupId:'answer-sheet-names',
             interactionType:'single_choice',layoutType:'matching_heading_dropdown',required:true,
             options:[{id:'A',label:'Name A'},{id:'B',label:'Name B'}]}));
@@ -42,13 +43,18 @@ for(const mode of ['notes','names']) {
           buildCompactExercises([items[0],{...items[1],displayNumber:items[0].displayNumber}],callbacks)];
       },mode);
       assert.deepEqual(await page.evaluate(()=>window.fallbacks),[null,null,null]);
-      if(mode==='notes') {
+      if(mode.startsWith('notes')) {
         await page.locator('textarea').first().fill('Dữ liệu có dấu và nội dung đủ dài');
         assert.equal(await page.locator('textarea').count(),2);
         assert.equal(await page.locator('textarea').first().evaluate(n=>n.required),true);
         assert.match(await page.locator('.sentence-text').first().textContent(),/^Text before 31.*text after\.$/);
         assert.deepEqual(await page.evaluate(()=>window.values),{'item-31':'Dữ liệu có dấu và nội dung đủ dài'});
         assert.equal(await page.evaluate(()=>window.unsafe),undefined);
+        if(mode==='notes-quoted') {
+          // Dấu nháy bao quanh ô vẫn giữ đúng trong câu và không làm cả notes mất nhóm.
+          assert.equal(await page.locator('.sentence-text').nth(0).textContent(),"Text before 31 '' text after.");
+          assert.equal(await page.locator('.sentence-text').nth(1).textContent(),'Text before 32 ‘’ text after.');
+        }
       } else {
         await page.locator('select').nth(0).selectOption('A');
         await page.locator('select').nth(1).selectOption('A');
