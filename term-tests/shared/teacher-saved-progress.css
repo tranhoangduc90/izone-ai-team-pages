@@ -1,0 +1,10 @@
+.teacher-saved-progress-dialog{width:min(900px,calc(100vw - 32px));max-height:90vh;overflow:auto;border:1px solid #dce1e7;border-radius:16px;padding:24px;color:#152b4e;background:white}
+.teacher-saved-progress-dialog::backdrop{background:rgb(12 25 46 / 45%)}
+.teacher-saved-progress-dialog header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.teacher-saved-progress-dialog section{border-top:1px solid #dce1e7;margin-top:24px;padding-top:12px}
+.teacher-saved-progress-dialog select{display:block;width:100%;margin-top:8px;padding:10px;font:inherit}
+.teacher-saved-progress-dialog table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:fixed}
+.teacher-saved-progress-dialog th,.teacher-saved-progress-dialog td{text-align:left;border-bottom:1px solid #dce1e7;padding:10px;overflow-wrap:anywhere}
+.teacher-saved-progress-dialog th:first-child,.teacher-saved-progress-dialog td:first-child{width:70px}
+.teacher-saved-progress-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.7}
+@media(max-width:600px){.teacher-saved-progress-dialog{padding:18px}.teacher-saved-progress-dialog h2{font-size:22px}}

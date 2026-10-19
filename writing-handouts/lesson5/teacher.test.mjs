@@ -1,4 +1,5 @@
 import {workflowFor,isWhole} from '../shared/workflow.mjs';
+import {classQuery,resolveClassRef} from '../js/class-selection.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,10 +9,22 @@ import {ORDER,FIELDS,createState} from '../lesson5-demo/core.mjs';
 function fixture(fetcher){
  const elements=new Map();
  const get=id=>{if(!elements.has(id))elements.set(id,{handlers:{},addEventListener(k,f){this.handlers[k]=f;},hidden:false,textContent:'',innerHTML:'',value:'',dataset:{}});return elements.get(id);};
- const context=vm.createContext({workflowFor,isWhole,ORDER,FIELDS,installStyles(){},savedContent:()=>'',approvalLabel:()=>'',threadsView:()=>'',fetch:fetcher,document:{getElementById:get,querySelectorAll:()=>[],addEventListener(){}},AbortSignal,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearTimeout,clearInterval,setInterval,window:{}});
+ const context=vm.createContext({workflowFor,isWhole,classQuery,resolveClassRef,location:{search:''},ORDER,FIELDS,installStyles(){},savedContent:()=>'',approvalLabel:()=>'',threadsView:()=>'',fetch:fetcher,document:{body:{dataset:{}},getElementById:get,querySelectorAll:()=>[],addEventListener(){}},AbortSignal,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearTimeout,clearInterval,setInterval,window:{}});
  const source=fs.readFileSync(new URL('./teacher.js',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,'').replace('void boot();','');vm.runInContext(source,context);
  return {run:code=>vm.runInContext(code,context),context,get};
 }
+
+test('Lối GV chọn lớp từ CTA sau đối chiếu danh sách được quyền, không lấy lớp đầu',async()=>{
+ const h=fixture(async()=>({ok:true,status:200,json:async()=>({ok:true,classes:[{classRef:'IC2304',className:'Lớp A'},{classRef:'IC2305',className:'Lớp B'}]})}));
+ h.context.location.search='?class=ic2305';h.run('refresh=async()=>{};schedule=()=>{};');
+ await h.run('enter()');assert.equal(h.get('class-select').value,'IC2305');assert.equal(h.get('dashboard').hidden,false);
+});
+
+test('CTA sai quyền không đọc lớp khác thay thế',async()=>{
+ const h=fixture(async()=>({ok:true,status:200,json:async()=>({ok:true,classes:[{classRef:'IC2304',className:'Lớp A'}]})}));
+ h.context.location.search='?class=PRIVATE';h.get('dashboard').hidden=true;h.run('refresh=async()=>{throw new Error("Không được đọc lớp khác")};');
+ await assert.rejects(h.run('enter()'),e=>e.status===403);assert.equal(h.get('dashboard').hidden,true);
+});
 function replyForm(body='GV trả lời'){
  const button={disabled:false},status={textContent:''};
  const form={dataset:{threadReply:'thread-one'},elements:{body:{value:body,disabled:false}},querySelector:s=>s==='button[type="submit"]'?button:status};

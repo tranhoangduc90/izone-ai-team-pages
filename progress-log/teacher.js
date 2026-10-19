@@ -13,6 +13,7 @@ import { createTeacherLoginPreference } from '../shared/teacher-login-preference
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261007-comments';
 import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261001-authoring-v1';
+import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const sessionClient = createTeacherSessionClient({
@@ -458,6 +459,7 @@ async function loadWorkspace() {
   // Chỉ đưa lớp có mã ERP hợp lệ vào bộ chọn; lớp thử mã âm không thuộc API lớp thật.
   state.classes = (options.classes || []).filter(item => /^[1-9]\d{0,17}$/u.test(String(item.class_id)));
   state.assignments = options.assignments || [];
+  const entryAssignment = resolveTeacherAssignment(state.assignments,state.classes,location.href);
   state.library = library.items || [];
   formEditor.setWorkspace({classes:state.classes,assignments:state.assignments});
   elements.teacherName.textContent = state.reviewer.name || state.reviewer.email;
@@ -473,7 +475,11 @@ async function loadWorkspace() {
   };
   showAll.onchange = () => {refreshClasses();void loadCourseOverview();};
   refreshClasses();
-  refreshAssignmentSelect();
+  refreshAssignmentSelect(entryAssignment?.assignment_id || '');
+  if (entryAssignment) {
+    elements.teacherClassSelect.value = entryAssignment.class_id;
+    elements.overviewClassSelect.value = entryAssignment.class_id;
+  }
   renderLibrary();
   elements.teacherAccessView.hidden = true;
   elements.teacherWorkspace.hidden = false;

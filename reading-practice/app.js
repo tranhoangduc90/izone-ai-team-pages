@@ -24,6 +24,7 @@ const total=()=>LESSON.questionIds.length,firstQuestion=()=>+LESSON.questionIds[
 const isRobots=()=>LESSON.groups[0].kind==='names';
 function setLesson(lesson){
  if(lesson)LESSON=lesson;
+ document.body.dataset.teacherCode=LESSON.code||'';
  KEY=Object.fromEntries(LESSON.questionIds.map(n=>[n,[]]));
  document.body.classList.toggle('lesson9',isRobots());
  document.title=`Reading Homework · Buổi ${LESSON.lesson} · ${LESSON.title}`;

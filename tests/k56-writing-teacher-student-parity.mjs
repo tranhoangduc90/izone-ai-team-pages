@@ -67,7 +67,7 @@ test('CSS cửa sổ học viên sao chép đúng mẫu giáo viên, không nạ
   assert.ok(!student.includes('.teacher-'));
   for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56']) {
     const bootstrap=fs.readFileSync('term-tests/'+slug+'-computer-based/bootstrap.js','utf8');
-    const revision=slug==='term-test-1-k56'?'20261018-draft-network-r87':'20261018-draft-network-r87';
+    const revision='20261018-identity-v1';
     assert.equal(bootstrap.split('\n').filter(line=>/app\.js\?(?:rev|v)=/.test(line)&&line.includes(revision)).length,2);
     assert.match(fs.readFileSync('term-tests/'+slug+'-computer-based/index.html','utf8'),/styles.css\?rev=[^"\s]*teacher-parity-v1/);
   }
