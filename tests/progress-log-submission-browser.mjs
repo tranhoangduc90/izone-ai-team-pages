@@ -96,7 +96,7 @@ test('B10/B13/B18: Chrome giữ draft sau hạn, phiếu đóng xem Journey; m�
           await page.locator('#submitButton').click();
           await page.locator('#resultView').waitFor({ state: 'visible' });
           await page.locator('#resultView .session-comment').waitFor();assert.match(await page.locator('#resultView .session-comment').textContent(),/Em đã làm tốt phần ôn tập/);
-          assert.match(await page.locator('#attendanceResult').textContent(), /Portal đang được đồng bộ/);
+          assert.match(await page.locator('#attendanceResult').textContent(), /Đã ghi nhận tham gia/);
           assert.equal(calls.filter(c => c.mode === mode && c.path.endsWith('/attempts/submit')).length, 1);
           assert.equal(calls.filter(c => c.mode === mode && c.path.endsWith('/attempts/result')).length, 1);
         }

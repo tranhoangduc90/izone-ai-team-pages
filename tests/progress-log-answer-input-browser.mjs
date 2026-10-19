@@ -25,7 +25,7 @@ async function setup(mode,{completed=false}={}){
   const origin=`http://127.0.0.1:${server.address().port}`;
   const browser=await chromium.launch({channel:'chrome',headless:true});
   const page=await browser.newPage();page.setDefaultTimeout(6000);
-  const responses=[],errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const responses=[],errors=[],submissions=[];page.on('pageerror',e=>errors.push(e.message));
   const prompt='Which TWO things surprised the students about the traffic-light system for nutritional labels?';
   const dropdown=mode.startsWith('dropdown');
   const optionItems=[makeItem(1,{prompt,interactionType:'single_choice',layoutType:'matching_heading_dropdown',
@@ -67,13 +67,15 @@ async function setup(mode,{completed=false}={}){
     if(url.pathname.endsWith('/attempts/draft')){responses.push(req.postDataJSON().responses);return send({draft:{revision:req.postDataJSON().revision}});}
     if(url.pathname.endsWith('/student/session-comments'))return send({comments:[]});
     if(url.pathname.endsWith('/checkpoints/submit'))return send({checkpointSubmission:{blockId:block.blockId,completeness:'complete'}});
+    if(url.pathname.endsWith('/attempts/submit')){submissions.push(req.postDataJSON());return send({receipt:{message:'Đã nhận phiếu.',
+      attendanceStatus:'self_confirmed',completeness:'incomplete'},result:null});}
     return send({});
   });
   await page.goto(`${origin}/progress-log/index.html#assignment=${uid(300)}`);
   await page.locator('#studentSelect').selectOption(uid(400));
   await page.locator('#chooseStudentButton').click();await page.locator('#confirmButton').click();
   await page.locator('#formView').waitFor({state:'visible'});
-  return {page,responses,errors,items,close:async()=>{await browser.close();await new Promise(done=>server.close(done));}};
+  return {page,responses,errors,items,submissions,close:async()=>{await browser.close();await new Promise(done=>server.close(done));}};
 }
 test('Listening chọn TWO: câu hỏi trải hết chiều ngang và nhãn dropdown chỉ là Chọn',{timeout:30000},async()=>{
   const s=await setup('dropdown');try{
@@ -142,14 +144,13 @@ test('Listening đã nộp: nhóm chung vẫn hiện phản hồi riêng và kh�
     assert.deepEqual(s.errors,[]);
   }finally{await s.close();}
 });
-test('Reading: nguyên câu bao quanh ô điền, bắt buộc trả lời và nháp giữ chuỗi đơn',{timeout:30000},async()=>{
+test('Reading: nguyên câu bao quanh ô điền, được bỏ trống và nháp giữ chuỗi đơn',{timeout:30000},async()=>{
   const s=await setup('reading');try{
     assert.equal(await s.page.locator('h3.sentence-text textarea.sentence-blank').count(),3);
-    await s.page.locator('#submitButton').click();assert.equal(await s.page.locator('#formView').isVisible(),true);
     const input=s.page.locator('h3.sentence-text textarea').first();
     const surroundings=await input.evaluate(el=>({before:el.previousSibling.textContent,after:el.nextSibling.textContent,required:el.required}));
     assert.equal(surroundings.before,'An undesirable trait such as loss of ');
-    assert.equal(surroundings.after,' may be caused by a mutation in a tomato gene.');assert.ok(surroundings.required);
+    assert.equal(surroundings.after,' may be caused by a mutation in a tomato gene.');assert.equal(surroundings.required,false);
     await input.fill('Câu trả lời có dấu để kiểm tra ô tự tăng chiều ngang và xuống dòng khi cần');
     const draft=await s.page.evaluate(()=>Object.values(sessionStorage).map(v=>{try{return JSON.parse(v)}catch{return null}}).find(v=>v?.responses));
     assert.equal(typeof draft.responses[s.items[0].itemVersionId],'string');
@@ -173,12 +174,9 @@ test('Listening sơ đồ: sáu dropdown nội tuyến, hai ô cùng câu và nh
     assert.equal(await s.page.locator('textarea').count(),0);
     assert.equal(await s.page.locator('.flowchart-line').filter({hasText:'Interview site'}).count(),1);
     assert.equal(await s.page.locator('.flowchart-line').filter({hasText:'Interview site'}).locator('select').count(),2);
-    await s.page.locator('#submitButton').click();
-    assert.equal(await s.page.locator('#formView').isVisible(),true);
-    assert.match(await s.page.locator('#notice').textContent(),/câu bắt buộc|đủ/i);
     const selects=s.page.locator('.flowchart-select');
     for(let i=0;i<6;i++){
-      assert.equal(await selects.nth(i).getAttribute('required'),'');
+      assert.equal(await selects.nth(i).getAttribute('required'),null);
       await selects.nth(i).selectOption(i%2?'B':'A');
     }
     const draft=await s.page.evaluate(()=>Object.values(sessionStorage).map(v=>{try{return JSON.parse(v)}catch{return null}}).find(v=>v?.responses));
@@ -195,6 +193,19 @@ test('Listening sơ đồ: sáu dropdown nội tuyến, hai ô cùng câu và nh
     assert.deepEqual(s.errors,[]);
   }finally{await s.close();}
 });
+
+for(const mode of ['reading','dropdown','dropdown-flowchart']){
+  test(`Nộp trống toàn bộ ${mode}: gửi đúng phiếu và hiện biên nhận`,{timeout:30000},async()=>{
+    const s=await setup(mode);try{
+      await s.page.locator('#submitButton').click();
+      await s.page.locator('#resultView').waitFor({state:'visible'});
+      assert.equal(s.submissions.length,1);
+      assert.deepEqual(s.submissions[0].responses,{});
+      assert.match(await s.page.locator('#completenessResult').textContent(),/chưa trả lời/);
+      assert.deepEqual(s.errors,[]);
+    }finally{await s.close();}
+  });
+}
 
 test('Listening sơ đồ đã nộp: khóa sáu dropdown và phản hồi chấm đúng từng số câu',{timeout:15000},async()=>{
   const s=await setup('dropdown-flowchart',{completed:true});try{

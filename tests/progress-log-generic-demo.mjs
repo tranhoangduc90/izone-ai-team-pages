@@ -30,6 +30,8 @@ test('trang học viên mẫu dùng cùng giao diện và chỉ được nối �
 
 test('dashboard có nút xem thử; trang thử nhận grant rồi cấp mã lượt riêng', () => {
   const boot = read('progress-log/demo/boot.js');
+  const appRevision=read('progress-log/index.html').match(/src="app\.js\?([^\"]+)"/)?.[1];
+  assert.ok(appRevision);assert.ok(boot.includes(`../app.js?${appRevision}`),'Demo phải tải đúng revision app chung sau phát hành');
   assert.match(boot, /location\.hash/);
   assert.match(boot, /grant \? \{ grant \} : \{ runToken \}/);
   assert.match(boot, /history\.replaceState/);

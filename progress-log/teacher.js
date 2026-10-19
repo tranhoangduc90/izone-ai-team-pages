@@ -622,8 +622,8 @@ function openDraft(student,focusComment=false) {
 
 function buildSummary(students) {
   const counts = [
-    ['Đã nộp đủ', students.filter(item => item.completeness === 'complete').length],
-    ['Nộp thiếu', students.filter(item => item.completeness === 'incomplete').length],
+    ['Đã nộp phiếu', students.filter(item => item.submissionId).length],
+    ['Còn câu trống', students.filter(item => item.completeness === 'incomplete').length],
     ['Chưa nộp', students.filter(item => !item.submissionId).length]
   ];
   return counts.map(([label, value]) => {
@@ -826,7 +826,7 @@ function buildStudentRow(student) {
     journey.addEventListener('click',()=>viewJourney({classId:state.dashboard.classId,studentRef:student.studentRef},student.name));heading.append(journey);}
   const detail = document.createElement('small');
   const submissionText = student.submissionId
-    ? (student.completeness === 'complete' ? 'Đã nộp đủ' : 'Đã nộp nhưng còn thiếu')
+    ? (student.completeness === 'complete' ? 'Đã nộp phiếu · đủ câu trả lời' : 'Đã nộp phiếu · còn câu trống')
     : 'Chưa nộp';
   detail.textContent = submissionText;
   if (!student.submissionId && student.checkpoints?.length) {
@@ -868,7 +868,7 @@ function buildStudentRow(student) {
     }
     copy.append(progress);
   }
-  if (['self_confirmed', 'teacher_confirmed'].includes(student.attendanceStatus)) {
+  if (student.portalSync || ['self_confirmed', 'teacher_confirmed'].includes(student.attendanceStatus)) {
     const portal = document.createElement('small');
     portal.className = `portal-sync-status${student.portalSync?.status === 'complete' ? ' complete' : ''}`;
     portal.textContent = {
@@ -879,6 +879,11 @@ function buildStudentRow(student) {
       review_required: 'Portal: cần đối soát buổi điểm danh',
       failed: 'Portal: đồng bộ lỗi'
     }[student.portalSync?.status] || 'Portal: chưa có xác nhận đồng bộ';
+    if (student.portalSync?.reviewReason === 'teacher_decision') {
+      portal.textContent = 'Portal: đã dừng yêu cầu điểm danh theo điều chỉnh của giảng viên.';
+    } else if (student.portalSync?.reviewReason === 'teacher_decision_during_processing') {
+      portal.textContent = 'Portal: giảng viên đã đổi điểm danh khi đang đồng bộ; cần đối chiếu kết quả.';
+    }
     if (student.portalSync?.reviewRequired) portal.textContent = student.portalSync.reviewReason === 'write_outcome_unknown'
       ? 'Portal: chưa xác định kết quả lần ghi trước; cần đối soát, chưa ghi lại.'
       : 'Portal: cần đối soát buổi điểm danh; giữ nguyên đích đã ghi.';

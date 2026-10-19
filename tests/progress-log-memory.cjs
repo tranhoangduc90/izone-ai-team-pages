@@ -49,7 +49,7 @@ const check=async (page,{origin}={}) => {
     }
     if (url.includes('/api/learning/attempts/checkpoints/submit')) {
       const body=request.postDataJSON();calls.checkpoint.push(body);
-      return json({ok:true,checkpoint:{blockId:body.blockId,checkpoint:body.checkpoint,
+      return json({ok:true,checkpointSubmission:{blockId:body.blockId,checkpoint:body.checkpoint,
         completeness:'complete',missingRequired:[],submittedAt:'2026-10-01T01:00:00Z'}});
     }
     if (url.includes('/api/learning/attempts/submit')) { calls.submit.push(request.postDataJSON()); return json({ ok: true, receipt: { message: 'Đã nhận', attendanceStatus: 'self_confirmed', completeness: 'complete', nextAction: 'Xong' } }); }
