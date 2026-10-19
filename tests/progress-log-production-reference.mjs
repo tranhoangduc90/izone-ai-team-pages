@@ -27,7 +27,9 @@ async function run(action){
   if(url.pathname.endsWith('/student/course-journey'))return json({ok:true,journey:{student:{studentRef:ref,name:'Học viên giả'},class:{classId:'1294',name:'IC2305 · Lớp thử'},summary:{totalSessions:4,attendedSessions:1,submittedComplete:1,availableReports:0},sessions,reports:[],coverage:{schedule:'teacher_confirmed',plannedSessions:4}}});
   if(url.pathname.endsWith('/student/session-comments'))return json({ok:true,classId:'1294',studentRef:ref,comments});
   if(url.pathname.endsWith('/student/course-session-detail')){
-   assert.equal(req.postDataJSON().studentRef,ref);assert.equal(req.postDataJSON().sessionNumber,2);assert.equal(req.postDataJSON().identityConfirmed,true);
+   const body=req.postDataJSON();assert.equal(body.sessionNumber,2);
+   if(body.accessToken)assert.equal(body.accessToken,token);
+   else{assert.equal(body.studentRef,ref);assert.equal(body.identityConfirmed,true);}
    if(detailMode==='hold')await new Promise(r=>release=r);
    if(detailMode==='fail')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({ok:false,message:'Nguồn tạm lỗi'})});
    return json({ok:true,detail:detailMode==='wrong'?{...detail,student:{studentRef:'wrong'}}:detail});
@@ -79,4 +81,21 @@ test('Nhận xét chung hiện trong Journey của phiếu, thẻ/chi tiết và
  const answers=await page.locator('[data-review-item]').count();assert.ok(answers>0);
  setComments([]);await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.locator('#journeyDetailContent .session-comment').waitFor({state:'hidden'});
  assert.equal(await page.locator('[data-review-item]').count(),answers);
+}));
+
+test('Bài nộp còn câu trống: Journey trong phiếu và link riêng đều mở bài, không mời nộp lại',{timeout:60000},async()=>run(async({page,origin,sessions,detail})=>{
+ sessions[0].completeness='incomplete';detail.status='incomplete';
+ await page.locator('#journeyBackButton').click();await page.locator('#journeyButton').click();
+ const card=page.locator('#journeySessions [data-session-number="2"]');
+ await card.filter({hasText:'còn câu trống'}).waitFor();
+ assert.equal(await card.evaluate(node=>node.tagName),'BUTTON');await card.click();
+ await page.locator('#journeyDetailStatus').filter({hasText:'Bài đã nộp'}).waitFor();
+ assert.ok(await page.locator('[data-review-item]').count()>0);
+ await page.goto(origin+'/progress-log/journey.html#access='+token);
+ await page.locator('#timelineToggle').click();
+ const legacy=page.locator('#sessionList [data-session-number="2"]');
+ await legacy.filter({hasText:'còn câu trống'}).waitFor();
+ assert.equal(await legacy.evaluate(node=>node.tagName),'BUTTON');await legacy.click();
+ await page.locator('#journeyDetailDialog').getByRole('status').filter({hasText:'Bài đã nộp'}).waitFor();
+ assert.ok(await page.locator('#journeyDetailDialog [data-review-item]').count()>0);
 }));
