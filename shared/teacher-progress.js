@@ -19,6 +19,7 @@ const workId = value => uuid(speaking && String(value).startsWith('legacy_') ? v
 const date = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : 'Chưa có bản lưu';
 const status = unit => unit?.status === 'submitted' ? 'Đã nộp' : !unit || unit.status === 'not_started' ? 'Chưa có tiến trình' : unit.status === 'reset' ? 'Đã reset' : 'Có tiến trình chưa nộp';
 let generation = 0, controller = new AbortController(), timer, googleLoading;
+let bootGeneration = null, resumeBoot = false;
 const back = new URL(query.get('back') || './index.html', location.href);
 $('student-return').href = back.origin === location.origin ? back.href : './index.html';
 $('page-title').textContent = titles[product];
@@ -99,6 +100,7 @@ async function refresh(quiet = false) {
 }
 async function boot() {
   const epoch = resetRequests();privateClear();$('auth').hidden = true;
+  bootGeneration = epoch;resumeBoot = false;
   try {
     const routeQuery = new URLSearchParams(location.search), routeHash = new URLSearchParams(location.hash.slice(1));
     state.code = routeQuery.get('code') || state.code;
@@ -126,6 +128,7 @@ async function boot() {
     $('class-select').value = state.classId;$('workspace').hidden = false;
     await refresh();
   } catch (error) { await handle(error, epoch); }
+  finally { if (bootGeneration === epoch) bootGeneration = null; }
 }
 function safeLink(value) {
   try { const url = new URL(value);return url.protocol === 'https:' && ['chatgpt.com', 'docs.google.com'].includes(url.hostname) ? url.href : ''; } catch { return ''; }
@@ -163,6 +166,7 @@ async function loadDetail(id, epoch = resetRequests(), navigate = true) {
   } catch (error) { await handle(error, epoch); }
 }
 async function showLogin() {
+  bootGeneration = null;resumeBoot = false;
   $('auth').hidden = false;notice('Đăng nhập Google để kiểm quyền lớp.');
   $('remember-wrap').hidden = speaking;
   try {
@@ -183,6 +187,7 @@ async function showLogin() {
   } catch (error) { notice(error.message, 'error'); }
 }
 $('logout').addEventListener('click', async () => {
+  bootGeneration = null;resumeBoot = false;
   resetRequests();privateClear();
   try {
     await request(speaking ? '/api/auth/session' : '/teacher/logout', speaking ? undefined : {}, { method: speaking ? 'DELETE' : 'POST' });
@@ -204,7 +209,14 @@ $('detail').addEventListener('click', event => {
   if (event.target.closest('#detail-back')) { event.preventDefault();resetRequests();state.selected = null;state.detail = null;state.attemptId = null;rememberView({ view: 'list' });$('detail').hidden = true;$('detail').replaceChildren();$('list-panel').hidden = false;document.body.classList.remove('teacher-view-detail');schedule(); }
 });
 $('detail').addEventListener('change', event => { if (event.target.id === 'attempt-select') { state.attemptId = event.target.value;renderDetail();rememberView(); } });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(timer);controller.abort();generation++; } else if (!$('workspace').hidden) refresh(true); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Nếu đang kiểm quyền lần đầu, ghi nhớ để vào lại khi quay về tab; chưa có workspace để refresh.
+    resumeBoot ||= bootGeneration !== null;
+    clearTimeout(timer);controller.abort();generation++;
+  } else if (resumeBoot) { resumeBoot = false;boot(); }
+  else if (!$('workspace').hidden) refresh(true);
+});
 window.addEventListener('storage', event => { if (event.key === `${product}-teacher-logout`) { resetRequests();privateClear();showLogin(); } });
 window.addEventListener('popstate', () => boot());
 boot();
