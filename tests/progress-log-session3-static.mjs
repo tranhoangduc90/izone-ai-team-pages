@@ -20,13 +20,11 @@ test('renderer có chuỗi lập luận với ô điền nằm giữa hai mắt 
   assert.match(styles, /\.reasoning-chain-input/);
 });
 
-test('ô Vấn đề khác chỉ hiện và trở thành bắt buộc theo lựa chọn điều khiển', () => {
+test('ô Vấn đề khác vẫn chỉ hiện theo lựa chọn điều khiển và dọn câu trả lời không áp dụng', () => {
   assert.match(app, /conditional_other_text/);
   assert.match(app, /visibleWhenItemVersionId/);
-  assert.match(app, /requiredWhenVisible/);
   assert.match(app, /refreshConditionalQuestions/);
-  assert.match(app, /marker\.hidden = !requiredNow/);
-  assert.match(app, /allItems\(\)\.filter\(item => itemIsRequired\(item\)/);
+  assert.match(app, /delete state\.responses\[item\.itemVersionId\]/);
 });
 
 test('học viên và giảng viên dùng số câu hiển thị của bản gốc', () => {

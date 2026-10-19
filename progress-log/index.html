@@ -58,17 +58,19 @@
           <span id="saveState" class="save-state">Chưa có thay đổi</span>
         </div>
         <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+        <p class="fine-print" id="participationState" role="status" hidden></p>
         <form class="card form-card" id="reflectionForm" novalidate>
           <div class="panel-heading">
             <p class="eyebrow" id="checkpointLabel">PHẦN 1/2</p>
             <h1 id="checkpointTitle">Ghi lại điều quan trọng</h1>
             <p class="muted" id="checkpointInstructions"></p>
+            <p class="fine-print">Bạn có thể bỏ trống câu chưa làm. Câu có chấm bị bỏ trống sẽ không được điểm.</p>
           </div>
           <div id="questionList"></div>
           <div class="form-actions">
             <button class="button text-button" id="previousButton" type="button">Quay lại</button>
             <button class="button primary" id="nextButton" type="button">Tiếp tục</button>
-            <button class="button primary" id="submitButton" type="submit" hidden>Nộp phiếu &amp; điểm danh</button>
+            <button class="button primary" id="submitButton" type="submit" hidden>Nộp phiếu</button>
           </div>
         </form>
       </section>
@@ -135,6 +137,6 @@
     <script src="config.js?rev=20260905-memory-v3"></script>
     <link rel="stylesheet" href="session-comments.css?rev=20261007">
     <script type="module" src="../shared/teacher-entry.js?v=20261019-v1"></script>
-    <script type="module" src="app.js?v=20261019-quoted-notes-v1"></script>
+    <script type="module" src="app.js?v=20261019-partial-attendance-v1"></script>
   </body>
 </html>

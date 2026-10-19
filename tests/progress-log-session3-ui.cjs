@@ -172,8 +172,8 @@ const check=async (page,{origin}={}) => {
   await page.locator('input[value=OTHER]').check();
   const otherField = page.getByRole('textbox', { name: 'Nêu rõ vấn đề khác.' });
   ensure(await otherField.isVisible(), 'Chọn OTHER nhưng ô nêu rõ không hiện.');
-  ensure(await otherField.getAttribute('required') !== null, 'Ô OTHER đang hiện nhưng không bắt buộc.');
-  ensure((await page.getByRole('heading', { name: /Nêu rõ vấn đề khác/ }).innerText()).includes('*'), 'Ô OTHER thiếu dấu bắt buộc.');
+  ensure(await otherField.getAttribute('required') === null, 'Ô OTHER còn chặn nộp khi bỏ trống.');
+  ensure(!(await page.getByRole('heading', { name: /Nêu rõ vấn đề khác/ }).innerText()).includes('*'), 'Ô OTHER còn nhãn bắt buộc.');
   await otherField.fill('Nội dung cũ phải được xóa.');
   await page.locator('input[value=VOCABULARY]').check();
   ensure(!(await otherField.isVisible()), 'Đổi khỏi OTHER nhưng ô phụ vẫn còn hiện.');
@@ -183,11 +183,11 @@ const check=async (page,{origin}={}) => {
 
   const score = page.locator('input[type=number]');
   await score.fill('7');
-  await page.getByRole('button', { name: 'Nộp phiếu & điểm danh' }).click();
+  await page.getByRole('button', { name: 'Nộp phiếu', exact:true }).click();
   ensure(await score.isVisible(), 'Điểm vượt phạm vi vẫn nộp được.');
   ensure(!(await score.evaluate(element => element.validity.valid)), 'Input không đánh dấu điểm 7/6 là sai.');
   await score.fill('5');
-  await page.getByRole('button', { name: 'Nộp phiếu & điểm danh' }).click();
+  await page.getByRole('button', { name: 'Nộp phiếu', exact:true }).click();
   await page.getByText('ĐÃ NHẬN PHIẾU',{exact:true}).waitFor();
   ensure(!(await page.locator('body').innerText()).includes('VIỆC TIẾP THEO'), 'Màn hoàn tất còn khối Việc tiếp theo.');
   ensure(pageErrors.length === 0, `Trang phát sinh lỗi JavaScript: ${pageErrors.join('; ')}`);
