@@ -60,7 +60,7 @@ async function setup(mode,{completed=false}={}){
       definitionHash:'a'.repeat(64),definition:{title:'Phiếu thử',blocks:[block]},blockReleases:[{blockId:block.blockId,status:'open'}]}});
     if(url.pathname.endsWith('/attempts/start'))return send({attempt:{attemptToken:uid(500),
       draft:completed?Object.fromEntries(items.map((item,i)=>[item.itemVersionId,i%2?'B':'A'])):{},draftRevision:0,
-      identity:{studentName:'Học viên giả',className:'Lớp giả',sessionNumber:6},
+      identity:{studentRef:uid(400),studentName:'Học viên giả',classId:'-99',className:'Lớp giả',sessionNumber:6},
       checkpointSubmissions:completed?[{blockId:block.blockId,result:{answerRelease:'released',summary:{maxScore:4},
         items:items.map((item,i)=>({itemVersionId:item.itemVersionId,rawAnswer:i%2?'B':'A',expectedAnswer:'A',
           verdict:i%2?'incorrect':'correct',maxScore:1}))}}]:[]}});
@@ -188,8 +188,8 @@ test('Listening sơ đồ: sáu dropdown nội tuyến, hai ô cùng câu và nh
       assert.equal(await s.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       for(const select of await selects.all()) assert.ok(await select.evaluate(el=>el.getBoundingClientRect().right<=innerWidth));
     }
-    await s.page.reload();await s.page.locator('#studentSelect').selectOption(uid(400));
-    await s.page.locator('#chooseStudentButton').click();await s.page.locator('#confirmButton').click();
+    // Tab đã ghim chủ bài nên tải lại tự vào đúng người; không bấm màn chọn đang ẩn.
+    await s.page.reload();
     await s.page.locator('#formView').waitFor({state:'visible'});
     for(let i=0;i<6;i++)assert.equal(await s.page.locator('.flowchart-select').nth(i).inputValue(),i%2?'B':'A');
     assert.deepEqual(s.errors,[]);

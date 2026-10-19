@@ -52,7 +52,7 @@ test('B10/B13/B18: Chrome giữ draft sau hạn, phiếu đóng xem Journey; m�
           blockReleases: [{ blockId: block.blockId, status: 'open' }], submissionWindow: window } });
         if (url.pathname.endsWith('/attempts/start')) return json({ ok: true, attempt: {
           attemptToken: '44444444-4444-4444-8444-444444444444', draft: {}, draftRevision: 0,
-          identity: { studentRef, studentName: 'Học viên giả', className: 'Lớp thử', sessionNumber: 6 }, checkpointSubmissions: [] } });
+          identity: { studentRef, studentName: 'Học viên giả', classId: '1294', className: 'Lớp thử', sessionNumber: 6 }, checkpointSubmissions: [] } });
         if (url.pathname.endsWith('/attempts/draft')) return json({ ok: true, draft: { revision: request.postDataJSON().revision, savedAt: '2026-10-06T14:00:00Z' } });
         if (url.pathname.endsWith('/checkpoints/submit')) return json({ ok: true, checkpointSubmission: { blockId: block.blockId, completeness: 'complete', result: null } });
         if (url.pathname.endsWith('/attempts/submit')) {

@@ -56,7 +56,7 @@ for(const mode of ['one','multi','hidden','lost-receipt','reload','closed-after-
         definitionHash:'a'.repeat(64),definition:{title:'Phiếu kiểm luồng cuối',blocks},
         blockReleases:blocks.map(block=>({blockId:block.blockId,status:'open'}))}});
       if(url.pathname.endsWith('/attempts/start'))return json({attempt:{attemptToken:uid(500),draft,draftRevision:1,
-        identity:{studentRef:uid(400),studentName:'Học viên giả',className:'Lớp giả',sessionNumber:7},
+        identity:{studentRef:uid(400),studentName:'Học viên giả',classId:'-99',className:'Lớp giả',sessionNumber:7},
         checkpointSubmissions:received?[]:[...checkpoints.values()]}});
       if(url.pathname.endsWith('/attempts/draft')){draft=req.postDataJSON().responses;return json({draft:{revision:req.postDataJSON().revision}});}
       if(url.pathname.endsWith('/checkpoints/submit')){
@@ -75,6 +75,9 @@ for(const mode of ['one','multi','hidden','lost-receipt','reload','closed-after-
       return route.abort();
     });
     const selectStudent=async()=>{
+      // Tải lại tab đã ghim sẽ tự khôi phục; lần đầu vẫn chọn người như trước.
+      await page.locator('#identityView:visible, #formView:visible').first().waitFor();
+      if(await page.locator('#formView').isVisible())return;
       await page.locator('#studentSelect').selectOption(uid(400));
       await page.locator('#chooseStudentButton').click();await page.locator('#confirmButton').click();
       await page.locator('#formView').waitFor({state:'visible'});
