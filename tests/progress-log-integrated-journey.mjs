@@ -115,7 +115,7 @@ test('API trả sai lớp hoặc học viên thì Journey không hiện', async 
 
 test('link phiếu đã đóng vẫn chọn tên để xem Journey và không mở phiếu', async () => {
   const begin = app.indexOf('async function openAssignment()');
-  const finish = app.indexOf('async function startAttempt()', begin);
+  const finish = app.indexOf('async function startAttempt(', begin);
   assert.ok(begin >= 0 && finish > begin);
   const elements = Object.fromEntries([
     'brandLabel', 'sessionLabel', 'assignmentTitle', 'classLabel',
@@ -128,7 +128,7 @@ test('link phiếu đã đóng vẫn chọn tên để xem Journey và không m�
     title: 'Phiếu buổi 2', roster: [{ studentRef: 'student-1', name: 'Học viên giả' }]
   };
   const context = {
-    contentTitle,sessionHeading,state, elements, config: {},
+    contentTitle,sessionHeading,state, elements, config: {},courseIdentity:null,
     readPublicToken: () => '11111111-1111-4111-8111-111111111111',
     apiRequest: async path => {
       calls.push(path);

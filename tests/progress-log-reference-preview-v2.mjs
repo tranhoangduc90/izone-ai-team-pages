@@ -7,6 +7,7 @@ import {readFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {resolve,extname,sep} from 'node:path';
+import {retiredProgressLogHtml} from './fixtures/progress-log-retired-html.mjs';
 const {chromium}=createRequire(process.env.PLAYWRIGHT_PACKAGE||'C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const root=process.env.PREVIEW_ROOT||fileURLToPath(new URL('../',import.meta.url));
 const routePath=process.env.PREVIEW_ROUTE||'reference-preview-v2';
@@ -15,6 +16,10 @@ async function harness(run,{beforeLoad,timezoneId}={}){
     try{const pathname=new URL(req.url,'http://localhost').pathname;
       const name=resolve(root,'.'+decodeURIComponent(pathname)+(pathname.endsWith('/')?'index.html':''));
       if(!name.startsWith(resolve(root)+sep)){res.writeHead(403);res.end();return;}
+      if(pathname==='/progress-log/'+routePath+'/'){
+        res.setHeader('content-type','text/html; charset=utf-8');
+        res.end(retiredProgressLogHtml('progress-log/'+routePath+'/index.html'));return;
+      }
       res.setHeader('content-type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[extname(name)]||'application/octet-stream'));res.end(await readFile(name));
     }catch{res.writeHead(404);res.end();}
   });

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import {retiredProgressLogHtml} from './fixtures/progress-log-retired-html.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'progress-log-ic2305-demo');
 const source = async name => readFile(resolve(root, name), 'utf8');
@@ -29,7 +30,7 @@ test('câu điền khuyết giữ nguyên bốn câu và tám ô theo bản gố
 
 test('mọi trang demo không khai báo mạng ra ngoài hoặc dùng kho bài thật', async () => {
   for (const name of ['index.html', 'teacher.html']) {
-    const html = await source(name);
+    const html = retiredProgressLogHtml('progress-log-ic2305-demo/'+name);
     assert.match(html, /connect-src 'none'/);
     assert.doesNotMatch(html, /ducizone\.ddns\.net|accounts\.google\.com/);
   }

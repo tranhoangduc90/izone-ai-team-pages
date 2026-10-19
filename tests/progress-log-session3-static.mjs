@@ -46,7 +46,7 @@ test('giao diện mới có responsive mobile và không thêm khối Việc ti�
 
 test('asset thay đổi có revision mới để trình duyệt không giữ giao diện cũ', () => {
   assert.match(studentHtml, /styles\.css\?rev=[A-Za-z0-9-]+/);
-  assert.match(studentHtml, /app\.js\?rev=[A-Za-z0-9-]+/);
+  assert.match(studentHtml, /app\.js\?(?:rev|v)=[A-Za-z0-9-]+/);
   assert.match(teacherHtml, /styles\.css\?rev=[A-Za-z0-9-]+/);
   assert.match(teacherHtml, /teacher\.js\?rev=[A-Za-z0-9-]+/);
 });

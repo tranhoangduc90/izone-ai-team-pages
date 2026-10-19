@@ -1,9 +1,12 @@
 // Nhận trang Progress Log chạy trên localhost và chặn toàn bộ API bằng dữ liệu giả.
 // Việc chính: đi hết luồng OTHER, đổi lựa chọn, nội dung dài, điểm ngoài phạm vi và nộp cuối.
 // Kết quả: trả danh sách contract đã kiểm; khi lỗi throw để tiến trình trả exit code 1.
-async (page) => {
+const test=require('node:test');
+const {run}=require('./fixtures/progress-log-callback-runner.cjs');
+const check=async (page,{origin}={}) => {
   const ensure = (condition, message) => { if (!condition) throw Error(message); };
-  const base = 'http://127.0.0.1:4188/progress-log/';
+  const site=origin||'http://127.0.0.1:4188';
+  const base = site+'/progress-log/';
   const publicToken = '57000000-0000-4000-8000-000000000004';
   const assignmentId = '57000000-0000-4000-8000-000000000003';
   const studentRef = '57000000-0000-4000-8100-000000000003';
@@ -99,7 +102,8 @@ async (page) => {
   await page.context().route('**/*', async route => {
     const request = route.request();
     const address = request.url();
-    if (address.startsWith('http://127.0.0.1:4188/')) return route.continue();
+    if (address.startsWith(site+'/')) return route.continue();
+    if(address.includes('/api/student-identity/resolve'))return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,status:'unique',identity:{authority:'erp-contact',id:'900001'},aliases:[{classId:'1294',classCode:'IC2305',studentRef,studentName:'Học viên giả'}]})});
     if (!address.includes('/api/learning/')) {
       blocked.push(address.split('?')[0]);
       return route.abort();
@@ -121,13 +125,14 @@ async (page) => {
     if (path === 'attempts/start') return send({ attempt: {
       attemptId: attemptToken, attemptToken, draftRevision, draft: lastDraft,
       checkpointSubmissions: checkpoints,
-      identity: { studentName: 'Học viên giả', className: 'IC2305', sessionNumber: 3 },
+      identity: { studentRef,classId:'1294',studentName: 'Học viên giả', className: 'IC2305', sessionNumber: 3 },
     } });
     if (path === 'attempts/draft') {
       draftRevision = Number(body.revision);
       lastDraft = body.responses || {};
       return send({ draft: { revision: draftRevision } });
     }
+    if(path==='student/session-comments')return send({comments:[]});
     if (path === 'attempts/checkpoints/submit') {
       checkpoints.push({ blockId: body.blockId, checkpoint: body.checkpoint, submittedAt: new Date().toISOString() });
       return send({ checkpointSubmission: checkpoints.at(-1) });
@@ -183,7 +188,7 @@ async (page) => {
   ensure(!(await score.evaluate(element => element.validity.valid)), 'Input không đánh dấu điểm 7/6 là sai.');
   await score.fill('5');
   await page.getByRole('button', { name: 'Nộp phiếu & điểm danh' }).click();
-  await page.getByText('ĐÃ NHẬN PHIẾU').waitFor();
+  await page.getByText('ĐÃ NHẬN PHIẾU',{exact:true}).waitFor();
   ensure(!(await page.locator('body').innerText()).includes('VIỆC TIẾP THEO'), 'Màn hoàn tất còn khối Việc tiếp theo.');
   ensure(pageErrors.length === 0, `Trang phát sinh lỗi JavaScript: ${pageErrors.join('; ')}`);
   ensure(blocked.length === 0, `Trang gọi ra ngoài phạm vi mock: ${blocked.join(', ')}`);
@@ -199,3 +204,4 @@ async (page) => {
     draftRevision,
   };
 }
+test('Buổi 3: MCQ bàn phím, ô dài, OTHER, giới hạn điểm và nộp cuối',{timeout:45000},()=>run(check));

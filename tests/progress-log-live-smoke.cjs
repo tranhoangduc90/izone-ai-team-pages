@@ -4,6 +4,8 @@
 // Khi lỗi: trả exit code 1 cùng lỗi console/request để đội vận hành biết lớp hỏng ở đâu.
 
 const { createRequire } = require('node:module');
+const {readFile}=require('node:fs/promises');
+const assert=require('node:assert/strict');
 
 const runtime = process.env.PLAYWRIGHT_PACKAGE
   || 'C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json';
@@ -12,6 +14,11 @@ const { chromium } = createRequire(runtime)('playwright');
 async function main() {
   const url = process.env.LIVE_PROGRESS_LOG_URL;
   if (!url) throw new Error('LIVE_PROGRESS_LOG_URL_REQUIRED');
+  // Mỗi phiếu khai tiêu chí độc lập; không giữ tiêu đề/buổi/revision của ca tháng 09.
+  if(!process.env.LIVE_PROGRESS_LOG_EXPECTED_FILE)throw new Error('LIVE_PROGRESS_LOG_EXPECTED_FILE_REQUIRED');
+  const expected=JSON.parse(await readFile(process.env.LIVE_PROGRESS_LOG_EXPECTED_FILE,'utf8'));
+  for(const key of ['title','className','session','appRevision','styleRevision'])assert.equal(typeof expected[key],'string',key);
+  assert.ok(Number.isInteger(expected.rosterCount)&&expected.rosterCount>0,'EXPECTED_ROSTER_INVALID');
 
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   try {
@@ -36,12 +43,12 @@ async function main() {
       styleRevision: document.querySelector('link[href*="styles.css"]')?.getAttribute('href') || ''
     }));
 
-    if (result.title !== 'ENTRANCE TICKET • LISTENING 1 + SPEAKING 2') throw new Error('LIVE_TITLE_MISMATCH');
-    if (result.className !== 'IC2305') throw new Error('LIVE_CLASS_MISMATCH');
-    if (result.session !== 'BUỔI 3') throw new Error('LIVE_SESSION_MISMATCH');
-    if (result.rosterCount !== 18) throw new Error('LIVE_ROSTER_COUNT_MISMATCH');
-    if (!result.appRevision.includes('20260921-session3-v1')) throw new Error('LIVE_APP_REVISION_MISMATCH');
-    if (!result.styleRevision.includes('20260921-session3-v1')) throw new Error('LIVE_STYLE_REVISION_MISMATCH');
+    assert.equal(result.title,expected.title,'LIVE_TITLE_MISMATCH');
+    assert.equal(result.className,expected.className,'LIVE_CLASS_MISMATCH');
+    assert.equal(result.session,expected.session,'LIVE_SESSION_MISMATCH');
+    assert.equal(result.rosterCount,expected.rosterCount,'LIVE_ROSTER_COUNT_MISMATCH');
+    assert.equal(result.appRevision,expected.appRevision,'LIVE_APP_REVISION_MISMATCH');
+    assert.equal(result.styleRevision,expected.styleRevision,'LIVE_STYLE_REVISION_MISMATCH');
     if (consoleErrors.length) throw new Error(`LIVE_CONSOLE_ERRORS_${consoleErrors.length}`);
     if (failedRequests.length) throw new Error(`LIVE_REQUEST_FAILURES_${failedRequests.length}`);
 

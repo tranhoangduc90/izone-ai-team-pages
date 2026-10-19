@@ -1,7 +1,9 @@
 // Dùng roster và API giả trong bộ nhớ; chặn toàn bộ mạng ngoài.
 // Kiểm UUID dùng chung, xác nhận thủ công, đổi người an toàn và lỗi storage/draft.
-async (page) => {
-  const site = page.url().split('writing-handouts/')[0].replace(/\/$/, '');
+const test=require('node:test');
+const {run}=require('./fixtures/progress-log-callback-runner.cjs');
+const check=async (page,{origin}={}) => {
+  const site = origin || page.url().split('writing-handouts/')[0].replace(/\/$/, '');
   const base = site + '/progress-log/index.html?fixture=memory#assignment=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const ids = {
     a: '11111111-1111-4111-8111-111111111111',
@@ -14,7 +16,8 @@ async (page) => {
   const external = [], pageErrors = [];
   let failStart = false;
   const assignment = {
-    assignmentId: 'assignment-fixture', sessionNumber: 1, title: 'Phiếu thử', definitionHash: 'fixture-hash',
+    assignmentId: 'assignment-fixture',courseCode:'DEMO-67', sessionNumber: 1, title: 'Phiếu thử', definitionHash: 'fixture-hash',
+    blockReleases:[{blockId:'block-1',checkpoint:1,status:'open'}],
     class: { classId: 'class-fixture', name: 'Lớp thử' },
     roster: [
       { studentRef: ids.a, name: 'Học viên A' }, { studentRef: ids.b, name: 'Học viên B' },
@@ -34,6 +37,7 @@ async (page) => {
       return route.fulfill({ contentType: 'application/javascript', body: "window.PROGRESS_LOG_CONFIG=Object.freeze({API_BASE_URL:'https://ducizone.ddns.net/mapping-api',STUDENT_MEMORY:Object.freeze({enabled:true,allClasses:true})});" });
     }
     if (url.includes('/api/learning/assignments/open')) return json({ ok: true, assignment });
+    if (url.includes('/api/learning/student/session-comments')) return json({ok:true,comments:[]});
     if (url.includes('/api/learning/attempts/start')) {
       const body = request.postDataJSON(); calls.start.push(body);
       if (failStart) return json({ ok: false, message: 'Mở phiếu thử thất bại.' }, 503);
@@ -143,3 +147,5 @@ async (page) => {
   ensure(pageErrors.length === 0, 'Trang phát sinh lỗi: ' + pageErrors.join(', '));
   return { outcome: 'success', checks: ['UUID dùng chung', 'xác nhận bận', 'draft sessionStorage', 'đổi người/lỗi storage/tab khác'] };
 }
+// Cách ghi nhớ UUID cũ chỉ còn ở phiếu DEMO legacy; phiếu thật dùng bộ kiểm ERP chung.
+test('Bộ nhớ legacy: UUID, xác nhận, hai tab, nháp và lỗi storage',{timeout:45000},()=>run(check));

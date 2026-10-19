@@ -14,6 +14,10 @@ for (const name of pages) {
   html = html.replace('connect-src \'self\' ', 'connect-src \'self\' http://127.0.0.1:8792 ');
   html = html.replaceAll(/(?:href|src)="(session-comments\.css|reference-components\.css|styles\.css|teacher\.css|journey\.css|app\.js|teacher\.js|journey\.js)/g,
     match => match.replace('="', '="../'));
+  // Kho thử giữ màn học viên hiện có; mã run giả không được chuyển thành mã phiếu dashboard thật.
+  html = html.replace(/\s*<link rel="stylesheet" href="\.\.\/shared\/teacher-entry\.css[^"]*">/, '');
+  html = html.replace(/\s*<script type="module" src="\.\.\/shared\/teacher-entry\.js[^"]*"><\/script>/, '');
+  html = html.replace(' data-teacher-product="progress-log" data-teacher-path="./teacher.html"', '');
   html = html.replace(/\s*<script src="https:\/\/accounts\.google\.com\/gsi\/client" async defer><\/script>/, '');
   if (name === 'index.html') {
     html = html.replace('src="../app.js?', 'src="boot.js?');
