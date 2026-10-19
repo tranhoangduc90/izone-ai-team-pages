@@ -1252,6 +1252,7 @@ function renderIntegratedJourney(journey) {
     const status = sessionState(session, {assignmentId:session.assignmentId,
       status:session.completeness==='complete'?'complete':session.testResult?'test_result':session.completeness==='incomplete'?'incomplete':session.conflict?'needs_review':'not_submitted'},
       session.assignmentId?{title:session.title,status:session.assignmentStatus}:null);
+    if(session.completeness==='incomplete')Object.assign(status,{kind:'complete',label:'Đã nộp · còn câu trống',canLearn:false});
     const completed = ['complete','incomplete'].includes(session.completeness)||Boolean(session.sessionComment?.noteText);
     const learn = !completed&&status.canLearn && /^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
     const item = document.createElement(learn?'a':completed?'button':'article');

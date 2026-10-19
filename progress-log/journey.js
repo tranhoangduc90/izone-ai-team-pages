@@ -101,7 +101,8 @@ function submissionLabel(session) {
 function buildSession(session) {
   const view=sessionState(session,{assignmentId:session.assignmentId,status:session.completeness==='complete'?'complete':session.testResult?'test_result':'not_submitted'},
     session.assignmentId?{title:session.title,status:session.assignmentStatus}:null);
-  const read=session.completeness==='complete'||Boolean(session.sessionComment?.noteText);
+  if(session.completeness==='incomplete')Object.assign(view,{kind:'complete',label:'Đã nộp · còn câu trống',canLearn:false});
+  const read=['complete','incomplete'].includes(session.completeness)||Boolean(session.sessionComment?.noteText);
   const learn=!read&&view.canLearn&&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
   const item=document.createElement(learn?'a':read?'button':'article');
   item.dataset.sessionNumber=String(session.sessionNumber);
