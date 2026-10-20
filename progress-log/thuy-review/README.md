@@ -4,7 +4,7 @@ Bản demo HTML/CSS/JavaScript thuần theo master 1.3 ngày 20/10/2026 của [T
 
 ## Mở trên GitHub Pages
 
-Mở route `progress-log/thuy-review/`, chọn **Chọn file dữ liệu riêng** rồi chọn gói JSON được bàn giao riêng. File được đọc trong bộ nhớ trình duyệt, không tải lên GitHub. Repo và asset công khai không chứa tên, câu trả lời, đáp án thật, token phiếu hoặc bản chụp dữ liệu.
+Mở route `progress-log/thuy-review/`: trang tự tải `demo-data.json`, không cần chọn file. Đức đã cho phép công bố gói dữ liệu demo IC2305 ngày 20/10/2026. Gói gồm dữ liệu học viên, bài làm và đáp án phục vụ bản demo; không chứa credential hoặc token phiếu production. Khi tải thất bại, trang hiển thị lỗi và nút **Thử tải lại**.
 
 Các tab trong cùng trình duyệt dùng BroadcastChannel để chia sẻ bản chụp và thao tác thử. Đóng tab cuối sẽ bỏ phiên thử. Bản chụp gốc không đổi. Bài do người xem soạn nằm trong phiên tab giảng viên; không hứa lưu bền vững hoặc đồng bộ nhiều thiết bị.
 
@@ -52,9 +52,10 @@ Thay bài bằng phiếu khác hoặc bài vừa soạn sẽ thu hồi bản cũ
 ## Source và kiểm thử
 
 - `app.js`, `theme.css`, `completion.css`, `index.html`: giao diện và các hành trình. Giữ renderer nội dung dùng chung ở `../answer-review.js`.
-- `model.mjs`: tính số tự báo, nhãn, kiểm câu trả lời và chấm mô phỏng từ khóa trong gói riêng.
+- `model.mjs`: tính số tự báo, nhãn, kiểm câu trả lời và chấm mô phỏng từ khóa trong gói demo.
 - `demo-store.mjs`: cùng một bộ nhớ thao tác cho bản local và Pages.
-- `pages-adapter.mjs`: mở file riêng, chia sẻ phiên qua các tab; không gọi API production.
+- `pages-adapter.mjs`: tự tải gói công khai, chia sẻ phiên qua các tab và xử lý tải lại khi lỗi; không gọi API production.
+- `demo-data.json`: gói IC2305 đã được cho phép công bố, giữ nguyên nội dung gói bàn giao; không phải bản chụp thô từ hệ thống vận hành.
 - `editor-bridge.mjs` và `exercise-*`, `library-model.js`, `worksheet-model.js`: editor/CSS từ nguồn Thủy, bỏ dữ liệu gieo sẵn và đường URL chứa payload; giữ điều kiện khi sao chép phiếu thật.
 - `fonts.css`, `fonts/`: Geologica tại chỗ, giấy phép SIL Open Font License.
 - `server.mjs`: tùy chọn chạy local bằng Node, chỉ nghe 127.0.0.1, đọc file qua biến PROGRESS_DEMO_SNAPSHOT; mặc định cổng 7163. Không dùng server này làm máy chủ công khai.
