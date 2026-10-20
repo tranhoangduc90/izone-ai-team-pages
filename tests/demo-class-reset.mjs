@@ -47,3 +47,11 @@ test('Cấu hình K56 chỉ chuyển đúng CODEXDEMO56 sang kho riêng',async()
     }
   }
 });
+test('Reset Mini giấy bỏ nháp đúng người, giữ người khác và bài khác',()=>{
+  const ctx=demoContext('67','mini'),prefix=`izone-mini-answer:v2:${ctx.slug}:${ctx.code}:`;
+  const own=prefix+a+':session',other=prefix+b+':session',otherTest=`izone-mini-answer:v2:term-test-1:${ctx.code}:${a}:session`;
+  const map=new Map([[own,JSON.stringify({studentRef:a,drafts:{reading:{1:'old'}}})],[other,JSON.stringify({studentRef:b})],[otherTest,JSON.stringify({studentRef:a})],[prefix+a+':mismatch',JSON.stringify({studentRef:b})]]);
+  const storage={get length(){return map.size},key:i=>[...map.keys()][i],getItem:k=>map.get(k),removeItem:k=>map.delete(k)};
+  clearStudentStorage(ctx,a,[storage]);assert.equal(map.has(own),false);assert.equal(map.size,3);
+  assert.ok(map.has(other));assert.ok(map.has(otherTest));assert.ok(map.has(prefix+a+':mismatch'));
+});
