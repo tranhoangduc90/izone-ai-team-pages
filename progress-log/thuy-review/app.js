@@ -7,14 +7,14 @@ const {reviewItems}=await import(localAPI?'/shared/answer-review.js':'../answer-
 if(!localAPI)await preparePages();
 
 const app=document.querySelector('#app'), dialog=document.querySelector('#dialog');
-const q=new URLSearchParams(location.search), isStudent=q.get('view')==='student';
+const q=new URLSearchParams(location.hash.includes('view=')?location.hash.slice(1):location.search), isStudent=q.get('view')==='student';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(`${String(v).slice(0,10)}T12:00:00+07:00`).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}):'—';
 const time=v=>v?new Date(v).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}):'—';
 const pct=v=>Number.isFinite(v)?`${Math.round(v*10)/10}%`:'—';
 const initials=name=>name.trim().split(/\s+/).slice(-2).map(s=>s[0]).join('').toUpperCase();
 const badge=(text,type='')=>`<span class="badge ${type}">${esc(text)}</span>`;
-const studentURL=(ref='demo-a',number=10)=>`./?view=student&ref=${encodeURIComponent(ref)}&number=${number}`;
+const studentURL=(ref='demo-a',number=10)=>`./${localAPI?'?':'#'}view=student&ref=${encodeURIComponent(ref)}&number=${number}`;
 let toastTimer;
 function toast(message){const e=document.querySelector('#toast');e.textContent=message;e.className='show';clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.className='',5000);}
 async function api(path,body){if(!localAPI)return pagesAPI(path,body);const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const data=await r.json();if(!r.ok)throw new Error(data.error||'Không tải được dữ liệu.');return data;}
@@ -161,7 +161,7 @@ async function openStudent(number=s.number,ref=s.ref){
   s.history=[data,...historyResults.filter(v=>v.status==='fulfilled').map(v=>v.value)];
   s.historyError=historyResults.some(v=>v.status==='rejected');
   s.data=data;s.number=number;s.ref=ref;s.responses=structuredClone(data.responses||{});s.dirty=false;s.saveError=false;s.expanded.clear();
-  const url=new URL(location.href);url.searchParams.set('number',number);url.searchParams.set('ref',ref);history.replaceState(null,'',url);renderStudent();
+  const url=new URL(location.href),params=new URLSearchParams(localAPI?url.search:url.hash.slice(1));params.set('view','student');params.set('number',number);params.set('ref',ref);if(localAPI)url.search=params.toString();else{url.search='';url.hash=params.toString();}history.replaceState(null,'',url);renderStudent();
 }
 async function saveStudent(){
   clearTimeout(s.timer);if(s.pending)await s.pending;
