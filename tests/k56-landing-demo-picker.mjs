@@ -38,14 +38,13 @@ async function fixture({query='?class=CODEXDEMO56&mode=lis_first',classes=fakeCl
  return {elements,tests,modes,destinations,location,calls,history,context,names:()=>elements.classSelect.children.map(x=>x.value)};
 }
 
-// Sau dọn production: không tự tạo lớp giả, vẫn giữ hành trình lớp thật và nháp/phiên.
-test('chỉ hiện lớp được cấp quyền, nguồn cũ lỗi không tự sinh demo',async()=>{
- const f=await fixture();assert.deepEqual(f.names(),['IC2305','IC2264']);
- assert.equal(f.elements.classSelect.value,'IC2305');
- assert.ok(!f.names().some(x=>x.startsWith('CODEX')));
+// Theo yêu cầu phục hồi: demo ở đầu; lớp thật vẫn giữ quyền, thứ tự và cách mở bài.
+test('ghim demo trước lớp thật kể cả khi nguồn options demo chưa tải được',async()=>{
+ const f=await fixture();assert.deepEqual(f.names(),['CODEXDEMO56','IC2305','IC2264']);
+ assert.equal(f.elements.classSelect.value,'CODEXDEMO56');
 });
 test('link lớp giả cũ bị bỏ lựa chọn và không tạo yêu cầu mở bài',async()=>{
- for(const code of ['CODEXDEMO56','CODEXDEMO806','CODEXID261018']){
+ for(const code of ['CODEXDEMO56X','CODEXDEMO806','CODEXID261018']){
   const f=await fixture({query:'?class='+code,authenticated:false});
   assert.equal(f.elements.classCode.value,'');assert.equal(new URLSearchParams(f.location.search).has('class'),false);
   const n=f.calls.length;await f.tests[0].handlers.click();assert.equal(f.calls.length,n);
@@ -61,13 +60,13 @@ test('lớp thật mở đúng ba bài và hai thứ tự, chỉ đọc roster',
  assert.ok(f.calls.filter(x=>x.url.includes('/roster?')).every(x=>x.url.startsWith('https://example.invalid/live/')));
  assert.ok(f.calls.every(x=>!x.opts?.method||x.opts.method==='GET'));
 });
-test('tài khoản không được cấp lớp giữ ô nhập tay, không lỗi hoặc thêm lớp',async()=>{
+test('tài khoản không được cấp lớp thật vẫn có đúng lớp demo dùng thử',async()=>{
  const f=await fixture({classes:[],demoError:false});
- assert.equal(f.elements.classSelect.hidden,true);assert.equal(f.elements.classCode.hidden,false);
- assert.match(f.elements.loginStatus.textContent,/chưa có lớp/);
+ assert.equal(f.elements.classSelect.hidden,false);assert.equal(f.elements.classCode.hidden,true);
+ assert.deepEqual(f.names(),['CODEXDEMO56']);assert.match(f.elements.loginStatus.textContent,/0 lớp thật/);
 });
 test('một nguồn khôi phục lỗi vẫn giữ lớp thật của nguồn còn lại',async()=>{
- const f=await fixture({restoreError:true});assert.deepEqual(f.names(),['IC2305','IC2264']);
+ const f=await fixture({restoreError:true});assert.deepEqual(f.names(),['CODEXDEMO56','IC2305','IC2264']);
  assert.match(f.elements.loginStatus.textContent,/chưa khôi phục được/);
 });
 test('roster lỗi giữ trang và cho thử lại, không mở bài',async()=>{
@@ -82,5 +81,15 @@ test('Answer Sheet, audio và dashboard giữ lớp thật và thứ tự tươn
 });
 test('lớp thật không được API cấp không được tự bổ sung vào danh sách',async()=>{
  const f=await fixture({classes:[{name:'IC2305'},{name:'CODEXDEMO56'},{name:'CODEXID261018'}],demoError:false});
- assert.deepEqual(f.names(),['IC2305']);
+ assert.deepEqual(f.names(),['CODEXDEMO56','IC2305']);
+});
+
+test('chưa đăng nhập vẫn mở demo đúng API, ba bài và hai thứ tự',async()=>{
+ const f=await fixture({authenticated:false});
+ for(const mode of ['lis_first','read_first'])for(const b of f.tests){
+  f.modes.find(x=>x.dataset.mode===mode).handlers.click();await b.handlers.click();
+  assert.equal(f.location.href,`../${b.dataset.test}/?class=CODEXDEMO56&mode=${mode}`);
+ }
+ const rosters=f.calls.filter(x=>x.url.includes('/roster?'));
+ assert.equal(rosters.length,6);assert.ok(rosters.every(x=>x.url.startsWith('https://example.invalid/demo/')));
 });
