@@ -1,4 +1,5 @@
 import { focusSpeakingStart } from './journey-focus.js';
+import { analysisStatus, analysisPending } from './analysis-status.js?v=20261020-doctor-snapshot-v1';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-speaking-tab-v2';
 import { createPendingPoller } from './pending-poller.js';
 import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
@@ -172,6 +173,7 @@ function renderDoctor() {
     li.append(link, detail); list.append(li);
   }
   $('doctor-sync').textContent = `Đang chờ luyện: ${doctor.neededCount} bài`;
+  if (state.submitted) $('doctor-sync').textContent += ` · ${analysisStatus(state.doctorAnalysis).label}`;
   $('doctor-expand').hidden = doctor.neededCount <= 5;
   $('doctor-expand').textContent = state.expanded ? 'Thu gọn còn 5 bài đầu' : `Xem tất cả ${doctor.neededCount} bài`;
   const choices = [...doctor.allNeeded, ...doctor.practiced];
@@ -189,14 +191,14 @@ function renderDoctor() {
   const history = $('extra-history'); history.replaceChildren();
   for (const item of state.practice) {
     const li = document.createElement('li');
-    li.textContent = `Bài luyện ${item.slot}: ${item.status === 'accepted' ? (item.analysis_status === 'done' ? 'đã phân tích' : 'đang phân tích') : item.status === 'pending' ? 'đang kiểm tra' : 'chưa đạt'}`;
+    li.textContent = `Bài luyện ${item.slot}: ${item.status === 'accepted' ? analysisStatus(item.analysis_status).label : item.status === 'pending' ? 'đang kiểm tra' : 'chưa đạt'}`;
     history.append(li);
   }
   const last = state.practice.at(-1);
   if (last?.status === 'accepted' && $('extra-link').value.trim() === last.share_url) {
     $('extra-link').value = '';
     const result = $('extra-result');
-    result.textContent = last.analysis_status === 'done' ? 'Đã phân tích và cập nhật danh sách cá nhân.' : 'Đã nhận bài, đang phân tích lỗi.';
+    result.textContent = analysisStatus(last.analysis_status).message;
     result.className = 'check-result is-pass'; result.hidden = false;
   }
 }
@@ -210,6 +212,7 @@ async function refresh() {
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.practice = data.practiceLinks || [];
   if (doctor) state.doctor = doctor;
+  state.doctorAnalysis = (data.processing?.analyze_homework || data.processing?.doctor_analyze)?.status;
   state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
   renderLinks();
   poller.settled();
@@ -232,6 +235,8 @@ const autoSubmit = createAutoSubmit({
   readBack: refresh,
   onSubmitted() {
     state.submitted = true;
+    state.doctorAnalysis ||= 'pending';
+    poller.settled();
     state.finishing = false;
     $('change-student').disabled = state.requestCount > 0;
     renderLinks();
@@ -319,8 +324,9 @@ $('extra-confirm').addEventListener('click', async () => {
 const poller = createPendingPoller({
   refresh,
   hasSession: () => Boolean(state.accessToken),
-  isPending: () => [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status))
-    || state.practice.some(link => link.status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
+  isPending: () => (state.submitted && analysisPending(state.doctorAnalysis))
+    || [...state.links.values()].some(link => link.check_status === 'pending' || analysisPending(link.analysis_status))
+    || state.practice.some(link => link.status === 'pending' || analysisPending(link.analysis_status)),
   onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
 });
 
