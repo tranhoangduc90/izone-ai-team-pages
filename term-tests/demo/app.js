@@ -1,4 +1,4 @@
-import {COURSES,demoContext,loadStudents,resetStudent,resetSignal,clearStudentStorage} from './model.js?v=20261020-v1';
+import {COURSES,demoContext,loadStudents,resetStudent,resetSignal,clearStudentStorage} from './model.js?v=20261020-v2';
 
 // Tải danh sách thật của lớp giả, mở trang thi hiện hành và reset theo từng người.
 // Khi mạng lỗi, giữ thông tin lỗi tại học viên; không biến reset một phần thành hoàn tất.

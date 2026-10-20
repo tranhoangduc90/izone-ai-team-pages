@@ -32,7 +32,8 @@ export function clearStudentStorage(context,studentRef,storages){
       const keys=Array.from({length:storage.length},(_,i)=>storage.key(i));
       for(const key of keys){
         const base=`izone-test:${context.slug}:${context.code}`;
-        if(key!==base&&!key?.startsWith(base+':'))continue;
+        const mini=`izone-mini-answer:v2:${context.slug}:${context.code}:${studentRef}:`;
+        if(key!==base&&!key?.startsWith(base+':')&&!key?.startsWith(mini))continue;
         try{if(JSON.parse(storage.getItem(key))?.studentRef===studentRef)storage.removeItem(key);}catch{/* Giữ dữ liệu không rõ chủ. */}
       }
     }catch{/* Reset trên máy chủ vẫn có hiệu lực khi trình duyệt chặn storage. */}
