@@ -1,0 +1,21 @@
+/* Lớp nối cho editor gốc, trạng thái thiếu dữ liệu và mở file riêng trên Pages. */
+.fileEntry{max-width:560px;margin:64px auto;padding:32px;background:white;border:1px solid var(--line);border-radius:8px}
+.fileEntry .brand{padding:0 0 24px}.fileEntry p{margin:16px 0}.fileEntry input[type=file]{display:block;margin:16px 0;width:100%}
+.fileEntry .btn{display:inline-flex}.fileEntry h1{font-size:24px;line-height:32px}
+.exercise-editor button,#exerciseAiDialog button{background:white;border:1px solid var(--control-border);border-radius:6px;padding:8px 12px;line-height:20px;color:var(--navy)}
+.exercise-editor button.primary,#exerciseAiDialog button.primary{color:white;background:var(--red);border-color:var(--red)}
+.exercise-editor button.primary:hover,#exerciseAiDialog button.primary:hover{background:#b90622}
+.exercise-editor .ghost{background:transparent;border-color:transparent}.exercise-editor .repo-field{display:flex;flex-direction:column;gap:6px;min-width:0;margin:12px 0}
+.exercise-editor .repo-field>span{font-size:12px;line-height:16px;color:var(--muted)}
+.exercise-editor input:not([type=radio]):not([type=checkbox]),.exercise-editor select{border:1px solid var(--control-border);border-radius:6px;background:white;max-width:100%;padding:8px 12px;min-width:0}
+.exercise-editor .repo-field input{width:100%}.exercise-editor textarea{min-height:72px}.exercise-student-preview>.exercise-part{padding:24px}
+.repo-error{color:var(--red);padding:12px;background:var(--pink);border-radius:6px;margin:12px 0}
+.repo-error[hidden]{display:none}.exercise-question-head .actions{flex-shrink:0}.exercise-editor{padding-bottom:24px}
+.ownForms{margin-top:20px}.repoTable td:last-child{white-space:nowrap}.repoTable td:last-child .btn+ .btn{margin-left:8px}
+.correctOption,.correctAnswer{background:#eef8f2;color:#18734c;border:1px solid #b9dcca!important;border-radius:6px;padding:10px 12px;white-space:pre-wrap}
+.correctOption b{display:block;margin-top:4px;font-size:12px}.correctAnswer{margin:8px 0 16px;font-size:14px}
+.studentPart .studentAnswerReview>.studentJourneyHeading{display:none}
+.writingTask{margin-top:12px}.writingTask p{margin-top:4px}.originalExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:pre-wrap}
+.fullFeedback{white-space:pre-wrap;overflow-wrap:anywhere}.dialogBody li{margin:8px 0}.matchingFields{display:grid;gap:12px}.matchingFields label{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+.identityEntry{max-width:560px;margin:24px auto;padding:32px;background:white;border:1px solid var(--line);border-radius:8px}.identityEntry h1{margin:0 0 16px}.identityEntry select,.identityEntry .btn{width:100%;margin-top:16px}.identityEntry p{margin-top:12px}
+@media(max-width:650px){.fileEntry{margin:24px 16px;padding:24px}.repoTable td:last-child{white-space:normal}.repoTable td:last-child .btn{margin:4px 0!important}.exercise-editor .exercise-toolbar .actions{width:100%}.exercise-editor .exercise-toolbar .actions button{flex:1}.identityEntry{padding:24px}.matchingFields label{grid-template-columns:1fr}}
