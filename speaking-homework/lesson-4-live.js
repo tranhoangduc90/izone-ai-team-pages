@@ -1,4 +1,5 @@
 import { focusSpeakingStart } from './journey-focus.js';
+import { analysisStatus, analysisPending } from './analysis-status.js?v=20261020-doctor-snapshot-v1';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-speaking-tab-v2';
 import { createPendingPoller } from './pending-poller.js';
 import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
@@ -249,6 +250,7 @@ function renderDoctor() {
   $('doctor-expand').textContent = state.expanded ? 'Thu gọn còn 5 bài đầu'
     : `Xem tất cả ${doctor.neededCount} bài cần luyện`;
   $('doctor-sync').textContent = `Đang chờ luyện: ${doctor.neededCount} bài`;
+  if (state.submitted) $('doctor-sync').textContent += ` · ${analysisStatus(state.doctorAnalysis).label}`;
   $('doctor-fallback').hidden = Number(doctor.personalCount) >= 2;
   const choices = doctorOptions();
   for (const select of [$('practice-1-exercise'), $('practice-2-exercise'), $('extra-exercise')]) {
@@ -298,9 +300,7 @@ function renderPractice() {
     if (row && !changed) {
       if (row.status === 'accepted') {
         showResult(resultId, 'pass', 'Đã nhận bài bổ trợ',
-          acceptanceMessage(row) + (row.analysis_status === 'done'
-            ? ' Danh sách bài cần luyện đã cập nhật.'
-            : ' Việc phân tích lỗi được xử lý riêng, không ảnh hưởng kết quả công nhận.'));
+          acceptanceMessage(row) + ' ' + analysisStatus(row.analysis_status).message);
       } else if (row.status === 'pending') {
         showResult(resultId, 'loading', 'Đang kiểm bài bổ trợ',
           'Hệ thống đang đọc hội thoại và bước áp dụng vào câu Speaking.');
@@ -320,7 +320,7 @@ function renderPractice() {
     const li = document.createElement('li');
     const exercise = doctorOptions().find(item => item.exercise_id === row.exercise_id);
     li.textContent = `${exercise?.title || 'Bài bổ trợ'} · ${row.status === 'accepted'
-      ? row.analysis_status === 'done' ? 'Đã phân tích' : 'Đã nhận, đang phân tích'
+      ? analysisStatus(row.analysis_status).label
       : row.status === 'pending' ? 'Đang kiểm' : 'Chưa đạt'}`;
     $('extra-history').append(li);
   }
@@ -330,9 +330,8 @@ function renderPractice() {
   if (last?.status === 'accepted' && $('extra-link').value.trim() === last.share_url) {
     $('extra-link').value = '';
     saveDraft();
-    showResult('extra-result', last.analysis_status === 'done' ? 'pass' : 'loading',
-      'Đã nhận bài luyện thêm', last.analysis_status === 'done'
-        ? 'Danh sách cá nhân đã cập nhật.' : 'Đang phân tích lỗi để cập nhật danh sách.');
+    const analysis = analysisStatus(last.analysis_status);
+    showResult('extra-result', analysis.tone, 'Đã nhận bài luyện thêm', analysis.message);
   }
 }
 function render() {
@@ -360,6 +359,7 @@ async function refresh() {
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.practice = new Map((data.practiceLinks || []).map(link => [Number(link.slot), link]));
   if (doctor) state.doctor = doctor;
+  state.doctorAnalysis = (data.processing?.analyze_homework || data.processing?.doctor_analyze)?.status;
   state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
   if (independent && data.status === 'submitted' && data.receipt?.id && !documentId) $('completion-message').textContent = `Biên nhận ${data.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
   render();
@@ -379,6 +379,8 @@ const autoSubmit = createAutoSubmit({
   readBack: refresh,
   onSubmitted() {
     state.submitted = true;
+    state.doctorAnalysis ||= 'pending';
+    poller.settled();
     state.finishing = false;
     $('change-student').disabled = state.requestCount > 0;
     render();
@@ -515,8 +517,9 @@ $('extra-confirm').addEventListener('click', async () => {
 const poller = createPendingPoller({
   refresh,
   hasSession: () => Boolean(state.accessToken),
-  isPending: () => [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status))
-    || [...state.practice.values()].some(link => link.status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
+  isPending: () => (state.submitted && analysisPending(state.doctorAnalysis))
+    || [...state.links.values()].some(link => link.check_status === 'pending' || analysisPending(link.analysis_status))
+    || [...state.practice.values()].some(link => link.status === 'pending' || analysisPending(link.analysis_status)),
   onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
 });
 
