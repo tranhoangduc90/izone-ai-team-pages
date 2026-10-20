@@ -1,12 +1,12 @@
 /*
  * Dữ liệu nhận vào: mã lớp nhập tay hoặc danh sách lớp API trả sau khi Google xác thực giảng viên.
- * Xử lý: chỉ nhận lớp thật theo quyền backend; không tự tạo lựa chọn lớp giả.
+ * Xử lý: ghim lớp demo đã phục hồi; lớp thật vẫn theo quyền backend.
  * Kết quả: giảng viên chọn lớp rồi mở bản computer-based, answer sheet hoặc trang kết quả.
  * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
  */
 
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-k56-v1';
-import { buildK56LandingClasses } from './landing-model.js?rev=20261019-cleanup-v1';
+import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-first-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const input = document.getElementById('classCode');
@@ -71,7 +71,7 @@ function selectedClassCode() {
 }
 
 function validClassCode(value) {
-  return /^[A-Z0-9_-]{2,32}$/.test(value) && !value.startsWith('CODEXDEMO') && value !== 'CODEXID261018';
+  return /^[A-Z0-9_-]{2,32}$/.test(value) && (!value.startsWith('CODEXDEMO') || value === 'CODEXDEMO56') && value !== 'CODEXID261018';
 }
 
 function showManualEntry(message = 'Bạn vẫn có thể nhập mã lớp khi chưa đăng nhập.') {
@@ -96,7 +96,7 @@ function showAuthorizedClasses(payload) {
   classSelect.replaceChildren(...classes.map(item => {
     const option = document.createElement('option');
     option.value = item.name;
-    option.textContent = item.name;
+    option.textContent = item.label || item.name;
     return option;
   }));
   const matchingClass = classes.find(item => item.name.toUpperCase() === requested);
@@ -105,10 +105,10 @@ function showAuthorizedClasses(payload) {
   classSelect.hidden = false;
   input.value = classSelect.value;
   updateLandingUrl();
-  classHelp.textContent = 'Các lớp chỉ hiển thị theo quyền tài khoản; lớp mới hơn nằm trên.';
+  classHelp.textContent = 'Lớp demo luôn ở đầu. Các lớp thật hiển thị theo quyền tài khoản, lớp mới hơn nằm trên.';
   const reviewerName = payload.reviewer?.displayName || payload.reviewer?.email || 'Giảng viên';
   loginBadge.textContent = `Đã đăng nhập: ${reviewerName}`;
-  loginStatus.textContent = `Đã tải ${classes.length} lớp.`;
+  loginStatus.textContent = `Đã tải ${classes.length - 1} lớp thật và lớp demo dùng thử.`;
   logoutButton.hidden = false;
   googleSignInButton.hidden = true;
 }

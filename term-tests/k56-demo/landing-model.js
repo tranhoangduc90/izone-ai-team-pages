@@ -34,7 +34,7 @@ export function sortClassesNewestFirst(classes) {
   });
 }
 
-// Chỉ nhận lớp được máy chủ cấp quyền; không tự thêm lại lớp giả đã dọn.
+// Ghim lớp demo đã phục hồi lên đầu; lớp thật vẫn chỉ lấy từ quyền máy chủ.
 export function buildK56LandingClasses(classes) {
   const byName = new Map();
   for (const item of Array.isArray(classes) ? classes : []) {
@@ -44,5 +44,5 @@ export function buildK56LandingClasses(classes) {
     if (name.startsWith('CODEXDEMO') || name === 'CODEXID261018') continue;
     if (!byName.has(name)) byName.set(name, { ...item, name });
   }
-  return sortClassesNewestFirst([...byName.values()]);
+  return [{name:'CODEXDEMO56',label:'Lớp demo · 10 học viên'},...sortClassesNewestFirst([...byName.values()])];
 }

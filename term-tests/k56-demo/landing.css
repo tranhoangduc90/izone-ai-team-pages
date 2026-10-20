@@ -2,6 +2,17 @@
   width: min(820px, 100%);
 }
 
+.landing-demo {
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid #dce3ec;
+  border-left: 4px solid #e4002b;
+  border-radius: 12px;
+  background: #f6f8fb;
+}
+.landing-demo h2 { margin: 0; color: var(--navy); font-size: 20px; }
+.landing-demo .button { display: inline-flex; }
+
 .landing-link-group {
   margin-top: 24px;
 }

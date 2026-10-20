@@ -11,7 +11,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const modules = process.env.CODEX_NODE_MODULES || resolve(process.env.USERPROFILE || '', '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const { chromium } = createRequire(pathToFileURL(resolve(modules, 'playwright/package.json')))('playwright');
 
-test('Chrome desktop/mobile: không còn lớp giả, mở ba bài của lớp thật đúng mode', async () => {
+test('Chromium desktop/mobile: demo ở đầu, mở demo và lớp thật đúng ba bài và mode', async () => {
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://127.0.0.1').pathname;
     const target = resolve(root, `.${path.endsWith('/') ? path + 'index.html' : path}`);
@@ -29,7 +29,7 @@ test('Chrome desktop/mobile: không còn lớp giả, mở ba bài của lớp t
   });
   await new Promise(done => server.listen(0, '127.0.0.1', done));
   const base = `http://127.0.0.1:${server.address().port}`;
-  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN}:{channel:'chrome'}) });
   const context = await browser.newContext();
   const page = await context.newPage();
   const requests = [];
@@ -53,26 +53,31 @@ test('Chrome desktop/mobile: không còn lớp giả, mở ba bài của lớp t
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 844 });
       for (const mode of ['lis_first', 'read_first']) {
-        for (const slug of ['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56']) {
-          await page.goto(`${base}/term-tests/k56-demo/?class=CODEXDEMO806&mode=${mode}`);
+        for (const slug of ['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56']) for(const code of ['CODEXDEMO56','IC2264']) {
+          await page.goto(`${base}/term-tests/k56-demo/?class=${code}&mode=${mode}`);
           const select = page.locator('#classSelect');
           await select.waitFor({ state: 'visible' });
-          assert.equal(await select.inputValue(), 'IC2305');
+          assert.equal(await select.inputValue(), code);
           assert.equal(await select.locator('option[value="CODEXDEMO806"]').count(), 0);
-          assert.equal(await select.locator('option[value="CODEXDEMO56"]').count(), 0);
-          assert.equal(new URL(page.url()).searchParams.get('class'), 'IC2305');
+          assert.equal(await select.locator('option').first().getAttribute('value'), 'CODEXDEMO56');
+          assert.equal(new URL(page.url()).searchParams.get('class'), code);
+          const demo=page.locator('#demoClassEntry');await demo.waitFor({state:'visible'});
+          assert.equal(await demo.getAttribute('href'),'../demo/?course=56');
+          assert.ok((await demo.boundingBox()).y < (await page.locator('.landing-auth').boundingBox()).y);
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
           await select.selectOption('IC2305');
           assert.equal(new URL(page.url()).searchParams.get('class'), 'IC2305');
-          await select.selectOption('IC2264');
+          await select.selectOption(code);
           await page.locator(`[data-slug="${slug}"]`).click();
-          await page.waitForURL(`**/${slug}-computer-based/?class=IC2264&mode=${mode}`);
+          await page.waitForURL(`**/${slug}-computer-based/?class=${code}&mode=${mode}`);
         }
       }
     }
     const rosters = requests.filter(item => item.path.endsWith('/roster'));
-    assert.equal(rosters.length, 12);
-    assert.ok(rosters.every(item => item.path.includes('/mapping-api-k56/') && item.method === 'GET'));
+    assert.equal(rosters.length, 24);
+    assert.equal(rosters.filter(item=>item.path.includes('/mapping-api-k56/')).length,12);
+    assert.equal(rosters.filter(item=>item.path.includes('/mapping-api-demo/')).length,12);
+    assert.ok(rosters.every(item => item.method === 'GET'));
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

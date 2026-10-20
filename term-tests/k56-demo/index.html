@@ -8,7 +8,7 @@
     <title>Danh sách bài test · Khóa 56</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="../shared/styles.css?rev=20261003-writing-save-cas-v1">
-    <link rel="stylesheet" href="landing.css?rev=20260911-k56-selected-button-v1">
+    <link rel="stylesheet" href="landing.css?rev=20261020-demo-first-v1">
   </head>
   <body>
     <main class="landing-shell">
@@ -16,6 +16,11 @@
         <p class="eyebrow">IZONE · IELTS 5–6 · Hệ thống bài thi</p>
         <h1>Danh sách bài test · Khóa 56</h1>
         <p>Chọn lớp rồi mở bài test để chọn học viên của lớp đó.</p>
+        <section class="landing-demo" aria-labelledby="demoClassHeading">
+          <h2 id="demoClassHeading">Lớp demo · 10 học viên</h2>
+          <p>Thử Term Test 1, Term Test 2 và Mini Test. Chấm AI thật, không gửi điểm sang Portal; reset riêng từng học viên để làm lại.</p>
+          <a class="button button-primary" id="demoClassEntry" href="../demo/?course=56">Mở lớp demo khóa 56</a>
+        </section>
         <section class="landing-auth" aria-label="Đăng nhập giảng viên">
           <div>
             <strong id="loginBadge">Giảng viên chưa đăng nhập</strong>
@@ -70,6 +75,6 @@
       </section>
     </main>
     <script src="../k56-shared/config.js?rev=20261020-demo-v1"></script>
-    <script type="module" src="landing.js?rev=20261019-cleanup-v1"></script>
+    <script type="module" src="landing.js?rev=20261020-demo-first-v1"></script>
   </body>
 </html>
