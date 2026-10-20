@@ -1,6 +1,6 @@
 // Dữ liệu vào: tham số lớp ở ba trang Term 1, Term 2 và Mini K56.
 // Việc chính: chạy config trong ngữ cảnh trình duyệt giả, không gọi API thật.
-// Kết quả: lớp thật đi API K56, link demo cũ cũng đi API thật để bị từ chối theo danh sách lớp; K67 không đổi.
+// Kết quả: lớp thật đi API K56; chỉ CODEXDEMO56 được khôi phục ở dịch vụ riêng, K67 không đổi.
 // Khi lỗi: test RED trước phát hành để tránh học viên gặp CLASS_NOT_FOUND.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -27,19 +27,19 @@ async function configFor(relative, search) {
 }
 
 for (const relative of paths) {
-  test(`${relative}: lớp K56 thật đi API đã mở, không còn API demo`, async () => {
+  test(`${relative}: lớp thật giữ API K56, lớp demo dùng kho riêng`, async () => {
     for (const classCode of ['IC2264', 'IC2322', 'IC2326']) {
       const config = await configFor(relative, `?class=${classCode}`);
       assert.equal(config.API_BASE_URL, realApi);
     }
     const demo = await configFor(relative, '?class=CODEXDEMO56');
-    assert.equal(demo.API_BASE_URL, realApi);
+    assert.equal(demo.API_BASE_URL, demoApi);
     const noClass = await configFor(relative, '');
     assert.equal(noClass.API_BASE_URL, realApi);
   });
 }
 
-test('mọi trang K56 nạp revision mới để không giữ API demo trong cache', async () => {
+test('mọi trang K56 nạp revision mới khi phục hồi lớp demo', async () => {
   const pages = [
     'k56-demo', 'teacher-k56', 'term-test-1-k56',
     'term-test-2-k56', 'mini-test-k56',
@@ -49,7 +49,7 @@ test('mọi trang K56 nạp revision mới để không giữ API demo trong cac
   ];
   for (const page of pages) {
     const html = await readFile(path.join(root, 'term-tests', page, 'index.html'), 'utf8');
-    assert.match(html, /k56-(?:test2-|mini-)?shared\/config\.js\?rev=20261019-cleanup-v1/,
+    assert.match(html, /k56-(?:test2-|mini-)?shared\/config\.js\?rev=20261020-demo-v1/,
       `${page} phải tải cấu hình định tuyến mới`);
   }
 });
