@@ -3698,6 +3698,12 @@
     setStage('identity');elements.identityTitle.textContent='Chọn lớp và họ tên';
     try{
       const response=await apiRequest(`${miniPrefix}/classes`);
+      // Danh sách lớp thật không công khai lớp demo. Chỉ thêm đúng mã từ link demo;
+      // danh sách tên và quyền mở bài vẫn được máy chủ kiểm tra qua roster/open.
+      if ((query.get('class') || '').trim().toUpperCase() === 'CODEXDEMO806'
+        && !response.classes.some(c=>c.name==='CODEXDEMO806')) {
+        response.classes.push({name:'CODEXDEMO806'});
+      }
       classSelect.replaceChildren(new Option('Nhấn để chọn lớp',''),...response.classes.map(c=>new Option(c.name,c.name)));
       if(response.classes.some(c=>c.name===requestedClass))classSelect.value=requestedClass;
       await loadClass();
