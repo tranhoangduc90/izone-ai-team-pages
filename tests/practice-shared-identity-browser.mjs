@@ -29,7 +29,7 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ channel: 'msedge', headless: true }), results = [];
 const pageUrl = (kind, shared = false) => `${origin}/${kind}-practice/?${shared ? 'lesson=7' : `documentId=${doc}`}#login${shared ? '' : '?entry=fixture-entry-token'}`;
-async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false, identityDelay = 0, legacy, legacySamePerson = false, forgotten = false, legacyFailure = false, sharedListening = false, excludedRoster = false, otherClass = false, ambiguous = false } = {}) {
+async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false, identityDelay = 0, legacy, legacySamePerson = false, forgotten = false, legacyFailure = false, sharedListening = false, excludedRoster = false, otherClass = false, ambiguous = false, missingIdentity = false } = {}) {
   const ctx = await browser.newContext({ serviceWorkers: 'block' }), errors = [], requests = [], external = [], sessions = new Map();
   let releaseLogin, loginSeen;
   const loginArrived = new Promise(r => loginSeen = r), gate = new Promise(r => releaseLogin = r);
@@ -56,6 +56,7 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
     const body = req.postDataJSON(); requests.push({ path: url.pathname, body });
     const send = (value, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(value) });
     if (url.pathname === '/mapping-api/api/student-identity/resolve') {
+      if(missingIdentity)return send({ok:true,status:'missing',identity:null,aliases:[]});
       if(identityDelay)await new Promise(resolve=>setTimeout(resolve,identityDelay));
       if(legacyFailure&&body.studentRef===b)return send({ok:false,message:'Nguồn cũ lỗi giả'},503);
       const id = body.identity?.id || (body.studentRef === b && !legacySamePerson ? '900002' : '900001');
@@ -81,6 +82,7 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
   return { ctx, page: await ctx.newPage(), errors, external, requests, loginArrived, releaseLogin };
 }
 async function run(name, options, fn) {
+  if(process.env.IDENTITY_ONLY&&!name.includes(process.env.IDENTITY_ONLY))return;
   const s = await setup(options);
   try { await fn(s); assert.deepEqual(s.errors, []); assert.deepEqual(s.external, []);
     assert.equal(s.requests.some(r => /\/(begin|activate|submit|audio|pause)$/.test(r.path)), false);
@@ -169,6 +171,13 @@ try {
     await page.locator('#student-select').selectOption(a);await page.locator('#remember-student').uncheck();
     await page.locator('#login-submit').click();await prep(page);
     assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity,key),null);
+  });
+  await run('listening-shared-missing-identity-explains-profile', {sharedListening:true,missingIdentity:true},async({page})=>{
+    await page.goto(pageUrl('listening',true));await manual(page,true);
+    const notice=await page.locator('#toast').innerText();
+    assert.match(notice,/Hồ sơ chưa đối chiếu/);
+    assert.doesNotMatch(notice,/trình duyệt/);
+    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null')?.identity??null,key),null);
   });
   await run('listening-shared-pinned-session-other-tab', {sharedListening:true,id:'900001'}, async({page,ctx})=>{
     await page.goto(pageUrl('listening',true));await prep(page);

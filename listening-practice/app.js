@@ -59,7 +59,8 @@ async function loginSelected(id,classCode,{selection=null,remember=true}={}){
  apply(response);recoverLocal();
  courseIdentity.pin(id);
  await courseIdentity.commit(context,{automatic:Boolean(selection),remember}).then(remembered=>{
-  if(!['ok','empty'].includes(remembered.status))notify('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài tiếp theo.');
+  if(['missing','ambiguous'].includes(remembered.status))notify('Bài đã mở đúng người. Hồ sơ chưa đối chiếu được với danh tính chung; chưa ghi nhớ cho bài tiếp theo.');
+  else if(!['ok','empty'].includes(remembered.status))notify('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài tiếp theo.');
  }).catch(()=>notify('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài tiếp theo.'));
  navigate(['running','paused'].includes(current()?.status)?'resume':'prep');
 }
