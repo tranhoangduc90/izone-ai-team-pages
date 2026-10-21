@@ -333,7 +333,11 @@ async function openStudent(number=s.number,ref=s.ref){
   s.history=[data,...historyResults.filter(v=>v.status==='fulfilled').map(v=>v.value)];
   s.historyError=historyResults.some(v=>v.status==='rejected');
   s.data=data;s.number=number;s.ref=ref;s.responses=structuredClone(data.responses||{});s.dirty=false;s.saveError=false;s.completionError=completionError;s.expanded.clear();
-  const url=new URL(location.href),params=new URLSearchParams(localAPI?url.search:url.hash.slice(1));params.set('view','student');params.set('number',number);params.set('ref',ref);if(localAPI)url.search=params.toString();else{url.search='';url.hash=params.toString();}history.replaceState(null,'',url);renderStudent();
+  const url=new URL(location.href),params=new URLSearchParams(localAPI?url.search:url.hash.slice(1));
+  params.set('view','student');params.set('number',number);params.set('ref',ref);
+  // Link đã gắn lần giao phải chuyển cùng buổi; link bản chụp độc lập vẫn giữ cách mở cũ.
+  if(params.has('generation'))params.set('generation',String(data.generation));
+  if(localAPI)url.search=params.toString();else{url.search='';url.hash=params.toString();}history.replaceState(null,'',url);renderStudent();
 }
 async function saveStudent(){
   clearTimeout(s.timer);if(s.pending)await s.pending;
