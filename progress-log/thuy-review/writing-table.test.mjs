@@ -23,3 +23,10 @@ test('Tên A–Z trong từng nhóm, người chưa có toàn bộ dữ liệu �
  assert.deepEqual([...rows].sort(compareWritingPeople).map(v=>v.name),['Bình','Châu','An']);
  assert.deepEqual(writingSummary([]),{hasData:false,scores:{}});
 });
+test('Hai Term Test tăng dần vẫn giữ điểm 0, hòa theo tên và ô thiếu cuối',()=>{
+ for(const slug of ['term-test-1','term-test-2']){
+  const rows=[person('Bình',[result(slug,4)]),person('An',[result(slug,4)]),person('Dũng',[result(slug,0)]),person('Châu',[result(slug,8)]),person('Anh',[]),person('Hà',[result('mini',7)])];
+  assert.deepEqual([...rows].sort((a,b)=>compareWritingPeople(a,b,'test-asc:'+slug)).map(v=>v.name),['Dũng','An','Bình','Châu','Hà','Anh']);
+  assert.deepEqual([...rows].sort((a,b)=>compareWritingPeople(a,b,'test:'+slug)).map(v=>v.name),['Châu','An','Bình','Dũng','Hà','Anh']);
+ }
+});
