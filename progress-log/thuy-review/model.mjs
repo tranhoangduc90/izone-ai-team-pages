@@ -2,6 +2,25 @@
 // Không lấy điểm quiz hay Test để lấp chỗ trống của bài luyện tập.
 export const SKILLS = {listening:'Listening', reading:'Reading', speaking:'Speaking', writing:'Writing'};
 export const itemsOf = definition => (definition?.blocks || []).flatMap(b => b.items || []);
+// Kho đọc phiếu gốc của lần giao đầu; thay bài ở lớp không đổi nội dung nguồn.
+export function libraryEntries(sessions,forms){
+  const known=skill=>skill==='general'||Object.hasOwn(SKILLS,skill);
+  return [
+    ...sessions.map(session=>{
+      const original=session.retired?.[0],value=original?{...session,...original}:session;
+      const items=itemsOf(value.definition);
+      return {id:'used:'+session.number,source:'used',title:value.title,count:items.length,
+        skills:[...new Set(items.flatMap(i=>i.skillCodes?.length?i.skillCodes:['general']))].filter(known),session:value};
+    }),
+    ...forms.map(form=>({id:'mine:'+form.id,source:'mine',title:form.title,count:form.questions.length,
+      skills:[...new Set(form.questions.map(q=>q.skill||'general'))].filter(known),form}))
+  ];
+}
+// Tìm tên, nhóm nguồn và kỹ năng cùng áp dụng; không sửa bản gốc hoặc bài đang giao.
+export function filterLibraryEntries(entries,{source='all',skill='all',query=''}={}){
+  const search=query.normalize('NFC').trim().toLocaleLowerCase('vi');
+  return entries.filter(entry=>(source==='all'||entry.source===source)&&(skill==='all'||entry.skills.includes(skill))&&entry.title.normalize('NFC').toLocaleLowerCase('vi').includes(search));
+}
 export const validReport = v => Boolean(v && Number.isInteger(v.correct) && Number.isInteger(v.total) && v.total > 0 && v.correct >= 0 && v.correct <= v.total);
 export const blank = v => v == null || v === '' || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length);
 export function applicable(item, responses) {
