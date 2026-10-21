@@ -20,7 +20,7 @@ Bản chụp chỉ đọc lúc **18:54 ngày 20/10/2026**, giờ Việt Nam. The
 
 Hành trình bổ sung các phiếu buổi **2, 3, 4, 5, 6**; tổng cộng tám phiếu hiện có, hợp danh sách 18 học viên theo studentRef. Không nối người theo tên. Kế hoạch nguồn có 31 buổi; chưa có phiếu buổi 1 và 7 trong nguồn đang đọc. Không coi buổi chưa có phiếu là vắng hoặc 0 điểm.
 
-Listening có số tự báo ở buổi 3 và 10; Reading ở buổi 4 và 8. Chưa đủ ba buổi cùng kỹ năng để có nhãn ưu tiên thật. Tình huống 40/55/50 chỉ nằm trong mục mô phỏng riêng, không cộng vào bảng lớp. TB từ các phiếu hiện có dùng trọng số bằng nhau theo buổi; nhãn dùng ba buổi hợp lệ gần nhất, ngưỡng chưa làm tròn dưới 60%.
+Listening có số tự báo ở buổi 3 và 10; Reading ở buổi 4 và 8. Chưa đủ ba buổi cùng kỹ năng để có nhãn ưu tiên thật. Theo yêu cầu ngày 21/10, bảng Listening/Reading mặc định thêm **bảy học viên giả**, từng dòng có nhãn riêng, để thử lọc/sắp xếp/mở chi tiết như bảng thật. Có thể bỏ chọn **Hiện 7 học viên giả** để chỉ còn 18 người thật. Các tình huống: dưới ngưỡng, mới giảm, đã tiến bộ, đúng 60%, chưa đủ ba buổi, có 0% hợp lệ, chưa có dữ liệu. Ba người giả có nhãn ưu tiên; không gán kết quả giả cho tên thật, không sửa gói nguồn hoặc tạo bài nộp/điểm danh/điểm Test. Bộ số giả giống nhau cho Listening và Reading để đối chiếu. TB từ các phiếu hiện có dùng trọng số bằng nhau theo buổi; nhãn dùng ba buổi hợp lệ gần nhất, ngưỡng chưa làm tròn dưới 60%.
 
 **Bất nhất nguồn:** tên bài buổi 4 có Listening nhưng hai ô tự báo được gắn Reading. Demo giữ mã kỹ năng của nguồn và hiện giải thích; chưa tự sửa dữ liệu.
 
@@ -59,6 +59,7 @@ Thay bài bằng phiếu khác hoặc bài vừa soạn sẽ thu hồi bản cũ
 
 - `app.js`, `theme.css`, `completion.css`, `index.html`: giao diện và các hành trình. Giữ renderer nội dung dùng chung ở `../answer-review.js`.
 - `model.mjs`: tính số tự báo, nhãn, kiểm câu trả lời và chấm mô phỏng từ khóa trong gói demo.
+- `journey-scenarios.mjs`: bảy học viên giả chỉ có ở bảng và chi tiết Listening/Reading; dùng cùng hàm tính nhãn với dữ liệu thật, không thêm vào kho dữ liệu hoặc danh sách buổi học.
 - `demo-store.mjs`: cùng một bộ nhớ thao tác cho bản local và Pages.
 - `pages-adapter.mjs`: tự tải gói công khai, chia sẻ phiên qua các tab và xử lý tải lại khi lỗi; không gọi API production.
 - `demo-data.json`: gói IC2305 đã được cho phép công bố, giữ nguyên nội dung gói bàn giao; không phải bản chụp thô từ hệ thống vận hành.
@@ -66,6 +67,6 @@ Thay bài bằng phiếu khác hoặc bài vừa soạn sẽ thu hồi bản cũ
 - `fonts.css`, `fonts/`: Geologica tại chỗ, giấy phép SIL Open Font License.
 - `server.mjs`: tùy chọn chạy local bằng Node, chỉ nghe 127.0.0.1, đọc file qua biến PROGRESS_DEMO_SNAPSHOT; mặc định cổng 7163. Không dùng server này làm máy chủ công khai.
 
-Kiểm native: `node --test progress-log/thuy-review/model.test.mjs progress-log/thuy-review/server.test.mjs progress-log/thuy-review/completion.test.mjs`. Nhóm server cần PROGRESS_DEMO_SNAPSHOT trỏ tới bản chụp riêng hoặc gói demo; thiếu biến sẽ skip, không tính là đã kiểm.
+Kiểm native: `node --test progress-log/thuy-review/model.test.mjs progress-log/thuy-review/server.test.mjs progress-log/thuy-review/completion.test.mjs progress-log/thuy-review/journey-scenarios.test.mjs`. Nhóm server cần PROGRESS_DEMO_SNAPSHOT trỏ tới bản chụp riêng hoặc gói demo; thiếu biến sẽ skip, không tính là đã kiểm.
 
 Bằng chứng browser và dữ liệu thật ở kho riêng ngoài Git. Ca Writing có dữ liệu được kiểm bằng fixture tổng hợp ghi rõ chỉ dùng kiểm giao diện; fixture đó không nằm trong gói dữ liệu IC2305 bàn giao. Không coi demo là nghiệm thu xác thực ERP, AI thật, lưu bền vững, Portal hoặc production backend.
