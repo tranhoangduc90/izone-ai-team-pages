@@ -56,9 +56,9 @@
   }
   const text = paragraphs => (paragraphs || []).map(p => p.map(r => r.text).join('')).join('\n');
   const colorClass = (prefix, color) => /^#[0-9a-f]{6}$/i.test(color || '') ? ` ex-${prefix}-${color.slice(1)}` : '';
-  function paragraphs(value) {
+  function paragraphs(value, colors = true) {
     return (value || []).map(p => `<p>${p.map(r => {
-      const classes = `${r.bold ? 'ex-bold' : ''}${r.italic ? ' ex-italic' : ''}${colorClass('fg', r.foreground)}${colorClass('bg', r.background)}`;
+      const classes = `${r.bold ? 'ex-bold' : ''}${r.italic ? ' ex-italic' : ''}${colors ? colorClass('fg', r.foreground) + colorClass('bg', r.background) : ''}`;
       return `<span class="${classes}">${escape(r.text)}</span>`;
     }).join('')}</p>`).join('');
   }
@@ -137,14 +137,29 @@
       .map(t => t.replace(/^Đoạn\s+[^:]+:\s*/i, ''))
       .flatMap(t => t.split(/\[?\.\.\.\]?|[…]/)).map(normalize).filter(t => t.length >= 25);
     const candidates = [...pane.querySelectorAll('p, .cbt-passage-paragraph')];
-    for (const p of candidates) {
+    const matches = candidates.filter(p => {
       const body = normalize(p.textContent);
-      if (excerpts.some(e => body.includes(e) || (body.length > 40 && e.includes(body)))) {
-        p.classList.add('explanation-active-paragraph'); colorEvidence(p, entry.evidence);
+      return excerpts.some(e => body.includes(e) || (body.length > 40 && e.includes(body)));
+    });
+    // Nguồn cũ đôi khi có biến thể focused/focussed hoặc metres/meters.
+    // Chỉ dùng cụm màu dài nằm duy nhất trong một đoạn, không đoán theo từ chung.
+    if (!matches.length) {
+      const anchors = entry.evidence.flatMap(p => p.filter(r => r.background || r.foreground === '#ff0000' || r.foreground === '#d90000')
+        .map(r => normalize(r.text))).filter(t => t.length >= 14);
+      for (const anchor of anchors) {
+        const found = candidates.filter(p => normalize(p.textContent).includes(anchor));
+        if (found.length === 1 && !matches.includes(found[0])) matches.push(found[0]);
       }
     }
-    const first = pane.querySelector('.explanation-active-paragraph');
-    if (first) pane.scrollTop = first.offsetTop - pane.offsetTop - 20;
+    for (const p of matches) {
+      p.classList.add('explanation-active-paragraph'); colorEvidence(p, entry.evidence);
+    }
+  }
+  // Cuộn chính vùng đọc đến chữ dẫn chứng, kể cả khi nó nằm cuối một đoạn dài.
+  function scrollToEvidence(pane) {
+    const first = pane.querySelector('.explanation-active-paragraph [class*="ex-bg-"], .explanation-active-paragraph [class*="ex-fg-"]')
+      || pane.querySelector('.explanation-active-paragraph');
+    if (first) pane.scrollTop += first.getBoundingClientRect().top - pane.getBoundingClientRect().top - 24;
   }
   function render() {
     player?.stop();
@@ -164,8 +179,11 @@
     Object.values(entries).filter(e => e.section === entry.section).forEach(e => e.blocks.forEach(b => {
       b.evidence.forEach(p => { const key = text([p]); if (key.trim()) excerptMap.set(key, p); });
     }));
+    // Các câu khác chỉ làm ngữ cảnh. Nếu dùng chung trích dẫn, lấy màu của đúng câu đang mở.
+    const currentExcerpts = new Map(entry.blocks.flatMap(b => b.evidence).map(p => [text([p]), p]));
+    for (const [key, p] of currentExcerpts) if (excerptMap.has(key)) excerptMap.set(key, p);
     const left = isReading ? passageHtml(section.passageHtml) : [...excerptMap].map(([key, p]) =>
-      `<div class="cbt-passage-paragraph${evidenceText.has(key) ? ' explanation-active-paragraph' : ''}">${paragraphs([p])}</div>`).join('');
+      `<div class="cbt-passage-paragraph${evidenceText.has(key) ? ' explanation-active-paragraph' : ''}">${paragraphs([p], currentExcerpts.has(key))}</div>`).join('');
     const analysis = entry.blocks.map(block => {
       const quotes = paragraphs(block.evidence);
       const primary = block.evidence.some(p => evidenceText.has(text([p])));
@@ -187,10 +205,12 @@
     d.querySelector('[data-explanation-next]').onclick = () => { number = numbers[index + 1]; render(); };
     if (!d.open) d.showModal();
     d.querySelector('[data-explanation-close]').focus({ preventScroll: true });
+    const renderedNumber = number;
     requestAnimationFrame(() => {
+      if (!d.open || context?.review !== review || context?.skill !== skill || number !== renderedNumber) return;
       const pane = d.querySelector('.explanation-dialog-passage-scroll');
       if (isReading) markReadingEvidence(pane, entry);
-      else { const first = pane.querySelector('.explanation-active-paragraph'); if (first) pane.scrollTop = first.offsetTop - pane.offsetTop - 20; }
+      scrollToEvidence(pane);
     });
   }
   function attach({ container, payload, attemptToken, reviewKey = attemptToken, testSlug, title, request,
