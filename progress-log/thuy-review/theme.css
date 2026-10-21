@@ -149,13 +149,24 @@ h1,h2,h3{color:var(--navy)}
 .teacher-screen .miniGrid .stat{background:white;display:block;padding:14px}
 .teacher-screen .miniGrid .stat strong{font-size:20px;line-height:28px}
 .repoSources{display:flex;gap:24px;border-bottom:1px solid var(--line);padding:0 16px}
-.repoSources button{border:0;border-bottom:3px solid var(--red);background:white;color:var(--red);padding:12px 0;min-height:44px;font-size:14px;line-height:20px;font-weight:600}
+.repoSources button{border:0;border-bottom:3px solid transparent;background:transparent;color:var(--muted);padding:12px 0;min-height:44px;font-size:14px;line-height:20px;font-weight:600}
+.repoSources button[aria-selected=true]{color:var(--red);border-bottom-color:var(--red)}
 .repoSources span{font-size:12px;font-weight:400;margin-left:6px}
 .repoTable{table-layout:fixed}
 .repoTable th:first-child{width:50%}
 .repoTable th:nth-child(2){width:32%}
 .repoTable td{white-space:normal}
-.repoTable td:last-child{text-align:right}
+.repoTable td:last-child{text-align:left}
+.libraryTools{display:flex;gap:12px;align-items:center;padding:16px}
+.libraryTools .search{flex:1;max-width:380px;min-width:140px;width:auto}
+.libraryTools .select{min-width:155px}
+.libraryTools .caption{margin-left:auto;white-space:nowrap}
+.librarySource{font-size:12px;color:var(--muted);white-space:nowrap}
+.libraryScope{margin-top:12px}
+.libraryPreviewMeta{margin-bottom:20px}
+.libraryPreview .reviewQuestionTop h3,.libraryPreview .reviewOption{font-size:14px;line-height:21px}
+.libraryPreview .reviewQuestionTop h3,.libraryPreview .reviewOption,.libraryCondition{white-space:pre-wrap}
+@media(max-width:650px){.libraryTools{flex-wrap:wrap;padding:12px}.libraryTools .search{max-width:none;flex-basis:100%}.libraryTools .select{flex:1}.repoSources{gap:16px;padding:0 12px}.repoSources button{font-size:12px}.repoTable{min-width:560px}.libraryTools .search,.libraryTools .select{font-size:16px}}
 .demoFooter{display:flex;align-items:start;justify-content:space-between;gap:16px;font-size:12px;line-height:16px;color:var(--muted);margin-top:22px}
 .demoFooter>details{position:relative;flex-shrink:0}
 .demoFooter summary{cursor:pointer;min-height:24px;line-height:24px}
