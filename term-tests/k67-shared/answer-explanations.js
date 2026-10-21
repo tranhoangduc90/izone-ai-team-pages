@@ -2,7 +2,7 @@
 // Dựng cửa sổ giống Reading/Listening thực chiến. Lỗi tải hiện tại nút, không đổi bài làm hay điểm.
 (function () {
   'use strict';
-  const supported = new Set(['term-test-1', 'mini-test-lesson-5']);
+  const supported = new Set(['term-test-1', 'term-test-2', 'mini-test-lesson-5']);
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[c]);
@@ -34,7 +34,17 @@
     dialog.id = 'explanation-dialog';
     dialog.setAttribute('aria-labelledby', 'explanation-dialog-title');
     document.body.append(dialog);
-    dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+    let pressedOutside = false, releasedOutside = false;
+    const outside = event => {
+      const r = dialog.getBoundingClientRect();
+      return event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom;
+    };
+    dialog.addEventListener('pointerdown', event => { pressedOutside = outside(event); releasedOutside = false; });
+    dialog.addEventListener('pointerup', event => { releasedOutside = outside(event); });
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog && pressedOutside && releasedOutside) dialog.close();
+      pressedOutside = releasedOutside = false;
+    });
     dialog.addEventListener('close', () => { if (trigger?.isConnected) trigger.focus(); });
     window.addEventListener('pagehide', () => { dialog.close(); cached = null; });
     return dialog;

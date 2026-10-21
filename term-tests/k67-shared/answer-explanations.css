@@ -97,3 +97,13 @@
 .detail-table[data-explanations-attached] td.detail-result-cell{display:table-cell;vertical-align:middle;white-space:nowrap}
 .detail-table[data-explanations-attached] .detail-result-icon{vertical-align:middle;margin-inline-end:7px}
 body.teacher-reading #explanation-dialog{font-family:inherit}
+
+/* Màu đối chiếu từ bộ lời giải Term 2; giữ nguyên màu trong Docs của team. */
+#explanation-dialog .ex-fg-d90000{color:#d90000}
+#explanation-dialog .ex-bg-f4cccc{background-color:#f4cccc}
+#explanation-dialog .ex-bg-fff2cc{background-color:#fff2cc}
+#explanation-dialog .ex-bg-fce5cd{background-color:#fce5cd}
+#explanation-dialog .ex-bg-d9ead3{background-color:#d9ead3}
+#explanation-dialog .ex-bg-d0e0e3{background-color:#d0e0e3}
+#explanation-dialog .ex-bg-c9daf8{background-color:#c9daf8}
+#explanation-dialog .ex-bg-d9d2e9{background-color:#d9d2e9}
