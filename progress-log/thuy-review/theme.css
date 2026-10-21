@@ -317,3 +317,9 @@ h1,h2,h3{color:var(--navy)}
 .speakingMapping{padding-left:20px;margin:12px 0}
 .speakingMapping>li{margin:12px 0;color:var(--navy)}
 .speakingMapping ul{padding-left:18px;margin-top:6px;color:var(--muted)}
+.writingScores .writingScore{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-height:22px}
+.writingScores .writingTask{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;margin-top:6px}
+.writingScores .writingTask p{margin:0;font-size:14px;line-height:21px}
+.writingScores .writingTask .rowLink{font-size:12px;line-height:18px;min-height:24px;white-space:nowrap;text-decoration:underline}
+.writingScores td{padding-top:10px;padding-bottom:10px}
+@media(max-width:650px){.writingScores .writingTask .rowLink{min-height:44px}}
