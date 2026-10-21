@@ -4,7 +4,7 @@ import {SKILLS,itemsOf,applicable,personJourney,priority,quizScore,practiceRepor
 import {localAPI,preparePages,pagesAPI} from './pages-adapter.mjs';
 import {journeyScenarios,scenarioSummary} from './journey-scenarios.mjs';
 import {testScenario} from './test-scenarios.mjs';
-import {loadEditor,sourceDraft,toDefinition,hintMarkup,matchingMarkup} from './editor-bridge.mjs';
+import {loadEditor,sourceDraft,toDefinition,hintMarkup,matchingMarkup,scoreMarkup,setScoreValidity} from './editor-bridge.mjs';
 import {libraryStorage} from './library-storage.mjs';
 const {reviewItems}=await import(localAPI?'/shared/answer-review.js':'../answer-review.js');
 if(!localAPI)await preparePages();
@@ -336,7 +336,7 @@ function field(item,index){const id=item.itemVersionId,value=s.responses[id],c=i
   const help=item.helpText||item.instructions;
   let control;
   if(['single_choice','multiple_choice'].includes(item.interactionType))control=`<fieldset><legend>${label}</legend>${help?`<p class="help">${esc(help)}</p>`:''}<div class="options">${item.options.map(o=>`<label class="option"><input type="${item.interactionType==='multiple_choice'?'checkbox':'radio'}" name="item-${esc(id)}" data-item="${esc(id)}" value="${esc(o.id)}" ${(Array.isArray(value)?value.includes(o.id):value===o.id)?'checked':''}><span>${esc(o.label)}</span></label>`).join('')}</div></fieldset>`;
-  else{const input=item.interactionType==='matching'?matchingMarkup(c.pairs||[],{itemId:id,value}):item.interactionType==='long_text'?`<textarea id="item-${esc(id)}" data-item="${esc(id)}" placeholder="Viết câu trả lời của em…">${esc(value||'')}</textarea>`:item.interactionType==='number_score'?`<div class="scoreInput"><input id="item-${esc(id)}" data-item="${esc(id)}" type="number" inputmode="numeric" min="0" max="${c.max}" step="1" value="${esc(value?.correct??'')}" placeholder="—"><span>/ ${c.max} câu</span></div>`:item.interactionType==='short_text'?`<input id="item-${esc(id)}" data-item="${esc(id)}" type="text" value="${esc(value||'')}" placeholder="Nhập câu trả lời…">`:'<p role="alert">Loại câu hỏi chưa được hỗ trợ trong demo.</p>';
+  else{const input=item.interactionType==='matching'?matchingMarkup(c.pairs||[],{itemId:id,value}):item.interactionType==='long_text'?`<textarea id="item-${esc(id)}" data-item="${esc(id)}" placeholder="Viết câu trả lời của em…">${esc(value||'')}</textarea>`:item.interactionType==='number_score'?scoreMarkup(c.max,{itemId:id,value}):item.interactionType==='short_text'?`<input id="item-${esc(id)}" data-item="${esc(id)}" type="text" value="${esc(value||'')}" placeholder="Nhập câu trả lời…">`:'<p role="alert">Loại câu hỏi chưa được hỗ trợ trong demo.</p>';
     control=item.interactionType==='matching'?`<fieldset><legend>${label}</legend>${help?`<p class="help">${esc(help)}</p>`:''}${input}</fieldset>`:`<label for="item-${esc(id)}">${label}</label>${help?`<p class="help">${esc(help)}</p>`:''}${input}`;
   }
   control=control.replaceAll('data-item=',`aria-describedby="error-${esc(id)}" data-item=`);
@@ -396,10 +396,7 @@ document.addEventListener('input',event=>{
     const item=itemsOf(s.data.definition).find(i=>i.itemVersionId===element.dataset.item);
     s.responses[item.itemVersionId]=item.interactionType==='multiple_choice'?[...document.querySelectorAll(`[data-item="${item.itemVersionId}"]:checked`)].map(input=>input.value):item.interactionType==='matching'?{...(s.responses[item.itemVersionId]||{}),[element.dataset.pairIndex]:element.value}:item.interactionType==='number_score'?(element.value===''?'':{correct:Number(element.value),total:item.interactionConfig.max}):element.value;
     if(item.interactionType==='number_score'){
-      const value=element.value===''?null:Number(element.value),invalid=value!==null&&(!Number.isInteger(value)||value<0||value>item.interactionConfig.max);
-      const error=document.getElementById('error-'+item.itemVersionId),message=`Nhập số nguyên từ 0 đến ${item.interactionConfig.max}, hoặc để trống.`;
-      element.setAttribute('aria-invalid',String(invalid));element.setCustomValidity(invalid?message:'');
-      if(error){error.textContent=invalid?message:'';error.hidden=!invalid;}
+      setScoreValidity(element,item.interactionConfig.max,document.getElementById('error-'+item.itemVersionId));
     }
     s.dirty=true;setSaveLabel('Đang giữ nháp…');updateConditionals();clearTimeout(s.timer);s.timer=setTimeout(()=>saveStudent().catch(e=>toast(e.message)),700);
   }
