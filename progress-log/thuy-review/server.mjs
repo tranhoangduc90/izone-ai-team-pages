@@ -22,6 +22,7 @@ staticFiles.set('/fonts.css','fonts.css');
 staticFiles.set('/completion.css','completion.css');
 staticFiles.set('/pages-adapter.mjs','pages-adapter.mjs');
 staticFiles.set('/demo-store.mjs','demo-store.mjs');
+staticFiles.set('/journey-scenarios.mjs','journey-scenarios.mjs');
 staticFiles.set('/editor-bridge.mjs','editor-bridge.mjs');
 staticFiles.set('/worksheet-model.js','worksheet-model.js');
 staticFiles.set('/library-model.js','library-model.js');

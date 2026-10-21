@@ -2,6 +2,7 @@
 // Mọi nút ghi chỉ gọi /api/demo; nháp được gắn đúng người, buổi và lần giao bài.
 import {SKILLS,itemsOf,applicable,personJourney,priority,quizScore,practiceReport} from './model.mjs';
 import {localAPI,preparePages,pagesAPI} from './pages-adapter.mjs';
+import {journeyScenarios,scenarioSummary} from './journey-scenarios.mjs';
 import {loadEditor,sourceDraft,toDefinition} from './editor-bridge.mjs';
 const {reviewItems}=await import(localAPI?'/shared/answer-review.js':'../answer-review.js');
 if(!localAPI)await preparePages();
@@ -37,7 +38,7 @@ function readonly(detail,blocks=detail.definition.blocks){
   return output;
 }
 function progress(p,session){return `${p.checkpoints.length}/${session.definition.blocks.length} phần`;}
-const t={data:null,number:Number(q.get('number')||10),tab:'session',skill:'listening',page:'class',selected:null,search:'',filter:'all',showFixture:false,drafts:new Map(),pending:null,timer:null,saveError:false,library:{version:1,forms:[],assignments:[]},editing:false};
+const t={data:null,number:Number(q.get('number')||10),tab:'session',skill:'listening',page:'class',selected:null,search:'',filter:'all',showFixture:false,showScenarios:true,drafts:new Map(),pending:null,timer:null,saveError:false,library:{version:1,forms:[],assignments:[]},editing:false};
 const s={data:null,number:Number(q.get('number')||10),ref:q.get('ref')||'demo-a',tab:'session',responses:{},expanded:new Set(),pending:null,timer:null,dirty:false,saveError:false,failNext:false,identityStage:'choose',identityChoice:null};
 const activeSession=()=>t.data.sessions.find(v=>v.number===t.number)||t.data.sessions[0];
 const feedbackKey=(session,ref)=>`${session.number}:${session.generation}:${ref}`;
@@ -157,9 +158,13 @@ function sessionTable(session){
   const people=visiblePeople(),reportSkills=['listening','reading'].filter(skill=>itemsOf(session.definition).some(i=>i.interactionType==='number_score'&&i.skillCodes?.includes(skill)));
   return `<div class="tableScroll" id="people-scroll" tabindex="0" aria-label="Kết quả từng học viên, cuộn ngang để xem đủ cột"><table><thead><tr><th>Học viên</th>${reportSkills.map(k=>`<th class="scoreCell">${SKILLS[k]}<div class="nameMeta">Tự báo số câu đúng</div></th>`).join('')}<th class="scoreCell">Quiz<div class="nameMeta">Điểm tự chấm phiếu</div></th><th>Speaking</th></tr></thead><tbody>${people.map(p=>{const feedback=teacherFeedback(session,p.studentRef).published;return `<tr data-person="${esc(p.studentRef)}" class="${t.selected===p.studentRef?'selected':''}"><td>${nameCell(p)}</td>${reportSkills.map(k=>`<td class="scoreCell">${p.reports[k]?`<b>${p.reports[k].correct}</b> / ${p.reports[k].total}`:'<small>Chưa có số liệu</small>'}</td>`).join('')}<td class="scoreCell">${p.quiz?`<b>${p.quiz.earned}</b> / ${p.quiz.max}`:'<small>Chưa có kết quả</small>'}</td><td>${feedback?`<div class="feedbackPreview">${esc(feedback)}</div>`:'<small>Chưa có nhận xét</small>'}</td></tr>`;}).join('')}</tbody></table>${!people.length?'<p class="noResults">Không có học viên khớp bộ lọc.</p>':''}</div>`;
 }
-function nameCell(p){return `<button class="rowLink" data-person="${esc(p.studentRef)}">${esc(p.name)}</button>${p.discriminator?`<div class="nameMeta">${esc(p.discriminator)}</div>`:''}`;}
+function nameCell(p){return `<button class="rowLink" data-person="${esc(p.studentRef)}">${esc(p.name)}</button>${p.synthetic?`<div>${badge('Dữ liệu giả','amber')}</div>`:''}${p.discriminator?`<div class="nameMeta">${esc(p.discriminator)}</div>`:''}`;}
+function journeyPeople(){
+  const real=t.data.people.map(p=>({...p,summary:personJourney(t.data,p.studentRef,t.skill)}));
+  return t.showScenarios&&['listening','reading'].includes(t.skill)?[...real,...journeyScenarios.map(p=>({...p,summary:scenarioSummary(p,t.skill)}))]:real;
+}
 function journeyView(){
-  const lr=['listening','reading'].includes(t.skill),all=t.data.people.map(p=>({...p,summary:personJourney(t.data,p.studentRef,t.skill)}));
+  const lr=['listening','reading'].includes(t.skill),all=journeyPeople();
   let rows=all.filter(p=>(!t.search||p.name.toLocaleLowerCase('vi').includes(t.search.toLocaleLowerCase('vi')))&&(!t.group||t.group==='all'||(t.group==='priority'?p.summary.flagged:p.summary.count===0)));
   rows.sort((a,b)=>Number(b.summary.flagged)-Number(a.summary.flagged)||Number(a.summary.count===0)-Number(b.summary.count===0)||(t.order==='score'?(a.summary.average??101)-(b.summary.average??101):a.name.localeCompare(b.name,'vi')));
   const skills=`<div class="skillTabs" role="tablist" aria-label="Kỹ năng của lớp">${Object.entries(SKILLS).map(([k,name])=>`<button class="skillTab ${t.skill===k?'active':''}" role="tab" aria-selected="${t.skill===k}" tabindex="${t.skill===k?0:-1}" data-skill="${k}">${name}</button>`).join('')}</div>`;
@@ -169,7 +174,12 @@ function journeyView(){
   if(lr)body=`${filters}<div class="tableScroll" id="people-scroll" tabindex="0" aria-label="Kết quả ${SKILLS[t.skill]} của lớp"><table class="journeyScores"><thead><tr><th>Học viên</th><th>TB tỷ lệ đúng<br>Progress Log cả khóa</th><th>Mini Test</th><th>Term Test 1</th><th>Term Test 2</th></tr></thead><tbody>${rows.map(p=>`<tr data-person="${esc(p.studentRef)}" class="${t.selected===p.studentRef?'selected':''}"><td>${nameCell(p)}${p.summary.flagged?`<span class="priorityLabel">Ưu tiên xem</span><div class="nameMeta">TB ${pct(p.summary.recentAverage)} · ${p.summary.recent.map(v=>'B'+v.sessionNumber).join(', ')}</div>`:''}</td><td><b class="numeric">${pct(p.summary.average)}</b><div class="nameMeta">${p.summary.count} buổi hợp lệ${p.summary.count<3?' · Chưa đủ 3 buổi để xét ưu tiên':''}</div></td>${testTypes.map(([slug])=>`<td>${testCell(p.studentRef,slug,t.skill)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><details class="calculationHelp"><summary>Cách tính và phạm vi dữ liệu</summary><p>TB cả khóa lấy các phiếu hiện có từ buổi 2 đến 10; chưa có phiếu buổi 1 và 7. Mỗi buổi có số tự báo hợp lệ có trọng số bằng nhau. Nhãn ưu tiên xét TB ba buổi gần nhất cùng kỹ năng dưới 60%, chưa đủ ba lần thì chưa đánh dấu. Chưa nộp không thành 0%; không lấy quiz hoặc Test thay số tự báo.</p><p>Nguồn buổi 4 có tên bài Listening nhưng hai ô tự báo được gắn kỹ năng Reading. Demo giữ mã kỹ năng của nguồn và ghi rõ bất nhất này, chưa tự sửa dữ liệu.</p><button class="btn small" data-action="fixture">Xem tình huống nhãn ưu tiên</button></details>${t.showFixture?fixture():''}`;
   else if(t.skill==='writing')body=`<p class="caption dataNote">Kho Test chưa có roster hoặc kết quả của IC2305 tại thời điểm chụp. Không dùng điểm quiz Writing để thay Test. Khi có nhận xét gốc: hiện tối đa hai dòng và Đọc đủ, không viết lại bằng AI.</p><div class="tableScroll" id="people-scroll"><table class="writingScores"><thead><tr><th>Học viên</th><th>Mini Test</th><th>Term Test 1</th><th>Term Test 2</th></tr></thead><tbody>${rows.map(p=>`<tr data-person="${esc(p.studentRef)}"><td>${nameCell(p)}</td>${testTypes.map(([slug])=>`<td>${writingCell(p.studentRef,slug)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   else body=speakingView(rows);
-  return skills+`<div class="split ${t.selected?'hasDetail':''}"><section class="panel listPanel classResultPanel">${header}<div class="journeyBody">${body}</div></section>${t.selected?detailPanel():''}</div>`;
+  const scenarios=lr?`<div class="scenarioTools"><label><input type="checkbox" data-journey-scenarios ${t.showScenarios?'checked':''}> Hiện ${journeyScenarios.length} học viên giả</label><span>${t.data.people.length} học viên thật${t.showScenarios?` + ${journeyScenarios.length} học viên giả để thử nhãn, lọc và chi tiết`:''}. Dữ liệu giả không phải kết quả IC2305.</span></div>`:'';
+  return skills+scenarios+`<div class="split ${t.selected?'hasDetail':''}"><section class="panel listPanel classResultPanel">${header}<div class="journeyBody">${body}</div></section>${t.selected?detailPanel():''}</div>`;
+}
+function scenarioDetail(person){
+  const summary=scenarioSummary(person,t.skill);
+  return `<aside class="panel detailPanel" aria-label="Chi tiết học viên"><div class="detailHead"><div class="inline">${badge('Dữ liệu giả','amber')}<button class="iconBtn" data-action="close-detail" aria-label="Đóng chi tiết">×</button></div><h2 class="detailName">${esc(person.name)}</h2><p class="caption">Tình huống thử ${SKILLS[t.skill]} · Không thuộc lớp IC2305</p></div><div class="detailBody"><p>${esc(person.note)}</p><div class="miniGrid"><div class="stat"><small>TB cả khóa mô phỏng</small><strong>${pct(summary.average)}</strong></div><div class="stat"><small>TB ba buổi hợp lệ gần nhất</small><strong>${pct(summary.recentAverage)}</strong></div></div><p>${summary.flagged?badge('Ưu tiên xem','red'):summary.count<3?'Chưa đủ 3 buổi để xét ưu tiên':'Không có nhãn ưu tiên'} · ${summary.count} buổi hợp lệ</p><div class="tableScroll"><table><thead><tr><th>Buổi mô phỏng</th><th>Tỷ lệ đúng</th><th>Dùng xét nhãn</th></tr></thead><tbody>${person.reports.slice().reverse().map(r=>`<tr><td>Buổi ${r.sessionNumber}</td><td>${pct(r.percent)}${r.percent===null?' · Chưa có dữ liệu':''}</td><td>${summary.recent.some(v=>v.sessionNumber===r.sessionNumber)?'Có':'—'}</td></tr>`).join('')}</tbody></table></div><p class="caption">Listening và Reading dùng cùng bộ số giả để đối chiếu quy tắc. Chưa tạo điểm Test, bài nộp, nhận xét hoặc điểm danh cho các học viên giả này.</p></div></aside>`;
 }
 function journeyCell(session,ref,skill){const person=session.students.find(p=>p.studentRef===ref);if(!person)return '<span class="caption">Ngoài danh sách buổi</span>';if(['listening','reading'].includes(skill)){const r=person.reports[skill];return r?`<b class="numeric">${r.correct}/${r.total}</b><div class="nameMeta">${pct(r.percent)}</div>`:'<span class="caption">Chưa có số liệu</span>';}
   if(skill==='writing')return '<span class="caption">Chưa có điểm Test</span>';
@@ -183,6 +193,8 @@ function archiveBody(archive){
   return `<p><b>${esc(archive.title)}</b></p><p class="caption">Nội dung giữ nguyên, không tính vào bài hiện tại.</p>${actual||empty('Chưa có bài làm thật','Bài thử được giữ riêng bên dưới.')}<h2 style="margin:20px 0 12px">Nháp và bài nộp thử đã giữ</h2>${simulated||'<p class="caption">Không có bản thử ở lần giao này.</p>'}`;
 }
 function detailPanel(){
+  const scenario=t.tab==='journey'&&t.showScenarios&&['listening','reading'].includes(t.skill)&&journeyScenarios.find(p=>p.studentRef===t.selected);
+  if(scenario)return scenarioDetail(scenario);
   const session=activeSession(),person=session.students.find(p=>p.studentRef===t.selected),overall=t.data.people.find(p=>p.studentRef===t.selected);
   if(!overall)return '';
   const feedback=teacherFeedback(session,t.selected),draft=t.drafts.get(feedbackKey(session,t.selected))??feedback.draft;
@@ -334,6 +346,7 @@ document.addEventListener('change',event=>{(async()=>{
   if(e.matches('[data-filter]'))await changeTeacher(()=>t.filter=e.value);
   if(e.matches('[data-teacher-session]'))await changeTeacher(()=>{t.number=Number(e.value);t.selected=null;t.question=null;});
   if(e.matches('[data-journey-order]'))await changeTeacher(()=>t.order=e.value);
+  if(e.matches('[data-journey-scenarios]'))await changeTeacher(()=>{t.showScenarios=e.checked;if(t.selected?.startsWith('journey-scenario-'))t.selected=null;});
   if(e.matches('[data-student-session]')){const number=Number(e.value);e.value=String(s.number);await saveStudent();await openStudent(number);}
 })().catch(error=>toast(error.message));});
 document.addEventListener('toggle',event=>{const e=event.target;if(e.matches?.('[data-part]')){if(e.open)s.expanded.add(e.dataset.part);else s.expanded.delete(e.dataset.part);}},true);
@@ -375,7 +388,7 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-collapse-part')){const id=button.dataset.collapsePart;await saveStudent();s.expanded.delete(id);renderStudent();document.querySelector(`[data-start-part="${id}"]`)?.focus({preventScroll:true});return;}
   if(button?.hasAttribute('data-tab'))return changeTeacher(()=>{t.tab=button.dataset.tab;t.selected=null;});
   if(button?.hasAttribute('data-session'))return changeTeacher(()=>{t.number=Number(button.dataset.session);t.selected=null;t.filter='all';});
-  if(button?.hasAttribute('data-skill'))return changeTeacher(()=>{t.skill=button.dataset.skill;t.group='all';});
+  if(button?.hasAttribute('data-skill'))return changeTeacher(()=>{t.skill=button.dataset.skill;t.group='all';if(t.selected?.startsWith('journey-scenario-')&&!['listening','reading'].includes(t.skill))t.selected=null;});
   if(button?.hasAttribute('data-open-detail-session'))return changeTeacher(()=>{t.number=Number(button.dataset.openDetailSession);t.tab='session';t.mode='results';});
   if(button?.hasAttribute('data-person-step')){const list=t.tab==='session'?visiblePeople():t.data.people;const index=list.findIndex(v=>v.studentRef===t.selected)+Number(button.dataset.personStep);if(list[index])return changeTeacher(()=>t.selected=list[index].studentRef);return;}
   if(row||button?.hasAttribute('data-person')){const ref=button?.dataset.person||row.dataset.person;const previous=document.querySelector('#people-scroll');const scroll={x:previous?.scrollLeft||0,y:previous?.scrollTop||0};const wasOpen=Boolean(t.selected);await changeTeacher(()=>t.selected=ref);const list=document.querySelector('#people-scroll');if(list){list.scrollLeft=scroll.x;list.scrollTop=scroll.y;}if(!wasOpen){if(t.tab==='session')scrollToResults('people');else document.querySelector('.split')?.scrollIntoView({block:'start'});}return;}

@@ -15,6 +15,13 @@ test('Hành vi demo với bản chụp thật', {skip:!snapshot}, async t=>{
   async function request(route,body){const r=await fetch(base+route,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});return {status:r.status,data:await r.json()};}
   const teacher=(await request('/api/teacher')).data,s=teacher.sessions[0];
   const action=body=>request('/api/demo',{number:s.number,generation:s.generation,...body});
+  await t.test('Máy chủ local tải được mô-đun học viên giả nhưng không đưa giả vào API lớp',async()=>{
+    const response=await fetch(base+'/journey-scenarios.mjs');
+    assert.equal(response.status,200);assert.match(response.headers.get('content-type'),/javascript/);
+    assert.match(await response.text(),/journeyScenarios/);
+    assert.equal(teacher.people.length,18);
+    assert.ok(teacher.people.every(p=>!p.studentRef.startsWith('journey-scenario-')));
+  });
   await t.test('Danh sách đủ ba buổi; giảng viên có đáp án, học viên chỉ nhận khi được mở',async()=>{
     assert.deepEqual(teacher.sessions.map(v=>[v.number,v.students.length,v.students.filter(p=>p.submitted).length]),[[10,17,14],[9,17,15],[8,18,2]]);
     assert.deepEqual(teacher.sessions.map(v=>v.definition.blocks.flatMap(b=>b.items).length),[10,9,11]);
