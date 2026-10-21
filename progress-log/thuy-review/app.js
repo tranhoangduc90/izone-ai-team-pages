@@ -55,7 +55,29 @@ function readonly(detail,blocks=detail.definition.blocks){
   const key=detail.answerKey||(!isStudent?allCourse().find(v=>v.number===detail.sessionNumber)?.answerKey||activeSession()?.answerKey:{}),items=blocks.flatMap(b=>b.items);
   output=output.replaceAll('</article>',()=>{const item=items[index++],answer=key?.[item.itemVersionId],label=answer?.graderType==='exact_option'?item.options?.find(o=>o.id===answer.expectedOptionId)?.label:answer?.graderType==='exact_options'?answer.expectedOptions.map(id=>item.options.find(o=>o.id===id)?.label||id).join(' · '):answer?.graderType==='exact_text'?answer.expectedText:answer?.graderType==='exact_matching'?answer.pairs.map(p=>p.left+' → '+p.right).join('\n'):'';return (label&&applicable(item,detail.responses||{})?`<p class="correctAnswer"><b>Đáp án chuẩn:</b> ${esc(label)}</p>${explanationMarkup(answer.explanation)}`:'')+'</article>';});
   let hintIndex=0;
-  return output.replaceAll('</article>',()=>{const item=items[hintIndex++];return (item.interactionType==='long_text'&&applicable(item,detail.responses||{})?hintMarkup(item.interactionConfig?.hintText):'')+'</article>';});
+  output=output.replaceAll('</article>',()=>{const item=items[hintIndex++];return (item.interactionType==='long_text'&&applicable(item,detail.responses||{})?hintMarkup(item.interactionConfig?.hintText):'')+'</article>';});
+  return isStudent?compactStudentReview(output):output;
+}
+function compactStudentReview(markup){
+  // Chỉ sắp xếp nội dung chỉ đọc đã được cấp: giữ nguyên câu trả lời, điểm và quyền xem đáp án.
+  // Giảng viên và bản xem đề vẫn dùng bộ hiển thị đầy đủ; học viên mở thêm lựa chọn khi cần.
+  const doc=new DOMParser().parseFromString(markup,'text/html');
+  for(const section of doc.querySelectorAll('.studentAnswerReview'))section.classList.add('compactReview');
+  for(const article of doc.querySelectorAll('[data-review-item]')){
+    const top=article.querySelector('.reviewQuestionTop'),title=top.querySelector('h3'),number=top.querySelector('.reviewQuestionNumber').textContent;
+    title.textContent=`Câu ${number}. ${title.textContent}`;
+    const verdict=article.querySelector('.reviewVerdict');
+    top.replaceChildren(title);
+    if(verdict)top.append(verdict);
+    article.querySelector('.reviewAnswer small')?.remove();
+    const options=article.querySelector('.reviewOptions');
+    if(options){
+      const disclosure=doc.createElement('details'),summary=doc.createElement('summary');
+      disclosure.className='reviewChoices';summary.textContent='Xem tất cả lựa chọn';
+      disclosure.append(summary,options);article.append(disclosure);
+    }
+  }
+  return doc.body.innerHTML;
 }
 function progress(p,session){return `${p.checkpoints.length}/${session.definition.blocks.length} phần`;}
 const t={data:null,number:Number(q.get('number')||10),tab:'session',skill:'listening',page:'class',selected:null,search:'',filter:'all',showFixture:false,showScenarios:true,showTestScenarios:true,drafts:new Map(),pending:null,timer:null,saveError:false,library:{version:1,forms:[],assignments:[]},librarySource:'all',librarySearch:'',librarySkill:'all',editing:false};

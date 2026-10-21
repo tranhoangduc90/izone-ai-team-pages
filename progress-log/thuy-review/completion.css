@@ -22,6 +22,22 @@
 .worksheetInstructions{margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .worksheetInstructions h2{font-size:16px;margin:0 0 8px}.worksheetInstructions p,.answerExplanation{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.answerExplanation{margin:8px 0 16px}
 .studentPart .studentAnswerReview>.studentJourneyHeading{display:none}
+/* Chữa bài học viên theo mẫu Thủy: trả lời trước, lựa chọn đầy đủ mở khi cần. */
+.student-screen .compactReview{margin:8px 0 0}
+.student-screen .compactReview article{padding:16px 0}
+.student-screen .compactReview .reviewQuestionTop{align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.student-screen .compactReview .reviewQuestionTop h3{flex:1 1 240px;min-width:0;margin:0;overflow-wrap:anywhere;font-weight:500}
+.student-screen .compactReview .reviewVerdict{flex-shrink:0;margin:0;padding:3px 8px;border-radius:4px;background:var(--hover);line-height:18px}
+.student-screen .compactReview .reviewVerdict.correct{background:#e9f5ef}
+.student-screen .compactReview .reviewVerdict.incorrect{background:var(--pink)}
+.student-screen .compactReview .reviewAnswer{padding:0;background:none;margin:8px 0;border-radius:0}
+.student-screen .compactReview .correctAnswer{padding:0;background:none;border:0!important;margin:8px 0;font-size:14px;line-height:22px}
+.student-screen .compactReview .answerExplanation{margin:8px 0;color:var(--muted)}
+.student-screen .compactReview .reviewChoices{margin-top:8px;font-size:14px;line-height:22px}
+.student-screen .compactReview .reviewChoices summary{cursor:pointer;color:var(--navy);width:fit-content;padding:4px 0}
+.student-screen .compactReview .reviewChoices[open] summary{margin-bottom:8px}
+.student-screen .compactReview .reviewChoices .reviewOptions{margin:0}
+@media(max-width:650px){.student-screen .compactReview .reviewChoices summary{min-height:44px;display:flex;align-items:center;gap:6px}.student-screen .compactReview .reviewChoices summary:before{content:'▸'}.student-screen .compactReview .reviewChoices[open] summary:before{content:'▾'}}
 .writingTask{margin-top:12px}.writingTask p{margin-top:4px}.originalExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:pre-wrap}
 .fullFeedback{white-space:pre-wrap;overflow-wrap:anywhere}.dialogBody li{margin:8px 0}.matchingFields{display:grid;gap:12px}.matchingFields label{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
 .matchingFields label{min-width:0}.matchingFields span{overflow-wrap:anywhere}.matchingFields select{width:100%;min-width:0;min-height:40px;border:1px solid var(--line);border-radius:6px;background:white;padding:8px 12px;font:inherit}.studentMain .matchingFields select{min-height:44px;font-size:16px}
