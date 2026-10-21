@@ -24,6 +24,10 @@ Listening có số tự báo ở buổi 3 và 10; Reading ở buổi 4 và 8. Ch
 
 **Bất nhất nguồn:** tên bài buổi 4 có Listening nhưng hai ô tự báo được gắn Reading. Demo giữ mã kỹ năng của nguồn và hiện giải thích; chưa tự sửa dữ liệu.
 
+Yêu cầu bổ sung ngày 21/10: mặc định **Hiện điểm Test giả** để xem đủ giao diện, có thể ẩn để về trạng thái thiếu thật. Mỗi học viên có Mini Test, Term Test 1/2 giả với Listening/Reading và điểm Writing /9, nhận xét Task 1/2 ghi rõ là giả. Cùng người/Test dùng cùng bộ số ở bảng lớp, tổng quan cá nhân và Kết quả học viên. Kết quả thật nếu có được ưu tiên; không sửa `demo-data.json`, API lớp hoặc điểm thi thật. Mô-đun `test-scenarios.mjs` tạo dữ liệu minh họa tại trình duyệt.
+
+Tổng quan cá nhân có đủ ba mục Test trong các thẻ Listening/Reading/Writing; Writing có trích đoạn nguyên văn và Đọc đủ đúng người/Test/Task. Speaking đếm lựa chọn tự phản ánh đã nộp, bỏ câu không áp dụng/câu chấm điểm, lấy nhận xét đã công bố ở buổi mới nhất; không dùng nháp. Có lối xuống lịch sử buổi học. Nhận xét nguồn cũ chưa xác minh người viết được ghi rõ, không gán cho Thủy.
+
 Kho Test có định nghĩa Mini Test, Term Test 1/2 nhưng chưa có roster/kết quả của IC2305 tại thời điểm đọc. Không tự gán Test vào buổi, tạo điểm hoặc viết nhận xét thay. Quiz Writing không thay kết quả Writing Test. Bản chấm Test hiện hành dùng band /9; nếu có dữ liệu phải giữ đơn vị nguồn, không tự đổi thành /10.
 
 ## Các màn và hành vi
@@ -67,6 +71,6 @@ Thay bài bằng phiếu khác hoặc bài vừa soạn sẽ thu hồi bản cũ
 - `fonts.css`, `fonts/`: Geologica tại chỗ, giấy phép SIL Open Font License.
 - `server.mjs`: tùy chọn chạy local bằng Node, chỉ nghe 127.0.0.1, đọc file qua biến PROGRESS_DEMO_SNAPSHOT; mặc định cổng 7163. Không dùng server này làm máy chủ công khai.
 
-Kiểm native: `node --test progress-log/thuy-review/model.test.mjs progress-log/thuy-review/server.test.mjs progress-log/thuy-review/completion.test.mjs progress-log/thuy-review/journey-scenarios.test.mjs`. Nhóm server cần PROGRESS_DEMO_SNAPSHOT trỏ tới bản chụp riêng hoặc gói demo; thiếu biến sẽ skip, không tính là đã kiểm.
+Kiểm native: `node --test progress-log/thuy-review/model.test.mjs progress-log/thuy-review/server.test.mjs progress-log/thuy-review/completion.test.mjs progress-log/thuy-review/journey-scenarios.test.mjs progress-log/thuy-review/personal-overview.test.mjs progress-log/thuy-review/test-scenarios.test.mjs`. Nhóm server cần PROGRESS_DEMO_SNAPSHOT trỏ tới bản chụp riêng hoặc gói demo; thiếu biến sẽ skip, không tính là đã kiểm.
 
-Bằng chứng browser và dữ liệu thật ở kho riêng ngoài Git. Ca Writing có dữ liệu được kiểm bằng fixture tổng hợp ghi rõ chỉ dùng kiểm giao diện; fixture đó không nằm trong gói dữ liệu IC2305 bàn giao. Không coi demo là nghiệm thu xác thực ERP, AI thật, lưu bền vững, Portal hoặc production backend.
+Bằng chứng browser và dữ liệu thật ở kho riêng ngoài Git. Dữ liệu Test giả để duyệt giao diện nằm trong mô-đun riêng; không nằm trong gói dữ liệu IC2305 gốc. Không coi demo là nghiệm thu xác thực ERP, AI thật, lưu bền vững, Portal hoặc production backend.

@@ -290,3 +290,20 @@ h1,h2,h3{color:var(--navy)}
 .scenarioTools{display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px;margin:0 0 16px;padding:12px 16px;border:1px solid #ead5a4;border-radius:8px;background:#fffaf0;font-size:12px;line-height:20px}
 .scenarioTools label{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}
 .scenarioTools input{width:18px;height:18px;accent-color:var(--red)}
+.personalOverview{align-items:stretch}
+.overviewSkill{min-width:0;overflow-wrap:anywhere}
+.overviewSkill h3{font-size:14px;line-height:21px;color:var(--navy);font-weight:600;margin-bottom:8px}
+.overviewSkill dl{margin:12px 0 0;font-size:12px;line-height:18px}
+.overviewSkill dl>div{display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:10px}
+.overviewSkill dt{min-width:0;color:var(--muted)}
+.overviewSkill dd{margin:0;text-align:right;flex-shrink:0;max-width:55%}
+.overviewSkill dd small{font-size:11px;line-height:16px}
+.overviewSkill .overviewLabel{margin:12px 0 6px;font-size:11px;line-height:16px;color:var(--muted)}
+.overviewSkill .overviewReflections{margin-top:6px}
+.overviewSkill .overviewReflections dt{color:var(--navy)}
+.overviewSkill .overviewFeedbackText,.overviewWritingTask p{font-size:12px;line-height:18px;white-space:pre-wrap;color:var(--navy)}
+.overviewSkill>small{margin-top:6px;font-size:10px;line-height:15px}
+.overviewWritingTask{margin-top:8px;font-size:12px;line-height:18px}
+.overviewWritingTask .rowLink{margin-top:4px;text-decoration:underline}
+.overviewHistoryButton{margin-top:14px}
+@media(max-width:480px){.personalOverview{grid-template-columns:1fr}}
