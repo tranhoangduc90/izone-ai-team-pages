@@ -25,6 +25,7 @@ staticFiles.set('/demo-store.mjs','demo-store.mjs');
 staticFiles.set('/journey-scenarios.mjs','journey-scenarios.mjs');
 staticFiles.set('/test-scenarios.mjs','test-scenarios.mjs');
 staticFiles.set('/editor-bridge.mjs','editor-bridge.mjs');
+staticFiles.set('/library-storage.mjs','library-storage.mjs');
 staticFiles.set('/worksheet-model.js','worksheet-model.js');
 staticFiles.set('/library-model.js','library-model.js');
 staticFiles.set('/exercise-editor.js','exercise-editor.js');

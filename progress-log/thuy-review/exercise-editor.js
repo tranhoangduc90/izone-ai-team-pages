@@ -29,7 +29,7 @@
   const choices=['mcq','multi'].includes(q.type),visible=questionsFor(q.section),position=visible.findIndex(item=>item.i===i),first=position===0,last=position===visible.length-1;
   return `<article class="exercise-question" data-question="${i}"><div class="exercise-question-head"><h3>Câu ${i+1} <span>${T[q.type]}</span></h3>${questionTags(q,i)}<div class="actions"><button type="button" data-question-move="${i}" data-direction="-1" aria-label="Đưa câu ${i+1} lên" ${first?'disabled':''}>↑</button><button type="button" data-question-move="${i}" data-direction="1" aria-label="Đưa câu ${i+1} xuống" ${last?'disabled':''}>↓</button><button type="button" data-question-remove="${i}" aria-label="Bỏ câu ${i+1}">Bỏ</button></div></div>${choices&&['listening','reading'].includes(q.skill)?`<label class="repo-field exercise-purpose"><span>Mục đích</span><select data-q="purpose"><option value="practice" ${q.purpose==='practice'?'selected':''}>Luyện tập</option><option value="reflection" ${!W.graded(q)?'selected':''}>Phản hồi · Không chấm điểm</option></select></label>`:''}${area('questionPrompt','Nội dung câu hỏi',q.prompt,2)}${choices?`<div class="exercise-options"><div class="exercise-options-label">${!W.graded(q)?'Các lựa chọn':'Các lựa chọn · Đánh dấu đáp án đúng'}</div>${q.options.map((o,j)=>`<div class="exercise-option">${!W.graded(q)?`<span>${String.fromCharCode(65+j)}</span>`:`<input data-answer="${j}" type="${q.type==='mcq'?'radio':'checkbox'}" name="answer-${i}" aria-label="Đáp án đúng ${String.fromCharCode(65+j)} câu ${i+1}" ${(q.answers||[]).includes(j)?'checked':''}>`}<input data-option="${j}" aria-label="Lựa chọn ${String.fromCharCode(65+j)} câu ${i+1}" value="${esc(o)}" placeholder="Lựa chọn ${String.fromCharCode(65+j)}"><button type="button" data-option-remove="${j}" aria-label="Bỏ lựa chọn ${String.fromCharCode(65+j)} câu ${i+1}" ${q.options.length<=2?'disabled':''}>×</button></div>`).join('')}${q.options.length<8?`<button class="ghost" type="button" data-option-add>+ Thêm lựa chọn</button>`:''}</div>`:''}${q.type==='score'?field('questionTotal','Tổng số câu của bài trên lớp',q.total||20,'number','min="1" max="100"'):''}${q.type==='gap'&&W.graded(q)?area('questionAnswer','Đáp án chấp nhận · Mỗi dòng một đáp án',q.answer,2):''}${q.type==='open'?area('questionAnswer','Gợi ý trả lời',q.answer||'',2):''}${q.type==='matching'?`<div class="exercise-pairs">${q.pairs.map((v,j)=>`<div class="exercise-pair"><input data-pair-left="${j}" aria-label="Vế trái cặp ${j+1} câu ${i+1}" value="${esc(v.left)}" placeholder="Vế trái"><span>→</span><input data-pair-right="${j}" aria-label="Vế phải cặp ${j+1} câu ${i+1}" value="${esc(v.right)}" placeholder="Vế phải"><button type="button" data-pair-remove="${j}" aria-label="Bỏ cặp ${j+1} câu ${i+1}" ${q.pairs.length<=2?'disabled':''}>×</button></div>`).join('')}<button class="ghost" type="button" data-pair-add>+ Thêm cặp</button></div>`:''}${W.graded(q)?`<details class="exercise-explanation"><summary>Giải thích đáp án</summary>${area('explanation','Giải thích',q.explanation,2)}</details>`:''}</article>`;
  }
- function toolbar(){return `<header class="exercise-toolbar"><div><button type="button" class="ghost" data-editor-exit>← Quản lý bài tập</button><h1>${draft.id?'Sửa bài tập':'Tạo bài tập'}</h1></div><div class="actions"><button type="button" data-editor-preview ${!draft.questions.length?'disabled':''}>${previewing?'Tiếp tục soạn':'Xem trước'}</button><button type="button" data-editor-save="draft">Lưu nháp</button><button type="button" class="primary" data-editor-save="published">${draft.id&&draft.status!=='draft'?'Lưu thay đổi':'Xuất bản'}</button></div></header>`}
+ function toolbar(){return `<header class="exercise-toolbar"><div><button type="button" class="ghost" data-editor-exit>← Quản lý bài tập</button><h1>${draft.id?'Sửa bài tập':'Tạo bài tập'}</h1></div><div class="actions"><small data-editor-draft-state role="status"></small><button type="button" data-editor-preview ${!draft.questions.length?'disabled':''}>${previewing?'Tiếp tục soạn':'Xem trước'}</button><button type="button" data-editor-save="draft">Lưu nháp</button><button type="button" class="primary" data-editor-save="published">${draft.id&&draft.status!=='draft'?'Lưu thay đổi':'Xuất bản'}</button></div></header>`}
  function render(focus){
   const info=`<section class="panel exercise-info"><div class="exercise-meta">${field('title','Tên bài tập',draft.title,'text','maxlength="150" placeholder="Nhập tên bài tập"')}<label class="repo-field"><span>Trình độ</span><select data-edit="level"><option value="" ${!draft.level?'selected':''} disabled>Chọn trình độ</option>${M.levels.map(l=>`<option ${draft.level===l?'selected':''}>${l}</option>`).join('')}</select></label></div><details><summary>Hướng dẫn toàn bài</summary>${area('instructions','Hướng dẫn',draft.instructions||'')}${field('audioUrl','Liên kết bài nghe (nếu có)',draft.audioUrl||'','url','placeholder="https://…"')}</details></section>`;
   let content;
@@ -45,6 +45,7 @@
   host.innerHTML=`<div class="exercise-editor">${toolbar()}<p id="exerciseError" class="repo-error" role="alert" tabindex="-1" hidden></p>${content}</div>`;
 
 
+  callbacks.change?.(structuredClone(draft));
   if(focus)(host.querySelector(focus)||host.querySelector('[data-editor-part] h2'))?.focus({preventScroll:true});
  }
  function capture(){
@@ -96,6 +97,8 @@
   render(target);
  });
  document.addEventListener('input',e=>{
+  if(previewing||!e.target.closest('.exercise-editor'))return;
+  capture();callbacks.change?.(structuredClone(draft));
   if(!e.target.matches('.exercise-editor [data-section-title]'))return;
   capture();
   draft.sections.forEach((section,index)=>{
@@ -105,6 +108,8 @@
   });
  });
  document.addEventListener('change',e=>{
+  if(previewing||!e.target.closest('.exercise-editor'))return;
+  capture();callbacks.change?.(structuredClone(draft));
   if(e.target.matches('#exerciseSectionCount')){capture();resizeSections(Number(e.target.value));return}
   if(!e.target.matches('.exercise-editor [data-q]'))return;
   const el=e.target.closest('[data-question]'),index=Number(el.dataset.question),kind=e.target.dataset.q;
