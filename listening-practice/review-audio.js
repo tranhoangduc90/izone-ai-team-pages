@@ -77,7 +77,7 @@ class ReviewAudio {
     this.stop('replace');
     if (!Number.isInteger(segment.startMs) || !Number.isInteger(segment.endMs) ||
         segment.startMs < 0 || segment.endMs <= segment.startMs ||
-        segment.endMs > 459207) {
+        segment.endMs > (this.durationMs ?? 459207)) {
       this.update('error', 'Mốc của đoạn nghe chưa hợp lệ.');
       return;
     }

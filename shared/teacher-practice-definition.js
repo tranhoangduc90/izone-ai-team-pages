@@ -8,6 +8,14 @@ const choices=list=>entries(list).map(([key,value])=>`<p class="teacher-choice">
 const question=row=>`<div class="teacher-question"><strong>Câu ${escape(row.n)}</strong><p>${escape(row.text)}</p>${Array.isArray(row.options)?'<div class="teacher-options">'+row.options.map((option,i)=>`<p><b>${escape(String.fromCharCode(65+i))}.</b> ${escape(option)}</p>`).join('')+'</div>':''}</div>`;
 
 export function renderPracticeDefinitionHtml(definition={},questionIds=[],code=''){
+ if(definition.authored){
+  // Bài do skill soạn vẫn chỉ xem: hiện đủ câu và lựa chọn, không tạo input/audio.
+  const passage=Object.entries(definition.passage||{}).map(([id,text])=>`<p><strong>Đoạn ${escape(id)}</strong><br>${escape(text)}</p>`).join('');
+  return passage+(definition.groups||[]).map(g=>section(escape(g.label||g.kind),`<p>${escape(g.instruction)}</p>`+(g.introduction?`<p style="white-space:pre-line">${escape(g.introduction)}</p>`:'')+(g.questions||[]).map(q=>{
+   const bank=q.options||g.options;
+   return `<div class="teacher-question"><strong>Câu ${escape(q.n)}</strong><p>${escape(q.text.replaceAll('{blank}','_____'))}</p>${bank?'<div class="teacher-options">'+bank.map(o=>`<p><b>${escape(o.value)}.</b> ${escape(o.text)}</p>`).join('')+'</div>':'<span class="teacher-question-gap">_____</span>'}</div>`;
+  }).join(''))).join('');
+ }
  const numbered=new Set([...values(definition.mcq),...values(definition.names),...values(definition.endings)]
   .map(row=>String(row.n)));
  for(const part of values(definition.summary))if(part.question!==undefined)numbered.add(String(part.question));

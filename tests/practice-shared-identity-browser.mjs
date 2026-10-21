@@ -11,6 +11,10 @@ assert.ok(out); await mkdir(out, { recursive: true });
 const key = 'izone:student-identity:v1', a = '11111111-1111-4111-8111-111111111111', b = '22222222-2222-4222-8222-222222222222';
 const record = id => ({ version: 1, identity: { authority: 'erp-contact', id }, revision: 'fixture_' + id, updatedAt: new Date().toISOString() });
 const doc = 'fixture-document-with-enough-characters';
+// Chỉ metadata để kiểm đăng nhập bài mới; fixture không cung cấp đề, key hoặc audio.
+const sharedListeningLesson = { authored: true, code: '7', lesson: 10, title: 'Inclusive design',
+  questionIds: [31,32,33,34,35,36,37,38,39,40], totalMs: 606322, audioMs: 486322, reviewMs: 120000,
+  groups: [{ id: 'notes', kind: 'completion', label: 'Note Completion', start: 31, end: 40 }] };
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/empty') { res.setHeader('Content-Type', 'text/html'); return res.end('<!doctype html><title>Thử</title>'); }
@@ -25,7 +29,7 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ channel: 'msedge', headless: true }), results = [];
 const pageUrl = (kind, shared = false) => `${origin}/${kind}-practice/?${shared ? 'lesson=7' : `documentId=${doc}`}#login${shared ? '' : '?entry=fixture-entry-token'}`;
-async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false, identityDelay = 0, legacy, legacySamePerson = false, forgotten = false, legacyFailure = false } = {}) {
+async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false, identityDelay = 0, legacy, legacySamePerson = false, forgotten = false, legacyFailure = false, sharedListening = false, excludedRoster = false, otherClass = false, ambiguous = false, missingIdentity = false } = {}) {
   const ctx = await browser.newContext({ serviceWorkers: 'block' }), errors = [], requests = [], external = [], sessions = new Map();
   let releaseLogin, loginSeen;
   const loginArrived = new Promise(r => loginSeen = r), gate = new Promise(r => releaseLogin = r);
@@ -39,7 +43,7 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
     if (blocked) for (const name of ['sessionStorage', 'localStorage']) Object.defineProperty(window, name,
       { configurable: true, get() { throw new DOMException('Fixture storage blocked', 'SecurityError'); } });
   }, { origin, key, initial: id ? record(id) : null, blocked, legacy, forgotten });
-  function view(ref, shared = false) { return { token: 'fixture-token-' + ref, identity: {
+  function view(ref, shared = false) { return { ...(sharedListening ? {lesson: sharedListeningLesson} : {}), token: 'fixture-token-' + ref, identity: {
     studentRef: ref, name: ref === a ? 'Học viên A' : 'Học viên B', classCode: 'IC2304',
     bindingId: 'binding-' + ref, entryMode: shared ? 'shared' : 'homework',
     documentId: doc, documentUrl: 'https://docs.google.com/document/d/' + doc }, attempts: [], events: [], firstCompleted: null }; }
@@ -52,17 +56,19 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
     const body = req.postDataJSON(); requests.push({ path: url.pathname, body });
     const send = (value, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(value) });
     if (url.pathname === '/mapping-api/api/student-identity/resolve') {
+      if(missingIdentity)return send({ok:true,status:'missing',identity:null,aliases:[]});
       if(identityDelay)await new Promise(resolve=>setTimeout(resolve,identityDelay));
       if(legacyFailure&&body.studentRef===b)return send({ok:false,message:'Nguồn cũ lỗi giả'},503);
       const id = body.identity?.id || (body.studentRef === b && !legacySamePerson ? '900002' : '900001');
-      return send({ ok: true, status: 'unique', identity: { authority: 'erp-contact', id }, aliases: [
-        { studentRef: body.studentRef || (id === '900002' ? b : a), studentName: id === '900002' ? 'Học viên B' : 'Học viên A', classId: '1293', classCode: 'IC2304' }] });
+      const aliases = [{ studentRef: body.studentRef || (id === '900002' ? b : a), studentName: id === '900002' ? 'Học viên B' : 'Học viên A', classId: '1293', classCode: otherClass ? 'IC9999' : 'IC2304' }];
+      if (ambiguous && !body.studentRef) aliases.push({studentRef:b,studentName:'Bí danh thứ hai',classId:'1293',classCode:'IC2304'});
+      return send({ ok: true, status: 'unique', identity: { authority: 'erp-contact', id }, aliases });
     }
     if (url.origin !== origin) { external.push(url.origin); return route.abort(); }
     if (url.pathname === '/api/open') return send({ classCode: 'IC2304', bindingId: 'binding-' + (wrongDoc ? b : a),
       selectedStudentRef: wrongDoc ? b : a, students: [{ id: a, name: 'Học viên A' }, { id: b, name: 'Học viên B' }] });
-    if (url.pathname === '/api/library/7') return send({ classes: [{ id: '1293', classCode: 'IC2304' }] });
-    if (url.pathname === '/api/library/7/classes/1293') return send({ students: [{ id: a, name: 'Học viên A' }, { id: b, name: 'Học viên B' }] });
+    if (url.pathname === '/api/library/7') return send({ ...(sharedListening ? {lesson: sharedListeningLesson} : {}), classes: [{ id: '1293', classCode: 'IC2304' }] });
+    if (url.pathname === '/api/library/7/classes/1293') return send({ students: excludedRoster ? [{ id: b, name: 'Học viên B' }] : [{ id: a, name: 'Học viên A' }, { id: b, name: 'Học viên B' }] });
     if (['/api/login', '/api/shared-login'].includes(url.pathname)) {
       loginSeen(); if (delayLogin) await gate;
       const value = view(body.studentRef, url.pathname.endsWith('shared-login')); sessions.set(value.token, value); return send(value);
@@ -76,6 +82,7 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
   return { ctx, page: await ctx.newPage(), errors, external, requests, loginArrived, releaseLogin };
 }
 async function run(name, options, fn) {
+  if(process.env.IDENTITY_ONLY&&!name.includes(process.env.IDENTITY_ONLY))return;
   const s = await setup(options);
   try { await fn(s); assert.deepEqual(s.errors, []); assert.deepEqual(s.external, []);
     assert.equal(s.requests.some(r => /\/(begin|activate|submit|audio|pause)$/.test(r.path)), false);
@@ -85,8 +92,8 @@ async function run(name, options, fn) {
   } finally { s.releaseLogin(); await s.ctx.close(); }
 }
 async function prep(page) { await page.locator('[data-action="begin"]').waitFor(); assert.equal(await page.locator('#login-form').count(), 0); }
-async function manual(page) {
-  await page.locator('#class-select').selectOption('IC2304'); await page.locator('#student-select').selectOption(a);
+async function manual(page, shared = false) {
+  await page.locator('#class-select').selectOption(shared ? '1293' : 'IC2304'); await page.locator('#student-select').selectOption(a);
   await page.locator('#login-submit').click(); await prep(page);
 }
 try {
@@ -142,6 +149,63 @@ try {
   await run('reading-shared-library-auto', { id: '900001' }, async ({ page }) => {
     await page.goto(pageUrl('reading', true)); await prep(page); assert.match(await page.locator('.identity-bar').innerText(), /Học viên A/);
   });
+  await run('listening-shared-remembered-no-audio', {sharedListening:true,id:'900001'}, async({page,requests})=>{
+    await page.goto(pageUrl('listening',true));await prep(page);
+    assert.match(await page.locator('.identity-bar').innerText(),/Học viên A/);
+    assert.equal(await page.evaluate(()=>window.__plays),0);
+    assert.deepEqual(requests.find(r=>r.path==='/api/shared-login').body,{code:'7',classId:'1293',studentRef:a});
+  });
+  await run('listening-shared-first-producer-before-reading', {sharedListening:true,identityDelay:1500}, async({page,ctx})=>{
+    await page.goto(pageUrl('listening',true));await manual(page,true);
+    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity.id,key),'900001');
+    const next=await ctx.newPage();await next.goto(pageUrl('reading'));await prep(next);
+    assert.match(await next.locator('.identity-bar').innerText(),/Học viên A/);
+  });
+  await run('listening-shared-blocked-storage-manual', {sharedListening:true,blocked:true}, async({page})=>{
+    await page.goto(pageUrl('listening',true));await manual(page,true);
+    assert.match(await page.locator('.identity-bar').innerText(),/Học viên A/);
+    await page.locator('#toast').filter({hasText:'chưa nhớ được'}).waitFor();
+  });
+  await run('listening-shared-without-remembering', {sharedListening:true}, async({page})=>{
+    await page.goto(pageUrl('listening',true));await page.locator('#class-select').selectOption('1293');
+    await page.locator('#student-select').selectOption(a);await page.locator('#remember-student').uncheck();
+    await page.locator('#login-submit').click();await prep(page);
+    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity,key),null);
+  });
+  await run('listening-shared-missing-identity-explains-profile', {sharedListening:true,missingIdentity:true},async({page})=>{
+    await page.goto(pageUrl('listening',true));await manual(page,true);
+    const notice=await page.locator('#toast').innerText();
+    assert.match(notice,/Hồ sơ chưa đối chiếu/);
+    assert.doesNotMatch(notice,/trình duyệt/);
+    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null')?.identity??null,key),null);
+  });
+  await run('listening-shared-pinned-session-other-tab', {sharedListening:true,id:'900001'}, async({page,ctx})=>{
+    await page.goto(pageUrl('listening',true));await prep(page);
+    const other=await ctx.newPage();await other.goto(origin+'/empty');
+    await other.evaluate(({key,value})=>localStorage.setItem(key,JSON.stringify(value)),{key,value:record('900002')});
+    await page.reload();await prep(page);assert.match(await page.locator('.identity-bar').innerText(),/Học viên A/);
+    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity.id,key),'900002');
+  });
+  await run('listening-shared-late-auto-response-discarded', {sharedListening:true,id:'900001',delayLogin:true}, async({page,ctx,loginArrived,releaseLogin})=>{
+    await page.goto(pageUrl('listening',true));await loginArrived;
+    const other=await ctx.newPage();await other.goto(origin+'/empty');
+    await other.evaluate(({key,value})=>localStorage.setItem(key,JSON.stringify(value)),{key,value:record('900002')});
+    releaseLogin();await page.locator('#login-form').waitFor();assert.equal(await page.locator('.identity-bar').count(),0);
+  });
+  await run('listening-shared-forget-preserves-draft', {sharedListening:true,id:'900001'}, async({page})=>{
+    await page.goto(pageUrl('listening',true));await prep(page);
+    await page.evaluate(()=>localStorage.setItem('old-draft-A','Bài của A'));
+    await page.getByRole('button',{name:'Đổi người học',exact:true}).click();await page.locator('#login-form').waitFor();
+    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity,key),null);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('old-draft-A')),'Bài của A');
+    await page.reload();await page.locator('#login-form').waitFor();
+  });
+  for(const [name,options] of [['not-in-roster',{excludedRoster:true}],['class-not-open',{otherClass:true}],['ambiguous-alias',{ambiguous:true}]]){
+    await run('listening-shared-'+name,{sharedListening:true,id:'900001',...options},async({page,requests})=>{
+      await page.goto(pageUrl('listening',true));await page.locator('#login-form').waitFor();
+      assert.equal(requests.some(r=>r.path==='/api/shared-login'),false);
+    });
+  }
   const legacy={['izone:remembered-writing-student:v1:https://ducizone.ddns.net/writing-api']:{version:1,studentRef:a},
     'reading-practice67-identity':{studentId:b,classCode:'IC2304'}};
   await run('legacy-same-person-auto-migrated', {legacy,legacySamePerson:true},async({page})=>{

@@ -1,10 +1,11 @@
-(function () {
+(function bootAnnotations() {
   'use strict';
   // Nhận phần chữ được chọn trong Reading; lưu vị trí, trích dẫn và nội dung Note
   // vào đúng học viên/lần làm bài. Khi không còn quyền làm ở tab này, chỉ đóng công cụ.
   // Thuật toán Range/text offset và kiểu Highlight/Note kế thừa Term Test 2.
   const bridge=window.ReadingInteractionBridge;
-  if(!bridge)return;
+  // App nạp module bất đồng bộ; đợi cầu nối sẵn sàng rồi mới gắn công cụ chọn chữ.
+  if(!bridge){window.addEventListener('reading-interaction-ready',bootAnnotations,{once:true});return;}
   const rootSelector='.cbt-reading-passage, .cbt-reading-questions';
   const excludedTextSelector='button,input,select,textarea,script,style,[contenteditable=true],.cbt-annotation-toolbar,.cbt-note-panel,.cbt-blank-number,.cbt-question-number,.cbt-choice-letter,.cbt-paragraph-label';
   const state={get annotations(){const attempt=bridge.current();if(!attempt)return [];return attempt.annotations ||= [];}};
@@ -68,7 +69,7 @@
     return [];
   }
 
-  function fallbackQuestionNumbers() { return [14,26]; }
+  function fallbackQuestionNumbers() { return bridge.questionIds().map(Number); }
 
   function questionRefForSelection(startElement, endElement, root) {
     if (!['listening', 'reading'].includes(rootSkill(root))) return '';

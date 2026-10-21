@@ -29,7 +29,7 @@ async function boot(kind,{mode='same',n=0}={}){
    if(mode==='entry-error'||mode==='both-error')throw Error('Link bài lỗi');
    return {bindingId:mode==='different'?'other-'+n:binding,students:[{id:'student-'+n,name:'Người giả'}]};
   },apply(value){context.identity=value.identity;context.studentId=value.identity.studentRef;},
-  recoverLocal(){events.push({phase:'recover'});},setLesson(){},current:()=>null,
+  recoverLocal(){events.push({phase:'recover'});},setLesson(){},setAuthoredLesson(){},current:()=>null,
   navigate(route){context.route=route;},teacherScreen:async()=>{}
  };
  vm.createContext(context);await vm.runInContext(source.slice(start,end)+'\nbootstrap()',context);

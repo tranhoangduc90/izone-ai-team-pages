@@ -49,13 +49,14 @@ window.ListeningReview = (() => {
     if(message){const status=d.querySelector('.replay-status');if(status){status.textContent=message;status.classList.add('is-error');}}
     if(state==='playing'&&segment){
       const q=context.data.review.questions[number],group=q.optionReplay[segment.option]||q.replay;
-      d.querySelector('.explanation-dialog-passage-scroll').innerHTML=`<p class="passage-subtitle">Science experiment for Year 12 students</p>${transcript(group)}`;
+      d.querySelector('.explanation-dialog-passage-scroll').innerHTML=`<p class="passage-subtitle">${escape(context.data.lesson?.title||'Science experiment for Year 12 students')}</p>${transcript(group)}`;
       scrollEvidence(segment.id);
     }
   }
   function close(){player?.stop('close');if(dialog().open)dialog().close();}
   function render() {
     const d=dialog(),data=context.data,a=context.attempt,e=data.explanations.entries[number];
+    const lesson=data.lesson,ids=lesson?.questionIds?.map(Number)||Array.from({length:10},(_,i)=>i+21),index=ids.indexOf(number);
     const q=data.review.questions[number],raw=document.createElement('template');
     raw.innerHTML=context.renderContent(e);
     const analysis=raw.content.querySelector('.explanation-analysis');
@@ -66,13 +67,13 @@ window.ListeningReview = (() => {
       const quote=analysis.querySelector(`[data-option="${option.letter}"] blockquote`);
       if(quote&&groups.length)quote.innerHTML=pieces(groups);
     }
-    const prompt=[e.prompt];if(e.kind==='mcq')prompt.push(e.options.find(o=>o.correct).label);
+    const prompt=[e.prompt];if(e.kind==='mcq'&&e.options?.find(o=>o.correct))prompt.push(e.options.find(o=>o.correct).label);
     const answer=e.answer.join(' / '),row=a.result.rows.find(r=>r.number===number);
-    const bank=e.kind==='flowchart'?data.definition.bank.find(x=>x[0]===answer):null;
-    d.innerHTML=`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI 8 · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${e.kind==='mcq'?'Multiple Choice':'Flow-chart Completion'}</h2></div><button type="button" class="explanation-dialog-close" data-review-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Transcript"><div class="explanation-dialog-pane-head"><strong>Transcript · Clare – Jake</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">Science experiment for Year 12 students</p>${transcript(q.replay)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}${bank?' · '+escape(bank[1]):''}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[number]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và transcript</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${context.renderParagraphs(prompt)}</section><section><h4>Bằng chứng trong transcript</h4>${pieces(q.replay)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis.innerHTML}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${number-20}/10</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-review-prev ${number===21?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-review-next ${number===30?'disabled':''}>Câu sau →</button></nav></footer></div>`;
+    const bank=e.kind==='flowchart'&&data.definition.bank?data.definition.bank.find(x=>x[0]===answer):null;
+    d.innerHTML=`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI ${lesson?.lesson||8} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(lesson?.groups.find(g=>number>=g.start&&number<=g.end)?.label||(e.kind==='mcq'?'Multiple Choice':'Flow-chart Completion'))}</h2></div><button type="button" class="explanation-dialog-close" data-review-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Transcript"><div class="explanation-dialog-pane-head"><strong>Transcript · ${escape(lesson?.title||'Clare – Jake')}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(context.data.lesson?.title||'Science experiment for Year 12 students')}</p>${transcript(q.replay)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}${bank?' · '+escape(bank[1]):''}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[number]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và transcript</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${context.renderParagraphs(prompt)}</section><section><h4>Bằng chứng trong transcript</h4>${pieces(q.replay)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis.innerHTML}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index+1}/${ids.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-review-prev ${index===0?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-review-next ${index===ids.length-1?'disabled':''}>Câu sau →</button></nav></footer></div>`;
     d.querySelector('[data-review-close]').onclick=close;
-    d.querySelector('[data-review-prev]').onclick=()=>{player.stop('change-question');number--;render();};
-    d.querySelector('[data-review-next]').onclick=()=>{player.stop('change-question');number++;render();};
+    d.querySelector('[data-review-prev]').onclick=()=>{player.stop('change-question');number=ids[index-1];render();};
+    d.querySelector('[data-review-next]').onclick=()=>{player.stop('change-question');number=ids[index+1];render();};
     d.querySelectorAll('[data-replay]').forEach(button=>button.onclick=()=>player.play(allSegments().find(r=>r.id===button.dataset.replay)));
     d.querySelector('[data-review-close]').focus({preventScroll:true});
     requestAnimationFrame(()=>scrollEvidence(q.replay[0].id));
@@ -82,12 +83,18 @@ window.ListeningReview = (() => {
     if(!player){
       player=new ReviewAudio(document.querySelector('#review-audio'),playback);
       const d=dialog();d.addEventListener('cancel',()=>player.stop('escape'));
-      d.addEventListener('click',e=>{if(e.target===d)close();});
+      // Giữ popup khi kéo chọn chữ qua mép; chỉ đóng nếu nhấn và thả đều ngoài khung.
+      let outsidePointer=null;
+      const outside=e=>{const r=d.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom;};
+      d.addEventListener('pointerdown',e=>{outsidePointer=outside(e)?e.pointerId:null;});
+      d.addEventListener('pointerup',e=>{const shouldClose=outsidePointer===e.pointerId&&outside(e);outsidePointer=null;if(shouldClose)close();});
+      d.addEventListener('pointercancel',()=>{outsidePointer=null;});
       d.addEventListener('close',()=>{player.stop('closed');if(context?.trigger?.isConnected)context.trigger.focus();});
       window.addEventListener('hashchange',close);
       window.addEventListener('resize',()=>{if(d.open)scrollEvidence(context.data.review.questions[number].replay[0].id);});
     }
     player.stop('open-question');context=input;number=input.number;
+    player.durationMs=input.data.review.audioDurationMs;
     player.prepare=async signal=>{
       const current=context;
       // API có prefix riêng trên production; không lấy nhầm audio từ tên miền Pages.
