@@ -10,7 +10,7 @@
 .exercise-editor .ghost{background:transparent;border-color:transparent}.exercise-editor :where(.repo-field){display:block;min-width:0;margin-bottom:16px}
 .exercise-editor .repo-field>span{display:block;font-size:12px;line-height:16px;margin-bottom:8px;color:var(--muted)}
 :where(.exercise-editor) :where(input:not([type=radio]):not([type=checkbox]),select){border:1px solid var(--control-border);border-radius:6px;background:white;max-width:100%;padding:6px 8px;min-width:0}
-.exercise-editor .repo-field input{width:100%}.exercise-editor textarea{min-height:72px}.exercise-student-preview>.exercise-part{padding:24px}
+.exercise-editor .repo-field input,.exercise-editor .repo-field select{width:100%}.exercise-editor textarea{min-height:72px}.exercise-student-preview>.exercise-part{padding:24px}
 .repo-error{color:var(--red);padding:12px;background:var(--pink);border-radius:6px;margin:12px 0}
 .repo-error[hidden]{display:none}.exercise-question-head .actions{flex-shrink:0}
 .ownForms{margin-top:20px}.repoTable td:last-child{white-space:nowrap}.repoTable td:last-child .btn+ .btn{margin-left:8px}
