@@ -2,6 +2,11 @@
 // Không lấy điểm quiz hay Test để lấp chỗ trống của bài luyện tập.
 export const SKILLS = {listening:'Listening', reading:'Reading', speaking:'Speaking', writing:'Writing'};
 export const itemsOf = definition => (definition?.blocks || []).flatMap(b => b.items || []);
+// Đủ phần theo đúng mã trong phiếu hiện tại, không đếm trùng hoặc mã phần cũ.
+export function allPartsSubmitted(definition,checkpoints=[]){
+  const blocks=definition?.blocks||[],received=new Set(checkpoints.map(c=>c.blockId));
+  return blocks.length>0&&blocks.every(b=>received.has(b.blockId));
+}
 // Kho đọc phiếu gốc của lần giao đầu; thay bài ở lớp không đổi nội dung nguồn.
 export function libraryEntries(sessions,forms){
   const known=skill=>skill==='general'||Object.hasOwn(SKILLS,skill);

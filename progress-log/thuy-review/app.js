@@ -1,6 +1,6 @@
 // Nhận bản chụp từ máy chủ cục bộ, dựng giao diện theo preset Thủy.
 // Mọi nút ghi chỉ gọi /api/demo; nháp được gắn đúng người, buổi và lần giao bài.
-import {SKILLS,itemsOf,applicable,personJourney,priority,quizScore,practiceReport,speakingSummary,speakingAnalytics,writingSummary,compareWritingPeople,libraryEntries,filterLibraryEntries} from './model.mjs';
+import {SKILLS,itemsOf,allPartsSubmitted,applicable,personJourney,priority,quizScore,practiceReport,speakingSummary,speakingAnalytics,writingSummary,compareWritingPeople,libraryEntries,filterLibraryEntries} from './model.mjs';
 import {localAPI,preparePages,pagesAPI} from './pages-adapter.mjs';
 import {journeyScenarios,scenarioSummary} from './journey-scenarios.mjs';
 import {testScenario} from './test-scenarios.mjs';
@@ -83,7 +83,7 @@ function progress(p,session){return `${p.checkpoints.length}/${session.definitio
 const t={data:null,number:Number(q.get('number')||10),tab:'session',skill:'listening',page:'class',selected:null,search:'',filter:'all',showFixture:false,showScenarios:true,showTestScenarios:true,drafts:new Map(),pending:null,timer:null,saveError:false,library:{version:1,forms:[],assignments:[]},librarySource:'all',librarySearch:'',librarySkill:'all',editing:false};
 t.working={};t.libraryIssue='';
 if(!isStudent){try{const restored=authoringStore.load();t.library=restored.library;t.working=restored.working;if(t.library.forms.length){t.page='library';t.librarySource='mine';}}catch(error){t.libraryIssue=error.message;}}
-const s={data:null,number:Number(q.get('number')||10),ref:q.get('ref')||'demo-a',tab:'session',responses:{},expanded:new Set(),pending:null,timer:null,dirty:false,saveError:false,failNext:false,showTestScenarios:true,identityStage:'choose',identityChoice:null};
+const s={data:null,number:Number(q.get('number')||10),ref:q.get('ref')||'demo-a',tab:'session',responses:{},expanded:new Set(),pending:null,timer:null,dirty:false,saveError:false,failNext:false,showTestScenarios:true,identityStage:'choose',identityChoice:null,completionError:''};
 const activeSession=()=>t.data.sessions.find(v=>v.number===t.number)||t.data.sessions[0];
 const feedbackKey=(session,ref)=>`${session.number}:${session.generation}:${ref}`;
 function teacherFeedback(session,ref){const key=feedbackKey(session,ref),published=session.students.find(p=>p.studentRef===ref)?.publishedFeedback||'';return t.data.feedback[key]||{draft:published,published};}
@@ -314,11 +314,18 @@ async function teacherAction(button){
   if(action==='reset')modal('Đặt lại demo',`<p>Đưa demo về bản chụp dữ liệu thật ban đầu. Các nhận xét, bài nộp thử và thay bài trong demo sẽ được bỏ. Bài tự soạn trong Của tôi vẫn giữ trên trình duyệt.</p><p>Dữ liệu thật ở hệ thống đang chạy không thay đổi.</p>`,`<button class="btn" data-close-dialog>Hủy</button><button class="btn primary" data-confirm-reset>Đặt lại demo</button>`);
 }
 async function openStudent(number=s.number,ref=s.ref){
-  const data=await api(`/api/student?number=${number}&ref=${encodeURIComponent(ref)}`);
+  const path=`/api/student?number=${number}&ref=${encodeURIComponent(ref)}`;
+  let data=await api(path),completionError='';
+  // Phiếu 2/2 từ tab cũ được hoàn tất sau khi người học đã xác nhận danh tính.
+  // Lỗi chuyển tiếp giữ nguyên bài đã nhận và cho thử lại, không yêu cầu nộp lại phần.
+  if(s.identityStage==='ready'&&data.isFake&&!data.submitted&&allPartsSubmitted(data.definition,data.checkpoints)){
+    try{await api('/api/demo',{action:'final',number,generation:data.generation,ref,responses:{}});data=await api(path);if(!data.submitted)throw new Error('Chưa xác nhận được hoàn tất phiếu.');}
+    catch(error){completionError=error.message;}
+  }
   const historyResults=await Promise.allSettled(data.sessions.filter(v=>v.available&&v.number!==number).map(v=>api(`/api/student?number=${v.number}&ref=${encodeURIComponent(ref)}`)));
   s.history=[data,...historyResults.filter(v=>v.status==='fulfilled').map(v=>v.value)];
   s.historyError=historyResults.some(v=>v.status==='rejected');
-  s.data=data;s.number=number;s.ref=ref;s.responses=structuredClone(data.responses||{});s.dirty=false;s.saveError=false;s.expanded.clear();
+  s.data=data;s.number=number;s.ref=ref;s.responses=structuredClone(data.responses||{});s.dirty=false;s.saveError=false;s.completionError=completionError;s.expanded.clear();
   const url=new URL(location.href),params=new URLSearchParams(localAPI?url.search:url.hash.slice(1));params.set('view','student');params.set('number',number);params.set('ref',ref);if(localAPI)url.search=params.toString();else{url.search='';url.hash=params.toString();}history.replaceState(null,'',url);renderStudent();
 }
 async function saveStudent(){
@@ -351,8 +358,8 @@ function renderStudent(){
   updateConditionals();
 }
 function studentSession(){
-  const d=s.data,completion=d.submitted?(d.completeness==='partial'?'Đã nộp · còn câu trống':'Đã nộp phiếu'):`Đã nộp ${d.checkpoints.length}/${d.definition.blocks.length} phần`;
-  return `<div class="studentHeading"><p>IC2305 · BUỔI ${d.number} · ${date(d.date)}</p><h1>${esc(d.title)}</h1></div>${d.replacement?'<div class="notice warn">Bài cũ đã thu hồi. Đây là bài hiện tại; bài cũ không cần làm tiếp.</div>':''}<section class="currentCard"><div class="currentHeading"><div class="lessonMeta"><span>${sourceDeadline(d.number)}</span>${badge(d.participated?'Đã ghi nhận tham gia'+(d.isFake?' · thử':''):'Chưa ghi nhận tham gia',d.participated?'green':'')}</div><div class="lessonProgress"><span>${completion}</span>${!d.isFake?'<small>Chỉ xem lại bài thật</small>':'<small>Nộp phần đầu thành công ghi nhận tham gia</small>'}</div></div>${instructionsMarkup(d.definition.instructions)}${d.definition.blocks.map((block,index)=>studentPart(block,index)).join('')}</section>${d.isFake&&!d.submitted?`<div class="bottomActions">${studentSaveStatus(s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nháp riêng theo người học và buổi',true)}<button class="btn primary" data-student-action="final">Nộp toàn bộ phiếu</button></div>`:''}<section class="currentFeedback"><h2>Nhận xét của giáo viên</h2><div class="feedbackCard"><b>Speaking</b><p>${d.publishedFeedback?esc(d.publishedFeedback):'Chưa có nhận xét đã công bố.'}</p></div></section>`;
+  const d=s.data,allReceived=allPartsSubmitted(d.definition,d.checkpoints),progress=`Đã nộp ${d.checkpoints.length}/${d.definition.blocks.length} phần`,completion=d.submitted?(d.isFake&&allReceived?progress+(d.completeness==='partial'?' · còn câu trống':' · Hoàn tất phiếu'):d.completeness==='partial'?'Đã nộp · còn câu trống':'Đã nộp phiếu'):progress+(allReceived?' · Chưa hoàn tất phiếu':'');
+  return `<div class="studentHeading"><p>IC2305 · BUỔI ${d.number} · ${date(d.date)}</p><h1>${esc(d.title)}</h1></div>${d.replacement?'<div class="notice warn">Bài cũ đã thu hồi. Đây là bài hiện tại; bài cũ không cần làm tiếp.</div>':''}<section class="currentCard"><div class="currentHeading"><div class="lessonMeta"><span>${sourceDeadline(d.number)}</span>${badge(d.participated?'Đã ghi nhận tham gia'+(d.isFake?' · thử':''):'Chưa ghi nhận tham gia',d.participated?'green':'')}</div><div class="lessonProgress"><span>${completion}</span>${!d.isFake?'<small>Chỉ xem lại bài thật</small>':'<small>Nộp phần đầu thành công ghi nhận tham gia</small>'}</div></div>${instructionsMarkup(d.definition.instructions)}${d.definition.blocks.map((block,index)=>studentPart(block,index)).join('')}</section>${d.isFake&&!d.submitted?(allReceived?`<div class="notice warn completionPending" role="status"><span><strong>Đã nhận đủ các phần.</strong><br>Chưa xác nhận được hoàn tất phiếu. Bài đã nộp vẫn được giữ.</span><button class="btn" data-student-action="retry-completion">Thử hoàn tất phiếu</button></div>`:`<div class="bottomActions">${studentSaveStatus(s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nháp riêng theo người học và buổi',true)}</div>`):''}<section class="currentFeedback"><h2>Nhận xét của giáo viên</h2><div class="feedbackCard"><b>Speaking</b><p>${d.publishedFeedback?esc(d.publishedFeedback):'Chưa có nhận xét đã công bố.'}</p></div></section>`;
 }
 function studentPart(block,index){
   const d=s.data,checkpoint=d.checkpoints.find(c=>c.blockId===block.blockId),submitted=d.submitted||Boolean(checkpoint),open=d.releases.find(r=>r.blockId===block.blockId)?.status==='open',editable=d.isFake&&!submitted,expanded=s.expanded.has(block.blockId);
@@ -397,6 +404,13 @@ function studentJourney(){
 }
 async function studentAction(action){
   if(action==='fail'){s.failNext=true;toast('Lần lưu kế tiếp sẽ báo lỗi thử. Người học và nháp sẽ được giữ tại chỗ.');return;}
+  if(action==='retry-completion'){
+    const trigger=document.activeElement?.closest('[data-student-action="retry-completion"]'),expanded=new Set(s.expanded);
+    if(trigger){trigger.disabled=true;trigger.textContent='Đang hoàn tất…';}
+    try{await openStudent();s.expanded=expanded;renderStudent();if(s.data.submitted)toast('Phiếu đã hoàn tất. Em có thể xem lại từng phần.');}
+    finally{if(trigger?.isConnected)trigger.disabled=false;}
+    return;
+  }
   if(action==='retry-save'){
     // Thử lại đúng hàm giữ nháp hiện hành, không nộp bài hoặc chuyển người.
     // Lưu lỗi giữ nút và nội dung; lưu thành công trả focus về thông báo đã lưu.
@@ -409,9 +423,6 @@ async function studentAction(action){
   }
   if(action==='identity'){
     await saveStudent();modal('Đổi người học',`<p>Nháp được giữ riêng cho từng người và từng buổi. Bạn chỉ chuyển người sau khi lưu nháp thành công.</p><label for="identity-select">Chọn người học ${s.data.isFake?'thử':'để xem bài thật'}</label><select id="identity-select" class="select" style="display:block;margin-top:8px;width:100%">${s.data.roster.map(p=>`<option value="${esc(p.studentRef)}" ${p.studentRef===s.ref?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`,`<button class="btn" data-close-dialog>Hủy</button><button class="btn primary" data-confirm-identity>Đổi người học</button>`);return;
-  }
-  if(action==='final'){
-    await saveStudent();modal('Nộp toàn bộ phiếu?',`<p>Em có thể nộp dù còn câu trống. Các câu chấm tự động còn trống được tính 0; phần tự nhận xét không chấm điểm.</p><p>Sau khi nộp, phiếu chỉ được xem lại. Việc nộp trong demo không ghi vào lớp thật.</p>`,`<button class="btn" data-close-dialog>Tiếp tục làm</button><button class="btn primary" data-confirm-final>Nộp phiếu</button>`);
   }
 }
 
@@ -480,7 +491,6 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-overview-history')){const heading=document.querySelector('#overview-history'),panel=heading.closest('.detailPanel');heading.focus({preventScroll:true});if(getComputedStyle(panel).position==='sticky')panel.scrollTo({top:panel.scrollTop+heading.getBoundingClientRect().top-panel.getBoundingClientRect().top-16,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});else heading.scrollIntoView({block:'start',behavior:'smooth'});return;}
   if(button?.hasAttribute('data-course-history')){const session=allCourse().find(v=>v.number===Number(button.dataset.courseHistory)),person=session.students.find(p=>p.studentRef===t.selected);modal(`${person.name} · Buổi ${session.number}`,`<p class="caption">${esc(session.title)} · ${date(session.date)} · Bản chụp chỉ đọc</p>${readonly(person.detail)}`);return;}
   if(button?.hasAttribute('data-own-history')){const v=s.data.courseHistory.find(v=>v.number===Number(button.dataset.ownHistory));modal(`Buổi ${v.number} · ${v.title}`,`<p class="readOnly">Bản chụp chỉ đọc · Đáp án giữ ẩn theo nguồn</p>${readonly({...v,submissionId:v.submitted?'observed':null})}`);return;}
-  if(button?.hasAttribute('data-confirm-final')){await saveStudent();await api('/api/demo',{action:'final',number:s.number,generation:s.data.generation,ref:s.ref,responses:s.responses});dialog.close();await openStudent();s.expanded=new Set(s.data.definition.blocks.map(b=>b.blockId));renderStudent();toast('Đã nộp phiếu thử. Em có thể xem lại từng phần.');return;}
   if(button?.hasAttribute('data-confirm-replace')){const chosen=document.querySelector('#replace-template').value,form=t.library.forms.find(f=>f.id===chosen),custom=form?{title:form.title,...toDefinition(form)}:{};await api('/api/demo',{action:'replace',number:t.number,generation:activeSession().generation,template:Number(chosen),...custom});t.selected=null;dialog.close();await refreshTeacher();toast('Đã thay bài trong demo; bài cũ vẫn ở Lịch sử thu hồi.');return;}
   if(button?.hasAttribute('data-confirm-reset')){await api('/api/demo',{action:'reset'});dialog.close();t.selected=null;t.drafts.clear();await refreshTeacher();toast('Đã trở về dữ liệu chụp ban đầu.');return;}
   if(button?.hasAttribute('data-archive')){const archive=activeSession().retired[Number(button.dataset.archive)];dialog.close();modal('Bài đã thu hồi · Chỉ đọc',archiveBody(archive));return;}
@@ -503,7 +513,7 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-student-tab')){await saveStudent();s.tab=button.dataset.studentTab;renderStudent();return;}
   if(button?.hasAttribute('data-student-open')){await saveStudent();s.tab='session';await openStudent(Number(button.dataset.studentOpen));return;}
   if(button?.hasAttribute('data-student-action'))return studentAction(button.dataset.studentAction);
-  if(button?.hasAttribute('data-submit-block')){const id=button.dataset.submitBlock;await saveStudent();await api('/api/demo',{action:'checkpoint',number:s.number,generation:s.data.generation,ref:s.ref,blockId:id,responses:s.responses});const expanded=new Set(s.expanded);await openStudent();s.expanded=expanded;renderStudent();const part=document.querySelector(`[data-part="${id}"]`);if(part){part.tabIndex=-1;part.scrollIntoView({block:'start'});part.focus({preventScroll:true});}toast('Đã nộp phần này và ghi nhận tham gia trong demo.');return;}
+  if(button?.hasAttribute('data-submit-block')){const id=button.dataset.submitBlock;await saveStudent();await api('/api/demo',{action:'checkpoint',number:s.number,generation:s.data.generation,ref:s.ref,blockId:id,responses:s.responses});const expanded=new Set(s.expanded);await openStudent();s.expanded=expanded;renderStudent();const part=document.querySelector(`[data-part="${id}"]`);if(part){part.tabIndex=-1;part.scrollIntoView({block:'start'});part.focus({preventScroll:true});}toast(s.data.submitted?'Đã nộp đủ các phần. Phiếu đã hoàn tất.':s.completionError?'Đã nhận phần này; cần thử hoàn tất phiếu.':'Đã nộp phần này và ghi nhận tham gia trong demo.');return;}
 })().catch(error=>toast(error.message));});
 window.addEventListener('beforeunload',event=>{if(s.dirty||t.pending||s.pending||t.saveError||t.editing){event.preventDefault();event.returnValue='';}});
 // Đóng bằng nền chỉ khi cả điểm nhấn xuống và nhả đều ở ngoài khung, tránh đóng khi kéo chọn chữ.
