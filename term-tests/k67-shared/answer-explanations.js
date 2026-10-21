@@ -7,6 +7,53 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[c]);
   let activeAttempt = '', cached, context, number, dialog, trigger, generation = 0;
+  const scriptBase = new URL('.', document.currentScript.src);
+  let player, reviewAudio, blobUrl = '', blobHash = '';
+  const clock = ms => `${String(Math.floor(ms / 60000)).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
+  function replayButtons(clips) {
+    return (clips || []).map((clip, i) => {
+      const label = `▶ Nghe lại ${clips.length > 1 ? clip.label || 'đoạn ' + (i + 1) : 'dẫn chứng'}`;
+      return `<div class="explanation-replay"><button type="button" class="explanation-replay-button" data-k67-replay="${escape(clip.id)}" data-replay-label="${escape(label)}" aria-pressed="false">${escape(label)}</button><span>${clock(clip.startMs)}–${clock(clip.endMs)} · tự dừng</span><span class="explanation-replay-status" role="status"></span></div>`;
+    }).join('');
+  }
+  function clearAudio() {
+    player?.dispose(); player = null;
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    blobUrl = blobHash = '';
+    if (reviewAudio) { reviewAudio.removeAttribute('src'); reviewAudio.load(); reviewAudio.remove(); reviewAudio = null; }
+  }
+  async function playClip(clip) {
+    const review = context.review, descriptor = review.bundle.reviewAudio;
+    if (!descriptor || !window.K67ReviewAudio) throw Error('Chưa tải đủ bộ phát nghe lại. Hãy tải lại trang.');
+    if (!reviewAudio) {
+      reviewAudio = document.createElement('audio'); reviewAudio.hidden = true; reviewAudio.preload = 'none';
+      reviewAudio.dataset.k67ReviewAudio = ''; document.body.append(reviewAudio);
+    }
+    if (!player) player = new window.K67ReviewAudio(reviewAudio, { durationMs: descriptor.durationMs,
+      prepare: async signal => {
+        if (blobHash === descriptor.sha256 && blobUrl) return;
+        if (!/^term-test-2-96kbps-[0-9a-f]{16}\.mp3$/.test(descriptor.asset)) throw Error('Sai nguồn audio');
+        const response = await fetch(new URL('../k67-audio-assets/' + descriptor.asset, scriptBase), { signal, cache: 'force-cache' });
+        if (!response.ok) throw Error('Không tải được audio');
+        const bytes = await response.arrayBuffer();
+        const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
+        if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
+        if (hash !== descriptor.sha256) throw Error('Audio không khớp phiên bản lời giải');
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        blobUrl = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' })); blobHash = hash; reviewAudio.src = blobUrl;
+      },
+      onState: ({ state, segment, message }) => {
+        dialog?.querySelectorAll('[data-k67-replay]').forEach(button => {
+          const active = button.dataset.k67Replay === segment?.id;
+          button.setAttribute('aria-pressed', String(active && state === 'playing'));
+          button.textContent = active && state === 'playing' ? '■ Dừng đoạn này' : active && state === 'loading' ? 'Hủy tải đoạn nghe' : button.dataset.replayLabel;
+          button.parentNode.querySelector('.explanation-replay-status').textContent = active && state === 'playing' ? 'Đang phát · tự dừng khi hết đoạn' : '';
+        });
+        if (message) { const status = dialog?.querySelector('.explanation-replay-status'); if (status) status.textContent = message; }
+      }
+    });
+    await player.play(clip);
+  }
   const text = paragraphs => (paragraphs || []).map(p => p.map(r => r.text).join('')).join('\n');
   const colorClass = (prefix, color) => /^#[0-9a-f]{6}$/i.test(color || '') ? ` ex-${prefix}-${color.slice(1)}` : '';
   function paragraphs(value) {
@@ -45,8 +92,8 @@
       if (event.target === dialog && pressedOutside && releasedOutside) dialog.close();
       pressedOutside = releasedOutside = false;
     });
-    dialog.addEventListener('close', () => { if (trigger?.isConnected) trigger.focus(); });
-    window.addEventListener('pagehide', () => { dialog.close(); cached = null; });
+    dialog.addEventListener('close', () => { player?.stop(); if (trigger?.isConnected) trigger.focus(); });
+    window.addEventListener('pagehide', () => { dialog.close(); cached = null; clearAudio(); });
     return dialog;
   }
   const normalize = value => value.normalize('NFKC').toLowerCase().replace(/[’‘]/g, "'").replace(/[^\p{L}\p{N}]/gu, '');
@@ -100,6 +147,7 @@
     if (first) pane.scrollTop = first.offsetTop - pane.offsetTop - 20;
   }
   function render() {
+    player?.stop();
     const { review, skill } = context;
     const entries = review.bundle.skills[skill].entries;
     const numbers = Object.keys(entries).map(Number).sort((a, b) => a - b);
@@ -122,12 +170,19 @@
       const quotes = paragraphs(block.evidence);
       const primary = block.evidence.some(p => evidenceText.has(text([p])));
       return `<div class="explanation-source-block">${paragraphs(block.analysis)}${quotes
-        ? primary ? `<blockquote>${quotes}</blockquote>` : `<details class="explanation-option-quote"><summary>Xem trích dẫn</summary><blockquote>${quotes}</blockquote></details>` : ''}</div>`;
+        ? primary ? `<blockquote>${quotes}${replayButtons(block.replay)}</blockquote>` : `<details class="explanation-option-quote"><summary>Xem trích dẫn</summary><blockquote>${quotes}${replayButtons(block.replay)}</blockquote></details>` : ''}</div>`;
     }).join('');
     const index = numbers.indexOf(number);
     const d = ensureDialog();
     d.innerHTML = `<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">${escape(context.title)} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(entry.type.replace(/^(Reading|Listening) - /, ''))}</h2></div><button type="button" class="explanation-dialog-close" data-explanation-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="${isReading ? 'Bài đọc' : 'Trích transcript'}"><div class="explanation-dialog-pane-head"><strong>${isReading ? 'Bài đọc' : 'Trích transcript'} · ${escape(section.label)}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(sectionTitle)}</p>${left}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(correctAnswer)}</strong></span><span>${escape(context.answerLabel || 'Bài làm của bạn')} <strong>${escape(studentAnswer || '—')}</strong></span><span class="result-${outcome}">${outcome === 'correct' ? 'Đúng' : outcome === 'blank' ? 'Bỏ trống' : outcome === 'incorrect' ? 'Sai' : 'Chưa có dữ liệu từng câu'}</span></div>${entry.pairNumbers ? `<p class="explanation-dialog-hint">Câu ${entry.pairNumbers.join('–')} dùng chung lời giải; hai đáp án đúng không xét thứ tự. Kết quả từng câu giữ theo bài đã chấm.</p>` : ''}<h3>Đối chiếu ý trong đề và ${isReading ? 'bài đọc' : 'transcript'}</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${paragraphs(entry.prompt)}</section><section><h4>Bằng chứng trong ${isReading ? 'bài đọc' : 'transcript'}</h4>${paragraphs(entry.evidence)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index + 1}/${numbers.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-explanation-prev ${index === 0 ? 'disabled' : ''}>← Câu trước</button><button type="button" class="button outline" data-explanation-next ${index === numbers.length - 1 ? 'disabled' : ''}>Câu sau →</button></nav></footer></div>`;
     d.querySelector('[data-explanation-close]').onclick = () => d.close();
+    if (!isReading && entry.replay?.length) {
+      d.querySelector('.explanation-dialog-compare>section:last-child').insertAdjacentHTML('beforeend', replayButtons(entry.replay));
+      const clips = new Map([...entry.replay, ...entry.blocks.flatMap(b => b.replay || [])].map(c => [c.id, c]));
+      d.querySelectorAll('[data-k67-replay]').forEach(button => button.onclick = () => playClip(clips.get(button.dataset.k67Replay)).catch(error => {
+        button.parentNode.querySelector('.explanation-replay-status').textContent = error.message;
+      }));
+    }
     d.querySelector('[data-explanation-prev]').onclick = () => { number = numbers[index - 1]; render(); };
     d.querySelector('[data-explanation-next]').onclick = () => { number = numbers[index + 1]; render(); };
     if (!d.open) d.showModal();
@@ -142,6 +197,7 @@
     loadReview, answerLabel = 'Bài làm của bạn' }) {
     if (!supported.has(testSlug) || !payload.completed || !reviewKey || (!attemptToken && !loadReview)) return;
     if (activeAttempt !== reviewKey) {
+      clearAudio(); player = null;
       activeAttempt = reviewKey; cached = null; generation++;
       if (dialog?.open) dialog.close();
     }
@@ -182,6 +238,7 @@
     });
   }
   function reset() {
+    clearAudio(); player = null;
     generation++; activeAttempt = ''; cached = null; context = null;
     if (dialog?.open) dialog.close();
     dialog?.replaceChildren(); trigger = null;
