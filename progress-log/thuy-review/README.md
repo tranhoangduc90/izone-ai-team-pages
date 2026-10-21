@@ -45,6 +45,10 @@ Kho Test có định nghĩa Mini Test, Term Test 1/2 nhưng chưa có roster/k�
 
 Nộp phần đầu thành công, kể cả trống, ghi nhận tham gia trong demo. Nháp chưa tính tham gia. Final thiếu vẫn được nhận; câu chấm còn trống tính 0, câu điều kiện không áp dụng không vào mẫu số. Không tự báo đã ghi Portal.
 
+Góp ý duyệt ngày 21/10/2026: bảng tiến độ giữ một cột **Điểm danh**. **Đã nhận bài** nghĩa là Progress Log đã nhận lần nộp phần đầu; **Đã điểm danh** chỉ hiện khi Portal có xác nhận đọc lại, không có cờ cần kiểm tra. Bấm trạng thái để đọc hai kết quả; chưa nhận bài và cần kiểm tra có nhãn riêng. Khi còn hàng ở dưới màn hình, hiện nút **Còn … học viên phía dưới ↓**; cuộn hết hoặc lọc danh sách ngắn thì tự ẩn.
+
+Nút **Xem phân bố và học viên** ở đầu khung câu hỏi, ngoài vùng nội dung cuộn. Hộp phân bố đóng bằng nút đóng, Escape hoặc bấm nền ngoài; kéo chọn chữ từ trong ra ngoài không làm đóng, và đóng xong trả focus về nơi mở.
+
 Nhận xét Speaking tự giữ nháp riêng. Chỉ **Lưu và hiển thị cho học viên** mới công bố; sửa tiếp giữ bản đã công bố cũ. Đổi người học phải giữ nháp thành công trước; lỗi lưu giữ người và nội dung tại chỗ.
 
 Thay bài bằng phiếu khác hoặc bài vừa soạn sẽ thu hồi bản cũ, giữ nháp/bài nộp cho giảng viên, bài mới bắt đầu sạch. Học viên không nhận lịch sử thu hồi; phiên bản cũ bị từ chối. Bài đã thu hồi không được cộng vào TB hiện hành.
