@@ -45,6 +45,22 @@
 @media(max-width:650px){.student-screen .compactReview .reviewChoices summary{min-height:44px;display:flex;align-items:center;gap:6px}.student-screen .compactReview .reviewChoices summary:before{content:'▸'}.student-screen .compactReview .reviewChoices[open] summary:before{content:'▾'}}
 .writingTask{margin-top:12px}.writingTask p{margin-top:4px}.originalExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:pre-wrap}
 .fullFeedback{white-space:pre-wrap;overflow-wrap:anywhere}.dialogBody li{margin:8px 0}.matchingFields{display:grid;gap:12px}.matchingFields label{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+
+/* Tổng quan giữ đoạn gốc ngắn; nhận xét đầy đủ mở riêng như mẫu Thủy. */
+.studentSkillCard{display:flex;flex-direction:column}
+.studentSkillCard>p.studentSpeakingExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;overflow:hidden}
+.studentSkillCard>p.studentWritingExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:12px;line-height:18px;margin:12px 0 0}
+.studentSkillCard>p.studentWritingSource{font-size:12px;line-height:18px;margin:12px 0 0}
+.studentSkillCard .studentSkillAction{display:flex;align-items:center;justify-content:space-between;align-self:stretch;margin-top:auto;padding:12px 0 0;min-height:44px;text-align:left;font-size:12px}
+.studentSkillCard dt{flex-shrink:0}.studentSkillCard dd{min-width:0}
+.studentSessionRow>span:first-child{min-width:0;overflow-wrap:anywhere}.studentSessionRow em{font-style:normal;color:var(--navy)}
+.studentJourneyDialog{width:700px;overflow:hidden}.studentJourneyDialog[open]{display:flex;flex-direction:column}
+.studentJourneyDialog .dialogHead{flex-shrink:0;padding:16px 20px}.studentJourneyDialog .dialogBody{min-height:0;padding:24px}
+.studentJourneyDialog .dialogFoot{flex-shrink:0;padding:8px 24px;justify-content:center;color:var(--muted)}.studentJourneyDialog .dialogFoot:has([hidden]){display:none}
+.studentFeedbackEntry{padding:16px 0;border-bottom:1px solid var(--line)}.studentFeedbackEntry:first-child{padding-top:0}.studentFeedbackEntry:last-child{border-bottom:0;padding-bottom:0}
+.studentFeedbackEntry h3{font-size:16px;line-height:24px}.studentFeedbackEntry p{margin:8px 0;line-height:22px}
+.studentTestHeading{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap}.studentTestHeading strong{white-space:nowrap}
+@media(max-width:759px){.studentJourneyDialog{width:100%;height:100dvh;max-width:100%;max-height:100dvh;margin:0;inset:0;border:0;border-radius:0}.studentJourneyDialog .dialogBody{padding:20px 16px}.studentJourneyDialog .dialogHead{padding:12px 16px}}
 .matchingFields label{min-width:0}.matchingFields span{overflow-wrap:anywhere}.matchingFields select{width:100%;min-width:0;min-height:40px;border:1px solid var(--line);border-radius:6px;background:white;padding:8px 12px;font:inherit}.studentMain .matchingFields select{min-height:44px;font-size:16px}
 .exercise-preview-question .scoreInput input{width:100px;min-height:40px}.exercise-preview-question .scoreInput span{white-space:nowrap}
 @media(max-width:650px){.matchingFields select,.exercise-preview-question .scoreInput input{min-height:44px;font-size:16px}}
