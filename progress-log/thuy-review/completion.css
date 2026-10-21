@@ -22,6 +22,11 @@
 .worksheetInstructions{margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .worksheetInstructions h2{font-size:16px;margin:0 0 8px}.worksheetInstructions p,.answerExplanation{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.answerExplanation{margin:8px 0 16px}
 .studentPart .studentAnswerReview>.studentJourneyHeading{display:none}
+.studentSaveState{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.studentSaveState [data-save-status]{overflow-wrap:anywhere}
+.studentSaveState button[hidden]{display:none}
+.studentMain .studentSaveState .btn{flex-shrink:0;min-height:36px}
+@media(max-width:650px){.studentMain .studentSaveState .btn{min-height:44px}}
 /* Chữa bài học viên theo mẫu Thủy: trả lời trước, lựa chọn đầy đủ mở khi cần. */
 .student-screen .compactReview{margin:8px 0 0}
 .student-screen .compactReview article{padding:16px 0}
