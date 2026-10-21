@@ -85,6 +85,34 @@ function updatePeopleScrollCue(){
 }
 window.addEventListener('scroll',updatePeopleScrollCue,{passive:true});
 window.addEventListener('resize',updatePeopleScrollCue);
+// Hai việc cùng một trang: lối vào có mô tả, thanh chuyển nhanh khi cuộn; không dựng lại bài/nháp.
+let resultsNavigationFrame;
+function updateResultsNavigation(){
+  cancelAnimationFrame(resultsNavigationFrame);
+  resultsNavigationFrame=requestAnimationFrame(()=>{
+    const entries=document.querySelector('.resultsEntries'),bar=document.querySelector('.resultsQuickBar');
+    if(!entries||!bar){document.body.classList.remove('results-nav-pinned');return;}
+    const rect=entries.getBoundingClientRect(),pinned=rect.top<8;
+    bar.style.left=`${rect.left}px`;bar.style.width=`${rect.width}px`;bar.hidden=!pinned;
+    entries.classList.toggle('isPast',pinned);document.body.classList.toggle('results-nav-pinned',pinned);
+    if(pinned)document.documentElement.style.setProperty('--results-nav-offset',`${bar.offsetHeight+24}px`);
+    const active=document.querySelector('#results-people').getBoundingClientRect().top<=(pinned?bar.getBoundingClientRect().bottom+32:rect.bottom+32)?'people':'questions';
+    for(const button of document.querySelectorAll('[data-results-jump]')){
+      if(button.dataset.resultsJump===active)button.setAttribute('aria-current','location');else button.removeAttribute('aria-current');
+    }
+  });
+}
+function scrollToResults(section){
+  const target=document.querySelector(section==='people'?'#results-people':'#results-questions'),bar=document.querySelector('.resultsQuickBar'),entries=document.querySelector('.resultsEntries');
+  if(!target||!bar||!entries)return;
+  const rect=entries.getBoundingClientRect();bar.style.left=`${rect.left}px`;bar.style.width=`${rect.width}px`;bar.hidden=false;
+  const offset=bar.offsetHeight+24;document.documentElement.style.setProperty('--results-nav-offset',`${offset}px`);
+  target.focus({preventScroll:true});
+  window.scrollTo({top:scrollY+target.getBoundingClientRect().top-offset,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+  updateResultsNavigation();
+}
+window.addEventListener('scroll',updateResultsNavigation,{passive:true});
+window.addEventListener('resize',updateResultsNavigation);
 function teacherShell(content){
   return `<aside class="side"><div class="brand"><div class="logo">IZONE</div><small>IELTS CHIẾN LƯỢC</small></div><div class="navLabel">PROGRESS LOG</div><button class="navButton ${t.page==='class'?'active':''}" data-page="class">Quản lý lớp</button><button class="navButton ${t.page==='library'?'active':''}" data-page="library">Quản lý bài tập</button><a class="navButton" target="_blank" rel="noopener" href="${studentURL('demo-a',t.number)}">Cổng học viên ↗</a><div class="sideFoot"><small>Không gian giảng viên</small><p>Thủy · IZONE</p></div></aside><header class="topbar"><span>Quản lý lớp / IC2305${t.tab==='session'?` / Buổi ${t.number}`:''}</span><span>Giảng viên · Thủy</span></header><main class="workspace">${content}</main>`;
 }
@@ -99,6 +127,7 @@ function renderTeacher(){
   const context=`<div class="classContextToolbar"><div class="classContext"><select class="select" aria-label="Chọn lớp"><option>IC2305</option></select>${t.tab==='session'?`<select class="select sessionSelect" aria-label="Chọn buổi học" data-teacher-session>${t.data.sessions.map(v=>`<option value="${v.number}" ${v.number===t.number?'selected':''}>Buổi ${v.number}</option>`).join('')}</select>`:''}<span class="caption">${t.tab==='session'?session.students.length:union} học viên${t.tab==='journey'?' · Đến buổi 10':''}</span></div><div class="managementTabs" role="tablist" aria-label="Quản lý lớp"><button role="tab" tabindex="${t.tab==='session'?0:-1}" aria-selected="${t.tab==='session'}" data-tab="session">Theo dõi buổi học</button><button role="tab" tabindex="${t.tab==='journey'?0:-1}" aria-selected="${t.tab==='journey'}" data-tab="journey">Hành trình lớp</button></div></div>`;
   app.innerHTML=teacherShell(context+(t.tab==='session'?sessionView(session):journeyView())+footer);
   updatePeopleScrollCue();
+  updateResultsNavigation();
 }
 function sessionView(session){
   const mode=t.mode||'progress';
@@ -110,7 +139,9 @@ function sessionView(session){
   const tabs=`<div class="sessionTabs" role="tablist" aria-label="Kết quả và tiến độ buổi học"><button role="tab" aria-selected="${mode==='progress'}" tabindex="${mode==='progress'?0:-1}" data-session-mode="progress">Tiến độ</button><button role="tab" aria-selected="${mode==='results'}" tabindex="${mode==='results'?0:-1}" data-session-mode="results">Kết quả</button></div>`;
   const tools=`<div class="inline"><select class="select" aria-label="Lọc trạng thái" data-filter><option value="all" ${t.filter==='all'?'selected':''}>Tất cả học viên</option><option value="final" ${t.filter==='final'?'selected':''}>Đã nộp cuối</option><option value="pending" ${t.filter==='pending'?'selected':''}>Chưa nộp cuối</option></select><input class="search" aria-label="Tìm học viên" placeholder="Tìm học viên" value="${esc(t.search)}" data-search></div>`;
   const progressPanel=`<section class="panel"><div class="panelHead"><h2>Tiến độ học viên</h2>${tools}</div><div class="tableScroll"><table class="progressTable"><thead><tr><th>Học viên</th>${session.definition.blocks.map((b,i)=>`<th>Phần ${i+1}</th>`).join('')}<th>Điểm danh</th></tr></thead><tbody>${visiblePeople().map(p=>`<tr><td><b>${esc(p.name)}</b></td>${session.definition.blocks.map(b=>`<td>${p.submitted||p.checkpoints.some(c=>c.blockId===b.blockId)?badge('Đã nộp','green'):b.items.some(i=>p.draftResponses[i.itemVersionId]!=null)?badge('Đang làm','blue'):badge('Chưa bắt đầu')}</td>`).join('')}<td>${attendanceLabel(p)}</td></tr>`).join('')}</tbody></table></div><div class="tableFoot">${visiblePeople().length}/${session.students.length} học viên trong danh sách · ${session.students.filter(p=>p.submitted).length}/${session.students.length} đã nộp cuối · Bấm trạng thái điểm danh để xem chi tiết.</div><button class="peopleScrollCue" data-scroll-people hidden></button></section>`;
-  const results=`${questionSummary(session)}<div class="split ${t.selected?'hasDetail':''}"><section class="panel listPanel"><div class="panelHead"><h2>Kết quả từng học viên</h2>${tools}</div>${sessionTable(session)}</section>${t.selected?detailPanel():''}</div>`;
+  const questionCount=session.analytics.filter(i=>i.objective).length,submittedCount=session.students.filter(p=>p.submitted).length;
+  const entries=`<nav class="resultsEntries" aria-label="Hai cách xem kết quả buổi học"><button class="resultsEntry" data-results-jump="questions"><strong>Thống kê câu hỏi <span aria-hidden="true">↓</span></strong><span>${questionCount} câu có kết quả chấm</span><small>Tìm câu cả lớp đang vướng</small></button><button class="resultsEntry" data-results-jump="people"><strong>Kết quả từng học viên <span aria-hidden="true">↓</span></strong><span>${session.students.length} học viên · ${submittedCount} bài nộp cuối</span><small>Đọc bài, xem lỗi và viết nhận xét</small></button></nav><nav class="resultsQuickBar" aria-label="Chuyển nhanh giữa hai phần kết quả" hidden><button data-results-jump="questions">Thống kê câu hỏi</button><button data-results-jump="people">Kết quả từng học viên</button></nav>`;
+  const results=`${entries}${questionSummary(session)}<div class="split ${t.selected?'hasDetail':''}" id="results-people" tabindex="-1"><section class="panel listPanel"><div class="panelHead"><h2>Kết quả từng học viên</h2>${tools}</div>${sessionTable(session)}</section>${t.selected?detailPanel():''}</div>`;
   return header+(session.replacement?'<div class="notice simulated">Đã thay bài trong demo. Bài cũ chỉ ở Lịch sử thu hồi của giảng viên.</div>':'')+tabs+(mode==='progress'?progressPanel:results);
 }
 function questionSummary(session){
@@ -120,7 +151,7 @@ function questionSummary(session){
   const list=values.length?[true,false].map(wrong=>`<div class="questionGroup"><h3>${wrong?'Các câu sai cần chữa':'Các câu lớp đã làm đúng'} ${badge(values.filter(v=>(v.counts.incorrect>0)===wrong).length+' câu')}</h3>${values.filter(v=>(v.counts.incorrect>0)===wrong).map(v=>{const i=flat.find(i=>i.itemVersionId===v.id),index=i.displayNumber??i.position??flat.indexOf(i)+1,block=session.definition.blocks.find(b=>b.items.includes(i)),total=v.counts.correct+v.counts.incorrect;return `<button class="questionRow ${t.question===v.id?'selected':''}" data-select-question="${esc(v.id)}"><span>Câu ${index}</span><span class="questionLabel">${esc(v.prompt)}<small>Phần ${session.definition.blocks.indexOf(block)+1} · ${(i?.skillCodes||[]).map(k=>SKILLS[k]).filter(Boolean).join(' · ')} · Trắc nghiệm</small></span><span class="questionMetric ${wrong?'wrong':'correct'}">${v.counts.incorrect}/${total} sai<small>${pct(total?v.counts.incorrect/total*100:null)} sai</small></span></button>`;}).join('')}</div>`).join(''):empty('Chưa có kết quả','Bài thay thế bắt đầu mới.');
   const answer=session.answerKey?.[item?.itemVersionId]?.expectedOptionId;
   const detail=selected?`<section class="questionDetailFrame"><div class="questionDetailActions"><button class="btn primary small" data-question="${esc(selected.id)}">Xem phân bố và học viên</button><span class="caption">${selected.counts.incorrect}/${selected.counts.correct+selected.counts.incorrect} sai · ${pct(selected.counts.incorrect/(selected.counts.correct+selected.counts.incorrect)*100)}</span></div><div class="questionDetail" tabindex="0" aria-label="Nội dung câu hỏi, cuộn để đọc đủ"><div class="inline"><small>Câu ${item.displayNumber??item.position??flat.indexOf(item)+1} · Trắc nghiệm</small>${badge(selected.counts.incorrect?'Cần chữa':'Cả lớp đã làm đúng')}</div><h3>${esc(item.prompt)}</h3>${item.helpText?`<p class="reviewInstructions">${esc(item.helpText)}</p>`:''}<div class="answerOptions">${item.options.map(o=>`<div class="${answer===o.id?'correctOption':''}">${esc(o.label)}${answer===o.id?' <b>✓ Đáp án chuẩn</b>':''}</div>`).join('')}</div>${!answer?'<p class="caption">Nguồn chưa có khóa đáp án cho câu này; không suy từ lượt chọn.</p>':''}<details class="calculationHelp"><summary>Cách thống kê</summary><p>Chỉ dùng câu đã có kết quả chấm. Chưa chấm và câu không áp dụng không vào mẫu số; câu áp dụng để trống tính sai.</p></details></div></section>`:'';
-  return `<section class="panel questionPanel"><div class="panelHead"><h2>Thống kê theo câu hỏi</h2></div><div class="questionWorkspace"><div class="questionList">${list}</div>${detail}</div></section>`;
+  return `<section class="panel questionPanel" id="results-questions" tabindex="-1"><div class="panelHead"><h2>Thống kê theo câu hỏi</h2></div><div class="questionWorkspace"><div class="questionList">${list}</div>${detail}</div></section>`;
 }
 function visiblePeople(){const session=activeSession();return session.students.filter(p=>(!t.search||p.name.toLocaleLowerCase('vi').includes(t.search.toLocaleLowerCase('vi')))&&(t.filter==='all'||(t.filter==='final'?p.submitted:!p.submitted)));}
 function sessionTable(session){
@@ -312,6 +343,7 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.disabled)return;
   if(button?.hasAttribute('data-reload')){location.reload();return;}
   if(button?.hasAttribute('data-close-dialog')){dialog.close();return;}
+  if(button?.hasAttribute('data-results-jump')){scrollToResults(button.dataset.resultsJump);return;}
   if(button?.hasAttribute('data-scroll-people')){window.scrollBy({top:Math.round(innerHeight*.65),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});return;}
   if(button?.hasAttribute('data-attendance-ref')){
     const person=activeSession().students.find(p=>p.studentRef===button.dataset.attendanceRef),state=attendanceState(person);
@@ -347,7 +379,7 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-skill'))return changeTeacher(()=>{t.skill=button.dataset.skill;t.group='all';});
   if(button?.hasAttribute('data-open-detail-session'))return changeTeacher(()=>{t.number=Number(button.dataset.openDetailSession);t.tab='session';t.mode='results';});
   if(button?.hasAttribute('data-person-step')){const list=t.tab==='session'?visiblePeople():t.data.people;const index=list.findIndex(v=>v.studentRef===t.selected)+Number(button.dataset.personStep);if(list[index])return changeTeacher(()=>t.selected=list[index].studentRef);return;}
-  if(row||button?.hasAttribute('data-person')){const ref=button?.dataset.person||row.dataset.person;const previous=document.querySelector('#people-scroll');const scroll={x:previous?.scrollLeft||0,y:previous?.scrollTop||0};const wasOpen=Boolean(t.selected);await changeTeacher(()=>t.selected=ref);const list=document.querySelector('#people-scroll');if(list){list.scrollLeft=scroll.x;list.scrollTop=scroll.y;}if(!wasOpen)document.querySelector('.split')?.scrollIntoView({block:'start'});return;}
+  if(row||button?.hasAttribute('data-person')){const ref=button?.dataset.person||row.dataset.person;const previous=document.querySelector('#people-scroll');const scroll={x:previous?.scrollLeft||0,y:previous?.scrollTop||0};const wasOpen=Boolean(t.selected);await changeTeacher(()=>t.selected=ref);const list=document.querySelector('#people-scroll');if(list){list.scrollLeft=scroll.x;list.scrollTop=scroll.y;}if(!wasOpen){if(t.tab==='session')scrollToResults('people');else document.querySelector('.split')?.scrollIntoView({block:'start'});}return;}
   if(button?.hasAttribute('data-action'))return teacherAction(button);
   if(button?.hasAttribute('data-release')){await teacherSave();const session=activeSession(),release=session.releases.find(r=>r.blockId===button.dataset.release);await api('/api/demo',{action:'release',number:t.number,generation:session.generation,blockId:release.blockId,open:release.status!=='open'});await refreshTeacher();toast('Đã đổi phần mở trong demo.');return;}
   if(button?.hasAttribute('data-student-tab')){await saveStudent();s.tab=button.dataset.studentTab;renderStudent();return;}

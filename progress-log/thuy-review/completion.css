@@ -31,3 +31,17 @@
 @media(max-width:1050px){.questionDetailFrame .questionDetail{max-height:260px}}
 @media(max-width:1000px){.peopleScrollCue{left:calc(50% + 70px)}}
 @media(max-width:650px){.peopleScrollCue{left:50%;bottom:12px;font-size:13px;padding:10px 14px}}
+
+/* Hai lối vào ngang hàng, thanh ghim chỉ thay cách di chuyển trên cùng nội dung. */
+.resultsEntries{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px}
+.resultsEntries.isPast{visibility:hidden}
+.resultsEntry{min-width:0;display:flex;flex-direction:column;gap:5px;align-items:stretch;text-align:left;padding:14px 16px;border:1px solid var(--control-border);border-radius:8px;background:white;color:var(--navy);cursor:pointer}
+.resultsEntry strong{display:flex;justify-content:space-between;gap:12px;font-size:16px;line-height:24px;font-weight:600}
+.resultsEntry>span{font-size:14px;line-height:20px}.resultsEntry small{font-size:12px;line-height:18px;color:var(--muted)}
+.resultsEntry:hover{border-color:var(--navy);background:var(--hover)}
+.resultsEntry[aria-current]{border-color:var(--navy);box-shadow:inset 3px 0 var(--navy)}
+.resultsQuickBar{position:fixed;top:8px;z-index:25;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 3px 12px #17426624}
+.resultsQuickBar button{min-width:0;min-height:40px;padding:8px 12px;border:0;border-radius:5px;background:white;color:var(--navy);font-size:14px;line-height:20px;font-weight:600;cursor:pointer}
+.resultsQuickBar button[aria-current]{background:var(--pink);color:var(--red)}
+.teacher-screen.results-nav-pinned .detailPanel{top:var(--results-nav-offset);max-height:calc(100dvh - var(--results-nav-offset) - 16px)}
+@media(max-width:650px){.resultsEntries{gap:8px}.resultsEntry{padding:10px;gap:6px}.resultsEntry strong{font-size:14px;line-height:20px;gap:4px}.resultsEntry>span{font-size:12px;line-height:18px}.resultsEntry small{font-size:12px;line-height:18px}.resultsQuickBar button{font-size:12px;line-height:18px;padding:8px 4px}.teacher-screen.results-nav-pinned .detailPanel{max-height:none}}

@@ -49,6 +49,8 @@ Góp ý duyệt ngày 21/10/2026: bảng tiến độ giữ một cột **Điể
 
 Nút **Xem phân bố và học viên** ở đầu khung câu hỏi, ngoài vùng nội dung cuộn. Hộp phân bố đóng bằng nút đóng, Escape hoặc bấm nền ngoài; kéo chọn chữ từ trong ra ngoài không làm đóng, và đóng xong trả focus về nơi mở.
 
+Phương án A Đức chọn ngày 21/10: đầu màn Kết quả có hai lối vào **Thống kê câu hỏi** và **Kết quả từng học viên**, kèm số liệu và việc giáo viên có thể làm. Cuộn xuống thì thu thành thanh chuyển nhanh ghim phía trên. Hai phần vẫn trên cùng trang; chuyển bằng cuộn, không dựng lại dữ liệu hoặc mất người đang xem/bộ lọc/nháp. Thanh ghim chừa chỗ cho tiêu đề và khung chi tiết.
+
 Nhận xét Speaking tự giữ nháp riêng. Chỉ **Lưu và hiển thị cho học viên** mới công bố; sửa tiếp giữ bản đã công bố cũ. Đổi người học phải giữ nháp thành công trước; lỗi lưu giữ người và nội dung tại chỗ.
 
 Thay bài bằng phiếu khác hoặc bài vừa soạn sẽ thu hồi bản cũ, giữ nháp/bài nộp cho giảng viên, bài mới bắt đầu sạch. Học viên không nhận lịch sử thu hồi; phiên bản cũ bị từ chối. Bài đã thu hồi không được cộng vào TB hiện hành.
