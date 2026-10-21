@@ -4,6 +4,7 @@ import {SKILLS,itemsOf,allPartsSubmitted,applicable,personJourney,priority,quizS
 import {localAPI,preparePages,pagesAPI} from './pages-adapter.mjs';
 import {journeyScenarios,scenarioSummary} from './journey-scenarios.mjs';
 import {testScenario} from './test-scenarios.mjs';
+import {studentReviewLabel} from './review-labels.mjs';
 import {loadEditor,sourceDraft,toDefinition,hintMarkup,matchingMarkup,scoreMarkup,setScoreValidity,instructionsMarkup,explanationMarkup} from './editor-bridge.mjs';
 import {libraryStorage} from './library-storage.mjs';
 const {reviewItems}=await import(localAPI?'/shared/answer-review.js':'../answer-review.js');
@@ -56,9 +57,9 @@ function readonly(detail,blocks=detail.definition.blocks){
   output=output.replaceAll('</article>',()=>{const item=items[index++],answer=key?.[item.itemVersionId],label=answer?.graderType==='exact_option'?item.options?.find(o=>o.id===answer.expectedOptionId)?.label:answer?.graderType==='exact_options'?answer.expectedOptions.map(id=>item.options.find(o=>o.id===id)?.label||id).join(' · '):answer?.graderType==='exact_text'?answer.expectedText:answer?.graderType==='exact_matching'?answer.pairs.map(p=>p.left+' → '+p.right).join('\n'):'';return (label&&applicable(item,detail.responses||{})?`<p class="correctAnswer"><b>Đáp án chuẩn:</b> ${esc(label)}</p>${explanationMarkup(answer.explanation)}`:'')+'</article>';});
   let hintIndex=0;
   output=output.replaceAll('</article>',()=>{const item=items[hintIndex++];return (item.interactionType==='long_text'&&applicable(item,detail.responses||{})?hintMarkup(item.interactionConfig?.hintText):'')+'</article>';});
-  return isStudent?compactStudentReview(output):output;
+  return isStudent?compactStudentReview(output,items):output;
 }
-function compactStudentReview(markup){
+function compactStudentReview(markup,items){
   // Chỉ sắp xếp nội dung chỉ đọc đã được cấp: giữ nguyên câu trả lời, điểm và quyền xem đáp án.
   // Giảng viên và bản xem đề vẫn dùng bộ hiển thị đầy đủ; học viên mở thêm lựa chọn khi cần.
   const doc=new DOMParser().parseFromString(markup,'text/html');
@@ -67,6 +68,12 @@ function compactStudentReview(markup){
     const top=article.querySelector('.reviewQuestionTop'),title=top.querySelector('h3'),number=top.querySelector('.reviewQuestionNumber').textContent;
     title.textContent=`Câu ${number}. ${title.textContent}`;
     const verdict=article.querySelector('.reviewVerdict');
+    const item=items.find(v=>v.itemVersionId===article.dataset.reviewItem);
+    if(verdict&&item){
+      const status=[...verdict.classList].find(v=>v!=='reviewVerdict');
+      const label=studentReviewLabel(item,status,{snapshot:!s.data.isFake});
+      if(label)verdict.textContent=label;
+    }
     top.replaceChildren(title);
     if(verdict)top.append(verdict);
     article.querySelector('.reviewAnswer small')?.remove();
@@ -420,7 +427,11 @@ function studentSkillDetail(skill){
   const body=skill==='speaking'?
     history.filter(v=>v.publishedFeedback?.trim()).map(v=>`<article class="studentFeedbackEntry"><h3>Buổi ${v.number} · ${date(v.date)}</h3><p class="caption">${esc(v.title)}</p><p class="fullFeedback">${esc(v.publishedFeedback)}</p></article>`).join('')||'<p>Chưa có nhận xét đã công bố.</p>':
     testTypes.map(([slug,name])=>{const record=ownTests.get(slug),value=record?.writing;return `<article class="studentFeedbackEntry"><div class="studentTestHeading"><h3>${name}</h3><strong>${value?.score!=null?`${esc(value.score)} / 9`:'Chưa có điểm'}</strong></div>${record?.synthetic?`<p>${badge('Dữ liệu giả','amber')}</p>`:''}${[1,2].map(task=>`<p class="fullFeedback"><b>Task ${task}</b><br>${esc(value?.tasks?.[task]?.feedback||'Chưa có nhận xét')}</p>`).join('')}</article>`;}).join('');
-  modal(`${s.data.person.name} · ${SKILLS[skill]}`,body,'<small data-student-detail-more>Cuộn xuống để xem tiếp ↓</small>');
+  studentDetailModal(`${s.data.person.name} · ${SKILLS[skill]}`,body);
+}
+// Dùng cùng khung đọc cho nhận xét và bài cũ: ghim tiêu đề/X, nhắc khi còn nội dung.
+function studentDetailModal(title,body){
+  modal(title,body,'<small data-student-detail-more>Cuộn xuống để xem tiếp ↓</small>');
   dialog.classList.add('studentJourneyDialog');
   const content=dialog.querySelector('.dialogBody'),cue=dialog.querySelector('[data-student-detail-more]');
   const updateCue=()=>{cue.hidden=content.scrollHeight-content.scrollTop-content.clientHeight<3;};
@@ -517,7 +528,7 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-read-writing')){event.stopPropagation();const person=t.data.people.find(p=>p.studentRef===button.dataset.readWriting),result=testRecord(person.studentRef,button.dataset.test),task=button.dataset.task,text=result?.writing?.tasks?.[task]?.feedback;modal(`${person.name} · ${result.title} · Task ${task}`,`<p class="fullFeedback">${esc(text||'Chưa có nhận xét')}</p><p class="caption">Nhận xét gốc; không tóm tắt bằng AI.</p>`);return;}
   if(button?.hasAttribute('data-overview-history')){const heading=document.querySelector('#overview-history'),panel=heading.closest('.detailPanel');heading.focus({preventScroll:true});if(getComputedStyle(panel).position==='sticky')panel.scrollTo({top:panel.scrollTop+heading.getBoundingClientRect().top-panel.getBoundingClientRect().top-16,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});else heading.scrollIntoView({block:'start',behavior:'smooth'});return;}
   if(button?.hasAttribute('data-course-history')){const session=allCourse().find(v=>v.number===Number(button.dataset.courseHistory)),person=session.students.find(p=>p.studentRef===t.selected);modal(`${person.name} · Buổi ${session.number}`,`<p class="caption">${esc(session.title)} · ${date(session.date)} · Bản chụp chỉ đọc</p>${readonly(person.detail)}`);return;}
-  if(button?.hasAttribute('data-own-history')){const v=s.data.courseHistory.find(v=>v.number===Number(button.dataset.ownHistory));modal(`Buổi ${v.number} · ${v.title}`,`<p class="readOnly">Bản chụp chỉ đọc · Đáp án giữ ẩn theo nguồn</p>${readonly({...v,submissionId:v.submitted?'observed':null})}`);return;}
+  if(button?.hasAttribute('data-own-history')){const v=s.data.courseHistory.find(v=>v.number===Number(button.dataset.ownHistory));studentDetailModal(`Buổi ${v.number} · ${v.title}`,`<p class="readOnly">Bản chụp chỉ đọc · Đáp án giữ ẩn theo nguồn</p>${readonly({...v,submissionId:v.submitted?'observed':null})}`);return;}
   if(button?.hasAttribute('data-student-skill'))return studentSkillDetail(button.dataset.studentSkill);
   if(button?.hasAttribute('data-confirm-replace')){const chosen=document.querySelector('#replace-template').value,form=t.library.forms.find(f=>f.id===chosen),custom=form?{title:form.title,...toDefinition(form)}:{};await api('/api/demo',{action:'replace',number:t.number,generation:activeSession().generation,template:Number(chosen),...custom});t.selected=null;dialog.close();await refreshTeacher();toast('Đã thay bài trong demo; bài cũ vẫn ở Lịch sử thu hồi.');return;}
   if(button?.hasAttribute('data-confirm-reset')){await api('/api/demo',{action:'reset'});dialog.close();t.selected=null;t.drafts.clear();await refreshTeacher();toast('Đã trở về dữ liệu chụp ban đầu.');return;}
