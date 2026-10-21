@@ -62,7 +62,29 @@ async function changeTeacher(fn){
   if(tabGroup)document.querySelector(`[role="tablist"][aria-label="${tabGroup}"] [aria-selected="true"]`)?.focus({preventScroll:true});
   if(closing&&selected)document.querySelector(`button[data-person="${selected}"]`)?.focus({preventScroll:true});
 }
-function portalLabel(p){return p.portal.status==='complete'&&p.portal.readbackAt?badge('Đã đối chiếu','green'):p.portal.reviewRequired?badge('Cần đối chiếu','amber'):badge('Chưa xác nhận');}
+function attendanceState(p){
+  const received=Boolean(p.checkpoints.length||p.submitted);
+  const confirmed=p.portal?.status==='complete'&&Boolean(p.portal.readbackAt)&&!p.portal.reviewRequired;
+  return {received,confirmed,label:confirmed?'Đã điểm danh':received?'Đã nhận bài':'Chưa nhận bài'};
+}
+function attendanceLabel(p){
+  const state=attendanceState(p);
+  return `<button class="attendanceStatus" data-attendance-ref="${esc(p.studentRef)}" aria-label="${esc(p.name)}: ${state.label}. Xem chi tiết điểm danh">${badge(state.label,state.confirmed?'green':state.received?'blue':'')}${p.portal?.reviewRequired?'<small>Cần kiểm tra</small>':''}</button>`;
+}
+// Chỉ hiện dấu nhắc khi bảng còn hàng nằm dưới màn hình; tính lại khi cuộn/lọc/đổi kích thước.
+let peopleScrollFrame;
+function updatePeopleScrollCue(){
+  cancelAnimationFrame(peopleScrollFrame);
+  peopleScrollFrame=requestAnimationFrame(()=>{
+    const cue=document.querySelector('[data-scroll-people]'),table=document.querySelector('.progressTable');
+    if(!cue||!table)return;
+    const remaining=[...table.querySelectorAll('tbody tr')].filter(row=>row.getBoundingClientRect().bottom>innerHeight-64).length;
+    cue.hidden=!remaining||table.getBoundingClientRect().top>=innerHeight||table.getBoundingClientRect().bottom<=0;
+    cue.textContent=`Còn ${remaining} học viên phía dưới ↓`;
+  });
+}
+window.addEventListener('scroll',updatePeopleScrollCue,{passive:true});
+window.addEventListener('resize',updatePeopleScrollCue);
 function teacherShell(content){
   return `<aside class="side"><div class="brand"><div class="logo">IZONE</div><small>IELTS CHIẾN LƯỢC</small></div><div class="navLabel">PROGRESS LOG</div><button class="navButton ${t.page==='class'?'active':''}" data-page="class">Quản lý lớp</button><button class="navButton ${t.page==='library'?'active':''}" data-page="library">Quản lý bài tập</button><a class="navButton" target="_blank" rel="noopener" href="${studentURL('demo-a',t.number)}">Cổng học viên ↗</a><div class="sideFoot"><small>Không gian giảng viên</small><p>Thủy · IZONE</p></div></aside><header class="topbar"><span>Quản lý lớp / IC2305${t.tab==='session'?` / Buổi ${t.number}`:''}</span><span>Giảng viên · Thủy</span></header><main class="workspace">${content}</main>`;
 }
@@ -76,6 +98,7 @@ function renderTeacher(){
   }
   const context=`<div class="classContextToolbar"><div class="classContext"><select class="select" aria-label="Chọn lớp"><option>IC2305</option></select>${t.tab==='session'?`<select class="select sessionSelect" aria-label="Chọn buổi học" data-teacher-session>${t.data.sessions.map(v=>`<option value="${v.number}" ${v.number===t.number?'selected':''}>Buổi ${v.number}</option>`).join('')}</select>`:''}<span class="caption">${t.tab==='session'?session.students.length:union} học viên${t.tab==='journey'?' · Đến buổi 10':''}</span></div><div class="managementTabs" role="tablist" aria-label="Quản lý lớp"><button role="tab" tabindex="${t.tab==='session'?0:-1}" aria-selected="${t.tab==='session'}" data-tab="session">Theo dõi buổi học</button><button role="tab" tabindex="${t.tab==='journey'?0:-1}" aria-selected="${t.tab==='journey'}" data-tab="journey">Hành trình lớp</button></div></div>`;
   app.innerHTML=teacherShell(context+(t.tab==='session'?sessionView(session):journeyView())+footer);
+  updatePeopleScrollCue();
 }
 function sessionView(session){
   const mode=t.mode||'progress';
@@ -86,7 +109,7 @@ function sessionView(session){
   }).join('')}</div></div>`;
   const tabs=`<div class="sessionTabs" role="tablist" aria-label="Kết quả và tiến độ buổi học"><button role="tab" aria-selected="${mode==='progress'}" tabindex="${mode==='progress'?0:-1}" data-session-mode="progress">Tiến độ</button><button role="tab" aria-selected="${mode==='results'}" tabindex="${mode==='results'?0:-1}" data-session-mode="results">Kết quả</button></div>`;
   const tools=`<div class="inline"><select class="select" aria-label="Lọc trạng thái" data-filter><option value="all" ${t.filter==='all'?'selected':''}>Tất cả học viên</option><option value="final" ${t.filter==='final'?'selected':''}>Đã nộp cuối</option><option value="pending" ${t.filter==='pending'?'selected':''}>Chưa nộp cuối</option></select><input class="search" aria-label="Tìm học viên" placeholder="Tìm học viên" value="${esc(t.search)}" data-search></div>`;
-  const progressPanel=`<section class="panel"><div class="panelHead"><h2>Tiến độ học viên</h2>${tools}</div><div class="tableScroll"><table class="progressTable"><thead><tr><th>Học viên</th>${session.definition.blocks.map((b,i)=>`<th>Phần ${i+1}</th>`).join('')}<th>Tham gia</th><th>Portal</th></tr></thead><tbody>${visiblePeople().map(p=>`<tr><td><b>${esc(p.name)}</b></td>${session.definition.blocks.map(b=>`<td>${p.submitted||p.checkpoints.some(c=>c.blockId===b.blockId)?badge('Đã nộp','green'):b.items.some(i=>p.draftResponses[i.itemVersionId]!=null)?badge('Đang làm','blue'):badge('Chưa bắt đầu')}</td>`).join('')}<td>${p.checkpoints.length||p.submitted?badge('Đã ghi nhận','green'):'Chưa ghi nhận'}</td><td>${portalLabel(p)}</td></tr>`).join('')}</tbody></table></div><div class="tableFoot">${session.students.filter(p=>p.submitted).length}/${session.students.length} đã nộp cuối · Tham gia và kết quả Portal là hai trạng thái riêng.</div></section>`;
+  const progressPanel=`<section class="panel"><div class="panelHead"><h2>Tiến độ học viên</h2>${tools}</div><div class="tableScroll"><table class="progressTable"><thead><tr><th>Học viên</th>${session.definition.blocks.map((b,i)=>`<th>Phần ${i+1}</th>`).join('')}<th>Điểm danh</th></tr></thead><tbody>${visiblePeople().map(p=>`<tr><td><b>${esc(p.name)}</b></td>${session.definition.blocks.map(b=>`<td>${p.submitted||p.checkpoints.some(c=>c.blockId===b.blockId)?badge('Đã nộp','green'):b.items.some(i=>p.draftResponses[i.itemVersionId]!=null)?badge('Đang làm','blue'):badge('Chưa bắt đầu')}</td>`).join('')}<td>${attendanceLabel(p)}</td></tr>`).join('')}</tbody></table></div><div class="tableFoot">${visiblePeople().length}/${session.students.length} học viên trong danh sách · ${session.students.filter(p=>p.submitted).length}/${session.students.length} đã nộp cuối · Bấm trạng thái điểm danh để xem chi tiết.</div><button class="peopleScrollCue" data-scroll-people hidden></button></section>`;
   const results=`${questionSummary(session)}<div class="split ${t.selected?'hasDetail':''}"><section class="panel listPanel"><div class="panelHead"><h2>Kết quả từng học viên</h2>${tools}</div>${sessionTable(session)}</section>${t.selected?detailPanel():''}</div>`;
   return header+(session.replacement?'<div class="notice simulated">Đã thay bài trong demo. Bài cũ chỉ ở Lịch sử thu hồi của giảng viên.</div>':'')+tabs+(mode==='progress'?progressPanel:results);
 }
@@ -96,7 +119,7 @@ function questionSummary(session){
   const selected=values.find(v=>v.id===t.question),flat=itemsOf(session.definition),item=flat.find(v=>v.itemVersionId===t.question);
   const list=values.length?[true,false].map(wrong=>`<div class="questionGroup"><h3>${wrong?'Các câu sai cần chữa':'Các câu lớp đã làm đúng'} ${badge(values.filter(v=>(v.counts.incorrect>0)===wrong).length+' câu')}</h3>${values.filter(v=>(v.counts.incorrect>0)===wrong).map(v=>{const i=flat.find(i=>i.itemVersionId===v.id),index=i.displayNumber??i.position??flat.indexOf(i)+1,block=session.definition.blocks.find(b=>b.items.includes(i)),total=v.counts.correct+v.counts.incorrect;return `<button class="questionRow ${t.question===v.id?'selected':''}" data-select-question="${esc(v.id)}"><span>Câu ${index}</span><span class="questionLabel">${esc(v.prompt)}<small>Phần ${session.definition.blocks.indexOf(block)+1} · ${(i?.skillCodes||[]).map(k=>SKILLS[k]).filter(Boolean).join(' · ')} · Trắc nghiệm</small></span><span class="questionMetric ${wrong?'wrong':'correct'}">${v.counts.incorrect}/${total} sai<small>${pct(total?v.counts.incorrect/total*100:null)} sai</small></span></button>`;}).join('')}</div>`).join(''):empty('Chưa có kết quả','Bài thay thế bắt đầu mới.');
   const answer=session.answerKey?.[item?.itemVersionId]?.expectedOptionId;
-  const detail=selected?`<section class="questionDetail"><div class="inline"><small>Câu ${item.displayNumber??item.position??flat.indexOf(item)+1} · Trắc nghiệm</small>${badge(selected.counts.incorrect?'Cần chữa':'Cả lớp đã làm đúng')}</div><h3>${esc(item.prompt)}</h3>${item.helpText?`<p class="reviewInstructions">${esc(item.helpText)}</p>`:''}<div class="answerOptions">${item.options.map(o=>`<div class="${answer===o.id?'correctOption':''}">${esc(o.label)}${answer===o.id?' <b>✓ Đáp án chuẩn</b>':''}</div>`).join('')}</div>${!answer?'<p class="caption">Nguồn chưa có khóa đáp án cho câu này; không suy từ lượt chọn.</p>':''}<p class="questionMetricLine">${selected.counts.incorrect}/${selected.counts.correct+selected.counts.incorrect} câu trả lời sai · ${pct(selected.counts.incorrect/(selected.counts.correct+selected.counts.incorrect)*100)}</p><button class="btn small" data-question="${esc(selected.id)}">Xem phân bố và học viên</button><details class="calculationHelp"><summary>Cách thống kê</summary><p>Chỉ dùng câu đã có kết quả chấm. Chưa chấm và câu không áp dụng không vào mẫu số; câu áp dụng để trống tính sai.</p></details></section>`:'';
+  const detail=selected?`<section class="questionDetailFrame"><div class="questionDetailActions"><button class="btn primary small" data-question="${esc(selected.id)}">Xem phân bố và học viên</button><span class="caption">${selected.counts.incorrect}/${selected.counts.correct+selected.counts.incorrect} sai · ${pct(selected.counts.incorrect/(selected.counts.correct+selected.counts.incorrect)*100)}</span></div><div class="questionDetail" tabindex="0" aria-label="Nội dung câu hỏi, cuộn để đọc đủ"><div class="inline"><small>Câu ${item.displayNumber??item.position??flat.indexOf(item)+1} · Trắc nghiệm</small>${badge(selected.counts.incorrect?'Cần chữa':'Cả lớp đã làm đúng')}</div><h3>${esc(item.prompt)}</h3>${item.helpText?`<p class="reviewInstructions">${esc(item.helpText)}</p>`:''}<div class="answerOptions">${item.options.map(o=>`<div class="${answer===o.id?'correctOption':''}">${esc(o.label)}${answer===o.id?' <b>✓ Đáp án chuẩn</b>':''}</div>`).join('')}</div>${!answer?'<p class="caption">Nguồn chưa có khóa đáp án cho câu này; không suy từ lượt chọn.</p>':''}<details class="calculationHelp"><summary>Cách thống kê</summary><p>Chỉ dùng câu đã có kết quả chấm. Chưa chấm và câu không áp dụng không vào mẫu số; câu áp dụng để trống tính sai.</p></details></div></section>`:'';
   return `<section class="panel questionPanel"><div class="panelHead"><h2>Thống kê theo câu hỏi</h2></div><div class="questionWorkspace"><div class="questionList">${list}</div>${detail}</div></section>`;
 }
 function visiblePeople(){const session=activeSession();return session.students.filter(p=>(!t.search||p.name.toLocaleLowerCase('vi').includes(t.search.toLocaleLowerCase('vi')))&&(t.filter==='all'||(t.filter==='final'?p.submitted:!p.submitted)));}
@@ -289,6 +312,11 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.disabled)return;
   if(button?.hasAttribute('data-reload')){location.reload();return;}
   if(button?.hasAttribute('data-close-dialog')){dialog.close();return;}
+  if(button?.hasAttribute('data-scroll-people')){window.scrollBy({top:Math.round(innerHeight*.65),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});return;}
+  if(button?.hasAttribute('data-attendance-ref')){
+    const person=activeSession().students.find(p=>p.studentRef===button.dataset.attendanceRef),state=attendanceState(person);
+    modal(`Điểm danh · ${person.name}`,`<p><b>Đã nhận bài:</b> Progress Log đã nhận lần nộp phần đầu thành công và ghi nhận tham gia. Chưa có xác nhận từ Portal thì chưa gọi là đã điểm danh.</p><p><b>Đã điểm danh:</b> đã có xác nhận điểm danh thành công từ Portal.</p><div class="notice"><p>Progress Log: <b>${state.received?'Đã nhận bài':'Chưa nhận bài'}</b>.</p><p>Portal: <b>${state.confirmed?'Đã điểm danh':person.portal?.reviewRequired?'Cần kiểm tra, chưa xác nhận thành công':'Chưa xác nhận điểm danh'}</b>${state.confirmed?` · Đối chiếu lúc ${time(person.portal.readbackAt)}`:''}.</p></div><p class="caption">Trạng thái theo bản chụp dữ liệu. Thao tác thử không ghi điểm danh thật.</p>`);return;
+  }
   if(button?.hasAttribute('data-identity-next')){s.identityChoice=document.querySelector('#entry-person').value;s.identityStage='confirm';renderStudent();return;}
   if(button?.hasAttribute('data-identity-back')){s.identityStage='choose';renderStudent();return;}
   if(button?.hasAttribute('data-identity-start')){s.identityStage='ready';await openStudent(s.number,s.identityChoice||s.ref);return;}
@@ -328,6 +356,11 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-submit-block')){const id=button.dataset.submitBlock;await saveStudent();await api('/api/demo',{action:'checkpoint',number:s.number,generation:s.data.generation,ref:s.ref,blockId:id,responses:s.responses});const expanded=new Set(s.expanded);await openStudent();s.expanded=expanded;renderStudent();const part=document.querySelector(`[data-part="${id}"]`);if(part){part.tabIndex=-1;part.scrollIntoView({block:'start'});part.focus({preventScroll:true});}toast('Đã nộp phần này và ghi nhận tham gia trong demo.');return;}
 })().catch(error=>toast(error.message));});
 window.addEventListener('beforeunload',event=>{if(s.dirty||t.pending||s.pending||t.saveError||t.editing){event.preventDefault();event.returnValue='';}});
+// Đóng bằng nền chỉ khi cả điểm nhấn xuống và nhả đều ở ngoài khung, tránh đóng khi kéo chọn chữ.
+let dialogPointerOutside=false;
+const outsideDialog=event=>{const r=dialog.getBoundingClientRect();return event.target===dialog&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom);};
+dialog.addEventListener('pointerdown',event=>{dialogPointerOutside=outsideDialog(event);});
+dialog.addEventListener('click',event=>{if(dialog.open&&dialogPointerOutside&&outsideDialog(event))dialog.close();dialogPointerOutside=false;});
 window.addEventListener('focus',()=>{
   if(!isStudent||!s.data||s.identityStage!=='ready'||s.dirty||s.pending)return;
   const expanded=new Set(s.expanded);openStudent().then(()=>{s.expanded=expanded;renderStudent();}).catch(error=>toast(error.message));
