@@ -15,6 +15,7 @@ const time=value=>value&&!Number.isNaN(Date.parse(value))?new Date(value).toLoca
 function node(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
 function message(text,type=''){const el=$('page-message');el.hidden=!text;el.textContent=text;el.className='notice '+type;}
 function clearResults(text='Đăng nhập để xem kết quả của những lượt nộp thật.'){
+ window.SUBSTITUTE_ANSWER_EXPLANATIONS?.reset();
  progress.clear();
  state.rows=[];$('student-detail').hidden=true;$('attempt-content').replaceChildren();$('student-rows').replaceChildren();
  const row=node('tr'),cell=node('td',text,'empty-cell');cell.colSpan=7;row.append(cell);$('student-rows').append(row);
@@ -66,6 +67,7 @@ function renderRows(){
  $('previous-page').disabled=state.offset===0;$('next-page').disabled=!state.hasMore;
 }
 async function openAttempt(attempt){
+ window.SUBSTITUTE_ANSWER_EXPLANATIONS?.reset();
  const generation=state.generation,detailGeneration=++state.detailGeneration;$('student-detail').hidden=false;$('student-name').textContent=attempt.studentName;
  $('student-status').textContent=attempt.classCode+' · Nộp lúc '+time(attempt.submittedAt);$('attempt-content').replaceChildren(node('p','Đang tải đúng lượt nộp…'));
  state.selectedAttempt=attempt.attemptToken;
@@ -76,7 +78,9 @@ async function openAttempt(attempt){
   $('student-name').textContent=data.studentName;
   const content=$('attempt-content');content.replaceChildren(node('p',statusText(data.status)+' · '+portalText(data.portalStatus)));
   appendPortalProjection(content,data);
-  appendStudentSource(content,data.source);
+  appendStudentSource(content,data.source,attempt.testSlug);
+  window.SUBSTITUTE_ANSWER_EXPLANATIONS?.attachTeacher({container:content,identity:{testSlug:attempt.testSlug,classCode:attempt.classCode,studentRef:attempt.studentRef,attemptToken:attempt.attemptToken},source:data.source,title:TITLES[attempt.testSlug],
+   loadReview:()=>request('/teacher/explanations',{test:attempt.testSlug,class:attempt.classCode,student:attempt.studentRef,attempt:attempt.attemptToken},state.controller?.signal)});
   if(data.requiredTasks?.length===2)content.append(node('h3','Writing tổng · '+(data.result?number(data.result.writingScore)+'/9':'Chưa có điểm tổng')),
     node('p','(Task 1 + 2 × Task 2) / 3, làm tròn xuống 0,5 band.'));
   const tasks=data.tasks||[{taskNumber:data.taskNumber,status:data.status,result:data.result}];
@@ -92,17 +96,21 @@ async function openAttempt(attempt){
   }
  }catch(error){if(detailGeneration===state.detailGeneration&&state.selectedAttempt===attempt.attemptToken)handleError(error,generation);}
 }
-function appendStudentSource(content,source){
+function appendStudentSource(content,source,testSlug){
  const block=node('section',undefined,'student-source');block.append(node('h3','Bài làm gốc của học viên'));
  for(const [skill,title]of [['listening','Listening'],['reading','Reading']]){
-  const part=node('details',undefined,'student-source-section');part.append(node('summary',`${title} · đáp án đã nộp`));
+  const explanations=testSlug==='substitute-test-1-k67';
+  const part=node('details',undefined,'student-source-section'+(explanations?' detail-block':''));part.dataset.skill=title;part.append(node('summary',`${title} · đáp án đã nộp`));
   const saved=source?.[skill];
-  if(saved?.availability==='available'&&Array.isArray(saved.section?.details)){
-   const wrap=node('div',undefined,'table-wrap'),table=node('table',undefined,'results-table'),head=node('thead'),row=node('tr'),body=node('tbody');
+  const available=saved?.availability==='available'&&Array.isArray(saved.section?.details);
+  if(!available)part.append(node('p','Lượt cũ chưa lưu đáp án từng câu. Không thể suy ra bài làm từ tổng điểm.','source-unavailable'));
+  if(available||explanations){
+   const wrap=node('div',undefined,'table-wrap'),table=node('table',undefined,'results-table'+(explanations?' detail-table':'')),head=node('thead'),row=node('tr'),body=node('tbody');
    for(const label of ['Câu','Đáp án đã nộp','Đáp án đúng','Kết quả'])row.append(node('th',label));head.append(row);
-   for(const detail of saved.section.details){const tr=node('tr');for(const text of [detail.number,detail.studentAnswer||'—',detail.correctAnswer||'—',({correct:'Đúng',incorrect:'Sai',blank:'Bỏ trống'})[detail.result]||'Chưa xác nhận'])tr.append(node('td',String(text)));body.append(tr);}
+   const details=available?saved.section.details:Array.from({length:40},(_,i)=>({number:i+1}));
+   for(const detail of details){const tr=node('tr');for(const text of [detail.number,detail.studentAnswer||'—',detail.correctAnswer||'—',({correct:'Đúng',incorrect:'Sai',blank:'Bỏ trống'})[detail.result]||'Chưa có dữ liệu'])tr.append(node('td',String(text)));body.append(tr);}
    table.append(head,body);wrap.append(table);part.append(wrap);
-  }else part.append(node('p','Lượt cũ chưa lưu đáp án từng câu. Không thể suy ra bài làm từ tổng điểm.','source-unavailable'));
+  }
   block.append(part);
  }
  content.append(block);

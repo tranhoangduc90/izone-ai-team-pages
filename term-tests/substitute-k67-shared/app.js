@@ -2038,6 +2038,11 @@
       elements.questionDetails.replaceChildren(...detailBlocks);
     }
     state.resultDetailsIdentity = identity;
+    if (serverGradingMode && state.writingSubmitted && hasReading && state.attemptToken) {
+      window.SUBSTITUTE_ANSWER_EXPLANATIONS?.attachStudent({ container: elements.questionDetails,
+        payload: { ...payload, completed: true }, title: testConfig.title,
+        identity: window.SUBSTITUTE_STATE.payload({ testSlug: testConfig.slug, attemptToken: state.attemptToken }) });
+    }
     // Phần tổng hợp vẫn nhận điểm mới, độc lập với bảng từng câu.
     const detailSignature = JSON.stringify([identity, result.listening, result.reading]);
     if (detailSignature !== resultDetailSignature) {
