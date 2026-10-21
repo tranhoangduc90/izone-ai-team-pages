@@ -84,15 +84,16 @@ export function writingSummary(results){
   }
   return {hasData,scores};
 }
-// Thiếu toàn bộ dữ liệu ở cuối; với Test được chọn, có điểm trước rồi giảm dần, hòa thì tên.
+// Thiếu toàn bộ dữ liệu ở cuối; điểm Test theo chiều được chọn, hòa thì tên.
 export function compareWritingPeople(a,b,order='name'){
   const missing=Number(!a.writing.hasData)-Number(!b.writing.hasData);
   if(missing)return missing;
-  if(order.startsWith('test:')){
-    const slug=order.slice(5),left=a.writing.scores[slug],right=b.writing.scores[slug];
+  const ascending=order.startsWith('test-asc:');
+  if(ascending||order.startsWith('test:')){
+    const slug=order.slice(ascending?9:5),left=a.writing.scores[slug],right=b.writing.scores[slug];
     const absent=Number(!Number.isFinite(left))-Number(!Number.isFinite(right));
     if(absent)return absent;
-    if(Number.isFinite(left)&&Number.isFinite(right)&&left!==right)return right-left;
+    if(Number.isFinite(left)&&Number.isFinite(right)&&left!==right)return ascending?left-right:right-left;
   }
   return a.name.localeCompare(b.name,'vi');
 }
