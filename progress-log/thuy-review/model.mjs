@@ -74,6 +74,28 @@ export function personJourney(data, studentRef, skill) {
   });
   return priority(reports);
 }
+// Writing có dữ liệu khi bất kỳ Test nào có điểm số (kể cả 0) hoặc nhận xét Task 1/2.
+export function writingSummary(results){
+  const scores={};let hasData=false;
+  for(const result of results.filter(Boolean)){
+    const writing=result.writing,score=writing?.score;
+    scores[result.testSlug]=Number.isFinite(score)?score:null;
+    if(Number.isFinite(score)||[1,2].some(task=>typeof writing?.tasks?.[task]?.feedback==='string'&&writing.tasks[task].feedback.trim()))hasData=true;
+  }
+  return {hasData,scores};
+}
+// Thiếu toàn bộ dữ liệu ở cuối; với Test được chọn, có điểm trước rồi giảm dần, hòa thì tên.
+export function compareWritingPeople(a,b,order='name'){
+  const missing=Number(!a.writing.hasData)-Number(!b.writing.hasData);
+  if(missing)return missing;
+  if(order.startsWith('test:')){
+    const slug=order.slice(5),left=a.writing.scores[slug],right=b.writing.scores[slug];
+    const absent=Number(!Number.isFinite(left))-Number(!Number.isFinite(right));
+    if(absent)return absent;
+    if(Number.isFinite(left)&&Number.isFinite(right)&&left!==right)return right-left;
+  }
+  return a.name.localeCompare(b.name,'vi');
+}
 // Bản đồ câu chữ đã biết: chỉ gom cùng vấn đề, không suy mức tự tin từ việc chưa thấy vấn đề.
 const speakingCategories=[
   ['ideas','Khó mở rộng ý',['Khó mở rộng ý','Khó phát triển ý và nói đủ dài','Em thiếu ý hoặc chưa biết cách phát triển câu trả lời']],
