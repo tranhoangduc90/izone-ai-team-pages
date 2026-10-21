@@ -25,7 +25,7 @@ const studentURL=(ref='demo-a',number=10)=>{
 let toastTimer;
 function toast(message){const e=document.querySelector('#toast');e.textContent=message;e.className='show';clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.className='',5000);}
 async function api(path,body){if(!localAPI)return pagesAPI(path,body);const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const data=await r.json();if(!r.ok)throw new Error(data.error||'Không tải được dữ liệu.');return data;}
-function modal(title,body,foot='',head=''){dialog.classList.toggle('libraryDialog',Boolean(head));dialog.innerHTML=`<div class="dialogHead"><h2 id="dialog-title">${esc(title)}</h2><div class="dialogHeadActions">${head}<button class="iconBtn" data-close-dialog aria-label="Đóng">×</button></div></div><div class="dialogBody">${body}</div>${foot?`<div class="dialogFoot">${foot}</div>`:''}`;dialog.showModal();}
+function modal(title,body,foot='',head=''){dialog.classList.remove('studentJourneyDialog');dialog.classList.toggle('libraryDialog',Boolean(head));dialog.innerHTML=`<div class="dialogHead"><h2 id="dialog-title">${esc(title)}</h2><div class="dialogHeadActions">${head}<button class="iconBtn" data-close-dialog aria-label="Đóng">×</button></div></div><div class="dialogBody">${body}</div>${foot?`<div class="dialogFoot">${foot}</div>`:''}`;dialog.showModal();}
 function empty(title,text){return `<div class="empty"><h3>${esc(title)}</h3><p>${esc(text)}</p></div>`;}
 function allCourse(){return [...t.data.sessions,...(t.data.courseSessions||[])].sort((a,b)=>b.number-a.number);}
 function testRecord(ref,slug){return t.data.testResults?.find(v=>v.studentRef===ref&&v.result.testSlug===slug)?.result||(t.showTestScenarios?testScenario(ref,slug):null);}
@@ -382,25 +382,52 @@ function field(item,index){const id=item.itemVersionId,value=s.responses[id],c=i
   return `<div class="field" data-field="${esc(id)}">${control}${item.interactionType==='long_text'?hintMarkup(c.hintText):''}<p class="fieldError" id="error-${esc(id)}" role="alert" hidden></p></div>`;
 }
 function updateConditionals(){if(!s.data)return;for(const element of document.querySelectorAll('[data-field]')){const item=itemsOf(s.data.definition).find(i=>i.itemVersionId===element.dataset.field);element.hidden=!applicable(item,s.responses);}}
-function studentJourney(){
+// Gộp lịch sử của đúng người đang xem; bản buổi hiện tại được ưu tiên sau cùng.
+function studentJourneyData(){
   const d=s.data;
   const ownTests=new Map((d.testResults||[]).map(v=>[v.result.testSlug,v.result]));
   if(s.showTestScenarios)for(const [slug] of testTypes)if(!ownTests.has(slug))ownTests.set(slug,testScenario(s.ref,slug));
-  const own=new Map([...(d.courseHistory||[]),...(s.history||[d])].map(v=>[v.number,v]));
+  const own=new Map([...(d.courseHistory||[]),...(s.history||[]),d].map(v=>[v.number,v]));
   const history=[...own.values()].sort((a,b)=>b.number-a.number);
+  return {ownTests,history};
+}
+const studentPractice=(session,skill)=>practiceReport(session.definition,{submissionId:session.submitted?'observed':null,responses:session.responses},skill);
+function studentJourney(){
+  const d=s.data,{ownTests,history}=studentJourneyData();
   const latest=history.find(v=>v.publishedFeedback?.trim());
+  const latestWriting=testTypes.map(([slug])=>ownTests.get(slug)).filter(v=>[1,2].some(task=>v?.writing?.tasks?.[task]?.feedback?.trim())).at(-1);
   const cards=Object.entries(SKILLS).map(([key,label])=>{
     let body;
     if(['listening','reading'].includes(key)){
-      const records=history.flatMap(v=>{const report=practiceReport(v.definition,{submissionId:v.submitted?'observed':null,responses:v.responses},key);return report?[{...report,sessionNumber:v.number}]:[];});
+      const records=history.flatMap(v=>{const report=studentPractice(v,key);return report?[{...report,sessionNumber:v.number}]:[];});
       const summary=priority(records);
       body=`<strong>${pct(summary.average)}</strong><p>TB Progress Log từ các phiếu hiện có</p><p class="caption">${summary.count} buổi tự báo hợp lệ · Chưa có phiếu buổi 1 và 7</p>`;
-    }else if(key==='speaking')body=`<p>${latest?esc(latest.publishedFeedback):'Chưa có nhận xét đã công bố'}</p>${latest?`<p class="caption">Buổi ${latest.number} · ${date(latest.date)}</p>`:''}`;
-    else body='<p>Điểm và nhận xét từ bài Test</p>';
-    const tests=key==='speaking'?'':`<dl>${testTypes.map(([slug,name])=>{const record=ownTests.get(slug),value=record?.[key];return `<div><dt>${name}</dt><dd>${record?.synthetic?`<p>${badge('Dữ liệu giả','amber')}</p>`:''}${key==='writing'?`${value?.score!=null?`<b>${esc(value.score)} / 9</b>`:'Chưa có điểm'}${[1,2].map(task=>`<p class="fullFeedback"><small>Task ${task}</small><br>${esc(value?.tasks?.[task]?.feedback||'Chưa có nhận xét')}</p>`).join('')}`:value?`${esc(value.correct)} / ${esc(value.total)}${value.band!=null?` · Band ${esc(value.band)}`:''}`:'Chưa có điểm'}</dd></div>`;}).join('')}</dl>`;
-    return `<section class="studentSkillCard"><h2>${label}</h2>${body}${tests}</section>`;
+    }else if(key==='speaking')body=`<p class="caption">Nhận xét mới nhất${latest?` · Buổi ${latest.number}`:''}</p><p class="studentSpeakingExcerpt">${latest?esc(latest.publishedFeedback):'Chưa có nhận xét đã công bố'}</p>`;
+    else body='';
+    const tests=key==='speaking'?'':`<dl>${testTypes.map(([slug,name])=>{const record=ownTests.get(slug),value=record?.[key];return `<div><dt>${name}</dt><dd>${record?.synthetic?`${badge('Dữ liệu giả','amber')}<br>`:''}${key==='writing'?(value?.score!=null?`${esc(value.score)} / 9`:'Chưa có điểm'):value?`${esc(value.correct)} / ${esc(value.total)}${value.band!=null?` · Band ${esc(value.band)}`:''}`:'Chưa có điểm'}</dd></div>`;}).join('')}</dl>`;
+    const excerpt=key==='writing'?(latestWriting?`<p class="caption studentWritingSource">${esc(testTypes.find(([slug])=>slug===latestWriting.testSlug)?.[1]||latestWriting.title)}${latestWriting.synthetic?' · Dữ liệu giả':''}</p>${[1,2].map(task=>`<p class="studentWritingExcerpt"><b>Task ${task}:</b> ${esc(latestWriting.writing.tasks?.[task]?.feedback||'Chưa có nhận xét')}</p>`).join('')}`:'<p class="studentWritingExcerpt">Chưa có nhận xét</p>'):'';
+    const action=['speaking','writing'].includes(key)?`<button type="button" class="rowLink studentSkillAction" data-student-skill="${key}">${key==='speaking'?'Xem nhận xét':'Điểm & nhận xét'}<span aria-hidden="true">→</span></button>`:'';
+    return `<section class="studentSkillCard" data-student-card="${key}"><h2>${label}</h2>${body}${tests}${excerpt}${action}</section>`;
   }).join('');
-  return `<div class="studentHeading"><h1>Kết quả học tập</h1><p>Dữ liệu của em từ các phiếu hiện có; buổi chưa có nguồn và điểm Test được ghi riêng.</p></div>${testScenarioControl(s.showTestScenarios)}${s.historyError?'<p class="notice warn">Chưa tải đủ lịch sử. Dữ liệu đang xem vẫn được giữ; mở lại trang để thử tải lại.</p>':''}<div class="studentSkillGrid">${cards}</div><section class="studentHistory"><h2>Lịch sử buổi học</h2><div class="panel">${history.map(v=>`<button class="studentSessionRow" ${d.sessions.some(item=>item.number===v.number)?`data-student-open="${v.number}"`:`data-own-history="${v.number}"`}><span><strong>Buổi ${v.number}</strong><small>${esc(v.title)}</small></span><span>${date(v.date)} <b>›</b></span></button>`).join('')}</div></section>`;
+  return `<div class="studentHeading"><h1>Kết quả học tập</h1><p>Dữ liệu của em từ các phiếu hiện có; buổi chưa có nguồn và điểm Test được ghi riêng.</p></div>${testScenarioControl(s.showTestScenarios)}${s.historyError?'<p class="notice warn">Chưa tải đủ lịch sử. Dữ liệu đang xem vẫn được giữ; mở lại trang để thử tải lại.</p>':''}<div class="studentSkillGrid">${cards}</div><section class="studentHistory"><h2>Lịch sử buổi học</h2><div class="panel">${history.map(v=>{
+    const reports=['listening','reading'].flatMap(skill=>{const report=studentPractice(v,skill);return report?[`${SKILLS[skill]} ${report.correct}/${report.total}`]:[];});
+    return `<button type="button" class="studentSessionRow" ${v.number===s.number?'aria-current="true"':''} ${d.sessions.some(item=>item.number===v.number)?`data-student-open="${v.number}"`:`data-own-history="${v.number}"`}><span><strong>Buổi ${v.number}</strong><small>${esc(v.title)}</small><small class="studentHistoryReport">${reports.length?esc(reports.join(' · ')+' · Tự báo'):'Chưa có kết quả Listening/Reading'}</small></span><span>${v.number===s.number?'<em>Đang xem</em><br>':''}${date(v.date)} <b aria-hidden="true">›</b></span></button>`;
+  }).join('')}</div></section>`;
+}
+// Chỉ đọc nhận xét đã công bố và kết quả của người đang xem; không ghi bài hoặc điểm danh.
+function studentSkillDetail(skill){
+  const {history,ownTests}=studentJourneyData();
+  const body=skill==='speaking'?
+    history.filter(v=>v.publishedFeedback?.trim()).map(v=>`<article class="studentFeedbackEntry"><h3>Buổi ${v.number} · ${date(v.date)}</h3><p class="caption">${esc(v.title)}</p><p class="fullFeedback">${esc(v.publishedFeedback)}</p></article>`).join('')||'<p>Chưa có nhận xét đã công bố.</p>':
+    testTypes.map(([slug,name])=>{const record=ownTests.get(slug),value=record?.writing;return `<article class="studentFeedbackEntry"><div class="studentTestHeading"><h3>${name}</h3><strong>${value?.score!=null?`${esc(value.score)} / 9`:'Chưa có điểm'}</strong></div>${record?.synthetic?`<p>${badge('Dữ liệu giả','amber')}</p>`:''}${[1,2].map(task=>`<p class="fullFeedback"><b>Task ${task}</b><br>${esc(value?.tasks?.[task]?.feedback||'Chưa có nhận xét')}</p>`).join('')}</article>`;}).join('');
+  modal(`${s.data.person.name} · ${SKILLS[skill]}`,body,'<small data-student-detail-more>Cuộn xuống để xem tiếp ↓</small>');
+  dialog.classList.add('studentJourneyDialog');
+  const content=dialog.querySelector('.dialogBody'),cue=dialog.querySelector('[data-student-detail-more]');
+  const updateCue=()=>{cue.hidden=content.scrollHeight-content.scrollTop-content.clientHeight<3;};
+  content.addEventListener('scroll',updateCue,{passive:true});
+  const observer=new ResizeObserver(updateCue);observer.observe(content);
+  dialog.addEventListener('close',()=>observer.disconnect(),{once:true});
+  requestAnimationFrame(updateCue);
 }
 async function studentAction(action){
   if(action==='fail'){s.failNext=true;toast('Lần lưu kế tiếp sẽ báo lỗi thử. Người học và nháp sẽ được giữ tại chỗ.');return;}
@@ -491,6 +518,7 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-overview-history')){const heading=document.querySelector('#overview-history'),panel=heading.closest('.detailPanel');heading.focus({preventScroll:true});if(getComputedStyle(panel).position==='sticky')panel.scrollTo({top:panel.scrollTop+heading.getBoundingClientRect().top-panel.getBoundingClientRect().top-16,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});else heading.scrollIntoView({block:'start',behavior:'smooth'});return;}
   if(button?.hasAttribute('data-course-history')){const session=allCourse().find(v=>v.number===Number(button.dataset.courseHistory)),person=session.students.find(p=>p.studentRef===t.selected);modal(`${person.name} · Buổi ${session.number}`,`<p class="caption">${esc(session.title)} · ${date(session.date)} · Bản chụp chỉ đọc</p>${readonly(person.detail)}`);return;}
   if(button?.hasAttribute('data-own-history')){const v=s.data.courseHistory.find(v=>v.number===Number(button.dataset.ownHistory));modal(`Buổi ${v.number} · ${v.title}`,`<p class="readOnly">Bản chụp chỉ đọc · Đáp án giữ ẩn theo nguồn</p>${readonly({...v,submissionId:v.submitted?'observed':null})}`);return;}
+  if(button?.hasAttribute('data-student-skill'))return studentSkillDetail(button.dataset.studentSkill);
   if(button?.hasAttribute('data-confirm-replace')){const chosen=document.querySelector('#replace-template').value,form=t.library.forms.find(f=>f.id===chosen),custom=form?{title:form.title,...toDefinition(form)}:{};await api('/api/demo',{action:'replace',number:t.number,generation:activeSession().generation,template:Number(chosen),...custom});t.selected=null;dialog.close();await refreshTeacher();toast('Đã thay bài trong demo; bài cũ vẫn ở Lịch sử thu hồi.');return;}
   if(button?.hasAttribute('data-confirm-reset')){await api('/api/demo',{action:'reset'});dialog.close();t.selected=null;t.drafts.clear();await refreshTeacher();toast('Đã trở về dữ liệu chụp ban đầu.');return;}
   if(button?.hasAttribute('data-archive')){const archive=activeSession().retired[Number(button.dataset.archive)];dialog.close();modal('Bài đã thu hồi · Chỉ đọc',archiveBody(archive));return;}
@@ -521,6 +549,7 @@ let dialogPointerOutside=false;
 const outsideDialog=event=>{const r=dialog.getBoundingClientRect();return event.target===dialog&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom);};
 dialog.addEventListener('pointerdown',event=>{dialogPointerOutside=outsideDialog(event);});
 dialog.addEventListener('click',event=>{if(dialog.open&&dialogPointerOutside&&outsideDialog(event))dialog.close();dialogPointerOutside=false;});
+dialog.addEventListener('close',()=>{if(!dialog.open)dialog.classList.remove('studentJourneyDialog');});
 window.addEventListener('focus',()=>{
   if(!isStudent||!s.data||s.identityStage!=='ready'||s.dirty||s.pending)return;
   const expanded=new Set(s.expanded);openStudent().then(()=>{s.expanded=expanded;renderStudent();}).catch(error=>toast(error.message));
