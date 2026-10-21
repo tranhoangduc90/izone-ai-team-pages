@@ -6,7 +6,7 @@ Bản demo HTML/CSS/JavaScript thuần theo master 1.3 ngày 20/10/2026 của [T
 
 Mở route `progress-log/thuy-review/`: trang tự tải `demo-data.json`, không cần chọn file. Đức đã cho phép công bố gói dữ liệu demo IC2305 ngày 20/10/2026. Gói gồm dữ liệu học viên, bài làm và đáp án phục vụ bản demo; không chứa credential hoặc token phiếu production. Khi tải thất bại, trang hiển thị lỗi và nút **Thử tải lại**.
 
-Các tab trong cùng trình duyệt dùng BroadcastChannel để chia sẻ bản chụp và thao tác thử. Đóng tab cuối sẽ bỏ phiên thử. Bản chụp gốc không đổi. Bài do người xem soạn nằm trong phiên tab giảng viên; không hứa lưu bền vững hoặc đồng bộ nhiều thiết bị.
+Các tab trong cùng trình duyệt dùng BroadcastChannel để chia sẻ bản chụp và thao tác thử. Link học viên từ giảng viên gắn đúng lần giao bài, ưu tiên phản hồi từ tab giảng viên. Nếu sau ba giây chưa nhận đúng bài thì hiện **Thử tải lại**, không âm thầm mở bài gốc; giữ tab giảng viên mở để thử lại. Tab mở bằng bản cũ vẫn được nhận trong thời gian chờ, ưu tiên lần giao mới hơn. Đóng tab cuối sẽ bỏ phiên thử của lớp; bản chụp gốc không đổi. Bài tự soạn lưu nháp tại trình duyệt này, không đồng bộ nhiều thiết bị.
 
 ## Dữ liệu thật đã tìm được
 
@@ -66,6 +66,8 @@ Nhận xét Speaking tự giữ nháp riêng. Chỉ **Lưu và hiển thị cho 
 Thay bài bằng phiếu khác hoặc bài vừa soạn sẽ thu hồi bản cũ, giữ nháp/bài nộp cho giảng viên, bài mới bắt đầu sạch. Học viên không nhận lịch sử thu hồi; phiên bản cũ bị từ chối. Bài đã thu hồi không được cộng vào TB hiện hành.
 
 ## Source và kiểm thử
+
+Hướng dẫn toàn bài được giữ khi lưu nháp/xuất bản/sao chép, hiện một lần trước các phần ở Xem trước, hộp xem phiếu và trang học viên; không thay hướng dẫn riêng của từng phần. Giải thích do giảng viên nhập đi theo mã câu trong khóa đáp án, chỉ hiện cạnh đáp án khi người xem được nhận khóa; câu tự nhận xét không mang lời giải chấm điểm. Kiểm nội dung rỗng, xuống dòng/ký tự HTML, đổi phần và ẩn/mở bằng `authoring-content.test.mjs` cùng lượt kiểm trình duyệt riêng.
 
 - `app.js`, `theme.css`, `completion.css`, `index.html`: giao diện và các hành trình. Giữ renderer nội dung dùng chung ở `../answer-review.js`.
 - `model.mjs`: tính số tự báo, nhãn, kiểm câu trả lời và chấm mô phỏng từ khóa trong gói demo.

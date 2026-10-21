@@ -34,7 +34,7 @@
   const info=`<section class="panel exercise-info"><div class="exercise-meta">${field('title','Tên bài tập',draft.title,'text','maxlength="150" placeholder="Nhập tên bài tập"')}<label class="repo-field"><span>Trình độ</span><select data-edit="level"><option value="" ${!draft.level?'selected':''} disabled>Chọn trình độ</option>${M.levels.map(l=>`<option ${draft.level===l?'selected':''}>${l}</option>`).join('')}</select></label></div><details><summary>Hướng dẫn toàn bài</summary>${area('instructions','Hướng dẫn',draft.instructions||'')}${field('audioUrl','Liên kết bài nghe (nếu có)',draft.audioUrl||'','url','placeholder="https://…"')}</details></section>`;
   let content;
   if(previewing){
-   content='<section class="panel exercise-student-preview">'+W.normalize(draft).parts.map(p=>'<div class="exercise-part"><h2>'+esc(p.title)+'</h2>'+previewPartContent(p)+'</div>').join('')+'</section>';
+   content='<section class="panel exercise-student-preview">'+window.ProgressLogInstructionsMarkup(draft.instructions)+W.normalize(draft).parts.map(p=>'<div class="exercise-part"><h2>'+esc(p.title)+'</h2>'+previewPartContent(p)+'</div>').join('')+'</section>';
   }else{
    const sections=draft.sections.length?draft.sections:[{id:'',title:'Bài tập'}];
    content=info+divisionSettings()+`<div id="exerciseQuestions" class="exercise-all-sections">${sections.map((section,index)=>{

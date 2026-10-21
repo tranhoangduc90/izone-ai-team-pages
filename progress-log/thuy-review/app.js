@@ -4,7 +4,7 @@ import {SKILLS,itemsOf,applicable,personJourney,priority,quizScore,practiceRepor
 import {localAPI,preparePages,pagesAPI} from './pages-adapter.mjs';
 import {journeyScenarios,scenarioSummary} from './journey-scenarios.mjs';
 import {testScenario} from './test-scenarios.mjs';
-import {loadEditor,sourceDraft,toDefinition,hintMarkup,matchingMarkup,scoreMarkup,setScoreValidity} from './editor-bridge.mjs';
+import {loadEditor,sourceDraft,toDefinition,hintMarkup,matchingMarkup,scoreMarkup,setScoreValidity,instructionsMarkup,explanationMarkup} from './editor-bridge.mjs';
 import {libraryStorage} from './library-storage.mjs';
 const {reviewItems}=await import(localAPI?'/shared/answer-review.js':'../answer-review.js');
 if(!localAPI)await preparePages();
@@ -17,7 +17,11 @@ const time=v=>v?new Date(v).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',
 const pct=v=>Number.isFinite(v)?`${Math.round(v*10)/10}%`:'—';
 const initials=name=>name.trim().split(/\s+/).slice(-2).map(s=>s[0]).join('').toUpperCase();
 const badge=(text,type='')=>`<span class="badge ${type}">${esc(text)}</span>`;
-const studentURL=(ref='demo-a',number=10)=>`./${localAPI?'?':'#'}view=student&ref=${encodeURIComponent(ref)}&number=${number}`;
+const studentURL=(ref='demo-a',number=10)=>{
+  // Gắn lần giao hiện tại để tab mới không âm thầm nhận bài gốc hoặc bài cũ.
+  const generation=t.data?.sessions.find(v=>v.number===Number(number))?.generation??(s.data?.number===Number(number)?s.data.generation:undefined);
+  return `./${localAPI?'?':'#'}view=student&ref=${encodeURIComponent(ref)}&number=${number}${Number.isInteger(generation)?'&generation='+generation:''}`;
+};
 let toastTimer;
 function toast(message){const e=document.querySelector('#toast');e.textContent=message;e.className='show';clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.className='',5000);}
 async function api(path,body){if(!localAPI)return pagesAPI(path,body);const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const data=await r.json();if(!r.ok)throw new Error(data.error||'Không tải được dữ liệu.');return data;}
@@ -49,9 +53,31 @@ function readonly(detail,blocks=detail.definition.blocks){
   for(const item of blocks.flatMap(b=>b.items))if(item.interactionType==='matching'&&responses[item.itemVersionId]){const pairs=item.interactionConfig.pairs||[],value=responses[item.itemVersionId];responses[item.itemVersionId]=pairs.map((pair,n)=>`${pair.left} → ${value[n]!==undefined&&value[n]!==''?pairs[Number(value[n])]?.right||'Chưa trả lời':'Chưa trả lời'}`).join('\n');}
   let output=reviewItems({...detail,definition,responses}),index=0;
   const key=detail.answerKey||(!isStudent?allCourse().find(v=>v.number===detail.sessionNumber)?.answerKey||activeSession()?.answerKey:{}),items=blocks.flatMap(b=>b.items);
-  output=output.replaceAll('</article>',()=>{const item=items[index++],answer=key?.[item.itemVersionId],label=answer?.graderType==='exact_option'?item.options?.find(o=>o.id===answer.expectedOptionId)?.label:answer?.graderType==='exact_options'?answer.expectedOptions.map(id=>item.options.find(o=>o.id===id)?.label||id).join(' · '):answer?.graderType==='exact_text'?answer.expectedText:answer?.graderType==='exact_matching'?answer.pairs.map(p=>p.left+' → '+p.right).join('\n'):'';return (label&&applicable(item,detail.responses||{})?`<p class="correctAnswer"><b>Đáp án chuẩn:</b> ${esc(label)}</p>`:'')+'</article>';});
+  output=output.replaceAll('</article>',()=>{const item=items[index++],answer=key?.[item.itemVersionId],label=answer?.graderType==='exact_option'?item.options?.find(o=>o.id===answer.expectedOptionId)?.label:answer?.graderType==='exact_options'?answer.expectedOptions.map(id=>item.options.find(o=>o.id===id)?.label||id).join(' · '):answer?.graderType==='exact_text'?answer.expectedText:answer?.graderType==='exact_matching'?answer.pairs.map(p=>p.left+' → '+p.right).join('\n'):'';return (label&&applicable(item,detail.responses||{})?`<p class="correctAnswer"><b>Đáp án chuẩn:</b> ${esc(label)}</p>${explanationMarkup(answer.explanation)}`:'')+'</article>';});
   let hintIndex=0;
-  return output.replaceAll('</article>',()=>{const item=items[hintIndex++];return (item.interactionType==='long_text'&&applicable(item,detail.responses||{})?hintMarkup(item.interactionConfig?.hintText):'')+'</article>';});
+  output=output.replaceAll('</article>',()=>{const item=items[hintIndex++];return (item.interactionType==='long_text'&&applicable(item,detail.responses||{})?hintMarkup(item.interactionConfig?.hintText):'')+'</article>';});
+  return isStudent?compactStudentReview(output):output;
+}
+function compactStudentReview(markup){
+  // Chỉ sắp xếp nội dung chỉ đọc đã được cấp: giữ nguyên câu trả lời, điểm và quyền xem đáp án.
+  // Giảng viên và bản xem đề vẫn dùng bộ hiển thị đầy đủ; học viên mở thêm lựa chọn khi cần.
+  const doc=new DOMParser().parseFromString(markup,'text/html');
+  for(const section of doc.querySelectorAll('.studentAnswerReview'))section.classList.add('compactReview');
+  for(const article of doc.querySelectorAll('[data-review-item]')){
+    const top=article.querySelector('.reviewQuestionTop'),title=top.querySelector('h3'),number=top.querySelector('.reviewQuestionNumber').textContent;
+    title.textContent=`Câu ${number}. ${title.textContent}`;
+    const verdict=article.querySelector('.reviewVerdict');
+    top.replaceChildren(title);
+    if(verdict)top.append(verdict);
+    article.querySelector('.reviewAnswer small')?.remove();
+    const options=article.querySelector('.reviewOptions');
+    if(options){
+      const disclosure=doc.createElement('details'),summary=doc.createElement('summary');
+      disclosure.className='reviewChoices';summary.textContent='Xem tất cả lựa chọn';
+      disclosure.append(summary,options);article.append(disclosure);
+    }
+  }
+  return doc.body.innerHTML;
 }
 function progress(p,session){return `${p.checkpoints.length}/${session.definition.blocks.length} phần`;}
 const t={data:null,number:Number(q.get('number')||10),tab:'session',skill:'listening',page:'class',selected:null,search:'',filter:'all',showFixture:false,showScenarios:true,showTestScenarios:true,drafts:new Map(),pending:null,timer:null,saveError:false,library:{version:1,forms:[],assignments:[]},librarySource:'all',librarySearch:'',librarySkill:'all',editing:false};
@@ -303,7 +329,13 @@ async function saveStudent(){
   s.pending=api('/api/demo',body).then(()=>{if(JSON.stringify(s.responses)===revision)s.dirty=false;s.saveError=false;setSaveLabel('Đã giữ nháp riêng cho người học này');}).catch(error=>{s.saveError=true;setSaveLabel(error.message,true);throw error;}).finally(()=>s.pending=null);
   await s.pending;
 }
-function setSaveLabel(text,error=false){for(const label of document.querySelectorAll('[data-save-status]')){label.textContent=text;label.classList.toggle('saveError',error);}}
+function setSaveLabel(text,error=false){
+  for(const label of document.querySelectorAll('[data-save-status]')){label.textContent=text;label.classList.toggle('saveError',error);}
+  for(const button of document.querySelectorAll('[data-student-action="retry-save"]'))button.hidden=!error;
+}
+function studentSaveStatus(message,announce=false){
+  return `<span class="studentSaveState"><small data-save-status class="${s.saveError?'saveError':''}" ${announce?'role="status" aria-live="polite"':''}>${esc(message)}</small><button type="button" class="btn small" data-student-action="retry-save" ${s.saveError?'':'hidden'}>Thử lưu lại</button></span>`;
+}
 function renderStudent(){
   const d=s.data;document.body.className='student-screen';
   if(s.identityStage!=='ready'){
@@ -320,14 +352,14 @@ function renderStudent(){
 }
 function studentSession(){
   const d=s.data,completion=d.submitted?(d.completeness==='partial'?'Đã nộp · còn câu trống':'Đã nộp phiếu'):`Đã nộp ${d.checkpoints.length}/${d.definition.blocks.length} phần`;
-  return `<div class="studentHeading"><p>IC2305 · BUỔI ${d.number} · ${date(d.date)}</p><h1>${esc(d.title)}</h1></div>${d.replacement?'<div class="notice warn">Bài cũ đã thu hồi. Đây là bài hiện tại; bài cũ không cần làm tiếp.</div>':''}<section class="currentCard"><div class="currentHeading"><div class="lessonMeta"><span>${sourceDeadline(d.number)}</span>${badge(d.participated?'Đã ghi nhận tham gia'+(d.isFake?' · thử':''):'Chưa ghi nhận tham gia',d.participated?'green':'')}</div><div class="lessonProgress"><span>${completion}</span>${!d.isFake?'<small>Chỉ xem lại bài thật</small>':'<small>Nộp phần đầu thành công ghi nhận tham gia</small>'}</div></div>${d.definition.blocks.map((block,index)=>studentPart(block,index)).join('')}</section>${d.isFake&&!d.submitted?`<div class="bottomActions"><small data-save-status>${s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nháp riêng theo người học và buổi'}</small><button class="btn primary" data-student-action="final">Nộp toàn bộ phiếu</button></div>`:''}<section class="currentFeedback"><h2>Nhận xét của giáo viên</h2><div class="feedbackCard"><b>Speaking</b><p>${d.publishedFeedback?esc(d.publishedFeedback):'Chưa có nhận xét đã công bố.'}</p></div></section>`;
+  return `<div class="studentHeading"><p>IC2305 · BUỔI ${d.number} · ${date(d.date)}</p><h1>${esc(d.title)}</h1></div>${d.replacement?'<div class="notice warn">Bài cũ đã thu hồi. Đây là bài hiện tại; bài cũ không cần làm tiếp.</div>':''}<section class="currentCard"><div class="currentHeading"><div class="lessonMeta"><span>${sourceDeadline(d.number)}</span>${badge(d.participated?'Đã ghi nhận tham gia'+(d.isFake?' · thử':''):'Chưa ghi nhận tham gia',d.participated?'green':'')}</div><div class="lessonProgress"><span>${completion}</span>${!d.isFake?'<small>Chỉ xem lại bài thật</small>':'<small>Nộp phần đầu thành công ghi nhận tham gia</small>'}</div></div>${instructionsMarkup(d.definition.instructions)}${d.definition.blocks.map((block,index)=>studentPart(block,index)).join('')}</section>${d.isFake&&!d.submitted?`<div class="bottomActions">${studentSaveStatus(s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nháp riêng theo người học và buổi',true)}<button class="btn primary" data-student-action="final">Nộp toàn bộ phiếu</button></div>`:''}<section class="currentFeedback"><h2>Nhận xét của giáo viên</h2><div class="feedbackCard"><b>Speaking</b><p>${d.publishedFeedback?esc(d.publishedFeedback):'Chưa có nhận xét đã công bố.'}</p></div></section>`;
 }
 function studentPart(block,index){
   const d=s.data,checkpoint=d.checkpoints.find(c=>c.blockId===block.blockId),submitted=d.submitted||Boolean(checkpoint),open=d.releases.find(r=>r.blockId===block.blockId)?.status==='open',editable=d.isFake&&!submitted,expanded=s.expanded.has(block.blockId);
   let content='';
   if(!editable){const review=readonly({definition:d.definition,responses:s.responses,gradingItems:d.gradingItems,submissionId:submitted?'submitted':null,answerKey:d.answerKey},[block]),grades=d.gradingItems.filter(g=>g.maxScore>0&&block.items.some(i=>i.itemVersionId===g.itemVersionId)),correct=grades.filter(g=>g.verdict==='correct').length;content=`<p class="readOnly">${submitted?'Đã nộp · Chỉ xem lại':'Nội dung đã lưu · Chưa nộp phần này'}${!d.answersVisible?' · Kết quả chấm đang ẩn':''}</p>${d.answersVisible&&grades.length?`<p class="partScore"><b>${correct} đúng</b> · ${grades.length-correct} sai / ${grades.length} câu có đáp án</p>`:''}${d.answersVisible?review:review.replace(/<p class="reviewVerdict (?!not_applicable)[^"]*">[^<]*<\/p>/g,'')}`;}
   else if(!open)content='<p class="muted">Giảng viên chưa mở phần này. Nháp vẫn được giữ.</p>';
-  else content=`${block.instructions?`<p class="exerciseInstructions">${esc(block.instructions)}</p>`:''}${block.items.map((item,i)=>field(item,i+1)).join('')}<div class="partFoot"><small data-save-status>${s.dirty?'Đang có thay đổi chưa lưu':'Nộp được khi còn câu trống'}</small><button class="btn primary" data-submit-block="${esc(block.blockId)}">Nộp phần ${index+1}</button></div>`;
+  else content=`${block.instructions?`<p class="exerciseInstructions">${esc(block.instructions)}</p>`:''}${block.items.map((item,i)=>field(item,i+1)).join('')}<div class="partFoot">${studentSaveStatus(s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nộp được khi còn câu trống')}<button class="btn primary" data-submit-block="${esc(block.blockId)}">Nộp phần ${index+1}</button></div>`;
   const title=block.title.replace(/^phần\s*\d+\s*[:：.]?\s*/i,'');
   return `<section class="studentPart" data-part="${esc(block.blockId)}"><div class="studentPartTop"><div><small>PHẦN ${index+1}</small><h2>${esc(title)}</h2></div>${badge(submitted?'Đã nộp':open?'Đã mở':'Chưa mở',submitted?'green':open?'blue':'')}</div>${!expanded?`<button class="btn ${editable&&open?'primary':''} partStart" data-start-part="${esc(block.blockId)}" ${editable&&!open?'disabled':''}>${submitted?'Xem kết quả':editable?'Bắt đầu làm':'Xem nội dung đã lưu'}</button>`:`<button class="btn quiet small collapsePart" data-collapse-part="${esc(block.blockId)}">Thu gọn ⌃</button><div class="partBody">${content}</div>`}</section>`;
 }
@@ -365,6 +397,16 @@ function studentJourney(){
 }
 async function studentAction(action){
   if(action==='fail'){s.failNext=true;toast('Lần lưu kế tiếp sẽ báo lỗi thử. Người học và nháp sẽ được giữ tại chỗ.');return;}
+  if(action==='retry-save'){
+    // Thử lại đúng hàm giữ nháp hiện hành, không nộp bài hoặc chuyển người.
+    // Lưu lỗi giữ nút và nội dung; lưu thành công trả focus về thông báo đã lưu.
+    const trigger=document.activeElement?.closest('[data-student-action="retry-save"]');
+    await saveStudent();
+    toast('Đã lưu lại nháp cho người học này.');
+    const status=trigger?.parentElement.querySelector('[data-save-status]');
+    if(status){status.tabIndex=-1;status.focus({preventScroll:true});}
+    return;
+  }
   if(action==='identity'){
     await saveStudent();modal('Đổi người học',`<p>Nháp được giữ riêng cho từng người và từng buổi. Bạn chỉ chuyển người sau khi lưu nháp thành công.</p><label for="identity-select">Chọn người học ${s.data.isFake?'thử':'để xem bài thật'}</label><select id="identity-select" class="select" style="display:block;margin-top:8px;width:100%">${s.data.roster.map(p=>`<option value="${esc(p.studentRef)}" ${p.studentRef===s.ref?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`,`<button class="btn" data-close-dialog>Hủy</button><button class="btn primary" data-confirm-identity>Đổi người học</button>`);return;
   }
@@ -433,7 +475,7 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-editor-form')){dialog.close();return editLibrary(ownForms().find(v=>v.id===button.dataset.editorForm));}
   if(button?.hasAttribute('data-library-source')){t.librarySource=button.dataset.librarySource;renderTeacher();document.querySelector(`[data-library-source="${t.librarySource}"]`).focus();return;}
   if(button?.hasAttribute('data-library-reset')){t.librarySearch='';t.librarySkill='all';renderTeacher();document.querySelector('[data-library-search]').focus();return;}
-  if(button?.hasAttribute('data-preview-form')){await loadEditor();const form=ownForms().find(v=>v.id===button.dataset.previewForm);modal(form.title,`<p class="notice simulated">Bài soạn trong demo · ${form.status==='draft'?'Nháp':'Đã xuất bản'} · Không ghi vào lớp thật.</p>${window.ProgressLogWorksheet.normalize(form).parts.map(p=>`<section class="exercise-part"><h2>${esc(p.title)}</h2>${window.ProgressLogExerciseEditor.previewPartContent(p)}</section>`).join('')}`,'',`<button class="btn primary" data-editor-form="${esc(form.id)}">Sửa bài tập</button>`);return;}
+  if(button?.hasAttribute('data-preview-form')){await loadEditor();const form=ownForms().find(v=>v.id===button.dataset.previewForm);modal(form.title,`<p class="notice simulated">Bài soạn trong demo · ${form.status==='draft'?'Nháp':'Đã xuất bản'} · Không ghi vào lớp thật.</p>${instructionsMarkup(form.instructions)}${window.ProgressLogWorksheet.normalize(form).parts.map(p=>`<section class="exercise-part"><h2>${esc(p.title)}</h2>${window.ProgressLogExerciseEditor.previewPartContent(p)}</section>`).join('')}`,'',`<button class="btn primary" data-editor-form="${esc(form.id)}">Sửa bài tập</button>`);return;}
   if(button?.hasAttribute('data-read-writing')){event.stopPropagation();const person=t.data.people.find(p=>p.studentRef===button.dataset.readWriting),result=testRecord(person.studentRef,button.dataset.test),task=button.dataset.task,text=result?.writing?.tasks?.[task]?.feedback;modal(`${person.name} · ${result.title} · Task ${task}`,`<p class="fullFeedback">${esc(text||'Chưa có nhận xét')}</p><p class="caption">Nhận xét gốc; không tóm tắt bằng AI.</p>`);return;}
   if(button?.hasAttribute('data-overview-history')){const heading=document.querySelector('#overview-history'),panel=heading.closest('.detailPanel');heading.focus({preventScroll:true});if(getComputedStyle(panel).position==='sticky')panel.scrollTo({top:panel.scrollTop+heading.getBoundingClientRect().top-panel.getBoundingClientRect().top-16,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});else heading.scrollIntoView({block:'start',behavior:'smooth'});return;}
   if(button?.hasAttribute('data-course-history')){const session=allCourse().find(v=>v.number===Number(button.dataset.courseHistory)),person=session.students.find(p=>p.studentRef===t.selected);modal(`${person.name} · Buổi ${session.number}`,`<p class="caption">${esc(session.title)} · ${date(session.date)} · Bản chụp chỉ đọc</p>${readonly(person.detail)}`);return;}
