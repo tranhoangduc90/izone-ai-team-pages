@@ -7,10 +7,23 @@ export function hintMarkup(value){return typeof value==='string'&&value.trim()?`
 export function matchingMarkup(pairs,{itemId='',value={}}={}){
   return `<div class="matchingFields">${pairs.map((pair,n)=>`<label><span>${escape(pair.left)}</span><select aria-label="Ghép cặp ${n+1}: ${escape(pair.left)}" ${itemId?`data-item="${escape(itemId)}" data-pair-index="${n}"`:`data-preview-pair="${n}"`}><option value="">Chọn vế phải</option>${pairs.map((p,j)=>`<option value="${j}" ${String(value?.[n])===String(j)?'selected':''}>${escape(p.right)}</option>`).join('')}</select></label>`).join('')}</div>`;
 }
+// Số học viên tự báo, không là đáp án tự chấm. Để trống khác với 0 câu đúng.
+export function scoreInputError(raw,total){return String(raw??'').trim()===''||Number.isInteger(Number(raw))&&Number(raw)>=0&&Number(raw)<=total?'':`Nhập số nguyên từ 0 đến ${total}, hoặc để trống.`;}
+export function setScoreValidity(input,total,error){
+  const message=scoreInputError(input.validity.badInput?'invalid':input.value,total);
+  input.setAttribute('aria-invalid',String(Boolean(message)));input.setCustomValidity(message);
+  if(error){error.textContent=message;error.hidden=!message;}
+}
+export function scoreMarkup(total,{itemId='',value,previewId=''}={}){
+  if(!Number.isInteger(total)||total<1||total>100)return '<p class="fieldError">Nhập tổng số câu từ 1 đến 100 trong bộ soạn để xem trước.</p>';
+  const id=itemId?`item-${itemId}`:`preview-score-${previewId}`,errorId=`error-${id}`;
+  return `<div class="scoreInput"><input id="${escape(id)}" ${itemId?`data-item="${escape(itemId)}"`:`data-preview-score aria-label="Số câu đúng (tổng ${total} câu)" aria-describedby="${escape(errorId)}"`} type="number" inputmode="numeric" min="0" max="${total}" step="1" value="${escape(value?.correct??'')}" placeholder="—"><span>/ ${total} câu</span></div>${itemId?'':`<p class="fieldError" id="${escape(errorId)}" role="alert" hidden></p>`}`;
+}
 export async function loadEditor(){
   if(window.ProgressLogExerciseEditor)return;
   window.ProgressLogHintMarkup=hintMarkup;
   window.ProgressLogMatchingMarkup=matchingMarkup;
+  window.ProgressLogScoreMarkup=scoreMarkup;window.ProgressLogScoreValidity=setScoreValidity;
   window.$=id=>document.getElementById(id);window.esc=escape;
   window.toast=message=>{const e=document.querySelector('#toast');e.textContent=message;e.className='show';setTimeout(()=>e.className='',5000);};
   for(const name of ['worksheet-model.js','library-model.js','exercise-ai-model.js','exercise-ai.js','exercise-editor.js'])await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=new URL(name,import.meta.url);script.onload=resolve;script.onerror=()=>reject(Error('Chưa tải được bộ soạn bài. Hãy tải lại trang.'));document.head.append(script);});
