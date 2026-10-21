@@ -17,7 +17,11 @@ const time=v=>v?new Date(v).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',
 const pct=v=>Number.isFinite(v)?`${Math.round(v*10)/10}%`:'—';
 const initials=name=>name.trim().split(/\s+/).slice(-2).map(s=>s[0]).join('').toUpperCase();
 const badge=(text,type='')=>`<span class="badge ${type}">${esc(text)}</span>`;
-const studentURL=(ref='demo-a',number=10)=>`./${localAPI?'?':'#'}view=student&ref=${encodeURIComponent(ref)}&number=${number}`;
+const studentURL=(ref='demo-a',number=10)=>{
+  // Gắn lần giao hiện tại để tab mới không âm thầm nhận bài gốc hoặc bài cũ.
+  const generation=t.data?.sessions.find(v=>v.number===Number(number))?.generation??(s.data?.number===Number(number)?s.data.generation:undefined);
+  return `./${localAPI?'?':'#'}view=student&ref=${encodeURIComponent(ref)}&number=${number}${Number.isInteger(generation)?'&generation='+generation:''}`;
+};
 let toastTimer;
 function toast(message){const e=document.querySelector('#toast');e.textContent=message;e.className='show';clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.className='',5000);}
 async function api(path,body){if(!localAPI)return pagesAPI(path,body);const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const data=await r.json();if(!r.ok)throw new Error(data.error||'Không tải được dữ liệu.');return data;}

@@ -6,7 +6,7 @@ Bản demo HTML/CSS/JavaScript thuần theo master 1.3 ngày 20/10/2026 của [T
 
 Mở route `progress-log/thuy-review/`: trang tự tải `demo-data.json`, không cần chọn file. Đức đã cho phép công bố gói dữ liệu demo IC2305 ngày 20/10/2026. Gói gồm dữ liệu học viên, bài làm và đáp án phục vụ bản demo; không chứa credential hoặc token phiếu production. Khi tải thất bại, trang hiển thị lỗi và nút **Thử tải lại**.
 
-Các tab trong cùng trình duyệt dùng BroadcastChannel để chia sẻ bản chụp và thao tác thử. Đóng tab cuối sẽ bỏ phiên thử. Bản chụp gốc không đổi. Bài do người xem soạn nằm trong phiên tab giảng viên; không hứa lưu bền vững hoặc đồng bộ nhiều thiết bị.
+Các tab trong cùng trình duyệt dùng BroadcastChannel để chia sẻ bản chụp và thao tác thử. Link học viên từ giảng viên gắn đúng lần giao bài, ưu tiên phản hồi từ tab giảng viên. Nếu sau ba giây chưa nhận đúng bài thì hiện **Thử tải lại**, không âm thầm mở bài gốc; giữ tab giảng viên mở để thử lại. Tab mở bằng bản cũ vẫn được nhận trong thời gian chờ, ưu tiên lần giao mới hơn. Đóng tab cuối sẽ bỏ phiên thử của lớp; bản chụp gốc không đổi. Bài tự soạn lưu nháp tại trình duyệt này, không đồng bộ nhiều thiết bị.
 
 ## Dữ liệu thật đã tìm được
 
