@@ -1,6 +1,6 @@
 // Bộ nhớ thử dùng chung cho máy chủ local và Pages. Chỉ đổi dữ liệu trong phiên.
 // Đầu vào là gói riêng tư đã đọc; không có API hoặc đường ghi tới hệ thống thật.
-import {projectSnapshot,itemsOf,applicable,blank,validateResponses,grade} from './model.mjs';
+import {projectSnapshot,itemsOf,applicable,blank,validateResponses,grade,allPartsSubmitted} from './model.mjs';
 export function createDemoStore(raw){
 const initial=raw.baseline||(raw.format==='thuy-review-data-v1'?raw.data:projectSnapshot(raw));
 const keys=raw.format==='thuy-review-data-v1'?raw.keys:Object.fromEntries(raw.sessions.map(s=>[s.number,s.privateKey?.items||{}]));
@@ -84,7 +84,10 @@ function mutate(body) {
     old.updatedAt=new Date().toISOString();feedback.set(key,old);return {ok:true,...old};
   }
   const state=fakeState(s,body.ref);
-  if (state.submitted) throw new Error('Bài đã nộp; chỉ được xem lại.');
+  if (state.submitted) {
+    if(body.action==='final'||(body.action==='checkpoint'&&state.checkpoints.some(c=>c.blockId===body.blockId)))return {ok:true,participated:true,submitted:true,completeness:state.completeness};
+    throw new Error('Bài đã nộp; chỉ được xem lại.');
+  }
   const next=mergeEditable(s,state,body.responses||{});
   if (body.failSave) throw new Error('Lỗi lưu được mô phỏng. Nội dung vẫn ở người học hiện tại; thử lưu lại để tiếp tục.');
   if (body.action==='draft') {
@@ -95,14 +98,19 @@ function mutate(body) {
     if (!block || s.releases.find(r => r.blockId===body.blockId)?.status!=='open') throw new Error('Phần này đang đóng. Nháp được giữ.');
     if (state.checkpoints.some(c => c.blockId===block.blockId)) return {ok:true};
     const incomplete=block.items.some(i => applicable(i,next) && blank(next[i.itemVersionId]));
-    state.responses=next;state.checkpoints.push({blockId:block.blockId,submittedAt:new Date().toISOString(),completeness:incomplete?'partial':'complete'});
-    state.participated=true;state.gradingItems=grade(s.definition,next,s.answerKey||keys[s.replacement?.template||s.number]||{});
-    return {ok:true,participated:true};
+    const checkpoints=[...state.checkpoints,{blockId:block.blockId,submittedAt:new Date().toISOString(),completeness:incomplete?'partial':'complete'}];
+    const gradingItems=grade(s.definition,next,s.answerKey||keys[s.replacement?.template||s.number]||{}),completed=allPartsSubmitted(s.definition,checkpoints);
+    // Tính xong kết quả trước khi ghi; phần cuối và hoàn tất phiếu được nhận cùng lúc.
+    const completion=completed?{submitted:true,completeness:itemsOf(s.definition).some(i=>applicable(i,next)&&blank(next[i.itemVersionId]))?'partial':'complete'}:{};
+    Object.assign(state,{responses:next,checkpoints,participated:true,gradingItems},completion);
+    return {ok:true,participated:true,submitted:state.submitted,completeness:state.completeness};
   }
   if (body.action==='final') {
-    state.responses=next;state.submitted=true;state.participated=true;
-    state.completeness=itemsOf(s.definition).some(i => applicable(i,next)&&blank(next[i.itemVersionId]))?'partial':'complete';
-    state.gradingItems=grade(s.definition,next,s.answerKey||keys[s.replacement?.template||s.number]||{});
+    // Tương thích phiếu 2/2 từ tab cũ; không cho bỏ qua phần chưa nộp.
+    if(!allPartsSubmitted(s.definition,state.checkpoints))throw new Error('Hãy nộp từng phần trước khi hoàn tất phiếu.');
+    const completeness=itemsOf(s.definition).some(i=>applicable(i,next)&&blank(next[i.itemVersionId]))?'partial':'complete';
+    const gradingItems=grade(s.definition,next,s.answerKey||keys[s.replacement?.template||s.number]||{});
+    Object.assign(state,{responses:next,submitted:true,participated:true,completeness,gradingItems});
     return {ok:true,participated:true,completeness:state.completeness};
   }
   throw new Error('Thao tác không được hỗ trợ.');

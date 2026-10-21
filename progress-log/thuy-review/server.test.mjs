@@ -59,8 +59,12 @@ test('Hành vi demo với bản chụp thật', {skip:!snapshot}, async t=>{
     const student=(await request(`/api/student?number=${s.number}&ref=demo-a`)).data;
     assert.equal(student.publishedFeedback,'Bản hoàn chỉnh');assert.doesNotMatch(JSON.stringify(student),/Sửa chưa xong/);
   });
-  await t.test('Nộp cuối trống được nhận và khóa sửa bài',async()=>{
-    assert.equal((await action({action:'final',ref:'demo-a',responses:{}})).status,200);
+  await t.test('Nộp hết phần còn câu trống tự hoàn tất và khóa sửa bài',async()=>{
+    assert.equal((await action({action:'final',ref:'demo-a',responses:{}})).status,400);
+    for(const block of s.definition.blocks){
+      await action({action:'release',blockId:block.blockId,open:true});
+      assert.equal((await action({action:'checkpoint',ref:'demo-a',blockId:block.blockId,responses:{}})).status,200);
+    }
     const person=(await request(`/api/student?number=${s.number}&ref=demo-a`)).data;
     assert.equal(person.submitted,true);assert.equal(person.completeness,'partial');
     assert.equal((await action({action:'draft',ref:'demo-a',responses:{}})).status,400);
