@@ -1,5 +1,5 @@
 import { teacherSessionRequestOptions } from './teacher-session-client.js';
-import { renderPracticeDefinitionHtml as definitionHtml } from './teacher-practice-definition.js?v=20261019-v1';
+import { renderPracticeDefinitionHtml as definitionHtml } from './teacher-practice-definition.js?v=20261021-authoring-v1';
 
 // Nhận dữ liệu chỉ đọc từ API của từng sản phẩm. Không dùng danh tính học viên,
 // không gọi begin/open/pulse/submit và không tạo trình phát hoặc yêu cầu audio.
