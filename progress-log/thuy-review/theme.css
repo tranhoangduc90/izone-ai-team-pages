@@ -307,3 +307,13 @@ h1,h2,h3{color:var(--navy)}
 .overviewWritingTask .rowLink{margin-top:4px;text-decoration:underline}
 .overviewHistoryButton{margin-top:14px}
 @media(max-width:480px){.personalOverview{grid-template-columns:1fr}}
+.reflectionPlot{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;min-width:740px}
+.reflectionAxis{display:flex;flex-direction:column;justify-content:space-between;height:190px;margin-top:-5px;text-align:right;font-size:10px;line-height:10px;color:var(--muted)}
+.reflectionPlot .reflectionChart{min-width:0;grid-auto-columns:minmax(76px,1fr);gap:12px}
+.chartCaption{margin:0 0 12px}
+.speakingMethod{font-size:12px;line-height:19px;color:var(--muted)}
+.speakingMethod summary{cursor:pointer;width:fit-content}
+.speakingMethod>p{margin:10px 0}
+.speakingMapping{padding-left:20px;margin:12px 0}
+.speakingMapping>li{margin:12px 0;color:var(--navy)}
+.speakingMapping ul{padding-left:18px;margin-top:6px;color:var(--muted)}

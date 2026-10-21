@@ -74,23 +74,58 @@ export function personJourney(data, studentRef, skill) {
   });
   return priority(reports);
 }
-// Gom các lựa chọn tự phản ánh đã nộp, giữ nguyên nhãn gốc; không suy thành điểm Speaking.
+// Bản đồ câu chữ đã biết: chỉ gom cùng vấn đề, không suy mức tự tin từ việc chưa thấy vấn đề.
+const speakingCategories=[
+  ['ideas','Khó mở rộng ý',['Khó mở rộng ý','Khó phát triển ý và nói đủ dài','Em thiếu ý hoặc chưa biết cách phát triển câu trả lời']],
+  ['vocabulary','Thiếu từ vựng',['Thiếu từ vựng','Thiếu từ vựng để diễn đạt ý','Em thiếu từ vựng để diễn đạt điều mình muốn nói']],
+  ['pronunciation','Cần luyện phát âm',['Cần luyện phát âm','Phát âm chưa rõ hoặc sai trọng âm']],
+  ['fluency','Còn ngập ngừng',['Còn ngập ngừng','Nói ngắt quãng hoặc dừng quá lâu','Em ngập ngừng nhiều hoặc phải dừng lại để nghĩ']],
+  ['grammar','Cần cải thiện ngữ pháp',['Cần cải thiện ngữ pháp','Dùng ngữ pháp chưa chính xác','Em còn mắc lỗi ngữ pháp khi nói']],
+  ['coherence','Cần cải thiện mạch lạc',['Câu trả lời chưa liên kết, thiếu mạch lạc']],
+  ['no-issue','Chưa nhận thấy vấn đề',['Em chưa nhận thấy vấn đề','Em chưa nhận thấy vấn đề lớn','Em chưa nhận thấy vấn đề lớn trong buổi luyện tập này']],
+  ['confident','Diễn đạt tự tin hơn',['Diễn đạt tự tin hơn']],
+  ['other','Vấn đề khác',['Vấn đề khác','Vấn đề khác. Nêu rõ']],
+];
+const normalizeSpeaking=label=>String(label||'').normalize('NFC').trim().replace(/\s+/g,' ').replace(/[.!?:;…]+$/g,'').toLocaleLowerCase('vi');
+const speakingLabels=new Map(speakingCategories.flatMap(([id,label,variants])=>variants.map(v=>[normalizeSpeaking(v),{id,label}])));
+export function speakingGroup(label){const key=normalizeSpeaking(label);return speakingLabels.get(key)||{id:'source:'+key,label:String(label).trim(),unmapped:true};}
+
+// Mỗi học viên/buổi đóng góp tối đa một lần cho mỗi nhóm; chỉ lấy phiếu đã nộp cuối.
+// Giữ cả câu chữ gốc để người xem đối chiếu cách gom; không sửa bản chụp hoặc tính điểm.
+export function speakingAnalytics(sessions,studentRefs=null){
+  const allowed=studentRefs?new Set(studentRefs):null,groups=new Map(),contributors=new Set(),seenSessions=new Set();let forms=0;
+  for(const session of [...sessions].sort((a,b)=>b.number-a.number)){
+    if(seenSessions.has(session.number))continue;seenSessions.add(session.number);
+    const seenPeople=new Set();
+    for(const person of session.students){
+      if(!person.submitted||allowed&&!allowed.has(person.studentRef)||seenPeople.has(person.studentRef))continue;seenPeople.add(person.studentRef);
+      const responses=person.detail?.responses||{},chosen=new Set();
+      for(const item of itemsOf(session.definition).filter(i=>i.skillCodes?.includes('speaking')&&i.graderType==='none'&&i.options?.length&&applicable(i,responses))){
+        const value=responses[item.itemVersionId],values=Array.isArray(value)?value:[value];
+        for(const option of item.options.filter(o=>values.includes(o.id)&&normalizeSpeaking(o.label))){
+          const group=speakingGroup(option.label);
+          if(!groups.has(group.id))groups.set(group.id,{...group,count:0,originals:new Map()});
+          const entry=groups.get(group.id);entry.originals.set(option.label,(entry.originals.get(option.label)||0)+1);
+          if(!chosen.has(group.id)){entry.count++;chosen.add(group.id);}
+        }
+      }
+      if(chosen.size){forms++;contributors.add(person.studentRef);}
+    }
+  }
+  const sorted=[...groups.values()].sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label,'vi')).map(g=>({...g,originals:[...g.originals].map(([label,count])=>({label,count}))}));
+  return {groups:sorted,contributors:contributors.size,forms,selections:sorted.reduce((sum,g)=>sum+g.count,0)};
+}
+// Tổng quan cá nhân dùng cùng nhóm với bảng lớp, không suy thành điểm Speaking.
 // Nhận xét mới nhất chỉ lấy bản đã công bố, kể cả khi học viên chưa nộp phiếu buổi đó.
 export function speakingSummary(sessions,studentRef,published=(session,person)=>person.publishedFeedback||'') {
-  const counts=new Map(),seen=new Set();let latest=null;
+  const seen=new Set();let latest=null;
   for(const session of [...sessions].sort((a,b)=>b.number-a.number)){
     if(seen.has(session.number))continue;seen.add(session.number);
     const person=session.students.find(p=>p.studentRef===studentRef);if(!person)continue;
     const text=published(session,person);
     if(!latest&&typeof text==='string'&&text.trim())latest={number:session.number,date:session.date,text};
-    if(!person.submitted)continue;
-    const responses=person.detail?.responses||{};
-    for(const item of itemsOf(session.definition).filter(i=>i.skillCodes?.includes('speaking')&&i.graderType==='none'&&i.options?.length&&applicable(i,responses))){
-      const value=responses[item.itemVersionId],values=Array.isArray(value)?value:[value];
-      for(const option of item.options.filter(o=>values.includes(o.id)))counts.set(option.label,(counts.get(option.label)||0)+1);
-    }
   }
-  return {frequencies:[...counts].map(([label,count])=>({label,count})).sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label,'vi')),latest};
+  return {frequencies:speakingAnalytics(sessions,[studentRef]).groups.map(({label,count})=>({label,count})),latest};
 }
 // Chỉ dùng để thử thao tác: kiểm dữ liệu trước khi lưu, chấm câu có khóa ở máy chủ.
 export function validateResponses(definition, responses) {
