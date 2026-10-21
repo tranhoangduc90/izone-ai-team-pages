@@ -329,7 +329,13 @@ async function saveStudent(){
   s.pending=api('/api/demo',body).then(()=>{if(JSON.stringify(s.responses)===revision)s.dirty=false;s.saveError=false;setSaveLabel('Đã giữ nháp riêng cho người học này');}).catch(error=>{s.saveError=true;setSaveLabel(error.message,true);throw error;}).finally(()=>s.pending=null);
   await s.pending;
 }
-function setSaveLabel(text,error=false){for(const label of document.querySelectorAll('[data-save-status]')){label.textContent=text;label.classList.toggle('saveError',error);}}
+function setSaveLabel(text,error=false){
+  for(const label of document.querySelectorAll('[data-save-status]')){label.textContent=text;label.classList.toggle('saveError',error);}
+  for(const button of document.querySelectorAll('[data-student-action="retry-save"]'))button.hidden=!error;
+}
+function studentSaveStatus(message,announce=false){
+  return `<span class="studentSaveState"><small data-save-status class="${s.saveError?'saveError':''}" ${announce?'role="status" aria-live="polite"':''}>${esc(message)}</small><button type="button" class="btn small" data-student-action="retry-save" ${s.saveError?'':'hidden'}>Thử lưu lại</button></span>`;
+}
 function renderStudent(){
   const d=s.data;document.body.className='student-screen';
   if(s.identityStage!=='ready'){
@@ -346,14 +352,14 @@ function renderStudent(){
 }
 function studentSession(){
   const d=s.data,completion=d.submitted?(d.completeness==='partial'?'Đã nộp · còn câu trống':'Đã nộp phiếu'):`Đã nộp ${d.checkpoints.length}/${d.definition.blocks.length} phần`;
-  return `<div class="studentHeading"><p>IC2305 · BUỔI ${d.number} · ${date(d.date)}</p><h1>${esc(d.title)}</h1></div>${d.replacement?'<div class="notice warn">Bài cũ đã thu hồi. Đây là bài hiện tại; bài cũ không cần làm tiếp.</div>':''}<section class="currentCard"><div class="currentHeading"><div class="lessonMeta"><span>${sourceDeadline(d.number)}</span>${badge(d.participated?'Đã ghi nhận tham gia'+(d.isFake?' · thử':''):'Chưa ghi nhận tham gia',d.participated?'green':'')}</div><div class="lessonProgress"><span>${completion}</span>${!d.isFake?'<small>Chỉ xem lại bài thật</small>':'<small>Nộp phần đầu thành công ghi nhận tham gia</small>'}</div></div>${instructionsMarkup(d.definition.instructions)}${d.definition.blocks.map((block,index)=>studentPart(block,index)).join('')}</section>${d.isFake&&!d.submitted?`<div class="bottomActions"><small data-save-status>${s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nháp riêng theo người học và buổi'}</small><button class="btn primary" data-student-action="final">Nộp toàn bộ phiếu</button></div>`:''}<section class="currentFeedback"><h2>Nhận xét của giáo viên</h2><div class="feedbackCard"><b>Speaking</b><p>${d.publishedFeedback?esc(d.publishedFeedback):'Chưa có nhận xét đã công bố.'}</p></div></section>`;
+  return `<div class="studentHeading"><p>IC2305 · BUỔI ${d.number} · ${date(d.date)}</p><h1>${esc(d.title)}</h1></div>${d.replacement?'<div class="notice warn">Bài cũ đã thu hồi. Đây là bài hiện tại; bài cũ không cần làm tiếp.</div>':''}<section class="currentCard"><div class="currentHeading"><div class="lessonMeta"><span>${sourceDeadline(d.number)}</span>${badge(d.participated?'Đã ghi nhận tham gia'+(d.isFake?' · thử':''):'Chưa ghi nhận tham gia',d.participated?'green':'')}</div><div class="lessonProgress"><span>${completion}</span>${!d.isFake?'<small>Chỉ xem lại bài thật</small>':'<small>Nộp phần đầu thành công ghi nhận tham gia</small>'}</div></div>${instructionsMarkup(d.definition.instructions)}${d.definition.blocks.map((block,index)=>studentPart(block,index)).join('')}</section>${d.isFake&&!d.submitted?`<div class="bottomActions">${studentSaveStatus(s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nháp riêng theo người học và buổi',true)}<button class="btn primary" data-student-action="final">Nộp toàn bộ phiếu</button></div>`:''}<section class="currentFeedback"><h2>Nhận xét của giáo viên</h2><div class="feedbackCard"><b>Speaking</b><p>${d.publishedFeedback?esc(d.publishedFeedback):'Chưa có nhận xét đã công bố.'}</p></div></section>`;
 }
 function studentPart(block,index){
   const d=s.data,checkpoint=d.checkpoints.find(c=>c.blockId===block.blockId),submitted=d.submitted||Boolean(checkpoint),open=d.releases.find(r=>r.blockId===block.blockId)?.status==='open',editable=d.isFake&&!submitted,expanded=s.expanded.has(block.blockId);
   let content='';
   if(!editable){const review=readonly({definition:d.definition,responses:s.responses,gradingItems:d.gradingItems,submissionId:submitted?'submitted':null,answerKey:d.answerKey},[block]),grades=d.gradingItems.filter(g=>g.maxScore>0&&block.items.some(i=>i.itemVersionId===g.itemVersionId)),correct=grades.filter(g=>g.verdict==='correct').length;content=`<p class="readOnly">${submitted?'Đã nộp · Chỉ xem lại':'Nội dung đã lưu · Chưa nộp phần này'}${!d.answersVisible?' · Kết quả chấm đang ẩn':''}</p>${d.answersVisible&&grades.length?`<p class="partScore"><b>${correct} đúng</b> · ${grades.length-correct} sai / ${grades.length} câu có đáp án</p>`:''}${d.answersVisible?review:review.replace(/<p class="reviewVerdict (?!not_applicable)[^"]*">[^<]*<\/p>/g,'')}`;}
   else if(!open)content='<p class="muted">Giảng viên chưa mở phần này. Nháp vẫn được giữ.</p>';
-  else content=`${block.instructions?`<p class="exerciseInstructions">${esc(block.instructions)}</p>`:''}${block.items.map((item,i)=>field(item,i+1)).join('')}<div class="partFoot"><small data-save-status>${s.dirty?'Đang có thay đổi chưa lưu':'Nộp được khi còn câu trống'}</small><button class="btn primary" data-submit-block="${esc(block.blockId)}">Nộp phần ${index+1}</button></div>`;
+  else content=`${block.instructions?`<p class="exerciseInstructions">${esc(block.instructions)}</p>`:''}${block.items.map((item,i)=>field(item,i+1)).join('')}<div class="partFoot">${studentSaveStatus(s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nộp được khi còn câu trống')}<button class="btn primary" data-submit-block="${esc(block.blockId)}">Nộp phần ${index+1}</button></div>`;
   const title=block.title.replace(/^phần\s*\d+\s*[:：.]?\s*/i,'');
   return `<section class="studentPart" data-part="${esc(block.blockId)}"><div class="studentPartTop"><div><small>PHẦN ${index+1}</small><h2>${esc(title)}</h2></div>${badge(submitted?'Đã nộp':open?'Đã mở':'Chưa mở',submitted?'green':open?'blue':'')}</div>${!expanded?`<button class="btn ${editable&&open?'primary':''} partStart" data-start-part="${esc(block.blockId)}" ${editable&&!open?'disabled':''}>${submitted?'Xem kết quả':editable?'Bắt đầu làm':'Xem nội dung đã lưu'}</button>`:`<button class="btn quiet small collapsePart" data-collapse-part="${esc(block.blockId)}">Thu gọn ⌃</button><div class="partBody">${content}</div>`}</section>`;
 }
@@ -391,6 +397,16 @@ function studentJourney(){
 }
 async function studentAction(action){
   if(action==='fail'){s.failNext=true;toast('Lần lưu kế tiếp sẽ báo lỗi thử. Người học và nháp sẽ được giữ tại chỗ.');return;}
+  if(action==='retry-save'){
+    // Thử lại đúng hàm giữ nháp hiện hành, không nộp bài hoặc chuyển người.
+    // Lưu lỗi giữ nút và nội dung; lưu thành công trả focus về thông báo đã lưu.
+    const trigger=document.activeElement?.closest('[data-student-action="retry-save"]');
+    await saveStudent();
+    toast('Đã lưu lại nháp cho người học này.');
+    const status=trigger?.parentElement.querySelector('[data-save-status]');
+    if(status){status.tabIndex=-1;status.focus({preventScroll:true});}
+    return;
+  }
   if(action==='identity'){
     await saveStudent();modal('Đổi người học',`<p>Nháp được giữ riêng cho từng người và từng buổi. Bạn chỉ chuyển người sau khi lưu nháp thành công.</p><label for="identity-select">Chọn người học ${s.data.isFake?'thử':'để xem bài thật'}</label><select id="identity-select" class="select" style="display:block;margin-top:8px;width:100%">${s.data.roster.map(p=>`<option value="${esc(p.studentRef)}" ${p.studentRef===s.ref?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`,`<button class="btn" data-close-dialog>Hủy</button><button class="btn primary" data-confirm-identity>Đổi người học</button>`);return;
   }
