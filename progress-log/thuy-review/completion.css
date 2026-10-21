@@ -14,6 +14,9 @@
 .repo-error{color:var(--red);padding:12px;background:var(--pink);border-radius:6px;margin:12px 0}
 .repo-error[hidden]{display:none}.exercise-question-head .actions{flex-shrink:0}
 .ownForms{margin-top:20px}.repoTable td:last-child{white-space:nowrap}.repoTable td:last-child .btn+ .btn{margin-left:8px}
+.repoTable [data-library-row]{cursor:pointer}.repoTable [data-library-row]:hover,.repoTable [data-library-row]:focus-within{background:var(--pink)}
+.dialogHeadActions{display:flex;align-items:center;gap:8px;flex-shrink:0}.libraryDialog .dialogHead{position:sticky;top:0;background:var(--white);z-index:2}.libraryDialog .dialogHead h2{overflow-wrap:anywhere}
+.questionHint{margin-top:12px;font-size:14px;line-height:22px}.questionHint summary{cursor:pointer;color:var(--navy);font-weight:500;padding:8px 0}.questionHint p{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 0;padding:12px;background:var(--canvas);border-radius:6px}.studentMain .questionHint summary{min-height:44px}
 .correctOption,.correctAnswer{background:#eef8f2;color:#18734c;border:1px solid #b9dcca!important;border-radius:6px;padding:10px 12px;white-space:pre-wrap}
 .correctOption b{display:block;margin-top:4px;font-size:12px}.correctAnswer{margin:8px 0 16px;font-size:14px}
 .studentPart .studentAnswerReview>.studentJourneyHeading{display:none}
