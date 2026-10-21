@@ -19,6 +19,8 @@
 .questionHint{margin-top:12px;font-size:14px;line-height:22px}.questionHint summary{cursor:pointer;color:var(--navy);font-weight:500;padding:8px 0}.questionHint p{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 0;padding:12px;background:var(--canvas);border-radius:6px}.studentMain .questionHint summary{min-height:44px}
 .correctOption,.correctAnswer{background:#eef8f2;color:#18734c;border:1px solid #b9dcca!important;border-radius:6px;padding:10px 12px;white-space:pre-wrap}
 .correctOption b{display:block;margin-top:4px;font-size:12px}.correctAnswer{margin:8px 0 16px;font-size:14px}
+.worksheetInstructions{margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.worksheetInstructions h2{font-size:16px;margin:0 0 8px}.worksheetInstructions p,.answerExplanation{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.answerExplanation{margin:8px 0 16px}
 .studentPart .studentAnswerReview>.studentJourneyHeading{display:none}
 .writingTask{margin-top:12px}.writingTask p{margin-top:4px}.originalExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:pre-wrap}
 .fullFeedback{white-space:pre-wrap;overflow-wrap:anywhere}.dialogBody li{margin:8px 0}.matchingFields{display:grid;gap:12px}.matchingFields label{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}

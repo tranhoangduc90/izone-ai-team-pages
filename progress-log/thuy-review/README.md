@@ -67,6 +67,8 @@ Thay bài bằng phiếu khác hoặc bài vừa soạn sẽ thu hồi bản cũ
 
 ## Source và kiểm thử
 
+Hướng dẫn toàn bài được giữ khi lưu nháp/xuất bản/sao chép, hiện một lần trước các phần ở Xem trước, hộp xem phiếu và trang học viên; không thay hướng dẫn riêng của từng phần. Giải thích do giảng viên nhập đi theo mã câu trong khóa đáp án, chỉ hiện cạnh đáp án khi người xem được nhận khóa; câu tự nhận xét không mang lời giải chấm điểm. Kiểm nội dung rỗng, xuống dòng/ký tự HTML, đổi phần và ẩn/mở bằng `authoring-content.test.mjs` cùng lượt kiểm trình duyệt riêng.
+
 - `app.js`, `theme.css`, `completion.css`, `index.html`: giao diện và các hành trình. Giữ renderer nội dung dùng chung ở `../answer-review.js`.
 - `model.mjs`: tính số tự báo, nhãn, kiểm câu trả lời và chấm mô phỏng từ khóa trong gói demo.
 - `journey-scenarios.mjs`: bảy học viên giả chỉ có ở bảng và chi tiết Listening/Reading; dùng cùng hàm tính nhãn với dữ liệu thật, không thêm vào kho dữ liệu hoặc danh sách buổi học.
