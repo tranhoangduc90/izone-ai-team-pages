@@ -74,6 +74,24 @@ export function personJourney(data, studentRef, skill) {
   });
   return priority(reports);
 }
+// Gom các lựa chọn tự phản ánh đã nộp, giữ nguyên nhãn gốc; không suy thành điểm Speaking.
+// Nhận xét mới nhất chỉ lấy bản đã công bố, kể cả khi học viên chưa nộp phiếu buổi đó.
+export function speakingSummary(sessions,studentRef,published=(session,person)=>person.publishedFeedback||'') {
+  const counts=new Map(),seen=new Set();let latest=null;
+  for(const session of [...sessions].sort((a,b)=>b.number-a.number)){
+    if(seen.has(session.number))continue;seen.add(session.number);
+    const person=session.students.find(p=>p.studentRef===studentRef);if(!person)continue;
+    const text=published(session,person);
+    if(!latest&&typeof text==='string'&&text.trim())latest={number:session.number,date:session.date,text};
+    if(!person.submitted)continue;
+    const responses=person.detail?.responses||{};
+    for(const item of itemsOf(session.definition).filter(i=>i.skillCodes?.includes('speaking')&&i.graderType==='none'&&i.options?.length&&applicable(i,responses))){
+      const value=responses[item.itemVersionId],values=Array.isArray(value)?value:[value];
+      for(const option of item.options.filter(o=>values.includes(o.id)))counts.set(option.label,(counts.get(option.label)||0)+1);
+    }
+  }
+  return {frequencies:[...counts].map(([label,count])=>({label,count})).sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label,'vi')),latest};
+}
 // Chỉ dùng để thử thao tác: kiểm dữ liệu trước khi lưu, chấm câu có khóa ở máy chủ.
 export function validateResponses(definition, responses) {
   if (!responses || typeof responses !== 'object' || Array.isArray(responses)) throw new Error('Câu trả lời không hợp lệ.');
