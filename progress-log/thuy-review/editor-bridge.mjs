@@ -3,9 +3,14 @@
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Gợi ý do giảng viên nhập, thu gọn ban đầu và không tham gia chấm điểm.
 export function hintMarkup(value){return typeof value==='string'&&value.trim()?`<details class="questionHint"><summary>Xem gợi ý</summary><p>${escape(value)}</p></details>`:'';}
+// Dùng cùng ô chọn Nối cặp ở Xem trước và phiếu học viên; giữ mã vế phải để chấm đúng cặp.
+export function matchingMarkup(pairs,{itemId='',value={}}={}){
+  return `<div class="matchingFields">${pairs.map((pair,n)=>`<label><span>${escape(pair.left)}</span><select aria-label="Ghép cặp ${n+1}: ${escape(pair.left)}" ${itemId?`data-item="${escape(itemId)}" data-pair-index="${n}"`:`data-preview-pair="${n}"`}><option value="">Chọn vế phải</option>${pairs.map((p,j)=>`<option value="${j}" ${String(value?.[n])===String(j)?'selected':''}>${escape(p.right)}</option>`).join('')}</select></label>`).join('')}</div>`;
+}
 export async function loadEditor(){
   if(window.ProgressLogExerciseEditor)return;
   window.ProgressLogHintMarkup=hintMarkup;
+  window.ProgressLogMatchingMarkup=matchingMarkup;
   window.$=id=>document.getElementById(id);window.esc=escape;
   window.toast=message=>{const e=document.querySelector('#toast');e.textContent=message;e.className='show';setTimeout(()=>e.className='',5000);};
   for(const name of ['worksheet-model.js','library-model.js','exercise-ai-model.js','exercise-ai.js','exercise-editor.js'])await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=new URL(name,import.meta.url);script.onload=resolve;script.onerror=()=>reject(Error('Chưa tải được bộ soạn bài. Hãy tải lại trang.'));document.head.append(script);});

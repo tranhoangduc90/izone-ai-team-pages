@@ -22,6 +22,8 @@
 .studentPart .studentAnswerReview>.studentJourneyHeading{display:none}
 .writingTask{margin-top:12px}.writingTask p{margin-top:4px}.originalExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:pre-wrap}
 .fullFeedback{white-space:pre-wrap;overflow-wrap:anywhere}.dialogBody li{margin:8px 0}.matchingFields{display:grid;gap:12px}.matchingFields label{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+.matchingFields label{min-width:0}.matchingFields span{overflow-wrap:anywhere}.matchingFields select{width:100%;min-width:0;min-height:40px;border:1px solid var(--line);border-radius:6px;background:white;padding:8px 12px;font:inherit}.studentMain .matchingFields select{min-height:44px;font-size:16px}
+@media(max-width:650px){.matchingFields select{min-height:44px;font-size:16px}}
 .identityEntry{max-width:560px;margin:24px auto;padding:32px;background:white;border:1px solid var(--line);border-radius:8px}.identityEntry h1{margin:0 0 16px}.identityEntry select,.identityEntry .btn{width:100%;margin-top:16px}.identityEntry p{margin-top:12px}
 @media(max-width:650px){.fileEntry{margin:24px 16px;padding:24px}.repoTable td:last-child{white-space:normal}.repoTable td:last-child .btn{margin:4px 0!important}.exercise-editor .exercise-toolbar .actions{width:100%}.exercise-editor .exercise-toolbar .actions button{flex:1}.identityEntry{padding:24px}.matchingFields label{grid-template-columns:1fr}}
 
