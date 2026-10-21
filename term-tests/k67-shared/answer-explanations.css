@@ -112,3 +112,5 @@ body.teacher-reading #explanation-dialog{font-family:inherit}
 #explanation-dialog .explanation-replay-button{min-height:38px;padding:8px 12px;border:1px solid #152b4e;border-radius:6px;background:#152b4e;color:#fff;font-family:inherit;font-weight:700;font-size:13px;line-height:1.4;cursor:pointer}
 #explanation-dialog .explanation-replay-button[aria-pressed="true"]{background:#a02a37;border-color:#a02a37}
 #explanation-dialog .explanation-replay-status{flex-basis:100%;color:#a02a37}
+#explanation-dialog .explanation-full-transcript .explanation-active-paragraph{background:transparent;border:0;border-radius:0;margin-left:0;padding:0}
+#explanation-dialog .explanation-question-figure{display:block;max-width:100%;height:auto;margin:12px auto 0}

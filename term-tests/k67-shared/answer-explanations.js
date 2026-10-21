@@ -2,7 +2,7 @@
 // Dựng cửa sổ giống Reading/Listening thực chiến. Lỗi tải hiện tại nút, không đổi bài làm hay điểm.
 (function () {
   'use strict';
-  const supported = new Set(['term-test-1', 'term-test-2', 'mini-test-lesson-5']);
+  const supported = new Set(['term-test-1', 'term-test-2', 'mini-test-lesson-5', 'substitute-test-1-k67']);
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[c]);
@@ -32,8 +32,12 @@
     if (!player) player = new window.K67ReviewAudio(reviewAudio, { durationMs: descriptor.durationMs,
       prepare: async signal => {
         if (blobHash === descriptor.sha256 && blobUrl) return;
-        if (!/^term-test-2-96kbps-[0-9a-f]{16}\.mp3$/.test(descriptor.asset)) throw Error('Sai nguồn audio');
-        const response = await fetch(new URL('../k67-audio-assets/' + descriptor.asset, scriptBase), { signal, cache: 'force-cache' });
+        const substitute = review.bundle.testSlug === 'substitute-test-1-k67' && descriptor.asset === 'substitute-test-1-k67.mp3'
+          && descriptor.sha256 === '59e69c9691841655a639a22fa9d7a8aec658e4c0c82c5e1451dd5bdd895d0b10';
+        if (!substitute && !/^term-test-2-96kbps-[0-9a-f]{16}\.mp3$/.test(descriptor.asset)) throw Error('Sai nguồn audio');
+        const source = substitute ? '../substitute-test-1-k67-computer-based/assets/private/listening-substitute-test-1-k67.mp3'
+          : '../k67-audio-assets/' + descriptor.asset;
+        const response = await fetch(new URL(source, scriptBase), { signal, cache: 'force-cache' });
         if (!response.ok) throw Error('Không tải được audio');
         const bytes = await response.arrayBuffer();
         const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -108,12 +112,14 @@
     for (const p of evidence) for (const run of p) {
       const color = colorClass('bg', run.background) + colorClass('fg', run.foreground);
       if (!color || (!run.background && ['#000000', '#333333', '#282828'].includes(run.foreground))) continue;
-      const fragment = normalize(run.text);
-      if (fragment.length < 4) continue;
-      const at = normalized.indexOf(fragment);
-      if (at < 0) continue;
-      const start = positions[at], end = positions[at + fragment.length - 1] + 1;
-      if (!ranges.some(r => start < r.end && end > r.start)) ranges.push({ start, end, color });
+      for (const piece of run.text.split(/\[?\.\.\.\]?|[…]/)) {
+        const fragment = normalize(piece);
+        if (fragment.length < 4) continue;
+        const at = normalized.indexOf(fragment);
+        if (at < 0) continue;
+        const start = positions[at], end = positions[at + fragment.length - 1] + 1;
+        if (!ranges.some(r => start < r.end && end > r.start)) ranges.push({ start, end, color });
+      }
     }
     // Bọc từ cuối đoạn để các vị trí chữ phía trước không bị thay đổi.
     for (const item of ranges.sort((a, b) => b.start - a.start)) {
@@ -135,8 +141,10 @@
   function markReadingEvidence(pane, entry) {
     const excerpts = entry.evidence.map(p => p.map(r => r.text).join(''))
       .map(t => t.replace(/^Đoạn\s+[^:]+:\s*/i, ''))
+      .map(t => t.replace(/^\s*\[[A-Z][A-Z ]*\]\s*:?\s*/, ''))
       .flatMap(t => t.split(/\[?\.\.\.\]?|[…]/)).map(normalize).filter(t => t.length >= 25);
-    const candidates = [...pane.querySelectorAll('p, .cbt-passage-paragraph')];
+    const candidates = [...pane.querySelectorAll('p, .cbt-passage-paragraph')]
+      .filter(p => !p.querySelector('p, .cbt-passage-paragraph'));
     const matches = candidates.filter(p => {
       const body = normalize(p.textContent);
       return excerpts.some(e => body.includes(e) || (body.length > 40 && e.includes(body)));
@@ -171,7 +179,7 @@
     const section = review.content[skill].sections[entry.section];
     const isReading = skill === 'reading';
     const sectionTitle = section.title || section.label;
-    const correctAnswer = row?.correctAnswer || entry.answers.join(entry.pairNumbers ? ' + ' : ' / ');
+    const correctAnswer = (entry.gradingNote ? null : row?.correctAnswer) || entry.answers.join(entry.pairNumbers ? ' + ' : ' / ');
     const studentAnswer = row?.studentAnswer ?? review.answers?.[skill]?.[number] ?? '';
     const outcome = ['correct', 'incorrect', 'blank'].includes(row?.result) ? row.result : 'unknown';
     const evidenceText = new Set(entry.evidence.map(p => text([p])));
@@ -182,7 +190,8 @@
     // Các câu khác chỉ làm ngữ cảnh. Nếu dùng chung trích dẫn, lấy màu của đúng câu đang mở.
     const currentExcerpts = new Map(entry.blocks.flatMap(b => b.evidence).map(p => [text([p]), p]));
     for (const [key, p] of currentExcerpts) if (excerptMap.has(key)) excerptMap.set(key, p);
-    const left = isReading ? passageHtml(section.passageHtml) : [...excerptMap].map(([key, p]) =>
+    const fullTranscript = !isReading && Array.isArray(section.transcript);
+    const left = isReading ? passageHtml(section.passageHtml) : fullTranscript ? paragraphs(section.transcript, false) : [...excerptMap].map(([key, p]) =>
       `<div class="cbt-passage-paragraph${evidenceText.has(key) ? ' explanation-active-paragraph' : ''}">${paragraphs([p], currentExcerpts.has(key))}</div>`).join('');
     const analysis = entry.blocks.map(block => {
       const quotes = paragraphs(block.evidence);
@@ -192,8 +201,16 @@
     }).join('');
     const index = numbers.indexOf(number);
     const d = ensureDialog();
-    d.innerHTML = `<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">${escape(context.title)} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(entry.type.replace(/^(Reading|Listening) - /, ''))}</h2></div><button type="button" class="explanation-dialog-close" data-explanation-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="${isReading ? 'Bài đọc' : 'Trích transcript'}"><div class="explanation-dialog-pane-head"><strong>${isReading ? 'Bài đọc' : 'Trích transcript'} · ${escape(section.label)}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(sectionTitle)}</p>${left}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(correctAnswer)}</strong></span><span>${escape(context.answerLabel || 'Bài làm của bạn')} <strong>${escape(studentAnswer || '—')}</strong></span><span class="result-${outcome}">${outcome === 'correct' ? 'Đúng' : outcome === 'blank' ? 'Bỏ trống' : outcome === 'incorrect' ? 'Sai' : 'Chưa có dữ liệu từng câu'}</span></div>${entry.pairNumbers ? `<p class="explanation-dialog-hint">Câu ${entry.pairNumbers.join('–')} dùng chung lời giải; hai đáp án đúng không xét thứ tự. Kết quả từng câu giữ theo bài đã chấm.</p>` : ''}<h3>Đối chiếu ý trong đề và ${isReading ? 'bài đọc' : 'transcript'}</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${paragraphs(entry.prompt)}</section><section><h4>Bằng chứng trong ${isReading ? 'bài đọc' : 'transcript'}</h4>${paragraphs(entry.evidence)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index + 1}/${numbers.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-explanation-prev ${index === 0 ? 'disabled' : ''}>← Câu trước</button><button type="button" class="button outline" data-explanation-next ${index === numbers.length - 1 ? 'disabled' : ''}>Câu sau →</button></nav></footer></div>`;
+    d.innerHTML = `<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">${escape(context.title)} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(entry.type.replace(/^(Reading|Listening) - /, ''))}</h2></div><button type="button" class="explanation-dialog-close" data-explanation-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="${isReading ? 'Bài đọc' : fullTranscript ? 'Transcript đầy đủ' : 'Trích transcript'}"><div class="explanation-dialog-pane-head"><strong>${isReading ? 'Bài đọc' : fullTranscript ? 'Transcript đầy đủ' : 'Trích transcript'} · ${escape(section.label)}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(sectionTitle)}</p>${left}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(correctAnswer)}</strong></span><span>${escape(context.answerLabel || 'Bài làm của bạn')} <strong>${escape(studentAnswer || '—')}</strong></span><span class="result-${outcome}">${outcome === 'correct' ? 'Đúng' : outcome === 'blank' ? 'Bỏ trống' : outcome === 'incorrect' ? 'Sai' : 'Chưa có dữ liệu từng câu'}</span></div>${entry.gradingNote ? `<p class="explanation-dialog-hint">${escape(entry.gradingNote)}</p>` : ''}${entry.pairNumbers ? `<p class="explanation-dialog-hint">Câu ${entry.pairNumbers.join('–')} dùng chung lời giải; hai đáp án đúng không xét thứ tự. Kết quả từng câu giữ theo bài đã chấm.</p>` : ''}<h3>Đối chiếu ý trong đề và ${isReading ? 'bài đọc' : 'transcript'}</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${paragraphs(entry.prompt)}</section><section><h4>Bằng chứng trong ${isReading ? 'bài đọc' : 'transcript'}</h4>${entry.contextOnly ? `<p>${escape(entry.contextNote)}</p>` : paragraphs(entry.evidence)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index + 1}/${numbers.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-explanation-prev ${index === 0 ? 'disabled' : ''}>← Câu trước</button><button type="button" class="button outline" data-explanation-next ${index === numbers.length - 1 ? 'disabled' : ''}>Câu sau →</button></nav></footer></div>`;
     d.querySelector('[data-explanation-close]').onclick = () => d.close();
+    if (fullTranscript) d.querySelector('.explanation-dialog-passage-scroll').classList.add('explanation-full-transcript');
+    if (review.bundle.testSlug === 'substitute-test-1-k67' && entry.figure === 'home-improvement-store.png') {
+      const image = document.createElement('img');
+      image.src = new URL('../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png', scriptBase);
+      image.alt = 'Sơ đồ Home Improvement Store, các vị trí A–H';
+      image.className = 'explanation-question-figure';
+      d.querySelector('.explanation-dialog-compare>section').append(image);
+    }
     if (!isReading && entry.replay?.length) {
       d.querySelector('.explanation-dialog-compare>section:last-child').insertAdjacentHTML('beforeend', replayButtons(entry.replay));
       const clips = new Map([...entry.replay, ...entry.blocks.flatMap(b => b.replay || [])].map(c => [c.id, c]));
@@ -209,7 +226,7 @@
     requestAnimationFrame(() => {
       if (!d.open || context?.review !== review || context?.skill !== skill || number !== renderedNumber) return;
       const pane = d.querySelector('.explanation-dialog-passage-scroll');
-      if (isReading) markReadingEvidence(pane, entry);
+      if (isReading || fullTranscript) markReadingEvidence(pane, entry);
       scrollToEvidence(pane);
     });
   }
