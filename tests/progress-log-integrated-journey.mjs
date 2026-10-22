@@ -32,7 +32,7 @@ function contextFor(journey) {
     journeyLoading: false
   };
   const calls = [];
-  const context = {
+  const context = { THUY_UI:false,
     contentTitle,skillsLabel,sessionHeading,sessionState,commentPanel:()=>null,paintJourneyComments:()=>{}, AbortController, setTimeout, clearTimeout,
     document: { createElement: () => new Node() }, elements, state,
     apiRequest: async (path, options) => { calls.push({ path, options }); return { journey }; },

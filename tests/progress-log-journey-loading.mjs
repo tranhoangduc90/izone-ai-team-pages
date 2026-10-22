@@ -21,7 +21,7 @@ function fixture(request) {
   const state = { assignment:{class:{id:'class-1'}}, publicToken:'token-1',
     confirmedStudent:{studentRef:'student-1'}, responses:{text:'Bài đang viết'}, journeyLoading:false };
   const views = [], timers = [];
-  const context = { contentTitle,skillsLabel,sessionHeading,sessionState,commentPanel:()=>null,paintJourneyComments:()=>{},elements,state,AbortController,
+  const context = { THUY_UI:false,contentTitle,skillsLabel,sessionHeading,sessionState,commentPanel:()=>null,paintJourneyComments:()=>{},elements,state,AbortController,
     setTimeout: fn => { timers.push(fn); return timers.length; }, clearTimeout() {},
     document:{createElement:node}, showView:id=>views.push(id), setNotice() {}, apiRequest:request };
   vm.createContext(context);

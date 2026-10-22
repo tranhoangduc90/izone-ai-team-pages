@@ -1,0 +1,6 @@
+/* Cùng thao tác từ khóa ở phiếu hiện hành, bản Thủy và lịch sử; không tự chấm. */
+.keyword-line{font-size:17px;line-height:2.6;color:#174266;padding:6px 0}
+.keyword-word{border:0!important;background:transparent!important;color:inherit;display:inline-block;padding:2px 4px;border-radius:3px;line-height:1.7;font:inherit;cursor:pointer;text-decoration:none;box-shadow:none!important;min-height:36px}
+.keyword-word[aria-pressed=true]{text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:5px;background:#fff0f3!important}
+.keyword-word:disabled{opacity:1;cursor:default}.keyword-status{display:block;color:#aa1632;font-size:12px}
+.keyword-word:focus-visible{outline:2px solid #174266;outline-offset:2px}.keyword-line.readonly .keyword-word{cursor:default}
