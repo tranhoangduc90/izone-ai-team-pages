@@ -12,7 +12,7 @@ import {
   writingStatusLabel,
   writingTaskStateLabel
 } from './model.js?rev=20260904-k56-demo-v1';
-import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-k56-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1';
 import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261019-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
@@ -28,8 +28,7 @@ const logoutIntentKey = 'izone:teacher-k56:logout-pending:' + logoutApi;
 let logoutRequest = null;
 let sessionOperation = Promise.resolve();
 function hasLogoutIntent() {
-  if (logoutApi && new URL(window.location.href).searchParams.get('signed_out') === logoutApi) return true;
-  try { return window.localStorage.getItem(logoutIntentKey) === '1'; } catch { return false; }
+  return hasK56LogoutIntent(logoutApi);
 }
 function rememberLogoutIntent() {
   try { window.localStorage.setItem(logoutIntentKey, '1'); } catch { /* URL giữ ý định khi storage bị chặn. */ }
@@ -37,8 +36,6 @@ function rememberLogoutIntent() {
   window.history.replaceState({}, '', url);
 }
 function clearLogoutIntent() {
-  try { window.localStorage.removeItem(logoutIntentKey); }
-  catch { try { window.localStorage.setItem(logoutIntentKey, '0'); } catch { /* Storage chỉ đọc vẫn giữ ý định an toàn. */ } }
   const url = new URL(window.location.href);
   if (url.searchParams.get('signed_out') === logoutApi) url.searchParams.delete('signed_out');
   window.history.replaceState({}, '', url);
