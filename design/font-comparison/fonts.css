@@ -1,5 +1,28 @@
 /* Font từ Google Fonts, tải ngày 22/10/2026; giấy phép OFL đi kèm. */
 
+/* Dùng đúng tài nguyên đang phát hành trong hai sản phẩm của Linh. */
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('../../writing-handouts/assets/fonts/SourceSans3-Variable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Source Sans Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../recordings/assets/fonts/SourceSansPro-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Source Sans Pro';
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+  src: url('../../recordings/assets/fonts/SourceSansPro-Bold.ttf') format('truetype');
+}
+
 /* Nunito Sans — vietnamese */
 @font-face {
   font-family: 'Nunito Sans';
