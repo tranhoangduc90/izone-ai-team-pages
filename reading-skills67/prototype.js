@@ -231,7 +231,7 @@ async function bootstrap(){
     if(serverMode){
       const loaded=await serverClient.initialize();content=loaded.content;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};render();
       if(loaded.restored){toast('Đã khôi phục bản chưa gửi từ thiết bị; đang lưu lên máy chủ.');serverClient.flush().catch(()=>{});}
-      const requested=query.get('attempt')||(loaded.config?.demo&&query.get('demoReview')==='1'&&query.get('view')!=='draft'?loaded.history.find(a=>a.status==='done')?.attemptId:null);
+      const requested=query.get('attemptId')||query.get('attempt')||(loaded.config?.demo&&query.get('demoReview')==='1'&&query.get('view')!=='draft'?loaded.history.find(a=>a.status==='done')?.attemptId:null);
       const pending=loaded.history.find(a=>['queued','processing'].includes(a.status));
       if(requested||(!teacher&&pending&&!loaded.restored))trackServerAttempt(await serverClient.getAttempt(requested||pending.attemptId));
       return;
@@ -249,6 +249,11 @@ function adaptServerSave(){
   const saved=serverClient.state;
   target.textContent=saved.conflict?'Xung đột bản lưu · Bài trên máy vẫn được giữ':saved.status==='saving'?'Đang lưu lên máy chủ…':saved.status==='dirty'?'Có thay đổi chưa lưu máy chủ':saved.status==='error'?'Chưa lưu máy chủ · Giữ bản trên thiết bị':saved.savedAt?'Đã lưu máy chủ · '+timeLabel(saved.savedAt):'Chưa nhập bài · Máy chủ sẵn sàng';
   target.dataset.saveStatus=saved.status;
+  if(!teacher&&saved.homework&&saved.homework.status!=='not_started'){
+    let notice=document.querySelector('.homework-sync');if(!notice){notice=document.createElement('div');notice.className='notice homework-sync';notice.setAttribute('role','status');document.querySelector('.lesson-head')?.after(notice);}
+    const h=saved.homework,blocked=h.status==='blocked'||h.jobs?.some(j=>j.status==='blocked'),missing=h.jobs?.some(j=>j.errorCode==='HOMEWORK_NOT_FOUND');
+    notice.textContent=blocked?'Bài đã được giữ trên máy chủ. Chưa đồng bộ được Homework; giảng viên cần kiểm tra.':h.status==='verified'&&h.cta==='verified'?'Đã cập nhật trạng thái và link vào Homework.':missing?'Bài đã lưu. Chưa có Homework cá nhân đúng mã; hệ thống sẽ nối khi được giao.':h.status==='unavailable'?'Chưa kiểm được trạng thái đồng bộ Homework. Xem trạng thái lưu bài ở thanh trên.':'Bài đã lưu. Đang đồng bộ trạng thái vào Homework.';
+  }
   if(state.archived)target.textContent='Nháp cũ · Lưu lúc '+timeLabel(state.savedAt)+' · Chỉ xem';
 }
 function adaptServerScreen(){
