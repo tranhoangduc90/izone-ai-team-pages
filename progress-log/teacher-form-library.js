@@ -60,7 +60,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
    for(const block of definition.blocks){body.append(node('h3',block.title));if(block.instructions)body.append(node('p',block.instructions));const comparison=block.items.filter(i=>i.groupId==='comparison-reading'&&i.layoutType==='numbered_short_texts');
     let comparisonRendered=false,previousNumber=null;
     for(const item of block.items){
-     if(comparison.length===2&&comparison.includes(item)){if(!comparisonRendered){const table=comparisonTable(comparison,{valueFor:()=>[],onChange:()=>{},resizeInput:()=>{}});for(const input of table.querySelectorAll('textarea')){input.disabled=true;input.placeholder='…';}body.append(table);comparisonRendered=true;}continue;}
+     if(comparison.length===2&&comparison.includes(item)){if(!comparisonRendered){const table=comparisonTable(comparison,{valueFor:()=>[],onChange:()=>{},resizeInput:()=>{}});for(const input of table.querySelectorAll('textarea')){const blank=node('span','________');blank.dataset.readonlyBlank='true';input.replaceWith(blank);}body.append(table);comparisonRendered=true;}continue;}
      const raw=String(item.displayNumber||item.position),number=raw.match(/^\d+/u)?.[0]||raw;
      const display=questionPresentation({...item,displayNumber:number}),card=node('section');
      if(number!==previousNumber){body.append(node('h3','Câu '+number));previousNumber=number;}

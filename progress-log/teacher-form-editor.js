@@ -1,7 +1,7 @@
 /* Nhận lớp, phiếu nguồn và API của phiên giảng viên. Soạn đúng 8 dạng đang dùng,
  * lưu nháp ở máy chủ, đối chiếu khi xung đột, xem thử tách biệt rồi duyệt/phát hành.
  * Đáp án chỉ giữ trong bộ nhớ tab; lỗi mạng giữ phần đang soạn và không báo đã lưu. */
-import {createFormLibrary} from './teacher-form-library.js?rev=20261022-parity-v3';
+import {createFormLibrary} from './teacher-form-library.js?rev=20261022-parity-v4';
 import {bindDialogDismiss} from './session-comments.js';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
