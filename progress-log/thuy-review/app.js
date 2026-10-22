@@ -1,7 +1,7 @@
 // Nhận bản chụp từ máy chủ cục bộ, dựng giao diện theo preset Thủy.
 // Mọi nút ghi chỉ gọi /api/demo; nháp được gắn đúng người, buổi và lần giao bài.
 import {SKILLS,itemsOf,allPartsSubmitted,applicable,blank,personJourney,priority,quizScore,practiceReport,speakingSummary,speakingAnalytics,writingSummary,compareWritingPeople,libraryEntries,filterLibraryEntries} from './model.mjs';
-import {localAPI,preparePages,pagesAPI,onPagesMutation} from './pages-adapter.mjs';
+import {localAPI,preparePages,pagesAPI,onPagesMutation,keepSessionDraft,pendingSessionDraft,sessionDrafts,sessionStorageState,onSessionStorage} from './pages-adapter.mjs';
 import {journeyScenarios,scenarioSummary} from './journey-scenarios.mjs';
 import {testScenario} from './test-scenarios.mjs';
 import {studentReviewLabel} from './review-labels.mjs';
@@ -9,6 +9,7 @@ import {loadEditor,sourceDraft,toDefinition,hintMarkup,matchingMarkup,scoreMarku
 import {libraryStorage} from './library-storage.mjs';
 const {reviewItems}=await import(localAPI?'/shared/answer-review.js':'../answer-review.js');
 if(!localAPI)await preparePages();
+window.ProgressLogSessionDrafts=sessionDrafts;
 
 const app=document.querySelector('#app'), dialog=document.querySelector('#dialog');
 const q=new URLSearchParams(location.hash.includes('view=')?location.hash.slice(1):location.search), isStudent=q.get('view')==='student';
@@ -28,6 +29,8 @@ function toast(message){const e=document.querySelector('#toast');e.textContent=m
 async function api(path,body){if(!localAPI)return pagesAPI(path,body);const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const data=await r.json();if(!r.ok)throw new Error(data.error||'Không tải được dữ liệu.');return data;}
 function modal(title,body,foot='',head=''){dialog.classList.remove('studentJourneyDialog');dialog.classList.toggle('libraryDialog',Boolean(head));dialog.innerHTML=`<div class="dialogHead"><h2 id="dialog-title">${esc(title)}</h2><div class="dialogHeadActions">${head}<button class="iconBtn" data-close-dialog aria-label="Đóng">×</button></div></div><div class="dialogBody">${body}</div>${foot?`<div class="dialogFoot">${foot}</div>`:''}`;dialog.showModal();}
 function empty(title,text){return `<div class="empty"><h3>${esc(title)}</h3><p>${esc(text)}</p></div>`;}
+function sessionStorageNotice(){const status=sessionStorageState();return localAPI?'':`<p class="sessionStorageNotice ${status.error?'saveError':''}" role="status" data-session-storage>${esc(status.message)}</p>`;}
+onSessionStorage(status=>{for(const node of document.querySelectorAll('[data-session-storage]')){node.textContent=status.message;node.classList.toggle('saveError',status.error);}});
 function allCourse(){return [...t.data.sessions,...(t.data.courseSessions||[])].sort((a,b)=>b.number-a.number);}
 function testRecord(ref,slug){return t.data.testResults?.find(v=>v.studentRef===ref&&v.result.testSlug===slug)?.result||(t.showTestScenarios?testScenario(ref,slug):null);}
 const testTypes=[['mini-test-lesson-5','Mini Test'],['term-test-1','Term Test 1'],['term-test-2','Term Test 2']];
@@ -203,7 +206,7 @@ function libraryPreview(session){
 function renderTeacher(){
   document.body.className='teacher-screen';
   const session=activeSession(),union=t.data.people.length;
-  const footer=`<footer class="demoFooter"><span>IZONE · Progress Log · Bản chụp thật ${time(t.data.capturedAt)}</span><details><summary>Thông tin bản demo</summary><div><p>Theo dõi buổi 8–10; Hành trình dùng ${t.data.sessions.length+(t.data.courseSessions?.length||0)} phiếu đang có của khóa. Bài tự soạn trong Của tôi lưu trên trình duyệt này. Các thao tác lớp học chỉ giữ trong phiên demo, không ghi lớp thật hoặc Portal. ${localAPI?'':'Đóng trang cuối sẽ bỏ các thao tác thử của lớp; bài tự soạn và file dữ liệu gốc vẫn giữ.'}</p><button class="btn small" data-action="coverage">Nguồn dữ liệu và phần còn thiếu</button><div class="actions"><button class="btn small quiet" data-action="answers">${session.showAnswers?'Ẩn':'Mở'} đáp án trong demo</button><button class="btn small" data-action="history">Lịch sử thu hồi${session.retired.length?` (${session.retired.length})`:''}</button><button class="btn small" data-action="reset">Đặt lại demo</button></div></div></details></footer>`;
+  const footer=`<footer class="demoFooter">${sessionStorageNotice()}<span>IZONE · Progress Log · Bản chụp thật ${time(t.data.capturedAt)}</span><details><summary>Thông tin bản demo</summary><div><p>Theo dõi buổi 8–10; Hành trình dùng ${t.data.sessions.length+(t.data.courseSessions?.length||0)} phiếu đang có của khóa. Bài tự soạn trong Của tôi lưu trên trình duyệt này. Các thao tác lớp học chỉ giữ trong phiên demo, không ghi lớp thật hoặc Portal. ${localAPI?'Bản máy chủ local giữ trạng thái lớp trong RAM.':'Bài đã giao, bài làm thử, nhận xét và lịch sử được lưu trên trình duyệt này qua tải lại hoặc đóng hết tab. Không đồng bộ sang trình duyệt/máy khác.'}</p><button class="btn small" data-action="coverage">Nguồn dữ liệu và phần còn thiếu</button><div class="actions"><button class="btn small quiet" data-action="answers">${session.showAnswers?'Ẩn':'Mở'} đáp án trong demo</button><button class="btn small" data-action="history">Lịch sử thu hồi${session.retired.length?` (${session.retired.length})`:''}</button><button class="btn small" data-action="reset">Đặt lại demo</button></div></div></details></footer>`;
   if(t.page==='library'){
     app.innerHTML=teacherShell(libraryView()+footer);return;
   }
@@ -337,6 +340,15 @@ async function openStudent(number=s.number,ref=s.ref){
   s.history=[data,...historyResults.filter(v=>v.status==='fulfilled').map(v=>v.value)];
   s.historyError=historyResults.some(v=>v.status==='rejected');
   s.data=data;s.number=number;s.ref=ref;s.responses=structuredClone(data.responses||{});s.dirty=false;s.saveError=false;s.completionError=completionError;s.expanded.clear();
+  s.changed=new Set();
+  if(!localAPI&&data.isFake&&!data.submitted){
+    const pending=pendingSessionDraft({action:'draft',number,generation:data.generation,ref});
+    if(pending)for(const block of data.definition.blocks){
+      if(data.checkpoints.some(c=>c.blockId===block.blockId))continue;
+      for(const item of block.items)if(Object.hasOwn(pending.responses,item.itemVersionId)){s.responses[item.itemVersionId]=pending.responses[item.itemVersionId];s.changed.add(item.itemVersionId);}
+    }
+    s.dirty=s.changed.size>0;s.saveError=s.dirty;
+  }
   const url=new URL(location.href),params=new URLSearchParams(localAPI?url.search:url.hash.slice(1));
   params.set('view','student');params.set('number',number);params.set('ref',ref);
   // Link đã gắn lần giao phải chuyển cùng buổi; link bản chụp độc lập vẫn giữ cách mở cũ.
@@ -346,9 +358,10 @@ async function openStudent(number=s.number,ref=s.ref){
 async function saveStudent(){
   clearTimeout(s.timer);if(s.pending)await s.pending;
   if(!s.data?.isFake||!s.dirty||s.data.submitted)return;
-  const body={action:'draft',number:s.number,generation:s.data.generation,ref:s.ref,responses:structuredClone(s.responses),failSave:s.failNext};s.failNext=false;
+  const responses=Object.fromEntries([...(s.changed||new Set(Object.keys(s.responses)))].map(id=>[id,structuredClone(s.responses[id])]));
+  const body={action:'draft',number:s.number,generation:s.data.generation,ref:s.ref,responses,failSave:s.failNext};s.failNext=false;
   const revision=JSON.stringify(s.responses);setSaveLabel('Đang giữ nháp…');
-  s.pending=api('/api/demo',body).then(()=>{if(JSON.stringify(s.responses)===revision)s.dirty=false;s.saveError=false;setSaveLabel('Đã giữ nháp riêng cho người học này');}).catch(error=>{s.saveError=true;setSaveLabel(error.message,true);throw error;}).finally(()=>s.pending=null);
+  s.pending=api('/api/demo',body).then(()=>{if(JSON.stringify(s.responses)===revision){s.dirty=false;s.changed?.clear();}s.saveError=false;setSaveLabel('Đã giữ nháp riêng cho người học này');}).catch(error=>{s.saveError=true;setSaveLabel(error.message,true);throw error;}).finally(()=>s.pending=null);
   await s.pending;
 }
 function setSaveLabel(text,error=false){
@@ -393,7 +406,7 @@ function renderStudent(){
   }
   const lessonIcon='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6"/></svg>';
   const resultsIcon='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V9h4v11m3 0V4h4v16m3 0v-8h4v8M2 20h21" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
-  app.innerHTML=`<header class="studentHeader"><div class="brand"><div class="logo">IZONE</div><small>PROGRESS LOG</small></div><span class="caption">Lớp IC2305</span></header><nav class="studentNav" aria-label="Trang học viên"><button class="btn ${s.tab==='session'?'active':''}" data-student-tab="session" ${s.tab==='session'?'aria-current="page"':''}><span aria-hidden="true">▤</span>Buổi học</button><button class="btn ${s.tab==='journey'?'active':''}" data-student-tab="journey" ${s.tab==='journey'?'aria-current="page"':''}><span aria-hidden="true">▥</span>Kết quả học tập</button></nav><main class="studentMain"><div class="studentInner"><h1 class="studentGreeting">Xin chào, ${esc(d.person.name)}</h1><div class="studentDemoTools"><span>${d.isFake?'Bản thử · Danh tính mô phỏng, không ghi vào lớp thật':'Bản chụp thật · Chỉ xem lại, không sửa bài thật'}</span><div><button class="btn quiet small" data-student-action="identity">Đổi người học</button>${!d.isFake?`<a class="btn quiet small" target="_blank" rel="noopener" href="${studentURL('demo-a',s.number)}">Thử làm phiếu</a>`:''}<select class="select" aria-label="Chọn buổi học" data-student-session>${d.sessions.map(v=>`<option value="${v.number}" ${v.number===s.number?'selected':''} ${!v.available?'disabled':''}>Buổi ${v.number} · ${date(v.date)}</option>`).join('')}</select></div></div>${s.tab==='session'?studentSession():studentJourney()}<footer class="demoFooter"><span>Bản chụp · ${time(d.capturedAt)}</span><details><summary>Mô phỏng</summary><div><p>Thao tác chỉ được giữ trong phiên demo; không đổi bài hay điểm danh thật.</p><a href="./?number=${s.number}">Về màn giảng viên</a>${d.isFake?'<button class="btn quiet small" data-student-action="fail">Thử lỗi lưu kế tiếp</button>':''}</div></details></footer></div></main>`;
+  app.innerHTML=`<header class="studentHeader"><div class="brand"><div class="logo">IZONE</div><small>PROGRESS LOG</small></div><span class="caption">Lớp IC2305</span></header><nav class="studentNav" aria-label="Trang học viên"><button class="btn ${s.tab==='session'?'active':''}" data-student-tab="session" ${s.tab==='session'?'aria-current="page"':''}><span aria-hidden="true">▤</span>Buổi học</button><button class="btn ${s.tab==='journey'?'active':''}" data-student-tab="journey" ${s.tab==='journey'?'aria-current="page"':''}><span aria-hidden="true">▥</span>Kết quả học tập</button></nav><main class="studentMain"><div class="studentInner"><h1 class="studentGreeting">Xin chào, ${esc(d.person.name)}</h1><div class="studentDemoTools"><span>${d.isFake?'Bản thử · Danh tính mô phỏng, không ghi vào lớp thật':'Bản chụp thật · Chỉ xem lại, không sửa bài thật'}</span><div><button class="btn quiet small" data-student-action="identity">Đổi người học</button>${!d.isFake?`<a class="btn quiet small" target="_blank" rel="noopener" href="${studentURL('demo-a',s.number)}">Thử làm phiếu</a>`:''}<select class="select" aria-label="Chọn buổi học" data-student-session>${d.sessions.map(v=>`<option value="${v.number}" ${v.number===s.number?'selected':''} ${!v.available?'disabled':''}>Buổi ${v.number} · ${date(v.date)}</option>`).join('')}</select></div></div>${s.tab==='session'?studentSession():studentJourney()}<footer class="demoFooter">${sessionStorageNotice()}<span>Bản chụp · ${time(d.capturedAt)}</span><details><summary>Mô phỏng</summary><div><p>${localAPI?'Bản máy chủ local giữ trạng thái lớp trong RAM.':'Phiên demo được giữ trên trình duyệt này sau khi đóng tab. Xóa dữ liệu trang web hoặc dùng trình duyệt khác sẽ không có cùng phiên.'} Không đổi bài hay điểm danh thật.</p><a href="./?number=${s.number}">Về màn giảng viên</a>${d.isFake?'<button class="btn quiet small" data-student-action="fail">Thử lỗi lưu kế tiếp</button>':''}</div></details></footer></div></main>`;
   document.querySelector('[data-student-tab="session"]>span')?.replaceWith(document.createRange().createContextualFragment(lessonIcon));
   document.querySelector('[data-student-tab="journey"]>span')?.replaceWith(document.createRange().createContextualFragment(resultsIcon));
   updateConditionals();
@@ -514,7 +527,7 @@ function speakingView(rows){
 // Sự kiện giữ định danh ngay từ lúc nhập; chuyển màn chờ lần lưu đang chạy hoàn tất.
 document.addEventListener('input',event=>{
   const element=event.target;
-  if(element.id==='teacher-feedback'){const key=feedbackKey(activeSession(),t.selected);t.drafts.set(key,element.value);clearTimeout(t.timer);const status=document.querySelector('#feedback-state');status.textContent='Đang giữ nháp riêng…';t.timer=setTimeout(()=>teacherSave().catch(e=>toast(e.message)),700);return;}
+  if(element.id==='teacher-feedback'){const key=feedbackKey(activeSession(),t.selected);t.drafts.set(key,element.value);try{keepSessionDraft({action:'feedbackDraft',number:activeSession().number,generation:activeSession().generation,ref:t.selected,text:element.value});}catch(error){t.saveError=true;toast(error.message);}clearTimeout(t.timer);const status=document.querySelector('#feedback-state');status.textContent='Đang giữ nháp riêng…';t.timer=setTimeout(()=>teacherSave().catch(e=>toast(e.message)),700);return;}
   if(element.matches('[data-search]')){t.search=element.value;const start=element.selectionStart;renderTeacher();const search=document.querySelector('[data-search]');search.focus();search.setSelectionRange(start,start);return;}
   if(element.matches('[data-library-search]')){t.librarySearch=element.value;const start=element.selectionStart;renderTeacher();const search=document.querySelector('[data-library-search]');search.focus();search.setSelectionRange(start,start);return;}
   if(element.matches('[data-item]')){
@@ -523,7 +536,7 @@ document.addEventListener('input',event=>{
     if(item.interactionType==='number_score'){
       setScoreValidity(element,item.interactionConfig.max,document.getElementById('error-'+item.itemVersionId));
     }
-    s.dirty=true;setSaveLabel('Đang giữ nháp…');updateConditionals();const part=element.closest('[data-part]');if(part)part.querySelector('[data-part-status]').innerHTML=badge('Đang làm','blue');clearTimeout(s.timer);s.timer=setTimeout(()=>saveStudent().catch(e=>toast(e.message)),700);
+    s.dirty=true;s.changed??=new Set();s.changed.add(item.itemVersionId);setSaveLabel('Đang giữ nháp…');try{keepSessionDraft({action:'draft',number:s.number,generation:s.data.generation,ref:s.ref,responses:{[item.itemVersionId]:s.responses[item.itemVersionId]}});}catch(error){s.saveError=true;setSaveLabel(error.message,true);}updateConditionals();const part=element.closest('[data-part]');if(part)part.querySelector('[data-part-status]').innerHTML=badge('Đang làm','blue');clearTimeout(s.timer);s.timer=setTimeout(()=>saveStudent().catch(e=>toast(e.message)),700);
   }
 });
 document.addEventListener('change',event=>{(async()=>{
@@ -586,9 +599,9 @@ document.addEventListener('click',event=>{(async()=>{
   if(button?.hasAttribute('data-student-tab')){await saveStudent();s.tab=button.dataset.studentTab;renderStudent();return;}
   if(button?.hasAttribute('data-student-open')){await saveStudent();s.tab='session';await openStudent(Number(button.dataset.studentOpen));return;}
   if(button?.hasAttribute('data-student-action'))return studentAction(button.dataset.studentAction);
-  if(button?.hasAttribute('data-submit-block')){const id=button.dataset.submitBlock;await saveStudent();await api('/api/demo',{action:'checkpoint',number:s.number,generation:s.data.generation,ref:s.ref,blockId:id,responses:s.responses});const expanded=new Set(s.expanded);await openStudent();s.expanded=expanded;renderStudent();const part=document.querySelector(`[data-part="${id}"]`);if(part){part.tabIndex=-1;part.scrollIntoView({block:'start'});part.focus({preventScroll:true});}toast(s.data.submitted?'Đã nộp đủ các phần. Phiếu đã hoàn tất.':s.completionError?'Đã nhận phần này; cần thử hoàn tất phiếu.':'Đã nộp phần này và ghi nhận tham gia trong demo.');return;}
+  if(button?.hasAttribute('data-submit-block')){const id=button.dataset.submitBlock;await saveStudent();await api('/api/demo',{action:'checkpoint',number:s.number,generation:s.data.generation,ref:s.ref,blockId:id,responses:{}});const expanded=new Set(s.expanded);await openStudent();s.expanded=expanded;renderStudent();const part=document.querySelector(`[data-part="${id}"]`);if(part){part.tabIndex=-1;part.scrollIntoView({block:'start'});part.focus({preventScroll:true});}toast(s.data.submitted?'Đã nộp đủ các phần. Phiếu đã hoàn tất.':s.completionError?'Đã nhận phần này; cần thử hoàn tất phiếu.':'Đã nộp phần này và ghi nhận tham gia trong demo.');return;}
 })().catch(error=>toast(error.message));});
-window.addEventListener('beforeunload',event=>{if(s.dirty||t.pending||s.pending||t.saveError||t.editing){event.preventDefault();event.returnValue='';}});
+window.addEventListener('beforeunload',event=>{if(window.__thuyAiUnsaved||s.dirty||t.pending||s.pending||t.saveError||t.editing){event.preventDefault();event.returnValue='';}});
 // Đóng bằng nền chỉ khi cả điểm nhấn xuống và nhả đều ở ngoài khung, tránh đóng khi kéo chọn chữ.
 let dialogPointerOutside=false;
 const outsideDialog=event=>{const r=dialog.getBoundingClientRect();return event.target===dialog&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom);};

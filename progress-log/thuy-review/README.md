@@ -4,19 +4,29 @@ Bản demo HTML/CSS/JavaScript thuần theo master 1.3 ngày 20/10/2026 của [T
 
 ## Hoàn thiện sau tổng kiểm 22/10/2026
 
+### Lưu toàn bộ phiên demo
+
+GitHub Pages tự giữ bài đang giao, mở/đóng phần, quyền xem đáp án, bài làm thử theo từng người/buổi/lần giao, phần đã nộp, nhận xét nháp/công bố và lịch sử thu hồi. Tải lại trang, đóng hết tab hoặc thoát rồi mở lại trình duyệt vẫn đọc cùng phiên. Phiếu tự soạn và nội dung hộp AI cũng được giữ. Dòng cuối trang báo trạng thái lưu; không cần thêm nút lưu toàn phiên.
+
+Kho phiên dùng IndexedDB, chỉ xác nhận sau khi giao dịch ghi hoàn tất. Bản đệm nhỏ giữ ngay nội dung đang gõ trước thời gian tự lưu; phục hồi nháp không tự nộp phần hoặc công bố nhận xét. Các tab ghi từ bản mới nhất trong cùng giao dịch, tránh thao tác khác người/buổi làm mất nhau. Đặt lại demo tạo mã phiên mới, chặn tab cũ ghi nháp trở lại; bài riêng trong kho vẫn giữ.
+
+Phạm vi: cùng địa chỉ trang, trình duyệt và hồ sơ người dùng trên máy này. Không đồng bộ Chrome/Edge, nhiều thiết bị hoặc cửa sổ ẩn danh; xóa dữ liệu trang web sẽ mất bản lưu. Không có ghi dữ liệu vào Portal hay backend thật. Máy chủ Node local vẫn giữ phiên ở RAM; lưu bền vững nói trên áp dụng bản Pages. Khi bộ nhớ bị chặn/đầy hoặc bản lưu không đọc được, hiện lỗi, giữ bản cũ và không tự đặt lại.
+
+Lần đầu chuyển từ bản cũ, mở bản mới trong tab khác khi tab giảng viên cũ còn mở để nhận phiên RAM đang có; sau đó tải lại các tab cũ trước khi thao tác tiếp. Dữ liệu đã mất trước khi có bản lưu này không thể phục hồi từ trình duyệt.
+
 - Link đã gắn lần giao cập nhật cùng buổi được chọn, để tải lại vẫn mở đúng bài. Link bản chụp độc lập giữ cách mở cũ.
 - Pages nhận thay đổi mở/đóng qua thông báo giữa các tab; bản local kiểm mỗi ba giây. Chỉ phần đổi quyền được dựng lại, giữ nháp kể cả đang lưu lỗi; ô đang nhập ở phần khác giữ con trỏ. Phản hồi cũ không áp vào màn vừa đổi người/buổi. Máy chủ demo vẫn kiểm khóa khi nộp.
-- Hộp tạo câu từ nội dung dán giữ nháp riêng theo bài/phần khi đóng rồi mở lại trong cùng trang. X, Esc và bấm ngoài vẫn đóng; kéo chuột từ trong ra ngoài không đóng. Sau khi thêm câu thành công, nháp hộp đó được bỏ để tránh thêm lại ngoài ý muốn. Chưa lưu nội dung hộp này qua tải lại hoặc giữa thiết bị.
+- Hộp tạo câu từ nội dung dán giữ nháp riêng theo bài/phần qua tải lại/đóng tab. X, Esc và bấm ngoài vẫn đóng; kéo chuột từ trong ra ngoài không đóng. Sau khi thêm câu thành công, nháp hộp đó được bỏ để tránh thêm lại ngoài ý muốn. Không đồng bộ giữa thiết bị.
 - Phần đang làm có nhãn riêng, bài thật và bài thử đều có bộ đếm phần từ dữ liệu thực có. Phần trống không gọi là nháp. Giảng viên và học viên phân biệt câu không chấm, số tự báo và kết quả chấm còn thiếu; không sửa bộ hiển thị chung của ứng dụng đang chạy.
 - Nhãn bài làm phía giảng viên tối thiểu 12px; vùng X ở màn hẹp là 44px. Điều hướng học viên khai báo trang hiện tại; phần chưa mở có lý do cạnh nút. Ô soạn hai dòng bỏ chiều cao ép 72px để theo số dòng nguồn, vẫn kéo giãn được.
 
-Giữ ghi nhận tham gia từ phần đầu thành công, không từ nháp; tự hoàn tất khi đủ phần, nháp nhận xét chỉ hiện khi công bố, lịch sử thu hồi chỉ cho giảng viên. Điểm Test/tình huống giả và nguồn thật tiếp tục có nhãn riêng. Lớp mô phỏng vẫn ở RAM; đây chưa phải nâng cấp lưu bền vững, AI thật hoặc đồng bộ Portal thật.
+Giữ ghi nhận tham gia từ phần đầu thành công, không từ nháp; tự hoàn tất khi đủ phần, nháp nhận xét chỉ hiện khi công bố, lịch sử thu hồi chỉ cho giảng viên. Điểm Test/tình huống giả và nguồn thật tiếp tục có nhãn riêng. Chưa kết nối AI thật hoặc đồng bộ Portal thật.
 
 ## Mở trên GitHub Pages
 
 Mở route `progress-log/thuy-review/`: trang tự tải `demo-data.json`, không cần chọn file. Đức đã cho phép công bố gói dữ liệu demo IC2305 ngày 20/10/2026. Gói gồm dữ liệu học viên, bài làm và đáp án phục vụ bản demo; không chứa credential hoặc token phiếu production. Khi tải thất bại, trang hiển thị lỗi và nút **Thử tải lại**.
 
-Các tab trong cùng trình duyệt dùng BroadcastChannel để chia sẻ bản chụp và thao tác thử. Link học viên từ giảng viên gắn đúng lần giao bài, ưu tiên phản hồi từ tab giảng viên. Nếu sau ba giây chưa nhận đúng bài thì hiện **Thử tải lại**, không âm thầm mở bài gốc; giữ tab giảng viên mở để thử lại. Tab mở bằng bản cũ vẫn được nhận trong thời gian chờ, ưu tiên lần giao mới hơn. Đóng tab cuối sẽ bỏ phiên thử của lớp; bản chụp gốc không đổi. Bài tự soạn lưu nháp tại trình duyệt này, không đồng bộ nhiều thiết bị.
+Các tab trong cùng trình duyệt dùng chung kho phiên IndexedDB; BroadcastChannel chỉ báo thay đổi để đọc lại. Link học viên gắn đúng lần giao bài, mở được sau khi đóng tab giảng viên. Link thuộc bài đã thu hồi hiện thông báo và yêu cầu lấy link hiện tại, không âm thầm mở bài gốc. Khi chưa có bản lưu, vẫn có thể nhận phiên từ tab cũ trước khi tải bản chụp nguồn. Đóng tab cuối không bỏ phiên; bản chụp gốc không đổi.
 
 ## Dữ liệu thật đã tìm được
 
@@ -84,6 +94,7 @@ Hướng dẫn toàn bài được giữ khi lưu nháp/xuất bản/sao chép, 
 - `journey-scenarios.mjs`: bảy học viên giả chỉ có ở bảng và chi tiết Listening/Reading; dùng cùng hàm tính nhãn với dữ liệu thật, không thêm vào kho dữ liệu hoặc danh sách buổi học.
 - `demo-store.mjs`: cùng một bộ nhớ thao tác cho bản local và Pages.
 - `pages-adapter.mjs`: tự tải gói công khai, chia sẻ phiên qua các tab và xử lý tải lại khi lỗi; không gọi API production.
+- `session-storage.mjs`: giao dịch IndexedDB, bản đệm đang nhập và mã phiên chống nháp cũ sau đặt lại; `session-storage.test.mjs` kiểm phục hồi và lỗi lưu.
 - `demo-data.json`: gói IC2305 đã được cho phép công bố, giữ nguyên nội dung gói bàn giao; không phải bản chụp thô từ hệ thống vận hành.
 - `editor-bridge.mjs` và `exercise-*`, `library-model.js`, `worksheet-model.js`: editor/CSS từ nguồn Thủy, bỏ dữ liệu gieo sẵn và đường URL chứa payload; giữ điều kiện khi sao chép phiếu thật.
 - `fonts.css`, `fonts/`: Geologica tại chỗ, giấy phép SIL Open Font License.
@@ -91,4 +102,4 @@ Hướng dẫn toàn bài được giữ khi lưu nháp/xuất bản/sao chép, 
 
 Kiểm native: `node --test progress-log/thuy-review/model.test.mjs progress-log/thuy-review/server.test.mjs progress-log/thuy-review/completion.test.mjs progress-log/thuy-review/journey-scenarios.test.mjs progress-log/thuy-review/personal-overview.test.mjs progress-log/thuy-review/test-scenarios.test.mjs progress-log/thuy-review/speaking-analytics.test.mjs progress-log/thuy-review/writing-table.test.mjs`. Nhóm server cần PROGRESS_DEMO_SNAPSHOT trỏ tới bản chụp riêng hoặc gói demo; thiếu biến sẽ skip, không tính là đã kiểm.
 
-Bằng chứng browser và dữ liệu thật ở kho riêng ngoài Git. Dữ liệu Test giả để duyệt giao diện nằm trong mô-đun riêng; không nằm trong gói dữ liệu IC2305 gốc. Không coi demo là nghiệm thu xác thực ERP, AI thật, lưu bền vững, Portal hoặc production backend.
+Bằng chứng browser và dữ liệu thật ở kho riêng ngoài Git. Dữ liệu Test giả để duyệt giao diện nằm trong mô-đun riêng; không nằm trong gói dữ liệu IC2305 gốc. Không coi demo là nghiệm thu xác thực ERP, AI thật, đồng bộ nhiều thiết bị, Portal hoặc production backend.

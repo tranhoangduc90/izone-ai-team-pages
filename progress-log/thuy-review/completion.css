@@ -95,6 +95,7 @@
 .teacher-screen :is(.reviewQuestionTop small,.reviewOption b,.reviewAnswer small,.reviewVerdict,.studentPortalEyebrow){font-size:12px;line-height:18px}
 .teacher-screen .reviewOption b{white-space:normal}
 .partAvailability{font-size:14px;line-height:22px;color:var(--muted);margin-top:8px}
+.sessionStorageNotice{flex-basis:100%;font-size:12px;line-height:18px;margin:0 0 8px;overflow-wrap:anywhere}
 .exercise-editor textarea[rows="2"]{min-height:0}
 @media(max-width:650px){
   .iconBtn{width:44px;height:44px;min-width:44px;min-height:44px}
