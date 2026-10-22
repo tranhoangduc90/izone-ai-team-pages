@@ -1,4 +1,5 @@
-// Chỉ dùng trong Substitute. Token Google ở RAM; không dùng session/DB của Term Test.
+// Cookie phiên chung được máy chủ xác minh; quyền Substitute vẫn do API riêng kiểm.
+import '../../shared/teacher-single-sign-on.js?v=20261023-sso-all';
 import {appendWritingFeedback as appendFeedback} from './feedback-renderer.js?rev=20261009-results-v2';
 import {createProgressPanel} from './teacher-progress-panel.js?rev=20261019-v1';
 const API='https://ducizone.ddns.net/substitute-teacher-api';
@@ -28,7 +29,7 @@ async function request(route,params={},signal,authenticated=true){
  const controller=new AbortController(),abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});
  if(signal?.aborted)controller.abort();const timer=setTimeout(abort,20000);
  try{
-  const response=await fetch(url,{method:'GET',cache:'no-store',credentials:'omit',headers:authenticated?{Authorization:'Bearer '+state.token}:{},signal:controller.signal});
+  const response=await fetch(url,{method:'GET',cache:'no-store',credentials:'include',signal:controller.signal});
   const data=await response.json().catch(()=>({}));
   if(!response.ok){const error=new Error(response.status===401?'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.':response.status===403?'Tài khoản này không có quyền xem bài/lớp đã chọn.':'Không tải được kết quả. Hãy thử lại sau.');error.status=response.status;throw error;}
   return data;
@@ -128,10 +129,11 @@ async function loadResults(){
  }catch(error){handleError(error,generation);}finally{if(generation===state.generation)$('load-results').disabled=false;}
 }
 async function signIn(response){
- cancel();clearResults();state.scopes=[];$('filter-section').hidden=true;$('roster-section').hidden=true;state.token=typeof response?.credential==='string'?response.credential:null;let generation=state.generation;
+ cancel();clearResults();state.scopes=[];$('filter-section').hidden=true;$('roster-section').hidden=true;state.token=!!(response?.restored||response?.credential);let generation=state.generation;
  if(!state.token){message('Chưa nhận được xác nhận đăng nhập từ Google.','error');return;}
  $('login-status').textContent='Đang kiểm tra quyền xem Substitute…';$('logout').hidden=false;
  try{
+  if(!response.restored){await window.IzoneTeacherSso.login('substitute',response.credential,true);if(generation!==state.generation)return;}
   const data=await request('/teacher/scopes');if(generation!==state.generation)return;
   state.scopes=(data.scopes||[]).filter(scope=>TITLES[scope.testSlug]);if(!state.scopes.length)throw new Error('Tài khoản này chưa được cấp quyền xem Substitute.');
   const tests=[...new Set(state.scopes.map(scope=>scope.testSlug))];$('test-select').replaceChildren(...tests.map(slug=>new Option(TITLES[slug],slug)));
@@ -143,7 +145,7 @@ async function signIn(response){
   $('filter-section').hidden=false;$('roster-section').hidden=false;$('google-signin').hidden=true;$('login-status').textContent='Đã đăng nhập · chỉ hiển thị các bài/lớp được cấp quyền.';state.offset=0;await loadResults();
   // loadResults tạo generation mới. Deep link tiếp tục theo generation đó,
   // nhưng không được hiện lại báo cáo nếu đã logout hoặc đổi tài khoản.
-  if(state.token!==response.credential)return;generation=state.generation;
+  if(!state.token)return;generation=state.generation;
   if(initial.has('attempt')&&initial.has('student')&&classesForTest().includes(initial.get('class'))){
    const id={testSlug:selectedTest(),classCode:initial.get('class'),studentRef:initial.get('student'),attemptToken:initial.get('attempt')};
    if(initial.has('stage')){
@@ -164,13 +166,14 @@ $('load-results').after(progressButton);progressButton.addEventListener('click',
 async function initialize(){
  logout();
  try{
+  if(await window.IzoneTeacherSso.restore('substitute')){await signIn({restored:true});return;}
   const config=await request('/teacher/config',{},undefined,false);
   if(!window.google?.accounts?.id)await new Promise((resolve,reject)=>{const script=$('google-identity'),timer=setTimeout(()=>reject(new Error('Không tải được Google đăng nhập. Hãy tải lại trang.')),15000);script.addEventListener('load',()=>{clearTimeout(timer);resolve();},{once:true});script.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('Trình duyệt không tải được Google đăng nhập.'));},{once:true});});
   window.google.accounts.id.initialize({client_id:config.googleClientId,callback:signIn,auto_select:false});
   window.google.accounts.id.renderButton($('google-signin'),{type:'standard',theme:'outline',size:'large',text:'signin_with',locale:'vi',width:270});
  }catch(error){message(error.message,'error');}
 }
-$('logout').addEventListener('click',logout);$('load-results').addEventListener('click',()=>{state.offset=0;loadResults();});
+$('logout').addEventListener('click',async()=>{try{await window.IzoneTeacherSso.logout();await initialize();}catch(error){message(error.message,'error');}});$('load-results').addEventListener('click',()=>{state.offset=0;loadResults();});
 $('test-select').addEventListener('change',()=>{renderClasses();state.offset=0;loadResults();});$('class-filter').addEventListener('change',()=>{state.offset=0;loadResults();});
 $('previous-page').addEventListener('click',()=>{state.offset=Math.max(0,state.offset-50);loadResults();});$('next-page').addEventListener('click',()=>{state.offset+=50;loadResults();});
 $('toggle-filters').addEventListener('click',()=>{const panel=$('extra-filters');panel.hidden=!panel.hidden;$('toggle-filters').setAttribute('aria-expanded',String(!panel.hidden));});
