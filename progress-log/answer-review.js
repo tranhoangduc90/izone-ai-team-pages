@@ -28,6 +28,8 @@ export function reviewItems(detail){
       if(!applicable)answer='<p class="reviewAnswer">Câu này không áp dụng; không được tính là sai hoặc thiếu bài.</p>';
       else if(item.layoutType==='keyword_selection'&&item.options?.length){
         answer='<p class="keyword-line readonly">'+item.options.map(o=>'<span class="keyword-word" aria-pressed="'+selected(value,o.id)+'">'+esc(o.label)+'</span>').join(' ')+'</p><p class="reviewAnswer">'+(present?'Các từ gạch chân là lựa chọn của em.':'Chưa chọn từ khóa')+'</p>';
+      }else if(item.layoutType==='matching_pairs'){
+        answer='<ol class="reviewAnswerList">'+c.matchingPrompts.map((left,i)=>'<li>'+esc(left)+' → <strong>'+esc(item.options.find(o=>o.id===value?.[i])?.label||'Chưa trả lời')+'</strong></li>').join('')+'</ol>';
       }else if(item.options?.length){
         answer='<div class="reviewOptions" aria-label="Các phương án">'+item.options.map(o=>'<div class="reviewOption '+(selected(value,o.id)?'isSelected':'')+'"><span aria-hidden="true">'+(selected(value,o.id)?'✓':'○')+'</span><span>'+esc(o.label)+'</span>'+(selected(value,o.id)?'<b>Lựa chọn của em</b>':'')+'</div>').join('')+'</div>';
         const values=Array.isArray(value)?value:[value];

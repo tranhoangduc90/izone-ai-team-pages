@@ -31,7 +31,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
  await ctx.route('**/*',async route=>{
   const req=route.request(),u=new URL(req.url());let body;try{body=req.postDataJSON();}catch{}
   const send=(value,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(value)});
-  if(u.pathname==='/progress-log/config.js')return route.fulfill({contentType:'text/javascript',body:`window.PROGRESS_LOG_CONFIG={API_BASE_URL:${JSON.stringify(origin)},STUDENT_MEMORY:{enabled:true,allClasses:true}};`});
+  if(u.pathname==='/progress-log/config.js')return route.fulfill({contentType:'text/javascript',body:`window.PROGRESS_LOG_CONFIG={API_BASE_URL:${JSON.stringify(origin)},THUY_PILOT_CLASS_IDS:['1294'],STUDENT_MEMORY:{enabled:true,allClasses:true}};`});
   if(u.pathname.endsWith('/api/student-identity/resolve'))return send({ok:true,status:'unique',identity:{authority:'erp-contact',id:body.studentRef===B?'900002':'900001'},aliases:[{classId:'1294',classCode:'IC2305',studentRef:body.identity?.id==='900002'||body.studentRef===B?B:A,studentName:'Học viên'}]});
   if(u.origin!==origin){unexpected.push(u.origin);return route.abort();}
   if(!u.pathname.startsWith('/api/learning/'))return route.continue();
@@ -58,7 +58,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   unexpected.push(path);return send({ok:false,message:'Ngoài phạm vi fixture'},503);
  });
  ctx.on('page',page=>{page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(8000);});
- let page=await ctx.newPage();const url=origin+'/progress-log/thuy.html#assignment='+assignmentId;
+ let page=await ctx.newPage();const url=origin+'/progress-log/index.html#assignment='+assignmentId;
  async function openManual(ref=A){await page.goto(url);await page.locator('#studentSelect').selectOption(ref);await page.locator('#chooseStudentButton').click();await page.locator('#confirmButton').click();await page.locator('#formView').waitFor();}
  try{
   await openManual();assert.equal(requests.filter(r=>r.path.includes('/submit')).length,0);

@@ -21,7 +21,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
  await ctx.route('**/*',async route=>{
   const req=route.request(),u=new URL(req.url());let body;try{body=req.postDataJSON();}catch{}
   const send=value=>route.fulfill({contentType:'application/json',body:JSON.stringify(value)});
-  if(u.pathname==='/progress-log/config.js')return route.fulfill({contentType:'text/javascript',body:`window.PROGRESS_LOG_CONFIG={API_BASE_URL:${JSON.stringify(origin)}};`});
+  if(u.pathname==='/progress-log/config.js')return route.fulfill({contentType:'text/javascript',body:`window.PROGRESS_LOG_CONFIG={API_BASE_URL:${JSON.stringify(origin)},THUY_PILOT_CLASS_IDS:['1294']};`});
   if(u.origin!==origin)return route.abort();
   if(u.pathname==='/api/auth/session')return send({ok:true,reviewer:{email:'teacher@example.invalid'}});
   if(!u.pathname.startsWith('/api/learning/'))return route.continue();
@@ -39,10 +39,12 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   if(path==='/teacher/session-comments'&&req.method()==='PUT'){
    assert.equal(req.headers()['x-izone-csrf'],'1');const note={...body,revision:body.expectedRevision+1,visibility:'visible',teacherName:'Giảng viên mẫu',updatedAt:new Date().toISOString()};comments.set(body.studentRef,note);return send({ok:true,comment:note});
   }
+  if(path==='/teacher/form-library')return send({ok:true,entries:[]});
   unexpected.push(path);return send({ok:false,message:'Ngoài fixture'});
  });
  try{
-  await page.goto(origin+'/progress-log/teacher-thuy.html');await page.locator('.thuy-roster tbody tr').first().waitFor();
+  await page.goto(origin+'/progress-log/teacher.html#assignment='+id);await page.locator('.thuy-roster tbody tr').first().waitFor();
+  assert.ok(page.url().includes('/teacher-thuy.html#assignment='+id));
   assert.equal(await page.locator('.thuy-roster th').filter({hasText:'Điểm danh'}).count(),1);
   assert.equal(await page.locator('.thuy-roster th').filter({hasText:'Portal'}).count(),0);
   await page.locator('.thuy-roster').getByText('Đã điểm danh',{exact:true}).waitFor();
