@@ -16,7 +16,7 @@ test('Hành vi demo với bản chụp thật', {skip:!snapshot}, async t=>{
   const teacher=(await request('/api/teacher')).data,s=teacher.sessions[0];
   const action=body=>request('/api/demo',{number:s.number,generation:s.generation,...body});
   await t.test('Máy chủ local tải được mô-đun học viên giả nhưng không đưa giả vào API lớp',async()=>{
-    for(const [path,name] of [['journey-scenarios.mjs','journeyScenarios'],['test-scenarios.mjs','testScenario'],['library-storage.mjs','libraryStorage'],['review-labels.mjs','studentReviewLabel'],['session-storage.mjs','SESSION_DB']]){
+    for(const [path,name] of [['journey-scenarios.mjs','journeyScenarios'],['test-scenarios.mjs','testScenario'],['library-storage.mjs','libraryStorage'],['review-labels.mjs','studentReviewLabel'],['session-storage.mjs','SESSION_DB'],['review-decisions.mjs','deadlineView'],['mini-test-results.mjs','miniResults']]){
       const response=await fetch(base+'/'+path);
       assert.equal(response.status,200);assert.match(response.headers.get('content-type'),/javascript/);
       assert.ok((await response.text()).includes(name));

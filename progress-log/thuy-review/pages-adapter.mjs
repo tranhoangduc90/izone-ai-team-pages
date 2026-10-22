@@ -1,6 +1,6 @@
 // Pages giữ phiên IC2305 trên trình duyệt; không ghi vào hệ thống thật.
-import {createDemoStore} from './demo-store.mjs';
-import {sessionDatabase,draftJournal,draftKey,validSessionPackage} from './session-storage.mjs';
+import {createDemoStore} from './demo-store.mjs?v=review-20261022';
+import {sessionDatabase,draftJournal,draftKey,validSessionPackage} from './session-storage.mjs?v=review-20261022';
 let store,database,epoch,revision=-1,sessionStale=false;
 export const sessionDrafts=draftJournal(()=>globalThis.localStorage);
 const mutationListeners=new Set();
