@@ -35,6 +35,8 @@ try{
      if(offlineEnd)return route.abort();
      const s=sessions.get(payload.clientRunId);if(!s.audioEndedAt){s.audioEndedAt=payload.audioEndedAt;s.listeningDeadlineAt=new Date(Date.parse(s.audioEndedAt)+300000).toISOString();}
      response={...s,serverNow:new Date(fixtureNow).toISOString()};
+    }else if(api==='/api/test/exam/section-status'){
+     response={testSlug:slug,classCode:payload.classCode,studentRef:payload.studentRef,clientRunId:payload.clientRunId,historyEpoch:payload.historyEpoch,skill:payload.examId,persisted:false};
     }else if(api==='/api/test/grade'){
      grades.push(payload);const total=payload.examId==='reading'&&slug==='substitute-test-1-k56'?26:40;
      response={persisted:true,snapshotHash:'a'.repeat(64),submittedAt:new Date(fixtureNow).toISOString(),

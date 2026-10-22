@@ -927,6 +927,9 @@
     }
 
     function reportAudioProgress(playbackState, keepalive = false) {
+      // Substitute giữ vị trí nghe cục bộ; mốc kết thúc đi qua SUBSTITUTE_EXAM.
+      // Webhook gateway không có REST audio-progress của Term Test.
+      if (window.SUBSTITUTE_EXAM && protectedBootstrap?.examSessionId) return Promise.resolve(null);
       if (appConfig.LOCAL_DEMO_ONLY) return Promise.resolve(null);
       const examSessionToken = protectedBootstrap?.examSessionToken;
       if (!examSessionToken || !examStarted || !['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56', 'substitute-test-1-k56'].includes(testConfig.slug)) return Promise.resolve(null);
@@ -1189,7 +1192,7 @@
     if (studentSelect) {
       new MutationObserver(updateStartAvailability).observe(studentSelect, { childList: true });
     }
-    listeningForm.form.addEventListener('submit', () => {
+    listeningForm.form.addEventListener('term-test:listening-submitted', () => {
       allowPause = true;
       window.clearInterval(audioWatchdog);
       audio.pause();

@@ -584,7 +584,17 @@
         throw requestError;
       }
       // HTTP 2xx không đủ: workflow có thể dừng trước khi trả biên nhận lưu bài.
-      if (serverGradingMode && requestUrl.pathname === '/api/test/grade') {
+      if (serverGradingMode && requestUrl.pathname === '/api/test/exam/section-status') {
+        const expected = window.SUBSTITUTE_STATE.payload(payload);
+        if (data.testSlug !== testConfig.slug || data.classCode !== expected.classCode
+          || data.studentRef !== expected.studentRef || data.clientRunId !== expected.clientRunId
+          || data.historyEpoch !== expected.historyEpoch || data.skill !== payload.examId
+          || typeof data.persisted !== 'boolean') {
+          throw new Error('Máy chủ chưa xác nhận đúng lượt thi. Bài nháp được giữ nguyên; vui lòng thử lại.');
+        }
+      }
+      if (serverGradingMode && (requestUrl.pathname === '/api/test/grade'
+        || requestUrl.pathname === '/api/test/exam/section-status' && data.persisted === true)) {
         const section = data?.section;
         const expectedTotal = payload.examId === 'listening' ? 40 : testConfig.slug === 'substitute-test-1-k56' ? 26 : 40;
         const durable = !window.TERM_TEST_BOOTSTRAP?.examSessionId || (data.persisted === true
@@ -615,6 +625,21 @@
     } finally {
       clearTimeout(timeout);
       untrack();
+    }
+  }
+
+  async function submitSection(examId, answers) {
+    const options = { method: 'POST', body: JSON.stringify({ examId, answers }) };
+    if (!window.TERM_TEST_BOOTSTRAP?.examSessionId) return apiRequest('/api/test/grade', options);
+    const read = () => apiRequest('/api/test/exam/section-status', {
+      method: 'POST', body: JSON.stringify({ examId })
+    });
+    const existing = await read();
+    if (existing.persisted) return existing;
+    try { return await apiRequest('/api/test/grade', options); }
+    catch (error) {
+      try { const saved = await read(); if (saved.persisted) return saved; } catch {}
+      throw error;
     }
   }
 
@@ -2155,6 +2180,7 @@
 
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
+    if (elements.listeningView.dataset.listeningSubmitting === 'true' || state.testGrades?.listening) return;
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
@@ -2182,11 +2208,7 @@
       if (demoMode === 'exam') {
         if(serverGradingMode && (!window.TERM_TEST_BOOTSTRAP?.clientRunId || !window.TERM_TEST_BOOTSTRAP?.listeningStartedAt)){showNotice('Hãy bắt đầu lượt thi từ phòng chờ.','error');return;}
         if (serverGradingMode) {
-          const grade = await apiRequest('/api/test/grade', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ examId: 'listening', answers })
-          });
+          const grade = await submitSection('listening', answers);
           state.testGrades.listening = grade.section;
         }
         ensureValidAttemptToken();
@@ -2280,6 +2302,7 @@
 
   elements.readingView.addEventListener('submit', async event => {
     event.preventDefault();
+    if (elements.readingView.dataset.readingSubmitting === 'true' || state.testGrades?.reading) return;
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.readingView.dataset.readingTimeExpired === 'true';
@@ -2302,11 +2325,7 @@
     try {
       if (demoMode === 'exam') {
         if (serverGradingMode) {
-          const grade = await apiRequest('/api/test/grade', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ examId: 'reading', answers })
-          });
+          const grade = await submitSection('reading', answers);
           state.testGrades.reading = grade.section;
         }
         state.completed = true;

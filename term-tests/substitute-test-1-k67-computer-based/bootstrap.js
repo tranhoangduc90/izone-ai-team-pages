@@ -24,8 +24,8 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_1_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261021-explanations-v1'))
-      .then(() => loadScript('enhance.js?v=20261018-identity-v1'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1'))
+      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -649,8 +649,8 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261021-explanations-v1');
-    await loadScript('enhance.js?v=20261018-identity-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1');
+    await loadScript('enhance.js?v=20261022-listening-recovery-v1');
     await loadScript('annotations.js?v=20261018-identity-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
