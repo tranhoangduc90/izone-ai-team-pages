@@ -11,15 +11,15 @@ function setup(handler){
  box.window=box;vm.createContext(box);vm.runInContext(code,box);return {box,calls};
 }
 const response=status=>({status,ok:status>=200&&status<300,json:async()=>({ok:status===200})});
-test('Authenticated product does not call bridge; student requests and writes are untouched',async()=>{
+test('First teacher read confirms shared identity; student requests and writes are untouched',async()=>{
  const {box,calls}=setup(()=>response(200));
  for(const [path,method] of [['/reading-practice-api/api/teacher/result/id','GET'],['/reading67-materials/api/reading-skills67/draft','GET'],['/reading67-materials/api/reading-skills67/submit','POST']])await box.fetch(origin+path,{method});
- assert.equal(calls.length,3);
+ assert.equal(calls.length,4);assert.equal(calls.filter(c=>c.url.includes('/shared-session')).length,0);
 });
 test('GET 401 restores exactly once; existing shared session skips source discovery',async()=>{
- let reads=0;const {box,calls}=setup(url=>response(url.includes('teacher-session-api')?200:++reads===1?401:200));
+ let ready=false;const {box,calls}=setup(url=>{if(url.includes('teacher-session-api'))ready=true;return response(ready?200:401);});
  assert.equal((await box.fetch(origin+'/reading67-materials/api/reading-skills67/teacher/classes')).status,200);
- assert.equal(calls.length,3);assert.ok(calls[1].url.endsWith('/restore/materials'));assert.equal(calls[1].options.credentials,'include');
+ assert.equal(calls.length,2);assert.ok(calls[0].url.endsWith('/restore/materials'));assert.equal(calls[0].options.credentials,'include');
 });
 test('Missing shared cookie adopts existing Reading cookie without sending a token in JS',async()=>{
  let restored=false,adopted=false;
@@ -33,7 +33,7 @@ test('Missing shared cookie adopts existing Reading cookie without sending a tok
  assert.ok(calls.filter(c=>c.url.includes('/shared-session')).every(c=>c.options.body==='{}'));
 });
 test('Native forbidden does not bypass permission; teacher mutations are never replayed',async()=>{
- const {box,calls}=setup(()=>response(403));await box.fetch(origin+'/reading-practice-api/api/teacher/result/id');assert.equal(calls.length,1);
+ const {box,calls}=setup(url=>response(url.includes('teacher-session-api')?200:403));await box.fetch(origin+'/reading-practice-api/api/teacher/result/id');assert.equal(calls.length,2);
  const other=setup(()=>response(401));await other.box.fetch(origin+'/reading-practice-api/api/teacher/update',{method:'POST',body:'private-change'});assert.equal(other.calls.length,1);
 });
 test('Google login success shares native cookie without forwarding Google credential',async()=>{
@@ -46,4 +46,9 @@ test('Logout revokes shared session after native response and cannot be retried 
 });
 test('Broker/source outage is visible; it cannot silently become an authenticated response',async()=>{
  const {box}=setup(url=>response(url.includes('/restore/')?503:401));await assert.rejects(box.fetch(origin+'/reading-practice-api/api/teacher/result/id'),/Chưa khôi phục/);
+});
+test('Stale native account cannot bypass a different shared account or a shared denial',async()=>{
+ let identity='old-account';const {box}=setup(url=>{if(url.includes('/restore/'))identity='shared-account';return {...response(200),json:async()=>({identity})};});
+ const result=await box.fetch(origin+'/reading67-materials/api/reading-skills67/teacher/classes');assert.equal((await result.json()).identity,'shared-account');
+ const denied=setup(url=>response(url.includes('/restore/')?403:200));await assert.rejects(denied.box.fetch(origin+'/reading67-materials/api/reading-skills67/teacher/classes'),/chưa có quyền/);assert.equal(denied.calls.length,1);
 });
