@@ -2,10 +2,10 @@
 // Không tạo kết quả, biên nhận hoặc dữ liệu học viên mẫu trên trang phát hành.
 import { installTeacherEntry } from '../shared/teacher-entry.js?v=20261019-v1';
 const lesson=Number(document.body.dataset.speakingLesson);
-await import(lesson===2?'./lesson-2-live.js?v=20261020-doctor-snapshot-v1':lesson===3?'./lesson-3-live.js?v=20261019-auto-submit-v1':'./lesson-4-live.js?v=20261020-doctor-snapshot-v1');
+await import(lesson===2?'./lesson-2-live.js?v=20261020-doctor-snapshot-v1':lesson===3?'./lesson-3-live.js?v=20261019-auto-submit-v1':'./lesson-4-live.js?v=20261022-lesson10-v1');
 const $=id=>document.getElementById(id);
 document.body.classList.add('speaking-design');
-const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh',9:'Full câu với ChatGPT · Freestyle'};
+const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh',9:'Full câu với ChatGPT · Freestyle',10:'Kể chuyện: Bối cảnh và Trình tự'};
 const header=document.createElement('header');header.className='studio-header';
 header.innerHTML='<a href="./index.html" class="studio-brand" aria-label="IZONE">IZONE<span>HỌC MỖI NGÀY</span></a><span>Speaking <i>/</i> Khóa 6.0–7.0</span>';
 document.querySelector('.page-shell').prepend(header);
