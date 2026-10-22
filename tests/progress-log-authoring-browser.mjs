@@ -53,7 +53,7 @@ test('D01–D05/P02: đủ 8 dạng, sáu phiếu/14 ô, lưu/conflict/reload/im
       const items=form.definition.blocks.flatMap(b=>b.items);total+=items.length;
       assert.equal(await page.locator('.editor-item').count(),items.length);
       for(const item of items){const type=await page.evaluate(item=>window.editorModule.editorType(item),item);types.add(type);if(type==='gapfill')slots+=item.interactionConfig.responseCount||1;}
-      assert.equal(await page.getByLabel('Dạng bài',{exact:true}).first().locator('option').count(),9);
+      assert.equal(await page.getByLabel('Dạng bài',{exact:true}).first().locator('option').count(),12);
       for(const width of [390,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
     }
     assert.equal(total,57);assert.equal(slots,14);assert.equal(types.size,8);

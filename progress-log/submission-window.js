@@ -23,6 +23,6 @@ export function submissionWindowMessage(window, monotonicNow) {
   if (!windowCanSubmit(window, monotonicNow)) {
     return `Phiếu đã khóa nhận bài${date ? ` từ ${date}` : ''}. Bài đã nộp được giữ nguyên; bạn vẫn xem được hành trình.`;
   }
-  return date ? `Nhận bài đến ${date} (giờ Việt Nam). Đã có ${count} học viên nộp đủ.`
+  return date ? `${window.extensionClosesAt?'Đã gia hạn · ':''}Nhận bài đến ${date} (giờ Việt Nam). Đã có ${count} học viên nộp đủ.`
     : `Đã có ${count}/3 học viên nộp đủ. Phiếu khóa lúc 22:00 ngày học viên thứ ba nộp đủ; nếu người thứ ba nộp sau 22:00, phiếu khóa ngay sau bài đó.`;
 }

@@ -29,3 +29,52 @@ main{max-width:1720px;margin:auto;padding:38px 40px 24px}.intro{display:flex;ali
 @media(max-width:1100px){main{padding:28px 24px}.page-header{padding:18px 24px}.comparison-grid:not(.single){grid-template-columns:repeat(3,350px);overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity}.font-column{scroll-snap-align:start}.mobile-hint{display:block;font-size:12px;line-height:1.6;color:var(--hint);margin:-12px 0 18px}.palette{display:none}.control-row{gap:12px}.size-control{margin-left:0}}
 @media(max-width:600px){main{padding:24px 16px}.page-header{min-height:68px;padding:14px 16px}.wordmark{font-size:25px;gap:12px}.wordmark span{font-size:8px;padding-left:12px;max-width:110px}.demo-label{display:none}h1{font-size:27px}.intro-copy{font-size:14px}.controls{padding:12px;margin-bottom:24px}.scenes{width:100%;order:3}.scenes button{flex:1;padding:8px;font-size:12px}.size-control{margin-left:auto}.comparison-notes{flex-direction:column;gap:5px}.single-picker{gap:8px}.single-picker .segmented{width:100%}.single-picker button{flex:1;font-size:12px;padding:8px}.single .sample-body{padding:22px}.single .sample-top{padding:14px 20px}.single .sample-title{font-size:calc(24px * var(--scale))}.comparison-grid:not(.single){grid-template-columns:repeat(3,calc(100vw - 48px));gap:16px}.font-caption h2{font-size:17px}.font-caption span{font-size:10px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+/* Ánh xạ màu gốc vào cùng bố cục; không mang font hoặc kích thước sản phẩm gốc sang. */
+:root{--heading:#152B4E;--sample-top-bg:#F8F9FB;--sample-top-ink:#152B4E;--sample-top-muted:#586477;--control-border:#8998AE;--error-text:#DB0829;--error-surface:#F8F9FB;--error-line:#DB0829}
+.font-column[data-palette="k56"]{
+  --header:#EEF2F7;--badge:#173B67;--badgeText:#FFFFFF;--hint:#667085;--edge:#2F6FED;
+  --line:#DFE5EE;--surface:#FFFFFF;--ink:#172033;--primary:#2F6FED;--primaryText:#FFFFFF;
+  --selected:#EDF4FF;--selectedText:#173B67;--selectedLine:#2563D9;
+  --rose:#F5F7FB;--roseText:#2F6FED;--success:#E9F8F1;--successText:#0F6448;
+  --flag:#FFF6D8;--flagText:#694B00;--heading:#173B67;--control-border:#CED6E2;
+  --sample-top-bg:linear-gradient(125deg,#102C4F,#1E5187);--sample-top-ink:#FFFFFF;--sample-top-muted:#D7E5F5;
+  --error-text:#8D2135;--error-surface:#FFF0F2;--error-line:#B4233C;
+}
+.font-column[data-palette="thuy"]{
+  --header:#F3F4F6;--badge:#174266;--badgeText:#FFFFFF;--hint:#647482;--edge:#DB0829;
+  --line:#E2E7EB;--surface:#FFFFFF;--ink:#263744;--primary:#DB0829;--primaryText:#FFFFFF;
+  --selected:#FFF0F3;--selectedText:#DB0829;--selectedLine:#DB0829;
+  --rose:#EDF4FA;--roseText:#DB0829;--success:#E8F5EE;--successText:#18734C;
+  --flag:#FFF4D9;--flagText:#915900;--heading:#174266;--control-border:#B6C6D2;
+  --sample-top-bg:#FFFFFF;--sample-top-ink:#174266;--sample-top-muted:#647482;
+  --error-text:#DB0829;--error-surface:#FFF0F3;--error-line:#DB0829;
+}
+.comparison-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.comparison-grid.compare-colors{grid-template-columns:repeat(3,minmax(0,1fr))}
+.font-subtitle{margin:4px 0 0;font-size:11px;color:#586477}
+.theme-picker{border-top:1px solid #DCE1E7;margin-top:14px;padding-top:14px;font-size:12px;color:#586477}
+#themeDescription{font-size:11px;line-height:1.6}
+.specimen{background:var(--header)}
+.sample-body{margin:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.sample-top{background:var(--sample-top-bg);color:var(--sample-top-muted)}
+.sample-top strong{color:var(--sample-top-ink)}
+.sample-title,.sample-section h3,.reading-text h3,.sample-field,.sample-table td:first-child{color:var(--heading)}
+.sample-field textarea{border-color:var(--control-border)}
+.sample-button{color:var(--primaryText)}
+.sample-button.secondary{color:var(--heading);border-color:var(--control-border)}
+.feedback.error{background:var(--error-surface);color:var(--error-text);border-color:var(--error-line)}
+.font-unavailable [data-font-state]{color:#DB0829}
+.font-unavailable .specimen{position:relative}
+.font-unavailable .specimen::before{content:"Chưa có đúng font — bản này đang dùng font dự phòng";display:block;padding:12px;background:#FFF4D9;color:#915900;font:13px/1.5 system-ui,sans-serif}
+@media(max-width:1250px){
+  .comparison-grid:not(.single){grid-template-columns:repeat(3,350px);overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity}
+  .comparison-grid.compare-colors{grid-template-columns:repeat(3,350px)}
+  .mobile-hint{display:block;font-size:12px;line-height:1.6;color:#586477;margin:-12px 0 18px}
+}
+@media(max-width:600px){
+  .comparison-grid:not(.single){grid-template-columns:repeat(3,calc(100vw - 48px))}
+  .comparison-grid.compare-colors{grid-template-columns:repeat(3,calc(100vw - 48px))}
+  .theme-picker{gap:8px}.theme-picker .segmented{flex:1}.theme-picker button{flex:1;padding:8px}
+  #themeDescription{width:100%}.single-picker .segmented{flex-wrap:wrap}.single-picker button{flex:1 0 28%}
+}

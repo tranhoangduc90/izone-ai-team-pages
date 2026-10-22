@@ -4,7 +4,7 @@
 import {createTeacherSessionClient,teacherSessionRequestOptions} from '../../shared/teacher-session-client.js';
 import {demoCourse,demoDetail} from './fixture.js';
 import {contentTitle,skillsLabel,sessionHeading,sessionState,vietnamDate,startsAt} from './session-ui.js';
-import {reviewItems} from './review.js';
+import {reviewItems} from './review.js?rev=20261022-official-v2';
 import {summarizeClass,sessionLabel,percent} from '../reference-preview/analytics.js';
 
 const $=id=>document.getElementById(id);

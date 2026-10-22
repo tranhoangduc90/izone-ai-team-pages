@@ -1,5 +1,6 @@
 // Đầu vào là trạng thái thật của app chung. Chỉ sắp xếp các phần trong một trang;
 // mở phần, lưu, nộp và quyền đáp án vẫn lấy từ máy chủ, không dùng kho dữ liệu demo.
+import {partFeedback} from './part-feedback.js?rev=20261022-official-v2';
 function node(tag,text='',className='') {const e=document.createElement(tag);e.textContent=text;e.className=className;return e;}
 export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmit,releaseFor,onSubmit,onRetry,onJourney,onRefresh}) {
   const root=elements.questionList,expanded=state.thuyExpanded??=new Set();
@@ -25,7 +26,8 @@ export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmi
     part.append(head);
     if(expanded.has(block.blockId)) {
       const body=node('div','','thuy-part-body');if(block.instructions)body.append(node('p',block.instructions,'help'));
-      body.append(...buildQuestions(block.items.filter(i=>i.layoutType!=='inline_option_text')));
+      const feedback=submitted?partFeedback(block,state.submissionPayload?.result||state.checkpointSubmissions.get(block.blockId)?.result):null;
+      if(feedback)body.append(feedback);else body.append(...buildQuestions(block.items.filter(i=>i.layoutType!=='inline_option_text')));
       const locked=submitted||!open||!canSubmit||Boolean(state.submissionPayload)||state.submitting;
       for(const control of body.querySelectorAll('input,textarea,select,button.keyword-word'))control.disabled=locked;
       if(submitted)body.append(node('p','Đã nhận phần này · Bài làm chỉ đọc.','thuy-readonly'));

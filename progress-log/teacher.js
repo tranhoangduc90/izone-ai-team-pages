@@ -2,7 +2,8 @@ import {renderClassAnalytics,renderStudentClassSummary} from './class-analytics-
 import {commentPanel,bindDialogDismiss} from './session-comments.js?rev=20261007-comments';
 import {commentEditor,journeyLinkManager,openStudentJourney,clearCommentDrafts} from './teacher-session-comments.js?rev=20261022-local-draft-v1';
 import {contentTitle,sessionHeading} from './session-presentation.js';
-import {observeSubmissionWindow, submissionWindowMessage} from './submission-window.js';
+import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
+import {observeSubmissionWindow, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 /*
  * Dữ liệu nhận vào: phiên đăng nhập ứng dụng, lớp được phân quyền và thư viện câu hỏi từ backend.
  * Xử lý: giảng viên chọn 2–3 câu, gán checkpoint, phát hành form bất biến và xem trạng thái nộp/điểm danh.
@@ -11,17 +12,18 @@ import {observeSubmissionWindow, submissionWindowMessage} from './submission-win
  */
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
-import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261022-keywords-v1';
-import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261022-keywords-v1';
+import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261022-official-v2';
+import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261022-official-v2';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
 import {renderThuyAnalytics} from './thuy-live/question-analytics.js';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
+import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261022-official-v2';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/teacher-thuy.html');
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js'):null;
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022-official-v2'):null;
 if(THUY_UI)document.body.classList.add('thuy-live','thuy-teacher');
 const sessionClient = createTeacherSessionClient({
   apiBaseUrl: config.API_BASE_URL,
@@ -98,6 +100,15 @@ const thuyLayout=THUY_UI?mountThuyTeacherLayout(elements,{onMode:showThuyMode,on
   refreshAssignmentSelect();for(const dialog of [elements.draftDialog,elements.journeyDetailDialog])if(dialog.open)dialog.close();
   if(!elements.overviewPanel.hidden)void loadCourseOverview();else void loadDashboard();
 }}):null;
+const managementHost=THUY_UI?document.createElement('div'):null;
+if(managementHost){managementHost.className='thuy-assignment-actions';document.querySelector('.thuy-session-overview').append(managementHost);}
+const assignmentManagement=THUY_UI?mountAssignmentManagement({host:managementHost,getContext:()=>state.dashboard||{
+  classId:thuyLayout.classes.value,className:state.classes.find(c=>String(c.class_id)===thuyLayout.classes.value)?.class_name||''},
+  request:apiRequest,onChanged:async(context,action)=>{
+    if(action==='withdraw'){history.replaceState(null,'',location.pathname+location.search);await loadWorkspace();if(thuyLayout){thuyLayout.classes.value=String(context.classId);elements.overviewClassSelect.value=String(context.classId);refreshAssignmentSelect();}await loadDashboard();
+      setNotice('Đã thu hồi và giữ lịch sử. Vào Kho bài tập để giao phiếu thay thế cho buổi '+context.sessionNumber+'.');}
+    else if(state.dashboard?.assignmentId===context.assignmentId)await loadDashboard();
+  }}):null;
 function showThuyMode(mode){
   state.thuyMode=mode;
   document.querySelector('#classInsightSection').hidden=mode!=='results';document.querySelector('.thuy-result-jumps').hidden=mode!=='results';
@@ -105,7 +116,7 @@ function showThuyMode(mode){
   renderStudentList();
 }
 
-const formEditor=createFormDraftEditor({host:document.getElementById('formDraftEditor'),apiRequest,
+const formEditor=createFormDraftEditor({host:document.getElementById('formDraftEditor'),apiRequest,libraryEnabled:THUY_UI,
   onPublished:published=>{
     state.assignments.unshift({assignment_id:published.assignmentId,public_token:published.publicToken,
       class_id:published.classId,class_name:state.classes.find(row=>String(row.class_id)===String(published.classId))?.class_name||'',
@@ -258,7 +269,7 @@ async function loadClassBasicAnalytics(classId,generation,signal) {
     if(THUY_UI){
       for(let offset=0;offset<assignments.length;offset+=3){
         const rows=await Promise.all(assignments.slice(offset,offset+3).map(async assignment=>{
-          const query='?assignmentId='+encodeURIComponent(assignment.assignment_id);
+          const query='?assignment='+encodeURIComponent(assignment.assignment_id);
           const {dashboard}=await apiRequest('/teacher/dashboard'+query,{signal});
           const {live}=await apiRequest('/teacher/live-drafts'+query,{signal});
           if(dashboard.assignmentId!==assignment.assignment_id||live.assignmentId!==assignment.assignment_id||String(dashboard.classId)!==String(classId))throw Error('Dữ liệu kỹ năng chưa khớp phiếu và lớp.');
@@ -522,6 +533,8 @@ async function loadWorkspace() {
   state.classes = (options.classes || []).filter(item => /^[1-9]\d{0,17}$/u.test(String(item.class_id)));
   state.assignments = options.assignments || [];
   const entryAssignment = resolveTeacherAssignment(state.assignments,state.classes,location.href);
+  const nextEntry=entryAssignment&&config.THUY_PILOT_CLASS_IDS?.includes(String(entryAssignment.class_id))&&pilotEntry(location.href,entryAssignment.class_id,'teacher',entryAssignment.public_token);
+  if(nextEntry){location.replace(nextEntry);return;}
   state.library = library.items || [];
   if(THUY_UI){fillSelect(thuyLayout.classes,state.classes,'class_id',c=>c.class_name);if(entryAssignment)thuyLayout.classes.value=String(entryAssignment.class_id);}
   formEditor.setWorkspace({classes:state.classes,assignments:state.assignments});
@@ -1462,7 +1475,11 @@ async function saveJourneyPlan(event) {
 
 async function loadDashboard({ quiet = false } = {}) {
   const assignmentId = elements.assignmentSelect.value;
+  const selected=state.assignments.find(a=>a.assignment_id===assignmentId);
+  const nextEntry=selected&&config.THUY_PILOT_CLASS_IDS?.includes(String(selected.class_id))&&pilotEntry(location.href,selected.class_id,'teacher',selected.public_token);
+  if(nextEntry){location.replace(nextEntry);return;}
   if (!assignmentId) {
+    state.dashboard=null;assignmentManagement?.refresh();
     state.dashboardGeneration += 1;
     state.liveByStudent.clear();
     elements.dashboardTitle.textContent = 'Chưa có phiếu để theo dõi';
@@ -1479,6 +1496,7 @@ async function loadDashboard({ quiet = false } = {}) {
     if (generation !== state.dashboardGeneration) return;
     const previousAssignmentId = state.dashboard?.assignmentId;
     state.dashboard = payload.dashboard;
+    assignmentManagement?.refresh();
     const deadlineHost = document.getElementById('teacherSubmissionWindow');
     if (deadlineHost) {
       deadlineHost.textContent = submissionWindowMessage(observeSubmissionWindow(state.dashboard.submissionWindow, performance.now()), performance.now());

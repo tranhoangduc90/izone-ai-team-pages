@@ -40,7 +40,8 @@ test('Whole-class basic analysis drills into exact student/session, keeps sparse
    if(u.pathname.includes('/sessions/')){const parts=u.pathname.split('/'),n=Number(parts.at(-3)),ref=parts.at(-1);detailCalls.push({n,ref});return json({ok:true,detail:{...demoDetail(ref,n),classId:'1294'}});}
    return route.abort();
   });
-  await page.goto(origin+'/progress-log/teacher.html');await page.locator('#teacherWorkspace').waitFor({state:'visible'});
+  // Nhóm này giữ kiểm giao diện cũ; nhánh chuyển lớp pilot có Chrome test riêng.
+  await page.goto(origin+'/progress-log/teacher.html?presentation=legacy');await page.locator('#teacherWorkspace').waitFor({state:'visible'});
   await page.getByRole('button',{name:'Hành trình lớp',exact:true}).click();await page.locator('#courseAnalyticsStatus').filter({hasText:'Đã đọc 4'}).waitFor();
   // Fixture có 15 bài × 3 câu khách quan: 30 đúng, 15 sai; câu mở được giữ riêng.
   assert.deepEqual(await page.locator('#courseAnalytics .teacherMetric strong').allTextContents(),['15','30','15','67%']);
