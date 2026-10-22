@@ -1,5 +1,20 @@
 # Reading 67 — prototype luyện nén
 
+## Chặng 2 — bản nối máy chủ thử
+
+`?server=1` dùng `web-client.js` để lưu nháp lên API/SQL của Reading/Listening 67,
+gửi bản bất biến và đọc phản hồi Read 67 thật. Phần hiển thị vẫn dùng cùng renderer.
+Mở qua máy chủ thử ở cổng 8948; `preview.html?server=1` có khung máy tính/390 px.
+Không dùng cờ này trên GitHub Pages khi chưa có backend và quyền đăng nhập thật.
+
+Chặng 2 đã có CAS/retry theo mutation ID, lưu dự phòng thiết bị khi mạng lỗi,
+lịch sử máy chủ và kết quả gắn đúng bản gửi. Nhận diện vẫn là hai tài khoản giả
+chỉ ở localhost; chặng này chưa nối roster/quyền GV/CTA hoặc ghi Homework.
+Source máy chủ thuộc module `backend/src/reading-listening67/web-*` trong repo
+`izone-writing-task1-practice`. Source browser không chứa đề/key/prompt riêng tư.
+
+Các mô tả dưới đây giữ cho chế độ prototype chặng 1 không có `?server=1`.
+
 Chặng 1 của bài **Materials to take us beyond concrete**: đủ A–H, Q1–4,
 16 ô viết và 4 ô chọn đoạn. Giao diện tự do chuyển đoạn/câu, có bản mobile,
 Highlight/Note, rà soát, lịch sử cục bộ và phản hồi mô phỏng từng phần.
@@ -42,5 +57,6 @@ Hồ sơ riêng tại `E:/Codex-Data/plans/reading67-materials-webapp-20261022/`
 `ui-check.json`, `ui-extra.json`, `ANH-XA-20-O.md`, ảnh viewport và báo cáo chặng 1.
 Các kiểm này không thay thế chấm AI, quyền đăng nhập, API/SQL hay readback Docs.
 
-Chặng sau nối bản gửi có version vào bộ chấm Read 67, lưu nháp máy chủ và
-phản hồi thật, nhận diện/quyền GV, rồi CTA chỉ ghi trạng thái/link vào Homework.
+Chặng 2 đã nối bản gửi có version vào bộ chấm Read 67, lưu nháp máy chủ và
+phản hồi thật trên localhost. Phần tiếp theo là nhận diện/quyền GV, vận hành
+runtime được phát hành, rồi CTA chỉ ghi trạng thái/link vào Homework.
