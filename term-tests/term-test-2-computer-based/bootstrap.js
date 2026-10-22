@@ -891,8 +891,8 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?v=20261018-identity-v1');
-    await loadScript(cbtAssetUrl('enhance.js?v=20261018-identity-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
+    await loadScript('../shared/app.js?v=20261023-submit-v1');
+    await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
 

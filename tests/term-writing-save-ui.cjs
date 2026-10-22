@@ -68,6 +68,9 @@ async function open(onSave, restored = {}, serverDraft = canonical()) {
     const url=gateway?raw.route+(raw.route.endsWith('/roster')?'?fixture=1':''):route.request().url();
     const fulfill=data=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
     if (url.includes('/roster?')) return fulfill({class:{code:'CODEXDEMO806',name:'Lớp giả D08'},students:[{ref:'11111111-1111-4111-8111-111111111111',name:'Học viên giả D08'}]});
+    if (url.endsWith('/attempt/prepare')) return fulfill({ok:true,attemptToken:token,completed:true,
+      examMode:'lis_first',nextSection:'writing',listeningSubmitted:true,readingSubmitted:true,
+      writingStartedAt:new Date().toISOString(),serverNow:new Date().toISOString()});
     if (url.endsWith('/result')) return fulfill({ok:true,attemptToken:token,completed:true,studentName:'Học viên giả D08',className:'Lớp giả D08',writing:serverDraft});
     if (url.endsWith('/client-event')) return fulfill({ok:true});
     if (url.endsWith('/writing')) { const payload=gateway?raw.payload:raw; requests.push(payload); transports.push({url:route.request().url(),body:raw,contentType:route.request().headers()['content-type']}); return onSave({route,payload,requests,fulfill}); }

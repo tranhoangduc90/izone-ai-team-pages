@@ -33,7 +33,12 @@
       "tests/k56-writing-teacher-student-parity.mjs",
       "tests/k56-writing-timer-ui.mjs",
       "tests/term-test-k56-audio-recovery.mjs",
-      "tests/term-test-teacher-access-banner.mjs"
+      "tests/term-test-teacher-access-banner.mjs",
+      "tests/term-mini-submission-contract.mjs",
+      "tests/term-mini-pending-storage.mjs",
+      "tests/term-mini-cache-graph.mjs",
+      "tests/term-mini-submit-browser.mjs",
+      "tests/term-mini-reading-submit-browser.mjs"
     ],
     "substitute_56_and_shared_67": [
       "tests/substitute-k56-dashboard.mjs",

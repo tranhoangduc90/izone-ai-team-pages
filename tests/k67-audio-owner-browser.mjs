@@ -33,7 +33,7 @@ async function open(slug='term-test-1',mode='lis_first',init){
   return{p,c,url,token,read,errors};
 }
 async function resume(p){await p.locator('#k67TestSound').click();await p.locator('#k67ResumeAudio').click();await p.waitForFunction(()=>!window.K67_ACTIVE_LISTENING.isHeld());}
-async function cloneState(p,c){const state=await p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>k.startsWith('izone-test'))));await c.addInitScript(state=>{for(const[k,v]of Object.entries(state))localStorage.setItem(k,v);},state);}
+async function cloneState(p,c){const state=await p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>k.startsWith('izone-test')||k==='izone:student-identity:v1')));await c.addInitScript(state=>{for(const[k,v]of Object.entries(state))localStorage.setItem(k,v);},state);}
 test('Claim đã ghi nhưng mất phản hồi: thử lại cùng quyền, không kẹt chủ cũ',async()=>{
   const c=await context();try{
     await c.request.post(base+'/preview/reset',{data:{}});let lost=false,first;

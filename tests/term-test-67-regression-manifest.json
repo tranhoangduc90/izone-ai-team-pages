@@ -15,7 +15,10 @@
       "tests/term-test-listening-retake.mjs",
       "tests/term-test-reliability.mjs",
       "tests/term-test-teacher-session.mjs",
-      "tests/term-test-writing-parity-feedback.mjs"
+      "tests/term-test-writing-parity-feedback.mjs",
+      "tests/term-mini-submission-contract.mjs",
+      "tests/term-mini-pending-storage.mjs",
+      "tests/term-mini-cache-graph.mjs"
     ],
     "browser": [
       "tests/term-test-blank-writing-browser.mjs",
@@ -28,7 +31,9 @@
       "tests/mini-test-identity.mjs",
       "tests/term-student-memory-ui.cjs",
       "tests/term-test-landing.mjs",
-      "tests/term-writing-save-clients.cjs"
+      "tests/term-writing-save-clients.cjs",
+      "tests/term-mini-submit-browser.mjs",
+      "tests/term-mini-reading-submit-browser.mjs"
     ]
   }
 }

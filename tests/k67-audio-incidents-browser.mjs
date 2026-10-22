@@ -75,7 +75,10 @@ for(const mode of ['lis_first','read_first'])for(const fault of ['500','abort-re
     if(mode==='read_first'){await page.locator('#startReading').click();await page.locator('#readingView').waitFor({state:'visible'});await page.locator('#submitReading').click();}
     await page.locator('#bootstrapPreview').click();await page.locator('#bootstrapStart').click();
     await page.locator('#bootstrapNotice').filter({hasText:'Chưa thể bắt đầu'}).waitFor();
-    const token=await page.evaluate(()=>JSON.parse(localStorage.getItem('izone-test:term-test-1:IC2304')).examSessionToken);
+    const token=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('izone-test:term-test-1:IC2304'))
+      .map(k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}})
+      .find(s=>s?.studentRef==='11111111-1111-4111-8111-111111111111'&&s.examSessionToken)?.examSessionToken);
+    assert.ok(token,'Phiên của đúng học viên phải được giữ trong kho nhận diện hiện hành');
     const read=()=>context.request.get(base+'/preview/audio-state?id='+token).then(r=>r.json());
     const held=await read();assert.ok(held.listening_started_at);assert.ok(held.listening_audio_incident_id,'Mất response phải có hold đã ghi');
     assert.equal(await page.locator('#listeningView').isVisible(),false);await page.waitForTimeout(1500);

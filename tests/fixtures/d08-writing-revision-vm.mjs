@@ -25,10 +25,11 @@ export function fixture(source, restored = {}) {
   let transport = () => ({ ok: true, writing: { accepted: true, revision: 6,
     task1: 'local task 1', task2: 'local task 2', started: true, submitted: false, reason: 'saved' } });
   const context = vm.createContext({ console, elements,
-    document: { createElement: node },
+    document: { createElement: node, getElementById() { return null; } },
+    availableStorages() { return [context.sessionStorage, context.localStorage]; },
     window: { clearTimeout() {}, setTimeout() { return 1; } },
-    sessionStorage: { setItem(key, value) { storage.set(key, value); } },
-    localStorage: { setItem(key, value) { storage.set(key, value); } },
+    sessionStorage: { setItem(key, value) { storage.set(key, value); }, getItem(key) { return storage.get(key); } },
+    localStorage: { setItem(key, value) { storage.set(key, value); }, getItem(key) { return storage.get(key); } },
     syncWritingEditors() {}, setWritingSaveStatus(message) { statuses.push(message); },
     showNotice() {}, randomDelay() { return 5000; },
     scheduleWritingSave(delay) { scheduled.push(delay); },
@@ -47,7 +48,8 @@ export function fixture(source, restored = {}) {
     drafts: { writing: { outline: 'local outline', task1: 'local task 1', task2: 'local task 2' } }, ...restored };
   vm.runInContext(`
     const classCode = 'FIXTURE', writingConfig = {tasks:[{id:'task1'},{id:'task2'}]}, demoMode = '';
-    const paperMini=false,paperConfirmed=false;
+    const paperMini=false,paperConfirmed=false,paperIdentity=null,miniAnswerSheet=false,miniConfirmed=false,miniGeneration=0;
+    window.sessionStorage=sessionStorage;window.localStorage=localStorage;
     const storageKey = 'fixture-writing', restoredSession = ${JSON.stringify(initial)};
     let writingSaveTimer = 0, writingForceSaveTimer = 0, writingRetryTimer = 0;
     let writingSavePromise = Promise.resolve();
@@ -196,12 +198,12 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
     }
   });
   test(title('bootstrap chính/dự phòng và answer sheet đều nạp app cache D08'), () => {
-    // Ba client K56 giữ cơ chế D08 nhưng có bản giao diện mới; K67 giữ revision cũ.
+    // Các entry phải nạp đúng bản vá xác nhận nộp mới, đồng thời giữ cơ chế Writing D08.
     const k56 = sourcePath.startsWith('term-tests/k56-');
-    const cacheRevision = sourcePath === 'term-tests/k56-shared/app.js' ? '20261018-draft-network-r87' : k56 ? '20261018-draft-network-r87' : '20261003-writing-save-cas-v1';
+    const cacheRevision = '20261023-submit-v1';
     const revisionOf = url => { const query = new URL(url, 'https://fixture.invalid').searchParams; return query.get('rev') || query.get('v'); };
     for (const path of cachePaths) {
-      const currentRevision = k56 ? cacheRevision : path.includes('-computer-based/') ? '20261012-audio-v2' : cacheRevision;
+      const currentRevision = cacheRevision;
       const text = fs.readFileSync(path, 'utf8');
       const appUrls = [...text.matchAll(/[.\/\w-]*app\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
       const writingApp = sourcePath.slice(sourcePath.indexOf('/') + 1);

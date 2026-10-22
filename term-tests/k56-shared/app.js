@@ -194,6 +194,7 @@
       writingRevision: state.writingRevision,
       writingAckRevision: state.writingAckRevision,
       drafts: state.drafts,
+      pendingSubmissions: state.pendingSubmissions,
       draftRevisions: state.draftRevisions,
       draftAckRevisions: state.draftAckRevisions,
       writingLayout: state.writingLayout,
@@ -471,7 +472,7 @@
   function bindPaperStudent(student, resolution = null) {
     const binding = paperIdentity.select(student, { resolution });
     storageKey = binding.keys.state;
-    Object.assign(state, binding.state, { studentRef: student.ref, studentName: student.name, identityConfirmed: true });
+    Object.assign(state, { pendingSubmissions: {} }, binding.state, { studentRef: student.ref, studentName: student.name, identityConfirmed: true });
     elements.studentSelect.value = student.ref;
     renderQuestionControls(testConfig.listening, elements.listeningQuestions, 'listening');
     renderQuestionControls(testConfig.reading, elements.readingQuestions, 'reading');
@@ -760,6 +761,34 @@
   }
 
   async function apiRequest(path, options = {}) {
+    const match = path.match(/^\/api\/term-tests\/([^/]+)\/(listening|reading)$/);
+    if (options.method !== 'POST' || !match) {
+      const data = await rawApiRequest(path, options);
+      // Những thao tác ngoài nộp L/R giữ contract hiện hành.
+      return data;
+    }
+    const section = match[2], testSlug = match[1];
+    const getOwner = () => JSON.stringify([storageKey, state.studentRef, state.examSessionToken, state.attemptToken, state.generation || 0]);
+    const owner = getOwner();
+    const body = { ...JSON.parse(options.body || '{}') };
+    const { submitSection } = await import('../shared/section-submission.mjs?v=20261023-v1');
+    const data = await submitSection({ state, section, body, testSlug, owner, getOwner, save: saveSession,
+      send: value => rawApiRequest(path, { ...options, body: JSON.stringify(value) }),
+      read: async value => {
+        try { return await rawApiRequest(`/api/term-tests/${testSlug}/submission-status`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...value, section })
+        }); } catch (error) {
+          if (error.status === 404 && error.code === 'SUBMISSION_NOT_FOUND') return { ok: true, persisted: false };
+          throw error;
+        }
+      }
+    });
+    // Chỉ trả bản đã được xác nhận; handler mới được chuyển phần.
+    return data;
+  }
+
+  async function rawApiRequest(path, options = {}) {
     if (window.K56_DEMO_RESETTING) throw new Error('Lượt demo đang được reset. Hãy chọn lại học viên sau khi tải trang.');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -2475,7 +2504,7 @@
         return;
       }
     }
-    let answers = state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
+    let answers = state.pendingSubmissions?.listening?.answers || state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
     if (automatic && !state.frozenAnswers.listening) {
       state.frozenAnswers.listening = Object.freeze({ ...answers });
       answers = state.frozenAnswers.listening;
@@ -2561,6 +2590,7 @@
         scheduleSectionDraft('listening', 0);
       }
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
+      if (state.pendingSubmissions?.listening) setAnswerControlsLocked('listening', true);
     }
   });
 
@@ -2605,9 +2635,10 @@
 
   elements.readingView.addEventListener('submit', async event => {
     event.preventDefault();
+    if (state.readingSubmitted || elements.readingView.dataset.readingSubmitting === 'true') return;
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.readingView.dataset.readingTimeExpired === 'true';
-    let answers = state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
+    let answers = state.pendingSubmissions?.reading?.answers || state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
     if (automatic && !state.frozenAnswers.reading) {
       state.frozenAnswers.reading = Object.freeze({ ...answers });
       answers = state.frozenAnswers.reading;
@@ -2695,6 +2726,7 @@
         scheduleSectionDraft('reading', 0);
       }
       setBusy(elements.submitReading, false, 'Đang lưu và chấm...', 'Nộp bài Reading');
+      if (state.pendingSubmissions?.reading) setAnswerControlsLocked('reading', true);
     }
   });
 
