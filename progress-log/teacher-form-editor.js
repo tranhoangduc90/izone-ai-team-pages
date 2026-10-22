@@ -1,7 +1,7 @@
 /* Nhận lớp, phiếu nguồn và API của phiên giảng viên. Soạn đúng 8 dạng đang dùng,
  * lưu nháp ở máy chủ, đối chiếu khi xung đột, xem thử tách biệt rồi duyệt/phát hành.
  * Đáp án chỉ giữ trong bộ nhớ tab; lỗi mạng giữ phần đang soạn và không báo đã lưu. */
-import {createFormLibrary} from './teacher-form-library.js?rev=20261022-parity-v2';
+import {createFormLibrary} from './teacher-form-library.js?rev=20261022-parity-v3';
 import {bindDialogDismiss} from './session-comments.js';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
@@ -65,10 +65,10 @@ export function newEditorPayload(title='Phiếu học tập mới') {
 export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},libraryEnabled=false}) {
   let classes=[],assignments=[],draft=null,dirty=false,busy=false,generation=0,reviewMode=false,
     publishOperationId=null,conflict=null,importPreview=null,importText='',importOpen=false,aiPopupOpen=false,importTargetBlockId=null,list=[];
-  const lockedControls=new Map(),librarySaves=new Map();let library,authoring=!libraryEnabled,autosaveTimer;
+  const lockedControls=new Map(),librarySaves=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false;
   const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
-  const notice=message=>{status.textContent=message;};
+  const notice=message=>{status.textContent=message;if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}};
   function field(parent,label,value,onChange,{kind='text',options=null,min,max,disabled=false}={}) {
     const wrap=el('label',undefined,{className:'field'});wrap.append(el('span',label));
     const input=options?el('select'):el(kind==='textarea'?'textarea':'input');
@@ -99,7 +99,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
   }
   async function run(action) {
     if(busy)return;busy=true;paintActions();lockControls();const current=generation;
-    try {await action(current);} catch(error) {if(current===generation)notice(error.name==='AbortError'?'Thao tác quá lâu. Nội dung vẫn còn; hãy thử lại.':error.message);}
+    try {await action(current);} catch(error) {if(current===generation){saveFailed=action===save&&!conflict;notice(error.name==='AbortError'?'Thao tác quá lâu. Nội dung vẫn còn; hãy thử lại.':error.message);}}
     finally {if(current===generation){busy=false;lockControls();paintActions();}}
   }
   async function request(path,options={}) {
@@ -118,7 +118,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     }
     markDirty();paint();
   }
-  function adopt(value,{review=false}={}) {draft=clone(value);dirty=false;reviewMode=review;publishOperationId=null;conflict=null;importPreview=null;session.value=String(value.sessionNumber);if(value.classId)classSelect.value=String(value.classId);authoring=true;paint();}
+  function adopt(value,{review=false}={}) {saveFailed=false;draft=clone(value);dirty=false;reviewMode=review;publishOperationId=null;conflict=null;importPreview=null;session.value=String(value.sessionNumber);if(value.classId)classSelect.value=String(value.classId);authoring=true;paint();}
   function payload() {return {definition:clone(draft.definition),gradingKey:clone(draft.gradingKey),sessionNumber:Number(session.value)};}
   async function refreshList() {
     const classId=classSelect.value,current=generation;if(!classId)return;

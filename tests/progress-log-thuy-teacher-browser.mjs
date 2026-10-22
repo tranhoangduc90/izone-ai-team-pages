@@ -17,6 +17,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
  const A=uid(1),B=uid(2),id=uid(3),block=uid(4),item=uid(5),comments=new Map();
  let savedDraft=null;
  const definition={title:'Phiếu từ khóa thử',blocks:[{blockId:block,checkpoint:1,title:'Từ khóa',items:[{itemVersionId:item,position:1,prompt:'Câu 1 · Câu hỏi',displayNumber:'1',skillCodes:['reflection'],interactionType:'multi_choice_group',layoutType:'keyword_selection',options:[{id:'w1',label:'go'},{id:'w2',label:'go'},{id:'w3',label:'home?'}],interactionConfig:{maxSelections:3}}]}]};
+ definition.blocks[0].items.push(...['Scanning','Skimming'].map((prompt,i)=>({itemVersionId:uid(50+i),position:2+i,displayNumber:'2',prompt,interactionType:'short_text_array',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:1,sentenceLines:[{title:'Mục đích',parts:['Tìm ','.']}]}})));
  const students=()=>[{studentRef:A,name:'Học viên A',checkpoints:[{blockId:block}],attendanceStatus:'self_confirmed',sessionComment:comments.get(A)||null,portalSync:{status:'complete',readbackAt:new Date().toISOString(),portalStatus:'synced'}},
  {studentRef:B,name:'Học viên B',checkpoints:[],attendanceStatus:null,sessionComment:comments.get(B)||null,portalSync:null}];
  await ctx.route('**/*',async route=>{
@@ -99,6 +100,9 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.equal(await libraryPreview.getByRole('heading',{name:'Câu 1',exact:true}).count(),1);
   assert.equal(await libraryPreview.getByText('go go home?',{exact:true}).count(),1);
   assert.doesNotMatch(await libraryPreview.innerText(),/Câu 1 · Câu 1/);
+  assert.equal(await libraryPreview.getByRole('heading',{level:3}).nth(1).innerText(),'Câu 1');
+  assert.equal(await libraryPreview.locator('.thuy-comparison table').count(),1);
+  assert.equal(await libraryPreview.locator('.thuy-comparison textarea:disabled').count(),2);
   await libraryPreview.getByRole('button',{name:'Đóng',exact:true}).click();
   await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
   await page.getByLabel('Tên bài tập',{exact:true}).waitFor();

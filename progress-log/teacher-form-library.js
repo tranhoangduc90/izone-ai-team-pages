@@ -1,4 +1,5 @@
 // Kho thật: API và các phiếu được cấp quyền. Không dùng storage hay bài giả của demo.
+import {comparisonTable} from './thuy-live/comparison-table.js?rev=20261022-parity-v1';
 import {questionPresentation} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {bindDialogDismiss,node} from './session-comments.js';
 const button=(text,action)=>{const b=node('button',text,'button');b.type='button';b.addEventListener('click',action);return b;};
@@ -56,8 +57,10 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     else if(entry.source==='used'){if(reply.dashboard.assignmentId!==entry.id)throw Error('Phiếu trả về chưa khớp.');definition=reply.dashboard.definition;}
     else{if(reply.entry.id!==entry.id)throw Error('Phiếu trả về chưa khớp.');definition=reply.entry.definition;}}
    if(!d.open)return;body.replaceChildren();if(definition.instructions)body.append(node('p',definition.instructions));
-   for(const block of definition.blocks){body.append(node('h3',block.title));if(block.instructions)body.append(node('p',block.instructions));let previousNumber=null;
+   for(const block of definition.blocks){body.append(node('h3',block.title));if(block.instructions)body.append(node('p',block.instructions));const comparison=block.items.filter(i=>i.groupId==='comparison-reading'&&i.layoutType==='numbered_short_texts');
+    let comparisonRendered=false,previousNumber=null;
     for(const item of block.items){
+     if(comparison.length===2&&comparison.includes(item)){if(!comparisonRendered){const table=comparisonTable(comparison,{valueFor:()=>[],onChange:()=>{},resizeInput:()=>{}});for(const input of table.querySelectorAll('textarea')){input.disabled=true;input.placeholder='…';}body.append(table);comparisonRendered=true;}continue;}
      const raw=String(item.displayNumber||item.position),number=raw.match(/^\d+/u)?.[0]||raw;
      const display=questionPresentation({...item,displayNumber:number}),card=node('section');
      if(number!==previousNumber){body.append(node('h3','Câu '+number));previousNumber=number;}

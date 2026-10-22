@@ -47,6 +47,7 @@ test('Thủy editor: đúng lớp, tự lưu, mất phản hồi tạo nháp, ch
   await page.getByRole('status').filter({hasText:'Mất phản hồi sau khi máy chủ đã lưu'}).waitFor();
   assert.equal(await page.getByLabel('Nội dung câu hỏi',{exact:true}).inputValue(),'Nội dung trước lỗi');
   await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Nội dung mới sau khi mất phản hồi');
+  await page.getByRole('button',{name:'Thử lưu lại',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();
   const state=await page.evaluate(()=>({draft:window.savedDraft,calls:window.calls.map(c=>({path:c.path,body:c.body,method:c.method})),keys:[...Object.keys(localStorage),...Object.keys(sessionStorage)]}));
   assert.equal(state.draft.classId,'1294');assert.equal(state.draft.sessionNumber,11);assert.equal(state.draft.definition.blocks[0].items[0].prompt,'Nội dung mới sau khi mất phản hồi');
