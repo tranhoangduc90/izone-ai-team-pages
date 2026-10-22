@@ -13,7 +13,7 @@ import {observeSubmissionWindow, submissionWindowMessage} from './submission-win
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261022-parity-v1';
-import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261022-parity-v4';
+import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261022-answers-remove-keywords';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261022-parity-v2';
 import {keywordSelection} from './thuy-live/keyword-selection.js';

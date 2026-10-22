@@ -7,7 +7,7 @@ import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss}
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
-import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261022-parity-v1';
+import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261022-answers-remove-keywords';
 import {comparisonTable} from './thuy-live/comparison-table.js?rev=20261022-parity-v1';
 import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
