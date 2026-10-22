@@ -16,7 +16,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
  page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(8000);
  const A=uid(1),B=uid(2),id=uid(3),block=uid(4),item=uid(5),comments=new Map();
  let savedDraft=null;
- const definition={title:'Phiếu từ khóa thử',blocks:[{blockId:block,checkpoint:1,title:'Từ khóa',items:[{itemVersionId:item,position:1,prompt:'Câu hỏi gạch chân',interactionType:'multi_choice_group',layoutType:'keyword_selection',options:[{id:'w1',label:'go'},{id:'w2',label:'go'},{id:'w3',label:'home?'}],interactionConfig:{maxSelections:3}}]}]};
+ const definition={title:'Phiếu từ khóa thử',blocks:[{blockId:block,checkpoint:1,title:'Từ khóa',items:[{itemVersionId:item,position:1,prompt:'Câu 1 · Câu hỏi',displayNumber:'1',skillCodes:['reflection'],interactionType:'multi_choice_group',layoutType:'keyword_selection',options:[{id:'w1',label:'go'},{id:'w2',label:'go'},{id:'w3',label:'home?'}],interactionConfig:{maxSelections:3}}]}]};
  const students=()=>[{studentRef:A,name:'Học viên A',checkpoints:[{blockId:block}],attendanceStatus:'self_confirmed',sessionComment:comments.get(A)||null,portalSync:{status:'complete',readbackAt:new Date().toISOString(),portalStatus:'synced'}},
  {studentRef:B,name:'Học viên B',checkpoints:[],attendanceStatus:null,sessionComment:comments.get(B)||null,portalSync:null}];
  await ctx.route('**/*',async route=>{
@@ -94,6 +94,12 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.equal(geometry.side,200);assert.equal(geometry.header,52);assert.equal(geometry.search,380);
   assert.equal(await page.locator('.thuy-side').getByRole('button',{name:'Quản lý lớp',exact:true}).isVisible(),true);
   if(process.env.THUY_EVIDENCE_DIR){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'teacher-library.png'),fullPage:true});}
+  await page.getByRole('button',{name:'Phiếu từ khóa thử',exact:true}).click();
+  const libraryPreview=page.locator('.thuy-management-dialog');
+  assert.equal(await libraryPreview.getByRole('heading',{name:'Câu 1',exact:true}).count(),1);
+  assert.equal(await libraryPreview.getByText('go go home?',{exact:true}).count(),1);
+  assert.doesNotMatch(await libraryPreview.innerText(),/Câu 1 · Câu 1/);
+  await libraryPreview.getByRole('button',{name:'Đóng',exact:true}).click();
   await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
   await page.getByLabel('Tên bài tập',{exact:true}).waitFor();
   assert.equal(await page.locator('.thuy-editor-info').isVisible(),true);

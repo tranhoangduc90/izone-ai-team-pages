@@ -105,7 +105,7 @@ export function renderTeacherSkills(root,course,{onSummary,onOpen}){
    else if(skill==='speaking'){const value=speakingSummary(course.sessions,person.studentRef);row.append(node('td',value.frequencies.map(g=>g.label+' ('+g.count+')').join(' · ')||'Chưa có phản hồi'));const cell=node('td');cell.append(node('p',value.latest?.text||'Chưa có nhận xét','thuy-feedback-excerpt'));if(value.latest)cell.append(action('Đọc đủ',()=>modal('Nhận xét Speaking · '+person.name,node('p',value.latest.text)),'button text-button'));row.append(cell);}
    else{row.append(node('td',percent(summary.average)));for(let i=0;i<3;i++){const result=namedTest(person,i)?.[skill];row.append(node('td',result&&Number.isFinite(result.correct)&&Number.isFinite(result.total)?result.correct+'/'+result.total:'Chưa có điểm'));}}
    tbody.append(row);
-  }table.append(tbody);const scroll=node('div','','thuy-roster-scroll');scroll.tabIndex=0;scroll.append(table);content.append(scroll,node('p',`Đang hiển thị ${people.length}/${course.people.length} học viên · Cuộn ngang để xem các buổi. Nguồn chưa kết nối giữ trạng thái chưa có dữ liệu.`,'thuy-roster-hint'));
+  }table.append(tbody);const scroll=node('div','','thuy-roster-scroll');scroll.tabIndex=0;scroll.append(table);content.append(scroll,node('p',`Đang hiển thị ${people.length}/${course.people.length} hồ sơ · Nguồn chưa kết nối giữ trạng thái chưa có dữ liệu.`,'thuy-roster-hint'));
   if(skill==='speaking'){
    const counts=speakingAnalytics(course.sessions),stats=node('section','','card thuy-speaking-stats'),chart=node('div','','thuy-speaking-chart'),method=node('details');
    stats.append(node('h3',`${counts.contributors} học viên · ${counts.forms} phiếu có phản hồi`));method.append(node('summary','Đối chiếu nhãn gốc'));
