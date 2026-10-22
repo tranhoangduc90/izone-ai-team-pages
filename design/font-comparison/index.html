@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="So sánh ba font thực tế của Reading, K56 và mẫu Thủy trên cùng nội dung IZONE.">
+  <meta name="description" content="So sánh font và màu Reading, mẫu Linh production và mẫu Thủy trên cùng nội dung IZONE.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'">
-  <title>Ba font đúng nguồn · Ba bảng màu — IZONE</title>
+  <title>Reading · Linh · Thủy — So font và màu IZONE</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="fonts.css">
-  <link rel="stylesheet" href="style.css?v=20261022-per-font-colors">
-  <script src="app.js?v=20261022-per-font-colors" defer></script>
+  <link rel="stylesheet" href="fonts.css?v=20261022-linh-production">
+  <link rel="stylesheet" href="style.css?v=20261022-linh-production">
+  <script src="app.js?v=20261022-linh-production" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#comparison">Đến nội dung so sánh</a>
@@ -19,7 +19,7 @@
   </header>
   <main>
     <div class="intro">
-      <div><p class="eyebrow">SO SÁNH THẨM MỸ · TEAM AI</p><h1>Ba font đúng nguồn. Ba cách phối màu.</h1>
+      <div><p class="eyebrow">SO SÁNH THẨM MỸ · TEAM AI</p><h1>Ba mẫu giao diện. Chọn font và màu.</h1>
       <p class="intro-copy">Nhìn cùng nội dung, thử đọc và chọn cảm giác phù hợp với team.</p></div>
       <div class="palette" aria-label="Màu của bản đang xem">
         <span class="swatch navy" title="Navy #152B4E"></span><span class="swatch red" title="Đỏ #DB0829"></span><span class="swatch gray" title="Xám sáng #F5F6F8"></span><span class="swatch white" title="Trắng #FFFFFF"></span>
@@ -44,7 +44,7 @@
         <span>Phối màu</span>
         <div class="segmented" role="group" aria-label="Chọn cách phối màu">
           <button type="button" data-theme="reading" aria-pressed="true">Reading</button>
-          <button type="button" data-theme="k56" aria-pressed="false">K56</button>
+          <button type="button" data-theme="linh" aria-pressed="false">Mẫu Linh</button>
           <button type="button" data-theme="thuy" aria-pressed="false">Mẫu Thủy</button>
         </div>
         <span id="themeDescription">Nền xám sáng · Hành động navy · Đỏ nhấn nhỏ</span>
@@ -53,15 +53,23 @@
         <span>Font chữ</span>
         <div class="segmented" role="group" aria-label="Chọn font xem rộng">
           <button type="button" data-font="nunito" aria-pressed="true">Reading · Nunito Sans</button>
-          <button type="button" data-font="segoe" aria-pressed="false">K56 · Segoe UI</button>
+          <button type="button" data-font="linh" aria-pressed="false">Linh · Source Sans 3</button>
           <button type="button" data-font="geologica" aria-pressed="false">Thủy · Geologica</button>
         </div>
       </div>
-      <div class="comparison-notes"><p id="comparisonHelp">Cùng nội dung, cỡ chữ và bố cục. Mỗi font có bộ chọn màu riêng.</p><p id="fontStatus" role="status">Đang kiểm ba font…</p></div>
+      <div class="control-row linh-font-picker">
+        <span>Font mẫu Linh</span>
+        <div class="segmented" role="group" aria-label="Chọn font từ sản phẩm của Linh">
+          <button type="button" data-linh-font="writing" aria-pressed="true">Writing · Source Sans 3</button>
+          <button type="button" data-linh-font="substitute" aria-pressed="false">Substitute · Source Sans Pro</button>
+        </div>
+        <p>Hai sản phẩm cùng hệ màu; font thực tế khác nhau. Đổi ở đây chỉ thay font của mẫu Linh.</p>
+      </div>
+      <div class="comparison-notes"><p id="comparisonHelp">Cùng nội dung, cỡ chữ và bố cục. Mỗi font có bộ chọn màu riêng.</p><p id="fontStatus" role="status">Đang kiểm font…</p></div>
     </section>
     <p id="mobileHint" class="mobile-hint">Vuốt ngang để so các bản, hoặc chọn <strong>Xem rộng</strong> để đọc trên điện thoại.</p>
     <section id="comparison" class="comparison-grid" aria-label="Các bản giao diện cùng nội dung" tabindex="-1"></section>
-    <footer class="page-footer"><p>Reading dùng Nunito Sans · Giao diện K56 trên Chrome/Windows dùng Segoe UI · Mẫu Thủy dùng Geologica.</p><p>Segoe UI lấy từ thiết bị. Nếu máy không có font này, bản K56 sẽ báo thiếu font. Demo giữ chung cỡ và độ đậm để so dáng chữ; K56 gốc dùng nhiều chữ đậm hơn, còn phần bài đọc/Writing có Georgia riêng.</p><p>Bản thử chỉ dùng trên trang này; lựa chọn ở đây chưa áp dụng cho các sản phẩm.</p></footer>
+    <footer class="page-footer"><p>Reading dùng Nunito Sans · Mẫu Linh dùng Source Sans 3 hoặc Source Sans Pro · Mẫu Thủy dùng Geologica.</p><p>Nguồn Linh đã đối chiếu production ngày 22/10/2026: <a href="../../writing-handouts/writing-flow-v2.html" target="_blank" rel="noopener">Dashboard Writing 56/67 — Source Sans 3</a> và <a href="../../term-tests/substitute-test-1-k56-computer-based/" target="_blank" rel="noopener">Substitute Test K56 — Source Sans Pro</a>. Bảng màu lấy phần chung của hai trang; mẫu Reading và Thủy giữ nguyên.</p><p>Demo giữ cùng cỡ chữ và độ đậm khai báo để so sánh. Source Sans Pro dùng đúng hai tệp Regular/Bold của production: mức 500 dùng Regular, 600–700 dùng Bold; Source Sans 3 có các mức đậm riêng. Đây là so font và màu, không sao chép bố cục từng sản phẩm.</p><p>Bản thử chỉ dùng trên trang này; lựa chọn ở đây chưa áp dụng cho các sản phẩm.</p></footer>
   </main>
   <noscript><p class="no-script">Vui lòng bật JavaScript để chuyển và so sánh font, bảng màu.</p></noscript>
 </body>
