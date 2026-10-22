@@ -327,6 +327,23 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
   // Bản trình bày Thủy dùng chính draft/revision và các lệnh lưu/duyệt/phát ở trên.
   // Không chuyển qua mô hình demo, vì chuyển đổi có thể làm mất dạng câu hoặc ID nguồn cũ.
   const thuyNames={mcq:'Trắc nghiệm',multi:'Chọn nhiều đáp án',short_answer:'Điền từ',reflection:'Trả lời mở',matching:'Nối cặp',self_reported_score:'Ghi số câu đúng',keyword_selection:'Gạch chân từ khóa'};
+  // Đáp án giữ riêng trong nháp; một ô có thể có nhiều cách viết do giảng viên xác nhận.
+  function paintSlotKeys(card,item){
+    if(item.layoutType!=='numbered_short_texts')return;
+    field(card,'Tự chấm từng ô',item.graderType==='accepted_text_sequence',value=>{
+      item.graderType=value?'accepted_text_sequence':'none';item.maxScore=value?item.interactionConfig.responseCount:0;
+      if(value)draft.gradingKey.items[item.itemVersionId]={graderType:'accepted_text_sequence',
+        acceptedBySlot:Array.from({length:item.interactionConfig.responseCount},(_,slot)=>draft.gradingKey.referenceAnswers?.[item.itemVersionId]?.[slot]?[draft.gradingKey.referenceAnswers[item.itemVersionId][slot]]:[]),
+        normalization:{caseInsensitive:true,collapseWhitespace:true}};
+      else delete draft.gradingKey.items[item.itemVersionId];paint();
+    },{kind:'checkbox'});
+    if(item.graderType!=='accepted_text_sequence')return;
+    for(let slot=0;slot<item.interactionConfig.responseCount;slot++)field(card,
+      'Đáp án '+(item.interactionConfig.responseLabels?.[slot]||'ô '+(slot+1))+' · mỗi dòng một cách viết',
+      (draft.gradingKey.items[item.itemVersionId]?.acceptedBySlot?.[slot]||[]).join('\n'),value=>{
+        const key=draft.gradingKey.items[item.itemVersionId];key.acceptedBySlot[slot]=value.split('\n').map(s=>s.trim()).filter(Boolean);
+      },{kind:'textarea'});
+  }
   function paintThuyItem(parent,item,block,readonly){
     if(!['mcq','multi','reflection','short_answer','keyword_selection','self_reported_score','matching','speaking_checklist','gapfill','numbered_short_texts'].includes(editorType(item))){paintLegacyItem(parent,item,block,readonly);return;}
     const type=editorType(item),index=block.items.indexOf(item),card=el('fieldset',undefined,{className:'editor-item thuy-editor-question',disabled:readonly}),head=el('div',undefined,{className:'thuy-editor-question-head'}),title=el('h3',`Câu ${item.position}`);
@@ -381,6 +398,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     }else if(config.sentenceLines){
       for(const line of config.sentenceLines)field(card,line.title||'Câu có ô trống',line.parts.join('[___]'),value=>{line.parts=value.split('[___]');config.responseCount=config.sentenceLines.reduce((n,l)=>n+l.parts.length-1,0);},{kind:'textarea'});
     }else if(type==='numbered_short_texts')field(card,'Số ô trả lời',config.responseCount,value=>{config.responseCount=value;},{kind:'number',min:2,max:10});
+    paintSlotKeys(card,item);
     const advanced=el('details');advanced.append(el('summary','Hướng dẫn và thiết lập thêm'));
     field(advanced,'Hướng dẫn',item.helpText||'',value=>{item.helpText=value;},{kind:'textarea'});field(advanced,'Số hiển thị',item.displayNumber||'',value=>{if(value)item.displayNumber=value;else delete item.displayNumber;});
     if(!['none',undefined].includes(item.graderType)){const details=el('details');details.append(el('summary','Giải thích đáp án'));field(details,'Giải thích',draft.gradingKey.explanations?.[item.itemVersionId]||'',value=>{draft.gradingKey.explanations??={};if(value.trim())draft.gradingKey.explanations[item.itemVersionId]=value;else delete draft.gradingKey.explanations[item.itemVersionId];},{kind:'textarea'});card.append(details);}

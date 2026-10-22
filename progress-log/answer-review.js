@@ -2,7 +2,7 @@
 // Giữ nguyên câu, lựa chọn, ô điền và xuống dòng. Không tự chấm hoặc suy đáp án đúng.
 import {legacySentences} from './legacy-sentences.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const verdicts={correct:'✓ Đúng',incorrect:'✕ Sai',pending:'Đang chờ chấm',manual_review:'Cần giảng viên kiểm tra',ungraded:'Chưa chấm đúng/sai',blank:'Để trống'};
+const verdicts={correct:'✓ Đúng',incorrect:'✕ Sai',partial:'Đúng một phần',pending:'Đang chờ chấm',manual_review:'Cần giảng viên kiểm tra',ungraded:'Chưa chấm đúng/sai',blank:'Để trống'};
 function plain(value){
   if(value===null||value===undefined||value==='')return 'Chưa trả lời';
   if(typeof value==='object'&&!Array.isArray(value)){
@@ -43,6 +43,7 @@ export function reviewItems(detail){
         answer='<ol class="reviewAnswerList">'+Array.from({length:count},(_,i)=>'<li><small>'+esc(c.responseLabels?.[i]||'Ô '+(i+1))+'</small><strong>'+esc(plain(values[i]))+'</strong></li>').join('')+'</ol>';
       }else answer='<p class="reviewAnswer"><small>'+ (item.interactionType==='number_score'?'Điểm em tự khai':'Câu trả lời của em')+'</small><strong>'+esc(plain(value))+'</strong></p>';
       const score=result&&Number.isFinite(result.scoreEarned)&&Number.isFinite(result.maxScore)&&result.maxScore>0?' · '+result.scoreEarned+'/'+result.maxScore+' điểm':'';
+      if(result?.slotResults)answer+='<ol class="reviewAnswerList">'+result.slotResults.map(slot=>'<li><small>'+esc(c.responseLabels?.[slot.slot]||'Ô '+(slot.slot+1))+'</small><strong>'+esc(verdicts[slot.verdict])+'</strong></li>').join('')+'</ol>';
       return '<article data-review-item="'+esc(item.itemVersionId)+'"><div class="reviewQuestionTop"><span class="reviewQuestionNumber">'+esc(item.displayNumber??item.position??index+1)+'</span><div><small>CÂU '+esc(item.displayNumber??item.position??index+1)+(item.required?' · BẮT BUỘC':'')+'</small><h3>'+esc(item.prompt)+'</h3></div></div>'+((item.helpText||item.instructions)?'<p class="reviewInstructions">'+esc(item.helpText||item.instructions)+'</p>':'')+answer+'<p class="reviewVerdict '+esc(verdict)+'">'+esc(label+score)+'</p></article>';
     }).join('');
     return '<section class="studentAnswerReview"><div class="studentJourneyHeading"><div><span class="studentPortalEyebrow">CÂU TRẢ LỜI CỦA EM · PHẦN '+esc(block.checkpoint??'')+'</span><h2>'+esc(block.title||'Nội dung đã ghi')+'</h2></div></div>'+(block.instructions?'<p class="reviewInstructions">'+esc(block.instructions)+'</p>':'')+articles+'</section>';

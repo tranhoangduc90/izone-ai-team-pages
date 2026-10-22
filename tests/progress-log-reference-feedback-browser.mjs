@@ -22,5 +22,19 @@ test('Đối chiếu sau nộp: giữ ẩn theo quyền, hiện đáp án nguồ
    const shown=partFeedback(block,{answerRelease:'released',items:[grade]});document.querySelector('main').append(shown);
    return {hidden:hidden===null,text:shown.innerText};
   });assert.equal(result.hidden,true);assert.match(result.text,/ý chính/);assert.match(result.text,/không tự chấm đúng\/sai/);assert.doesNotMatch(result.text,/✕ Sai|✓ Đúng|0 đúng/);
+  const graded=await page.evaluate(async()=>{
+   const {partFeedback}=await import('/progress-log/thuy-live/part-feedback.js');
+   const items=[4,6,2].map((count,index)=>({itemVersionId:'group-'+index,position:index+1,prompt:'Nhóm giả '+index,layoutType:'numbered_short_texts',options:[],interactionConfig:{responseCount:count,responseLabels:Array.from({length:count},(_,i)=>'Nhãn giả '+index+' · '+i)}}));
+   const grades=items.map(item=>({itemVersionId:item.itemVersionId,maxScore:item.interactionConfig.responseCount,verdict:'partial',expectedAnswer:['khóa nhóm'],slotResults:Array.from({length:item.interactionConfig.responseCount},(_,slot)=>({slot,rawAnswer:slot===1?null:'Nội dung giả',verdict:slot===1?'incorrect':'correct',expectedAnswer:['Đáp án giả '+slot]}))}));
+   const hidden=partFeedback({items},{answerRelease:'hidden',items:grades});
+   const shown=partFeedback({items},{answerRelease:'released',items:grades});document.querySelector('main').replaceChildren(shown);
+   const {reviewItems}=await import('/progress-log/answer-review.js');
+   const history=reviewItems({definition:{blocks:[{items}]},responses:{},gradingItems:grades,submissionId:'fake'});
+   return {hidden:hidden===null,text:shown.innerText,slots:shown.querySelectorAll('.thuy-slot-review li').length,history};
+  });
+  assert.equal(graded.hidden,true);assert.equal(graded.slots,12);assert.match(graded.text,/9 đúng · 3 sai \/ 12 ô đã chấm/);
+  assert.match(graded.text,/Nhãn giả 1 · 5/);assert.match(graded.text,/Để trống/);assert.match(graded.text,/✓ Đúng/);assert.match(graded.text,/✕ Sai/);
+  assert.match(graded.history,/Đúng một phần/);assert.doesNotMatch(graded.history,/Chưa có kết quả chấm/);
+  await page.setViewportSize({width:390,height:850});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  }finally{await browser.close();await new Promise(done=>server.close(done));}
 });
