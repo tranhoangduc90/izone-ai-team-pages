@@ -1,0 +1,182 @@
+// Cookie phiên chung được máy chủ xác minh; quyền Substitute vẫn do API riêng kiểm.
+import '../../shared/teacher-single-sign-on.js?v=20261023-sso-all';
+import {appendWritingFeedback as appendFeedback} from './feedback-renderer.js?rev=20261009-results-v2';
+import {createProgressPanel} from './teacher-progress-panel.js?rev=20261019-v1';
+const API='https://ducizone.ddns.net/teacher-login-preview-api/substitute-teacher-api';
+const TITLES={'substitute-test-1-k56':'Substitute Test 1 · Khóa 56','substitute-test-2-k56':'Substitute Test 2 · Khóa 56','substitute-test-1-k67':'Substitute Test 1 · Khóa 67','substitute-test-2-k67':'Substitute Test 2 · Khóa 67'};
+const $=id=>document.getElementById(id);
+const state={token:null,generation:0,detailGeneration:0,controller:null,scopes:[],rows:[],offset:0,hasMore:false};
+const initial=new URLSearchParams(location.search);
+const pageTest=Object.keys(TITLES).find(slug=>location.pathname.includes(slug+'-results'));
+const selectedTest=()=>$('test-select').value;
+const statusText=value=>({queued:'Chờ chấm Writing',processing:'Đang chấm Writing',ready:'Đã chấm Writing',incomplete:'Thiếu bài Writing; chưa có điểm tổng',failed:'Cần kiểm tra bài chấm'}[value]||'Chưa xác nhận');
+const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',blocked:'Đồng bộ bị chặn · chưa ghi Portal',unknown:'Cần đối soát Portal · chưa xác nhận',synced:'Đã xác nhận đồng bộ Portal'}[value]||'Chưa xác nhận Portal');
+const number=value=>typeof value==='number'&&Number.isFinite(value)?String(value):'—';
+const time=value=>value&&!Number.isNaN(Date.parse(value))?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'—';
+function node(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
+function message(text,type=''){const el=$('page-message');el.hidden=!text;el.textContent=text;el.className='notice '+type;}
+function clearResults(text='Đăng nhập để xem kết quả của những lượt nộp thật.'){
+ window.SUBSTITUTE_ANSWER_EXPLANATIONS?.reset();
+ progress.clear();
+ state.rows=[];$('student-detail').hidden=true;$('attempt-content').replaceChildren();$('student-rows').replaceChildren();
+ const row=node('tr'),cell=node('td',text,'empty-cell');cell.colSpan=7;row.append(cell);$('student-rows').append(row);
+ $('updated-at').textContent='';$('previous-page').disabled=true;$('next-page').disabled=true;$('page-range').textContent='';
+}
+function cancel(){state.generation++;state.controller?.abort();state.controller=null;}
+function logout(){cancel();state.token=null;state.scopes=[];state.filters={};$('extra-filters').reset();$('extra-filters').hidden=true;$('toggle-filters').setAttribute('aria-expanded','false');clearResults();$('filter-section').hidden=true;$('roster-section').hidden=true;$('logout').hidden=true;$('login-status').textContent='Chỉ giáo viên/quản trị được cấp quyền mới xem được kết quả.';$('google-signin').hidden=false;message('');window.google?.accounts?.id.disableAutoSelect();}
+async function request(route,params={},signal,authenticated=true){
+ const url=new URL(API+route);for(const [k,v]of Object.entries(params))url.searchParams.set(k,String(v));
+ const controller=new AbortController(),abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});
+ if(signal?.aborted)controller.abort();const timer=setTimeout(abort,20000);
+ try{
+  const response=await fetch(url,{method:'GET',cache:'no-store',credentials:'include',signal:controller.signal});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){const error=new Error(response.status===401?'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.':response.status===403?'Tài khoản này không có quyền xem bài/lớp đã chọn.':'Không tải được kết quả. Hãy thử lại sau.');error.status=response.status;throw error;}
+  return data;
+ }finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
+}
+function handleError(error,generation){if(generation!==state.generation)return;if(error.status===401)logout();else clearResults('Chưa tải được kết quả.');message(error.name==='AbortError'?'Kết nối bị gián đoạn hoặc quá thời gian chờ. Bạn có thể tải lại kết quả.':error.message,'error');}
+function classesForTest(){return state.scopes.filter(scope=>scope.testSlug===selectedTest()).map(scope=>scope.classCode);}
+function renderClasses(requested='ALL'){
+ const classes=classesForTest();$('class-filter').replaceChildren(new Option('Tất cả lớp được phép','ALL'),...classes.map(code=>new Option(code,code)));
+ $('class-filter').value=classes.includes(requested)?requested:'ALL';
+}
+function score(skill,row){const value=row.scores?.[skill];if(!value)return'—';return row.testSlug==='substitute-test-1-k56'?`${number(value.raw)}/${number(value.max)}`:`${number(value.band)}/9 (${number(value.raw)}/${number(value.max)} câu)`;}
+function appendPortalProjection(content,data){
+ const p=data.portalProjection;if(!p)return;
+ const skills=['listening','reading','writing'],maxima=data.testSlug.endsWith('k67')?[9,9,9]:[40,data.testSlug==='substitute-test-1-k56'?26:40,9];
+ if(!skills.every(s=>typeof p.actualScores?.[s]==='number'&&Number.isFinite(p.actualScores[s])&&typeof p.portalScores?.[s]==='number'&&Number.isFinite(p.portalScores[s]))){content.append(node('p','Chưa xác nhận được điểm dự kiến Portal.'));return;}
+ const synced=data.portalStatus==='synced',demo=data.classCode==='DEMO',section=node('section',undefined,'portal-projection');
+ section.append(node('h3','Điểm thực tế và điểm Thi lại'),node('p',demo?'DEMO · Chỉ đối chiếu quy tắc, không gửi Portal.':synced?'Đã xác nhận ba điểm Thi lại trên Portal.':'Điểm Portal dưới đây là dự kiến; chưa xác nhận đã ghi.'));
+ const wrap=node('div',undefined,'table-wrap'),table=node('table',undefined,'results-table'),head=node('thead'),headers=node('tr');
+ headers.append(node('th','Kỹ năng'),node('th','Điểm thực tế'),node('th',synced&&!demo?'Điểm Thi lại đã xác nhận':'Điểm Portal dự kiến'));head.append(headers);const body=node('tbody');
+ skills.forEach((s,i)=>{const row=node('tr');row.append(node('th',['Listening','Reading','Writing'][i]),node('td',number(p.actualScores[s]).replace('.',',')+'/'+maxima[i]),node('td',number(p.portalScores[s]).replace('.',',')+'/'+maxima[i]));body.append(row);});
+ table.append(head,body);wrap.append(table);section.append(wrap,node('p','Kết quả bài thực tế: '+(p.actualPassed===true?'Đạt':p.actualPassed===false?'Chưa đạt':'Chưa xác nhận')+'.'));
+ if(typeof p.displayAverageBand==='number')section.append(node('p','Band trung bình hiển thị theo quy tắc: '+number(p.displayAverageBand).replace('.',',')+'/9.'));
+ content.append(section);
+}
+function renderRows(){
+ $('student-rows').replaceChildren();
+ for(const attempt of state.rows){
+  const row=node('tr');row.dataset.attempt=attempt.attemptToken;
+  const who=node('td',undefined,'student-cell');who.append(node('strong',attempt.studentName),node('span',attempt.classCode+' · '+time(attempt.submittedAt)));
+  row.append(who,node('td',score('listening',attempt),'score-cell'),node('td',score('reading',attempt),'score-cell'),node('td',attempt.result?number(attempt.result.writingScore??attempt.result.taskScore)+'/9':'—','score-cell'),node('td',statusText(attempt.status)),node('td',portalText(attempt.portalStatus)));
+  const actions=node('td'),button=node('button','Chi tiết','open-student');button.type='button';button.addEventListener('click',()=>openAttempt(attempt));actions.append(button);row.append(actions);$('student-rows').append(row);
+ }
+ if(!state.rows.length){const row=node('tr'),cell=node('td','Chưa có lượt nộp trong phạm vi này.','empty-cell');cell.colSpan=7;row.append(cell);$('student-rows').append(row);}
+ $('page-range').textContent=state.rows.length?`Lượt ${state.offset+1}–${state.offset+state.rows.length}`:'0 lượt nộp';
+ $('previous-page').disabled=state.offset===0;$('next-page').disabled=!state.hasMore;
+}
+async function openAttempt(attempt){
+ window.SUBSTITUTE_ANSWER_EXPLANATIONS?.reset();
+ const generation=state.generation,detailGeneration=++state.detailGeneration;$('student-detail').hidden=false;$('student-name').textContent=attempt.studentName;
+ $('student-status').textContent=attempt.classCode+' · Nộp lúc '+time(attempt.submittedAt);$('attempt-content').replaceChildren(node('p','Đang tải đúng lượt nộp…'));
+ state.selectedAttempt=attempt.attemptToken;
+ try{
+  const data=await request('/teacher/result',{test:attempt.testSlug,class:attempt.classCode,student:attempt.studentRef,attempt:attempt.attemptToken},state.controller?.signal);
+  if(generation!==state.generation||detailGeneration!==state.detailGeneration||state.selectedAttempt!==attempt.attemptToken)return;
+  if(data.attemptToken!==attempt.attemptToken||data.testSlug!==attempt.testSlug||data.classCode!==attempt.classCode||data.studentRef!==attempt.studentRef)throw new Error('Kết quả trả về không khớp lượt đã chọn.');
+  $('student-name').textContent=data.studentName;
+  const content=$('attempt-content');content.replaceChildren(node('p',statusText(data.status)+' · '+portalText(data.portalStatus)));
+  appendPortalProjection(content,data);
+  appendStudentSource(content,data.source,attempt.testSlug);
+  window.SUBSTITUTE_ANSWER_EXPLANATIONS?.attachTeacher({container:content,identity:{testSlug:attempt.testSlug,classCode:attempt.classCode,studentRef:attempt.studentRef,attemptToken:attempt.attemptToken},source:data.source,title:TITLES[attempt.testSlug],
+   loadReview:()=>request('/teacher/explanations',{test:attempt.testSlug,class:attempt.classCode,student:attempt.studentRef,attempt:attempt.attemptToken},state.controller?.signal)});
+  if(data.requiredTasks?.length===2)content.append(node('h3','Writing tổng · '+(data.result?number(data.result.writingScore)+'/9':'Chưa có điểm tổng')),
+    node('p','(Task 1 + 2 × Task 2) / 3, làm tròn xuống 0,5 band.'));
+  const tasks=data.tasks||[{taskNumber:data.taskNumber,status:data.status,result:data.result}];
+  for(const task of tasks){
+   content.append(node('h3',`Writing Task ${task.taskNumber} · ${task.result?number(task.result.taskScore)+'/9':task.status==='missing'?'Chưa có bài làm':'Đang chấm'}`));
+   const review=node('section',undefined,'writing-review-grid'),original=node('section',undefined,'student-source-writing'),feedback=node('section',undefined,'writing-review-feedback');
+   const source=data.source?.writing?.find(t=>t.taskNumber===task.taskNumber);
+   original.append(node('h4',`Bài viết đã nộp · Task ${task.taskNumber}`),node('div',source?.availability==='available'?source.essay||'Task này chưa có bài viết.':'Chưa có nguồn bài viết của lượt này.','student-essay'));
+   review.append(original,feedback);content.append(review);
+   if(task.result){
+    const criteria=node('div',undefined,'criterion-grid');for(const item of task.result.criteria||[]){const detail=node('details',undefined,'criterion-card');detail.append(node('summary',`${item.key||item.code} · ${number(item.score??item.bandScore)}/9`));appendFeedback(detail,item.feedback);if(item.components)appendFeedback(detail,item.components);criteria.append(detail);}feedback.append(criteria,node('h3',`Báo cáo Writing Task ${task.taskNumber}`));appendFeedback(feedback,task.result.report);
+   }else feedback.append(node('p',task.status==='missing'?'Hết giờ nhưng chưa có bài viết ở Task này; không tạo điểm 0 hoặc điểm tổng.':'Bài làm của học viên đang được chấm, kết quả sẽ hiện lại sau'));
+  }
+ }catch(error){if(detailGeneration===state.detailGeneration&&state.selectedAttempt===attempt.attemptToken)handleError(error,generation);}
+}
+function appendStudentSource(content,source,testSlug){
+ const block=node('section',undefined,'student-source');block.append(node('h3','Bài làm gốc của học viên'));
+ for(const [skill,title]of [['listening','Listening'],['reading','Reading']]){
+  const explanations=testSlug==='substitute-test-1-k67';
+  const part=node('details',undefined,'student-source-section'+(explanations?' detail-block':''));part.dataset.skill=title;part.append(node('summary',`${title} · đáp án đã nộp`));
+  const saved=source?.[skill];
+  const available=saved?.availability==='available'&&Array.isArray(saved.section?.details);
+  if(!available)part.append(node('p','Lượt cũ chưa lưu đáp án từng câu. Không thể suy ra bài làm từ tổng điểm.','source-unavailable'));
+  if(available||explanations){
+   const wrap=node('div',undefined,'table-wrap'),table=node('table',undefined,'results-table'+(explanations?' detail-table':'')),head=node('thead'),row=node('tr'),body=node('tbody');
+   for(const label of ['Câu','Đáp án đã nộp','Đáp án đúng','Kết quả'])row.append(node('th',label));head.append(row);
+   const details=available?saved.section.details:Array.from({length:40},(_,i)=>({number:i+1}));
+   for(const detail of details){const tr=node('tr');for(const text of [detail.number,detail.studentAnswer||'—',detail.correctAnswer||'—',({correct:'Đúng',incorrect:'Sai',blank:'Bỏ trống'})[detail.result]||'Chưa có dữ liệu'])tr.append(node('td',String(text)));body.append(tr);}
+   table.append(head,body);wrap.append(table);part.append(wrap);
+  }
+  block.append(part);
+ }
+ content.append(block);
+}
+async function loadResults(){
+ if(!state.token)return;cancel();state.controller=new AbortController();const generation=state.generation;
+ const test=selectedTest(),classCode=$('class-filter').value;
+ clearResults('Đang tải kết quả…');message('');$('load-results').disabled=true;
+ try{
+  const data=await request('/teacher/results',{test,class:classCode,limit:50,offset:state.offset,...state.filters},state.controller.signal);
+  if(generation!==state.generation)return;
+  if(data.testSlug!==test||data.classCode!==classCode||!Array.isArray(data.results))throw new Error('Dữ liệu kết quả không đúng phạm vi đã chọn.');
+  state.rows=data.results;state.hasMore=data.hasMore===true;renderRows();$('updated-at').textContent='Cập nhật '+time(new Date().toISOString());
+  const url=new URL(location.href);url.searchParams.set('test',test);url.searchParams.set('class',classCode);history.replaceState(null,'',url);
+ }catch(error){handleError(error,generation);}finally{if(generation===state.generation)$('load-results').disabled=false;}
+}
+async function signIn(response){
+ cancel();clearResults();state.scopes=[];$('filter-section').hidden=true;$('roster-section').hidden=true;state.token=!!(response?.restored||response?.credential);let generation=state.generation;
+ if(!state.token){message('Chưa nhận được xác nhận đăng nhập từ Google.','error');return;}
+ $('login-status').textContent='Đang kiểm tra quyền xem Substitute…';$('logout').hidden=false;
+ try{
+  if(!response.restored){await window.IzoneTeacherSso.login('substitute',response.credential,true);if(generation!==state.generation)return;}
+  const data=await request('/teacher/scopes');if(generation!==state.generation)return;
+  state.scopes=(data.scopes||[]).filter(scope=>TITLES[scope.testSlug]);if(!state.scopes.length)throw new Error('Tài khoản này chưa được cấp quyền xem Substitute.');
+  const tests=[...new Set(state.scopes.map(scope=>scope.testSlug))];$('test-select').replaceChildren(...tests.map(slug=>new Option(TITLES[slug],slug)));
+  const requestedTest=initial.get('test')||pageTest,requestedClass=(initial.get('class')||'ALL').toUpperCase();
+  if(requestedTest&&!tests.includes(requestedTest))throw new Error('Bạn chưa có quyền xem bài trong link này. Hãy mở lại từ bài được giao.');
+  $('test-select').value=requestedTest||tests[0];
+  if(requestedClass!=='ALL'&&!classesForTest().includes(requestedClass))throw new Error('Bạn chưa có quyền xem lớp trong link này. Hãy mở lại từ bài được giao.');
+  renderClasses(requestedClass);
+  $('filter-section').hidden=false;$('roster-section').hidden=false;$('google-signin').hidden=true;$('login-status').textContent='Đã đăng nhập · chỉ hiển thị các bài/lớp được cấp quyền.';state.offset=0;await loadResults();
+  // loadResults tạo generation mới. Deep link tiếp tục theo generation đó,
+  // nhưng không được hiện lại báo cáo nếu đã logout hoặc đổi tài khoản.
+  if(!state.token)return;generation=state.generation;
+  if(initial.has('attempt')&&initial.has('student')&&classesForTest().includes(initial.get('class'))){
+   const id={testSlug:selectedTest(),classCode:initial.get('class'),studentRef:initial.get('student'),attemptToken:initial.get('attempt')};
+   if(initial.has('stage')){
+    const data=await request('/teacher/result',{test:id.testSlug,class:id.classCode,student:id.studentRef,attempt:id.attemptToken,stage:initial.get('stage')});
+    if(generation!==state.generation)return;
+    if(data.attemptToken!==id.attemptToken||data.studentRef!==id.studentRef||data.classCode!==id.classCode||data.testSlug!==id.testSlug||data.stageKey!==initial.get('stage'))throw new Error('Báo cáo không khớp lượt nộp.');
+    $('student-detail').hidden=false;$('student-name').textContent='Báo cáo Writing Task 1';$('student-status').textContent=id.classCode+' · '+data.stageKey;
+    $('attempt-content').replaceChildren();appendFeedback($('attempt-content'),data.report);
+   }else await openAttempt(id);
+  }
+ }catch(error){if(generation===state.generation){logout();if(error.status!==401)$('login-status').textContent='Chưa mở được quyền xem kết quả.';message(error.message,'error');}}
+}
+const progress=createProgressPanel({host:$('roster-section'),request,
+ isCurrent:scope=>!!state.token&&scope.generation===state.generation&&scope.test===selectedTest()&&scope.class===$('class-filter').value,
+ onAuthError:error=>{if(error.status===401)logout();else{clearResults();message('Quyền xem lớp đã thay đổi. Hãy kiểm tra lại lớp được cấp.','error');}}});
+const progressButton=node('button','Tiến trình đã lưu','button button-secondary');progressButton.type='button';
+$('load-results').after(progressButton);progressButton.addEventListener('click',()=>progress.show({test:selectedTest(),class:$('class-filter').value,generation:state.generation}));
+async function initialize(){
+ logout();
+ try{
+  if(await window.IzoneTeacherSso.restore('substitute')){await signIn({restored:true});return;}
+  const config=await request('/teacher/config',{},undefined,false);
+  if(!window.google?.accounts?.id)await new Promise((resolve,reject)=>{const script=$('google-identity'),timer=setTimeout(()=>reject(new Error('Không tải được Google đăng nhập. Hãy tải lại trang.')),15000);script.addEventListener('load',()=>{clearTimeout(timer);resolve();},{once:true});script.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('Trình duyệt không tải được Google đăng nhập.'));},{once:true});});
+  window.google.accounts.id.initialize({client_id:config.googleClientId,callback:signIn,auto_select:false});
+  window.google.accounts.id.renderButton($('google-signin'),{type:'standard',theme:'outline',size:'large',text:'signin_with',locale:'vi',width:270});
+ }catch(error){message(error.message,'error');}
+}
+$('logout').addEventListener('click',async()=>{try{await window.IzoneTeacherSso.logout();await initialize();}catch(error){message(error.message,'error');}});$('load-results').addEventListener('click',()=>{state.offset=0;loadResults();});
+$('test-select').addEventListener('change',()=>{renderClasses();state.offset=0;loadResults();});$('class-filter').addEventListener('change',()=>{state.offset=0;loadResults();});
+$('previous-page').addEventListener('click',()=>{state.offset=Math.max(0,state.offset-50);loadResults();});$('next-page').addEventListener('click',()=>{state.offset+=50;loadResults();});
+$('toggle-filters').addEventListener('click',()=>{const panel=$('extra-filters');panel.hidden=!panel.hidden;$('toggle-filters').setAttribute('aria-expanded',String(!panel.hidden));});
+$('extra-filters').addEventListener('submit',event=>{event.preventDefault();const from=$('from-filter').value,to=$('to-filter').value;if(from&&to&&from>to){message('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.','error');return;}state.filters={name:$('name-filter').value.trim(),writing:$('writing-filter').value,portal:$('portal-filter').value,from,to};state.offset=0;loadResults();});
+$('reset-filters').addEventListener('click',()=>{$('extra-filters').reset();state.filters={};state.offset=0;loadResults();});
+initialize();
