@@ -210,9 +210,10 @@ document.addEventListener('click',async event=>{
     if(button.dataset.explain)explanationFor(button.dataset.explain,button);
     if(button.dataset.explainOffset){explanationIndex+=Number(button.dataset.explainOffset);explanationFor(content.targets[explanationIndex].id);}
     if(button.dataset.history){const snapshot=modal._historyItems[Number(button.dataset.history)];closeModal();state={...newState(),isSample:!!snapshot.feedback,answers:structuredClone(snapshot.answers),feedback:snapshot.feedback,status:snapshot.feedback?'review':'history',savedAt:snapshot.createdAt};render();}
-    if(button.dataset.serverAttempt){closeModal();const attempt=await serverClient.getAttempt(button.dataset.serverAttempt);showServerAttempt(attempt);}
+    if(button.dataset.serverAttempt){closeModal();const attempt=await serverClient.getAttempt(button.dataset.serverAttempt);trackServerAttempt(attempt);}
+    if(button.dataset.serverArchive){const archived=modal._serverArchives[Number(button.dataset.serverArchive)];closeModal();serverClient.stopPoll();state={...newState(),...structuredClone(archived.body),status:'history',savedAt:archived.savedAt,archived};render();}
     if(button.dataset.previewPerson)await serverClient.changePerson(button.dataset.previewPerson);
-    if(button.id==='teacher'){if(serverMode)toast('Chặng 2 chưa nối đăng nhập và quyền giảng viên thật.');else window.open(location.pathname+'?teacher=1&scenario=draft','_blank','noopener');}
+    if(button.id==='teacher'){if(serverMode)window.open('teacher.html','_blank','noopener');else window.open(location.pathname+'?teacher=1&scenario=draft','_blank','noopener');}
   }catch(err){toast('Chưa thực hiện được: '+err.message);}
 });
 for(const dialog of [modal,explanation]){
@@ -227,7 +228,14 @@ window.addEventListener('online',()=>{if(serverMode){serverClient.flush().catch(
 window.addEventListener('offline',()=>toast('Đang ngoại tuyến. Bản đang viết được giữ trên thiết bị.'));
 async function bootstrap(){
   try{
-    if(serverMode){const loaded=await serverClient.initialize();content=loaded.content;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};render();if(loaded.restored){toast('Đã khôi phục bản chưa gửi từ thiết bị; đang lưu lên máy chủ.');serverClient.flush().catch(()=>{});}return;}
+    if(serverMode){
+      const loaded=await serverClient.initialize();content=loaded.content;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};render();
+      if(loaded.restored){toast('Đã khôi phục bản chưa gửi từ thiết bị; đang lưu lên máy chủ.');serverClient.flush().catch(()=>{});}
+      const requested=query.get('attempt')||(loaded.config?.demo&&query.get('demoReview')==='1'&&query.get('view')!=='draft'?loaded.history.find(a=>a.status==='done')?.attemptId:null);
+      const pending=loaded.history.find(a=>['queued','processing'].includes(a.status));
+      if(requested||(!teacher&&pending&&!loaded.restored))trackServerAttempt(await serverClient.getAttempt(requested||pending.attemptId));
+      return;
+    }
     const response=await fetch('/__prototype__/content');if(!response.ok)throw Error('Không đọc được đề riêng tư.');content=await response.json();
     if(scenario==='sample-current'){const saved=localStorage.getItem(storageKey+':sample');if(saved){state=JSON.parse(saved);render();}else await changeScenario('draft');}
     else if(['draft','waiting','review','empty','entry'].includes(scenario))await changeScenario(scenario);else{scenario='current';state=structuredClone(originalDraft);render();}
@@ -241,13 +249,24 @@ function adaptServerSave(){
   const saved=serverClient.state;
   target.textContent=saved.conflict?'Xung đột bản lưu · Bài trên máy vẫn được giữ':saved.status==='saving'?'Đang lưu lên máy chủ…':saved.status==='dirty'?'Có thay đổi chưa lưu máy chủ':saved.status==='error'?'Chưa lưu máy chủ · Giữ bản trên thiết bị':saved.savedAt?'Đã lưu máy chủ · '+timeLabel(saved.savedAt):'Chưa nhập bài · Máy chủ sẵn sàng';
   target.dataset.saveStatus=saved.status;
+  if(state.archived)target.textContent='Nháp cũ · Lưu lúc '+timeLabel(state.savedAt)+' · Chỉ xem';
 }
 function adaptServerScreen(){
   const strip=document.querySelector('.prototype-strip');strip.querySelector('span').innerHTML='<strong>BẢN THỬ · BỘ CHẤM THẬT</strong> · Nháp và phản hồi lưu máy chủ';strip.querySelector('label').hidden=true;
-  const learner=document.querySelector('.learner');if(learner)learner.innerHTML='<strong>'+e(serverClient.identity.name)+'</strong><span>· '+e(serverClient.identity.className)+'</span><button class="quiet" data-action="identity">Đổi người thử</button>';
+  const config=serverClient.access?.config;
+  if(config)strip.querySelector('span').innerHTML='<strong>'+(config.demo?'DEMO · TÀI KHOẢN GIẢ':'BẢN THỬ · NHẬN DIỆN HỌC VIÊN')+'</strong> · '+(teacher?'Giảng viên chỉ xem · ':'')+'Nháp và phản hồi lưu máy chủ';
+  const learner=document.querySelector('.learner');if(learner)learner.innerHTML='<strong>'+e(serverClient.identity.name)+'</strong><span>· '+e(serverClient.identity.className)+'</span>'+(teacher?'':'<button class="quiet" data-action="identity">'+(config?'Đổi người học':'Đổi người thử')+'</button>');
+  const teacherNotice=document.querySelector('.teacher-notice');if(teacherNotice)teacherNotice.textContent='Giảng viên · Chỉ xem bài đã lưu. Lưu lúc '+timeLabel(state.savedAt)+'. Không nộp hoặc chấm thay học viên.';
   const result=document.querySelector('.result-note');if(result)result.textContent='Phản hồi Read 67 thật · Bản gửi #'+(state.serverAttempt?.draftRevision||'')+'. Bài được chấm đúng phiên bản đã gửi; sửa tiếp dùng nháp riêng.';
+  if(result){
+    const f=Object.values(state.feedback||{}),counts={correct:0,partial:0,incorrect:0,blank:0};f.forEach(v=>{if(v.status in counts)counts[v.status]++;});
+    const problem=content.targets.find(t=>state.feedback[t.id]?.status!=='correct');
+    result.innerHTML='<strong>Đã có bài chấm · Lượt làm '+(state.serverAttempt?.runNo||1)+'</strong><span> '+counts.correct+' đúng · '+counts.partial+' đúng một phần · '+counts.incorrect+' cần sửa · '+counts.blank+' bỏ trống</span>'+(problem?'<button class="quiet" data-jump-field="'+problem.id+'">Xem phần cần sửa ↓</button>':'')+(state.serverAttempt?.fromCache?'<small> Bài không đổi — dùng lại kết quả đã lưu.</small>':'');
+  }
   const waiting=document.querySelector('.waiting-card');if(waiting)waiting.innerHTML='<span class="spinner"></span><span><strong>'+(latestServerAttempt?.status==='processing'?'Đang chấm bằng Read 67':'Đã nhận bài · Đang chờ chấm')+'</strong><br>Nhận xét sẽ được lưu trên máy chủ. <button class="quiet" data-action="server-return-draft">Tiếp tục chỉnh nháp →</button></span>';
   if(state.status==='waiting')document.querySelector('.footer-tools [data-action="show-result"]')?.setAttribute('hidden','');
+  if(teacher){document.querySelector('.footer-tools [data-action="edit"]')?.remove();document.querySelector('#grade-button')?.remove();}
+  else if(state.status==='draft'){const b=document.querySelector('#grade-button');if(b)b.textContent=serverClient.initialHistory?.attempts?.some(a=>a.status==='done')?'Chấm lại bản sửa':'Nộp bài để chấm';}
   if(state.status==='grading-error'){
     const notice=document.createElement('div');notice.className='notice server-error';notice.textContent='Chưa có phản hồi hoàn tất. '+(state.serverAttempt?.errorCode==='AI_OUTCOME_UNKNOWN'?'Chưa rõ kết quả gọi AI; cần đối chiếu trước khi gọi lại.':'Bộ chấm trả lỗi: '+(state.serverAttempt?.errorCode||'CHƯA XÁC ĐỊNH'));
     document.querySelector('.lesson-head').after(notice);const b=document.querySelector('#grade-button');if(b){b.textContent='Quay lại nháp';b.dataset.action='server-return-draft';}
@@ -255,14 +274,21 @@ function adaptServerScreen(){
   adaptServerSave();
 }
 async function serverGrade(){
+  if(teacher||!writable())return;
   closeModal();
   const button=document.querySelector('#grade-button');if(button)button.disabled=true;
-  try{await serverClient.flush();if(completed()<16){if(button)button.disabled=false;review();return;}const attempt=await serverClient.submit();latestServerAttempt=attempt;showServerAttempt(attempt);serverClient.poll(attempt.attemptId,value=>{
+  try{await serverClient.flush();if(completed()<16){if(button)button.disabled=false;review();return;}trackServerAttempt(await serverClient.submit());}catch(error){toast('Chưa gửi chấm: '+error.message);if(button)button.disabled=false;}
+}
+// Reload hoặc lịch sử nối lại đúng job; phản hồi muộn chỉ nhắc khi đang sửa nháp.
+function trackServerAttempt(attempt){
+  showServerAttempt(attempt);serverClient.stopPoll();
+  if(!['queued','processing'].includes(attempt.status))return;
+  serverClient.poll(attempt.attemptId,value=>{
     if(value.status==='connection_error'){toast('Chưa đọc được tiến độ. Bản gửi vẫn giữ trên máy chủ; đang kết nối lại.');return;}
     latestServerAttempt=value;
     if(state.serverAttempt?.attemptId===value.attemptId&&state.status!=='draft')showServerAttempt(value);
     else if(value.status==='done')toast('Đã có phản hồi cho bản đã gửi. Mở Lịch sử để xem; nháp đang sửa được giữ.');
-  });}catch(error){toast('Chưa gửi chấm: '+error.message);if(button)button.disabled=false;}
+  });
 }
 function showServerAttempt(attempt){
   latestServerAttempt=attempt;
@@ -271,14 +297,22 @@ function showServerAttempt(attempt){
   render();
 }
 async function serverHistoryModal(){
-  try{const attempts=await serverClient.getHistory();showModal('Lịch sử đã lưu trên máy chủ','<div class="history-list">'+(attempts.length?attempts.map(a=>'<div class="history-row"><div><strong>Bản gửi #'+a.draftRevision+'</strong><small>'+timeLabel(a.createdAt)+' · '+e(({done:'Đã có phản hồi',queued:'Đang chờ chấm',processing:'Đang chấm',failed:'Chấm lỗi',needs_review:'Cần đối chiếu'})[a.status]||a.status)+'</small></div><button class="secondary" data-server-attempt="'+a.attemptId+'">Xem</button></div>').join(''):'<p>Chưa gửi bài để chấm. Nháp hiện tại vẫn được lưu riêng.</p>')+'</div>','<button class="secondary" data-close-modal>Đóng</button><button class="primary" data-action="server-return-draft">Về nháp hiện tại</button>');}catch(error){toast(error.message);}
+  try{const data=await serverClient.historyDetail(),attempts=data.attempts,archives=data.archives||[];
+    const rows=attempts.map(a=>'<div class="history-row"><div><strong>Lượt '+(a.runNo||1)+' · Bản gửi #'+a.draftRevision+'</strong><small>'+new Date(a.createdAt).toLocaleString('vi-VN')+' · '+e(({done:'Đã có phản hồi',queued:'Đang chờ chấm',processing:'Đang chấm',failed:'Chấm lỗi',needs_review:'Cần đối chiếu'})[a.status]||a.status)+'</small></div><button class="secondary" data-server-attempt="'+a.attemptId+'">Xem</button></div>').join('');
+    const drafts=archives.map((a,i)=>'<div class="history-row"><div><strong>Nháp trước khi làm lại · Lượt '+a.runNo+'</strong><small>'+new Date(a.savedAt).toLocaleString('vi-VN')+' · Chỉ xem</small></div><button class="secondary" data-server-archive="'+i+'">Xem nháp</button></div>').join('');
+    showModal('Lịch sử đã lưu trên máy chủ',(data.firstCompleted?'<p>Lần hoàn thành đầu: lượt '+data.firstCompleted.runNo+' · '+new Date(data.firstCompleted.finishedAt).toLocaleString('vi-VN')+'</p>':'<p>Chưa có lần hoàn thành. Nháp hiện tại vẫn được lưu riêng.</p>')+'<div class="history-list">'+rows+drafts+'</div>','<button class="secondary" data-close-modal>Đóng</button><button class="primary" data-action="server-return-draft">Về nháp hiện tại</button>'+(!teacher?'<button class="secondary" data-action="reset">Làm lại từ đầu</button>':''));modal._serverArchives=archives;
+  }catch(error){toast(error.message);}
 }
 async function serverAction(name){
+  if(teacher&&name!=='server-return-draft')return;
+  if(name==='identity'&&serverClient.access?.config){await serverClient.changeIdentity();return;}
   if(name==='identity'){showModal('Chọn học viên thử','<p>Đây là hai tài khoản thử cục bộ để kiểm nháp và phản hồi riêng. Chưa dùng đăng nhập hoặc roster production.</p>','<button class="secondary" data-preview-person="A">Học viên thử A</button><button class="primary" data-preview-person="B">Học viên thử B</button>');return;}
   if(name==='reset'){closeModal();showModal('Mở nháp trống mới?','<p>Giữ toàn bộ lượt đã gửi và phản hồi trên máy chủ. Nháp hiện tại sẽ được thay bằng bản trống sau khi lưu.</p>','<button class="secondary" data-close-modal>Giữ nháp</button><button class="primary" data-action="confirm-reset">Mở nháp trống</button>');return;}
   closeModal();
-  if(name==='confirm-reset'){state=newState();serverClient.schedule(state);await serverClient.flush();}
+  if(name==='confirm-reset')await serverClient.reset();
+  else await serverClient.flush();
   const draft=await serverClient.getDraft();scenario='current';state={...newState(),...draft.body,id:'draft-'+serverClient.identity.ownerId,status:'draft',savedAt:draft.savedAt};render();
   if(name==='edit')toast('Đang chỉnh nháp trên máy chủ. Bản đã chấm và phản hồi vẫn giữ riêng.');
 }
 window.addEventListener('reading67:server-state',()=>{if(serverMode&&content&&state)updateProgress();});
+window.addEventListener('reading67:access-warning',event=>toast(event.detail));

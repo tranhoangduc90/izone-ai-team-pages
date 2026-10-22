@@ -1,5 +1,23 @@
 # Reading 67 — prototype luyện nén
 
+## Chặng 3 — bản thử trên Pages
+
+`demo.html` trình bày sau nộp/chờ/kết quả và mở bản làm để sửa, chấm lại.
+Màn chờ minh họa có nhãn riêng; bản kết quả lấy từ API/SQL thử, không nhúng key
+hoặc phản hồi trong source Pages. `api-config.js` chọn API HTTPS thử riêng khi
+chạy ngoài localhost. Đăng nhập giảng viên ở `teacher.html` dùng Google và quyền
+lớp từ nguồn Reading. Runtime công khai dùng học viên giả; không ghi mã người
+giả vào bộ nhớ ERP dùng chung. Cách nhận diện bằng roster thật đã có ở profile
+local riêng, không công khai danh sách thật trong bản demo.
+
+Nháp/reset/bản gửi và lịch sử giữ riêng trên máy chủ. Lượt có kết quả chỉ xem;
+Sửa bài quay về nháp mới. Reset lưu nháp cũ trước khi mở lượt tiếp theo. Tải lại
+nối job còn chờ; phản hồi muộn không phủ phần đang sửa. Giảng viên chỉ đọc đúng
+lớp, nháp, lịch sử và feedback; tham số `teacher=1` không tự cấp quyền.
+
+Đây là phát hành **bản thử riêng**, chưa mở lớp, đăng ký CTA hoặc ghi Homework.
+Không thay API/DB/worker Read 67 hoặc Reading thực chiến đang vận hành.
+
 ## Chặng 2 — bản nối máy chủ thử
 
 `?server=1` dùng `web-client.js` để lưu nháp lên API/SQL của Reading/Listening 67,
