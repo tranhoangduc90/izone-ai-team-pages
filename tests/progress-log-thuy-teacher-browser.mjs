@@ -102,7 +102,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.doesNotMatch(await libraryPreview.innerText(),/Câu 1 · Câu 1/);
   assert.equal(await libraryPreview.getByRole('heading',{level:3}).nth(1).innerText(),'Câu 1');
   assert.equal(await libraryPreview.locator('.thuy-comparison table').count(),1);
-  assert.equal(await libraryPreview.locator('.thuy-comparison textarea:disabled').count(),2);
+  assert.equal(await libraryPreview.locator('.thuy-comparison [data-readonly-blank]').count(),2);
   await libraryPreview.getByRole('button',{name:'Đóng',exact:true}).click();
   await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
   await page.getByLabel('Tên bài tập',{exact:true}).waitFor();
