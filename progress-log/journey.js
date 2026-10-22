@@ -159,7 +159,7 @@ function renderJourney(journey) {
   if(config.THUY_PILOT_CLASS_IDS?.includes(String(journey.class.classId))&&new URLSearchParams(location.search).get('presentation')!=='legacy'){
     document.body.classList.add('thuy-live','thuy-student');
     if(!document.querySelector('#thuyStudentJourneySkills')){
-      const css=document.createElement('link');css.rel='stylesheet';css.href='./thuy-live/styles.css?rev=20261022-parity-v1';document.head.append(css);
+      const css=document.createElement('link');css.rel='stylesheet';css.href='./thuy-live/styles.css?rev=20261022-final-choice';document.head.append(css);
       const root=document.createElement('section');root.id='thuyStudentJourneySkills';elements.journeyView.prepend(root);
       void import('./thuy-live/student-skills-journey.js?rev=20261022-parity-v2').then(({mountStudentSkillJourney})=>mountStudentSkillJourney(root,journey,async sessionNumber=>{
         const response=await fetch(config.API_BASE_URL+'/api/learning/student/course-session-detail',{method:'POST',headers:{'content-type':'application/json'},

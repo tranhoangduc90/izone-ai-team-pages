@@ -24,7 +24,7 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
 const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022-parity-v2'):null;
-if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./thuy-live/styles.css?rev=20261022-matching-dropdown',import.meta.url);document.head.append(css);}
+if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./thuy-live/styles.css?rev=20261022-final-choice',import.meta.url);document.head.append(css);}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;
 const AUTOSAVE_FORCE_MIN_MS = 25_000;
