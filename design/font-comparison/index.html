@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="So sánh Nunito Sans, Geologica và Inter trên cùng nội dung và bảng màu Reading của IZONE.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'">
+  <title>Ba font · Một giao diện — IZONE</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#comparison">Đến nội dung so sánh</a>
+  <header class="page-header">
+    <a class="wordmark" href="./" aria-label="IZONE · So sánh font">IZONE<span>PHÒNG THỬ GIAO DIỆN</span></a>
+    <span class="demo-label">Bản xem thẩm mỹ · Dữ liệu minh họa</span>
+  </header>
+  <main>
+    <div class="intro">
+      <div><p class="eyebrow">READING · XÁM SÁNG–ĐỎ</p><h1>Ba font. Cùng một giao diện.</h1>
+      <p class="intro-copy">Nhìn cùng nội dung, thử đọc và chọn cảm giác phù hợp với team.</p></div>
+      <div class="palette" aria-label="Bảng màu Reading cố định">
+        <span class="swatch navy" title="Navy #152B4E"></span><span class="swatch red" title="Đỏ #DB0829"></span><span class="swatch gray" title="Xám sáng #F5F6F8"></span><span class="swatch white" title="Trắng #FFFFFF"></span>
+        <span>Một bảng màu<br><strong>Chỉ đổi font chữ</strong></span>
+      </div>
+    </div>
+    <section class="controls" aria-label="Điều chỉnh so sánh">
+      <div class="control-row">
+        <div class="segmented" role="group" aria-label="Cách xem">
+          <button type="button" data-view="compare" aria-pressed="true">So cạnh nhau</button>
+          <button type="button" data-view="single" aria-pressed="false">Xem rộng</button>
+        </div>
+        <div class="segmented scenes" role="group" aria-label="Nội dung xem thử">
+          <button type="button" data-scene="lesson" aria-pressed="true">Màn học viên</button>
+          <button type="button" data-scene="reading" aria-pressed="false">Đọc dài</button>
+          <button type="button" data-scene="dashboard" aria-pressed="false">Bảng & biểu mẫu</button>
+        </div>
+        <label class="size-control" for="scale">Cỡ chữ <select id="scale"><option value="1" selected>100%</option><option value="1.125">112,5%</option><option value="1.25">125%</option></select></label>
+      </div>
+      <div class="control-row single-picker" hidden>
+        <span>Font đang xem</span>
+        <div class="segmented" role="group" aria-label="Chọn font xem rộng">
+          <button type="button" data-font="nunito" aria-pressed="true">Nunito Sans</button>
+          <button type="button" data-font="geologica" aria-pressed="false">Geologica</button>
+          <button type="button" data-font="inter" aria-pressed="false">Inter</button>
+        </div>
+      </div>
+      <div class="comparison-notes"><p>Cùng cỡ chữ, độ đậm, giãn dòng và chiều rộng. Xuống dòng khác nhau là do font.</p><p id="fontStatus" role="status">Đang tải đủ ba font…</p></div>
+    </section>
+    <p id="mobileHint" class="mobile-hint">Vuốt ngang để so ba bản, hoặc chọn <strong>Xem rộng</strong> để đọc trên điện thoại.</p>
+    <section id="comparison" class="comparison-grid" aria-label="Ba bản giao diện cùng nội dung" tabindex="-1"></section>
+    <footer class="page-footer"><p>Hãy nhìn cả chữ Việt có dấu, đoạn tiếng Anh và số liệu trước khi chọn.</p><p>Bản thử chỉ dùng trên trang này; lựa chọn ở đây chưa áp dụng cho các sản phẩm.</p></footer>
+  </main>
+  <noscript><p class="no-script">Vui lòng bật JavaScript để chuyển và so sánh ba font.</p></noscript>
+</body>
+</html>
