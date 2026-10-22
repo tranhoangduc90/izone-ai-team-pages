@@ -52,3 +52,16 @@ test('Stale native account cannot bypass a different shared account or a shared 
  const result=await box.fetch(origin+'/reading67-materials/api/reading-skills67/teacher/classes');assert.equal((await result.json()).identity,'shared-account');
  const denied=setup(url=>response(url.includes('/restore/')?403:200));await assert.rejects(denied.box.fetch(origin+'/reading67-materials/api/reading-skills67/teacher/classes'),/chưa có quyền/);assert.equal(denied.calls.length,1);
 });
+
+test('Mapping, Term67, K56 và demo nối đúng sản phẩm; Handout dùng endpoint phiên riêng',async()=>{
+ for(const [path,id] of [['/mapping-api/api/auth/session','mapping'],['/term-mini-k67-api/api/auth/session','term67'],['/mapping-api-k56/api/auth/session','k56'],['/mapping-api-demo/api/auth/session','k56demo'],['/api/handout67/v1/teacher/session','handout67'],['/substitute-teacher-api/teacher/scopes','substitute']]){
+  const {box,calls}=setup(()=>response(200));await box.fetch(origin+path,{credentials:'include'});
+  assert.ok(calls[0].url.endsWith('/restore/'+id),path);assert.equal(calls.length,2);
+ }
+});
+test('Handout login đổi Google lấy phiên chung, rồi đọc quyền gốc; không tạo cookie riêng 12 giờ',async()=>{
+ const {box,calls}=setup(()=>response(200));
+ await box.fetch(origin+'/api/handout67/v1/teacher/session',{method:'POST',body:JSON.stringify({credential:'fixture-google',remember:false})});
+ assert.ok(calls[0].url.endsWith('/login/handout67'));assert.equal(calls[0].options.body,'{"credential":"fixture-google","remember":false}');
+ assert.equal(calls[1].options.method,'GET');assert.equal(calls[1].options.body,undefined);
+});

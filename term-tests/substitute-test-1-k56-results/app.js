@@ -1,1 +1,1 @@
-import '../substitute-shared/teacher-results.js?rev=20261019-teacher-progress-v1';
+import '../substitute-shared/teacher-results.js?rev=20261023-sso-all';

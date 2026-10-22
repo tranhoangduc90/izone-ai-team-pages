@@ -11,7 +11,11 @@
   {id:'writing',prefix:'/writing-api/api',source:'/writing-api/api/auth/session/shared-session'},
   {id:'mapping',prefix:'/mapping-api/api',source:'/mapping-api/api/auth/session/shared-session'},
   {id:'term67',prefix:'/term-mini-k67-api/api',source:'/term-mini-k67-api/api/auth/session/shared-session'},
-  {id:'materials',prefix:'/reading67-materials/api/reading-skills67',source:'/reading67-materials/api/reading-skills67/teacher/shared-session'}
+  {id:'materials',prefix:'/reading67-materials/api/reading-skills67',source:'/reading67-materials/api/reading-skills67/teacher/shared-session'},
+  {id:'k56',prefix:'/mapping-api-k56/api',source:'/mapping-api-k56/api/auth/session/shared-session'},
+  {id:'k56demo',prefix:'/mapping-api-demo/api',source:'/mapping-api-demo/api/auth/session/shared-session'},
+  {id:'handout67',prefix:'/api/handout67/v1',source:'/api/handout67/v1/teacher/shared-session',identity:true},
+  {id:'substitute',prefix:'/substitute-teacher-api',identity:true}
  ];
  const original=window.fetch.bind(window),pending=new Map(),initialized=new Set();
  let discovery=null,generation=0;
@@ -23,7 +27,7 @@
    let response=await post(base+'/restore/'+id);
    if(response.status===401){
     discovery||=(async()=>{
-     const first=products.find(p=>p.id===id),ordered=[first,...products.filter(p=>p!==first)];
+     const first=products.find(p=>p.id===id),ordered=[first,...products.filter(p=>p!==first)].filter(p=>p.source);
      for(const p of ordered){const check=await post(origin+p.source);if(check.ok)return true;if(check.status!==401)throw Object.assign(Error('Chưa xác minh được phiên giảng viên dùng chung.'),{status:check.status});}
      return false;
     })().finally(()=>{discovery=null;});
@@ -45,11 +49,17 @@
   const product=products.find(p=>url.pathname.startsWith(p.prefix+'/'));if(!product)return null;
   const path=url.pathname.slice(product.prefix.length).replace(/^\/v1\/auth\/session$/,'/auth/session'),method=(options?.method||input?.method||'GET').toUpperCase();
   if(!path.startsWith('/teacher/')&&path!=='/auth/session')return null;
-  return {product,path,method,login:method==='POST'&&(path==='/teacher/login'||path==='/auth/session'),logout:method==='DELETE'&&path==='/auth/session'||method==='POST'&&path==='/teacher/logout'};
+  if(path==='/teacher/config')return null;
+  return {product,path,method,login:method==='POST'&&['/teacher/login','/teacher/session','/auth/session'].includes(path),logout:method==='DELETE'&&['/auth/session','/teacher/session'].includes(path)||method==='POST'&&path==='/teacher/logout'};
  }
  window.fetch=async function(input,options){
   const match=route(input,options);if(!match)return original(input,options);
   const version=generation;
+  if(match.login&&match.product.identity){
+   const body=JSON.parse(options?.body||'{}');
+   await login(match.product.id,body.credential,body.remember!==false);
+   return original(input,{...options,method:'GET',body:undefined,credentials:'include'});
+  }
   // Xác nhận tài khoản chung trước lần đọc đầu, tránh dùng cookie riêng của tài khoản cũ.
   if(match.method==='GET'&&!initialized.has(match.product.id)){
    if(await restore(match.product.id))initialized.add(match.product.id);
@@ -66,5 +76,15 @@
   return response;
  };
  window.addEventListener('storage',event=>{if(['izone:teacher-sso-logout','izone:teacher-sso-login'].includes(event.key)){generation++;initialized.clear();}});
- window.IzoneTeacherSso={restore};
+ async function login(product,credential,remember=true){
+  if(!products.some(p=>p.id===product&&p.identity))throw Error('Sản phẩm chưa hỗ trợ đăng nhập chung.');
+  const result=await post(base+'/login/'+product,{credential,remember});
+  if(!result.ok)throw Error('Chưa xác minh được tài khoản Google. Hãy đăng nhập lại.');
+  generation++;initialized.clear();try{window.localStorage.setItem('izone:teacher-sso-login',String(Date.now()));}catch{}
+ }
+ async function logout(){
+  const result=await post(base+'/logout');if(!result.ok)throw Error('Chưa đăng xuất hết các sản phẩm. Hãy thử lại.');
+  generation++;initialized.clear();try{window.localStorage.setItem('izone:teacher-sso-logout',String(Date.now()));}catch{}
+ }
+ window.IzoneTeacherSso={restore,login,logout};
 }());

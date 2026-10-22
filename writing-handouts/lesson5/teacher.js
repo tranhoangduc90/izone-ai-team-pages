@@ -1,3 +1,4 @@
+import '../../shared/teacher-single-sign-on.js?v=20261023-sso-all';
 import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261017-l9-1';
 import {workflowFor,isWhole} from '../shared/workflow.mjs';
 import {classQuery,resolveClassRef} from '../js/class-selection.js';
