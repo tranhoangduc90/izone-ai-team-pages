@@ -4,7 +4,7 @@
 // Khi lỗi: dừng build và giữ nguyên các trang đã phát hành.
 import { readFile, writeFile } from 'node:fs/promises';
 
-const pages = ['index.html'];
+const pages = ['index.html','thuy.html'];
 const check = process.argv.includes('--check');
 
 for (const name of pages) {
@@ -14,12 +14,13 @@ for (const name of pages) {
   html = html.replace('connect-src \'self\' ', 'connect-src \'self\' http://127.0.0.1:8792 ');
   html = html.replaceAll(/(?:href|src)="(session-comments\.css|reference-components\.css|styles\.css|teacher\.css|journey\.css|app\.js|teacher\.js|journey\.js)/g,
     match => match.replace('="', '="../'));
+  html = html.replaceAll('href="thuy-live/','href="../thuy-live/');
   // Kho thử giữ màn học viên hiện có; mã run giả không được chuyển thành mã phiếu dashboard thật.
   html = html.replace(/\s*<link rel="stylesheet" href="\.\.\/shared\/teacher-entry\.css[^"]*">/, '');
   html = html.replace(/\s*<script type="module" src="\.\.\/shared\/teacher-entry\.js[^"]*"><\/script>/, '');
-  html = html.replace(' data-teacher-product="progress-log" data-teacher-path="./teacher.html"', '');
+  html = html.replace(/ data-teacher-product="progress-log" data-teacher-path="\.\/teacher(?:-thuy)?\.html"/, '');
   html = html.replace(/\s*<script src="https:\/\/accounts\.google\.com\/gsi\/client" async defer><\/script>/, '');
-  if (name === 'index.html') {
+  if (['index.html','thuy.html'].includes(name)) {
     html = html.replace('src="../app.js?', 'src="boot.js?');
     // Bản thử dùng cùng API Journey trong kho demo, nên giữ hai nút của trang chính.
     html = html.replace('<main class="shell">', `<aside class="demo-banner" role="note">
@@ -31,7 +32,7 @@ for (const name of pages) {
   }
   html = html.replace('<title>', '<title>Bản thử · ');
   html = html.replace(/src="config\.js\?rev=[^"]+"/, 'src="config.js?rev=20260924-generic-demo-v1"');
-  if (name === 'index.html') {
+  if (['index.html','thuy.html'].includes(name)) {
     html = html.replace(/src="boot\.js\?rev=[^"]+"/, 'src="boot.js?rev=20261015-compact-exercises-v1"');
   }
   html = html.replace('</head>', '    <link rel="stylesheet" href="demo.css?rev=20260924-v1">\n  </head>');

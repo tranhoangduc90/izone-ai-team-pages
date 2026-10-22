@@ -1,9 +1,10 @@
 import {node,commentPanel,bindDialogDismiss} from './session-comments.js';
 const prefix='progress-log-comment-draft-v1:';
-function stored(key) {try{return JSON.parse(sessionStorage.getItem(key)||'null');}catch{return null;}}
-function store(key,value) {try{value?sessionStorage.setItem(key,JSON.stringify(value)):sessionStorage.removeItem(key);}catch{/* Giữ nháp đang gõ nếu bộ nhớ trình duyệt đầy. */}}
+const draftStorage=()=>globalThis.location?.pathname?.endsWith('/teacher-thuy.html')?localStorage:sessionStorage;
+function stored(key) {try{return JSON.parse(draftStorage().getItem(key)||'null');}catch{return null;}}
+function store(key,value) {try{const storage=draftStorage();value?storage.setItem(key,JSON.stringify(value)):storage.removeItem(key);return true;}catch{return false;}}
 export function clearCommentDrafts(teacherEmail) {
-  for(let i=sessionStorage.length-1;i>=0;i--){const key=sessionStorage.key(i);if(key.startsWith(prefix+teacherEmail+':'))sessionStorage.removeItem(key);}
+  const storage=draftStorage();for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key.startsWith(prefix+teacherEmail+':'))storage.removeItem(key);}
 }
 // Nháp theo tài khoản/lớp/người/buổi. Retry giữ operationId; đổi nội dung tạo thao tác mới.
 export function commentEditor({target,studentName,comment,reviewerKey,request,current,onSaved}) {
@@ -19,7 +20,7 @@ export function commentEditor({target,studentName,comment,reviewerKey,request,cu
   const history=node('button','Xem lịch sử','mini-action'),historyBox=node('div');
   for(const button of [save,hide,history])button.type='button';
   hide.hidden=!saved||saved.visibility==='hidden';
-  const persist=()=>store(key,{noteText:input.value,expectedRevision:revision,operationId,action});
+  const persist=()=>{const ok=store(key,{noteText:input.value,expectedRevision:revision,operationId,action});if(!ok)status.textContent='Chưa giữ được nháp trên trình duyệt. Giữ trang đang mở hoặc sao chép nội dung trước khi chuyển người.';return ok;};
   const recount=()=>{count.textContent=[...input.value.trim()].length+' / 1.000 ký tự';};recount();
   input.addEventListener('input',()=>{operationId=crypto.randomUUID();action='save';persist();recount();});
   async function mutate(hiding=false) {

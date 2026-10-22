@@ -53,7 +53,7 @@ test('D01–D05/P02: đủ 8 dạng, sáu phiếu/14 ô, lưu/conflict/reload/im
       const items=form.definition.blocks.flatMap(b=>b.items);total+=items.length;
       assert.equal(await page.locator('.editor-item').count(),items.length);
       for(const item of items){const type=await page.evaluate(item=>window.editorModule.editorType(item),item);types.add(type);if(type==='gapfill')slots+=item.interactionConfig.responseCount||1;}
-      assert.equal(await page.getByLabel('Dạng bài',{exact:true}).first().locator('option').count(),8);
+      assert.equal(await page.getByLabel('Dạng bài',{exact:true}).first().locator('option').count(),9);
       for(const width of [390,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
     }
     assert.equal(total,57);assert.equal(slots,14);assert.equal(types.size,8);
@@ -111,6 +111,19 @@ test('D01–D05/P02: đủ 8 dạng, sáu phiếu/14 ô, lưu/conflict/reload/im
     assert.ok(!(await publishedLink.getAttribute('href')).includes('?assignment='));
     await page.evaluate(()=>window.client.openDraft({...window.serverDraft,status:'published',publicToken:'a0000000-0000-4000-8000-000000000001'}));
     assert.ok((await publishedLink.getAttribute('href')).endsWith('#assignment=a0000000-0000-4000-8000-000000000001'));
+    // Dạng mới đã được yêu cầu riêng: nhập văn bản rồi lưu/mở lại, không sinh đáp án.
+    await page.evaluate(()=>{const p=window.editorModule.newEditorPayload('Phiếu từ khóa');window.serverDraft={id:crypto.randomUUID(),classId:'1294',sessionNumber:11,revision:1,status:'draft',contentHash:'a'.repeat(64),...p};window.client.openDraft(window.serverDraft);});
+    await page.getByLabel('Dạng bài',{exact:true}).selectOption('keyword_selection');
+    await page.getByLabel('Văn bản để gạch chân (2–40 từ)',{exact:true}).fill('go go home?');
+    let keyword=await page.evaluate(()=>window.client.getPayload().definition.blocks[0].items[0]);
+    assert.equal(keyword.interactionType,'multi_choice_group');assert.equal(keyword.layoutType,'keyword_selection');assert.equal(keyword.graderType,'none');assert.equal(keyword.maxScore,0);
+    assert.deepEqual(keyword.options.map(o=>o.label),['go','go','home?']);assert.notEqual(keyword.options[0].id,keyword.options[1].id);
+    assert.equal(keyword.interactionConfig.maxSelections,2);
+    await page.getByLabel('Số từ được gạch chân tối đa',{exact:true}).fill('1');
+    await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã lưu'}).waitFor();
+    await page.evaluate(()=>window.client.openDraft(window.serverDraft));assert.equal(await page.getByLabel('Văn bản để gạch chân (2–40 từ)',{exact:true}).inputValue(),'go go home?');
+    assert.equal(await page.getByLabel('Số từ được gạch chân tối đa',{exact:true}).inputValue(),'1');
+    assert.deepEqual(await page.evaluate(()=>window.client.getPayload().gradingKey.items),{});
     await mkdir(resolve(root,'output/playwright'),{recursive:true});await page.setViewportSize({width:390,height:900});
     await page.screenshot({path:resolve(root,'output/playwright/progress-editor-390.png'),fullPage:true});
     assert.deepEqual(errors,[]);

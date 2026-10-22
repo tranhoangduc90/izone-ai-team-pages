@@ -20,7 +20,11 @@ for(const mode of ['notes','notes-quoted','names']) {
         res.end(await readFile(path));
       }catch{res.writeHead(404);res.end();}
     });
-    await new Promise(done=>server.listen(0,'127.0.0.1',done));
+    // Windows có thể cấp cổng thấp mà Chrome chặn (đã gặp 1723); chọn vùng an toàn và thử cổng kế tiếp khi bận.
+    for(let attempt=0;attempt<20;attempt++){
+      try{await new Promise((done,reject)=>{server.once('error',reject);server.listen(24000+attempt,'127.0.0.1',()=>{server.removeListener('error',reject);done();});});break;}
+      catch(error){if(error.code!=='EADDRINUSE'||attempt===19)throw error;}
+    }
     const browser=await chromium.launch({channel:'chrome',headless:true});
     const page=await browser.newPage({viewport:{width:390,height:844}});
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
