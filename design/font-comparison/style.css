@@ -53,6 +53,10 @@ main{max-width:1720px;margin:auto;padding:38px 40px 24px}.intro{display:flex;ali
 .comparison-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .comparison-grid.compare-colors{grid-template-columns:repeat(3,minmax(0,1fr))}
 .font-subtitle{margin:4px 0 0;font-size:11px;color:#586477}
+.column-theme-picker{display:flex;gap:4px;padding:4px;margin-bottom:12px;border:1px solid #DCE1E7;border-radius:8px;background:#FFFFFF}
+.column-theme-picker button{flex:1;min-width:0;min-height:38px;padding:8px 6px;border:0;border-radius:5px;background:transparent;color:#586477;font:500 12px/1.4 system-ui,sans-serif}
+.column-theme-picker button[aria-pressed=true]{background:#152B4E;color:#FFFFFF}
+.column-theme-picker button:hover:not([aria-pressed=true]){background:#EDF1F7;color:#152B4E}
 .theme-picker{border-top:1px solid #DCE1E7;margin-top:14px;padding-top:14px;font-size:12px;color:#586477}
 #themeDescription{font-size:11px;line-height:1.6}
 .specimen{background:var(--header)}

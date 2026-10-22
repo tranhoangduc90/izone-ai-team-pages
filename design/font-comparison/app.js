@@ -13,9 +13,14 @@ const themes = [
 const params = new URLSearchParams(location.search);
 // Link Inter/Georgia của bản thử cũ chuyển sang font giao diện K56 đã xác minh.
 const requestedFont = ['inter', 'georgia'].includes(params.get('font')) ? 'segoe' : params.get('font');
+// Mỗi font giữ màu riêng; link cũ có một theme chỉ dùng làm màu khởi đầu.
+const initialTheme = themes.some(t => t.id === params.get('theme')) ? params.get('theme') : 'reading';
 const state = {
   view: ['single', 'colors'].includes(params.get('view')) ? params.get('view') : 'compare',
-  theme: themes.some(t => t.id === params.get('theme')) ? params.get('theme') : 'reading',
+  themes: Object.fromEntries(fonts.map(f => {
+    const choice = params.get(`theme_${f.id}`);
+    return [f.id, themes.some(t => t.id === choice) ? choice : initialTheme];
+  })),
   scene: ['lesson', 'reading', 'dashboard'].includes(params.get('scene')) ? params.get('scene') : 'lesson',
   font: fonts.some(f => f.id === requestedFont) ? requestedFont : 'nunito',
   scale: ['1', '1.125', '1.25'].includes(params.get('scale')) ? params.get('scale') : '1',
@@ -51,7 +56,8 @@ function dashboard(id) {
   <div class="feedback">✓ Minh họa thành công: Đã lưu nhận xét</div><div class="feedback flag">⚑ Minh họa cần chú ý: Còn 1 bài chưa nộp</div><div class="feedback error">! Minh họa lỗi: Chưa lưu được. Hãy thử lại.</div>`;
 }
 function updateUrl() {
-  const query = new URLSearchParams({ view: state.view, scene: state.scene, font: state.font, theme: state.theme, scale: state.scale });
+  const query = new URLSearchParams({ view: state.view, scene: state.scene, font: state.font, theme: state.themes[state.font], scale: state.scale });
+  fonts.forEach(f => query.set(`theme_${f.id}`, state.themes[f.id]));
   history.replaceState(null, '', `${location.pathname}?${query}`);
 }
 function syncExamples() {
@@ -63,23 +69,25 @@ function render() {
   document.documentElement.style.setProperty('--scale', state.scale);
   document.querySelector('#scale').value = state.scale;
   document.querySelector('.single-picker').hidden = state.view === 'compare';
-  document.querySelector('.theme-picker').hidden = state.view === 'colors';
+  document.querySelector('.theme-picker').hidden = state.view !== 'single';
   document.querySelector('#mobileHint').hidden = state.view === 'single';
-  for (const key of ['view', 'scene', 'font', 'theme']) document.querySelectorAll(`[data-${key}]`).forEach(button => button.setAttribute('aria-pressed', String(button.dataset[key] === state[key])));
+  for (const key of ['view', 'scene', 'font']) document.querySelectorAll(`[data-${key}]`).forEach(button => button.setAttribute('aria-pressed', String(button.dataset[key] === state[key])));
+  document.querySelectorAll('[data-theme]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.theme === state.themes[state.font])));
   comparison.classList.toggle('single', state.view === 'single');
   comparison.classList.toggle('compare-colors', state.view === 'colors');
-  const font = fonts.find(f => f.id === state.font), theme = themes.find(t => t.id === state.theme);
-  const shown = state.view === 'colors' ? themes.map(t => ({ font, theme: t })) : (state.view === 'single' ? [font] : fonts).map(f => ({ font: f, theme }));
+  const font = fonts.find(f => f.id === state.font), theme = themes.find(t => t.id === state.themes[state.font]);
+  const shown = state.view === 'colors' ? themes.map(t => ({ font, theme: t })) : (state.view === 'single' ? [font] : fonts).map(f => ({ font: f, theme: themes.find(t => t.id === state.themes[f.id]) }));
   document.querySelector('#themeDescription').textContent = theme.description;
-  document.querySelector('#comparisonHelp').textContent = state.view === 'colors' ? 'Cùng một font và bố cục. Ba bản chỉ khác cách phối màu; không sao chép bố cục riêng của sản phẩm gốc.' : state.view === 'single' ? 'Đổi font hoặc màu để so trên cùng một màn rộng; nội dung và cỡ chữ giữ chung.' : 'Cùng nội dung, cỡ chữ và bố cục. Chọn một bảng màu để so ba font đúng nguồn.';
+  document.querySelector('#comparisonHelp').textContent = state.view === 'colors' ? 'Cùng một font và bố cục. Ba bản chỉ khác cách phối màu; không sao chép bố cục riêng của sản phẩm gốc.' : state.view === 'single' ? 'Màu được giữ riêng cho font đang xem. Đổi font để xem hoặc chỉnh màu của bản khác.' : 'Cùng nội dung, cỡ chữ và bố cục. Chọn màu riêng ngay dưới tên mỗi font; các cột khác giữ nguyên.';
   const palette = document.querySelector('.palette');
-  palette.hidden = state.view === 'colors';
+  palette.hidden = state.view !== 'single';
   palette.querySelectorAll('.swatch').forEach((swatch, i) => { swatch.style.background = theme.swatches[i]; swatch.style.borderColor = i < 2 ? theme.swatches[i] : ''; swatch.title = theme.swatches[i]; });
   comparison.innerHTML = shown.map(({ font: f, theme: t }) => {
     const id = `${f.id}-${t.id}`;
     const family = `'${f.name}'`;
     const subtitle = state.view === 'colors' ? `${f.name} · Font ${f.source}` : `Font ${f.source} · Màu ${t.name}`;
-    return `<article class="font-column" data-family="${f.name}" data-palette="${t.id}" style="--sample-font:${family}"><div class="font-caption"><div><h2>${state.view === 'colors' ? t.name : f.name}</h2><p class="font-subtitle">${subtitle}</p></div><span data-font-state>Đang kiểm…</span></div><div class="specimen">${commonTop}<div class="sample-body">${state.scene === 'reading' ? reading() : state.scene === 'dashboard' ? dashboard(id) : lesson(id)}</div></div></article>`;
+    const picker = state.view === 'compare' ? `<div class="column-theme-picker" role="group" aria-label="Phối màu cho ${f.name}">${themes.map(option => `<button type="button" data-column-theme="${option.id}" data-owner-font="${f.id}" aria-pressed="${option.id === t.id}">${option.name}</button>`).join('')}</div>` : '';
+    return `<article class="font-column" data-family="${f.name}" data-palette="${t.id}" style="--sample-font:${family}"><div class="font-caption"><div><h2>${state.view === 'colors' ? t.name : f.name}</h2><p class="font-subtitle">${subtitle}</p></div><span data-font-state>Đang kiểm…</span></div>${picker}<div class="specimen">${commonTop}<div class="sample-body">${state.scene === 'reading' ? reading() : state.scene === 'dashboard' ? dashboard(id) : lesson(id)}</div></div></article>`;
   }).join('');
   syncExamples(); updateFontLabels(); updateUrl();
 }
@@ -95,7 +103,16 @@ function updateFontLabels() {
 }
 document.addEventListener('click', event => {
   const button = event.target.closest('button'); if (!button) return;
-  for (const key of ['view', 'scene', 'font', 'theme']) if (button.dataset[key]) { state[key] = button.dataset[key]; render(); return; }
+  if (button.dataset.columnTheme) {
+    const owner = button.dataset.ownerFont, choice = button.dataset.columnTheme;
+    state.themes[owner] = choice;
+    render();
+    // Dựng lại cột không làm mất vị trí bàn phím ở bộ chọn vừa dùng.
+    comparison.querySelector(`[data-owner-font="${owner}"][data-column-theme="${choice}"]`).focus({ preventScroll: true });
+    return;
+  }
+  if (button.dataset.theme) { state.themes[state.font] = button.dataset.theme; render(); return; }
+  for (const key of ['view', 'scene', 'font']) if (button.dataset[key]) { state[key] = button.dataset[key]; render(); return; }
   if (button.hasAttribute('data-save')) { state.saved = true; syncExamples(); }
   if (button.hasAttribute('data-reset')) { state.note = ''; state.answer = 'B'; state.saved = false; syncExamples(); }
 });
