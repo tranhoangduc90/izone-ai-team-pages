@@ -5,7 +5,7 @@
  * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
  */
 
-import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-k56-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56-shared/teacher-session-client.js?rev=20261022-v1';
 import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-first-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
@@ -156,8 +156,10 @@ async function connectSession(restoring = false) {
 }
 
 async function loginAvailableApis(credential) {
+  const generation = loginGeneration;
   const results = await Promise.allSettled(Array.from(sessionClients, async ([apiBaseUrl, client]) => {
     await client.login(credential);
+    if (generation !== loginGeneration) throw { staleSession: true };
     authenticatedApiUrls.add(apiBaseUrl);
   }));
   if (authenticatedApiUrls.size) return;
@@ -176,10 +178,13 @@ function setupGoogleSignIn() {
       auto_select: false,
       callback: async response => {
         resetLogin();
+        const generation = loginGeneration;
         try {
           await loginAvailableApis(response.credential || '');
+          if (generation !== loginGeneration) return;
           await connectSession();
         } catch (error) {
+          if (error.staleSession || generation !== loginGeneration) return;
           resetLogin();
           loginStatus.textContent = `Không thể đăng nhập: ${error.message}`;
         }
@@ -254,8 +259,8 @@ document.getElementById('teacherDashboard')?.addEventListener('click', () => {
 });
 
 logoutButton.addEventListener('click', async () => {
-  await Promise.allSettled(Array.from(sessionClients.values(), client => client.logout()));
   resetLogin();
+  await Promise.allSettled(Array.from(sessionClients.values(), client => client.logout()));
   window.google?.accounts?.id?.disableAutoSelect?.();
   loginStatus.textContent = 'Đã đăng xuất. Bạn có thể nhập mã lớp hoặc đăng nhập tài khoản khác.';
 });
