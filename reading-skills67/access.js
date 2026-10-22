@@ -34,7 +34,11 @@
   try{config=await request('/config');}catch(e){if(e.status===404)return {legacy:true};throw e;}
   if(params.get('assignmentCode')&&params.get('assignmentCode')!==config.code)throw Error('Mã trong link không khớp bài đang mở. Hãy dùng lại CTA trong Homework.');
   key='reading67:session:'+config.code;
-  if(teacher){const classId=params.get('classId'),studentRef=params.get('studentRef');if(!classId||!studentRef)throw Error('Mở từ trang Giảng viên để chọn đúng lớp và học viên.');return {teacher:true,work:await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef)),config};}
+  if(teacher){
+   const classId=params.get('classId'),studentRef=params.get('studentRef');if(!classId||!studentRef)throw Error('Mở từ trang Giảng viên để chọn đúng lớp và học viên.');
+   try{return {teacher:true,work:await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef)),config};}
+   catch(error){if(error.status!==401)throw error;const login=new URL('teacher.html',location.href);login.searchParams.set('returnTo',location.pathname+location.search);location.replace(login.href);return new Promise(()=>{});}
+  }
   const {createCourseStudentIdentity}=await import('../shared/course-student-identity.js?v=20261018-identity-v1');
   course=createCourseStudentIdentity({product:'reading-skills67',entry:config.code,requestIdentity:value=>post('/identity/resolve',value)});
   course.subscribe(()=>{if(person)window.dispatchEvent(new CustomEvent('reading67:access-warning',{detail:'Người đã nhớ ở tab khác vừa đổi. Bài tại tab này vẫn giữ đúng người.'}));});
