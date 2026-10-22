@@ -5,7 +5,7 @@
  * Khi lỗi: trả lỗi có status để giao diện phân biệt hết phiên, thiếu quyền và lỗi mạng.
  */
 
-import './teacher-single-sign-on.js?v=20261022-sso1';
+import './teacher-single-sign-on.js?v=20261022-sso2';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 function joinUrl(base, path) {

@@ -3,6 +3,7 @@
 (function(){
  'use strict';
  if(typeof window==='undefined'||typeof window.fetch!=='function'||window.IzoneTeacherSso)return;
+ if(new URL(window.location.href).origin!=='https://tranhoangduc90.github.io')return;
  const origin='https://ducizone.ddns.net',base=origin+'/teacher-session-api/v1';
  const products=[
   {id:'reading',prefix:'/reading-practice-api/api',source:'/reading-practice-api/api/teacher/shared-session'},
@@ -12,7 +13,7 @@
   {id:'term67',prefix:'/term-mini-k67-api/api',source:'/term-mini-k67-api/api/auth/session/shared-session'},
   {id:'materials',prefix:'/reading67-materials/api/reading-skills67',source:'/reading67-materials/api/reading-skills67/teacher/shared-session'}
  ];
- const original=window.fetch.bind(window),pending=new Map();
+ const original=window.fetch.bind(window),pending=new Map(),initialized=new Set();
  let discovery=null,generation=0;
  const post=(url,body={})=>original(url,{method:'POST',credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
  async function restore(id){
@@ -31,7 +32,8 @@
     response=await post(base+'/restore/'+id);
    }
    if(start!==generation)return false;
-   if(response.status===401||response.status===403)return false;
+   if(response.status===401)return false;
+   if(response.status===403)throw Object.assign(Error('Tài khoản đang đăng nhập chưa có quyền sản phẩm này.'),{status:403});
    if(!response.ok)throw Error('Chưa khôi phục được phiên giảng viên dùng chung. Hãy thử lại.');
    return true;
   })().finally(()=>pending.delete(id));
@@ -47,16 +49,22 @@
  }
  window.fetch=async function(input,options){
   const match=route(input,options);if(!match)return original(input,options);
+  const version=generation;
+  // Xác nhận tài khoản chung trước lần đọc đầu, tránh dùng cookie riêng của tài khoản cũ.
+  if(match.method==='GET'&&!initialized.has(match.product.id)){
+   if(await restore(match.product.id))initialized.add(match.product.id);
+  }
   // Chỉ GET bị từ chối mới được thử lại; không tự phát lại thao tác sửa/nộp/chấm.
   let response=await original(input,options);
   if(match.logout){
-   if(response.ok||response.status===401){generation++;const result=await post(base+'/logout');if(!result.ok)throw Error('Chưa đăng xuất hết các sản phẩm. Hãy thử lại.');try{window.localStorage.setItem('izone:teacher-sso-logout',String(Date.now()));}catch{}}
+   if(response.ok||response.status===401){generation++;initialized.clear();const result=await post(base+'/logout');if(!result.ok)throw Error('Chưa đăng xuất hết các sản phẩm. Hãy thử lại.');try{window.localStorage.setItem('izone:teacher-sso-logout',String(Date.now()));}catch{}}
    return response;
   }
-  if(match.login&&response.ok){generation++;const result=await post(origin+match.product.source,{replace:true});if(!result.ok)throw Error('Đã đăng nhập sản phẩm này nhưng chưa lưu được phiên dùng chung. Hãy thử lại.');return response;}
+  if(match.login&&response.ok){generation++;initialized.clear();const result=await post(origin+match.product.source,{replace:true});if(!result.ok)throw Error('Đã đăng nhập sản phẩm này nhưng chưa lưu được phiên dùng chung. Hãy thử lại.');try{window.localStorage.setItem('izone:teacher-sso-login',String(Date.now()));}catch{}return response;}
   if(match.method==='GET'&&response.status===401&&await restore(match.product.id))response=await original(input,options);
+  if(match.method==='GET'&&version!==generation)throw Error('Phiên giảng viên vừa thay đổi. Hãy mở lại bài.');
   return response;
  };
- window.addEventListener('storage',event=>{if(event.key==='izone:teacher-sso-logout')generation++;});
+ window.addEventListener('storage',event=>{if(['izone:teacher-sso-logout','izone:teacher-sso-login'].includes(event.key)){generation++;initialized.clear();}});
  window.IzoneTeacherSso={restore};
 }());
