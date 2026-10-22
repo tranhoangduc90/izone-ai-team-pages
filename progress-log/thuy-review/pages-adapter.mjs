@@ -2,13 +2,18 @@
 // Các thao tác thử dùng cùng bộ nhớ mô phỏng với bản chạy local; đóng trang sẽ bỏ phiên.
 import {createDemoStore} from './demo-store.mjs';
 let store;
+const mutationListeners=new Set();
+export function onPagesMutation(listener){mutationListeners.add(listener);return ()=>mutationListeners.delete(listener);}
 const params=new URLSearchParams(location.hash.includes('view=')?location.hash.slice(1):location.search);
 const role=params.get('view')==='student'?'student':'teacher',number=Number(params.get('number')||10);
 const bound=role==='student'&&params.has('generation');
 const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('thuy-review-demo-v1'):null;
 channel?.addEventListener('message',event=>{
   if(event.data?.kind==='request'&&store)channel.postMessage({kind:'snapshot',id:event.data.id,role,package:store.exportPackage()});
-  if(event.data?.kind==='mutation'&&store){try{store.mutate(event.data.body);}catch{/* Trang gửi đã hiển thị lỗi; không đổi dữ liệu khi không hợp lệ. */}}
+  if(event.data?.kind==='mutation'&&store){
+    try{store.mutate(event.data.body);}catch{return;/* Không báo thay đổi nếu thao tác bị từ chối. */}
+    for(const listener of mutationListeners)listener(event.data.body);
+  }
 });
 export const localAPI=['127.0.0.1','localhost'].includes(location.hostname)&&['7163','7164','7166'].includes(location.port)&&!new URLSearchParams(location.search).has('pages');
 const validPackage=value=>value?.format==='thuy-review-data-v1'&&value.data?.className==='IC2305'&&Array.isArray(value.data.sessions)&&value.data.sessions.length===3;
