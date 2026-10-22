@@ -239,7 +239,7 @@ async function bootstrap(){
     const response=await fetch('/__prototype__/content');if(!response.ok)throw Error('Không đọc được đề riêng tư.');content=await response.json();
     if(scenario==='sample-current'){const saved=localStorage.getItem(storageKey+':sample');if(saved){state=JSON.parse(saved);render();}else await changeScenario('draft');}
     else if(['draft','waiting','review','empty','entry'].includes(scenario))await changeScenario(scenario);else{scenario='current';state=structuredClone(originalDraft);render();}
-  }catch(err){app.innerHTML='<section class="notice" style="margin-top:30px"><h2>Chưa mở được bài</h2><p>'+e(err.message)+'</p><p>Hãy mở bằng máy chủ prototype trên máy này, rồi tải lại trang.</p></section>';app.removeAttribute('aria-busy');}
+  }catch(err){app.innerHTML='<section class="notice" style="margin-top:30px"><h2>Chưa mở được bài</h2><p>'+e(err.message)+'</p><p>'+(serverMode?'Kiểm tra tài khoản, quyền lớp hoặc kết nối rồi tải lại trang.':'Hãy mở bằng máy chủ prototype trên máy này, rồi tải lại trang.')+'</p></section>';app.removeAttribute('aria-busy');}
 }
 bootstrap();
 
