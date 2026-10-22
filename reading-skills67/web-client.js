@@ -6,7 +6,8 @@
   if(new URLSearchParams(location.search).get('server')!=='1'&&!window.READING67_API_BASE)return;
   const prefix=window.READING67_API_BASE||new URL('../api/reading-skills67',location.href).pathname;
   let revision=0,identity=null,content=null,pending=null,processing=null,timer=null,pollTimer=null,generation=0,backupKey='',submitKey='',access=null,runNo=1,initialHistory=null;
-  const state={status:'loading',savedAt:null,error:null,conflict:false,completeness:null};
+  const state={status:'loading',savedAt:null,error:null,conflict:false,completeness:null,homework:null};
+  let homeworkTimer=null,homeworkRead=0;
   function emit(){window.dispatchEvent(new CustomEvent('reading67:server-state',{detail:{...state,revision}}));}
   async function request(url,options={},repeat=true){
     let response;
@@ -15,6 +16,15 @@
     const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error),{code:value.error,details:value.details,status:response.status});return value;
   }
   const json=(method,body)=>({method,body:JSON.stringify(body)});
+  // Chỉ đọc trạng thái SQL; Google xử lý riêng. Không đổi ACK lưu bài khi Docs lỗi.
+  async function refreshHomework(){
+    if(!access?.config?.homeworkEnabled||access.teacher)return;
+    const current=++homeworkRead;
+    clearTimeout(homeworkTimer);
+    try{const value=await request(prefix+'/homework',{},false);if(current!==homeworkRead)return;state.homework=value;}catch{if(current!==homeworkRead)return;state.homework={status:'unavailable'};}
+    emit();const h=state.homework;
+    if(h.status!=='not_started'&&h.status!=='blocked'&&!h.jobs?.some(j=>j.status==='blocked')&&!(h.status==='verified'&&h.cta==='verified'))homeworkTimer=setTimeout(refreshHomework,4000);
+  }
   function bodyOf(source){return {answers:structuredClone(source.answers||{}),annotations:structuredClone(source.annotations||[]),notes:source.notes||'',flags:[...(source.flags||[])]};}
   function saveBackup(){try{localStorage.setItem(backupKey,JSON.stringify(pending));}catch{state.error='Không lưu được bản dự phòng trên thiết bị.';}}
   function schedule(source){
@@ -34,7 +44,7 @@
         revision=value.revision;runNo=value.runNo||runNo;state.savedAt=value.savedAt;state.completeness=value.completeness;
         if(pending===operation){pending=null;localStorage.removeItem(backupKey);state.status='saved';}
         else{pending.baseRevision=revision;saveBackup();state.status='dirty';}
-        state.error=null;emit();return value;
+        state.error=null;emit();refreshHomework();return value;
       }catch(error){state.status='error';state.error=error.code||error.message;state.conflict=error.code==='DRAFT_REVISION_CONFLICT';emit();throw error;}
     })();
     try{await processing;}finally{processing=null;}
@@ -55,20 +65,20 @@
       if(backup?.body&&backup.baseRevision===revision){pending=backup;draft.body=backup.body;state.status='dirty';restored=true;}
       else if(backup?.body&&JSON.stringify(backup.body)!==JSON.stringify(draft.body)){state.error='Có bản chưa lưu trên thiết bị cần đối chiếu.';}
     }catch{}
-    emit();return {content,identity,draft,history:history.attempts,restored,config:access?.config};
+    emit();refreshHomework();return {content,identity,draft,history:history.attempts,restored,config:access?.config};
   }
   async function submit(){
     await flush();let remembered;
     try{remembered=JSON.parse(localStorage.getItem(submitKey)||'null');}catch{}
     const requestId=remembered?.revision===revision?remembered.requestId:crypto.randomUUID();
     localStorage.setItem(submitKey,JSON.stringify({revision,requestId}));
-    return request(prefix+'/submit',json('POST',{revision,requestId}));
+    const value=await request(prefix+'/submit',json('POST',{revision,requestId}));refreshHomework();return value;
   }
   async function getAttempt(id){return request(prefix+(access?.teacher?window.Reading67Access.teacherPath:'')+'/attempts/'+encodeURIComponent(id));}
   function stopPoll(){generation++;clearTimeout(pollTimer);}
   function poll(id,onUpdate){
     stopPoll();const scope=generation;
-    const work=async()=>{try{const value=await getAttempt(id);if(scope!==generation)return;onUpdate(value);if(['queued','processing'].includes(value.status))pollTimer=setTimeout(work,1500);}catch(error){if(scope!==generation)return;onUpdate({status:'connection_error',errorCode:error.code});pollTimer=setTimeout(work,4000);}};
+    const work=async()=>{try{const value=await getAttempt(id);if(scope!==generation)return;onUpdate(value);refreshHomework();if(['queued','processing'].includes(value.status))pollTimer=setTimeout(work,1500);}catch(error){if(scope!==generation)return;onUpdate({status:'connection_error',errorCode:error.code});pollTimer=setTimeout(work,4000);}};
     work();
   }
   async function changePerson(person){await flush();stopPoll();await request('/_preview/session',json('POST',{person}));location.href=location.pathname+'?server=1';}
@@ -79,6 +89,6 @@
   async function getHistory(){return (await request(prefix+'/attempts')).attempts;}
   async function historyDetail(){return access?.teacher?await request(prefix+window.Reading67Access.teacherPath):await request(prefix+'/attempts');}
   async function changeIdentity(){await flush();stopPoll();await window.Reading67Access.change();}
-  async function reset(){if(access?.teacher)throw Error('Giảng viên chỉ xem.');await flush();const receipt=await request(prefix+'/reset',json('POST',{baseRevision:revision,mutationId:crypto.randomUUID()}));revision=receipt.revision;runNo=receipt.runNo;state.savedAt=receipt.savedAt;state.completeness=receipt.completeness;return receipt;}
+  async function reset(){if(access?.teacher)throw Error('Giảng viên chỉ xem.');await flush();const receipt=await request(prefix+'/reset',json('POST',{baseRevision:revision,mutationId:crypto.randomUUID()}));revision=receipt.revision;runNo=receipt.runNo;state.savedAt=receipt.savedAt;state.completeness=receipt.completeness;refreshHomework();return receipt;}
   window.ReadingServerClient={initialize,schedule,flush,submit,getAttempt,getDraft,getHistory,historyDetail,poll,stopPoll,changePerson,changeIdentity,reset,state,get identity(){return identity;},get revision(){return revision;},get runNo(){return runNo;},get initialHistory(){return initialHistory;},get access(){return access;}};
 }());

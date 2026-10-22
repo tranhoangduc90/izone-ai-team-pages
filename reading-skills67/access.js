@@ -32,6 +32,7 @@
  }
  async function open(){
   try{config=await request('/config');}catch(e){if(e.status===404)return {legacy:true};throw e;}
+  if(params.get('assignmentCode')&&params.get('assignmentCode')!==config.code)throw Error('Mã trong link không khớp bài đang mở. Hãy dùng lại CTA trong Homework.');
   key='reading67:session:'+config.code;
   if(teacher){const classId=params.get('classId'),studentRef=params.get('studentRef');if(!classId||!studentRef)throw Error('Mở từ trang Giảng viên để chọn đúng lớp và học viên.');return {teacher:true,work:await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef)),config};}
   const {createCourseStudentIdentity}=await import('../shared/course-student-identity.js?v=20261018-identity-v1');
