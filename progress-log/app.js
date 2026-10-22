@@ -24,7 +24,7 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
 const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022-parity-v2'):null;
-if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./thuy-live/styles.css?rev=20261022-parity-v1',import.meta.url);document.head.append(css);}
+if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./thuy-live/styles.css?rev=20261022-matching-dropdown',import.meta.url);document.head.append(css);}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;
 const AUTOSAVE_FORCE_MIN_MS = 25_000;
@@ -840,6 +840,23 @@ function buildQuestion(item) {
     help.className = 'help';
     help.textContent = item.helpText;
     content.append(help);
+  }
+  // Matching Information chỉ cần chọn đoạn; giữ nguyên ID và giá trị để nháp/bài cũ đọc được.
+  if (THUY_UI && item.pedagogicalTypeCode === 'matching_information'
+    && item.interactionType === 'single_choice' && item.skillCodes?.includes('reading')) {
+    wrapper.classList.add('matching-information');
+    const select = document.createElement('select');
+    select.className = 'matching-information-select';
+    select.setAttribute('aria-label', `Câu ${item.displayNumber || item.position}: chọn đoạn văn`);
+    const placeholder = document.createElement('option');
+    placeholder.value = '';placeholder.textContent = 'Chọn đoạn';select.append(placeholder);
+    for (const option of item.options) {
+      const choice = document.createElement('option');choice.value = option.id;choice.textContent = option.label;select.append(choice);
+    }
+    select.value = String(responseFor(item) || '');
+    select.addEventListener('change', () => recordResponse(item.itemVersionId, select.value || undefined));
+    content.append(select);
+    return wrapper;
   }
   if (buildSingleSentenceCompletion(item, label)) return wrapper;
   if(item.layoutType==='keyword_selection'&&item.interactionType==='multi_choice_group'){
