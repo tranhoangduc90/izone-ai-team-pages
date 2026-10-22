@@ -1,7 +1,7 @@
 // Nhận bản chụp từ máy chủ cục bộ, dựng giao diện theo preset Thủy.
 // Mọi nút ghi chỉ gọi /api/demo; nháp được gắn đúng người, buổi và lần giao bài.
-import {SKILLS,itemsOf,allPartsSubmitted,applicable,personJourney,priority,quizScore,practiceReport,speakingSummary,speakingAnalytics,writingSummary,compareWritingPeople,libraryEntries,filterLibraryEntries} from './model.mjs';
-import {localAPI,preparePages,pagesAPI} from './pages-adapter.mjs';
+import {SKILLS,itemsOf,allPartsSubmitted,applicable,blank,personJourney,priority,quizScore,practiceReport,speakingSummary,speakingAnalytics,writingSummary,compareWritingPeople,libraryEntries,filterLibraryEntries} from './model.mjs';
+import {localAPI,preparePages,pagesAPI,onPagesMutation} from './pages-adapter.mjs';
 import {journeyScenarios,scenarioSummary} from './journey-scenarios.mjs';
 import {testScenario} from './test-scenarios.mjs';
 import {studentReviewLabel} from './review-labels.mjs';
@@ -57,6 +57,16 @@ function readonly(detail,blocks=detail.definition.blocks){
   output=output.replaceAll('</article>',()=>{const item=items[index++],answer=key?.[item.itemVersionId],label=answer?.graderType==='exact_option'?item.options?.find(o=>o.id===answer.expectedOptionId)?.label:answer?.graderType==='exact_options'?answer.expectedOptions.map(id=>item.options.find(o=>o.id===id)?.label||id).join(' · '):answer?.graderType==='exact_text'?answer.expectedText:answer?.graderType==='exact_matching'?answer.pairs.map(p=>p.left+' → '+p.right).join('\n'):'';return (label&&applicable(item,detail.responses||{})?`<p class="correctAnswer"><b>Đáp án chuẩn:</b> ${esc(label)}</p>${explanationMarkup(answer.explanation)}`:'')+'</article>';});
   let hintIndex=0;
   output=output.replaceAll('</article>',()=>{const item=items[hintIndex++];return (item.interactionType==='long_text'&&applicable(item,detail.responses||{})?hintMarkup(item.interactionConfig?.hintText):'')+'</article>';});
+  const doc=new DOMParser().parseFromString(output,'text/html');
+  for(const article of doc.querySelectorAll('[data-review-item]')){
+    const item=items.find(v=>v.itemVersionId===article.dataset.reviewItem),verdict=article.querySelector('.reviewVerdict');
+    if(!item||!verdict)continue;
+    const status=[...verdict.classList].find(v=>v!=='reviewVerdict');
+    const snapshot=detail.isFake===undefined?!isStudent||!s.data.isFake:!detail.isFake;
+    const label=studentReviewLabel(item,status,{snapshot});
+    if(label)verdict.textContent=label;
+  }
+  output=doc.body.innerHTML;
   return isStudent?compactStudentReview(output,items):output;
 }
 function compactStudentReview(markup,items){
@@ -68,12 +78,6 @@ function compactStudentReview(markup,items){
     const top=article.querySelector('.reviewQuestionTop'),title=top.querySelector('h3'),number=top.querySelector('.reviewQuestionNumber').textContent;
     title.textContent=`Câu ${number}. ${title.textContent}`;
     const verdict=article.querySelector('.reviewVerdict');
-    const item=items.find(v=>v.itemVersionId===article.dataset.reviewItem);
-    if(verdict&&item){
-      const status=[...verdict.classList].find(v=>v!=='reviewVerdict');
-      const label=studentReviewLabel(item,status,{snapshot:!s.data.isFake});
-      if(label)verdict.textContent=label;
-    }
     top.replaceChildren(title);
     if(verdict)top.append(verdict);
     article.querySelector('.reviewAnswer small')?.remove();
@@ -289,7 +293,7 @@ function reflectionText(definition,responses,skill){return itemsOf(definition).f
 function fixture(){const report=priority([{sessionNumber:8,percent:40},{sessionNumber:9,percent:55},{sessionNumber:10,percent:50}]);return `<section class="fixture"><div class="inline">${badge('Tình huống mô phỏng','amber')}<h2>Học viên minh họa · ${SKILLS[t.skill]}</h2>${badge('Ưu tiên xem','red')}</div><p>Buổi 8: 40% · Buổi 9: 55% · Buổi 10: 50%. TB ba buổi = <b>${pct(report.recentAverage)}</b>, dưới 60%. Không phải bài làm của học viên IC2305 và không được cộng vào bảng lớp.</p><div class="spark">${report.recent.slice().reverse().map(r=>`<div class="sparkItem"><span>${pct(r.percent)}</span><div class="sparkBar low" style="height:${r.percent*.6}px"></div><small>B${r.sessionNumber}</small></div>`).join('')}</div><p>TB 60% trở lên: bỏ nhãn. Chỉ có hai buổi: hiện “Chưa đủ 3 buổi”. Giá trị 0% hợp lệ vẫn được tính; ô thiếu không được coi là 0%.</p></section>`;}
 function archiveBody(archive){
   const actual=archive.students.filter(p=>p.started).map(p=>`<details class="panel part"><summary><h2>${esc(p.name)}</h2>${badge(p.submitted?'Đã nộp':'Có nháp')}</summary><div class="partBody">${readonly({...p.detail,definition:archive.definition,answerKey:archive.answerKey,responses:p.submitted?p.detail.responses:p.draftResponses})}</div></details>`).join('');
-  const simulated=archive.fake.map(([key,state])=>`<details class="panel part"><summary><h2>${esc(key.endsWith('demo-a')?'Học viên thử A':'Học viên thử B')}</h2>${badge('Dữ liệu mô phỏng','amber')}</summary><div class="partBody">${readonly({definition:archive.definition,responses:state.responses,gradingItems:state.gradingItems,submissionId:state.submitted?'demo':null})}</div></details>`).join('');
+  const simulated=archive.fake.map(([key,state])=>`<details class="panel part"><summary><h2>${esc(key.endsWith('demo-a')?'Học viên thử A':'Học viên thử B')}</h2>${badge('Dữ liệu mô phỏng','amber')}</summary><div class="partBody">${readonly({isFake:true,definition:archive.definition,responses:state.responses,gradingItems:state.gradingItems,submissionId:state.submitted?'demo':null})}</div></details>`).join('');
   return `<p><b>${esc(archive.title)}</b></p><p class="caption">Nội dung giữ nguyên, không tính vào bài hiện tại.</p>${actual||empty('Chưa có bài làm thật','Bài thử được giữ riêng bên dưới.')}<h2 style="margin:20px 0 12px">Nháp và bài nộp thử đã giữ</h2>${simulated||'<p class="caption">Không có bản thử ở lần giao này.</p>'}`;
 }
 function detailPanel(){
@@ -333,7 +337,11 @@ async function openStudent(number=s.number,ref=s.ref){
   s.history=[data,...historyResults.filter(v=>v.status==='fulfilled').map(v=>v.value)];
   s.historyError=historyResults.some(v=>v.status==='rejected');
   s.data=data;s.number=number;s.ref=ref;s.responses=structuredClone(data.responses||{});s.dirty=false;s.saveError=false;s.completionError=completionError;s.expanded.clear();
-  const url=new URL(location.href),params=new URLSearchParams(localAPI?url.search:url.hash.slice(1));params.set('view','student');params.set('number',number);params.set('ref',ref);if(localAPI)url.search=params.toString();else{url.search='';url.hash=params.toString();}history.replaceState(null,'',url);renderStudent();
+  const url=new URL(location.href),params=new URLSearchParams(localAPI?url.search:url.hash.slice(1));
+  params.set('view','student');params.set('number',number);params.set('ref',ref);
+  // Link đã gắn lần giao phải chuyển cùng buổi; link bản chụp độc lập vẫn giữ cách mở cũ.
+  if(params.has('generation'))params.set('generation',String(data.generation));
+  if(localAPI)url.search=params.toString();else{url.search='';url.hash=params.toString();}history.replaceState(null,'',url);renderStudent();
 }
 async function saveStudent(){
   clearTimeout(s.timer);if(s.pending)await s.pending;
@@ -350,6 +358,32 @@ function setSaveLabel(text,error=false){
 function studentSaveStatus(message,announce=false){
   return `<span class="studentSaveState"><small data-save-status class="${s.saveError?'saveError':''}" ${announce?'role="status" aria-live="polite"':''}>${esc(message)}</small><button type="button" class="btn small" data-student-action="retry-save" ${s.saveError?'':'hidden'}>Thử lưu lại</button></span>`;
 }
+let releaseRefresh=0;
+async function refreshStudentReleases(){
+  if(!isStudent||!s.data)return;
+  const request=++releaseRefresh,context=s.data,number=s.number,ref=s.ref,generation=s.data.generation;
+  const next=await api(`/api/student?number=${number}&ref=${encodeURIComponent(ref)}`);
+  if(request!==releaseRefresh||s.data!==context||s.number!==number||s.ref!==ref||s.data.generation!==generation||next.generation!==generation)return;
+  const changed=next.releases.filter(release=>s.data.releases.find(v=>v.blockId===release.blockId)?.status!==release.status);
+  s.data.releases=next.releases;
+  // Chỉ dựng lại phần vừa đổi quyền. Các ô khác giữ nguyên DOM, con trỏ và chữ chưa lưu.
+  for(const release of changed){
+    const index=s.data.definition.blocks.findIndex(v=>v.blockId===release.blockId),block=s.data.definition.blocks[index];
+    const old=document.querySelector(`[data-part="${release.blockId}"]`);
+    if(!old||s.identityStage!=='ready'||s.tab!=='session')continue;
+    const focused=old.contains(document.activeElement),scroll={x:scrollX,y:scrollY};
+    const replacement=document.createRange().createContextualFragment(studentPart(block,index));
+    old.replaceWith(replacement);updateConditionals();
+    if(focused){const part=document.querySelector(`[data-part="${release.blockId}"]`);part.tabIndex=-1;part.focus({preventScroll:true});}
+    window.scrollTo(scroll.x,scroll.y);
+    toast(`Phần ${index+1} ${release.status==='open'?'đã được mở.':'đã đóng. Nháp vẫn được giữ.'}`);
+  }
+}
+onPagesMutation(body=>{
+  if(body.action==='release'&&Number(body.number)===s.number)refreshStudentReleases().catch(error=>toast(error.message));
+});
+// Bản local đọc cùng trạng thái máy chủ; Pages nhận thông báo trực tiếp giữa các tab.
+if(localAPI)setInterval(()=>{if(!document.hidden)refreshStudentReleases().catch(()=>{});},3000);
 function renderStudent(){
   const d=s.data;document.body.className='student-screen';
   if(s.identityStage!=='ready'){
@@ -359,23 +393,23 @@ function renderStudent(){
   }
   const lessonIcon='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6"/></svg>';
   const resultsIcon='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V9h4v11m3 0V4h4v16m3 0v-8h4v8M2 20h21" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
-  app.innerHTML=`<header class="studentHeader"><div class="brand"><div class="logo">IZONE</div><small>PROGRESS LOG</small></div><span class="caption">Lớp IC2305</span></header><nav class="studentNav" aria-label="Trang học viên"><button class="btn ${s.tab==='session'?'active':''}" data-student-tab="session"><span aria-hidden="true">▤</span>Buổi học</button><button class="btn ${s.tab==='journey'?'active':''}" data-student-tab="journey"><span aria-hidden="true">▥</span>Kết quả học tập</button></nav><main class="studentMain"><div class="studentInner"><h1 class="studentGreeting">Xin chào, ${esc(d.person.name)}</h1><div class="studentDemoTools"><span>${d.isFake?'Bản thử · Danh tính mô phỏng, không ghi vào lớp thật':'Bản chụp thật · Chỉ xem lại, không sửa bài thật'}</span><div><button class="btn quiet small" data-student-action="identity">Đổi người học</button>${!d.isFake?`<a class="btn quiet small" target="_blank" rel="noopener" href="${studentURL('demo-a',s.number)}">Thử làm phiếu</a>`:''}<select class="select" aria-label="Chọn buổi học" data-student-session>${d.sessions.map(v=>`<option value="${v.number}" ${v.number===s.number?'selected':''} ${!v.available?'disabled':''}>Buổi ${v.number} · ${date(v.date)}</option>`).join('')}</select></div></div>${s.tab==='session'?studentSession():studentJourney()}<footer class="demoFooter"><span>Bản chụp · ${time(d.capturedAt)}</span><details><summary>Mô phỏng</summary><div><p>Thao tác chỉ được giữ trong phiên demo; không đổi bài hay điểm danh thật.</p><a href="./?number=${s.number}">Về màn giảng viên</a>${d.isFake?'<button class="btn quiet small" data-student-action="fail">Thử lỗi lưu kế tiếp</button>':''}</div></details></footer></div></main>`;
+  app.innerHTML=`<header class="studentHeader"><div class="brand"><div class="logo">IZONE</div><small>PROGRESS LOG</small></div><span class="caption">Lớp IC2305</span></header><nav class="studentNav" aria-label="Trang học viên"><button class="btn ${s.tab==='session'?'active':''}" data-student-tab="session" ${s.tab==='session'?'aria-current="page"':''}><span aria-hidden="true">▤</span>Buổi học</button><button class="btn ${s.tab==='journey'?'active':''}" data-student-tab="journey" ${s.tab==='journey'?'aria-current="page"':''}><span aria-hidden="true">▥</span>Kết quả học tập</button></nav><main class="studentMain"><div class="studentInner"><h1 class="studentGreeting">Xin chào, ${esc(d.person.name)}</h1><div class="studentDemoTools"><span>${d.isFake?'Bản thử · Danh tính mô phỏng, không ghi vào lớp thật':'Bản chụp thật · Chỉ xem lại, không sửa bài thật'}</span><div><button class="btn quiet small" data-student-action="identity">Đổi người học</button>${!d.isFake?`<a class="btn quiet small" target="_blank" rel="noopener" href="${studentURL('demo-a',s.number)}">Thử làm phiếu</a>`:''}<select class="select" aria-label="Chọn buổi học" data-student-session>${d.sessions.map(v=>`<option value="${v.number}" ${v.number===s.number?'selected':''} ${!v.available?'disabled':''}>Buổi ${v.number} · ${date(v.date)}</option>`).join('')}</select></div></div>${s.tab==='session'?studentSession():studentJourney()}<footer class="demoFooter"><span>Bản chụp · ${time(d.capturedAt)}</span><details><summary>Mô phỏng</summary><div><p>Thao tác chỉ được giữ trong phiên demo; không đổi bài hay điểm danh thật.</p><a href="./?number=${s.number}">Về màn giảng viên</a>${d.isFake?'<button class="btn quiet small" data-student-action="fail">Thử lỗi lưu kế tiếp</button>':''}</div></details></footer></div></main>`;
   document.querySelector('[data-student-tab="session"]>span')?.replaceWith(document.createRange().createContextualFragment(lessonIcon));
   document.querySelector('[data-student-tab="journey"]>span')?.replaceWith(document.createRange().createContextualFragment(resultsIcon));
   updateConditionals();
 }
 function studentSession(){
-  const d=s.data,allReceived=allPartsSubmitted(d.definition,d.checkpoints),progress=`Đã nộp ${d.checkpoints.length}/${d.definition.blocks.length} phần`,completion=d.submitted?(d.isFake&&allReceived?progress+(d.completeness==='partial'?' · còn câu trống':' · Hoàn tất phiếu'):d.completeness==='partial'?'Đã nộp · còn câu trống':'Đã nộp phiếu'):progress+(allReceived?' · Chưa hoàn tất phiếu':'');
+  const d=s.data,allReceived=allPartsSubmitted(d.definition,d.checkpoints),progress=`Đã nộp ${d.checkpoints.length}/${d.definition.blocks.length} phần`,completion=progress+(d.submitted?(d.completeness==='partial'?' · còn câu trống':' · Hoàn tất phiếu'):allReceived?' · Chưa hoàn tất phiếu':'');
   return `<div class="studentHeading"><p>IC2305 · BUỔI ${d.number} · ${date(d.date)}</p><h1>${esc(d.title)}</h1></div>${d.replacement?'<div class="notice warn">Bài cũ đã thu hồi. Đây là bài hiện tại; bài cũ không cần làm tiếp.</div>':''}<section class="currentCard"><div class="currentHeading"><div class="lessonMeta"><span>${sourceDeadline(d.number)}</span>${badge(d.participated?'Đã ghi nhận tham gia'+(d.isFake?' · thử':''):'Chưa ghi nhận tham gia',d.participated?'green':'')}</div><div class="lessonProgress"><span>${completion}</span>${!d.isFake?'<small>Chỉ xem lại bài thật</small>':'<small>Nộp phần đầu thành công ghi nhận tham gia</small>'}</div></div>${instructionsMarkup(d.definition.instructions)}${d.definition.blocks.map((block,index)=>studentPart(block,index)).join('')}</section>${d.isFake&&!d.submitted?(allReceived?`<div class="notice warn completionPending" role="status"><span><strong>Đã nhận đủ các phần.</strong><br>Chưa xác nhận được hoàn tất phiếu. Bài đã nộp vẫn được giữ.</span><button class="btn" data-student-action="retry-completion">Thử hoàn tất phiếu</button></div>`:`<div class="bottomActions">${studentSaveStatus(s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nháp riêng theo người học và buổi',true)}</div>`):''}<section class="currentFeedback"><h2>Nhận xét của giáo viên</h2><div class="feedbackCard"><b>Speaking</b><p>${d.publishedFeedback?esc(d.publishedFeedback):'Chưa có nhận xét đã công bố.'}</p></div></section>`;
 }
 function studentPart(block,index){
-  const d=s.data,checkpoint=d.checkpoints.find(c=>c.blockId===block.blockId),submitted=d.submitted||Boolean(checkpoint),open=d.releases.find(r=>r.blockId===block.blockId)?.status==='open',editable=d.isFake&&!submitted,expanded=s.expanded.has(block.blockId);
+  const d=s.data,checkpoint=d.checkpoints.find(c=>c.blockId===block.blockId),submitted=d.submitted||Boolean(checkpoint),open=d.releases.find(r=>r.blockId===block.blockId)?.status==='open',editable=d.isFake&&!submitted,expanded=s.expanded.has(block.blockId),hasDraft=block.items.some(item=>!blank(s.responses[item.itemVersionId])),started=hasDraft||editable&&expanded;
   let content='';
-  if(!editable){const review=readonly({definition:d.definition,responses:s.responses,gradingItems:d.gradingItems,submissionId:submitted?'submitted':null,answerKey:d.answerKey},[block]),grades=d.gradingItems.filter(g=>g.maxScore>0&&block.items.some(i=>i.itemVersionId===g.itemVersionId)),correct=grades.filter(g=>g.verdict==='correct').length;content=`<p class="readOnly">${submitted?'Đã nộp · Chỉ xem lại':'Nội dung đã lưu · Chưa nộp phần này'}${!d.answersVisible?' · Kết quả chấm đang ẩn':''}</p>${d.answersVisible&&grades.length?`<p class="partScore"><b>${correct} đúng</b> · ${grades.length-correct} sai / ${grades.length} câu có đáp án</p>`:''}${d.answersVisible?review:review.replace(/<p class="reviewVerdict (?!not_applicable)[^"]*">[^<]*<\/p>/g,'')}`;}
+  if(!editable){const review=readonly({definition:d.definition,responses:s.responses,gradingItems:d.gradingItems,submissionId:submitted?'submitted':null,answerKey:d.answerKey},[block]),grades=d.gradingItems.filter(g=>g.maxScore>0&&block.items.some(i=>i.itemVersionId===g.itemVersionId)),correct=grades.filter(g=>g.verdict==='correct').length;content=`<p class="readOnly">${submitted?'Đã nộp · Chỉ xem lại':hasDraft?'Có nháp · Chưa nộp phần này':'Chưa có câu trả lời · Chưa nộp phần này'}${submitted&&!d.answersVisible?' · Kết quả chấm đang ẩn':''}</p>${d.answersVisible&&grades.length?`<p class="partScore"><b>${correct} đúng</b> · ${grades.length-correct} sai / ${grades.length} câu có đáp án</p>`:''}${d.answersVisible?review:review.replace(/<p class="reviewVerdict (?!not_applicable)[^"]*">[^<]*<\/p>/g,'')}`;}
   else if(!open)content='<p class="muted">Giảng viên chưa mở phần này. Nháp vẫn được giữ.</p>';
   else content=`${block.instructions?`<p class="exerciseInstructions">${esc(block.instructions)}</p>`:''}${block.items.map((item,i)=>field(item,i+1)).join('')}<div class="partFoot">${studentSaveStatus(s.saveError?'Chưa giữ được nháp. Hãy thử lại.':s.dirty?'Đang có thay đổi chưa lưu':'Nộp được khi còn câu trống')}<button class="btn primary" data-submit-block="${esc(block.blockId)}">Nộp phần ${index+1}</button></div>`;
   const title=block.title.replace(/^phần\s*\d+\s*[:：.]?\s*/i,'');
-  return `<section class="studentPart" data-part="${esc(block.blockId)}"><div class="studentPartTop"><div><small>PHẦN ${index+1}</small><h2>${esc(title)}</h2></div>${badge(submitted?'Đã nộp':open?'Đã mở':'Chưa mở',submitted?'green':open?'blue':'')}</div>${!expanded?`<button class="btn ${editable&&open?'primary':''} partStart" data-start-part="${esc(block.blockId)}" ${editable&&!open?'disabled':''}>${submitted?'Xem kết quả':editable?'Bắt đầu làm':'Xem nội dung đã lưu'}</button>`:`<button class="btn quiet small collapsePart" data-collapse-part="${esc(block.blockId)}">Thu gọn ⌃</button><div class="partBody">${content}</div>`}</section>`;
+  return `<section class="studentPart" data-part="${esc(block.blockId)}"><div class="studentPartTop"><div><small>PHẦN ${index+1}</small><h2>${esc(title)}</h2></div><span data-part-status>${badge(submitted?'Đã nộp':!open?'Chưa mở':started?'Đang làm':'Đã mở',submitted?'green':open?'blue':'')}</span></div>${!expanded?`<button class="btn ${editable&&open?'primary':''} partStart" data-start-part="${esc(block.blockId)}" ${editable&&!open?'disabled':''}>${submitted?'Xem kết quả':editable?started?'Tiếp tục làm':'Bắt đầu làm':hasDraft?'Xem nháp':'Xem phần chưa nộp'}</button>${editable&&!open?'<p class="partAvailability">Giảng viên chưa mở phần này. Nháp vẫn được giữ.</p>':''}`:`<button class="btn quiet small collapsePart" data-collapse-part="${esc(block.blockId)}">Thu gọn ⌃</button><div class="partBody">${content}</div>`}</section>`;
 }
 function field(item,index){const id=item.itemVersionId,value=s.responses[id],c=item.interactionConfig||{};
   const label=`<span class="caption">CÂU ${esc(item.displayNumber??index)}</span><br>${esc(item.prompt)}`;
@@ -489,7 +523,7 @@ document.addEventListener('input',event=>{
     if(item.interactionType==='number_score'){
       setScoreValidity(element,item.interactionConfig.max,document.getElementById('error-'+item.itemVersionId));
     }
-    s.dirty=true;setSaveLabel('Đang giữ nháp…');updateConditionals();clearTimeout(s.timer);s.timer=setTimeout(()=>saveStudent().catch(e=>toast(e.message)),700);
+    s.dirty=true;setSaveLabel('Đang giữ nháp…');updateConditionals();const part=element.closest('[data-part]');if(part)part.querySelector('[data-part-status]').innerHTML=badge('Đang làm','blue');clearTimeout(s.timer);s.timer=setTimeout(()=>saveStudent().catch(e=>toast(e.message)),700);
   }
 });
 document.addEventListener('change',event=>{(async()=>{

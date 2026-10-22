@@ -47,3 +47,13 @@ test('Mở demo độc lập vẫn đọc được bản chụp khi không có t
  await env.adapter.preparePages();assert.equal(env.fetches,1);
  assert.equal((await env.adapter.pagesAPI('/api/teacher')).className,'IC2305');
 }));
+test('Tab nhận thay đổi phần sau khi kho chấp nhận; thao tác cũ bị từ chối không phát thông báo',()=>environment({responses:[{delay:10,package:current,role:'teacher'}]},async env=>{
+ await env.adapter.preparePages();const changes=[],stop=env.adapter.onPagesMutation(body=>changes.push(body));
+ const body={action:'release',number:10,generation:session.generation,blockId:session.definition.blocks[0].blockId,open:false};
+ env.channel.deliver({kind:'mutation',body});
+ assert.deepEqual(changes,[body]);
+ assert.equal((await env.adapter.pagesAPI('/api/student?number=10&ref=demo-a')).releases[0].status,'closed');
+ env.channel.deliver({kind:'mutation',body:{...body,generation:session.generation-1,open:true}});
+ assert.equal(changes.length,1);
+ stop();env.channel.deliver({kind:'mutation',body:{...body,open:true}});assert.equal(changes.length,1);
+}));

@@ -2,6 +2,16 @@
 
 Bản demo HTML/CSS/JavaScript thuần theo master 1.3 ngày 20/10/2026 của [Thủy](https://izone-progress-log-design-demo.wingsenglish90.chatgpt.site/), kèm các lựa chọn Q1–Q8 Đức đã chốt. Đây là demo độc lập; không sửa ứng dụng, bài làm hoặc điểm danh đang chạy.
 
+## Hoàn thiện sau tổng kiểm 22/10/2026
+
+- Link đã gắn lần giao cập nhật cùng buổi được chọn, để tải lại vẫn mở đúng bài. Link bản chụp độc lập giữ cách mở cũ.
+- Pages nhận thay đổi mở/đóng qua thông báo giữa các tab; bản local kiểm mỗi ba giây. Chỉ phần đổi quyền được dựng lại, giữ nháp kể cả đang lưu lỗi; ô đang nhập ở phần khác giữ con trỏ. Phản hồi cũ không áp vào màn vừa đổi người/buổi. Máy chủ demo vẫn kiểm khóa khi nộp.
+- Hộp tạo câu từ nội dung dán giữ nháp riêng theo bài/phần khi đóng rồi mở lại trong cùng trang. X, Esc và bấm ngoài vẫn đóng; kéo chuột từ trong ra ngoài không đóng. Sau khi thêm câu thành công, nháp hộp đó được bỏ để tránh thêm lại ngoài ý muốn. Chưa lưu nội dung hộp này qua tải lại hoặc giữa thiết bị.
+- Phần đang làm có nhãn riêng, bài thật và bài thử đều có bộ đếm phần từ dữ liệu thực có. Phần trống không gọi là nháp. Giảng viên và học viên phân biệt câu không chấm, số tự báo và kết quả chấm còn thiếu; không sửa bộ hiển thị chung của ứng dụng đang chạy.
+- Nhãn bài làm phía giảng viên tối thiểu 12px; vùng X ở màn hẹp là 44px. Điều hướng học viên khai báo trang hiện tại; phần chưa mở có lý do cạnh nút. Ô soạn hai dòng bỏ chiều cao ép 72px để theo số dòng nguồn, vẫn kéo giãn được.
+
+Giữ ghi nhận tham gia từ phần đầu thành công, không từ nháp; tự hoàn tất khi đủ phần, nháp nhận xét chỉ hiện khi công bố, lịch sử thu hồi chỉ cho giảng viên. Điểm Test/tình huống giả và nguồn thật tiếp tục có nhãn riêng. Lớp mô phỏng vẫn ở RAM; đây chưa phải nâng cấp lưu bền vững, AI thật hoặc đồng bộ Portal thật.
+
 ## Mở trên GitHub Pages
 
 Mở route `progress-log/thuy-review/`: trang tự tải `demo-data.json`, không cần chọn file. Đức đã cho phép công bố gói dữ liệu demo IC2305 ngày 20/10/2026. Gói gồm dữ liệu học viên, bài làm và đáp án phục vụ bản demo; không chứa credential hoặc token phiếu production. Khi tải thất bại, trang hiển thị lỗi và nút **Thử tải lại**.

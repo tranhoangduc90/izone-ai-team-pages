@@ -73,7 +73,7 @@
   const b=e.target.closest('.exercise-editor button');if(!b)return;
   const d=b.dataset;
   capture();
-  if('editorAi'in d){const target=d.targetSection||'',sectionTitle=draft.sections.find(p=>p.id===target)?.title;ProgressLogExerciseAI.open({skill:'general',sectionTitle,apply:(items,title)=>{draft=ProgressLogExerciseAIModel.merge(draft,items,title,target);previewing=false;render(`[data-question="${draft.questions.length-items.length}"] textarea`);toast(`Đã thêm ${items.length} câu${sectionTitle?' vào '+sectionTitle:''}.`)}});return}
+  if('editorAi'in d){const target=d.targetSection||'',sectionTitle=draft.sections.find(p=>p.id===target)?.title;ProgressLogExerciseAI.open({draftKey:JSON.stringify([draft.id,target]),skill:'general',sectionTitle,apply:(items,title)=>{draft=ProgressLogExerciseAIModel.merge(draft,items,title,target);previewing=false;render(`[data-question="${draft.questions.length-items.length}"] textarea`);toast(`Đã thêm ${items.length} câu${sectionTitle?' vào '+sectionTitle:''}.`)}});return}
   if('editorDivision'in d){if(d.editorDivision==='single'){draft.sections=[];draft.questions.forEach(q=>q.section='');render('[data-editor-division="single"]')}else if(!draft.sections.length)resizeSections(2);return}
   if('editorExit'in d){callbacks.cancel();return}
   if('editorSave'in d){try{callbacks.save(structuredClone(draft),d.editorSave)}catch(err){error(err.message)}return}
