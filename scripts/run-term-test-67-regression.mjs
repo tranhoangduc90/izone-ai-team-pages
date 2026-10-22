@@ -48,7 +48,7 @@ if (requestedMode === '--list') {
 }
 
 console.log(`Chạy ${selectedTests.length} file regression Term Test 67 (${requestedMode === '--quick' ? 'tĩnh' : 'đầy đủ'}).`);
-const result = spawnSync(process.execPath, ['--test', ...selectedTests], {
+const result = spawnSync(process.execPath, ['--test', '--test-concurrency=1', ...selectedTests], {
   cwd: repoRoot,
   stdio: 'inherit',
   env: process.env

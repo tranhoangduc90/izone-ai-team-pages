@@ -1280,8 +1280,8 @@
     if (studentSelect) {
       new MutationObserver(updateStartAvailability).observe(studentSelect, { childList: true });
     }
-    listeningForm.form.addEventListener('submit', () => {
-      if (protection?.isHeld()) return;
+    listeningForm.form.addEventListener('term-test:listening-submitted', () => {
+      if (protection) return;
       allowPause = true;
       window.clearInterval(audioWatchdog);
       audio.pause();

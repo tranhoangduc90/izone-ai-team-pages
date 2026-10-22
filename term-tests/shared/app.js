@@ -192,6 +192,7 @@
       writingConflict: state.writingConflict,
       writingRecovery: state.writingRecovery,
       drafts: state.drafts,
+      pendingSubmissions: state.pendingSubmissions,
       draftRevisions: state.draftRevisions,
       draftAckRevisions: state.draftAckRevisions,
       writingLayout: state.writingLayout,
@@ -711,7 +712,7 @@
     const binding = paperIdentity.select(student, { resolution, remember: !student.temporary });
     storageScope = binding.scope; window.TERM_TEST_STORAGE_SCOPE = binding.scope;
     paperPointerKey = binding.keys.state; storageKey = paperPointerKey;
-    Object.assign(state, binding.state, { studentRef: student.ref, studentName: student.name,
+    Object.assign(state, { pendingSubmissions: {} }, binding.state, { studentRef: student.ref, studentName: student.name,
       studentIdentitySource: student.temporary ? 'temporary' : 'roster' });
   }
   function rememberPaperStudent(studentRef) {
@@ -893,6 +894,34 @@
   }
 
   async function apiRequest(path, options = {}) {
+    const match = path.match(/^\/api\/term-tests\/([^/]+)\/(listening|reading)$/);
+    if (options.method !== 'POST' || !match) {
+      const data = await rawApiRequest(path, options);
+      window.K67_EXAM_ORDER?.apply(state, data);
+      return data;
+    }
+    const section = match[2], testSlug = match[1];
+    const getOwner = () => JSON.stringify([storageKey, state.studentRef, state.examSessionToken, state.attemptToken, miniGeneration]);
+    const owner = getOwner();
+    const body = { ...JSON.parse(options.body || '{}'), ...(miniAnswerSheet ? { generation: miniGeneration } : {}) };
+    const { submitSection } = await import('../shared/section-submission.mjs?v=20261023-v1');
+    const data = await submitSection({ state, section, body, testSlug, owner, getOwner, save: saveSession,
+      send: value => rawApiRequest(path, { ...options, body: JSON.stringify(value) }),
+      read: async value => {
+        try { return await rawApiRequest(`/api/term-tests/${testSlug}/submission-status`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...value, section })
+        }); } catch (error) {
+          if (error.status === 404 && error.code === 'SUBMISSION_NOT_FOUND') return { ok: true, persisted: false };
+          throw error;
+        }
+      }
+    });
+    window.K67_EXAM_ORDER?.apply(state, data);
+    return data;
+  }
+
+  async function rawApiRequest(path, options = {}) {
     // Tra mã người học không phải yêu cầu ghi bài hoặc giữ quyền phát audio.
     if (!path.endsWith('/student-identity')) {
       options = window.K67_EXAM_ORDER?.request(options) || options;
@@ -926,7 +955,6 @@
         requestError.status = response.status;
         throw requestError;
       }
-      window.K67_EXAM_ORDER?.apply(state, data);
       return data;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Vui lòng thử lại.');
@@ -2948,6 +2976,7 @@
       }
       if (previousStudentRef && previousStudentRef !== state.studentRef) {
       // Đổi học viên phải tạo một lượt độc lập; không mang mã gửi bài hoặc bài nháp của người trước sang.
+      state.pendingSubmissions = {};
       state.clientSubmissionId = '';
       state.clientSubmissionStudentRef = '';
       state.examSessionToken = '';
@@ -3100,6 +3129,7 @@
 
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
+    if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
       showNotice('Hãy chọn đúng họ và tên trước khi nộp Listening.', 'error');
@@ -3107,7 +3137,7 @@
     }
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.listeningView.dataset.listeningTimeExpired === 'true';
-    let answers = state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
+    let answers = state.pendingSubmissions?.listening?.answers || state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
     if (automatic && !state.frozenAnswers.listening) {
       state.frozenAnswers.listening = Object.freeze({ ...answers });
       answers = state.frozenAnswers.listening;
@@ -3211,6 +3241,7 @@
       }
       if (!submitted && isSectionExpired('listening')) startSectionDeadlineGuard('listening');
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
+      if (state.pendingSubmissions?.listening) setAnswerControlsLocked('listening', true);
       if (!submitted && window.K67_ACTIVE_LISTENING?.isHeld()) elements.submitListening.disabled = true;
     }
   });
@@ -3246,9 +3277,10 @@
 
   elements.readingView.addEventListener('submit', async event => {
     event.preventDefault();
+    if (state.readingSubmitted || elements.readingView.dataset.readingSubmitting === 'true') return;
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.readingView.dataset.readingTimeExpired === 'true';
-    let answers = state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
+    let answers = state.pendingSubmissions?.reading?.answers || state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
     if (automatic && !state.frozenAnswers.reading) {
       state.frozenAnswers.reading = Object.freeze({ ...answers });
       answers = state.frozenAnswers.reading;
@@ -3325,6 +3357,7 @@
       }
       if (!submitted && isSectionExpired('reading')) startSectionDeadlineGuard('reading');
       setBusy(elements.submitReading, false, 'Đang lưu và chấm...', 'Nộp bài Reading');
+      if (state.pendingSubmissions?.reading) setAnswerControlsLocked('reading', true);
     }
   });
 
@@ -3583,7 +3616,7 @@
       for(const section of ['listening','reading']) {stopSectionDraftFlow(section);stopSectionDeadlineGuard(section);}
       state.attemptToken=''; state.examSessionToken=''; state.clientSubmissionId='';
       state.listeningSubmitted=false; state.readingSubmitted=false; state.examMode='lis_first'; state.completed=false; state.result=null;
-      state.attemptReview=null;
+      state.attemptReview=null;state.pendingSubmissions={};
       state.drafts={listening:{},reading:{},writing:{task1:'',task2:''}};
       state.frozenAnswers={listening:null,reading:null};state.readingDeadlineAt='';state.listeningDeadlineAt='';
       state.draftRevisions={listening:0,reading:0};state.draftAckRevisions={listening:0,reading:0};
