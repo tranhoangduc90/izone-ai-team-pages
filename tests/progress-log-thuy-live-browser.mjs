@@ -12,8 +12,8 @@ const uid=n=>`a0000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const A=uid(1),B=uid(2),assignmentId=uid(3),block1=uid(4),block2=uid(5),wordItem=uid(6),scanId=uid(7),skimId=uid(8);
 const base={itemFamilyId:uid(20),required:true,maxScore:0,graderType:'none',skillCodes:['reading'],helpText:'',options:[],interactionConfig:{}};
 const definition={schemaVersion:'FormDefinitionV1',formVersionId:uid(9),title:'Phiếu kiểm giao diện mới',kind:'mixed',answerReleasePolicy:'hidden',blocks:[
- {blockId:block1,checkpoint:1,title:'Listening · Từ khóa',instructions:'Gạch chân từ quan trọng.',items:[{...base,itemVersionId:wordItem,position:1,prompt:'Tìm từ khóa',interactionType:'multi_choice_group',layoutType:'keyword_selection',
-  options:[{id:'w1',label:'test'},{id:'w2',label:'test'},{id:'w3',label:'again?'}],interactionConfig:{maxSelections:2}}]},
+ {blockId:block1,checkpoint:1,title:'Listening · Từ khóa',instructions:'Gạch chân từ quan trọng.',items:[{...base,itemVersionId:wordItem,position:1,displayNumber:'1',prompt:'Câu 1 · Câu hỏi',interactionType:'multi_choice_group',layoutType:'keyword_selection',
+  options:[{id:'w1',label:'test'},{id:'w2',label:'test'},{id:'w3',label:'again?'}],interactionConfig:{maxSelections:2}},...['A','B','C'].map((letter,index)=>({...base,itemVersionId:uid(80+index),position:2+index,displayNumber:'1'+letter,prompt:'Câu 1 · '+letter,interactionType:'multi_choice_group',layoutType:'keyword_selection',options:[{id:letter+'1',label:'other'},{id:letter+'2',label:'words'}],interactionConfig:{maxSelections:2}}))]},
  {blockId:block2,checkpoint:2,title:'Reading · Bảng so sánh',instructions:'Điền bảng.',items:[
  {...base,itemVersionId:scanId,position:2,prompt:'Scanning',interactionType:'short_text',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:2,sentenceLines:[{title:'Mục tiêu',parts:['Tìm ',' và ','.']},{title:'Dạng bài áp dụng',parts:['Câu có sẵn.']}]}},
  {...base,itemVersionId:skimId,position:3,prompt:'Skimming',interactionType:'short_text',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:2,sentenceLines:[{title:'Mục tiêu',parts:['Hiểu ',' trong ','.']},{title:'Dạng bài áp dụng',parts:['Dòng nguồn giữ nguyên.']}]}}]}]};
@@ -63,6 +63,9 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
  try{
   await openManual();assert.equal(requests.filter(r=>r.path.includes('/submit')).length,0);
   await page.locator(`[data-part="${block1}"]`).getByRole('button',{name:'Bắt đầu làm',exact:true}).click();
+  assert.equal(await page.locator('.thuy-keyword-question>.thuy-question-heading').innerText(),'Câu 1','Số câu phải hiển thị riêng khỏi nội dung');
+  assert.deepEqual(await page.locator('.thuy-keyword-subitem h3').allTextContents(),['Câu hỏi','A','B','C']);
+  assert.equal(await page.locator('.thuy-keyword-subitem').count(),4);
   await page.locator('[data-keyword=w2]').click();assert.equal(await page.locator('[data-keyword=w1]').getAttribute('aria-pressed'),'false');assert.equal(await page.locator('[data-keyword=w2]').getAttribute('aria-pressed'),'true');
   await page.locator('[data-keyword=w3]').focus();await page.keyboard.press('Space');assert.equal(await page.locator('[data-keyword=w3]').getAttribute('aria-pressed'),'true');
   await page.locator('[data-keyword=w1]').click();assert.equal(await page.locator('[data-keyword=w1]').getAttribute('aria-pressed'),'false');await page.getByRole('status').filter({hasText:'Mỗi câu chọn tối đa 2 từ'}).waitFor();

@@ -1,4 +1,5 @@
 // Dùng kết quả đã lọc quyền từ API. Không tự lấy key, suy đáp án hoặc chấm ở trình duyệt.
+import {questionPresentation} from './question-presentation.js?rev=20261022-parity-v1';
 const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 function answer(item,value){
  const values=Array.isArray(value)?value:[value];
@@ -15,7 +16,7 @@ export function partFeedback(block,result){
  const scored=grades.filter(g=>g.maxScore>0),correct=scored.filter(g=>g.verdict==='correct').length;
  root.append(node('p',`${correct} đúng · ${scored.length-correct} sai / ${scored.length} câu đã chấm`));
  for(const item of block.items){const grade=grades.find(g=>g.itemVersionId===item.itemVersionId);if(!grade)continue;
-  const card=node('article'),heading=node('h3',`Câu ${item.displayNumber||item.position} · ${item.prompt}`);
+  const display=questionPresentation(item),card=node('article'),heading=node('h3',`Câu ${display.number} · ${display.title}`);
   card.append(heading,node('p','Câu trả lời của em: '+answer(item,grade.rawAnswer)));
   if(grade.expectedAnswer!=null){card.append(node('b',grade.verdict==='correct'?'✓ Đúng':'✕ Sai'),node('p','Đáp án: '+answer(item,grade.expectedAnswer)));}
   else card.append(node('p','Không tự chấm đúng/sai'));
