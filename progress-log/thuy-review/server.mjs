@@ -22,6 +22,7 @@ staticFiles.set('/fonts.css','fonts.css');
 staticFiles.set('/completion.css','completion.css');
 staticFiles.set('/pages-adapter.mjs','pages-adapter.mjs');
 staticFiles.set('/review-labels.mjs','review-labels.mjs');
+staticFiles.set('/session-storage.mjs','session-storage.mjs');
 staticFiles.set('/demo-store.mjs','demo-store.mjs');
 staticFiles.set('/journey-scenarios.mjs','journey-scenarios.mjs');
 staticFiles.set('/test-scenarios.mjs','test-scenarios.mjs');

@@ -3,7 +3,12 @@
  const model=ProgressLogExerciseAIModel,skills=ProgressLogWorksheet.skills;
  let dialog,settings,source='',fallback='',result=null,selected=[],returnFocus,scopeKey;
  const drafts=new Map();
- function remember(){if(scopeKey)drafts.set(scopeKey,{source,fallback,result:structuredClone(result),selected:[...selected]});}
+ function remember(){
+  if(!scopeKey)return;
+  const value={source,fallback,result:structuredClone(result),selected:[...selected]};drafts.set(scopeKey,value);
+  try{window.ProgressLogSessionDrafts?.save('ai:'+scopeKey,'authoring',{action:'authoringAI',value});window.__thuyAiUnsaved=false;}
+  catch(error){window.__thuyAiUnsaved=true;if(dialog.open)showError(error.message);else{const notice=document.querySelector('#toast');if(notice){notice.textContent=error.message;notice.className='show';}}}
+ }
  const icon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
  function ensure(){
   if(dialog)return;
@@ -18,14 +23,14 @@
    const b=e.target.closest('button');if(!b)return;
    const d=b.dataset;
    if('aiClose'in d)dialog.close();
-   if('aiSample'in d){dialog.querySelector('#aiSource').value=model.sample;dialog.querySelector('#aiSource').focus();updateInputCount()}
+   if('aiSample'in d){source=model.sample;dialog.querySelector('#aiSource').value=source;dialog.querySelector('#aiSource').focus();updateInputCount();remember()}
    if('aiAnalyze'in d){
     source=dialog.querySelector('#aiSource').value;fallback=dialog.querySelector('#aiTargetSkill').value;
-    try{result=model.parse(source,fallback);selected=result.items.map(()=>true);render()}catch(err){showError(err.message)}
+    try{result=model.parse(source,fallback);selected=result.items.map(()=>true);render();remember()}catch(err){showError(err.message)}
    }
-   if('aiBack'in d){result=null;render();dialog.querySelector('#aiSource').focus()}
+   if('aiBack'in d){result=null;render();remember();dialog.querySelector('#aiSource').focus()}
    if('aiApply'in d){
-    try{const included=result.items.filter((_,i)=>selected[i]);settings.apply(included,result.title);drafts.delete(scopeKey);scopeKey=null;dialog.close();document.querySelector('[data-editor-ai]')?.focus({preventScroll:true})}catch(err){showError(err.message)}
+    try{const included=result.items.filter((_,i)=>selected[i]);settings.apply(included,result.title);window.ProgressLogSessionDrafts?.remove('ai:'+scopeKey);drafts.delete(scopeKey);scopeKey=null;window.__thuyAiUnsaved=false;dialog.close();document.querySelector('[data-editor-ai]')?.focus({preventScroll:true})}catch(err){showError(err.message)}
    }
   });
   dialog.addEventListener('input',e=>{if(e.target.id==='aiSource'){source=e.target.value;updateInputCount();remember()}});
@@ -46,6 +51,10 @@
   if(result){dialog.querySelectorAll('[data-ai-include]').forEach((input,i)=>input.checked=selected[i]);updateSelection();}else updateInputCount();
   dialog.scrollTop=0;dialog.querySelector('#exerciseAiTitle').focus({preventScroll:true});
  }
- function open(options){ensure();settings=options;scopeKey=options.draftKey;const saved=drafts.get(scopeKey);fallback=saved?.fallback??options.skill??'';source=saved?.source||'';result=structuredClone(saved?.result||null);selected=[...(saved?.selected||[])];returnFocus=document.activeElement;render();dialog.showModal();dialog.querySelector('#aiSource')?.focus()}
+ function open(options){
+  ensure();settings=options;scopeKey=options.draftKey;let saved=drafts.get(scopeKey),issue;
+  try{saved=window.ProgressLogSessionDrafts?.get('ai:'+scopeKey)?.body?.value||saved;}catch(error){issue=error;}
+  fallback=saved?.fallback??options.skill??'';source=saved?.source||'';result=structuredClone(saved?.result||null);selected=[...(saved?.selected||[])];returnFocus=document.activeElement;render();dialog.showModal();dialog.querySelector('#aiSource')?.focus();if(issue)showError(issue.message);
+ }
  window.ProgressLogExerciseAI={open,icon};
 })();
