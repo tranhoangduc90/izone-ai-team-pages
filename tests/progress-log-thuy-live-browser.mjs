@@ -16,7 +16,8 @@ const definition={schemaVersion:'FormDefinitionV1',formVersionId:uid(9),title:'P
   options:[{id:'w1',label:'test'},{id:'w2',label:'test'},{id:'w3',label:'again?'}],interactionConfig:{maxSelections:2}},...['A','B','C'].map((letter,index)=>({...base,itemVersionId:uid(80+index),position:2+index,displayNumber:'1'+letter,prompt:'Câu 1 · '+letter,interactionType:'multi_choice_group',layoutType:'keyword_selection',options:[{id:letter+'1',label:'other'},{id:letter+'2',label:'words'}],interactionConfig:{maxSelections:2}}))]},
  {blockId:block2,checkpoint:2,title:'Reading · Bảng so sánh',instructions:'Điền bảng.',items:[
  {...base,itemVersionId:scanId,position:2,prompt:'Scanning',interactionType:'short_text',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:2,sentenceLines:[{title:'Mục tiêu',parts:['Tìm ',' và ','.']},{title:'Dạng bài áp dụng',parts:['Câu có sẵn.']}]}},
- {...base,itemVersionId:skimId,position:3,prompt:'Skimming',interactionType:'short_text',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:2,sentenceLines:[{title:'Mục tiêu',parts:['Hiểu ',' trong ','.']},{title:'Dạng bài áp dụng',parts:['Dòng nguồn giữ nguyên.']}]}}]}]};
+ {...base,itemVersionId:skimId,position:3,prompt:'Skimming',interactionType:'short_text',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:2,sentenceLines:[{title:'Mục tiêu',parts:['Hiểu ',' trong ','.']},{title:'Dạng bài áp dụng',parts:['Dòng nguồn giữ nguyên.']}] }},
+ {...base,itemVersionId:uid(90),position:9,displayNumber:'2',prompt:'Em muốn luyện thêm điều gì?',interactionType:'single_choice',layoutType:'choice_cards',skillCodes:['speaking'],options:[{id:'A',label:'Phát triển ý và diễn đạt câu trả lời dài, rõ ràng hơn trong buổi luyện nói'},{id:'B',label:'Phát âm và trọng âm'}]}]}]};
 
 test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp độc lập, tự hoàn tất và xem lại không tạo lượt',{timeout:120000},async()=>{
  const server=createServer(async(req,res)=>{try{const u=new URL(req.url,'http://local');const file=resolve(root,'.'+u.pathname);if(!file.startsWith(resolve(root)+sep))throw Error('Denied');res.setHeader('content-type',{'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.woff2':'font/woff2'}[extname(file)]||'application/octet-stream');res.end(await readFile(file));}catch{res.writeHead(404);res.end();}});
@@ -72,7 +73,16 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   await page.locator('[data-keyword=w2]').click();assert.equal(await page.locator('[data-keyword=w2]').getAttribute('aria-pressed'),'false');
   await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Bắt đầu làm',exact:true}).click();assert.equal(await page.locator('.thuy-comparison textarea').count(),4);
   await page.locator('.thuy-comparison textarea').nth(0).fill('Nháp A giữ đủ dấu');
-  for(const width of [1440,768,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
+  // Phương án là nội dung form học viên: phải đủ 16/24px theo preset, kể cả khi xuống dòng trên điện thoại.
+  const speaking=page.locator(`[data-item-version-id="${uid(90)}"]`);
+  for(const width of [1440,768,390]){
+   await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await speaking.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,`speaking-choice-${width}.png`)});}
+   const typography=await speaking.locator('.choice-text').first().evaluate(el=>({size:getComputedStyle(el).fontSize,line:getComputedStyle(el).lineHeight}));
+   assert.deepEqual(typography,{size:'16px',line:'24px'},'Phương án Speaking phải đúng preset form học viên 16/24px');
+   assert.ok(await speaking.locator('.choice').first().evaluate(el=>el.getBoundingClientRect().height>=48));
+  }
+  await speaking.locator('input[value=B]').check();assert.equal(await speaking.locator('input[value=B]').isChecked(),true);
   await page.setViewportSize({width:1440,height:1000});
   failSave=true;await page.getByRole('button',{name:'Đổi người học',exact:true}).click();await page.locator('#notice').filter({hasText:'Chưa lưu xong'}).waitFor();
   assert.match(await page.locator('#studentNameLabel').innerText(),/Học viên A/);assert.equal(await page.locator('#thuyRetrySave').isVisible(),true);
