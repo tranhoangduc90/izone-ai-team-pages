@@ -5,7 +5,6 @@ import {createFormLibrary} from './teacher-form-library.js?rev=20261022-parity-v
 import {bindDialogDismiss} from './session-comments.js';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
-  ['keyword_selection','Gạch chân từ khóa'],
   ['dropdown','Dropdown Matching Headings'],['gapfill','Điền từ trong câu / chuỗi lập luận'],
   ['numbered_short_texts','Nhóm ô ngắn đánh số'],['speaking_checklist','Checklist Speaking'],
   ['conditional_explanation','Ô giải thích có điều kiện'],['self_reported_score','Số câu đúng tự khai']];
@@ -403,7 +402,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     for(const [index,block]of draft.definition.blocks.entries()){
       const section=el('section',undefined,{className:'thuy-editor-section'}),top=el('header',undefined,{className:'thuy-editor-section-head'}),ai=button('AI chuyển nội dung có sẵn',()=>{importTargetBlockId=block.blockId;aiPopupOpen=true;paint();},readonly);ai.dataset.aiTargetBlock=block.blockId;top.append(el('h2',(draft.definition.blocks.length>1?'Phần '+(index+1)+' · ':'')+block.title),ai);section.append(top);
       if(draft.definition.blocks.length>1)field(section,'Tên phần '+(index+1),block.title,value=>{block.title=value;},{disabled:readonly});
-      const add=el('div',undefined,{className:'thuy-editor-add'});for(const type of ['mcq','multi','short_answer','reflection','matching','self_reported_score','keyword_selection'])add.append(button('+ '+thuyNames[type],()=>{block.items.push(newEditorItem(type));resequence();markDirty();paint();},readonly));section.append(add);
+      const add=el('div',undefined,{className:'thuy-editor-add'});for(const type of ['mcq','multi','short_answer','reflection','matching','self_reported_score'])add.append(button('+ '+thuyNames[type],()=>{block.items.push(newEditorItem(type));resequence();markDirty();paint();},readonly));section.append(add);
       for(const item of block.items)paintThuyItem(section,item,block,readonly);if(!block.items.length)section.append(el('p','Chưa có câu hỏi.'));editor.append(section);
     }
     if(!readonly){paintImport();editor.lastElementChild.classList.add('thuy-import');if(aiPopupOpen)paintImport({aiOnly:true});}
