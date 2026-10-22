@@ -54,7 +54,7 @@ export function renderThuyRoster(root,{dashboard,liveByStudent,mode='progress',q
     row.addEventListener('click',event=>{if(event.target.closest('button,a,input,select')||window.getSelection()?.toString())return;onOpen(student);});
     row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();onOpen(student);}});tbody.append(row);
   }
-  table.append(tbody);wrap.append(table);const hint=node('p',`Đang hiển thị ${people.length}/${dashboard.students.length} học viên · Cuộn trang để xem các hàng còn lại.`,'thuy-roster-hint');
+  table.append(tbody);wrap.append(table);const hint=node('p',`Đang hiển thị ${people.length}/${dashboard.students.length} học viên.`,'thuy-roster-hint');
   const cue=node('button','','button thuy-roster-cue');cue.type='button';const remaining=()=>[...tbody.rows].filter(row=>row.getBoundingClientRect().top>=innerHeight-48);
   cue.addEventListener('click',()=>remaining()[0]?.scrollIntoView({behavior:'smooth',block:'center'}));
   const update=()=>{const count=remaining().length;cue.hidden=!count||root.hidden;cue.textContent=count?'Còn '+count+' học viên phía dưới ↓':'';};

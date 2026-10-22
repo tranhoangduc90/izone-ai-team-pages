@@ -1,7 +1,8 @@
 // Kho thật: API và các phiếu được cấp quyền. Không dùng storage hay bài giả của demo.
+import {questionPresentation} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {bindDialogDismiss,node} from './session-comments.js';
 const button=(text,action)=>{const b=node('button',text,'button');b.type='button';b.addEventListener('click',action);return b;};
-const skills={general:'Chung',listening:'Listening',reading:'Reading',speaking:'Speaking',writing:'Writing'};
+const skills={general:'Chung',reflection:'Tự nhìn lại',listening:'Listening',reading:'Reading',speaking:'Speaking',writing:'Writing'};
 const fold=s=>String(s||'').normalize('NFD').replace(/\p{M}/gu,'').replace(/đ/giu,'d').toLocaleLowerCase('vi');
 export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDraft=()=>{},onCopyUsed=()=>{}}){
  let scope='all',generation=0,usedGeneration=0,entries=[],used=[],drafts=[];
@@ -55,7 +56,16 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     else if(entry.source==='used'){if(reply.dashboard.assignmentId!==entry.id)throw Error('Phiếu trả về chưa khớp.');definition=reply.dashboard.definition;}
     else{if(reply.entry.id!==entry.id)throw Error('Phiếu trả về chưa khớp.');definition=reply.entry.definition;}}
    if(!d.open)return;body.replaceChildren();if(definition.instructions)body.append(node('p',definition.instructions));
-   for(const block of definition.blocks){body.append(node('h3',block.title));if(block.instructions)body.append(node('p',block.instructions));for(const item of block.items){const card=node('section');card.append(node('b','Câu '+(item.displayNumber||item.position)+' · '+item.prompt));if(item.helpText)card.append(node('p',item.helpText));for(const option of item.options||[])card.append(node('p',option.label));for(const line of item.interactionConfig?.sentenceLines||[])card.append(node('p',line.parts.join(' […] ')));body.append(card);}}
+   for(const block of definition.blocks){body.append(node('h3',block.title));if(block.instructions)body.append(node('p',block.instructions));let previousNumber=null;
+    for(const item of block.items){
+     const raw=String(item.displayNumber||item.position),number=raw.match(/^\d+/u)?.[0]||raw;
+     const display=questionPresentation({...item,displayNumber:number}),card=node('section');
+     if(number!==previousNumber){body.append(node('h3','Câu '+number));previousNumber=number;}
+     card.append(node('b',display.title));if(item.helpText)card.append(node('p',item.helpText));
+     if(item.layoutType==='keyword_selection')card.append(node('p',(item.options||[]).map(o=>o.label).join(' ')));
+     else for(const option of item.options||[])card.append(node('p',option.label));
+     for(const line of item.interactionConfig?.sentenceLines||[])card.append(node('p',line.parts.join(' […] ')));body.append(card);
+    }}
   }catch(error){body.replaceChildren(node('p',error.message));}
  }
  for(const [value,label]of [['all','Tất cả'],['izone','Kho IZONE'],['used','Phiếu đã dùng'],['personal','Của tôi'],['review','Chờ bạn duyệt']]){const b=button('',()=>{scope=value;paint();});b.setAttribute('role','tab');b.append(document.createTextNode(label+' '),node('span','0'));tabs.set(value,b);nav.append(b);}

@@ -13,9 +13,9 @@ import {observeSubmissionWindow, submissionWindowMessage} from './submission-win
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261022-parity-v1';
-import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261022-parity-v1';
+import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261022-parity-v2';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
-import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261022-parity-v1';
+import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261022-parity-v2';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
 import {renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261022-parity-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
@@ -23,7 +23,7 @@ import {mountAssignmentManagement} from './thuy-live/assignment-management.js?re
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/teacher-thuy.html');
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022-parity-v1'):null;
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022-parity-v2'):null;
 if(THUY_UI)document.body.classList.add('thuy-live','thuy-teacher');
 const sessionClient = createTeacherSessionClient({
   apiBaseUrl: config.API_BASE_URL,
