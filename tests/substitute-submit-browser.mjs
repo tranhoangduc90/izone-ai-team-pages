@@ -6,6 +6,7 @@ const root=path.resolve(fileURLToPath(new URL('../',import.meta.url)));
 const backend=process.env.SUBSTITUTE_BACKEND_ROOT;
 // Chế độ nhận diện kiểm UI với biên nhận giả; không giả rằng SQLite cũ là production mới.
 const fixture = process.env.SUBSTITUTE_IDENTITY_UI_FIXTURE === 'true';
+const emptyListening = process.env.SUBSTITUTE_EMPTY_LISTENING_FIXTURE === 'true';
 if(!fixture&&!backend)throw Error('Cần backend đã đối chiếu hoặc chọn fixture UI giả.');
 const {SubstituteStore,TESTS,gradingFromReadback}=fixture
  ?await import('./fixtures/substitute-identity-store.mjs')
@@ -46,7 +47,8 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
    else if(api==='/api/test/grade'){
     gradeCalls++;
     const total=payload.examId==='listening'?40:TESTS[slug].readingMax;
-    const section={correct:1,total,band:2.5,typeStats:[{type:'Fixture',correct:1,total,percentage:1/total}],details:Array.from({length:total},(_,i)=>({number:i+1,studentAnswer:String(payload.answers?.[i+1]||''),correctAnswer:'Fixture',result:i===0?'correct':'blank'}))};
+    const correct=Object.values(payload.answers||{}).some(value=>String(value).trim())?1:0;
+    const section={correct,total,band:correct?2.5:0,typeStats:[{type:'Fixture',correct,total,percentage:correct/total}],details:Array.from({length:total},(_,i)=>({number:i+1,studentAnswer:String(payload.answers?.[i+1]||''),correctAnswer:'Fixture',result:i===0&&correct?'correct':'blank'}))};
     response=store.saveSectionSubmission({...id,clientRunId:payload.examSessionId,skill:payload.examId,section});
     if(fault==='lost-ack'){fault=null;return route.abort();}
    }else if(api==='/api/test/writing'){
@@ -67,13 +69,13 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
   await page.locator('#bootstrapStudent').selectOption(selectedStudent);await page.locator('#confirmIdentity').click();await page.locator('#bootstrapPreview:enabled').click();await page.locator('#bootstrapStart:enabled').click();
   await page.locator('#listeningView').waitFor({state:'visible'});
   // Tái hiện 39/40 câu: câu cuối trống vẫn được nộp sớm sau xác nhận.
-  await page.evaluate(()=>{
+  if(!emptyListening)await page.evaluate(()=>{
    for(const field of document.querySelectorAll('#listeningQuestions [data-number]')){
     field.value=Number(field.dataset.number)===40?'':field.tagName==='SELECT'?field.options[1].value:'Fixture';
     field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));
    }
   });
-  assert.match(await page.locator('#listeningCount').innerText(),/39\/40/);
+  assert.match(await page.locator('#listeningCount').innerText(),emptyListening?/0\/40/:/39\/40/);
   // Hủy xác nhận khi còn câu trống phải giữ audio đang chạy và giữ màn làm bài.
   cancelSubmit=true;
   await page.locator('#submitListening').click();
@@ -84,7 +86,7 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
    const view=page.locator('#'+skill+'View'),textAnswer=view.locator('input[type="text"]:visible').first();
    const answer=await textAnswer.count()?textAnswer:view.locator('select:visible').first();
    const isSelect=await answer.evaluate(e=>e.tagName==='SELECT');
-   if(isSelect)await answer.selectOption({index:1});else await answer.fill('Fixture');
+   if(skill!=='listening'||!emptyListening){if(isSelect)await answer.selectOption({index:1});else await answer.fill('Fixture');}
    const originalAnswer=await answer.inputValue();
    for(const failure of ['http','empty','malformed']){
     fault=failure;const response=page.waitForResponse(r=>r.request().postData()?.includes('/api/test/grade'));await page.locator(button).click();await response;
@@ -103,9 +105,9 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
    assert.equal(gradeCalls,beforeCalls+1,'Bấm lặp và mất phản hồi chỉ ghi một lần');
    assert.equal(store.db.prepare('SELECT count(*) n FROM section_submission WHERE skill=?').get(skill).n,1);
    if(skill==='listening'){
-    const run=store.db.prepare('SELECT * FROM exam_session').get();
-    const saved=store.readSectionSubmission({testSlug:slug,classCode:run.class_code,studentRef:run.student_ref,clientRunId:run.run_id,historyEpoch:run.history_epoch,skill});
-    assert.equal(saved.section.details.filter(d=>d.studentAnswer).length,39);
+    const run=await page.evaluate(()=>window.SUBSTITUTE_STATE.payload({}));
+    const saved=store.readSectionSubmission({...run,testSlug:slug,skill});
+    assert.equal(saved.section.details.filter(d=>d.studentAnswer).length,emptyListening?0:39);
    }
    if(skill==='listening'){assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),true,'Chỉ dừng audio sau xác nhận lưu');assert.equal(store.db.prepare('SELECT audio_ended_at FROM exam_session').get().audio_ended_at,null);await page.locator('#startReading').click();await page.locator('#readingView').waitFor({state:'visible'});}
   }
@@ -118,11 +120,11 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
    assert.equal(await page.locator('#writingView').isVisible(),true);assert.equal(acceptedWriting,0);
   }
   await page.locator('#submitWriting').click();await page.locator('#resultView').waitFor({state:'visible'});
-  const summary=await page.locator('#summaryGrid').innerText();assert.match(summary,/Listening/);assert.match(summary,/Reading/);assert.match(summary,/1\/40/);
+  const summary=await page.locator('#summaryGrid').innerText();assert.match(summary,/Listening/);assert.match(summary,/Reading/);assert.match(summary,emptyListening?/0\/40/:/1\/40/);
   assert.equal(await page.locator('#questionDetails details').count(),2);
   assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);
-  await page.reload();await page.locator('#resultView').waitFor({state:'visible'});assert.match(await page.locator('#summaryGrid').innerText(),/1\/40/);
+  await page.reload();await page.locator('#resultView').waitFor({state:'visible'});assert.match(await page.locator('#summaryGrid').innerText(),emptyListening?/0\/40/:/1\/40/);
   assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({slug,ok:true,earlyBeforeAudioEnd:true,failuresKeepDrafts:true,lostAckRecovered:true,doubleSubmitNoDuplicate:true,resultsAfterWriting:true,reloadNoDuplicate:true,realAI:false,portalWrites:0}));
+  console.log(JSON.stringify({slug,ok:true,answeredListening:emptyListening?0:39,earlyBeforeAudioEnd:true,failuresKeepDrafts:true,lostAckRecovered:true,doubleSubmitNoDuplicate:true,resultsAfterWriting:true,reloadNoDuplicate:true,realAI:false,portalWrites:0}));
  }finally{await context.unrouteAll({behavior:'ignoreErrors'});await context.close();store.close();}
 }}finally{await browser.close();await new Promise(r=>server.close(r));}

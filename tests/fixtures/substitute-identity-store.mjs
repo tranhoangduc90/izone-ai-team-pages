@@ -12,8 +12,9 @@ const key = input => JSON.stringify([input.testSlug,input.classCode,input.studen
 export class SubstituteStore {
   constructor() {
     this.attempts = new Map(); this.exams = new Map(); this.sections = new Map();
-    this.db = { prepare: sql => ({ get: () => {
+    this.db = { prepare: sql => ({ get: skill => {
       if (sql === 'SELECT audio_ended_at FROM exam_session') return { audio_ended_at: null };
+      if (sql === 'SELECT count(*) n FROM section_submission WHERE skill=?') return { n: [...this.sections.keys()].filter(k=>k.endsWith(skill)).length };
       assert.equal(sql, 'SELECT count(*) AS n FROM attempt'); return { n: this.attempts.size };
     } }) };
   }
@@ -32,8 +33,14 @@ export class SubstituteStore {
   }
   saveSectionSubmission(input) {
     assert.equal(input.historyEpoch,epoch); assert.ok(input.clientRunId);
-    this.sections.set(key(input)+input.skill, structuredClone(input.section));
-    return { persisted:true, snapshotHash:'a'.repeat(64), submittedAt:new Date().toISOString(), section:input.section };
+    const index=key(input)+input.skill;
+    if(!this.sections.has(index))this.sections.set(index,{persisted:true,snapshotHash:'a'.repeat(64),submittedAt:new Date().toISOString(),section:structuredClone(input.section)});
+    return structuredClone(this.sections.get(index));
+  }
+  readSectionSubmission(input) {
+    assert.equal(input.historyEpoch,epoch);assert.ok(this.exams.has(key(input)));
+    const binding=Object.fromEntries(['testSlug','classCode','studentRef','clientRunId','historyEpoch','skill'].map(k=>[k,input[k]]));
+    return {...binding,...structuredClone(this.sections.get(key(input)+input.skill)||{persisted:false})};
   }
   submit(input) {
     assert.equal(input.historyEpoch,epoch); assert.ok(input.clientRunId);
