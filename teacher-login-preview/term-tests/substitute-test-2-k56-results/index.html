@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com/gsi/; frame-src 'self' https://accounts.google.com/gsi/; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Kết quả Substitute Test 2 · Khóa 56</title>
+  <link rel="stylesheet" href="../substitute-k56-shared/styles.css?rev=20261007-live-results-v1">
+  <link rel="stylesheet" href="../substitute-shared/teacher-results.css?v=20261014-exam-source-v1">
+  <script id="google-identity" src="https://accounts.google.com/gsi/client" async defer></script>
+  <link rel="stylesheet" href="../substitute-shared/brand.css?v=20261014-exam-source-v1">
+  <link rel="stylesheet" href="../substitute-shared/teacher-progress-panel.css?v=20261019-v1">
+  <script src="../../shared/teacher-single-sign-on.js?v=20261023-sso-all"></script>
+<script defer src="../../preview-nav.js"></script><link rel="stylesheet" href="../../preview.css"></head>
+<body>
+    <div class="substitute-brandbar" aria-label="IZONE">
+      <img src="../substitute-shared/izone-logo-color.png" alt="IZONE · IELTS Chiến lược" width="120" height="44">
+    </div>
+  <header class="results-header">
+    <div class="header-copy">
+      <a class="back-link" href="../substitute-test-1-k56-dashboard/">← Danh sách bài</a>
+      <h1>Kết quả Substitute Test 2 · Khóa 56</h1>
+      <p>Kết quả thật theo từng lượt nộp. Chỉ giáo viên/quản trị được cấp quyền mới xem được.</p>
+    </div>
+  </header>
+  <main class="results-shell">
+    <section class="panel auth-panel" aria-labelledby="login-heading">
+      <div><h2 id="login-heading">Đăng nhập xem kết quả</h2><p id="login-status" role="status">Chỉ giáo viên/quản trị được cấp quyền mới xem được kết quả.</p></div>
+      <div class="auth-actions"><div id="google-signin"></div><button class="button button-secondary" id="logout" type="button" hidden>Đăng xuất</button></div>
+    </section>
+    <div id="page-message" class="notice" role="status" hidden></div>
+    <section id="filter-section" class="filter-bar panel" aria-label="Bộ lọc kết quả" hidden>
+      <label>Lớp<select id="class-filter"><option value="ALL">Tất cả lớp được phép</option></select></label>
+      <label>Bài kiểm tra<select id="test-select"><option value="substitute-test-2-k56">Substitute Test 2 · Khóa 56</option></select></label>
+      <button class="button button-primary" id="load-results" type="button">Tải lại kết quả</button>
+      <span class="updated-at" id="updated-at"></span>
+    </section>
+    <section id="roster-section" class="panel roster-panel" aria-labelledby="roster-heading" hidden>
+      <div class="section-title"><h2 id="roster-heading">Các lượt nộp · mới nhất trước</h2><button id="toggle-filters" type="button" class="button button-secondary" aria-expanded="false" aria-controls="extra-filters">Bộ lọc</button></div>
+      <form id="extra-filters" class="extra-filters" hidden>
+        <label>Tên học viên<input id="name-filter" type="search" maxlength="100" placeholder="Tìm tên học viên" autocomplete="off"></label>
+        <label>Chấm Writing<select id="writing-filter"><option value="">Tất cả trạng thái</option><option value="ready">Đã chấm</option><option value="queued">Chờ chấm</option><option value="processing">Đang chấm</option><option value="incomplete">Thiếu bài</option><option value="failed">Cần kiểm tra</option></select></label>
+        <label>Đồng bộ Portal<select id="portal-filter"><option value="">Tất cả trạng thái</option><option value="synced">Đã xác nhận đồng bộ</option><option value="pending">Chờ đồng bộ</option><option value="blocked">Bị chặn, chưa ghi</option><option value="unknown">Cần đối soát</option><option value="not_applicable">DEMO · không gửi</option></select></label>
+        <label>Từ ngày (giờ Việt Nam)<input id="from-filter" type="date"></label>
+        <label>Đến hết ngày (giờ Việt Nam)<input id="to-filter" type="date"></label>
+        <div class="filter-actions"><button id="apply-filters" class="button button-primary" type="submit">Áp dụng</button><button id="reset-filters" class="button button-secondary" type="button">Xóa bộ lọc</button></div>
+      </form>
+      <div class="table-wrap"><table class="results-table">
+        <thead><tr><th>Học viên · Lớp · Thời gian nộp</th><th>Listening</th><th>Reading</th><th>Writing</th><th>Chấm Writing</th><th>Đồng bộ Portal</th><th>Chi tiết lượt nộp</th></tr></thead>
+        <tbody id="student-rows"></tbody>
+      </table></div>
+      <div class="pagination"><button id="previous-page" class="button button-secondary" type="button" disabled>Trước</button><span id="page-range"></span><button id="next-page" class="button button-secondary" type="button" disabled>Sau</button></div>
+    </section>
+    <section class="panel student-panel" id="student-detail" hidden aria-labelledby="student-name">
+      <div class="student-heading"><div><h2 id="student-name">Chi tiết lượt nộp</h2><p id="student-status"></p></div></div>
+      <div id="attempt-content"></div>
+    </section>
+  </main>
+  <script type="module" src="./app.js?rev=20261023-sso-all"></script>
+</body>
+</html>
