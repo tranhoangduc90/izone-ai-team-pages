@@ -23,6 +23,8 @@ Với `progress-log/`, đọc [preset chuẩn Thủy](docs/progress-log-thuy-pre
 
 ## 2. Quy tắc route term-tests
 
+- Mọi sửa đổi hoặc bài Term/Mini K56/K67 mới phải đọc [hợp đồng nộp/phục hồi và checklist tạo bài](docs/TERM_MINI_SUBMISSION_2026-10-23.md). Dùng `shared/section-submission.mjs` qua adapter đúng khóa, giữ storage/identity/generation, Writing, controller K56 v2 và owner/hold K67. Giữ hồi quy nộp, pending storage, cache và bài cũ trong cả hai manifest; thêm cấu hình bài mới vào ca kiểm phù hợp và allowlist API. Không dùng HTTP 200 đơn thuần làm xác nhận đã lưu hoặc copy handler trước bản sửa. Bài/nháp/điểm cũ phải còn nguyên sau thay đổi; mock không chứng minh Portal/thiết bị thật đã đạt.
+
 - Trọng tâm 03–45: `webtest-34/` + `34-shared/` là prototype demo tĩnh (LOCAL_DEMO_ONLY);
   `progress-log/` là frontend learning platform. Khối 56/67 (term-test-1/2, mini-test,
   answer-sheet, teacher) là tham chiếu — không thêm tính năng mới khi chưa được yêu cầu.

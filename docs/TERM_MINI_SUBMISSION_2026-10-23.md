@@ -20,6 +20,14 @@
 6. Kiểm riêng nội dung/đáp án/audio/quyền/đích điểm; demo không ghi Portal. Giấy và thi máy giữ chính sách riêng, ghi N/A khi một mode không hỗ trợ.
 7. Trước phát hành, đối chiếu consumer/cache revision, backup và hash từng bài/điểm; sau phát hành đọc lại asset/runtime và dữ liệu cũ. Không restore dump cũ vào kho đang dùng để quay code.
 
+8. Bài mới cần đăng ký slug trong allowlist của cả module canonical K67 và module release API, kiểm parity hai bản; copy giao diện không tự mở route phục hồi. Reading chỉ cần quyền token lượt phù hợp; guard chủ audio chỉ áp dụng Listening K67. Yêu cầu đổi thời gian rà K56 ở issue #117 là việc riêng chưa được gói này chốt; giá trị 0 giây là baseline quan sát, không cấm yêu cầu thay đổi đã được duyệt sau này.
+
+## Bảo toàn qua các lần sửa tiếp
+
+Đọc [hồ sơ đầy đủ, 44 chức năng và giới hạn kiểm](https://github.com/tranhoangduc90/izone-AI-team/blob/main/docs/TERM_MINI_THANH_QUA_VA_BAO_TOAN_2026-10-23.md). Giữ các nhóm `term-mini-submission-contract`, `term-mini-pending-storage`, `term-mini-cache-graph`, `term-mini-submit-browser`, `term-mini-reading-submit-browser` và `term-mini-existing-results-browser` trong manifest K67/K56. Khi thêm slug hoặc đổi owner, mở rộng cấu hình ca kiểm cho bài đó; không xóa hoặc nới kỳ vọng chỉ để suite xanh. Các kiểm Writing/audio/identity/order hiện hành vẫn có phạm vi riêng.
+
+Khi thay đổi API/controller/shared, kiểm cả nơi gọi và nơi nhận dữ liệu. Giữ receipt cũ nguyên trạng và ghi rõ revision/môi trường; chỉ dùng lại bằng chứng còn hiệu lực, chạy phần thiếu hoặc bị ảnh hưởng. Trước phát hành có dữ liệu, đối soát từng ID/hash bài/nháp/điểm và phân loại ghi mới hợp lệ. Không nộp/chấm/reset bài học viên để tạo fixture; quay code phải giữ mọi bài mới.
+
 ## Chạy kiểm
 
 `node --test tests/term-mini-submission-contract.mjs` kiểm các điều kiện nhận xác nhận và phục hồi, bằng state giả trong bộ nhớ.
