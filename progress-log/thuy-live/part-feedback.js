@@ -11,10 +11,10 @@ function answer(item,value){
 export function partFeedback(block,result){
  if(result?.answerRelease!=='released')return null;
  const grades=(result.items||[]).filter(i=>block.items.some(q=>q.itemVersionId===i.itemVersionId));
- if(!grades.some(g=>g.maxScore>0&&g.expectedAnswer!=null))return null;
+ if(!grades.some(g=>(g.maxScore>0&&g.expectedAnswer!=null)||g.explanation))return null;
  const root=node('div');root.className='thuy-part-review';
  const scored=grades.filter(g=>g.maxScore>0),correct=scored.filter(g=>g.verdict==='correct').length;
- root.append(node('p',`${correct} đúng · ${scored.length-correct} sai / ${scored.length} câu đã chấm`));
+ root.append(node('p',scored.length?`${correct} đúng · ${scored.length-correct} sai / ${scored.length} câu đã chấm`:'Đáp án đối chiếu · Phần này không tự chấm đúng/sai'));
  for(const item of block.items){const grade=grades.find(g=>g.itemVersionId===item.itemVersionId);if(!grade)continue;
   const display=questionPresentation(item),card=node('article'),heading=node('h3',`Câu ${display.number} · ${display.title}`);
   card.append(heading,node('p','Câu trả lời của em: '+answer(item,grade.rawAnswer)));

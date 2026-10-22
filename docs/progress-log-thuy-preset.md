@@ -1,6 +1,6 @@
 # Preset chuẩn giao diện Progress Log · Thủy
 
-**Mã chuẩn:** `progress-log-thuy-v1` · **Hồ sơ áp dụng production:** 1.1, ngày 22/10/2026.
+**Mã chuẩn:** `progress-log-thuy-v1` · **Hồ sơ áp dụng production:** 1.2, ngày 22/10/2026.
 
 Đây là chuẩn cần đạt, không phải giấy xác nhận bản đang chạy đã đạt. Kế thừa DESIGN, screens, components trong master ngày 20/10 và các lựa chọn trực tiếp Q1–Q8/M01–M10 cùng phản hồi sau đó. Bản public trong repo Pages là bản xuất từ tài liệu này; không sửa hai bản độc lập.
 
@@ -73,7 +73,7 @@ Responsive nguồn đã đo: sidebar170px ở1024,140px ở768; ≤650 chuyển 
 - Các lựa chọn có marker ở cạnh: trắc nghiệm **radio tròn**, chọn nhiều **checkbox vuông**; Speaking phản hồi chỉ các lựa chọn, không đánh dấu key hoặc Xem đáp án. Không bắt nhập JSON/mã phương án cho ca phổ thông.
 - Điền từ nhận nhiều đáp án hợp lệ, một dòng một đáp án. Câu mở có gợi ý do giảng viên nhập; chỉ hiện nút Xem gợi ý khi có nội dung.
 - Nối cặp soạn hai vế theo từng hàng, thêm/bỏ cặp; xem trước chọn/đổi được. Tự báo có tổng rõ, trống khác0, báo lỗi ngoài miền.
-- Gạch chân từ khóa là loại chọn trong bộ soạn; văn bản, giới hạn số từ và trạng thái bỏ/chọn rõ, không tự chấm khi không có key.
+- Theo yêu cầu Đức ngày22/10, đã gỡ Gạch chân từ khóa khỏi danh mục tạo mới, nhập CSV/văn bản và nhập AI. Chỉ giữ khả năng đọc dữ liệu lịch sử; không xóa bài làm cũ hoặc cho tạo/copy lại dạng đã gỡ.
 - Đổi thứ tự/chuyển phần giữ ID/nội dung/đáp án/gợi ý. Chỉ bỏ phần trống; phần có câu phải chuyển câu trước. Không âm thầm xóa cả phần.
 - Lưu nháp phải qua tải lại/đóng tab; đang lưu/đã lưu/lưu lỗi rõ, giữ chữ khi lỗi và có Thử lưu lại. Không báo Đã lưu chỉ vì dữ liệu trong RAM. Bản chưa gửi thành công phải nói rõ giới hạn.
 - Xem trước dùng renderer học viên thật, có hướng dẫn một lần và lời giải theo quyền. Không phát bài thật để lấy preview.
