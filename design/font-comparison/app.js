@@ -2,23 +2,29 @@
 // Thao tác thử được đồng bộ trong trang, không gửi bài hoặc lưu dữ liệu lên hệ thống.
 const fonts = [
   { id: 'nunito', name: 'Nunito Sans', source: 'Reading' },
-  { id: 'segoe', name: 'Segoe UI', source: 'K56', local: true },
+  { id: 'linh', name: 'Source Sans 3', source: 'Linh · Writing' },
   { id: 'geologica', name: 'Geologica', source: 'Mẫu Thủy' },
 ];
 const themes = [
   { id: 'reading', name: 'Reading', description: 'Nền xám sáng · Hành động navy · Đỏ nhấn nhỏ', swatches: ['#152B4E', '#DB0829', '#F5F6F8', '#FFFFFF'] },
-  { id: 'k56', name: 'K56', description: 'Nền xám xanh · Hành động xanh dương · Đầu vùng navy', swatches: ['#173B67', '#2F6FED', '#EEF2F7', '#FFFFFF'] },
+  { id: 'linh', name: 'Mẫu Linh', description: 'Nền xám sáng · Tiêu đề navy · Nút đỏ · Nền chọn xanh nhạt', swatches: ['#174265', '#DB0829', '#F6F7FB', '#E6EEF5'] },
   { id: 'thuy', name: 'Mẫu Thủy', description: 'Nền xám sáng · Hành động đỏ · Tiêu đề xanh đậm', swatches: ['#174266', '#DB0829', '#F3F4F6', '#FFFFFF'] },
 ];
 const params = new URLSearchParams(location.search);
-// Link Inter/Georgia của bản thử cũ chuyển sang font giao diện K56 đã xác minh.
-const requestedFont = ['inter', 'georgia'].includes(params.get('font')) ? 'segoe' : params.get('font');
+const linhFonts = {
+  writing: { name: 'Source Sans 3', source: 'Linh · Writing' },
+  substitute: { name: 'Source Sans Pro', source: 'Linh · Substitute' },
+};
+// Giữ link đã chia sẻ: cột Segoe/K56 cũ chuyển sang mẫu Linh production.
+const requestedFont = ['segoe', 'inter', 'georgia'].includes(params.get('font')) ? 'linh' : params.get('font');
+const normalizeTheme = value => value === 'k56' ? 'linh' : value;
 // Mỗi font giữ màu riêng; link cũ có một theme chỉ dùng làm màu khởi đầu.
-const initialTheme = themes.some(t => t.id === params.get('theme')) ? params.get('theme') : 'reading';
+const initialTheme = themes.some(t => t.id === normalizeTheme(params.get('theme'))) ? normalizeTheme(params.get('theme')) : 'reading';
 const state = {
+  linhFont: Object.hasOwn(linhFonts, params.get('linh_font')) ? params.get('linh_font') : 'writing',
   view: ['single', 'colors'].includes(params.get('view')) ? params.get('view') : 'compare',
   themes: Object.fromEntries(fonts.map(f => {
-    const choice = params.get(`theme_${f.id}`);
+    const choice = normalizeTheme(params.get(`theme_${f.id}`) ?? (f.id === 'linh' ? params.get('theme_segoe') : null));
     return [f.id, themes.some(t => t.id === choice) ? choice : initialTheme];
   })),
   scene: ['lesson', 'reading', 'dashboard'].includes(params.get('scene')) ? params.get('scene') : 'lesson',
@@ -56,7 +62,7 @@ function dashboard(id) {
   <div class="feedback">✓ Minh họa thành công: Đã lưu nhận xét</div><div class="feedback flag">⚑ Minh họa cần chú ý: Còn 1 bài chưa nộp</div><div class="feedback error">! Minh họa lỗi: Chưa lưu được. Hãy thử lại.</div>`;
 }
 function updateUrl() {
-  const query = new URLSearchParams({ view: state.view, scene: state.scene, font: state.font, theme: state.themes[state.font], scale: state.scale });
+  const query = new URLSearchParams({ view: state.view, scene: state.scene, font: state.font, theme: state.themes[state.font], scale: state.scale, linh_font: state.linhFont });
   fonts.forEach(f => query.set(`theme_${f.id}`, state.themes[f.id]));
   history.replaceState(null, '', `${location.pathname}?${query}`);
 }
@@ -66,6 +72,10 @@ function syncExamples() {
   document.querySelectorAll('.save-status').forEach(el => { el.textContent = state.saved ? '✓ Đã giữ nội dung thử trong trang này.' : ''; });
 }
 function render() {
+  Object.assign(fonts.find(f => f.id === 'linh'), linhFonts[state.linhFont]);
+  document.querySelector('.linh-font-picker').hidden = state.view !== 'compare' && state.font !== 'linh';
+  document.querySelectorAll('[data-linh-font]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.linhFont === state.linhFont)));
+  document.querySelector('[data-font="linh"]').textContent = `Linh · ${linhFonts[state.linhFont].name}`;
   document.documentElement.style.setProperty('--scale', state.scale);
   document.querySelector('#scale').value = state.scale;
   document.querySelector('.single-picker').hidden = state.view === 'compare';
@@ -97,12 +107,17 @@ const failed = new Set();
 function updateFontLabels() {
   document.querySelectorAll('[data-family]').forEach(column => {
     const family = column.dataset.family;
-    column.querySelector('[data-font-state]').textContent = failed.has(family) ? (family === 'Segoe UI' ? 'Máy chưa có Segoe UI' : 'Chưa tải được font') : loaded.has(family) ? (family === 'Segoe UI' ? '✓ Font hệ thống' : '✓ Font đã tải') : 'Đang kiểm…';
+    column.querySelector('[data-font-state]').textContent = failed.has(family) ? 'Chưa tải được font' : loaded.has(family) ? '✓ Font đã tải' : 'Đang kiểm…';
     column.classList.toggle('font-unavailable', failed.has(family));
   });
 }
 document.addEventListener('click', event => {
   const button = event.target.closest('button'); if (!button) return;
+  if (button.dataset.linhFont) {
+    state.linhFont = button.dataset.linhFont;
+    render();
+    return;
+  }
   if (button.dataset.columnTheme) {
     const owner = button.dataset.ownerFont, choice = button.dataset.columnTheme;
     state.themes[owner] = choice;
@@ -124,16 +139,11 @@ document.addEventListener('change', event => {
   if (event.target.matches('[data-answer]')) { state.answer = event.target.value; syncExamples(); }
 });
 render();
-Promise.allSettled(fonts.map(async f => {
+Promise.allSettled([fonts[0], fonts[2], ...Object.values(linhFonts)].map(async f => {
   try {
-    if (f.local) {
-      // Chỉ dò Segoe UI cài sẵn; không sao chép hoặc phát hành tệp font hệ thống.
-      await new FontFace('Segoe UI local probe', 'local("Segoe UI")').load();
-    } else {
-      for (const weight of [400, 500, 600, 700]) {
-        const faces = await document.fonts.load(`${weight} 16px "${f.name}"`, 'Tiếng Việt: Nguyễn Thủy Đặng Ước mơ 85,7% Reading');
-        if (!faces.length) throw new Error(`Thiếu font ${f.name}`);
-      }
+    for (const weight of [400, 500, 600, 700]) {
+      const faces = await document.fonts.load(`${weight} 16px "${f.name}"`, 'Tiếng Việt: Nguyễn Thủy Đặng Ước mơ 85,7% Reading');
+      if (!faces.length) throw new Error(`Thiếu font ${f.name}`);
     }
     loaded.add(f.name);
   } catch (error) {
@@ -144,6 +154,6 @@ Promise.allSettled(fonts.map(async f => {
   }
 })).then(() => {
   const status = document.querySelector('#fontStatus');
-  status.textContent = failed.size ? `Chưa dùng được: ${[...failed].join(', ')}. Không dùng bản đó để kết luận về font.` : '✓ Đủ 3 font đúng nguồn';
+  status.textContent = failed.size ? `Chưa dùng được: ${[...failed].join(', ')}. Không dùng bản đó để kết luận về font.` : '✓ Đã tải font của cả 3 mẫu';
   status.className = failed.size ? 'error' : 'ready';
 });
