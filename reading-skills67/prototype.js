@@ -213,7 +213,15 @@ document.addEventListener('click',async event=>{
     if(button.dataset.serverAttempt){closeModal();const attempt=await serverClient.getAttempt(button.dataset.serverAttempt);trackServerAttempt(attempt);}
     if(button.dataset.serverArchive){const archived=modal._serverArchives[Number(button.dataset.serverArchive)];closeModal();serverClient.stopPoll();state={...newState(),...structuredClone(archived.body),status:'history',savedAt:archived.savedAt,archived};render();}
     if(button.dataset.previewPerson)await serverClient.changePerson(button.dataset.previewPerson);
-    if(button.id==='teacher'){if(serverMode)window.open('teacher.html','_blank','noopener');else window.open(location.pathname+'?teacher=1&scenario=draft','_blank','noopener');}
+    if(button.id==='teacher'){
+      if(serverMode&&serverClient.identity){
+        const target=new URL('./',location.href),person=serverClient.identity;
+        target.searchParams.set('server','1');target.searchParams.set('teacher','1');target.searchParams.set('classId',person.courseId);target.searchParams.set('studentRef',person.ownerId);
+        if(state.serverAttempt)target.searchParams.set('attemptId',state.serverAttempt.attemptId);
+        window.open(target.href,'_blank','noopener');
+      }else if(serverMode)window.open('teacher.html','_blank','noopener');
+      else window.open(location.pathname+'?teacher=1&scenario=draft','_blank','noopener');
+    }
   }catch(err){toast('Chưa thực hiện được: '+err.message);}
 });
 for(const dialog of [modal,explanation]){
