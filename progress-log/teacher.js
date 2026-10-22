@@ -269,7 +269,7 @@ async function loadClassBasicAnalytics(classId,generation,signal) {
     if(THUY_UI){
       for(let offset=0;offset<assignments.length;offset+=3){
         const rows=await Promise.all(assignments.slice(offset,offset+3).map(async assignment=>{
-          const query='?assignmentId='+encodeURIComponent(assignment.assignment_id);
+          const query='?assignment='+encodeURIComponent(assignment.assignment_id);
           const {dashboard}=await apiRequest('/teacher/dashboard'+query,{signal});
           const {live}=await apiRequest('/teacher/live-drafts'+query,{signal});
           if(dashboard.assignmentId!==assignment.assignment_id||live.assignmentId!==assignment.assignment_id||String(dashboard.classId)!==String(classId))throw Error('Dữ liệu kỹ năng chưa khớp phiếu và lớp.');

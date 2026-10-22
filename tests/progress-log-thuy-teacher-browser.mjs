@@ -26,6 +26,9 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   if(u.pathname==='/api/auth/session')return send({ok:true,reviewer:{email:'teacher@example.invalid'}});
   if(!u.pathname.startsWith('/api/learning/'))return route.continue();
   const path=u.pathname.slice('/api/learning'.length);
+  // Khớp schema router thật: dashboard/live nhận assignment, không nhận assignmentId.
+  if(['/teacher/dashboard','/teacher/live-drafts'].includes(path)&&u.searchParams.get('assignment')!==id)
+    return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({ok:false,message:'Dữ liệu gửi lên không hợp lệ.'})});
   if(req.method()!=='GET')writes.push({path,body});
   if(path==='/teacher/options')return send({ok:true,reviewer:{name:'Giảng viên mẫu',email:'teacher@example.invalid'},classes:[{class_id:'1294',class_name:'IC2305'}],assignments:[{assignment_id:id,public_token:id,class_id:'1294',class_name:'IC2305',session_number:11,title:definition.title,status:'published'}]});
   if(path==='/teacher/question-library')return send({ok:true,items:[]});
