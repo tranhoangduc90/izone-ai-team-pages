@@ -12,7 +12,7 @@ for(const app of apps) test(app+': không khôi phục bài khác học viên ho
  const stored={studentRef:'fictional-other',drafts:{writing:{task2:'Fictional old essay'}},testGrades:{listening:{correct:0,total:40}}};
  const storage={getItem:()=>JSON.stringify(stored)};
  const context=vm.createContext({serverGradingMode:true,storageKey:'fixture',sessionStorage:storage,localStorage:storage,
-  window:{TERM_TEST_BOOTSTRAP:{studentRef:'fictional-new',clientRunId:'new-run'},SUBSTITUTE_STATE:{accept:()=>false}},JSON});
+  window:{TERM_TEST_BOOTSTRAP:{studentRef:'fictional-new',clientRunId:'new-run'},SUBSTITUTE_STATE:{storages:()=>[storage],accept:()=>false}},JSON});
  vm.runInContext(source.slice(start,end),context);
  assert.equal(JSON.stringify(vm.runInContext('readSession()',context)),'{}');
 });
