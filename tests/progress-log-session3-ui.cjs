@@ -147,8 +147,9 @@ const check=async (page,{origin}={}) => {
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${base}index.html?ui-test=session3#assignment=${publicToken}`);
-  await page.waitForTimeout(200);
+  // Ca này kiểm khung cũ; lớp IC2305 mặc định chuyển sang Thủy, được kiểm ở thuy-live-browser.
+  await page.goto(`${base}index.html?ui-test=session3&presentation=legacy#assignment=${publicToken}`);
+  await page.locator('#identityView').waitFor({state:'visible'});
   ensure(await page.locator('#identityView').isVisible(),
     `Không mở được màn chọn tên: ${(await page.locator('body').innerText()).slice(0, 500)}; blocked=${blocked.join(',')}`);
   await page.locator('#studentSelect').selectOption(studentRef);

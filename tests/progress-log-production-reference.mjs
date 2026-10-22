@@ -38,7 +38,8 @@ async function run(action){
  });
  try{
   await page.clock.install({time:new Date('2026-10-03T11:24:58Z')});await page.clock.pauseAt(new Date('2026-10-03T11:24:59Z'));
-  await page.goto(origin+'/progress-log/index.html#assignment='+token);await page.locator('#studentSelect').selectOption(ref);await page.locator('#chooseStudentButton').click();await page.locator('#journeyButton').click();await page.locator('#journeyView').waitFor({state:'visible'});
+  // Bộ này kiểm Journey/ngoại hình legacy; tránh chuyển sang Thủy giữa các bước của ca.
+  await page.goto(origin+'/progress-log/index.html?presentation=legacy#assignment='+token);await page.locator('#studentSelect').selectOption(ref);await page.locator('#chooseStudentButton').click();await page.locator('#journeyButton').click();await page.locator('#journeyView').waitFor({state:'visible'});
   await action({page,origin,sessions,detail,setComments:value=>comments=value,setMode:m=>detailMode=m,release:()=>release?.()});assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
  } finally{release?.();await browser.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 }

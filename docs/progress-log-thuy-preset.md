@@ -87,6 +87,7 @@ Responsive nguồn đã đo: sidebar170px ở1024,140px ở768; ≤650 chuyển 
 - Một câu gồm nhiều mục con: tiêu đề CâuN một lần; Câu hỏi và A/B/C bên trong, không hiển thị bốn câu độc lập. Việc nhóm không đổi itemVersionId, thứ tự từ, ID từ trùng nhau, payload hoặc câu trả lời đã lưu.
 - Sentence completion giữ nguyên câu và ô nằm trong câu. Bảng Scanning/Skimming giữ cấu trúc bảng, số/câu theo nguồn, không hardcode số2 cho mọi phiếu.
 - Chữa bài gọn: trả lời, đúng/sai, đáp án/lời giải khi được phép; toàn bộ lựa chọn mở khi cần. Không chấm đúng/sai cho tự báo/phản hồi; thiếu kết quả nguồn không gọi là chấm sai.
+- Nhóm điền nhiều ô có đáp án được duyệt: tự chấm riêng từng vị trí, mỗi ô một điểm; sai hoặc bỏ trống nhận 0 và giữ đủ mẫu số. Chữa bài/lịch sử hiện nhãn, câu trả lời và đúng/sai từng ô; đáp án chỉ hiện theo quyền. Không chấm cả nhóm theo kiểu đúng hết mới có điểm.
 - Kết quả học tập: bốn thẻ kỹ năng trước, lịch sử sau; Writing gọn và mở đủ Test, Speaking có lối xem nhận xét; lịch sử có ngày/tên/tóm tắt và Đang xem.
 
 ## 8. Nghiệp vụ giữ qua mọi lần sửa giao diện

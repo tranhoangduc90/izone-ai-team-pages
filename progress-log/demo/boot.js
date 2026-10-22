@@ -49,7 +49,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261022-answers-remove-keywords');
+  await import('../app.js?rev=20261022-reading-slots');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });

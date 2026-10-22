@@ -1,16 +1,17 @@
 // Dữ liệu nhận: bài public đã được API lọc theo người/lớp/buổi, không có khóa đáp án.
 // Dựng hero, điểm khách quan và toàn bộ câu trả lời chỉ đọc; không ghi bài hoặc điểm danh.
 import {contentTitle,skillsLabel} from './session-presentation.js';
-import {reviewItems} from './answer-review.js?rev=20261022-official-v2';
+import {reviewItems} from './answer-review.js?rev=20261022-reading-slots';
 import {commentPanel} from './session-comments.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function renderSessionReview(root,detail,{session={}}={}){
- const title=contentTitle(session,detail.definition||session),items=(detail.gradingItems||[]).filter(i=>i.maxScore>0&&['correct','incorrect'].includes(i.verdict));
- const correct=items.filter(i=>i.verdict==='correct').length,complete=detail.status==='complete';
+ const title=contentTitle(session,detail.definition||session),items=(detail.gradingItems||[]).filter(i=>i.maxScore>0&&['correct','incorrect','partial'].includes(i.verdict));
+ const units=items.flatMap(i=>i.slotResults||[i]),correct=units.filter(i=>i.verdict==='correct').length,complete=detail.status==='complete';
+ const unit=items.some(i=>i.slotResults)?'ô/câu':'câu';
  const date=String(detail.sessionDate||session.sessionDate||'').split('-'),when=date.length===3?date.reverse().join('/'):'Chưa xác nhận ngày';
  root.classList.add('referenceRegion');
  root.innerHTML='<div class="studentDetailPage"><header class="studentDetailHeader"><div><span class="studentPortalEyebrow">PROGRESS LOG '+(complete?'ĐÃ HOÀN THÀNH':'CỦA BUỔI HỌC')+' · BUỔI '+esc(String(detail.sessionNumber).padStart(2,'0'))+'</span><h1>'+esc(title)+'</h1><p>'+esc([when,skillsLabel(title)].filter(Boolean).join(' · '))+'</p></div><span class="portalCompleteBadge">'+(complete?'✓ Đã hoàn thành':'Dữ liệu hiện có')+'</span></header><p class="reviewPerson">'+esc(detail.student.name+(detail.student.discriminator?' · '+detail.student.discriminator:''))+'</p>'
-  +(items.length?'<section class="studentDetailScore"><small>KẾT QUẢ CÂU ĐÃ CHẤM</small><strong>'+correct+'/'+items.length+'</strong><span>'+correct+' câu đúng · '+(items.length-correct)+' câu sai</span><p>Câu mở, điểm tự khai và câu chưa chấm được hiển thị riêng trong bài.</p></section>':'')
+  +(items.length?'<section class="studentDetailScore"><small>KẾT QUẢ CÂU ĐÃ CHẤM</small><strong>'+correct+'/'+units.length+'</strong><span>'+correct+' '+unit+' đúng · '+(units.length-correct)+' '+unit+' sai</span><p>Câu mở, điểm tự khai và câu chưa chấm được hiển thị riêng trong bài.</p></section>':'')
   +(detail.definition?reviewItems(detail):'<p>Buổi này chưa có bài Progress Log hoàn tất để xem lại.</p>')+'</div>';
  if(String(detail.classId)==='1294'&&Number(detail.sessionNumber)===4){const note=document.createElement('p');note.className='reviewPerson';note.textContent='Ôn Listening; bài mới Reading và Speaking. Giữ tên và kỹ năng theo phiếu nguồn.';root.querySelector('.studentDetailHeader').after(note);}
  const comment=commentPanel(detail.sessionComment);if(comment)root.append(comment);

@@ -9,7 +9,7 @@ export function renderThuyAnalytics(root,analytics,{onStudent,definition}){
  for(const item of [...analytics.items].sort((a,b)=>(b.counts.incorrect||0)-(a.counts.incorrect||0))){
   const number=sourceItems.get(item.itemVersionId)?.displayNumber||item.position;
   const source=sourceItems.get(item.itemVersionId),display=questionPresentation(source||item),card=node('section','','thuy-question-card');
-  card.append(node('small','Câu '+number),node('h3',display.title),node('p',item.objective?`${item.counts.incorrect}/${item.counts.graded} đã chấm sai`:`${item.counts.answered}/${item.counts.visible} đã trả lời · Không tự chấm đúng/sai`));
+  card.append(node('small','Câu '+number),node('h3',display.title),node('p',item.objective?`${item.counts.incorrect}/${item.counts.graded} ${item.gradingUnit==='text_slots'?'học viên có ô sai hoặc trống':'đã chấm sai'}`:`${item.counts.answered}/${item.counts.visible} đã trả lời · Không tự chấm đúng/sai`));
   if(source?.helpText)card.append(node('p',source.helpText,'muted'));
   for(const option of source?.options||[])card.append(node('p',option.label));
   for(const line of source?.interactionConfig?.sentenceLines||[])card.append(node('p',line.parts.join(' […] ')));
@@ -25,7 +25,7 @@ export function renderThuyAnalytics(root,analytics,{onStudent,definition}){
    if(!people.childElementCount)people.append(node('p','Chưa có bài nộp để đối chiếu học viên.','muted'));dialog.append(people);
    document.body.append(dialog);bindDialogDismiss(dialog);dialog.addEventListener('close',()=>{dialog.remove();if(open.isConnected)open.focus({preventScroll:true});},{once:true});dialog.showModal();
   });card.append(open);
-  const choose=node('button','Câu '+number+' · '+display.title,'thuy-question-select');choose.type='button';choose.append(node('small',item.objective?item.counts.incorrect+'/'+item.counts.graded+' đã chấm sai':item.counts.answered+'/'+item.counts.visible+' đã trả lời'));
+  const choose=node('button','Câu '+number+' · '+display.title,'thuy-question-select');choose.type='button';choose.append(node('small',item.objective?item.counts.incorrect+'/'+item.counts.graded+(item.gradingUnit==='text_slots'?' có ô sai hoặc trống':' đã chấm sai'):item.counts.answered+'/'+item.counts.visible+' đã trả lời'));
   choose.addEventListener('click',()=>{detail.replaceChildren(card);for(const button of navigation.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button===choose));});navigation.append(choose);if(!detail.childElementCount){detail.append(card);choose.setAttribute('aria-pressed','true');}
  }
  if(!analytics.items.length)list.append(node('p','Chưa có câu hỏi để thống kê.','muted'));
