@@ -1,10 +1,9 @@
 // Nhận cách so, font, màu và cỡ chữ; dựng cùng nội dung cho mọi bản.
 // Thao tác thử được đồng bộ trong trang, không gửi bài hoặc lưu dữ liệu lên hệ thống.
 const fonts = [
-  { id: 'nunito', name: 'Nunito Sans' },
-  { id: 'geologica', name: 'Geologica' },
-  { id: 'inter', name: 'Inter' },
-  { id: 'georgia', name: 'Georgia', local: true },
+  { id: 'nunito', name: 'Nunito Sans', source: 'Reading' },
+  { id: 'segoe', name: 'Segoe UI', source: 'K56', local: true },
+  { id: 'geologica', name: 'Geologica', source: 'Mẫu Thủy' },
 ];
 const themes = [
   { id: 'reading', name: 'Reading', description: 'Nền xám sáng · Hành động navy · Đỏ nhấn nhỏ', swatches: ['#152B4E', '#DB0829', '#F5F6F8', '#FFFFFF'] },
@@ -12,11 +11,13 @@ const themes = [
   { id: 'thuy', name: 'Mẫu Thủy', description: 'Nền xám sáng · Hành động đỏ · Tiêu đề xanh đậm', swatches: ['#174266', '#DB0829', '#F3F4F6', '#FFFFFF'] },
 ];
 const params = new URLSearchParams(location.search);
+// Link Inter/Georgia của bản thử cũ chuyển sang font giao diện K56 đã xác minh.
+const requestedFont = ['inter', 'georgia'].includes(params.get('font')) ? 'segoe' : params.get('font');
 const state = {
   view: ['single', 'colors'].includes(params.get('view')) ? params.get('view') : 'compare',
   theme: themes.some(t => t.id === params.get('theme')) ? params.get('theme') : 'reading',
   scene: ['lesson', 'reading', 'dashboard'].includes(params.get('scene')) ? params.get('scene') : 'lesson',
-  font: fonts.some(f => f.id === params.get('font')) ? params.get('font') : 'nunito',
+  font: fonts.some(f => f.id === requestedFont) ? requestedFont : 'nunito',
   scale: ['1', '1.125', '1.25'].includes(params.get('scale')) ? params.get('scale') : '1',
   answer: 'B', note: '', saved: false,
 };
@@ -70,14 +71,14 @@ function render() {
   const font = fonts.find(f => f.id === state.font), theme = themes.find(t => t.id === state.theme);
   const shown = state.view === 'colors' ? themes.map(t => ({ font, theme: t })) : (state.view === 'single' ? [font] : fonts).map(f => ({ font: f, theme }));
   document.querySelector('#themeDescription').textContent = theme.description;
-  document.querySelector('#comparisonHelp').textContent = state.view === 'colors' ? 'Cùng một font và bố cục. Ba bản chỉ khác cách phối màu; không sao chép bố cục riêng của sản phẩm gốc.' : state.view === 'single' ? 'Đổi font hoặc màu để so trên cùng một màn rộng; nội dung và cỡ chữ giữ chung.' : 'Cùng nội dung, cỡ chữ và bố cục. Chọn một bảng màu để so bốn font.';
+  document.querySelector('#comparisonHelp').textContent = state.view === 'colors' ? 'Cùng một font và bố cục. Ba bản chỉ khác cách phối màu; không sao chép bố cục riêng của sản phẩm gốc.' : state.view === 'single' ? 'Đổi font hoặc màu để so trên cùng một màn rộng; nội dung và cỡ chữ giữ chung.' : 'Cùng nội dung, cỡ chữ và bố cục. Chọn một bảng màu để so ba font đúng nguồn.';
   const palette = document.querySelector('.palette');
   palette.hidden = state.view === 'colors';
   palette.querySelectorAll('.swatch').forEach((swatch, i) => { swatch.style.background = theme.swatches[i]; swatch.style.borderColor = i < 2 ? theme.swatches[i] : ''; swatch.title = theme.swatches[i]; });
   comparison.innerHTML = shown.map(({ font: f, theme: t }) => {
     const id = `${f.id}-${t.id}`;
-    const family = f.local ? "'Georgia','Gelasio',serif" : `'${f.name}'`;
-    const subtitle = state.view === 'colors' ? (f.local ? 'Georgia + Gelasio' : f.name) : `${t.name}${f.local ? ' · Tiếng Việt: Gelasio' : ''}`;
+    const family = `'${f.name}'`;
+    const subtitle = state.view === 'colors' ? `${f.name} · Font ${f.source}` : `Font ${f.source} · Màu ${t.name}`;
     return `<article class="font-column" data-family="${f.name}" data-palette="${t.id}" style="--sample-font:${family}"><div class="font-caption"><div><h2>${state.view === 'colors' ? t.name : f.name}</h2><p class="font-subtitle">${subtitle}</p></div><span data-font-state>Đang kiểm…</span></div><div class="specimen">${commonTop}<div class="sample-body">${state.scene === 'reading' ? reading() : state.scene === 'dashboard' ? dashboard(id) : lesson(id)}</div></div></article>`;
   }).join('');
   syncExamples(); updateFontLabels(); updateUrl();
@@ -88,7 +89,7 @@ const failed = new Set();
 function updateFontLabels() {
   document.querySelectorAll('[data-family]').forEach(column => {
     const family = column.dataset.family;
-    column.querySelector('[data-font-state]').textContent = failed.has(family) ? (family === 'Georgia' ? 'Georgia chưa sẵn sàng' : 'Chưa tải được font') : loaded.has(family) ? (family === 'Georgia' ? '✓ Đủ bộ chữ Việt' : '✓ Font đã tải') : 'Đang kiểm…';
+    column.querySelector('[data-font-state]').textContent = failed.has(family) ? (family === 'Segoe UI' ? 'Máy chưa có Segoe UI' : 'Chưa tải được font') : loaded.has(family) ? (family === 'Segoe UI' ? '✓ Font hệ thống' : '✓ Font đã tải') : 'Đang kiểm…';
     column.classList.toggle('font-unavailable', failed.has(family));
   });
 }
@@ -109,12 +110,8 @@ render();
 Promise.allSettled(fonts.map(async f => {
   try {
     if (f.local) {
-      // Chỉ dò font cài sẵn, không tải hoặc phát hành lại tệp Georgia.
-      await new FontFace('Georgia local probe', 'local("Georgia")').load();
-      for (const weight of [400, 500, 600, 700]) {
-        const faces = await document.fonts.load(`${weight} 16px Gelasio`, 'Ă Â Ê Ô Ơ Ư Đ ắ ằ ẳ ẵ ặ ấ ầ ẩ ẫ ậ ế ề ể ễ ệ ố ồ ổỗ ộ ớ ờ ở ỡ ợ ứ ừ ử ữ ự');
-        if (!faces.length) throw new Error('Thiếu bộ chữ Việt Gelasio');
-      }
+      // Chỉ dò Segoe UI cài sẵn; không sao chép hoặc phát hành tệp font hệ thống.
+      await new FontFace('Segoe UI local probe', 'local("Segoe UI")').load();
     } else {
       for (const weight of [400, 500, 600, 700]) {
         const faces = await document.fonts.load(`${weight} 16px "${f.name}"`, 'Tiếng Việt: Nguyễn Thủy Đặng Ước mơ 85,7% Reading');
@@ -130,6 +127,6 @@ Promise.allSettled(fonts.map(async f => {
   }
 })).then(() => {
   const status = document.querySelector('#fontStatus');
-  status.textContent = failed.size ? `Chưa dùng được: ${[...failed].join(', ')}. Không dùng bản đó để kết luận về font.` : '✓ Đủ 4 font · Georgia có bộ chữ Việt bổ sung';
+  status.textContent = failed.size ? `Chưa dùng được: ${[...failed].join(', ')}. Không dùng bản đó để kết luận về font.` : '✓ Đủ 3 font đúng nguồn';
   status.className = failed.size ? 'error' : 'ready';
 });
