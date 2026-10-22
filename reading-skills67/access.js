@@ -30,6 +30,22 @@
   studentInput.onchange=()=>button.disabled=!studentInput.value;
   return new Promise(resolve=>{button.onclick=async()=>{button.disabled=true;error.textContent='';try{await login(classInput.value,studentInput.value);resolve();}catch(e){error.textContent=e.message;button.disabled=false;}};});
  }
+ // Reading thực chiến: đăng nhập ngay tại link Homework, giữ đúng học viên/lượt.
+ async function teacherLogin(classId,studentRef){
+  const app=document.querySelector('#app');
+  app.innerHTML='<section class="access-card"><p class="kicker">GIẢNG VIÊN · READING 67</p><h1>Đăng nhập để xem bài</h1><p>Dùng tài khoản Google đã có quyền lớp. Đăng nhập xong sẽ mở ngay bài trong link Homework này.</p><label class="remember"><input type="checkbox" id="teacher-remember" checked> Tự đăng nhập Google trên thiết bị này</label><div id="google-button"></div><p id="teacher-error" role="status"></p>'+(config.demoGoogle?'<button class="primary" id="demo-teacher">Vào vai giảng viên thử</button>':'')+'</section>';
+  return new Promise(resolve=>{
+   const error=message=>{app.querySelector('#teacher-error').textContent=message;};
+   const enter=async credential=>{try{
+    await post('/teacher/login',{credential,remember:app.querySelector('#teacher-remember').checked});
+    const work=await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef));
+    resolve({teacher:true,work,config});
+   }catch(e){error(e.message);}};
+   if(config.demoGoogle){app.querySelector('#demo-teacher').onclick=()=>enter('demo-teacher-allowed');return;}
+   const start=()=>{window.google.accounts.id.initialize({client_id:config.googleClientId,callback:value=>enter(value.credential)});window.google.accounts.id.renderButton(app.querySelector('#google-button'),{theme:'outline',size:'large',text:'signin_with'});};
+   if(window.google?.accounts?.id)start();else{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=start;script.onerror=()=>error('Chưa tải được đăng nhập Google. Hãy tải lại trang.');document.head.append(script);}
+  });
+ }
  async function open(){
   try{config=await request('/config');}catch(e){if(e.status===404)return {legacy:true};throw e;}
   if(params.get('assignmentCode')&&params.get('assignmentCode')!==config.code)throw Error('Mã trong link không khớp bài đang mở. Hãy dùng lại CTA trong Homework.');
@@ -37,7 +53,7 @@
   if(teacher){
    const classId=params.get('classId'),studentRef=params.get('studentRef');if(!classId||!studentRef)throw Error('Mở từ trang Giảng viên để chọn đúng lớp và học viên.');
    try{return {teacher:true,work:await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef)),config};}
-   catch(error){if(error.status!==401)throw error;const login=new URL('teacher.html',location.href);login.searchParams.set('returnTo',location.pathname+location.search);location.replace(login.href);return new Promise(()=>{});}
+   catch(error){if(error.status!==401)throw error;return teacherLogin(classId,studentRef);}
   }
   if(config.studentsOpen===false)throw Error('Bài này đang được giảng viên chuẩn bị, chưa mở cho học viên. Bạn hãy quay lại khi lớp nhận Homework Lesson 10.');
   const {createCourseStudentIdentity}=await import('../shared/course-student-identity.js?v=20261018-identity-v1');
