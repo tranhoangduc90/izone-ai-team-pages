@@ -36,7 +36,7 @@ test('nhận xét trên hành trình học viên không lặp số buổi', asyn
   elements.sessionList = { replaceChildren() {} };
   elements.reportList = { replaceChildren() {} };
   const render = vm.runInNewContext(`${source}\nrenderJourney`, {
-    elements,commentPoller:null,paintJourneyComments(){}, renderLatestReport() {}, buildSession() { return {}; }, buildReport() { return {}; }
+    config:{},elements,commentPoller:null,paintJourneyComments(){}, renderLatestReport() {}, buildSession() { return {}; }, buildReport() { return {}; }
   });
   render({
     student: { name: 'Học viên giả' }, class: { name: 'IC2305' },

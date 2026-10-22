@@ -1,12 +1,13 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
-import {renderSessionReview} from './session-review.js?rev=20261022-keywords-v1';
+import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
+import {renderSessionReview} from './session-review.js?rev=20261022-official-v2';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
 import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
-import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js';
+import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
-import {renderThuyLearner} from './thuy-live/learner-view.js';
+import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261022-official-v2';
 import {comparisonTable} from './thuy-live/comparison-table.js';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
@@ -21,8 +22,8 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js'):null;
-if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./thuy-live/styles.css?v=20261022-live-v1',import.meta.url);document.head.append(css);}
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022-official-v2'):null;
+if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./thuy-live/styles.css?rev=20261022-official-v2',import.meta.url);document.head.append(css);}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;
 const AUTOSAVE_FORCE_MIN_MS = 25_000;
@@ -828,6 +829,10 @@ function buildQuestion(item) {
   }
   wrapper.append(number, content);
   content.append(label);
+  if(item.interactionConfig?.hintText){
+    const hint=document.createElement('details'),summary=document.createElement('summary'),text=document.createElement('p');
+    summary.textContent='Xem gợi ý';text.textContent=item.interactionConfig.hintText;hint.append(summary,text);content.append(hint);
+  }
   if (item.helpText) {
     const help = document.createElement('p');
     help.className = 'help';
@@ -838,7 +843,18 @@ function buildQuestion(item) {
   if(item.layoutType==='keyword_selection'&&item.interactionType==='multi_choice_group'){
     content.append(keywordSelection(item,responseFor(item),recordResponse));return wrapper;
   }
-  if (item.interactionType === 'number_score') {
+  if(item.layoutType==='matching_pairs'){
+    const existing=Array.isArray(responseFor(item))?responseFor(item):[],group=document.createElement('div');
+    group.className='numbered-text-group';
+    item.interactionConfig.matchingPrompts.forEach((prompt,index)=>{
+      const row=document.createElement('label'),text=document.createElement('span'),select=document.createElement('select');
+      text.textContent=prompt;const empty=document.createElement('option');empty.value='';empty.textContent='Chọn vế phải';select.append(empty);
+      for(const option of item.options){const choice=document.createElement('option');choice.value=option.id;choice.textContent=option.label;select.append(choice);}
+      select.value=existing[index]||'';select.setAttribute('aria-label','Ghép cặp '+(index+1)+': '+prompt);
+      select.addEventListener('change',()=>recordResponse(item.itemVersionId,[...group.querySelectorAll('select')].map(s=>s.value)));
+      row.append(text,select);group.append(row);
+    });content.append(group);
+  } else if (item.interactionType === 'number_score') {
     const score = responseFor(item);
     const config = item.interactionConfig || {};
     const row = document.createElement('div');
@@ -1088,9 +1104,10 @@ function showCheckpointFeedback(block) {
 
 function answerLabel(item, answer) {
   const selected = Array.isArray(answer) ? answer : [answer];
-  return selected.map(value => {
+  return selected.map((value,index) => {
     const option = item.options?.find(candidate => candidate.id === value);
-    return option ? `${option.id}. ${option.label}` : String(value ?? '—');
+    const label=option ? `${option.id}. ${option.label}` : String(value ?? '—');
+    return item.layoutType==='matching_pairs'?`${item.interactionConfig.matchingPrompts[index]} → ${label}`:label;
   }).join(', ');
 }
 
@@ -1415,7 +1432,7 @@ async function loadThuyStudentSkills(journey,{signal,current}){
       }));if(!current())return;for(const detail of details)records.set(detail.sessionNumber,detail);
     }
     if(!current())return;
-    const person={...journey.student,cells:journey.sessions.map(session=>({...session,status:session.completeness,testResult:session.testResult}))};
+    const person={...journey.student,externalTests:journey.externalTests||[],cells:journey.sessions.map(session=>({...session,status:session.completeness,testResult:session.testResult}))};
     const overview={classId:journey.class.classId,sessions:journey.sessions,students:[person]};
     const forms=journey.sessions.map(session=>{
       const source=records.get(session.sessionNumber),detail=source?legacyFeedbackForView(source):null,definition=detail?.definition||{blocks:[]};
@@ -1567,6 +1584,8 @@ async function openAssignment() {
       state.journeyOnly = true;
     }
     state.assignment = assignment;
+    const nextEntry=!config.DEMO_MODE&&config.THUY_PILOT_CLASS_IDS?.includes(String(assignment.class.id))&&pilotEntry(location.href,assignment.class.id);
+    if(nextEntry){location.replace(nextEntry);return;}
     updateSubmissionWindow(assignment.submissionWindow);
     const courseCode = String(state.assignment.courseCode || '').trim();
     elements.brandLabel.textContent = /^\d{2,3}$/.test(courseCode)

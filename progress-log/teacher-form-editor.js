@@ -1,7 +1,9 @@
 /* Nhận lớp, phiếu nguồn và API của phiên giảng viên. Soạn đúng 8 dạng đang dùng,
  * lưu nháp ở máy chủ, đối chiếu khi xung đột, xem thử tách biệt rồi duyệt/phát hành.
  * Đáp án chỉ giữ trong bộ nhớ tab; lỗi mạng giữ phần đang soạn và không báo đã lưu. */
+import {createFormLibrary} from './teacher-form-library.js?rev=20261022-official-v2';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
+  ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
   ['keyword_selection','Gạch chân từ khóa'],
   ['dropdown','Dropdown Matching Headings'],['gapfill','Điền từ trong câu / chuỗi lập luận'],
   ['numbered_short_texts','Nhóm ô ngắn đánh số'],['speaking_checklist','Checklist Speaking'],
@@ -18,6 +20,9 @@ function button(text,action,disabled=false) {
   node.addEventListener('click',action);return node;
 }
 export function editorType(item) {
+  if(item.layoutType==='multiple_choice_cards')return 'multi';
+  if(item.layoutType==='matching_pairs')return 'matching';
+  if(item.interactionType==='short_text'&&item.layoutType==='plain_prompt')return 'short_answer';
   if(item.interactionType==='multi_choice_group'&&item.layoutType==='keyword_selection')return 'keyword_selection';
   if(item.layoutType==='matching_heading_dropdown')return 'dropdown';
   if(item.layoutType==='choice_cards')return 'mcq';
@@ -33,7 +38,10 @@ export function newEditorItem(type,position=1) {
   const item={itemFamilyId:uuid(),itemVersionId:uuid(),position,prompt:'Câu hỏi mới',helpText:'',required:true,
     interactionType:'long_text',pedagogicalTypeCode:'reflection',layoutType:'plain_prompt',graderType:'none',
     maxScore:0,options:[],interactionConfig:{},skillCodes:[],evidenceSource:'student_self_report',releasePolicy:'inherit'};
-  if(['mcq','dropdown','speaking_checklist'].includes(type))item.options=[{id:'A',label:'Phương án A'},{id:'B',label:'Phương án B'}];
+  if(['mcq','dropdown','speaking_checklist','multi','matching'].includes(type))item.options=[{id:'A',label:'Phương án A'},{id:'B',label:'Phương án B'}];
+  if(type==='multi')Object.assign(item,{interactionType:'multi_choice_group',layoutType:'multiple_choice_cards',graderType:'exact_option_set',maxScore:1,interactionConfig:{maxSelections:2}});
+  if(type==='matching')Object.assign(item,{interactionType:'multi_choice_group',layoutType:'matching_pairs',graderType:'exact_sequence',maxScore:1,interactionConfig:{matchingPrompts:['Vế trái 1','Vế trái 2']}});
+  if(type==='short_answer')Object.assign(item,{interactionType:'short_text',graderType:'accepted_text',maxScore:1});
   if(['mcq','dropdown'].includes(type))Object.assign(item,{interactionType:'single_choice',
     pedagogicalTypeCode:type==='mcq'?'multiple_choice':'matching_headings',layoutType:type==='mcq'?'choice_cards':'matching_heading_dropdown',graderType:'exact_option',maxScore:1});
   if(['gapfill','numbered_short_texts'].includes(type))Object.assign(item,{interactionType:'short_text',pedagogicalTypeCode:'sentence_completion',
@@ -53,10 +61,10 @@ export function newEditorPayload(title='Phiếu học tập mới') {
     gradingKey:{schemaVersion:'FormGradingKeyV1',formVersionId:version,graderVersion:1,items:{},groups:{}}};
 }
 
-export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
+export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},libraryEnabled=false}) {
   let classes=[],assignments=[],draft=null,dirty=false,busy=false,generation=0,reviewMode=false,
     publishOperationId=null,conflict=null,importPreview=null,importText='',importOpen=false,list=[];
-  const lockedControls=new Map();
+  const lockedControls=new Map(),librarySaves=new Map();let library;
   const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
   const notice=message=>{status.textContent=message;};
@@ -89,8 +97,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
     finally {if(current===generation){busy=false;lockControls();paintActions();}}
   }
   async function request(path,options={}) {
-    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),25_000);
-    try{return await apiRequest(path,{...options,signal:controller.signal});}finally{clearTimeout(timeout);}
+    const {timeoutMs=25000,...rest}=options,controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),timeoutMs);
+    try{return await apiRequest(path,{...rest,signal:controller.signal});}finally{clearTimeout(timeout);}
   }
   function resequence() {draft.definition.blocks.flatMap(block=>block.items).forEach((item,index)=>{item.position=index+1;});}
   function move(values,index,delta) {
@@ -139,6 +147,11 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
     actions.replaceChildren();if(!draft)return;
     const readonly=reviewMode||draft.status==='published';
     actions.append(button('Lưu nháp',()=>void run(save),busy||readonly));
+    if(libraryEnabled&&!reviewMode)for(const [scope,label]of [['personal','Lưu vào Của tôi'],['izone','Đưa vào Kho IZONE']])actions.append(button(label,()=>void run(async()=>{
+      if(dirty)await save();const key=draft.id+':'+draft.revision+':'+scope;if(!librarySaves.has(key))librarySaves.set(key,uuid());
+      await request('/teacher/form-library',{method:'POST',body:{draftId:draft.id,expectedRevision:draft.revision,expectedHash:draft.contentHash,scope,operationId:librarySaves.get(key)}});
+      notice('Đã lưu bản chụp vào '+(scope==='izone'?'Kho IZONE':'Của tôi')+'. Phiếu lớp không thay đổi.');
+    }),busy||(scope==='izone'&&!['approved','published'].includes(draft.status))));
     if(!reviewMode)actions.append(button('Xem thử như học viên',()=>{
       const tab=window.open('about:blank','_blank');void run(async current=>{
         try {
@@ -180,7 +193,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
     field(card,'Dạng bài',editorType(item),type=>{
       const next=newEditorItem(type,item.position);next.itemVersionId=item.itemVersionId;next.itemFamilyId=item.itemFamilyId;next.prompt=item.prompt;next.helpText=item.helpText;
       for(const key of Object.keys(item))delete item[key];Object.assign(item,next);
-      delete draft.gradingKey.items[item.itemVersionId];delete draft.gradingKey.referenceAnswers?.[item.itemVersionId];paint();
+      delete draft.gradingKey.items[item.itemVersionId];delete draft.gradingKey.referenceAnswers?.[item.itemVersionId];delete draft.gradingKey.explanations?.[item.itemVersionId];paint();
     },{options:EDITOR_TYPES});
     field(card,'Câu hỏi',item.prompt,value=>{item.prompt=value;},{kind:'textarea'});
     field(card,'Hướng dẫn',item.helpText,value=>{item.helpText=value;},{kind:'textarea'});
@@ -211,6 +224,25 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
       options.append(button('Thêm phương án',()=>{item.options.push({id:'option-'+(item.options.length+1),label:'Phương án mới'});markDirty();paint();},readonly||item.options.length>=40));
     }
     const config=item.interactionConfig,type=editorType(item);
+    if(type==='reflection')field(card,'Gợi ý trả lời (học viên bấm để xem khi làm)',config.hintText||'',value=>{if(value.trim())config.hintText=value;else delete config.hintText;},{kind:'textarea'});
+    if(type==='multi'){
+      field(card,'Số lựa chọn tối đa',config.maxSelections,value=>{config.maxSelections=value;},{kind:'number',min:1,max:Math.min(10,item.options.length)});
+      card.append(el('p','Đánh dấu các đáp án đúng. Học viên sẽ dùng ô vuông để chọn nhiều.'));
+      for(const option of item.options)field(card,'Đáp án đúng · '+option.id+' · '+option.label,draft.gradingKey.items[item.itemVersionId]?.expectedOptionIds.includes(option.id),checked=>{
+        const ids=new Set(draft.gradingKey.items[item.itemVersionId]?.expectedOptionIds||[]);if(checked)ids.add(option.id);else ids.delete(option.id);
+        if(ids.size)draft.gradingKey.items[item.itemVersionId]={graderType:'exact_option_set',expectedOptionIds:[...ids]};else delete draft.gradingKey.items[item.itemVersionId];
+      },{kind:'checkbox'});
+    }
+    if(type==='matching'){
+      field(card,'Các vế trái — mỗi dòng một vế',config.matchingPrompts.join('\n'),value=>{config.matchingPrompts=value.split('\n');delete draft.gradingKey.items[item.itemVersionId];},{kind:'textarea'});
+      field(card,'Đáp án theo thứ tự vế trái — mỗi dòng một mã phương án',(draft.gradingKey.items[item.itemVersionId]?.expectedOptionIds||[]).join('\n'),value=>{
+        if(value.trim())draft.gradingKey.items[item.itemVersionId]={graderType:'exact_sequence',expectedOptionIds:value.split('\n').map(v=>v.trim())};else delete draft.gradingKey.items[item.itemVersionId];
+      },{kind:'textarea'});card.append(el('p','Mỗi vế trái ghép với một phương án phải; số vế trái và phải phải bằng nhau (2–10 cặp).'));
+    }
+    if(type==='short_answer')field(card,'Đáp án chấp nhận — mỗi dòng một cách viết',(draft.gradingKey.items[item.itemVersionId]?.accepted||[]).join('\n'),value=>{
+      if(value.trim())draft.gradingKey.items[item.itemVersionId]={graderType:'accepted_text',accepted:value.split('\n').map(v=>v.trim()),normalization:{caseInsensitive:true,collapseWhitespace:true}};
+      else delete draft.gradingKey.items[item.itemVersionId];
+    },{kind:'textarea'});
     if(['mcq','dropdown'].includes(type)){
       field(card,'Chấm đáp án khách quan',item.graderType==='exact_option',value=>{item.graderType=value?'exact_option':'none';item.maxScore=value?1:0;if(!value)delete draft.gradingKey.items[item.itemVersionId];paint();},{kind:'checkbox'});
       if(item.graderType==='exact_option'){
@@ -252,6 +284,10 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
       field(card,'Phương án làm hiện ô',config.visibleWhenValue||'',value=>{config.visibleWhenValue=value;},{options:[['','Chọn phương án'],...(chosen?.options||[]).map(o=>[o.id,o.label])]});
     }
     if(type==='self_reported_score')for(const [key,label,min]of [['min','Số nhỏ nhất',0],['max','Tổng số câu',1],['step','Bước tăng',1]])field(card,label,config[key]??(key==='step'?1:0),value=>{config[key]=value;},{kind:'number',min,max:10000});
+    if(item.graderType!=='none')field(card,'Giải thích đáp án (chỉ hiện khi mở đáp án)',draft.gradingKey.explanations?.[item.itemVersionId]||'',value=>{
+      if(value.trim()){draft.gradingKey.explanations??={};draft.gradingKey.explanations[item.itemVersionId]=value;}
+      else delete draft.gradingKey.explanations?.[item.itemVersionId];
+    },{kind:'textarea'});
     field(card,'Đáp án tham khảo (không tự chấm; mỗi dòng một đáp án)',(draft.gradingKey.referenceAnswers?.[item.itemVersionId]||[]).join('\n'),value=>{
       if(value){draft.gradingKey.referenceAnswers??={};draft.gradingKey.referenceAnswers[item.itemVersionId]=value.split('\n');}
       else {delete draft.gradingKey.referenceAnswers?.[item.itemVersionId];if(draft.gradingKey.referenceAnswers&&!Object.keys(draft.gradingKey.referenceAnswers).length)delete draft.gradingKey.referenceAnswers;}
@@ -261,7 +297,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
       button('Đưa câu xuống',()=>move(block.items,itemIndex,1),readonly||itemIndex===block.items.length-1));
     card.append(button('Bỏ câu',()=>{
       if(draft.definition.blocks.flatMap(b=>b.items).some(i=>i.interactionConfig.visibleWhenItemVersionId===item.itemVersionId)){notice('Cần đổi hoặc bỏ ô phụ thuộc trước khi bỏ câu này.');return;}
-      block.items=block.items.filter(i=>i!==item);delete draft.gradingKey.items[item.itemVersionId];delete draft.gradingKey.referenceAnswers?.[item.itemVersionId];resequence();markDirty();paint();
+      block.items=block.items.filter(i=>i!==item);delete draft.gradingKey.items[item.itemVersionId];delete draft.gradingKey.referenceAnswers?.[item.itemVersionId];delete draft.gradingKey.explanations?.[item.itemVersionId];resequence();markDirty();paint();
     },readonly||block.items.length<=1));parent.append(card);
   }
   function paint() {
@@ -298,7 +334,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
           if(draft.definition.blocks.filter(value=>value!==block).flatMap(value=>value.items).some(item=>ids.has(item.interactionConfig.visibleWhenItemVersionId))) {
             notice('Cần đổi ô phụ thuộc ở phần khác trước khi bỏ phần này.');return;
           }
-          for(const id of ids){delete draft.gradingKey.items[id];delete draft.gradingKey.referenceAnswers?.[id];}
+          for(const id of ids){delete draft.gradingKey.items[id];delete draft.gradingKey.referenceAnswers?.[id];delete draft.gradingKey.explanations?.[id];}
           draft.definition.blocks=draft.definition.blocks.filter(value=>value!==block);resequence();markDirty();paint();
         },readonly||draft.definition.blocks.length<=1));
       field(section,'Tên phần',block.title,value=>{block.title=value;},{disabled:readonly});field(section,'Hướng dẫn phần',block.instructions,value=>{block.instructions=value;},{kind:'textarea',disabled:readonly});
@@ -325,8 +361,15 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
       const raw=text.value;importText=raw;if(dirty)await save();
       const reply=await request('/teacher/form-drafts/'+draft.id+'/import-preview',{method:'POST',body:{text:raw,expectedRevision:draft.revision}});
       if(current!==generation)return;importPreview=reply.preview;importOpen=true;paint();
-    })),result);
+    })),button('AI chuyển nội dung có sẵn thành câu hỏi',()=>void run(async current=>{
+      const raw=text.value;importText=raw;if(!raw.trim()||raw.length>20000)throw new Error('Dán từ 1 đến 20.000 ký tự để AI nhận dạng.');
+      if(dirty)await save();notice('AI đang nhận dạng nội dung. Chưa thêm câu hoặc phát hành phiếu…');
+      const reply=await request('/teacher/form-drafts/'+draft.id+'/ai-import-preview',{method:'POST',body:{text:raw,expectedRevision:draft.revision},timeoutMs:55000});
+      if(current!==generation)return;importPreview=reply.preview;importOpen=true;paint();notice('AI đã tạo bản đề xuất. Đối chiếu nguồn, đáp án và phần chưa nhận dạng trước khi thêm.');
+    })),el('p','Với AI: dán nguyên đề có sẵn, không cần chia cột. AI không tự soạn câu mới, đoán đáp án hoặc giao bài. Với CSV: dùng Xem trước lô câu hỏi.'),result);
     if(importPreview){
+      for(const warning of importPreview.warnings||[])result.append(el('p',warning,{className:'notice error'}));
+      if(importPreview.unmappedText){const remaining=el('details');remaining.append(el('summary','Nội dung nguồn chưa được chuyển — cần đối chiếu'),el('pre',importPreview.unmappedText));result.append(remaining);}
       for(const row of importPreview.rows)result.append(el('p',`Dòng ${row.line} · ${row.type} · chặng ${row.checkpoint} · ${row.slotCount} ô · ${row.optionCount} phương án · ${row.required?'bắt buộc':'không bắt buộc'} · ${row.graderType==='none'?'không tự chấm':'chấm đáp án'}: ${row.prompt}`));
       for(const error of importPreview.errors)result.append(el('p',`Dòng ${error.line}: ${error.message}`,{className:'notice error'}));
       result.append(button('Xác nhận thêm lô này vào nháp',()=>void run(async()=>{
@@ -355,7 +398,15 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
     if(!canDiscard()){classSelect.value=draft?.classId||'';return;}
     generation+=1;busy=false;draft=null;dirty=false;pendingCreate=null;pendingCopy=null;paint();void run(refreshList);
   });
-  host.replaceChildren(header,status,draftList,actions,editor);
+  const libraryRoot=el('section',undefined,{className:'editor-form-library'});
+  host.replaceChildren(...(libraryEnabled?[libraryRoot]:[]),header,status,draftList,actions,editor);
+  if(libraryEnabled){const copies=new Map();library=createFormLibrary({host:libraryRoot,request,onCopy:async entry=>{
+    if(!canDiscard())return false;let copied=false;await run(async current=>{
+      const key=entry.id+':'+classSelect.value+':'+session.value;if(!copies.has(key))copies.set(key,uuid());
+      const reply=await request('/teacher/form-library/'+entry.id+'/copy',{method:'POST',body:{classId:classSelect.value,sessionNumber:Number(session.value),operationId:copies.get(key)}});
+      if(current!==generation)return;copies.delete(key);adopt(reply.draft);await refreshList();copied=true;notice('Đã mở bản nháp riêng để sửa.');
+    });return copied;
+  }});}
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
   return {
     hasUnsavedChanges:()=>dirty,
@@ -368,8 +419,10 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{}}) {
       if(classes.some(value=>String(value.class_id)===String(selectedClass)))classSelect.value=String(selectedClass);
       if(assignments.some(value=>value.assignment_id===selectedSource))sourceSelect.value=selectedSource;
       void run(refreshList);
+      if(libraryEnabled)void library.refresh();
     },
     clear() {generation+=1;draft=null;dirty=false;busy=false;lockControls();conflict=null;importPreview=null;pendingCreate=null;pendingCopy=null;
+      library?.clear();
       importText='';importOpen=false;classSelect.replaceChildren();sourceSelect.replaceChildren();draftList.replaceChildren();paint();notice('Đăng nhập để soạn phiếu.');},
     // Dùng cùng đường render thật trong kiểm thử để đối chiếu definition/key trước và sau khi soạn.
     openDraft:value=>adopt(value),getPayload:()=>draft?payload():null

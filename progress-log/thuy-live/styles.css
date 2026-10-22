@@ -64,3 +64,16 @@
 .thuy-live .referenceRegion{--ink:#263744;--teal-dark:#174266;--line:#e2e7eb;--muted:#586477;--red:#db0829;color:var(--ink);font-family:inherit}.thuy-live .referenceRegion .studentPortalEyebrow{color:var(--muted);font-size:12px;font-weight:500;letter-spacing:0}
 .thuy-student #journeyView .studentPortalHero{min-height:0;align-items:start;border-radius:0;margin:0 0 20px}.thuy-student #journeyView .studentPortalHero p{color:var(--muted);font-size:14px}.thuy-student #journeyView .studentJourney{border-radius:8px;padding:20px}.thuy-student #journeyView .studentJourneyHeading h2{font-size:18px;letter-spacing:0;font-weight:600}.thuy-student #journeyView .studentSessionCard{min-height:0;padding:16px}.thuy-student #journeyView .studentSessionCard>strong{margin-top:8px}.thuy-student #journeyView .studentSessionCard:hover{box-shadow:none;transform:none;border-color:var(--navy)}
 .thuy-teacher #journeyDetailDialog .thuy-four-skills{grid-template-columns:1fr}.thuy-live .referenceRegion .studentAnswerReview{border-radius:8px}.thuy-live .referenceRegion .studentDetailHeader{background:#fff;color:var(--ink);border-radius:8px}.thuy-live .referenceRegion .studentDetailHeader h1{font-family:inherit;font-size:20px;letter-spacing:0}
+/* Thao tác vận hành luôn ở đầu phiếu; popup giữ tiêu đề và nút đóng khi đọc nội dung dài. */
+.thuy-assignment-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.thuy-management-dialog{width:min(960px,calc(100vw - 32px));max-height:85dvh;padding:0;border:1px solid #e2e7eb;border-radius:8px;color:#174266}
+.thuy-management-dialog::backdrop{background:rgb(20 38 58 / .35)}
+.thuy-management-head{display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;background:white;padding:16px 20px;border-bottom:1px solid #e2e7eb;z-index:2}
+.thuy-management-head h2{margin:0;font-size:20px}.thuy-management-body{padding:20px}
+.thuy-management-body label{display:grid;gap:8px;margin:16px 0}.thuy-management-body textarea{min-height:100px}
+.thuy-management-body section,.thuy-management-body details{padding:16px 0;border-bottom:1px solid #e2e7eb}
+.editor-form-library{margin-bottom:24px;padding:20px;background:white;border:1px solid #e2e7eb;border-radius:8px}
+.editor-library-tabs{display:flex;gap:8px;margin:12px 0}.editor-library-tabs [aria-pressed=true]{color:#db0829;background:#fff3f5;border-color:#db0829}
+.editor-form-library table{width:100%;border-collapse:collapse;margin-top:16px}.editor-form-library td,.editor-form-library th{padding:12px;text-align:left;border-bottom:1px solid #e2e7eb}
+.editor-form-library tbody tr{cursor:pointer}.editor-form-library tbody tr:hover,.editor-form-library tbody tr:focus{background:#f3f4f6;outline-color:#174266}
+.editor-form-library small{display:block;margin-top:6px}
