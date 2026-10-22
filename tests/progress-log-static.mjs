@@ -89,7 +89,7 @@ test('link sao chép từ dashboard mang mã phiếu để trang học viên m�
   const token = '00000000-0000-4000-8000-000000000001';
   const makeLink = vm.runInNewContext(
     `${teacher.slice(teacher.indexOf('function studentLink('), teacher.indexOf('function selectedLibraryItems('))}\nstudentLink`,
-    { URL, URLSearchParams, window: { location: { href: 'https://example.test/progress-log/teacher.html' } } }
+    { URL, URLSearchParams, THUY_UI:false, window: { location: { href: 'https://example.test/progress-log/teacher.html' } } }
   );
   const link = new URL(makeLink(token));
   assert.equal(link.pathname, '/progress-log/');

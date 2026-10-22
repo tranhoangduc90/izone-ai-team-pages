@@ -1,6 +1,6 @@
 import {renderClassAnalytics,renderStudentClassSummary} from './class-analytics-view.js?rev=20261007-comments';
 import {commentPanel,bindDialogDismiss} from './session-comments.js?rev=20261007-comments';
-import {commentEditor,journeyLinkManager,openStudentJourney,clearCommentDrafts} from './teacher-session-comments.js';
+import {commentEditor,journeyLinkManager,openStudentJourney,clearCommentDrafts} from './teacher-session-comments.js?rev=20261022-local-draft-v1';
 import {contentTitle,sessionHeading} from './session-presentation.js';
 import {observeSubmissionWindow, submissionWindowMessage} from './submission-window.js';
 /*
@@ -11,11 +11,18 @@ import {observeSubmissionWindow, submissionWindowMessage} from './submission-win
  */
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
-import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261007-comments';
-import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261001-authoring-v1';
+import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261022-keywords-v1';
+import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261022-keywords-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
+import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js';
+import {keywordSelection} from './thuy-live/keyword-selection.js';
+import {renderThuyAnalytics} from './thuy-live/question-analytics.js';
+import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
+const THUY_UI=location.pathname.endsWith('/teacher-thuy.html');
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js'):null;
+if(THUY_UI)document.body.classList.add('thuy-live','thuy-teacher');
 const sessionClient = createTeacherSessionClient({
   apiBaseUrl: config.API_BASE_URL,
   sessionPath: '/api/auth/session'
@@ -86,6 +93,18 @@ const elements = Object.fromEntries([
   'draftJourneyLinkStatus', 'copyDraftJourneyLinkButton'
 ].map(id => [id, document.getElementById(id)]));
 
+const thuyLayout=THUY_UI?mountThuyTeacherLayout(elements,{onMode:showThuyMode,onClass:classId=>{
+  elements.overviewClassSelect.value=elements.teacherClassSelect.value=classId;
+  refreshAssignmentSelect();for(const dialog of [elements.draftDialog,elements.journeyDetailDialog])if(dialog.open)dialog.close();
+  if(!elements.overviewPanel.hidden)void loadCourseOverview();else void loadDashboard();
+}}):null;
+function showThuyMode(mode){
+  state.thuyMode=mode;
+  document.querySelector('#classInsightSection').hidden=mode!=='results';document.querySelector('.thuy-result-jumps').hidden=mode!=='results';
+  for(const button of document.querySelectorAll('[data-thuy-mode]'))button.setAttribute('aria-pressed',String(button.dataset.thuyMode===mode));
+  renderStudentList();
+}
+
 const formEditor=createFormDraftEditor({host:document.getElementById('formDraftEditor'),apiRequest,
   onPublished:published=>{
     state.assignments.unshift({assignment_id:published.assignmentId,public_token:published.publicToken,
@@ -139,6 +158,7 @@ function fillSelect(select, items, valueKey, labelBuilder) {
 }
 
 function switchPanel(panel) {
+  if(THUY_UI){thuyLayout.context.hidden=panel==='create';if(panel==='dashboard')showThuyMode(state.thuyMode||'progress');}
   const creating = panel === 'create';
   elements.createPanel.hidden = !creating;
   elements.dashboardPanel.hidden = panel !== 'dashboard';
@@ -153,6 +173,15 @@ function switchPanel(panel) {
 
 function paintCourseOverview() {
   if (!state.overview) return;
+  if(THUY_UI){
+    if(!state.thuyCourse){elements.courseOverview.textContent='Đang đọc số tự báo và phản hồi Speaking từ các phiếu đã có…';return;}
+    const onOpen=(studentRef,sessionNumber)=>void openJourneyDetail({classId:state.overview.classId,studentRef,sessionNumber});
+    thuySkills.renderTeacherSkills(elements.courseOverview,state.thuyCourse,{onOpen,onSummary:person=>{
+      state.detailController?.abort();state.detailGeneration++;state.detailTarget=null;
+      elements.retryJourneyDetailButton.hidden=true;elements.journeyDetailStatus.textContent='Tổng quan từ các phiếu đã nộp và nguồn Test đã kết nối.';
+      thuySkills.renderPersonSkills(elements.journeyDetailContent,state.thuyCourse,person,{onOpen});showThuyDetail(elements.journeyDetailDialog);
+    }});return;
+  }
   renderCourseOverview(elements.courseOverview,state.overview,{filter:elements.overviewFilter.value,
     onOpen:(student,cell)=>void openJourneyDetail({classId:state.overview.classId,
       studentRef:student.studentRef,sessionNumber:cell.sessionNumber}),
@@ -174,11 +203,15 @@ function mountCommentEditor(root,dialog,target,studentName,comment,focus=false) 
         ?state.dashboard.students.find(s=>s.studentRef===target.studentRef):null;
       if(person)person.sessionComment=note;
       const cell=String(state.overview?.classId)===String(target.classId)?state.overview.students.find(s=>s.studentRef===target.studentRef)?.cells.find(c=>c.sessionNumber===target.sessionNumber):null;
-      if(cell)cell.sessionComment=note;renderStudentList();paintCourseOverview();
+      if(cell)cell.sessionComment=note;
+      const coursePerson=state.thuyCourse?.sessions.find(s=>s.number===target.sessionNumber)?.students.find(s=>s.studentRef===target.studentRef);
+      if(coursePerson){coursePerson.sessionComment=note;coursePerson.publishedFeedback=note.visibility==='visible'?note.noteText:'';}
+      renderStudentList();paintCourseOverview();
     }});
   const links=document.createElement('button');links.type='button';links.className='mini-action';links.textContent='Quản lý link Hành trình riêng';
   links.addEventListener('click',()=>manageJourney({classId:target.classId,studentRef:target.studentRef},studentName));editor.element.append(links);
-  root.append(editor.element);if(focus)editor.focus();return editor;
+  if(THUY_UI){root.prepend(editor.element);editor.element.querySelector('h3').textContent='Nhận xét Speaking';const note=document.createElement('small');note.textContent='Nháp trên thiết bị này · Bấm lưu mới hiển thị cho học viên';editor.element.prepend(note);}
+  else root.append(editor.element);if(focus)editor.focus();return editor;
 }
 
 async function loadCourseOverview() {
@@ -186,6 +219,7 @@ async function loadCourseOverview() {
   state.overviewController?.abort();
   const generation=++state.overviewGeneration;
   state.overview=null;
+  if(THUY_UI)state.thuyCourse=null;
   elements.courseOverview.replaceChildren();elements.courseAnalytics.replaceChildren();elements.courseAnalyticsStatus.textContent='';
   if (!classId) { elements.overviewStatus.textContent='Chưa có lớp được cấp quyền.';return; }
   const controller=new AbortController();state.overviewController=controller;
@@ -221,6 +255,21 @@ async function loadClassBasicAnalytics(classId,generation,signal) {
   elements.courseAnalyticsStatus.textContent='Đang đọc kết quả từ các Progress Log đã có…';
   const forms=[],assignments=state.assignments.filter(a=>String(a.class_id)===String(classId)&&['published','closed'].includes(a.status));
   try {
+    if(THUY_UI){
+      for(let offset=0;offset<assignments.length;offset+=3){
+        const rows=await Promise.all(assignments.slice(offset,offset+3).map(async assignment=>{
+          const query='?assignmentId='+encodeURIComponent(assignment.assignment_id);
+          const {dashboard}=await apiRequest('/teacher/dashboard'+query,{signal});
+          const {live}=await apiRequest('/teacher/live-drafts'+query,{signal});
+          if(dashboard.assignmentId!==assignment.assignment_id||live.assignmentId!==assignment.assignment_id||String(dashboard.classId)!==String(classId))throw Error('Dữ liệu kỹ năng chưa khớp phiếu và lớp.');
+          return {sessionNumber:Number(assignment.session_number),definition:dashboard.definition,dashboard,live};
+        }));
+        if(generation!==state.overviewGeneration||classId!==elements.overviewClassSelect.value)return;forms.push(...rows);
+      }
+      if(new Set(forms.map(form=>form.sessionNumber)).size!==forms.length)throw Error('Có nhiều phiếu cùng buổi cần đối chiếu; chưa gộp số liệu.');
+      state.thuyCourse=thuySkills.buildSkillCourse(state.overview,forms);paintCourseOverview();elements.courseAnalytics.hidden=true;
+      elements.courseAnalyticsStatus.textContent='Đã đọc '+forms.length+' phiếu của lớp. Điểm Test chỉ hiện từ nguồn đã kết nối.';return;
+    }
     for(let offset=0;offset<assignments.length;offset+=3){
       const rows=await Promise.all(assignments.slice(offset,offset+3).map(async a=>{
         const data=await apiRequest('/teacher/assignments/'+encodeURIComponent(a.assignment_id)+'/question-analytics',{signal});
@@ -252,7 +301,8 @@ async function openJourneyDetail(target) {
   elements.journeyDetailContent.replaceChildren();
   elements.retryJourneyDetailButton.hidden=true;
   elements.journeyDetailStatus.textContent='Đang tải buổi học…';
-  if (!elements.journeyDetailDialog.open) elements.journeyDetailDialog.showModal();
+  if(THUY_UI)showThuyDetail(elements.journeyDetailDialog);
+  else if (!elements.journeyDetailDialog.open) elements.journeyDetailDialog.showModal();
   try {
     const path='/teacher/classes/'+encodeURIComponent(target.classId)+'/sessions/'+target.sessionNumber
       +'/students/'+encodeURIComponent(target.studentRef);
@@ -261,11 +311,15 @@ async function openJourneyDetail(target) {
     const detail=payload.detail;
     if(String(detail.classId)!==String(target.classId)||detail.student.studentRef!==target.studentRef
       ||detail.sessionNumber!==target.sessionNumber) throw new Error('Dữ liệu buổi học không khớp học viên đã chọn.');
-    renderSessionDetail(elements.journeyDetailContent,detail,{session:state.overview?.sessions.find(s=>s.sessionNumber===target.sessionNumber)||{}});
+    renderSessionDetail(elements.journeyDetailContent,THUY_UI?legacyFeedbackForView(detail,{teacher:true}):detail,{session:state.overview?.sessions.find(s=>s.sessionNumber===target.sessionNumber)||{}});
     if(state.overview?.journeyCommentsEnabled||state.dashboard?.journeyCommentsEnabled)mountCommentEditor(elements.journeyDetailContent,elements.journeyDetailDialog,
       {classId:String(target.classId),studentRef:target.studentRef,sessionNumber:target.sessionNumber},
       detail.student.name,detail.sessionComment,target.focusComment);
     elements.journeyDetailStatus.textContent='Bản dữ liệu hiện hành; chi tiết chỉ để xem lại.';
+    if(THUY_UI&&target.focusItem)requestAnimationFrame(()=>{
+      const question=elements.journeyDetailContent.querySelector('[data-review-item="'+CSS.escape(target.focusItem)+'"]');
+      if(question){question.tabIndex=-1;question.focus({preventScroll:true});question.scrollIntoView({block:'start'});}
+    });
   } catch(error) {
     if(generation===state.detailGeneration&&elements.journeyDetailDialog.open) {
       elements.journeyDetailStatus.textContent='Chưa đọc được buổi học: '+(controller.signal.aborted?'Thời gian chờ đã hết.':error.message);
@@ -285,8 +339,8 @@ async function loadQuestionAnalytics(assignmentId) {
     if(generation!==state.analyticsGeneration||elements.assignmentSelect.value!==assignmentId) return;
     if(payload.analytics.assignmentId!==assignmentId) throw new Error('Thống kê không khớp phiếu.');
     const assignment=state.assignments.find(item=>item.assignment_id===assignmentId);
-    renderQuestionAnalytics(elements.questionAnalytics,payload.analytics,{onStudent:student=>void openJourneyDetail({
-      classId:String(assignment.class_id),sessionNumber:Number(assignment.session_number),studentRef:student.studentRef})});
+    (THUY_UI?renderThuyAnalytics:renderQuestionAnalytics)(elements.questionAnalytics,payload.analytics,{definition:state.dashboard?.definition,onStudent:(student,focusItem)=>void openJourneyDetail({
+      classId:String(assignment.class_id),sessionNumber:Number(assignment.session_number),studentRef:student.studentRef,focusItem})});
     elements.questionAnalyticsStatus.textContent=payload.analytics.submittedCount+'/'+payload.analytics.rosterCount
       +' học viên có bài nộp hiện hành. Mỗi học viên chỉ được đếm một lần.';
   } catch(error) {
@@ -345,10 +399,17 @@ function buildBlockControl(release) {
   row.className = 'block-control';
   const copy = document.createElement('div');
   const title = document.createElement('b');
-  title.textContent = `Phần ${release.checkpoint}`;
+  title.textContent = THUY_UI?state.dashboard.definition.blocks.find(b=>b.blockId===release.blockId)?.title||`Phần ${release.checkpoint}`:`Phần ${release.checkpoint}`;
   const status = document.createElement('small');
   status.textContent = releaseLabel(release.status);
   copy.append(title, status);
+  if(THUY_UI){
+    const count=state.dashboard.students.filter(s=>s.checkpoints?.some(c=>c.blockId===release.blockId)).length;
+    status.textContent=(release.status==='open'?'Đã mở':'Đang đóng')+' · '+count+'/'+state.dashboard.students.length+' đã nộp';
+    const toggle=document.createElement('button');toggle.type='button';toggle.className='button'+(release.status==='open'?'':' primary');
+    toggle.textContent=release.status==='open'?'Đóng':'Mở';toggle.value=release.status==='open'?'closed':'open';toggle.setAttribute('aria-label',toggle.textContent+' phần '+release.checkpoint);
+    toggle.addEventListener('click',()=>void setBlockRelease(release,toggle));row.append(copy,toggle);return row;
+  }
   const select = document.createElement('select');
   for (const [value, label] of [['locked', 'Chưa mở'], ['open', 'Mở cho học viên'], ['closed', 'Đóng phần']]) {
     const option = new Option(label, value, false, value === release.status);
@@ -403,7 +464,7 @@ function renderClassInsights(insights) {
 }
 
 function studentLink(publicToken) {
-  const url = new URL('./', window.location.href);
+  const url = new URL(THUY_UI?'./thuy.html':'./', window.location.href);
   url.search = '';
   url.hash = new URLSearchParams({ assignment: publicToken }).toString();
   return url.toString();
@@ -436,15 +497,16 @@ function assignmentLabel(item) {
 }
 
 function refreshAssignmentSelect(selectedId = '') {
-  if (!state.assignments.length) {
+  const assignments=THUY_UI?state.assignments.filter(a=>String(a.class_id)===thuyLayout.classes.value):state.assignments;
+  if (!assignments.length) {
     const option = document.createElement('option');
     option.value = '';
     option.textContent = 'Chưa có phiếu nào';
     elements.assignmentSelect.replaceChildren(option);
     return;
   }
-  fillSelect(elements.assignmentSelect, state.assignments, 'assignment_id', assignmentLabel);
-  elements.assignmentSelect.value = selectedId || state.assignments[0].assignment_id;
+  fillSelect(elements.assignmentSelect, assignments, 'assignment_id', THUY_UI?a=>'Buổi '+a.session_number:assignmentLabel);
+  elements.assignmentSelect.value = selectedId || assignments[0].assignment_id;
 }
 
 async function loadWorkspace() {
@@ -461,6 +523,7 @@ async function loadWorkspace() {
   state.assignments = options.assignments || [];
   const entryAssignment = resolveTeacherAssignment(state.assignments,state.classes,location.href);
   state.library = library.items || [];
+  if(THUY_UI){fillSelect(thuyLayout.classes,state.classes,'class_id',c=>c.class_name);if(entryAssignment)thuyLayout.classes.value=String(entryAssignment.class_id);}
   formEditor.setWorkspace({classes:state.classes,assignments:state.assignments});
   elements.teacherName.textContent = state.reviewer.name || state.reviewer.email;
   fillSelect(elements.teacherClassSelect, state.classes, 'class_id', item => item.class_name);
@@ -572,8 +635,8 @@ function verdictLabel(verdict) {
 }
 
 function openDraft(student,focusComment=false) {
-  const live = state.liveByStudent.get(student.studentRef);
-  if (!live?.attemptId) {
+  const live = state.liveByStudent.get(student.studentRef)||{};
+  if (!live?.attemptId&&!THUY_UI) {
     return void openJourneyDetail({classId:state.dashboard.classId,studentRef:student.studentRef,
       sessionNumber:state.dashboard.sessionNumber,focusComment});
   }
@@ -591,7 +654,7 @@ function openDraft(student,focusComment=false) {
   elements.draftStudentName.textContent = student.discriminator
     ? `${student.name} · ${student.discriminator}`
     : student.name;
-  elements.draftStatus.textContent = live.submissionId
+  elements.draftStatus.textContent = THUY_UI&&!live.attemptId?'Chưa bắt đầu · Chưa có bài làm':live.submissionId
     ? `Đã nộp lúc ${formatSavedAt(live.submittedAt)} · đây là bản cuối.`
     : `Bản lưu số ${live.draftRevision || 0} · lưu lúc ${formatSavedAt(live.draftUpdatedAt)}. Nội dung có thể chậm hơn thao tác gõ vài giây.`;
   const cards = definitionItems().filter(item => itemApplies(item, responses)).map(item => {
@@ -602,6 +665,7 @@ function openDraft(student,focusComment=false) {
       : `Câu ${item.displayNumber || item.position}. ${item.prompt}`;
     const answer = document.createElement('p');
     answer.textContent = answerText(item, responses?.[item.itemVersionId]);
+    if(THUY_UI&&item.layoutType==='keyword_selection')answer.replaceChildren(keywordSelection(item,responses?.[item.itemVersionId],()=>{},{disabled:true}));
     const result = resultByItem.get(item.itemVersionId);
     if (result && result.verdict !== 'ungraded') {
       const verdict = document.createElement('small');
@@ -614,7 +678,7 @@ function openDraft(student,focusComment=false) {
     return card;
   });
   elements.draftAnswers.replaceChildren(...cards);
-  elements.draftDialog.showModal();
+  if(THUY_UI)showThuyDetail(elements.draftDialog);else elements.draftDialog.showModal();
   if(state.dashboard.journeyCommentsEnabled) mountCommentEditor(elements.draftAnswers,elements.draftDialog,
     {classId:state.dashboard.classId,studentRef:student.studentRef,sessionNumber:state.dashboard.sessionNumber},
     student.name,student.sessionComment,focusComment);
@@ -926,6 +990,10 @@ function buildStudentRow(student) {
 }
 
 function renderStudentList() {
+  if(THUY_UI&&state.dashboard){renderThuyRoster(elements.studentList,{dashboard:state.dashboard,liveByStudent:state.liveByStudent,
+    mode:state.thuyMode||'progress',
+    query:state.thuySearch||'',filter:state.thuyFilter||'all',onQuery:value=>{state.thuySearch=value;renderStudentList();},
+    onFilter:value=>{state.thuyFilter=value;renderStudentList();},onOpen:openDraft,onAttendance:openAttendance});return;}
   elements.studentList.replaceChildren(...(state.dashboard?.students || []).map(buildStudentRow));
 }
 
@@ -1420,7 +1488,7 @@ async function loadDashboard({ quiet = false } = {}) {
       state.liveByStudent.clear();
       void loadJourneyPlan();
     }
-    elements.dashboardTitle.textContent = state.dashboard.className+' · '+sessionHeading(state.dashboard,{title:state.dashboard.title||state.dashboard.definition?.title});
+    elements.dashboardTitle.textContent = THUY_UI?state.dashboard.title:state.dashboard.className+' · '+sessionHeading(state.dashboard,{title:state.dashboard.title||state.dashboard.definition?.title});
     elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
     elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));
     renderClassInsights(state.dashboard.classInsights || []);
@@ -1496,7 +1564,8 @@ async function previewAsStudent() {
     const payload = await apiRequest('/teacher/demo-grants', {
       method: 'POST', body: { assignmentId }
     });
-    const url = new URL('./demo/', window.location.href);
+    const url = new URL(THUY_UI?'./demo/thuy.html':'./demo/', window.location.href);
+    if(THUY_UI)url.searchParams.set('presentation','thuy');
     url.hash = new URLSearchParams({ grant: payload.grant }).toString();
     if (tab) { tab.opener = null; tab.location.replace(url.toString()); }
     else window.location.assign(url.toString());
@@ -1682,6 +1751,16 @@ elements.copyStudentJourneyLinkButton.addEventListener('click', () => void copyS
 elements.sendDraftFeedbackButton.addEventListener('click', () => void sendDraftFeedback());
 elements.copyDraftJourneyLinkButton.addEventListener('click', () => void copyDraftJourneyLink());
 for(const dialog of document.querySelectorAll('dialog'))bindDialogDismiss(dialog);
+if(THUY_UI){
+  for(const [id,step] of [['thuyPreviousStudent',-1],['thuyNextStudent',1]])document.getElementById(id)?.addEventListener('click',()=>{
+    const people=state.dashboard?.students||[],index=people.findIndex(s=>s.studentRef===state.draftStudent?.studentRef);
+    if(index+step>=0&&index+step<people.length)openDraft(people[index+step]);
+  });
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')for(const dialog of [elements.draftDialog,elements.journeyDetailDialog])if(dialog.open)dialog.close();});
+  let outside=null;
+  document.addEventListener('pointerdown',event=>{const dialog=[elements.draftDialog,elements.journeyDetailDialog].find(d=>d.open&&!d.contains(event.target));outside=dialog?{dialog,generation:dialog.dataset.thuyGeneration}:null;});
+  document.addEventListener('click',event=>{if(outside?.dialog.open&&outside.generation===outside.dialog.dataset.thuyGeneration&&!outside.dialog.contains(event.target))outside.dialog.close();outside=null;});
+}
 elements.draftSpeakingFeedback.addEventListener('input', () => { state.feedbackOperationId = crypto.randomUUID(); });
 elements.rememberTeacherLogin.checked = loginPreference.read();
 elements.rememberTeacherLogin.addEventListener('change', () => {
