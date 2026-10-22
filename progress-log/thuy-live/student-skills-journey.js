@@ -1,6 +1,6 @@
 // Link Hành trình riêng dùng đúng access token hiện hành; chỉ đọc bài của chính học viên.
 // Lỗi một nguồn giữ lịch sử cũ để xem, không suy điểm trống hoặc ghi bài/điểm danh.
-import {buildSkillCourse,renderPersonSkills} from './course-skills.js?rev=20261022-official-v2';
+import {buildSkillCourse,renderPersonSkills} from './course-skills.js?rev=20261022-parity-v2';
 import {legacyFeedbackForView} from './feedback-policy.js';
 export async function mountStudentSkillJourney(host,journey,request){
  host.textContent='Đang đọc kết quả bốn kỹ năng…';

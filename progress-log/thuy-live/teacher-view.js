@@ -1,5 +1,8 @@
 // Bảng giảng viên đọc dashboard/live thật. Một cột điểm danh phân biệt nhận bài và ghi Portal.
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
+const scrollCues=new Map();
+window.addEventListener('scroll',()=>{for(const [root,update]of scrollCues){if(root.isConnected)update();else scrollCues.delete(root);}},{passive:true});
+window.addEventListener('resize',()=>{for(const update of scrollCues.values())update();},{passive:true});
 export function attendancePresentation(student){
   const portal=student.portalSync;
   if(portal?.status==='complete'&&portal.readbackAt&&['synced','already_present'].includes(portal.portalStatus)&&!portal.reviewRequired)
@@ -19,7 +22,7 @@ export function renderThuyRoster(root,{dashboard,liveByStudent,mode='progress',q
   const wrap=node('div','','thuy-roster-scroll');wrap.tabIndex=0;wrap.setAttribute('aria-label','Bảng kết quả học viên, cuộn ngang nếu cần');
   const table=node('table','','thuy-roster'),head=node('tr');
   const items=dashboard.definition.blocks.flatMap(b=>b.items),reportSkills=['listening','reading'].filter(skill=>items.some(i=>i.interactionType==='number_score'&&i.skillCodes?.includes(skill)));
-  const columns=mode==='progress'?['Học viên',...dashboard.definition.blocks.map((b,i)=>`Phần ${i+1}`),'Điểm danh','']:
+  const columns=mode==='progress'?['Học viên',...dashboard.definition.blocks.map((b,i)=>`Phần ${i+1}`),'Điểm danh']:
     ['Học viên',...reportSkills.map(s=>(s==='listening'?'Listening':'Reading')+' · Tự báo'),'Quiz','Nhận xét Speaking'];
   for(const label of columns){const h=node('th',label);h.scope='col';head.append(h);}const thead=node('thead');thead.append(head);table.append(thead);
   const tbody=node('tbody');const people=dashboard.students.filter(s=>{
@@ -46,13 +49,16 @@ export function renderThuyRoster(root,{dashboard,liveByStudent,mode='progress',q
       const cell=node('td');cell.append(node('span',submitted?'Đã nộp':writing?'Đang làm':'Chưa bắt đầu',submitted?'badge green':writing?'badge blue':'badge'));row.append(cell);
     }
     const attendance=attendancePresentation(student),cell=node('td');cell.append(node('span',attendance.label,'badge '+attendance.kind));cell.title=attendance.detail;cell.append(node('small',attendance.detail));row.append(cell);
-    const actions=node('td'),adjust=node('button','Điều chỉnh','button');adjust.type='button';adjust.addEventListener('click',()=>onAttendance(student));actions.append(adjust);row.append(actions);
+    const adjust=node('button','Điều chỉnh','button text-button');adjust.type='button';adjust.addEventListener('click',()=>onAttendance(student));cell.append(adjust);
     }
     row.addEventListener('click',event=>{if(event.target.closest('button,a,input,select')||window.getSelection()?.toString())return;onOpen(student);});
     row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();onOpen(student);}});tbody.append(row);
   }
-  table.append(tbody);wrap.append(table);const hint=node('p',`Đang hiển thị ${people.length}/${dashboard.students.length} học viên · Cuộn trang để xem các hàng còn lại.`,'thuy-roster-hint');
-  root.replaceChildren(toolbar,wrap,hint);
+  table.append(tbody);wrap.append(table);const hint=node('p',`Đang hiển thị ${people.length}/${dashboard.students.length} học viên.`,'thuy-roster-hint');
+  const cue=node('button','','button thuy-roster-cue');cue.type='button';const remaining=()=>[...tbody.rows].filter(row=>row.getBoundingClientRect().top>=innerHeight-48);
+  cue.addEventListener('click',()=>remaining()[0]?.scrollIntoView({behavior:'smooth',block:'center'}));
+  const update=()=>{const count=remaining().length;cue.hidden=!count||root.hidden;cue.textContent=count?'Còn '+count+' học viên phía dưới ↓':'';};
+  root.replaceChildren(toolbar,wrap,hint,cue);scrollCues.set(root,update);update();
   if(searchFocus){input.focus({preventScroll:true});if(input.type!=='search')input.setSelectionRange(caret,caret);}
 }
 
@@ -61,7 +67,15 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass}){
   const priorLabel=elements.assignmentSelect.closest('label'),priorParts=elements.blockControls.closest('section');
   const context=node('section','','thuy-class-context'),pickers=node('div','','thuy-class-pickers'),classes=node('select');classes.id='thuyClassSelect';classes.setAttribute('aria-label','Chọn lớp');classes.addEventListener('change',()=>onClass(classes.value));
   pickers.append(classes,elements.assignmentSelect);const nav=node('nav','','thuy-management-tabs');nav.setAttribute('aria-label','Quản lý lớp');nav.append(elements.dashboardTab,elements.overviewTab);context.append(pickers,nav);workspace.prepend(context);
-  const home=node('button','Các lớp','tab active');home.type='button';home.addEventListener('click',()=>elements.dashboardTab.click());side.prepend(home);elements.createTab.textContent='Kho bài tập';
+  const home=node('button','Quản lý lớp','tab active');home.type='button';home.addEventListener('click',()=>elements.dashboardTab.click());side.prepend(home);elements.createTab.textContent='Quản lý bài tập';
+  elements.dashboardTab.textContent='Theo dõi buổi học';
+  elements.assignmentSelect.setAttribute('aria-label','Chọn buổi học');
+  const brand=document.querySelector('.thuy-side .brand');brand.replaceChildren(node('b','IZONE'),node('small','IELTS CHIẾN LƯỢC'));
+  brand.after(node('div','PROGRESS LOG','thuy-nav-label'));
+  const foot=node('div','','thuy-side-foot');foot.append(node('small','Không gian giảng viên'));document.querySelector('.thuy-side').append(foot);
+  const top=document.querySelector('.teacher-header');top.replaceChildren(node('span','Quản lý lớp','thuy-breadcrumb'),elements.teacherName);
+  foot.append(document.querySelector('#teacherLogoutButton'));
+  const learner=node('a','Cổng học viên ↗','tab');learner.id='thuyStudentPortal';learner.target='_blank';learner.rel='noopener';learner.href='./';side.append(learner);
   const dashboard=elements.dashboardPanel,hero=node('div','','thuy-session-header'),overview=node('section','','thuy-session-overview'),parts=node('section','','thuy-session-parts');
   overview.append(elements.dashboardTitle,elements.teacherSubmissionWindow||document.querySelector('#teacherSubmissionWindow'),document.querySelector('.dashboard-share'));
   parts.append(elements.blockControls);hero.append(overview,parts);dashboard.prepend(hero);
@@ -76,8 +90,16 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass}){
   elements.scoresPanel.hidden=true;elements.insightPanel.hidden=true;
   analytics.prepend(elements.questionAnalyticsStatus,elements.questionAnalytics);
   elements.overviewFilter.closest('label').hidden=true;
+  elements.overviewClassSelect.closest('.field-grid').hidden=true;
+  elements.overviewPanel.querySelector('.section-heading').hidden=true;
+  elements.overviewPanel.querySelector('#showAllJourneyClasses').closest('label').hidden=true;
+  for(const text of elements.overviewPanel.querySelectorAll(':scope>p.muted'))text.hidden=true;
   const extras=node('details','','thuy-extra-tools');extras.append(node('summary','Thông tin và công cụ của buổi'));extras.append(elements.dashboardSummary,elements.refreshDashboardButton);dashboard.append(extras);
-  return {context,classes};
+  const count=node('span','','thuy-class-count');pickers.append(count);
+  return {context,classes,home,count,learner,setPanel(panel){
+    context.hidden=panel==='create';home.classList.toggle('active',panel!=='create');
+    document.querySelector('.thuy-breadcrumb').textContent=panel==='create'?'Quản lý bài tập':'Quản lý lớp / '+(classes.selectedOptions[0]?.textContent||'');
+  }};
 }
 
 export function showThuyDetail(dialog){
@@ -85,5 +107,6 @@ export function showThuyDetail(dialog){
   const opener=document.activeElement;
   for(const other of document.querySelectorAll('#draftDialog,#journeyDetailDialog'))if(other!==dialog&&other.open)other.close();
   if(!dialog.open)dialog.show();document.body.classList.add('has-thuy-detail');
+  if(matchMedia('(max-width:650px)').matches){dialog.scrollIntoView({block:'start'});dialog.querySelector('button[aria-label]')?.focus({preventScroll:true});}
   dialog.addEventListener('close',()=>{if(!document.querySelector('#draftDialog[open],#journeyDetailDialog[open]')){document.body.classList.remove('has-thuy-detail');if(opener?.isConnected)opener.focus({preventScroll:true});}},{once:true});
 }

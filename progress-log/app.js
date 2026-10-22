@@ -1,14 +1,15 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
-import {renderSessionReview} from './session-review.js?rev=20261022-official-v2';
+import {renderSessionReview} from './session-review.js?rev=20261022-parity-v1';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
 import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
-import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261022-official-v2';
-import {comparisonTable} from './thuy-live/comparison-table.js';
+import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261022-answers-remove-keywords';
+import {comparisonTable} from './thuy-live/comparison-table.js?rev=20261022-parity-v1';
+import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
@@ -22,8 +23,8 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022-official-v2'):null;
-if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./thuy-live/styles.css?rev=20261022-official-v2',import.meta.url);document.head.append(css);}
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022-parity-v2'):null;
+if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./thuy-live/styles.css?rev=20261022-parity-v1',import.meta.url);document.head.append(css);}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;
 const AUTOSAVE_FORCE_MIN_MS = 25_000;
@@ -814,12 +815,13 @@ function buildQuestion(item) {
   wrapper.hidden = !itemIsVisible(item);
   const number = document.createElement('span');
   number.className = 'question-number';
-  number.textContent = item.displayNumber || String(item.position);
+  const presentation=THUY_UI?questionPresentation(item):null;
+  number.textContent = presentation?'Câu '+presentation.number:item.displayNumber || String(item.position);
   const content = document.createElement('div');
   content.className = 'question-content';
   const label = document.createElement('h3');
   label.id = `question-${item.itemVersionId}`;
-  label.textContent = item.prompt;
+  label.textContent = presentation?presentation.title:item.prompt;
   if (itemIsRequired(item)) {
     const required = document.createElement('span');
     required.className = 'required';
@@ -979,6 +981,7 @@ function buildCheckpointQuestions(items) {
   const questions = [];
   for (let index = 0; index < items.length; index += 1) {
     const first = items[index];
+    if(THUY_UI){const keywordGroup=buildKeywordGroup(items.slice(index),buildQuestion);if(keywordGroup){questions.push(keywordGroup.element);index+=keywordGroup.count-1;continue;}}
     const group = [first];
     // Chỉ gộp các ô chọn cùng nhóm và nguyên văn câu hỏi/lựa chọn giống nhau.
     // Mỗi ô vẫn dùng item riêng để giữ nháp, required và phản hồi chấm hiện hành.

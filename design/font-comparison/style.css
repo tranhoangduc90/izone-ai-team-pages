@@ -1,4 +1,4 @@
-/* Giữ cố định bảng màu Reading và toàn bộ kích thước; mỗi bản chỉ đổi font-family. */
+/* Khung so sánh cố định; font và bảng màu được chọn riêng cho từng mẫu. */
 :root {
   color-scheme: light;
   --header:#F5F6F8; --badge:#152B4E; --badgeText:#FFFFFF;
@@ -32,14 +32,14 @@ main{max-width:1720px;margin:auto;padding:38px 40px 24px}.intro{display:flex;ali
 
 /* Ánh xạ màu gốc vào cùng bố cục; không mang font hoặc kích thước sản phẩm gốc sang. */
 :root{--heading:#152B4E;--sample-top-bg:#F8F9FB;--sample-top-ink:#152B4E;--sample-top-muted:#586477;--control-border:#8998AE;--error-text:#DB0829;--error-surface:#F8F9FB;--error-line:#DB0829}
-.font-column[data-palette="k56"]{
-  --header:#EEF2F7;--badge:#173B67;--badgeText:#FFFFFF;--hint:#667085;--edge:#2F6FED;
-  --line:#DFE5EE;--surface:#FFFFFF;--ink:#172033;--primary:#2F6FED;--primaryText:#FFFFFF;
-  --selected:#EDF4FF;--selectedText:#173B67;--selectedLine:#2563D9;
-  --rose:#F5F7FB;--roseText:#2F6FED;--success:#E9F8F1;--successText:#0F6448;
-  --flag:#FFF6D8;--flagText:#694B00;--heading:#173B67;--control-border:#CED6E2;
-  --sample-top-bg:linear-gradient(125deg,#102C4F,#1E5187);--sample-top-ink:#FFFFFF;--sample-top-muted:#D7E5F5;
-  --error-text:#8D2135;--error-surface:#FFF0F2;--error-line:#B4233C;
+.font-column[data-palette="linh"]{
+  --header:#F6F7FB;--badge:#174265;--badgeText:#FFFFFF;--hint:#6B7280;--edge:#DB0829;
+  --line:#E3E7EF;--surface:#FFFFFF;--ink:#1F2937;--primary:#DB0829;--primaryText:#FFFFFF;
+  --selected:#E6EEF5;--selectedText:#174265;--selectedLine:#174265;
+  --rose:#E6EEF5;--roseText:#174265;--success:#E4F5EA;--successText:#166534;
+  --flag:#FFF4E0;--flagText:#8A5300;--heading:#174265;--control-border:#CED5DF;
+  --sample-top-bg:#FFFFFF;--sample-top-ink:#174265;--sample-top-muted:#6B7280;
+  --error-text:#9B0A22;--error-surface:#FDE8EB;--error-line:#9B0A22;
 }
 .font-column[data-palette="thuy"]{
   --header:#F3F4F6;--badge:#174266;--badgeText:#FFFFFF;--hint:#647482;--edge:#DB0829;
@@ -58,6 +58,11 @@ main{max-width:1720px;margin:auto;padding:38px 40px 24px}.intro{display:flex;ali
 .column-theme-picker button[aria-pressed=true]{background:#152B4E;color:#FFFFFF}
 .column-theme-picker button:hover:not([aria-pressed=true]){background:#EDF1F7;color:#152B4E}
 .theme-picker{border-top:1px solid #DCE1E7;margin-top:14px;padding-top:14px;font-size:12px;color:#586477}
+.linh-font-picker{border-top:1px solid #DCE1E7;margin-top:14px;padding-top:14px;font-size:12px;color:#586477;gap:12px}
+.linh-font-picker p{font-size:11px;line-height:1.6;margin:0}
+.linh-font-picker .segmented{flex-wrap:wrap}
+.font-column[data-palette="linh"] .sample-button.secondary{background:#E6EEF5;border-color:transparent}
+.font-column[data-palette="linh"] .sample-table th{background:#E6EEF5;color:#174265}
 #themeDescription{font-size:11px;line-height:1.6}
 .specimen{background:var(--header)}
 .sample-body{margin:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px}

@@ -17,6 +17,10 @@ nguồn sự thật cho attempt, deadline, điểm hay quyền truy cập — ba
 Khi task chạm API backend của Term Test/learning, backend nằm ở `../backend-term-test/` — đọc
 `../backend-term-test/AGENTS.md` và `../ARCHITECTURE.md` trước khi kết luận contract.
 
+## Preset Progress Log hiện hành
+
+Với `progress-log/`, đọc [preset chuẩn Thủy](docs/progress-log-thuy-preset.md) trước sửa/render/phát hành. Nguồn chuẩn là demo `progress-log/thuy-review/` đã được Đức chỉnh và duyệt từng luồng, cùng lựa chọn trong preset. Không thay bằng editor/khung cũ hoặc chỉ copy màu/font. Số câu phải là nhãn riêng; nhóm câu con giữ ID/payload. Kiểm hình thức và hành vi riêng, không dùng số test thay bằng chứng giống demo. Hồ sơ master đầy đủ tại `E:/Codex-Data/design-presets/progress-log-thuy-20261020/` trên máy Đức.
+
 ## 2. Quy tắc route term-tests
 
 - Trọng tâm 03–45: `webtest-34/` + `34-shared/` là prototype demo tĩnh (LOCAL_DEMO_ONLY);
