@@ -38,7 +38,8 @@
       "tests/term-mini-pending-storage.mjs",
       "tests/term-mini-cache-graph.mjs",
       "tests/term-mini-submit-browser.mjs",
-      "tests/term-mini-reading-submit-browser.mjs"
+      "tests/term-mini-reading-submit-browser.mjs",
+      "tests/term-mini-existing-results-browser.mjs"
     ],
     "substitute_56_and_shared_67": [
       "tests/substitute-k56-dashboard.mjs",

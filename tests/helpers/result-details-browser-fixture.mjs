@@ -73,14 +73,17 @@ export async function completedPage(browser,base,routeName,{writingResult=null,e
  async function confirmMiniIfNeeded(){
   // Lượt đã xác minh có thể tự mở kết quả; chỉ bấm xác nhận khi trang thực sự yêu cầu.
   await page.waitForFunction(()=>{
-   const button=document.querySelector('#confirmIdentity'),detail=document.querySelector('#questionDetails > details'),result=document.querySelector('#viewResult');
-   return Boolean(button?.getClientRects().length||detail?.getClientRects().length||(result?.getClientRects().length&&!result.disabled));
+   const buttons=[...document.querySelectorAll('#confirmIdentity,#miniPaperEnter')],detail=document.querySelector('#questionDetails > details'),result=document.querySelector('#viewResult');
+   return Boolean(buttons.some(button=>button.getClientRects().length)||detail?.getClientRects().length||(result?.getClientRects().length&&!result.disabled));
   },null,{timeout:waitTimeout});
-  if(await page.locator('#confirmIdentity').isVisible())await page.locator('#confirmIdentity').click();
+  for(const button of await page.locator('#confirmIdentity,#miniPaperEnter').all())if(await button.isVisible()){
+    if(paperMini&&await page.locator('#studentSelect').isVisible()&&await page.locator('#studentSelect').isEnabled())await page.locator('#studentSelect').selectOption(payload.studentRef);
+    await button.click();
+  }
  }
  async function enter(){
   await page.goto(url,{waitUntil:'domcontentloaded'});
-  if(paperMini){await page.locator('#studentSelect').selectOption(payload.studentRef);await page.locator('#miniPaperEnter').click();}
+  if(paperMini)await confirmMiniIfNeeded();
   else if(slug==='mini-test-k56'&&cbt)await confirmMiniIfNeeded();
   const details=await waitForDetails();
   await page.evaluate(()=>document.fonts.ready);return details;

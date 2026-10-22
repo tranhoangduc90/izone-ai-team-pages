@@ -33,7 +33,8 @@
       "tests/term-test-landing.mjs",
       "tests/term-writing-save-clients.cjs",
       "tests/term-mini-submit-browser.mjs",
-      "tests/term-mini-reading-submit-browser.mjs"
+      "tests/term-mini-reading-submit-browser.mjs",
+      "tests/term-mini-existing-results-browser.mjs"
     ]
   }
 }
