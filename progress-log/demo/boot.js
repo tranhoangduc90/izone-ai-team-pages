@@ -49,7 +49,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261022-official-v2');
+  await import('../app.js?rev=20261022-parity-v1');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });

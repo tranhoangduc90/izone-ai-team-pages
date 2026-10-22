@@ -1,7 +1,7 @@
 // Dựng bảng từ sentenceLines có sẵn; giữ thứ tự ô của từng item để API lưu/chấm đúng nguồn.
 export function comparisonTable(items,{valueFor,onChange,resizeInput}) {
   const section=document.createElement('section');section.className='thuy-comparison';
-  const heading=document.createElement('h3');heading.textContent='Câu 2 · Phân biệt Scanning và Skimming';section.append(heading);
+  const heading=document.createElement('h3');heading.className='thuy-question-heading';heading.textContent='Câu '+(items[0].displayNumber||items[0].position)+' · Phân biệt Scanning và Skimming';section.append(heading);
   const wrap=document.createElement('div');wrap.className='thuy-comparison-scroll';
   const table=document.createElement('table'),thead=document.createElement('thead'),head=document.createElement('tr');
   for(const title of ['Tiêu chí',...items.map(i=>i.prompt)]){const th=document.createElement('th');th.scope='col';th.textContent=title;head.append(th);}thead.append(head);table.append(thead);
