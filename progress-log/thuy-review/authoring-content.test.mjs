@@ -30,7 +30,7 @@ test('Lời giải đi theo mã câu qua sao chép và đổi phần; không đ�
 });
 test('Chưa nộp hoặc chưa mở đáp án thì chưa nhận lời giải; mở/ẩn vẫn giữ bài',()=>{
  const {definition,keys}=bridge.toDefinition(form());
- const store=createDemoStore({format:'thuy-review-data-v1',keys:{},data:{sessions:[{number:10,title:'Phiếu thử',generation:0,definition,answerKey:keys,students:[],retired:[],releases:definition.blocks.map(b=>({blockId:b.blockId,status:'open'}))}]}});
+ const store=createDemoStore({format:'thuy-review-data-v1',keys:{},data:{sessions:[{number:10,date:'2026-01-01',title:'Phiếu thử',generation:0,definition,answerKey:keys,students:[],retired:[],releases:definition.blocks.map(b=>({blockId:b.blockId,status:'open'}))}]}});
  const act=body=>store.mutate({number:10,generation:0,...body});
  act({action:'showAnswers',open:true});assert.deepEqual(store.student(10,'demo-a').answerKey,{});
  act({action:'showAnswers',open:false});act({action:'checkpoint',ref:'demo-a',blockId:'review',responses:{mcq:'B'}});

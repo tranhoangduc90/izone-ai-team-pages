@@ -6,7 +6,7 @@ import {createDemoStore} from './demo-store.mjs';
 import {grade,personJourney,publishedSourceFeedback} from './model.mjs';
 const item=(id,extra={})=>({itemVersionId:id,prompt:id,interactionType:'single_choice',skillCodes:['writing'],graderType:'exact_option',maxScore:1,options:[{id:'A',label:'Lựa chọn thử A'},{id:'B',label:'Lựa chọn thử B'}],interactionConfig:{},...extra});
 const definition={blocks:[{blockId:'block',title:'Phần thử',items:[item('q1'),item('q2',{interactionType:'short_text',maxScore:0,graderType:'none',options:[],interactionConfig:{visibleWhenItemVersionId:'q1',visibleWhenValue:'B'}})]}]};
-const session={number:10,title:'Phiếu kiểm thử',definition,answerKey:{q1:{graderType:'exact_option',expectedOptionId:'A'}},students:[],releases:[{blockId:'block',status:'open'}],generation:0,replacement:null,retired:[],analytics:[]};
+const session={number:10,date:'2026-01-01',title:'Phiếu kiểm thử',definition,answerKey:{q1:{graderType:'exact_option',expectedOptionId:'A'}},students:[],releases:[{blockId:'block',status:'open'}],generation:0,replacement:null,retired:[],analytics:[]};
 const pack=()=>({format:'thuy-review-data-v1',data:{capturedAt:'2026-01-01T00:00:00Z',className:'Lớp kiểm thử',sessions:[structuredClone(session)],people:[],courseSessions:[]},keys:{10:session.answerKey}});
 test('Nhận xét ẩn hiện hành không bị bản legacy làm xuất hiện trở lại',()=>{
   assert.equal(publishedSourceFeedback({sessionComment:{visibility:'visible',noteText:'Bản hiện hành'},teacherSessionFeedback:{noteText:'Bản cũ'}}),'Bản hiện hành');

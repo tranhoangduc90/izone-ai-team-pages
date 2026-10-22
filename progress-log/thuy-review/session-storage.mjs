@@ -1,5 +1,5 @@
 // Kho phiên lớn dùng IndexedDB; bản đệm nhỏ giữ ngay khi gõ, không chờ lúc đóng tab.
-import {createDemoStore} from './demo-store.mjs';
+import {createDemoStore} from './demo-store.mjs?v=review-20261022';
 export const SESSION_DB='izone-progress-log-thuy-review-v1';
 export const JOURNAL_PREFIX='izone:progress-log:thuy-review:pending:v1:';
 export const validSessionPackage=value=>value?.format==='thuy-review-data-v1'&&value.data?.className==='IC2305'&&Array.isArray(value.data.sessions)&&value.data.sessions.length===3;

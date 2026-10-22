@@ -1,10 +1,11 @@
 // Bộ nhớ thử dùng chung cho máy chủ local và Pages. Chỉ đổi dữ liệu trong phiên.
 // Đầu vào là gói riêng tư đã đọc; không có API hoặc đường ghi tới hệ thống thật.
 import {projectSnapshot,itemsOf,applicable,blank,validateResponses,grade,allPartsSubmitted} from './model.mjs';
+import {applyReviewData,learnerFeedback,deadlineView,changeDeadline,updateAutoDeadline} from './review-decisions.mjs';
 export function createDemoStore(raw){
 const initial=raw.baseline||(raw.format==='thuy-review-data-v1'?raw.data:projectSnapshot(raw));
 const keys=raw.format==='thuy-review-data-v1'?raw.keys:Object.fromEntries(raw.sessions.map(s=>[s.number,s.privateKey?.items||{}]));
-let data = structuredClone(raw.format==='thuy-review-data-v1'?raw.data:initial), fake = new Map(raw.demoState?.fake||[]), feedback = new Map(raw.demoState?.feedback||[]);
+let data = applyReviewData(structuredClone(raw.format==='thuy-review-data-v1'?raw.data:initial)), fake = new Map(raw.demoState?.fake||[]), feedback = new Map(raw.demoState?.feedback||[]);
 const fakePeople = [{studentRef:'demo-a',name:'Học viên thử A'},{studentRef:'demo-b',name:'Học viên thử B'}];
 const byNumber = number => {
   const s = data.sessions.find(s => s.number === Number(number));
@@ -26,7 +27,7 @@ function studentData(s, ref) {
   const published = feedback.get(`${s.number}:${s.generation}:${ref}`)?.published ?? person.publishedFeedback ?? '';
   const visibleGrading = s.showAnswers && (isFake ? state.submitted || state.checkpoints.length : person.submitted);
   return {capturedAt:data.capturedAt,number:s.number,date:s.date,title:s.title,definition:s.definition,generation:s.generation,
-    replacement:Boolean(s.replacement),person:{studentRef:ref,name:person.name},isFake,
+    replacement:Boolean(s.replacement),person:{studentRef:ref,name:person.name},isFake,deadline:deadlineView(s),
     roster:isFake?fakePeople:s.students.map(p => ({studentRef:p.studentRef,name:p.name})),
     releases:s.releases, submitted:isFake?state.submitted:person.submitted,
     completeness:isFake?state.completeness:person.completeness,
@@ -34,8 +35,8 @@ function studentData(s, ref) {
     participated:isFake?state.participated:Boolean(person.checkpoints.length || person.submitted),
     portal:isFake?'simulated':person.portal.status,
     gradingItems:visibleGrading ? (isFake?state.gradingItems:person.detail.gradingItems) : [],
-    answersVisible:Boolean(visibleGrading),answerKey:visibleGrading?s.answerKey||keys[s.number]||{}:{}, publishedFeedback:published,
-    courseHistory:isFake?[]:[...data.sessions,...(data.courseSessions||[])].flatMap(v=>{const p=v.students.find(p=>p.studentRef===ref);return p?[{number:v.number,date:v.date,title:v.title,definition:v.definition,submitted:p.submitted,responses:p.submitted?p.detail.responses:p.draftResponses,gradingItems:[],publishedFeedback:feedback.get(`${v.number}:${v.generation}:${ref}`)?.published??p.publishedFeedback??''}]:[];}),
+    answersVisible:Boolean(visibleGrading),answerKey:visibleGrading?s.answerKey||keys[s.number]||{}:{}, publishedFeedback:learnerFeedback(s.number,ref,published),
+    courseHistory:isFake?[]:[...data.sessions,...(data.courseSessions||[])].flatMap(v=>{const p=v.students.find(p=>p.studentRef===ref);return p?[{number:v.number,date:v.date,title:v.title,definition:v.definition,submitted:p.submitted,responses:p.submitted?p.detail.responses:p.draftResponses,gradingItems:[],publishedFeedback:learnerFeedback(v.number,ref,feedback.get(`${v.number}:${v.generation}:${ref}`)?.published??p.publishedFeedback??'')}]:[];}),
     testResults:isFake?[]:(data.testResults||[]).filter(v=>v.studentRef===ref),
     sessions:data.sessions.map(v => ({number:v.number,date:v.date,title:v.title,available:isFake || v.students.some(p => p.studentRef === ref)}))};
 }
@@ -51,9 +52,10 @@ function mergeEditable(s, state, responses) {
   return next;
 }
 function mutate(body) {
-  if (body.action === 'reset') {data=structuredClone(initial);fake=new Map();feedback=new Map();return {ok:true};}
+  if (body.action === 'reset') {data=applyReviewData(structuredClone(initial));fake=new Map();feedback=new Map();return {ok:true};}
   const s = byNumber(body.number);
   if (body.generation !== s.generation) throw new Error('Bài đã được thu hồi. Nháp cũ được giữ trong lịch sử của giảng viên; hãy mở bài hiện tại.');
+  if(['deadlineClock','deadlineExtend'].includes(body.action))return changeDeadline(s,body);
   if (body.action === 'release') {
     const r=s.releases.find(v => v.blockId===body.blockId);
     if (!r) throw new Error('Không tìm thấy phần bài.');
@@ -65,7 +67,7 @@ function mutate(body) {
     if(!template.definition?.blocks?.length||!template.title?.trim())throw Error('Bài thay thế chưa hợp lệ.');
     const history={title:s.title,generation:s.generation,retiredAt:new Date().toISOString(),definition:s.definition,answerKey:s.answerKey,feedback:Object.fromEntries([...feedback].filter(([key])=>key.startsWith(`${s.number}:${s.generation}:`))),
       students:structuredClone(s.students),fake:[...fake].filter(([key]) => key.startsWith(`${s.number}:${s.generation}:`))};
-    s.retired.push(history);s.generation++;
+    s.retired.push(history);s.generation++;s.closesAt=null;delete s.deadlineState;
     s.replacement={template:template.number};s.title=`Bài thay thế · ${template.title}`;
     s.definition=structuredClone(template.definition);s.answerKey=structuredClone(template.answerKey||keys[template.number]||{});s.showAnswers=false;
     s.releases=s.definition.blocks.map(b => ({blockId:b.blockId,status:'closed'}));
@@ -88,6 +90,8 @@ function mutate(body) {
     if(body.action==='final'||(body.action==='checkpoint'&&state.checkpoints.some(c=>c.blockId===body.blockId)))return {ok:true,participated:true,submitted:true,completeness:state.completeness};
     throw new Error('Bài đã nộp; chỉ được xem lại.');
   }
+  if(body.action==='checkpoint'&&state.checkpoints.some(c=>c.blockId===body.blockId))return {ok:true,participated:true,submitted:state.submitted,completeness:state.completeness};
+  if(['checkpoint','final'].includes(body.action)&&deadlineView(s).closed&&!(body.action==='final'&&allPartsSubmitted(s.definition,state.checkpoints)))throw Error('Phiếu đã hết hạn nhận bài. Nháp vẫn được giữ; hãy liên hệ giảng viên nếu cần gia hạn.');
   const next=mergeEditable(s,state,body.responses||{});
   if (body.failSave) throw new Error('Lỗi lưu được mô phỏng. Nội dung vẫn ở người học hiện tại; thử lưu lại để tiếp tục.');
   if (body.action==='draft') {
@@ -98,11 +102,12 @@ function mutate(body) {
     if (!block || s.releases.find(r => r.blockId===body.blockId)?.status!=='open') throw new Error('Phần này đang đóng. Nháp được giữ.');
     if (state.checkpoints.some(c => c.blockId===block.blockId)) return {ok:true};
     const incomplete=block.items.some(i => applicable(i,next) && blank(next[i.itemVersionId]));
-    const checkpoints=[...state.checkpoints,{blockId:block.blockId,submittedAt:new Date().toISOString(),completeness:incomplete?'partial':'complete'}];
+    const checkpoints=[...state.checkpoints,{blockId:block.blockId,submittedAt:deadlineView(s).now,completeness:incomplete?'partial':'complete'}];
     const gradingItems=grade(s.definition,next,s.answerKey||keys[s.replacement?.template||s.number]||{}),completed=allPartsSubmitted(s.definition,checkpoints);
     // Tính xong kết quả trước khi ghi; phần cuối và hoàn tất phiếu được nhận cùng lúc.
-    const completion=completed?{submitted:true,completeness:itemsOf(s.definition).some(i=>applicable(i,next)&&blank(next[i.itemVersionId]))?'partial':'complete'}:{};
+    const completion=completed?{submitted:true,submittedAt:deadlineView(s).now,completeness:itemsOf(s.definition).some(i=>applicable(i,next)&&blank(next[i.itemVersionId]))?'partial':'complete'}:{};
     Object.assign(state,{responses:next,checkpoints,participated:true,gradingItems},completion);
+    if(completed)updateAutoDeadline(s,fake);
     return {ok:true,participated:true,submitted:state.submitted,completeness:state.completeness};
   }
   if (body.action==='final') {
@@ -111,6 +116,7 @@ function mutate(body) {
     const completeness=itemsOf(s.definition).some(i=>applicable(i,next)&&blank(next[i.itemVersionId]))?'partial':'complete';
     const gradingItems=grade(s.definition,next,s.answerKey||keys[s.replacement?.template||s.number]||{});
     Object.assign(state,{responses:next,submitted:true,participated:true,completeness,gradingItems});
+    state.submittedAt=deadlineView(s).now;updateAutoDeadline(s,fake);
     return {ok:true,participated:true,completeness:state.completeness};
   }
   throw new Error('Thao tác không được hỗ trợ.');
@@ -118,7 +124,7 @@ function mutate(body) {
 
 return {
  exportPackage:()=>structuredClone({format:'thuy-review-data-v1',data,baseline:initial,keys,demoState:{fake:[...fake],feedback:[...feedback]}}),
- teacher:()=>structuredClone({...data,feedback:Object.fromEntries(feedback),fakePeople,simulationOnly:true}),
+ teacher:()=>structuredClone({...data,sessions:data.sessions.map(v=>({...v,deadline:deadlineView(v)})),feedback:Object.fromEntries(feedback),fakePeople,simulationOnly:true}),
  student:(number,ref,generation)=>{const session=byNumber(number);if(generation!=null&&Number(generation)!==session.generation){const error=Error('Bài cũ đã thu hồi. Hãy mở bài hiện tại.');error.status=410;throw error;}return structuredClone(studentData(session,ref||'demo-a'));},
  mutate,
  metadata:()=>({capturedAt:data.capturedAt})

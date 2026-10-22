@@ -6,7 +6,7 @@ const definition={blocks:[
   {blockId:'review',title:'Ôn tập',items:[{itemVersionId:'quiz',interactionType:'single_choice',options:[{id:'A',label:'A'},{id:'B',label:'B'}],graderType:'exact_option',maxScore:1,required:true,interactionConfig:{}},{itemVersionId:'conditional',interactionType:'short_text',graderType:'exact_text',maxScore:1,interactionConfig:{visibleWhenItemVersionId:'quiz',visibleWhenValue:'B'}}]},
   {blockId:'reflection',title:'Bài mới',items:[{itemVersionId:'writing',interactionType:'long_text',graderType:'none',maxScore:0,required:true,interactionConfig:{}}]}
 ]};
-const pack=()=>({format:'thuy-review-data-v1',keys:{},data:{className:'IC2305',sessions:[{number:10,generation:0,title:'Phiếu thử',definition:structuredClone(definition),answerKey:{quiz:{graderType:'exact_option',expectedOptionId:'A'},conditional:{graderType:'exact_text',expectedText:'Có'}},students:[],retired:[],releases:definition.blocks.map(b=>({blockId:b.blockId,status:'open'}))}]}});
+const pack=()=>({format:'thuy-review-data-v1',keys:{},data:{className:'IC2305',sessions:[{number:10,date:'2026-01-01',generation:0,title:'Phiếu thử',definition:structuredClone(definition),answerKey:{quiz:{graderType:'exact_option',expectedOptionId:'A'},conditional:{graderType:'exact_text',expectedText:'Có'}},students:[],retired:[],releases:definition.blocks.map(b=>({blockId:b.blockId,status:'open'}))}]}});
 const act=(store,body)=>store.mutate({number:10,generation:0,ref:'demo-a',...body});
 test('Nộp phần bất kỳ ghi nhận tham gia; đủ phần tự hoàn tất dù còn trống',()=>{
   const store=createDemoStore(pack());

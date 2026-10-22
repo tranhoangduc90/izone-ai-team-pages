@@ -102,3 +102,5 @@
   .student-screen :is(.studentDemoTools button,.studentDemoTools a,.studentDemoTools select,.collapsePart,.questionHint summary){min-height:44px}
 }
 @media(max-width:650px){.resultsEntries{gap:8px}.resultsEntry{padding:10px;gap:6px}.resultsEntry strong{font-size:14px;line-height:20px;gap:4px}.resultsEntry>span{font-size:12px;line-height:18px}.resultsEntry small{font-size:12px;line-height:18px}.resultsQuickBar button{font-size:12px;line-height:18px;padding:8px 4px}.teacher-screen.results-nav-pinned .detailPanel{max-height:none}}
+/* Hạn mô phỏng/gia hạn cùng kiểu điều khiển hiện có, đủ rộng và dễ bấm trên màn hẹp. */
+.deadlineFields{display:grid;gap:10px;margin:16px 0}.deadlineFields label{font-weight:600}.deadlineFields input,.deadlineFields textarea{width:100%;min-width:0;min-height:44px;border:1px solid var(--line);border-radius:6px;padding:10px;font:inherit;color:var(--ink);background:#fff}.deadlineFields textarea{resize:vertical}.deadlineHistory{margin-top:18px}.deadlineHistory summary{cursor:pointer;font-weight:600}.deadlineHistory article{border-top:1px solid var(--line);padding:12px 0}.sessionContext{margin-top:6px}

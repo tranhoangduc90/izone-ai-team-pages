@@ -4,6 +4,17 @@ Bản demo HTML/CSS/JavaScript thuần theo master 1.3 ngày 20/10/2026 của [T
 
 ## Hoàn thiện sau tổng kiểm 22/10/2026
 
+### Cập nhật sau vòng quyết định M01–M10
+
+- Mini Test thật được đọc trực tiếp từ Portal IC2305 ngày 22/10, ghép bằng mã người học đã đối chiếu roster máy chủ: Listening /10, Reading /13; 16 người có cả hai điểm, hai người trống. Giữ trống Writing Mini và các kết quả chưa có nguồn, không dùng điểm giả bù ô thiếu của Mini. Term Test giả vẫn có công tắc và nhãn riêng. `mini-test-results.mjs` là phần bổ sung; snapshot gốc không đổi.
+- Buổi 4 giữ tên/kỹ năng nguồn; lịch sử hai vai có giải thích “Ôn Listening; bài mới Reading và Speaking”. Riêng nhận xét nguồn cũ `gjjyuyuy` của Phạm Hồng Dịu buổi 4 ẩn khỏi mọi phản hồi/màn học viên; GV giữ nguyên văn cùng nhãn Cần xác minh, không gán tác giả Thủy.
+- Nháp nhận xét ghi rõ “Nháp trên thiết bị này”. Công bố vẫn là thao tác riêng. Bổ sung dữ liệu mới khi mở phiên cũ, giữ bài đã giao, bài làm thử, nháp và nhận xét; không cần Đặt lại demo.
+- Theo M08-B, hạn tự động là 22:00 ngày người thứ ba nộp đủ nội dung, khác hạn theo ngày học trong mẫu Thủy. Trước ngưỡng hiện chưa chốt hạn; nộp phần đầu trống vẫn ghi nhận tham gia, chưa chắc là bài đủ nội dung để xét ngưỡng.
+- Nút **Hạn và gia hạn** ở đầu màn giảng viên. Dùng **Thử sau hạn trong demo** để kiểm trạng thái khóa. Gia hạn toàn phiếu cần hạn mới/lý do, giữ hạn ban đầu và lịch sử; hai tab sửa cùng phiên bản bị báo xung đột. Phần đã nộp vẫn chỉ đọc, phần còn lại tiếp tục khi mở và còn hạn.
+- Các buổi lịch sử dùng **đồng hồ thử cố định lúc 21:00 ngày buổi học** để vẫn thử được bài. Nút thử sau hạn chuyển đồng hồ này tới sau mốc đóng; đây không phải giờ thực hay gia hạn trên máy chủ thật. Đồng hồ và lịch sử gia hạn được lưu trong phiên trình duyệt. Không dùng demo làm bằng chứng Portal hoặc phân quyền production.
+
+Kho IZONE cần bộ bài chuẩn mới và AI nhập câu mức B vẫn chưa được nối ở lát cập nhật này. Theo M09/M10, Đức duyệt bản hoàn thiện trước, dùng thử giao diện mới tại IC2305 một buổi rồi lấy góp ý Thủy; chưa tự chọn lịch, gửi link hoặc đổi hệ thống lớp thật.
+
 ### Lưu toàn bộ phiên demo
 
 GitHub Pages tự giữ bài đang giao, mở/đóng phần, quyền xem đáp án, bài làm thử theo từng người/buổi/lần giao, phần đã nộp, nhận xét nháp/công bố và lịch sử thu hồi. Tải lại trang, đóng hết tab hoặc thoát rồi mở lại trình duyệt vẫn đọc cùng phiên. Phiếu tự soạn và nội dung hộp AI cũng được giữ. Dòng cuối trang báo trạng thái lưu; không cần thêm nút lưu toàn phiên.
@@ -54,7 +65,7 @@ Writing có bộ lọc **Tất cả/Chưa có dữ liệu**, theo mẫu Thủy: 
 
 Kho bài có ba tab **Tất cả/Phiếu đã dùng/Của tôi**, bộ tìm tên kết hợp lọc kỹ năng (kể cả Chung), số lượng, cột nguồn và trạng thái rỗng/bỏ lọc. Tìm bài độc lập với tìm học viên. Chưa có dữ liệu kho IZONE nên không gán ba phiếu buổi 8–10 vào nguồn đó. Bấm tên bài mở đề và đáp án; mọi câu có điều kiện vẫn hiện kèm điều kiện nguồn, không mang nhãn bài làm/chờ chấm. Tạo bản riêng và sửa bài riêng nằm trong hộp xem trước; lưu đưa về Của tôi. Bài đã xuất bản trong demo chọn được khi thay bài; phiếu nguồn trong kho giữ nội dung lần giao đầu dù bài đang giao đã thay. Mọi thao tác soạn vẫn chỉ trong phiên demo.
 
-Kho Test có định nghĩa Mini Test, Term Test 1/2 nhưng chưa có roster/kết quả của IC2305 tại thời điểm đọc. Không tự gán Test vào buổi, tạo điểm hoặc viết nhận xét thay. Quiz Writing không thay kết quả Writing Test. Bản chấm Test hiện hành dùng band /9; nếu có dữ liệu phải giữ đơn vị nguồn, không tự đổi thành /10.
+Kho Test trong bản chụp 20/10 có định nghĩa Mini Test, Term Test 1/2 nhưng chưa trả roster/kết quả IC2305. Đã bổ sung Mini L/R thật từ nguồn Portal riêng đọc ngày 22/10 như mục đầu; chưa có Term hoặc Writing Mini. Không tự gán Test vào buổi, tạo điểm hoặc viết nhận xét thay. Quiz Writing không thay kết quả Writing Test. Writing Test dùng band /9; không tự đổi thành /10.
 
 ## Các màn và hành vi
 
