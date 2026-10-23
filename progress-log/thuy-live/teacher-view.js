@@ -62,18 +62,21 @@ export function renderThuyRoster(root,{dashboard,liveByStudent,mode='progress',q
   if(searchFocus){input.focus({preventScroll:true});if(input.type!=='search')input.setSelectionRange(caret,caret);}
 }
 
-export function mountThuyTeacherLayout(elements,{onMode,onClass}){
+export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   const workspace=document.querySelector('#teacherWorkspace'),side=document.querySelector('.thuy-side .teacher-tabs');
   const priorLabel=elements.assignmentSelect.closest('label'),priorParts=elements.blockControls.closest('section');
   const context=node('section','','thuy-class-context'),pickers=node('div','','thuy-class-pickers'),classes=node('select');classes.id='thuyClassSelect';classes.setAttribute('aria-label','Chọn lớp');classes.addEventListener('change',()=>onClass(classes.value));
   pickers.append(classes,elements.assignmentSelect);const nav=node('nav','','thuy-management-tabs');nav.setAttribute('aria-label','Quản lý lớp');nav.append(elements.dashboardTab,elements.overviewTab);context.append(pickers,nav);workspace.prepend(context);
-  const home=node('button','Quản lý lớp','tab active');home.type='button';home.addEventListener('click',()=>elements.dashboardTab.click());side.prepend(home);elements.createTab.textContent='Quản lý bài tập';
+  const home=node('button','Quản lý lớp','tab active');home.type='button';home.addEventListener('click',()=>onHome?onHome():elements.dashboardTab.click());side.prepend(home);elements.createTab.textContent='Quản lý bài tập';
   elements.dashboardTab.textContent='Theo dõi buổi học';
   elements.assignmentSelect.setAttribute('aria-label','Chọn buổi học');
   const brand=document.querySelector('.thuy-side .brand');brand.replaceChildren(node('b','IZONE'),node('small','IELTS CHIẾN LƯỢC'));
   brand.after(node('div','PROGRESS LOG','thuy-nav-label'));
   const foot=node('div','','thuy-side-foot');foot.append(node('small','Không gian giảng viên'));document.querySelector('.thuy-side').append(foot);
-  const top=document.querySelector('.teacher-header');top.replaceChildren(node('span','Quản lý lớp','thuy-breadcrumb'),elements.teacherName);
+  const top=document.querySelector('.teacher-header'),actions=node('div','','thuy-header-actions'),connection=node('span','','thuy-connection');
+  connection.id='teacherConnectionStatus';connection.setAttribute('aria-label','Trạng thái cập nhật');connection.textContent='Chọn lớp để theo dõi';
+  elements.refreshDashboardButton.textContent='Làm mới';actions.append(connection,elements.refreshDashboardButton,elements.teacherName);
+  top.replaceChildren(node('span','Quản lý lớp','thuy-breadcrumb'),actions);
   foot.append(document.querySelector('#teacherLogoutButton'));
   const learner=node('a','Cổng học viên ↗','tab');learner.id='thuyStudentPortal';learner.target='_blank';learner.rel='noopener';learner.href='./';side.append(learner);
   const dashboard=elements.dashboardPanel,hero=node('div','','thuy-session-header'),overview=node('section','','thuy-session-overview'),parts=node('section','','thuy-session-parts');
@@ -94,11 +97,11 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass}){
   elements.overviewPanel.querySelector('.section-heading').hidden=true;
   elements.overviewPanel.querySelector('#showAllJourneyClasses').closest('label').hidden=true;
   for(const text of elements.overviewPanel.querySelectorAll(':scope>p.muted'))text.hidden=true;
-  const extras=node('details','','thuy-extra-tools');extras.append(node('summary','Thông tin và công cụ của buổi'));extras.append(elements.dashboardSummary,elements.refreshDashboardButton);dashboard.append(extras);
+  const extras=node('details','','thuy-extra-tools');extras.append(node('summary','Thông tin và công cụ của buổi'));extras.append(elements.dashboardSummary);dashboard.append(extras);
   const count=node('span','','thuy-class-count');pickers.append(count);
   return {context,classes,home,count,learner,setPanel(panel){
-    context.hidden=panel==='create';home.classList.toggle('active',panel!=='create');
-    document.querySelector('.thuy-breadcrumb').textContent=panel==='create'?'Quản lý bài tập':'Quản lý lớp / '+(classes.selectedOptions[0]?.textContent||'');
+    context.hidden=['create','classes'].includes(panel);home.classList.toggle('active',panel!=='create');
+    document.querySelector('.thuy-breadcrumb').textContent=panel==='create'?'Quản lý bài tập':panel==='classes'?'Quản lý lớp':'Quản lý lớp / '+(classes.selectedOptions[0]?.textContent||'');
   }};
 }
 

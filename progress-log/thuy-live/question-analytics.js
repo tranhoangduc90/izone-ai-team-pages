@@ -3,6 +3,7 @@ import {bindDialogDismiss} from '../session-comments.js';
 import {questionPresentation} from './question-presentation.js?rev=20261022-parity-v1';
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 export function renderThuyAnalytics(root,analytics,{onStudent,definition}){
+ const selected=root.dataset.selectedItem,scrollTop=root.querySelector('.thuy-question-list')?.scrollTop||0,detailTop=root.querySelector('.thuy-question-detail')?.scrollTop||0;
  const sourceItems=new Map((definition?.blocks||[]).flatMap(block=>block.items).map(item=>[item.itemVersionId,item]));
  const header=node('div','','thuy-analytics-heading');header.append(node('h2','Thống kê theo câu hỏi'),node('small',`${analytics.submittedCount}/${analytics.rosterCount} học viên có bài nộp hiện hành`));
  const list=node('div','','thuy-question-workspace'),navigation=node('div','','thuy-question-list'),detail=node('div','','thuy-question-detail');list.append(navigation,detail);
@@ -26,8 +27,11 @@ export function renderThuyAnalytics(root,analytics,{onStudent,definition}){
    document.body.append(dialog);bindDialogDismiss(dialog);dialog.addEventListener('close',()=>{dialog.remove();if(open.isConnected)open.focus({preventScroll:true});},{once:true});dialog.showModal();
   });card.append(open);
   const choose=node('button','Câu '+number+' · '+display.title,'thuy-question-select');choose.type='button';choose.append(node('small',item.objective?item.counts.incorrect+'/'+item.counts.graded+(item.gradingUnit==='text_slots'?' có ô sai hoặc trống':' đã chấm sai'):item.counts.answered+'/'+item.counts.visible+' đã trả lời'));
-  choose.addEventListener('click',()=>{detail.replaceChildren(card);for(const button of navigation.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button===choose));});navigation.append(choose);if(!detail.childElementCount){detail.append(card);choose.setAttribute('aria-pressed','true');}
+  choose.dataset.itemId=item.itemVersionId;
+  choose.addEventListener('click',()=>{root.dataset.selectedItem=item.itemVersionId;detail.replaceChildren(card);for(const button of navigation.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button===choose));});navigation.append(choose);if(!detail.childElementCount){detail.append(card);choose.setAttribute('aria-pressed','true');}
  }
  if(!analytics.items.length)list.append(node('p','Chưa có câu hỏi để thống kê.','muted'));
  root.replaceChildren(header,list);
+ if(selected)navigation.querySelector('[data-item-id="'+CSS.escape(selected)+'"]')?.click();
+ navigation.scrollTop=scrollTop;detail.scrollTop=detailTop;
 }

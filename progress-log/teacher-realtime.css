@@ -1,0 +1,26 @@
+/* Kế thừa token/nhịp Thủy; chỉ bổ sung lối vào lớp và cụm cập nhật ở header 52px. */
+.thuy-teacher .teacher-header{position:sticky;top:0;z-index:60;gap:12px;flex-wrap:nowrap}
+.thuy-header-actions{display:flex;align-items:center;gap:12px;margin-left:auto;flex-shrink:0}
+.thuy-header-actions .button{min-height:32px;margin:0;font-size:12px;padding:5px 10px}
+.thuy-header-actions .teacher-name{max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thuy-connection{font-size:12px;color:var(--muted);white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.thuy-connection::before{content:'';display:block;width:7px;height:7px;border-radius:50%;background:#8a939b;flex:none}
+.thuy-connection[data-state=connected]{color:#18734c}
+.thuy-connection[data-state=connected]::before{background:#18734c}
+.thuy-connection[data-state=updating]::before,.thuy-connection[data-state=fallback]::before,.thuy-connection[data-state=reconnecting]::before,.thuy-connection[data-state=partial]::before{background:#b67515}
+.thuy-connection[data-state=offline]::before{background:#db0829}
+.thuy-connection.received-signal[data-state=connected]::before{animation:thuy-signal .65s ease-out}
+@keyframes thuy-signal{from{box-shadow:0 0 0 0 #18734c60}to{box-shadow:0 0 0 6px #18734c00}}
+.thuy-header-actions .is-refreshing::before{display:inline-block;content:'↻';margin-right:5px;animation:thuy-refresh 1s linear infinite}
+@keyframes thuy-refresh{to{transform:rotate(360deg)}}
+.thuy-class-list-tools{display:flex;gap:16px;align-items:center;justify-content:space-between;margin:16px 0}
+.thuy-class-list-tools nav{display:flex;gap:8px;flex-wrap:wrap}
+.thuy-class-list-tools input{width:240px;max-width:100%;height:32px}
+.thuy-class-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.thuy-class-card{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:8px;color:var(--navy);text-align:left;font:inherit;cursor:pointer}
+.thuy-class-card:hover{background:#edf4fa;border-color:var(--navy)}
+.thuy-class-card b{font-size:16px;line-height:24px}.thuy-class-card small{font-size:12px}
+.thuy-header-actions button:focus-visible,.thuy-class-card:focus-visible{outline:2px solid var(--navy);outline-offset:3px}
+@media(max-width:1050px){.thuy-header-actions .teacher-name{display:none}.thuy-class-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.thuy-teacher .teacher-header{min-height:52px;height:auto;padding:8px 12px;flex-wrap:wrap}.thuy-header-actions{gap:8px}.thuy-connection{font-size:11px}.thuy-class-grid{grid-template-columns:1fr}.thuy-class-list-tools{align-items:stretch;flex-direction:column}.thuy-class-list-tools input{width:100%}}
+@media(prefers-reduced-motion:reduce){.thuy-connection::before,.thuy-header-actions .is-refreshing::before{animation:none!important}}

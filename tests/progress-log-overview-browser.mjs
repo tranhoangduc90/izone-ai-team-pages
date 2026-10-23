@@ -81,8 +81,8 @@ test('E01/E02/O01/O04: Hành trình lớp, lịch ERP và chi tiết trên 390/7
         testResult:{title:'Term Test',reading:{correct:28,total:40},writing:{status:'pending',score:null}},testCoverage:'connected'}});
       external.push(req.url());return route.abort();
     });
-    await page.goto(base+'/progress-log/teacher.html');
-    await page.locator('#teacherWorkspace').waitFor({state:'visible'});
+    await page.goto(base+'/progress-log/teacher.html?presentation=legacy');
+    await page.locator('#teacherWorkspace').waitFor({state:'visible'}).catch(async error=>{throw new Error(error.message+' · '+await page.locator('#teacherNotice').textContent()+' · '+errors.join(';'));});
     // Lớp thử mã âm từ inventory admin không được chọn hoặc gửi vào API lớp thật.
     assert.equal(await page.locator('#overviewClassSelect').inputValue(),'1294','Overview chọn sẵn lớp ERP hợp lệ');
     assert.equal(await page.locator('#teacherClassSelect').inputValue(),'1294','Tạo phiếu thư viện chọn lớp hợp lệ');
@@ -91,7 +91,7 @@ test('E01/E02/O01/O04: Hành trình lớp, lịch ERP và chi tiết trên 390/7
 
     assert.equal(await page.locator('#journeyPlanSection').evaluate(e=>e.open),false);
     await page.getByRole('button',{name:'Hành trình lớp',exact:true}).click();
-    await page.locator('#overviewStatus').filter({hasText:'IC2305'}).waitFor();
+    await page.locator('#overviewStatus').filter({hasText:'IC2305'}).waitFor({state:'attached'}).catch(async error=>{throw new Error(error.message+' · '+await page.locator('#overviewStatus').textContent()+' · '+errors.join(';'));});
     await page.locator('#courseAnalyticsStatus').filter({hasText:'Đã đọc 0'}).waitFor();
     assert.equal(await page.locator('.overview-table tbody tr').count(),2);
     assert.equal(await page.locator('.overview-table tbody td').count(),62);
