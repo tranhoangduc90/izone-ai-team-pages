@@ -13,7 +13,7 @@ const assignmentId=uid(3),block=uid(4),item=uid(5);
 async function until(check,message,timeout=3000){const start=performance.now();while(performance.now()-start<timeout){if(await check())return;await new Promise(done=>setTimeout(done,40));}assert.fail(message);}
 
 async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
-  let count=14,revision=1,unavailable=false,writeCount=0,draftText='Bản đầu';const streams=new Set(),requests=[];
+  let count=14,revision=1,unavailable=false,breakNextRead=false,writeCount=0,draftText='Bản đầu';const streams=new Set(),requests=[];
   const students=()=>Array.from({length:17},(_,i)=>({studentRef:uid(100+i),name:`Học viên ${String(i+1).padStart(2,'0')}`,
     submissionId:i<count?uid(200+i):null,checkpoints:i<count?[{blockId:block}]:[],sessionComment:null,portalSync:null}));
   const definition={title:'Phiếu kiểm cập nhật',blocks:[{blockId:block,checkpoint:1,title:'Ôn tập',items:[
@@ -35,7 +35,16 @@ async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
         const path=u.pathname.slice('/api/learning'.length);requests.push(path);
         if(req.method!=='GET')writeCount++;
         if(path.endsWith('/events')){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-store'});res.write(`event: change\ndata: ${JSON.stringify({assignmentId,revision:String(revision)})}\n\n`);streams.add(res);res.on('close',()=>streams.delete(res));return;}
-        if(path.endsWith('/live-updates'))return unavailable?json({ok:false,message:'Nguồn cập nhật tạm lỗi'},503):json({ok:true,update:{assignmentId,revision:String(revision),generatedAt:new Date().toISOString(),full:true,changes:[],dashboard:dashboard(),live:live(),analytics:analytics()}});
+        if(path.endsWith('/live-updates')){
+          if(breakNextRead){
+            const mode=breakNextRead;breakNextRead=false;
+            if(mode==='html'){res.writeHead(200,{'Content-Type':'text/html'});res.end('<html>Phản hồi trung gian</html>');return;}
+            // Headers 200 đã về nhưng kết nối đứt giữa body: fetch thành công, json() thất bại.
+            res.writeHead(200,{'Content-Type':'application/json','Content-Length':'1000'});
+            res.write('{"ok":true,"update":');if(mode!=='stall')setTimeout(()=>res.destroy(),30);return;
+          }
+          return unavailable?json({ok:false,message:'Nguồn cập nhật tạm lỗi'},503):json({ok:true,update:{assignmentId,revision:String(revision),generatedAt:new Date().toISOString(),full:true,changes:[],dashboard:dashboard(),live:live(),analytics:analytics()}});
+        }
         if(path==='/teacher/options')return json({ok:true,reviewer:{name:'Giảng viên mẫu',email:'teacher@example.test'},capabilities:{liveUpdates:true},
           classes:[{class_id:'1294',class_name:'IC2305',class_status:'on_going'},{class_id:'1252',class_name:'IC2264',class_status:'on_going'},{class_id:'1001',class_name:'Lớp cũ',class_status:'completed'}],
           assignments:[{assignment_id:assignmentId,public_token:assignmentId,class_id:'1294',class_name:'IC2305',session_number:11,title:definition.title,status:'published',live_updates_enabled:liveAllowed}]});
@@ -60,6 +69,7 @@ async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
   return {page,origin,requests,errors,get writes(){return writeCount;},advance(value){count=value;revision++;draftText='Bản mới '+value;for(const stream of streams)stream.write(`event: change\ndata: ${JSON.stringify({assignmentId,revision:String(revision)})}\n\n`);},
     fail(value){unavailable=value;if(value)for(const stream of streams)stream.destroy();},
+    breakNextRead(mode='truncated'){breakNextRead=mode;},
     async close(){await context.close();await browser.close();for(const stream of streams)stream.destroy();server.closeAllConnections();await new Promise(done=>server.close(done));}};
 }
 
@@ -90,6 +100,39 @@ test('Live: 14 → 15 bài cập nhật trong panel, giữ nháp/câu chọn; L�
     await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('16/17'),'Làm mới không phục hồi số liệu');
     assert.equal(f.writes,0);assert.deepEqual(f.errors,[]);
     if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await f.page.evaluate(()=>scrollTo(0,0));await f.page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'live-panel.png'),fullPage:true});}
+  }finally{await f.close();}
+});
+
+for(const mode of ['truncated','html'])test(`Phản hồi 200 lỗi ${mode}: giữ số cũ/nháp và tự đọc lại, không báo mã 200`,{timeout:30000},async()=>{
+  const f=await fixture();try{
+    await f.page.goto(f.origin+'/progress-log/teacher.html#assignment='+assignmentId);
+    await f.page.locator('.thuy-roster tbody tr').first().waitFor();
+    await f.page.locator('[data-thuy-mode=results]').click();
+    await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('14/17'),'Chưa có baseline');
+    await f.page.locator(`[data-student="${uid(100)}"]`).click();
+    const comment=f.page.locator('#draftDialog .session-comment-editor textarea');
+    await comment.fill('Nháp giữ qua lần đọc gián đoạn');
+    f.breakNextRead(mode);f.advance(15);
+    await until(async()=>(await f.page.locator('#teacherConnectionStatus').getAttribute('data-state'))==='partial','Không thấy lỗi body bị đứt');
+    assert.match(await f.page.locator('#questionAnalyticsStatus').textContent(),/14\/17/,'Chưa được áp dụng số liệu từ body lỗi');
+    assert.doesNotMatch(await f.page.locator('#teacherConnectionStatus').getAttribute('title'),/mã 200/,'HTTP thành công không phải nguyên nhân đọc thất bại');
+    await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('15/17'),'Không tự đọc lại sau lỗi body trong khi SSE vẫn mở',5000);
+    assert.equal(await comment.inputValue(),'Nháp giữ qua lần đọc gián đoạn');
+    assert.equal(await f.page.locator('#draftDialog').isVisible(),true);
+    assert.equal(f.writes,0);assert.deepEqual(f.errors,[]);
+  }finally{await f.close();}
+});
+
+test('Body 200 treo quá 15 giây: phân biệt timeout và tự phục hồi, không kẹt cập nhật',{timeout:35000},async()=>{
+  const f=await fixture();try{
+    await f.page.goto(f.origin+'/progress-log/teacher.html#assignment='+assignmentId);
+    await f.page.locator('.thuy-roster tbody tr').first().waitFor();
+    f.breakNextRead('stall');f.advance(15);
+    await until(async()=>(await f.page.locator('#teacherConnectionStatus').getAttribute('data-error-code'))==='READ_TIMEOUT','Không xác định được timeout khi body treo',19000);
+    assert.match(await f.page.locator('#teacherConnectionStatus').getAttribute('title'),/Đọc dữ liệu quá lâu/);
+    await until(async()=>(await f.page.locator('#teacherConnectionStatus').getAttribute('data-state'))==='connected','Timeout không tự phục hồi',5000);
+    assert.equal(await f.page.locator('#teacherConnectionStatus').getAttribute('data-error-code'),null);
+    assert.equal(f.writes,0);assert.deepEqual(f.errors,[]);
   }finally{await f.close();}
 });
 
