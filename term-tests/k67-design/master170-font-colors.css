@@ -60,6 +60,7 @@
 }
 
 body,
+body.cbt-mode,
 body.design67,
 body.teacher-reading,
 body.reading-landing {
@@ -86,6 +87,8 @@ body.reading-landing {
   --design-green-soft: var(--k67-success);
   --cbt-navy: var(--k67-action);
   --cbt-blue: var(--k67-action);
+  --cbt-blue-soft: var(--k67-selected);
+  --cbt-line: var(--k67-line);
   --cbt-ink: var(--k67-ink);
   --cbt-muted: var(--k67-muted);
   --cbt-paper: var(--k67-surface);
@@ -267,3 +270,46 @@ body.teacher-reading .writing-feedback-source > .writing-feedback-text.writing-f
   border-color: var(--k67-structure);
   color: var(--k67-surface);
 }
+
+/* The retake uses the original CBT presentation, without the design67 skin.
+ * Preserve its gradient angle/stops and every control dimension.
+ */
+body.cbt-mode:not(.design67) .topbar {
+  background-image: linear-gradient(120deg, var(--k67-action), var(--k67-structure));
+  color: var(--k67-surface);
+}
+body.cbt-mode:not(.design67) .topbar :is(h1, h2, p, .cbt-class-label) { color: var(--k67-surface); }
+body.cbt-mode:not(.design67) :is(.cbt-toolbar, .cbt-content-viewport) { background-color: var(--k67-canvas); }
+body.cbt-mode:not(.design67) :is(.cbt-part-button, .cbt-tool-button, .cbt-choice) {
+  color: var(--k67-ink);
+  border-color: var(--k67-control);
+}
+body.cbt-mode:not(.design67) :is(.cbt-part-button, .cbt-tool-button):hover,
+body.cbt-mode:not(.design67) .cbt-part-button.is-active {
+  color: var(--k67-surface);
+  background-color: var(--k67-action);
+  border-color: var(--k67-action);
+}
+body.cbt-mode:not(.design67) :is(.cbt-choice:has(input:checked), .cbt-inline-answer.is-answered input, .cbt-select-answer.is-answered select, .cbt-question-button.is-answered, .cbt-review-question.is-answered) {
+  color: var(--k67-action);
+  background-color: var(--k67-selected);
+  border-color: var(--k67-action);
+}
+body.cbt-mode:not(.design67) .cbt-question-button.is-active {
+  color: var(--k67-surface);
+  background-color: var(--k67-action);
+  border-color: var(--k67-action);
+}
+body.cbt-mode:not(.design67) .cbt-question-card.is-answered { border-left-color: var(--k67-action); }
+body.cbt-mode:not(.design67) :is(.cbt-inline-answer, .cbt-select-answer).is-answered .cbt-blank-number { background-color: var(--k67-action); }
+body.cbt-mode:not(.design67) .cbt-flag-button:is(:hover, .is-flagged),
+body.cbt-mode:not(.design67) .cbt-blocked-shortcut-notice {
+  color: var(--k67-attention-ink);
+  background-color: var(--k67-attention);
+  border-color: var(--k67-attention-ink);
+}
+body.cbt-mode:not(.design67) .cbt-question-button.is-flagged { box-shadow: inset 0 -3px var(--k67-attention-ink); }
+body.cbt-mode:not(.design67) .cbt-review-question.is-flagged { box-shadow: inset 0 -4px var(--k67-attention-ink); }
+body.cbt-mode:not(.design67) .progress-step { color: var(--k67-muted); background-color: var(--k67-neutral); }
+body.cbt-mode:not(.design67) .progress-step.active { color: var(--k67-surface); background-color: var(--k67-action); }
+body.cbt-mode:not(.design67) .progress-step.done { color: var(--k67-success-ink); background-color: var(--k67-success); }
