@@ -2,7 +2,8 @@ import {renderClassAnalytics,renderStudentClassSummary} from './class-analytics-
 import {commentPanel,bindDialogDismiss} from './session-comments.js?rev=20261007-comments';
 import {commentEditor,journeyLinkManager,openStudentJourney,clearCommentDrafts} from './teacher-session-comments.js?rev=20261022-local-draft-v1';
 import {contentTitle,sessionHeading} from './session-presentation.js';
-import {createTeacherLiveUpdates,paintConnection} from './teacher-live-updates.js?rev=20261023-live-v1';
+import {createTeacherLiveUpdates,paintConnection} from './teacher-live-updates.js?rev=20261023-read-recovery-v2';
+import {readLearningResponse} from './api-response.js?rev=20261023-read-recovery-v2';
 import {renderTeacherClassPortal} from './teacher-class-portal.js?rev=20261023-live-v1';
 import {observeSubmissionWindow, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 /*
@@ -164,20 +165,17 @@ async function apiRequest(path, { method = 'GET', body, signal } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: 'no-store', signal
   }));
-  const payload = await response.json().catch(() => null);
-  if (generation !== state.authGeneration) throw new Error('Lượt đăng nhập đã thay đổi.');
-  if (!response.ok || !payload?.ok) {
-    const message = response.status === 401
-      ? 'Phiên đăng nhập đã hết hạn; hãy đăng nhập lại.'
-      : payload?.message || `Hệ thống trả về mã ${response.status}.`;
-    const error = new Error(message);
-    error.status = response.status;
-    if (response.status === 401 || (response.status === 403 && !path.startsWith('/teacher/form-drafts'))) {
+  let payload;
+  try{payload=await readLearningResponse(response,{signal});}
+  catch(error){
+    if (generation !== state.authGeneration) throw new Error('Lượt đăng nhập đã thay đổi.');
+    if (error.status === 401 || (error.status === 403 && !path.startsWith('/teacher/form-drafts'))) {
       clearTeacherLogin();
-      setNotice(message, 'error');
+      setNotice(error.message, 'error');
     }
     throw error;
   }
+  if (generation !== state.authGeneration) throw new Error('Lượt đăng nhập đã thay đổi.');
   return payload;
 }
 
