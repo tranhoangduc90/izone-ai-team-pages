@@ -1,0 +1,81 @@
+/* Các số đo từ màn Reading thực chiến đã duyệt; chỉ có hiệu lực khi cần đăng nhập.
+   Không nhập cả bộ skin thi để tránh đổi hai cột bài đọc và giao diện học viên. */
+body.materials-teacher-login {
+  overflow: auto;
+  min-width: 320px;
+  background: #f5f6f8;
+  color: #202b3b;
+}
+.materials-teacher-login > .app-header { display: none; }
+.materials-login-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 65px;
+  padding: 12px 28px 15px;
+  border-top: 3px solid #db0829;
+  border-bottom: 1px solid #dce1e7;
+  background: #fff;
+  color: #152b4e;
+}
+.materials-login-brand {
+  color: #db0829;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -.04em;
+  line-height: 1;
+  border-right: 1px solid #dce1e7;
+  padding-right: 24px;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.materials-login-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  margin: 0;
+  line-height: 1.3;
+}
+body.materials-teacher-login :is(#app, #teacher-app).materials-login-root {
+  display: block;
+  width: min(1160px, calc(100% - 40px));
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  padding: 0 0 40px;
+  margin: auto;
+}
+.materials-login-hero { display: flex; padding: 32px 0 24px; }
+.materials-login-kicker {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  color: #db0829;
+}
+.materials-login-hero h1 { font-size: 32px; line-height: 1.3; font-weight: 700; margin-bottom: 16px; }
+.materials-login-title { font-weight: 600; margin: 0 0 12px; font-size: 16px; line-height: 1.5; }
+.materials-login-copy { color: #586477; font-size: 15px; line-height: 1.65; margin-bottom: 0; }
+.materials-login-card {
+  background: #fff;
+  border: 1px solid #dce1e7;
+  border-radius: 12px;
+  box-shadow: none;
+  padding: 30px 32px;
+}
+.materials-login-remember { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 12px; font-weight: 800; line-height: 1.35; color: #667085; }
+.materials-login-remember input { width: 16px; height: 16px; min-height: 16px; margin: 0; padding: 0; flex: none; accent-color: #152b4e; }
+.materials-login-card #google-button { display: flex; min-height: 40px; }
+.materials-login-card #teacher-error { overflow-wrap: anywhere; }
+.materials-login-card #teacher-error:not(:empty) { color: #a32432; margin-top: 16px; }
+@media (max-width: 760px) {
+  .materials-login-card { padding: 24px; }
+}
+@media (max-width: 620px) {
+  .materials-login-header { min-height: 58px; padding: 10px 16px; gap: 12px; }
+  .materials-login-header h1 { font-size: 16px; }
+  .materials-login-brand { font-size: 21px; padding-right: 13px; }
+  body.materials-teacher-login :is(#app, #teacher-app).materials-login-root { width: calc(100% - 32px); }
+  .materials-login-hero h1 { font-size: 28px; }
+}
