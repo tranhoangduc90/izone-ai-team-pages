@@ -77,13 +77,14 @@ test('K67 renders real Source Sans 3, role colors and preserves the existing typ
 
 test('K67 font/color CSS declares no layout, type-scale or interaction changes',async()=>{
  const css=(await readFile(join(root,'term-tests/k67-design/master170-font-colors.css'),'utf8')).replace(/\/\*[\s\S]*?\*\//g,'');
- const allowed=new Set(['font-family','color','background-color','border-color','border-top-color','outline-color','accent-color','box-shadow']);
+ const allowed=new Set(['font-family','color','background-color','border-color','border-top-color','border-left-color','outline-color','accent-color','box-shadow','background-image']);
  for(const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
   if(match[1].includes('@font-face'))continue;
   for(const declaration of match[2].split(';')){
    if(!declaration.trim())continue;const property=declaration.slice(0,declaration.indexOf(':')).trim();
    assert(property.startsWith('--')||allowed.has(property),'Outside font/color scope: '+property);
-   if(property==='box-shadow')assert.equal(declaration.trim(),'box-shadow: inset 0 -3px var(--k67-attention-ink)');
+   if(property==='box-shadow')assert.match(declaration.trim(),/^box-shadow: inset 0 -(3|4)px var\(--k67-attention-ink\)$/);
+   if(property==='background-image')assert.equal(declaration.trim(),'background-image: linear-gradient(120deg, var(--k67-action), var(--k67-structure))');
   }
  }
 });
@@ -100,6 +101,7 @@ test('K67 entry fonts load locally; shared demo and K56 never load this styleshe
   for(const entry of ['','teacher/','term-test-1-listening-retake/']){
    await page.goto(server.base+'term-tests/'+entry);await page.evaluate(()=>document.fonts.ready);
    assert.match(await page.locator('body').evaluate(e=>getComputedStyle(e).fontFamily),/Source Sans 3/);
+   assert.equal(await page.locator('body').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(245, 246, 248)',entry+' canvas role');
    assert.equal(await page.locator('link[href*="k67-design/master170-font-colors.css"]').count(),1);
   }
   for(const entry of ['demo/','term-test-1-k56-computer-based/','teacher-k56/','substitute-test-1-k67-computer-based/']){
@@ -155,5 +157,29 @@ test('Landing and teacher legacy selectors use the same role colors',async()=>{
     await page.locator('#scroll').hover();await page.waitForFunction(()=>getComputedStyle(document.querySelector('#scroll')).backgroundColor==='rgb(16, 33, 60)');
    }
   }
+ }finally{await context.close();}
+});
+
+test('Retake CBT colors preserve its original gradient and flag geometry',async()=>{
+ const context=await browser.newContext();
+ try{
+  await context.route('**/*',r=>r.request().url().startsWith(server.base)?r.continue():r.abort());
+  const page=await context.newPage();
+  await page.route(server.base+'retake-roles',r=>r.fulfill({contentType:'text/html',body:`<!doctype html><html><head>${['shared/styles.css','term-test-2-computer-based/styles.css','k67-design/master170-font-colors.css'].map(s=>`<link rel="stylesheet" href="${server.base}term-tests/${s}">`).join('')}</head><body class="cbt-mode"><header class="topbar"><h1>Thi bù Listening</h1></header><main><button id="flag" class="cbt-question-button is-flagged">1</button><button id="review" class="cbt-review-question is-flagged">2</button><button id="answered" class="cbt-question-button is-answered">3</button><div id="card" class="cbt-question-card is-answered">Nội dung giữ nguyên</div></main></body></html>`}));
+  await page.goto(server.base+'retake-roles');await page.evaluate(()=>document.fonts.ready);
+  const result=await page.evaluate(()=>{
+   const nodes=[...document.querySelectorAll('body,header,h1,main,button,#card')];
+   const geometry=s=>['fontSize','fontWeight','fontStyle','lineHeight','padding','margin','borderWidth','borderRadius','display'].map(p=>s[p]).concat(s.boxShadow.replace(/rgba?\([^)]*\)/g,'COLOR'));
+   const after=nodes.map(e=>geometry(getComputedStyle(e)));
+   const gradient=getComputedStyle(document.querySelector('header')).backgroundImage.replace(/rgba?\([^)]*\)/g,'COLOR');
+   const colors={heading:getComputedStyle(document.querySelector('h1')).color,canvas:getComputedStyle(document.body).backgroundColor,selected:getComputedStyle(document.querySelector('#answered')).backgroundColor};
+   const sheet=[...document.styleSheets].find(s=>s.href?.includes('master170-font-colors.css'));sheet.disabled=true;
+   const before=nodes.map(e=>geometry(getComputedStyle(e)));
+   const oldGradient=getComputedStyle(document.querySelector('header')).backgroundImage.replace(/rgba?\([^)]*\)/g,'COLOR');
+   return{after,before,gradient,oldGradient,colors};
+  });
+  assert.deepEqual(result.after,result.before);
+  assert.equal(result.gradient,result.oldGradient);
+  assert.deepEqual(result.colors,{heading:'rgb(255, 255, 255)',canvas:'rgb(245, 246, 248)',selected:'rgb(237, 241, 247)'});
  }finally{await context.close();}
 });
