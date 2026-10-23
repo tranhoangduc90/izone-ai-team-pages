@@ -3,12 +3,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const code=fs.readFileSync(new URL('../shared/teacher-single-sign-on.js',import.meta.url),'utf8');
+const code=fs.readFileSync(process.env.SSO_SCRIPT||new URL('../shared/teacher-single-sign-on.js',import.meta.url),'utf8');
 const origin='https://ducizone.ddns.net';
 function setup(handler){
- const calls=[];
- const box={URL,Headers,Request,Response,AbortSignal,location:{href:'https://tranhoangduc90.github.io/izone-ai-team-pages/'},localStorage:{setItem(){}},addEventListener(){},fetch:async(input,options)=>{calls.push({url:String(input),options});return handler(String(input),options);}};
- box.window=box;vm.createContext(box);vm.runInContext(code,box);return {box,calls};
+ const calls=[],listeners=new Map();
+ const box={URL,Headers,Request,Response,AbortSignal,location:{href:'https://tranhoangduc90.github.io/izone-ai-team-pages/'},localStorage:{setItem(){}},addEventListener(name,fn){listeners.set(name,fn);},fetch:async(input,options)=>{calls.push({url:String(input),options});return handler(String(input),options);}};
+ box.window=box;vm.createContext(box);vm.runInContext(code,box);return {box,calls,listeners};
 }
 const response=status=>({status,ok:status>=200&&status<300,json:async()=>({ok:status===200})});
 test('First teacher read confirms shared identity; student requests and writes are untouched',async()=>{
@@ -79,4 +79,88 @@ test('Term67 dùng HTTPS 18869 thật: khôi phục, nối Google và đăng xu�
  for(const url of [api+'/student/session','https://ducizone.ddns.net:19999/term-mini-k67-api/api/auth/session','https://ducizone.ddns.net:18869/mapping-api/api/auth/session']){
   const before=calls.length;await box.fetch(url);assert.equal(calls.length,before+1);assert.equal(calls.at(-1).url,url);
  }
+});
+
+test('Signed-out GET scans each legacy source once; the next request can discover a new login',async()=>{
+ let signedIn=false;
+ const {box,calls}=setup(url=>response(signedIn?200:401));
+ const url=origin+'/reading-practice-api/api/teacher/classes';
+ assert.equal((await box.fetch(url)).status,401);
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,1);
+ assert.equal(calls.filter(c=>c.url.includes('/shared-session')).length,9);
+ signedIn=true;assert.equal((await box.fetch(url)).status,200);
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,2);
+});
+
+test('Concurrent teacher reads coalesce restore; a native 401 after success can still retry',async()=>{
+ let release;const ready=new Promise(r=>release=r);let native=0;
+ const {box,calls}=setup(async url=>{
+  if(url.includes('/restore/')){await ready;return response(200);}
+  return response(++native===1?401:200);
+ });
+ const first=box.fetch(origin+'/reading-practice-api/api/teacher/classes');
+ const second=box.fetch(origin+'/reading-practice-api/api/teacher/result/id');
+ release();assert.equal((await first).status,200);assert.equal((await second).status,200);
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,2);
+ assert.equal(native,3);
+});
+
+test('Cross-tab account change starts fresh work and rejects an older in-flight read',async()=>{
+ let release,restores=0;
+ const old=new Promise(r=>release=r);
+ const {box,listeners}=setup(async url=>{
+  if(url.includes('/restore/')&&++restores===1)await old;
+  return response(200);
+ });
+ const url=origin+'/reading67-materials/api/reading-skills67/teacher/classes';
+ const first=box.fetch(url);const rejected=assert.rejects(first,/Phiên giảng viên vừa thay đổi/);
+ listeners.get('storage')({key:'izone:teacher-sso-login'});
+ const second=box.fetch(url);
+ // Resolve the old request only after the new generation has started its own restore.
+ await new Promise(r=>setImmediate(r));const count=restores;
+ const result=second.catch(e=>e);release();await rejected;
+ assert.equal(count,2);assert.equal((await result).status,200);
+});
+
+test('A source outage is retried on the next request, never retained as signed out',async()=>{
+ let offline=true;
+ const {box}=setup(url=>response(url.includes('/restore/')?401:offline?503:401));
+ const url=origin+'/reading-practice-api/api/teacher/classes';
+ await assert.rejects(box.fetch(url),/Chưa xác minh/);
+ offline=false;assert.equal((await box.fetch(url)).status,401);
+});
+
+test('A late old 401 cannot discard source discovery already running for the new account',async()=>{
+ let releaseOld,releaseSource,scans=0;
+ const old=new Promise(r=>releaseOld=r),sources=new Promise(r=>releaseSource=r);
+ const {box,listeners}=setup(async url=>{
+  if(url.endsWith('/restore/reading'))await old;
+  if(url.endsWith('/shared-session')){scans++;await sources;}
+  return response(401);
+ });
+ const first=box.fetch(origin+'/reading-practice-api/api/teacher/classes');
+ const rejected=assert.rejects(first,/Phiên giảng viên vừa thay đổi/);
+ listeners.get('storage')({key:'izone:teacher-sso-login'});
+ const second=box.fetch(origin+'/listening-practice-api/api/teacher/classes');
+ await new Promise(r=>setImmediate(r));assert.equal(scans,1);
+ releaseOld();await rejected;
+ const third=box.fetch(origin+'/reading67-materials/api/reading-skills67/teacher/classes');
+ await new Promise(r=>setImmediate(r));const parallelScans=scans;
+ releaseSource();await Promise.all([second,third]);assert.equal(parallelScans,1);
+});
+
+test('An old native 401 after an account change is rejected without borrowing the new account',async()=>{
+ let native=0,release;
+ const wait=new Promise(r=>release=r);
+ const {box,calls,listeners}=setup(async url=>{
+  if(url.includes('/restore/'))return response(200);
+  if(++native===2){await wait;return response(401);}
+  return response(200);
+ });
+ const url=origin+'/reading-practice-api/api/teacher/classes';
+ await box.fetch(url);
+ const old=box.fetch(url),rejected=assert.rejects(old,/Phiên giảng viên vừa thay đổi/);
+ listeners.get('storage')({key:'izone:teacher-sso-login'});release();await rejected;
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,1);
+ assert.equal(native,2);
 });
