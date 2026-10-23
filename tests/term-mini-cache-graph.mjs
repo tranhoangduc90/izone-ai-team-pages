@@ -9,7 +9,7 @@ for(const slug of ['term-test-1','term-test-2','mini-test-lesson-5','term-test-1
   const html=fs.readFileSync(`term-tests/${slug+delivery}/index.html`,'utf8');
   const target=delivery?'bootstrap.js':'shared/app.js';
   const urls=[...html.matchAll(/src="([^"]+)"/g)].map(m=>m[1]).filter(url=>url.includes(target));
-  const expectedVersion=delivery&&slug.endsWith('k56')?'20261023-pages-audio1':version;
+  const expectedVersion=delivery?'20261024-cf512-1':version;
   assert.equal(urls.length,1);assert.equal(new URL(urls[0],'https://fixture.invalid').searchParams.get('v'),expectedVersion);
  });
 }

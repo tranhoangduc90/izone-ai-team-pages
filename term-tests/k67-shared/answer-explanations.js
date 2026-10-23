@@ -37,9 +37,15 @@
         if (!substitute && !/^term-test-2-96kbps-[0-9a-f]{16}\.mp3$/.test(descriptor.asset)) throw Error('Sai nguồn audio');
         const source = substitute ? '../substitute-test-1-k67-computer-based/assets/private/listening-substitute-test-1-k67.mp3'
           : '../k67-audio-assets/' + descriptor.asset;
-        const response = await fetch(new URL(source, scriptBase), { signal, cache: 'force-cache' });
-        if (!response.ok) throw Error('Không tải được audio');
-        const bytes = await response.arrayBuffer();
+        const {downloadReview} = await import(new URL('../../shared/audio/transport.mjs?v=20261023-cf512-1', scriptBase));
+        const preferred = await downloadReview(new URL(source, scriptBase).href, descriptor.sha256, {signal});
+        let bytes;
+        if (preferred) bytes = await preferred.arrayBuffer();
+        else {
+          const response = await fetch(new URL(source, scriptBase), { signal, cache: 'force-cache' });
+          if (!response.ok) throw Error('Không tải được audio');
+          bytes = await response.arrayBuffer();
+        }
         const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
         if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
         if (hash !== descriptor.sha256) throw Error('Audio không khớp phiên bản lời giải');

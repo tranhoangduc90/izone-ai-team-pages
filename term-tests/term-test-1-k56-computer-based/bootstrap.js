@@ -631,7 +631,7 @@
       const previewUrl = appConfig.API_BASE_URL + session.previewAudioUrl;
       publicAudioManifest = session.audioManifest?.envelopeVersion === 'MP3' ? session.audioManifest : null;
       const publicStore = publicAudioManifest
-        ? await import('../k56-shared/public-audio.mjs?v=20261023-pages-audio1') : null;
+        ? await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1') : null;
       const [encrypted, previewResponse] = await Promise.all([
         (publicStore ? publicStore.downloadSessionAudio.bind(null, publicAudioManifest) : audioLoader.downloadAudio.bind(null, audioUrl))({
           signal: downloadController.signal,
@@ -789,7 +789,7 @@
 
   async function decryptOfficialAudio(blob, response) {
     if (publicAudioManifest) {
-      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261023-pages-audio1');
+      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1');
       return plaintextAudio(blob, publicAudioManifest);
     }
     const envelope = new Uint8Array(await blob.arrayBuffer());
