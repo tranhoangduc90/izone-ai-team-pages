@@ -110,6 +110,7 @@
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
   let encryptedAudio = null;
+  let publicAudioManifest = null;
   let previewObjectUrl = '';
   let officialObjectUrl = '';
   let previewHeard = false;
@@ -547,39 +548,42 @@
     elements.bootstrapRetry.hidden = true;
     elements.bootstrapPreview.disabled = true;
     elements.bootstrapVolume.disabled = true;
-    elements.bootstrapDownloadStatus.textContent = 'Đang tải audio đã mã hóa...';
+    elements.bootstrapDownloadStatus.textContent = 'Đang tải audio...';
     elements.bootstrapDownloadProgress.max = 1;
     elements.bootstrapDownloadProgress.value = 0;
     try {
       const audioUrl = appConfig.API_BASE_URL + session.encryptedAudioUrl;
       const previewUrl = appConfig.API_BASE_URL + session.previewAudioUrl;
+      publicAudioManifest = session.audioManifest?.envelopeVersion === 'MP3' ? session.audioManifest : null;
+      const publicStore = publicAudioManifest
+        ? await import('../k56-shared/public-audio.mjs?v=20261023-pages-audio1') : null;
       const [encrypted, previewResponse] = await Promise.all([
-        audioLoader.downloadAudio(audioUrl, {
+        (publicStore ? publicStore.downloadSessionAudio.bind(null, publicAudioManifest) : audioLoader.downloadAudio.bind(null, audioUrl))({
           signal: downloadController.signal,
           onProgress: ({ loaded, total, complete }) => {
             if (total > 0) {
               elements.bootstrapDownloadProgress.max = total;
               elements.bootstrapDownloadProgress.value = loaded;
               const percent = Math.min(100, Math.round(loaded * 100 / total));
-              elements.bootstrapDownloadStatus.textContent = `${complete ? 'Đã tải đủ audio mã hóa' : 'Đang tải audio mã hóa'} · ${percent}% · ${formatBytes(loaded)} / ${formatBytes(total)}`;
+              elements.bootstrapDownloadStatus.textContent = `${complete ? 'Đã tải đủ audio' : 'Đang tải audio'} · ${percent}% · ${formatBytes(loaded)} / ${formatBytes(total)}`;
             } else {
               elements.bootstrapDownloadProgress.removeAttribute('value');
-              elements.bootstrapDownloadStatus.textContent = `Đang tải audio mã hóa · ${formatBytes(loaded)}`;
+              elements.bootstrapDownloadStatus.textContent = `Đang tải audio · ${formatBytes(loaded)}`;
             }
           }
         }),
-        fetch(previewUrl, { cache: 'no-store', signal: downloadController.signal })
+        publicStore ? Promise.resolve(null) : fetch(previewUrl, { cache: 'no-store', signal: downloadController.signal })
       ]);
-      if (!previewResponse.ok) throw new Error('Không tải được bản nghe thử.');
+      if (!publicStore && !previewResponse.ok) throw new Error('Không tải được bản nghe thử.');
       encryptedAudio = encrypted;
-      const previewBlob = await previewResponse.blob();
+      const previewBlob = publicStore ? encrypted : await previewResponse.blob();
       revokePreview();
       previewObjectUrl = URL.createObjectURL(previewBlob);
       previewAudio.src = previewObjectUrl;
       previewAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       elements.bootstrapDownloadProgress.max = 1;
       elements.bootstrapDownloadProgress.value = 1;
-      elements.bootstrapDownloadStatus.textContent = `Đã tải đủ audio mã hóa · 100% · ${formatBytes(encrypted.size)}`;
+      elements.bootstrapDownloadStatus.textContent = `Đã tải đủ audio · 100% · ${formatBytes(encrypted.size)}`;
       elements.bootstrapDownloadStep.dataset.state = 'complete';
       elements.bootstrapVolume.disabled = false;
       if (resuming) {
@@ -643,6 +647,7 @@
           attemptMode:'cbt',
           attemptToken: state.attemptToken || undefined,
           examSessionToken: state.examSessionToken || undefined,
+          publicAudioVersion: 1,
           legacyElapsedSeconds: legacyListeningResume ? legacyUiState.audioTime : 0
         })
       });
@@ -712,6 +717,10 @@
   }
 
   async function decryptOfficialAudio(blob, response) {
+    if (publicAudioManifest) {
+      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261023-pages-audio1');
+      return plaintextAudio(blob, publicAudioManifest);
+    }
     const envelope = new Uint8Array(await blob.arrayBuffer());
     const magic = new TextDecoder().decode(envelope.subarray(0, 5));
     if (magic !== response.audioEnvelope.magic) throw new Error('Gói audio mã hóa không hợp lệ.');
