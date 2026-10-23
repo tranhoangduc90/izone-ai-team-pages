@@ -50,7 +50,8 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(css, /\.teacher-shell \.card/);
   assert.match(html, /id="questionLibrary"/);
   assert.match(html, /id="attendanceReason"[^>]+minlength="3"/);
-  assert.match(app, /\/teacher\/question-library/);
+  // Kho câu hỏi được tải tại bộ soạn, không còn chặn tải cổng lớp.
+  assert.match(await source('teacher-form-library.js'), /\/teacher\/form-library/);
   assert.match(app, /\/teacher\/reflection-forms\/publish/);
   assert.match(app, /attendanceOperationId = crypto\.randomUUID\(\)/);
   assert.match(app, /operationId:\s*state\.attendanceOperationId/);

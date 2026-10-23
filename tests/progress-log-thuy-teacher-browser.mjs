@@ -51,7 +51,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
  });
  try{
   await page.goto(origin+'/progress-log/teacher.html#assignment='+id);await page.locator('.thuy-roster tbody tr').first().waitFor();
-  assert.ok(page.url().includes('/teacher-thuy.html#assignment='+id));
+  assert.ok(page.url().includes('/teacher.html#assignment='+id),'Cổng chung giữ deep link và không chuyển sang trang theo tên giảng viên');
   assert.equal(await page.locator('.thuy-roster th').filter({hasText:'Điểm danh'}).count(),1);
   assert.equal(await page.locator('.thuy-roster th').filter({hasText:'Portal'}).count(),0);
   await page.locator('.thuy-roster').getByText('Đã điểm danh',{exact:true}).waitFor();

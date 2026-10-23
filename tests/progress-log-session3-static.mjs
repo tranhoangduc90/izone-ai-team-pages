@@ -29,7 +29,7 @@ test('ô Vấn đề khác vẫn chỉ hiện theo lựa chọn điều khiển 
 
 test('học viên và giảng viên dùng số câu hiển thị của bản gốc', () => {
   assert.match(app, /item\.displayNumber \|\| String\(item\.position\)/);
-  assert.match(teacher, /item\.displayNumber \|\| item\.position/);
+  assert.match(teacher, /item\.displayNumber\s*\|\|\s*item\.position/);
 });
 
 test('dashboard không tạo thẻ rỗng cho câu phụ đang không áp dụng', () => {

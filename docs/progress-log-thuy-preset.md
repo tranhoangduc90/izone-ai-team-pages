@@ -1,6 +1,6 @@
 # Preset chuẩn giao diện Progress Log · Thủy
 
-**Mã chuẩn:** `progress-log-thuy-v1` · **Hồ sơ áp dụng production:** 1.2, ngày 22/10/2026.
+**Mã chuẩn:** `progress-log-thuy-v1` · **Hồ sơ áp dụng production:** 1.3, cập nhật ngày 23/10/2026.
 
 Đây là chuẩn cần đạt, không phải giấy xác nhận bản đang chạy đã đạt. Kế thừa DESIGN, screens, components trong master ngày 20/10 và các lựa chọn trực tiếp Q1–Q8/M01–M10 cùng phản hồi sau đó. Bản public trong repo Pages là bản xuất từ tài liệu này; không sửa hai bản độc lập.
 
@@ -35,6 +35,13 @@ Không lấy UI production hiện tại làm baseline để hợp thức hóa sa
 Responsive nguồn đã đo: sidebar170px ở1024,140px ở768; ≤650 chuyển điều hướng lên trên. Dưới760 học viên có hai mục điều hướng ghim dưới và chừa safe-area. Số đo chính xác theo rule cuối và cùng viewport, không lấy rule cũ bị ghi đè. Ở1440 nội dung trái224/phải1416; ở1742 sidebar200, nội dung x295/rộng1352 đã đo lại ngày22/10.
 
 ## 3. Khung điều hướng và quản lý lớp
+
+- Cổng chung là `teacher.html`; `teacher-thuy.html` giữ như lối vào tương thích cùng renderer. Không ép tài khoản vào Thủy hoặc lớp1294, không tạo trang đăng nhập riêng theo giảng viên. Link phiếu có quyền vẫn mở thẳng đúng phiếu.
+- Danh sách lớp lấy theo quyền máy chủ, có Đang học/Lịch sử/Tất cả và Tìm lớp. Giữ lớp được cấp bổ sung; lớp chưa có phiếu vẫn hiện Chưa giao bài. Tải lớp không phụ thuộc việc tải thành công Kho bài tập.
+- Giữ đăng nhập chung Google, 90 ngày không hoạt động/trần365 ngày và đăng xuất chung; phiên xác minh danh tính, từng API vẫn kiểm quyền lớp/bài. Không giữ token trong URL hoặc browser storage.
+- Header52px có **Làm mới** và tín hiệu kết nối ở bên phải, giữ vị trí khi cuộn và khi panel học viên đang mở. Làm mới dùng chung bộ điều phối với tự cập nhật; không nộp lại bài hoặc gửi lại điểm danh.
+- Chỉ hiện xanh **Đang kết nối** khi đã nhận tín hiệu máy chủ hợp lệ và dữ liệu màn đã theo kịp. Chấm nở nhẹ khi nhận ACK/heartbeat thật, rồi đứng yên; reduced-motion tắt hiệu ứng. Đang cập nhật/Chưa cập nhật đủ/Đang kết nối lại/Mất kết nối và chế độ dự phòng phải phân biệt được bằng chữ. Heartbeat không được che lỗi đọc một vùng.
+- Tự cập nhật và Làm mới giữ người/câu đang xem, bộ lọc, vị trí và ô nhận xét đang gõ. Response thuộc lớp/buổi/phiên cũ không được ghi đè màn mới. Giữ số cũ khi lỗi, ghi giờ đọc cuối và cho thử lại.
 
 - Sidebar: **Quản lý lớp**, **Quản lý bài tập**, **Cổng học viên ↗**. Chỉ mục hiện tại active. Không để Các lớp và Kho bài tập cùng sáng; không lặp logo ở header.
 - Đầu Quản lý lớp: chọn lớp, chọn buổi và tổng số học viên; bên phải **Theo dõi buổi học / Hành trình lớp**. Giữ đúng lớp/buổi khi đổi màn hoặc mở editor.
