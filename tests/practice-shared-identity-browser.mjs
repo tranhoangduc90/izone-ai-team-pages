@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
 const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const root = fileURLToPath(new URL('../', import.meta.url)), out = process.env.IDENTITY_EVIDENCE_DIR;
 assert.ok(out); await mkdir(out, { recursive: true });
@@ -29,7 +30,7 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ channel: 'msedge', headless: true }), results = [];
 const pageUrl = (kind, shared = false) => `${origin}/${kind}-practice/?${shared ? 'lesson=7' : `documentId=${doc}`}#login${shared ? '' : '?entry=fixture-entry-token'}`;
-async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false, identityDelay = 0, legacy, legacySamePerson = false, forgotten = false, legacyFailure = false, sharedListening = false, excludedRoster = false, otherClass = false, ambiguous = false, missingIdentity = false } = {}) {
+async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false, identityDelay = 0, legacy, legacySamePerson = false, forgotten = false, legacyFailure = false, sharedListening = false, excludedRoster = false, otherClass = false, ambiguous = false, missingIdentity = false, delayRoster = false, baseRevision } = {}) {
   const ctx = await browser.newContext({ serviceWorkers: 'block' }), errors = [], requests = [], external = [], sessions = new Map();
   let releaseLogin, loginSeen;
   const loginArrived = new Promise(r => loginSeen = r), gate = new Promise(r => releaseLogin = r);
@@ -50,10 +51,12 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
   await ctx.route('**/*', async route => {
     const req = route.request(), url = new URL(req.url());
     if (/\.(mp3|wav|m4a|enc|ogg)$/.test(url.pathname)) { external.push('audio blocked'); return route.abort(); }
+    if (baseRevision && url.origin === origin && /^\/(reading|listening)-practice\/app.js$/.test(url.pathname)) return route.fulfill({contentType:'text/javascript',body:execFileSync('git',['show',baseRevision+':'+url.pathname.slice(1)],{cwd:root})});
     if (url.origin === origin && !url.pathname.startsWith('/api/')) return route.continue();
     const headers = { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' };
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     const body = req.postDataJSON(); requests.push({ path: url.pathname, body });
+    if(process.env.ENTRY_BENCHMARK)await new Promise(resolve=>setTimeout(resolve,80));
     const send = (value, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(value) });
     if (url.pathname === '/mapping-api/api/student-identity/resolve') {
       if(missingIdentity)return send({ok:true,status:'missing',identity:null,aliases:[]});
@@ -68,7 +71,7 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
     if (url.pathname === '/api/open') return send({ classCode: 'IC2304', bindingId: 'binding-' + (wrongDoc ? b : a),
       selectedStudentRef: wrongDoc ? b : a, students: [{ id: a, name: 'Học viên A' }, { id: b, name: 'Học viên B' }] });
     if (url.pathname === '/api/library/7') return send({ ...(sharedListening ? {lesson: sharedListeningLesson} : {}), classes: [{ id: '1293', classCode: 'IC2304' }] });
-    if (url.pathname === '/api/library/7/classes/1293') return send({ students: excludedRoster ? [{ id: b, name: 'Học viên B' }] : [{ id: a, name: 'Học viên A' }, { id: b, name: 'Học viên B' }] });
+    if (url.pathname === '/api/library/7/classes/1293') {if(delayRoster){loginSeen();await gate;}return send({ students: excludedRoster ? [{ id: b, name: 'Học viên B' }] : [{ id: a, name: 'Học viên A' }, { id: b, name: 'Học viên B' }] });}
     if (['/api/login', '/api/shared-login'].includes(url.pathname)) {
       loginSeen(); if (delayLogin) await gate;
       const value = view(body.studentRef, url.pathname.endsWith('shared-login')); sessions.set(value.token, value); return send(value);
@@ -97,7 +100,30 @@ async function manual(page, shared = false) {
   await page.locator('#login-submit').click(); await prep(page);
 }
 try {
+  if(process.env.ENTRY_BENCHMARK){
+    const samples=[];
+    for(let sample=0;sample<10;sample++)for(const kind of ['reading','listening'])for(const version of ['before','after']){
+      const s=await setup({id:'900001',sharedListening:kind==='listening',baseRevision:version==='before'?process.env.ENTRY_BASE:undefined});
+      try{const start=performance.now();await s.page.goto(pageUrl(kind,true));await prep(s.page);
+        assert.deepEqual(s.errors,[]);assert.deepEqual(s.external,[]);
+        samples.push({sample,kind,version,ms:performance.now()-start,identityReads:s.requests.filter(r=>r.path==='/mapping-api/api/student-identity/resolve').length,apiRequests:s.requests.length});
+      }finally{s.releaseLogin();await s.ctx.close();}
+    }
+    await writeFile(path.join(out,'measurement.json'),JSON.stringify(samples,null,2));console.log(JSON.stringify({samples:samples.length,latencyMs:80}));
+  }else{
   for (const kind of ['reading', 'listening']) {
+    // Cùng lượt vào thư viện: quy đổi một lần, sau roster vẫn phải giữ đúng
+    // người và kiểm phiên trả về. Bộ test roster/race bên dưới giữ ranh giới đó.
+    await run(kind + '-shared-one-identity-read', { id:'900001', sharedListening:kind==='listening' }, async ({page,requests})=>{
+      await page.goto(pageUrl(kind,true)); await prep(page);
+      assert.match(await page.locator('.identity-bar').innerText(),/Học viên A/);
+      assert.equal(requests.filter(r=>r.path==='/mapping-api/api/student-identity/resolve').length,1);
+    });
+    await run(kind+'-identity-changed-while-roster-pending',{id:'900001',sharedListening:kind==='listening',delayRoster:true},async({page,ctx,loginArrived,releaseLogin,requests})=>{
+      await page.goto(pageUrl(kind,true));await loginArrived;const other=await ctx.newPage();await other.goto(origin+'/empty');
+      await other.evaluate(({key,value})=>localStorage.setItem(key,JSON.stringify(value)),{key,value:record('900002')});releaseLogin();
+      await page.locator('#login-form').waitFor();assert.equal(requests.some(r=>r.path==='/api/shared-login'),false);
+    });
     await run(kind + '-remembered-skip-login', { id: '900001' }, async ({ page }) => {
       await page.goto(pageUrl(kind)); await prep(page); assert.match(await page.locator('.identity-bar').innerText(), /Học viên A/);
       assert.equal(await page.evaluate(() => window.__plays), 0);
@@ -229,6 +255,7 @@ try {
     assert.equal(requests.some(r=>r.path==='/api/login'),false);
     assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity,key),null);
   });
+  }
 } finally {
   await writeFile(path.join(out, 'results.json'), JSON.stringify(results, null, 2), 'utf8');
   await browser.close(); await new Promise(r => server.close(r));
