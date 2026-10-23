@@ -1,12 +1,12 @@
 (async () => {
 'use strict';
 const AuthoredUI=await import('./authored-ui.js?v=20261021-ui-acceptance-v1');
-const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261023-pages-audio1');
+const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261024-cf512-1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 let CODE='67-practice-listening_mcq_flowchart',FULL_TIME=579207;const TAB=crypto.randomUUID();
 let AUDIO_DURATION=459.207, REVIEW_TIME=120000;const audio=document.querySelector('#listening-audio');
-let audioBlob='',audioBlobAttempt='',seekingAudio=false,playbackGeneration=0,audioStarted=false;
+let audioBlob='',audioBlobAttempt='',seekingAudio=false,playbackGeneration=0,audioStarted=false,audioFetchController=null;
 const app=document.querySelector('#app'),modal=document.querySelector('#modal');
 const API=window.LISTENING_CONFIG.apiBase.replace(/\/$/,'');
 const MEMORY='listening-practice67-identity';
@@ -160,7 +160,7 @@ async function perform(action,payload){
 }
 
 // Giữ tiến độ nghe và giờ rà trong lượt; tải audio qua API có kiểm chủ bài.
-function stopAudio(){playbackGeneration++;audioStarted=false;audio.pause();}
+function stopAudio(){playbackGeneration++;audioStarted=false;audioFetchController?.abort();audioFetchController=null;audio.pause();}
 function consumeTime(){
  const a=current();if(!a||a.status!=='running'||a.owner!==TAB||!lastTick)return;
  const now=performance.now();
@@ -185,7 +185,13 @@ async function startPlayback(id,proof){
  const a=current();
  if(a.phase==='listening'){
   if(audioBlobAttempt!==id){
-   const blob=await fetchListeningAudio(`${API}/audio/${id}`,{headers:{Authorization:`Bearer ${sessionToken}`},signal:AbortSignal.timeout(20000)});
+   // A multipart download can exceed 20 seconds while each part is healthy.
+   // Keep its budget separate from the exam clock; pause/reset/identity change
+   // cancels through stopAudio, and each network part has its own timeout.
+   const controller=audioFetchController=new AbortController(),timer=setTimeout(()=>controller.abort(),120000);
+   let blob;
+   try{blob=await fetchListeningAudio(`${API}/audio/${id}`,{headers:{Authorization:`Bearer ${sessionToken}`},signal:controller.signal});}
+   finally{clearTimeout(timer);if(audioFetchController===controller)audioFetchController=null;}
    if(generation!==playbackGeneration||current()?.id!==id)return;
    if(audioBlob)URL.revokeObjectURL(audioBlob);audioBlob=URL.createObjectURL(blob);audioBlobAttempt=id;audio.src=audioBlob;
   }

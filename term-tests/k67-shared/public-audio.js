@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+  const transportUrl = new URL('../../shared/audio/transport.mjs?v=20261023-cf512-1', document.currentScript.src).href;
   // Nhận metadata do VPS ghim; tải MP3 Pages từng phần, kiểm hash rồi mới cho phát.
   // Phần đúng giữ 24 giờ trong IndexedDB; lỗi mạng chỉ thử lại phần thiếu/hỏng.
   // Lỗi kho dùng RAM, lỗi hash/phiên bản ném về phòng chờ để khóa Bắt đầu.
@@ -67,6 +68,7 @@
   }
   async function download(m, options = {}) {
     if (!validManifest(m)) throw new Error('Định danh audio Pages không hợp lệ.');
+    if (m.cloudflare?.version === 1) { const {downloadPreferred} = await import(transportUrl); const blob = await downloadPreferred(m, options); if (blob) return verify(blob, m); }
     const fetchImpl = options.fetchImpl || window.fetch.bind(window), parts = new Array(m.chunks.length);
     let loaded = 0, next = 0, whole = null, failure = null;
     const progress = () => options.onProgress?.({loaded, total: m.byteLength, complete: loaded === m.byteLength});

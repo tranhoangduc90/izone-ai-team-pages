@@ -16,7 +16,7 @@ const manifest = {assetVersion: 'sha256-' + sha256, sha256, byteLength: bytes.le
   chunks: Array.from({length: 3}, (_, i) => {const b = bytes.subarray(i*1048576, (i+1)*1048576); return {byteLength:b.length,sha256:hash(b)};})};
 function loader() {
   const window = {};
-  vm.runInNewContext(source, {window, URL, Blob, crypto:webcrypto, Uint8Array, AbortController, setTimeout, clearTimeout, console});
+  vm.runInNewContext(source, {window,document:{currentScript:{src:'https://tranhoangduc90.github.io/izone-ai-team-pages/term-tests/k67-shared/public-audio.js'}}, URL, Blob, crypto:webcrypto, Uint8Array, AbortController, setTimeout, clearTimeout, console});
   return window.K67_PUBLIC_AUDIO;
 }
 const partial = range => {

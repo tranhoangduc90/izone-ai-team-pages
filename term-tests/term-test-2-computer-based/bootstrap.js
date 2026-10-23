@@ -597,7 +597,7 @@
       }
       if (audioAccess?.audioCacheSupported) {
         const publicAudio = audioAccess.audioManifest?.envelopeVersion === 'MP3';
-        if (publicAudio && !window.K67_PUBLIC_AUDIO) await loadScript('../k67-shared/public-audio.js?rev=20261017-pages-v1');
+        if (publicAudio && !window.K67_PUBLIC_AUDIO) await loadScript('../k67-shared/public-audio.js?rev=20261024-cf512-1');
         if (publicAudio && !window.K67_PUBLIC_AUDIO.validManifest(audioAccess.audioManifest)) throw new Error('Định danh audio từ máy chủ không hợp lệ.');
         if (!publicAudio && !window.K67_AUDIO_STORE) {
           try { await loadScript('../k67-shared/audio-store.js?rev=20261015-cache-v1'); }
