@@ -56,13 +56,16 @@ for(const slug of slugs)for(const delivery of ['','-computer-based'])for(const m
  }finally{await f.close();}
 });
 test('Landing: desktop/mobile có lựa chọn lớp, thứ tự, ba bài và hỗ trợ tách nhóm',async()=>{
- const f=await fixture();try{
+ const f=await fixture({teacher:true});try{
   await f.page.goto(server.base+'term-tests/k56-demo/');await f.page.evaluate(()=>document.fonts.ready);
   for(const width of [1366,390,320]){
    await f.page.setViewportSize({width,height:844});assert.equal(await f.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
    if(width!==320)await f.page.screenshot({path:resolve(output,'landing-'+width+'.png'),fullPage:true});
   }
   assert.equal(await f.page.locator('.k56-brand img').count(),1);assert.equal(await f.page.locator('[data-test]').count(),3);
+  assert.equal(await f.page.locator('#demoClassEntry,.landing-demo').count(),0,'Không có lối vào demo trùng ở cuối trang');
+  await f.page.waitForFunction(()=>document.querySelector('#classSelect option[value="CODEXDEMO56"]'));
+  assert.equal(await f.page.locator('#classSelect option[value="CODEXDEMO56"]').count(),1,'Demo vẫn có trong chọn lớp');
  }finally{await f.close();}
 });
 for(const slug of slugs)test(slug+': audio dự phòng lỗi tải giữ phát khóa và có thử lại',async()=>{

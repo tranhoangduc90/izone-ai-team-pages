@@ -1536,7 +1536,7 @@
 
       const split = document.createElement('div');
       split.className = 'writing-split';
-      const initialSplit = Number(state.writingLayout.splits[task.id] || (document.body.hasAttribute('data-k56-design') ? 33.333 : task.initialSplit || 50));
+      const initialSplit = Number(state.writingLayout.splits[task.id] || task.initialSplit || 50);
 
       const promptPane = document.createElement('article');
       promptPane.className = 'writing-prompt-pane';

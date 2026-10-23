@@ -16,14 +16,14 @@ export async function serve(root=new URL('../../',import.meta.url)){
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  return {base:`http://127.0.0.1:${server.address().port}/`,close:()=>new Promise(r=>server.close(r))};
 }
-export async function completedPage(browser,base,routeName,{writingResult=null,examMode='lis_first',waitTimeout=60000}={}){
+export async function completedPage(browser,base,routeName,{writingResult=null,examMode='lis_first',waitTimeout=60000,sectionTotals={listening:40,reading:40}}={}){
  const substitute=routeName.startsWith('substitute'),slug=routeName.replace('-computer-based',''),cbt=routeName.endsWith('-computer-based'),paperMini=slug==='mini-test-k56'&&!cbt;
  const classCode='IC9999',now=new Date().toISOString(),row={number:1,studentAnswer:'OLD-RUN',correctAnswer:'A',result:'incorrect'};
- const section=()=>({correct:0,total:40,details:Array.from({length:40},(_,i)=>({...row,number:i+1})),typeStats:[]});
+ const section=(total=40)=>({correct:0,total,details:Array.from({length:total},(_,i)=>({...row,number:i+1})),typeStats:[]});
  const writing={submitted:true,started:true,revision:1,outline:'',task1:writingResult?'':'Bài giả Task 1',task2:writingResult?'':'Bài giả Task 2',grading:writingResult||{ready:false,status:'processing',tasks:[]}};
- const payload={studentRef:id,studentName:'Học viên giả A',className:classCode,attemptToken:token,examSessionToken:epoch,completed:true,portalSyncStatus:'not_applicable',exam:{serverNow:now},writing,result:{listening:section(),reading:section(),typeStats:[],performance:{best:[],needsImprovement:[],other:[]}}};
+ const payload={studentRef:id,studentName:'Học viên giả A',className:classCode,attemptToken:token,examSessionToken:epoch,completed:true,portalSyncStatus:'not_applicable',exam:{serverNow:now},writing,result:{listening:section(sectionTotals.listening),reading:section(sectionTotals.reading),typeStats:[],performance:{best:[],needsImprovement:[],other:[]}}};
  if(paperMini)delete payload.writing;
- const session={classCode,className:classCode,studentRef:id,studentName:payload.studentName,attemptToken:token,clientRunId:run,examMode,identityConfirmed:true,listeningStartedAt:now,completed:true,writingStarted:!paperMini,writingSubmitted:!paperMini,writingDirty:false,drafts:{listening:{},reading:{},writing:{task1:writing.task1,task2:writing.task2,outline:''}},testGrades:{listening:section(),reading:section(),writing:{grading:writing.grading}}};
+ const session={classCode,className:classCode,studentRef:id,studentName:payload.studentName,attemptToken:token,clientRunId:run,examMode,identityConfirmed:true,listeningStartedAt:now,completed:true,writingStarted:!paperMini,writingSubmitted:!paperMini,writingDirty:false,drafts:{listening:{},reading:{},writing:{task1:writing.task1,task2:writing.task2,outline:''}},testGrades:{listening:section(sectionTotals.listening),reading:section(sectionTotals.reading),writing:{grading:writing.grading}}};
  if(substitute)session._substitute={version:2,testSlug:slug,historyEpoch:epoch,classCode,studentRef:id,clientRunId:run,attemptToken:token};
  const keys=substitute?[`izone-test:${slug}:RETAKE-LOBBY:server-grade:state-v2:${epoch}:lobby`,`izone-test:${slug}:${classCode}:server-grade:state-v2:${epoch}:${id}:${run}`]:[`izone-test:${slug}:${classCode}`,`izone-test:${slug}:${classCode}:cbt`];
  const context=await browser.newContext({serviceWorkers:'block',viewport:{width:1440,height:900}}),errors=[],requests=[];

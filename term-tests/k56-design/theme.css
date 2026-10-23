@@ -54,24 +54,24 @@ body[data-k56-design] :is(button,.button):disabled { color: var(--muted); backgr
 body[data-k56-design] .eyebrow { color: var(--muted); font-size: 14px; font-weight: 600; text-transform: none; letter-spacing: normal; }
 body[data-k56-design] .topbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px;
-  min-height: 80px; padding: 16px max(32px, calc((100vw - 1280px)/2));
+  min-height: 60px; padding: 10px 24px;
   color: var(--ink); background: var(--surface); border-bottom: 1px solid var(--line);
 }
-body[data-k56-design] .topbar h1 { margin: 0; font-size: 28px; flex: 1 1 240px; }
+body[data-k56-design] .topbar h1 { margin: 0; font-size: 20px; flex: 1 1 220px; }
 body[data-k56-design] .topbar > p { flex-basis: 100%; color: var(--muted); max-width: none; }
 body[data-k56-design] .topbar p { color: var(--muted); }
 body[data-k56-design] .topbar > .eyebrow { display: none; }
 body[data-k56-design].cbt-mode .topbar > p { display: none; }
 body[data-k56-design] .k56-brand { flex: 0 0 auto; display: inline-flex; align-items: center; padding: 0 8px 0 0; }
-body[data-k56-design] .k56-brand img { display: block; width: auto; height: 48px; max-width: 160px; object-fit: contain; }
+body[data-k56-design] .k56-brand img { display: block; width: auto; height: 32px; max-width: 108px; object-fit: contain; }
 body[data-k56-design] .k56-product-label { color: var(--navy); font-size: 18px; font-weight: 600; }
-body[data-k56-design] .page-shell { width: min(1280px,calc(100% - 64px)); margin: 24px auto 48px; }
+body[data-k56-design] .page-shell { width: min(1480px,calc(100% - 32px)); margin: 12px auto 32px; }
 body[data-k56-design] .panel { border: 1px solid var(--line); border-radius: 12px; box-shadow: none; }
 body[data-k56-design] .notice { font-size: 16px; color: var(--attention-fg); background: var(--attention-bg); border: 1px solid var(--line); }
 body[data-k56-design] .notice.success { color: var(--success-fg); background: var(--success-bg); }
 body[data-k56-design] .notice.error { color: var(--error-fg); background: var(--error-bg); }
-body[data-k56-design] .progress { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-body[data-k56-design] .progress-step { flex: 1 1 120px; color: var(--muted); background: var(--neutral-bg); border-radius: 8px; font-size: 14px; font-weight: 600; }
+body[data-k56-design] .progress { gap: 6px; margin-bottom: 10px; }
+body[data-k56-design] .progress-step { flex: 1 1 120px; color: var(--muted); background: var(--neutral-bg); border-radius: 6px; font-size: 12px; font-weight: 600; padding: 6px 10px; }
 body[data-k56-design] .progress-step.active { color: var(--selected-fg); background: var(--selected-bg); box-shadow: inset 0 -3px var(--action); }
 body[data-k56-design] .progress-step.done { color: var(--success-fg); background: var(--success-bg); }
 body[data-k56-design] :is(.identity-panel,.transition-card,.result-panel) { padding: 24px; }
@@ -82,19 +82,17 @@ body[data-k56-design] .instructions { color: var(--muted); font-size: 14px; line
 body[data-k56-design] .answer-count { color: var(--pending-fg); background: var(--pending-bg); font-size: 14px; font-weight: 600; }
 body[data-k56-design] .section-heading { padding: 20px 24px; }
 /* Phiếu: thứ tự DOM được giữ, không chia số hàng cố định khi reflow. */
-body[data-k56-design]:not(.cbt-mode) .questions-grid { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: none; grid-auto-flow: row; gap: 12px 24px; padding: 24px; }
+body[data-k56-design]:not(.cbt-mode) .questions-grid { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(var(--question-rows,20),auto); grid-auto-flow: column; gap: 10px 20px; padding: 20px; }
 body[data-k56-design] .question { min-width: 0; grid-template-columns: 64px minmax(0,1fr); background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; }
 body[data-k56-design] .question-number { font-size: 16px; font-weight: 600; }
 /* Phòng chờ: một trình tự rõ, không có hero tranh diện tích với thao tác. */
-body[data-k56-design] .cbt-bootstrap-shell { max-width: 900px; }
+body[data-k56-design] .cbt-bootstrap-shell { max-width: 1040px; }
 body[data-k56-design] .cbt-bootstrap-card { padding: 28px; }
-body[data-k56-design] .cbt-lobby-header { color: var(--ink); background: var(--surface); padding: 0 0 24px; box-shadow: none; }
+body[data-k56-design] .cbt-lobby-header { color: var(--ink); background: var(--surface); padding: 0 0 20px; box-shadow: none; }
 body[data-k56-design] .cbt-lobby-header h2 { color: var(--navy); font-size: 22px; }
 body[data-k56-design] .cbt-lobby-header p { color: var(--muted); font-size: 16px; }
 body[data-k56-design] .cbt-lobby-badge { color: var(--navy); background: var(--pending-bg); font-size: 14px; }
-body[data-k56-design] .cbt-bootstrap-identity { grid-template-columns: minmax(0,1fr) minmax(0,2fr); gap: 24px; padding: 20px 0; background: var(--surface); }
-body[data-k56-design] .cbt-lobby-steps { display: grid; grid-template-columns: 1fr; gap: 0; }
-body[data-k56-design] .cbt-lobby-step { grid-template-columns: 36px minmax(0,1fr); min-height: 0; padding: 20px 0; background: var(--surface); border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+body[data-k56-design] .cbt-bootstrap-identity { background: var(--surface-soft); border-color: var(--line); }
 body[data-k56-design] .cbt-lobby-step h3 { font-size: 18px; }
 body[data-k56-design] .cbt-lobby-step p { color: var(--muted); font-size: 16px; }
 body[data-k56-design] .cbt-lobby-step-number { color: var(--action); background: var(--selected-bg); font-size: 18px; }
@@ -106,13 +104,13 @@ body[data-k56-design].cbt-mode .topbar .cbt-identity-panel { flex: 1 1 360px; ma
 body[data-k56-design].cbt-mode .topbar .cbt-identity-panel h2 { font-size: 14px; color: var(--muted); }
 body[data-k56-design].cbt-mode .topbar .cbt-identity-panel select { color: var(--ink); background: var(--surface-soft); border: 1px solid var(--control-border); font-size: 16px; min-height: 44px; }
 body[data-k56-design].cbt-mode .cbt-class-label { color: var(--navy); font-size: 14px; }
-body[data-k56-design].cbt-mode .test-panel:not([hidden]) { height: max(540px,calc(100dvh - 220px)); min-height: 0; max-height: none; box-shadow: none; border-radius: 12px; }
-body[data-k56-design] .cbt-toolbar { padding: 16px 20px; gap: 12px 16px; background: var(--surface); border-color: var(--line); }
+body[data-k56-design].cbt-mode .test-panel:not([hidden]) { height: max(560px,calc(100dvh - 168px)); min-height: 0; max-height: none; box-shadow: none; border-radius: 12px; }
+body[data-k56-design] .cbt-toolbar { padding: 10px 14px; gap: 8px 12px; background: var(--surface); border-color: var(--line); }
 body[data-k56-design] .cbt-test-heading { padding: 0; }
-body[data-k56-design] .cbt-test-heading h2 { font-size: 22px; }
+body[data-k56-design] .cbt-test-heading h2 { font-size: 18px; }
 body[data-k56-design] .cbt-heading-actions { flex-wrap: wrap; gap: 8px; }
-body[data-k56-design] .cbt-toolbar-controls { flex-wrap: wrap; gap: 12px; }
-body[data-k56-design] .cbt-text-size { color: var(--muted); font-size: 14px; }
+body[data-k56-design] .cbt-toolbar-controls { flex-wrap: wrap; gap: 8px; }
+body[data-k56-design] .cbt-text-size { color: var(--muted); font-size: 12px; }
 body[data-k56-design] :is(.cbt-part-nav,.cbt-text-size) { flex-wrap: wrap; }
 body[data-k56-design] :is(.cbt-part-button,.cbt-tool-button,.cbt-section-page-button,.cbt-notes-toggle) { font-size: 16px; font-weight: 600; border-radius: 8px; box-shadow: none; }
 body[data-k56-design] :is(.cbt-part-button,.cbt-tool-button,.cbt-notes-toggle) { color: var(--action); background: var(--surface); border: 1px solid var(--control-border); }
@@ -121,18 +119,17 @@ body[data-k56-design] .cbt-content-viewport { font-size: 18px; color: var(--ink)
 body[data-k56-design] .cbt-content-viewport[data-font-size='90'] { font-size: 16.2px; }
 body[data-k56-design] .cbt-content-viewport[data-font-size='110'] { font-size: 19.8px; }
 body[data-k56-design] .cbt-content-viewport[data-font-size='120'] { font-size: 21.6px; }
-body[data-k56-design] .cbt-reading-section { grid-template-columns: minmax(0,55fr) minmax(0,45fr); }
 body[data-k56-design] .cbt-reading-passage { background: var(--surface); border-color: var(--line); }
-body[data-k56-design] .cbt-passage-header { position: static; padding: 24px 28px 16px; color: var(--ink); background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: none; }
+body[data-k56-design] .cbt-passage-header { padding: 18px 28px 16px; color: var(--ink); background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: none; }
 body[data-k56-design] .cbt-passage-header span { color: var(--muted); font-size: 14px; letter-spacing: normal; text-transform: none; font-weight: 600; }
 body[data-k56-design] .cbt-passage-header h3 { font-size: 22px; }
 body[data-k56-design] .cbt-passage-body { max-width: 76ch; padding: 24px 28px; line-height: 1.65; }
 body[data-k56-design] .cbt-passage-body p { text-align: justify; text-align-last: left; line-height: 1.65; }
 /* Linh duyệt 23/10: đoạn dài căn đều hai lề, dòng cuối căn trái. */
 body[data-k56-design] :is(.attempt-review-passage p,.attempt-review-essay-text,.writing-feedback-prompt,.writing-feedback-text p,.writing-feedback-text,.writing-instruction,.writing-follow-up) { text-align: justify; text-align-last: left; }
-body[data-k56-design] .cbt-reading-questions { padding: 24px; background: var(--surface-soft); }
-body[data-k56-design] .cbt-listening-section { padding: 24px 28px; background: var(--surface); }
-body[data-k56-design] .cbt-section-intro { padding: 0 0 20px; color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+body[data-k56-design] .cbt-reading-questions { padding: 22px 24px; background: var(--surface-soft); }
+body[data-k56-design] .cbt-listening-section { padding: 22px 28px; background: var(--surface); }
+body[data-k56-design] .cbt-section-intro { padding: 16px 18px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-top: 3px solid var(--brand); border-radius: 8px; box-shadow: none; }
 body[data-k56-design] .cbt-section-intro :is(h3,h4,strong,p) { color: inherit; }
 body[data-k56-design] .cbt-section-intro .cbt-kicker { color: var(--muted); font-size: 14px; font-weight: 600; letter-spacing: normal; }
 body[data-k56-design] .cbt-instruction { color: var(--ink); }
@@ -142,7 +139,7 @@ body[data-k56-design] :is(.cbt-answer-input,.cbt-answer-select) { color: var(--i
 body[data-k56-design] .cbt-question-heading { font-weight: 400; }
 body[data-k56-design] :is(.cbt-question-card,.cbt-question,.cbt-multi-choice) { padding: 16px 0; color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; }
 body[data-k56-design] .cbt-question-number { color: var(--navy); background: var(--selected-bg); border-radius: 8px; font-weight: 600; }
-body[data-k56-design] :is(.cbt-choice,.cbt-choice-option) { min-height: 48px; padding: 10px 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--control-border); border-radius: 8px; font-weight: 400; line-height: 1.5; }
+body[data-k56-design] :is(.cbt-choice,.cbt-choice-option) { min-height: 40px; padding: 8px 10px; color: var(--ink); background: var(--surface); border: 1px solid var(--control-border); border-radius: 8px; font-weight: 400; line-height: 1.5; }
 body[data-k56-design] :is(.cbt-choice,.cbt-choice-option):has(input:checked) { color: var(--selected-fg); background: var(--selected-bg); border-color: var(--action); }
 body[data-k56-design] .cbt-option-bank { background: var(--surface-soft); border-color: var(--line); }
 body[data-k56-design] :is(.cbt-notes-card,.cbt-note-group p:nth-child(odd)) { color: var(--ink); background: var(--surface-soft); border-color: var(--line); }
@@ -156,9 +153,8 @@ body[data-k56-design] .cbt-notes-panel { color: var(--ink); background: var(--su
 body[data-k56-design] .cbt-note-editor { font-size: 18px; line-height: 1.65; color: var(--ink); border-color: var(--control-border); }
 body[data-k56-design] .cbt-note-delete { color: var(--error-fg); background: var(--error-bg); border-color: var(--control-border); }
 body[data-k56-design] .cbt-notes-save-status.is-error { color: var(--error-fg); }
-body[data-k56-design] .cbt-question-nav-wrap { background: var(--surface); padding: 12px 20px; border-color: var(--line); backdrop-filter: none; }
-body[data-k56-design] .cbt-question-nav { grid-template-columns: repeat(auto-fit,minmax(36px,1fr)); gap: 6px; }
-body[data-k56-design] .cbt-question-button { height: 36px; min-height: 36px; color: var(--muted); background: var(--surface); border: 1px solid var(--control-border); font-size: 14px; font-weight: 600; }
+body[data-k56-design] .cbt-question-nav-wrap { background: var(--surface); padding: 8px 12px; border-color: var(--line); backdrop-filter: none; }
+body[data-k56-design] .cbt-question-button { height: 32px; min-height: 32px; color: var(--muted); background: var(--surface); border: 1px solid var(--control-border); font-size: 14px; font-weight: 600; }
 body[data-k56-design] .cbt-question-button.is-answered { color: var(--selected-fg); background: var(--selected-bg); border-color: var(--action); }
 body[data-k56-design] .cbt-question-button.is-active { color: white; background: var(--action); border-color: var(--action); }
 body[data-k56-design] .cbt-question-button.is-flagged { box-shadow: inset 0 -3px var(--attention-fg); }
@@ -166,22 +162,16 @@ body[data-k56-design] .cbt-nav-legend { font-size: 14px; color: var(--muted); }
 body[data-k56-design] .cbt-flag-button { min-width: 32px; min-height: 32px; color: var(--muted); background: var(--surface); border: 1px solid var(--control-border); }
 body[data-k56-design] .cbt-flag-button.is-flagged { color: var(--attention-fg); background: var(--attention-bg); }
 body[data-k56-design] :is(.cbt-reading-clock,.cbt-writing-clock) { color: var(--navy); background: var(--pending-bg); border: 1px solid var(--line); font-size: 14px; box-shadow: none; }
-body[data-k56-design] .k56-reading-switch { display: none; gap: 8px; }
-body[data-k56-design] .k56-reading-switch button { flex: 1; padding: 10px 16px; color: var(--action); background: var(--surface); border: 1px solid var(--control-border); }
-body[data-k56-design] .k56-reading-switch button[aria-pressed=true] { color: var(--selected-fg); background: var(--selected-bg); border-color: var(--action); box-shadow: inset 0 -2px var(--action); }
 /* Writing: giá trị --writing-left vẫn do separator hiện hành quản lý. */
-body[data-k56-design] .writing-exam-view { margin-top: 20px; height: auto; min-height: 0; max-height: none; overflow: visible; }
-body[data-k56-design] :is(.writing-workspace,.writing-task-panel) { height: auto; overflow: visible; }
-body[data-k56-design] .writing-exam-header { padding: 20px 24px; flex-wrap: wrap; color: var(--ink); background: var(--surface); border-color: var(--line); }
-body[data-k56-design] .writing-exam-header h2 { font-size: 22px; }
-body[data-k56-design] .writing-split { display: grid; grid-template-columns: minmax(0,var(--writing-left,33.333%)) 12px minmax(0,1fr); min-height: 540px; height: auto; }
-body[data-k56-design] :is(.writing-prompt-pane,.writing-answer-pane) { min-width: 0; min-height: 0; overflow: visible; color: var(--ink); background: var(--surface); }
+body[data-k56-design] .writing-exam-view { margin-top: 12px; min-height: 560px; max-height: none; box-shadow: none; }
+body[data-k56-design] .writing-exam-header { padding: 12px 18px; flex-wrap: wrap; color: var(--ink); background: var(--surface); border-color: var(--line); }
+body[data-k56-design] .writing-exam-header h2 { font-size: 20px; }
 body[data-k56-design] .writing-prompt-pane { border: 0; background: var(--surface-soft); }
-body[data-k56-design] .writing-pane-header { padding: 16px 24px; color: var(--navy); background: transparent; border-color: var(--line); font-size: 16px; }
-body[data-k56-design] .writing-prompt-body { padding: 20px 24px; font-size: 18px; line-height: 1.65; overflow: visible; }
+body[data-k56-design] .writing-pane-header { padding: 12px 18px; color: var(--navy); background: transparent; border-color: var(--line); font-size: 16px; }
+body[data-k56-design] .writing-prompt-body { padding: 20px 24px; font-size: 18px; line-height: 1.65; }
 body[data-k56-design] .writing-separator { min-width: 12px; width: 12px; padding: 0; border: 0; border-radius: 0; color: var(--muted); background: var(--neutral-bg); }
-body[data-k56-design] .writing-editor { width: 100%; min-height: 440px; height: auto; flex: 1; padding: 24px; color: var(--ink); background: var(--surface); border: 0; border-radius: 0; font-size: 18px; line-height: 1.65; resize: vertical; }
-body[data-k56-design] .writing-editor-meta { padding: 12px 24px; color: var(--muted); background: var(--surface-soft); border-top: 1px solid var(--line); font-size: 14px; gap: 12px; flex-wrap: wrap; }
+body[data-k56-design] .writing-editor { width: 100%; padding: 20px 24px; color: var(--ink); background: var(--surface); border: 0; border-radius: 0; font-size: 18px; line-height: 1.65; resize: vertical; }
+body[data-k56-design] .writing-editor-meta { padding: 10px 18px; color: var(--muted); background: var(--surface-soft); border-top: 1px solid var(--line); font-size: 14px; gap: 12px; flex-wrap: wrap; }
 body[data-k56-design] .writing-outline-card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 body[data-k56-design] .writing-outline-editor { min-height: 160px; font-size: 18px; line-height: 1.65; }
 body[data-k56-design] .writing-save-conflict { border: 1px solid var(--control-border); color: var(--attention-fg); background: var(--attention-bg); }
@@ -253,14 +243,14 @@ body[data-k56-design] .teacher-saved-progress-dialog::backdrop { background: #15
 body[data-k56-design] .teacher-saved-progress-dialog pre { font-size: 18px; line-height: 1.65; }
 /* Landing: lựa chọn lớp/thứ tự dẫn tới bài; các đường dự phòng là nhóm riêng. */
 body[data-k56-design] .landing-shell { display: block; min-height: 0; padding: 32px; background: var(--canvas); }
-body[data-k56-design] .landing-card { width: min(1040px,100%); margin: auto; padding: 32px; }
+body[data-k56-design] .landing-card { width: min(820px,100%); margin: auto; padding: 28px 32px; border-top: 3px solid var(--brand); }
 body[data-k56-design] .landing-card h1 { font-size: 28px; }
-body[data-k56-design] .landing-auth { margin: 24px 0; padding: 20px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 12px; }
+body[data-k56-design] .landing-auth { margin: 20px 0; padding: 16px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 12px; }
 body[data-k56-design] .landing-class-field { max-width: 520px; margin: 24px 0 12px; }
-body[data-k56-design] .landing-order { margin: 24px 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); }
+body[data-k56-design] .landing-order { margin: 24px 0; padding: 0; border: 0; background: transparent; }
 body[data-k56-design] .landing-order legend { color: var(--navy); font-size: 18px; font-weight: 700; }
 body[data-k56-design] .landing-actions-three { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
-body[data-k56-design] .landing-actions-three .button { min-width: 0; min-height: 64px; }
+body[data-k56-design] .landing-actions-three .button { min-width: 0; min-height: 52px; }
 body[data-k56-design] :is(.landing-choice,.order-choice).is-selected { color: var(--selected-fg); background: var(--selected-bg); border-color: var(--action); box-shadow: inset 0 -3px var(--action); }
 body[data-k56-design] .landing-link-group { padding: 24px 0; border-color: var(--line); }
 body[data-k56-design] .landing-demo { background: var(--surface-soft); border-color: var(--line); }
@@ -271,41 +261,24 @@ body[data-k56-design] .audio-shell button.secondary { color: var(--action); back
 body[data-k56-design] .audio-shell button:disabled { color: var(--muted); background: var(--neutral-bg) !important; border-color: var(--line); }
 body[data-k56-design] .audio-shell .notice { padding: 16px; }
 body[data-k56-design] .volume-modal { border-radius: 12px; padding: 24px; }
-@media (max-width: 1000px) {
-  body[data-k56-design] .writing-split { grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto; }
-  body[data-k56-design] .writing-separator { display: none; }
-  body[data-k56-design] :is(.writing-prompt-pane,.writing-answer-pane) { max-height: none; overflow: visible; }
-  body[data-k56-design] .writing-editor { min-height: 360px; }
-}
 @media (max-width: 800px) {
-  body[data-k56-design] .topbar { padding: 16px; gap: 12px 16px; }
-  body[data-k56-design] .topbar h1 { font-size: 26px; }
-  body[data-k56-design].cbt-mode .topbar.cbt-topbar-with-identity > h1 { font-size: 26px; white-space: normal; }
-  body[data-k56-design] .k56-brand img { height: 36px; }
-  body[data-k56-design] .page-shell { width: calc(100% - 32px); margin-top: 16px; }
+  body[data-k56-design] .topbar { padding: 12px 16px; gap: 10px 16px; }
+  body[data-k56-design] .topbar h1 { font-size: 20px; }
+  body[data-k56-design].cbt-mode .topbar.cbt-topbar-with-identity > h1 { font-size: 20px; white-space: normal; }
+  body[data-k56-design] .k56-brand img { height: 30px; }
+  body[data-k56-design] .page-shell { width: calc(100% - 24px); margin-top: 12px; }
   body[data-k56-design].cbt-mode .topbar .cbt-identity-panel { max-width: none; flex-basis: 100%; }
   body[data-k56-design].cbt-mode .topbar .cbt-class-label { display: block; }
-  body[data-k56-design] :is(.cbt-bootstrap-identity,.identity-panel,.teacher-toolbar,.analysis-grid) { grid-template-columns: minmax(0,1fr); }
+  body[data-k56-design] :is(.identity-panel,.teacher-toolbar,.analysis-grid) { grid-template-columns: minmax(0,1fr); }
   body[data-k56-design] :is(.cbt-bootstrap-card,.transition-card,.result-panel) { padding: 20px; }
-  body[data-k56-design].cbt-mode .test-panel:not([hidden]) { display: block; height: auto; min-height: 0; overflow: visible; }
-  body[data-k56-design] :is(.cbt-semantic-stage.questions-grid,.cbt-semantic-pane,.cbt-content-viewport) { height: auto; overflow: visible; }
-  body[data-k56-design] .cbt-reading-section { height: auto; grid-template-columns: minmax(0,1fr); grid-template-rows: auto; }
-  body[data-k56-design] :is(.cbt-reading-passage,.cbt-reading-questions,.cbt-listening-section) { max-height: none; overflow: visible; }
-  body[data-k56-design] .cbt-reading-passage { border: 0; }
-  body[data-k56-design] .k56-reading-switch { display: flex; position: sticky; top: 0; z-index: 30; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
-  body[data-k56-design] #readingView[data-reading-pane=passage] .cbt-reading-questions { display: none; }
-  body[data-k56-design] #readingView[data-reading-pane=questions] .cbt-reading-passage { display: none; }
   body[data-k56-design] :is(.cbt-toolbar,.cbt-reading-questions,.cbt-listening-section,.cbt-passage-header,.cbt-passage-body) { padding: 16px; }
   body[data-k56-design] :is(.cbt-test-heading,.cbt-toolbar-controls) { display: flex; flex-wrap: wrap; align-items: flex-start; }
-  body[data-k56-design] .cbt-heading-actions { width: 100%; }
+  body[data-k56-design] .cbt-heading-actions { max-width: 100%; }
   body[data-k56-design] .cbt-part-nav { max-width: 100%; flex-basis: 100%; }
   body[data-k56-design] .cbt-text-size > :is(span,strong) { display: inline; font-size: 14px; }
-  body[data-k56-design] .cbt-matching-layout { grid-template-columns: minmax(0,1fr); }
-  body[data-k56-design] :is(.k56-side-layout,.cbt-matching-layout.k56-answers-left) { grid-template-columns: minmax(0,1fr); }
   body[data-k56-design] .cbt-section-pager { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
   body[data-k56-design] .cbt-section-pager > span { grid-row: 1; grid-column: 1/-1; }
   body[data-k56-design] .cbt-section-page-button { min-width: 0; padding: 10px; }
-  body[data-k56-design]:not(.cbt-mode) .questions-grid { grid-template-columns: minmax(0,1fr); padding: 16px; }
   body[data-k56-design] :is(.teacher-topbar,.teacher-access) { flex-wrap: wrap; }
   body[data-k56-design] .teacher-topbar-actions { flex: 1 1 100%; }
   body[data-k56-design] .teacher-toolbar { gap: 16px; padding: 20px; }
@@ -318,4 +291,64 @@ body[data-k56-design] .volume-modal { border-radius: 12px; padding: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
   body[data-k56-design] *,body[data-k56-design] *::before,body[data-k56-design] *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Kế thừa phân cấp K67, giữ nguyên cấu trúc nhóm và control của renderer K56. */
+body[data-k56-design] .cbt-section-intro > span,
+body[data-k56-design] .cbt-section-intro > span.cbt-kicker,
+body[data-k56-design] .cbt-subsection-heading h4 {
+  display: inline-block; margin: 0 0 10px; padding: 6px 12px;
+  color: white; background: var(--action); border-radius: 6px;
+  font-size: 18px; line-height: 1.35; font-weight: 700;
+}
+body[data-k56-design] .cbt-section-intro .cbt-kicker { margin-bottom: 8px; }
+body[data-k56-design] .cbt-section-intro :is(h3,h4) { font-size:18px; color:var(--navy); background:transparent; margin:0 0 8px; }
+body[data-k56-design] .cbt-subsection-heading { color: var(--ink); background: var(--canvas); border-color: var(--line); border-left: 3px solid var(--brand); box-shadow: none; }
+body[data-k56-design] .cbt-subsection-heading p { color: var(--ink); }
+body[data-k56-design] .cbt-part-button { min-height: 36px; padding: 7px 11px; font-size: 14px; }
+body[data-k56-design] .cbt-tool-button { min-height: 36px; padding: 6px 9px; font-size: 14px; }
+body[data-k56-design] .cbt-heading-submit { min-height: 40px; font-size: 14px; }
+body[data-k56-design] .cbt-test-heading .instructions { font-size: 12px; }
+body[data-k56-design] .cbt-heading-actions :is(.autosave-status,.answer-count) { font-size: 12px; }
+body[data-k56-design].cbt-mode .topbar .cbt-identity-panel :is(h2,.cbt-class-label) { font-size: 12px; }
+body[data-k56-design].cbt-mode .topbar .cbt-identity-panel select { min-height: 36px; font-size: 14px; }
+body[data-k56-design] .cbt-reading-clock { font-size: 12px; }
+body[data-k56-design] .cbt-question-card.is-active { box-shadow: none; }
+body[data-k56-design]:not(.cbt-mode) .page-shell { width: min(1100px,calc(100% - 32px)); }
+body[data-k56-design] .landing-auth :is(strong,p) { font-size: 14px; }
+body[data-k56-design] .landing-class-help { font-size: 13px; }
+body[data-k56-design] .landing-link-group { margin-top: 20px; padding: 0; }
+body[data-k56-design] .landing-link-group h2 { font-size: 18px; margin-bottom: 12px; }
+body[data-k56-design] .order-choice[aria-pressed=true] { color: white; background: var(--action); border-color: var(--action); box-shadow: none; }
+@media (min-width:981px) {
+  /* Cùng thứ tự DOM cũ; chỉ tính chiều cao còn lại như vỏ K67 để không cắt footer. */
+  body[data-k56-design].cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) #app { display:flex; flex-direction:column; height:calc(100dvh - 41px); min-height:0; }
+  body[data-k56-design].cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) .topbar { flex:0 0 auto; }
+  body[data-k56-design].cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) .page-shell { display:flex; flex-direction:column; flex:1 1 0; min-height:0; margin-bottom:8px; }
+  body[data-k56-design].cbt-mode :is(.test-panel,.writing-exam-view):not([hidden]) { flex:1 1 0; min-height:0; height:auto; max-height:none; }
+  body[data-k56-design].cbt-mode :is(.progress,.notice) { flex:0 0 auto; }
+}
+@media (max-width:980px) {
+  /* Luồng cũ: bài đọc nằm trên câu hỏi, cả hai cùng hiện và cuộn độc lập. */
+  body[data-k56-design].cbt-mode #readingView:not([hidden]) { height: auto; min-height: 0; }
+  body[data-k56-design] #readingView .cbt-semantic-stage { height: auto; }
+  body[data-k56-design] #readingView .cbt-content-viewport { height: 640px; }
+  body[data-k56-design] #readingView .cbt-reading-section { height: 100%; }
+}
+@media (max-width:700px) {
+  body[data-k56-design]:not(.cbt-mode) .questions-grid { grid-template-columns:minmax(0,1fr); grid-template-rows:none; grid-auto-flow:row; padding:16px; }
+}
+@media (max-width:620px) {
+  body[data-k56-design] .writing-exam-view:not([hidden]) { height:auto; min-height:0; }
+  body[data-k56-design] .writing-prompt-body { padding:20px; }
+  body[data-k56-design] .cbt-part-button,body[data-k56-design] .cbt-tool-button { min-height:44px; }
+  body[data-k56-design] .landing-card { padding:24px 20px; }
+}
+/* Trạng thái lỗi hiện có cần đủ chỗ đối chiếu hai bản; không ép vào khung thi hữu hạn. */
+body[data-k56-design].cbt-mode:has(#writingConflict:not([hidden])) #app { height:auto; min-height:calc(100dvh - 41px); }
+body[data-k56-design].cbt-mode:has(#writingConflict:not([hidden])) .page-shell { flex:0 0 auto; }
+body[data-k56-design] .writing-exam-view:has(#writingConflict:not([hidden])) { display:block; height:auto; flex:none; overflow:visible; }
+body[data-k56-design] .writing-exam-view:has(#writingConflict:not([hidden])) .writing-workspace { height:560px; }
+@media (max-width:620px) {
+  body[data-k56-design] .writing-exam-view:has(#writingConflict:not([hidden])) .writing-workspace { height:auto; }
 }

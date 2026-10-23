@@ -1,6 +1,6 @@
 /* Chỉ giữ vỏ trang công khai; không cache API, audio, khóa, token hoặc bài làm. */
 'use strict';
-const cacheName = 'k56-listening-shell-20261023-master170-v1:' + self.registration.scope;
+const cacheName = 'k56-listening-shell-20261023-master170-v2:' + self.registration.scope;
 const shell = new URL(self.registration.scope);
 const publicRoot = new URL('../', shell).pathname;
 function publicFile(url) {

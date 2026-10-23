@@ -14,13 +14,18 @@ for(const slug of slugs) test(slug+': Reading giữ control/đáp án khi reflow
   const f=await readingPage(browser,server.base,slug);
   try {
     await f.page.screenshot({path:resolve(output,slug+'-reading-desktop.png')});
+    if(!baseline)for(const [width,height] of [[1366,768],[1280,720]]){
+      await f.page.setViewportSize({width,height});
+      assert.equal(await f.page.locator('#readingView').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),true,'Reading bị cắt thanh số câu ở laptop');
+    }
+    await f.page.setViewportSize({width:1366,height:768});
     if(baseline)return;
     const theme=await f.page.evaluate(()=>({font:getComputedStyle(document.body).fontFamily,bg:getComputedStyle(document.body).backgroundColor,loaded:document.fonts.check('400 18px "Source Sans 3"')}));
     assert.match(theme.font,/Source Sans 3/);assert.equal(theme.bg,'rgb(245, 246, 248)');assert.equal(theme.loaded,true);
     assert.deepEqual(await f.page.locator('.cbt-passage-body p').first().evaluate(el=>({align:getComputedStyle(el).textAlign,last:getComputedStyle(el).textAlignLast})),{align:'justify',last:'left'});
     const section=f.page.locator('.cbt-reading-section:not([hidden])');
     const sizes=await section.evaluate(el=>[...el.children].map(n=>n.getBoundingClientRect().width));
-    assert(Math.abs(sizes[0]/(sizes[0]+sizes[1])-.55)<.02);
+    assert(Math.abs(sizes[0]/(sizes[0]+sizes[1])-.5)<.01);
     await section.locator('.cbt-reading-questions input:visible,.cbt-reading-questions select:visible').first().evaluate(el=>{window.originalK56Field=el;el.dataset.fixtureIdentity='same-node';});
     const field=f.page.locator('[data-fixture-identity="same-node"]');
     const save=f.page.waitForResponse(response=>response.url().endsWith('/reading/draft')&&response.request().method()==='POST');
@@ -29,39 +34,23 @@ for(const slug of slugs) test(slug+': Reading giữ control/đáp án khi reflow
     else await field.fill('DRAFT');
     await save;
     const answer=await field.inputValue();
-    for(const width of [801,800,799,390,320,844]){
+    for(const width of [981,980,979,801,800,799,390,320,844]){
       await f.page.setViewportSize({width,height:width===844?390:844});
-      if(width<=800){
-        await f.page.getByRole('button',{name:'Câu hỏi',exact:true}).click();
-        assert.equal(await field.isVisible(),true);
-        await f.page.getByRole('button',{name:'Bài đọc',exact:true}).click();
-        assert.equal(await field.isVisible(),false);
-        await f.page.locator('#readingView [data-nav-number]').first().click();
-        await field.waitFor({state:'visible'});
-      }
+      assert.equal(await section.locator('.cbt-reading-passage').isVisible(),true);
+      assert.equal(await section.locator('.cbt-reading-questions').isVisible(),true);
+      assert.equal(await f.page.locator('.k56-reading-switch').count(),0);
       assert.equal(await field.evaluate(el=>el===window.originalK56Field),true);
       assert.equal(await field.inputValue(),answer);
       if(await field.getAttribute('type')==='radio')assert.equal(await field.isChecked(),true);
-      const overflow=await f.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);
-      assert.equal(overflow,false,'Trang tràn ngang ở '+width);
+      assert.equal(await f.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Trang tràn ngang ở '+width);
     }
     await f.page.setViewportSize({width:390,height:844});
-    await f.page.getByRole('button',{name:'Bài đọc',exact:true}).click();
-    const passage=f.page.locator('.cbt-reading-section:not([hidden]) .cbt-reading-passage');
-    await passage.evaluate(el=>window.scrollTo({top:window.scrollY+el.getBoundingClientRect().top+600,behavior:'instant'}));
-    const point=await passage.evaluate(el=>el.getBoundingClientRect().top);
-    for(let i=0;i<3;i++){
-      await f.page.getByRole('button',{name:'Câu hỏi',exact:true}).click();
-      await f.page.getByRole('button',{name:'Bài đọc',exact:true}).click();
-    }
-    assert(Math.abs((await passage.evaluate(el=>el.getBoundingClientRect().top))-point)<2,'Đổi vùng nhiều lần làm lệch điểm đọc');
-    await f.page.locator('.k56-reading-switch').scrollIntoViewIfNeeded();
     await f.page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
     await f.page.screenshot({path:resolve(output,slug+'-reading-mobile.png')});
     assert.deepEqual(f.errors,[]);
   }finally{await f.close();}
 });
-test('Reading: Notes và highlight giữ nguyên qua đổi vùng và reload',async()=>{
+test('Reading: Note giữ nguyên khi cuộn hai vùng và reload',async()=>{
   const f=await readingPage(browser,server.base,'term-test-2-k56');
   try{
     await f.page.setViewportSize({width:390,height:844});
@@ -77,8 +66,8 @@ test('Reading: Notes và highlight giữ nguyên qua đổi vùng và reload',as
     await f.page.locator('.cbt-note-editor').fill('Ghi chú giả cần giữ qua đổi vùng và tải lại.');
     await f.page.getByRole('button',{name:'Đóng Notes',exact:true}).click();
     const marks=await passage.locator('[data-annotation-ids]').count();assert(marks>0);
-    await f.page.getByRole('button',{name:'Câu hỏi',exact:true}).click();
-    await f.page.getByRole('button',{name:'Bài đọc',exact:true}).click();
+    await f.page.locator('.cbt-reading-section:not([hidden]) .cbt-reading-questions').evaluate(el=>{el.scrollTop=150;});
+    await passage.evaluate(el=>el.parentElement.scrollTop=120);
     assert.equal(await passage.locator('[data-annotation-ids]').count(),marks);
     await f.page.reload();await f.page.locator('#readingView').waitFor({state:'visible'});
     await f.page.locator('#readingView .cbt-notes-open').click();
@@ -113,18 +102,23 @@ for(const slug of slugs)test(slug+': Writing đúng vùng đề/editor và giữ
     await page.evaluate(()=>document.fonts.ready);
     const split=page.locator('.writing-split').first();
     const ratio=await split.evaluate(el=>el.querySelector('.writing-prompt-pane').getBoundingClientRect().width/el.getBoundingClientRect().width);
-    assert(Math.abs(ratio-1/3)<.02);
+    assert(Math.abs(ratio-(slug==='term-test-1-k56'?.44:.5))<.02);
     assert.equal(await page.locator('#writingView').evaluate(el=>{
       const footer=el.querySelector('.writing-editor-meta'),workspace=el.querySelector('.writing-workspace');
       return footer.getBoundingClientRect().bottom<=workspace.getBoundingClientRect().bottom+1&&workspace.getBoundingClientRect().bottom<=el.getBoundingClientRect().bottom+1;
     }),true,'Dòng tự lưu/số từ bị cắt bởi khung Writing');
     const editor=page.locator('[data-writing-task]').first();
     await editor.evaluate(el=>window.originalWritingEditor=el);
+    for(const [width,height] of [[1366,768],[1280,720]]){
+      await page.setViewportSize({width,height});
+      assert.equal(await page.locator('#writingView').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),true,'Writing bị cắt footer ở laptop');
+    }
+    await page.setViewportSize({width:1366,height:768});
     await page.screenshot({path:resolve(output,slug+'-writing-desktop.png')});
-    for(const width of [1001,1000,999,390,320]){
+    for(const width of [1001,1000,999,621,620,619,390,320]){
       await page.setViewportSize({width,height:844});
       assert.equal(await editor.evaluate(el=>el===window.originalWritingEditor),true);
-      if(width<=1000){
+      if(width<=620){
         const bounds=await split.evaluate(el=>[el.querySelector('.writing-prompt-pane').getBoundingClientRect().bottom,el.querySelector('.writing-answer-pane').getBoundingClientRect().top]);
         assert(bounds[1]>=bounds[0]-1);
       }
@@ -134,12 +128,53 @@ for(const slug of slugs)test(slug+': Writing đúng vùng đề/editor và giữ
     await page.screenshot({path:resolve(output,slug+'-writing-mobile.png'),fullPage:true});
   }finally{await context.close();}
 });
+for(const slug of slugs)test(slug+': Writing không cắt vùng xung đột dài',async()=>{
+  const context=await browser.newContext({serviceWorkers:'block',viewport:{width:1366,height:768}});
+  try{
+    await context.route('**/*',r=>r.request().url().startsWith(server.base)?r.continue():r.abort());
+    const page=await context.newPage();
+    await page.goto(server.base+'term-tests/'+slug+'-computer-based/?demo=writing&class=CODEXDEMO56');
+    await page.locator('#writingView').waitFor({state:'visible'});
+    // Chỉ fixture bố cục: mở panel/controls thật và cùng cấu trúc preview của renderer.
+    // Không giả một phản hồi API hoặc tuyên bố đã kiểm xử lý revision/conflict.
+    await page.locator('#writingConflict').evaluate(panel=>{
+      panel.hidden=false;
+      const container=panel.querySelector('[id$=ConflictDrafts]');
+      for(const title of ['Bản đang viết trên máy','Bản đã lưu trên hệ thống']){
+        const heading=document.createElement('h4');heading.textContent=title;container.append(heading);
+        for(const name of ['Bài viết','Dàn ý giữ trên máy']){
+          const label=document.createElement('label');label.textContent=name;
+          const text=document.createElement('textarea');text.readOnly=true;text.value=('Nội dung giả đủ dài để kiểm phần đối chiếu. ').repeat(80);
+          label.append(text);container.append(label);
+        }
+      }
+    });
+    for(const [width,height] of [[1366,768],[1280,720],[390,844]]){
+      await page.setViewportSize({width,height});
+      const clipped=await page.locator('#writingConflict .form-actions').evaluate(el=>{
+        const r=el.getBoundingClientRect();
+        for(let p=el.parentElement;p;p=p.parentElement){
+          if(/^(hidden|clip)$/.test(getComputedStyle(p).overflowY)){
+            const a=p.getBoundingClientRect();if(r.top<a.top-1||r.bottom>a.bottom+1)return true;
+          }
+        }
+        return false;
+      });
+      assert.equal(clipped,false,'Hai nút xử lý xung đột bị khung Writing cắt ở '+width);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+    }
+    await page.screenshot({path:resolve(output,slug+'-writing-conflict-mobile.png'),fullPage:true});
+  }finally{await context.close();}
+});
 for(const slug of slugs)for(const delivery of ['','-computer-based'])for(const mode of ['lis_first','read_first'])test(slug+delivery+'/'+mode+': theme và kết quả cũ đúng bài, không gửi lại',async()=>{
-  const f=await completedPage(browser,server.base,slug+delivery,{examMode:mode,waitTimeout:15000});
+  const sectionTotals={listening:slug==='mini-test-k56'?10:40,reading:slug==='term-test-1-k56'?26:slug==='term-test-2-k56'?40:13};
+  const f=await completedPage(browser,server.base,slug+delivery,{examMode:mode,waitTimeout:15000,sectionTotals});
   try{
     assert.equal(await f.page.locator('body[data-k56-design]').count(),1);
     assert.equal(await f.page.locator('.k56-brand img').count(),1);
     assert.equal(await f.page.locator('#resultStudentName').innerText(),'Học viên giả A');
+    const summary=await f.page.locator('.summary-grid').innerText();
+    for(const total of Object.values(sectionTotals))assert.match(summary,new RegExp('0\\s*/\\s*'+total+'\\b'),'Hiển thị đúng tổng câu của từng bài');
     assert(!f.requests.some(url=>/\/(listening|reading|writing)$/.test(url)));
     assert.deepEqual(f.errors,[]);
     if(mode==='lis_first'&&delivery)await f.page.screenshot({path:resolve(output,slug+'-result.png')});

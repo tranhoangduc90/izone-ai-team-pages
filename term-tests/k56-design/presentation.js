@@ -20,54 +20,6 @@
     header.prepend(brand);
   }
 
-  function decorateReading() {
-    const form = document.getElementById('readingView');
-    const toolbar = form?.querySelector('.cbt-toolbar-controls');
-    if (!toolbar || form.querySelector('.k56-reading-switch')) return;
-    const group = document.createElement('div');
-    group.className = 'k56-reading-switch';
-    group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', 'Vùng Reading trên màn hình hẹp');
-    const scrolls = new WeakMap();
-    const pagePositions = new WeakMap();
-    const buttons = ['passage', 'questions'].map((value, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = index ? 'Câu hỏi' : 'Bài đọc';
-      button.addEventListener('click', () => activate(value, true));
-      group.append(button);
-      return button;
-    });
-    const activePane = value => form.querySelector('.cbt-reading-section:not([hidden]) .cbt-reading-' + (value === 'passage' ? 'passage' : 'questions'));
-    function activate(value, restorePosition = false) {
-      const old = form.dataset.readingPane;
-      if (old !== value) {
-        const narrow = matchMedia('(max-width: 800px)').matches;
-        const previous = old && activePane(old);
-        if (narrow && previous) pagePositions.set(previous, Math.max(0, group.getBoundingClientRect().bottom - previous.getBoundingClientRect().top));
-        form.querySelectorAll('.cbt-reading-passage,.cbt-reading-questions').forEach(node => {
-          if (node.getClientRects().length) scrolls.set(node, node.scrollTop);
-        });
-        form.dataset.readingPane = value;
-        form.querySelectorAll('.cbt-reading-passage,.cbt-reading-questions').forEach(node => {
-          if (node.getClientRects().length && scrolls.has(node)) node.scrollTop = scrolls.get(node);
-        });
-        const next = activePane(value);
-        if (narrow && restorePosition && next) window.scrollTo({top:window.scrollY + next.getBoundingClientRect().top + (pagePositions.get(next) || 0) - group.getBoundingClientRect().bottom,behavior:'instant'});
-      }
-      buttons.forEach((button, index) => button.setAttribute('aria-pressed', String(value === (index ? 'questions' : 'passage'))));
-    }
-    activate('passage');
-    form.prepend(group);
-    // Chạy trước handler nhảy câu hiện có để nó focus đúng ô đang nhìn thấy.
-    form.addEventListener('click', event => {
-      if (event.target.closest('[data-nav-number]')) activate('questions');
-    }, true);
-    form.addEventListener('focusin', event => {
-      if (event.target.closest('.cbt-reading-questions')) activate('questions');
-    });
-  }
-
   function decorateReadOnlyDialogs() {
     document.querySelectorAll('.attempt-review-dialog,.writing-feedback-dialog,.teacher-saved-progress-dialog').forEach(dialog => {
       if (dialog.dataset.k56Dialog) return;
@@ -110,7 +62,7 @@
   let scheduled = false;
   function update() {
     scheduled = false;
-    decorateHeader(); decorateReading(); decorateReadOnlyDialogs();
+    decorateHeader(); decorateReadOnlyDialogs();
     document.querySelectorAll('.cbt-nav-legend').forEach(legend => {
       const text = 'Nền navy: đang chọn · Nền nhạt: đã làm · Gạch vàng: cần xem lại';
       if (legend.textContent !== text) legend.textContent = text;
