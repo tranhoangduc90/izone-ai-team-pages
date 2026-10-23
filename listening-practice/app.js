@@ -105,7 +105,7 @@ function apply(response,{preserve=false}={}){
  setAuthoredLesson(response.lesson);
  identity=response.identity;studentId=identity.studentRef;checkpointKey=cacheKey();
  const local=current();db.students[studentId]={attempts:response.attempts,events:response.events,firstCompleted:response.firstCompleted};
- const a=current();if(preserve&&local&&a?.id===local.id&&a.status==='running'&&local.sequence>=a.sequence){Object.assign(a,snapshotFrom(local));a.remainingMs=Math.min(local.remainingMs,a.remainingMs);a.owner=TAB;}
+ const a=current();if(preserve&&local&&a?.id===local.id&&['running','paused'].includes(a.status)&&local.sequence>=a.sequence){Object.assign(a,snapshotFrom(local));a.remainingMs=Math.min(local.remainingMs,a.remainingMs);a.owner=TAB;}
  if(response.definition){AUTHORED_DEF=response.definition;({mcq:MCQ,bank:BANK,flow:FLOW}=response.definition);PASSAGE={loaded:true};}
  if(response.lease){lease=response.lease;activeMs=0;leaseBaseline=a.usedMs;a.owner=TAB;pendingOperation=null;}
  return a;
@@ -118,7 +118,7 @@ async function request(path,body,teacher=false,keepalive=false){
   if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
   response=await fetch(`${API}${path}`,options);}
  catch{networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
- const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{code:value.error.code});networkFailed=false;return value;
+ const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{code:value.error.code,httpStatus:response.status});networkFailed=false;return value;
 }
 function serial(fn){const next=queue.then(fn);queue=next.catch(()=>{});return next;}
 function setActivating(value){activating=value;document.querySelectorAll('[data-action="request-reset"],[data-action="request-submit"]').forEach(button=>button.disabled=value||!isOnline());}
@@ -141,18 +141,21 @@ async function sendPulse(){
 function savedStatus(text){const el=document.querySelector('.autosave-status');if(el)el.textContent=text;}
 function stopLocal(reason){consumeTime();stopAudio();setActivating(false);rememberScroll();lastTick=0;clearTimeout(debounce);if(current()){current().status='paused';current().pauseReason=reason;persist(false);}closeModal();if(!saveError)navigate('resume');}
 function tick(){if(current()?.status!=='running'||route!=='exercise')return;if(document.hidden||!navigator.onLine){pause(document.hidden?'hidden':'offline');return;}consumeTime();updateProgress();if(performance.now()-lastSave>900)persist(false);if(current().remainingMs<=0){finish('timeout');return;}if(performance.now()-lastPulse>4500)sendPulse();}
+function clearPendingOperation(){
+ pendingOperation=null;sessionStorage.removeItem(`listening-operation:${identity.bindingId}`);
+}
 async function perform(action,payload){
  if(busy||activating)return;busy=true;clearTimeout(debounce);
  const op=pendingOperation?.action===action?pendingOperation:{action,payload:{operationId:crypto.randomUUID(),...payload}};pendingOperation=op;
  try{sessionStorage.setItem(`listening-operation:${identity.bindingId}`,JSON.stringify(op));persist(false);
- await serial(async()=>{const response=await request(`/${action}`,op.payload);pendingOperation=null;sessionStorage.removeItem(`listening-operation:${identity.bindingId}`);apply(response);persist(false);lastPulse=performance.now();
+ await serial(async()=>{const response=await request(`/${action}`,op.payload);clearPendingOperation();apply(response,{preserve:!!response.attempts.at(-1)?.progressRecovery});persist(false);lastPulse=performance.now();
   if(current()?.status==='submitted'){lastTick=0;await loadResult(current().no);}else if(response.lease){
    // Đề mở sau ACK tạo lượt. Gửi mốc kích hoạt cùng lúc mở đề, không chờ thêm ACK để chạy giờ.
    const id=current().id,proof=lease;current().status='running';lastTick=0;activating=true;busy=false;navigate('exercise');
    await startPlayback(id,proof);
 
-  }else{lastTick=0;current().status='paused';lease=null;navigate('resume');}
- });}catch(e){stopLocal(e.code);notify(e.message);}finally{busy=false;}
+  }else{lastTick=0;current().status='paused';if(!current().progressRecovery)lease=null;navigate('resume');if(current().progressRecovery)notify(current().progressRecovery.message);}
+ });}catch(e){if(e.httpStatus>=400&&e.httpStatus<500)clearPendingOperation();stopLocal(e.code);notify(e.message);}finally{busy=false;}
 }
 
 // Giữ tiến độ nghe và giờ rà trong lượt; tải audio qua API có kiểm chủ bài.
@@ -210,6 +213,8 @@ document.addEventListener('input',e=>{if(e.target.id==='audio-volume')audio.volu
 function begin(){if(current()?.status==='submitted'){loadResult(current().no);return;}if(current())return resume();perform('begin',{owner:TAB});}
 function resume(){
  if(!navigator.onLine){notify('Khôi phục kết nối trước khi tiếp tục.');return;}
+ // Tiếp tục luôn giữ lượt hiện tại; không phát lại Reset cũ khi trạng thái kết quả chưa rõ.
+ if(pendingOperation?.action==='reset')clearPendingOperation();
  if(pendingOperation){perform(pendingOperation.action,pendingOperation.payload);return;}
  const a=current();if(!a)return begin();
  let recovery;
@@ -220,7 +225,12 @@ function pause(reason='manual',shouldRender=true){
  const a=current();if(!a||a.status!=='running'||a.owner!==TAB)return;
  consumeTime();stopAudio();rememberScroll();persist(false);const input={attemptId:a.id,lease,snapshot:snapshot()};
  a.status='paused';a.pauseReason=reason;lastTick=0;clearTimeout(debounce);closeModal();
- if(navigator.onLine)serial(async()=>{try{const response=await request('/pause',input,false,true);if(current()?.id===input.attemptId&&lease?.id===input.lease.id){apply(response,{preserve:true});persist(false);if(current().status==='submitted')await loadResult(current().no);}}catch(e){notify(e.message);}});
+ if(navigator.onLine)serial(async()=>{try{
+  if(current()?.id!==input.attemptId||lease?.id!==input.lease.id)return;
+  // Pulse trước đó có thể đã ACK trong hàng đợi; gửi nháp mới nhất cùng đúng lease.
+  input.snapshot=snapshot();const response=await request('/pause',input,false,true);
+  if(current()?.id===input.attemptId&&lease?.id===input.lease.id){apply(response,{preserve:true});persist(false);if(current().status==='submitted')await loadResult(current().no);else if(current().progressRecovery&&shouldRender)navigate('resume');}
+ }catch(e){notify(e.message);}});
  if(shouldRender&&!saveError)navigate('resume');
 }
 function finish(method){if(busy||activating||!current()||!['running','paused'].includes(current().status))return;consumeTime();rememberScroll();stopAudio();lastTick=0;persist(false);perform('submit',{attemptId:current().id,lease,snapshot:snapshot(),method});}
@@ -262,6 +272,7 @@ function render(){
  if(route==='exercise'&&!Object.keys(PASSAGE).length)return navigate('resume');
  if(route==='result'){const a=record()?.attempts.find(x=>x.no===+(routeParams.get('attempt')||current()?.no));if(a?.status==='submitted'&&!resultCache.has(a.id)){loadResult(a.no);return;}}
  ({docs,login,prep,resume:resumeScreen,exercise,result:resultScreen,teacher:teacherScreen}[route]||login)();if(route!=='exercise')window.scrollTo(0,0);
+ if(route==='resume'&&current()?.progressRecovery){const note=document.createElement('p');note.className='note warning';note.textContent=current().progressRecovery.message;app.querySelector('.resume-card>div:last-child')?.prepend(note);}
  if(route==='login'&&!app.querySelector('[data-action="change-student"]'))app.insertAdjacentHTML('beforeend',textBtn('Đổi người học','change-student'));
 }
 async function teacherScreen(afterLogin=false){
