@@ -1,5 +1,5 @@
 // Cookie phiên chung được máy chủ xác minh; quyền Substitute vẫn do API riêng kiểm.
-import '../../shared/teacher-single-sign-on.js?v=20261023-sso-all';
+import '../../shared/teacher-single-sign-on.js?v=20261023-sso-all-port';
 import {appendWritingFeedback as appendFeedback} from './feedback-renderer.js?rev=20261009-results-v2';
 import {createProgressPanel} from './teacher-progress-panel.js?rev=20261019-v1';
 const API='https://ducizone.ddns.net/substitute-teacher-api';

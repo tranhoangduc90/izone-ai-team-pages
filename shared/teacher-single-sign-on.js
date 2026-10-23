@@ -10,7 +10,7 @@
   {id:'listening',prefix:'/listening-practice-api/api',source:'/listening-practice-api/api/teacher/shared-session'},
   {id:'writing',prefix:'/writing-api/api',source:'/writing-api/api/auth/session/shared-session'},
   {id:'mapping',prefix:'/mapping-api/api',source:'/mapping-api/api/auth/session/shared-session'},
-  {id:'term67',prefix:'/term-mini-k67-api/api',source:'/term-mini-k67-api/api/auth/session/shared-session'},
+  {id:'term67',prefix:'/term-mini-k67-api/api',source:'/term-mini-k67-api/api/auth/session/shared-session',apiOrigin:'https://ducizone.ddns.net:18869'},
   {id:'materials',prefix:'/reading67-materials/api/reading-skills67',source:'/reading67-materials/api/reading-skills67/teacher/shared-session'},
   {id:'k56',prefix:'/mapping-api-k56/api',source:'/mapping-api-k56/api/auth/session/shared-session'},
   {id:'k56demo',prefix:'/mapping-api-demo/api',source:'/mapping-api-demo/api/auth/session/shared-session'},
@@ -45,8 +45,7 @@
  }
  function route(input,options){
   let url;try{url=new URL(typeof input==='string'||input instanceof URL?String(input):input.url,window.location.href);}catch{return null;}
-  if(url.origin!==origin)return null;
-  const product=products.find(p=>url.pathname.startsWith(p.prefix+'/'));if(!product)return null;
+  const product=products.find(p=>(url.origin===origin||url.origin===p.apiOrigin)&&url.pathname.startsWith(p.prefix+'/'));if(!product)return null;
   const path=url.pathname.slice(product.prefix.length).replace(/^\/v1\/auth\/session$/,'/auth/session'),method=(options?.method||input?.method||'GET').toUpperCase();
   if(!path.startsWith('/teacher/')&&path!=='/auth/session')return null;
   if(path==='/teacher/config')return null;
