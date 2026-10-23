@@ -219,6 +219,21 @@ test('Materials teacher login: desktop/mobile, shared session and permissions', 
         } finally { await f.context.close(); }
       });
     }
+    await t.test('Google receives only the Pages origin from the direct work login', async () => {
+      const f = await fixture(browser, 390);
+      try {
+        let googleReferrer;
+        await f.page.route('https://accounts.google.com/gsi/client', async route => {
+          googleReferrer = await route.request().headerValue('referer');
+          await route.fulfill({ body: google, contentType: 'application/javascript' });
+        });
+        await f.page.goto(site + entry + query);
+        await f.page.getByRole('button', { name: 'Đăng nhập bằng Google' }).waitFor();
+        // Google cần origin để kiểm ứng dụng; không được gửi lớp/học viên/query cho Google.
+        assert.equal(googleReferrer, new URL(site).origin + '/');
+        assert.deepEqual(f.errors, []);
+      } finally { await f.context.close(); }
+    });
     await t.test('student remains closed; sibling Reading67 login keeps its existing screen', async () => {
       const f = await fixture(browser, 390);
       try {
