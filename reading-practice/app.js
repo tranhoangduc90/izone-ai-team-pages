@@ -73,7 +73,10 @@ async function autoLoginRemembered(){
   STUDENTS=(await request(`/library/${encodeURIComponent(requestedLesson)}/classes/${encodeURIComponent(selectedClassId)}`)).students;
  }
  const classCode=sharedEntry?CLASSES.find(c=>c.id===selectedClassId)?.classCode:entryInfo?.classCode;
- selected=await courseIdentity.resolve({classCode,studentRefs:STUDENTS.map(s=>s.id||s.studentRef),expectedRef:sharedEntry?'':entryInfo?.selectedStudentRef});
+ if(selected){
+  // Kết quả vừa xác minh vẫn thuộc lượt mở này, không cache quyền qua lượt sau.
+  if(!courseIdentity.isCurrent(selected)||!STUDENTS.some(s=>(s.id||s.studentRef)===selected.alias.studentRef))return false;
+ }else selected=await courseIdentity.resolve({classCode,studentRefs:STUDENTS.map(s=>s.id||s.studentRef),expectedRef:sharedEntry?'':entryInfo?.selectedStudentRef});
  if(selected.status==='wrong_owner'){notify('Link bài thuộc người khác với người đã nhớ. Hãy kiểm tra link hoặc dùng Đổi người học.');return false;}
  if(selected.status!=='unique')return false;
  await loginSelected(selected.alias.studentRef,sharedEntry?selectedClassId:classCode,{selection:selected});return true;
