@@ -34,11 +34,13 @@
  async function teacherLogin(classId,studentRef){
   const app=document.querySelector('#app');
   app.innerHTML='<section class="access-card"><p class="kicker">GIẢNG VIÊN · READING 67</p><h1>Đăng nhập để xem bài</h1><p>Dùng tài khoản Google đã có quyền lớp. Đăng nhập xong sẽ mở ngay bài trong link Homework này.</p><label class="remember"><input type="checkbox" id="teacher-remember" checked> Tự đăng nhập Google trên thiết bị này</label><div id="google-button"></div><p id="teacher-error" role="status"></p>'+(config.demoGoogle?'<button class="primary" id="demo-teacher">Vào vai giảng viên thử</button>':'')+'</section>';
+  window.MaterialsTeacherLogin?.render(app,config);
   return new Promise(resolve=>{
    const error=message=>{app.querySelector('#teacher-error').textContent=message;};
    const enter=async credential=>{try{
     await post('/teacher/login',{credential,remember:app.querySelector('#teacher-remember').checked});
     const work=await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef));
+    window.MaterialsTeacherLogin?.clear();
     resolve({teacher:true,work,config});
    }catch(e){error(e.message);}};
    if(config.demoGoogle){app.querySelector('#demo-teacher').onclick=()=>enter('demo-teacher-allowed');return;}
