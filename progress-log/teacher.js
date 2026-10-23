@@ -560,7 +560,8 @@ async function loadWorkspace() {
   state.classes = (options.classes || []).filter(item => /^[1-9]\d{0,17}$/u.test(String(item.class_id)));
   state.assignments = options.assignments || [];
   const entryAssignment = resolveTeacherAssignment(state.assignments,state.classes,location.href);
-  state.liveEnabled=THUY_UI&&options.capabilities?.liveUpdates===true;
+  state.liveAvailable=THUY_UI&&options.capabilities?.liveUpdates===true;
+  state.liveEnabled=false;
   state.library=[];
   if(THUY_UI){fillSelect(thuyLayout.classes,state.classes,'class_id',c=>c.class_name);if(entryAssignment)thuyLayout.classes.value=String(entryAssignment.class_id);}
   formEditor.setWorkspace({classes:state.classes,assignments:state.assignments,classId:entryAssignment?.class_id,sessionNumber:entryAssignment?.session_number});
@@ -1533,6 +1534,7 @@ function applyLiveUpdate(update){
 async function loadDashboard({ quiet = false } = {}) {
   const assignmentId = elements.assignmentSelect.value;
   const selected=state.assignments.find(a=>a.assignment_id===assignmentId);
+  state.liveEnabled=state.liveAvailable&&selected?.live_updates_enabled!==false;
   if(selected)history.replaceState(null,'',location.pathname+location.search+'#assignment='+encodeURIComponent(selected.public_token));
   if(state.dashboard?.assignmentId!==assignmentId){
     liveUpdates.stop();state.dashboardGeneration++;state.analyticsGeneration++;state.analyticsController?.abort();

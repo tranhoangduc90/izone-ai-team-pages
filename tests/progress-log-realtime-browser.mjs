@@ -12,7 +12,7 @@ const uid=n=>`b0000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const assignmentId=uid(3),block=uid(4),item=uid(5);
 async function until(check,message,timeout=3000){const start=performance.now();while(performance.now()-start<timeout){if(await check())return;await new Promise(done=>setTimeout(done,40));}assert.fail(message);}
 
-async function fixture({libraryUnavailable=false}={}){
+async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
   let count=14,revision=1,unavailable=false,writeCount=0,draftText='Bản đầu';const streams=new Set(),requests=[];
   const students=()=>Array.from({length:17},(_,i)=>({studentRef:uid(100+i),name:`Học viên ${String(i+1).padStart(2,'0')}`,
     submissionId:i<count?uid(200+i):null,checkpoints:i<count?[{blockId:block}]:[],sessionComment:null,portalSync:null}));
@@ -38,7 +38,7 @@ async function fixture({libraryUnavailable=false}={}){
         if(path.endsWith('/live-updates'))return unavailable?json({ok:false,message:'Nguồn cập nhật tạm lỗi'},503):json({ok:true,update:{assignmentId,revision:String(revision),generatedAt:new Date().toISOString(),full:true,changes:[],dashboard:dashboard(),live:live(),analytics:analytics()}});
         if(path==='/teacher/options')return json({ok:true,reviewer:{name:'Giảng viên mẫu',email:'teacher@example.test'},capabilities:{liveUpdates:true},
           classes:[{class_id:'1294',class_name:'IC2305',class_status:'on_going'},{class_id:'1252',class_name:'IC2264',class_status:'on_going'},{class_id:'1001',class_name:'Lớp cũ',class_status:'completed'}],
-          assignments:[{assignment_id:assignmentId,public_token:assignmentId,class_id:'1294',class_name:'IC2305',session_number:11,title:definition.title,status:'published'}]});
+          assignments:[{assignment_id:assignmentId,public_token:assignmentId,class_id:'1294',class_name:'IC2305',session_number:11,title:definition.title,status:'published',live_updates_enabled:liveAllowed}]});
         if(path==='/teacher/dashboard')return json({ok:true,dashboard:dashboard()});
         if(path==='/teacher/live-drafts')return json({ok:true,live:live()});
         if(path.endsWith('/question-analytics'))return json({ok:true,analytics:analytics()});
@@ -90,6 +90,19 @@ test('Live: 14 → 15 bài cập nhật trong panel, giữ nháp/câu chọn; L�
     await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('16/17'),'Làm mới không phục hồi số liệu');
     assert.equal(f.writes,0);assert.deepEqual(f.errors,[]);
     if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await f.page.evaluate(()=>scrollTo(0,0));await f.page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'live-panel.png'),fullPage:true});}
+  }finally{await f.close();}
+});
+
+test('Lớp ngoài đợt thí điểm giữ đường đọc hiện hành và nút Làm mới, không mở SSE',{timeout:30000},async()=>{
+  const f=await fixture({liveAllowed:false});try{
+    await f.page.goto(f.origin+'/progress-log/teacher.html#assignment='+assignmentId);
+    await f.page.locator('.thuy-roster tbody tr').first().waitFor();
+    assert.ok(f.requests.includes('/teacher/dashboard'));
+    assert.ok(!f.requests.some(path=>path.endsWith('/events')||path.endsWith('/live-updates')));
+    const before=f.requests.filter(path=>path==='/teacher/dashboard').length;
+    await f.page.locator('#refreshDashboardButton').click();
+    await until(()=>f.requests.filter(path=>path==='/teacher/dashboard').length>before,'Làm mới vẫn phải dùng được ngoài pilot');
+    assert.equal(f.writes,0);assert.deepEqual(f.errors,[]);
   }finally{await f.close();}
 });
 
