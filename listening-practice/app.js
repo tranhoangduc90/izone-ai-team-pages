@@ -1,6 +1,7 @@
 (async () => {
 'use strict';
 const AuthoredUI=await import('./authored-ui.js?v=20261021-ui-acceptance-v1');
+const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261023-pages-audio1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 let CODE='67-practice-listening_mcq_flowchart',FULL_TIME=579207;const TAB=crypto.randomUUID();
@@ -184,9 +185,8 @@ async function startPlayback(id,proof){
  const a=current();
  if(a.phase==='listening'){
   if(audioBlobAttempt!==id){
-   const response=await fetch(`${API}/audio/${id}`,{headers:{Authorization:`Bearer ${sessionToken}`},signal:AbortSignal.timeout(20000)});
-   if(!response.ok)throw new Error('Chưa tải được audio. Nhấn Tiếp tục để thử lại.');
-   const blob=await response.blob();if(generation!==playbackGeneration||current()?.id!==id)return;
+   const blob=await fetchListeningAudio(`${API}/audio/${id}`,{headers:{Authorization:`Bearer ${sessionToken}`},signal:AbortSignal.timeout(20000)});
+   if(generation!==playbackGeneration||current()?.id!==id)return;
    if(audioBlob)URL.revokeObjectURL(audioBlob);audioBlob=URL.createObjectURL(blob);audioBlobAttempt=id;audio.src=audioBlob;
   }
   if(audio.readyState===0)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{cleanup();reject(new Error('Audio chưa sẵn sàng.'));},10000);const done=()=>{cleanup();resolve();};const error=()=>{cleanup();reject(new Error('Không giải mã được audio.'));};const cleanup=()=>{clearTimeout(timer);audio.removeEventListener('loadedmetadata',done);audio.removeEventListener('error',error);};audio.addEventListener('loadedmetadata',done);audio.addEventListener('error',error);audio.load();});
