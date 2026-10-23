@@ -101,9 +101,9 @@ window.ListeningReview = (() => {
       const base=new URL(window.LISTENING_CONFIG.apiBase.replace(/\/$/,'')+'/',location.href);
       const key=new URL(current.data.reviewAudioUrl,base).href;
       if(blobKey===key&&blobUrl)return;
-      const response=await fetch(key,{headers:current.token?{Authorization:`Bearer ${current.token}`}:{},credentials:'include',signal});
-      if(!response.ok)throw new Error('REVIEW_AUDIO_UNAVAILABLE');
-      const blob=await response.blob();if(signal.aborted)throw new DOMException('Cancelled','AbortError');
+      const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261023-pages-audio1');
+      const blob=await fetchListeningAudio(key,{headers:current.token?{Authorization:`Bearer ${current.token}`}:{},credentials:'include',signal});
+      if(signal.aborted)throw new DOMException('Cancelled','AbortError');
       if(blobUrl)URL.revokeObjectURL(blobUrl);
       blobUrl=URL.createObjectURL(blob);blobKey=key;player.audio.src=blobUrl;
     };
