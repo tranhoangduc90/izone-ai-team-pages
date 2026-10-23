@@ -16,9 +16,10 @@ Mười một entry: landing `k56-demo`, ba CBT, ba phiếu, ba Audio Backup và
 
 ## Bố cục
 
-- Theo phản hồi sau phát hành ngày 23/10: giữ cấu trúc đề K56 cũ. Reading 50/50 trên desktop; ≤980 px bài đọc trên, câu hỏi dưới, cả hai cùng hiện và cuộn độc lập. Không thêm nút đổi vùng, không đổi nhóm/control hoặc DOM annotation.
+- Theo phản hồi sau phát hành ngày 23/10: giữ cấu trúc đề K56 cũ. Reading 50/50 trên desktop; ≤980 px bài đọc trên, câu hỏi dưới. Không thêm nút đổi vùng, không đổi nhóm/control hoặc DOM annotation.
+- Bản sửa diện tích đọc sau v2: trang thi cuộn tự nhiên, không chia phần chiều cao còn lại sau header/công cụ thành một khung thấp. Reading desktop có hai vùng cao gần toàn màn hình, vẫn cuộn độc lập; tiêu đề bài đọc cuộn cùng nội dung. Màn hẹp Reading đọc liên tục theo trang. Listening mọi Part cuộn theo trang, giữ đủ câu và thứ tự cũ.
 - Linh duyệt bổ sung ngày 23/10: căn đều hai lề các đoạn văn dài, đặc biệt bài Reading; dòng cuối căn trái. Không áp cho nhãn, đáp án, bảng và ô đang nhập.
-- Writing: dùng default của content (Term 1: 44%, Term 2/Mini: 50%) và ưu tiên preference cũ. Giữ separator, đề/dàn ý/editor/meta theo cấu trúc gốc; ≤620 px xếp dọc theo CSS gốc. Khung laptop tính chiều cao còn lại để không cắt số từ/trạng thái lưu.
+- Writing: dùng default của content (Term 1: 44%, Term 2/Mini: 50%) và ưu tiên preference cũ. Giữ separator, đề/dàn ý/editor/meta theo cấu trúc gốc; ≤620 px xếp dọc. Vùng viết đủ cao để đọc/soạn bài, không bị trừ chiều cao bởi phần đầu trang; số từ/trạng thái lưu tới được bằng cuộn trang. Đề màn hẹp mở theo nội dung.
 - Phiếu: hai cột đi từ trên xuống theo cột như bản gốc, màn hẹp một cột. Câu 32 Term 1 vẫn là cặp ô; nhóm 24–26 Term 2 vẫn do handler chọn ba xử lý.
 - Giảng viên: lọc gần bảng, tóm tắt gọn, giữ tab, toàn bài, nháp và quyền hiện hành. Dialog chỉ đọc giữ nhấn–nhả ngoài, Escape, nút đóng và trả focus; bản lưu dùng nút đóng của owner để dọn timer.
 
@@ -39,7 +40,7 @@ Các test mới bảo vệ token/font thực nạp, breakpoint, cùng node/giá 
 
 ## Phát hành và quay lui
 
-Bản v1 đã phát hành trước phản hồi. Gói sửa v2 hiện chưa commit/push/deploy. Khi được cấp quyền riêng, phát hành đồng bộ entry, bootstrap, ba adapter, theme/script/font/logo và worker. Giữ nguyên cơ chế xác nhận nộp của #172. Không đổi query, storage key hoặc xóa cache/nháp của học viên.
+Bản v2 đã phát hành ở commit `66b7362` ngày 23/10/2026, giữ cập nhật audio Pages #233. Bản sửa diện tích đọc và chiều rộng chọn lớp sau v2 dùng revision `20261023-master170-v3`, đồng bộ entry/bootstrap/enhance/worker. Linh đã yêu cầu phát hành sau kiểm; kết quả build/readback ghi riêng trong biên bản phát hành. Chỉ chỉnh vị trí cuộn khi chuyển Part/Passage trong theme K56, không đổi khởi tạo hay nhảy câu. Giữ nguyên cơ chế xác nhận nộp của #172. Không đổi query nghiệp vụ, storage key hoặc xóa cache/nháp của học viên.
 
 Quay lui bằng gói frontend tương thích trước thay đổi: bỏ opt-in/theme và trả đúng entry/bootstrap/adapter/worker của gói trước. Không restore database, reset bài/điểm hoặc xóa nháp. Sau phát hành cần đọc lại asset đích và xác nhận nghiệp vụ thật được Đức chỉ định; fixture không thay phần đó.
 

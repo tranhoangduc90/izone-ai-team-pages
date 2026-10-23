@@ -104,7 +104,11 @@ body[data-k56-design].cbt-mode .topbar .cbt-identity-panel { flex: 1 1 360px; ma
 body[data-k56-design].cbt-mode .topbar .cbt-identity-panel h2 { font-size: 14px; color: var(--muted); }
 body[data-k56-design].cbt-mode .topbar .cbt-identity-panel select { color: var(--ink); background: var(--surface-soft); border: 1px solid var(--control-border); font-size: 16px; min-height: 44px; }
 body[data-k56-design].cbt-mode .cbt-class-label { color: var(--navy); font-size: 14px; }
-body[data-k56-design].cbt-mode .test-panel:not([hidden]) { height: max(560px,calc(100dvh - 168px)); min-height: 0; max-height: none; box-shadow: none; border-radius: 12px; }
+/* Cuộn trang để phần nhận diện/công cụ không lấy chiều cao cố định của đề. */
+body[data-k56-design].cbt-mode .test-panel:not([hidden]) { height: auto; min-height: 0; max-height: none; grid-template-rows: auto auto; box-shadow: none; border-radius: 12px; }
+body[data-k56-design] .cbt-semantic-pane { height: auto; grid-template-rows: auto auto; }
+body[data-k56-design] #listeningView .cbt-content-viewport { overflow: visible; }
+body[data-k56-design] #readingView .cbt-content-viewport { height: max(560px,calc(100dvh - 96px)); }
 body[data-k56-design] .cbt-toolbar { padding: 10px 14px; gap: 8px 12px; background: var(--surface); border-color: var(--line); }
 body[data-k56-design] .cbt-test-heading { padding: 0; }
 body[data-k56-design] .cbt-test-heading h2 { font-size: 18px; }
@@ -120,7 +124,7 @@ body[data-k56-design] .cbt-content-viewport[data-font-size='90'] { font-size: 16
 body[data-k56-design] .cbt-content-viewport[data-font-size='110'] { font-size: 19.8px; }
 body[data-k56-design] .cbt-content-viewport[data-font-size='120'] { font-size: 21.6px; }
 body[data-k56-design] .cbt-reading-passage { background: var(--surface); border-color: var(--line); }
-body[data-k56-design] .cbt-passage-header { padding: 18px 28px 16px; color: var(--ink); background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: none; }
+body[data-k56-design] .cbt-passage-header { position: static; padding: 18px 28px 16px; color: var(--ink); background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: none; }
 body[data-k56-design] .cbt-passage-header span { color: var(--muted); font-size: 14px; letter-spacing: normal; text-transform: none; font-weight: 600; }
 body[data-k56-design] .cbt-passage-header h3 { font-size: 22px; }
 body[data-k56-design] .cbt-passage-body { max-width: 76ch; padding: 24px 28px; line-height: 1.65; }
@@ -128,7 +132,7 @@ body[data-k56-design] .cbt-passage-body p { text-align: justify; text-align-last
 /* Linh duyệt 23/10: đoạn dài căn đều hai lề, dòng cuối căn trái. */
 body[data-k56-design] :is(.attempt-review-passage p,.attempt-review-essay-text,.writing-feedback-prompt,.writing-feedback-text p,.writing-feedback-text,.writing-instruction,.writing-follow-up) { text-align: justify; text-align-last: left; }
 body[data-k56-design] .cbt-reading-questions { padding: 22px 24px; background: var(--surface-soft); }
-body[data-k56-design] .cbt-listening-section { padding: 22px 28px; background: var(--surface); }
+body[data-k56-design] .cbt-listening-section { height: auto; overflow: visible; padding: 22px 28px; background: var(--surface); }
 body[data-k56-design] .cbt-section-intro { padding: 16px 18px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-top: 3px solid var(--brand); border-radius: 8px; box-shadow: none; }
 body[data-k56-design] .cbt-section-intro :is(h3,h4,strong,p) { color: inherit; }
 body[data-k56-design] .cbt-section-intro .cbt-kicker { color: var(--muted); font-size: 14px; font-weight: 600; letter-spacing: normal; }
@@ -163,7 +167,8 @@ body[data-k56-design] .cbt-flag-button { min-width: 32px; min-height: 32px; colo
 body[data-k56-design] .cbt-flag-button.is-flagged { color: var(--attention-fg); background: var(--attention-bg); }
 body[data-k56-design] :is(.cbt-reading-clock,.cbt-writing-clock) { color: var(--navy); background: var(--pending-bg); border: 1px solid var(--line); font-size: 14px; box-shadow: none; }
 /* Writing: giá trị --writing-left vẫn do separator hiện hành quản lý. */
-body[data-k56-design] .writing-exam-view { margin-top: 12px; min-height: 560px; max-height: none; box-shadow: none; }
+body[data-k56-design] .writing-exam-view:not([hidden]) { margin-top: 12px; height: auto; min-height: 0; max-height: none; grid-template-rows: auto auto auto; box-shadow: none; }
+body[data-k56-design] .writing-workspace { height: max(600px,calc(100dvh - 120px)); }
 body[data-k56-design] .writing-exam-header { padding: 12px 18px; flex-wrap: wrap; color: var(--ink); background: var(--surface); border-color: var(--line); }
 body[data-k56-design] .writing-exam-header h2 { font-size: 20px; }
 body[data-k56-design] .writing-prompt-pane { border: 0; background: var(--surface-soft); }
@@ -246,7 +251,7 @@ body[data-k56-design] .landing-shell { display: block; min-height: 0; padding: 3
 body[data-k56-design] .landing-card { width: min(820px,100%); margin: auto; padding: 28px 32px; border-top: 3px solid var(--brand); }
 body[data-k56-design] .landing-card h1 { font-size: 28px; }
 body[data-k56-design] .landing-auth { margin: 20px 0; padding: 16px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 12px; }
-body[data-k56-design] .landing-class-field { max-width: 520px; margin: 24px 0 12px; }
+body[data-k56-design] .landing-class-field { width: 100%; max-width: none; margin: 24px 0 12px; }
 body[data-k56-design] .landing-order { margin: 24px 0; padding: 0; border: 0; background: transparent; }
 body[data-k56-design] .landing-order legend { color: var(--navy); font-size: 18px; font-weight: 700; }
 body[data-k56-design] .landing-actions-three { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
@@ -320,27 +325,22 @@ body[data-k56-design] .landing-class-help { font-size: 13px; }
 body[data-k56-design] .landing-link-group { margin-top: 20px; padding: 0; }
 body[data-k56-design] .landing-link-group h2 { font-size: 18px; margin-bottom: 12px; }
 body[data-k56-design] .order-choice[aria-pressed=true] { color: white; background: var(--action); border-color: var(--action); box-shadow: none; }
-@media (min-width:981px) {
-  /* Cùng thứ tự DOM cũ; chỉ tính chiều cao còn lại như vỏ K67 để không cắt footer. */
-  body[data-k56-design].cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) #app { display:flex; flex-direction:column; height:calc(100dvh - 41px); min-height:0; }
-  body[data-k56-design].cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) .topbar { flex:0 0 auto; }
-  body[data-k56-design].cbt-mode:has(.cbt-test-form:not([hidden]),#writingView:not([hidden])) .page-shell { display:flex; flex-direction:column; flex:1 1 0; min-height:0; margin-bottom:8px; }
-  body[data-k56-design].cbt-mode :is(.test-panel,.writing-exam-view):not([hidden]) { flex:1 1 0; min-height:0; height:auto; max-height:none; }
-  body[data-k56-design].cbt-mode :is(.progress,.notice) { flex:0 0 auto; }
-}
 @media (max-width:980px) {
-  /* Luồng cũ: bài đọc nằm trên câu hỏi, cả hai cùng hiện và cuộn độc lập. */
+  /* Giữ thứ tự bài đọc → câu hỏi; màn hẹp đọc liền theo trang, không hai ô cuộn thấp. */
   body[data-k56-design].cbt-mode #readingView:not([hidden]) { height: auto; min-height: 0; }
   body[data-k56-design] #readingView .cbt-semantic-stage { height: auto; }
-  body[data-k56-design] #readingView .cbt-content-viewport { height: 640px; }
-  body[data-k56-design] #readingView .cbt-reading-section { height: 100%; }
+  body[data-k56-design] #readingView .cbt-content-viewport { height: auto; overflow: visible; }
+  body[data-k56-design] #readingView .cbt-reading-section { height: auto; grid-template-rows: auto auto; }
+  body[data-k56-design] #readingView :is(.cbt-reading-passage,.cbt-reading-questions) { overflow: visible; }
 }
 @media (max-width:700px) {
   body[data-k56-design]:not(.cbt-mode) .questions-grid { grid-template-columns:minmax(0,1fr); grid-template-rows:none; grid-auto-flow:row; padding:16px; }
 }
 @media (max-width:620px) {
   body[data-k56-design] .writing-exam-view:not([hidden]) { height:auto; min-height:0; }
-  body[data-k56-design] .writing-prompt-body { padding:20px; }
+  body[data-k56-design] .writing-workspace { height:auto; }
+  body[data-k56-design] .writing-split { grid-template-rows:auto minmax(560px,75dvh); }
+  body[data-k56-design] .writing-prompt-body { overflow:visible; padding:20px; }
   body[data-k56-design] .cbt-part-button,body[data-k56-design] .cbt-tool-button { min-height:44px; }
   body[data-k56-design] .landing-card { padding:24px 20px; }
 }

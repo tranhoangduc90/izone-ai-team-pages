@@ -16,10 +16,18 @@ for(const slug of slugs) test(slug+': Reading giữ control/đáp án khi reflow
     await f.page.screenshot({path:resolve(output,slug+'-reading-desktop.png')});
     if(!baseline)for(const [width,height] of [[1366,768],[1280,720]]){
       await f.page.setViewportSize({width,height});
-      assert.equal(await f.page.locator('#readingView').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),true,'Reading bị cắt thanh số câu ở laptop');
+      const space=await f.page.locator('.cbt-reading-section:not([hidden])').evaluate(el=>({passage:el.children[0].clientHeight,questions:el.children[1].clientHeight,headerPosition:getComputedStyle(el.querySelector('.cbt-passage-header')).position}));
+      console.log(JSON.stringify({scope:'reading-space',slug,width,height,...space}));
+      assert(space.passage>=height*.75&&space.questions>=height*.75,'Hai vùng Reading cần ít nhất 75% chiều cao màn hình, không chỉ phần dư dưới các thanh công cụ');
+      assert.equal(space.headerPosition,'static','Tiêu đề bài đọc cần cuộn cùng nội dung');
+      const nav=f.page.locator('#readingView .cbt-question-nav-wrap');
+      await nav.scrollIntoViewIfNeeded();
+      assert.equal(await nav.evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),true,'Cuộn trang phải tới được thanh số câu Reading');
     }
     await f.page.setViewportSize({width:1366,height:768});
     if(baseline)return;
+    await f.page.locator('.cbt-reading-section:not([hidden])').scrollIntoViewIfNeeded();
+    await f.page.screenshot({path:resolve(output,slug+'-reading-focus-desktop.png')});
     const theme=await f.page.evaluate(()=>({font:getComputedStyle(document.body).fontFamily,bg:getComputedStyle(document.body).backgroundColor,loaded:document.fonts.check('400 18px "Source Sans 3"')}));
     assert.match(theme.font,/Source Sans 3/);assert.equal(theme.bg,'rgb(245, 246, 248)');assert.equal(theme.loaded,true);
     assert.deepEqual(await f.page.locator('.cbt-passage-body p').first().evaluate(el=>({align:getComputedStyle(el).textAlign,last:getComputedStyle(el).textAlignLast})),{align:'justify',last:'left'});
@@ -41,10 +49,15 @@ for(const slug of slugs) test(slug+': Reading giữ control/đáp án khi reflow
       assert.equal(await f.page.locator('.k56-reading-switch').count(),0);
       assert.equal(await field.evaluate(el=>el===window.originalK56Field),true);
       assert.equal(await field.inputValue(),answer);
+      if(width<=980)assert.equal(await section.evaluate(el=>[...el.children].every(n=>n.scrollHeight<=n.clientHeight+1)),true,'Màn hẹp đọc liên tục theo trang, không chia thành hai khung cuộn thấp');
       if(await field.getAttribute('type')==='radio')assert.equal(await field.isChecked(),true);
       assert.equal(await f.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Trang tràn ngang ở '+width);
     }
     await f.page.setViewportSize({width:390,height:844});
+    if(await f.page.locator('#readingView .cbt-part-button').count()>1){
+      await section.getByRole('button',{name:'Next Passage →',exact:true}).click();
+      await f.page.waitForFunction(()=>{const h=document.querySelector('.cbt-reading-section:not([hidden]) .cbt-passage-header');const r=h.getBoundingClientRect();return r.top>=-1&&r.bottom<=innerHeight;},null,{timeout:5000});
+    }
     await f.page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
     await f.page.screenshot({path:resolve(output,slug+'-reading-mobile.png')});
     assert.deepEqual(f.errors,[]);
@@ -66,8 +79,13 @@ test('Reading: Note giữ nguyên khi cuộn hai vùng và reload',async()=>{
     await f.page.locator('.cbt-note-editor').fill('Ghi chú giả cần giữ qua đổi vùng và tải lại.');
     await f.page.getByRole('button',{name:'Đóng Notes',exact:true}).click();
     const marks=await passage.locator('[data-annotation-ids]').count();assert(marks>0);
-    await f.page.locator('.cbt-reading-section:not([hidden]) .cbt-reading-questions').evaluate(el=>{el.scrollTop=150;});
-    await passage.evaluate(el=>el.parentElement.scrollTop=120);
+    await f.page.setViewportSize({width:1366,height:768});
+    const scrolling=await f.page.locator('.cbt-reading-section:not([hidden])').evaluate(el=>[...el.children].map(n=>{n.scrollTo({top:120,behavior:'instant'});return {top:n.scrollTop,height:n.clientHeight,content:n.scrollHeight};}));
+    console.log(JSON.stringify({scope:'reading-independent-scroll',scrolling}));
+    assert(scrolling.every(value=>value.content<=value.height+1||value.top>0),'Vùng Reading dài vẫn cuộn độc lập trên desktop');
+    await f.page.setViewportSize({width:390,height:844});
+    await f.page.locator('.cbt-reading-section:not([hidden]) .cbt-reading-questions').evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));
+    assert(await f.page.evaluate(()=>scrollY)>100,'Màn hẹp cuộn trang tới câu hỏi');
     assert.equal(await passage.locator('[data-annotation-ids]').count(),marks);
     await f.page.reload();await f.page.locator('#readingView').waitFor({state:'visible'});
     await f.page.locator('#readingView .cbt-notes-open').click();
@@ -111,9 +129,16 @@ for(const slug of slugs)test(slug+': Writing đúng vùng đề/editor và giữ
     await editor.evaluate(el=>window.originalWritingEditor=el);
     for(const [width,height] of [[1366,768],[1280,720]]){
       await page.setViewportSize({width,height});
-      assert.equal(await page.locator('#writingView').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),true,'Writing bị cắt footer ở laptop');
+      await page.screenshot({path:resolve(output,slug+'-writing-space-'+width+'.png')});
+      const space=await editor.evaluate(el=>({editor:el.clientHeight,prompt:document.querySelector('.writing-prompt-body').clientHeight}));
+      console.log(JSON.stringify({scope:'writing-space',slug,width,height,...space}));
+      assert(space.editor>=height*.6&&space.prompt>=height*.6,'Vùng viết và đề Writing cần ít nhất 60% chiều cao màn hình');
+      const meta=page.locator('#writingView .writing-editor-meta').first();
+      await meta.scrollIntoViewIfNeeded();
+      assert.equal(await meta.evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight+1),true,'Cuộn trang phải tới được số từ/trạng thái lưu Writing');
     }
     await page.setViewportSize({width:1366,height:768});
+    await page.locator('.writing-workspace').scrollIntoViewIfNeeded();
     await page.screenshot({path:resolve(output,slug+'-writing-desktop.png')});
     for(const width of [1001,1000,999,621,620,619,390,320]){
       await page.setViewportSize({width,height:844});
@@ -213,10 +238,26 @@ for(const slug of slugs)test(slug+': Listening qua phòng chờ, không thêm ng
       assert.equal(await form.locator('[data-number="32a"]').count(),1);assert.equal(await form.locator('[data-number="32b"]').count(),1);assert.equal(await form.locator('[data-nav-number="32"]').count(),1);
     }
     await page.screenshot({path:resolve(output,slug+'-listening-desktop.png')});
+    for(const [width,height] of [[1366,768],[1280,720]]){
+      await page.setViewportSize({width,height});
+      const section=form.locator('.cbt-listening-section:not([hidden])');
+      const space=await section.evaluate(el=>({height:el.clientHeight,content:el.scrollHeight}));
+      console.log(JSON.stringify({scope:'listening-space',slug,width,viewportHeight:height,...space}));
+      assert(space.content<=space.height+1,'Listening cần cuộn theo trang, không nhốt câu hỏi trong khung cuộn thấp');
+      await section.locator('input:not([type=hidden]),select').first().evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));
+      const visible=await section.locator('input[data-number],select[data-number]').evaluateAll(nodes=>new Set(nodes.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.top>=0&&r.bottom<=innerHeight;}).map(el=>el.dataset.number)).size);
+      console.log(JSON.stringify({scope:'listening-visible-answers',slug,width,height,visible}));
+      await page.screenshot({path:resolve(output,slug+'-listening-focus-'+width+'.png')});
+    }
+    if(await form.locator('.cbt-part-button').count()>1){
+      await form.locator('.cbt-listening-section:not([hidden])').getByRole('button',{name:'Next Part →',exact:true}).click();
+      await page.waitForFunction(()=>{const h=document.querySelector('.cbt-listening-section:not([hidden]) .cbt-section-intro');const r=h.getBoundingClientRect();return r.top>=-1&&r.bottom<=innerHeight;},null,{timeout:5000});
+    }
     for(const width of [1366,390,320]){
       await page.setViewportSize({width,height:844});
       for(const button of await form.locator('.cbt-part-button').all()){
         await button.click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,slug+' Listening tràn ngang '+width);
+        assert.equal(await form.locator('.cbt-listening-section:not([hidden])').evaluate(el=>el.scrollHeight<=el.clientHeight+1),true,'Mọi Part Listening đều cuộn theo trang ở '+width);
       }
     }
     await page.setViewportSize({width:390,height:844});await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));

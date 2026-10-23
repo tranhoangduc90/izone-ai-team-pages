@@ -61,6 +61,9 @@ test('Landing: desktop/mobile có lựa chọn lớp, thứ tự, ba bài và h�
   for(const width of [1366,390,320]){
    await f.page.setViewportSize({width,height:844});assert.equal(await f.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
    if(width!==320)await f.page.screenshot({path:resolve(output,'landing-'+width+'.png'),fullPage:true});
+   const widths=await f.page.evaluate(()=>({field:document.querySelector('.landing-class-field').getBoundingClientRect().width,actions:document.querySelector('.landing-actions').getBoundingClientRect().width}));
+   console.log(JSON.stringify({scope:'landing-class-width',width,...widths}));
+   assert(Math.abs(widths.field-widths.actions)<2,'Vùng chọn lớp phải bằng chiều rộng các thanh thao tác bên dưới');
   }
   assert.equal(await f.page.locator('.k56-brand img').count(),1);assert.equal(await f.page.locator('[data-test]').count(),3);
   assert.equal(await f.page.locator('#demoClassEntry,.landing-demo').count(),0,'Không có lối vào demo trùng ở cuối trang');

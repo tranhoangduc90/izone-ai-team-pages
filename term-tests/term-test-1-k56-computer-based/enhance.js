@@ -489,6 +489,8 @@
       uiState.activeSection[skill] = safeIndex;
       saveUiState();
       if (focusTop) {
+        // Theme K56 cuộn theo trang; chuyển phần vẫn phải về đầu nội dung mới.
+        if (document.body.hasAttribute('data-k56-design')) sectionNodes[safeIndex].scrollIntoView({ block: 'start', behavior: 'auto' });
         if (skill === 'listening') {
           sectionNodes[safeIndex].scrollTo(0, 0);
         } else {
