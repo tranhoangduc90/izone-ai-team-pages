@@ -313,3 +313,29 @@ body.cbt-mode:not(.design67) .cbt-review-question.is-flagged { box-shadow: inset
 body.cbt-mode:not(.design67) .progress-step { color: var(--k67-muted); background-color: var(--k67-neutral); }
 body.cbt-mode:not(.design67) .progress-step.active { color: var(--k67-surface); background-color: var(--k67-action); }
 body.cbt-mode:not(.design67) .progress-step.done { color: var(--k67-success-ink); background-color: var(--k67-success); }
+
+/* Listening lobby: retain the existing step states, icons and disabled rules. */
+body:is(.design67, .cbt-mode) :is(.cbt-lobby-header h2, .cbt-lobby-step h3) { color: var(--k67-structure); }
+body:is(.design67, .cbt-mode) :is(.cbt-lobby-header p, .cbt-lobby-step p, .cbt-preview-status) { color: var(--k67-muted); }
+body:is(.design67, .cbt-mode) .cbt-bootstrap-identity { background-color: var(--k67-canvas); border-color: var(--k67-line); }
+body:is(.design67, .cbt-mode) .cbt-bootstrap-identity select { border-color: var(--k67-control); }
+body:is(.design67, .cbt-mode) .cbt-lobby-badge { color: var(--k67-structure); background-color: var(--k67-pending); border-color: var(--k67-line); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step-number { color: var(--k67-muted); background-color: var(--k67-neutral); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=active] { border-color: var(--k67-action); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=active] .cbt-lobby-step-number { color: var(--k67-surface); background-color: var(--k67-action); border-color: var(--k67-action); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=complete] { border-color: var(--k67-success-ink); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=complete] .cbt-lobby-step-number { color: transparent; background-color: var(--k67-success-ink); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=locked] .cbt-lobby-step-number { color: var(--k67-muted); background-color: var(--k67-neutral); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=error] { border-color: var(--k67-error-ink); }
+body:is(.design67, .cbt-mode) .cbt-lobby-download-status.cbt-audio-status { color: var(--k67-muted); background-color: var(--k67-neutral); border-color: var(--k67-line); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=active] .cbt-lobby-download-status.cbt-audio-status { color: var(--k67-structure); background-color: var(--k67-pending); border-color: var(--k67-structure); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=complete] :is(.cbt-preview-status, .cbt-lobby-download-status) { color: var(--k67-success-ink); background-color: var(--k67-success); border-color: var(--k67-success-ink); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=error] .cbt-lobby-download-status.cbt-audio-status { color: var(--k67-error-ink); background-color: var(--k67-error); border-color: var(--k67-error-ink); }
+body:is(.design67, .cbt-mode) .cbt-audio-preview { color: var(--k67-action); background-color: var(--k67-selected); border-color: var(--k67-control); }
+body:is(.design67, .cbt-mode) :is(.cbt-audio-preview, .cbt-start-listening):disabled { color: var(--k67-muted); background-color: var(--k67-neutral); border-color: var(--k67-line); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step .cbt-audio-progress { accent-color: var(--k67-success-ink); border-color: var(--k67-control); background-color: var(--k67-neutral); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step .cbt-audio-progress::-webkit-progress-bar { background-color: var(--k67-neutral); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step .cbt-audio-progress::-webkit-progress-value { background-color: var(--k67-success-ink); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=active] .cbt-audio-progress::-webkit-progress-value { background-color: var(--k67-action); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step .cbt-audio-progress::-moz-progress-bar { background-color: var(--k67-success-ink); }
+body:is(.design67, .cbt-mode) .cbt-lobby-step[data-state=active] .cbt-audio-progress::-moz-progress-bar { background-color: var(--k67-action); }

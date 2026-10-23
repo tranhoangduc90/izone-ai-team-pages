@@ -183,3 +183,33 @@ test('Retake CBT colors preserve its original gradient and flag geometry',async(
   assert.deepEqual(result.colors,{heading:'rgb(255, 255, 255)',canvas:'rgb(245, 246, 248)',selected:'rgb(237, 241, 247)'});
  }finally{await context.close();}
 });
+
+test('Listening lobby maps pending, complete, error and locked without changing controls',async()=>{
+ const context=await browser.newContext();
+ try{
+  await context.route('**/*',r=>r.request().url().startsWith(server.base)?r.continue():r.abort());
+  const page=await context.newPage();
+  for(const design of [true,false]){
+   const files=design?styles:['shared/styles.css','term-test-2-computer-based/styles.css','k67-design/master170-font-colors.css'];
+   await page.route(server.base+'lobby-'+design,r=>r.fulfill({contentType:'text/html',body:`<!doctype html><html><head>${files.map(s=>`<link rel="stylesheet" href="${server.base}term-tests/${s}">`).join('')}</head><body class="cbt-mode ${design?'design67':''}"><main><span class="cbt-lobby-badge">Phòng chờ</span>${['active','complete','error','locked'].map((state,i)=>`<section class="cbt-lobby-step" data-state="${state}"><span class="cbt-lobby-step-number">${i+1}</span><div class="cbt-lobby-step-body"><h3>Bước giữ nguyên</h3><p class="cbt-lobby-download-status cbt-audio-status">Trạng thái ${state}</p><button class="cbt-audio-preview" disabled>Nghe thử</button><progress class="cbt-audio-progress" value="50" max="100"></progress></div></section>`).join('')}</main></body></html>`}));
+   await page.goto(server.base+'lobby-'+design);await page.evaluate(()=>document.fonts.ready);
+   const result=await page.evaluate(()=>{
+    const props=['fontSize','fontWeight','fontStyle','lineHeight','padding','margin','gap','borderWidth','borderRadius','opacity','display','gridTemplateColumns'];
+    const nodes=[...document.querySelectorAll('main *')];
+    const read=()=>nodes.map(e=>{const s=getComputedStyle(e);return props.map(p=>s[p]);});
+    const after=read();
+    const colors=Object.fromEntries(['active','complete','error','locked'].map(state=>{const n=document.querySelector(`[data-state=${state}] .cbt-lobby-download-status`),s=getComputedStyle(n);return[state,[s.color,s.backgroundColor]];}));
+    const completeDigit=getComputedStyle(document.querySelector('[data-state=complete] .cbt-lobby-step-number')).color;
+    const completeIcon=getComputedStyle(document.querySelector('[data-state=complete] .cbt-lobby-step-number'),'::after').content;
+    [...document.styleSheets].find(s=>s.href?.includes('master170-font-colors.css')).disabled=true;
+    return{before:read(),after,colors,completeDigit,completeIcon,oldCompleteIcon:getComputedStyle(document.querySelector('[data-state=complete] .cbt-lobby-step-number'),'::after').content};
+   });
+   assert.deepEqual(result.after,result.before,'lobby geometry/type/opacity unchanged');
+   assert.deepEqual(result.colors.active,['rgb(23, 66, 101)','rgb(230, 238, 245)']);
+   assert.deepEqual(result.colors.complete,['rgb(22, 101, 52)','rgb(228, 245, 234)']);
+   assert.deepEqual(result.colors.error,['rgb(155, 10, 34)','rgb(253, 232, 235)']);
+   assert.deepEqual(result.colors.locked,['rgb(88, 100, 119)','rgb(234, 237, 242)']);
+   assert.equal(result.completeDigit,'rgba(0, 0, 0, 0)');assert.equal(result.completeIcon,result.oldCompleteIcon);
+  }
+ }finally{await context.close();}
+});
