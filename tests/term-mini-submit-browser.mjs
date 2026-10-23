@@ -10,7 +10,8 @@ const sourceRoot=process.env.TERM_SUBMIT_SOURCE_ROOT||root;
 const pages=path.join(sourceRoot,'term-tests');
 const evidence=process.env.TERM_SUBMIT_EVIDENCE||path.join(root,'output/playwright/term-mini-submit');
 fs.mkdirSync(evidence,{recursive:true});
-const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
+const modules=process.env.CODEX_NODE_MODULES||path.join(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
+const {chromium}=createRequire(path.join(modules,'playwright/package.json'))('playwright');
 const read=p=>fs.readFileSync(path.join(pages,p),'utf8');
 function fn(source,name){const start=source.indexOf('  function '+name+'(')>=0?source.indexOf('  function '+name+'('):source.indexOf('  async function '+name+'(');if(start<0)throw Error('missing '+name);const next=source.slice(start+5).search(/\n  (?:async )?function \w+\(/);if(next<0)throw Error('missing end '+name);return source.slice(start,start+5+next);}
 const routes=[['term-test-1','shared','term-test-2'],['term-test-2','shared','term-test-2'],['mini-test-lesson-5','shared','term-test-2'],['term-test-1-k56','k56-shared','term-test-1-k56'],['term-test-2-k56','k56-test2-shared','term-test-2-k56'],['mini-test-k56','k56-mini-shared','mini-test-k56']];

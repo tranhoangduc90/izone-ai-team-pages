@@ -21,6 +21,8 @@ for(const prefix of ['', '/izone-ai-team-pages']) {
     assert.equal(h.ctx.publicFile(new URL(h.scope)),true);
     assert.equal(h.ctx.publicFile(new URL('bootstrap.js?rev=public-build',h.scope)),true);
     assert.equal(h.ctx.publicFile(new URL('../k56-audio-recovery.js?rev=public-build',h.scope)),true);
+    assert.equal(h.ctx.publicFile(new URL('../k56-design/assets/SourceSans3-Variable.woff2',h.scope)),true);
+    assert.equal(h.ctx.publicFile(new URL('../k56-design/assets/izone-logo-color.png',h.scope)),true);
   });
   test(`API/audio/private assets and external origins cannot enter cache '${prefix}'`,()=>{
     const h=harness(prefix);
@@ -28,6 +30,8 @@ for(const prefix of ['', '/izone-ai-team-pages']) {
       `https://tranhoangduc90.github.io${prefix}/api/term-tests/session/audio`,
       new URL('../k56-audio-assets/term-test-1-k56.mp3',h.scope).href,
       new URL('assets/private/audio.js',h.scope).href,
+      new URL('../k56-design/assets/private.js',h.scope).href,
+      new URL('../k56-design/assets/draft.json',h.scope).href,
       'https://ducizone.ddns.net/api/term-tests/session/audio',
       'https://example.invalid/static.js'
     ])assert.equal(h.ctx.publicFile(new URL(value)),false,value);

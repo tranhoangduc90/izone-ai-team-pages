@@ -22,7 +22,7 @@
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   document.body.classList.add('cbt-mode');
   if ('serviceWorker' in navigator && !localDemo) {
-    navigator.serviceWorker.register('../k56-listening-offline-worker.js?rev=20261012-audio-v2', { scope: './' })
+    navigator.serviceWorker.register('../k56-listening-offline-worker.js?rev=20261023-master170-v1', { scope: './' })
       .catch(() => { /* Nháp vẫn được lưu; trình duyệt có thể không hỗ trợ mở vỏ trang offline. */ });
   }
 
@@ -35,7 +35,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1'))
+      .then(() => loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1'))
       .then(() => loadScript('enhance.js?v=20261023-submit-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
@@ -763,7 +763,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1');
+    await loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v1');
     await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1');
     await loadScript('enhance.js?v=20261023-submit-v1');
     await loadScript('annotations.js?v=20261018-identity-v1');

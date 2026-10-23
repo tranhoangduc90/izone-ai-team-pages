@@ -1,12 +1,14 @@
 /* Chỉ giữ vỏ trang công khai; không cache API, audio, khóa, token hoặc bài làm. */
 'use strict';
-const cacheName = 'k56-listening-shell-20261012-v2:' + self.registration.scope;
+const cacheName = 'k56-listening-shell-20261023-master170-v1:' + self.registration.scope;
 const shell = new URL(self.registration.scope);
 const publicRoot = new URL('../', shell).pathname;
 function publicFile(url) {
+  const designAsset = ['SourceSans3-Variable.woff2', 'izone-logo-color.png']
+    .some(name => url.pathname === publicRoot + 'k56-design/assets/' + name);
   return url.origin === shell.origin && url.pathname.startsWith(publicRoot)
-    && (/\.(?:js|css|html)$/.test(url.pathname) || url.pathname === shell.pathname)
-    && !url.pathname.includes('/assets/');
+    && (designAsset || ((/\.(?:js|css|html)$/.test(url.pathname) || url.pathname === shell.pathname)
+      && !url.pathname.includes('/assets/')));
 }
 self.addEventListener('install', event => event.waitUntil((async () => {
   const cache = await caches.open(cacheName);

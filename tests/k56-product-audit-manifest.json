@@ -4,6 +4,11 @@
   "groups": {
     "term_mini_56": [
       "tests/k56-answer-sheet-identity.mjs",
+      "tests/k56-master170-browser.mjs",
+      "tests/k56-master170-entry-teacher.mjs",
+      "tests/k56-listening-offline-scope.mjs",
+      "tests/k56-teacher-session-navigation-browser.mjs",
+      "tests/k56-teacher-review-images.mjs",
       "tests/k56-audio-volume-flow.mjs",
       "tests/k56-backup-pages.mjs",
       "tests/k56-class-api-routing.mjs",
