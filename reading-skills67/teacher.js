@@ -10,6 +10,7 @@
  async function request(route,body){const r=await fetch(prefix+route,{credentials:'include',...(body?{method:'POST',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Object.assign(new Error(({ACCESS_DENIED:'Tài khoản chưa được cấp quyền lớp này.',TEACHER_LOGIN_REQUIRED:'Cần đăng nhập Google.',GOOGLE_IDENTITY_INVALID:'Google chưa xác minh được tài khoản.'})[data.error]||data.error),{status:r.status});return data;}
  async function screen(){
   const result=await request('/teacher/classes');
+  window.MaterialsTeacherLogin?.clear();
   if(returnTarget){location.replace(returnTarget);return;}
   root.innerHTML='<section class="teacher-heading"><div><p class="kicker">'+(config.demo?'BẢN THỬ · ':'')+'GIẢNG VIÊN CHỈ XEM</p><h1>'+e(config.title)+'</h1><p>Chọn học viên để xem nháp đã lưu và từng bản đã chấm.</p></div><button class="secondary" id="teacher-logout">Đăng xuất</button></section><label for="teacher-class">Lớp được phụ trách</label><select id="teacher-class"><option value="">Chọn lớp…</option>'+result.classes.map(c=>'<option value="'+c.id+'">'+e(c.classCode)+'</option>').join('')+'</select><div id="teacher-students"></div>';
   root.querySelector('#teacher-logout').onclick=async()=>{await request('/teacher/logout',{});login();};
@@ -17,6 +18,7 @@
  }
  function login(){
   root.innerHTML='<section class="access-card"><p class="kicker">GIẢNG VIÊN · READING 67</p><h1>Xem bài học viên</h1><p>Đăng nhập bằng tài khoản Google đã được cấp quyền lớp.</p><label class="remember"><input type="checkbox" id="teacher-remember" checked> Ghi nhớ đăng nhập</label><div id="google-button"></div><p id="teacher-error" role="alert"></p>'+(config.demoGoogle?'<button class="primary" id="demo-teacher">Vào vai giảng viên thử</button><p class="minimum-note">Tài khoản giả, chỉ có quyền lớp READING67DEMO trên máy này.</p>':'')+'</section>';
+  window.MaterialsTeacherLogin?.render(root,config);
   const enter=async credential=>{try{await request('/teacher/login',{credential,remember:root.querySelector('#teacher-remember').checked});await screen();}catch(error){root.querySelector('#teacher-error').textContent=error.message;}};
   if(config.demoGoogle){root.querySelector('#demo-teacher').onclick=()=>enter('demo-teacher-allowed');return;}
   const start=()=>{window.google.accounts.id.initialize({client_id:config.googleClientId,callback:value=>enter(value.credential)});window.google.accounts.id.renderButton(root.querySelector('#google-button'),{theme:'outline',size:'large',text:'signin_with'});};
