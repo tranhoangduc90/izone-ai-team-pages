@@ -1,0 +1,269 @@
+/* K67 only: master #170 v1.0 font family and role colors.
+ * Loaded last by K67 entries. No type scale, geometry or behavior overrides.
+ * Wordmarks, authored evidence colors and saved learner highlights stay intact.
+ */
+@font-face {
+  font-family: 'Source Sans 3';
+  src: url('assets/SourceSans3-Variable.woff2') format('woff2');
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Source Sans 3';
+  src: url('assets/SourceSans3-Italic-Variable.woff2') format('woff2');
+  font-weight: 200 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  --k67-font: 'Source Sans 3', system-ui, sans-serif;
+  --k67-canvas: #f5f6f8;
+  --k67-surface: #ffffff;
+  --k67-structure: #174265;
+  --k67-ink: #1f2937;
+  --k67-muted: #586477;
+  --k67-brand: #db0829;
+  --k67-action: #152b4e;
+  --k67-action-hover: #10213c;
+  --k67-line: #dce1e7;
+  --k67-control: #7c8798;
+  --k67-selected: #edf1f7;
+  --k67-pending: #e6eef5;
+  --k67-attention: #fff4e0;
+  --k67-attention-ink: #8a5300;
+  --k67-success: #e4f5ea;
+  --k67-success-ink: #166534;
+  --k67-error: #fde8eb;
+  --k67-error-ink: #9b0a22;
+  --k67-neutral: #eaedf2;
+  --lab-header: var(--k67-canvas);
+  --lab-badge: var(--k67-structure);
+  --lab-badgeText: var(--k67-surface);
+  --lab-hint: var(--k67-muted);
+  --lab-edge: var(--k67-brand);
+  --lab-line: var(--k67-line);
+  --lab-surface: var(--k67-surface);
+  --lab-ink: var(--k67-ink);
+  --lab-primary: var(--k67-action);
+  --lab-primaryText: var(--k67-surface);
+  --lab-selected: var(--k67-selected);
+  --lab-selectedText: var(--k67-action);
+  --lab-selectedLine: var(--k67-action);
+  --lab-rose: var(--k67-selected);
+  --lab-roseText: var(--k67-action);
+  --lab-success: var(--k67-success);
+  --lab-successText: var(--k67-success-ink);
+  --lab-flag: var(--k67-attention);
+  --lab-flagText: var(--k67-attention-ink);
+}
+
+body,
+body.design67,
+body.teacher-reading,
+body.reading-landing {
+  font-family: var(--k67-font);
+  color: var(--k67-ink);
+  background-color: var(--k67-canvas);
+  --ink: var(--k67-ink);
+  --muted: var(--k67-muted);
+  --line: var(--k67-line);
+  --surface: var(--k67-surface);
+  --navy: var(--k67-action);
+  --blue: var(--k67-action);
+  --primary: var(--k67-action);
+  --red: var(--k67-brand);
+  --green: var(--k67-success-ink);
+  --amber: var(--k67-attention-ink);
+  --design-bg: var(--k67-canvas);
+  --design-ink: var(--k67-ink);
+  --design-muted: var(--k67-muted);
+  --design-line: var(--k67-line);
+  --design-navy: var(--k67-action);
+  --design-red: var(--k67-brand);
+  --design-green: var(--k67-success-ink);
+  --design-green-soft: var(--k67-success);
+  --cbt-navy: var(--k67-action);
+  --cbt-blue: var(--k67-action);
+  --cbt-ink: var(--k67-ink);
+  --cbt-muted: var(--k67-muted);
+  --cbt-paper: var(--k67-surface);
+}
+
+/* Specific families in older CSS must not keep passages or dialogs on Nunito/serif.
+ * Longhands preserve the existing sizes, weights, italics and line heights.
+ */
+:is(body.design67, body.teacher-reading, body.reading-landing, body) :is(
+  .cbt-passage-header span, .cbt-passage-header h3, .cbt-passage-body,
+  .cbt-lettered-paragraph > span, .writing-prompt-body, .writing-editor,
+  .writing-guidance, .attempt-review-essay-text, .writing-feedback-essay,
+  .attempt-review-close, .writing-feedback-close, .explanation-open
+) { font-family: var(--k67-font); }
+body #explanation-dialog { font-family: var(--k67-font); }
+body :is(button, input, select, textarea) { font-family: inherit; }
+body.design67 .design-brand { font-family: 'Nunito Sans', 'Segoe UI', sans-serif; }
+
+body :is(h1, h2, h3, h4, h5),
+body.teacher-reading :is(h1, h2, h3, h4, h5),
+body.reading-landing .landing-card h1 { color: var(--k67-structure); }
+body.design67 .design-question-group > :is(.cbt-subsection-heading, .cbt-section-intro) > :is(h3, h4) {
+  background-color: var(--k67-structure);
+  color: var(--k67-surface);
+}
+body :is(.cbt-passage-body, .writing-prompt-body, .writing-editor, .writing-feedback-essay, .attempt-review-essay-text) {
+  color: var(--k67-ink);
+  background-color: var(--k67-surface);
+}
+body :is(input, select, textarea),
+body :is(.button-secondary, .cbt-tool-button, .teacher-open-button, .teacher-writing-score-button) {
+  border-color: var(--k67-control);
+}
+body.design67 :is(.cbt-inline-answer input, .cbt-select-answer select, .question input, .question select, .cbt-choice, .button-secondary, .cbt-tool-button),
+body.teacher-reading :is(input, select, textarea, .button-secondary, .teacher-open-button, .teacher-writing-score-button) {
+  border-color: var(--k67-control);
+}
+body :is(.button-primary, .button.primary, .cbt-heading-submit, .cbt-start-listening, .explanation-open),
+body.design67 :is(.button-primary, .button.primary, .cbt-heading-submit, .cbt-start-listening, .explanation-open),
+body.teacher-reading .button-primary {
+  color: var(--k67-surface);
+  background-color: var(--k67-action);
+  border-color: var(--k67-action);
+}
+body :is(.button-primary, .button.primary, .cbt-heading-submit, .cbt-start-listening, .explanation-open):hover:not(:disabled),
+body.design67 :is(.button-primary, .button.primary, .cbt-heading-submit, .cbt-start-listening, .explanation-open):hover:not(:disabled),
+body.teacher-reading .button-primary:hover:not(:disabled) {
+  background-color: var(--k67-action-hover);
+  border-color: var(--k67-action-hover);
+  color: var(--k67-surface);
+}
+body input:is([type=radio], [type=checkbox]) { accent-color: var(--k67-action); }
+body :is(button, a, summary, input, select, textarea):focus-visible,
+body.design67 :is(.button, button, a, summary, input, select, textarea):focus-visible,
+body.reading-landing :is(a, button, input, select):focus-visible,
+body.teacher-reading :is(button, summary, input, select):focus-visible,
+body #explanation-dialog button:focus-visible { outline-color: var(--k67-brand); }
+body :is(input, select, textarea):focus { border-color: var(--k67-action); }
+
+/* Preserve each existing state and its activation rule. */
+body .notice,
+body.design67 .notice,
+body.teacher-reading .notice {
+  background-color: var(--k67-attention);
+  color: var(--k67-attention-ink);
+  border-color: var(--k67-attention-ink);
+}
+body.design67 :is(.cbt-choice:has(input:checked), .cbt-inline-answer.is-answered input, .cbt-select-answer.is-answered select),
+body.design67 :is(.cbt-question-button, .cbt-review-question).is-answered,
+body.design67 .question :is(input, select)[data-design-filled=true] {
+  background-color: var(--k67-selected);
+  color: var(--k67-action);
+  border-color: var(--k67-action);
+}
+body.design67 :is(.cbt-question-button, .cbt-review-question).is-active {
+  background-color: var(--k67-action);
+  color: var(--k67-surface);
+  border-color: var(--k67-action);
+}
+body.design67 .cbt-flag-button.is-flagged {
+  background-color: var(--k67-attention);
+  color: var(--k67-attention-ink);
+  border-color: var(--k67-attention-ink);
+}
+body.design67 :is(.cbt-question-button, .cbt-review-question).is-flagged {
+  box-shadow: inset 0 -3px var(--k67-attention-ink);
+}
+body :is(.notice.success, .analysis-card.best, .teacher-status.completed, .teacher-writing-status.ready),
+body.design67 :is(.notice.success, .analysis-card.best, .teacher-status.completed, .teacher-writing-status.ready),
+body.teacher-reading :is(.notice.success, .analysis-card.best, .teacher-status.completed, .teacher-writing-status.ready) {
+  background-color: var(--k67-success);
+  color: var(--k67-success-ink);
+}
+body.design67 :is(.autosave-status[data-status=saved], [data-design-status=saved], .analysis-card.best h4) {
+  color: var(--k67-success-ink);
+}
+body :is(.autosave-status[data-status=saving], [data-design-status=pending], .teacher-writing-status.processing),
+body.design67 :is(.autosave-status[data-status=saving], [data-design-status=pending], .teacher-writing-status.processing),
+body.teacher-reading .teacher-writing-status.processing {
+  color: var(--k67-structure);
+  background-color: var(--k67-pending);
+}
+body :is(.notice.error, [data-design-status=error], .teacher-writing-status.review_required, .cbt-reading-clock.is-warning),
+body.design67 :is(.notice.error, [data-design-status=error], .teacher-writing-status.review_required, .cbt-reading-clock.is-warning),
+body.teacher-reading :is(.notice.error, .teacher-writing-status.review_required) {
+  background-color: var(--k67-error);
+  color: var(--k67-error-ink);
+  border-color: var(--k67-error-ink);
+}
+body :is(.notice.warning, .analysis-card.improve, .teacher-status.incomplete),
+body.design67 :is(.notice.warning, .analysis-card.improve, .teacher-status.incomplete),
+body.teacher-reading :is(.analysis-card.improve, .teacher-status.incomplete) {
+  background-color: var(--k67-attention);
+  color: var(--k67-attention-ink);
+}
+body.design67 .analysis-card.improve h4 { color: var(--k67-attention-ink); }
+body :is(.teacher-status.not_started, .teacher-writing-status.not_submitted),
+body.teacher-reading :is(.teacher-status.not_started, .teacher-writing-status.not_submitted) {
+  background-color: var(--k67-neutral);
+  color: var(--k67-muted);
+}
+
+body #explanation-dialog {
+  color: var(--k67-ink);
+  background-color: var(--k67-surface);
+  border-color: var(--k67-line);
+  border-top-color: var(--k67-brand);
+}
+body #explanation-dialog .explanation-replay-button {
+  background-color: var(--k67-action);
+  color: var(--k67-surface);
+  border-color: var(--k67-action);
+}
+body #explanation-dialog .explanation-replay-button[aria-pressed=true] {
+  background-color: var(--k67-error-ink);
+  border-color: var(--k67-error-ink);
+}
+body :is(.explanation-load-status, .explanation-replay-status) { color: var(--k67-error-ink); }
+
+/* Landing and teacher have their own legacy cascade. Keep their controls and
+ * geometry; map only the remaining explicit role colors in those stylesheets.
+ */
+body.reading-landing :is(input, select) { border-color: var(--k67-control); }
+body.reading-landing :is(input, select):focus { border-color: var(--k67-action); }
+body.reading-landing .landing-link-group h2,
+body.reading-landing .demo-class strong,
+body.teacher-reading :is(.writing-feedback-header, .attempt-review-header) h2 {
+  color: var(--k67-structure);
+}
+body.reading-landing .order-choice[aria-pressed=true]:hover,
+body.teacher-reading .teacher-tabs-scroll:hover:not(:disabled) {
+  background-color: var(--k67-action-hover);
+}
+body.teacher-reading .teacher-tabs-scroll:disabled {
+  background-color: var(--k67-neutral);
+  color: var(--k67-muted);
+}
+body.teacher-reading .teacher-tabs-shell { background-color: var(--k67-neutral); }
+body.teacher-reading :is(.writing-component-toggle, .attempt-review-tab:not(.is-active), .attempt-review-answer, .writing-feedback-close, .attempt-review-close) {
+  border-color: var(--k67-control);
+}
+body.teacher-reading :is(.writing-component-toggle, .teacher-writing-score-button):hover:not(:disabled) {
+  background-color: var(--k67-selected);
+  border-color: var(--k67-action);
+}
+body.teacher-reading .teacher-access-notice {
+  background-color: var(--k67-attention);
+  color: var(--k67-attention-ink);
+  border-color: var(--k67-attention-ink);
+}
+body.teacher-reading .teacher-access-notice strong { color: var(--k67-attention-ink); }
+body.teacher-reading .teacher-tab-status { background-color: var(--k67-muted); }
+body.teacher-reading .teacher-tab-status.completed { background-color: var(--k67-success-ink); }
+body.teacher-reading .teacher-tab-status.incomplete { background-color: var(--k67-attention-ink); }
+body.teacher-reading :is(.notice.success, .analysis-card.best) { border-color: var(--k67-success-ink); }
+body.teacher-reading :is(.notice.warning, .analysis-card.improve) { border-color: var(--k67-attention-ink); }
+body.teacher-reading .writing-feedback-source > .writing-feedback-text.writing-feedback-richtext > h5:first-child {
+  background-color: var(--k67-structure);
+  border-color: var(--k67-structure);
+  color: var(--k67-surface);
+}

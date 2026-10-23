@@ -34,7 +34,8 @@
       "tests/term-writing-save-clients.cjs",
       "tests/term-mini-submit-browser.mjs",
       "tests/term-mini-reading-submit-browser.mjs",
-      "tests/term-mini-existing-results-browser.mjs"
+      "tests/term-mini-existing-results-browser.mjs",
+      "tests/k67-master170-font-colors.mjs"
     ]
   }
 }
