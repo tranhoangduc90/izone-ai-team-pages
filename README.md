@@ -1,6 +1,8 @@
 # izone-ai-team-pages
 Kho chứa các website HTML tĩnh của đội IZONE để xuất bản bằng GitHub Pages.
 
+Mọi sản phẩm có giảng viên đăng nhập phải dùng [phiên chung IZONE](docs/TEACHER_SHARED_LOGIN.md): Google một lần, nhớ 90 ngày không hoạt động, vẫn giữ quyền riêng theo sản phẩm/lớp/bài.
+
 Đây là repo chuẩn cho mọi trang HTML tĩnh mới của team. Mỗi hệ thống đặt trong một thư mục riêng, dùng đường dẫn tương đối và không lưu token, credential, đáp án hoặc dữ liệu định danh học viên.
 
 ## Đường dẫn chính

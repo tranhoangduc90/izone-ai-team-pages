@@ -65,3 +65,18 @@ test('Handout login đổi Google lấy phiên chung, rồi đọc quyền gốc
  assert.ok(calls[0].url.endsWith('/login/handout67'));assert.equal(calls[0].options.body,'{"credential":"fixture-google","remember":false}');
  assert.equal(calls[1].options.method,'GET');assert.equal(calls[1].options.body,undefined);
 });
+
+test('Term67 dùng HTTPS 18869 thật: khôi phục, nối Google và đăng xuất cùng phiên; cổng lạ không bị can thiệp',async()=>{
+ const api='https://ducizone.ddns.net:18869/term-mini-k67-api/api';
+ const {box,calls}=setup(()=>response(200));
+ await box.fetch(api+'/auth/session',{credentials:'include'});
+ assert.equal(calls[0].url,origin+'/teacher-session-api/v1/restore/term67');
+ assert.equal(calls[1].url,api+'/auth/session');
+ await box.fetch(api+'/auth/session',{method:'POST',body:'fixture-google'});
+ assert.equal(calls[3].url,origin+'/term-mini-k67-api/api/auth/session/shared-session');
+ await box.fetch(api+'/auth/session',{method:'DELETE'});
+ assert.equal(calls[5].url,origin+'/teacher-session-api/v1/logout');
+ for(const url of [api+'/student/session','https://ducizone.ddns.net:19999/term-mini-k67-api/api/auth/session','https://ducizone.ddns.net:18869/mapping-api/api/auth/session']){
+  const before=calls.length;await box.fetch(url);assert.equal(calls.length,before+1);assert.equal(calls.at(-1).url,url);
+ }
+});
