@@ -7,3 +7,5 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 /* Chừa vùng cuộn cho footer cố định để Tab đưa control lên vùng nhìn. */
 html{scroll-padding-block-end:110px}
+/* Các font khai báo riêng trong bài minh họa cũng kế thừa master đã chọn. */
+html[data-izone-theme='master170'] body[data-m170-product='demo-writing7'] :is(.field-value.english,.essay,.gap){font-family:var(--m170-font)}

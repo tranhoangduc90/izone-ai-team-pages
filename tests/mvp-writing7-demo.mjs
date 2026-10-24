@@ -223,3 +223,42 @@ for (const [width,height] of [[1440,1000],[1024,768],[390,844],[320,568],[844,39
     } finally { await page.close(); }
   });
 }
+
+// Giữ font master ở cả nội dung lồng trong từng bước, không chỉ kiểm BODY.
+// Lỗi nêu phần tử còn dùng font khác; kiểm glyph thật ở các đoạn tiếng Anh.
+for (const width of [1440,390]) {
+  test(`Font master phủ nội dung và bài viết trên đủ 36 bước — ${width}px`, async () => {
+    const page=await open('#buoc=1',width);
+    try {
+      await page.evaluate(() => document.fonts.ready);
+      assert.equal(stepCount,36);
+      for (let step=1;step<=stepCount;step++) {
+        await page.goto(base+`#buoc=${step}`);
+        await page.waitForFunction(n => document.querySelector('#step-count').textContent.trim().startsWith(`${n} /`),step);
+        const mismatches=await page.evaluate(() => {
+          const result=[],walk=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+          for (let node;node=walk.nextNode();) {
+            const e=node.parentElement,text=node.textContent.trim();
+            if (!e||!text||e.closest('script,style,noscript,[aria-hidden=true]')||!e.getClientRects().length) continue;
+            const s=getComputedStyle(e);
+            if (s.display==='none'||s.visibility==='hidden'||s.fontFamily.includes('Source Sans 3')) continue;
+            result.push({tag:e.tagName,class:e.className,font:s.fontFamily,text:text.slice(0,80)});
+          }
+          return result;
+        });
+        assert.deepEqual(mismatches,[],`Bước ${step}: nội dung còn dùng font khác master (${width}px).`);
+        if ([15,18,28,34].includes(step)) {
+          const cdp=await page.context().newCDPSession(page);
+          try {
+            await cdp.send('DOM.enable');await cdp.send('CSS.enable');
+            const {root}=await cdp.send('DOM.getDocument');
+            const {nodeId}=await cdp.send('DOM.querySelector',{nodeId:root.nodeId,selector:'#screen-body .field-value.english,#screen-body .essay'});
+            assert.ok(nodeId,`Bước ${step}: thiếu vùng bài viết để kiểm font thật.`);
+            const {fonts}=await cdp.send('CSS.getPlatformFontsForNode',{nodeId});
+            assert.ok(fonts.some(f=>f.isCustomFont&&f.glyphCount>0&&/Source\s*Sans\s*3/i.test(f.familyName)),`Bước ${step}: glyph chưa dùng Source Sans 3 thật.`);
+          } finally { await cdp.detach(); }
+        }
+      }
+    } finally { await page.close(); }
+  });
+}
