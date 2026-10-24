@@ -553,7 +553,23 @@ $('saveSource').addEventListener('click', () => {
   });
 });
 $('closeDialog').addEventListener('click', () => $('detailDialog').close());
+const detailDialog = $('detailDialog');
+let backdropPointer = null;
+function outsideDetail(event) {
+  const box = detailDialog.getBoundingClientRect();
+  return event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;
+}
+detailDialog.addEventListener('pointerdown', event => {
+  backdropPointer = event.button === 0 && outsideDetail(event) ? event.pointerId : null;
+});
+detailDialog.addEventListener('pointercancel', () => { backdropPointer = null; });
+detailDialog.addEventListener('pointerup', event => {
+  const close = backdropPointer === event.pointerId && outsideDetail(event);
+  backdropPointer = null;
+  if (close) detailDialog.close();
+});
 $('detailDialog').addEventListener('close', () => {
+  backdropPointer = null;
   if (document.documentElement.dataset.izoneTheme !== 'master170') return;
   const trigger = document.activeElement;
   if (trigger?.closest('#historyBody')) trigger.scrollIntoView({ block:'nearest', behavior:'instant' });
