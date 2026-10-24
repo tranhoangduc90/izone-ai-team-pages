@@ -1,6 +1,6 @@
 import { IndexedOutbox } from './outbox.mjs';
 import { createRecorder,fetchTransport,observeDocument,observeAudio } from './recorder.mjs';
-import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-audio-v1';
+import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-startup-v1';
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const registryKey=Symbol.for('izone.examJournal.connections.v1');
@@ -31,12 +31,12 @@ export function contentFields(state) {
 
 // Nhận state qua callback chỉ đọc. Không thay fetch/confirm toàn cục, timer hoặc điều khiển bài thi.
 export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,build = 'unknown',
-  document:doc = globalThis.document,window:win = globalThis.window,onHealth = () => {},outbox:providedOutbox,fetcher = globalThis.fetch }) {
+  document:doc = globalThis.document,window:win = globalThis.window,onHealth = () => {},outbox:providedOutbox,fetcher = globalThis.fetch,adoptExistingState=true }) {
   if (!enabled) return null;
   const target = new URL(endpoint,win.location.href);
   if (!['http:','https:'].includes(target.protocol) || target.search || target.hash || target.username || target.password) throw new Error('INVALID_JOURNAL_ENDPOINT');
   const connectionKey=JSON.stringify([target.href,testSlug]),existing=win[registryKey]?.get(connectionKey);
-  if(existing)return existing.adopt(getState);
+  if(existing)return adoptExistingState?existing.adopt(getState):existing;
   const outbox = providedOutbox || new IndexedOutbox({ name:'izone-exam-journal-v2:' + target.origin + target.pathname });
   const visitId = crypto.randomUUID(); let current = null,ownerKey = '',requesting = '',lastProjection = '',nextContextTry = 0,stopped = false,unobservedSince=performance.now(),previousFields=new Set();
   const audioStops = new Map();
@@ -46,7 +46,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     try { onHealth(data); } catch {}
   };
   const recorder = createRecorder({ outbox,context:() => current,
-    transport:fetchTransport(target.href + '/journal-events',fetcher),build,onHealth:health });
+    transport:fetchTransport(target.href + '/journal-events',fetcher),build:String(build).slice(0,80)+'+startup-20261024-v1',onHealth:health });
   const proofOf = state => ({ testSlug,classCode:String(state.classCode || state.className || ''),
     attemptToken:String(state.attemptToken || ''),examSessionToken:String(state.examSessionToken || ''),
     clientRunId:String(state.clientRunId || ''),examSessionId:String(state.examSessionId || ''),historyEpoch:String(state.historyEpoch || state._substitute?.historyEpoch || ''),
@@ -162,6 +162,17 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   void refresh();
   const api={ stateChanged,recorder,
     adopt(reader){if(typeof reader==='function'){getState=reader;stateChanged('state_reader_changed');}return api;},
+    async recordInitialization(rows,{classCode='',lostCount=0}={}) {
+      if(stopped)throw Error('JOURNAL_STOPPED');
+      // UI choices describe intent. Only native API proof can establish learner authority.
+      const context=await loadBinding(proofOf({classCode,generation:0}));
+      if(stopped||context.identityConfirmed!==false)throw Error('JOURNAL_INITIALIZATION_SCOPE_INVALID');
+      const binding=capturedBinding(context);
+      if(lostCount)await recorder.record('sequence_gap',{cause:'initialization_buffer_budget',lostCount,
+        checkpointState:{attribution:'unconfirmed',gapScope:'page_initialization'}},binding);
+      for(const row of rows)await recorder.record(row.type,row.data,binding);
+      // The existing periodic/exit flush owns transport cadence and retry backoff.
+    },
     startAudioTransfer(metadata,{forceUnconfirmed=false,classCodeHint}={}) {
       try {
         if(stopped)return null;const state=getState(),proof=proofOf(state),key=JSON.stringify(proof);

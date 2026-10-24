@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "tools/exam-journal",
-  "release": "20261023-candidate",
+  "release": "20261024-startup-candidate",
   "files": [
     {
       "file": "outbox.mjs",
@@ -24,14 +24,23 @@
     {
       "file": "bridge.mjs",
       "source": "browser/bridge.mjs",
-      "sha256": "b46bf7f29d8a7c03f6c76cb380ec661adeea8e96c51c4714f14307737264e50b",
-      "bytes": 17248
+      "sha256": "e48bb3f25d66168051d348d5daa604005007b21dd195e21ae8f6721aed0e1a77",
+      "bytes": 18154
     },
     {
       "file": "bootstrap-capture.mjs",
       "source": "browser/bootstrap-capture.mjs",
-      "sha256": "0a6f783a4f0f1172af53b57e76e2b82f23394ae66eae1e66d0b74622e7a96655",
-      "bytes": 1010
+      "sha256": "a9be39c06998c4f639e51f2ef49ff274c02c4d32ff915fb781bfab0e1add8ab6",
+      "bytes": 1012
+    },
+    {
+      "file": "lobby-capture.js",
+      "source": "pages/term-tests/shared/exam-journal/lobby-capture.js",
+      "sha256": "2209df36ce1ce47c01123fbeb49a6c6f72d4631b70aed42bd2224ae2a3735a50",
+      "bytes": 8194
     }
-  ]
+  ],
+  "baseRelease": "20261023-candidate",
+  "candidateSource": "Pages term-tests/shared/exam-journal; based on tools/exam-journal browser release; no backend change",
+  "hashEncoding": "Git blob bytes, UTF-8; existing line endings preserved"
 }

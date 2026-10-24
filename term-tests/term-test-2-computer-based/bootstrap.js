@@ -522,10 +522,13 @@
       options = window.K67_EXAM_ORDER?.request(options) || options;
       options = window.K67_AUDIO_OWNER?.request(options) || options;
     }
+    let initializationRequest, initializationStatus;
+    try { initializationRequest = window.EXAM_JOURNAL_STARTUP?.startRequest(path, options); } catch {}
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(appConfig.API_BASE_URL + path, { ...options, signal: controller.signal });
+      initializationStatus = response.status;
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
@@ -533,8 +536,10 @@
         requestError.code = data.error || '';
         throw requestError;
       }
+      try { initializationRequest?.done(data, undefined, initializationStatus); } catch {}
       return data;
     } catch (error) {
+      try { initializationRequest?.done(undefined, error, initializationStatus); } catch {}
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Hãy thử lại.');
       throw error;
     } finally {
@@ -597,7 +602,7 @@
       }
       if (audioAccess?.audioCacheSupported) {
         const publicAudio = audioAccess.audioManifest?.envelopeVersion === 'MP3';
-        if (publicAudio && !window.K67_PUBLIC_AUDIO) await loadScript('../k67-shared/public-audio.js?rev=20261024-cf512-1&journal=20261024-audio-v1');
+        if (publicAudio && !window.K67_PUBLIC_AUDIO) await loadScript('../k67-shared/public-audio.js?rev=20261024-cf512-1&journal=20261024-startup-v1');
         if (publicAudio && !window.K67_PUBLIC_AUDIO.validManifest(audioAccess.audioManifest)) throw new Error('Định danh audio từ máy chủ không hợp lệ.');
         if (!publicAudio && !window.K67_AUDIO_STORE) {
           try { await loadScript('../k67-shared/audio-store.js?rev=20261015-cache-v1'); }
@@ -891,7 +896,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-audio-v1&ej=20261024-production-r1');
+    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v1&ej=20261024-production-r1');
     await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }

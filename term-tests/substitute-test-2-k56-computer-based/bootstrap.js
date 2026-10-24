@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-audio-v1&ej=20261024-production-r1'))
+      .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v1&ej=20261024-production-r1'))
       .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
@@ -331,6 +331,8 @@
   }
 
   async function apiRequest(path, options = {}, timeoutMs = 30_000) {
+    let initializationRequest, initializationStatus;
+    try { initializationRequest = window.EXAM_JOURNAL_STARTUP?.startRequest(path, options); } catch {}
     const controller = new AbortController();
     const untrack=window.SUBSTITUTE_STATE.track(controller);
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -346,10 +348,13 @@
         body: JSON.stringify({ route: requestUrl.pathname, payload:window.SUBSTITUTE_STATE.payload(payload) }),
         signal: controller.signal
       });
+      initializationStatus = response.status;
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || `Lỗi HTTP ${response.status}`);
+      try { initializationRequest?.done(data, undefined, initializationStatus); } catch {}
       return data;
     } catch (error) {
+      try { initializationRequest?.done(undefined, error, initializationStatus); } catch {}
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Hãy thử lại.');
       throw error;
     } finally {
@@ -659,7 +664,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-audio-v1&ej=20261024-production-r1');
+    await loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v1&ej=20261024-production-r1');
     await loadScript('enhance.js?v=20261022-listening-recovery-v1');
     await loadScript('annotations.js?v=20261018-identity-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
