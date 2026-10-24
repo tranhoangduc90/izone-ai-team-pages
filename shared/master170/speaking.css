@@ -15,6 +15,10 @@ body[data-m170-product='speaking'] :is(.hero-copy, .login-copy, .instruction-lea
 body[data-m170-product='speaking'] .studio-brand { gap: 0; letter-spacing: normal; }
 body[data-m170-product='speaking'] :is(.identity-card, .task-card, .guide-card, .completion-card) { border-color: var(--m170-line); border-radius: 12px; box-shadow: none; }
 body[data-m170-product='speaking'] :is(.button, input[type='url'], select) { font-size: 16px; border-radius: 8px; }
+body[data-m170-product='speaking'].speaking-design :is(.teacher-entry-link, .text-button, .share-help-button) { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; font-size: 16px; }
+body[data-m170-product='speaking'] .share-help-button { white-space: normal; line-height: 1.4; text-align: left; }
+body[data-m170-product='speaking'] .doctor-fallback { color: var(--m170-attention-fg); background: var(--m170-attention-bg); border-left-color: var(--m170-attention-fg); font-size: 14px; }
+body[data-m170-product='speaking'] #share-guide-dialog :is(#guide-iphone, #guide-android) { scroll-margin-top: 84px; }
 body[data-m170-product='speaking'] :is(input[type='url'], select) { border-color: var(--m170-control); }
 body[data-m170-product='speaking'] :is(.button-primary, .practice-button) { background: var(--m170-action); border-color: var(--m170-action); }
 body[data-m170-product='speaking'] :is(.button-primary, .practice-button):hover { background: var(--m170-action-hover); }
