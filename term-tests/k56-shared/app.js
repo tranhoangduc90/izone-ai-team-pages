@@ -139,6 +139,20 @@
     writingRecovery: Array.isArray(restoredSession.writingRecovery) ? restoredSession.writingRecovery.slice(0, 5) : []
   };
 
+  // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
+  let examJournal = null;
+  if (appConfig.EXAM_JOURNAL_ENABLED === true) {
+    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-audio-v1').then(({ connectExamJournal }) => {
+      examJournal = connectExamJournal({ enabled: true,
+        endpoint: appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug,
+        testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
+        getState: () => ({ ...state, classCode,
+          generation: typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
+          clientRunId: window.TERM_TEST_BOOTSTRAP?.clientRunId || '', examSessionId: window.TERM_TEST_BOOTSTRAP?.examSessionId || '', historyEpoch: window.TERM_TEST_BOOTSTRAP?.historyEpoch || '' })
+      });
+    }).catch(() => {});
+  }
+
   function readSession() {
     if (!storageKey) return {};
     for (const storage of availableStorages()) {
@@ -161,6 +175,7 @@
   }
 
   function saveSession() {
+    try { if (typeof examJournal !== 'undefined') examJournal?.stateChanged('save_requested'); } catch {}
     if (window.K56_DEMO_RESETTING) return;
     if (!storageKey) return false;
     const serialized = JSON.stringify({
@@ -761,6 +776,10 @@
   }
 
   async function apiRequest(path, options = {}) {
+    let journalRequest;
+    try { if (typeof examJournal !== 'undefined') journalRequest = examJournal?.startRequest(path, options); } catch {}
+    if (journalRequest?.requestId) { try { const headers = new Headers(options.headers || {}); headers.set('x-exam-journal-request-id', journalRequest.requestId); options = { ...options, headers: Object.fromEntries(headers) }; } catch {} }
+    const journalRun = async () => {
     const match = path.match(/^\/api\/term-tests\/([^/]+)\/(listening|reading)$/);
     if (options.method !== 'POST' || !match) {
       const data = await rawApiRequest(path, options);
@@ -786,6 +805,11 @@
     });
     // Chỉ trả bản đã được xác nhận; handler mới được chuyển phần.
     return data;
+
+    };
+    if (!journalRequest) return journalRun();
+    try { const result = await journalRun(); try { journalRequest.done(result); } catch {} return result; }
+    catch (error) { try { journalRequest.done(undefined, error); } catch {} throw error; }
   }
 
   async function rawApiRequest(path, options = {}) {
@@ -1474,7 +1498,7 @@
   function confirmIncomplete(answered, skillLabel) {
     const total = skillLabel === 'Listening' ? testConfig.listening.controls.length : testConfig.reading.controls.length;
     if (answered === total) return true;
-    return window.confirm(`${skillLabel} hiện có ${answered}/${total} câu đã nhập. Bạn vẫn muốn nộp bài?`);
+    return ((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${skillLabel} hiện có ${answered}/${total} câu đã nhập. Bạn vẫn muốn nộp bài?`);
   }
 
   function setBusy(button, busy, busyText, normalText) {
@@ -2467,7 +2491,7 @@
     const student = state.roster.find(item => item.ref === elements.studentSelect.value);
     if (paperIdentity) {
       if (!student) return;
-      if (!window.confirm(`Xác nhận học viên ${student.name} · lớp ${classCode}?`)) { elements.studentSelect.value = previousStudentRef; return; }
+      if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`Xác nhận học viên ${student.name} · lớp ${classCode}?`)) { elements.studentSelect.value = previousStudentRef; return; }
       bindPaperStudent(student);
       try { await prepareK56Attempt(); } catch (error) { showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, 'error'); }
       return;
@@ -2477,7 +2501,7 @@
     if (previousStudentRef !== state.studentRef) resetUnboundWritingIdentity();
     saveSession();
     if (!demoMode && state.studentRef && !document.body.classList.contains('cbt-mode')) {
-      if (!window.confirm(`Xác nhận học viên ${state.studentName} · lớp ${classCode}?`)) return;
+      if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`Xác nhận học viên ${state.studentName} · lớp ${classCode}?`)) return;
       prepareK56Attempt().catch(error => showNotice(`Chưa chuẩn bị được bài thi: ${error.message}`, 'error'));
     }
   });
@@ -2772,7 +2796,7 @@
       }
       if (!automatic && belowMinimum.length) {
         const summary = belowMinimum.map(task => `${task.label}: ${task.words}/${task.minimum} từ`).join('\n');
-        if (!window.confirm(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
+        if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
       }
 
       if (demoMode) {

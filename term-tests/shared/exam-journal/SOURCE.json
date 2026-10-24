@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "source": "tools/exam-journal",
+  "release": "20261023-candidate",
+  "files": [
+    {
+      "file": "outbox.mjs",
+      "source": "browser/outbox.mjs",
+      "sha256": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
+      "bytes": 11015
+    },
+    {
+      "file": "recorder.mjs",
+      "source": "browser/recorder.mjs",
+      "sha256": "da45762a20e114a74efa069262f6e2ffc55b9568aa07fc33d98a0262aaba237f",
+      "bytes": 22770
+    },
+    {
+      "file": "audio-delivery.mjs",
+      "source": "browser/audio-delivery.mjs",
+      "sha256": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
+      "bytes": 4039
+    },
+    {
+      "file": "bridge.mjs",
+      "source": "browser/bridge.mjs",
+      "sha256": "b46bf7f29d8a7c03f6c76cb380ec661adeea8e96c51c4714f14307737264e50b",
+      "bytes": 17248
+    },
+    {
+      "file": "bootstrap-capture.mjs",
+      "source": "browser/bootstrap-capture.mjs",
+      "sha256": "0a6f783a4f0f1172af53b57e76e2b82f23394ae66eae1e66d0b74622e7a96655",
+      "bytes": 1010
+    }
+  ]
+}

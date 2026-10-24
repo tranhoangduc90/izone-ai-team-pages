@@ -24,7 +24,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-audio-v1&ej=20261024-production-r1'))
       .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
@@ -659,7 +659,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-audio-v1&ej=20261024-production-r1');
     await loadScript('enhance.js?v=20261022-listening-recovery-v1');
     await loadScript('annotations.js?v=20261018-identity-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);

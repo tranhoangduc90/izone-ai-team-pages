@@ -101,7 +101,7 @@ window.ListeningReview = (() => {
       const base=new URL(window.LISTENING_CONFIG.apiBase.replace(/\/$/,'')+'/',location.href);
       const key=new URL(current.data.reviewAudioUrl,base).href;
       if(blobKey===key&&blobUrl)return;
-      const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261024-cf512-1');
+      const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261024-cf512-1&journal=20261024-audio-v1');
       const blob=await fetchListeningAudio(key,{headers:current.token?{Authorization:`Bearer ${current.token}`}:{},credentials:'include',signal});
       if(signal.aborted)throw new DOMException('Cancelled','AbortError');
       if(blobUrl)URL.revokeObjectURL(blobUrl);
