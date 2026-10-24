@@ -2,6 +2,8 @@
 
 ## 1. Phạm vi
 
+**Bảo toàn giao diện khi sửa hoặc tạo sản phẩm:** đọc [mốc master #170 và cách kiểm consumer](docs/MASTER170_INTERFACE_MEMORY.md). Kế thừa theme/adapter và bản sửa đã phát; không phục hồi Nunito/palette/DOM cũ từ skill/demo khi sản phẩm đã chuyển. Web mới trong phạm vi mặc định dùng master; lesson mới dùng engine/giao diện hiện hành. Giữ ngoại lệ toàn bộ Test, Progress Log và mọi handout Writing SW cùng nguồn dùng chung liên quan. Kiểm đúng màn/popup/trạng thái và consumer chịu tác động, kể cả nhóm loại trừ; báo rõ phần chưa kiểm. Đây là hướng dẫn chất lượng, không thêm cổng công cụ, Git hoặc phát hành.
+
 **Đăng nhập giảng viên bắt buộc dùng chung:** với mọi sản phẩm IZONE có GV đăng nhập, đọc và kế thừa [chuẩn phiên chung](docs/TEACHER_SHARED_LOGIN.md). Google một lần trên cùng trình duyệt, nhớ 90 ngày không hoạt động/trần 365 ngày, mở thẳng URL bài có quyền và đăng xuất chung. Dùng thư viện/adapter hiện hành, kiểm origin thực tế (Term 67 có cổng 18869), quyền riêng và Google thật qua các sản phẩm; không dựng đăng nhập riêng từng lesson hoặc suy có phiên là có mọi quyền. Quy tắc này không mở thêm lớp hoặc thêm cổng công cụ/quyền phát hành.
 
 Frontend HTML tĩnh + JS thuần xuất bản bằng GitHub Pages. Không dùng framework. Không phải
