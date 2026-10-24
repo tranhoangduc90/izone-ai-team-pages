@@ -64,7 +64,7 @@ test('định dạng VND thành số nguyên theo quy tắc làm tròn gần nh�
 test('source, nhãn biểu đồ và cache không còn contract USD', () => {
   assert.doesNotMatch(source + html, /US\$|\bUSD\b/);
   assert.match(html, /VND ước tính · xếp chồng theo tài khoản/);
-  assert.match(html, /app\.js\?v=20261024-master170-feedback1/);
+  assert.match(html, /app\.js\?v=20261024-master170-dialog1/);
 });
 
 test('thẻ tài khoản và phần tổng hợp dùng cùng định dạng VND nguyên', () => {
