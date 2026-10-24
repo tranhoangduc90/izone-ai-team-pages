@@ -9,3 +9,11 @@ Các trường hợp chưa có bài nộp trong bảng Lark nguồn, bài nộp 
 Backend có hai webhook **POST /cta-link-batch/submit** và **POST /cta-link-batch/status** nhận **text/plain** chứa `{"docs":[{"docId":"..."}]}`. Cách gửi này không cần yêu cầu OPTIONS; máy chủ từng trả HTTP 500 cho OPTIONS. Workflow chỉ gửi queue khóa 67 sau khi tìm đúng một bản ghi nguồn khớp URL Docs đầy đủ.
 
 Kiểm tra cục bộ: chạy **node tests/cta-link-67.test.mjs** từ gốc repo Pages; sau phát hành mở URL thật và kiểm yêu cầu trong trình duyệt.
+
+Lỗi mạng fetch và phản hồi JSON không đọc được có thông báo tiếng Việt; lỗi
+HTTP, đối chiếu Doc ID và thời gian chờ giữ nguyên. Khi gửi chưa xác nhận,
+trang giữ từng Doc ở trạng thái cần đối soát; lỗi đọc trạng thái giữ kết quả cũ
+và nhắc rõ trạng thái đang hiển thị chưa được cập nhật.
+`tests/cta-recovery-copy-browser.mjs` kiểm bằng webhook giả; dùng
+`CTA_RECOVERY_EVIDENCE_DIR` để lưu bằng chứng ngoài source. Không dùng kiểm UI
+để kết luận đã ghi Docs/Lark thật.
