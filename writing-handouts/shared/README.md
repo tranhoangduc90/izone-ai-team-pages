@@ -23,3 +23,7 @@ Phải chuyển API/registry tương thích trước khi phát hành trang. Nế
 Màu h3 chung của master từng ghi đè chữ trắng trên nền trạng thái của Handout67, khiến tiêu đề bước khó đọc. `reading-theme.css` giữ chữ trắng riêng cho tiêu đề học viên khi có đủ master170/handout/student/reading và không có `data-kind="test"`. Ba entrypoint Lesson5/7/9 tăng query CSS; màn giảng viên và mã JS/API không đổi. File này chỉ được nạp bởi sáu entrypoint HV/GV của ba lesson; không sửa theme master toàn cục hoặc handout Speaking–Writing chuyên sâu.
 
 `tests/handout67-heading-browser.mjs` dùng `PLAYWRIGHT_MODULE`, `HANDOUT67_EVIDENCE_DIR` bên ngoài Git. Nó mở UI thật với API giả, đi đủ17bước ×5trạng thái ×1440/390/320px, đo tương phản/khung chữ và giữ kiểm Edit/cho qua rồi hủy. Ảnh mới là vùng tiêu đề; không thay kiểm toàn trang, Google thật hoặc dữ liệu học viên. Có thể đặt SOURCE_ROOT/SITE_ORIGIN cho bản nguồn khác. Không gửi Check, xác nhận cho qua hay ghi bài thật.
+
+## Handout67 mobile header — 24/10/2026
+
+Ở master170, thanh đầu trang học viên L5/L7/L9 tự giãn dưới760px khi nhãn lớp hoặc liên kết Giảng viên xuống dòng. Giữ nguyên chữ,href,nhận diện,session và mọi handler; không sửa teacher-entry/master chung hoặc handout SW/Test/Progress. Kiểm native bằng tests/handout67-header-browser.mjs:54 tổ hợp ba lesson × chọn/xác nhận/workspace ×1440/1024/760/600/390/320px; 27 ca RED trước sửa. Đầu ra đặt ngoài Git qua HANDOUT67_EVIDENCE_DIR; API giả trong RAM, không dùng để chứng nhận Google/AI/Docs thật.

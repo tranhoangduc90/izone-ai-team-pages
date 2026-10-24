@@ -112,3 +112,8 @@ body[data-handout-theme="reading"] #save-state{color:#586477}
 
 /* Master170 keeps readable light type on Handout67 status headings. */
 html[data-izone-theme="master170"] body[data-m170-product="handout"][data-view="student"][data-handout-theme="reading"]:not([data-kind="test"]) .step-heading h3{color:#fff}
+
+/* Let the Handout67 mobile header contain wrapped identity and teacher links. */
+@media(max-width:760px){
+html[data-izone-theme="master170"] body[data-m170-product="handout"][data-view="student"][data-handout-theme="reading"]:not([data-kind="test"]) .topbar:has(>.teacher-entry-link){height:auto;min-height:68px;padding-block:12px}
+}
