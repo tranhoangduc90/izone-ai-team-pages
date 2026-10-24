@@ -29,6 +29,6 @@ form.addEventListener('submit',async event=>{
     status('Hệ thống đã nhận yêu cầu gửi '+payload.records.length+' bài.\nBác sĩ AI sẽ xử lý tiếp; bạn xem kết quả trong bảng luyện tập cá nhân.','received');
     links.value='';preview.textContent='';
   }catch(error){
-    status('Chưa xác nhận được bài đã nhận. Link bạn nhập vẫn được giữ.\nHãy kiểm tra bảng luyện tập hoặc báo giáo viên trước khi gửi lại.','error');
+    status('Chưa xác nhận được bài đã nhận. Link bạn nhập vẫn được giữ.\nHãy kiểm tra bảng luyện tập hoặc báo giáo viên trước khi gửi lại.','attention');
   }finally{busy=false;send.disabled=classCode!=='IC2314';send.textContent='Gửi bài bổ trợ';links.readOnly=false;student.readOnly=false;}
 });

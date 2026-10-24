@@ -9,4 +9,10 @@ Trang nhận link chia sẻ ChatGPT và gửi đúng ba trường của form Bá
 
 Kiểm hợp đồng gửi bài bằng `node --test tests/bo-tro-contract.mjs`. Kiểm trên trình duyệt cần chặn request tới webhook để không tạo bài giả trong Lark thật.
 
+Thông báo chưa xác nhận đã nhận bài dùng màu chú ý của master #170; lỗi nhập
+vẫn dùng màu lỗi. Nội dung đang nhập và hướng dẫn đối soát giữ nguyên.
+`tests/supplement-notice-browser.mjs` kiểm bằng webhook giả; dùng
+`SUPPLEMENT_NOTICE_EVIDENCE_DIR` để lưu bằng chứng ngoài source. Kết quả này
+không chứng nhận Lark, Docs hoặc AI thật.
+
 Trang hiện chỉ hỗ trợ IC2314. Các lớp khác cần được tạo bảng, bộ lọc, phân loại khóa và kiểm lại trước khi mở.
