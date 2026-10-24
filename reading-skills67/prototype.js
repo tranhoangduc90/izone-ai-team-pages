@@ -237,7 +237,10 @@ for(const dialog of [modal,explanation]){
   function outside(ev){const r=dialog.getBoundingClientRect();return ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom;}
   dialog.addEventListener('pointerdown',ev=>pressedOutside=ev.target===dialog&&outside(ev));
   dialog.addEventListener('pointerup',ev=>{if(pressedOutside&&ev.target===dialog&&outside(ev))dialog.close();pressedOutside=false;});
-  dialog.addEventListener('close',()=>{lastTrigger?.focus({preventScroll:true});});
+  dialog.addEventListener('close',()=>{
+    if(document.documentElement.dataset.izoneTheme==='master170'&&document.body.dataset.m170Product==='materials'&&document.activeElement!==document.body&&!dialog.contains(document.activeElement))return;
+    lastTrigger?.focus({preventScroll:true});
+  });
 }
 document.addEventListener('focusin',event=>{const q=event.target.closest('.question-block');if(q)activeQuestion=Number(q.dataset.questionNumber);});
 window.addEventListener('online',()=>{if(serverMode){serverClient.flush().catch(()=>{});toast('Đã có mạng. Đang thử lưu phần chưa gửi lên máy chủ.');}else toast('Đã có mạng. Prototype vẫn lưu bài trên thiết bị.');});
@@ -290,6 +293,7 @@ function adaptServerScreen(){
   else if(state.status==='draft'){const b=document.querySelector('#grade-button');if(b)b.textContent=serverClient.initialHistory?.attempts?.some(a=>a.status==='done')?'Chấm lại bản sửa':'Nộp bài để chấm';}
   if(state.status==='grading-error'){
     const notice=document.createElement('div');notice.className='notice server-error';notice.textContent='Chưa có phản hồi hoàn tất. '+(state.serverAttempt?.errorCode==='AI_OUTCOME_UNKNOWN'?'Chưa rõ kết quả gọi AI; cần đối chiếu trước khi gọi lại.':'Bộ chấm trả lỗi: '+(state.serverAttempt?.errorCode||'CHƯA XÁC ĐỊNH'));
+    notice.dataset.state=(state.serverAttempt?.status==='needs_review'||state.serverAttempt?.errorCode==='AI_OUTCOME_UNKNOWN')?'attention':'error';
     document.querySelector('.lesson-head').after(notice);const b=document.querySelector('#grade-button');if(b){b.textContent='Quay lại nháp';b.dataset.action='server-return-draft';}
   }
   adaptServerSave();

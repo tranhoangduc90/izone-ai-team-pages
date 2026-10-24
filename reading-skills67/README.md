@@ -1,5 +1,22 @@
 # Reading 67 — prototype luyện nén
 
+## Trạng thái giao diện master #170
+
+Banner chờ xử lý dùng vai trò `pending`. Trường hợp cần đối chiếu hoặc chưa rõ
+kết quả AI dùng `attention`; lỗi đã xác định dùng `error`. Hook DOM chỉ chọn màu
+trình bày, giữ nguyên thông báo, nháp, phiên bản bài, hành vi gọi lại và API.
+
+`tests/materials-status-browser.mjs` chạy renderer thật với nội dung và WebClient
+giả, kiểm bảy tình huống tại 1440/390/320px. Test nhận module Playwright qua
+`PLAYWRIGHT_MODULE`, lưu bằng chứng tại `MATERIALS_STATUS_EVIDENCE_DIR` và trả mã
+lỗi nếu vai trò màu, 20 ô hoặc bố cục không đúng. Không gọi AI hoặc dữ liệu thật.
+
+Sự kiện đóng dialog trên master không lấy lại focus khi người dùng đã chọn một
+control bên ngoài. `tests/materials-history-async-focus-browser.mjs` kiểm tải lịch
+sử có độ trễ tại ba chiều rộng: giữ focus bên ngoài hoặc chuyển tới tiêu đề kết
+quả, đồng thời đối chiếu nguyên 20 câu trả lời. Test nhận `PLAYWRIGHT_MODULE`, lưu
+JSON vào `MATERIALS_ASYNC_EVIDENCE_DIR` và trả mã lỗi nếu sai focus hoặc dữ liệu.
+
 ## Chặng 3 — bản thử trên Pages
 
 `demo.html` trình bày sau nộp/chờ/kết quả và mở bản làm để sửa, chấm lại.
