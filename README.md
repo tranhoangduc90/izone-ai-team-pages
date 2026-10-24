@@ -61,3 +61,10 @@ Trang `vocab-06.html` là demo độc lập cho Vocab 06. Trang chỉ gọi hai 
 ## Chấm bài Reading/Listening 67
 
 Trang `check-now.html` dùng chung cho các bài Reading và Listening khóa 67. Trang nhận `documentId` cùng `assignmentCode`, xóa hai giá trị khỏi thanh địa chỉ, gửi yêu cầu chấm tới n8n và chỉ dùng `jobId` để hỏi tiến độ. Trang không chứa credential, nội dung bài làm hoặc dữ liệu định danh học viên.
+
+
+### Câu lỗi kết nối trên trang chấm nhanh
+
+Bảy trang check-now/Vocab dùng câu tiếng Việt cho lỗi kết nối native của trình duyệt. Chỉ đổi câu hiển thị; thông báo API, ngưỡng khóa học, tiến độ, timeout, requestId, payload và cách thử lại/quay Docs giữ nguyên. Không chứng nhận backend chống chấm trùng bằng fixture.
+
+Hồi quy: `tests/grader-recovery-copy-browser.mjs`, dùng `PLAYWRIGHT_MODULE` trỏ tới Playwright và `GRADERS_RECOVERY_EVIDENCE_DIR` ngoài repo. Có thể đặt `GRADERS_RECOVERY_REVISION` để so bản nền, hoặc `GRADERS_RECOVERY_PUBLIC_BASE` để nạp tài nguyên công khai vào fixture. API chấm/Docs không được gọi thật; timeout chỉ rút ngắn trong fixture.

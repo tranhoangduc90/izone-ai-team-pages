@@ -108,6 +108,13 @@
     try { return JSON.parse(text); } catch { return null; }
   }
 
+  function uiErrorMessage(error) {
+    if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message || '')) {
+      return 'Chưa kết nối được với hệ thống chấm bài. Hãy kiểm tra mạng rồi thử lại.';
+    }
+    return error.message;
+  }
+
   async function requestJson(url, options = {}) {
     const response = await fetch(url, { cache: 'no-store', ...options });
     const text = await response.text();
@@ -193,7 +200,7 @@
       if (stages.includes(accepted.stage)) setStage(accepted.stage);
       window.setTimeout(() => pollStatus(Date.now()), 400);
     } catch (error) {
-      showError(error.message, error.retryable !== false);
+      showError(uiErrorMessage(error), error.retryable !== false);
     }
   }
 
