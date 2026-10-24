@@ -17,6 +17,7 @@ const id=()=>crypto.randomUUID();
 const apiBase=window.IZONE_SHOPS_PREVIEW?.apiBase||'/api/v1/';
 const entry=new URL(location.href).searchParams;let requestedClass=null;
 function indexPeople(){PEOPLE.splice(0,PEOPLE.length,...classes.flatMap(c=>c.students.map(p=>({id:p.studentRef,name:p.displayAlias||p.displayName,classRef:c.classRef,classCode:c.className,scenario:'fresh',requiresAccessCode:!!p.requiresAccessCode}))));}
+function authMessage(error){return error.status===403?'Tài khoản Google chưa có quyền xem lớp hoặc bài này.':error.status===401?'Chưa xác minh được phiên Google. Hãy đăng nhập lại.':error.status>=500?'Dịch vụ đăng nhập đang gián đoạn. Lời đang soạn được giữ; bạn có thể thử lại.':error.message;}
 async function api(path,method='GET',body){
  const response=await fetch(apiBase+path,{method,credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
  const data=await response.json().catch(()=>({}));
@@ -37,7 +38,7 @@ function draw(){
  const s=current?state():teacher&&loggedIn?{...fixture(fallbackPerson(),'fresh'),connected:true}:null;
  let html=teacher?(loggedIn?teacherLayout(s||fixture(fallbackPerson(),'fresh'),{rows,query,filter,order,detailOpen,drafts,composer}):'<section class="answer-card"><h1>Giảng viên · Đăng nhập Google</h1><p>Dùng tài khoản đã có quyền Writing. Phiên dùng chung được ghi nhớ trên trình duyệt này; dữ liệu bài làm vẫn ở database thử riêng.</p><div id="google-signin"></div><button class="text-button" data-action="retry-login">Thử lại đăng nhập</button></section>'):(s?studentLayout(s,''):loginView());
  root.innerHTML=top()+banner()+'<main id="main"><p id="notice" role="status">'+esc(notice)+'</p>'+html+'</main>';
- if(teacher&&!loggedIn)void renderGoogleLogin($('#google-signin'),{onCredential:async credential=>{const epoch=generation;await api('auth/session','POST',{credential});if(epoch===generation)await setupTeacher();},onError:error=>message(error.message)}).catch(error=>message(error.message));
+ if(teacher&&!loggedIn)void renderGoogleLogin($('#google-signin'),{onCredential:async credential=>{const epoch=generation;await api('auth/session','POST',{credential});if(epoch===generation)await setupTeacher();},onError:error=>message(authMessage(error))}).catch(error=>message(authMessage(error)));
  if(teacher&&loggedIn)root.querySelector('.teacher-heading .teacher-actions')?.insertAdjacentHTML('beforeend','<button class="secondary" data-action="teacher-logout">Đăng xuất chung</button>');
  for(const el of root.querySelectorAll('details')){const key=owner+':'+detailsKey(el);if(openDetails.has(key))el.open=openDetails.get(key);}
  renderedOwner=owner;
@@ -255,7 +256,7 @@ async function boot(){
  classes.sort((a,b)=>Number(a.className==='SHOPS-CU-READONLY')-Number(b.className==='SHOPS-CU-READONLY')||a.className.localeCompare(b.className));
  const query=entry.get('class')?.trim();if(query){requestedClass=classes.find(c=>[c.classRef,c.className].some(v=>v.toLowerCase()===query.toLowerCase()));if(!requestedClass)throw Error('Không tìm thấy lớp trong đường link này. Chưa mở bài.');if(!teacher)classes=[requestedClass];}
  indexPeople();if(entry.has('student')&&!PEOPLE.some(p=>p.id===entry.get('student')&&(!requestedClass||p.classRef===requestedClass.classRef)))throw Error('Học viên trong link không thuộc lớp đã chọn. Chưa mở bài.');
- if(teacher){try{await api('auth/session');await setupTeacher();}catch(error){notice=error.status===401?'':error.message;draw();}}
+ if(teacher){try{await api('auth/session');await setupTeacher();}catch(error){notice=error.status===401?'':authMessage(error);draw();}}
  else{let remembered;try{remembered=JSON.parse(localStorage.getItem(namespace+'identity')||'null');}catch{}
   const p=PEOPLE.find(p=>p.id===remembered?.id&&p.classRef===remembered?.classRef&&(!entry.has('student')||p.id===entry.get('student')));if(p&&(!p.requiresAccessCode||remembered.sessionRef))await openPerson(p,undefined,remembered.sessionRef);else{draw();fillPeople();}}
 }
