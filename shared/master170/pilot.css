@@ -26,6 +26,7 @@ body[data-m170-product='supplement'] button { background: var(--m170-action); fo
 body[data-m170-product='supplement'] button:hover { background: var(--m170-action-hover); }
 body[data-m170-product='supplement'] #result { border: 0; border-radius: 8px; padding: 12px 16px; background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
 body[data-m170-product='supplement'] #result[data-state='error'] { background: var(--m170-error-bg); color: var(--m170-error-fg); }
+body[data-m170-product='supplement'] #result[data-state='attention'] { background: var(--m170-attention-bg); color: var(--m170-attention-fg); }
 body[data-m170-product='supplement'] #result[data-state='received'] { background: var(--m170-success-bg); color: var(--m170-success-fg); }
 body[data-m170-product='supplement'] footer { border-color: var(--m170-line); }
 
