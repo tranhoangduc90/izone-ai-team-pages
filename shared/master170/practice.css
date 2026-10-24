@@ -68,3 +68,10 @@ body[data-m170-product='practice'] :is(.cbt-note-question-ref,.cbt-note-panel fo
 body[data-m170-product='practice'] .cbt-note-delete { color: var(--m170-error-fg); background: var(--m170-error-bg); border: 1px solid var(--m170-error-fg); border-radius: 8px; font: 600 16px/1.5 var(--m170-font); min-height: 44px; padding: 8px 12px; }
 
 body[data-m170-product='practice'] .cbt-note-panel footer span[data-state='error'] { color: var(--m170-error-fg); background: var(--m170-error-bg); font-size: 16px; line-height: 1.5; padding: 8px 12px; border-radius: 8px; min-width: 0; }
+
+/* Trên màn thấp, cho trang cuộn để toolbar không ép vùng đọc/câu hỏi về 0px. */
+@media (max-height: 700px) {
+  body[data-m170-product='practice'].design67.reading #app:has(:is(#readingView,#listeningView):not([hidden])) { min-height: 720px; }
+  body[data-m170-product='practice'].design67.reading #app:has(:is(#readingView,#listeningView):not([hidden])):has(.listening-audio-bar) { min-height: 800px; }
+  html:has(body[data-m170-product='practice'].design67.reading :is(#readingView,#listeningView):not([hidden])) { scroll-padding-block-end: 44px; }
+}

@@ -12,3 +12,7 @@ Giữ preset Reading xám sáng–đỏ, highlight/note và popup đối chiếu
 - API production dự kiến trong `config.js` chưa được coi là đã hoạt động cho tới khi phát hành và readback. Local dùng `/api`.
 
 Nguồn UI được ghim từ demo `reading-practice-buoi7-demo-20261012`, theo Term Test Reading đã duyệt. CSS/fonts/annotation adapter chép riêng để phát hành Reading không đổi giao diện sản phẩm khác. Backend độc lập nằm trong repository `izone-classroom-mapping-review`, `products/reading-practice`.
+
+Trong master170, màn cao tối đa 700px giữ khung làm bài tối thiểu 720px (800px nếu có thanh audio) và cho trang cuộn, để toolbar/điều hướng không làm vùng đọc hoặc câu hỏi biến mất. Khoảng cuộn cuối trang giữ focus cách footer cố định. Quy tắc chỉ áp dụng khi đang mở vùng làm bài Reading/Listening; không đổi timer, câu hỏi, popup lời giải hoặc handler.
+
+Hồi quy bố cục: chạy `node tests/practice-short-viewport-browser.mjs` từ root Pages, với `PLAYWRIGHT_MODULE` trỏ tới file `index.mjs` của Playwright. Bộ thử dùng CSS thật và hai fixture HTML đã bỏ đề, key, media, API và định danh thật; kiểm vùng đọc, cuộn và focus ở tám viewport, hai cỡ chữ. Kết quả nằm trong `output/playwright/practice-short-viewport/` hoặc thư mục `PRACTICE_VIEWPORT_EVIDENCE_DIR`. Đây là kiểm bố cục; kiểm ứng dụng/API thật là bằng chứng riêng.

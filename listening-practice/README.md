@@ -10,6 +10,8 @@ Giao diện giữ bộ Reading gốc. app.js chỉ thay điểm mở lời giả
 
 Thanh audio một hàng, âm lượng trước đồng hồ; chỉ ẩn dòng đang nghe thông thường. Q26–30 bỏ đệm trên để ngang Q21–25. Màn rất thấp có chiều cao tối thiểu để cuộn được vùng đề. Không sửa 9 CSS nền hoặc annotations.js.
 
+Master170 bổ sung giới hạn chiều cao cho cả bài có flowchart và bài Note Completion: khi viewport cao tối đa 700px, khung có thanh audio giữ tối thiểu 800px để vùng đề còn đọc và thao tác được. Khoảng cuộn cuối trang giữ focus cách footer cố định. Trang cuộn theo chiều dọc; audio, tốc độ phát, timer, lưu/nộp và quyền xem lại giữ nguyên. Hồi quy bố cục dùng `tests/practice-short-viewport-browser.mjs`; fixture không chứa đề, key, audio hoặc API thật, nên cần kiểm ứng dụng/API riêng.
+
 API riêng do config.js chỉ định. Audio xem lại lấy URL tương đối từ kết quả, giải theo API base; không lấy từ tên miền Pages. Giữ xác thực học viên/GV và không tạo lượt làm khi xem lại.
 
 Backend/test/canary và quy trình quay lại: repository izone-classroom-mapping-review, products/listening-practice. Mở lớp/đăng ký link bài là bước riêng với đúng tài liệu homework, không suy từ việc Pages đã phát hành.
