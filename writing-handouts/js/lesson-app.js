@@ -471,6 +471,7 @@ function latestVocabulary(bodyKey) {
   const comments = [...(app.state.comments || [])].reverse();
   for (const comment of comments) {
     const artifacts = comment.artifacts || {};
+    if (artifacts.bodyKey && artifacts.bodyKey !== bodyKey) continue;
     const rows = normalizeVocabularyRows(artifacts.vocabulary || artifacts.vocabularyRows, bodyKey);
     if (rows.length) return rows;
   }
@@ -489,8 +490,11 @@ function renderVocabulary(bodyRoot, bodyKey) {
     title.textContent = app.manifest.vocabulary?.title || "Từ vựng hỗ trợ";
     const empty = document.createElement("p");
     empty.className = "muted";
+    const unavailable = [...(app.state.comments || [])].reverse().find(comment =>
+      comment.artifacts?.vocabularyStatus === "unavailable"
+      && comment.artifacts.bodyKey === selectedBody);
     empty.textContent = unlocked
-      ? "Hệ thống chưa trả được bảng từ vựng. Hãy thử lại lượt Check lỗi kỹ thuật hoặc liên hệ giảng viên."
+      ? unavailable?.artifacts?.vocabularyNotice || "Hệ thống chưa trả được bảng từ vựng. Hãy thử lại lượt Check lỗi kỹ thuật hoặc liên hệ giảng viên."
       : "Hoàn thành Topic Sentence và cả hai Supporting Ideas để mở bảng từ vựng.";
     section.append(title, empty);
     bodyRoot.append(section);
