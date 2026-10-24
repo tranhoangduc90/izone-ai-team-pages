@@ -114,6 +114,11 @@ function showModal(title,body,actions=''){
   modal.showModal();
 }
 function closeModal(){modal.close();}
+function focusHistoryDestination(){
+  if(document.documentElement.dataset.izoneTheme!=='master170'||document.body.dataset.m170Product!=='materials'||document.activeElement!==document.body)return;
+  const heading=app.querySelector('h1');if(!heading)return;
+  heading.tabIndex=-1;heading.focus({preventScroll:true});heading.scrollIntoView({block:'nearest',behavior:'instant'});
+}
 function review(){
   const groups=[['Nén thông tin câu hỏi','radar'],['Nén câu chứa thông tin','evidence_l1'],['Đáp án Matching Information','section'],['Nén các đoạn A–H','paragraph']];
   showModal('Rà soát bài làm',`<p>Đã điền <strong>${completed()}/20 phần</strong>. ${completed()<16?'Cần thêm '+(16-completed())+' phần để đủ 80%.':'Đã đủ khối lượng để chấm; phần bỏ trống vẫn được giữ.'}</p><div class="review-groups">${groups.map(([label,kind])=>`<div class="review-group"><h3>${label}</h3><div class="review-items">${content.targets.filter(t=>t.kind===kind).map(t=>`<button data-jump-field="${t.id}" class="${filled(t)?'filled':''} ${state.flags.includes(t.question)?'flagged':''}" data-status="${filled(t)?'✓':'Trống'}" aria-label="${e(t.label)}">${t.paragraph||t.question}</button>`).join('')}</div></div>`).join('')}</div><p class="minimum-note">Chữ được tô là phần đã điền, chưa phải kết quả đúng. ⚑ là câu bạn muốn xem lại.</p>`,writable()?'<button class="primary" data-action="grade">Chấm bài</button>':'');
@@ -146,7 +151,8 @@ function renderEntry(){
 function explanationFor(id,trigger){
   explanationIndex=content.targets.findIndex(t=>t.id===id);if(explanationIndex<0)return;
   const t=content.targets[explanationIndex],f=state.feedback?.[id];if(!f)return;
-  if(!explanation.open){lastTrigger=trigger||document.activeElement;explanation.showModal();}
+  const opening=!explanation.open;
+  if(opening)lastTrigger=trigger||document.activeElement;
   const q=content.questions.find(q=>q.number===t.question);
   const section=t.paragraph||fixture.answers[q?.targets.section]||'A';
   const p=content.paragraphs.find(p=>p.id===section);
@@ -159,6 +165,8 @@ function explanationFor(id,trigger){
     for(const h of explanation.querySelectorAll('h3'))if(h.textContent==='Bài làm minh họa')h.textContent='Bài bạn đã gửi';
     explanation.querySelector('.minimum-note').textContent='Màu nền là lớp trình bày giúp đối chiếu nguồn và bản nén.';
   }
+  if(opening)explanation.showModal();
+  explanation.querySelector('[data-close-explanation]').focus({preventScroll:true});
   requestAnimationFrame(()=>{if(!radar){const el=explanation.querySelector('[data-popup-paragraph="'+section+'"]');const scroll=explanation.querySelector('.explanation-dialog-passage-scroll');if(el)scroll.scrollTop=el.offsetTop-scroll.offsetTop-12;}});
 }
 function historyModal(){
@@ -209,9 +217,9 @@ document.addEventListener('click',async event=>{
     if(button.dataset.viewSelected){activeQuestion=Number(button.dataset.viewSelected);const q=content.questions.find(q=>q.number===activeQuestion);const p=state.answers[q.targets.section];if(p){jumpTo('paragraph',p);document.querySelector('.mobile-return').hidden=false;}}
     if(button.dataset.explain)explanationFor(button.dataset.explain,button);
     if(button.dataset.explainOffset){explanationIndex+=Number(button.dataset.explainOffset);explanationFor(content.targets[explanationIndex].id);}
-    if(button.dataset.history){const snapshot=modal._historyItems[Number(button.dataset.history)];closeModal();state={...newState(),isSample:!!snapshot.feedback,answers:structuredClone(snapshot.answers),feedback:snapshot.feedback,status:snapshot.feedback?'review':'history',savedAt:snapshot.createdAt};render();}
-    if(button.dataset.serverAttempt){closeModal();const attempt=await serverClient.getAttempt(button.dataset.serverAttempt);trackServerAttempt(attempt);}
-    if(button.dataset.serverArchive){const archived=modal._serverArchives[Number(button.dataset.serverArchive)];closeModal();serverClient.stopPoll();state={...newState(),...structuredClone(archived.body),status:'history',savedAt:archived.savedAt,archived};render();}
+    if(button.dataset.history){const snapshot=modal._historyItems[Number(button.dataset.history)];closeModal();state={...newState(),isSample:!!snapshot.feedback,answers:structuredClone(snapshot.answers),feedback:snapshot.feedback,status:snapshot.feedback?'review':'history',savedAt:snapshot.createdAt};render();focusHistoryDestination();}
+    if(button.dataset.serverAttempt){closeModal();const attempt=await serverClient.getAttempt(button.dataset.serverAttempt);trackServerAttempt(attempt);focusHistoryDestination();}
+    if(button.dataset.serverArchive){const archived=modal._serverArchives[Number(button.dataset.serverArchive)];closeModal();serverClient.stopPoll();state={...newState(),...structuredClone(archived.body),status:'history',savedAt:archived.savedAt,archived};render();focusHistoryDestination();}
     if(button.dataset.previewPerson)await serverClient.changePerson(button.dataset.previewPerson);
     if(button.id==='teacher'){
       if(serverMode&&serverClient.identity){
@@ -325,6 +333,7 @@ async function serverAction(name){
   if(name==='confirm-reset')await serverClient.reset();
   else await serverClient.flush();
   const draft=await serverClient.getDraft();scenario='current';state={...newState(),...draft.body,id:'draft-'+serverClient.identity.ownerId,status:'draft',savedAt:draft.savedAt};render();
+  focusHistoryDestination();
   if(name==='edit')toast('Đang chỉnh nháp trên máy chủ. Bản đã chấm và phản hồi vẫn giữ riêng.');
 }
 window.addEventListener('reading67:server-state',()=>{if(serverMode&&content&&state)updateProgress();});

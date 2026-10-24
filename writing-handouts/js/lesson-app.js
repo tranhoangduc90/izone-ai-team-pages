@@ -6,7 +6,7 @@ import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { claimSectionSubmission, fieldDefinitions, gradingFailureMessage, normalizeLessonProgress, sectionDefinitions, sectionIsFilled, sectionPrerequisitesPassed, sectionSubmitLabel, vocabularyPrerequisitesPassed } from "./lesson-core.js?v=20260826-grading-timeout-v1";
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
-import { renderStudentFieldComments } from "./teacher-comments-ui.js";
+import { renderStudentFieldComments } from "./teacher-comments-ui.js?v=20261024-master170-thread2";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
 
 const $ = (id) => document.getElementById(id);

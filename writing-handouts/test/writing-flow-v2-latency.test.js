@@ -28,6 +28,7 @@ class Element {
   replaceChildren(...nodes) { this.text=''; this.children=[...nodes]; }
   get childElementCount() { return this.children.length; }
   setAttribute(key,value) { this[key]=String(value); }
+  removeAttribute(key) { delete this[key]; }
   addEventListener(event,handler) { this.listeners[event]=handler; }
   closest() { return this; }
   focus() {}

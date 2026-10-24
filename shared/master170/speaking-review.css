@@ -1,0 +1,10 @@
+body[data-m170-product='speaking-review'] .shell { width: min(1160px, calc(100% - 40px)); }
+body[data-m170-product='speaking-review'] header .m170-logo { margin-bottom: 28px; }
+body[data-m170-product='speaking-review'] h1 { font-size: 28px; }
+body[data-m170-product='speaking-review'] h2 { font-size: 22px; }
+body[data-m170-product='speaking-review'] .card { border-color: var(--m170-line); border-radius: 12px; box-shadow: none; }
+body[data-m170-product='speaking-review'] :is(button, select) { border-radius: 8px; }
+body[data-m170-product='speaking-review'] button { background: var(--m170-action); color: white; }
+body[data-m170-product='speaking-review'] button:hover { background: var(--m170-action-hover); }
+body[data-m170-product='speaking-review'] a { color: var(--m170-action); }
+@media (max-width: 600px) { body[data-m170-product='speaking-review'] h1 { font-size: 26px; } }

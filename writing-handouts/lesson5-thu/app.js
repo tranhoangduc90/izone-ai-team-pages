@@ -138,7 +138,7 @@ function enqueue(action){const result=serial.then(action);serial=result.catch(()
 function apply(value){state=value;render();}
 function failure(error){
 
- if(error.status===409){conflict=true;note('Bài đã thay đổi ở tab khác. Nháp của bạn được giữ trên thiết bị. Đọc bản đã lưu trước khi tiếp tục.');$('read-latest').hidden=false;}
+ if(error.status===409){conflict=true;document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);note('Bài đã thay đổi ở tab khác. Nháp của bạn được giữ trên thiết bị. Đọc bản đã lưu trước khi tiếp tục.');$('read-latest').hidden=false;}
  else if(error.status===401){note('Phiên đã hết hạn. Hãy chọn lại tên để mở bài đã lưu.');message('Bài đã lưu trên máy chủ vẫn được giữ.');}
  else {note('Chưa kết nối được máy chủ. Nháp vẫn được giữ trên thiết bị; bạn có thể thử lại.');}
  $('save-state').textContent='Có nháp chưa lưu';
@@ -287,15 +287,15 @@ $('workspace').addEventListener('submit',async event=>{
  if(signature!==body){form.dataset.replyId=crypto.randomUUID();form.dataset.replyBody=body;}
  // Lưu xong bài trước khi gửi trao đổi; khóa nhập trong thời gian chờ để ACK không làm mất chữ.
  editingLocked=true;button.disabled=true;form.elements.body.disabled=true;mutationVersion++;
- document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);status.textContent='Đang lưu bài và gửi trả lời…';
+ document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);status.dataset.state='pending';status.textContent='Đang lưu bài và gửi trả lời…';
  try{
-  if(!await flush()||epoch!==generation||ref!==state.ref){status.textContent='Chưa lưu được bài; lời trả lời vẫn giữ. Hãy xử lý kết nối rồi thử lại.';return;}
+  if(!await flush()||epoch!==generation||ref!==state.ref){status.dataset.state='error';status.textContent='Chưa lưu được bài; lời trả lời vẫn giữ. Hãy xử lý kết nối rồi thử lại.';return;}
   busy=true;mutationVersion++;
   const result=await api.thread(ref,{action:'reply',threadRef:form.dataset.threadReply,body,requestId:form.dataset.replyId});if(epoch!==generation||ref!==state.ref)return;
   form.elements.body.value='';delete form.dataset.replyId;delete form.dataset.replyBody;
   apply({...result.session,responses:{...result.session.responses,...dirty}});message('Đã lưu trả lời trong cùng luồng trao đổi.');
  }
- catch(e){if(epoch===generation)status.textContent=e.status===401?'Phiên hết hạn. Lời trả lời vẫn được giữ.':'Chưa gửi được; lời trả lời được giữ để thử lại.';}
+ catch(e){if(epoch===generation){status.dataset.state='error';status.textContent=e.status===401?'Phiên hết hạn. Lời trả lời vẫn được giữ.':'Chưa gửi được; lời trả lời được giữ để thử lại.';}}
  finally{if(epoch===generation){busy=false;editingLocked=false;button.disabled=false;form.elements.body.disabled=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});schedulePoll();}}
 });
 window.addEventListener('pagehide',()=>{if(student&&Object.keys(dirty).length)keepDraft();});

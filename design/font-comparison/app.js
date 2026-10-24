@@ -1,11 +1,13 @@
 // Nhận cách so, font, màu và cỡ chữ; dựng cùng nội dung cho mọi bản.
 // Thao tác thử được đồng bộ trong trang, không gửi bài hoặc lưu dữ liệu lên hệ thống.
 const fonts = [
+  { id: 'master', name: 'Source Sans 3', source: 'Master #170 v1.0' },
   { id: 'nunito', name: 'Nunito Sans', source: 'Reading' },
   { id: 'linh', name: 'Source Sans 3', source: 'Linh · Writing' },
   { id: 'geologica', name: 'Geologica', source: 'Mẫu Thủy' },
 ];
 const themes = [
+  { id: 'master', name: 'Master #170', description: 'Source Sans 3 · nền xám sáng · hành động navy · trạng thái riêng', swatches: ['#174265', '#152B4E', '#DB0829', '#F5F6F8'] },
   { id: 'reading', name: 'Reading', description: 'Nền xám sáng · Hành động navy · Đỏ nhấn nhỏ', swatches: ['#152B4E', '#DB0829', '#F5F6F8', '#FFFFFF'] },
   { id: 'linh', name: 'Mẫu Linh', description: 'Nền xám sáng · Tiêu đề navy · Nút đỏ · Nền chọn xanh nhạt', swatches: ['#174265', '#DB0829', '#F6F7FB', '#E6EEF5'] },
   { id: 'thuy', name: 'Mẫu Thủy', description: 'Nền xám sáng · Hành động đỏ · Tiêu đề xanh đậm', swatches: ['#174266', '#DB0829', '#F3F4F6', '#FFFFFF'] },
@@ -25,7 +27,7 @@ const state = {
   view: ['single', 'colors'].includes(params.get('view')) ? params.get('view') : 'compare',
   themes: Object.fromEntries(fonts.map(f => {
     const choice = normalizeTheme(params.get(`theme_${f.id}`) ?? (f.id === 'linh' ? params.get('theme_segoe') : null));
-    return [f.id, themes.some(t => t.id === choice) ? choice : initialTheme];
+    return [f.id, themes.some(t => t.id === choice) ? choice : f.id === 'master' ? 'master' : initialTheme];
   })),
   scene: ['lesson', 'reading', 'dashboard'].includes(params.get('scene')) ? params.get('scene') : 'lesson',
   font: fonts.some(f => f.id === requestedFont) ? requestedFont : 'nunito',

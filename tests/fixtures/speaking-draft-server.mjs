@@ -15,6 +15,7 @@ export const lessons = [
   { number: 7, file: 'lesson-7.html', code: '67-speaking-cach_lam_mot_viec', parts: ['how_to_do'] },
   { number: 8, file: 'lesson-8.html', code: '67-speaking-so_sanh', parts: ['comparison_direct', 'comparison_extended', 'freestyle'] },
   { number: 9, file: 'lesson-9.html', code: '67-speaking-freestyle_on_tap', parts: ['freestyle'] },
+  { number: 10, file: 'lesson-10.html', code: '67-speaking-ke_chuyen_boi_canh_truoc_trong_sau', parts: ['story_context', 'story_sequence'] },
 ];
 export const share = index => `https://chatgpt.com/share/00000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
 
@@ -75,7 +76,7 @@ export async function startFixture(root, options = {}) {
         else if (path === '/assignment/roster') data = { assignment: {
           title: 'Bài kiểm thử · dữ liệu giả', assignmentCode: lesson.code, classCode: 'IC2304', assignmentStatus: 'open',
           students: learners.map((student_ref, index) => ({ student_ref, name: `Hồ sơ thử ${index + 1}` })),
-          parts: lesson.parts.map((part_key, index) => ({ part_key, min_questions: lesson.number === 8 ? [6, 6, 1][index] : lesson.number === 7 ? 4 : lesson.number === 6 ? [0, 2, 1][index] : lesson.number >= 4 && part_key === 'freestyle' ? 1 : 3 })),
+          parts: lesson.parts.map((part_key, index) => ({ part_key, min_questions: lesson.number === 10 ? 1 : lesson.number === 8 ? [6, 6, 1][index] : lesson.number === 7 ? 4 : lesson.number === 6 ? [0, 2, 1][index] : lesson.number >= 4 && part_key === 'freestyle' ? 1 : 3 })),
           requiredPracticeCount: lesson.number >= 4 ? 2 : 0, doctorEnabled: lesson.number !== 3,
         } };
         else if (path === '/session/start-selected') data = { session: {

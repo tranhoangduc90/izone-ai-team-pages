@@ -182,10 +182,11 @@ function setConnection(ok, label) {
   $('liveLabel').textContent = label;
 }
 
-function toast(message, type = 'success') {
+function toast(message, type = 'success', dialogFeedback) {
   const element = $('toast');
   element.textContent = message;
   element.className = `toast show ${type}`;
+  if (type === 'error') window.recordingDialogFeedback?.error(dialogFeedback, message);
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => { element.className = 'toast'; }, 3200);
 }
@@ -261,6 +262,7 @@ document.addEventListener('change',event=>{const select=event.target.closest('[d
 
 $('renameForm').addEventListener('submit', async (event) => {
   event.preventDefault();
+  const feedback = window.recordingDialogFeedback?.begin(event.currentTarget);
   const button = $('renameSubmit');
   button.disabled = true;
   button.textContent = 'Đang lưu…';
@@ -270,15 +272,17 @@ $('renameForm').addEventListener('submit', async (event) => {
     $('renameDialog').close();
     toast('Đã đổi tên video trên YouTube.');
   } catch {
-    toast('Không đổi được tên video. Vui lòng thử lại.', 'error');
+    toast('Không đổi được tên video. Vui lòng thử lại.', 'error', feedback);
   } finally {
     button.disabled = false;
     button.textContent = 'Lưu tên';
+    window.recordingDialogFeedback?.finish(feedback, button);
   }
 });
 
 $('playlistForm').addEventListener('submit', async (event) => {
   event.preventDefault();
+  const feedback = window.recordingDialogFeedback?.begin(event.currentTarget);
   const select = $('playlistSelect');
   const option = select.selectedOptions[0];
   if (!select.value) return;
@@ -302,10 +306,11 @@ $('playlistForm').addEventListener('submit', async (event) => {
     $('playlistDialog').close();await loadData(true);
     toast('Đã chuyển playlist và lưu tên video.');
   } catch(error) {
-    if(error.message.includes('VERSION_CONFLICT')){toast('Dữ liệu đã được người khác sửa. Hãy đóng hộp thoại, làm mới và mở lại để kiểm tra trước khi lưu.','error');return;}
-    toast(moved?'Đã chuyển playlist nhưng chưa lưu được tên video. Hãy kiểm tra và lưu lại.':'Chưa lưu được thay đổi. Hãy làm mới dữ liệu và thử lại.','error');
+    if(error.message.includes('VERSION_CONFLICT')){toast('Dữ liệu đã được người khác sửa. Hãy đóng hộp thoại, làm mới và mở lại để kiểm tra trước khi lưu.','error',feedback);return;}
+    toast(moved?'Đã chuyển playlist nhưng chưa lưu được tên video. Hãy kiểm tra và lưu lại.':'Chưa lưu được thay đổi. Hãy làm mới dữ liệu và thử lại.','error',feedback);
   } finally {
     button.disabled=false;button.textContent='Chuyển playlist và đổi tên';
+    window.recordingDialogFeedback?.finish(feedback, button);
   }
 });
 

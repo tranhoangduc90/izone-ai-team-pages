@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html data-izone-theme="master170" lang="vi">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'sha256-CJ02OVqT7p9v9HDCMKiouj0TJ0ooW7ybXUHymIEqyeE=' 'sha256-RU4sU0AaS8IBGZx8XrGt/pa9A5SLA3dQszGeqT5L3Kw=' https://accounts.google.com/gsi/style; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'self' https://accounts.google.com" />
@@ -9,9 +9,11 @@
     <title>Theo dõi handout Writing</title>
     <link rel="stylesheet" href="./styles.css?v=20260918-teacher-checkbox-v1" />
     <script src="../shared/teacher-single-sign-on.js?v=20261023-cache1"></script>
+<link rel="stylesheet" href="../shared/master170/theme.css">
+<link rel="stylesheet" href="../shared/master170/writing.css">
 </head>
-  <body class="teacher-page">
-    <header class="topbar"><a class="brand" href="./teacher.html">iZONE · Theo dõi Writing</a><p id="teacher-updated" class="save-state">Chưa đăng nhập</p></header>
+  <body data-m170-product="writing" class="teacher-page">
+    <header class="topbar"><a class="brand" href="./teacher.html"><img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"><span>Theo dõi Writing</span></a><p id="teacher-updated" class="save-state">Chưa đăng nhập</p></header>
     <main class="page-shell teacher-shell">
       <section id="teacher-login" class="card teacher-login" aria-labelledby="teacher-login-title">
         <p class="eyebrow">Dành cho giảng viên</p>
@@ -35,11 +37,11 @@
       </section>
     </main>
 
-    <dialog id="teacher-detail" class="teacher-detail">
+    <dialog id="teacher-detail" class="teacher-detail" aria-label="Bài làm và trao đổi với học viên">
       <form method="dialog"><button class="dialog-close" aria-label="Đóng">×</button></form>
       <div id="teacher-detail-content"></div>
     </dialog>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="module" src="./js/teacher-app.js?v=20261019-teacher-entry-v1"></script>
+    <script type="module" src="./js/teacher-app.js?v=20261024-master170-errors2"></script>
   </body>
 </html>

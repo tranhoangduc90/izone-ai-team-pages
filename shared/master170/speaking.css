@@ -1,0 +1,34 @@
+/* Speaking Lesson 2–10: giữ bố cục học/luyện/nộp của composition và mọi trạng thái gốc. */
+body[data-m170-product='speaking'] {
+  --navy: var(--m170-action);
+  --red: var(--m170-brand);
+  --ink: var(--m170-ink);
+  --muted: var(--m170-muted);
+  --line: var(--m170-line);
+  --paper: var(--m170-surface);
+  --canvas: var(--m170-canvas);
+}
+body[data-m170-product='speaking'] :is(.hero h1, .login-intro h1, .lesson-index, .studio-brand, .teacher-entry-link) { font-family: var(--m170-font); }
+body[data-m170-product='speaking'] :is(.hero h1, .login-intro h1) { font-size: 28px; letter-spacing: normal; }
+body[data-m170-product='speaking'] :is(.task-header h2, .doctor-heading h2, .doctor-required h3) { font-size: 22px; letter-spacing: normal; }
+body[data-m170-product='speaking'] :is(.hero-copy, .login-copy, .instruction-lead) { font-size: 18px; line-height: 1.65; }
+body[data-m170-product='speaking'] .studio-brand { gap: 0; letter-spacing: normal; }
+body[data-m170-product='speaking'] :is(.identity-card, .task-card, .guide-card, .completion-card) { border-color: var(--m170-line); border-radius: 12px; box-shadow: none; }
+body[data-m170-product='speaking'] :is(.button, input[type='url'], select) { font-size: 16px; border-radius: 8px; }
+body[data-m170-product='speaking'] :is(input[type='url'], select) { border-color: var(--m170-control); }
+body[data-m170-product='speaking'] :is(.button-primary, .practice-button) { background: var(--m170-action); border-color: var(--m170-action); }
+body[data-m170-product='speaking'] :is(.button-primary, .practice-button):hover { background: var(--m170-action-hover); }
+body[data-m170-product='speaking'] :is(.field-hint, .draft-status, .memory-help, .login-support, .doctor-list small, #doctor-sync) { color: var(--m170-muted); font-size: 14px; }
+body[data-m170-product='speaking'] .check-result { font-size: 16px; border: 0; border-radius: 8px; }
+body[data-m170-product='speaking'] .check-result.is-pass { background: var(--m170-success-bg); color: var(--m170-success-fg); }
+body[data-m170-product='speaking'] .check-result.is-blocked { background: var(--m170-error-bg); color: var(--m170-error-fg); }
+body[data-m170-product='speaking'] .check-result.is-warning { background: var(--m170-attention-bg); color: var(--m170-attention-fg); }
+body[data-m170-product='speaking'] .check-result.is-loading { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='speaking'] .completion-card { background: var(--m170-success-bg); color: var(--m170-success-fg); }
+body[data-m170-product='speaking'] .completion-card :is(h2, p) { color: var(--m170-success-fg); }
+body[data-m170-product='speaking'] .completion-icon { background: var(--m170-success-fg); }
+body[data-m170-product='speaking'] .studio-header > span { color: var(--m170-muted); }
+@media (max-width: 600px) {
+  body[data-m170-product='speaking'] :is(.hero h1, .login-intro h1) { font-size: 26px; }
+  body[data-m170-product='speaking'] .studio-header { flex-wrap: wrap; gap: 12px; }
+}

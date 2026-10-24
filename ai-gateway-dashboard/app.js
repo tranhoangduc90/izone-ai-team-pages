@@ -43,6 +43,40 @@ function toast(message) {
   window.setTimeout(() => { box.style.display = 'none'; }, 3600);
 }
 
+// Presentation only: keep a failed save beside its own controls until the next try.
+const operationFeedbackContexts = new WeakMap();
+function beginOperationFeedback(button) {
+  if (document.documentElement.dataset.izoneTheme !== 'master170') return;
+  const target = button.closest('.worker, .source-tools');
+  if (!target) return;
+  const previous = operationFeedbackContexts.get(target);
+  if (previous?.notice) { previous.notice.textContent = ''; previous.notice.hidden = true; }
+  const context = { target, button, notice:previous?.notice };
+  operationFeedbackContexts.set(target, context);
+  return context;
+}
+function operationFeedbackError(context, message) {
+  if (!context?.target.isConnected || operationFeedbackContexts.get(context.target) !== context) return;
+  if (!context.notice) {
+    context.notice = node('p', 'm170-operation-feedback');
+    context.notice.setAttribute('role', 'alert');
+    if (context.target.matches('.source-tools')) context.target.after(context.notice);
+    else context.target.append(context.notice);
+  }
+  context.notice.textContent = message;
+  context.notice.hidden = false;
+}
+function finishOperationFeedback(context) {
+  if (!context) return;
+  requestAnimationFrame(() => {
+    if (context.target.isConnected && operationFeedbackContexts.get(context.target) === context
+        && document.activeElement === document.body && document.hasFocus()
+        && context.button.isConnected && !context.button.disabled) {
+      context.button.focus({ preventScroll:true });
+    }
+  });
+}
+
 function friendlyError(code, fallback) {
   const messages = {
     google_login_required:'Bạn cần đăng nhập Google.',
@@ -200,6 +234,7 @@ function previewShares() {
 
 async function saveWorker(event) {
   const button = event.currentTarget;
+  const feedback = beginOperationFeedback(button);
   const id = button.dataset.save;
   button.disabled = true;
   try {
@@ -211,12 +246,13 @@ async function saveWorker(event) {
     await api(`/workers/${encodeURIComponent(id)}`, { method:'PATCH', body, reason:`Cập nhật trọng số hoặc trạng thái máy ${id}` });
     toast(`Đã lưu cấu hình ${id}.`);
     await loadSummary();
-  } catch (error) { toast(`Lỗi: ${error.message}`); }
-  finally { button.disabled = false; }
+  } catch (error) { toast(`Lỗi: ${error.message}`); operationFeedbackError(feedback, `Lỗi: ${error.message}`); }
+  finally { button.disabled = false; finishOperationFeedback(feedback); }
 }
 
 async function openAccountRotation(event) {
   const button = event.currentTarget;
+  const feedback = beginOperationFeedback(button);
   const workerId = button.dataset.rotateWorker;
   button.disabled = true;
   try {
@@ -229,7 +265,9 @@ async function openAccountRotation(event) {
     window.location.assign(target.toString());
   } catch (error) {
     toast(`Lỗi: ${error.message}`);
+    operationFeedbackError(feedback, `Lỗi: ${error.message}`);
     button.disabled = false;
+    finishOperationFeedback(feedback);
   }
 }
 
@@ -255,11 +293,22 @@ async function loadCredentials() {
   renderCredentials(data.items || []);
 }
 
+function chartFrame(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(1, rect.width), height = Math.max(1, rect.height);
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  const context = canvas.getContext('2d');
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  return { context, width, height };
+}
+
 function drawAxes(context, width, height, maxValue, labelFormatter, left=44) {
   context.clearRect(0, 0, width, height);
-  context.strokeStyle = '#dce5ec';
-  context.fillStyle = '#66788a';
-  context.font = '11px Segoe UI';
+  context.strokeStyle = '#dce1e7';
+  context.fillStyle = '#586477';
+  context.font = '14px "Source Sans 3"';
   context.lineWidth = 1;
   for (let index = 0; index <= 4; index += 1) {
     const y = 20 + (height - 55) * (index / 4);
@@ -270,7 +319,7 @@ function drawAxes(context, width, height, maxValue, labelFormatter, left=44) {
 
 function drawCostChart(rows) {
   const canvas = $('costChart');
-  const context = canvas.getContext('2d');
+  const { context, width, height: chartHeight } = chartFrame(canvas);
   const dates = [...new Set(rows.map(row => row.date))];
   const byDate = new Map();
   for (const row of rows) {
@@ -279,34 +328,34 @@ function drawCostChart(rows) {
   }
   const max = Math.max(1, ...dates.map(date => Object.values(byDate.get(date) || {}).reduce((a, b) => a + b, 0))) * 1.15;
   const plotLeft = 88;
-  drawAxes(context, canvas.width, canvas.height, max, value => money(value), plotLeft);
+  drawAxes(context, width, chartHeight, max, value => money(value), plotLeft);
   if (!dates.length) return;
-  const plotWidth = canvas.width - plotLeft - 12;
+  const plotWidth = width - plotLeft - 12;
   const barWidth = Math.max(4, Math.min(34, plotWidth / dates.length * .68));
   dates.forEach((date, index) => {
-    let y = canvas.height - 35;
+    let y = chartHeight - 35;
     const x = plotLeft + (index + .5) * (plotWidth / dates.length) - barWidth / 2;
     for (const account of Object.keys(colors)) {
       const value = byDate.get(date)?.[account] || 0;
-      const height = value / max * (canvas.height - 55);
+      const height = value / max * (chartHeight - 55);
       y -= height;
       context.fillStyle = colors[account];
       context.fillRect(x, y, barWidth, height);
     }
     if (index === 0 || index === dates.length - 1 || index % Math.ceil(dates.length / 6) === 0) {
-      context.save(); context.translate(x, canvas.height - 19); context.rotate(-.5); context.fillStyle = '#66788a'; context.fillText(date.slice(5), 0, 0); context.restore();
+      context.save(); context.translate(x, chartHeight - 19); context.rotate(-.5); context.fillStyle = '#586477'; context.fillText(date.slice(5), 0, 0); context.restore();
     }
   });
 }
 
 function drawRequestChart(rows) {
   const canvas = $('requestChart');
-  const context = canvas.getContext('2d');
+  const { context, width, height: chartHeight } = chartFrame(canvas);
   const max = Math.max(1, ...rows.map(row => Number(row.requests))) * 1.2;
-  drawAxes(context, canvas.width, canvas.height, max, value => String(Math.round(value)));
+  drawAxes(context, width, chartHeight, max, value => String(Math.round(value)));
   if (!rows.length) return;
-  const x = index => 48 + index * ((canvas.width - 64) / Math.max(1, rows.length - 1));
-  const y = value => 20 + (canvas.height - 55) * (1 - value / max);
+  const x = index => 48 + index * ((width - 64) / Math.max(1, rows.length - 1));
+  const y = value => 20 + (chartHeight - 55) * (1 - value / max);
   context.strokeStyle = '#2878d0'; context.lineWidth = 3; context.beginPath();
   rows.forEach((row, index) => index ? context.lineTo(x(index), y(row.requests)) : context.moveTo(x(index), y(row.requests))); context.stroke();
   context.strokeStyle = '#d92d20'; context.lineWidth = 2; context.beginPath();
@@ -314,9 +363,9 @@ function drawRequestChart(rows) {
   rows.forEach((row, index) => {
     context.beginPath(); context.fillStyle = '#2878d0'; context.arc(x(index), y(row.requests), 3.5, 0, Math.PI * 2); context.fill();
     if (Number(row.failed) > 0) { context.beginPath(); context.fillStyle = '#d92d20'; context.arc(x(index), y(row.failed), 3, 0, Math.PI * 2); context.fill(); }
-    if (index === 0 || index === rows.length - 1 || index % Math.ceil(rows.length / 6) === 0) { context.fillStyle = '#66788a'; context.font = '11px Segoe UI'; context.fillText(row.date.slice(5), Math.max(44, x(index) - 14), canvas.height - 20); }
+    if (index === 0 || index === rows.length - 1 || index % Math.ceil(rows.length / 6) === 0) { context.fillStyle = '#586477'; context.font = '14px "Source Sans 3"'; context.fillText(row.date.slice(5), Math.max(44, x(index) - 14), chartHeight - 20); }
   });
-  context.fillStyle = '#66788a'; context.font = '11px Segoe UI'; context.fillText('Xanh: tổng request · Đỏ: lỗi', 48, canvas.height - 8);
+  context.fillStyle = '#586477'; context.font = '14px "Source Sans 3"'; context.fillText('Xanh: tổng request · Đỏ: lỗi', 48, chartHeight - 8);
 }
 
 function renderInsights(data) {
@@ -355,6 +404,7 @@ async function loadUsage() {
   const days = $('usageDays').value;
   const account = $('usageAccount').value;
   const data = await api(`/usage?days=${encodeURIComponent(days)}&account=${encodeURIComponent(account)}`);
+  if (document.fonts?.ready) await document.fonts.ready;
   drawCostChart(data.billing || []);
   drawRequestChart(data.requests || []);
   renderInsights(data);
@@ -495,8 +545,19 @@ $('logoutButton').addEventListener('click', () => {
 $('refreshAll').addEventListener('click', () => void refreshAll());
 $('applyUsage').addEventListener('click', () => void loadUsage().catch(error => toast(`Lỗi: ${error.message}`)));
 $('applyHistory').addEventListener('click', () => void loadHistory().catch(error => toast(`Lỗi: ${error.message}`)));
-$('saveSource').addEventListener('click', () => void saveSourceMachine().catch(error => toast(`Lỗi: ${error.message}`)));
+$('saveSource').addEventListener('click', () => {
+  const feedback = beginOperationFeedback($('saveSource'));
+  void saveSourceMachine().catch(error => {
+    toast(`Lỗi: ${error.message}`);
+    operationFeedbackError(feedback, `Lỗi: ${error.message}`);
+  });
+});
 $('closeDialog').addEventListener('click', () => $('detailDialog').close());
+$('detailDialog').addEventListener('close', () => {
+  if (document.documentElement.dataset.izoneTheme !== 'master170') return;
+  const trigger = document.activeElement;
+  if (trigger?.closest('#historyBody')) trigger.scrollIntoView({ block:'nearest', behavior:'instant' });
+});
 window.addEventListener('resize', () => { if (state.authenticated) void loadUsage().catch(() => undefined); });
 
 async function restoreSession() {

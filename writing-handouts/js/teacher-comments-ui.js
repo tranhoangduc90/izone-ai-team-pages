@@ -1,5 +1,12 @@
 import { annotatedSegments, threadsForField } from "./teacher-comments-core.js";
 
+export function masterScrollBehavior() {
+  const doc = globalThis.document;
+  return doc?.documentElement?.dataset?.izoneTheme === 'master170'
+    && doc?.body?.dataset?.m170Product === 'writing' && doc?.body?.dataset?.kind !== 'test'
+    && globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'auto' : 'smooth';
+}
+
 function formatDate(value) {
   return value ? new Date(value).toLocaleString("vi-VN") : "Mới cập nhật";
 }
@@ -19,6 +26,7 @@ export function renderAnnotatedText(root, text, threads, onOpenThread = () => {}
 
 export function createTeacherCommentThreadCard(thread, { allowReply = true, allowStatus = false, onReply = async () => {}, onStatus = async () => {} } = {}) {
   const card = document.createElement("article"); card.className = "teacher-comment-thread"; card.dataset.threadRef = thread.threadRef; card.dataset.status = thread.status || "open";
+  const feedback = document.createElement("p"); feedback.className = "teacher-comment-feedback"; feedback.setAttribute("role", "status");
   const header = document.createElement("div"); header.className = "teacher-comment-thread-header";
   const quote = document.createElement("blockquote"); quote.textContent = thread.anchor?.quote || "Đoạn được nhận xét";
   const status = document.createElement("span"); status.className = "teacher-comment-status";
@@ -44,23 +52,23 @@ export function createTeacherCommentThreadCard(thread, { allowReply = true, allo
     form.append(input, submit);
     form.addEventListener("submit", async (event) => {
       event.preventDefault(); const body = input.value.trim(); if (!body) return;
-      submit.disabled = true; submit.textContent = "Đang gửi…";
+      submit.disabled = true; submit.textContent = "Đang gửi…"; feedback.dataset.state = "pending"; feedback.textContent = "Đang gửi trả lời…";
       try { await onReply(thread, body); input.value = ""; }
-      catch (error) { submit.disabled = false; submit.textContent = "Trả lời"; input.setCustomValidity(error.message || "Chưa gửi được trả lời."); input.reportValidity(); input.setCustomValidity(""); }
+      catch (error) { submit.disabled = false; submit.textContent = "Trả lời"; feedback.dataset.state = "error"; feedback.textContent = error.message || "Chưa gửi được trả lời."; input.setCustomValidity(feedback.textContent); input.reportValidity(); input.setCustomValidity(""); }
     });
     card.append(form);
   }
   if (allowStatus) {
     const action = document.createElement("button"); action.type = "button"; action.className = "link-button teacher-comment-status-action";
-    action.textContent = thread.status === "addressed" ? "Mở lại trao đổi" : "Đánh dấu đã xử lý (không ẩn)";
+    const actionLabel = thread.status === "addressed" ? "Mở lại trao đổi" : "Đánh dấu đã xử lý (không ẩn)"; action.textContent = actionLabel;
     action.addEventListener("click", async () => {
-      action.disabled = true;
+      action.disabled = true; feedback.dataset.state = "pending"; feedback.textContent = "Đang lưu trạng thái trao đổi…";
       try { await onStatus(thread, thread.status === "addressed" ? "open" : "addressed"); }
-      catch (error) { action.disabled = false; action.textContent = error.message || "Chưa đổi được trạng thái"; }
+      catch (error) { action.disabled = false; action.textContent = actionLabel; feedback.dataset.state = "error"; feedback.textContent = error.message || "Chưa đổi được trạng thái"; }
     });
     card.append(action);
   }
-  return card;
+  card.append(feedback); return card;
 }
 
 export function renderStudentFieldComments(root, { fieldKey, text, threads, onReply }) {
@@ -71,7 +79,7 @@ export function renderStudentFieldComments(root, { fieldKey, text, threads, onRe
   const title = document.createElement("h4"); title.textContent = `Comment trực tiếp của giảng viên · ${fieldThreads.length}`; root.append(title);
   const preview = document.createElement("div"); preview.className = "teacher-comment-preview"; preview.setAttribute("aria-label", "Bài viết có đánh dấu comment");
   const list = document.createElement("div"); list.className = "teacher-comment-thread-list";
-  const focusThread = (threadRef) => list.querySelector(`[data-thread-ref="${CSS.escape(threadRef)}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const focusThread = (threadRef) => list.querySelector(`[data-thread-ref="${CSS.escape(threadRef)}"]`)?.scrollIntoView({ behavior: masterScrollBehavior(), block: "nearest" });
   renderAnnotatedText(preview, text, fieldThreads, focusThread); root.append(preview);
   for (const thread of fieldThreads) list.append(createTeacherCommentThreadCard(thread, { onReply }));
   root.append(list);

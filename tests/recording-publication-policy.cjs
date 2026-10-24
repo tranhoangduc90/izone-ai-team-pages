@@ -2,6 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const root=path.join(__dirname,'../recordings');
 const ctx=vm.createContext({nightlyState:{snapshot:{records:[]}},state:{records:[]},escapeHtml:String,window:{},Set,document:{getElementById:()=>({})}});
 vm.runInContext(fs.readFileSync(path.join(root,'publication-policy.js'),'utf8'),ctx);
+ctx.recordingPublication=vm.runInContext('recordingPublication',ctx);
 const manual=fs.readFileSync(path.join(root,'manual-upload.js'),'utf8');
 vm.runInContext(manual.slice(0,manual.indexOf("document.addEventListener('click'")),ctx);
 const source=seconds=>({id:'fixture',kind:'recording',type:'MP4',status:'completed',fileSize:1024,source:'Zoom 6',recordingFileId:'fixture',recordingStart:'2026-10-05T11:00:00Z',recordingEnd:seconds===null?'':new Date(Date.parse('2026-10-05T11:00:00Z')+seconds*1000).toISOString()});

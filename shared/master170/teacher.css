@@ -1,0 +1,24 @@
+/* Consumer của teacher-progress: không sửa thư viện phiên hoặc CSS dùng bởi Test/Progress Log. */
+body[data-m170-product='teacher'] {
+  --navy: var(--m170-action);
+  --ink: var(--m170-ink);
+  --muted: var(--m170-muted);
+  --line: var(--m170-line);
+  --red: var(--m170-brand);
+}
+body[data-m170-product='teacher'] .teacher-brand { display: block; line-height: 1; }
+body[data-m170-product='teacher'] h1 { font-size: 28px; }
+body[data-m170-product='teacher'] h2 { font-size: 22px; }
+body[data-m170-product='teacher'] :is(button, select, input) { border-radius: 8px; }
+body[data-m170-product='teacher'] button:not(.secondary):not(.text):hover { background: var(--m170-action-hover); }
+body[data-m170-product='teacher'] :is(.teacher-auth, .teacher-filters, .teacher-list, .teacher-paper) { border-radius: 12px; box-shadow: none; }
+body[data-m170-product='teacher'] .teacher-notice { border-left: 0; border-radius: 8px; background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='teacher'] .teacher-notice[data-kind='error'] { background: var(--m170-error-bg); color: var(--m170-error-fg); }
+body[data-m170-product='teacher'] .badge { background: var(--m170-neutral-bg); color: var(--m170-neutral-fg); }
+body[data-m170-product='teacher'] .badge.done { background: var(--m170-success-bg); color: var(--m170-success-fg); }
+body[data-m170-product='teacher'] .badge.pending { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='teacher'] :is(th, .teacher-filters label, .teacher-footer) { font-size: 14px; }
+body[data-m170-product='teacher'] td { font-size: 16px; }
+body[data-m170-product='teacher'] .teacher-paper { font-size: 18px; line-height: 1.65; }
+body[data-m170-product='teacher'] .teacher-kicker { color: var(--m170-muted); font-weight: 600; letter-spacing: normal; text-transform: none; }
+@media (max-width: 600px) { body[data-m170-product='teacher'] h1 { font-size: 26px; } }

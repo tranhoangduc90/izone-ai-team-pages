@@ -12,6 +12,46 @@
   let activeScope=bridge.scope();
   function syncStorageScope(){const next=bridge.scope();if(next===activeScope)return false;activeScope=next;hideActionToolbar();closeNotePanel();return true;}
   function saveState(){return bridge.save();}
+  // Presentation-only focus context; never persisted with annotation data.
+  const masterTools = () => document.documentElement.dataset.izoneTheme === 'master170'
+    && ['practice', 'materials'].includes(document.body.dataset.m170Product);
+  const materialSaveState = () => masterTools() && document.body.dataset.m170Product === 'materials'
+    ? window.ReadingServerClient?.state : null;
+  function showNoteSaveStatus(target, stored = true) {
+    const remote = materialSaveState();
+    const pending = remote && ['dirty', 'saving'].includes(remote.status);
+    const failed = remote ? remote.status === 'error' : !stored;
+    if (masterTools()) target.dataset.state = failed ? 'error' : pending ? 'pending' : 'neutral';
+    target.textContent = masterTools() && failed
+      ? 'Chưa lưu được ghi chú; nội dung vẫn đang giữ trong ô này.'
+      : pending ? 'Đang lưu ghi chú lên máy chủ…'
+      : remote?.status === 'saved' ? 'Đã lưu ghi chú trên máy chủ'
+      : 'Đã tự lưu cùng lần làm bài';
+  }
+  let noteFocusContext = null, toolbarFocusContext = null, generalFocusContext = null;
+  const focusContext = annotation => ({scope: bridge.scope(), id: annotation?.id, rootKey: annotation?.rootKey});
+  function focusVisibleTarget(target) {
+    if (!target?.isConnected || !target.getClientRects().length) return false;
+    target.focus({preventScroll: true});
+    target.scrollIntoView({block: 'nearest', behavior: 'instant'});
+    return document.activeElement === target;
+  }
+  function notesLauncher() {
+    return [...document.querySelectorAll('[data-action="notes"]')]
+      .find(node => !node.closest('#notes-panel') && node.getClientRects().length);
+  }
+  function restoreAnnotationFocus(context) {
+    if (!masterTools() || !context || context.scope !== bridge.scope() || !bridge.writable()) return;
+    const mark = context.id && document.querySelector('mark[data-annotation-id="' + CSS.escape(context.id) + '"]');
+    if (focusVisibleTarget(mark)) return;
+    const root = context.rootKey && document.querySelector('[data-annotation-root-key="' + CSS.escape(context.rootKey) + '"]');
+    if (root?.getClientRects().length) { root.tabIndex = -1; if (focusVisibleTarget(root)) return; }
+    focusVisibleTarget(notesLauncher());
+  }
+  function restoreGeneralFocus(context) {
+    if (!masterTools() || !context || context.scope !== bridge.scope() || !bridge.writable()) return;
+    if (!focusVisibleTarget(context.element)) focusVisibleTarget(notesLauncher());
+  }
   function makeButton(className, label) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -197,6 +237,7 @@
     mark.dataset.annotationId = annotation.id;
     mark.title = annotation.kind === 'note' ? 'Open Note' : 'Delete Highlight';
     mark.tabIndex = 0;
+    if (masterTools()) { mark.setAttribute('role', 'button'); mark.setAttribute('aria-label', annotation.kind === 'note' ? 'Mở công cụ ghi chú' : 'Mở công cụ Highlight'); }
     selected.parentNode.insertBefore(mark, selected);
     mark.append(selected);
   }
@@ -237,11 +278,14 @@
   let pendingSelection = null;
   let existingMode=false;
 
-  function hideActionToolbar() {
+  function hideActionToolbar(restore = false) {
+    const context = toolbarFocusContext, restoreFocus = restore === true && actionToolbar.contains(document.activeElement);
+    toolbarFocusContext = null;
     actionToolbar.hidden = true;
     actionToolbar.replaceChildren();
     pendingSelection = null;
     existingMode=false;
+    if (restoreFocus) restoreAnnotationFocus(context);
   }
 
   function positionActionToolbar(rect) {
@@ -267,7 +311,8 @@
       note: ''
     };
     state.annotations.push(annotation);
-    if(!saveState())return;
+    const stored = saveState();
+    if (!stored && !['dirty', 'saving'].includes(materialSaveState()?.status)) return;
     hideActionToolbar();
     window.getSelection()?.removeAllRanges();
     renderAllAnnotations();
@@ -276,6 +321,7 @@
 
   function showSelectionToolbar(data, rect) {
     pendingSelection = data;
+    toolbarFocusContext = {scope: bridge.scope(), rootKey: data.rootKey};
     existingMode=false;
     const highlight = makeButton('cbt-annotation-action', 'Highlight');
     const note = makeButton('cbt-annotation-action', 'Note');
@@ -290,14 +336,18 @@
     if(!bridge.writable())return;
     const index = state.annotations.findIndex(item => item.id === id);
     if (index < 0) return;
+    const context = focusContext(state.annotations[index]);
+    const restoreFocus = actionToolbar.contains(document.activeElement) || notePanel.contains(document.activeElement);
     state.annotations.splice(index, 1);
     saveState();
     hideActionToolbar();
-    closeNotePanel();
+    closeNotePanel(false);
     renderAllAnnotations();
+    if (restoreFocus) restoreAnnotationFocus(context);
   }
 
-  function showExistingToolbar(annotation, rect) {
+  function showExistingToolbar(annotation, rect, keyboard = false) {
+    toolbarFocusContext = focusContext(annotation);
     existingMode=true;
     const buttons = [];
     if (annotation.kind === 'highlight') {
@@ -316,6 +366,7 @@
     }
     actionToolbar.replaceChildren(...buttons);
     positionActionToolbar(rect);
+    if (keyboard && masterTools()) buttons[0]?.focus({preventScroll: true});
   }
 
   const notePanel = document.createElement('aside');
@@ -332,9 +383,12 @@
   notePanel.querySelector('.cbt-note-close').addEventListener('click', closeNotePanel);
   let noteSkillFilter = '';
 
-  function closeNotePanel() {
+  function closeNotePanel(restore = true) {
+    const context = noteFocusContext, restoreFocus = !notePanel.hidden && notePanel.contains(document.activeElement);
+    noteFocusContext = null;
     notePanel.hidden = true;
     noteContent.replaceChildren();
+    if (restore !== false && restoreFocus) restoreAnnotationFocus(context);
   }
 
   function annotationRoot(annotation) {
@@ -374,12 +428,14 @@
       list.append(button);
     });
     noteContent.replaceChildren(list);
+    if (masterTools()) (list.querySelector('button') || notePanel.querySelector('.cbt-note-close')).focus({preventScroll: true});
   }
 
   function openNoteDetail(id) {
     syncStorageScope();
     const annotation = state.annotations.find(item => item.id === id && item.kind === 'note');
     if (!annotation) return;
+    noteFocusContext = focusContext(annotation);
     bridge.closeGeneralNotes();
     notePanel.hidden = false;
     const back = makeButton('cbt-note-back', '← Tất cả ghi chú');
@@ -402,15 +458,16 @@
     textarea.value = annotation.note;
     const footer = document.createElement('footer');
     const saved = document.createElement('span');
-    saved.textContent = 'Đã tự lưu cùng lần làm bài';
+    if (masterTools()) { saved.setAttribute('role', 'status'); saved.dataset.state = 'neutral'; }
+    showNoteSaveStatus(saved);
     const remove = makeButton('cbt-note-delete', 'Delete');
     footer.append(saved, remove);
     back.addEventListener('click', () => openNoteList(noteSkillFilter || annotation.skill));
     textarea.addEventListener('input', () => {
       if(!bridge.writable()){textarea.readOnly=true;return;}
       annotation.note = textarea.value.slice(0, 4000);
-      saveState();
-      saved.textContent = 'Đã tự lưu cùng lần làm bài';
+      const stored = saveState();
+      showNoteSaveStatus(saved, stored);
     });
     remove.addEventListener('click', () => deleteAnnotation(annotation.id));
     noteContent.replaceChildren(back, quote, textarea, footer);
@@ -454,6 +511,18 @@
     setTimeout(inspectSelection,0);
   });
   document.addEventListener('click',event=>{
+    const generalPanel = document.querySelector('#notes-panel');
+    const launcher = event.target.closest('[data-action="notes"]');
+    if (launcher && !generalPanel?.contains(launcher)) {
+      generalFocusContext = {scope: bridge.scope(), element: launcher};
+      if (masterTools() && (!generalPanel || generalPanel.hidden)) closeNotePanel(false);
+    }
+    if (masterTools() && generalPanel?.contains(event.target) && event.target.closest('[aria-label="Đóng ghi chú"]')) {
+      const context = generalFocusContext || {scope: bridge.scope(), element: notesLauncher()};
+      requestAnimationFrame(() => {
+        if (generalPanel.hidden && (document.activeElement === document.body || generalPanel.contains(document.activeElement))) restoreGeneralFocus(context);
+      });
+    }
     const mark=event.target.closest('mark[data-annotation-id]');
     if(mark&&bridge.writable()){
       event.preventDefault();event.stopPropagation();
@@ -464,11 +533,25 @@
     if(!event.target.closest('.cbt-annotation-toolbar'))hideActionToolbar();
   },true);
   document.addEventListener('keydown',event=>{
-    if(event.key==='Escape'){hideActionToolbar();closeNotePanel();}
+    if(event.key==='Escape'){
+      hideActionToolbar(true);closeNotePanel();
+      const generalPanel = document.querySelector('#notes-panel');
+      if (masterTools() && generalPanel && !generalPanel.hidden) {
+        const restoreFocus = generalPanel.contains(document.activeElement);
+        bridge.closeGeneralNotes();
+        if (restoreFocus) restoreGeneralFocus(generalFocusContext || {scope: bridge.scope(), element: notesLauncher()});
+      }
+    }
     const mark=event.target.closest?.('mark[data-annotation-id]');
-    if(mark&&bridge.writable()&&['Enter',' '].includes(event.key)){event.preventDefault();const annotation=state.annotations.find(item=>item.id===mark.dataset.annotationId);if(annotation)showExistingToolbar(annotation,mark.getBoundingClientRect());}
+    if(mark&&bridge.writable()&&['Enter',' '].includes(event.key)){event.preventDefault();const annotation=state.annotations.find(item=>item.id===mark.dataset.annotationId);if(annotation)showExistingToolbar(annotation,mark.getBoundingClientRect(),true);}
   });
   document.addEventListener('scroll',hideActionToolbar,true);
+  window.addEventListener('reading67:server-state', () => {
+    if (!notePanel.hidden && noteFocusContext?.scope === bridge.scope() && bridge.writable()) {
+      const status = notePanel.querySelector('footer [role="status"]');
+      if (status && materialSaveState()) showNoteSaveStatus(status);
+    }
+  });
   window.addEventListener('resize',hideActionToolbar);
   window.addEventListener('hashchange',()=>{hideActionToolbar();closeNotePanel();installTools();});
   const observer=new MutationObserver(records=>{

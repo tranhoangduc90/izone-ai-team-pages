@@ -102,15 +102,25 @@ test('Materials teacher login: desktop/mobile, shared session and permissions', 
             return { viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth,
               header: rect('.materials-login-header'), hero: rect('.materials-login-hero'), card: rect('.materials-login-card'),
               font: getComputedStyle(document.querySelector('.materials-login-hero h1')).fontFamily,
-              titleSize: getComputedStyle(document.querySelector('.materials-login-hero h1')).fontSize };
+              titleSize: getComputedStyle(document.querySelector('.materials-login-hero h1')).fontSize,
+              logo: rect('.materials-login-brand img'),
+              logoLoaded: document.querySelector('.materials-login-brand img').naturalWidth > 0,
+              remember: rect('.materials-login-remember'), google: rect('#google-button') };
           });
           assert.equal(metrics.scrollWidth, width);
           assert.equal(metrics.card.x, width === 1440 ? 140 : 16);
           assert.equal(metrics.card.width, width === 1440 ? 1160 : 358);
-          assert.ok(Math.abs(metrics.card.height - (width === 1440 ? 150.19 : 138.19)) < 2, JSON.stringify(metrics));
-          assert.equal(metrics.header.height, width === 1440 ? 65 : 58);
-          assert.ok(Math.abs(metrics.card.y - (width === 1440 ? 270.53 : 294.72)) < 2, JSON.stringify(metrics));
-          assert.equal(metrics.titleSize, width === 1440 ? '32px' : '28px');
+          // Master #170 đổi font/logo nên chiều cao chữ thay đổi. Giữ quan hệ vùng và control dùng được.
+          assert.match(metrics.font, /Source Sans 3/);
+          assert.equal(metrics.titleSize, width === 1440 ? '28px' : '26px');
+          assert.equal(metrics.logoLoaded, true);
+          assert.equal(metrics.logo.height, width === 1440 ? 48 : 36);
+          assert.ok(metrics.logo.y >= 0 && metrics.logo.y + metrics.logo.height <= metrics.header.height);
+          assert.ok(metrics.card.y >= metrics.hero.y + metrics.hero.height - 1);
+          for (const control of [metrics.remember, metrics.google]) {
+            assert.ok(control.height > 0 && control.y >= metrics.card.y && control.y + control.height <= metrics.card.y + metrics.card.height);
+            assert.ok(control.x >= metrics.card.x && control.x + control.width <= metrics.card.x + metrics.card.width);
+          }
           if (process.env.MATERIALS_REFERENCE_HTML) {
             const reference = await f.context.newPage();
             await reference.setContent(await fs.readFile(process.env.MATERIALS_REFERENCE_HTML, 'utf8'));

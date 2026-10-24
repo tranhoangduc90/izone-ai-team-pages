@@ -34,3 +34,15 @@ test('Nộp gặp timeout vẫn giữ mã thao tác để đối chiếu/chống
  vm.runInContext('resume()',h.context);await new Promise(resolve=>setImmediate(resolve));
  assert.deepEqual(h.requests.map(r=>r.path),['/submit','/submit']);assert.equal(h.requests[0].body.operationId,h.requests[1].body.operationId);
 });
+
+test('Rời màn khi đang chờ kích hoạt audio vẫn cho Tiếp tục đúng lượt và giữ nháp',()=>{
+ const a={id:'attempt-1',status:'running',owner:'tab-1',remainingMs:550000,answers:{21:'B'},notes:'nháp đang nghe'},buttons=[{disabled:true},{disabled:true}],requests=[];
+ const context=vm.createContext({current:()=>a,TAB:'tab-1',navigator:{onLine:true},document:{querySelectorAll:()=>buttons},isOnline:()=>true,
+  consumeTime(){},stopAudio(){},rememberScroll(){},persist(){},snapshot:()=>({answers:a.answers,notes:a.notes}),clearTimeout(){},closeModal(){},serial(){},navigate(){},
+  perform:(action,input)=>requests.push({action,input}),sessionStorage:{getItem:()=>null},localStorage:{getItem:()=>null},cacheKey:()=> 'fixture-cache',identity:{bindingId:'binding-1'}});
+ vm.runInContext('let activating=true,lease={id:"lease-1"},lastTick=0,debounce,saveError=false,pendingOperation=null;\n'+section('function setActivating(','async function sendPulse(')+'\n'+section('function resume(){','function pause(')+'\n'+section('function pause(','function finish('),context);
+ vm.runInContext("pause('leave',false);resume();",context);
+ assert.equal(vm.runInContext('activating',context),false);assert.equal(a.status,'paused');assert.equal(a.pauseReason,'leave');
+ assert.equal(requests.length,1);assert.equal(requests[0].action,'resume');assert.equal(requests[0].input.attemptId,a.id);
+ assert.equal(a.remainingMs,550000);assert.deepEqual(a.answers,{21:'B'});assert.equal(a.notes,'nháp đang nghe');assert.ok(buttons.every(b=>!b.disabled));
+});

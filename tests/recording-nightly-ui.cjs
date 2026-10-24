@@ -45,7 +45,7 @@ const server=http.createServer((req,res)=>{
     assert.equal(await classCard.getAttribute('aria-pressed'),'false');
     await classCard.click();
     assert.equal(await classCard.getAttribute('aria-pressed'),'true');
-    assert.equal(await classCard.evaluate(element=>getComputedStyle(element).backgroundColor),'rgb(236, 253, 243)');
+    assert.equal(await classCard.evaluate(element=>getComputedStyle(element).backgroundColor),'rgb(237, 241, 247)');
     await page.evaluate(()=>{state.yesterdayClasses.push({...state.yesterdayClasses[0],classSessionId:'s2',className:'IC9002'});renderYesterday();});
     assert.equal(await page.getByRole('button',{name:'IC9002, Buổi 3'}).getAttribute('aria-pressed'),'false');
     await page.getByRole('button',{name:'Làm mới',exact:true}).click();
@@ -64,8 +64,8 @@ const server=http.createServer((req,res)=>{
     assert.deepEqual(await page.locator('[data-edit-id="old"] option').allTextContents(),['Chọn thao tác','Đổi tên video','Đổi playlist']);
     assert.match(await page.locator('.video-link[href]:not(.zoom-source-link)').getAttribute('href'),/watch\?v=abcdefghijk&list=PLfixture$/);
     await page.evaluate(()=>document.fonts.ready);
-    assert.ok(await page.evaluate(()=>document.fonts.check('400 16px "Source Sans Pro"')&&document.fonts.check('700 16px "Source Sans Pro"')));
-    assert.ok((await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily)).includes('Source Sans Pro'));
+    assert.ok(await page.evaluate(()=>document.fonts.check('400 16px "Source Sans 3"')&&document.fonts.check('700 16px "Source Sans 3"')));
+    assert.ok((await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily)).includes('Source Sans 3'));
     for(const width of [1440,1920,390]){
       await page.setViewportSize({width,height:960});
       const grids=await page.locator('.review-section table').evaluateAll(tables=>tables.map(t=>[...t.querySelectorAll('thead th')].map(c=>({x:c.getBoundingClientRect().x,width:c.getBoundingClientRect().width}))));

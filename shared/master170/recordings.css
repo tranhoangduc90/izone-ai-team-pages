@@ -1,0 +1,44 @@
+/* Recording: chỉ lớp nhìn, giữ toàn bộ hành động và phân quyền hiện hành. */
+body[data-m170-product='recordings'] {
+  --red: var(--m170-brand); --red-dark: var(--m170-error-fg); --navy: var(--m170-ink);
+  --muted: var(--m170-muted); --line: var(--m170-line); --canvas: var(--m170-canvas);
+  --green: var(--m170-success-fg); --green-bg: var(--m170-success-bg);
+  --amber: var(--m170-attention-fg); --amber-bg: var(--m170-attention-bg);
+  --blue: var(--m170-structure); --blue-bg: var(--m170-pending-bg);
+  --error: var(--m170-error-fg); --error-bg: var(--m170-error-bg);
+}
+body[data-m170-product='recordings'] .hero { min-height: 0; background: var(--m170-surface); color: var(--m170-ink); box-shadow: none; border: 1px solid var(--m170-line); border-radius: 12px; padding: 24px; }
+body[data-m170-product='recordings'] .hero::after { display: none; }
+body[data-m170-product='recordings'] h1 { font-size: 28px; line-height: 1.3; margin: 16px 0 8px; }
+body[data-m170-product='recordings'] .hero p { opacity: 1; }
+body[data-m170-product='recordings'] h2 { font-size: 22px; }
+body[data-m170-product='recordings'] h3 { font-size: 18px; }
+body[data-m170-product='recordings'] :is(.eyebrow, .section-kicker) { color: var(--m170-muted); font-size: 14px; letter-spacing: normal; text-transform: none; }
+body[data-m170-product='recordings'] .live { background: var(--m170-pending-bg); color: var(--m170-pending-fg); border: 1px solid var(--m170-line); backdrop-filter: none; }
+body[data-m170-product='recordings'] :is(.stats article, .class-card, .review-section, .scan-panel, .class-folder, dialog) { border-radius: 12px; box-shadow: none; }
+body[data-m170-product='recordings'] :is(.toolbar label, dialog label) { font-size: 16px; text-transform: none; letter-spacing: normal; }
+body[data-m170-product='recordings'] :is(input, select, textarea, button) { border-radius: 8px; }
+body[data-m170-product='recordings'] :is(.toolbar button,dialog button) {min-height:44px;}
+body[data-m170-product='recordings'] .icon-button {width:44px;min-height:44px;}
+body[data-m170-product='recordings'] .approval-check {min-height:44px;min-width:44px;}
+body[data-m170-product='recordings'] :is(input, select, textarea, .action-button, .account-box button) { border: 1px solid var(--m170-control); }
+body[data-m170-product='recordings'] :is(.toolbar button, dialog button:not(.icon-button), .scan-panel > button) { background: var(--m170-action); }
+body[data-m170-product='recordings'] :is(.toolbar button, dialog button:not(.icon-button), .scan-panel > button):hover { background: var(--m170-action-hover); }
+body[data-m170-product='recordings'] :is(.subtext, .dialog-note, .stats span, .badge, .review-heading > span, footer, .approval-check em, .class-card > span) { font-size: 14px; }
+body[data-m170-product='recordings'] th { font-size: 14px; letter-spacing: normal; text-transform: none; white-space: normal; }
+body[data-m170-product='recordings'] td { font-size: 16px; line-height: 1.5; }
+body[data-m170-product='recordings'] :is(.badge, .record-title, .subtext) { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
+body[data-m170-product='recordings'] :is(.date-pill, .source-link, .video-link) { color: var(--m170-action); }
+body[data-m170-product='recordings'] .date-pill { background: var(--m170-selected); }
+body[data-m170-product='recordings'] .class-card[aria-pressed='true'] { background: var(--m170-selected); border-color: var(--m170-action); box-shadow: 0 0 0 1px var(--m170-action); }
+body[data-m170-product='recordings'] .approval-check input:checked + span { background: var(--m170-action); border-color: var(--m170-action); }
+body[data-m170-product='recordings'] .approval-check span { border-color: var(--m170-control); transition-property: background-color, border-color; }
+body[data-m170-product='recordings'] .approval-check input:focus-visible + span { outline: 3px solid var(--m170-brand); outline-offset: 3px; }
+body[data-m170-product='recordings'] dialog button.secondary { color: var(--m170-action); background: var(--m170-surface); border-color: var(--m170-control); }
+body[data-m170-product='recordings'] dialog button.secondary:hover { color: var(--m170-action); background: var(--m170-selected); }
+body[data-m170-product='recordings'] [data-m170-dialog-feedback] { margin: 0; padding: 12px; color: var(--m170-error-fg); background: var(--m170-error-bg); border-radius: 8px; font-size: 16px; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  body[data-m170-product='recordings'] h1 { font-size: 26px; }
+  body[data-m170-product='recordings'] .hero { padding: 16px; }
+  body[data-m170-product='recordings'] .hero-controls { max-width: 100%; }
+}

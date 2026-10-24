@@ -1,0 +1,57 @@
+/* Task 1/2/Lesson 13 và dashboard dùng chung; không nạp vào Writing Flow có view Test. */
+body[data-m170-product='writing'] {
+  --ink: var(--m170-ink); --muted: var(--m170-muted); --navy: var(--m170-action);
+  --blue: var(--m170-action); --line: var(--m170-line); --surface: var(--m170-surface);
+  --canvas: var(--m170-canvas); --success: var(--m170-success-fg);
+  --warning: var(--m170-attention-fg); --danger: var(--m170-error-fg);
+  --passed-surface: var(--m170-success-bg); --queued-surface: var(--m170-pending-bg);
+  --revision-surface: var(--m170-attention-bg);
+}
+body[data-m170-product='writing'] .topbar { background: var(--m170-surface); color: var(--m170-structure); border-bottom: 1px solid var(--m170-line); padding-top: 16px; padding-bottom: 16px; }
+body[data-m170-product='writing'] .brand { display: flex; align-items: center; gap: 24px; color: var(--m170-structure); font-size: 16px; font-weight: 600; }
+body[data-m170-product='writing'] .save-state { color: var(--m170-muted); }
+body[data-m170-product='writing'] h1 { font-size: 28px; }
+body[data-m170-product='writing'] h2 { font-size: 22px; }
+body[data-m170-product='writing'] h3 { font-size: 18px; }
+body[data-m170-product='writing'] :is(.eyebrow, .section-kicker) { color: var(--m170-muted); font-size: 14px; font-weight: 600; text-transform: none; letter-spacing: normal; }
+body[data-m170-product='writing'] :is(.card, .section-card, .comments-panel, .conflict, .task-content > *) { border-radius: 12px; box-shadow: none; }
+body[data-m170-product='writing'] label { color: var(--m170-ink); font-size: 16px; }
+body[data-m170-product='writing'] :is(input, select, textarea) { border-color: var(--m170-control); border-radius: 8px; }
+body[data-m170-product='writing'] textarea { font-size: 18px; line-height: 1.65; }
+body[data-m170-product='writing'] :is(.primary, .secondary, .danger-button) { border-radius: 8px; font-weight: 600; }
+body[data-m170-product='writing'] .primary:hover { background: var(--m170-action-hover); }
+body[data-m170-product='writing'] .secondary { border-color: var(--m170-control); color: var(--m170-action); }
+body[data-m170-product='writing'] .danger-button { border-color: var(--m170-error-fg); color: var(--m170-error-fg); }
+body[data-m170-product='writing'] :is(.task-content p, .comment-list, .teacher-comment-body, .lms-inline-result) { font-size: 18px; line-height: 1.65; }
+body[data-m170-product='writing'] .notice { border-left: 0; border-radius: 8px; color: var(--m170-attention-fg); background: var(--m170-attention-bg); }
+body[data-m170-product='writing'] :is(.section-status, .polling-state) { background: var(--m170-neutral-bg); color: var(--m170-neutral-fg); font-size: 14px; }
+body[data-m170-product='writing'] .section-status[data-state='passed'] { background: var(--m170-success-bg); color: var(--m170-success-fg); }
+body[data-m170-product='writing'] :is(.section-status[data-state='queued'], .polling-state[data-state='polling']) { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='writing'] .section-status[data-state='revision'] { background: var(--m170-attention-bg); color: var(--m170-attention-fg); }
+body[data-m170-product='writing'] .section-status[data-state='technical_error'] { background: var(--m170-error-bg); color: var(--m170-error-fg); }
+body[data-m170-product='writing'] .section-workspace[data-state] :is(.section-card, .comments-panel, textarea) { border-color: var(--m170-line); box-shadow: none; }
+body[data-m170-product='writing'] .section-workspace[data-state] textarea { background: var(--m170-surface); border-color: var(--m170-control); }
+body[data-m170-product='writing'] :is(.section-workspace, .lesson-section-workspace)[data-state] :is(.section-card, .lesson-section-card, .comments-panel) { background: var(--m170-surface); border-color: var(--m170-line); box-shadow: none; }
+body[data-m170-product='writing'] .lesson-section-workspace[data-state] .lesson-section-card textarea { background: var(--m170-surface); border-color: var(--m170-control); }
+body[data-m170-product='writing'] .lesson-body-block { background: var(--m170-surface); border-color: var(--m170-line); border-radius: 12px; }
+body[data-m170-product='writing'] .lesson-section-workspace[data-state='queued'] .submit-section { background: var(--m170-pending-fg); border-color: var(--m170-pending-fg); color: white; }
+body[data-m170-product='writing'] .lesson-section-workspace[data-state='revision'] .submit-section { background: var(--m170-action); border-color: var(--m170-action); color: white; }
+body[data-m170-product='writing'] .vocab-table { font-size: 16px; line-height: 1.5; }
+body[data-m170-product='writing'] .section-workspace:has(.comment-list:empty) { grid-template-columns: minmax(0, 1fr); }
+body[data-m170-product='writing'] .section-workspace:has(.comment-list:empty) .comments-panel { min-height: 0; }
+body[data-m170-product='writing'] .teacher-summary-card[data-state='writing'] { background: var(--m170-pending-bg); border-color: var(--m170-line); }
+body[data-m170-product='writing'] :is(.teacher-summary-card[data-state='technical_error'], .teacher-student-card[data-state='technical_error']) { background: var(--m170-error-bg); border-color: var(--m170-line); }
+body[data-m170-product='writing'] .teacher-summary-card[data-state='revision'] { background: var(--m170-attention-bg); border-color: var(--m170-line); }
+body[data-m170-product='writing'] :is(.teacher-summary-card[data-state='queued'], .draft-result-box[data-status='queued']) { background: var(--m170-pending-bg); border-color: var(--m170-line); }
+body[data-m170-product='writing'] .teacher-summary-card[data-state='passed'] { background: var(--m170-success-bg); border-color: var(--m170-line); }
+body[data-m170-product='writing'] .teacher-comment-status { background: var(--m170-attention-bg); color: var(--m170-attention-fg); }
+body[data-m170-product='writing'] .teacher-comment-thread[data-status='addressed'] .teacher-comment-status { background: var(--m170-neutral-bg); color: var(--m170-neutral-fg); }
+html[data-izone-theme='master170'] body[data-m170-product='writing'] .teacher-comment-feedback:not(:empty),
+html[data-izone-theme='master170'] body[data-m170-product='writing'] #teacher-detail .teacher-comment-feedback:not(:empty) {font-size:16px;line-height:1.5;padding:8px 10px;border-radius:6px;overflow-wrap:anywhere;}
+html[data-izone-theme='master170'] body[data-m170-product='writing'] .teacher-comment-feedback[data-state='pending'] {background:var(--m170-pending-bg);color:var(--m170-pending-fg);}
+html[data-izone-theme='master170'] body[data-m170-product='writing'] .teacher-comment-feedback[data-state='error'] {background:var(--m170-error-bg);color:var(--m170-error-fg);}
+@media (max-width: 600px) {
+  body[data-m170-product='writing'] h1 { font-size: 26px; }
+  body[data-m170-product='writing'] .topbar { flex-wrap: wrap; gap: 12px; }
+  body[data-m170-product='writing'] .brand { flex-wrap: wrap; gap: 16px; }
+}
