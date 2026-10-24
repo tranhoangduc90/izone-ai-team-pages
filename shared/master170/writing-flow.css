@@ -31,3 +31,6 @@ body[data-m170-product='writing-flow'][data-kind='homework'] .m170-flow-class-fe
 body[data-m170-product='writing-flow'][data-kind='homework'] .m170-flow-class-feedback[data-state='success'] { color: var(--m170-success-fg); background: var(--m170-success-bg); }
 body[data-m170-product='writing-flow'][data-kind='homework'] .m170-flow-class-feedback[data-state='error'] { color: var(--m170-error-fg); background: var(--m170-error-bg); }
 body[data-m170-product='writing-flow'][data-kind='homework'] .flow-class-card-actions { flex-wrap: wrap; overflow-x: visible; }
+
+/* Keep the classic Homework update time in normal flow when the page scrolls. */
+body[data-m170-product='writing-flow'][data-kind='homework'] > .flow-updated { position: static; margin: 0; padding: 8px 24px 0; text-align: right; }
