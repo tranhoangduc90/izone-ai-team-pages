@@ -18,6 +18,9 @@ body[data-m170-product='materials'] :is(button, select, .answer-field label, .se
 body[data-m170-product='materials'] :is(button, select) { min-height: 44px; }
 body[data-m170-product='materials'] :is(.minimum-note, .notice, .field-indicator, .lesson-meta, .learner, .font-control span) { font-size: 14px; }
 body[data-m170-product='materials'] .footer-tools { flex-wrap: wrap; }
+body[data-m170-product='materials'] .notice.waiting-card { color: var(--m170-pending-fg); background: var(--m170-pending-bg); border-left-color: var(--m170-pending-fg); }
+body[data-m170-product='materials'] .notice.server-error { color: var(--m170-error-fg); background: var(--m170-error-bg); border-left-color: var(--m170-error-fg); }
+body[data-m170-product='materials'] .notice.server-error[data-state='attention'] { color: var(--m170-attention-fg); background: var(--m170-attention-bg); border-left-color: var(--m170-attention-fg); }
 body[data-m170-product='materials'] .footer-tools :is(.history-button, .notes-button) { display: inline-flex; }
 body[data-m170-product='materials'] :is(.product-name, .materials-login-kicker) { font-size: 14px; letter-spacing: normal; color: var(--m170-muted); }
 body[data-m170-product='materials'] .materials-login-brand { display: block; border-right: 0; padding-right: 0; }
