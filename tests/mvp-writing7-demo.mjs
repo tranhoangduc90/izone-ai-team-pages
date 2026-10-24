@@ -179,3 +179,47 @@ test('Tài nguyên đúng origin, không có lỗi console hoặc lỗi tải', 
   assert.ok(requests.every(url => new URL(url).origin===new URL(base).origin));
   await page.close();
 });
+
+// Đầu vào là 36 bước và viewport thật của trình duyệt. Đi bằng Tab như người dùng,
+// đo điểm giữa của phần đang focus và kiểm nút không bị footer che. Lỗi nêu đúng
+// bước/control; không đọc CSS để tạo kỳ vọng và không thêm hook vào sản phẩm.
+for (const [width,height] of [[1440,1000],[1024,768],[390,844],[320,568],[844,390]]) {
+  test(`Tab giữ control trên thanh điều hướng cố định — ${width}x${height}`, async () => {
+    const page = await open('#buoc=1',width);
+    try {
+      await page.setViewportSize({width,height});
+      await page.evaluate(() => document.fonts.ready);
+      for (let step=1;step<=stepCount;step++) {
+        await page.goto(base+`#buoc=${step}`);
+        await page.waitForFunction(n => document.querySelector('#step-count').textContent.trim().startsWith(`${n} /`),step);
+        const expected = await page.locator('#screen-body').evaluate(body => [...body.querySelectorAll('a[href],button,input,textarea,select,[tabindex]')]
+          .filter(e => e.tabIndex>=0 && !e.disabled && e.getClientRects().length).length);
+        await page.locator('#screen-title').focus();
+        let visited=0;
+        let reachedFooter=false;
+        for (let tab=0;tab<expected+5;tab++) {
+          await page.keyboard.press('Tab');
+          await page.waitForTimeout(100);
+          const focused = await page.evaluate(() => {
+            const e=document.activeElement,footer=document.querySelector('.navigation');
+            const r=e.getBoundingClientRect(),f=footer.getBoundingClientRect();
+            const top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+            return {inBody:!!e.closest('#screen-body'),inFooter:footer.contains(e),tag:e.tagName,
+              text:(e.innerText||e.getAttribute('aria-label')||e.tagName).trim().slice(0,100),
+              centerVisible:!!top&&(top===e||e.contains(top)),bottom:r.bottom,footerTop:f.top};
+          });
+          if (focused.inFooter) { reachedFooter=true;break; }
+          if (!focused.inBody) continue;
+          visited++;
+          if ([2,28,34].includes(step)) await page.screenshot({path:path.join(qa,`tab-${width}-${step}-${tab}.png`)});
+          assert.ok(focused.centerVisible,`Bước ${step}: focus bị che ở “${focused.text}” (${width}x${height}).`);
+          if (['BUTTON','A','INPUT','SELECT'].includes(focused.tag)) {
+            assert.ok(focused.bottom<=focused.footerTop,`Bước ${step}: thanh điều hướng che nút “${focused.text}” (${width}x${height}).`);
+          }
+        }
+        assert.ok(reachedFooter,`Bước ${step}: Tab chưa đến được điều hướng.`);
+        assert.ok(visited>=expected,`Bước ${step}: Tab bỏ qua control trong màn.`);
+      }
+    } finally { await page.close(); }
+  });
+}
