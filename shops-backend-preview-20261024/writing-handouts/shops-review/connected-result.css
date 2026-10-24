@@ -1,5 +1,6 @@
 /* Thẻ LMS tái dùng từ writing-handouts/styles.css; chỉ nạp ở bản nối backend. */
 .draft-result-message { margin:.6rem 0 0; }
+.shops-result-page { width:min(960px,calc(100% - 32px)); margin:32px auto; }
 .lms-draft-summary { display:flex; justify-content:space-between; gap:.75rem; margin:.25rem 0 .9rem; padding:.75rem; border:1px solid #b8cbe3; border-radius:10px; background:#eef6ff; }
 .lms-draft-summary h4,.lms-draft-summary p { margin:0; }
 .lms-draft-summary p { margin-top:.2rem; color:#526078; font-size:.82rem; }
