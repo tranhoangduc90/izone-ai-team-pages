@@ -93,6 +93,13 @@
     try { return JSON.parse(text); } catch { return null; }
   }
 
+  function uiErrorMessage(error) {
+    if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message || '')) {
+      return 'Chưa kết nối được với hệ thống chấm bài. Hãy kiểm tra mạng rồi thử lại.';
+    }
+    return error.message;
+  }
+
   async function requestJson(url, options = {}) {
     const response = await fetch(url, { cache: 'no-store', ...options });
     const text = await response.text();
@@ -129,7 +136,7 @@
     } catch (error) {
       // Lỗi mạng tạm thời được thử lại; lỗi kéo dài sẽ chạm ngưỡng thời gian ở trên.
       if (Date.now() - startedAt > config.timeoutMs / 2) {
-        showError(error.message);
+        showError(uiErrorMessage(error));
         return;
       }
     }
@@ -172,7 +179,7 @@
       }
       window.setTimeout(() => pollStatus(Date.now()), 400);
     } catch (error) {
-      showError(error.message);
+      showError(uiErrorMessage(error));
     }
   }
 
