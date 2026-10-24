@@ -16,6 +16,13 @@ Không sửa trạng thái, thông báo hoặc handler tự nộp. Bộ
 `tests/speaking-submit-colors-browser.mjs` kiểm component trình bày với các
 trạng thái giả trên cả chín renderer; không chứng nhận giao dịch nộp thật.
 
+Trang giảng viên xem biên nhận dùng màu thông tin, chú ý và lỗi theo trạng thái
+hiện hành; nhãn đầu trang dùng màu ghi chú của master. Lỗi kết nối có hướng dẫn
+tiếng Việt, còn thông báo từ API giữ nguyên. Phiên, quyền lớp, request, nội dung
+biên nhận và link không đổi. `tests/speaking-teacher-receipt-browser.mjs` kiểm
+cả hai API biên nhận bằng Google/API giả; dùng `SPEAKING_TEACHER_EVIDENCE_DIR`
+để lưu kết quả ngoài source, không chứng nhận SSO hoặc Docs thật.
+
 Từ gói ngày 11/10/2026, Lesson 2–7 dùng một lớp trình bày chung: Nunito Sans, màu đỏ/navy IZONE, phần luyện trước phần nộp trên điện thoại và hai cột trên laptop. Hướng dẫn lấy Share nằm trước từng ô nhập; mở bài bắt đầu ở tiêu đề, mở lại bài đã nộp bắt đầu ở biên nhận.
 
 HTML nạp `presentation.js`; module này nạp renderer Lesson 2, Lesson 3 hoặc renderer cấu hình chung Lesson 4–7, rồi sắp xếp lại các node thật. Sự kiện, phần học, link chatbot và kiểm kết quả vẫn do renderer hiện hành xử lý. `composition.css` và `fonts/` giữ font cùng trang; không phụ thuộc dịch vụ font bên ngoài.
