@@ -173,7 +173,9 @@ export function renderLmsDraftResult(root, payload, {
   if (!essays.length) {
     const empty = documentRef.createElement("p");
     empty.className = "draft-result-message";
-    empty.textContent = "Chưa có thẻ nhận xét từng câu.";
+    empty.textContent = payload?.noCorrections === true && payload?.readbackOk === true
+      ? "Đã chấm xong. Không có câu nào cần chỉnh sửa trong lần chấm này."
+      : "Chưa có thẻ nhận xét từng câu.";
     root.append(empty);
     return { count: 0 };
   }
@@ -193,6 +195,12 @@ export function renderLmsDraftResult(root, payload, {
     summary.append(summaryText);
   }
   root.append(summary);
+  if (Number.isSafeInteger(payload?.reviewCaseCount) && payload.reviewCaseCount > 0) {
+    const notice = documentRef.createElement("p");
+    notice.className = "draft-result-message";
+    notice.textContent = `${payload.reviewCaseCount} mục cần giảng viên xem thêm trước khi chốt.`;
+    root.append(notice);
+  }
 
   const cards = documentRef.createElement("div");
   cards.className = "lms-sentence-cards";
