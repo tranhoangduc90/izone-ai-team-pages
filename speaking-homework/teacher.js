@@ -9,7 +9,12 @@ const sessionClient = createTeacherSessionClient({ apiBaseUrl: config.API_BASE_U
   sessionPath: '/api/auth/session' });
 const $ = id => document.getElementById(id);
 
-function notice(text) { $('notice').textContent = text; }
+function notice(text, state = 'info') { $('notice').textContent = text; $('notice').dataset.state = state; }
+function showError(error) {
+  const network = error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message || '');
+  notice(network ? 'Chưa kết nối được để tải bài. Hãy kiểm tra mạng rồi thử lại.' : error.message,
+    error.status ? 'error' : 'attention');
+}
 function addDetail(list, term, value) {
   const dt = document.createElement('dt'); dt.textContent = term;
   const dd = document.createElement('dd'); dd.textContent = value || '—';
@@ -99,7 +104,7 @@ function render(receipt) {
 }
 
 async function load() {
-  if (!validReceipt) { notice('Link xem bài không hợp lệ.'); return; }
+  if (!validReceipt) { notice('Link xem bài không hợp lệ.', 'error'); return; }
   notice('Đang tải bài và kiểm quyền lớp…');
   const response = await fetch(`${config.API_BASE_URL}${receiptApi}/teacher/receipts/${receiptId}`,
     { credentials: 'include', cache: 'no-store' });
@@ -107,14 +112,16 @@ async function load() {
   if (!response.ok || !data.ok) {
     $('receipt-panel').hidden = true;
     $('login-panel').hidden = false;
-    throw new Error(data.message || 'Chưa xem được bài. Kiểm tra quyền lớp hoặc thử lại sau.');
+    const error = new Error(data.message || 'Chưa xem được bài. Kiểm tra quyền lớp hoặc thử lại sau.');
+    error.status = response.status;
+    throw error;
   }
   render(data.receipt);
 }
 
 function setupGoogle() {
   if (!config.GOOGLE_CLIENT_ID || !config.API_BASE_URL) {
-    notice('Chưa cấu hình đăng nhập hoặc API.'); return;
+    notice('Chưa cấu hình đăng nhập hoặc API.', 'error'); return;
   }
   const script = document.createElement('script');
   script.src = 'https://accounts.google.com/gsi/client';
@@ -123,12 +130,12 @@ function setupGoogle() {
     window.google.accounts.id.initialize({ client_id: config.GOOGLE_CLIENT_ID,
       auto_select: false, callback: async response => {
         try { await sessionClient.login(response.credential || ''); await load(); }
-        catch (error) { notice(error.message); }
+        catch (error) { showError(error); }
       } });
     window.google.accounts.id.renderButton($('google-sign-in'),
       { type: 'standard', theme: 'outline', size: 'large', text: 'signin_with' });
   };
-  script.onerror = () => notice('Không tải được đăng nhập Google.');
+  script.onerror = () => notice('Không tải được đăng nhập Google.', 'error');
   document.head.append(script);
 }
 
@@ -143,7 +150,7 @@ if (validReceipt) {
   sessionClient.restore().then(session => {
     if (session) return load();
     $('login-panel').hidden = false;
-    notice('Đăng nhập Google để xem bài.');
-  }).catch(error => { $('login-panel').hidden = false; notice(error.message); });
-} else notice('Link xem bài không hợp lệ.');
+    notice('Đăng nhập Google để xem bài.', 'attention');
+  }).catch(error => { $('login-panel').hidden = false; showError(error); });
+} else notice('Link xem bài không hợp lệ.', 'error');
 setupGoogle();

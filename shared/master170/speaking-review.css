@@ -7,4 +7,8 @@ body[data-m170-product='speaking-review'] :is(button, select) { border-radius: 8
 body[data-m170-product='speaking-review'] button { background: var(--m170-action); color: white; }
 body[data-m170-product='speaking-review'] button:hover { background: var(--m170-action-hover); }
 body[data-m170-product='speaking-review'] a { color: var(--m170-action); }
+body[data-m170-product='speaking-review'] .eyebrow { color: var(--m170-muted); }
+body[data-m170-product='speaking-review'] #notice { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='speaking-review'] #notice[data-state='attention'] { background: var(--m170-attention-bg); color: var(--m170-attention-fg); }
+body[data-m170-product='speaking-review'] #notice[data-state='error'] { background: var(--m170-error-bg); color: var(--m170-error-fg); }
 @media (max-width: 600px) { body[data-m170-product='speaking-review'] h1 { font-size: 26px; } }
