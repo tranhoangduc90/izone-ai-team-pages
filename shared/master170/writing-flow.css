@@ -39,3 +39,7 @@ body[data-m170-product='writing-flow'][data-kind='homework'] > .flow-updated { p
 @media (min-width: 601px) {
   body[data-m170-product='writing-flow'][data-kind='homework'].flow-v2 .flow-toolbar-line { grid-template-columns: minmax(128px, 1fr) max-content 108px 128px 128px max-content; }
 }
+
+/* Keep expanded technical payloads inside their own panel on narrow screens. */
+body[data-m170-product='writing-flow'][data-kind='homework'] .flow-detail-grid > * { min-width: 0; }
+body[data-m170-product='writing-flow'][data-kind='homework'] .flow-detail-panel pre { max-width: 100%; overflow-x: auto; }
