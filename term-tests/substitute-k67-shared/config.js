@@ -1,6 +1,8 @@
 const match = location.pathname.match(/substitute-test-(1|2)-k67/);
 const testNumber = match?.[1] || '1';
 window.TERM_TEST_APP_CONFIG = Object.freeze({
+  EXAM_JOURNAL_ENABLED: true,
+  EXAM_JOURNAL_BUILD: 'exam-journal-production-20261024-r1',
   API_BASE_URL: `https://ducizone.ddns.net/webhook/substitute-test-${testNumber}-k67-public-api`,
   AUTH_MODE: 'online-demo', GOOGLE_CLIENT_ID: '', LOCAL_DEMO_ONLY: true, API_GATEWAY_MODE: true
 });

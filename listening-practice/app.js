@@ -1,7 +1,7 @@
 (async () => {
 'use strict';
 const AuthoredUI=await import('./authored-ui.js?v=20261021-ui-acceptance-v1');
-const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261024-cf512-1');
+const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261024-cf512-1&journal=20261024-audio-v1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 let CODE='67-practice-listening_mcq_flowchart',FULL_TIME=579207;const TAB=crypto.randomUUID();

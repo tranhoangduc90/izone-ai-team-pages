@@ -1,4 +1,4 @@
-import {createPublicAudio} from '../../shared/public-audio.mjs?v=20261024-cf512-1';
+import {createPublicAudio} from '../../shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-audio-v1';
 
 // Same download/hash/cache contract as K67; separate allowlist and cache.
 export const publicAudio = createPublicAudio({

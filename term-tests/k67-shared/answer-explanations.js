@@ -37,7 +37,7 @@
         if (!substitute && !/^term-test-2-96kbps-[0-9a-f]{16}\.mp3$/.test(descriptor.asset)) throw Error('Sai nguồn audio');
         const source = substitute ? '../substitute-test-1-k67-computer-based/assets/private/listening-substitute-test-1-k67.mp3'
           : '../k67-audio-assets/' + descriptor.asset;
-        const {downloadReview} = await import(new URL('../../shared/audio/transport.mjs?v=20261023-cf512-1', scriptBase));
+        const {downloadReview} = await import(new URL('../../shared/audio/transport.mjs?v=20261023-cf512-1&journal=20261024-audio-v1', scriptBase));
         const preferred = await downloadReview(new URL(source, scriptBase).href, descriptor.sha256, {signal});
         let bytes;
         if (preferred) bytes = await preferred.arrayBuffer();

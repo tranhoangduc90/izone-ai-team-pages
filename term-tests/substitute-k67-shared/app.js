@@ -115,6 +115,20 @@
     state.listeningDeadlineAt ||= window.TERM_TEST_BOOTSTRAP.listeningDeadlineAt || '';
   }
 
+  // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
+  let examJournal = null;
+  if (appConfig.EXAM_JOURNAL_ENABLED === true) {
+    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-audio-v1').then(({ connectExamJournal }) => {
+      examJournal = connectExamJournal({ enabled: true,
+        endpoint: appConfig.EXAM_JOURNAL_BASE_URL || new URL(appConfig.API_BASE_URL).origin + '/substitute-journal-api/' + testConfig.slug,
+        testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
+        getState: () => ({ ...state, classCode,
+          generation: typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
+          clientRunId: window.TERM_TEST_BOOTSTRAP?.clientRunId || '', examSessionId: window.TERM_TEST_BOOTSTRAP?.examSessionId || '', historyEpoch: window.TERM_TEST_BOOTSTRAP?.historyEpoch || '' })
+      });
+    }).catch(() => {});
+  }
+
   function readSession() {
     for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try {
@@ -154,6 +168,7 @@
   }
 
   function saveSession() {
+    try { if (typeof examJournal !== 'undefined') examJournal?.stateChanged('save_requested'); } catch {}
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
     const pinnedWriting = serverGradingMode
       ? {...(window.TERM_TEST_BOOTSTRAP.examVersion?{examVersion:window.TERM_TEST_BOOTSTRAP.examVersion}:{}),
@@ -560,6 +575,9 @@
   }
 
   async function apiRequest(path, options = {}) {
+    let journalRequest;
+    try { if (typeof examJournal !== 'undefined') journalRequest = examJournal?.startRequest(path, options); } catch {}
+    const journalRun = async () => {
     const controller = new AbortController();
     const untrack=window.SUBSTITUTE_STATE?.track(controller) || (()=>{});
     const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -626,6 +644,11 @@
       clearTimeout(timeout);
       untrack();
     }
+
+    };
+    if (!journalRequest) return journalRun();
+    try { const result = await journalRun(); try { journalRequest.done(result); } catch {} return result; }
+    catch (error) { try { journalRequest.done(undefined, error); } catch {} throw error; }
   }
 
   async function submitSection(examId, answers) {
@@ -1125,7 +1148,7 @@
   function confirmIncomplete(answered, skillLabel) {
     const total = skillLabel === 'Listening' ? testConfig.listening.controls.length : testConfig.reading.controls.length;
     if (answered === total) return true;
-    return window.confirm(`${skillLabel} hiện có ${answered}/${total} câu đã nhập. Bạn vẫn muốn nộp bài?`);
+    return ((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${skillLabel} hiện có ${answered}/${total} câu đã nhập. Bạn vẫn muốn nộp bài?`);
   }
 
   function setBusy(button, busy, busyText, normalText) {
@@ -2418,7 +2441,7 @@
       })).filter(task => task.words < task.minimum);
       if (!automatic && belowMinimum.length) {
         const summary = belowMinimum.map(task => `${task.label}: ${task.words}/${task.minimum} từ`).join('\n');
-        if (!window.confirm(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
+        if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
       }
 
       if (demoMode) {
