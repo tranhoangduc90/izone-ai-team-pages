@@ -42,3 +42,11 @@ body[data-m170-product='recordings'] [data-m170-dialog-feedback] { margin: 0; pa
   body[data-m170-product='recordings'] .hero { padding: 16px; }
   body[data-m170-product='recordings'] .hero-controls { max-width: 100%; }
 }
+
+/* Chỉ nhãn kết nối của Recording; không thay dữ liệu hoặc cách làm mới. */
+body[data-m170-product='recordings'] .live[data-state='pending'] { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='recordings'] .live[data-state='pending'] span { background: var(--m170-pending-fg); box-shadow: 0 0 0 5px var(--m170-pending-bg); }
+body[data-m170-product='recordings'] .live[data-state='success'] { background: var(--m170-success-bg); color: var(--m170-success-fg); }
+body[data-m170-product='recordings'] .live[data-state='success'] span { background: var(--m170-success-fg); box-shadow: 0 0 0 5px var(--m170-success-bg); }
+body[data-m170-product='recordings'] .live[data-state='attention'] { background: var(--m170-attention-bg); color: var(--m170-attention-fg); }
+body[data-m170-product='recordings'] .live[data-state='attention'] span { background: var(--m170-attention-fg); box-shadow: 0 0 0 5px var(--m170-attention-bg); }
