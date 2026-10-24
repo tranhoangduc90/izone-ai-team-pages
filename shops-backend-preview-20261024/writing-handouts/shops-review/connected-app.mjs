@@ -260,15 +260,15 @@ async function boot(){
   const p=PEOPLE.find(p=>p.id===remembered?.id&&p.classRef===remembered?.classRef&&(!entry.has('student')||p.id===entry.get('student')));if(p&&(!p.requiresAccessCode||remembered.sessionRef))await openPerson(p,undefined,remembered.sessionRef);else{draw();fillPeople();}}
 }
 async function setupTeacher(){
- const access=await api('admin/me');
+ const epoch=generation,access=await api('admin/me');if(epoch!==generation)return;
  indexPeople();
  if(access.reviewer.role!=='admin'){const allowed=new Set(access.classes.map(c=>c.classCode));PEOPLE.splice(0,PEOPLE.length,...PEOPLE.filter(p=>allowed.has(p.classCode)));}
  if(!PEOPLE.length)throw Error('Phiên giảng viên thử chưa có lớp được phân công.');
  let selected=entry.has('student')?PEOPLE.find(p=>p.id===entry.get('student')):requestedClass?PEOPLE.find(p=>p.classRef===requestedClass.classRef):PEOPLE[0];
  let linked;
  if(entry.has('session')){linked=(await api('admin/lesson9/sessions/'+encodeURIComponent(entry.get('session')))).session;if(linked.activitySlug!==ACTIVITY||requestedClass&&linked.classRef!==requestedClass.classRef)throw Error('Bài trong link không thuộc đúng đề/lớp.');selected=PEOPLE.find(p=>p.id===linked.studentRef&&p.classRef===linked.classRef);}
- if(!selected)throw Error('Tài khoản chưa có quyền lớp hoặc học viên trong đường link.');
- loggedIn=true;notice='';person=selected;await loadTeacher();
+ if(epoch!==generation)return;if(!selected)throw Error('Tài khoản chưa có quyền lớp hoặc học viên trong đường link.');
+ loggedIn=true;notice='';person=selected;await loadTeacher();if(epoch!==generation)return;
  if(linked||entry.has('student')){const row=rows.find(r=>r.id===person.id);current=linked||(row?.sessionRef?(await api('admin/lesson9/sessions/'+row.sessionRef)).session:null);responses=current?working(current):{};threads=current?(await api('admin/live/sessions/'+current.sessionRef+'/teacher-comments')).threads:[];detailOpen=true;draw();}
  startPoll();
 }
