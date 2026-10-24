@@ -30,6 +30,9 @@ body[data-m170-product='speaking'] .check-result.is-warning { background: var(--
 body[data-m170-product='speaking'] .check-result.is-loading { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
 body[data-m170-product='speaking'] .completion-card { background: var(--m170-success-bg); color: var(--m170-success-fg); }
 body[data-m170-product='speaking'] .completion-card :is(h2, p) { color: var(--m170-success-fg); }
+body[data-m170-product='speaking'] #ready-submit-card { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='speaking'] #ready-submit-card :is(h2, p) { color: inherit; }
+body[data-m170-product='speaking'] #ready-submit-card:has(#submit-homework:not([hidden])) { background: var(--m170-attention-bg); color: var(--m170-attention-fg); }
 body[data-m170-product='speaking'] .completion-icon { background: var(--m170-success-fg); }
 body[data-m170-product='speaking'] .studio-header > span { color: var(--m170-muted); }
 @media (max-width: 600px) {

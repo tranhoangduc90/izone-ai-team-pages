@@ -10,6 +10,12 @@ chín lesson ở năm viewport, mở/đóng hướng dẫn, giữ giá trị và
 API giả, không gọi Check, finish hoặc dịch vụ thật. Đặt `PLAYWRIGHT_MODULE` và
 `SPEAKING_ACTIONS_EVIDENCE_DIR` để chạy và lưu kết quả ngoài source.
 
+Thẻ tự nộp đang gửi/đọc lại/chờ kết nối dùng màu chờ. Khi renderer hiện nút
+thử nộp lại, CSS dùng màu chú ý; biên nhận đã nộp vẫn giữ màu thành công.
+Không sửa trạng thái, thông báo hoặc handler tự nộp. Bộ
+`tests/speaking-submit-colors-browser.mjs` kiểm component trình bày với các
+trạng thái giả trên cả chín renderer; không chứng nhận giao dịch nộp thật.
+
 Từ gói ngày 11/10/2026, Lesson 2–7 dùng một lớp trình bày chung: Nunito Sans, màu đỏ/navy IZONE, phần luyện trước phần nộp trên điện thoại và hai cột trên laptop. Hướng dẫn lấy Share nằm trước từng ô nhập; mở bài bắt đầu ở tiêu đề, mở lại bài đã nộp bắt đầu ở biên nhận.
 
 HTML nạp `presentation.js`; module này nạp renderer Lesson 2, Lesson 3 hoặc renderer cấu hình chung Lesson 4–7, rồi sắp xếp lại các node thật. Sự kiện, phần học, link chatbot và kiểm kết quả vẫn do renderer hiện hành xử lý. `composition.css` và `fonts/` giữ font cùng trang; không phụ thuộc dịch vụ font bên ngoài.
