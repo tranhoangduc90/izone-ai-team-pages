@@ -19,6 +19,14 @@ JSON vào `MATERIALS_ASYNC_EVIDENCE_DIR` và trả mã lỗi nếu sai focus ho�
 
 ## Chặng 3 — bản thử trên Pages
 
+Trang giảng viên dùng chữ 16px cho label, tên người học và link thao tác; tên dài
+được xuống dòng. Khi tải danh sách, `data-state` chỉ chọn cách trình bày pending
+hoặc error, rồi được bỏ khi có dữ liệu; không đổi request, thông báo hoặc guard
+chống phản hồi cũ. `tests/materials-teacher-browser.mjs` kiểm hai entry với tên
+thường/dài ở năm viewport, gồm tải, lỗi và thử lại. Test dùng API chỉ đọc giả,
+nhận `PLAYWRIGHT_MODULE`, lưu qua `MATERIALS_TEACHER_EVIDENCE_DIR` và trả mã lỗi
+nếu typography, trạng thái, identity link hoặc bố cục không đúng.
+
 Khung preview trên điện thoại giữ chiều cao iframe tối thiểu 480px; nút và link
 trong hai vỏ preview/demo có vùng bấm tối thiểu 44px. Bộ
 `tests/materials-preview-layout-browser.mjs` kiểm 42 tình huống ở bảy viewport,
