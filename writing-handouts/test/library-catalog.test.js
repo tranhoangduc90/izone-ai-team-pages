@@ -8,7 +8,7 @@ const root = new URL("../", import.meta.url);
 test("danh mục chứa đủ 14 buổi Writing theo đúng thứ tự", async () => {
   const library = JSON.parse(await readFile(new URL("library.json", root), "utf8"));
   assert.equal(library.course.id, "speaking-writing-chuyen-sau");
-  assert.deepEqual(library.course.classCodes, ["CS.070626", "CS.160826"]);
+  assert.deepEqual(library.course.classCodes, ["CS.070626", "CS.160826", "CS.181026"]);
   assert.equal(library.handouts.length, 14);
   assert.deepEqual(
     sortHandoutsByWritingLesson(library.handouts).map((item) => item.lessonId),
@@ -19,7 +19,11 @@ test("danh mục chứa đủ 14 buổi Writing theo đúng thứ tự", async (
   assert.equal(new Set(library.handouts.map((item) => item.slug)).size, 14);
   assert.equal(library.handouts.some((item) => item.classes.includes("IC2200")), false);
   assert.ok(library.handouts.every((item) => [1, 2].includes(item.taskNumber)));
-  assert.ok(library.handouts.every((item) => JSON.stringify(item.classes) === JSON.stringify(["CS.070626", "CS.160826"])));
+  const shops = library.handouts.find((item) => item.slug === 'writing-task2-public-health-ban');
+  assert.deepEqual(shops.classes, ["CS.070626", "CS.160826", "CS.181026"]);
+  assert.equal(shops.studentPath, '../shops-writing/');
+  assert.equal(shops.dashboardPath, '../shops-writing/teacher.html');
+  assert.ok(library.handouts.filter(item => item !== shops).every((item) => JSON.stringify(item.classes) === JSON.stringify(["CS.070626", "CS.160826"])));
 
   const lesson3 = library.handouts.find((item) => item.writingLesson === 3);
   const lesson11 = library.handouts.find((item) => item.writingLesson === 11);

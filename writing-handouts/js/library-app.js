@@ -5,13 +5,12 @@
  * Khi lỗi: không mở thư viện, không lộ dữ liệu dashboard và hiển thị thông báo để đăng nhập lại.
  */
 
-import { createTeacherApi } from "./api.js?rev=20260920-server-session-v1";
 import {
   classAvailable,
   dashboardUrl,
   sortHandoutsByWritingLesson,
   studentUrl,
-} from "./library-core.js?v=20260913-writing-sequence-v2";
+} from "./library-core.js?v=20261024-shops";
 import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20260920-v1";
 
 const $ = (id) => document.getElementById(id);
@@ -152,8 +151,13 @@ function hideLibrary() {
 }
 
 async function verifyTeacher() {
-  const api = createTeacherApi(state.config.apiBase || "");
-  await api.liveActivity(state.library.authProbeSlug);
+  const response = await fetch(new URL('api/v1/admin/me', state.config.apiBase || document.baseURI), {
+    credentials: 'include', cache: 'no-store', signal: AbortSignal.timeout(30000),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.ok === false || !['admin', 'teacher'].includes(data.reviewer?.role)) {
+    throw Object.assign(new Error('Chưa xác minh được quyền giảng viên.'), {status: response.ok ? 403 : response.status});
+  }
 }
 
 async function connectSession(restoring = false) {

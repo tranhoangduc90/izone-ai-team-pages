@@ -24,5 +24,5 @@ export function studentUrl(handout, classCode, baseUrl) {
 }
 
 export function dashboardUrl(handout, classCode, baseUrl) {
-  return activityUrl("./teacher.html", handout, classCode, baseUrl);
+  return activityUrl(handout.dashboardPath || "./teacher.html", handout, classCode, baseUrl);
 }

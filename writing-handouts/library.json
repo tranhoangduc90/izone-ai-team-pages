@@ -3,9 +3,8 @@
   "course": {
     "id": "speaking-writing-chuyen-sau",
     "title": "Speaking Writing chuyên sâu",
-    "classCodes": ["CS.070626", "CS.160826"]
+    "classCodes": ["CS.070626", "CS.160826", "CS.181026"]
   },
-  "authProbeSlug": "writing-task2-public-health-ban",
   "handouts": [
     {
       "lessonId": "cs070626-writing-01",
@@ -15,8 +14,9 @@
       "title": "Cấm bán thực phẩm, đồ uống có hại",
       "type": "Writing Task 2 · Agree or disagree",
       "statement": "Shops should be banned from selling any food or drink that has been scientifically proven to be damaging to public health. Do you agree or disagree?",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "studentPath": "../shops-writing/",
+      "dashboardPath": "../shops-writing/teacher.html",
+      "classes": ["CS.070626", "CS.160826", "CS.181026"]
     },
     {
       "lessonId": "cs070626-writing-02",

@@ -30,3 +30,8 @@ test("dashboardUrl tạo đúng route dashboard dùng chung", () => {
   const url = dashboardUrl({ slug: "writing-task2-public-health-ban" }, "CS.160826", "https://example.test/writing-handouts/library.html");
   assert.equal(url, "https://example.test/writing-handouts/teacher.html?task=writing-task2-public-health-ban&class=CS.160826");
 });
+
+test('dashboard riêng của Shops giữ đúng lớp và không quay về backend Writing chung', () => {
+  const url = dashboardUrl({slug:'writing-task2-public-health-ban',dashboardPath:'../shops-writing/teacher.html'}, 'CS.181026', 'https://example.test/writing-handouts/library.html');
+  assert.equal(url, 'https://example.test/shops-writing/teacher.html?task=writing-task2-public-health-ban&class=CS.181026');
+});
