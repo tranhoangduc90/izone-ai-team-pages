@@ -22,6 +22,11 @@ function setBusy(value) {
   $('check').disabled = value || !docs.length;
 }
 function notice(message, state = 'neutral') { $('notice').textContent = message; $('notice').dataset.state = state; }
+function responseErrorMessage(error) {
+  if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message || '')) return 'Chưa kết nối được với hệ thống.';
+  if (error instanceof SyntaxError) return 'Chưa đọc được phản hồi của hệ thống.';
+  return error.message;
+}
 function render() {
   const box = $('results');
   box.replaceChildren();
@@ -74,7 +79,7 @@ $('submit').addEventListener('click', async () => {
     setBusy(true);
     notice('Đang tìm bài nộp và gửi từng file vào hàng chờ…', 'pending');
     try { rows = [...parsed.errors, ...await request('submit', docs)]; notice('Đã nhận kết quả gửi. Bấm “Kiểm tra kết quả” để đọc lại trạng thái.'); }
-    catch (error) { rows = [...parsed.errors, ...unknownRows(docs)]; notice(error.name === 'AbortError' ? 'Hết thời gian chờ; kiểm tra kết quả trước khi gửi lại.' : error.message + ' Kiểm tra kết quả trước khi gửi lại.', 'attention'); }
+    catch (error) { rows = [...parsed.errors, ...unknownRows(docs)]; notice(error.name === 'AbortError' ? 'Hết thời gian chờ; kiểm tra kết quả trước khi gửi lại.' : responseErrorMessage(error) + ' Kiểm tra kết quả trước khi gửi lại.', 'attention'); }
     render();
   } catch (error) { notice(error.message, 'error'); }
   finally { setBusy(false); }
@@ -89,6 +94,6 @@ $('check').addEventListener('click', async () => {
     rows = rows.map((row) => byId.get(row.docId) || row);
     notice('Đã cập nhật trạng thái.');
     render();
-  } catch (error) { notice(error.name === 'AbortError' ? 'Hết thời gian chờ; thử kiểm tra lại.' : error.message, 'attention'); }
+  } catch (error) { notice((error.name === 'AbortError' ? 'Hết thời gian chờ; thử kiểm tra lại.' : responseErrorMessage(error)) + ' Trạng thái đang hiển thị chưa được cập nhật.', 'attention'); }
   finally { setBusy(false); }
 });
