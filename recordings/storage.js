@@ -37,9 +37,9 @@
     }
     if(!data.rows?.length)rows.append(tableRow(['Không tìm thấy file recording trong lần kiểm này.']));
   }
-  async function perform(action){
+  async function perform(action,isHistory=false){
     if(busy)return;busy=true;
-    try{await action();}catch(error){invalidate();uncertain();message(errors[error.message]||'Chưa xác minh kết quả. Hãy kiểm tra lại kết nối hoặc quyền truy cập.',true);}
+    try{await action();}catch(error){invalidate();uncertain();message((errors[error.message]||'Chưa xác minh kết quả. Hãy kiểm tra lại kết nối hoặc quyền truy cập.')+(isHistory&&detail.textContent.trim()?' Lịch sử đang hiển thị là bản tải trước.':''),true);}
     finally{busy=false;}
   }
   async function waitRead(job){
@@ -91,7 +91,8 @@
       detail.append(item);
     }
     if(!data.runs.length)detail.textContent='Chưa có lượt dọn nào.';
-  }));
+    message('Đã tải lịch sử dọn file.');
+  },true));
   document.addEventListener('recording-auth-changed',()=>{
     epoch++;clearTimeout(timer);invalidate();rows.replaceChildren();summary.textContent='Chưa có lần đo trong phiên này.';detail.replaceChildren();
     message(window.recordingAuth?.isAuthenticated()?'Chọn Kiểm tra lại để đọc tình trạng trên VPS.':'Đăng nhập để kiểm tra lưu trữ VPS.');

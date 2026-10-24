@@ -65,8 +65,12 @@ function filteredRecords(records) {
     && (!search || [record.className, record.title, record.recordingFileId, record.source, record.playlistTitle].join(' ').toLowerCase().includes(search)));
 }
 
+function incompleteNightlyData() {
+  return nightlyState.error || ['failed', 'partial'].includes(nightlyState.snapshot?.scanStatus);
+}
+
 function renderStats() {
-  $('yesterdayClassCount').textContent = state.yesterdayClasses.length;
+  $('yesterdayClassCount').textContent = incompleteNightlyData() ? '—' : state.yesterdayClasses.length;
   $('totalCount').textContent = state.records.length;
   $('reviewCount').textContent = state.records.filter((record) => !isApproved(record)).length;
   $('approvedCount').textContent = state.records.filter(isApproved).length;
@@ -179,6 +183,8 @@ function replaceRecord(updated) {
 
 function setConnection(ok, label) {
   document.querySelector('.live').classList.toggle('offline', !ok);
+  document.querySelector('.live').dataset.state = label === 'Đang làm mới' ? 'pending'
+    : !ok || label === 'Dữ liệu đối soát chưa đầy đủ' ? 'attention' : 'success';
   $('liveLabel').textContent = label;
 }
 
@@ -225,10 +231,11 @@ async function loadData(force = false) {
     populateAccounts();
     renderSections();
     $('updatedAt').textContent = `Cập nhật ${dateTime(payload.generatedAt)}`;
-    setConnection(true, 'Dữ liệu trực tiếp');
+    setConnection(true, incompleteNightlyData() ? 'Dữ liệu đối soát chưa đầy đủ' : 'Dữ liệu trực tiếp');
   } catch (error) {
     setConnection(false, 'Mất kết nối');
-    $('reviewSections').innerHTML = '<div class="empty">Không tải được dữ liệu. Hệ thống sẽ thử lại sau 60 giây.</div>';
+    $('reviewSections').innerHTML = '<div class="empty">Không tải được dữ liệu. Hệ thống sẽ thử lại sau 60 giây.'
+      + ($('updatedAt').textContent ? ' Các số liệu và lịch học còn hiển thị là bản tải trước.' : '') + '</div>';
   } finally {
     if(requestId===dataRequestId)state.loading = false;
   }
