@@ -19,6 +19,13 @@ JSON vào `MATERIALS_ASYNC_EVIDENCE_DIR` và trả mã lỗi nếu sai focus ho�
 
 ## Chặng 3 — bản thử trên Pages
 
+Khung preview trên điện thoại giữ chiều cao iframe tối thiểu 480px; nút và link
+trong hai vỏ preview/demo có vùng bấm tối thiểu 44px. Bộ
+`tests/materials-preview-layout-browser.mjs` kiểm 42 tình huống ở bảy viewport,
+đổi khung điện thoại/máy tính, query, nguồn iframe và cuộn tới cuối nội dung giả.
+Nhận `PLAYWRIGHT_MODULE`, lưu JSON/ảnh qua `MATERIALS_PREVIEW_EVIDENCE_DIR` và trả
+mã lỗi khi kiểm bố cục sai. Nội dung iframe giả không chứng nhận API hoặc bài thật.
+
 `demo.html` trình bày sau nộp/chờ/kết quả và mở bản làm để sửa, chấm lại.
 Màn chờ minh họa có nhãn riêng; bản kết quả lấy từ API/SQL thử, không nhúng key
 hoặc phản hồi trong source Pages. `api-config.js` chọn API HTTPS thử riêng khi

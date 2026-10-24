@@ -43,11 +43,12 @@ body[data-m170-product='materials'] #explanation-dialog .explanation-dialog-deta
 
 body[data-m170-product='materials-preview'] { background: var(--m170-canvas); }
 body[data-m170-product='materials-preview'] header { height: auto; min-height: 80px; background: var(--m170-surface); padding: 16px 24px; gap: 16px; }
-body[data-m170-product='materials-preview'] :is(button,a) { font-size: 16px; color: var(--m170-action); border-color: var(--m170-control); }
+body[data-m170-product='materials-preview'] :is(button,a) { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; font-size: 16px; color: var(--m170-action); border-color: var(--m170-control); }
 body[data-m170-product='materials-preview'] button.on { color: white; background: var(--m170-action); }
 body[data-m170-product='materials-preview'] small { font-size: 14px; }
 body[data-m170-product='materials-preview'] main { height: calc(100dvh - 96px); }
 @media(max-width:600px) { body[data-m170-product='materials-preview'] header { padding: 12px 16px; } body[data-m170-product='materials-preview'] main { height: auto; min-height: calc(100dvh - 140px); } }
+@media(max-width:600px) { body[data-m170-product='materials-preview'] main > #preview { height: calc(100dvh - 200px); min-height: 480px; } }
 
 body[data-m170-product='materials-preview'] header p { font-size: 14px; }
 body[data-m170-product='materials-preview'] .frame { height: calc(100dvh - 210px); min-height: 480px; }
