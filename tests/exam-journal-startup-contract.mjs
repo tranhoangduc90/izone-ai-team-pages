@@ -60,11 +60,11 @@ test('all live student entries install early capture before app/bootstrap, with 
  for(const entry of entries){
   const html=fs.readFileSync('term-tests/'+entry+'/index.html','utf8'),config=html.match(/src="([^"]*test-config\.js[^\"]*)"/);
   assert.ok(config,entry);assert.ok(config.index<html.search(/<script src="[^"]*(?:shared\/app|bootstrap)\.js/),entry);
-  assert.match(config[1],/journal=20261024-startup-v1/);
+  assert.match(config[1],/journal=20261024-startup-v2/);
   const definition=fs.readFileSync(path.resolve('term-tests',entry,config[1].split('?')[0]),'utf8');
   assert.match(definition,/BEGIN GENERATED EXAM JOURNAL STARTUP v1/);
  }
  for(const dir of ['shared','k56-shared','k56-test2-shared','k56-mini-shared','substitute-k67-shared','substitute-k56-shared','substitute-test-2-k56-shared']){
-  const source=fs.readFileSync('term-tests/'+dir+'/app.js','utf8');assert.match(source,/EXAM_JOURNAL_STARTUP\?\.startRequest/);assert.match(source,/bridge\.mjs\?[^'\n]+20261024-startup-v1/);
+  const source=fs.readFileSync('term-tests/'+dir+'/app.js','utf8');assert.match(source,/EXAM_JOURNAL_STARTUP\?\.startRequest/);assert.match(source,/bridge\.mjs\?[^'\n]+20261024-startup-v2/);
  }
 });

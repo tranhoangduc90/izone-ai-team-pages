@@ -18,7 +18,7 @@
   const win=window,doc=document,cfg=win.TERM_TEST_APP_CONFIG,slug=win.TERM_TEST_CONFIG?.slug;
   if(cfg?.EXAM_JOURNAL_ENABLED!==true||typeof slug!=='string'||win.EXAM_JOURNAL_STARTUP)return;
   const script=doc.currentScript,standalone=new URL(script.src).pathname.endsWith('/exam-journal/lobby-capture.js');
-  const bridgeUrl=new URL((standalone?'./':'../shared/exam-journal/')+'bridge.mjs?v=20261024-startup-v1',script.src).href;
+  const bridgeUrl=new URL((standalone?'./':'../shared/exam-journal/')+'bridge.mjs?v=20261024-startup-v2',script.src).href;
   const endpoint=cfg.EXAM_JOURNAL_BASE_URL||(slug.startsWith('substitute-')
     ?new URL(cfg.API_BASE_URL,win.location.href).origin+'/substitute-journal-api/'+slug
     :cfg.API_BASE_URL+'/api/term-tests/'+slug);
@@ -37,7 +37,7 @@
       if(stopped)return;
       const row={type,data:{...data,stage:'initialization',checkpointState:{...data.checkpointState,
         observedAt:new Date().toISOString(),captureOrdinal:++ordinal,attribution:'unconfirmed',classCodeAtObservation:capturedClass,
-        captureVersion:'20261024-startup-v1'}},classCode:capturedClass};
+        captureVersion:'20261024-startup-v2'}},classCode:capturedClass};
       const size=JSON.stringify(row).length*2;
       // Includes the in-flight batch. An unavailable journal cannot grow this queue.
       if(queue.length>=128||bytes+size>64*1024){lost++;return;}
@@ -77,15 +77,22 @@
       }catch{nextTry=Date.now()+5000;}finally{loading=false;}
       if(!bridge||stopped)return;
     }
-    busy=true;
     // Class is captured at observation time. Never move old rows onto a later student/class.
     const batch=queue.filter(item=>!item.row.classCode||item.row.classCode===code).slice(0,32),lostAtStart=lost;
+    const rows=batch.map(({row})=>row.classCode?row:{...row,data:{...row.data,
+      checkpointState:{...row.data.checkpointState,scopeClassSource:'later_page_hint'}}});
     try{
-      await bridge.recordInitialization(batch.map(({row})=>row.classCode?row:{...row,data:{...row.data,
-        checkpointState:{...row.data.checkpointState,scopeClassSource:'later_page_hint'}}}),{classCode:code,lostCount:lostAtStart});
-      for(const item of batch){const index=queue.indexOf(item);if(index>=0){queue.splice(index,1);bytes-=item.size;}}
-      lost-=lostAtStart;
+      // With a warm ticket this path is synchronous, including in pagehide. No
+      // await/IndexedDB operation may get between an observation and the exit send.
+      if(bridge.recordInitializationNow(rows,{classCode:code,lostCount:lostAtStart})){
+        for(const item of batch){const index=queue.indexOf(item);if(index>=0){queue.splice(index,1);bytes-=item.size;}}
+        lost-=lostAtStart;
+        if(queue.length)queueMicrotask(()=>void drain());
+        return;
+      }
+      busy=true;await bridge.prepareInitialization({classCode:code});
     }catch{nextTry=Date.now()+5000;}finally{busy=false;}
+    if(Date.now()>=nextTry)void drain();
   }
   function listen(target,type,fn){const safe=event=>{try{fn(event);}catch{}};target.addEventListener(type,safe,true);listeners.push(()=>target.removeEventListener(type,safe,true));}
   const lifecycle=event=>{scan(event.type);enqueue('state_observed',{action:event.type,checkpointState:{readyState:doc.readyState}});};
@@ -101,7 +108,17 @@
     scan('before_lobby_action',event);enqueue('button_clicked',{action:changes.has(el.id)?'change_learner_requested':el.id,label:String(el.textContent||'').trim().slice(0,160),
       disabled:!!el.disabled,trusted:event.isTrusted===true,identityConfirmed:false,checkpointState:{controlId:el.id}});
   });
-  listen(win,'pagehide',event=>{scan('pagehide');enqueue('page_hidden',{persisted:!!event.persisted});void bridge?.recorder.flush({keepalive:true});});
+  function departure(type,event){
+    scan(type);
+    enqueue(type==='pagehide'?'page_hidden':'page_visibility',{
+      ...(type==='pagehide'?{persisted:!!event.persisted}:{visibility:doc.visibilityState}),
+      checkpointState:{readyState:doc.readyState,visibilityState:doc.visibilityState,cause:type}});
+    // A visibility hint is distinct from a proven pagehide (including BFCache).
+    // Both are best effort; no navigation is blocked or delayed to wait for ACK.
+    if(type==='pagehide'||doc.visibilityState==='hidden')void bridge?.recorder.flush({force:true,keepalive:true});
+  }
+  listen(win,'pagehide',event=>departure('pagehide',event));
+  listen(doc,'visibilitychange',event=>departure('visibilitychange',event));
   const mutation=new MutationObserver(()=>scan('dom_updated'));
   mutation.observe(doc.body||doc.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected']});
   // A programmatic .value restore need not emit a DOM mutation or change event.
