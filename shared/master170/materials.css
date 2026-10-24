@@ -29,6 +29,14 @@ body[data-m170-product='materials'] .materials-login-hero h1 { font-size: 28px; 
 body[data-m170-product='materials'] .materials-login-copy { font-size: 18px; line-height: 1.65; }
 body[data-m170-product='materials'] .materials-login-remember { font-size: 14px; color: var(--m170-muted); font-weight: 400; }
 body[data-m170-product='materials'] .materials-login-card #teacher-error:not(:empty) { color: var(--m170-error-fg); }
+body[data-m170-product='materials'].access-page #teacher-app label { font-size: 16px; }
+body[data-m170-product='materials'].access-page :is(.app-header a.quiet, #teacher-students a.secondary) { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; font-size: 16px; text-align: center; }
+body[data-m170-product='materials'] #teacher-students .history-row strong { min-width: 0; font-size: 16px; overflow-wrap: anywhere; }
+body[data-m170-product='materials'] #teacher-students .history-row { flex-wrap: wrap; }
+body[data-m170-product='materials'] #teacher-students a.secondary { flex-shrink: 0; margin-left: auto; }
+body[data-m170-product='materials'] #teacher-students[data-state] { padding: 12px; border-left: 3px solid currentColor; border-radius: 6px; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+body[data-m170-product='materials'] #teacher-students[data-state='pending'] { color: var(--m170-pending-fg); background: var(--m170-pending-bg); }
+body[data-m170-product='materials'] #teacher-students[data-state='error'] { color: var(--m170-error-fg); background: var(--m170-error-bg); }
 body[data-m170-product='materials'] :is(input, textarea, select) { border-color: var(--m170-control); border-radius: 8px; }
 body[data-m170-product='materials'] :is(.primary, .button-primary) { background: var(--m170-action); border-color: var(--m170-action); }
 body[data-m170-product='materials'] :is(.primary, .button-primary):hover { background: var(--m170-action-hover); }
