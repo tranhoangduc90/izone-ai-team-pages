@@ -15,7 +15,7 @@ function code(start, end) {
 test('Cập nhật tổng quan dựng lại thanh tiến trình từ số liệu hiện hành', () => {
   let renders = 0;
   const context = Object.fromEntries(['renderHeading', 'renderCounts', 'renderSummary',
-    'renderClasses', 'renderPairs', 'renderDaily', 'renderStageQuick', 'setViewVisibility'].map(name => [name, () => {}]));
+    'renderWorksheetSources', 'renderClasses', 'renderPairs', 'renderDaily', 'renderStageQuick', 'setViewVisibility'].map(name => [name, () => {}]));
   context.renderJourney = () => { renders += 1; };
   context.baseView = () => 'overview';
   context.$ = () => ({ hidden: true });

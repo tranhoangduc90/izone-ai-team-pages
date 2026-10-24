@@ -1,4 +1,5 @@
-import { createTeacherApi } from './api.js?rev=20260922-table-polish-v1';
+import { createTeacherApi } from './api.js?rev=20261023-worksheet-counts-v1';
+import { worksheetSourcePanel } from './writing-flow-worksheet-ui.js?v=20261023-v1';
 import { createWritingReadCache } from './writing-flow-read-cache.js?v=20261014-latency-v1';
 import { createRequestId } from './core.js';
 import { teacherAuthFailure } from './teacher-auth-ui.js';
@@ -52,7 +53,7 @@ const viewMeta = {
   overview: ['Toàn hệ thống', 'Tổng quan vận hành', 'Các số cần chú ý và tình trạng quét lớp.', 'Tất cả trạng thái'],
   daily: ['Thống kê', 'Hoạt động Writing theo ngày', 'Tách bài chấm mới, kết quả cũ được ghi nhận và bài đã giao.', 'Ba loại hoạt động'],
   classes: ['Theo lớp', 'Không gian lớp', 'Xem trạng thái nguồn và yêu cầu quét riêng từng lớp đang học.', 'Lớp đang học và lớp CS hợp lệ'],
-  completed_classes: ['Lưu trữ', 'Các lớp đã hoàn thành', 'Không nằm trong lượt quét và các view vận hành hằng ngày.', 'Không quét tự động'],
+  completed_classes: ['Lưu trữ', 'Các lớp đã hoàn thành', 'Tiếp tục kiểm tra bài nộp muộn trong 7 ngày sau buổi học cuối thực tế.', 'Nhận bài muộn trong 7 ngày'],
   mapping: ['Nguồn lớp', 'Lớp cần ghép hoặc kiểm tra', 'Các lớp thiếu trạng thái, trùng mapping hoặc chưa đủ điều kiện quét.', 'Đang tạm dừng'],
   review: ['Cần xử lý', 'Bài đã lỗi ba lần', 'Kiểm tra nguyên nhân rồi chạy lại đúng bước đang lỗi.', 'Cần kiểm tra'],
   source: ['Cần xử lý', 'Tài liệu hoặc bài không hợp lệ', 'Sai loại file, sai đề hoặc sai format bảng được giữ riêng tại đây.', 'Dừng trước khi gọi AI'],
@@ -113,7 +114,7 @@ const state = { readCache: null, viewDataKey: null, countsKey: null, viewLoaded:
   loadingMore: false,
   searchQuery: '', rangeIsDefault: true, searchUsesAllDates: false,
   periodMetrics: null, overviewReviews: [], journeyIssues: [], sourcePairCache: new Map(), intakeRows: null, intakeVisible: 50,
-  counts: null, summary: [], coverage: [], reviews: [], issues: [], failures: [], events: [], legacy: [],
+  worksheetSources: [], worksheetSourcesLoaded: false, counts: null, summary: [], coverage: [], reviews: [], issues: [], failures: [], events: [], legacy: [],
   activeClasses: [], completedClasses: [], daily: [], filtersLoaded: false,
   visibleColumns: readColumns(), columnWidths: { ...readColumnWidths(window.localStorage), stage: 170 },
   sortRules: readSortRules(), pinnedClasses: readClassList('writing-flow:pinned-classes:v1'),
@@ -141,7 +142,7 @@ function currentFilters(extra = {}) { return { classCode: $('flow-class').value,
   stageStatus: activeStage() ? $('flow-stage-status').value : '', sourceKind: activeSourceKind(),
   dateFrom: $('flow-date-from').value, dateTo: $('flow-date-to').value,
   // Bài đã xử lý và lớp được mở riêng vẫn giữ lịch sử khi lớp hoàn thành.
-  includeCompleted: ['delivered', 'skipped', 'search'].includes(baseView()) || Boolean($('flow-class').value),
+  includeCompleted: true,
   sort: serializeSortRules(state.sortRules), limit: 50, ...extra }; }
 function pairViewFilters() {
   const view = baseView();
@@ -777,8 +778,37 @@ function setupV2Filters() {
   details.append(content); toolbar.append(line, details);
 }
 
+function worksheetScopeKey(filters = currentFilters()) { return JSON.stringify([filters.classCode, filters.teacherName, filters.sourceKind]); }
+function renderWorksheetSources() {
+  let root = $('flow-worksheet-sources');
+  if (!root) { root = document.createElement('section'); root.id = 'flow-worksheet-sources'; root.className = 'flow-section'; $('flow-pairs-section').before(root); }
+  root.replaceChildren(); root.hidden = true;
+  if (!state.authenticated) return;
+  const filters = currentFilters(), panel = worksheetSourcePanel(state.worksheetSources, { ...filters, view: baseView(), stage: activeStage(), stageStatus: $('flow-stage-status').value });
+  if (!panel) return;
+  root.hidden = false;
+  if (!state.worksheetSourcesLoaded || state.worksheetSourcesKey !== worksheetScopeKey(filters)) { root.append(makeText('p', 'Đang tải phiếu và nguồn chờ theo bộ lọc…', 'muted')); return; }
+  root.append(makeText('h2', panel.pending ? 'Nguồn đang chờ tiếp nhận' : 'Phiếu Writing 1/2 đã giao'));
+  root.append(makeText('p', panel.pending
+    ? `${panel.documents} tài liệu đã được phát hiện, chưa có biên nhận tiếp nhận hoàn tất. Danh sách này gồm cả bài tồn trước khoảng ngày đang chọn.`
+    : `${panel.documents} phiếu · ${panel.units} ô có bài đã được ghi và đọc lại kết quả. Các ô bỏ trống không tính là bài thiếu chấm.`, 'muted'));
+  for (const source of panel.rows.slice(0, 50)) {
+    const row = document.createElement('article'); row.className = 'flow-row';
+    const body = document.createElement('div');
+    body.append(makeText('strong', source.display_name || 'Tài liệu Writing'), makeText('p', source.class_code || 'Ngoài lớp', 'flow-meta'));
+    body.append(makeText('p', source.worksheet
+      ? `${source.worksheet.kind === 'writing1' ? 'Writing 1' : 'Writing 2'} · ${source.worksheet.answeredCount} ô đã giao · ${formatTime(source.worksheet.deliveredAt)}`
+      : `${source.dispatch_status === 'sent' ? 'Đã gửi cho bộ đọc, chưa có biên nhận hoàn tất' : 'Chờ gửi cho bộ đọc'} · tiếp nhận ${formatTime(source.source_created_at)}`, 'flow-meta'));
+    row.append(body, externalLink('https://docs.google.com/document/d/' + encodeURIComponent(source.homework_file_id) + '/edit', 'Mở Docs', '—'));
+    root.append(row);
+  }
+  if (panel.documents > 50) root.append(makeText('p', `Hiển thị 50/${panel.documents} tài liệu. Chọn lớp hoặc tìm tên tài liệu để thu hẹp.`, 'muted'));
+  root.append(makeText('p', 'Thanh 7 giai đoạn tính toàn bộ hàng đợi: bài thường theo đề, phiếu Writing 1/2 theo ô, nguồn chưa tách theo tài liệu. Thẻ tổng quan tính theo ngày đang chọn.', 'flow-result-note'));
+}
+
+
 function renderAll() {
-  setViewVisibility(); renderCounts();
+  setViewVisibility(); renderCounts(); renderWorksheetSources();
   const view = baseView();
   if (view === 'overview') { renderSummary(); renderJourney(); renderDaily(); }
   else if (view === 'daily') renderDaily();
@@ -854,12 +884,13 @@ async function loadCommon() {
       commit(response.data);
       delete state.commonErrors[label];
       showError('flow-common-error', Object.values(state.commonErrors).join(' · '));
-      renderCounts();
+      renderCounts(); renderWorksheetSources();
       if (baseView() === 'overview') renderJourney();
       if (baseView() === 'classes') renderClasses();
     } catch (error) { loadFailure(error, context, label); }
   };
   const jobs = [
+    part('Phiếu và nguồn chờ', () => state.api.writingWorksheetSources(filters), data => { state.worksheetSources = data.records || []; state.worksheetSourcesLoaded = true; state.worksheetSourcesKey = worksheetScopeKey(filters); }),
     part('Số tổng', () => state.api.writingCounts(filters.classCode, filters.teacherName, filters.sourceKind),
       data => { state.counts = data.counts || null; }),
     part('Lớp đang học', () => state.api.writingClasses('active'),
@@ -1049,6 +1080,7 @@ function clearLogin() {
   state.readCache?.clear(); state.sourcePairCache.clear(); actionSelections.clear();
   clearTimeout(state.timer);
   state.pairs = []; state.issues = []; state.daily = []; state.counts = null;
+  state.worksheetSources = []; state.worksheetSourcesLoaded = false; state.worksheetSourcesKey = null;
   state.activeClasses = []; state.completedClasses = []; state.periodMetrics = null;
   state.overviewReviews = []; state.journeyIssues = []; state.intakeRows = null;
   state.activeClassesLoaded = false; state.completedClassesLoaded = false;

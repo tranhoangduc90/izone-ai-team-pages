@@ -5,6 +5,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 import * as ui from '../js/writing-flow-ui.js';
 import * as overview from '../js/writing-flow-overview.js';
+import { worksheetSourcePanel } from '../js/writing-flow-worksheet-ui.js';
 import { teacherAuthFailure } from '../js/teacher-auth-ui.js';
 import { createWritingReadCache } from '../js/writing-flow-read-cache.js';
 
@@ -41,6 +42,7 @@ async function harness(overrides={}) {
   const node=id => { if(!elements.has(id))elements.set(id,new Element()); return elements.get(id); };
   const storage={ getItem(){return null;},setItem(){} };
   const apiDefaults={
+    writingWorksheetSources:async()=>({data:{records:[]}}),
     writingCounts:async()=>({data:{counts:{stages:[{stage_key:'main',pair_count:1}]}}}),
     writingClasses:async()=>({data:{classes:[]}}),
     writingFilterOptions:async()=>({data:{filters:{classes:[],teachers:[]}}}),
@@ -62,7 +64,7 @@ async function harness(overrides={}) {
   documentElement.dataset.izoneTheme='master170';
   body.dataset.kind='homework';
   const context=vm.createContext({
-    ...ui,...overview,teacherAuthFailure,createWritingReadCache,
+    ...ui,...overview,worksheetSourcePanel,teacherAuthFailure,createWritingReadCache,
     createTeacherApi:()=>api,createTeacherSessionClient:()=>session,
     createTeacherLoginPreference:()=>({read:()=>false,set:()=>true}),
     createRequestId:()=> '11111111-1111-4111-8111-111111111111',
