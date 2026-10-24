@@ -27,3 +27,7 @@ body[data-m170-product='writing-flow'][data-kind='test'] .m170-homework-logo { d
 body[data-m170-product='writing-flow'][data-kind='homework'] .m170-homework-header { display: flex; gap: 24px; align-items: center; padding: 16px 24px; background: var(--m170-surface); color: var(--m170-structure); border-bottom: 1px solid var(--m170-line); }
 @media (max-width: 600px) { body[data-m170-product='writing-flow'][data-kind='homework'] h1 { font-size: 26px; } }
 body[data-m170-product='writing-flow'][data-kind='homework'] .m170-flow-manual-feedback { grid-column: 1 / -1; margin: 0; padding: 12px 16px; color: var(--m170-error-fg); background: var(--m170-error-bg); border-radius: 8px; font: 400 16px/1.5 var(--m170-font); overflow-wrap: anywhere; }
+body[data-m170-product='writing-flow'][data-kind='homework'] .m170-flow-class-feedback { grid-column: 1 / -1; margin: 0; padding: 12px 16px; border-radius: 8px; font: 400 16px/1.5 var(--m170-font); overflow-wrap: anywhere; }
+body[data-m170-product='writing-flow'][data-kind='homework'] .m170-flow-class-feedback[data-state='success'] { color: var(--m170-success-fg); background: var(--m170-success-bg); }
+body[data-m170-product='writing-flow'][data-kind='homework'] .m170-flow-class-feedback[data-state='error'] { color: var(--m170-error-fg); background: var(--m170-error-bg); }
+body[data-m170-product='writing-flow'][data-kind='homework'] .flow-class-card-actions { flex-wrap: wrap; overflow-x: visible; }

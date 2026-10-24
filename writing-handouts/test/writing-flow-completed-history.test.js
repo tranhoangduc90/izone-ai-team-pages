@@ -42,7 +42,11 @@ for (const file of ['writing-flow.js', 'writing-flow-v2.js']) {
     let selected;
     const context = {
       state: { pinnedClasses: [] },
-      document: { createElement: () => ({ dataset: {}, append() {} }) },
+      document: {
+        documentElement: { dataset: { izoneTheme: 'master170' } },
+        body: { dataset: { m170Product: 'writing-flow', kind: 'test' } },
+        createElement: () => ({ dataset: {}, append() {} }),
+      },
       makeText: () => ({}), formatTime: () => '—', statusNames: {},
       actionButton: (label, click) => { const action = { label, click }; actions.push(action); return action; },
       chooseClass: code => { selected = code; },

@@ -46,10 +46,9 @@ test("tình huống hoàn tất có thẻ LMS còn lỗi kỹ thuật có thể 
   assert.equal(failed.sections.draft.comments[0].canRetry, true);
 });
 
-test("trang demo là trang tĩnh và không kết nối dịch vụ production", () => {
-  const html = fs.readFileSync(path.join(root, "task2-demo.html"), "utf8");
+test("lối vào demo đã bỏ không được phục hồi và renderer tham khảo không gọi production", () => {
+  // Keep the retired route absent; its synthetic scenarios still have tests above.
+  assert.equal(fs.existsSync(path.join(root, "task2-demo.html")), false);
   const js = fs.readFileSync(path.join(root, "js", "task2-demo.js"), "utf8");
-  assert.match(html, /connect-src 'self'/);
-  assert.match(html, /Dữ liệu giả · không gọi AI/);
-  assert.doesNotMatch(`${html}\n${js}`, /api\/v1|googleapis|n8n-webhook|studentRef/i);
+  assert.doesNotMatch(js, /api\/v1|googleapis|n8n-webhook|studentRef/i);
 });
