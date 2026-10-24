@@ -104,7 +104,7 @@ async function api(path, { method='GET', body, reason } = {}) {
   if (!response.ok) {
     const code = payload?.error?.code;
     if (response.status === 401) {
-      showLogin();
+      showLogin(friendlyError(code, `API trả về mã ${response.status}.`));
       initializeGoogle();
     }
     throw new Error(friendlyError(code, `API trả về mã ${response.status}.`));
@@ -112,7 +112,7 @@ async function api(path, { method='GET', body, reason } = {}) {
   return payload;
 }
 
-function showLogin(message='') {
+function showLogin(message='', kind='error') {
   state.authenticated = false;
   state.operator = null;
   $('dashboardView').hidden = true;
@@ -120,6 +120,8 @@ function showLogin(message='') {
   $('logoutButton').hidden = true;
   $('loginView').hidden = false;
   $('loginNotice').textContent = message;
+  $('loginNotice').dataset.state = message ? kind : 'neutral';
+  $('loginNotice').role = message && kind === 'error' ? 'alert' : 'status';
 }
 
 function showDashboard() {
@@ -537,7 +539,7 @@ $('logoutButton').addEventListener('click', () => {
   button.disabled = true;
   void sessionClient.logout().then(() => {
     window.google?.accounts?.id?.disableAutoSelect();
-    showLogin('Bạn đã đăng xuất khỏi dashboard.');
+    showLogin('Bạn đã đăng xuất khỏi dashboard.', 'neutral');
     initializeGoogle();
   }).catch(error => toast(`Không thể đăng xuất: ${friendlyError(error.code, error.message)}`))
     .finally(() => { button.disabled = false; });
@@ -577,7 +579,7 @@ $('detailDialog').addEventListener('close', () => {
 window.addEventListener('resize', () => { if (state.authenticated) void loadUsage().catch(() => undefined); });
 
 async function restoreSession() {
-  showLogin('Đang kiểm tra phiên đăng nhập…');
+  showLogin('Đang kiểm tra phiên đăng nhập…', 'pending');
   try {
     const session = await sessionClient.restore();
     if (session) {
