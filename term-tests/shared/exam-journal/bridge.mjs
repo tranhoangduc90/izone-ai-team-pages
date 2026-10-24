@@ -1,6 +1,6 @@
 import { IndexedOutbox } from './outbox.mjs';
-import { createRecorder,fetchTransport,observeDocument,observeAudio } from './recorder.mjs';
-import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-startup-v1';
+import { createRecorder,fetchTransport,observeDocument,observeAudio } from './recorder.mjs?v=20261024-startup-v2';
+import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-startup-v2';
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const registryKey=Symbol.for('izone.examJournal.connections.v1');
@@ -46,7 +46,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     try { onHealth(data); } catch {}
   };
   const recorder = createRecorder({ outbox,context:() => current,
-    transport:fetchTransport(target.href + '/journal-events',fetcher),build:String(build).slice(0,80)+'+startup-20261024-v1',onHealth:health });
+    transport:fetchTransport(target.href + '/journal-events',fetcher),build:String(build).slice(0,80)+'+startup-20261024-v2',onHealth:health });
   const proofOf = state => ({ testSlug,classCode:String(state.classCode || state.className || ''),
     attemptToken:String(state.attemptToken || ''),examSessionToken:String(state.examSessionToken || ''),
     clientRunId:String(state.clientRunId || ''),examSessionId:String(state.examSessionId || ''),historyEpoch:String(state.historyEpoch || state._substitute?.historyEpoch || ''),
@@ -154,7 +154,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     if (!records.some(record => [...record.addedNodes,...record.removedNodes].some(node => node.nodeType === 1))) return;
     attachPlayers(); observer.snapshot('render');
   });
-  mutation.observe(doc.body,{childList:true,subtree:true}); attachPlayers();
+  mutation.observe(doc.body||doc.documentElement,{childList:true,subtree:true}); attachPlayers();
   const runtimeError = event => recorder.record('runtime_error',{errorCode:event.type === 'error' ? 'WINDOW_ERROR' : 'UNHANDLED_REJECTION',
     stack:event.type === 'error' ? {file:safeRoute(event.filename || ''),line:event.lineno || 0,column:event.colno || 0} : {},stage:String(getState().stage || '')});
   win.addEventListener('error',runtimeError);win.addEventListener('unhandledrejection',runtimeError);
@@ -162,15 +162,26 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   void refresh();
   const api={ stateChanged,recorder,
     adopt(reader){if(typeof reader==='function'){getState=reader;stateChanged('state_reader_changed');}return api;},
+    prepareInitialization({classCode='' }={}) {
+      // Warm only the page scope. Never borrow an adopted native learner proof.
+      return loadBinding(proofOf({classCode,generation:0}));
+    },
+    recordInitializationNow(rows,{classCode='',lostCount=0}={}) {
+      if(stopped)return false;
+      const context=bindingCache.get(JSON.stringify(proofOf({classCode,generation:0})));
+      if(!context||Number(context.expiresAt)<=Date.now()+5000)return false;
+      if(context.identityConfirmed!==false)throw Error('JOURNAL_INITIALIZATION_SCOPE_INVALID');
+      const binding=capturedBinding(context);
+      if(lostCount)recorder.record('sequence_gap',{cause:'initialization_buffer_budget',lostCount,
+        checkpointState:{attribution:'unconfirmed',gapScope:'page_initialization'}},binding);
+      for(const row of rows)recorder.record(row.type,row.data,binding);
+      return true;
+    },
     async recordInitialization(rows,{classCode='',lostCount=0}={}) {
       if(stopped)throw Error('JOURNAL_STOPPED');
       // UI choices describe intent. Only native API proof can establish learner authority.
-      const context=await loadBinding(proofOf({classCode,generation:0}));
-      if(stopped||context.identityConfirmed!==false)throw Error('JOURNAL_INITIALIZATION_SCOPE_INVALID');
-      const binding=capturedBinding(context);
-      if(lostCount)await recorder.record('sequence_gap',{cause:'initialization_buffer_budget',lostCount,
-        checkpointState:{attribution:'unconfirmed',gapScope:'page_initialization'}},binding);
-      for(const row of rows)await recorder.record(row.type,row.data,binding);
+      await api.prepareInitialization({classCode});
+      if(!api.recordInitializationNow(rows,{classCode,lostCount}))throw Error('JOURNAL_INITIALIZATION_SCOPE_UNAVAILABLE');
       // The existing periodic/exit flush owns transport cadence and retry backoff.
     },
     startAudioTransfer(metadata,{forceUnconfirmed=false,classCodeHint}={}) {

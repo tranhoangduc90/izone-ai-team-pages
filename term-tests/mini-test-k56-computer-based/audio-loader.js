@@ -45,7 +45,7 @@ function startJournalAudioCapture(metadata,bootstrapUrl){
 // END optional exam journal audio entry
 (function () {
   'use strict';
-  const journalUrl = new URL('../shared/exam-journal/bootstrap-capture.mjs?v=20261024-startup-v1', document.currentScript.src).href;
+  const journalUrl = new URL('../shared/exam-journal/bootstrap-capture.mjs?v=20261024-startup-v2', document.currentScript.src).href;
 
   // Dữ liệu vào: đường dẫn audio, hàm nhận tiến độ và tín hiệu hủy khi học viên thử lại.
   // Việc chính: đọc toàn bộ các khối dữ liệu từ mạng rồi mới ghép thành một Blob trong máy.

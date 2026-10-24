@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "tools/exam-journal",
-  "release": "20261024-startup-candidate",
+  "release": "20261024-startup-exit-v2",
   "files": [
     {
       "file": "outbox.mjs",
@@ -12,8 +12,8 @@
     {
       "file": "recorder.mjs",
       "source": "browser/recorder.mjs",
-      "sha256": "da45762a20e114a74efa069262f6e2ffc55b9568aa07fc33d98a0262aaba237f",
-      "bytes": 22770
+      "sha256": "e86dc995a63500c0000d44976469a05e1afb0db17d518d67d68246348b351565",
+      "bytes": 24283
     },
     {
       "file": "audio-delivery.mjs",
@@ -24,23 +24,23 @@
     {
       "file": "bridge.mjs",
       "source": "browser/bridge.mjs",
-      "sha256": "e48bb3f25d66168051d348d5daa604005007b21dd195e21ae8f6721aed0e1a77",
-      "bytes": 18154
+      "sha256": "751b4b6e082d3b86d471ea1b8a5a0077b27ceb1ba4782d01f5a6c81d9333bb73",
+      "bytes": 18762
     },
     {
       "file": "bootstrap-capture.mjs",
       "source": "browser/bootstrap-capture.mjs",
-      "sha256": "a9be39c06998c4f639e51f2ef49ff274c02c4d32ff915fb781bfab0e1add8ab6",
+      "sha256": "525208d11e45ee7810f17cc8e031922e11aca2590829580c20e3d624742afbfd",
       "bytes": 1012
     },
     {
       "file": "lobby-capture.js",
       "source": "pages/term-tests/shared/exam-journal/lobby-capture.js",
-      "sha256": "2209df36ce1ce47c01123fbeb49a6c6f72d4631b70aed42bd2224ae2a3735a50",
-      "bytes": 8194
+      "sha256": "bf7d5e0992dd17ec85a939fdc5e3dbc14d946034b6f6eb3b19ab20e04d927a09",
+      "bytes": 9136
     }
   ],
-  "baseRelease": "20261023-candidate",
+  "baseRelease": "20261024-startup-candidate",
   "candidateSource": "Pages term-tests/shared/exam-journal; based on tools/exam-journal browser release; no backend change",
   "hashEncoding": "Git blob bytes, UTF-8; existing line endings preserved"
 }

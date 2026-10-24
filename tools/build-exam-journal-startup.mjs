@@ -8,7 +8,9 @@ export const targets=['term-test-1','term-test-2','mini-test-lesson-5','term-tes
  'substitute-test-1-k67','substitute-test-2-k67','substitute-test-1-k56','substitute-test-2-k56'];
 for(const target of targets){
  const file=new URL(target+'/test-config.js',base),current=fs.readFileSync(file,'utf8');
- const expected=current.split(marker)[0].trimEnd()+marker+source+'\n// END GENERATED EXAM JOURNAL STARTUP v1\n';
+ const newline=current.includes('\r\n')?'\r\n':'\n';
+ const prefix=current.split(/\r?\n\/\/ BEGIN GENERATED EXAM JOURNAL STARTUP v1\r?\n/)[0].trimEnd();
+ const expected=prefix+(marker+source+'\n// END GENERATED EXAM JOURNAL STARTUP v1\n').replace(/\n/g,newline);
  if(process.argv.includes('--write'))fs.writeFileSync(file,expected);
  else assert.equal(current.replace(/\r\n/g,'\n'),expected.replace(/\r\n/g,'\n'),'Startup observer bundle drift: '+target);
 }

@@ -31,7 +31,8 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
   maxPending = 128, maxMemoryBytes = 1024 * 1024 }) {
   const pageVisitId = uuid(), started = monotonic(), fields = new Map(), sequences = new Map(), fallback = [],losses=new Map(),writes=[];
     let sequence = 0, serial = Promise.resolve(), queued = 0, activeWrites=[],draining = false, flushing = false,liveFlushing=false,exitFlushing=false,memoryBytes = 0,
-    lost = 0, nextTry = 0, failures = 0, stopped = false, lastBinding = '',storageReported=false;
+    lost = 0, nextTry = 0, failures = 0, stopped = false, lastBinding = '',storageReported=false,exitBytes=0,exitRequests=0;
+  const exitPending=new Set();
   const health = data => { try { onHealth(data); } catch { /* Observability must not interrupt exams. */ } };
   const scope = () => {
     try {
@@ -116,14 +117,19 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
   // Local I/O must not hold network delivery hostage. Keep the durable copy until
   // its usual ACK/replay; server event IDs make a later duplicate harmless.
   function flushPending(keepalive){
-    if(keepalive?exitFlushing:liveFlushing)return null;
+    if(!keepalive&&liveFlushing)return null;
     const rows=[...activeWrites,...writes,...fallback],active=scope();
+    if(keepalive&&(exitFlushing||exitRequests)&&!rows.some(row=>
+      ['page_hidden','page_visibility'].includes(row.event.type)&&!row.serverConfirmed&&!row.blocked&&row.auth&&!exitPending.has(row.event.id)))return null;
+    if(keepalive)rows.sort((a,b)=>Number(['page_hidden','page_visibility'].includes(b.event.type))-Number(['page_hidden','page_visibility'].includes(a.event.type)));
     for(const row of rows)if(active&&row.binding===active.bindingId&&row.auth?.ticketId!==active.auth?.ticketId){row.auth=active.auth;row.blocked=false;}
     const groups=new Map();let bytes=0,count=0;
-    const maxBytes=keepalive?46*1024:256*1024,maxGroups=keepalive?4:1;
+    // Leave room under the browser's shared 64 KiB keepalive budget for a later
+    // pagehide after visibilitychange. Only new IDs enter concurrent tail sends.
+    const maxBytes=keepalive?Math.min(46*1024,60*1024-exitBytes):256*1024,maxGroups=keepalive?4-exitRequests:1;
     for(const row of rows){
       if(count>=100)break;
-      if(row.serverConfirmed||row.blocked||!row.auth)continue;
+      if(row.serverConfirmed||row.blocked||!row.auth||(keepalive&&exitPending.has(row.event.id)))continue;
       const key=JSON.stringify([row.binding,row.auth]);let group=groups.get(key);
       if(!group){
         if(groups.size>=maxGroups)continue;
@@ -136,7 +142,10 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
       bytes+=added;count++;group.selected.push(row);group.body.events.push(row.event);
     }
     if(!count)return null;
-    if(keepalive)exitFlushing=true;else liveFlushing=true;
+    if(keepalive){
+      exitBytes+=bytes;exitRequests+=groups.size;
+      for(const {selected} of groups.values())for(const row of selected)exitPending.add(row.event.id);
+    }else liveFlushing=true;
     return (async()=>{
       try{
         // Start bounded exit requests together, before awaiting any local operation.
@@ -161,16 +170,20 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
         if(failed){failures++;nextTry=clock()+Math.min(60_000,1000*2**Math.min(6,failures-1));}
         else{failures=0;nextTry=0;health({status:'degraded',saveState:'server_confirmed_local_pending',memoryBytes,lostCount:lost});}
         return {status:failed?.status||'server_confirmed',acknowledgedCount:results.reduce((sum,row)=>sum+row.acknowledgedCount,0)};
-      }finally{if(keepalive)exitFlushing=false;else liveFlushing=false;}
+      }finally{
+        if(keepalive){exitBytes-=bytes;exitRequests-=groups.size;
+          for(const {selected} of groups.values())for(const row of selected)exitPending.delete(row.event.id);
+        }else liveFlushing=false;
+      }
     })();
   }
   async function flush({ force = false, keepalive = false } = {}) {
     if (stopped || (!force && clock() < nextTry)) return { status: 'deferred' };
-    if(keepalive&&exitFlushing)return {status:'deferred'};
+    if(keepalive&&(exitFlushing||exitRequests))return flushPending(true)||{status:'deferred'};
     if(keepalive||draining||flushing){const live=flushPending(keepalive);if(live)return live;}
     if(flushing)return {status:'deferred'};
     if(keepalive)exitFlushing=true;
-    let current = scope();
+    let current = scope(),exitReservation=0,exitReservedIds=[];
     flushing = true;
     try {
       await serial;
@@ -195,11 +208,17 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
       if (!current) return { status:'no_identity' };
       if(keepalive){
         let bytes=size({schemaVersion:1,bindingId:current.bindingId,auth:current.auth,events:[]}),count=0;
-        for(const event of batch){const added=size(event)+(count?1:0);if(count>=100||bytes+added>46*1024)break;bytes+=added;count++;}
+        for(const event of batch){const added=size(event)+(count?1:0);if(count>=100||bytes+added>Math.min(46*1024,60*1024-exitBytes))break;bytes+=added;count++;}
         batch=batch.slice(0,count);
       }
       if (batch.length) {
-        const reply = await transport({ schemaVersion: 1,bindingId:current.bindingId, auth: current.auth, events: batch }, { keepalive });
+        const body={schemaVersion:1,bindingId:current.bindingId,auth:current.auth,events:batch};
+        if(keepalive){
+          if(exitRequests>=4)return {status:'deferred'};
+          exitReservation=size(body);exitBytes+=exitReservation;exitRequests++;
+          exitReservedIds=batch.map(event=>event.id);for(const id of exitReservedIds)exitPending.add(id);
+        }
+        const reply = await transport(body, { keepalive });
         const ack=assertAcknowledged(current,batch,reply);
         if (fromMemory) {
           removeMemory(current.bindingId,ack);
@@ -221,7 +240,9 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
       failures++; nextTry = clock() + Math.min(60_000, 1000 * 2 ** Math.min(6, failures - 1));
       health({ status: 'degraded', errorCode: /^[A-Z0-9_]{1,80}$/.test(error.message || '')?error.message:'JOURNAL_UNAVAILABLE', memoryBytes, lostCount: lost });
       return { status: 'degraded' };
-    } finally { flushing = false;if(keepalive)exitFlushing=false; }
+    } finally { flushing = false;if(keepalive){exitFlushing=false;
+      if(exitReservation){exitBytes-=exitReservation;exitRequests--;for(const id of exitReservedIds)exitPending.delete(id);}
+    } }
   }
   function identity(details = {}) {
     const current = scope(); if (!current || current.bindingId === lastBinding) return;
