@@ -109,3 +109,6 @@ body[data-handout-theme="reading"] #save-state{color:#586477}
  body[data-handout-theme="reading"] .handout-brand-mark{font-size:21px}
  body[data-handout-theme="reading"] .topbar{gap:8px}
 }
+
+/* Master170 keeps readable light type on Handout67 status headings. */
+html[data-izone-theme="master170"] body[data-m170-product="handout"][data-view="student"][data-handout-theme="reading"]:not([data-kind="test"]) .step-heading h3{color:#fff}
