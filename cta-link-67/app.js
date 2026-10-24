@@ -21,13 +21,14 @@ function setBusy(value) {
   $('submit').disabled = value;
   $('check').disabled = value || !docs.length;
 }
-function notice(message) { $('notice').textContent = message; }
+function notice(message, state = 'neutral') { $('notice').textContent = message; $('notice').dataset.state = state; }
 function render() {
   const box = $('results');
   box.replaceChildren();
   for (const row of rows) {
     const item = document.createElement('div');
     item.className = 'result';
+    item.dataset.state = row.status;
     const name = document.createElement('strong');
     name.textContent = row.docId || 'Dòng ' + row.line;
     const state = document.createElement('span');
@@ -69,25 +70,25 @@ $('submit').addEventListener('click', async () => {
     docs = parsed.docs;
     rows = parsed.errors;
     render();
-    if (!docs.length) { notice('Không có link Docs hợp lệ để gửi.'); return; }
+    if (!docs.length) { notice('Không có link Docs hợp lệ để gửi.', 'error'); return; }
     setBusy(true);
-    notice('Đang tìm bài nộp và gửi từng file vào hàng chờ…');
+    notice('Đang tìm bài nộp và gửi từng file vào hàng chờ…', 'pending');
     try { rows = [...parsed.errors, ...await request('submit', docs)]; notice('Đã nhận kết quả gửi. Bấm “Kiểm tra kết quả” để đọc lại trạng thái.'); }
-    catch (error) { rows = [...parsed.errors, ...unknownRows(docs)]; notice(error.name === 'AbortError' ? 'Hết thời gian chờ; kiểm tra kết quả trước khi gửi lại.' : error.message + ' Kiểm tra kết quả trước khi gửi lại.'); }
+    catch (error) { rows = [...parsed.errors, ...unknownRows(docs)]; notice(error.name === 'AbortError' ? 'Hết thời gian chờ; kiểm tra kết quả trước khi gửi lại.' : error.message + ' Kiểm tra kết quả trước khi gửi lại.', 'attention'); }
     render();
-  } catch (error) { notice(error.message); }
+  } catch (error) { notice(error.message, 'error'); }
   finally { setBusy(false); }
 });
 $('check').addEventListener('click', async () => {
   if (busy || !docs.length) return;
   setBusy(true);
-  notice('Đang đọc lại các đăng ký CTA trong Lark…');
+  notice('Đang đọc lại các đăng ký CTA trong Lark…', 'pending');
   try {
     const latest = await request('status', docs);
     const byId = new Map(latest.map((row) => [row.docId, row]));
     rows = rows.map((row) => byId.get(row.docId) || row);
     notice('Đã cập nhật trạng thái.');
     render();
-  } catch (error) { notice(error.name === 'AbortError' ? 'Hết thời gian chờ; thử kiểm tra lại.' : error.message); }
+  } catch (error) { notice(error.name === 'AbortError' ? 'Hết thời gian chờ; thử kiểm tra lại.' : error.message, 'attention'); }
   finally { setBusy(false); }
 });

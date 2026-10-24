@@ -64,7 +64,7 @@ test('định dạng VND thành số nguyên theo quy tắc làm tròn gần nh�
 test('source, nhãn biểu đồ và cache không còn contract USD', () => {
   assert.doesNotMatch(source + html, /US\$|\bUSD\b/);
   assert.match(html, /VND ước tính · xếp chồng theo tài khoản/);
-  assert.match(html, /app\.js\?v=20260922-dashboard-vnd-v1/);
+  assert.match(html, /app\.js\?v=20261024-master170-feedback1/);
 });
 
 test('thẻ tài khoản và phần tổng hợp dùng cùng định dạng VND nguyên', () => {
@@ -110,6 +110,7 @@ test('trục biểu đồ chi phí hiển thị số nguyên với hậu tố đ
   elements.set('costChart', {
     width: 900,
     height: 300,
+    getBoundingClientRect: () => ({ width: 900, height: 300 }),
     getContext: () => canvasContext,
   });
 

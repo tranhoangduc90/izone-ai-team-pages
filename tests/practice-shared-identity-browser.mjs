@@ -22,7 +22,7 @@ const server = createServer(async (req, res) => {
   const file = path.resolve(root, '.' + (url.pathname.endsWith('/') ? url.pathname + 'index.html' : url.pathname));
   try {
     if (!file.startsWith(path.resolve(root) + path.sep) || /\.(mp3|wav|m4a|enc|ogg)$/i.test(file)) throw Error('Blocked');
-    res.setHeader('Content-Type', ({ '.js': 'text/javascript', '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.svg': 'image/svg+xml' })[path.extname(file)] || 'application/octet-stream');
+    res.setHeader('Content-Type', ({ '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' })[path.extname(file)] || 'application/octet-stream');
     res.end(await readFile(file));
   } catch { res.writeHead(404); res.end(); }
 });

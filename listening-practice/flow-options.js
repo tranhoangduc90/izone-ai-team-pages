@@ -89,10 +89,17 @@
       clear.addEventListener('click', () => choose('')); dialog.append(clear);
     }
     dialog.addEventListener('cancel', event => {event.preventDefault(); close();});
-    dialog.addEventListener('click', event => {
+    let pressedOutside = false;
+    const outside = event => {
       const rect = dialog.getBoundingClientRect();
-      if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) close();
+      return event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+    };
+    dialog.addEventListener('pointerdown', event => { pressedOutside = event.target === dialog && outside(event); });
+    dialog.addEventListener('pointerup', event => {
+      if (pressedOutside && event.target === dialog && outside(event)) close();
+      pressedOutside = false;
     });
+    dialog.addEventListener('pointercancel', () => { pressedOutside = false; });
     dialog.addEventListener('keydown', event => {
       const index = buttons.indexOf(document.activeElement);
       let next;

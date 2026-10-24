@@ -1,0 +1,59 @@
+/* Chỉ shell các minh họa. Mẫu so font/màu giữ nguyên từng specimen lịch sử. */
+body[data-m170-product^='demo-'] {
+  --navy:var(--m170-action);--red:var(--m170-brand);--blue:var(--m170-action);
+  --blue-2:var(--m170-structure);--text:var(--m170-ink);--ink:var(--m170-ink);
+  --muted:var(--m170-muted);--bg:var(--m170-canvas);--page:var(--m170-canvas);
+  --paper:var(--m170-surface);--border:var(--m170-line);--line:var(--m170-line);
+  --green:var(--m170-success-fg);--green-bg:var(--m170-success-bg);
+  --amber:var(--m170-attention-fg);--amber-bg:var(--m170-attention-bg);
+  --red-bg:var(--m170-error-bg);--focus:var(--m170-brand);--shadow:none;
+}
+body[data-m170-product^='demo-'] h1 {font-size:28px;letter-spacing:normal}
+body[data-m170-product^='demo-'] h2 {font-size:22px;letter-spacing:normal}
+body[data-m170-product^='demo-'] h3 {font-size:18px}
+body[data-m170-product^='demo-'] :is(.hero,.student-screen,.screen,.card) {border-radius:12px;box-shadow:none}
+body[data-m170-product^='demo-'] .hero {background:var(--m170-surface);color:var(--m170-ink);border:1px solid var(--m170-line)}
+body[data-m170-product^='demo-'] .hero::after {display:none}
+body[data-m170-product='demo-journey'] :is(.hero-kicker,.hero p) {color:var(--m170-muted)}
+body[data-m170-product='demo-journey'] .hero-meta span {background:var(--m170-selected);border-color:var(--m170-line);color:var(--m170-action);font-size:14px}
+body[data-m170-product='demo-journey'] .status.revision {color:var(--m170-error-fg);background:var(--m170-error-bg)}
+body[data-m170-product='demo-journey'] .sentence.original h4 {color:var(--m170-error-fg);background:var(--m170-error-bg)}
+/* Keep neighbouring content readable; the active frame still guides presentation. */
+body[data-m170-product='demo-journey'].presenter-on .focus-target:not(.is-active) {opacity:1;filter:none}
+body[data-m170-product='demo-journey'] .status.info {color:var(--m170-pending-fg);background:var(--m170-pending-bg)}
+body[data-m170-product='demo-journey'] :is(.hero-kicker,.kicker,.status,.field label,.sentence h4,.presenter-topline,.presenter-note) {font-size:14px;letter-spacing:normal}
+body[data-m170-product='demo-journey'] :is(.field .value,.feedback,.draft-box) {font-size:18px;line-height:1.65}
+body[data-m170-product='demo-writing7'] .navigation button span {font-size:14px;opacity:1}
+body[data-m170-product='demo-writing7'] .navigation button:hover {filter:none}
+body[data-m170-product^='demo-'] :is(.essay,.field-value,.feedback p,.screen-content p) {font-size:18px;line-height:1.65}
+body[data-m170-product^='demo-'] :is(button,select,textarea) {border-radius:8px}
+body[data-m170-product^='demo-'] :is(select,textarea) {border-color:var(--m170-control)}
+body[data-m170-product^='demo-'] :is(.eyebrow,.demo-label,.demo-note,.step-count,.privacy-badge) {font-size:14px;letter-spacing:normal}
+body[data-m170-product='font-comparison'] .wordmark {gap:24px;letter-spacing:normal}
+body[data-m170-product='font-comparison'] .intro h1 {font-size:28px;line-height:1.3;color:#174265;font-weight:700;letter-spacing:normal}
+body[data-m170-product='font-comparison'] {font-family:'Source Sans 3',system-ui,sans-serif;background:#f5f6f8;color:#1f2937;--m170-font:'Source Sans 3',system-ui,sans-serif}
+body[data-m170-product='font-comparison'] .m170-logo {display:block;height:48px;width:auto;max-width:100%;object-fit:contain}
+body[data-m170-product='font-comparison'] :focus-visible {outline:3px solid #db0829;outline-offset:3px}
+body[data-m170-product='font-comparison'] :is(.controls,.font-caption,.column-theme-picker) {font-family:var(--m170-font)}
+body[data-m170-product='font-comparison'] .controls select {border-color:#7c8798}
+body[data-m170-product='font-comparison'] .comparison-grid:not(.single) {grid-template-columns:repeat(4,minmax(300px,1fr));width:100%;overflow-x:auto}
+body[data-m170-product='font-comparison'] [data-palette='master'] {
+  --ink:#1f2937;--muted:#586477;--navy:#174265;
+  --red:#db0829;--canvas:#f5f6f8;--line:#dce1e7;--action:#152b4e;
+  --heading:#174265;--primary:#152b4e;--primaryText:#fff;--surface:#fff;
+  --control-border:#7c8798;--selected:#edf1f7;
+  --header:#f5f6f8;--badge:#174265;--badgeText:#fff;--hint:#586477;--edge:#db0829;
+  --selectedText:#152b4e;--selectedLine:#152b4e;--rose:#e6eef5;--roseText:#174265;
+  --success:#e4f5ea;--successText:#166534;--flag:#fff4e0;--flagText:#8a5300;
+  --sample-top-bg:#fff;--sample-top-ink:#174265;--sample-top-muted:#586477;
+  --error-text:#9b0a22;--error-surface:#fde8eb;--error-line:#9b0a22;
+}
+body[data-m170-product='font-comparison'] [data-palette='master'] :is(.sample-top,.sample-header) {background:#fff;color:#174265;border-bottom:1px solid #dce1e7}
+body[data-m170-product='font-comparison'] [data-palette='master'] :is(.sample-title,h3,h4) {color:#174265}
+body[data-m170-product='font-comparison'] [data-palette='master'] .primary {background:#152b4e;color:#fff}
+@media(max-width:600px){
+  body[data-m170-product^='demo-'] h1 {font-size:26px}
+  body[data-m170-product='font-comparison'] .comparison-grid:not(.single) {grid-template-columns:repeat(4,calc(100vw - 48px))}
+  body[data-m170-product='font-comparison'] .m170-logo {height:36px}
+  body[data-m170-product='font-comparison'] .intro h1 {font-size:26px}
+}

@@ -1,0 +1,74 @@
+/* Read 67: giữ hai cột đọc/luyện nén và engine riêng, chỉ chuyển hệ chữ/màu/nhận diện. */
+body[data-m170-product='materials'] {
+  --lab-edge: var(--m170-brand);
+  --lab-primary: var(--m170-action);
+  --lab-ink: var(--m170-ink);
+  --lab-hint: var(--m170-muted);
+  --lab-line: var(--m170-line);
+  --lab-header: var(--m170-canvas);
+  --lab-surface: var(--m170-surface);
+  --lab-successText: var(--m170-success-fg);
+  --cbt-navy: var(--m170-action);
+  --cbt-ink: var(--m170-ink);
+  --cbt-muted: var(--m170-muted);
+}
+body[data-m170-product='materials'] .wordmark { display: block; line-height: 1; letter-spacing: normal; }
+body[data-m170-product='materials'] :is(.passage-text, .passage-text p, .question-text, .answer-field textarea, .feedback p, .source-hint, .answer-copy, .evidence-box) { font-size: calc(18px * var(--reading-scale, 1)); line-height: 1.65; }
+body[data-m170-product='materials'] :is(button, select, .answer-field label, .selection-field label) { font-size: 16px; }
+body[data-m170-product='materials'] :is(button, select) { min-height: 44px; }
+body[data-m170-product='materials'] :is(.minimum-note, .notice, .field-indicator, .lesson-meta, .learner, .font-control span) { font-size: 14px; }
+body[data-m170-product='materials'] .footer-tools { flex-wrap: wrap; }
+body[data-m170-product='materials'] .footer-tools :is(.history-button, .notes-button) { display: inline-flex; }
+body[data-m170-product='materials'] :is(.product-name, .materials-login-kicker) { font-size: 14px; letter-spacing: normal; color: var(--m170-muted); }
+body[data-m170-product='materials'] .materials-login-brand { display: block; border-right: 0; padding-right: 0; }
+body[data-m170-product='materials'] .materials-login-header { padding-top: 8px; padding-bottom: 8px; }
+body[data-m170-product='materials'] .materials-login-hero h1 { font-size: 28px; }
+body[data-m170-product='materials'] .materials-login-copy { font-size: 18px; line-height: 1.65; }
+body[data-m170-product='materials'] .materials-login-remember { font-size: 14px; color: var(--m170-muted); font-weight: 400; }
+body[data-m170-product='materials'] .materials-login-card #teacher-error:not(:empty) { color: var(--m170-error-fg); }
+body[data-m170-product='materials'] :is(input, textarea, select) { border-color: var(--m170-control); border-radius: 8px; }
+body[data-m170-product='materials'] :is(.primary, .button-primary) { background: var(--m170-action); border-color: var(--m170-action); }
+body[data-m170-product='materials'] :is(.primary, .button-primary):hover { background: var(--m170-action-hover); }
+body[data-m170-product='materials'] #explanation-dialog :is(.explanation-dialog-passage-scroll, .explanation-dialog-detail-scroll) { font-size: 18px; line-height: 1.65; }
+body[data-m170-product='materials'] #explanation-dialog :is(.explanation-dialog-compare p, .explanation-dialog-analysis p) { font-size: 18px; line-height: 1.65; }
+body[data-m170-product='materials'] #explanation-dialog .explanation-dialog-detail-scroll > p:not(.minimum-note) { font-size: 18px; line-height: 1.65; }
+@media (max-width: 600px) {
+  body[data-m170-product='materials'] .app-header { height: auto; min-height: 55px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+  body[data-m170-product='materials'] .app-header .product-name { order: 4; flex-basis: 100%; }
+  body[data-m170-product='materials'] .materials-login-hero h1 { font-size: 26px; }
+}
+
+body[data-m170-product='materials-preview'] { background: var(--m170-canvas); }
+body[data-m170-product='materials-preview'] header { height: auto; min-height: 80px; background: var(--m170-surface); padding: 16px 24px; gap: 16px; }
+body[data-m170-product='materials-preview'] :is(button,a) { font-size: 16px; color: var(--m170-action); border-color: var(--m170-control); }
+body[data-m170-product='materials-preview'] button.on { color: white; background: var(--m170-action); }
+body[data-m170-product='materials-preview'] small { font-size: 14px; }
+body[data-m170-product='materials-preview'] main { height: calc(100dvh - 96px); }
+@media(max-width:600px) { body[data-m170-product='materials-preview'] header { padding: 12px 16px; } body[data-m170-product='materials-preview'] main { height: auto; min-height: calc(100dvh - 140px); } }
+
+body[data-m170-product='materials-preview'] header p { font-size: 14px; }
+body[data-m170-product='materials-preview'] .frame { height: calc(100dvh - 210px); min-height: 480px; }
+body[data-m170-product='materials-preview'] button.active { color: white; background: var(--m170-action); }
+body[data-m170-product='materials-preview'] .wait-card { color: var(--m170-pending-fg); background: var(--m170-pending-bg); }
+@media(max-width:600px) { body[data-m170-product='materials-preview'] .frame { height: calc(100dvh - 280px); } }
+
+
+/* Highlight/Note UI only. Annotation ranges, quotes and their source colors stay unchanged. */
+body[data-m170-product='materials'] .cbt-annotation-toolbar { background: var(--m170-action); color: #fff; border-radius: 8px; }
+body[data-m170-product='materials'] .cbt-annotation-action { font: 600 16px/1.5 var(--m170-font); min-height: 44px !important; border-radius: 8px; padding: 8px 12px; color: #fff; background: transparent; }
+body[data-m170-product='materials'] .cbt-annotation-action:hover { background: var(--m170-action-hover); }
+body[data-m170-product='materials'] .cbt-note-panel { color: var(--m170-ink); background: var(--m170-surface); border-color: var(--m170-line); font-family: var(--m170-font); font-size: 16px; line-height: 1.5; }
+body[data-m170-product='materials'] .cbt-note-panel > header { color: var(--m170-structure); background: var(--m170-surface); border-color: var(--m170-line); font-size: 18px; }
+body[data-m170-product='materials'] :is(.cbt-note-close,.cbt-note-back,.cbt-note-list-item) { color: var(--m170-action); background: var(--m170-surface); border-color: var(--m170-control); font: 600 16px/1.5 var(--m170-font); min-height: 44px !important; border-radius: 8px; }
+body[data-m170-product='materials'] .cbt-note-close { width: 44px; height: 44px; flex-shrink: 0; }
+body[data-m170-product='materials'] :is(.cbt-note-back,.cbt-note-list-item):hover { color: var(--m170-action); background: var(--m170-selected); }
+body[data-m170-product='materials'] :is(.cbt-note-list-item strong,.cbt-note-list-item span) { font-size: 16px; line-height: 1.5; }
+body[data-m170-product='materials'] :is(.cbt-note-editor,#notes) { font: 400 18px/1.65 var(--m170-font); color: var(--m170-ink); background: var(--m170-surface); border: 1px solid var(--m170-control); border-radius: 8px; }
+body[data-m170-product='materials'] .cbt-linked-note-panel blockquote { color: var(--m170-ink); background: var(--m170-canvas); font-size: 18px; line-height: 1.65; }
+body[data-m170-product='materials'] :is(.cbt-note-question-ref,.cbt-note-panel footer,.cbt-note-panel footer span) { color: var(--m170-muted); font-size: 14px; line-height: 1.5; }
+body[data-m170-product='materials'] .cbt-note-delete { color: var(--m170-error-fg); background: var(--m170-error-bg); border: 1px solid var(--m170-error-fg); border-radius: 8px; font: 600 16px/1.5 var(--m170-font); min-height: 44px; padding: 8px 12px; }
+body[data-m170-product='materials'] .general-notes { color: var(--m170-ink); background: var(--m170-surface); border-color: var(--m170-line); }
+body[data-m170-product='materials'] #general-note { font: 400 18px/1.65 var(--m170-font); border-color: var(--m170-control); }
+
+body[data-m170-product='materials'] .cbt-note-panel footer span[data-state='error'] { color: var(--m170-error-fg); background: var(--m170-error-bg); font-size: 16px; line-height: 1.5; padding: 8px 12px; border-radius: 8px; min-width: 0; }
+body[data-m170-product='materials'] .cbt-note-panel footer span[data-state='pending'] { color: var(--m170-pending-fg); background: var(--m170-pending-bg); padding: 8px 12px; border-radius: 8px; min-width: 0; }

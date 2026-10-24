@@ -47,6 +47,6 @@ test('giao diện chung có tìm toàn database, xác nhận trước ghi và ph
   assert.match(source, /reconciliationSearches.get\(item.studentRef\)/);
   assert.match(source, /confirm\(`Ghép hồ sơ/);
   assert.match(source, /confirm\(`Xóa hồ sơ tạm/);
-  assert.match(html, /teacher-app.js\?v=20261019-teacher-entry-v1/);
+  assert.match(html, /teacher-app.js\?v=20261024-master170-errors2/);
   assert.match(html, /styles.css\?v=20260918-teacher-checkbox-v1/);
 });

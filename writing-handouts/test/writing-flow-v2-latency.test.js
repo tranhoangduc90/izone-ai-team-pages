@@ -28,6 +28,7 @@ class Element {
   replaceChildren(...nodes) { this.text=''; this.children=[...nodes]; }
   get childElementCount() { return this.children.length; }
   setAttribute(key,value) { this[key]=String(value); }
+  removeAttribute(key) { delete this[key]; }
   addEventListener(event,handler) { this.listeners[event]=handler; }
   closest() { return this; }
   focus() {}
@@ -57,13 +58,16 @@ async function harness(overrides={}) {
   const api=Object.fromEntries(Object.entries({...apiDefaults,...overrides}).map(([method,fn])=>
     [method,(...args)=>{calls.push({method,args});return fn(...args);}]));
   const session={async restore(){return true;},async login(){},async logout(){}};
+  const documentElement=new Element('html'), body=new Element('body');
+  documentElement.dataset.izoneTheme='master170';
+  body.dataset.kind='homework';
   const context=vm.createContext({
     ...ui,...overview,teacherAuthFailure,createWritingReadCache,
     createTeacherApi:()=>api,createTeacherSessionClient:()=>session,
     createTeacherLoginPreference:()=>({read:()=>false,set:()=>true}),
     createRequestId:()=> '11111111-1111-4111-8111-111111111111',
     document:{getElementById:node,querySelector:node,querySelectorAll:()=>[],
-      createElement:tag=>new Element(tag),createTextNode:text=>({textContent:text}),body:new Element()},
+      createElement:tag=>new Element(tag),createTextNode:text=>({textContent:text}),documentElement,body},
     Option:class extends Element {constructor(label,value){super('option');this.textContent=label;this.value=value;}},
     Node:Element,localStorage:storage,window:{localStorage:storage},
     location:{hash:'#stage/homework/main'},history:{replaceState(){}},

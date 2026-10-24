@@ -26,7 +26,7 @@ test('CTA sai quyền không đọc lớp khác thay thế',async()=>{
  await assert.rejects(h.run('enter()'),e=>e.status===403);assert.equal(h.get('dashboard').hidden,true);
 });
 function replyForm(body='GV trả lời'){
- const button={disabled:false},status={textContent:''};
+ const button={disabled:false},status={textContent:'',dataset:{}};
  const form={dataset:{threadReply:'thread-one'},elements:{body:{value:body,disabled:false}},querySelector:s=>s==='button[type="submit"]'?button:status};
  return {form,button,status,event:{target:{closest:()=>form},preventDefault(){}}};
 }

@@ -7,7 +7,7 @@ import { commentsForSection, isBackdropClick, latestVocabularyRows, mergeTeacher
 import { groupStudents } from "./teacher-progress.js";
 import { teacherAuthFailure } from "./teacher-auth-ui.js";
 import { selectionOffsets, threadsForField } from "./teacher-comments-core.js";
-import { createTeacherCommentThreadCard, renderAnnotatedText } from "./teacher-comments-ui.js";
+import { createTeacherCommentThreadCard, renderAnnotatedText, masterScrollBehavior } from "./teacher-comments-ui.js?v=20261024-master170-thread2";
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
 import { createTeacherLoginPreference } from "../../shared/teacher-login-preference.js?rev=20260918-v1";
@@ -73,7 +73,7 @@ function renderSummary(students) {
   const support = document.createElement("button"); support.type = "button"; support.className = "teacher-summary-card"; support.dataset.state = "support";
   const supportCount = document.createElement("strong"); supportCount.textContent = String(students.filter(item => item.supportRequired).length);
   const supportLabel = document.createElement("span"); supportLabel.textContent = "Cần hỗ trợ"; support.append(supportCount, supportLabel);
-  support.addEventListener("click", () => document.querySelector('[data-group="support"]')?.scrollIntoView({ behavior: "smooth", block: "start" })); root.append(support);
+  support.addEventListener("click", () => document.querySelector('[data-group="support"]')?.scrollIntoView({ behavior: masterScrollBehavior(), block: "start" })); root.append(support);
   const statuses = ["not_started", "writing", "queued", "technical_error", "revision", "passed"];
   for (const status of statuses) {
     const card = document.createElement("article");
@@ -100,6 +100,7 @@ function renderStudents(students) {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "teacher-student-card";
+    card.dataset.commentContext = commentContext(student);
     card.dataset.state = status;
     card.dataset.priority = student.supportRequired ? "support" : "normal";
     card.dataset.started = String(Boolean(student.hasStarted));
@@ -238,8 +239,24 @@ function renderVocabulary(bodySection, student, bodyKey, loading) {
   table.append(tbody); tableRoot.append(table); vocabulary.append(tableRoot); bodySection.append(vocabulary);
 }
 
-async function reloadSelectedStudent() {
-  if (state.selectedStudent?.sessionRef) await loadStudentDetail(state.selectedStudent);
+function commentContext(student) { return student.sessionRef || `${student.studentRef}:${student.classRef}`; }
+function hasActiveCommentComposer() { return Boolean($("teacher-detail").querySelector(".teacher-comment-composer:not([hidden])")); }
+function hasTeacherCommentDraft() {
+  return hasActiveCommentComposer() || [...$("teacher-detail").querySelectorAll(".teacher-comment-composer textarea, .teacher-comment-reply textarea")].some(input => input.value.trim());
+}
+function replyDrafts(omitThread) {
+  return new Map([...$("teacher-detail").querySelectorAll(".teacher-comment-thread")].filter(card => card.dataset.threadRef !== omitThread).map(card => [card.dataset.threadRef, card.querySelector("textarea")?.value || ""]).filter(([, text]) => text.trim()));
+}
+function restoreReplyDrafts(drafts) {
+  for (const card of $("teacher-detail").querySelectorAll(".teacher-comment-thread")) {
+    const input = card.querySelector("textarea"); if (input && drafts.has(card.dataset.threadRef)) input.value = drafts.get(card.dataset.threadRef);
+  }
+}
+function requireFinishedComposer() {
+  if (hasActiveCommentComposer()) throw new Error("Hãy gửi hoặc hủy comment đang soạn trước; bản nháp đang được giữ.");
+}
+async function reloadSelectedStudent(options = {}) {
+  if (state.selectedStudent?.sessionRef) await loadStudentDetail(state.selectedStudent, options);
 }
 
 function renderTeacherResponseField(responseColumn, student, definition, field) {
@@ -251,7 +268,7 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
   const responseText = student.responses?.[field.key] || "";
   const fieldThreads = threadsForField(student.teacherComments || [], field.key, responseText);
   const threads = document.createElement("div"); threads.className = "teacher-comment-thread-list teacher-comment-thread-list-dashboard";
-  const focusThread = (threadRef) => threads.querySelector(`[data-thread-ref="${CSS.escape(threadRef)}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const focusThread = (threadRef) => threads.querySelector(`[data-thread-ref="${CSS.escape(threadRef)}"]`)?.scrollIntoView({ behavior: masterScrollBehavior(), block: "nearest" });
   if (responseText) renderAnnotatedText(value, responseText, fieldThreads, focusThread);
   else { value.textContent = "Chưa viết"; value.classList.add("muted"); }
 
@@ -261,7 +278,8 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
   const actions = document.createElement("div"); actions.className = "actions";
   const cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "secondary compact"; cancel.textContent = "Hủy";
   const submit = document.createElement("button"); submit.type = "submit"; submit.className = "primary compact"; submit.textContent = "Comment";
-  actions.append(cancel, submit); composer.append(selectedQuote, input, actions);
+  const feedback = document.createElement("p"); feedback.className = "teacher-comment-feedback"; feedback.setAttribute("role", "status");
+  actions.append(cancel, submit); composer.append(selectedQuote, input, actions, feedback);
   let selected = null;
   const captureSelection = () => {
     if (!responseText) return;
@@ -274,7 +292,7 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
   cancel.addEventListener("click", () => { selected = null; input.value = ""; composer.hidden = true; });
   composer.addEventListener("submit", async (event) => {
     event.preventDefault(); const body = input.value.trim(); if (!selected || !body) return;
-    submit.disabled = true; submit.textContent = "Đang lưu…";
+    submit.disabled = true; submit.textContent = "Đang lưu…"; feedback.dataset.state = "pending"; feedback.textContent = "Đang lưu góp ý…";
     try {
       await state.api.createTeacherComment(student.sessionRef, {
         sectionKey: definition.key,
@@ -285,18 +303,19 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
         body,
         requestId: createRequestId(),
       });
-      await reloadSelectedStudent();
+      await reloadSelectedStudent({ discardComposer: true });
     } catch (error) {
       submit.disabled = false; submit.textContent = "Comment";
-      showDashboardError(error.message || "Chưa lưu được comment. Bài có thể vừa thay đổi; hãy bôi lại đoạn chữ.");
+      feedback.dataset.state = "error"; feedback.textContent = error.message || "Chưa lưu được comment. Bài có thể vừa thay đổi; hãy bôi lại đoạn chữ.";
+      showDashboardError(feedback.textContent);
     }
   });
 
   for (const thread of fieldThreads) {
     threads.append(createTeacherCommentThreadCard(thread, {
       allowStatus: true,
-      onReply: async (item, body) => { await state.api.replyTeacherComment(item.threadRef, body); await reloadSelectedStudent(); },
-      onStatus: async (item, status) => { await state.api.setTeacherCommentStatus(item.threadRef, status); await reloadSelectedStudent(); },
+      onReply: async (item, body) => { requireFinishedComposer(); await state.api.replyTeacherComment(item.threadRef, body); await reloadSelectedStudent({ omitReplyThread: item.threadRef }); },
+      onStatus: async (item, status) => { requireFinishedComposer(); await state.api.setTeacherCommentStatus(item.threadRef, status); await reloadSelectedStudent(); },
     }));
   }
   const empty = document.createElement("p"); empty.className = "muted teacher-comment-empty"; empty.textContent = responseText ? "Bôi đen một đoạn trong bài để thêm comment." : "Học viên chưa viết ô này.";
@@ -308,6 +327,7 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
 
 function renderStudentDetail(student, { loading = false, error = "" } = {}) {
   const dialog = $("teacher-detail");
+  dialog.dataset.commentContext = commentContext(student);
   const previousScroll = dialog.scrollTop;
   const root = $("teacher-detail-content");
   root.replaceChildren();
@@ -393,7 +413,7 @@ function renderStudentDetail(student, { loading = false, error = "" } = {}) {
   if (state.focusSection) requestAnimationFrame(() => root.querySelector(`[data-section-key="${CSS.escape(state.focusSection)}"]`)?.scrollIntoView({ block: "center" }));
 }
 
-async function loadStudentDetail(student) {
+async function loadStudentDetail(student, { omitReplyThread, discardComposer = false } = {}) {
   if (!student?.sessionRef) {
     state.selectedStudent = student;
     renderStudentDetail(student);
@@ -405,6 +425,8 @@ async function loadStudentDetail(student) {
     state.api.teacherComments(student.sessionRef),
   ]);
   if (requestId !== state.detailRequestId || !$("teacher-detail").open) return;
+  if (hasActiveCommentComposer() && !discardComposer) return;
+  const drafts = $("teacher-detail").dataset.commentContext === commentContext(student) ? replyDrafts(omitReplyThread) : new Map();
   const session = sessionResult.status === "fulfilled"
     ? (sessionResult.value.data.session || sessionResult.value.data)
     : {};
@@ -419,10 +441,17 @@ async function loadStudentDetail(student) {
     ? `Bài đang hiển thị từ dữ liệu tổng hợp; tạm thời chưa tải được ${unavailable.join(" và ")}.`
     : "";
   renderStudentDetail(state.selectedStudent, { error });
+  restoreReplyDrafts(drafts);
 }
 
 function showStudentDetail(student, focusSection = "") {
   const dialog = $("teacher-detail");
+  if (hasTeacherCommentDraft()) {
+    if (dialog.dataset.commentContext === commentContext(student)) {
+      state.selectedStudent = student; state.focusSection = focusSection; if (!dialog.open) dialog.showModal(); return;
+    }
+    if (!confirm("Có lời góp ý chưa gửi. Bỏ bản nháp để mở bài khác?")) return;
+  }
   const resetScroll = !dialog.open || state.selectedStudent?.sessionRef !== student.sessionRef;
   state.selectedStudent = student;
   state.focusSection = focusSection;
@@ -484,7 +513,13 @@ function renderReconciliation() {
     select.value = searchState.results.some(candidate => candidate.studentRef === searchState.selectedRef) ? searchState.selectedRef : "";
     const actions = document.createElement("span"); actions.className = "actions";
     const reset = document.createElement("button"); reset.type = "button"; reset.className = "secondary"; reset.textContent = "Đặt lại mã";
-    reset.addEventListener("click", async () => { const result = await state.api.resetProvisionalCode(item.studentRef); alert(`Mã mới của ${item.displayName}: ${result.data.accessCode}\nMã chỉ hiển thị lần này.`); });
+    reset.addEventListener("click", async () => {
+      if (reset.disabled) return;
+      reset.disabled = true;
+      try { const result = await state.api.resetProvisionalCode(item.studentRef); alert(`Mã mới của ${item.displayName}: ${result.data.accessCode}\nMã chỉ hiển thị lần này.`); }
+      catch (error) { showDashboardError(error.message); }
+      finally { reset.disabled = false; }
+    });
     const match = document.createElement("button"); match.type = "button"; match.className = "primary"; match.textContent = "Ghép hồ sơ"; match.disabled = !select.value;
     select.addEventListener("change", () => { searchState.selectedRef = select.value; match.disabled = !select.value; });
     match.addEventListener("click", async () => {
@@ -614,11 +649,22 @@ async function init() {
       state.classQueryError = "";
       void refresh();
     });
-    $("teacher-export").addEventListener("click", async () => { const blob = await state.api.exportProgress(state.activitySlug, $("teacher-class").value); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.activitySlug}-progress.csv`; link.click(); URL.revokeObjectURL(url); });
-    const detail = $("teacher-detail");
-    detail.addEventListener("click", (event) => {
-      if (event.target === detail && isBackdropClick(event, detail.getBoundingClientRect())) detail.close();
+    $("teacher-export").addEventListener("click", async () => {
+      const button = $("teacher-export"); if (button.disabled) return; button.disabled = true;
+      try { const blob = await state.api.exportProgress(state.activitySlug, $("teacher-class").value); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${state.activitySlug}-progress.csv`; link.click(); URL.revokeObjectURL(url); }
+      catch (error) { showDashboardError(error.message); }
+      finally { button.disabled = false; }
     });
+    const detail = $("teacher-detail");
+    let detailPressedOutside = false;
+    detail.addEventListener("pointerdown", (event) => {
+      detailPressedOutside = event.target === detail && isBackdropClick(event, detail.getBoundingClientRect());
+    });
+    detail.addEventListener("pointerup", (event) => {
+      if (detailPressedOutside && event.target === detail && isBackdropClick(event, detail.getBoundingClientRect())) detail.close();
+      detailPressedOutside = false;
+    });
+    detail.addEventListener("pointercancel", () => { detailPressedOutside = false; });
     detail.addEventListener("close", () => {
       state.detailRequestId += 1;
       state.selectedStudent = null;
@@ -653,6 +699,15 @@ function clearTeacherLogin() {
   $("teacher-login").hidden = false;
 }
 
+// A roster refresh can replace the original opener while its modal is open.
+$("teacher-detail").addEventListener("close", () => {
+  const dialog = $("teacher-detail");
+  if (dialog.open || $("teacher-dashboard").hidden) return;
+  const target = [...document.querySelectorAll("#teacher-students button.teacher-student-card")]
+    .find(card => card.dataset.commentContext === dialog.dataset.commentContext);
+  (target || $("teacher-class")).focus();
+});
+
 $("remember-teacher-login").checked = loginPreference.read();
 $("remember-teacher-login").addEventListener("change", () => {
   const input = $("remember-teacher-login");
@@ -662,6 +717,7 @@ $("remember-teacher-login").addEventListener("change", () => {
 });
 
 $("teacher-logout").addEventListener("click", async () => {
+  if (hasTeacherCommentDraft() && !confirm("Bỏ lời góp ý chưa gửi và đăng xuất?")) return;
   try { await state.sessionClient?.logout(); } catch { /* Vẫn xóa dữ liệu đang hiển thị trên máy dùng chung. */ }
   clearTeacherLogin();
   globalThis.google?.accounts?.id?.disableAutoSelect?.();

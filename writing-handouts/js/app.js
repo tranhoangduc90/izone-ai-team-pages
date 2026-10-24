@@ -3,7 +3,7 @@ import { installStudentMemory } from "./shared-student-memory-ui.js?v=20261018-i
 import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelayWithJitter, randomDelay, rebaseLocalProgress, retryDelay, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260921-draft-result-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";
 import { appendInlineMarkdown, appendMarkdown } from "./markdown.js?v=20260818-numbering-v3";
-import { renderStudentFieldComments } from "./teacher-comments-ui.js";
+import { renderStudentFieldComments } from "./teacher-comments-ui.js?v=20261024-master170-thread2";
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
 
@@ -77,7 +77,8 @@ function addListCard(root, title, values) {
 function renderTaskContent() {
   const root = $("task-content"); root.replaceChildren(); const manifest = app.manifest; const task = manifest.task || manifest;
   addTextCard(root, "Đề bài", task.statement || task.taskStatement);
-  const imageUrl = safeHttpUrl(task.chart_image?.url || task.chartImage || task.chartImageUrl || task.imageUrl);
+  const chartUrl = task.chart_image?.url || task.chartImage || task.chartImageUrl || task.imageUrl;
+  const imageUrl = chartUrl ? safeHttpUrl(chartUrl) : null;
   if (imageUrl) { const card = document.createElement("section"); const title = document.createElement("h2"); const link = document.createElement("a"); const image = document.createElement("img"); const hint = document.createElement("p"); card.className = "chart-card"; title.textContent = "Biểu đồ"; link.className = "chart-link"; link.href = imageUrl; link.target = "_blank"; link.rel = "noopener noreferrer"; image.src = imageUrl; image.alt = task.chart_image?.alt_text || task.chartAlt || "Biểu đồ của bài Writing Task 1"; image.decoding = "async"; hint.className = "chart-hint"; hint.textContent = "Nhấn vào ảnh để mở kích thước đầy đủ."; link.append(image); card.append(title, link, hint); root.append(card); }
   if (manifest.decoding && typeof manifest.decoding === "object") {
     addListCard(root, "Cách đọc dữ liệu", [

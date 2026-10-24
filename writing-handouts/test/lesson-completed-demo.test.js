@@ -22,8 +22,9 @@ test("completed Lesson 13 demo has a safe two-column vocabulary table", () => {
   assert.doesNotMatch(JSON.stringify(completedLessonDemo), /Bearer |api.?key|credential|studentRef|@/i);
 });
 
-test("completed demo page is static and does not connect to the production API", () => {
-  const html = fs.readFileSync(path.join(root, "lesson-completed-demo.html"), "utf8");
-  assert.match(html, /connect-src 'self'/);
-  assert.doesNotMatch(html, /ducizone|googleapis|studentRef|api\/v1/i);
+test("retired completed demo entry stays removed and its reference renderer stays isolated", () => {
+  // The HTML entry was retired in 12e5dd6; preserve its removal during UI migration.
+  assert.equal(fs.existsSync(path.join(root, "lesson-completed-demo.html")), false);
+  const js = fs.readFileSync(path.join(root, "js", "lesson-completed-demo.js"), "utf8");
+  assert.doesNotMatch(js, /ducizone|googleapis|studentRef|api\/v1|n8n-webhook/i);
 });

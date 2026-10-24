@@ -142,7 +142,7 @@ $('class-select').addEventListener('change',()=>{
 });
 $('students').addEventListener('click',event=>{const b=event.target.closest('[data-student]');if(b)void openDetail(b.dataset.student);});
 // Đóng popup chỉ ẩn; giữ nguyên bản nháp, form, phần mở để tiếp tục khi mở lại.
-function closeDetail(){if(sending)return;const studentRef=selected?.studentRef;selected=null;detailSequence++;activitySequence++;$('detail').close();$('detail').hidden=true;$('students').querySelector(`[data-student="${studentRef}"]`)?.focus();}
+function closeDetail(){if(sending)return;const studentRef=selected?.studentRef;selected=null;detailSequence++;activitySequence++;$('detail').close();$('detail').hidden=true;const trigger=$('students').querySelector(`[data-student="${studentRef}"]`);trigger?.focus();trigger?.scrollIntoView({block:'nearest',behavior:'instant'});}
 $('close-detail').addEventListener('click',closeDetail);
 let backdropDown=false;
 const outside=e=>{const r=$('detail').getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom;};
@@ -195,12 +195,12 @@ $('detail-content').addEventListener('submit',async event=>{
  if(creation&&(!c||c.ref!==ref||c.epoch!==current))return;
  if(form.dataset.requestBody!==body){form.dataset.requestBody=body;form.dataset.requestId=crypto.randomUUID();}
  const input={action:creation?'create':'reply',body,requestId:form.dataset.requestId,expectedActor:actorEmail,...(creation?{field:c.field,fieldHash:c.fieldHash,...(c.range?{range:c.range}:{})}:{threadRef:form.dataset.threadReply})};
- const button=form.querySelector('button[type="submit"]'),status=form.querySelector('.thread-status');sending=true;detailSequence++;button.disabled=true;form.elements.body.disabled=true;status.textContent='Đang gửi…';
+ const button=form.querySelector('button[type="submit"]'),status=form.querySelector('.thread-status');sending=true;detailSequence++;button.disabled=true;form.elements.body.disabled=true;status.dataset.state='pending';status.textContent='Đang gửi…';
  try{
   const value=await request('/sessions/'+ref+'/threads','POST',input);
   if(current!==epoch||selected?.ref!==ref)return;
   form.elements.body.value='';status.textContent='Đã lưu trao đổi.';delete form.dataset.requestId;delete form.dataset.requestBody;composer?.form.remove();composer=null;renderDetail(value.session);await readActivity(ref);$('comment-status').textContent='Đã lưu trao đổi; học viên đọc được trên bài của mình.';
- }catch(e){if(current===epoch&&selected?.ref===ref)status.textContent=e.message==='COMMENT_CONTENT_CHANGED'?'Nội dung trích đã thay đổi. Lời góp ý vẫn giữ; sao chép rồi hủy, cập nhật bài và chọn lại đoạn.':errorText(e);}
+ }catch(e){if(current===epoch&&selected?.ref===ref){status.dataset.state='error';status.textContent=e.message==='COMMENT_CONTENT_CHANGED'?'Nội dung trích đã thay đổi. Lời góp ý vẫn giữ; sao chép rồi hủy, cập nhật bài và chọn lại đoạn.':errorText(e);}}
  finally{sending=false;button.disabled=false;form.elements.body.disabled=false;}
 });
 $('logout').addEventListener('click',async()=>{if(authBusy)return;if(hasThreadDraft()&&!window.confirm('Bỏ lời trao đổi chưa gửi và đăng xuất?'))return;authBusy=true;epoch++;clearTimeout(timer);selected=null;composer=null;detailSession=null;actorEmail='';rows=[];$('detail-content').innerHTML='';delete $('detail-content').dataset.session;$('detail').close();$('detail').hidden=true;$('dashboard').hidden=true;$('login').hidden=true;$('students').innerHTML='';$('comment-text').value='';try{await request('/session','DELETE');}catch(e){report(e,'login-error');}finally{authBusy=false;$('login').hidden=false;}window.google?.accounts.id.disableAutoSelect();});

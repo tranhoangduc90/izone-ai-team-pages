@@ -1,0 +1,26 @@
+/* Dashboard Cổng AI. Canvas có bảng dữ liệu và màu riêng theo tài khoản. */
+body[data-m170-product='ai-gateway'] {
+  --navy: var(--m170-action); --navy-2: var(--m170-structure); --red: var(--m170-error-fg);
+  --blue: var(--m170-structure); --sky: var(--m170-pending-bg); --ink: var(--m170-ink);
+  --muted: var(--m170-muted); --line: var(--m170-line); --green: var(--m170-success-fg);
+  --amber: var(--m170-attention-fg); --bg: var(--m170-canvas); --white: var(--m170-surface);
+}
+body[data-m170-product='ai-gateway'] .topbar { background: var(--m170-surface); color: var(--m170-structure); border-bottom: 1px solid var(--m170-line); padding-top: 16px; padding-bottom: 16px; }
+body[data-m170-product='ai-gateway'] .brand { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; }
+body[data-m170-product='ai-gateway'] .brand h1 { font-size: 28px; line-height: 1.3; letter-spacing: normal; }
+body[data-m170-product='ai-gateway'] .brand p { color: var(--m170-muted); font-size: 14px; line-height: 1.5; }
+body[data-m170-product='ai-gateway'] h2 { font-size: 22px; }
+body[data-m170-product='ai-gateway'] h3 { font-size: 18px; }
+body[data-m170-product='ai-gateway'] :is(.section, .login-card, .card) { background: var(--m170-surface); border-radius: 12px; box-shadow: none; }
+body[data-m170-product='ai-gateway'] .environment-pill { background: var(--m170-neutral-bg); color: var(--m170-neutral-fg); border-color: var(--m170-line); font-size: 14px; white-space: normal; }
+body[data-m170-product='ai-gateway'] .operator-badge { background: var(--m170-selected); color: var(--m170-action); border-color: var(--m170-line); font-size: 14px; white-space: normal; max-width: 100%; overflow: visible; }
+body[data-m170-product='ai-gateway'] :is(label, input, select, button, td) { font-size: 16px; }
+body[data-m170-product='ai-gateway'] :is(input, select, textarea) { border-color: var(--m170-control); border-radius: 8px; }
+body[data-m170-product='ai-gateway'] :is(.label, .sub, .meta, .chart-title span, th, .status) { font-size: 14px; }
+body[data-m170-product='ai-gateway'] .notice { background: var(--m170-attention-bg); color: var(--m170-attention-fg); border: 1px solid var(--m170-line); }
+body[data-m170-product='ai-gateway'] .status-success { background: var(--m170-success-bg); color: var(--m170-success-fg); }
+body[data-m170-product='ai-gateway'] .status-failed { background: var(--m170-error-bg); color: var(--m170-error-fg); }
+body[data-m170-product='ai-gateway'] .status-running { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='ai-gateway'] .eyebrow { color: var(--m170-muted) !important; font-size: 14px; letter-spacing: normal; }
+body[data-m170-product='ai-gateway'] .m170-operation-feedback { margin: 12px 0 0; padding: 12px; color: var(--m170-error-fg); background: var(--m170-error-bg); border-radius: 8px; font-size: 16px; overflow-wrap: anywhere; }
+@media (max-width: 600px) { body[data-m170-product='ai-gateway'] .brand h1 { font-size: 26px; } }

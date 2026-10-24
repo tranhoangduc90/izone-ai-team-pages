@@ -24,7 +24,7 @@ function fixture(api={}){
 }
 
 function replyForm(body='Lời trả lời'){
- const button={disabled:false},status={textContent:''};
+ const button={disabled:false},status={textContent:'',dataset:{}};
  const form={dataset:{threadReply:'thread-one'},elements:{body:{value:body,disabled:false}},querySelector:s=>s==='button'?button:status};
  return {form,button,status,event:{target:{closest:()=>form},preventDefault(){}}};
 }
@@ -101,6 +101,15 @@ test('R-UI-ACK · retry body gián đoạn dùng nguyên requestId',async()=>{
 test('R-UI-409 · HTTP conflict không retry mutation',async()=>{
  let calls=0;const api=createClient('https://fixture.invalid',async()=>{calls++;return {ok:false,status:409,json:async()=>({ok:false,error:'VERSION_CONFLICT'})};});
  await assert.rejects(api.save('a-ref',{baseVersion:1,requestId:'stable-request',responses:{idea1:'Draft'}}),error=>error.status===409);assert.equal(calls,1);
+});
+test('R-UI-CONFLICT-INPUT · khóa ô sau xung đột, giữ nháp và đường đọc bản máy chủ',async()=>{
+ const h=fixture({save:async()=>{throw Object.assign(new Error('VERSION_CONFLICT'),{status:409});}});
+ h.textarea.value='Nháp cần khôi phục';h.el('workspace').handlers.input({target:h.textarea});
+ await h.run('flush()');
+ assert.equal(h.textarea.disabled,true);
+ assert.equal(h.el('read-latest').hidden,false);
+ assert.match(h.el('connection-note').textContent,/Bài đã thay đổi/);
+ assert.equal(JSON.parse(h.storage.get('izone-handout67:draft:a-ref')).changes.idea1,'Nháp cần khôi phục');
 });
 test('R-UI-DRAFT · khôi phục chỉ phần chưa lưu, giữ trường máy chủ mới',async()=>{
  const h=fixture({save:async()=>({session:{version:2}})});h.run("state.responses.idea2='New server idea two';");

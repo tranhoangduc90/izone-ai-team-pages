@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id);
 document.body.classList.add('speaking-design');
 const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh',9:'Full câu với ChatGPT · Freestyle',10:'Kể chuyện: Bối cảnh và Trình tự'};
 const header=document.createElement('header');header.className='studio-header';
-header.innerHTML='<a href="./index.html" class="studio-brand" aria-label="IZONE">IZONE<span>HỌC MỖI NGÀY</span></a><span>Speaking <i>/</i> Khóa 6.0–7.0</span>';
+header.innerHTML='<a href="./index.html" class="studio-brand" aria-label="IZONE"><img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"></a><span>Speaking <i>/</i> Khóa 6.0–7.0</span>';
 document.querySelector('.page-shell').prepend(header);
 installTeacherEntry({product:'speaking',hosts:[header,document.querySelector('.identity-card')]});
 const badge=$('lesson-badge');if(badge)badge.hidden=true;

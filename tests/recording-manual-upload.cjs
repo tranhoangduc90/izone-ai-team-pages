@@ -32,7 +32,7 @@ const server=http.createServer((req,res)=>{
     });
     await page.route('https://fixture.invalid/**',async route=>{
       const url=route.request().url();
-      if(url.includes('/action')){const b=JSON.parse(route.request().postData());if(b.action==='auth')return route.fulfill({json:{ok:true,actor:{verified:true,expiresAt:Date.now()+3600000}}});assert.equal(b.idToken,'fixture-token');if(b.action==='source_link')return route.fulfill({json:{ok:true,status:'available',url:'https://zoom.us/rec/play/fixture-source',scope:'file'}});if(b.action==='confirm_publish'){uploads.push(b);if(rejectUpload)return route.fulfill({status:409,json:{ok:false,error:'VERSION_CONFLICT'}});const row=snapshot.records[1];Object.assign(row,{version:2,className:b.className,lessonNumber:b.lessonNumber,recordingDate:b.recordingDate,metadataSource:'manual',proposedTitle:'Buổi 4 (20.09.26)',youtubeStatus:'uploading',errorCode:'',stage:'upload'});await new Promise(r=>setTimeout(r,200));return route.fulfill({json:{ok:true,record:row}});}if(b.action==='preview_file')return route.fulfill({contentType:'video/mp4',body:Buffer.from('fixture-video')});if(b.action==='preview'){previews++;return route.fulfill({json:previews===1?{ok:true,preview:{url:'https://zoom.us/rec/play/fixture'}}:{ok:false,error:'ZOOM_SOURCE_UNAVAILABLE'}});}if(b.action==='acknowledge_review'){const row=snapshot.records.find(r=>r.id===b.id);assert.equal(b.expectedVersion,row.version);row.version++;row.reviewStatus=b.approved?'approved':'pending';const {errorCode,...response}=row;return route.fulfill({json:{ok:true,record:response}});}actions++;assert.equal(b.expectedVersion,session.version);session.version++;session.reviewStatus='approved';session.exceptionStatus=b.action;session.exceptionReason=b.reason;return route.fulfill({json:{ok:true,record:session}});}
+      if(url.includes('/action')){const b=JSON.parse(route.request().postData());if(b.action==='auth')return route.fulfill({json:{ok:true,actor:{verified:true,expiresAt:Date.now()+3600000}}});assert.equal(b.idToken,'fixture-token');if(b.action==='source_link')return route.fulfill({json:{ok:true,status:'available',url:'https://zoom.us/rec/play/fixture-source',scope:'file'}});if(b.action==='confirm_publish'){uploads.push(b);if(rejectUpload)return route.fulfill({status:409,json:{ok:false,error:'VERSION_CONFLICT'}});const row=snapshot.records[1];Object.assign(row,{version:2,className:b.className,lessonNumber:b.lessonNumber,recordingDate:b.recordingDate,metadataSource:'manual',proposedTitle:'Buổi 4 (20.09.26)',youtubeStatus:'uploading',errorCode:'',stage:'upload'});await new Promise(r=>setTimeout(r,200));return route.fulfill({json:{ok:true,accepted:true,requestId:b.requestId,record:row}});}if(b.action==='preview_file')return route.fulfill({contentType:'video/mp4',body:Buffer.from('fixture-video')});if(b.action==='preview'){previews++;return route.fulfill({json:previews===1?{ok:true,preview:{url:'https://zoom.us/rec/play/fixture'}}:{ok:false,error:'ZOOM_SOURCE_UNAVAILABLE'}});}if(b.action==='acknowledge_review'){const row=snapshot.records.find(r=>r.id===b.id);assert.equal(b.expectedVersion,row.version);row.version++;row.reviewStatus=b.approved?'approved':'pending';const {errorCode,...response}=row;return route.fulfill({json:{ok:true,record:response}});}actions++;assert.equal(b.expectedVersion,session.version);session.version++;session.reviewStatus='approved';session.exceptionStatus=b.action;session.exceptionReason=b.reason;return route.fulfill({json:{ok:true,record:session}});}
       if(url.includes('/recheck')){scans++;return route.fulfill({json:{message:'started'}});}
       return route.fulfill({json:{ok:true,snapshot}});
     });
@@ -51,8 +51,9 @@ const server=http.createServer((req,res)=>{
     assert.equal(uploads.length,1);assert.equal(uploads[0].title,undefined);assert.equal(uploads[0].className,'IC9002');assert.equal(uploads[0].lessonNumber,4);assert.equal(uploads[0].recordingDate,'2026-09-20');
     assert.equal(uploads[0].playlistId,'PLfixture1234');assert.equal(uploads[0].expectedVersion,1);
     assert.equal(uploads[0].contentConfirmed,true);assert.equal(uploads[0].classSessionId,undefined);
+    await page.waitForFunction(()=>!document.querySelector('[data-action="manual-upload"]'),{},{timeout:6000});
     assert.equal(await page.locator('[data-action="manual-upload"]').count(),0);
-    assert.ok((await page.locator('#toast').innerText()).includes('Đã gửi yêu cầu đăng'));
+    assert.ok((await page.locator('#toast').innerText()).includes('Đã nhận yêu cầu và xếp hàng'));
     assert.equal(scans,0);
     // Mở lại trang mô phỏng một yêu cầu bị xung đột phiên bản.
     Object.assign(snapshot.records[1],{youtubeStatus:'uploading',stage:'needs_attention',errorCode:'UPLOAD_REJECTED'});
@@ -62,9 +63,10 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>window.recordingAuth.isAuthenticated());
     await page.click('[data-action="manual-upload"]');await page.selectOption('#manualUploadPlaylist','PLfixture1234');await page.fill('#manualUploadLesson','4');
     await page.click('#manualUploadSubmit');await page.waitForFunction(()=>document.getElementById('manualUploadStatus').textContent.includes('Dữ liệu đã thay đổi'));
-    assert.equal(await page.locator('#manualUploadSubmit').isDisabled(),true);
+    await page.waitForFunction(()=>!document.getElementById('manualUploadDialog').open);
+    assert.equal(await page.locator('#manualUploadLesson').inputValue(),'4');
+    assert.match(await page.locator('#toast').innerText(),/Dữ liệu đã thay đổi/);
     assert.equal(uploads.length,2);
-    await page.locator('#manualUploadDialog [data-close-dialog]').first().click();
     await page.getByRole('button',{name:'Làm mới',exact:true}).click();
     await page.waitForSelector('[data-action="manual-upload"]');
     assert.equal(await page.locator('[data-action="manual-upload"]').count(),1);
