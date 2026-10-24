@@ -19,6 +19,6 @@ Demo dùng bài làm, lời thoại, thời gian và điểm giả định. Các
 
 ## Kiểm trước phát hành
 
-Chạy file kiểm trình duyệt `tests/mvp-writing7-demo.mjs` với Playwright có sẵn. Bộ kiểm đi toàn hành trình, quay lại, tải lại/deep link, các nút trong màn, các câu feedback, màn 390 px và lỗi console/network. Kết quả QA riêng của task được giữ ngoài repo.
+Chạy file kiểm trình duyệt `tests/mvp-writing7-demo.mjs` với Playwright có sẵn. Bộ kiểm đi toàn hành trình, quay lại, tải lại/deep link, các nút trong màn, các câu feedback, màn 390 px và lỗi console/network. Ca Tab đi đủ 36 bước ở 1440×1000, 1024×768, 390×844, 320×568 và 844×390; lỗi nếu focus hoặc nút bị footer cố định che. Kết quả QA riêng của task được giữ ngoài repo.
 
 Quay lui: revert commit thêm riêng thư mục demo và file kiểm của task; không thay các route Writing, Term Test hoặc Progress Log hiện có.
