@@ -1,4 +1,4 @@
-import {connectExamJournal} from './bridge.mjs?v=20261024-audio-v1';
+import {connectExamJournal} from './bridge.mjs?v=20261024-startup-v1';
 
 // No learner credentials are reconstructed here. Native app adoption supplies them later.
 export function connectAudioCapture(metadata,{classCodeHint}={}){

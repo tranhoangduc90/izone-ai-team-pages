@@ -57,6 +57,8 @@ async function setup(options = {}) {
     const headers = { 'access-control-allow-origin': origin, 'access-control-allow-headers': 'content-type',
       'access-control-allow-methods': 'GET,POST,OPTIONS' };
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+    // A journal outage must not alter native identity, permissions or exam state.
+    if (url.pathname.endsWith('/journal-context')) return route.fulfill({status:503,headers,contentType:'application/json',body:'{"ok":false}'});
     const body = request.postDataJSON(); requests.push({ path: url.pathname, body });
     const send = (data, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify({ ok: true, ...data }) });
     if (url.pathname.endsWith('/student-identity')) {
