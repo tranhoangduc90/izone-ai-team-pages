@@ -90,7 +90,7 @@ function render() {
   const font = fonts.find(f => f.id === state.font), theme = themes.find(t => t.id === state.themes[state.font]);
   const shown = state.view === 'colors' ? themes.map(t => ({ font, theme: t })) : (state.view === 'single' ? [font] : fonts).map(f => ({ font: f, theme: themes.find(t => t.id === state.themes[f.id]) }));
   document.querySelector('#themeDescription').textContent = theme.description;
-  document.querySelector('#comparisonHelp').textContent = state.view === 'colors' ? 'Cùng một font và bố cục. Ba bản chỉ khác cách phối màu; không sao chép bố cục riêng của sản phẩm gốc.' : state.view === 'single' ? 'Màu được giữ riêng cho font đang xem. Đổi font để xem hoặc chỉnh màu của bản khác.' : 'Cùng nội dung, cỡ chữ và bố cục. Chọn màu riêng ngay dưới tên mỗi font; các cột khác giữ nguyên.';
+  document.querySelector('#comparisonHelp').textContent = state.view === 'colors' ? `Cùng một font và bố cục. ${themes.length} bản chỉ khác cách phối màu; không sao chép bố cục riêng của sản phẩm gốc.` : state.view === 'single' ? 'Màu được giữ riêng cho font đang xem. Đổi font để xem hoặc chỉnh màu của bản khác.' : 'Cùng nội dung, cỡ chữ và bố cục. Chọn màu riêng ngay dưới tên mỗi font; các cột khác giữ nguyên.';
   const palette = document.querySelector('.palette');
   palette.hidden = state.view !== 'single';
   palette.querySelectorAll('.swatch').forEach((swatch, i) => { swatch.style.background = theme.swatches[i]; swatch.style.borderColor = i < 2 ? theme.swatches[i] : ''; swatch.title = theme.swatches[i]; });
@@ -141,7 +141,7 @@ document.addEventListener('change', event => {
   if (event.target.matches('[data-answer]')) { state.answer = event.target.value; syncExamples(); }
 });
 render();
-Promise.allSettled([fonts[0], fonts[2], ...Object.values(linhFonts)].map(async f => {
+Promise.allSettled([...fonts, ...Object.values(linhFonts)].map(async f => {
   try {
     for (const weight of [400, 500, 600, 700]) {
       const faces = await document.fonts.load(`${weight} 16px "${f.name}"`, 'Tiếng Việt: Nguyễn Thủy Đặng Ước mơ 85,7% Reading');
@@ -156,6 +156,6 @@ Promise.allSettled([fonts[0], fonts[2], ...Object.values(linhFonts)].map(async f
   }
 })).then(() => {
   const status = document.querySelector('#fontStatus');
-  status.textContent = failed.size ? `Chưa dùng được: ${[...failed].join(', ')}. Không dùng bản đó để kết luận về font.` : '✓ Đã tải font của cả 3 mẫu';
+  status.textContent = failed.size ? `Chưa dùng được: ${[...failed].join(', ')}. Không dùng bản đó để kết luận về font.` : `✓ Đã tải font của cả ${fonts.length} mẫu`;
   status.className = failed.size ? 'error' : 'ready';
 });
