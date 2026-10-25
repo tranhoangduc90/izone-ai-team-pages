@@ -1,0 +1,26 @@
+{
+  "sourceRevision": "00dfef7232b6a34622791051cec8e77d36f3db2e",
+  "sourceDirectory": "writing-handouts",
+  "pinnedSourceFiles": {
+    "js/api.js": "abb84c24904f64f08f615c1d498286eafffba5e47fb1053d80049ed9dd2a4b04",
+    "js/app.js": "98a60d4a63ee7eb578f491dda282d81c0d13b323df5bf5034c29c336b846df04",
+    "js/class-selection.js": "5660a38e766784e1340f170f3e4101d490f8a8924873feefb3f2a25d32f30b16",
+    "js/core.js": "7a3f2ae48a5b9fdb850fceb59c1b848c10320a97d6548dd34ac773262f0eb9cd",
+    "js/idb.js": "e4e51bfbc181cfc757287b013849a3a6440f76d0842b350d39f9f475b4a34f72",
+    "js/lesson-core.js": "ce9b62b42bb03c51ec97cdc80e821e5d10b8dbd7073393782b31972099395d40",
+    "js/lms-draft-result.js": "6089316704ce1b76dd7ed1a144d3368795b558974a5367e322db2d72141c5d1e",
+    "js/markdown.js": "314ac65a5cbfae48b8b291cc886cf53c26cfee9d7403cba87ef587fe12fadfae",
+    "js/shared-student-memory-ui.js": "f5cd7ad01c44029cb28d3e289d31d7c1d76f8616af477a7c3d5449b7c7e228bd",
+    "js/student-memory-ui.js": "e886a08183900160d09acec33624339416423c1362ec8b64a80cb0b0c4b86d8c",
+    "js/student-memory.js": "33b5b8a5256d050e38ffc04ec4c1f8c7d88a9d37a2db46ac71e6926b98f8def8",
+    "js/teacher-app.js": "fb86530ff3ec354ead52d07b590d7d178ea9761532b2c610766269a0e7f79d82",
+    "js/teacher-auth-ui.js": "5f639eb7eed8d934ae3df8d65550e25c59cf40e81844bd422d970d9746fc32df",
+    "js/teacher-comments-core.js": "d5bbabd573a110b23289e80a1bb0af5eeec7fb387b08842fccdd1d0783dd24bd",
+    "js/teacher-comments-ui.js": "f36145d3fdd58f84ee22c24929814c57f01f55931b50daece6b11e48a3f1075b",
+    "js/teacher-detail-core.js": "68aeb29ecbbb7916249bf660b58673436fb76fb79c78c53fb86b1fc781fa7177",
+    "js/teacher-progress.js": "1d006d0f6bf4e1d15cc4828cbcfe3e3c25cb2015ccd46003d7bb57b4f054d664",
+    "js/vocabulary-ui.js": "68605442a1eb6021a2a14f17d5a62981af662eebb30854c009ca0af65630fea3",
+    "styles.css": "3a2d93017f63ba6586dd9a008539cde0898250ccfed6b1917c77ca486daf35a3"
+  },
+  "purpose": "isolated Task 1 preview; existing product files unchanged"
+}
