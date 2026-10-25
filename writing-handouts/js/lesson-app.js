@@ -848,6 +848,7 @@ function saveWithKeepalive() {
 }
 
 async function init() {
+  if (globalThis.__IZONE_SW_TASK2_REDIRECTING__) return;
   try {
     await loadManifest();
     const roster = await app.api.roster(app.activitySlug);
