@@ -3,7 +3,20 @@
   "course": {
     "id": "speaking-writing-chuyen-sau",
     "title": "Speaking Writing chuyên sâu",
-    "classCodes": ["CS.070626", "CS.160826", "CS.181026"]
+    "classCodes": [
+      "CS.181026",
+      "CS.160826",
+      "CS.070626",
+      "CS.281225",
+      "CS.071225",
+      "CS.100825",
+      "CS.300325",
+      "CS.090225",
+      "CS.221224",
+      "CS.171124",
+      "CS.070724",
+      "CS.280924"
+    ]
   },
   "handouts": [
     {
@@ -14,9 +27,22 @@
       "title": "Cấm bán thực phẩm, đồ uống có hại",
       "type": "Writing Task 2 · Agree or disagree",
       "statement": "Shops should be banned from selling any food or drink that has been scientifically proven to be damaging to public health. Do you agree or disagree?",
-      "studentPath": "../shops-writing/",
-      "dashboardPath": "../shops-writing/teacher.html",
-      "classes": ["CS.070626", "CS.160826", "CS.181026"]
+      "studentPath": "../sw-task2-writing/index.html",
+      "dashboardPath": "../sw-task2-writing/teacher.html",
+      "classes": [
+        "CS.181026",
+        "CS.160826",
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924"
+      ]
     },
     {
       "lessonId": "cs070626-writing-02",
@@ -26,8 +52,22 @@
       "title": "Ngân sách y tế: phòng bệnh hay điều trị",
       "type": "Writing Task 2 · Agree or disagree",
       "statement": "It is more important to spend public money promoting a healthy lifestyle to prevent illness than to spend it on treating people who are already ill. To what extent do you agree or disagree?",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "studentPath": "../sw-task2-writing/index.html",
+      "classes": [
+        "CS.181026",
+        "CS.160826",
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924"
+      ],
+      "dashboardPath": "../sw-task2-writing/teacher.html"
     },
     {
       "lessonId": "cs070626-writing-03",
@@ -37,8 +77,22 @@
       "title": "Biểu diễn trực tiếp hay xem tại nhà",
       "type": "Writing Task 2 · Agree or disagree",
       "statement": "In today’s world, it is no longer necessary to attend live performances such as shows or concerts, as watching them on television or on a computer at home is considered a better option. Do you agree or disagree with this opinion?",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "studentPath": "../sw-task2-writing/index.html",
+      "classes": [
+        "CS.181026",
+        "CS.160826",
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924"
+      ],
+      "dashboardPath": "../sw-task2-writing/teacher.html"
     },
     {
       "lessonId": "cs070626-writing-04",
@@ -48,8 +102,22 @@
       "title": "Trách nhiệm phòng chống tội phạm",
       "type": "Writing Task 2 · Discuss both views",
       "statement": "Some people think that the government should be responsible for crime prevention, while others believe that it is the responsibility of the individual to protect themselves. Discuss both views and give your opinion.",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "studentPath": "../sw-task2-writing/index.html",
+      "classes": [
+        "CS.181026",
+        "CS.160826",
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924"
+      ],
+      "dashboardPath": "../sw-task2-writing/teacher.html"
     },
     {
       "lessonId": "cs070626-writing-05",
@@ -60,7 +128,10 @@
       "type": "Writing Task 1 · Bar chart",
       "statement": "The bar chart below shows the percentage of Australian men and women in different age groups who did regular physical activity in 2010.",
       "studentPath": "./index.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "classes": [
+        "CS.070626",
+        "CS.160826"
+      ]
     },
     {
       "lessonId": "cs070626-writing-06",
@@ -71,7 +142,10 @@
       "type": "Writing Task 1 · Table",
       "statement": "The table below shows employment patterns for males and females in New Zealand in 1993 and 2003.",
       "studentPath": "./index.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "classes": [
+        "CS.070626",
+        "CS.160826"
+      ]
     },
     {
       "lessonId": "cs070626-writing-07",
@@ -82,7 +156,10 @@
       "type": "Writing Task 1 · Pie charts",
       "statement": "The pie charts show the proportion of users across different age groups on three apps:Twitter, Facebook and YouTube.",
       "studentPath": "./index.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "classes": [
+        "CS.070626",
+        "CS.160826"
+      ]
     },
     {
       "lessonId": "cs070626-writing-08",
@@ -93,7 +170,10 @@
       "type": "Writing Task 1 · Table",
       "statement": "The table below gives information on the number of Australian people who visited the seven most popular destinations in 1999 and 2009.",
       "studentPath": "./index.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "classes": [
+        "CS.070626",
+        "CS.160826"
+      ]
     },
     {
       "lessonId": "cs070626-writing-09",
@@ -103,8 +183,22 @@
       "title": "Sống một mình: tích cực hay tiêu cực",
       "type": "Writing Task 2 · Positive or negative development",
       "statement": "Nowadays, more and more people are choosing to live alone. Is this a positive or negative development?",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "studentPath": "../sw-task2-writing/index.html",
+      "classes": [
+        "CS.181026",
+        "CS.160826",
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924"
+      ],
+      "dashboardPath": "../sw-task2-writing/teacher.html"
     },
     {
       "lessonId": "cs070626-writing-10",
@@ -114,8 +208,22 @@
       "title": "Đô thị đông đúc và ùn tắc giao thông",
       "type": "Writing Task 2 · Problems and solutions",
       "statement": "Many cities are becoming increasingly crowded, and traffic congestion is getting worse. What problems does this cause, and what measures can be taken to solve them?",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "studentPath": "../sw-task2-writing/index.html",
+      "classes": [
+        "CS.181026",
+        "CS.160826",
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924"
+      ],
+      "dashboardPath": "../sw-task2-writing/teacher.html"
     },
     {
       "lessonId": "cs070626-writing-11",
@@ -125,8 +233,22 @@
       "title": "Phát triển kinh tế hay bảo vệ môi trường",
       "type": "Writing Task 2 · Discuss both views",
       "statement": "Some people believe economic development should be the main priority for governments, while others think protecting the natural environment is more important. Discuss both views and give your own opinion.",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "studentPath": "../sw-task2-writing/index.html",
+      "classes": [
+        "CS.181026",
+        "CS.160826",
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924"
+      ],
+      "dashboardPath": "../sw-task2-writing/teacher.html"
     },
     {
       "lessonId": "cs070626-writing-12",
@@ -136,8 +258,22 @@
       "title": "Tiếng Anh làm ngôn ngữ giảng dạy",
       "type": "Writing Task 2 · Advantages outweigh disadvantages",
       "statement": "In many countries, English is used as the main language of instruction in schools and universities. Do the advantages of this policy outweigh the disadvantages?",
-      "studentPath": "./lesson.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "studentPath": "../sw-task2-writing/index.html",
+      "classes": [
+        "CS.181026",
+        "CS.160826",
+        "CS.070626",
+        "CS.281225",
+        "CS.071225",
+        "CS.100825",
+        "CS.300325",
+        "CS.090225",
+        "CS.221224",
+        "CS.171124",
+        "CS.070724",
+        "CS.280924"
+      ],
+      "dashboardPath": "../sw-task2-writing/teacher.html"
     },
     {
       "lessonId": "cs070626-writing-13",
@@ -148,7 +284,10 @@
       "type": "Writing Task 1 · Biểu đồ cột và bảng",
       "statement": "The chart below shows the average earnings of people in various areas of work in one country in 2000 and 2010. The table shows the average salary for all sectors in the same years. Summarise the information by selecting and reporting the main features, and make comparisons where relevant.",
       "studentPath": "./index.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "classes": [
+        "CS.070626",
+        "CS.160826"
+      ]
     },
     {
       "lessonId": "cs070626-writing-14",
@@ -159,7 +298,10 @@
       "type": "Writing Task 1 · Biểu đồ đường",
       "statement": "The line graph below illustrates the proportion of mobile phone sales by three manufacturers (Motorola, Nokia and Sony Ericsson) between 1994 and 2004. Summarise the information by selecting and reporting the main features and make comparisons where relevant.",
       "studentPath": "./index.html",
-      "classes": ["CS.070626", "CS.160826"]
+      "classes": [
+        "CS.070626",
+        "CS.160826"
+      ]
     }
   ]
 }

@@ -630,6 +630,7 @@ async function waitForGoogle(clientId) {
 }
 
 async function init() {
+  if (globalThis.__IZONE_SW_TASK2_REDIRECTING__) return;
   try {
     const slug = new URLSearchParams(location.search).get("task") || "writing-lesson13-young-leaders";
     state.requestedClass = classQuery(location.search);

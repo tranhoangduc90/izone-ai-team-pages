@@ -8,7 +8,7 @@ const root = new URL("../", import.meta.url);
 test("danh mục chứa đủ 14 buổi Writing theo đúng thứ tự", async () => {
   const library = JSON.parse(await readFile(new URL("library.json", root), "utf8"));
   assert.equal(library.course.id, "speaking-writing-chuyen-sau");
-  assert.deepEqual(library.course.classCodes, ["CS.070626", "CS.160826", "CS.181026"]);
+  assert.deepEqual([...library.course.classCodes].sort(), ["CS.070724", "CS.280924", "CS.171124", "CS.221224", "CS.090225", "CS.300325", "CS.100825", "CS.071225", "CS.281225", "CS.070626", "CS.160826", "CS.181026"].sort());
   assert.equal(library.handouts.length, 14);
   assert.deepEqual(
     sortHandoutsByWritingLesson(library.handouts).map((item) => item.lessonId),
@@ -20,10 +20,14 @@ test("danh mục chứa đủ 14 buổi Writing theo đúng thứ tự", async (
   assert.equal(library.handouts.some((item) => item.classes.includes("IC2200")), false);
   assert.ok(library.handouts.every((item) => [1, 2].includes(item.taskNumber)));
   const shops = library.handouts.find((item) => item.slug === 'writing-task2-public-health-ban');
-  assert.deepEqual(shops.classes, ["CS.070626", "CS.160826", "CS.181026"]);
-  assert.equal(shops.studentPath, '../shops-writing/');
-  assert.equal(shops.dashboardPath, '../shops-writing/teacher.html');
-  assert.ok(library.handouts.filter(item => item !== shops).every((item) => JSON.stringify(item.classes) === JSON.stringify(["CS.070626", "CS.160826"])));
+  const task2=library.handouts.filter(item=>item.taskNumber===2);
+  assert.equal(task2.length,8);
+  for(const item of task2){
+    assert.deepEqual(item.classes,library.course.classCodes);
+    assert.equal(item.studentPath,'../sw-task2-writing/index.html');
+    assert.equal(item.dashboardPath,'../sw-task2-writing/teacher.html');
+  }
+  assert.ok(library.handouts.filter(item => item.taskNumber===1).every((item) => JSON.stringify(item.classes) === JSON.stringify(["CS.070626", "CS.160826"])));
 
   const lesson3 = library.handouts.find((item) => item.writingLesson === 3);
   const lesson11 = library.handouts.find((item) => item.writingLesson === 11);
