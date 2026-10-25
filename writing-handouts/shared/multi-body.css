@@ -1,0 +1,4 @@
+/* Chỉ bố trí hai instance của mẫu Lesson 9; giữ nguyên toàn bộ token/card/control. */
+.preparation-body{margin-top:24px}.preparation-body>h3{margin-bottom:12px}
+.handout-body{scroll-margin-top:24px;margin:36px 0 48px}.handout-body+.handout-body{border-top:1px solid var(--line);padding-top:32px}.body-title{margin-top:28px}.body-title h2{margin:0 0 7px}.body-title>.badge{margin-top:24px}.body-nav-group{margin-top:16px}.body-nav-group>.kicker{margin:0 0 8px 12px}.journey:has(.body-nav-group){max-height:calc(100vh - 48px);overflow-y:auto;scrollbar-width:thin}.journey:has(.body-nav-group) .journey-note{margin-top:20px}
+@media(max-width:760px){.body-nav-group{display:flex;gap:7px;margin:0;flex:none;align-items:stretch}.body-nav-group>.kicker{margin:0 4px;display:flex;align-items:center;min-width:42px}.journey:has(.body-nav-group){max-height:none;overflow:visible}.handout-body{margin-top:28px}.body-title{display:block}.body-title>.badge{margin-top:10px}}

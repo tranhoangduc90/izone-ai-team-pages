@@ -1,6 +1,6 @@
 // Dữ liệu nhận vào là bài demo; quản lý luật mở khóa và kết quả giả, không gọi dịch vụ.
 // Lỗi nhập/lượt cũ trả mã để giao diện báo rõ, không biến lỗi thành bài cần sửa.
-import {workflowFor,isWhole,available as policyAvailable,ideaPassed as policyIdeaPassed} from '../shared/workflow.mjs';
+import {workflowFor,isWhole,available as policyAvailable,ideaPassed as policyIdeaPassed} from '../shared/workflow.mjs?v=20261025-l11-ideas-v4';
 export const ORDER = ['topic', 'b1', 'a1', 'x1', 'b2', 'a2', 'x2'];
 export const FIELDS = {topic:['idea1','idea2','topicSentence'], b1:['b1'], a1:['a1'], x1:['x1'], b2:['b2'], a2:['a2'], x2:['x2']};
 export const EXAMPLE = {
@@ -20,7 +20,7 @@ export const VOCAB = {
 };
 export function createState(generation = 0,lesson={}) {
   const policy=workflowFor(lesson);
-  return {version:1,generation,...(lesson.workflowMode?{workflowMode:lesson.workflowMode}:{}),responses:Object.fromEntries(Object.keys(EXAMPLE).map(k=>[k,''])),steps:Object.fromEntries(policy.order.map(k=>[k,{status:'draft',history:[],pending:null,error:''}])),idea2Open:false};
+  return {version:1,generation,...(lesson.workflowMode?{workflowMode:lesson.workflowMode}:{}),...(lesson.preparationMode?{preparationMode:lesson.preparationMode}:{}),...(lesson.handoutMode?{handoutMode:lesson.handoutMode,bodyProgress:{1:{idea2Open:false},2:{idea2Open:false}}}:{}),responses:Object.fromEntries(Object.values(policy.fields).flat().map(k=>[k,''])),steps:Object.fromEntries(policy.order.map(k=>[k,{status:'draft',history:[],pending:null,error:''}])),idea2Open:false};
 }
 export function ideaPassed(s, n) { return policyIdeaPassed(s,n); }
 export function available(s, key) {

@@ -1,8 +1,9 @@
-import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261017-l9-1';
-import {createClient} from './client.mjs?v=20261011-1';
-import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261017-l9-1';
+import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261025-l11-ideas-v4';
+import {createClient} from './client.mjs?v=20261025-l11-ideas-v4';
+import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261025-l11-ideas-v4';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
-import {workflowFor,isWhole} from '../shared/workflow.mjs';
+import {workflowFor,isWhole,isMulti,isPrepared,PLAN_FIELDS,SOLUTIONS,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs?v=20261025-l11-ideas-v4';
+import {renderMultiBodies,multiJourney} from '../shared/multi-body-ui.mjs?v=20261025-l11-ideas-v4';
 import {wholeSections} from '../shared/whole-chain-ui.mjs';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../../shared/course-student-identity.js?v=20261018-identity-v1';
 installStyles();
@@ -15,17 +16,21 @@ const api=createClient(globalThis.handout67ApiBase||'https://ducizone.ddns.net/a
 let lesson=globalThis.handout67Lesson||{activity:'lesson5'};
 const courseIdentity=createCourseStudentIdentity({product:'handout67',entry:lesson.activity,requestIdentity:requestMappingStudentIdentity});
 const {order:ORDER,fields:FIELDS}=workflowFor(lesson);
-const names={};let classes=[],state=createState(0,lesson),student='',generation=0,busy=false,conflict=false,editingLocked=false;
+const names={};let classes=[],state=createState(0,lesson),student='',generation=0,busy=false,saveInFlight=false,conflict=false,editingLocked=false;
 let mutationVersion=0;
 let featureDialog=null;
 let dirty={},saveTimer,pollTimer,toastTimer,serial=Promise.resolve();
 const labels={idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic sentence của thân bài 2',b1:'Điểm cuối B · Ý 1',a1:'Điểm đầu A · Ý 1',x1:'Cầu nối X · Ý 1',b2:'Điểm cuối B · Ý 2',a2:'Điểm đầu A · Ý 2',x2:'Cầu nối X · Ý 2'};
 if(isWhole(lesson)){labels.topicSentence='Topic sentence của thân bài 1 · WHY';labels.si1='Cả chuỗi ý 1';labels.si2='Cả chuỗi ý 2';}
+if(isMulti(lesson))for(const n of [1,2])for(const [key,value] of Object.entries({...labels,topicSentence:'Topic sentence',topic:'Topic sentence',si1:'Cả chuỗi ý 1',si2:'Cả chuỗi ý 2'}))if(!bodyIndexOf(key))labels[bodyKey(n,key)]=value+' · Thân bài '+n;
 const descriptions={topic:{title:'Chốt idea và Topic sentence',kicker:'01 · Chuẩn bị thân bài 2',instruction:'Topic sentence = Trọng tâm bàn luận + Tóm tắt ngắn gọn toàn bộ idea của đoạn văn.',button:'Check chất lượng Topic Sentence'},b:{title:'Chốt điểm cuối (B)',instruction:'Có cụ thể không? Nêu kết quả cuối cùng mà ý này muốn chứng minh, để người đọc hình dung rõ.',button:'Check chất lượng Điểm cuối'},a:{title:'Check điểm đầu (A)',instruction:lesson.aInstruction||'',button:'Check chất lượng điểm đầu A'},x:{title:'Xây X · Cầu nối từ A sang B',instruction:'Vì sao A dẫn đến B? Giải thích một cơ chế nối hai điểm đã đạt; không chỉ diễn đạt lại A hoặc B.',button:'Check chất lượng cầu nối X'}};
 if(isWhole(lesson)){descriptions.topic.instruction='Chọn hai lý do giải thích WHY. Topic sentence báo trước hiện tượng và bao quát hai nhóm lý do; không cần kể chi tiết cả hai ý.';}
+if(isPrepared(lesson)){labels.outline='Kế hoạch idea hai thân bài';labels.chosenSolution='Phương án bạn cho là tốt hơn';descriptions.outline={title:'Chốt idea của cả hai thân bài',instruction:'Chọn phương án bạn ủng hộ và nêu hai idea cho mỗi thân bài. Thân bài 1 chỉ ra hạn chế của phương án không chọn; có thể khen mở đầu rồi chuyển sang chê. Thân bài 2 tập trung khen phương án bạn chọn. Chưa viết Topic sentence hoặc A/X/B.',button:'Check idea của cả hai thân bài'};}
 const statusLabels={draft:'Chưa check',revision:'Cần sửa',passed:'Đã đạt',pending:'Đang chấm…',technical_error:'Chưa chấm xong'};
-function field(name,disabled){
-  const isTopic=name==='topicSentence',idea=/^idea/.test(name);
+function field(name,disabled,readOnly=false){
+  if(readOnly)return `<div class="student-field"><span>${escape(labels[name])} · Đã chốt</span>${savedContent(state,name,{editable:false})}</div>`;
+  if(name==='chosenSolution'){if(disabled&&state.responses[name])return `<div class="student-field"><span>${escape(labels[name])}</span>${savedContent(state,name,{editable:true})}</div>`;return `<label class="student-field">${escape(labels[name])}<select id="field-chosenSolution" data-field="chosenSolution" ${disabled?'disabled':''}><option value="">Chọn phương án bạn cho là tốt hơn…</option>${SOLUTIONS.map(v=>`<option value="${escape(v)}" ${state.responses[name]===v?'selected':''}>${escape(v)}</option>`).join('')}</select></label>`;}
+  const isTopic=localKey(name)==='topicSentence',idea=/^idea/.test(localKey(name));
   const placeholder=idea?'Ghi ngắn gọn ý bạn muốn triển khai…':isTopic?'Viết câu chủ đề bao quát cả hai idea…':'Bạn có thể ghi ý bằng tiếng Việt hoặc tiếng Anh…';
   const section=ORDER.find(k=>FIELDS[k].includes(name));
   if(disabled&&state.responses[name]&&available(state,section))return `<div class="student-field"><span>${labels[name]}</span>${savedContent(state,name,{editable:true})}${idea?'<small>'+escape(lesson.ideaHint)+'</small>':''}</div>`;
@@ -43,25 +48,26 @@ function comments(key){
   body=teacherNotes.map(c=>`<article class="comment"><div class="comment-header"><span>Giảng viên · ${escape(c.authorName)}</span></div><div class="comment-body"><p>${escape(c.feedback)}</p><details><summary>Xem nội dung lúc góp ý</summary><div class="snapshot">${escape(snapshot(c,key))}</div></details></div></article>`).join('')+body;
   const fails=step.history.filter(h=>h.status==='revision').length;
   if(fails>0&&fails%3===0&&step.status!=='passed')body+='<p class="support">Bạn đã sửa 3 lần trong vòng này. Hãy nhờ giảng viên giúp làm rõ điểm đang vướng trước khi thử tiếp.</p>';
-  return `<aside class="comments" aria-label="Nhận xét ${escape(key)}"><div class="comments-heading"><h3>Dòng thời gian · Comment</h3><span>${hist.length} lượt</span></div><div aria-live="polite">${body}</div></aside>`;
+  return `<aside class="comments" aria-label="Nhận xét ${escape(labels[key]||key)}"><div class="comments-heading"><h3>Dòng thời gian · Comment</h3><span>${hist.length} lượt</span></div><div aria-live="polite">${body}</div></aside>`;
 }
 function chain(key){
-  if(key==='topic')return '';
+  if(['topic','outline'].includes(localKey(key)))return '';
   const n=key.at(-1),type=key[0];
   if(type==='a'||type==='x')return renderJourney(state,key,field(key,!canEdit(state,key)),lesson.shortTitle);
   const items=[['Idea',state.responses['idea'+n]],...(n==='2'?[['B1',state.responses.b1]]:[])];
   return `<div class="context-chain">${items.map(([label,value])=>`<div><b>${label}</b><span>${label==='Idea'?savedContent(state,'idea'+n,{editable:true}):label==='B1'?savedContent(state,'b1',{editable:true}):escape(value)}</span></div>`).join('')}</div>`;
 }
 function stepCard(key){
-  const step=state.steps[key],type=key==='topic'?'topic':key[0],n=key.at(-1),def=descriptions[type];
-  const title=def.title+(key==='topic'?'':` · Ý ${n}`);
+  const local=localKey(key),b=bodyIndexOf(key),copy=lesson.bodies?.find(x=>x.body===b),prefix=f=>b?bodyKey(b,f):f;
+  const step=state.steps[key],type=['topic','outline'].includes(local)?local:local[0],n=key.at(-1),def=copy&&type==='topic'?{...descriptions.topic,...(isPrepared(lesson)?{title:'Viết Topic sentence'}:{}),instruction:copy.topicInstruction}:descriptions[type];
+  const title=def.title+(['topic','outline'].includes(local)?'':` · Ý ${n}`);
   if(!available(state,key))return `<div id="step-${key}" class="lock-note"><span aria-hidden="true">◌</span><span><strong>${title}</strong><br>Mở sau khi ${key==='b1'?'Topic sentence':key[0]==='a'?'điểm cuối B':'điểm đầu A'} đạt.</span></div>`;
   const disabled=!canEdit(state,key);
-  let form=key==='topic'?`<h3>Chốt idea cho thân bài ${lesson.body||2}</h3><div class="field-grid">${field('idea1',disabled)}${field('idea2',disabled)}</div>${field('topicSentence',disabled)}`:(type==='a'||type==='x'?'':field(key,disabled));
+  let form=local==='outline'?`${field('chosenSolution',disabled)}${[1,2].map(n=>`<section class="preparation-body"><h3>Thân bài ${n} · ${n===1?'Đánh giá phương án không chọn':'Bảo vệ phương án chọn'}</h3><div class="field-grid">${[1,2].map(i=>field(bodyKey(n,'idea'+i),disabled)).join('')}</div></section>`).join('')}`:local==='topic'?`<h3>${isPrepared(lesson)?'Hai idea đã chốt của':'Chốt idea cho'} thân bài ${b||lesson.body||2}</h3><div class="field-grid">${field(prefix('idea1'),disabled,isPrepared(lesson))}${field(prefix('idea2'),disabled,isPrepared(lesson))}</div>${field(prefix('topicSentence'),disabled)}`:(type==='a'||type==='x'?'':field(key,disabled));
   const words=FIELDS[key].reduce((total,f)=>total+state.responses[f].trim().split(/\s+/).filter(Boolean).length,0);
   const submitted=(state.submittedSections||[]).includes(key)||step.history.length>0;
   const attestation=step.status!=='passed'?`<div class="attest-wrap"><button type="button" data-attest="${key}" ${submitted?'':'disabled'}>GV xác nhận có thể bỏ qua comment</button><small>${submitted?'Bạn tự nhấn sau khi được GV đồng ý miệng.':'Cần gửi chấm ít nhất một lần trước khi xác nhận.'}</small></div>`:'';
-  const current=`<div class="step-grid"><article class="answer-card"><div class="step-heading"><div><p class="kicker">${key==='topic'?'Chuẩn bị nội dung':`Ý ${n} · ${type.toUpperCase()} trong A–X–B`}</p><h3>${def.title}</h3></div><span class="badge ${step.status}">${statusLabels[step.status]}</span></div><p class="instruction">${def.instruction}</p>${chain(key)}${form}<p class="error" id="error-${key}" role="alert" hidden></p><div class="section-actions"><span class="word-count" data-count="${key}">${words} từ</span><button data-check="${key}" class="primary" ${disabled?'disabled':''}>${step.status==='passed'?'Đã đạt · giữ nguyên':step.status==='pending'?'Đang chấm…':def.button+(type==='b'?` ${n}`:'')}</button></div>${attestation}</article>${comments(key)}</div>`;
+  const current=`<div class="step-grid"><article class="answer-card"><div class="step-heading"><div><p class="kicker">${['topic','outline'].includes(local)?'Chuẩn bị nội dung':`Ý ${n} · ${type.toUpperCase()} trong A–X–B`}</p><h3>${def.title}</h3></div><span class="badge ${step.status}">${statusLabels[step.status]}</span></div><p class="instruction">${def.instruction}</p>${chain(key)}${form}<p class="error" id="error-${key}" role="alert" hidden></p><div class="section-actions"><span class="word-count" data-count="${key}">${words} từ</span><button data-check="${key}" class="primary" ${disabled?'disabled':''}>${step.status==='passed'?'Đã đạt · giữ nguyên':step.status==='pending'?'Đang chấm…':def.button+(type==='b'?` ${n}`:'')}</button></div>${attestation}</article>${comments(key)}</div>`;
   return step.status==='passed'?`<details class="prior-step expandable" id="step-${key}" data-status="passed"><summary><span class="section-title">${title}</span><span class="badge passed">✓ Đã đạt</span><span class="expand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path class="vertical" d="M12 5v14"/></svg></span></summary>${current}</details>`:`<section id="step-${key}" class="step" data-status="${step.status}" aria-label="${title}">${current}</section>`;
 }
 function vocabulary(n){
@@ -76,12 +82,19 @@ function render(){
   const replyDrafts=new Map([...document.querySelectorAll('[data-thread-reply]')].map(f=>[f.dataset.threadReply,{body:f.elements.body.value,id:f.dataset.replyId,sentBody:f.dataset.replyBody}]));
   const openSteps=[...document.querySelectorAll('details.prior-step[open]')].map(d=>d.id);
   const historyStates=new Map([...document.querySelectorAll('details.comment.history[data-history]')].map(d=>[d.dataset.history,d.open]));
+  if(isMulti(lesson)){
+   $('sections').innerHTML=renderMultiBodies(state,lesson,{field,comments,stepCard});
+   $('journey-nav').innerHTML=multiJourney(state,lesson);
+   const done=[1,2].every(n=>ideaPassed(bodyView(state,n),2));
+   $('completion').hidden=!done;$('completion').innerHTML=done?'<section class="completed"><span class="badge passed">✓ Cả hai thân bài đã hoàn thiện</span><h2>Handout Lesson '+lesson.number+' đã hoàn tất</h2><p>Bạn có thể xem lại nội dung và từ vựng trong bảng cuối của từng thân bài.</p></section>':'';
+  }else{
   $('sections').innerHTML=isWhole(lesson)?wholeSections(state,{field,comments,stepCard}):`<section class="section-group" id="topic"><div class="group-header"><div><span class="group-number" aria-hidden="true">1</span><h2>Ý tưởng & Topic sentence</h2><p>Chốt cả hai idea trước khi phát triển từng ý.</p></div></div>${stepCard('topic')}</section><section class="section-group" id="idea1"><div class="group-header"><div><span class="group-number" aria-hidden="true">2</span><h2>Hoàn thiện ý 1</h2><p>Chốt B → kiểm A → xây X → mở từ vựng.</p></div><span class="badge ${ideaPassed(state,1)?'passed':''}">${ideaPassed(state,1)?'✓ Đã đạt':'Làm từng bước'}</span></div>${['b1','a1','x1'].map(stepCard).join('')}${vocabulary(1)}${ideaPassed(state,1)&&!state.idea2Open?'<div class="next-idea"><div><strong>Ý 1 đã hoàn thiện.</strong><p>Giữ nguyên ba điểm đã đạt và bắt đầu ý tiếp theo.</p></div><button class="primary" id="next-idea">Tiếp tục với ý 2 →</button></div>':''}</section>${state.idea2Open?`<section class="section-group" id="idea2"><div class="group-header"><div><span class="group-number" aria-hidden="true">3</span><h2>Hoàn thiện ý 2</h2><p>Tiếp tục quy trình B → A → X với idea thứ hai.</p></div></div>${['b2','a2','x2'].map(stepCard).join('')}${vocabulary(2)}</section>`:'<div id="idea2" class="lock-note">◌ &nbsp; Ý 2 sẽ mở sau khi bạn hoàn thiện ý 1 và nhấn tiếp tục.</div>'}`;
   const topicDone=state.steps.topic.status==='passed',oneDone=ideaPassed(state,1),twoDone=ideaPassed(state,2);
   $('journey-nav').innerHTML=[['prompt','Đề bài','Đọc đề','?',false,true],['topic','Ý tưởng & Topic','Chốt cả hai idea','1',topicDone,true],['idea1','Lập luận ý 1',isWhole(lesson)?'Check cả chuỗi':'B → A → X','2',oneDone,topicDone],['idea2','Lập luận ý 2',isWhole(lesson)?'Check cả chuỗi':'B → A → X','3',twoDone,state.idea2Open]].map(([id,title,sub,num,done,enabled])=>`<button class="nav-item ${done?'done':''} ${id==='topic'&&!topicDone||id==='idea1'&&topicDone&&!oneDone||id==='idea2'&&state.idea2Open?'active':''}" data-target="${id}" ${enabled?'':'disabled'}><span>${done?'✓':num}</span><span>${title}<small>${sub}</small></span></button>`).join('');
   $('completion').hidden=!twoDone;
   if(twoDone)$('completion').innerHTML=renderRecap({...state,body:lesson.body||2});
   if(isWhole(lesson))$('journey-nav').insertAdjacentHTML('beforeend',`<button class="nav-item ${twoDone?'done':''}" data-target="completion" ${twoDone?'':'disabled'}><span>${twoDone?'✓':'4'}</span><span>Bảng cuối<small>Nội dung & từ vựng chung</small></span></button>`);
+  }
   for(const f of document.querySelectorAll('[data-thread-reply]'))if(replyDrafts.has(f.dataset.threadReply)){
    const d=replyDrafts.get(f.dataset.threadReply);f.elements.body.value=d.body;
    if(d.id)f.dataset.replyId=d.id;if(d.sentBody!==undefined)f.dataset.replyBody=d.sentBody;
@@ -116,14 +129,14 @@ function openFeature(button){
   inFlight=true;submit.disabled=true;cancel.disabled=true;error.hidden=true;
   if(!await flush()||epoch!==generation){inFlight=false;submit.disabled=false;cancel.disabled=false;error.hidden=false;error.textContent='Chưa lưu được bản nháp đang làm. Hãy kiểm kết nối hoặc đọc bản mới trước.';return;}
   busy=true;editingLocked=true;mutationVersion++;
-  document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);
+  fieldControls().forEach(el=>el.disabled=true);
   if(!requestBody||(field&&requestBody.value!==value))requestBody={requestId:crypto.randomUUID(),baseVersion:state.version,...(field?{field,value}:{section,teacherPermission:true})};
   try{
    const result=field?await api.edit(ref,requestBody):await api.attest(ref,requestBody);
    if(epoch!==generation||ref!==state.ref)return;
    apply({...result.session,responses:{...result.session.responses,...dirty}});note('');inFlight=false;dialog.close();message(field?'Đã lưu thay đổi. Nội dung đã đồng bộ; trạng thái thông qua được giữ.':'Đã ghi xác nhận và mở phần tiếp theo.');
   }catch(e){if(epoch===generation){error.hidden=false;error.textContent=e.status===409?'Bài đã thay đổi. Nội dung chỉnh vẫn ở đây; hãy sao chép rồi đóng hộp và đọc bản mới.':e.status===401?'Phiên đã hết hạn. Giữ nội dung chỉnh và đăng nhập lại.':'Chưa xác nhận được kết quả lưu. Bạn có thể thử lại; nội dung nhập được giữ.';}}
-  finally{inFlight=false;if(epoch===generation){busy=false;editingLocked=false;submit.disabled=false;cancel.disabled=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});schedulePoll();}}
+  finally{inFlight=false;if(epoch===generation){busy=false;editingLocked=false;submit.disabled=false;cancel.disabled=false;fieldControls().forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});schedulePoll();}}
  });
  document.body.append(dialog);dialog.showModal();dialog.querySelector('textarea,input')?.focus();
 }
@@ -138,7 +151,7 @@ function enqueue(action){const result=serial.then(action);serial=result.catch(()
 function apply(value){state=value;render();}
 function failure(error){
 
- if(error.status===409){conflict=true;document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);note('Bài đã thay đổi ở tab khác. Nháp của bạn được giữ trên thiết bị. Đọc bản đã lưu trước khi tiếp tục.');$('read-latest').hidden=false;}
+ if(error.status===409){conflict=true;fieldControls().forEach(el=>el.disabled=true);note('Bài đã thay đổi ở tab khác. Nháp của bạn được giữ trên thiết bị. Đọc bản đã lưu trước khi tiếp tục.');$('read-latest').hidden=false;}
  else if(error.status===401){note('Phiên đã hết hạn. Hãy chọn lại tên để mở bài đã lưu.');message('Bài đã lưu trên máy chủ vẫn được giữ.');}
  else {note('Chưa kết nối được máy chủ. Nháp vẫn được giữ trên thiết bị; bạn có thể thử lại.');}
  $('save-state').textContent='Có nháp chưa lưu';
@@ -148,7 +161,7 @@ async function flush(){
  const epoch=generation;
  return enqueue(async()=>{
   if(epoch!==generation||!state.ref||conflict||!Object.keys(dirty).length)return !conflict;
-  const changes={...dirty};busy=true;mutationVersion++;
+  const changes={...dirty};busy=true;saveInFlight=true;mutationVersion++;
   try {
    const result=await api.save(state.ref,{baseVersion:state.version,requestId:crypto.randomUUID(),responses:changes});
    if(epoch!==generation)return false;
@@ -159,7 +172,7 @@ async function flush(){
    if(!Object.keys(dirty).length){try{localStorage.removeItem(draftKey());}catch{}note('');}
    return true;
   }catch(error){if(epoch===generation)failure(error);return false;}
-  finally{if(epoch===generation)busy=false;}
+  finally{if(epoch===generation){busy=false;saveInFlight=false;}}
  });
 }
 function schedulePoll(){clearTimeout(pollTimer);if(!student)return;pollTimer=setTimeout(poll,4000);}
@@ -182,7 +195,7 @@ async function enter({selection=null,pinned=false}={}){
   if(epoch!==generation||student!==selectedStudent||$('class-select').value!==classRef)return;
   if(selection&&!courseIdentity.isCurrent(selection))throw new Error('IDENTITY_CHANGED');
   if(!result.token||result.session?.activity!==lesson.activity||result.session.classRef!==classRef||result.session.studentRef!==selectedStudent)throw new Error('SESSION_OWNER_MISMATCH');
-  api.setToken(result.token);dirty={};conflict=false;busy=false;editingLocked=false;serial=Promise.resolve();state=result.session;
+  api.setToken(result.token);dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
   if(!pinned)await courseIdentity.commit(context,{automatic:Boolean(selection),remember:$('remember').checked}).then(value=>{
    if(!['ok','empty'].includes(value.status))message('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.');
   }).catch(()=>message('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.'));
@@ -246,10 +259,10 @@ for(const view of ['identity','confirm']){const change=document.createElement('b
 $('read-latest').addEventListener('click',async()=>{
  if(busy||editingLocked)return;
  const epoch=generation,ref=state.ref;keepDraft();busy=true;editingLocked=true;mutationVersion++;
- document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);
+ fieldControls().forEach(el=>el.disabled=true);
  try{const result=await api.read(ref);if(epoch!==generation||ref!==state.ref)return;dirty={};conflict=false;busy=false;apply(result.session);note('');$('read-latest').hidden=true;$('restore-draft').hidden=false;$('save-state').textContent='Đã đọc bản mới từ máy chủ';}
  catch(error){if(epoch===generation&&ref===state.ref)failure(error);}
- finally{if(epoch===generation&&ref===state.ref){busy=false;editingLocked=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});}}
+ finally{if(epoch===generation&&ref===state.ref){busy=false;editingLocked=false;fieldControls().forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});}}
 });
 $('restore-draft').addEventListener('click',()=>{if(busy||editingLocked)return;try{const saved=JSON.parse(localStorage.getItem(draftKey()));for(const [field,value] of Object.entries(saved.changes||saved.responses)){const key=ORDER.find(k=>FIELDS[k].includes(field));if(typeof value==='string'&&canEdit(state,key)&&state.responses[field]!==value){state.responses[field]=value;dirty[field]=value;}}render();$('restore-draft').hidden=true;if(Object.keys(dirty).length){keepDraft();void flush();}}catch{message('Chưa đọc được nháp trên thiết bị.');}});
 $('workspace').addEventListener('input',event=>{
@@ -264,18 +277,19 @@ $('workspace').addEventListener('click',async event=>{
  if(button.dataset.edit||button.dataset.attest){openFeature(button);return;}
  if(button.dataset.target){$(button.dataset.target)?.scrollIntoView({behavior:'auto'});return;}
  const key=button.dataset.check;
- if(!key&&button.id!=='next-idea'&&!button.dataset.vocabRetry)return;
- if(busy||conflict||button.disabled)return;
+ const next=button.id==='next-idea'||!!button.id?.endsWith('_next-idea'),bodyIndex=isMulti(lesson)?bodyIndexOf(key||button.id)||Number(button.closest('[data-body-index]')?.dataset.bodyIndex)||undefined:undefined;
+ if(!key&&!next&&!button.dataset.vocabRetry)return;
+ if((busy&&!saveInFlight)||conflict||editingLocked||button.disabled)return;
  if(key){const empty=FIELDS[key].find(f=>!state.responses[f].trim());if(empty){const el=$('error-'+key);el.hidden=false;el.textContent='Hãy nhập đủ nội dung vào các ô trước khi Check.';$('field-'+empty)?.focus();return;}}
  button.disabled=true;editingLocked=true;const epoch=generation;
- document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);
- if(!await flush()||epoch!==generation){if(epoch===generation){editingLocked=false;button.disabled=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});}return;}
+ fieldControls().forEach(el=>el.disabled=true);
+ if(!await flush()||epoch!==generation){if(epoch===generation){editingLocked=false;button.disabled=false;fieldControls().forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});}return;}
  busy=true;mutationVersion++;
  try {
-  const result=key?await api.check(state.ref,{section:key,baseVersion:state.version,requestId:crypto.randomUUID()}):button.id==='next-idea'?await api.idea2(state.ref):await api.vocabulary(state.ref,button.dataset.vocabRetry==='all'?'all':Number(button.dataset.vocabRetry));
-  if(epoch!==generation)return;busy=false;apply(result.session);note('');if(button.id==='next-idea')focusSection(isWhole(lesson)?'si2':'b2');
+  const result=key?await api.check(state.ref,{section:key,bodyIndex,baseVersion:state.version,requestId:crypto.randomUUID()}):next?await api.idea2(state.ref,bodyIndex):await api.vocabulary(state.ref,button.dataset.vocabRetry==='all'?'all':Number(button.dataset.vocabRetry),bodyIndex);
+  if(epoch!==generation)return;busy=false;apply(result.session);note('');if(next)focusSection(bodyIndex?bodyKey(bodyIndex,'si2'):isWhole(lesson)?'si2':'b2');
  }catch(error){if(epoch===generation){failure(error);button.disabled=false;}}
- finally{if(epoch===generation){busy=false;editingLocked=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});schedulePoll();}}
+ finally{if(epoch===generation){busy=false;editingLocked=false;fieldControls().forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});schedulePoll();}}
 });
 $('workspace').addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)&&event.target.dataset.threads){event.preventDefault();revealThreads(event.target.dataset.threads);}});
 $('workspace').addEventListener('submit',async event=>{
@@ -287,16 +301,16 @@ $('workspace').addEventListener('submit',async event=>{
  if(signature!==body){form.dataset.replyId=crypto.randomUUID();form.dataset.replyBody=body;}
  // Lưu xong bài trước khi gửi trao đổi; khóa nhập trong thời gian chờ để ACK không làm mất chữ.
  editingLocked=true;button.disabled=true;form.elements.body.disabled=true;mutationVersion++;
- document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);status.dataset.state='pending';status.textContent='Đang lưu bài và gửi trả lời…';
+ fieldControls().forEach(el=>el.disabled=true);status.dataset.state='pending';status.textContent='Đang lưu bài và gửi trả lời…';
  try{
   if(!await flush()||epoch!==generation||ref!==state.ref){status.dataset.state='error';status.textContent='Chưa lưu được bài; lời trả lời vẫn giữ. Hãy xử lý kết nối rồi thử lại.';return;}
   busy=true;mutationVersion++;
-  const result=await api.thread(ref,{action:'reply',threadRef:form.dataset.threadReply,body,requestId:form.dataset.replyId});if(epoch!==generation||ref!==state.ref)return;
+  const result=await api.thread(ref,{action:'reply',threadRef:form.dataset.threadReply,body,requestId:form.dataset.replyId,bodyIndex:bodyIndexOf(state.commentThreads?.find(t=>t.ref===form.dataset.threadReply)?.field)??undefined});if(epoch!==generation||ref!==state.ref)return;
   form.elements.body.value='';delete form.dataset.replyId;delete form.dataset.replyBody;
   apply({...result.session,responses:{...result.session.responses,...dirty}});message('Đã lưu trả lời trong cùng luồng trao đổi.');
  }
  catch(e){if(epoch===generation){status.dataset.state='error';status.textContent=e.status===401?'Phiên hết hạn. Lời trả lời vẫn được giữ.':'Chưa gửi được; lời trả lời được giữ để thử lại.';}}
- finally{if(epoch===generation){busy=false;editingLocked=false;button.disabled=false;form.elements.body.disabled=false;document.querySelectorAll('textarea[data-field]').forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});schedulePoll();}}
+ finally{if(epoch===generation){busy=false;editingLocked=false;button.disabled=false;form.elements.body.disabled=false;fieldControls().forEach(el=>{const key=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,key);});schedulePoll();}}
 });
 window.addEventListener('pagehide',()=>{if(student&&Object.keys(dirty).length)keepDraft();});
 window.addEventListener('beforeunload',event=>{if(Object.keys(dirty).length){keepDraft();event.preventDefault();event.returnValue='';}});
@@ -309,27 +323,30 @@ function openInline(button){
  if(busy||conflict||editingLocked||button.disabled||document.querySelector('.inline-edit-box'))return;
  const field=button.dataset.edit,root=button.closest('.saved-field'),text=root.querySelector('.saved-text'),before=state.responses[field],key=ORDER.find(k=>FIELDS[k].includes(field)),epoch=generation,ref=state.ref;
  const box=document.createElement('form');box.className='inline-edit-box';box.dataset.inlineField=field;
- box.innerHTML=`<label>${escape(labels[field])}<textarea maxlength="4000" required>${escape(before)}</textarea></label><footer><button type="submit" class="primary">Lưu thay đổi</button><button type="button" class="secondary" data-cancel-inline>Hủy</button></footer><p role="status">Chỉnh tại ô đang xem. Trạng thái thông qua và bản đã gửi chấm vẫn được giữ.</p>`;
- text.hidden=true;button.hidden=true;root.append(box);box.querySelector('textarea').focus();
+ box.innerHTML=`<label>${escape(labels[field])}${editControl(field,before)}</label><footer><button type="submit" class="primary">Lưu thay đổi</button><button type="button" class="secondary" data-cancel-inline>Hủy</button></footer><p role="status">${isPrepared(lesson)&&PLAN_FIELDS.includes(field)?'Đổi kế hoạch cần chốt idea và kiểm lại các phần phụ thuộc. Nội dung và lịch sử cũ vẫn được giữ.':'Chỉnh tại ô đang xem. Trạng thái thông qua và bản đã gửi chấm vẫn được giữ.'}</p>`;
+ text.hidden=true;button.hidden=true;root.append(box);(box.querySelector('textarea')||box.querySelector('select')).focus();
  let inFlight=false,requestBody=null;
  box.querySelector('[data-cancel-inline]').addEventListener('click',()=>{if(inFlight)return;box.remove();text.hidden=false;button.hidden=false;button.focus();});
  box.addEventListener('submit',async event=>{
   event.preventDefault();if(inFlight||epoch!==generation||ref!==state.ref)return;
-  const value=box.querySelector('textarea').value;if(!value.trim())return;
+  const value=(box.querySelector('textarea')||box.querySelector('select')).value;if(!value.trim())return;
   const controls=box.querySelectorAll('button'),status=box.querySelector('[role="status"]');
   inFlight=true;editingLocked=true;controls.forEach(b=>b.disabled=true);
-  document.querySelectorAll('textarea[data-field]').forEach(el=>el.disabled=true);
+  fieldControls().forEach(el=>el.disabled=true);
   try{
    if(!await flush()||epoch!==generation||ref!==state.ref){status.textContent='Chưa lưu được bản nháp đang làm. Nội dung chỉnh vẫn giữ; hãy kiểm kết nối hoặc đọc bản mới.';return;}
    busy=true;mutationVersion++;
    if(!requestBody||requestBody.value!==value)requestBody={field,value,baseVersion:state.version,requestId:crypto.randomUUID()};
    const result=await api.edit(ref,requestBody);
-   if(epoch===generation&&ref===state.ref){apply({...result.session,responses:{...result.session.responses,...dirty}});note('');message('Đã lưu thay đổi. Nội dung đã đồng bộ; trạng thái thông qua được giữ.');}
+   if(epoch===generation&&ref===state.ref){apply({...result.session,responses:{...result.session.responses,...dirty}});note('');message(isPrepared(lesson)&&PLAN_FIELDS.includes(field)?'Đã đổi kế hoạch. Hãy chốt lại idea; bài và lịch sử cũ vẫn được giữ.':'Đã lưu thay đổi. Nội dung đã đồng bộ; trạng thái thông qua được giữ.');}
   }catch(error){
    if(epoch===generation&&ref===state.ref)status.textContent=error.status===409?'Bài đã thay đổi. Nội dung chỉnh vẫn ở đây; hãy sao chép rồi hủy để đọc bản mới.':error.status===401?'Phiên đã hết hạn. Giữ nội dung chỉnh và đăng nhập lại.':'Chưa xác nhận được kết quả lưu. Bạn có thể thử lại; nội dung nhập được giữ.';
   }finally{
    inFlight=false;
-   if(epoch===generation&&ref===state.ref){busy=false;editingLocked=false;controls.forEach(b=>b.disabled=false);document.querySelectorAll('textarea[data-field]').forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});schedulePoll();}
+   if(epoch===generation&&ref===state.ref){busy=false;editingLocked=false;controls.forEach(b=>b.disabled=false);fieldControls().forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});schedulePoll();}
   }
  });
 }
+
+function fieldControls(){return [...document.querySelectorAll('textarea[data-field]'),...(isPrepared(lesson)?document.querySelectorAll('select[data-field]'):[])];}
+function editControl(field,value){return field==='chosenSolution'?'<select required>'+SOLUTIONS.map(v=>'<option '+(v===value?'selected':'')+'>'+escape(v)+'</option>').join('')+'</select>':'<textarea maxlength="4000" required>'+escape(value)+'</textarea>';}

@@ -1,5 +1,5 @@
 import {wholeSections} from '../shared/whole-chain-ui.mjs';
-import {workflowFor,isWhole} from '../shared/workflow.mjs';
+import {workflowFor,isWhole,isMulti,isPrepared,PLAN_FIELDS,SOLUTIONS,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs';
 import {createCourseStudentIdentity} from '../../shared/course-student-identity.js';
 // Ca kiểm riêng của reviewer: dữ liệu giả, VM chạy source UI thật với DOM/API tối thiểu.
 // Không gọi mạng/VPS/AI; kết quả kiểm cho biết phản hồi muộn có làm mất hoặc trộn bài không.
@@ -15,7 +15,7 @@ function deferred(){let resolve;const promise=new Promise(r=>resolve=r);return {
 function fixture(api={}){
  const elements=new Map(),storage=new Map(),textarea={dataset:{field:'idea1'},value:'',disabled:false};
  const el=id=>{if(!elements.has(id))elements.set(id,{hidden:false,disabled:false,dataset:{},textContent:'',innerHTML:'',value:'',handlers:{},addEventListener(k,f){this.handlers[k]=f;},append(){},querySelector(){return null;},scrollIntoView(){},focus(){}});return elements.get(id);};
- const context=vm.createContext({workflowFor,isWhole,wholeSections,createCourseStudentIdentity,requestMappingStudentIdentity:async()=>{throw new Error('Bộ thử phản hồi muộn không được gọi mạng');},...core,installStyles(){},createClient:()=>({setToken(){},...api}),document:{createElement:()=>({addEventListener(){}}),getElementById:el,querySelector:()=>null,querySelectorAll:s=>s==='textarea[data-field]'?[textarea]:[]},window:{addEventListener(){},scrollTo(){}},localStorage:{setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k),getItem:k=>storage.get(k)||null},crypto:{randomUUID:()=> 'fixture-request'},setTimeout:()=>0,clearTimeout(){},Promise,JSON,Date,Number,String,Object,structuredClone});
+ const context=vm.createContext({workflowFor,isWhole,isMulti,isPrepared,PLAN_FIELDS,SOLUTIONS,bodyView,bodyKey,bodyIndexOf,localKey,wholeSections,createCourseStudentIdentity,requestMappingStudentIdentity:async()=>{throw new Error('Bộ thử phản hồi muộn không được gọi mạng');},...core,installStyles(){},createClient:()=>({setToken(){},...api}),document:{createElement:()=>({addEventListener(){}}),getElementById:el,querySelector:()=>null,querySelectorAll:s=>s==='textarea[data-field]'?[textarea]:[]},window:{addEventListener(){},scrollTo(){}},localStorage:{setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k),getItem:k=>storage.get(k)||null},crypto:{randomUUID:()=> 'fixture-request'},setTimeout:()=>0,clearTimeout(){},Promise,JSON,Date,Number,String,Object,structuredClone});
  const source=fs.readFileSync(root+'/lesson5-thu/app.js','utf8').replace(/^import .*\r?\n/gm,'').replace('void bootstrap();','');
  vm.runInContext(source,context);
  const run=code=>vm.runInContext(code,context);
@@ -88,6 +88,16 @@ test('R-UI-CHECK · khóa nhập ngay trước đợi flush',async()=>{
  h.run("dirty={idea1:'Old draft'};state.responses.idea2='Idea two';state.responses.topicSentence='Topic sentence';");
  const button={dataset:{check:'topic'},disabled:false};const pending=h.el('workspace').handlers.click({target:{closest:s=>s==='button'?button:null}});
  assert.equal(h.textarea.disabled,true);assert.equal(h.run('editingLocked'),true);save.resolve({session:{version:2}});await pending;
+});
+test('R-UI-CHECK-AUTOSAVE · bấm Check khi autosave chờ ACK vẫn gửi đúng một lượt sau bản lưu mới',async()=>{
+ const save=deferred(),sent=[];let h;
+ h=fixture({save:()=>save.promise,check:async(_ref,input)=>{sent.push(input);return {session:h.run('structuredClone(state)')};}});
+ h.run("dirty={idea1:'Old draft'};state.responses.idea2='Idea two';state.responses.topicSentence='Topic sentence';");
+ const autosave=h.run('flush()');await Promise.resolve();await Promise.resolve();
+ const button={dataset:{check:'topic'},disabled:false},event={target:{closest:s=>s==='button'?button:null}};
+ const check=h.el('workspace').handlers.click(event);const duplicate=h.el('workspace').handlers.click(event);
+ save.resolve({session:{version:2}});await Promise.all([autosave,check,duplicate]);
+ assert.equal(sent.length,1);assert.equal(sent[0].baseVersion,2);assert.equal(sent[0].section,'topic');
 });
 test('R-UI-READ-SINGLE · doubleclick read-latest chỉ tạo một read',async()=>{
  const read=deferred();let calls=0;const h=fixture({read:()=>{calls++;return read.promise;}});

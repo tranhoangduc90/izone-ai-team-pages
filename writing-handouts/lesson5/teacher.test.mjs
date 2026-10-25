@@ -1,4 +1,4 @@
-import {workflowFor,isWhole} from '../shared/workflow.mjs';
+import {workflowFor,isWhole,isMulti,isPrepared,PLAN_FIELDS,SOLUTIONS,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs';
 import {classQuery,resolveClassRef} from '../js/class-selection.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +9,7 @@ import {ORDER,FIELDS,createState} from '../lesson5-demo/core.mjs';
 function fixture(fetcher){
  const elements=new Map();
  const get=id=>{if(!elements.has(id))elements.set(id,{handlers:{},addEventListener(k,f){this.handlers[k]=f;},hidden:false,textContent:'',innerHTML:'',value:'',dataset:{}});return elements.get(id);};
- const context=vm.createContext({workflowFor,isWhole,classQuery,resolveClassRef,location:{search:''},ORDER,FIELDS,installStyles(){},savedContent:()=>'',approvalLabel:()=>'',threadsView:()=>'',fetch:fetcher,document:{body:{dataset:{}},getElementById:get,querySelectorAll:()=>[],addEventListener(){}},AbortSignal,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearTimeout,clearInterval,setInterval,window:{}});
+ const context=vm.createContext({workflowFor,isWhole,isMulti,isPrepared,PLAN_FIELDS,SOLUTIONS,bodyView,bodyKey,bodyIndexOf,localKey,classQuery,resolveClassRef,location:{search:''},ORDER,FIELDS,installStyles(){},savedContent:()=>'',approvalLabel:()=>'',threadsView:()=>'',fetch:fetcher,document:{body:{dataset:{}},getElementById:get,querySelectorAll:()=>[],addEventListener(){}},AbortSignal,JSON,String,Object,Number,Date,crypto,Error,Promise,setTimeout,clearTimeout,clearInterval,setInterval,window:{}});
  const source=fs.readFileSync(new URL('./teacher.js',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,'').replace('void boot();','');vm.runInContext(source,context);
  return {run:code=>vm.runInContext(code,context),context,get};
 }

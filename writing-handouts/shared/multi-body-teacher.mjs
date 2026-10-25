@@ -1,0 +1,6 @@
+import {bodyKey,isPrepared,bodyConfig} from './workflow.mjs?v=20261025-l11-ideas-v4';
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Hai recap cùng cấu tạo bảng GV Lesson 9, chung hồ sơ và bộ gửi comment đã có.
+export function teacherBodies(lesson,field,session){
+ return (isPrepared(lesson)?'<section class="recap"><h3>Kế hoạch idea hai thân bài</h3>'+field('chosenSolution')+'</section>':'')+lesson.bodies.map(base=>{const {body:n,title,focus}=bodyConfig(lesson,session||{},base.body);return `<section class="recap handout-body" data-body-index="${n}"><p class="kicker red">Thân bài ${n}</p><h3>${esc(title)} · A → X → B</h3><p class="fine-print">${esc(focus)} Bôi đen để góp ý đoạn hoặc chọn Comment cả phần.</p>${['idea1','idea2','topicSentence'].map(f=>field(bodyKey(n,f))).join('')}<div class="recap-scroll"><table class="recap-table"><thead><tr><th>Ý</th><th>Điểm đầu A</th><th>Cầu nối X</th><th>Điểm cuối B</th></tr></thead><tbody>${[1,2].map(i=>`<tr><th>Ý ${i}</th>${['a','x','b'].map(k=>`<td>${field(bodyKey(n,k+i))}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;}).join('')+'<div id="recap-status"></div>';
+}

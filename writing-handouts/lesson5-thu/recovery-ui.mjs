@@ -2,7 +2,7 @@
 // Nội dung đã chốt giữ nguyên; thiếu từ vựng/lỗi vẫn hiện khung và cách thử lại.
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const points=['A','X','B'];
-import {isWhole,ideaPassed} from '../shared/workflow.mjs';
+import {isWhole,ideaPassed} from '../shared/workflow.mjs?v=20261025-l11-ideas-v4';
 import {savedContent} from './features.mjs?v=20261007-1';
 const names={A:'Điểm đầu',X:'Cầu nối',B:'Điểm cuối'};
 export function renderJourney(session,key,currentContent='',shortTitle=''){

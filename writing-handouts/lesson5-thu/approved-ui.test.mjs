@@ -1,5 +1,5 @@
 import {wholeSections} from '../shared/whole-chain-ui.mjs';
-import {workflowFor,isWhole} from '../shared/workflow.mjs';
+import {workflowFor,isWhole,isMulti,isPrepared,PLAN_FIELDS,SOLUTIONS,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs';
 import {createCourseStudentIdentity} from '../../shared/course-student-identity.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,7 +17,7 @@ function fixture(){
  const state=core.createState();state.ref='fixture';state.idea2Open=true;
  for(const key of core.ORDER)state.steps[key].status='passed';
  for(const field of Object.keys(state.responses))state.responses[field]='Bài giả '+field;
- const context=vm.createContext({workflowFor,isWhole,wholeSections,createCourseStudentIdentity,requestMappingStudentIdentity:async()=>{throw new Error('Bộ thử giao diện không được gọi mạng');},...core,renderJourney,renderProcessing,renderRecap,savedContent,threadsView,approvalLabel,installStyles(){},createClient:()=>({}),document:{createElement:()=>({addEventListener(){}}),getElementById:get,querySelectorAll:()=>[],addEventListener(){}},window:{addEventListener(){}},setTimeout:()=>0,clearTimeout(){},JSON,Object,String,Number,Date,Promise});
+ const context=vm.createContext({workflowFor,isWhole,isMulti,isPrepared,PLAN_FIELDS,SOLUTIONS,bodyView,bodyKey,bodyIndexOf,localKey,wholeSections,createCourseStudentIdentity,requestMappingStudentIdentity:async()=>{throw new Error('Bộ thử giao diện không được gọi mạng');},...core,renderJourney,renderProcessing,renderRecap,savedContent,threadsView,approvalLabel,installStyles(){},createClient:()=>({}),document:{createElement:()=>({addEventListener(){}}),getElementById:get,querySelectorAll:()=>[],addEventListener(){}},window:{addEventListener(){}},setTimeout:()=>0,clearTimeout(){},JSON,Object,String,Number,Date,Promise});
  const source=fs.readFileSync(new URL('./app.js',import.meta.url),'utf8').replace(/^import .*\r?\n/gm,'').replace('void bootstrap();','');
  vm.runInContext(source,context);context.current=state;vm.runInContext('state=current;',context);
  return {state,run:code=>vm.runInContext(code,context)};

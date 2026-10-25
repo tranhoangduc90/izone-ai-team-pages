@@ -1,6 +1,8 @@
 import '../../shared/teacher-single-sign-on.js?v=20261023-cache1';
-import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261017-l9-1';
-import {workflowFor,isWhole} from '../shared/workflow.mjs';
+import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261025-l11-ideas-v4';
+import {workflowFor,isWhole,isMulti,isPrepared,bodyKey,bodyIndexOf} from '../shared/workflow.mjs?v=20261025-l11-ideas-v4';
+import {teacherBodies} from '../shared/multi-body-teacher.mjs?v=20261025-l11-ideas-v4';
+const multi=isMulti(globalThis.handout67Lesson||{});
 import {classQuery,resolveClassRef} from '../js/class-selection.js';
 const whole=isWhole(globalThis.handout67Lesson||{});
 const {order:ORDER,fields:FIELDS}=workflowFor(globalThis.handout67Lesson||{});
@@ -14,6 +16,8 @@ const lessonActivity=globalThis.handout67Lesson?.activity||'lesson5';
 const $=id=>document.getElementById(id);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={si1:'Cả chuỗi ý 1',si2:'Cả chuỗi ý 2',topic:'Topic sentence và idea',b1:'Điểm B · Ý 1',a1:'Điểm A · Ý 1',x1:'Cầu nối X · Ý 1',b2:'Điểm B · Ý 2',a2:'Điểm A · Ý 2',x2:'Cầu nối X · Ý 2',idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic sentence'};
+if(multi)for(const b of [1,2]){for(const [k,v] of Object.entries({...labels}))if(!bodyIndexOf(k))labels[bodyKey(b,k)]=v+' · Thân bài '+b;for(const [k,v] of Object.entries({...names}))if(!bodyIndexOf(k))names[bodyKey(b,k)]=v+' · Thân bài '+b;}
+if(isPrepared(globalThis.handout67Lesson||{})){labels.outline='Kế hoạch idea hai thân bài';labels.chosenSolution='Phương án học viên chọn';names.outline=labels.outline;names.chosenSolution=labels.chosenSolution;}
 const statuses={draft:'Chưa check',passed:'Đã đạt',revision:'Cần sửa',pending:'Đang chấm',technical_error:'Gặp lỗi'};
 if(whole)$('comment-section').innerHTML=ORDER.map(k=>`<option value="${k}">${labels[k]}</option>`).join('');
 let epoch=0,rows=[],selected=null,timer=null,loading=false,sending=false,detailSequence=0,detailVersion=null,authBusy=false,actorEmail='';
@@ -22,6 +26,7 @@ let detailSession=null,composer=null,activeClass='';
 let readGeneration=0;
 const hasThreadDraft=()=>!!composer||!!$('comment-text').value.trim()||[...document.querySelectorAll('[data-thread-reply] textarea')].some(el=>el.value.trim());
 async function request(path,method='GET',body){
+ if(multi&&body){const b=bodyIndexOf(body.field||body.section||detailSession?.commentThreads?.find(t=>t.ref===body.threadRef)?.field);if(b!==null)body={...body,bodyIndex:b};}
  const payload=body===undefined?undefined:JSON.stringify(body);
  const requestEpoch=epoch;
  let response,value;
@@ -40,7 +45,7 @@ function renderRows(){
  $('summary').innerHTML=Object.entries(states).map(([key,label])=>`<button class="teacher-summary-card" data-filter="${key}" data-state="${key}" aria-pressed="${filter===key}"><span>${label}</span><strong>${rows.filter(r=>rowState(r)===key).length}</strong></button>`).join('');
  const focused=document.activeElement?.dataset.student;
  const groups=new Map();for(const r of filtered){const key=r.sessionRef?r.dashboard?.priority??3:5;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
- $('students').innerHTML=[...groups].map(([key,list])=>`<section class="group"><div class="group-heading"><h2>${['Cần hỗ trợ','Lỗi hoặc chờ quá hạn','Bài đã sửa và HV trả lời','Đang làm bài','Đã thông qua','Chưa bắt đầu'][key]} <span class="group-count">${list.length}</span></h2></div><div class="teacher-students">${list.map(r=>card(r,{order:ORDER})).join('')}</div></section>`).join('')||'<p class="empty">Không có học viên phù hợp.</p>';
+ $('students').innerHTML=[...groups].map(([key,list])=>`<section class="group"><div class="group-heading"><h2>${['Cần hỗ trợ','Lỗi hoặc chờ quá hạn','Bài đã sửa và HV trả lời','Đang làm bài','Đã thông qua','Chưa bắt đầu'][key]} <span class="group-count">${list.length}</span></h2></div><div class="teacher-students">${list.map(r=>card(r,{order:ORDER,totalFields:Object.values(FIELDS).flat().length})).join('')}</div></section>`).join('')||'<p class="empty">Không có học viên phù hợp.</p>';
  if(focused)$('students').querySelector(`[data-student="${CSS.escape(focused)}"]`)?.focus({preventScroll:true});
  $('list-description').textContent=`${filtered.length}/${rows.length} học viên · hỗ trợ và bài đáng chú ý lên trước`;
 }
@@ -58,9 +63,10 @@ function renderDetail(session){
   content.dataset.session=session.ref;
   const field=f=>`<div class="teacher-response-field" data-field-box="${f}"><strong>${names[f]}</strong><span data-current-status="${f}" class="step-status"></span><div data-field-read="${f}"></div><div data-keywords="${f}"></div></div>`;
   content.innerHTML=`<section class="recap"><h3>Bài hiện tại · A → X → B</h3><p class="fine-print">${whole?'Mỗi ý Check chung cả chuỗi A → X → B.':'Thứ tự Check vẫn B → A → X.'} Bôi đen để góp ý đoạn hoặc chọn Comment cả phần.</p>${['idea1','idea2','topicSentence'].map(field).join('')}<div class="recap-scroll"><table class="recap-table"><thead><tr><th>Ý</th><th>Điểm đầu A</th><th>Cầu nối X</th><th>Điểm cuối B</th></tr></thead><tbody>${[1,2].map(n=>`<tr><th>Ý ${n}</th>${['a','x','b'].map(k=>`<td>${field(k+n)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div id="recap-status"></div></section><div class="teacher-detail-section-layout"><section><h3>Các phần làm bài</h3>${ORDER.map(k=>`<details class="teacher-detail-section expandable" data-history="section-${k}"><summary><span class="section-title">${labels[k]}</span><span data-section-status="${k}" class="step-status"></span><span class="expand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path class="vertical" d="M12 5v14"/></svg></span></summary><div class="teacher-section-body"><div data-step-read="${k}"></div><div data-history-read="${k}"></div><div data-legacy-read="${k}"></div></div></details>`).join('')}<section class="teacher-detail-vocabulary"><h3>${whole?'Một bảng từ vựng chung':'Từ vựng từng ý'}</h3><div id="vocabulary-read"></div></section><details class="activity-panel"><summary>Nhật ký hoạt động · Giữ hai tháng</summary><p class="fine-print">Lượt trước khi bật tính năng có thể thiếu nhật ký. Mở lượt chấm để xem nội dung và phản hồi AI.</p><p id="activity-state" role="status">Đang tải nhật ký…</p><div id="activity-list"></div><div id="activity-job"></div></details></section><aside class="teacher-note"><h3>Trao đổi GV–HV</h3><p class="fine-print">Đã xử lý chỉ đổi trạng thái trao đổi; không cho qua Check.</p><div id="threads-read"></div></aside></div>`;
+  if(multi)content.querySelector('.recap').outerHTML=teacherBodies(globalThis.handout67Lesson,field,session);
  }
  const d=session.dashboard;
- $('detail-meta').textContent=d?`${d.filled}/9 ô · ${d.passed}/${ORDER.length} phần thông qua · ${d.checks} Check · ${d.openThreads} trao đổi mở`:'';
+ $('detail-meta').textContent=d?`${d.filled}/${Object.keys(session.responses).length} ô · ${d.passed}/${ORDER.length} phần thông qua · ${d.checks} Check · ${d.openThreads} trao đổi mở`:'';
  for(const f of Object.keys(session.responses)){
   // Comment đang soạn giữ hash/range gốc; bài mới vẫn cập nhật tiến độ và các vùng khác.
   const node=content.querySelector(`[data-field-read="${f}"]`);
@@ -81,8 +87,9 @@ function renderDetail(session){
   patchHTML(content.querySelector(`[data-legacy-read="${key}"]`),(session.teacherComments||[]).filter(c=>c.section===key).reverse().map(c=>`<details class="detail-comments expandable"><summary><span class="section-title">Giảng viên · ${escape(c.authorName)}</span><span class="expand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path class="vertical" d="M12 5v14"/></svg></span></summary><div class="attempt-content"><h5>Nội dung lúc góp ý</h5><pre>${escape(snapshot(c))}</pre><h5>Nhận xét</h5><p>${escape(c.feedback)}</p></div></details>`).join(''));
  }
  patchThreads($('threads-read'),(session.commentThreads||[]).map(t=>threadsView([t],{teacher:true}).replace('Trao đổi với giảng viên','Trao đổi · '+escape(names[t.field]||t.field))).join('')||'<p class="empty">Chưa có trao đổi.</p>');
- patchHTML($('vocabulary-read'),(whole?[0]:[1,2]).map(n=>{const v=session.vocabulary[whole?0:n],status=v?.status==='ready'?'Đã có, khớp bản hiện tại':v?.status==='failed'?'Gặp lỗi; tiến độ vẫn giữ':v?'Đang tạo lại gợi ý':whole?'Chưa mở — chờ cả hai ý thông qua':'Chưa mở — chờ B/A/X thông qua';return `<p><strong>${n===0?'Chung cho hai ý':'Ý '+n}:</strong> ${status}${session.processing?.['vocab'+n]?'<br>'+escape(jobText('vocab'+n,session.processing['vocab'+n])):''}</p>`;}).join(''));
- for(const n of [1,2])for(const k of ['a','x','b']){const v=session.vocabulary[whole?0:n];patchHTML(content.querySelector(`[data-keywords="${k+n}"]`),v?.status==='ready'?`<div class="vocab">${(v.groups?.[whole?k.toUpperCase()+n:k.toUpperCase()]||[]).map(w=>`<span>${escape(w.phrase)} · ${escape(w.meaningVi)}</span>`).join('')}</div>`:'');}
+ patchHTML($('vocabulary-read'),(multi?['body1','body2']:whole?[0]:[1,2]).map(n=>{const v=session.vocabulary[multi?n:whole?0:n],status=v?.status==='ready'?'Đã có, khớp bản hiện tại':v?.status==='failed'?'Gặp lỗi; tiến độ vẫn giữ':v?'Đang tạo lại gợi ý':whole?'Chưa mở — chờ cả hai ý thông qua':'Chưa mở — chờ B/A/X thông qua';return `<p><strong>${multi?'Thân bài '+n.at(-1)+' · Hai ý':n===0?'Chung cho hai ý':'Ý '+n}:</strong> ${status}${session.processing?.['vocab'+n]?'<br>'+escape(jobText('vocab'+n,session.processing['vocab'+n])):''}</p>`;}).join(''));
+ if(multi)for(const b of [1,2])for(const n of [1,2])for(const k of ['a','x','b']){const v=session.vocabulary['body'+b];patchHTML(content.querySelector(`[data-keywords="${bodyKey(b,k+n)}"]`),v?.status==='ready'?`<div class="vocab">${(v.groups?.[k.toUpperCase()+n]||[]).map(w=>`<span>${escape(w.phrase)} · ${escape(w.meaningVi)}</span>`).join('')}</div>`:'');}
+ else for(const n of [1,2])for(const k of ['a','x','b']){const v=session.vocabulary[whole?0:n];patchHTML(content.querySelector(`[data-keywords="${k+n}"]`),v?.status==='ready'?`<div class="vocab">${(v.groups?.[whole?k.toUpperCase()+n:k.toUpperCase()]||[]).map(w=>`<span>${escape(w.phrase)} · ${escape(w.meaningVi)}</span>`).join('')}</div>`:'');}
 }
 async function readDetail(ref,{activity=false}={}){
  const current=epoch,sequence=++detailSequence;

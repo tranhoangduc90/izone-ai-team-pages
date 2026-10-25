@@ -16,3 +16,8 @@ test('H67-GV-CARD · tên escape và ô viết khác phần thông qua',()=>{
  const r=row('<script>',3,10);Object.assign(r.dashboard,{filled:9,passed:2,checks:4,aiComments:1,openThreads:1});
  const html=card(r);assert.match(html,/9\/9/);assert.match(html,/2\/7/);assert.match(html,/&lt;script&gt;/);assert.ok(!html.includes('<script>'));
 });
+test('H11-GV-CARD · một hồ sơ đếm 18 ô, tối đa 100% và nhãn rõ thân bài',()=>{
+ const r=row('HV mẫu',3,10);Object.assign(r.dashboard,{filled:18,passed:6,totalSections:6,sectionOrder:['body1_topic','body1_si1','body1_si2','body2_topic','body2_si1','body2_si2']});
+ const html=card(r,{order:r.dashboard.sectionOrder,totalFields:18});
+ assert.match(html,/18\/18/);assert.match(html,/max="18"/);assert.match(html,/>100%/);assert.doesNotMatch(html,/>200%/);assert.match(html,/Thân 1 · Topic/);assert.match(html,/Thân 2 · Ý 2/);assert.doesNotMatch(html,/BODY[12]_/);
+});
