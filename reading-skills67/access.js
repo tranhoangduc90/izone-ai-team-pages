@@ -55,6 +55,24 @@
   try{config=await request('/config');}catch(e){if(e.status===404)return {legacy:true};throw e;}
   if(params.get('assignmentCode')&&params.get('assignmentCode')!==config.code)throw Error('Mã trong link không khớp bài đang mở. Hãy dùng lại CTA trong Homework.');
   key='reading67:session:'+config.code;
+  // Phiên máy chủ quyết định vai trò; query cũ không cấp quyền hoặc đổi người học.
+  if(config.autoRole){
+   const classId=params.get('classId'),studentRef=params.get('studentRef');
+   teacher=true;
+   try{
+    if(classId&&studentRef)return {teacher:true,work:await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef)),config};
+    await request('/teacher/classes');
+    location.replace('teacher.html');return new Promise(()=>{});
+   }catch(error){
+    if(error.status!==401)throw error;
+    teacher=false;
+    if(params.get('mode')==='teacher'){
+     teacher=true;
+     if(classId&&studentRef)return teacherLogin(classId,studentRef);
+     location.replace('teacher.html');return new Promise(()=>{});
+    }
+   }
+  }
   if(teacher){
    const classId=params.get('classId'),studentRef=params.get('studentRef');if(!classId||!studentRef)throw Error('Mở từ trang Giảng viên để chọn đúng lớp và học viên.');
    try{return {teacher:true,work:await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef)),config};}
