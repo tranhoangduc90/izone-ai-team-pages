@@ -42,7 +42,10 @@ test("record 90 manifest contains its released chart, two routes and vocabulary"
 
 test("public config only contains non-secret browser configuration", () => {
   const config = JSON.parse(fs.readFileSync(path.join(root, "config.json"), "utf8"));
-  assert.deepEqual(Object.keys(config), ["apiBase", "studentMemory", "googleClientId"]);
+  assert.deepEqual(Object.keys(config), ["apiBase", "studentMemory", "googleClientId", "socraticTask1Slugs"]);
+  assert.equal(config.socraticTask1Slugs.length,6);
+  assert.equal(new Set(config.socraticTask1Slugs).size,6);
+  for(const slug of config.socraticTask1Slugs) assert.match(slug,/^[a-z0-9]+(?:-[a-z0-9]+)*$/u);
   assert.deepEqual(Object.keys(config.studentMemory), ["enabled", "allClasses"]);
   assert.equal(typeof config.studentMemory.enabled, "boolean");
   assert.equal(config.studentMemory.allClasses, true);
