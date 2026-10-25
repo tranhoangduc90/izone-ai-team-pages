@@ -100,6 +100,7 @@ export function createTeacherApi(base = "") {
   const teacherFetch = (url, options = {}) => fetchJson(url, teacherSessionRequestOptions(options));
   const teacherJson = (method, body, headers = {}, keepalive = false) => teacherSessionRequestOptions(jsonOptions(method, body, headers, keepalive));
   return {
+    identity: () => teacherFetch(endpoint(root, 'auth/session')),
     liveActivity: (slug, classRef = "") => {
       const url = new URL(endpoint(root, `admin/live/activities/${encodeURIComponent(slug)}`));
       if (classRef) url.searchParams.set("classRef", classRef);
