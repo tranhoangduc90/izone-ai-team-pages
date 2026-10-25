@@ -170,7 +170,7 @@ function renderVocabulary(bodySection, student, bodyKey, loading) {
 }
 
 function commentContext(student) { return student.sessionRef || `${student.studentRef}:${student.classRef}`; }
-function hasActiveCommentComposer() { return Boolean($("teacher-detail").querySelector(".teacher-comment-composer:not([hidden])")); }
+function hasActiveCommentComposer() { return Boolean($("teacher-detail").querySelector(".teacher-comment-composer:not([hidden]), .reopen-composer")); }
 function hasTeacherCommentDraft() {
   return hasActiveCommentComposer() || [...$("teacher-detail").querySelectorAll(".teacher-comment-composer textarea, .teacher-comment-reply textarea")].some(input => input.value.trim());
 }
@@ -306,7 +306,26 @@ function renderStudentDetail(student, { loading = false, error = "" } = {}) {
       sectionTitle.textContent = `${definition.title} · ${statusLabel(sectionState)}`;
       const sectionInstruction = document.createElement("p"); sectionInstruction.className = "muted teacher-detail-instruction"; sectionInstruction.textContent = definition.instruction || "";
       section.append(sectionKicker, sectionTitle, sectionInstruction);
-      if(sectionState==='passed'&&state.canReopen&&!student.readOnly){const reopen=document.createElement('button');reopen.type='button';reopen.className='secondary';reopen.textContent='Mở lại '+definition.title;reopen.onclick=async()=>{if(hasTeacherCommentDraft()){showDashboardError('Hãy gửi hoặc hủy lời đang soạn trước khi mở lại.');return;}const reason=globalThis.prompt('Lý do mở lại phần '+definition.title+' (giữ mọi lịch sử):');if(!reason?.trim())return;reopen.disabled=true;try{await state.api.reopenSection(student.sessionRef,sectionKey,reason.trim());await loadStudentDetail(student);await refresh();}catch(error){showDashboardError(error.message);}finally{reopen.disabled=false;}};section.append(reopen);}
+      if(sectionState==='passed'&&state.canReopen&&!student.readOnly){
+        const reopen=document.createElement('button');reopen.type='button';reopen.className='secondary';reopen.textContent='Mở lại '+definition.title;
+        reopen.onclick=()=>{
+          if(hasTeacherCommentDraft()){showDashboardError('Hãy gửi hoặc hủy phần đang soạn trước khi mở lại.');return;}
+          const form=document.createElement('form');form.className='reopen-composer';
+          const label=document.createElement('label');label.textContent='Lý do mở lại '+definition.title;
+          const reason=document.createElement('textarea');reason.required=true;reason.maxLength=1000;reason.rows=2;label.append(reason);
+          const note=document.createElement('p');note.className='fine-print';note.textContent='Chỉ mở lại phần này. Bài và mọi lịch sử được giữ nguyên.';
+          const submit=document.createElement('button');submit.type='submit';submit.className='primary';submit.textContent='Xác nhận mở lại';
+          const cancel=document.createElement('button');cancel.type='button';cancel.className='secondary';cancel.textContent='Hủy mở lại';
+          const error=document.createElement('p');error.setAttribute('role','alert');
+          const actions=document.createElement('div');actions.className='actions';actions.append(submit,cancel);form.append(label,note,actions,error);
+          cancel.onclick=()=>{form.remove();reopen.disabled=false;reopen.focus();};
+          form.onsubmit=async event=>{event.preventDefault();if(!reason.value.trim()){error.textContent='Bạn cần nhập lý do mở lại.';reason.focus();return;}submit.disabled=true;cancel.disabled=true;
+            try{await state.api.reopenSection(student.sessionRef,sectionKey,reason.value.trim());form.remove();await loadStudentDetail(student);await refresh();}
+            catch(failure){error.textContent=failure.message;submit.disabled=false;cancel.disabled=false;}
+          };
+          reopen.disabled=true;reopen.after(form);reason.focus();
+        };section.append(reopen);
+      }
 
       const sectionLayout = document.createElement("div"); sectionLayout.className = "teacher-detail-section-layout";
       const responseColumn = document.createElement("div"); responseColumn.className = "teacher-detail-responses";
