@@ -119,6 +119,15 @@ function jumpRepairField(id){
   requestAnimationFrame(()=>{
     const input=[...document.querySelectorAll('[data-target]')].find(el=>el.dataset.target===id);if(!input)return;
     input.scrollIntoView({block:'center',behavior:'instant'});
+    if(document.body.classList.contains('has-repair-workspace')&&matchMedia('(max-width:800px), (max-width:1000px) and (max-height:500px)').matches){
+      const bottom=document.querySelector('.study-footer').getBoundingClientRect().top-8;
+      const source=input.closest('.answer-field,.selection-field')?.querySelector('.repair-source-context');
+      const rect=input.getBoundingClientRect(),sourceRect=source?.getBoundingClientRect();
+      const start=sourceRect&&rect.bottom-sourceRect.top<=bottom-8?sourceRect.top:rect.top;
+      const height=rect.bottom-start;
+      const desired=Math.max(8,(bottom-height)/2);
+      window.scrollBy({top:start-desired,behavior:'instant'});
+    }
     const focus=input.disabled?input.closest('.selection-field,.answer-field'):input;
     if(focus){if(input.disabled)focus.tabIndex=-1;focus.focus({preventScroll:true});}
   });
@@ -135,6 +144,7 @@ function focusHistoryDestination(){
   heading.tabIndex=-1;heading.focus({preventScroll:true});heading.scrollIntoView({block:'nearest',behavior:'instant'});
 }
 function review(){
+  if(serverMode&&window.MaterialsRepairWorkspace?.review())return;
   const groups=[['Nén thông tin câu hỏi','radar'],['Nén câu chứa thông tin','evidence_l1'],['Đáp án Matching Information','section'],['Nén các đoạn A–H','paragraph']];
   showModal('Rà soát bài làm',`<p>Đã điền <strong>${completed()}/20 phần</strong>. ${completed()<16?'Cần thêm '+(16-completed())+' phần để đủ 80%.':'Đã đủ khối lượng để chấm; phần bỏ trống vẫn được giữ.'}</p><div class="review-groups">${groups.map(([label,kind])=>`<div class="review-group"><h3>${label}</h3><div class="review-items">${content.targets.filter(t=>t.kind===kind).map(t=>`<button data-jump-field="${t.id}" class="${filled(t)?'filled':''} ${state.flags.includes(t.question)?'flagged':''}" data-status="${filled(t)?'✓':'Trống'}" aria-label="${e(t.label)}">${t.paragraph||t.question}</button>`).join('')}</div></div>`).join('')}</div><p class="minimum-note">Chữ được tô là phần đã điền, chưa phải kết quả đúng. ⚑ là câu bạn muốn xem lại.</p>`,writable()?'<button class="primary" data-action="grade">Chấm bài</button>':'');
 }
@@ -164,6 +174,7 @@ function renderEntry(){
   app.innerHTML=`<section class="entry"><div><p class="eyebrow">READING 67 · LUYỆN KỸ NĂNG</p><h1>${e(content.title)}</h1><p>Đọc để hiểu ý. Nén để giữ điều cốt lõi.</p><small>Matching Information · Câu 1–4<br>8 đoạn đọc · 20 phần trả lời</small></div><div class="entry-card"><h2>Bài luyện của bạn</h2><p>Học viên minh họa · Lớp 6.0–7.0</p><ol><li>Nén cấp 1 các đoạn A–H.</li><li>Nén thông tin của từng câu hỏi.</li><li>Tìm và nén câu chứa thông tin.</li><li>Chọn đoạn A–H cho câu 1–4.</li></ol><p class="minimum-note">Đổi qua lại tự do. Đủ 16/20 phần để chấm. Bài luyện không có đồng hồ đếm ngược.</p><button class="primary" data-action="start">Bắt đầu làm bài</button><button class="quiet" data-action="history">Xem lịch sử minh họa</button></div></section>`;app.removeAttribute('aria-busy');
 }
 function explanationFor(id,trigger){
+  if(serverMode)window.MaterialsRepairWorkspace?.rememberExplanation();
   explanationIndex=content.targets.findIndex(t=>t.id===id);if(explanationIndex<0)return;
   const t=content.targets[explanationIndex],f=state.feedback?.[id];if(!f)return;
   const opening=!explanation.open;
@@ -184,7 +195,8 @@ function explanationFor(id,trigger){
   }
   if(opening)explanation.showModal();
   explanation.querySelector('[data-close-explanation]').focus({preventScroll:true});
-  requestAnimationFrame(()=>{if(!radar){const el=explanation.querySelector('[data-popup-paragraph="'+section+'"]');const scroll=explanation.querySelector('.explanation-dialog-passage-scroll');if(el)scroll.scrollTop=el.offsetTop-scroll.offsetTop-12;}});
+  const restoredExplanation=serverMode&&window.MaterialsRepairWorkspace?.restoreExplanation(id);
+  requestAnimationFrame(()=>{if(!radar&&!restoredExplanation){const el=explanation.querySelector('[data-popup-paragraph="'+section+'"]');const scroll=explanation.querySelector('.explanation-dialog-passage-scroll');if(el)scroll.scrollTop=el.offsetTop-scroll.offsetTop-12;}});
 }
 function historyModal(){
   if(serverMode){serverHistoryModal();return;}
@@ -305,6 +317,7 @@ function adaptServerSave(){
     notice.textContent=blocked?'Bài đã được giữ trên máy chủ. Chưa đồng bộ được Homework; giảng viên cần kiểm tra.':h.status==='verified'&&h.cta==='verified'?'Đã cập nhật trạng thái và link vào Homework.':missing?'Bài đã lưu. Chưa có Homework cá nhân đúng mã; hệ thống sẽ nối khi được giao.':h.status==='unavailable'?'Chưa kiểm được trạng thái đồng bộ Homework. Xem trạng thái lưu bài ở thanh trên.':'Bài đã lưu. Đang đồng bộ trạng thái vào Homework.';
   }
   if(state.archived)target.textContent='Nháp cũ · Lưu lúc '+timeLabel(state.savedAt)+' · Chỉ xem';
+  window.MaterialsRepairWorkspace?.updateSync();
 }
 function adaptServerScreen(){
   const strip=document.querySelector('.prototype-strip');strip.querySelector('span').innerHTML='<strong>BẢN THỬ · BỘ CHẤM THẬT</strong> · Nháp và phản hồi lưu máy chủ';strip.querySelector('label').hidden=true;

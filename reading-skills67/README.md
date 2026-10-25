@@ -8,6 +8,16 @@ chế độ sửa dùng bản chấm gần nhất trong cùng lượt. Nhập l�
 chấm, không tự xóa ô khỏi danh sách. Bản chấm mới tạo danh sách mới; bài đạt
 toàn bộ không hiện thanh này. Điều hướng và đổi cách xem GV/HV không ghi bài.
 
+`repair-workspace.js`/`.css` đặt cụm Trước/Tiếp gọn trong footer, tách khỏi
+Nộp lại; giữ điểm bấm khi đổi khung. Rà soát liệt kê phần đã chỉnh/chưa chỉnh
+so với bản chấm, không gọi thay đổi nội dung là đã đúng. Nhận xét cũ giữ bên
+ô nhập; Đối chiếu mở câu hỏi/đoạn người học đã chọn, không lấy key để chọn nguồn.
+Vị trí ô/khung/cuộn và chỗ đọc popup được nhớ riêng theo người, lớp, bài,
+version, lượt, bản chấm và vai trò; chỉ lưu metadata trên thiết bị, không lưu
+câu trả lời hoặc gọi API. Storage lỗi không chặn sửa bài. `data-target` chỉ
+dành cho control trả lời; vùng nguồn dùng `data-repair-context-for` để không
+chiếm selector focus/nhập liệu. Renderer cũ không nạp workspace vẫn giữ fallback.
+
 Banner chờ xử lý dùng vai trò `pending`. Trường hợp cần đối chiếu hoặc chưa rõ
 kết quả AI dùng `attention`; lỗi đã xác định dùng `error`. Hook DOM chỉ chọn màu
 trình bày, giữ nguyên thông báo, nháp, phiên bản bài, hành vi gọi lại và API.
