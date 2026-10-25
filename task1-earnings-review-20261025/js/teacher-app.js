@@ -13,7 +13,7 @@ import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui
 import { createTeacherLoginPreference } from "../../shared/teacher-login-preference.js?rev=20260918-v1";
 import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20260920-v1";
 
-import { renderTimeline, installTeacherTools, filterStudents, decorateTeacher } from "./review-ui.js";
+import { renderTimeline, installTeacherTools, filterStudents, decorateTeacher } from "./review-ui.js?v=3";
 const $ = (id) => document.getElementById(id);
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = { authenticated: false, api: null, sessionClient: null, manifest: null, activitySlug: "", students: [], pollTimer: null,
@@ -306,7 +306,7 @@ function renderStudentDetail(student, { loading = false, error = "" } = {}) {
       sectionTitle.textContent = `${definition.title} · ${statusLabel(sectionState)}`;
       const sectionInstruction = document.createElement("p"); sectionInstruction.className = "muted teacher-detail-instruction"; sectionInstruction.textContent = definition.instruction || "";
       section.append(sectionKicker, sectionTitle, sectionInstruction);
-      if(sectionState==='passed'&&state.canManage&&!student.readOnly){const reopen=document.createElement('button');reopen.type='button';reopen.className='secondary';reopen.textContent='Mở lại '+definition.title;reopen.onclick=async()=>{if(hasTeacherCommentDraft()){showDashboardError('Hãy gửi hoặc hủy lời đang soạn trước khi mở lại.');return;}const reason=prompt('Lý do mở lại phần '+definition.title+' (giữ mọi lịch sử):');if(!reason?.trim())return;reopen.disabled=true;try{await state.api.reopenSection(student.sessionRef,sectionKey,reason.trim());await loadStudentDetail(student);await refresh();}catch(error){showDashboardError(error.message);}finally{reopen.disabled=false;}};section.append(reopen);}
+      if(sectionState==='passed'&&state.canReopen&&!student.readOnly){const reopen=document.createElement('button');reopen.type='button';reopen.className='secondary';reopen.textContent='Mở lại '+definition.title;reopen.onclick=async()=>{if(hasTeacherCommentDraft()){showDashboardError('Hãy gửi hoặc hủy lời đang soạn trước khi mở lại.');return;}const reason=prompt('Lý do mở lại phần '+definition.title+' (giữ mọi lịch sử):');if(!reason?.trim())return;reopen.disabled=true;try{await state.api.reopenSection(student.sessionRef,sectionKey,reason.trim());await loadStudentDetail(student);await refresh();}catch(error){showDashboardError(error.message);}finally{reopen.disabled=false;}};section.append(reopen);}
 
       const sectionLayout = document.createElement("div"); sectionLayout.className = "teacher-detail-section-layout";
       const responseColumn = document.createElement("div"); responseColumn.className = "teacher-detail-responses";
@@ -487,9 +487,11 @@ async function refresh() {
     const selectedClassRef = $("teacher-class").value;
     const result = await state.api.liveActivity(state.activitySlug, selectedClassRef);
     const pendingResult = await state.api.provisionalStudents(state.activitySlug, $("teacher-class").value);
+    const identityResult = await state.api.identity();
     if (loginGeneration !== state.loginGeneration) return;
     state.students = result.data.students || [];
     state.canManage = result.data.permissions?.canManage === true;
+    state.canReopen = identityResult.data.reviewer?.canManage === true;
     state.pending = pendingResult.data.students || [];
     const classes = populateClasses(state.students);
     if (!state.classQueryResolved) {
@@ -636,6 +638,7 @@ function clearTeacherLogin() {
   state.students = [];
   state.pending = [];
   state.canManage = false;
+  state.canReopen = false;
   state.draftResults.clear();
   state.reconciliationSearches.clear();
   state.selectedStudent = null;

@@ -7,7 +7,7 @@ import { renderStudentFieldComments } from "./teacher-comments-ui.js?v=20261024-
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
 
-import { installPreviewEntry, decorateStudent, preserveView, renderTimeline, decorateTask } from "./review-ui.js";
+import { installPreviewEntry, decorateStudent, preserveView, renderTimeline, decorateTask } from "./review-ui.js?v=3";
 const $ = (id) => document.getElementById(id);
 const SECTION_INFO = {
   overview: { title: "Overview", kicker: "Phần 1", fields: [{ key: "overview", label: "Overview", placeholder: "Nêu những đặc điểm nổi bật nhất của biểu đồ…" }] },
