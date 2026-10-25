@@ -199,12 +199,12 @@ async function action(name){
 }
 document.addEventListener('input',event=>{
   const target=event.target;
-  if(target.matches('[data-target]')&&writable()){promoteDraft();state.answers[target.dataset.target]=target.value;if(target.tagName==='TEXTAREA')autoGrow(target);persist();}
+  if(target.matches('[data-target]')&&writable()){promoteDraft();state.answers[target.dataset.target]=target.value;if(target.tagName==='TEXTAREA')autoGrow(target);persist();window.ReadingMaterialsExperience?.decorate();}
   if(target.id==='general-note'&&writable()){state.notes=target.value;persist();}
 });
 document.addEventListener('change',async event=>{
   if(event.target.id==='scenario'){try{await changeScenario(event.target.value);}catch(err){toast(err.message);}}
-  if(event.target.matches('select[data-target]')&&writable()){promoteDraft();state.answers[event.target.dataset.target]=event.target.value;persist();const q=content.questions.find(q=>q.targets.section===event.target.dataset.target);const link=document.querySelector('[data-view-selected="'+q.number+'"]');link.hidden=!event.target.value;}
+  if(event.target.matches('select[data-target]')&&writable()){promoteDraft();state.answers[event.target.dataset.target]=event.target.value;persist();const q=content.questions.find(q=>q.targets.section===event.target.dataset.target);const link=document.querySelector('[data-view-selected="'+q.number+'"]');link.hidden=!event.target.value;window.ReadingMaterialsExperience?.decorate();}
 });
 document.addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;
