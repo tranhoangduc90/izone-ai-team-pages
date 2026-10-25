@@ -56,13 +56,13 @@ function draw(){
   if(save)save.parentElement.insertAdjacentHTML('beforeend','<button class="text-button" data-action="save">Lưu máy chủ</button><button class="text-button" data-action="refresh">Đọc cập nhật</button>');
   if(!teacher&&['shops-lesson9-v1','sw-task2-lesson9-v1'].includes(current.ui?.version)&&['topic_sentence','supporting_idea_1','supporting_idea_2'].every(key=>current.sections[key]?.locked)){
    if((current.ui.data.editedFields||[]).length&&$('#completion'))$('#completion').insertAdjacentHTML('beforeend','<p class="preview-vocab-note">Gợi ý thuộc bản nội dung đã chốt. Sau khi sửa, bạn có thể <button class="text-button" data-vocab-retry="all">lấy lại từ vựng</button>.</p>');
-   if(s.vocabStatus==='pending'&&current.uiVocabulary?.status==='missing'&&!current.comments.some(c=>c.artifacts?.vocabulary)&&!dirty&&!editor)void requestVocabulary();
+   if(current.uiVocabulary?.status==='missing'&&!dirty&&!editor)void requestVocabulary();
   }
   for(const details of root.querySelectorAll('[data-history]')){
    const label=details.querySelector('.section-title')?.textContent||'',section=details.closest('[id^="step-"]')?.id.slice(5),index=Number(label.match(/Lần (\d+)/)?.[1])-1;
    const text=s.steps[section]?.history[index]?.feedback,body=details.querySelector('.comment-body>p');if(text&&body){body.replaceChildren();appendMarkdown(body,text);}
   }
-  const vocab=$('.teacher-detail-vocabulary');if(vocab){vocab.innerHTML='<h3>Từ vựng theo nội dung đã chấm</h3>'+Object.entries(s.vocabularyGroups||{}).map(([key,terms])=>'<p><b>'+key+'</b>: '+terms.map(t=>esc(t.phrase)+' · '+esc(t.meaningVi)).join('; ')+'</p>').join('');}
+  const vocab=$('.teacher-detail-vocabulary');if(vocab){vocab.innerHTML='<h3>Từ vựng theo nội dung đã chấm</h3>'+Object.entries(s.vocabularyGroups||{}).map(([key,terms])=>'<p><b>'+key+'</b>: '+terms.map(t=>esc(t.phrase)+(t.meaningVi?' · '+esc(t.meaningVi):'')).join('; ')+'</p>').join('')+(s.legacyVocabulary?.length?'<h4>Từ vựng đã lưu của bài cũ</h4>'+s.legacyVocabulary.map(row=>'<p><b>'+esc(row.label)+'</b>: '+row.terms.map(t=>esc(t.phrase)+(t.meaningVi?' · '+esc(t.meaningVi):'')).join('; ')+'</p>').join(''):'');}
   const foot=$('.teacher-draft-read .fine-print');if(foot)foot.textContent='Nhận xét từng câu của Draft 2; học viên xem cùng nội dung tại mục Kết quả.';
   if(teacher){
    for(const [index,section] of Object.keys(SECTION_FIELDS).entries()){
@@ -137,7 +137,7 @@ async function loadTeacher(render=true){
  if(epoch!==generation||!loggedIn)return;
  rows=[];
  for(const row of data.students||[]){
-  const p=PEOPLE.find(p=>p.id===row.studentRef);if(!p)continue;
+  const p=PEOPLE.find(p=>p.id===row.studentRef&&p.classRef===row.classRef);if(!p)continue;
   if(row.sessionRef){const raw=(await api('admin/lesson9/sessions/'+row.sessionRef)).session;if(epoch!==generation||!loggedIn)return;rows.push(connectedState(raw,p));if((current?.sessionRef===raw.sessionRef||detailOpen&&!current&&person?.id===p.id)&&!editor){current=raw;responses=working(raw);}}
   else rows.push({...fixture(p,'fresh'),connected:true});
  }
