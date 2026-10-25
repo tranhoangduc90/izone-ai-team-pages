@@ -1,0 +1,48 @@
+<!doctype html>
+<html data-izone-theme="master170" lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'sha256-CJ02OVqT7p9v9HDCMKiouj0TJ0ooW7ybXUHymIEqyeE=' 'sha256-RU4sU0AaS8IBGZx8XrGt/pa9A5SLA3dQszGeqT5L3Kw=' https://accounts.google.com/gsi/style; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' https://ducizone.ddns.net https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'self' https://accounts.google.com" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#14213d" />
+    <link rel="icon" href="data:," />
+    <title>Theo dõi handout Writing Task 1</title>
+
+    
+
+
+
+<link rel="stylesheet" href="./legacy.css"><link rel="stylesheet" href="./reference/base.css"><link rel="stylesheet" href="./reference/teacher.css"><link rel="stylesheet" href="./reference/reading-teacher.css"><link rel="stylesheet" href="./reference/recovery.css"><link rel="stylesheet" href="./reference/reading.css"><link rel="stylesheet" href="./reference/whole-chain.css"><link rel="stylesheet" href="./reference/theme.css"><link rel="stylesheet" href="./reference/handout.css"><link rel="stylesheet" href="./reference/app.css"><link rel="stylesheet" href="./review.css?v=4"></head>
+  <body data-m170-product="handout" data-handout-theme="reading" class="teacher-page">
+    <header class="topbar"><a class="brand" href="./index.html"><img class="m170-logo" src="./reference/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược"><span class="brand-divider"></span><span class="brand-product">Writing<span>Handout trên lớp</span></span></a><span>Speaking Writing chuyên sâu · Task 1</span></header>
+    <p id="teacher-updated" class="teacher-updated" role="status">Chưa đăng nhập</p><main class="page-shell teacher-shell">
+      <section id="teacher-login" class="card teacher-login" aria-labelledby="teacher-login-title">
+        <p class="eyebrow">Dành cho giảng viên</p>
+        <h1 id="teacher-login-title">Đăng nhập để xem tiến độ lớp</h1>
+        <p>Dữ liệu bài làm chỉ được tải sau khi tài khoản giảng viên được hệ thống xác minh.</p>
+        <div id="google-signin"></div>
+        <label class="teacher-login-remember"><input id="remember-teacher-login" type="checkbox" /> Tự đăng nhập Google trên thiết bị này</label>
+        <p id="teacher-login-error" class="form-error" role="alert" hidden></p>
+      </section>
+
+      <section id="teacher-dashboard" hidden>
+        <div class="task-header">
+          <div><p class="eyebrow">Dashboard giảng viên</p><h1 id="teacher-title">Theo dõi bài làm</h1><p class="muted">Tự cập nhật bản tổng hợp của lớp mỗi 5 giây.</p></div>
+          <label class="teacher-class-filter">Lớp<select id="teacher-class"><option value="">Tất cả lớp</option></select></label>
+        </div>
+        <div class="actions"><button id="teacher-export" class="secondary" type="button">Tải báo cáo CSV</button><button id="teacher-logout" class="secondary" type="button">Đăng xuất</button></div>
+        <p id="teacher-error" class="notice" hidden></p>
+        <section id="teacher-summary" class="teacher-summary" aria-label="Tổng hợp trạng thái"></section>
+        <section id="teacher-reconciliation" class="reconciliation-panel" aria-labelledby="teacher-reconciliation-title" hidden><h2 id="teacher-reconciliation-title">Cần đối soát</h2><div id="teacher-reconciliation-list"></div></section>
+        <div class="teacher-toolbar"><label>Tìm học viên<input id="review-search" type="search" placeholder="Nhập tên học viên"></label><label>Trạng thái<select id="review-filter"><option value="">Tất cả</option><option value="support">Cần hỗ trợ</option><option value="not_started">Chưa làm</option><option value="writing">Đang viết</option><option value="queued">Đang chấm</option><option value="technical_error">Lỗi chấm</option><option value="revision">Cần sửa</option><option value="passed">Đã đạt</option></select></label><label>Sắp xếp<select id="review-order"><option value="priority">Ưu tiên hỗ trợ và mới cập nhật</option><option value="name">Theo tên</option></select></label><button id="review-refresh" class="secondary">Cập nhật</button></div><p id="review-count" class="muted"></p><section id="teacher-students" class="teacher-students" aria-label="Danh sách học viên"></section>
+      </section>
+    </main>
+
+    <dialog id="teacher-detail" class="teacher-detail" aria-label="Bài làm và trao đổi với học viên">
+      <form method="dialog"><button class="dialog-close" aria-label="Đóng">×</button></form>
+      <div id="teacher-detail-content"></div>
+    </dialog>
+    
+    
+  </body>
+</html>
