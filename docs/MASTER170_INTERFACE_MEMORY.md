@@ -11,6 +11,10 @@ Nguồn chuẩn dùng lâu dài: [bảo toàn và kế thừa master #170](https
 
 **Nhóm loại trừ của đợt chuyển:** toàn bộ Test, Progress Log và mọi handout Writing Speaking–Writing chuyên sâu, gồm học viên/giảng viên/library/Draft/kết quả/popup/trạng thái và nguồn dùng chung liên quan. Giữ chuẩn và thread riêng của chúng. `student-journey.html` lấy nguồn SW được giữ; font comparison là demo độc lập và phải giữ cả preset tham khảo cũ lẫn Master. Các HTML `teacher-login-preview/` là tư liệu, không dùng nghiệm thu sản phẩm hiện hành.
 
+## Reading — cập nhật theo yêu cầu 25/10/2026
+
+Reading thực chiến không hiển thị dòng chú thích tên/mã màu giao diện ở cuối bài (ví dụ “Navy đậm: đang chọn…”). Giữ màu và trạng thái của nút/cờ cùng nhãn hỗ trợ tiếp cận; không phục hồi dòng chú thích từ mẫu/ảnh cũ. Quy tắc áp dụng cho bài hiện hành và các bài Reading kế thừa sau.
+
 ## Hồi quy đã lưu, chọn theo phần chịu tác động
 
 | Phần | Runner trong `tests/` |
