@@ -1,0 +1,131 @@
+{
+  "course": {
+    "title": "Speaking Writing chuyên sâu · Bản thử",
+    "classCodes": [
+      "SW-THU-A",
+      "SW-THU-B"
+    ]
+  },
+  "handouts": [
+    {
+      "slug": "writing-task2-public-health-ban",
+      "lessonId": "sw-task2-1",
+      "writingLesson": 1,
+      "taskNumber": 2,
+      "type": "Agree or disagree",
+      "title": "Cấm bán thực phẩm, đồ uống có hại",
+      "statement": "Shops should be banned from selling any food or drink that has been scientifically proven to be damaging to public health. Do you agree or disagree?",
+      "classes": [
+        "SW-THU-A",
+        "SW-THU-B"
+      ],
+      "studentPath": "./index.html",
+      "dashboardPath": "./teacher.html"
+    },
+    {
+      "slug": "writing-task2-public-health-spending",
+      "lessonId": "sw-task2-2",
+      "writingLesson": 2,
+      "taskNumber": 2,
+      "type": "Agree or disagree",
+      "title": "Ngân sách y tế: phòng bệnh hay điều trị",
+      "statement": "It is more important to spend public money promoting a healthy lifestyle to prevent illness than to spend it on treating people who are already ill. To what extent do you agree or disagree?",
+      "classes": [
+        "SW-THU-A",
+        "SW-THU-B"
+      ],
+      "studentPath": "./index.html",
+      "dashboardPath": "./teacher.html"
+    },
+    {
+      "slug": "writing-task2-live-performances-at-home",
+      "lessonId": "sw-task2-3",
+      "writingLesson": 3,
+      "taskNumber": 2,
+      "type": "Agree or disagree",
+      "title": "Biểu diễn trực tiếp hay xem tại nhà",
+      "statement": "In today’s world, it is no longer necessary to attend live performances such as shows or concerts, as watching them on television or on a computer at home is considered a better option. Do you agree or disagree with this opinion?",
+      "classes": [
+        "SW-THU-A",
+        "SW-THU-B"
+      ],
+      "studentPath": "./index.html",
+      "dashboardPath": "./teacher.html"
+    },
+    {
+      "slug": "writing-task2-crime-prevention-responsibility",
+      "lessonId": "sw-task2-4",
+      "writingLesson": 4,
+      "taskNumber": 2,
+      "type": "Discuss both views",
+      "title": "Trách nhiệm phòng chống tội phạm",
+      "statement": "Some people think that the government should be responsible for crime prevention, while others believe that it is the responsibility of the individual to protect themselves. Discuss both views and give your opinion.",
+      "classes": [
+        "SW-THU-A",
+        "SW-THU-B"
+      ],
+      "studentPath": "./index.html",
+      "dashboardPath": "./teacher.html"
+    },
+    {
+      "slug": "writing-task2-living-alone-development",
+      "lessonId": "sw-task2-9",
+      "writingLesson": 9,
+      "taskNumber": 2,
+      "type": "Positive or negative development",
+      "title": "Sống một mình: tích cực hay tiêu cực",
+      "statement": "Nowadays, more and more people are choosing to live alone. Is this a positive or negative development?",
+      "classes": [
+        "SW-THU-A",
+        "SW-THU-B"
+      ],
+      "studentPath": "./index.html",
+      "dashboardPath": "./teacher.html"
+    },
+    {
+      "slug": "writing-task2-urban-crowding-traffic-congestion",
+      "lessonId": "sw-task2-10",
+      "writingLesson": 10,
+      "taskNumber": 2,
+      "type": "Problems and solutions",
+      "title": "Đô thị đông đúc và ùn tắc giao thông",
+      "statement": "Many cities are becoming increasingly crowded, and traffic congestion is getting worse. What problems does this cause, and what measures can be taken to solve them?",
+      "classes": [
+        "SW-THU-A",
+        "SW-THU-B"
+      ],
+      "studentPath": "./index.html",
+      "dashboardPath": "./teacher.html"
+    },
+    {
+      "slug": "writing-task2-economic-development-environment",
+      "lessonId": "sw-task2-11",
+      "writingLesson": 11,
+      "taskNumber": 2,
+      "type": "Discuss both views",
+      "title": "Phát triển kinh tế hay bảo vệ môi trường",
+      "statement": "Some people believe economic development should be the main priority for governments, while others think protecting the natural environment is more important. Discuss both views and give your own opinion.",
+      "classes": [
+        "SW-THU-A",
+        "SW-THU-B"
+      ],
+      "studentPath": "./index.html",
+      "dashboardPath": "./teacher.html"
+    },
+    {
+      "slug": "writing-task2-english-medium-instruction",
+      "lessonId": "sw-task2-12",
+      "writingLesson": 12,
+      "taskNumber": 2,
+      "type": "Advantages outweigh disadvantages",
+      "title": "Tiếng Anh làm ngôn ngữ giảng dạy",
+      "statement": "In many countries, English is used as the main language of instruction in schools and universities. Do the advantages of this policy outweigh the disadvantages?",
+      "classes": [
+        "SW-THU-A",
+        "SW-THU-B"
+      ],
+      "studentPath": "./index.html",
+      "dashboardPath": "./teacher.html"
+    }
+  ]
+}

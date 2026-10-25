@@ -6,11 +6,13 @@ import {renderLmsDraftResult} from '../js/lms-draft-result.js';
 import {installStyles} from '../lesson5-thu/features.mjs';
 import {renderActivityDetail} from '../lesson5/activity-ui.mjs';
 import {renderGoogleLogin} from './teacher-google.mjs';
+import {readLegacyDraft} from './legacy-draft.mjs';
 installStyles();
 const root=document.querySelector('#app'),teacher=document.body.dataset.view==='teacher',$=s=>root.querySelector(s);
 const namespace='izone:sw-task2:preview-20261025:'+ACTIVITY+':',drafts=new Map(),composers=new Map();
 const openDetails=new Map(),historyCounts=new Map(),resultIndexes=new Map();let renderedOwner='login';
 const vocabularyRequests=new Set();
+let legacyDraft=null;
 let classes=[],person=null,current=null,threads=[],rows=[],responses={},dirty=false,conflict=false,busy=false,saveTimer,pollTimer,generation=0;
 let notice='',filter='all',query='',order='recent',detailOpen=false,editor=null,attestKey=null,composer=null,loggedIn=false,conflictServer=null;
 const id=()=>crypto.randomUUID();
@@ -38,6 +40,7 @@ function draw(){
  const s=current?state():teacher&&loggedIn?{...fixture(fallbackPerson(),'fresh'),connected:true}:null;
  let html=teacher?(loggedIn?teacherLayout(s||fixture(fallbackPerson(),'fresh'),{rows,query,filter,order,detailOpen,drafts,composer}):'<section class="answer-card"><h1>Giảng viên · Đăng nhập Google</h1><p>Dùng tài khoản Google đã được cấp quyền giảng viên. Phiên đăng nhập dùng chung được ghi nhớ trên trình duyệt này.</p><div id="google-signin"></div><button class="text-button" data-action="retry-login">Thử lại đăng nhập</button></section>'):(s?studentLayout(s,''):loginView());
  root.innerHTML=top()+banner()+'<main id="main"><p id="notice" role="status">'+esc(notice)+'</p>'+html+'</main>';
+ if(!teacher&&s&&legacyDraft?.sessionRef===current.sessionRef)$('#notice').insertAdjacentHTML('afterend','<section class="answer-card" id="legacy-draft-notice"><h2>Bản nháp từ giao diện cũ</h2><p>Tìm thấy bản gõ khác trên thiết bị này. Xem và chọn trước khi dùng; bản gốc vẫn được giữ.</p><button class="secondary" data-action="legacy-compare">Xem hai bản nháp</button></section>');
  if(teacher&&!loggedIn)void renderGoogleLogin($('#google-signin'),{onCredential:async credential=>{const epoch=generation;await fetch('https://ducizone.ddns.net/shops-writing-api/api/v1/auth/session',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify({credential})}).then(r=>{if(!r.ok)throw Error('Chưa xác minh được Google.');});if(epoch===generation)await setupTeacher();},onError:error=>message(authMessage(error))}).catch(error=>message(authMessage(error)));
  if(teacher&&loggedIn)root.querySelector('.teacher-heading .teacher-actions')?.insertAdjacentHTML('beforeend','<button class="secondary" data-export-csv>Xuất CSV</button><button class="secondary" data-action="teacher-logout">Đăng xuất chung</button>');
  for(const el of root.querySelectorAll('details')){const key=owner+':'+detailsKey(el);if(openDetails.has(key))el.open=openDetails.get(key);}
@@ -87,12 +90,14 @@ async function openPerson(p,accessCode,rememberedRef){
  if(epoch!==generation)return;
  if(data.session.studentRef!==p.id||data.session.classRef!==p.classRef)throw Error('Máy chủ trả phiên khác chủ; chưa mở bài.');
  if(data.session.activitySlug!==ACTIVITY)throw Error('Phiên không thuộc đúng đề. Chưa mở bài.');
- current=data.session;responses=working(current);dirty=false;conflict=false;
+ current=data.session;responses=working(current);dirty=false;conflict=false;legacyDraft=null;
  try{
   const saved=JSON.parse(localStorage.getItem(namespace+current.sessionRef)||'null');
   if(saved?.dirty&&saved.studentRef===p.id&&saved.classRef===p.classRef){responses=saved.responses;dirty=true;conflict=saved.baseVersion!==current.draftVersion;message(conflict?'Bản dự phòng chưa lưu khác phiên bản máy chủ. Giữ bản gõ để đối chiếu; chưa ghi đè.':'Đã khôi phục bản gõ chưa lưu; bấm Lưu máy chủ trước khi Check.');}
   localStorage.setItem(namespace+'identity',JSON.stringify({id:p.id,classRef:p.classRef,sessionRef:current.sessionRef}));
  }catch{}
+ try{const found=await readLegacyDraft(current,ACTIVITY);if(epoch!==generation)return;legacyDraft=found&&localStorage.getItem(namespace+current.sessionRef+':legacy-reviewed')!==JSON.stringify(found)?found:null;}catch{if(epoch!==generation)return;message('Chưa đọc được bản nháp cũ trên thiết bị; bản gốc vẫn giữ. Bạn có thể tải lại để thử.');}
+ if(epoch!==generation)return;
  threads=(await api('sessions/'+current.sessionRef+'/teacher-comments')).threads;draw();startPoll();
 }
 async function save(){
@@ -204,6 +209,15 @@ root.addEventListener('click',async e=>{
   if(b.dataset.commentField){composer={personId:person.id,field:b.dataset.commentField,quote:''};draw();$('#comment-body').focus();return;}
   if(b.dataset.threadStatus){const t=threads.find(t=>t.threadRef===b.dataset.threadStatus);await api('admin/teacher-comments/'+t.threadRef+'/status','POST',{status:t.status==='addressed'?'open':'addressed',requestId:id()});await refresh();draw();return;}
   const a=b.dataset.action;
+  if(a==='legacy-compare'){
+   root.insertAdjacentHTML('beforeend',`<dialog id="legacy-dialog" class="feature-dialog"><h3>Đối chiếu bản nháp cũ</h3><h4>Bản từ giao diện cũ</h4><pre>${esc(JSON.stringify(legacyDraft.responses,null,2))}</pre><h4>Bản đang mở</h4><pre>${esc(JSON.stringify(responses,null,2))}</pre><p>Bản cũ chỉ được đưa vào ô soạn. Hãy kiểm tra rồi bấm Lưu máy chủ.</p><footer><button class="secondary" data-action="legacy-cancel">Giữ bản đang mở</button><button class="primary" data-action="legacy-use">Dùng bản nháp cũ</button></footer></dialog>`);$('#legacy-dialog').showModal();return;
+  }
+  if(a==='legacy-cancel'){$('#legacy-dialog').remove();return;}
+  if(a==='legacy-use'){
+   localStorage.setItem(namespace+current.sessionRef+':handover-backup:'+Date.now(),JSON.stringify({studentRef:person.id,classRef:person.classRef,current:responses,legacy:legacyDraft,server:current.responses}));
+   localStorage.setItem(namespace+current.sessionRef+':legacy-reviewed',JSON.stringify(legacyDraft));
+   responses={...responses,...legacyDraft.responses};dirty=true;conflict=legacyDraft.baseVersion!==current.draftVersion;legacyDraft=null;cache();draw();message(conflict?'Đã giữ bản nháp cũ. Phiên bản máy chủ đã đổi; hãy đối chiếu trước khi lưu.':'Đã đưa bản nháp cũ vào ô soạn. Hãy kiểm tra rồi bấm Lưu máy chủ.');return;
+  }
   if(a==='reload'){location.reload();return;}
   if(a==='save'){await save();message('Đã lưu máy chủ.');}
   if(a==='compare-conflict'){
