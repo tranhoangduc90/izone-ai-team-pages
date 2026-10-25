@@ -34,4 +34,4 @@
 .lms-page-button:last-child { justify-self:stretch; }
 .lms-page-status { min-width:5.7rem; color:#344054; text-align:center; white-space:nowrap; }
 @media (max-width:520px) { .lms-draft-pager { grid-template-columns:1fr 1fr; } .lms-page-status { grid-column:1/-1; grid-row:1; } .lms-page-button { grid-row:2; padding-inline:.55rem; } }
-#conflict-dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:15rem; overflow:auto; }
+#conflict-dialog pre, #legacy-dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:15rem; overflow:auto; }
