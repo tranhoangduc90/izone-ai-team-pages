@@ -32,6 +32,11 @@ function banner(){return '<div class="prototype-banner" role="note">Bản thử 
 function top(){return `<header class="topbar"><a class="brand" href="./index.html?task=${encodeURIComponent(ACTIVITY)}" aria-label="IZONE Writing"><img class="m170-logo handout-brand-mark" src="./shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"><span class="brand-divider"></span><span class="brand-product">Writing<span>Handout trên lớp</span></span></a><span>Speaking Writing chuyên sâu · Bài ${TASK?.number||'?'} · ${esc(TASK?.shortTitle||'Đề chưa xác định')}</span></header>`;}
 function fallbackPerson(){return person||PEOPLE[0];}
 function working(raw){return Object.fromEntries([...new Set(raw.sectionDefinitions.flatMap(d=>d.inputFields))].map(key=>[key,raw.responses[key]??(key==='body_choice'?'body1':'')]));}
+function draftComparison(values){
+ const labels={body1_message:'Thân bài 1 · Thông điệp',body1_idea1:'Thân bài 1 · Idea 1',body1_idea2:'Thân bài 1 · Idea 2',body2_message:'Thân bài 2 · Thông điệp',body2_idea1:'Thân bài 2 · Idea 1',body2_idea2:'Thân bài 2 · Idea 2',body_choice:'Thân bài đã chọn',topic_sentence:'Topic Sentence',idea1_a:LABELS.a1,idea1_x:LABELS.x1,idea1_b:LABELS.b1,idea2_a:LABELS.a2,idea2_x:LABELS.x2,idea2_b:LABELS.b2,draft1:'Draft 1',draft2:'Draft 2'};
+ const content=Object.entries(labels).filter(([key])=>values[key]?.trim()).map(([key,label])=>'<dt>'+esc(label)+'</dt><dd>'+esc(key==='body_choice'?(values[key]==='body2'?'Thân bài 2':'Thân bài 1'):values[key])+'</dd>').join('');
+ return content?'<dl class="draft-comparison">'+content+'</dl>':'<p>Chưa có nội dung.</p>';
+}
 function detailsKey(el){const group=el.closest('.teacher-detail-section'),index=group?[...root.querySelectorAll('.teacher-detail-section')].indexOf(group):'';return el.id||(el.dataset.history?'history:'+el.dataset.history:el.className+':'+index+':'+el.querySelector(':scope>summary')?.textContent.trim().split('·')[0]);}
 function draw(){
  for(const el of root.querySelectorAll('details'))openDetails.set(renderedOwner+':'+detailsKey(el),el.open);
@@ -211,7 +216,7 @@ root.addEventListener('click',async e=>{
   if(b.dataset.threadStatus){const t=threads.find(t=>t.threadRef===b.dataset.threadStatus);await api('admin/teacher-comments/'+t.threadRef+'/status','POST',{status:t.status==='addressed'?'open':'addressed',requestId:id()});await refresh();draw();return;}
   const a=b.dataset.action;
   if(a==='legacy-compare'){
-   root.insertAdjacentHTML('beforeend',`<dialog id="legacy-dialog" class="feature-dialog"><h3>Đối chiếu bản nháp cũ</h3><h4>Bản từ giao diện cũ</h4><pre>${esc(JSON.stringify(legacyDraft.responses,null,2))}</pre><h4>Bản đang mở</h4><pre>${esc(JSON.stringify(responses,null,2))}</pre><p>Bản cũ chỉ được đưa vào ô soạn. Hãy kiểm tra rồi bấm Lưu máy chủ.</p><footer><button class="secondary" data-action="legacy-cancel">Giữ bản đang mở</button><button class="primary" data-action="legacy-use">Dùng bản nháp cũ</button></footer></dialog>`);$('#legacy-dialog').showModal();return;
+   root.insertAdjacentHTML('beforeend',`<dialog id="legacy-dialog" class="feature-dialog"><h3>Đối chiếu bản nháp cũ</h3><h4>Bản từ giao diện cũ</h4>${draftComparison(legacyDraft.responses)}<h4>Bản đang mở</h4>${draftComparison(responses)}<p>Bản cũ chỉ được đưa vào ô soạn. Hãy kiểm tra rồi bấm Lưu máy chủ.</p><footer><button class="secondary" data-action="legacy-cancel">Giữ bản đang mở</button><button class="primary" data-action="legacy-use">Dùng bản nháp cũ</button></footer></dialog>`);$('#legacy-dialog').showModal();return;
   }
   if(a==='legacy-cancel'){$('#legacy-dialog').remove();return;}
   if(a==='legacy-use'){
@@ -223,7 +228,7 @@ root.addEventListener('click',async e=>{
   if(a==='save'){await save();message('Đã lưu máy chủ.');}
   if(a==='compare-conflict'){
    conflictServer=(await api('lesson9/sessions/'+current.sessionRef)).session;
-   root.insertAdjacentHTML('beforeend',`<dialog id="conflict-dialog" class="feature-dialog"><h3>Đối chiếu bản nháp</h3><p>Cả hai bản được giữ trong thiết bị. Chọn bản dùng tiếp.</p><h4>Bản đang gõ</h4><pre>${esc(JSON.stringify(responses,null,2))}</pre><h4>Bản máy chủ</h4><pre>${esc(JSON.stringify(working(conflictServer),null,2))}</pre><footer><button class="secondary" data-action="conflict-server">Dùng bản máy chủ</button><button class="primary" data-action="conflict-local">Lưu bản đang gõ</button><button class="secondary" data-action="conflict-cancel">Để tôi đối chiếu thêm</button></footer></dialog>`);$('#conflict-dialog').showModal();return;
+   root.insertAdjacentHTML('beforeend',`<dialog id="conflict-dialog" class="feature-dialog"><h3>Đối chiếu bản nháp</h3><p>Cả hai bản được giữ trong thiết bị. Chọn bản dùng tiếp.</p><h4>Bản đang gõ</h4>${draftComparison(responses)}<h4>Bản máy chủ</h4>${draftComparison(working(conflictServer))}<footer><button class="secondary" data-action="conflict-server">Dùng bản máy chủ</button><button class="primary" data-action="conflict-local">Lưu bản đang gõ</button><button class="secondary" data-action="conflict-cancel">Để tôi đối chiếu thêm</button></footer></dialog>`);$('#conflict-dialog').showModal();return;
   }
   if(a==='conflict-cancel'){$('#conflict-dialog').remove();return;}
   if(a==='conflict-server'||a==='conflict-local'){
