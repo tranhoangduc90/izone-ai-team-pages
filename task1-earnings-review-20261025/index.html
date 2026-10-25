@@ -1,0 +1,50 @@
+<!doctype html>
+<html data-izone-theme="master170" lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://ducizone.ddns.net; object-src 'none'; base-uri 'none'; form-action 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#14213d" />
+    <title>Task 1 · Earnings · Bản thử học viên</title>
+
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2314213d'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-size='34' font-family='Arial' font-weight='700' fill='white'%3EI%3C/text%3E%3C/svg%3E" />
+
+
+
+<link rel="stylesheet" href="./legacy.css"><link rel="stylesheet" href="./reference/base.css"><link rel="stylesheet" href="./reference/reading.css"><link rel="stylesheet" href="./reference/theme.css"><link rel="stylesheet" href="./reference/handout.css"><link rel="stylesheet" href="./reference/teacher.css"><link rel="stylesheet" href="./reference/reading-teacher.css"><link rel="stylesheet" href="./reference/whole-chain.css"><link rel="stylesheet" href="./reference/recovery.css"><link rel="stylesheet" href="./reference/app.css"><link rel="stylesheet" href="./review.css?v=1"></head>
+  <body data-m170-product="handout" data-handout-theme="reading" data-teacher-product="writing" data-teacher-path="./teacher.html">
+    <a class="skip-link" href="#workspace">Đi tới bài làm</a>
+    <header class="topbar"><a class="brand" href="./index.html"><img class="m170-logo" src="./reference/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược"><span class="brand-divider"></span><span class="brand-product">Writing<span>Handout trên lớp</span></span></a><span>Speaking Writing chuyên sâu · Task 1 · Thu nhập theo ngành</span></header><p class="preview-banner" role="note">Bản thử giao diện · Chỉ ghi vào lớp TASK1-THU. Link và bài làm của lớp thật giữ nguyên.</p>
+    <main class="page-shell">
+      <section id="setup-card" class="login-shell" aria-labelledby="setup-title">
+        <div class="login-card"><p class="kicker red">Speaking Writing chuyên sâu · Task 1</p><h1 id="setup-title">Bắt đầu bài học</h1><p class="login-description">Đọc biểu đồ, chốt Overview và dàn ý,<br>rồi tự viết và chỉnh Draft.</p><p id="task-summary" class="fine-print">Đang tải cấu hình bài…</p>
+        <form id="identity-form" novalidate>
+          <label>Lớp của bạn<select id="class-id" required><option value="">Chọn lớp của bạn</option></select></label>
+          <label>Tên của bạn<select id="student-name" name="studentName" required disabled><option value="">Chọn họ và tên của bạn</option></select></label>
+          <label id="access-code-row" hidden>Mã 4 số<input id="access-code" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" /></label>
+          <button id="show-provisional" class="link-button" type="button">Không thấy tên trong danh sách?</button>
+          <section id="provisional-panel" class="provisional-panel" hidden aria-labelledby="provisional-title">
+            <h2 id="provisional-title">Đăng ký học viên tạm</h2>
+            <p>Nhập đúng họ tên và tự đặt mã 4 số để vào lại bài trên thiết bị khác. Không chia sẻ mã này.</p>
+            <label>Họ và tên<input id="provisional-name" maxlength="100" autocomplete="name" /></label>
+            <div class="pin-grid"><label>Mã 4 số<input id="provisional-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" /></label><label>Nhập lại mã<input id="provisional-pin-confirm" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" /></label></div>
+            <label id="duplicate-confirm-row" class="checkbox-row" hidden><input id="duplicate-confirm" type="checkbox" /> Tôi là người khác cùng tên</label>
+            <button id="create-provisional" class="secondary" type="button">Tạo hồ sơ tạm</button>
+          </section>
+          <p id="identity-error" class="form-error" role="alert" hidden></p><label class="checkbox"><input id="remember-review" type="checkbox" checked> <span>Ghi nhớ tôi trên thiết bị này</span></label><button class="primary wide" type="submit">Tiếp tục <span aria-hidden="true">→</span></button>
+          <button id="resume-recent" class="secondary" type="button" hidden>Tiếp tục bài gần nhất trên thiết bị</button>
+        </form><p class="fine-print">Chọn đúng tên của bạn. Bài làm và các lần nhận xét được lưu để bạn tiếp tục khi quay lại. Bỏ ghi nhớ nếu dùng máy chung.</p></div>
+      </section>
+<section id="identity-confirm" class="login-shell" hidden aria-labelledby="confirm-title"><div class="login-card confirm-card"><p class="kicker red">Xác nhận người học</p><div class="avatar" aria-hidden="true">HV</div><h1 id="confirm-title"></h1><p id="confirm-context"></p><button id="confirm-open" class="primary wide">Đúng là tôi · mở bài làm →</button><button id="identity-back" class="text-button">Chọn lại tên</button><p id="confirm-error" class="error" role="alert"></p></div></section>
+<section id="workspace" class="workspace" hidden>
+ <div class="context"><div><strong id="student-label"></strong><span>Speaking Writing chuyên sâu</span></div><div class="actions context-actions"><span id="save-state" role="status">Chưa tải bài làm</span><button id="change-review-person" class="secondary" type="button">Đổi người học</button><button id="manual-save" class="secondary" type="button">Lưu ngay</button><button id="save-close" class="secondary" type="button">Lưu &amp; đóng</button><a class="text-button" href="./teacher.html?task=average-earnings-by-sector-2000-2010&class=TASK1-THU-A" target="_blank" rel="noopener">Giảng viên ↗</a></div></div>
+ <p id="network-notice" class="notice" hidden></p>
+ <section id="conflict-card" class="conflict" hidden aria-labelledby="conflict-title"><h2 id="conflict-title">Bài làm đã được thay đổi ở tab khác</h2><p>Bản trên thiết bị này vẫn an toàn. Chọn bản muốn tiếp tục dùng.</p><div class="actions"><button id="reload-server" class="secondary">Dùng bản trên hệ thống</button><button id="keep-local" class="primary">Dùng bản trên thiết bị và lưu đè</button></div></section>
+ <div class="layout"><aside class="journey"><p class="kicker">Bài học của bạn</p><h2>Writing Task 1</h2><nav aria-label="Tiến độ bài làm" id="review-nav"><button class="nav-item" data-target="task-content"><span>?</span><span>Đề bài<small>Đọc biểu đồ và bảng</small></span></button><button class="nav-item" data-target="overview"><span>1</span><span>Overview<small>Nhận xét lớn</small></span></button><button class="nav-item" data-target="outline"><span>2</span><span>Outline<small>Body 1 và Body 2</small></span></button><button class="nav-item" data-target="draft"><span>3</span><span>Draft 1 → Draft 2<small>Tự viết và tự chỉnh</small></span></button></nav><div class="journey-note"><strong>Tự viết · Tự sửa</strong><p>Đọc nhận xét, trả lời câu hỏi gợi mở và chỉnh bài của bạn.</p></div></aside><div class="work-content"><div class="page-title"><div><p class="kicker red">Writing Task 1</p><h1 id="task-title">Thu nhập theo ngành</h1><p>Hoàn thiện Overview và Outline, rồi luyện viết Overview cùng Body 1.</p></div></div><section id="task-content" class="task-content" aria-label="Đề bài và biểu đồ"></section><div id="sections"></div></div></div>
+</section>
+    </main>
+    <template id="section-template"><section class="section-workspace section-group"><div class="group-header"><div><h2 class="group-title"></h2><p class="group-description"></p></div></div><div class="step-grid"><article class="section-card answer-card"><div class="section-heading step-heading"><div><p class="section-kicker"></p><h3></h3></div><span class="section-status badge">Chưa gửi</span></div><div class="text-fields"></div><p class="field-error" role="alert" hidden></p><div class="section-actions"><span class="word-count muted">0 từ</span><button class="primary submit-section" type="button">Gửi để nhận xét</button></div></article><aside class="comments-panel comments"><div class="comments-heading"><h3 class="comments-title">Dòng thời gian</h3><span class="polling-state">—</span></div><ol class="comment-list" aria-live="polite"></ol><p class="empty-comments muted">Gửi phần này để nhận phản hồi gợi mở. Các lượt cũ sẽ được giữ ở đây.</p></aside></div></section></template>
+
+  <script type="module" src="./js/app.js?v=earnings-review-1"></script>
+  </body>
+</html>
