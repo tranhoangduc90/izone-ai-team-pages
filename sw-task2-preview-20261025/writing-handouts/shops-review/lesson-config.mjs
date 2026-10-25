@@ -57,7 +57,7 @@ export const TASKS = {
       ],
       "topic": "Hai idea cần cùng hỗ trợ thông điệp của thân bài về vấn đề được hỏi."
     },
-    "previewAvailable": false
+    "previewAvailable": true
   },
   "writing-task2-crime-prevention-responsibility": {
     "slug": "writing-task2-crime-prevention-responsibility",
@@ -77,7 +77,7 @@ export const TASKS = {
       ],
       "topic": "Hai idea cần phát triển rõ quan điểm mà thân bài này đảm nhiệm."
     },
-    "previewAvailable": false
+    "previewAvailable": true
   },
   "writing-task2-living-alone-development": {
     "slug": "writing-task2-living-alone-development",
@@ -97,7 +97,7 @@ export const TASKS = {
       ],
       "topic": "Hai idea cần hỗ trợ đánh giá về xu hướng, không chỉ liệt kê hai mặt."
     },
-    "previewAvailable": false
+    "previewAvailable": true
   },
   "writing-task2-urban-crowding-traffic-congestion": {
     "slug": "writing-task2-urban-crowding-traffic-congestion",
@@ -117,7 +117,7 @@ export const TASKS = {
       ],
       "topic": "Hai idea cần đúng vai trò vấn đề hoặc giải pháp của thân bài đã chọn."
     },
-    "previewAvailable": false
+    "previewAvailable": true
   },
   "writing-task2-economic-development-environment": {
     "slug": "writing-task2-economic-development-environment",
@@ -137,7 +137,7 @@ export const TASKS = {
       ],
       "topic": "Hai idea cần phát triển rõ quan điểm mà thân bài này đảm nhiệm."
     },
-    "previewAvailable": false
+    "previewAvailable": true
   },
   "writing-task2-english-medium-instruction": {
     "slug": "writing-task2-english-medium-instruction",
@@ -157,7 +157,7 @@ export const TASKS = {
       ],
       "topic": "Hai idea cần hỗ trợ đánh giá và phép so sánh mức độ của bài."
     },
-    "previewAvailable": false
+    "previewAvailable": true
   }
 };
 export const DEFAULT_TASK="writing-task2-public-health-spending";
