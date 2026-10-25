@@ -16,9 +16,13 @@ function answers(){return Object.fromEntries(content.targets.map(t=>[t.id,t.kind
 function attempt(id,body,correct=false,revision=1){return {attemptId:id,runNo:1,status:'done',draftRevision:revision,createdAt:'2026-10-25T01:00:00.000Z',snapshot:structuredClone(body),completeness:{filled_cells:20},
  result:{feedback:Object.fromEntries(content.targets.map((t,i)=>[t.id,{status:correct||i>0?'correct':'partial',modelAnswer:'Đáp án thử',reason:'Cần giữ ý chính.',sourceMeaning:'Ý nguồn',nextStep:'Sửa bản nén.'}]))}};}
 async function fixture(browser,width,teacher=false,options={}){
- const context=await browser.newContext({viewport:{width,height:900},locale:'vi-VN'}),page=await context.newPage();page.setDefaultTimeout(6000);
+ const context=await browser.newContext({viewport:{width,height:options.height||900},locale:'vi-VN'}),page=await context.newPage();page.setDefaultTimeout(6000);
  const state={teacher,revision:1,body:{answers:answers(),notes:'Ghi chú giữ nguyên',flags:[],annotations:[]},attempts:[],writes:0,submits:0,errors:[],reads:[]};
- if(options.history)state.attempts=[attempt('old',state.body)];
+ if(options.history){
+  const old=attempt('old',state.body,options.allCorrect);
+  if(options.repairIds)for(const t of content.targets)old.result.feedback[t.id].status=options.repairIds.includes(t.id)?(t.kind==='section'?'incorrect':t.id==='p.C'?'blank':'partial'):'correct';
+  state.attempts=[old];
+ }
  page.on('pageerror',e=>state.errors.push(e.message));
  await context.route('**/*',async route=>{
   const request=route.request(),u=new URL(request.url()),reply=(json,status=200)=>route.fulfill({json,status});
@@ -142,5 +146,65 @@ test('Link lịch sử báo bản mới hơn; phiên Google thiếu quyền khô
   await page.getByRole('button',{name:'Xem bản mới nhất',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.attempt-context button'));
   state.denied=true;await page.reload();await page.getByRole('heading',{name:'Chưa mở được bài'}).waitFor();
   assert.equal(await page.locator('#entry-class').count(),0);assert.equal(state.writes,0);assert.equal(state.submits,0);
+ }finally{await browser.close();}
+});
+
+const repairIds=['p.A','p.C','q.1.evidence_l1','q.4.section'];
+async function assertRepairPosition(page,index){
+ await page.waitForFunction(({id,position})=>document.querySelector('.repair-current')?.dataset.repairTarget===id&&document.querySelector('#repair-position')?.textContent===position,{id:repairIds[index],position:`Phần cần sửa ${index+1}/${repairIds.length}`});
+ const field=page.locator('.repair-current');assert.equal(await field.count(),1);
+ await page.waitForFunction(id=>document.activeElement?.dataset.target===id||document.activeElement?.dataset.repairTarget===id,repairIds[index]);
+ const input=page.locator('[data-target="'+repairIds[index]+'"]');assert.equal(await input.isVisible(),true);
+ const visible=await input.evaluate(el=>{const r=el.getBoundingClientRect(),pane=el.closest('.pane-scroll').getBoundingClientRect(),bar=document.querySelector('.repair-navigation').getBoundingClientRect();return r.top>=Math.max(0,pane.top,bar.bottom)-2&&r.bottom<=Math.min(innerHeight,pane.bottom)+2&&bar.top>=0&&bar.bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth;});
+ assert.equal(visible,true,'Ô đích và thanh điều hướng phải cùng nhìn thấy, không tràn ngang');
+ assert.equal(await page.getByRole('button',{name:'Phần cần sửa trước',exact:true}).isDisabled(),index===0);
+ assert.equal(await page.getByRole('button',{name:'Phần cần sửa tiếp theo',exact:true}).isDisabled(),index===repairIds.length-1);
+}
+for(const [width,height] of [[1440,900],[390,844],[844,390]])test(`Điều hướng Trước/Tiếp đúng từng ô và giữ chỉ xem · ${width}x${height}`,async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true});try{
+  const url=entry+'?server=1&teacher=1&classId=1293&studentRef='+person.ownerId+'&attemptId=old';
+  const {page,state}=await fixture(browser,width,true,{history:true,repairIds,height,url});const before=structuredClone(state.body),history=structuredClone(state.attempts);
+  await page.getByRole('button',{name:'Xem phần cần sửa ↓',exact:true}).click();await assertRepairPosition(page,0);
+  assert.equal(await page.locator('.repair-current-label').textContent(),'Nén cấp 1 đoạn A');
+  for(let i=1;i<repairIds.length;i++){await page.getByRole('button',{name:'Phần cần sửa tiếp theo',exact:true}).click();await assertRepairPosition(page,i);}
+  assert.equal(await page.locator('.repair-current-label').textContent(),'Đáp án câu 4');
+  for(let i=repairIds.length-2;i>=0;i--){await page.getByRole('button',{name:'Phần cần sửa trước',exact:true}).click();await assertRepairPosition(page,i);}
+  await page.getByRole('button',{name:'Giảng viên',exact:true}).click();await page.getByRole('button',{name:'Xem như học viên · Chỉ xem'}).click();
+  await assertRepairPosition(page,0);await page.getByRole('button',{name:'Phần cần sửa tiếp theo',exact:true}).click();await assertRepairPosition(page,1);
+  assert.equal(await page.locator('textarea[data-target]:not([readonly])').count(),0);assert.equal(await page.locator('select[data-target]:not([disabled])').count(),0);
+  assert.equal(state.writes,0);assert.equal(state.submits,0);assert.deepEqual(state.body,before);assert.deepEqual(state.attempts,history);assert.deepEqual(state.errors,[]);
+  if(process.env.MATERIALS_PROOF_DIR){await fs.mkdir(process.env.MATERIALS_PROOF_DIR,{recursive:true});await page.screenshot({path:resolve(process.env.MATERIALS_PROOF_DIR,`repair-navigation-${width}x${height}.png`),fullPage:true});}
+ }finally{await browser.close();}
+});
+test('Học viên sửa vẫn giữ danh sách/kịp vị trí đến lần chấm mới; reload giữ nháp và lịch sử',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true});try{
+  const {page,state}=await fixture(browser,390,false,{history:true,repairIds,height:844});await page.locator('.repair-banner').waitFor();
+  const history=structuredClone(state.attempts);await page.getByRole('button',{name:'Phần cần sửa tiếp theo',exact:true}).click();await assertRepairPosition(page,0);
+  await page.getByRole('button',{name:'Phần cần sửa tiếp theo',exact:true}).click();await assertRepairPosition(page,1);
+  await page.locator('[data-target="p.C"]').fill('Đã viết lại bản nén đoạn C');await page.getByText('Đã sửa — chờ chấm lại',{exact:true}).waitFor();await assertRepairPosition(page,1);
+  assert.match(await page.locator('.repair-banner').textContent(),/Còn 4 phần/);
+  await page.waitForFunction(()=>document.querySelector('#save-state')?.dataset.saveStatus==='saved');await page.reload();await page.locator('.repair-banner').waitFor();
+  assert.equal(await page.locator('[data-target="p.C"]').inputValue(),'Đã viết lại bản nén đoạn C');assert.deepEqual(state.attempts,history);
+  await page.getByRole('button',{name:'Phần cần sửa tiếp theo',exact:true}).click();await assertRepairPosition(page,0);
+  assert.equal(state.submits,0);assert.deepEqual(state.errors,[]);
+ }finally{await browser.close();}
+});
+test('Chuyển từ bản đã chấm sang sửa giữ đúng ô đang xem; kết quả mới đặt lại danh sách',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true});try{
+  const url=entry+'?server=1&attemptId=old';const {page,state}=await fixture(browser,1440,false,{history:true,repairIds,url});
+  await page.getByRole('button',{name:'Xem phần cần sửa ↓',exact:true}).click();await assertRepairPosition(page,0);
+  await page.getByRole('button',{name:'Phần cần sửa tiếp theo',exact:true}).click();await assertRepairPosition(page,1);
+  await page.locator('.repair-banner').getByRole('button',{name:'Tôi sẽ sửa',exact:true}).click();await page.locator('#grade-button').waitFor();await assertRepairPosition(page,1);
+  await page.getByRole('button',{name:'Nộp lại bài',exact:true}).click();await page.getByRole('heading',{name:'Còn 1 phần cần sửa',exact:true}).waitFor();
+  await page.locator('#modal').getByRole('button',{name:'Tôi sẽ sửa',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#repair-position')?.textContent==='Phần cần sửa 1/1');
+  assert.equal(await page.locator('.repair-current').getAttribute('data-repair-target'),'p.A');assert.equal(await page.getByRole('button',{name:'Phần cần sửa tiếp theo',exact:true}).isDisabled(),true);
+  assert.equal(state.attempts.length,2);assert.deepEqual(state.errors,[]);
+ }finally{await browser.close();}
+});
+test('Đạt toàn bộ: không còn nút xem lỗi hoặc thanh Trước/Tiếp',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true});try{
+  const url=entry+'?server=1&teacher=1&classId=1293&studentRef='+person.ownerId+'&attemptId=old';const {page,state}=await fixture(browser,390,true,{history:true,allCorrect:true,url});
+  await page.locator('.repair-banner[data-state="success"]').waitFor();assert.equal(await page.locator('[data-action="repair-start"],.repair-navigation,.repair-current').count(),0);
+  assert.equal(state.writes,0);assert.equal(state.submits,0);assert.deepEqual(state.errors,[]);
  }finally{await browser.close();}
 });
