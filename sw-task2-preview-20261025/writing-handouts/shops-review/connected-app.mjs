@@ -6,11 +6,13 @@ import {renderLmsDraftResult} from '../js/lms-draft-result.js';
 import {installStyles} from '../lesson5-thu/features.mjs';
 import {renderActivityDetail} from '../lesson5/activity-ui.mjs';
 import {renderGoogleLogin} from './teacher-google.mjs';
+import {readLegacyDraft} from './legacy-draft.mjs';
 installStyles();
 const root=document.querySelector('#app'),teacher=document.body.dataset.view==='teacher',$=s=>root.querySelector(s);
 const namespace='izone:sw-task2:preview-20261025:'+ACTIVITY+':',drafts=new Map(),composers=new Map();
 const openDetails=new Map(),historyCounts=new Map(),resultIndexes=new Map();let renderedOwner='login';
 const vocabularyRequests=new Set();
+let legacyDraft=null;
 let classes=[],person=null,current=null,threads=[],rows=[],responses={},dirty=false,conflict=false,busy=false,saveTimer,pollTimer,generation=0;
 let notice='',filter='all',query='',order='recent',detailOpen=false,editor=null,attestKey=null,composer=null,loggedIn=false,conflictServer=null;
 const id=()=>crypto.randomUUID();
@@ -30,6 +32,11 @@ function banner(){return '<div class="prototype-banner" role="note">Bản thử 
 function top(){return `<header class="topbar"><a class="brand" href="./index.html?task=${encodeURIComponent(ACTIVITY)}" aria-label="IZONE Writing"><img class="m170-logo handout-brand-mark" src="./shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"><span class="brand-divider"></span><span class="brand-product">Writing<span>Handout trên lớp</span></span></a><span>Speaking Writing chuyên sâu · Bài ${TASK?.number||'?'} · ${esc(TASK?.shortTitle||'Đề chưa xác định')}</span></header>`;}
 function fallbackPerson(){return person||PEOPLE[0];}
 function working(raw){return Object.fromEntries([...new Set(raw.sectionDefinitions.flatMap(d=>d.inputFields))].map(key=>[key,raw.responses[key]??(key==='body_choice'?'body1':'')]));}
+function draftComparison(values){
+ const labels={body1_message:'Thân bài 1 · Thông điệp',body1_idea1:'Thân bài 1 · Idea 1',body1_idea2:'Thân bài 1 · Idea 2',body2_message:'Thân bài 2 · Thông điệp',body2_idea1:'Thân bài 2 · Idea 1',body2_idea2:'Thân bài 2 · Idea 2',body_choice:'Thân bài đã chọn',topic_sentence:'Topic Sentence',idea1_a:LABELS.a1,idea1_x:LABELS.x1,idea1_b:LABELS.b1,idea2_a:LABELS.a2,idea2_x:LABELS.x2,idea2_b:LABELS.b2,draft1:'Draft 1',draft2:'Draft 2'};
+ const content=Object.entries(labels).filter(([key])=>values[key]?.trim()).map(([key,label])=>'<dt>'+esc(label)+'</dt><dd>'+esc(key==='body_choice'?(values[key]==='body2'?'Thân bài 2':'Thân bài 1'):values[key])+'</dd>').join('');
+ return content?'<dl class="draft-comparison">'+content+'</dl>':'<p>Chưa có nội dung.</p>';
+}
 function detailsKey(el){const group=el.closest('.teacher-detail-section'),index=group?[...root.querySelectorAll('.teacher-detail-section')].indexOf(group):'';return el.id||(el.dataset.history?'history:'+el.dataset.history:el.className+':'+index+':'+el.querySelector(':scope>summary')?.textContent.trim().split('·')[0]);}
 function draw(){
  for(const el of root.querySelectorAll('details'))openDetails.set(renderedOwner+':'+detailsKey(el),el.open);
@@ -38,6 +45,7 @@ function draw(){
  const s=current?state():teacher&&loggedIn?{...fixture(fallbackPerson(),'fresh'),connected:true}:null;
  let html=teacher?(loggedIn?teacherLayout(s||fixture(fallbackPerson(),'fresh'),{rows,query,filter,order,detailOpen,drafts,composer}):'<section class="answer-card"><h1>Giảng viên · Đăng nhập Google</h1><p>Dùng tài khoản Google đã được cấp quyền giảng viên. Phiên đăng nhập dùng chung được ghi nhớ trên trình duyệt này.</p><div id="google-signin"></div><button class="text-button" data-action="retry-login">Thử lại đăng nhập</button></section>'):(s?studentLayout(s,''):loginView());
  root.innerHTML=top()+banner()+'<main id="main"><p id="notice" role="status">'+esc(notice)+'</p>'+html+'</main>';
+ if(!teacher&&s&&legacyDraft?.sessionRef===current.sessionRef)$('#notice').insertAdjacentHTML('afterend','<section class="answer-card" id="legacy-draft-notice"><h2>Bản nháp từ giao diện cũ</h2><p>Tìm thấy bản gõ khác trên thiết bị này. Xem và chọn trước khi dùng; bản gốc vẫn được giữ.</p><button class="secondary" data-action="legacy-compare">Xem hai bản nháp</button></section>');
  if(teacher&&!loggedIn)void renderGoogleLogin($('#google-signin'),{onCredential:async credential=>{const epoch=generation;await fetch('https://ducizone.ddns.net/shops-writing-api/api/v1/auth/session',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify({credential})}).then(r=>{if(!r.ok)throw Error('Chưa xác minh được Google.');});if(epoch===generation)await setupTeacher();},onError:error=>message(authMessage(error))}).catch(error=>message(authMessage(error)));
  if(teacher&&loggedIn)root.querySelector('.teacher-heading .teacher-actions')?.insertAdjacentHTML('beforeend','<button class="secondary" data-export-csv>Xuất CSV</button><button class="secondary" data-action="teacher-logout">Đăng xuất chung</button>');
  for(const el of root.querySelectorAll('details')){const key=owner+':'+detailsKey(el);if(openDetails.has(key))el.open=openDetails.get(key);}
@@ -87,12 +95,14 @@ async function openPerson(p,accessCode,rememberedRef){
  if(epoch!==generation)return;
  if(data.session.studentRef!==p.id||data.session.classRef!==p.classRef)throw Error('Máy chủ trả phiên khác chủ; chưa mở bài.');
  if(data.session.activitySlug!==ACTIVITY)throw Error('Phiên không thuộc đúng đề. Chưa mở bài.');
- current=data.session;responses=working(current);dirty=false;conflict=false;
+ current=data.session;responses=working(current);dirty=false;conflict=false;legacyDraft=null;
  try{
   const saved=JSON.parse(localStorage.getItem(namespace+current.sessionRef)||'null');
   if(saved?.dirty&&saved.studentRef===p.id&&saved.classRef===p.classRef){responses=saved.responses;dirty=true;conflict=saved.baseVersion!==current.draftVersion;message(conflict?'Bản dự phòng chưa lưu khác phiên bản máy chủ. Giữ bản gõ để đối chiếu; chưa ghi đè.':'Đã khôi phục bản gõ chưa lưu; bấm Lưu máy chủ trước khi Check.');}
   localStorage.setItem(namespace+'identity',JSON.stringify({id:p.id,classRef:p.classRef,sessionRef:current.sessionRef}));
  }catch{}
+ try{const found=await readLegacyDraft(current,ACTIVITY);if(epoch!==generation)return;legacyDraft=found&&localStorage.getItem(namespace+current.sessionRef+':legacy-reviewed')!==JSON.stringify(found)?found:null;}catch{if(epoch!==generation)return;message('Chưa đọc được bản nháp cũ trên thiết bị; bản gốc vẫn giữ. Bạn có thể tải lại để thử.');}
+ if(epoch!==generation)return;
  threads=(await api('sessions/'+current.sessionRef+'/teacher-comments')).threads;draw();startPoll();
 }
 async function save(){
@@ -107,6 +117,7 @@ async function save(){
  }catch(error){if(epoch===generation){if(error.status===409)conflict=true;dirty=true;cache();message(error.message+' Nội dung đang gõ được giữ, chưa ghi đè máy chủ.');}throw error;}finally{busy=false;}
 }
 async function refresh(){
+ if($('#legacy-dialog')||$('#conflict-dialog'))return;
  if(!current)return;const ref=current.sessionRef,epoch=generation;
  const path=teacher?'admin/lesson9/sessions/':'lesson9/sessions/';
  const result=await api(path+ref);const threadData=await api((teacher?'admin/live/':'')+'sessions/'+ref+'/teacher-comments');
@@ -204,11 +215,20 @@ root.addEventListener('click',async e=>{
   if(b.dataset.commentField){composer={personId:person.id,field:b.dataset.commentField,quote:''};draw();$('#comment-body').focus();return;}
   if(b.dataset.threadStatus){const t=threads.find(t=>t.threadRef===b.dataset.threadStatus);await api('admin/teacher-comments/'+t.threadRef+'/status','POST',{status:t.status==='addressed'?'open':'addressed',requestId:id()});await refresh();draw();return;}
   const a=b.dataset.action;
+  if(a==='legacy-compare'){
+   root.insertAdjacentHTML('beforeend',`<dialog id="legacy-dialog" class="feature-dialog"><h3>Đối chiếu bản nháp cũ</h3><h4>Bản từ giao diện cũ</h4>${draftComparison(legacyDraft.responses)}<h4>Bản đang mở</h4>${draftComparison(responses)}<p>Bản cũ chỉ được đưa vào ô soạn. Hãy kiểm tra rồi bấm Lưu máy chủ.</p><footer><button class="secondary" data-action="legacy-cancel">Giữ bản đang mở</button><button class="primary" data-action="legacy-use">Dùng bản nháp cũ</button></footer></dialog>`);$('#legacy-dialog').showModal();return;
+  }
+  if(a==='legacy-cancel'){$('#legacy-dialog').remove();return;}
+  if(a==='legacy-use'){
+   localStorage.setItem(namespace+current.sessionRef+':handover-backup:'+Date.now(),JSON.stringify({studentRef:person.id,classRef:person.classRef,current:responses,legacy:legacyDraft,server:current.responses}));
+   localStorage.setItem(namespace+current.sessionRef+':legacy-reviewed',JSON.stringify(legacyDraft));
+   responses={...responses,...legacyDraft.responses};dirty=true;conflict=legacyDraft.baseVersion!==current.draftVersion;legacyDraft=null;cache();draw();message(conflict?'Đã giữ bản nháp cũ. Phiên bản máy chủ đã đổi; hãy đối chiếu trước khi lưu.':'Đã đưa bản nháp cũ vào ô soạn. Hãy kiểm tra rồi bấm Lưu máy chủ.');return;
+  }
   if(a==='reload'){location.reload();return;}
   if(a==='save'){await save();message('Đã lưu máy chủ.');}
   if(a==='compare-conflict'){
    conflictServer=(await api('lesson9/sessions/'+current.sessionRef)).session;
-   root.insertAdjacentHTML('beforeend',`<dialog id="conflict-dialog" class="feature-dialog"><h3>Đối chiếu bản nháp</h3><p>Cả hai bản được giữ trong thiết bị. Chọn bản dùng tiếp.</p><h4>Bản đang gõ</h4><pre>${esc(JSON.stringify(responses,null,2))}</pre><h4>Bản máy chủ</h4><pre>${esc(JSON.stringify(working(conflictServer),null,2))}</pre><footer><button class="secondary" data-action="conflict-server">Dùng bản máy chủ</button><button class="primary" data-action="conflict-local">Lưu bản đang gõ</button><button class="secondary" data-action="conflict-cancel">Để tôi đối chiếu thêm</button></footer></dialog>`);$('#conflict-dialog').showModal();return;
+   root.insertAdjacentHTML('beforeend',`<dialog id="conflict-dialog" class="feature-dialog"><h3>Đối chiếu bản nháp</h3><p>Cả hai bản được giữ trong thiết bị. Chọn bản dùng tiếp.</p><h4>Bản đang gõ</h4>${draftComparison(responses)}<h4>Bản máy chủ</h4>${draftComparison(working(conflictServer))}<footer><button class="secondary" data-action="conflict-server">Dùng bản máy chủ</button><button class="primary" data-action="conflict-local">Lưu bản đang gõ</button><button class="secondary" data-action="conflict-cancel">Để tôi đối chiếu thêm</button></footer></dialog>`);$('#conflict-dialog').showModal();return;
   }
   if(a==='conflict-cancel'){$('#conflict-dialog').remove();return;}
   if(a==='conflict-server'||a==='conflict-local'){

@@ -2,7 +2,7 @@
    chấm đạt từ thao tác nhập. Giảng viên đổi cách xem vẫn chỉ đọc. */
 (function(){
  'use strict';
- let bridge,repair=null,cursor=0,studentView=new URLSearchParams(location.search).get('view')==='student';
+ let bridge,repair=null,cursor=-1,navigationScope='',studentView=new URLSearchParams(location.search).get('view')==='student';
  const shown=new Set();
  const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function progress(attempt,content){
@@ -18,15 +18,48 @@
    total:rows.length,remainingCount:needsRepair.length,needsRepair,allCorrect:!needsRepair.length};
  }
  function description(p){return `Matching Information: đúng ${p.matchingCorrect}/${p.matchingTotal} câu. Phần nén: ${p.compressionCorrect}/${p.compressionTotal} phần đạt.`;}
- function next(){
-  if(!repair?.progress.needsRepair.length)return;
-  const ids=repair.progress.needsRepair;bridge.jump(ids[cursor++%ids.length]);
+ function navigation(){
+  if(!bridge)return null;
+  const {state,content}=bridge.current();
+  const attempt=state.serverAttempt?.status==='done'?state.serverAttempt:state.status==='draft'?repair?.attempt:null;
+  const p=progress(attempt,content);if(!p)return null;
+  const needed=new Set(p.needsRepair);
+  return {attempt,progress:p,items:content.targets.filter(t=>needed.has(t.id))};
+ }
+ function move(offset=0){
+  const nav=navigation();if(!nav?.items.length)return;
+  if(navigationScope!==nav.attempt.attemptId){navigationScope=nav.attempt.attemptId;cursor=-1;}
+  cursor=cursor<0?0:Math.max(0,Math.min(nav.items.length-1,cursor+offset));
+  decorate();bridge.jump(nav.items[cursor].id);
+ }
+ function start(){cursor=-1;move();}
+ function next(){move(1);}
+ function previous(){move(-1);}
+ function targetLabel(id,content){
+  const paragraph=content.paragraphs.find(p=>p.target===id);if(paragraph)return 'Nén cấp 1 đoạn '+paragraph.id;
+  const question=content.questions.find(q=>Object.values(q.targets).includes(id));
+  if(!question)return content.targets.find(t=>t.id===id)?.label||'Phần trả lời';
+  return (question.targets.radar===id?'Nén thông tin câu hỏi ':question.targets.section===id?'Đáp án câu ':'Nén dẫn chứng câu ')+question.number;
+ }
+ function navigationBar(anchor,nav,content){
+  if(cursor<0||!nav.items.length)return;
+  cursor=Math.min(cursor,nav.items.length-1);
+  const bar=document.createElement('nav');bar.className='repair-navigation';bar.setAttribute('aria-label','Điều hướng phần cần sửa');
+  const back=document.createElement('button');back.type='button';back.className='secondary';back.textContent='← Trước';back.setAttribute('aria-label','Phần cần sửa trước');back.disabled=cursor===0;back.onclick=previous;
+  const position=document.createElement('strong');position.id='repair-position';position.setAttribute('role','status');position.setAttribute('aria-live','polite');position.textContent='Phần cần sửa '+(cursor+1)+'/'+nav.items.length;
+  const forward=document.createElement('button');forward.type='button';forward.className='secondary';forward.textContent='Tiếp →';forward.setAttribute('aria-label','Phần cần sửa tiếp theo');forward.disabled=cursor===nav.items.length-1;forward.onclick=next;
+  const label=document.createElement('span');label.className='repair-current-label';label.textContent=targetLabel(nav.items[cursor].id,content);
+  bar.append(back,position,forward,label);anchor.after(bar);
+  const input=[...document.querySelectorAll('[data-target]')].find(el=>el.dataset.target===nav.items[cursor].id);
+  const field=input?.closest('.answer-field,.selection-field');
+  if(field){field.classList.add('repair-current');field.dataset.repairTarget=nav.items[cursor].id;field.setAttribute('aria-current','step');}
  }
  function decorate(){
   if(!bridge)return;
   const {state,teacher}=bridge.current();
   document.querySelectorAll('.repair-highlight').forEach(el=>el.classList.remove('repair-highlight'));
-  document.querySelectorAll('.repair-field-note,.repair-banner,.attempt-context').forEach(el=>el.remove());
+  document.querySelectorAll('.repair-current').forEach(el=>{el.classList.remove('repair-current');delete el.dataset.repairTarget;el.removeAttribute('aria-current');});
+  document.querySelectorAll('.repair-field-note,.repair-banner,.attempt-context,.repair-navigation').forEach(el=>el.remove());
   document.body.classList.toggle('materials-student-view',teacher&&studentView);
   let role=document.querySelector('#materials-role-label');
   if(!role){role=document.createElement('span');role.id='materials-role-label';role.className='materials-role-label';document.querySelector('#teacher')?.before(role);}
@@ -45,14 +78,18 @@
   }
   const current=selected?.status==='done'?{attempt:selected,progress:progress(selected,bridge.current().content)}:state.status==='draft'?repair:null;
   if(!current?.progress)return;
+  if(navigationScope!==current.attempt.attemptId){navigationScope=current.attempt.attemptId;cursor=-1;}
+  const nav=navigation();
+  const trigger=document.querySelector('[data-action="repair-start"]');if(trigger)trigger.hidden=cursor>=0;
   const p=current.progress,banner=document.createElement('div');banner.className='notice repair-banner';banner.dataset.state=p.allCorrect?'success':'attention';banner.setAttribute('role','status');
   if(edit&&p.allCorrect)edit.textContent='Sửa bài';
   banner.append(document.createTextNode((p.allCorrect?'Đã đạt toàn bộ bài. ':`Còn ${p.remainingCount} phần cần sửa theo lần chấm gần nhất. `)+description(p)));
-  if(!teacher&&!p.allCorrect){
+  if(!teacher&&!p.allCorrect&&!(state.status==='draft'&&cursor>=0)){
    const button=document.createElement('button');button.className='secondary';button.textContent=state.status==='draft'?'Phần cần sửa tiếp theo':'Tôi sẽ sửa';
    button.onclick=()=>state.status==='draft'?next():bridge.edit();banner.append(' ',button);
   }
   document.querySelector('.lesson-head')?.after(banner);
+  if(nav)navigationBar(banner,nav,bridge.current().content);
   if(state.status!=='draft'||!repair)return;
   for(const id of p.needsRepair){
    const input=[...document.querySelectorAll('[data-target]')].find(el=>el.dataset.target===id);if(!input)continue;
@@ -66,7 +103,7 @@
  }
  function outcome(attempt,{announce=false}={}){
   const p=progress(attempt,bridge.current().content);if(!p)return;
-  repair={attempt,progress:p};cursor=0;decorate();
+  repair={attempt,progress:p};decorate();
   if(bridge.current().teacher||!announce||shown.has(attempt.attemptId))return;
   shown.add(attempt.attemptId);
   bridge.modal(p.allCorrect?'Chúc mừng! Bạn đã sửa đúng toàn bộ bài.':`Còn ${p.remainingCount} phần cần sửa`,
@@ -97,12 +134,12 @@
  document.addEventListener('click',async event=>{
   const b=event.target.closest('button');if(!b)return;
   try{
-   if(b.dataset.materialsView){studentView=b.dataset.materialsView==='student';const url=new URL(location.href);url.searchParams.set('view',studentView?'student':'teacher');window.history.replaceState(null,'',url);bridge.close();decorate();}
+   if(b.dataset.materialsView){studentView=b.dataset.materialsView==='student';const url=new URL(location.href);url.searchParams.set('view',studentView?'student':'teacher');window.history.replaceState(null,'',url);bridge.close();decorate();if(cursor>=0)move();}
    if(b.hasAttribute('data-materials-dashboard'))location.href='teacher.html';
    if(b.hasAttribute('data-materials-login')){await bridge.flush();const url=new URL(location.href),person=bridge.identity();const linked=url.searchParams.get('teacher')==='1'&&url.searchParams.get('classId')&&url.searchParams.get('studentRef');url.searchParams.set('mode','teacher');url.searchParams.set('teacher','1');if(!linked){url.searchParams.set('classId',person.courseId);url.searchParams.set('studentRef',person.ownerId);}location.href=url.href;}
    if(b.hasAttribute('data-materials-logout')){await window.IzoneTeacherSso.logout();location.href=location.pathname+'?server=1';}
   }catch(error){bridge.toast('Chưa chuyển được giao diện: '+error.message);}
  });
- window.ReadingMaterialsExperience={bind(value){bridge=value;},decorate,outcome,restore,menu,next,
-  get repair(){return repair;},clear(){repair=null;},progress};
+ window.ReadingMaterialsExperience={bind(value){bridge=value;},decorate,outcome,restore,menu,start,next,previous,focusCurrent:()=>move(),
+  get repair(){return repair;},clear(){repair=null;cursor=-1;navigationScope='';},progress};
 }());

@@ -5,5 +5,11 @@
 .repair-field-note{font-size:14px;font-weight:600;color:var(--m170-attention-fg,#8a5300);margin:8px 0}
 .repair-field-note button{display:block;text-align:left}
 .attempt-context{font-size:14px;line-height:1.6}
+.repair-navigation{position:sticky;top:0;z-index:13;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;flex:none;gap:8px;padding:8px 12px;margin:8px 0;background:var(--m170-surface,#fff);border:1px solid var(--m170-line,#dce1e7);border-radius:12px;box-shadow:0 2px 8px #152b4e12}
+.repair-navigation strong{text-align:center;font-size:14px;color:var(--m170-structure,#174265)}
+.repair-navigation button{min-height:44px}
+.repair-current-label{grid-column:1/-1;text-align:center;font-size:14px;color:var(--m170-muted,#586477)}
+.repair-current{box-shadow:0 0 0 3px var(--m170-brand,#db0829);border-radius:8px;scroll-margin-block:84px}
 .materials-student-view .teacher-notice{display:none}
+@media(max-width:800px),(max-width:1000px) and (max-height:500px){.repair-navigation~.mobile-tabs,.repair-navigation~.study-grid .pane-heading{position:static}}
 @media(max-width:620px){.materials-role-label{font-size:11px;max-width:140px}.repair-banner button{width:100%}}

@@ -2,6 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderPracticeDefinitionHtml as render} from '../shared/teacher-practice-definition.js';
 
+test('Bài authored: đủ câu ngoài phạm vi mẫu, phương án có nhãn và không dựng input/audio',()=>{
+ const html=render({authored:true,passage:{A:'Passage giả'},groups:[{kind:'mcq',label:'Multiple Choice',instruction:'Choose one.',questions:[{n:31,text:'Câu mới <script>',options:[{value:'B',text:'Cổng bắc'}]}]},{kind:'completion',label:'Notes',instruction:'ONE WORD',questions:[{n:36,text:'Plant ___.'}]}]});
+ for(const value of ['Câu 31','Câu 36','<b>B.</b> Cổng bắc','ONE WORD','Passage giả','&lt;script&gt;'])assert.ok(html.includes(value),value);
+ assert.ok(!/<(?:input|audio|script)\b/.test(html));
+});
+
 test('Giữ nhãn headings, người, vế kết thúc và ngân hàng từ để đối chiếu đáp án ký tự',()=>{
  const html=render({headings:{i:'Một cách bắt đầu',ii:'Một cách kết thúc'},experts:{A:'Người giả A'},
   names:[{n:27,text:'Phát biểu giả'}],endings:[{n:34,text:'Đầu câu giả'}],endingOptions:{A:'vế một',B:'vế hai'},bank:{C:'từ giả'}});
