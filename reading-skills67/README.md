@@ -2,6 +2,12 @@
 
 ## Trạng thái giao diện master #170
 
+Trong bài Materials, **Xem phần cần sửa** mở thanh **Trước / Tiếp**, số thứ tự
+và tên phần đang xem. Thanh đi qua các ô chưa đạt theo đúng bản chấm đang mở;
+chế độ sửa dùng bản chấm gần nhất trong cùng lượt. Nhập lại chỉ đánh dấu chờ
+chấm, không tự xóa ô khỏi danh sách. Bản chấm mới tạo danh sách mới; bài đạt
+toàn bộ không hiện thanh này. Điều hướng và đổi cách xem GV/HV không ghi bài.
+
 Banner chờ xử lý dùng vai trò `pending`. Trường hợp cần đối chiếu hoặc chưa rõ
 kết quả AI dùng `attention`; lỗi đã xác định dùng `error`. Hook DOM chỉ chọn màu
 trình bày, giữ nguyên thông báo, nháp, phiên bản bài, hành vi gọi lại và API.

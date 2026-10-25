@@ -109,6 +109,20 @@ function jumpTo(kind,value){
   requestAnimationFrame(()=>{target?.scrollIntoView({block:'start',behavior:'instant'});target?.classList.remove('highlight-arrival');requestAnimationFrame(()=>target?.classList.add('highlight-arrival'));});
 }
 function jumpField(id){const t=content.targets.find(t=>t.id===id);if(!t)return;jumpTo(t.kind==='paragraph'?'paragraph':'question',t.paragraph||t.question);setTimeout(()=>document.querySelector('[data-target="'+id+'"]')?.focus({preventScroll:true}),40);}
+// Đi đúng ô, kể cả ô dưới cùng của câu hỏi và select chỉ xem; không sửa giá trị.
+function jumpRepairField(id){
+  const paragraph=content.paragraphs.find(p=>p.target===id);
+  const question=content.questions.find(q=>Object.values(q.targets).includes(id));
+  if(!paragraph&&!question)return;
+  if(question)activeQuestion=question.number;
+  setMobilePane(paragraph?'passage':'questions');
+  requestAnimationFrame(()=>{
+    const input=[...document.querySelectorAll('[data-target]')].find(el=>el.dataset.target===id);if(!input)return;
+    input.scrollIntoView({block:'center',behavior:'instant'});
+    const focus=input.disabled?input.closest('.selection-field,.answer-field'):input;
+    if(focus){if(input.disabled)focus.tabIndex=-1;focus.focus({preventScroll:true});}
+  });
+}
 function showModal(title,body,actions=''){
   lastTrigger=document.activeElement;
   modal.innerHTML=`<div class="dialog-top"><h2 id="modal-title">${e(title)}</h2><button class="close-button" data-close-modal aria-label="Đóng">×</button></div>${body}${actions?'<div class="dialog-actions">'+actions+'</div>':''}`;
@@ -181,6 +195,11 @@ function historyModal(){
 }
 function toggleNotes(){generalNotesOpen=!generalNotesOpen;document.querySelector('#notes-panel').hidden=!generalNotesOpen;window.ReadingAnnotations?.refreshNotes();if(generalNotesOpen)document.querySelector('#general-note')?.focus();}
 async function action(name){
+  if(serverMode&&name==='repair-start'){
+    if(window.ReadingMaterialsExperience)window.ReadingMaterialsExperience.start();
+    else{const problem=content.targets.find(t=>state.feedback?.[t.id]?.status!=='correct');if(problem)jumpField(problem.id);}
+    return;
+  }
   if(serverMode&&name==='repair-edit'){await serverAction('repair-edit');return;}
   if(serverMode&&['identity','edit','reset','confirm-reset','server-return-draft'].includes(name)){await serverAction(name);return;}
   if(name==='review')review();
@@ -258,7 +277,7 @@ async function bootstrap(){
         draftRevision:()=>serverClient.revision,runNo:()=>serverClient.runNo,fetchAttempt:id=>serverClient.getAttempt(id),identity:()=>serverClient.identity,
         openAttempt:async id=>{closeModal();trackServerAttempt(await serverClient.getAttempt(id));},edit:()=>serverAction('repair-edit'),
         explain:(id,attempt)=>{state.feedback=attempt.result.feedback;fixture={answers:Object.fromEntries(content.targets.map(t=>[t.id,attempt.result.feedback[t.id]?.modelAnswer||'']))};explanationFor(id);},
-        modal:showModal,close:closeModal,jump:jumpField,flush:()=>serverClient.flush(),toast});render();
+        modal:showModal,close:closeModal,jump:jumpRepairField,flush:()=>serverClient.flush(),toast});render();
       if(loaded.restored){toast('Đã khôi phục bản chưa gửi từ thiết bị; đang lưu lên máy chủ.');serverClient.flush().catch(()=>{});}
       const matchingLink=teacher||(!query.get('studentRef')||query.get('studentRef')===loaded.identity.ownerId)&&(!query.get('classId')||query.get('classId')===loaded.identity.courseId);
       const requested=matchingLink&&(query.get('attemptId')||query.get('attempt'))||(loaded.config?.demo&&query.get('demoReview')==='1'&&query.get('view')!=='draft'?loaded.history.find(a=>a.status==='done')?.attemptId:null);
@@ -297,7 +316,7 @@ function adaptServerScreen(){
   if(result){
     const f=Object.values(state.feedback||{}),counts={correct:0,partial:0,incorrect:0,blank:0};f.forEach(v=>{if(v.status in counts)counts[v.status]++;});
     const problem=content.targets.find(t=>state.feedback[t.id]?.status!=='correct');
-    result.innerHTML='<strong>Đã có bài chấm · Lượt làm '+(state.serverAttempt?.runNo||1)+'</strong><span> '+counts.correct+' đúng · '+counts.partial+' đúng một phần · '+counts.incorrect+' cần sửa · '+counts.blank+' bỏ trống</span>'+(problem?'<button class="quiet" data-jump-field="'+problem.id+'">Xem phần cần sửa ↓</button>':'')+(state.serverAttempt?.fromCache?'<small> Bài không đổi — dùng lại kết quả đã lưu.</small>':'');
+    result.innerHTML='<strong>Đã có bài chấm · Lượt làm '+(state.serverAttempt?.runNo||1)+'</strong><span> '+counts.correct+' đúng · '+counts.partial+' đúng một phần · '+counts.incorrect+' cần sửa · '+counts.blank+' bỏ trống</span>'+(problem?'<button class="quiet" data-action="repair-start">Xem phần cần sửa ↓</button>':'')+(state.serverAttempt?.fromCache?'<small> Bài không đổi — dùng lại kết quả đã lưu.</small>':'');
   }
   const waiting=document.querySelector('.waiting-card');if(waiting)waiting.innerHTML='<span class="spinner"></span><span><strong>'+(latestServerAttempt?.status==='processing'?'Đang chấm bằng Read 67':'Đã nhận bài · Đang chờ chấm')+'</strong><br>Nhận xét sẽ được lưu trên máy chủ. <button class="quiet" data-action="server-return-draft">Tiếp tục chỉnh nháp →</button></span>';
   if(state.status==='waiting')document.querySelector('.footer-tools [data-action="show-result"]')?.setAttribute('hidden','');
@@ -352,7 +371,7 @@ async function serverAction(name){
   const draft=await serverClient.getDraft();scenario='current';state={...newState(),...draft.body,id:'draft-'+serverClient.identity.ownerId,status:'draft',savedAt:draft.savedAt};render();
   if(name==='repair-edit'||name==='edit'){
     const url=new URL(location.href);url.searchParams.delete('attemptId');url.searchParams.delete('attempt');window.history.replaceState(null,'',url);
-    const history=await serverClient.getHistory();await window.ReadingMaterialsExperience?.restore(history);window.ReadingMaterialsExperience?.next();
+    const history=await serverClient.getHistory();await window.ReadingMaterialsExperience?.restore(history);window.ReadingMaterialsExperience?.focusCurrent();
   }
   focusHistoryDestination();
   if(name==='edit')toast('Đang chỉnh nháp trên máy chủ. Bản đã chấm và phản hồi vẫn giữ riêng.');
