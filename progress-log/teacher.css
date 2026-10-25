@@ -208,3 +208,13 @@ dialog h2 { margin: 8px 0 25px; font-size: 28px; font-weight: 500; letter-spacin
   .editor-structure { grid-template-columns: minmax(0, 1fr); }
   .editor-outline { position: static; }
 }
+.docs-batch-dialog { width: min(1120px, calc(100% - 32px)); max-height: 92dvh; padding: 0; overflow: auto; }
+.docs-batch-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e2e7eb; }
+.docs-batch-head h2 { margin: 0; font-size: 18px; }
+.docs-batch-dialog > .notice, .docs-batch-body { margin: 12px 16px; }
+.docs-batch-body textarea, .docs-batch-body select { width: 100%; margin-bottom: 8px; }
+.docs-batch-source, .docs-batch-result { padding: 12px; margin: 12px 0; border: 1px solid #e2e7eb; border-radius: 8px; overflow-wrap: anywhere; }
+.docs-batch-unit, .docs-batch-question { display: flex; align-items: start; gap: 10px; padding: 10px 0; min-height: 44px; }
+.docs-batch-unit input, .docs-batch-question input { flex: none; width: 18px; height: 18px; margin-top: 2px; }
+.docs-batch-body pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 650px) { .docs-batch-dialog { width: calc(100% - 12px); max-height: 96dvh; } .docs-batch-head { padding: 10px; } .docs-batch-body { margin: 10px; } }

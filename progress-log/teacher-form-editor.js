@@ -4,6 +4,7 @@
 import {createFormLibrary} from './teacher-form-library.js?rev=20261022-parity-v4';
 import {bindDialogDismiss} from './session-comments.js';
 import {importReviewCard} from './docs-import-review.js';
+import {createDocsBatchImporter} from './docs-batch-import.js';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
   ['dropdown','Dropdown Matching Headings'],['gapfill','Điền từ trong câu / chuỗi lập luận'],
@@ -65,7 +66,7 @@ export function newEditorPayload(title='Phiếu học tập mới') {
 export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},libraryEnabled=false}) {
   let classes=[],assignments=[],draft=null,dirty=false,busy=false,generation=0,reviewMode=false,
     publishOperationId=null,conflict=null,importPreview=null,importText='',docsUrl='',importOpen=false,aiPopupOpen=false,importTargetBlockId=null,list=[];
-  const lockedControls=new Map(),librarySaves=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false;
+  const lockedControls=new Map(),librarySaves=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false,docsBatch;
   const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
   const notice=message=>{status.textContent=message;if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}};
@@ -81,8 +82,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     wrap.append(input);parent.append(wrap);return input;
   }
   function markDirty() {dirty=true;importPreview=null;notice('Có thay đổi chưa lưu. Đáp án đang giữ trong phiên này.');
-    if(draft?.gradingKey.importReviews){const ids=new Set(draft.definition.blocks.flatMap(b=>b.items).map(i=>i.itemVersionId));
-      for(const id of Object.keys(draft.gradingKey.importReviews))if(!ids.has(id))delete draft.gradingKey.importReviews[id];}
+    const ids=new Set(draft?.definition.blocks.flatMap(b=>b.items).map(i=>i.itemVersionId)||[]);
+    for(const name of ['importReviews','importSources'])if(draft?.gradingKey[name])for(const id of Object.keys(draft.gradingKey[name]))if(!ids.has(id))delete draft.gradingKey[name][id];
     if(libraryEnabled){clearTimeout(autosaveTimer);const current=generation;autosaveTimer=setTimeout(()=>{
       if(current!==generation||busy||!dirty||!draft||reviewMode||draft.status==='published')return;
       void run(save);
@@ -483,6 +484,23 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     const section=el('details',undefined,{open:importOpen});section.append(el('summary','Nhập câu hỏi từ CSV / văn bản chia cột'));
     if(!aiOnly)section.addEventListener('toggle',()=>{importOpen=section.open;});
     section.append(el('p',aiOnly?'Dán nguyên câu hỏi và đáp án đã có. AI chỉ nhận dạng cấu trúc; bạn kiểm và chọn thêm vào phần đang soạn.':'Các cột: type, prompt, checkpoint, block_title, options, answer, required, config, display_number, skill, alias, depends_on, when, graded. Nhập chưa phát hành phiếu.'));
+    section.append(button('Nhập file tổng hợp / nhiều Docs',()=>void run(async()=>{
+      if(dirty)await save();if(!draft||reviewMode||draft.status==='published')return;
+      aiPopupOpen=false;for(const popup of editor.querySelectorAll('dialog.thuy-editor-ai'))popup.close();
+      const getContext=()=>draft&&!reviewMode&&draft.status!=='published'?{draftId:draft.id,revision:draft.revision,contextKey:generation+':'+draft.id,
+        targetBlockId:importTargetBlockId,blocks:draft.definition.blocks.map(b=>({blockId:b.blockId,title:b.title}))}:null;
+      docsBatch??=createDocsBatchImporter({apiRequest:request,getContext,
+        refreshDraft:async()=>{if(dirty)throw Error('Bản đang gõ có thay đổi chưa lưu. Lưu hoặc đối chiếu nháp trước khi xem đề xuất nhập.');
+          const before=getContext();if(!before)throw Error('Ngữ cảnh soạn nháp đã đổi.');const value=await request('/teacher/form-drafts/'+before.draftId);
+          if(getContext()?.contextKey!==before.contextKey)throw Error('Đã chuyển nháp; không áp dụng phản hồi cũ.');
+          if(dirty)throw Error('Giữ bản đang gõ; đối chiếu trước khi tải nháp mới.');adopt(value.draft);return getContext();},
+        onApplied:(reply,context)=>{if(getContext()?.contextKey!==context.contextKey)return;
+          if(dirty){notice('Lô nhập đã được lưu trên máy chủ. Giữ bản đang gõ; hãy đối chiếu phiên bản mới trước khi lưu tiếp.');return;}
+          adopt(reply.draft);void refreshList();const r=reply.receipt;
+          notice(`${reply.replayed?'Đã đối chiếu lần thêm trước':'Đã thêm'} ${r.appliedQuestions} câu vào nháp; ${r.excludedByTeacher} câu được loại bởi giảng viên. `+
+            `${r.keyProblems} cảnh báo key theo câu và ${r.sourceKeyWarnings||0} cảnh báo ghép key nguồn cần đối chiếu; ${r.needsReviewQuestions} câu cần xử lý; ${r.incompleteDocuments} tài liệu chưa đọc; ${r.manualRegions} vùng nguồn cần xem riêng. Phiếu lớp chưa thay đổi.`);
+        }});docsBatch.open();
+    })));
     const docs=el('input',undefined,{type:'url',placeholder:'https://docs.google.com/document/d/…',value:docsUrl});docs.setAttribute('aria-label','Link Google Docs câu hỏi');
     docs.addEventListener('input',()=>{docsUrl=docs.value;importPreview=null;});
     const docsRead=button('Đọc Google Docs và đề xuất câu hỏi',()=>void run(async current=>{
@@ -598,7 +616,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
       if(libraryEnabled)void library.refresh();
     },
     setContext({classId,sessionNumber}){if(draft||dirty||busy)return;classSelect.value=String(classId);if(sessionNumber)session.value=String(sessionNumber);library?.setUsed(assignments.filter(a=>String(a.class_id)===classSelect.value));void run(refreshList);},
-    clear() {generation+=1;clearTimeout(autosaveTimer);authoring=!libraryEnabled;draft=null;dirty=false;busy=false;lockControls();conflict=null;importPreview=null;pendingCreate=null;pendingCopy=null;
+    clear() {generation+=1;clearTimeout(autosaveTimer);docsBatch?.dispose();authoring=!libraryEnabled;draft=null;dirty=false;busy=false;lockControls();conflict=null;importPreview=null;pendingCreate=null;pendingCopy=null;
       library?.clear();
       importText='';importOpen=false;classSelect.replaceChildren();sourceSelect.replaceChildren();draftList.replaceChildren();paint();notice('Đăng nhập để soạn phiếu.');},
     // Dùng cùng đường render thật trong kiểm thử để đối chiếu definition/key trước và sau khi soạn.
