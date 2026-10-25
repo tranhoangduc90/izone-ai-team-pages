@@ -1,0 +1,9 @@
+{
+  "apiBase": "https://ducizone.ddns.net/task1-preview-api/",
+  "googleClientId": "235597750133-urmb86ktf5recnvvtbghf13bktfv5rkj.apps.googleusercontent.com",
+  "studentMemory": {
+    "enabled": false
+  },
+  "feedbackMode": "socratic-v2",
+  "preview": true
+}
