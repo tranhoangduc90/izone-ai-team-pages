@@ -372,6 +372,7 @@ function renderComments() {
   for (const section of SECTION_KEYS) {
     const workspace = document.querySelector(`.section-workspace[data-section="${section}"]`); if (!workspace) continue;
     const list = workspace.querySelector(".comment-list"); const sectionComments = comments.filter((item) => item.section === section); list.replaceChildren();
+    if (section === "draft" && app.manifest.feedbackMode === "socratic-v2") workspace.querySelector(".comments-title").textContent = "Dòng thời gian Draft";
     if (section === "draft" && (app.manifest.feedbackMode !== "socratic-v2" || safeLmsUrl(sectionComments.at(-1)?.artifacts?.lmsUrl || sectionComments.at(-1)?.feedback))) { renderDraftResult(workspace, sectionComments); continue; }
     for (const item of sectionComments.slice().reverse()) {
       const li = document.createElement("li"); const meta = document.createElement("div"); const body = document.createElement("div"); meta.className = "comment-meta"; body.className = "comment-body markdown-body"; li.dataset.status = item.status || "completed";
