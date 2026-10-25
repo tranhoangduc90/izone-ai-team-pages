@@ -1,4 +1,5 @@
 import { focusSpeakingStart } from './journey-focus.js';
+import {renderDocsProgress,docsProgressPending} from './docs-progress.js?v=20261025-progress1';
 import { analysisStatus, analysisPending } from './analysis-status.js?v=20261020-doctor-snapshot-v1';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-speaking-tab-v2';
 import { createPendingPoller } from './pending-poller.js';
@@ -363,6 +364,7 @@ async function refresh() {
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.practice = new Map((data.practiceLinks || []).map(link => [Number(link.slot), link]));
   if (doctor) state.doctor = doctor;
+  state.docsProgress=data.docsProgress||null;renderDocsProgress(state.docsProgress);
   state.doctorAnalysis = (data.processing?.analyze_homework || data.processing?.doctor_analyze)?.status;
   state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
   if (independent && data.status === 'submitted' && data.receipt?.id && !documentId) $('completion-message').textContent = `Biên nhận ${data.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
@@ -521,7 +523,7 @@ $('extra-confirm').addEventListener('click', async () => {
 const poller = createPendingPoller({
   refresh,
   hasSession: () => Boolean(state.accessToken),
-  isPending: () => (state.submitted && analysisPending(state.doctorAnalysis))
+  isPending: () => docsProgressPending(state.docsProgress) || (state.submitted && analysisPending(state.doctorAnalysis))
     || [...state.links.values()].some(link => link.check_status === 'pending' || analysisPending(link.analysis_status))
     || [...state.practice.values()].some(link => link.status === 'pending' || analysisPending(link.analysis_status)),
   onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
@@ -586,7 +588,7 @@ const identityController = createSpeakingIdentity({
     $('extra-link').value = '';
     state.pending.clear(); state.finishing = false;
     if ('extraPending' in state) state.extraPending = false;
-    documentId = ''; workUnitId = ''; classCode = '';
+    documentId = ''; workUnitId = ''; classCode = '';state.docsProgress=null;renderDocsProgress(null);
     $('draft-status').textContent = '';
   },
 });

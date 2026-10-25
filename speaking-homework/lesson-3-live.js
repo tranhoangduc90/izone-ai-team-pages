@@ -1,4 +1,5 @@
 import { focusSpeakingStart } from './journey-focus.js';
+import {renderDocsProgress,docsProgressPending} from './docs-progress.js?v=20261025-progress1';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-speaking-tab-v2';
 import { createPendingPoller } from './pending-poller.js';
 import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
@@ -154,6 +155,7 @@ async function refresh() {
   if (token !== state.accessToken || revision !== state.refreshRevision) return;
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
+  state.docsProgress=data.docsProgress||null;renderDocsProgress(state.docsProgress);
   renderLinks();
   poller.settled();
   autoSubmit.consider();
@@ -238,7 +240,7 @@ for (const part of parts) {
 const poller = createPendingPoller({
   refresh,
   hasSession: () => Boolean(state.accessToken),
-  isPending: () => [...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
+  isPending: () => docsProgressPending(state.docsProgress)||[...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
   onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
 });
 
@@ -271,7 +273,7 @@ const identityController = createSpeakingIdentity({
     if (saveDraft() === false) return false;
     poller.stop();
     autoSubmit.reset();
-    state.studentRef = ''; state.accessToken = ''; state.links.clear(); state.submitted = false;
+    state.studentRef = ''; state.accessToken = ''; state.links.clear(); state.submitted = false;state.docsProgress=null;renderDocsProgress(null);
     state.localFeedback.clear();
     draftFields.clear();
     $('completion-card').hidden = true;
