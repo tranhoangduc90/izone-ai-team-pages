@@ -30,7 +30,7 @@
   const nav=navigation();if(!nav?.items.length)return;
   if(navigationScope!==nav.attempt.attemptId){navigationScope=nav.attempt.attemptId;cursor=-1;}
   cursor=cursor<0?0:Math.max(0,Math.min(nav.items.length-1,cursor+offset));
-  decorate();bridge.jump(nav.items[cursor].id);
+  decorate();bridge.jump(nav.items[cursor].id);window.MaterialsRepairWorkspace?.afterMove();
  }
  function start(){cursor=-1;move();}
  function next(){move(1);}
@@ -42,6 +42,9 @@
   return (question.targets.radar===id?'Nén thông tin câu hỏi ':question.targets.section===id?'Đáp án câu ':'Nén dẫn chứng câu ')+question.number;
  }
  function navigationBar(anchor,nav,content){
+  if(window.MaterialsRepairWorkspace){
+   window.MaterialsRepairWorkspace.render({bridge,nav,content,cursor,label:targetLabel,move,go:id=>{const index=nav.items.findIndex(t=>t.id===id);if(index>=0){cursor=index;move();}}});return;
+  }
   if(cursor<0||!nav.items.length)return;
   cursor=Math.min(cursor,nav.items.length-1);
   const bar=document.createElement('nav');bar.className='repair-navigation';bar.setAttribute('aria-label','Điều hướng phần cần sửa');
@@ -57,9 +60,10 @@
  function decorate(){
   if(!bridge)return;
   const {state,teacher}=bridge.current();
+  window.MaterialsRepairWorkspace?.detachSync();
   document.querySelectorAll('.repair-highlight').forEach(el=>el.classList.remove('repair-highlight'));
   document.querySelectorAll('.repair-current').forEach(el=>{el.classList.remove('repair-current');delete el.dataset.repairTarget;el.removeAttribute('aria-current');});
-  document.querySelectorAll('.repair-field-note,.repair-banner,.attempt-context,.repair-navigation').forEach(el=>el.remove());
+  document.querySelectorAll('.repair-field-note,.repair-banner,.attempt-context,.repair-navigation:not(.repair-docked)').forEach(el=>el.remove());
   document.body.classList.toggle('materials-student-view',teacher&&studentView);
   let role=document.querySelector('#materials-role-label');
   if(!role){role=document.createElement('span');role.id='materials-role-label';role.className='materials-role-label';document.querySelector('#teacher')?.before(role);}
@@ -77,9 +81,10 @@
    document.querySelector('.lesson-head')?.after(notice);
   }
   const current=selected?.status==='done'?{attempt:selected,progress:progress(selected,bridge.current().content)}:state.status==='draft'?repair:null;
-  if(!current?.progress)return;
+  if(!current?.progress){window.MaterialsRepairWorkspace?.deactivate();return;}
   if(navigationScope!==current.attempt.attemptId){navigationScope=current.attempt.attemptId;cursor=-1;}
   const nav=navigation();
+  if(nav){const restored=window.MaterialsRepairWorkspace?.prepare(nav,bridge);if(restored!==null&&restored!==undefined)cursor=restored;}
   const trigger=document.querySelector('[data-action="repair-start"]');if(trigger)trigger.hidden=cursor>=0;
   const p=current.progress,banner=document.createElement('div');banner.className='notice repair-banner';banner.dataset.state=p.allCorrect?'success':'attention';banner.setAttribute('role','status');
   if(edit&&p.allCorrect)edit.textContent='Sửa bài';
@@ -96,7 +101,8 @@
    const field=input.closest('.answer-field,.selection-field')||input.parentElement;field.classList.add('repair-highlight');
    const note=document.createElement('p');note.className='repair-field-note';
    const changed=(state.answers[id]||'')!==(repair.attempt.snapshot.answers[id]||'');
-   const label=document.createElement('span');label.textContent=changed?'Đã sửa — chờ chấm lại':'Cần sửa · '+(repair.attempt.result?.feedback?.[id]?.reason||'Đối chiếu lại câu trả lời.');note.append(label);
+   const label=document.createElement('span');label.textContent=changed?'Đã sửa — chờ chấm lại':'Chưa chỉnh · Cần sửa';note.append(label);
+   const reason=document.createElement('p');reason.className='repair-previous-reason';reason.textContent='Nhận xét lần chấm trước: '+(repair.attempt.result?.feedback?.[id]?.reason||'Đối chiếu lại câu trả lời.');note.append(reason);
    field.append(note);
    if(repair.attempt.result?.feedback?.[id]){const b=document.createElement('button');b.className='quiet';b.textContent='Xem giải thích lần chấm trước';b.onclick=()=>bridge.explain(id,repair.attempt);note.append(' ',b);}
   }
@@ -141,5 +147,5 @@
   }catch(error){bridge.toast('Chưa chuyển được giao diện: '+error.message);}
  });
  window.ReadingMaterialsExperience={bind(value){bridge=value;},decorate,outcome,restore,menu,start,next,previous,focusCurrent:()=>move(),
-  get repair(){return repair;},clear(){repair=null;cursor=-1;navigationScope='';},progress};
+  get repair(){return repair;},clear(){repair=null;cursor=-1;navigationScope='';window.MaterialsRepairWorkspace?.deactivate();},progress};
 }());
