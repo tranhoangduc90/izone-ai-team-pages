@@ -187,7 +187,7 @@ function renderCommentTimeline(student, definition, loading) {
     item.append(link); list.append(item); timeline.append(list);
     return timeline;
   }
-  if (definition.key === "draft" && latest && latest.status !== "queued" && latest.status !== "technical_error") {
+  if (definition.key === "draft" && state.manifest.feedbackMode !== "socratic-v2" && latest && latest.status !== "queued" && latest.status !== "technical_error") {
     const message = document.createElement("p"); message.className = "draft-result-message";
     message.textContent = "Chưa tải được kết quả chấm Draft vì đường dẫn không hợp lệ. Vui lòng báo người quản lý.";
     timeline.append(message);
@@ -640,6 +640,7 @@ async function init() {
     if (!manifestResponse.ok || !configResponse.ok) throw new Error("Thiếu cấu hình dashboard.");
     state.manifest = await manifestResponse.json();
     const config = await configResponse.json();
+    if (config.socraticTask1Slugs?.includes(state.manifest.activity?.slug || slug)) state.manifest.feedbackMode = "socratic-v2";
     if (!config.googleClientId) throw new Error("Dashboard chưa được cấu hình đăng nhập giảng viên.");
     state.sessionClient = createTeacherSessionClient({ apiBaseUrl: config.apiBase || "", sessionPath: "api/v1/auth/session" });
     state.activitySlug = state.manifest.activity?.slug || slug;

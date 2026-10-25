@@ -40,6 +40,7 @@ async function loadManifest() {
   if (!app.activitySlug) throw new Error("Cấu hình bài luyện thiếu mã hoạt động.");
   const publicConfig = configResponse?.ok ? await configResponse.json() : {};
   app.studentMemoryConfig = publicConfig.studentMemory;
+  if (publicConfig.socraticTask1Slugs?.includes(app.activitySlug)) app.manifest.feedbackMode = "socratic-v2";
   app.apiBase = publicConfig.apiBase || app.manifest.apiBase || "";
   app.api = createApi(publicConfig.apiBase || app.manifest.apiBase || "");
   const title = app.manifest.activity?.title || app.manifest.title || "Bài luyện Writing Task 1";
@@ -299,7 +300,7 @@ function renderSections() {
     status.textContent = section === "draft" && !prerequisitesPassed ? "Chờ phần trước" : statusLabel(app.state.sections[section].status); status.dataset.state = app.state.sections[section].status;
     if (section === "draft") renderDraftFields(card, locked, prerequisitesPassed);
     else for (const field of info.fields) addTextarea(card, section, field, locked);
-    const button = card.querySelector(".submit-section"); button.hidden = section === "draft" && !app.state.draft2Unlocked; button.disabled = locked || app.conflict; button.textContent = app.conflict ? "Xử lý xung đột bản lưu trước" : sectionSubmitLabel(section, app.state.sections[section].status, submitting); button.addEventListener("click", () => submitSection(section, card));
+    const button = card.querySelector(".submit-section"); button.hidden = section === "draft" && !app.state.draft2Unlocked; button.disabled = locked || app.conflict; button.textContent = app.conflict ? "Xử lý xung đột bản lưu trước" : (section === "draft" && app.manifest.feedbackMode === "socratic-v2" && !submitting && !["queued","technical_error"].includes(app.state.sections[section].status) ? (locked ? "Draft đã đạt" : "Gửi nhận xét Draft") : sectionSubmitLabel(section, app.state.sections[section].status, submitting)); button.addEventListener("click", () => submitSection(section, card));
     refreshSection(card, section); root.append(workspace);
   }
 }
@@ -371,7 +372,7 @@ function renderComments() {
   for (const section of SECTION_KEYS) {
     const workspace = document.querySelector(`.section-workspace[data-section="${section}"]`); if (!workspace) continue;
     const list = workspace.querySelector(".comment-list"); const sectionComments = comments.filter((item) => item.section === section); list.replaceChildren();
-    if (section === "draft") { renderDraftResult(workspace, sectionComments); continue; }
+    if (section === "draft" && (app.manifest.feedbackMode !== "socratic-v2" || safeLmsUrl(sectionComments.at(-1)?.artifacts?.lmsUrl || sectionComments.at(-1)?.feedback))) { renderDraftResult(workspace, sectionComments); continue; }
     for (const item of sectionComments.slice().reverse()) {
       const li = document.createElement("li"); const meta = document.createElement("div"); const body = document.createElement("div"); meta.className = "comment-meta"; body.className = "comment-body markdown-body"; li.dataset.status = item.status || "completed";
       const number = item.commentNumber ? `Comment lần ${item.commentNumber}` : "Comment"; const pending = item.status === "queued" ? " — Đang chấm" : "";
@@ -456,7 +457,7 @@ async function submitSection(section, card) {
     if (terminalResult(attempt)) { applyTerminalAttempt(attempt, section); renderAll(); return; }
     app.state.sections[section].status = "queued"; registerAttempt(attempt); resetAutosave(); renderAll();
     const number = attempt.attemptNumber || attempt.commentNumber || attempt.sequence || app.state.sections[section].attemptsWithoutPass + 1;
-    upsertComment({ commentRef: attempt.commentRef, attemptRef: attempt.attemptRef, section, commentNumber: number, status: "queued", feedback: section === "draft" ? "Hệ thống đang chấm từng câu và tạo link LMS…" : "Đang chấm", createdAt: new Date().toISOString() });
+    upsertComment({ commentRef: attempt.commentRef, attemptRef: attempt.attemptRef, section, commentNumber: number, status: "queued", feedback: section === "draft" ? (app.manifest.feedbackMode === "socratic-v2" ? "Đang đọc Draft và chuẩn bị phản hồi gợi mở…" : "Hệ thống đang chấm từng câu và tạo link LMS…") : "Đang chấm", createdAt: new Date().toISOString() });
     renderComments(); setSaveState("Đã nhận Check — đang chấm, không cần bấm lại");
   } catch (error) {
     app.state.sections[section].status = previousStatus;
@@ -483,7 +484,7 @@ async function retryComment(comment, button) {
     const result = await app.api.retryAttempt(comment.attemptRef); const attempt = result.data.attempt || result.data;
     upsertComment({ commentRef: attempt.commentRef, attemptRef: attempt.attemptRef, section: comment.section,
       commentNumber: attempt.commentNumber, status: "queued",
-      feedback: comment.section === "draft" ? "Hệ thống đang chấm từng câu và tạo link LMS…" : "Đang chấm",
+      feedback: comment.section === "draft" ? (app.manifest.feedbackMode === "socratic-v2" ? "Đang đọc Draft và chuẩn bị phản hồi gợi mở…" : "Hệ thống đang chấm từng câu và tạo link LMS…") : "Đang chấm",
       createdAt: new Date().toISOString() });
     app.state.sections[comment.section].status = "queued"; registerAttempt(attempt); renderAll(); setSaveState("Đã bắt đầu check...");
   } catch (error) { showNotice(error.message); button.disabled = false; button.textContent = "Check lại"; }
