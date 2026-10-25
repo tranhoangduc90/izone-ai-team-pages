@@ -258,7 +258,7 @@ let down=false;const outside=e=>{if(e.target.tagName!=='DIALOG')return false;con
 root.addEventListener('pointerdown',e=>down=outside(e));root.addEventListener('pointerup',e=>{if(down&&outside(e))closeDialog();down=false;});
 window.addEventListener('beforeunload',e=>{if(dirty||editor){cache();e.preventDefault();e.returnValue='';}});
 async function boot(){
- if(!TASK||!TASK.previewAvailable)throw Error('Đề này chưa có trong bản thử. Hãy mở đúng link buổi 1 hoặc buổi 2.');
+ if(!TASK||!TASK.previewAvailable)throw Error('Đề này chưa có trong bản thử. Hãy chọn bài từ chỉ mục tám buổi Writing Task 2.');
  document.title=TASK.shortTitle+' · '+(teacher?'Giảng viên':'Học viên')+' · Bản thử SW';
  await api('sw/status');classes=(await api('activities/'+ACTIVITY+'/roster')).classes;
  classes.sort((a,b)=>b.className.localeCompare(a.className));
