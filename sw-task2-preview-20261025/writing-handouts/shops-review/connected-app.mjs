@@ -112,6 +112,7 @@ async function save(){
  }catch(error){if(epoch===generation){if(error.status===409)conflict=true;dirty=true;cache();message(error.message+' Nội dung đang gõ được giữ, chưa ghi đè máy chủ.');}throw error;}finally{busy=false;}
 }
 async function refresh(){
+ if($('#legacy-dialog')||$('#conflict-dialog'))return;
  if(!current)return;const ref=current.sessionRef,epoch=generation;
  const path=teacher?'admin/lesson9/sessions/':'lesson9/sessions/';
  const result=await api(path+ref);const threadData=await api((teacher?'admin/live/':'')+'sessions/'+ref+'/teacher-comments');
