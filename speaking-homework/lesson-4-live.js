@@ -11,6 +11,7 @@ import { lesson7Code, lesson7Parts } from './lesson-7-parts.js';
 import { lesson8Code, lesson8Parts } from './lesson-8-parts.js';
 import { lesson9Code, lesson9Parts } from './lesson-9-parts.js';
 import { lesson10Code, lesson10Parts } from './lesson-10-parts.js';
+import { lesson11Code, lesson11Parts } from './lesson-11-parts.js';
 
 const independentRequested = document.body.dataset.speakingIntake === 'independent';
 let independent = independentRequested;
@@ -24,9 +25,10 @@ const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
 let workUnitId = '';
 let classCode = '';
-const lessonNumber = ['5', '6', '7', '8', '9', '10'].includes(document.body.dataset.speakingLesson)
+const lessonNumber = ['5', '6', '7', '8', '9', '10', '11'].includes(document.body.dataset.speakingLesson)
   ? Number(document.body.dataset.speakingLesson) : 4;
-const expectedAssignmentCode = lessonNumber === 10 ? lesson10Code
+const expectedAssignmentCode = lessonNumber === 11 ? lesson11Code
+  : lessonNumber === 10 ? lesson10Code
   : lessonNumber === 9 ? lesson9Code
   : lessonNumber === 8 ? lesson8Code
   : lessonNumber === 7 ? lesson7Code
@@ -36,7 +38,7 @@ document.body.dataset.teacherCode = expectedAssignmentCode;
 const assignmentCode = query.get('assignmentCode') || expectedAssignmentCode;
 const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);
-const parts = lessonNumber === 10 ? lesson10Parts : lessonNumber === 9 ? lesson9Parts : lessonNumber === 8 ? lesson8Parts : lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
+const parts = lessonNumber === 11 ? lesson11Parts : lessonNumber === 10 ? lesson10Parts : lessonNumber === 9 ? lesson9Parts : lessonNumber === 8 ? lesson8Parts : lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
   { key: 'insert_middle', title: 'Chèn điểm giữa trong Speaking',
     url: 'https://ducizone.short.gy/chen_diem_giua_speak',
     lead: 'Luyện đủ ba giai đoạn trong một hội thoại.',
