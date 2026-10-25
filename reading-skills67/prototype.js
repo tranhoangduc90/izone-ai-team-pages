@@ -8,7 +8,7 @@ const explanation = document.querySelector('#explanation-dialog');
 const query = new URLSearchParams(location.search);
 const serverClient=window.ReadingServerClient;
 const serverMode=!!serverClient;
-const teacher = query.get('teacher') === '1';
+let teacher = query.get('teacher') === '1';
 const storageKey = 'izone:reading-skills67:materials-mi:prototype:v1';
 let content, fixture, state, history = [], scenario = query.get('scenario') || 'current';
 let mobilePane = 'passage', activeQuestion = 1, lastTrigger = null, explanationIndex = 0;
@@ -79,6 +79,7 @@ function render(){
   document.querySelector('#scenario').value=scenario==='sample-current'?'draft':scenario;
   updateProgress();
   if(serverMode)adaptServerScreen();
+  if(serverMode)window.ReadingMaterialsExperience?.decorate();
   document.querySelectorAll('textarea[data-target]').forEach(autoGrow);
   requestAnimationFrame(()=>window.ReadingAnnotations?.install());
 }
@@ -160,7 +161,9 @@ function explanationFor(id,trigger){
   explanation.innerHTML=`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><p class="kicker">PHẢN HỒI MÔ PHỎNG</p><h2 id="explanation-dialog-title">${e(t.label)}</h2></div><button class="explanation-dialog-close" data-close-explanation aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage"><div class="explanation-dialog-pane-head"><strong>Nguồn đối chiếu</strong><span>${radar?'Câu hỏi '+q.number:'Đoạn '+section}</span></div><div class="explanation-dialog-passage-scroll">${q?'<h3>Câu '+q.number+'</h3><div class="evidence-box">'+e(q.text)+'</div>':''}<h3 style="font-size:14px;margin-top:22px">${e(content.title)}</h3>${content.paragraphs.map(pp=>`<div class="popup-paragraph ${pp.id===section&&!radar?'explanation-active-paragraph':''}" data-popup-paragraph="${pp.id}"><strong>${pp.id}</strong>${pp.text.split('\n\n').map(s=>'<p>'+e(s)+'</p>').join('')}</div>`).join('')}</div></section><section class="explanation-dialog-detail"><div class="explanation-dialog-detail-scroll"><div class="notice">Ví dụ để duyệt cách đọc nhận xét. Chưa có kết quả AI thật.</div><div class="explanation-dialog-answer"><span>Kết quả minh họa</span><strong>${e(statusNames[f.status])}</strong></div><h3>Bài làm minh họa</h3><div class="answer-copy">${e(state.answers[id]||'Chưa trả lời')}</div><h3>Vì sao?</h3><p>${e(f.reason)}</p><h3>Mẫu đối chiếu từ bộ chấm đang dùng</h3><div class="evidence-box">${e(f.modelAnswer)}</div><h3>Bước nên sửa / kiểm lại</h3><p>${e(f.nextStep)}</p><p class="minimum-note">Màu nền là lớp trình bày của prototype, không phải màu gốc của tài liệu.</p><div class="dialog-stepper"><button class="secondary" data-explain-offset="-1" ${explanationIndex===0?'disabled':''}>← Phần trước</button><span>${explanationIndex+1}/20</span><button class="secondary" data-explain-offset="1" ${explanationIndex===19?'disabled':''}>Phần sau →</button></div></div></section></div></div>`;
   if(serverMode){
     explanation.querySelector('.kicker').textContent='PHẢN HỒI READ 67';
-    explanation.querySelector('.notice').textContent='Kết quả thật của bản đã gửi #'+state.serverAttempt.draftRevision+'. Bài đang chỉnh được lưu thành nháp riêng.';
+    const reviewedAttempt=state.serverAttempt||window.ReadingMaterialsExperience?.repair?.attempt;
+    explanation.querySelector('.notice').textContent='Kết quả thật của bản đã gửi #'+(reviewedAttempt?.draftRevision||'')+'. Bài đang chỉnh được lưu thành nháp riêng.';
+    if(reviewedAttempt)explanation.querySelector('.answer-copy').textContent=reviewedAttempt.snapshot.answers[id]||'Chưa trả lời';
     explanation.querySelector('.explanation-dialog-answer span').textContent='Kết quả bộ chấm';
     for(const h of explanation.querySelectorAll('h3'))if(h.textContent==='Bài làm minh họa')h.textContent='Bài bạn đã gửi';
     explanation.querySelector('.minimum-note').textContent='Màu nền là lớp trình bày giúp đối chiếu nguồn và bản nén.';
@@ -178,6 +181,7 @@ function historyModal(){
 }
 function toggleNotes(){generalNotesOpen=!generalNotesOpen;document.querySelector('#notes-panel').hidden=!generalNotesOpen;window.ReadingAnnotations?.refreshNotes();if(generalNotesOpen)document.querySelector('#general-note')?.focus();}
 async function action(name){
+  if(serverMode&&name==='repair-edit'){await serverAction('repair-edit');return;}
   if(serverMode&&['identity','edit','reset','confirm-reset','server-return-draft'].includes(name)){await serverAction(name);return;}
   if(name==='review')review();
   if(name==='grade')grade();
@@ -222,6 +226,7 @@ document.addEventListener('click',async event=>{
     if(button.dataset.serverArchive){const archived=modal._serverArchives[Number(button.dataset.serverArchive)];closeModal();serverClient.stopPoll();state={...newState(),...structuredClone(archived.body),status:'history',savedAt:archived.savedAt,archived};render();focusHistoryDestination();}
     if(button.dataset.previewPerson)await serverClient.changePerson(button.dataset.previewPerson);
     if(button.id==='teacher'){
+      if(window.ReadingMaterialsExperience){await window.ReadingMaterialsExperience.menu();return;}
       if(serverMode&&serverClient.identity){
         const target=new URL('./',location.href),person=serverClient.identity;
         target.searchParams.set('server','1');target.searchParams.set('teacher','1');target.searchParams.set('classId',person.courseId);target.searchParams.set('studentRef',person.ownerId);
@@ -248,11 +253,18 @@ window.addEventListener('offline',()=>toast('Đang ngoại tuyến. Bản đang 
 async function bootstrap(){
   try{
     if(serverMode){
-      const loaded=await serverClient.initialize();content=loaded.content;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};render();
+      const loaded=await serverClient.initialize();teacher=!!loaded.teacher;content=loaded.content;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};
+      window.ReadingMaterialsExperience?.bind({current:()=>({state,content,teacher}),history:()=>serverClient.initialHistory?.attempts||serverClient.initialHistory||[],
+        draftRevision:()=>serverClient.revision,runNo:()=>serverClient.runNo,fetchAttempt:id=>serverClient.getAttempt(id),identity:()=>serverClient.identity,
+        openAttempt:async id=>{closeModal();trackServerAttempt(await serverClient.getAttempt(id));},edit:()=>serverAction('repair-edit'),
+        explain:(id,attempt)=>{state.feedback=attempt.result.feedback;fixture={answers:Object.fromEntries(content.targets.map(t=>[t.id,attempt.result.feedback[t.id]?.modelAnswer||'']))};explanationFor(id);},
+        modal:showModal,close:closeModal,jump:jumpField,flush:()=>serverClient.flush(),toast});render();
       if(loaded.restored){toast('Đã khôi phục bản chưa gửi từ thiết bị; đang lưu lên máy chủ.');serverClient.flush().catch(()=>{});}
-      const requested=query.get('attemptId')||query.get('attempt')||(loaded.config?.demo&&query.get('demoReview')==='1'&&query.get('view')!=='draft'?loaded.history.find(a=>a.status==='done')?.attemptId:null);
+      const matchingLink=teacher||(!query.get('studentRef')||query.get('studentRef')===loaded.identity.ownerId)&&(!query.get('classId')||query.get('classId')===loaded.identity.courseId);
+      const requested=matchingLink&&(query.get('attemptId')||query.get('attempt'))||(loaded.config?.demo&&query.get('demoReview')==='1'&&query.get('view')!=='draft'?loaded.history.find(a=>a.status==='done')?.attemptId:null);
       const pending=loaded.history.find(a=>['queued','processing'].includes(a.status));
       if(requested||(!teacher&&pending&&!loaded.restored))trackServerAttempt(await serverClient.getAttempt(requested||pending.attemptId));
+      else if(!teacher)await window.ReadingMaterialsExperience?.restore(loaded.history);
       return;
     }
     const response=await fetch('/__prototype__/content');if(!response.ok)throw Error('Không đọc được đề riêng tư.');content=await response.json();
@@ -302,24 +314,25 @@ async function serverGrade(){
   if(teacher||!writable())return;
   closeModal();
   const button=document.querySelector('#grade-button');if(button)button.disabled=true;
-  try{await serverClient.flush();if(completed()<16){if(button)button.disabled=false;review();return;}trackServerAttempt(await serverClient.submit());}catch(error){toast('Chưa gửi chấm: '+error.message);if(button)button.disabled=false;}
+  try{await serverClient.flush();if(completed()<16){if(button)button.disabled=false;review();return;}trackServerAttempt(await serverClient.submit(),{announce:true});}catch(error){toast('Chưa gửi chấm: '+error.message);if(button)button.disabled=false;}
 }
 // Reload hoặc lịch sử nối lại đúng job; phản hồi muộn chỉ nhắc khi đang sửa nháp.
-function trackServerAttempt(attempt){
-  showServerAttempt(attempt);serverClient.stopPoll();
+function trackServerAttempt(attempt,{announce=false}={}){
+  showServerAttempt(attempt,announce);serverClient.stopPoll();
   if(!['queued','processing'].includes(attempt.status))return;
   serverClient.poll(attempt.attemptId,value=>{
     if(value.status==='connection_error'){toast('Chưa đọc được tiến độ. Bản gửi vẫn giữ trên máy chủ; đang kết nối lại.');return;}
     latestServerAttempt=value;
-    if(state.serverAttempt?.attemptId===value.attemptId&&state.status!=='draft')showServerAttempt(value);
+    if(state.serverAttempt?.attemptId===value.attemptId&&state.status!=='draft')showServerAttempt(value,announce);
     else if(value.status==='done')toast('Đã có phản hồi cho bản đã gửi. Mở Lịch sử để xem; nháp đang sửa được giữ.');
   });
 }
-function showServerAttempt(attempt){
+function showServerAttempt(attempt,announce=false){
   latestServerAttempt=attempt;
   state={...newState(),...attempt.snapshot,id:attempt.attemptId,serverAttempt:attempt,savedAt:attempt.createdAt,status:attempt.status==='done'?'review':['failed','needs_review'].includes(attempt.status)?'grading-error':'waiting'};
   if(attempt.result){state.feedback=attempt.result.feedback;fixture={answers:Object.fromEntries(content.targets.map(t=>[t.id,attempt.result.feedback[t.id]?.modelAnswer||'']))};}
   render();
+  if(attempt.status==='done')window.ReadingMaterialsExperience?.outcome(attempt,{announce});
 }
 async function serverHistoryModal(){
   try{const data=await serverClient.historyDetail(),attempts=data.attempts,archives=data.archives||[];
@@ -334,9 +347,13 @@ async function serverAction(name){
   if(name==='identity'){showModal('Chọn học viên thử','<p>Đây là hai tài khoản thử cục bộ để kiểm nháp và phản hồi riêng. Chưa dùng đăng nhập hoặc roster production.</p>','<button class="secondary" data-preview-person="A">Học viên thử A</button><button class="primary" data-preview-person="B">Học viên thử B</button>');return;}
   if(name==='reset'){closeModal();showModal('Mở nháp trống mới?','<p>Giữ toàn bộ lượt đã gửi và phản hồi trên máy chủ. Nháp hiện tại sẽ được thay bằng bản trống sau khi lưu.</p>','<button class="secondary" data-close-modal>Giữ nháp</button><button class="primary" data-action="confirm-reset">Mở nháp trống</button>');return;}
   closeModal();
-  if(name==='confirm-reset')await serverClient.reset();
+  if(name==='confirm-reset'){await serverClient.reset();window.ReadingMaterialsExperience?.clear();}
   else await serverClient.flush();
   const draft=await serverClient.getDraft();scenario='current';state={...newState(),...draft.body,id:'draft-'+serverClient.identity.ownerId,status:'draft',savedAt:draft.savedAt};render();
+  if(name==='repair-edit'||name==='edit'){
+    const url=new URL(location.href);url.searchParams.delete('attemptId');url.searchParams.delete('attempt');window.history.replaceState(null,'',url);
+    const history=await serverClient.getHistory();await window.ReadingMaterialsExperience?.restore(history);window.ReadingMaterialsExperience?.next();
+  }
   focusHistoryDestination();
   if(name==='edit')toast('Đang chỉnh nháp trên máy chủ. Bản đã chấm và phản hồi vẫn giữ riêng.');
 }

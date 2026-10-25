@@ -52,7 +52,7 @@
   }
   async function initialize(){
     access=await window.Reading67Access?.open();
-    if(access?.teacher){const w=access.work;identity=w.identity;content=w.content;revision=w.draft.revision;state.savedAt=w.draft.savedAt;state.status='saved';initialHistory=w;return {content,identity,draft:w.draft,history:w.attempts,teacher:true,config:access.config};}
+    if(access?.teacher){const w=access.work;identity=w.identity;content=w.content;revision=w.draft.revision;runNo=w.draft.runNo||1;state.savedAt=w.draft.savedAt;state.status='saved';initialHistory=w;return {content,identity,draft:w.draft,history:w.attempts,teacher:true,config:access.config};}
     let lesson;
     try{lesson=await request(prefix+'/lesson',{},false);}catch(error){if(error.status!==401||!access?.legacy)throw error;await request('/_preview/session',json('POST',{person:'A'}));lesson=await request(prefix+'/lesson');}
     identity=lesson.identity;content=lesson.content;
@@ -86,7 +86,7 @@
     const value=access?.teacher?(await request(prefix+window.Reading67Access.teacherPath)).draft:await request(prefix+'/draft');
     revision=value.revision;runNo=value.runNo||runNo;state.savedAt=value.savedAt;state.completeness=value.completeness;return value;
   }
-  async function getHistory(){return (await request(prefix+'/attempts')).attempts;}
+  async function getHistory(){const value=await historyDetail();initialHistory=value;return value.attempts;}
   async function historyDetail(){return access?.teacher?await request(prefix+window.Reading67Access.teacherPath):await request(prefix+'/attempts');}
   async function changeIdentity(){await flush();stopPoll();await window.Reading67Access.change();}
   async function reset(){if(access?.teacher)throw Error('Giảng viên chỉ xem.');await flush();const receipt=await request(prefix+'/reset',json('POST',{baseRevision:revision,mutationId:crypto.randomUUID()}));revision=receipt.revision;runNo=receipt.runNo;state.savedAt=receipt.savedAt;state.completeness=receipt.completeness;refreshHomework();return receipt;}
