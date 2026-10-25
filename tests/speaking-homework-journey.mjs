@@ -19,7 +19,8 @@ const lessons=[
   {n:7,file:'lesson-7.html',code:'67-speaking-cach_lam_mot_viec',parts:['how_to_do'],mins:[4],practice:2},
   {n:8,file:'lesson-8.html',code:'67-speaking-so_sanh',parts:['comparison_direct','comparison_extended','freestyle'],mins:[6,6,1],practice:2},
   {n:9,file:'lesson-9.html',code:'67-speaking-freestyle_on_tap',parts:['freestyle'],mins:[1],practice:2},
-  {n:10,file:'lesson-10.html',code:'67-speaking-ke_chuyen_boi_canh_truoc_trong_sau',parts:['story_context','story_sequence'],mins:[1,1],practice:2}
+  {n:10,file:'lesson-10.html',code:'67-speaking-ke_chuyen_boi_canh_truoc_trong_sau',parts:['story_context','story_sequence'],mins:[1,1],practice:2},
+  {n:11,file:'lesson-11.html',code:'67-speaking-ke_chuyen_dien_bien_chi_tiet',parts:['story_detail','story_sequence'],mins:[1,1],practice:2}
 ];
 const exercises=[1,2,3].map(n=>({exercise_id:`exercise-${n}`,title:'Bài mẫu '+n,exercise_url:'https://example.invalid/'+n,recommendation_count:4-n,practice_count:n}));
 const server=createServer(async(req,res)=>{try{
@@ -34,6 +35,8 @@ const results=[];const share=n=>'https://chatgpt.com/share/'+String(n).padStart(
 try{
 for(const lesson of lessons.filter(l=>!process.env.SPEAKING_LESSON_FILTER||process.env.SPEAKING_LESSON_FILTER.split(',').includes(String(l.n))))for(const width of [390,768,1440]){
   const context=await browser.newContext({viewport:{width,height:1000}}),page=await context.newPage();
+  page.setDefaultTimeout(15000);
+  console.log(`Speaking journey: Lesson ${lesson.n}, ${width}px`);
   const errors=[],requests=[];page.on('console',m=>{if(m.type()==='error')console.error(m.text());});let links=[],practice=[],submitted=false;
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('https://ducizone.ddns.net/mapping-api/api/student-identity/resolve', route => route.fulfill({json:{ok:true,status:'unique',identity:{authority:'erp-contact',id:'12345'},aliases:[{classId:'111',classCode:'LOPMAU',studentRef:ref,studentName:'Học viên mẫu'}]}}));
@@ -58,7 +61,7 @@ for(const lesson of lessons.filter(l=>!process.env.SPEAKING_LESSON_FILTER||proce
   await page.locator('#class-select').selectOption('LOPMAU');await page.waitForFunction(()=>!document.getElementById('student-select').disabled||!document.getElementById('reload-roster').hidden);assert.equal(await page.locator('#student-select').isDisabled(),false,JSON.stringify({message:await page.locator('#identity-message').innerText(),errors,requests}));await page.locator('#student-select').selectOption(ref);await page.locator('#open-homework').click();
   await page.waitForFunction(()=>document.activeElement?.matches('#lesson-hero h1'));
   await page.evaluate(()=>document.fonts.ready);
-  assert.match(await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily),/Nunito Sans/);
+  assert.match(await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily),/Source Sans 3/);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
   if(width!==768)await page.screenshot({path:`${out}/lesson-${lesson.n}-${width}-start.png`,fullPage:true});
   for(const [i,part] of lesson.parts.entries()){
