@@ -3,6 +3,7 @@
  * Đáp án chỉ giữ trong bộ nhớ tab; lỗi mạng giữ phần đang soạn và không báo đã lưu. */
 import {createFormLibrary} from './teacher-form-library.js?rev=20261022-parity-v4';
 import {bindDialogDismiss} from './session-comments.js';
+import {importReviewCard} from './docs-import-review.js';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
   ['dropdown','Dropdown Matching Headings'],['gapfill','Điền từ trong câu / chuỗi lập luận'],
@@ -63,7 +64,7 @@ export function newEditorPayload(title='Phiếu học tập mới') {
 
 export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},libraryEnabled=false}) {
   let classes=[],assignments=[],draft=null,dirty=false,busy=false,generation=0,reviewMode=false,
-    publishOperationId=null,conflict=null,importPreview=null,importText='',importOpen=false,aiPopupOpen=false,importTargetBlockId=null,list=[];
+    publishOperationId=null,conflict=null,importPreview=null,importText='',docsUrl='',importOpen=false,aiPopupOpen=false,importTargetBlockId=null,list=[];
   const lockedControls=new Map(),librarySaves=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false;
   const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
@@ -80,6 +81,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     wrap.append(input);parent.append(wrap);return input;
   }
   function markDirty() {dirty=true;importPreview=null;notice('Có thay đổi chưa lưu. Đáp án đang giữ trong phiên này.');
+    if(draft?.gradingKey.importReviews){const ids=new Set(draft.definition.blocks.flatMap(b=>b.items).map(i=>i.itemVersionId));
+      for(const id of Object.keys(draft.gradingKey.importReviews))if(!ids.has(id))delete draft.gradingKey.importReviews[id];}
     if(libraryEnabled){clearTimeout(autosaveTimer);const current=generation;autosaveTimer=setTimeout(()=>{
       if(current!==generation||busy||!dirty||!draft||reviewMode||draft.status==='published')return;
       void run(save);
@@ -214,6 +217,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
   }
   function paintLegacyItem(parent,item,block,readonly) {
     const card=el('fieldset',undefined,{className:'editor-item',disabled:readonly});card.append(el('legend',`Câu ${item.position} · ${EDITOR_TYPES.find(([id])=>id===editorType(item))?.[1]||'Dạng không hỗ trợ'}`));
+    const importReview=draft.gradingKey.importReviews?.[item.itemVersionId];if(importReview)card.append(importReviewCard(importReview,{item,gradingKey:draft.gradingKey,readonly,onChange:()=>{markDirty();paint();}}));
     field(card,'Dạng bài',editorType(item),type=>{
       const next=newEditorItem(type,item.position);next.itemVersionId=item.itemVersionId;next.itemFamilyId=item.itemFamilyId;next.prompt=item.prompt;next.helpText=item.helpText;
       for(const key of Object.keys(item))delete item[key];Object.assign(item,next);
@@ -348,6 +352,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     if(!['mcq','multi','reflection','short_answer','keyword_selection','self_reported_score','matching','speaking_checklist','gapfill','numbered_short_texts'].includes(editorType(item))){paintLegacyItem(parent,item,block,readonly);return;}
     const type=editorType(item),index=block.items.indexOf(item),card=el('fieldset',undefined,{className:'editor-item thuy-editor-question',disabled:readonly}),head=el('div',undefined,{className:'thuy-editor-question-head'}),title=el('h3',`Câu ${item.position}`);
     title.append(el('small',thuyNames[type]||EDITOR_TYPES.find(([id])=>id===type)?.[1]||'Câu từ nguồn cũ'));head.append(title);
+    const importReview=draft.gradingKey.importReviews?.[item.itemVersionId];if(importReview)card.append(importReviewCard(importReview,{item,gradingKey:draft.gradingKey,readonly,onChange:()=>{markDirty();paint();}}));
     field(head,'Kỹ năng câu '+item.position,item.skillCodes?.[0]||'',value=>{item.skillCodes=value?[value]:[];if(value==='speaking'&&['mcq','multi'].includes(type)){item.graderType='none';item.maxScore=0;delete draft.gradingKey.items[item.itemVersionId];}paint();},{options:[['','Chung'],['listening','Listening'],['reading','Reading'],['speaking','Speaking'],['writing','Writing']]});
     if(draft.definition.blocks.length>1)field(head,'Phần câu '+item.position,block.blockId,value=>{
       const target=draft.definition.blocks.find(b=>b.blockId===value);if(!target||target===block)return;
@@ -478,6 +483,15 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     const section=el('details',undefined,{open:importOpen});section.append(el('summary','Nhập câu hỏi từ CSV / văn bản chia cột'));
     if(!aiOnly)section.addEventListener('toggle',()=>{importOpen=section.open;});
     section.append(el('p',aiOnly?'Dán nguyên câu hỏi và đáp án đã có. AI chỉ nhận dạng cấu trúc; bạn kiểm và chọn thêm vào phần đang soạn.':'Các cột: type, prompt, checkpoint, block_title, options, answer, required, config, display_number, skill, alias, depends_on, when, graded. Nhập chưa phát hành phiếu.'));
+    const docs=el('input',undefined,{type:'url',placeholder:'https://docs.google.com/document/d/…',value:docsUrl});docs.setAttribute('aria-label','Link Google Docs câu hỏi');
+    docs.addEventListener('input',()=>{docsUrl=docs.value;importPreview=null;});
+    const docsRead=button('Đọc Google Docs và đề xuất câu hỏi',()=>void run(async current=>{
+      docsUrl=docs.value;if(!docsUrl.trim())throw Error('Dán link Google Docs cần nhập.');if(dirty)await save();
+      importPreview=null;notice('Đang đọc cấu trúc Docs. Key chỉ là đề xuất; chưa thay đổi phiếu.');
+      const reply=await request('/teacher/form-drafts/'+draft.id+'/docs-import-preview',{method:'POST',body:{url:docsUrl,
+        expectedRevision:draft.revision,...(importTargetBlockId?{targetBlockId:importTargetBlockId}:{})},timeoutMs:25000});
+      if(current!==generation)return;importPreview=reply.preview;importOpen=true;paint();notice('Đã đọc Docs. Kiểm cảnh báo key từng câu trước khi thêm vào nháp.');
+    }));section.append(el('p','Nhập một Docs theo buổi. Màu đáp án và key cuối được giữ riêng để giảng viên đối chiếu.'),docs,docsRead);
     const text=el('textarea',undefined,{rows:7});text.setAttribute('aria-label',aiOnly?'Nội dung câu hỏi có sẵn':'CSV hoặc văn bản nhập câu hỏi');
     text.value=importText;text.addEventListener('input',()=>{importText=text.value;importPreview=null;});
     text.placeholder='type,prompt\nreflection,Em muốn luyện thêm điều gì?';const file=el('input',undefined,{type:'file',accept:'.csv,.tsv,.txt'});
@@ -503,6 +517,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
       importOpen=true;paint();notice('AI đã tạo bản đề xuất. Đối chiếu nguồn, đáp án và phần chưa nhận dạng trước khi thêm.');
     })),el('p','Với AI: dán nguyên đề có sẵn, không cần chia cột. AI không tự soạn câu mới, đoán đáp án hoặc giao bài. Với CSV: dùng Xem trước lô câu hỏi.'),result);
     if(importPreview){
+      if(importPreview.source)result.append(el('p','Nguồn: '+importPreview.source.title+' · Đọc cấu trúc Docs, chưa gọi AI · Key chưa được tự động duyệt.'));
+      for(const row of importPreview.rows||[])if(row.keyStatus&&row.keyStatus!=='not_required')result.append(importReviewCard(row));
       for(const warning of importPreview.warnings||[])result.append(el('p',warning,{className:'notice error'}));
       if(importPreview.unmappedText){const remaining=el('details');remaining.append(el('summary','Nội dung nguồn chưa được chuyển — cần đối chiếu'),el('pre',importPreview.unmappedText));result.append(remaining);}
       for(const row of importPreview.rows)result.append(el('p',`Dòng ${row.line} · ${row.type} · chặng ${row.checkpoint} · ${row.slotCount} ô · ${row.optionCount} phương án · ${row.required?'bắt buộc':'không bắt buộc'} · ${row.graderType==='none'?'không tự chấm':'chấm đáp án'}: ${row.prompt}`));
