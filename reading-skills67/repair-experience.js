@@ -81,7 +81,15 @@
   const p=progress(attempt,bridge.current().content);if(p){repair={attempt,progress:p};decorate();}
  }
  async function menu(){
-  if(!bridge){location.href='teacher.html';return;}
+  if(!bridge){
+   // Giữ đích bài ban đầu qua Google; teacher.js vẫn kiểm cùng origin/đúng trang.
+   const target=new URL(location.href),login=new URL('teacher.html',location.href);
+   if(target.searchParams.get('classId')&&target.searchParams.get('studentRef')){
+    target.searchParams.set('server','1');target.searchParams.set('teacher','1');target.searchParams.set('mode','teacher');
+    login.searchParams.set('returnTo',target.href);
+   }
+   location.href=login.href;return;
+  }
   const {teacher}=bridge.current();
   bridge.modal('Chuyển giao diện',teacher?'<p>Phiên giảng viên vẫn chỉ có quyền xem. Chọn cách hiển thị bài đang mở.</p>':'<p>Bài đang mở thuộc học viên hiện tại. Vào giao diện giảng viên bằng tài khoản Google có quyền.</p>',
    teacher?'<button class="secondary" data-materials-view="teacher">Giao diện giảng viên</button><button class="primary" data-materials-view="student">Xem như học viên · Chỉ xem</button><button class="quiet" data-materials-dashboard>Danh sách học viên</button><button class="quiet" data-materials-logout>Đăng xuất giảng viên</button>':'<button class="primary" data-materials-login>Đăng nhập giảng viên</button><button class="secondary" data-close-modal>Tiếp tục giao diện học viên</button>');
@@ -91,11 +99,10 @@
   try{
    if(b.dataset.materialsView){studentView=b.dataset.materialsView==='student';const url=new URL(location.href);url.searchParams.set('view',studentView?'student':'teacher');window.history.replaceState(null,'',url);bridge.close();decorate();}
    if(b.hasAttribute('data-materials-dashboard'))location.href='teacher.html';
-   if(b.hasAttribute('data-materials-login')){await bridge.flush();const url=new URL(location.href),person=bridge.identity();url.searchParams.set('mode','teacher');url.searchParams.set('teacher','1');url.searchParams.set('classId',person.courseId);url.searchParams.set('studentRef',person.ownerId);location.href=url.href;}
+   if(b.hasAttribute('data-materials-login')){await bridge.flush();const url=new URL(location.href),person=bridge.identity();const linked=url.searchParams.get('teacher')==='1'&&url.searchParams.get('classId')&&url.searchParams.get('studentRef');url.searchParams.set('mode','teacher');url.searchParams.set('teacher','1');if(!linked){url.searchParams.set('classId',person.courseId);url.searchParams.set('studentRef',person.ownerId);}location.href=url.href;}
    if(b.hasAttribute('data-materials-logout')){await window.IzoneTeacherSso.logout();location.href=location.pathname+'?server=1';}
   }catch(error){bridge.toast('Chưa chuyển được giao diện: '+error.message);}
  });
- document.addEventListener('input',event=>{if(event.target.matches('[data-target]'))queueMicrotask(decorate);});
  window.ReadingMaterialsExperience={bind(value){bridge=value;},decorate,outcome,restore,menu,next,
   get repair(){return repair;},clear(){repair=null;},progress};
 }());
