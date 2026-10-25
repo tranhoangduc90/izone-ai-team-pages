@@ -109,7 +109,7 @@
     return [];
   }
 
-  function fallbackQuestionNumbers() { return [14,26]; }
+  function fallbackQuestionNumbers() { return bridge.questionIds().map(Number); }
 
   function questionRefForSelection(startElement, endElement, root) {
     if (!['listening', 'reading'].includes(rootSkill(root))) return '';
