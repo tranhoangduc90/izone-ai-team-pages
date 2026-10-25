@@ -9,7 +9,7 @@ import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shar
 import {keywordSelection} from './thuy-live/keyword-selection.js';
 import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261022-reading-slots';
 import {comparisonTable} from './thuy-live/comparison-table.js?rev=20261022-parity-v1';
-import {docsSourceTable} from './docs-source-table.js';
+import {docsSourceTable} from './docs-source-table.js?rev=20261025-docs-import-v1';
 import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,

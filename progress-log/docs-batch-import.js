@@ -1,6 +1,6 @@
 // Giảng viên chọn nguồn/buổi/phần; server giữ snapshot, ID câu và biên nhận. Không lưu key vào browser storage.
 import {bindDialogDismiss} from './session-comments.js';
-import {importReviewCard} from './docs-import-review.js';
+import {importReviewCard} from './docs-import-review.js?rev=20261025-docs-import-v1';
 const el=(tag,text='',props={})=>{const node=document.createElement(tag);node.textContent=text;Object.assign(node,props);return node;};
 const caption={pending:'Chưa đọc',reading:'Đang đọc',ready:'Đã đọc',error:'Đọc lỗi'};
 const resultCaption={ready:'Chuyển được',needs_review:'Cần xử lý',error:'Chuyển lỗi',already_imported:'Đã có trong nháp',source_changed:'Nguồn đã đổi — cần đối chiếu',duplicate_source:'Trùng nguồn — không thêm lần hai'};

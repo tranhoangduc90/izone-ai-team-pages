@@ -3,8 +3,8 @@
  * Đáp án chỉ giữ trong bộ nhớ tab; lỗi mạng giữ phần đang soạn và không báo đã lưu. */
 import {createFormLibrary} from './teacher-form-library.js?rev=20261022-parity-v4';
 import {bindDialogDismiss} from './session-comments.js';
-import {importReviewCard} from './docs-import-review.js';
-import {createDocsBatchImporter} from './docs-batch-import.js';
+import {importReviewCard} from './docs-import-review.js?rev=20261025-docs-import-v1';
+import {createDocsBatchImporter} from './docs-batch-import.js?rev=20261025-docs-import-v1';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
   ['dropdown','Dropdown Matching Headings'],['gapfill','Điền từ trong câu / chuỗi lập luận'],
