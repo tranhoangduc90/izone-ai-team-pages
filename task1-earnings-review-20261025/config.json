@@ -1,0 +1,11 @@
+{
+  "apiBase": "https://ducizone.ddns.net/task1-preview-api/",
+  "studentMemory": {
+    "enabled": false
+  },
+  "googleClientId": "235597750133-urmb86ktf5recnvvtbghf13bktfv5rkj.apps.googleusercontent.com",
+  "socraticTask1Slugs": [
+    "average-earnings-by-sector-2000-2010"
+  ],
+  "preview": true
+}
