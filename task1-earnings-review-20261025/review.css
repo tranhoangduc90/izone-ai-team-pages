@@ -1,6 +1,7 @@
 /* Adapter chỉ cho bản thử Task 1: giữ bố cục và cascade SW Task 2, không đổi backend. */
 body{--navy:var(--m170-action);--line:var(--m170-line)}
 .login-card select,.login-card .wide{min-height:49px}
+#task-content{position:static;max-height:none;height:auto;overflow:visible;align-self:auto}
 .page-shell{max-width:none;padding:0}.preview-banner{margin:0;padding:10px 24px;border-bottom:1px solid var(--m170-line);background:white;color:var(--m170-muted);font-size:14px;line-height:1.5}
 .topbar .m170-logo{height:48px}.topbar{gap:24px}.login-shell{margin-bottom:40px}.login-card .login-description{font-size:18px;line-height:1.65}.login-card form{margin-top:24px}.login-card #task-summary{margin:12px 0 0}.login-card input{width:100%;min-height:49px;padding:9px 13px;border:1px solid var(--m170-control)}
 .login-card .checkbox input,.login-card .checkbox-row input{width:18px;min-height:18px;height:18px;padding:0;margin:0;accent-color:var(--m170-action)}

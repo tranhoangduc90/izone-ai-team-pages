@@ -218,6 +218,9 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
     selected = next; selectedQuote.textContent = next.quote; composer.hidden = false; input.focus();
   };
   value.addEventListener("mouseup", captureSelection);
+  const wholeField = document.createElement('button'); wholeField.type='button'; wholeField.className='secondary compact';
+  wholeField.textContent=responseText.length>2000?'Góp ý đoạn đầu của ô':'Góp ý ô này'; wholeField.disabled=!responseText||student.readOnly;
+  wholeField.addEventListener('click',()=>{selected={start:0,end:Math.min(responseText.length,2000),quote:responseText.slice(0,2000)};selectedQuote.textContent=selected.quote;composer.hidden=false;input.focus();});
   value.addEventListener("keyup", (event) => { if (event.key === "Shift" || event.key.startsWith("Arrow")) captureSelection(); });
   cancel.addEventListener("click", () => { selected = null; input.value = ""; composer.hidden = true; });
   composer.addEventListener("submit", async (event) => {
@@ -251,7 +254,7 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
   const empty = document.createElement("p"); empty.className = "muted teacher-comment-empty"; empty.textContent = responseText ? "Bôi đen một đoạn trong bài để thêm comment." : "Học viên chưa viết ô này.";
   empty.hidden = fieldThreads.length > 0;
   const layout = document.createElement("div"); layout.className = "teacher-response-comment-layout";
-  const response = document.createElement("div"); response.className = "teacher-response-comment-source"; response.append(value, composer, empty);
+  const response = document.createElement("div"); response.className = "teacher-response-comment-source"; response.append(value, wholeField, composer, empty);
   layout.append(response, threads); fieldRoot.append(label, layout); responseColumn.append(fieldRoot);
 }
 
