@@ -9,6 +9,7 @@ import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shar
 import {keywordSelection} from './thuy-live/keyword-selection.js';
 import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261022-reading-slots';
 import {comparisonTable} from './thuy-live/comparison-table.js?rev=20261022-parity-v1';
+import {docsSourceTable} from './docs-source-table.js';
 import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
@@ -532,6 +533,8 @@ function buildSentenceCompletion(item) {
   const expected = Number(item.interactionConfig?.responseCount || 0);
   if (!templates || templates.reduce((count, line) => count + line.parts.length - 1, 0) !== expected) return null;
   const existing = Array.isArray(responseFor(item)) ? responseFor(item) : [];
+  if(item.interactionConfig?.tableLayout)return docsSourceTable(item,{values:existing,
+    onChange:value=>recordResponse(item.itemVersionId,value),resizeInput:resizeSentenceBlank,required:itemIsRequired(item)});
   const group = document.createElement('div');
   group.className = 'sentence-group';
   let slot = 0;
@@ -724,7 +727,9 @@ function buildSpeakingIssueChecklist(item, questionLabel) {
       control.key.textContent = checked ? '✓' : control.card.dataset.key;
       if (control.textarea) {
         control.textarea.required = false;
-        control.textarea.disabled = !checked && selected.length >= item.interactionConfig.maxSelections;
+        const reveal=control.child.interactionConfig.showOnlyWhenSelected;
+        if(reveal)control.textarea.closest('.speaking-inline-field').hidden=!checked;
+        control.textarea.disabled = reveal?!checked:!checked && selected.length >= item.interactionConfig.maxSelections;
         if (!checked && control.textarea.value) {
           control.textarea.value = '';
           recordResponse(control.child.itemVersionId, undefined);
@@ -772,7 +777,7 @@ function buildSpeakingIssueChecklist(item, questionLabel) {
         if (textarea.value.trim() && !selected.includes(option.id)) {
           if (selected.length >= item.interactionConfig.maxSelections) {
             textarea.value = '';
-            setNotice('Em chỉ được chọn tối đa 2 mục. Hãy bỏ một mục trước khi nhập thêm.', 'error');
+            setNotice(`Em chỉ được chọn tối đa ${item.interactionConfig.maxSelections} mục. Hãy bỏ một mục trước khi nhập thêm.`, 'error');
             return;
           }
           setSelection([...selected.filter(id => id !== item.interactionConfig.exclusiveOptionId), option.id]);
@@ -788,7 +793,7 @@ function buildSpeakingIssueChecklist(item, questionLabel) {
         } else {
           const otherSelections = selected.filter(id => id !== item.interactionConfig.exclusiveOptionId);
           if (otherSelections.length >= item.interactionConfig.maxSelections) {
-            setNotice('Em chỉ được chọn tối đa 2 mục. Hãy bỏ một mục trước khi chọn thêm.', 'error');
+            setNotice(`Em chỉ được chọn tối đa ${item.interactionConfig.maxSelections} mục. Hãy bỏ một mục trước khi chọn thêm.`, 'error');
             sync();
             return;
           }

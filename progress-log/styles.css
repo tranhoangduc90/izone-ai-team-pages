@@ -256,3 +256,10 @@ select:focus, textarea:focus, input[type="text"]:focus { border-color: #dc7581; 
   .reasoning-chain-arrow { transform: rotate(90deg); line-height: 1; }
   .reasoning-chain-node { min-height: 58px; }
 }
+/* Bảng nhập từ Docs dùng cùng ô nội tuyến; cuộn trong vùng bảng trên điện thoại. */
+.docs-source-table { max-width: 100%; overflow-x: auto; margin: 12px 0; }
+.docs-source-table table { width: 100%; min-width: 450px; border-collapse: collapse; font: inherit; }
+.docs-source-table th, .docs-source-table td { padding: 10px 12px; border: 1px solid #e2e7eb; vertical-align: top; text-align: left; }
+.docs-source-table thead th { background: #f3f4f6; color: #174266; }
+.docs-source-table tbody th { max-width: 180px; }
+.docs-source-table p { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; }

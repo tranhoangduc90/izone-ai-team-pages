@@ -518,14 +518,18 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},librar
     })),el('p','Với AI: dán nguyên đề có sẵn, không cần chia cột. AI không tự soạn câu mới, đoán đáp án hoặc giao bài. Với CSV: dùng Xem trước lô câu hỏi.'),result);
     if(importPreview){
       if(importPreview.source)result.append(el('p','Nguồn: '+importPreview.source.title+' · Đọc cấu trúc Docs, chưa gọi AI · Key chưa được tự động duyệt.'));
+      if(importPreview.coverage){const c=importPreview.coverage;result.append(el('p',`Đã chuyển ${c.convertedQuestions}/${c.sourceQuestions} câu nguồn thành ${c.generatedControls} trường nhập. `+
+        (c.deferredQuestions?`Còn ${c.deferredQuestions} câu CHƯA CHUYỂN, cần xử lý riêng; không được coi là đã nhập đủ.`:'Không có câu nguồn bị bỏ khỏi đề xuất.'),{className:c.deferredQuestions?'notice error':'notice',role:c.deferredQuestions?'alert':'status'}));}
       for(const row of importPreview.rows||[])if(row.keyStatus&&row.keyStatus!=='not_required')result.append(importReviewCard(row));
       for(const warning of importPreview.warnings||[])result.append(el('p',warning,{className:'notice error'}));
       if(importPreview.unmappedText){const remaining=el('details');remaining.append(el('summary','Nội dung nguồn chưa được chuyển — cần đối chiếu'),el('pre',importPreview.unmappedText));result.append(remaining);}
       for(const row of importPreview.rows)result.append(el('p',`Dòng ${row.line} · ${row.type} · chặng ${row.checkpoint} · ${row.slotCount} ô · ${row.optionCount} phương án · ${row.required?'bắt buộc':'không bắt buộc'} · ${row.graderType==='none'?'không tự chấm':'chấm đáp án'}: ${row.prompt}`));
       for(const error of importPreview.errors)result.append(el('p',`Dòng ${error.line}: ${error.message}`,{className:'notice error'}));
-      result.append(button('Xác nhận thêm lô này vào nháp',()=>void run(async()=>{
+      result.append(button(importPreview.coverage?.deferredQuestions?'Xác nhận thêm các câu đã chuyển vào nháp':'Xác nhận thêm lô này vào nháp',()=>void run(async()=>{
         if(!importPreview?.payload||importPreview.baseRevision!==draft.revision)throw new Error('Lô nhập đã cũ. Hãy xem trước lại.');
-        draft.definition=clone(importPreview.payload.definition);draft.gradingKey=clone(importPreview.payload.gradingKey);dirty=true;aiPopupOpen=false;await save();notice('Đã thêm cả lô vào nháp; phiếu lớp chưa thay đổi.');
+        const deferred=importPreview.coverage?.deferredQuestions||0;
+        draft.definition=clone(importPreview.payload.definition);draft.gradingKey=clone(importPreview.payload.gradingKey);dirty=true;aiPopupOpen=false;await save();
+        notice(deferred?`Đã thêm các câu đã chuyển vào nháp. Còn ${deferred} câu cần xử lý riêng; phiếu lớp chưa thay đổi.`:'Đã thêm cả lô vào nháp; phiếu lớp chưa thay đổi.');
       }),Boolean(importPreview.errors.length)||!importPreview.payload));
     }
     if(aiOnly){

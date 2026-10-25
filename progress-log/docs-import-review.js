@@ -21,7 +21,8 @@ export function importReviewCard(review,{item,gradingKey,onChange,readonly=false
   if(item&&!readonly){
     if(review.keyStatus==='proposed'&&review.candidates.length){
       const choice=review.candidates[0],canChoice=item.graderType==='exact_option'&&review.candidates.length===1&&item.options.some(o=>o.id===choice);
-      const canReference=item.graderType==='none'&&item.interactionConfig?.responseCount===review.candidates.length&&review.candidates.every(s=>s.length<=300);
+      const referenceCount=item.interactionConfig?.responseCount||(item.interactionType==='short_text'?1:0);
+      const canReference=item.graderType==='none'&&referenceCount===review.candidates.length&&review.candidates.every(s=>s.length<=300);
       if(canChoice||canReference){const apply=node('button','Dùng đáp án đề xuất sau khi đối chiếu');apply.type='button';apply.className='button';
         apply.onclick=()=>{if(canChoice)gradingKey.items[item.itemVersionId]={graderType:'exact_option',expectedOptionId:choice};
           else{gradingKey.referenceAnswers??={};gradingKey.referenceAnswers[item.itemVersionId]=[...review.candidates];}

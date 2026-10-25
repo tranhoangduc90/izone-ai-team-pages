@@ -34,6 +34,7 @@ test('Docs: cảnh báo key rõ ở đề xuất và nháp sau đọc lại; kh�
         if(path.endsWith('/docs-import-preview')){const definition=structuredClone(window.saved.definition);definition.blocks[0].items.push(item);
           const gradingKey=structuredClone(window.saved.gradingKey);gradingKey.importReviews={[item.itemVersionId]:review};
           return {preview:{baseRevision:window.saved.revision,source:{title:'Docs giả'},warnings:[],errors:[],unmappedText:'',
+            coverage:{sourceQuestions:2,convertedQuestions:1,deferredQuestions:1,generatedControls:1},
             rows:[{line:2,type:'mcq',prompt:item.prompt,slotCount:1,optionCount:2,checkpoint:1,graderType:'exact_option',...review}],payload:{definition,gradingKey}}};}
         if(options.method==='PUT'){window.saved={...window.saved,...structuredClone(options.body),revision:window.saved.revision+1};return {draft:window.saved};}
         return {draft:window.saved,drafts:[],entries:[]};
@@ -43,8 +44,9 @@ test('Docs: cảnh báo key rõ ở đề xuất và nháp sau đọc lại; kh�
     await page.locator('dialog').getByLabel('Link Google Docs câu hỏi',{exact:true}).fill('https://docs.google.com/document/d/fixture_document_123/edit');
     await page.getByRole('button',{name:'Đọc Google Docs và đề xuất câu hỏi',exact:true}).click();
     await page.locator('dialog').getByRole('alert').filter({hasText:'KEY KHÔNG KHỚP'}).waitFor();
+    await page.locator('dialog').getByRole('alert').filter({hasText:'CHƯA CHUYỂN'}).waitFor();
     assert.equal(await page.getByRole('button',{name:'Dùng đáp án đề xuất sau khi đối chiếu'}).count(),0);
-    await page.locator('dialog').getByRole('button',{name:'Xác nhận thêm lô này vào nháp',exact:true}).click();
+    await page.locator('dialog').getByRole('button',{name:'Xác nhận thêm các câu đã chuyển vào nháp',exact:true}).click();
     const saved=await page.evaluate(()=>window.saved);assert.equal(saved.revision,2);
     await page.evaluate(()=>window.editor.openDraft(structuredClone(window.saved)));
     await page.getByRole('alert').filter({hasText:'KEY KHÔNG KHỚP'}).waitFor();
