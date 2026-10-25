@@ -598,7 +598,7 @@ async function init() {
     const slug = new URLSearchParams(location.search).get("task") || "writing-lesson13-young-leaders";
     state.requestedClass = classQuery(location.search) || "";
     const [manifestResponse, configResponse] = await Promise.all([
-      fetch(`./manifests/${encodeURIComponent(slug)}.json`),
+      fetch(`./manifests/${encodeURIComponent(slug)}.json?ui=20261025-rollout2`, { cache: 'no-cache' }),
       fetch("./config.json", { cache: "no-store" }),
     ]);
     if (!manifestResponse.ok || !configResponse.ok) throw new Error("Thiếu cấu hình dashboard.");

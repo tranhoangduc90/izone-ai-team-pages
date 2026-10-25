@@ -32,7 +32,7 @@ async function loadManifest() {
     ? `./manifests/${encodeURIComponent(slug)}/${encodeURIComponent(version)}.json`
     : `./manifests/${encodeURIComponent(slug)}.json`;
   const [response, configResponse] = await Promise.all([
-    fetch(manifestPath),
+    fetch(manifestPath + '?ui=20261025-rollout2', { cache: 'no-cache' }),
     fetch("./config.json", { cache: "no-store" }).catch(() => null),
   ]);
   if (!response.ok) throw new Error("Không tìm thấy cấu hình bài luyện.");
