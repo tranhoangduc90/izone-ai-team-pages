@@ -6,7 +6,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // Dữ liệu vào: trang buổi 2 thật và API mô phỏng có roster, bài nộp, Bác sĩ AI.
 // Việc chính: chạy hành trình trên Chromium ở máy tính và điện thoại.
-// Kết quả: bắt lỗi giao diện, link sai, biên nhận và bài luyện thêm; lỗi hiện ở test.
+// Kết quả: Paraphrase 5 + Speaking 2, không bổ trợ kể cả sau receipt/reload.
+// Giữ kiểm link sai, phiên legacy, biên nhận và nháp trên renderer thật; API là giả.
 const playwrightPath = process.env.PLAYWRIGHT_MODULE;
 if (!playwrightPath) throw new Error('Cần PLAYWRIGHT_MODULE trỏ tới bản Playwright có sẵn.');
 const { chromium } = await import(pathToFileURL(playwrightPath).href);
@@ -44,11 +45,11 @@ try {
       let data;
       if (path === '/classes') data = { classes: [{ classCode: 'IC2304', ready: true, assignmentStatus: 'open' }] };
       else if (path === '/identity/resolve') data = { status: 'unique', classCode: 'IC2304', studentRef };
-      else if (path === '/assignment/roster') data = { assignment: { title: 'Homework Lesson 2', classCode: 'IC2304', students: [{ student_ref: studentRef, name: 'Học viên thử' }], parts: [{ part_key: 'paraphrase' }, { part_key: 'speaking' }] } };
+      else if (path === '/assignment/roster') data = { assignment: { title: 'Homework Lesson 2', classCode: 'IC2304', requiredPracticeCount: 0, students: [{ student_ref: studentRef, name: 'Học viên thử' }], parts: [{ part_key: 'paraphrase', min_questions: 5 }, { part_key: 'speaking', min_questions: 2 }] } };
       else if (path === '/session/start-selected') data = { session: { accessToken: 'A'.repeat(40), studentRef, classCode: 'IC2304', documentId: docId, intakeMode: 'legacy' } };
       else if (path === '/open') data = { status: submitted ? 'submitted' : 'draft', receipt: submitted ? { id: 'receipt' } : null, links: [...links.values()], practiceLinks: extra };
       else if (path === '/doctor/list') data = { needed: [{ exercise_id: 'exercise-1', title: 'Luyện phát âm', exercise_url: 'https://example.org/exercise', recommendation_count: 3, practice_count: 0 }], allNeeded: [{ exercise_id: 'exercise-1', title: 'Luyện phát âm', exercise_url: 'https://example.org/exercise', recommendation_count: 3, practice_count: 0 }], practiced: [], neededCount: 1, personalCount: 1 };
-      else if (path === '/checks/request') { links.set(body.part, { part: body.part, share_url: body.url, check_status: 'accepted', question_count: body.part === 'paraphrase' ? 5 : 3 }); data = { check: { status: 'pending' } }; }
+      else if (path === '/checks/request') { links.set(body.part, { part: body.part, share_url: body.url, check_status: 'accepted', question_count: body.part === 'paraphrase' ? 5 : 2 }); data = { check: { status: 'pending' } }; }
       else if (path === '/finish') { submitted = true; data = { receipt: { id: 'receipt' } }; }
       else if (path === '/doctor/practice/extra/request') { extra = [{ id: '33333333-3333-4333-8333-333333333333', slot: 3, share_url: body.url, status: 'accepted', analysis_status: 'done' }]; data = { check: { status: 'pending' } }; }
       else throw new Error(`Unexpected API: ${path}`);
@@ -58,6 +59,10 @@ try {
     await page.locator('#class-select').selectOption('IC2304');
     await page.locator('#student-select').selectOption(studentRef);
     await page.getByRole('button', { name: 'Mở bài Speaking' }).click();
+    assert.match(await page.locator('#speaking-card .instruction-lead').innerText(), /đủ 2 câu/);
+    assert.match(await page.locator('#speaking-card .instructions').innerText(), /một câu hỏi khác/);
+    assert.equal(await page.locator('#doctor-section').isVisible(), false);
+    assert.equal(await page.locator('.lesson-nav a[href="#doctor-section"]').count(), 0);
     await page.locator('#paraphrase-link').fill('https://chatgpt.com/s/t_6ab7c876892881919d9c9cfff0af4c32');
     await page.locator('#paraphrase-confirm').click();
     assert.match(await page.locator('#paraphrase-result').innerText(), /một phản hồi/i);
@@ -67,21 +72,20 @@ try {
     await page.locator('#speaking-confirm').click();
     await page.locator('#completion-card').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#return-homework').getAttribute('href'), `https://docs.google.com/document/d/${docId}/edit?tab=t.0`);
-    assert.equal(await page.locator('#doctor-list li').count(), 1);
-    await page.locator('#extra-exercise').selectOption('exercise-1');
-    await page.locator('#extra-link').fill(share3);
-    await page.locator('#extra-confirm').click();
-    await page.getByText('Đã phân tích và cập nhật danh sách cá nhân.').waitFor();
-    assert.equal(extra.length, 1);
+    assert.equal(await page.locator('#doctor-section').isVisible(), false);
+    assert.equal(await page.locator('#extra-practice').isVisible(), false);
+    assert.equal(extra.length, 0);
     assert.equal(await page.locator('.guide-content img').count(), 9);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true);
     await page.reload();
     await page.locator('#completion-card').waitFor({ state: 'visible' });
     await page.locator('#identity-confirmed').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#active-student').innerText(), 'Học viên thử');
+    assert.equal(await page.locator('#doctor-section').isVisible(), false);
+    assert.equal(await page.locator('#extra-practice').isVisible(), false);
     await context.close();
   }
-  process.stdout.write('Lesson 2 live: desktop + mobile, link sai, 2 link đạt, biên nhận, Bác sĩ AI, ghi nhớ học viên, 9 ảnh: PASS\n');
+  process.stdout.write('Lesson 2: 5 + 2 câu, ẩn bổ trợ trước/sau nộp/reload, legacy, 2 link, biên nhận, ghi nhớ, 9 ảnh: PASS\n');
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));

@@ -11,7 +11,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const out=process.env.SPEAKING_EVIDENCE_DIR;assert.ok(out);await mkdir(out,{recursive:true});
 const ref='70000000-0000-4000-8000-000000000001';
 const lessons=[
-  {n:2,file:'index.html',code:'67-speaking-paraphrase',parts:['paraphrase','speaking'],mins:[5,3],practice:0},
+  {n:2,file:'index.html',code:'67-speaking-paraphrase',parts:['paraphrase','speaking'],mins:[5,2],practice:0},
   {n:3,file:'lesson-3.html',code:'67-speaking-lam_ro',parts:['clarify_1','clarify_2','clarify_3','freestyle'],mins:[3,2,2,2],practice:0},
   {n:4,file:'lesson-4.html',code:'67-speaking-diem_giua',parts:['insert_middle','freestyle'],mins:[3,1],practice:2},
   {n:5,file:'lesson-5.html',code:'67-speaking-on_tap_lam_ro_diem_giua',parts:['review_clarify_middle','freestyle'],mins:[3,1],practice:2},
@@ -63,6 +63,11 @@ for(const lesson of lessons.filter(l=>!process.env.SPEAKING_LESSON_FILTER||proce
   await page.evaluate(()=>document.fonts.ready);
   assert.match(await page.locator('body').evaluate(el=>getComputedStyle(el).fontFamily),/Source Sans 3/);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  if(lesson.n===2){
+    assert.match(await page.locator('#speaking-card .instruction-lead').innerText(),/đủ 2 câu/);
+    assert.equal(await page.locator('#doctor-section').isVisible(),false);
+    assert.equal(await page.locator('.lesson-nav a[href="#doctor-section"]').count(),0);
+  }
   if(width!==768)await page.screenshot({path:`${out}/lesson-${lesson.n}-${width}-start.png`,fullPage:true});
   for(const [i,part] of lesson.parts.entries()){
     const input=page.locator('#'+part+'-link');const card=page.locator('#'+part+'-card');
@@ -85,6 +90,11 @@ for(const lesson of lessons.filter(l=>!process.env.SPEAKING_LESSON_FILTER||proce
     await page.locator(`#practice-${slot}-result`).getByText('Đã nhận bài bổ trợ',{exact:true}).waitFor();
   }
   await page.locator('#completion-card').waitFor({state:'visible'});assert.equal(requests.filter(r=>r.path==='/finish').length,1);
+  if(lesson.n===2){
+    assert.equal(await page.locator('#doctor-section').isVisible(),false);
+    assert.equal(await page.locator('#extra-practice').isVisible(),false);
+    assert.equal(requests.some(r=>r.path==='/doctor/list'),false);
+  }
   assert.equal(await page.locator('#return-homework').isVisible(),false);assert.doesNotMatch(await page.locator('#completion-message').innerText(),/quay lại file Homework/);
   if(width!==768)await page.screenshot({path:`${out}/lesson-${lesson.n}-${width}-submitted.png`,fullPage:true});
   await page.reload();await page.waitForFunction(()=>document.activeElement?.matches('#completion-card h2'));

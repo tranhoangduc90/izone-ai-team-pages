@@ -21,7 +21,7 @@ let classCode = '';
 const $ = (id) => document.getElementById(id);
 const parts = [
   { key: 'paraphrase', title: 'Luyện tập Paraphrase', url: 'https://ducizone.short.gy/paraphrase_cau_hoi', lead: 'Luyện ít nhất 5 câu hỏi theo hướng dẫn của ChatGPT.', steps: ['Đăng nhập ChatGPT và mở bài luyện Paraphrase.', 'Làm theo các bước chatbot hướng dẫn với ít nhất 5 câu hỏi.', 'Tạo link Chia sẻ của chính hội thoại Paraphrase.'] },
-  { key: 'speaking', title: 'Luyện full câu Speaking', url: 'https://ducizone.short.gy/freestyle', lead: 'Luyện đủ 3 câu Speaking trong một hội thoại.', steps: ['Yêu cầu ChatGPT hỏi một câu; nếu cần, hỏi thêm câu phụ hoặc xin gợi ý ý tưởng và từ vựng.', 'Trả lời và xem ChatGPT nhận xét, sửa lỗi, nâng cấp câu trả lời.', 'Nói lại câu trả lời hoàn chỉnh sau góp ý. Lặp lại với hai câu hỏi khác.', 'Tạo link Chia sẻ riêng của hội thoại Full Speaking.'] },
+  { key: 'speaking', title: 'Luyện full câu Speaking', url: 'https://ducizone.short.gy/freestyle', lead: 'Luyện đủ 2 câu Speaking trong một hội thoại.', steps: ['Yêu cầu ChatGPT hỏi một câu; nếu cần, hỏi thêm câu phụ hoặc xin gợi ý ý tưởng và từ vựng.', 'Trả lời và xem ChatGPT nhận xét, sửa lỗi, nâng cấp câu trả lời.', 'Nói lại câu trả lời hoàn chỉnh sau góp ý. Lặp lại với một câu hỏi khác.', 'Tạo link Chia sẻ riêng của hội thoại Full Speaking.'] },
 ];
 const draftFields = new Set();
 const state = { studentRef: '', accessToken: '', assignment: null, links: new Map(), practice: [], doctor: null, expanded: false, extraPending: false, localFeedback: new Map(), pending: new Set(), submitted: false, finishing: false };
@@ -150,69 +150,21 @@ function renderLinks() {
   renderDoctor();
 }
 
-// Dữ liệu vào: danh sách Bác sĩ AI và bài đã luyện của đúng học viên.
-// Việc chính: hiện 5 bài đầu, cho mở rộng và chỉ mở ô luyện thêm sau khi có biên nhận.
-// Kết quả: bài vừa luyện được phân tích rồi cập nhật thứ tự ở lượt tải tiếp theo.
+// Lesson 2 chỉ có hai phần chính theo tài liệu; không hiện mục bổ trợ/luyện thêm.
+// Giữ dữ liệu Bác sĩ AI đã có trên máy chủ, không thay đổi lịch sử học viên.
 function renderDoctor() {
-  const doctor = state.doctor;
-  if (!doctor) return;
-  const list = $('doctor-list');
-  list.replaceChildren();
-  const needed = state.expanded ? doctor.allNeeded : doctor.needed;
-  if (!needed.length) {
-    const empty = document.createElement('li');
-    empty.textContent = doctor.personalCount ? 'Hiện không có bài đang chờ luyện.' : 'Danh sách sẽ hiện sau khi hệ thống phân tích bài Speaking.';
-    list.append(empty);
-  }
-  for (const item of needed) {
-    const li = document.createElement('li');
-    const link = document.createElement('a');
-    link.href = item.exercise_url;
-    link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = item.title;
-    const detail = document.createElement('small');
-    detail.textContent = `Đề xuất ${item.recommendation_count} lần · đã luyện ${item.practice_count} lần`;
-    li.append(link, detail); list.append(li);
-  }
-  $('doctor-sync').textContent = `Đang chờ luyện: ${doctor.neededCount} bài`;
-  if (state.submitted) $('doctor-sync').textContent += ` · ${analysisStatus(state.doctorAnalysis).label}`;
-  $('doctor-expand').hidden = doctor.neededCount <= 5;
-  $('doctor-expand').textContent = state.expanded ? 'Thu gọn còn 5 bài đầu' : `Xem tất cả ${doctor.neededCount} bài`;
-  const choices = [...doctor.allNeeded, ...doctor.practiced];
-  const select = $('extra-exercise');
-  const selected = select.value;
-  select.replaceChildren(new Option('Chọn bài luyện tập', ''));
-  for (const item of choices) select.add(new Option(item.title, item.exercise_id));
-  if (choices.some(item => item.exercise_id === selected)) select.value = selected;
-  $('extra-practice').hidden = !state.submitted;
-  $('extra-confirm').disabled = state.extraPending || !choices.length
-    || state.practice.some(item => item.status === 'pending');
-  const chosen = choices.find(item => item.exercise_id === select.value);
-  $('extra-open').hidden = !chosen;
-  if (chosen) $('extra-open').href = chosen.exercise_url;
-  const history = $('extra-history'); history.replaceChildren();
-  for (const item of state.practice) {
-    const li = document.createElement('li');
-    li.textContent = `Bài luyện ${item.slot}: ${item.status === 'accepted' ? analysisStatus(item.analysis_status).label : item.status === 'pending' ? 'đang kiểm tra' : 'chưa đạt'}`;
-    history.append(li);
-  }
-  const last = state.practice.at(-1);
-  if (last?.status === 'accepted' && $('extra-link').value.trim() === last.share_url) {
-    $('extra-link').value = '';
-    const result = $('extra-result');
-    result.textContent = analysisStatus(last.analysis_status).message;
-    result.className = 'check-result is-pass'; result.hidden = false;
-  }
+  $('doctor-section').hidden = true;
+  $('extra-practice').hidden = true;
 }
 
 async function refresh() {
   if (!state.accessToken) return;
   const token = state.accessToken;
   const revision = state.refreshRevision = (state.refreshRevision || 0) + 1;
-  const [data, doctor] = await Promise.all([post('/open', identity()), post('/doctor/list', identity()).catch(() => null)]);
+  const data = await post('/open', identity());
   if (token !== state.accessToken || revision !== state.refreshRevision) return;
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.practice = data.practiceLinks || [];
-  if (doctor) state.doctor = doctor;
   state.docsProgress=data.docsProgress||null;renderDocsProgress(state.docsProgress);
   state.doctorAnalysis = (data.processing?.analyze_homework || data.processing?.doctor_analyze)?.status;
   state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
