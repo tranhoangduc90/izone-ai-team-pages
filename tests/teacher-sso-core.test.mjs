@@ -5,12 +5,53 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const code=fs.readFileSync(process.env.SSO_SCRIPT||new URL('../shared/teacher-single-sign-on.js',import.meta.url),'utf8');
 const origin='https://ducizone.ddns.net';
-function setup(handler){
+function setup(handler,entryProduct){
  const calls=[],listeners=new Map();
  const box={URL,Headers,Request,Response,AbortSignal,location:{href:'https://tranhoangduc90.github.io/izone-ai-team-pages/'},localStorage:{setItem(){}},addEventListener(name,fn){listeners.set(name,fn);},fetch:async(input,options)=>{calls.push({url:String(input),options});return handler(String(input),options);}};
+ if(entryProduct)box.document={currentScript:{dataset:{izoneTeacherProduct:entryProduct}}};
  box.window=box;vm.createContext(box);vm.runInContext(code,box);return {box,calls,listeners};
 }
 const response=status=>({status,ok:status>=200&&status<300,json:async()=>({ok:status===200})});
+
+// Bảo vệ lượt mở thật: khôi phục trực tiếp và đọc quyền phải dùng cùng phiên;
+// kiểm qua request ở biên mạng, không phụ thuộc tên hàm hoặc biến bên trong.
+test('Explicit restore followed by first teacher read uses one restore request',async()=>{
+ const {box,calls}=setup(()=>response(200));
+ assert.equal(await box.IzoneTeacherSso.restore('substitute'),true);
+ assert.equal((await box.fetch(origin+'/substitute-teacher-api/teacher/scopes')).status,200);
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,1);
+});
+
+test('Teacher entry starts restoration before app loads and reuses its completed result',async()=>{
+ const {box,calls}=setup(()=>response(200),'term67');
+ assert.equal(calls.length,1,'Khôi phục phải bắt đầu ngay khi script đầu trang chạy');
+ await new Promise(r=>setImmediate(r));
+ assert.equal(await box.IzoneTeacherSso.restore('term67'),true);
+ assert.equal((await box.fetch('https://ducizone.ddns.net:18869/term-mini-k67-api/api/auth/session')).status,200);
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,1);
+});
+
+test('Eager signed-out result is consumed once; a later login can be discovered',async()=>{
+ let signedIn=false;
+ const {box,calls}=setup(()=>response(signedIn?200:401),'reading');
+ await new Promise(r=>setImmediate(r));
+ assert.equal((await box.fetch(origin+'/reading-practice-api/api/teacher/classes')).status,401);
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,1);
+ signedIn=true;
+ assert.equal((await box.fetch(origin+'/reading-practice-api/api/teacher/classes')).status,200);
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,2);
+});
+
+test('Eager outage reaches the consumer and retry can recover',async()=>{
+ let offline=true;
+ const {box,calls}=setup(()=>response(offline?503:200),'substitute');
+ await new Promise(r=>setImmediate(r));
+ await assert.rejects(box.IzoneTeacherSso.restore('substitute'),/Chưa khôi phục/);
+ offline=false;
+ assert.equal(await box.IzoneTeacherSso.restore('substitute'),true);
+ assert.equal((await box.fetch(origin+'/substitute-teacher-api/teacher/scopes')).status,200);
+ assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,2);
+});
 test('First teacher read confirms shared identity; student requests and writes are untouched',async()=>{
  const {box,calls}=setup(()=>response(200));
  for(const [path,method] of [['/reading-practice-api/api/teacher/result/id','GET'],['/reading67-materials/api/reading-skills67/draft','GET'],['/reading67-materials/api/reading-skills67/submit','POST']])await box.fetch(origin+path,{method});

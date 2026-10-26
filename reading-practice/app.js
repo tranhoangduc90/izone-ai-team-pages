@@ -119,7 +119,7 @@ async function request(path,body,teacher=false,keepalive=false){
  if(teacher){try{token=sessionStorage.getItem('reading-teacher-token');}catch{token='';}}
  let response;try{
   let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000),keepalive};
-  if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
+  if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js?startup=20261026-v1');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
   response=await fetch(`${API}${path}`,options);}
  catch{networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
  const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{code:value.error.code});networkFailed=false;return value;

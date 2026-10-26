@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="../shared/styles.css?rev=20261003-writing-save-cas-v1">
 <link rel="stylesheet" href="styles.css?rev=20261017-review-image-fit-v1">
 <link rel="stylesheet" href="../shared/teacher-saved-progress.css?rev=20261019-v1">
-    <script src="../../shared/teacher-single-sign-on.js?v=20261023-cache1"></script>
+    <script src="../../shared/teacher-single-sign-on.js?v=20261026-startup1"></script>
 <link rel="preload" href="../k56-design/assets/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../k56-design/theme.css?v=20261023-master170-v3">
   </head>
@@ -22,16 +22,16 @@
         <p>Xem kết quả Listening, Reading và theo dõi tiến độ chấm từng bài Writing.</p>
       </div>
       <div class="teacher-topbar-actions">
-        <span class="teacher-login-badge" id="loginBadge">Chưa đăng nhập</span>
+        <span class="teacher-login-badge" id="loginBadge">Đang xác minh đăng nhập…</span>
         <button class="button button-secondary" id="refreshButton" type="button" hidden>Làm mới dữ liệu</button>
         <button class="button button-secondary" id="logoutButton" type="button" hidden>Đăng xuất</button>
       </div>
     </header>
 
     <main class="page-shell teacher-page-shell">
-      <div class="notice" id="notice" role="status">Đăng nhập Google để xem các lớp bạn được cấp quyền.</div>
+      <div class="notice" id="notice" role="status">Đang khôi phục đăng nhập của bạn…</div>
 
-      <section class="panel teacher-access" id="accessView">
+      <section class="panel teacher-access" id="accessView" hidden>
         <div>
           <p class="eyebrow">Quyền truy cập</p>
           <h2>Đăng nhập tài khoản giảng viên</h2>
@@ -95,7 +95,7 @@
 
     <script src="../k56-shared/config.js?rev=20261020-demo-v1&ej=20261024-production-r1"></script>
     <script src="../shared/attempt-review.js?rev=20260821-attempt-review-v1"></script>
-<script type="module" src="app.js?rev=20261019-saved-progress-v1&amp;session=20261022-v1"></script>
+<script type="module" src="app.js?rev=20261019-saved-progress-v1&amp;session=20261022-v1&startup=20261026-v1"></script>
     <script src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
   </body>
 </html>

@@ -30,6 +30,18 @@ Nguồn đang đăng ký: `reading`, `listening`, `writing`, `mapping`, `term67`
 
 Source broker/adapter và bộ kiểm nằm trong [backend teacher-sso](https://github.com/tranhoangduc90/izone-writing-task1-practice/tree/main/backend/src/teacher-sso). Handout/Substitute đang dùng [module phát hành ghim theo image](https://github.com/tranhoangduc90/izone-writing-task1-practice/tree/main/backend/ops/teacher-sso/release-20261023); không rebuild toàn main lịch sử làm mất sửa nghiệp vụ live. Mỗi sản phẩm vẫn có runtime/dữ liệu/phát hành riêng.
 
+## Khởi động nhanh và trạng thái đăng nhập — 26/10/2026
+
+Trang vào **riêng cho giảng viên** có thể khai báo `data-izone-teacher-product` trên script phiên chung. Thư viện bắt đầu khôi phục ngay trong lúc tải giao diện. Trang học viên hoặc trang chưa xác định vai trò không khai báo thuộc tính này. K56 giữ điều phối ý định đăng xuất hiện hành trước khi khôi phục, không khởi động sớm vượt qua điều phối đó.
+
+Kết quả thành công dùng chung trong bộ nhớ của cùng trang/sản phẩm/thế hệ đăng nhập; lời gọi trực tiếp và lần đọc API đầu không khôi phục lặp. Đổi tài khoản/đăng xuất ở tab khác vô hiệu hóa kết quả cũ; GET bị 401 có thể khôi phục mới và thử lại một lần. Không tự phát lại thao tác ghi. Kết quả âm/lỗi của lần khởi động sớm chỉ được tiêu thụ một lần, không chặn lần thử hoặc đăng nhập mới sau đó.
+
+Term K67 và Progress Log dùng `sharedProduct` của client phiên để bỏ GET phiên trung gian, vì API tải lớp tiếp theo vẫn chạy cùng middleware xác thực và kiểm quyền gốc. Chỉ áp dụng tùy chọn này sau khi đối chiếu API kế tiếp; không thay việc kiểm quyền bằng cờ lưu trong trình duyệt hoặc bỏ dữ liệu trả về của API phiên ở consumer còn dùng nó.
+
+Giao diện mặc định hiển thị **Đang khôi phục đăng nhập của bạn…**, ẩn form/checkbox từ HTML đầu tiên. Chỉ hiện Google khi chưa có/hết phiên và đã đọc lựa chọn ghi nhớ. Phân biệt thiếu quyền (403), lỗi dịch vụ và chưa có phiên (401); lỗi dịch vụ có thử lại, không trở thành đăng nhập thành công hoặc vòng tự đăng nhập. Kế thừa giao diện hiện hành từng sản phẩm. Entry/module đổi phải cập nhật query phiên bản xuyên chuỗi import/loader để tránh trình duyệt trộn HTML mới với JavaScript cũ.
+
+Kiểm hồi quy: `tests/teacher-sso-core.test.mjs`, `tests/term-test-teacher-session.mjs`, `tests/teacher-startup-browser.mjs`, bộ K56 navigation và browser cookie/consumer hiện có. Runner startup dùng HTML/JS thật, chặn toàn bộ API/Google bằng fixture; đo tới lúc có dữ liệu dùng được, ghi riêng số khung hình form xuất hiện và số lượt khôi phục. Số đo fixture không thay số đo thời gian production.
+
 ## Kiểm khi tạo hoặc sửa sản phẩm có giảng viên
 
 1. Một lần Google thật ở sản phẩm A → mở URL thật của B, link bài cụ thể, tải lại và tab mới; không có bước Google lần hai khi phiên còn hợp lệ. Kiểm origin/path/cookie thực tế, không chỉ URL giả trong fixture.

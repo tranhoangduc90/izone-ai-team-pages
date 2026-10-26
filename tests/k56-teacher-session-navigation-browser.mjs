@@ -65,7 +65,8 @@ async function fixture(classCode,{storageState,loginFailureApi,sessionRegistry=n
  });
  async function landing(){await page.goto(base+'/term-tests/k56-demo/?class='+classCode);await page.waitForFunction(()=>typeof window.qaGoogleCallback==='function');}
  async function login(){await page.evaluate(()=>window.qaGoogleCallback({credential:'synthetic-google-only'}));await page.locator('#loginBadge').filter({hasText:'Đã đăng nhập'}).waitFor();}
- async function results(){await page.locator('#teacherDashboard').click();await page.waitForFunction(()=>typeof window.qaGoogleCallback==='function');await page.locator('#dashboardView').waitFor({state:'visible'});}
+ // Còn phiên thì không cần tải/khởi tạo Google lần nữa; chờ kết quả người dùng thấy.
+ async function results(){await page.locator('#teacherDashboard').click();await page.locator('#dashboardView').waitFor({state:'visible'});}
  return {context,page,calls,errors,sessions,api,marker,selected,landing,login,results,setLogoutFailure:value=>{logoutFailure=value;},pauseLogin(kind){pausedApi=kind;loginGate=new Promise(done=>{releaseLogin=done;});},releaseLogin(){releaseLogin?.();}};
 }
 for(const code of ['IC2264','IC2305','CODEXDEMO56']){

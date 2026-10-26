@@ -1,4 +1,4 @@
-import {createTeacherSessionClient,teacherSessionRequestOptions} from '../../shared/teacher-session-client.js';
+import {createTeacherSessionClient,teacherSessionRequestOptions} from '../../shared/teacher-session-client.js?startup=20261026-v1';
 
 // Đọc lớp/bản lưu qua phiên Google riêng. Không dùng bộ nhớ hoặc token học viên,
 // không gọi các đường kiểm/nháp/nộp của học viên và không tạo trình phát audio.

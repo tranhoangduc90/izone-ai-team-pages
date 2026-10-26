@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="styles.css?rev=20261025-docs-import-v1">
     <link rel="stylesheet" href="teacher.css?rev=20261025-docs-import-v1">
     <link rel="stylesheet" href="reference-components.css?rev=20261005-compact-v1">
-  <link rel="stylesheet" href="thuy-live/styles.css?rev=20261022-final-choice"><script src="../shared/teacher-single-sign-on.js?v=20261023-cache1"></script></head>
+  <link rel="stylesheet" href="thuy-live/styles.css?rev=20261022-final-choice"><script src="../shared/teacher-single-sign-on.js?v=20261026-startup1" data-izone-teacher-product="mapping"></script></head>
   <body><aside class="thuy-side"><div class="brand"><b>IZONE</b><small>PROGRESS LOG</small></div><nav class="teacher-tabs" aria-label="Chức năng">
           <button class="tab active" id="dashboardTab" type="button">Theo dõi lớp</button>
           <button class="tab" id="overviewTab" type="button">Hành trình lớp</button>
@@ -18,12 +18,12 @@
         </nav></aside>
     <header class="topbar teacher-header">
         <div class="brand"><span class="brand-mark" aria-hidden="true">I</span><div><b>IZONE</b><small>Progress Log · Giảng viên</small></div></div>
-        <span class="teacher-name" id="teacherName">Chưa đăng nhập</span>
+        <span class="teacher-name" id="teacherName">Đang xác minh đăng nhập…</span>
     </header>
     <main class="teacher-shell">
-      <p class="notice" id="teacherNotice" role="status">Đăng nhập để bắt đầu.</p>
+      <p class="notice" id="teacherNotice" role="status">Đang khôi phục đăng nhập của bạn…</p>
 
-      <section class="card access-card" id="teacherAccessView">
+      <section class="card access-card" id="teacherAccessView" hidden>
         <p class="eyebrow">DÀNH CHO GIẢNG VIÊN</p>
         <h1>Nhìn rõ tình hình lớp</h1>
         <p class="muted">Mở phiếu học viên, xem bài đang nhập và điều chỉnh điểm danh khi cần. Tab Tạo phiếu luôn ở ngay bên cạnh.</p>
@@ -159,6 +159,6 @@
     <script src="config.js?rev=20261022-official-v2"></script>
     <link rel="stylesheet" href="session-comments.css?rev=20261007">
     <link rel="stylesheet" href="teacher-realtime.css?rev=20261023-live-v1">
-    <script type="module" src="teacher.js?rev=20261025-docs-import-v1"></script>
+    <script type="module" src="teacher.js?rev=20261025-docs-import-v1&startup=20261026-v1"></script>
   </body>
 </html>

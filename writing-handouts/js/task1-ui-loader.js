@@ -1,7 +1,7 @@
 import {task1UiRoute} from './task1-ui-routing.js?v=20261025-rollout1';
 const route=task1UiRoute(location.search,location.pathname);
 if(!globalThis.__IZONE_SW_TASK2_REDIRECTING__){
- if(!route){await import(location.pathname.endsWith('/teacher.html')?'./teacher-app.js?v=20261024-master170-errors2&cutover=20261025&sw=20261025.1':'./app.js?v=20261024-master170-ui3&cutover=20261025.2');}
+ if(!route){await import(location.pathname.endsWith('/teacher.html')?'./teacher-app.js?v=20261024-master170-errors2&cutover=20261025&sw=20261025.1&startup=20261026-v1':'./app.js?v=20261024-master170-ui3&cutover=20261025.2&startup=20261026-v1');}
  else{
   // Local templates and style are mounted only for the six approved Task 1 slugs.
   // Document URL, API config, manifest, identity and IndexedDB remain unchanged.
@@ -18,7 +18,7 @@ if(!globalThis.__IZONE_SW_TASK2_REDIRECTING__){
    document.body.replaceChildren(...page.body.childNodes);
    document.body.dataset.task1Ui='20261025-rollout1';
    const brand=document.querySelector('.brand');if(brand){const home=new URL(route.role==='teacher'?'./teacher.html':'./index.html',location.href);home.search=location.search;brand.href=home.href;}
-   await import(route.role==='teacher'?'./task1-ui-teacher.js?v=20261025-rollout2':'./task1-ui-app.js?v=20261025-rollout2');
+   await import(route.role==='teacher'?'./task1-ui-teacher.js?v=20261025-rollout2&startup=20261026-v1':'./task1-ui-app.js?v=20261025-rollout2&startup=20261026-v1');
   }catch(error){const note=document.createElement('p');note.className='notice';note.setAttribute('role','alert');note.textContent=error.message;document.body.prepend(note);}
  }
 }

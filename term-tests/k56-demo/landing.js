@@ -5,7 +5,7 @@
  * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
  */
 
-import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56-shared/teacher-session-client.js?rev=20261022-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v1';
 import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-first-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
