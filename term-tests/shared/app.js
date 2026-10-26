@@ -238,6 +238,7 @@
   }
 
   function clearAllLocalAttemptData() {
+    window.K67_ANSWER_EXPLANATIONS?.reset();
     const uiStorageKey = `izone-test-ui:${testConfig.slug}:${classCode}${storageScope}`;
     const interactionPrefix = `izone-test-interactions:${testConfig.slug}:${classCode}${storageScope}:`;
     for (const storage of availableStorages()) {
@@ -614,6 +615,7 @@
       setStudentMemoryStatus('Không thể xóa ghi nhớ trong trình duyệt.');
       return;
     }
+    window.K67_ANSWER_EXPLANATIONS?.reset();
     state.studentRef = '';
     state.studentName = '';
     state.studentIdentitySource = '';
@@ -3000,6 +3002,7 @@
         studentMemory.checkbox.checked = studentMemory.preferred;
       }
       if (previousStudentRef && previousStudentRef !== state.studentRef) {
+      window.K67_ANSWER_EXPLANATIONS?.reset();
       // Đổi học viên phải tạo một lượt độc lập; không mang mã gửi bài hoặc bài nháp của người trước sang.
       state.pendingSubmissions = {};
       state.clientSubmissionId = '';
