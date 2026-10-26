@@ -13,8 +13,9 @@ import { lesson8Code, lesson8Parts } from './lesson-8-parts.js';
 import { lesson9Code, lesson9Parts } from './lesson-9-parts.js';
 import { lesson10Code, lesson10Parts } from './lesson-10-parts.js';
 import { lesson11Code, lesson11Parts } from './lesson-11-parts.js';
-import { lesson12Code, lesson12Parts } from './lesson-12-parts.js';
 import { lesson15Code, lesson15Parts } from './lesson-15-parts.js';
+import { lesson12Code, lesson12Parts } from './lesson-12-parts.js';
+import { lesson13Code, lesson13Parts } from './lesson-13-parts.js';
 
 const independentRequested = document.body.dataset.speakingIntake === 'independent';
 let independent = independentRequested;
@@ -28,9 +29,10 @@ const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
 let workUnitId = '';
 let classCode = '';
-const lessonNumber = ['5', '6', '7', '8', '9', '10', '11', '12', '15'].includes(document.body.dataset.speakingLesson)
+['5', '6', '7', '8', '9', '10', '11', '12', '13', '15'].includes(document.body.dataset.speakingLesson)
   ? Number(document.body.dataset.speakingLesson) : 4;
 const expectedAssignmentCode = lessonNumber === 15 ? lesson15Code
+  : lessonNumber === 13 ? lesson13Code
   : lessonNumber === 12 ? lesson12Code
   : lessonNumber === 11 ? lesson11Code
   : lessonNumber === 10 ? lesson10Code
@@ -43,7 +45,7 @@ document.body.dataset.teacherCode = expectedAssignmentCode;
 const assignmentCode = query.get('assignmentCode') || expectedAssignmentCode;
 const classHint = query.get('class') || '';
 const $ = id => document.getElementById(id);
-const parts = lessonNumber === 15 ? lesson15Parts : lessonNumber === 12 ? lesson12Parts : lessonNumber === 11 ? lesson11Parts : lessonNumber === 10 ? lesson10Parts : lessonNumber === 9 ? lesson9Parts : lessonNumber === 8 ? lesson8Parts : lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
+const parts = lessonNumber === 15 ? lesson15Parts : lessonNumber === 13 ? lesson13Parts : lessonNumber === 12 ? lesson12Parts : lessonNumber === 11 ? lesson11Parts : lessonNumber === 10 ? lesson10Parts : lessonNumber === 9 ? lesson9Parts : lessonNumber === 8 ? lesson8Parts : lessonNumber === 7 ? lesson7Parts : lessonNumber === 6 ? lesson6Parts : lessonNumber === 5 ? lesson5Parts : [
   { key: 'insert_middle', title: 'Chèn điểm giữa trong Speaking',
     url: 'https://ducizone.short.gy/chen_diem_giua_speak',
     lead: 'Luyện đủ ba giai đoạn trong một hội thoại.',
@@ -192,7 +194,7 @@ function renderMain() {
     if (link?.check_status === 'accepted' && !changed) {
       showResult(resultId, 'pass', 'Đã xác nhận hội thoại',
         part.linkOnly ? 'Đã nhận link. Phần này không yêu cầu số lượng luyện tập.'
-          : acceptanceMessage(link, `Đã xác nhận ${link.question_count} giai đoạn/câu luyện theo tiêu chuẩn của phần này.`));
+          : acceptanceMessage(link, `Đã xác nhận ${link.question_count} ${['object_intro', 'object_description'].includes(part.key) ? 'lượt luyện đầy đủ' : 'giai đoạn/câu luyện'} theo tiêu chuẩn của phần này.`));
     } else if (link?.check_status === 'pending' && !changed) {
       showResult(resultId, 'loading', 'Đang kiểm nội dung', 'Hệ thống đang đọc và phân tích hội thoại.');
     } else if (link?.check_status === 'rejected' && !changed) {
