@@ -71,7 +71,7 @@ async function fixture(t,{slug='term-test-2',teacher=false,completed=true,grantD
     await new Promise((resolve,reject)=>{audio.onloadedmetadata=resolve;audio.onerror=reject;audio.load();});
     const duration=Math.round(audio.duration*1000);audio.removeAttribute('src');audio.load();return duration;
   },asset.url);
-  if(!textOnlySlug)review.bundle.reviewAudio={asset:slug==='term-test-2'?path.basename(relative):'substitute-test-1-k67.mp3',sha256:asset.sha256,durationMs};
+  if(!textOnlySlug)review.bundle.reviewAudio={asset:slug.startsWith('term-test-')?path.basename(relative):'substitute-test-1-k67.mp3',sha256:asset.sha256,durationMs};
   else for(const entry of Object.values(review.bundle.skills.listening.entries)){delete entry.replay;entry.blocks.forEach(block=>delete block.replay);}
   const manifest={...asset,envelopeVersion:'MP3',assetVersion:'sha256-'+asset.sha256,encryptedByteLength:asset.byteLength,chunkSize:1048576,
     chunks:Array.from({length:Math.ceil(bytes.length/1048576)},(_,i)=>({byteLength:Math.min(1048576,bytes.length-i*1048576),sha256:''})),cloudflare:{version:1,policy:'public-mp3-v1'}};
@@ -90,19 +90,23 @@ async function fixture(t,{slug='term-test-2',teacher=false,completed=true,grantD
   }
   return{page,ctx,review,errors,unexpected,requests,attach,counts:()=>({grants,transfers,workerAccess}),set denied(v){deny=v;},set delay(v){delay=v;},set mediaDelay(v){mediaWait=v;},
     async seed(){await page.evaluate(async({slug,manifest})=>{
-      if(slug==='term-test-2')await window.K67_PUBLIC_AUDIO.download(manifest);
+      if(slug.startsWith('term-test-'))await window.K67_PUBLIC_AUDIO.download(manifest);
       else await window.TERM_TEST_AUDIO_LOADER.downloadAudio(manifest.url);
     },{slug,manifest});},
     async ready(){await page.waitForFunction(()=>document.querySelector('audio[data-k67-review-audio]')?.readyState>=1);},
     async open(n=1,skill='Listening'){await page.getByRole('button',{name:`${skill} câu ${n}: Xem giải thích`,exact:true}).click();await page.locator('#explanation-dialog[open]').waitFor();},
     async play(selector='[data-k67-replay]'){
       await page.locator('#explanation-dialog '+selector).first().click();
-      await page.waitForFunction(()=>{const a=document.querySelector('audio[data-k67-review-audio]');return a&&!a.paused&&a.currentTime>1.01;});
+      try{await page.waitForFunction(()=>{const a=document.querySelector('audio[data-k67-review-audio]');return a&&!a.paused&&a.currentTime>1.01;});}
+      catch(error){
+        const state=await page.evaluate(()=>{const a=document.querySelector('audio[data-k67-review-audio]');return{time:a?.currentTime,paused:a?.paused,readyState:a?.readyState,duration:a?.duration,error:a?.error?.code,buttons:[...document.querySelectorAll('[data-k67-replay]')].map(b=>b.textContent),latency:window.__latency};});
+        throw Error('Replay did not stay observable: '+JSON.stringify(state),{cause:error});
+      }
       return page.evaluate(()=>window.__latency);
     }};
 }
 
-for(const slug of ['term-test-2','substitute-test-1-k67'])for(const teacher of [false,true]){
+for(const slug of ['term-test-1','term-test-2','substitute-test-1-k67'])for(const teacher of [false,true]){
   test(`${slug} ${teacher?'teacher':'student'} prepares at completed result and starts the first clip promptly`,async t=>{
     const f=await fixture(t,{slug,teacher});if(!teacher)await f.seed();const before=f.counts().transfers;
     await f.attach();await f.page.waitForTimeout(450);const beforeClick=f.counts().grants;
@@ -129,17 +133,36 @@ for(const slug of ['term-test-2','substitute-test-1-k67'])for(const teacher of [
     assert.ok(p95<300);assert.deepEqual(f.errors,[]);assert.deepEqual(f.unexpected,[]);
   });
 }
-for(const slug of ['term-test-2','substitute-test-1-k67'])test(`${slug} incomplete test does not request explanations or review audio`,async t=>{
+for(const slug of ['term-test-1','term-test-2','substitute-test-1-k67'])test(`${slug} incomplete test does not request explanations or review audio`,async t=>{
   const f=await fixture(t,{slug,completed:false});await f.attach();await f.page.waitForTimeout(200);
   assert.equal(f.counts().grants,0);assert.equal(f.counts().transfers,0);
   assert.equal(await f.page.locator('.explanation-open').count(),0);
 });
-for(const textOnlySlug of ['term-test-1','mini-test-lesson-5'])test(`${textOnlySlug} text-only explanations remain lazy and never prepare audio`,async t=>{
+for(const textOnlySlug of ['mini-test-lesson-5'])test(`${textOnlySlug} text-only explanations remain lazy and never prepare audio`,async t=>{
   const f=await fixture(t,{textOnlySlug});await f.attach();await f.page.waitForTimeout(200);
   assert.equal(f.counts().grants,0);await f.open();assert.equal(f.counts().grants,1);
   assert.equal(f.counts().transfers,0);assert.equal(await f.page.locator('audio[data-k67-review-audio]').count(),0);
   assert.equal(await f.page.locator('#explanation-dialog [data-k67-replay]').count(),0);assert.deepEqual(f.errors,[]);
 });
+test('Term 1 paper media policy permits verified Blob replay',async t=>{
+  const f=await fixture(t,{slug:'term-test-1'});
+  const entry=await fs.readFile(path.join(root,'term-tests/term-test-1/index.html'),'utf8');
+  const policy=entry.match(/<meta http-equiv="Content-Security-Policy"[^>]+>/)?.[0];
+  assert.ok(policy,'Use the real entry media policy');
+  await f.page.evaluate(meta=>document.head.insertAdjacentHTML('afterbegin',meta),policy);
+  await f.attach();await f.ready();await f.open();await f.play();
+  await f.page.locator('[data-explanation-close]').click();
+  assert.equal(await f.page.locator('[data-k67-review-audio]').evaluate(a=>a.paused),true);
+  assert.deepEqual(f.errors,[]);
+});
+
+test('a legacy Term 1 text-only response remains readable without any media preparation',async t=>{
+  const f=await fixture(t,{slug:'term-test-1',textOnlySlug:'term-test-1'});await f.attach();await f.page.waitForTimeout(200);
+  assert.equal(f.counts().grants,1);assert.equal(f.counts().transfers,0);
+  await f.open();assert.equal(await f.page.locator('#explanation-dialog [data-k67-replay]').count(),0);
+  assert.equal(await f.page.locator('audio[data-k67-review-audio]').count(),0);assert.deepEqual(f.errors,[]);
+});
+
 test('reset during a delayed grant prevents late audio and a later result can prepare again',async t=>{
   const f=await fixture(t,{grantDelay:450});await f.attach();await f.page.waitForTimeout(50);
   await f.page.evaluate(()=>window.K67_ANSWER_EXPLANATIONS.reset());await f.page.waitForTimeout(550);
@@ -171,10 +194,10 @@ test('a mismatched audio hash never becomes playable',async t=>{
   await f.page.waitForFunction(()=>[...document.querySelectorAll('.explanation-replay-status')].some(n=>n.textContent.includes('Không phát được')));
   assert.equal(await f.page.locator('audio[data-k67-review-audio]').getAttribute('src'),null);assert.deepEqual(f.errors,[]);
 });
-test('real background visibility stops the test replay without autoplay on return',{skip:!process.env.TEST_REPLAY_NATIVE_CDP_URL},async t=>{
+test('real background visibility stops Term 1 replay without autoplay on return',{skip:!process.env.TEST_REPLAY_NATIVE_CDP_URL},async t=>{
   const native=await chromium.connectOverCDP(process.env.TEST_REPLAY_NATIVE_CDP_URL,{noDefaults:true});
   try{
-    const f=await fixture(t,{nativeContext:native.contexts()[0]});await f.attach();await f.ready();await f.open();await f.play();
+    const f=await fixture(t,{slug:'term-test-1',nativeContext:native.contexts()[0]});await f.attach();await f.ready();await f.open();await f.play();
     const other=await f.ctx.newPage();await other.goto('about:blank');await other.bringToFront();
     await f.page.waitForFunction(()=>document.hidden===true,{},{timeout:4000});
     assert.equal(await f.page.locator('audio[data-k67-review-audio]').evaluate(a=>a.paused),true);
