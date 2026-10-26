@@ -23,6 +23,7 @@ const lessons=[
   {n:11,file:'lesson-11.html',code:'67-speaking-ke_chuyen_dien_bien_chi_tiet',parts:['story_detail','story_sequence'],mins:[1,1],practice:2},
   {n:12,file:'lesson-12.html',code:'67-speaking-ke_chuyen_ket_cuc_y_nghia',parts:['story_outcome','story_sequence'],mins:[1,1],practice:2},
   {n:13,file:'lesson-13.html',code:'67-speaking-ta_vat_gioi_thieu_mieu_ta',parts:['object_intro','object_description'],mins:[2,1],practice:2},
+  {n:14,file:'lesson-14.html',code:'67-speaking-ta_vat_mieu_ta_chuc_nang_what_if',parts:['object_description','object_function','object_what_if'],mins:[1,1,1],practice:2},
   {n:15,file:'lesson-15.html',code:'67-speaking-ta_nguoi',parts:['person_intro','person_traits','person_ending'],mins:[1,1,1],practice:2}
 ];
 const exercises=[1,2,3].map(n=>({exercise_id:`exercise-${n}`,title:'Bài mẫu '+n,exercise_url:'https://example.invalid/'+n,recommendation_count:4-n,practice_count:n}));
