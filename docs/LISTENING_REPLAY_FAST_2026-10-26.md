@@ -1,5 +1,7 @@
 # Chuẩn bị sớm audio nghe lại Listening — 26/10/2026
 
+Phần mở rộng cho các Test có dẫn chứng nghe lại được ghi riêng tại [Chuẩn bị sớm audio dẫn chứng trong Test](TEST_LISTENING_REPLAY_FAST_2026-10-26.md).
+
 ## Phạm vi và hành vi
 
 Yêu cầu: giảm thời gian chờ ở lần đầu bấm “Nghe lại đoạn này”, áp dụng cho tất cả webapp Listening thực chiến hiện có. Kiểm kê source/cấu hình: bài Buổi 8 `67-practice-listening_mcq_flowchart` và Buổi 10 `67-practice-listening_c20_t3_p4_inclusive_design`, cùng engine `listening-practice/`, cả học viên và giảng viên. Bài sau dùng engine này kế thừa thay đổi; không mở bài/lớp hoặc sửa CTA trong đợt này.

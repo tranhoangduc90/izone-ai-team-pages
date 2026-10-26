@@ -8,7 +8,7 @@ const source = await readFile(new URL('../term-tests/k67-shared/review-audio.js'
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 function fixture(prepare = async () => {}) {
   const doc = new EventTarget(), win = new EventTarget(); doc.hidden = false;
-  const context = vm.createContext({ window: win, document: doc, DOMException, AbortController, setInterval, clearInterval,
+  const context = vm.createContext({ window: win, document: doc, DOMException, AbortController, setTimeout, clearTimeout, setInterval, clearInterval,
     requestAnimationFrame: () => 1, cancelAnimationFrame() {} });
   vm.runInContext(source, context);
   class Audio extends EventTarget {
@@ -61,4 +61,11 @@ test('đổi người xóa bộ phát và hủy listener cũ', async () => {
   const f = fixture(); await f.player.play(clip); f.player.dispose();
   const count = f.states.length; f.doc.hidden = true; f.doc.dispatchEvent(new Event('visibilitychange'));
   f.audio.dispatchEvent(new Event('ended')); assert.equal(f.states.length, count); assert.equal(f.audio.paused, true);
+});
+test('chuẩn bị decoder không phát tiếng và hết hạn nếu metadata không tới', async t => {
+  t.mock.timers.enable({apis:['setTimeout']});
+  const f=fixture();f.audio.readyState=0;f.audio.load=()=>{};
+  const pending=f.player.prime(new AbortController().signal);
+  assert.equal(f.audio.playCount,0);assert.equal(f.audio.paused,true);
+  t.mock.timers.tick(10001);await assert.rejects(pending,/AUDIO_READY_TIMEOUT/);
 });

@@ -49,7 +49,7 @@ import {decodeBase64url,keyContext,sha256} from './protocol.mjs';
 import {WORKER_ORIGIN,SUBSTITUTE_ASSETS,REVIEW_ASSETS} from './config.mjs';
 
 const memory=new Map(),breakers=new Map(),TTL=86400000;
-let cacheUnavailable=false;
+let cacheUnavailable=false,completeAudio=null;
 const safeOrigins=['https://izone-audio-delivery-stage.tranhoangduc90.workers.dev','https://izone-audio-delivery.tranhoangduc90.workers.dev'];
 function denied(){throw Object.assign(Error('ACCESS_DENIED'),{accessDenied:true});}
 function breaker(origin,now=Date.now()){
@@ -91,6 +91,15 @@ export async function downloadPreferred(m,options={}){
   try{
   if(!a||m.envelopeVersion!=='MP3')throw Error('AUDIO_CATALOG_MISMATCH');
   if(!safeOrigins.includes(WORKER_ORIGIN))throw Error('AUDIO_ORIGIN_DENIED');
+  options.signal?.throwIfAborted();
+  if(completeAudio?.expiresAt<=Date.now())completeAudio=null;
+  // One immutable verified public file, never a grant or session key. A caller
+  // supplying its own parts collection still needs that collection populated.
+  if(!options.parts&&completeAudio?.sha256===a.sha256){
+    onEvent({source:'cache',wireBytes:0});
+    options.onProgress?.({loaded:a.byteLength,total:a.byteLength,complete:true});
+    journal?.complete({byteLength:a.byteLength,verified:true});return completeAudio.blob;
+  }
   const parts=options.parts||await readParts(a),fetchImpl=options.fetchImpl||fetch;
   if(cacheUnavailable)onEvent({source:'cache-error',reason:'CACHE_UNAVAILABLE'});
   options.signal?.throwIfAborted();
@@ -125,6 +134,8 @@ export async function downloadPreferred(m,options={}){
     onPrimaryFailure:()=>openBreaker(WORKER_ORIGIN),
     refresh:async()=>{const access=await issue();if(!access.rawKey.every((n,i)=>n===key[i]))denied();return access.ticket;}
   });
+  options.signal?.throwIfAborted();
+  if(!options.parts)completeAudio={sha256:a.sha256,blob:result.blob,expiresAt:Date.now()+TTL};
   journal?.complete({byteLength:result.blob.size,verified:true});return result.blob;
   }catch(error){journal?.fail(error);throw error;}
 }
