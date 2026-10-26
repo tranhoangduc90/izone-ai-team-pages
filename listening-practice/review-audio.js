@@ -27,9 +27,9 @@ class ReviewAudio {
     if (this.events.length > 100) this.events.shift();
   }
 
-  update(state, message = '') {
+  update(state, message = '', reason = '') {
     this.state = state;
-    this.notify({ state, segment: this.active, message });
+    this.notify({ state, segment: this.active, message, reason });
   }
 
   stop(reason = 'manual', message = '') {
@@ -42,12 +42,14 @@ class ReviewAudio {
     this.audio.pause();
     if (this.active) this.record('stop', { reason, requestedEnd: this.active.endMs / 1000 });
     this.active = null;
-    this.update(message ? 'error' : 'idle', message);
+    this.update(message ? 'error' : 'idle', message, reason);
   }
 
   waitFor(event, signal) {
     return new Promise((resolve, reject) => {
+      let timer;
       const cleanup = () => {
+        clearTimeout(timer);
         this.audio.removeEventListener(event, done);
         this.audio.removeEventListener('error', failed);
         signal.removeEventListener('abort', cancelled);
@@ -58,8 +60,19 @@ class ReviewAudio {
       this.audio.addEventListener(event, done, { once: true });
       this.audio.addEventListener('error', failed, { once: true });
       signal.addEventListener('abort', cancelled, { once: true });
+      timer = setTimeout(() => { cleanup(); reject(new Error('AUDIO_READY_TIMEOUT')); }, 10000);
       if (signal.aborted) cancelled();
     });
+  }
+
+  // Prepare the browser decoder without playing or changing an exam clock.
+  async prime(signal) {
+    signal.throwIfAborted();
+    if (this.audio.readyState < 1) {
+      const ready = this.waitFor('loadedmetadata', signal);
+      this.audio.load();
+      await ready;
+    }
   }
 
   checkEnd() {
@@ -91,11 +104,7 @@ class ReviewAudio {
       // Gói audio xem lại được tải bằng đúng quyền của kết quả đang mở.
       if (this.prepare) await this.prepare(controller.signal);
       if (sequence !== this.sequence) return;
-      if (this.audio.readyState < 1) {
-        const ready = this.waitFor('loadedmetadata', controller.signal);
-        this.audio.load();
-        await ready;
-      }
+      await this.prime(controller.signal);
       if (sequence !== this.sequence) return;
       if (segment.endMs / 1000 > this.audio.duration + 0.05) throw new Error('AUDIO_DURATION_MISMATCH');
       if (Math.abs(this.audio.currentTime - segment.startMs / 1000) > 0.01) {
@@ -116,7 +125,9 @@ class ReviewAudio {
       this.timer = setInterval(() => this.checkEnd(), 25);
     } catch (error) {
       if (sequence !== this.sequence || error.name === 'AbortError') return;
-      this.stop('error', error.name === 'NotAllowedError'
+      this.stop('error', [401,403].includes(error.httpStatus)
+        ? 'Phiên xem lại đã hết hạn hoặc không còn quyền. Hãy mở lại kết quả hoặc đăng nhập lại.'
+        : error.name === 'NotAllowedError'
         ? 'Trình duyệt chưa cho phép phát. Hãy bấm nghe lại.'
         : 'Không phát được đoạn audio. Hãy bấm nghe để thử lại.');
     }

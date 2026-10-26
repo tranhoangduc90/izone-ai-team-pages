@@ -1,7 +1,8 @@
 // Chỉ quản lý cửa sổ đáp án và bộ phát xem lại. Các màn khác do app gốc điều khiển.
 // Nhận đúng kết quả đã nộp từ app; lỗi audio hiện tại nút, không ghi thay bài làm.
 window.ListeningReview = (() => {
-  let context, number, player, blobUrl='',blobKey='';
+  let context, number, player, blobUrl='';
+  let resultScope=null, preparation=null;
   const escape = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clock = ms => `${String(Math.floor(ms/60000)).padStart(2,'0')}:${(ms/1000%60).toFixed(2).padStart(5,'0')}`;
   const dialog = () => document.querySelector('#explanation-dialog');
@@ -35,7 +36,16 @@ window.ListeningReview = (() => {
       return `<div class="replay-evidence">${context.renderParagraphs(r.paragraphs)}<button type="button" class="replay-button" data-replay="${r.id}" data-label="${label}" aria-pressed="false">${label}</button><span class="replay-meta">${clock(r.startMs)}–${clock(r.endMs)} · tự dừng khi hết đoạn</span><span class="replay-status" role="status" aria-live="polite" data-status="${r.id}"></span></div>`;
     }).join('<p class="replay-meta">[…]</p>');
   }
-  function playback({state,segment,message}) {
+  function cancelPreparation(){
+    const job=preparation;
+    preparation=null;
+    job?.controller.abort();
+    if(job&&!job.ready)releaseMedia();
+  }
+  function playback({state,segment,message,reason}) {
+    // Changing the selected clip cancels play intent, while the same authorized
+    // result may keep preparing. Explicit cancellation/close/hidden stops work.
+    if(reason&&!['replace','change-question','open-question'].includes(reason)&&!preparation?.ready)cancelPreparation();
     const d=dialog();if(!d.open)return;
     d.querySelectorAll('[data-replay]').forEach(button=>{
       const active=button.dataset.replay===segment?.id;
@@ -78,8 +88,7 @@ window.ListeningReview = (() => {
     d.querySelector('[data-review-close]').focus({preventScroll:true});
     requestAnimationFrame(()=>scrollEvidence(q.replay[0].id));
   }
-  function open(input) {
-    if(!input.data.review){return;}
+  function initPlayer() {
     if(!player){
       player=new ReviewAudio(document.querySelector('#review-audio'),playback);
       const d=dialog();d.addEventListener('cancel',()=>player.stop('escape'));
@@ -89,27 +98,71 @@ window.ListeningReview = (() => {
       d.addEventListener('pointerdown',e=>{outsidePointer=outside(e)?e.pointerId:null;});
       d.addEventListener('pointerup',e=>{const shouldClose=outsidePointer===e.pointerId&&outside(e);outsidePointer=null;if(shouldClose)close();});
       d.addEventListener('pointercancel',()=>{outsidePointer=null;});
-      d.addEventListener('close',()=>{player.stop('closed');if(context?.trigger?.isConnected)context.trigger.focus();});
-      window.addEventListener('hashchange',close);
-      window.addEventListener('resize',()=>{if(d.open)scrollEvidence(context.data.review.questions[number].replay[0].id);});
+      d.addEventListener('close',()=>{if(!d.open&&context?.trigger?.isConnected)context.trigger.focus();});
+      window.addEventListener('resize',()=>{if(d.open&&context)scrollEvidence(context.data.review.questions[number].replay[0].id);});
     }
+  }
+  function useResult(input){
+    const {attempt,data}=input,review=data?.review;
+    if(attempt?.status!=='submitted'||!review||!data.reviewAudioUrl||
+      review.audioSha256!==data.definition?.audio?.sha256||review.contentVersion!==data.contentVersion)return false;
+    let base,url;
+    try{base=new URL(window.LISTENING_CONFIG.apiBase.replace(/\/$/,'')+'/',location.href);url=new URL(data.reviewAudioUrl,base);}catch{return false;}
+    if(url.origin!==base.origin||!url.pathname.startsWith(base.pathname))return false;
+    const key=JSON.stringify([input.owner,input.role,attempt.id,data.contentVersion,review.audioSha256,url.href]);
+    if(resultScope?.key===key&&resultScope.token===input.token)return true;
+    reset();initPlayer();
+    resultScope={key,url:url.href,hash:review.audioSha256,token:input.token};
+    player.durationMs=review.audioDurationMs;
+    player.prepare=signal=>prepareAudio(signal);
+    return true;
+  }
+  function prepareAudio(signal){
+    signal?.throwIfAborted();
+    if(!resultScope)throw new DOMException('Cancelled','AbortError');
+    if(!preparation){
+      const scope=resultScope,controller=new AbortController(),job={controller,ready:false};
+      const timer=setTimeout(()=>controller.abort(),120000);
+      preparation=job;
+      job.promise=(async()=>{
+        const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1');
+        const blob=await fetchListeningAudio(scope.url,{headers:scope.token?{Authorization:`Bearer ${scope.token}`}:{},credentials:'include',signal:controller.signal,expectedSha256:scope.hash});
+        controller.signal.throwIfAborted();
+        if(resultScope!==scope||preparation!==job)throw new DOMException('Cancelled','AbortError');
+        blobUrl=URL.createObjectURL(blob);
+        player.audio.preload='auto';player.audio.src=blobUrl;
+        await player.prime(controller.signal);
+        controller.signal.throwIfAborted();
+        if(resultScope!==scope||preparation!==job)throw new DOMException('Cancelled','AbortError');
+        job.ready=true;
+      })().catch(error=>{
+        if(preparation===job){preparation=null;releaseMedia();}
+        throw error;
+      }).finally(()=>clearTimeout(timer));
+    }
+    const pending=preparation.promise;
+    if(!signal)return pending;
+    return new Promise((resolve,reject)=>{
+      const cancelled=()=>{cleanup();reject(new DOMException('Cancelled','AbortError'));};
+      const cleanup=()=>signal.removeEventListener('abort',cancelled);
+      signal.addEventListener('abort',cancelled,{once:true});
+      pending.then(value=>{cleanup();resolve(value);},error=>{cleanup();reject(error);});
+      if(signal.aborted)cancelled();
+    });
+  }
+  // Called after an authorized submitted result is visible; it never opens a
+  // popup or plays. The click joins this exact job, including its API grant.
+  function warm(input){if(useResult(input)&&!document.hidden)void prepareAudio().catch(()=>{});}
+  function open(input) {
+    if(!useResult(input))return;
     player.stop('open-question');context=input;number=input.number;
-    player.durationMs=input.data.review.audioDurationMs;
-    player.prepare=async signal=>{
-      const current=context;
-      // API có prefix riêng trên production; không lấy nhầm audio từ tên miền Pages.
-      const base=new URL(window.LISTENING_CONFIG.apiBase.replace(/\/$/,'')+'/',location.href);
-      const key=new URL(current.data.reviewAudioUrl,base).href;
-      if(blobKey===key&&blobUrl)return;
-      const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261024-cf512-1&journal=20261024-audio-v1');
-      const blob=await fetchListeningAudio(key,{headers:current.token?{Authorization:`Bearer ${current.token}`}:{},credentials:'include',signal});
-      if(signal.aborted)throw new DOMException('Cancelled','AbortError');
-      if(blobUrl)URL.revokeObjectURL(blobUrl);
-      blobUrl=URL.createObjectURL(blob);blobKey=key;player.audio.src=blobUrl;
-    };
     if(!dialog().open)dialog().showModal();render();
   }
+  function releaseMedia(){
+    if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl='';
+      if(player){player.audio.removeAttribute('src');player.audio.load();}}
+  }
   // Đăng xuất phải xóa cả dữ liệu/audio đang xem, kể cả từ tab khác.
-  function reset(){close();context=null;dialog().replaceChildren();if(blobUrl)URL.revokeObjectURL(blobUrl);blobUrl=blobKey='';if(player){player.audio.removeAttribute('src');player.audio.load();}}
-  return {open,close,reset,debug:()=>({player,number,attemptId:context?.attempt.id})};
+  function reset(){close();cancelPreparation();resultScope=null;context=null;dialog().replaceChildren();releaseMedia();}
+  return {open,close,reset,warm,debug:()=>({player,number,attemptId:context?.attempt.id,ready:preparation?.ready===true})};
 })();
