@@ -1,4 +1,4 @@
-import { createApi } from "./task1-ui-api.js?v=20260911-load-guard-v1&startup=20261026-v1";
+import { createApi } from "./task1-ui-api.js?v=20260911-load-guard-v1&startup=20261026-v2";
 import { installStudentMemory } from "./shared-student-memory-ui.js?v=20261018-identity-v1";
 import { SECTION_KEYS, canUnlockDraft2, claimSectionSubmission, createRequestId, draftPrerequisitesPassed, gradingFailureMessage, hasMeaningfulText, isConflict, normalizeProgress, pollingDelayWithJitter, randomDelay, rebaseLocalProgress, retryDelay, safeHttpUrl, safeLmsUrl, sectionSubmitLabel, terminalResult, wordCount } from "./core.js?v=20260921-draft-result-v1";
 import { getDraft, getLatestDraft, putDraft } from "./idb.js";

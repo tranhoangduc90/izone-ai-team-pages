@@ -27,7 +27,7 @@ async function fixture(classCode,{storageState,loginFailureApi,sessionRegistry=n
  const context=await browser.newContext({storageState}),page=await context.newPage();page.setDefaultTimeout(15000);
  if(blockRemove)await context.addInitScript(()=>{Storage.prototype.removeItem=function(){throw new Error('Storage giả chỉ cho phép setItem');};});
  if(withoutLocks)await context.addInitScript(()=>{Object.defineProperty(navigator,'locks',{value:undefined});});
- const calls=[],errors=[],sessions=sessionRegistry;let version=0,logoutFailure=false,pausedApi=null,releaseLogin;
+ const calls=[],errors=[],sessions=sessionRegistry;let version=0,logoutFailure=false,pausedApi=null,releaseLogin,requireLandingReauth=false;
  let loginGate=Promise.resolve();
  const selected=classCode==='CODEXDEMO56'?'demo':'live';
  const api=kind=>base+'/fixture-'+kind;
@@ -54,6 +54,7 @@ async function fixture(classCode,{storageState,loginFailureApi,sessionRegistry=n
      const token=request.headers().cookie?.match(new RegExp('qa_'+kind+'=([^;]+)'))?.[1];sessions.delete(token);
      return reply({ok:true},200,{'set-cookie':`qa_${kind}=; Path=/fixture-${kind}; Max-Age=0`});
     }
+    if(requireLandingReauth&&request.frame().url().includes('/k56-demo/'))return reply({ok:false},401);
     return isAuthenticated(request,kind)?reply({ok:true}):reply({ok:false},401);
    }
    if(!isAuthenticated(request,kind))return reply({ok:false},401);
@@ -63,11 +64,20 @@ async function fixture(classCode,{storageState,loginFailureApi,sessionRegistry=n
   }
   if(url.origin===base)return route.continue();return route.abort();
  });
- async function landing(){await page.goto(base+'/term-tests/k56-demo/?class='+classCode);await page.waitForFunction(()=>typeof window.qaGoogleCallback==='function');}
- async function login(){await page.evaluate(()=>window.qaGoogleCallback({credential:'synthetic-google-only'}));await page.locator('#loginBadge').filter({hasText:'Đã đăng nhập'}).waitFor();}
+ async function landing(){await page.goto(base+'/term-tests/k56-demo/?class='+classCode);await page.waitForFunction(()=>typeof window.qaGoogleCallback==='function'||document.querySelector('#loginBadge').textContent.includes('Đã đăng nhập'));}
+ // A valid restored landing intentionally doesn't load Google. Race cases that
+ // submit a new Google credential explicitly model a native 401 on this landing;
+ // the cookie registry and existing results tab remain available for the race.
+ async function requireGoogle(target){
+  await target.waitForFunction(()=>typeof window.qaGoogleCallback==='function'||document.querySelector('#loginBadge').textContent.includes('Đã đăng nhập'));
+  if(await target.evaluate(()=>typeof window.qaGoogleCallback==='function'))return;
+  requireLandingReauth=true;
+  try{await target.reload();await target.waitForFunction(()=>typeof window.qaGoogleCallback==='function');}finally{requireLandingReauth=false;}
+ }
+ async function login(){await requireGoogle(page);await page.evaluate(()=>window.qaGoogleCallback({credential:'synthetic-google-only'}));await page.locator('#loginBadge').filter({hasText:'Đã đăng nhập'}).waitFor();}
  // Còn phiên thì không cần tải/khởi tạo Google lần nữa; chờ kết quả người dùng thấy.
  async function results(){await page.locator('#teacherDashboard').click();await page.locator('#dashboardView').waitFor({state:'visible'});}
- return {context,page,calls,errors,sessions,api,marker,selected,landing,login,results,setLogoutFailure:value=>{logoutFailure=value;},pauseLogin(kind){pausedApi=kind;loginGate=new Promise(done=>{releaseLogin=done;});},releaseLogin(){releaseLogin?.();}};
+ return {context,page,calls,errors,sessions,api,marker,selected,landing,login,requireGoogle,results,setLogoutFailure:value=>{logoutFailure=value;},pauseLogin(kind){pausedApi=kind;loginGate=new Promise(done=>{releaseLogin=done;});},releaseLogin(){releaseLogin?.();}};
 }
 for(const code of ['IC2264','IC2305','CODEXDEMO56']){
  test(`${code}: một lần Google, chuyển trang/F5/tab mới dùng cookie 90 ngày`,async()=>{
@@ -102,7 +112,7 @@ for(const code of ['IC2264','IC2305','CODEXDEMO56']){
    await f.landing();await f.login();await f.results();f.setLogoutFailure(true);
    await f.page.locator('#logoutButton').click();await f.page.locator('#notice').filter({hasText:'Máy chủ chưa xác nhận'}).waitFor();
    assert.equal(new URL(f.page.url()).searchParams.has('signed_out'),true);
-   const landing=await f.context.newPage();await landing.goto(base+'/term-tests/k56-demo/?class='+code);await landing.waitForFunction(()=>typeof window.qaGoogleCallback==='function');
+   const landing=await f.context.newPage();await landing.goto(base+'/term-tests/k56-demo/?class='+code);await f.requireGoogle(landing);
    f.setLogoutFailure(false);await landing.evaluate(()=>window.qaGoogleCallback({credential:'synthetic-google-only'}));await landing.locator('#loginBadge').filter({hasText:'Đã đăng nhập'}).waitFor();
    const deletes=f.calls.filter(c=>c.method==='DELETE').length;
    await f.page.reload();await f.page.locator('#dashboardView').waitFor({state:'visible'});assert.equal(f.calls.filter(c=>c.method==='DELETE').length,deletes);
@@ -112,7 +122,7 @@ for(const code of ['IC2264','IC2305','CODEXDEMO56']){
  test(`${code}: logout mới ở tab khác thắng POST đang chờ và login đã xếp hàng`,async()=>{
   const f=await fixture(code);try{
    await f.landing();await f.login();await f.results();
-   const landing=await f.context.newPage();await landing.goto(base+'/term-tests/k56-demo/?class='+code);await landing.waitForFunction(()=>typeof window.qaGoogleCallback==='function');
+   const landing=await f.context.newPage();await landing.goto(base+'/term-tests/k56-demo/?class='+code);await f.requireGoogle(landing);
    const posts=f.calls.filter(c=>c.method==='POST'&&c.kind===f.selected).length;f.pauseLogin(f.selected);
    await landing.evaluate(()=>{window.qaGoogleCallback({credential:'synthetic-delayed-only'});});
    for(let n=0;n<200&&f.calls.filter(c=>c.method==='POST'&&c.kind===f.selected).length===posts;n++)await landing.waitForTimeout(20);
@@ -132,7 +142,7 @@ for(const code of ['IC2264','IC2305','CODEXDEMO56']){
 for(const code of ['IC2264','CODEXDEMO56'])test(`${code}: không có Web Locks, POST muộn sau DELETE không hồi sinh phiên`,async()=>{
  const f=await fixture(code,{withoutLocks:true});try{
   await f.landing();await f.login();await f.results();
-  const landing=await f.context.newPage();await landing.goto(base+'/term-tests/k56-demo/?class='+code);await landing.waitForFunction(()=>typeof window.qaGoogleCallback==='function');
+  const landing=await f.context.newPage();await landing.goto(base+'/term-tests/k56-demo/?class='+code);await f.requireGoogle(landing);
   f.pauseLogin(f.selected);const count=f.calls.filter(c=>c.method==='POST'&&c.kind===f.selected).length;
   await landing.evaluate(()=>{window.qaGoogleCallback({credential:'synthetic-late-cookie'});});
   for(let n=0;n<200&&f.calls.filter(c=>c.method==='POST'&&c.kind===f.selected).length===count;n++)await landing.waitForTimeout(20);

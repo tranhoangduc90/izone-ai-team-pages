@@ -1,6 +1,6 @@
 // Điều phối phiên riêng K56; cookie/quyền/thời hạn vẫn do backend xác minh.
 // Storage chỉ chứa ý định ngẫu nhiên, không chứa token hoặc danh tính.
-import {createTeacherSessionClient as createBaseClient,teacherSessionRequestOptions} from '../../shared/teacher-session-client.js?rev=20261026-startup1';
+import {createTeacherSessionClient as createBaseClient,teacherSessionRequestOptions} from '../../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
 export {teacherSessionRequestOptions};
 const queues=new Map();
 const keyFor=api=>'izone:teacher-k56:logout-pending:'+api;

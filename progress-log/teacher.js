@@ -14,7 +14,7 @@ import {observeSubmissionWindow, submissionWindowMessage} from './submission-win
  */
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherAuthState } from '../shared/teacher-auth-state.js?v=20261026-startup1';
-import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20261026-startup1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261022-reading-slots';
 import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261025-docs-import-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
@@ -1674,6 +1674,7 @@ async function copyCurrentStudentLink() {
   }
 }
 
+let googleScriptLoading=false;
 function initializeGoogle(attempt = 0) {
   if (!authView.needsLogin) return;
   if (!config.GOOGLE_CLIENT_ID) {
@@ -1681,6 +1682,7 @@ function initializeGoogle(attempt = 0) {
     return;
   }
   if (!window.google?.accounts?.id) {
+    if(!googleScriptLoading){googleScriptLoading=true;const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.onerror=()=>{googleScriptLoading=false;script.remove();authView.failed(new Error('Không tải được đăng nhập Google. Hãy thử lại.'));};document.head.append(script);}
     if (attempt < 30) window.setTimeout(() => initializeGoogle(attempt + 1), 200);
     else setNotice('Không tải được nút đăng nhập Google.', 'error');
     return;

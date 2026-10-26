@@ -11,7 +11,7 @@ import {
   sortHandoutsByWritingLesson,
   studentUrl,
 } from "./library-core.js?v=20261024-shops";
-import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20261026-startup1";
+import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2";
 import {createTeacherAuthState} from "../../shared/teacher-auth-state.js?v=20261026-startup1";
 
 const $ = (id) => document.getElementById(id);
@@ -185,6 +185,7 @@ async function connectSession(restoring = false) {
   }
 }
 
+let googleScriptLoading=false;
 function setupGoogleSignIn() {
   if(state.authenticated)return;
   const render = () => {
@@ -210,6 +211,7 @@ function setupGoogleSignIn() {
     });
   };
   if (globalThis.google?.accounts?.id) return render();
+  if(!googleScriptLoading){googleScriptLoading=true;const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.onerror=()=>{googleScriptLoading=false;script.remove();authView.failed(new Error('Không tải được đăng nhập Google. Hãy thử lại.'));};document.head.append(script);}
   let attempts = 0;
   const timer = setInterval(() => {
     attempts += 1;

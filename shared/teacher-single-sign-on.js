@@ -15,7 +15,8 @@
   {id:'k56',prefix:'/mapping-api-k56/api',source:'/mapping-api-k56/api/auth/session/shared-session'},
   {id:'k56demo',prefix:'/mapping-api-demo/api',source:'/mapping-api-demo/api/auth/session/shared-session'},
   {id:'handout67',prefix:'/api/handout67/v1',source:'/api/handout67/v1/teacher/shared-session',identity:true},
-  {id:'substitute',prefix:'/substitute-teacher-api',identity:true}
+  {id:'substitute',prefix:'/substitute-teacher-api',identity:true},
+  {id:'shops',prefix:'/shops-writing-api/api',source:'/shops-writing-api/api/v1/auth/session/shared-session'}
  ];
  const original=window.fetch.bind(window),pending=new Map(),initialized=new Set();
  let discovery=null,generation=0,startup=null;

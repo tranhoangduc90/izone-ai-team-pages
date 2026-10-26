@@ -27,12 +27,12 @@
   </header>
 
   <main>
-    <section id="loginView" class="login-card" aria-labelledby="loginTitle">
+    <p id="loginNotice" class="login-notice" role="status" aria-live="polite" aria-busy="true">Đang khôi phục đăng nhập của bạn…</p>
+    <section id="loginView" hidden class="login-card" aria-labelledby="loginTitle">
       <p class="eyebrow">KHU VỰC HẠN CHẾ</p>
       <h2 id="loginTitle">Đăng nhập để xem tình hình vận hành</h2>
       <p>Chỉ tài khoản Google đã được cấp quyền mới xem lịch sử, prompt/response và thay đổi cấu hình.</p>
       <div id="googleSignInButton" class="google-signin"></div>
-      <p id="loginNotice" class="login-notice" role="alert"></p>
     </section>
 
     <div id="dashboardView" hidden>
@@ -118,9 +118,8 @@
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="./config.js?v=20260830-google-auth-v1"></script>
   <script src="./session-client.js?v=20260922-dashboard-session-v1"></script>
-  <script type="module" src="./app.js?v=20261024-master170-login1"></script>
+  <script type="module" src="./app.js?v=20261024-master170-login1&startup=20261026-v2"></script>
 </body>
 </html>

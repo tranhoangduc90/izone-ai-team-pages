@@ -1,5 +1,5 @@
 import {createTeacherAuthState} from "../../shared/teacher-auth-state.js?v=20261026-startup1";
-import { createTeacherApi } from "./api.js?rev=20260920-server-session-v1&startup=20261026-v1";
+import { createTeacherApi } from "./api.js?rev=20260920-server-session-v1&startup=20261026-v2";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js?v=20260921-draft-result-v1";
 import { sectionDefinitions } from "./lesson-core.js";
@@ -12,7 +12,7 @@ import { createTeacherCommentThreadCard, renderAnnotatedText, masterScrollBehavi
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
 import { createTeacherLoginPreference } from "../../shared/teacher-login-preference.js?rev=20260918-v1";
-import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20261026-startup1";
+import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2";
 
 const $ = (id) => document.getElementById(id);
 const authView=createTeacherAuthState({panel:$("teacher-login"),notice:$("teacher-updated"),retry:()=>location.reload()});
@@ -631,6 +631,13 @@ async function waitForGoogle(clientId) {
   throw new Error("Không tải được dịch vụ đăng nhập Google.");
 }
 
+let googleClientId,googleSetup;
+function ensureGoogle(){
+ return googleSetup ||= (async()=>{
+  if(!globalThis.google?.accounts?.id)await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.onload=resolve;script.onerror=()=>{script.remove();reject(new Error('Không tải được đăng nhập Google. Hãy thử lại.'));};document.head.append(script);});
+  await waitForGoogle(googleClientId);
+ })().catch(error=>{googleSetup=null;throw error;});
+}
 async function init() {
   authView.checking();
   if (globalThis.__IZONE_SW_TASK2_REDIRECTING__) return;
@@ -646,6 +653,7 @@ async function init() {
     const config = await configResponse.json();
     if (config.socraticTask1Slugs?.includes(state.manifest.activity?.slug || slug)) state.manifest.feedbackMode = "socratic-v2";
     if (!config.googleClientId) throw new Error("Dashboard chưa được cấu hình đăng nhập giảng viên.");
+    googleClientId=config.googleClientId;
     state.sessionClient = createTeacherSessionClient({ apiBaseUrl: config.apiBase || "", sessionPath: "api/v1/auth/session" });
     state.activitySlug = state.manifest.activity?.slug || slug;
     state.api = createTeacherApi(config.apiBase || "");
@@ -680,7 +688,7 @@ async function init() {
       await refresh();
     }
     if (!restored) authView.signedOut();
-    await waitForGoogle(config.googleClientId);
+    if(!restored) await ensureGoogle();
     if (!state.authenticated && loginPreference.read()) globalThis.google.accounts.id.prompt();
   } catch (error) {
     authView.failed(error);
@@ -689,6 +697,7 @@ async function init() {
 }
 
 function clearTeacherLogin() {
+  if(googleClientId)void ensureGoogle().catch(error=>showLoginError(error.message));
   state.loginGeneration += 1;
   state.authenticated = false;
   state.classQueryResolved = false;state.classQueryError = "";

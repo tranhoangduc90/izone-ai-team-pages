@@ -170,8 +170,9 @@ test('đăng nhập Google giả lập đổi ô nhập thành dropdown lớp đ
     await page.locator('#loginStatus').filter({ hasText: 'Dịch vụ thử đang bận.' }).waitFor();
     assert.equal(await page.locator('#classCode').isVisible(), true);
     assert.equal(await page.locator('#classSelect').isHidden(), true);
+    assert.equal(await page.getByRole('button',{name:'Đăng nhập thử'}).isVisible(),false);
     optionsMode = 'empty';
-    await page.getByRole('button', { name: 'Đăng nhập thử' }).click();
+    await page.getByRole('button', { name: 'Thử lại',exact:true }).click();
     await page.locator('#loginStatus').filter({ hasText: 'chưa được cấp quyền cho lớp nào' }).waitFor();
     assert.equal(await page.locator('#classSelect option').count(), 0);
     assert.deepEqual(browserErrors, []);

@@ -1,4 +1,4 @@
-import { teacherSessionRequestOptions } from './teacher-session-client.js?startup=20261026-v1';
+import { teacherSessionRequestOptions } from './teacher-session-client.js?startup=20261026-v2';
 import { renderPracticeDefinitionHtml as definitionHtml } from './teacher-practice-definition.js?v=20261021-authoring-v1';
 
 // Nhận dữ liệu chỉ đọc từ API của từng sản phẩm. Không dùng danh tính học viên,
@@ -102,6 +102,8 @@ async function boot() {
   const epoch = resetRequests();privateClear();$('auth').hidden = true;
   bootGeneration = epoch;resumeBoot = false;
   try {
+    notice('Đang khôi phục đăng nhập của bạn…');
+    await window.IzoneTeacherSso?.restore(speaking ? 'mapping' : product);
     const routeQuery = new URLSearchParams(location.search), routeHash = new URLSearchParams(location.hash.slice(1));
     state.code = routeQuery.get('code') || state.code;
     if (speaking && !state.code) throw new Error('Link chưa xác định bài Speaking. Hãy mở “Giảng viên” từ đúng bài học.');

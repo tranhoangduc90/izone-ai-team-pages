@@ -1,4 +1,4 @@
-import {createTeacherSessionClient,teacherSessionRequestOptions} from '../../shared/teacher-session-client.js?startup=20261026-v1';
+import {createTeacherSessionClient,teacherSessionRequestOptions} from '../../shared/teacher-session-client.js?startup=20261026-v2';
 
 // Đọc lớp/bản lưu qua phiên Google riêng. Không dùng bộ nhớ hoặc token học viên,
 // không gọi các đường kiểm/nháp/nộp của học viên và không tạo trình phát audio.
@@ -59,7 +59,7 @@ async function loadDetail(ref){
 }
 async function boot(){
  cancel();clearPrivate();$('auth').hidden=true;const current=generation;
- try{const options=await request('/classes');if(current!==generation)return;classes=options.classes;
+ try{await window.IzoneTeacherSso?.restore('term67');if(current!==generation)return;const options=await request('/classes');if(current!==generation)return;classes=options.classes;
   const params=new URLSearchParams(location.search),requested=params.get('classId')||params.get('class'),match=classes.find(c=>c.classId===requested||c.classCode===requested);
   if(requested&&!match)throw Object.assign(new Error('Tài khoản chưa có quyền xem lớp trong link này.'),{status:403});
   classId=(match||classes[0])?.classId;if(!classId)throw new Error('Chưa có lớp được cấp quyền.');

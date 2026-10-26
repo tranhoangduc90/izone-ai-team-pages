@@ -26,6 +26,7 @@ for(const width of [1440,390])test('Phiên chung mở Handout, K56 thật/demo v
  for(const [id,path] of [['k56','/mapping-api-k56'],['k56demo','/mapping-api-demo']])sources[id]={cookieName:'izone_teacher_session',cookiePath:path,native:{issue:async value=>{nativeRows.set(digest(value),true);return true;},revokeHash:async hash=>nativeRows.delete(hash)}};
  const service=createSharedTeacherSession({file:':memory:',key:Buffer.alloc(32,2),sources});t.after(()=>service.close());
  const context=await browser.newContext({viewport:{width,height:900}});t.after(()=>context.close());
+ await context.addInitScript(()=>{window.__loginFrames=0;const watch=()=>{const el=document.querySelector('#login,#accessView');if(el&&el.getBoundingClientRect().height)window.__loginFrames++;requestAnimationFrame(watch);};requestAnimationFrame(watch);});
  const calls=[],errors=[];const jar=[];let cookieDebug;
  const output=()=>({cookie(name,value,options){jar.push({name,value,options});}});
  const teacher=createTeacher({db:{query:async()=>({rows:[]})},store:{},roster:async()=>[{classRef:'IC2304',className:'IC2304',students:[{studentRef:'fixture-student',displayName:'Học viên thử'}]}],registry:()=>({clientId:'fixture.apps.googleusercontent.com',teachers:[{email:identity.email,subject:identity.sub,displayName:'Giảng viên thử',classes:['IC2304']}]}),secret:'s'.repeat(40),verifyGoogleToken:async()=>identity});
@@ -88,7 +89,7 @@ for(const width of [1440,390])test('Phiên chung mở Handout, K56 thật/demo v
  await page.goto(pageBase+'/writing-handouts/lesson5/teacher.html?class=IC2304');
  await page.getByRole('button',{name:'Google giả'}).waitFor({state:'visible'});await page.getByRole('button',{name:'Google giả'}).click();
  try{await page.locator('#dashboard').waitFor({state:'visible',timeout:8000});}catch(error){console.log(JSON.stringify({errors,calls,lastText:await page.locator('body').innerText()}));throw error;}
- assert.match(await page.locator('#students').innerText(),/Học viên thử/);
+ await page.locator('#students').filter({hasText:'Học viên thử'}).waitFor({state:'visible'});
  const actualCookie=(await context.cookies(apiOrigin)).find(c=>c.name==='izone_teacher_shared');
  assert.ok(actualCookie?.httpOnly&&actualCookie.secure);
  const debug=await context.newCDPSession(page),rawCookies=await debug.send('Network.getAllCookies');await debug.detach();
@@ -97,6 +98,8 @@ for(const width of [1440,390])test('Phiên chung mở Handout, K56 thật/demo v
  assert.ok(actualCookie.expires>Date.now()/1000+89*86400);
  fs.writeFileSync(resolve(process.env.SSO_TEST_OUTPUT||root,'cookie-proof-'+width+'.json'),JSON.stringify({installation:'CDP_fixture',transport:'mock_from_browser_cookie_store',httpOnly:actualCookie.httpOnly,secure:actualCookie.secure,partitionKey:partition,remainingDays:(actualCookie.expires-Date.now()/1000)/86400},null,2));
  await page.reload();await page.locator('#dashboard').waitFor({state:'visible'});
+ assert.equal(await page.evaluate(()=>window.__loginFrames),0);
+ assert.equal(await page.locator('script[src^="https://accounts.google.com"]').count(),0);
  for(const classCode of ['IC2264','CODEXDEMO56']){
   await page.goto(pageBase+'/term-tests/teacher-k56/?class='+classCode);await page.locator('#dashboardView').waitFor({state:'visible'});
   assert.match(await page.locator('#loginBadge').innerText(),/Đã đăng nhập/);

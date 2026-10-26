@@ -13,6 +13,22 @@ function setup(handler,entryProduct){
 }
 const response=status=>({status,ok:status>=200&&status<300,json:async()=>({ok:status===200})});
 
+test('Shops native session shares the common startup result and retains its own adapter',async()=>{
+ const {box,calls}=setup(()=>response(200),'shops');
+ assert.equal(await box.IzoneTeacherSso.restore('shops'),true);
+ const url=origin+'/shops-writing-api/api/v1/auth/session';
+ assert.equal((await box.fetch(url)).status,200);
+ assert.deepEqual(calls.map(c=>c.url),[origin+'/teacher-session-api/v1/restore/shops',url]);
+ await box.fetch(url,{method:'POST',body:JSON.stringify({credential:'fixture-only-google'})});
+ assert.equal(calls.at(-1).url,origin+'/shops-writing-api/api/v1/auth/session/shared-session');
+ assert.ok(!calls.at(-1).options.body.includes('fixture-only-google'));
+});
+
+test('Both deployed Shops/SW consumers use the current shared-session runtime',()=>{
+ const canonical=fs.readFileSync(new URL('../shared/teacher-single-sign-on.js',import.meta.url),'utf8').replaceAll('\r\n','\n');
+ for(const file of ['shops-writing','sw-task2-writing'])assert.equal(fs.readFileSync(new URL('../'+file+'/shared/teacher-single-sign-on.js',import.meta.url),'utf8').replaceAll('\r\n','\n'),canonical);
+});
+
 // Bảo vệ lượt mở thật: khôi phục trực tiếp và đọc quyền phải dùng cùng phiên;
 // kiểm qua request ở biên mạng, không phụ thuộc tên hàm hoặc biến bên trong.
 test('Explicit restore followed by first teacher read uses one restore request',async()=>{
@@ -128,7 +144,7 @@ test('Signed-out GET scans each legacy source once; the next request can discove
  const url=origin+'/reading-practice-api/api/teacher/classes';
  assert.equal((await box.fetch(url)).status,401);
  assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,1);
- assert.equal(calls.filter(c=>c.url.includes('/shared-session')).length,9);
+ assert.equal(calls.filter(c=>c.url.includes('/shared-session')).length,10);
  signedIn=true;assert.equal((await box.fetch(url)).status,200);
  assert.equal(calls.filter(c=>c.url.includes('/restore/')).length,2);
 });

@@ -1,5 +1,5 @@
 import { createRequestId } from "./core.js";
-import { teacherSessionRequestOptions } from "../../shared/teacher-session-client.js?rev=20261026-startup1";
+import { teacherSessionRequestOptions } from "../../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2";
 
 function endpoint(base, path) { return new URL(path.replace(/^\//, ""), base || window.location.href).toString(); }
 

@@ -1,4 +1,5 @@
-import { createTeacherSessionClient } from '../shared/teacher-session-client.js?startup=20261026-v1';
+import {createTeacherAuthState} from '../shared/teacher-auth-state.js?v=20261026-startup2';
+import { createTeacherSessionClient } from '../shared/teacher-session-client.js?startup=20261026-v2';
 
 const config = window.TERM_TEST_APP_CONFIG || {};
 const receiptId = new URL(location.href).searchParams.get('receipt') || '';
@@ -8,6 +9,9 @@ const validReceipt = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const sessionClient = createTeacherSessionClient({ apiBaseUrl: config.API_BASE_URL,
   sessionPath: '/api/auth/session' });
 const $ = id => document.getElementById(id);
+const authView = createTeacherAuthState({panel:$('login-panel'),notice:$('notice'),retry:()=>restoreSession()});
+let googleStarted=false;
+function fail(error){$('receipt-panel').hidden=true;authView.failed(error);showError(error);if(authView.needsLogin)setupGoogle();}
 
 function notice(text, state = 'info') { $('notice').textContent = text; $('notice').dataset.state = state; }
 function showError(error) {
@@ -98,7 +102,7 @@ function render(receipt) {
       : state.status === 'review' ? 'Cần kiểm tra lại' : state.status === 'failed' ? 'Cần thử lại' : 'Đang xử lý'}`;
     processing.append(li);
   }
-  $('login-panel').hidden = true;
+  authView.ready();
   $('receipt-panel').hidden = false;
   notice('Đã tải bản chỉ đọc.');
 }
@@ -120,6 +124,7 @@ async function load() {
 }
 
 function setupGoogle() {
+  if(googleStarted)return;googleStarted=true;
   if (!config.GOOGLE_CLIENT_ID || !config.API_BASE_URL) {
     notice('Chưa cấu hình đăng nhập hoặc API.', 'error'); return;
   }
@@ -130,27 +135,29 @@ function setupGoogle() {
     window.google.accounts.id.initialize({ client_id: config.GOOGLE_CLIENT_ID,
       auto_select: false, callback: async response => {
         try { await sessionClient.login(response.credential || ''); await load(); }
-        catch (error) { showError(error); }
+        catch (error) { fail(error); }
       } });
     window.google.accounts.id.renderButton($('google-sign-in'),
       { type: 'standard', theme: 'outline', size: 'large', text: 'signin_with' });
   };
-  script.onerror = () => notice('Không tải được đăng nhập Google.', 'error');
+  script.onerror = () => {googleStarted=false;authView.failed(new Error('Không tải được đăng nhập Google. Hãy thử lại.'));};
   document.head.append(script);
 }
 
 $('logout').addEventListener('click', async () => {
   try { await sessionClient.logout(); } catch { /* Giữ giao diện ở trạng thái đăng xuất nếu mạng lỗi. */ }
   $('receipt-panel').hidden = true;
-  $('login-panel').hidden = false; notice('Đã đăng xuất.');
+  authView.signedOut();setupGoogle();notice('Đã đăng xuất.');
   window.google?.accounts?.id?.disableAutoSelect();
 });
 
-if (validReceipt) {
-  sessionClient.restore().then(session => {
-    if (session) return load();
-    $('login-panel').hidden = false;
-    notice('Đăng nhập Google để xem bài.', 'attention');
-  }).catch(error => { $('login-panel').hidden = false; showError(error); });
-} else notice('Link xem bài không hợp lệ.', 'error');
-setupGoogle();
+async function restoreSession(){
+ if(!validReceipt){notice('Link xem bài không hợp lệ.','error');return;}
+ authView.checking();
+ try{
+  const session=await sessionClient.restore();
+  if(session)return await load();
+  authView.signedOut();notice('Đăng nhập Google để xem bài.','attention');setupGoogle();
+ }catch(error){fail(error);}
+}
+void restoreSession();

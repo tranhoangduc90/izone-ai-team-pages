@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {sortClassesNewestFirst,buildK56LandingClasses} from '../term-tests/k56-demo/landing-model.js';
 const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
-function element(){return {value:'',hidden:false,dataset:{},handlers:{},classList:{toggle(){}},setAttribute(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){},append(){}};}
+function element(){return {value:'',hidden:false,dataset:{},handlers:{},classList:{toggle(){}},setAttribute(){},removeAttribute(){},after(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){},append(){}};}
 const elements=Object.fromEntries(['classCode','classSelect','classHelp','loginBadge','loginStatus','googleSignInButton','logoutButton','teacherDashboard'].map(id=>[id,element()]));
 const modes=['lis_first','read_first'].map(mode=>Object.assign(element(),{dataset:{mode}}));
 const history=[];
@@ -21,7 +21,7 @@ const context=vm.createContext({
   teacherSessionRequestOptions:options=>({...options,credentials:'include'}),
   fetch:async(url,options)=>{requests.push({url,options});return {ok:response.ok,status:response.ok?200:404,json:async()=>response}}
 });
-vm.runInContext(source,context);
+vm.runInContext(fs.readFileSync(new URL('../shared/teacher-auth-state.js',import.meta.url),'utf8').replace('export function','function')+'\n'+source,context);
 assert.equal(elements.classCode.value,'IC2264');
 await buttons[0].handlers.click();
 assert.equal(context.window.location.href,'../term-test-1-k56-computer-based/?class=IC2264&mode=lis_first');
