@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./lesson-4.css">
   <link rel="stylesheet" href="./identity-login.css">
   <style>[hidden] { display: none !important; }</style>
-  <script type="module" src="./presentation.js?v=20261025-progress1"></script>
+  <script type="module" src="./presentation.js?v=20261026-lesson2"></script>
   <link rel="stylesheet" href="../shared/teacher-entry.css?v=20261019-v1">
   <link rel="stylesheet" href="./composition.css?v=20261019-auto-submit-v1">
 <link rel="stylesheet" href="../shared/master170/theme.css">
@@ -22,7 +22,7 @@
     <section id="login-screen" class="login-screen">
       <header class="login-header"><div class="login-brand" aria-label="IZONE">IZONE<span>IELTS TRAINING ACADEMY</span></div><div class="login-course">Speaking · Khóa 6.0–7.0</div></header>
       <div class="login-layout">
-        <div class="login-intro"><p class="login-lesson">Homework buổi 2</p><h1>Luyện Speaking.<br>Nộp bài tại đây.</h1><p class="login-copy">Chọn lớp và tên của bạn để mở bài. Luyện trên ChatGPT, rồi quay lại xác nhận từng link hội thoại.</p><ol class="login-tasks"><li><span class="login-task-number">01</span><div><strong>Luyện Paraphrase</strong><p>Luyện ít nhất 5 câu hỏi.</p></div></li><li><span class="login-task-number">02</span><div><strong>Luyện Full Speaking</strong><p>Luyện đủ 3 câu và nói lại sau khi được góp ý.</p></div></li></ol></div>
+        <div class="login-intro"><p class="login-lesson">Homework buổi 2</p><h1>Luyện Speaking.<br>Nộp bài tại đây.</h1><p class="login-copy">Chọn lớp và tên của bạn để mở bài. Luyện trên ChatGPT, rồi quay lại xác nhận từng link hội thoại.</p><ol class="login-tasks"><li><span class="login-task-number">01</span><div><strong>Luyện Paraphrase</strong><p>Luyện ít nhất 5 câu hỏi.</p></div></li><li><span class="login-task-number">02</span><div><strong>Luyện Full Speaking</strong><p>Luyện đủ 2 câu và nói lại sau khi được góp ý.</p></div></li></ol></div>
         <section class="identity-card" aria-labelledby="identity-title">
           <h2 id="identity-title">Bạn học lớp nào?</h2><p class="identity-subtitle">Chọn đúng lớp và tên trước khi bắt đầu.</p><div id="remembered-identity" class="remembered-identity" hidden><span aria-hidden="true">✓</span><span>Đã chọn sẵn lớp và tên từ lần trước.</span></div>
           <div id="identity-form" class="identity-form"><label for="class-select">Lớp</label><select id="class-select" disabled><option value="">Đang tải danh sách lớp…</option></select><label for="student-select">Học viên</label><select id="student-select" disabled><option value="">Chọn lớp trước để xem danh sách</option></select><button id="reload-roster" class="button button-outline" type="button" hidden>Tải lại danh sách</button><label class="checkbox-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label><p class="memory-help">Lần sau sẽ chọn sẵn lớp và tên của bạn.<br>Bỏ tick nếu bạn đang dùng thiết bị chung.</p><button id="open-homework" class="button button-primary" type="button" disabled><span>Mở bài Speaking</span><span aria-hidden="true">→</span></button><button id="forget-remembered" class="text-button" type="button" hidden>Đổi người học</button></div>
@@ -47,7 +47,7 @@
       <div id="parts"></div>
 
       <section id="completion-card" class="completion-card" hidden aria-live="polite"><span class="completion-icon">✓</span><div><span class="section-kicker">ĐÃ NỘP BÀI</span><h2>Nộp bài thành công</h2><p id="completion-message">Biên nhận đã lưu trong hệ thống. Bạn có thể quay lại file Homework để làm tiếp.</p></div><a id="return-homework" class="button button-primary" target="_blank" rel="noopener noreferrer">Quay lại Homework ↗</a></section>
-      <section id="doctor-section" class="doctor-section" aria-labelledby="doctor-title">
+      <section id="doctor-section" class="doctor-section" aria-labelledby="doctor-title" hidden>
         <div class="doctor-heading"><div><span class="section-kicker">BÁC SĨ AI · BÀI LUYỆN CÁ NHÂN</span><h2 id="doctor-title">Bài bạn nên luyện tiếp</h2></div><p id="doctor-sync" role="status">Đang tải danh sách…</p></div>
         <p class="doctor-intro">Danh sách ưu tiên bài đang chờ luyện, rồi xếp theo số lần được đề xuất. Sau mỗi bài nộp, hệ thống phân tích lỗi và cập nhật danh sách.</p>
         <ol id="doctor-list" class="doctor-list"></ol>

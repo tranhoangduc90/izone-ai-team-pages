@@ -2,7 +2,7 @@
 // Không tạo kết quả, biên nhận hoặc dữ liệu học viên mẫu trên trang phát hành.
 import { installTeacherEntry } from '../shared/teacher-entry.js?v=20261019-v1';
 const lesson=Number(document.body.dataset.speakingLesson);
-await import(lesson===2?'./lesson-2-live.js?v=20261025-progress1':lesson===3?'./lesson-3-live.js?v=20261025-progress1':'./lesson-4-live.js?v=20261025-progress1');
+await import(lesson===2?'./lesson-2-live.js?v=20261026-lesson2':lesson===3?'./lesson-3-live.js?v=20261025-progress1':'./lesson-4-live.js?v=20261025-progress1');
 const $=id=>document.getElementById(id);
 document.body.classList.add('speaking-design');
 const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh',9:'Full câu với ChatGPT · Freestyle',10:'Kể chuyện: Bối cảnh và Trình tự',11:'Kể chuyện: Diễn biến chi tiết'};
@@ -22,7 +22,7 @@ const nav=document.createElement('nav');nav.className='lesson-nav';nav.setAttrib
 for(const [i,card] of cards.entries()) {
   const a=document.createElement('a');a.href='#'+card.id;a.innerHTML=`<b>${String(i+1).padStart(2,'0')}</b> ${cards.length===1?'Bài chính':'Phần '+(i+1)}`;nav.append(a);
 }
-if($('doctor-section')){const a=document.createElement('a');a.href='#doctor-section';a.textContent=lesson>=4?'Bài bổ trợ':'Bác sĩ AI';nav.append(a);}
+if($('doctor-section')&&!$('doctor-section').hidden){const a=document.createElement('a');a.href='#doctor-section';a.textContent=lesson>=4?'Bài bổ trợ':'Bác sĩ AI';nav.append(a);}
 $('homework-content').prepend(nav);
 const note=document.createElement('p');note.className='journey-note';
 document.querySelector('.submission-progress').after(note,$('draft-status'));

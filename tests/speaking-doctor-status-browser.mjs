@@ -34,6 +34,10 @@ try{for(const lesson of [2,8].filter(n=>!process.env.SPEAKING_LESSON_FILTER||pro
  await page.locator('#class-select').selectOption('LOPMAU');await page.waitForFunction(()=>!document.getElementById('student-select').disabled);
  await page.locator('#student-select').selectOption(ref);await page.locator('#open-homework').click();
  await page.locator('#completion-card').waitFor({state:'visible'});
+ if(lesson===2){
+   assert.equal(await page.locator('#doctor-section').isVisible(),false);
+   assert.equal(await page.locator('#extra-practice').isVisible(),false);
+ }else{
  const text=await page.locator('#extra-history').innerText();
  if(status==='review'){assert.match(text,/kiểm lại/);assert.doesNotMatch(text,/đang phân tích/);assert.match(await page.locator('#doctor-sync').innerText(),/kiểm lại/);}
  if(status==='done')assert.match(text,/Đã phân tích/);
@@ -41,6 +45,7 @@ try{for(const lesson of [2,8].filter(n=>!process.env.SPEAKING_LESSON_FILTER||pro
  if(status==='processing')assert.match(text,/đang phân tích/);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
  if(status==='review'){await page.locator('#doctor-sync').scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/doctor-review-${lesson}-${width}.png`});}
+ }
  assert.deepEqual(errors,[]);assert.equal(writes,0);results.push({lesson,width,status,outcome:'passed',submitCalls:0});await context.close();
 }}finally{await writeFile(out+'/browser-results.json',JSON.stringify(results,null,2));await browser.close();await new Promise(r=>server.close(r));}
 console.log(JSON.stringify({outcome:'passed',cases:results.length,submitCalls:0}));
