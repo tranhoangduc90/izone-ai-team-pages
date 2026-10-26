@@ -330,8 +330,11 @@ function adaptServerScreen(){
     const f=Object.values(state.feedback||{}),counts={correct:0,partial:0,incorrect:0,blank:0};f.forEach(v=>{if(v.status in counts)counts[v.status]++;});
     const problem=content.targets.find(t=>state.feedback[t.id]?.status!=='correct');
     result.innerHTML='<strong>Đã có bài chấm · Lượt làm '+(state.serverAttempt?.runNo||1)+'</strong><span> '+counts.correct+' đúng · '+counts.partial+' đúng một phần · '+counts.incorrect+' cần sửa · '+counts.blank+' bỏ trống</span>'+(problem?'<button class="quiet" data-action="repair-start">Xem phần cần sửa ↓</button>':'')+(state.serverAttempt?.fromCache?'<small> Bài không đổi — dùng lại kết quả đã lưu.</small>':'');
+    if(state.serverAttempt?.recovery){const receipt=document.createElement('small');receipt.textContent='Đã phục hồi lượt chấm trước đó bị lỗi. Giữ nguyên bản nộp và lượt làm; lịch sử xử lý được lưu trên máy chủ.';result.append(receipt);}
   }
-  const waiting=document.querySelector('.waiting-card');if(waiting)waiting.innerHTML='<span class="spinner"></span><span><strong>'+(latestServerAttempt?.status==='processing'?'Đang chấm bằng Read 67':'Đã nhận bài · Đang chờ chấm')+'</strong><br>Nhận xét sẽ được lưu trên máy chủ. <button class="quiet" data-action="server-return-draft">Tiếp tục chỉnh nháp →</button></span>';
+  const stage=latestServerAttempt?.validationProgress;
+  const waitingLabel=stage?.service_error?'Đang chờ dịch vụ AI · Bài đã được lưu':stage?.phase==='repair'?'Đang bổ sung nhận xét cho một số phần':stage?.phase==='review'?'Đang kiểm tra nội dung chấm':stage&&latestServerAttempt?.status==='queued'?'Đang chờ dịch vụ AI · Bài đã được lưu':latestServerAttempt?.status==='processing'?'Đang chấm bằng Read 67':'Đã nhận bài · Đang chờ chấm';
+  const waiting=document.querySelector('.waiting-card');if(waiting)waiting.innerHTML='<span class="spinner"></span><span><strong>'+waitingLabel+'</strong><br>Bài gửi đã được lưu. Kết quả chỉ hoàn tất sau khi đủ nội dung và qua kiểm tra. <button class="quiet" data-action="server-return-draft">Tiếp tục chỉnh nháp →</button></span>';
   if(state.status==='waiting')document.querySelector('.footer-tools [data-action="show-result"]')?.setAttribute('hidden','');
   if(teacher){document.querySelector('.footer-tools [data-action="edit"]')?.remove();document.querySelector('#grade-button')?.remove();}
   else if(state.status==='draft'){const b=document.querySelector('#grade-button');if(b)b.textContent=serverClient.initialHistory?.attempts?.some(a=>a.status==='done')?'Chấm lại bản sửa':'Nộp bài để chấm';}
