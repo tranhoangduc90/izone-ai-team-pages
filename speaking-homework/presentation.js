@@ -2,10 +2,10 @@
 // Không tạo kết quả, biên nhận hoặc dữ liệu học viên mẫu trên trang phát hành.
 import { installTeacherEntry } from '../shared/teacher-entry.js?v=20261019-v1';
 const lesson=Number(document.body.dataset.speakingLesson);
-await import(lesson===2?'./lesson-2-live.js?v=20261026-lesson2':lesson===3?'./lesson-3-live.js?v=20261025-progress1':'./lesson-4-live.js?v=20261026-lesson13');
+await import(lesson===2?'./lesson-2-live.js?v=20261026-lesson2':lesson===3?'./lesson-3-live.js?v=20261025-progress1':'./lesson-4-live.js?v=20261026-lesson15-v2');
 const $=id=>document.getElementById(id);
 document.body.classList.add('speaking-design');
-const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh',9:'Full câu với ChatGPT · Freestyle',10:'Kể chuyện: Bối cảnh và Trình tự',11:'Kể chuyện: Diễn biến chi tiết',12:'Kể chuyện: Kết cục và ý nghĩa',13:'Mở bài và miêu tả chi tiết một vật'};
+const topics={2:'Diễn đạt theo cách của bạn',3:'Làm rõ điều muốn nói',4:'Nối ý, mở rộng câu trả lời',5:'Ôn tập Làm rõ và Chèn điểm giữa',6:'Lý do đằng sau hành động',7:'Cách làm một việc',8:'Ôn tập So sánh',9:'Full câu với ChatGPT · Freestyle',10:'Kể chuyện: Bối cảnh và Trình tự',11:'Kể chuyện: Diễn biến chi tiết',15:'Tả người: Giới thiệu, Đặc điểm và Kết thúc',12:'Kể chuyện: Kết cục và ý nghĩa',13:'Mở bài và miêu tả chi tiết một vật'};
 const header=document.createElement('header');header.className='studio-header';
 header.innerHTML='<a href="./index.html" class="studio-brand" aria-label="IZONE"><img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"></a><span>Speaking <i>/</i> Khóa 6.0–7.0</span>';
 document.querySelector('.page-shell').prepend(header);
