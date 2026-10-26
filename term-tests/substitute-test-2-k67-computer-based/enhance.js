@@ -5,7 +5,9 @@
   const testConfig = window.TERM_TEST_CONFIG;
   const appConfig = window.TERM_TEST_APP_CONFIG;
   const query = new URLSearchParams(window.location.search);
-  const classCode = (query.get('class') || '').trim().toUpperCase();
+  const classHint = (query.get('class') || '').trim().toUpperCase();
+  const classCode = query.get('demo') === 'exam' && query.get('grading') === 'server'
+    ? window.SUBSTITUTE_STATE.resolveClass(classHint) : classHint;
   const isDemo = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
   const serverGradingMode = query.get('demo') === 'exam' && query.get('grading') === 'server';
 

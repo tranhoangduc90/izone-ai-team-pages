@@ -7,6 +7,8 @@ const backend=process.env.SUBSTITUTE_BACKEND_ROOT;
 // Chế độ nhận diện kiểm UI với biên nhận giả; không giả rằng SQLite cũ là production mới.
 const fixture = process.env.SUBSTITUTE_IDENTITY_UI_FIXTURE === 'true';
 const emptyListening = process.env.SUBSTITUTE_EMPTY_LISTENING_FIXTURE === 'true';
+const staleClassUrl = process.env.SUBSTITUTE_STALE_CLASS_FIXTURE === 'true';
+const completeListening = process.env.SUBSTITUTE_COMPLETE_LISTENING_FIXTURE === 'true';
 if(!fixture&&!backend)throw Error('Cần backend đã đối chiếu hoặc chọn fixture UI giả.');
 const {SubstituteStore,TESTS,gradingFromReadback}=fixture
  ?await import('./fixtures/substitute-identity-store.mjs')
@@ -20,6 +22,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.
 const browser=await chromium.launch({channel:'msedge',headless:true});
 try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TEST_SLUG||slug===process.env.SUBSTITUTE_TEST_SLUG)){
  const store=new SubstituteStore({encryptionKey:randomBytes(32)});store.configureWritingRelease('substitute-test-2-k67','open');
+ const testClass=staleClassUrl?(slug.endsWith('k67')?'IC2063':'IC2264'):'DEMO';
  const context=await browser.newContext({serviceWorkers:'block',viewport:{width:slug.endsWith('k67')?390:1440,height:1000}}),errors=[];
  let fault=null,acceptedWriting=0,gradeCalls=0;
  await context.addInitScript(()=>{
@@ -30,16 +33,19 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
  });
  await context.route('**/*',async route=>{
   const request=route.request(),url=request.url();
+  // Media thật được kiểm riêng; runner nộp bài không tải/hash 30 phút audio.
+  if(url.startsWith(base+'/shared/audio/transport.mjs'))return route.fulfill({status:200,contentType:'text/javascript',body:'export async function downloadSubstitute(){return null;}'});
   if(/\.(mp3|wav|m4a|ogg|enc)(?:\?|$)/i.test(url))return route.fulfill({status:200,body:Buffer.alloc(64),contentType:'audio/mpeg'});
   if(url.startsWith(base))return route.continue();
   if(/googleusercontent|drive\.google|\/audio/.test(url))return route.fulfill({status:200,body:Buffer.alloc(64),contentType:'audio/mpeg'});
   if(!url.includes('/webhook/'))return route.abort();
   const {route:api,payload={}}=request.postDataJSON(),id={...payload,testSlug:slug};let response={},status=200;
+  if(!['/api/test/history','/api/test/roster'].includes(api))assert.equal(payload.classCode,testClass,'Payload phải giữ lớp đã xác nhận');
   if(fault&&fault!=='lost-ack'&&['/api/test/grade','/api/test/writing'].includes(api)){
    const value=fault;fault=null;return route.fulfill({status:value==='http'?502:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:value==='empty'?'':JSON.stringify(value==='http'?{ok:false,code:'SUBSTITUTE_SAVE_UNCONFIRMED',message:'Lỗi thử có kiểm soát'}:{accepted:true})});
   }
   try{
-   if(api==='/api/test/history')response={...store.historyState(id),examTimingVersion:'substitute-audio-transfer-20261014-v1',classes:[{code:'DEMO',name:'DEMO'}],...(slug==='substitute-test-2-k67'?{writingVersions:{DEMO:'substitute-k67-test2-two-task-20261007-v1'}}:{})};
+   if(api==='/api/test/history')response={...store.historyState(id),examTimingVersion:'substitute-audio-transfer-20261014-v1',classes:[{code:testClass,name:testClass}],...(slug==='substitute-test-2-k67'?{writingVersions:{[testClass]:'substitute-k67-test2-two-task-20261007-v1'}}:{})};
    else if(api==='/api/test/roster')response={students:[{ref:'fictional-01',name:'Học viên giả'}]};
    else if(api==='/api/test/exam/session')response=store.startExamSession(id);
    else if(api==='/api/test/writing/session')response=store.startWritingSession(id);
@@ -64,24 +70,26 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>cancelSubmit?d.dismiss():d.accept());
  try{
   await page.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server&class=DEMO');
-  await page.locator('#bootstrapClass').selectOption('DEMO');await page.locator('#bootstrapStudent option:not([value=""])').first().waitFor({state:'attached'});
+  await page.locator('#bootstrapClass').selectOption(testClass);await page.locator('#bootstrapStudent option:not([value=""])').first().waitFor({state:'attached'});
   const selectedStudent=await page.locator('#bootstrapStudent option:not([value=""])').first().getAttribute('value');
-  await page.locator('#bootstrapStudent').selectOption(selectedStudent);await page.locator('#confirmIdentity').click();await page.locator('#bootstrapPreview:enabled').click();await page.locator('#bootstrapStart:enabled').click();
+  await page.locator('#bootstrapStudent').selectOption(selectedStudent);await page.locator('#confirmIdentity').click();await page.locator('#bootstrapPreview:enabled').click();
+  if(staleClassUrl)await page.evaluate(()=>{const u=new URL(location.href);u.searchParams.delete('class');history.replaceState(null,'',u);});
+  await page.locator('#bootstrapStart:enabled').click();
   await page.locator('#listeningView').waitFor({state:'visible'});
   // Tái hiện 39/40 câu: câu cuối trống vẫn được nộp sớm sau xác nhận.
-  if(!emptyListening)await page.evaluate(()=>{
+  if(!emptyListening)await page.evaluate(complete=>{
    for(const field of document.querySelectorAll('#listeningQuestions [data-number]')){
-    field.value=Number(field.dataset.number)===40?'':field.tagName==='SELECT'?field.options[1].value:'Fixture';
+    field.value=Number(field.dataset.number)===40&&!complete?'':field.tagName==='SELECT'?field.options[1].value:'Fixture';
     field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));
    }
-  });
-  assert.match(await page.locator('#listeningCount').innerText(),emptyListening?/0\/40/:/39\/40/);
+  },completeListening);
+  assert.match(await page.locator('#listeningCount').innerText(),emptyListening?/0\/40/:completeListening?/40\/40/:/39\/40/);
   // Hủy xác nhận khi còn câu trống phải giữ audio đang chạy và giữ màn làm bài.
-  cancelSubmit=true;
+  if(!completeListening){cancelSubmit=true;
   await page.locator('#submitListening').click();
   assert.equal(await page.locator('#listeningView').isVisible(),true);
   assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),false,'Hủy nộp không được dừng audio');
-  cancelSubmit=false;
+  cancelSubmit=false;}
   for(const[skill,button]of [['listening','#submitListening'],['reading','#submitReading']]){
    const view=page.locator('#'+skill+'View'),textAnswer=view.locator('input[type="text"]:visible').first();
    const answer=await textAnswer.count()?textAnswer:view.locator('select:visible').first();
@@ -107,7 +115,7 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
    if(skill==='listening'){
     const run=await page.evaluate(()=>window.SUBSTITUTE_STATE.payload({}));
     const saved=store.readSectionSubmission({...run,testSlug:slug,skill});
-    assert.equal(saved.section.details.filter(d=>d.studentAnswer).length,emptyListening?0:39);
+    assert.equal(saved.section.details.filter(d=>d.studentAnswer).length,emptyListening?0:completeListening?40:39);
    }
    if(skill==='listening'){assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),true,'Chỉ dừng audio sau xác nhận lưu');assert.equal(store.db.prepare('SELECT audio_ended_at FROM exam_session').get().audio_ended_at,null);await page.locator('#startReading').click();await page.locator('#readingView').waitFor({state:'visible'});}
   }
@@ -125,6 +133,7 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
   assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);
   await page.reload();await page.locator('#resultView').waitFor({state:'visible'});assert.match(await page.locator('#summaryGrid').innerText(),emptyListening?/0\/40/:/1\/40/);
   assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({slug,ok:true,answeredListening:emptyListening?0:39,earlyBeforeAudioEnd:true,failuresKeepDrafts:true,lostAckRecovered:true,doubleSubmitNoDuplicate:true,resultsAfterWriting:true,reloadNoDuplicate:true,realAI:false,portalWrites:0}));
- }finally{await context.unrouteAll({behavior:'ignoreErrors'});await context.close();store.close();}
+  console.log(JSON.stringify({slug,ok:true,answeredListening:emptyListening?0:completeListening?40:39,staleClassUrl,earlyBeforeAudioEnd:true,failuresKeepDrafts:true,lostAckRecovered:true,doubleSubmitNoDuplicate:true,resultsAfterWriting:true,reloadNoDuplicate:true,realAI:false,portalWrites:0}));
+ }catch(error){console.error(JSON.stringify({slug,errors,...await page.evaluate(()=>({notice:document.querySelector('#bootstrapNotice')?.textContent,download:document.querySelector('#bootstrapDownloadStatus')?.textContent}))}));throw error;}
+ finally{await context.unrouteAll({behavior:'ignoreErrors'});await context.close();store.close();}
 }}finally{await browser.close();await new Promise(r=>server.close(r));}

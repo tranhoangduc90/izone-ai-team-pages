@@ -1,1 +1,1 @@
-import '../substitute-shared/teacher-results.js?rev=20261023-sso-all';
+import '../substitute-shared/teacher-results.js?rev=20261026-portal-recovery-v1';

@@ -42,7 +42,7 @@
       <form id="extra-filters" class="extra-filters" hidden>
         <label>Tên học viên<input id="name-filter" type="search" maxlength="100" placeholder="Tìm tên học viên" autocomplete="off"></label>
         <label>Chấm Writing<select id="writing-filter"><option value="">Tất cả trạng thái</option><option value="ready">Đã chấm</option><option value="queued">Chờ chấm</option><option value="processing">Đang chấm</option><option value="incomplete">Thiếu bài</option><option value="failed">Cần kiểm tra</option></select></label>
-        <label>Đồng bộ Portal<select id="portal-filter"><option value="">Tất cả trạng thái</option><option value="synced">Đã xác nhận đồng bộ</option><option value="pending">Chờ đồng bộ</option><option value="blocked">Bị chặn, chưa ghi</option><option value="unknown">Cần đối soát</option><option value="not_applicable">DEMO · không gửi</option></select></label>
+        <label>Đồng bộ Portal<select id="portal-filter"><option value="">Tất cả trạng thái</option><option value="synced">Đã xác nhận đồng bộ</option><option value="pending">Chờ đồng bộ</option><option value="waiting_destination">Chờ khởi tạo điểm</option><option value="blocked">Cần xử lý, chưa xác nhận</option><option value="unknown">Cần đối soát</option><option value="not_applicable">DEMO · không gửi</option></select></label>
         <label>Từ ngày (giờ Việt Nam)<input id="from-filter" type="date"></label>
         <label>Đến hết ngày (giờ Việt Nam)<input id="to-filter" type="date"></label>
         <div class="filter-actions"><button id="apply-filters" class="button button-primary" type="submit">Áp dụng</button><button id="reset-filters" class="button button-secondary" type="button">Xóa bộ lọc</button></div>
@@ -61,6 +61,6 @@
   <script src="../k67-shared/review-audio.js?v=20261021-v1"></script>
   <script src="../k67-shared/answer-explanations.js?rev=20261024-cf512-1&journal=20261024-startup-v2"></script>
   <script src="../substitute-shared/answer-explanation-adapter.js?v=20261021-v1"></script>
-  <script type="module" src="./app.js?rev=20261023-sso-all-port"></script>
+  <script type="module" src="./app.js?rev=20261023-sso-all-port&recovery=20261026-v1"></script>
 </body>
 </html>

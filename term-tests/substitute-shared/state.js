@@ -26,15 +26,33 @@
   function bind(value){
     if(!meta||blocked)throw new Error('Phiên làm bài không còn hợp lệ.');
     const previous=binding;
-    binding={testSlug:meta.testSlug,historyEpoch:meta.historyEpoch,classCode:String(value.classCode||'').toUpperCase(),
+    const next={testSlug:meta.testSlug,historyEpoch:meta.historyEpoch,classCode:String(value.classCode||'').trim().toUpperCase(),
       studentRef:String(value.studentRef||''),clientRunId:String(value.clientRunId||''),attemptToken:String(value.attemptToken||''),
       ...(value.examVersion?{examVersion:value.examVersion}:{})};
-    if(value.examSessionId)binding.examSessionId=value.examSessionId;
-    else if(previous?.examSessionId&&['classCode','studentRef','clientRunId'].every(key=>previous[key]===binding[key]))binding.examSessionId=previous.examSessionId;
-    if(meta.testSlug==='substitute-test-2-k67'&&value.writingSessionId)binding.writingSessionId=value.writingSessionId;
-    if(binding.examVersion&&(binding.testSlug!=='substitute-test-2-k67'||binding.examVersion!=='substitute-k67-test2-two-task-20261007-v1'))throw new Error('Phiên bản Writing không hợp lệ.');
-    if(!uuid.test(binding.clientRunId)||!binding.studentRef)throw new Error('Thiếu định danh lượt làm bài.');
+    if(value.examSessionId)next.examSessionId=value.examSessionId;
+    else if(previous?.examSessionId&&['classCode','studentRef','clientRunId'].every(key=>previous[key]===next[key]))next.examSessionId=previous.examSessionId;
+    if(meta.testSlug==='substitute-test-2-k67'&&value.writingSessionId)next.writingSessionId=value.writingSessionId;
+    if(next.examVersion&&(next.testSlug!=='substitute-test-2-k67'||next.examVersion!=='substitute-k67-test2-two-task-20261007-v1'))throw new Error('Phiên bản Writing không hợp lệ.');
+    if(!uuid.test(next.clientRunId)||!next.studentRef||!next.classCode||meta.classes&&!meta.classes.some(c=>c.code===next.classCode))throw new Error('Thiếu định danh lượt làm bài.');
+    // Phòng chờ có thể chọn lại; khi bài đã mở thì không đổi chủ lượt bằng URL/state cũ.
+    const confirmed=window.TERM_TEST_BOOTSTRAP;
+    if(confirmed&&['classCode','studentRef','clientRunId'].some(key=>String(confirmed[key]||'')!==next[key]))throw new Error('Định danh lượt không khớp. Hãy tải lại đúng trang đang làm; bản nháp được giữ nguyên.');
+    binding=next;
+    if(window.location?.href&&window.history?.replaceState){
+      try{
+        const url=new URL(window.location.href);
+        if(url.searchParams.get('class')!==binding.classCode){
+          url.searchParams.set('class',binding.classCode);
+          window.history.replaceState(window.history.state??null,'',url.href);
+        }
+      }catch{/* URL chỉ là gợi ý; trình duyệt chặn history vẫn giữ định danh trong RAM. */}
+    }
     return {...binding};
+  }
+  function resolveClass(hint=''){
+    const confirmed=window.TERM_TEST_BOOTSTRAP;
+    if(binding&&confirmed&&['classCode','studentRef','clientRunId'].some(key=>String(confirmed[key]||'')!==binding[key]))throw new Error('Định danh lượt không khớp. Hãy tải lại đúng trang đang làm.');
+    return binding?.classCode||confirmed?.classCode||String(hint).trim().toUpperCase();
   }
   function key(prefix,namespace,{lobby=false}={}){
     if(!meta)throw new Error('Chưa xác nhận phiên dữ liệu.');
@@ -90,5 +108,5 @@
   function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch,...(binding?{classCode:binding.classCode,studentRef:binding.studentRef,clientRunId:binding.clientRunId}:{}),...(binding?.examSessionId?{examSessionId:binding.examSessionId}:{}),...(binding?.examVersion?{examVersion:binding.examVersion}:{}),...(binding?.writingSessionId?{writingSessionId:binding.writingSessionId}:{})};}
   function track(controller){if(blocked)controller.abort();else controllers.add(controller);return ()=>controllers.delete(controller);}
   window.addEventListener('storage',event=>{if(meta&&canReset(meta.testSlug)&&event.key==='izone-demo-reset:'+meta.testSlug+':DEMO:server-grade'&&event.newValue)stop();});
-  window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,key,accept,stamp,canReset,clear,payload,track,stop,storages:stores,get blocked(){return blocked;},get meta(){return meta;}});
+  window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,resolveClass,key,accept,stamp,canReset,clear,payload,track,stop,storages:stores,get blocked(){return blocked;},get meta(){return meta;}});
 }());

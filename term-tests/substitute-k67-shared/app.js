@@ -6,7 +6,9 @@
   const appConfig = window.TERM_TEST_APP_CONFIG;
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
-  const classCode = (query.get('class') || '').trim().toUpperCase();
+  const classHint = (query.get('class') || '').trim().toUpperCase();
+  const classCode = query.get('demo') === 'exam' && query.get('grading') === 'server'
+    ? window.SUBSTITUTE_STATE.resolveClass(classHint) : classHint;
   const requestedDemo = query.get('demo') || '';
   const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
   const twoTaskWriting = testConfig?.slug === 'substitute-test-2-k67'
