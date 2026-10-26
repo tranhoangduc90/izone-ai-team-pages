@@ -10,8 +10,8 @@ function boot(classCode='IC2213',slug='term-test-2') {
   vm.runInNewContext(script,{window:win,location:{search:'?class='+classCode},URLSearchParams,document:{getElementById:()=>notice}});
   return{win,calls,notice,verify};
 }
-test('IC2213 giữ xác minh file và chọn Pages mà không sửa manifest/quyền gốc',()=>{
-  const f=boot(),manifest={sha256:'same',cloudflare:{version:1},url:'same-public-file'},options={signal:{}};
+for (const classCode of ['IC2213','IC2207']) test(`${classCode} giữ xác minh file và chọn Pages mà không sửa manifest/quyền gốc`,()=>{
+  const f=boot(classCode),manifest={sha256:'same',cloudflare:{version:1},url:'same-public-file'},options={signal:{}};
   assert.equal(f.win.K67_PUBLIC_AUDIO.download(manifest,options),'checked-blob');
   assert.equal(f.calls[0].manifest.cloudflare,undefined);
   assert.equal(f.calls[0].manifest.sha256,manifest.sha256);

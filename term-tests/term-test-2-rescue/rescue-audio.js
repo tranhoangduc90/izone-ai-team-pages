@@ -5,9 +5,9 @@
   'use strict';
   const classCode = new URLSearchParams(location.search).get('class')?.trim().toUpperCase();
   const current = window.K67_PUBLIC_AUDIO;
-  if (classCode !== 'IC2213' || window.TERM_TEST_CONFIG?.slug !== 'term-test-2' || !current) {
+  if (!['IC2213', 'IC2207'].includes(classCode) || window.TERM_TEST_CONFIG?.slug !== 'term-test-2' || !current) {
     window.TERM_TEST_APP_CONFIG = undefined;
-    document.getElementById('app').textContent = 'Link dự phòng này dành cho Term Test 2 lớp IC2213. Hãy dùng đúng link giáo viên gửi.';
+    document.getElementById('app').textContent = 'Link dự phòng này dành cho Term Test 2 lớp IC2213 hoặc IC2207. Hãy dùng đúng link giáo viên gửi.';
     return;
   }
   const download = current.download;
