@@ -20,11 +20,11 @@
         <p>Nhập mã lớp để mở đúng danh sách học viên, sau đó chọn bài test.</p>
         <section class="landing-auth" aria-label="Đăng nhập giảng viên">
           <div>
-            <strong id="loginBadge">Giảng viên chưa đăng nhập</strong>
-            <p id="loginStatus" role="status">Đăng nhập Google để chọn nhanh lớp bạn đang hoặc đã dạy.</p>
+            <strong id="loginBadge">Đang xác minh đăng nhập…</strong>
+            <p id="loginStatus" role="status">Đang khôi phục đăng nhập của bạn…</p>
           </div>
-          <div id="googleSignInButton"></div>
-          <label class="teacher-login-remember"><input id="rememberTeacherLogin" type="checkbox"> Tự đăng nhập Google trên thiết bị này</label>
+          <div id="teacher-login-controls" hidden><div id="googleSignInButton"></div>
+          <label class="teacher-login-remember"><input id="rememberTeacherLogin" type="checkbox"> Tự đăng nhập Google trên thiết bị này</label></div>
           <button class="button button-secondary landing-logout" id="logoutButton" type="button" hidden>Đăng xuất</button>
         </section>
         <div class="landing-class-field">
@@ -65,6 +65,6 @@
       </section>
     </main>
     <script src="k67-shared/config.js?rev=20261006-k67-backend"></script>
-    <script type="module" src="shared/landing.js?rev=20261014-order-v1&startup=20261026-v1"></script>
+    <script type="module" src="shared/landing.js?rev=20261014-order-v1&startup=20261026-v2"></script>
   </body>
 </html>

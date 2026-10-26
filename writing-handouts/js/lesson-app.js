@@ -1,4 +1,4 @@
-import { createLessonApi } from "./api.js?v=20260911-load-guard-v1&startup=20261026-v1";
+import { createLessonApi } from "./api.js?v=20260911-load-guard-v1&startup=20261026-v2";
 import { installStudentMemory } from "./shared-student-memory-ui.js?v=20261018-identity-v1";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, isConflict, pollingDelayWithJitter, randomDelay, retryDelay, safeLmsUrl, terminalResult, wordCount } from "./core.js?v=20260921-draft-result-v1";

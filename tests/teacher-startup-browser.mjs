@@ -23,7 +23,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 const records=[];
 try{
  for(const variant of variants.filter(v=>!process.env.TEACHER_STARTUP_PRODUCTS||process.env.TEACHER_STARTUP_PRODUCTS.split(',').includes(v.id)))for(const scenario of (process.env.TEACHER_STARTUP_SCENARIOS||'active').split(','))for(let round=0;round<Number(process.env.TEACHER_STARTUP_ROUNDS||1);round++){
-  let mode=scenario;
+  let mode=scenario,googleLoads=0;
   const width=Number(process.env.TEACHER_STARTUP_WIDTH||1440);
   const context=await browser.newContext({viewport:{width,height:900}});
   const calls=[],errors=[],escaped=[];
@@ -43,7 +43,7 @@ try{
      const body=await fs.readFile(file);return route.fulfill({body,contentType:({'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.woff2':'font/woff2'})[extname(file)]||'application/octet-stream'});
     }catch{return route.fulfill({status:404,body:''});}
    }
-   if(u.hostname==='accounts.google.com')return route.fulfill({contentType:'text/javascript',body:gis});
+   if(u.hostname==='accounts.google.com'){googleLoads++;return route.fulfill({contentType:'text/javascript',body:gis});}
    if(u.hostname!=='ducizone.ddns.net'){escaped.push(u.origin);return route.abort();}
    calls.push({path:p,method:req.method(),at:performance.now()});
    await delay(150);
@@ -80,6 +80,7 @@ try{
   }
   catch(error){console.log(JSON.stringify({product:variant.id,calls,errors,escaped,body:await page.locator('body').innerText()}));throw error;}
   const readyMs=Math.round(performance.now()-started),frames=await page.evaluate(()=>window.__startupFrames);
+  if(scenario==='active')assert.equal(googleLoads,0,'Phiên còn hiệu lực không tải Google');
   const record={product:variant.id,scenario,width,round,readyMs,loginVisibleFrames:frames.length,restores:calls.filter(c=>c.path.includes('/restore/')).length,sessionReads:calls.filter(c=>c.path.endsWith('/auth/session')).length,requests:calls.map(c=>({path:c.path,method:c.method,startMs:Math.round(c.at-started)})),errors,escaped};
   records.push(record);
   if(round===0)await page.screenshot({path:resolve(out,variant.id+'-'+scenario+'-'+width+'.png'),fullPage:true});

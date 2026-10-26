@@ -12,7 +12,7 @@ import {
   writingStatusLabel,
   writingTaskStateLabel
 } from './model.js?rev=20260904-k56-demo-v1';
-import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v2';
 import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261019-v1';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 

@@ -1,4 +1,5 @@
-import '../../shared/teacher-single-sign-on.js?v=20261026-startup1';
+import '../../shared/teacher-single-sign-on.js?v=20261026-startup2&startup=20261026-v2';
+import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
 import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261025-l11-ideas-v4';
 import {workflowFor,isWhole,isMulti,isPrepared,bodyKey,bodyIndexOf} from '../shared/workflow.mjs?v=20261025-l11-ideas-v4';
 import {teacherBodies} from '../shared/multi-body-teacher.mjs?v=20261025-l11-ideas-v4';
@@ -14,6 +15,17 @@ installStyles();
 const base=(globalThis.handout67ApiBase||'https://ducizone.ddns.net/api/handout67/v1')+'/teacher';
 const lessonActivity=globalThis.handout67Lesson?.activity||'lesson5';
 const $=id=>document.getElementById(id);
+const authView=createTeacherAuthState({panel:$('login'),notice:$('teacher-startup-status'),retry:()=>boot(),hideOnReady:true});
+let googleSetup;
+async function setupGoogle(){
+ if(googleSetup)return googleSetup;
+ googleSetup=(async()=>{
+  const {clientId}=await request('/config');
+  if(!window.google?.accounts?.id)await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=resolve;script.onerror=()=>{script.remove();reject(Error('Chưa tải được đăng nhập Google. Hãy thử lại.'));};document.head.append(script);});
+  window.google.accounts.id.initialize({client_id:clientId,callback:login,auto_select:false});
+  window.google.accounts.id.renderButton($('google-signin'),{theme:'outline',size:'large',text:'signin_with',locale:'vi'});
+ })().catch(error=>{googleSetup=null;throw error;});return googleSetup;
+}
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={si1:'Cả chuỗi ý 1',si2:'Cả chuỗi ý 2',topic:'Topic sentence và idea',b1:'Điểm B · Ý 1',a1:'Điểm A · Ý 1',x1:'Cầu nối X · Ý 1',b2:'Điểm B · Ý 2',a2:'Điểm A · Ý 2',x2:'Cầu nối X · Ý 2',idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic sentence'};
 if(multi)for(const b of [1,2]){for(const [k,v] of Object.entries({...labels}))if(!bodyIndexOf(k))labels[bodyKey(b,k)]=v+' · Thân bài '+b;for(const [k,v] of Object.entries({...names}))if(!bodyIndexOf(k))names[bodyKey(b,k)]=v+' · Thân bài '+b;}
@@ -138,7 +150,7 @@ async function enter(){
  if(requested&&!matched)throw Object.assign(new Error('TEACHER_FORBIDDEN'),{status:403});
  if(matched)$('class-select').value=matched;
  activeClass=$('class-select').value;
- $('login').hidden=true;$('dashboard').hidden=false;await refresh();if(current!==epoch)return;schedule();
+ authView.ready();$('dashboard').hidden=false;await refresh();if(current!==epoch)return;schedule();
 }
 async function login(response){if(authBusy)return;authBusy=true;try{const result=await request('/session','POST',{credential:response.credential});actorEmail=result.reviewer.email;await enter();$('login-error').hidden=true;}catch(e){report(e,'login-error');}finally{authBusy=false;}}
 $('refresh').addEventListener('click',()=>refresh(true));$('search').addEventListener('input',renderRows);$('status-filter').addEventListener('change',renderRows);$('order').addEventListener('change',renderRows);$('summary').addEventListener('click',event=>{const b=event.target.closest('[data-filter]');if(b){$('status-filter').value=$('status-filter').value===b.dataset.filter?'all':b.dataset.filter;renderRows();}});
@@ -210,7 +222,7 @@ $('detail-content').addEventListener('submit',async event=>{
  }catch(e){if(current===epoch&&selected?.ref===ref){status.dataset.state='error';status.textContent=e.message==='COMMENT_CONTENT_CHANGED'?'Nội dung trích đã thay đổi. Lời góp ý vẫn giữ; sao chép rồi hủy, cập nhật bài và chọn lại đoạn.':errorText(e);}}
  finally{sending=false;button.disabled=false;form.elements.body.disabled=false;}
 });
-$('logout').addEventListener('click',async()=>{if(authBusy)return;if(hasThreadDraft()&&!window.confirm('Bỏ lời trao đổi chưa gửi và đăng xuất?'))return;authBusy=true;epoch++;clearTimeout(timer);selected=null;composer=null;detailSession=null;actorEmail='';rows=[];$('detail-content').innerHTML='';delete $('detail-content').dataset.session;$('detail').close();$('detail').hidden=true;$('dashboard').hidden=true;$('login').hidden=true;$('students').innerHTML='';$('comment-text').value='';try{await request('/session','DELETE');}catch(e){report(e,'login-error');}finally{authBusy=false;$('login').hidden=false;}window.google?.accounts.id.disableAutoSelect();});
+$('logout').addEventListener('click',async()=>{if(authBusy)return;if(hasThreadDraft()&&!window.confirm('Bỏ lời trao đổi chưa gửi và đăng xuất?'))return;authBusy=true;epoch++;clearTimeout(timer);selected=null;composer=null;detailSession=null;actorEmail='';rows=[];$('detail-content').innerHTML='';delete $('detail-content').dataset.session;$('detail').close();$('detail').hidden=true;$('dashboard').hidden=true;$('login').hidden=true;$('students').innerHTML='';$('comment-text').value='';try{await request('/session','DELETE');}catch(e){report(e,'login-error');}finally{authBusy=false;authView.signedOut();await setupGoogle().catch(e=>report(e,'login-error'));}window.google?.accounts.id.disableAutoSelect();});
 $('comment-form').addEventListener('submit',async event=>{
  event.preventDefault();if(sending||!selected?.ref||!Number.isSafeInteger(detailVersion))return;
  if(composer){$('comment-status').textContent='Hãy gửi hoặc hủy comment đang soạn trước khi gửi góp ý theo phần; bản nháp đang được giữ.';return;}
@@ -219,9 +231,12 @@ $('comment-form').addEventListener('submit',async event=>{
  try{const value=await request('/sessions/'+ref+'/comments','POST',{section,feedback,expectedActor:actorEmail,expectedVersion:detailVersion,requestId:crypto.randomUUID()});if(current!==epoch||selected?.ref!==ref)return;detailSequence++;renderDetail(value.session);if($('comment-text').value.trim()===feedback)$('comment-text').value='';$('comment-status').textContent='Đã lưu góp ý; học viên sẽ thấy ở đúng phần bài.';await readActivity(ref);await refresh();}catch(e){if(current===epoch&&selected?.ref===ref)$('comment-status').textContent=errorText(e);}finally{sending=false;$('comment-submit').disabled=false;}
 });
 async function boot(){
- try{const result=await request('/session');actorEmail=result.reviewer.email;await enter();}catch(e){if(e.status!==401)report(e,'login-error');}
- if(globalThis.handout67ApiBase?.startsWith('http://127.0.0.1:3199/'))return;
- try{const {clientId}=await request('/config');let attempts=0;const setup=()=>{if(window.google?.accounts?.id){window.google.accounts.id.initialize({client_id:clientId,callback:login,auto_select:false});window.google.accounts.id.renderButton($('google-signin'),{theme:'outline',size:'large',text:'signin_with',locale:'vi'});}else if(attempts++<100)setTimeout(setup,100);else $('login-error').textContent='Chưa tải được nút Google. Hãy tải lại trang.';};setup();}catch(e){report(e,'login-error');}
+ authView.checking();
+ try{const result=await request('/session');actorEmail=result.reviewer.email;await enter();}
+ catch(e){
+  authView.failed(e);
+  if(e.status===401){authView.signedOut();if(!globalThis.handout67ApiBase?.startsWith('http://127.0.0.1:3199/'))await setupGoogle().catch(error=>{authView.failed(error);});}
+ }
 }
 $('detail').addEventListener('cancel',e=>{e.preventDefault();$('close-detail').click();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(timer);else if(!$('dashboard').hidden)void refresh();});

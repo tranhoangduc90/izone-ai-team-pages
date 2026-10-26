@@ -24,7 +24,7 @@ Frontend dùng [thư viện phiên chung](../shared/teacher-single-sign-on.js) t
 
 Broker production: `https://ducizone.ddns.net/teacher-session-api/v1`; các đường `restore/<product>`, `source/<product>`, `login/<product>` và `logout` chỉ dùng đúng kiểu adapter. Request có cookie, origin được phép và `X-Izone-Csrf: 1`. Đường `/teacher-session-api/internal/` bị chặn ngoài Internet; không đưa khóa consumer lên Pages.
 
-Nguồn đang đăng ký: `reading`, `listening`, `writing`, `mapping`, `term67`, `materials`, `k56`, `k56demo`, `handout67`, `substitute`. Progress Log/Speaking dùng nguồn Mapping; cổng Task 1/2 dùng nguồn Writing. Sản phẩm mới dùng mã nguồn riêng theo chức năng, không mượn danh tính sản phẩm khác chỉ để qua kiểm.
+Nguồn đang đăng ký: `reading`, `listening`, `writing`, `mapping`, `term67`, `materials`, `k56`, `k56demo`, `handout67`, `substitute`, `shops`. Progress Log/Speaking dùng nguồn Mapping; cổng Writing gốc/Task 1 dùng nguồn Writing; SW chuyên sâu/đề Shops dùng native `shops` ở `/shops-writing-api/api/v1/auth/session`. Sản phẩm mới dùng mã nguồn riêng theo chức năng, không mượn danh tính sản phẩm khác chỉ để qua kiểm.
 
 **Kiểm đúng origin thực tế, gồm cả cổng:** Term 67 hiện gọi `https://ducizone.ddns.net:18869/term-mini-k67-api`; thư viện nhận riêng origin này cho `term67`, còn broker/cầu nối dùng HTTPS 443. Không nới wildcard mọi port/host. Đây là nguyên nhân lỗi mở Term vẫn hỏi đăng nhập đã được khóa bằng test hồi quy ngày 23/10.
 
@@ -41,6 +41,8 @@ Term K67 và Progress Log dùng `sharedProduct` của client phiên để bỏ G
 Giao diện mặc định hiển thị **Đang khôi phục đăng nhập của bạn…**, ẩn form/checkbox từ HTML đầu tiên. Chỉ hiện Google khi chưa có/hết phiên và đã đọc lựa chọn ghi nhớ. Phân biệt thiếu quyền (403), lỗi dịch vụ và chưa có phiên (401); lỗi dịch vụ có thử lại, không trở thành đăng nhập thành công hoặc vòng tự đăng nhập. Kế thừa giao diện hiện hành từng sản phẩm. Entry/module đổi phải cập nhật query phiên bản xuyên chuỗi import/loader để tránh trình duyệt trộn HTML mới với JavaScript cũ.
 
 Kiểm hồi quy: `tests/teacher-sso-core.test.mjs`, `tests/term-test-teacher-session.mjs`, `tests/teacher-startup-browser.mjs`, bộ K56 navigation và browser cookie/consumer hiện có. Runner startup dùng HTML/JS thật, chặn toàn bộ API/Google bằng fixture; đo tới lúc có dữ liệu dùng được, ghi riêng số khung hình form xuất hiện và số lượt khôi phục. Số đo fixture không thay số đo thời gian production.
+
+Phạm vi từng sản phẩm/entry và các ngoại lệ vận hành: [bảng phủ khởi động hiện hành](TEACHER_LOGIN_STARTUP_COVERAGE.md). Hai consumer Shops/SW dùng cùng runtime đã tối ưu, giữ nguồn quyền native riêng.
 
 ## Kiểm khi tạo hoặc sửa sản phẩm có giảng viên
 

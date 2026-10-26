@@ -1,5 +1,5 @@
 // Cookie phiên chung được máy chủ xác minh; quyền Substitute vẫn do API riêng kiểm.
-import '../../shared/teacher-single-sign-on.js?v=20261026-startup1';
+import '../../shared/teacher-single-sign-on.js?v=20261026-startup2&startup=20261026-v2';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 import {appendWritingFeedback as appendFeedback} from './feedback-renderer.js?rev=20261009-results-v2';
 import {createProgressPanel} from './teacher-progress-panel.js?rev=20261019-v1';
@@ -175,7 +175,7 @@ async function initialize(){
   }
   authView.signedOut();$('login-heading').textContent='Đăng nhập xem kết quả';
   const config=await request('/teacher/config',{},undefined,false);
-  if(!window.google?.accounts?.id)await new Promise((resolve,reject)=>{const script=$('google-identity'),timer=setTimeout(()=>reject(new Error('Không tải được Google đăng nhập. Hãy tải lại trang.')),15000);script.addEventListener('load',()=>{clearTimeout(timer);resolve();},{once:true});script.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('Trình duyệt không tải được Google đăng nhập.'));},{once:true});});
+  if(!window.google?.accounts?.id)await new Promise((resolve,reject)=>{const script=document.createElement('script'),timer=setTimeout(()=>{script.remove();reject(new Error('Không tải được Google đăng nhập. Hãy tải lại trang.'));},15000);script.src='https://accounts.google.com/gsi/client';script.async=true;script.addEventListener('load',()=>{clearTimeout(timer);resolve();},{once:true});script.addEventListener('error',()=>{clearTimeout(timer);script.remove();reject(new Error('Trình duyệt không tải được Google đăng nhập.'));},{once:true});document.head.append(script);});
   window.google.accounts.id.initialize({client_id:config.googleClientId,callback:signIn,auto_select:false});
   window.google.accounts.id.renderButton($('google-signin'),{type:'standard',theme:'outline',size:'large',text:'signin_with',locale:'vi',width:270});
  }catch(error){authView.failed(error);$('login-heading').textContent='Chưa mở được sản phẩm';message(error.message,'error');}

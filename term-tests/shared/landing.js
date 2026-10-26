@@ -6,9 +6,10 @@
  */
 
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
-import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20261026-startup1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
 import { sortClassesNewestFirst } from './landing-model.js?rev=20260904-landing-google-auth-v1';
 
+import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const input = document.getElementById('classCode');
 const classSelect = document.getElementById('classSelect');
@@ -24,6 +25,8 @@ const sessionClient = createTeacherSessionClient({
   sessionPath: '/api/auth/session'
 });
 
+const authView=createTeacherAuthState({panel:document.getElementById('teacher-login-controls'),notice:loginStatus,badge:loginBadge,retry:()=>restoreSession()});
+let googleStarted=false;
 let authenticated = false;
 let loginGeneration = 0;
 let examMode = new URLSearchParams(location.search).get('mode') === 'read_first' ? 'read_first' : 'lis_first';
@@ -72,7 +75,7 @@ function showAuthorizedClasses(payload) {
   loginBadge.textContent = `Đã đăng nhập: ${reviewerName}`;
   loginStatus.textContent = `Đã tải ${classes.length} lớp.`;
   logoutButton.hidden = false;
-  googleSignInButton.hidden = true;
+  googleSignInButton.hidden = true;authView.ready();
 }
 
 async function loadAuthorizedClasses() {
@@ -103,12 +106,12 @@ async function connectSession(restoring = false) {
   try {
     await loadAuthorizedClasses();
   } catch (error) {
-    resetLogin();
-    loginStatus.textContent = `Không thể tải danh sách lớp: ${error.message}`;
+    resetLogin();authView.failed(error);if(authView.needsLogin)setupGoogleSignIn();
   }
 }
 
 function setupGoogleSignIn() {
+  if(googleStarted)return;googleStarted=true;
   if (!appConfig.GOOGLE_CLIENT_ID) {
     loginStatus.textContent = 'Chưa cấu hình Google OAuth Client ID.';
     return;
@@ -142,7 +145,7 @@ function setupGoogleSignIn() {
   script.async = true;
   script.defer = true;
   script.onload = renderButton;
-  script.onerror = () => { loginStatus.textContent = 'Không tải được nút đăng nhập Google.'; };
+  script.onerror = () => { googleStarted=false;authView.failed(new Error('Không tải được nút đăng nhập Google. Hãy thử lại.')); };
   document.head.append(script);
 }
 
@@ -167,7 +170,7 @@ document.getElementById('teacherDashboard')?.addEventListener('click', () => {
 
 logoutButton.addEventListener('click', async () => {
   try { await sessionClient.logout(); } catch { /* Vẫn xóa trạng thái hiển thị trên máy dùng chung. */ }
-  resetLogin();
+  resetLogin();authView.signedOut();setupGoogleSignIn();
   window.google?.accounts?.id?.disableAutoSelect?.();
   const forgotten = loginPreference.set(false);
   rememberTeacherLogin.checked = !forgotten;
@@ -181,12 +184,12 @@ rememberTeacherLogin.addEventListener('change', () => {
   loginStatus.textContent = 'Trình duyệt chưa lưu được lựa chọn tự đăng nhập.';
 });
 
-showManualEntry();
-void sessionClient.restore()
-  .then(async restored => {
-    if (!restored) return;
-    authenticated = true;
-    await connectSession(true);
-  })
-  .catch(error => { loginStatus.textContent = `Không thể khôi phục phiên: ${error.message}`; })
-  .finally(setupGoogleSignIn);
+async function restoreSession(){
+ showManualEntry();authView.checking();
+ try{
+  const restored=await sessionClient.restore();
+  if(!restored){authView.signedOut();setupGoogleSignIn();return;}
+  authenticated=true;await connectSession(true);
+ }catch(error){authView.failed(error);if(authView.needsLogin)setupGoogleSignIn();}
+}
+void restoreSession();

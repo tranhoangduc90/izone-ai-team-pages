@@ -8,6 +8,9 @@ const config = window.AI_GATEWAY_DASHBOARD_CONFIG || {};
 const $ = id => document.getElementById(id);
 const colors = { google_1:'#2878d0', google_2:'#16a085', google_3:'#f39c12', google_4:'#8e5bb7' };
 const statusText = { success:'Thành công', failed:'Thất bại', running:'Đang chạy' };
+import {createTeacherAuthState} from '../shared/teacher-auth-state.js?v=20261026-startup2';
+const authView=createTeacherAuthState({panel:$('loginView'),notice:$('loginNotice'),retry:()=>restoreSession(),hideOnReady:true});
+let googleStarted=false;
 const state = { authenticated:false, operator:null, workers:[], billing:[], shares:{}, summary:{} };
 const sessionClient = window.AIGatewaySessionClient.create({ baseUrl:config.API_BASE_URL });
 
@@ -113,6 +116,7 @@ async function api(path, { method='GET', body, reason } = {}) {
 }
 
 function showLogin(message='', kind='error') {
+  authView.signedOut();$('loginNotice').hidden=false;
   state.authenticated = false;
   state.operator = null;
   $('dashboardView').hidden = true;
@@ -125,6 +129,7 @@ function showLogin(message='', kind='error') {
 }
 
 function showDashboard() {
+  authView.ready();
   $('loginView').hidden = true;
   $('dashboardView').hidden = false;
   $('operatorBadge').textContent = `Đã đăng nhập: ${state.operator?.name || state.operator?.email || ''}`;
@@ -507,6 +512,7 @@ async function connectAfterGoogleLogin(credential) {
 }
 
 function initializeGoogle(attempt = 0) {
+  if(attempt===0){if(googleStarted)return;googleStarted=true;const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.onerror=()=>{googleStarted=false;authView.failed(new Error('Không tải được đăng nhập Google. Hãy thử lại.'));};document.head.append(script);}
   if (!config.API_BASE_URL || !config.GOOGLE_CLIENT_ID) {
     showLogin('Trang chưa được cấu hình đầy đủ.');
     return;
@@ -579,7 +585,7 @@ $('detailDialog').addEventListener('close', () => {
 window.addEventListener('resize', () => { if (state.authenticated) void loadUsage().catch(() => undefined); });
 
 async function restoreSession() {
-  showLogin('Đang kiểm tra phiên đăng nhập…', 'pending');
+  authView.checking();$('loginNotice').dataset.state='pending';
   try {
     const session = await sessionClient.restore();
     if (session) {
@@ -589,11 +595,12 @@ async function restoreSession() {
       await refreshAll();
       return;
     }
-    showLogin();
+    showLogin();initializeGoogle();
   } catch (error) {
-    showLogin(friendlyError(error.code, 'Không kiểm tra được phiên đăng nhập.'));
+    authView.failed(error);$('loginNotice').dataset.state='error';$('loginNotice').role='alert';
+    $('loginNotice').textContent=friendlyError(error.code,'Không kiểm tra được phiên đăng nhập.');
+    if(authView.needsLogin)initializeGoogle();
   }
-  initializeGoogle();
 }
 
 void restoreSession();

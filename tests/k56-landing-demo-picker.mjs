@@ -7,7 +7,7 @@ import * as model from '../term-tests/k56-demo/landing-model.js';
 const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
 const fakeClasses=[{name:'CODEXDEMO806'},{name:'IC2305'},{name:'IC2264'}];
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function element(){return {value:'',hidden:false,dataset:{},children:[],handlers:{},classList:{toggle(){}},setAttribute(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){}};}
+function element(){return {value:'',hidden:false,dataset:{},children:[],handlers:{},classList:{toggle(){}},setAttribute(){},removeAttribute(){},after(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){}};}
 async function fixture({query='?class=CODEXDEMO56&mode=lis_first',classes=fakeClasses,demoError='http',liveError=false,restoreError=false,authenticated=true,rosterOk=true}={}) {
  const elements=Object.fromEntries(['classCode','classSelect','classHelp','loginBadge','loginStatus','googleSignInButton','logoutButton','teacherDashboard'].map(id=>[id,element()]));
  const tests=['term-test-1-k56','term-test-2-k56','mini-test-k56'].map(slug=>Object.assign(element(),{dataset:{test:slug+'-computer-based',slug}}));
@@ -33,7 +33,7 @@ async function fixture({query='?class=CODEXDEMO56&mode=lis_first',classes=fakeCl
    return {ok:rosterOk,status:rosterOk?200:404,json:async()=>rosterOk?{ok:true,students:[{name:'Học viên giả',ref:'synthetic'}]}:{ok:false,message:'Synthetic roster missing'}};
   }
  });
- vm.runInContext(source,context);
+ vm.runInContext(fs.readFileSync(new URL('../shared/teacher-auth-state.js',import.meta.url),'utf8').replace('export function','function')+'\n'+source,context);
  await tick();await tick();
  return {elements,tests,modes,destinations,location,calls,history,context,names:()=>elements.classSelect.children.map(x=>x.value)};
 }

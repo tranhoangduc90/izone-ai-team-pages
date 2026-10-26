@@ -5,9 +5,10 @@
  * Khi lỗi: giữ ô nhập tay, không hiện dữ liệu lớp và báo rõ để người dùng thử đăng nhập lại.
  */
 
-import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v2';
 import { buildK56LandingClasses } from './landing-model.js?rev=20261020-demo-first-v1';
 
+import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const input = document.getElementById('classCode');
 const classSelect = document.getElementById('classSelect');
@@ -22,6 +23,8 @@ const sessionClients = new Map(apiBaseUrls.map(apiBaseUrl => [apiBaseUrl, create
   sessionPath: '/api/auth/session'
 })]));
 const authenticatedApiUrls = new Set();
+const authView=createTeacherAuthState({panel:googleSignInButton,notice:loginStatus,badge:loginBadge,retry:()=>restoreSessions()});
+let googleStarted=false;
 let loginGeneration = 0;
 const landingQuery = new URLSearchParams(location.search);
 let examMode = landingQuery.get('mode') === 'read_first' ? 'read_first' : 'lis_first';
@@ -85,9 +88,11 @@ function showManualEntry(message = 'Bạn vẫn có thể nhập mã lớp khi c
 }
 
 function showAuthorizedClasses(payload) {
+  authView.ready();
   const classes = buildK56LandingClasses(payload.classes);
   if (!classes.length) {
     showManualEntry('Tài khoản chưa được cấp lớp. Bạn có thể nhập mã lớp đã được mở bài.');
+    authView.ready();
     loginStatus.textContent = 'Đã đăng nhập, chưa có lớp được cấp quyền.';
     logoutButton.hidden = false;
     return;
@@ -151,7 +156,7 @@ async function connectSession(restoring = false) {
     await loadAuthorizedClasses();
   } catch (error) {
     resetLogin();
-    loginStatus.textContent = `Không thể tải danh sách lớp: ${error.message}`;
+    authView.failed(error);if(authView.needsLogin)setupGoogleSignIn();
   }
 }
 
@@ -168,6 +173,7 @@ async function loginAvailableApis(credential) {
 }
 
 function setupGoogleSignIn() {
+  if(googleStarted)return;googleStarted=true;
   if (!appConfig.GOOGLE_CLIENT_ID) {
     loginStatus.textContent = 'Chưa cấu hình Google OAuth Client ID.';
     return;
@@ -203,7 +209,7 @@ function setupGoogleSignIn() {
   script.async = true;
   script.defer = true;
   script.onload = renderButton;
-  script.onerror = () => { loginStatus.textContent = 'Không tải được nút đăng nhập Google.'; };
+  script.onerror = () => {googleStarted=false;authView.failed(new Error('Không tải được nút đăng nhập Google. Hãy thử lại.'));};
   document.head.append(script);
 }
 
@@ -261,6 +267,7 @@ document.getElementById('teacherDashboard')?.addEventListener('click', () => {
 logoutButton.addEventListener('click', async () => {
   resetLogin();
   await Promise.allSettled(Array.from(sessionClients.values(), client => client.logout()));
+  authView.signedOut();setupGoogleSignIn();
   window.google?.accounts?.id?.disableAutoSelect?.();
   loginStatus.textContent = 'Đã đăng xuất. Bạn có thể nhập mã lớp hoặc đăng nhập tài khoản khác.';
 });
@@ -275,14 +282,10 @@ classSelect.addEventListener('change', () => {
   updateLandingUrl();
 });
 input.addEventListener('change', updateLandingUrl);
-void Promise.allSettled(Array.from(sessionClients, async ([apiBaseUrl, client]) => {
-  if (await client.restore()) authenticatedApiUrls.add(apiBaseUrl);
-}))
-  .then(async results => {
-    if (authenticatedApiUrls.size) await connectSession(true);
-    if (results.some(item => item.status === 'rejected')) {
-      loginStatus.textContent += ' Một nguồn đăng nhập chưa khôi phục được. Bạn có thể đăng nhập lại hoặc nhập mã lớp.';
-    }
-  })
-  .catch(error => { loginStatus.textContent = `Không thể khôi phục phiên: ${error.message}`; })
-  .finally(setupGoogleSignIn);
+async function restoreSessions(){
+ authView.checking();
+ const results=await Promise.allSettled(Array.from(sessionClients,async([apiBaseUrl,client])=>{if(await client.restore())authenticatedApiUrls.add(apiBaseUrl);}));
+ if(authenticatedApiUrls.size){await connectSession(true);if(results.some(r=>r.status==='rejected'))loginStatus.textContent+=' Một nguồn đăng nhập chưa khôi phục được.';}
+ else{const failure=results.find(r=>r.status==='rejected');if(failure)authView.failed(failure.reason);else{authView.signedOut();setupGoogleSignIn();}}
+}
+void restoreSessions();

@@ -11,7 +11,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const modules = process.env.CODEX_NODE_MODULES || resolve(process.env.USERPROFILE || '', '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const { chromium } = createRequire(pathToFileURL(resolve(modules, 'playwright/package.json')))('playwright');
 
-test('Chromium desktop/mobile: khối demo cuối trang, mở demo và lớp thật đúng ba bài và mode', async () => {
+test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo và lớp thật đúng ba bài và mode', async () => {
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://127.0.0.1').pathname;
     const target = resolve(root, `.${path.endsWith('/') ? path + 'index.html' : path}`);
@@ -31,6 +31,7 @@ test('Chromium desktop/mobile: khối demo cuối trang, mở demo và lớp th�
   const base = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN}:{channel:'chrome'}) });
   const context = await browser.newContext();
+  await context.addInitScript(()=>{window.__loginFrames=0;const watch=()=>{const el=document.querySelector('#googleSignInButton');if(el&&el.getBoundingClientRect().height)window.__loginFrames++;requestAnimationFrame(watch);};requestAnimationFrame(watch);});
   const page = await context.newPage();
   const requests = [];
   const errors = [];
@@ -61,9 +62,9 @@ test('Chromium desktop/mobile: khối demo cuối trang, mở demo và lớp th�
           assert.equal(await select.locator('option[value="CODEXDEMO806"]').count(), 0);
           assert.equal(await select.locator('option').first().getAttribute('value'), 'CODEXDEMO56');
           assert.equal(new URL(page.url()).searchParams.get('class'), code);
-          const demo=page.locator('#demoClassEntry');await demo.waitFor({state:'visible'});
-          assert.equal(await demo.getAttribute('href'),'../demo/?course=56');
-          assert.ok((await demo.boundingBox()).y > (await page.locator('#teacherDashboard').boundingBox()).y);
+          assert.equal(await page.locator('#googleSignInButton').isVisible(),false);
+          assert.equal(await page.locator('script[src^="https://accounts.google.com"]').count(),0);
+          assert.equal(await page.evaluate(()=>window.__loginFrames),0);
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
           await select.selectOption('IC2305');
           assert.equal(new URL(page.url()).searchParams.get('class'), 'IC2305');

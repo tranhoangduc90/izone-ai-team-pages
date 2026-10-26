@@ -5,7 +5,7 @@ import {appendMarkdown} from '../js/markdown.js';
 import {renderLmsDraftResult} from '../js/lms-draft-result.js';
 import {installStyles} from '../lesson5-thu/features.mjs';
 import {renderActivityDetail} from '../lesson5/activity-ui.mjs';
-import {renderGoogleLogin} from './teacher-google.mjs';
+import {renderGoogleLogin} from './teacher-google.mjs?startup=20261026-v2';
 import {readLegacyDraft} from './legacy-draft.mjs';
 installStyles();
 const root=document.querySelector('#app'),teacher=document.body.dataset.view==='teacher',$=s=>root.querySelector(s);
@@ -15,6 +15,7 @@ const vocabularyRequests=new Set();
 let legacyDraft=null;
 let pendingIdentity=null,rememberStudent=true;
 let classes=[],person=null,current=null,threads=[],rows=[],responses={},dirty=false,conflict=false,busy=false,saveTimer,pollTimer,generation=0;
+let teacherAuth='checking';
 let notice='',filter='all',query='',order='recent',detailOpen=false,editor=null,attestKey=null,composer=null,loggedIn=false,conflictServer=null;
 const id=()=>crypto.randomUUID();
 const apiBase=window.IZONE_SHOPS?.apiBase||'/api/v1/';
@@ -44,10 +45,10 @@ function draw(){
  const owner=person?.id||'login',count=current?.comments.length||0;
  if(historyCounts.get(owner)!==count){for(const key of openDetails.keys())if(key.startsWith(owner+':history:'))openDetails.delete(key);historyCounts.set(owner,count);}
  const s=current?state():teacher&&loggedIn?{...fixture(fallbackPerson(),'fresh'),connected:true}:null;
- let html=teacher?(loggedIn?teacherLayout(s||fixture(fallbackPerson(),'fresh'),{rows,query,filter,order,detailOpen,drafts,composer}):'<section class="answer-card"><h1>Giảng viên · Đăng nhập Google</h1><p>Dùng tài khoản Google đã được cấp quyền giảng viên. Phiên đăng nhập dùng chung được ghi nhớ trên trình duyệt này.</p><div id="google-signin"></div><button class="text-button" data-action="retry-login">Thử lại đăng nhập</button></section>'):(s?studentLayout(s,''):pendingIdentity?confirmLoginView():loginView());
+ let html=teacher?(loggedIn?teacherLayout(s||fixture(fallbackPerson(),'fresh'),{rows,query,filter,order,detailOpen,drafts,composer}):teacherAuth!=='signedOut'?'<section class="answer-card"><h1>Không gian giảng viên</h1><p role="status" aria-live="polite"'+(teacherAuth==='checking'?' aria-busy="true"':'')+'>'+esc(teacherAuth==='checking'?'Đang khôi phục đăng nhập của bạn…':notice)+'</p>'+(teacherAuth==='failed'?'<button class="secondary" data-action="retry-login">Thử lại</button>':'')+'</section>':'<section class="answer-card"><h1>Giảng viên · Đăng nhập Google</h1><p>Dùng tài khoản Google đã được cấp quyền giảng viên. Phiên đăng nhập dùng chung được ghi nhớ trên trình duyệt này.</p><div id="google-signin"></div><button class="text-button" data-action="retry-login">Thử lại đăng nhập</button></section>'):(s?studentLayout(s,''):pendingIdentity?confirmLoginView():loginView());
  root.innerHTML=top()+banner()+'<main id="main"><p id="notice" role="status">'+esc(notice)+'</p>'+html+'</main>';
  if(!teacher&&s&&legacyDraft?.sessionRef===current.sessionRef)$('#notice').insertAdjacentHTML('afterend','<section class="answer-card" id="legacy-draft-notice"><h2>Bản nháp từ giao diện cũ</h2><p>Tìm thấy bản gõ khác trên thiết bị này. Xem và chọn trước khi dùng; bản gốc vẫn được giữ.</p><button class="secondary" data-action="legacy-compare">Xem hai bản nháp</button></section>');
- if(teacher&&!loggedIn)void renderGoogleLogin($('#google-signin'),{onCredential:async credential=>{const epoch=generation;await fetch('https://ducizone.ddns.net/shops-writing-api/api/v1/auth/session',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify({credential})}).then(r=>{if(!r.ok)throw Error('Chưa xác minh được Google.');});if(epoch===generation)await setupTeacher();},onError:error=>message(authMessage(error))}).catch(error=>message(authMessage(error)));
+ if(teacher&&!loggedIn&&teacherAuth==='signedOut')void renderGoogleLogin($('#google-signin'),{onCredential:async credential=>{const epoch=generation;await fetch('https://ducizone.ddns.net/shops-writing-api/api/v1/auth/session',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify({credential})}).then(r=>{if(!r.ok)throw Error('Chưa xác minh được Google.');});if(epoch===generation)await setupTeacher();},onError:error=>message(authMessage(error))}).catch(error=>message(authMessage(error)));
  if(teacher&&loggedIn)root.querySelector('.teacher-heading .teacher-actions')?.insertAdjacentHTML('beforeend','<button class="secondary" data-export-csv>Xuất CSV</button><button class="secondary" data-action="teacher-logout">Đăng xuất chung</button>');
  for(const el of root.querySelectorAll('details')){const key=owner+':'+detailsKey(el);if(openDetails.has(key))el.open=openDetails.get(key);}
  renderedOwner=owner;
@@ -241,7 +242,7 @@ root.addEventListener('click',async e=>{
    if(a==='conflict-server'){responses=working(current);dirty=false;cache();}else{dirty=true;await save();}
    draw();message('Đã chọn bản dùng tiếp; bản đối chiếu vẫn giữ trên thiết bị.');return;
   }
-  if(a==='retry-login'){await api('auth/session');await setupTeacher();}
+  if(a==='retry-login'){await restoreTeacher();}
   if(a==='teacher-logout'){try{await api('auth/session','DELETE');}catch(error){if(error.status!==401)throw error;}invalidateTeacher('Đã đăng xuất phiên dùng chung. Lời đang soạn được giữ trong tab.');return;}
   if(a==='refresh'){if(dirty)await save();await refresh();draw();}
   if(a==='identity'){await save();current=null;generation++;clearTimeout(pollTimer);draw();fillPeople();}
@@ -281,6 +282,13 @@ root.addEventListener('cancel',e=>{if(e.target.tagName==='DIALOG'){e.preventDefa
 let down=false;const outside=e=>{if(e.target.tagName!=='DIALOG')return false;const r=e.target.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom;};
 root.addEventListener('pointerdown',e=>down=outside(e));root.addEventListener('pointerup',e=>{if(down&&outside(e))closeDialog();down=false;});
 window.addEventListener('beforeunload',e=>{if(dirty||editor){cache();e.preventDefault();e.returnValue='';}});
+async function restoreTeacher(){
+ const epoch=generation;teacherAuth='checking';notice='';draw();
+ try{
+  if(await window.IzoneTeacherSso?.restore('shops')===false)throw Object.assign(Error('Chưa có phiên đăng nhập.'),{status:401});await api('auth/session');
+  if(epoch!==generation)return;await setupTeacher();
+ }catch(error){if(epoch!==generation)return;loggedIn=false;teacherAuth=error.status===401?'signedOut':'failed';notice=error.status===401?'':authMessage(error);draw();}
+}
 async function boot(){
  if(!TASK||!TASK.previewAvailable)throw Error('Đề này chưa có trong khóa Speaking Writing chuyên sâu. Hãy chọn bài từ chỉ mục tám buổi Writing Task 2.');
  document.title=TASK.shortTitle+' · '+(teacher?'Giảng viên':'Học viên')+' · SW';
@@ -288,7 +296,7 @@ async function boot(){
  classes.sort((a,b)=>b.className.localeCompare(a.className));
  const query=entry.get('class')?.trim();if(query&&!teacher){requestedClass=classes.find(c=>[c.classRef,c.className].some(v=>v.toLowerCase()===query.toLowerCase()));if(!requestedClass)throw Error('Không tìm thấy lớp trong đường link này. Chưa mở bài.');if(!teacher)classes=[requestedClass];}
  indexPeople();if(!teacher&&entry.has('student')&&!PEOPLE.some(p=>p.id===entry.get('student')&&(!requestedClass||p.classRef===requestedClass.classRef)))throw Error('Học viên trong link không thuộc lớp đã chọn. Chưa mở bài.');
- if(teacher){try{await window.IzoneTeacherSso?.restore('shops');await api('auth/session');await setupTeacher();}catch(error){notice=error.status===401?'':authMessage(error);draw();}}
+ if(teacher){await restoreTeacher();}
  else{let remembered;try{remembered=JSON.parse(localStorage.getItem(namespace+'identity')||'null');if(!remembered&&ACTIVITY==='writing-task2-public-health-ban')remembered=JSON.parse(localStorage.getItem('izone:shops-writing:production:identity')||'null');}catch{}
   const p=PEOPLE.find(p=>p.id===remembered?.id&&p.classRef===remembered?.classRef&&(!entry.has('student')||p.id===entry.get('student')));if(p&&(!p.requiresAccessCode||remembered.sessionRef))await openPerson(p,undefined,remembered.sessionRef);else{draw();fillPeople();}}
 }
@@ -308,6 +316,6 @@ async function setupTeacher(){
  if(linked||entry.has('student')){const row=rows.find(r=>r.id===person.id);current=linked||(row?.sessionRef?(await api('admin/lesson9/sessions/'+row.sessionRef)).session:null);responses=current?working(current):{};threads=current?(await api('admin/live/sessions/'+current.sessionRef+'/teacher-comments')).threads:[];detailOpen=true;draw();}
  startPoll();
 }
-function invalidateTeacher(text){if(composer&&person)composers.set(person.id,composer);loggedIn=false;detailOpen=false;current=null;threads=[];generation++;clearTimeout(pollTimer);draw();message(text);}
+function invalidateTeacher(text){teacherAuth='signedOut';if(composer&&person)composers.set(person.id,composer);loggedIn=false;detailOpen=false;current=null;threads=[];generation++;clearTimeout(pollTimer);draw();message(text);}
 window.addEventListener('storage',event=>{if(teacher&&['izone:teacher-sso-logout'].includes(event.key))invalidateTeacher('Phiên đã đăng xuất ở tab khác. Lời đang soạn được giữ.');});
 boot().catch(error=>{root.innerHTML=top()+banner()+'<main><h1>Chưa mở được handout</h1><p role="alert">'+esc(error.message)+'</p><button data-action="reload">Thử lại</button></main>';});
