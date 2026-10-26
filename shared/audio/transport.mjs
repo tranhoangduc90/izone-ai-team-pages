@@ -46,7 +46,7 @@ function startJournalAudioCapture(metadata,bootstrapUrl){
 import {ASSETS} from './catalog.mjs';
 import {downloadAudio} from './chunks.mjs';
 import {decodeBase64url,keyContext,sha256} from './protocol.mjs';
-import {WORKER_ORIGIN,SUBSTITUTE_ASSETS,REVIEW_ASSETS} from './config.mjs';
+import {WORKER_ORIGIN,SUBSTITUTE_ASSETS,REVIEW_ASSETS} from './config.mjs?v=20261026-term1-replay1';
 
 const memory=new Map(),breakers=new Map(),TTL=86400000;
 let cacheUnavailable=false,completeAudio=null;

@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   const supported = new Set(['term-test-1', 'term-test-2', 'mini-test-lesson-5', 'substitute-test-1-k67']);
-  const replayTests = new Set(['term-test-2', 'substitute-test-1-k67']);
+  const replayTests = new Set(['term-test-1', 'term-test-2', 'substitute-test-1-k67']);
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[c]);
@@ -34,7 +34,11 @@
     if (!descriptor || !/^[a-f0-9]{64}$/.test(descriptor.sha256) || !Number.isInteger(descriptor.durationMs) || descriptor.durationMs < 1) throw Error('Sai định danh audio');
     const substitute = review.bundle.testSlug === 'substitute-test-1-k67' && descriptor.asset === 'substitute-test-1-k67.mp3'
       && descriptor.sha256 === '59e69c9691841655a639a22fa9d7a8aec658e4c0c82c5e1451dd5bdd895d0b10';
-    if (!substitute && !(review.bundle.testSlug === 'term-test-2' && /^term-test-2-96kbps-[0-9a-f]{16}\.mp3$/.test(descriptor.asset))) throw Error('Sai nguồn audio');
+    const termAsset = {
+      'term-test-1': /^term-test-1-128kbps-[0-9a-f]{16}\.mp3$/,
+      'term-test-2': /^term-test-2-96kbps-[0-9a-f]{16}\.mp3$/
+    }[review.bundle.testSlug];
+    if (!substitute && !termAsset?.test(descriptor.asset)) throw Error('Sai nguồn audio');
     return new URL(substitute ? '../substitute-test-1-k67-computer-based/assets/private/listening-substitute-test-1-k67.mp3'
       : '../k67-audio-assets/' + descriptor.asset, scriptBase).href;
   }
@@ -72,7 +76,7 @@
       const timer = setTimeout(() => controller.abort(), 120000);
       preparation = job;
       job.promise = (async () => {
-        const {downloadReview} = await import(new URL('../../shared/audio/transport.mjs?v=20261026-test-replay1&journal=20261024-startup-v2', scriptBase));
+        const {downloadReview} = await import(new URL('../../shared/audio/transport.mjs?v=20261026-term1-replay1&journal=20261024-startup-v2', scriptBase));
         let blob = await downloadReview(source, descriptor.sha256, {signal:controller.signal});
         if (!blob) {
           const response = await fetch(source, {signal:controller.signal, cache:'force-cache'});
