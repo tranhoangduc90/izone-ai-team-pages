@@ -29,7 +29,7 @@ const originalDocumentId = query.get('documentId') || '';
 let documentId = '';
 let workUnitId = '';
 let classCode = '';
-['5', '6', '7', '8', '9', '10', '11', '12', '13', '15'].includes(document.body.dataset.speakingLesson)
+const lessonNumber = ['5', '6', '7', '8', '9', '10', '11', '12', '13', '15'].includes(document.body.dataset.speakingLesson)
   ? Number(document.body.dataset.speakingLesson) : 4;
 const expectedAssignmentCode = lessonNumber === 15 ? lesson15Code
   : lessonNumber === 13 ? lesson13Code
