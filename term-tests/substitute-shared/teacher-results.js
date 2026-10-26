@@ -10,7 +10,7 @@ const initial=new URLSearchParams(location.search);
 const pageTest=Object.keys(TITLES).find(slug=>location.pathname.includes(slug+'-results'));
 const selectedTest=()=>$('test-select').value;
 const statusText=value=>({queued:'Chờ chấm Writing',processing:'Đang chấm Writing',ready:'Đã chấm Writing',incomplete:'Thiếu bài Writing; chưa có điểm tổng',failed:'Cần kiểm tra bài chấm'}[value]||'Chưa xác nhận');
-const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',blocked:'Đồng bộ bị chặn · chưa ghi Portal',unknown:'Cần đối soát Portal · chưa xác nhận',synced:'Đã xác nhận đồng bộ Portal'}[value]||'Chưa xác nhận Portal');
+const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',waiting_destination:'Chờ khởi tạo điểm trên Portal',blocked:'Đồng bộ cần xử lý · chưa xác nhận ghi Portal',unknown:'Cần đối soát Portal · chưa xác nhận',synced:'Đã xác nhận đồng bộ Portal'}[value]||'Chưa xác nhận Portal');
 const number=value=>typeof value==='number'&&Number.isFinite(value)?String(value):'—';
 const time=value=>value&&!Number.isNaN(Date.parse(value))?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'—';
 function node(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}

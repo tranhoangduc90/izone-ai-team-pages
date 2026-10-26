@@ -4,7 +4,9 @@
   if (!window.TERM_TEST_CONTENT || document.getElementById('cbtNotesPanel')) return;
   const query = new URLSearchParams(location.search);
   const slug = window.TERM_TEST_CONFIG.slug;
-  const classCode = (query.get('class') || '').trim().toUpperCase();
+  const classHint = (query.get('class') || '').trim().toUpperCase();
+  const classCode = query.get('demo') === 'exam' && query.get('grading') === 'server'
+    ? window.SUBSTITUTE_STATE.resolveClass(classHint) : classHint;
   const suffix = query.get('demo') === 'exam' && query.get('grading') === 'server' ? ':server-grade' : '';
   const storageKey = suffix ? window.SUBSTITUTE_STATE.key('izone-test-annotations:',classCode) : `izone-test-annotations:${slug}:${classCode}:preview:${query.get('demo')}`;
   const sessionKey = suffix ? window.SUBSTITUTE_STATE.key('izone-test:',classCode) : `izone-test:${slug}:${classCode}:preview:${query.get('demo')}`;

@@ -21,6 +21,7 @@ try{
   });
   await context.route('**/*',async route=>{
    const req=route.request(),url=req.url();
+   if(url.startsWith(base+'/shared/audio/transport.mjs'))return route.fulfill({status:200,contentType:'text/javascript',body:'export async function downloadSubstitute(){return null;}'});
    if(/\.(mp3|wav|m4a|ogg|enc)(?:\?|$)/i.test(url))return route.fulfill({status:200,body:Buffer.alloc(64),contentType:'audio/mpeg'});
    if(url.startsWith(base))return route.continue();
    if(url.includes('/webhook/')){
