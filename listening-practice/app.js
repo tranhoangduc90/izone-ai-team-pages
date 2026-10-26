@@ -1,7 +1,7 @@
 (async () => {
 'use strict';
 const AuthoredUI=await import('./authored-ui.js?v=20261021-ui-acceptance-v1');
-const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261024-cf512-1&journal=20261024-audio-v1');
+const {fetchListeningAudio,clearListeningAudioMemory}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 let CODE='67-practice-listening_mcq_flowchart',FULL_TIME=579207;const TAB=crypto.randomUUID();
@@ -38,7 +38,7 @@ let db={students:{}},studentId='',route='',routeParams=new URLSearchParams(),las
 let saveError=false,simulatedOffline=false,toastTimeout,modalAction=null,fontSize=17,lease=null,queue=Promise.resolve(),debounce,networkFailed=false,busy=false,ready=false;
 let activeMs=0,leaseBaseline=0,lastPulse=0,checkpointKey='',pendingOperation=null,pulsePending=false,activating=false;
 const resultCache=new Map();
-let teacherGoogleScript;
+let teacherGoogleScript,teacherResultGeneration=0;
 const legacyTeacherToken=()=>{try{return sessionStorage.getItem('listening-teacher-token')||'';}catch{return '';}};
 const student=()=>({name:identity?.name});
 const record=()=>db.students[studentId];
@@ -89,6 +89,7 @@ async function changeStudent(){
  pause('identity',false);await queue;
  if((await courseIdentity.forget()).status!=='empty'){notify('Chưa đổi được người học. Bài và nháp vẫn được giữ.');return;}
  try{sessionStorage.removeItem(SESSION);}catch{}
+ window.ListeningReview?.reset();clearListeningAudioMemory();resultCache.clear();
  sessionToken='';studentId='';identity=null;navigate('login');
 }
 function completionCopy(a){const first=record()?.firstCompleted;return a.no===1?'Hoàn thành ngay từ lần đầu.':first&&first!==a.no?`Kết quả lượt luyện lại số ${a.no} · Lần hoàn thành đầu tiên: lượt ${first}.`:`Hoàn thành sau ${a.no-1} lần reset · Kết quả của lần làm bài số ${a.no}.`;}
@@ -244,7 +245,7 @@ function finish(method){if(busy||activating||!current()||!['running','paused'].i
 function reset(){if(busy||activating)return;consumeTime();stopAudio();rememberScroll();lastTick=0;const a=current();perform('reset',{attemptId:a.id,owner:TAB,...(['running','paused'].includes(a.status)&&lease?{lease,snapshot:snapshot()}:{} )});}
 async function loadResult(no){
  const a=record()?.attempts.find(a=>a.no===+no);if(!a)return;
- if(a.status==='submitted'&&!resultCache.has(a.id)){try{const response=await request(`/result/${a.id}`);resultCache.set(a.id,response);apply(response);MCQ=response.definition.mcq;}catch(e){notify(e.message);return;}}
+ if(a.status==='submitted'&&!resultCache.has(a.id)){const owner=identity?.bindingId,token=sessionToken;try{const response=await request(`/result/${a.id}`);if(owner!==identity?.bindingId||token!==sessionToken)return;resultCache.set(a.id,response);apply(response);MCQ=response.definition.mcq;}catch(e){if(owner===identity?.bindingId&&token===sessionToken)notify(e.message);return;}}
  navigate(`result?attempt=${no}`);
 }
 function docsNotice(a){const e=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed'),verified=e?.docs==='verified';return `<div class="note ${verified?'success':'warning'}">${verified?'✓ Đã cập nhật tình trạng trong tài liệu bài tập.':e?.docs==='blocked'?'Bài đã nộp. Chưa cập nhật được Docs; giảng viên cần kiểm tra ô trạng thái.':'Bài đã nộp và được lưu trên máy chủ. Đang cập nhật tình trạng trong Docs.'} ${identity.documentUrl?`<a href="${escape(identity.documentUrl)}" target="_blank" rel="noopener noreferrer">Mở tài liệu ↗</a>`:''}</div>`;}
@@ -283,11 +284,15 @@ function render(){
  if(route==='login'&&!app.querySelector('[data-action="change-student"]'))app.insertAdjacentHTML('beforeend',textBtn('Đổi người học','change-student'));
 }
 async function teacherScreen(afterLogin=false){
+ const generation=++teacherResultGeneration;window.ListeningReview?.reset();
  const submissionId=new URLSearchParams(location.hash.slice(1)).get('submission')||routeParams.get('submission');
  if(!submissionId){app.innerHTML='<section class="card card-pad"><h1>Mở bài từ link kết quả</h1><p>Giảng viên mở link trong tài liệu homework của học viên.</p></section>';return;}
- try{const response=await request(`/teacher/result/${encodeURIComponent(submissionId)}`,undefined,true);apply(response);resultCache.set(response.attempt.id,response);MCQ=response.definition.mcq;
+ try{const response=await request(`/teacher/result/${encodeURIComponent(submissionId)}`,undefined,true);
+  if(generation!==teacherResultGeneration)return;
+  apply(response);resultCache.set(response.attempt.id,response);MCQ=response.definition.mcq;
   const a=response.attempt;app.innerHTML='<div class="teacher-banner">Giảng viên xem bài · Chỉ xem '+textBtn('Đăng xuất','teacher-logout')+'</div>'+hero('BUỔI 8 · KẾT QUẢ LISTENING','Science experiment for Year 12 students',`${escape(identity.name)} · ${escape(identity.classCode)} · Lần làm ${a.no}`)+`<section class="card card-pad"><h2>${a.finalScore}/${total()} câu đúng</h2><p>${completionCopy(a)}</p><p>Bắt đầu: ${dateLabel(a.startedAt)} · Nộp bài: ${dateLabel(a.completedAt)}</p><p>${a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Học viên chủ động nộp bài'} · ${a.no-1} lần reset trước lượt này</p></section>`+teacherHistory(response,a)+resultTable(a)+`<section class="card card-pad"><h3>Ghi chú học viên</h3><p style="white-space:pre-wrap">${escape(a.notes||'Chưa có ghi chú.')}</p></section>`+footer();
- }catch(e){if(e.code!=='TEACHER_LOGIN_REQUIRED'){app.innerHTML=`<section class="card card-pad"><h1>Chưa mở được kết quả</h1><p>${escape(e.message)}</p>${e.code==='ACCESS_DENIED'?btn('Đăng xuất và đổi tài khoản','teacher-logout'):''}</section>`;return;}
+  warmReviewResult(a,response);
+ }catch(e){if(generation!==teacherResultGeneration)return;if(e.code!=='TEACHER_LOGIN_REQUIRED'){app.innerHTML=`<section class="card card-pad"><h1>Chưa mở được kết quả</h1><p>${escape(e.message)}</p>${e.code==='ACCESS_DENIED'?btn('Đăng xuất và đổi tài khoản','teacher-logout'):''}</section>`;return;}
   app.innerHTML=hero('BUỔI 8 · GIẢNG VIÊN','Đăng nhập để xem kết quả','Dùng tài khoản Google đã có quyền lớp.')+'<section class="card card-pad"><label class="teacher-login-remember"><input id="teacher-remember" type="checkbox" checked> Tự đăng nhập Google trên thiết bị này</label><div id="google-signin"></div><p id="teacher-error" role="status"></p></section>';
   if(afterLogin)document.querySelector('#teacher-error').textContent='Trình duyệt chưa giữ được phiên. Hãy cho phép cookie cho trang này rồi đăng nhập lại.';
   const config=await request('/config');if(!config.googleClientId){document.querySelector('#teacher-error').textContent='Chưa cấu hình đăng nhập Google.';return;}
@@ -306,6 +311,7 @@ async function teacherScreen(afterLogin=false){
  }
 }
 async function teacherLogout(){
+ teacherResultGeneration++;window.ListeningReview?.reset();clearListeningAudioMemory();
  try{
   await request('/teacher/logout',{},true);
   try{sessionStorage.removeItem('listening-teacher-token');localStorage.setItem('listening-teacher-logout',crypto.randomUUID());}catch{}
@@ -486,6 +492,10 @@ function explanationContent(e) {
     return `<article class="explanation-question evidence" data-explanation-question="${n}" aria-label="Giải thích câu ${n}">${e.prompt?`<div class="explanation-prompt">${explanationRuns(e.prompt.runs)}</div>`:''}<div class="explanation-body"><section class="explanation-analysis">${analysis}</section><aside class="explanation-evidence"><h4>Bằng chứng · ${e.paragraph}</h4><blockquote>${explanationParagraphs(evidence)}</blockquote><p class="explanation-evidence-hint">Từ cùng màu liên kết ý trong câu hỏi với bằng chứng; chữ đỏ giữ phần đối chiếu trong tài liệu.</p></aside></div></article>`;
   }
 
+function reviewContext(attempt,data){return {attempt,data,owner:identity?.bindingId||identity?.studentRef,
+ role:location.pathname.endsWith('/teacher.html')?'teacher':'student',
+ token:location.pathname.endsWith('/teacher.html')?legacyTeacherToken():sessionToken};}
+function warmReviewResult(attempt,data){window.ListeningReview?.warm(reviewContext(attempt,data));}
 // Chỉ thay điểm mở lời giải; lấy đúng lượt đang xem, giữ mọi luồng làm bài gốc.
 function toggleExplanation(number,button) {
  const id=button.closest('[data-attempt-id]')?.dataset.attemptId;
@@ -496,9 +506,9 @@ function toggleExplanation(number,button) {
   row.hidden=!row.hidden;button.setAttribute('aria-expanded',String(!row.hidden));
   button.textContent=row.hidden?'Xem giải thích':'Ẩn giải thích';return;
  }
- window.ListeningReview.open({number,attempt,data,trigger:button,
+ window.ListeningReview.open({...reviewContext(attempt,data),number,trigger:button,
   renderParagraphs:explanationParagraphs,renderContent:explanationContent,
-  token:location.pathname.endsWith('/teacher.html')?legacyTeacherToken():sessionToken});
+ });
 }
 
 function resultTable(a) {
@@ -520,6 +530,7 @@ function resultScreen() {
     if(!a) { navigate('prep'); return; }
     const submitted=a.status==='submitted';
     app.innerHTML=hero(submitted?'BUỔI 8 · KẾT QUẢ LISTENING':'BUỔI 8 · LỊCH SỬ LÀM BÀI',submitted?'Bạn đã hoàn thành bài nghe':`Lần ${a.no} đã ${a.status==='reset'?'reset':'tạm dừng'}`,submitted?completionCopy(a):'Bài này chưa được nộp. Đáp án đúng chỉ mở sau khi hoàn thành.')+identityBar()+`<div class="meta-row section"><span>Lần làm bài <strong>${a.no}</strong></span><span>${submitted?(a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Bạn chủ động nộp bài'):'Chưa nộp bài'}</span><span>Đã làm <strong>${timeLabel(FULL_TIME-a.remainingMs)}</strong></span></div>${submitted?`<section class="result-summary"><div class="score-box"><strong>${a.finalScore}<span>/${total()}</span></strong><small>Số câu trả lời đúng<br>Điểm của riêng Listening Part ${LESSON?.part||3}</small></div><div class="score-details"><h2>${escape(LESSON?.title||'Science experiment for Year 12 students')}</h2><p class="small muted">${LESSON?escape(AuthoredUI.sourceLabel(LESSON))+` · Câu ${LESSON.questionIds[0]}–${LESSON.questionIds.at(-1)}`:'Cambridge 19 · Test 3 · Part 3 · Câu 21–30'}</p><div class="type-scores">${(LESSON?.groups||[{start:21,end:25,label:'Multiple Choice'},{start:26,end:30,label:'Flow-chart completion'}]).map(g=>`<div><strong>${resultFor(a,g.start,g.end)}/${g.end-g.start+1}</strong><span>${escape(g.label)}</span></div>`).join('')}</div></div></section>${docsNotice(a)}`:`<div class="note">${countAnswered(a)}/${total()} câu đã trả lời. ${a.status==='reset'?'Lần này được lưu trong lịch sử nhưng không có điểm hoàn thành.':'Bạn có thể tiếp tục bằng thời gian còn lại.'}</div>`}<div class="actions section">${current()?.status==='paused'?btn('Tiếp tục lần đang làm','resume'):''}${btn('Reset và làm lại từ đầu','request-reset','outline')}${textBtn('Về tài liệu bài tập','show-docs')}</div><section class="section"><h3>Lịch sử làm bài</h3>${attemptHistory(rec,a.no)}</section>${submitted?resultTable(a):''}`+footer();
+    if(submitted)warmReviewResult(a,resultCache.get(a.id));
   }
 // Các thao tác chỉ ghi khi tab đang giữ lượt làm. Chọn chữ dùng adapter nguyên bản của Term Test.
 document.addEventListener('click',event=>{
@@ -572,14 +583,15 @@ function recoverLocal(){
   a.status='paused';a.owner=null;
  }catch{saveError=true;showStorageError();}
 }
-window.addEventListener('hashchange',()=>{if(location.pathname.endsWith('/teacher.html')){route='teacher';teacherScreen();}else render();});
+window.addEventListener('hashchange',()=>{window.ListeningReview?.reset();if(location.pathname.endsWith('/teacher.html')){route='teacher';teacherScreen();}else render();});
 window.addEventListener('offline',()=>pause('offline'));
 window.addEventListener('online',()=>{networkFailed=false;if(route==='resume')render();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('hidden');});
 window.addEventListener('pagehide',()=>pause('closed',false));
 window.addEventListener('beforeunload',()=>pause('closed',false));
 window.addEventListener('storage',event=>{
- if(event.key==='listening-teacher-logout'&&location.pathname.endsWith('/teacher.html')){
+ if(['listening-teacher-logout','izone:teacher-sso-logout'].includes(event.key)&&location.pathname.endsWith('/teacher.html')){
+  teacherResultGeneration++;clearListeningAudioMemory();
   try{sessionStorage.removeItem('listening-teacher-token');}catch{}
   window.ListeningReview?.reset();resultCache.clear();db={students:{}};identity=null;app.replaceChildren();teacherScreen();return;
  }
