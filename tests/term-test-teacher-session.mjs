@@ -7,6 +7,20 @@ function response(status, body) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
 
+test('trang đã kiểm quyền tại API lớp bỏ lượt đọc phiên dư nhưng giữ lỗi xác thực',async t=>{
+ let result=true;const calls=[];
+ const previous=globalThis.window;
+ globalThis.window={IzoneTeacherSso:{restore:async product=>{calls.push(product);if(result instanceof Error)throw result;return result;}}};
+ t.after(()=>{if(previous===undefined)delete globalThis.window;else globalThis.window=previous;});
+ t.mock.method(globalThis,'fetch',async()=>{throw Error('Không được phát sinh GET phiên trung gian');});
+ const client=createTeacherSessionClient({apiBaseUrl:'https://api.example.invalid',sessionPath:'/auth/session',sharedProduct:'term67'});
+ assert.deepEqual(await client.restore(),{ok:true});
+ result=false;assert.equal(await client.restore(),null);
+ result=Object.assign(Error('Thiếu quyền'),{status:403});
+ await assert.rejects(client.restore(),error=>error.status===403);
+ assert.deepEqual(calls,['term67','term67','term67']);
+});
+
 test('đổi Google credential lấy cookie máy chủ mà không đưa credential vào URL hoặc storage', async t => {
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {

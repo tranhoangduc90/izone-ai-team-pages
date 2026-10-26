@@ -1,5 +1,6 @@
 // Cookie phiên chung được máy chủ xác minh; quyền Substitute vẫn do API riêng kiểm.
-import '../../shared/teacher-single-sign-on.js?v=20261023-cache1';
+import '../../shared/teacher-single-sign-on.js?v=20261026-startup1';
+import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 import {appendWritingFeedback as appendFeedback} from './feedback-renderer.js?rev=20261009-results-v2';
 import {createProgressPanel} from './teacher-progress-panel.js?rev=20261019-v1';
 const API='https://ducizone.ddns.net/substitute-teacher-api';
@@ -8,6 +9,7 @@ const $=id=>document.getElementById(id);
 const state={token:null,generation:0,detailGeneration:0,controller:null,scopes:[],rows:[],offset:0,hasMore:false};
 const initial=new URLSearchParams(location.search);
 const pageTest=Object.keys(TITLES).find(slug=>location.pathname.includes(slug+'-results'));
+const authView=createTeacherAuthState({panel:$('google-signin'),notice:$('login-status'),retry:initialize});
 const selectedTest=()=>$('test-select').value;
 const statusText=value=>({queued:'Chờ chấm Writing',processing:'Đang chấm Writing',ready:'Đã chấm Writing',incomplete:'Thiếu bài Writing; chưa có điểm tổng',failed:'Cần kiểm tra bài chấm'}[value]||'Chưa xác nhận');
 const portalText=value=>({not_applicable:'DEMO · không gửi Portal',pending:'Chờ đồng bộ Portal',waiting_destination:'Chờ khởi tạo điểm trên Portal',blocked:'Đồng bộ cần xử lý · chưa xác nhận ghi Portal',unknown:'Cần đối soát Portal · chưa xác nhận',synced:'Đã xác nhận đồng bộ Portal'}[value]||'Chưa xác nhận Portal');
@@ -156,7 +158,7 @@ async function signIn(response){
     $('attempt-content').replaceChildren();appendFeedback($('attempt-content'),data.report);
    }else await openAttempt(id);
   }
- }catch(error){if(generation===state.generation){logout();if(error.status!==401)$('login-status').textContent='Chưa mở được quyền xem kết quả.';message(error.message,'error');}}
+ }catch(error){if(generation===state.generation){logout();authView.failed(error);if(error.status!==401)$('login-status').textContent='Chưa mở được quyền xem kết quả.';message(error.message,'error');}if(response.restored)throw error;}
 }
 const progress=createProgressPanel({host:$('roster-section'),request,
  isCurrent:scope=>!!state.token&&scope.generation===state.generation&&scope.test===selectedTest()&&scope.class===$('class-filter').value,
@@ -165,13 +167,18 @@ const progressButton=node('button','Tiến trình đã lưu','button button-seco
 $('load-results').after(progressButton);progressButton.addEventListener('click',()=>progress.show({test:selectedTest(),class:$('class-filter').value,generation:state.generation}));
 async function initialize(){
  logout();
+ authView.checking();$('login-heading').textContent='Đang mở quyền giảng viên…';
  try{
-  if(await window.IzoneTeacherSso.restore('substitute')){await signIn({restored:true});return;}
+  if(await window.IzoneTeacherSso.restore('substitute')){
+   try{await signIn({restored:true});if(state.token){authView.ready();$('login-heading').textContent='Quyền xem kết quả';return;}}
+   catch(error){if(error.status!==401)throw error;}
+  }
+  authView.signedOut();$('login-heading').textContent='Đăng nhập xem kết quả';
   const config=await request('/teacher/config',{},undefined,false);
   if(!window.google?.accounts?.id)await new Promise((resolve,reject)=>{const script=$('google-identity'),timer=setTimeout(()=>reject(new Error('Không tải được Google đăng nhập. Hãy tải lại trang.')),15000);script.addEventListener('load',()=>{clearTimeout(timer);resolve();},{once:true});script.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('Trình duyệt không tải được Google đăng nhập.'));},{once:true});});
   window.google.accounts.id.initialize({client_id:config.googleClientId,callback:signIn,auto_select:false});
   window.google.accounts.id.renderButton($('google-signin'),{type:'standard',theme:'outline',size:'large',text:'signin_with',locale:'vi',width:270});
- }catch(error){message(error.message,'error');}
+ }catch(error){authView.failed(error);$('login-heading').textContent='Chưa mở được sản phẩm';message(error.message,'error');}
 }
 $('logout').addEventListener('click',async()=>{try{await window.IzoneTeacherSso.logout();await initialize();}catch(error){message(error.message,'error');}});$('load-results').addEventListener('click',()=>{state.offset=0;loadResults();});
 $('test-select').addEventListener('change',()=>{renderClasses();state.offset=0;loadResults();});$('class-filter').addEventListener('change',()=>{state.offset=0;loadResults();});

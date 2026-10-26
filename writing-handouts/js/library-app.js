@@ -11,9 +11,11 @@ import {
   sortHandoutsByWritingLesson,
   studentUrl,
 } from "./library-core.js?v=20261024-shops";
-import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20260920-v1";
+import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20261026-startup1";
+import {createTeacherAuthState} from "../../shared/teacher-auth-state.js?v=20261026-startup1";
 
 const $ = (id) => document.getElementById(id);
+const authView=createTeacherAuthState({panel:$("google-signin"),notice:$("auth-status"),retry:()=>location.reload()});
 const state = { authenticated: false, config: null, library: null, sessionClient: null, loginGeneration: 0 };
 
 function showAuthStatus(message, error = false) {
@@ -163,6 +165,7 @@ async function verifyTeacher() {
 async function connectSession(restoring = false) {
   const generation = ++state.loginGeneration;
   hideLibrary();
+  authView.checking();$("auth-title").textContent="Đang xác minh quyền giảng viên…";
   showAuthStatus(restoring ? "Đang khôi phục phiên giảng viên…" : "Đang xác minh quyền giảng viên…");
   try {
     await verifyTeacher();
@@ -170,6 +173,7 @@ async function connectSession(restoring = false) {
     state.authenticated = true;
     showAuthStatus(`Đã đăng nhập · ${state.library.course.title}`);
     showLibrary();
+    authView.ready();$("auth-title").textContent="Thư viện handout Writing";
   } catch (error) {
     if (generation !== state.loginGeneration) return;
     state.authenticated = false;
@@ -177,10 +181,12 @@ async function connectSession(restoring = false) {
     showAuthStatus(error.status === 403
       ? "Tài khoản Google này chưa được cấp quyền xem dashboard Writing."
       : "Không thể xác minh quyền giảng viên. Hãy đăng nhập lại hoặc thử sau.", true);
+    authView.failed(error);
   }
 }
 
 function setupGoogleSignIn() {
+  if(state.authenticated)return;
   const render = () => {
     globalThis.google.accounts.id.initialize({
       client_id: state.config.googleClientId,
@@ -213,6 +219,7 @@ function setupGoogleSignIn() {
 }
 
 async function init() {
+  authView.checking();
   try {
     const [configResponse, libraryResponse] = await Promise.all([
       fetch("./config.json", { cache: "no-store" }),
@@ -228,6 +235,7 @@ async function init() {
       state.authenticated = false;
       globalThis.google?.accounts?.id?.disableAutoSelect?.();
       hideLibrary();
+      authView.signedOut();setupGoogleSignIn();
       showAuthStatus("Đã đăng xuất. Hãy đăng nhập Google để mở lại thư viện.");
     });
     $("class-select").addEventListener("change", () => {
@@ -236,10 +244,12 @@ async function init() {
     });
     const restored = await state.sessionClient.restore();
     if (restored) await connectSession(true);
+    else {authView.signedOut();$("auth-title").textContent="Đăng nhập để mở thư viện";}
     setupGoogleSignIn();
   } catch (error) {
     hideLibrary();
     showAuthStatus(error.message || "Không thể mở thư viện.", true);
+    authView.failed(error);
   }
 }
 

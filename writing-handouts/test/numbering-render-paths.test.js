@@ -29,6 +29,12 @@ test("bản học viên và giảng viên cùng tải bộ Markdown đã sửa, 
     "../lesson.html",
     "../teacher.html",
   ].map((path) => readFile(new URL(path, import.meta.url), "utf8")));
+  // Entry hiện hành đi qua loader Task 1; tiếp tục kiểm module/version thật nó nạp.
+  const loader = await readFile(new URL('../js/task1-ui-loader.js',import.meta.url),'utf8');
+  for(const i of [0,2]){
+    assert.match(htmlSources[i],/task1-ui-loader\.js\?v=/u);
+    htmlSources[i] += loader;
+  }
   for (const source of javascriptSources) assert.match(source, new RegExp(VERSION));
   for (const source of javascriptSources) assert.match(source, new RegExp(`markdown\\.js\\?v=${VERSION}`));
   assert.match(htmlSources[0], /app\.js\?v=[^"]+/u);
