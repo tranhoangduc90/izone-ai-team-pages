@@ -17,7 +17,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true}),records=[]
 try{
  for(const width of process.env.STARTUP_WIDTH?[Number(process.env.STARTUP_WIDTH)]:[1440,390])for(const [engine,task,scenario] of [
   ...tasks.map(t=>['sw-task2-writing',t,'active']),
-  ...['missing','forbidden','offline','api-denied','expired-product'].map(s=>['sw-task2-writing',tasks[0],s]),
+  ...['missing','forbidden','offline','api-denied','expired-product','data-mismatch'].map(s=>['sw-task2-writing',tasks[0],s]),
   ['shops-writing',tasks[0],'active']
  ]){
   if(process.env.STARTUP_SCENARIO&&scenario!==process.env.STARTUP_SCENARIO)continue;
@@ -42,7 +42,8 @@ try{
    if(p.endsWith('/auth/session'))return route.fulfill({status:['missing','expired-product'].includes(mode)?401:200,json:{ok:true}});
    if(p.endsWith('/auth/config'))return route.fulfill({json:{googleClientId:'fixture-google',sharedSession:true}});
    if(p.endsWith('/admin/me'))return route.fulfill({status:mode==='api-denied'?403:200,json:{reviewer:{role:'admin'},classes:[{classCode:'CS-FIXTURE'}]}});
-   if(p.includes('/admin/live/activities/'))return route.fulfill({json:{students:[{studentRef:'fixture-student',classRef:'fixture-class'}]}});
+   if(p.includes('/admin/lesson9/sessions/'))return route.fulfill({json:{session:{activitySlug:task,studentRef:'different-student',classRef:'fixture-class'}}});
+   if(p.includes('/admin/live/activities/'))return route.fulfill({json:{students:[{studentRef:'fixture-student',classRef:'fixture-class',...(mode==='data-mismatch'?{sessionRef:'mismatched-session'}:{})}]}});
    if(p.endsWith('/roster'))return route.fulfill({json:{classes}});
    if(p.endsWith('/sw/status')||p.endsWith('/shops/status'))return route.fulfill({json:{ok:true}});
    errors.push('Unexpected fixture '+req.method()+' '+p);return route.fulfill({status:500,json:{error:'UNEXPECTED_FIXTURE'}});
@@ -51,7 +52,13 @@ try{
   const entry=engine==='sw-task2-writing'?'/sw-task2-writing/teacher.html?task='+task:'/shops-writing/writing-handouts/shops-review/connected-teacher.html';
   await page.goto(origin+prefix+entry);
   try{
-   if(['missing','expired-product'].includes(scenario))await page.getByRole('button',{name:'Google thử',exact:true}).waitFor({timeout:12000});
+   if(scenario==='data-mismatch'){
+    await page.locator('.teacher-heading').waitFor({state:'visible',timeout:12000});
+    await page.locator('#notice').filter({hasText:'SESSION_OWNER_MISMATCH'}).waitFor();
+    assert.equal(await page.locator('.teacher-student-card').count(),0,'Mismatched record must not render');
+    assert.equal(await page.getByRole('button',{name:'Cập nhật',exact:true}).isVisible(),true);
+   }
+   else if(['missing','expired-product'].includes(scenario))await page.getByRole('button',{name:'Google thử',exact:true}).waitFor({timeout:12000});
    else if(['forbidden','offline','api-denied'].includes(scenario)){
     await page.getByRole('button',{name:'Thử lại',exact:true}).waitFor({timeout:12000});
     assert.equal(await page.locator('#google-signin').count(),0);assert.equal(await page.locator('.teacher-student-card').count(),0);

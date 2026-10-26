@@ -36,3 +36,7 @@ Tám bài SW được runner đọc từ catalog production, không dùng danh s
 Các bộ startup, K56 navigation/landing, tiến độ Reading/Listening/Speaking, receipt, Làm quen, Materials, Writing/Flow và Cổng AI kiểm theo đúng engine. Kết quả từng lần chạy được ghi trong PR/ledger. Fixture, viewport hẹp và số đo PR309 không thay bằng chứng Google production hoặc thiết bị vật lý; không suy mỗi bài có cùng mức giảm mili giây.
 
 Quay lui bằng revert gói frontend và query asset. Không phục hồi DB/cookie phiên cũ; giữ các bản sửa nghiệp vụ từ task khác.
+
+## Lỗi đọc tiến độ sau xác thực — kiểm URL thật
+
+Sau khi native session, tài khoản và lớp đã được xác minh, lỗi đọc một bản bài không đổi trạng thái đó thành lỗi đăng nhập. SW/Shops giữ workspace đã kiểm quyền, báo phần tiến độ chưa tải được và nút Cập nhật. Guard `SESSION_OWNER_MISMATCH` vẫn chặn bản bài không khớp chủ/lớp trước khi render. Bộ SW có ca synthetic cố ý trả bản sai chủ để kiểm phần này; lỗi dữ liệu thật không được coi là đã sửa chỉ vì màn đăng nhập đã tối ưu.

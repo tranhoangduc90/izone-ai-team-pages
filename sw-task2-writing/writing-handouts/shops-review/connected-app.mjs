@@ -287,7 +287,13 @@ async function restoreTeacher(){
  try{
   if(await window.IzoneTeacherSso?.restore('shops')===false)throw Object.assign(Error('Chưa có phiên đăng nhập.'),{status:401});await api('auth/session');
   if(epoch!==generation)return;await setupTeacher();
- }catch(error){if(epoch!==generation)return;loggedIn=false;teacherAuth=error.status===401?'signedOut':'failed';notice=error.status===401?'':authMessage(error);draw();}
+ }catch(error){
+  if(epoch!==generation)return;
+  // Native session, account and class checks already passed. A failed data read
+  // keeps the verified workspace; the owner guard still excludes mismatched work.
+  if(loggedIn&&![401,403].includes(error.status)){notice='Chưa tải đủ tiến độ: '+error.message+'. Nhấn Cập nhật để thử lại.';draw();return;}
+  loggedIn=false;teacherAuth=error.status===401?'signedOut':'failed';notice=error.status===401?'':authMessage(error);draw();
+ }
 }
 async function boot(){
  if(!TASK||!TASK.previewAvailable)throw Error('Đề này chưa có trong khóa Speaking Writing chuyên sâu. Hãy chọn bài từ chỉ mục tám buổi Writing Task 2.');
