@@ -26,16 +26,20 @@ const feedback=Object.fromEntries(content.targets.map((t,i)=>[t.id,{status:['cor
 // Expected roles are independently taken from master170's semantic state contract.
 const palette={pending:{fg:'rgb(23, 66, 101)',bg:'rgb(230, 238, 245)'},attention:{fg:'rgb(138, 83, 0)',bg:'rgb(255, 244, 224)'},error:{fg:'rgb(155, 10, 34)',bg:'rgb(253, 232, 235)'}};
 const cases=[{name:'queued',status:'queued',role:'pending'},{name:'processing',status:'processing',role:'pending'},
+ {name:'repair',status:'queued',role:'pending',validationProgress:{phase:'repair',round:'2',pending:1},expectedText:'Đang bổ sung nhận xét cho một số phần'},
+ {name:'content-review',status:'processing',role:'pending',validationProgress:{phase:'review',round:'3',pending:0},expectedText:'Đang kiểm tra nội dung chấm'},
+ {name:'service-wait',status:'queued',role:'pending',validationProgress:{phase:'repair',round:'4',service_error:{code:'AI_HTTP_429'}},expectedText:'Đang chờ dịch vụ AI · Bài đã được lưu'},
  {name:'failed-unknown',status:'failed',errorCode:'AI_OUTCOME_UNKNOWN',role:'attention'},
  {name:'review-unknown',status:'needs_review',errorCode:'AI_OUTCOME_UNKNOWN',role:'attention'},
  {name:'failed-known',status:'failed',errorCode:'AI_PROVIDER_ERROR',role:'error'},
  {name:'review-known',status:'needs_review',errorCode:'AI_PROVIDER_ERROR',role:'attention'},
- {name:'done',status:'done',role:null}];
+ {name:'done',status:'done',role:null},
+ {name:'done-recovered',status:'done',role:null,recovery:{error_code:'GRADING_VALIDATION_FAILED'},expectedText:'Đã phục hồi lượt chấm trước đó bị lỗi.'}];
 const site=await serveDirectory(root),browser=await chromium.launch({channel:'chrome',headless:true}),records=[];let fatal;
 try{
  for(const spec of cases)for(const[width,height]of[[1440,1000],[390,844],[320,568]]){
   const context=await browser.newContext({viewport:{width,height}}),page=await context.newPage(),errors=[],writes=[];page.setDefaultTimeout(8000);page.on('pageerror',e=>errors.push(e.message));
-  const attempt={attemptId:'synthetic-attempt',runNo:1,draftRevision:1,createdAt:'2026-10-24T00:00:00Z',status:spec.status,errorCode:spec.errorCode||null,snapshot:{answers},completeness:{filled_cells:20,total_cells:20},result:spec.status==='done'?{feedback}:null};
+  const attempt={attemptId:'synthetic-attempt',runNo:1,draftRevision:1,createdAt:'2026-10-24T00:00:00Z',status:spec.status,errorCode:spec.errorCode||null,validationProgress:spec.validationProgress||null,recovery:spec.recovery||null,snapshot:{answers},completeness:{filled_cells:20,total_cells:20},result:spec.status==='done'?{feedback}:null};
   try{
    await context.route('**/*',route=>{const request=route.request(),url=new URL(request.url());if(url.origin!==site.origin)return route.abort();if(request.method()!=='GET'){writes.push(url.pathname);return route.abort();}
     if(overrides.has(url.pathname))return route.fulfill({body:overrides.get(url.pathname),contentType:url.pathname.endsWith('.js')?'text/javascript':'text/css'});
@@ -48,6 +52,7 @@ try{
    try{assert.equal(row.observation.fields.length,20);assert.equal(row.observation.overflow,false);assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);if(spec.role){assert.equal(row.observation.fg,palette[spec.role].fg,'Foreground expresses the operation state.');assert.equal(row.observation.bg,palette[spec.role].bg,'Background expresses the operation state.');assert.equal(row.observation.border,palette[spec.role].fg,'State border matches its foreground.');}}
    catch(e){row.outcome='failed';row.error=e.message;}
    row.image=`${spec.name}-${width}.png`;await page.screenshot({path:out+'/'+row.image});row.errors=errors;row.writes=writes;records.push(row);
+   if(spec.expectedText&&!row.observation.noticeText.includes(spec.expectedText)){row.outcome='failed';row.error='Missing validation progress label: '+spec.expectedText;}
   }finally{await context.close();}
  }
 }catch(e){fatal=e.stack;}finally{await browser.close();await site.close();}
