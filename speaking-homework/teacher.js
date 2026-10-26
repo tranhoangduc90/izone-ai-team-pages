@@ -1,4 +1,4 @@
-import { createTeacherSessionClient } from '../shared/teacher-session-client.js';
+import { createTeacherSessionClient } from '../shared/teacher-session-client.js?startup=20261026-v1';
 
 const config = window.TERM_TEST_APP_CONFIG || {};
 const receiptId = new URL(location.href).searchParams.get('receipt') || '';

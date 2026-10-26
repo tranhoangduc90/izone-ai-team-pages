@@ -5,7 +5,7 @@
  * Khi lỗi: trả lỗi có status để giao diện phân biệt hết phiên, thiếu quyền và lỗi mạng.
  */
 
-import './teacher-single-sign-on.js?v=20261023-cache1';
+import './teacher-single-sign-on.js?v=20261026-startup1';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 function joinUrl(base, path) {
@@ -30,7 +30,7 @@ export function teacherSessionRequestOptions(options = {}) {
   return { ...options, method, headers, credentials: 'include' };
 }
 
-export function createTeacherSessionClient({ apiBaseUrl, sessionPath }) {
+export function createTeacherSessionClient({ apiBaseUrl, sessionPath, sharedProduct }) {
   const url = joinUrl(apiBaseUrl, sessionPath);
   return {
     async login(credential) {
@@ -43,6 +43,11 @@ export function createTeacherSessionClient({ apiBaseUrl, sessionPath }) {
       return parseResponse(response);
     },
     async restore() {
+      // Nơi đã kiểm API tải lớp dùng cùng middleware xác thực có thể đi thẳng
+      // từ phiên chung tới API đó. Fallback cũ giữ cho localhost/trang khác.
+      if (sharedProduct && globalThis.window?.IzoneTeacherSso) {
+        return await window.IzoneTeacherSso.restore(sharedProduct) ? { ok: true } : null;
+      }
       const response = await fetch(url, { method: 'GET', credentials: 'include', cache: 'no-store' });
       if (response.status === 401) return null;
       return parseResponse(response);

@@ -1,4 +1,5 @@
-import { createTeacherApi } from "./api.js?rev=20260920-server-session-v1";
+import {createTeacherAuthState} from "../../shared/teacher-auth-state.js?v=20261026-startup1";
+import { createTeacherApi } from "./api.js?rev=20260920-server-session-v1&startup=20261026-v1";
 import { classQuery, resolveClassRef } from "./class-selection.js";
 import { createRequestId, hasMeaningfulText, safeLmsUrl } from "./core.js?v=20260921-draft-result-v1";
 import { sectionDefinitions } from "./lesson-core.js";
@@ -11,9 +12,10 @@ import { createTeacherCommentThreadCard, renderAnnotatedText, masterScrollBehavi
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
 import { createTeacherLoginPreference } from "../../shared/teacher-login-preference.js?rev=20260918-v1";
-import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20260920-v1";
+import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20261026-startup1";
 
 const $ = (id) => document.getElementById(id);
+const authView=createTeacherAuthState({panel:$("teacher-login"),notice:$("teacher-updated"),retry:()=>location.reload()});
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = { authenticated: false, api: null, sessionClient: null, manifest: null, activitySlug: "", students: [], pollTimer: null,
   selectedStudent: null, detailRequestId: 0, focusSection: "", pending: [], canManage: false, draftResults: new Map(),
@@ -556,7 +558,7 @@ async function refresh() {
         // Link giao bài chọn một lớp cụ thể: không đổi ngầm sang toàn bộ lớp khác.
         state.students = [];state.pending = [];
         $("teacher-students").replaceChildren();$("teacher-summary").replaceChildren();
-        $("teacher-dashboard").hidden = true;$("teacher-login").hidden = false;
+        $("teacher-dashboard").hidden = true;$("teacher-login").hidden = false;authView.signedOut();
         showLoginError(`Không tìm thấy lớp “${state.requestedClass}” trong phạm vi được xem. Hãy kiểm tra lớp trong link hoặc đổi tài khoản Google.`);
         return;
       } else if (classRef && classRef !== selectedClassRef) {
@@ -569,7 +571,7 @@ async function refresh() {
     renderSummary(state.students);
     renderStudents(state.students);
     renderReconciliation();
-    $("teacher-login").hidden = true;
+    $("teacher-login").hidden = true;authView.ready();
     $("teacher-dashboard").hidden = false;
     $("teacher-updated").textContent = `Cập nhật lúc ${formatTime(result.data.generatedAt)}`;
     showLoginError();
@@ -602,7 +604,7 @@ async function handleCredential(response) {
   state.loginGeneration += 1;
   state.authenticated = false;
   state.classQueryResolved = false;state.classQueryError = "";
-  $("teacher-login").hidden = false;
+  $("teacher-login").hidden = false;authView.signedOut();
   $("teacher-dashboard").hidden = true;
   $("teacher-updated").textContent = "Đang xác minh quyền…";
   showLoginError("Đang xác minh quyền truy cập…");
@@ -630,6 +632,7 @@ async function waitForGoogle(clientId) {
 }
 
 async function init() {
+  authView.checking();
   if (globalThis.__IZONE_SW_TASK2_REDIRECTING__) return;
   try {
     const slug = new URLSearchParams(location.search).get("task") || "writing-lesson13-young-leaders";
@@ -676,9 +679,11 @@ async function init() {
       state.authenticated = true;
       await refresh();
     }
+    if (!restored) authView.signedOut();
     await waitForGoogle(config.googleClientId);
     if (!state.authenticated && loginPreference.read()) globalThis.google.accounts.id.prompt();
   } catch (error) {
+    authView.failed(error);
     showLoginError(error.message);
   }
 }
@@ -698,7 +703,7 @@ function clearTeacherLogin() {
   for (const id of ["teacher-students", "teacher-summary", "teacher-reconciliation-list", "teacher-class", "teacher-detail-content"]) $(id).replaceChildren();
   $("teacher-reconciliation").hidden = true;
   $("teacher-dashboard").hidden = true;
-  $("teacher-login").hidden = false;
+  $("teacher-login").hidden = false;authView.signedOut();
 }
 
 // A roster refresh can replace the original opener while its modal is open.

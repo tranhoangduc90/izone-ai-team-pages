@@ -18,9 +18,12 @@
   {id:'substitute',prefix:'/substitute-teacher-api',identity:true}
  ];
  const original=window.fetch.bind(window),pending=new Map(),initialized=new Set();
- let discovery=null,generation=0;
+ let discovery=null,generation=0,startup=null;
  const post=(url,body={})=>original(url,{method:'POST',credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
- async function restore(id){
+ async function performRestore(id,force=false){
+  if(!products.some(p=>p.id===id))throw Error('Sản phẩm chưa hỗ trợ đăng nhập chung.');
+  if(!force&&initialized.has(id))return true;
+  if(force)initialized.delete(id);
   const start=generation;
   const key=start+':'+id;
   if(pending.has(key))return pending.get(key);
@@ -45,9 +48,17 @@
    if(response.status===401)return false;
    if(response.status===403)throw Object.assign(Error('Tài khoản đang đăng nhập chưa có quyền sản phẩm này.'),{status:403});
    if(!response.ok)throw Error('Chưa khôi phục được phiên giảng viên dùng chung. Hãy thử lại.');
+   initialized.add(id);
    return true;
   })().finally(()=>pending.delete(key));
   pending.set(key,work);return work;
+ }
+ // Trang GV và lần đọc API đầu dùng chung kết quả khởi động, kể cả kết quả
+ // không có phiên/lỗi. Chỉ tiêu thụ một lần; thử lại sau đó luôn hỏi máy chủ.
+ function restore(id,{force=false}={}){
+  const early=startup;startup=null;
+  if(!force&&early?.generation===generation&&early.id===id)return early.promise;
+  return performRestore(id,force);
  }
  function route(input,options){
   let url;try{url=new URL(typeof input==='string'||input instanceof URL?String(input):input.url,window.location.href);}catch{return null;}
@@ -82,7 +93,7 @@
   // Lần đọc này đã dò mà không có phiên: không dò lại cùng các nguồn lần hai.
   // Không giữ kết quả âm sang request sau hoặc qua lần đăng nhập/đăng xuất.
   if(match.method==='GET'&&version!==generation)throw Error('Phiên giảng viên vừa thay đổi. Hãy mở lại bài.');
-  if(match.method==='GET'&&response.status===401&&!missingSharedSession&&await restore(match.product.id))response=await original(input,options);
+  if(match.method==='GET'&&response.status===401&&!missingSharedSession&&await restore(match.product.id,{force:true}))response=await original(input,options);
   if(match.method==='GET'&&version!==generation)throw Error('Phiên giảng viên vừa thay đổi. Hãy mở lại bài.');
   return response;
  };
@@ -98,4 +109,10 @@
   generation++;initialized.clear();try{window.localStorage.setItem('izone:teacher-sso-logout',String(Date.now()));}catch{}
  }
  window.IzoneTeacherSso={restore,login,logout};
+ // Chỉ trang vào dành cho GV khai báo thuộc tính này. Trang học viên giữ nguyên.
+ const entry=typeof document!=='undefined'?document.currentScript?.dataset.izoneTeacherProduct:null;
+ if(products.some(p=>p.id===entry)){
+  const promise=performRestore(entry);startup={id:entry,generation,promise};
+  promise.catch(()=>{}); // Giao diện sẽ nhận lỗi khi tiêu thụ kết quả, không bỏ lỗi.
+ }
 }());

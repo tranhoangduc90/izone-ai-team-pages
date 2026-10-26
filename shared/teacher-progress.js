@@ -1,4 +1,4 @@
-import { teacherSessionRequestOptions } from './teacher-session-client.js';
+import { teacherSessionRequestOptions } from './teacher-session-client.js?startup=20261026-v1';
 import { renderPracticeDefinitionHtml as definitionHtml } from './teacher-practice-definition.js?v=20261021-authoring-v1';
 
 // Nhận dữ liệu chỉ đọc từ API của từng sản phẩm. Không dùng danh tính học viên,

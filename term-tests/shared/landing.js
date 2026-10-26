@@ -6,7 +6,7 @@
  */
 
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
-import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20260920-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20261026-startup1';
 import { sortClassesNewestFirst } from './landing-model.js?rev=20260904-landing-google-auth-v1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};

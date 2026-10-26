@@ -12,8 +12,9 @@ import {
   writingStatusLabel,
   writingTaskStateLabel
 } from './model.js?rev=20260904-k56-demo-v1';
-import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1';
+import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v1';
 import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261019-v1';
+import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const sessionClient = createTeacherSessionClient({
@@ -81,6 +82,8 @@ const elements = Object.fromEntries([
   'classSelect', 'testSelect', 'reviewerName', 'teacherTabs', 'teacherTabsPrev', 'teacherTabsNext', 'overviewView', 'overviewTitle',
   'resultCount', 'classSummary', 'overviewBody', 'studentView'
 ].map(id => [id, document.getElementById(id)]));
+const authView=createTeacherAuthState({panel:elements.accessView,notice:elements.notice,badge:elements.loginBadge,retry:()=>restoreLogin().finally(setupGoogleSignIn)});
+let googleSignInLoading=false,googleSignInReady=false;
 
 function showNotice(message, kind = '') {
   elements.notice.textContent = message;
@@ -169,9 +172,13 @@ async function apiRequest(path) {
     throw Object.assign(new Error('Lượt đăng nhập đã thay đổi.'), { staleSession: true });
   }
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) resetLoginAfterError();
-    if (response.status === 401) throw new Error('Phiên đăng nhập đã hết hạn; hãy đăng nhập lại.');
-    if (response.status === 403) throw new Error(payload?.message || 'Tài khoản chưa được cấp quyền cho lớp này.');
+    if (response.status === 401 || response.status === 403) {
+      resetLoginAfterError();
+      if(response.status===401){authView.signedOut();setupGoogleSignIn();}
+      else authView.failed({status:403,message:payload?.message||'Thiếu quyền truy cập.'});
+    }
+    if (response.status === 401) throw Object.assign(new Error('Phiên đăng nhập đã hết hạn; hãy đăng nhập lại.'),{status:401});
+    if (response.status === 403) throw Object.assign(new Error(payload?.message || 'Tài khoản chưa được cấp quyền cho lớp này.'),{status:403});
     throw new Error(payload?.message || `API trả về mã ${response.status}.`);
   }
   if (!payload?.ok) throw new Error(payload?.message || payload?.error || 'API không xác nhận yêu cầu.');
@@ -1025,38 +1032,45 @@ function resetLoginAfterError() {
 async function restoreLogin() {
   if (hasLogoutIntent()) {
     resetLoginAfterError();
+    authView.signedOut();
     try { await requestLogout(); clearLogoutIntent(); showNotice('Đã đăng xuất. Đăng nhập Google để xem kết quả lớp.'); }
     catch { showNotice('Máy chủ chưa xác nhận đăng xuất. Dữ liệu vẫn được ẩn; hãy kết nối lại hoặc chủ động đăng nhập Google.', 'error'); }
     return;
   }
-  showNotice('Đang khôi phục phiên đăng nhập...');
+  authView.checking();showNotice('Đang khôi phục phiên đăng nhập...');
   try {
     const restored = await sessionClient.restore();
     if (!restored) {
+      authView.signedOut();
       showNotice('Đăng nhập Google để xem kết quả lớp.');
       return;
     }
     state.authenticated = true;
     await connectAfterGoogleLogin();
+    authView.ready();
   } catch (error) {
     if (error.staleSession) return;
     resetLoginAfterError();
     showNotice(`Không thể khôi phục phiên: ${error.message} Bạn có thể tải lại trang hoặc đăng nhập lại.`, 'error');
+    authView.failed(error);
   }
 }
 
 function setupGoogleSignIn() {
+  if(!authView.needsLogin||googleSignInLoading||googleSignInReady)return;
   const clientId = appConfig.GOOGLE_CLIENT_ID;
   if (!clientId) {
     showNotice('Chưa cấu hình Google OAuth Client ID.', 'error');
     return;
   }
   const renderButton = () => {
+    googleSignInLoading=false;googleSignInReady=true;
     window.google.accounts.id.initialize({
       client_id: clientId,
       auto_select: false,
       callback: async response => {
         resetLoginAfterError();
+        authView.checking();
         const generation = loginGeneration;
         try {
           await requestLogin(response.credential || '', generation);
@@ -1064,10 +1078,12 @@ function setupGoogleSignIn() {
           clearLogoutIntent();
           state.authenticated = true;
           await connectAfterGoogleLogin();
+          authView.ready();
         } catch (error) {
           if (error.staleSession || generation !== loginGeneration) return;
           resetLoginAfterError();
           showNotice(`Không thể đăng nhập: ${error.message}`, 'error');
+          authView.failed(error);
         }
       }
     });
@@ -1080,11 +1096,13 @@ function setupGoogleSignIn() {
     });
   };
   const script = document.createElement('script');
+  googleSignInLoading=true;
   script.src = 'https://accounts.google.com/gsi/client';
   script.async = true;
   script.defer = true;
   script.onload = renderButton;
   script.onerror = () => {
+    googleSignInLoading=false;
     if (!state.connected) showNotice('Không tải được màn hình đăng nhập Google.', 'error');
   };
   document.head.append(script);
@@ -1125,6 +1143,7 @@ elements.refreshButton.addEventListener('click', async () => {
 
 elements.logoutButton.addEventListener('click', async () => {
   rememberLogoutIntent(); resetLoginAfterError();
+  authView.signedOut();setupGoogleSignIn();
   const generation = loginGeneration;
   window.google?.accounts?.id?.disableAutoSelect?.();
   showNotice('Đang đăng xuất; dữ liệu trên máy đã được ẩn.');

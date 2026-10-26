@@ -13,7 +13,8 @@ import {observeSubmissionWindow, submissionWindowMessage} from './submission-win
  * Khi lỗi: giao diện giữ dữ liệu đang chọn, không giả vờ đã lưu và hiện thông báo để thử lại.
  */
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
-import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20260920-v1';
+import { createTeacherAuthState } from '../shared/teacher-auth-state.js?v=20261026-startup1';
+import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20261026-startup1';
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261022-reading-slots';
 import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261025-docs-import-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
@@ -30,7 +31,7 @@ const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261022
 if(THUY_UI)document.body.classList.add('thuy-live','thuy-teacher');
 const sessionClient = createTeacherSessionClient({
   apiBaseUrl: config.API_BASE_URL,
-  sessionPath: '/api/auth/session'
+  sessionPath: '/api/auth/session', sharedProduct: 'mapping'
 });
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
 const state = {
@@ -97,6 +98,7 @@ const elements = Object.fromEntries([
   'draftSpeakingFeedback', 'draftFeedbackStatus', 'sendDraftFeedbackButton',
   'draftJourneyLinkStatus', 'copyDraftJourneyLinkButton'
 ].map(id => [id, document.getElementById(id)]));
+const authView = createTeacherAuthState({panel:elements.teacherAccessView,notice:elements.teacherNotice,badge:elements.teacherName,retry:initializeAuthentication});
 
 const classPortal=document.createElement('section');classPortal.id='teacherClassPortal';classPortal.hidden=true;elements.teacherWorkspace.prepend(classPortal);
 const thuyLayout=THUY_UI?mountThuyTeacherLayout(elements,{onMode:showThuyMode,onHome:showClassPortal,onClass:classId=>{
@@ -172,6 +174,7 @@ async function apiRequest(path, { method = 'GET', body, signal } = {}) {
     if (error.status === 401 || (error.status === 403 && !path.startsWith('/teacher/form-drafts'))) {
       clearTeacherLogin();
       setNotice(error.message, 'error');
+      if(error.status===401){authView.signedOut();initializeGoogle();}else authView.failed(error);
     }
     throw error;
   }
@@ -1672,6 +1675,7 @@ async function copyCurrentStudentLink() {
 }
 
 function initializeGoogle(attempt = 0) {
+  if (!authView.needsLogin) return;
   if (!config.GOOGLE_CLIENT_ID) {
     setNotice('Chưa cấu hình Google Client ID.', 'error');
     return;
@@ -1688,12 +1692,15 @@ function initializeGoogle(attempt = 0) {
       if (!response.credential) return;
       state.authGeneration += 1;
       clearTeacherLogin();
+      authView.checking();
       try {
         await sessionClient.login(response.credential);
         state.authenticated = true;
         await loadWorkspace();
+        authView.ready();
       } catch (error) {
         if (state.authGeneration) setNotice(error.message, 'error');
+        authView.failed(error);
       }
     }
   });
@@ -1859,21 +1866,29 @@ elements.teacherLogoutButton.addEventListener('click', async () => {
   try { await sessionClient.logout(); } catch { /* Vẫn xóa dữ liệu hiển thị trên máy dùng chung. */ }
   clearTeacherLogin();
   window.google?.accounts?.id?.disableAutoSelect();
+  authView.signedOut();
   const forgotten = loginPreference.set(false);
   elements.rememberTeacherLogin.checked = !forgotten;
   setNotice(forgotten ? 'Đã đăng xuất.' : 'Đã đăng xuất, nhưng trình duyệt chưa xóa được lựa chọn tự đăng nhập.', forgotten ? '' : 'error');
+  initializeGoogle();
 });
 
 async function initializeAuthentication() {
+  authView.checking();
   try {
     const restored = await sessionClient.restore();
     if (restored) {
       state.authenticated = true;
       await loadWorkspace();
+      authView.ready();
+    } else {
+      authView.signedOut();
+      setNotice('Đăng nhập Google để mở lớp của bạn.');
     }
   } catch (error) {
     clearTeacherLogin();
     setNotice(`Không thể khôi phục phiên: ${error.message}`, 'error');
+    authView.failed(error);
   } finally {
     initializeGoogle();
   }
@@ -1890,7 +1905,7 @@ window.addEventListener('online',()=>{if(state.liveEnabled)liveUpdates.resume();
 window.addEventListener('storage',event=>{
   if(!['izone:teacher-sso-login','izone:teacher-sso-logout'].includes(event.key))return;
   clearTeacherLogin();
-  if(event.key==='izone:teacher-sso-login')void initializeAuthentication();else setNotice('Bạn đã đăng xuất ở tab khác.');
+  if(event.key==='izone:teacher-sso-login')void initializeAuthentication();else {authView.signedOut();setNotice('Bạn đã đăng xuất ở tab khác.');initializeGoogle();}
 });
 window.addEventListener('pagehide',()=>liveUpdates.stop());
 window.addEventListener('pageshow',event=>{if(event.persisted&&state.authenticated&&!elements.dashboardPanel.hidden)void loadDashboard();});

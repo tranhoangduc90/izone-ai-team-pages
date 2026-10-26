@@ -39,7 +39,9 @@ test('lỗi ghép phải được báo, không được coi là đã ghép', asy
 
 test('giao diện chung có tìm toàn database, xác nhận trước ghi và phiên bản chống cache cũ', async () => {
   const source = await readFile(new URL('../js/teacher-app.js', import.meta.url), 'utf8');
-  const html = await readFile(new URL('../teacher.html', import.meta.url), 'utf8');
+  const entry = await readFile(new URL('../teacher.html', import.meta.url), 'utf8');
+  assert.match(entry,/task1-ui-loader\.js\?v=/);
+  const html = entry + await readFile(new URL('../js/task1-ui-loader.js',import.meta.url),'utf8');
   assert.match(source, /searchOfficialStudents\(query, item.studentRef\)/);
   assert.match(source, /deleteProvisional\(item.studentRef\)/);
   assert.match(source, /reconcileProvisional\(item.studentRef, candidate.studentRef\)/);

@@ -25,6 +25,7 @@ class Element {
   set textContent(value) { this.text=String(value); this.children=[]; }
   get textContent() { return (this.text||'')+this.children.map(n=>n.textContent??String(n)).join(''); }
   append(...nodes) { this.children.push(...nodes); }
+  after(...nodes) { this.afterNodes=nodes; }
   prepend(...nodes) { this.children.unshift(...nodes); }
   replaceChildren(...nodes) { this.text=''; this.children=[...nodes]; }
   get childElementCount() { return this.children.length; }
@@ -82,7 +83,8 @@ async function harness(overrides={}) {
   const boundary=source.lastIndexOf('\nsetupV2Filters();');
   assert.ok(boundary>0);
   const executable=source.slice(0,boundary).replace(/^import[\s\S]*?from ['"][^'"]+['"];[ \t]*\r?\n/gm,'');
-  vm.runInContext(executable+'\nglobalThis.subject={state,init,refreshData,selectView,clearLogin,loadSourceIssues,skipPair,restorePair,openDetail};',context);
+  const authState=(await readFile(new URL('../../shared/teacher-auth-state.js',import.meta.url),'utf8')).replace('export function ','function ');
+  vm.runInContext(authState+'\n'+executable+'\nglobalThis.subject={state,init,refreshData,selectView,clearLogin,loadSourceIssues,skipPair,restorePair,openDetail};',context);
   const subject=context.subject;
   const boot=subject.init();
   await tick(); await tick();

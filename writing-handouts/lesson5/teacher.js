@@ -1,4 +1,4 @@
-import '../../shared/teacher-single-sign-on.js?v=20261023-cache1';
+import '../../shared/teacher-single-sign-on.js?v=20261026-startup1';
 import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261025-l11-ideas-v4';
 import {workflowFor,isWhole,isMulti,isPrepared,bodyKey,bodyIndexOf} from '../shared/workflow.mjs?v=20261025-l11-ideas-v4';
 import {teacherBodies} from '../shared/multi-body-teacher.mjs?v=20261025-l11-ideas-v4';
