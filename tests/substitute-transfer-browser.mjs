@@ -26,7 +26,7 @@ try{
    if(url.startsWith(base))return route.continue();
    if(url.includes('/webhook/')){
     const {route:api,payload={}}=req.postDataJSON();let response={};
-    if(api==='/api/test/history')response={testSlug:slug,historyEpoch:'11111111-1111-4111-8111-111111111111',stateVersion:2,maintenance:false,examTimingVersion:'substitute-audio-transfer-20261014-v1',...(slug==='substitute-test-2-k67'?{writingVersions:{DEMO:'substitute-k67-test2-two-task-20261007-v1'}}:{}),classes:[{code:'DEMO',name:'DEMO'}]};
+    if(api==='/api/test/history')response={testSlug:slug,serverNow:new Date(fixtureNow).toISOString(),historyEpoch:'11111111-1111-4111-8111-111111111111',stateVersion:2,maintenance:false,examTimingVersion:'substitute-audio-transfer-20261014-v1',...(slug==='substitute-test-2-k67'?{writingVersions:{DEMO:'substitute-k67-test2-two-task-20261007-v1'}}:{}),classes:[{code:'DEMO',name:'DEMO'}]};
     else if(api==='/api/test/roster')response={students:[{ref:'fictional-01',name:'Học viên giả'}]};
     else if(api==='/api/test/writing/session')response={testSlug:slug,classCode:payload.classCode,studentRef:payload.studentRef,clientRunId:payload.clientRunId,historyEpoch:payload.historyEpoch,examVersion:'substitute-k67-test2-two-task-20261007-v1',writingSessionId:payload.clientRunId};
     else if(api==='/api/test/exam/session'){

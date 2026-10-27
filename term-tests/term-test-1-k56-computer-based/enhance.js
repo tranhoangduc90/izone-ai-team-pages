@@ -1330,7 +1330,7 @@
       const deadline = Date.parse(exam.listeningDeadlineAt || '');
       if (!Number.isFinite(deadline)) return;
       const serverOffset = Number(exam.serverTimeOffsetMs) || 0;
-      const remaining = Math.max(0, deadline - (Date.now() + serverOffset));
+      const remaining = Math.max(0, deadline - (window.IZONE_EXAM_CLOCK?.now(serverOffset) ?? (Date.now() + serverOffset)));
       if (remaining === 0) lockAndSubmit(Date.now());
     }
     render();
@@ -1406,7 +1406,8 @@
     function renderTimer() {
       if (readingForm.form.hidden || !uiState.readingTimer.deadline) return;
       const now = Date.now();
-      const remainingMs = Math.max(0, uiState.readingTimer.deadline - now);
+      const remainingMs = Math.max(0, uiState.readingTimer.deadline - (window.IZONE_EXAM_CLOCK?.now() ?? now));
+      if (!Number.isFinite(remainingMs)) return;
       const remainingSeconds = Math.ceil(remainingMs / 1000);
       if (remainingSeconds !== lastRenderedSecond) {
         lastRenderedSecond = remainingSeconds;
@@ -1432,7 +1433,7 @@
         try {
           const session = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
           const deadline = Date.parse(session.readingDeadlineAt || '');
-          if (Number.isFinite(deadline)) uiState.readingTimer.deadline = deadline - (Number(session.serverTimeOffsetMs) || 0);
+          if (Number.isFinite(deadline)) uiState.readingTimer.deadline = deadline;
         } catch {
           // Tiếp tục với nguồn bộ nhớ còn lại.
         }
@@ -1519,7 +1520,8 @@
     function renderTimer() {
       if (form.hidden || !uiState.writingTimer.deadline) return;
       const now = Date.now();
-      const remainingMs = Math.max(0, uiState.writingTimer.deadline - now);
+      const remainingMs = Math.max(0, uiState.writingTimer.deadline - (window.IZONE_EXAM_CLOCK?.now() ?? now));
+      if (!Number.isFinite(remainingMs)) return;
       const remainingSeconds = Math.ceil(remainingMs / 1000);
       if (remainingSeconds !== lastRenderedSecond) {
         lastRenderedSecond = remainingSeconds;
@@ -1546,7 +1548,7 @@
         try {
           const session = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
           const deadline = Date.parse(session.writingDeadlineAt || '');
-          if (Number.isFinite(deadline)) uiState.writingTimer.deadline = deadline - (Number(session.serverTimeOffsetMs) || 0);
+          if (Number.isFinite(deadline)) uiState.writingTimer.deadline = deadline;
         } catch {
           // Tiếp tục với nguồn bộ nhớ còn lại.
         }

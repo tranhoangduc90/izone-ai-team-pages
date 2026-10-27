@@ -6,7 +6,7 @@
   const win=window,doc=document,cfg=win.TERM_TEST_APP_CONFIG,slug=win.TERM_TEST_CONFIG?.slug;
   if(cfg?.EXAM_JOURNAL_ENABLED!==true||typeof slug!=='string'||win.EXAM_JOURNAL_STARTUP)return;
   const script=doc.currentScript,standalone=new URL(script.src).pathname.endsWith('/exam-journal/lobby-capture.js');
-  const bridgeUrl=new URL((standalone?'./':'../shared/exam-journal/')+'bridge.mjs?v=20261024-startup-v2',script.src).href;
+  const bridgeUrl=new URL((standalone?'./':'../shared/exam-journal/')+'bridge.mjs?v=20261024-startup-v2&resilience=20261027-v1',script.src).href;
   const endpoint=cfg.EXAM_JOURNAL_BASE_URL||(slug.startsWith('substitute-')
     ?new URL(cfg.API_BASE_URL,win.location.href).origin+'/substitute-journal-api/'+slug
     :cfg.API_BASE_URL+'/api/term-tests/'+slug);

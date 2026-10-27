@@ -27,6 +27,7 @@
     : '';
 
   if (!testConfig || !appConfig || !root) return;
+  if(!window.IZONE_EXAM_CLOCK)await import('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
 
   if (!classCode && !window.TERM_TEST_CONTENT && !demoMode) {
     const { redirectRememberedTestClass } = await import('../../shared/test-student-class.js?v=20261018-identity-v1');
@@ -139,6 +140,7 @@
       && restoredSession.writingServerRevision >= 0 ? restoredSession.writingServerRevision : null,
     writingRecovery: Array.isArray(restoredSession.writingRecovery) ? restoredSession.writingRecovery.slice(0, 5) : []
   };
+  if(!demoMode)window.IZONE_EXAM_CLOCK?.configure(() => apiRequest(`/api/term-tests/${testConfig.slug}/clock`));
 
   // Trình duyệt chặn một kho lưu vẫn cho chọn tên và dùng kho còn lại.
   function availableStorages() {
@@ -150,7 +152,7 @@
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null;
   if (appConfig.EXAM_JOURNAL_ENABLED === true) {
-    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2').then(({ connectExamJournal }) => {
+    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug,
         testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
@@ -1155,7 +1157,7 @@
       if (skill === 'listening') state.listeningDeadlineAt = response.deadlineAt;
       else state.readingDeadlineAt = response.deadlineAt;
     }
-    if (response.serverNow) state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
+    if (response.serverNow) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(response.serverNow) ?? (Date.parse(response.serverNow) - Date.now()));
     return response;
   }
 
@@ -1257,7 +1259,7 @@
     if (miniAnswerSheet) return false;
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const deadline = Date.parse(deadlineValue || '');
-    return Number.isFinite(deadline) && Date.now() + (Number(state.serverTimeOffsetMs) || 0) >= deadline;
+    return Number.isFinite(deadline) && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + (Number(state.serverTimeOffsetMs) || 0))) >= deadline;
   }
 
   const sectionDeadlineGuards = {
@@ -1277,7 +1279,7 @@
     }};
     const applyProtection = detail => {
       if (detail.listeningDeadlineAt) state.listeningDeadlineAt = detail.listeningDeadlineAt;
-      if (detail.serverNow) state.serverTimeOffsetMs = Date.parse(detail.serverNow) - Date.now();
+      if (detail.serverNow) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(detail.serverNow) ?? (Date.parse(detail.serverNow) - Date.now()));
       if (detail.held) {
         state.frozenAnswers.listening ||= {...collectAnswers(elements.listeningQuestions)};
         stopSectionDraftFlow('listening'); setAnswerControlsLocked('listening', true);
@@ -1309,7 +1311,7 @@
     if (!Number.isFinite(Date.parse(deadlineAt))) return;
     state.listeningDeadlineAt = deadlineAt;
     if (Number.isFinite(Date.parse(serverNow))) {
-      state.serverTimeOffsetMs = Date.parse(serverNow) - Date.now();
+      state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(serverNow) ?? (Date.parse(serverNow) - Date.now()));
     }
     saveSession();
   });
@@ -1601,7 +1603,7 @@
   function writingTimeExpired() {
     return Boolean(state.writingConflict?.timedOut
       || elements.writingView?.dataset.writingTimeExpired === 'true'
-      || (state.writingDeadlineAt && Date.now() + state.serverTimeOffsetMs > Date.parse(state.writingDeadlineAt)));
+      || (state.writingDeadlineAt && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + state.serverTimeOffsetMs)) > Date.parse(state.writingDeadlineAt)));
   }
 
   function renderWritingConflict() {
@@ -1652,7 +1654,7 @@
       && (state.drafts.writing.task1 || state.drafts.writing.task2)) state.writingDirty = true;
     state.writingStarted = Boolean(writing.started || state.writingStarted);
     state.writingDeadlineAt = writing.deadlineAt || state.writingDeadlineAt;
-    if (writing.serverNow) state.serverTimeOffsetMs = Date.parse(writing.serverNow) - Date.now();
+    if (writing.serverNow) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(writing.serverNow) ?? (Date.parse(writing.serverNow) - Date.now()));
     if (writing.submitted && !sameWriting(state.drafts.writing, writing)) {
       preserveWritingRecovery('Bài trên máy khác bản đã nộp');
     }
@@ -1801,7 +1803,7 @@
     state.completed = Boolean(payload.completed);
     state.examSessionToken = payload.exam?.examSessionToken || state.examSessionToken;
     state.readingDeadlineAt = payload.exam?.readingDeadlineAt || state.readingDeadlineAt;
-    if (payload.exam?.serverNow) state.serverTimeOffsetMs = Date.parse(payload.exam.serverNow) - Date.now();
+    if (payload.exam?.serverNow) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(payload.exam.serverNow) ?? (Date.parse(payload.exam.serverNow) - Date.now()));
     applyWritingFromServer(payload.writing);
     saveSession();
     return payload;
@@ -1866,7 +1868,7 @@
     state.listeningSubmitted = true;
     state.studentName = payload.studentName || state.studentName;
     state.readingDeadlineAt = payload.readingDeadlineAt || '';
-    if (payload.serverNow) state.serverTimeOffsetMs = Date.parse(payload.serverNow) - Date.now();
+    if (payload.serverNow) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(payload.serverNow) ?? (Date.parse(payload.serverNow) - Date.now()));
     applySectionDraft('reading', payload.readingDraft, payload.readingDraftRevision, true);
     elements.readingStudentName.textContent = state.studentName;
     saveSession();
@@ -3283,7 +3285,7 @@
         body: JSON.stringify({ attemptToken: state.attemptToken })
       });
       state.readingDeadlineAt = response.readingDeadlineAt;
-      state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
+      state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(response.serverNow) ?? (Date.parse(response.serverNow) - Date.now()));
       applySectionDraft('reading', response.readingDraft, response.readingDraftRevision);
       saveSession();
       elements.readingStudentName.textContent = state.studentName;

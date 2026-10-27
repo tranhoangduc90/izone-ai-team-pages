@@ -19,13 +19,14 @@
   // Khi server đã có mốc xác nhận, luôn dùng deadline của server.
   const provisional=!data.audioEndedAt&&state.audioEndedAt&&Number.isFinite(Date.parse(state.listeningDeadlineAt||''))
    ?{audioEndedAt:state.audioEndedAt,listeningDeadlineAt:state.listeningDeadlineAt}:{};
+  window.IZONE_EXAM_CLOCK?.observe(data);
   return {...data,...provisional,examSessionId:data.clientRunId};
  }
  function ended(audio,observedAudioEndedAt){
   const bootstrap=window.TERM_TEST_BOOTSTRAP;if(!bootstrap?.examSessionId||window.SUBSTITUTE_STATE.blocked)return;
-  const audioEndedAt=endedByRun.get(bootstrap.clientRunId)||observedAudioEndedAt||bootstrap.audioEndedAt||new Date(Date.now()+(Number(bootstrap.serverTimeOffsetMs)||0)).toISOString();
+  const audioEndedAt=endedByRun.get(bootstrap.clientRunId)||observedAudioEndedAt||bootstrap.audioEndedAt||new Date((window.IZONE_EXAM_CLOCK?.estimate(bootstrap.serverTimeOffsetMs) ?? (Date.now()+(Number(bootstrap.serverTimeOffsetMs)||0)))).toISOString();
   endedByRun.set(bootstrap.clientRunId,audioEndedAt);
-  const patch={audioEndedAt,listeningDeadlineAt:new Date(Date.parse(audioEndedAt)+300000).toISOString(),serverNow:new Date(Date.now()+(Number(bootstrap.serverTimeOffsetMs)||0)).toISOString()};
+  const patch={audioEndedAt,listeningDeadlineAt:new Date(Date.parse(audioEndedAt)+300000).toISOString()};
   window.dispatchEvent(new CustomEvent('term-test:listening-timing-updated',{detail:patch}));
   if(confirmingRuns.has(bootstrap.clientRunId)||confirmedRuns.has(bootstrap.clientRunId))return;
   confirmingRuns.add(bootstrap.clientRunId);

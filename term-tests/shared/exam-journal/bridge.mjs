@@ -32,7 +32,7 @@ export function contentFields(state) {
 // Nhận state qua callback chỉ đọc. Không thay fetch/confirm toàn cục, timer hoặc điều khiển bài thi.
 export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,build = 'unknown',
   document:doc = globalThis.document,window:win = globalThis.window,onHealth = () => {},outbox:providedOutbox,fetcher = globalThis.fetch,adoptExistingState=true }) {
-  if (!enabled) return null;
+  if (!enabled || win?.IZONE_EXAM_DEVICE_BLOCKED) return null;
   const target = new URL(endpoint,win.location.href);
   if (!['http:','https:'].includes(target.protocol) || target.search || target.hash || target.username || target.password) throw new Error('INVALID_JOURNAL_ENDPOINT');
   const connectionKey=JSON.stringify([target.href,testSlug]),existing=win[registryKey]?.get(connectionKey);

@@ -51,7 +51,7 @@ import {WORKER_ORIGIN,SUBSTITUTE_ASSETS,REVIEW_ASSETS} from './config.mjs?v=2026
 const memory=new Map(),breakers=new Map(),TTL=86400000;
 let cacheUnavailable=false,completeAudio=null;
 const safeOrigins=['https://izone-audio-delivery-stage.tranhoangduc90.workers.dev','https://izone-audio-delivery.tranhoangduc90.workers.dev'];
-function denied(){throw Object.assign(Error('ACCESS_DENIED'),{accessDenied:true});}
+function denied(){throw Object.assign(Error('ACCESS_DENIED'),{accessDenied:true,userMessage:'Chưa xác nhận được quyền tải audio. Giữ trang và báo giáo viên để kiểm tra phiên; bài làm được giữ nguyên.'});}
 function breaker(origin,now=Date.now()){
   let until=breakers.get(origin)||0;
   try{until=Math.max(until,Number(sessionStorage.getItem('audio-source:'+origin))||0);}catch{}
@@ -86,8 +86,8 @@ function save(id,bytes){const r={id,bytes,expiresAt:Date.now()+TTL};memory.set(i
 export async function downloadPreferred(m,options={}){
   if(m?.cloudflare?.version!==1||m.cloudflare.policy!=='public-mp3-v1')return null;
   const a=Object.values(ASSETS).find(x=>x.sha256===m.sha256&&x.url===m.url&&x.byteLength===m.byteLength);
-  const journal=startJournalAudioCapture({assetId:a?.id,sha256:m.sha256,byteLength:m.byteLength,transportRevision:'20261024-cf512-1'},new URL('../../term-tests/shared/exam-journal/bootstrap-capture.mjs?v=20261024-audio-v1',import.meta.url).href);
-  const onEvent=row=>{journal?.event(row);try{const work=options.onEvent?.(row);if(work?.catch)void work.catch(()=>{});}catch{}};
+  const journal=startJournalAudioCapture({assetId:a?.id,sha256:m.sha256,byteLength:m.byteLength,transportRevision:'20261024-cf512-1'},new URL('../../term-tests/shared/exam-journal/bootstrap-capture.mjs?v=20261024-audio-v1&resilience=20261027-v1',import.meta.url).href);
+  const onEvent=row=>{journal?.event(row);try{globalThis.window?.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:row.source}}));}catch{}try{const work=options.onEvent?.(row);if(work?.catch)void work.catch(()=>{});}catch{}};
   try{
   if(!a||m.envelopeVersion!=='MP3')throw Error('AUDIO_CATALOG_MISMATCH');
   if(!safeOrigins.includes(WORKER_ORIGIN))throw Error('AUDIO_ORIGIN_DENIED');
@@ -119,13 +119,19 @@ export async function downloadPreferred(m,options={}){
       }
       if(!r.ok)throw Error('ACCESS_SOURCE_'+r.status);
       const value=await r.json();
-      if(value.policy!=='public-mp3-v1'||value.version!==1||keyContext(value.context)!==keyContext(context)||!Number.isSafeInteger(value.expiresAt)||value.expiresAt<=Date.now()||value.expiresAt>Date.now()+610000)denied();
+      // The issuer checks the signed expiry on every part request. Comparing its
+      // epoch with Windows time rejects valid tickets on otherwise authorized
+      // devices. Keep scope/key validation here; EXPIRED renews once in chunks.
+      if(value.policy!=='public-mp3-v1'||value.version!==1||keyContext(value.context)!==keyContext(context)||!Number.isSafeInteger(value.expiresAt)||value.expiresAt<=0)denied();
       const nextKey=decodeBase64url(value.key);
       if(nextKey.length!==32||typeof value.ticket!=='string'||value.ticket.length>4096)denied();
       return {...value,rawKey:nextKey};
     }finally{clearTimeout(timer);options.signal?.removeEventListener('abort',abort);}
   }
   if(!disablePrimary&&parts.size<a.chunks.length)try{const access=await issue();ticket=access.ticket;key=access.rawKey;}catch(error){options.signal?.throwIfAborted();if(error.accessDenied)throw error;disablePrimary=true;openBreaker(WORKER_ORIGIN);onEvent({source:'primary-error',reason:error.name==='AbortError'?'ACCESS_TIMEOUT':error.message});}
+  // A manual retry still passes native authorization and the same access/scope
+  // checks above. It changes source only, never the session, key or deadline.
+  if(options.preferFallback===true||globalThis.window?.IZONE_AUDIO_PREFER_FALLBACK===true)disablePrimary=true;
   const manifest={version:1,chunkSize:524288,sha256:a.sha256,byteLength:a.byteLength,chunks:a.chunks,context,ticket,primaryUrl:WORKER_ORIGIN+'/parts/'+a.id,fallbackUrl:a.url};
   const result=await downloadAudio(manifest,{
     key,parts,signal:options.signal,fetchImpl,disablePrimary,

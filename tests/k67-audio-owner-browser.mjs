@@ -34,13 +34,56 @@ async function open(slug='term-test-1',mode='lis_first',init){
 }
 async function resume(p){await p.locator('#k67TestSound').click();await p.locator('#k67ResumeAudio').click();await p.waitForFunction(()=>!window.K67_ACTIVE_LISTENING.isHeld());}
 async function cloneState(p,c){const state=await p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>k.startsWith('izone-test')||k==='izone:student-identity:v1')));await c.addInitScript(state=>{for(const[k,v]of Object.entries(state))localStorage.setItem(k,v);},state);}
-test('Claim đã ghi nhưng mất phản hồi: thử lại cùng quyền, không kẹt chủ cũ',async()=>{
+
+test('Phòng chờ: hai thiết bị tải/nghe thử không giữ quyền; máy bấm Start trước thắng',async()=>{
+  const first=await context(),second=await context();
+  try{
+    assert.equal((await first.request.post(base+'/preview/reset',{data:{}})).status(),200);
+    const p=await pageIn(first),url=base+'/term-tests/term-test-2-computer-based/?class=IC2304&mode=lis_first';
+    await p.goto(url);await p.locator('#bootstrapStudent').selectOption('11111111-1111-4111-8111-111111111111');await p.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
+    await p.waitForFunction(()=>!document.getElementById('bootstrapPreview').disabled);
+    const token=await p.evaluate(()=>window.K67_AUDIO_OWNER.token);
+    await cloneState(p,second);const q=await pageIn(second);await q.goto(url);
+    await q.waitForFunction(()=>!document.getElementById('bootstrapPreview').disabled);
+    assert.equal(await q.evaluate(()=>window.K67_AUDIO_OWNER.token),token);
+    let saved=await first.request.get(base+'/preview/audio-state?id='+token).then(r=>r.json());
+    assert.equal(saved.audio_owner_id,null);assert.equal(saved.listening_started_at,null);
+    await p.locator('#bootstrapPreview').click();await q.locator('#bootstrapPreview').click();
+    await q.locator('#bootstrapStart').click();await q.locator('#listeningView').waitFor({state:'visible'});
+    const deadline=(await first.request.get(base+'/preview/audio-state?id='+token).then(r=>r.json())).listening_deadline_at;
+    await p.locator('#bootstrapStart').click();await p.waitForFunction(()=>document.getElementById('bootstrapNotice').textContent.includes('tab'));
+    saved=await first.request.get(base+'/preview/audio-state?id='+token).then(r=>r.json());assert.equal(saved.listening_deadline_at,deadline);
+    assert.equal(await q.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),false);
+  }finally{await first.close();await second.close();}
+});
+
+test('Đổi giờ máy và thức dậy: Reading giữ nháp, đồng hồ và chưa tự nộp',async()=>{
+  const f=await open();
+  try{
+    await f.p.locator('#submitListening').click();await f.p.locator('#startReading').click();await f.p.locator('#readingView').waitFor({state:'visible'});
+    await f.p.locator('#readingQuestions input[type=text]').first().fill('CLOCK-PRESERVED');
+    const before=await f.p.locator('#readingView [role=timer] strong').innerText();
+    await f.p.evaluate(()=>{const original=Date.now;Date.now=()=>original()+86400000;});
+    await f.p.waitForTimeout(1200);
+    assert.equal(await f.p.locator('#readingView [role=timer] strong').innerText(),before);
+    assert.equal(await f.p.locator('#readingView').isVisible(),true);
+    await f.p.evaluate(()=>document.dispatchEvent(new Event('resume')));
+    await f.p.waitForFunction(()=>window.IZONE_EXAM_CLOCK.ready);
+    assert.equal(await f.p.locator('#readingQuestions input[type=text]').first().inputValue(),'CLOCK-PRESERVED');
+    assert.equal(await f.p.locator('#readingView').isVisible(),true);
+  }finally{await f.c.close();}
+});
+test('Start đã ghi nhưng mất phản hồi: thử lại cùng trang giữ quyền và deadline',async()=>{
   const c=await context();try{
-    await c.request.post(base+'/preview/reset',{data:{}});let lost=false,first;
-    await c.route('**/session/audio-owner',async route=>{const body=route.request().postDataJSON();if(body.action==='claim'&&!lost){lost=true;first=body;const response=await route.fetch();assert.equal(response.status(),200);await route.abort();}else await route.continue();});
+    await c.request.post(base+'/preview/reset',{data:{}});let lost=false,first,deadline;
+    await c.route('**/session/start',async route=>{const body=route.request().postDataJSON();if(!lost){lost=true;first=body;const response=await route.fetch();assert.equal(response.status(),200);deadline=(await response.json()).listeningDeadlineAt;await route.abort();}else await route.continue();});
     const p=await pageIn(c);await p.goto(base+'/term-tests/term-test-1-computer-based/?class=IC2304&mode=lis_first');await p.locator('#bootstrapStudent').selectOption('11111111-1111-4111-8111-111111111111');await p.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
-    await p.locator('#bootstrapRetry').waitFor({state:'visible'});assert.ok(lost);await p.locator('#bootstrapRetry').click();await p.locator('#bootstrapPreview').click();await p.locator('#bootstrapStart').click();await p.locator('#listeningView').waitFor({state:'visible'});
-    assert.equal(await p.evaluate(()=>window.K67_AUDIO_OWNER.fields().ownerProof),first.ownerProof);assert.equal(await p.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),false);
+    await p.locator('#bootstrapPreview').click();await p.locator('#bootstrapStart').click();
+    await p.waitForFunction(()=>document.getElementById('bootstrapNotice').textContent.includes('Chưa thể bắt đầu'));
+    assert.ok(lost);await p.locator('#bootstrapStart').click();await p.locator('#listeningView').waitFor({state:'visible'});
+    assert.equal(await p.evaluate(()=>window.K67_AUDIO_OWNER.fields().ownerProof),first.ownerProof);
+    assert.equal(await p.evaluate(()=>window.TERM_TEST_BOOTSTRAP.listeningDeadlineAt),deadline);
+    assert.equal(await p.evaluate(()=>window.TERM_TEST_BOOTSTRAP.officialAudioElement.paused),false);
   }finally{await c.close();}
 });
 test('Không lưu được quyền bền: chặn trước claim, không tạo phiên bị kẹt sau reload',async()=>{

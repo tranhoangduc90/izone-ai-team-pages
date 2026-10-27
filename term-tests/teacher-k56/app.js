@@ -14,6 +14,7 @@ import {
 } from './model.js?rev=20260904-k56-demo-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v2';
 import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261019-v1';
+import {openTeacherAudioRecovery,clearTeacherAudioRecovery} from '../shared/teacher-audio-recovery.js?v=20261026-v1&resilience=20261027-v1';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
@@ -158,11 +159,11 @@ function updateUrl() {
   window.history.replaceState({}, '', url);
 }
 
-async function apiRequest(path) {
+async function apiRequest(path,options={}) {
   if (!appConfig.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
   if (!state.authenticated) throw new Error('Bạn chưa đăng nhập Google.');
   const generation = loginGeneration;
-  const response = await fetch(`${appConfig.API_BASE_URL}${path}`, teacherSessionRequestOptions({ cache: 'no-store' })).catch(error => {
+  const response = await fetch(`${appConfig.API_BASE_URL}${path}`, teacherSessionRequestOptions({ cache: 'no-store',...options })).catch(error => {
     if (generation !== loginGeneration) error.staleSession = true;
     throw error;
   });
@@ -179,7 +180,7 @@ async function apiRequest(path) {
     }
     if (response.status === 401) throw Object.assign(new Error('Phiên đăng nhập đã hết hạn; hãy đăng nhập lại.'),{status:401});
     if (response.status === 403) throw Object.assign(new Error(payload?.message || 'Tài khoản chưa được cấp quyền cho lớp này.'),{status:403});
-    throw new Error(payload?.message || `API trả về mã ${response.status}.`);
+    throw Object.assign(new Error(payload?.message || `API trả về mã ${response.status}.`),{status:response.status,code:payload?.error});
   }
   if (!payload?.ok) throw new Error(payload?.message || payload?.error || 'API không xác nhận yêu cầu.');
   return payload;
@@ -852,7 +853,12 @@ function savedProgressButton(student){
     const generation=loginGeneration,classId=state.selectedClassId,testSlug=state.selectedTestSlug;
     openTeacherSavedProgress({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,request:apiRequest,
       isCurrent:()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref});
-  });return button;
+  });
+  const support=createNode('button','button button-secondary','Hỗ trợ Listening');support.type='button';
+  support.addEventListener('click',()=>{const generation=loginGeneration,classId=state.selectedClassId,testSlug=state.selectedTestSlug;
+    openTeacherAudioRecovery({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,request:apiRequest,
+      isCurrent:()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref});});
+  const controls=document.createDocumentFragment();controls.append(button,document.createTextNode(' '),support);return controls;
 }
 
 function renderStudentResult(student) {
@@ -1001,7 +1007,7 @@ async function connectAfterGoogleLogin() {
 }
 
 function resetLoginAfterError() {
-  clearTeacherSavedProgress();
+  clearTeacherSavedProgress();clearTeacherAudioRecovery();
   loginGeneration += 1;
   state.authenticated = false;
   state.connected = false;
@@ -1109,7 +1115,7 @@ function setupGoogleSignIn() {
 }
 
 elements.classSelect.addEventListener('change', async () => {
-  clearTeacherSavedProgress();
+  clearTeacherSavedProgress();clearTeacherAudioRecovery();
   state.selectedClassId = elements.classSelect.value;
   state.selectedTab = 'overview';
   try {
@@ -1121,7 +1127,7 @@ elements.classSelect.addEventListener('change', async () => {
 });
 
 elements.testSelect.addEventListener('change', async () => {
-  clearTeacherSavedProgress();
+  clearTeacherSavedProgress();clearTeacherAudioRecovery();
   state.selectedTestSlug = elements.testSelect.value;
   state.selectedTab = 'overview';
   try {
