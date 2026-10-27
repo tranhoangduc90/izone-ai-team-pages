@@ -59,9 +59,9 @@ export function decorateTask(){
   else if(!card.classList.contains('chart-card')){const heading=card.querySelector('h2');if(!heading)continue;const d=el('details','task-help');const summary=el('summary','',heading.textContent+' · Xem khi cần');heading.remove();d.append(summary,...card.childNodes);card.replaceWith(d);}
  }
 }
-export function decorateStudent(app){
+export function decorateStudent(app,scope=document){
  const descriptions={overview:'Chọn những đặc điểm nổi bật của đề.',outline:'Sắp xếp thông tin vào hai thân bài; gửi nhận xét chung một lần.',draft:'Tự viết Overview và Body 1, sau đó tự chỉnh bản thứ hai.'};
- for(const [i,workspace] of [...document.querySelectorAll('.section-workspace')].entries()){
+ for(const [i,workspace] of [...scope.querySelectorAll('.section-workspace')].entries()){
   const section=workspace.dataset.section,title={overview:'Overview',outline:'Outline',draft:'Draft 1 → Draft 2'}[section];workspace.id='section-'+section;
   workspace.querySelector('.group-title').textContent=`${i+1}. ${title}`;workspace.querySelector('.group-description').textContent=descriptions[section];
   const status=app.state.sections[section].status;workspace.dataset.status=status;
