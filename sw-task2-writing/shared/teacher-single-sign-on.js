@@ -18,6 +18,9 @@
   {id:'substitute',prefix:'/substitute-teacher-api',identity:true},
   {id:'shops',prefix:'/shops-writing-api/api',source:'/shops-writing-api/api/v1/auth/session/shared-session'}
  ];
+ // New Homework source participates on its own entry pages. Other deployed
+ // consumers keep their existing discovery set during this independent rollout.
+ if(new URL(window.location.href).pathname.startsWith('/izone-ai-team-pages/listening-homework/'))products.push({id:'listeninghomework',prefix:'/listening-homework67/api/listening-homework67',source:'/listening-homework67/api/listening-homework67/teacher/shared-session'});
  const original=window.fetch.bind(window),pending=new Map(),initialized=new Set();
  let discovery=null,generation=0,startup=null;
  const post=(url,body={})=>original(url,{method:'POST',credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});

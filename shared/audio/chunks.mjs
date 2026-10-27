@@ -8,7 +8,7 @@ export async function downloadAudio(m,options={}){
   if(m.version!==1||!CHUNK_SIZES.includes(m.chunkSize)||!Number.isSafeInteger(m.byteLength)||m.byteLength<1||!/^[a-f0-9]{64}$/.test(m.sha256)||m.context?.assetHash!==m.sha256||m.chunks?.length!==Math.ceil(m.byteLength/m.chunkSize))throw Error('MANIFEST_DENIED');
   const primary=new URL(m.primaryUrl),fallback=new URL(m.fallbackUrl);
   if(!['https://izone-audio-delivery-stage.tranhoangduc90.workers.dev','https://izone-audio-delivery.tranhoangduc90.workers.dev'].includes(primary.origin)||!primary.pathname.startsWith('/parts/')||primary.search||primary.hash||primary.username||primary.password)throw Error('PRIMARY_DENIED');
-  if(fallback.origin!=='https://tranhoangduc90.github.io'||!['/izone-ai-team-pages/term-tests/','/izone-ai-team-pages/listening-practice/audio-assets/'].some(p=>fallback.pathname.startsWith(p))||fallback.search||fallback.hash||fallback.username||fallback.password)throw Error('FALLBACK_DENIED');
+  if(fallback.origin!=='https://tranhoangduc90.github.io'||!['/izone-ai-team-pages/term-tests/','/izone-ai-team-pages/listening-practice/audio-assets/','/izone-ai-team-pages/listening-homework/audio-assets/'].some(p=>fallback.pathname.startsWith(p))||fallback.search||fallback.hash||fallback.username||fallback.password)throw Error('FALLBACK_DENIED');
   if(!m.chunks.every((x,i)=>x.byteLength===Math.min(m.chunkSize,m.byteLength-i*m.chunkSize)&&/^[a-f0-9]{64}$/.test(x.sha256)))throw Error('MANIFEST_DENIED');
   const key=await crypto.subtle.importKey('raw',options.key,{name:'AES-GCM'},false,['decrypt']);
   let next=0,loaded=0,disablePrimary=!!options.disablePrimary,fatal=null,refreshed=false,refreshPromise=null;
