@@ -110,7 +110,14 @@ function jumpTo(kind,value){
   if(kind==='question')activeQuestion=Number(value);
   setMobilePane(pane);
   const target=document.querySelector('#'+kind+'-'+value);
-  requestAnimationFrame(()=>{target?.scrollIntoView({block:'start',behavior:'instant'});target?.classList.remove('highlight-arrival');requestAnimationFrame(()=>target?.classList.add('highlight-arrival'));});
+  requestAnimationFrame(()=>{
+    target?.scrollIntoView({block:'start',behavior:'instant'});
+    if(content.type==='tfng'&&matchMedia('(max-width:800px), (max-width:1000px) and (max-height:500px)').matches){
+      const heading=target?.closest('.study-pane')?.querySelector('.pane-heading');
+      if(heading&&target){const edge=heading.getBoundingClientRect().bottom+12,top=target.getBoundingClientRect().top;if(top<edge)scrollBy({top:top-edge,behavior:'instant'});}
+    }
+    target?.classList.remove('highlight-arrival');requestAnimationFrame(()=>target?.classList.add('highlight-arrival'));
+  });
 }
 function jumpField(id){const t=content.targets.find(t=>t.id===id);if(!t)return;jumpTo(t.kind==='paragraph'?'paragraph':'question',t.paragraph||t.question);setTimeout(()=>document.querySelector('[data-target="'+id+'"]')?.focus({preventScroll:true}),40);}
 // Đi đúng ô, kể cả ô dưới cùng của câu hỏi và select chỉ xem; không sửa giá trị.
