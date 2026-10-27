@@ -2,7 +2,7 @@ import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261027-l2-v1'
 import {createCourseStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
 const API=location.hostname==='127.0.0.1'||location.hostname==='localhost'?'/api/listening-homework67':'https://ducizone.ddns.net/listening-homework67/api/listening-homework67';
-const code='67-listening-02',sessionKey='listening-homework:session:'+code;
+const code='67-listening-scandinavian-studies',sessionKey='listening-homework:session:'+code;
 let token='',person=null,content=null,draft=null,config=null,readonly=params.get('teacher')==='1',dirty=false,saving=null,saveTimer=null,pendingSave=null,lastAttempt=null,pollTimer=null,audioUrl=null,audioAbort=null,audioTask=null,segmentEnd=null,identityGeneration=0;
 let loginPending=false,teacherReadGeneration=0;
 const rosterGeneration={student:0,teacher:0};
@@ -117,4 +117,4 @@ $('change-person').onclick=async()=>{try{await flush();await request('/student/l
 $('new-run').onclick=async()=>{if(!confirm('Bắt đầu lượt luyện mới? Nháp và các lần nộp cũ vẫn được giữ trong lịch sử.'))return;try{await flush();draft=await request('/reset',{method:'POST',body:{baseRevision:draft.revision,mutationId:crypto.randomUUID()}});fillBody(draft.body);backup();for(const i of content.items)$('feedback-'+i.id).replaceChildren();text('grade-status','Đã mở lượt luyện mới.');await history();}catch(e){saveFailed(e);}};
 window.addEventListener('beforeunload',e=>{if(dirty||pendingSave){backup();e.preventDefault();e.returnValue='';}});
 window.addEventListener('pagehide',()=>{audioAbort?.abort();$('audio').pause();});
-try{config=await request('/config');$('fixture-status').hidden=!config.fixture;if(params.get('assignmentCode')&&params.get('assignmentCode')!==config.code)throw Error('Mã bài trong link không khớp Lesson 2.');if(readonly)await teacher();else await access();}catch(e){text('access-status',problem(e));}
+try{config=await request('/config');$('fixture-status').hidden=!config.fixture;if(params.get('assignmentCode')&&![code,'67-listening-02'].includes(params.get('assignmentCode')))throw Error('Mã trong link không khớp audio Scandinavian Studies.');if(params.get('assignmentCode')==='67-listening-02'||location.pathname.endsWith('/lesson-2.html')){const canonical=new URL(location.href);canonical.pathname=canonical.pathname.replace('/lesson-2.html','/scandinavian-studies.html');canonical.searchParams.set('assignmentCode',code);window.history.replaceState(null,'',canonical);}if(readonly)await teacher();else await access();}catch(e){text('access-status',problem(e));}
