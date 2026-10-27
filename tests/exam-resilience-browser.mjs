@@ -38,6 +38,27 @@ test('K56: real Web Locks preserve owner across lost start ACK/reload and exclud
  }finally{await c.close();await other.close();}
 });
 
+for(const slug of ['term-test-1-k56','term-test-2-k56','mini-test-k56'])test(`${slug}: the real bootstrap loading request keeps the recovered owner after reload`,async()=>{
+ const c=await context();try{
+  const p=await page(c,'/term-tests/k56-audio-recovery.js');
+  const options={apiBase:base,classCode:'FIXTURE',slug,studentRef:'synthetic',token:'11111111-1111-4111-8111-111111111111',generation:0};
+  const first=await p.evaluate(x=>window.K56AudioRecovery.prepare(x),options);
+  await p.reload();await p.addScriptTag({url:base+'/term-tests/k56-audio-recovery.js'});
+  const source=fs.readFileSync(path.join(root,`term-tests/${slug}-computer-based/bootstrap.js`),'utf8');
+  const start=source.indexOf('      const loading = window.K56AudioRecovery.beginLoading('),end=source.indexOf('      Object.assign(started, loadingResponse);',start);assert.ok(start>0&&end>start);
+  const snippet=source.slice(start,end+'      Object.assign(started, loadingResponse);'.length);
+  const result=await p.evaluate(async({options,expected,snippet})=>{
+   const resumed=await window.K56AudioRecovery.prepare(options);
+   if(resumed.ownerId!==expected||window.K56AudioRecovery.ownerId===expected)throw Error('reload fixture did not create a distinct page ID');
+   const state={examSessionToken:options.token,studentRef:options.studentRef,generation:0},started={generation:0,audioStateRevision:4,listeningResumeAtSeconds:23,listeningDeadlineAt:'2026-10-27T01:00:00Z'};
+   let request;const apiRequest=async(_url,init)=>{request=JSON.parse(init.body);if(request.audioOwnerId!==expected)throw Error('native AUDIO_OWNER_CONFLICT: loading pause used a different owner');return{audioStateRevision:5};};
+   await new (Object.getPrototypeOf(async function(){}).constructor)('appConfig','classCode','testConfig','state','started','apiRequest',snippet)({API_BASE_URL:options.apiBase},options.classCode,{slug:options.slug},state,started,apiRequest);
+   return{owner:request.audioOwnerId,heard:request.heardSeconds,revision:started.audioStateRevision,deadline:started.listeningDeadlineAt};
+  },{options,expected:first.ownerId,snippet});
+  assert.deepEqual(result,{owner:first.ownerId,heard:23,revision:5,deadline:'2026-10-27T01:00:00Z'});
+ }finally{await c.close();}
+});
+
 test('source retry offers a fallback only after a source failure and keeps the existing retry/session path',async()=>{
  const c=await context();try{
   const p=await c.newPage();await p.goto(base+'/fixture');
