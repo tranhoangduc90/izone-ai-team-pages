@@ -18,7 +18,7 @@ if(!globalThis.__IZONE_SW_TASK2_REDIRECTING__){
    document.body.replaceChildren(...page.body.childNodes);
    document.body.dataset.task1Ui='20261025-rollout1';
    const brand=document.querySelector('.brand');if(brand){const home=new URL(route.role==='teacher'?'./teacher.html':'./index.html',location.href);home.search=location.search;brand.href=home.href;}
-   await import(route.role==='teacher'?'./task1-ui-teacher.js?v=20261025-rollout2&startup=20261026-v2':'./task1-ui-app.js?v=20261025-rollout2&startup=20261026-v2');
+   await import(route.role==='teacher'?'./task1-ui-teacher.js?v=20261025-rollout2&startup=20261026-v2&reading=20261027-v1':'./task1-ui-app.js?v=20261025-rollout2&startup=20261026-v2&reading=20261027-v1');
   }catch(error){const note=document.createElement('p');note.className='notice';note.setAttribute('role','alert');note.textContent=error.message;document.body.prepend(note);}
  }
 }

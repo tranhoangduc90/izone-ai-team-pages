@@ -7,13 +7,14 @@ import { renderStudentFieldComments } from "./teacher-comments-ui.js?v=20261024-
 import { renderLmsDraftResult } from "./lms-draft-result.js?v=20260818-numbering-v3";
 import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui.js?v=20260818-vocabulary-scroll";
 
-import { installTask1Entry, decorateStudent, preserveView, renderTimeline, decorateTask } from "./task1-ui.js?v=20261025-rollout1";
+import { installTask1Entry, decorateStudent, preserveView, renderTimeline, decorateTask } from "./task1-ui.js?v=20261025-rollout1&reading=20261027-v1";
 const $ = (id) => document.getElementById(id);
 const SECTION_INFO = {
   overview: { title: "Overview", kicker: "Phần 1", fields: [{ key: "overview", label: "Overview", placeholder: "Nêu những đặc điểm nổi bật nhất của biểu đồ…" }] },
   outline: { title: "Outline", kicker: "Phần 2", fields: [{ key: "body1", label: "Body 1", placeholder: "Nhóm số liệu thứ nhất…" }, { key: "body2", label: "Body 2", placeholder: "Nhóm số liệu thứ hai…" }] },
   draft: { title: "Draft 1 → Draft 2", kicker: "Phần 3", fields: [{ key: "draft1", label: "Draft 1", placeholder: "Viết liên tục phần Overview và Body 1…" }, { key: "draft2", label: "Draft 2", placeholder: "Sửa bản sao Draft 1 thành tiếng Anh hoàn chỉnh…" }] },
 };
+import {markReadingRegion,updateReadingRoot} from './task1-ui-reading.js?v=20261027-reading-v1';
 const app = { manifest: null, activitySlug: null, api: null, roster: null, identity: null, sessionRef: null, state: null, dirty: false, idbTimer: null, saveTimer: null, saveRetryCount: 0, pollTimer: null, heartbeatTimer: null, pendingAttempts: new Map(), submittingSections: new Set(), conflict: false, conflictServer: null, teacherComments: [], teacherCommentsEtag: null, teacherCommentTimer: null, draftResult: { key: null, status: "idle", data: null, pageIndex: 0 } };
 
 function setSaveState(text) { $("save-state").textContent = text; }
@@ -230,6 +231,7 @@ function addTextarea(card, section, field, disabled) {
     app.state.texts[field.key] = textarea.value; markDirty(); refreshSection(card, section);
     renderTeacherCommentsForField(teacherComments, field.key);
     const unlock = card.querySelector(".unlock-draft2"); if (unlock) unlock.disabled = disabled || !canUnlockDraft2(app.state.texts);
+    markStudentRegion(card.closest('.section-workspace'),section);
   });
   label.append(textarea); fieldRoot.append(label, teacherComments); card.querySelector(".text-fields").append(fieldRoot);
   renderTeacherCommentsForField(teacherComments, field.key);
@@ -249,6 +251,7 @@ function renderTeacherCommentsForField(root, fieldKey) {
 
 function renderTeacherCommentPanels() {
   for (const root of document.querySelectorAll("[data-teacher-comment-field]")) renderTeacherCommentsForField(root, root.dataset.teacherCommentField);
+  for(const workspace of document.querySelectorAll(".section-workspace"))markStudentRegion(workspace,workspace.dataset.section);
 }
 
 function scheduleTeacherComments() {
@@ -291,8 +294,8 @@ function renderDraftFields(card, locked, prerequisitesPassed) {
   addTextarea(card, "draft", SECTION_INFO.draft.fields[1], locked);
 }
 
-function renderSections() {
-  const root = $("sections"); const template = $("section-template"); root.replaceChildren();
+function renderSections(root = $("sections")) {
+  const template = $("section-template"); root.replaceChildren();
   for (const section of SECTION_KEYS) {
     const info = SECTION_INFO[section]; const workspace = template.content.firstElementChild.cloneNode(true); const card = workspace.querySelector(".section-card"); const status = card.querySelector(".section-status");
     workspace.dataset.section = section; workspace.dataset.state = app.state.sections[section].status; card.dataset.section = section; card.querySelector(".section-kicker").textContent = info.kicker; card.querySelector("h3").textContent = info.title;
@@ -368,16 +371,26 @@ function renderDraftResult(workspace, sectionComments) {
   list.append(item);
 }
 
-function renderComments() {
+function renderComments(root = $("sections")) {
  for(const section of SECTION_KEYS){
-  const workspace=document.querySelector(`.section-workspace[data-section="${section}"]`);if(!workspace)continue;
+  const workspace=root.querySelector(`.section-workspace[data-section="${section}"]`);if(!workspace)continue;
   const items=(app.state.comments||[]).filter(x=>x.section===section).slice().reverse();
   renderTimeline(workspace.querySelector('.comment-list'),items,{section,onRetry:(item,button)=>retryComment(item,button),api:app.api,sessionRef:app.sessionRef});
   workspace.querySelector('.comments-title').textContent='Dòng thời gian · '+SECTION_INFO[section].title;
   workspace.querySelector('.empty-comments').hidden=items.length>0;
  }
 }
-function renderAll(){const restore=preserveView(document);renderSections();renderComments();updatePollingStates();decorateStudent(app);restore();}
+function markStudentRegion(workspace,section){
+ const fields=SECTION_INFO[section].fields.map(field=>field.key);
+ markReadingRegion(workspace,section,[app.state.sections[section],fields.map(key=>app.state.texts[key]),(app.state.comments||[]).filter(c=>c.section===section),app.teacherComments.filter(t=>fields.includes(t.fieldKey)),app.conflict,app.submittingSections.has(section),section==='draft'?[app.state.draft2Unlocked,draftPrerequisitesPassed(app.state.sections)]:null]);
+}
+function renderAll(){
+ const root=$("sections"),next=document.createElement('div'),restore=preserveView(root);
+ renderSections(next);renderComments(next);decorateStudent(app,next);
+ for(const workspace of next.querySelectorAll('.section-workspace'))markStudentRegion(workspace,workspace.dataset.section);
+ updateReadingRoot(root,next,JSON.stringify([app.activitySlug,app.identity?.classRef,app.identity?.studentRef,app.sessionRef]));
+ updatePollingStates();restore();
+}
 function resetAutosave() { clearTimeout(app.saveTimer); if (app.dirty) app.saveTimer = setTimeout(async () => { await saveRemote("timer"); resetAutosave(); }, randomDelay(9 * 60_000, 11 * 60_000)); }
 function markDirty() { const wasClean = !app.dirty; app.dirty = true; app.changeSequence = (app.changeSequence || 0) + 1; setSaveState("Có thay đổi chưa lưu"); clearTimeout(app.idbTimer); app.idbTimer = setTimeout(saveLocal, 500); if (wasClean) resetAutosave(); }
 async function saveLocal() { if (!app.identity || !app.state) return; await putDraft({ key: keyForDraft(), savedAt: Date.now(), dirty: app.dirty, progress: app.state, sessionRef: app.sessionRef, identity: app.identity }); }
@@ -519,18 +532,18 @@ function updatePollingStates() {
 
 async function pollAttempts() {
   if (document.hidden) return schedulePoll();
-  let retryAfterMs = 0;
+  let retryAfterMs = 0,changed=false;
   for (const attempt of activeAttempts()) {
     try {
       const result = await app.api.attempt(attempt.ref, attempt.etag);
       if (result.notModified) continue;
       const payload = result.data.attempt || result.data; attempt.etag = result.etag || attempt.etag;
       if (terminalResult(payload)) {
-        app.pendingAttempts.delete(attempt.ref); applyTerminalAttempt(payload, attempt.section);
+        app.pendingAttempts.delete(attempt.ref); applyTerminalAttempt(payload, attempt.section);changed=true;
       }
     } catch (error) { retryAfterMs = Math.max(retryAfterMs, Number(error.retryAfterMs) || 0); if (error.status !== 304) showNotice("Đang chờ phản hồi chấm. Hệ thống sẽ tự thử lại."); }
   }
-  renderAll(); schedulePoll(retryAfterMs);
+  if(changed)renderAll(); schedulePoll(retryAfterMs);
 }
 
 async function openSession(event) {

@@ -14,10 +14,11 @@ import { createVocabularySection, manifestVocabularyRows } from "./vocabulary-ui
 import { createTeacherLoginPreference } from "../../shared/teacher-login-preference.js?rev=20260918-v1";
 import { createTeacherSessionClient } from "../../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2";
 
-import { renderTimeline, installTeacherTools, filterStudents, decorateTeacher } from "./task1-ui.js?v=20261025-rollout1";
+import { renderTimeline, preserveView, installTeacherTools, filterStudents, decorateTeacher } from "./task1-ui.js?v=20261025-rollout1&reading=20261027-v1";
 const $ = (id) => document.getElementById(id);
 const authView=createTeacherAuthState({panel:$("teacher-login"),notice:$("teacher-updated"),retry:()=>location.reload()});
 const loginPreference = createTeacherLoginPreference(() => window.localStorage);
+import {markReadingRegion,updateReadingRoot} from './task1-ui-reading.js?v=20261027-reading-v1';
 const state = { authenticated: false, api: null, sessionClient: null, manifest: null, activitySlug: "", students: [], pollTimer: null,
   selectedStudent: null, detailRequestId: 0, focusSection: "", pending: [], canManage: false, draftResults: new Map(),
   requestedClass: "", classQueryResolved: false, classQueryError: "", reconciliationSearches: new Map(), loginGeneration: 0 };
@@ -234,7 +235,7 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
         fieldKey: field.key,
         start: selected.start,
         end: selected.end,
-        baseVersion: student.draftVersion,
+        baseVersion: state.selectedStudent?.sessionRef===student.sessionRef?state.selectedStudent.draftVersion:student.draftVersion,
         body,
         requestId: createRequestId(),
       });
@@ -260,30 +261,29 @@ function renderTeacherResponseField(responseColumn, student, definition, field) 
   layout.append(response, threads); fieldRoot.append(label, layout); responseColumn.append(fieldRoot);
 }
 
-function renderStudentDetail(student, { loading = false, error = "" } = {}) {
+function renderStudentDetail(student, { loading = false, error = "", force = false } = {}) {
   const dialog = $("teacher-detail");
   dialog.dataset.commentContext = commentContext(student);
-  const previousScroll = dialog.scrollTop;
-  const root = $("teacher-detail-content");
-  root.replaceChildren();
-  const heading = document.createElement("div"); heading.className = "teacher-detail-heading";
+  const actualRoot=$("teacher-detail-content"),restore=preserveView(actualRoot);
+  const root=document.createElement("div");
+  const heading = document.createElement("div"); heading.className = "teacher-detail-heading";heading.dataset.readingKey='heading';
   const title = document.createElement("h2"); title.textContent = student.displayName;
   const meta = document.createElement("p"); meta.className = "muted"; meta.textContent = `${student.className} · ${statusLabel(studentStatus(student))} · Lưu gần nhất ${formatTime(student.savedAt)}`;
   heading.append(title, meta); root.append(heading);
-  const controls=document.createElement('div');controls.className='actions detail-actions';
+  const controls=document.createElement('div');controls.className='actions detail-actions';controls.dataset.readingKey='actions';
   const close=document.createElement('button');close.className='secondary';close.textContent='Đóng bài làm';close.onclick=()=>dialog.close();
-  const reload=document.createElement('button');reload.className='secondary';reload.textContent='Cập nhật bài';reload.onclick=()=>{if(!hasTeacherCommentDraft())void loadStudentDetail(student);else showDashboardError('Hãy gửi hoặc hủy lời đang soạn trước khi cập nhật.');};controls.append(close,reload);root.append(controls);
-  if(student.readOnly){const note=document.createElement('p');note.className='notice';note.textContent='Bản sao lịch sử chỉ đọc. Bài và nhận xét gốc được giữ nguyên; không chấm lại tại bản thử.';root.append(note);}
-  const chart=state.manifest.task?.chart_image;if(chart?.url){const link=document.createElement('a');link.href=chart.url;link.target='_blank';link.rel='noopener';const img=document.createElement('img');img.className='teacher-chart';img.src=chart.url;img.alt=chart.alt_text||'Biểu đồ và bảng mức lương';link.append(img);root.append(link);}
+  const reload=document.createElement('button');reload.className='secondary';reload.textContent='Cập nhật bài';reload.onclick=()=>{if(!hasTeacherCommentDraft())void reloadSelectedStudent();else showDashboardError('Hãy gửi hoặc hủy lời đang soạn trước khi cập nhật.');};controls.append(close,reload);root.append(controls);
+  if(student.readOnly){const note=document.createElement('p');note.className='notice';note.dataset.readingKey='readonly';note.textContent='Bản sao lịch sử chỉ đọc. Bài và nhận xét gốc được giữ nguyên; không chấm lại tại bản thử.';root.append(note);}
+  const chart=state.manifest.task?.chart_image;if(chart?.url){const link=document.createElement('a');link.dataset.readingKey='chart';link.href=chart.url;link.target='_blank';link.rel='noopener';const img=document.createElement('img');img.className='teacher-chart';img.src=chart.url;img.alt=chart.alt_text||'Biểu đồ và bảng mức lương';link.append(img);root.append(link);}
 
-  const prompt = document.createElement("article"); prompt.className = "teacher-detail-prompt";
+  const prompt = document.createElement("article"); prompt.className = "teacher-detail-prompt";prompt.dataset.readingKey='prompt';
   const promptLabel = document.createElement("p"); promptLabel.className = "eyebrow"; promptLabel.textContent = "Đề bài";
   const promptTitle = document.createElement("h3"); promptTitle.textContent = state.manifest.task?.title || "Essay question";
   const promptText = document.createElement("div"); promptText.className = "markdown-body";
   appendMarkdown(promptText, state.manifest.task?.statement || "");
   prompt.append(promptLabel, promptTitle, promptText); root.append(prompt);
   for (const body of teacherBodies()) {
-    const bodySection = document.createElement("section"); bodySection.className = "teacher-detail-body";
+    const bodySection = document.createElement("section"); bodySection.className = "teacher-detail-body";bodySection.dataset.readingKey='body:'+body.key;
     const bodyTitle = document.createElement("h3"); bodyTitle.textContent = body.title;
     const bodyDescription = document.createElement("p"); bodyDescription.className = "muted"; bodyDescription.textContent = body.description || "";
     bodySection.append(bodyTitle, bodyDescription);
@@ -322,7 +322,7 @@ function renderStudentDetail(student, { loading = false, error = "" } = {}) {
           const actions=document.createElement('div');actions.className='actions';actions.append(submit,cancel);form.append(label,note,actions,error);
           cancel.onclick=()=>{form.remove();reopen.disabled=false;reopen.focus();};
           form.onsubmit=async event=>{event.preventDefault();if(!reason.value.trim()){error.textContent='Bạn cần nhập lý do mở lại.';reason.focus();return;}submit.disabled=true;cancel.disabled=true;
-            try{await state.api.reopenSection(student.sessionRef,sectionKey,reason.value.trim());form.remove();await loadStudentDetail(student);await refresh();}
+            try{await state.api.reopenSection(student.sessionRef,sectionKey,reason.value.trim());form.remove();await reloadSelectedStudent();await refresh();}
             catch(failure){error.textContent=failure.message;submit.disabled=false;cancel.disabled=false;}
           };
           reopen.disabled=true;reopen.after(form);reason.focus();
@@ -363,17 +363,21 @@ function renderStudentDetail(student, { loading = false, error = "" } = {}) {
       }
       sectionLayout.append(responseColumn, renderCommentTimeline(student, definition, loading));
       section.append(sectionLayout);
+      const fields=(definition.fields||[]).map(field=>field.key);
+      const comments=(student.comments||[]).filter(c=>c.section===sectionKey);
+      markReadingRegion(section,sectionKey,[sectionInfo,fields.map(key=>student.responses?.[key]),comments,(student.teacherComments||[]).filter(t=>fields.includes(t.fieldKey)),student.readOnly,state.canManage,state.canReopen,fields.includes(student.activeField)?[student.activeField,student.online]:null,loading&&!comments.length]);
       bodySection.append(section);
     }
     if (!(body.sectionKeys || []).includes("draft")) renderVocabulary(bodySection, student, body.key, loading);
     root.append(bodySection);
   }
   if (error) {
-    const message = document.createElement("p"); message.className = "notice"; message.textContent = error; root.prepend(message);
+    const message = document.createElement("p"); message.className = "notice";message.dataset.readingKey='error'; message.textContent = error; root.prepend(message);
   }
   if(student.readOnly)root.querySelectorAll('.teacher-comment-reply button,.teacher-comment-reply textarea,.teacher-comment-status-button').forEach(el=>el.disabled=true);
-  if (dialog.open) requestAnimationFrame(() => { dialog.scrollTop = previousScroll; });
-  if (state.focusSection) requestAnimationFrame(() => root.querySelector(`[data-section-key="${CSS.escape(state.focusSection)}"]`)?.scrollIntoView({ block: "center" }));
+  updateReadingRoot(actualRoot,root,JSON.stringify([state.loginGeneration,state.activitySlug,commentContext(student)]),{force});restore();
+  const focusSection=state.focusSection;state.focusSection='';
+  if(focusSection)requestAnimationFrame(()=>actualRoot.querySelector(`[data-section-key="${CSS.escape(focusSection)}"]`)?.scrollIntoView({block:'center'}));
 }
 
 async function loadStudentDetail(student, { omitReplyThread, discardComposer = false } = {}) {
@@ -403,7 +407,7 @@ async function loadStudentDetail(student, { omitReplyThread, discardComposer = f
   const error = unavailable.length
     ? `Bài đang hiển thị từ dữ liệu tổng hợp; tạm thời chưa tải được ${unavailable.join(" và ")}.`
     : "";
-  renderStudentDetail(state.selectedStudent, { error });
+  renderStudentDetail(state.selectedStudent, { error, force: discardComposer||Boolean(omitReplyThread) });
   restoreReplyDrafts(drafts);
 }
 
