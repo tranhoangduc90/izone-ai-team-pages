@@ -396,6 +396,7 @@
   }
 
   function goToAnnotation(annotation) {
+    bridge.revealAnnotation?.(annotation);
     const root=annotationRoot(annotation);
     if(!root)return;
     bridge.showPane(root.classList.contains('cbt-reading-passage')?'passage':'questions');
