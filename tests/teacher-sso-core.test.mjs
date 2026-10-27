@@ -13,6 +13,14 @@ function setup(handler,entryProduct){
 }
 const response=status=>({status,ok:status>=200&&status<300,json:async()=>({ok:status===200})});
 
+test('Lesson 12 restores the shared teacher account; student requests keep their own session',async()=>{
+ const {box,calls}=setup(()=>response(200));
+ const prefix=origin+'/reading67-materials/api/reading-skills67/lesson12';
+ await box.fetch(prefix+'/classes');assert.equal(calls.length,1);
+ await box.fetch(prefix+'/teacher/classes');
+ assert.deepEqual(calls.slice(1).map(c=>c.url),[origin+'/teacher-session-api/v1/restore/materials',prefix+'/teacher/classes']);
+});
+
 test('Shops native session shares the common startup result and retains its own adapter',async()=>{
  const {box,calls}=setup(()=>response(200),'shops');
  assert.equal(await box.IzoneTeacherSso.restore('shops'),true);
