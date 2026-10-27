@@ -883,7 +883,7 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ examSessionToken: state.examSessionToken, state: 'pause',
           heardSeconds: started.listeningResumeAtSeconds, recoveryId: loading.recoveryId,
-          audioOwnerId: window.K56AudioRecovery.ownerId, audioStateRevision: started.audioStateRevision, generation: started.generation })
+          audioOwnerId: loading.ownerId, audioStateRevision: started.audioStateRevision, generation: started.generation })
       });
       Object.assign(started, loadingResponse);
       const decrypted = await decryptOfficialAudio(encryptedAudio, started);
