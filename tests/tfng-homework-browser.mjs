@@ -47,6 +47,10 @@ try{
    const url=site.origin+'/reading-skills67/butterflies-britain-tfng/?server=1';await page.goto(url);await page.waitForSelector('[data-target]',{state:'attached'});await page.evaluate(()=>document.fonts.ready);
    assert.equal(await page.locator('[data-target]').count(),42);assert.equal(await page.locator('textarea[data-target]').count(),18);assert.equal(await page.locator('select[data-target]').count(),24);
    if(width<=800||height<=500)await page.locator('[data-pane="questions"]').click();
+   if(width<=800||height<=500){
+    await page.locator('[data-question="6"]').click();
+    await page.waitForFunction(()=>{const q=document.querySelector('#question-6').getBoundingClientRect(),heading=document.querySelector('#pane-questions .pane-heading').getBoundingClientRect();return q.top>=heading.bottom+8&&q.top<innerHeight-100;});
+   }
    for(const t of content.targets){const locator=page.locator('[data-target="'+t.id+'"]');if(t.kind==='evidence')await locator.fill(wrong.includes(t.id)?'Mistaken synthetic meaning':'Synthetic source evidence');else await locator.selectOption(wrong.includes(t.id)?'FALSE':'TRUE');}
    await page.locator('[data-flag="6"]').click();assert.deepEqual(await page.evaluate(()=>window.__tfngTest.body().flags),[6]);
    assert.match(await page.locator('#progress-label').textContent(),/42\/42/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
