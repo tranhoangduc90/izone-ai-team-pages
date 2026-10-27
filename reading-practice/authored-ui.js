@@ -4,6 +4,10 @@
 export function sourceLabel(lesson){
  return lesson.sourceLabel||[lesson.book?`Cambridge ${lesson.book}`:'',lesson.test?`Test ${lesson.test}`:'',lesson.part?`Part ${lesson.part}`:lesson.passage?`Passage ${lesson.passage}`:''].filter(Boolean).join(' · ')||'Bài luyện';
 }
+// Nhận metadata và số câu, trả passage tương ứng; bài lẻ giữ đường cũ.
+export const passageFor=(lesson,n)=>lesson.passages?.find(p=>Number(n)>=p.start&&Number(n)<=p.end);
+export const paragraphLabel=(lesson,id)=>lesson.passages?.find(p=>p.paragraphs.includes(id))?.labels?.[id]||id;
+export const passageSubset=(passage,p)=>p?Object.fromEntries(p.paragraphs.map(id=>[id,passage[id]])):passage;
 export function prepHtml(lesson,a,kind,btn,textBtn){
  const listening=kind==='listening',count=lesson.questionIds.length;
  const clock=ms=>`${String(Math.floor(ms/60000)).padStart(2,'0')}:${String(Math.ceil(ms/1000)%60).padStart(2,'0')}`;
@@ -48,24 +52,24 @@ export function bindMultiple(root,onAnswer){
 export function analysisHtml(e,paragraphs){
  return '<article class="explanation-question"><section class="explanation-analysis">'+paragraphs(e.reason)+(e.options||[]).map(o=>`<section class="explanation-option ${o.correct?'is-correct':''}" data-option="${esc(o.letter)}"><header><strong>${esc(o.letter)}</strong>${o.label?paragraphs([o.label]):''}<span class="option-verdict">${o.correct?'Đáp án đúng':'Loại'}</span></header>${paragraphs(o.reason||[])}<blockquote>${paragraphs(o.evidence||[])}</blockquote>${(o.evidenceGroups||[]).map(g=>`<section class="explanation-evidence-group"><strong>Đoạn ${esc(g.paragraph)}${g.speaker?' · '+esc(g.speaker):''}</strong>${paragraphs(g.paragraphs)}</section>`).join('')}</section>`).join('')+'</section></article>';
 }
-export function passageHtml(passage,evidence=[]){
+export function passageHtml(passage,evidence=[],labels={}){
  return Object.entries(passage).map(([id,text])=>{
   const marks=evidence.filter(g=>g.paragraph===id).flatMap(g=>g.marks),points=[...new Set([0,text.length,...marks.flatMap(m=>[m.start,m.end])])].sort((a,b)=>a-b);
   let body='';for(let i=0;i<points.length-1;i++){const start=points[i],end=points[i+1],m=marks.find(m=>m.start<=start&&m.end>=end);const color=v=>/^#[0-9a-f]{6}$/i.test(v||'')?v:'';body+=m?`<mark style="background-color:${color(m.background)||'transparent'};color:${color(m.foreground)||'inherit'}">${esc(text.slice(start,end))}</mark>`:esc(text.slice(start,end));}
-  return `<div id="explanation-paragraph-${id}" class="cbt-passage-paragraph paragraph ${marks.length?'explanation-active-paragraph':''}"><span class="cbt-paragraph-label">${esc(id)}</span><p>${body}</p></div>`;
+  return `<div id="explanation-paragraph-${id}" class="cbt-passage-paragraph paragraph ${marks.length?'explanation-active-paragraph':''}"><span class="cbt-paragraph-label">${esc(labels[id]||id)}</span><p>${body}</p></div>`;
  }).join('');
 }
 export function dialogHtml(lesson,data,a,n,paragraphs){
  const e=data.explanations.entries[n],ids=lesson.questionIds,index=ids.indexOf(String(n)),kind=lesson.groups.find(g=>n>=g.start&&n<=g.end)?.label||e.kind;
- const passage=data.definition.passage,row=a.result.rows.find(r=>r.number===n);
+ const selected=passageFor(lesson,n),passage=passageSubset(data.definition.passage,selected),row=a.result.rows.find(r=>r.number===n);
  // Kế thừa lối chuyển đoạn của Robots and us, kể cả khi một câu dùng nhiều vị trí.
  const groups=e.evidenceGroups,locations=[...new Map(groups.map(g=>[g.paragraph,g])).values()];
- const location=g=>`<button type="button" class="button outline" data-evidence-paragraph="${esc(g.paragraph)}">Đoạn ${esc(g.paragraph)}${g.speaker?' · '+esc(g.speaker):''}</button>`;
+ const location=g=>`<button type="button" class="button outline" data-evidence-paragraph="${esc(g.paragraph)}">Đoạn ${esc(paragraphLabel(lesson,g.paragraph))}${g.speaker?' · '+esc(g.speaker):''}</button>`;
  const anchors=`<nav class="explanation-anchor-nav" aria-label="Vị trí dẫn chứng">${locations.map(location).join('')}</nav>`;
  return `<div class="explanation-dialog-shell">
  <header class="explanation-dialog-header"><div><span class="kicker">BUỔI ${lesson.lesson} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${n} · ${esc(kind)}</h2></div><button type="button" class="explanation-dialog-close" data-action="explanation-close" aria-label="Đóng giải thích">×</button></header>
  <div class="explanation-dialog-columns">
- <section class="explanation-dialog-passage" aria-label="Toàn bài đọc"><div class="explanation-dialog-pane-head"><strong>Bài đọc · ${esc(lesson.title)}</strong></div>${anchors}<div class="explanation-dialog-passage-scroll">${passageHtml(passage,groups)}</div></section>
+ <section class="explanation-dialog-passage" aria-label="Toàn bài đọc"><div class="explanation-dialog-pane-head"><strong>${esc(selected?selected.label+' · '+selected.title:'Bài đọc · '+lesson.title)}</strong></div>${anchors}<div class="explanation-dialog-passage-scroll">${passageHtml(passage,groups,selected?.labels)}</div></section>
  <section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll">
  <div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${esc(e.answer.join(' / '))}</strong></span><span>Bài làm của bạn <strong>${esc(a.answers[n]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div>
  <h3>Đối chiếu ý trong đề và bài đọc</h3><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${paragraphs([e.prompt])}</section><section><h4>Bằng chứng</h4>${groups.map(g=>`<section class="explanation-evidence-group">${location(g)}${paragraphs(g.paragraphs)}</section>`).join('')}</section></div>

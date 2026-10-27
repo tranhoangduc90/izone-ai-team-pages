@@ -1,6 +1,6 @@
 (async () => {
 'use strict';
-const AuthoredUI=await import('./authored-ui.js?v=20261025-reading11-v1');
+const AuthoredUI=await import('./authored-ui.js?v=20261027-reading14-v1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 let FULL_TIME=1200000;const TAB=crypto.randomUUID();
@@ -187,7 +187,7 @@ function login(){
  const memory={}; // Bộ nhớ cũ được chuyển riêng; không lấy tên cũ để lấn danh tính chung.
  const selected=STUDENTS.some(s=>s.id===memory.studentId)&&(!sharedEntry||CLASSES.find(c=>c.id===selectedClassId)?.classCode===memory.classCode)?memory.studentId:'';
  const classOptions=sharedEntry?CLASSES.map(c=>`<option value="${escape(c.id)}" ${c.id===selectedClassId?'selected':''}>${escape(c.classCode)}</option>`).join(''):`<option value="${escape(entryInfo?.classCode)}" ${selected?'selected':''}>${escape(entryInfo?.classCode)}</option>`;
- app.innerHTML=`<div class="login-layout"><section><span class="kicker">BUỔI ${LESSON.lesson} · READING HOMEWORK</span><h1>${escape(LESSON.title)}</h1><p class="login-copy">Luyện trọn một passage trong ${FULL_TIME/60000} phút.<br>Đọc kỹ, chốt ý và chọn đáp án.</p><ul class="login-tasks"><li><span>01</span><div><strong>Chuẩn bị</strong><p>${LESSON.authored?escape(LESSON.groups.map(g=>g.label).join(' · ')):isRobots()?'Nhắc nhanh cách ghép tên, ghép vế câu và MCQ.':'Nhắc nhanh cách làm Headings và MCQ.'}</p></div></li><li><span>02</span><div><strong>Làm bài</strong><p>${total()} câu · Tự lưu · Có thể tiếp tục lần đang làm.</p></div></li><li><span>03</span><div><strong>Xem kết quả</strong><p>Điểm, đáp án và số lần làm bài.</p></div></li></ul></section><section class="card login-card"><h2>Bạn học lớp nào?</h2><p class="muted">Chọn đúng lớp và tên trước khi bắt đầu.</p><form id="login-form"><label for="class-select">Lớp</label><select id="class-select" required><option value="">Chọn lớp của bạn</option>${classOptions}</select><label for="student-select">Học viên</label><select id="student-select" required ${(sharedEntry?selectedClassId:selected)?'':'disabled'}><option value="">Chọn tên của bạn</option>${STUDENTS.map(s=>`<option value="${escape(s.id)}" ${s.id===selected?'selected':''}>${escape(s.name)}</option>`).join('')}</select><label class="check-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label><p class="memory-help">Lần sau sẽ chọn sẵn lớp và tên của bạn.<br>Bỏ tick nếu bạn đang dùng thiết bị chung.</p><button class="button full" id="login-submit" ${selected?'':'disabled'}><span>Mở bài Reading</span><span>→</span></button><p class="form-error" role="status" id="login-error"></p></form></section></div>`;
+ app.innerHTML=`<div class="login-layout"><section><span class="kicker">BUỔI ${LESSON.lesson} · READING HOMEWORK</span><h1>${escape(LESSON.title)}</h1><p class="login-copy">${LESSON.passages?'Luyện trọn 3 passage, 40 câu':'Luyện trọn một passage'} trong ${FULL_TIME/60000} phút.<br>Đọc kỹ, chốt ý và chọn đáp án.</p><ul class="login-tasks"><li><span>01</span><div><strong>Chuẩn bị</strong><p>${LESSON.authored?escape(LESSON.groups.map(g=>g.label).join(' · ')):isRobots()?'Nhắc nhanh cách ghép tên, ghép vế câu và MCQ.':'Nhắc nhanh cách làm Headings và MCQ.'}</p></div></li><li><span>02</span><div><strong>Làm bài</strong><p>${total()} câu · Tự lưu · Có thể tiếp tục lần đang làm.</p></div></li><li><span>03</span><div><strong>Xem kết quả</strong><p>Điểm, đáp án và số lần làm bài.</p></div></li></ul></section><section class="card login-card"><h2>Bạn học lớp nào?</h2><p class="muted">Chọn đúng lớp và tên trước khi bắt đầu.</p><form id="login-form"><label for="class-select">Lớp</label><select id="class-select" required><option value="">Chọn lớp của bạn</option>${classOptions}</select><label for="student-select">Học viên</label><select id="student-select" required ${(sharedEntry?selectedClassId:selected)?'':'disabled'}><option value="">Chọn tên của bạn</option>${STUDENTS.map(s=>`<option value="${escape(s.id)}" ${s.id===selected?'selected':''}>${escape(s.name)}</option>`).join('')}</select><label class="check-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label><p class="memory-help">Lần sau sẽ chọn sẵn lớp và tên của bạn.<br>Bỏ tick nếu bạn đang dùng thiết bị chung.</p><button class="button full" id="login-submit" ${selected?'':'disabled'}><span>Mở bài Reading</span><span>→</span></button><p class="form-error" role="status" id="login-error"></p></form></section></div>`;
 }
 // Đổi lớp chỉ cập nhật danh sách tương ứng; bỏ phản hồi cũ nếu học viên đã chọn lớp khác.
 async function selectSharedClass(classId){
@@ -265,6 +265,12 @@ function rememberScroll() {
     const passage=document.querySelector('#passage-scroll'),questions=document.querySelector('#question-scroll');
     if(passage)a.scroll.passage=passage.scrollTop;
     if(questions)a.scroll.questions.all=questions.scrollTop;
+    const id=document.querySelector('.cbt-reading-section')?.dataset.sectionIndex;
+    if(LESSON.passages&&id){
+      if(passage)a.scroll.questions['passage:'+id]=passage.scrollTop;
+      if(questions)a.scroll.questions['questions:'+id]=questions.scrollTop;
+      if(AuthoredUI.passageFor(LESSON,a.activeQuestion)?.id===id)a.scroll.questions['active:'+id]=a.activeQuestion;
+    }
   }
 
 function requestReset() {
@@ -336,17 +342,36 @@ function robotsRenderQuestions() {
 
 
 function authoredQuestions(){
- const a=current(),groups=AUTHORED_DEF.groups;
+ const a=current(),selected=AuthoredUI.passageFor(LESSON,a.activeQuestion),groups=selected?AUTHORED_DEF.groups.filter(g=>g.start>=selected.start&&g.end<=selected.end):AUTHORED_DEF.groups;
  const write=(n,value)=>{if(!writable())return;a.answers[n]=value;persist();updateProgress();};
  if(LESSON.audioMs!==undefined){
   const left=document.querySelector('#passage-scroll'),right=document.querySelector('#question-scroll');
   left.innerHTML=groups.length>1?AuthoredUI.groupsHtml(groups.slice(0,1),a,flag):`<header class="cbt-passage-header"><h3>${escape(LESSON.title)}</h3><p>${escape(groups[0].instruction)}</p></header>`;
   right.innerHTML=AuthoredUI.groupsHtml(groups.length>1?groups.slice(1):groups,a,flag);
  }else{
-  document.querySelector('#passage-scroll').innerHTML=`<header class="cbt-passage-header"><span>PASSAGE ${escape(LESSON.passage||'')}</span><h3>${escape(LESSON.title)}</h3></header><div class="cbt-passage-body">${(AUTHORED_DEF.lesson?.subtitle||LESSON.subtitle)?`<p class="passage-subtitle">${escape(AUTHORED_DEF.lesson?.subtitle||LESSON.subtitle)}</p>`:''}${Object.entries(AUTHORED_DEF.passage).map(([id,text])=>`<div class="cbt-passage-paragraph paragraph" data-paragraph="${escape(id)}" id="paragraph-${escape(id)}"><span class="cbt-paragraph-label">${escape(id)}</span><p>${escape(text)}</p></div>`).join('')}</div>`;
+  const subtitle=selected?AUTHORED_DEF.passageSubtitles?.[selected.id]:(AUTHORED_DEF.lesson?.subtitle||LESSON.subtitle);
+  document.querySelector('#passage-scroll').innerHTML=`<header class="cbt-passage-header"><span>${escape(selected?.label||'PASSAGE '+(LESSON.passage||''))}</span><h3>${escape(selected?.title||LESSON.title)}</h3></header><div class="cbt-passage-body">${subtitle?`<p class="passage-subtitle">${escape(subtitle)}</p>`:''}${Object.entries(AuthoredUI.passageSubset(AUTHORED_DEF.passage,selected)).map(([id,text])=>`<div class="cbt-passage-paragraph paragraph ${a.highlighted.includes(id)?'highlighted':''}" data-paragraph="${escape(id)}" id="paragraph-${escape(id)}"><span class="cbt-paragraph-label">${escape(AuthoredUI.paragraphLabel(LESSON,id))}</span><p>${escape(text)}</p></div>`).join('')}</div>`;
   document.querySelector('#question-scroll').innerHTML=AuthoredUI.groupsHtml(groups,a,flag);
  }
+ if(selected){
+  document.querySelector('.cbt-reading-section').dataset.sectionIndex=selected.id;
+  document.querySelector('#passage-scroll').dataset.annotationRootKey='reading-passage-'+selected.id;
+  document.querySelector('#question-scroll').dataset.annotationRootKey='reading-questions-'+selected.id;
+  document.querySelector('.cbt-part-nav').innerHTML=LESSON.passages.map(p=>`<button type="button" class="cbt-part-button ${p.id===selected.id?'is-active':''}" data-action="passage" data-passage="${escape(p.id)}" aria-pressed="${p.id===selected.id}">${escape(p.label)} · Q${p.start}–${p.end}</button>`).join('');
+  document.querySelector('.cbt-question-nav').innerHTML=LESSON.passages.map(p=>`<span class="full-test-question-group" role="group" aria-label="${escape(p.label)}"><span class="full-test-group-label">${escape(p.label)}</span>${LESSON.questionIds.filter(n=>+n>=p.start&&+n<=p.end).map(n=>`<button type="button" class="cbt-question-button" data-action="jump" data-question="${n}" aria-label="Câu ${n}">${n}</button>`).join('')}</span>`).join('');
+  a.scroll.passage=a.scroll.questions['passage:'+selected.id]||0;
+  document.querySelector('#passage-scroll').scrollTop=a.scroll.passage;
+  document.querySelector('#question-scroll').scrollTop=a.scroll.questions['questions:'+selected.id]||0;
+ }
  AuthoredUI.bindMultiple(document.querySelector('#readingView'),write);window.ReadingAnnotations?.install();
+}
+
+// Giữ cùng lượt/đồng hồ, chỉ thay hai vùng nội dung theo passage đã chọn.
+function changePassage(id){
+ if(!writable())return;const p=LESSON.passages?.find(p=>p.id===id);if(!p)return;
+ rememberScroll();const a=current();a.activeQuestion=a.scroll.questions['active:'+id]||p.start;
+ a.tab=LESSON.groups.find(g=>a.activeQuestion>=g.start&&a.activeQuestion<=g.end).kind;
+ authoredQuestions();persist();updateProgress();
 }
 
 function renderQuestions(...args){if(LESSON.authored)return authoredQuestions();return (isRobots()?robotsRenderQuestions:legacyRenderQuestions)(...args);}
@@ -365,12 +390,19 @@ function updateProgress() {
     });
     document.querySelectorAll('[data-question-number]').forEach(el=>{const n=+el.dataset.questionNumber;el.classList.toggle('is-answered',!!normal(a.answers[n]));el.classList.toggle('is-active',a.activeQuestion===n);el.classList.toggle('is-flagged',a.flags.includes(n));});
     document.querySelectorAll('.cbt-flag-button').forEach(el=>{const selected=a.flags.includes(+el.dataset.question);el.classList.toggle('is-flagged',selected);el.setAttribute('aria-pressed',String(selected));});
+    if(LESSON.passages){
+      const nav=document.querySelector('.cbt-question-nav'),active=nav?.querySelector('.is-active');
+      if(active){const r=active.getBoundingClientRect(),box=nav.getBoundingClientRect();if(r.left<box.left)nav.scrollLeft+=r.left-box.left;if(r.right>box.right)nav.scrollLeft+=r.right-box.right;}
+    }
   }
 
 function switchTab(tab) { jump(LESSON.groups.find(g=>g.kind===tab)?.start||firstQuestion()); }
 
 function jump(n) {
+    if(!writable())return;rememberScroll();
     const a=current(); a.activeQuestion=n; a.tab=LESSON.groups.find(g=>n>=g.start&&n<=g.end).kind;
+    const selected=AuthoredUI.passageFor(LESSON,n);
+    if(selected&&document.querySelector('.cbt-reading-section')?.dataset.sectionIndex!==selected.id)authoredQuestions();
     if(matchMedia('(max-width:980px)').matches)setMobilePane('questions');
     const el=document.querySelector(`#q-${n}`), scroll=document.querySelector('#question-scroll');
     if(el&&scroll)scroll.scrollTo({top:el.getBoundingClientRect().top-scroll.getBoundingClientRect().top+scroll.scrollTop-16,behavior:'auto'});
@@ -556,7 +588,7 @@ function resultScreen() {
     const rec=record(); const a=rec?.attempts.find(a=>a.no===+(routeParams.get('attempt') || current()?.no));
     if(!a) { navigate('prep'); return; }
     const submitted=a.status==='submitted';
-    app.innerHTML=hero(submitted?`BUỔI ${LESSON.lesson} · KẾT QUẢ READING`:`BUỔI ${LESSON.lesson} · LỊCH SỬ LÀM BÀI`,submitted?'Bạn đã hoàn thành passage':`Lần ${a.no} đã ${a.status==='reset'?'reset':'tạm dừng'}`,submitted?completionCopy(a):'Bài này chưa được nộp. Đáp án đúng chỉ mở sau khi hoàn thành.')+identityBar()+`<div class="meta-row section"><span>Lần làm bài <strong>${a.no}</strong></span><span>${submitted?(a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Bạn chủ động nộp bài'):'Chưa nộp bài'}</span><span>Đã làm <strong>${timeLabel(FULL_TIME-a.remainingMs)}</strong></span></div>${submitted?`<section class="result-summary"><div class="score-box"><strong>${a.finalScore}<span>/${total()}</span></strong><small>Số câu trả lời đúng<br>Điểm của riêng passage này</small></div><div class="score-details"><h2>${escape(LESSON.title)}</h2><p class="small muted">${escape(AuthoredUI.sourceLabel(LESSON))} · Câu ${firstQuestion()}–${lastQuestion()}</p><div class="type-scores">${LESSON.groups.map(g=>`<div><strong>${resultFor(a,g.start,g.end)}/${g.end-g.start+1}</strong><span>${escape(g.label)}</span></div>`).join('')}</div></div></section>${docsNotice(a)}`:`<div class="note">${countAnswered(a)}/${total()} câu đã trả lời. ${a.status==='reset'?'Lần này được lưu trong lịch sử nhưng không có điểm hoàn thành.':'Bạn có thể tiếp tục bằng thời gian còn lại.'}</div>`}<div class="actions section">${current()?.status==='paused'?btn('Tiếp tục lần đang làm','resume'):''}${btn('Reset và làm lại từ đầu','request-reset','outline')}${textBtn(identity?.documentUrl?'Về tài liệu bài tập':'Về đầu bài','show-docs')}</div><section class="section"><h3>Lịch sử làm bài</h3>${attemptHistory(rec,a.no)}</section>${submitted?resultTable(a):''}`+footer();
+    app.innerHTML=hero(submitted?`BUỔI ${LESSON.lesson} · KẾT QUẢ READING`:`BUỔI ${LESSON.lesson} · LỊCH SỬ LÀM BÀI`,submitted?(LESSON.passages?'Bạn đã hoàn thành bài Reading':'Bạn đã hoàn thành passage'):`Lần ${a.no} đã ${a.status==='reset'?'reset':'tạm dừng'}`,submitted?completionCopy(a):'Bài này chưa được nộp. Đáp án đúng chỉ mở sau khi hoàn thành.')+identityBar()+`<div class="meta-row section"><span>Lần làm bài <strong>${a.no}</strong></span><span>${submitted?(a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Bạn chủ động nộp bài'):'Chưa nộp bài'}</span><span>Đã làm <strong>${timeLabel(FULL_TIME-a.remainingMs)}</strong></span></div>${submitted?`<section class="result-summary"><div class="score-box"><strong>${a.finalScore}<span>/${total()}</span></strong><small>Số câu trả lời đúng<br>${LESSON.passages?'Điểm của toàn bài Reading':'Điểm của riêng passage này'}</small></div><div class="score-details"><h2>${escape(LESSON.title)}</h2><p class="small muted">${escape(AuthoredUI.sourceLabel(LESSON))} · Câu ${firstQuestion()}–${lastQuestion()}</p><div class="type-scores">${(LESSON.passages||LESSON.groups).map(g=>`<div><strong>${resultFor(a,g.start,g.end)}/${g.end-g.start+1}</strong><span>${escape(g.label)}</span></div>`).join('')}</div></div></section>${docsNotice(a)}`:`<div class="note">${countAnswered(a)}/${total()} câu đã trả lời. ${a.status==='reset'?'Lần này được lưu trong lịch sử nhưng không có điểm hoàn thành.':'Bạn có thể tiếp tục bằng thời gian còn lại.'}</div>`}<div class="actions section">${current()?.status==='paused'?btn('Tiếp tục lần đang làm','resume'):''}${btn('Reset và làm lại từ đầu','request-reset','outline')}${textBtn(identity?.documentUrl?'Về tài liệu bài tập':'Về đầu bài','show-docs')}</div><section class="section"><h3>Lịch sử làm bài</h3>${attemptHistory(rec,a.no)}</section>${submitted?resultTable(a):''}`+footer();
   }
 // Các thao tác chỉ ghi khi tab đang giữ lượt làm. Chọn chữ dùng adapter nguyên bản của Term Test.
 document.addEventListener('click',event=>{
@@ -567,7 +599,7 @@ document.addEventListener('click',event=>{
   'change-student':changeStudent,
   begin,resume,pause:()=>pause(),'request-reset':requestReset,'request-submit':requestSubmit,'show-result':()=>loadResult(a.no),
   'close-modal':closeModal,'confirm-modal':()=>{const fn=modalAction;closeModal();fn?.();},
-  tab:()=>switchTab(target.dataset.tab),jump:()=>jump(n),
+  tab:()=>switchTab(target.dataset.tab),jump:()=>jump(n),passage:()=>changePassage(target.dataset.passage),
   flag:()=>{if(!writable())return;a.flags=a.flags.includes(n)?a.flags.filter(x=>x!==n):[...a.flags,n];persist();updateProgress();},
   review:()=>review(),'review-filter':()=>review(target.dataset.filter),'close-review':()=>document.querySelector('#review-panel').hidden=true,
   'review-jump':()=>{document.querySelector('#review-panel').hidden=true;jump(n);},'mobile-pane':()=>setMobilePane(target.dataset.pane),
@@ -633,6 +665,7 @@ explanationDialog.addEventListener('pointercancel',()=>{explanationPressedOutsid
 explanationDialog.addEventListener('close',()=>{explanationTrigger?.focus();explanationTrigger=null;});
 window.addEventListener('resize',()=>{if(explanationDialog.open)setTimeout(alignExplanationEvidence,60);});
 window.ReadingInteractionBridge={current,questionIds:()=>LESSON.questionIds,scope:()=>`${identity?.bindingId}:${current()?.id||''}`,writable,
+ revealAnnotation:annotation=>{const id=/^reading-(?:passage|questions)-(.+)$/.exec(annotation.rootKey||'')?.[1];if(LESSON.passages?.some(p=>p.id===id))changePassage(id);},
  save:()=>{if(!writable())return false;consumeTime();return persist();},showPane:setMobilePane,
  closeGeneralNotes:()=>{const panel=document.querySelector('#notes-panel');if(panel)panel.hidden=true;if(current())current().notesOpen=false;}};
 window.dispatchEvent(new Event('reading-interaction-ready'));
