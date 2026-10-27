@@ -3,7 +3,25 @@
   const VERSION = 2;
   const uuid = () => crypto.randomUUID();
   const ownerId = uuid();
+  const leases = new Map();
   function key(identity) { return 'izone-k56-audio:v2:' + encodeURIComponent(JSON.stringify(identity)); }
+  function ownerFor(bound){return leases.get(key(bound))?.ownerId||ownerId;}
+  async function acquire(bound,saved=read(bound)){
+    if(!navigator.locks?.request)return null;
+    const name=key(bound);let lease=leases.get(name);
+    if(lease?.live)return lease;
+    if(lease?.pending)return lease.pending;
+    lease ||= {ownerId:saved.ownerId||ownerId,live:false,unlock:null,pending:null};leases.set(name,lease);
+    lease.pending=new Promise((resolve,reject)=>{
+      navigator.locks.request(name,{ifAvailable:true},async lock=>{
+        if(!lock){reject(Object.assign(new Error('Bài đang mở ở tab khác. Nháp được giữ; hãy quay lại hoặc đóng tab đó trước.'),{code:'AUDIO_OWNER_CONFLICT'}));return;}
+        lease.live=true;resolve(lease);await new Promise(done=>{lease.unlock=done;});lease.live=false;
+      }).catch(reject);
+    });
+    try{return await lease.pending;}finally{lease.pending=null;}
+  }
+  function releaseLease(bound){const lease=leases.get(key(bound));if(lease){lease.live=false;lease.unlock?.();lease.unlock=null;}}
+  window.addEventListener('pagehide',()=>{for(const lease of leases.values()){lease.live=false;lease.unlock?.();lease.unlock=null;}});
   function read(identity) {
     try { const value = JSON.parse(localStorage.getItem(key(identity)) || '{}'); return value.identity && JSON.stringify(value.identity) === JSON.stringify(identity) ? value : {}; }
     catch { return {}; }
@@ -13,29 +31,30 @@
   }
   async function prepare(options) {
     const bound = identity(options), saved = read(bound);
+    await acquire(bound,saved);const preparedOwnerId=ownerFor(bound);
     if (typeof BroadcastChannel === 'function') {
       const active = await new Promise(resolve => {
         const channel = new BroadcastChannel(key(bound));
         const timer = setTimeout(() => { channel.close(); resolve(false); }, 250);
         channel.onmessage = event => {
-          if (event.data?.type === 'owner-active' && event.data.ownerId !== ownerId) {
+          if (event.data?.type === 'owner-active' && event.data.ownerId !== preparedOwnerId) {
             clearTimeout(timer); channel.close(); resolve(true);
           }
         };
-        channel.postMessage({ type: 'owner-probe', ownerId });
+        channel.postMessage({ type: 'owner-probe', ownerId:preparedOwnerId });
       });
       if (active) throw new Error('Bài đang mở trên một tab khác. Nháp được giữ; hãy tiếp tục ở tab đó hoặc đóng tab đó trước khi mở lại.');
     }
     const recoveryId = saved.pending && saved.recoveryId ? saved.recoveryId : uuid();
-    const value = { ...saved, identity: bound, recoveryId, pending: true };
+    const value = { ...saved, identity: bound, ownerId:preparedOwnerId, recoveryId, pending: true };
     try { localStorage.setItem(key(bound), JSON.stringify(value)); } catch { /* Giữ nháp chính ở luồng lưu bài. */ }
     return { recoveryId, heardSeconds: Number.isFinite(saved.heardSeconds) ? saved.heardSeconds : undefined,
-      revision: Number.isSafeInteger(saved.revision) ? saved.revision : undefined, ownerId };
+      revision: Number.isSafeInteger(saved.revision) ? saved.revision : undefined, ownerId:preparedOwnerId };
   }
 
   function beginLoading(options, response) {
     const bound = identity(options), saved = read(bound);
-    const value = { ...saved, identity: bound, ownerId, recoveryId: uuid(), pending: true,
+    const value = { ...saved, identity: bound, ownerId:ownerFor(bound), recoveryId: uuid(), pending: true,
       heardSeconds: response.listeningResumeAtSeconds, revision: response.audioStateRevision };
     try { localStorage.setItem(key(bound), JSON.stringify(value)); } catch { /* Nháp chính được giữ riêng. */ }
     return value;
@@ -44,6 +63,7 @@
   function create(options) {
     const { audio, token, slug, studentRef, classCode, apiBase, generation, resumeButton, manualButton, render } = options;
     const bound = identity(options);
+    const ownerId=ownerFor(bound);
     let memory = { ...read(bound), identity: bound };
     let phase = memory.manual ? 'technical_pause' : options.initial.audioAutoplayBlocked ? 'awaiting_user' : 'playing';
     let lastAdvance = performance.now(), observed = audio.currentTime || 0;
@@ -59,7 +79,7 @@
     let revision = Number(options.initial.audioStateRevision) || 0;
     let deadline = Date.parse(options.initial.listeningDeadlineAt);
     let hardDeadline = Date.parse(options.initial.listeningHardDeadlineAt);
-    let offset = Date.parse(options.initial.serverNow) - Date.now();
+    let offset = (window.IZONE_EXAM_CLOCK?.offset(options.initial.serverNow) ?? (Date.parse(options.initial.serverNow) - Date.now()));
     const phaseOffset = Array.from(token).reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381) % 5000;
     function terminal() { return disposed || destroyed || ['submitting', 'submitted', 'ended'].includes(phase); }
     function save() {
@@ -97,7 +117,7 @@
       revision = payload.audioStateRevision;
       memory.ackedHeard = payload.listeningResumeAtSeconds;
       deadline = Date.parse(payload.listeningDeadlineAt); hardDeadline = Date.parse(payload.listeningHardDeadlineAt);
-      if (Number.isFinite(Date.parse(payload.serverNow))) offset = Date.parse(payload.serverNow) - Date.now();
+      if (Number.isFinite(Date.parse(payload.serverNow))) offset = (window.IZONE_EXAM_CLOCK?.offset(payload.serverNow) ?? (Date.parse(payload.serverNow) - Date.now()));
       window.dispatchEvent(new CustomEvent('term-test:listening-timing-updated', { detail: {
         ...payload, examSessionToken: token, studentRef, classCode, testSlug: slug, apiBase, generation: Number(generation) || 0
       } }));
@@ -150,10 +170,11 @@
       const wasPaused = audio.paused;
       phase = 'recovering'; notice('Đang khôi phục audio...');
       recoveryPromise = (async () => {
+        await acquire(bound);
         const payload = await send('recovered');
         if (terminal() || navigating || memory.recoveryId !== episodeId) return null;
         retryCount = 0;
-        if (Date.now() + offset >= Date.parse(payload.listeningHardDeadlineAt)) {
+        if ((window.IZONE_EXAM_CLOCK?.now(offset) ?? (Date.now() + offset)) >= Date.parse(payload.listeningHardDeadlineAt)) {
           phase = 'sync_failed'; notice('Đã hết mức bù thời gian Listening.'); return payload;
         }
         if (wasPaused) {
@@ -242,11 +263,11 @@
     const controller = {
       async beforeAutoSubmit() {
         if (['submitted','submitting'].includes(phase) || destroyed) return { submit: false };
-        if (Date.now() + offset >= hardDeadline) return { submit: true };
-        if (phase === 'ended') return { submit: Date.now() + offset >= deadline, deadlineChanged: Date.now() + offset < deadline };
+        if ((window.IZONE_EXAM_CLOCK?.now(offset) ?? (Date.now() + offset)) >= hardDeadline) return { submit: true };
+        if (phase === 'ended') return { submit: (window.IZONE_EXAM_CLOCK?.now(offset) ?? (Date.now() + offset)) >= deadline, deadlineChanged: (window.IZONE_EXAM_CLOCK?.now(offset) ?? (Date.now() + offset)) < deadline };
         if (memory.pending || recoveryPromise) await recover('deadline', { force: true, keepPaused: memory.manual || phase === 'awaiting_user' });
         if (['submitted','submitting'].includes(phase) || destroyed) return { submit: false };
-        return { submit: !memory.pending && Date.now() + offset >= deadline, deadlineChanged: Date.now() + offset < deadline };
+        return { submit: !memory.pending && (window.IZONE_EXAM_CLOCK?.now(offset) ?? (Date.now() + offset)) >= deadline, deadlineChanged: (window.IZONE_EXAM_CLOCK?.now(offset) ?? (Date.now() + offset)) < deadline };
       },
       submitting() { phase = 'submitting'; stopWatch(); audio.pause(); save(); },
       submitFailed() {
@@ -257,13 +278,13 @@
         phase = memory.manual ? 'technical_pause' : 'playing'; startWatch();
         if (!memory.manual) recover('submit-failed', { force: true });
       },
-      finish() { phase = 'submitted'; memory.pending = false; memory.manual = false; stopWatch(); audio.pause(); save(); },
+      finish() { phase = 'submitted'; memory.pending = false; memory.manual = false; stopWatch(); audio.pause(); save(); releaseLease(bound); },
       dispose() {
         if (disposed) return;
-        if (terminal()) { disposed = true; destroyed = true; stopWatch(); audio.pause(); channel?.close(); return; }
+        if (terminal()) { disposed = true; destroyed = true; stopWatch(); audio.pause(); channel?.close(); releaseLease(bound); return; }
         if (recoveryPromise) memory.recoveryId = uuid();
         episode('load-error', memory.manual); phase = 'sync_failed'; stopWatch(); audio.pause();
-        send('pause').catch(() => null); disposed = true; destroyed = true; channel?.close();
+        send('pause').catch(() => null); disposed = true; destroyed = true; channel?.close(); releaseLease(bound);
       },
       inspect() { return { phase, pending: !!memory.pending, revision, watchdogActive: !!timer, deadline, hardDeadline, disposed }; }
     };

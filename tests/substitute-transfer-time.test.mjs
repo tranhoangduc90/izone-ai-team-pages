@@ -35,3 +35,11 @@ test('Audio preview/không có phiên thật không mở 5 phút; audio chính m
  assert.equal(f.events.at(-1).detail.listeningDeadlineAt,end.listeningDeadlineAt);
  f.window.SUBSTITUTE_STATE.blocked=true;const n=f.events.length;f.window.SUBSTITUTE_EXAM.ended({duration:1728.535488});assert.equal(f.events.length,n);
 });
+test('Kết thúc audio khi chưa đối soát được giờ không tạo ngày lỗi hoặc giả mốc server đã xác nhận',async()=>{
+ const f=fixture();f.advance(1728536);
+ f.window.IZONE_EXAM_CLOCK={now:()=>NaN,estimate:()=>Date.parse('2026-10-14T00:28:48.536Z')};
+ f.window.TERM_TEST_BOOTSTRAP={...f.state,examSessionId:f.state.clientRunId};
+ assert.doesNotThrow(()=>f.window.SUBSTITUTE_EXAM.ended({duration:1728.535488}));
+ assert.equal(f.events[0].detail.audioEndedAt,'2026-10-14T00:28:48.536Z');assert.equal(f.events[0].detail.serverNow,undefined);
+ await new Promise(r=>setImmediate(r));assert.ok(f.events.at(-1).detail.serverNow);
+});

@@ -15,6 +15,7 @@
   const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
 
   if (!testConfig || !appConfig || !root) return;
+  if(!window.IZONE_EXAM_CLOCK)await import('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
 
   if (!classCode && !document.body.classList.contains('cbt-mode') && !demoMode) {
     const { redirectRememberedTestClass } = await import('../../shared/test-student-class.js?v=20261018-identity-v1');
@@ -129,11 +130,12 @@
       && restoredSession.writingServerRevision >= 0 ? restoredSession.writingServerRevision : null,
     writingRecovery: Array.isArray(restoredSession.writingRecovery) ? restoredSession.writingRecovery.slice(0, 5) : []
   };
+  if(!demoMode || serverGradingMode)window.IZONE_EXAM_CLOCK?.configure(() => apiRequest(`/api/term-tests/${testConfig.slug}/clock`));
 
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null;
   if (appConfig.EXAM_JOURNAL_ENABLED === true) {
-    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2').then(({ connectExamJournal }) => {
+    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug,
         testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
@@ -245,11 +247,11 @@
     if (detail.audioRecoveryVersion === 2) listeningAudioRevision = detail.audioStateRevision;
     state.listeningDeadlineAt = deadlineAt;
     if (Number.isFinite(Date.parse(serverNow))) {
-      state.serverTimeOffsetMs = Date.parse(serverNow) - Date.now();
+      state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(serverNow) ?? (Date.parse(serverNow) - Date.now()));
     }
     if (detail.audioRecoveryVersion === 2 && !state.listeningSubmitted
         && elements.listeningView.dataset.listeningSubmitting !== 'true'
-        && Date.now() + state.serverTimeOffsetMs < Date.parse(state.listeningDeadlineAt)) {
+        && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + state.serverTimeOffsetMs)) < Date.parse(state.listeningDeadlineAt)) {
       delete elements.listeningView.dataset.listeningTimeExpired;
       state.frozenAnswers.listening = null;
       setAnswerControlsLocked('listening', false);
@@ -590,7 +592,7 @@
         });
         state.listeningStartedAt = started.listeningStartedAt;
         state.listeningDeadlineAt = started.listeningDeadlineAt;
-        state.serverTimeOffsetMs = Date.parse(started.serverNow) - Date.now();
+        state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(started.serverNow) ?? (Date.parse(started.serverNow) - Date.now()));
         saveSession(); hideNotice(); setStage('listening');
       } catch (error) { showNotice(`Chưa thể mở Listening: ${error.message}`, 'error'); }
       finally { setBusy(button, false, '', 'Bắt đầu Listening'); }
@@ -868,7 +870,7 @@
       if (skill === 'listening') state.listeningDeadlineAt = response.deadlineAt;
       else state.readingDeadlineAt = response.deadlineAt;
     }
-    if (response.serverNow) state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
+    if (response.serverNow) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(response.serverNow) ?? (Date.parse(response.serverNow) - Date.now()));
     saveSession();
     return response;
   }
@@ -930,7 +932,7 @@
   function isSectionExpired(skill) {
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const deadline = Date.parse(deadlineValue || '');
-    return Number.isFinite(deadline) && Date.now() + (Number(state.serverTimeOffsetMs) || 0) >= deadline;
+    return Number.isFinite(deadline) && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + (Number(state.serverTimeOffsetMs) || 0))) >= deadline;
   }
 
   let writingSaveTimer = 0;
@@ -988,7 +990,7 @@
       || writingGradingPollTimer
     ) return;
     const availableAt = Date.parse(grading?.availableAt || '');
-    const serverNow = Date.now() + (Number(state.serverTimeOffsetMs) || 0);
+    const serverNow = (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + (Number(state.serverTimeOffsetMs) || 0)));
     if (grading?.status === 'awaiting_release' && Number.isFinite(availableAt) && availableAt > serverNow) {
       // Chỉ hẹn tải lại API; không dùng đồng hồ trình duyệt để tự công bố điểm.
       writingGradingPollTimer = window.setTimeout(() => {
@@ -1088,7 +1090,7 @@
   function writingTimeExpired() {
     return Boolean(state.writingConflict?.timedOut
       || elements.writingView?.dataset.writingTimeExpired === 'true'
-      || (state.writingDeadlineAt && Date.now() + state.serverTimeOffsetMs > Date.parse(state.writingDeadlineAt)));
+      || (state.writingDeadlineAt && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + state.serverTimeOffsetMs)) > Date.parse(state.writingDeadlineAt)));
   }
 
   function renderWritingConflict() {
@@ -1140,7 +1142,7 @@
         || (serverWritingOutlineSupported() && state.drafts.writing.outline))) state.writingDirty = true;
     state.writingStarted = Boolean(writing.started || state.writingStarted);
     state.writingDeadlineAt = writing.deadlineAt || state.writingDeadlineAt;
-    if (writing.serverNow) state.serverTimeOffsetMs = Date.parse(writing.serverNow) - Date.now();
+    if (writing.serverNow) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(writing.serverNow) ?? (Date.parse(writing.serverNow) - Date.now()));
     if (writing.submitted && !sameWriting(state.drafts.writing, writing)) {
       preserveWritingRecovery('Bài trên máy khác bản đã nộp');
     }
@@ -1289,7 +1291,7 @@
     state.completed = Boolean(payload.completed);
     state.examSessionToken = payload.exam?.examSessionToken || state.examSessionToken;
     state.readingDeadlineAt = payload.exam?.readingDeadlineAt || state.readingDeadlineAt;
-    if (payload.exam?.serverNow) state.serverTimeOffsetMs = Date.parse(payload.exam.serverNow) - Date.now();
+    if (payload.exam?.serverNow) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(payload.exam.serverNow) ?? (Date.parse(payload.exam.serverNow) - Date.now()));
     applyWritingFromServer(payload.writing);
     saveSession();
     return payload;
@@ -2446,7 +2448,7 @@
     setBusy(button, true, 'Đang mở Reading...', button.dataset.normalText || button.textContent);
     try {
       if (demoMode === 'exam') {
-        state.readingDeadlineAt = new Date(Date.now() + (Number(testConfig.reading.durationMinutes) || 40) * 60_000).toISOString();
+        state.readingDeadlineAt = new Date((window.IZONE_EXAM_CLOCK?.now() ?? Date.now()) + (Number(testConfig.reading.durationMinutes) || 40) * 60_000).toISOString();
         state.serverTimeOffsetMs = 0;
         saveSession();
         elements.readingStudentName.textContent = state.studentName;
@@ -2461,7 +2463,7 @@
       });
       state.readingStartedAt = response.readingStartedAt;
       state.readingDeadlineAt = response.readingDeadlineAt;
-      state.serverTimeOffsetMs = Date.parse(response.serverNow) - Date.now();
+      state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(response.serverNow) ?? (Date.parse(response.serverNow) - Date.now()));
       saveSession();
       elements.readingStudentName.textContent = state.studentName;
       hideNotice();
@@ -2573,7 +2575,7 @@
       const wasStarted = state.writingStarted;
       state.writingStarted = true;
       if (demoMode === 'exam') {
-        state.writingDeadlineAt = new Date(Date.now() + (Number(testConfig.writing?.durationMinutes) || 30) * 60_000).toISOString();
+        state.writingDeadlineAt = new Date((window.IZONE_EXAM_CLOCK?.now() ?? Date.now()) + (Number(testConfig.writing?.durationMinutes) || 30) * 60_000).toISOString();
         state.serverTimeOffsetMs = 0;
       }
       saveSession();
@@ -2855,7 +2857,7 @@
           return;
         }
         if (!state.listeningDeadlineAt) {
-          state.listeningDeadlineAt = new Date(Date.now() + (Number(testConfig.listening.durationSeconds) || 1848) * 1000).toISOString();
+          state.listeningDeadlineAt = new Date((window.IZONE_EXAM_CLOCK?.now() ?? Date.now()) + (Number(testConfig.listening.durationSeconds) || 1848) * 1000).toISOString();
         }
         saveSession();
         if (serverGradingMode) {
