@@ -5,9 +5,9 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const code=fs.readFileSync(process.env.SSO_SCRIPT||new URL('../shared/teacher-single-sign-on.js',import.meta.url),'utf8');
 const origin='https://ducizone.ddns.net';
-function setup(handler,entryProduct){
+function setup(handler,entryProduct,entryUrl='https://tranhoangduc90.github.io/izone-ai-team-pages/'){
  const calls=[],listeners=new Map();
- const box={URL,Headers,Request,Response,AbortSignal,location:{href:'https://tranhoangduc90.github.io/izone-ai-team-pages/'},localStorage:{setItem(){}},addEventListener(name,fn){listeners.set(name,fn);},fetch:async(input,options)=>{calls.push({url:String(input),options});return handler(String(input),options);}};
+ const box={URL,Headers,Request,Response,AbortSignal,location:{href:entryUrl},localStorage:{setItem(){}},addEventListener(name,fn){listeners.set(name,fn);},fetch:async(input,options)=>{calls.push({url:String(input),options});return handler(String(input),options);}};
  if(entryProduct)box.document={currentScript:{dataset:{izoneTeacherProduct:entryProduct}}};
  box.window=box;vm.createContext(box);vm.runInContext(code,box);return {box,calls,listeners};
 }
@@ -19,6 +19,17 @@ test('Lesson 12 restores the shared teacher account; student requests keep their
  await box.fetch(prefix+'/classes');assert.equal(calls.length,1);
  await box.fetch(prefix+'/teacher/classes');
  assert.deepEqual(calls.slice(1).map(c=>c.url),[origin+'/teacher-session-api/v1/restore/materials',prefix+'/teacher/classes']);
+});
+
+test('Listening Homework restores its own source without changing discovery on other product entries',async()=>{
+ const {box,calls}=setup(()=>response(200),'listeninghomework','https://tranhoangduc90.github.io/izone-ai-team-pages/listening-homework/lesson-2.html?teacher=1');
+ assert.equal(await box.IzoneTeacherSso.restore('listeninghomework'),true);
+ const url=origin+'/listening-homework67/api/listening-homework67/teacher/classes';
+ assert.equal((await box.fetch(url)).status,200);
+ assert.deepEqual(calls.map(c=>c.url),[origin+'/teacher-session-api/v1/restore/listeninghomework',url]);
+ const before=calls.length;await box.fetch(origin+'/listening-homework67/api/listening-homework67/draft',{method:'PUT',body:'fixture-student'});
+ assert.equal(calls.length,before+1);
+ const other=setup(()=>response(200));await assert.rejects(other.box.IzoneTeacherSso.restore('listeninghomework'));
 });
 
 test('Shops native session shares the common startup result and retains its own adapter',async()=>{
