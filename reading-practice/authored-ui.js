@@ -32,17 +32,39 @@ export function groupsHtml(groups,a,flag){
   };
   // Nhận toàn bộ đoạn tóm tắt có chỗ trống; giữ cả câu ngữ cảnh không mang số câu.
   // Mỗi ô vẫn gửi/lưu bằng số gốc và dùng cờ/đường nhảy của engine Reading.
-  const questions=Array.isArray(g.summaryParagraphs)?`<article class="cbt-question-card authored-summary">${g.summaryTitle?`<h4>${esc(g.summaryTitle)}</h4>`:''}${g.summaryParagraphs.map(text=>`<p>${String(text).split(/(\{\{\d+\}\})/).map(part=>{
+  let questions=Array.isArray(g.summaryParagraphs)?`<article class="cbt-question-card authored-summary">${g.summaryTitle?`<h4>${esc(g.summaryTitle)}</h4>`:''}${g.summaryParagraphs.map(text=>`<p>${String(text).split(/(\{\{\d+\}\})/).map(part=>{
    const match=/^\{\{(\d+)\}\}$/.exec(part);
    if(!match)return esc(part);
    const q=g.questions.find(item=>item.n===Number(match[1]));
    if(!q)throw new Error('Chỗ trống không thuộc nhóm câu hỏi.');
    return `<span id="q-${q.n}" data-question-number="${q.n}">${answerControl(q)}${flag(q.n)}</span>`;
   }).join('')}</p>`).join('')}</article>`:g.questions.map(q=>`<article class="cbt-question-card" id="q-${q.n}" data-question-number="${q.n}"><div class="cbt-question-heading"><span class="cbt-question-number">${q.n}</span><p id="stem-${q.n}">${esc(q.text)}</p>${flag(q.n)}</div>${answerControl(q)}</article>`).join('');
-  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${esc(g.instruction)}</p></header>${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${bank?'cbt-matching-layout cbt-answer-first-matching-layout':''}"><section class="cbt-matching-questions">${questions}</section>${bank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
+  // Các ô bảng vẫn dùng số câu, cờ và handler lưu của engine gốc.
+  if(g.table){
+   const cell=value=>String(value).split(/(\{\{\d+\}\})/).map(part=>{
+    const m=/^\{\{(\d+)\}\}$/.exec(part);if(!m)return esc(part).replace(/\n/g,'<br>');
+    const q=g.questions.find(q=>q.n===Number(m[1]));if(!q)throw new Error('Ô bảng không thuộc nhóm câu hỏi.');
+    return `<span id="q-${q.n}" data-question-number="${q.n}">${answerControl(q)}${flag(q.n)}</span>`;
+   }).join('');
+   questions=`<div class="authored-table-scroll" tabindex="0" aria-label="Bảng câu hỏi có thể cuộn ngang"><table class="authored-table">${g.table.caption?`<caption>${esc(g.table.caption)}</caption>`:''}<thead><tr>${g.table.headers.map(v=>`<th scope="col">${esc(v)}</th>`).join('')}</tr></thead><tbody>${g.table.rows.map(row=>`<tr>${row.map(v=>`<td>${cell(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  if(g.chooseCount){
+   const selected=new Set(g.questions.map(q=>String(a.answers[q.n]||'')));
+   questions=`<article class="cbt-question-card authored-choice-group" data-choice-group="${esc(g.id)}" data-choice-count="${g.chooseCount}" data-choice-numbers="${g.questions.map(q=>q.n).join(',')}"><p>${esc(g.stem||g.questions[0].text)}</p><div class="authored-choice-slots">${g.questions.map(q=>`<span id="q-${q.n}" data-question-number="${q.n}"><strong>Câu ${q.n}</strong> <span data-choice-slot="${q.n}">${esc(a.answers[q.n]||'Chưa chọn')}</span>${flag(q.n)}</span>`).join('')}</div><p class="small muted" role="status" data-choice-status>Chọn ${g.chooseCount} đáp án.</p><div class="cbt-choice-list">${bank.map(o=>`<label class="cbt-choice"><input type="checkbox" data-authored-choice="${esc(g.id)}" value="${esc(o.value)}" ${selected.has(o.value)?'checked':''}><span class="cbt-choice-letter">${esc(o.value)}</span><span>${esc(o.text)}</span></label>`).join('')}</div></article>`;
+  }
+  const sideBank=bank&&!g.chooseCount,range=g.questions.length===1?`Question ${g.questions[0].n}`:`Questions ${g.questions[0].n}–${g.questions.at(-1).n}`;
+  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>${range} · ${esc(g.label||g.kind)}</h4><p>${esc(g.instruction)}</p></header>${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${sideBank?'cbt-matching-layout cbt-answer-first-matching-layout':''}"><section class="cbt-matching-questions">${questions}</section>${sideBank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
  }).join('');
 }
 export function bindMultiple(root,onAnswer){
+ // Một checklist ghi đủ các ô điểm, giới hạn lựa chọn trước khi gọi bộ lưu.
+ root.querySelectorAll('[data-authored-choice]').forEach(el=>el.addEventListener('change',event=>{
+  event.stopImmediatePropagation();const group=el.closest('[data-choice-group]'),limit=Number(group.dataset.choiceCount);
+  let values=[...group.querySelectorAll('[data-authored-choice]:checked')].map(x=>x.value);
+  if(values.length>limit){el.checked=false;group.querySelector('[data-choice-status]').textContent=`Chỉ chọn tối đa ${limit} đáp án.`;return;}
+  group.querySelector('[data-choice-status]').textContent=`Đã chọn ${values.length}/${limit} đáp án.`;
+  group.dataset.choiceNumbers.split(',').map(Number).forEach((n,i)=>{const value=values[i]||'';group.querySelector(`[data-choice-slot="${n}"]`).textContent=value||'Chưa chọn';onAnswer(n,value);});
+ }));
  root.querySelectorAll('[data-authored-multi]').forEach(el=>el.addEventListener('change',event=>{
   event.stopImmediatePropagation();const n=el.dataset.authoredMulti;
   const value=[...root.querySelectorAll('[data-authored-multi="'+n+'"]:checked')].map(x=>x.value).sort().join('|');

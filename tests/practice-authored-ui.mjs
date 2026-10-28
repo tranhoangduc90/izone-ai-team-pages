@@ -3,6 +3,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dialogHtml,prepHtml,groupsHtml} from '../reading-practice/authored-ui.js';
 
+test('Bảng giữ tiêu đề/cột/ngữ cảnh và ô nhập theo số câu gốc',()=>{
+ const group={id:'table',kind:'completion',label:'Table',instruction:'ONE WORD ONLY',table:{caption:'Research',headers:['Animal','Finding'],rows:[['Bird','Uses {{1}} input'],['Whale','Keeps {{2}} awake']]},questions:[{n:1,text:'Input'},{n:2,text:'Awake'}]};
+ const html=groupsHtml([group],{answers:{1:'colour',2:'part'}},n=>`<button>Flag ${n}</button>`);
+ for(const v of ['<table','<caption>Research','scope="col"','Bird','Uses ','Whale','Keeps ','value="colour"','value="part"','Flag 1','Flag 2'])assert.ok(html.includes(v),v);
+ for(const n of [1,2])assert.equal(html.split(`id="answer-${n}"`).length-1,1);
+ assert.ok(!html.includes('{{'));
+});
+test('Chọn hai hiện một bank, đủ hai ô/cờ và phục hồi cả hai lựa chọn',()=>{
+ const group={id:'pair',kind:'mcq',label:'Choose two',instruction:'Choose TWO',chooseCount:2,stem:'Pick two colours',options:[{value:'A',text:'Red'},{value:'B',text:'Blue'},{value:'D',text:'White'}],questions:[{n:20,text:'Pick two'},{n:21,text:'Pick two'}]};
+ const html=groupsHtml([group],{answers:{20:'D',21:'B'}},n=>`<button>Flag ${n}</button>`);
+ assert.equal((html.match(/type="checkbox"/g)||[]).length,3);assert.equal((html.match(/checked/g)||[]).length,2);
+ for(const v of ['id="q-20"','id="q-21"','Flag 20','Flag 21','data-choice-count="2"','Pick two colours'])assert.ok(html.includes(v),v);
+ assert.ok(!html.includes('cbt-option-bank'));
+});
+
 test('Chuẩn bị MCQ Reading giữ phương pháp đã chốt, không thay bằng chỉ dẫn điền đáp án',()=>{
  const lesson={title:'Fixture',questionIds:['1'],totalMs:1200000,groups:[{kind:'mcq',label:'Multiple Choice',instruction:'Choose one letter.'}]};
  const html=prepHtml(lesson,null,'reading',()=>'',()=> '');

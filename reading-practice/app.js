@@ -1,6 +1,6 @@
 (async () => {
 'use strict';
-const AuthoredUI=await import('./authored-ui.js?v=20261027-reading14-v1');
+const AuthoredUI=await import('./authored-ui.js?v=20261028-reading16-v1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 let FULL_TIME=1200000;const TAB=crypto.randomUUID();
