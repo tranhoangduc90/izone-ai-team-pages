@@ -305,9 +305,15 @@ function resumeScreen() {
 
 function exercise() {
     const a=current(); if(!a || a.status!=='running' || a.owner!==TAB || !lease || lease.id!==a.leaseId) { navigate(a?.status==='submitted'?`result?attempt=${a.no}`:'resume'); return; }
+    fontSize=17;
+    try{const preference=JSON.parse(localStorage.getItem(cacheKey()+':font'));if(preference?.attemptId===a.id&&[90,100,110,120].includes(preference.percent))fontSize=17*preference.percent/100;}catch{}
     app.innerHTML=`<header class="topbar"><a class="design-brand" href="#docs"><img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"></a><h1>Reading Homework · Buổi ${LESSON.lesson}</h1><details class="identity-options homework-options"><summary><span class="homework-student">${escape(student()?.name)} · </span>Lần ${a.no}</summary><div class="identity-options-body"><p>${escape(student()?.name)} · Lớp ${escape(identity?.classCode)}</p>${textBtn('Tạm dừng','pause')}${textBtn('Reset bài','request-reset')}${textBtn('Tô đoạn đang chọn','highlight')}${identity?.documentUrl?'<a href="#docs">Xem tài liệu bài tập ↗</a>':'<a href="#docs">Thông tin bài luyện</a>'}</div></details></header>
     <div class="page-shell"><section id="readingView" class="panel test-panel cbt-test-form" data-design-pane="${a.mobilePane||'passage'}" aria-label="Bài Reading"><div class="cbt-semantic-stage questions-grid"><div class="cbt-semantic-pane"><div class="cbt-toolbar"><div class="cbt-test-heading"><div><h2>Reading - ${total()} câu</h2></div><div class="cbt-toolbar-controls"><nav class="cbt-part-nav" aria-label="Passage"><button type="button" class="cbt-part-button is-active" data-action="jump" data-question="${firstQuestion()}">${LESSON.passage?`Passage ${LESSON.passage}`:'Bài đọc'} · Q${firstQuestion()}–${lastQuestion()}</button></nav><div class="cbt-text-size"><button type="button" class="cbt-tool-button" data-action="font-down" aria-label="Giảm cỡ chữ">A−</button><strong id="font-percent">${Math.round(fontSize/17*100)}%</strong><button type="button" class="cbt-tool-button" data-action="font-up" aria-label="Tăng cỡ chữ">A+</button></div><button type="button" class="cbt-tool-button" data-action="notes">Notes</button></div><div class="cbt-heading-actions"><div id="timer" class="cbt-reading-clock">Còn <strong>${timeLabel(a.remainingMs)}</strong><span>/ ${FULL_TIME/60000} phút</span></div><span class="answer-count" id="answered-progress"></span><span class="autosave-status" data-status="saved">Đã lưu trên thiết bị</span><button type="button" class="button button-primary cbt-heading-submit" data-action="request-submit">Nộp bài Reading</button></div></div><nav class="reading-view-switch" aria-label="Vùng Reading"><button type="button" data-action="mobile-pane" data-pane="passage" aria-pressed="${(a.mobilePane||'passage')==='passage'}">Bài đọc</button><button type="button" data-action="mobile-pane" data-pane="questions" aria-pressed="${a.mobilePane==='questions'}">Câu hỏi</button></nav></div><div class="cbt-content-viewport" data-font-size="${Math.round(fontSize/17*100)}"><section class="cbt-reading-section"><article class="cbt-reading-passage" id="passage-scroll" aria-label="Bài đọc"><header class="cbt-passage-header"><span>PASSAGE ${LESSON.passage}</span><h3>${escape(LESSON.title)}</h3></header><div class="cbt-passage-body"><p class="passage-subtitle">${escape(LESSON.subtitle)}</p>${Object.entries(PASSAGE).map(([letter,text])=>`<div id="paragraph-${letter}" class="cbt-passage-paragraph paragraph ${a.highlighted.includes(letter)?'highlighted':''}" data-paragraph="${letter}">${isRobots()?'':`<span class="cbt-paragraph-label">${letter}</span>`}<p>${escape(text)}</p></div>`).join('')}${isRobots()?`<div class="passage-footnotes"><p>* terraforming: modifying a planet’s atmosphere to suit human needs</p><p>** singularity: the point when robots will be able to start creating ever more sophisticated versions of themselves</p></div>`:''}</div></article><article class="cbt-reading-questions" id="question-scroll" aria-label="Câu hỏi"></article></section></div></div></div><div class="cbt-question-nav-wrap"><div class="cbt-review-bar"><span id="review-count"></span><button type="button" class="cbt-review-open" data-action="review">Rà soát bài</button></div><nav class="cbt-question-nav" aria-label="Đi đến câu hỏi">${Object.keys(KEY).map(n=>`<button type="button" class="cbt-question-button" data-action="jump" data-question="${n}" aria-label="Câu ${n}">${n}</button>`).join('')}</nav><aside id="review-panel" class="cbt-review-panel" hidden></aside></div></section></div><aside class="cbt-note-panel" id="notes-panel" hidden><header><strong>Ghi chú cá nhân</strong><button type="button" class="cbt-review-close" data-action="notes" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="notes">Tự lưu cùng lần làm bài</label><textarea id="notes" placeholder="Nén ý, từ khóa hoặc điểm cần kiểm lại…">${escape(a.notes)}</textarea></div></aside><footer class="reading-demo-footer">IZONE · Reading Homework · Buổi ${LESSON.lesson}</footer>`;
     renderQuestions(); updateProgress(); setActivating(activating);
+    const questionNav=document.querySelector('.cbt-question-nav');
+    questionNav.style.setProperty('--reading-question-count',String(total()));
+    // Keep review available in the learner menu; the bottom strip contains questions only.
+    document.querySelector('.identity-options-body').append(document.querySelector('.cbt-review-bar'));
     document.querySelector('#passage-scroll').scrollTop=a.scroll?.passage || 0;
     document.querySelector('#notes-panel').hidden=!a.notesOpen;
   }
@@ -358,7 +364,7 @@ function authoredQuestions(){
   document.querySelector('#passage-scroll').dataset.annotationRootKey='reading-passage-'+selected.id;
   document.querySelector('#question-scroll').dataset.annotationRootKey='reading-questions-'+selected.id;
   document.querySelector('.cbt-part-nav').innerHTML=LESSON.passages.map(p=>`<button type="button" class="cbt-part-button ${p.id===selected.id?'is-active':''}" data-action="passage" data-passage="${escape(p.id)}" aria-pressed="${p.id===selected.id}">${escape(p.label)} · Q${p.start}–${p.end}</button>`).join('');
-  document.querySelector('.cbt-question-nav').innerHTML=LESSON.passages.map(p=>`<span class="full-test-question-group" role="group" aria-label="${escape(p.label)}"><span class="full-test-group-label">${escape(p.label)}</span>${LESSON.questionIds.filter(n=>+n>=p.start&&+n<=p.end).map(n=>`<button type="button" class="cbt-question-button" data-action="jump" data-question="${n}" aria-label="Câu ${n}">${n}</button>`).join('')}</span>`).join('');
+  document.querySelector('.cbt-question-nav').innerHTML=LESSON.questionIds.map(n=>`<button type="button" class="cbt-question-button" data-action="jump" data-question="${n}" aria-label="Câu ${n}">${n}</button>`).join('');
   a.scroll.passage=a.scroll.questions['passage:'+selected.id]||0;
   document.querySelector('#passage-scroll').scrollTop=a.scroll.passage;
   document.querySelector('#question-scroll').scrollTop=a.scroll.questions['questions:'+selected.id]||0;
@@ -406,7 +412,9 @@ function jump(n) {
     if(matchMedia('(max-width:980px)').matches)setMobilePane('questions');
     const el=document.querySelector(`#q-${n}`), scroll=document.querySelector('#question-scroll');
     if(el&&scroll)scroll.scrollTo({top:el.getBoundingClientRect().top-scroll.getBoundingClientRect().top+scroll.scrollTop-16,behavior:'auto'});
-    document.querySelector(`[data-answer="${n}"]`)?.focus({preventScroll:true});
+    const control=document.querySelector(`[data-answer="${n}"]`)
+      ||el?.closest('.authored-choice-group')?.querySelector('[data-authored-choice]');
+    control?.focus({preventScroll:true});
     if(!LESSON.authored&&!isRobots()&&n<=20) spotParagraph('ABCDEFG'[n-14]);
     rememberScroll();persist(); updateProgress();
   }
@@ -428,6 +436,7 @@ function changeFont(delta) {
     const percent=Math.min(120,Math.max(90,Math.round(fontSize/17*100)+delta));fontSize=17*percent/100;
     document.querySelector('.cbt-content-viewport').dataset.fontSize=percent;
     document.querySelector('#font-percent').textContent=percent+'%';
+    try{localStorage.setItem(cacheKey()+':font',JSON.stringify({attemptId:current().id,percent}));}catch{}
   }
 
 function review(filter='all') {
