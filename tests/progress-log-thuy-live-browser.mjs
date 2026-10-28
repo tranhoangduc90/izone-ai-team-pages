@@ -14,7 +14,7 @@ const base={itemFamilyId:uid(20),required:true,maxScore:0,graderType:'none',skil
 const definition={schemaVersion:'FormDefinitionV1',formVersionId:uid(9),title:'Phiếu kiểm giao diện mới',kind:'mixed',answerReleasePolicy:'hidden',blocks:[
  {blockId:block1,checkpoint:1,title:'Listening · Từ khóa',instructions:'Gạch chân từ quan trọng.',items:[{...base,itemVersionId:wordItem,position:1,displayNumber:'1',prompt:'Câu 1 · Câu hỏi',interactionType:'multi_choice_group',layoutType:'keyword_selection',
   options:[{id:'w1',label:'test'},{id:'w2',label:'test'},{id:'w3',label:'again?'}],interactionConfig:{maxSelections:2}},...['A','B','C'].map((letter,index)=>({...base,itemVersionId:uid(80+index),position:2+index,displayNumber:'1'+letter,prompt:'Câu 1 · '+letter,interactionType:'multi_choice_group',layoutType:'keyword_selection',options:[{id:letter+'1',label:'other'},{id:letter+'2',label:'words'}],interactionConfig:{maxSelections:2}}))]},
- {blockId:block2,checkpoint:2,title:'Reading · Bảng so sánh',instructions:'Điền bảng.',items:[
+ {blockId:block2,checkpoint:2,kind:'survey',title:'Reading · Bảng so sánh',instructions:'Điền bảng.',items:[
  {...base,itemVersionId:scanId,position:2,prompt:'Scanning',interactionType:'short_text',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:2,sentenceLines:[{title:'Mục tiêu',parts:['Tìm ',' và ','.']},{title:'Dạng bài áp dụng',parts:['Câu có sẵn.']}]}},
  {...base,itemVersionId:skimId,position:3,prompt:'Skimming',interactionType:'short_text',layoutType:'numbered_short_texts',groupId:'comparison-reading',interactionConfig:{responseCount:2,sentenceLines:[{title:'Mục tiêu',parts:['Hiểu ',' trong ','.']},{title:'Dạng bài áp dụng',parts:['Dòng nguồn giữ nguyên.']}] }},
  {...base,itemVersionId:uid(90),position:9,displayNumber:'2',prompt:'Em muốn luyện thêm điều gì?',interactionType:'single_choice',layoutType:'choice_cards',skillCodes:['speaking'],options:[{id:'A',label:'Phát triển ý và diễn đạt câu trả lời dài, rõ ràng hơn trong buổi luyện nói'},{id:'B',label:'Phát âm và trọng âm'}]}]}]};
@@ -41,7 +41,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   if(path==='/student/course-journey'){if(journeyFailure==='denied')return send({ok:false,message:'Quyền đọc đã bị thu hồi'},403);if(journeyFailure)return send({ok:false,message:'Nguồn danh sách tạm lỗi'},503);return send({ok:true,journey:{student:person(body.studentRef),class:{classId:'1294',name:'IC2305'},summary:{totalSessions:11,submittedComplete:0,attendedSessions:0,availableReports:0},sessions:[{assignmentId,publicToken:assignmentId,sessionNumber:11,sessionDate:'2026-01-01',title:definition.title,assignmentStatus:'published',submissionWindow:window(),completeness:state(body.studentRef).final?'incomplete':null}],reports:[]}});}
   if(path==='/student/course-session-detail'){
    const s=state(body.studentRef);if(!s.final)return send({ok:false,error:'JOURNEY_SUBMISSION_NOT_READY',message:'Buổi này chưa có bài nộp cuối'},409);
-   return send({ok:true,detail:{classId:'1294',sessionNumber:11,student:person(body.studentRef),submissionId:uid(40),definition,responses:s.draft,gradingItems:result(s).items,status:'incomplete'}});
+   return send({ok:true,detail:{classId:'1294',sessionNumber:11,student:person(body.studentRef),submissionId:uid(40),definition,responses:s.draft,gradingItems:result(s).items.map(item=>item.itemVersionId===uid(90)?{...item,expectedAnswer:['Tham khảo sau khi mở lại']}:item),status:'incomplete'}});
   }
   if(path==='/attempts/start'){
    const s=state(body.studentRef);return send({ok:true,attempt:{attemptToken:s.attemptToken,assignmentId,definitionHash:'a'.repeat(64),draft:s.draft,draftRevision:s.rev,checkpointSubmissions:s.checkpoints,
@@ -104,6 +104,8 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   assert.equal(await page.locator('#submitButton').isVisible(),false);assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);
   const starts=requests.filter(r=>r.path==='/attempts/start').length;await page.close();page=await ctx.newPage();await page.goto(url);await page.locator('#formView').waitFor();
   await page.getByText('Phiếu đã nộp · Chỉ đọc',{exact:true}).waitFor();assert.equal(requests.filter(r=>r.path==='/attempts/start').length,starts);
+  await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Xem bài đã nộp',exact:true}).click();
+  await page.getByText('Đáp án tham khảo: Tham khảo sau khi mở lại',{exact:true}).waitFor();
   assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'learner-completed.png'),fullPage:true});}
   closed=true;journeyFailure=true;await page.getByRole('button',{name:'Đổi người học',exact:true}).click();await page.reload();

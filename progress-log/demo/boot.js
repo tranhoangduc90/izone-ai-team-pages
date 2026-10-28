@@ -50,7 +50,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261028-thuy-v1');
+  await import('../app.js?rev=20261028-thuy-v2');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });

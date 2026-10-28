@@ -10,6 +10,9 @@ export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmi
   elements.checkpointInstructions.textContent=state.assignment.definition.instructions||'';
   elements.checkpointInstructions.hidden=!elements.checkpointInstructions.textContent;
   const count=blocks.filter(b=>state.checkpointSubmissions.has(b.blockId)).length;
+  const savedResult=state.thuyReadOnly?{items:(state.thuyReadOnly.gradingItems||[]).map(item=>({
+    ...item,rawAnswer:state.responses[item.itemVersionId]??null
+  }))}:null;
   const progress=node('div','','thuy-progress');
   progress.append(node('strong',state.thuyReadOnly?'Phiếu đã nộp · Chỉ đọc':`Đã nộp ${count}/${blocks.length} phần`),node('span',count||state.thuyReadOnly?'Đã nhận bài trong Progress Log':'Chưa ghi nhận tham gia',count||state.thuyReadOnly?'badge green':'badge'));
   root.append(progress);
@@ -26,7 +29,7 @@ export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmi
     part.append(head);
     if(expanded.has(block.blockId)) {
       const body=node('div','','thuy-part-body');if(block.instructions)body.append(node('p',block.instructions,'help'));
-      const feedback=submitted?partFeedback(block,state.submissionPayload?.result||state.checkpointSubmissions.get(block.blockId)?.result):null;
+      const feedback=submitted?partFeedback(block,state.submissionPayload?.result||state.checkpointSubmissions.get(block.blockId)?.result||savedResult):null;
       if(feedback)body.append(feedback);else body.append(...buildQuestions(block.items.filter(i=>i.layoutType!=='inline_option_text')));
       const locked=submitted||!open||!canSubmit||Boolean(state.submissionPayload)||state.submitting;
       for(const control of body.querySelectorAll('input,textarea,select,button.keyword-word'))control.disabled=locked;
