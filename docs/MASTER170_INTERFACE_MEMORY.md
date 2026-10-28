@@ -4,6 +4,8 @@
 
 ## Phạm vi1.1 đang dùng
 
+Phản hồi29/10 được nối vào [bản sửa component và cách kiểm](assessment-ui-fixes-20261029.md): T/F/NG–Y/N/NG dùng radio như Term, không bank/số lặp; Note Completion liên tục của bài lẻ dùng một giấy; checkbox ghi nhớ tách khỏi chiều cao text input. Giữ anchor/nháp và URL dùng mã bài đầy đủ, không dùng số buổi làm alias.
+
 Reading/Listening Homework và thực chiến, Term/Mini/Substitute67 dùng profile/adapter1.1. Substitute có thêm `substitute-v1.1.css/.mjs` cho native layout; hub trộn hai khóa chỉ đổi hàngK67, giữ chrome và hàngK56. Đây là ngoại lệ có chủ đích để không mở rộng phạm vi sangK56. Phần nhắc toàn bộ Test được loại trừ bên dưới là lịch sử1.0, không phủ quy định1.1.
 
 Reading Homework phải kiểm cả đường bài thật `reading-skills67/materials-beyond-concrete/` và `reading-skills67/butterflies-britain-tfng/`, cùng `teacher.html` của từng bài. Các trang gốc, demo và preview không chứng minh những đường này đã nạp adapter. Bổ sung ngày29/10/2026 nối bốn HTML đó vào profile `skill-homework`; giữ API, phiên, nháp, chấm và quyền native. Khi tạo bài mới, kiểm chính URL Homework đang dùng thay vì chỉ kiểm trang gốc.

@@ -19,13 +19,18 @@ export function prepHtml(lesson,a,kind,btn,textBtn){
 }
 
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const judgmentOptions=options=>{
+ const values=(options||[]).map(o=>String(o.value).toUpperCase().replace(/\s+/g,''));
+ return values.length===3&&values.includes('NOTGIVEN')&&(['TRUE','FALSE'].every(v=>values.includes(v))||['YES','NO'].every(v=>values.includes(v)));
+};
 export function groupsHtml(groups,a,flag){
  return groups.map(g=>{
   const bank=g.options;
+  const judgment=judgmentOptions(bank||g.questions[0]?.options)&&g.questions.every(q=>!q.multiple&&judgmentOptions(q.options||bank));
   const answerControl=q=>{
    const options=q.options||bank,selected=String(a.answers[q.n]||'').split('|');
    let control;
-   if(g.kind==='mcq')control='<div class="cbt-choice-list">'+options.map(o=>`<label class="cbt-choice"><input type="${q.multiple?'checkbox':'radio'}" name="answer-${q.n}" value="${esc(o.value)}" ${q.multiple?'data-authored-multi="'+q.n+'"':'data-answer="'+q.n+'"'} ${selected.includes(o.value)?'checked':''}><span class="cbt-choice-letter">${esc(o.value)}</span><span>${esc(o.text)}</span></label>`).join('')+'</div>';
+   if(g.kind==='mcq'||judgment)control='<div class="cbt-choice-list'+(judgment?' authored-judgment-choices':'')+'">'+options.map(o=>`<label class="cbt-choice${judgment?' cbt-choice-single-label':''}"><input type="${q.multiple?'checkbox':'radio'}" name="answer-${q.n}" value="${esc(o.value)}" ${q.multiple?'data-authored-multi="'+q.n+'"':'data-answer="'+q.n+'"'} ${selected.includes(o.value)?'checked':''}>${judgment?'':`<span class="cbt-choice-letter">${esc(o.value)}</span>`}<span>${esc(o.text)}</span></label>`).join('')+'</div>';
    else if(options)control=`<span class="cbt-select-answer" data-question-number="${q.n}"><span class="cbt-blank-number">${q.n}</span><span data-answer-slot><select class="cbt-answer-select" id="answer-${q.n}" data-answer="${q.n}" aria-label="Câu ${q.n}"><option value="">Nhấn để chọn</option>${options.map(o=>`<option value="${esc(o.value)}" ${a.answers[q.n]===o.value?'selected':''}>${esc(o.value)} · ${esc(o.text)}</option>`).join('')}</select></span></span>`;
    else control=`<span class="cbt-inline-answer"><span class="cbt-blank-number">${q.n}</span><span data-answer-slot><input class="cbt-answer-input" type="text" id="answer-${q.n}" data-answer="${q.n}" value="${esc(a.answers[q.n]||'')}" aria-label="Câu ${q.n}" maxlength="80" autocomplete="off"></span></span>`;
    return control;
@@ -52,8 +57,12 @@ export function groupsHtml(groups,a,flag){
    const selected=new Set(g.questions.map(q=>String(a.answers[q.n]||'')));
    questions=`<article class="cbt-question-card authored-choice-group" data-choice-group="${esc(g.id)}" data-choice-count="${g.chooseCount}" data-choice-numbers="${g.questions.map(q=>q.n).join(',')}"><p>${esc(g.stem||g.questions[0].text)}</p><div class="authored-choice-slots">${g.questions.map(q=>`<span id="q-${q.n}" data-question-number="${q.n}"><strong>Câu ${q.n}</strong> <span data-choice-slot="${q.n}">${esc(a.answers[q.n]||'Chưa chọn')}</span>${flag(q.n)}</span>`).join('')}</div><p class="small muted" role="status" data-choice-status>Chọn ${g.chooseCount} đáp án.</p><div class="cbt-choice-list">${bank.map(o=>`<label class="cbt-choice"><input type="checkbox" data-authored-choice="${esc(g.id)}" value="${esc(o.value)}" ${selected.has(o.value)?'checked':''}><span class="cbt-choice-letter">${esc(o.value)}</span><span>${esc(o.text)}</span></label>`).join('')}</div></article>`;
   }
-  const sideBank=bank&&!g.chooseCount,range=g.questions.length===1?`Question ${g.questions[0].n}`:`Questions ${g.questions[0].n}–${g.questions.at(-1).n}`;
-  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>${range} · ${esc(g.label||g.kind)}</h4><p>${esc(g.instruction)}</p></header>${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${sideBank?'cbt-matching-layout cbt-answer-first-matching-layout':''}"><section class="cbt-matching-questions">${questions}</section>${sideBank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
+  const sideBank=bank&&!g.chooseCount&&!judgment,range=g.questions.length===1?`Question ${g.questions[0].n}`:`Questions ${g.questions[0].n}–${g.questions.at(-1).n}`;
+  const originalLabel=g.label||g.kind,label=originalLabel.replace(/\s*[—–-]\s*subtitle$/i,'');
+  // Hidden legacy text preserves existing annotation offsets; no saved data changes.
+  const labelHtml=esc(label)+(label!==originalLabel?`<span class="authored-annotation-context" hidden aria-hidden="true">${esc(originalLabel.slice(label.length))}</span>`:'');
+  const bankHtml=bank&&!g.chooseCount?`<aside class="cbt-option-bank${judgment?' authored-annotation-context':''}"${judgment?' hidden aria-hidden="true"':''}><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:'';
+  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>${range} · ${labelHtml}</h4><p>${esc(g.instruction)}</p></header>${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${sideBank?'cbt-matching-layout cbt-answer-first-matching-layout':''}"><section class="${judgment?'authored-judgment-list':'cbt-matching-questions'}">${questions}</section>${bankHtml}</div></section>`;
  }).join('');
 }
 export function bindMultiple(root,onAnswer){
@@ -82,7 +91,7 @@ export function passageHtml(passage,evidence=[],labels={}){
  }).join('');
 }
 export function dialogHtml(lesson,data,a,n,paragraphs){
- const e=data.explanations.entries[n],ids=lesson.questionIds,index=ids.indexOf(String(n)),kind=lesson.groups.find(g=>n>=g.start&&n<=g.end)?.label||e.kind;
+ const e=data.explanations.entries[n],ids=lesson.questionIds,index=ids.indexOf(String(n)),kind=String(lesson.groups.find(g=>n>=g.start&&n<=g.end)?.label||e.kind||'').replace(/\s*[—–-]\s*subtitle$/i,'');
  const selected=passageFor(lesson,n),passage=passageSubset(data.definition.passage,selected),row=a.result.rows.find(r=>r.number===n);
  // Kế thừa lối chuyển đoạn của Robots and us, kể cả khi một câu dùng nhiều vị trí.
  const groups=e.evidenceGroups,locations=[...new Map(groups.map(g=>[g.paragraph,g])).values()];

@@ -1,4 +1,35 @@
 /* Chỉ bố cục bài nhiều part; không thay timer, nhận diện hoặc theme bài cũ. */
+/* Khoảng đệm cũng áp dụng cho bài lẻ; phần dẫn nhập cũ nằm ngoài content. */
+body[data-izone-consumer='listening-practice'] #readingView .design-question-content{padding:24px 28px}
+body[data-izone-consumer='listening-practice'] #readingView .design-question-group>.authored-introduction{margin:0;padding:0 28px 12px}
+body[data-izone-consumer='listening-practice'] #readingView .cbt-matching-questions>.cbt-question-card{padding:16px}
+/* Một khung/luồng cuộn cho mười ô; hai gốc Note vẫn giữ đúng chữ/offset. */
+#readingView.listening-note-document .cbt-reading-section{display:flex;flex-direction:column;min-height:0;height:100%;padding:0;gap:0;border:1px solid #d8dee5;border-top:3px solid var(--design-red,#e9002b);border-radius:12px;overflow:hidden}
+#readingView.listening-note-document #question-scroll{display:block!important;flex:1 1 auto;min-height:0;width:100%;max-width:none;padding:0;border:0;overflow:auto}
+#readingView.listening-note-document #passage-scroll{display:block!important;flex:none;width:100%;max-width:none;height:auto;min-height:0;padding:0;border:0;overflow:visible}
+#readingView.listening-note-document #passage-scroll.authored-empty-note-root{display:none!important}
+#readingView.listening-note-document .reading-view-switch{display:none}
+#readingView.listening-note-document .authored-notes-heading{flex:none;padding:20px 28px;background:var(--m170-canvas,#f5f6f7);border-bottom:1px solid #d8dee5}
+#readingView.listening-note-document .authored-notes-heading h4{display:inline-block;margin:0 0 10px;padding:8px 14px;border-radius:6px;background:var(--m170-structure,#174265);color:white;font-size:1.25em;line-height:1.4}
+#readingView.listening-note-document .authored-notes-heading p{margin:0;font-size:.9375em;line-height:1.65}
+#readingView.listening-note-document .authored-note-section{margin:0;border:0;border-radius:0;box-shadow:none}
+#readingView.listening-note-document .authored-note-section>.cbt-subsection-heading{padding:20px 28px 0;border:0;background:transparent}
+#readingView.listening-note-document .authored-note-section>.cbt-subsection-heading h4{display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:var(--m170-structure,#174265);font-size:1.12em;line-height:1.4}
+#readingView.listening-note-document .authored-note-range,
+#readingView.listening-note-document .authored-note-section>.cbt-subsection-heading>p{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#readingView.listening-note-document .cbt-matching-questions{display:block;border:0;border-radius:0;overflow:visible}
+#readingView.listening-note-document .cbt-matching-questions>.cbt-question-card{margin:0;padding:12px 0 20px;border:0;border-radius:0;background:transparent;box-shadow:none}
+body[data-izone-consumer='listening-practice'] #readingView.listening-note-document .cbt-matching-questions>.cbt-question-card{padding:12px 0 20px}
+#readingView.listening-note-document #question-scroll>.authored-note-section{width:100%;max-width:none;margin-inline:0}
+#readingView.listening-note-document>.cbt-semantic-stage .authored-notes-heading{border-left:0;margin:0}
+#readingView.listening-note-document .cbt-question-heading{grid-template-columns:minmax(0,1fr) 34px!important;gap:16px;align-items:start}
+#readingView.listening-note-document .authored-stem{min-width:0;font-weight:400;line-height:1.75;overflow-wrap:break-word;white-space:pre-line}
+@media(max-width:799px){
+ body[data-izone-consumer='listening-practice'] #readingView .design-question-content{padding:20px 16px}
+ body[data-izone-consumer='listening-practice'] #readingView .design-question-group>.authored-introduction{padding:0 16px 12px}
+ #readingView.listening-note-document .authored-notes-heading{padding:18px 16px}
+ #readingView.listening-note-document .authored-note-section>.cbt-subsection-heading{padding:20px 16px 0}
+}
 .listening-full-test .cbt-part-nav{flex-wrap:wrap;gap:6px}
 .listening-full-test .cbt-part-button{white-space:nowrap}
 .listening-full-test #readingView .cbt-test-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title actions" "controls controls";gap:8px 16px}

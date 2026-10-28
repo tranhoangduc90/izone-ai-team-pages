@@ -1,4 +1,6 @@
 /* Chỉ bố trí nội dung bài Reading authored, giữ token Master và CSS bài cũ. */
+.authored-annotation-context[hidden]{display:none!important}
+body[data-m170-product='practice'].authored-reading .authored-judgment-list .cbt-choice:not(:has(input:checked)){border-color:var(--m170-control,#7c8798)}
 body.authored-reading .cbt-part-nav { flex-wrap: wrap; }
 body[data-m170-product='practice'].authored-reading .cbt-matching-questions .cbt-question-card {
   min-width: 0;

@@ -7,7 +7,7 @@
   // App có import bất đồng bộ; khởi tạo công cụ sau khi cầu nối của đúng trang sẵn sàng.
   if(!bridge){window.addEventListener('reading-interaction-ready',bootAnnotations,{once:true});return;}
   const rootSelector='.cbt-reading-passage, .cbt-reading-questions';
-  const excludedTextSelector='button,input,select,textarea,script,style,[contenteditable=true],.cbt-annotation-toolbar,.cbt-note-panel,.cbt-blank-number,.cbt-question-number,.cbt-choice-letter,.cbt-paragraph-label';
+  const excludedTextSelector='button,input,select,textarea,script,style,[contenteditable=true],.cbt-annotation-toolbar,.cbt-note-panel,.cbt-blank-number,.cbt-question-number,.cbt-choice-letter,.cbt-paragraph-label,.authored-judgment-choices';
   const state={get annotations(){const attempt=bridge.current();if(!attempt)return [];return attempt.annotations ||= [];}};
   let activeScope=bridge.scope();
   function syncStorageScope(){const next=bridge.scope();if(next===activeScope)return false;activeScope=next;hideActionToolbar();closeNotePanel();return true;}

@@ -151,7 +151,7 @@
     const nodes = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
-        if (!node.parentElement || node.parentElement.closest(excludedTextSelector)) {
+        if (!node.parentElement || node.parentElement.closest(excludedTextSelector) || node.parentElement.closest(rootSelector)!==root) {
           return NodeFilter.FILTER_REJECT;
         }
         return NodeFilter.FILTER_ACCEPT;
@@ -224,7 +224,7 @@
   }
 
   function unwrapMarks(root) {
-    root.querySelectorAll('mark.cbt-annotation-mark').forEach(mark => mark.replaceWith(...mark.childNodes));
+    root.querySelectorAll('mark.cbt-annotation-mark').forEach(mark => {if(mark.parentElement.closest(rootSelector)===root)mark.replaceWith(...mark.childNodes);});
     root.normalize();
   }
 

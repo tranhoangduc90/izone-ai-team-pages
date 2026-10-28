@@ -45,6 +45,15 @@ html[data-izone-theme='master170'] body:not([data-kind='test']) {
   color-scheme: light;
 }
 html[data-izone-theme='master170'] body:not([data-kind='test']) :where(input, textarea, select, button) { font-family: inherit; }
+/* Remember choices are native checkboxes, not 44px text inputs. Keep their
+   full label clickable and align the glyph with single/multiline labels. */
+html body label:has(> input[type='checkbox'][id*='remember' i]) {
+  display:flex; align-items:center; gap:10px; min-height:24px; line-height:1.5;
+}
+html body label:has(> input[type='checkbox'][id*='remember' i]) > input[type='checkbox'] {
+  flex:0 0 17px; width:17px; height:17px; min-width:17px; min-height:17px; max-height:17px;
+  padding:0; margin:0; align-self:center; vertical-align:middle;
+}
 html[data-izone-theme='master170'] body:not([data-kind='test']) :where(h1, h2, h3) { color: var(--m170-structure); font-weight: 700; line-height: 1.3; }
 html[data-izone-theme='master170'] body:not([data-kind='test']) :focus-visible { outline: 3px solid var(--m170-brand); outline-offset: 3px; }
 html[data-izone-theme='master170'] body:not([data-kind='test']) .m170-logo { display: block; width: auto; height: 48px; max-width: 100%; object-fit: contain; flex-shrink: 0; }
