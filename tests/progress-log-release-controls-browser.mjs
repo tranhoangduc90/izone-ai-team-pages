@@ -31,7 +31,7 @@ test('Gia hạn giữ chữ khi lỗi/đóng; kho cả hàng, sửa ở đầu; 
   const entry={id:'entry-a',title:'Phiếu thư viện thử',itemCount:2,skills:['reading'],createdAt:'2026-10-22T00:00:00Z'};
   window.bank=createFormLibrary({host:document.querySelector('#bank'),request:async path=>path.includes('?')?{entries:[entry]}:{entry:{...entry,definition:{blocks:[{title:'Phần thử',items:[{prompt:'Câu nguồn',options:[]}]}]}}},onCopy:async entry=>window.copied.push(entry.id)});await window.bank.refresh();
  });
- await page.locator('#bank tbody tr td').last().click();await page.getByRole('dialog').getByRole('button',{name:'Sửa bài tập',exact:true}).click();assert.deepEqual(await page.evaluate(()=>window.copied),['entry-a']);
+ await page.locator('#bank tbody tr').click({position:{x:4,y:4}});await page.getByRole('dialog').getByRole('button',{name:'Sửa bài',exact:true}).click();assert.deepEqual(await page.evaluate(()=>window.copied),['entry-a']);
  await page.evaluate(async()=>{const m=await import('/progress-log/teacher-form-editor.js'),v=m.newEditorPayload('Bộ đủ dạng');window.editor=m.createFormDraftEditor({host:document.querySelector('#editor'),apiRequest:async()=>({drafts:[]})});
   v.definition.blocks[0].items=['mcq','multi','matching','short_answer','reflection'].map((type,index)=>m.newEditorItem(type,index+1));
   v.definition.blocks[0].items[4].interactionConfig.hintText='Gợi ý có sẵn';
@@ -42,6 +42,17 @@ test('Gia hạn giữ chữ khi lỗi/đóng; kho cả hàng, sửa ở đầu; 
  assert.equal(await page.getByLabel('Đáp án đúng · A · Phương án A',{exact:true}).getAttribute('type'),'checkbox');
  await page.getByLabel('Đáp án đúng · A · Phương án A',{exact:true}).check();assert.equal((await page.evaluate(()=>window.editor.getPayload())).gradingKey.items[(await page.evaluate(()=>window.editor.getPayload())).definition.blocks[0].items[1].itemVersionId].expectedOptionIds[0],'A');
  assert.equal(await page.evaluate(()=>window.hiddenFeedback),null);assert.match(await page.locator('#feedback').innerText(),/Lời giải nguồn/);
+ const cleanup=await page.evaluate(async()=>{
+  const {createFormLibrary}=await import('/progress-log/teacher-form-library.js'),{createAssignmentDialog}=await import('/progress-log/teacher-assignment-dialog.js');
+  const host=document.createElement('section');document.body.append(host);const entry={id:'private-entry',title:'Nội dung phiên GV cũ',sourceDraftId:'draft-a',sourceRevision:1};
+  let release,requested;const reached=new Promise(done=>{requested=done;}),hold=new Promise(done=>{release=done;});
+  const library=createFormLibrary({host,request:async path=>{if(path.includes('?scope='))return {entries:path.endsWith('izone')?[entry]:[]};if(path.endsWith('/preview-grant')){requested();return hold;}return {entry:{...entry,definition:{blocks:[]}}};},onCopy:()=>{}});
+  await library.refresh();host.querySelector('.thuy-library-name').click();await reached;library.clear();release({grant:'late-private-grant'});await new Promise(done=>setTimeout(done,0));
+  const libraryGone=!document.querySelector('.thuy-library-detail'),noFrame=!document.querySelector('.thuy-library-preview');
+  let releasePlan;const plan=new Promise(done=>{releasePlan=done;});const assign=createAssignmentDialog({request:()=>plan,getClasses:()=>[{class_id:'1294',class_name:'Lớp riêng'}],getPreferredClass:()=>1294});
+  assign.open({title:entry.title,definition:{blocks:[]},publication:{id:'pub-a'}});assign.clear();releasePlan({plan:{classId:'1294',totalSessions:1,sessionDates:[]}});await new Promise(done=>setTimeout(done,0));
+  return {libraryGone,noFrame,assignmentGone:!document.querySelector('.thuy-assignment-dialog')};
+ });assert.deepEqual(cleanup,{libraryGone:true,noFrame:true,assignmentGone:true});
  assert.deepEqual(errors,[]);
  }finally{await browser.close();await new Promise(done=>server.close(done));}
 });

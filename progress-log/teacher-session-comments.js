@@ -7,7 +7,7 @@ export function clearCommentDrafts(teacherEmail) {
   const storage=draftStorage();for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key.startsWith(prefix+teacherEmail+':'))storage.removeItem(key);}
 }
 // Nháp theo tài khoản/lớp/người/buổi. Retry giữ operationId; đổi nội dung tạo thao tác mới.
-export function commentEditor({target,studentName,comment,reviewerKey,request,current,onSaved}) {
+export function commentEditor({target,studentName,comment,reviewerKey,request,current,onSaved,compact=false}) {
   const key=prefix+reviewerKey+':'+target.classId+':'+target.studentRef+':'+target.sessionNumber;
   let saved=comment,draft=stored(key),operationId=draft?.operationId||crypto.randomUUID(),busy=false;
   let revision=Number(draft?.expectedRevision??comment?.revision??0),action=draft?.action||'save';
@@ -16,7 +16,7 @@ export function commentEditor({target,studentName,comment,reviewerKey,request,cu
   const input=node('textarea');input.value=draft?.noteText??(comment?.visibility==='hidden'?'':comment?.noteText||'');
   input.rows=5;input.setAttribute('aria-label','Nhận xét dành cho '+studentName);input.placeholder='Viết nhận xét cho buổi học này…';
   const count=node('small'),status=node('p','','notice');status.setAttribute('role','status');
-  const actions=node('div','','comment-actions'),save=node('button','Lưu và hiển thị với học viên','button primary'),hide=node('button','Ẩn nhận xét','mini-action');
+  const actions=node('div','','comment-actions'),save=node('button',compact?'Lưu nhận xét':'Lưu và hiển thị với học viên','button primary'),hide=node('button','Ẩn nhận xét','mini-action');
   const history=node('button','Xem lịch sử','mini-action'),historyBox=node('div');
   for(const button of [save,hide,history])button.type='button';
   hide.hidden=!saved||saved.visibility==='hidden';
@@ -57,7 +57,7 @@ export function commentEditor({target,studentName,comment,reviewerKey,request,cu
   history.addEventListener('click',async()=>{try{const data=await request('/teacher/session-comments/history?'+new URLSearchParams(target));if(!current())return;
     historyBox.replaceChildren(...data.history.map(note=>{const box=commentPanel({...note,visibility:'visible'});box.prepend(node('small',`Bản ${note.revision} · ${note.action==='hide'?'Đã ẩn':'Đã lưu'}`));return box;}));
   }catch(error){status.textContent=error.message;}});
-  actions.append(save,hide,history);section.append(input,count,actions,status,historyBox);
+  actions.append(save,hide);if(!compact)actions.append(history);section.append(input,count,actions,status,historyBox);
   return {element:section,focus(){input.focus();input.scrollIntoView({block:'center',behavior:'smooth'});}};
 }
 export function journeyLinkManager({request,target,studentName,current}) {

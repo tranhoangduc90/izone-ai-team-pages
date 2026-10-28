@@ -38,6 +38,7 @@ async function boot() {
     resetButton.hidden = false;
     // Mở phần trong lượt demo trước khi tải phiếu; lỗi hiện ở notice và dừng tải.
     await demoRequest('runs/open-blocks', {}, teacherToken);
+    window.PROGRESS_LOG_CONFIG = Object.freeze({...config,DEMO_AUTO_STUDENT:true});
     resetButton.addEventListener('click', async () => {
       resetButton.disabled = true;
       try {
@@ -49,7 +50,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261025-docs-import-v1');
+  await import('../app.js?rev=20261028-thuy-v1');
 }
 
 boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });

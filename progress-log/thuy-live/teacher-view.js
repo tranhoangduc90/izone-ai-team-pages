@@ -1,6 +1,7 @@
 // Bảng giảng viên đọc dashboard/live thật. Một cột điểm danh phân biệt nhận bài và ghi Portal.
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const scrollCues=new Map();
+const rosterViews=new WeakMap();
 window.addEventListener('scroll',()=>{for(const [root,update]of scrollCues){if(root.isConnected)update();else scrollCues.delete(root);}},{passive:true});
 window.addEventListener('resize',()=>{for(const update of scrollCues.values())update();},{passive:true});
 export function attendancePresentation(student){
@@ -30,7 +31,7 @@ export function renderThuyRoster(root,{dashboard,liveByStudent,mode='progress',q
     return s.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))&&(filter==='all'||filter==='submitted'&&s.submissionId||filter==='unfinished'&&!s.submissionId||filter==='notstarted'&&!started);
   });
   for(const student of people){
-    const row=node('tr');row.tabIndex=0;row.dataset.student=student.studentRef;row.setAttribute('aria-label','Xem bài '+student.name);
+    const row=node('tr');row.tabIndex=0;row.dataset.student=student.studentRef;row.setAttribute('aria-label','Xem bài '+student.name);row._student=student;row._open=onOpen;
     const name=node('td',student.name,'person-name');if(student.discriminator)name.append(node('small',student.discriminator));row.append(name);
     const live=liveByStudent.get(student.studentRef);
     if(mode==='results'){
@@ -41,24 +42,40 @@ export function renderThuyRoster(root,{dashboard,liveByStudent,mode='progress',q
       const graded=live?.gradingResult?.items?.filter(i=>i.maxScore>0&&['correct','incorrect','partial'].includes(i.verdict))||[];
       row.append(node('td',graded.length?graded.reduce((n,i)=>n+i.scoreEarned,0)+' / '+graded.reduce((n,i)=>n+i.maxScore,0):'Chưa có điểm chấm'));
       const comment=student.sessionComment?.visibility==='visible'?student.sessionComment.noteText:student.teacherSessionFeedback?.noteText;
-      const feedback=node('td',comment||'Chưa có nhận xét');feedback.className='thuy-feedback-excerpt';row.append(feedback);
+      const feedback=node('td',comment||'Bấm để nhận xét');feedback.className='thuy-feedback-excerpt';row.append(feedback);
     }else{
     for(const block of dashboard.definition.blocks){
       const submitted=student.checkpoints?.some(c=>c.blockId===block.blockId);
       const writing=block.items.some(i=>{const value=live?.draftResponses?.[i.itemVersionId];return Array.isArray(value)?value.some(v=>String(v||'').trim()):value!==undefined&&String(value).trim();});
       const cell=node('td');cell.append(node('span',submitted?'Đã nộp':writing?'Đang làm':'Chưa bắt đầu',submitted?'badge green':writing?'badge blue':'badge'));row.append(cell);
     }
-    const attendance=attendancePresentation(student),cell=node('td');cell.append(node('span',attendance.label,'badge '+attendance.kind));cell.title=attendance.detail;cell.append(node('small',attendance.detail));row.append(cell);
-    const adjust=node('button','Điều chỉnh','button text-button');adjust.type='button';adjust.addEventListener('click',()=>onAttendance(student));cell.append(adjust);
+    const attendance=attendancePresentation(student),cell=node('td');cell.append(node('span',attendance.label,'badge '+attendance.kind));cell.title=attendance.detail;row.append(cell);
     }
-    row.addEventListener('click',event=>{if(event.target.closest('button,a,input,select')||window.getSelection()?.toString())return;onOpen(student);});
-    row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();onOpen(student);}});tbody.append(row);
+    row.addEventListener('click',event=>{if(event.target.closest('button,a,input,select')||window.getSelection()?.toString())return;row._open(row._student);});
+    row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();row._open(row._student);}});tbody.append(row);
   }
   table.append(tbody);wrap.append(table);const hint=node('p',`Đang hiển thị ${people.length}/${dashboard.students.length} học viên.`,'thuy-roster-hint');
   const cue=node('button','','button thuy-roster-cue');cue.type='button';const remaining=()=>[...tbody.rows].filter(row=>row.getBoundingClientRect().top>=innerHeight-48);
   cue.addEventListener('click',()=>remaining()[0]?.scrollIntoView({behavior:'smooth',block:'center'}));
   const update=()=>{const count=remaining().length;cue.hidden=!count||root.hidden;cue.textContent=count?'Còn '+count+' học viên phía dưới ↓':'';};
-  root.replaceChildren(toolbar,wrap,hint,cue);scrollCues.set(root,update);update();
+  const layout=JSON.stringify([dashboard.assignmentId,mode,columns]),previous=rosterViews.get(root);
+  if(previous?.toolbar.isConnected&&previous.layout===layout){
+    // Dữ liệu nền thay đúng hàng; các hàng không đổi giữ node, bôi chọn và vùng đang đọc.
+    const oldRows=new Map([...previous.tbody.rows].map(row=>[row.dataset.student,row])),desired=[...tbody.rows];
+    for(const [index,next]of desired.entries()){
+      const old=oldRows.get(next.dataset.student);oldRows.delete(next.dataset.student);
+      const current=old&&old.innerHTML===next.innerHTML?old:next;
+      if(old&&current!==old)old.replaceWith(current);
+      current._student=next._student;current._open=next._open;
+      if(previous.tbody.rows[index]!==current)previous.tbody.insertBefore(current,previous.tbody.rows[index]||null);
+    }
+    for(const row of oldRows.values())row.remove();
+    if(previous.title.textContent!==title.textContent)previous.title.textContent=title.textContent;
+    if(previous.input.value!==query)previous.input.value=query;if(previous.select.value!==filter)previous.select.value=filter;
+    if(previous.hint.textContent!==hint.textContent)previous.hint.textContent=hint.textContent;
+    scrollCues.get(root)?.();return;
+  }
+  root.replaceChildren(toolbar,wrap,hint,cue);rosterViews.set(root,{layout,toolbar,tbody,title,input,select,hint});scrollCues.set(root,update);update();
   if(searchFocus){input.focus({preventScroll:true});if(input.type!=='search')input.setSelectionRange(caret,caret);}
 }
 
@@ -81,6 +98,7 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   const learner=node('a','Cổng học viên ↗','tab');learner.id='thuyStudentPortal';learner.target='_blank';learner.rel='noopener';learner.href='./';side.append(learner);
   const dashboard=elements.dashboardPanel,hero=node('div','','thuy-session-header'),overview=node('section','','thuy-session-overview'),parts=node('section','','thuy-session-parts');
   overview.append(elements.dashboardTitle,elements.teacherSubmissionWindow||document.querySelector('#teacherSubmissionWindow'),document.querySelector('.dashboard-share'));
+  overview.querySelector('.dashboard-share').hidden=true;
   parts.append(elements.blockControls);hero.append(overview,parts);dashboard.prepend(hero);
   dashboard.querySelector('.teacherReferenceHero').hidden=true;priorLabel?.remove();priorParts?.remove();
   elements.openClassOverviewButton.hidden=true;

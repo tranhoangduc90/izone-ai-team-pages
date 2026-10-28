@@ -1,0 +1,29 @@
+/* Góp ý thẻ 1–14: giữ Geologica và token Thủy, bố trí theo ảnh Giao bài của Đức. */
+.thuy-roster td{padding:10px 12px;font-size:14px;line-height:20px;vertical-align:middle}
+.thuy-roster th{padding:10px 12px}.thuy-roster td.person-name{font-size:14px}
+.thuy-session-tabs{display:flex;gap:12px;border:0}.thuy-teacher .thuy-session-tabs>.button{flex:1;font-size:18px!important;min-height:56px;padding:14px 20px;text-align:center;border:1px solid var(--line);border-radius:8px;background:#fff;font-weight:600}
+.thuy-teacher .thuy-session-tabs>.button[aria-pressed=true]{border-color:var(--red);background:#fff0f4;color:var(--red)}
+.thuy-result-jumps{position:static;justify-content:flex-end;padding:8px 0;gap:8px}
+.thuy-teacher .thuy-result-jumps>.button{flex:0 0 auto;padding:8px 12px;font-size:13px!important;min-height:38px}
+.thuy-part-kind{display:flex;gap:0;border-bottom:1px solid var(--line);margin:12px 0}
+.thuy-part-kind .button{border:0;border-bottom:3px solid transparent;border-radius:0;box-shadow:none;padding:12px 20px;background:none}
+.thuy-part-kind .button[aria-pressed=true]{border-bottom-color:var(--red);color:var(--red);font-weight:700}
+.thuy-editor-division>.button[aria-pressed=true]{background:var(--navy);color:#fff}
+.thuy-create-blank{margin:0 0 12px}.thuy-create-blank[hidden]{display:none}
+.thuy-library-preview{display:block;width:100%;height:min(65dvh,760px);border:0;background:var(--page)}
+.thuy-library-review-actions{display:flex;gap:8px;margin:8px 0}.thuy-library-history{padding:0 20px 12px}
+.thuy-teacher .thuy-authoring>.editor-actions{position:sticky;top:auto;bottom:0;z-index:5;padding:12px 16px;margin:16px 0 0;border-top:1px solid var(--line);border-bottom:0;background:#fff}
+.thuy-library-detail .thuy-management-head>h2{margin-right:auto}.thuy-library-detail .thuy-management-head{flex-wrap:wrap}
+.thuy-assignment-dialog{width:min(895px,calc(100vw - 32px));max-height:90dvh}
+.thuy-assignment-dialog .thuy-management-head{padding:20px 22px}.thuy-assignment-dialog .thuy-management-head h2{font-size:26px;line-height:36px}
+.thuy-assignment-dialog .thuy-management-body{padding:36px 22px 24px}.thuy-assignment-dialog .thuy-assignment-summary{border:0;padding:24px;border-radius:12px;background:#edf5fa;margin:0 0 32px}
+.thuy-assignment-summary h2{font-size:26px;line-height:36px;margin:0 0 20px}.thuy-assignment-skills{display:flex;flex-wrap:wrap;gap:36px;font-size:18px}
+.thuy-assignment-target{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:12px}.thuy-assignment-target small{grid-column:1/-1}
+.thuy-assignment-dialog .thuy-assignment-target label{display:grid;gap:12px;margin:0;font-size:18px;font-weight:600}.thuy-assignment-target select{width:100%;height:66px;min-height:48px;border:1px solid #8b9ba7;border-radius:9px;padding:14px 18px;font-size:20px;color:var(--navy);background:#fff}
+.thuy-assignment-targets+.button{border:0;box-shadow:none;background:none;color:var(--navy);font-size:20px;font-weight:700;padding:14px 0;margin-top:8px}
+.thuy-teacher .thuy-assignment-dialog .thuy-assignment-target select{font-size:20px!important;font-weight:400;background:#fff;border-color:#8b9ba7}
+.thuy-teacher .thuy-assignment-dialog .thuy-management-head>.button{font-size:22px!important;font-weight:700;min-height:60px;padding:16px 18px}
+.thuy-question-group{font-size:13px;color:var(--muted);font-weight:600;margin:12px 0 0}
+.thuy-assignment-footer{display:flex;justify-content:flex-end;gap:12px;margin:0 22px;padding:24px 0 12px;border-top:1px solid var(--line)}
+.thuy-assignment-footer .button{font-size:20px;font-weight:700;padding:12px 18px;min-height:50px}
+@media(max-width:650px){.thuy-assignment-dialog .thuy-management-head h2,.thuy-assignment-summary h2{font-size:21px;line-height:29px}.thuy-assignment-dialog .thuy-management-body{padding:20px 16px}.thuy-assignment-dialog .thuy-assignment-summary{padding:18px;margin-bottom:24px}.thuy-assignment-target{grid-template-columns:1fr}.thuy-assignment-target select{height:52px;font-size:16px}.thuy-teacher .thuy-assignment-dialog .thuy-assignment-target select{font-size:16px!important}.thuy-teacher .thuy-assignment-dialog .thuy-management-head>.button{font-size:16px!important;min-height:44px;padding:10px 14px}.thuy-assignment-footer{margin:0 16px;flex-wrap:wrap}.thuy-assignment-footer .button{font-size:16px;flex:1}.thuy-assignment-skills{gap:20px;font-size:16px}.thuy-session-tabs>.button{font-size:16px}.thuy-result-jumps{justify-content:stretch}.thuy-result-jumps>.button{flex:1;font-size:12px}}

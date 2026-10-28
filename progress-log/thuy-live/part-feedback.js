@@ -9,13 +9,14 @@ function answer(item,value){
  }).join(' · ');
 }
 export function partFeedback(block,result){
- if(result?.answerRelease!=='released')return null;
+ const survey=block.kind==='survey';
+ if(!result||!survey&&result.answerRelease!=='released')return null;
  const grades=(result.items||[]).filter(i=>block.items.some(q=>q.itemVersionId===i.itemVersionId));
- if(!grades.some(g=>(g.maxScore>0&&g.expectedAnswer!=null)||g.explanation))return null;
+ if(!grades.some(g=>(g.maxScore>0&&g.expectedAnswer!=null)||survey&&g.expectedAnswer!=null||!survey&&g.explanation))return null;
  const root=node('div');root.className='thuy-part-review';
  const scored=grades.filter(g=>g.maxScore>0),units=scored.flatMap(g=>g.slotResults||[g]),correct=units.filter(g=>g.verdict==='correct').length;
  const unit=scored.some(g=>g.slotResults)?'ô':'câu';
- root.append(node('p',units.length?`${correct} đúng · ${units.length-correct} sai / ${units.length} ${unit} đã chấm`:'Đáp án đối chiếu · Phần này không tự chấm đúng/sai'));
+ root.append(node('p',units.length?`${correct} đúng · ${units.length-correct} sai / ${units.length} ${unit} đã chấm`:'Đáp án tham khảo · Phần này không chấm đúng/sai'));
  for(const item of block.items){const grade=grades.find(g=>g.itemVersionId===item.itemVersionId);if(!grade)continue;
   const display=questionPresentation(item),card=node('article'),heading=node('h3',`Câu ${display.number} · ${display.title}`);
   card.append(heading);
@@ -31,7 +32,7 @@ export function partFeedback(block,result){
    }card.append(list);
   }else{
   card.append(node('p','Câu trả lời của em: '+answer(item,grade.rawAnswer)));
-  if(grade.expectedAnswer!=null){card.append(node('b',grade.verdict==='correct'?'✓ Đúng':'✕ Sai'),node('p','Đáp án: '+answer(item,grade.expectedAnswer)));}
+  if(grade.expectedAnswer!=null){if(!survey)card.append(node('b',grade.verdict==='correct'?'✓ Đúng':'✕ Sai'));card.append(node('p',(survey?'Đáp án tham khảo: ':'Đáp án: ')+answer(item,grade.expectedAnswer)));}
   else card.append(node('p','Không tự chấm đúng/sai'));
   }
   if(grade.explanation)card.append(node('p','Giải thích: '+grade.explanation));

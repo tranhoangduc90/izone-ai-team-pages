@@ -85,9 +85,11 @@ export function renderPersonSkills(root,course,person,{onOpen,history=true}={}){
 
 export function renderTeacherSkills(root,course,{onSummary,onOpen}){
  const previous=views.get(root),saved=previous?.classId===course.overview.classId?previous:{};
+ const modelFingerprint=JSON.stringify(course,(key,value)=>['generatedAt','capturedAt'].includes(key)?undefined:value);
+ if(root.childElementCount&&saved.modelFingerprint===modelFingerprint)return;
  let {skill='listening',query='',filter='all',order='name'}=saved;
  const paint=()=>{
-  views.set(root,{classId:course.overview.classId,skill,query,filter,order});
+  views.set(root,{classId:course.overview.classId,skill,query,filter,order,modelFingerprint});
   const nav=node('nav','','thuy-skill-tabs');nav.setAttribute('aria-label','Bốn kỹ năng');for(const [key,label]of Object.entries(skills)){const button=action(label,()=>{skill=key;filter='all';order='name';paint();});button.setAttribute('aria-pressed',String(skill===key));nav.append(button);}
   const toolbar=node('div','','thuy-roster-tools'),input=node('input');input.type='search';input.value=query;input.placeholder='Tìm học viên';input.setAttribute('aria-label','Tìm trong hành trình lớp');input.addEventListener('input',()=>{query=input.value;paint();const restored=root.querySelector('input');restored.focus();});
   const select=node('select');select.setAttribute('aria-label','Lọc dữ liệu kỹ năng');for(const [id,label]of [['all','Tất cả học viên'],['data','Có dữ liệu'],['missing','Chưa có dữ liệu'],...(['listening','reading'].includes(skill)?[['priority','Ưu tiên xem']]:[])]){const option=node('option',label);option.value=id;select.append(option);}select.value=filter;select.addEventListener('change',()=>{filter=select.value;paint();});

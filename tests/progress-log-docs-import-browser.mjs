@@ -23,7 +23,7 @@ test('Docs: cảnh báo key rõ ở đề xuất và nháp sau đọc lại; kh�
     await page.goto('http://127.0.0.1:'+server.address().port+'/test');
     await page.evaluate(async()=>{
       const m=await import('/progress-log/teacher-form-editor.js');const v=crypto.randomUUID(),b=crypto.randomUUID();
-      const item=m.newEditorItem('mcq');item.prompt='Chọn đáp án cho tình huống giả';
+      const item=m.newEditorItem('mcq');item.prompt='Chọn đáp án cho tình huống giả';item.skillCodes=['reading'];
       const review={sourceLabel:'Phần 2 · Câu 2',sourceQuote:'Câu nguồn giả và hai phương án.',sourceKey:'Lời giải cho một câu khác.',
         sourceHash:'a'.repeat(64),keyStatus:'mismatch',candidates:[],messages:['KEY KHÔNG KHỚP: lời giải không thuộc nội dung câu này. Không tự đoán đáp án.']};
       window.saved={id:crypto.randomUUID(),classId:'9999',sessionNumber:5,revision:1,status:'draft',contentHash:'b'.repeat(64),

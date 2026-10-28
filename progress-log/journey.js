@@ -161,7 +161,7 @@ function renderJourney(journey) {
     if(!document.querySelector('#thuyStudentJourneySkills')){
       const css=document.createElement('link');css.rel='stylesheet';css.href='./thuy-live/styles.css?rev=20261022-final-choice';document.head.append(css);
       const root=document.createElement('section');root.id='thuyStudentJourneySkills';elements.journeyView.prepend(root);
-      void import('./thuy-live/student-skills-journey.js?rev=20261022-parity-v2').then(({mountStudentSkillJourney})=>mountStudentSkillJourney(root,journey,async sessionNumber=>{
+      void import('./thuy-live/student-skills-journey.js?rev=20261028-thuy-v1').then(({mountStudentSkillJourney})=>mountStudentSkillJourney(root,journey,async sessionNumber=>{
         const response=await fetch(config.API_BASE_URL+'/api/learning/student/course-session-detail',{method:'POST',headers:{'content-type':'application/json'},
           body:JSON.stringify({accessToken,sessionNumber}),cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
         const payload=await response.json();if(!response.ok||!payload.ok)throw Error(payload.message||'Chưa đọc được bài buổi này.');return payload;

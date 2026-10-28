@@ -47,6 +47,8 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
    assert.equal(req.headers()['x-izone-csrf'],'1');const note={...body,revision:body.expectedRevision+1,visibility:'visible',teacherName:'Giảng viên mẫu',updatedAt:new Date().toISOString()};comments.set(body.studentRef,note);return send({ok:true,comment:note});
   }
   if(path==='/teacher/form-library')return send({ok:true,entries:[]});
+  if(path==='/teacher/form-publications')return send({ok:true,publications:[]});
+  if(path==='/teacher/demo-grants')return send({ok:true,grant:'fixture-preview-grant'});
   unexpected.push(path);return send({ok:false,message:'Ngoài fixture'});
  });
  try{
@@ -56,21 +58,30 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.equal(await page.locator('.thuy-roster th').filter({hasText:'Portal'}).count(),0);
   await page.locator('.thuy-roster').getByText('Đã điểm danh',{exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  const modes=await page.locator('[data-thuy-mode]').evaluateAll(nodes=>nodes.map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height,font:parseFloat(getComputedStyle(node).fontSize)})));
+  assert.equal(modes.length,2);assert.ok(Math.abs(modes[0].width-modes[1].width)<1);assert.ok(modes.every(m=>m.height>=56&&m.font>=18));
   await page.locator('[data-thuy-mode=results]').click();
-  await page.getByRole('button',{name:'Xem phân bố và học viên',exact:true}).click();
-  await page.getByText('1 bài nộp · 1 đã trả lời · 0 để trống · 0 không áp dụng',{exact:true}).waitFor();
-  assert.equal(await page.locator('.thuy-question-distribution').getByRole('button',{name:'Học viên A',exact:true}).count(),1);
-  await page.locator('.thuy-question-distribution').getByRole('button',{name:'Đóng phân bố',exact:true}).click();
+  assert.deepEqual(await page.locator('.thuy-result-jumps>a').allTextContents(),['Tổng quan lớp','Nhận xét cá nhân']);
+  assert.equal(await page.getByRole('button',{name:'Xem phân bố và học viên',exact:true}).count(),0);
+  await page.locator('.thuy-question-card').getByText('1/1 đã trả lời · Không chấm đúng/sai',{exact:true}).waitFor();
+  if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'teacher-results-'+width+'.png'),fullPage:true});}await page.setViewportSize({width:1440,height:1000});}
   await page.locator('[data-thuy-mode=progress]').click();
   await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog').waitFor();
   assert.equal(await page.locator('#draftDialog [data-keyword=w2]').getAttribute('aria-pressed'),'true');
   const panelTop=await page.locator('#draftDialog').evaluate(e=>e.getBoundingClientRect().top);
   assert.ok(panelTop>=68,'Khung chi tiết phải nằm dưới thanh đầu trang');
   const draft=page.locator('#draftDialog .session-comment-editor textarea');await draft.fill('Nháp riêng của A');
+  await page.evaluate(()=>{window.commentReadingNode=document.querySelector('#draftDialog .session-comment-editor textarea');});
+  await page.locator('#createTab').click();assert.equal(await page.locator('#draftDialog').isVisible(),false);
+  await page.locator('.thuy-side').getByRole('button',{name:'Quản lý lớp',exact:true}).click();await page.locator('#draftDialog').waitFor();
+  assert.equal(await draft.inputValue(),'Nháp riêng của A');assert.equal(await page.locator('#assignmentSelect').inputValue(),id);
+  assert.equal(await page.evaluate(()=>window.commentReadingNode===document.querySelector('#draftDialog .session-comment-editor textarea')),true);
+  assert.equal(await page.locator('#draftDialog').getByRole('button',{name:'Xem lịch sử',exact:true}).count(),0);
+  assert.equal(await page.locator('#draftDialog').getByRole('button',{name:'Quản lý link Hành trình riêng',exact:true}).count(),0);
   await page.locator('#thuyNextStudent').click();assert.match(await page.locator('#draftStudentName').innerText(),/Học viên B/);assert.equal(await draft.inputValue(),'');
   await page.locator('#thuyPreviousStudent').click();assert.equal(await draft.inputValue(),'Nháp riêng của A');assert.equal(writes.length,0);
   await page.locator(`[data-student="${B}"]`).click();assert.equal(await page.locator('#draftDialog').isVisible(),true);assert.match(await page.locator('#draftStudentName').innerText(),/Học viên B/);
-  await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog .session-comment-editor').getByRole('button',{name:'Lưu và hiển thị với học viên',exact:true}).click();
+  await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog .session-comment-editor').getByRole('button',{name:'Lưu nhận xét',exact:true}).click();
   await page.getByText('Đã lưu. Học viên đọc được khi mở hoặc làm mới hành trình.',{exact:true}).waitFor();assert.equal(comments.get(A).noteText,'Nháp riêng của A');assert.equal(writes.length,1);
   await draft.fill('Sửa chưa công bố');await page.keyboard.press('Escape');assert.equal(await page.locator('#draftDialog').isVisible(),false);assert.equal(comments.get(A).noteText,'Nháp riêng của A');
   await page.locator(`[data-student="${A}"]`).click();assert.equal(await draft.inputValue(),'Sửa chưa công bố');
@@ -88,6 +99,9 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   await page.keyboard.press('Escape');await page.locator('#createTab').click();
   assert.equal(await page.locator('.thuy-side .active').count(),1,'Chỉ một mục quản lý được chọn');
   await page.getByRole('heading',{name:'Quản lý bài tập',exact:true}).waitFor();
+  await page.locator('.thuy-side').getByRole('button',{name:'Quản lý lớp',exact:true}).click();
+  assert.equal(await page.locator('#overviewPanel').isVisible(),true);assert.equal(await page.locator('#courseOverview .thuy-skill-tabs').getByRole('button',{name:'Writing',exact:true}).getAttribute('aria-pressed'),'true');
+  await page.locator('#createTab').click();
   assert.equal(await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).isVisible(),true);
   assert.equal(await page.getByRole('heading',{name:'Soạn và duyệt phiếu học tập',exact:true}).isVisible(),false,'Bộ soạn không trộn vào màn danh sách');
   assert.equal(await page.getByRole('searchbox',{name:'Tìm bài tập',exact:true}).isVisible(),true);
@@ -95,14 +109,10 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.equal(geometry.side,200);assert.equal(geometry.header,52);assert.equal(geometry.search,380);
   assert.equal(await page.locator('.thuy-side').getByRole('button',{name:'Quản lý lớp',exact:true}).isVisible(),true);
   if(process.env.THUY_EVIDENCE_DIR){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'teacher-library.png'),fullPage:true});}
-  await page.getByRole('button',{name:'Phiếu từ khóa thử',exact:true}).click();
-  const libraryPreview=page.locator('.thuy-management-dialog');
-  assert.equal(await libraryPreview.getByRole('heading',{name:'Câu 1',exact:true}).count(),1);
-  assert.equal(await libraryPreview.getByText('go go home?',{exact:true}).count(),1);
-  assert.doesNotMatch(await libraryPreview.innerText(),/Câu 1 · Câu 1/);
-  assert.equal(await libraryPreview.getByRole('heading',{level:3}).nth(1).innerText(),'Câu 1');
-  assert.equal(await libraryPreview.locator('.thuy-comparison table').count(),1);
-  assert.equal(await libraryPreview.locator('.thuy-comparison [data-readonly-blank]').count(),2);
+  await page.getByRole('tab',{name:/Phiếu đã giao/}).click();await page.getByRole('button',{name:'Phiếu từ khóa thử',exact:true}).click();
+  const libraryPreview=page.locator('.thuy-library-detail');
+  assert.equal(await libraryPreview.getByRole('button',{name:'Sửa bài',exact:true}).count(),1);assert.equal(await libraryPreview.getByRole('button',{name:'Giao bài',exact:true}).count(),1);
+  await libraryPreview.locator('iframe.thuy-library-preview').waitFor();
   await libraryPreview.getByRole('button',{name:'Đóng',exact:true}).click();
   await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
   await page.getByLabel('Tên bài tập',{exact:true}).waitFor();

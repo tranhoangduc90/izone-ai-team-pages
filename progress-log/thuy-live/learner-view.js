@@ -1,6 +1,6 @@
 // Đầu vào là trạng thái thật của app chung. Chỉ sắp xếp các phần trong một trang;
 // mở phần, lưu, nộp và quyền đáp án vẫn lấy từ máy chủ, không dùng kho dữ liệu demo.
-import {partFeedback} from './part-feedback.js?rev=20261022-reading-slots';
+import {partFeedback} from './part-feedback.js?rev=20261028-thuy-v1';
 function node(tag,text='',className='') {const e=document.createElement(tag);e.textContent=text;e.className=className;return e;}
 export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmit,releaseFor,onSubmit,onRetry,onJourney,onRefresh}) {
   const root=elements.questionList,expanded=state.thuyExpanded??=new Set();
