@@ -390,6 +390,7 @@ function authoredQuestions(){
  if(LESSON.audioMs!==undefined){
   const single=Boolean(part&&part.splitAfter===undefined);
   view.classList.toggle('listening-single-part',single);view.dataset.listeningPart=part?.id||'single';
+  if(part){left.dataset.annotationRootKey=`listening-${part.id}-left`;right.dataset.annotationRootKey=`listening-${part.id}-right`;}
   const leftGroups=part?(single?[]:groups.filter(g=>g.end<=part.splitAfter)):groups.length>1?groups.slice(0,1):[];
   const rightGroups=part?(single?groups:groups.filter(g=>g.start>part.splitAfter)):groups.length>1?groups.slice(1):groups;
   if(part)view.querySelector('.cbt-test-heading h2').textContent=part.title;
