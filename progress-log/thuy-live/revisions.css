@@ -20,7 +20,7 @@
 .thuy-teacher #formDraftEditor .thuy-editor-titlebar .button{margin:0;font-size:12px;min-height:36px;padding:6px 10px;white-space:nowrap}
 .thuy-teacher #formDraftEditor .thuy-editor-back{width:36px;min-width:36px;padding:0;font-size:22px;background:#fff}
 .thuy-teacher .thuy-authoring>.editor-toolbar{margin:0}.thuy-teacher .thuy-editor-context{margin:8px 0}
-.thuy-teacher:has(.thuy-authoring:not([hidden])) #teacherNotice[data-idle]{display:none}
+.thuy-teacher:has(#createPanel:not([hidden]) .thuy-authoring:not([hidden])) #teacherNotice[data-idle]{display:none}
 .thuy-skill-error{font-size:12px;color:var(--red);margin:0 0 12px}.thuy-authoring [aria-invalid=true]{border-color:var(--red)!important}
 .thuy-authoring :is(input,textarea,select,button,[contenteditable]){scroll-margin-top:160px}
 .thuy-teacher #formDraftEditor .thuy-answer-icon{position:relative;flex:0 0 36px;display:inline-grid;place-items:center;width:36px;height:36px;min-height:36px;padding:0;margin:0;font-size:22px;line-height:1;background:#fff;border:1px solid #8b9ba7;border-radius:6px;color:var(--navy)}

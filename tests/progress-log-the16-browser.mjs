@@ -14,7 +14,7 @@ async function fixture(t){
  const server=createServer(async(req,res)=>{try{
   const path=new URL(req.url,'http://fixture').pathname;
   if(path==='/progress-log/fixture.html'){
-   res.setHeader('content-type','text/html; charset=utf-8');return res.end('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/progress-log/styles.css"><link rel="stylesheet" href="/progress-log/teacher.css"><link rel="stylesheet" href="/progress-log/thuy-live/styles.css"><link rel="stylesheet" href="/progress-log/thuy-live/revisions.css"><body class="thuy-live thuy-teacher"><header class="topbar teacher-header"><span>Quản lý bài tập</span><span>Giảng viên mẫu</span></header><main class="shell teacher-shell"><section id="createPanel"><main id="formDraftEditor"></main></section></main>');
+   res.setHeader('content-type','text/html; charset=utf-8');return res.end('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/progress-log/styles.css"><link rel="stylesheet" href="/progress-log/teacher.css"><link rel="stylesheet" href="/progress-log/thuy-live/styles.css"><link rel="stylesheet" href="/progress-log/thuy-live/revisions.css"><body class="thuy-live thuy-teacher"><header class="topbar teacher-header"><span>Quản lý bài tập</span><span>Giảng viên mẫu</span></header><main class="shell teacher-shell"><p id="teacherNotice" class="notice" data-idle>Sẵn sàng.</p><section id="createPanel"><main id="formDraftEditor"></main></section></main>');
   }
   if(path==='/progress-log/demo/thuy.html'){res.setHeader('content-type','text/html; charset=utf-8');return res.end('<h1>Đích xem thử giả</h1>');}
   const file=resolve(root,'.'+path);if(!file.startsWith(resolve(root)+sep))throw Error('Denied');
@@ -137,6 +137,9 @@ test('T16 R01: xung đột giữ bản đang sửa và cho đối chiếu trư�
 
 test('T16 R02 R04 R06: thanh tiêu đề ghim, icon đúng ô, màn hẹp và focus khi thêm đáp án',{timeout:60000},async t=>{
  const {page}=await fixture(t);await mkdir(evidence,{recursive:true});
+ assert.equal(await page.locator('#teacherNotice').isVisible(),false);
+ await page.evaluate(()=>{document.querySelector('#createPanel').hidden=true;});assert.equal(await page.locator('#teacherNotice').isVisible(),true);
+ await page.evaluate(()=>{document.querySelector('#createPanel').hidden=false;});
  await page.getByRole('button',{name:'+ Điền từ',exact:true}).click();await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('general');
  const q=page.locator('[data-question]').first(),content=q.getByRole('textbox',{name:'Nội dung câu hỏi',exact:true});await content.fill('Đây là nội dung mẫu để tạo ô trống.');
  await q.locator('.thuy-gap-segment').first().evaluate(n=>{const range=document.createRange();range.setStart(n.firstChild,0);range.setEnd(n.firstChild,3);const s=getSelection();s.removeAllRanges();s.addRange(range);});
