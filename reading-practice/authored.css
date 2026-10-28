@@ -1,12 +1,5 @@
 /* Chỉ bố trí nội dung bài Reading authored, giữ token Master và CSS bài cũ. */
-.full-test-question-group { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; }
-.full-test-group-label { font-size: 13px; color: var(--m170-muted, #586477); margin-inline: 4px; }
 body.authored-reading .cbt-part-nav { flex-wrap: wrap; }
-body.authored-reading .cbt-question-nav:has(.full-test-question-group) { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 12px; }
-body.authored-reading .full-test-question-group .cbt-question-button { flex: 0 0 32px; width: 32px; min-width: 32px; height: 36px; }
-@media (max-width: 800px) {
- body.authored-reading .full-test-question-group .cbt-question-button { flex-basis: 44px; width: 44px; min-width: 44px; height: 44px; }
-}
 body[data-m170-product='practice'].authored-reading .cbt-matching-questions .cbt-question-card {
   min-width: 0;
   padding: 16px;
