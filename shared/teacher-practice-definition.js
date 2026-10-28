@@ -11,10 +11,11 @@ export function renderPracticeDefinitionHtml(definition={},questionIds=[],code='
  if(definition.authored){
   // Bài do skill soạn vẫn chỉ xem: hiện đủ câu và lựa chọn, không tạo input/audio.
   const passage=Object.entries(definition.passage||{}).map(([id,text])=>`<p><strong>Đoạn ${escape(id)}</strong><br>${escape(text)}</p>`).join('');
-  return passage+(definition.groups||[]).map(g=>section(escape(g.label||g.kind),`<p>${escape(g.instruction)}</p>`+(g.introduction?`<p style="white-space:pre-line">${escape(g.introduction)}</p>`:'')+(g.questions||[]).map(q=>{
+  const table=g=>`<table class="authored-completion-table"><caption>${escape(g.table.caption||g.label)}</caption><thead><tr>${g.table.headers.map(h=>`<th scope="col">${escape(h)}</th>`).join('')}</tr></thead><tbody>${g.table.rows.map(row=>`<tr>${row.map((cell,i)=>`<td data-label="${escape(g.table.headers[i])}">${escape(cell).replace(/\{(\d+)\}/g,'(Câu $1) _____')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  return passage+(definition.groups||[]).map(g=>section(escape([definition.lesson?.parts?.find(p=>g.start>=p.start&&g.end<=p.end)?.title,g.label||g.kind].filter(Boolean).join(' · ')),`<p>${escape(g.instruction)}</p>`+(g.introduction?`<p style="white-space:pre-line">${escape(g.introduction)}</p>`:'')+(g.table?table(g):(g.questions||[]).map(q=>{
    const bank=q.options||g.options;
    return `<div class="teacher-question"><strong>Câu ${escape(q.n)}</strong><p>${escape(q.text.replaceAll('{blank}','_____'))}</p>${bank?'<div class="teacher-options">'+bank.map(o=>`<p><b>${escape(o.value)}.</b> ${escape(o.text)}</p>`).join('')+'</div>':'<span class="teacher-question-gap">_____</span>'}</div>`;
-  }).join(''))).join('');
+  }).join('')))).join('');
  }
  const numbered=new Set([...values(definition.mcq),...values(definition.names),...values(definition.endings)]
   .map(row=>String(row.n)));
