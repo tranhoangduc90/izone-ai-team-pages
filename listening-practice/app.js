@@ -1,6 +1,6 @@
 (async () => {
 'use strict';
-const AuthoredUI=await import('./authored-ui.js?v=20261028-full-test6');
+const AuthoredUI=await import('./authored-ui.js?v=20261029-notes-document1');
 const {fetchListeningAudio,clearListeningAudioMemory}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
@@ -36,6 +36,7 @@ function setAuthoredLesson(lesson){
 function questionPane(n){
  const part=AuthoredUI.partForQuestion(LESSON||{},n);
  if(part)return part.splitAfter!==undefined&&n<=part.splitAfter?'passage':'questions';
+ if(LESSON&&AuthoredUI.isNoteDocument(LESSON.groups))return 'questions';
  return LESSON?(LESSON.groups.length>1&&n<=LESSON.groups[0].end?'passage':'questions'):n<=25?'passage':'questions';
 }
 function audioScope(){return LESSON?.parts?.length?'Listening · 4 part':`Listening Part ${LESSON?.part||3}`;}
@@ -387,6 +388,7 @@ function authoredQuestions(){
  const groups=part?AUTHORED_DEF.groups.filter(g=>g.start>=part.start&&g.end<=part.end):AUTHORED_DEF.groups;
  const write=(n,value)=>{if(!writable())return;a.answers[n]=value;if(LESSON.parts?.length)a.activeQuestion=+n;persist();updateProgress();};
  const left=document.querySelector('#passage-scroll'),right=document.querySelector('#question-scroll'),view=document.querySelector('#readingView');
+ if(left.parentElement===right)right.before(left);
  if(LESSON.audioMs!==undefined){
   const single=Boolean(part&&part.splitAfter===undefined);
   view.classList.toggle('listening-single-part',single);view.dataset.listeningPart=part?.id||'single';
@@ -396,9 +398,10 @@ function authoredQuestions(){
   if(part)view.querySelector('.cbt-test-heading h2').textContent=part.title;
   left.innerHTML=leftGroups.length?AuthoredUI.groupsHtml(leftGroups,a,flag,{practiceLayout:Boolean(part)}):`<header class="cbt-passage-header"><h3>${escape(part?.title||LESSON.title)}</h3><p>${escape(groups[0].instruction)}</p></header>`;
   right.innerHTML=AuthoredUI.groupsHtml(rightGroups,a,flag,{documentNotes:single,practiceLayout:Boolean(part)});
+  const notesDocument=!part&&AuthoredUI.mountNoteDocument(view,groups,LESSON.title);
   left.setAttribute('aria-label',part?`${part.title} · Nhóm đầu`:'Nhóm câu đầu');right.setAttribute('aria-label',part?`${part.title} · Câu hỏi`:'Câu hỏi');
   if(part){left.scrollTop=a.scroll?.questions[part.id+'-left']||0;right.scrollTop=a.scroll?.questions[part.id+'-right']||0;}
-  if(single)setMobilePane('questions');
+  if(single||notesDocument)setMobilePane('questions');
  }else{
   left.innerHTML=`<header class="cbt-passage-header"><h3>${escape(LESSON.title)}</h3></header><div class="cbt-passage-body">${Object.entries(AUTHORED_DEF.passage).map(([id,text])=>`<div class="cbt-passage-paragraph paragraph" data-paragraph="${escape(id)}" id="paragraph-${escape(id)}"><span class="cbt-paragraph-label">${escape(id)}</span><p>${escape(text)}</p></div>`).join('')}</div>`;
   right.innerHTML=AuthoredUI.groupsHtml(groups,a,flag);

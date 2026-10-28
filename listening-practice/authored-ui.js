@@ -21,6 +21,35 @@ export function partNavHtml(lesson,n){
  const parts=lesson?.parts||[{id:'single',title:`Part ${lesson?.part||3}`,start:lesson?.questionIds[0]||21,end:lesson?.questionIds.at(-1)||30}];
  return parts.map(p=>`<button type="button" class="cbt-part-button ${n>=p.start&&n<=p.end?'is-active':''}" data-action="jump" data-question="${p.start}" data-listening-part="${esc(p.id)}" aria-pressed="${n>=p.start&&n<=p.end}">${esc(p.id==='single'?p.title:p.title.split(' · ')[0])} · Q${p.start}–${p.end}</button>`).join('');
 }
+// Một giấy ghi chú liên tục; không ghép MCQ, bảng, hình hoặc chỉ dẫn khác nhau.
+export function isNoteDocument(groups){
+ if(!groups?.length||groups.some(g=>g.kind!=='completion'||g.options||g.table||g.image||g.answerMode||g.questions?.some(q=>q.options||q.multiple)))return false;
+ const instructions=groups.map(g=>String(g.instruction||'').trim().replace(/\s+/g,' ')).filter(Boolean);
+ if(new Set(instructions).size>1)return false;
+ return groups.every((g,i)=>{const start=+(g.start??g.questions?.[0]?.n),end=+(g.end??g.questions?.at(-1)?.n),previous=groups[i-1];return Number.isFinite(start)&&end>=start&&(!i||start===+(previous.end??previous.questions?.at(-1)?.n)+1);});
+}
+// Giữ nguyên chữ và gốc annotation của hai vùng cũ. Chỉ ghép hình thức/cuộn;
+// không đổi câu, key, offset, nháp hoặc ghi dữ liệu khi nâng giao diện.
+export function mountNoteDocument(view,groups,title){
+ if(!isNoteDocument(groups))return false;
+ const left=view.querySelector('#passage-scroll'),right=view.querySelector('#question-scroll'),sheet=view.querySelector('.cbt-reading-section');
+ const sections=[...view.querySelectorAll('.design-question-group')];
+ if(!left||!right||!sheet||!sections.length)return false;
+ sheet.querySelector(':scope > .authored-notes-heading')?.remove();
+ const heading=sections[0].querySelector('.cbt-subsection-heading').cloneNode(true);
+ heading.classList.add('authored-notes-heading');
+ heading.querySelector('h4').textContent=`Questions ${groups[0].start??groups[0].questions[0].n}–${groups.at(-1).end??groups.at(-1).questions.at(-1).n} · ${title}`;
+ for(const section of sections){
+  section.classList.add('authored-note-section');
+  const group=groups.find(g=>g.id===section.dataset.group),label=group?.label||group?.kind,h4=section.querySelector('.cbt-subsection-heading h4');
+  if(h4&&label&&h4.textContent.endsWith(label)){
+   const prefix=document.createElement('span');prefix.className='authored-note-range';prefix.textContent=h4.textContent.slice(0,-label.length);h4.replaceChildren(prefix,document.createTextNode(label));
+  }
+ }
+ left.classList.toggle('authored-empty-note-root',!left.querySelector('.design-question-group'));
+ right.prepend(left);sheet.prepend(heading);view.classList.add('listening-note-document');
+ return true;
+}
 function completionSlot(n,a,flag){return `<span class="cbt-inline-answer authored-table-slot" id="q-${n}" data-question-number="${n}"><span class="cbt-blank-number">${n}</span><span data-answer-slot><input class="cbt-answer-input" type="text" id="answer-${n}" data-answer="${n}" value="${esc(a.answers[n]||'')}" aria-label="Câu ${n}" maxlength="80" autocomplete="off"></span>${flag(n)}</span>`;}
 function tableHtml(g,a,flag){
  const cell=value=>String(value).split(/(\{\d+\})/).map(piece=>/^\{\d+\}$/.test(piece)?completionSlot(+piece.slice(1,-1),a,flag):esc(piece)).join('');
