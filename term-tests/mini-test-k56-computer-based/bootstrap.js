@@ -270,7 +270,8 @@
   }
 
   function recoverFromServerReset(error) {
-    if (error?.status !== 404 || !['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND'].includes(error?.code)) return false;
+    if (error?.status !== 404 || !(['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND'].includes(error?.code)
+      || (classCode === 'CODEXDEMO56' && error?.code === 'DEMO_ATTEMPT_NOT_FOUND'))) return false;
     const audioVolume = state.audioVolume;
     for (const storage of availableStorages()) {
       try {
@@ -1126,6 +1127,7 @@
         elements.bootstrapDownloadStep.dataset.state = 'active';
       }
     } catch (error) {
+      if (classCode === 'CODEXDEMO56' && recoverFromServerReset(error)) return;
       elements.bootstrapRetry.hidden = false;
       showNotice(navigator.onLine ? `Không thể mở phòng chờ: ${error.message}`
         : 'Chưa có kết nối. Nháp và mốc nghe trên máy được giữ. Chờ có mạng để lấy lại khóa audio và tiếp tục.', true);
