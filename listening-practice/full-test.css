@@ -25,6 +25,9 @@
 .listening-full-test .authored-completion-table th{font-weight:600}
 .listening-full-test .cbt-choice{font-size:.92em;font-weight:400}
 .listening-full-test :is(.cbt-answer-input,.cbt-answer-select){font-size:.88em;font-weight:600}
+.listening-full-test #readingView :is(.cbt-answer-input,.cbt-answer-select){min-height:38px;padding:7px 9px;line-height:normal}
+.listening-full-test #readingView :is(.cbt-answer-input,.cbt-answer-select):focus{border-color:var(--design-navy,#152b4e);outline:0;box-shadow:0 0 0 2px #152b4e18}
+.listening-full-test #readingView :is(.cbt-answer-input,.cbt-answer-select):focus-visible{outline:0;box-shadow:0 0 0 3px #2156a033}
 .listening-full-test .authored-question-list{border:0;border-radius:0}
 .listening-full-test .authored-question-list>.cbt-question-card:first-child{padding-top:0}
 .listening-full-test .authored-question-list>.cbt-question-card:last-child{border-bottom:0;padding-bottom:0}
