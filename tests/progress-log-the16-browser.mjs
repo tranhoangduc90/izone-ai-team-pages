@@ -78,7 +78,8 @@ test('T16 R01 R05: cả ba nút đưa lỗi kỹ năng đến đúng câu và ph
   assert.equal(await skill.getAttribute('aria-invalid'),'true');
   assert.equal(await page.locator('[data-question] .thuy-skill-error:visible').count(),1);
   assert.equal(await page.getByRole('button',{name:'Thử lưu lại',exact:true}).count(),0);
-  assert.equal(await page.evaluate(()=>window.calls.some(c=>c.method==='POST'&&c.path==='/teacher/form-drafts')),false);
+  // Tự lưu nháp vẫn được phép khi thiếu kỹ năng; kiểm riêng các lệnh chỉ được chạy sau xác thực.
+  assert.equal(await page.evaluate(()=>window.calls.some(c=>/(preview-grant|approve|publish-library)$/.test(c.path))),false);
  }
  await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('general');
  await page.getByLabel('Tên bài tập',{exact:true}).fill('Phiếu giả Thẻ 16');
@@ -143,7 +144,7 @@ test('T16 R01: xung đột giữ bản đang sửa và cho đối chiếu trư�
  assert.equal(await page.evaluate(()=>window.savedDraft.definition.blocks[0].items[0].prompt),'Nội dung riêng chưa được ghi đè');
 });
 
-test('T16 R02 R04 R06: thanh tiêu đề ghim, icon đúng ô, màn hẹp và focus khi thêm đáp án',{timeout:60000},async t=>{
+test('T16 R02 R04 R06: thanh tiêu đề ghim, icon đúng ô, màn hẹp và focus khi thêm đáp án',{timeout:120000},async t=>{
  const {page}=await fixture(t);await mkdir(evidence,{recursive:true});
  assert.equal(await page.locator('#teacherNotice').isVisible(),false);
  await page.evaluate(()=>{document.querySelector('#createPanel').hidden=true;});assert.equal(await page.locator('#teacherNotice').isVisible(),true);
@@ -180,4 +181,25 @@ test('T16 R02 R04 R06: thanh tiêu đề ghim, icon đúng ô, màn hẹp và fo
  await page.evaluate(()=>window.editor.openDraft({...window.editor.getPayload(),id:'readonly-draft',revision:1,status:'published'}));
  assert.equal(await page.getByRole('button',{name:'Lưu nháp',exact:true}).isEnabled(),false);assert.equal(await page.getByRole('button',{name:'Xuất bản',exact:true}).isEnabled(),false);
  assert.equal(await page.locator('.thuy-answer-icon').count(),0);assert.equal(await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).isEnabled(),true);
+ // Cùng quy chuẩn cho các nút còn lại; kiểm thêm/xóa đúng câu và giữ tối thiểu hai lựa chọn/cặp.
+ await page.evaluate(async()=>{
+  const {newEditorPayload,newEditorItem}=await import('/progress-log/teacher-form-editor.js'),payload=newEditorPayload('Phiếu kiểm nút thêm và xóa');
+  payload.definition.blocks[0].items=['mcq','multi','dropdown','speaking_checklist','matching','reflection'].map((type,i)=>({...newEditorItem(type,i+1),skillCodes:['general']}));
+  window.savedDraft={...payload,id:'draft-the16',status:'draft',revision:1,contentHash:'audit-1'};window.editor.openDraft(structuredClone(window.savedDraft));
+ });
+ await page.setViewportSize({width:1440,height:900});
+ for(let i=0;i<4;i++){
+  const question=page.locator('[data-question]').nth(i);await question.getByRole('button',{name:'+ Thêm lựa chọn',exact:true}).click();
+  assert.equal(await question.locator('.thuy-editor-option').count(),3);
+  await question.getByRole('button',{name:'Xóa phương án C câu '+(i+1),exact:true}).click();assert.equal(await question.locator('.thuy-editor-option').count(),2);
+  assert.equal(await question.getByRole('button',{name:'Xóa phương án A câu '+(i+1),exact:true}).isEnabled(),false);
+ }
+ const matching=page.locator('[data-question]').nth(4);await matching.getByRole('button',{name:'+ Thêm cặp',exact:true}).click();
+ assert.equal(await matching.locator('.thuy-editor-pair').count(),3);await matching.getByRole('button',{name:'Bỏ cặp 3 câu 5',exact:true}).click();
+ assert.equal(await matching.locator('.thuy-editor-pair').count(),2);assert.equal(await matching.getByRole('button',{name:'Bỏ cặp 1 câu 5',exact:true}).isEnabled(),false);
+ const audit=await page.locator('.thuy-authoring-action').evaluateAll(nodes=>nodes.filter(n=>n.offsetParent!==null).map(n=>({kind:n.classList.contains('thuy-authoring-action--remove')?'remove':'add',label:n.getAttribute('aria-label')||n.textContent,color:getComputedStyle(n).color,trash:!!n.querySelector('svg[aria-hidden=true]')})));
+ for(const action of audit){assert.equal(action.color,action.kind==='add'?'rgb(21, 43, 78)':'rgb(155, 10, 34)',action.label);if(action.kind==='remove')assert.equal(action.trash,true,action.label);}
+ await writeFile(resolve(evidence,'all-authoring-actions.json'),JSON.stringify(audit,null,2));
+ for(const width of [1440,390]){await page.setViewportSize({width,height:900});await page.mouse.move(0,0);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('[data-question]').first().screenshot({path:resolve(evidence,'all-actions-'+width+'.png')});}
+ await page.getByRole('button',{name:'Bỏ câu 6',exact:true}).click();assert.equal(await page.locator('[data-question]').count(),5);
 });

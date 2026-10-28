@@ -1,5 +1,6 @@
 // Giảng viên chọn nguồn/buổi/phần; server giữ snapshot, ID câu và biên nhận. Không lưu key vào browser storage.
 import {bindDialogDismiss} from './session-comments.js';
+import {authoringAction} from './authoring-action.js?rev=20261029-authoring-actions-v2';
 import {importReviewCard} from './docs-import-review.js?rev=20261025-docs-import-v1';
 const el=(tag,text='',props={})=>{const node=document.createElement(tag);node.textContent=text;Object.assign(node,props);return node;};
 const caption={pending:'Chưa đọc',reading:'Đang đọc',ready:'Đã đọc',error:'Đọc lỗi'};
@@ -110,7 +111,7 @@ export function createDocsBatchImporter({apiRequest,getContext,refreshDraft,onAp
     if(!pendingApply.questionIds.length){pendingApply=null;throw Error('Chọn ít nhất một câu đã chuyển.');}
     const reply=await apiRequest(path()+'/'+session.id+'/apply',{method:'POST',body:pendingApply});if(!current(token))return;
     pendingApply=null;plan=null;session.plan=null;session.draftRevision=reply.draft.revision;dialog.close();onApplied(reply,context);
-   },busy||(!readyIds().length&&!pendingApply));apply.dataset.docsApply='';results.append(apply);
+   },busy||(!readyIds().length&&!pendingApply));authoringAction(apply,'add');apply.dataset.docsApply='';results.append(apply);
    if(pendingApply)results.append(el('p','Lần thêm trước chưa được xác nhận. Thử lại dùng cùng thao tác để tránh thêm trùng, hoặc đọc lại nháp và xem trước lại.',{className:'notice error',role:'alert'}));
    updatePlanChoice();
   }dialog.scrollTop=top;

@@ -4,12 +4,13 @@
 import {createFormLibrary} from './teacher-form-library.js?rev=20261028-the15-v1';
 import {bindDialogDismiss} from './session-comments.js';
 import {importReviewCard} from './docs-import-review.js?rev=20261025-docs-import-v1';
-import {createDocsBatchImporter} from './docs-batch-import.js?rev=20261025-docs-import-v1';
+import {createDocsBatchImporter} from './docs-batch-import.js?rev=20261029-authoring-actions-v2';
 import {PART_TYPES,PART_SKILLS,selectedLimit,preparePartItem,missingSkills} from './authoring-parts.js?rev=20261028-the15-v1';
 import {editorItemKind} from './item-kind.js?rev=20261028-the15-v1';
 import {changeQuestionKind,incompleteAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
-import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261029-answer-icons-v1';
+import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261029-authoring-actions-v2';
 import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261028-v1';
+import {authoringAction} from './authoring-action.js?rev=20261029-authoring-actions-v2';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
   ['dropdown','Dropdown Matching Headings'],['gapfill','Điền từ trong câu / chuỗi lập luận'],
@@ -26,6 +27,8 @@ function button(text,action,disabled=false) {
   const node=el('button',text,{type:'button',className:'button',disabled});
   node.addEventListener('click',action);return node;
 }
+const addButton=(text,action,disabled=false)=>authoringAction(button(text,action,disabled),'add');
+const removeButton=(text,action,disabled=false,label)=>authoringAction(button(text,action,disabled),'remove',{iconOnly:text==='×',label});
 export function editorType(item) {
   if(item.layoutType==='multiple_choice_cards')return 'multi';
   if(item.layoutType==='matching_pairs')return 'matching';
@@ -321,7 +324,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       const options=el('div');card.append(options);options.append(el('h4','Phương án'));
       for(const option of item.options){const row=el('div',undefined,{className:'field-grid'});
         field(row,'Mã phương án',option.id,value=>{option.id=value;});field(row,'Nội dung phương án',option.label,value=>{option.label=value;});
-        row.append(button('Thêm ô giải thích cho phương án này',()=>{
+        row.append(addButton('Thêm ô giải thích cho phương án này',()=>{
           if(draft.definition.blocks.flatMap(value=>value.items).some(value=>value.interactionConfig.visibleWhenItemVersionId===item.itemVersionId
             &&value.interactionConfig.visibleWhenValue===option.id)){notice('Phương án này đã có ô giải thích.');return;}
           const child=newEditorItem('conditional_explanation');child.prompt='Giải thích thêm khi chọn '+option.label;
@@ -329,8 +332,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
           if(item.interactionType==='multi_choice_group'){child.interactionType='long_text';child.layoutType='inline_option_text';}
           block.items.splice(block.items.indexOf(item)+1,0,child);resequence();markDirty();paint();
         },readonly||draft.definition.blocks.flatMap(value=>value.items).length>=100));
-        row.append(button('Bỏ phương án',()=>{item.options=item.options.filter(o=>o!==option);markDirty();paint();},readonly||item.options.length<=2));options.append(row);}
-      options.append(button('Thêm phương án',()=>{item.options.push({id:'option-'+(item.options.length+1),label:'Phương án mới'});markDirty();paint();},readonly||item.options.length>=40));
+        row.append(removeButton('Bỏ phương án',()=>{item.options=item.options.filter(o=>o!==option);markDirty();paint();},readonly||item.options.length<=2));options.append(row);}
+      options.append(addButton('Thêm phương án',()=>{item.options.push({id:'option-'+(item.options.length+1),label:'Phương án mới'});markDirty();paint();},readonly||item.options.length>=40));
     }
     const config=item.interactionConfig,type=editorType(item);
     if(type==='reflection')field(card,'Gợi ý trả lời (học viên bấm để xem khi làm)',config.hintText||'',value=>{if(value.trim())config.hintText=value;else delete config.hintText;},{kind:'textarea'});
@@ -372,8 +375,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
         card.append(el('p','Dùng [___] ở mỗi vị trí cần điền. Giữ nguyên chữ và dấu câu giữa các ô.'));
         for(const line of config.sentenceLines||[]){field(card,'Tiêu đề dòng',line.title||'',value=>{line.title=value;});field(card,'Câu có ô trống',line.parts.join('[___]'),value=>{
           line.parts=value.split('[___]');config.responseCount=config.sentenceLines.reduce((n,l)=>n+l.parts.length-1,0);
-        },{kind:'textarea'});card.append(button('Bỏ dòng',()=>{config.sentenceLines=config.sentenceLines.filter(l=>l!==line);config.responseCount=config.sentenceLines.reduce((n,l)=>n+l.parts.length-1,0);markDirty();paint();},readonly||config.sentenceLines.length<=1));}
-        card.append(button('Thêm dòng điền từ',()=>{config.sentenceLines.push({title:'',parts:['','']});config.responseCount+=1;markDirty();paint();},readonly));
+        },{kind:'textarea'});card.append(removeButton('Bỏ dòng',()=>{config.sentenceLines=config.sentenceLines.filter(l=>l!==line);config.responseCount=config.sentenceLines.reduce((n,l)=>n+l.parts.length-1,0);markDirty();paint();},readonly||config.sentenceLines.length<=1));}
+        card.append(addButton('Thêm dòng điền từ',()=>{config.sentenceLines.push({title:'',parts:['','']});config.responseCount+=1;markDirty();paint();},readonly));
       }
     }
     if(type==='numbered_short_texts'){
@@ -404,7 +407,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     const itemIndex=block.items.indexOf(item);
     card.append(button('Đưa câu lên',()=>move(block.items,itemIndex,-1),readonly||itemIndex===0),
       button('Đưa câu xuống',()=>move(block.items,itemIndex,1),readonly||itemIndex===block.items.length-1));
-    card.append(button('Bỏ câu',()=>{
+    card.append(removeButton('Bỏ câu',()=>{
       if(draft.definition.blocks.flatMap(b=>b.items).some(i=>i.interactionConfig.visibleWhenItemVersionId===item.itemVersionId)){notice('Cần đổi hoặc bỏ ô phụ thuộc trước khi bỏ câu này.');return;}
       block.items=block.items.filter(i=>i!==item);removeItemKeys(item.itemVersionId);resequence();markDirty();paint();
     },readonly||block.items.length<=1));parent.append(card);
@@ -434,7 +437,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       item.kind??=kind;block.items.splice(index,1);target.items.push(item);resequence();markDirty();paint();
     },{options:draft.definition.blocks.map(b=>[b.blockId,b.title])});
     const moves=el('div',undefined,{className:'thuy-editor-question-moves'});
-    moves.append(button('↑',()=>move(block.items,index,-1),readonly||index===0),button('↓',()=>move(block.items,index,1),readonly||index===block.items.length-1),button('Bỏ',()=>{
+    moves.append(button('↑',()=>move(block.items,index,-1),readonly||index===0),button('↓',()=>move(block.items,index,1),readonly||index===block.items.length-1),removeButton('Bỏ',()=>{
       if(draft.definition.blocks.flatMap(b=>b.items).some(i=>i.interactionConfig.visibleWhenItemVersionId===item.itemVersionId)){notice('Cần bỏ hoặc đổi ô phụ thuộc trước.');return;}
       block.items.splice(index,1);removeItemKeys(item.itemVersionId);resequence();markDirty();paint();
     },readonly));for(const [i,b]of [...moves.children].entries())b.setAttribute('aria-label',(i===0?'Đưa câu lên ':i===1?'Đưa câu xuống ':'Bỏ câu ')+item.position);head.append(moves);card.append(head,skillError,modes);
@@ -453,12 +456,12 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
           else{const selected=new Set(draft.gradingKey.items[item.itemVersionId]?.expectedOptionIds||[]);if(input.checked)selected.add(option.id);else selected.delete(option.id);if(selected.size)draft.gradingKey.items[item.itemVersionId]={graderType:'exact_option_set',expectedOptionIds:[...selected]};else delete draft.gradingKey.items[item.itemVersionId];}
           selectedLimit(item,draft.gradingKey.items[item.itemVersionId],kind);markDirty();
         });row.append(input);}else row.append(el('span',String.fromCharCode(65+j)));
-        const text=el('input',undefined,{type:'text',value:option.label,placeholder:'Phương án '+(j+1)});text.className='thuy-option-content';text.setAttribute('aria-label','Lựa chọn '+String.fromCharCode(65+j)+' câu '+item.position);text.addEventListener('input',()=>{option.label=text.value;markDirty();});row.append(text,button('×',()=>{
+        const text=el('input',undefined,{type:'text',value:option.label,placeholder:'Phương án '+(j+1)});text.className='thuy-option-content';text.setAttribute('aria-label','Lựa chọn '+String.fromCharCode(65+j)+' câu '+item.position);text.addEventListener('input',()=>{option.label=text.value;markDirty();});row.append(text,removeButton('×',()=>{
           if(draft.definition.blocks.flatMap(b=>b.items).some(i=>i.interactionConfig.visibleWhenItemVersionId===item.itemVersionId&&i.interactionConfig.visibleWhenValue===option.id)){notice('Phương án có ô giải thích. Đổi quan hệ trước khi bỏ.');return;}
           item.options.splice(j,1);const key=draft.gradingKey.items[item.itemVersionId];if(key?.expectedOptionId===option.id)delete draft.gradingKey.items[item.itemVersionId];if(key?.expectedOptionIds){key.expectedOptionIds=key.expectedOptionIds.filter(id=>id!==option.id);if(!key.expectedOptionIds.length)delete draft.gradingKey.items[item.itemVersionId];}selectedLimit(item,draft.gradingKey.items[item.itemVersionId],kind);markDirty();paint();
-        },readonly||item.options.length<=2));card.append(row);
+        },readonly||item.options.length<=2,'Xóa phương án '+String.fromCharCode(65+j)+' câu '+item.position));card.append(row);
       }
-      card.append(button('+ Thêm lựa chọn',()=>{item.options.push({id:uuid(),label:''});markDirty();paint();},readonly||item.options.length>=40));
+      card.append(addButton('+ Thêm lựa chọn',()=>{item.options.push({id:uuid(),label:''});markDirty();paint();},readonly||item.options.length>=40));
     }else if(type==='reflection')field(card,'Gợi ý trả lời',config.hintText||'',value=>{if(value.trim())config.hintText=value;else delete config.hintText;},{kind:'textarea'});
     else if(type==='keyword_selection'){
       field(card,'Văn bản để gạch chân (2–40 từ)',item.options.map(o=>o.label).join(' '),value=>{item.options=value.trim().split(/\s+/u).filter(Boolean).map((label,i)=>({id:'word-'+(i+1),label}));},{kind:'textarea'});
@@ -468,8 +471,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       const expected=draft.gradingKey.items[item.itemVersionId]?.expectedOptionIds||item.options.map(o=>o.id);
       config.matchingPrompts.forEach((prompt,j)=>{const option=item.options.find(o=>o.id===expected[j])||item.options[j],row=el('div',undefined,{className:'thuy-editor-pair'}),left=el('input',undefined,{value:prompt}),right=el('input',undefined,{value:option?.label||''});left.setAttribute('aria-label','Vế trái cặp '+(j+1)+' câu '+item.position);right.setAttribute('aria-label','Vế phải cặp '+(j+1)+' câu '+item.position);
         left.addEventListener('input',()=>{config.matchingPrompts[j]=left.value;markDirty();});right.addEventListener('input',()=>{option.label=right.value;draft.gradingKey.items[item.itemVersionId]={graderType:'exact_sequence',expectedOptionIds:expected};markDirty();});
-        row.append(left,el('span','→'),right,button('×',()=>{config.matchingPrompts.splice(j,1);item.options=item.options.filter(o=>o.id!==option.id);draft.gradingKey.items[item.itemVersionId]={graderType:'exact_sequence',expectedOptionIds:expected.filter((_,i)=>i!==j)};markDirty();paint();},readonly||config.matchingPrompts.length<=2));card.append(row);
-      });card.append(button('+ Thêm cặp',()=>{const id=uuid();config.matchingPrompts.push('');item.options.push({id,label:''});draft.gradingKey.items[item.itemVersionId]={graderType:'exact_sequence',expectedOptionIds:[...expected,id]};markDirty();paint();},readonly||config.matchingPrompts.length>=10));
+        row.append(left,el('span','→'),right,removeButton('×',()=>{config.matchingPrompts.splice(j,1);item.options=item.options.filter(o=>o.id!==option.id);draft.gradingKey.items[item.itemVersionId]={graderType:'exact_sequence',expectedOptionIds:expected.filter((_,i)=>i!==j)};markDirty();paint();},readonly||config.matchingPrompts.length<=2,'Bỏ cặp '+(j+1)+' câu '+item.position));card.append(row);
+      });card.append(addButton('+ Thêm cặp',()=>{const id=uuid();config.matchingPrompts.push('');item.options.push({id,label:''});draft.gradingKey.items[item.itemVersionId]={graderType:'exact_sequence',expectedOptionIds:[...expected,id]};markDirty();paint();},readonly||config.matchingPrompts.length>=10));
     }else if(type==='numbered_short_texts'&&!gap)gapWidgets.push(mountSlotAnswers(card,{item,key:draft.gradingKey,kind,readonly,onChange:markDirty,onError:notice}));
     if(kind==='survey'&&!gap&&type!=='numbered_short_texts')field(card,'Đáp án tham khảo (tùy chọn)',(draft.gradingKey.referenceAnswers?.[item.itemVersionId]||[]).join('\n'),value=>{
       if(PART_TYPES.survey.some(([code])=>code===type))item.kind??=kind;
@@ -496,7 +499,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     for(const [index,block]of draft.definition.blocks.entries()){
       const section=el('section',undefined,{className:'thuy-editor-section'}),top=el('header',undefined,{className:'thuy-editor-section-head'}),ai=button('AI chuyển nội dung có sẵn',()=>{importTargetBlockId=block.blockId;aiPopupOpen=true;paint();},readonly);ai.dataset.aiTargetBlock=block.blockId;top.append(el('h2',(draft.definition.blocks.length>1?'Phần '+(index+1)+' · ':'')+block.title),ai);section.append(top);
       if(draft.definition.blocks.length>1)field(section,'Tên phần '+(index+1),block.title,value=>{block.title=value;},{disabled:readonly});
-      const add=el('div',undefined,{className:'thuy-editor-add'});for(const [type,label]of PART_TYPES.survey)add.append(button('+ '+label,()=>{const kind=['reflection','self_reported_score'].includes(type)?'survey':'exercise';block.items.push(preparePartItem(newEditorItem(type),kind));resequence();markDirty();paint();},readonly));section.append(add);
+      const add=el('div',undefined,{className:'thuy-editor-add'});for(const [type,label]of PART_TYPES.survey)add.append(addButton('+ '+label,()=>{const kind=['reflection','self_reported_score'].includes(type)?'survey':'exercise';block.items.push(preparePartItem(newEditorItem(type),kind));resequence();markDirty();paint();},readonly));section.append(add);
       for(const item of block.items)paintThuyItem(section,item,block,readonly);if(!block.items.length)section.append(el('p','Chưa có câu hỏi.'));editor.append(section);
     }
     if(!readonly){paintImport();editor.lastElementChild.classList.add('thuy-import');if(aiPopupOpen)paintImport({aiOnly:true});}
@@ -532,7 +535,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       const blockIndex=draft.definition.blocks.indexOf(block);
       section.append(button('Đưa phần lên',()=>move(draft.definition.blocks,blockIndex,-1),readonly||blockIndex===0),
         button('Đưa phần xuống',()=>move(draft.definition.blocks,blockIndex,1),readonly||blockIndex===draft.definition.blocks.length-1),
-        button('Bỏ phần',()=>{
+        removeButton('Bỏ phần',()=>{
           if(libraryEnabled&&block.items.length){notice('Phần này đang có câu hỏi. Chuyển các câu sang phần khác trước khi bỏ phần.');return;}
           const ids=new Set(block.items.map(item=>item.itemVersionId));
           if(draft.definition.blocks.filter(value=>value!==block).flatMap(value=>value.items).some(item=>ids.has(item.interactionConfig.visibleWhenItemVersionId))) {
@@ -544,11 +547,11 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       field(section,'Tên phần',block.title,value=>{block.title=value;},{disabled:readonly});field(section,'Hướng dẫn phần',block.instructions,value=>{block.instructions=value;},{kind:'textarea',disabled:readonly});
       field(section,'Chặng làm bài',block.checkpoint,value=>{block.checkpoint=Number(value);},{disabled:readonly,options:[['1','Đầu buổi'],['2','Trong buổi'],['3','Cuối buổi']]});
       for(const item of block.items)paintItem(section,item,block,readonly);
-      const type=el('select');type.setAttribute('aria-label','Dạng câu mới');for(const [code,label]of EDITOR_TYPES)type.append(el('option',label,{value:code}));section.append(type,button('Thêm câu vào phần',()=>{
+      const type=el('select');type.setAttribute('aria-label','Dạng câu mới');for(const [code,label]of EDITOR_TYPES)type.append(el('option',label,{value:code}));section.append(type,addButton('Thêm câu vào phần',()=>{
         block.items.push(newEditorItem(type.value));resequence();markDirty();paint();
       },readonly||draft.definition.blocks.flatMap(b=>b.items).length>=100));sections.append(section);
     }
-    editor.append(button('Thêm phần',()=>{draft.definition.blocks.push({blockId:uuid(),checkpoint:3,title:'Phần mới',instructions:'',items:[newEditorItem('reflection')]});resequence();markDirty();paint();},readonly||draft.definition.blocks.length>=20));
+    editor.append(addButton('Thêm phần',()=>{draft.definition.blocks.push({blockId:uuid(),checkpoint:3,title:'Phần mới',instructions:'',items:[newEditorItem('reflection')]});resequence();markDirty();paint();},readonly||draft.definition.blocks.length>=20));
     if(!readonly)paintImport();lockControls();
   }
   function paintImport({aiOnly=false}={}) {
@@ -614,7 +617,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       if(importPreview.unmappedText){const remaining=el('details');remaining.append(el('summary','Nội dung nguồn chưa được chuyển — cần đối chiếu'),el('pre',importPreview.unmappedText));result.append(remaining);}
       for(const row of importPreview.rows)result.append(el('p',`Dòng ${row.line} · ${row.type} · chặng ${row.checkpoint} · ${row.slotCount} ô · ${row.optionCount} phương án · ${row.required?'bắt buộc':'không bắt buộc'} · ${row.graderType==='none'?'không tự chấm':'chấm đáp án'}: ${row.prompt}`));
       for(const error of importPreview.errors)result.append(el('p',`Dòng ${error.line}: ${error.message}`,{className:'notice error'}));
-      result.append(button(importPreview.coverage?.deferredQuestions?'Xác nhận thêm các câu đã chuyển vào nháp':'Xác nhận thêm lô này vào nháp',()=>void run(async()=>{
+      result.append(addButton(importPreview.coverage?.deferredQuestions?'Xác nhận thêm các câu đã chuyển vào nháp':'Xác nhận thêm lô này vào nháp',()=>void run(async()=>{
         if(!importPreview?.payload||importPreview.baseRevision!==draft.revision)throw new Error('Lô nhập đã cũ. Hãy xem trước lại.');
         const deferred=importPreview.coverage?.deferredQuestions||0;
         const existing=new Set(draft.definition.blocks.flatMap(block=>block.items).map(item=>item.itemVersionId));
@@ -639,7 +642,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   for(const [label,input]of [['Lớp soạn phiếu',classSelect],['Buổi của nháp',session],['Phiếu nguồn để sao chép',sourceSelect]]){const wrap=el('label',undefined,{className:'field'});wrap.append(el('span',label),input);grid.append(wrap);}
   session.addEventListener('input',()=>{if(draft&&!reviewMode&&draft.status!=='published')markDirty();});
   let pendingCreate=null,pendingCopy=null;
-  const newButton=button('Tạo nháp mới',()=>void run(async current=>{
+  const newButton=addButton('Tạo nháp mới',()=>void run(async current=>{
     if(!canDiscard())return;pendingCreate??={...newEditorPayload(),classId:classSelect.value,sessionNumber:Number(session.value),operationId:uuid()};
     const result=await request('/teacher/form-drafts',{method:'POST',body:pendingCreate});if(current!==generation)return;
     pendingCreate=null;adopt(result.draft);await refreshList();notice('Đã tạo nháp trên máy chủ.');

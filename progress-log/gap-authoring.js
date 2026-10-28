@@ -1,13 +1,10 @@
 import {insertBlank,removeBlank} from './authoring-parts.js?rev=20261028-the15-v1';
 import {ensureBlankIds,answerValues,answerRows,syncAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
+import {authoringAction} from './authoring-action.js?rev=20261029-authoring-actions-v2';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const button=(text,action)=>{const n=el('button',text,'button');n.type='button';n.addEventListener('click',action);return n;};
 const iconButton=(icon,label,action)=>{
- const adding=icon==='+',n=button(adding?'+':undefined,action);n.classList.add('thuy-answer-icon','thuy-answer-icon--'+(adding?'add':'remove'));n.setAttribute('aria-label',label);n.title=label;
- if(!adding){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  for(const [name,value]of Object.entries({viewBox:'0 0 24 24',width:'18',height:'18',fill:'none',stroke:'currentColor','stroke-width':'1.8','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))svg.setAttribute(name,value);
-  const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6');svg.append(path);n.append(svg);
- }return n;
+ const adding=icon==='+',n=authoringAction(button(adding?'+':undefined,action),adding?'add':'remove',{iconOnly:!adding,label});n.classList.add('thuy-answer-icon');return n;
 };
 const histories=new WeakMap(),privateFields=['items','referenceAnswers','referenceAnswersBySlot','savedExerciseKeys','authoringState'];
 const snapshot=(item,key)=>({item:structuredClone(item),key:Object.fromEntries(privateFields.map(name=>[name,structuredClone(key[name]?.[item.itemVersionId])]))});
@@ -65,7 +62,7 @@ export function mountGapAuthoring(parent,{item,key,kind,readonly=false,onChange=
  const controller=new AbortController(),opts={signal:controller.signal},widget=el('div',undefined,'thuy-gap-authoring'),sentenceField=el('label',undefined,'field');
  const caption=el('span','Nội dung câu hỏi'),editor=el('div',undefined,'thuy-gap-text');editor.contentEditable=String(!readonly);editor.setAttribute('role','textbox');editor.setAttribute('aria-multiline','true');editor.setAttribute('aria-label','Nội dung câu hỏi');
  sentenceField.append(caption,editor);const instructions=el('label',undefined,'field'),instructionInput=el('textarea');instructions.append(el('span','Yêu cầu của câu hỏi'),instructionInput);instructionInput.setAttribute('aria-label','Yêu cầu câu '+item.position);instructionInput.disabled=readonly;instructionInput.maxLength=2000;
- const notice=el('p','','help'),answers=el('div',undefined,'thuy-answer-groups'),popup=button('Tạo chỗ trống',createBlank);popup.classList.add('thuy-selection-popup');popup.hidden=true;popup.disabled=readonly;popup.setAttribute('aria-label','Tạo chỗ trống câu '+item.position);
+ const notice=el('p','','help'),answers=el('div',undefined,'thuy-answer-groups'),popup=authoringAction(button('Tạo chỗ trống',createBlank),'add');popup.classList.add('thuy-selection-popup');popup.hidden=true;popup.disabled=readonly;popup.setAttribute('aria-label','Tạo chỗ trống câu '+item.position);
  widget.append(instructions,sentenceField,notice,popup,answers);parent.append(widget);let selected=null,composing=false,busy=false;
  const fail=message=>{notice.textContent=message;onError(message);};
  function refresh(){
