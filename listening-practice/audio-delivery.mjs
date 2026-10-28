@@ -1,4 +1,4 @@
-import {createPublicAudio} from '../shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-audio-v1';
+import {createPublicAudio} from '../shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1';
 
 const store = createPublicAudio({
   database: 'izone-listening-public-audio-v1',

@@ -7,7 +7,8 @@ const read=path=>process.env.REGRESSION_BASE?execFileSync('git',['show',process.
 const run='c25faeb1-c369-4527-9ca9-e160e8930749',epoch='5cf7ccec-8359-4170-ae91-f219d81c80da';
 async function fixture(slug,hint){
  const location=new URL('https://example.test/'+slug+'/?demo=exam&grading=server'+(hint?'&class='+hint:''));
- const window={location,addEventListener(){},dispatchEvent(){},history:{state:{fixtureTabIdentity:'preserve'},replaceState(state,_b,url){this.state=state;location.href=new URL(url,location).href;}},
+ // Trang thật đã nạp exam-clock trước app; fixture này chỉ kiểm định danh.
+ const window={IZONE_EXAM_CLOCK:{},location,addEventListener(){},dispatchEvent(){},history:{state:{fixtureTabIdentity:'preserve'},replaceState(state,_b,url){this.state=state;location.href=new URL(url,location).href;}},
  TERM_TEST_CONFIG:{slug},TERM_TEST_APP_CONFIG:{},TERM_TEST_CONTENT:{variant:'semantic-html'},
  TERM_TEST_BOOTSTRAP:{classCode:'IC2238',studentRef:'999990001',clientRunId:run}};
  const context=vm.createContext({window,location,history:window.history,document:{getElementById:()=>({})},URL,URLSearchParams,AbortController,Event,setTimeout,clearTimeout,
@@ -48,4 +49,27 @@ test('Trình duyệt chặn đổi URL vẫn giữ đúng binding trong RAM',asy
  assert.doesNotThrow(()=>window.SUBSTITUTE_STATE.bind(window.TERM_TEST_BOOTSTRAP));
  assert.equal(calls,1);assert.equal(window.history.state.fixtureTabIdentity,'preserve');
  assert.equal(window.SUBSTITUTE_STATE.payload({classCode:'DEMO'}).classCode,'IC2238');
+});
+
+test('Thời hạn trong RAM giữ đúng lượt khi storage lỗi, không mang theo bài viết',async()=>{
+ const {window}=await fixture('substitute-test-1-k67','');
+ const deadline='2026-10-28T12:05:00.000Z';
+ window.SUBSTITUTE_STATE.bind({...window.TERM_TEST_BOOTSTRAP,listeningDeadlineAt:deadline,readingDeadlineAt:deadline,writingDeadlineAt:deadline,essay:'Không được sao chép'});
+ window.SUBSTITUTE_STATE.bind({...window.TERM_TEST_BOOTSTRAP,listeningDeadlineAt:''});
+ const saved=window.SUBSTITUTE_STATE.timing;
+ assert.equal(saved.listeningDeadlineAt,deadline);assert.equal(saved.readingDeadlineAt,deadline);assert.equal(saved.writingDeadlineAt,deadline);
+ assert.equal(saved.studentRef,'999990001');assert.equal(saved.clientRunId,run);assert.equal(saved.essay,undefined);
+ saved.listeningDeadlineAt='';assert.equal(window.SUBSTITUTE_STATE.timing.listeningDeadlineAt,deadline);
+ assert.throws(()=>window.SUBSTITUTE_STATE.bind({...window.TERM_TEST_BOOTSTRAP,studentRef:'other'}));
+ assert.equal(window.SUBSTITUTE_STATE.timing.studentRef,'999990001');
+ window.SUBSTITUTE_STATE.stop();assert.equal(window.SUBSTITUTE_STATE.timing,null);
+});
+
+test('Chọn học viên hoặc lượt khác ở phòng chờ không kế thừa thời hạn trong RAM',async()=>{
+ const {window}=await fixture('substitute-test-1-k67','');
+ window.SUBSTITUTE_STATE.bind({...window.TERM_TEST_BOOTSTRAP,listeningDeadlineAt:'2026-10-28T12:05:00.000Z'});
+ window.TERM_TEST_BOOTSTRAP=null;
+ window.SUBSTITUTE_STATE.bind({classCode:'DEMO',studentRef:'other',clientRunId:'11111111-1111-4111-8111-111111111111'});
+ assert.equal(window.SUBSTITUTE_STATE.timing.listeningDeadlineAt,undefined);
+ assert.equal(window.SUBSTITUTE_STATE.timing.studentRef,'other');
 });

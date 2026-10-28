@@ -125,7 +125,7 @@ window.ListeningReview = (() => {
       const timer=setTimeout(()=>controller.abort(),120000);
       preparation=job;
       job.promise=(async()=>{
-        const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1');
+        const {fetchListeningAudio}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1');
         const blob=await fetchListeningAudio(scope.url,{headers:scope.token?{Authorization:`Bearer ${scope.token}`}:{},credentials:'include',signal:controller.signal,expectedSha256:scope.hash});
         controller.signal.throwIfAborted();
         if(resultScope!==scope||preparation!==job)throw new DOMException('Cancelled','AbortError');

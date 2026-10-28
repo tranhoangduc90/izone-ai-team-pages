@@ -45,7 +45,7 @@ function startJournalAudioCapture(metadata,bootstrapUrl){
 // END optional exam journal audio entry
 (function () {
   'use strict';
-  const transportUrl = new URL('../../shared/audio/transport.mjs?v=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1', document.currentScript.src).href;
+  const transportUrl = new URL('../../shared/audio/transport.mjs?v=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1', document.currentScript.src).href;
   const journalUrl = new URL('../shared/exam-journal/bootstrap-capture.mjs?v=20261024-startup-v2&resilience=20261027-v1', document.currentScript.src).href;
   // Nhận metadata do VPS ghim; tải MP3 Pages từng phần, kiểm hash rồi mới cho phát.
   // Phần đúng giữ 24 giờ trong IndexedDB; lỗi mạng chỉ thử lại phần thiếu/hỏng.

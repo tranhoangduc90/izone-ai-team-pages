@@ -1,4 +1,4 @@
-import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261028-integration1';
+import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261028-integration1&audio=20261028-part-rescue-v1';
 import {createCourseStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
 const API=location.hostname==='127.0.0.1'||location.hostname==='localhost'?'/api/listening-homework67':'https://ducizone.ddns.net/listening-homework67/api/listening-homework67';

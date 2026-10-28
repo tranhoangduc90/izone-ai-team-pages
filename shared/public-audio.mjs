@@ -43,7 +43,7 @@ function startJournalAudioCapture(metadata,bootstrapUrl){
  }catch{return null;}
 }
 // END optional exam journal audio entry
-import {downloadPreferred} from './audio/transport.mjs?v=20261023-cf512-1&journal=20261024-audio-v1';
+import {downloadPreferred} from './audio/transport.mjs?v=20261023-cf512-1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1';
 
 export function createPublicAudio({database, prefixes}) {
   // Nhận metadata do VPS ghim; tải MP3 Pages từng phần, kiểm hash rồi mới cho phát.
