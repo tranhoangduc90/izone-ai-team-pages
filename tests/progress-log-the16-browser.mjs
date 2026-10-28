@@ -1,4 +1,4 @@
-// Bộ soạn và CSS thật; API giả có trạng thái, chặn mọi dịch vụ lớp thật.
+// HTML giảng viên, khung Thủy, bộ soạn và CSS thật; API giả có trạng thái, chặn mọi dịch vụ lớp thật.
 // Bảo vệ lỗi thao tác không có phản hồi tại chỗ, khóa nút qua autosave và tác động icon đúng ô.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +14,9 @@ async function fixture(t){
  const server=createServer(async(req,res)=>{try{
   const path=new URL(req.url,'http://fixture').pathname;
   if(path==='/progress-log/fixture.html'){
-   res.setHeader('content-type','text/html; charset=utf-8');return res.end('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/progress-log/styles.css"><link rel="stylesheet" href="/progress-log/teacher.css"><link rel="stylesheet" href="/progress-log/thuy-live/styles.css"><link rel="stylesheet" href="/progress-log/thuy-live/revisions.css"><body class="thuy-live thuy-teacher"><header class="topbar teacher-header"><span>Quản lý bài tập</span><span>Giảng viên mẫu</span></header><main class="shell teacher-shell"><p id="teacherNotice" class="notice" data-idle>Sẵn sàng.</p><section id="createPanel"><main id="formDraftEditor"></main></section></main>');
+   // Chỉ bỏ khởi động đăng nhập/API thật. Giữ nguyên HTML, mọi wrapper và thứ tự CSS của entry đang phát.
+   const html=(await readFile(resolve(root,'progress-log/teacher.html'),'utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'');
+   res.setHeader('content-type','text/html; charset=utf-8');return res.end(html);
   }
   if(path==='/progress-log/demo/thuy.html'){res.setHeader('content-type','text/html; charset=utf-8');return res.end('<h1>Đích xem thử giả</h1>');}
   const file=resolve(root,'.'+path);if(!file.startsWith(resolve(root)+sep))throw Error('Denied');
@@ -27,6 +29,12 @@ async function fixture(t){
  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
  await page.goto(origin+'/progress-log/fixture.html');
  await page.evaluate(async()=>{
+  document.body.className='thuy-live thuy-teacher';
+  const elements=Object.fromEntries([...document.querySelectorAll('[id]')].map(n=>[n.id,n]));
+  const {mountThuyTeacherLayout}=await import('/progress-log/thuy-live/teacher-view.js');
+  mountThuyTeacherLayout(elements,{onMode(){},onClass(){},onHome(){}}).setPanel('create');
+  elements.teacherWorkspace.hidden=false;elements.createPanel.hidden=false;elements.dashboardPanel.hidden=true;elements.overviewPanel.hidden=true;
+  elements.teacherNotice.textContent='Sẵn sàng.';elements.teacherNotice.setAttribute('data-idle','');elements.teacherName.textContent='Giảng viên mẫu';
   const {createFormDraftEditor}=await import('/progress-log/teacher-form-editor.js');
   window.calls=[];window.savedDraft=null;window.hold=false;window.failNext=false;window.publications=[];
   const request=async(path,options={})=>{
@@ -118,7 +126,7 @@ test('T16 R01 R04: rời màn trong lúc tự lưu không gắn phản hồi cũ
  const {page}=await fixture(t);await page.getByRole('button',{name:'+ Trả lời mở',exact:true}).click();await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('general');
  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();
  await page.evaluate(()=>{window.hold=true;});await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Bản cũ đang tự lưu');await page.waitForFunction(()=>typeof window.releaseSave==='function');
- await page.getByRole('button',{name:/Quản lý bài tập/}).click();await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
+ await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
  await page.getByRole('button',{name:'+ Trả lời mở',exact:true}).click();await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('general');
  await page.getByLabel('Tên bài tập',{exact:true}).fill('Nháp mới phải có định danh riêng');await page.evaluate(()=>window.releaseSave());
  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();
@@ -153,11 +161,16 @@ test('T16 R02 R04 R06: thanh tiêu đề ghim, icon đúng ô, màn hẹp và fo
  for(let i=0;i<8;i++)await page.getByRole('button',{name:'+ Trả lời mở',exact:true}).click();
  const measurements=[];
  for(const width of [1440,1024,768,390,360]){
-  await page.setViewportSize({width,height:900});await page.evaluate(()=>scrollTo(0,900));
+  await page.setViewportSize({width,height:760});await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
+  const gap=await page.locator('.thuy-editor-titlebar').evaluate(n=>n.getBoundingClientRect().top-document.querySelector('.teacher-header').getBoundingClientRect().bottom);
+  assert.ok(gap>=-1&&gap<=8,`Khoảng trống trên tiêu đề ở ${width}px: ${gap}px`);
+  await page.evaluate(()=>scrollTo({top:900,behavior:'instant'}));
   const result=await page.locator('.thuy-editor-titlebar').evaluate(n=>{const r=n.getBoundingClientRect(),header=document.querySelector('.teacher-header').getBoundingClientRect();return {top:r.top,bottom:r.bottom,headerBottom:header.bottom,width:r.width,overflow:document.documentElement.scrollWidth>innerWidth,buttons:[...n.querySelectorAll('button')].map(b=>{const r=b.getBoundingClientRect();return {name:b.getAttribute('aria-label')||b.textContent,left:r.left,right:r.right,top:r.top,bottom:r.bottom};})};});
   assert.ok(result.top>=result.headerBottom-1&&result.top<result.headerBottom+4,JSON.stringify({width,...result}));assert.equal(result.overflow,false);
   assert.equal(result.buttons.length,4);assert.ok(result.buttons.every(b=>b.left>=0&&b.right<=width&&b.top>=result.top&&b.bottom<=result.bottom));
-  measurements.push({viewportWidth:width,...result});await page.screenshot({path:resolve(evidence,'toolbar-'+width+'.png')});
+  const middleTop=result.top;await page.evaluate(()=>scrollTo({top:2200,behavior:'instant'}));
+  const deepTop=await page.locator('.thuy-editor-titlebar').evaluate(n=>n.getBoundingClientRect().top);assert.ok(Math.abs(deepTop-middleTop)<=1,'Tiêu đề phải giữ vị trí qua nhiều mức cuộn');
+  measurements.push({viewportWidth:width,gapAbove:gap,deepTop,...result});await page.screenshot({path:resolve(evidence,'toolbar-'+width+'.png')});
  }
  await writeFile(resolve(evidence,'toolbar-measurements.json'),JSON.stringify(measurements,null,2));
  await page.evaluate(()=>window.editor.openDraft({...window.editor.getPayload(),id:'readonly-draft',revision:1,status:'published'}));

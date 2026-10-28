@@ -12,7 +12,9 @@
 .thuy-create-blank{margin:0 0 12px}.thuy-create-blank[hidden]{display:none}
 .thuy-library-preview{display:block;width:100%;height:min(65dvh,760px);border:0;background:var(--page)}
 .thuy-library-review-actions{display:flex;gap:8px;margin:8px 0}.thuy-library-history{padding:0 20px 12px}
-.thuy-teacher .thuy-editor-titlebar{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 0;box-sizing:border-box;background:var(--page);border-bottom:1px solid var(--line);margin-bottom:12px}
+.thuy-teacher #createPanel:has(.thuy-authoring:not([hidden])){overflow:visible}
+.thuy-teacher:has(#createPanel:not([hidden]) .thuy-authoring:not([hidden])) .teacher-shell{padding-top:0}
+.thuy-teacher .thuy-editor-titlebar{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:12px;min-height:60px;padding:6px 0;box-sizing:border-box;background:var(--page);border-bottom:1px solid var(--line);margin-bottom:12px}
 .thuy-teacher:has(.teacher-header) .thuy-editor-titlebar{top:52px}
 .thuy-teacher .thuy-editor-titlebar h2{font-size:24px;line-height:32px;margin:0;min-width:0;font-weight:600}
 .thuy-editor-title{min-width:0}.thuy-editor-save-state{display:block;min-height:16px;font-size:11px;line-height:16px;color:var(--muted)}
