@@ -27,12 +27,12 @@
   <header class="topbar">
    <a class="design-brand" href="#exercise" aria-label="IZONE — Đến phần bài tập"><img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"></a>
    <h1 id="lesson-title">Listening Homework · Scandinavian Studies</h1>
-   <div class="hw-header-actions"><button id="change-person" class="text-button" hidden>Đổi người học</button><button id="teacher-logout" class="text-button" hidden>Đăng xuất giảng viên</button><button id="history-button" class="text-button">Lịch sử bài làm</button></div>
+   <div class="hw-header-actions"><button id="change-person" class="text-button" hidden>Đổi người học</button><button id="teacher-logout" class="text-button" hidden>Đăng xuất giảng viên</button><button id="history-button" class="text-button" disabled>Lịch sử bài làm</button></div>
   </header>
 
   <p id="fixture-status" class="fixture" hidden>Bản kiểm thử · dữ liệu giả, không ghi bài học viên thật.</p>
   <section id="access" class="access panel"><h2 id="access-title">Mở bài luyện nghe</h2><p id="access-status" role="status">Đang kiểm tra thông tin bài học…</p><form id="student-form" hidden><label>Lớp<select id="class" required><option value="">Chọn lớp của bạn</option></select></label><label>Họ và tên<select id="student" required disabled><option value="">Chọn tên của bạn</option></select></label><label class="check"><input id="remember" type="checkbox" checked> Ghi nhớ mã người học trên thiết bị này</label><button class="button button-primary" type="submit">Vào làm bài</button><button type="button" id="teacher-entry" class="text-button">Giảng viên xem bài</button></form><div id="teacher-login" hidden><div id="google-button"></div><button id="retry-login">Thử khôi phục lại</button></div></section>
-  <div id="work-area" hidden><div class="hw-identity"><span id="person"></span><span id="readonly" hidden>Giảng viên · Chỉ xem</span></div><div id="teacher-pick" class="hw-teacher-pick" hidden><label>Lớp<select id="teacher-class"></select></label><label>Học viên<select id="teacher-student"></select></label></div>
+  <div id="work-area" hidden><div class="hw-identity"><span id="person"></span><span id="readonly" hidden>Giảng viên · Chỉ xem</span></div><div id="teacher-pick" class="hw-teacher-pick" hidden><label>Lớp<select id="teacher-class"></select></label><label>Học viên<select id="teacher-student" disabled></select></label></div>
   <div class="hw-runtime-status"><p id="threshold"></p><p id="grade-status" role="status"></p><p id="docs-status" role="status"></p><button id="save-retry" hidden>Thử lưu lại</button><button id="download-draft" hidden>Tải bản đang nhập</button></div>
   <div id="lesson" class="page-shell" hidden>
    <section id="readingView" class="panel test-panel cbt-test-form" data-design-pane="passage" data-homework-chapter="0" aria-label="Listening Homework">
