@@ -19,19 +19,22 @@
  <link rel="stylesheet" href="../listening-practice/flow-options.css">
  <link rel="stylesheet" href="../shared/master170/theme.css">
  <link rel="stylesheet" href="../shared/master170/practice.css?v=20261024-short-viewport">
- <link rel="stylesheet" href="workspace.css?v=20261028-integration1">
-<link rel="stylesheet" href="app.css?v=20261028-integration1"><script src="../shared/teacher-single-sign-on.js?v=20261027-listening-homework-v1"></script></head>
+ <link rel="stylesheet" href="workspace.css?v=20261028-master2">
+<link rel="stylesheet" href="app.css?v=20261028-master2"><script src="../shared/teacher-single-sign-on.js?v=20261027-listening-homework-v1"></script></head>
 <body class="design67 reading cbt-mode hw-homework" data-m170-product="practice">
  <a class="hw-skip" href="#exercise">Đến phần bài tập</a>
  <main id="app">
   <header class="topbar">
    <a class="design-brand" href="#exercise" aria-label="IZONE — Đến phần bài tập"><img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"></a>
    <h1 id="lesson-title">Listening Homework · Scandinavian Studies</h1>
-   <div class="hw-header-actions"><button id="change-person" class="text-button" hidden>Đổi người học</button><button id="teacher-logout" class="text-button" hidden>Đăng xuất giảng viên</button><button id="history-button" class="text-button" disabled>Lịch sử bài làm</button></div>
+   <div class="hw-header-actions"><details id="account-menu" class="identity-options"><summary>Tùy chọn</summary><div class="identity-options-body"><button id="teacher-entry" class="text-button" type="button">Giảng viên xem bài</button><button id="change-person" class="text-button" hidden>Đổi người học</button><button id="teacher-logout" class="text-button" hidden>Đăng xuất giảng viên</button><button id="history-button" class="text-button" disabled>Lịch sử bài làm</button></div></details></div>
   </header>
 
   <p id="fixture-status" class="fixture" hidden>Bản kiểm thử · dữ liệu giả, không ghi bài học viên thật.</p>
-  <section id="access" class="access panel"><h2 id="access-title">Mở bài luyện nghe</h2><p id="access-status" role="status">Đang kiểm tra thông tin bài học…</p><form id="student-form" hidden><label>Lớp<select id="class" required><option value="">Chọn lớp của bạn</option></select></label><label>Họ và tên<select id="student" required disabled><option value="">Chọn tên của bạn</option></select></label><label class="check"><input id="remember" type="checkbox" checked> Ghi nhớ mã người học trên thiết bị này</label><button class="button button-primary" type="submit">Vào làm bài</button><button type="button" id="teacher-entry" class="text-button">Giảng viên xem bài</button></form><div id="teacher-login" hidden><div id="google-button"></div><button id="retry-login">Thử khôi phục lại</button></div></section>
+  <section id="access" class="hw-entry-layout" aria-label="Mở Listening Homework">
+   <div class="hw-entry-intro"><p class="kicker">LISTENING HOMEWORK · LESSON 2</p><h1>Scandinavian Studies</h1><p class="hw-entry-lead">Nghe kỹ, tìm dẫn chứng và giải thích theo cách hiểu của bạn.</p><ol class="hw-entry-steps"><li><span>01</span><div><strong>Nghe và điền từ</strong><p>Điền trực tiếp vào câu. Bạn có thể nghe lại đoạn đang luyện.</p></div></li><li><span>02</span><div><strong>Chọn ý và tìm dẫn chứng</strong><p>Đối chiếu câu 24–25 với transcript, rồi trả lời đủ 22 mục.</p></div></li><li><span>03</span><div><strong>Nhận góp ý và sửa bài</strong><p>Nhận xét theo ý nghĩa; bạn được sửa và nộp lại. Nháp và lịch sử được giữ riêng.</p></div></li></ol></div>
+   <div class="access panel"><h2 id="access-title">Bạn học lớp nào?</h2><p id="access-status" role="status">Đang kiểm tra thông tin bài học…</p><button id="access-retry" class="button" type="button" hidden>Thử tải lại bài</button><form id="student-form" hidden><label>Lớp<select id="class" required><option value="">Chọn lớp của bạn</option></select></label><label>Họ và tên<select id="student" required disabled><option value="">Chọn tên của bạn</option></select></label><label class="check"><input id="remember" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label><p class="hw-remember-help">Lần sau sẽ chọn sẵn lớp và tên của bạn. Bỏ chọn nếu bạn dùng thiết bị chung.</p><button id="entry-submit" class="button button-primary" type="submit" disabled>Mở bài Listening →</button></form><div id="teacher-login" hidden><div id="google-button"></div><button id="retry-login" class="button" type="button">Thử khôi phục lại</button></div></div>
+  </section>
   <div id="work-area" hidden><div class="hw-identity"><span id="person"></span><span id="readonly" hidden>Giảng viên · Chỉ xem</span></div><div id="teacher-pick" class="hw-teacher-pick" hidden><label>Lớp<select id="teacher-class"></select></label><label>Học viên<select id="teacher-student" disabled></select></label></div>
   <div class="hw-runtime-status"><p id="threshold"></p><p id="grade-status" role="status"></p><p id="docs-status" role="status"></p><button id="save-retry" hidden>Thử lưu lại</button><button id="download-draft" hidden>Tải bản đang nhập</button></div>
   <div id="lesson" class="page-shell" hidden>
@@ -70,15 +73,15 @@
       </section>
      </div>
     </div></div>
-    <div class="cbt-question-nav-wrap hw-question-dock"><div class="cbt-review-bar"><span id="review-count">22 chưa nhập</span><span id="flag-summary"></span><button id="sample-feedback" class="cbt-review-open" disabled>Xem góp ý</button><button id="submit" class="button button-primary" disabled>Nộp để nhận góp ý</button></div><nav id="question-map" class="cbt-question-nav" aria-label="Đi đến Mục 1–22"></nav></div>
+    <div class="cbt-question-nav-wrap hw-question-dock"><div class="cbt-review-bar"><span id="review-count">22 chưa nhập</span><span id="flag-summary"></span><button id="sample-feedback" class="cbt-review-open" disabled>Xem góp ý</button><button id="submit" class="button button-primary" aria-label="Nộp bài để nhận góp ý" disabled><span class="hw-submit-wide">Nộp để nhận góp ý</span><span class="hw-submit-compact">Nộp bài</span></button></div><nav id="question-map" class="cbt-question-nav" aria-label="Đi đến Mục 1–22"></nav></div>
    </section>
   </div>
   </div><p id="global-error" role="alert" hidden></p>
  </main>
  <aside id="notes-panel" class="cbt-note-panel" hidden><header><strong>Ghi chú cá nhân</strong><button id="close-notes" class="cbt-note-close" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="notes">Ghi chú của bạn</label><textarea id="notes" rows="5" placeholder="Từ khóa hoặc điều cần kiểm lại…"></textarea></div></aside>
  <dialog id="explanation-dialog" aria-labelledby="review-title"><div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><p class="kicker">ĐỐI CHIẾU VÀ SỬA BÀI</p><h2 id="review-title">Góp ý bài làm</h2></div><button id="close-review" class="explanation-dialog-close" aria-label="Đóng góp ý">×</button></header><div id="review-content"></div></div></dialog>
- <dialog id="history-dialog" aria-labelledby="history-heading"><header class="explanation-dialog-header"><h2 id="history-heading">Lịch sử bài làm</h2><button id="close-history-dialog" class="explanation-dialog-close" aria-label="Đóng lịch sử">×</button></header><div class="hw-history-scroll"><div class="hw-history-actions"><button id="history-refresh">Tải lại lịch sử</button><button id="new-run">Luyện lại từ đầu</button></div><p>Lượt nộp cũ được giữ nguyên. Bạn có thể sửa nháp và nộp lại.</p><div id="history"></div><div id="history-view" hidden><h3 id="history-title"></h3><button id="close-history">Đóng bản đã nộp</button><div id="history-detail"></div></div></div></dialog>
+ <dialog id="history-dialog" aria-labelledby="history-heading"><header class="explanation-dialog-header"><h2 id="history-heading">Lịch sử bài làm</h2><button id="close-history-dialog" class="explanation-dialog-close" aria-label="Đóng lịch sử">×</button></header><div class="hw-history-scroll"><div class="hw-history-actions"><button id="history-refresh">Tải lại lịch sử</button><button id="new-run">Luyện lại từ đầu</button></div><p>Lượt nộp cũ được giữ nguyên. Bạn có thể sửa nháp và nộp lại.</p><p id="history-status" role="status"></p><div id="history"></div><div id="history-view" hidden><h3 id="history-title"></h3><button id="close-history">Đóng bản đã nộp</button><div id="history-detail"></div></div></div></dialog>
  <audio id="audio" preload="metadata"></audio><div id="toast" class="hw-toast" role="status" hidden></div>
  <footer class="reading-demo-footer">IZONE · Listening Homework · Scandinavian Studies</footer>
- <script type="module" src="app.mjs?v=20261028-integration1&audio=20261028-part-rescue-v1"></script>
+ <script type="module" src="app.mjs?v=20261028-master2&audio=20261028-part-rescue-v1"></script>
 </body></html>
