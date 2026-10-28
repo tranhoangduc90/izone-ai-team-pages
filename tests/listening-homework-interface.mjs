@@ -38,3 +38,37 @@ test('Homework uses current Listening type scale, independent blank feedback and
   assert.deepEqual(errors,[]);
  }finally{await browser.close();await site.close();}
 });
+
+test('Approved compact layout keeps controls in one row and returns footer space to the exercise',async()=>{
+ const site=await serveDirectory(fileURLToPath(new URL('../',import.meta.url))),browser=await chromium.launch({channel:'chrome',headless:true});
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ try{
+  await page.goto(site.origin+'/listening-homework/preview.html');await page.locator('#entry-submit').click();await page.locator('#field-D1').waitFor();await page.evaluate(()=>document.fonts.ready);
+  assert.ok(await page.locator('.cbt-test-heading').evaluate(e=>e.getBoundingClientRect().height<=64),'Toolbar uses a single compact row');
+  assert.equal(await page.locator('#account-menu').count(),0);
+  assert.equal(await page.locator('.reading-demo-footer').count(),0);
+  assert.ok(await page.locator('#person').evaluate(e=>!!e.closest('.topbar')));
+  assert.ok(await page.locator('#threshold').evaluate(e=>!!e.closest('.topbar')));
+  assert.ok(await page.locator('#docs-status').evaluate(e=>!!e.closest('.topbar')));
+  assert.ok(await page.locator('#history-button').evaluate(e=>e.nextElementSibling.id==='sample-feedback'));
+  for(const viewport of [{width:1440,height:1000},{width:1280,height:800},{width:1366,height:690},{width:1280,height:600}]){
+   await page.setViewportSize(viewport);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No page overflow '+viewport.width);
+   assert.ok(await page.locator('.cbt-test-heading').evaluate(e=>e.getBoundingClientRect().height<=64));
+   assert.ok(await page.locator('#content-viewport').evaluate(e=>e.getBoundingClientRect().height>innerHeight*.44),'The exercise retains useful height');
+   assert.ok(await page.locator('#question-map').evaluate(e=>{const r=e.getBoundingClientRect();return innerHeight-r.bottom<=10&&r.bottom<=innerHeight;}),'Question row reaches the bottom');
+  }
+  for(const viewport of [{width:390,height:844},{width:320,height:568},{width:844,height:390}]){
+   await page.setViewportSize(viewport);await page.locator('[data-jump="S19"]').click();await page.locator('#field-S19quote').focus();
+   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r)))));
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.ok(await page.locator('.cbt-test-heading').evaluate(e=>e.getBoundingClientRect().height<=64));
+   assert.ok(await page.locator('#field-S19quote').evaluate(e=>{const r=e.getBoundingClientRect(),d=document.querySelector('.hw-question-dock').getBoundingClientRect();return r.top>=0&&r.bottom<d.top;}));
+  }
+  await page.setViewportSize({width:1440,height:1000});await page.locator('#history-button').click();await page.locator('#history-dialog').waitFor({state:'visible'});await page.keyboard.press('Escape');
+  assert.ok(await page.locator('#history-button').evaluate(e=>e===document.activeElement));
+  await page.locator('#change-person').click();assert.ok(await page.locator('#access').isVisible());assert.ok(await page.locator('#header-status').isHidden());
+  assert.deepEqual(errors,[]);
+ }finally{await browser.close();await site.close();}
+});
