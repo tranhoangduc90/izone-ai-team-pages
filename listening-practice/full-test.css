@@ -11,6 +11,20 @@
 .listening-full-test .cbt-question-card:not(.authored-pair) .cbt-question-heading{grid-template-columns:34px minmax(0,1fr) 34px}
 .listening-full-test .authored-note-list .cbt-question-heading{grid-template-columns:minmax(0,1fr) 34px!important}
 .listening-full-test .authored-stem{min-width:0;overflow-wrap:break-word}
+.listening-full-test .cbt-content-viewport{font-size:18px}
+.listening-full-test .cbt-content-viewport[data-font-size="90"]{font-size:16.2px}
+.listening-full-test .cbt-content-viewport[data-font-size="110"]{font-size:19.8px}
+.listening-full-test .cbt-content-viewport[data-font-size="120"]{font-size:21.6px}
+.listening-full-test #readingView .cbt-test-heading h2{font-size:22px;font-weight:700;line-height:1.3;white-space:normal;overflow-wrap:break-word}
+.listening-full-test .design-question-group>.cbt-subsection-heading>h4{font-size:1.111111em;font-weight:700}
+.listening-full-test .design-question-group>.cbt-subsection-heading>p{font-size:.833333em}
+.listening-full-test .design-question-group>.cbt-subsection-heading strong{font-weight:600}
+.listening-full-test .authored-note-list .authored-stem,.listening-full-test .authored-introduction{font-weight:400;line-height:1.65}
+.listening-full-test .authored-note-heading{font-size:1em;font-weight:700;line-height:1.4;color:var(--m170-structure,#174265)}
+.listening-full-test .authored-completion-table caption,.listening-full-test .design-question-content .cbt-option-bank>h4{font-size:1em;font-weight:700;line-height:1.4}
+.listening-full-test .authored-completion-table th{font-weight:600}
+.listening-full-test .cbt-choice{font-size:1em;font-weight:400}
+.listening-full-test :is(.cbt-answer-input,.cbt-answer-select){font-size:1em;font-weight:600}
 .listening-full-test .authored-question-list{border:0;border-radius:0}
 .listening-full-test .authored-question-list>.cbt-question-card:first-child{padding-top:0}
 .listening-full-test .authored-question-list>.cbt-question-card:last-child{border-bottom:0;padding-bottom:0}
@@ -41,6 +55,12 @@
 #readingView.listening-single-part .cbt-reading-questions{display:block!important;grid-column:1/-1;flex:1 1 auto!important;width:100%!important;max-width:1000px;min-width:0;margin-inline:auto;border-left:0}
 .listening-single-part .design-question-group{margin-inline:auto}
 .listening-single-part .reading-view-switch{display:none}
+@media(max-width:799px),(max-height:700px){
+ .listening-full-test #app:has(#readingView:not([hidden])){height:auto;min-height:100dvh}
+ .listening-full-test #app:has(#readingView:not([hidden]))>.page-shell{flex:0 0 auto;overflow:visible}
+ .listening-full-test #readingView.test-panel:not([hidden]){height:auto;min-height:0;flex:none;grid-template-rows:auto auto}
+ .listening-full-test #readingView .cbt-semantic-pane{height:auto;grid-template-rows:auto auto minmax(360px,55dvh)}
+}
 @media(max-width:799px){
  .listening-full-test .authored-pair .cbt-question-heading{grid-template-columns:minmax(0,1fr) auto;gap:12px}
  .listening-full-test .authored-pair .cbt-question-number{justify-self:start}
