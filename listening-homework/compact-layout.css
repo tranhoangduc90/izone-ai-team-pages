@@ -1,0 +1,94 @@
+/* Compact layout approved 28/10/2026. Homework alone; content type scale is unchanged. */
+body.hw-homework #app>.topbar{display:flex;flex:none;gap:20px;min-height:78px;padding:8px 24px;border-bottom:1px solid var(--m170-line);align-items:center}
+body.hw-homework #app>.topbar>h1{font-size:20px;line-height:1.3;flex:0 1 auto;white-space:normal;min-width:180px}
+body.hw-homework .hw-header-actions{display:flex;flex:1;justify-content:flex-end;align-items:center;gap:18px;max-width:none;min-width:0}
+.hw-homework .compact-identity{text-align:right;min-width:0;line-height:1.35;color:var(--m170-muted)}
+.hw-homework .compact-name{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.hw-homework .compact-identity #person{font-size:14px;font-weight:600;color:var(--m170-structure);margin:0 0 2px}
+body.hw-homework #app>.topbar .compact-identity p{font-size:13px;line-height:1.35;margin:1px 0;color:var(--m170-muted);overflow-wrap:anywhere}
+body.hw-homework #app>.topbar .compact-identity p:empty{display:none}
+body.hw-homework #app>.topbar :is(#grade-status,#save-problem){color:var(--m170-ink)}
+body.hw-homework #app>.topbar #save-problem{color:var(--m170-error-fg)}
+.hw-homework .compact-recovery{display:none;gap:8px;justify-content:flex-end;margin-top:4px;flex-wrap:wrap}
+.hw-homework .compact-recovery:has(button:not([hidden])){display:flex}
+.hw-homework .compact-recovery button{font-size:13px;min-height:36px}
+body.hw-homework :is(.compact-change,.compact-history){white-space:nowrap;min-height:40px;padding:8px 12px;border:1px solid var(--m170-control);background:white;color:var(--m170-structure);border-radius:8px;font:600 14px var(--m170-font);margin:0;flex:none}
+.hw-homework .hw-preview-tag{display:block;font-size:10px;letter-spacing:.04em;font-weight:400;color:var(--m170-muted);margin-top:3px}
+body.hw-homework #readingView .cbt-toolbar{flex:none;padding:0!important;overflow-x:auto;scrollbar-width:thin}
+body.hw-homework #readingView .cbt-test-heading{display:flex!important;flex-wrap:nowrap!important;align-items:center;gap:14px;padding:10px 16px;min-height:60px;width:100%;min-width:max-content}
+body.hw-homework #readingView #section-title{font-size:22px;line-height:1.25;white-space:nowrap;flex:none;margin:0;padding-right:14px;border-right:1px solid var(--m170-line)}
+body.hw-homework #readingView .cbt-part-nav{display:flex;flex-wrap:nowrap!important;flex:0 0 auto!important;flex-basis:auto!important;width:auto!important;max-width:none;gap:6px;margin:0;padding:0}
+body.hw-homework #readingView .cbt-part-button{white-space:nowrap;min-height:38px;font-size:12px!important;padding:6px 9px!important;line-height:1.4;flex:none}
+body.hw-homework #readingView .cbt-part-button span{display:inline;font-size:11px}
+.hw-homework .compact-tools{display:flex;flex:none;align-items:center;gap:8px;padding:0 14px;border-left:1px solid var(--m170-line);border-right:1px solid var(--m170-line)}
+body.hw-homework #readingView .cbt-text-size{display:flex;gap:4px;align-items:center}
+body.hw-homework #readingView .cbt-text-size button{height:36px;min-height:36px;min-width:30px;padding:4px 5px}
+body.hw-homework #readingView #notes-button{height:36px;min-height:36px;margin:0;padding:6px 9px}
+body.hw-homework #readingView .compact-save{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;min-width:0;flex:1}
+body.hw-homework #readingView #progress{font-size:12px;flex:none;white-space:nowrap;align-self:center;padding:7px 9px}
+body.hw-homework #readingView #save-status{font-size:12px;white-space:nowrap;line-height:1.3;max-width:none!important;margin:0;text-align:left;flex:none;color:var(--m170-muted)}
+.hw-homework #save-status:is([data-save-state='saved'],[data-save-state='loaded']):before{content:'✓';margin-right:4px}
+.hw-homework #save-status[data-save-state='error']{color:var(--m170-error-fg)!important}
+body.hw-homework #readingView #next{min-height:38px;white-space:nowrap;font-size:13px;padding:8px 12px;min-width:0;width:auto;margin:0;flex:none}
+body.hw-homework #readingView .hw-audio-bar{flex:none;min-height:60px;padding:8px 16px}
+body.hw-homework .hw-transcript>*{width:100%;max-width:none;box-sizing:border-box}
+body.hw-homework .hw-question-dock{margin:0!important;padding:6px 16px 6px!important;border:0;border-top:1px solid var(--m170-line);border-radius:0;box-shadow:none;background:white}
+body.hw-homework .cbt-review-bar{display:flex!important;align-items:center;flex-wrap:nowrap!important;gap:10px;min-height:38px;margin:0 0 6px;padding:0}
+body.hw-homework #review-count{font-size:12px;margin-right:auto}
+body.hw-homework #flag-summary:empty{display:none}
+body.hw-homework .compact-history{font-size:13px;line-height:1.3;padding:7px 12px;min-height:36px}
+body.hw-homework #sample-feedback{margin:0!important;min-height:36px;font-size:13px;padding:7px 14px}
+body.hw-homework #submit{min-height:36px;font-size:13px;padding:7px 14px}
+body.hw-homework .cbt-question-nav{display:grid!important;grid-template-columns:repeat(22,minmax(30px,1fr));gap:5px;margin:0;padding:0!important;overflow-x:auto}
+body.hw-homework .cbt-question-button{min-height:32px;height:32px;margin:0;font-size:12px;padding:4px}
+body.hw-homework .hw-toast{bottom:calc(var(--hw-dock-height) + 12px)}
+body.hw-homework #global-error{flex:none;max-height:120px;overflow:auto}
+@media(min-width:981px){
+ body.hw-homework:has(#work-area:not([hidden])){height:100dvh;min-height:0;overflow:hidden}
+ body.hw-homework #app:has(#work-area:not([hidden])){height:100dvh!important;min-height:0!important;overflow:hidden!important;padding:0!important;display:flex;flex-direction:column}
+ body.hw-homework #work-area{display:flex;flex:1!important;min-height:0!important;padding:0;overflow:hidden}
+ body.hw-homework #work-area>#lesson{display:flex;flex:1!important;min-height:0!important;height:auto!important;width:calc(100% - 24px)!important;max-width:none;margin:10px 12px 0!important;overflow:hidden}
+ body.hw-homework #lesson>#readingView{display:flex;flex-direction:column;flex:1!important;min-height:0!important;height:auto!important;max-height:none!important;width:100%;padding:0!important;margin:0;border-radius:10px 10px 0 0;overflow:hidden}
+ body.hw-homework .cbt-semantic-stage,body.hw-homework .cbt-semantic-pane{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+ body.hw-homework #readingView #content-viewport{display:flex;flex-direction:column;flex:1!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:hidden}
+ body.hw-homework #workspace{flex:1;min-height:0;height:100%}
+ body.hw-homework .hw-question-dock{position:static!important;bottom:auto!important;left:auto!important;right:auto!important;z-index:auto;width:100%;flex:none}
+}
+@media(max-width:1400px){
+ body.hw-homework #app>.topbar{gap:16px;padding-inline:20px}
+ body.hw-homework #app>.topbar>h1{max-width:310px;font-size:18px}
+ body.hw-homework .hw-header-actions{gap:12px}
+ body.hw-homework #readingView .cbt-test-heading{gap:10px;padding-inline:12px}
+ body.hw-homework #readingView #section-title{font-size:20px;padding-right:10px}
+ .hw-homework .compact-tools{gap:6px;padding-inline:10px}
+ body.hw-homework #readingView .compact-save{gap:6px}
+}
+@media(max-width:980px){
+ body.hw-homework #app:has(#work-area:not([hidden])){height:auto;min-height:100dvh;overflow:visible;padding-bottom:calc(var(--hw-dock-height) + 14px)}
+ body.hw-homework #app>.topbar{flex-wrap:wrap;gap:10px 14px;padding:8px 16px}
+ body.hw-homework #app>.topbar>h1{flex:1;min-width:0;max-width:none;font-size:17px}
+ body.hw-homework .hw-header-actions{flex:1 0 100%;gap:12px;justify-content:space-between}
+ .hw-homework .compact-identity{text-align:left;flex:1}
+ .hw-homework .compact-name{justify-content:flex-start}
+ body.hw-homework #app>.topbar .compact-identity p{font-size:12px}
+ .hw-homework .compact-recovery{justify-content:flex-start}
+ body.hw-homework #work-area{min-height:0}
+ body.hw-homework #work-area>#lesson{width:calc(100% - 20px);margin:10px 10px 0;max-width:none}
+ body.hw-homework #readingView{padding-bottom:0!important}
+ body.hw-homework #readingView #content-viewport{height:clamp(360px,60svh,640px);min-height:0;max-height:none}
+ body.hw-homework #readingView .hw-audio-bar{grid-template-columns:40px 48px minmax(80px,1fr) 66px}
+ body.hw-homework .hw-question-dock{position:fixed;bottom:0;left:10px;right:10px;width:auto;z-index:30;box-sizing:border-box;border:1px solid var(--m170-line)}
+ body.hw-homework .cbt-question-nav{grid-template-columns:repeat(22,38px)}
+ body.hw-homework .cbt-question-button{height:38px;min-height:38px}
+}
+@media(max-width:600px){
+ body.hw-homework #app>.topbar>h1{font-size:15px}
+ body.hw-homework .compact-change{font-size:12px;min-height:40px;padding:7px 9px}
+ body.hw-homework .hw-question-dock{padding:6px 10px!important}
+ body.hw-homework .cbt-review-bar{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 8px;min-height:0}
+ body.hw-homework #review-count{grid-column:1;grid-row:1;font-size:11px}
+ body.hw-homework #flag-summary{grid-column:2/4;grid-row:1;font-size:11px}
+ body.hw-homework #history-button{grid-column:1;grid-row:2;font-size:12px;min-height:40px;padding:6px 8px}
+ body.hw-homework #sample-feedback{grid-column:2;grid-row:2;min-height:40px;font-size:12px;padding:6px 10px}
+ body.hw-homework #submit{grid-column:3;grid-row:2;min-height:40px;font-size:12px;padding:6px 10px}
+}
