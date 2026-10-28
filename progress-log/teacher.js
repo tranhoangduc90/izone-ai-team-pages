@@ -15,14 +15,14 @@ import {observeSubmissionWindow, submissionWindowMessage} from './submission-win
 import { createTeacherLoginPreference } from '../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherAuthState } from '../shared/teacher-auth-state.js?v=20261026-startup1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
-import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261022-reading-slots';
-import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261028-thuy-v2';
+import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261028-the15-v1';
+import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261028-the15-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261028-thuy-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
 import {renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261028-thuy-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
-import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261028-thuy-v1';
+import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261028-the15-v1';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 // Link chung luôn dùng preset đã duyệt; giữ tham số cũ chỉ cho đường tương thích được chỉ định rõ.

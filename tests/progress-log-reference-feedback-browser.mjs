@@ -21,7 +21,7 @@ test('Đối chiếu sau nộp: giữ ẩn theo quyền, hiện đáp án nguồ
    const hidden=partFeedback(block,{answerRelease:'hidden',items:[grade]});
    const shown=partFeedback(block,{answerRelease:'released',items:[grade]});document.querySelector('main').append(shown);
    return {hidden:hidden===null,text:shown.innerText};
-  });assert.equal(result.hidden,true);assert.match(result.text,/ý chính/);assert.match(result.text,/không tự chấm đúng\/sai/);assert.doesNotMatch(result.text,/✕ Sai|✓ Đúng|0 đúng/);
+  });assert.equal(result.hidden,true);assert.match(result.text,/ý chính/);assert.match(result.text,/không tự chấm đúng\/sai/i);assert.doesNotMatch(result.text,/✕ Sai|✓ Đúng|0 đúng/);
   const graded=await page.evaluate(async()=>{
    const {partFeedback}=await import('/progress-log/thuy-live/part-feedback.js');
    const items=[4,6,2].map((count,index)=>({itemVersionId:'group-'+index,position:index+1,prompt:'Nhóm giả '+index,layoutType:'numbered_short_texts',options:[],interactionConfig:{responseCount:count,responseLabels:Array.from({length:count},(_,i)=>'Nhãn giả '+index+' · '+i)}}));

@@ -1,5 +1,5 @@
 import {contentTitle,sessionHeading,sessionState,skillsLabel} from './session-presentation.js';
-import {renderSessionReview} from './session-review.js?rev=20261022-reading-slots';
+import {renderSessionReview} from './session-review.js?rev=20261028-the15-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
 'use strict';
 

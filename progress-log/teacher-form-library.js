@@ -1,6 +1,6 @@
 // Ba nguồn kho dùng cùng dữ liệu/quyền thật; xem trước chạy renderer học viên trong kho demo.
 import {bindDialogDismiss,node} from './session-comments.js';
-import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261028-thuy-v1';
+import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261028-the15-v1';
 const button=(label,action)=>{const b=node('button',label,'button');b.type='button';b.addEventListener('click',action);return b;};
 const fold=s=>String(s||'').normalize('NFD').replace(/\p{M}/gu,'').replace(/đ/giu,'d').toLocaleLowerCase('vi');
 export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDraft=()=>{},onCopyUsed=()=>{},onAssign=()=>{},onRefresh=()=>{},getClassContext=()=>({}),onManagementChanged=()=>{}}){

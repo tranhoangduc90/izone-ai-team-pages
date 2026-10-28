@@ -43,7 +43,7 @@ test('Thủy editor: đúng lớp, tự lưu, mất phản hồi, giữ node qua
    window.editor=createFormDraftEditor({host:document.querySelector('#formDraftEditor'),apiRequest:request,libraryEnabled:true});
    window.editor.setWorkspace({classes:[{class_id:'111',class_name:'Lớp khác'},{class_id:'1294',class_name:'IC2305'}],assignments:[],classId:'1294',sessionNumber:11});
   });
-  await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByRole('button',{name:'Khảo sát',exact:true}).click();await page.getByRole('button',{name:'+ Trả lời mở',exact:true}).click();
+  await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByRole('button',{name:'+ Trả lời mở',exact:true}).click();
   await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('general');
   await page.getByLabel('Tên bài tập',{exact:true}).fill('Phiếu nháp cần phục hồi');await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Nội dung trước lỗi');
   await page.getByRole('status').filter({hasText:'Mất phản hồi sau khi máy chủ đã lưu'}).waitFor();

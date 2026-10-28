@@ -1,6 +1,7 @@
 // Nhận definition public, responses và kết quả chấm của đúng học viên; dựng bài chỉ đọc.
 // Giữ nguyên câu, lựa chọn, ô điền và xuống dòng. Không tự chấm hoặc suy đáp án đúng.
 import {legacySentences} from './legacy-sentences.js';
+import {effectiveItemKind} from './item-kind.js?rev=20261028-the15-v1';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const verdicts={correct:'✓ Đúng',incorrect:'✕ Sai',partial:'Đúng một phần',pending:'Đang chờ chấm',manual_review:'Cần giảng viên kiểm tra',ungraded:'Chưa chấm đúng/sai',blank:'Để trống'};
 function plain(value){
@@ -23,7 +24,8 @@ export function reviewItems(detail){
       const result=detail.gradingItems?.find(g=>g.itemVersionId===item.itemVersionId);
       const present=value!==undefined&&value!==null&&value!==''&&(!Array.isArray(value)||value.some(v=>String(v??'').trim()));
       const verdict=applicable?(result?.verdict||(present?'ungraded':detail.submissionId?'blank':'pending')):'not_applicable';
-      const label=applicable?(verdicts[verdict]||'Chưa có kết quả chấm'):'Không áp dụng cho lựa chọn của em';
+      const survey=effectiveItemKind(item,block)==='survey';
+      const label=applicable?(survey?'Khảo sát · Không chấm đúng/sai':verdicts[verdict]||'Chưa có kết quả chấm'):'Không áp dụng cho lựa chọn của em';
       let answer='';
       if(!applicable)answer='<p class="reviewAnswer">Câu này không áp dụng; không được tính là sai hoặc thiếu bài.</p>';
       else if(item.layoutType==='keyword_selection'&&item.options?.length){
@@ -43,7 +45,12 @@ export function reviewItems(detail){
         answer='<ol class="reviewAnswerList">'+Array.from({length:count},(_,i)=>'<li><small>'+esc(c.responseLabels?.[i]||'Ô '+(i+1))+'</small><strong>'+esc(plain(values[i]))+'</strong></li>').join('')+'</ol>';
       }else answer='<p class="reviewAnswer"><small>'+ (item.interactionType==='number_score'?'Điểm em tự khai':'Câu trả lời của em')+'</small><strong>'+esc(plain(value))+'</strong></p>';
       const score=result&&Number.isFinite(result.scoreEarned)&&Number.isFinite(result.maxScore)&&result.maxScore>0?' · '+result.scoreEarned+'/'+result.maxScore+' điểm':'';
-      if(result?.slotResults)answer+='<ol class="reviewAnswerList">'+result.slotResults.map(slot=>'<li><small>'+esc(c.responseLabels?.[slot.slot]||'Ô '+(slot.slot+1))+'</small><strong>'+esc(verdicts[slot.verdict])+'</strong></li>').join('')+'</ol>';
+      if(!survey&&result?.slotResults)answer+='<ol class="reviewAnswerList">'+result.slotResults.map(slot=>'<li><small>'+esc(c.responseLabels?.[slot.slot]||'Ô '+(slot.slot+1))+'</small><strong>'+esc(verdicts[slot.verdict])+'</strong></li>').join('')+'</ol>';
+      if(survey&&applicable&&result){
+        if(result.referenceSlots)answer+='<ol class="reviewAnswerList">'+result.referenceSlots.filter(slot=>slot.expectedAnswer.length).map(slot=>'<li><small>'+esc(c.responseLabels?.[slot.slot]||'Ô '+(slot.slot+1))+' · Đáp án tham khảo</small><strong>'+esc(slot.expectedAnswer.join(' / '))+'</strong></li>').join('')+'</ol>';
+        else if(result.expectedAnswer!=null){const refs=Array.isArray(result.expectedAnswer)?result.expectedAnswer:[result.expectedAnswer];answer+='<p class="reviewAnswer"><small>Đáp án tham khảo</small><strong>'+esc(refs.map(value=>item.options?.find(o=>o.id===value)?.label||plain(value)).join(' / '))+'</strong></p>';}
+        if(result.explanation&&(result.expectedAnswer!=null||result.referenceSlots?.some(slot=>slot.expectedAnswer.length)))answer+='<p class="reviewInstructions">Giải thích: '+esc(result.explanation)+'</p>';
+      }
       return '<article data-review-item="'+esc(item.itemVersionId)+'"><div class="reviewQuestionTop"><span class="reviewQuestionNumber">'+esc(item.displayNumber??item.position??index+1)+'</span><div><small>CÂU '+esc(item.displayNumber??item.position??index+1)+(item.required?' · BẮT BUỘC':'')+'</small><h3>'+esc(item.prompt)+'</h3></div></div>'+((item.helpText||item.instructions)?'<p class="reviewInstructions">'+esc(item.helpText||item.instructions)+'</p>':'')+answer+'<p class="reviewVerdict '+esc(verdict)+'">'+esc(label+score)+'</p></article>';
     }).join('');
     return '<section class="studentAnswerReview"><div class="studentJourneyHeading"><div><span class="studentPortalEyebrow">CÂU TRẢ LỜI CỦA EM · PHẦN '+esc(block.checkpoint??'')+'</span><h2>'+esc(block.title||'Nội dung đã ghi')+'</h2></div></div>'+(block.instructions?'<p class="reviewInstructions">'+esc(block.instructions)+'</p>':'')+articles+'</section>';

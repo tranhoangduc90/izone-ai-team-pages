@@ -1,13 +1,13 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
-import {renderSessionReview} from './session-review.js?rev=20261022-reading-slots';
+import {renderSessionReview} from './session-review.js?rev=20261028-the15-v1';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
 import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
-import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261028-thuy-v2';
+import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261028-the15-v1';
 import {comparisonTable} from './thuy-live/comparison-table.js?rev=20261022-parity-v1';
 import {docsSourceTable} from './docs-source-table.js?rev=20261025-docs-import-v1';
 import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
