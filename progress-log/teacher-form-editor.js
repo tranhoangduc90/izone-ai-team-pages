@@ -71,7 +71,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   const lockedControls=new Map(),librarySaves=new Map(),publishedByDraft=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false,docsBatch;
   const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
-  const assignmentDialog=createAssignmentDialog({request,getClasses:()=>classes,getPreferredClass:()=>classSelect.value,onAssigned:value=>{onPublished(value);library?.setUsed(assignments.filter(a=>String(a.class_id)===classSelect.value));}});
+  const assignmentDialog=createAssignmentDialog({request,getClasses:()=>classes,getPreferredClass:()=>classSelect.value,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
   const notice=message=>{status.textContent=message;if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}};
   function field(parent,label,value,onChange,{kind='text',options=null,min,max,disabled=false}={}) {
     const wrap=el('label',undefined,{className:'field'});wrap.append(el('span',label));
@@ -691,12 +691,12 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       for(const value of assignments)sourceSelect.append(el('option',`${value.class_name} · buổi ${value.session_number} · ${value.title}`,{value:value.assignment_id}));
       if(classes.some(value=>String(value.class_id)===String(selectedClass)))classSelect.value=String(selectedClass);
       if(!draft&&sessionNumber)session.value=String(sessionNumber);
-      library?.setUsed(assignments.filter(a=>String(a.class_id)===classSelect.value));
+      library?.setUsed(assignments);
       if(assignments.some(value=>value.assignment_id===selectedSource))sourceSelect.value=selectedSource;
       void run(refreshList);
       if(libraryEnabled)void library.refresh();
     },
-    setContext({classId,sessionNumber}){if(draft||dirty||busy)return;classSelect.value=String(classId);if(sessionNumber)session.value=String(sessionNumber);library?.setUsed(assignments.filter(a=>String(a.class_id)===classSelect.value));void run(refreshList);},
+    setContext({classId,sessionNumber}){if(draft||dirty||busy)return;classSelect.value=String(classId);if(sessionNumber)session.value=String(sessionNumber);library?.setUsed(assignments);void run(refreshList);},
     clear() {generation+=1;clearTimeout(autosaveTimer);docsBatch?.dispose();authoring=!libraryEnabled;draft=null;dirty=false;busy=false;lockControls();conflict=null;importPreview=null;pendingCreate=null;pendingCopy=null;
       library?.clear();assignmentDialog.clear();
       importText='';importOpen=false;classSelect.replaceChildren();sourceSelect.replaceChildren();draftList.replaceChildren();paint();notice('Đăng nhập để soạn phiếu.');},

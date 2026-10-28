@@ -53,6 +53,16 @@ test('Gia hạn giữ chữ khi lỗi/đóng; kho cả hàng, sửa ở đầu; 
   assign.open({title:entry.title,definition:{blocks:[]},publication:{id:'pub-a'}});assign.clear();releasePlan({plan:{classId:'1294',totalSessions:1,sessionDates:[]}});await new Promise(done=>setTimeout(done,0));
   return {libraryGone,noFrame,assignmentGone:!document.querySelector('.thuy-assignment-dialog')};
  });assert.deepEqual(cleanup,{libraryGone:true,noFrame:true,assignmentGone:true});
+ await page.evaluate(async()=>{
+  const {createFormDraftEditor}=await import('/progress-log/teacher-form-editor.js');
+  const host=document.createElement('section');host.id='all-deliveries';document.body.append(host);
+  window.allDeliveries=createFormDraftEditor({host,libraryEnabled:true,apiRequest:async()=>({entries:[],drafts:[],publications:[]})});
+  window.allDeliveries.setWorkspace({classes:[{class_id:'1294',class_name:'Lớp A chưa giao'},{class_id:'1295',class_name:'Lớp B đã giao'}],classId:'1294',assignments:[{assignment_id:'delivery-b',class_id:'1295',class_name:'Lớp B đã giao',session_number:4,title:'Phiếu ngoài lớp đang chọn'}]});
+ });
+ await page.locator('#all-deliveries').getByRole('tab',{name:'Phiếu đã giao 1',exact:true}).click();
+ assert.match(await page.locator('#all-deliveries tbody').innerText(),/Lớp B đã giao · Buổi 4/);
+ await page.evaluate(()=>{window.allDeliveries.setContext({classId:'1295'});window.allDeliveries.setContext({classId:'1294'});});
+ assert.equal(await page.locator('#all-deliveries tbody tr').count(),1);
  assert.deepEqual(errors,[]);
  }finally{await browser.close();await new Promise(done=>server.close(done));}
 });
