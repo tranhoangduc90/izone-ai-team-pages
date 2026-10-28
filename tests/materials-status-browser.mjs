@@ -9,6 +9,7 @@ import{execFileSync}from'node:child_process';
 import{serveDirectory}from'./fixtures/static-ui-server.mjs';
 const{chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const root=process.env.SOURCE_ROOT||resolve(fileURLToPath(new URL('../',import.meta.url)));
+const entry=process.env.MATERIALS_STATUS_ENTRY||'reading-skills67/index.html';
 const out=process.env.MATERIALS_STATUS_EVIDENCE_DIR||resolve(root,'output/playwright/materials-status');await fs.mkdir(out,{recursive:true});
 const revision=process.env.MATERIALS_STATUS_REVISION||null,publicBase=process.env.MATERIALS_STATUS_PUBLIC_BASE||null;
 assert.ok(!(revision&&publicBase),'Choose a Git baseline or public assets.');
@@ -46,7 +47,7 @@ try{
     if(url.pathname.endsWith('/api-config.js'))return route.fulfill({contentType:'text/javascript',body:''});
     if(url.pathname.endsWith('/web-client.js'))return route.fulfill({contentType:'text/javascript',body:`(()=>{const content=${JSON.stringify(content)},attempt=${JSON.stringify(attempt)},identity={ownerId:'synthetic-owner',name:'Người thử giả',className:'LOPTHU'};window.ReadingServerClient={identity,access:{config:{demo:true}},initialHistory:{attempts:[attempt]},state:{status:'saved',completeness:{filled_cells:20,total_cells:20}},initialize:async()=>({content,identity,draft:{body:{answers:attempt.snapshot.answers},savedAt:attempt.createdAt},config:{demo:true},history:[attempt],restored:false}),getAttempt:async()=>attempt,poll(){},stopPoll(){},schedule(){return true},flush:async()=>{},historyDetail:async()=>({attempts:[attempt],archives:[]})};})();`});
     return route.continue();});
-   await page.goto(site.origin+'/reading-skills67/?server=1&attemptId=synthetic-attempt');await page.waitForFunction(()=>document.querySelector('.waiting-card,.server-error,.result-note'));await page.evaluate(()=>document.fonts.ready);
+   await page.goto(site.origin+'/'+entry+'?server=1&attemptId=synthetic-attempt');await page.waitForFunction(()=>document.querySelector('.waiting-card,.server-error,.result-note'));await page.evaluate(()=>document.fonts.ready);
    const row={case:spec.name,width,height,expectedRole:spec.role,outcome:'passed'};
    row.observation=await page.evaluate(()=>{const n=document.querySelector('.waiting-card,.server-error,.result-note'),s=getComputedStyle(n),fields=[...document.querySelectorAll('[data-target]')].map(e=>({id:e.dataset.target,value:e.value,readOnly:e.readOnly,disabled:e.disabled}));return{noticeText:n.textContent.trim().replace(/\s+/g,' '),fg:s.color,bg:s.backgroundColor,border:s.borderLeftColor,fields,overflow:document.documentElement.scrollWidth>innerWidth,returnDraft:document.querySelector('[data-action="server-return-draft"]')?.textContent.trim()||null,gradingButton:document.querySelector('#grade-button')?.textContent.trim()||null};});
    try{assert.equal(row.observation.fields.length,20);assert.equal(row.observation.overflow,false);assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);if(spec.role){assert.equal(row.observation.fg,palette[spec.role].fg,'Foreground expresses the operation state.');assert.equal(row.observation.bg,palette[spec.role].bg,'Background expresses the operation state.');assert.equal(row.observation.border,palette[spec.role].fg,'State border matches its foreground.');}}

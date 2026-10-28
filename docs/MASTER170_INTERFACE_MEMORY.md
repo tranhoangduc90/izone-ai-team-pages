@@ -6,6 +6,8 @@
 
 Reading/Listening Homework và thực chiến, Term/Mini/Substitute67 dùng profile/adapter1.1. Substitute có thêm `substitute-v1.1.css/.mjs` cho native layout; hub trộn hai khóa chỉ đổi hàngK67, giữ chrome và hàngK56. Đây là ngoại lệ có chủ đích để không mở rộng phạm vi sangK56. Phần nhắc toàn bộ Test được loại trừ bên dưới là lịch sử1.0, không phủ quy định1.1.
 
+Reading Homework phải kiểm cả đường bài thật `reading-skills67/materials-beyond-concrete/` và `reading-skills67/butterflies-britain-tfng/`, cùng `teacher.html` của từng bài. Các trang gốc, demo và preview không chứng minh những đường này đã nạp adapter. Bổ sung ngày29/10/2026 nối bốn HTML đó vào profile `skill-homework`; giữ API, phiên, nháp, chấm và quyền native. Khi tạo bài mới, kiểm chính URL Homework đang dùng thay vì chỉ kiểm trang gốc.
+
 # Giữ giao diện master #170 khi sửa hoặc tạo sản phẩm
 
 Nguồn chuẩn dùng lâu dài: [bảo toàn và kế thừa master #170](https://github.com/tranhoangduc90/izone-AI-team/blob/main/docs/interface-master170/README.md), gồm bản đầy đủ 21 mục/17 hình, token, mốc cuối và 255 mục màn/popup/trạng thái. Bản mẫu lịch sử không được dùng để đổi ngược sản phẩm đã chuyển.

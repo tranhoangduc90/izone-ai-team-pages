@@ -7,6 +7,7 @@ import {serveDirectory} from './fixtures/static-ui-server.mjs';
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const root=resolve(fileURLToPath(new URL('../',import.meta.url))),out=process.env.TFNG_EVIDENCE_DIR;
 assert.ok(out);await fs.mkdir(out,{recursive:true});
+if(process.env.TFNG_VIEWPORT_WIDTH)assert.ok([1440,1366,390,320,844].includes(Number(process.env.TFNG_VIEWPORT_WIDTH)),'Choose an existing viewport; an empty run must not pass.');
 const content={type:'tfng',lesson:12,code:'synthetic-tfng-browser',version:'fixture-v1',title:'Bài đọc giả về sự thay đổi của một quần thể',subtitle:'Dữ liệu cách ly',instruction:'Đối chiếu đủ ba mảnh rồi kết luận toàn câu.',blankValues:[],dropdownPlaceholders:[],minimumRequired:42,paragraphs:Array.from({length:9},(_,i)=>({id:String(i+1),text:('Synthetic source evidence for a careful comparison of time, place and conditions. ').repeat(9)})),questions:[],targets:[]};
 for(let q=1;q<=6;q++){
  const question={number:q,text:'Synthetic statement '+q+' compares a reported change with the supplied source and its conditions.',leader:'synthetic, conditions',sensitive:'comparison and scope',targets:{},chunks:[]};
@@ -41,10 +42,13 @@ function stub(content){
 const site=await serveDirectory(root),browser=await chromium.launch({channel:'chrome',headless:true}),records=[];
 try{
  for(const [width,height] of [[1440,900],[1366,600],[390,844],[320,568],[844,390]]){
+  if(process.env.TFNG_VIEWPORT_WIDTH&&width!==Number(process.env.TFNG_VIEWPORT_WIDTH))continue;
   const context=await browser.newContext({viewport:{width,height}}),page=await context.newPage(),errors=[],writes=[];page.setDefaultTimeout(10000);page.on('pageerror',e=>errors.push(e.message));
   try{
    await context.route('**/*',route=>{const r=route.request(),u=new URL(r.url());if(u.origin!==site.origin)return route.abort();if(r.method()!=='GET'){writes.push(u.pathname);return route.abort();}if(u.pathname.endsWith('/api-config.js'))return route.fulfill({contentType:'text/javascript',body:''});if(u.pathname.endsWith('/web-client.js'))return route.fulfill({contentType:'text/javascript',body:`(${stub.toString()})(${JSON.stringify(content)});`});return route.continue();});
    const url=site.origin+'/reading-skills67/butterflies-britain-tfng/?server=1';await page.goto(url);await page.waitForSelector('[data-target]',{state:'attached'});await page.evaluate(()=>document.fonts.ready);
+   const ui=await page.evaluate(()=>({profile:document.body.dataset.izoneUiProfile,input:getComputedStyle(document.querySelector('textarea[data-target]')).fontSize,select:getComputedStyle(document.querySelector('select[data-target]')).fontSize,flag:getComputedStyle(document.querySelector('[data-flag]'),'::before').maskImage}));
+   assert.equal(ui.profile,'skill-homework','The real lesson entry must load its Homework profile.');assert.equal(ui.input,'18px');assert.equal(ui.select,'18px');assert.match(ui.flag,/icons\/flag\.svg/);
    assert.equal(await page.locator('[data-target]').count(),42);assert.equal(await page.locator('textarea[data-target]').count(),18);assert.equal(await page.locator('select[data-target]').count(),24);
    if(width<=800||height<=500)await page.locator('[data-pane="questions"]').click();
    if(width<=800||height<=500){
