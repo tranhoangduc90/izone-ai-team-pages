@@ -6,7 +6,7 @@ export function sourceLabel(lesson){
 }
 export function prepHtml(lesson,a,kind,btn,textBtn){
  const listening=kind==='listening',count=lesson.questionIds.length;
- const preparationGroups=lesson.preparationSteps?.length?[{label:'Note Completion',preparationSteps:lesson.preparationSteps}]:lesson.groups;
+ const preparationGroups=lesson.preparationGroups?.length?lesson.preparationGroups:lesson.preparationSteps?.length?[{label:'Note Completion',preparationSteps:lesson.preparationSteps}]:lesson.groups;
  const clock=ms=>`${String(Math.floor(ms/60000)).padStart(2,'0')}:${String(Math.ceil(ms/1000)%60).padStart(2,'0')}`;
  const duration=listening?`Audio ${clock(lesson.audioMs)} + rà bài ${clock(lesson.reviewMs)}`:`${lesson.totalMs/60000} phút`;
  // Nhận các bước từ giáo trình của bài mới; giữ phương pháp mặc định cho bài cũ.
@@ -15,8 +15,24 @@ export function prepHtml(lesson,a,kind,btn,textBtn){
 }
 
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Metadata chỉ tổ chức đề; chuyển part không điều khiển audio hay tạo lượt mới.
+export function partForQuestion(lesson,n){return lesson.parts?.find(p=>n>=p.start&&n<=p.end)||lesson.parts?.[0]||null;}
+export function partNavHtml(lesson,n){
+ const parts=lesson?.parts||[{id:'single',title:`Part ${lesson?.part||3}`,start:lesson?.questionIds[0]||21,end:lesson?.questionIds.at(-1)||30}];
+ return parts.map(p=>`<button type="button" class="cbt-part-button ${n>=p.start&&n<=p.end?'is-active':''}" data-action="jump" data-question="${p.start}" data-listening-part="${esc(p.id)}" aria-pressed="${n>=p.start&&n<=p.end}">${esc(p.id==='single'?p.title:p.title.split(' · ')[0])} · Q${p.start}–${p.end}</button>`).join('');
+}
+function completionSlot(n,a,flag){return `<span class="cbt-inline-answer authored-table-slot" id="q-${n}" data-question-number="${n}"><span class="cbt-blank-number">${n}</span><span data-answer-slot><input class="cbt-answer-input" type="text" id="answer-${n}" data-answer="${n}" value="${esc(a.answers[n]||'')}" aria-label="Câu ${n}" maxlength="80" autocomplete="off"></span>${flag(n)}</span>`;}
+function tableHtml(g,a,flag){
+ const cell=value=>String(value).split(/(\{\d+\})/).map(piece=>/^\{\d+\}$/.test(piece)?completionSlot(+piece.slice(1,-1),a,flag):esc(piece)).join('');
+ return `<div class="authored-table-wrap"><table class="authored-completion-table"><caption>${esc(g.table.caption||g.label)}</caption><thead><tr>${g.table.headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${g.table.rows.map(row=>`<tr>${row.map((value,i)=>`<td data-label="${esc(g.table.headers[i])}">${cell(value)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function pairHtml(g,a,flag){
+ const numbers=g.questions.map(q=>q.n),chosen=numbers.map(n=>a.answers[n]).filter(Boolean),options=g.options||g.questions[0].options;
+ return `<article class="cbt-question-card authored-pair" id="q-${numbers[0]}" data-question-number="${numbers[0]}"><div class="cbt-question-heading"><span class="cbt-question-number">${numbers.join('–')}</span><p class="authored-stem">${esc(g.questions[0].text)}</p><span class="authored-pair-flags">${numbers.map(n=>`${n!==numbers[0]?`<span id="q-${n}" data-question-number="${n}"></span>`:''}${flag(n)}`).join('')}</span></div><div class="cbt-choice-list">${options.map(o=>`<label class="cbt-choice"><input type="checkbox" name="pair-${g.id}" data-authored-pair="${numbers.join(',')}" value="${esc(o.value)}" ${chosen.includes(o.value)?'checked':''}><span class="cbt-choice-letter">${esc(o.value)}</span><span>${esc(o.text)}</span></label>`).join('')}</div><p class="small muted" data-pair-status="${numbers.join(',')}" role="status">Đã chọn ${new Set(chosen).size}/${numbers.length}</p></article>`;
+}
 export function groupsHtml(groups,a,flag){
  return groups.map(g=>{
+  if(g.table||g.answerMode==='unordered-pair')return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.start}–${g.end} · ${esc(g.label)}</h4><p>${esc(g.instruction)}</p></header><div class="design-question-content">${g.table?tableHtml(g,a,flag):pairHtml(g,a,flag)}</div></section>`;
   const bank=g.options;
   const questions=g.questions.map(q=>{
    const options=q.options||bank,selected=String(a.answers[q.n]||'').split('|');
@@ -27,7 +43,7 @@ export function groupsHtml(groups,a,flag){
    // Câu điền ghi chú giữ chữ hai bên ô nhập để không mất nghĩa hoặc lộ ký hiệu bản soạn.
    if(!options&&q.text.includes('{blank}')){
     const [before,...after]=q.text.split('{blank}');
-    return `<article class="cbt-question-card" id="q-${q.n}" data-question-number="${q.n}"><div class="cbt-question-heading" style="grid-template-columns:minmax(0,1fr) 30px"><p id="stem-${q.n}">${esc(before)}${control}${esc(after.join('{blank}'))}</p>${flag(q.n)}</div></article>`;
+    return `<article class="cbt-question-card" id="q-${q.n}" data-question-number="${q.n}"><div class="cbt-question-heading" style="grid-template-columns:minmax(0,1fr) 30px"><p class="authored-stem" id="stem-${q.n}">${esc(before)}${control}${esc(after.join('{blank}'))}</p>${flag(q.n)}</div></article>`;
    }
    return `<article class="cbt-question-card" id="q-${q.n}" data-question-number="${q.n}"><div class="cbt-question-heading"><span class="cbt-question-number">${q.n}</span><p id="stem-${q.n}">${esc(q.text)}</p>${flag(q.n)}</div>${control}</article>`;
   }).join('');
@@ -35,6 +51,14 @@ export function groupsHtml(groups,a,flag){
  }).join('');
 }
 export function bindMultiple(root,onAnswer){
+ root.querySelectorAll('[data-authored-pair]').forEach(el=>el.addEventListener('change',event=>{
+  event.stopImmediatePropagation();const ids=el.dataset.authoredPair,numbers=ids.split(',').map(Number);
+  let checked=[...root.querySelectorAll('[data-authored-pair="'+ids+'"]:checked')];
+  const status=root.querySelector('[data-pair-status="'+ids+'"]');
+  if(checked.length>numbers.length){el.checked=false;if(status)status.textContent=`Chỉ chọn tối đa ${numbers.length} đáp án. Bỏ một lựa chọn trước khi chọn đáp án khác.`;return;}
+  const values=checked.map(x=>x.value).sort();numbers.forEach((n,i)=>onAnswer(n,values[i]||''));
+  if(status)status.textContent=`Đã chọn ${values.length}/${numbers.length}`;
+ }));
  root.querySelectorAll('[data-authored-multi]').forEach(el=>el.addEventListener('change',event=>{
   event.stopImmediatePropagation();const n=el.dataset.authoredMulti;
   const value=[...root.querySelectorAll('[data-authored-multi="'+n+'"]:checked')].map(x=>x.value).sort().join('|');

@@ -1,0 +1,38 @@
+/* Chỉ bố cục bài nhiều part; không thay timer, nhận diện hoặc theme bài cũ. */
+.listening-full-test .cbt-part-nav{flex-wrap:wrap;gap:6px}
+.listening-full-test .cbt-part-button{white-space:nowrap}
+.listening-full-test #readingView .cbt-test-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title actions" "controls controls";gap:8px 16px}
+.listening-full-test #readingView .cbt-test-heading>div:first-child{grid-area:title;min-width:0}
+.listening-full-test #readingView .cbt-toolbar-controls{grid-area:controls;display:flex;justify-content:space-between;flex-wrap:wrap;max-width:none;width:100%;min-width:0;overflow:visible}
+.listening-full-test #readingView .cbt-heading-actions{grid-area:actions;min-width:0;max-width:100%}
+.listening-full-test #readingView .cbt-part-nav{flex:1 1 auto;max-width:none;width:auto;overflow:visible}
+.listening-full-test .authored-stem{white-space:pre-line}
+.authored-pair-flags{display:flex;gap:4px}
+.authored-pair .cbt-question-heading{grid-template-columns:auto minmax(0,1fr) auto}
+.authored-table-wrap{max-width:100%;overflow:auto}
+.authored-completion-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:inherit}
+.authored-completion-table caption{text-align:left;font-weight:700;padding:0 0 14px;color:var(--ink,#172d45)}
+.authored-completion-table th,.authored-completion-table td{border:1px solid #d8dee5;padding:12px 9px;vertical-align:top;overflow-wrap:anywhere;white-space:pre-line}
+.authored-completion-table th{background:#edf1f5;text-align:left}
+.authored-completion-table th:first-child{width:16%}
+.authored-completion-table .authored-table-slot{display:inline-flex;max-width:100%;flex-wrap:wrap;gap:3px;vertical-align:middle}
+.authored-completion-table .cbt-answer-input{width:92px;max-width:100%}
+#readingView.listening-single-part .cbt-reading-section{display:grid;grid-template-columns:minmax(0,1fr)}
+#readingView.listening-single-part .cbt-reading-passage{display:none!important}
+#readingView.listening-single-part .cbt-reading-questions{display:block!important;grid-column:1/-1;flex:1 1 auto!important;width:100%!important;max-width:1000px;min-width:0;margin-inline:auto;border-left:0}
+.listening-single-part .reading-view-switch{display:none}
+@media(max-width:799px){
+ .listening-full-test #readingView .cbt-part-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:1 1 100%;width:100%;min-width:0;gap:5px;flex-wrap:wrap}
+ .listening-full-test #readingView .cbt-part-button{width:100%;min-width:0;white-space:normal}
+ .listening-full-test #readingView .cbt-test-heading{grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "controls" "actions"}
+ .listening-full-test #readingView .cbt-heading-actions{display:flex;flex-wrap:wrap}
+ .listening-full-test #readingView .cbt-question-nav{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));width:100%;min-width:0;overflow:visible;gap:3px}
+ .listening-full-test .cbt-question-button{min-height:30px;padding:4px 0}
+ .authored-completion-table,.authored-completion-table tbody,.authored-completion-table tr,.authored-completion-table td{display:block;width:auto}
+ .authored-completion-table thead{display:none}
+ .authored-completion-table tr{margin-bottom:14px;border:1px solid #d8dee5}
+ .authored-completion-table td{border:0;border-bottom:1px solid #e4e8ed}
+ .authored-completion-table td::before{content:attr(data-label);display:block;font-size:.85em;font-weight:700;color:#45576b;margin-bottom:5px;white-space:normal}
+ .listening-full-test .cbt-toolbar-controls{flex-wrap:wrap}
+ .listening-full-test .cbt-part-nav{width:100%}
+}

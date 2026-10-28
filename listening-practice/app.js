@@ -1,6 +1,6 @@
 (async () => {
 'use strict';
-const AuthoredUI=await import('./authored-ui.js?v=20261021-ui-acceptance-v1');
+const AuthoredUI=await import('./authored-ui.js?v=20261028-full-test1');
 const {fetchListeningAudio,clearListeningAudioMemory}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
@@ -27,12 +27,18 @@ let LESSON=null;
 const total=()=>Object.keys(KEY).length;
 function setAuthoredLesson(lesson){
  if(!lesson?.authored)return;
- LESSON=lesson;CODE=lesson.code;FULL_TIME=lesson.totalMs;AUDIO_DURATION=lesson.audioMs/1000;REVIEW_TIME=lesson.reviewMs;
+ LESSON=lesson;document.body.classList.toggle('listening-full-test',Boolean(lesson.parts?.length));CODE=lesson.code;FULL_TIME=lesson.totalMs;AUDIO_DURATION=lesson.audioMs/1000;REVIEW_TIME=lesson.reviewMs;
  KEY=Object.fromEntries(lesson.questionIds.map(n=>[n,[]]));document.body.dataset.teacherCode=CODE;
  document.title=`Listening Homework · Buổi ${lesson.lesson} · ${lesson.title}`;
  document.querySelectorAll('[data-lesson-title]').forEach(el=>el.textContent=`Listening Homework · Buổi ${lesson.lesson}`);
  const heading=document.querySelector('.topbar h1');if(heading)heading.textContent=`Listening Homework · Buổi ${lesson.lesson}`;
 }
+function questionPane(n){
+ const part=AuthoredUI.partForQuestion(LESSON||{},n);
+ if(part)return part.splitAfter!==undefined&&n<=part.splitAfter?'passage':'questions';
+ return LESSON?(LESSON.groups.length>1&&n<=LESSON.groups[0].end?'passage':'questions'):n<=25?'passage':'questions';
+}
+function audioScope(){return LESSON?.parts?.length?'Listening · 4 part':`Listening Part ${LESSON?.part||3}`;}
 let PASSAGE={},HEADINGS=[],MCQ=[],BANK=[],FLOW=[],SUMMARY=[],STUDENTS=[],identity,entryInfo,entryToken='',sessionToken='';
 let db={students:{}},studentId='',route='',routeParams=new URLSearchParams(),lastTick=0,lastSave=0;
 let saveError=false,simulatedOffline=false,toastTimeout,modalAction=null,fontSize=17,lease=null,queue=Promise.resolve(),debounce,networkFailed=false,busy=false,ready=false;
@@ -172,12 +178,12 @@ function consumeTime(){
  a.remainingMs=Math.max(0,FULL_TIME-leaseBaseline-activeMs);a.reviewRemainingMs=a.phase==='review'?a.remainingMs:REVIEW_TIME;lastTick=now;
 }
 function audioToolbar(a) {
-    return `<section class="listening-audio-bar" aria-label="Audio Part ${LESSON?.part||3}"><div class="audio-heading"><strong id="audio-phase">${a.phase==='review'?'Rà bài trong 2 phút':`Listening Part ${LESSON?.part||3} · Nghe một lượt`}</strong><span id="audio-position">${timeLabel((a.audioPosition||0)*1000)} / ${timeLabel(AUDIO_DURATION*1000)}</span></div><progress id="audio-progress" max="${AUDIO_DURATION}" value="${a.audioPosition||0}" aria-label="Tiến độ nghe"></progress><div class="audio-controls"><span id="audio-status" role="status">${a.phase==='review'?'Audio đã kết thúc':'Đang chuẩn bị audio…'}</span><label>Âm lượng <input id="audio-volume" type="range" min="0" max="1" step="0.05" value="${audio.volume}" aria-label="Âm lượng"></label><button type="button" class="cbt-tool-button" data-action="audio-play" id="audio-play" hidden>Phát audio để tiếp tục</button></div></section>`;
+    return `<section class="listening-audio-bar" aria-label="${audioScope()}"><div class="audio-heading"><strong id="audio-phase">${a.phase==='review'?'Rà bài trong 2 phút':`${audioScope()} · Nghe một lượt`}</strong><span id="audio-position">${timeLabel((a.audioPosition||0)*1000)} / ${timeLabel(AUDIO_DURATION*1000)}</span></div><progress id="audio-progress" max="${AUDIO_DURATION}" value="${a.audioPosition||0}" aria-label="Tiến độ nghe"></progress><div class="audio-controls"><span id="audio-status" role="status">${a.phase==='review'?'Audio đã kết thúc':'Đang chuẩn bị audio…'}</span><label>Âm lượng <input id="audio-volume" type="range" min="0" max="1" step="0.05" value="${audio.volume}" aria-label="Âm lượng"></label><button type="button" class="cbt-tool-button" data-action="audio-play" id="audio-play" hidden>Phát audio để tiếp tục</button></div></section>`;
   }
 function updateAudioToolbar() {
     const a=current(),progress=document.querySelector('#audio-progress');if(!a||!progress)return;
     progress.value=a.audioPosition||0;
-    document.querySelector('#audio-phase').textContent=a.phase==='review'?'Rà bài trong 2 phút':`Listening Part ${LESSON?.part||3} · Nghe một lượt`;
+    document.querySelector('#audio-phase').textContent=a.phase==='review'?'Rà bài trong 2 phút':`${audioScope()} · Nghe một lượt`;
     document.querySelector('#audio-position').textContent=timeLabel((a.audioPosition||0)*1000)+' / '+timeLabel(AUDIO_DURATION*1000);
     if(a.phase==='review')document.querySelector('#audio-status').textContent='Audio đã kết thúc · kiểm tra đáp án rồi nộp';
   }
@@ -337,6 +343,7 @@ function rememberScroll() {
     const passage=document.querySelector('#passage-scroll'),questions=document.querySelector('#question-scroll');
     if(passage)a.scroll.passage=passage.scrollTop;
     if(questions)a.scroll.questions.all=questions.scrollTop;
+    const part=document.querySelector('#readingView')?.dataset.listeningPart;if(LESSON?.parts?.length&&part){a.scroll.questions[part+'-left']=passage?.scrollTop||0;a.scroll.questions[part+'-right']=questions?.scrollTop||0;}
   }
 
 function requestReset() {
@@ -366,7 +373,7 @@ function exercise() {
     const a=current(); if(!a || a.status!=='running') { navigate(a?.status==='submitted'?`result?attempt=${a.no}`:'resume'); return; }
     recoveryNotice='';
     app.innerHTML=`<header class="topbar"><a class="design-brand" href="#docs"><img class="m170-logo" src="../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"></a><h1>Listening Homework · Buổi ${LESSON?.lesson||8}</h1><details class="identity-options homework-options"><summary><span class="homework-student">${escape(student()?.name)} · </span>Lần ${a.no}</summary><div class="identity-options-body"><p>${escape(student()?.name)} · Lớp ${escape(identity?.classCode)}</p>${textBtn('Tạm dừng','pause')}${textBtn('Reset bài','request-reset')}<a href="#docs">Xem tài liệu bài tập ↗</a></div></details></header>
-    <div class="page-shell"><section id="readingView" class="panel test-panel cbt-test-form" data-design-pane="${a.mobilePane||'passage'}" aria-label="Bài Listening"><div class="cbt-semantic-stage questions-grid"><div class="cbt-semantic-pane"><div class="cbt-toolbar"><div class="cbt-test-heading"><div><h2>Listening - ${total()} câu</h2></div><div class="cbt-toolbar-controls"><nav class="cbt-part-nav" aria-label="Passage"><button type="button" class="cbt-part-button is-active" data-action="jump" data-question="${LESSON?.questionIds[0]||21}">${LESSON?`Part ${LESSON.part} · Q${LESSON.questionIds[0]}–${LESSON.questionIds.at(-1)}`:'Part 3 · Q21–30'}</button></nav><div class="cbt-text-size"><button type="button" class="cbt-tool-button" data-action="font-down" aria-label="Giảm cỡ chữ">A−</button><strong id="font-percent">${Math.round(fontSize/17*100)}%</strong><button type="button" class="cbt-tool-button" data-action="font-up" aria-label="Tăng cỡ chữ">A+</button></div><button type="button" class="cbt-tool-button" data-action="notes">Notes</button></div><div class="cbt-heading-actions"><div id="timer" class="cbt-reading-clock">Còn <strong>${timeLabel(a.remainingMs)}</strong><span>/ audio + 2 phút rà bài</span></div><span class="answer-count" id="answered-progress"></span><span class="autosave-status" data-status="saved">Đã giữ trên thiết bị</span><button type="button" class="button button-primary cbt-heading-submit" data-action="request-submit">Nộp bài Listening</button></div></div><nav class="reading-view-switch" aria-label="Vùng Reading"><button type="button" data-action="mobile-pane" data-pane="passage" aria-pressed="${(a.mobilePane||'passage')==='passage'}">${LESSON?(LESSON.groups.length>1?'Nhóm đầu':'Hướng dẫn'):'Câu 21–25'}</button><button type="button" data-action="mobile-pane" data-pane="questions" aria-pressed="${a.mobilePane==='questions'}">${LESSON?'Câu hỏi':'Câu 26–30'}</button></nav></div>${audioToolbar(a)}<div class="cbt-content-viewport" data-font-size="${Math.round(fontSize/17*100)}"><section class="cbt-reading-section"><article class="cbt-reading-passage" id="passage-scroll" aria-label="Câu 21–25"></article><article class="cbt-reading-questions" id="question-scroll" aria-label="Câu 26–30"></article></section></div></div></div><div class="cbt-question-nav-wrap"><div class="cbt-review-bar"><span id="review-count"></span><button type="button" class="cbt-review-open" data-action="review">Rà soát bài</button></div><nav class="cbt-question-nav" aria-label="Đi đến câu hỏi">${Object.keys(KEY).map(n=>`<button type="button" class="cbt-question-button" data-action="jump" data-question="${n}" aria-label="Câu ${n}">${n}</button>`).join('')}</nav><p class="cbt-nav-legend">Navy đậm: đang chọn · Navy nhạt: đã trả lời · Gạch vàng: cần xem lại</p><aside id="review-panel" class="cbt-review-panel" hidden></aside></div></section></div><aside class="cbt-note-panel" id="notes-panel" hidden><header><strong>Ghi chú cá nhân</strong><button type="button" class="cbt-review-close" data-action="notes" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="notes">Tự lưu cùng lần làm bài</label><textarea id="notes" placeholder="Nén ý, từ khóa hoặc điểm cần kiểm lại…">${escape(a.notes)}</textarea></div></aside><footer class="reading-demo-footer">IZONE · Listening Homework · Buổi ${LESSON?.lesson||8}</footer>`;
+    <div class="page-shell"><section id="readingView" class="panel test-panel cbt-test-form" data-design-pane="${a.mobilePane||'passage'}" aria-label="Bài Listening"><div class="cbt-semantic-stage questions-grid"><div class="cbt-semantic-pane"><div class="cbt-toolbar"><div class="cbt-test-heading"><div><h2>Listening - ${total()} câu</h2></div><div class="cbt-toolbar-controls"><nav class="cbt-part-nav" aria-label="Chuyển part Listening">${AuthoredUI.partNavHtml(LESSON,a.activeQuestion)}</nav><div class="cbt-text-size"><button type="button" class="cbt-tool-button" data-action="font-down" aria-label="Giảm cỡ chữ">A−</button><strong id="font-percent">${Math.round(fontSize/17*100)}%</strong><button type="button" class="cbt-tool-button" data-action="font-up" aria-label="Tăng cỡ chữ">A+</button></div><button type="button" class="cbt-tool-button" data-action="notes">Notes</button></div><div class="cbt-heading-actions"><div id="timer" class="cbt-reading-clock">Còn <strong>${timeLabel(a.remainingMs)}</strong><span>/ audio + 2 phút rà bài</span></div><span class="answer-count" id="answered-progress"></span><span class="autosave-status" data-status="saved">Đã giữ trên thiết bị</span><button type="button" class="button button-primary cbt-heading-submit" data-action="request-submit">Nộp bài Listening</button></div></div><nav class="reading-view-switch" aria-label="Vùng Reading"><button type="button" data-action="mobile-pane" data-pane="passage" aria-pressed="${(a.mobilePane||'passage')==='passage'}">${LESSON?(LESSON.groups.length>1?'Nhóm đầu':'Hướng dẫn'):'Câu 21–25'}</button><button type="button" data-action="mobile-pane" data-pane="questions" aria-pressed="${a.mobilePane==='questions'}">${LESSON?'Câu hỏi':'Câu 26–30'}</button></nav></div>${audioToolbar(a)}<div class="cbt-content-viewport" data-font-size="${Math.round(fontSize/17*100)}"><section class="cbt-reading-section"><article class="cbt-reading-passage" id="passage-scroll" aria-label="Câu 21–25"></article><article class="cbt-reading-questions" id="question-scroll" aria-label="Câu 26–30"></article></section></div></div></div><div class="cbt-question-nav-wrap"><div class="cbt-review-bar"><span id="review-count"></span><button type="button" class="cbt-review-open" data-action="review">Rà soát bài</button></div><nav class="cbt-question-nav" aria-label="Đi đến câu hỏi">${Object.keys(KEY).map(n=>`<button type="button" class="cbt-question-button" data-action="jump" data-question="${n}" aria-label="Câu ${n}">${n}</button>`).join('')}</nav><p class="cbt-nav-legend">Navy đậm: đang chọn · Navy nhạt: đã trả lời · Gạch vàng: cần xem lại</p><aside id="review-panel" class="cbt-review-panel" hidden></aside></div></section></div><aside class="cbt-note-panel" id="notes-panel" hidden><header><strong>Ghi chú cá nhân</strong><button type="button" class="cbt-review-close" data-action="notes" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="notes">Tự lưu cùng lần làm bài</label><textarea id="notes" placeholder="Nén ý, từ khóa hoặc điểm cần kiểm lại…">${escape(a.notes)}</textarea></div></aside><footer class="reading-demo-footer">IZONE · Listening Homework · Buổi ${LESSON?.lesson||8}</footer>`;
     renderQuestions(); updateProgress();setActivating(activating);
 
     document.querySelector('#passage-scroll').scrollTop=a.scroll?.passage || 0;
@@ -376,17 +383,26 @@ function flag(n) { return `<button type="button" class="cbt-flag-button flag ${c
 
 
 function authoredQuestions(){
- const a=current(),groups=AUTHORED_DEF.groups;
- const write=(n,value)=>{if(!writable())return;a.answers[n]=value;persist();updateProgress();};
+ const a=current(),part=AuthoredUI.partForQuestion(LESSON,a.activeQuestion);
+ const groups=part?AUTHORED_DEF.groups.filter(g=>g.start>=part.start&&g.end<=part.end):AUTHORED_DEF.groups;
+ const write=(n,value)=>{if(!writable())return;a.answers[n]=value;if(LESSON.parts?.length)a.activeQuestion=+n;persist();updateProgress();};
+ const left=document.querySelector('#passage-scroll'),right=document.querySelector('#question-scroll'),view=document.querySelector('#readingView');
  if(LESSON.audioMs!==undefined){
-  const left=document.querySelector('#passage-scroll'),right=document.querySelector('#question-scroll');
-  left.innerHTML=groups.length>1?AuthoredUI.groupsHtml(groups.slice(0,1),a,flag):`<header class="cbt-passage-header"><h3>${escape(LESSON.title)}</h3><p>${escape(groups[0].instruction)}</p></header>`;
-  right.innerHTML=AuthoredUI.groupsHtml(groups.length>1?groups.slice(1):groups,a,flag);
+  const single=Boolean(part&&part.splitAfter===undefined);
+  view.classList.toggle('listening-single-part',single);view.dataset.listeningPart=part?.id||'single';
+  const leftGroups=part?(single?[]:groups.filter(g=>g.end<=part.splitAfter)):groups.length>1?groups.slice(0,1):[];
+  const rightGroups=part?(single?groups:groups.filter(g=>g.start>part.splitAfter)):groups.length>1?groups.slice(1):groups;
+  if(part)view.querySelector('.cbt-test-heading h2').textContent=part.title;
+  left.innerHTML=leftGroups.length?AuthoredUI.groupsHtml(leftGroups,a,flag):`<header class="cbt-passage-header"><h3>${escape(part?.title||LESSON.title)}</h3><p>${escape(groups[0].instruction)}</p></header>`;
+  right.innerHTML=AuthoredUI.groupsHtml(rightGroups,a,flag);
+  left.setAttribute('aria-label',part?`${part.title} · Nhóm đầu`:'Nhóm câu đầu');right.setAttribute('aria-label',part?`${part.title} · Câu hỏi`:'Câu hỏi');
+  if(part){left.scrollTop=a.scroll?.questions[part.id+'-left']||0;right.scrollTop=a.scroll?.questions[part.id+'-right']||0;}
+  if(single)setMobilePane('questions');
  }else{
-  document.querySelector('#passage-scroll').innerHTML=`<header class="cbt-passage-header"><h3>${escape(LESSON.title)}</h3></header><div class="cbt-passage-body">${Object.entries(AUTHORED_DEF.passage).map(([id,text])=>`<div class="cbt-passage-paragraph paragraph" data-paragraph="${escape(id)}" id="paragraph-${escape(id)}"><span class="cbt-paragraph-label">${escape(id)}</span><p>${escape(text)}</p></div>`).join('')}</div>`;
-  document.querySelector('#question-scroll').innerHTML=AuthoredUI.groupsHtml(groups,a,flag);
+  left.innerHTML=`<header class="cbt-passage-header"><h3>${escape(LESSON.title)}</h3></header><div class="cbt-passage-body">${Object.entries(AUTHORED_DEF.passage).map(([id,text])=>`<div class="cbt-passage-paragraph paragraph" data-paragraph="${escape(id)}" id="paragraph-${escape(id)}"><span class="cbt-paragraph-label">${escape(id)}</span><p>${escape(text)}</p></div>`).join('')}</div>`;
+  right.innerHTML=AuthoredUI.groupsHtml(groups,a,flag);
  }
- AuthoredUI.bindMultiple(document.querySelector('#readingView'),write);window.ReadingAnnotations?.install();
+ AuthoredUI.bindMultiple(view,write);window.ReadingAnnotations?.install();
 }
 
 function renderQuestions() {
@@ -405,6 +421,7 @@ function updateProgress() {
     const a=current(); if(!a) return;
     const timer=document.querySelector('#timer');
     if(timer) { timer.querySelector('strong').textContent=a.phase==='listening'?timeLabel((AUDIO_DURATION-(a.audioPosition||0))*1000):timeLabel(a.reviewRemainingMs??a.remainingMs);updateAudioToolbar(); timer.classList.toggle('is-warning',a.remainingMs<60000); }
+    document.querySelectorAll('button[data-listening-part]').forEach(button=>{const p=AuthoredUI.partForQuestion(LESSON||{},a.activeQuestion),selected=p?button.dataset.listeningPart===p.id:true;button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));});
     const progress=document.querySelector('#answered-progress'); if(progress) progress.textContent=`${countAnswered(a)}/${total()} đã nhập`;
     const reviewCount=document.querySelector('#review-count'); if(reviewCount)reviewCount.textContent=`${total()-countAnswered(a)} chưa làm · ${a.flags.length} đã đánh dấu`;
     document.querySelectorAll('.cbt-question-button').forEach(b=>{
@@ -420,12 +437,13 @@ function updateProgress() {
 function switchTab(tab) { jump(tab==='headings'?14:tab==='mcq'?21:24); }
 
 function jump(n) {
-    const a=current();a.activeQuestion=n;a.tab=LESSON?LESSON.groups.find(g=>n>=g.start&&n<=g.end).kind:n<=25?'mcq':'flowchart';
-    const pane=LESSON?(LESSON.groups.length>1&&n<=LESSON.groups[0].end?'passage':'questions'):n<=25?'passage':'questions';
+    const a=current();rememberScroll();a.activeQuestion=n;a.tab=LESSON?LESSON.groups.find(g=>n>=g.start&&n<=g.end).kind:n<=25?'mcq':'flowchart';
+    const part=AuthoredUI.partForQuestion(LESSON||{},n);if(part&&document.querySelector('#readingView')?.dataset.listeningPart!==part.id)renderQuestions();
+    const pane=questionPane(n);
     if(matchMedia('(max-width:980px)').matches)setMobilePane(pane);
     const el=document.querySelector(`#q-${n}`),scroll=document.querySelector(pane==='passage'?'#passage-scroll':'#question-scroll');
     if(el&&scroll)scroll.scrollTo({top:el.getBoundingClientRect().top-scroll.getBoundingClientRect().top+scroll.scrollTop-16,behavior:'auto'});
-    document.querySelector(`[data-answer="${n}"]`)?.focus({preventScroll:true});rememberScroll();persist();updateProgress();
+    document.querySelector(`[data-answer="${n}"], [data-authored-pair^="${n},"], [data-authored-pair$=",${n}"]`)?.focus({preventScroll:true});rememberScroll();persist();updateProgress();
   }
 function spotParagraph(letter) {
     document.querySelectorAll('.paragraph').forEach(p=>p.classList.toggle('spot',p.dataset.paragraph===letter));
@@ -516,7 +534,7 @@ function resultTable(a) {
     return `<section class="card section answer-explanations" data-attempt-id="${escape(a.id)}" aria-labelledby="explanations-title"><div class="section-heading"><h2 id="explanations-title">Đáp án và giải thích</h2><span class="pill">${total()} câu</span></div><div class="table-wrap detail-table-wrap"><table class="result-table detail-table"><thead><tr><th scope="col">Câu</th><th scope="col">Bài làm</th><th scope="col">Đáp án đúng</th><th scope="col">Kết quả</th><th scope="col">Giải thích</th></tr></thead><tbody>${Object.keys(KEY).map(n=>{
       const row=a.result.rows.find(r=>r.number===+n),correct=row.state==='correct',blank=row.state==='blank';
       const state=correct?'correct':blank?'blank':'incorrect';
-      const answers=resultCache.get(a.id).key[n];const key=n>=21&&n<=23?answers[0].toUpperCase():answers.join(' / ');
+      const answers=resultCache.get(a.id).key[n];const key=LESSON?answers.join(' / '):n>=21&&n<=23?answers[0].toUpperCase():answers.join(' / ');
       return `<tr class="detail-row detail-row-${state}" data-result-question="${n}"><td>${String(n).padStart(2,'0')}.</td><td data-label="Bài làm">${escape(a.answers[n]||'—')}</td><td data-label="Đáp án đúng">${key}</td><td class="${correct?'mark-good':blank?'muted':'mark-bad'}"><span class="detail-result-cell result-${state}"><span class="detail-result-icon" aria-hidden="true">${correct?'✓':blank?'–':'✕'}</span>${correct?'Đúng':blank?'Bỏ trống':'Sai'}</span></td><td><button type="button" class="explanation-button" data-action="explanation-toggle" data-question="${n}" aria-haspopup="dialog">Xem giải thích</button></td></tr><tr class="inline-explanation-row" id="explanation-${n}" hidden><td colspan="5">${explanationContent(data?.entries?.[n])}</td></tr>`;
     }).join('')}</tbody></table></div></section>`;
   }
@@ -529,7 +547,7 @@ function resultScreen() {
     const rec=record(); const a=rec?.attempts.find(a=>a.no===+(routeParams.get('attempt') || current()?.no));
     if(!a) { navigate('prep'); return; }
     const submitted=a.status==='submitted';
-    app.innerHTML=hero(submitted?'BUỔI 8 · KẾT QUẢ LISTENING':'BUỔI 8 · LỊCH SỬ LÀM BÀI',submitted?'Bạn đã hoàn thành bài nghe':`Lần ${a.no} đã ${a.status==='reset'?'reset':'tạm dừng'}`,submitted?completionCopy(a):'Bài này chưa được nộp. Đáp án đúng chỉ mở sau khi hoàn thành.')+identityBar()+`<div class="meta-row section"><span>Lần làm bài <strong>${a.no}</strong></span><span>${submitted?(a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Bạn chủ động nộp bài'):'Chưa nộp bài'}</span><span>Đã làm <strong>${timeLabel(FULL_TIME-a.remainingMs)}</strong></span></div>${submitted?`<section class="result-summary"><div class="score-box"><strong>${a.finalScore}<span>/${total()}</span></strong><small>Số câu trả lời đúng<br>Điểm của riêng Listening Part ${LESSON?.part||3}</small></div><div class="score-details"><h2>${escape(LESSON?.title||'Science experiment for Year 12 students')}</h2><p class="small muted">${LESSON?escape(AuthoredUI.sourceLabel(LESSON))+` · Câu ${LESSON.questionIds[0]}–${LESSON.questionIds.at(-1)}`:'Cambridge 19 · Test 3 · Part 3 · Câu 21–30'}</p><div class="type-scores">${(LESSON?.groups||[{start:21,end:25,label:'Multiple Choice'},{start:26,end:30,label:'Flow-chart completion'}]).map(g=>`<div><strong>${resultFor(a,g.start,g.end)}/${g.end-g.start+1}</strong><span>${escape(g.label)}</span></div>`).join('')}</div></div></section>${docsNotice(a)}`:`<div class="note">${countAnswered(a)}/${total()} câu đã trả lời. ${a.status==='reset'?'Lần này được lưu trong lịch sử nhưng không có điểm hoàn thành.':'Bạn có thể tiếp tục bằng thời gian còn lại.'}</div>`}<div class="actions section">${current()?.status==='paused'?btn('Tiếp tục lần đang làm','resume'):''}${btn('Reset và làm lại từ đầu','request-reset','outline')}${textBtn('Về tài liệu bài tập','show-docs')}</div><section class="section"><h3>Lịch sử làm bài</h3>${attemptHistory(rec,a.no)}</section>${submitted?resultTable(a):''}`+footer();
+    app.innerHTML=hero(submitted?'BUỔI 8 · KẾT QUẢ LISTENING':'BUỔI 8 · LỊCH SỬ LÀM BÀI',submitted?'Bạn đã hoàn thành bài nghe':`Lần ${a.no} đã ${a.status==='reset'?'reset':'tạm dừng'}`,submitted?completionCopy(a):'Bài này chưa được nộp. Đáp án đúng chỉ mở sau khi hoàn thành.')+identityBar()+`<div class="meta-row section"><span>Lần làm bài <strong>${a.no}</strong></span><span>${submitted?(a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Bạn chủ động nộp bài'):'Chưa nộp bài'}</span><span>Đã làm <strong>${timeLabel(FULL_TIME-a.remainingMs)}</strong></span></div>${submitted?`<section class="result-summary"><div class="score-box"><strong>${a.finalScore}<span>/${total()}</span></strong><small>Số câu trả lời đúng<br>${LESSON?.parts?.length?'Điểm toàn bài Listening':`Điểm của riêng Listening Part ${LESSON?.part||3}`}</small></div><div class="score-details"><h2>${escape(LESSON?.title||'Science experiment for Year 12 students')}</h2><p class="small muted">${LESSON?escape(AuthoredUI.sourceLabel(LESSON))+` · Câu ${LESSON.questionIds[0]}–${LESSON.questionIds.at(-1)}`:'Cambridge 19 · Test 3 · Part 3 · Câu 21–30'}</p><div class="type-scores">${(LESSON?.parts?.map(p=>({...p,label:p.title.split(' · ')[0]}))||LESSON?.groups||[{start:21,end:25,label:'Multiple Choice'},{start:26,end:30,label:'Flow-chart completion'}]).map(g=>`<div><strong>${resultFor(a,g.start,g.end)}/${g.end-g.start+1}</strong><span>${escape(g.label)}</span></div>`).join('')}</div></div></section>${docsNotice(a)}`:`<div class="note">${countAnswered(a)}/${total()} câu đã trả lời. ${a.status==='reset'?'Lần này được lưu trong lịch sử nhưng không có điểm hoàn thành.':'Bạn có thể tiếp tục bằng thời gian còn lại.'}</div>`}<div class="actions section">${current()?.status==='paused'?btn('Tiếp tục lần đang làm','resume'):''}${btn('Reset và làm lại từ đầu','request-reset','outline')}${textBtn('Về tài liệu bài tập','show-docs')}</div><section class="section"><h3>Lịch sử làm bài</h3>${attemptHistory(rec,a.no)}</section>${submitted?resultTable(a):''}`+footer();
     if(submitted)warmReviewResult(a,resultCache.get(a.id));
   }
 // Các thao tác chỉ ghi khi tab đang giữ lượt làm. Chọn chữ dùng adapter nguyên bản của Term Test.
