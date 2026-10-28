@@ -4,6 +4,6 @@
  (async()=>{
   if(new URLSearchParams(location.search).get('mode')==='saved'){await load('../design-full/history.js?v=full-20261014');return;}
   if(document.body.dataset.demoPaper==='true'){await load('../shared/attempt-review.js?rev=20260909-k67-update-v1');await load('../shared/app.js?v=20261018-identity-v1&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1');}
-  else{await load('../term-test-2-computer-based/audio-loader.js?rev=20260823-multi-test-v1&journal=20261024-startup-v2&resilience=20261027-v1');await load('../term-test-2-computer-based/bootstrap.js?v=20261018-identity-v1&journal=20261024-startup-v2&resilience=20261027-v1');}
+  else{await load('../term-test-2-computer-based/audio-loader.js?rev=20260823-multi-test-v1&journal=20261024-startup-v2&resilience=20261027-v1');await load('../term-test-2-computer-based/bootstrap.js?v=20261018-identity-v1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1');}
  })().catch(()=>{document.getElementById('app').textContent='Chưa tải được bài. Hãy tải lại trang.';});
 })();

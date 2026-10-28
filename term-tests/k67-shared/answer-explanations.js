@@ -76,7 +76,7 @@
       const timer = setTimeout(() => controller.abort(), 120000);
       preparation = job;
       job.promise = (async () => {
-        const {downloadReview} = await import(new URL('../../shared/audio/transport.mjs?v=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1', scriptBase));
+        const {downloadReview} = await import(new URL('../../shared/audio/transport.mjs?v=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1', scriptBase));
         let blob = await downloadReview(source, descriptor.sha256, {signal:controller.signal});
         if (!blob) {
           const response = await fetch(source, {signal:controller.signal, cache:'force-cache'});

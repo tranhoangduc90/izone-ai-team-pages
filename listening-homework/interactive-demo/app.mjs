@@ -1,4 +1,4 @@
-import {downloadPreferred} from '../../shared/audio/transport.mjs';
+import {downloadPreferred} from '../../shared/audio/transport.mjs?audio=20261028-part-rescue-v1';
 import {ASSETS} from '../../shared/audio/catalog.mjs';
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

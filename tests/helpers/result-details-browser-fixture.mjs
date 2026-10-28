@@ -38,6 +38,7 @@ export async function completedPage(browser,base,routeName,{writingResult=null,e
    if(route.endsWith('/journal-context'))return r.fulfill({status:503,headers,contentType:'application/json',body:'{"ok":false}'});
    requests.push(route);let data,status=200;
    if(route==='/api/test/history')data={testSlug:slug,stateVersion:2,historyEpoch:epoch,classes:[{code:'DEMO',name:'Lớp giả DEMO'},{code:'IC9999',name:'Lớp giả A'},{code:'IC9998',name:'Lớp giả B'}]};
+   else if(route===`/api/term-tests/${slug}/clock`)data={serverNow:new Date().toISOString()};
    else if(route.endsWith('/student-identity'))data={ok:true,status:'unique',identity:{authority:'erp-contact',id:'900001'},aliases:[{classId:'9999',classCode,studentRef:id,studentName:payload.studentName}]};
    else if(route.includes('roster'))data={class:{name:payload.className,code:payload.className},students:[{ref:payload.studentRef,name:payload.studentName}]};
    // K56 xác minh lượt đã lưu trước khi chuẩn bị; dữ liệu giả trả đúng hai token hiện hành.
