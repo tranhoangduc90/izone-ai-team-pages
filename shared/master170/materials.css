@@ -13,7 +13,7 @@ body[data-m170-product='materials'] {
   --cbt-muted: var(--m170-muted);
 }
 body[data-m170-product='materials'] .wordmark { display: block; line-height: 1; letter-spacing: normal; }
-body[data-m170-product='materials'] :is(.passage-text, .passage-text p, .question-text, .answer-field textarea, .feedback p, .source-hint, .answer-copy, .evidence-box) { font-size: calc(18px * var(--reading-scale, 1)); line-height: 1.65; }
+body[data-m170-product='materials'] :is(.passage-text, .passage-text p, .question-text, .answer-field textarea, .feedback p, .source-hint, .answer-copy, .evidence-box) { font-size: calc(var(--m170-skill-homework-base, 18px) * var(--reading-scale, 1)); line-height: 1.65; }
 body[data-m170-product='materials'] :is(button, select, .answer-field label, .selection-field label) { font-size: 16px; }
 body[data-m170-product='materials'] :is(button, select) { min-height: 44px; }
 body[data-m170-product='materials'] :is(.minimum-note, .notice, .field-indicator, .lesson-meta, .learner, .font-control span) { font-size: 14px; }

@@ -1,0 +1,102 @@
+/* Approved assessment upgrade. Only explicitly registered consumers opt in.
+   No JS handlers, timer, grading, storage, audio or access rules live here. */
+@import url('./tokens-v1.1.css?v=20261028-master11');
+
+body[data-izone-design='master170@1.1'] {
+  --m170-font: var(--m170-v11-font-family);
+  font-family: var(--m170-font);
+}
+html body[data-izone-design='master170@1.1'][data-izone-ui-profile] .topbar .m170-logo,
+body[data-izone-design='master170@1.1'] .m170-logo {
+  display: block; width: auto; height: 48px; object-fit: contain; flex-shrink: 0;
+}
+body[data-izone-design='master170@1.1'] :is(.hero h1,.login-layout h1,.materials-login-hero h1,#securePrepTitle) {
+  font-size: var(--m170-h1-size,28px); line-height: 1.3; font-weight: 700;
+}
+body[data-izone-design='master170@1.1'][data-izone-consumer='reading-homework'] select[data-target] {
+  font-size: calc(var(--m170-skill-homework-control) * var(--reading-scale, 1));
+}
+body[data-izone-design='master170@1.1'][data-izone-consumer='reading-homework'] :is(.answer-field textarea,select[data-target]):focus {
+  border-color: var(--m170-input-focus-border); outline: 0;
+  box-shadow: 0 0 0 2px var(--m170-input-focus-pointer);
+}
+body[data-izone-design='master170@1.1'][data-izone-consumer='reading-homework'] :is(.answer-field textarea,select[data-target]):focus-visible {
+  outline: 0; box-shadow: 0 0 0 3px var(--m170-input-focus-keyboard);
+}
+body[data-izone-design='master170@1.1'] .design-brand:has(>.m170-logo) {
+  display: block; border-right: 0; padding-right: 0; line-height: 1;
+}
+body[data-izone-design='master170@1.1'][data-izone-consumer='term-mini-k67'] .design-brand:not(:has(>.m170-logo)) {
+  display: block; width: 145px; height: 48px; flex: 0 0 145px;
+  font-size: 0; border-right: 0; padding: 0;
+  background: url('./assets/izone-logo-color.png') left center/contain no-repeat;
+}
+
+/* Native compact roles: scale with their existing paper parent, never with a
+   new document-wide zoom. Authored tables/banks keep their semantic layout. */
+body[data-izone-design='master170@1.1'][data-izone-ui-profile='exam-compact'] #readingView .cbt-choice {
+  font-size: calc(1em * var(--m170-exam-compact-choice-ratio)); font-weight: 400;
+}
+body[data-izone-design='master170@1.1'][data-izone-ui-profile='exam-compact'] #readingView :is(.cbt-answer-input,.cbt-answer-select) {
+  font-size: calc(1em * var(--m170-exam-compact-control-ratio));
+  font-weight: 600; min-height: var(--m170-exam-compact-control-min-height);
+  padding: 7px 9px; line-height: normal;
+}
+body[data-izone-design='master170@1.1'] #readingView :is(.cbt-answer-input,.cbt-answer-select,.evidence-input,.hw-short-answer):focus {
+  border-color: var(--m170-input-focus-border); outline: 0;
+  box-shadow: 0 0 0 2px var(--m170-input-focus-pointer);
+}
+body[data-izone-design='master170@1.1'] #readingView :is(.cbt-answer-input,.cbt-answer-select,.evidence-input,.hw-short-answer):focus-visible {
+  outline: 0; box-shadow: 0 0 0 3px var(--m170-input-focus-keyboard);
+}
+
+/* The question map remains one continuous row at intermediate breakpoints.
+   Flex retains the configured count (including single parts), not a hardcoded
+   40-column grid. Keyboard navigation scrolls the focused button natively. */
+body[data-izone-design='master170@1.1'][data-izone-ui-profile='exam-compact'] #readingView .cbt-question-nav {
+  display: flex; flex-wrap: nowrap; gap: 5px; min-width: 0; max-width: 100%;
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
+}
+body[data-izone-design='master170@1.1'][data-izone-ui-profile='exam-compact'] #readingView .cbt-question-button {
+  flex: 1 0 24px; width: auto; min-width: 24px;
+  height: var(--m170-exam-compact-question-button-height);
+  min-height: var(--m170-exam-compact-question-button-height);
+  padding: 0; font-size: var(--m170-exam-compact-question-button); font-weight: 600;
+}
+
+/* Local SVG masks preserve each native button, accessible name, state and
+   event target. The original text remains in the accessibility tree. */
+body[data-izone-design='master170@1.1'] :is(.cbt-flag-button,.flag-button[data-flag]) {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0 !important; flex-shrink: 0;
+}
+body[data-izone-design='master170@1.1'] :is(.cbt-flag-button,.flag-button[data-flag])::before {
+  content: ''; display: block; width: var(--m170-icon-size,16px); height: var(--m170-icon-size,16px);
+  background: currentColor; mask: url('./icons/flag.svg') center/contain no-repeat;
+}
+body[data-izone-design='master170@1.1'] :is(.explanation-dialog-close,.cbt-note-close,.cbt-review-close,.close-button[aria-label]) {
+  display: inline-flex !important; align-items: center; justify-content: center; font-size: 0 !important;
+}
+body[data-izone-design='master170@1.1'] :is(.explanation-dialog-close,.cbt-note-close,.cbt-review-close,.close-button[aria-label])::before {
+  content: ''; display: block; width: var(--m170-close-icon-size,18px); height: var(--m170-close-icon-size,18px);
+  background: currentColor; mask: url('./icons/close.svg') center/contain no-repeat;
+}
+body[data-izone-design='master170@1.1'] button[data-m170-icon] { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+body[data-izone-design='master170@1.1'] .m170-icon { display: inline-block; width: var(--m170-icon-size,16px); height: var(--m170-icon-size,16px); flex: none; vertical-align: middle; pointer-events: none; }
+body[data-izone-design='master170@1.1'] .m170-icon * { pointer-events: none; }
+@media(max-width:1200px) {
+  body[data-izone-design='master170@1.1'][data-izone-ui-profile='exam-compact'] #readingView .cbt-question-button {
+    flex: 0 0 34px; width: 34px;
+  }
+}
+@media(max-width:620px) {
+  body[data-izone-design='master170@1.1'][data-izone-ui-profile='exam-compact'] #readingView .cbt-question-button { font-size: 11px; }
+}
+@media(max-width:600px) {
+  html body[data-izone-design='master170@1.1'][data-izone-ui-profile] .topbar .m170-logo,
+  body[data-izone-design='master170@1.1'] .m170-logo { height: 36px; }
+  body[data-izone-design='master170@1.1'] :is(.hero h1,.login-layout h1,.materials-login-hero h1,#securePrepTitle) { font-size: var(--m170-h1-mobile-size,26px); }
+  body[data-izone-design='master170@1.1'][data-izone-consumer='term-mini-k67'] .design-brand:not(:has(>.m170-logo)) {
+    width: 109px; height: 36px; flex-basis: 109px;
+  }
+}

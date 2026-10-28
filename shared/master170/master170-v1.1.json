@@ -1,0 +1,178 @@
+{
+  "name": "IZONE master #170",
+  "version": "1.1",
+  "date": "2026-10-28",
+  "decision": "Approved illustrated proposal and implementation request in the current task, 28 October 2026",
+  "colors": {
+    "canvas": "#F5F6F8",
+    "surface": "#FFFFFF",
+    "structure": "#174265",
+    "ink": "#1F2937",
+    "muted": "#586477",
+    "brand": "#DB0829",
+    "action": "#152B4E",
+    "on-action": "#FFFFFF",
+    "action-hover": "#10213C",
+    "line": "#DCE1E7",
+    "control-border": "#7C8798",
+    "selected-bg": "#EDF1F7",
+    "selected-fg": "#152B4E",
+    "selected-line": "#152B4E",
+    "pending-bg": "#E6EEF5",
+    "pending-fg": "#174265",
+    "attention-bg": "#FFF4E0",
+    "attention-fg": "#8A5300",
+    "success-bg": "#E4F5EA",
+    "success-fg": "#166534",
+    "error-bg": "#FDE8EB",
+    "error-fg": "#9B0A22",
+    "neutral-bg": "#EAEDF2",
+    "neutral-fg": "#586477",
+    "focus": "#DB0829"
+  },
+  "font": {
+    "family": "Source Sans 3",
+    "weights": [
+      400,
+      600,
+      700
+    ],
+    "fallback": [
+      "system-ui",
+      "sans-serif"
+    ]
+  },
+  "type": {
+    "h1": {
+      "size": 28,
+      "weight": 700,
+      "line_height": 1.3,
+      "mobile_size": 26
+    },
+    "h2": {
+      "size": 22,
+      "weight": 700,
+      "line_height": 1.3
+    },
+    "h3": {
+      "size": 18,
+      "weight": 700,
+      "line_height": 1.3
+    },
+    "ui": {
+      "size": 16,
+      "weight": [
+        400,
+        600
+      ]
+    },
+    "prose": {
+      "size": 18,
+      "weight": 400,
+      "line_height": 1.65
+    },
+    "metadata": {
+      "size": 14,
+      "weight": [
+        400,
+        600
+      ],
+      "line_height": 1.5
+    }
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    20,
+    24,
+    28,
+    32,
+    40
+  ],
+  "radius": {
+    "panel": 12,
+    "control": 8,
+    "badge": 999
+  },
+  "layout_defaults": {
+    "workspace_max": 1280,
+    "desktop_padding": 32,
+    "mobile_padding": 16,
+    "topbar_approx": 80,
+    "writing_breakpoint": 1000,
+    "teacher_reading_breakpoint": 800
+  },
+  "focus": {
+    "width": 3,
+    "offset": 3
+  },
+  "scope_note": "Các số đo layout là mặc định khởi đầu. Ngoại lệ sản phẩm giữ theo mục 15. Không là CSS để tự phủ toàn hệ thống.",
+  "profiles": {
+    "exam-compact": {
+      "base": 16,
+      "reading-passage": 17,
+      "reading-line-height": 1.78,
+      "question": 16,
+      "choice-ratio": 0.92,
+      "control-ratio": 0.88,
+      "control-min-height": 38,
+      "group-ratio": 1.25,
+      "tool": 12,
+      "submit": 13,
+      "question-button": 12,
+      "question-button-height": 34
+    },
+    "skill-homework": {
+      "base": 18,
+      "prose": 18,
+      "choice": 18,
+      "control": 18,
+      "control-min-height": 44,
+      "workspace-title": 22,
+      "group": 20
+    },
+    "explanation": {
+      "title": 23,
+      "mobile-title": 19,
+      "section": 18,
+      "transcript": 15,
+      "analysis": 14,
+      "metadata": 12
+    }
+  },
+  "input-focus": {
+    "border": "#152B4E",
+    "pointer-ring": "#152B4E18",
+    "keyboard-ring": "#2156A033",
+    "keyboard-width": 3
+  },
+  "rules": {
+    "question-navigation": "Single contiguous row, internal scrolling when necessary",
+    "font-scaling": "Native content roles only; do not scale result, dialog or chrome with the paper",
+    "homework": "Keep repair workflow, replay and 18px learning roles",
+    "background-refresh": "Keep unchanged DOM, scroll, selection, focus, tab and dialog; never disable updates",
+    "scope": "Reading/Listening Homework and Practice; Term/Mini/Substitute K67. Preserve all other consumers."
+  },
+  "icons": {
+    "size": 16,
+    "close_size": 18,
+    "stroke_width": 1.8,
+    "sprite": "shared/master170/icons.svg",
+    "roles": [
+      "notes",
+      "previous",
+      "next",
+      "play",
+      "pause",
+      "rewind",
+      "volume"
+    ],
+    "masks": {
+      "flag": "shared/master170/icons/flag.svg",
+      "close": "shared/master170/icons/close.svg"
+    },
+    "native_audio": "Reuse existing local inline SVG when it has the same semantics; keep native playback handlers."
+  }
+}
