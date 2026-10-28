@@ -32,3 +32,145 @@ body.hw-homework #app>.topbar>.hw-header-actions{grid-column:3;grid-row:1}
 @media(max-width:600px){body.hw-homework #app>.topbar{padding:8px 16px 7px;gap:10px;min-height:58px}body.hw-homework #app>.topbar>h1{font-size:15px;line-height:1.3}body.hw-homework .hw-header-actions{max-width:60px}}
 @media(max-width:980px) and (max-height:550px){.hw-homework .hw-transcript-heading p,.hw-homework .hw-selection-tools>p{display:none}.hw-homework .hw-transcript-heading{padding-top:6px;padding-bottom:6px}.hw-homework .hw-selection-tools{padding-top:6px;padding-bottom:6px}}
 @media(max-width:600px){body.hw-homework .hw-header-actions .hw-homework-badge{font-size:9px;line-height:11px;padding:1px 3px}body.hw-homework .hw-header-actions .text-button{line-height:13px;min-height:20px}}
+
+/* Current Listening typography, scoped to Homework. */
+.hw-homework{--hw-dock-height:100px}
+.hw-homework :is(button,input,select,textarea,summary):focus-visible{outline:3px solid #db0829;outline-offset:3px}
+body.hw-homework #account-menu{position:relative}
+body.hw-homework #account-menu summary{font-size:14px;min-height:44px;display:flex;align-items:center;padding:8px;cursor:pointer}
+body.hw-homework #account-menu .identity-options-body{position:absolute;right:0;top:100%;z-index:80;min-width:220px;padding:12px;background:white;border:1px solid var(--m170-line);border-radius:8px;box-shadow:0 8px 24px #152b4e20}
+body.hw-homework #account-menu button{width:100%;display:block;text-align:left;min-height:44px;font-size:16px;white-space:normal}
+body.hw-homework #account-menu button:disabled{display:none}
+body.hw-homework #readingView .cbt-test-heading{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'title actions' 'controls controls';gap:8px 16px}
+body.hw-homework #readingView .cbt-test-heading>div:first-child{grid-area:title;min-width:0;flex-basis:auto!important}
+body.hw-homework #readingView #section-title{font-size:22px;font-weight:700;line-height:1.3;white-space:normal}
+body.hw-homework #readingView .cbt-toolbar-controls{grid-area:controls;display:flex!important;align-items:center;flex-wrap:wrap;gap:8px;width:100%;max-width:none;min-width:0}
+body.hw-homework #readingView .cbt-part-nav{flex:1 1 auto;max-width:none;gap:6px;flex-wrap:wrap;width:auto;flex-basis:auto!important}
+body.hw-homework .cbt-part-button{white-space:normal;min-height:40px}
+body.hw-homework .cbt-part-button span{font-size:11px}
+body.hw-homework .cbt-text-size{gap:4px}
+body.hw-homework .cbt-text-size strong{font-size:12px;min-width:32px}
+body.hw-homework #readingView .cbt-heading-actions{grid-area:actions;display:flex!important;align-items:center;gap:10px;max-width:none;min-width:0}
+body.hw-homework .cbt-heading-actions .autosave-status{max-width:230px!important;font-size:12px;line-height:1.4}
+body.hw-homework .cbt-tool-button{border-radius:8px;min-height:38px}
+body.hw-homework #readingView .hw-audio-bar{grid-template-columns:40px 52px minmax(160px,1fr) 76px 88px;gap:10px;min-height:66px}
+body.hw-homework #readingView .hw-audio-track .audio-heading{font-size:13px;gap:8px}
+body.hw-homework .hw-audio-track input{height:16px;min-height:16px;margin:2px 0}
+body.hw-homework #audio-status{font-size:14px;line-height:1.5;min-height:0}
+body.hw-homework #audio-status:not([data-state='loading']):not([data-state='error']){display:none}
+body.hw-homework #audio-status[data-state='error']{color:var(--m170-error-fg)}
+body.hw-homework .hw-speed,body.hw-homework .hw-volume{font-size:12px;line-height:1.4}
+body.hw-homework .hw-speed select{min-height:32px;height:auto;width:76px;font-size:14px}
+body.hw-homework .hw-volume input{width:88px;min-height:24px;height:24px}
+body.hw-homework #readingView #content-viewport{--hw-scale:1;--hw-prose:calc(18px * var(--hw-scale));font-size:var(--hw-prose)!important}
+body.hw-homework .hw-exercise{padding:24px 28px;scroll-padding-block:20px}
+body.hw-homework .hw-exercise .hw-group-heading{margin:-24px -28px 22px;padding:20px 24px;background:var(--m170-canvas);border-top:4px solid var(--m170-brand);border-bottom:1px solid var(--m170-line);box-shadow:none;border-radius:10px 10px 0 0}
+body.hw-homework .hw-group-heading h3{display:inline-block;font-size:calc(20px * var(--hw-scale));font-weight:700;line-height:1.4;padding:8px 12px;border-radius:6px;background:var(--m170-structure);color:white;margin:0 0 10px}
+body.hw-homework .hw-group-heading p{font-size:calc(15px * var(--hw-scale));font-weight:400;line-height:1.6;margin:0;color:var(--m170-muted)}
+body.hw-homework .hw-analysis-heading{font-size:1em;line-height:1.4;font-weight:700;color:var(--m170-structure);margin:24px 0 12px}
+body.hw-homework .hw-context-label{font-size:14px;font-weight:600;color:var(--m170-muted);margin:0 0 16px}
+body.hw-homework .mcq-context>p:last-child{font-size:14px}
+body.hw-homework #readingView .cbt-question-heading p{font-size:1em;font-weight:600;line-height:1.6;color:var(--m170-ink)}
+body.hw-homework #readingView .cbt-choice{font-size:1em;font-weight:400;line-height:1.6;color:var(--m170-ink);min-height:48px}
+body.hw-homework .response-choices .cbt-choice{min-width:130px}
+body.hw-homework .slot-heading{gap:8px;margin-bottom:8px}
+body.hw-homework .slot-heading label{font-size:14px}
+body.hw-homework .evidence-row{align-items:center}
+body.hw-homework #readingView :is(.evidence-input,.hw-short-answer){font:inherit;font-size:1em;line-height:1.6;min-height:46px;border-color:var(--m170-control);border-radius:8px;color:var(--m170-ink);scroll-margin-block:20px}
+body.hw-homework .hw-short-answer{min-height:92px!important}
+body.hw-homework .evidence-button{font-size:13px;white-space:normal}
+body.hw-homework .clear-field{font-size:22px;min-width:38px;min-height:44px}
+body.hw-homework .hint{font-size:14px}
+body.hw-homework .dictation-passage{font-size:1em;line-height:2}
+body.hw-homework .dictation-line p{font-size:1em}
+body.hw-homework .speaker{font-size:14px}
+body.hw-homework .inline-blank{width:21ch;margin:5px;max-width:100%}
+body.hw-homework .inline-blank.short{width:18ch}
+body.hw-homework .inline-blank.long{width:24ch}
+body.hw-homework .hw-blank-control{display:flex;align-items:center;gap:4px;min-width:0}
+body.hw-homework #readingView .inline-blank input{font:inherit;font-size:1em;font-weight:600;line-height:1.4;padding:8px 9px;min-height:44px;border:1px solid var(--m170-control);border-radius:8px;background:white;color:var(--m170-ink);width:0;flex:1;min-width:0;margin:0}
+body.hw-homework .hw-blank-control .flag{flex:none}
+body.hw-homework .inline-blank label{font-size:14px;margin:4px 0 0}
+body.hw-homework .hw-dictation-help{font-size:14px}
+body.hw-homework .hw-transcript-heading h2{font-size:1em;font-weight:700}
+body.hw-homework .hw-transcript-heading p{font-size:14px}
+body.hw-homework .hw-selection-tools strong,body.hw-homework .hw-selection-tools p,body.hw-homework .hw-tap-mode{font-size:14px}
+body.hw-homework #selection-preview button{font-size:14px;min-height:44px}
+body.hw-homework #selected-text{font-size:16px}
+body.hw-homework .cue-head{font-size:14px;margin-bottom:8px}
+body.hw-homework .cue-head button{font-size:12px;min-height:38px;padding:6px 8px}
+body.hw-homework .cue p{font-size:1em;line-height:1.75}
+body.hw-homework .cue:is(.current,.context-cue){background:var(--m170-selected-bg,#edf1f7)}
+body.hw-homework .cbt-review-bar{font-size:12px}
+body.hw-homework #sample-feedback{font-size:12px;min-height:38px}
+body.hw-homework .hw-toast{bottom:calc(var(--hw-dock-height) + 44px);font-size:14px}
+body.hw-homework #explanation-dialog :is(.explanation-dialog-passage-scroll,.explanation-dialog-detail-scroll){font-size:18px;line-height:1.65;color:var(--m170-ink)}
+body.hw-homework .hw-review-quote{font-size:18px;line-height:1.65}
+body.hw-homework .hw-review-caption{font-size:15px}
+body.hw-homework #explanation-dialog[data-feedback-status='correct'] .hw-review-status{color:var(--m170-success-fg)}
+body.hw-homework #history-dialog{width:min(900px,calc(100vw - 32px));max-height:90dvh}
+body.hw-homework .explanation-dialog-header h2{font-size:22px}
+body.hw-homework .explanation-dialog-close{width:44px;height:44px;flex:none;border-color:var(--m170-control);border-radius:8px}
+body.hw-homework .cbt-note-panel{width:min(390px,calc(100vw - 24px))}
+body.hw-homework #notes{font-size:18px;line-height:1.65}
+@media(max-width:980px){
+ body.hw-homework #app:has(#readingView:not([hidden])){height:auto;min-height:100dvh;overflow:visible;padding-bottom:calc(var(--hw-dock-height) + 48px)}
+ body.hw-homework #work-area{flex:none;min-height:0}
+ body.hw-homework #work-area>#lesson{flex:none;min-height:0;height:auto}
+ body.hw-homework #lesson>#readingView{height:auto;max-height:none;min-height:0;padding-bottom:0}
+ body.hw-homework #readingView #content-viewport{height:clamp(440px,62svh,700px);flex:none;max-height:none}
+ body.hw-homework #workspace{height:100%}
+ body.hw-homework .hw-exercise{padding:20px 16px}
+ body.hw-homework .hw-exercise .hw-group-heading{margin:-20px -16px 20px;padding:16px}
+ body.hw-homework #return-exercise{font-size:13px;min-height:44px}
+ body.hw-homework #context-task:not([hidden]){font-size:14px}
+ body.hw-homework #context-task p{font-size:15px}
+ body.hw-homework .cbt-question-nav{grid-template-columns:repeat(22,38px);gap:5px}
+ body.hw-homework .cbt-question-button{min-height:38px}
+ body.hw-homework #readingView .hw-audio-bar{grid-template-columns:40px 48px minmax(80px,1fr) 66px;padding:8px 12px;gap:8px;min-height:66px}
+ body.hw-homework .hw-speed select{width:66px;min-height:38px}
+ body.hw-homework :is(.hw-back,.hw-play,.cbt-text-size button,#notes-button,.evidence-button){min-height:44px}
+}
+@media(max-width:600px){
+ body.hw-homework .hw-header-actions{max-width:none}
+ body.hw-homework #account-menu summary{font-size:12px;padding:4px}
+ body.hw-homework #readingView .cbt-test-heading{grid-template-columns:110px 50px minmax(0,1fr);grid-template-areas:none;gap:8px}
+ body.hw-homework #readingView .cbt-test-heading>div:first-child{grid-area:1/1/2/3}
+ body.hw-homework #readingView .cbt-toolbar-controls,body.hw-homework #readingView .cbt-heading-actions{display:contents!important}
+ body.hw-homework #readingView .cbt-part-nav{grid-area:2/1/3/-1;display:flex;flex-wrap:nowrap;width:100%}
+ body.hw-homework .cbt-part-button{flex:1;min-width:0;font-size:12px!important;padding:6px!important;min-height:44px}
+ body.hw-homework .cbt-text-size{grid-area:3/1/4/2;gap:0}
+ body.hw-homework .cbt-text-size button{min-width:34px;padding:4px}
+ body.hw-homework #notes-button{grid-area:3/2/4/3;padding:6px}
+ body.hw-homework #progress{grid-area:1/3/2/4;justify-self:end;align-self:center;font-size:11px}
+ body.hw-homework .cbt-heading-submit{grid-area:3/3/4/4;justify-self:end;white-space:normal;max-width:100%;min-height:44px}
+body.hw-homework .cbt-heading-actions .autosave-status{grid-area:4/1/5/-1;max-width:none!important;font-size:12px}
+ body.hw-homework .inline-blank{margin-left:0}
+ body.hw-homework .evidence-button{max-width:132px;font-size:12px}
+ body.hw-homework .hw-selection-tools>p{display:none}
+ body.hw-homework #selection-preview p{display:block}
+}
+/* Override native mobile grid coordinates after flattening the toolbar wrappers. */
+.hw-homework .hw-submit-compact{display:none}
+@media(max-width:600px){
+ body.hw-homework #readingView .cbt-text-size{grid-area:3/1/4/2}
+ body.hw-homework #readingView #notes-button{grid-area:3/2/4/3}
+ body.hw-homework #readingView #progress{grid-area:1/3/2/4;justify-self:end}
+ body.hw-homework #readingView #next{grid-area:3/3/4/4;width:auto;margin:0;max-width:100%}
+ body.hw-homework #readingView #save-status{grid-area:4/1/5/-1;max-width:none!important;text-align:left;margin:0}
+ body.hw-homework .hw-submit-wide{display:none}
+ body.hw-homework .hw-submit-compact{display:inline}
+ body.hw-homework .cbt-review-bar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 8px}
+ body.hw-homework #review-count{grid-column:1;grid-row:1}
+ body.hw-homework #flag-summary{grid-column:1;grid-row:2}
+ body.hw-homework #flag-summary:empty{display:none}
+ body.hw-homework #sample-feedback{grid-column:2;grid-row:1/3;margin:0;min-height:44px}
+ body.hw-homework #submit{grid-column:3;grid-row:1/3;min-height:44px}
+}
+@media(min-width:981px) and (max-height:760px){
+ body.hw-homework #app:has(#readingView:not([hidden])){height:auto;min-height:100dvh;overflow:visible;padding-bottom:calc(var(--hw-dock-height) + 48px)}
+ body.hw-homework #work-area,body.hw-homework #work-area>#lesson{flex:none;min-height:0;height:auto}
+ body.hw-homework #lesson>#readingView{height:auto;max-height:none;min-height:0;padding-bottom:0}
+ body.hw-homework #readingView #content-viewport{height:480px;flex:none;max-height:none}
+ body.hw-homework .hw-question-dock{position:fixed;bottom:28px;left:21px;right:21px;width:auto;z-index:30;box-sizing:border-box;border:1px solid var(--m170-line)}
+}

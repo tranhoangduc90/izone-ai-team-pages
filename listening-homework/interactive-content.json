@@ -6,19 +6,19 @@
     {
       "id": "D1",
       "group": "dictation",
-      "question": "Điền đúng 3 từ vào ô D1: the one on Scandinavian literature that’s running at the moment [D1] by more [D2] courses.",
+      "question": "Điền đúng 3 từ vào ô Mục 1: the one on Scandinavian literature that’s running at the moment [Mục 1] by more [Mục 2] courses.",
       "displayNumber": 1
     },
     {
       "id": "D2",
       "group": "dictation",
-      "question": "Điền đúng 1 từ vào ô D2: ... will be replaced by more [D2] courses.",
+      "question": "Điền đúng 1 từ vào ô Mục 2: ... will be replaced by more [Mục 2] courses.",
       "displayNumber": 2
     },
     {
       "id": "D3",
       "group": "dictation",
-      "question": "Điền đúng 4 từ vào ô D3: there’s going to be a course on that [D3].",
+      "question": "Điền đúng 4 từ vào ô Mục 3: there’s going to be a course on that [Mục 3].",
       "displayNumber": 3
     },
     {

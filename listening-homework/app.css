@@ -2,3 +2,59 @@
 .hw-homework #work-area{display:flex;flex:1;flex-direction:column;min-height:0}.hw-homework #lesson{flex:1;min-height:0;margin-top:6px}.hw-homework .hw-identity{display:flex;gap:12px;align-items:center;padding:4px 20px;font-size:12px;color:var(--lab-primary)}.hw-homework #readonly{font-weight:700}.hw-homework .access{width:min(480px,calc(100% - 32px));margin:36px auto;padding:24px;background:white;border:1px solid var(--lab-line);border-radius:10px}.hw-homework .access h2{font-size:23px;margin:0 0 12px}.hw-homework .access p{font-size:14px}.hw-homework .access form{display:flex;flex-direction:column;gap:14px}.hw-homework .access label{display:flex;flex-direction:column;gap:6px;font-size:14px}.hw-homework .access select{width:100%;min-height:44px}.hw-homework .access .check{flex-direction:row;align-items:center;font-size:13px}.hw-homework .access .check input{width:17px;min-height:17px;margin:0}.hw-homework .hw-runtime-status{padding:0 20px;font-size:12px;line-height:1.5}.hw-homework .hw-runtime-status p{margin:2px 0}.hw-homework .hw-runtime-status p:empty{display:none}.hw-homework .error-text,.hw-homework #global-error{color:#9f1239}.hw-homework .fixture{padding:6px 20px;background:#fff8e8;font-size:12px}.hw-homework .hw-teacher-pick{display:flex;gap:12px;padding:8px 20px}.hw-homework .hw-teacher-pick label{font-size:12px;flex:1;display:flex;align-items:center;gap:8px}.hw-homework .hw-teacher-pick select{min-width:0;width:100%}.hw-homework .hw-feedback{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--lab-primary)}.hw-homework .hw-feedback:empty{display:none}.hw-homework .hw-feedback.partial,.hw-homework .hw-feedback.incorrect{border-left:3px solid var(--lab-edge);padding-left:10px}.hw-homework .hw-feedback button{font-size:12px}.hw-homework #submit{font-size:12px;min-height:32px}.hw-homework .hw-history-scroll{padding:16px 24px;overflow:auto;max-height:70dvh}.hw-homework .hw-history-actions{display:flex;gap:12px;flex-wrap:wrap}.hw-homework .history-entry{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--lab-line);font-size:14px}.hw-homework .history-entry small{display:block;color:var(--lab-hint)}.hw-homework .history-response,.hw-homework .hw-legacy-original p{white-space:pre-wrap}.hw-homework #history-detail .item h3{font-size:16px}.hw-homework .feedback{font-size:14px}.hw-homework .hw-legacy>p,.hw-homework .hw-legacy-original{font-size:12px;color:var(--lab-hint)}.hw-homework .hw-legacy button{margin-top:8px;font-size:12px}
 body.hw-homework #work-area>#lesson{display:flex;flex-direction:column;flex:1;min-height:0}body.hw-homework #lesson>#readingView{flex:1;min-height:0;height:100%;max-height:100%}
 @media(max-width:980px){.hw-homework .hw-identity,.hw-homework .hw-runtime-status{padding-left:12px;padding-right:12px}.hw-homework #work-area{min-height:900px}.hw-homework .hw-header-actions{max-width:90px}.hw-homework .hw-header-actions button{white-space:normal}.hw-homework .hw-teacher-pick{flex-direction:column}.hw-homework .hw-history-scroll{padding:12px 16px}.hw-homework .cbt-review-bar{flex-wrap:wrap}.hw-homework #submit{font-size:11px}.hw-homework .hw-question-dock{padding-top:6px}.hw-homework #sample-feedback{margin-left:auto}}
+
+/* Entry and durable states use the same roles as native Listening. */
+body.hw-homework #app:has(#access:not([hidden])){height:auto;min-height:calc(100dvh - 28px);overflow:visible}
+.hw-homework .hw-entry-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:80px;align-items:start;width:min(1160px,calc(100% - 64px));margin:64px auto}
+.hw-homework .hw-entry-intro{padding-top:30px}
+.hw-homework .hw-entry-intro h1{font-size:28px;font-weight:700;line-height:1.3;color:var(--m170-structure);margin:14px 0 20px}
+.hw-homework .hw-entry-lead{font-size:18px;line-height:1.65;color:var(--m170-muted);margin:0 0 32px}
+.hw-homework .hw-entry-steps{list-style:none;padding:0;margin:0}
+.hw-homework .hw-entry-steps li{display:flex;gap:20px;padding:18px 0;border-top:1px solid var(--m170-line)}
+.hw-homework .hw-entry-steps li>span{font-size:14px;color:var(--m170-brand);padding-top:2px}
+.hw-homework .hw-entry-steps strong{font-size:16px;font-weight:600;color:var(--m170-ink)}
+.hw-homework .hw-entry-steps p{font-size:14px;line-height:1.6;color:var(--m170-muted);margin:4px 0 0}
+body.hw-homework .access{width:100%;margin:0;padding:32px;border-radius:12px}
+body.hw-homework .access h2{font-size:22px;line-height:1.3}
+body.hw-homework .access p{font-size:16px;line-height:1.5}
+body.hw-homework .access form{gap:16px}
+body.hw-homework .access label{gap:8px;font-size:14px}
+body.hw-homework .access select{min-height:50px;font-size:16px;font-weight:400}
+body.hw-homework .access .check{font-size:14px}
+body.hw-homework .access .check input{width:18px;min-height:18px}
+body.hw-homework .access .hw-remember-help{font-size:14px;color:var(--m170-muted);line-height:1.5;margin:-4px 0 2px;padding-left:26px}
+body.hw-homework #entry-submit{min-height:44px;font-size:16px}
+body.hw-homework .hw-identity{font-size:14px;flex-wrap:wrap}
+body.hw-homework #readonly{background:var(--m170-pending-bg);padding:3px 10px;border-radius:999px}
+body.hw-homework .hw-runtime-status{font-size:14px}
+body.hw-homework .error-text,body.hw-homework #global-error{color:var(--m170-error-fg)}
+body.hw-homework #global-error{background:var(--m170-error-bg);padding:12px 20px}
+body.hw-homework .fixture{background:var(--m170-attention-bg);font-size:14px;color:var(--m170-attention-fg)}
+body.hw-homework .hw-teacher-pick{gap:16px;padding:12px 20px}
+body.hw-homework .hw-teacher-pick label{font-size:14px}
+body.hw-homework .hw-teacher-pick select{min-height:44px;font-size:16px}
+body.hw-homework .hw-feedback{font-size:14px;line-height:1.5}
+body.hw-homework .hw-feedback:is(.partial,.incorrect){border-color:var(--m170-attention-fg);color:var(--m170-attention-fg)}
+body.hw-homework .hw-feedback.correct{color:var(--m170-success-fg)}
+body.hw-homework .hw-feedback button{font-size:13px}
+body.hw-homework .inline-blank .hw-feedback{flex-direction:column;align-items:flex-start;margin-top:6px;gap:4px}
+body.hw-homework #submit{font-size:13px;min-height:38px}
+body.hw-homework .hw-history-scroll{padding:20px 24px;max-height:72dvh}
+body.hw-homework .hw-history-actions button{min-height:44px;font-size:16px}
+body.hw-homework #new-run{color:var(--m170-error-fg)}
+body.hw-homework .history-entry{gap:16px;padding:18px 0;font-size:16px;line-height:1.5}
+body.hw-homework .history-entry small{font-size:14px;margin-top:4px}
+body.hw-homework .history-entry button{min-height:44px;font-size:14px}
+body.hw-homework .history-response,body.hw-homework .hw-legacy-original p{overflow-wrap:anywhere}
+body.hw-homework #history-detail .item h3{font-size:18px;line-height:1.6}
+body.hw-homework #history-detail .history-response,body.hw-homework .feedback{font-size:18px;line-height:1.65}
+body.hw-homework .hw-legacy>p,body.hw-homework .hw-legacy-original{font-size:14px}
+body.hw-homework .hw-legacy button{font-size:14px}
+@media(max-width:800px){
+ .hw-homework .hw-entry-layout{grid-template-columns:minmax(0,1fr);width:calc(100% - 32px);gap:28px;margin:24px auto 48px}
+ .hw-homework .hw-entry-intro{padding:0}
+ .hw-homework .hw-entry-intro h1{font-size:26px}
+ .hw-homework .hw-entry-lead{margin-bottom:20px}
+ body.hw-homework .access{padding:24px}
+ body.hw-homework .history-entry{flex-wrap:wrap}
+}
