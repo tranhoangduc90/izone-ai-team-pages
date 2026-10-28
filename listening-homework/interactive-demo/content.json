@@ -1,0 +1,320 @@
+{
+  "code": "67-listening-scandinavian-studies",
+  "version": "lesson2-v2-20261027",
+  "title": "Scandinavian Studies",
+  "items": [
+    {
+      "id": "D1",
+      "group": "dictation",
+      "question": "Điền đúng 3 từ vào ô D1: the one on Scandinavian literature that’s running at the moment [D1] by more [D2] courses."
+    },
+    {
+      "id": "D2",
+      "group": "dictation",
+      "question": "Điền đúng 1 từ vào ô D2: ... will be replaced by more [D2] courses."
+    },
+    {
+      "id": "D3",
+      "group": "dictation",
+      "question": "Điền đúng 4 từ vào ô D3: there’s going to be a course on that [D3]."
+    },
+    {
+      "id": "S1",
+      "group": "q24_open",
+      "question": "Trong câu 24, cụm “They agree” yêu cầu đáp án thể hiện ý kiến riêng của một người hay lựa chọn cuối cùng được cả James và Beth đồng ý?"
+    },
+    {
+      "id": "S2",
+      "group": "q24_open",
+      "question": "Trong lời Beth mở đầu đoạn về literature paper, trích mệnh đề xác định đây là bài viết James phải làm. Không chép cả câu."
+    },
+    {
+      "id": "S3",
+      "group": "q24_open",
+      "question": "Trong cùng câu của Beth, trích cụm chỉ thời gian liên hệ với “this term” ở câu 24 trong ngữ cảnh này."
+    },
+    {
+      "id": "S4",
+      "group": "q24_sagas",
+      "question": "Trích 3 cụm trong lời Beth khi nói về Icelandic sagas: (a) mở lời nêu vướng mắc; (b) đánh giá mức độ khó; (c) đề nghị để chủ đề này sang dịp khác."
+    },
+    {
+      "id": "S5",
+      "group": "q24_sagas",
+      "question": "Beth có đồng ý để James chọn Icelandic sagas cho literature paper lần này không?"
+    },
+    {
+      "id": "S6",
+      "group": "q24_choice",
+      "question": "Beth gợi ý modern novels hoặc nineteenth century playwrights. Trong câu đáp của James, trích đúng 1 từ cho biết anh ấy đang nghiêng về lựa chọn thứ hai."
+    },
+    {
+      "id": "S7",
+      "group": "q24_choice",
+      "question": "Trong câu đáp của James, trích cụm thể hiện anh ấy đánh giá lựa chọn vừa nhắc đến là một ý hay."
+    },
+    {
+      "id": "S8",
+      "group": "q24_choice",
+      "question": "Beth có đồng ý với lựa chọn vừa được James nhắc đến không? Trích đúng 1 từ trong câu chốt của Beth thể hiện thái độ đó."
+    },
+    {
+      "id": "S9",
+      "group": "q25_aim",
+      "question": "Trong câu hỏi “So what would you advise me to aim at in the paper?” của James, trích đúng 1 động từ liên hệ với “recommends” ở câu 25."
+    },
+    {
+      "id": "S10",
+      "group": "q25_aim",
+      "question": "Câu hỏi “what would you advise me to aim at in the paper?” và câu 25 “Beth recommends that James’s paper should be …” cùng muốn làm rõ điều gì về bài viết? Trả lời ngắn bằng tiếng Việt."
+    },
+    {
+      "id": "S11",
+      "group": "q25_writer",
+      "question": "Trong lời Beth về việc chỉ chọn một tác giả, trích cụm diễn tả phân tích rất sâu, tương ứng với “in-depth analysis” ở phương án B của câu 25."
+    },
+    {
+      "id": "S12",
+      "group": "q25_writer",
+      "question": "Trong cùng lời Beth, trích đúng 1 từ tương ứng với “single” ở cụm “a single writer”."
+    },
+    {
+      "id": "S13",
+      "group": "q25_writer",
+      "question": "Trong câu “That approach certainly has its place”, “That approach” chỉ cách làm nào Beth vừa nhắc đến? Có thể trích tiếng Anh hoặc giải thích ngắn bằng tiếng Việt."
+    },
+    {
+      "id": "S14",
+      "group": "q25_context",
+      "question": "Trong lời Beth chuyển sang cách tiếp cận văn học trong bối cảnh xã hội, trích cụm có nghĩa tìm hiểu, liên hệ với “a study of” ở phương án C."
+    },
+    {
+      "id": "S15",
+      "group": "q25_context",
+      "question": "Trong cùng lời Beth, trích cụm tương ứng với “the social background” ở phương án C."
+    },
+    {
+      "id": "S16",
+      "group": "q25_context",
+      "question": "Các chi tiết “who it was written for, how it was published, and so on” đang làm rõ ý nào trong lời Beth? Nêu mối liên hệ bằng tiếng Việt."
+    },
+    {
+      "id": "S17",
+      "group": "q25_context",
+      "question": "Beth có ưu tiên cách tiếp cận ở phương án C, tìm hiểu bối cảnh xã hội của văn học, cho bài viết này không? Trích cụm cho thấy sự ưu tiên đó."
+    },
+    {
+      "id": "S18",
+      "group": "q25_comparison",
+      "question": "Trong riêng câu của Beth “I also think that’s more fruitful than placing it within the history of the genre”, “that” chỉ cách tiếp cận nào? Giải thích ngắn bằng tiếng Việt hoặc trích tiếng Anh."
+    },
+    {
+      "id": "S19",
+      "group": "q25_comparison",
+      "question": "Trong phép so sánh vừa rồi, Beth đánh giá phương án C hay phương án A, a historical overview of the genre, hiệu quả hơn cho bài viết này? Trích phần câu thể hiện so sánh."
+    }
+  ],
+  "groups": [
+    {
+      "id": "dictation",
+      "title": "1. Nghe và điền từ",
+      "start": 156,
+      "end": 182.62
+    },
+    {
+      "id": "q24_open",
+      "title": "2. Đọc đúng yêu cầu câu 24",
+      "start": 182.62,
+      "end": 218.12
+    },
+    {
+      "id": "q24_sagas",
+      "title": "3. Nhận ra hướng bị hoãn",
+      "start": 193.3,
+      "end": 204.2
+    },
+    {
+      "id": "q24_choice",
+      "title": "4. Theo dõi lựa chọn chung",
+      "start": 205.0,
+      "end": 218.12
+    },
+    {
+      "id": "q25_aim",
+      "title": "5. Hiểu trọng tâm câu 25",
+      "start": 218.46,
+      "end": 222.2
+    },
+    {
+      "id": "q25_writer",
+      "title": "6. Theo dõi cách tiếp cận B",
+      "start": 223.4,
+      "end": 230.0
+    },
+    {
+      "id": "q25_context",
+      "title": "7. Hiểu cách tiếp cận C",
+      "start": 229.5,
+      "end": 240.56
+    },
+    {
+      "id": "q25_comparison",
+      "title": "8. Nhận ra phép so sánh",
+      "start": 229.5,
+      "end": 246.96
+    }
+  ],
+  "questions": [
+    {
+      "number": 24,
+      "stem": "They agree that James’s literature paper this term should be on",
+      "options": {
+        "A": "nineteenth century playwrights.",
+        "B": "the Icelandic sagas.",
+        "C": "modern novels."
+      }
+    },
+    {
+      "number": 25,
+      "stem": "Beth recommends that James’s paper should be",
+      "options": {
+        "A": "a historical overview of the genre.",
+        "B": "an in-depth analysis of a single writer.",
+        "C": "a study of the social background to the literature."
+      }
+    }
+  ],
+  "transcript": [
+    {
+      "id": "cue-0",
+      "start": 156,
+      "end": 161.1,
+      "speaker": "Beth",
+      "text": "OK. Now how are you finding the courses you’re taking this term, James?"
+    },
+    {
+      "id": "cue-1",
+      "start": 161.1,
+      "end": 164.55,
+      "speaker": "James",
+      "text": "Well, I’m really enjoying the one on Swedish cinema."
+    },
+    {
+      "id": "cue-2",
+      "start": 164.55,
+      "end": 173.02,
+      "speaker": "Beth",
+      "text": "That’ll continue next term, but the one on Scandinavian literature that’s running at the moment will be replaced by more specialised courses."
+    },
+    {
+      "id": "cue-3",
+      "start": 173.02,
+      "end": 181.65,
+      "speaker": "Beth",
+      "text": "Oh, and by the way, if you’re interested in watching Danish television programmes, there’s going to be a course on that the term after next."
+    },
+    {
+      "id": "cue-4",
+      "start": 181.65,
+      "end": 182.62,
+      "speaker": "James",
+      "text": "That sounds good."
+    },
+    {
+      "id": "cue-5",
+      "start": 182.62,
+      "end": 187.82,
+      "speaker": "Beth",
+      "text": "Have you started thinking about the literature paper that you have to write in the next few weeks?"
+    },
+    {
+      "id": "cue-6",
+      "start": 187.82,
+      "end": 192.8,
+      "speaker": "James",
+      "text": "Yes, my first choice would be to do something on the Icelandic sagas."
+    },
+    {
+      "id": "cue-7",
+      "start": 192.8,
+      "end": 204.1,
+      "speaker": "Beth",
+      "text": "Hmm. The trouble with that is that a lot of people choose that topic, and it can be difficult to get hold of the books you’ll need. Why not leave that for another time?"
+    },
+    {
+      "id": "cue-8",
+      "start": 204.1,
+      "end": 205.05,
+      "speaker": "James",
+      "text": "Right."
+    },
+    {
+      "id": "cue-9",
+      "start": 205.05,
+      "end": 209.15,
+      "speaker": "Beth",
+      "text": "You might find modern novels or nineteenth century playwrights interesting."
+    },
+    {
+      "id": "cue-10",
+      "start": 209.15,
+      "end": 215.15,
+      "speaker": "James",
+      "text": "I’ve read or seen several plays in translation, so that would be a good idea."
+    },
+    {
+      "id": "cue-11",
+      "start": 215.15,
+      "end": 218.12,
+      "speaker": "Beth",
+      "text": "Fine. I’ll put you down for that topic."
+    },
+    {
+      "id": "cue-12",
+      "start": 218.46,
+      "end": 222.12,
+      "speaker": "James",
+      "text": "Right. So what would you advise me to aim at in the paper?"
+    },
+    {
+      "id": "cue-13",
+      "start": 222.12,
+      "end": 227.1,
+      "speaker": "Beth",
+      "text": "First I suggest you avoid taking one writer and going into a great deal of detail."
+    },
+    {
+      "id": "cue-14",
+      "start": 227.1,
+      "end": 236.65,
+      "speaker": "Beth",
+      "text": "That approach certainly has its place, but I think you first need to get an understanding of the literature in the context of the society in which it was produced"
+    },
+    {
+      "id": "cue-15",
+      "start": 236.65,
+      "end": 240.5,
+      "speaker": "Beth",
+      "text": "— who it was written for, how it was published, and so on."
+    },
+    {
+      "id": "cue-16",
+      "start": 240.5,
+      "end": 245.08,
+      "speaker": "Beth",
+      "text": "I also think that’s more fruitful than placing it within the history of the genre."
+    },
+    {
+      "id": "cue-17",
+      "start": 245.08,
+      "end": 246.96,
+      "speaker": "James",
+      "text": "OK, that sounds reasonable."
+    }
+  ],
+  "transcriptScope": {
+    "start": 156,
+    "end": 246.96,
+    "label": "Phần luyện tập · 02:36–04:07"
+  }
+}

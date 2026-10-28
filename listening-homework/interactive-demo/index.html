@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="robots" content="noindex,nofollow"><title>Scandinavian Studies · Demo tương tác</title>
+ <link rel="icon" href="data:,"><link rel="stylesheet" href="style.css">
+</head>
+<body>
+ <a class="skip" href="#exercise">Đến phần bài tập</a>
+ <header class="page-header">
+  <div class="brand" aria-label="IZONE">I<span>Z</span>ONE<span class="brand-divider"></span><small>LISTENING HOMEWORK</small></div>
+  <span class="demo-tag">BẢN DEMO</span>
+ </header>
+ <main>
+  <div class="intro"><div><p class="eyebrow">NGHE · NHẬN DIỆN · ĐỐI CHIẾU</p><h1>Scandinavian Studies</h1><p>Nghe lại, chọn dẫn chứng và tự hoàn thiện câu trả lời.</p></div><div class="draft-state"><span id="save-status" role="status">Đang mở bản thử…</span><button id="history-button" class="text-button">Lịch sử thử</button></div></div>
+  <p class="demo-note">Bạn đang xem bản thử giao diện. Nháp chỉ giữ trên thiết bị này; nút góp ý dùng một tình huống minh họa.</p>
+  <div id="load-error" class="notice" role="alert" hidden></div>
+  <div id="app" hidden>
+   <nav class="chapters" aria-label="Các phần luyện tập">
+    <button data-chapter="0" aria-current="step"><span class="step-number">1</span><span>Nghe & điền từ<small>D1–D3</small></span><span class="chapter-count" id="count-0">0/3</span></button>
+    <button data-chapter="1"><span class="step-number">2</span><span>Phân tích câu 24<small>S1–S8</small></span><span class="chapter-count" id="count-1">0/8</span></button>
+    <button data-chapter="2"><span class="step-number">3</span><span>Phân tích câu 25<small>S9–S19</small></span><span class="chapter-count" id="count-2">0/11</span></button>
+   </nav>
+   <section class="audio-bar" aria-label="Điều khiển audio">
+    <button id="play" class="play-button" aria-label="Phát đoạn đang luyện"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg></button>
+    <button id="back" class="icon-button" aria-label="Lùi 5 giây">−5s</button>
+    <div class="audio-track"><div class="audio-title"><strong id="audio-label">Nghe & điền từ</strong><span id="time">02:36 / 03:03</span></div><input id="seek" type="range" min="156" max="182.62" step="0.1" value="156" aria-label="Vị trí trong đoạn audio"><p id="audio-status" role="status">Bấm phát để nghe đoạn đang luyện.</p></div>
+    <label class="speed-label"><span>Tốc độ</span><select id="speed" aria-label="Tốc độ audio"><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select></label>
+    <label class="volume-label"><span>Âm lượng</span><input id="volume" type="range" min="0" max="1" value="0.8" step="0.1" aria-label="Âm lượng"></label>
+    <button id="whole-audio" class="quiet-button">Nghe toàn bài</button><button id="fallback" class="quiet-button" hidden>Thử nguồn dự phòng</button>
+    <audio id="audio" preload="metadata"></audio>
+   </section>
+   <div class="workspace-tools"><span id="chapter-description"></span><button id="transcript-toggle" class="quiet-button transcript-toggle" aria-expanded="false" aria-controls="transcript-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"/></svg><span>Xem transcript</span></button></div>
+   <div class="workspace" id="workspace">
+    <section id="exercise" class="exercise" aria-label="Bài tập" tabindex="-1"><div id="exercise-content"></div></section>
+    <aside id="transcript-panel" class="transcript-panel" hidden aria-labelledby="transcript-title">
+     <div class="transcript-heading"><div><p class="eyebrow">NGHE VÀ ĐỐI CHIẾU</p><h2 id="transcript-title">Transcript</h2><p id="transcript-scope">Phần luyện tập · 02:36–04:07</p></div><button id="close-transcript" class="icon-button" aria-label="Đóng transcript">×</button></div>
+     <div class="selection-tools" id="selection-tools"><div><strong id="selection-target">Chọn một ô dẫn chứng bên bài tập</strong><p id="selection-help">Bôi đen cụm từ rồi bấm “Dùng đoạn này”. Trên điện thoại, bật chọn bằng chạm.</p></div><label class="tap-mode"><input id="tap-mode" type="checkbox"> Chọn bằng chạm</label><div id="selection-preview" hidden><p id="selected-text"></p><button id="use-selection" class="primary small">Dùng đoạn này</button><button id="clear-selection" class="text-button">Bỏ chọn</button></div></div>
+     <div id="transcript-cues"></div>
+    </aside>
+   </div>
+   <footer class="work-footer"><div class="progress-block"><strong id="progress">0/22 mục đã điền</strong><span>Chấm theo ý nghĩa; bạn có thể sửa và nộp lại.</span></div><div class="footer-actions"><button id="sample-feedback" class="quiet-button">Xem góp ý mẫu</button><button id="next" class="primary">Sang câu 24 <span aria-hidden="true">→</span></button></div></footer>
+   <details class="question-map"><summary>Đi đến mục <span id="flag-summary"></span></summary><div id="question-map" aria-label="Đi đến từng mục"></div><p>Viền nét đứt: đã đánh dấu để xem lại. Dấu chấm: đã điền, chưa phải kết quả chấm.</p></details>
+  </div>
+ </main>
+ <dialog id="review-dialog" aria-labelledby="review-title"><div class="dialog-header"><div><p class="eyebrow">ĐỐI CHIẾU VÀ SỬA BÀI</p><h2 id="review-title">Góp ý minh họa · S4</h2></div><button id="close-review" class="icon-button" aria-label="Đóng góp ý">×</button></div><div id="review-content"></div></dialog>
+ <dialog id="history-dialog" aria-labelledby="history-title"><div class="dialog-header"><h2 id="history-title">Lịch sử thử trên thiết bị</h2><button id="close-history" class="icon-button" aria-label="Đóng lịch sử">×</button></div><div id="history-content"></div></dialog>
+ <div class="toast" id="toast" role="status" hidden></div>
+ <script type="module" src="app.mjs"></script>
+</body>
+</html>
