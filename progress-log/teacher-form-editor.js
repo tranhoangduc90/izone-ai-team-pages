@@ -8,7 +8,7 @@ import {createDocsBatchImporter} from './docs-batch-import.js?rev=20261025-docs-
 import {PART_TYPES,PART_SKILLS,selectedLimit,preparePartItem,missingSkills} from './authoring-parts.js?rev=20261028-the15-v1';
 import {editorItemKind} from './item-kind.js?rev=20261028-the15-v1';
 import {changeQuestionKind,incompleteAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
-import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261028-the15-v1';
+import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261028-the16-v1';
 import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261028-v1';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
@@ -72,16 +72,28 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   let classes=[],assignments=[],draft=null,dirty=false,busy=false,backgroundBusy=false,generation=0,reviewMode=false,
     publishOperationId=null,conflict=null,importPreview=null,importText='',docsUrl='',importOpen=false,aiPopupOpen=false,importTargetBlockId=null,list=[];
   const lockedControls=new Map(),librarySaves=new Map(),publishedByDraft=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false,docsBatch;
-  let gapWidgets=[];
+  let gapWidgets=[],thuyActionButtons,backgroundCompletion,queuedForeground=false;
+  const skillErrors=new Set();
+  function checkSkills({focus=true}={}) {
+    const positions=missingSkills(draft.definition);if(!positions.length)return;
+    for(const item of draft.definition.blocks.flatMap(b=>b.items))if(positions.includes(item.position)){
+      skillErrors.add(item.itemVersionId);
+      const card=editor.querySelector('[data-question="'+item.itemVersionId+'"]'),select=card?.querySelector('select[aria-label="Kỹ năng câu '+item.position+'"]'),error=card?.querySelector('.thuy-skill-error');
+      select?.setAttribute('aria-invalid','true');if(error)error.hidden=false;
+    }
+    if(focus)requestAnimationFrame(()=>{const select=editor.querySelector('select[aria-invalid=true]');select?.focus({preventScroll:true});select?.scrollIntoView({block:'center'});});
+    const error=Error('Chọn kỹ năng ở câu được đánh dấu.');error.editorValidation=true;throw error;
+  }
   function removeItemKeys(id){for(const name of ['items','explanations','referenceAnswers','referenceAnswersBySlot','authoringState','savedExerciseKeys','importReviews','importSources'])delete draft.gradingKey[name]?.[id];}
   function checkAnswerRows(){const first=draft&&incompleteAnswerRows(draft.gradingKey)[0];if(!first)return;
     requestAnimationFrame(()=>{const input=editor.querySelector('[data-answer-row="'+first.rowId+'"]');input?.focus();input?.setAttribute('aria-invalid','true');const error=input?.parentElement.querySelector('.thuy-answer-error');if(error)error.hidden=false;});
     throw Error('Câu '+draft.definition.blocks.flatMap(b=>b.items).find(i=>i.itemVersionId===first.itemId)?.position+': hãy nhập đáp án hoặc bỏ ô đáp án còn trống.');
   }
-  const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
+  const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),saveState=el('small','',{className:'thuy-editor-save-state'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
   const assignmentDialog=createAssignmentDialog({request,getClasses:()=>classes,getPreferredClass:()=>classSelect.value,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
-  const notice=message=>{status.textContent=message;if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}};
+  const notice=message=>{status.textContent=message;if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}if(libraryEnabled)paintSaveState();};
+  function paintSaveState(){saveState.textContent=!draft?'':busy?(backgroundBusy?'Đang lưu…':'Đang xử lý…'):saveFailed?'Lưu lỗi':draft.status==='published'?'Đã xuất bản':dirty?'Chưa lưu':'Đã lưu';}
   function field(parent,label,value,onChange,{kind='text',options=null,min,max,disabled=false}={}) {
     const wrap=el('label',undefined,{className:'field'});wrap.append(el('span',label));
     const input=options?el('select'):el(kind==='textarea'?'textarea':'input');
@@ -93,7 +105,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     input.addEventListener(options||kind==='checkbox'?'change':'input',()=>{onChange(kind==='checkbox'?input.checked:kind==='number'?Number(input.value):input.value);markDirty();});
     wrap.append(input);parent.append(wrap);return input;
   }
-  function markDirty() {dirty=true;importPreview=null;notice('Có thay đổi chưa lưu. Đáp án đang giữ trong phiên này.');
+  function markDirty() {dirty=true;importPreview=null;notice(libraryEnabled?'Có thay đổi chưa lưu.':'Có thay đổi chưa lưu. Đáp án đang giữ trong phiên này.');
     const ids=new Set(draft?.definition.blocks.flatMap(b=>b.items).map(i=>i.itemVersionId)||[]);
     for(const name of ['importReviews','importSources'])if(draft?.gradingKey[name])for(const id of Object.keys(draft.gradingKey[name]))if(!ids.has(id))delete draft.gradingKey[name][id];
     if(libraryEnabled){clearTimeout(autosaveTimer);const current=generation;autosaveTimer=setTimeout(()=>{
@@ -115,9 +127,17 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     }
   }
   async function run(action,{background=false}={}) {
-    if(busy)return;busy=true;backgroundBusy=background;paintActions();lockControls();const current=generation;
-    try {await action(current);} catch(error) {if(current===generation){saveFailed=(background||action===save)&&!conflict;notice(error.name==='AbortError'?'Thao tác quá lâu. Nội dung vẫn còn; hãy thử lại.':error.message);}}
-    finally {if(current===generation){busy=false;backgroundBusy=false;lockControls();paintActions();if(background&&dirty&&!conflict&&!saveFailed){clearTimeout(autosaveTimer);autosaveTimer=setTimeout(()=>void run(()=>save({background:true}),{background:true}),1800);}}}
+    if(busy){
+      if(!libraryEnabled||!backgroundBusy||background||queuedForeground)return false;
+      const waitingGeneration=generation,queued={generation};queuedForeground=queued;paintActions();await backgroundCompletion;if(queuedForeground===queued)queuedForeground=false;
+      if(waitingGeneration!==generation||!draft)return false;
+      return run(action);
+    }
+    let releaseBackground;if(background)backgroundCompletion=new Promise(done=>{releaseBackground=done;});
+    busy=true;backgroundBusy=background;paintActions();lockControls();const current=generation;
+    try {await action(current);} catch(error) {if(current===generation){saveFailed=!error.editorValidation&&(background||action===save||error.editorSaveFailure)&&!conflict;notice(error.name==='AbortError'?'Thao tác quá lâu. Nội dung vẫn còn; hãy thử lại.':error.message);
+      if(!background&&!error.editorValidation)requestAnimationFrame(()=>(editor.querySelector('.editor-conflict')||status).scrollIntoView({block:'center'}));}}
+    finally {if(current===generation){busy=false;backgroundBusy=false;lockControls();paintActions();if(background&&dirty&&!conflict&&!saveFailed){clearTimeout(autosaveTimer);autosaveTimer=setTimeout(()=>void run(()=>save({background:true}),{background:true}),1800);}}releaseBackground?.();}
   }
   async function request(path,options={}) {
     const {timeoutMs=25000,...rest}=options,controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),timeoutMs);
@@ -135,7 +155,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     }
     markDirty();paint();
   }
-  function adopt(value,{review=false}={}) {saveFailed=false;draft=clone(value);if(publishedByDraft.has(value.id)){draft.publication=publishedByDraft.get(value.id);draft.status='published';}dirty=false;reviewMode=review;publishOperationId=null;conflict=null;importPreview=null;session.value=String(value.sessionNumber);if(value.classId)classSelect.value=String(value.classId);authoring=true;paint();}
+  function adopt(value,{review=false}={}) {saveFailed=false;skillErrors.clear();draft=clone(value);if(publishedByDraft.has(value.id)){draft.publication=publishedByDraft.get(value.id);draft.status='published';}dirty=false;reviewMode=review;publishOperationId=null;conflict=null;importPreview=null;session.value=String(value.sessionNumber);if(value.classId)classSelect.value=String(value.classId);authoring=true;paint();}
   function payload() {return {definition:clone(draft.definition),gradingKey:clone(draft.gradingKey),sessionNumber:Number(session.value)};}
   async function refreshList() {
     const classId=classSelect.value,current=generation;if(!classId)return;
@@ -155,20 +175,20 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   function statusLabel(value) {return {draft:'Đang soạn',pending_review:'Chờ duyệt',approved:'Đã duyệt',published:'Đã phát hành'}[value]||value;}
   async function save(options={}) {
     if(!draft||reviewMode||draft.status==='published')return;
-    if(libraryEnabled&&missingSkills(draft.definition).length)throw Error('Chọn Kỹ năng cho câu '+missingSkills(draft.definition).join(', ')+', hoặc chủ động chọn Chung. Nội dung đang soạn vẫn được giữ.');
+    if(libraryEnabled)checkSkills({focus:!options?.background});
     const local=payload(),current=generation;
     try {
       let result;
       if(draft.id)result=await request('/teacher/form-drafts/'+draft.id,{method:'PUT',body:{...local,expectedRevision:draft.revision}});
       else{
         // Khi mất phản hồi tạo nháp, gửi lại đúng gói cũ; phần gõ thêm được lưu sau bằng revision vừa nhận.
-        pendingCreate??={...clone(local),classId:draft.classId,operationId:uuid()};
-        result=await request('/teacher/form-drafts',{method:'POST',body:pendingCreate});
-        if(JSON.stringify([pendingCreate.definition,pendingCreate.gradingKey,pendingCreate.sessionNumber])!==JSON.stringify([local.definition,local.gradingKey,local.sessionNumber]))
+        pendingCreate??={...clone(local),classId:draft.classId,operationId:uuid()};const operation=pendingCreate;
+        result=await request('/teacher/form-drafts',{method:'POST',body:operation});if(current!==generation)return;
+        if(JSON.stringify([operation.definition,operation.gradingKey,operation.sessionNumber])!==JSON.stringify([local.definition,local.gradingKey,local.sessionNumber]))
           result=await request('/teacher/form-drafts/'+result.draft.id,{method:'PUT',body:{...local,expectedRevision:result.draft.revision}});
       }
-      pendingCreate=null;
       if(current!==generation)return;
+      pendingCreate=null;
       if(options?.background){
         // Request cũ không thay cây câu hỏi/handler và không xóa nội dung gõ thêm khi đang lưu.
         const unchanged=JSON.stringify(local)===JSON.stringify(payload());
@@ -179,13 +199,13 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       if(error.status===409&&current===generation){
         const result=await request('/teacher/form-drafts/'+draft.id);if(current!==generation)return;
         conflict=result.draft;paint();notice('Máy chủ đã có bản mới. Nội dung đang soạn vẫn được giữ bên dưới để đối chiếu.');
-      } else throw error;
+      } else {error.editorSaveFailure=true;throw error;}
       throw new Error('Chưa lưu được. Hãy đối chiếu và chọn bản cần dùng.');
     }
   }
   function paintActions() {
+    if(libraryEnabled){if(draft)paintThuyActions();else actions.replaceChildren();return;}
     actions.replaceChildren();if(!draft)return;
-    if(libraryEnabled){paintThuyActions();return;}
     const readonly=reviewMode||draft.status==='published';
     actions.append(button('Lưu nháp',()=>void run(save),busy||readonly));
     if(libraryEnabled&&!reviewMode)for(const [scope,label]of [['personal','Lưu vào Của tôi'],['izone','Đưa vào Kho IZONE']])actions.append(button(label,()=>void run(async()=>{
@@ -237,20 +257,22 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   }
   function paintThuyActions(){
     const readonly=reviewMode||draft.status==='published';
-    const preview=button('Xem trước',()=>{
+    if(!thuyActionButtons){const preview=button('Xem trước',()=>{
+      if(busy&&!backgroundBusy||queuedForeground||!draft)return;
       const tab=window.open('about:blank','_blank');void run(async current=>{try{
         checkAnswerRows();
-        if(missingSkills(draft.definition).length)throw Error('Chọn Kỹ năng cho câu '+missingSkills(draft.definition).join(', ')+', hoặc chủ động chọn Chung.');
+        checkSkills();
         if(dirty||!draft.id)await save();
         const reply=await request('/teacher/form-drafts/'+draft.id+'/preview-grant',{method:'POST',body:{expectedRevision:draft.revision}});
         if(current!==generation){tab?.close();return;}
         const url=new URL('./demo/thuy.html',location.href);url.hash=new URLSearchParams({grant:reply.grant});
         if(tab){tab.opener=null;tab.location.replace(url.href);}else location.assign(url.href);
-      }catch(error){tab?.close();throw error;}});
-    },busy||reviewMode||!draft.definition.blocks.some(b=>b.items.length));
+      }catch(error){tab?.close();throw error;}}).then(performed=>{if(performed===false)tab?.close();});
+    });
     const saveButton=button('Lưu nháp',()=>void run(save),busy||readonly);
     const publish=button('Xuất bản',()=>void run(async current=>{
       checkAnswerRows();
+      checkSkills();
       if(dirty||!draft.id)await save();
       if(draft.status!=='approved'){
         const approved=await request('/teacher/form-drafts/'+draft.id+'/approve',{method:'POST',body:{expectedRevision:draft.revision,expectedHash:draft.contentHash}});
@@ -260,7 +282,15 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       const reply=await request('/teacher/form-drafts/'+draft.id+'/publish-library',{method:'POST',body:{expectedRevision:draft.revision,operationId:publishOperationId}});
       if(current!==generation)return;publishedByDraft.set(draft.id,reply.publication);draft.publication=reply.publication;draft.status='published';dirty=false;
       notice('Đã xuất bản vào kho. Chọn Giao bài để chọn lớp và buổi học.');paint();await refreshList();
-    }),busy||readonly);publish.classList.add('primary');actions.append(preview,saveButton,publish);
+    }));publish.classList.add('primary');thuyActionButtons={preview,saveButton,publish};}
+    const {preview,saveButton,publish}=thuyActionButtons;
+    if(preview.parentElement!==actions)actions.replaceChildren(preview,saveButton,publish);
+    const blocked=busy&&!backgroundBusy||queuedForeground;
+    preview.disabled=blocked||reviewMode||!draft.definition.blocks.some(b=>b.items.length);
+    saveButton.disabled=publish.disabled=blocked||readonly;
+    actions.setAttribute('aria-busy',String(busy));
+    paintSaveState();
+    for(const control of [preview,saveButton,publish])control.title=readonly&&control!==preview?'Bản chỉ đọc; tạo bản riêng để chỉnh sửa.':busy?'Đang xử lý, vui lòng chờ.':'';
   }
   function paintItem(parent,item,block,readonly) {
     if(libraryEnabled){paintThuyItem(parent,item,block,readonly);return;}
@@ -393,7 +423,11 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       if(kind===value)return;try{changeQuestionKind(item,draft.gradingKey,value,type);markDirty();paint();if(value==='exercise'&&!draft.gradingKey.items[item.itemVersionId])notice('Đã chuyển câu '+item.position+' sang Bài tập. Hãy kiểm và nhập đáp án cho nội dung hiện tại.');}catch(error){notice(error.message);}
     },readonly);choice.setAttribute('aria-pressed',String(kind===value));choices.append(choice);}modes.append(choices);
     const importReview=draft.gradingKey.importReviews?.[item.itemVersionId];if(importReview)card.append(importReviewCard(importReview,{item,gradingKey:draft.gradingKey,readonly,onChange:()=>{markDirty();paint();}}));
-    field(head,'Kỹ năng câu '+item.position,item.skillCodes?.[0]||'',value=>{item.skillCodes=value?[value]:[];},{options:PART_SKILLS});
+    const skill=field(head,'Kỹ năng câu '+item.position,item.skillCodes?.[0]||'',value=>{
+      item.skillCodes=value?[value]:[];if(value){skillErrors.delete(item.itemVersionId);skill.removeAttribute('aria-invalid');skillError.hidden=true;}
+    },{options:PART_SKILLS});
+    const skillError=el('p','Chọn kỹ năng, hoặc chọn Chung nếu câu không thuộc kỹ năng riêng.',{className:'thuy-skill-error',id:'skill-error-'+item.itemVersionId,hidden:!skillErrors.has(item.itemVersionId)});
+    skill.setAttribute('aria-describedby',skillError.id);if(!skillError.hidden)skill.setAttribute('aria-invalid','true');
     if(draft.definition.blocks.length>1)field(head,'Phần câu '+item.position,block.blockId,value=>{
       const target=draft.definition.blocks.find(b=>b.blockId===value);if(!target||target===block)return;
       if(item.interactionConfig.visibleWhenItemVersionId||draft.definition.blocks.flatMap(b=>b.items).some(i=>i.interactionConfig.visibleWhenItemVersionId===item.itemVersionId)){notice('Câu này có ô phụ thuộc. Giữ các câu liên quan trong cùng ngữ cảnh khi chuyển phần.');paint();return;}
@@ -403,7 +437,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     moves.append(button('↑',()=>move(block.items,index,-1),readonly||index===0),button('↓',()=>move(block.items,index,1),readonly||index===block.items.length-1),button('Bỏ',()=>{
       if(draft.definition.blocks.flatMap(b=>b.items).some(i=>i.interactionConfig.visibleWhenItemVersionId===item.itemVersionId)){notice('Cần bỏ hoặc đổi ô phụ thuộc trước.');return;}
       block.items.splice(index,1);removeItemKeys(item.itemVersionId);resequence();markDirty();paint();
-    },readonly));for(const [i,b]of [...moves.children].entries())b.setAttribute('aria-label',(i===0?'Đưa câu lên ':i===1?'Đưa câu xuống ':'Bỏ câu ')+item.position);head.append(moves);card.append(head,modes);
+    },readonly));for(const [i,b]of [...moves.children].entries())b.setAttribute('aria-label',(i===0?'Đưa câu lên ':i===1?'Đưa câu xuống ':'Bỏ câu ')+item.position);head.append(moves);card.append(head,skillError,modes);
     const config=item.interactionConfig;
     const gap=type==='short_answer'||Boolean(config.sentenceLines);
     if(gap&&!readonly&&['short_answer','gapfill'].includes(type))item.kind??=kind;
@@ -445,7 +479,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     parent.append(card);
   }
   function paintThuyEditor(){
-    const readonly=reviewMode||draft.status==='published';header.querySelector('h2').textContent=draft.id?'Sửa bài tập':'Tạo bài tập';
+    const readonly=reviewMode||draft.status==='published';editorTitle.textContent=draft.id?'Sửa bài tập':'Tạo bài tập';
     const info=el('section',undefined,{className:'thuy-editor-info'}),meta=el('div',undefined,{className:'thuy-editor-meta'});info.append(meta);
     field(meta,'Tên bài tập',draft.definition.title,value=>{draft.definition.title=value;},{disabled:readonly});
     field(meta,'Trình độ',draft.definition.courseCode||'',value=>{if(value)draft.definition.courseCode=value;else delete draft.definition.courseCode;},{disabled:readonly,options:[['','Chọn trình độ'],['34','3.0–4.0'],['45','4.0–5.0'],['56','5.0–6.0'],['67','6.0–7.0']]});
@@ -470,9 +504,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   function paint() {
     for(const widget of gapWidgets)widget.dispose();gapWidgets=[];
     editor.replaceChildren();paintActions();paintWorkspace();session.disabled=false;if(!draft)return;
-    if(libraryEnabled){paintThuyEditor();lockControls();return;}
     const readonly=reviewMode||draft.status==='published';session.disabled=readonly;
-    editor.append(el('h3',`${statusLabel(draft.status)} · bản ${draft.revision}${dirty?' · chưa lưu':''}`));
+    if(!libraryEnabled)editor.append(el('h3',`${statusLabel(draft.status)} · bản ${draft.revision}${dirty?' · chưa lưu':''}`));
     if(conflict){const compare=el('section',undefined,{className:'editor-conflict'});
       compare.append(el('h4','Đối chiếu bản mới trên máy chủ'),el('p',`Bản máy chủ ${conflict.revision}: ${conflict.definition.title} · buổi ${conflict.sessionNumber}`));
       const details=el('details');details.append(el('summary','Xem nội dung bản mới'));
@@ -483,6 +516,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
           draft.revision=conflict.revision;conflict=null;dirty=true;await save();
         })));editor.append(compare);
     }
+    if(libraryEnabled){paintThuyEditor();lockControls();return;}
     field(editor,'Tên phiếu',draft.definition.title,value=>{draft.definition.title=value;},{disabled:readonly});
     field(editor,'Mã khóa (theo các phiếu của lớp)',draft.definition.courseCode||'',value=>{if(value)draft.definition.courseCode=value.trim();else delete draft.definition.courseCode;},{disabled:readonly});
     field(editor,'Cấu trúc phiếu',draft.definition.kind,value=>{draft.definition.kind=value;},{disabled:readonly,options:[['mixed','Phiếu hỗn hợp'],['quiz','Phiếu câu hỏi'],['reflection','Phiếu nhìn lại bài học']]});
@@ -600,7 +634,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       dialog.addEventListener('close',()=>{importText=text.value;aiPopupOpen=false;editor.querySelector('[data-ai-target-block="'+importTargetBlockId+'"]')?.focus({preventScroll:true});});dialog.showModal();
     }else editor.append(section);
   }
-  const header=el('section',undefined,{className:'editor-toolbar'});header.append(el('h2',libraryEnabled?'Sửa bài tập':'Soạn và duyệt phiếu học tập'));
+  const header=el('section',undefined,{className:'editor-toolbar'}),editorTitle=el('h2',libraryEnabled?'Sửa bài tập':'Soạn và duyệt phiếu học tập');header.append(editorTitle);
   const grid=el('div',undefined,{className:'field-grid'});
   for(const [label,input]of [['Lớp soạn phiếu',classSelect],['Buổi của nháp',session],['Phiếu nguồn để sao chép',sourceSelect]]){const wrap=el('label',undefined,{className:'field'});wrap.append(el('span',label),input);grid.append(wrap);}
   session.addEventListener('input',()=>{if(draft&&!reviewMode&&draft.status!=='published')markDirty();});
@@ -618,13 +652,19 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   }));header.append(grid,newButton,copyButton,button('Đọc lại danh sách nháp',()=>void run(refreshList)));
   classSelect.addEventListener('change',()=>{
     if(!canDiscard()){classSelect.value=draft?.classId||'';return;}
-    generation+=1;busy=false;draft=null;dirty=false;pendingCreate=null;pendingCopy=null;paint();void run(refreshList);
+    generation+=1;busy=false;backgroundBusy=false;queuedForeground=false;draft=null;dirty=false;pendingCreate=null;pendingCopy=null;paint();void run(refreshList);
   });
   const libraryRoot=el('section',undefined,{className:'editor-form-library'});
   const authorRoot=el('div',undefined,{className:'thuy-authoring'}),back=button('← Quản lý bài tập',()=>{
-    if(!canDiscard())return;clearTimeout(autosaveTimer);draft=null;dirty=false;authoring=false;paint();void run(refreshList);void library?.refresh();
+    if(!canDiscard())return;generation+=1;clearTimeout(autosaveTimer);busy=false;backgroundBusy=false;queuedForeground=false;lockControls();
+    draft=null;dirty=false;pendingCreate=null;pendingCopy=null;skillErrors.clear();authoring=false;paint();void run(refreshList);void library?.refresh();
   });
-  authorRoot.append(back,header,status,draftList,editor,actions);
+  if(libraryEnabled){
+    const titlebar=el('div',undefined,{className:'thuy-editor-titlebar'});
+    back.textContent='←';back.setAttribute('aria-label','Quay lại Quản lý bài tập');back.title='Quay lại Quản lý bài tập';back.classList.add('thuy-editor-back');
+    const titleGroup=el('div',undefined,{className:'thuy-editor-title'});titleGroup.append(editorTitle,saveState);
+    titlebar.append(back,titleGroup,actions);authorRoot.append(titlebar,header,status,draftList,editor);
+  }else authorRoot.append(back,header,status,draftList,editor,actions);
   function paintWorkspace(){if(!libraryEnabled)return;libraryRoot.hidden=authoring;authorRoot.hidden=!authoring;draftList.hidden=Boolean(draft);}
   host.replaceChildren(...(libraryEnabled?[libraryRoot,authorRoot]:[header,status,draftList,actions,editor]));
   if(libraryEnabled){
@@ -663,7 +703,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       if(libraryEnabled)void library.refresh();
     },
     setContext({classId,sessionNumber}){if(draft||dirty||busy)return;classSelect.value=String(classId);if(sessionNumber)session.value=String(sessionNumber);library?.setUsed(assignments);void run(refreshList);},
-    clear() {generation+=1;clearTimeout(autosaveTimer);docsBatch?.dispose();authoring=!libraryEnabled;draft=null;dirty=false;busy=false;lockControls();conflict=null;importPreview=null;pendingCreate=null;pendingCopy=null;
+    clear() {generation+=1;clearTimeout(autosaveTimer);docsBatch?.dispose();authoring=!libraryEnabled;draft=null;dirty=false;busy=false;backgroundBusy=false;queuedForeground=false;lockControls();conflict=null;importPreview=null;pendingCreate=null;pendingCopy=null;
       library?.clear();assignmentDialog.clear();
       importText='';importOpen=false;classSelect.replaceChildren();sourceSelect.replaceChildren();draftList.replaceChildren();paint();notice('Đăng nhập để soạn phiếu.');},
     // Dùng cùng đường render thật trong kiểm thử để đối chiếu definition/key trước và sau khi soạn.

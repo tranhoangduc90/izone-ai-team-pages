@@ -57,12 +57,12 @@ test('R18/R22/R27/R28/R30: xuất bản không mở lớp, preview tự nhận n
     await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();
     if(process.env.PROGRESS_LOG_EVIDENCE_DIR){await mkdir(process.env.PROGRESS_LOG_EVIDENCE_DIR,{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:resolve(process.env.PROGRESS_LOG_EVIDENCE_DIR,'editor-'+width+'.png'),fullPage:true});}await page.setViewportSize({width:1440,height:1000});}
     assert.deepEqual(await page.locator('.editor-actions>button').allTextContents(),['Xem trước','Lưu nháp','Xuất bản']);
-    assert.equal(await page.locator('.thuy-authoring>.editor-actions').evaluate(element=>element===element.parentElement.lastElementChild),true);
+    // Vị trí ghim mới được kiểm qua cuộn và viewport trong progress-log-the16-browser.mjs.
     await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã xuất bản vào kho'}).waitFor();
     const published=(await sourceDb.query('SELECT * FROM learning.form_publication')).rows[0];assert.ok(published);
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_assignment')).rows[0].n,0);
     // Chuyển đúng bản đã duyệt vào Kho chung qua UI và quyền backend thật.
-    await page.getByRole('button',{name:'← Quản lý bài tập',exact:true}).click();await page.getByRole('tab',{name:/Kho cá nhân/}).click();await page.getByRole('button',{name:'Phiếu tích hợp R22',exact:true}).click();
+    await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();await page.getByRole('tab',{name:/Kho cá nhân/}).click();await page.getByRole('button',{name:'Phiếu tích hợp R22',exact:true}).click();
     await page.getByRole('button',{name:'Đưa vào Kho chung',exact:true}).click();await page.getByText('Đã lưu đúng phiên bản vào Kho chung.',{exact:true}).waitFor();
     await page.locator('.thuy-library-detail').getByRole('button',{name:'Đóng',exact:true}).click();
     await page.getByRole('tab',{name:/Kho chung/}).click();await page.getByRole('button',{name:'Phiếu tích hợp R22',exact:true}).click();

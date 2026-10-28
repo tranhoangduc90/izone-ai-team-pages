@@ -16,7 +16,7 @@ import { createTeacherLoginPreference } from '../shared/teacher-login-preference
 import { createTeacherAuthState } from '../shared/teacher-auth-state.js?v=20261026-startup1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261028-the15-v1';
-import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261028-the15-v1';
+import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261028-the16-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261028-thuy-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
@@ -156,6 +156,7 @@ const formEditor=createFormDraftEditor({host:document.getElementById('formDraftE
 function setNotice(message, kind = '') {
   elements.teacherNotice.textContent = message;
   elements.teacherNotice.className = `notice${kind ? ` ${kind}` : ''}`;
+  elements.teacherNotice.toggleAttribute('data-idle',message==='Sẵn sàng.');
 }
 
 async function apiRequest(path, { method = 'GET', body, signal } = {}) {

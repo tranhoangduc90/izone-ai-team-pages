@@ -54,7 +54,7 @@ test('Thủy editor: đúng lớp, tự lưu, mất phản hồi, giữ node qua
   const state=await page.evaluate(()=>({draft:window.savedDraft,calls:window.calls.map(c=>({path:c.path,body:c.body,method:c.method})),keys:[...Object.keys(localStorage),...Object.keys(sessionStorage)]}));
   assert.equal(state.draft.classId,'1294');assert.equal(state.draft.sessionNumber,11);assert.equal(state.draft.definition.blocks[0].items[0].prompt,'Nội dung mới sau khi mất phản hồi');
   const creates=state.calls.filter(c=>c.path==='/teacher/form-drafts'&&c.method==='POST');assert.equal(creates.length,2);assert.deepEqual(creates[0].body,creates[1].body);assert.deepEqual(state.keys,[]);
-  await page.getByRole('button',{name:'← Quản lý bài tập',exact:true}).click();await page.getByRole('tab',{name:/Kho cá nhân/}).click();
+  await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();await page.getByRole('tab',{name:/Kho cá nhân/}).click();
   await page.getByRole('button',{name:'Phiếu nháp cần phục hồi',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Sửa bài',exact:true}).click();
   assert.equal(await page.getByLabel('Nội dung câu hỏi',{exact:true}).inputValue(),'Nội dung mới sau khi mất phản hồi');
   await page.evaluate(()=>{window.readingNode=document.querySelector('textarea[aria-label="Nội dung câu hỏi"]');});

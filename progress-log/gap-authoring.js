@@ -2,6 +2,7 @@ import {insertBlank,removeBlank} from './authoring-parts.js?rev=20261028-the15-v
 import {ensureBlankIds,answerValues,answerRows,syncAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const button=(text,action)=>{const n=el('button',text,'button');n.type='button';n.addEventListener('click',action);return n;};
+const iconButton=(icon,label,action)=>{const n=button(icon,action);n.classList.add('thuy-answer-icon');n.setAttribute('aria-label',label);n.title=label;return n;};
 const histories=new WeakMap(),privateFields=['items','referenceAnswers','referenceAnswersBySlot','savedExerciseKeys','authoringState'];
 const snapshot=(item,key)=>({item:structuredClone(item),key:Object.fromEntries(privateFields.map(name=>[name,structuredClone(key[name]?.[item.itemVersionId])]))});
 function prepareAnswers(item,key){ensureBlankIds(item,key);for(let slot=0;slot<(item.interactionConfig.responseCount||1);slot++)answerRows(item,key,item.graderType==='none'?'survey':'exercise',slot);}
@@ -24,10 +25,10 @@ function renderAnswerGroups(host,{item,key,kind,readonly,onChange,onStructure,on
   const top=el('div',undefined,'thuy-answer-group-head'),title=el('h4',ids.length?'Ô trống '+(slot+1):kind==='survey'?'Đáp án tham khảo':'Đáp án chấp nhận');top.append(title);
   const source=key.authoringState?.[item.itemVersionId]?.sources?.[blankId];if(source!==undefined)top.append(el('small',source,'thuy-gap-source'));
   if(ids.length&&item.interactionConfig.sentenceLines&&!readonly){
-   const remove=button('Bỏ ô',()=>{try{commit(item,key,()=>{
+   const remove=iconButton('×','Bỏ ô trống '+(slot+1)+' câu '+item.position,()=>{try{commit(item,key,()=>{
     let cursor=slot,lineIndex=0;for(const line of item.interactionConfig.sentenceLines){if(cursor<line.parts.length-1)break;cursor-=line.parts.length-1;lineIndex++;}
     removeBlank(item,key,{lineIndex,partIndex:cursor,kind});
-   });onChange();onStructure();}catch(error){onError(error.message);}});remove.setAttribute('aria-label','Bỏ ô trống '+(slot+1)+' câu '+item.position);top.append(remove);
+   });onChange();onStructure();host.closest('.thuy-gap-authoring')?.querySelector('.thuy-gap-text')?.focus({preventScroll:true});}catch(error){onError(error.message);}});remove.setAttribute('aria-label','Bỏ ô trống '+(slot+1)+' câu '+item.position);top.append(remove);
   }group.append(top);
   const rows=readonly?(key.authoringState?.[item.itemVersionId]?.answerRows?.[blankId]||answerValues(item,key,kind,slot).map((value,i)=>({id:'readonly-'+item.itemVersionId+'-'+slot+'-'+i,value}))):answerRows(item,key,kind,slot);
   rows.forEach((row,index)=>{
@@ -39,15 +40,16 @@ function renderAnswerGroups(host,{item,key,kind,readonly,onChange,onStructure,on
    input.addEventListener('input',()=>{commit(item,key,()=>{row.value=input.value;syncAnswerRows(item,key,kind);});check();onChange();});
    input.addEventListener('blur',()=>{if(readonly)return;commit(item,key,()=>{row.touched=true;});touched=true;check();onChange();});field.append(input,error);line.append(field);
    if(!readonly&&(rows.length>1||kind==='survey')){
-    const remove=button('Bỏ đáp án',()=>{commit(item,key,()=>{rows.splice(index,1);syncAnswerRows(item,key,kind);});onChange();onStructure();});remove.setAttribute('aria-label','Bỏ đáp án '+(index+1)+' '+(ids.length?'ô '+(slot+1)+' ':'')+'câu '+item.position);line.append(remove);
+    const remove=iconButton('×','Bỏ đáp án '+(index+1)+' '+(ids.length?'ô '+(slot+1)+' ':'')+'câu '+item.position,()=>{commit(item,key,()=>{rows.splice(index,1);syncAnswerRows(item,key,kind);});onChange();onStructure();
+      const target=host.querySelector('[data-answer-row="'+(rows[Math.min(index,rows.length-1)]?.id||'')+'"]')||host.querySelector('[data-blank-group="'+blankId+'"] .thuy-answer-icon');target?.focus({preventScroll:true});});line.append(remove);
    }
-   if(index===rows.length-1&&!readonly){const add=button('Thêm đáp án',()=>addRow());add.disabled=rows.length>=40;line.append(add);}group.append(line);
+   if(index===rows.length-1&&!readonly){const add=iconButton('+','Thêm đáp án cho '+(ids.length?'ô '+(slot+1)+' ':'')+'câu '+item.position,()=>addRow());add.disabled=rows.length>=40;line.append(add);}group.append(line);
   });
   function addRow(){
    let rowId;commit(item,key,()=>{rowId=crypto.randomUUID();rows.push({id:rowId,value:''});syncAnswerRows(item,key,kind);});onChange();onStructure();
    host.querySelector('[data-answer-row="'+rowId+'"]')?.focus({preventScroll:true});
   }
-  if(!rows.length){group.append(el('p',kind==='survey'?'Chưa thêm đáp án tham khảo.':'Chưa nhập đáp án.','help'));if(!readonly)group.append(button('Thêm đáp án',addRow));}
+  if(!rows.length){group.append(el('p',kind==='survey'?'Chưa thêm đáp án tham khảo.':'Chưa nhập đáp án.','help'));if(!readonly)group.append(iconButton('+','Thêm đáp án cho '+(ids.length?'ô '+(slot+1)+' ':'')+'câu '+item.position,addRow));}
   host.append(group);
  }
 }
