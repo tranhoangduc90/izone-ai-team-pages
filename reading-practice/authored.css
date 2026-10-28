@@ -33,3 +33,19 @@ body[data-m170-product='practice'].authored-reading .authored-summary [data-ques
   gap: 4px;
   max-width: 100%;
 }
+
+/* Bảng giữ quan hệ hàng/cột; cuộn bên trong khi màn nhỏ thay vì tràn cả trang. */
+.authored-table-scroll { max-width: 100%; overflow-x: auto; }
+.authored-table { width: 100%; min-width: 560px; table-layout: fixed; border-collapse: collapse; font-size: 18px; line-height: 1.65; }
+.authored-table th:first-child { width: 24%; }
+.authored-table th:nth-child(2) { width: 48%; }
+.authored-table th:last-child { width: 28%; }
+.authored-table caption { padding: 12px; font-weight: 700; text-align: left; }
+.authored-table th, .authored-table td { border: 1px solid #DCE1E7; padding: 12px; vertical-align: top; overflow-wrap: anywhere; }
+.authored-table th { background: #EDF1F7; text-align: left; }
+.authored-table .cbt-answer-input { width: 130px; max-width: 100%; }
+.authored-table [data-question-number] { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: 100%; }
+.authored-table .cbt-inline-answer { flex-wrap: wrap; width: 100%; min-width: 0; }
+.authored-table [data-answer-slot] { flex: 1 1 70px; min-width: 0; max-width: 100%; }
+.authored-choice-slots { display: flex; flex-wrap: wrap; gap: 16px; margin-block: 12px; }
+.authored-choice-slots > span { display: inline-flex; align-items: center; gap: 6px; }
