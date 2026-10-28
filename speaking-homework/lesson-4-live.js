@@ -153,15 +153,7 @@ function restoreDraft() {
   } catch { $('draft-status').textContent = 'Không khôi phục được link đang gõ; các link đã xác nhận vẫn ở trên máy chủ.'; }
 }
 function showResult(id, kind, title, message) {
-  const el = $(id);
-  el.replaceChildren();
-  const strong = document.createElement('strong');
-  const detail = document.createElement('span');
-  strong.textContent = title;
-  detail.textContent = message;
-  el.append(strong, detail);
-  el.className = `check-result is-${kind}`;
-  el.hidden = false;
+  renderCheckResult($(id), kind, title, message);
 }
 function localError(id, input, title, message) {
   state.localFeedback.set(id, { value: input.value.trim(), title, message });
@@ -192,11 +184,14 @@ function renderMain() {
     const local = state.localFeedback.get(resultId);
     if (local && input.value.trim() !== local.value) state.localFeedback.delete(resultId);
     input.disabled = state.submitted || state.finishing;
-    $(`${part.key}-confirm`).disabled = state.submitted || state.finishing || state.pending.has(part.key);
+    updateCheckControl($(`${part.key}-confirm`), link, { changed, disabled: state.submitted || state.finishing || state.pending.has(part.key) });
     if (link?.check_status === 'accepted' && !changed) {
       showResult(resultId, 'pass', 'Đã xác nhận hội thoại',
         part.linkOnly ? 'Đã nhận link. Phần này không yêu cầu số lượng luyện tập.'
           : acceptanceMessage(link, `Đã xác nhận ${link.question_count} ${['object_intro', 'object_description'].includes(part.key) ? 'lượt luyện đầy đủ' : 'giai đoạn/câu luyện'} theo tiêu chuẩn của phần này.`));
+    } else if (!changed && technicalCheckFeedback(link)) {
+      const feedback = technicalCheckFeedback(link);
+      showResult(resultId, feedback.kind, feedback.title, feedback.message);
     } else if (link?.check_status === 'pending' && !changed) {
       showResult(resultId, 'loading', 'Đang kiểm nội dung', 'Hệ thống đang đọc và phân tích hội thoại.');
     } else if (link?.check_status === 'rejected' && !changed) {
@@ -207,7 +202,7 @@ function renderMain() {
       showResult(resultId, 'blocked', note.title, note.message);
     } else $(resultId).hidden = true;
     $(`${part.key}-status`).textContent = link?.check_status === 'accepted' && !changed
-      ? 'Đạt yêu cầu' : link?.check_status === 'pending' && !changed ? 'Đang kiểm tra' : 'Chưa kiểm tra';
+      ? 'Đạt yêu cầu' : !changed && technicalCheckFeedback(link) ? 'Chờ kiểm tra lại' : link?.check_status === 'pending' && !changed ? 'Đang kiểm tra' : 'Chưa kiểm tra';
   }
 }
 function doctorOptions() {
@@ -239,6 +234,9 @@ function renderDoctor() {
   if (!doctor) return;
   const items = state.expanded ? doctor.allNeeded : doctor.needed;
   const list = $('doctor-list');
+  const listSignature=JSON.stringify([state.studentRef,state.expanded,items.map(item=>[item.exercise_id,item.title,item.exercise_url,item.recommendation_count,item.practice_count]),doctor.neededCount]);
+  const changedList=list.dataset.renderSignature!==listSignature;
+  if(changedList){
   list.replaceChildren();
   if (!items.length) {
     const empty = document.createElement('li');
@@ -259,6 +257,8 @@ function renderDoctor() {
     li.append(a, count);
     list.append(li);
   }
+  list.dataset.renderSignature=listSignature;
+  }
   $('doctor-expand').hidden = doctor.neededCount <= 5;
   $('doctor-expand').textContent = state.expanded ? 'Thu gọn còn 5 bài đầu'
     : `Xem tất cả ${doctor.neededCount} bài cần luyện`;
@@ -266,8 +266,10 @@ function renderDoctor() {
   if (state.submitted) $('doctor-sync').textContent += ` · ${analysisStatus(state.doctorAnalysis).label}`;
   $('doctor-fallback').hidden = Number(doctor.personalCount) >= 2;
   const choices = doctorOptions();
+  const optionsSignature=JSON.stringify([state.studentRef,choices.map(item=>[item.exercise_id,item.title,item.source,item.recommendation_count])]);
   for (const select of [$('practice-1-exercise'), $('practice-2-exercise'), $('extra-exercise')]) {
     const selected = select.value || select.dataset.draft || '';
+    if(select.dataset.optionsSignature!==optionsSignature){
     select.replaceChildren(new Option('Chọn bài luyện tập', ''));
     for (const item of choices) {
       select.add(new Option(item.source === 'shared'
@@ -275,6 +277,8 @@ function renderDoctor() {
         : `${item.title} · đề xuất ${item.recommendation_count} lần`, item.exercise_id));
     }
     if (choices.some(item => item.exercise_id === selected)) select.value = selected;
+    select.dataset.optionsSignature=optionsSignature;
+    }
     select.dataset.draft = '';
   }
   for (const slot of [1, 2]) {
@@ -309,11 +313,14 @@ function renderPractice() {
       || select.value !== row.exercise_id);
     input.disabled = state.submitted || state.finishing;
     select.disabled = state.submitted || state.finishing;
-    $(`practice-${slot}-confirm`).disabled = state.submitted || state.finishing || state.pending.has(`practice-${slot}`);
+    updateCheckControl($(`practice-${slot}-confirm`), row, { changed, disabled: state.submitted || state.finishing || state.pending.has(`practice-${slot}`) });
     if (row && !changed) {
       if (row.status === 'accepted') {
         showResult(resultId, 'pass', 'Đã nhận bài bổ trợ',
           acceptanceMessage(row) + ' ' + analysisStatus(row.analysis_status).message);
+      } else if (technicalCheckFeedback(row)) {
+        const feedback = technicalCheckFeedback(row);
+        showResult(resultId, feedback.kind, feedback.title, feedback.message);
       } else if (row.status === 'pending') {
         showResult(resultId, 'loading', 'Đang kiểm bài bổ trợ',
           'Hệ thống đang đọc hội thoại và bước áp dụng vào câu Speaking.');
@@ -328,22 +335,34 @@ function renderPractice() {
   $('extra-practice').hidden = !state.submitted;
   const extra = [...state.practice.values()].filter(row => Number(row.slot) >= 3)
     .sort((a, b) => Number(a.slot) - Number(b.slot));
-  $('extra-history').replaceChildren();
-  for (const row of extra) {
-    const li = document.createElement('li');
+  const history=$('extra-history');
+  const historyNodes=new Map([...history.children].map(node=>[node.dataset.slot,node]));
+  for (const [index,row] of extra.entries()) {
+    const key=String(row.slot);
+    const li=historyNodes.get(key)||document.createElement('li');
+    li.dataset.slot=key;historyNodes.delete(key);
     const exercise = doctorOptions().find(item => item.exercise_id === row.exercise_id);
-    li.textContent = `${exercise?.title || 'Bài bổ trợ'} · ${row.status === 'accepted'
+    const text = `${exercise?.title || 'Bài bổ trợ'} · ${row.status === 'accepted'
       ? analysisStatus(row.analysis_status).label
-      : row.status === 'pending' ? 'Đang kiểm' : 'Chưa đạt'}`;
-    $('extra-history').append(li);
+      : technicalCheckFeedback(row) ? 'Chờ kiểm tra lại' : row.status === 'pending' ? 'Đang kiểm' : 'Chưa đạt'}`;
+    if(li.textContent!==text)li.textContent=text;
+    if(history.children[index]!==li)history.insertBefore(li,history.children[index]||null);
   }
-  const last = extra.at(-1);
-  $('extra-confirm').disabled = state.extraPending
-    || extra.some(row => row.status === 'pending');
-  if (last?.status === 'accepted' && $('extra-link').value.trim() === last.share_url) {
+  for(const node of historyNodes.values())node.remove();
+  const currentExtra=extra.findLast(row=>row.share_url===$('extra-link').value.trim()&&row.exercise_id===$('extra-exercise').value);
+  updateCheckControl($('extra-confirm'), currentExtra, { disabled: state.extraPending || extra.some(row => row.status === 'pending') });
+  if(currentExtra?.status==='pending'){
+    showResult('extra-result','loading','Đang kiểm bài luyện thêm','Hệ thống đang đọc lại hội thoại. Kết quả sẽ tự cập nhật.');
+  }else if(technicalCheckFeedback(currentExtra)){
+    const feedback=technicalCheckFeedback(currentExtra);
+    showResult('extra-result',feedback.kind,feedback.title,feedback.message);
+  }else if(currentExtra?.status==='rejected'){
+    showResult('extra-result','blocked','Bài luyện cần bổ sung',checkReason(currentExtra));
+  }
+  if (currentExtra?.status === 'accepted') {
     $('extra-link').value = '';
     saveDraft();
-    const analysis = analysisStatus(last.analysis_status);
+    const analysis = analysisStatus(currentExtra.analysis_status);
     showResult('extra-result', analysis.tone, 'Đã nhận bài luyện thêm', analysis.message);
   }
 }
@@ -605,4 +624,4 @@ window.addEventListener('beforeunload', event => {
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
 identityController.start();
-import { acceptanceMessage, checkReason, updateSubmitControl } from './check-feedback.js?v=20261019-auto-submit-v1';
+import { acceptanceMessage, checkReason, updateSubmitControl, technicalCheckFeedback, renderCheckResult, updateCheckControl } from './check-feedback.js?v=20261029-check-retry-v1';
