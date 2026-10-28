@@ -1,6 +1,6 @@
 (async () => {
 'use strict';
-const AuthoredUI=await import('./authored-ui.js?v=20261028-full-test3');
+const AuthoredUI=await import('./authored-ui.js?v=20261028-full-test4');
 const {fetchListeningAudio,clearListeningAudioMemory}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
@@ -394,8 +394,8 @@ function authoredQuestions(){
   const leftGroups=part?(single?[]:groups.filter(g=>g.end<=part.splitAfter)):groups.length>1?groups.slice(0,1):[];
   const rightGroups=part?(single?groups:groups.filter(g=>g.start>part.splitAfter)):groups.length>1?groups.slice(1):groups;
   if(part)view.querySelector('.cbt-test-heading h2').textContent=part.title;
-  left.innerHTML=leftGroups.length?AuthoredUI.groupsHtml(leftGroups,a,flag):`<header class="cbt-passage-header"><h3>${escape(part?.title||LESSON.title)}</h3><p>${escape(groups[0].instruction)}</p></header>`;
-  right.innerHTML=AuthoredUI.groupsHtml(rightGroups,a,flag,{documentNotes:single});
+  left.innerHTML=leftGroups.length?AuthoredUI.groupsHtml(leftGroups,a,flag,{practiceLayout:Boolean(part)}):`<header class="cbt-passage-header"><h3>${escape(part?.title||LESSON.title)}</h3><p>${escape(groups[0].instruction)}</p></header>`;
+  right.innerHTML=AuthoredUI.groupsHtml(rightGroups,a,flag,{documentNotes:single,practiceLayout:Boolean(part)});
   left.setAttribute('aria-label',part?`${part.title} · Nhóm đầu`:'Nhóm câu đầu');right.setAttribute('aria-label',part?`${part.title} · Câu hỏi`:'Câu hỏi');
   if(part){left.scrollTop=a.scroll?.questions[part.id+'-left']||0;right.scrollTop=a.scroll?.questions[part.id+'-right']||0;}
   if(single)setMobilePane('questions');
