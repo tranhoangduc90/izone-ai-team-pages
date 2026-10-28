@@ -26,6 +26,11 @@
 .thuy-skill-error{font-size:12px;color:var(--red);margin:0 0 12px}.thuy-authoring [aria-invalid=true]{border-color:var(--red)!important}
 .thuy-authoring :is(input,textarea,select,button,[contenteditable]){scroll-margin-top:160px}
 .thuy-teacher #formDraftEditor .thuy-answer-icon{position:relative;flex:0 0 36px;display:inline-grid;place-items:center;width:36px;height:36px;min-height:36px;padding:0;margin:0;font-size:22px;line-height:1;background:#fff;border:1px solid #8b9ba7;border-radius:6px;color:var(--navy)}
+.thuy-teacher #formDraftEditor .thuy-answer-icon--add{color:#152b4e;border-color:#152b4e;background:#edf1f7}
+.thuy-teacher #formDraftEditor .thuy-answer-icon--remove{color:#9b0a22;border-color:#9b0a22;background:#fde8eb}
+.thuy-teacher #formDraftEditor .thuy-answer-icon--add:hover:not(:disabled){background:#e2e8f0}
+.thuy-teacher #formDraftEditor .thuy-answer-icon--remove:hover:not(:disabled){background:#fbd5dc}
+.thuy-answer-icon>svg{display:block;pointer-events:none}
 .thuy-answer-icon:is(:hover,:focus-visible)::after{content:attr(aria-label);position:absolute;top:calc(100% + 6px);right:0;width:max-content;max-width:min(260px,calc(100vw - 32px));padding:6px 8px;border-radius:4px;background:var(--navy);color:white;font:12px/1.4 Geologica,Arial,sans-serif;white-space:normal;pointer-events:none;z-index:10}
 .thuy-teacher #formDraftEditor :is(.thuy-answer-icon,.thuy-editor-back):focus-visible{outline:2px solid var(--navy);outline-offset:3px}
 @media(max-width:850px){.thuy-teacher .thuy-editor-titlebar{flex-wrap:wrap;gap:8px}.thuy-teacher .thuy-editor-titlebar>.editor-actions{flex-basis:100%}}

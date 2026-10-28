@@ -8,7 +8,7 @@ import {createDocsBatchImporter} from './docs-batch-import.js?rev=20261025-docs-
 import {PART_TYPES,PART_SKILLS,selectedLimit,preparePartItem,missingSkills} from './authoring-parts.js?rev=20261028-the15-v1';
 import {editorItemKind} from './item-kind.js?rev=20261028-the15-v1';
 import {changeQuestionKind,incompleteAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
-import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261028-the16-v1';
+import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261029-answer-icons-v1';
 import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261028-v1';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],

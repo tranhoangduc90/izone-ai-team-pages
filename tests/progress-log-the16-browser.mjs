@@ -152,9 +152,13 @@ test('T16 R02 R04 R06: thanh tiêu đề ghim, icon đúng ô, màn hẹp và fo
  const q=page.locator('[data-question]').first(),content=q.getByRole('textbox',{name:'Nội dung câu hỏi',exact:true});await content.fill('Đây là nội dung mẫu để tạo ô trống.');
  await q.locator('.thuy-gap-segment').first().evaluate(n=>{const range=document.createRange();range.setStart(n.firstChild,0);range.setEnd(n.firstChild,3);const s=getSelection();s.removeAllRanges();s.addRange(range);});
  await q.getByRole('button',{name:'Tạo chỗ trống câu 1',exact:true}).click();
- const add=q.getByRole('button',{name:'Thêm đáp án cho ô 1 câu 1',exact:true});assert.equal(await add.innerText(),'+');await add.click();
+ const add=q.getByRole('button',{name:'Thêm đáp án cho ô 1 câu 1',exact:true});assert.equal(await add.innerText(),'+');
+ assert.deepEqual(await add.evaluate(n=>{const s=getComputedStyle(n);return [s.color,s.backgroundColor,s.borderTopColor];}),['rgb(21, 43, 78)','rgb(237, 241, 247)','rgb(21, 43, 78)']);await add.click();
  assert.equal(await q.getByLabel('Đáp án 2 ô 1 câu 1',{exact:true}).evaluate(n=>n===document.activeElement),true);
- const remove=q.getByRole('button',{name:'Bỏ đáp án 2 ô 1 câu 1',exact:true});assert.equal(await remove.innerText(),'×');await remove.click();
+ const remove=q.getByRole('button',{name:'Bỏ đáp án 2 ô 1 câu 1',exact:true});assert.equal(await remove.locator('svg[aria-hidden="true"]').count(),1);
+ assert.equal(await remove.evaluate(n=>getComputedStyle(n).color),'rgb(155, 10, 34)');
+ for(const width of [1440,390]){await page.setViewportSize({width,height:760});await page.mouse.move(0,0);await q.locator('.thuy-answer-group').first().screenshot({path:resolve(evidence,'answer-buttons-'+width+'.png')});}
+ await page.setViewportSize({width:1440,height:950});await remove.click();
  assert.equal(await q.locator('[data-answer-row]').count(),1);
  await q.getByRole('button',{name:'Bỏ ô trống 1 câu 1',exact:true}).press('Space');assert.equal(await q.locator('.thuy-gap-chip').count(),0);
  assert.equal(await content.evaluate(n=>n===document.activeElement),true);await content.press('Control+z');assert.equal(await q.locator('.thuy-gap-chip').count(),1);

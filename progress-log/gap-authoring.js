@@ -2,7 +2,13 @@ import {insertBlank,removeBlank} from './authoring-parts.js?rev=20261028-the15-v
 import {ensureBlankIds,answerValues,answerRows,syncAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const button=(text,action)=>{const n=el('button',text,'button');n.type='button';n.addEventListener('click',action);return n;};
-const iconButton=(icon,label,action)=>{const n=button(icon,action);n.classList.add('thuy-answer-icon');n.setAttribute('aria-label',label);n.title=label;return n;};
+const iconButton=(icon,label,action)=>{
+ const adding=icon==='+',n=button(adding?'+':undefined,action);n.classList.add('thuy-answer-icon','thuy-answer-icon--'+(adding?'add':'remove'));n.setAttribute('aria-label',label);n.title=label;
+ if(!adding){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  for(const [name,value]of Object.entries({viewBox:'0 0 24 24',width:'18',height:'18',fill:'none',stroke:'currentColor','stroke-width':'1.8','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))svg.setAttribute(name,value);
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6');svg.append(path);n.append(svg);
+ }return n;
+};
 const histories=new WeakMap(),privateFields=['items','referenceAnswers','referenceAnswersBySlot','savedExerciseKeys','authoringState'];
 const snapshot=(item,key)=>({item:structuredClone(item),key:Object.fromEntries(privateFields.map(name=>[name,structuredClone(key[name]?.[item.itemVersionId])]))});
 function prepareAnswers(item,key){ensureBlankIds(item,key);for(let slot=0;slot<(item.interactionConfig.responseCount||1);slot++)answerRows(item,key,item.graderType==='none'?'survey':'exercise',slot);}
