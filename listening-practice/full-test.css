@@ -11,20 +11,20 @@
 .listening-full-test .cbt-question-card:not(.authored-pair) .cbt-question-heading{grid-template-columns:34px minmax(0,1fr) 34px}
 .listening-full-test .authored-note-list .cbt-question-heading{grid-template-columns:minmax(0,1fr) 34px!important}
 .listening-full-test .authored-stem{min-width:0;overflow-wrap:break-word}
-.listening-full-test .cbt-content-viewport{font-size:18px}
-.listening-full-test .cbt-content-viewport[data-font-size="90"]{font-size:16.2px}
-.listening-full-test .cbt-content-viewport[data-font-size="110"]{font-size:19.8px}
-.listening-full-test .cbt-content-viewport[data-font-size="120"]{font-size:21.6px}
-.listening-full-test #readingView .cbt-test-heading h2{font-size:22px;font-weight:700;line-height:1.3;white-space:normal;overflow-wrap:break-word}
-.listening-full-test .design-question-group>.cbt-subsection-heading>h4{font-size:1.111111em;font-weight:700}
-.listening-full-test .design-question-group>.cbt-subsection-heading>p{font-size:.833333em}
+.listening-full-test .cbt-content-viewport{font-size:16px}
+.listening-full-test .cbt-content-viewport[data-font-size="90"]{font-size:14.4px}
+.listening-full-test .cbt-content-viewport[data-font-size="110"]{font-size:17.6px}
+.listening-full-test .cbt-content-viewport[data-font-size="120"]{font-size:19.2px}
+.listening-full-test #readingView .cbt-test-heading h2{font-size:17px;font-weight:700;line-height:1.3;white-space:normal;overflow-wrap:break-word}
+.listening-full-test .design-question-group>.cbt-subsection-heading>h4{font-size:1.25em;font-weight:700}
+.listening-full-test .design-question-group>.cbt-subsection-heading>p{font-size:.9375em}
 .listening-full-test .design-question-group>.cbt-subsection-heading strong{font-weight:600}
-.listening-full-test .authored-note-list .authored-stem,.listening-full-test .authored-introduction{font-weight:400;line-height:1.65}
-.listening-full-test .authored-note-heading{font-size:1em;font-weight:700;line-height:1.4;color:var(--m170-structure,#174265)}
-.listening-full-test .authored-completion-table caption,.listening-full-test .design-question-content .cbt-option-bank>h4{font-size:1em;font-weight:700;line-height:1.4}
+.listening-full-test .authored-note-list .authored-stem,.listening-full-test .authored-introduction{font-weight:400;line-height:1.75}
+.listening-full-test .authored-note-heading{font-size:1.12em;font-weight:700;line-height:1.4;color:var(--m170-structure,#174265)}
+.listening-full-test .authored-completion-table caption,.listening-full-test .design-question-content .cbt-option-bank>h4{font-size:1.125em;font-weight:700;line-height:1.4}
 .listening-full-test .authored-completion-table th{font-weight:600}
-.listening-full-test .cbt-choice{font-size:1em;font-weight:400}
-.listening-full-test :is(.cbt-answer-input,.cbt-answer-select){font-size:1em;font-weight:600}
+.listening-full-test .cbt-choice{font-size:.92em;font-weight:400}
+.listening-full-test :is(.cbt-answer-input,.cbt-answer-select){font-size:.88em;font-weight:600}
 .listening-full-test .authored-question-list{border:0;border-radius:0}
 .listening-full-test .authored-question-list>.cbt-question-card:first-child{padding-top:0}
 .listening-full-test .authored-question-list>.cbt-question-card:last-child{border-bottom:0;padding-bottom:0}
@@ -50,11 +50,45 @@
 .authored-completion-table .authored-table-slot{margin:4px 0}
 .authored-completion-table .authored-table-slot [data-answer-slot]{width:92px;max-width:100%}
 .authored-completion-table .cbt-answer-input{width:92px;max-width:100%}
+.listening-full-test .authored-completion-table .authored-table-slot{display:flex;width:100%;flex-wrap:nowrap}
+.listening-full-test .authored-completion-table [data-answer-slot]{flex:1 1 92px;width:auto;min-width:0;max-width:92px}
+.listening-full-test .authored-completion-table .cbt-answer-input{width:100%;min-width:0}
+.listening-full-test .authored-completion-table :is(.cbt-blank-number,.cbt-flag-button){flex-shrink:0}
 #readingView.listening-single-part .cbt-reading-section{display:grid;grid-template-columns:minmax(0,1fr)}
 #readingView.listening-single-part .cbt-reading-passage{display:none!important}
 #readingView.listening-single-part .cbt-reading-questions{display:block!important;grid-column:1/-1;flex:1 1 auto!important;width:100%!important;max-width:1000px;min-width:0;margin-inline:auto;border-left:0}
 .listening-single-part .design-question-group{margin-inline:auto}
 .listening-single-part .reading-view-switch{display:none}
+.listening-full-test.reading #app>.page-shell{width:calc(100% - 32px);margin:10px auto 0}
+.listening-full-test.reading #app:has(#readingView:not([hidden])){padding-bottom:0}
+.listening-full-test.reading :is(.page-footer,.reading-demo-footer){display:none}
+.listening-full-test #readingView .cbt-question-nav-wrap{padding:9px 12px}
+.listening-full-test #readingView .cbt-question-nav{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:5px;padding:0;min-width:0;max-width:100%}
+.listening-full-test #readingView .cbt-question-button{min-width:0;height:34px;min-height:34px;padding:0;font-size:12px;font-weight:600}
+.listening-full-test #readingView .cbt-nav-legend{display:none}
+@media(min-width:1201px){
+ .listening-full-test #readingView .cbt-question-nav{grid-template-columns:repeat(40,minmax(0,1fr))}
+}
+@media(max-width:980px){
+ .listening-full-test #readingView .cbt-question-nav{display:flex;overflow-x:auto;overflow-y:hidden;gap:6px;padding-bottom:3px;scrollbar-width:thin}
+ .listening-full-test #readingView .cbt-question-button{width:34px;min-width:34px;flex-shrink:0}
+}
+@media(max-width:620px){
+ .listening-full-test #readingView .cbt-question-button{font-size:11px}
+}
+/* Kết quả và lời giải dùng thang chữ riêng của Term Test, không phóng theo giấy đề. */
+body.design67.listening-full-test .answer-explanations>.section-heading h2{font-size:22px;line-height:1.3;font-weight:700}
+body.design67.listening-full-test .result-table.detail-table .detail-row td{font-weight:400}
+body.design67.listening-full-test .result-table.detail-table .detail-row td:first-child,
+body.design67.listening-full-test .result-table.detail-table .detail-row td:nth-child(3),
+body.design67.listening-full-test .result-table .detail-result-cell,
+body.design67.listening-full-test .result-table .explanation-button{font-weight:600}
+body.design67.listening-full-test .result-table .detail-result-icon{font-weight:700}
+body.design67.listening-full-test #explanation-dialog .explanation-dialog-passage-scroll,
+body.design67.listening-full-test #explanation-dialog .transcript-segment p{font-size:15px;line-height:1.75}
+body.design67.listening-full-test #explanation-dialog .explanation-dialog-compare p{font-size:14px;line-height:1.65}
+body.design67.listening-full-test #explanation-dialog .explanation-dialog-analysis p{font-size:14px;line-height:1.75}
+body.design67.listening-full-test #explanation-dialog :is(p.replay-meta,.replay-meta,.replay-status){font-size:12px;line-height:1.6}
 @media(max-width:799px),(max-height:700px){
  .listening-full-test #app:has(#readingView:not([hidden])){height:auto;min-height:100dvh}
  .listening-full-test #app:has(#readingView:not([hidden]))>.page-shell{flex:0 0 auto;overflow:visible}
@@ -70,8 +104,6 @@
  .listening-full-test #readingView .cbt-part-button{width:100%;min-width:0;white-space:normal}
  .listening-full-test #readingView .cbt-test-heading{grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "controls" "actions"}
  .listening-full-test #readingView .cbt-heading-actions{display:flex;flex-wrap:wrap}
- .listening-full-test #readingView .cbt-question-nav{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));width:100%;min-width:0;overflow:visible;gap:3px}
- .listening-full-test .cbt-question-button{min-height:30px;padding:4px 0}
  .authored-completion-table,.authored-completion-table tbody,.authored-completion-table tr,.authored-completion-table td{display:block;width:auto}
  .authored-completion-table thead{display:none}
  .authored-completion-table tr{margin-bottom:14px;border:1px solid #d8dee5}
