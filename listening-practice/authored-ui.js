@@ -30,7 +30,7 @@ function pairHtml(g,a,flag){
  const numbers=g.questions.map(q=>q.n),chosen=numbers.map(n=>a.answers[n]).filter(Boolean),options=g.options||g.questions[0].options;
  return `<article class="cbt-question-card authored-pair" id="q-${numbers[0]}" data-question-number="${numbers[0]}"><div class="cbt-question-heading"><span class="cbt-question-number">${numbers.join('–')}</span><p class="authored-stem">${esc(g.questions[0].text)}</p><span class="authored-pair-flags">${numbers.map(n=>`${n!==numbers[0]?`<span id="q-${n}" data-question-number="${n}"></span>`:''}${flag(n)}`).join('')}</span></div><div class="cbt-choice-list">${options.map(o=>`<label class="cbt-choice"><input type="checkbox" name="pair-${g.id}" data-authored-pair="${numbers.join(',')}" value="${esc(o.value)}" ${chosen.includes(o.value)?'checked':''}><span class="cbt-choice-letter">${esc(o.value)}</span><span>${esc(o.text)}</span></label>`).join('')}</div><p class="small muted" data-pair-status="${numbers.join(',')}" role="status">Đã chọn ${new Set(chosen).size}/${numbers.length}</p></article>`;
 }
-export function groupsHtml(groups,a,flag,{documentNotes=false}={}){
+export function groupsHtml(groups,a,flag,{documentNotes=false,practiceLayout=false}={}){
  return groups.map(g=>{
   if(g.table||g.answerMode==='unordered-pair')return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.start}–${g.end} · ${esc(g.label)}</h4><p>${esc(g.instruction)}</p></header><div class="design-question-content">${g.table?tableHtml(g,a,flag):pairHtml(g,a,flag)}</div></section>`;
   const bank=g.options;
@@ -48,8 +48,9 @@ export function groupsHtml(groups,a,flag,{documentNotes=false}={}){
    }
    return `<article class="cbt-question-card" id="q-${q.n}" data-question-number="${q.n}"><div class="cbt-question-heading"><span class="cbt-question-number">${q.n}</span><p id="stem-${q.n}">${esc(q.text)}</p>${flag(q.n)}</div>${control}</article>`;
   }).join('');
-  const questionClass=documentNotes&&g.kind==='completion'&&!bank?'authored-note-list':'cbt-matching-questions';
-  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${esc(g.instruction)}</p></header>${g.introduction?`<p style="white-space:pre-line">${esc(g.introduction)}</p>`:''}${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${bank?'cbt-matching-layout cbt-answer-first-matching-layout':''}"><section class="${questionClass}">${questions}</section>${bank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
+  const questionClass=(documentNotes||practiceLayout)&&g.kind==='completion'&&!bank?'authored-note-list':practiceLayout&&g.kind==='mcq'?'authored-question-list':'cbt-matching-questions';
+  const introduction=g.introduction?`<p class="authored-introduction" style="white-space:pre-line">${esc(g.introduction)}</p>`:'';
+  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${esc(g.instruction)}</p></header>${practiceLayout?'':introduction}${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${bank?'cbt-matching-layout cbt-answer-first-matching-layout':''}">${practiceLayout?introduction:''}<section class="${questionClass}">${questions}</section>${bank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
  }).join('');
 }
 export function bindMultiple(root,onAnswer){

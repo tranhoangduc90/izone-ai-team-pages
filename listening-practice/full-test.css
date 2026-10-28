@@ -7,6 +7,14 @@
 .listening-full-test #readingView .cbt-heading-actions{grid-area:actions;min-width:0;max-width:100%}
 .listening-full-test #readingView .cbt-part-nav{flex:1 1 auto;max-width:none;width:auto;overflow:visible}
 .listening-full-test .authored-stem{white-space:pre-line}
+.listening-full-test .authored-introduction{margin:0 0 12px;line-height:1.6}
+.listening-full-test .cbt-question-card:not(.authored-pair) .cbt-question-heading{grid-template-columns:34px minmax(0,1fr) 34px}
+.listening-full-test .authored-note-list .cbt-question-heading{grid-template-columns:minmax(0,1fr) 34px!important}
+.listening-full-test .authored-stem{min-width:0;overflow-wrap:break-word}
+.listening-full-test .authored-question-list{border:0;border-radius:0}
+.listening-full-test .authored-question-list>.cbt-question-card:first-child{padding-top:0}
+.listening-full-test .authored-question-list>.cbt-question-card:last-child{border-bottom:0;padding-bottom:0}
+.listening-full-test .authored-pair .cbt-question-number{width:auto;min-width:54px;padding-inline:6px;white-space:nowrap}
 .authored-pair-flags{display:flex;gap:4px}
 .authored-pair .cbt-question-heading{grid-template-columns:auto minmax(0,1fr) auto}
 .design67 .authored-matching-answer{display:flex;align-items:center;gap:10px;min-width:0}
@@ -25,12 +33,19 @@
 .authored-completion-table th{background:#edf1f5;text-align:left}
 .authored-completion-table th:first-child{width:16%}
 .authored-completion-table .authored-table-slot{display:inline-flex;max-width:100%;flex-wrap:wrap;gap:3px;vertical-align:middle}
+.authored-completion-table .authored-table-slot{margin:4px 0}
+.authored-completion-table .authored-table-slot [data-answer-slot]{width:92px;max-width:100%}
 .authored-completion-table .cbt-answer-input{width:92px;max-width:100%}
 #readingView.listening-single-part .cbt-reading-section{display:grid;grid-template-columns:minmax(0,1fr)}
 #readingView.listening-single-part .cbt-reading-passage{display:none!important}
 #readingView.listening-single-part .cbt-reading-questions{display:block!important;grid-column:1/-1;flex:1 1 auto!important;width:100%!important;max-width:1000px;min-width:0;margin-inline:auto;border-left:0}
+.listening-single-part .design-question-group{margin-inline:auto}
 .listening-single-part .reading-view-switch{display:none}
 @media(max-width:799px){
+ .listening-full-test .authored-pair .cbt-question-heading{grid-template-columns:minmax(0,1fr) auto;gap:12px}
+ .listening-full-test .authored-pair .cbt-question-number{justify-self:start}
+ .listening-full-test .authored-pair .authored-pair-flags{grid-column:2;grid-row:1}
+ .listening-full-test .authored-pair .authored-stem{grid-column:1/-1;grid-row:2;margin:0}
  .listening-full-test #readingView .cbt-part-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:1 1 100%;width:100%;min-width:0;gap:5px;flex-wrap:wrap}
  .listening-full-test #readingView .cbt-part-button{width:100%;min-width:0;white-space:normal}
  .listening-full-test #readingView .cbt-test-heading{grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "controls" "actions"}
