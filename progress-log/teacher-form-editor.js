@@ -406,7 +406,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     },readonly));for(const [i,b]of [...moves.children].entries())b.setAttribute('aria-label',(i===0?'Đưa câu lên ':i===1?'Đưa câu xuống ':'Bỏ câu ')+item.position);head.append(moves);card.append(head,modes);
     const config=item.interactionConfig;
     const gap=type==='short_answer'||Boolean(config.sentenceLines);
-    if(gap)gapWidgets.push(mountGapAuthoring(card,{item,key:draft.gradingKey,kind,readonly,onChange:()=>{if(['short_answer','gapfill'].includes(type))item.kind??=kind;markDirty();},onError:notice}));
+    if(gap&&!readonly&&['short_answer','gapfill'].includes(type))item.kind??=kind;
+    if(gap)gapWidgets.push(mountGapAuthoring(card,{item,key:draft.gradingKey,kind,readonly,onChange:markDirty,onError:notice}));
     else field(card,'Nội dung câu hỏi',item.prompt,value=>{item.prompt=value;},{kind:'textarea'});
     if(['mcq','multi','dropdown','speaking_checklist'].includes(type)){
       const objective=['exact_option','exact_option_set'].includes(item.graderType);
