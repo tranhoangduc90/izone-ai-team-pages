@@ -1,5 +1,6 @@
 import {setWorkspaceText} from './workspace-status.mjs?v=20261028-compact1';
-import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261028-compact1&audio=20261028-part-rescue-v1';
+import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
+import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261029-grading2&audio=20261028-part-rescue-v1';
 import {createCourseStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
 const API=location.hostname==='127.0.0.1'||location.hostname==='localhost'?'/api/listening-homework67':'https://ducizone.ddns.net/listening-homework67/api/listening-homework67';
@@ -20,7 +21,7 @@ const backupKey=()=>`listening-homework:backup:${person.ownerId}:${person.course
 function body(){return view.getBody();}
 function backup(){if(!person||!content||readonly)return;const stored=storage.put(backupKey(),{body:body(),revision:draft?.revision||0,pendingSave,dirty:dirty||!!pendingSave});if(!stored)text('save-status','Chưa lưu được trên thiết bị. Hãy giữ trang mở và thử lưu lên hệ thống.');}
 function fillBody(value,options){view.setBody(value,options);completion();}
-function completion(){if(!content||!view)return;const answers=body().answers,count=content.items.filter(i=>{const value=(answers[i.id]||'').trim();return value&&!/^(?:\.{2,}|[-_…]+|n\/?a)$/i.test(value);}).length,required=Math.ceil(content.items.length*content.minimumCompletion);text('progress',`${count}/${content.items.length} đã nhập`);$('submit').disabled=readonly||submitting||count<required;}
+function completion(){if(!content||!view)return;const answers=body().answers,count=content.items.filter(i=>hasAnswerContent(answers[i.id])).length,required=Math.ceil(content.items.length*content.minimumCompletion);text('progress',`${count}/${content.items.length} đã nhập`);$('submit').disabled=readonly||submitting||count<required;}
 
 function feedbackNode(itemId,feedback){const div=document.createElement('div');div.className='feedback '+feedback.status;const h=document.createElement('strong');h.textContent=({correct:'Đạt ý',partial:'Cần bổ sung',incorrect:'Cần đối chiếu lại',blank:'Chưa trả lời'})[feedback.status]||'Góp ý';if(feedback.totalUnits>1)h.textContent+=` · ${feedback.metUnits}/${feedback.totalUnits} ý`;div.append(h);for(const line of [feedback.reason,feedback.nextStep])if(line){const p=document.createElement('p');p.textContent=line;div.append(p);}if(feedback.writingNotes?.length){const p=document.createElement('p');p.textContent='Góp ý cách viết: '+feedback.writingNotes.join(' ');div.append(p);}if(feedback.modelAnswer){const details=document.createElement('details'),label=document.createElement('summary'),p=document.createElement('p');label.textContent='Đối chiếu đáp án gợi ý';p.textContent=feedback.modelAnswer;details.append(label,p);div.append(details);}return div;}
 function entryReady(){const b=$('entry-submit');b.disabled=loginPending||!$('class').value||!$('student').value;b.textContent=loginPending?'Đang mở bài…':'Mở bài Listening →';}

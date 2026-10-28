@@ -1,5 +1,6 @@
 import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261027-l2-v1&audio=20261028-part-rescue-v1';
 import {decodeBody,encodeBody,encodeAnswer} from './answer-codec.mjs?v=20261028-integration1';
+import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
 export function createListeningWorkspace(options){
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -21,12 +22,12 @@ function save(){
 }
 function answer(id){return Object.hasOwn(state.legacy,id)?state.legacy[id]:encodeAnswer(id,state.fields);}
 function progress(){
- const done=data.items.filter(i=>answer(i.id).trim()).length;
+ const done=data.items.filter(i=>hasAnswerContent(answer(i.id))).length;
  $('progress').textContent=`${done}/22 đã nhập`;
- chapters.forEach((c,n)=>$('count-'+n).textContent=c.ids.filter(id=>answer(id).trim()).length+'/'+c.ids.length);
+ chapters.forEach((c,n)=>$('count-'+n).textContent=c.ids.filter(id=>hasAnswerContent(answer(id))).length+'/'+c.ids.length);
  $('review-count').textContent=`${22-done} chưa nhập`;
  $('flag-summary').textContent=state.flags.length?state.flags.length+' đã đánh dấu':'';
- document.querySelectorAll('[data-jump]').forEach(b=>{const id=b.dataset.jump,filled=!!answer(id).trim(),flagged=state.flags.includes(id),active=id===activeItem;
+ document.querySelectorAll('[data-jump]').forEach(b=>{const id=b.dataset.jump,filled=hasAnswerContent(answer(id)),flagged=state.flags.includes(id),active=id===activeItem;
   b.classList.toggle('is-answered',filled);b.classList.toggle('is-flagged',flagged);b.classList.toggle('is-active',active);b.setAttribute('aria-current',String(active));b.setAttribute('aria-label',[itemLabel(id),filled?'đã nhập':'chưa nhập',flagged?'đã đánh dấu':''].filter(Boolean).join(', '));});
  document.querySelectorAll('[data-flag]').forEach(b=>{const marked=state.flags.includes(b.dataset.flag);b.classList.toggle('is-flagged',marked);b.setAttribute('aria-pressed',String(marked));b.setAttribute('aria-label',(marked?'Bỏ đánh dấu ':'Đánh dấu ')+itemLabel(b.dataset.flag));});
 }
@@ -191,7 +192,7 @@ $('seek').oninput=()=>{if(audioUrl)audio.currentTime=+$('seek').value;else $('se
 scopeListen(audio,'play',renderPlay);scopeListen(audio,'pause',renderPlay);scopeListen(audio,'timeupdate',updateAudio);scopeListen(audio,'ended',renderPlay);
 $('font-down').onclick=()=>setFont(-10);$('font-up').onclick=()=>setFont(10);$('notes-button').onclick=()=>toggleNotes($('notes-panel').hidden);$('close-notes').onclick=()=>toggleNotes(false);$('notes').oninput=()=>{state.notes=$('notes').value;save();};
 scopeListen(document,'keydown',e=>{if(e.key==='Escape'&&!$('notes-panel').hidden)toggleNotes(false);});
-$('next').onclick=()=>{if(state.chapter<2)setChapter(state.chapter+1);else{const blank=data.items.find(i=>!answer(i.id).trim())||data.items[0];document.querySelector(`[data-jump="${blank.id}"]`).click();}};
+$('next').onclick=()=>{if(state.chapter<2)setChapter(state.chapter+1);else{const blank=data.items.find(i=>!hasAnswerContent(answer(i.id)))||data.items[0];document.querySelector(`[data-jump="${blank.id}"]`).click();}};
 $('sample-feedback').onclick=()=>openReview(feedback?.items.find(i=>i.feedback.status!=='correct')?.id||feedback?.items[0]?.id,$('sample-feedback'));$('history-button').onclick=()=>options.onHistory?.();bindDialog('explanation-dialog','close-review','sample-feedback');
 for(const id of ['exercise','transcript-cues'])scopeListen($(id),'scroll',()=>{rememberView();save();},{passive:true});
 scopeListen(document,'visibilitychange',()=>{if(document.hidden){stop();downloadAbort?.abort();rememberView();save();}});scopeListen(window,'pagehide',()=>{stop();downloadAbort?.abort();rememberView();save();});
