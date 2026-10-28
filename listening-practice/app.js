@@ -1,6 +1,6 @@
 (async () => {
 'use strict';
-const AuthoredUI=await import('./authored-ui.js?v=20261028-full-test4');
+const AuthoredUI=await import('./authored-ui.js?v=20261028-full-test5');
 const {fetchListeningAudio,clearListeningAudioMemory}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
