@@ -30,7 +30,7 @@ function pairHtml(g,a,flag){
  const numbers=g.questions.map(q=>q.n),chosen=numbers.map(n=>a.answers[n]).filter(Boolean),options=g.options||g.questions[0].options;
  return `<article class="cbt-question-card authored-pair" id="q-${numbers[0]}" data-question-number="${numbers[0]}"><div class="cbt-question-heading"><span class="cbt-question-number">${numbers.join('–')}</span><p class="authored-stem">${esc(g.questions[0].text)}</p><span class="authored-pair-flags">${numbers.map(n=>`${n!==numbers[0]?`<span id="q-${n}" data-question-number="${n}"></span>`:''}${flag(n)}`).join('')}</span></div><div class="cbt-choice-list">${options.map(o=>`<label class="cbt-choice"><input type="checkbox" name="pair-${g.id}" data-authored-pair="${numbers.join(',')}" value="${esc(o.value)}" ${chosen.includes(o.value)?'checked':''}><span class="cbt-choice-letter">${esc(o.value)}</span><span>${esc(o.text)}</span></label>`).join('')}</div><p class="small muted" data-pair-status="${numbers.join(',')}" role="status">Đã chọn ${new Set(chosen).size}/${numbers.length}</p></article>`;
 }
-export function groupsHtml(groups,a,flag){
+export function groupsHtml(groups,a,flag,{documentNotes=false}={}){
  return groups.map(g=>{
   if(g.table||g.answerMode==='unordered-pair')return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.start}–${g.end} · ${esc(g.label)}</h4><p>${esc(g.instruction)}</p></header><div class="design-question-content">${g.table?tableHtml(g,a,flag):pairHtml(g,a,flag)}</div></section>`;
   const bank=g.options;
@@ -38,8 +38,9 @@ export function groupsHtml(groups,a,flag){
    const options=q.options||bank,selected=String(a.answers[q.n]||'').split('|');
    let control;
    if(g.kind==='mcq')control='<div class="cbt-choice-list">'+options.map(o=>`<label class="cbt-choice"><input type="${q.multiple?'checkbox':'radio'}" name="answer-${q.n}" value="${esc(o.value)}" ${q.multiple?'data-authored-multi="'+q.n+'"':'data-answer="'+q.n+'"'} ${selected.includes(o.value)?'checked':''}><span class="cbt-choice-letter">${esc(o.value)}</span><span>${esc(o.text)}</span></label>`).join('')+'</div>';
-   else if(options)control=`<span class="cbt-select-answer" data-question-number="${q.n}"><span class="cbt-blank-number">${q.n}</span><span data-answer-slot><select class="cbt-answer-select" id="answer-${q.n}" data-answer="${q.n}" aria-label="Câu ${q.n}"><option value="">Nhấn để chọn</option>${options.map(o=>`<option value="${esc(o.value)}" ${a.answers[q.n]===o.value?'selected':''}>${esc(o.value)} · ${esc(o.text)}</option>`).join('')}</select></span></span>`;
+   else if(options)control=`<span class="cbt-select-answer" data-question-number="${q.n}"><span class="cbt-blank-number">${q.n}</span><span data-answer-slot><select class="cbt-answer-select" id="answer-${q.n}" data-answer="${q.n}" aria-label="Câu ${q.n}"><option value="">Nhấn để chọn</option>${options.map(o=>`<option value="${esc(o.value)}" title="${esc(o.text)}" ${a.answers[q.n]===o.value?'selected':''}>${esc(o.value)}${bank?'':' · '+esc(o.text)}</option>`).join('')}</select></span></span>`;
    else control=`<span class="cbt-inline-answer"><span class="cbt-blank-number">${q.n}</span><span data-answer-slot><input class="cbt-answer-input" type="text" id="answer-${q.n}" data-answer="${q.n}" value="${esc(a.answers[q.n]||'')}" aria-label="Câu ${q.n}" maxlength="80" autocomplete="off"></span></span>`;
+   if(g.kind!=='mcq'&&options)return `<div class="authored-matching-row" id="q-${q.n}" data-question-number="${q.n}"><label for="answer-${q.n}">${esc(q.text)}</label><span class="authored-matching-answer">${control}${flag(q.n)}</span></div>`;
    // Câu điền ghi chú giữ chữ hai bên ô nhập để không mất nghĩa hoặc lộ ký hiệu bản soạn.
    if(!options&&q.text.includes('{blank}')){
     const [before,...after]=q.text.split('{blank}');
@@ -47,7 +48,8 @@ export function groupsHtml(groups,a,flag){
    }
    return `<article class="cbt-question-card" id="q-${q.n}" data-question-number="${q.n}"><div class="cbt-question-heading"><span class="cbt-question-number">${q.n}</span><p id="stem-${q.n}">${esc(q.text)}</p>${flag(q.n)}</div>${control}</article>`;
   }).join('');
-  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${esc(g.instruction)}</p></header>${g.introduction?`<p style="white-space:pre-line">${esc(g.introduction)}</p>`:''}${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${bank?'cbt-matching-layout cbt-answer-first-matching-layout':''}"><section class="cbt-matching-questions">${questions}</section>${bank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
+  const questionClass=documentNotes&&g.kind==='completion'&&!bank?'authored-note-list':'cbt-matching-questions';
+  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${esc(g.instruction)}</p></header>${g.introduction?`<p style="white-space:pre-line">${esc(g.introduction)}</p>`:''}${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${bank?'cbt-matching-layout cbt-answer-first-matching-layout':''}"><section class="${questionClass}">${questions}</section>${bank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
  }).join('');
 }
 export function bindMultiple(root,onAnswer){
