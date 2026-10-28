@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  let meta=null,binding=null,blocked=false;
+  let meta=null,binding=null,timing={},blocked=false;
   const controllers=new Set();
   // Từng getter có thể bị chặn; vẫn dùng nơi còn truy cập được, hoặc giữ lượt trong RAM.
   const stores=(names=['sessionStorage','localStorage'])=>names.flatMap(name=>{try{return window[name]?[window[name]]:[];}catch{return [];}});
@@ -37,6 +37,12 @@
     // Phòng chờ có thể chọn lại; khi bài đã mở thì không đổi chủ lượt bằng URL/state cũ.
     const confirmed=window.TERM_TEST_BOOTSTRAP;
     if(confirmed&&['classCode','studentRef','clientRunId'].some(key=>String(confirmed[key]||'')!==next[key]))throw new Error('Định danh lượt không khớp. Hãy tải lại đúng trang đang làm; bản nháp được giữ nguyên.');
+    // Giữ thời hạn trong RAM của đúng lượt, kể cả khi storage bị đầy/chặn.
+    if(!previous||['testSlug','historyEpoch','classCode','studentRef','clientRunId'].some(key=>previous[key]!==next[key]))timing={};
+    for(const key of ['listeningStartedAt','listeningDeadlineAt','readingDeadlineAt','writingDeadlineAt']){
+      if(typeof value[key]==='string'&&Number.isFinite(Date.parse(value[key])))timing[key]=value[key];
+    }
+    if(Number.isFinite(value.serverTimeOffsetMs))timing.serverTimeOffsetMs=value.serverTimeOffsetMs;
     binding=next;
     if(window.location?.href&&window.history?.replaceState){
       try{
@@ -108,5 +114,5 @@
   function payload(value){if(blocked||!meta)throw new Error('Lượt làm bài đã hết hiệu lực. Hãy tải lại trang.');return {...value,historyEpoch:meta.historyEpoch,...(binding?{classCode:binding.classCode,studentRef:binding.studentRef,clientRunId:binding.clientRunId}:{}),...(binding?.examSessionId?{examSessionId:binding.examSessionId}:{}),...(binding?.examVersion?{examVersion:binding.examVersion}:{}),...(binding?.writingSessionId?{writingSessionId:binding.writingSessionId}:{})};}
   function track(controller){if(blocked)controller.abort();else controllers.add(controller);return ()=>controllers.delete(controller);}
   window.addEventListener('storage',event=>{if(meta&&canReset(meta.testSlug)&&event.key==='izone-demo-reset:'+meta.testSlug+':DEMO:server-grade'&&event.newValue)stop();});
-  window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,resolveClass,key,accept,stamp,canReset,clear,payload,track,stop,storages:stores,get blocked(){return blocked;},get meta(){return meta;}});
+  window.SUBSTITUTE_STATE=Object.freeze({initialize,bind,resolveClass,key,accept,stamp,canReset,clear,payload,track,stop,storages:stores,get blocked(){return blocked;},get meta(){return meta;},get timing(){return !blocked&&binding?{...timing,...binding}:null;}});
 }());
