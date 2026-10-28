@@ -24,6 +24,19 @@
   const submissionStorageKey = serverGradingMode ? window.SUBSTITUTE_STATE.key('izone-test:',classCode) : 'izone-test:' + testConfig.slug + ':' + classCode + ':preview:' + query.get('demo');
   const uiState = readUiState();
 
+  // Metadata thời hạn trong RAM thắng bản storage cũ; không chứa đáp án/bài viết.
+  function readTimerSession() {
+    const live = window.SUBSTITUTE_STATE?.timing;
+    if (serverGradingMode && live) return live;
+    for (const storage of window.SUBSTITUTE_STATE.storages()) {
+      try {
+        const value = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
+        if (!serverGradingMode || window.SUBSTITUTE_STATE.accept(value)) return value;
+      } catch { /* Thử nơi lưu còn dùng được. */ }
+    }
+    return {};
+  }
+
   // Dữ liệu vào: phần đang mở, câu đánh dấu, cỡ chữ, vị trí audio và hạn giờ Reading/Writing trên máy hiện tại.
   // Việc chính: đọc an toàn rồi bổ sung giá trị mặc định cho Listening, Reading và Writing.
   // Kết quả: tải lại trang vẫn trở về đúng ngữ cảnh học viên đang làm.
@@ -1242,19 +1255,9 @@
     autoSubmit.tabIndex = -1;
     listeningForm.form.append(autoSubmit);
     let intervalId = 0;
-    let lastAttempt = 0;
+    let lastAttempt = -Infinity;
 
-    function readExamState() {
-      for (const storage of window.SUBSTITUTE_STATE.storages()) {
-        try {
-          const parsed = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
-          if ((!serverGradingMode || window.SUBSTITUTE_STATE.accept(parsed)) && parsed.listeningStartedAt && parsed.listeningDeadlineAt) return parsed;
-        } catch {
-          // Tiếp tục với nguồn bộ nhớ còn lại.
-        }
-      }
-      return {};
-    }
+    function readExamState() { return readTimerSession(); }
 
     const transferClock=document.createElement('div');
     transferClock.className='cbt-reading-clock';transferClock.setAttribute('role','timer');transferClock.hidden=true;
@@ -1276,12 +1279,13 @@
       if (!Number.isFinite(deadline)) return;
       const serverOffset = Number(exam.serverTimeOffsetMs) || 0;
       const remaining = Math.max(0, deadline - (window.IZONE_EXAM_CLOCK?.now(serverOffset) ?? (Date.now() + serverOffset)));
+      if (!Number.isFinite(remaining)) return;
       if(window.TERM_TEST_BOOTSTRAP?.examSessionId){
         transferClock.hidden=false;const seconds=Math.ceil(remaining/1000);
         transferClock.textContent='Điền đáp án · '+String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
         transferClock.setAttribute('aria-label','Còn '+seconds+' giây để điền đáp án Listening');
       }
-      if (remaining === 0) lockAndSubmit(Date.now());
+      if (remaining === 0) lockAndSubmit(performance.now());
     }
     render();
     intervalId = window.setInterval(render, 1000);
@@ -1323,19 +1327,9 @@
 
     let intervalId = 0;
     let lastRenderedSecond = null;
-    let lastAutoSubmitAttempt = 0;
+    let lastAutoSubmitAttempt = -Infinity;
 
-    function readAttemptToken() {
-      for (const storage of window.SUBSTITUTE_STATE.storages()) {
-        try {
-          const token = String(JSON.parse(storage.getItem(submissionStorageKey) || '{}').attemptToken || '');
-          if (token) return token;
-        } catch {
-          // Tiếp tục kiểm tra nguồn bộ nhớ còn lại.
-        }
-      }
-      return '';
-    }
+    function readAttemptToken() { return String(readTimerSession().attemptToken || ''); }
 
     function stopTimer() {
       if (intervalId) window.clearInterval(intervalId);
@@ -1353,8 +1347,8 @@
     function renderTimer() {
       if(window.SUBSTITUTE_STATE?.blocked){stopTimer();return;}
       if (readingForm.form.hidden || !uiState.readingTimer.deadline) return;
-      const now = Date.now();
-      const remainingMs = Math.max(0, uiState.readingTimer.deadline - (window.IZONE_EXAM_CLOCK?.now() ?? now));
+      const now = performance.now();
+      const remainingMs = Math.max(0, uiState.readingTimer.deadline - (window.IZONE_EXAM_CLOCK?.now() ?? Date.now()));
       if (!Number.isFinite(remainingMs)) return;
       const remainingSeconds = Math.ceil(remainingMs / 1000);
       if (remainingSeconds !== lastRenderedSecond) {
@@ -1377,15 +1371,8 @@
         uiState.readingTimer.deadline = 0;
         uiState.readingTimer.attemptToken = attemptToken;
       }
-      for (const storage of window.SUBSTITUTE_STATE.storages()) {
-        try {
-          const session = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
-          const deadline = Date.parse(session.readingDeadlineAt || '');
-          if (Number.isFinite(deadline)) uiState.readingTimer.deadline = deadline;
-        } catch {
-          // Tiếp tục với nguồn bộ nhớ còn lại.
-        }
-      }
+      const deadline = Date.parse(readTimerSession().readingDeadlineAt || '');
+      if (Number.isFinite(deadline)) uiState.readingTimer.deadline = deadline;
       if (!uiState.readingTimer.deadline) return;
       renderTimer();
       intervalId = window.setInterval(renderTimer, 1000);
@@ -1446,20 +1433,10 @@
 
     let intervalId = 0;
     let lastRenderedSecond = null;
-    let lastAutoSubmitAttempt = 0;
+    let lastAutoSubmitAttempt = -Infinity;
     let essayPhaseAnnounced = false;
 
-    function readAttemptToken() {
-      for (const storage of window.SUBSTITUTE_STATE.storages()) {
-        try {
-          const token = String(JSON.parse(storage.getItem(submissionStorageKey) || '{}').attemptToken || '');
-          if (token) return token;
-        } catch {
-          // Tiếp tục kiểm tra nguồn bộ nhớ còn lại.
-        }
-      }
-      return '';
-    }
+    function readAttemptToken() { return String(readTimerSession().attemptToken || ''); }
 
     function stopTimer() {
       if (intervalId) window.clearInterval(intervalId);
@@ -1477,8 +1454,8 @@
     function renderTimer() {
       if(window.SUBSTITUTE_STATE?.blocked){stopTimer();return;}
       if (window.SUBSTITUTE_STATE?.blocked || form.hidden || !uiState.writingTimer.deadline) return;
-      const now = Date.now();
-      const remainingMs = Math.max(0, uiState.writingTimer.deadline - (window.IZONE_EXAM_CLOCK?.now() ?? now));
+      const now = performance.now();
+      const remainingMs = Math.max(0, uiState.writingTimer.deadline - (window.IZONE_EXAM_CLOCK?.now() ?? Date.now()));
       if (!Number.isFinite(remainingMs)) return;
       const remainingSeconds = Math.ceil(remainingMs / 1000);
       if (remainingSeconds !== lastRenderedSecond) {
@@ -1511,15 +1488,8 @@
         uiState.writingTimer.deadline = 0;
         uiState.writingTimer.attemptToken = attemptToken;
       }
-      for (const storage of window.SUBSTITUTE_STATE.storages()) {
-        try {
-          const session = JSON.parse(storage.getItem(submissionStorageKey) || '{}');
-          const deadline = Date.parse(session.writingDeadlineAt || '');
-          if (Number.isFinite(deadline)) uiState.writingTimer.deadline = deadline;
-        } catch {
-          // Tiếp tục với nguồn bộ nhớ còn lại.
-        }
-      }
+      const deadline = Date.parse(readTimerSession().writingDeadlineAt || '');
+      if (Number.isFinite(deadline)) uiState.writingTimer.deadline = deadline;
       if (!uiState.writingTimer.deadline) return;
       renderTimer();
       intervalId = window.setInterval(renderTimer, 1000);

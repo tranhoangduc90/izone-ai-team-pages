@@ -29,7 +29,7 @@
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
       .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1'))
-      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1'))
+      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -669,7 +669,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1');
-    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1');
+    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
