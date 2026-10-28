@@ -22,7 +22,7 @@
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   if(!window.IZONE_EXAM_DEVICE_CHECKED)await loadScript('../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1');
   if(window.IZONE_EXAM_DEVICE_BLOCKED)return;
-  if(!window.IZONE_AUDIO_SOURCE_CHOICE)await loadScript('../shared/audio-source-choice.js?v=20261027-v1');
+  if(!window.IZONE_AUDIO_SOURCE_CHOICE)await loadScript('../shared/audio-source-choice.js?v=20261027-v1&audio=20261028-part-rescue-v1');
   if(!window.IZONE_EXAM_CLOCK)await loadScript('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
   document.body.classList.add('cbt-mode');
   if ('serviceWorker' in navigator && !localDemo) {
@@ -566,7 +566,7 @@
       const previewUrl = appConfig.API_BASE_URL + session.previewAudioUrl;
       publicAudioManifest = session.audioManifest?.envelopeVersion === 'MP3' ? session.audioManifest : null;
       const publicStore = publicAudioManifest
-        ? await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2') : null;
+        ? await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1') : null;
       const [encrypted, previewResponse] = await Promise.all([
         (publicStore ? publicStore.downloadSessionAudio.bind(null, publicAudioManifest) : audioLoader.downloadAudio.bind(null, audioUrl))({
           signal: downloadController.signal,
@@ -728,7 +728,7 @@
 
   async function decryptOfficialAudio(blob, response) {
     if (publicAudioManifest) {
-      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2');
+      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1');
       return plaintextAudio(blob, publicAudioManifest);
     }
     const envelope = new Uint8Array(await blob.arrayBuffer());

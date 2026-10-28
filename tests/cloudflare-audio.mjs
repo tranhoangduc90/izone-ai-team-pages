@@ -127,3 +127,21 @@ test('Full primary, partial fallback, 1027/429, truncated 200, bad AES and cache
   const before=calls.length;assert.equal((await x.downloadPreferred(m(),{fetchImpl})).size,asset.byteLength);assert.equal(calls.length,before,'verified public cache makes no new network request');
  });
 });
+
+test('rescuing one part does not disable Cloudflare for the next uncached transfer',async()=>{
+ const bytes=await readFile(process.env.AUDIO_PUBLIC_FIXTURE);assert.equal(await sha(bytes),asset.sha256);
+ env.AUDIO={get:async(_key,{range})=>({size:asset.byteLength,arrayBuffer:async()=>bytes.subarray(range.offset,range.offset+range.length)})};
+ const x=await transport();let accesses=0;const rescued=[];
+ const fetchImpl=async(url,init)=>{
+  url=String(url);
+  if(url.startsWith(origin)){
+   if(url.includes('/access/'))accesses++;
+   if(url.endsWith('/524288/0'))return new Response('isolated part failure',{status:500});
+   return input(url,init);
+  }
+  assert.equal(url,asset.url);const [,start,end]=/^bytes=(\d+)-(\d+)$/.exec(init.headers.Range);rescued.push(+start);
+  return new Response(bytes.subarray(+start,+end+1),{status:206});
+ };
+ for(let run=0;run<2;run++)assert.equal((await x.downloadPreferred(m(),{parts:new Map(),fetchImpl})).size,asset.byteLength);
+ assert.equal(accesses,2,'each fresh transfer still starts with Cloudflare');assert.deepEqual(rescued,[0,0]);
+});

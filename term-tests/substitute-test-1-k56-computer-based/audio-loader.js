@@ -46,7 +46,7 @@ function startJournalAudioCapture(metadata,bootstrapUrl){
 (function () {
   'use strict';
   const journalUrl = new URL('../shared/exam-journal/bootstrap-capture.mjs?v=20261024-startup-v2&resilience=20261027-v1', document.currentScript.src).href;
-  const transportUrl = new URL('../../shared/audio/transport.mjs?v=20261023-cf512-1&journal=20261024-startup-v2&resilience=20261027-v1', document.currentScript.src).href;
+  const transportUrl = new URL('../../shared/audio/transport.mjs?v=20261023-cf512-1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1', document.currentScript.src).href;
 
   // Dữ liệu vào: đường dẫn audio, hàm nhận tiến độ và tín hiệu hủy khi học viên thử lại.
   // Việc chính: đọc toàn bộ các khối dữ liệu từ mạng rồi mới ghép thành một Blob trong máy.
