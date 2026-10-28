@@ -1,5 +1,6 @@
+import {patchReadingView} from './reading-view.mjs?v=20261027-reading1';
 import { teacherSessionRequestOptions } from './teacher-session-client.js?startup=20261026-v2';
-import { renderPracticeDefinitionHtml as definitionHtml } from './teacher-practice-definition.js?v=20261021-authoring-v1';
+import { renderPracticeDefinitionHtml as definitionHtml } from './teacher-practice-definition.js?v=20261028-full-test1';
 
 // Nhận dữ liệu chỉ đọc từ API của từng sản phẩm. Không dùng danh tính học viên,
 // không gọi begin/open/pulse/submit và không tạo trình phát hoặc yêu cầu audio.
@@ -155,7 +156,18 @@ function renderDetail() {
     const attemptSelect = data.attempts?.length ? `<div class="teacher-attempts"><label for="attempt-select">Lần làm</label><select id="attempt-select">${data.attempts.map(a => `<option value="${a.id}" ${a.id === state.attemptId ? 'selected' : ''}>Lần ${a.no} · ${status(a)}</option>`).join('')}</select></div>` : '';
     content = attemptSelect + `<div class="teacher-grid"><section class="teacher-paper"><h2>Đề bài để đối chiếu</h2>${definitionHtml(data.definition,data.questionIds,data.code)}</section><section class="teacher-paper"><h2>Bài làm đã lưu</h2>${selected ? `<p class="small muted">${submitted ? `Đã nộp${Number.isFinite(selected.finalScore) ? ' · ' + selected.finalScore + ' câu đúng' : ''}` : 'Chưa nộp · Chưa có kết quả chính thức'}</p>${questions.length ? questions.map(n => `<div class="teacher-answer"><span>Câu ${escape(n)}</span><span>${escape(answers[n] || 'Chưa nhập')}</span></div>`).join('') : '<p class="muted">Chưa có câu trả lời được lưu.</p>'}<h3 style="margin-top:26px">Ghi chú học viên</h3><div class="teacher-notes">${escape(selected.notes || 'Chưa có ghi chú.')}</div>` : '<p class="muted">Chưa có lần làm nào được lưu. Việc xem trang này không tạo lượt làm bài.</p>'}</section></div>`;
   }
-  $('detail').innerHTML = `<a class="teacher-back" href="#students" id="detail-back">← Về danh sách học viên</a><p class="teacher-kicker">${escape($('page-title').textContent)}</p><div class="teacher-detail-heading"><div><h1>${escape(data.student.name)}</h1><span class="badge ${submitted ? 'done' : 'pending'}">${submitted ? 'Đã nộp · Chỉ xem' : 'Chưa nộp · Chỉ xem'}</span><p class="teacher-saved">${escape(data.student.classCode)} · ${date(data.savedAt || data.submittedAt || data.links?.at(-1)?.savedAt)}</p></div><button class="secondary" id="refresh-detail">Cập nhật bài đã lưu</button></div>${content}${safeLink(data.documentUrl) ? `<a class="teacher-document" target="_blank" rel="noopener noreferrer" href="${escape(safeLink(data.documentUrl))}">Mở tài liệu bài tập ↗</a>` : ''}`;
+  const markup = `<a class="teacher-back" href="#students" id="detail-back">← Về danh sách học viên</a><p class="teacher-kicker">${escape($('page-title').textContent)}</p><div class="teacher-detail-heading"><div><h1>${escape(data.student.name)}</h1><span class="badge ${submitted ? 'done' : 'pending'}">${submitted ? 'Đã nộp · Chỉ xem' : 'Chưa nộp · Chỉ xem'}</span><p class="teacher-saved">${escape(data.student.classCode)} · ${date(data.savedAt || data.submittedAt || data.links?.at(-1)?.savedAt)}</p></div><button class="secondary" id="refresh-detail">Cập nhật bài đã lưu</button></div>${content}${safeLink(data.documentUrl) ? `<a class="teacher-document" target="_blank" rel="noopener noreferrer" href="${escape(safeLink(data.documentUrl))}">Mở tài liệu bài tập ↗</a>` : ''}`;
+  const fullListening=product==='listening'&&data.definition?.lesson?.parts?.length;
+  const identity=JSON.stringify([state.code,state.classId,state.selected,state.attemptId]);
+  if(fullListening&&state.readingIdentity===identity&&$('detail').firstChild){
+    // Vẫn đọc nền; chỉ sửa vùng đổi, giữ thẻ đang mở/đóng, bôi chọn và vị trí đọc.
+    const template=document.createElement('template');template.innerHTML=markup;
+    patchReadingView($('detail'),template.content,{
+      nodeKey:node=>node.nodeType===1?(node.id||node.dataset.readingKey||''):'',
+      boundary:(existing,incoming)=>existing.nodeName==='DETAILS'&&incoming.nodeName==='DETAILS'&&existing.innerHTML===incoming.innerHTML?'keep':undefined
+    });
+  }else $('detail').innerHTML=markup;
+  state.readingIdentity=fullListening?identity:null;
   $('detail').hidden = false;$('list-panel').hidden = true;
 }
 async function loadDetail(id, epoch = resetRequests(), navigate = true) {
