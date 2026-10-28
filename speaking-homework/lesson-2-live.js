@@ -91,11 +91,7 @@ function setStatus(key, label, kind = '') {
 }
 function showResult(key, kind, title, message) {
   const el = $(`${key}-result`);
-  const strong = document.createElement('strong'); strong.textContent = title;
-  const span = document.createElement('span'); span.textContent = message;
-  el.replaceChildren(strong, span);
-  el.className = `check-result is-${kind}`;
-  el.hidden = false;
+  renderCheckResult(el, kind, title, message);
   setStatus(key, kind === 'pass' ? 'Đạt yêu cầu' : kind === 'warning' ? 'Cần xác nhận' : kind === 'loading' ? 'Đang kiểm tra' : 'Chưa nhận bài', kind);
 }
 // Dữ liệu vào: cảnh báo của link học viên đang gõ.
@@ -118,9 +114,13 @@ function renderLinks() {
     const localFeedback = state.localFeedback.get(part.key);
     if (localFeedback && input.value.trim() !== localFeedback.value) state.localFeedback.delete(part.key);
     input.disabled = state.submitted || state.finishing;
-    $(`${part.key}-confirm`).disabled = state.submitted || state.finishing || state.pending.has(part.key);
+    updateCheckControl($(`${part.key}-confirm`), link, { changed, disabled: state.submitted || state.finishing || state.pending.has(part.key) });
     if (state.submitted || (link?.check_status === 'accepted' && !changed)) {
         showResult(part.key, 'pass', 'Đã xác nhận hội thoại', acceptanceMessage(link, `Đã xác nhận ${link?.question_count ?? 'đủ'} câu/lượt luyện cho phần này.`));
+    } else if (!changed && technicalCheckFeedback(link)) {
+      const feedback = technicalCheckFeedback(link);
+      showResult(part.key, feedback.kind, feedback.title, feedback.message);
+      setStatus(part.key, 'Chờ kiểm tra lại', 'warning');
     } else if (link?.check_status === 'pending' && !changed) {
       showResult(part.key, 'loading', 'Đang đọc hội thoại', 'Hệ thống đang kiểm nội dung link bạn đã dán. Kết quả sẽ tự cập nhật.');
     } else if (link?.check_status === 'rejected' && !changed) {
@@ -333,4 +333,4 @@ window.addEventListener('beforeunload', event => {
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
 identityController.start();
-import { acceptanceMessage, checkReason, updateSubmitControl } from './check-feedback.js?v=20261019-auto-submit-v1';
+import { acceptanceMessage, checkReason, updateSubmitControl, technicalCheckFeedback, renderCheckResult, updateCheckControl } from './check-feedback.js?v=20261029-check-retry-v1';

@@ -14,10 +14,39 @@ export function checkReason(link) {
   if (code === 'REUSED_CONVERSATION') return 'Hội thoại này đã dùng cho bài khác trong khóa. Hãy dùng hội thoại riêng của phần này.';
   if (code === 'EXERCISE_MISMATCH') return 'Hội thoại chưa khớp kỹ năng của bài đã chọn. Hãy kiểm tra tên bài và link đang gửi.';
   if (['CHECK_REVIEW_REQUIRED', 'CHECK_SERVICE_UNAVAILABLE', 'SHARE_UNAVAILABLE', 'SHARE_CONTENT_INVALID'].includes(code)) {
-    return 'Hệ thống chưa xác minh được hội thoại này. Link đã được lưu để kiểm tra; thông báo này không có nghĩa bạn làm thiếu.';
+    return 'Link và tiến độ của bạn đã được giữ. Hãy nhấn Thử kiểm tra lại để hệ thống đọc lại hội thoại; bạn không cần làm lại bài hoặc tạo link mới vì lỗi này.';
   }
   if (link?.evidence?.checkMessage) return link.evidence.checkMessage;
   return 'Chưa xác nhận được đủ các bước của phần này. Link đã được giữ; hãy nhờ giảng viên kiểm tra nếu chatbot đã báo hoàn thành.';
+}
+
+export function technicalCheckFeedback(link) {
+  if ((link?.check_status ?? link?.status) === 'accepted') return null;
+  if (link?.retryable !== true && !['CHECK_REVIEW_REQUIRED', 'CHECK_SERVICE_UNAVAILABLE',
+    'SHARE_UNAVAILABLE', 'SHARE_CONTENT_INVALID'].includes(link?.check_code)) return null;
+  return { kind: 'warning', title: 'Hệ thống đang gặp lỗi', message: checkReason(link) };
+}
+
+// Chỉ đổi vùng thông báo khi nội dung đổi, giữ node/focus/bôi chọn qua polling.
+export function renderCheckResult(element, kind, title, message) {
+  const signature = JSON.stringify([kind, title, message]);
+  if (element.dataset.checkSignature !== signature) {
+    const strong = document.createElement('strong'); strong.textContent = title;
+    const span = document.createElement('span'); span.textContent = message;
+    element.replaceChildren(strong, span);
+    element.className = `check-result is-${kind}`;
+    element.dataset.checkSignature = signature;
+  }
+  element.hidden = false;
+}
+
+export function updateCheckControl(button, link, { changed = false, disabled = false } = {}) {
+  button.dataset.confirmLabel ||= button.textContent.trim();
+  const retryable = !changed && Boolean(technicalCheckFeedback(link));
+  const pending = !changed && !retryable && (link?.check_status ?? link?.status) === 'pending';
+  button.disabled = disabled || pending;
+  const label = retryable ? 'Thử kiểm tra lại' : pending ? 'Đang kiểm tra…' : button.dataset.confirmLabel;
+  if (button.textContent !== label) button.textContent = label;
 }
 
 export function updateSubmitControl({ ready, submitted, phase = 'idle', error = '', onSubmit }) {
