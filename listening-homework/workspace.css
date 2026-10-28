@@ -62,7 +62,7 @@ body.hw-homework #audio-status[data-state='error']{color:var(--m170-error-fg)}
 body.hw-homework .hw-speed,body.hw-homework .hw-volume{font-size:12px;line-height:1.4}
 body.hw-homework .hw-speed select{min-height:32px;height:auto;width:76px;font-size:14px}
 body.hw-homework .hw-volume input{width:88px;min-height:24px;height:24px}
-body.hw-homework #readingView #content-viewport{--hw-scale:1;--hw-prose:calc(18px * var(--hw-scale));font-size:var(--hw-prose)!important}
+body.hw-homework #readingView #content-viewport{--hw-scale:1;--hw-prose:calc(var(--m170-skill-homework-base,18px) * var(--hw-scale));font-size:var(--hw-prose)!important}
 body.hw-homework .hw-exercise{padding:24px 28px;scroll-padding-block:20px}
 body.hw-homework .hw-exercise .hw-group-heading{margin:-24px -28px 22px;padding:20px 24px;background:var(--m170-canvas);border-top:4px solid var(--m170-brand);border-bottom:1px solid var(--m170-line);box-shadow:none;border-radius:10px 10px 0 0}
 body.hw-homework .hw-group-heading h3{display:inline-block;font-size:calc(20px * var(--hw-scale));font-weight:700;line-height:1.4;padding:8px 12px;border-radius:6px;background:var(--m170-structure);color:white;margin:0 0 10px}

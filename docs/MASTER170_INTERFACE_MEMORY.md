@@ -1,3 +1,11 @@
+# Nguồn chuẩn hiện hành: master 170 v1.1 — 28/10/2026
+
+Đức đã duyệt nâng cấp từ sản phẩm thực tế: [chuẩn 1.1](https://github.com/tranhoangduc90/izone-AI-team/blob/main/docs/interface-master170/MASTER_STANDARD_V1_1.md), [thông số và consumer](https://github.com/tranhoangduc90/izone-ai-team-pages/blob/main/shared/master170/consumers-v1.1.json). Bản này bổ sung trên nền1.0, thay các ngoại lệ font Term/Mini đã cũ và tách thang bài thi gọn/Homework18px. Mốc triển khai phải đọc từ hồ sơ mới; hướng dẫn không tự chứng nhận mọi consumer đã phát. Các ngoại lệ Writing, Speaking, Progress Log và K56 vẫn giữ.
+
+## Phạm vi1.1 đang dùng
+
+Reading/Listening Homework và thực chiến, Term/Mini/Substitute67 dùng profile/adapter1.1. Substitute có thêm `substitute-v1.1.css/.mjs` cho native layout; hub trộn hai khóa chỉ đổi hàngK67, giữ chrome và hàngK56. Đây là ngoại lệ có chủ đích để không mở rộng phạm vi sangK56. Phần nhắc toàn bộ Test được loại trừ bên dưới là lịch sử1.0, không phủ quy định1.1.
+
 # Giữ giao diện master #170 khi sửa hoặc tạo sản phẩm
 
 Nguồn chuẩn dùng lâu dài: [bảo toàn và kế thừa master #170](https://github.com/tranhoangduc90/izone-AI-team/blob/main/docs/interface-master170/README.md), gồm bản đầy đủ 21 mục/17 hình, token, mốc cuối và 255 mục màn/popup/trạng thái. Bản mẫu lịch sử không được dùng để đổi ngược sản phẩm đã chuyển.
@@ -9,7 +17,7 @@ Nguồn chuẩn dùng lâu dài: [bảo toàn và kế thừa master #170](https
 - Khi tạo entry mới trong phạm vi master, kế thừa theme và adapter đúng nhiệm vụ; giữ engine/API của sản phẩm. Tạo lesson mới dùng phiên bản giao diện/engine đã phát, không copy HTML cũ từ skill/demo rồi mang font cũ trở lại.
 - Sửa CSS chung phải tìm mọi consumer thực sự nạp nó, kiểm cả ảnh hưởng lên nhóm được loại trừ. Nếu không có công cụ graph, đọc import/template/selector trực tiếp và báo phạm vi; không coi thiếu công cụ là lý do bỏ kiểm hoặc dựng cổng mới.
 
-**Nhóm loại trừ của đợt chuyển:** toàn bộ Test, Progress Log và mọi handout Writing Speaking–Writing chuyên sâu, gồm học viên/giảng viên/library/Draft/kết quả/popup/trạng thái và nguồn dùng chung liên quan. Giữ chuẩn và thread riêng của chúng. `student-journey.html` lấy nguồn SW được giữ; font comparison là demo độc lập và phải giữ cả preset tham khảo cũ lẫn Master. Các HTML `teacher-login-preview/` là tư liệu, không dùng nghiệm thu sản phẩm hiện hành.
+**Nhóm loại trừ của đợt chuyển1.0 (lịch sử):** toàn bộ Test, Progress Log và mọi handout Writing Speaking–Writing chuyên sâu, gồm học viên/giảng viên/library/Draft/kết quả/popup/trạng thái và nguồn dùng chung liên quan. Giữ chuẩn và thread riêng của chúng. `student-journey.html` lấy nguồn SW được giữ; font comparison là demo độc lập và phải giữ cả preset tham khảo cũ lẫn Master. Các HTML `teacher-login-preview/` là tư liệu, không dùng nghiệm thu sản phẩm hiện hành.
 
 ## Reading — cập nhật theo yêu cầu 25/10/2026
 
