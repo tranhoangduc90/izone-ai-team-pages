@@ -44,7 +44,7 @@ function startJournalAudioCapture(metadata,bootstrapUrl){
 }
 // END optional exam journal audio entry
 import {ASSETS} from './catalog.mjs';
-import {downloadAudio} from './chunks.mjs';
+import {downloadAudio} from './chunks.mjs?v=20261028-part-rescue-v1';
 import {decodeBase64url,keyContext,sha256} from './protocol.mjs';
 import {WORKER_ORIGIN,SUBSTITUTE_ASSETS,REVIEW_ASSETS} from './config.mjs?v=20261026-term1-replay1';
 
@@ -87,11 +87,12 @@ export async function downloadPreferred(m,options={}){
   if(m?.cloudflare?.version!==1||m.cloudflare.policy!=='public-mp3-v1')return null;
   const a=Object.values(ASSETS).find(x=>x.sha256===m.sha256&&x.url===m.url&&x.byteLength===m.byteLength);
   const journal=startJournalAudioCapture({assetId:a?.id,sha256:m.sha256,byteLength:m.byteLength,transportRevision:'20261024-cf512-1'},new URL('../../term-tests/shared/exam-journal/bootstrap-capture.mjs?v=20261024-audio-v1&resilience=20261027-v1',import.meta.url).href);
-  const onEvent=row=>{journal?.event(row);try{globalThis.window?.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:row.source}}));}catch{}try{const work=options.onEvent?.(row);if(work?.catch)void work.catch(()=>{});}catch{}};
+  const onEvent=row=>{journal?.event(row);try{globalThis.window?.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:row.source,index:row.index,scope:row.scope}}));}catch{}try{const work=options.onEvent?.(row);if(work?.catch)void work.catch(()=>{});}catch{}};
   try{
   if(!a||m.envelopeVersion!=='MP3')throw Error('AUDIO_CATALOG_MISMATCH');
   if(!safeOrigins.includes(WORKER_ORIGIN))throw Error('AUDIO_ORIGIN_DENIED');
   options.signal?.throwIfAborted();
+  onEvent({source:'transfer-start'});
   if(completeAudio?.expiresAt<=Date.now())completeAudio=null;
   // One immutable verified public file, never a grant or session key. A caller
   // supplying its own parts collection still needs that collection populated.
@@ -135,7 +136,7 @@ export async function downloadPreferred(m,options={}){
   const manifest={version:1,chunkSize:524288,sha256:a.sha256,byteLength:a.byteLength,chunks:a.chunks,context,ticket,primaryUrl:WORKER_ORIGIN+'/parts/'+a.id,fallbackUrl:a.url};
   const result=await downloadAudio(manifest,{
     key,parts,signal:options.signal,fetchImpl,disablePrimary,
-    primaryRetries:1,primaryTimeoutMs:15000,fallbackTimeoutMs:30000,
+    primaryRetries:1,primaryTimeoutMs:6000,fallbackTimeoutMs:30000,concurrency:options.concurrency??4,
     onProgress:options.onProgress,onEvent,onVerifiedPart:save,
     onPrimaryFailure:()=>openBreaker(WORKER_ORIGIN),
     refresh:async()=>{const access=await issue();if(!access.rawKey.every((n,i)=>n===key[i]))denied();return access.ticket;}

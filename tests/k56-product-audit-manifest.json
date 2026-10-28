@@ -3,6 +3,8 @@
   "suite_id": "k56-term-mini-substitute-audit",
   "groups": {
     "term_mini_56": [
+      "tests/k56-demo-stale-attempt.mjs",
+      "tests/k56-demo-class-reset.mjs",
       "tests/k56-answer-sheet-identity.mjs",
       "tests/k56-master170-browser.mjs",
       "tests/k56-original-layout-browser.mjs",

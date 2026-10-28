@@ -24,7 +24,7 @@
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   if(!window.IZONE_EXAM_DEVICE_CHECKED)await loadScript('../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1');
   if(window.IZONE_EXAM_DEVICE_BLOCKED)return;
-  if(!window.IZONE_AUDIO_SOURCE_CHOICE)await loadScript('../shared/audio-source-choice.js?v=20261027-v1');
+  if(!window.IZONE_AUDIO_SOURCE_CHOICE)await loadScript('../shared/audio-source-choice.js?v=20261027-v1&audio=20261028-part-rescue-v1');
   if(!window.IZONE_EXAM_CLOCK)await loadScript('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
   document.body.classList.add('cbt-mode');
   if ('serviceWorker' in navigator && !localDemo) {
@@ -342,7 +342,8 @@
   }
 
   function recoverFromServerReset(error) {
-    if (error?.status !== 404 || !['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND'].includes(error?.code)) return false;
+    if (error?.status !== 404 || !(['ATTEMPT_NOT_FOUND', 'EXAM_SESSION_NOT_FOUND'].includes(error?.code)
+      || (classCode === 'CODEXDEMO56' && error?.code === 'DEMO_ATTEMPT_NOT_FOUND'))) return false;
     const audioVolume = state.audioVolume;
     for (const storage of availableStorages()) {
       try {
@@ -640,7 +641,7 @@
       const previewUrl = appConfig.API_BASE_URL + session.previewAudioUrl;
       publicAudioManifest = session.audioManifest?.envelopeVersion === 'MP3' ? session.audioManifest : null;
       const publicStore = publicAudioManifest
-        ? await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2') : null;
+        ? await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1') : null;
       const [encrypted, previewResponse] = await Promise.all([
         (publicStore ? publicStore.downloadSessionAudio.bind(null, publicAudioManifest) : audioLoader.downloadAudio.bind(null, audioUrl))({
           signal: downloadController.signal,
@@ -798,7 +799,7 @@
 
   async function decryptOfficialAudio(blob, response) {
     if (publicAudioManifest) {
-      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2');
+      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1');
       return plaintextAudio(blob, publicAudioManifest);
     }
     const envelope = new Uint8Array(await blob.arrayBuffer());
@@ -1269,6 +1270,7 @@
         elements.bootstrapDownloadStep.dataset.state = 'active';
       }
     } catch (error) {
+      if (classCode === 'CODEXDEMO56' && recoverFromServerReset(error)) return;
       showNotice(navigator.onLine ? `Không thể mở phòng chờ: ${error.message}`
         : 'Chưa có kết nối. Nháp và mốc nghe trên máy được giữ. Chờ có mạng để lấy lại khóa audio và tiếp tục.', true);
     } finally {

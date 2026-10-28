@@ -68,8 +68,19 @@ test('source retry offers a fallback only after a source failure and keeps the e
   await p.evaluate(()=>{document.getElementById('bootstrapRetry').hidden=false;});
   assert.equal(await p.locator('#bootstrapFallback').isVisible(),false,'authorization errors never offer a source bypass');
   await p.evaluate(()=>window.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:'primary-error'}})));
+  assert.doesNotMatch(await p.locator('#bootstrapDownloadStatus').innerText(),/nguồn dự phòng/,'a primary retry has not selected Pages');
+  await p.evaluate(()=>window.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:'cloudflare',index:0}})));
+  assert.match(await p.locator('#bootstrapDownloadStatus').innerText(),/Cloudflare/);
+  assert.doesNotMatch(await p.locator('#bootstrapDownloadStatus').innerText(),/nguồn dự phòng/,'successful retry clears the misleading fallback message');
+  await p.evaluate(()=>window.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:'pages-start',index:1}})));
+  assert.match(await p.locator('#bootstrapDownloadStatus').innerText(),/một phần audio.*nguồn dự phòng/);
+  await p.evaluate(()=>window.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:'pages-start',index:2,scope:'source'}})));
+  assert.equal(await p.locator('#bootstrapDownloadStatus').innerText(),'Đang tải audio từ nguồn dự phòng…');
   await p.getByRole('button',{name:'Tải bằng nguồn dự phòng',exact:true}).click();
   assert.deepEqual(await p.evaluate(()=>({count:window.fixtureRetryCount,source:window.IZONE_AUDIO_PREFER_FALLBACK,state:localStorage.getItem('fixture-session')})),{count:1,source:true,state:'kept'});
+  await p.evaluate(()=>{window.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:'transfer-start'}}));window.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:'cache'}}));});
+  assert.equal(await p.locator('#bootstrapFallback').isVisible(),false);
+  assert.equal(await p.locator('#bootstrapDownloadStatus').innerText(),'Đang dùng audio đã tải và kiểm tra…');
  }finally{await c.close();}
 });
 
