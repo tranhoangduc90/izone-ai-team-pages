@@ -90,5 +90,7 @@
   async function historyDetail(){return access?.teacher?await request(prefix+window.Reading67Access.teacherPath):await request(prefix+'/attempts');}
   async function changeIdentity(){await flush();stopPoll();await window.Reading67Access.change();}
   async function reset(){if(access?.teacher)throw Error('Giảng viên chỉ xem.');await flush();const receipt=await request(prefix+'/reset',json('POST',{baseRevision:revision,mutationId:crypto.randomUUID()}));revision=receipt.revision;runNo=receipt.runNo;state.savedAt=receipt.savedAt;state.completeness=receipt.completeness;refreshHomework();return receipt;}
-  window.ReadingServerClient={initialize,schedule,flush,submit,getAttempt,getDraft,getHistory,historyDetail,poll,stopPoll,changePerson,changeIdentity,reset,state,get identity(){return identity;},get revision(){return revision;},get runNo(){return runNo;},get initialHistory(){return initialHistory;},get access(){return access;}};
+  async function practice(attemptId){const path=access?.teacher?'/teacher/work/'+encodeURIComponent(identity.courseId)+'/'+encodeURIComponent(identity.ownerId)+'/practice':'/practice';return request(prefix+path+(attemptId?'?attemptId='+encodeURIComponent(attemptId):''),{},false);}
+  async function savePractice(body){return request(prefix+'/practice',json('POST',body));}
+  window.ReadingServerClient={initialize,schedule,flush,submit,getAttempt,getDraft,getHistory,historyDetail,poll,stopPoll,changePerson,changeIdentity,reset,practice,savePractice,state,get identity(){return identity;},get revision(){return revision;},get runNo(){return runNo;},get initialHistory(){return initialHistory;},get access(){return access;}};
 }());

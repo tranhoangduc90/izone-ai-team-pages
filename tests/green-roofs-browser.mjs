@@ -26,6 +26,8 @@ try{
    if(width<800)await page.locator('#tab-questions').click();
    await page.locator('[data-question="13"]').click();await page.locator('[data-action="review"]').click();await page.getByRole('button',{name:'Nén cấp 2 đoạn E'}).click();
    if(scenario==='waiting'){
+    // jumpTo cuộn ở animation frame kế tiếp; đo sau khi điều hướng đã ổn định.
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await page.evaluate(()=>{const pane=document.querySelector('#scroll-passage');window.__kept={node:document.querySelector('[data-target="l4.paragraph.e.level_2"]'),pane,scroll:pane.scrollTop};window.__pulseStart=window.__polls;});
     await page.waitForFunction(()=>window.__polls>=window.__pulseStart+3);
     assert.equal(await page.evaluate(()=>window.__kept.node===document.querySelector('[data-target="l4.paragraph.e.level_2"]')&&Math.abs(window.__kept.pane.scrollTop-window.__kept.scroll)<2),true);

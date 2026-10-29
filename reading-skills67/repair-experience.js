@@ -17,7 +17,7 @@
    compressionCorrect:compression.filter(t=>t.status==='correct').length,compressionTotal:compression.length,
    total:rows.length,remainingCount:needsRepair.length,needsRepair,allCorrect:!needsRepair.length};
  }
- function description(p){if(p.kind==='tfng')return `Kết luận toàn câu: ${p.conclusionCorrect}/${p.conclusionTotal}. T/F/NG theo mảnh: ${p.labelCorrect}/${p.labelTotal}. Nội dung đối chiếu: ${p.evidenceCorrect}/${p.evidenceTotal}.`;return `${p.kind==='green-roofs'?'Multiple choice':'Matching Information'}: đúng ${p.matchingCorrect}/${p.matchingTotal} câu. Phần nén: ${p.compressionCorrect}/${p.compressionTotal} phần đạt.`;}
+ function description(p){if(p.kind==='tfng')return `Kết luận toàn câu: ${p.conclusionCorrect}/${p.conclusionTotal}. T/F/NG theo mảnh: ${p.labelCorrect}/${p.labelTotal}. Nội dung đối chiếu: ${p.evidenceCorrect}/${p.evidenceTotal}.`;return `${p.kind==='green-roofs'?'Multiple choice':bridge?.current().content.type==='matching_headings'?'Matching Headings':'Matching Information'}: đúng ${p.matchingCorrect}/${p.matchingTotal} câu. Phần nén: ${p.compressionCorrect}/${p.compressionTotal} phần đạt.`;}
  function navigation(){
   if(!bridge)return null;
   const {state,content}=bridge.current();
@@ -36,7 +36,7 @@
  function next(){move(1);}
  function previous(){move(-1);}
  function targetLabel(id,content){
-  if(['tfng','green-roofs'].includes(content.type))return content.targets.find(t=>t.id===id)?.label||'Phần trả lời';
+  if(['tfng','green-roofs','matching_headings'].includes(content.type))return content.targets.find(t=>t.id===id)?.label||'Phần trả lời';
   const paragraph=content.paragraphs.find(p=>p.target===id);if(paragraph)return 'Nén cấp 1 đoạn '+paragraph.id;
   const question=content.questions.find(q=>Object.values(q.targets).includes(id));
   if(!question)return content.targets.find(t=>t.id===id)?.label||'Phần trả lời';
