@@ -100,6 +100,7 @@
     writingAckRevision: 0,
     writingServerRevision: null,
     writingConfirmedDraft: null,
+    writingUnconfirmedDraft: null,
     writingConflict: null,
     writingRecovery: [],
     drafts: { listening: {}, reading: {}, writing: { task1: '', task2: '' } },
@@ -206,6 +207,7 @@
       writingAckRevision: state.writingAckRevision,
       writingServerRevision: state.writingServerRevision,
       writingConfirmedDraft: state.writingConfirmedDraft,
+      writingUnconfirmedDraft: state.writingUnconfirmedDraft,
       writingConflict: state.writingConflict,
       writingRecovery: state.writingRecovery,
       drafts: state.drafts,
@@ -1568,6 +1570,22 @@
     return Number.isSafeInteger(value) && value >= 0;
   }
 
+  // Chỉ nối lại ACK của snapshot đã gửi từ đúng người/lượt và đúng một bước revision.
+  // Nội dung khác hoặc tab khác vẫn cần người học chọn; không nới hạn nộp.
+  function recoverWritingSaveAck(writing) {
+    const pending = state.writingUnconfirmedDraft;
+    if (!pending || writing.submitted || writingTimeExpired()
+      || pending.attemptToken !== state.attemptToken || pending.studentRef !== state.studentRef
+      || !validWritingRevision(pending.baseRevision)
+      || state.writingServerRevision !== pending.baseRevision
+      || writing.revision !== pending.baseRevision + 1 || !sameWriting(pending, writing)) return false;
+    state.writingServerRevision = writing.revision;
+    state.writingAckRevision = writing.revision;
+    state.writingConfirmedDraft = writingSnapshot(writing);
+    state.writingUnconfirmedDraft = null;
+    return true;
+  }
+
   // Giữ bản trước khi đổi sang bản khác; đầu ra có thể đọc/sao chép ở mục phục hồi.
   function preserveWritingRecovery(reason, value = state.drafts.writing) {
     const draft = writingSnapshot(value);
@@ -1620,9 +1638,11 @@
     window.clearTimeout(writingSaveTimer); window.clearTimeout(writingForceSaveTimer);
     window.clearTimeout(writingRetryTimer); writingForceSaveTimer = 0;
     state.writingConflict = { ...writing, ...writingSnapshot(writing) };
+    state.writingUnconfirmedDraft = null;
     state.writingDirty = true;
     renderWritingConflict(); saveSession();
-    setWritingSaveStatus('Có hai bản khác nhau · bài trên máy được giữ nguyên');
+    setWritingSaveStatus('Chưa lưu lên hệ thống · cần chọn bản để tiếp tục');
+    showNotice('Bài mới đang chỉ được giữ trên máy. Có hai bản khác nhau; hãy chọn bản cần tiếp tục trong khung đối chiếu.', 'error');
   }
 
   function resolveWritingConflict(useServer) {
@@ -1632,6 +1652,7 @@
     preserveWritingRecovery('Trước khi chọn bản bài viết');
     preserveWritingRecovery('Bản hệ thống trước khi chọn', server);
     state.writingConflict = null;
+    state.writingUnconfirmedDraft = null;
     state.writingServerRevision = server.revision;
     state.writingConfirmedDraft = writingSnapshot(server);
     if (useServer) {
@@ -1662,7 +1683,7 @@
       const basedOnKnownDraft = hasRevision && state.writingConfirmedDraft
         && sameWriting(state.writingConfirmedDraft, writing)
         && writing.revision === state.writingServerRevision;
-      if (!basedOnKnownDraft && hasRevision) setWritingConflict(writing);
+      if (!basedOnKnownDraft && hasRevision && !recoverWritingSaveAck(writing)) setWritingConflict(writing);
       renderWritingRecovery(); saveSession(); return;
     }
     const useServerDraft = forceDrafts || writing.submitted || !state.writingDirty;
@@ -1670,6 +1691,7 @@
       state.drafts.writing = writingSnapshot(writing);
       state.writingDirty = false;
       state.writingConflict = null;
+      state.writingUnconfirmedDraft = null;
     }
     state.writingSubmitted = Boolean(writing.submitted || state.writingSubmitted);
     if (hasRevision) {
@@ -1708,26 +1730,38 @@
         const error = new Error('Chưa đọc được bản lưu để xác nhận. Bài vẫn được giữ trên máy; hãy tải lại trang khi kết nối ổn định.');
         error.code = 'WRITING_CLIENT_UPDATE_REQUIRED'; throw error;
       }
-      if (validWritingRevision(state.writingServerRevision)) payload.baseRevision = state.writingServerRevision;
-      const response = await apiRequest('/api/term-tests/writing', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-      });
-      if (state.studentRef !== boundStudentRef || state.attemptToken !== boundAttemptToken) {
-        const error = new Error('Phản hồi thuộc lượt làm trước, chưa xác nhận bài của lượt hiện tại.');
-        error.code = 'WRITING_IDENTITY_CHANGED'; throw error;
+      let response, writing;
+      for (let retry = 0; retry < 2; retry += 1) {
+        if (validWritingRevision(state.writingServerRevision)) payload.baseRevision = state.writingServerRevision;
+        if (action !== 'start' && !state.writingUnconfirmedDraft && validWritingRevision(payload.baseRevision)) {
+          state.writingUnconfirmedDraft = { ...writingSnapshot(payload), baseRevision: payload.baseRevision,
+            attemptToken: boundAttemptToken, studentRef: boundStudentRef };
+          saveSession();
+        }
+        response = await apiRequest('/api/term-tests/writing', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        if (state.studentRef !== boundStudentRef || state.attemptToken !== boundAttemptToken) {
+          const error = new Error('Phản hồi thuộc lượt làm trước, chưa xác nhận bài của lượt hiện tại.');
+          error.code = 'WRITING_IDENTITY_CHANGED'; throw error;
+        }
+        writing = response.writing;
+        if (response.ok !== true || !writing || !validWritingRevision(writing.revision)
+          || typeof writing.accepted !== 'boolean') {
+          throw new Error('Chưa có xác nhận lưu bài hợp lệ. Bài vẫn được giữ trên máy.');
+        }
+        const knownRevision = state.writingConflict?.revision ?? state.writingServerRevision;
+        if (validWritingRevision(knownRevision) && writing.revision < knownRevision) {
+          throw new Error('Phản hồi cũ hơn bản đã xác nhận. Bài trên máy vẫn được giữ nguyên.');
+        }
+        if (writing.accepted && action !== 'start' && !sameWriting(payload, writing)) {
+          throw new Error('Xác nhận không khớp bài vừa gửi. Bài trên máy vẫn được giữ nguyên.');
+        }
+        if (retry === 0 && writing.accepted === false && writing.reason === 'revision_conflict'
+          && recoverWritingSaveAck(writing)) { saveSession(); continue; }
+        break;
       }
-      const writing = response.writing;
-      if (response.ok !== true || !writing || !validWritingRevision(writing.revision)
-        || typeof writing.accepted !== 'boolean') {
-        throw new Error('Chưa có xác nhận lưu bài hợp lệ. Bài vẫn được giữ trên máy.');
-      }
-      const knownRevision = state.writingConflict?.revision ?? state.writingServerRevision;
-      if (validWritingRevision(knownRevision) && writing.revision < knownRevision) {
-        throw new Error('Phản hồi cũ hơn bản đã xác nhận. Bài trên máy vẫn được giữ nguyên.');
-      }
-      if (writing.accepted && action !== 'start' && !sameWriting(payload, writing)) {
-        throw new Error('Xác nhận không khớp bài vừa gửi. Bài trên máy vẫn được giữ nguyên.');
-      }
+      if (writing.accepted) state.writingUnconfirmedDraft = null;
       if (writing.submitted) {
         applyWritingFromServer(writing, true);
         setWritingSaveStatus(writing.accepted ? 'Đã nộp và lưu trên hệ thống'
@@ -3022,7 +3056,7 @@
       state.writingStarted = false;
       state.writingSubmitted = false;
       state.writingDirty = false;
-      state.writingServerRevision = null; state.writingConfirmedDraft = null;
+      state.writingServerRevision = null; state.writingConfirmedDraft = null; state.writingUnconfirmedDraft = null;
       state.writingConflict = null; state.writingRecovery = [];
       state.writingRevision = 0; state.writingAckRevision = 0;
       renderWritingConflict(); renderWritingRecovery();

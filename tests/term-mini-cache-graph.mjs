@@ -23,3 +23,17 @@ test('Thi bù Listening giữ cùng bản vá; module không có đáp án/chìa
  const source=fs.readFileSync('term-tests/shared/section-submission.mjs','utf8');
  assert.doesNotMatch(source,/correctAnswers|acceptedAnswers|api_key|Bearer /);
 });
+test('K67 nạp bản phục hồi ACK qua entry, bootstrap và phiếu cứu hộ',()=>{
+ const files=['term-test-1/index.html','term-test-2/index.html','mini-test-lesson-5/index.html',
+  'term-test-1-computer-based/index.html','term-test-2-computer-based/index.html','mini-test-lesson-5-computer-based/index.html',
+  'term-test-1-listening-retake/index.html','term-test-2-rescue/index.html'];
+ for(const file of files){
+  const html=fs.readFileSync('term-tests/'+file,'utf8');
+  const urls=[...html.matchAll(/src="([^"]+)"/g)].map(m=>m[1]).filter(url=>url.includes('shared/app.js')||url.includes('bootstrap.js'));
+  assert.equal(urls.length,1,file);
+  assert.equal(new URL(urls[0].replaceAll('&amp;','&'),'https://fixture.invalid').searchParams.get('writing_ack'),'20261029-v1',file);
+ }
+ const bootstrap=fs.readFileSync('term-tests/term-test-2-computer-based/bootstrap.js','utf8');
+ const apps=[...bootstrap.matchAll(/\.\.\/shared\/app\.js\?[^'"\s)]+/g)].map(m=>m[0]);
+ assert.ok(apps.length);for(const url of apps)assert.equal(new URL(url,'https://fixture.invalid').searchParams.get('writing_ack'),'20261029-v1');
+});
