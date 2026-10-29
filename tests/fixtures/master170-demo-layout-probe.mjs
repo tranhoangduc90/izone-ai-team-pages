@@ -24,7 +24,7 @@ export function inspectDemo(doc,example){
  if(['reading-multiple','listening-pair'].includes(example.id)&&doc.querySelectorAll('.authored-choice-group,.authored-pair').length<2)violations.push('pair-second-stem-not-rendered');
  const table=doc.querySelector('table'),cell=table?.querySelector('td');
  const tableObservation=table?{className:table.className,minWidth:style(table).minWidth,font:style(table).fontSize,padding:style(cell).padding,border:style(cell).borderColor,cellOverflow:[...table.querySelectorAll('td,th')].some(e=>e.scrollWidth>e.clientWidth+1)}:null;
- if(table&&example.id==='reading-table'&&!table.classList.contains('authored-completion-table'))violations.push('reading-table-differs-from-listening-reference');
+ if(table&&example.id==='reading-table'&&!table.matches('.authored-completion-table,.m170-completion-table'))violations.push('reading-table-differs-from-listening-reference');
  if(tableObservation?.cellOverflow)violations.push('table-cell-content-overflow');
  const overflow=[...doc.querySelectorAll('#passage-scroll,#question-scroll,.design-question-content,.cbt-matching-questions,.cbt-question-card,.authored-table-wrap')].filter(visible).filter(e=>e.scrollWidth>e.clientWidth+2).map(e=>e.id||e.className);
  if(overflow.length)violations.push('nested-content-overflow');

@@ -1,5 +1,7 @@
 # Master170 — demo từng dạng
 
+**Hiện hành29/10/2026:** Đức đã chốt R3 và yêu cầu áp dụng vào sản phẩm. Question components dùng chung `shared/master170/question-layout-v1.1.css/mjs`; `review.css` chỉ còn khung gallery. Các câu chờ duyệt R1/R2/R3 ở hồ sơ cũ là lịch sử; trạng thái phát sản phẩm có receipt riêng.
+
 Mở index.html qua HTTP. Danh sách và mã tiêu chí trong manifest.json. Các demo dùng renderer/styles hiện hành, dữ liệu giả; không đăng ký lesson hoặc gọi API bài làm. Reading Homework prototype chỉ nhận hai phản hồi giả và từ chối fetch khác; Listening Homework dùng preview hiện có, góp ý mô phỏng. Không dùng các demo làm bằng chứng SSO/AI/Docs hoặc tiêu chí184đều đạt.
 
 ## Bản sửa R2 — 29/10/2026, chờ Đức duyệt

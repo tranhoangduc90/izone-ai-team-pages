@@ -71,7 +71,7 @@ function instructionHtml(text){
 export function groupsHtml(groups,a,flag,{documentNotes=false,practiceLayout=false}={}){
  return groups.map(g=>{
   const instruction=practiceLayout?instructionHtml(g.instruction):esc(g.instruction);
-  if(g.table||g.answerMode==='unordered-pair')return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.start}–${g.end} · ${esc(g.label)}</h4><p>${instruction}</p></header><div class="design-question-content">${g.table?tableHtml(g,a,flag):pairHtml(g,a,flag)}</div></section>`;
+  if(g.table||g.answerMode==='unordered-pair')return `<section class="design-question-group" data-group="${esc(g.id)}" data-m170-question-kind="${g.kind==='matching'?'matching':'other'}" data-m170-visual="${!!g.image}"><header class="cbt-subsection-heading"><h4>Questions ${g.start}–${g.end} · ${esc(g.label)}</h4><p>${instruction}</p></header><div class="design-question-content">${g.table?tableHtml(g,a,flag):pairHtml(g,a,flag)}</div></section>`;
   const bank=g.options;
   const questions=g.questions.map(q=>{
    const options=q.options||bank,selected=String(a.answers[q.n]||'').split('|');
@@ -89,7 +89,7 @@ export function groupsHtml(groups,a,flag,{documentNotes=false,practiceLayout=fal
   }).join('');
   const questionClass=(documentNotes||practiceLayout)&&g.kind==='completion'&&!bank?'authored-note-list':practiceLayout&&g.kind==='mcq'?'authored-question-list':'cbt-matching-questions';
   const introduction=g.introduction?`<p class="authored-introduction" style="white-space:pre-line">${practiceLayout?noteTextHtml(g.introduction):esc(g.introduction)}</p>`:'';
-  return `<section class="design-question-group" data-group="${esc(g.id)}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${instruction}</p></header>${practiceLayout?'':introduction}${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${bank?'cbt-matching-layout cbt-answer-first-matching-layout':''}">${practiceLayout?introduction:''}<section class="${questionClass}">${questions}</section>${bank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
+  return `<section class="design-question-group" data-group="${esc(g.id)}" data-m170-question-kind="${g.kind==='matching'?'matching':'other'}" data-m170-visual="${!!g.image}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${instruction}</p></header>${practiceLayout?'':introduction}${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${bank?'cbt-matching-layout cbt-answer-first-matching-layout':''}">${practiceLayout?introduction:''}<section class="${questionClass}">${questions}</section>${bank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
  }).join('');
 }
 export function bindMultiple(root,onAnswer){
