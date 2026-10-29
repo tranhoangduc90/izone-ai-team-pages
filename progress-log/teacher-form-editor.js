@@ -562,14 +562,14 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     const input=el('textarea',undefined,{rows:12,value:importText,placeholder:'Dán câu hỏi, các phương án và đáp án rõ ràng. Có thể dán nhiều bài cùng lúc.'});input.setAttribute('aria-label','Nội dung câu hỏi có sẵn');
     const status=el('p','',{role:'status',className:'notice'}),details=el('div');let applied=false,running=false;
     const create=button('Tạo bài',()=>{
-      if(running||applied)return;running=true;input.disabled=create.disabled=true;status.textContent='Đang tạo các câu trong bản nháp…';
+      if(running||applied)return;running=true;input.disabled=create.disabled=true;status.textContent=input.value.length>6000?'Nội dung dài: AI đang xử lý, có thể cần tới 4–5 phút kể cả một lần thử lại. Bạn có thể đóng cửa sổ để hủy nhận kết quả.':'AI đang tạo câu; hệ thống tự thử lại một lần nếu gặp lỗi. Nội dung của bạn đang được giữ nguyên…';
       void run(async current=>{
         try{
-          const raw=input.value;importText=raw;if(!raw.trim()||raw.length>20000)throw Error('Dán từ 1 đến 20.000 ký tự để AI nhận dạng.');
+          const raw=input.value;importText=raw;if(!raw.trim()||raw.length>60000)throw Error('Dán từ 1 đến 60.000 ký tự để AI nhận dạng; nội dung dài hơn hãy chia thành các lượt nhỏ.');
           if(aiApplied?.text===raw&&aiApplied.draftId===draft.id)throw Error('Nội dung này đã được thêm vào phiếu. Kiểm các câu trong bộ soạn trước khi nhập tiếp.');
           if(dirty||!draft.id)await save();if(current!==generation||!dialog.open)return;
           const before=draft,id=draft.id,revision=draft.revision,targetId=importTargetBlockId;
-          const {preview}=await request('/teacher/form-drafts/'+id+'/ai-import-preview',{method:'POST',body:{text:raw,expectedRevision:revision},timeoutMs:55000});
+          const {preview}=await requestAiImport(id,raw,revision);
           if(current!==generation||!dialog.open||draft!==before||draft.id!==id||draft.revision!==revision)return;
           if(!preview?.payload||preview.baseRevision!==revision||(preview.errors||[]).length)throw Error((preview?.errors||[]).map(e=>e.message).join(' ')||'Kết quả chưa hợp lệ; bản nháp chưa thay đổi.');
           const next=clone(preview.payload),existing=new Map(draft.definition.blocks.flatMap(b=>b.items).map(i=>[i.itemVersionId,i])),nextItems=next.definition.blocks.flatMap(b=>b.items);
@@ -577,7 +577,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
           const added=nextItems.filter(i=>!existing.has(i.itemVersionId)),target=next.definition.blocks.find(b=>b.blockId===targetId);
           if(!target||!added.length||new Set(nextItems.map(i=>i.itemVersionId)).size!==nextItems.length)throw Error('Phần nhận hoặc định danh câu chưa khớp; chưa thêm câu nào.');
           for(const block of next.definition.blocks)block.items=block.items.filter(i=>existing.has(i.itemVersionId));
-          for(const item of added){item.kind??=item.graderType==='none'?'survey':'exercise';if(!item.skillCodes?.length)item.skillCodes=['general'];}
+          for(const item of added){if(!['exercise','survey'].includes(item.kind))throw Error('AI chưa xác định Bài tập/Khảo sát cho từng câu; chưa thêm câu nào.');if(!item.skillCodes?.length)item.skillCodes=['general'];}
           target.items.push(...added);const oldBlocks=new Set(draft.definition.blocks.map(b=>b.blockId));next.definition.blocks=next.definition.blocks.filter(b=>oldBlocks.has(b.blockId));
           draft.definition=next.definition;draft.gradingKey=next.gradingKey;resequence();dirty=true;applied=true;aiApplied={text:raw,draftId:id};aiPopupOpen=false;paint();
           status.textContent='Đã thêm '+added.length+' câu. Đang lưu nháp…';
@@ -594,9 +594,13 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       }).finally(()=>{running=false;input.disabled=false;create.disabled=applied;});
     });
     create.classList.add('primary');input.addEventListener('input',()=>{importText=input.value;});
-    body.append(el('p','Chỉ nhận văn bản thuần. Ghi rõ đáp án cho câu Bài tập. Nhiều bài được thêm thành nhiều câu trong phiếu đang soạn; chưa xuất bản hoặc giao lớp.'),input,create,status,details);
+    body.append(el('p','Dán tối đa 60.000 ký tự văn bản thuần. AI nhận dạng Bài tập/Khảo sát và dạng tương tác cho từng câu. Thiếu key vẫn tạo câu, để trống đáp án/giải thích và cảnh báo để bạn bổ sung. Nhiều bài được thêm vào phiếu đang soạn; chưa xuất bản hoặc giao lớp.'),input,create,status,details);
     dialog.append(head,body);document.body.append(dialog);aiView=dialog;bindDialogDismiss(dialog);
     dialog.addEventListener('close',()=>{importText=input.value;aiPopupOpen=false;if(aiView===dialog)aiView=null;dialog.remove();editor.querySelector('[data-ai-target-block="'+importTargetBlockId+'"]')?.focus({preventScroll:true});},{once:true});dialog.showModal();
+  }
+  async function requestAiImport(id,text,revision){
+    try{return await request('/teacher/form-drafts/'+id+'/ai-import-preview',{method:'POST',body:{text,expectedRevision:revision},timeoutMs:300000});}
+    catch(error){if(error.name==='AbortError'||error.name==='TimeoutError')throw Error('Đã hết thời gian chờ AI. Nội dung nguồn và nháp được giữ nguyên; bạn có thể thử lại hoặc chia nội dung thành lượt nhỏ.');throw error;}
   }
   function paintImport({aiOnly=false}={}) {
     if(aiOnly){paintAiImport();return;}
@@ -640,9 +644,9 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       const reply=await request('/teacher/form-drafts/'+draft.id+'/import-preview',{method:'POST',body:{text:raw,expectedRevision:draft.revision}});
       if(current!==generation)return;importPreview=reply.preview;importOpen=true;paint();
     })),button('AI chuyển nội dung có sẵn thành câu hỏi',()=>void run(async current=>{
-      const raw=text.value;importText=raw;if(!raw.trim()||raw.length>20000)throw new Error('Dán từ 1 đến 20.000 ký tự để AI nhận dạng.');
+      const raw=text.value;importText=raw;if(!raw.trim()||raw.length>60000)throw new Error('Dán từ 1 đến 60.000 ký tự để AI nhận dạng; nội dung dài hơn hãy chia thành các lượt nhỏ.');
       if(dirty)await save();notice('AI đang nhận dạng nội dung. Chưa thêm câu hoặc phát hành phiếu…');
-      const reply=await request('/teacher/form-drafts/'+draft.id+'/ai-import-preview',{method:'POST',body:{text:raw,expectedRevision:draft.revision},timeoutMs:55000});
+      const reply=await requestAiImport(draft.id,raw,draft.revision);
       if(current!==generation)return;importPreview=reply.preview;
       if(libraryEnabled&&importTargetBlockId&&importPreview.payload){
         const existing=new Set(draft.definition.blocks.flatMap(b=>b.items).map(i=>i.itemVersionId)),blockIds=new Set(draft.definition.blocks.map(b=>b.blockId)),blocks=importPreview.payload.definition.blocks,target=blocks.find(b=>b.blockId===importTargetBlockId);
