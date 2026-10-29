@@ -28,7 +28,7 @@ const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"></head>
 window.TERM_TEST_APP_CONFIG={API_BASE_URL:location.origin+'/fixture-api'};
 window.TERM_TEST_CONFIG={slug:'term-test-1',title:'Writing giả D08',listening:{title:'Listening',description:[],controls:[]},reading:{title:'Reading',description:[],controls:[]}};
 window.TERM_TEST_CONTENT={variant:'semantic-html',deferResultsUntilComplete:true,timing:{writingMinutes:60},writing:{tasks:[{id:'task1',label:'Task 1',prompt:'Đề giả 1',recommendedMinutes:20,minimumWords:0},{id:'task2',label:'Task 2',prompt:'Đề giả 2',recommendedMinutes:40,minimumWords:0}]}};
-</script><script src="/term-tests/k56-exam-order.js"></script><script src="/term-tests/shared/app.js"></script></body></html>`;
+</script><script src="/term-tests/k56-exam-order.js"></script><script src="/term-tests/substitute-shared/state.js"></script><script src="/term-tests/shared/app.js"></script></body></html>`;
 test.before(async () => {
   server = createServer(async (req, res) => {
     if (req.url.startsWith('/fixture.html')) { res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'}); return res.end(html); }
@@ -38,6 +38,14 @@ test.before(async () => {
       return res.end(process.env.D08_DEBUG==='1'?app.replace('function handleWritingSaveError(error) {','function handleWritingSaveError(error) { console.error(error.stack);'):app);
     }
     if (req.url === '/term-tests/k56-exam-order.js') { res.writeHead(200, {'Content-Type':'text/javascript; charset=utf-8'}); return res.end(await readFile(join(root,'term-tests/k56-exam-order.js'),'utf8')); }
+    if (req.url.split('?')[0] === '/term-tests/shared/exam-clock.js') {
+      res.writeHead(200, {'Content-Type':'text/javascript; charset=utf-8'});
+      return res.end(await readFile(join(root,'term-tests/shared/exam-clock.js'),'utf8'));
+    }
+    if (req.url === '/term-tests/substitute-shared/state.js') {
+      res.writeHead(200, {'Content-Type':'text/javascript; charset=utf-8'});
+      return res.end(await readFile(join(root,'term-tests/substitute-shared/state.js'),'utf8'));
+    }
     res.writeHead(404); res.end();
   });
   await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
@@ -73,6 +81,8 @@ async function open(onSave, restored = {}, serverDraft = canonical()) {
       writingStartedAt:new Date().toISOString(),serverNow:new Date().toISOString()});
     if (url.endsWith('/result')) return fulfill({ok:true,attemptToken:token,completed:true,studentName:'Học viên giả D08',className:'Lớp giả D08',writing:serverDraft});
     if (url.endsWith('/client-event')) return fulfill({ok:true});
+    if (url.endsWith('/clock')) return fulfill({ok:true,serverNow:new Date().toISOString()});
+    if (url.endsWith('/api/test/history')) return fulfill({ok:true,serverNow:new Date().toISOString(),historyEpoch:''});
     if (url.endsWith('/writing')) { const payload=gateway?raw.payload:raw; requests.push(payload); transports.push({url:route.request().url(),body:raw,contentType:route.request().headers()['content-type']}); return onSave({route,payload,requests,fulfill}); }
     errors.push('API fixture chưa khai báo: '+url); return route.abort();
   });
@@ -162,6 +172,73 @@ test('D08 mất phản hồi sau ghi: retry cùng snapshot được xác nhận 
     assert.equal((await session(opened.page)).writingServerRevision,6);
   } finally { await opened.context.close(); }
 });
+
+if (clientName === 'shared') test('D08 mất ACK rồi viết Task 2: nối lại bản đã lưu từ chính request và lưu đủ hai Task',async () => {
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  let serverDraft = canonical();
+  const opened = await open(async ({route,payload,requests,fulfill}) => {
+    if (requests.length === 1) {
+      serverDraft = canonical({task1:payload.task1,task2:payload.task2,revision:6});
+      await pending;
+      return route.abort('failed');
+    }
+    if (payload.baseRevision !== serverDraft.revision) {
+      return fulfill({ok:true,writing:{...serverDraft,accepted:false,reason:'revision_conflict'}});
+    }
+    serverDraft = canonical({task1:payload.task1,task2:payload.task2,
+      revision:serverDraft.revision+(payload.action==='submit'?0:1),submitted:payload.action==='submit',
+      deadlineAt:new Date(Date.now()+1200).toISOString()});
+    return fulfill({ok:true,writing:{...serverDraft,accepted:true,reason:'saved'}});
+  });
+  try {
+    await opened.editor.fill('Task 1 mới đã tới server nhưng mất ACK');
+    await opened.page.waitForFunction(key => JSON.parse(sessionStorage.getItem(key)||'{}').writingDirty === true,key);
+    while (!opened.requests.length) await opened.page.waitForTimeout(10);
+    await opened.page.getByRole('button',{name:'Task 2',exact:true}).click();
+    await opened.page.locator('[data-writing-task="task2"]').fill('Task 2 mới phải được lưu trước khi hết giờ');
+    release();
+    await waitSaved(opened.page);
+    assert.equal(serverDraft.task1,'Task 1 mới đã tới server nhưng mất ACK');
+    assert.equal(serverDraft.task2,'Task 2 mới phải được lưu trước khi hết giờ');
+    assert.equal((await session(opened.page)).writingServerRevision,7);
+    assert.equal((await session(opened.page)).writingConflict,null);
+    assert.deepEqual(opened.requests.slice(0,3).map(p=>p.baseRevision),[5,5,6]);
+    await opened.page.waitForTimeout(1300);
+    // Handoff của bộ đếm thật: khóa theo hạn rồi requestSubmit bằng nút auto.
+    await opened.page.evaluate(()=>{
+      const form=document.querySelector('#writingView'),button=document.createElement('button');
+      button.type='submit';button.dataset.autoSubmit='true';button.hidden=true;form.append(button);
+      form.dataset.writingTimeExpired='true';form.requestSubmit(button);
+    });
+    await opened.page.waitForFunction(key=>JSON.parse(sessionStorage.getItem(key)||'{}').writingSubmitted===true,key);
+    const submitted=opened.requests.find(p=>p.action==='submit');
+    assert.equal(submitted.baseRevision,7);
+    assert.equal(submitted.task2,'Task 2 mới phải được lưu trước khi hết giờ');
+    assert.equal(serverDraft.submitted,true);
+  } finally { release(); await opened.context.close(); }
+});
+
+if (clientName === 'shared') {
+  const pending = {task1:'Task 1 đã lưu',task2:'',baseRevision:5,attemptToken:token,studentRef:'11111111-1111-4111-8111-111111111111'};
+  test('D08 reload sau mất ACK giữ Task 2 mới và nối lại đúng revision đã gửi',async () => {
+    const opened=await open(({payload,fulfill})=>fulfill({ok:true,writing:canonical({task1:payload.task1,task2:payload.task2,revision:7,accepted:true,reason:'saved'})}),
+      {writingDirty:true,writingUnconfirmedDraft:pending,drafts:{writing:{task1:pending.task1,task2:'Task 2 vẫn giữ sau reload'}}},
+      canonical({task1:pending.task1,task2:'',revision:6}));
+    try{await waitSaved(opened.page);assert.equal(opened.requests[0].baseRevision,6);assert.equal(opened.requests[0].task2,'Task 2 vẫn giữ sau reload');assert.equal((await session(opened.page)).writingUnconfirmedDraft,null);}
+    finally{await opened.context.close();}
+  });
+  for (const [label,proof,revision] of [
+    ['sai lượt',{...pending,attemptToken:'55555555-5555-4555-8555-555555555555'},6],
+    ['revision nhảy hai bước',pending,7]
+  ]) test(`D08 pending ${label} vẫn chặn ghi đè và hiện rõ chưa lưu`,async () => {
+    const opened=await open(({fulfill})=>fulfill({ok:true}),
+      {writingDirty:true,writingUnconfirmedDraft:proof,drafts:{writing:{task1:pending.task1,task2:'Bản local phải giữ'}}},
+      canonical({task1:pending.task1,task2:'',revision}));
+    try{await opened.page.locator('#writingConflict').waitFor({state:'visible'});assert.equal(opened.requests.length,0);assert.equal((await session(opened.page)).drafts.writing.task2,'Bản local phải giữ');assert.match(await opened.page.locator('.writing-editor-meta span').first().innerText(),/Chưa lưu/);}
+    finally{await opened.context.close();}
+  });
+}
 
 
 test('D08 ACK nộp sai nội dung không được chốt UI hay xóa bài local',async () => {
