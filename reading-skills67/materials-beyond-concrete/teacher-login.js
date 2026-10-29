@@ -24,7 +24,7 @@
     header = document.createElement('header');
     header.className = 'materials-login-header';
     const lesson=Number.isInteger(config.lesson)?config.lesson:10;
-    const product=['tfng','matching_headings'].includes(config.type)?'Reading Homework':'Reading Materials';
+    const product=['tfng','green-roofs','matching_headings'].includes(config.type)?'Reading Homework':'Reading Materials';
     header.innerHTML = '<a class="materials-login-brand" href="./teacher.html"><img class="m170-logo" src="../../shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"></a><h1>'+product+' · Buổi '+lesson+'</h1>';
     document.body.prepend(header);
     root.innerHTML = '<section class="materials-login-hero"><div><span class="materials-login-kicker">BUỔI '+lesson+' · GIẢNG VIÊN</span><h1>Đăng nhập để xem bài học viên</h1><p class="materials-login-title">' + escape(config.title) + '</p><p class="materials-login-copy">Dùng tài khoản Google đã có quyền lớp.</p></div></section>' +
