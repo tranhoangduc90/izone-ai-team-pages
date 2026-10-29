@@ -19,7 +19,13 @@ Preview ban đầu83file:10SDK/metadata và73host,145URL. Rà token/trivia độ
 - Native journal handler/SQLite dùng code thật trên laptop qua route interception. Cả năm DB đã giải mã GCM độc lập, so payload/binding mọi event ACK và dựng text UTF16;74asset ghim. ACK lặp không thành event mới. Receipt `NATIVE_SDK_HOST_FIVE_CASE_READBACK_20261030.json`; không nhận thành collector HTTP từ xa.
 - Browser exit r4 và startup r3 đạt6ca mỗi nhóm, gồm điều hướng thật và IDB treo, context chậm/lỗi/hồi phục, phân biệt visibility/pagehide, scope lớp và disabled. Guard departure4,5giây không đổi; chỉ warmup/quan sát thường/replay chờ20giây cho nhịp gom15giây. `SDK_BROWSER_CONTRACT_ACCEPTANCE_20261030.json` giữ số native ID và checksum; receipt lỗi cũ vẫn giữ.
 
-Các phép kiểm không đổi UI, phiên GV90/365ngày, native deadline hoặc quyền Listening. Chưa gọi K67/Substitute, Google thật, OS kill/BFCache thực, cache nóng/rollback, tải lớn hay toàn hệ A–G đã đạt. Sự kiện pagehide/pageshow giả lập không chứng minh eligibility BFCache. Xem STATUS của repo điều phối để lấy kết quả mới nhất.
+Lát tiếp cùng SDK đã chạy ba K67 với API thật/PGlite RAM và bốn Substitute với journal/owner worker thật nhưng API bài thi/DB phiên giả. Các ca giữ trạng thái35giây và readback GCM/ticket/ACK/owner có hồ sơ riêng trong repo điều phối. Không nhận fixture thành production parity hoặc native n8n/Portal/Google.
+
+Runner `tests/substitute-shared-identity-browser.mjs` được bổ sung điều kiện đợi ô Listening trong bố cục semantic đã dựng xong, xác nhận giá trị đã nhập trước thao tác Đổi người, rồi kiểm cùng node/giá trị và ô Reading không đổi.20ca danh tính/nháp của bốn host đạt trên Chrome cách ly, audio/API bị thay bằng fixture. Thay đổi này chỉ ở test;8asset SDK và mã bài thi nguyên byte.
+
+Chẩn đoán có kiểm soát trên hai K67, có/tắt SDK: chuyển ô native sang bố cục thi làm mất focus; ký tự gửi trong khoảng đó chưa vào ô, sau focus lại thì nhập/giữ được. Nội dung đã nhập trước chuyển vẫn được giữ. Bốn phép xen thời điểm xác nhận cơ chế này nhưng không có trace đủ để gán lại chính xác hai failure cũ. Rủi ro native gõ quá sớm không được sửa trong PR SDK và không được gọi là lỗi production đã giải quyết.
+
+Các phép kiểm không đổi UI, phiên GV90/365ngày, native deadline hoặc quyền Listening. Chưa gọi toàn bộ K67/Substitute, Google thật, OS kill/BFCache thực, cache nóng/rollback, tải lớn hay toàn hệ A–G đã đạt. Sự kiện pagehide/pageshow giả lập không chứng minh eligibility BFCache. Xem STATUS của repo điều phối để lấy kết quả mới nhất.
 
 ## Cách kiểm lại
 
