@@ -11,7 +11,7 @@
   {id:'writing',prefix:'/writing-api/api',source:'/writing-api/api/auth/session/shared-session'},
   {id:'mapping',prefix:'/mapping-api/api',source:'/mapping-api/api/auth/session/shared-session'},
   {id:'term67',prefix:'/term-mini-k67-api/api',source:'/term-mini-k67-api/api/auth/session/shared-session',apiOrigin:'https://ducizone.ddns.net:18869'},
-  {id:'materials',prefix:'/reading67-materials/api/reading-skills67',nestedPrefixes:['/lesson12'],source:'/reading67-materials/api/reading-skills67/teacher/shared-session'},
+  {id:'materials',prefix:'/reading67-materials/api/reading-skills67',nestedPrefixes:['/lesson12','/green-roofs'],source:'/reading67-materials/api/reading-skills67/teacher/shared-session'},
   {id:'k56',prefix:'/mapping-api-k56/api',source:'/mapping-api-k56/api/auth/session/shared-session'},
   {id:'k56demo',prefix:'/mapping-api-demo/api',source:'/mapping-api-demo/api/auth/session/shared-session'},
   {id:'handout67',prefix:'/api/handout67/v1',source:'/api/handout67/v1/teacher/shared-session',identity:true},
