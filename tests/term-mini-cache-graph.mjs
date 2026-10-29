@@ -36,4 +36,11 @@ test('K67 nạp bản phục hồi ACK qua entry, bootstrap và phiếu cứu h�
  const bootstrap=fs.readFileSync('term-tests/term-test-2-computer-based/bootstrap.js','utf8');
  const apps=[...bootstrap.matchAll(/\.\.\/shared\/app\.js\?[^'"\s)]+/g)].map(m=>m[0]);
  assert.ok(apps.length);for(const url of apps)assert.equal(new URL(url,'https://fixture.invalid').searchParams.get('writing_ack'),'20261029-v1');
+ // enhance phải có bản vá submission hiện hành cả khi qua cbtAssetUrl.
+ const enhanceLoads=[...bootstrap.matchAll(/cbtAssetUrl\('(enhance\.js[^']*)', '([^']+)'\)/g)];
+ assert.equal(enhanceLoads.length,1);
+ for(const [,file,revision] of enhanceLoads){
+  const url=new URL(`${file}?rev=${revision}`,'https://fixture.invalid');
+  assert.equal(url.searchParams.get('v'),version);
+ }
 });
