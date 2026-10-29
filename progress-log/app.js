@@ -1763,7 +1763,7 @@ async function startAttempt({selection=null,pinned=false}={}) {
     elements.studentNameLabel.textContent = state.attempt.identity.studentName;
     elements.formContextLabel.textContent = state.attempt.identity.className+' · '+sessionHeading({sessionNumber:state.attempt.identity.sessionNumber},state.assignment);
     setSaveState(state.attempt.draftRevision ? 'Đã khôi phục bản lưu' : 'Chưa có thay đổi', state.attempt.draftRevision ? 'saved' : '');
-    setNotice('Bạn có thể điền mỗi phần ngay sau hoạt động tương ứng.');
+    setNotice('');
     state.checkpointIndex = 0;
     const eligible = officialStudent(state.confirmedStudent) && allowedGroup(studentMemory.group || {}, config.STUDENT_MEMORY);
     if (!courseIdentity && studentMemory.enabled && !writeMemory(studentMemory.storage, studentMemory.key,

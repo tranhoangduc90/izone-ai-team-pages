@@ -32,7 +32,6 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       const row=node('tr'),name=node('td'),open=button(entry.title,()=>void preview(entry));row.tabIndex=0;row.dataset.entryId=entry.id;row.classList.toggle('thuy-library-published',entry.id===highlighted);row.setAttribute('aria-label','Xem '+entry.title);open.className='thuy-library-name';
       name.append(open,node('small',entry.meta||`${entry.itemCount||0} câu`));const actions=node('td');
       if(entry.source!=='used'){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');actions.append(assign);}
-      if(entry.draft)actions.append(button('Duyệt và quản lý kho',()=>void preview(entry,{manage:true})));
       row.append(name,node('td',sourceName(entry.source)),actions);
       row.addEventListener('click',event=>{if(!event.target.closest('button,a')&&!getSelection()?.toString())void preview(entry);});
       row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();void preview(entry);}});body.append(row);
@@ -60,7 +59,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     }
     if(!full.publication)throw Error('Phiếu cần được xuất bản vào kho trước khi giao.');await onAssign(full);
   }catch(error){if(run===lifecycle)status.textContent=error.message;}}
-  async function preview(entry,{manage=false}={}){
+  async function preview(entry){
     const run=lifecycle;
     const opener=document.activeElement,dialog=node('dialog','','thuy-management-dialog thuy-library-detail'),head=node('header','','thuy-management-head'),body=node('div','','thuy-management-body'),notice=node('p','Đang đọc phiếu…');notice.setAttribute('role','status');
     const close=button('×',()=>dialog.close());close.setAttribute('aria-label','Đóng');
@@ -71,38 +70,14 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     dialog.addEventListener('close',()=>{dialogs.delete(dialog);dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});},{once:true});
     try{
       const full=await readEntry(entry);if(run!==lifecycle||!dialog.open)return;
-      if(manage&&entry.draft){
-        const review=node('div','','thuy-library-review-actions');
-        for(const [action,label]of [['request-review','Gửi duyệt'],['approve','Duyệt bản này']]){
-          const control=button(label,async()=>{control.disabled=true;try{
-            const reply=await request('/teacher/form-drafts/'+entry.id+'/'+action,{method:'POST',body:{expectedRevision:full.detail.revision,...(action==='approve'?{expectedHash:full.detail.contentHash}:{})}});
-            if(run!==lifecycle)return;
-            full.detail=reply.draft;notice.textContent=action==='approve'?'Đã duyệt đúng phiên bản này.':'Đã gửi người có quyền chuyên môn duyệt.';await onRefresh();
-          }catch(error){notice.textContent=error.message;}finally{control.disabled=false;}});
-          control.disabled=Boolean(full.publication)||full.detail.status==='published';review.append(control);
-        }
-        const share=button('Đưa vào Kho chung',async()=>{
-          share.disabled=true;const key='share:'+entry.id+':'+full.detail.revision;if(!sourceOperations.has(key))sourceOperations.set(key,crypto.randomUUID());
-          try{await request('/teacher/form-library',{method:'POST',body:{draftId:entry.id,expectedRevision:full.detail.revision,expectedHash:full.detail.contentHash,scope:'izone',operationId:sourceOperations.get(key)}});
-            if(run!==lifecycle)return;
-            sourceOperations.delete(key);notice.textContent='Đã lưu đúng phiên bản vào Kho chung.';await load();await onRefresh();
-          }catch(error){notice.textContent=error.message;share.disabled=false;}
-        });
-        share.disabled=!['approved','published'].includes(full.detail.status);review.append(share);body.append(review);
-      }
       if(entry.source==='used'){
         const host=node('div','','thuy-assignment-actions');body.append(host);
         const a=entry.assignment;const management=mountAssignmentManagement({host,getContext:()=>({assignmentId:entry.id,classId:String(a.class_id),className:a.class_name,sessionNumber:Number(a.session_number),title:entry.title}),request,onChanged:onManagementChanged});managers.add(management);management.refresh();
       }
-      if(manage&&entry.draft){
-        // Người duyệt cần đọc đúng key của bản đã mở, trong phiên đã kiểm quyền.
-        for(const block of full.definition.blocks){body.append(node('h3',block.title));for(const item of block.items){body.append(node('h4','Câu '+item.position+' · '+item.prompt));for(const option of item.options||[])body.append(node('p',option.label));const key=full.detail.gradingKey?.items[item.itemVersionId];if(key)body.append(node('p','Đáp án: '+JSON.stringify(key.expectedOptionId||key.expectedOptionIds||key.accepted||key.acceptedBySlot)));}}
-        notice.textContent='Bản để duyệt · '+full.detail.revision;return;
-      }
       const reply=await request(entry.draft?'/teacher/form-drafts/'+entry.id+'/preview-grant':entry.source==='used'?'/teacher/demo-grants':'/teacher/form-library/'+entry.id+'/preview-grant',
         {method:'POST',body:entry.draft?{expectedRevision:full.detail.revision}:entry.source==='used'?{assignmentId:entry.id}:{}});
       if(run!==lifecycle||!dialog.open)return;mountWorksheetFrame(body,{grant:reply.grant,title:entry.title});notice.hidden=true;
-    }catch(error){notice.hidden=false;notice.textContent='Chưa mở được phiếu: '+error.message;body.append(button('Thử mở lại',()=>{dialog.close();void preview(entry,{manage});}));}
+    }catch(error){notice.hidden=false;notice.textContent='Chưa mở được phiếu: '+error.message;body.append(button('Thử mở lại',()=>{dialog.close();void preview(entry);}));}
   }
   for(const [value,label]of [['izone','Kho chung'],['personal','Kho cá nhân'],['used','Phiếu đã giao']]){const b=button('',()=>{scope=value;paint();});b.setAttribute('role','tab');b.append(document.createTextNode(label+' '),node('span','0'));tabs.set(value,b);nav.append(b);}
   nav.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const keys=[...tabs.keys()],index=keys.indexOf(scope);scope=keys[event.key==='Home'?0:event.key==='End'?keys.length-1:(index+(event.key==='ArrowRight'?1:keys.length-1))%keys.length];event.preventDefault();paint();tabs.get(scope).focus();});

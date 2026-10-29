@@ -74,7 +74,11 @@ test('T17 Phiếu đã giao bỏ nút giao ở cả hàng và chi tiết',{timeo
    return {entries:[]};
   }});
   window.library.setUsed([{assignment_id:'used-fixture',title:'Phiếu đã dùng mẫu',class_id:'a',class_name:'Lớp mẫu',session_number:7}]);
+  window.library.setDrafts([{id:'personal-fixture',revision:1,status:'draft',sessionNumber:7,definition:{title:'Nháp cá nhân mẫu',blocks:[]}}]);
  });
+ await page.getByRole('tab',{name:/Kho cá nhân/}).click();
+ assert.equal(await page.getByRole('button',{name:'Duyệt và quản lý kho',exact:true}).count(),0);
+ assert.equal(await page.getByRole('button',{name:'Nháp cá nhân mẫu',exact:true}).count(),1);
  await page.getByRole('tab',{name:/Phiếu đã giao/}).click();
  assert.equal(await page.locator('.thuy-library-scroll').getByRole('button',{name:'Giao bài',exact:true}).count(),0);
  await page.getByRole('button',{name:'Phiếu đã dùng mẫu',exact:true}).click();
