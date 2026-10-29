@@ -5,12 +5,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const releaseRevision = '20261003-writing-save-cas-v1';
-const allStudentConfirmationRevision = '20261003-writing-save-cas-v1';
-const computerBasedLayoutRevision = '20261015-owner-v1';
-const loadGuardRevision = '20260912-load-guard-v1';
-const liveResultsRevision = '20261007-mini-login-v1';
-const resetRecoveryRevision = '20261017-pages-audio-v1';
+// Mã phát hành chính xác do term-mini-cache-graph.mjs kiểm; không ghim lại ngày
+// ở các ca danh tính/retry, khiến đổi cache che mất những assertion phía sau.
 const studentEntries = [
   'term-tests/term-test-1/index.html',
   'term-tests/term-test-2/index.html',
@@ -20,42 +16,32 @@ const studentEntries = [
   'term-tests/mini-test-lesson-5-computer-based/index.html'
 ];
 
-test('mọi trang Term/Mini Test nạp đúng bản reliability và không thiếu tài nguyên local', async () => {
+test('mọi trang Term/Mini Test có đủ tài nguyên local và URL script/style chống cache cũ', async () => {
   for (const relativeEntry of studentEntries) {
     const entryPath = path.join(repoRoot, relativeEntry);
     const html = await readFile(entryPath, 'utf8');
-    const entryRevision = relativeEntry === 'term-tests/mini-test-lesson-5/index.html' ? liveResultsRevision : relativeEntry.includes('term-test-')
-      ? allStudentConfirmationRevision
-      : releaseRevision;
-    assert.match(html, new RegExp(`shared/styles\\.css\\?rev=${entryRevision}`), relativeEntry);
-    if (relativeEntry.includes('computer-based')) {
-      assert.match(html, new RegExp(`bootstrap\\.js\\?rev=${resetRecoveryRevision}`), relativeEntry);
-    } else {
-      const scriptRevision = liveResultsRevision;
-      assert.match(html, new RegExp(`shared/app\\.js\\?rev=${scriptRevision}`), relativeEntry);
-    }
-    const localAssets = [...html.matchAll(/(?:src|href)="([^"#?]+)(?:\?[^"#]*)?"/g)]
+    const localAssets = [...html.matchAll(/(?:src|href)="([^"#]+)"/g)]
       .map(match => match[1])
       .filter(value => !value.startsWith('data:') && !/^https?:/i.test(value));
+    assert.ok(localAssets.length > 0, relativeEntry);
     for (const asset of localAssets) {
-      await access(path.resolve(path.dirname(entryPath), asset));
+      const url = new URL(asset.replaceAll('&amp;', '&'), `https://fixture.invalid/${relativeEntry}`);
+      await access(path.join(repoRoot, decodeURIComponent(url.pathname)));
+      if (/\.(?:css|m?js)$/.test(url.pathname)) {
+        assert.ok(url.searchParams.get('v') || url.searchParams.get('rev'), `${relativeEntry}: ${asset} thiếu mã chống cache cũ`);
+      }
     }
   }
 });
 
-test('hai bản Term Test computer-based bắt buộc xác nhận đúng tên và lớp trước khi chuẩn bị bài', async () => {
-  const termTest1Entry = await readFile(path.join(repoRoot, 'term-tests/term-test-1-computer-based/index.html'), 'utf8');
-  const entry = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/index.html'), 'utf8');
+test('chọn tên thủ công ở Term Test computer-based phải xác nhận đúng tên và lớp trước khi chuẩn bị bài', async () => {
   const bootstrap = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/bootstrap.js'), 'utf8');
   const styles = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/styles.css'), 'utf8');
   const changeHandlerStart = bootstrap.indexOf("elements.bootstrapStudent.addEventListener('change'");
   const changeHandlerEnd = bootstrap.indexOf('function renderRosterOptions', changeHandlerStart);
   const changeHandler = bootstrap.slice(changeHandlerStart, changeHandlerEnd);
 
-  assert.match(termTest1Entry, new RegExp(`styles\\.css\\?rev=${computerBasedLayoutRevision}`));
-  assert.match(termTest1Entry, new RegExp(`bootstrap\\.js\\?rev=${resetRecoveryRevision}`));
-  assert.match(entry, new RegExp(`styles\\.css\\?rev=${computerBasedLayoutRevision}`));
-  assert.match(entry, new RegExp(`bootstrap\\.js\\?rev=${resetRecoveryRevision}`));
+  assert.ok(changeHandlerStart >= 0 && changeHandlerEnd > changeHandlerStart, 'Không tìm thấy cổng chọn tên CBT');
   assert.match(bootstrap, /function confirmStudentIdentity\(student\)/);
   assert.match(bootstrap, /\['Họ và tên', student\.name\]/);
   assert.match(bootstrap, /\['Lớp', classConfirmationLabel\(\)\]/);
@@ -77,9 +63,7 @@ test('computer-based tự bỏ dấu vết lượt cũ khi máy chủ đã reset
   assert.ok(bootstrap.includes('prepared = await prepareSession()'));
 });
 
-test('hai answer sheet Term Test chỉ lưu và nối lượt sau khi học viên xác nhận', async () => {
-  const termTest1Entry = await readFile(path.join(repoRoot, 'term-tests/term-test-1/index.html'), 'utf8');
-  const termTest2Entry = await readFile(path.join(repoRoot, 'term-tests/term-test-2/index.html'), 'utf8');
+test('chọn tên thủ công ở answer sheet Term Test chỉ lưu và nối lượt sau khi học viên xác nhận', async () => {
   const sharedApp = await readFile(path.join(repoRoot, 'term-tests/shared/app.js'), 'utf8');
   const sharedStyles = await readFile(path.join(repoRoot, 'term-tests/shared/styles.css'), 'utf8');
   const changeHandlerStart = sharedApp.indexOf("async function selectStudentIdentity(");
@@ -87,10 +71,6 @@ test('hai answer sheet Term Test chỉ lưu và nối lượt sau khi học viê
   const changeHandler = sharedApp.slice(changeHandlerStart, changeHandlerEnd);
   assert.ok(changeHandlerStart >= 0, 'Không tìm thấy cổng xác nhận dùng chung cho chọn tay và chọn sẵn');
 
-  for (const entry of [termTest1Entry, termTest2Entry]) {
-    assert.match(entry, new RegExp(`shared/styles\\.css\\?rev=${allStudentConfirmationRevision}`));
-    assert.match(entry, new RegExp(`shared/app\\.js\\?rev=${liveResultsRevision}`));
-  }
   assert.match(sharedApp, /function confirmStudentIdentity\(student\)/);
   assert.match(changeHandler, /testConfig\.slug\.startsWith\('term-test-'\)/);
   assert.match(changeHandler, /await confirmStudentIdentity\(student\)/);
@@ -114,8 +94,8 @@ test('answer sheet và computer-based dùng chung guard, revision và retry', as
   assert.match(sharedApp, /randomDelay\(10_000, 15_000\)/);
   assert.match(sharedApp, /randomDelay\(4_000, 8_000\)/);
   assert.match(sharedApp, /form\.requestSubmit\(submitButton\)/);
-  assert.match(bootstrap, new RegExp(`shared/app\\.js\\?rev=${liveResultsRevision}`));
-  assert.match(bootstrap, new RegExp(`enhance\\.js', '${loadGuardRevision}`));
+  assert.match(bootstrap, /await loadScript\('\.\.\/shared\/app\.js\?[^']+'\)/);
+  assert.match(bootstrap, /await loadScript\(cbtAssetUrl\('enhance\.js\?[^']+', '[^']+'\)\)/);
   assert.match(bootstrap, /listeningDraftRevision/);
   assert.match(bootstrap, /readingDraftRevision/);
   assert.match(enhance, /if \(window\.TERM_TEST_DEADLINE_GUARD_ACTIVE\) return;/);
