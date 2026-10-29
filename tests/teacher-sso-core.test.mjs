@@ -21,6 +21,17 @@ test('Lesson 12 restores the shared teacher account; student requests keep their
  assert.deepEqual(calls.slice(1).map(c=>c.url),[origin+'/teacher-session-api/v1/restore/materials',prefix+'/teacher/classes']);
 });
 
+test('Green roofs restores the Materials teacher source and leaves learner writes untouched',async()=>{
+ const {box,calls}=setup(()=>response(200));
+ const prefix=origin+'/reading67-materials/api/reading-skills67/green-roofs';
+ await box.fetch(prefix+'/draft',{method:'PUT',body:'synthetic-learner-draft'});
+ assert.equal(calls.length,1);
+ await box.fetch(prefix+'/teacher/classes');
+ assert.deepEqual(calls.slice(1).map(c=>c.url),[origin+'/teacher-session-api/v1/restore/materials',prefix+'/teacher/classes']);
+ await box.fetch(prefix+'/teacher/logout',{method:'POST'});
+ assert.ok(calls.some(c=>c.url===origin+'/teacher-session-api/v1/logout'));
+});
+
 test('Listening Homework restores its own source without changing discovery on other product entries',async()=>{
  const {box,calls}=setup(()=>response(200),'listeninghomework','https://tranhoangduc90.github.io/izone-ai-team-pages/listening-homework/lesson-2.html?teacher=1');
  assert.equal(await box.IzoneTeacherSso.restore('listeninghomework'),true);
