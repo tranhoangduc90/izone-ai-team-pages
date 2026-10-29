@@ -1,0 +1,8 @@
+.thuy-question-review{min-width:0;font-size:16px;line-height:24px}
+.thuy-question-review :is(input,select,textarea){max-width:100%;box-sizing:border-box;font:inherit}
+.thuy-question-review p{font:inherit}.thuy-question-review textarea{width:100%;min-height:90px}
+.thuy-question-review .choice{display:flex;align-items:center;gap:10px;padding:12px;background:white;min-height:48px}
+.thuy-question-review .choice-key{flex:0 0 28px}.thuy-question-review .choice-feedback{margin-left:auto;font-size:12px}
+.thuy-question-review .feedback-correct{background:#e4f5ec;border:1px solid #18734c}.thuy-question-review .choice-text{flex:1;min-width:0;font-size:16px;line-height:24px}
+.thuy-review-sentence{line-height:2.5;overflow-wrap:anywhere}.thuy-review-sentence input{width:12ch}
+.thuy-review-pairs{width:100%;border-collapse:collapse}.thuy-review-pairs td{padding:8px;border-bottom:1px solid var(--line)}

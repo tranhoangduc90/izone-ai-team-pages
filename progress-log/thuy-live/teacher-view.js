@@ -31,7 +31,8 @@ export function renderThuyRoster(root,{dashboard,liveByStudent,mode='progress',q
     return s.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))&&(filter==='all'||filter==='submitted'&&s.submissionId||filter==='unfinished'&&!s.submissionId||filter==='notstarted'&&!started);
   });
   for(const student of people){
-    const row=node('tr');row.tabIndex=0;row.dataset.student=student.studentRef;row.setAttribute('aria-label','Xem bài '+student.name);row._student=student;row._open=onOpen;
+    const row=node('tr');row.dataset.student=student.studentRef;row._student=student;row._open=mode==='results'?onOpen:()=>{};
+    if(mode==='results'){row.tabIndex=0;row.setAttribute('aria-label','Xem bài '+student.name);}
     const name=node('td',student.name,'person-name');if(student.discriminator)name.append(node('small',student.discriminator));row.append(name);
     const live=liveByStudent.get(student.studentRef);
     if(mode==='results'){
@@ -106,6 +107,19 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   for(const [id,label] of [['progress','Tiến độ'],['results','Kết quả']]){const button=node('button',label,'button');button.type='button';button.dataset.thuyMode=id;button.setAttribute('aria-pressed',String(id==='progress'));button.addEventListener('click',()=>onMode(id));tabs.append(button);}
   hero.after(tabs);const plan=document.querySelector('#dashboardPlanHost');dashboard.append(plan);
   const analytics=document.querySelector('#classInsightSection');
+  const results=node('div','','thuy-student-results');results.id='thuyStudentResults';elements.studentList.before(results);results.append(elements.studentList);
+  const resultNav=document.querySelector('.thuy-result-jumps');resultNav.setAttribute('role','tablist');resultNav.setAttribute('aria-label','Kết quả buổi học');
+  resultNav.replaceChildren();let resultTab='overview',mode='progress';const resultTabs=new Map();
+  function applyResultTab(){
+    analytics.hidden=mode!=='results'||resultTab!=='overview';results.hidden=mode==='results'&&resultTab!=='students';resultNav.hidden=mode!=='results';
+    for(const [key,tab]of resultTabs){tab.setAttribute('aria-selected',String(key===resultTab));tab.tabIndex=key===resultTab?0:-1;}
+    if(mode!=='results'||resultTab!=='students')for(const dialog of results.querySelectorAll('dialog[open]'))dialog.close();
+  }
+  analytics.setAttribute('role','tabpanel');analytics.setAttribute('aria-labelledby','thuyResultsOverview');results.setAttribute('role','tabpanel');results.setAttribute('aria-labelledby','thuyResultsStudents');
+  for(const [key,label,id,panelId]of [['overview','Tổng quan lớp','thuyResultsOverview','classInsightSection'],['students','Nhận xét cá nhân','thuyResultsStudents','thuyStudentResults']]){
+    const tab=node('button',label,'button');tab.id=id;tab.type='button';tab.setAttribute('role','tab');tab.setAttribute('aria-controls',panelId);tab.addEventListener('click',()=>{resultTab=key;applyResultTab();});resultTabs.set(key,tab);resultNav.append(tab);
+  }
+  resultNav.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();resultTab=event.key==='Home'?'overview':event.key==='End'?'students':resultTab==='overview'?'students':'overview';applyResultTab();resultTabs.get(resultTab).focus();});applyResultTab();
   analytics.querySelector('.library-heading').hidden=true;
   analytics.querySelector('.teacher-insight-tabs').hidden=true;
   elements.scoresPanel.hidden=true;elements.insightPanel.hidden=true;
@@ -117,7 +131,7 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   for(const text of elements.overviewPanel.querySelectorAll(':scope>p.muted'))text.hidden=true;
   const extras=node('details','','thuy-extra-tools');extras.append(node('summary','Thông tin và công cụ của buổi'));extras.append(elements.dashboardSummary);dashboard.append(extras);
   const count=node('span','','thuy-class-count');pickers.append(count);
-  return {context,classes,home,count,learner,setPanel(panel){
+  return {context,classes,home,count,learner,setMode(value){mode=value;applyResultTab();},setPanel(panel){
     context.hidden=['create','classes'].includes(panel);home.classList.toggle('active',panel!=='create');
     document.querySelector('.thuy-breadcrumb').textContent=panel==='create'?'Quản lý bài tập':panel==='classes'?'Quản lý lớp':'Quản lý lớp / '+(classes.selectedOptions[0]?.textContent||'');
   }};
@@ -127,7 +141,9 @@ export function showThuyDetail(dialog){
   dialog.dataset.thuyGeneration=String(Number(dialog.dataset.thuyGeneration||0)+1);
   const opener=document.activeElement;
   for(const other of document.querySelectorAll('#draftDialog,#journeyDetailDialog'))if(other!==dialog&&other.open)other.close();
-  if(!dialog.open)dialog.show();document.body.classList.add('has-thuy-detail');
+  const results=dialog.id==='draftDialog'?document.querySelector('#thuyStudentResults'):null;
+  if(results){document.body.classList.remove('has-thuy-detail');results.append(dialog);results.classList.add('has-inline-detail');dialog.classList.add('thuy-inline-detail');}
+  if(!dialog.open)dialog.show();if(!results)document.body.classList.add('has-thuy-detail');
   if(matchMedia('(max-width:650px)').matches){dialog.scrollIntoView({block:'start'});dialog.querySelector('button[aria-label]')?.focus({preventScroll:true});}
-  dialog.addEventListener('close',()=>{if(!document.querySelector('#draftDialog[open],#journeyDetailDialog[open]')){document.body.classList.remove('has-thuy-detail');if(opener?.isConnected)opener.focus({preventScroll:true});}},{once:true});
+  dialog.addEventListener('close',()=>{results?.classList.remove('has-inline-detail');if(!document.querySelector('#draftDialog[open],#journeyDetailDialog[open]'))document.body.classList.remove('has-thuy-detail');if(opener?.isConnected)opener.focus({preventScroll:true});},{once:true});
 }

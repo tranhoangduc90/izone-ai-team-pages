@@ -1,6 +1,7 @@
 // Dùng kết quả đã lọc quyền từ API. Không tự lấy key, suy đáp án hoặc chấm ở trình duyệt.
 import {questionPresentation} from './question-presentation.js?rev=20261022-parity-v1';
 import {effectiveItemKind} from '../item-kind.js?rev=20261028-the15-v1';
+import {questionReview} from './question-review.js?rev=20261030-the17-19-v1';
 const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 function answer(item,value){
  const values=Array.isArray(value)?value:[value];
@@ -36,11 +37,12 @@ export function partFeedback(block,result){
    }card.append(list);
   }else{
   card.append(node('p','Câu trả lời của em: '+answer(item,grade.rawAnswer)));
-  if(grade.expectedAnswer!=null){if(!survey)card.append(node('b',grade.verdict==='correct'?'✓ Đúng':'✕ Sai'));card.append(node('p',(survey?'Đáp án tham khảo: ':'Đáp án: ')+answer(item,grade.expectedAnswer)));}
+  if(grade.expectedAnswer!=null){if(!survey)card.append(node('b',grade.verdict==='correct'?'✓ Đúng':'✕ Sai'));}
   else if(survey||grade.maxScore===0)card.append(node('p','Không tự chấm đúng/sai'));
   }
   if(grade.explanation)card.append(node('p','Giải thích: '+grade.explanation));
-  if(item.options.length){const details=node('details');details.append(node('summary','Xem toàn bộ lựa chọn'));for(const option of item.options)details.append(node('p',option.id+'. '+option.label));card.append(details);}
+  card.append(questionReview(item,{includeHeading:false,rawAnswer:grade.rawAnswer,
+    correctAnswer:grade.expectedAnswer,expectedIds:grade.expectedAnswer,reference:survey}));
   root.append(card);
  }return root;
 }
