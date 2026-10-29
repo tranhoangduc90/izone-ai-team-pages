@@ -1,0 +1,5 @@
+#remember{width:18px;height:18px;vertical-align:middle;margin:12px 6px 12px 0;padding:0}
+header{min-height:76px;height:auto;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}
+#who{overflow-wrap:anywhere;flex:1 1 160px}
+#detail pre{max-height:460px;overflow:auto}
+@media(max-width:780px){header{gap:12px}.trial{font-size:13px}#who{order:4;flex-basis:100%}#logout{padding:7px 10px}}
