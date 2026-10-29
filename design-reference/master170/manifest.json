@@ -1,0 +1,294 @@
+{
+  "version": "master170@1.1",
+  "updated": "2026-10-29",
+  "count": 31,
+  "url": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/",
+  "scope": "Component demos with synthetic data; no student accounts or business APIs. Existing Listening Homework preview has clearly labelled simulated feedback.",
+  "cases": [
+    {
+      "id": "reading-tfng",
+      "title": "True / False / Not Given",
+      "family": "reading",
+      "criteria": [
+        "I06",
+        "D06",
+        "H06"
+      ]
+    },
+    {
+      "id": "reading-ynng",
+      "title": "Yes / No / Not Given",
+      "family": "reading",
+      "criteria": [
+        "I06",
+        "D06",
+        "H06"
+      ]
+    },
+    {
+      "id": "reading-mcq",
+      "title": "Multiple choice · một đáp án",
+      "family": "reading",
+      "criteria": [
+        "I04",
+        "D03"
+      ]
+    },
+    {
+      "id": "reading-multiple",
+      "title": "Multiple choice · hai đáp án",
+      "family": "reading",
+      "criteria": [
+        "I05"
+      ]
+    },
+    {
+      "id": "reading-information",
+      "title": "Matching information",
+      "family": "reading",
+      "criteria": [
+        "I01",
+        "I02",
+        "I03"
+      ]
+    },
+    {
+      "id": "reading-headings",
+      "title": "Matching headings",
+      "family": "reading",
+      "criteria": [
+        "I01",
+        "I02",
+        "I03"
+      ]
+    },
+    {
+      "id": "reading-features",
+      "title": "Matching features / names",
+      "family": "reading",
+      "criteria": [
+        "I01",
+        "I02",
+        "I03"
+      ]
+    },
+    {
+      "id": "reading-endings",
+      "title": "Matching sentence endings",
+      "family": "reading",
+      "criteria": [
+        "I01",
+        "I02",
+        "I03"
+      ]
+    },
+    {
+      "id": "reading-summary",
+      "title": "Summary completion",
+      "family": "reading",
+      "criteria": [
+        "I09"
+      ]
+    },
+    {
+      "id": "reading-summary-bank",
+      "title": "Summary completion · word bank",
+      "family": "reading",
+      "criteria": [
+        "I09",
+        "I01"
+      ]
+    },
+    {
+      "id": "reading-sentence",
+      "title": "Sentence completion",
+      "family": "reading",
+      "criteria": [
+        "H02"
+      ]
+    },
+    {
+      "id": "reading-short",
+      "title": "Short-answer questions",
+      "family": "reading",
+      "criteria": [
+        "H01",
+        "H02"
+      ]
+    },
+    {
+      "id": "reading-table",
+      "title": "Table completion",
+      "family": "reading",
+      "criteria": [
+        "I08"
+      ]
+    },
+    {
+      "id": "listening-note",
+      "title": "Note completion · một tờ 10 ô",
+      "family": "listening",
+      "criteria": [
+        "E04",
+        "E07",
+        "I07",
+        "K04"
+      ]
+    },
+    {
+      "id": "listening-form",
+      "title": "Form completion",
+      "family": "listening",
+      "criteria": [
+        "H02",
+        "I07"
+      ]
+    },
+    {
+      "id": "listening-sentence",
+      "title": "Sentence completion",
+      "family": "listening",
+      "criteria": [
+        "H02",
+        "I07"
+      ]
+    },
+    {
+      "id": "listening-short",
+      "title": "Short-answer questions",
+      "family": "listening",
+      "criteria": [
+        "H02",
+        "I07"
+      ]
+    },
+    {
+      "id": "listening-summary",
+      "title": "Summary completion",
+      "family": "listening",
+      "criteria": [
+        "H02",
+        "I07"
+      ]
+    },
+    {
+      "id": "listening-table",
+      "title": "Table completion",
+      "family": "listening",
+      "criteria": [
+        "I08"
+      ]
+    },
+    {
+      "id": "listening-mcq",
+      "title": "Multiple choice · một đáp án",
+      "family": "listening",
+      "criteria": [
+        "I04"
+      ]
+    },
+    {
+      "id": "listening-pair",
+      "title": "Multiple choice · hai đáp án",
+      "family": "listening",
+      "criteria": [
+        "I05"
+      ]
+    },
+    {
+      "id": "listening-matching",
+      "title": "Matching",
+      "family": "listening",
+      "criteria": [
+        "I01",
+        "I03"
+      ]
+    },
+    {
+      "id": "reading-diagram",
+      "title": "Diagram labelling",
+      "family": "reading",
+      "criteria": [
+        "I10"
+      ]
+    },
+    {
+      "id": "reading-flow",
+      "title": "Flowchart completion",
+      "family": "reading",
+      "criteria": [
+        "I10"
+      ]
+    },
+    {
+      "id": "listening-diagram",
+      "title": "Diagram labelling",
+      "family": "listening",
+      "criteria": [
+        "I10"
+      ]
+    },
+    {
+      "id": "listening-flow",
+      "title": "Flowchart completion",
+      "family": "listening",
+      "criteria": [
+        "I10"
+      ]
+    },
+    {
+      "id": "listening-map",
+      "title": "Map / plan labelling",
+      "family": "listening",
+      "criteria": [
+        "I10"
+      ]
+    },
+    {
+      "id": "remember",
+      "title": "Đăng nhập · Ghi nhớ",
+      "family": "shared",
+      "criteria": [
+        "H03",
+        "H06"
+      ]
+    },
+    {
+      "id": "reading-homework",
+      "title": "Reading Homework · Matching và nén",
+      "family": "homework-reading",
+      "criteria": [
+        "A02",
+        "C06",
+        "M01"
+      ]
+    },
+    {
+      "id": "reading-homework-tfng",
+      "title": "Reading Homework · TFNG phân tích mảnh",
+      "family": "homework-tfng",
+      "criteria": [
+        "A02",
+        "I06"
+      ]
+    },
+    {
+      "id": "listening-homework",
+      "title": "Listening Homework · chép từ và phân tích",
+      "family": "homework-listening",
+      "criteria": [
+        "A02",
+        "C06",
+        "M07"
+      ]
+    }
+  ],
+  "nativeSources": [
+    "reading-practice/authored-ui.js",
+    "listening-practice/authored-ui.js",
+    "reading-skills67/prototype.js",
+    "reading-skills67/tfng-renderer.js",
+    "listening-homework/interactive-workspace.mjs"
+  ],
+  "baseCommit": "3ee7747095553a532f6023e068f542694ad51869"
+}
