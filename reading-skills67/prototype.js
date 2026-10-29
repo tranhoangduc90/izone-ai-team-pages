@@ -15,6 +15,7 @@ let mobilePane = 'passage', activeQuestion = 1, lastTrigger = null, explanationI
 let scale = 100, generalNotesOpen = false, toastTimer, storageAvailable = true;
 let latestServerAttempt=null;
 const tfng=()=>content?.type==='tfng';
+const lessonRenderer=()=>content?.type==='green-roofs'?window.ReadingGreenRoofsRenderer:tfng()?window.ReadingTfngRenderer:null;
 const totalTargets=()=>content?.targets?.length||20;
 const minimumRequired=()=>content?.minimumRequired||16;
 const panePositions = {passage: 0, questions: 0};
@@ -77,7 +78,7 @@ function summaryHtml(){
 function render(){
   if(!content)return;
   if(scenario==='entry'){renderEntry();return;}
-  if(tfng())app.innerHTML=window.ReadingTfngRenderer.shell(content,{state,teacher,writable:writable(),feedback:feedbackHtml,mobilePane,scale});
+  if(lessonRenderer())app.innerHTML=lessonRenderer().shell(content,{state,teacher,writable:writable(),feedback:feedbackHtml,mobilePane,scale});
   else app.innerHTML=`<div class="lesson-head"><div><h1>${e(content.title)}</h1><div class="lesson-meta"><span>Matching Information · Câu 1–4</span><span>Nén cấp 1</span><span>8 đoạn đọc</span></div></div><div class="learner"><strong>Học viên minh họa</strong><span>· Lớp 6.0–7.0</span><button class="quiet" data-action="identity">Đổi người</button></div></div>${teacher?'<div class="notice teacher-notice"><strong>Giảng viên · Chỉ xem bản minh họa.</strong> Chưa kiểm đăng nhập hoặc quyền lớp thật. Nháp lưu lúc '+timeLabel(state.savedAt)+'.</div>':''}${isResult()?'<div class="notice result-note"><strong>Phản hồi mô phỏng để duyệt giao diện.</strong> Bài minh họa riêng; chưa gọi AI, ghi Docs hoặc tính điểm thật.</div>':''}${state.status==='waiting'?'<div class="notice waiting-card"><span class="spinner"></span><span><strong>Đang chờ chấm · Mô phỏng</strong><br>Bản gửi được giữ riêng. <button class="quiet" data-action="show-result">Xem kết quả mô phỏng →</button></span></div>':''}<div class="mobile-tabs" role="tablist" aria-label="Vùng làm bài"><button role="tab" id="tab-passage" aria-controls="pane-passage" aria-selected="${mobilePane==='passage'}" data-pane="passage">Bài đọc & nén đoạn</button><button role="tab" id="tab-questions" aria-controls="pane-questions" aria-selected="${mobilePane==='questions'}" data-pane="questions">Câu hỏi 1–4</button></div><div class="study-grid"><section class="study-pane ${mobilePane==='passage'?'active':''}" id="pane-passage" aria-label="Bài đọc và nén đoạn"><div class="pane-heading"><div><h2>Bài đọc & nén đoạn</h2><small>Đọc từng đoạn, tự viết bản nén</small></div><nav class="pane-jumps" aria-label="Chuyển đoạn">${content.paragraphs.map(p=>`<button data-paragraph="${p.id}" aria-label="Đến đoạn ${p.id}">${p.id}</button>`).join('')}</nav></div><div class="pane-scroll" id="scroll-passage"><button class="mobile-return" data-action="return-question" hidden>← Về câu đang làm</button><div class="source-intro"><h2>${e(content.title)}</h2><p>${e(content.subtitle)}</p></div>${content.paragraphs.map(paragraphHtml).join('')}</div></section><section class="study-pane ${mobilePane==='questions'?'active':''}" id="pane-questions" aria-label="Câu hỏi Matching Information"><div class="pane-heading"><div><h2>Matching Information</h2><small>Nén câu hỏi · tìm thông tin · chọn đoạn</small></div><nav class="pane-jumps" aria-label="Chuyển câu hỏi">${content.questions.map(q=>`<button data-question="${q.number}" class="${state.flags.includes(q.number)?'flagged':''}" aria-label="Đến câu ${q.number}">${q.number}</button>`).join('')}</nav></div><div class="pane-scroll" id="scroll-questions">${summaryHtml()}<p class="question-instruction">${e(content.instruction)}</p>${content.questions.map(questionHtml).join('')}<p class="minimum-note">Bài có 20 phần trả lời. Bạn có thể đổi qua lại giữa câu hỏi và bài đọc.</p></div></section></div><footer class="study-footer"><div class="progress-area"><div class="progress-label" id="progress-label"></div><div class="progress-track"><span id="progress-bar"></span></div></div><span class="save-state" id="save-state" aria-live="polite"></span><div class="footer-tools"><div class="font-control"><button class="quiet" data-font="-10" aria-label="Giảm cỡ chữ">A−</button><span id="font-scale">${scale}%</span><button class="quiet" data-font="10" aria-label="Tăng cỡ chữ">A+</button></div><button class="quiet notes-button" data-action="notes">Ghi chú</button><button class="quiet history-button" data-action="history">Lịch sử</button><button class="quiet" data-action="review">Rà soát</button>${teacher?'<span class="quiet">Chỉ xem</span>':isResult()?'<button class="primary" data-action="edit">Sửa bài</button>':state.status==='waiting'?'<button class="secondary" data-action="show-result">Xem mẫu</button>':'<button class="primary" id="grade-button" data-action="grade">Chấm bài</button>'}</div></footer><aside id="notes-panel" class="general-notes" hidden><header><strong>Ghi chú của bạn</strong><button class="close-button" data-action="close-notes" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="general-note">Chọn chữ trong bài đọc hoặc câu hỏi để Highlight / Note.</label><textarea id="general-note" placeholder="Ghi chú chung cho bài…" ${writable()?'':'readonly'}>${e(state.notes||'')}</textarea></div></aside>`;
   app.removeAttribute('aria-busy');
   document.querySelector('#scenario').value=scenario==='sample-current'?'draft':scenario;
@@ -112,17 +113,17 @@ function jumpTo(kind,value){
   const target=document.querySelector('#'+kind+'-'+value);
   requestAnimationFrame(()=>{
     target?.scrollIntoView({block:'start',behavior:'instant'});
-    if(content.type==='tfng'&&matchMedia('(max-width:800px), (max-width:1000px) and (max-height:500px)').matches){
+    if(['tfng','green-roofs'].includes(content.type)&&matchMedia('(max-width:800px), (max-width:1000px) and (max-height:500px)').matches){
       const heading=target?.closest('.study-pane')?.querySelector('.pane-heading');
       if(heading&&target){const edge=heading.getBoundingClientRect().bottom+12,top=target.getBoundingClientRect().top;if(top<edge)scrollBy({top:top-edge,behavior:'instant'});}
     }
     target?.classList.remove('highlight-arrival');requestAnimationFrame(()=>target?.classList.add('highlight-arrival'));
   });
 }
-function jumpField(id){const t=content.targets.find(t=>t.id===id);if(!t)return;jumpTo(t.kind==='paragraph'?'paragraph':'question',t.paragraph||t.question);setTimeout(()=>document.querySelector('[data-target="'+id+'"]')?.focus({preventScroll:true}),40);}
+function jumpField(id){const t=content.targets.find(t=>t.id===id);if(!t)return;jumpTo(t.paragraph?'paragraph':'question',t.paragraph||t.question);setTimeout(()=>document.querySelector('[data-target="'+id+'"]')?.focus({preventScroll:true}),40);}
 // Đi đúng ô, kể cả ô dưới cùng của câu hỏi và select chỉ xem; không sửa giá trị.
 function jumpRepairField(id){
-  const paragraph=content.paragraphs.find(p=>p.target===id);
+  const paragraph=content.paragraphs.find(p=>p.target===id||Object.values(p.targets||{}).includes(id));
   const question=content.questions.find(q=>Object.values(q.targets).includes(id));
   if(!paragraph&&!question)return;
   if(question)activeQuestion=question.number;
@@ -156,7 +157,7 @@ function focusHistoryDestination(){
 }
 function review(){
   if(serverMode&&window.MaterialsRepairWorkspace?.review())return;
-  const groups=tfng()?window.ReadingTfngRenderer.reviewGroups:[['Nén thông tin câu hỏi','radar'],['Nén câu chứa thông tin','evidence_l1'],['Đáp án Matching Information','section'],['Nén các đoạn A–H','paragraph']];
+  const groups=lessonRenderer()?lessonRenderer().reviewGroups:[['Nén thông tin câu hỏi','radar'],['Nén câu chứa thông tin','evidence_l1'],['Đáp án Matching Information','section'],['Nén các đoạn A–H','paragraph']];
   showModal('Rà soát bài làm',`<p>Đã điền <strong>${completed()}/${totalTargets()} phần</strong>. ${completed()<minimumRequired()?'Cần thêm '+(minimumRequired()-completed())+' phần để đủ điều kiện gửi chấm.':'Đã đủ khối lượng để chấm.'}</p><div class="review-groups">${groups.map(([label,kind])=>`<div class="review-group"><h3>${label}</h3><div class="review-items">${content.targets.filter(t=>t.kind===kind).map(t=>`<button data-jump-field="${t.id}" class="${filled(t)?'filled':''} ${state.flags.includes(t.question)?'flagged':''}" data-status="${filled(t)?'✓':'Trống'}" aria-label="${e(t.label)}">${t.paragraph||t.question}</button>`).join('')}</div></div>`).join('')}</div><p class="minimum-note">Chữ được tô là phần đã điền, chưa phải kết quả đúng. ⚑ là câu bạn muốn xem lại.</p>`,writable()?'<button class="primary" data-action="grade">Chấm bài</button>':'');
 }
 function grade(){
@@ -190,9 +191,9 @@ function explanationFor(id,trigger){
   const t=content.targets[explanationIndex],f=state.feedback?.[id];if(!f)return;
   const opening=!explanation.open;
   if(opening)lastTrigger=trigger||document.activeElement;
-  if(tfng()){
+  if(lessonRenderer()){
     const attempt=state.serverAttempt||window.ReadingMaterialsExperience?.repair?.attempt;
-    explanation.innerHTML=window.ReadingTfngRenderer.explanation(content,{target:t,state,attempt,index:explanationIndex,statusNames});
+    explanation.innerHTML=lessonRenderer().explanation(content,{target:t,state,attempt,index:explanationIndex,statusNames});
     if(opening)explanation.showModal();
     explanation.querySelector('[data-close-explanation]').focus({preventScroll:true});
     const restored=window.MaterialsRepairWorkspace?.restoreExplanation(id);
@@ -383,6 +384,16 @@ function trackServerAttempt(attempt,{announce=false}={}){
   });
 }
 function showServerAttempt(attempt,announce=false){
+  if(content.type==='green-roofs'&&state.serverAttempt?.attemptId===attempt.attemptId){
+    const visible=value=>JSON.stringify([value.status,value.errorCode,value.result,value.snapshot,value.validationProgress,value.recovery]);
+    if(visible(state.serverAttempt)===visible(attempt)){latestServerAttempt=attempt;return;}
+    if(state.status==='waiting'&&['queued','processing'].includes(attempt.status)){
+      latestServerAttempt=attempt;state.serverAttempt=attempt;
+      const stage=attempt.validationProgress,label=stage?.service_error?'Đang chờ dịch vụ AI · Bài đã được lưu':stage?.phase==='repair'?'Đang bổ sung nhận xét cho một số phần':stage?.phase==='review'?'Đang kiểm tra nội dung chấm':attempt.status==='processing'?'Đang chấm bằng Read 67':'Đã nhận bài · Đang chờ chấm';
+      const notice=document.querySelector('.waiting-card strong');if(notice&&notice.textContent!==label)notice.textContent=label;
+      return;
+    }
+  }
   latestServerAttempt=attempt;
   state={...newState(),...attempt.snapshot,id:attempt.attemptId,serverAttempt:attempt,savedAt:attempt.createdAt,status:attempt.status==='done'?'review':['failed','needs_review'].includes(attempt.status)?'grading-error':'waiting'};
   if(attempt.result){state.feedback=attempt.result.feedback;fixture={answers:Object.fromEntries(content.targets.map(t=>[t.id,attempt.result.feedback[t.id]?.modelAnswer||'']))};}
