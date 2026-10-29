@@ -1,0 +1,20 @@
+{
+  "generated": true,
+  "files": [
+    {
+      "source": "services/portal-sync/web/app.js",
+      "sourceSha256": "70c5053285395c691bac87d8f698fba87a1c6d29f1a7f11941991a9893be60da",
+      "target": "dashboard.js",
+      "sha256": "70c5053285395c691bac87d8f698fba87a1c6d29f1a7f11941991a9893be60da",
+      "transform": "none"
+    },
+    {
+      "source": "services/portal-sync/web/style.css",
+      "sourceSha256": "e37148bd66097979bd748f1db20ff1a81525186929038414e52905cfce7e201d",
+      "target": "dashboard.css",
+      "sha256": "edccd3e04b08b902d327ffdbbb3c40d08b49c1a4c93c985bca32edde52746893",
+      "transform": "shared font URL"
+    }
+  ],
+  "hashEncoding": "UTF-8 text, normalized to LF"
+}

@@ -1,0 +1,7 @@
+{
+  "source": "shared/teacher-single-sign-on.js",
+  "sourceSha256": "f7c3e6be6aff7dd9d093beb6c079b41783496f9f8d9039b9c1ab82b3abe05c78",
+  "targetSha256": "a4bdd1f73b403b681c1a42c0c50bcca8aa8fcafa594eb6c26cf449b89ec0ff5e",
+  "transform": "Register portal_sync identity product only on portal-sync entry. No other code changes.",
+  "hashEncoding": "UTF-8 text, normalized to LF"
+}
