@@ -3,8 +3,22 @@
 .thuy-roster th{padding:10px 12px}.thuy-roster td.person-name{font-size:14px}
 .thuy-session-tabs{display:flex;gap:12px;border:0}.thuy-teacher .thuy-session-tabs>.button{flex:1;font-size:18px!important;min-height:56px;padding:14px 20px;text-align:center;border:1px solid var(--line);border-radius:8px;background:#fff;font-weight:600}
 .thuy-teacher .thuy-session-tabs>.button[aria-pressed=true]{border-color:var(--red);background:#fff0f4;color:var(--red)}
+.thuy-teacher .thuy-session-tabs{padding:8px 0;margin:0}.thuy-teacher .thuy-session-tabs>.button{min-height:44px;padding:8px 16px;font-size:16px!important}
 .thuy-result-jumps{position:static;justify-content:flex-end;padding:8px 0;gap:8px}
 .thuy-teacher .thuy-result-jumps>.button{flex:0 0 auto;padding:8px 12px;font-size:13px!important;min-height:38px}
+.thuy-teacher .thuy-result-jumps>.button[aria-selected=true]{color:var(--red);border-color:var(--red);background:#fff0f4}
+.thuy-student-results{min-width:0}.thuy-student-results.has-inline-detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.thuy-student-results[hidden]{display:none!important}
+.thuy-teacher #thuyStudentResults>#studentList{margin-top:0;min-width:0}.thuy-student-results.has-inline-detail .thuy-roster-tools{flex-wrap:wrap;gap:8px}
+.thuy-teacher #thuyStudentResults>.thuy-inline-detail{position:static;inset:auto;width:100%;height:auto;max-height:min(78dvh,900px);max-width:100%;margin:0;box-sizing:border-box;overflow:auto;box-shadow:none;z-index:auto}
+.thuy-teacher #thuyStudentResults>.thuy-inline-detail:not([open]){display:none}
+.thuy-teacher #thuyStudentResults>.thuy-inline-detail .session-comment-editor>p.muted{display:none}
+.thuy-teacher #thuyStudentResults>.thuy-inline-detail>form{position:sticky;top:0;z-index:3;background:#fff;padding:12px 18px}
+.thuy-library-published{background:#e4f5ec!important;outline:2px solid #367455;outline-offset:-2px}.thuy-publication-notice{padding:12px 20px}
+.thuy-worksheet-preview .thuy-management-body{padding:0;overflow:hidden}.thuy-worksheet-preview .thuy-library-preview{height:min(72dvh,800px)}
+.thuy-editor-ai textarea{width:100%;box-sizing:border-box;min-height:200px}.thuy-editor-ai pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.thuy-question-select{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}.thuy-question-copy{min-width:0;overflow-wrap:anywhere}.thuy-question-stats{text-align:right;white-space:nowrap}.thuy-question-stats strong{font-size:13px}.thuy-question-select small{font-size:12px}
+@media(max-width:850px){.thuy-student-results.has-inline-detail{grid-template-columns:1fr}.thuy-teacher #thuyStudentResults>.thuy-inline-detail{max-height:none}.thuy-roster-tools-inner{flex-wrap:wrap}}
 .thuy-part-kind{display:flex;gap:0;border-bottom:1px solid var(--line);margin:12px 0}
 .thuy-part-kind .button{border:0;border-bottom:3px solid transparent;border-radius:0;box-shadow:none;padding:12px 20px;background:none}
 .thuy-part-kind .button[aria-pressed=true]{border-bottom-color:var(--red);color:var(--red);font-weight:700}
@@ -63,4 +77,11 @@
 @media(max-width:650px){.thuy-question-mode{gap:8px}.thuy-mode-buttons{width:100%}.thuy-mode-buttons>.button{flex:1}.thuy-answer-row{flex-wrap:wrap}.thuy-answer-field{flex:1 1 0;min-width:0}.thuy-gap-text{padding:12px}.thuy-answer-group{padding:10px}}
 .thuy-assignment-footer{display:flex;justify-content:flex-end;gap:12px;margin:0 22px;padding:24px 0 12px;border-top:1px solid var(--line)}
 .thuy-assignment-footer .button{font-size:20px;font-weight:700;padding:12px 18px;min-height:50px}
+.thuy-assignment-footer{position:sticky;bottom:0;background:#fff;flex-wrap:wrap;z-index:2}
+.thuy-assignment-footer>.notice{flex:1 0 100%;margin:0;padding:10px 12px;border-radius:6px;font-size:14px}
+.thuy-assignment-footer>.notice:empty{display:none}.thuy-assignment-footer>.success{background:#e4f5ec;color:#145d38;font-weight:600}
+.thuy-delivery-receipt{display:block;margin-top:6px;font-weight:400}
+.thuy-teacher :is(.thuy-assignment-footer,.thuy-editor-ai,.thuy-library-detail) .notice,.thuy-teacher .thuy-publication-notice{position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:normal;min-width:0}
+.thuy-teacher .thuy-publication-notice{background:#e4f5ec;color:#145d38;margin:12px 20px;border-radius:6px}
+.thuy-assignment-target [aria-invalid=true]{border:2px solid var(--red)!important}
 @media(max-width:650px){.thuy-assignment-dialog .thuy-management-head h2,.thuy-assignment-summary h2{font-size:21px;line-height:29px}.thuy-assignment-dialog .thuy-management-body{padding:20px 16px}.thuy-assignment-dialog .thuy-assignment-summary{padding:18px;margin-bottom:24px}.thuy-assignment-target{grid-template-columns:1fr}.thuy-assignment-target select{height:52px;font-size:16px}.thuy-teacher .thuy-assignment-dialog .thuy-assignment-target select{font-size:16px!important}.thuy-teacher .thuy-assignment-dialog .thuy-management-head>.button{font-size:16px!important;min-height:44px;padding:10px 14px}.thuy-assignment-footer{margin:0 16px;flex-wrap:wrap}.thuy-assignment-footer .button{font-size:16px;flex:1}.thuy-assignment-skills{gap:20px;font-size:16px}.thuy-session-tabs>.button{font-size:16px}.thuy-result-jumps{justify-content:stretch}.thuy-result-jumps>.button{flex:1;font-size:12px}}

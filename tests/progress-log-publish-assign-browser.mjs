@@ -58,23 +58,24 @@ test('R18/R22/R27/R28/R30: xuất bản không mở lớp, preview tự nhận n
     if(process.env.PROGRESS_LOG_EVIDENCE_DIR){await mkdir(process.env.PROGRESS_LOG_EVIDENCE_DIR,{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:resolve(process.env.PROGRESS_LOG_EVIDENCE_DIR,'editor-'+width+'.png'),fullPage:true});}await page.setViewportSize({width:1440,height:1000});}
     assert.deepEqual(await page.locator('.editor-actions>button').allTextContents(),['Xem trước','Lưu nháp','Xuất bản']);
     // Vị trí ghim mới được kiểm qua cuộn và viewport trong progress-log-the16-browser.mjs.
-    await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã xuất bản vào kho'}).waitFor();
+    await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.locator('.thuy-publication-notice').filter({hasText:'Đã xuất bản thành công'}).waitFor();
     const published=(await sourceDb.query('SELECT * FROM learning.form_publication')).rows[0];assert.ok(published);
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_assignment')).rows[0].n,0);
     // Chuyển đúng bản đã duyệt vào Kho chung qua UI và quyền backend thật.
-    await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();await page.getByRole('tab',{name:/Kho cá nhân/}).click();await page.getByRole('button',{name:'Phiếu tích hợp R22',exact:true}).click();
+    await page.getByRole('tab',{name:/Kho cá nhân/}).click();await page.getByRole('button',{name:'Duyệt và quản lý kho',exact:true}).click();
     await page.getByRole('button',{name:'Đưa vào Kho chung',exact:true}).click();await page.getByText('Đã lưu đúng phiên bản vào Kho chung.',{exact:true}).waitFor();
     await page.locator('.thuy-library-detail').getByRole('button',{name:'Đóng',exact:true}).click();
     await page.getByRole('tab',{name:/Kho chung/}).click();await page.getByRole('button',{name:'Phiếu tích hợp R22',exact:true}).click();
     const detail=page.locator('.thuy-library-detail'),frame=page.frameLocator('.thuy-library-preview');
     try{await frame.locator('.thuy-part').first().waitFor();}catch(error){throw Error(error.message+' · Detail: '+await detail.innerText()+' · Frame: '+await frame.locator('#notice').innerText());}
-    assert.equal(await frame.locator('#identityView').isVisible(),false);assert.equal(await frame.locator('#confirmView').isVisible(),false);assert.match(await frame.locator('#studentNameLabel').innerText(),/Học viên mẫu 1/);
+    assert.equal(await frame.locator('#identityView').isVisible(),false);assert.equal(await frame.locator('#confirmView').isVisible(),false);assert.match(await frame.locator('#studentNameLabel').textContent(),/Học viên mẫu 1/);
+    assert.equal(await frame.locator('.context-bar').isVisible(),false);assert.equal(await frame.locator('.demo-banner').isVisible(),false);assert.equal(await frame.locator('#studentDashboardLatest').count(),0);
     const survey=frame.locator('.thuy-part').nth(1);await survey.getByRole('button',{name:'Bắt đầu làm',exact:true}).click();assert.equal(await survey.getByText('Lời tham khảo từ giáo viên',{exact:false}).count(),0);await survey.locator('textarea').fill('Nội dung học viên mẫu');await survey.getByRole('button',{name:'Nộp phần này',exact:true}).click();await survey.getByText('Đáp án tham khảo: Lời tham khảo từ giáo viên',{exact:true}).waitFor();assert.doesNotMatch(await survey.innerText(),/✕ Sai|✓ Đúng/);
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.submission')).rows[0].n,0);
     await detail.getByRole('button',{name:'Giao bài',exact:true}).click();const dialog=page.locator('.thuy-assignment-dialog');await dialog.waitFor();
     await dialog.getByLabel('Chọn buổi học 1',{exact:true}).selectOption('3');await dialog.getByRole('button',{name:'+ Thêm lớp nhận bài tập',exact:true}).click();await dialog.getByLabel('Chọn lớp nhận bài 2',{exact:true}).selectOption('1295');await dialog.getByLabel('Chọn buổi học 2',{exact:true}).selectOption('4');
     if(process.env.PROGRESS_LOG_EVIDENCE_DIR){await mkdir(process.env.PROGRESS_LOG_EVIDENCE_DIR,{recursive:true});await dialog.screenshot({path:resolve(process.env.PROGRESS_LOG_EVIDENCE_DIR,'assignment-desktop.png')});}
-    await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByText('Đã giao và đối chiếu tất cả các lớp.',{exact:true}).waitFor();
+    await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByRole('status').filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
     const rows=(await sourceDb.query('SELECT erp_course_class_id::text class_id,session_number,form_version_id FROM learning.form_assignment ORDER BY erp_course_class_id')).rows;
     assert.deepEqual(rows.map(row=>[row.class_id,row.session_number]),[['1294',3],['1295',4]]);assert.ok(rows.every(row=>row.form_version_id===published.form_version_id));assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.outbox_job')).rows[0].n,0);
     await page.setViewportSize({width:390,height:844});assert.equal(await dialog.evaluate(element=>element.scrollWidth>element.clientWidth),false);

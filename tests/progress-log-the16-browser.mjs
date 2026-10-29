@@ -85,12 +85,12 @@ test('T16 R01 R05: cả ba nút đưa lỗi kỹ năng đến đúng câu và ph
  await page.getByLabel('Tên bài tập',{exact:true}).fill('Phiếu giả Thẻ 16');
  await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();
  await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();
- const popup=context.waitForEvent('page');await page.getByRole('button',{name:'Xem trước',exact:true}).click();const preview=await popup;await preview.waitForURL('**/demo/thuy.html#grant=fixture-only-demo-grant');await preview.close();
+ await page.getByRole('button',{name:'Xem trước',exact:true}).click();const preview=page.locator('.thuy-worksheet-preview');await preview.locator('iframe').waitFor();assert.equal(context.pages().length,1);await preview.getByRole('button',{name:'Đóng xem trước',exact:true}).click();
  await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Nội dung trước lỗi lưu từ Xem trước');await page.evaluate(()=>{window.failNext=true;});
- const failedPopup=context.waitForEvent('page');await page.getByRole('button',{name:'Xem trước',exact:true}).click();const failedPreview=await failedPopup;
- await page.getByRole('button',{name:'Thử lưu lại',exact:true}).waitFor();assert.equal(failedPreview.isClosed(),true);
+ await page.getByRole('button',{name:'Xem trước',exact:true}).click();
+ await page.getByRole('button',{name:'Thử lưu lại',exact:true}).waitFor();assert.equal(await page.locator('.thuy-worksheet-preview').count(),0);
  await page.getByRole('button',{name:'Thử lưu lại',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();
- await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.getByRole('status').filter({hasText:'Đã xuất bản vào kho'}).waitFor();
+ await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.locator('.thuy-publication-notice').filter({hasText:'Đã xuất bản thành công'}).waitFor();
  assert.equal(await page.evaluate(()=>window.publications.length),1);
  assert.equal(await page.evaluate(()=>window.calls.some(c=>/assign/.test(c.path))),false);
 });

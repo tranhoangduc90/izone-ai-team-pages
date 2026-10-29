@@ -8,6 +8,8 @@ const resetButton = document.getElementById('resetDemoButton');
 const parameters = new URLSearchParams(window.location.hash.slice(1));
 const grant = parameters.get('grant') || '';
 const runToken = parameters.get('assignment') || '';
+const compact=window.parent!==window&&new URLSearchParams(location.search).get('view')==='worksheet';
+if(compact)document.body.dataset.worksheetPreview='true';
 
 async function demoRequest(path, body, teacherToken = '') {
   const response = await fetch(`${config.API_BASE_URL}/api/demo/${path}`, {
@@ -38,7 +40,7 @@ async function boot() {
     resetButton.hidden = false;
     // Mở phần trong lượt demo trước khi tải phiếu; lỗi hiện ở notice và dừng tải.
     await demoRequest('runs/open-blocks', {}, teacherToken);
-    window.PROGRESS_LOG_CONFIG = Object.freeze({...config,DEMO_AUTO_STUDENT:true});
+    window.PROGRESS_LOG_CONFIG = Object.freeze({...config,DEMO_AUTO_STUDENT:true,DEMO_COMPACT_PREVIEW:compact});
     resetButton.addEventListener('click', async () => {
       resetButton.disabled = true;
       try {
@@ -50,7 +52,10 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261028-the15-v1');
+  await import('../app.js?rev=20261030-the17-19-v1');
 }
 
-boot().catch(error => { notice.textContent = error.message; notice.classList.add('error'); });
+boot().catch(error => {
+  notice.textContent = error.message; notice.classList.add('error');
+  if(compact){const retry=document.createElement('button');retry.type='button';retry.className='button';retry.textContent='Thử mở lại phiếu';retry.addEventListener('click',()=>location.reload());notice.append(' ',retry);}
+});

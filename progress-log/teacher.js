@@ -16,11 +16,11 @@ import { createTeacherLoginPreference } from '../shared/teacher-login-preference
 import { createTeacherAuthState } from '../shared/teacher-auth-state.js?v=20261026-startup1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261028-the15-v1';
-import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261029-authoring-actions-v2';
+import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261030-the17-19-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
-import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261028-thuy-v1';
+import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261030-the17-19-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
-import {renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261028-thuy-v1';
+import {renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261030-the17-19-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261028-the15-v1';
 
@@ -127,7 +127,7 @@ const assignmentManagement=THUY_UI?mountAssignmentManagement({host:managementHos
   }}):null;
 function showThuyMode(mode){
   state.thuyMode=mode;
-  document.querySelector('#classInsightSection').hidden=mode!=='results';document.querySelector('.thuy-result-jumps').hidden=mode!=='results';
+  thuyLayout.setMode(mode);
   for(const button of document.querySelectorAll('[data-thuy-mode]'))button.setAttribute('aria-pressed',String(button.dataset.thuyMode===mode));
   renderStudentList();
 }
@@ -203,7 +203,7 @@ function switchPanel(panel,{returning=false}={}) {
     for(const dialog of state.suspendedDialogs)dialog.hidden=true;document.body.classList.remove('has-thuy-detail');
   }else if(THUY_UI&&previous==='create'&&panel!=='create'){
     for(const dialog of state.suspendedDialogs||[])if(dialog.open)dialog.hidden=false;
-    if((state.suspendedDialogs||[]).some(dialog=>dialog.open))document.body.classList.add('has-thuy-detail');state.suspendedDialogs=[];
+    if((state.suspendedDialogs||[]).some(dialog=>dialog.open&&!dialog.classList.contains('thuy-inline-detail')))document.body.classList.add('has-thuy-detail');state.suspendedDialogs=[];
   }
   state.activePanel=panel;
   classPortal.hidden=panel!=='classes';
@@ -263,7 +263,7 @@ function mountCommentEditor(root,dialog,target,studentName,comment,focus=false) 
     }});
   const links=document.createElement('button');links.type='button';links.className='mini-action';links.textContent='Quản lý link Hành trình riêng';
   links.addEventListener('click',()=>manageJourney({classId:target.classId,studentRef:target.studentRef},studentName));if(!THUY_UI)editor.element.append(links);
-  if(THUY_UI){root.prepend(editor.element);editor.element.querySelector('h3').textContent='Nhận xét Speaking';const note=document.createElement('small');note.textContent='Nháp trên thiết bị này · Bấm lưu mới hiển thị cho học viên';editor.element.prepend(note);}
+  if(THUY_UI){root.prepend(editor.element);editor.element.querySelector('h3').textContent='Nhận xét Speaking';}
   else root.append(editor.element);if(focus)editor.focus();return editor;
 }
 
@@ -385,7 +385,7 @@ function paintQuestionAnalytics(analytics,assignmentId){
   const assignment=state.assignments.find(item=>item.assignment_id===assignmentId);
   (THUY_UI?renderThuyAnalytics:renderQuestionAnalytics)(elements.questionAnalytics,analytics,{definition:state.dashboard?.definition,onStudent:(student,focusItem)=>void openJourneyDetail({
     classId:String(assignment.class_id),sessionNumber:Number(assignment.session_number),studentRef:student.studentRef,focusItem})});
-  elements.questionAnalyticsStatus.textContent=analytics.submittedCount+'/'+analytics.rosterCount
+  elements.questionAnalyticsStatus.textContent=THUY_UI?'':analytics.submittedCount+'/'+analytics.rosterCount
     +' học viên có bài nộp hiện hành. Mỗi học viên chỉ được đếm một lần.';
 }
 async function loadQuestionAnalytics(assignmentId,{quiet=false}={}) {
