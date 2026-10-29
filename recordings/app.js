@@ -7,7 +7,7 @@ const REFRESH_MS = 60_000;
 const state = { records: [], yesterdayClasses: [], playlists: [], loading: false, playlistQuery: '', version: 0 };
 const selectedSessions = new Set();
 const $ = (id) => document.getElementById(id);
-const controls = ['dateFilter', 'accountFilter', 'searchFilter'].map($);
+const controls = ['dateFilter', 'dateToFilter', 'accountFilter', 'reviewFilter', 'youtubeFilter', 'columnFilter', 'searchFilter'].map($);
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -58,26 +58,34 @@ function displayClassName(record) {
   return !name || /^(cần duyệt|chưa xác định(?: lớp)?)$/i.test(name) ? 'Chưa xác định' : name;
 }
 
+function currentRecordingFilter() {
+  const from=$('dateFilter').value, to=$('dateToFilter').value;
+  return {from:from||to,to:to||from,account:$('accountFilter').value,review:$('reviewFilter').value,
+    youtube:$('youtubeFilter').value,column:$('columnFilter').value,search:$('searchFilter').value,
+    reasonLabels:typeof NIGHTLY_LABELS==='undefined'?{}:NIGHTLY_LABELS};
+}
 function filteredRecords(records) {
-  const [date, account, search] = controls.map((control) => control.value.trim().toLowerCase());
-  return records.filter((record) => (!date || localDate(record.recordingStart) === date)
-    && (!account || String(record.source || '').toLowerCase() === account)
-    && (!search || [record.className, record.title, record.recordingFileId, record.source, record.playlistTitle].join(' ').toLowerCase().includes(search)));
+  return records.filter(record=>recordingFilters.matches(record,currentRecordingFilter(),localDate));
 }
-
+function filteredSessions() {
+  return state.yesterdayClasses.filter(record=>recordingFilters.matches(record,currentRecordingFilter(),localDate,true));
+}
 function incompleteNightlyData() {
-  return nightlyState.error || ['failed', 'partial'].includes(nightlyState.snapshot?.scanStatus);
+  return state.historyUnavailable || nightlyState.error || ['failed', 'partial'].includes(nightlyState.snapshot?.scanStatus);
 }
-
 function renderStats() {
-  $('yesterdayClassCount').textContent = incompleteNightlyData() ? '—' : state.yesterdayClasses.length;
-  $('totalCount').textContent = state.records.length;
-  $('reviewCount').textContent = state.records.filter((record) => !isApproved(record)).length;
-  $('approvedCount').textContent = state.records.filter(isApproved).length;
+  if(state.rangeUnavailable){for(const id of ['yesterdayClassCount','totalCount','reviewCount','approvedCount'])$(id).textContent='—';return;}
+  const records=filteredRecords(state.records), partial=incompleteNightlyData()?'≥ ':'';
+  $('yesterdayClassCount').textContent = partial+filteredSessions().length;
+  $('totalCount').textContent = partial+records.length;
+  $('reviewCount').textContent = partial+records.filter(record=>!isApproved(record)).length;
+  $('approvedCount').textContent = partial+records.filter(isApproved).length;
 }
+function renderFilteredView() { renderStats(); renderYesterday(); renderSections(); }
 
 function renderYesterday() {
-  const cards = state.yesterdayClasses.map((item) => {
+  if(state.rangeUnavailable){$('yesterdayClasses').innerHTML='<div class="empty-inline">Chưa tải được lịch học của khoảng ngày đã chọn.</div>';return;}
+  const cards = filteredSessions().map((item) => {
     const key = String(item.classSessionId || item.id || `${item.className}:${item.sessionStart}`);
     return `<button type="button" class="class-card${selectedSessions.has(key) ? ' is-selected' : ''}" data-session-key="${escapeHtml(key)}" aria-pressed="${selectedSessions.has(key)}" aria-label="${escapeHtml(`${item.className || 'Chưa rõ lớp'}, Buổi ${item.lessonNumber || '—'}`)}">
     <div><span class="class-code">${escapeHtml(item.className || 'Chưa rõ lớp')}</span><span class="badge zoom">${escapeHtml(item.zoomAccount || 'Chưa phân bổ Zoom')}</span></div>
@@ -147,6 +155,7 @@ function renderSection(title, records, approved) {
 }
 
 function renderSections() {
+  if(state.rangeUnavailable){$('reviewSections').innerHTML='<div class="empty" role="alert">Chưa tải được dữ liệu cho khoảng ngày đã chọn. Hãy bấm Làm mới.</div>';return;}
   const newest = (a, b) => parseTimestamp(b.recordingStart || 0) - parseTimestamp(a.recordingStart || 0);
   const pending = state.records.filter((record) => !isApproved(record)).sort(newest);
   const approved = state.records.filter(isApproved).sort((a, b) => parseTimestamp(b.approvedAt || b.recordingStart || 0) - parseTimestamp(a.approvedAt || a.recordingStart || 0));
@@ -208,41 +217,63 @@ async function postAction(url, payload) {
 }
 
 let dataRequestId=0;
+let dashboardController;
 async function loadData(force = false) {
   if (state.loading && force !== true) return;
-  state.loading = true;
-  const requestId=++dataRequestId;
-  const loadVersion = state.version;
-  setConnection(true, 'Đang làm mới');
+  const from=$('dateFilter').value,to=$('dateToFilter').value;
+  if(from||to){try{recordingFilters.range(from,to);}catch(error){
+    $('filterStatus').textContent=error.message==='REVERSED_DATE_RANGE'?'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.':error.message==='DATE_RANGE_TOO_LARGE'?'Mỗi lần xem tối đa 90 ngày. Hãy thu hẹp khoảng ngày.':'Hãy chọn ngày hợp lệ.';
+    $('filterStatus').dataset.error='true';return;
+  }}
+  dashboardController?.abort(); dashboardController=new AbortController();
+  const signal=dashboardController.signal;
+  state.loading=true;const requestId=++dataRequestId,loadVersion=state.version;
+  setConnection(true,'Đang làm mới');
   try {
-    const response = await fetch(DATA_API_URL, { cache: 'no-store', referrerPolicy: 'no-referrer' });
-    if (!response.ok) throw new Error(`HTTP_${response.status}`);
-    const payload = await response.json();
-    if (loadVersion !== state.version || requestId!==dataRequestId) return;
-    let snapshot = null;
-    try { snapshot = await loadNightly(); } catch { nightlyState.error=true;toast('Không tải được dữ liệu đối soát của ngày đã chọn.','error'); }
-    if (loadVersion !== state.version || requestId!==dataRequestId) return;
-    state.records = mergeNightlyRecords(Array.isArray(payload.records) ? payload.records : [], snapshot);
-    state.yesterdayClasses = snapshot ? snapshot.records.filter(r=>r.kind==='session').map(r=>({...r,zoomAccount:r.source,normalizedTime:true})) : (Array.isArray(payload.yesterdayClasses) ? payload.yesterdayClasses : []);
-    state.playlists = Array.isArray(payload.playlists) ? payload.playlists : [];
-    $('yesterdayDate').textContent = displayDate(snapshot?.date || payload.yesterdayDate);
-    renderStats();
-    renderYesterday();
-    populateAccounts();
-    renderSections();
-    $('updatedAt').textContent = `Cập nhật ${dateTime(payload.generatedAt)}`;
-    setConnection(true, incompleteNightlyData() ? 'Dữ liệu đối soát chưa đầy đủ' : 'Dữ liệu trực tiếp');
-  } catch (error) {
-    setConnection(false, 'Mất kết nối');
-    $('reviewSections').innerHTML = '<div class="empty">Không tải được dữ liệu. Hệ thống sẽ thử lại sau 60 giây.'
-      + ($('updatedAt').textContent ? ' Các số liệu và lịch học còn hiển thị là bản tải trước.' : '') + '</div>';
-  } finally {
-    if(requestId===dataRequestId)state.loading = false;
-  }
+    const [history,night]=await Promise.allSettled([
+      (async()=>{const response=await fetch(DATA_API_URL,{cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.any([signal,AbortSignal.timeout(45000)])});
+        if(!response.ok)throw Error('HISTORY_UNAVAILABLE');return response.json();})(),
+      loadNightly(signal,force===true)
+    ]);
+    if(signal.aborted||requestId!==dataRequestId||loadVersion!==state.version)return;
+    if(history.status==='rejected'&&night.status==='rejected')throw Error('DATA_UNAVAILABLE');
+    const payload=history.status==='fulfilled'?history.value:null;
+    state.historyUnavailable=!payload;
+    const snapshot=night.status==='fulfilled'?night.value:null;
+    if(!payload&&!snapshot)throw Error('DATA_UNAVAILABLE');
+    state.rangeUnavailable=false;
+    if(night.status==='rejected')nightlyState.error=true;
+    const records=payload&&Array.isArray(payload.records)?payload.records:state.records.filter(r=>!r.nightly);
+    state.records=mergeNightlyRecords(records,snapshot);
+    state.yesterdayClasses=snapshot?(snapshot.records||[]).filter(r=>r.kind==='session').map(r=>({...r,zoomAccount:r.source,normalizedTime:true}))
+      :(Array.isArray(payload?.yesterdayClasses)?payload.yesterdayClasses:[]);
+    if(Array.isArray(payload?.playlists))state.playlists=payload.playlists;
+    const date=snapshot?.date||payload?.yesterdayDate;
+    if(!from&&!to&&date){$('dateFilter').value=date;$('dateToFilter').value=date;}
+    const f=currentRecordingFilter();
+    $('yesterdayDate').textContent=f.from===f.to?displayDate(f.from):displayDate(f.from)+' – '+displayDate(f.to);
+    populateAccounts();renderFilteredView();
+    if(payload?.generatedAt)$('updatedAt').textContent=`Cập nhật ${dateTime(payload.generatedAt)}`;
+    const warnings=[];
+    if(!payload)warnings.push('Chưa tải được lịch sử/playlist; đang hiển thị dữ liệu đối soát đọc được.');
+    if(nightlyState.missingDates?.length)warnings.push('Chưa có snapshot: '+nightlyState.missingDates.map(displayDate).join(', ')+'.');
+    if(nightlyState.failedDates?.length)warnings.push('Chưa đọc được: '+nightlyState.failedDates.map(displayDate).join(', ')+'.');
+    if(incompleteNightlyData())warnings.push('Dữ liệu chưa đầy đủ; số có dấu ≥ là số tối thiểu đã đọc được.');
+    $('filterStatus').textContent=warnings.join(' ')||'Số liệu và bảng recording theo bộ lọc hiện tại. Khoảng ngày tính cả hai ngày đầu/cuối, tối đa 90 ngày mỗi lần.';
+    $('filterStatus').dataset.error=String(warnings.length>0);
+    setConnection(true,incompleteNightlyData()||!payload?'Dữ liệu đối soát chưa đầy đủ':'Dữ liệu trực tiếp');
+  } catch(error) {
+    if(signal.aborted||requestId!==dataRequestId)return;
+    state.rangeUnavailable=true;renderFilteredView();
+    setConnection(false,'Mất kết nối');
+    $('filterStatus').textContent='Chưa tải được dữ liệu. Hãy bấm Làm mới; dữ liệu đang hiển thị có thể là bản tải trước.';
+    $('filterStatus').dataset.error='true';
+  } finally {if(requestId===dataRequestId)state.loading=false;}
 }
-
-controls.forEach((control) => control.addEventListener('input', renderSections));
-$('refreshButton').addEventListener('click', loadData);
+controls.filter(c=>!['dateFilter','dateToFilter'].includes(c.id)).forEach(control=>control.addEventListener('input',renderFilteredView));
+for(const id of ['dateFilter','dateToFilter'])$(id).addEventListener('change',()=>{state.version++;loadData(true);});
+$('refreshButton').addEventListener('click',()=>loadData(true));
+$('resetFilters').addEventListener('click',()=>{for(const c of controls)c.value='';state.version++;loadData(true);});
 
 document.querySelectorAll('[data-close-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
 

@@ -14,7 +14,7 @@ const NIGHTLY_LABELS = {
   missing_session_time:'Thiếu giờ học', not_observed_in_latest_scan:'Chưa quan sát lại được file',
 };
 const QUEUE_MESSAGES={queued:'Đang chờ hàng đợi truyền file',waiting:'Đang chờ hàng đợi truyền file',download:'Đang tải từ Zoom',downloading:'Đang tải từ Zoom',upload:'Đang đăng lên YouTube',uploading:'Đang đăng lên YouTube',processing:'YouTube đang xử lý',completed:'Hoàn tất',running:'Đang truyền file',blocked_disk:'Thiếu dung lượng VPS; giữ tác vụ chờ kiểm tra',blocked_quota:'Đã hết quota YouTube; cần kiểm tra trước khi thử lại',LOCAL_SPACE_INSUFFICIENT:'Thiếu dung lượng VPS; giữ tác vụ chờ kiểm tra',LOCAL_SPACE_UNKNOWN:'Chưa xác minh dung lượng trống VPS',YOUTUBE_QUOTA_EXCEEDED:'Đã hết quota YouTube',WORKER_EXECUTION_FAILED:'Tác vụ truyền file bị lỗi; cần kiểm tra',UPLOAD_OUTCOME_UNKNOWN:'Chưa xác định kết quả upload; không gửi lại để tránh đăng trùng',VIDEO_NOT_FOUND:'Không đọc được video đích — cần xác minh; giữ nguyên video ID'};
-const nightlyState = {snapshot:null, generation:0};
+const nightlyState = {snapshot:null, generation:0, missingDates:[], failedDates:[]};
 function mergeNightlyRecords(existing, snapshot) {
   const hiddenIds=new Set((snapshot?.records||[]).filter(row=>row.kind==='recording'&&!shouldShowRecordingRow(row)).map(row=>row.id));
   for(const row of snapshot?.records||[]) if(row.kind==='recording'&&row.type==='MP4')
@@ -26,7 +26,7 @@ function mergeNightlyRecords(existing, snapshot) {
     const index=records.findIndex(r=>r.source===row.source && r.recordingFileId && r.recordingFileId===row.recordingFileId);
     if(index<0)records.push({...row,title:row.proposedTitle || `${row.className || row.source} · ${row.kind==='session'?'Buổi '+(row.lessonNumber||'—'):'Recording chưa đăng'}`,nightly:true});
     else {
-      const merged={...row,...records[index],reasons:row.reasons || [],observedMatch:row.observedMatch};
+      const merged={...row,...records[index],reasons:row.reasons || [],observedMatch:row.observedMatch,_snapshotDate:row._snapshotDate};
       if(row.sourceRefreshedAt && !merged.videoId) Object.assign(merged,{type:row.type,status:row.status,fileSize:row.fileSize,
         recordingEnd:row.recordingEnd,observationStale:row.observationStale,version:row.version});
       records[index]=merged;
@@ -34,17 +34,29 @@ function mergeNightlyRecords(existing, snapshot) {
   }
   return records;
 }
-async function loadNightly() {
-  const config=window.RECORDING_NIGHTLY;
-  if(!config?.dataUrl)return null;
+const nightlyRangeCache=new Map();
+async function loadNightly(signal,force=false) {
+  const config=window.RECORDING_NIGHTLY;if(!config?.dataUrl)return null;
   const generation=++nightlyState.generation;
-  const date=document.getElementById('dateFilter').value;
-  const url=new URL(config.dataUrl);if(date)url.searchParams.set('date',date);
-  const r=await fetch(url,{cache:'no-store',referrerPolicy:'no-referrer'});
-  if(!r.ok)throw new Error('Không tải được đối soát');const data=await r.json();
+  const from=document.getElementById('dateFilter').value,to=document.getElementById('dateToFilter').value;
+  async function read(date,signal){
+    const cached=nightlyRangeCache.get(date);
+    if(!force&&cached&&Date.now()-cached.at<300000)return cached.snapshot;
+    const url=new URL(config.dataUrl);if(date)url.searchParams.set('date',date);
+    const r=await fetch(url,{cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.any([signal||new AbortController().signal,AbortSignal.timeout(30000)])});
+    if(!r.ok)throw Error('SNAPSHOT_UNAVAILABLE');const data=await r.json();if(data.ok===false)throw Error('SNAPSHOT_UNAVAILABLE');if(!date||!data.snapshot||data.snapshot.date===date)nightlyRangeCache.set(date,{at:Date.now(),snapshot:data.snapshot});
+    if(nightlyRangeCache.size>100)nightlyRangeCache.delete(nightlyRangeCache.keys().next().value);return data.snapshot;
+  }
+  const dates=from||to?recordingFilters.range(from,to).days:[''];
+  const result=await recordingFilters.loadRange(dates,read,{signal,onProgress:(done,total)=>{
+    if(generation===nightlyState.generation)document.getElementById('filterStatus').textContent=`Đang tải đối soát ${done}/${total} ngày…`;
+  }});
   if(generation!==nightlyState.generation)return nightlyState.snapshot;
-  nightlyState.snapshot=data.snapshot;nightlyState.error=false;
-  return data.snapshot;
+  nightlyState.missingDates=result.missing;nightlyState.failedDates=result.failed;
+  nightlyState.error=Boolean(result.missing.length||result.failed.length);
+  if(!result.snapshots.length){nightlyState.snapshot=null;return null;}
+  const snapshot=recordingFilters.combine(result.snapshots);nightlyState.snapshot=snapshot;
+  return snapshot;
 }
 function nightlyRow(record) {
   const label=record.excluded?'Đã loại khỏi luồng đăng':NIGHTLY_LABELS[record.exceptionStatus || record.status] || 'Recording cần xác nhận';
@@ -54,12 +66,12 @@ function nightlyRow(record) {
   return `<tr><td><strong>${escapeHtml(displayClassName(record))}</strong><div class="subtext">${escapeHtml(record.source)}</div></td><td><strong>${escapeHtml(record.title)}</strong>${record.kind==='session'?'<div class="subtext">Buổi học từ Portal · Chưa gắn recording</div>':''}<div class="subtext"><strong>Lý do cần duyệt:</strong> ${escapeHtml(issues||label)}</div><div class="subtext"><strong>Lỗi hiện tại:</strong> ${escapeHtml(currentIssue)}</div>${exception}</td><td>${dateTime(record.recordingStart)}</td><td>${recordingSourceCell(record)}</td><td>${videoEditCell(record)}</td><td>—</td><td class="approval-cell">${record.kind==='recording'?`<label class="approval-check" title="Xác nhận đã kiểm tra; không tự đăng video hay xóa lỗi"><input type="checkbox" data-action="nightly-review" data-id="${escapeHtml(record.id)}" ${typeof recordingReviewAttributes==='function'?recordingReviewAttributes(record):isApproved(record)?'checked':''}><span aria-hidden="true">✓</span><em>${isApproved(record)?'Đã duyệt':'Duyệt'}</em></label>`:(isApproved(record)?'✓ Đã duyệt':'Cần duyệt')}</td></tr>`;
 
 }
-document.getElementById('dateFilter').addEventListener('change',()=>{state.version++;loadData(true);});
+
 
 document.addEventListener('click',(event)=>{
   const button=event.target.closest('[data-action="exception"]');if(!button)return;
   const record=state.records.find(r=>r.id===button.dataset.id);if(!record)return;
-  const dialog=document.getElementById('exceptionDialog');dialog.dataset.id=record.id;dialog.dataset.version=record.version;
+  const dialog=document.getElementById('exceptionDialog');dialog.dataset.id=record.id;dialog.dataset.version=record.version;dialog.dataset.date=record._snapshotDate||nightlyState.snapshot?.date;
   document.getElementById('exceptionReason').value=record.exceptionReason||'';dialog.showModal();
 });
 
@@ -71,7 +83,7 @@ document.addEventListener('click',async(event)=>{
  const source=nightlyState.snapshot?.records?.find(r=>r.id===displayed.id||(r.recordingFileId&&r.recordingFileId===displayed.recordingFileId&&r.source===displayed.source));
  const record=source?{...displayed,...source,title:displayed.title}:displayed;
  const generation=++previewGeneration,dialog=document.getElementById('previewDialog');
- dialog.dataset.id=record.id;dialog.dataset.version=record.version;dialog.dataset.date=nightlyState.snapshot.date;
+ dialog.dataset.id=record.id;dialog.dataset.version=record.version;dialog.dataset.date=record._snapshotDate||nightlyState.snapshot?.date;dialog.dataset.date=record._snapshotDate||nightlyState.snapshot.date;
  dialog.dataset.canPublish=displayed.videoId?'false':'true';document.getElementById('publishForm').reset();document.getElementById('publishForm').hidden=dialog.dataset.canPublish==='false'||!window.recordingAuth?.isAuthenticated();
  const sessions=(nightlyState.snapshot.records||[]).filter(r=>r.kind==='session'&&r.numberingVerified&&r.lessonNumber>0);
  document.getElementById('publishSession').innerHTML='<option value="">Chọn đúng lớp và buổi học</option>'+sessions.map(r=>`<option value="${escapeHtml(r.classSessionId)}">${escapeHtml(r.className)} — Buổi ${escapeHtml(r.lessonNumber)} — ${escapeHtml(dateTime(r.recordingStart))}</option>`).join('');
@@ -122,7 +134,7 @@ document.getElementById('publishForm').addEventListener('submit',async(event)=>{
 document.getElementById('exceptionForm').addEventListener('submit',async(event)=>{
   event.preventDefault();const dialog=document.getElementById('exceptionDialog');const button=document.getElementById('exceptionSubmit');button.disabled=true;
   try {
-    const record=await postAction(window.RECORDING_NIGHTLY.actionUrl,{id:dialog.dataset.id,date:document.getElementById('dateFilter').value||nightlyState.snapshot?.date,expectedVersion:Number(dialog.dataset.version),action:document.getElementById('exceptionAction').value,reason:document.getElementById('exceptionReason').value.trim()});
+    const record=await postAction(window.RECORDING_NIGHTLY.actionUrl,{id:dialog.dataset.id,date:dialog.dataset.date,expectedVersion:Number(dialog.dataset.version),action:document.getElementById('exceptionAction').value,reason:document.getElementById('exceptionReason').value.trim()});
     replaceRecord({...record,nightly:true});dialog.close();toast('Đã lưu và đọc lại trạng thái ngoại lệ.');await loadData(true);
   }catch(error){toast(error.message.includes('VERSION_CONFLICT')?'Dữ liệu đã thay đổi. Hãy tải lại rồi thực hiện.':'Chưa lưu được. Khi đóng ngoại lệ, cần nhập lý do.','error');}
   finally{button.disabled=false;}

@@ -1,0 +1,12 @@
+.recording-filters {display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.filter-track {display:grid;grid-template-columns:minmax(120px,.95fr) minmax(120px,.95fr) minmax(112px,.9fr) minmax(106px,.85fr) minmax(130px,1fr) minmax(125px,1fr) minmax(160px,1.4fr) max-content max-content;gap:10px;align-items:end;overflow-x:auto;max-width:100%;min-width:0;padding:2px 2px 8px;scrollbar-width:thin;overscroll-behavior-x:contain}
+.filter-track:focus-visible {outline:2px solid var(--m170-action,#142c50);outline-offset:3px;border-radius:8px}
+.recording-filters label {min-width:0}
+.recording-filters label,.recording-filters .search {grid-column:auto;min-width:0}
+.recording-filters input,.recording-filters select {width:100%;min-width:0;box-sizing:border-box}
+.recording-filters .filter-button {min-height:48px;white-space:nowrap}
+.recording-filters .filter-reset {background:#fff;color:var(--m170-text,#142c50);border:1px solid #cbd5e1}
+body[data-m170-product='recordings'] .recording-filters .filter-reset {background:#fff;color:var(--m170-action,#142c50)}
+body[data-m170-product='recordings'] .recording-filters .filter-reset:hover {background:var(--m170-selected,#edf1f7);color:var(--m170-action,#142c50)}
+.filter-status {grid-column:1/-1;margin:0;color:#526581;font-size:14px;line-height:1.4}
+.filter-status[data-error="true"] {color:#a44016}

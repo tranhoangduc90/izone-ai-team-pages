@@ -12,10 +12,10 @@ const SOURCE_MESSAGES = {
   unassigned: 'Chưa xác định nguồn recording của buổi',
 };
 function sourceLookupDate(record) {
-  const selected=document.getElementById('dateFilter').value || nightlyState.snapshot?.date;
-  if(selected)return selected;
+  if(record._snapshotDate)return record._snapshotDate;
+  if(typeof localDate==='function'&&localDate(record.recordingStart))return localDate(record.recordingStart);
   const time=Date.parse(record.recordingStart);
-  return Number.isFinite(time)?new Date(time+7*3600000).toISOString().slice(0,10):'';
+  return Number.isFinite(time)?new Date(time+7*3600000).toISOString().slice(0,10):nightlyState.snapshot?.date||'';
 }
 function sourceLinkKey(record) { return `${sourceLookupDate(record)}:${record.id}`; }
 function sourceLinkMarkup(record) {
@@ -69,6 +69,7 @@ document.addEventListener('recording-auth-changed', () => {
   // Lượt trước có thể còn chờ HTTP; vòng timer sẽ tiếp tục phiên mới.
   refreshSourceLinks();
 });
-document.getElementById('dateFilter').addEventListener('change', () => { sourceLinkEpoch++; });
+for(const id of ['dateFilter','dateToFilter'])document.getElementById(id)?.addEventListener('change', () => { sourceLinkEpoch++; });
+document.getElementById('resetFilters')?.addEventListener('click', () => { sourceLinkEpoch++; });
 setInterval(refreshSourceLinks, 2000);
 refreshSourceLinks();
