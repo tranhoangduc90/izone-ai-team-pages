@@ -5,6 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {groupsHtml} from '../reading-practice/authored-ui.js';
 import {isNoteDocument} from '../listening-practice/authored-ui.js';
+import {groupsHtml as listeningGroupsHtml} from '../listening-practice/authored-ui.js';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const directory=path.join(root,'design-reference/master170');
@@ -14,6 +15,23 @@ test('reference links cover the declared cases and native question families',asy
  assert.equal(cases.length,31);assert.equal(manifest.count,cases.length);
  assert.equal(new Set(cases.map(c=>c.id)).size,cases.length);
  for(const id of ['reading-tfng','reading-ynng','reading-mcq','reading-multiple','reading-headings','reading-features','reading-endings','reading-information','reading-summary','reading-summary-bank','reading-sentence','reading-short','reading-table','listening-note','listening-table','listening-pair','listening-map','reading-homework','reading-homework-tfng','listening-homework','remember'])assert.ok(cases.some(c=>c.id===id),id);
+});
+test('every practice example has multiple numbered answers and pair examples have two stems',()=>{
+ for(const c of cases.filter(c=>['reading','listening'].includes(c.family)&&c.id!=='remember')){
+  assert.ok(new Set(c.groups.flatMap(g=>g.questions.map(q=>q.n))).size>=2,c.id);
+ }
+ for(const id of ['reading-multiple','listening-pair']){
+  const c=cases.find(c=>c.id===id);assert.equal(c.groups.length,2);
+  assert.equal(new Set(c.groups.map(g=>g.stem||g.questions[0].text)).size,2,id);
+  assert.equal(new Set(c.groups.flatMap(g=>g.questions.map(q=>q.n))).size,4,id);
+ }
+});
+test('Reading table data works with the chosen Listening table component',()=>{
+ const c=cases.find(c=>c.id==='reading-table');
+ const groups=c.groups.map(g=>({...g,table:{...g.table,rows:g.table.rows.map(row=>row.map(cell=>String(cell).replace(/\{\{(\d+)\}\}/g,'{$1}')))}}));
+ const html=listeningGroupsHtml(groups,{answers:{}},()=>'<button aria-label="Flag"></button>',{practiceLayout:true});
+ assert.match(html,/authored-completion-table/);assert.match(html,/data-answer="16"/);assert.match(html,/data-answer="17"/);assert.doesNotMatch(html,/\{\{?\d+\}\}?/);
+ assert.ok(c.title.startsWith('Reading ·'));assert.ok(cases.find(c=>c.id==='listening-table').title.startsWith('Listening ·'));
 });
 test('demo HTML resolves its native local resources under the Pages prefix',async()=>{
  for(const file of (await fs.readdir(directory)).filter(f=>f.endsWith('.html'))){

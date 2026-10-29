@@ -7,7 +7,7 @@
   "cases": [
     {
       "id": "reading-tfng",
-      "title": "True / False / Not Given",
+      "title": "Reading · True / False / Not Given",
       "family": "reading",
       "criteria": [
         "I06",
@@ -17,7 +17,7 @@
     },
     {
       "id": "reading-ynng",
-      "title": "Yes / No / Not Given",
+      "title": "Reading · Yes / No / Not Given",
       "family": "reading",
       "criteria": [
         "I06",
@@ -27,7 +27,7 @@
     },
     {
       "id": "reading-mcq",
-      "title": "Multiple choice · một đáp án",
+      "title": "Reading · Multiple choice · một đáp án",
       "family": "reading",
       "criteria": [
         "I04",
@@ -36,7 +36,7 @@
     },
     {
       "id": "reading-multiple",
-      "title": "Multiple choice · hai đáp án",
+      "title": "Reading · Multiple choice · hai đáp án",
       "family": "reading",
       "criteria": [
         "I05"
@@ -44,7 +44,7 @@
     },
     {
       "id": "reading-information",
-      "title": "Matching information",
+      "title": "Reading · Matching information",
       "family": "reading",
       "criteria": [
         "I01",
@@ -54,7 +54,7 @@
     },
     {
       "id": "reading-headings",
-      "title": "Matching headings",
+      "title": "Reading · Matching headings",
       "family": "reading",
       "criteria": [
         "I01",
@@ -64,7 +64,7 @@
     },
     {
       "id": "reading-features",
-      "title": "Matching features / names",
+      "title": "Reading · Matching features / names",
       "family": "reading",
       "criteria": [
         "I01",
@@ -74,7 +74,7 @@
     },
     {
       "id": "reading-endings",
-      "title": "Matching sentence endings",
+      "title": "Reading · Matching sentence endings",
       "family": "reading",
       "criteria": [
         "I01",
@@ -84,7 +84,7 @@
     },
     {
       "id": "reading-summary",
-      "title": "Summary completion",
+      "title": "Reading · Summary completion",
       "family": "reading",
       "criteria": [
         "I09"
@@ -92,7 +92,7 @@
     },
     {
       "id": "reading-summary-bank",
-      "title": "Summary completion · word bank",
+      "title": "Reading · Summary completion · word bank",
       "family": "reading",
       "criteria": [
         "I09",
@@ -101,7 +101,7 @@
     },
     {
       "id": "reading-sentence",
-      "title": "Sentence completion",
+      "title": "Reading · Sentence completion",
       "family": "reading",
       "criteria": [
         "H02"
@@ -109,7 +109,7 @@
     },
     {
       "id": "reading-short",
-      "title": "Short-answer questions",
+      "title": "Reading · Short-answer questions",
       "family": "reading",
       "criteria": [
         "H01",
@@ -118,7 +118,7 @@
     },
     {
       "id": "reading-table",
-      "title": "Table completion",
+      "title": "Reading · Table completion",
       "family": "reading",
       "criteria": [
         "I08"
@@ -126,7 +126,7 @@
     },
     {
       "id": "listening-note",
-      "title": "Note completion · một tờ 10 ô",
+      "title": "Listening · Note completion · một tờ 10 ô",
       "family": "listening",
       "criteria": [
         "E04",
@@ -137,7 +137,7 @@
     },
     {
       "id": "listening-form",
-      "title": "Form completion",
+      "title": "Listening · Form completion",
       "family": "listening",
       "criteria": [
         "H02",
@@ -146,7 +146,7 @@
     },
     {
       "id": "listening-sentence",
-      "title": "Sentence completion",
+      "title": "Listening · Sentence completion",
       "family": "listening",
       "criteria": [
         "H02",
@@ -155,7 +155,7 @@
     },
     {
       "id": "listening-short",
-      "title": "Short-answer questions",
+      "title": "Listening · Short-answer questions",
       "family": "listening",
       "criteria": [
         "H02",
@@ -164,7 +164,7 @@
     },
     {
       "id": "listening-summary",
-      "title": "Summary completion",
+      "title": "Listening · Summary completion",
       "family": "listening",
       "criteria": [
         "H02",
@@ -173,7 +173,7 @@
     },
     {
       "id": "listening-table",
-      "title": "Table completion",
+      "title": "Listening · Table completion",
       "family": "listening",
       "criteria": [
         "I08"
@@ -181,7 +181,7 @@
     },
     {
       "id": "listening-mcq",
-      "title": "Multiple choice · một đáp án",
+      "title": "Listening · Multiple choice · một đáp án",
       "family": "listening",
       "criteria": [
         "I04"
@@ -189,7 +189,7 @@
     },
     {
       "id": "listening-pair",
-      "title": "Multiple choice · hai đáp án",
+      "title": "Listening · Multiple choice · hai đáp án",
       "family": "listening",
       "criteria": [
         "I05"
@@ -197,7 +197,7 @@
     },
     {
       "id": "listening-matching",
-      "title": "Matching",
+      "title": "Listening · Matching",
       "family": "listening",
       "criteria": [
         "I01",
@@ -206,7 +206,7 @@
     },
     {
       "id": "reading-diagram",
-      "title": "Diagram labelling",
+      "title": "Reading · Diagram labelling",
       "family": "reading",
       "criteria": [
         "I10"
@@ -214,7 +214,7 @@
     },
     {
       "id": "reading-flow",
-      "title": "Flowchart completion",
+      "title": "Reading · Flowchart completion",
       "family": "reading",
       "criteria": [
         "I10"
@@ -222,7 +222,7 @@
     },
     {
       "id": "listening-diagram",
-      "title": "Diagram labelling",
+      "title": "Listening · Diagram labelling",
       "family": "listening",
       "criteria": [
         "I10"
@@ -230,7 +230,7 @@
     },
     {
       "id": "listening-flow",
-      "title": "Flowchart completion",
+      "title": "Listening · Flowchart completion",
       "family": "listening",
       "criteria": [
         "I10"
@@ -238,7 +238,7 @@
     },
     {
       "id": "listening-map",
-      "title": "Map / plan labelling",
+      "title": "Listening · Map / plan labelling",
       "family": "listening",
       "criteria": [
         "I10"
@@ -290,5 +290,9 @@
     "reading-skills67/tfng-renderer.js",
     "listening-homework/interactive-workspace.mjs"
   ],
-  "baseCommit": "3ee7747095553a532f6023e068f542694ad51869"
+  "baseCommit": "3ee7747095553a532f6023e068f542694ad51869",
+  "review": "r2",
+  "reviewStatus": "pending-user-review",
+  "minimumQuestionsPerExercise": 2,
+  "pairExamplesHaveTwoStems": true
 }
