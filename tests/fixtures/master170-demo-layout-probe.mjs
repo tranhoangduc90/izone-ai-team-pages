@@ -4,13 +4,18 @@ export function inspectDemo(doc,example){
  const banks=[...doc.querySelectorAll('.cbt-option-bank')].filter(visible);
  const bankObservations=banks.map(bank=>{const r=bank.getBoundingClientRect(),bad=[];
   for(const node of bank.querySelectorAll('h4,div>span')){if(!visible(node))continue;const range=doc.createRange();range.selectNodeContents(node);for(const b of range.getClientRects())if(b.left<r.left+10||b.right>r.right-10)bad.push({text:node.textContent.trim(),left:b.left-r.left,right:r.right-b.right});}
-  const observation={width:r.width,scrollWidth:bank.scrollWidth,clientWidth:bank.clientWidth,padding:style(bank).padding,textOutsideInset:bad};
+  const questions=bank.parentElement.querySelector(':scope > :first-child'),qr=questions?.getBoundingClientRect();
+  const position=qr?{gap:r.left-qr.right,topDifference:r.top-qr.top}:null;
+  if(position&&(position.gap<10||Math.abs(position.topDifference)>2))violations.push('options-must-stay-right-of-exercise');
+  const observation={width:r.width,scrollWidth:bank.scrollWidth,clientWidth:bank.clientWidth,padding:style(bank).padding,textOutsideInset:bad,position};
   if(bank.scrollWidth>bank.clientWidth+1||bad.length)violations.push('option-bank-clips-or-lacks-inset');return observation;
  });
  const matchingIds=['reading-information','reading-headings','reading-features','reading-endings','listening-matching'];
  const isMatching=matchingIds.includes(example.id);
  const shells=[...doc.querySelectorAll('#readingView .cbt-matching-questions,#readingView .cbt-question-card')].filter(visible).map(e=>{const s=style(e);return{className:e.className,left:parseFloat(s.borderLeftWidth),right:parseFloat(s.borderRightWidth),radius:s.borderRadius,bottom:parseFloat(s.borderBottomWidth)};});
  if(!isMatching&&!example.family.startsWith('homework')&&shells.some(s=>s.left>0||s.right>0))violations.push('non-matching-question-still-boxed');
+ const visualRows=example.groups?.some(g=>g.image)?[...doc.querySelectorAll('#readingView .cbt-question-card,#readingView .authored-summary > p')].filter(visible):[];
+ if(visualRows.some(e=>parseFloat(style(e).borderBottomWidth)>0))violations.push('visual-labelling-completion-must-not-have-row-dividers');
  const source=doc.querySelector('#passage-scroll'),sourceStyle=source&&visible(source)&&example.family==='reading'?{left:parseFloat(style(source).paddingLeft),right:parseFloat(style(source).paddingRight)}:null;
  if(sourceStyle&&(sourceStyle.left<16||sourceStyle.right<16))violations.push('reading-source-needs-padding');
  const numberCount=example.groups?.length?new Set(example.groups.flatMap(g=>g.questions.map(q=>q.n))).size:null;

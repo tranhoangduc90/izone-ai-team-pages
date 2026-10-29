@@ -1,6 +1,6 @@
 import * as reading from '../../reading-practice/authored-ui.js?v=20261029-judgment1';
 import * as listening from '../../listening-practice/authored-ui.js?v=20261029-notes-document1';
-const cases=await fetch('./cases.json?v=20261029-review2').then(r=>r.json()),c=cases.find(c=>c.id===new URLSearchParams(location.search).get('case'))||cases[0],stage=document.querySelector('#stage'),status=document.querySelector('#demo-status');
+const cases=await fetch('./cases.json?v=20261029-review3').then(r=>r.json()),c=cases.find(c=>c.id===new URLSearchParams(location.search).get('case'))||cases[0],stage=document.querySelector('#stage'),status=document.querySelector('#demo-status');
 const a={answers:{}},flag=n=>`<button type="button" class="cbt-flag-button" data-flag="${n}" aria-label="Đánh dấu câu ${n}" aria-pressed="false"></button>`;
 document.title=c.title+' · Master170 demo';
 if(c.id==='remember')stage.innerHTML='<section class="card login-card" style="padding:24px;max-width:540px"><h2>Vào bài</h2><p>Ví dụ căn hàng checkbox và nhãn.</p><label class="check-line"><input type="checkbox" id="remember-demo" checked> Ghi nhớ tôi trên thiết bị này</label></section>';
@@ -12,6 +12,16 @@ else{
  stage.innerHTML=`<div id="readingView"><div class="cbt-content-viewport" style="font-size:16px"><div class="cbt-reading-section"${c.family==='listening'?' style="display:block"':''}><article id="passage-scroll" class="cbt-reading-passage"${c.family==='listening'?' style="display:none"':''}>${source}</article><article id="question-scroll" class="cbt-reading-questions">${html}</article></div></div></div>`;
  const matching=['reading-information','reading-headings','reading-features','reading-endings','listening-matching'].includes(c.id);
  stage.querySelectorAll('.design-question-group').forEach(g=>g.dataset.demoMatching=String(matching));
+ for(const group of stage.querySelectorAll('.design-question-group')){
+  const sourceGroup=c.groups.find(g=>g.id===group.dataset.group);
+  group.dataset.demoVisual=String(!!sourceGroup?.image);
+  const content=group.querySelector('.design-question-content');
+  if(!content?.querySelector(':scope > .cbt-option-bank'))continue;
+  const scroll=document.createElement('div');scroll.className='demo-options-scroll';scroll.tabIndex=0;
+  scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Bài tập bên trái, Options bên phải; cuộn ngang nếu cần');
+  content.before(scroll);scroll.append(content);content.classList.add('demo-options-columns');
+  stage.querySelector('#readingView').dataset.demoOptions='true';
+ }
  if(['reading-multiple','listening-pair'].includes(c.id)){
   const sections=[...stage.querySelectorAll('.design-question-group')],first=sections[0],container=first.querySelector('.cbt-matching-questions')||first.querySelector('.design-question-content');
   for(const section of sections.slice(1)){container.append(...section.querySelectorAll('.authored-choice-group,.authored-pair'));section.remove();}
