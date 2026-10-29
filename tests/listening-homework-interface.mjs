@@ -5,6 +5,18 @@ import {fileURLToPath} from 'node:url';
 import {serveDirectory} from './fixtures/static-ui-server.mjs';
 const {chromium}=createRequire(import.meta.url)('C:/Users/ADMIN/AppData/Roaming/npm/node_modules/@playwright/cli/node_modules/playwright');
 
+test('Invisible answer does not advance visible progress or question navigation',async()=>{
+ const site=await serveDirectory(fileURLToPath(new URL('../',import.meta.url))),browser=await chromium.launch({channel:'chrome',headless:true});
+ const page=await browser.newPage();
+ try{
+  await page.goto(site.origin+'/listening-homework/preview.html');await page.locator('#entry-submit').click();await page.locator('#field-D1').waitFor();
+  await page.locator('#field-D1').fill('\u200b');assert.match(await page.locator('#progress').innerText(),/^0\/22/);
+  assert.equal(await page.locator('[data-jump="D1"]').evaluate(e=>e.classList.contains('is-answered')),false);
+  await page.locator('#field-D1').fill('meaningful answer');assert.match(await page.locator('#progress').innerText(),/^1\/22/);
+  assert.equal(await page.locator('[data-jump="D1"]').evaluate(e=>e.classList.contains('is-answered')),true);
+ }finally{await browser.close();await site.close();}
+});
+
 test('Homework uses current Listening type scale, independent blank feedback and safe mobile focus',async()=>{
  const site=await serveDirectory(fileURLToPath(new URL('../',import.meta.url))),browser=await chromium.launch({channel:'chrome',headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
