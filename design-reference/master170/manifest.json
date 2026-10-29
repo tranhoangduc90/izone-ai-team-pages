@@ -291,8 +291,10 @@
     "listening-homework/interactive-workspace.mjs"
   ],
   "baseCommit": "3ee7747095553a532f6023e068f542694ad51869",
-  "review": "r2",
+  "review": "r3",
   "reviewStatus": "pending-user-review",
   "minimumQuestionsPerExercise": 2,
-  "pairExamplesHaveTwoStems": true
+  "pairExamplesHaveTwoStems": true,
+  "optionsPosition": "right-of-exercise-at-all-widths",
+  "visualQuestionDividers": false
 }
