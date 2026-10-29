@@ -174,5 +174,15 @@
       "close": "shared/master170/icons/close.svg"
     },
     "native_audio": "Reuse existing local inline SVG when it has the same semantics; keep native playback handlers."
+  },
+  "questionLayout": {
+    "revision": "approved-r3",
+    "approved": "2026-10-29",
+    "css": "shared/master170/question-layout-v1.1.css",
+    "module": "shared/master170/question-layout-v1.1.mjs",
+    "intent": "docs/interface-master170/APPROVED_R3_2026-10-29.md",
+    "optionsPosition": "right",
+    "imageRowDividers": false,
+    "demoMinimumQuestions": 2
   }
 }

@@ -1,3 +1,5 @@
+import {installQuestionLayout} from './question-layout-v1.1.mjs?v=20261029-approved-r3';
+installQuestionLayout();
 // Presentation only. Reveal a focused/active question after its map resizes.
 // Never react to timers/autosave, rebuild DOM, focus an input or scroll a pane.
 export function installQuestionMapVisibility(root=document.body) {

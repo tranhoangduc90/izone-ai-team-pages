@@ -292,9 +292,11 @@
   ],
   "baseCommit": "3ee7747095553a532f6023e068f542694ad51869",
   "review": "r3",
-  "reviewStatus": "pending-user-review",
+  "reviewStatus": "approved",
   "minimumQuestionsPerExercise": 2,
   "pairExamplesHaveTwoStems": true,
   "optionsPosition": "right-of-exercise-at-all-widths",
-  "visualQuestionDividers": false
+  "visualQuestionDividers": false,
+  "approvedAt": "2026-10-29",
+  "sharedQuestionLayout": "../../shared/master170/question-layout-v1.1.mjs"
 }

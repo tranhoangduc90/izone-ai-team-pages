@@ -1,6 +1,7 @@
 /* Approved assessment upgrade. Only explicitly registered consumers opt in.
    No JS handlers, timer, grading, storage, audio or access rules live here. */
 @import url('./tokens-v1.1.css?v=20261028-master11');
+@import url('./question-layout-v1.1.css?v=20261029-approved-r3');
 
 body[data-izone-design='master170@1.1'] {
   --m170-font: var(--m170-v11-font-family);
