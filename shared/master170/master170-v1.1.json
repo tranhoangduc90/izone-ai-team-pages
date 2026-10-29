@@ -6,6 +6,7 @@
   "colors": {
     "canvas": "#F5F6F8",
     "surface": "#FFFFFF",
+    "option-bank": "#F6F9FC",
     "structure": "#174265",
     "ink": "#1F2937",
     "muted": "#586477",

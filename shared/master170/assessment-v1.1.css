@@ -1,7 +1,10 @@
 /* Approved assessment upgrade. Only explicitly registered consumers opt in.
    No JS handlers, timer, grading, storage, audio or access rules live here. */
-@import url('./tokens-v1.1.css?v=20261028-master11');
+@import url('./tokens-v1.1.css?v=20261029-option-bank');
 @import url('./question-layout-v1.1.css?v=20261029-approved-r3');
+
+/* Options separates reference choices from white answer areas (Term67 native). */
+body[data-izone-design='master170@1.1']:is([data-izone-consumer='reading-practice'],[data-izone-consumer='listening-practice'],[data-izone-consumer='reading-homework'],[data-izone-consumer='listening-homework'],[data-izone-consumer='term-mini-k67'],[data-izone-consumer='substitute-k67']) :is(.cbt-option-bank,.k67-option-bank,.cbt-matching-bank,.headings-bank,.green-options-bank){background:var(--m170-option-bank-bg,#f6f9fc)}
 
 body[data-izone-design='master170@1.1'] {
   --m170-font: var(--m170-v11-font-family);

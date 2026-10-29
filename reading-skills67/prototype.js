@@ -32,6 +32,7 @@ let originalDraft = readStorage();
 function toast(text){const t=document.querySelector('#toast');t.textContent=text;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,4300);}
 function persist(){
   if(teacher)return false;
+  if(headings()&&!writable())return false;
   if(serverMode)return serverClient.schedule(state);
   if(state.status==='draft')promoteDraft();
   state.savedAt=new Date().toISOString();
@@ -53,7 +54,7 @@ function filled(target){const v=normalize(state.answers[target.id]);return !!v&&
 function completed(){if(serverMode&&state?.serverAttempt)return state.serverAttempt.completeness.filled_cells;if(serverMode&&state?.status==='draft'&&serverClient.state.status==='saved'&&serverClient.state.completeness)return serverClient.state.completeness.filled_cells;return content.targets.filter(filled).length;}
 function timeLabel(iso){return iso?new Date(iso).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'chưa lưu';}
 function isResult(){return state.status==='review';}
-function writable(){return !teacher&&state?.status==='draft';}
+function writable(){return !teacher&&state?.status==='draft'&&(!headings()||window.ReadingSharePractice?.isAccepted()===true);}
 window.ReadingInteractionBridge={current:()=>state,scope:()=>content?.version+':'+state?.id,writable,save:persist,showPane:setMobilePane,closeGeneralNotes:()=>{generalNotesOpen=false;document.querySelector('#notes-panel')?.setAttribute('hidden','');}};
 function feedbackHtml(id){
   if(!isResult())return '';

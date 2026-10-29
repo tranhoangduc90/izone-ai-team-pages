@@ -7,6 +7,8 @@
   --m170-close-icon-size: 18px;
   --m170-v11-color-canvas: #F5F6F8;
   --m170-v11-color-surface: #FFFFFF;
+  --m170-v11-color-option-bank: #F6F9FC;
+  --m170-option-bank-bg: var(--m170-v11-color-option-bank);
   --m170-v11-color-structure: #174265;
   --m170-v11-color-ink: #1F2937;
   --m170-v11-color-muted: #586477;
