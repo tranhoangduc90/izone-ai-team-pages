@@ -8,7 +8,7 @@ async function refreshKnownRecordingFile(id, control) {
   if (refreshFilePending.has(id)) return;
   refreshFilePending.add(id); control.disabled = true;
   try {
-    const result = await window.recordingRequests.submit({action:'refresh_file',date:nightlyState.snapshot.date,id,expectedVersion:record.version});
+    const result = await window.recordingRequests.submit({action:'refresh_file',date:record._snapshotDate||nightlyState.snapshot.date,id,expectedVersion:record.version});
     if (result.ok !== true || result.record?.type !== 'MP4' || result.record?.status !== 'completed')
       throw new Error(result.error || 'REFRESH_FAILED');
     await loadData(true);
@@ -85,7 +85,7 @@ document.addEventListener('click', event => {
   const reason = manualUploadUnavailable(displayed);
   if (reason) { toast(reason, 'error'); return; }
   const record = manualUploadSource(displayed), dialog = document.getElementById('manualUploadDialog');
-  dialog.dataset.id = record.id; dialog.dataset.version = record.version; dialog.dataset.date = nightlyState.snapshot.date;
+  dialog.dataset.id = record.id; dialog.dataset.version = record.version; dialog.dataset.date = record._snapshotDate||nightlyState.snapshot.date;
   document.getElementById('manualUploadClass').value = /^[A-Z]{1,4}\d{3,5}$/i.test(record.className||'')?record.className:'';
   document.getElementById('manualUploadLesson').value = Number(record.lessonNumber)>0?record.lessonNumber:'';
   document.getElementById('manualUploadDate').value = record.recordingDate || recordingPublication.date(record.recordingStart);
