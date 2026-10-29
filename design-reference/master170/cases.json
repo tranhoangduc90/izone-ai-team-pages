@@ -1,0 +1,1196 @@
+[
+  {
+    "id": "reading-tfng",
+    "title": "True / False / Not Given",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "reading-tfng",
+        "label": "True / False / Not Given",
+        "kind": "matching",
+        "questions": [
+          {
+            "n": 8,
+            "text": "The centre is open to visitors every day."
+          },
+          {
+            "n": 9,
+            "text": "The writer believes the changes will benefit everyone."
+          }
+        ],
+        "start": 8,
+        "end": 9,
+        "instruction": "Do the statements agree with the information or claims in the passage?",
+        "options": [
+          {
+            "value": "TRUE",
+            "text": "TRUE"
+          },
+          {
+            "value": "FALSE",
+            "text": "FALSE"
+          },
+          {
+            "value": "NOT GIVEN",
+            "text": "NOT GIVEN"
+          }
+        ]
+      }
+    ],
+    "criteria": [
+      "I06",
+      "D06",
+      "H06"
+    ],
+    "focus": "Ba radio; một số câu và một cờ. Không dropdown hoặc bảng Options."
+  },
+  {
+    "id": "reading-ynng",
+    "title": "Yes / No / Not Given",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "reading-ynng",
+        "label": "Yes / No / Not Given",
+        "kind": "matching",
+        "questions": [
+          {
+            "n": 8,
+            "text": "The centre is open to visitors every day."
+          },
+          {
+            "n": 9,
+            "text": "The writer believes the changes will benefit everyone."
+          }
+        ],
+        "start": 8,
+        "end": 9,
+        "instruction": "Do the statements agree with the information or claims in the passage?",
+        "options": [
+          {
+            "value": "YES",
+            "text": "YES"
+          },
+          {
+            "value": "NO",
+            "text": "NO"
+          },
+          {
+            "value": "NOT GIVEN",
+            "text": "NOT GIVEN"
+          }
+        ]
+      }
+    ],
+    "criteria": [
+      "I06",
+      "D06",
+      "H06"
+    ],
+    "focus": "Ba radio; một số câu và một cờ. Không dropdown hoặc bảng Options."
+  },
+  {
+    "id": "reading-mcq",
+    "title": "Multiple choice · một đáp án",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "mcq",
+        "label": "Multiple choice — subtitle",
+        "kind": "mcq",
+        "questions": [
+          {
+            "n": 40,
+            "text": "What is the main purpose of the new visitor centre?",
+            "options": [
+              {
+                "value": "A",
+                "text": "It improves access for local residents."
+              },
+              {
+                "value": "B",
+                "text": "It reduces the cost of maintenance."
+              },
+              {
+                "value": "C",
+                "text": "It provides more space for visitors."
+              },
+              {
+                "value": "D",
+                "text": "It protects the original design."
+              }
+            ]
+          }
+        ],
+        "start": 40,
+        "end": 40,
+        "instruction": "Choose the correct answer."
+      }
+    ],
+    "criteria": [
+      "I04",
+      "D03"
+    ],
+    "focus": "Tiêu đề chỉ là Question 40 · Multiple choice; chọn một phương án."
+  },
+  {
+    "id": "reading-multiple",
+    "title": "Multiple choice · hai đáp án",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "multiple",
+        "label": "Multiple choice",
+        "kind": "mcq",
+        "questions": [
+          {
+            "n": 21,
+            "text": "Which TWO benefits are mentioned?"
+          },
+          {
+            "n": 22,
+            "text": "Which TWO benefits are mentioned?"
+          }
+        ],
+        "start": 21,
+        "end": 22,
+        "instruction": "Choose TWO letters, A–D.",
+        "options": [
+          {
+            "value": "A",
+            "text": "It improves access for local residents."
+          },
+          {
+            "value": "B",
+            "text": "It reduces the cost of maintenance."
+          },
+          {
+            "value": "C",
+            "text": "It provides more space for visitors."
+          },
+          {
+            "value": "D",
+            "text": "It protects the original design."
+          }
+        ],
+        "chooseCount": 2,
+        "stem": "Which TWO benefits of the new visitor centre are mentioned?"
+      }
+    ],
+    "criteria": [
+      "I05"
+    ],
+    "focus": "Một stem, hai ô điểm; chỉ chọn tối đa hai phương án."
+  },
+  {
+    "id": "reading-information",
+    "title": "Matching information",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "reading-information",
+        "label": "Matching information",
+        "kind": "matching",
+        "questions": [
+          {
+            "n": 1,
+            "text": "An explanation of how the project began"
+          },
+          {
+            "n": 2,
+            "text": "A description of the help provided by residents"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Choose the correct answer.",
+        "options": [
+          {
+            "value": "A",
+            "text": "Information in paragraph A"
+          },
+          {
+            "value": "B",
+            "text": "Information in paragraph B"
+          },
+          {
+            "value": "C",
+            "text": "Information in paragraph C"
+          },
+          {
+            "value": "D",
+            "text": "Information in paragraph D"
+          }
+        ],
+        "summaryParagraphs": [
+          "An explanation of how the project began {{1}}",
+          "A description of the help provided by residents {{2}}"
+        ]
+      }
+    ],
+    "criteria": [
+      "I01",
+      "I02",
+      "I03"
+    ],
+    "focus": "Bank và câu giữ cùng hướng nhìn; không nhận nhầm thành TFNG/YNNG."
+  },
+  {
+    "id": "reading-headings",
+    "title": "Matching headings",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "reading-headings",
+        "label": "Matching headings",
+        "kind": "matching",
+        "questions": [
+          {
+            "n": 1,
+            "text": "An explanation of how the project began"
+          },
+          {
+            "n": 2,
+            "text": "A description of the help provided by residents"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Choose the correct answer.",
+        "options": [
+          {
+            "value": "i",
+            "text": "A change in how the area is used"
+          },
+          {
+            "value": "ii",
+            "text": "The value of local knowledge"
+          },
+          {
+            "value": "iii",
+            "text": "A challenge during construction"
+          },
+          {
+            "value": "iv",
+            "text": "Plans for future improvement"
+          }
+        ],
+        "summaryParagraphs": [
+          "An explanation of how the project began {{1}}",
+          "A description of the help provided by residents {{2}}"
+        ]
+      }
+    ],
+    "criteria": [
+      "I01",
+      "I02",
+      "I03"
+    ],
+    "focus": "Bank và câu giữ cùng hướng nhìn; không nhận nhầm thành TFNG/YNNG."
+  },
+  {
+    "id": "reading-features",
+    "title": "Matching features / names",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "reading-features",
+        "label": "Matching features / names",
+        "kind": "matching",
+        "questions": [
+          {
+            "n": 1,
+            "text": "An explanation of how the project began"
+          },
+          {
+            "n": 2,
+            "text": "A description of the help provided by residents"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Choose the correct answer.",
+        "options": [
+          {
+            "value": "A",
+            "text": "Dr Maya Ellis"
+          },
+          {
+            "value": "B",
+            "text": "Professor Arun Shah"
+          },
+          {
+            "value": "C",
+            "text": "Dr Eva Chen"
+          }
+        ],
+        "summaryParagraphs": [
+          "An explanation of how the project began {{1}}",
+          "A description of the help provided by residents {{2}}"
+        ]
+      }
+    ],
+    "criteria": [
+      "I01",
+      "I02",
+      "I03"
+    ],
+    "focus": "Bank và câu giữ cùng hướng nhìn; không nhận nhầm thành TFNG/YNNG."
+  },
+  {
+    "id": "reading-endings",
+    "title": "Matching sentence endings",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "reading-endings",
+        "label": "Matching sentence endings",
+        "kind": "matching",
+        "questions": [
+          {
+            "n": 1,
+            "text": "An explanation of how the project began"
+          },
+          {
+            "n": 2,
+            "text": "A description of the help provided by residents"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Choose the correct answer.",
+        "options": [
+          {
+            "value": "A",
+            "text": "became easier to maintain."
+          },
+          {
+            "value": "B",
+            "text": "was supported by local volunteers."
+          },
+          {
+            "value": "C",
+            "text": "could be used throughout the year."
+          }
+        ],
+        "summaryParagraphs": [
+          "An explanation of how the project began {{1}}",
+          "A description of the help provided by residents {{2}}"
+        ]
+      }
+    ],
+    "criteria": [
+      "I01",
+      "I02",
+      "I03"
+    ],
+    "focus": "Bank và câu giữ cùng hướng nhìn; không nhận nhầm thành TFNG/YNNG."
+  },
+  {
+    "id": "reading-summary",
+    "title": "Summary completion",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "summary",
+        "label": "Summary completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 14,
+            "text": ""
+          },
+          {
+            "n": 15,
+            "text": ""
+          }
+        ],
+        "start": 14,
+        "end": 15,
+        "instruction": "Write ONE WORD ONLY for each answer.",
+        "summaryTitle": "The visitor centre",
+        "summaryParagraphs": [
+          "The centre was built using {{14}} sourced from the local area.",
+          "A team of {{15}} helped plan the facilities."
+        ]
+      }
+    ],
+    "criteria": [
+      "I09"
+    ],
+    "focus": "Văn cảnh liền; blank nằm trong đoạn."
+  },
+  {
+    "id": "reading-summary-bank",
+    "title": "Summary completion · word bank",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "summary-bank",
+        "label": "Summary completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 14,
+            "text": ""
+          },
+          {
+            "n": 15,
+            "text": ""
+          }
+        ],
+        "start": 14,
+        "end": 15,
+        "instruction": "Choose the correct letter, A–C.",
+        "summaryParagraphs": [
+          "The centre uses {{14}} and relies on {{15}} to welcome visitors."
+        ],
+        "options": [
+          {
+            "value": "A",
+            "text": "local materials"
+          },
+          {
+            "value": "B",
+            "text": "volunteers"
+          },
+          {
+            "value": "C",
+            "text": "new technology"
+          }
+        ]
+      }
+    ],
+    "criteria": [
+      "I09",
+      "I01"
+    ],
+    "focus": "Giữ văn cảnh liên tục và bank khi đề cho sẵn từ."
+  },
+  {
+    "id": "reading-sentence",
+    "title": "Sentence completion",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "sentence",
+        "label": "Sentence completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 6,
+            "text": "The roof collects rainwater for the building’s gardens."
+          },
+          {
+            "n": 7,
+            "text": "Visitors can find information about the local environment."
+          }
+        ],
+        "start": 6,
+        "end": 7,
+        "instruction": "Complete each sentence. Write ONE WORD ONLY.",
+        "summaryParagraphs": [
+          "The roof collects {{6}} for the building’s gardens.",
+          "Visitors can learn about the local {{7}}."
+        ]
+      }
+    ],
+    "criteria": [
+      "H02"
+    ],
+    "focus": "Control compact, một số câu; giữ đầy đủ câu nguồn."
+  },
+  {
+    "id": "reading-short",
+    "title": "Short-answer questions",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "short",
+        "label": "Short-answer questions",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 11,
+            "text": "Which material was used for the main entrance?"
+          },
+          {
+            "n": 12,
+            "text": "Who helped design the garden?"
+          }
+        ],
+        "start": 11,
+        "end": 12,
+        "instruction": "Write NO MORE THAN TWO WORDS for each answer.",
+        "summaryParagraphs": [
+          "Which material was used for the main entrance? {{11}}",
+          "Who helped design the garden? {{12}}"
+        ]
+      }
+    ],
+    "criteria": [
+      "H01",
+      "H02"
+    ],
+    "focus": "Nhãn rõ, không chọn sẵn đáp án; word limit tại nhóm câu."
+  },
+  {
+    "id": "reading-table",
+    "title": "Table completion",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "table",
+        "label": "Table completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 16,
+            "text": ""
+          },
+          {
+            "n": 17,
+            "text": ""
+          }
+        ],
+        "start": 16,
+        "end": 17,
+        "instruction": "Write ONE WORD ONLY for each answer.",
+        "table": {
+          "caption": "Facilities at the centre",
+          "headers": [
+            "Area",
+            "Feature"
+          ],
+          "rows": [
+            [
+              "Entrance",
+              "Built from {{16}}"
+            ],
+            [
+              "Garden",
+              "Designed with {{17}}"
+            ]
+          ]
+        }
+      }
+    ],
+    "criteria": [
+      "I08"
+    ],
+    "focus": "Caption, header, hàng/cột và padding đầy đủ."
+  },
+  {
+    "id": "listening-note",
+    "title": "Note completion · một tờ 10 ô",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "definition",
+        "label": "Definition",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 31,
+            "text": "Designing services for people with different {blank}."
+          },
+          {
+            "n": 32,
+            "text": "The approach considers a broad range of {blank}."
+          }
+        ],
+        "start": 31,
+        "end": 32,
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer."
+      },
+      {
+        "id": "examples",
+        "label": "Examples of inclusive design",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 33,
+            "text": "Public spaces\nAdjustable {blank} help visitors find a comfortable position."
+          },
+          {
+            "n": 34,
+            "text": "Clear {blank} make facilities easier to locate."
+          },
+          {
+            "n": 35,
+            "text": "Digital services\nSimple {blank} help people use websites."
+          },
+          {
+            "n": 36,
+            "text": "Users may give commands with their {blank}."
+          }
+        ],
+        "start": 33,
+        "end": 36,
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer."
+      },
+      {
+        "id": "impact",
+        "label": "Impact of non-inclusive designs",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 37,
+            "text": "Safety\nPoorly designed {blank} can put users at risk."
+          },
+          {
+            "n": 38,
+            "text": "Working life\nSome people face barriers to {blank}."
+          },
+          {
+            "n": 39,
+            "text": "Daily life\nLimited access can reduce personal {blank}."
+          },
+          {
+            "n": 40,
+            "text": "Community\nBetter design encourages wider {blank}."
+          }
+        ],
+        "start": 37,
+        "end": 40,
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer.",
+        "introduction": "Access\nPoor access can limit participation in everyday activities."
+      }
+    ],
+    "documentNotes": true,
+    "criteria": [
+      "E04",
+      "E07",
+      "I07",
+      "K04"
+    ],
+    "focus": "Đủ10ô31–40; một tờ, một vùng cuộn, ba đề mục nhỏ; padding28/16px."
+  },
+  {
+    "id": "listening-form",
+    "title": "Form completion",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "listening-form",
+        "label": "Form completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "Name of organisation: {blank}"
+          },
+          {
+            "n": 2,
+            "text": "Preferred day for the visit: {blank}"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer."
+      }
+    ],
+    "criteria": [
+      "H02",
+      "I07"
+    ],
+    "focus": "Blank trong câu; một số/cờ và khoảng cách đủ quanh control."
+  },
+  {
+    "id": "listening-sentence",
+    "title": "Sentence completion",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "listening-sentence",
+        "label": "Sentence completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "The project is supported by {blank}."
+          },
+          {
+            "n": 2,
+            "text": "The centre will open in {blank}."
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer."
+      }
+    ],
+    "criteria": [
+      "H02",
+      "I07"
+    ],
+    "focus": "Blank trong câu; một số/cờ và khoảng cách đủ quanh control."
+  },
+  {
+    "id": "listening-short",
+    "title": "Short-answer questions",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "listening-short",
+        "label": "Short-answer questions",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "Who supported the project? {blank}"
+          },
+          {
+            "n": 2,
+            "text": "When will the centre open? {blank}"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer."
+      }
+    ],
+    "criteria": [
+      "H02",
+      "I07"
+    ],
+    "focus": "Blank trong câu; một số/cờ và khoảng cách đủ quanh control."
+  },
+  {
+    "id": "listening-summary",
+    "title": "Summary completion",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "listening-summary",
+        "label": "Summary completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "The new community centre uses local materials and depends on {blank} to welcome visitors."
+          },
+          {
+            "n": 2,
+            "text": "It provides a space for events and helps residents learn about the local {blank}."
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer."
+      }
+    ],
+    "criteria": [
+      "H02",
+      "I07"
+    ],
+    "focus": "Blank trong câu; một số/cờ và khoảng cách đủ quanh control."
+  },
+  {
+    "id": "listening-table",
+    "title": "Table completion",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "table",
+        "label": "Table completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 21,
+            "text": ""
+          },
+          {
+            "n": 22,
+            "text": ""
+          }
+        ],
+        "start": 21,
+        "end": 22,
+        "instruction": "Write ONE WORD ONLY for each answer.",
+        "table": {
+          "caption": "Community activities",
+          "headers": [
+            "Day",
+            "Activity",
+            "Location"
+          ],
+          "rows": [
+            [
+              "Monday",
+              "{21}",
+              "Main hall"
+            ],
+            [
+              "Thursday",
+              "{22}",
+              "Garden"
+            ]
+          ]
+        }
+      }
+    ],
+    "criteria": [
+      "I08"
+    ],
+    "focus": "Bảng thật giữ cấu trúc hàng/cột; không ghép thành note."
+  },
+  {
+    "id": "listening-mcq",
+    "title": "Multiple choice · một đáp án",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "mcq",
+        "label": "Multiple choice",
+        "kind": "mcq",
+        "questions": [
+          {
+            "n": 21,
+            "text": "Why did the speakers choose the new venue?",
+            "options": [
+              {
+                "value": "A",
+                "text": "It improves access for local residents."
+              },
+              {
+                "value": "B",
+                "text": "It reduces the cost of maintenance."
+              },
+              {
+                "value": "C",
+                "text": "It provides more space for visitors."
+              }
+            ]
+          },
+          {
+            "n": 22,
+            "text": "Which feature should be improved first?",
+            "options": [
+              {
+                "value": "A",
+                "text": "It improves access for local residents."
+              },
+              {
+                "value": "B",
+                "text": "It reduces the cost of maintenance."
+              },
+              {
+                "value": "C",
+                "text": "It provides more space for visitors."
+              }
+            ]
+          }
+        ],
+        "start": 21,
+        "end": 22,
+        "instruction": "Choose the correct letter, A, B or C."
+      }
+    ],
+    "criteria": [
+      "I04"
+    ],
+    "focus": "Mỗi phương án một hàng, dùng radio."
+  },
+  {
+    "id": "listening-pair",
+    "title": "Multiple choice · hai đáp án",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "pair",
+        "label": "Multiple choice",
+        "kind": "mcq",
+        "questions": [
+          {
+            "n": 21,
+            "text": "Which TWO improvements do the speakers suggest?"
+          },
+          {
+            "n": 22,
+            "text": "Which TWO improvements do the speakers suggest?"
+          }
+        ],
+        "start": 21,
+        "end": 22,
+        "instruction": "Choose TWO letters, A–D.",
+        "options": [
+          {
+            "value": "A",
+            "text": "It improves access for local residents."
+          },
+          {
+            "value": "B",
+            "text": "It reduces the cost of maintenance."
+          },
+          {
+            "value": "C",
+            "text": "It provides more space for visitors."
+          },
+          {
+            "value": "D",
+            "text": "It protects the original design."
+          }
+        ],
+        "answerMode": "unordered-pair"
+      }
+    ],
+    "criteria": [
+      "I05"
+    ],
+    "focus": "Giữ hai câu cùng một nhóm, chặn lựa chọn thứ ba."
+  },
+  {
+    "id": "listening-matching",
+    "title": "Matching",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "matching",
+        "label": "Matching",
+        "kind": "matching",
+        "questions": [
+          {
+            "n": 25,
+            "text": "The entrance"
+          },
+          {
+            "n": 26,
+            "text": "The garden"
+          }
+        ],
+        "start": 25,
+        "end": 26,
+        "instruction": "Choose the correct letter, A–C.",
+        "options": [
+          {
+            "value": "A",
+            "text": "The space needs more signs."
+          },
+          {
+            "value": "B",
+            "text": "The facilities are easy to use."
+          },
+          {
+            "value": "C",
+            "text": "The area is difficult to reach."
+          }
+        ]
+      }
+    ],
+    "criteria": [
+      "I01",
+      "I03"
+    ],
+    "focus": "Câu và bank cùng hướng nhìn; chọn chữ đúng câu."
+  },
+  {
+    "id": "reading-diagram",
+    "title": "Diagram labelling",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "diagram",
+        "label": "Diagram labelling",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "Position 1"
+          },
+          {
+            "n": 2,
+            "text": "Position 2"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer.",
+        "image": "assets/diagram.svg",
+        "imageAlt": "Hình minh họa giả có hai vị trí được đánh số1và2.",
+        "summaryParagraphs": [
+          "Position 1 {{1}}",
+          "Position 2 {{2}}"
+        ]
+      }
+    ],
+    "criteria": [
+      "I10"
+    ],
+    "focus": "Ảnh SVG dữ liệu giả; nhãn và control giữ quan hệ số câu. Không ghép vào note liên tục."
+  },
+  {
+    "id": "reading-flow",
+    "title": "Flowchart completion",
+    "family": "reading",
+    "groups": [
+      {
+        "id": "flow",
+        "label": "Flowchart completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "Position 1"
+          },
+          {
+            "n": 2,
+            "text": "Position 2"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer.",
+        "image": "assets/flow.svg",
+        "imageAlt": "Hình minh họa giả có hai vị trí được đánh số1và2.",
+        "summaryParagraphs": [
+          "Position 1 {{1}}",
+          "Position 2 {{2}}"
+        ]
+      }
+    ],
+    "criteria": [
+      "I10"
+    ],
+    "focus": "Ảnh SVG dữ liệu giả; nhãn và control giữ quan hệ số câu. Không ghép vào note liên tục."
+  },
+  {
+    "id": "listening-diagram",
+    "title": "Diagram labelling",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "diagram",
+        "label": "Diagram labelling",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "Position 1: {blank}"
+          },
+          {
+            "n": 2,
+            "text": "Position 2: {blank}"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer.",
+        "image": "assets/diagram.svg",
+        "imageAlt": "Hình minh họa giả có hai vị trí được đánh số1và2."
+      }
+    ],
+    "criteria": [
+      "I10"
+    ],
+    "focus": "Ảnh SVG dữ liệu giả; nhãn và control giữ quan hệ số câu. Không ghép vào note liên tục."
+  },
+  {
+    "id": "listening-flow",
+    "title": "Flowchart completion",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "flow",
+        "label": "Flowchart completion",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "Position 1: {blank}"
+          },
+          {
+            "n": 2,
+            "text": "Position 2: {blank}"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer.",
+        "image": "assets/flow.svg",
+        "imageAlt": "Hình minh họa giả có hai vị trí được đánh số1và2."
+      }
+    ],
+    "criteria": [
+      "I10"
+    ],
+    "focus": "Ảnh SVG dữ liệu giả; nhãn và control giữ quan hệ số câu. Không ghép vào note liên tục."
+  },
+  {
+    "id": "listening-map",
+    "title": "Map / plan labelling",
+    "family": "listening",
+    "groups": [
+      {
+        "id": "map",
+        "label": "Map / plan labelling",
+        "kind": "completion",
+        "questions": [
+          {
+            "n": 1,
+            "text": "Position 1: {blank}"
+          },
+          {
+            "n": 2,
+            "text": "Position 2: {blank}"
+          }
+        ],
+        "start": 1,
+        "end": 2,
+        "instruction": "Write ONE WORD ONLY for each answer.",
+        "image": "assets/map.svg",
+        "imageAlt": "Hình minh họa giả có hai vị trí được đánh số1và2."
+      }
+    ],
+    "criteria": [
+      "I10"
+    ],
+    "focus": "Ảnh SVG dữ liệu giả; nhãn và control giữ quan hệ số câu. Không ghép vào note liên tục."
+  },
+  {
+    "id": "remember",
+    "title": "Đăng nhập · Ghi nhớ",
+    "family": "shared",
+    "groups": [],
+    "criteria": [
+      "H03",
+      "H06"
+    ],
+    "focus": "Ô17×17px căn giữa chữ, cả nhãn nhận bấm; thử bật/tắt."
+  },
+  {
+    "id": "reading-homework",
+    "title": "Reading Homework · Matching và nén",
+    "family": "homework-reading",
+    "groups": [],
+    "criteria": [
+      "A02",
+      "C06",
+      "M01"
+    ],
+    "focus": "Renderer Homework thật với nguồn giả: nén đoạn/câu, bằng chứng và chọn đoạn; không timer đề thi."
+  },
+  {
+    "id": "reading-homework-tfng",
+    "title": "Reading Homework · TFNG phân tích mảnh",
+    "family": "homework-tfng",
+    "groups": [],
+    "criteria": [
+      "A02",
+      "I06"
+    ],
+    "focus": "Renderer TFNG Homework thật: bằng chứng và nhãn từng mảnh, rồi kết luận. Không thay bằng ba radio thực chiến."
+  },
+  {
+    "id": "listening-homework",
+    "title": "Listening Homework · chép từ và phân tích",
+    "family": "homework-listening",
+    "groups": [],
+    "criteria": [
+      "A02",
+      "C06",
+      "M07"
+    ],
+    "focus": "Bản preview hiện có dùng renderer thật. Góp ý là minh họa; không chấm AI/ghi Docs."
+  }
+]
