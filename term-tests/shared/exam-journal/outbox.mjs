@@ -1,7 +1,11 @@
 // Mỗi sự kiện có scope bất biến. Chỉ giữ vé ghi log giới hạn scope, không giữ token thi.
 export class IndexedOutbox {
   constructor({ indexedDB = globalThis.indexedDB, name = 'izone-exam-journal-v1', maxBytes = 16 * 1024 * 1024 } = {}) {
+    if(!Number.isSafeInteger(maxBytes)||maxBytes<1)throw new Error('OUTBOX_BUDGET_INVALID');
     this.maxBytes = maxBytes;
+    // Keep a small fixed control allowance even when event storage is full.
+    this.deliveryReserveBytes = maxBytes >= 4096 ? 512 : 0;
+    this.eventBudget = maxBytes - this.deliveryReserveBytes;
     this.ready = new Promise((resolve, reject) => {
       if (!indexedDB) { reject(new Error('OUTBOX_UNAVAILABLE')); return; }
       const request = indexedDB.open(name, 2);
@@ -61,9 +65,9 @@ export class IndexedOutbox {
         const read = usage.get('bytes');
         read.onsuccess = () => {
           const used = read.result || 0;
-          if (used + bytes > this.maxBytes) { fail(new Error('OUTBOX_BUDGET_REACHED')); return; }
+          if (used + bytes > this.eventBudget) { fail(new Error('OUTBOX_BUDGET_REACHED')); return; }
           const insert = (contextBytes = 0) => {
-            if (used + bytes + contextBytes > this.maxBytes) { fail(new Error('OUTBOX_BUDGET_REACHED')); return; }
+            if (used + bytes + contextBytes > this.eventBudget) { fail(new Error('OUTBOX_BUDGET_REACHED')); return; }
             events.add({ id: event.id, binding, bytes, event,contextId,queuedAt:Date.now() });
             usage.put(used + bytes + contextBytes, 'bytes'); next();
           };
@@ -75,7 +79,7 @@ export class IndexedOutbox {
               insert();
             } else {
               const contextBytes = new TextEncoder().encode(JSON.stringify(effectiveAuth)).length + binding.length + contextId.length;
-              if (used + bytes + contextBytes > this.maxBytes) { fail(new Error('OUTBOX_BUDGET_REACHED')); return; }
+              if (used + bytes + contextBytes > this.eventBudget) { fail(new Error('OUTBOX_BUDGET_REACHED')); return; }
               contexts.add({ id:contextId,binding,auth:effectiveAuth,bytes:contextBytes }); insert(contextBytes);
             }
           };
@@ -101,13 +105,13 @@ export class IndexedOutbox {
           }
           const contextBytes = new TextEncoder().encode(JSON.stringify(auth)).length + binding.length + auth.ticketId.length;
           const latestBytes = contextBytes + 7;
-          if (used + contextBytes + latestBytes > this.maxBytes) {fail(new Error('OUTBOX_BUDGET_REACHED'));return;}
+          if (used + contextBytes + latestBytes > this.eventBudget) {fail(new Error('OUTBOX_BUDGET_REACHED'));return;}
           contexts.put({id:auth.ticketId,binding,auth,bytes:contextBytes});
           contexts.put({id:'latest:' + binding,binding,auth,bytes:latestBytes});used += contextBytes + latestBytes;
           const rows = events.index('binding').openCursor(binding);
           rows.onsuccess = () => {
             const row = rows.result;
-            if (!row) {if (used > this.maxBytes) {fail(new Error('OUTBOX_BUDGET_REACHED'));return;}usage.put(Math.max(0,used),'bytes');done({moved});return;}
+            if (!row) {if (used > this.eventBudget) {fail(new Error('OUTBOX_BUDGET_REACHED'));return;}usage.put(Math.max(0,used),'bytes');done({moved});return;}
             const value = row.value,delta = auth.ticketId.length - (value.contextId || '').length;
             used += delta;value.bytes += delta;value.contextId = auth.ticketId;row.update(value);moved++;row.continue();
           };
@@ -121,12 +125,43 @@ export class IndexedOutbox {
       read.onsuccess = () => {if (read.result?.binding === binding) contexts.put({...read.result,blocked:true});done(true);};
     });
   }
+  async claimDelivery(owner,{now=Date.now(),ttlMs=60_000}={}) {
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    if(!uuid.test(owner)||!Number.isSafeInteger(now)||now<0||!Number.isSafeInteger(now+ttlMs)||!Number.isInteger(ttlMs)||ttlMs<1000||ttlMs>60_000)
+      throw new Error('OUTBOX_DELIVERY_CLAIM_INVALID');
+    if(!this.deliveryReserveBytes)return null;
+    return this.transaction((tx,done)=>{
+      const usage=tx.objectStore('usage'),read=usage.get('bytes');
+      read.onsuccess=()=>{
+        // Old full databases can still drain without adding control bytes.
+        if((read.result||0)>this.eventBudget){done(null);return;}
+        const lease=usage.get('delivery-lease');
+        lease.onsuccess=()=>{
+          const held=lease.result;
+          const valid=held?.version===1&&uuid.test(held.owner||'')
+            &&Number.isSafeInteger(held.createdAt)&&Number.isSafeInteger(held.until)
+            &&held.createdAt>=0&&held.until>held.createdAt&&held.until-held.createdAt<=60_000;
+          if(held&&!valid){done(null);return;}
+          if(valid&&held.until>now&&held.createdAt<=now+60_000){done(false);return;}
+          usage.put({version:1,owner,createdAt:now,until:now+ttlMs},'delivery-lease');done(true);
+        };
+      };
+    });
+  }
+  async releaseDelivery(owner) {
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(owner))throw new Error('OUTBOX_DELIVERY_CLAIM_INVALID');
+    return this.transaction((tx,done)=>{
+      const usage=tx.objectStore('usage'),read=usage.get('delivery-lease');
+      read.onsuccess=()=>{const owned=read.result?.owner===owner;if(owned)usage.delete('delivery-lease');done(owned);};
+    });
+  }
   async nextBatch({ maxCount = 100,maxBytes = 256 * 1024 } = {}) {
     await this.ready;
     return new Promise((resolve,reject) => {
-      const tx = this.db.transaction(['events','contexts']), events = tx.objectStore('events');
+      const tx = this.db.transaction(['events','contexts']), events = tx.objectStore('events'),total=events.count();
       let result = null;
-      tx.oncomplete = () => resolve(result); tx.onerror = () => reject(new Error('OUTBOX_READ_FAILED'));
+      tx.oncomplete=()=>{if(result)result.morePending=total.result>result.events.length;resolve(result);};
+      tx.onerror = () => reject(new Error('OUTBOX_READ_FAILED'));
       const first = tx.objectStore('contexts').openCursor();
       first.onsuccess = () => {
         const cursor = first.result; if (!cursor) return;
@@ -190,8 +225,9 @@ export class IndexedOutbox {
   async size() {
     await this.ready;
     return new Promise((resolve, reject) => {
-      const tx = this.db.transaction('usage'), read = tx.objectStore('usage').get('bytes');
-      tx.oncomplete = () => resolve(read.result || 0); tx.onerror = () => reject(new Error('OUTBOX_READ_FAILED'));
+      const tx = this.db.transaction('usage'),usage=tx.objectStore('usage'),read=usage.get('bytes'),lease=usage.get('delivery-lease');
+      tx.oncomplete=()=>resolve((read.result||0)+(lease.result?new TextEncoder().encode(JSON.stringify(lease.result)).length+14:0));
+      tx.onerror = () => reject(new Error('OUTBOX_READ_FAILED'));
     });
   }
   async close() { await this.ready; this.db.close(); }

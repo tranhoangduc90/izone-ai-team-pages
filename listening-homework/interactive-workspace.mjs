@@ -1,4 +1,4 @@
-import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261027-l2-v1&audio=20261028-part-rescue-v1';
+import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261027-l2-v1&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
 import {decodeBody,encodeBody,encodeAnswer} from './answer-codec.mjs?v=20261028-integration1';
 import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
 export function createListeningWorkspace(options){

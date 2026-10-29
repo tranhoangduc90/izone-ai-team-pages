@@ -39,7 +39,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1'))
+      .then(() => loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=ej-a176e4d58d3089a76456&resilience=20261027-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1'))
       .then(() => loadScript('enhance.js?v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
@@ -540,7 +540,7 @@
       const previewUrl = appConfig.API_BASE_URL + session.previewAudioUrl;
       publicAudioManifest = session.audioManifest?.envelopeVersion === 'MP3' ? session.audioManifest : null;
       const publicStore = publicAudioManifest
-        ? await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1') : null;
+        ? await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456') : null;
       const [encrypted, previewResponse] = await Promise.all([
         (publicStore ? publicStore.downloadSessionAudio.bind(null, publicAudioManifest) : audioLoader.downloadAudio.bind(null, audioUrl))({
           signal: downloadController.signal,
@@ -692,7 +692,7 @@
 
   async function decryptOfficialAudio(blob, response) {
     if (publicAudioManifest) {
-      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1');
+      const {plaintextAudio} = await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456');
       return plaintextAudio(blob, publicAudioManifest);
     }
     const envelope = new Uint8Array(await blob.arrayBuffer());
@@ -746,7 +746,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1');
+    await loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=ej-a176e4d58d3089a76456&resilience=20261027-v1');
     await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1');
     await loadScript('enhance.js?v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1');
     await loadScript('annotations.js?v=20261018-identity-v1');

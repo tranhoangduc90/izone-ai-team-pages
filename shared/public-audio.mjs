@@ -43,7 +43,7 @@ function startJournalAudioCapture(metadata,bootstrapUrl){
  }catch{return null;}
 }
 // END optional exam journal audio entry
-import {downloadPreferred} from './audio/transport.mjs?v=20261023-cf512-1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1';
+import {downloadPreferred} from './audio/transport.mjs?v=20261023-cf512-1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
 
 export function createPublicAudio({database, prefixes}) {
   // Nhận metadata do VPS ghim; tải MP3 Pages từng phần, kiểm hash rồi mới cho phát.
@@ -114,7 +114,7 @@ export function createPublicAudio({database, prefixes}) {
   async function download(m, options = {}) {
     if (!validManifest(m)) throw new Error('Định danh audio Pages không hợp lệ.');
     if (m.cloudflare?.version === 1) { const blob = await downloadPreferred(m, options); if (blob) return verify(blob, m); }
-    const journal=startJournalAudioCapture({sha256:m.sha256,byteLength:m.byteLength,transportRevision:'legacy-mp3-pages'},new URL('../term-tests/shared/exam-journal/bootstrap-capture.mjs?v=20261024-audio-v1',import.meta.url).href);
+    const journal=startJournalAudioCapture({sha256:m.sha256,byteLength:m.byteLength,transportRevision:'legacy-mp3-pages'},new URL('../term-tests/shared/exam-journal/bootstrap-capture.mjs?ej=ej-a176e4d58d3089a76456',import.meta.url).href);
     try{
     const checked=async value=>{try{return await verify(value,m);}catch(error){journal?.event({source:'primary-error',reason:'WHOLE_HASH_MISMATCH'});throw error;}};
     const fetchImpl = options.fetchImpl || globalThis.fetch.bind(globalThis), parts = new Array(m.chunks.length);

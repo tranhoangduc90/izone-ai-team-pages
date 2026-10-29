@@ -1,0 +1,34 @@
+# SDK journal ứng viên — chưa phát hành
+
+Ngày30/10/2026, branch `codex/log-sdk-integration-20261030-pages` từ `ed6916109b24c059de8a384f46acc326c8f11894`. Logger production đang tắt theo yêu cầu Đức. Bản này chỉ tích hợp local để hoàn thiện hệ mới; không bật lại logger, đổi API/lịch/khóa hoặc tác động bài/điểm.
+
+## Phạm vi
+
+SDK8asset được dựng từ source chuẩn `tools/exam-journal/browser/` của repo điều phối bằng `build-browser-sdk.mjs`. Revision `ej-a176e4d58d3089a76456`; SHA256 của `term-tests/shared/exam-journal/SDK_MANIFEST.json` là `f1fd2e22c8432aec43928d7e7956acb5ebb8b7955f2aded760bd5df3af6c7a95`. Manifest và SOURCE mô tả byte thực, không phải chữ ký hoặc giấy phép bật production.
+
+Giữ recorder/retry/ACK, thêm nhịp gom adaptive và phối hợp tab từ hệ ứng viên. Kế thừa API startup và bản sửa tail lifecycle đã phát của Pages. Cache vé khởi tạo dùng thời hạn máy chủ và elapsed time; collector vẫn kiểm quyền/hạn, log giữ đồng hồ client và cờ lệch giờ.
+
+Mọi caller trực tiếp tới SDK dùng cùng `?ej=<revision>`. Các asset native gọi SDK và entry/loader tổ tiên giữ tham số cũ, thay/thêm ej. Có cập nhật cache ở Listening Homework/thực chiến vì dùng audio chung; không thêm slug/cờ ghi log mới. Audio transport/chunks/metadata/quyền và các thuật toán native giữ nguyên.10test-config chỉ thay suffix generated từ lobby SDK; prefix nguyên byte.
+
+Preview ban đầu83file:10SDK/metadata và73host,145URL. Rà token/trivia độc lập kiểm không đổi byte ngoài URL/suffix được giao. Các file test và hồ sơ sau đó được thêm riêng;83 không phải tổng file Git cuối cùng. Backup/receipt riêng ở `C:/Codex-Work/log-optimization-build-20261028/`, gồm `PAGES_SDK_PREVIEW_REVIEW.json`, `PAGES_SDK_LOCAL_APPLY.json`.
+
+## Kiểm đã đạt
+
+- 126native ID Node tập trung theo nhóm: startup/exit/package/bundle, clock/part rescue, Worker/Homework audio, cache/submission/teacher session và Git checkout autocrlf=true giữ SHA. `.gitattributes` chỉ scoped SDK giữ LF; host giữ newline hiện có. Đây không phải toàn bộ test Pages. Các lượt thiếu cấu hình fixture và guard v/rev cũ giữ nguyên log; runner mới kiểm ej đúng manifest.
+- Native Chrome cách ly, asset/entry thật: Term1K56 giờ đúng/nhanh30ngày/chậm30ngày, Term2K56 và MiniK56 giờ đúng; Reading35giây giữ DOM/focus/selection/scroll/nháp. Mạng ngoài bị chặn hoặc trả API giả, không gọi bài thật. SDK thực sự tải đều dùng revision trên.
+- Native journal handler/SQLite dùng code thật trên laptop qua route interception. Cả năm DB đã giải mã GCM độc lập, so payload/binding mọi event ACK và dựng text UTF16;74asset ghim. ACK lặp không thành event mới. Receipt `NATIVE_SDK_HOST_FIVE_CASE_READBACK_20261030.json`; không nhận thành collector HTTP từ xa.
+- Browser exit r4 và startup r3 đạt6ca mỗi nhóm, gồm điều hướng thật và IDB treo, context chậm/lỗi/hồi phục, phân biệt visibility/pagehide, scope lớp và disabled. Guard departure4,5giây không đổi; chỉ warmup/quan sát thường/replay chờ20giây cho nhịp gom15giây. `SDK_BROWSER_CONTRACT_ACCEPTANCE_20261030.json` giữ số native ID và checksum; receipt lỗi cũ vẫn giữ.
+
+Các phép kiểm không đổi UI, phiên GV90/365ngày, native deadline hoặc quyền Listening. Chưa gọi K67/Substitute, Google thật, OS kill/BFCache thực, cache nóng/rollback, tải lớn hay toàn hệ A–G đã đạt. Sự kiện pagehide/pageshow giả lập không chứng minh eligibility BFCache. Xem STATUS của repo điều phối để lấy kết quả mới nhất.
+
+## Cách kiểm lại
+
+Từ root Pages, dùng Node24 chạy các test `exam-journal-*.test.mjs`, `exam-journal-startup-contract.mjs`, `audio-clock-skew.test.mjs`, `audio-part-rescue.test.mjs`, `term-test-reliability.mjs`, `term-mini-submission-contract.mjs`, `term-mini-cache-graph.mjs`, `term-test-teacher-session.mjs` trong `tests/` theo nhóm phù hợp. Các runner browser là chương trình riêng, không chạy mọi file mjs bằng test runner.
+
+Hai runner `cloudflare-audio.mjs` và `listening-homework-audio.test.mjs` cần `AUDIO_WORKER_SOURCE` trỏ đúng release Worker cô lập tại backend `backend/ops/releases/audio-cloudflare-20261023`; runner đầu còn cần `AUDIO_PUBLIC_FIXTURE` là MP3 MiniK56 đã kiểm SHA theo catalog. Thiếu env thì runner lỗi; không coi là skip/pass. Worker được import trong tiến trình với R2/mạng giả, không triển khai cloud.
+
+Lệnh kiểm nhận source/fixture local, chạy hành vi và in số đạt/lỗi; lỗi trả exit khác0. Chọn thư mục evidence mới ngoài Git cho browser. Không đưa log/SQLite/ảnh/khóa hoặc thông tin học viên thật vào repo public. `tools/build-exam-journal-startup.mjs --check` kiểm suffix lobby đúng artifact; không dùng helper cũ để ghi đè SDK từ source chưa đóng gói.
+
+## Tiếp theo và quay lại
+
+Hoàn thiện các engine còn lại, consumer/cache thực, replay/lifecycle, canary và kế hoạch toàn hệ trước khi phát hành. Tab đang mở giữ bản đã tải; không ép tải lại bài đang làm. Nếu cần quay mã ứng viên, dùng commit/revert đúng SDK và chuỗi cache của cùng gói sau review; giữ database/nháp/bài mới và cấu hình paused. Không restore dữ liệu bài thi để quay frontend.

@@ -607,7 +607,7 @@
       }
       if (audioAccess?.audioCacheSupported) {
         const publicAudio = audioAccess.audioManifest?.envelopeVersion === 'MP3';
-        if (publicAudio && !window.K67_PUBLIC_AUDIO) await loadScript('../k67-shared/public-audio.js?rev=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1');
+        if (publicAudio && !window.K67_PUBLIC_AUDIO) await loadScript('../k67-shared/public-audio.js?rev=20261026-term1-replay1&journal=20261024-startup-v2&resilience=20261027-v1&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456');
         if (publicAudio && !window.K67_PUBLIC_AUDIO.validManifest(audioAccess.audioManifest)) throw new Error('Định danh audio từ máy chủ không hợp lệ.');
         if (!publicAudio && !window.K67_AUDIO_STORE) {
           try { await loadScript('../k67-shared/audio-store.js?rev=20261015-cache-v1'); }
@@ -903,7 +903,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1');
+    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=ej-a176e4d58d3089a76456&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1');
     await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }

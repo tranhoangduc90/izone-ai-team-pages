@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {connectExamJournal} from '../term-tests/shared/exam-journal/bridge.mjs';
+const sdkRevision=JSON.parse(fs.readFileSync('term-tests/shared/exam-journal/SDK_MANIFEST.json','utf8')).revision;
 
 test('initialization never acquires the native owner, including after adoption and delayed context',async t=>{
  const rows=[],proofs=[];let release;
@@ -15,7 +16,7 @@ test('initialization never acquires the native owner, including after adoption a
   getState:()=>({classCode:'ICFIXA',stage:'reading',attemptToken:'synthetic-native',drafts:{}}),
   fetcher:async(url,options)=>{
    const proof=JSON.parse(options.body);proofs.push(proof);if(!proof.attemptToken)await waiting;
-   return {ok:true,json:async()=>({ok:true,bindingId:(proof.attemptToken?'c':'a').repeat(64),ticket:'synthetic',ticketId:crypto.randomUUID(),expiresAt:Date.now()+3600000,identityConfirmed:!!proof.attemptToken})};
+   return {ok:true,json:async()=>({ok:true,bindingId:(proof.attemptToken?'c':'a').repeat(64),ticket:'synthetic',ticketId:crypto.randomUUID(),issuedAt:Date.now(),expiresAt:Date.now()+3600000,identityConfirmed:!!proof.attemptToken})};
   }});
  t.after(async()=>{release();await bridge.stop();});
  const row={type:'identity_observed',data:{action:'selection_changed',identityConfirmed:false,checkpointState:{selected:{value:'fixture-A',label:'Fixture A'},observedAt:'2026-10-24T11:13:11.000Z'}}};
@@ -60,11 +61,13 @@ test('all live student entries install early capture before app/bootstrap, with 
  for(const entry of entries){
   const html=fs.readFileSync('term-tests/'+entry+'/index.html','utf8'),config=html.match(/src="([^"]*test-config\.js[^\"]*)"/);
   assert.ok(config,entry);assert.ok(config.index<html.search(/<script src="[^"]*(?:shared\/app|bootstrap)\.js/),entry);
-  assert.match(config[1],/journal=20261024-startup-v2/);
+  assert.equal(new URL(config[1],'https://fixture.invalid/').searchParams.get('ej'),sdkRevision);
   const definition=fs.readFileSync(path.resolve('term-tests',entry,config[1].split('?')[0]),'utf8');
   assert.match(definition,/BEGIN GENERATED EXAM JOURNAL STARTUP v1/);
  }
  for(const dir of ['shared','k56-shared','k56-test2-shared','k56-mini-shared','substitute-k67-shared','substitute-k56-shared','substitute-test-2-k56-shared']){
-  const source=fs.readFileSync('term-tests/'+dir+'/app.js','utf8');assert.match(source,/EXAM_JOURNAL_STARTUP\?\.startRequest/);assert.match(source,/bridge\.mjs\?[^'\n]+20261024-startup-v2/);
+  const source=fs.readFileSync('term-tests/'+dir+'/app.js','utf8');assert.match(source,/EXAM_JOURNAL_STARTUP\?\.startRequest/);
+  const specifier=source.match(/import\(['"]([^'"]*exam-journal\/bridge\.mjs\?[^'"]+)['"]\)/)?.[1];
+  assert.ok(specifier,dir);assert.equal(new URL(specifier,'https://fixture.invalid/').search,'?ej='+sdkRevision);
  }
 });
