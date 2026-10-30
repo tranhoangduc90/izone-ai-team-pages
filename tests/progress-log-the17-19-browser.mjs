@@ -102,6 +102,7 @@ async function editorFixture(t){
    if(path==='/teacher/form-drafts'&&options.method==='POST'){window.saved={...body,id:'draft-fixture',revision:1,status:'draft',contentHash:'h1'};return {draft:structuredClone(window.saved)};}
    if(path.endsWith('/ai-import-preview')){
     if(window.holdAi)await new Promise((done,reject)=>{window.releaseAi=done;options.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});});
+    if(window.aiNetworkFailure)throw new TypeError('Failed to fetch');
     if(window.aiFailure)throw Error(window.aiFailure);
     const payload={definition:structuredClone(window.saved.definition),gradingKey:structuredClone(window.saved.gradingKey)};
     // JSONB có thể trả thứ tự khóa object khác dù nội dung/ID của câu cũ không đổi.
@@ -162,6 +163,15 @@ test('AI lỗi cuối giữ nguồn/câu cũ, mở lại và thử lại thêm �
  assert.equal(await ai.getByLabel('Nội dung câu hỏi có sẵn').inputValue(),source);
  await page.evaluate(()=>{window.aiFailure='';});await ai.getByRole('button',{name:'Tạo bài',exact:true}).click();await ai.waitFor({state:'detached'});
  assert.equal(await page.evaluate(()=>window.saved.definition.blocks[0].items.length),3);assert.deepEqual(await page.evaluate(()=>window.saved.definition.blocks[0].items.slice(1).map(i=>i.kind)),['exercise','survey']);
+});
+
+test('mất kết nối AI báo tiếng Việt, giữ nguồn và câu cũ để thử lại',{timeout:45000},async t=>{
+ const {page}=await editorFixture(t);const before=await page.evaluate(()=>window.editor.getPayload());
+ await page.evaluate(()=>{window.aiNetworkFailure=true;});await page.getByRole('button',{name:'AI chuyển nội dung có sẵn',exact:true}).click();const ai=page.locator('.thuy-editor-ai');
+ await ai.getByLabel('Nội dung câu hỏi có sẵn').fill('Nguồn giữ lại khi mất mạng');await ai.getByRole('button',{name:'Tạo bài',exact:true}).click();
+ await ai.getByRole('status').getByText(/Không kết nối được máy chủ/).waitFor();
+ assert.doesNotMatch(await ai.getByRole('status').innerText(),/Failed to fetch/);assert.match(await ai.getByRole('status').innerText(),/giữ nguyên/);
+ assert.equal(await ai.getByLabel('Nội dung câu hỏi có sẵn').inputValue(),'Nguồn giữ lại khi mất mạng');assert.deepEqual(await page.evaluate(()=>window.editor.getPayload()),before);assert.equal(await ai.getByRole('button',{name:'Tạo bài',exact:true}).isEnabled(),true);
 });
 
 test('nguồn dài qua giới hạn cũ dùng đủ thời gian, quá 60000 bị chặn trước API',{timeout:45000},async t=>{
