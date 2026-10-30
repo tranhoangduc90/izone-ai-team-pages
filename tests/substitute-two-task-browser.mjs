@@ -27,7 +27,8 @@ try{for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
  await page.locator('#writingTaskTabs button').nth(1).focus();await page.keyboard.press('Enter');assert.equal(await page.locator('[data-writing-task="task2"]').isVisible(),true);
  await page.keyboard.press('Tab');await page.locator('#writingTaskTabs button').nth(1).focus();
  assert.equal(await page.locator('#writingTaskTabs button').nth(1).evaluate(e=>getComputedStyle(e).outlineColor),'rgb(219, 8, 41)');
- assert.equal(await page.locator('#writingTaskTabs button').nth(1).evaluate(e=>getComputedStyle(e).borderBottomWidth),'3px');
+ // Tab hiện hành theo native Term K67: viền chọn 1px, giữ focus và handler.
+ assert.equal(await page.locator('#writingTaskTabs button').nth(1).evaluate(e=>getComputedStyle(e).borderBottomWidth),'1px');
  assert.deepEqual(errors,[]);await context.close();
 }console.log(JSON.stringify({ok:true,desktopMobile:true,twoDraftsReload:true,blankManualBlocked:true,keyboard:true,aiCalls:0,portalWrites:0,screenshots:out}));}
 finally{await browser.close();await new Promise(r=>server.close(r));}
