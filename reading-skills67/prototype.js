@@ -16,7 +16,7 @@ let scale = 100, generalNotesOpen = false, toastTimer, storageAvailable = true;
 let latestServerAttempt=null;
 const tfng=()=>content?.type==='tfng';
 const headings=()=>content?.type==='matching_headings';
-const lessonRenderer=()=>content?.type==='green-roofs'?window.ReadingGreenRoofsRenderer:tfng()?window.ReadingTfngRenderer:null;
+const lessonRenderer=()=>content?.type==='sentence_completion'?window.ReadingSentenceRenderer:content?.type==='matching_people'?window.ReadingPeopleRenderer:content?.type==='green-roofs'?window.ReadingGreenRoofsRenderer:tfng()?window.ReadingTfngRenderer:null;
 const totalTargets=()=>content?.targets?.length||20;
 const minimumRequired=()=>content?.minimumRequired||16;
 const panePositions = {passage: 0, questions: 0};
@@ -80,6 +80,7 @@ function summaryHtml(){
 function render(){
   if(!content)return;
   document.body.classList.toggle('headings-homework',headings());
+  document.body.classList.toggle('sentence-homework',content.type==='sentence_completion');
   if(scenario==='entry'){renderEntry();return;}
   if(headings())app.innerHTML=window.ReadingHeadingsRenderer.shell(content,{state,teacher,writable:writable(),feedback:feedbackHtml,mobilePane,scale});
   else if(lessonRenderer())app.innerHTML=lessonRenderer().shell(content,{state,teacher,writable:writable(),feedback:feedbackHtml,mobilePane,scale});
@@ -118,21 +119,22 @@ function jumpTo(kind,value){
   const target=document.querySelector('#'+kind+'-'+value);
   requestAnimationFrame(()=>{
     target?.scrollIntoView({block:'start',behavior:'instant'});
-    if(['tfng','green-roofs'].includes(content.type)&&matchMedia('(max-width:800px), (max-width:1000px) and (max-height:500px)').matches){
+    if(['tfng','green-roofs','matching_people','sentence_completion'].includes(content.type)&&matchMedia('(max-width:800px), (max-width:1000px) and (max-height:500px)').matches){
       const heading=target?.closest('.study-pane')?.querySelector('.pane-heading');
       if(heading&&target){const edge=heading.getBoundingClientRect().bottom+12,top=target.getBoundingClientRect().top;if(top<edge)scrollBy({top:top-edge,behavior:'instant'});}
     }
     target?.classList.remove('highlight-arrival');requestAnimationFrame(()=>target?.classList.add('highlight-arrival'));
   });
 }
-function jumpField(id){const t=content.targets.find(t=>t.id===id);if(!t)return;jumpTo(t.paragraph?'paragraph':'question',t.paragraph||t.question);setTimeout(()=>document.querySelector('[data-target="'+id+'"]')?.focus({preventScroll:true}),40);}
+function jumpField(id){if(content.type==='matching_people')return jumpRepairField(id);const t=content.targets.find(t=>t.id===id);if(!t)return;jumpTo(t.paragraph?'paragraph':'question',t.paragraph||t.question);setTimeout(()=>document.querySelector('[data-target="'+id+'"]')?.focus({preventScroll:true}),40);}
 // Đi đúng ô, kể cả ô dưới cùng của câu hỏi và select chỉ xem; không sửa giá trị.
 function jumpRepairField(id){
   const paragraph=content.paragraphs.find(p=>p.target===id||headings()&&p.id===content.targets.find(t=>t.id===id)?.paragraph||Object.values(p.targets||{}).includes(id));
   const question=content.questions.find(q=>Object.values(q.targets).includes(id));
-  if(!paragraph&&!question)return;
+  const person=content.type==='matching_people'&&content.people.find(p=>p.analyses.some(a=>Object.values(a.targets).includes(id)));
+  if(!paragraph&&!question&&!person)return;
   if(question)activeQuestion=question.number;
-  setMobilePane(question?'questions':'passage');
+  setMobilePane(question||person?'questions':'passage');
   requestAnimationFrame(()=>{
     const input=[...document.querySelectorAll('[data-target]')].find(el=>el.dataset.target===id);if(!input)return;
     input.scrollIntoView({block:'center',behavior:'instant'});
@@ -310,7 +312,7 @@ window.addEventListener('offline',()=>toast('Đang ngoại tuyến. Bản đang 
 async function bootstrap(){
   try{
     if(serverMode){
-      const loaded=await serverClient.initialize();teacher=!!loaded.teacher;content=loaded.content;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};
+      const loaded=await serverClient.initialize();teacher=!!loaded.teacher;content=loaded.content;activeQuestion=content.questions[0]?.number||1;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};
       window.ReadingMaterialsExperience?.bind({current:()=>({state,content,teacher}),history:()=>serverClient.initialHistory?.attempts||serverClient.initialHistory||[],
         draftRevision:()=>serverClient.revision,runNo:()=>serverClient.runNo,fetchAttempt:id=>serverClient.getAttempt(id),identity:()=>serverClient.identity,
         openAttempt:async id=>{closeModal();trackServerAttempt(await serverClient.getAttempt(id));},edit:()=>serverAction('repair-edit'),
@@ -389,7 +391,7 @@ function trackServerAttempt(attempt,{announce=false}={}){
   });
 }
 function showServerAttempt(attempt,announce=false){
-  if(['green-roofs','matching_headings'].includes(content.type)&&state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
+  if(['green-roofs','matching_headings','matching_people','sentence_completion'].includes(content.type)&&state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
     const visible=value=>JSON.stringify([value.status,value.errorCode,value.result,value.snapshot,value.validationProgress,value.recovery]);
     if(visible(state.serverAttempt)===visible(attempt)){latestServerAttempt=attempt;return;}
     if(state.status==='waiting'&&['queued','processing'].includes(attempt.status)){
