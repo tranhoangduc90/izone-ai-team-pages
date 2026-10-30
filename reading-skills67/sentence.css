@@ -1,0 +1,36 @@
+/* Chỉ bài Sentence Completion opt in; dùng font/token/adapter Homework R3 chung. */
+.sentence-homework .sentence-kicker{font-size:14px;color:var(--m170-structure,#174265);font-weight:700;margin:0 0 8px}
+body.sentence-homework .sentence-question{border:0;border-bottom:1px solid #dce1e7;border-radius:0;box-shadow:none;background:transparent;padding:24px 0;margin:0}
+.sentence-homework .sentence-question:last-of-type{border-bottom:0}
+.sentence-homework .sentence-question:first-of-type{padding-top:8px}
+.sentence-homework .sentence-question :is(textarea,input,select){box-sizing:border-box;width:100%;max-width:100%;min-width:0;font-size:calc(18px * var(--reading-scale,1));line-height:1.65;min-height:44px}
+.sentence-homework .sentence-question input{padding:9px 12px;border:1px solid #7c8798;border-radius:8px;background:#fff;color:#1f2937}
+body[data-izone-design='master170@1.1'][data-izone-consumer='reading-homework'].sentence-homework .sentence-question input:focus{border-color:var(--m170-input-focus-border,#152b4e);outline:0;box-shadow:0 0 0 2px var(--m170-input-focus-pointer,#152b4e18)}
+body[data-izone-design='master170@1.1'][data-izone-consumer='reading-homework'].sentence-homework .sentence-question input:focus-visible{outline:0;box-shadow:0 0 0 3px var(--m170-input-focus-keyboard,#2156a033)}
+.sentence-homework .sentence-question .selection-field{display:block}
+.sentence-homework .sentence-question :is(.answer-field,.selection-field)>label{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;line-height:1.5;margin-bottom:8px}
+.sentence-homework .sentence-question .field-indicator{flex-shrink:0;margin-left:0}
+.sentence-homework .sentence-hint{font-size:16px;line-height:1.5;color:#586477;margin:6px 0 10px}
+.sentence-homework .sentence-compression{margin-top:20px}
+.sentence-homework .sentence-method{margin:0 0 24px;padding:16px;background:#f5f6f8;border-radius:8px;font-size:16px;line-height:1.65}
+.sentence-homework .sentence-method summary{font-weight:600;cursor:pointer}
+.sentence-homework .optional-label{font-size:14px;font-weight:400;color:#586477}
+.sentence-homework .sentence-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sentence-homework .sentence-summary p{font-size:14px}
+.sentence-homework .learner{white-space:normal;overflow-wrap:anywhere}
+.sentence-homework .question-instruction{font-size:calc(18px * var(--reading-scale,1));line-height:1.65}
+@media(max-width:800px),(max-width:1000px) and (max-height:500px){
+ .sentence-homework .sentence-question{padding-block:22px}
+ .sentence-homework .sentence-method{padding:12px}
+ .sentence-homework .source-intro p{font-size:calc(18px * var(--reading-scale,1));line-height:1.65}
+ .sentence-homework .pane-heading{max-width:100%;box-sizing:border-box}
+ .sentence-homework .app-header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;height:auto;min-height:66px;padding:10px 16px;gap:4px 12px}
+ .sentence-homework .app-header .product-name{display:none}
+ .sentence-homework .app-header .header-notes{grid-column:2;grid-row:1;margin:0}
+ .sentence-homework .app-header #teacher{grid-column:3;grid-row:1;margin:0}
+ .sentence-homework .app-header .materials-role-label{grid-column:1/-1;grid-row:2;justify-self:end;font-size:12px;margin:0}
+ .sentence-homework .learner{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:14px}
+ .sentence-homework .learner strong{grid-column:1;grid-row:1;font-size:14px}
+ .sentence-homework .learner>span{grid-column:1;grid-row:2}
+ .sentence-homework .learner button{grid-column:2;grid-row:1/span 2;font-size:14px;max-width:100px}
+}
