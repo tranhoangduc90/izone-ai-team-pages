@@ -9,6 +9,7 @@
   let classCode = (query.get('class') || '').trim().toUpperCase();
   const demoMode = query.get('demo') || '';
   const localDemo = demoMode === 'exam' && query.get('grading') === 'server';
+  let startAtFirstSection = false;
   const storageSuffix = localDemo && query.get('grading') === 'server' ? ':server-grade' : '';
   const demoStudentRef = localDemo ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = localDemo ? (query.get('demoAttempt') || '').trim() : '';
@@ -29,7 +30,7 @@
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
       .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1'))
-      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1'))
+      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -646,6 +647,7 @@
     });
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
+      startAtFirstSection,
       classCode: state.classCode || classCode,
       studentRef: state.studentRef,
       clientRunId: state.clientRunId,
@@ -669,7 +671,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1');
-    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1');
+    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
@@ -737,6 +739,8 @@
     saveState({ audioVolume: volume });
   });
   elements.bootstrapStart.addEventListener('click', async () => {
+    // Chỉ vị trí giao diện: bắt đầu mới khác với tiếp tục lượt đang làm.
+    startAtFirstSection = !state.listeningStartedAt && !state.attemptToken && !legacyListeningResume;
     if (!encryptedAudio || preparing) return;
     preparing = true;
     elements.bootstrapStart.disabled = true;
