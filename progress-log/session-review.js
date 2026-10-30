@@ -1,8 +1,8 @@
 // Dữ liệu nhận: bài public đã được API lọc theo người/lớp/buổi, không có khóa đáp án.
 // Dựng hero, điểm khách quan và toàn bộ câu trả lời chỉ đọc; không ghi bài hoặc điểm danh.
 import {contentTitle,skillsLabel} from './session-presentation.js';
-import {reviewItems} from './answer-review.js?rev=20261030-the20-v1';
-import {commentPanel} from './session-comments.js?rev=20261030-the20-v1';
+import {reviewItems} from './answer-review.js?rev=20261030-the20-v2';
+import {commentPanel} from './session-comments.js?rev=20261030-the20-v2';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function renderSessionReview(root,detail,{session={},studentView=false}={}){
  const title=contentTitle(session,detail.definition||session),items=(detail.gradingItems||[]).filter(i=>i.maxScore>0&&['correct','incorrect','partial'].includes(i.verdict));

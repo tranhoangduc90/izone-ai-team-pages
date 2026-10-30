@@ -1,8 +1,8 @@
 // Chỉ dùng số câu tự báo hợp lệ của bài đã nhận và điểm Test có nguồn.
 // Các hàm thống kê dùng lại đúng quy tắc đã duyệt trong bản Thủy; không gọi AI hoặc sinh dữ liệu.
 import {practiceReport,priority,speakingAnalytics,speakingSummary,publishedSourceFeedback} from '../thuy-review/model.mjs';
-import {bindDialogDismiss} from '../session-comments.js?rev=20261030-the20-v1';
-import {studentTestRecords,latestSkillTest,safeWritingResultUrl} from '../student-test-results.js?rev=20261030-the20-v1';
+import {bindDialogDismiss} from '../session-comments.js?rev=20261030-the20-v2';
+import {studentTestRecords,latestSkillTest,safeWritingResultUrl} from '../student-test-results.js?rev=20261030-the20-v2';
 const skills={listening:'Listening',reading:'Reading',speaking:'Speaking',writing:'Writing'};
 const node=(tag,text='',className='')=>{const element=document.createElement(tag);element.textContent=text;element.className=className;return element;};
 const percent=value=>Number.isFinite(value)?value.toLocaleString('vi-VN',{maximumFractionDigits:1})+'%':'Chưa có dữ liệu';

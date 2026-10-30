@@ -10,3 +10,9 @@ test('mới nhất riêng L/R: bỏ ngày nhập, giữ điểm 0 và không dù
  assert.equal(latestSkillTest(rows,'listening').listening.analysis,undefined);assert.equal(resultTime({completedAt:'2026-10-21T10:00:00'}),null);
  assert.equal(studentTestRecords(rows).length,3);assert.equal(latestSkillTest(rows.slice(0,2),'listening').listening.correct,0);
 });
+test('Mini K56 hiện một lần khi cùng bài có cả nguồn thi và bản đồng bộ Portal',()=>{
+ const native={testSlug:'mini-test-k56',completedAt:'2026-10-08T10:00:00Z',listening:{correct:6,total:10,analysis:{status:'available'}}};
+ const portal={testSlug:'mini-test-erp-56',completedAt:null,observedAt:'2026-10-30T10:00:00Z',listening:{correct:6,total:10}};
+ assert.deepEqual(studentTestRecords([portal,native]),[native]);assert.equal(latestSkillTest([native,portal],'listening'),native);
+ assert.equal(studentTestRecords([native,{...native,testSlug:'mini-test-2'}]).length,2);
+});

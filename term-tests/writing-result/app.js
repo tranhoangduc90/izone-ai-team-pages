@@ -1,5 +1,5 @@
 // Chỉ đọc bản kết quả đã công bố qua quyền Journey; không có token/nút/API tạo, sửa hoặc nộp lượt thi.
-import {stampProgressStudent,progressPinWasLoggedOut} from '../../progress-log/student-session-memory.js?rev=20261030-the20-v1';
+import {stampProgressStudent,progressPinWasLoggedOut} from '../../progress-log/student-session-memory.js?rev=20261030-the20-v2';
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const status=document.getElementById('resultStatus'),retry=document.getElementById('resultRetry'),root=document.getElementById('resultContent'),back=document.getElementById('resultBack');
 let controller=null,generation=0,loaded=null,loadedKey='';

@@ -1,9 +1,9 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
-import {renderSessionReview} from './session-review.js?rev=20261030-the20-v1';
+import {renderSessionReview} from './session-review.js?rev=20261030-the20-v2';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
 import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
-import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261030-the20-v1';
+import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261030-the20-v2';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
@@ -13,8 +13,8 @@ import {docsSourceTable} from './docs-source-table.js?rev=20261025-docs-import-v
 import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import {createStudentSessionDashboard} from './student-session-dashboard.js';
-import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v1';
-import {writingResultLink} from './student-test-results.js?rev=20261030-the20-v1';
+import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v2';
+import {writingResultLink} from './student-test-results.js?rev=20261030-the20-v2';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
 
@@ -27,7 +27,7 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261030-the20-v1'):null;
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261030-the20-v2'):null;
 if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./student-session-dashboard.css?rev=20261028-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL(path,import.meta.url);document.head.append(css);}}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;

@@ -1,5 +1,5 @@
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
-import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v1';
+import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v2';
 const config=window.PROGRESS_LOG_CONFIG,byId=id=>document.getElementById(id);
 const [status,identityView,home,classSelect,studentSelect,remember,enter,retry,logout]=['portalStatus','portalIdentity','portalHome','portalClass','portalStudent','portalRemember','portalContinue','portalRetry','portalLogout'].map(byId);
 const identity=createCourseStudentIdentity({product:'progress-log',entry:'portal',requestIdentity:input=>requestMappingStudentIdentity(input,config.API_BASE_URL)});
