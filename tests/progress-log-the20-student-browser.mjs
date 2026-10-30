@@ -63,7 +63,7 @@ test('Thẻ 20 Writing mở điểm 0 và Task 2 đầy đủ, chỉ đọc và 
  assert.deepEqual(errors,[]);if(out)await page.screenshot({path:out+'/writing-result.png',fullPage:true});
 });
 test('Thẻ 20 từ cổng vào Journey, xem bài, mở Writing và đăng xuất trở lại chọn lớp không tạo attempt',async()=>{
- const before=fixture.calls.length,{page,errors}=await pageFor('/progress-log/student.html');
+ const before=fixture.calls.length,{page,errors}=await pageFor('/progress-log/student.html',{width:390});
  await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();
  await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#portalHome:not([hidden])').waitFor();
  await page.getByRole('link',{name:'Hành trình của em',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
@@ -72,6 +72,7 @@ test('Thẻ 20 từ cổng vào Journey, xem bài, mở Writing và đăng xuấ
  assert.equal(await page.locator('#journeyDetailContent .reviewStudentName').count(),1);assert.ok(await page.locator('#journeyDetailBackButton').evaluate(e=>e.getBoundingClientRect().height>=44&&parseFloat(getComputedStyle(e).fontSize)>=16));await page.locator('#journeyDetailBackButton').click();
  await page.getByRole('link',{name:/Task 1 Term Test 1 điểm 0/u}).click();await page.locator('#resultContent:not([hidden])').waitFor();
  await page.getByRole('link',{name:'← Hành trình của em',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
+ assert.equal(await page.locator('#progressLogChangeStudent').evaluate(e=>{const r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===e;}),true);
  await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.waitForURL('**/progress-log/student.html');await page.locator('#portalIdentity:not([hidden])').waitFor();
  await page.goBack();await page.locator('#portalIdentity:not([hidden])').waitFor();assert.equal(await page.locator('#portalHome').isVisible(),false);
  assert.equal(fixture.calls.slice(before).some(c=>/attempts\/(start|submit)|checkpoints/u.test(c.path)),false);assert.deepEqual(errors,[]);

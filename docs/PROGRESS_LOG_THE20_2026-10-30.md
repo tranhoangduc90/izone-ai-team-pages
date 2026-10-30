@@ -32,3 +32,5 @@ API thật, API demo và Pages đã phát hành qua PR backend #122/#123 và fro
 Các lớp có phiếu Progress Log hiện chưa có kết quả Writing đủ điểm từng Task để kiểm trọn luồng bằng dữ liệu thật. Trang Writing và quyền truy cập đã kiểm SQL/HTTP + Chrome trên dữ liệu giả, đồng thời truy vấn chỉ đọc hai Task thật ở nguồn K67. Không tạo phiếu/lượt làm mới để lấp khoảng trống kiểm này.
 
 Kiểm mạng chậm: lịch vẫn giữ giới hạn 15 giây; sau khi lịch mở, pha đọc chi tiết nhiều buổi có tối đa 60 giây riêng và vẫn hủy khi đổi người/rời màn. Ca giả lập lịch 6 giây cùng ba lô chi tiết 4 giây/lô đã đạt.
+
+Kiểm mobile phát hiện backdrop-filter của topbar giữ thanh điều hướng fixed bên trong header, che nút Đăng xuất. Đã bỏ hiệu ứng này riêng mobile, giữ thanh điều hướng ở đáy viewport và kiểm điểm bấm trúng nút trước khi kiểm đăng xuất/quay lại.
