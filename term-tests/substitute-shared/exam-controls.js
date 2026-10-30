@@ -19,6 +19,16 @@
 
   function arrange() {
     frame = 0;
+    const active = Boolean(root.querySelector('#listeningView:not([hidden]),#readingView:not([hidden])'));
+    const workspace = active ? 'active' : 'inactive';
+    if (document.body.dataset.substituteWorkspace !== workspace) document.body.dataset.substituteWorkspace = workspace;
+    const topbar = root.querySelector('.topbar');
+    const logo = document.querySelector('.substitute-brandbar img');
+    if (topbar && logo && !topbar.querySelector('.substitute-exam-logo')) {
+      const copy = logo.cloneNode(true);
+      copy.classList.add('substitute-exam-logo');
+      topbar.prepend(copy);
+    }
     for (const skill of ['listening', 'reading']) {
       const form = document.getElementById(skill + 'View');
       if (!form) continue;

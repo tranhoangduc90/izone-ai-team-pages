@@ -43,10 +43,15 @@
   // Khi lỗi: dùng cấu hình mặc định; luồng lưu bài của shared/app.js không bị ảnh hưởng.
   function readUiState() {
     let stored = {};
-    for (const storage of window.SUBSTITUTE_STATE.storages()) {
+    // Không khôi phục vị trí/flags/audio của giao diện cũ khi người học bấm bắt đầu mới.
+    // Bài làm và deadline do app/metadata giữ riêng; reload cùng lượt vẫn khôi phục UI.
+    const stateStores = serverGradingMode && window.TERM_TEST_BOOTSTRAP?.startAtFirstSection ? [] : window.SUBSTITUTE_STATE.storages();
+    for (const storage of stateStores) {
       try {
         stored = JSON.parse(storage.getItem(uiStorageKey) || '{}');
-        if (Object.keys(stored).length && (!serverGradingMode || window.SUBSTITUTE_STATE.accept(stored))) break;
+        const sessionId = window.TERM_TEST_BOOTSTRAP?.examSessionId;
+        const sameSession = !serverGradingMode || !sessionId || stored._substitute?.examSessionId === sessionId;
+        if (Object.keys(stored).length && sameSession && (!serverGradingMode || window.SUBSTITUTE_STATE.accept(stored))) break;
         stored={};
       } catch {
         stored = {};
