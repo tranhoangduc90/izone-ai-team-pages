@@ -30,3 +30,5 @@ Các nhịp cập nhật không thay toàn bộ danh sách khi chỉ một nhậ
 API thật, API demo và Pages đã phát hành qua PR backend #122/#123 và frontend #375. Hai nguồn Test có role SELECT riêng, không có quyền ghi. So sánh bài, điểm và lượt làm trước/sau không có thay đổi. Đã sửa bộ chọn lớp để nhận cả nhãn khóa lịch sử/null; Mini K56 chỉ hiện một lần khi có cả nguồn thi và Portal. Bump toàn chuỗi cache của các module Thẻ 20.
 
 Các lớp có phiếu Progress Log hiện chưa có kết quả Writing đủ điểm từng Task để kiểm trọn luồng bằng dữ liệu thật. Trang Writing và quyền truy cập đã kiểm SQL/HTTP + Chrome trên dữ liệu giả, đồng thời truy vấn chỉ đọc hai Task thật ở nguồn K67. Không tạo phiếu/lượt làm mới để lấp khoảng trống kiểm này.
+
+Kiểm mạng chậm: lịch vẫn giữ giới hạn 15 giây; sau khi lịch mở, pha đọc chi tiết nhiều buổi có tối đa 60 giây riêng và vẫn hủy khi đổi người/rời màn. Ca giả lập lịch 6 giây cùng ba lô chi tiết 4 giây/lô đã đạt.

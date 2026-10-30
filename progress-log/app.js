@@ -1637,7 +1637,12 @@ async function openIntegratedJourney(returnView) {
     showView('journeyView');
     scheduleJourneyClock();
     setNotice('Hành trình của bạn đã được cập nhật.');
-    if(THUY_UI)await loadThuyStudentSkills(journey,{signal:controller.signal,current});
+    if(THUY_UI){
+      // Lịch đã mở xong; đọc nhiều bài chi tiết có thời hạn riêng, không dùng nốt 15 giây của lịch.
+      clearTimeout(timeout);const skillsTimeout=setTimeout(()=>controller.abort(),60_000);
+      try{await loadThuyStudentSkills(journey,{signal:controller.signal,current});}
+      finally{clearTimeout(skillsTimeout);}
+    }
   } catch (error) {
     if (!current()) return;
     const message = timedOut ? 'Kết nối mất nhiều thời gian. Bạn có thể thử lại.' : error.message;
