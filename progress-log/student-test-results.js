@@ -40,7 +40,9 @@ export function safeWritingResultUrl(value) {
 export function writingResultLink(result,task,identity){
   if(!/^term-test-[1-9]\d*$/u.test(result?.testSlug||'')||!/^[0-9a-f]{64}$/u.test(result?.resultRef||'')||![1,2].includes(task))return null;
   const params={test:result.testSlug,result:result.resultRef,task:String(task)};
-  if(identity?.accessToken)params.access=identity.accessToken;
+  if(identity?.teacherClassId&&/^[1-9]\d{0,18}$/u.test(String(identity.teacherClassId))&&/^[0-9a-f-]{36}$/iu.test(identity.studentRef||'')){
+    params.teacherClass=String(identity.teacherClassId);params.student=identity.studentRef;
+  }else if(identity?.accessToken)params.access=identity.accessToken;
   else if(/^[0-9a-f-]{36}$/iu.test(identity?.publicToken||'')&&/^[0-9a-f-]{36}$/iu.test(identity?.studentRef||'')){
     params.assignment=identity.publicToken;params.student=identity.studentRef;
   }else return null;

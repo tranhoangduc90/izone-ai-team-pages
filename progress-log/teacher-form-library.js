@@ -2,9 +2,15 @@
 import {bindDialogDismiss,node} from './session-comments.js';
 import {reviewContent} from './docs-import-review.js?rev=20261025-docs-import-v1';
 import {mountWorksheetFrame} from './worksheet-preview.js?rev=20261030-multi-limit-v1';
-import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261028-the15-v1';
+import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261030-the22-23-v1';
 const button=(label,action)=>{const b=node('button',label,'button');b.type='button';b.addEventListener('click',action);return b;};
 const fold=s=>String(s||'').normalize('NFD').replace(/\p{M}/gu,'').replace(/đ/giu,'d').toLocaleLowerCase('vi');
+export function currentLibraryRows(entries,drafts,used){
+  const values=new Map(),key=e=>e.source+':'+(e.source==='used'?e.id:e.worksheetId||e.sourceDraftId||e.id);
+  for(const entry of entries)if(!values.has(key(entry)))values.set(key(entry),entry);
+  for(const entry of [...drafts,...used])values.set(key(entry),entry);
+  return [...values.values()];
+}
 export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDraft=()=>{},onCopyUsed=()=>{},onAssign=()=>{},onRefresh=()=>{},getClassContext=()=>({}),onManagementChanged=()=>{}}){
   let scope='izone',generation=0,lifecycle=0,entries=[],used=[],drafts=[],publicationRows=[],publications=new Map(),listSignature='';
   const dialogs=new Set(),managers=new Set();
@@ -14,10 +20,10 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
   search.type='search';search.placeholder='Tìm tên bài tập';search.setAttribute('aria-label','Tìm bài tập');status.setAttribute('role','status');nav.setAttribute('role','tablist');nav.setAttribute('aria-label','Nguồn bài tập');
   const tabs=new Map(),sourceName=s=>({izone:'Kho chung',personal:'Kho cá nhân',used:'Phiếu đã giao'})[s];
   const matchedPublication=entry=>{const value=publications.get(entry.sourceDraftId||entry.draft?.id);return value&&value.revision===(entry.sourceRevision||entry.draft?.revision)?value:publicationRows.find(p=>p.libraryEntryId===entry.id||p.assignmentId===entry.id||entry.source==='used'&&entry.definition&&p.formVersionId===entry.definition.formVersionId)||entry.publication;};
-  const all=()=>[...entries,...drafts,...used].map(entry=>({...entry,publication:matchedPublication(entry)}));
+  const all=()=>currentLibraryRows(entries,drafts,used).map(entry=>({...entry,publication:matchedPublication(entry)}));
   const historyTools=node('div','','thuy-library-history');
   const publicationNotice=node('p','','notice thuy-publication-notice');publicationNotice.setAttribute('role','status');publicationNotice.hidden=true;let highlighted=null;
-  const historyManagement=mountAssignmentManagement({host:historyTools,getContext:getClassContext,request,onChanged:onManagementChanged});for(const [index,control]of [...historyTools.children].entries())control.hidden=index<2;
+  const historyManagement=mountAssignmentManagement({host:historyTools,getContext:getClassContext,request,onChanged:onManagementChanged,showHistory:false});for(const control of historyTools.children)control.hidden=true;
   managers.add(historyManagement);
   function paint(){
     historyTools.hidden=scope!=='used';historyManagement.refresh();
@@ -33,13 +39,13 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       const row=node('tr'),name=node('td'),open=button(entry.title,()=>void preview(entry));row.tabIndex=0;row.dataset.entryId=entry.id;row.classList.toggle('thuy-library-published',entry.id===highlighted);row.setAttribute('aria-label','Xem '+entry.title);open.className='thuy-library-name';
       name.append(open,node('small',entry.meta||`${entry.itemCount||0} câu`));const actions=node('td');
       if(entry.source!=='used'){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');actions.append(assign);}
-      row.append(name,node('td',sourceName(entry.source)),actions);
+      row.append(name,node('td',entry.source==='used'?sourceName(entry.assignment.origin_scope)||'Chưa xác định nguồn':sourceName(entry.source)),actions);
       row.addEventListener('click',event=>{if(!event.target.closest('button,a')&&!getSelection()?.toString())void preview(entry);});
       row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();void preview(entry);}});body.append(row);
     }wrap.append(table);list.append(wrap);
   }
   async function load(){const run=++generation;status.textContent='Đang đọc kho…';
-    try{const replies=await Promise.all(['izone','personal'].map(source=>request('/teacher/form-library?scope='+source).then(reply=>(reply.entries||[]).map(entry=>({...entry,source})))));if(run!==generation)return false;entries=replies.flat();paint();return true;}
+    try{const replies=await Promise.all(['izone','personal'].map(source=>request('/teacher/form-library?scope='+source).then(reply=>(reply.entries||[]).map(entry=>({...entry,source,...(source==='personal'&&entry.editableDraftId?{id:entry.editableDraftId,sourceDraftId:entry.editableDraftId,sourceRevision:entry.editableDraftRevision,draft:{id:entry.editableDraftId,revision:entry.editableDraftRevision,status:entry.editableDraftStatus}}:{})})))));if(run!==generation)return false;entries=replies.flat();paint();return true;}
     catch(error){if(run===generation){status.textContent='Chưa đọc được kho: '+error.message;const retry=button('Thử đọc lại kho',()=>void load());list.replaceChildren(retry);}return false;}
   }
   async function readEntry(entry){
@@ -78,7 +84,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       const full=await readEntry(entry);if(run!==lifecycle||!dialog.open)return;
       if(entry.source==='used'){
         const host=node('div','','thuy-assignment-actions');body.append(host);
-        const a=entry.assignment;const management=mountAssignmentManagement({host,getContext:()=>({assignmentId:entry.id,classId:String(a.class_id),className:a.class_name,sessionNumber:Number(a.session_number),title:entry.title}),request,onChanged:onManagementChanged});managers.add(management);management.refresh();
+        const a=entry.assignment;const management=mountAssignmentManagement({host,getContext:()=>({assignmentId:entry.id,classId:String(a.class_id),className:a.class_name,sessionNumber:Number(a.session_number),title:entry.title}),request,onChanged:onManagementChanged,showHistory:false});managers.add(management);management.refresh();
       }
       const reply=await request(entry.draft?'/teacher/form-drafts/'+entry.id+'/preview-grant':entry.source==='used'?'/teacher/demo-grants':'/teacher/form-library/'+entry.id+'/preview-grant',
         {method:'POST',body:entry.draft?{expectedRevision:full.detail.revision}:entry.source==='used'?{assignmentId:entry.id}:{}});
@@ -93,5 +99,5 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     publicationNotice.textContent=error?'Đã xuất bản thành công. Chưa cập nhật đủ danh sách kho: '+error:published?'Đã xuất bản thành công. Phiếu mới được đánh dấu trong Kho cá nhân.':'Đã xuất bản. Đang cập nhật Kho cá nhân…';
     if(retry)publicationNotice.append(button('Tải lại danh sách',async()=>{try{await retry();}catch(e){publicationNotice.firstChild.textContent='Đã xuất bản. Chưa tải lại được: '+e.message;}}));
     requestAnimationFrame(()=>{list.querySelector('[data-entry-id="'+CSS.escape(id)+'"]')?.scrollIntoView({block:'center'});});
-  },setPublications(rows){publicationRows=rows;publications=new Map(rows.filter(row=>row.draftId).map(row=>[row.draftId,row]));paint();},setUsed(assignments){used=assignments.map(a=>({id:a.assignment_id,title:a.title,source:'used',meta:a.class_name+' · Buổi '+a.session_number,assignment:a}));paint();},setDrafts(rows){drafts=rows.map(d=>({id:d.id,title:d.definition?.title||d.title||'Phiếu chưa đặt tên',source:'personal',draft:d,sourceDraftId:d.id,definition:d.definition,meta:'Buổi '+d.sessionNumber+' · Bản '+d.revision+' · '+({draft:'Nháp',pending_review:'Chờ duyệt',approved:'Đã duyệt',published:'Đã xuất bản'}[d.status]||d.status)}));paint();},clear(){generation++;lifecycle++;publicationNotice.hidden=true;highlighted=null;for(const dialog of dialogs){dialog.close();dialog.remove();}dialogs.clear();for(const manager of managers)manager.dispose?.();managers.clear();managers.add(historyManagement);entries=[];used=[];drafts=[];publicationRows=[];publications.clear();sourceOperations.clear();listSignature='';list.replaceChildren();status.textContent='Đăng nhập để mở kho bài.';}};
+  },setPublications(rows){publicationRows=rows;publications=new Map(rows.filter(row=>row.draftId).map(row=>[row.draftId,row]));paint();},setUsed(assignments){used=assignments.map(a=>({id:a.assignment_id,title:a.title,source:'used',meta:a.class_name+' · Buổi '+a.session_number,assignment:a}));paint();},setDrafts(rows){drafts=rows.map(d=>({id:d.id,title:d.definition?.title||d.title||'Phiếu chưa đặt tên',source:'personal',draft:d,sourceDraftId:d.id,worksheetId:d.worksheetId,definition:d.definition,meta:'Buổi '+d.sessionNumber+' · Bản '+d.revision+' · '+({draft:'Nháp',pending_review:'Chờ duyệt',approved:'Đã duyệt',published:'Đã xuất bản'}[d.status]||d.status)}));paint();},clear(){generation++;lifecycle++;publicationNotice.hidden=true;highlighted=null;for(const dialog of dialogs){dialog.close();dialog.remove();}dialogs.clear();for(const manager of managers)manager.dispose?.();managers.clear();managers.add(historyManagement);entries=[];used=[];drafts=[];publicationRows=[];publications.clear();sourceOperations.clear();listSignature='';list.replaceChildren();status.textContent='Đăng nhập để mở kho bài.';}};
 }

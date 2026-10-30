@@ -14,7 +14,7 @@ import {questionPresentation,buildKeywordGroup} from './thuy-live/question-prese
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import {createStudentSessionDashboard} from './student-session-dashboard.js';
 import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v2';
-import {writingResultLink} from './student-test-results.js?rev=20261030-the20-v2';
+import {writingResultLink} from './student-test-results.js?rev=20261030-the22-23-v1';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
 
@@ -27,7 +27,7 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261030-the20-v2'):null;
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261030-the22-23-v1'):null;
 if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./student-session-dashboard.css?rev=20261028-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL(path,import.meta.url);document.head.append(css);}}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;

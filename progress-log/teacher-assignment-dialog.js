@@ -5,7 +5,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
   const pending=new Map();let lifecycle=0;
   return {open(entry){
     if(!entry.publication?.id&&!entry.draft?.id)throw Error('Chưa xác định được phiếu cần giao.');
-    const viewKey=entry.publication?.id||'draft:'+entry.id+':'+entry.detail.revision;
+    const viewKey=entry.source+':'+entry.id+':'+(entry.publication?.id||'draft:'+entry.detail.revision);
     const run=lifecycle;let view=pending.get(viewKey);
     if(!view){
       const dialog=node('dialog','','thuy-management-dialog thuy-assignment-dialog'),head=node('header','','thuy-management-head');
@@ -55,7 +55,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
             const {draft}=await request('/teacher/form-drafts/'+entry.id);
             if(run!==lifecycle)return;
             if(draft.id!==entry.id||draft.revision!==entry.detail.revision||draft.contentHash!==entry.detail.contentHash)throw Error('Phiếu đã được chỉnh sửa. Đóng cửa sổ và mở lại Giao bài để dùng đúng bản mới.');
-            if(draft.status!=='approved')await request('/teacher/form-drafts/'+entry.id+'/approve',{method:'POST',body:{expectedRevision:draft.revision,expectedHash:draft.contentHash}});
+            if(draft.status!=='approved')await request('/teacher/form-drafts/'+entry.id+'/approve',{method:'POST',body:{expectedRevision:draft.revision,expectedHash:draft.contentHash,libraryOnly:true}});
             if(run!==lifecycle)return;
             const prepared=await request('/teacher/form-drafts/'+entry.id+'/publish-library',{method:'POST',body:{expectedRevision:draft.revision,operationId:publicationOperationId}});
             if(run!==lifecycle)return;
@@ -63,7 +63,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
             if(!p?.id||p.draftId!==entry.id||p.revision!==draft.revision||p.formVersionId!==draft.definition.formVersionId)throw Error('Phiên bản chuẩn bị giao chưa khớp phiếu; chưa giao cho lớp.');
             entry.publication=p;
           }
-          const reply=await request('/teacher/form-publications/'+entry.publication.id+'/assign',{method:'POST',body:{operationId,targets:choices}});
+          const reply=await request('/teacher/form-publications/'+entry.publication.id+'/assign',{method:'POST',body:{operationId,targets:choices,origin:{source:entry.draft?'draft':'library',id:entry.id}}});
           if(run!==lifecycle)return;
           const results=reply.delivery?.results;if(!Array.isArray(results)||results.length!==choices.length)throw Error('Kết quả chưa đủ các đích vừa giao. Thử lại dùng cùng mã thao tác.');
           const key=value=>String(value.classId)+':'+value.sessionNumber,byTarget=new Map(results.map(result=>[key(result),result]));
