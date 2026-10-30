@@ -600,7 +600,11 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   }
   async function requestAiImport(id,text,revision){
     try{return await request('/teacher/form-drafts/'+id+'/ai-import-preview',{method:'POST',body:{text,expectedRevision:revision},timeoutMs:300000});}
-    catch(error){if(error.name==='AbortError'||error.name==='TimeoutError')throw Error('Đã hết thời gian chờ AI. Nội dung nguồn và nháp được giữ nguyên; bạn có thể thử lại hoặc chia nội dung thành lượt nhỏ.');throw error;}
+    catch(error){
+      if(error.name==='AbortError'||error.name==='TimeoutError')throw Error('Đã hết thời gian chờ AI. Nội dung nguồn và nháp được giữ nguyên; bạn có thể thử lại hoặc chia nội dung thành lượt nhỏ.');
+      if(error.name==='TypeError')throw Error('Không kết nối được máy chủ. Nội dung nguồn và nháp được giữ nguyên; hãy kiểm tra kết nối mạng rồi bấm Tạo bài để thử lại.');
+      throw error;
+    }
   }
   function paintImport({aiOnly=false}={}) {
     if(aiOnly){paintAiImport();return;}
