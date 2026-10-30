@@ -2,7 +2,7 @@
 import {bindDialogDismiss,node} from './session-comments.js';
 export function mountWorksheetFrame(host,{grant,title}){
   const frame=node('iframe');frame.title='Xem trước như học viên · '+title;frame.className='thuy-library-preview';
-  const url=new URL('./demo/thuy.html',import.meta.url);url.searchParams.set('view','worksheet');url.hash=new URLSearchParams({grant});
+  const url=new URL('./demo/thuy.html',import.meta.url);url.searchParams.set('rev','20261030-multi-limit-v1');url.searchParams.set('view','worksheet');url.hash=new URLSearchParams({grant});
   frame.src=url.href;host.append(frame);return frame;
 }
 export function openWorksheetPreview({title,prepare,current=()=>true}){
