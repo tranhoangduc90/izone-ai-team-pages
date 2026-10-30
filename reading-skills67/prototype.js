@@ -94,7 +94,7 @@ function render(){
   document.querySelectorAll('textarea[data-target]').forEach(autoGrow);
   requestAnimationFrame(()=>window.ReadingAnnotations?.install());
 }
-function autoGrow(input){input.style.height='auto';input.style.height=Math.max(80,input.scrollHeight+2)+'px';}
+function autoGrow(input){input.style.height='auto';input.style.height=Math.max(input.dataset.compactField==='true'?44:80,input.scrollHeight+2)+'px';}
 function updateProgress(){
   if(!content||!state)return;
   const count=completed();

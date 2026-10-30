@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {serveDirectory} from './fixtures/static-ui-server.mjs';
-const root=path.resolve(fileURLToPath(new URL('../',import.meta.url))),dir=process.env.READING_SENTENCE_PRIVATE_DIR,out=dir+'/ui';
+const root=path.resolve(fileURLToPath(new URL('../',import.meta.url))),dir=process.env.READING_SENTENCE_PRIVATE_DIR,out=process.env.READING_SENTENCE_UI_OUT||dir+'/ui';
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE));
 const content=JSON.parse(await fs.readFile(dir+'/content.private.json','utf8'));
 await fs.mkdir(out,{recursive:true});
@@ -25,6 +25,18 @@ try{
    const facts=await page.evaluate(()=>({title:document.querySelector('h1')?.textContent,fields:document.querySelectorAll('[data-target]').length,questions:[...document.querySelectorAll('.question-block')].map(q=>Number(q.dataset.questionNumber)),paragraphs:document.querySelectorAll('.passage-block').length,compression:document.querySelectorAll('.sentence-compression [data-target]').length,banks:document.querySelectorAll('.cbt-option-bank,.headings-bank').length,overflow:document.documentElement.scrollWidth>innerWidth,passageFont:parseFloat(getComputedStyle(document.querySelector('.passage-text')).fontSize),inputFont:parseFloat(getComputedStyle(document.querySelector('.sentence-question input')).fontSize),readonly:[...document.querySelectorAll('[data-target]')].every(e=>e.tagName==='SELECT'?e.disabled:e.readOnly)}));
    assert.equal(facts.title,'Athletes and stress');assert.equal(facts.fields,29);assert.deepEqual(facts.questions,[19,20,21,22]);assert.equal(facts.paragraphs,6);assert.equal(facts.compression,4);assert.equal(facts.banks,0);assert.equal(facts.overflow,false);assert.equal(facts.passageFont,18);assert.equal(facts.inputFont,18);assert.equal(facts.readonly,scenario!=='draft');
    if(width<=800||height<500)await page.locator('#tab-questions').click();
+   for(const q of content.questions){
+    const question=page.locator('#question-'+q.number),answer=question.locator('.question-text [data-target="'+q.targets.answer+'"]');
+    assert.equal(await answer.count(),1,'Sentence Completion phải có ô đáp án ngay tại chỗ trống trong câu '+q.number);
+    assert.ok((await answer.boundingBox()).width<=205.1,'Ô đáp án phải gọn như mẫu R3');
+    assert.ok((await question.locator('.sentence-completion-slot').boundingBox()).width<=273,'Số/ô/cờ phải gọn trong dòng câu, không chiếm một hàng riêng');
+    assert.equal(await question.locator('.cbt-blank-number').count(),1,'Chỉ một số câu ở chỗ trống');
+    assert.equal(await question.locator('.sentence-completion-slot [data-flag="'+q.number+'"]').count(),1,'Cờ đứng cạnh ô nhập');
+    const groups=question.locator('.sentence-keyword-group');assert.equal(await groups.count(),2);
+    for(const id of [q.targets.leader,q.targets.location,q.targets.leader_evidence])assert.equal(await groups.nth(0).locator('[data-target="'+id+'"]').count(),1,'Các mục keyword chính phải ở cùng cụm');
+    for(const id of [q.targets.supporter,q.targets.supporter_evidence])assert.equal(await groups.nth(1).locator('[data-target="'+id+'"]').count(),1,'Các mục keyword phụ phải ở cùng cụm');
+    const source=await question.locator('.question-text').evaluate(root=>{const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('button,input,select,textarea,.cbt-blank-number,.cbt-question-number')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});let value='';while(walker.nextNode())value+=walker.currentNode.textContent;return value;});assert.equal(source,q.text,'Giữ nguyên offset/quote của Highlight/Note đã lưu');
+   }
    const frame=await page.locator('.sentence-question').first().evaluate(el=>{const s=getComputedStyle(el);return {left:s.borderLeftWidth,top:s.borderTopWidth,bottom:s.borderBottomWidth,radius:s.borderRadius};});assert.deepEqual(frame,{left:'0px',top:'0px',bottom:'1px',radius:'0px'});
    await page.screenshot({path:out+'/questions-'+scenario+'-'+width+'.png'});
    if(scenario==='draft'){
@@ -33,6 +45,7 @@ try{
     await page.locator('[data-font="10"]').click();assert.ok(Math.abs(await input.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))-19.8)<.01);await page.locator('[data-font="-10"]').click();
     await input.fill('n/a');assert.match(await page.locator('#progress-label').innerText(),/27\/28/);
     await input.fill('studentword');await page.waitForFunction(()=>window.__lastSaved?.answers['l6.sc.q19.answer']==='studentword');
+    const keyword=page.locator('[data-target="l6.sc.q19.leader"]'),oldKeyword=await keyword.inputValue();await keyword.fill('');assert.ok((await keyword.boundingBox()).height<60,'Keyword ngắn không bị ép textarea cao 80px');await keyword.fill(oldKeyword);
     await page.locator('[data-target="l6.sc.q19.location"]').selectOption('F');assert.equal(await page.evaluate(()=>window.__lastSaved.answers['l6.sc.q19.location']),'F');
     await page.locator('[data-flag="19"]').click();assert.equal(await page.locator('[data-flag="19"]').getAttribute('aria-pressed'),'true');
     await page.reload();await page.waitForSelector('[data-target]',{state:'attached'});if(width<=800||height<500)await page.locator('#tab-questions').click();assert.equal(await input.inputValue(),'studentword');assert.equal(await page.locator('[data-target="l6.sc.q19.location"]').inputValue(),'F');
@@ -44,8 +57,9 @@ try{
    }
    if(scenario==='waiting'){
     await page.locator('[data-question="22"]').click();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-    await page.evaluate(()=>{const node=document.querySelector('#question-22'),pane=document.querySelector('#scroll-questions');window.__kept={node,pane,scroll:pane.scrollTop,y:scrollY};window.__pulseStart=window.__polls;});await page.waitForFunction(()=>window.__polls>=window.__pulseStart+3);
+    await page.evaluate(()=>{const node=document.querySelector('#question-22'),pane=document.querySelector('#scroll-questions'),input=node.querySelector('input');input.focus({preventScroll:true});input.setSelectionRange(0,3);window.__kept={node,pane,input,scroll:pane.scrollTop,y:scrollY};window.__pulseStart=window.__polls;});await page.waitForFunction(()=>window.__polls>=window.__pulseStart+3);
     assert.equal(await page.evaluate(()=>window.__kept.node===document.querySelector('#question-22')&&Math.abs(window.__kept.pane.scrollTop-window.__kept.scroll)<2&&Math.abs(scrollY-window.__kept.y)<2),true);
+    assert.equal(await page.evaluate(()=>document.activeElement===window.__kept.input&&window.__kept.input.selectionStart===0&&window.__kept.input.selectionEnd===3),true,'Ba nhịp nền giữ focus và vùng chọn trong ô inline');
     await page.evaluate(()=>window.__changeStatus('processing'));assert.equal(await page.evaluate(()=>window.__kept.node===document.querySelector('#question-22')),true);
     await page.evaluate(()=>window.__changeStatus('done'));await page.waitForSelector('.result-note');
    }

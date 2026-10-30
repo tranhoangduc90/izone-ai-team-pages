@@ -19,6 +19,26 @@ body[data-izone-design='master170@1.1'][data-izone-consumer='reading-homework'].
 .sentence-homework .sentence-summary p{font-size:14px}
 .sentence-homework .learner{white-space:normal;overflow-wrap:anywhere}
 .sentence-homework .question-instruction{font-size:calc(18px * var(--reading-scale,1));line-height:1.65}
+.sentence-homework .sentence-answer{margin:0}
+.sentence-homework .sentence-answer .question-text{display:block;font-size:calc(18px * var(--reading-scale,1));font-weight:400;line-height:1.9;margin:0;overflow:visible}
+.sentence-homework .sentence-blank-source{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.sentence-homework .sentence-completion-slot{display:inline-flex;align-items:center;gap:6px;width:auto;max-width:100%;margin:2px 3px;vertical-align:middle}
+.sentence-homework .sentence-completion-slot .cbt-inline-answer{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;margin:0}
+.sentence-homework .sentence-completion-slot [data-answer-slot]{display:inline-flex;width:clamp(120px,18vw,205px);min-width:0;max-width:205px}
+.sentence-homework .sentence-completion-slot .cbt-blank-number{flex:none;min-width:28px;width:28px;height:28px;margin:0;font-size:13px;border-radius:50%}
+.sentence-homework .sentence-answer .cbt-answer-input{min-width:0;width:100%;min-height:44px;padding:7px 9px;line-height:normal;font-weight:600;border:1px solid #939eae;border-radius:6px}
+.sentence-homework .sentence-completion-slot .flag-button{flex:none;width:28px;height:28px;min-height:28px!important;border:1px solid #d1d9e4;border-radius:6px;background:#eef2f6;font-size:14px}
+.sentence-homework .sentence-completion-slot .flag-button[aria-pressed=true]{color:#7b5100;background:#ffedb8;border-color:#e2b84e}
+.sentence-homework .sentence-answer-status{display:flex;justify-content:flex-end;margin-top:4px;min-height:16px}
+.sentence-homework .sentence-keyword-group{container-type:inline-size;margin-top:16px;min-width:0}
+.sentence-homework .sentence-keyword-group+.sentence-keyword-group{padding-top:14px;border-top:1px solid #edf1f5}
+.sentence-homework .sentence-keyword-group h3{color:#174265;font-size:16px;line-height:1.5;margin:0 0 8px}
+.sentence-homework .sentence-keyword-main{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:12px;align-items:start}
+.sentence-homework .sentence-keyword-group :is(.answer-field,.selection-field){min-width:0;margin:0 0 10px}
+.sentence-homework .sentence-keyword-group :is(.answer-field,.selection-field)>label{margin-bottom:5px;font-size:15px;font-weight:600;gap:8px}
+.sentence-homework .sentence-keyword-group :is(textarea,select){min-height:44px;padding:7px 9px;line-height:1.5}
+.sentence-homework .sentence-keyword-group .answer-field:last-child{margin-bottom:0}
+@container(max-width:380px){.sentence-homework .sentence-keyword-main{grid-template-columns:minmax(0,1fr);gap:0}}
 @media(max-width:800px),(max-width:1000px) and (max-height:500px){
  .sentence-homework .sentence-question{padding-block:22px}
  .sentence-homework .sentence-method{padding:12px}
