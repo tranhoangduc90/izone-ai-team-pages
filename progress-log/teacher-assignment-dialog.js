@@ -4,8 +4,9 @@ const button=(label,action)=>{const b=node('button',label,'button');b.type='butt
 export function createAssignmentDialog({request,getClasses,getPreferredClass,onAssigned=()=>{}}){
   const pending=new Map();let lifecycle=0;
   return {open(entry){
-    if(!entry.publication?.id)throw Error('Xuất bản phiếu vào kho trước khi giao bài.');
-    const run=lifecycle;let view=pending.get(entry.publication.id);
+    if(!entry.publication?.id&&!entry.draft?.id)throw Error('Chưa xác định được phiếu cần giao.');
+    const viewKey=entry.publication?.id||'draft:'+entry.id+':'+entry.detail.revision;
+    const run=lifecycle;let view=pending.get(viewKey);
     if(!view){
       const dialog=node('dialog','','thuy-management-dialog thuy-assignment-dialog'),head=node('header','','thuy-management-head');
       const close=button('Đóng',()=>dialog.close());head.append(node('h2','Giao bài tập'),close);
@@ -14,7 +15,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
       const targets=node('div','','thuy-assignment-targets'),status=node('p','','notice');status.setAttribute('role','status');
       const footer=node('footer','','thuy-assignment-footer'),back=button('Quay lại bài tập',()=>dialog.close()),submit=button('Giao bài',()=>void assign()),add=button('+ Thêm lớp nhận bài tập',()=>addTarget());submit.classList.add('primary');
       body.append(summary,targets,add);footer.append(status,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
-      const rows=[],operationId=crypto.randomUUID();let busy=false,opener=null;
+      const rows=[],operationId=crypto.randomUUID(),publicationOperationId=crypto.randomUUID();let busy=false,opener=null;
       function syncSubmit(){submit.disabled=busy||rows.every(row=>row.done);submit.textContent=busy?'Đang giao…':rows.every(row=>row.done)?'Đã giao':'Giao bài';}
       async function addTarget(preferred=getPreferredClass()){
         const row=node('div','','thuy-assignment-target'),classLabel=node('label','Chọn lớp'),sessionLabel=node('label','Chọn buổi học'),classes=node('select'),sessions=node('select'),message=node('small');
@@ -50,6 +51,18 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
         syncSubmit();dialog.setAttribute('aria-busy','true');
         status.textContent='Đang giao và đối chiếu từng lớp…';
         try{
+          if(!entry.publication){
+            const {draft}=await request('/teacher/form-drafts/'+entry.id);
+            if(run!==lifecycle)return;
+            if(draft.id!==entry.id||draft.revision!==entry.detail.revision||draft.contentHash!==entry.detail.contentHash)throw Error('Phiếu đã được chỉnh sửa. Đóng cửa sổ và mở lại Giao bài để dùng đúng bản mới.');
+            if(draft.status!=='approved')await request('/teacher/form-drafts/'+entry.id+'/approve',{method:'POST',body:{expectedRevision:draft.revision,expectedHash:draft.contentHash}});
+            if(run!==lifecycle)return;
+            const prepared=await request('/teacher/form-drafts/'+entry.id+'/publish-library',{method:'POST',body:{expectedRevision:draft.revision,operationId:publicationOperationId}});
+            if(run!==lifecycle)return;
+            const p=prepared.publication;
+            if(!p?.id||p.draftId!==entry.id||p.revision!==draft.revision||p.formVersionId!==draft.definition.formVersionId)throw Error('Phiên bản chuẩn bị giao chưa khớp phiếu; chưa giao cho lớp.');
+            entry.publication=p;
+          }
           const reply=await request('/teacher/form-publications/'+entry.publication.id+'/assign',{method:'POST',body:{operationId,targets:choices}});
           if(run!==lifecycle)return;
           const results=reply.delivery?.results;if(!Array.isArray(results)||results.length!==choices.length)throw Error('Kết quả chưa đủ các đích vừa giao. Thử lại dùng cùng mã thao tác.');
@@ -69,7 +82,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
       }
       dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
       dialog.addEventListener('close',()=>{dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});});
-      view={dialog,show(){opener=document.activeElement;document.body.append(dialog);dialog.showModal();}};pending.set(entry.publication.id,view);void addTarget();
+      view={dialog,show(){if(dialog.open)return;opener=document.activeElement;document.body.append(dialog);dialog.showModal();}};pending.set(viewKey,view);void addTarget();
     }
     view.show();
   },clear(){lifecycle++;for(const view of pending.values()){view.dialog.close();view.dialog.remove();}pending.clear();}};

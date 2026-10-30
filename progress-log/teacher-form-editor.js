@@ -1,16 +1,16 @@
 /* Nhận lớp, phiếu nguồn và API của phiên giảng viên. Soạn đúng 8 dạng đang dùng,
  * lưu nháp ở máy chủ, đối chiếu khi xung đột, xem thử tách biệt rồi duyệt/phát hành.
  * Đáp án chỉ giữ trong bộ nhớ tab; lỗi mạng giữ phần đang soạn và không báo đã lưu. */
-import {createFormLibrary} from './teacher-form-library.js?rev=20261030-multi-limit-v1';
+import {createFormLibrary} from './teacher-form-library.js?rev=20261030-personal-assign-v1';
 import {bindDialogDismiss} from './session-comments.js';
-import {openWorksheetPreview} from './worksheet-preview.js?rev=20261030-multi-limit-v1';
+import {openWorksheetPreview} from './worksheet-preview.js?rev=20261030-personal-assign-v1';
 import {importReviewCard} from './docs-import-review.js?rev=20261025-docs-import-v1';
 import {createDocsBatchImporter} from './docs-batch-import.js?rev=20261029-authoring-actions-v2';
 import {PART_TYPES,PART_SKILLS,selectedLimit,preparePartItem,missingSkills} from './authoring-parts.js?rev=20261028-the15-v1';
 import {editorItemKind} from './item-kind.js?rev=20261028-the15-v1';
 import {changeQuestionKind,incompleteAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
 import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261029-authoring-actions-v2';
-import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261030-the17-19-v1';
+import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261030-personal-assign-v1';
 import {authoringAction} from './authoring-action.js?rev=20261029-authoring-actions-v2';
 export const EDITOR_TYPES=[['reflection','Câu trả lời mở'],['mcq','Chọn một phương án'],
   ['multi','Chọn nhiều đáp án'],['matching','Nối cặp'],['short_answer','Điền từ — đáp án chấp nhận'],
