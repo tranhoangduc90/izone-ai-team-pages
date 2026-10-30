@@ -52,7 +52,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261030-ui-trim-v2');
+  await import('../app.js?rev=20261030-multi-limit-v1');
 }
 
 boot().catch(error => {
