@@ -26,6 +26,7 @@ function harness(n, fail = false) {
   ctx.document.addEventListener=()=>{};
   ctx.Event=Event;ctx.crypto={randomUUID:()=> 'fixture-reset-signal'};
   ctx.window.dispatchEvent=()=>{};
+  ctx.window.localStorage=ctx.localStorage;ctx.window.sessionStorage=ctx.sessionStorage;
   ctx.document.getElementById=id=>id==='app'?root:null;
   vm.runInNewContext(read('term-tests/substitute-shared/state.js'),ctx);
   if(helper)vm.runInNewContext(helper,ctx);

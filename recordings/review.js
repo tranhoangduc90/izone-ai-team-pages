@@ -3,7 +3,7 @@ const recordingReviewPending=new Map();
 function recordingReviewTarget(row){
  const snapshot=nightlyState.snapshot;
  const source=snapshot?.records?.find(r=>r.kind==='recording'&&(r.id===row.id||(r.source===row.source&&r.recordingFileId&&r.recordingFileId===row.recordingFileId)));
- return {row,source:source||row,date:source?snapshot.date:localDate(row.recordingStart)};
+ return {row,source:source||row,date:source?(source._snapshotDate||snapshot.date):localDate(row.recordingStart)};
 }
 async function readRecordingReviews(rows){
  if(!window.recordingAuth?.isAuthenticated())return [];

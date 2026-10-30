@@ -78,15 +78,16 @@ test('Live: 14 → 15 bài cập nhật trong panel, giữ nháp/câu chọn; L�
     await f.page.goto(f.origin+'/progress-log/teacher-thuy.html#assignment='+assignmentId);
     await f.page.locator('.thuy-roster tbody tr').first().waitFor();
     await f.page.locator('[data-thuy-mode=results]').click();
-    await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('14/17'),'Baseline 14/17 chưa tải');
+    await until(async()=>(await f.page.locator('#questionAnalytics').textContent()).includes('2/14 sai'),'Baseline 2/14 sai chưa tải');
     await f.page.locator('.thuy-question-select').nth(1).click();
+    await f.page.getByRole('tab',{name:'Nhận xét cá nhân',exact:true}).click();
     await f.page.locator(`[data-student="${uid(100)}"]`).click();
     const draft=f.page.locator('#draftDialog .session-comment-editor textarea');await draft.fill('Nháp giáo viên đang viết');
     f.advance(15);
-    await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('15/17'),'Thống kê vẫn cũ sau khi máy chủ nhận bài mới',2500);
+    await until(async()=>(await f.page.locator('#questionAnalytics').textContent()).includes('2/15 sai'),'Thống kê vẫn cũ sau khi máy chủ nhận bài mới',2500);
     assert.equal(await draft.inputValue(),'Nháp giáo viên đang viết');assert.equal(await draft.evaluate(e=>document.activeElement===e),true);
     assert.match(await f.page.locator('#draftAnswers').innerText(),/Bản mới 15/);
-    assert.match(await f.page.locator('.thuy-question-detail').innerText(),/Điều em đã học/);
+    assert.match(await f.page.locator('.thuy-question-detail').textContent(),/Điều em đã học/);
     await f.page.locator('#refreshDashboardButton').click();
     assert.equal(await f.page.locator('#draftDialog').isVisible(),true);
     assert.equal(await draft.inputValue(),'Nháp giáo viên đang viết');
@@ -94,36 +95,38 @@ test('Live: 14 → 15 bài cập nhật trong panel, giữ nháp/câu chọn; L�
     const rect=await f.page.locator('#refreshDashboardButton').boundingBox();assert.ok(rect.y>=0&&rect.y+rect.height<=60,'Nút phải giữ ở header');
     f.fail(true);await f.page.locator('#refreshDashboardButton').click();
     await until(async()=>['offline','partial','reconnecting'].includes(await f.page.locator('#teacherConnectionStatus').getAttribute('data-state')),'Không báo lỗi cập nhật');
-    assert.match(await f.page.locator('#questionAnalyticsStatus').textContent(),/15\/17/);
+    assert.match(await f.page.locator('#questionAnalytics').textContent(),/2\/15 sai/);
     assert.equal(await draft.inputValue(),'Nháp giáo viên đang viết');
     f.fail(false);f.advance(16);await f.page.locator('#refreshDashboardButton').click();
-    await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('16/17'),'Làm mới không phục hồi số liệu');
+    await until(async()=>(await f.page.locator('#questionAnalytics').textContent()).includes('2/16 sai'),'Làm mới không phục hồi số liệu');
     assert.equal(f.writes,0);assert.deepEqual(f.errors,[]);
     if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await f.page.evaluate(()=>scrollTo(0,0));await f.page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'live-panel.png'),fullPage:true});}
   }finally{await f.close();}
 });
 
-for(const mode of ['truncated','html'])test(`Phản hồi 200 lỗi ${mode}: giữ số cũ/nháp và tự đọc lại, không báo mã 200`,{timeout:30000},async()=>{
+// Ngân sách bao trùm khởi động/dọn Chrome; deadline đọc 15s và cửa sổ phục hồi 5s bên dưới giữ nguyên.
+for(const mode of ['truncated','html'])test(`Phản hồi 200 lỗi ${mode}: giữ số cũ/nháp và tự đọc lại, không báo mã 200`,{timeout:90000},async()=>{
   const f=await fixture();try{
     await f.page.goto(f.origin+'/progress-log/teacher.html#assignment='+assignmentId);
     await f.page.locator('.thuy-roster tbody tr').first().waitFor();
     await f.page.locator('[data-thuy-mode=results]').click();
-    await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('14/17'),'Chưa có baseline');
+    await until(async()=>(await f.page.locator('#questionAnalytics').textContent()).includes('2/14 sai'),'Chưa có baseline');
+    await f.page.getByRole('tab',{name:'Nhận xét cá nhân',exact:true}).click();
     await f.page.locator(`[data-student="${uid(100)}"]`).click();
     const comment=f.page.locator('#draftDialog .session-comment-editor textarea');
     await comment.fill('Nháp giữ qua lần đọc gián đoạn');
     f.breakNextRead(mode);f.advance(15);
     await until(async()=>(await f.page.locator('#teacherConnectionStatus').getAttribute('data-state'))==='partial','Không thấy lỗi body bị đứt');
-    assert.match(await f.page.locator('#questionAnalyticsStatus').textContent(),/14\/17/,'Chưa được áp dụng số liệu từ body lỗi');
+    assert.match(await f.page.locator('#questionAnalytics').textContent(),/2\/14 sai/,'Chưa được áp dụng số liệu từ body lỗi');
     assert.doesNotMatch(await f.page.locator('#teacherConnectionStatus').getAttribute('title'),/mã 200/,'HTTP thành công không phải nguyên nhân đọc thất bại');
-    await until(async()=>(await f.page.locator('#questionAnalyticsStatus').textContent()).includes('15/17'),'Không tự đọc lại sau lỗi body trong khi SSE vẫn mở',5000);
+    await until(async()=>(await f.page.locator('#questionAnalytics').textContent()).includes('2/15 sai'),'Không tự đọc lại sau lỗi body trong khi SSE vẫn mở',5000);
     assert.equal(await comment.inputValue(),'Nháp giữ qua lần đọc gián đoạn');
     assert.equal(await f.page.locator('#draftDialog').isVisible(),true);
     assert.equal(f.writes,0);assert.deepEqual(f.errors,[]);
   }finally{await f.close();}
 });
 
-test('Body 200 treo quá 15 giây: phân biệt timeout và tự phục hồi, không kẹt cập nhật',{timeout:35000},async()=>{
+test('Body 200 treo quá 15 giây: phân biệt timeout và tự phục hồi, không kẹt cập nhật',{timeout:90000},async()=>{
   const f=await fixture();try{
     await f.page.goto(f.origin+'/progress-log/teacher.html#assignment='+assignmentId);
     await f.page.locator('.thuy-roster tbody tr').first().waitFor();
@@ -136,7 +139,7 @@ test('Body 200 treo quá 15 giây: phân biệt timeout và tự phục hồi, k
   }finally{await f.close();}
 });
 
-test('Lớp ngoài đợt thí điểm giữ đường đọc hiện hành và nút Làm mới, không mở SSE',{timeout:30000},async()=>{
+test('Lớp ngoài đợt thí điểm giữ đường đọc hiện hành và nút Làm mới, không mở SSE',{timeout:90000},async()=>{
   const f=await fixture({liveAllowed:false});try{
     await f.page.goto(f.origin+'/progress-log/teacher.html#assignment='+assignmentId);
     await f.page.locator('.thuy-roster tbody tr').first().waitFor();

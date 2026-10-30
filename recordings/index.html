@@ -7,6 +7,7 @@
   <title>IZONE Recording Automation</title>
   <link rel="icon" href="assets/izone-recording-thumbnail.png">
   <link rel="stylesheet" href="styles.css?v=32">
+  <link rel="stylesheet" href="filters.css?v=20261029">
 <link rel="stylesheet" href="../shared/master170/theme.css">
 <link rel="stylesheet" href="../shared/master170/recordings.css?v=20261024-master170-status">
 </head>
@@ -29,7 +30,7 @@
     </header>
 
     <section class="stats" aria-label="Tổng quan">
-      <article><span>Lớp trong ngày đối soát</span><strong id="yesterdayClassCount">—</strong></article>
+      <article><span>Buổi học trong khoảng chọn</span><strong id="yesterdayClassCount">—</strong></article>
       <article><span>Tổng recording</span><strong id="totalCount">—</strong></article>
       <article><span>Cần duyệt</span><strong id="reviewCount">—</strong></article>
       <article><span>Đã duyệt</span><strong id="approvedCount">—</strong></article>
@@ -37,34 +38,25 @@
 
     <section class="yesterday-panel" aria-labelledby="yesterdayHeading">
       <div class="section-heading">
-        <div><span class="section-kicker">DỮ LIỆU PORTAL</span><h2 id="yesterdayHeading">Lớp có buổi học trong ngày đã chọn</h2></div>
+        <div><span class="section-kicker">DỮ LIỆU PORTAL</span><h2 id="yesterdayHeading">Lớp có buổi học trong khoảng đã chọn</h2></div>
         <span id="yesterdayDate" class="date-pill">—</span>
       </div>
       <div id="yesterdayClasses" class="class-grid"><div class="loading-inline">Đang tải lịch học…</div></div>
     </section>
 
-    <details id="recordingStorage" class="storage-panel">
-      <summary>Lưu trữ VPS</summary>
-      <p id="storageSummary">Chưa có lần đo trong phiên này.</p>
-      <div class="storage-controls">
-        <button id="storageRefresh" type="button">Kiểm tra lại</button>
-        <button id="storagePreviewButton" type="button">Xem trước danh sách dọn</button>
-        <button id="storageCleanup" type="button" disabled>Dọn theo danh sách đã xem</button>
-        <button id="storageHistory" type="button">Xem lịch sử</button>
-      </div>
-      <p id="storageStatus" role="status" aria-live="polite">Đăng nhập để kiểm tra lưu trữ VPS.</p>
-      <div class="storage-table-wrap"><table>
-        <thead><tr><th>Recording</th><th>MP4</th><th>Khối tạm</th><th>Dung lượng</th><th>Lý do</th><th>Giữ đến</th><th>Kiểm gần nhất</th></tr></thead>
-        <tbody id="storageRows"></tbody>
-      </table></div>
-      <div id="storagePreview"></div><div id="storageRunResult" aria-live="polite"></div>
-    </details>
-
-    <section class="toolbar">
-      <label>Ngày recording<input id="dateFilter" type="date"></label>
+    <section class="toolbar recording-filters" aria-label="Lọc recording">
+      <div class="filter-track" role="group" aria-label="Các bộ lọc recording — cuộn ngang trên màn hình nhỏ" tabindex="0">
+      <label>Từ ngày<input id="dateFilter" type="date"></label>
+      <label>Đến ngày<input id="dateToFilter" type="date"></label>
       <label>Tài khoản Zoom<select id="accountFilter"><option value="">Tất cả</option></select></label>
+      <label>Đã duyệt<select id="reviewFilter"><option value="">Tất cả</option><option value="pending">Cần duyệt</option><option value="approved">Đã duyệt</option></select></label>
+      <label>YouTube<select id="youtubeFilter"><option value="">Tất cả</option><option value="has_link">Có link YouTube</option><option value="no_link">Chưa có link</option><option value="processing">Đang xử lý</option><option value="error">Có lỗi / Cần xác minh</option></select></label>
+      <label class="filter-column">Tìm trong cột<select id="columnFilter"><option value="">Tất cả các cột</option><option value="className">Lớp</option><option value="title">Recording / Tên video</option><option value="source">Tài khoản Zoom</option><option value="recordingFileId">Mã recording</option><option value="playlistTitle">Playlist</option><option value="reason">Lý do / Lỗi</option></select></label>
       <label class="search">Tìm kiếm<input id="searchFilter" type="search" placeholder="Mã lớp, tiêu đề, recording…"></label>
-      <button id="refreshButton" type="button">Làm mới</button>
+      <button id="resetFilters" class="filter-button filter-reset" type="button">Xóa bộ lọc</button>
+      <button id="refreshButton" class="filter-button" type="button">Làm mới</button>
+      </div>
+      <p id="filterStatus" class="filter-status" role="status" aria-live="polite">Đang tải khoảng ngày mặc định…</p>
     </section>
 
     <main id="reviewSections" aria-live="polite"><div class="loading">Đang tải dữ liệu…</div></main>
@@ -142,13 +134,13 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="auth.js?v=19" defer></script>
     <script src="../shared/master170/recording-dialog-feedback.js?v=20261024-master170-feedback1" defer></script>
-    <script src="app.js?v=20261024-master170-status" defer></script>
-    <script src="nightly.js?v=20261018" defer></script>
-<script src="source-links.js?v=20"></script>
+    <script src="filters.js?v=20261029" defer></script>
+    <script src="app.js?v=20261029-filters" defer></script>
+    <script src="nightly.js?v=20261029-filters" defer></script>
+<script src="source-links.js?v=20261029-filters"></script>
   <script src="action-receipts.js?v=20261018" defer></script>
-  <script src="manual-upload.js?v=20261018" defer></script>
-  <script src="review.js?v=review-20261015" defer></script>
-  <script src="storage.js?v=20261024-master170-status" defer></script>
+  <script src="manual-upload.js?v=20261029-filters" defer></script>
+  <script src="review.js?v=20261029-filters" defer></script>
   <script src="../shared/master170/recording-focus.js?v=20261024-master170-ui3" defer></script>
 </body>
 </html>

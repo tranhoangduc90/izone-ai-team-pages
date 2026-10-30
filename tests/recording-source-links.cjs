@@ -16,6 +16,12 @@ test('Legacy không cần snapshot vẫn tra theo ngày recording và cache tron
  await vm.runInContext('refreshSourceLinks()',f.ctx);assert.match(f.cell.innerHTML,/href="https:\/\/zoom.us\/rec\/play\/safe"/);
  await vm.runInContext('refreshSourceLinks()',f.ctx);assert.equal(calls,1);
 });
+
+test('Trong khoảng nhiều ngày, link Zoom dùng ngày của nguồn, không dùng ngày đầu bộ lọc',async()=>{
+ const f=fixture();f.ctx.loggedIn=true;f.date.value='2026-10-26';f.record.recordingStart='2026-10-27T11:00:00Z';f.record._snapshotDate='2026-10-27';
+ f.ctx.window.recordingAuth.request=async body=>{assert.equal(body.date,'2026-10-27');return {ok:true,json:async()=>({status:'available',url:'https://zoom.us/rec/play/safe'})};};
+ await vm.runInContext('refreshSourceLinks()',f.ctx);assert.match(f.cell.innerHTML,/href=/);
+});
 test('Phản hồi link muộn không hiện lại sau logout',async()=>{
  const f=fixture();let resolve;f.ctx.loggedIn=true;f.ctx.window.recordingAuth.request=()=>new Promise(r=>resolve=r);
  const pending=vm.runInContext('refreshSourceLinks()',f.ctx);f.ctx.loggedIn=false;f.events['recording-auth-changed']();resolve({ok:true,json:async()=>({status:'available',url:'https://zoom.us/rec/play/private'})});await pending;

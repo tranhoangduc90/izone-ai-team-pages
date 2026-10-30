@@ -57,6 +57,7 @@ try{
    if(p.endsWith('/term-tests/teacher/options'))return route.fulfill({json:{ok:true,reviewer:{displayName:'Giảng viên thử',role:'teacher'},classes:[{id:'fixture-class',name:'IC2304'}],tests:[{slug:'term-test-1',title:'Bài thử',writingTasks:[],sectionTotals:{listening:40,reading:40}}]}});
    if(p.endsWith('/term-tests/teacher/results'))return route.fulfill({json:{ok:true,students:[]}});
    if(p.endsWith('/learning/teacher/options'))return route.fulfill({json:{ok:true,reviewer:{name:'Giảng viên thử'},classes:[{class_id:'101',class_name:'IC2304'}],assignments:[],capabilities:{}}});
+   if(req.method()==='GET'&&p.endsWith('/learning/teacher/form-publications'))return route.fulfill({json:{ok:true,publications:[]}});
    if(['/mapping-api/api/learning/teacher/form-drafts','/mapping-api/api/learning/teacher/form-drafts/review-queue','/mapping-api/api/learning/teacher/form-library'].includes(p))return route.fulfill({json:{ok:true,drafts:[],items:[],entries:[],reviews:[]}});
    if(p.endsWith('/teacher/scopes'))return route.fulfill({json:{scopes:[{testSlug:'substitute-test-1-k56',classCode:'DEMO'}]}});
    if(p.endsWith('/teacher/results'))return route.fulfill({json:{testSlug:u.searchParams.get('test'),classCode:u.searchParams.get('class'),results:[],hasMore:false}});

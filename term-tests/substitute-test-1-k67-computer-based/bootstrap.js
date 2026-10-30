@@ -73,7 +73,7 @@
   let previewHeard = false;
   let preparing = false;
   let downloadController = null;
-  const localDemoClasses = Object.freeze(window.SUBSTITUTE_STATE.meta.classes || [
+  const localDemoClasses = Object.freeze([...(window.SUBSTITUTE_STATE.meta.classes || [
     {
       code: 'DEMO',
       name: 'DEMO · Chỉ kiểm tra, không gửi Portal'
@@ -82,7 +82,7 @@
       code: 'IC2063',
       name: 'IC2063 · Lớp K67'
     }
-  ]);
+  ])].sort((a, b) => Number(a.code === 'DEMO') - Number(b.code === 'DEMO')));
 
   root.innerHTML = `
     <header class="topbar cbt-bootstrap-topbar">

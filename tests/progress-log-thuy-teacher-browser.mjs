@@ -9,7 +9,7 @@ import {createRequire} from 'node:module';
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const root=fileURLToPath(new URL('../',import.meta.url)),uid=n=>`b0000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 
-test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, công bố, X/Esc/ngoài khung và không nhầm popup mới',{timeout:60000},async()=>{
+test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, công bố, X/Esc/ngoài khung và không nhầm popup mới',{timeout:180000},async()=>{
  const server=createServer(async(req,res)=>{try{const file=resolve(root,'.'+new URL(req.url,'http://local').pathname);if(!file.startsWith(resolve(root)+sep))throw Error('Denied');res.setHeader('content-type',{'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.woff2':'font/woff2'}[extname(file)]||'application/octet-stream');res.end(await readFile(file));}catch{res.writeHead(404);res.end();}});
  await new Promise(done=>server.listen(0,'127.0.0.1',done));const origin=`http://127.0.0.1:${server.address().port}`;
  const browser=await chromium.launch({channel:'chrome',headless:true}),ctx=await browser.newContext({serviceWorkers:'block',viewport:{width:1440,height:1000}}),page=await ctx.newPage(),errors=[],writes=[],unexpected=[];
@@ -59,13 +59,15 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   await page.locator('.thuy-roster').getByText('Đã điểm danh',{exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   const modes=await page.locator('[data-thuy-mode]').evaluateAll(nodes=>nodes.map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height,font:parseFloat(getComputedStyle(node).fontSize)})));
-  assert.equal(modes.length,2);assert.ok(Math.abs(modes[0].width-modes[1].width)<1);assert.ok(modes.every(m=>m.height>=56&&m.font>=18));
+  assert.equal(modes.length,2);assert.ok(Math.abs(modes[0].width-modes[1].width)<1);assert.ok(modes.every(m=>m.height===44&&m.font>=16));
   await page.locator('[data-thuy-mode=results]').click();
-  assert.deepEqual(await page.locator('.thuy-result-jumps>a').allTextContents(),['Tổng quan lớp','Nhận xét cá nhân']);
+  assert.deepEqual(await page.locator('.thuy-result-jumps>[role=tab]').allTextContents(),['Tổng quan lớp','Nhận xét cá nhân']);
   assert.equal(await page.getByRole('button',{name:'Xem phân bố và học viên',exact:true}).count(),0);
   await page.locator('.thuy-question-card').getByText('1/1 đã trả lời · Không chấm đúng/sai',{exact:true}).waitFor();
   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'teacher-results-'+width+'.png'),fullPage:true});}await page.setViewportSize({width:1440,height:1000});}
   await page.locator('[data-thuy-mode=progress]').click();
+  await page.locator(`[data-student="${A}"]`).click();assert.equal(await page.locator('#draftDialog').isVisible(),false);
+  await page.locator('[data-thuy-mode=results]').click();await page.getByRole('tab',{name:'Nhận xét cá nhân',exact:true}).click();
   await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog').waitFor();
   assert.equal(await page.locator('#draftDialog [data-keyword=w2]').getAttribute('aria-pressed'),'true');
   const panelTop=await page.locator('#draftDialog').evaluate(e=>e.getBoundingClientRect().top);
@@ -76,6 +78,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   await page.locator('.thuy-side').getByRole('button',{name:'Quản lý lớp',exact:true}).click();await page.locator('#draftDialog').waitFor();
   assert.equal(await draft.inputValue(),'Nháp riêng của A');assert.equal(await page.locator('#assignmentSelect').inputValue(),id);
   assert.equal(await page.evaluate(()=>window.commentReadingNode===document.querySelector('#draftDialog .session-comment-editor textarea')),true);
+  assert.equal(await page.locator('body').evaluate(e=>e.classList.contains('has-thuy-detail')),false,'Trở về từ kho không được co cả trang theo panel cũ');
   assert.equal(await page.locator('#draftDialog').getByRole('button',{name:'Xem lịch sử',exact:true}).count(),0);
   assert.equal(await page.locator('#draftDialog').getByRole('button',{name:'Quản lý link Hành trình riêng',exact:true}).count(),0);
   await page.locator('#thuyNextStudent').click();assert.match(await page.locator('#draftStudentName').innerText(),/Học viên B/);assert.equal(await draft.inputValue(),'');
@@ -87,7 +90,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   await page.locator(`[data-student="${A}"]`).click();assert.equal(await draft.inputValue(),'Sửa chưa công bố');
   await page.locator('#dashboardTitle').click();assert.equal(await page.locator('#draftDialog').isVisible(),false);
   await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog button[aria-label="Đóng chi tiết"]').click();assert.equal(await page.locator('#draftDialog').isVisible(),false);
-  await page.reload();await page.locator('.thuy-roster tbody tr').first().waitFor();await page.locator(`[data-student="${A}"]`).click();assert.equal(await draft.inputValue(),'Sửa chưa công bố');
+  await page.reload();await page.locator('.thuy-roster tbody tr').first().waitFor();await page.locator('[data-thuy-mode=results]').click();await page.getByRole('tab',{name:'Nhận xét cá nhân',exact:true}).click();await page.locator(`[data-student="${A}"]`).click();assert.equal(await draft.inputValue(),'Sửa chưa công bố');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'teacher-panel.png'),fullPage:true});}
   await page.keyboard.press('Escape');await page.locator('#overviewTab').click();await page.locator('#courseOverview .thuy-skill-tabs').waitFor();
@@ -111,7 +114,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   if(process.env.THUY_EVIDENCE_DIR){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'teacher-library.png'),fullPage:true});}
   await page.getByRole('tab',{name:/Phiếu đã giao/}).click();await page.getByRole('button',{name:'Phiếu từ khóa thử',exact:true}).click();
   const libraryPreview=page.locator('.thuy-library-detail');
-  assert.equal(await libraryPreview.getByRole('button',{name:'Sửa bài',exact:true}).count(),1);assert.equal(await libraryPreview.getByRole('button',{name:'Giao bài',exact:true}).count(),1);
+  assert.equal(await libraryPreview.getByRole('button',{name:'Sửa bài',exact:true}).count(),1);assert.equal(await libraryPreview.getByRole('button',{name:'Giao bài',exact:true}).count(),0);
   await libraryPreview.locator('iframe.thuy-library-preview').waitFor();
   await libraryPreview.getByRole('button',{name:'Đóng',exact:true}).click();
   await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
@@ -125,7 +128,8 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.equal(await page.getByLabel('Đáp án đúng A câu 2',{exact:true}).getAttribute('type'),'checkbox');
   await page.getByRole('button',{name:'Chia phần',exact:true}).click();
   assert.equal(await page.locator('.thuy-editor-section').count(),2);
-  await page.getByLabel('Phần câu 2',{exact:true}).selectOption({label:'Bài học hôm nay'});
+  assert.equal(await page.getByLabel('Phần câu 2',{exact:true}).count(),0);
+  await page.locator('.thuy-editor-section').nth(1).getByRole('button',{name:'+ Trả lời mở',exact:true}).click();
   await page.getByRole('button',{name:'Không chia phần',exact:true}).click();await page.getByText('Chuyển các câu về phần đầu trước khi bỏ các phần còn lại.',{exact:true}).waitFor();
   assert.equal(await page.locator('.thuy-editor-section').count(),2);
   if(process.env.THUY_EVIDENCE_DIR){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'teacher-editor.png'),fullPage:true});}
