@@ -25,6 +25,8 @@
 .student-review-compact .studentDetailScore p{flex-basis:100%;font-size:12px}
 .thuy-student .student-back-button{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:8px 14px;font-size:16px;font-weight:600;border:1px solid var(--navy,#174266);border-radius:6px;color:var(--navy,#174266);background:#fff}
 .student-back-button .back-icon{font-size:24px;line-height:1}
+/* Các preset đặt cỡ nút bằng !important; nút quay lại có vùng chạm riêng 44px. */
+#journeyDetailBackButton.student-back-button{min-height:44px!important;font-size:16px!important;color:var(--navy,#174266)!important;border-color:var(--navy,#174266)!important}
 .thuy-student-skills .thuy-skill-block{margin-top:12px;padding-top:12px;border-top:1px solid var(--line,#e2e7eb)}
 .thuy-student-skills .thuy-skill-block:first-of-type{margin-top:8px}
 .thuy-student-skills h4{font-size:14px;line-height:20px;color:var(--navy,#174266);margin:0 0 8px;font-weight:600}
