@@ -1,0 +1,153 @@
+{
+  "kind": "practice",
+  "subject": "listening",
+  "code": "67-practice-listening_c20_t3_p4_inclusive_design",
+  "title": "Inclusive design",
+  "version": "c20-t3-p4-inclusive-design-20261022-v2",
+  "totalMs": 606322,
+  "definition": {
+    "mcq": [],
+    "audio": {
+      "sha256": "b0220f6be93db9e2ddc28f3debd48d86f81c6b69c809f12a4c1135bee08afacc",
+      "durationMs": 486322
+    },
+    "groups": [
+      {
+        "id": "definition",
+        "end": 32,
+        "kind": "completion",
+        "label": "Definition",
+        "start": 31,
+        "maxWords": 1,
+        "questions": [
+          {
+            "n": 31,
+            "text": "Designing products that can be accessed by a diverse range of people without the need for any  {blank}",
+            "maxWords": 1
+          },
+          {
+            "n": 32,
+            "text": "Not the same as universal design: that is design for everyone, including catering for people with {blank} problems.",
+            "maxWords": 1
+          }
+        ],
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer.",
+        "preparationSteps": [
+          "Đọc lướt các chỗ trống cần điền đáp án. Khoanh tròn giới hạn từ cần điền.",
+          "Đoán nhanh loại từ cần điền: danh từ, động từ, tính từ hay trạng từ; xác định dạng từ như tên quốc gia, tên người, con số.",
+          "Xác định những từ khóa trong câu chứa chỗ trống cần điền.",
+          "Nghe và lựa chọn đáp án."
+        ]
+      },
+      {
+        "id": "examples",
+        "end": 36,
+        "kind": "completion",
+        "label": "Examples of inclusive design",
+        "start": 33,
+        "maxWords": 1,
+        "questions": [
+          {
+            "n": 33,
+            "text": "{blank} which are adjustable, avoiding back or neck problems",
+            "maxWords": 1
+          },
+          {
+            "n": 34,
+            "text": "{blank} in public toilets which are easier to use",
+            "maxWords": 1
+          },
+          {
+            "n": 35,
+            "text": "To assist the elderly: designers avoid using {blank} in interfaces",
+            "maxWords": 1
+          },
+          {
+            "n": 36,
+            "text": "To assist the elderly: people can make commands using a mouse, keyboard or their {blank}",
+            "maxWords": 1
+          }
+        ],
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer."
+      },
+      {
+        "id": "impact",
+        "end": 40,
+        "kind": "completion",
+        "label": "Impact of non-inclusive designs",
+        "start": 37,
+        "maxWords": 1,
+        "questions": [
+          {
+            "n": 37,
+            "text": "Safety: Seatbelts are especially problematic for {blank} women.",
+            "maxWords": 1
+          },
+          {
+            "n": 38,
+            "text": "Safety: PPE jackets are often unsuitable because of the size of women's {blank}",
+            "maxWords": 1
+          },
+          {
+            "n": 39,
+            "text": "Safety: PPE for female {blank} officers dealing with emergencies is the worst.",
+            "maxWords": 1
+          },
+          {
+            "n": 40,
+            "text": "Comfort in the workplace: The {blank} in offices is often too low for women.",
+            "maxWords": 1
+          }
+        ],
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer.",
+        "introduction": "Access\nLoss of independence for disabled people."
+      }
+    ],
+    "lesson": {
+      "book": 20,
+      "code": "67-practice-listening_c20_t3_p4_inclusive_design",
+      "part": 4,
+      "test": 3,
+      "title": "Inclusive design",
+      "groups": [
+        {
+          "id": "definition",
+          "end": 32,
+          "kind": "completion",
+          "label": "Definition",
+          "start": 31
+        },
+        {
+          "id": "examples",
+          "end": 36,
+          "kind": "completion",
+          "label": "Examples of inclusive design",
+          "start": 33
+        },
+        {
+          "id": "impact",
+          "end": 40,
+          "kind": "completion",
+          "label": "Impact of non-inclusive designs",
+          "start": 37
+        }
+      ],
+      "lesson": 10,
+      "audioMs": 486322,
+      "totalMs": 606322,
+      "reviewMs": 120000,
+      "subtitle": "Questions 31–40 · Note Completion",
+      "paragraphs": [
+        "A"
+      ],
+      "sourceLabel": "Cambridge 20 · Test 3 · Part 4",
+      "preparationSteps": [
+        "Đọc lướt các chỗ trống cần điền đáp án. Khoanh tròn giới hạn từ cần điền.",
+        "Đoán nhanh loại từ cần điền: danh từ, động từ, tính từ hay trạng từ; xác định dạng từ như tên quốc gia, tên người, con số.",
+        "Xác định những từ khóa trong câu chứa chỗ trống cần điền.",
+        "Nghe và lựa chọn đáp án."
+      ]
+    },
+    "authored": true
+  }
+}

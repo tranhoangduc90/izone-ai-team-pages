@@ -1,0 +1,278 @@
+{
+  "kind": "reading-homework",
+  "code": "67-reading-the-desolenator",
+  "title": "The Desolenator: producing clean water",
+  "content": {
+    "code": "67-reading-the-desolenator",
+    "version": "the-desolenator-headings-compression-20261029-v1",
+    "type": "matching_headings",
+    "title": "The Desolenator: producing clean water",
+    "subtitle": "Luyện nén thông tin hai cấp độ và chọn Heading",
+    "lesson": 3,
+    "minimumRequired": 12,
+    "paragraphs": [
+      {
+        "id": "A",
+        "text": "Travelling around Thailand in the 1990s, William Janssen was impressed with the basic rooftop solar heating systems that were on many homes, where energy from the sun was absorbed by a plate and then used to heat water for domestic use. Two decades later Janssen developed that basic idea he saw in Southeast Asia into a portable device that uses the power from the sun to purify water."
+      },
+      {
+        "id": "B",
+        "text": "The Desolenator operates as a mobile desalination unit that can take water from different places, such as the sea, rivers, boreholes and rain, and purify it for human consumption. It is particularly valuable in regions where natural groundwater reserves have been polluted, or where seawater is the only water source available.\n\nJanssen saw that there was a need for a sustainable way to clean water in both the developing and the developed countries when he moved to the United Arab Emirates and saw large-scale water processing. ‘I was confronted with the enormous carbon footprint that the Gulf nations have because of all of the desalination that they do,’ he says."
+      },
+      {
+        "id": "C",
+        "text": "The Desolenator can produce 15 litres of drinking water per day, enough to sustain a family for cooking and drinking. Its main selling point is that unlike standard desalination techniques, it doesn’t require a generated power supply: just sunlight. It measures 120 cm by 90 cm, and it easy to transport, thanks to its two wheels. Water enters through a pipe, and flows as a thin film between a sheet of double glazing and the surface of a solar panel, where it is heated by the sun. The warm water flows into a small boiler (heated by a solar-powered battery) where it is converted to steam. When the steam cools, it becomes distilled water. The device has a very simple filter to trap particles, and this can easily be shaken to remove them. There are two tubes for liquid coming out: one for the waste – salt from seawater, fluoride, etc. – and another for the distilled water. The performance of the unit is shown on an LCD screen and transmitted to the company which provides servicing when necessary."
+      },
+      {
+        "id": "D",
+        "text": "A recent analysis found that at least two-thirds of the world’s population lives with severe water scarcity for at least a month every year. Janssen says that be 2030 half of the world’s population will be living with water stress – where the demand exceeds the supply over a certain period of time. ‘It is really important that a sustainable solution is brought to the market that is able to help these people,’ he says. Many countries ‘don’t have the money for desalination plants, which are very expensive to build. They don’t have the money to operate them, they are very maintenance intensive, and they don’t have the money to buy the diesel to run the desalination plants, so it is a really bad situation.’"
+      },
+      {
+        "id": "E",
+        "text": "The device is aimed at a wide variety of users – from homeowners in the developing world who do not have a constant supply of water to people living off the grid in rural parts of the US. The first commercial versions of the Desolenator are expected to be in operation in India early next year, after field tests are carried out. The market for the self-sufficient devices in developing countries is twofold – those who cannot afford the money for the device outright and pay through microfinance, and middle-income homes that can lease their own equipment. ‘People in India don’t pay for a fridge outright; they pay for it over six months. They would put the Desolenator on their roof and hook it up to their municipal supply and they would get very reliable drinking water on a daily basis,’ Janssen says. In the developed world, it is aimed at niche markets where tap water is unavailable – for camping, on boats, or for the military, for instance."
+      },
+      {
+        "id": "F",
+        "text": "Prices will vary according to where it is bought. In the developing world, the price will depend on what deal aid organisations can negotiate. In developed countries, it is likely to come in at $1,000 (£685) a unit, said Janssen. ‘We are a venture with a social mission. We are aware that the product we have envisioned is mainly finding application in the developing world and humanitarian sector and that this is the way we will proceed. We do realise, though, that to be a viable company there is a bottom line to keep in mind,’ he says."
+      },
+      {
+        "id": "G",
+        "text": "The company itself is based at Imperial College London, although Janssen, its chief executive, still lives in the UAE. It has raised £340,000 in funding so far. Within two years, he says, the company aims to be selling 1,000 units a month, mainly in the humanitarian field. They are expected to be sold in areas such as Australia, northern Chile, Peru, Texas and California."
+      }
+    ],
+    "questions": [
+      {
+        "number": 1,
+        "paragraph": "C",
+        "text": "Paragraph C",
+        "targets": {
+          "section": "L3.H.C",
+          "l1": "L3.L1.C",
+          "l2": "L3.L2.C"
+        }
+      },
+      {
+        "number": 2,
+        "paragraph": "D",
+        "text": "Paragraph D",
+        "targets": {
+          "section": "L3.H.D",
+          "l1": "L3.L1.D",
+          "l2": "L3.L2.D"
+        }
+      },
+      {
+        "number": 3,
+        "paragraph": "E",
+        "text": "Paragraph E",
+        "targets": {
+          "section": "L3.H.E",
+          "l1": "L3.L1.E",
+          "l2": "L3.L2.E"
+        }
+      },
+      {
+        "number": 4,
+        "paragraph": "F",
+        "text": "Paragraph F",
+        "targets": {
+          "section": "L3.H.F",
+          "l1": "L3.L1.F",
+          "l2": "L3.L2.F"
+        }
+      },
+      {
+        "number": 5,
+        "paragraph": "G",
+        "text": "Paragraph G",
+        "targets": {
+          "section": "L3.H.G",
+          "l1": "L3.L1.G",
+          "l2": "L3.L2.G"
+        }
+      }
+    ],
+    "targets": [
+      {
+        "id": "L3.H.C",
+        "kind": "section",
+        "paragraph": "C",
+        "question": 1,
+        "label": "Heading đoạn C"
+      },
+      {
+        "id": "L3.L1.C",
+        "kind": "l1",
+        "paragraph": "C",
+        "question": 1,
+        "label": "Nén cấp 1 đoạn C"
+      },
+      {
+        "id": "L3.L2.C",
+        "kind": "l2",
+        "paragraph": "C",
+        "question": 1,
+        "label": "Nén cấp 2 đoạn C"
+      },
+      {
+        "id": "L3.H.D",
+        "kind": "section",
+        "paragraph": "D",
+        "question": 2,
+        "label": "Heading đoạn D"
+      },
+      {
+        "id": "L3.L1.D",
+        "kind": "l1",
+        "paragraph": "D",
+        "question": 2,
+        "label": "Nén cấp 1 đoạn D"
+      },
+      {
+        "id": "L3.L2.D",
+        "kind": "l2",
+        "paragraph": "D",
+        "question": 2,
+        "label": "Nén cấp 2 đoạn D"
+      },
+      {
+        "id": "L3.H.E",
+        "kind": "section",
+        "paragraph": "E",
+        "question": 3,
+        "label": "Heading đoạn E"
+      },
+      {
+        "id": "L3.L1.E",
+        "kind": "l1",
+        "paragraph": "E",
+        "question": 3,
+        "label": "Nén cấp 1 đoạn E"
+      },
+      {
+        "id": "L3.L2.E",
+        "kind": "l2",
+        "paragraph": "E",
+        "question": 3,
+        "label": "Nén cấp 2 đoạn E"
+      },
+      {
+        "id": "L3.H.F",
+        "kind": "section",
+        "paragraph": "F",
+        "question": 4,
+        "label": "Heading đoạn F"
+      },
+      {
+        "id": "L3.L1.F",
+        "kind": "l1",
+        "paragraph": "F",
+        "question": 4,
+        "label": "Nén cấp 1 đoạn F"
+      },
+      {
+        "id": "L3.L2.F",
+        "kind": "l2",
+        "paragraph": "F",
+        "question": 4,
+        "label": "Nén cấp 2 đoạn F"
+      },
+      {
+        "id": "L3.H.G",
+        "kind": "section",
+        "paragraph": "G",
+        "question": 5,
+        "label": "Heading đoạn G"
+      },
+      {
+        "id": "L3.L1.G",
+        "kind": "l1",
+        "paragraph": "G",
+        "question": 5,
+        "label": "Nén cấp 1 đoạn G"
+      },
+      {
+        "id": "L3.L2.G",
+        "kind": "l2",
+        "paragraph": "G",
+        "question": 5,
+        "label": "Nén cấp 2 đoạn G"
+      }
+    ],
+    "headings": [
+      {
+        "id": "i",
+        "text": "Getting the finance for production"
+      },
+      {
+        "id": "ii",
+        "text": "An unexpected benefit"
+      },
+      {
+        "id": "iii",
+        "text": "From initial inspiration to new product"
+      },
+      {
+        "id": "iv",
+        "text": "The range of potential customers for the device"
+      },
+      {
+        "id": "v",
+        "text": "What makes the device different from alternatives"
+      },
+      {
+        "id": "vi",
+        "text": "Cleaning water from a range of sources"
+      },
+      {
+        "id": "vii",
+        "text": "Overcoming production difficulties"
+      },
+      {
+        "id": "viii",
+        "text": "Profit not the primary goal"
+      },
+      {
+        "id": "ix",
+        "text": "A warm welcome for the device"
+      },
+      {
+        "id": "x",
+        "text": "The number of people affected by water shortages"
+      }
+    ],
+    "examples": {
+      "headings": {
+        "A": "iii",
+        "B": "vi"
+      },
+      "l1": "Ngày xưa ông William đi Thái thấy [cái máy hay] → 20 năm sau ông ấy biến ý tưởng đó thành [cái máy] lọc nước mới.",
+      "l2": "Cảm hứng ban đầu → Ra đời sản phẩm"
+    },
+    "instruction": "Chú ý: ban đầu đừng tra từ hoặc dùng công cụ hỗ trợ, hãy chỉ dựa vào cái đầu của mình (mô phỏng tình trạng phòng thi). Làm và chọn xong hết đáp án rồi mới tra từ và chỉnh lại nếu cần.",
+    "blankValues": [
+      "",
+      "-",
+      "_",
+      "__",
+      "___",
+      "...",
+      "…",
+      "n/a",
+      "none",
+      "null",
+      "chưa làm",
+      "không làm",
+      "không biết"
+    ],
+    "dropdownPlaceholders": [
+      "nhấn để chọn",
+      "chọn"
+    ],
+    "practice": {
+      "title": "Luyện tập nén thông tin cấp 1 với ChatGPT",
+      "url": "https://ducizone.short.gy/reading_skimming_lv1",
+      "target": "Luyện nén thông tin cấp 1: khái quát nội dung các câu, giữ ý chính và quan hệ, lược chi tiết; hoàn thành toàn bộ bài luyện được chatbot giao."
+    }
+  }
+}
