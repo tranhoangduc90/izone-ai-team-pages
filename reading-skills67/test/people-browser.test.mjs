@@ -94,7 +94,7 @@ for(const width of [1440,390])test(`GV lồng đúng bài,25 ô chỉ đọc; s�
   await page.getByRole('button',{name:'Giảng viên',exact:true}).click();await page.getByRole('button',{name:'Xem như học viên · Chỉ xem'}).click();assert.equal(state.writes,0);assert.equal(state.submits,0);
   await page.locator('[data-action="repair-start"]').click();
   for(let i=0;i<25;i++){
-   const id=content.targets[i].id;await page.waitForFunction(id=>document.querySelector('[data-repair-target]')?.dataset.repairTarget===id,id);
+   const id=content.targets[i].id;await page.waitForFunction(id=>document.querySelector('[data-repair-target]')?.dataset.repairTarget===id&&(document.activeElement?.dataset.target||document.activeElement?.querySelector('[data-target]')?.dataset.target)===id,id);
    const active=await page.evaluate(()=>document.activeElement?.dataset.target||document.activeElement?.querySelector('[data-target]')?.dataset.target);assert.equal(active,id);
    if(i<24)await page.locator('[data-repair-direction="1"]').click();
   }
