@@ -34,7 +34,7 @@
 .thuy-editor-title{min-width:0}.thuy-editor-save-state{display:block;min-height:16px;font-size:11px;line-height:16px;color:var(--muted)}
 .thuy-teacher .thuy-editor-titlebar>.editor-actions{position:static;display:flex;flex-wrap:nowrap;justify-content:flex-end;gap:8px;margin:0 0 0 auto;padding:0;border:0;background:none;z-index:auto}
 .thuy-teacher #formDraftEditor .thuy-editor-titlebar .button{margin:0;font-size:12px;min-height:36px;padding:6px 10px;white-space:nowrap}
-.thuy-teacher #formDraftEditor .thuy-editor-back{width:36px;min-width:36px;padding:0;font-size:22px;background:#fff}
+.thuy-teacher #formDraftEditor .thuy-editor-back{width:44px;min-width:44px;min-height:44px;padding:0;font-size:26px;font-weight:700;line-height:1;background:#fff}
 .thuy-teacher .thuy-authoring>.editor-toolbar{margin:0}.thuy-teacher .thuy-editor-context{margin:8px 0}
 .thuy-teacher:has(#createPanel:not([hidden]) .thuy-authoring:not([hidden])) #teacherNotice[data-idle]{display:none}
 .thuy-skill-error{font-size:12px;color:var(--red);margin:0 0 12px}.thuy-authoring [aria-invalid=true]{border-color:var(--red)!important}

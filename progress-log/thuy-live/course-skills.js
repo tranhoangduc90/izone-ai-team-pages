@@ -1,7 +1,8 @@
 // Chỉ dùng số câu tự báo hợp lệ của bài đã nhận và điểm Test có nguồn.
 // Các hàm thống kê dùng lại đúng quy tắc đã duyệt trong bản Thủy; không gọi AI hoặc sinh dữ liệu.
 import {practiceReport,priority,speakingAnalytics,speakingSummary,publishedSourceFeedback} from '../thuy-review/model.mjs';
-import {bindDialogDismiss} from '../session-comments.js';
+import {bindDialogDismiss} from '../session-comments.js?rev=20261030-the20-v1';
+import {studentTestRecords,latestSkillTest,safeWritingResultUrl} from '../student-test-results.js?rev=20261030-the20-v1';
 const skills={listening:'Listening',reading:'Reading',speaking:'Speaking',writing:'Writing'};
 const node=(tag,text='',className='')=>{const element=document.createElement(tag);element.textContent=text;element.className=className;return element;};
 const percent=value=>Number.isFinite(value)?value.toLocaleString('vi-VN',{maximumFractionDigits:1})+'%':'Chưa có dữ liệu';
@@ -65,18 +66,63 @@ function chart(reports){
  root.append(svg);return root;
 }
 
-export function renderPersonSkills(root,course,person,{onOpen,history=true}={}){
- const heading=node('h2','Tổng quan · '+person.name),grid=node('div','','thuy-four-skills');
- for(const skill of ['listening','reading']){const values=skillReports(course,person.studentRef,skill),summary=priority(values),card=node('section','','card');card.append(node('h3',skills[skill]),node('strong',percent(summary.average)),node('p',summary.count+' buổi có số tự báo hợp lệ'),chart(values));
-  tests.forEach((title,index)=>{const test=namedTest(person,index),score=test?.[skill];if(score)card.append(node('p',title+': '+score.correct+'/'+score.total+(test.source?' · Nguồn Portal':'')));});
+export function renderPersonSkills(root,course,person,{onOpen,history=true,studentView=false,writingResultUrl}={}){
+ if(!studentView){delete root.dataset.studentSkillsFingerprint;delete root.dataset.studentSkillsOwner;}
+ const fingerprint=JSON.stringify({course,person,history,studentView},(key,value)=>['generatedAt','capturedAt','serverNow'].includes(key)?undefined:value);
+ if(studentView&&root.dataset.studentSkillsFingerprint===fingerprint)return;
+ const heading=node('h2',studentView?'Tổng quan':'Tổng quan · '+person.name),grid=node('div','','thuy-four-skills');
+ const allRecords=testRecords(person),records=studentTestRecords(allRecords);
+ for(const skill of ['listening','reading']){const values=skillReports(course,person.studentRef,skill),summary=priority(values),card=node('section','','card');card.append(node('h3',skills[skill]),node('strong',percent(summary.average)));
+  if(!studentView)card.append(node('p',summary.count+' buổi có số tự báo hợp lệ'),chart(values));
+  if(studentView){
+   for(const test of records){const score=test[skill];if(Number.isFinite(score?.correct)&&Number.isFinite(score?.total)&&score.total>0)card.append(node('p',(test.title||test.testSlug)+': '+score.correct+'/'+score.total));}
+   const section=node('section','','thuy-skill-block');section.append(node('h4','Dạng cần cải thiện'));
+   const latest=latestSkillTest(allRecords,skill),analysis=latest?.[skill]?.analysis;
+   if(!latest)section.append(node('p','Chưa có kết quả Test có ngày làm bài để chọn bài mới nhất.','muted'));
+   else{
+    section.append(node('small',(latest.title||latest.testSlug)+' · '+new Date(latest[skill]?.completedAt||latest.completedAt).toLocaleDateString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})));
+    if(analysis?.status!=='available')section.append(node('p','Chưa có phân tích dạng bài.','muted'));
+    else if(!analysis.needsImprovement?.length)section.append(node('p','Không có dạng cần cải thiện theo phân tích của Test.'));
+    else for(const type of analysis.needsImprovement)section.append(node('p',type.label||type.type));
+   }card.append(section);
+  }else tests.forEach((title,index)=>{const test=namedTest(person,index),score=test?.[skill];if(score)card.append(node('p',title+': '+score.correct+'/'+score.total+(test.source?' · Nguồn Portal':'')));});
   if(summary.flagged)card.append(node('p','Ưu tiên xem · TB ba buổi gần nhất '+percent(summary.recentAverage),'thuy-priority'));grid.append(card);}
  const speaking=speakingSummary(course.sessions,person.studentRef),speech=node('section','','card');speech.append(node('h3','Speaking'));
- for(const group of speaking.frequencies)speech.append(node('p',`${group.label}: ${group.count} buổi`));if(!speaking.frequencies.length)speech.append(node('p','Chưa có phản hồi Speaking đã nộp.'));
- if(speaking.latest)speech.append(action('Xem nhận xét',()=>modal('Nhận xét Speaking · Buổi '+speaking.latest.number,node('p',speaking.latest.text))));grid.append(speech);
+ if(studentView){
+  if(speaking.latest){const feedback=node('section','','thuy-skill-block');feedback.append(node('h4','Nhận xét của giảng viên'),node('small','Buổi '+speaking.latest.number),node('p',speaking.latest.text,'thuy-feedback-excerpt'),action('Đọc đủ',()=>modal('Nhận xét Speaking · Buổi '+speaking.latest.number,node('p',speaking.latest.text)),'button text-button'));speech.append(feedback);}
+  const self=node('section','','thuy-skill-block');self.append(node('h4','Tự nhận xét'));for(const group of speaking.frequencies)self.append(node('p',group.label));
+  if(!speaking.frequencies.length)self.append(node('p','Chưa có tự nhận xét Speaking.','muted'));speech.append(self);
+ }else{
+  for(const group of speaking.frequencies)speech.append(node('p',`${group.label}: ${group.count} buổi`));if(!speaking.frequencies.length)speech.append(node('p','Chưa có phản hồi Speaking đã nộp.'));
+  if(speaking.latest)speech.append(action('Xem nhận xét',()=>modal('Nhận xét Speaking · Buổi '+speaking.latest.number,node('p',speaking.latest.text))));
+ }grid.append(speech);
  const writing=node('section','','card');writing.append(node('h3','Writing'));
- tests.forEach((title,index)=>{const result=namedTest(person,index),line=node('div','','thuy-person-test');line.append(node('b',title),writingFeedback(result));writing.append(line);});grid.append(writing);
- root.replaceChildren(heading,grid,explanation());
- const source=portalSourceNote([person]);if(source)heading.after(source);
+ if(studentView){
+  const results=records.filter(r=>/^term-test-\d+$/u.test(r.testSlug||'')||/term\s*test/iu.test(r.title||''));
+  for(const result of results){const line=node('section','','thuy-person-test');line.append(node('h4',result.title||result.testSlug));
+   const tasks=result.writing?.tasks||{};
+   for(const task of [1,2]){const value=tasks[task];if(!value)continue;const row=node('p');row.append(node('span','Task '+task+': '));
+    if(Number.isFinite(value.score)){
+     const href=safeWritingResultUrl(writingResultUrl?.(result,task)||value.resultUrl||result.writing?.resultUrl);
+     if(href){const a=node('a',String(value.score),'thuy-task-score');a.href=href;a.setAttribute('aria-label',`Task ${task} ${result.title||result.testSlug} điểm ${value.score} mở kết quả Writing`);row.append(a);}
+     else{row.append(node('strong',String(value.score)),node('small',' · Chưa mở được liên kết kết quả','muted'));}
+    }else row.append(node('span',value.status==='pending'?'Đang chấm':value.status==='needs_review'?'Cần giảng viên kiểm tra':'Chưa có điểm','muted'));line.append(row);
+   }
+   if(!Object.keys(tasks).length)line.append(node('p',result.writing?.status==='pending'?'Đang chấm':'Chưa có điểm từng Task.','muted'));writing.append(line);
+  }
+  if(!results.length)writing.append(node('p','Chưa có kết quả Writing Term Test.','muted'));
+ }else tests.forEach((title,index)=>{const result=namedTest(person,index),line=node('div','','thuy-person-test');line.append(node('b',title),writingFeedback(result));writing.append(line);});grid.append(writing);
+ const owner=String(course.overview.classId)+':'+person.studentRef,previous=root.querySelector(':scope > .thuy-four-skills');
+ if(studentView&&previous&&root.dataset.studentSkillsOwner===owner&&previous.children.length===grid.children.length){
+  for(const [index,card]of [...grid.children].entries())if(previous.children[index].innerHTML!==card.innerHTML)previous.children[index].replaceWith(card);
+ }else root.replaceChildren(heading,grid,...(studentView?[]:[explanation()]));
+ if(studentView){root.dataset.studentSkillsFingerprint=fingerprint;root.dataset.studentSkillsOwner=owner;root.classList.add('thuy-student-skills');
+  const stale=records.some(r=>r.sourceCoverage==='stale_snapshot'),unavailable=['testResults','portalTests'].some(k=>course.overview.coverage?.[k]==='temporarily_unavailable');
+  let warning=root.querySelector(':scope > .thuy-test-warning');
+  if(stale||unavailable){if(!warning){warning=node('p','','thuy-test-warning');warning.setAttribute('role','status');root.append(warning);}warning.textContent=stale?'Nguồn điểm tạm gián đoạn. Đang hiển thị dữ liệu đã đọc trước đó.':'Chưa tải đủ điểm Test. Em có thể thử lại.';}
+  else warning?.remove();
+ }
+ const source=!studentView&&portalSourceNote([person]);if(source)heading.after(source);
  if(!history)return;
  const list=node('section');list.append(node('h3','Lịch sử buổi học'));
  for(const cell of person.cells||[]){const session=course.overview.sessions.find(s=>s.sessionNumber===cell.sessionNumber);list.append(action('Buổi '+cell.sessionNumber+' · '+(session?.sessionDate||'Chưa có ngày')+' · '+({complete:'Đã nộp',incomplete:'Đã nộp · còn câu trống',test_result:'Có kết quả Test',no_assignment:'Chưa có phiếu',not_submitted:'Chưa nộp'}[cell.status]||'Dữ liệu hiện có'),()=>onOpen?.(person.studentRef,cell.sessionNumber),'button text-button'));}

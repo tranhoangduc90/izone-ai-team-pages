@@ -41,7 +41,7 @@ async function setup(options) {
     const headers = { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,PATCH,OPTIONS', 'access-control-allow-headers': 'content-type' };
     const send = (value, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(value) });
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
-    if (u.pathname === '/mapping-api/api/student-identity/resolve') {
+    if (u.pathname === '/mapping-api/api/student-identity/resolve' || u.origin===origin&&u.pathname==='/api/student-identity/resolve') {
       if(options.identityDelay)await new Promise(resolve=>setTimeout(resolve,options.identityDelay));
       const id = body.identity?.id || (body.studentRef === b ? '900002' : '900001');
       return send({ ok: true, status: 'unique', identity: { authority: 'erp-contact', id }, aliases: [
