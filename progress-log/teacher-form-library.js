@@ -1,5 +1,6 @@
 // Ba nguồn kho dùng cùng dữ liệu/quyền thật; xem trước chạy renderer học viên trong kho demo.
 import {bindDialogDismiss,node} from './session-comments.js';
+import {reviewContent} from './docs-import-review.js?rev=20261025-docs-import-v1';
 import {mountWorksheetFrame} from './worksheet-preview.js?rev=20261030-multi-limit-v1';
 import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261028-the15-v1';
 const button=(label,action)=>{const b=node('button',label,'button');b.type='button';b.addEventListener('click',action);return b;};
@@ -57,7 +58,12 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       if(run!==lifecycle)return;
       full.publication=reply.publication;publicationRows.push(reply.publication);sourceOperations.delete(key);
     }
-    if(!full.publication)throw Error('Phiếu cần được xuất bản vào kho trước khi giao.');await onAssign(full);
+    if(!full.publication&&entry.draft){
+      const reviews=full.detail.gradingKey?.importReviews||{},items=full.definition.blocks.flatMap(b=>b.items);
+      const pending=items.map((item,index)=>reviews[item.itemVersionId]&&reviews[item.itemVersionId].reviewedContent!==reviewContent(item,full.detail.gradingKey)?index+1:null).filter(Boolean);
+      if(pending.length)throw Error('Chưa thể giao: câu '+pending.join(', ')+' còn cảnh báo key chưa xử lý. Mở phiếu, bấm Sửa bài để bổ sung đáp án hoặc xác nhận chế độ không chấm.');
+    }
+    if(!full.publication&&!entry.draft)throw Error('Chưa chuẩn bị được phiên bản để giao; hãy thử lại.');await onAssign(full);
   }catch(error){if(run===lifecycle)status.textContent=error.message;}}
   async function preview(entry){
     const run=lifecycle;

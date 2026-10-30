@@ -127,6 +127,49 @@ async function editorFixture(t){
   window.saved={...payload,id:'draft-fixture',classId:'a',sessionNumber:7,revision:1,status:'draft',contentHash:'h1'};window.editor.openDraft(window.saved);
  });return f;
 }
+
+test('Kho cá nhân: Giao nháp mở chọn lớp, chỉ chốt bản riêng khi xác nhận; lỗi lưu phiên bản thử lại an toàn',{timeout:40000},async t=>{
+ const {page}=await fixture(t);await page.evaluate(async()=>{
+  const {createFormLibrary}=await import('/progress-log/teacher-form-library.js');const {createAssignmentDialog}=await import('/progress-log/teacher-assignment-dialog.js');
+  const host=document.querySelector('#formDraftEditor');for(let p=host;p;p=p.parentElement)p.hidden=false;
+  window.requests=[];window.pubAttempts=0;window.d={id:'private',revision:4,contentHash:'h4',status:'draft',sessionNumber:7,definition:{formVersionId:'v',title:'Nháp riêng',blocks:[{items:[]}]},gradingKey:{items:{}}};
+  const request=async(path,options={})=>{window.requests.push({path,body:options.body});
+   if(path==='/teacher/form-drafts/private')return {draft:structuredClone(window.d)};
+   if(path.startsWith('/teacher/journey-plan'))return {plan:{classId:'a',totalSessions:12}};
+   if(path.endsWith('/approve')){window.d.status='approved';return {draft:structuredClone(window.d)};}
+   if(path.endsWith('/publish-library')){window.pubAttempts++;if(window.pubAttempts===1)throw Error('Mất kết nối khi chốt phiên bản');return {publication:{id:'p',draftId:'private',revision:4,formVersionId:'v'}};}
+   if(path.endsWith('/assign'))return {delivery:{results:options.body.targets.map(target=>({...target,ok:true,delivery:{formVersionId:'v',rosterCount:2}}))}};
+   if(path==='/teacher/form-publications')return {publications:[]};return {entries:[]};
+  };
+  const dialog=createAssignmentDialog({request,getClasses:()=>[{class_id:'a',class_name:'Lớp giả'}],getPreferredClass:()=> 'a'});
+  window.lib=createFormLibrary({host,request,onAssign:e=>dialog.open(e)});window.lib.setDrafts([window.d]);
+ });
+ await page.getByRole('tab',{name:/Kho cá nhân/}).click();await page.getByRole('button',{name:'Giao bài',exact:true}).click();const dialog=page.locator('.thuy-assignment-dialog');await dialog.waitFor();
+ assert.equal(await page.evaluate(()=>window.requests.some(r=>r.path.endsWith('/approve')||r.path.endsWith('/publish-library')||r.path.endsWith('/assign'))),false);
+ await dialog.getByRole('button',{name:'Đóng',exact:true}).click();await page.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByLabel('Chọn buổi học 1').selectOption('7');
+ await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByRole('status').filter({hasText:'Mất kết nối khi chốt phiên bản'}).waitFor();assert.equal(await page.evaluate(()=>window.requests.filter(r=>r.path.endsWith('/assign')).length),0);
+ await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByRole('status').filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
+ const calls=await page.evaluate(()=>window.requests);assert.equal(calls.filter(r=>r.path.endsWith('/approve')).length,1);const publish=calls.filter(r=>r.path.endsWith('/publish-library'));assert.equal(publish.length,2);assert.equal(publish[0].body.operationId,publish[1].body.operationId);assert.equal(calls.filter(r=>r.path.endsWith('/assign')).length,1);assert.equal(calls.some(r=>r.path.includes('from-source')||r.path.includes('form-library/')||r.body?.scope==='izone'),false);
+});
+
+test('Kho cá nhân: cảnh báo key chưa xử lý chỉ rõ câu; xác nhận đúng nội dung mới mở giao',{timeout:30000},async t=>{
+ const {page}=await fixture(t);await page.evaluate(async()=>{
+  const {createFormLibrary}=await import('/progress-log/teacher-form-library.js'),{reviewContent}=await import('/progress-log/docs-import-review.js');const host=document.querySelector('#formDraftEditor');for(let p=host;p;p=p.parentElement)p.hidden=false;
+  const item={itemVersionId:'q',prompt:'Câu thiếu key',graderType:'exact_option'};window.d={id:'private',revision:1,definition:{title:'Thiếu key',blocks:[{items:[item]}]},gradingKey:{items:{},importReviews:{q:{keyStatus:'missing'}}}};window.opened=0;
+  window.resolveReview=()=>{window.d.gradingKey.importReviews.q.reviewedContent=reviewContent(item,window.d.gradingKey);};
+  const lib=createFormLibrary({host,request:async()=>({draft:structuredClone(window.d)}),onAssign:()=>window.opened++});lib.setDrafts([window.d]);
+ });await page.getByRole('tab',{name:/Kho cá nhân/}).click();await page.getByRole('button',{name:'Giao bài',exact:true}).click();await page.getByRole('status').filter({hasText:'câu 1 còn cảnh báo key'}).waitFor();assert.equal(await page.evaluate(()=>window.opened),0);await page.evaluate(()=>window.resolveReview());await page.getByRole('button',{name:'Giao bài',exact:true}).click();await page.waitForFunction(()=>window.opened===1);
+});
+test('Kho cá nhân: phiên bản đổi hoặc máy chủ từ chối duyệt không được giao',{timeout:30000},async t=>{
+ const {page}=await fixture(t);await page.evaluate(async()=>{
+  const {createAssignmentDialog}=await import('/progress-log/teacher-assignment-dialog.js');window.calls=[];window.scenario='stale';
+  window.d={id:'d',revision:4,contentHash:'h4',status:'draft',definition:{formVersionId:'v',blocks:[]}};
+  window.dialog=createAssignmentDialog({getClasses:()=>[{class_id:'a',class_name:'Lớp giả'}],getPreferredClass:()=> 'a',request:async(path,options={})=>{window.calls.push(path);if(path.startsWith('/teacher/journey-plan'))return {plan:{classId:'a',totalSessions:8}};if(path==='/teacher/form-drafts/d')return {draft:{...window.d,revision:window.scenario==='stale'?5:4}};throw Error('Không có quyền duyệt hoặc còn thiếu đáp án');}});
+  window.open=()=>window.dialog.open({id:'d',title:'Nháp riêng',draft:window.d,detail:structuredClone(window.d),definition:window.d.definition,sessionNumber:7});window.open();
+ });const dialog=page.locator('.thuy-assignment-dialog');await dialog.getByLabel('Chọn buổi học 1').selectOption('7');await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByRole('status').filter({hasText:'Phiếu đã được chỉnh sửa'}).waitFor();assert.equal(await page.evaluate(()=>window.calls.some(p=>p.endsWith('/approve'))),false);
+ await dialog.getByRole('button',{name:'Đóng',exact:true}).click();await dialog.waitFor({state:'detached'});await page.evaluate(()=>{window.scenario='denied';window.open();});await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByRole('status').filter({hasText:'Không có quyền duyệt hoặc còn thiếu đáp án'}).waitFor();assert.equal(await page.evaluate(()=>window.calls.some(p=>p.endsWith('/publish-library')||p.endsWith('/assign'))),false);
+});
+
 test('T18 Tạo bài thêm một lần vào nháp giữ câu cũ; lưu lỗi thử lại không gọi AI lần hai',{timeout:45000},async t=>{
  const {page}=await editorFixture(t);
  const before=await page.evaluate(()=>window.editor.getPayload().definition.blocks[0].items[0].itemVersionId);
