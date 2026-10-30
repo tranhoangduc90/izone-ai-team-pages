@@ -6,10 +6,13 @@ const app = document.querySelector('#app');
 const modal = document.querySelector('#modal');
 const explanation = document.querySelector('#explanation-dialog');
 const query = new URLSearchParams(location.search);
+// Only the separate public demo entry supplies content and local-only callbacks.
+const homeworkDemo = window.IzoneReadingHomeworkDemo;
+const draftStorage = homeworkDemo ? sessionStorage : localStorage;
 const serverClient=window.ReadingServerClient;
 const serverMode=!!serverClient;
 let teacher = query.get('teacher') === '1';
-const storageKey = 'izone:reading-skills67:materials-mi:prototype:v1';
+const storageKey = homeworkDemo ? `izone:homework-demo:${homeworkDemo.content.code}:v1` : 'izone:reading-skills67:materials-mi:prototype:v1';
 let content, fixture, state, history = [], scenario = query.get('scenario') || 'current';
 let mobilePane = 'passage', activeQuestion = 1, lastTrigger = null, explanationIndex = 0;
 let scale = 100, generalNotesOpen = false, toastTimer, storageAvailable = true;
@@ -25,7 +28,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'
 const e = escapeHtml;
 function newState(){ return {id:crypto.randomUUID(), answers:{}, flags:[], annotations:[], notes:'', status:'draft', savedAt:null}; }
 function readStorage(){
-  try {const stored=JSON.parse(localStorage.getItem(storageKey)||'null');history=stored?.history||[];return stored?.draft||newState();}
+  try {const stored=JSON.parse(draftStorage.getItem(storageKey)||'null');history=stored?.history||[];return stored?.draft||newState();}
   catch {storageAvailable=false;return newState();}
 }
 let originalDraft = readStorage();
@@ -37,9 +40,9 @@ function persist(){
   if(state.status==='draft')promoteDraft();
   state.savedAt=new Date().toISOString();
   try {
-    if(state.isSample)localStorage.setItem(storageKey+':sample',JSON.stringify(state));
+    if(state.isSample)draftStorage.setItem(storageKey+':sample',JSON.stringify(state));
     else originalDraft=structuredClone(state);
-    localStorage.setItem(storageKey,JSON.stringify({draft:originalDraft,history}));storageAvailable=true;
+    draftStorage.setItem(storageKey,JSON.stringify({draft:originalDraft,history}));storageAvailable=true;
   }
   catch {storageAvailable=false;}
   updateProgress();return storageAvailable;
@@ -54,7 +57,7 @@ function filled(target){const v=normalize(state.answers[target.id]);return !!v&&
 function completed(){if(serverMode&&state?.serverAttempt)return state.serverAttempt.completeness.filled_cells;if(serverMode&&state?.status==='draft'&&serverClient.state.status==='saved'&&serverClient.state.completeness)return serverClient.state.completeness.filled_cells;return content.targets.filter(filled).length;}
 function timeLabel(iso){return iso?new Date(iso).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'chưa lưu';}
 function isResult(){return state.status==='review';}
-function writable(){return !teacher&&state?.status==='draft'&&(!headings()||window.ReadingSharePractice?.isAccepted()===true);}
+function writable(){return !teacher&&state?.status==='draft'&&(!headings()||homeworkDemo||window.ReadingSharePractice?.isAccepted()===true);}
 window.ReadingInteractionBridge={current:()=>state,scope:()=>content?.version+':'+state?.id,writable,save:persist,showPane:setMobilePane,closeGeneralNotes:()=>{generalNotesOpen=false;document.querySelector('#notes-panel')?.setAttribute('hidden','');}};
 function feedbackHtml(id){
   if(!isResult())return '';
@@ -92,6 +95,7 @@ function render(){
   if(serverMode)window.ReadingMaterialsExperience?.decorate();
   if(serverMode&&headings())window.ReadingSharePractice?.bind({content,teacher,client:serverClient,attemptId:state.serverAttempt?.attemptId,readonly:teacher||state.status!=='draft'});
   document.querySelectorAll('textarea[data-target]').forEach(autoGrow);
+  homeworkDemo?.decorate({content,state,showModal,reset:()=>{state=newState();originalDraft=structuredClone(state);history=[];draftStorage.removeItem(storageKey);render();}});
   requestAnimationFrame(()=>window.ReadingAnnotations?.install());
 }
 function autoGrow(input){input.style.height='auto';input.style.height=Math.max(input.dataset.compactField==='true'?44:80,input.scrollHeight+2)+'px';}
@@ -168,6 +172,7 @@ function review(){
   showModal('Rà soát bài làm',`<p>Đã điền <strong>${completed()}/${totalTargets()} phần</strong>. ${completed()<minimumRequired()?'Cần thêm '+(minimumRequired()-completed())+' phần để đủ điều kiện gửi chấm.':'Đã đủ khối lượng để chấm.'}</p><div class="review-groups">${groups.map(([label,kind])=>`<div class="review-group"><h3>${label}</h3><div class="review-items">${content.targets.filter(t=>t.kind===kind).map(t=>`<button data-jump-field="${t.id}" class="${filled(t)?'filled':''} ${state.flags.includes(t.question)?'flagged':''}" data-status="${filled(t)?'✓':'Trống'}" aria-label="${e(t.label)}">${t.paragraph||t.question}</button>`).join('')}</div></div>`).join('')}</div><p class="minimum-note">Chữ được tô là phần đã điền, chưa phải kết quả đúng. ⚑ là câu bạn muốn xem lại.</p>`,writable()?'<button class="primary" data-action="grade">Chấm bài</button>':'');
 }
 function grade(){
+  if(homeworkDemo){homeworkDemo.showFeedback(showModal);return;}
   if(serverMode)return serverGrade();
   closeModal();
   if(completed()<minimumRequired()){review();return;}
@@ -326,8 +331,9 @@ async function bootstrap(){
       else if(!teacher)await window.ReadingMaterialsExperience?.restore(loaded.history);
       return;
     }
+    if(homeworkDemo){content=homeworkDemo.content;scenario='current';state=structuredClone(originalDraft);render();return;}
     const response=await fetch('/__prototype__/content');if(!response.ok)throw Error('Không đọc được đề riêng tư.');content=await response.json();
-    if(scenario==='sample-current'){const saved=localStorage.getItem(storageKey+':sample');if(saved){state=JSON.parse(saved);render();}else await changeScenario('draft');}
+    if(scenario==='sample-current'){const saved=draftStorage.getItem(storageKey+':sample');if(saved){state=JSON.parse(saved);render();}else await changeScenario('draft');}
     else if(['draft','waiting','review','empty','entry'].includes(scenario))await changeScenario(scenario);else{scenario='current';state=structuredClone(originalDraft);render();}
   }catch(err){app.innerHTML='<section class="notice" style="margin-top:30px"><h2>Chưa mở được bài</h2><p>'+e(err.message)+'</p><p>'+(serverMode?'Kiểm tra tài khoản, quyền lớp hoặc kết nối rồi tải lại trang.':'Hãy mở bằng máy chủ prototype trên máy này, rồi tải lại trang.')+'</p></section>';app.removeAttribute('aria-busy');}
 }

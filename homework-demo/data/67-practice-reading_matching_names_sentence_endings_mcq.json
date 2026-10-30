@@ -1,0 +1,344 @@
+{
+  "kind": "practice",
+  "subject": "reading",
+  "code": "67-practice-reading_matching_names_sentence_endings_mcq",
+  "title": "Robots and us",
+  "version": "cam20-t3-p3-robots-and-us-v1",
+  "totalMs": 1200000,
+  "definition": {
+    "mcq": [
+      {
+        "n": 37,
+        "text": "What point does Richardson make about fear of machines?",
+        "options": [
+          "It has grown alongside the development of ever more advanced robots.",
+          "It is the result of our inclination to attribute human characteristics to non-human entities.",
+          "It has its origins in basic misunderstandings about how inanimate objects function.",
+          "It demonstrates a key difference between human intelligence and machine intelligence."
+        ]
+      },
+      {
+        "n": 38,
+        "text": "What potential advance does Rees see as a cause for concern?",
+        "options": [
+          "robots outnumbering people",
+          "robots having abilities which humans do not",
+          "artificial intelligence developing independent thought",
+          "artificial intelligence taking over every aspect of our lives"
+        ]
+      },
+      {
+        "n": 39,
+        "text": "What does Wolpert emphasise in his response to the question about science fiction?",
+        "options": [
+          "how science fiction influences our attitudes to robots",
+          "how fundamental robots are to the science fiction genre",
+          "how the image of robots in science fiction has changed over time",
+          "how reactions to similar portrayals of robots in science fiction may vary"
+        ]
+      },
+      {
+        "n": 40,
+        "text": "What is Richardson doing in her comment about reality and fantasy?",
+        "options": [
+          "warning people not to confuse one with the other",
+          "outlining ways in which one has impacted on the other",
+          "recommending a change of approach in how people view them",
+          "explaining why scientists have a different perspective on them from other people"
+        ]
+      }
+    ],
+    "names": [
+      {
+        "n": 27,
+        "text": "For our own safety, humans will need to restrict the abilities of robots."
+      },
+      {
+        "n": 28,
+        "text": "The risk of robots harming us is less serious than humans believe it to be."
+      },
+      {
+        "n": 29,
+        "text": "It will take many decades for robot intelligence to be as imaginative as human intelligence."
+      },
+      {
+        "n": 30,
+        "text": "We may have to start considering whether we are treating robots fairly."
+      },
+      {
+        "n": 31,
+        "text": "Robots are probably of more help to us on Earth than in space."
+      },
+      {
+        "n": 32,
+        "text": "The ideas in high-quality science fiction may prove to be just as accurate as those found in the work of mediocre scientists."
+      },
+      {
+        "n": 33,
+        "text": "There are those who look forward to robots developing greater intelligence."
+      }
+    ],
+    "endings": [
+      {
+        "n": 34,
+        "text": "Richardson and Rees express similar views regarding the ethical aspect of"
+      },
+      {
+        "n": 35,
+        "text": "Rees and Wolpert share an opinion about the extent of"
+      },
+      {
+        "n": 36,
+        "text": "Wolpert disagrees with Richardson on the question of"
+      }
+    ],
+    "experts": [
+      [
+        "A",
+        "Martin Rees"
+      ],
+      [
+        "B",
+        "Daniel Wolpert"
+      ],
+      [
+        "C",
+        "Kathleen Richardson"
+      ]
+    ],
+    "passage": {
+      "1": "When asked ‘Should robots be used to colonise other planets?’, cosmology and astrophysics Professor Martin Rees said he believed the solar system would be mapped by robotic craft by the end of the century. ‘The next step would be mining of asteroids, enabling fabrication of large structures in space without having to bring all the raw materials from Earth. ... I think this is more realistic and benign than the ... “terraforming”* of planets.’ He maintains that colonised planets ‘should be preserved with a status that is analogous to Antarctica here on Earth.’",
+      "2": "On the question of using robots to colonise other planets and exploit mineral resources, engineering Professor Daniel Wolpert replied, ‘I don’t see a pressing need to colonise other planets unless we can bring [these] resources back to Earth. The vast majority of Earth is currently inaccessible to us. Using robots to gather resources nearer to home would seem to be a better use of our robotic tools.’",
+      "3": "Meanwhile, for anthropology Professor Kathleen Richardson, the idea of ‘colonisation’ of other planets seemed morally dubious: ‘I think whether we do something on Earth or on Mars we should always do it in the spirit of a genuine interest in “the Other”, not to impose a particular model, but to meet “the Other”.’",
+      "4": "In response to the second question, ‘How soon will machine intelligence outstrip human intelligence?’, Rees mentions robots that are advanced enough to beat humans at chess, but then goes on to say, ‘Robots are still limited in their ability to sense their environment: they can’t yet recognise and move the pieces on a real chessboard as cleverly as a child can. Later this century, however, their more advanced successors may relate to their surroundings, and to people, as adeptly as we do. Moral questions then arise. ... Should we feel guilty about exploiting [sophisticated robots]? Should we fret if they are underemployed, frustrated, or bored?’",
+      "5": "Wolpert’s response to the question about machine intelligence outstripping human intelligence was this: ‘In a limited sense it already has. Machines can already navigate, remember and search for items with an ability that far outstrips humans. However, there is no machine that can identify visual objects or speech with the reliability and flexibility of humans. ... Expecting a machine close to the creative intelligence of a human within the next 50 years would be highly ambitious.’",
+      "6": "Richardson believes that our fear of machines becoming too advanced has more to do with human nature than anything intrinsic to the machines themselves. In her view, it stems from humans’ tendency to personify inanimate objects: we create machines based on representations of ourselves, imagine that machines think and behave as we do, and therefore see them as an autonomous threat. ‘One of the consequences of thinking that the problem lies with machines is that ... we tend to imagine they are greater and more powerful than they really are and subsequently they become so.’",
+      "7": "This led on to the third question, ‘Should we be scared by advances in artificial intelligence?’ To this question, Rees replied, ‘Those who should be worried are the futurologists who believe in the so-called “singularity”.** ... And another worry is that we are increasingly dependent on computer networks, and that these could behave like a single “brain” with a mind of its own, and with goals that may be contrary to human welfare. I think we should ensure that robots remain as no more than “idiot savants” lacking the capacity to outwit us, even though they may greatly surpass us in the ability to calculate and process information.’",
+      "8": "Wolpert’s response was to say that we have already seen the damaging effects of artificial intelligence in the form of computer viruses. ‘But in this case,’ he says, ‘the real intelligence is the malicious designer. Critically, the benefits of computers outweigh the damage that computer viruses cause. Similarly, while there may be misuses of robotics in the near future, the benefits that they will bring are likely to outweigh these negative aspects.’",
+      "9": "Richardson’s response to this question was this: ‘We need to ask why fears of artificial intelligence and robots persist; none have in fact risen up and challenged human supremacy.’ She believes that as robots have never shown themselves to be a threat to humans, it seems unlikely that they ever will. In fact, she went on, ‘Not all fear [robots]; many people welcome machine intelligence.’",
+      "10": "In answer to the fourth question, ‘What can science fiction tell us about robotics?’, Rees replied, ‘I sometimes advise students that it’s better to read first-rate science fiction than second-rate science - more stimulating, and perhaps no more likely to be wrong.’ As his response, Wolpert commented, ‘Science fiction has often been remarkable at predicting the future. ... Science fiction has painted a vivid spectrum of possible futures, from cute and helpful robots to dystopian robotic societies. Interestingly, almost no science fiction envisages a future without robots.’",
+      "11": "Finally, on the question of science fiction, Richardson pointed out that in modern society, people tend to think there is reality on the one hand, and fiction and fantasy on the other. She then explained that the division did not always exist, and that scientists and technologists made this separation because they wanted to carve out the sphere of their work. ‘But the divide is not so clear cut, and that is why the worlds seem to collide at times,’ she said. ‘In some cases, we need to bring these different understandings together to get a whole perspective. Perhaps then, we won’t be so frightened that something we create as a copy of ourselves will be a [threat] to us.’"
+    },
+    "summary": [],
+    "headings": [],
+    "endingOptions": [
+      [
+        "A",
+        "robots to explore outer space."
+      ],
+      [
+        "B",
+        "advances made in machine intelligence so far."
+      ],
+      [
+        "C",
+        "changes made to other planets for our own benefit."
+      ],
+      [
+        "D",
+        "the harm already done by artificial intelligence."
+      ]
+    ],
+    "groups": [
+      {
+        "id": "names",
+        "kind": "matching",
+        "label": "Matching names",
+        "questions": [
+          {
+            "n": 27,
+            "text": "For our own safety, humans will need to restrict the abilities of robots."
+          },
+          {
+            "n": 28,
+            "text": "The risk of robots harming us is less serious than humans believe it to be."
+          },
+          {
+            "n": 29,
+            "text": "It will take many decades for robot intelligence to be as imaginative as human intelligence."
+          },
+          {
+            "n": 30,
+            "text": "We may have to start considering whether we are treating robots fairly."
+          },
+          {
+            "n": 31,
+            "text": "Robots are probably of more help to us on Earth than in space."
+          },
+          {
+            "n": 32,
+            "text": "The ideas in high-quality science fiction may prove to be just as accurate as those found in the work of mediocre scientists."
+          },
+          {
+            "n": 33,
+            "text": "There are those who look forward to robots developing greater intelligence."
+          }
+        ],
+        "start": 27,
+        "end": 33,
+        "instruction": "Match each statement with the correct expert, A, B or C. You may use any letter more than once.",
+        "options": [
+          {
+            "value": "A",
+            "text": "Martin Rees"
+          },
+          {
+            "value": "B",
+            "text": "Daniel Wolpert"
+          },
+          {
+            "value": "C",
+            "text": "Kathleen Richardson"
+          }
+        ]
+      },
+      {
+        "id": "endings",
+        "kind": "matching",
+        "label": "Sentence endings",
+        "questions": [
+          {
+            "n": 34,
+            "text": "Richardson and Rees express similar views regarding the ethical aspect of"
+          },
+          {
+            "n": 35,
+            "text": "Rees and Wolpert share an opinion about the extent of"
+          },
+          {
+            "n": 36,
+            "text": "Wolpert disagrees with Richardson on the question of"
+          }
+        ],
+        "start": 34,
+        "end": 36,
+        "instruction": "Complete each sentence with the correct ending, A–D, below.",
+        "options": [
+          {
+            "value": "A",
+            "text": "robots to explore outer space."
+          },
+          {
+            "value": "B",
+            "text": "advances made in machine intelligence so far."
+          },
+          {
+            "value": "C",
+            "text": "changes made to other planets for our own benefit."
+          },
+          {
+            "value": "D",
+            "text": "the harm already done by artificial intelligence."
+          }
+        ]
+      },
+      {
+        "id": "mcq",
+        "kind": "mcq",
+        "label": "Multiple choice",
+        "questions": [
+          {
+            "n": 37,
+            "text": "What point does Richardson make about fear of machines?",
+            "options": [
+              {
+                "value": "A",
+                "text": "It has grown alongside the development of ever more advanced robots."
+              },
+              {
+                "value": "B",
+                "text": "It is the result of our inclination to attribute human characteristics to non-human entities."
+              },
+              {
+                "value": "C",
+                "text": "It has its origins in basic misunderstandings about how inanimate objects function."
+              },
+              {
+                "value": "D",
+                "text": "It demonstrates a key difference between human intelligence and machine intelligence."
+              }
+            ]
+          },
+          {
+            "n": 38,
+            "text": "What potential advance does Rees see as a cause for concern?",
+            "options": [
+              {
+                "value": "A",
+                "text": "robots outnumbering people"
+              },
+              {
+                "value": "B",
+                "text": "robots having abilities which humans do not"
+              },
+              {
+                "value": "C",
+                "text": "artificial intelligence developing independent thought"
+              },
+              {
+                "value": "D",
+                "text": "artificial intelligence taking over every aspect of our lives"
+              }
+            ]
+          },
+          {
+            "n": 39,
+            "text": "What does Wolpert emphasise in his response to the question about science fiction?",
+            "options": [
+              {
+                "value": "A",
+                "text": "how science fiction influences our attitudes to robots"
+              },
+              {
+                "value": "B",
+                "text": "how fundamental robots are to the science fiction genre"
+              },
+              {
+                "value": "C",
+                "text": "how the image of robots in science fiction has changed over time"
+              },
+              {
+                "value": "D",
+                "text": "how reactions to similar portrayals of robots in science fiction may vary"
+              }
+            ]
+          },
+          {
+            "n": 40,
+            "text": "What is Richardson doing in her comment about reality and fantasy?",
+            "options": [
+              {
+                "value": "A",
+                "text": "warning people not to confuse one with the other"
+              },
+              {
+                "value": "B",
+                "text": "outlining ways in which one has impacted on the other"
+              },
+              {
+                "value": "C",
+                "text": "recommending a change of approach in how people view them"
+              },
+              {
+                "value": "D",
+                "text": "explaining why scientists have a different perspective on them from other people"
+              }
+            ]
+          }
+        ],
+        "start": 37,
+        "end": 40,
+        "instruction": "Choose the correct letter, A, B, C or D."
+      }
+    ],
+    "lesson": {
+      "code": "67-practice-reading_matching_names_sentence_endings_mcq",
+      "lesson": 9,
+      "title": "Robots and us",
+      "book": 20,
+      "test": 3,
+      "passage": 3,
+      "totalMs": 1200000
+    }
+  }
+}

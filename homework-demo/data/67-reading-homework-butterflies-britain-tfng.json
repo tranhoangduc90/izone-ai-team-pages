@@ -1,0 +1,527 @@
+{
+  "kind": "reading-homework",
+  "code": "67-reading-homework-butterflies-britain-tfng",
+  "title": "The impact of climate change on butterflies in Britain",
+  "content": {
+    "code": "67-reading-homework-butterflies-britain-tfng",
+    "version": "butterflies-tfng-l12-20261027-v1",
+    "lesson": 12,
+    "title": "The impact of climate change on butterflies in Britain",
+    "type": "tfng",
+    "paragraphs": [
+      {
+        "id": "1",
+        "text": "According to conservationists, populations of around two thirds of butterfly species have declined in Britain over the past 40 years. If this trend continues, it might have unpredictable knock-on effects for other species in the ecosystem. Butterfly eggs develop into caterpillars and these insects, which are the second stage in a new butterfly’s lifecycle, consume vast quantities of plant material, and in turn act as prey for birds as well as bats and other small mammals. Only by arming themselves with an understanding of why butterfly numbers are down can conservationists hope to halt or reverse the decline."
+      },
+      {
+        "id": "2",
+        "text": "Butterflies prefer outdoor conditions to be ‘just right’, which means neither too hot nor too cold. Under the conditions of climate change, the temperature at any given time in summer is generally getting warmer, leaving butterflies with the challenge of how to deal with this. One of the main ways in which species are ensuring conditions suit them is by changing the time of year at which they are active and reproduce. Scientists refer to the timing of such lifecycle events as ‘phenology’, so when an animal or plant starts to do something earlier in the year than it usually does, it is said to be ‘advancing its phenology’."
+      },
+      {
+        "id": "3",
+        "text": "These advances have been observed already in a wide range of butterflies – indeed, most species are advancing their phenology to some extent. In Britain, as the average spring temperature has increased by roughly 0.5°C over the past 20 years, species have advanced by between three days and a week on average, to keep in line with cooler temperatures. Is this a sign that butterflies are well equipped to cope with climate change, and readily adjust to new temperatures? Or are these populations under stress, being dragged along unwillingly by unnaturally fast changes? The answer is still unknown, but a new study is seeking to answer these questions."
+      },
+      {
+        "id": "4",
+        "text": "First, the researchers pulled together data from millions of records that had been submitted by butterfly enthusiasts – people who spend their free time observing the activities of different species. This provided information on 130 species of butterflies in Great Britain every year for a 20-year period. They then estimated the abundance and distribution of each species across this time, along with how far north in the country they had moved. The data also, crucially, allowed researchers to estimate subtle changes in what time of the year each species was changing into an adult butterfly."
+      },
+      {
+        "id": "5",
+        "text": "Analyzing the trends in each variable, the researchers discovered that species with more flexible lifecycles were more likely to be able to benefit from an earlier emergence driven by climate change. Some species are able to go from caterpillar to butterfly twice or more per year, so that the individual butterflies you see flying in the spring are the grandchildren or great-grandchildren of the individuals seen a year previously."
+      },
+      {
+        "id": "6",
+        "text": "Among these species, researchers observed that those which have been advancing their phenology the most over the 20-year study period also had the most positive trends in abundance, distribution and northwards extent. For these species, such as Britain’s tiniest butterfly, the dainty Small Blue, whose colonies are up to a hundred strong, some develop into butterflies early in spring, allowing their summer generations to complete another reproductive cycle by autumn so that more population growth occurs."
+      },
+      {
+        "id": "7",
+        "text": "Other species, however, are less flexible and restricted to a single reproductive cycle per year. For these species, there was no evidence of any benefit to emerging earlier. Indeed, worryingly, it was found that the species in this group that specialize in very specific habitat types, often related to the caterpillar’s preferred diet, actually tended to be most at harm from advancing phenology. The beautiful High Brown Fritillary, often described as Britain’s most endangered butterfly, is in this group. It is found only in coppiced woodland and limestone pavement habitats. It is also a single-generation butterfly that has advanced its phenology. This suggests that climate change, while undoubtedly not the sole cause, might have played a part in the downfall of this species."
+      },
+      {
+        "id": "8",
+        "text": "All is not lost, however. Many of Britain’s single-generation species show the capacity, in continental Europe, to add a second generation in years that are sufficiently warm. Therefore, as the climate continues to warm, species like the Silver-studded Blue might be able to switch to multiple generations in the UK as well, and so begin to extract benefits from the additional warmth, potentially leading to population increases."
+      },
+      {
+        "id": "9",
+        "text": "More immediately, conservationists can arm themselves with all this knowledge to spot the warning signs of species that may be at risk. The White Admiral of southern England, a much sought-after butterfly, experienced a significant increase in numbers from the 1920s but has shown a considerable decline in the past 20 years. This may be because the caterpillar exists solely on a diet of a plant called honeysuckle. But it is also likely to be due to climate change."
+      }
+    ],
+    "subtitle": "Lesson 12 · Quét Radar → Đối chiếu 3 mảnh → Kết luận T/F/NG",
+    "instruction": "Dùng Leader keyword để tìm vùng liên quan. Điền nội dung bài đọc tương ứng và chọn T/F/NG cho từng mảnh, sau đó chọn kết luận toàn câu. Khi bài không đề cập thông tin, ghi rõ phần không có; không suy diễn.",
+    "blankValues": [
+      "",
+      "—",
+      "..."
+    ],
+    "dropdownPlaceholders": [
+      "Nhấn để chọn"
+    ],
+    "minimumRequired": 42,
+    "targets": [
+      {
+        "id": "l12.read.tfng.q1.m1.evidence",
+        "kind": "evidence",
+        "question": 1,
+        "label": "Câu 1 · Mảnh 1 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q1.m1.label",
+        "kind": "chunk_label",
+        "question": 1,
+        "label": "Câu 1 · Mảnh 1 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q1.m2.evidence",
+        "kind": "evidence",
+        "question": 1,
+        "label": "Câu 1 · Mảnh 2 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q1.m2.label",
+        "kind": "chunk_label",
+        "question": 1,
+        "label": "Câu 1 · Mảnh 2 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q1.m3.evidence",
+        "kind": "evidence",
+        "question": 1,
+        "label": "Câu 1 · Mảnh 3 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q1.m3.label",
+        "kind": "chunk_label",
+        "question": 1,
+        "label": "Câu 1 · Mảnh 3 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q1.conclusion",
+        "kind": "conclusion",
+        "question": 1,
+        "label": "Câu 1 · Kết luận toàn câu"
+      },
+      {
+        "id": "l12.read.tfng.q2.m1.evidence",
+        "kind": "evidence",
+        "question": 2,
+        "label": "Câu 2 · Mảnh 1 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q2.m1.label",
+        "kind": "chunk_label",
+        "question": 2,
+        "label": "Câu 2 · Mảnh 1 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q2.m2.evidence",
+        "kind": "evidence",
+        "question": 2,
+        "label": "Câu 2 · Mảnh 2 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q2.m2.label",
+        "kind": "chunk_label",
+        "question": 2,
+        "label": "Câu 2 · Mảnh 2 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q2.m3.evidence",
+        "kind": "evidence",
+        "question": 2,
+        "label": "Câu 2 · Mảnh 3 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q2.m3.label",
+        "kind": "chunk_label",
+        "question": 2,
+        "label": "Câu 2 · Mảnh 3 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q2.conclusion",
+        "kind": "conclusion",
+        "question": 2,
+        "label": "Câu 2 · Kết luận toàn câu"
+      },
+      {
+        "id": "l12.read.tfng.q3.m1.evidence",
+        "kind": "evidence",
+        "question": 3,
+        "label": "Câu 3 · Mảnh 1 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q3.m1.label",
+        "kind": "chunk_label",
+        "question": 3,
+        "label": "Câu 3 · Mảnh 1 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q3.m2.evidence",
+        "kind": "evidence",
+        "question": 3,
+        "label": "Câu 3 · Mảnh 2 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q3.m2.label",
+        "kind": "chunk_label",
+        "question": 3,
+        "label": "Câu 3 · Mảnh 2 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q3.m3.evidence",
+        "kind": "evidence",
+        "question": 3,
+        "label": "Câu 3 · Mảnh 3 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q3.m3.label",
+        "kind": "chunk_label",
+        "question": 3,
+        "label": "Câu 3 · Mảnh 3 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q3.conclusion",
+        "kind": "conclusion",
+        "question": 3,
+        "label": "Câu 3 · Kết luận toàn câu"
+      },
+      {
+        "id": "l12.read.tfng.q4.m1.evidence",
+        "kind": "evidence",
+        "question": 4,
+        "label": "Câu 4 · Mảnh 1 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q4.m1.label",
+        "kind": "chunk_label",
+        "question": 4,
+        "label": "Câu 4 · Mảnh 1 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q4.m2.evidence",
+        "kind": "evidence",
+        "question": 4,
+        "label": "Câu 4 · Mảnh 2 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q4.m2.label",
+        "kind": "chunk_label",
+        "question": 4,
+        "label": "Câu 4 · Mảnh 2 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q4.m3.evidence",
+        "kind": "evidence",
+        "question": 4,
+        "label": "Câu 4 · Mảnh 3 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q4.m3.label",
+        "kind": "chunk_label",
+        "question": 4,
+        "label": "Câu 4 · Mảnh 3 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q4.conclusion",
+        "kind": "conclusion",
+        "question": 4,
+        "label": "Câu 4 · Kết luận toàn câu"
+      },
+      {
+        "id": "l12.read.tfng.q5.m1.evidence",
+        "kind": "evidence",
+        "question": 5,
+        "label": "Câu 5 · Mảnh 1 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q5.m1.label",
+        "kind": "chunk_label",
+        "question": 5,
+        "label": "Câu 5 · Mảnh 1 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q5.m2.evidence",
+        "kind": "evidence",
+        "question": 5,
+        "label": "Câu 5 · Mảnh 2 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q5.m2.label",
+        "kind": "chunk_label",
+        "question": 5,
+        "label": "Câu 5 · Mảnh 2 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q5.m3.evidence",
+        "kind": "evidence",
+        "question": 5,
+        "label": "Câu 5 · Mảnh 3 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q5.m3.label",
+        "kind": "chunk_label",
+        "question": 5,
+        "label": "Câu 5 · Mảnh 3 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q5.conclusion",
+        "kind": "conclusion",
+        "question": 5,
+        "label": "Câu 5 · Kết luận toàn câu"
+      },
+      {
+        "id": "l12.read.tfng.q6.m1.evidence",
+        "kind": "evidence",
+        "question": 6,
+        "label": "Câu 6 · Mảnh 1 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q6.m1.label",
+        "kind": "chunk_label",
+        "question": 6,
+        "label": "Câu 6 · Mảnh 1 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q6.m2.evidence",
+        "kind": "evidence",
+        "question": 6,
+        "label": "Câu 6 · Mảnh 2 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q6.m2.label",
+        "kind": "chunk_label",
+        "question": 6,
+        "label": "Câu 6 · Mảnh 2 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q6.m3.evidence",
+        "kind": "evidence",
+        "question": 6,
+        "label": "Câu 6 · Mảnh 3 · Nội dung tương ứng"
+      },
+      {
+        "id": "l12.read.tfng.q6.m3.label",
+        "kind": "chunk_label",
+        "question": 6,
+        "label": "Câu 6 · Mảnh 3 · T/F/NG"
+      },
+      {
+        "id": "l12.read.tfng.q6.conclusion",
+        "kind": "conclusion",
+        "question": 6,
+        "label": "Câu 6 · Kết luận toàn câu"
+      }
+    ],
+    "questions": [
+      {
+        "number": 1,
+        "text": "Forty years ago, there were fewer butterflies in Britain than at present.",
+        "sensitive": "fewer ... than at present (So sánh số lượng)",
+        "leader": "Forty years, Britain",
+        "targets": {
+          "m1_evidence": "l12.read.tfng.q1.m1.evidence",
+          "m1_label": "l12.read.tfng.q1.m1.label",
+          "m2_evidence": "l12.read.tfng.q1.m2.evidence",
+          "m2_label": "l12.read.tfng.q1.m2.label",
+          "m3_evidence": "l12.read.tfng.q1.m3.evidence",
+          "m3_label": "l12.read.tfng.q1.m3.label",
+          "conclusion": "l12.read.tfng.q1.conclusion"
+        },
+        "chunks": [
+          {
+            "number": 1,
+            "text": "Forty years ago,",
+            "evidenceTarget": "l12.read.tfng.q1.m1.evidence",
+            "labelTarget": "l12.read.tfng.q1.m1.label"
+          },
+          {
+            "number": 2,
+            "text": "there were fewer butterflies… than at present",
+            "evidenceTarget": "l12.read.tfng.q1.m2.evidence",
+            "labelTarget": "l12.read.tfng.q1.m2.label"
+          },
+          {
+            "number": 3,
+            "text": "in Britain",
+            "evidenceTarget": "l12.read.tfng.q1.m3.evidence",
+            "labelTarget": "l12.read.tfng.q1.m3.label"
+          }
+        ]
+      },
+      {
+        "number": 2,
+        "text": "Caterpillars are eaten by a number of different predators.",
+        "sensitive": "a number of different predators (Số lượng/Phân loại)",
+        "leader": "Caterpillars, predators",
+        "targets": {
+          "m1_evidence": "l12.read.tfng.q2.m1.evidence",
+          "m1_label": "l12.read.tfng.q2.m1.label",
+          "m2_evidence": "l12.read.tfng.q2.m2.evidence",
+          "m2_label": "l12.read.tfng.q2.m2.label",
+          "m3_evidence": "l12.read.tfng.q2.m3.evidence",
+          "m3_label": "l12.read.tfng.q2.m3.label",
+          "conclusion": "l12.read.tfng.q2.conclusion"
+        },
+        "chunks": [
+          {
+            "number": 1,
+            "text": "Caterpillars",
+            "evidenceTarget": "l12.read.tfng.q2.m1.evidence",
+            "labelTarget": "l12.read.tfng.q2.m1.label"
+          },
+          {
+            "number": 2,
+            "text": "are eaten by",
+            "evidenceTarget": "l12.read.tfng.q2.m2.evidence",
+            "labelTarget": "l12.read.tfng.q2.m2.label"
+          },
+          {
+            "number": 3,
+            "text": "a number of different predators.",
+            "evidenceTarget": "l12.read.tfng.q2.m3.evidence",
+            "labelTarget": "l12.read.tfng.q2.m3.label"
+          }
+        ]
+      },
+      {
+        "number": 3,
+        "text": "‘Phenology’ is a term used to describe a creature’s ability to alter the location of a lifecycle event.",
+        "sensitive": "the location (Địa điểm)",
+        "leader": "‘Phenology’",
+        "targets": {
+          "m1_evidence": "l12.read.tfng.q3.m1.evidence",
+          "m1_label": "l12.read.tfng.q3.m1.label",
+          "m2_evidence": "l12.read.tfng.q3.m2.evidence",
+          "m2_label": "l12.read.tfng.q3.m2.label",
+          "m3_evidence": "l12.read.tfng.q3.m3.evidence",
+          "m3_label": "l12.read.tfng.q3.m3.label",
+          "conclusion": "l12.read.tfng.q3.conclusion"
+        },
+        "chunks": [
+          {
+            "number": 1,
+            "text": "‘Phenology’ is a term used to describe",
+            "evidenceTarget": "l12.read.tfng.q3.m1.evidence",
+            "labelTarget": "l12.read.tfng.q3.m1.label"
+          },
+          {
+            "number": 2,
+            "text": "a creature’s ability to alter",
+            "evidenceTarget": "l12.read.tfng.q3.m2.evidence",
+            "labelTarget": "l12.read.tfng.q3.m2.label"
+          },
+          {
+            "number": 3,
+            "text": "the location of a lifecycle event.",
+            "evidenceTarget": "l12.read.tfng.q3.m3.evidence",
+            "labelTarget": "l12.read.tfng.q3.m3.label"
+          }
+        ]
+      },
+      {
+        "number": 4,
+        "text": "Some species of butterfly have a reduced lifespan due to spring temperature increases.",
+        "sensitive": "reduced lifespan (Sự thay đổi tuổi thọ)",
+        "leader": "lifespan, spring temperature",
+        "targets": {
+          "m1_evidence": "l12.read.tfng.q4.m1.evidence",
+          "m1_label": "l12.read.tfng.q4.m1.label",
+          "m2_evidence": "l12.read.tfng.q4.m2.evidence",
+          "m2_label": "l12.read.tfng.q4.m2.label",
+          "m3_evidence": "l12.read.tfng.q4.m3.evidence",
+          "m3_label": "l12.read.tfng.q4.m3.label",
+          "conclusion": "l12.read.tfng.q4.conclusion"
+        },
+        "chunks": [
+          {
+            "number": 1,
+            "text": "Some species of butterfly",
+            "evidenceTarget": "l12.read.tfng.q4.m1.evidence",
+            "labelTarget": "l12.read.tfng.q4.m1.label"
+          },
+          {
+            "number": 2,
+            "text": "have a reduced lifespan",
+            "evidenceTarget": "l12.read.tfng.q4.m2.evidence",
+            "labelTarget": "l12.read.tfng.q4.m2.label"
+          },
+          {
+            "number": 3,
+            "text": "due to spring temperature increases.",
+            "evidenceTarget": "l12.read.tfng.q4.m3.evidence",
+            "labelTarget": "l12.read.tfng.q4.m3.label"
+          }
+        ]
+      },
+      {
+        "number": 5,
+        "text": "There is a clear reason for the adaptations that butterflies are making to climate change.",
+        "sensitive": "clear reason (Tính chất tuyệt đối)",
+        "leader": "reason, adaptations, climate change",
+        "targets": {
+          "m1_evidence": "l12.read.tfng.q5.m1.evidence",
+          "m1_label": "l12.read.tfng.q5.m1.label",
+          "m2_evidence": "l12.read.tfng.q5.m2.evidence",
+          "m2_label": "l12.read.tfng.q5.m2.label",
+          "m3_evidence": "l12.read.tfng.q5.m3.evidence",
+          "m3_label": "l12.read.tfng.q5.m3.label",
+          "conclusion": "l12.read.tfng.q5.conclusion"
+        },
+        "chunks": [
+          {
+            "number": 1,
+            "text": "There is a clear reason",
+            "evidenceTarget": "l12.read.tfng.q5.m1.evidence",
+            "labelTarget": "l12.read.tfng.q5.m1.label"
+          },
+          {
+            "number": 2,
+            "text": "for the adaptations",
+            "evidenceTarget": "l12.read.tfng.q5.m2.evidence",
+            "labelTarget": "l12.read.tfng.q5.m2.label"
+          },
+          {
+            "number": 3,
+            "text": "that butterflies are making to climate change.",
+            "evidenceTarget": "l12.read.tfng.q5.m3.evidence",
+            "labelTarget": "l12.read.tfng.q5.m3.label"
+          }
+        ]
+      },
+      {
+        "number": 6,
+        "text": "The data used in the study was taken from the work of amateur butterfly watchers.",
+        "sensitive": "amateur (Nghiệp dư)",
+        "leader": "data, amateur, watchers",
+        "targets": {
+          "m1_evidence": "l12.read.tfng.q6.m1.evidence",
+          "m1_label": "l12.read.tfng.q6.m1.label",
+          "m2_evidence": "l12.read.tfng.q6.m2.evidence",
+          "m2_label": "l12.read.tfng.q6.m2.label",
+          "m3_evidence": "l12.read.tfng.q6.m3.evidence",
+          "m3_label": "l12.read.tfng.q6.m3.label",
+          "conclusion": "l12.read.tfng.q6.conclusion"
+        },
+        "chunks": [
+          {
+            "number": 1,
+            "text": "The data used in the study",
+            "evidenceTarget": "l12.read.tfng.q6.m1.evidence",
+            "labelTarget": "l12.read.tfng.q6.m1.label"
+          },
+          {
+            "number": 2,
+            "text": "was taken from the work of",
+            "evidenceTarget": "l12.read.tfng.q6.m2.evidence",
+            "labelTarget": "l12.read.tfng.q6.m2.label"
+          },
+          {
+            "number": 3,
+            "text": "amateur butterfly watchers.",
+            "evidenceTarget": "l12.read.tfng.q6.m3.evidence",
+            "labelTarget": "l12.read.tfng.q6.m3.label"
+          }
+        ]
+      }
+    ]
+  }
+}

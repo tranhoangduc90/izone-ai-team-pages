@@ -1,0 +1,297 @@
+{
+  "kind": "practice",
+  "subject": "listening",
+  "code": "67-practice-listening_mcq_flowchart",
+  "title": "Science experiment",
+  "version": "cam19-t3-p3-approved-20261014-v1",
+  "totalMs": 579207,
+  "definition": {
+    "mcq": [
+      {
+        "n": 21,
+        "text": "How does Clare feel about the students in her Year 12 science class?",
+        "options": [
+          "worried that they are not making progress",
+          "challenged by their poor behaviour in class",
+          "frustrated at their lack of interest in the subject"
+        ]
+      },
+      {
+        "n": 22,
+        "text": "How does Jake react to Clare’s suggestion about an experiment based on children’s diet?",
+        "options": [
+          "He is concerned that the results might not be meaningful.",
+          "He feels some of the data might be difficult to obtain.",
+          "He suspects that the conclusions might be upsetting."
+        ]
+      },
+      {
+        "n": 23,
+        "text": "What problem do they agree may be involved in an experiment involving animals?",
+        "options": [
+          "Any results may not apply to humans.",
+          "It may be complicated to get permission.",
+          "Students may not be happy about animal experiments."
+        ]
+      },
+      {
+        "n": 24,
+        "text": "What question do they decide the experiment should address?",
+        "options": [
+          "Are mice capable of controlling their food intake?",
+          "Does an increase in sugar lead to health problems?",
+          "How much do supplements of different kinds affect health?"
+        ]
+      },
+      {
+        "n": 25,
+        "text": "Clare might also consider doing another experiment involving",
+        "options": [
+          "other types of food supplement.",
+          "different genetic strains of mice.",
+          "varying amounts of exercise."
+        ]
+      }
+    ],
+    "bank": [
+      [
+        "A",
+        "size"
+      ],
+      [
+        "B",
+        "escape"
+      ],
+      [
+        "C",
+        "age"
+      ],
+      [
+        "D",
+        "water"
+      ],
+      [
+        "E",
+        "cereal"
+      ],
+      [
+        "F",
+        "calculations"
+      ],
+      [
+        "G",
+        "changes"
+      ],
+      [
+        "H",
+        "colour"
+      ]
+    ],
+    "flow": [
+      [
+        26,
+        "Choose mice which are all the same",
+        " ."
+      ],
+      [
+        27,
+        "Divide the mice into two groups, each with a different",
+        " ."
+      ],
+      [
+        28,
+        "Put each group in a separate cage. Feed group A commercial mouse food. Feed group B the same, but also sugar contained in",
+        " ."
+      ],
+      [
+        29,
+        "Take measurements using an electronic scale. Place them in a weighing chamber to prevent",
+        " ."
+      ],
+      [
+        30,
+        "Do all necessary",
+        " ."
+      ]
+    ],
+    "audio": {
+      "sha256": "0454a5b56ce8e7645a5aaa33cfc01be4b1b4fa81de768d20ec5f70bf17d3cfbb",
+      "durationMs": 459207
+    },
+    "groups": [
+      {
+        "id": "mcq",
+        "kind": "mcq",
+        "label": "Multiple choice",
+        "questions": [
+          {
+            "n": 21,
+            "text": "How does Clare feel about the students in her Year 12 science class?",
+            "options": [
+              {
+                "value": "A",
+                "text": "worried that they are not making progress"
+              },
+              {
+                "value": "B",
+                "text": "challenged by their poor behaviour in class"
+              },
+              {
+                "value": "C",
+                "text": "frustrated at their lack of interest in the subject"
+              }
+            ]
+          },
+          {
+            "n": 22,
+            "text": "How does Jake react to Clare’s suggestion about an experiment based on children’s diet?",
+            "options": [
+              {
+                "value": "A",
+                "text": "He is concerned that the results might not be meaningful."
+              },
+              {
+                "value": "B",
+                "text": "He feels some of the data might be difficult to obtain."
+              },
+              {
+                "value": "C",
+                "text": "He suspects that the conclusions might be upsetting."
+              }
+            ]
+          },
+          {
+            "n": 23,
+            "text": "What problem do they agree may be involved in an experiment involving animals?",
+            "options": [
+              {
+                "value": "A",
+                "text": "Any results may not apply to humans."
+              },
+              {
+                "value": "B",
+                "text": "It may be complicated to get permission."
+              },
+              {
+                "value": "C",
+                "text": "Students may not be happy about animal experiments."
+              }
+            ]
+          },
+          {
+            "n": 24,
+            "text": "What question do they decide the experiment should address?",
+            "options": [
+              {
+                "value": "A",
+                "text": "Are mice capable of controlling their food intake?"
+              },
+              {
+                "value": "B",
+                "text": "Does an increase in sugar lead to health problems?"
+              },
+              {
+                "value": "C",
+                "text": "How much do supplements of different kinds affect health?"
+              }
+            ]
+          },
+          {
+            "n": 25,
+            "text": "Clare might also consider doing another experiment involving",
+            "options": [
+              {
+                "value": "A",
+                "text": "other types of food supplement."
+              },
+              {
+                "value": "B",
+                "text": "different genetic strains of mice."
+              },
+              {
+                "value": "C",
+                "text": "varying amounts of exercise."
+              }
+            ]
+          }
+        ],
+        "start": 21,
+        "end": 25,
+        "instruction": "Choose the correct letter, A, B or C."
+      },
+      {
+        "id": "flow",
+        "kind": "matching",
+        "label": "Flowchart completion",
+        "questions": [
+          {
+            "n": 26,
+            "text": "Choose mice which are all the same ______  ."
+          },
+          {
+            "n": 27,
+            "text": "Divide the mice into two groups, each with a different ______  ."
+          },
+          {
+            "n": 28,
+            "text": "Put each group in a separate cage. Feed group A commercial mouse food. Feed group B the same, but also sugar contained in ______  ."
+          },
+          {
+            "n": 29,
+            "text": "Take measurements using an electronic scale. Place them in a weighing chamber to prevent ______  ."
+          },
+          {
+            "n": 30,
+            "text": "Do all necessary ______  ."
+          }
+        ],
+        "start": 26,
+        "end": 30,
+        "instruction": "Complete the flowchart. Choose FIVE answers from the box and write the correct letter, A–H, next to Questions 26–30.",
+        "options": [
+          {
+            "value": "A",
+            "text": "size"
+          },
+          {
+            "value": "B",
+            "text": "escape"
+          },
+          {
+            "value": "C",
+            "text": "age"
+          },
+          {
+            "value": "D",
+            "text": "water"
+          },
+          {
+            "value": "E",
+            "text": "cereal"
+          },
+          {
+            "value": "F",
+            "text": "calculations"
+          },
+          {
+            "value": "G",
+            "text": "changes"
+          },
+          {
+            "value": "H",
+            "text": "colour"
+          }
+        ]
+      }
+    ],
+    "lesson": {
+      "code": "67-practice-listening_mcq_flowchart",
+      "lesson": 8,
+      "title": "Science experiment",
+      "book": 19,
+      "test": 3,
+      "part": 3,
+      "totalMs": 579207
+    }
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "kind": "speaking",
+  "code": "67-speaking-ta_nguoi",
+  "title": "Tả người",
+  "lesson": 15,
+  "parts": [
+    {
+      "key": "person_intro",
+      "title": "Tả người – Giới thiệu",
+      "url": "https://ducizone.short.gy/ta_nguoi_gioi_thieu",
+      "lead": "Hoàn thành ít nhất một lượt luyện đầy đủ với công thức Bối cảnh 1+2.",
+      "steps": [
+        "Giới thiệu người được chọn, mối quan hệ hoặc vai trò; giải thích bạn biết họ thế nào và vì sao họ phù hợp với đề.",
+        "Ghép thành phần mở đầu hoàn chỉnh sau khi luyện từng bước cùng chatbot.",
+        "Làm thử thách phản xạ với đề mới, đọc góp ý và tổng kết. Chia sẻ toàn bộ hội thoại riêng cho bài Giới thiệu."
+      ]
+    },
+    {
+      "key": "person_traits",
+      "title": "Tả người – Đặc điểm",
+      "url": "https://ducizone.short.gy/ta_nguoi_dac_diem_cau_chuyen",
+      "lead": "Hoàn thành ít nhất một lượt luyện đầy đủ về đặc điểm và kỷ niệm.",
+      "steps": [
+        "Dùng Bằng chứng 1+1: chọn đặc điểm nội tâm, chứng minh bằng thói quen hoặc ví dụ rồi ghép đoạn mô tả. Chi tiết ngoại hình hoặc cử chỉ là tùy chọn.",
+        "Kể một kỷ niệm cụ thể theo ba phần: Thiết lập → Hành động chính → Kết quả và cảm xúc; tự ghép thành câu chuyện hoàn chỉnh.",
+        "Làm thử thách với đề mới, đọc góp ý và tổng kết. Chia sẻ toàn bộ hội thoại riêng cho bài Đặc điểm."
+      ]
+    },
+    {
+      "key": "person_ending",
+      "title": "Tả người – Kết thúc",
+      "url": "https://ducizone.short.gy/ta_nguoi_ket_thuc",
+      "lead": "Hoàn thành ít nhất một lượt luyện đầy đủ với Cầu nối ảnh hưởng.",
+      "steps": [
+        "Chọn đặc điểm hoặc hành động mấu chốt và một hướng ảnh hưởng: Sự nhận ra, Thay đổi hành động hoặc Một giá trị.",
+        "Giải thích vì sao đặc điểm đó ảnh hưởng đến bạn rồi ghép thành đoạn kết hoàn chỉnh khoảng 2–3 câu.",
+        "Áp dụng cho đề thử thách về một người lớn tuổi bạn kính trọng; đọc góp ý và tổng kết. Chia sẻ toàn bộ hội thoại riêng cho bài Kết thúc."
+      ]
+    }
+  ],
+  "supplementary": true,
+  "exercises": [
+    {
+      "title": "Luyện tập Paraphrase",
+      "url": "https://ducizone.short.gy/paraphrase_cau_hoi"
+    },
+    {
+      "title": "Full câu Speaking · Freestyle",
+      "url": "https://ducizone.short.gy/freestyle"
+    },
+    {
+      "title": "Làm rõ · Cấp 1",
+      "url": "https://ducizone.short.gy/lam_ro_lv1"
+    },
+    {
+      "title": "Làm rõ · Cấp 2",
+      "url": "https://ducizone.short.gy/lam_ro_lv2"
+    },
+    {
+      "title": "Làm rõ · Cấp 3",
+      "url": "https://ducizone.short.gy/lam_ro_lv3"
+    },
+    {
+      "title": "Chèn điểm giữa trong Speaking",
+      "url": "https://ducizone.short.gy/chen_diem_giua_speak"
+    },
+    {
+      "title": "Ôn tập Làm rõ / Chèn điểm giữa",
+      "url": "https://ducizone.short.gy/luyen_tap_lam_ro_chen_diem_giua"
+    },
+    {
+      "title": "Ngôn ngữ thể hiện Lợi ích – Tác hại",
+      "url": "https://ducizone.short.gy/vocab_speaking_loi_hai"
+    },
+    {
+      "title": "Lý do làm một việc",
+      "url": "https://ducizone.short.gy/ly_do_lam_mot_viec"
+    },
+    {
+      "title": "Cách làm một việc",
+      "url": "https://ducizone.short.gy/how_to_do"
+    },
+    {
+      "title": "So sánh trực tiếp",
+      "url": "https://ducizone.short.gy/phat_trien_y_so_sanh_truc_tiep"
+    },
+    {
+      "title": "So sánh mở rộng",
+      "url": "https://ducizone.short.gy/phat_trien_y_so_sanh_mo_rong"
+    },
+    {
+      "title": "Xây dựng bối cảnh 4+2",
+      "url": "https://ducizone.short.gy/ke_chuyen_boi_canh"
+    },
+    {
+      "title": "Thứ tự kể chuyện Trước – Trong – Sau",
+      "url": "https://ducizone.short.gy/speaking_lesson_10_vocab_ke_chuyen"
+    },
+    {
+      "title": "Kể chuyện: Diễn biến chi tiết",
+      "url": "https://ducizone.short.gy/ke_chuyen_dien_bien_chinh"
+    },
+    {
+      "title": "Kể chuyện: Kết cục và ý nghĩa",
+      "url": "https://ducizone.short.gy/ke_chuyen_ket_cuc"
+    },
+    {
+      "title": "Mở bài tả vật",
+      "url": "https://ducizone.short.gy/ta_vat_gioi_thieu"
+    },
+    {
+      "title": "Miêu tả chi tiết một vật",
+      "url": "https://ducizone.short.gy/ta_vat_mieu_ta"
+    },
+    {
+      "title": "Tả vật – Chức năng",
+      "url": "https://ducizone.short.gy/ta_vat_chuc_nang"
+    },
+    {
+      "title": "Tả vật – What if",
+      "url": "https://ducizone.short.gy/ta_vat_what_if"
+    },
+    {
+      "title": "Tả người – Giới thiệu",
+      "url": "https://ducizone.short.gy/ta_nguoi_gioi_thieu"
+    },
+    {
+      "title": "Tả người – Đặc điểm",
+      "url": "https://ducizone.short.gy/ta_nguoi_dac_diem_cau_chuyen"
+    },
+    {
+      "title": "Tả người – Kết thúc",
+      "url": "https://ducizone.short.gy/ta_nguoi_ket_thuc"
+    }
+  ]
+}

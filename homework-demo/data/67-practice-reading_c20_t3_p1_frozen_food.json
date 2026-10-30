@@ -1,0 +1,193 @@
+{
+  "kind": "practice",
+  "subject": "reading",
+  "code": "67-practice-reading_c20_t3_p1_frozen_food",
+  "title": "Frozen Food",
+  "version": "c20-t3-p1-frozen-food-20261026-v1",
+  "totalMs": 1200000,
+  "definition": {
+    "mcq": [],
+    "groups": [
+      {
+        "id": "notes",
+        "end": 7,
+        "kind": "completion",
+        "label": "Note Completion",
+        "start": 1,
+        "maxWords": 1,
+        "questions": [
+          {
+            "n": 1,
+            "text": "2,000 years ago, South America People conserved the nutritional value of _______  using a method of freezing then drying.",
+            "maxWords": 1
+          },
+          {
+            "n": 2,
+            "text": "1851, USA  ____ was kept cool by ice during transportation in specially adapted trains.",
+            "maxWords": 1
+          },
+          {
+            "n": 3,
+            "text": "Two kinds of___ were the first frozen food shipped to England.",
+            "maxWords": 1
+          },
+          {
+            "n": 4,
+            "text": "Clarence Birdseye introduced innovations including: - quick-freezing methods, so that _____  did not spoil the food.",
+            "maxWords": 1
+          },
+          {
+            "n": 5,
+            "text": "packaging products with _____, so the product was visible.",
+            "maxWords": 1
+          },
+          {
+            "n": 6,
+            "text": "Early 1940s, USA  Frozen food became popular because of a shortage of _____",
+            "maxWords": 1
+          },
+          {
+            "n": 7,
+            "text": "1950s, USA A large number of homes now had a _______",
+            "maxWords": 1
+          }
+        ],
+        "instruction": "Complete the notes below. Choose ONE WORD ONLY from the passage for each answer. Write your answers in boxes 1–7 on your answer sheet.",
+        "summaryTitle": "The history of frozen food",
+        "summaryParagraphs": [
+          "2,000 years ago, South America",
+          "• People conserved the nutritional value of {{1}}, using a method of freezing then drying.",
+          "1851, USA",
+          "• {{2}} was kept cool by ice during transportation in specially adapted trains.",
+          "1880, Australia",
+          "• Two kinds of {{3}} were the first frozen food shipped to England.",
+          "1917 onwards, USA",
+          "• Clarence Birdseye introduced innovations including:",
+          "– quick-freezing methods, so that {{4}} did not spoil the food.",
+          "– packaging products with {{5}}, so the product was visible.",
+          "Early 1940s, USA",
+          "• Frozen food became popular because of a shortage of {{6}}.",
+          "1950s, USA",
+          "• A large number of homes now had a {{7}}."
+        ]
+      },
+      {
+        "id": "statements",
+        "end": 13,
+        "kind": "tfng",
+        "label": "TRUE / FALSE / NOT GIVEN",
+        "start": 8,
+        "options": [
+          {
+            "text": "TRUE",
+            "value": "TRUE"
+          },
+          {
+            "text": "FALSE",
+            "value": "FALSE"
+          },
+          {
+            "text": "NOT GIVEN",
+            "value": "NOT GIVEN"
+          }
+        ],
+        "questions": [
+          {
+            "n": 8,
+            "text": "The ice transportation business made some Boston ship owners very wealthy in the early 1800s."
+          },
+          {
+            "n": 9,
+            "text": "A disadvantage of the freezing process invented in Australia was that it affected the taste of food."
+          },
+          {
+            "n": 10,
+            "text": "Clarence Birdseye travelled to Labrador in order to learn how the Inuit people froze fish."
+          },
+          {
+            "n": 11,
+            "text": "Swanson Foods invested a great deal of money in the promotion of the TV Dinner."
+          },
+          {
+            "n": 12,
+            "text": "Swanson Foods developed a new style of container for the launch of the TV Dinner."
+          },
+          {
+            "n": 13,
+            "text": "The US frozen food industry is currently the largest in the world"
+          }
+        ],
+        "instruction": "Do the following statements agree with the information given in Reading Passage 1? In boxes 8–13 on your answer sheet, write TRUE if the statement agrees with the information; FALSE if the statement contradicts the information; NOT GIVEN if there is no information on this."
+      }
+    ],
+    "lesson": {
+      "book": 20,
+      "code": "67-practice-reading_c20_t3_p1_frozen_food",
+      "test": 3,
+      "title": "Frozen Food",
+      "groups": [
+        {
+          "id": "notes",
+          "end": 7,
+          "kind": "completion",
+          "label": "Note Completion",
+          "start": 1
+        },
+        {
+          "id": "statements",
+          "end": 13,
+          "kind": "tfng",
+          "label": "TRUE / FALSE / NOT GIVEN",
+          "start": 8
+        }
+      ],
+      "lesson": 13,
+      "passage": 1,
+      "totalMs": 1200000,
+      "subtitle": "A US perspective on the development of the frozen food industry",
+      "paragraphs": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ],
+      "preparationMethods": {
+        "notes": [
+          "Khoanh tròn giới hạn từ được điền: ONE WORD ONLY.",
+          "Nghiên cứu phần ghi chú và xác định loại từ cho mỗi chỗ trống.",
+          "Skim bài text để tìm ra những đoạn liên quan chứa đáp án.",
+          "Scan đoạn văn và điền đáp án đúng, chú ý giới hạn từ."
+        ],
+        "statements": [
+          "Đọc kĩ câu hỏi và gạch chân từ khóa.",
+          "Scan từ khóa đã gạch trong bài đọc.",
+          "Chú ý tới controlling words (not, only, the majority etc.).",
+          "Nếu có thông tin trong câu hỏi không có phần tương ứng trong bài đọc, chọn NOT GIVEN. Nếu mọi thông tin đều khớp, chọn TRUE; nếu có thông tin trái ngược hoặc sai lệch, chọn FALSE."
+        ]
+      }
+    },
+    "passage": {
+      "1": "At some point in history, humans discovered that ice preserved food. There is evidence that winter ice was stored to preserve food in the summer as far back as 10,000 years ago. Two thousand years ago, the inhabitants of South America's Andean mountains had a unique means of conserving potatoes for later consumption. They froze them overnight, then trampled them to squeeze out the moisture, then dried them in the sun. This preserved their nutritional value—if not their aesthetic appeal.",
+      "2": "Natural ice remained the main form of refrigeration until late in the 19th century. In the early 1800s, ship owners from Boston, USA, had enormous blocks of Arctic ice towed all over the Atlantic for the purpose of food preservation. In 1851, railroads first began putting blocks of ice in insulated rail cars to send butter from Ogdensburg, New York, to Boston.",
+      "3": "Finally, in 1870, Australian inventors found a way to make 'mechanical ice'. They used a compressor to force a gas—ammonia at first and later Freon—through a condenser. The compressed gas gave up some of its heat as it moved through the condenser. Then the gas was released quickly into a low-pressure evaporator coil where it became liquid and cold. Air was blown over the evaporator coil and then this cooled air passed into an insulated compartment, lowering its temperature to freezing point.",
+      "4": "Initially, this process was invented to keep Australian beer cool even in hot weather. But Australian cattlemen were quick to realize that, if they could put this new invention on a ship, they could export meat across the oceans. In 1880, a shipment of Australian beef and mutton was sent, frozen, to England. While the food frozen this way was still palatable, there was some deterioration. During the freezing process, crystals formed within the cells of the food, and when the ice expanded and the cells burst, this spoilt the flavor and texture of the food.",
+      "5": "The modern frozen food industry began with the indigenous Inuit people of Canada. In 1912, a biology student in Massachusetts, USA, named Clarence Birdseye, ran out of money and went to Labrador in Canada to trap and trade furs. While he was there, he became fascinated with how the Inuit would quickly freeze fish in the Arctic air. The fish looked and tasted fresh even months later.",
+      "6": "Birdseye returned to the USA in 1917 and began developing mechanical freezers capable of quick-freezing food. Birdseye methodically kept inventing better freezers and gradually built a business selling frozen fish from Gloucester, Massachusetts. In 1929, his business was sold and became General Foods, but he stayed with the company as director of research, and his division continued to innovate.",
+      "7": "Birdseye was responsible for several key innovations that made the frozen food industry possible. He developed quick-freezing techniques that reduced the damage that crystals caused, as well as the technique of freezing the product in the package it was to be sold in. He also introduced the use of cellophane, the first transparent material for food packaging, which allowed consumers to see the quality of the product. Birdseye products also came in convenient size packages that could be prepared with a minimum of effort.",
+      "8": "But there were still obstacles. In the 1930s, few grocery stores could afford to buy freezers for a market that wasn't established yet. So, Birdseye leased inexpensive freezer cases to them. He also leased insulated railroad cars so that he could ship his products nationwide. However, few consumers had freezers large enough or efficient enough to take advantage of the products.",
+      "9": "Sales increased in the early 1940s, when World War II gave a boost to the frozen food industry because tin was being used for munitions. Canned foods were rationed to save tin for the war effort, while frozen foods were abundant and cheap.",
+      "10": "Finally, by the 1950s, refrigerator technology had developed far enough to make these appliances affordable for the average family. By 1953, 33 million US families owned a refrigerator, and manufacturers were gradually increasing the size of the freezer compartments in them.",
+      "11": "1950s families were also looking for convenience at mealtimes, so the moment was right for the arrival of the 'TV Dinner'. Swanson Foods was a large, nationally recognized producer of canned and frozen poultry. In 1954, the company adapted some of Birdseye's freezing techniques, and with the help of a clever name and a huge advertising budget, it launched the first 'TV Dinner'. This consisted of frozen turkey, potatoes and vegetables served in the same segmented aluminum tray that was used by airlines. The product was an instant success. Within a year, Swanson had sold 13 million TV dinners. American consumers couldn't resist the combination of a trusted brand name, a single-serving package and the convenience of a meal that could be ready after only 25 minutes in a hot oven. By 1959, Americans were spending $2.7 billion annually on frozen foods, and half a billion of that was spent on ready-prepared meals such as the TV Dinner.",
+      "12": "Today, the US frozen food industry has a turnover of over $67 billion annually, with $26.6 billion of that sold to consumers for home consumption. The remaining $40 billion in frozen food sales come through restaurants, cafeterias, hospitals and schools, and that represents a third of the total food service sales."
+    },
+    "authored": true
+  }
+}

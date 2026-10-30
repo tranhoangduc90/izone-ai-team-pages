@@ -1,0 +1,148 @@
+{
+  "kind": "speaking",
+  "code": "67-speaking-lam_ro",
+  "title": "Làm rõ",
+  "lesson": 3,
+  "parts": [
+    {
+      "key": "clarify_1",
+      "title": "Làm rõ · Cấp 1",
+      "url": "https://ducizone.short.gy/lam_ro_lv1",
+      "lead": "Luyện đủ 3 phần: Danh từ, Động từ và Tính từ. Mỗi phần ít nhất một câu hỏi.",
+      "steps": [
+        "Đăng nhập ChatGPT và mở bài Làm rõ cấp 1.",
+        "Làm theo chatbot cho cả ba loại từ, mỗi loại ít nhất một câu.",
+        "Tạo link Chia sẻ của chính hội thoại cấp 1."
+      ]
+    },
+    {
+      "key": "clarify_2",
+      "title": "Làm rõ · Cấp 2",
+      "url": "https://ducizone.short.gy/lam_ro_lv2",
+      "lead": "Luyện ít nhất 2 câu hỏi ở cấp 2.",
+      "steps": [
+        "Mở bài Làm rõ cấp 2.",
+        "Làm theo các bước của chatbot cho ít nhất hai câu hỏi.",
+        "Tạo link Chia sẻ riêng của hội thoại cấp 2."
+      ]
+    },
+    {
+      "key": "clarify_3",
+      "title": "Làm rõ · Cấp 3",
+      "url": "https://ducizone.short.gy/lam_ro_lv3",
+      "lead": "Luyện ít nhất 2 câu hỏi ở cấp 3.",
+      "steps": [
+        "Mở bài Làm rõ cấp 3.",
+        "Làm theo các bước của chatbot cho ít nhất hai câu hỏi.",
+        "Tạo link Chia sẻ riêng của hội thoại cấp 3."
+      ]
+    },
+    {
+      "key": "freestyle",
+      "title": "Full câu Speaking · Freestyle",
+      "url": "https://ducizone.short.gy/freestyle",
+      "lead": "Luyện đủ 2 câu Speaking. Mỗi câu cần một chu trình hoàn chỉnh.",
+      "steps": [
+        "Yêu cầu ChatGPT hỏi một câu. Nếu cần, xin gợi ý về ý tưởng hoặc từ vựng.",
+        "Trả lời và xem ChatGPT nhận xét, sửa lỗi, nâng cấp câu trả lời.",
+        "Nói lại toàn bộ câu trả lời sau góp ý. Lặp lại với câu hỏi thứ hai.",
+        "Tạo link Chia sẻ riêng của hội thoại Freestyle."
+      ]
+    }
+  ],
+  "supplementary": false,
+  "exercises": [
+    {
+      "title": "Luyện tập Paraphrase",
+      "url": "https://ducizone.short.gy/paraphrase_cau_hoi"
+    },
+    {
+      "title": "Full câu Speaking · Freestyle",
+      "url": "https://ducizone.short.gy/freestyle"
+    },
+    {
+      "title": "Làm rõ · Cấp 1",
+      "url": "https://ducizone.short.gy/lam_ro_lv1"
+    },
+    {
+      "title": "Làm rõ · Cấp 2",
+      "url": "https://ducizone.short.gy/lam_ro_lv2"
+    },
+    {
+      "title": "Làm rõ · Cấp 3",
+      "url": "https://ducizone.short.gy/lam_ro_lv3"
+    },
+    {
+      "title": "Chèn điểm giữa trong Speaking",
+      "url": "https://ducizone.short.gy/chen_diem_giua_speak"
+    },
+    {
+      "title": "Ôn tập Làm rõ / Chèn điểm giữa",
+      "url": "https://ducizone.short.gy/luyen_tap_lam_ro_chen_diem_giua"
+    },
+    {
+      "title": "Ngôn ngữ thể hiện Lợi ích – Tác hại",
+      "url": "https://ducizone.short.gy/vocab_speaking_loi_hai"
+    },
+    {
+      "title": "Lý do làm một việc",
+      "url": "https://ducizone.short.gy/ly_do_lam_mot_viec"
+    },
+    {
+      "title": "Cách làm một việc",
+      "url": "https://ducizone.short.gy/how_to_do"
+    },
+    {
+      "title": "So sánh trực tiếp",
+      "url": "https://ducizone.short.gy/phat_trien_y_so_sanh_truc_tiep"
+    },
+    {
+      "title": "So sánh mở rộng",
+      "url": "https://ducizone.short.gy/phat_trien_y_so_sanh_mo_rong"
+    },
+    {
+      "title": "Xây dựng bối cảnh 4+2",
+      "url": "https://ducizone.short.gy/ke_chuyen_boi_canh"
+    },
+    {
+      "title": "Thứ tự kể chuyện Trước – Trong – Sau",
+      "url": "https://ducizone.short.gy/speaking_lesson_10_vocab_ke_chuyen"
+    },
+    {
+      "title": "Kể chuyện: Diễn biến chi tiết",
+      "url": "https://ducizone.short.gy/ke_chuyen_dien_bien_chinh"
+    },
+    {
+      "title": "Kể chuyện: Kết cục và ý nghĩa",
+      "url": "https://ducizone.short.gy/ke_chuyen_ket_cuc"
+    },
+    {
+      "title": "Mở bài tả vật",
+      "url": "https://ducizone.short.gy/ta_vat_gioi_thieu"
+    },
+    {
+      "title": "Miêu tả chi tiết một vật",
+      "url": "https://ducizone.short.gy/ta_vat_mieu_ta"
+    },
+    {
+      "title": "Tả vật – Chức năng",
+      "url": "https://ducizone.short.gy/ta_vat_chuc_nang"
+    },
+    {
+      "title": "Tả vật – What if",
+      "url": "https://ducizone.short.gy/ta_vat_what_if"
+    },
+    {
+      "title": "Tả người – Giới thiệu",
+      "url": "https://ducizone.short.gy/ta_nguoi_gioi_thieu"
+    },
+    {
+      "title": "Tả người – Đặc điểm",
+      "url": "https://ducizone.short.gy/ta_nguoi_dac_diem_cau_chuyen"
+    },
+    {
+      "title": "Tả người – Kết thúc",
+      "url": "https://ducizone.short.gy/ta_nguoi_ket_thuc"
+    }
+  ]
+}
