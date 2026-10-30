@@ -13,7 +13,11 @@ export async function mount(data){
    const grade=document.querySelector('#grade-button');if(grade){grade.textContent='Xem ví dụ góp ý';grade.setAttribute('aria-label','Xem ví dụ góp ý minh họa');}
   }};
  const renderer=data.content.type==='tfng'?'tfng':data.content.type==='green-roofs'?'green-roofs':data.content.type==='matching_people'?'people':data.content.type==='sentence_completion'?'sentence':data.content.type==='matching_headings'?'headings':null;
- if(renderer)await loadScript(new URL(`../reading-skills67/${renderer}-renderer.js`,import.meta.url).href);
+ if(renderer){
+  await loadScript(new URL(`../reading-skills67/${renderer}-renderer.js`,import.meta.url).href);
+  const name={'tfng':'ReadingTfngRenderer','green-roofs':'ReadingGreenRoofsRenderer','people':'ReadingPeopleRenderer','sentence':'ReadingSentenceRenderer','headings':'ReadingHeadingsRenderer'}[renderer];
+  await window[name]?.ready;
+ }
  await loadScript(new URL('../reading-skills67/prototype.js?v=20261030-cta31-demo1',import.meta.url).href);
  await loadScript(new URL('../reading-practice/annotations.js?v=20261024-master170-notes6',import.meta.url).href);
  await new Promise((resolve,reject)=>{let tries=0;const check=()=>{if(document.querySelector('[data-target]'))resolve();else if(++tries>100)reject(Error('Chưa dựng được bài Reading.'));else setTimeout(check,40);};check();});
