@@ -128,3 +128,17 @@ test('Thẻ 20 ba nhịp cập nhật thật giữ DOM, vùng đọc và lựa c
   assert.equal(await current.evaluate(list=>readingState.row===document.querySelector(list+' [data-session-number="1"]'),list),true);}
  assert.deepEqual(primary.errors,[]);assert.deepEqual(privateView.errors,[]);
 });
+
+
+test('Thẻ 20 lịch và tổng quan nhiều buổi có thời hạn đọc riêng khi mạng chậm',{timeout:60000},async()=>{
+ const {page,errors}=await pageFor('/progress-log/student.html');
+ await page.route('**/api/learning/student/course-journey',async route=>{
+  const response=await route.fetch(),data=await response.json();data.journey.sessions=Array.from({length:7},(_,i)=>({...data.journey.sessions[0],sessionNumber:i+1,sessionDate:'2026-10-0'+(i+1)}));
+  await new Promise(done=>setTimeout(done,6000));await route.fulfill({response,json:data});
+ });
+ await page.route('**/api/learning/student/course-session-detail',async route=>{await new Promise(done=>setTimeout(done,4000));await route.continue();});
+ await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();await page.locator('#portalStudent').selectOption(a);
+ await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#portalHome:not([hidden])').waitFor();
+ await page.getByRole('link',{name:'Hành trình của em',exact:true}).click();await page.locator('#thuyStudentSkills h2').waitFor({timeout:40000});
+ assert.equal(await page.locator('#thuyStudentSkills h2').textContent(),'Tổng quan');assert.doesNotMatch(await page.locator('#thuyStudentSkills').textContent(),/Hết thời gian chờ/u);assert.deepEqual(errors,[]);
+});
