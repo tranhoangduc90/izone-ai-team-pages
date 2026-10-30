@@ -125,6 +125,7 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   elements.scoresPanel.hidden=true;elements.insightPanel.hidden=true;
   analytics.prepend(elements.questionAnalyticsStatus,elements.questionAnalytics);
   elements.overviewFilter.closest('label').hidden=true;
+  const courseResults=node('div','','thuy-student-results thuy-course-results');courseResults.id='thuyCourseResults';elements.courseOverview.before(courseResults);courseResults.append(elements.courseOverview);
   elements.overviewClassSelect.closest('.field-grid').hidden=true;
   elements.overviewPanel.querySelector('.section-heading').hidden=true;
   elements.overviewPanel.querySelector('#showAllJourneyClasses').closest('label').hidden=true;
@@ -141,7 +142,9 @@ export function showThuyDetail(dialog){
   dialog.dataset.thuyGeneration=String(Number(dialog.dataset.thuyGeneration||0)+1);
   const opener=document.activeElement;
   for(const other of document.querySelectorAll('#draftDialog,#journeyDetailDialog'))if(other!==dialog&&other.open)other.close();
-  const results=dialog.id==='draftDialog'?document.querySelector('#thuyStudentResults'):null;
+  const results=dialog.id==='draftDialog'?document.querySelector('#thuyStudentResults'):dialog.id==='journeyDetailDialog'&&!document.querySelector('#overviewPanel')?.hidden?document.querySelector('#thuyCourseResults'):null;
+  if(dialog.parentElement?.classList.contains('has-inline-detail')&&dialog.parentElement!==results)dialog.parentElement.classList.remove('has-inline-detail');
+  if(!results&&dialog.classList.contains('thuy-inline-detail')){dialog.classList.remove('thuy-inline-detail');document.body.append(dialog);}
   if(results){document.body.classList.remove('has-thuy-detail');results.append(dialog);results.classList.add('has-inline-detail');dialog.classList.add('thuy-inline-detail');}
   if(!dialog.open)dialog.show();if(!results)document.body.classList.add('has-thuy-detail');
   if(matchMedia('(max-width:650px)').matches){dialog.scrollIntoView({block:'start'});dialog.querySelector('button[aria-label]')?.focus({preventScroll:true});}
