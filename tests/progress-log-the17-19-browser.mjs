@@ -192,6 +192,15 @@ test('kết quả chưa phân mode từng câu bị chặn nguyên lô',{timeout
  await ai.getByRole('status').getByText(/AI chưa xác định/).waitFor();assert.deepEqual(await page.evaluate(()=>window.editor.getPayload()),before);
 });
 
+test('xem trước cho phép ô đáp án trống, xuất bản vẫn yêu cầu xử lý',{timeout:45000},async t=>{
+ const {page}=await editorFixture(t);
+ await page.evaluate(async()=>{const {newEditorItem}=await import('/progress-log/teacher-form-editor.js');const gap=newEditorItem('gapfill',2),ids=[crypto.randomUUID(),crypto.randomUUID()];gap.kind='exercise';gap.skillCodes=['general'];gap.graderType='accepted_text_sequence';gap.maxScore=2;gap.interactionConfig.blankIds=ids;window.saved.definition.blocks[0].items.push(gap);window.saved.gradingKey.authoringState={[gap.itemVersionId]:{answerRows:Object.fromEntries(ids.map(id=>[id,[{id:crypto.randomUUID(),value:''}]]))}};window.editor.openDraft(window.saved);});
+ await page.getByRole('button',{name:'Xem trước',exact:true}).click();await page.locator('.thuy-worksheet-preview iframe').waitFor();
+ assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.path.endsWith('/preview-grant')).length),1);
+ await page.keyboard.press('Escape');await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.getByText(/hãy nhập đáp án hoặc bỏ ô đáp án/).first().waitFor();
+ assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.path.endsWith('/approve')||c.path.endsWith('/publish-library')).length),0);
+});
+
 test('T19 Xem trước tại chỗ lỗi grant thử lại và Escape trả focus không mở tab mới',{timeout:30000},async t=>{
  const {page,context}=await editorFixture(t);await page.evaluate(()=>{window.failGrant=true;});
  await page.getByRole('button',{name:'Xem trước',exact:true}).click();

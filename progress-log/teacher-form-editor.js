@@ -265,7 +265,6 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     if(!thuyActionButtons){const preview=button('Xem trước',()=>{
       if(busy&&!backgroundBusy||queuedForeground||!draft)return;
       void run(async current=>{
-        checkAnswerRows();
         checkSkills();
         if(dirty||!draft.id)await save();
         if(current!==generation)return;
