@@ -737,6 +737,12 @@ function buildChoice(item, option, inputType, optionIndex) {
     if (inputType === 'radio') recordResponse(item.itemVersionId, input.value);
     else {
       const selected = [...label.parentElement.querySelectorAll('input:checked')].map(node => node.value);
+      const limit = item.interactionConfig?.maxSelections;
+      if (input.checked && item.kind !== 'survey' && Number.isInteger(limit) && selected.length > limit) {
+        input.checked = false;
+        setNotice(`Em chỉ được chọn tối đa ${limit} phương án. Hãy bỏ một phương án trước khi chọn thêm.`, 'error');
+        return;
+      }
       recordResponse(item.itemVersionId, selected);
     }
     for (const choice of label.parentElement.querySelectorAll('.choice')) {
