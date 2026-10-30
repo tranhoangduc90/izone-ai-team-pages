@@ -94,18 +94,20 @@ async function editorFixture(t){
   const {createFormDraftEditor,newEditorPayload,newEditorItem}=await import('/progress-log/teacher-form-editor.js');
   window.calls=[];window.publications=[];window.saved=null;
   const request=async(path,options={})=>{
-   const body=structuredClone(options.body);window.calls.push({path,body});
+   const body=structuredClone(options.body);window.calls.push({path,body,timeoutMs:options.timeoutMs});
    if(path.startsWith('/teacher/form-library?'))return {entries:[]};
    if(path==='/teacher/form-publications')return {publications:window.publications};
    if(path.startsWith('/teacher/form-drafts/review-queue'))return {drafts:[]};
    if(path.startsWith('/teacher/form-drafts?'))return {drafts:window.saved?[structuredClone(window.saved)]:[]};
    if(path==='/teacher/form-drafts'&&options.method==='POST'){window.saved={...body,id:'draft-fixture',revision:1,status:'draft',contentHash:'h1'};return {draft:structuredClone(window.saved)};}
    if(path.endsWith('/ai-import-preview')){
-    if(window.holdAi)await new Promise(done=>{window.releaseAi=done;});
+    if(window.holdAi)await new Promise((done,reject)=>{window.releaseAi=done;options.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});});
+    if(window.aiFailure)throw Error(window.aiFailure);
     const payload={definition:structuredClone(window.saved.definition),gradingKey:structuredClone(window.saved.gradingKey)};
     // JSONB có thể trả thứ tự khóa object khác dù nội dung/ID của câu cũ không đổi.
     payload.definition.blocks[0].items[0]=Object.fromEntries(Object.entries(payload.definition.blocks[0].items[0]).reverse());
-    const added=[newEditorItem('mcq',2),newEditorItem('reflection',3)];added[0].prompt='Question alpha';added[0].skillCodes=['reading'];added[1].prompt='Question beta';added[1].skillCodes=['speaking'];
+    const added=[newEditorItem('mcq',2),newEditorItem('reflection',3)];added[0].prompt='Question alpha';added[0].skillCodes=['reading'];added[0].kind='exercise';added[1].prompt='Question beta';added[1].skillCodes=['speaking'];added[1].kind='survey';
+    if(window.invalidAiKinds)delete added[1].kind;
     payload.definition.blocks[0].items.push(...added);payload.gradingKey.items[added[0].itemVersionId]={graderType:'exact_option',expectedOptionId:'B'};
     window.failedAiSave=Boolean(window.failAiSave);return {preview:{baseRevision:window.saved.revision,payload,rows:[],errors:[],warnings:[],unmappedText:''}};
    }
@@ -146,6 +148,38 @@ test('T18 Tạo bài thêm một lần vào nháp giữ câu cũ; lưu lỗi th�
  assert.equal(await page.getByRole('tab',{name:/Kho cá nhân/}).getAttribute('aria-selected'),'true');
  assert.equal(await page.getByRole('button',{name:'Phiếu đang soạn mẫu',exact:true}).isVisible(),true);
  assert.equal(await page.locator('.thuy-authoring').isVisible(),false);await shot(page,'publish-personal-library');
+});
+
+test('AI lỗi cuối giữ nguồn/câu cũ, mở lại và thử lại thêm đúng một lần',{timeout:45000},async t=>{
+ const {page}=await editorFixture(t),source='Nội dung nguồn giữ nguyên khi AI đã thử hai lần';
+ const before=await page.evaluate(()=>window.editor.getPayload());
+ await page.evaluate(()=>{window.aiFailure='AI trả cấu trúc chưa hợp lệ. Đã thử 2 lần. Nội dung nguồn và bản nháp được giữ nguyên.';});
+ await page.getByRole('button',{name:'AI chuyển nội dung có sẵn',exact:true}).click();let ai=page.locator('.thuy-editor-ai');
+ await ai.getByLabel('Nội dung câu hỏi có sẵn').fill(source);await ai.getByRole('button',{name:'Tạo bài',exact:true}).click();
+ await ai.getByRole('status').getByText(/Đã thử 2 lần/).waitFor();
+ assert.deepEqual(await page.evaluate(()=>window.editor.getPayload()),before);assert.equal(await ai.getByLabel('Nội dung câu hỏi có sẵn').inputValue(),source);
+ await ai.getByRole('button',{name:'Đóng AI',exact:true}).click();await page.getByRole('button',{name:'AI chuyển nội dung có sẵn',exact:true}).click();ai=page.locator('.thuy-editor-ai');
+ assert.equal(await ai.getByLabel('Nội dung câu hỏi có sẵn').inputValue(),source);
+ await page.evaluate(()=>{window.aiFailure='';});await ai.getByRole('button',{name:'Tạo bài',exact:true}).click();await ai.waitFor({state:'detached'});
+ assert.equal(await page.evaluate(()=>window.saved.definition.blocks[0].items.length),3);assert.deepEqual(await page.evaluate(()=>window.saved.definition.blocks[0].items.slice(1).map(i=>i.kind)),['exercise','survey']);
+});
+
+test('nguồn dài qua giới hạn cũ dùng đủ thời gian, quá 60000 bị chặn trước API',{timeout:45000},async t=>{
+ const {page}=await editorFixture(t);await page.clock.install();await page.getByRole('button',{name:'AI chuyển nội dung có sẵn',exact:true}).click();const ai=page.locator('.thuy-editor-ai');
+ await ai.getByLabel('Nội dung câu hỏi có sẵn').fill('x'.repeat(60001));await ai.getByRole('button',{name:'Tạo bài',exact:true}).click();
+ await ai.getByRole('status').getByText(/60.000 ký tự/).waitFor();assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.path.endsWith('/ai-import-preview')).length),0);
+ await page.evaluate(()=>{window.holdAi=true;});await ai.getByLabel('Nội dung câu hỏi có sẵn').fill('x'.repeat(20001));await ai.getByRole('button',{name:'Tạo bài',exact:true}).click();
+ await page.waitForFunction(()=>Boolean(window.releaseAi));assert.match(await ai.getByRole('status').innerText(),/4–5 phút/);
+ await page.clock.runFor(140000);assert.equal(await ai.getByRole('button',{name:'Tạo bài',exact:true}).isDisabled(),true);assert.doesNotMatch(await ai.getByRole('status').innerText(),/hết thời gian|Chưa tạo được/);
+ await ai.getByRole('button',{name:'Đóng AI',exact:true}).click();await page.evaluate(()=>window.releaseAi());
+});
+
+test('kết quả chưa phân mode từng câu bị chặn nguyên lô',{timeout:45000},async t=>{
+ const {page}=await editorFixture(t);await page.evaluate(()=>{window.invalidAiKinds=true;});
+ const before=await page.evaluate(()=>window.editor.getPayload());
+ await page.getByRole('button',{name:'AI chuyển nội dung có sẵn',exact:true}).click();const ai=page.locator('.thuy-editor-ai');
+ await ai.getByLabel('Nội dung câu hỏi có sẵn').fill('Câu nguồn');await ai.getByRole('button',{name:'Tạo bài',exact:true}).click();
+ await ai.getByRole('status').getByText(/AI chưa xác định/).waitFor();assert.deepEqual(await page.evaluate(()=>window.editor.getPayload()),before);
 });
 
 test('T19 Xem trước tại chỗ lỗi grant thử lại và Escape trả focus không mở tab mới',{timeout:30000},async t=>{
