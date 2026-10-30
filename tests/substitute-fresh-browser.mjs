@@ -45,7 +45,7 @@ try{
    await page.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server&class=DEMO');
    await page.locator('#bootstrapStudent').waitFor({state:'visible'});
    assert.equal(await page.locator('#bootstrapStudent').inputValue(),'');
-   assert.deepEqual(await page.locator('#bootstrapClass option').evaluateAll(options=>options.map(o=>o.value).filter(Boolean)),['DEMO','IC9001','IC9002']);
+   assert.deepEqual(await page.locator('#bootstrapClass option').evaluateAll(options=>options.map(o=>o.value).filter(Boolean)),['IC9001','IC9002','DEMO']);
    await page.locator('#bootstrapClass').selectOption('IC9002');
    await page.locator('#bootstrapStudent option[value="fictional-01"]').waitFor({state:'attached'});
    assert.equal(await page.locator('#bootstrapStudent').inputValue(),'');
