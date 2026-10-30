@@ -49,6 +49,8 @@ function harness(number, blocked = false) {
   };
   if (blocked) context.sessionStorage.removeItem = () => { throw new Error('blocked'); };
   vm.createContext(context);
+  context.window.localStorage = context.localStorage;
+  context.window.sessionStorage = context.sessionStorage;
   vm.runInContext(readFileSync(new URL('../term-tests/substitute-shared/state.js',import.meta.url),'utf8'),context);
   vm.runInContext(read(number), context);
   return { context, dialog, own, unrelated, listeners, confirm: () => dialog.querySelector('[data-reset-confirm]').listeners.click() };

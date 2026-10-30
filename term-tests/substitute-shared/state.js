@@ -15,7 +15,7 @@
     const timer=setTimeout(()=>controller.abort(),20000);
     try{
       const response=await fetch(app.API_BASE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},
-        body:JSON.stringify({route:'/api/test/history',payload:testClass?{qaClass:'CODEXID261018',excludeTestClasses:true}:{excludeTestClasses:true}}),signal:controller.signal,cache:'no-store'});
+        body:JSON.stringify({route:'/api/test/history',payload:testClass?{qaClass:'CODEXID261018'}:{}}),signal:controller.signal,cache:'no-store'});
       const value=await response.json();
       if(!response.ok||value.testSlug!==config.slug||!uuid.test(value.historyEpoch)||value.stateVersion!==2)throw new Error('Không xác nhận được phiên dữ liệu. Hãy tải lại trang.');
       if(value.maintenance)throw new Error('Bài thi đang bảo trì. Vui lòng quay lại sau.');
@@ -96,9 +96,17 @@
     stop();
     if(broadcast)localStorage.setItem('izone-demo-reset:'+slug+':DEMO:server-grade',crypto.randomUUID());
     const prefixes=['izone-test:','izone-test-ui:','izone-test-annotations:'].map(p=>p+slug+':');
+    const pointerPrefix='izone-substitute-lobby-v1:'+slug+':';
     for(const storage of stores()){
       const keys=[];for(let i=0;i<storage.length;i++){
-        const k=storage.key(i),prefix=k&&prefixes.find(p=>k.startsWith(p));if(!prefix)continue;
+        const k=storage.key(i);
+        if(k?.startsWith(pointerPrefix)){
+          if(k.slice(pointerPrefix.length).split(':')[1]==='DEMO'){
+            try{const v=JSON.parse(storage.getItem(k));if(v.classCode==='DEMO'&&(!v._substitute?.classCode||v._substitute.classCode==='DEMO'))keys.push(k);}catch{/* Giữ con trỏ không rõ chủ. */}
+          }
+          continue;
+        }
+        const prefix=k&&prefixes.find(p=>k.startsWith(p));if(!prefix)continue;
         const namespace=k.slice(prefix.length).split(':')[0];
         if(namespace==='DEMO')keys.push(k);
         else if(namespace==='RETAKE-LOBBY'){
