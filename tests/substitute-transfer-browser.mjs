@@ -48,7 +48,7 @@ try{
    if(/\.mp3(?:\?|$)|googleusercontent|drive\.google|audio/.test(url))return route.fulfill({status:200,body:Buffer.alloc(64),contentType:'audio/mpeg'});
    return route.abort();
   });
-  page=await context.newPage();await page.clock.install({time:new Date(fixtureNow)});await page.clock.pauseAt(new Date(fixtureNow));page.on('dialog',d=>d.accept());
+  page=await context.newPage();await page.clock.install({time:new Date(fixtureNow)});await page.clock.pauseAt(new Date(fixtureNow+1000));page.on('dialog',d=>d.accept());
   const errors=[];page.on('pageerror',e=>errors.push(e.message));const url=base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server&class=DEMO';
   await page.goto(url);await page.locator('#bootstrapClass').selectOption('DEMO');
   await page.locator('#bootstrapStudent option:not([value=""])').first().waitFor({state:'attached'});

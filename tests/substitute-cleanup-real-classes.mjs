@@ -7,7 +7,8 @@ for(const slug of ['substitute-test-1-k56','substitute-test-2-k56','substitute-t
   let request;
   const context={AbortController,setTimeout,clearTimeout,location:{search:'',href:'https://fixture.invalid/'},window:{addEventListener(){}},fetch:async(_url,options)=>{request=JSON.parse(options.body);return {ok:true,json:async()=>({testSlug:slug,historyEpoch:epoch,stateVersion:2,classes:[{code:'IC2264',name:'IC2264'}]})}}};
   vm.runInNewContext(source,context);const api=context.window.SUBSTITUTE_STATE;await api.initialize({slug},{API_BASE_URL:'https://fixture.invalid/gateway'});
-  assert.equal(request.payload.excludeTestClasses,true);
+  // API thường nay trả cả DEMO để chọn tại phòng chờ; không loại lớp ở request.
+  assert.deepEqual(Object.keys(request.payload),[]);
   api.bind({classCode:'IC2264',studentRef:'123456',clientRunId:'22222222-2222-4222-8222-222222222222'});
   const draft=api.stamp({classCode:'IC2264',studentRef:'123456',drafts:{writing:{task2:'Nháp kiểm riêng'}}});
   assert.equal(api.accept(draft),true);assert.equal(api.payload({}).historyEpoch,epoch);
