@@ -79,7 +79,7 @@ for(const item of inventory){
   data={kind:'practice',subject:kind,code:item.code,title:lesson.title,version:row.version,totalMs:row.total_ms,definition:strip(definition)};
   html=head(data.title,practiceStyles(kind))+`<body class="design67 reading cbt-mode homework-demo demo-practice" data-izone-design="master170@1.1" data-izone-ui-profile="exam-compact" data-izone-consumer="${kind}-practice" data-teacher-product="${kind}" data-m170-product="practice" data-demo-code="${item.code}"><main id="app" class="demo-shell"></main>`;
  }
- html+='<script type="module" src="./app.mjs?v=20261030-1"></script><noscript>Bật JavaScript để mở nội dung và thao tác thử.</noscript></body></html>\n';
+ html+='<script type="module" src="./app.mjs?v=20261030-ready2"></script><noscript>Bật JavaScript để mở nội dung và thao tác thử.</noscript></body></html>\n';
  html=html.replace(/[\t ]+$/gm,'');
  const dataText=json(data);await fs.writeFile(path.join(out,'data',item.code+'.json'),dataText,'utf8');await fs.writeFile(path.join(out,item.code+'.html'),html,'utf8');
  const qids=data.kind==='practice'?data.definition.groups.flatMap(g=>g.questions.map(q=>q.n)):null;

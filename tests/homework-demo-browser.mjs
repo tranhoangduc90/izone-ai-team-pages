@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
+import {execFileSync} from 'node:child_process';
 import {serveDirectory} from './fixtures/static-ui-server.mjs';
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const root=path.resolve(fileURLToPath(new URL('../',import.meta.url)));
@@ -12,6 +13,7 @@ const inventory=JSON.parse(await fs.readFile(path.join(process.env.DEMO_CAPTURE_
 const catalog=JSON.parse(await fs.readFile(path.join(root,'homework-demo/catalog.json'),'utf8'));
 assert.deepEqual(catalog.map(x=>x.code),inventory.map(x=>x.code));
 const selected=process.env.DEMO_ONLY_CODES?catalog.filter(x=>process.env.DEMO_ONLY_CODES.split(',').includes(x.code)):catalog;
+const baseline=process.env.DEMO_BASELINE_REF?execFileSync('git',['-C',root,'show',process.env.DEMO_BASELINE_REF+':homework-demo/reading-homework.mjs'],{encoding:'utf8'}):null;
 const docsLinks=process.env.DEMO_DOC_LINKS?JSON.parse(await fs.readFile(process.env.DEMO_DOC_LINKS,'utf8')):null;
 if(docsLinks){assert.equal(docsLinks.length,31);assert.deepEqual(docsLinks.map(x=>x.code),catalog.map(x=>x.code));for(const row of catalog)assert.equal(docsLinks.find(x=>x.code===row.code).url,`https://tranhoangduc90.github.io/izone-ai-team-pages/homework-demo/${row.href}`);}
 const server=process.env.DEMO_PUBLIC_BASE?null:await serveDirectory(root),base=process.env.DEMO_PUBLIC_BASE||server.origin+'/';
@@ -22,7 +24,7 @@ try{
   page.setDefaultTimeout(6000);
   page.on('pageerror',e=>errors.push(e.message));
   page.on('response',r=>{if(r.status()>=400)missing.push({status:r.status(),url:r.url()});});
-  await page.route('**/*',async route=>{const u=new URL(route.request().url());if(/ducizone|googleapis|accounts\.google|gstatic/.test(u.hostname)){realRequests.push({url:u.origin+u.pathname,method:route.request().method()});return route.abort();}await route.continue();});
+  await page.route('**/*',async route=>{const u=new URL(route.request().url());if(/ducizone|googleapis|accounts\.google|gstatic/.test(u.hostname)){realRequests.push({url:u.origin+u.pathname,method:route.request().method()});return route.abort();}if(baseline&&u.pathname.endsWith('/homework-demo/reading-homework.mjs'))return route.fulfill({status:200,contentType:'text/javascript',body:baseline});if(row.code==='67-reading-green-roofs'&&u.pathname.endsWith('/reading-practice/authored-ui.js'))await new Promise(resolve=>setTimeout(resolve,1500));await route.continue();});
   try{
    const url=process.env.DEMO_PUBLIC_BASE&&docsLinks?docsLinks.find(x=>x.code===row.code).url:new URL('homework-demo/'+row.href,base).href;await page.goto(url,{waitUntil:'networkidle'});
    await page.locator('body[data-demo-ready="true"]').waitFor({timeout:20000});
