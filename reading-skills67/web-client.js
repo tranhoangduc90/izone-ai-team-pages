@@ -56,7 +56,7 @@
     let lesson;
     try{lesson=await request(prefix+'/lesson',{},false);}catch(error){if(error.status!==401||!access?.legacy)throw error;await request('/_preview/session',json('POST',{person:'A'}));lesson=await request(prefix+'/lesson');}
     identity=lesson.identity;content=lesson.content;
-    backupKey='reading67-web-backup:'+identity.ownerId+':'+(['tfng','green-roofs','sentence_completion'].includes(content.type)?identity.courseId+':':'')+content.code+':'+content.version;
+    backupKey='reading67-web-backup:'+identity.ownerId+':'+(['tfng','green-roofs','matching_people','sentence_completion'].includes(content.type)?identity.courseId+':':'')+content.code+':'+content.version;
     submitKey=backupKey+':submit';
     const [draft,history]=await Promise.all([request(prefix+'/draft'),request(prefix+'/attempts')]);
     revision=draft.revision;runNo=draft.runNo||1;initialHistory=history;state.savedAt=draft.savedAt;state.completeness=draft.completeness;state.status='saved';
