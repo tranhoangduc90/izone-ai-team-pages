@@ -15,12 +15,12 @@
           },
           {
             "n": 9,
-            "text": "The writer believes the changes will benefit everyone."
+            "text": "The writer states that the new centre will be cheaper to maintain than the old one."
           }
         ],
         "start": 8,
         "end": 9,
-        "instruction": "Do the statements agree with the information or claims in the passage?",
+        "instruction": "Do the following statements agree with the information given in the Reading Passage? Write TRUE if the statement agrees with the information, FALSE if it contradicts the information, or NOT GIVEN if there is no information on this.",
         "options": [
           {
             "value": "TRUE",
@@ -56,7 +56,7 @@
         "questions": [
           {
             "n": 8,
-            "text": "The centre is open to visitors every day."
+            "text": "The writer is certain that the centre's long-term success is guaranteed."
           },
           {
             "n": 9,
@@ -65,7 +65,7 @@
         ],
         "start": 8,
         "end": 9,
-        "instruction": "Do the statements agree with the information or claims in the passage?",
+        "instruction": "Do the following statements agree with the claims of the writer in the Reading Passage? Write YES if the statement agrees with the claims, NO if it contradicts the claims, or NOT GIVEN if it is impossible to say what the writer thinks about this.",
         "options": [
           {
             "value": "YES",

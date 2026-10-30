@@ -1,7 +1,7 @@
 import {applyQuestionLayout} from '../../shared/master170/question-layout-v1.1.mjs?v=20261029-approved-r3';
 import * as reading from '../../reading-practice/authored-ui.js?v=20261029-approved-r3';
 import * as listening from '../../listening-practice/authored-ui.js?v=20261029-approved-r3';
-const cases=await fetch('./cases.json?v=20261029-approved-r3').then(r=>r.json()),c=cases.find(c=>c.id===new URLSearchParams(location.search).get('case'))||cases[0],stage=document.querySelector('#stage'),status=document.querySelector('#demo-status');
+const cases=await fetch('./cases.json?v=20261030-rationale').then(r=>r.json()),c=cases.find(c=>c.id===new URLSearchParams(location.search).get('case'))||cases[0],stage=document.querySelector('#stage'),status=document.querySelector('#demo-status');
 const a={answers:{}},flag=n=>`<button type="button" class="cbt-flag-button" data-flag="${n}" aria-label="Đánh dấu câu ${n}" aria-pressed="false"></button>`;
 document.title=c.title+' · Master170 demo';
 if(c.id==='remember')stage.innerHTML='<section class="card login-card" style="padding:24px;max-width:540px"><h2>Vào bài</h2><p>Ví dụ căn hàng checkbox và nhãn.</p><label class="check-line"><input type="checkbox" id="remember-demo" checked> Ghi nhớ tôi trên thiết bị này</label></section>';
