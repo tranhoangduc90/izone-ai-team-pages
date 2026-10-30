@@ -1,7 +1,7 @@
 // Nhận đúng lớp/phiếu từ dashboard; gửi thay đổi có revision và giữ chữ đang nhập khi lỗi/đóng popup.
 // Lịch sử chỉ dùng API giảng viên; xem lại không tạo bài làm hoặc đổi điểm danh.
 import {bindDialogDismiss,node} from '../session-comments.js';
-import {renderSessionReview} from '../session-review.js?rev=20261028-the15-v1';
+import {renderSessionReview} from '../session-review.js?rev=20261030-the20-v1';
 const button=(label,action)=>{const b=node('button',label,'button');b.type='button';b.addEventListener('click',action);return b;};
 const date=value=>value?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'Chưa có';
 function dialog(title){

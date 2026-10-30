@@ -1,6 +1,8 @@
 import {contentTitle,sessionHeading,sessionState,skillsLabel} from './session-presentation.js';
-import {renderSessionReview} from './session-review.js?rev=20261028-the15-v1';
-import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
+import {renderSessionReview} from './session-review.js?rev=20261030-the20-v1';
+import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261030-the20-v1';
+import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
+import {markProgressLogout,stampProgressStudent,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v1';
 'use strict';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
@@ -14,6 +16,7 @@ const elements = Object.fromEntries([
 ].map(id => [id, document.getElementById(id)]));
 
 let accessToken = '';
+let startGeneration=0,studentSkillView=null;
 
 function setNotice(message = '', kind = '') {
   elements.journeyNotice.textContent = message;
@@ -117,11 +120,22 @@ function buildSession(session) {
   const bottom=document.createElement('div');bottom.className='studentSessionBottom';const status=document.createElement('i');status.textContent=view.label;bottom.append(status);
   if(session.quizSummary?.graded>0){const score=document.createElement('b');score.textContent=session.quizSummary.correct+'/'+session.quizSummary.graded;bottom.append(score);}
   item.append(top,title,skills,bottom);
-  const comment=commentPanel(session.sessionComment);if(comment)item.append(comment);
+  const comment=commentPanel(session.sessionComment,{compact:true});if(comment)item.append(comment);
   if(session.testResult){const p=document.createElement('p');p.className='sessionTestScore';p.textContent=Object.entries(session.testResult).filter(([k,v])=>['listening','reading','writing'].includes(k)&&v).map(([k,v])=>k==='writing'?'Writing: '+(v.status==='ready'?v.score:v.status==='pending'?'đã nộp, đang chờ điểm':'chưa có bài'):k[0].toUpperCase()+k.slice(1)+': '+v.correct+'/'+v.total).join(' · ');item.append(p);}
   return item;
 }
-let historyGeneration=0,historyController=null,journeyData=null;
+let historyGeneration=0,historyController=null,journeyData=null,sessionOwner='',sessionCards=new Map();
+function paintSessionCards(){
+ if(!journeyData)return;
+ const owner=journeyData.class.classId+':'+journeyData.student.studentRef;
+ if(owner!==sessionOwner){elements.sessionList.replaceChildren();sessionCards.clear();sessionOwner=owner;}
+ const keep=new Set(),ordered=[];
+ for(const session of journeyData.sessions){const key=String(session.sessionNumber),state=sessionState(session,{assignmentId:session.assignmentId,status:session.completeness==='complete'?'complete':session.testResult?'test_result':'not_submitted'},session.assignmentId?{title:session.title,status:session.assignmentStatus}:null),signature=JSON.stringify({session,state});
+  keep.add(key);let card=sessionCards.get(key);if(!card||card.signature!==signature){const element=buildSession(session);if(card)card.element.replaceWith(element);card={element,signature};sessionCards.set(key,card);}ordered.push(card.element);
+ }
+ for(const [key,card]of sessionCards)if(!keep.has(key)){card.element.remove();sessionCards.delete(key);}
+ for(const [index,card]of ordered.entries())if(elements.sessionList.children[index]!==card)elements.sessionList.insertBefore(card,elements.sessionList.children[index]||null);
+}
 const historyDialog=document.createElement('dialog');historyDialog.className='draft-dialog referenceRegion';historyDialog.id='journeyDetailDialog';
 const close=document.createElement('button');close.type='button';close.className='button';close.textContent='Đóng chi tiết';close.addEventListener('click',()=>historyDialog.close());
 const historyStatus=document.createElement('p');historyStatus.setAttribute('role','status');
@@ -138,7 +152,7 @@ async function openHistory(session){
     const data=await response.json();if(generation!==historyGeneration||!historyDialog.open)return;
     if(!response.ok||!data.ok)throw Error(data.message||'Chưa đọc được bài làm.');const detail=data.detail;
     if(detail.student?.studentRef!==journeyData.student.studentRef||String(detail.classId)!==String(journeyData.class.classId)||detail.sessionNumber!==session.sessionNumber)throw Error('Dữ liệu không khớp học viên và buổi đã chọn.');
-    renderSessionReview(historyContent,detail,{session});historyStatus.textContent='Bài đã nộp · chỉ để xem lại.';
+    renderSessionReview(historyContent,detail,{session,studentView:true});historyStatus.textContent='Bài đã nộp · chỉ để xem lại.';
   }catch(e){if(generation===historyGeneration&&historyDialog.open){historyStatus.textContent=controller.signal.aborted?'Quá thời gian chờ.':e.message;retry.hidden=false;}}finally{clearTimeout(timeout);}
 }
 
@@ -161,11 +175,11 @@ function renderJourney(journey) {
     if(!document.querySelector('#thuyStudentJourneySkills')){
       const css=document.createElement('link');css.rel='stylesheet';css.href='./thuy-live/styles.css?rev=20261022-final-choice';document.head.append(css);
       const root=document.createElement('section');root.id='thuyStudentJourneySkills';elements.journeyView.prepend(root);
-      void import('./thuy-live/student-skills-journey.js?rev=20261028-thuy-v1').then(({mountStudentSkillJourney})=>mountStudentSkillJourney(root,journey,async sessionNumber=>{
+      void import('./thuy-live/student-skills-journey.js?rev=20261030-the20-v1').then(({mountStudentSkillJourney})=>mountStudentSkillJourney(root,journey,async sessionNumber=>{
         const response=await fetch(config.API_BASE_URL+'/api/learning/student/course-session-detail',{method:'POST',headers:{'content-type':'application/json'},
           body:JSON.stringify({accessToken,sessionNumber}),cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
         const payload=await response.json();if(!response.ok||!payload.ok)throw Error(payload.message||'Chưa đọc được bài buổi này.');return payload;
-      })).catch(()=>{root.textContent='Chưa tải được tổng quan kỹ năng. Lịch sử bên dưới vẫn xem được.';});
+      },{accessToken})).then(view=>{if(root.isConnected&&journeyData?.student.studentRef===journey.student.studentRef)studentSkillView=view;}).catch(()=>{root.textContent='Chưa tải được tổng quan kỹ năng. Lịch sử bên dưới vẫn xem được.';});
     }
   }
   commentPoller?.refresh();
@@ -189,7 +203,7 @@ function renderJourney(journey) {
     ? [`Buổi ${latestFeedbackSession.sessionNumber}`, title].filter(Boolean).join(' · ') : '';
   elements.latestSpeakingFeedbackText.textContent = latestFeedbackSession?.teacherSessionFeedback.noteText || '';
   elements.timelineCount.textContent = `${journey.summary.totalSessions} buổi`;
-  elements.sessionList.replaceChildren(...journey.sessions.map(buildSession));
+  paintSessionCards();
   paintJourneyComments(elements.journeyView,elements.sessionList,journey.sessions,session=>void openHistory(session));
   elements.reportHistory.hidden = !journey.reports.length;
   elements.reportList.replaceChildren(...journey.reports.map(buildReport));
@@ -197,6 +211,7 @@ function renderJourney(journey) {
 }
 
 async function start() {
+  const generation=++startGeneration;
   accessToken = readAccessToken();
   if (!/^[A-Za-z0-9_-]{32,200}$/.test(accessToken)) {
     elements.journeyErrorMessage.textContent = 'Đường dẫn thiếu mã truy cập hoặc mã đã bị thay đổi.';
@@ -205,11 +220,11 @@ async function start() {
     return;
   }
   try {
-    const journey = await apiRequest(accessToken);
+    const journey = await apiRequest(accessToken);if(generation!==startGeneration)return;
     renderJourney(journey);
     setNotice('Chỉ bạn và người có link cá nhân này mới mở được nội dung.', '');
   } catch (error) {
-    elements.journeyErrorMessage.textContent = error.message;
+    if(generation!==startGeneration)return;elements.journeyErrorMessage.textContent = error.message;
     elements.journeyError.hidden = false;
     setNotice('', '');
   } finally {
@@ -228,13 +243,22 @@ let commentPoller=createCommentPoller({context:()=>journeyData&&accessToken?{acc
   request:async(path,options)=>{const response=await fetch(config.API_BASE_URL+'/api/learning'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(options.body),signal:options.signal,cache:'no-store',referrerPolicy:'no-referrer'});const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'Chưa đọc được nhận xét.');return data;},
   onData:data=>{if(!journeyData||data.studentRef!==journeyData.student.studentRef||String(data.classId)!==String(journeyData.class.classId))return;
     const byNumber=new Map(data.comments.map(note=>[note.sessionNumber,note]));journeyData.sessions=journeyData.sessions.map(session=>({...session,sessionComment:byNumber.get(session.sessionNumber)||null}));
-    elements.sessionList.replaceChildren(...journeyData.sessions.map(buildSession));paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session));
-    if(historyDialog.open&&historySession){historyContent.querySelectorAll('[data-session-comment]').forEach(box=>box.remove());const panel=commentPanel(byNumber.get(historySession.sessionNumber));if(panel)historyContent.append(panel);}
+    paintSessionCards();paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session));
+    studentSkillView?.refreshComments(data.comments);
+    if(historyDialog.open&&historySession){const existing=[...historyContent.querySelectorAll('[data-session-comment]')],panel=commentPanel(byNumber.get(historySession.sessionNumber));
+      if(existing.length!==(panel?1:0)||existing[0]?.outerHTML!==panel?.outerHTML){existing.forEach(box=>box.remove());if(panel)historyContent.append(panel);}}
   }});
-void start();
+stampProgressStudent();void start();
+window.addEventListener('pageshow',event=>{if(event.persisted&&progressPinWasLoggedOut()){journeyData=null;accessToken='';elements.journeyView.hidden=true;location.replace(new URL('./student.html',location.href));}});
 
 // Đồng hồ chỉ làm mới thẻ; không gọi API và không thay quyền mở phần.
-function repaintSessionCards(){if(!journeyData)return;elements.sessionList.replaceChildren(...journeyData.sessions.map(buildSession));paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session));}
+function repaintSessionCards(){if(!journeyData)return;paintSessionCards();paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session));}
 function refreshClock(){repaintSessionCards();setTimeout(refreshClock,60000-Date.now()%60000+20);}
 setTimeout(refreshClock,60000-Date.now()%60000+20);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)repaintSessionCards();});
+document.getElementById('journeyLogout')?.addEventListener('click',async()=>{
+ const identity=createCourseStudentIdentity({product:'progress-log',entry:'private-journey',requestIdentity:input=>requestMappingStudentIdentity(input,config.API_BASE_URL)});
+ const result=await identity.forget();if(result.status!=='empty'){setNotice('Chưa xóa được ghi nhớ. Em hãy thử lại.','error');return;}
+ markProgressLogout();startGeneration++;historyGeneration++;historyController?.abort();commentPoller.stop();accessToken='';journeyData=null;
+ history.replaceState({},'',location.pathname+location.search);location.replace(new URL('./student.html',location.href));
+});

@@ -7,7 +7,7 @@ const verdicts={correct:'✓ Đúng',incorrect:'✕ Sai',partial:'Đúng một p
 function plain(value){
   if(value===null||value===undefined||value==='')return 'Chưa trả lời';
   if(typeof value==='object'&&!Array.isArray(value)){
-    if('correct' in value&&'total' in value)return 'Em tự khai: '+value.correct+'/'+value.total;
+    if('correct' in value&&'total' in value)return value.correct+'/'+value.total;
     return Object.entries(value).map(([key,v])=>key+': '+plain(v)).join('\n');
   }
   return String(value);
@@ -43,7 +43,7 @@ export function reviewItems(detail){
       else if(item.layoutType==='numbered_short_texts'||Array.isArray(value)){
         const values=Array.isArray(value)?value:[];const count=Math.max(values.length,Number(c.responseCount)||0);
         answer='<ol class="reviewAnswerList">'+Array.from({length:count},(_,i)=>'<li><small>'+esc(c.responseLabels?.[i]||'Ô '+(i+1))+'</small><strong>'+esc(plain(values[i]))+'</strong></li>').join('')+'</ol>';
-      }else answer='<p class="reviewAnswer"><small>'+ (item.interactionType==='number_score'?'Điểm em tự khai':'Câu trả lời của em')+'</small><strong>'+esc(plain(value))+'</strong></p>';
+      }else answer='<p class="reviewAnswer"><small>Câu trả lời của em</small><strong>'+esc(plain(value))+'</strong></p>';
       const score=result&&Number.isFinite(result.scoreEarned)&&Number.isFinite(result.maxScore)&&result.maxScore>0?' · '+result.scoreEarned+'/'+result.maxScore+' điểm':'';
       if(!survey&&result?.slotResults)answer+='<ol class="reviewAnswerList">'+result.slotResults.map(slot=>'<li><small>'+esc(c.responseLabels?.[slot.slot]||'Ô '+(slot.slot+1))+'</small><strong>'+esc(verdicts[slot.verdict])+'</strong></li>').join('')+'</ol>';
       if(survey&&applicable&&result){

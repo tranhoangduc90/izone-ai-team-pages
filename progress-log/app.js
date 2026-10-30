@@ -1,9 +1,9 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
 import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
-import {renderSessionReview} from './session-review.js?rev=20261028-the15-v1';
+import {renderSessionReview} from './session-review.js?rev=20261030-the20-v1';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
 import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
-import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261007-comments-v2';
+import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261030-the20-v1';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
@@ -13,6 +13,8 @@ import {docsSourceTable} from './docs-source-table.js?rev=20261025-docs-import-v
 import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import {createStudentSessionDashboard} from './student-session-dashboard.js';
+import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v1';
+import {writingResultLink} from './student-test-results.js?rev=20261030-the20-v1';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
 
@@ -25,7 +27,7 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261028-thuy-v1'):null;
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261030-the20-v1'):null;
 if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./student-session-dashboard.css?rev=20261028-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL(path,import.meta.url);document.head.append(css);}}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;
@@ -78,22 +80,32 @@ let courseIdentity=null;
 async function applyCommonStudentMemory(){
   if(!courseIdentity||studentMemory.busy||state.attempt)return;
   const own=courseIdentity.getPinned();
+  if(own&&progressPinWasLoggedOut())return;
+  const entryParams=new URLSearchParams(location.hash.slice(1)),expectedRef=entryParams.get('student');
   let selected,selection=null;
   if(own?.studentRef)selected=state.assignment.roster.find(s=>s.studentRef===own.studentRef);
   else{
-    selection=await courseIdentity.resolve({studentRefs:state.assignment.roster.filter(officialStudent).map(s=>s.studentRef)});
+    selection=await courseIdentity.resolve({studentRefs:state.assignment.roster.filter(officialStudent).map(s=>s.studentRef),expectedRef:expectedRef||''});
     if(selection.status!=='unique')return;
     selected=state.assignment.roster.find(s=>s.studentRef===selection.alias.studentRef);
   }
-  if(!selected){memoryStatus('Người của tab này chưa có quyền trong phiếu. Danh tính và bài cũ được giữ.');return;}
+  if(!selected||expectedRef&&selected.studentRef!==expectedRef){memoryStatus('Chọn đúng người của đường dẫn trước khi mở phiếu. Danh tính và bài cũ được giữ.');return;}
   state.selectedStudent=state.confirmedStudent=selected;elements.studentSelect.value=selected.studentRef;
   studentMemory.busy=true;state.automaticSelection=selection;
+  if(THUY_UI&&['sessions','journey'].includes(entryParams.get('view'))){
+    await openDashboardOnly();
+    if(state.journeyData?.student?.studentRef===selected.studentRef){
+      if(selection)await courseIdentity.commit(courseIdentity.automaticContext(selection),{automatic:true});
+      courseIdentity.pin(selected.studentRef);stampProgressStudent();
+      if(entryParams.get('view')==='journey')await openIntegratedJourney('formView');
+    }return;
+  }
   if(state.journeyOnly||!windowCanSubmit(observedWindow,performance.now())){
-    if(THUY_UI){await openDashboardOnly();if(state.journeyData?.student?.studentRef===selected.studentRef){if(selection)void courseIdentity.commit(courseIdentity.automaticContext(selection),{automatic:true});courseIdentity.pin(selected.studentRef);}return;}
+    if(THUY_UI){await openDashboardOnly();if(state.journeyData?.student?.studentRef===selected.studentRef){if(selection)void courseIdentity.commit(courseIdentity.automaticContext(selection),{automatic:true});courseIdentity.pin(selected.studentRef);stampProgressStudent();}return;}
     await openIntegratedJourney('confirmView');
     if(state.journeyData?.student?.studentRef===selected.studentRef&&!elements.journeyView.hidden){
       if(selection)void courseIdentity.commit(courseIdentity.automaticContext(selection),{automatic:true});
-      courseIdentity.pin(selected.studentRef);
+      courseIdentity.pin(selected.studentRef);stampProgressStudent();
     }
   }else await startAttempt({selection,pinned:Boolean(own)});
 }
@@ -106,14 +118,16 @@ async function changeProgressStudent(){
     if(state.savedVersion!==state.changeVersion){setNotice('Chưa lưu xong nháp. Phiếu vẫn giữ nguyên người.','error');return;}
   }
   if((await courseIdentity.forget()).status!=='empty'){setNotice('Chưa bỏ được ghi nhớ. Phiếu và nháp vẫn được giữ.','error');return;}
-  clearSaveTimers();state.journeyGeneration=(state.journeyGeneration||0)+1;state.journeyController?.abort();
+  markProgressLogout();clearSaveTimers();state.journeyGeneration=(state.journeyGeneration||0)+1;state.journeyController?.abort();
   state.journeyDetailGeneration=(state.journeyDetailGeneration||0)+1;state.journeyDetailController?.abort();
   state.dashboardGeneration=(state.dashboardGeneration||0)+1;state.dashboardController?.abort();studentDashboard?.clear();state.dashboardKey='';
   Object.assign(state,{selectedStudent:null,confirmedStudent:null,attempt:null,responses:{},changeVersion:0,savedVersion:0,
     thuyReadOnly:null,thuyExpanded:new Set(),thuyFinalId:null,thuyCompletionError:'',thuyComments:null,
     submissionPayload:null,automaticSelection:null,journeyData:null,journeyLoading:false,dashboardDenied:false,dashboardLoading:false,dashboardReadAt:0,checkpointSubmissions:new Map(),saveChain:Promise.resolve()});
   studentMemory.busy=false;elements.studentSelect.value='';elements.chooseStudentButton.disabled=true;
-  syncStudentMemoryControls();showView('identityView');setNotice('Đã bỏ ghi nhớ. Hãy chọn người học.');
+  elements.journeyDetailContent.replaceChildren();elements.journeySessions.replaceChildren();elements.journeyView.querySelector('#thuyStudentSkills')?.remove();
+  syncStudentMemoryControls();showView('identityView');setNotice('Đã đăng xuất. Hãy chọn người học.');
+  location.replace(new URL('./student.html',location.href));
 }
 
 function progressRosterGroup() {
@@ -181,12 +195,12 @@ function clearRememberedSelection() {
 
 function installStudentMemory() {
   if(!config.DEMO_MODE&&!['DEMO-56','DEMO-67'].includes(state.assignment.courseCode)){
-    courseIdentity=createCourseStudentIdentity({product:'progress-log',entry:state.assignment.assignmentId,requestIdentity:requestMappingStudentIdentity});
+    courseIdentity=createCourseStudentIdentity({product:'progress-log',entry:state.assignment.assignmentId,requestIdentity:input=>requestMappingStudentIdentity(input,config.API_BASE_URL)});
     studentMemory.enabled=true;
     if(!studentMemory.installed){
       elements.rememberStudent.addEventListener('change',()=>{studentMemory.preference=elements.rememberStudent.checked;});
       const change=elements.changeRememberedStudent.cloneNode(true);change.id='progressLogChangeStudent';change.hidden=false;
-      change.textContent='Đổi người học';change.addEventListener('click',()=>void changeProgressStudent());
+      change.textContent='Đăng xuất';change.addEventListener('click',()=>void changeProgressStudent());
       document.querySelector('.topbar').append(change);studentMemory.installed=true;
     }
     courseIdentity.subscribe(()=>{if(state.attempt||state.confirmedStudent)setNotice('Người đã nhớ vừa đổi ở tab khác. Phiếu này vẫn giữ nguyên người và câu trả lời.');});
@@ -265,9 +279,11 @@ async function openDashboardSession(session,status){
 }
 function showView(id) {
   for (const viewId of viewIds) elements[viewId].hidden = viewId !== id;
+  if(THUY_UI)for(const [button,active]of [[document.querySelector('#thuyLessonNav'),!['journeyView','journeyDetailView','journeyLoadingView'].includes(id)],
+    [document.querySelector('#thuyJourneyNav'),['journeyView','journeyDetailView','journeyLoadingView'].includes(id)]]){button?.classList.toggle('active',active);button?.setAttribute('aria-pressed',String(active));}
   if(THUY_UI&&id==='formView'){elements.reflectionForm.hidden=Boolean(state.dashboardDenied)||!state.attempt&&!state.thuyReadOnly;if(!state.dashboardStarting)void loadStudentDashboard();}
   commentPoller?.refresh();
-  if(THUY_UI){document.querySelector('#thuyGreeting')?.remove();const name=state.attempt?.identity.studentName||state.thuyReadOnly?.student.name;if(name){const greeting=document.createElement('h1');greeting.id='thuyGreeting';greeting.textContent='Xin chào, '+name;document.querySelector('main').prepend(greeting);}}
+  if(THUY_UI){document.querySelector('#thuyGreeting')?.remove();const name=state.attempt?.identity.studentName||state.thuyReadOnly?.student.name||state.confirmedStudent?.name;if(name&&['formView','resultView'].includes(id)){const greeting=document.createElement('h1');greeting.id='thuyGreeting';greeting.textContent=name;document.querySelector('main').prepend(greeting);}}
 }
 
 function setNotice(message = '', kind = '') {
@@ -1406,6 +1422,7 @@ function journeyPortalMessage(status) {
   return 'Chưa có trạng thái đồng bộ Portal để đối chiếu.';
 }
 
+let integratedSessionOwner='',integratedSessionCards=new Map();
 function renderIntegratedJourney(journey) {
   state.journeyData=journey;
   const signature=JSON.stringify(journey,(key,value)=>['serverNow','generatedAt','capturedAt'].includes(key)?undefined:value);
@@ -1423,11 +1440,15 @@ function renderIntegratedJourney(journey) {
     elements.journeyIncorrectCount.textContent=(journey.sessions||[]).reduce((n,s)=>n+(s.quizSummary?.incorrect||0),0);
     elements.journeyListTitle.textContent=journey.summary.totalSessions+' buổi học, từng bước rõ ràng';
   }
+  const owner=journey.class.classId+':'+journey.student.studentRef,keep=new Set();
+  if(integratedSessionOwner!==owner){elements.journeySessions.replaceChildren();integratedSessionCards.clear();integratedSessionOwner=owner;}
   const sessions = (journey.sessions || []).map(session => {
     const status = sessionState(session, {assignmentId:session.assignmentId,
       status:session.completeness==='complete'?'complete':session.testResult?'test_result':session.completeness==='incomplete'?'incomplete':session.conflict?'needs_review':'not_submitted'},
       session.assignmentId?{title:session.title,status:session.assignmentStatus}:null);
     if(session.completeness==='incomplete')Object.assign(status,{kind:'complete',label:'Đã nộp · còn câu trống',canLearn:false});
+    const key=String(session.sessionNumber),cardSignature=JSON.stringify({session,status,current:state.assignment.sessionNumber}),cached=integratedSessionCards.get(key);keep.add(key);
+    if(cached?.signature===cardSignature)return cached.element;
     const completed = ['complete','incomplete'].includes(session.completeness)||Boolean(session.sessionComment?.noteText);
     const learn = !completed&&status.canLearn && /^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
     const item = document.createElement(learn?'a':completed?'button':'article');
@@ -1450,7 +1471,7 @@ function renderIntegratedJourney(journey) {
     if(session.quizSummary?.graded>0)bottom.append(journeyText('b',session.quizSummary.correct+'/'+session.quizSummary.graded));
     item.append(heading,journeyText('strong',title),journeyText('small',skillsLabel(title)||'Trong kế hoạch khóa học'),bottom);
     if(THUY_UI&&session.sessionNumber===state.assignment.sessionNumber)item.append(journeyText('small','Đang xem','badge blue'));
-    const comment=commentPanel(session.sessionComment);if(comment)item.append(comment);
+    const comment=commentPanel(session.sessionComment,{compact:THUY_UI});if(comment)item.append(comment);
     if(session.testResult){
       const result=journeyText('div','', 'sessionTestScore');
       for(const skill of ['listening','reading','writing']){
@@ -1460,10 +1481,11 @@ function renderIntegratedJourney(journey) {
       }
       item.append(result);
     }
-    return item;
+    if(cached)cached.element.replaceWith(item);integratedSessionCards.set(key,{signature:cardSignature,element:item});return item;
   });
-  elements.journeySessions.replaceChildren(...(sessions.length ? sessions
-    : [journeyText('p', 'Chưa có buổi học nào được ghi nhận.', 'muted')]));
+  for(const [key,card]of integratedSessionCards)if(!keep.has(key)){card.element.remove();integratedSessionCards.delete(key);}
+  if(!sessions.length)elements.journeySessions.replaceChildren(journeyText('p', 'Chưa có buổi học nào được ghi nhận.', 'muted'));
+  else for(const [index,card]of sessions.entries())if(elements.journeySessions.children[index]!==card)elements.journeySessions.insertBefore(card,elements.journeySessions.children[index]||null);
   paintJourneyComments(elements.journeyView,elements.journeySessions,journey.sessions,session=>void openStudentJourneyDetail(session));
   const reports = (journey.reports || []).map(report => {
     const item = document.createElement('article');
@@ -1475,7 +1497,7 @@ function renderIntegratedJourney(journey) {
     return item;
   });
   elements.journeyReports.hidden = reports.length === 0;
-  elements.journeyReportList.replaceChildren(...reports);
+  if(elements.journeyReportList.innerHTML!==reports.map(report=>report.outerHTML).join(''))elements.journeyReportList.replaceChildren(...reports);
   const inferredCount = (journey.sessions || []).filter(session => session.dataOrigin === 'inferred_gap'
     || (!session.dataOrigin && !session.assignmentId && session.sessionKind !== 'test')).length;
   elements.journeyStatus.textContent = journey.coverage?.planOutdated
@@ -1502,7 +1524,8 @@ function renderIntegratedJourney(journey) {
 
 function renderPersonSkillsForStudent(root,overview,forms,person){
   state.thuyStudentCourse=thuySkills.buildSkillCourse(overview,forms);
-  thuySkills.renderPersonSkills(root,state.thuyStudentCourse,person,{history:false});
+  thuySkills.renderPersonSkills(root,state.thuyStudentCourse,person,{history:false,studentView:true,
+    writingResultUrl:(result,task)=>writingResultLink(result,task,{publicToken:state.publicToken,studentRef:person.studentRef})});
 }
 async function loadThuyStudentSkills(journey,{signal,current}){
   let root=elements.journeyView.querySelector('#thuyStudentSkills');
@@ -1518,7 +1541,7 @@ async function loadThuyStudentSkills(journey,{signal,current}){
     }
     if(!current())return;
     const person={...journey.student,externalTests:journey.externalTests||[],cells:journey.sessions.map(session=>({...session,status:session.completeness,testResult:session.testResult}))};
-    const overview={classId:journey.class.classId,sessions:journey.sessions,students:[person]};
+  const overview={classId:journey.class.classId,sessions:journey.sessions,students:[person],coverage:journey.coverage};
     const forms=journey.sessions.map(session=>{
       const source=records.get(session.sessionNumber),detail=source?legacyFeedbackForView(source):null,definition=detail?.definition||{blocks:[]};
       const student={...journey.student,submissionId:detail?.submissionId,sessionComment:session.sessionComment,teacherSessionFeedback:detail?.teacherSessionFeedback};
@@ -1558,7 +1581,7 @@ async function openStudentJourneyDetail(session) {
     const detail=payload.detail;
     if (detail.student?.studentRef!==studentRef||String(detail.classId)!==String(classId)
       ||detail.sessionNumber!==session.sessionNumber) throw new Error('Dữ liệu bài làm không khớp học viên và buổi đã chọn.');
-    renderSessionReview(elements.journeyDetailContent,THUY_UI?legacyFeedbackForView(detail):detail,{session});elements.journeyDetailStatus.textContent='Bài đã nộp · chỉ để xem lại.';
+    renderSessionReview(elements.journeyDetailContent,THUY_UI?legacyFeedbackForView(detail):detail,{session,studentView:true});elements.journeyDetailStatus.textContent='Bài đã nộp · chỉ để xem lại.';
   } catch(error) {
     if (!current()) return;
     elements.journeyDetailStatus.textContent='Chưa đọc được bài làm: '+(controller.signal.aborted?'Quá thời gian chờ; bạn có thể thử lại.':error.message);
@@ -1652,7 +1675,7 @@ function backFromJourney() {
 async function openAssignment() {
   state.publicToken = readPublicToken();
   if (!state.publicToken) {
-    fail('Đường dẫn chưa đúng', 'Đây là địa chỉ trang chung, chưa có mã phiếu. Hãy nhờ giảng viên chọn phiếu trong dashboard rồi bấm “Sao chép link” để gửi đường dẫn đầy đủ.');
+    location.replace(new URL('./student.html',location.href));
     return;
   }
   try {
@@ -1730,7 +1753,7 @@ async function startAttempt({selection=null,pinned=false}={}) {
         if(detail.student.studentRef!==chosenStudent.studentRef||String(detail.classId)!==String(state.assignment.class.id)
           ||detail.sessionNumber!==state.assignment.sessionNumber)throw Error('Bài đã nộp chưa khớp người, lớp và buổi.');
         state.thuyReadOnly=detail;state.responses=detail.responses||{};state.checkpointSubmissions=new Map();
-        if(courseIdentity){if(!pinned)await courseIdentity.commit(identityContext,{automatic:Boolean(selection),remember:elements.rememberStudent.checked&&officialStudent(chosenStudent)});courseIdentity.pin(chosenStudent.studentRef);}
+        if(courseIdentity){if(!pinned)await courseIdentity.commit(identityContext,{automatic:Boolean(selection),remember:elements.rememberStudent.checked&&officialStudent(chosenStudent)});courseIdentity.pin(chosenStudent.studentRef);stampProgressStudent();}
         elements.studentNameLabel.textContent=chosenStudent.name;elements.formContextLabel.textContent=state.assignment.class.name+' · Buổi '+state.assignment.sessionNumber;
         state.confirmedStudent=null;renderCheckpoint();showView('formView');setSaveState('Bài đã nộp · Chỉ đọc','saved');setNotice('Đã mở lại bài đã nộp. Không tạo lượt làm mới.');return;
       }
@@ -1758,7 +1781,7 @@ async function startAttempt({selection=null,pinned=false}={}) {
     if(courseIdentity){
       if(!pinned)await courseIdentity.commit(identityContext,{automatic:Boolean(selection),remember:elements.rememberStudent.checked&&officialStudent(chosenStudent)})
         .then(result=>{if(!['ok','empty'].includes(result.status))setNotice('Phiếu mở đúng người; trình duyệt chưa nhớ được cho bài khác.');}).catch(()=>{});
-      courseIdentity.pin(chosenStudent.studentRef);
+      courseIdentity.pin(chosenStudent.studentRef);stampProgressStudent();
     }
     state.checkpointSubmissions = new Map(
       (state.attempt.checkpointSubmissions || []).map(item => [item.blockId, item])
@@ -1964,6 +1987,7 @@ window.addEventListener('pagehide', () => {
   storeLocalDraft();
   clearSaveTimers();
 });
+window.addEventListener('pageshow',event=>{if(event.persisted&&progressPinWasLoggedOut()){clearSaveTimers();location.replace(new URL('./student.html',location.href));}});
 
 const commentPaints=new WeakMap();
 function refreshVisibleComment(root,note){
@@ -1989,7 +2013,8 @@ commentPoller=createCommentPoller({request:apiRequest,context:()=>{
   if(state.journeyData?.student.studentRef===person){state.journeyData.sessions=state.journeyData.sessions.map(session=>({...session,sessionComment:byNumber.get(session.sessionNumber)||null}));
     if(THUY_UI&&state.thuyStudentCourse?.people[0]?.studentRef===person){
       for(const session of state.thuyStudentCourse.sessions){const student=session.students[0],note=byNumber.get(session.number);student.publishedFeedback=note?.visibility==='visible'?note.noteText:'';}
-      const root=elements.journeyView.querySelector('#thuyStudentSkills');if(root&&!elements.journeyView.hidden)thuySkills.renderPersonSkills(root,state.thuyStudentCourse,state.thuyStudentCourse.people[0],{history:false});
+      const root=elements.journeyView.querySelector('#thuyStudentSkills');if(root&&!elements.journeyView.hidden)thuySkills.renderPersonSkills(root,state.thuyStudentCourse,state.thuyStudentCourse.people[0],{history:false,studentView:true,
+        writingResultUrl:(result,task)=>writingResultLink(result,task,{publicToken:state.publicToken,studentRef:person})});
     }
     if(!elements.journeyView.hidden)renderIntegratedJourney(state.journeyData);
     if(studentDashboard&&!elements.formView.hidden)studentDashboard.render(state.journeyData,{currentId:state.assignment.assignmentId});}
