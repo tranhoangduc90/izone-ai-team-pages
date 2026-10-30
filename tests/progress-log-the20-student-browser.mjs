@@ -69,7 +69,7 @@ test('Thẻ 20 từ cổng vào Journey, xem bài, mở Writing và đăng xuấ
  await page.getByRole('link',{name:'Hành trình của em',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
  assert.equal(await page.getByRole('button',{name:'Hành trình của em',exact:true}).getAttribute('aria-pressed'),'true');
  await page.locator('#journeySessions button.studentSessionCard').first().click();await page.locator('#journeyDetailContent .reviewStudentName').waitFor();
- assert.equal(await page.locator('#journeyDetailContent .reviewStudentName').count(),1);await page.locator('#journeyDetailBackButton').click();
+ assert.equal(await page.locator('#journeyDetailContent .reviewStudentName').count(),1);assert.ok(await page.locator('#journeyDetailBackButton').evaluate(e=>e.getBoundingClientRect().height>=44&&parseFloat(getComputedStyle(e).fontSize)>=16));await page.locator('#journeyDetailBackButton').click();
  await page.getByRole('link',{name:/Task 1 Term Test 1 điểm 0/u}).click();await page.locator('#resultContent:not([hidden])').waitFor();
  await page.getByRole('link',{name:'← Hành trình của em',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
  await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.waitForURL('**/progress-log/student.html');await page.locator('#portalIdentity:not([hidden])').waitFor();

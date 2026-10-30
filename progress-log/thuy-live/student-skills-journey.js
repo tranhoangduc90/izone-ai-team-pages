@@ -1,8 +1,8 @@
 // Link Hành trình riêng dùng đúng access token hiện hành; chỉ đọc bài của chính học viên.
 // Lỗi một nguồn giữ lịch sử cũ để xem, không suy điểm trống hoặc ghi bài/điểm danh.
-import {buildSkillCourse,renderPersonSkills} from './course-skills.js?rev=20261030-the20-v1';
+import {buildSkillCourse,renderPersonSkills} from './course-skills.js?rev=20261030-the20-v2';
 import {legacyFeedbackForView} from './feedback-policy.js';
-import {writingResultLink} from '../student-test-results.js?rev=20261030-the20-v1';
+import {writingResultLink} from '../student-test-results.js?rev=20261030-the20-v2';
 export async function mountStudentSkillJourney(host,journey,request,resultContext={}){
  host.textContent='Đang đọc kết quả bốn kỹ năng…';
  try{

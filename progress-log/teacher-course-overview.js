@@ -1,5 +1,5 @@
 import {contentTitle,sessionHeading} from './session-presentation.js';
-import {renderSessionReview} from './session-review.js?rev=20261030-the20-v1';
+import {renderSessionReview} from './session-review.js?rev=20261030-the20-v2';
 import {commentPanel} from './session-comments.js?rev=20261007-comments';
 // Nhận DTO đã kiểm quyền; tạo bảng lớp và thống kê câu bằng DOM an toàn.
 // Không suy điểm danh từ ô trống; lỗi đọc được caller hiện ở vùng trạng thái.

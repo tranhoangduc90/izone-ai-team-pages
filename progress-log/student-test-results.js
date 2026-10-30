@@ -9,7 +9,9 @@ export function studentTestRecords(records) {
   const unique = new Map();
   for (const result of records) {
     if (!result || typeof result !== 'object') continue;
-    const key = result.testSlug || result.title;
+    // Cùng Mini Test K56 có hai mã ở nguồn thi và bản đồng bộ Portal.
+    // Chỉ gộp cặp mã đã biết; không đoán theo tiêu đề hoặc ghép các bài Mini khác.
+    const key = result.testSlug === 'mini-test-erp-56' ? 'mini-test-k56' : result.testSlug || result.title;
     if (!key) continue;
     const prior = unique.get(key), time = resultTime(result), priorTime = resultTime(prior);
     if (!prior || time !== null && (priorTime === null || time > priorTime)) unique.set(key, result);

@@ -21,6 +21,12 @@ Các nhịp cập nhật không thay toàn bộ danh sách khi chỉ một nhậ
 - 15/15 hồi quy giao diện liên quan; 8 tình huống danh tính dùng chung đã kiểm riêng.
 - 33/33 kiểm SQL/HTTP/database liên quan và kiểm cú pháp backend đạt.
 - Chrome plugin đã thao tác bản local bằng dữ liệu giả; đã kiểm viewport 390/720/1440 và focus bàn phím. Không coi viewport 720 là bằng chứng zoom trình duyệt 200% thật.
-- Bộ Learning rộng còn 39 ca PostgreSQL nhiều kết nối chưa chạy được vì thiếu fixture riêng. Một fixture thiếu bảng grading run đã bổ sung và nhóm liên quan kiểm lại đạt. Chưa xác nhận full suite đạt.
+- Đã kiểm bổ sung 42/42 ca PostgreSQL trên database thử riêng, không có mạng ngoài; gồm cả 39 ca thiếu fixture trước đó và ba ca HTTP Portal mô phỏng. Một fixture thiếu bảng grading run đã bổ sung và nhóm liên quan kiểm lại đạt. Các nhóm chạy ở hai môi trường được báo riêng.
 
 Để có điểm hiện hành, API cần nối chỉ đọc kho Test K56/K67; runtime cũ chỉ nối kho lịch sử. Cấu hình và rollback ở repo backend `ops/releases/progress-log-the20-20261030/`. Demo giữ database riêng. Quyền Git và quyền production tách biệt: push nhánh task chưa đồng nghĩa bản đang dùng đã được phát hành.
+
+## Kiểm dữ liệu thật và phát hành
+
+API thật, API demo và Pages đã phát hành qua PR backend #122/#123 và frontend #375. Hai nguồn Test có role SELECT riêng, không có quyền ghi. So sánh bài, điểm và lượt làm trước/sau không có thay đổi. Đã sửa bộ chọn lớp để nhận cả nhãn khóa lịch sử/null; Mini K56 chỉ hiện một lần khi có cả nguồn thi và Portal. Bump toàn chuỗi cache của các module Thẻ 20.
+
+Các lớp có phiếu Progress Log hiện chưa có kết quả Writing đủ điểm từng Task để kiểm trọn luồng bằng dữ liệu thật. Trang Writing và quyền truy cập đã kiểm SQL/HTTP + Chrome trên dữ liệu giả, đồng thời truy vấn chỉ đọc hai Task thật ở nguồn K67. Không tạo phiếu/lượt làm mới để lấp khoảng trống kiểm này.
