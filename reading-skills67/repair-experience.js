@@ -58,6 +58,7 @@
   const field=input?.closest('.answer-field,.selection-field');
   if(field){field.classList.add('repair-current');field.dataset.repairTarget=nav.items[cursor].id;field.setAttribute('aria-current','step');}
  }
+ function editLabel(){return bridge?.current().content.type==='tfng'?'Sửa bài':'Tôi sẽ sửa';}
  function decorate(){
   if(!bridge)return;
   const {state,teacher}=bridge.current();
@@ -70,7 +71,7 @@
   if(!role){role=document.createElement('span');role.id='materials-role-label';role.className='materials-role-label';document.querySelector('#teacher')?.before(role);}
   role.textContent=teacher?(studentView?'Giảng viên đang xem như học viên · Chỉ xem':'Giao diện giảng viên'):'Giao diện học viên';
   const grade=document.querySelector('#grade-button');if(grade&&state.status==='draft')grade.textContent=repair?'Nộp lại bài':'Nộp bài';
-  const edit=document.querySelector('[data-action="edit"]');if(edit)edit.textContent='Tôi sẽ sửa';
+  const edit=document.querySelector('[data-action="edit"]');if(edit)edit.textContent=editLabel();
   const selected=state.serverAttempt;
   if(selected){
    const notice=document.createElement('div');notice.className='notice attempt-context';
@@ -91,7 +92,7 @@
   if(edit&&p.allCorrect)edit.textContent='Sửa bài';
   banner.append(document.createTextNode((p.allCorrect?'Đã đạt toàn bộ bài. ':`Còn ${p.remainingCount} phần cần sửa theo lần chấm gần nhất. `)+description(p)));
   if(!teacher&&!p.allCorrect&&!(state.status==='draft'&&cursor>=0)){
-   const button=document.createElement('button');button.className='secondary';button.textContent=state.status==='draft'?'Phần cần sửa tiếp theo':'Tôi sẽ sửa';
+   const button=document.createElement('button');button.className='secondary';button.textContent=state.status==='draft'?'Phần cần sửa tiếp theo':editLabel();
    button.onclick=()=>state.status==='draft'?next():bridge.edit();banner.append(' ',button);
   }
   document.querySelector('.lesson-head')?.after(banner);
@@ -115,7 +116,7 @@
   shown.add(attempt.attemptId);
   bridge.modal(p.allCorrect?'Chúc mừng! Bạn đã sửa đúng toàn bộ bài.':`Còn ${p.remainingCount} phần cần sửa`,
    '<p>Bài đã được lưu và chấm.</p><p>'+escape(description(p))+'</p>',
-   p.allCorrect?'<button class="primary" data-close-modal>Xem kết quả</button>':'<button class="secondary" data-close-modal>Xem nhận xét</button><button class="primary" data-action="repair-edit">Tôi sẽ sửa</button>');
+   p.allCorrect?'<button class="primary" data-close-modal>Xem kết quả</button>':'<button class="secondary" data-close-modal>Xem nhận xét</button><button class="primary" data-action="repair-edit">'+escape(editLabel())+'</button>');
  }
  async function restore(history){
   const start=bridge.current().state;

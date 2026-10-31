@@ -50,16 +50,41 @@ try{
    const ui=await page.evaluate(()=>({profile:document.body.dataset.izoneUiProfile,input:getComputedStyle(document.querySelector('textarea[data-target]')).fontSize,select:getComputedStyle(document.querySelector('select[data-target]')).fontSize,flag:getComputedStyle(document.querySelector('[data-flag]'),'::before').maskImage}));
    assert.equal(ui.profile,'skill-homework','The real lesson entry must load its Homework profile.');assert.equal(ui.input,'18px');assert.equal(ui.select,'18px');assert.match(ui.flag,/icons\/flag\.svg/);
    assert.equal(await page.locator('[data-target]').count(),42);assert.equal(await page.locator('textarea[data-target]').count(),18);assert.equal(await page.locator('select[data-target]').count(),24);
+   assert.equal(await page.getByText('Từ khóa định vị',{exact:true}).count(),6);
+   assert.equal(await page.getByText('Thông tin nhạy cảm',{exact:true}).count(),6);
+   assert.equal(await page.locator('.answer-field > label').filter({hasText:/^Nội dung bài đọc tương ứng/}).count(),18);
+   assert.equal(await page.getByText('Chấm T/F/NG riêng cho mảnh này',{exact:true}).count(),18);
+   assert.equal(await page.locator('textarea[placeholder="Trích hoặc diễn đạt ý tương ứng…"]').count(),18);
+   assert.equal(await page.locator('select[data-target] option[value=""]').filter({hasText:'Chọn…'}).count(),24);
+   if(width<=800||height<=500)await page.locator('[data-pane="questions"]').click();
+   const evidence=page.locator('[data-target="q1.m1.evidence"]'),choice=page.locator('[data-target="q1.m1.label"]');
+   const background=locator=>locator.evaluate(el=>getComputedStyle(el).backgroundColor);
+   assert.equal(await background(evidence),'rgb(255, 255, 255)');
+   await evidence.fill('   ');assert.equal(await background(evidence),'rgb(255, 255, 255)');
+   await evidence.fill('Synthetic source evidence');assert.equal(await background(evidence),'rgb(223, 244, 233)');
+   await evidence.fill('');assert.equal(await background(evidence),'rgb(255, 255, 255)');
+   await choice.selectOption('TRUE');assert.equal(await background(choice),'rgb(223, 244, 233)');
+   await choice.selectOption('');assert.equal(await background(choice),'rgb(255, 255, 255)');
    if(width<=800||height<=500)await page.locator('[data-pane="questions"]').click();
    if(width<=800||height<=500){
     await page.locator('[data-question="6"]').click();
     await page.waitForFunction(()=>{const q=document.querySelector('#question-6').getBoundingClientRect(),heading=document.querySelector('#pane-questions .pane-heading').getBoundingClientRect();return q.top>=heading.bottom+8&&q.top<innerHeight-100;});
    }
    for(const t of content.targets){const locator=page.locator('[data-target="'+t.id+'"]');if(t.kind==='evidence')await locator.fill(wrong.includes(t.id)?'Mistaken synthetic meaning':'Synthetic source evidence');else await locator.selectOption(wrong.includes(t.id)?'FALSE':'TRUE');}
+   const reading=page.locator('[data-target="q6.m3.evidence"]');await reading.scrollIntoViewIfNeeded();await reading.focus();
+   await reading.evaluate(el=>{el.setSelectionRange(2,10);window.__keptReading=el;window.__keptReadingScroll=document.querySelector('#scroll-questions').scrollTop;window.__keptWindowScroll=scrollY;});
+   for(let tick=0;tick<3;tick++){await page.evaluate(()=>window.dispatchEvent(new Event('reading67:server-state')));await page.waitForTimeout(750);}
+   assert.deepEqual(await reading.evaluate(el=>({same:el===window.__keptReading,focus:document.activeElement===el,start:el.selectionStart,end:el.selectionEnd,pane:document.querySelector('#scroll-questions').scrollTop===window.__keptReadingScroll,window:scrollY===window.__keptWindowScroll})),{same:true,focus:true,start:2,end:10,pane:true,window:true});
+   const beforeHelp=await page.evaluate(()=>window.__tfngTest.body());
+   await page.locator('[data-action="tfng-help"]').click();
+   assert.match(await page.locator('#modal').innerText(),/Nếu chọn NG, nêu rõ thông tin còn thiếu\./);
+   assert.match(await page.locator('#modal').innerText(),/Một mảnh khớp chưa xác nhận toàn bộ câu đúng/);
+   await page.keyboard.press('Escape');assert.deepEqual(await page.evaluate(()=>window.__tfngTest.body()),beforeHelp);
    await page.locator('[data-flag="6"]').click();assert.deepEqual(await page.evaluate(()=>window.__tfngTest.body().flags),[6]);
    assert.match(await page.locator('#progress-label').textContent(),/42\/42/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    await page.screenshot({path:out+'/draft-'+width+'.png'});
    await page.locator('#grade-button').click();await page.waitForSelector('.repair-banner');await page.locator('[data-close-modal]').first().click();assert.match(await page.locator('.repair-banner').textContent(),/Còn 4 phần/);
+   assert.equal(await page.locator('[data-action="edit"]').textContent(),'Sửa bài');
    await page.locator('[data-action="edit"]').click();await page.waitForSelector('.repair-current');
    const oldReason=await page.locator('[data-target="q4.m2.evidence"]').locator('..').locator('.repair-previous-reason').textContent();
    for(const id of wrong){const el=page.locator('[data-target="'+id+'"]');if(id.endsWith('.evidence'))await el.fill('Synthetic source evidence');else await el.selectOption('TRUE');}
