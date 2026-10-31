@@ -1,5 +1,5 @@
 import {PEOPLE,ACTIVITY,LABELS,fixture,wordCount} from './model.mjs';
-import {studentLayout,teacherLayout,esc,SECTION_FIELDS} from './lesson9-view.mjs';
+import {studentLayout,teacherLayout,esc,SECTION_FIELDS} from './lesson9-view.mjs?v=20261031-threads';
 import {connectedState,SECTION,serverField} from './connected-adapter.mjs';
 import {appendMarkdown} from '../js/markdown.js';
 import {renderLmsDraftResult} from '../js/lms-draft-result.js';
@@ -146,7 +146,13 @@ async function loadTeacher(render=true){
  rows=[];
  for(const row of data.students||[]){
   const p=PEOPLE.find(p=>p.id===row.studentRef);if(!p)continue;
-  if(row.sessionRef){const raw=(await api('admin/lesson9/sessions/'+row.sessionRef)).session;if(epoch!==generation||!loggedIn)return;rows.push(connectedState(raw,p));if((current?.sessionRef===raw.sessionRef||detailOpen&&!current&&person?.id===p.id)&&!editor){current=raw;responses=working(raw);}}
+  if(row.sessionRef){
+   // Cùng phiên bài, đọc cả trao đổi để danh sách không bỏ sót người cần hỗ trợ.
+   const [sessionData,threadData]=await Promise.all([api('admin/lesson9/sessions/'+row.sessionRef),api('admin/live/sessions/'+row.sessionRef+'/teacher-comments')]);
+   if(epoch!==generation||!loggedIn)return;
+   const raw=sessionData.session;rows.push(connectedState(raw,p,threadData.threads));
+   if((current?.sessionRef===raw.sessionRef||detailOpen&&!current&&person?.id===p.id)&&!editor){current=raw;responses=working(raw);}
+  }
   else rows.push({...fixture(p,'fresh'),connected:true});
  }
  if(render)draw();else if(detailOpen)await refresh({background:true});else if(!document.activeElement?.matches('input,textarea,select'))draw({background:true});
