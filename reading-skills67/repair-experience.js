@@ -58,7 +58,7 @@
   const field=input?.closest('.answer-field,.selection-field');
   if(field){field.classList.add('repair-current');field.dataset.repairTarget=nav.items[cursor].id;field.setAttribute('aria-current','step');}
  }
- function editLabel(){return bridge?.current().content.type==='tfng'?'Sửa bài':'Tôi sẽ sửa';}
+ function editLabel(){return 'Sửa bài';}
  function decorate(){
   if(!bridge)return;
   const {state,teacher}=bridge.current();
@@ -70,6 +70,7 @@
   let role=document.querySelector('#materials-role-label');
   if(!role){role=document.createElement('span');role.id='materials-role-label';role.className='materials-role-label';document.querySelector('#teacher')?.before(role);}
   role.textContent=teacher?(studentView?'Giảng viên đang xem như học viên · Chỉ xem':'Giao diện giảng viên'):'Giao diện học viên';
+  role.hidden=!teacher&&document.body.classList.contains('homework-concise');
   const grade=document.querySelector('#grade-button');if(grade&&state.status==='draft')grade.textContent=repair?'Nộp lại bài':'Nộp bài';
   const edit=document.querySelector('[data-action="edit"]');if(edit)edit.textContent=editLabel();
   const selected=state.serverAttempt;
@@ -90,7 +91,13 @@
   const trigger=document.querySelector('[data-action="repair-start"]');if(trigger)trigger.hidden=cursor>=0;
   const p=current.progress,banner=document.createElement('div');banner.className='notice repair-banner';banner.dataset.state=p.allCorrect?'success':'attention';banner.setAttribute('role','status');
   if(edit&&p.allCorrect)edit.textContent='Sửa bài';
-  banner.append(document.createTextNode((p.allCorrect?'Đã đạt toàn bộ bài. ':`Còn ${p.remainingCount} phần cần sửa theo lần chấm gần nhất. `)+description(p)));
+  const headline=p.allCorrect?'Đã đạt toàn bộ bài. ':`Còn ${p.remainingCount} phần cần sửa theo lần chấm gần nhất. `;
+  banner.append(document.createTextNode(headline+(document.body.classList.contains('homework-concise')?'':description(p))));
+  if(document.body.classList.contains('homework-concise')){
+   const detail=document.createElement('details');detail.className='repair-summary-detail';
+   const title=document.createElement('summary');title.textContent='Chi tiết kết quả';
+   const text=document.createElement('p');text.textContent=description(p);detail.append(title,text);banner.append(detail);
+  }
   if(!teacher&&!p.allCorrect&&!(state.status==='draft'&&cursor>=0)){
    const button=document.createElement('button');button.className='secondary';button.textContent=state.status==='draft'?'Phần cần sửa tiếp theo':editLabel();
    button.onclick=()=>state.status==='draft'?next():bridge.edit();banner.append(' ',button);

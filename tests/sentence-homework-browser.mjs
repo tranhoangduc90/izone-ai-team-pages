@@ -53,7 +53,7 @@ try{
    if(scenario==='review'||scenario==='teacher'){
     await page.locator('[data-explain="l6.sc.q19.answer"]').click();await page.waitForSelector('#explanation-dialog[open]');assert.match(await page.locator('#explanation-dialog').innerText(),/Bài bạn đã gửi/);await page.keyboard.press('Escape');assert.equal(await page.locator('#explanation-dialog').evaluate(d=>d.open),false);
     if(scenario==='teacher'){assert.equal(await page.locator('#grade-button').count(),0);assert.equal(await page.locator('[data-action="edit"]').count(),0);}
-    else{await page.locator('[data-action="edit"]').click();await page.waitForSelector('.repair-docked');assert.match(await page.locator('.repair-banner').innerText(),/Phân tích từ khóa/);assert.equal(await page.locator('[data-target="l6.sc.q19.answer"]').evaluate(el=>el.readOnly),false);}
+    else{await page.locator('[data-action="edit"]').click();await page.waitForSelector('.repair-docked');await page.locator('.repair-summary-detail > summary').click();assert.match(await page.locator('.repair-banner').innerText(),/Phân tích từ khóa/);assert.equal(await page.locator('[data-target="l6.sc.q19.answer"]').evaluate(el=>el.readOnly),false);}
    }
    if(scenario==='waiting'){
     await page.locator('[data-question="22"]').click();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
