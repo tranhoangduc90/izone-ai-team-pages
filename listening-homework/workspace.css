@@ -174,3 +174,7 @@ body.hw-homework .cbt-heading-actions .autosave-status{grid-area:4/1/5/-1;max-wi
  body.hw-homework #readingView #content-viewport{height:480px;flex:none;max-height:none}
  body.hw-homework .hw-question-dock{position:fixed;bottom:28px;left:21px;right:21px;width:auto;z-index:30;box-sizing:border-box;border:1px solid var(--m170-line)}
 }
+/* Bank là vùng tham chiếu 16px; chữ bài và ô trả lời vẫn theo thang Homework. */
+.hw-homework .cbt-option-bank .response-choices .cbt-choice span { font-size:16px; }
+body.hw-homework[data-izone-consumer="listening-homework"] #readingView .cbt-option-bank > .response-choices { display:flex; flex-direction:column; gap:12px; width:100%; margin:0; }
+body.hw-homework[data-izone-consumer="listening-homework"] #readingView .cbt-option-bank .response-choices .cbt-choice { width:100%; margin:0; }

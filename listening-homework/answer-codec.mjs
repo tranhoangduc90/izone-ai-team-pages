@@ -3,15 +3,24 @@
 export const UI_KIND='listening-homework-interaction-v1';
 const compound=new Set(['S1','S4','S5','S8','S17','S19']);
 const choices={S1:['Ý kiến riêng của một người','Lựa chọn cuối cùng được cả James và Beth đồng ý'],S5:['Có','Không'],S8:['Có','Không'],S17:['Có','Không'],S19:['C','A']};
-export function encodeAnswer(id,fields){
+export function encodeAnswer(id,fields,item){
+ if(item?.ui){const slots=item.ui.slots;if(slots?.length)return slots.some(s=>fields[s.key]?.trim())?slots.map((s,n)=>`(${String.fromCharCode(97+n)}) ${fields[s.key]||''}`).join('\n'):'';return fields[id]||'';}
  if(id==='S4')return ['a','b','c'].some(k=>fields[id+k]?.trim())?['a','b','c'].map(k=>`(${k}) ${fields[id+k]||''}`).join('\n'):'';
  if(['S8','S17','S19'].includes(id))return fields[id+'choice']||fields[id+'quote']?`Lựa chọn: ${fields[id+'choice']||''}\nDẫn chứng: ${fields[id+'quote']||''}`:'';
  return fields[id]||'';
 }
 export function decodeBody(body,items){
  const fields={},legacy={},annotation=body.annotations?.find(a=>a.kind===UI_KIND);
- for(const {id} of items){
+ for(const item of items){
+  const {id}=item;
   const raw=body.answers?.[id]||'';
+  if(item.ui){
+   if(!item.ui.slots?.length){fields[id]=raw;continue;}
+   const saved=annotation?.fields;
+   if(saved&&encodeAnswer(id,saved,item)===raw){for(const s of item.ui.slots)if(typeof saved[s.key]==='string')fields[s.key]=saved[s.key];continue;}
+   if(raw)legacy[id]=raw;
+   continue;
+  }
   if(!compound.has(id)){fields[id]=raw;continue;}
   const saved=annotation?.fields;
   if(saved&&encodeAnswer(id,saved)===raw){for(const [k,v]of Object.entries(saved))if((k===id||k.startsWith(id+'choice')||k===id+'quote'||id==='S4'&&/^S4[abc]$/.test(k))&&typeof v==='string')fields[k]=v;continue;}
@@ -32,7 +41,7 @@ export function decodeBody(body,items){
  return {fields,legacy,legacyOriginal:annotation?.legacyOriginal||{}};
 }
 export function encodeBody(state,items,annotations=[]){
- const answers=Object.fromEntries(items.map(({id})=>[id,Object.hasOwn(state.legacy,id)?state.legacy[id]:encodeAnswer(id,state.fields)]));
+ const answers=Object.fromEntries(items.map(item=>[item.id,Object.hasOwn(state.legacy,item.id)?state.legacy[item.id]:encodeAnswer(item.id,state.fields,item)]));
  const meta={kind:UI_KIND,fields:{...state.fields},mcq:Object.fromEntries([24,25].map(n=>[n,state.fields['mcq'+n]||''])),legacyOriginal:state.legacyOriginal||{}};
  return {answers,annotations:[...annotations.filter(a=>a.kind!==UI_KIND),meta],notes:state.notes||'',flags:items.flatMap((i,n)=>state.flags.includes(i.id)?[n+1]:[])};
 }
