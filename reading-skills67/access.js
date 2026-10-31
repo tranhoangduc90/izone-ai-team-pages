@@ -65,11 +65,12 @@
   if(params.get('assignmentCode')&&params.get('assignmentCode')!==config.code)throw Error('Mã trong link không khớp bài đang mở. Hãy dùng lại CTA trong Homework.');
   key='reading67:session:'+config.code;
   const teacherIntent=teacher||params.get('mode')==='teacher'||params.has('classId')||params.has('studentRef');
-  const studentIntent=!!config.ownerEntry&&!teacherIntent&&(params.get('mode')==='student'||params.has('documentId'));
+  const studentIntent=!!config.ownerEntry&&!teacherIntent;
   if(studentIntent&&params.has('documentId')){
    entryDocument=params.get('documentId');
    const value=await request('/entry?'+new URLSearchParams({documentId:entryDocument}));entryContext=value.entry;
-   if(!entryContext||entryContext.documentId!==entryDocument||entryContext.code!==config.code||entryContext.classId!==config.ownerEntry.classId)throw Error(entryErrors.HOMEWORK_ENTRY_NOT_FOUND);
+   const entryClasses=config.ownerEntry.classes||[config.ownerEntry];
+   if(!entryContext||entryContext.documentId!==entryDocument||entryContext.code!==config.code||!entryClasses.some(c=>c.classId===entryContext.classId&&c.classCode===entryContext.classCode))throw Error(entryErrors.HOMEWORK_ENTRY_NOT_FOUND);
   }
   // Phiên máy chủ quyết định vai trò; query cũ không cấp quyền hoặc đổi người học.
   if(config.autoRole&&!studentIntent){
