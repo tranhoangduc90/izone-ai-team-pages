@@ -43,6 +43,7 @@ try{
    if(p.endsWith('/auth/config'))return route.fulfill({json:{googleClientId:'fixture-google',sharedSession:true}});
    if(p.endsWith('/admin/me'))return route.fulfill({status:mode==='api-denied'?403:200,json:{reviewer:{role:'admin'},classes:[{classCode:'CS-FIXTURE'}]}});
    if(p.includes('/admin/lesson9/sessions/'))return route.fulfill({json:{session:{activitySlug:task,studentRef:'different-student',classRef:'fixture-class'}}});
+   if(p.endsWith('/teacher-comments'))return route.fulfill({json:{threads:[]}});
    if(p.includes('/admin/live/activities/'))return route.fulfill({json:{students:[{studentRef:'fixture-student',classRef:'fixture-class',...(mode==='data-mismatch'?{sessionRef:'mismatched-session'}:{})}]}});
    if(p.endsWith('/roster'))return route.fulfill({json:{classes}});
    if(p.endsWith('/sw/status')||p.endsWith('/shops/status'))return route.fulfill({json:{ok:true}});
