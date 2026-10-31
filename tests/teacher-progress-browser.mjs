@@ -28,13 +28,13 @@ for (const {variant,product,captured} of variants) test(`${variant}: chưa nộp
     const url = new URL(req.url, 'http://localhost');
     const path = resolve(root, '.' + decodeURIComponent(url.pathname));
     if (!path.startsWith(root + sep)) return res.writeHead(403).end();
-    try { const data = await readFile(path);res.writeHead(200, { 'Content-Type': ({ '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' })[extname(path)] || 'application/octet-stream' });res.end(data); }
+    try { const data = await readFile(path);res.writeHead(200, { 'Content-Type': ({ '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' })[extname(path)] || 'application/octet-stream' });res.end(data); }
     catch { res.writeHead(404).end(); }
   });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   let browser;
   // Đóng tab trước máy chủ; polling của trang không được giữ bước dọn bộ thử vô hạn.
-  t.after(async () => { if (browser) await browser.close();server.closeAllConnections();await new Promise(r => server.close(r)); });
+  t.after(async () => { if (browser) {const p=browser.contexts()[0]?.pages()[0];if(p)await writeFile(join(output,variant+'-final.html'),await p.content(),'utf8');await writeFile(join(output,variant+'-diagnostic.json'),JSON.stringify({errors,forbidden,calls},null,2),'utf8');await browser.close();}server.closeAllConnections();await new Promise(r => server.close(r)); });
   browser = await chromium.launch({ channel: process.env.TEACHER_BROWSER_CHANNEL || 'msedge', headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();page.setDefaultTimeout(7000);
@@ -44,17 +44,19 @@ for (const {variant,product,captured} of variants) test(`${variant}: chưa nộp
   const endpoint = product === 'speaking' ? '/mapping-api/api/speaking-homework-independent/teacher/progress' : '/api/teacher/progress';
   await context.route('**/*', async route => {
     const req = route.request(), url = new URL(req.url());
+    const reply=options=>route.fulfill({...options,headers:{...options.headers,'access-control-allow-origin':`http://127.0.0.1:${server.address().port}`,'access-control-allow-credentials':'true','access-control-allow-headers':'content-type,authorization,x-izone-csrf','access-control-allow-methods':'GET,POST,DELETE,OPTIONS'}});
+    if(req.method()==='OPTIONS')return reply({status:204,body:''});
     if (/\.(mp3|wav|ogg)(?:$|\?)|\/audio(?:[/?-]|$)/i.test(url.href)) { forbidden.push(url.href);return route.abort(); }
-    if (url.hostname === 'accounts.google.com') return route.fulfill({ contentType: 'text/javascript', body: `window.google={accounts:{id:{initialize(o){this.callback=o.callback},renderButton(el){let b=document.createElement('button');b.textContent='Google thử';b.onclick=()=>this.callback({credential:'fixture-google-credential'});el.replaceChildren(b)},disableAutoSelect(){}}}};` });
+    if (url.hostname === 'accounts.google.com') return reply({ contentType: 'text/javascript', body: `window.google={accounts:{id:{initialize(o){this.callback=o.callback},renderButton(el){let b=document.createElement('button');b.textContent='Google thử';b.onclick=()=>this.callback({credential:'fixture-google-credential'});el.replaceChildren(b)},disableAutoSelect(){}}}};` });
     if (url.pathname.startsWith('/api/') || url.hostname === 'ducizone.ddns.net') {
       calls.push({ path: url.pathname, method: req.method() });
-      if (url.pathname.endsWith('/config')) return route.fulfill({ json: { googleClientId: 'fixture-google-client' } });
-      if (url.pathname.endsWith('/teacher/login') || url.pathname.endsWith('/auth/session')) { signed = req.method() !== 'DELETE';return route.fulfill({ json: { ok: true } }); }
-      if (url.pathname.endsWith('/teacher/logout')) { signed = false;return route.fulfill({ json: { ok: true } }); }
-      if (!signed) return route.fulfill({ status: 401, json: { error: { code: 'LOGIN_REQUIRED', message: 'Đăng nhập lại để xem bài.' } } });
-      if (url.pathname === endpoint + '/entry') return route.fulfill({json:{code,classId:'1124',studentRef:baseA,documentId:'fixture-doc',unitIds:[A]}});
-      if (url.pathname === endpoint + '/classes') return route.fulfill({ json: { classes: [{ classId: '1124', classCode: 'LỚP THỬ 67' }] } });
-      if (url.pathname === endpoint + '/students') return route.fulfill({ json: { assignment: { title: 'Bài kiểm thử' }, students: [A, B].map((id, i) => ({ studentRef: product==='speaking'?[baseA,baseB][i]:id, name: i ? 'Học viên B' : 'Học viên A', active: true, units: [{ id, status: 'draft', sentLinks: 1, answered: 1, savedAt }] })) } });
+      if (url.pathname.endsWith('/config')) return reply({ json: { googleClientId: 'fixture-google-client' } });
+      if (url.pathname.endsWith('/teacher/login') || url.pathname.endsWith('/auth/session')) { signed = req.method() !== 'DELETE';return reply({ json: { ok: true } }); }
+      if (url.pathname.endsWith('/teacher/logout')) { signed = false;return reply({ json: { ok: true } }); }
+      if (!signed) return reply({ status: 401, json: { error: { code: 'LOGIN_REQUIRED', message: 'Đăng nhập lại để xem bài.' } } });
+      if (url.pathname === endpoint + '/entry') return reply({json:{code,classId:'1124',studentRef:baseA,documentId:'fixture-doc',unitIds:[A]}});
+      if (url.pathname === endpoint + '/classes') return reply({ json: { classes: [{ classId: '1124', classCode: 'LỚP THỬ 67' }] } });
+      if (url.pathname === endpoint + '/students') return reply({ json: { assignment: { title: 'Bài kiểm thử' }, students: [A, B].map((id, i) => ({ studentRef: product==='speaking'?[baseA,baseB][i]:id, name: i ? 'Học viên B' : 'Học viên A', active: true, units: [{ id, status: 'draft', sentLinks: 1, answered: 1, savedAt }] })) } });
       if (url.pathname.startsWith(endpoint + '/units/')) {
         const id = url.pathname.split('/').at(-1), name = id === A ? 'Học viên A' : 'Học viên B';
         if (id === A && delayA) await new Promise(r => setTimeout(r, 300));
@@ -63,9 +65,9 @@ for (const {variant,product,captured} of variants) test(`${variant}: chưa nộp
           links: [{ kind: 'main', part: 'freestyle', status: 'pending', url: 'https://chatgpt.com/share/fixture', savedAt }],
           code,definition: captured?.definition||{ passage: { A: 'Nội dung đọc giả để kiểm giao diện.' } }, questionIds,
           attempts: [{ id, no: 1, status: 'running', answers: { '21': id === A ? 'A' : 'B' }, notes: 'Nháp của ' + name }] };
-        return route.fulfill({ json: body }).catch(() => {});
+        return reply({ json: body }).catch(() => {});
       }
-      forbidden.push(url.href);return route.fulfill({ status: 500, json: { error: { message: 'Đường ngoài hợp đồng thử' } } });
+      forbidden.push(url.href);return reply({ status: 500, json: { error: { message: 'Đường ngoài hợp đồng thử' } } });
     }
     if (!['127.0.0.1', 'localhost'].includes(url.hostname)) { forbidden.push(url.href);return route.abort(); }
     return route.continue();

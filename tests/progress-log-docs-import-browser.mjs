@@ -40,13 +40,13 @@ test('Docs: cảnh báo key rõ ở đề xuất và nháp sau đọc lại; kh�
         return {draft:window.saved,drafts:[],entries:[]};
       }});window.editor.openDraft(window.saved);
     });
-    await page.getByRole('button',{name:'AI chuyển nội dung có sẵn',exact:true}).click();
-    await page.locator('dialog').getByLabel('Link Google Docs câu hỏi',{exact:true}).fill('https://docs.google.com/document/d/fixture_document_123/edit');
+    await page.getByText('Nhập câu hỏi từ CSV / văn bản chia cột',{exact:true}).click();
+    await page.getByLabel('Link Google Docs câu hỏi',{exact:true}).fill('https://docs.google.com/document/d/fixture_document_123/edit');
     await page.getByRole('button',{name:'Đọc Google Docs và đề xuất câu hỏi',exact:true}).click();
-    await page.locator('dialog').getByRole('alert').filter({hasText:'KEY KHÔNG KHỚP'}).waitFor();
-    await page.locator('dialog').getByRole('alert').filter({hasText:'CHƯA CHUYỂN'}).waitFor();
+    await page.getByRole('alert').filter({hasText:'KEY KHÔNG KHỚP'}).waitFor();
+    await page.getByRole('alert').filter({hasText:'CHƯA CHUYỂN'}).waitFor();
     assert.equal(await page.getByRole('button',{name:'Dùng đáp án đề xuất sau khi đối chiếu'}).count(),0);
-    await page.locator('dialog').getByRole('button',{name:'Xác nhận thêm các câu đã chuyển vào nháp',exact:true}).click();
+    await page.getByRole('button',{name:'Xác nhận thêm các câu đã chuyển vào nháp',exact:true}).click();
     const saved=await page.evaluate(()=>window.saved);assert.equal(saved.revision,2);
     await page.evaluate(()=>window.editor.openDraft(structuredClone(window.saved)));
     await page.getByRole('alert').filter({hasText:'KEY KHÔNG KHỚP'}).waitFor();

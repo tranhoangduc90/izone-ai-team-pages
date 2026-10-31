@@ -22,9 +22,11 @@ export function latestComment(sessions,onOpen) {
   const button=node('button','Xem lại buổi học này →','mini-action');button.type='button';
   button.addEventListener('click',()=>onOpen(session));box.append(button);return box;
 }
+const commentViews=new WeakMap();
 export function paintJourneyComments(root,list,sessions,onOpen) {
-  root.querySelector('.latest-session-comment')?.remove();
-  const latest=latestComment(sessions,onOpen);if(latest){let host=list;while(host.parentElement!==root&&host.parentElement)host=host.parentElement;host.before(latest);}
+  const signature=JSON.stringify(sessions.map(s=>({sessionNumber:s.sessionNumber,title:s.title,sessionDate:s.sessionDate,comment:s.sessionComment})));
+  if(commentViews.get(root)!==signature){root.querySelector('.latest-session-comment')?.remove();
+    const latest=latestComment(sessions,onOpen);if(latest){let host=list;while(host.parentElement!==root&&host.parentElement)host=host.parentElement;host.before(latest);}commentViews.set(root,signature);}
   let filter=root.querySelector('.journey-comment-filter select');
   if(!filter){const label=node('label','Hiển thị','journey-comment-filter');filter=node('select');filter.setAttribute('aria-label','Lọc buổi học theo nhận xét');
     for(const [value,text] of [['all','Tất cả buổi học'],['comments','Buổi có nhận xét']]){const option=node('option',text);option.value=value;filter.append(option);}label.append(filter);list.before(label);}

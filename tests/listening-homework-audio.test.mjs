@@ -5,7 +5,7 @@ import {pathToFileURL} from 'node:url';
 import {randomUUID,createHash} from 'node:crypto';
 import {ASSETS} from '../shared/audio/catalog.mjs';
 import {WORKER_ORIGIN} from '../shared/audio/config.mjs';
-const asset=ASSETS['homework-listening-02-scandinavian'];
+const asset=ASSETS[process.env.LISTENING_AUDIO_ASSET||'homework-listening-02-scandinavian'];
 const bytes=await readFile(new URL('../listening-homework/audio-assets/'+asset.url.split('/').at(-1),import.meta.url));
 assert.equal(createHash('sha256').update(bytes).digest('hex'),asset.sha256);
 const {default:worker}=await import(pathToFileURL(process.env.AUDIO_WORKER_SOURCE+'/worker.mjs'));

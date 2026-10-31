@@ -6,17 +6,20 @@ const app = document.querySelector('#app');
 const modal = document.querySelector('#modal');
 const explanation = document.querySelector('#explanation-dialog');
 const query = new URLSearchParams(location.search);
+// Only the separate public demo entry supplies content and local-only callbacks.
+const homeworkDemo = window.IzoneReadingHomeworkDemo;
+const draftStorage = homeworkDemo ? sessionStorage : localStorage;
 const serverClient=window.ReadingServerClient;
 const serverMode=!!serverClient;
 let teacher = query.get('teacher') === '1';
-const storageKey = 'izone:reading-skills67:materials-mi:prototype:v1';
+const storageKey = homeworkDemo ? `izone:homework-demo:${homeworkDemo.content.code}:v1` : 'izone:reading-skills67:materials-mi:prototype:v1';
 let content, fixture, state, history = [], scenario = query.get('scenario') || 'current';
 let mobilePane = 'passage', activeQuestion = 1, lastTrigger = null, explanationIndex = 0;
 let scale = 100, generalNotesOpen = false, toastTimer, storageAvailable = true;
 let latestServerAttempt=null;
 const tfng=()=>content?.type==='tfng';
 const headings=()=>content?.type==='matching_headings';
-const lessonRenderer=()=>content?.type==='green-roofs'?window.ReadingGreenRoofsRenderer:tfng()?window.ReadingTfngRenderer:null;
+const lessonRenderer=()=>content?.type==='sentence_completion'?window.ReadingSentenceRenderer:content?.type==='matching_people'?window.ReadingPeopleRenderer:content?.type==='green-roofs'?window.ReadingGreenRoofsRenderer:tfng()?window.ReadingTfngRenderer:null;
 const totalTargets=()=>content?.targets?.length||20;
 const minimumRequired=()=>content?.minimumRequired||16;
 const panePositions = {passage: 0, questions: 0};
@@ -25,7 +28,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'
 const e = escapeHtml;
 function newState(){ return {id:crypto.randomUUID(), answers:{}, flags:[], annotations:[], notes:'', status:'draft', savedAt:null}; }
 function readStorage(){
-  try {const stored=JSON.parse(localStorage.getItem(storageKey)||'null');history=stored?.history||[];return stored?.draft||newState();}
+  try {const stored=JSON.parse(draftStorage.getItem(storageKey)||'null');history=stored?.history||[];return stored?.draft||newState();}
   catch {storageAvailable=false;return newState();}
 }
 let originalDraft = readStorage();
@@ -37,9 +40,9 @@ function persist(){
   if(state.status==='draft')promoteDraft();
   state.savedAt=new Date().toISOString();
   try {
-    if(state.isSample)localStorage.setItem(storageKey+':sample',JSON.stringify(state));
+    if(state.isSample)draftStorage.setItem(storageKey+':sample',JSON.stringify(state));
     else originalDraft=structuredClone(state);
-    localStorage.setItem(storageKey,JSON.stringify({draft:originalDraft,history}));storageAvailable=true;
+    draftStorage.setItem(storageKey,JSON.stringify({draft:originalDraft,history}));storageAvailable=true;
   }
   catch {storageAvailable=false;}
   updateProgress();return storageAvailable;
@@ -54,7 +57,7 @@ function filled(target){const v=normalize(state.answers[target.id]);return !!v&&
 function completed(){if(serverMode&&state?.serverAttempt)return state.serverAttempt.completeness.filled_cells;if(serverMode&&state?.status==='draft'&&serverClient.state.status==='saved'&&serverClient.state.completeness)return serverClient.state.completeness.filled_cells;return content.targets.filter(filled).length;}
 function timeLabel(iso){return iso?new Date(iso).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'chưa lưu';}
 function isResult(){return state.status==='review';}
-function writable(){return !teacher&&state?.status==='draft'&&(!headings()||window.ReadingSharePractice?.isAccepted()===true);}
+function writable(){return !teacher&&state?.status==='draft'&&(!headings()||homeworkDemo||window.ReadingSharePractice?.isAccepted()===true);}
 window.ReadingInteractionBridge={current:()=>state,scope:()=>content?.version+':'+state?.id,writable,save:persist,showPane:setMobilePane,closeGeneralNotes:()=>{generalNotesOpen=false;document.querySelector('#notes-panel')?.setAttribute('hidden','');}};
 function feedbackHtml(id){
   if(!isResult())return '';
@@ -64,12 +67,12 @@ function feedbackHtml(id){
 function field(id,label,kind){
   const value=state.answers[id]||'';
   const dom='answer-'+id.replaceAll('.','-');
-  return `<div class="answer-field ${kind==='paragraph'?'field-paragraph':''}" data-field="${e(id)}"><label for="${dom}">${e(label)}<span class="field-indicator" data-indicator="${e(id)}">${value?'Đã điền':'Chưa điền'}</span></label><textarea id="${dom}" data-target="${e(id)}" rows="${kind==='radar'?2:3}" placeholder="${kind==='radar'?'Tự xác định loại thông tin, đối tượng và đặc điểm…':'Viết bản nén của bạn…'}" ${writable()?'':'readonly'}>${e(value)}</textarea>${feedbackHtml(id)}</div>`;
+  return `<div class="answer-field ${kind==='paragraph'?'field-paragraph':''}" data-field="${e(id)}"><label for="${dom}">${e(label)}<span class="field-indicator" data-indicator="${e(id)}">${value?'Đã điền':'Chưa điền'}</span></label><textarea id="${dom}" data-target="${e(id)}" rows="${kind==='radar'?2:3}" placeholder="${kind==='radar'?'[Loại thông tin] Đối tượng : Đặc điểm…':'Viết bản nén của bạn…'}" ${writable()?'':'readonly'}>${e(value)}</textarea>${feedbackHtml(id)}</div>`;
 }
 function paragraphHtml(p){return `<section class="passage-block" id="paragraph-${p.id}"><div class="paragraph-heading"><span class="paragraph-letter cbt-paragraph-label">${p.id}</span><h3>ĐOẠN ${p.id}</h3></div><div class="passage-text cbt-reading-passage" data-annotation-root-key="materials-paragraph-${p.id}" data-question-numbers="1 2 3 4">${p.text.split('\n\n').map(t=>`<p>${e(t)}</p>`).join('')}</div>${field(p.target,`Nén cấp 1 đoạn ${p.id}`,'paragraph')}</section>`;}
 function questionHtml(q){
   const flagged=state.flags.includes(q.number),val=state.answers[q.targets.section]||'';
-  return `<section class="question-block" id="question-${q.number}" data-question-number="${q.number}"><div class="question-top"><span class="question-number cbt-question-number">${q.number}</span><p class="question-text cbt-reading-questions" data-annotation-root-key="materials-question-${q.number}" data-question-number="${q.number}">${e(q.text)}</p><button class="flag-button" data-flag="${q.number}" aria-label="Đánh dấu câu ${q.number}" aria-pressed="${flagged}" ${writable()?'':'disabled'}>⚑</button></div><div class="answer-field"><label for="answer-${q.targets.radar.replaceAll('.','-')}">Nén thông tin câu hỏi</label><p class="syntax">Theo cú pháp <strong>[PHÂN LOẠI THÔNG TIN] Đối tượng : Đặc điểm</strong></p><div class="source-hint"><strong>Gợi ý từ đề</strong>\n${e(q.hint)}</div></div>${field(q.targets.radar,'Bản nén của bạn','radar')}${field(q.targets.evidence_l1,'Nén cấp 1 câu chứa thông tin trong bài đọc','evidence')}<div class="selection-field"><label for="answer-${q.targets.section.replaceAll('.','-')}">Đáp án (tên đoạn văn)</label><select id="answer-${q.targets.section.replaceAll('.','-')}" data-target="${e(q.targets.section)}" ${writable()?'':'disabled'}><option value="">Nhấn để chọn</option>${'ABCDEFGH'.split('').map(l=>`<option value="${l}" ${val===l?'selected':''}>Đoạn ${l}</option>`).join('')}</select></div><button class="quiet jump-selected" data-view-selected="${q.number}" ${val?'':'hidden'}>Xem đoạn đã chọn ↗</button>${feedbackHtml(q.targets.section)}</section>`;
+  return `<section class="question-block" id="question-${q.number}" data-question-number="${q.number}"><div class="question-top"><span class="question-number cbt-question-number">${q.number}</span><p class="question-text cbt-reading-questions" data-annotation-root-key="materials-question-${q.number}" data-question-number="${q.number}">${e(q.text)}</p><button class="flag-button" data-flag="${q.number}" aria-label="Đánh dấu câu ${q.number}" aria-pressed="${flagged}" ${writable()?'':'disabled'}>⚑</button></div><div class="answer-field"><details class="question-method"><summary>Gợi ý nén câu hỏi</summary><div class="source-hint">${e(q.hint)}</div></details></div>${field(q.targets.radar,'Nén câu hỏi','radar')}${field(q.targets.evidence_l1,'Nén cấp 1 câu dẫn chứng','evidence')}<div class="selection-field"><label for="answer-${q.targets.section.replaceAll('.','-')}">Đoạn chứa thông tin</label><select id="answer-${q.targets.section.replaceAll('.','-')}" data-target="${e(q.targets.section)}" ${writable()?'':'disabled'}><option value="">Chọn…</option>${'ABCDEFGH'.split('').map(l=>`<option value="${l}" ${val===l?'selected':''}>Đoạn ${l}</option>`).join('')}</select></div><button class="quiet jump-selected" data-view-selected="${q.number}" ${val?'':'hidden'}>Xem đoạn đã chọn ↗</button>${feedbackHtml(q.targets.section)}</section>`;
 }
 function summaryHtml(){
   if(!isResult())return '';
@@ -80,10 +83,12 @@ function summaryHtml(){
 function render(){
   if(!content)return;
   document.body.classList.toggle('headings-homework',headings());
+  document.body.classList.toggle('sentence-homework',content.type==='sentence_completion');
+  document.body.classList.toggle('homework-concise',!tfng());
   if(scenario==='entry'){renderEntry();return;}
   if(headings())app.innerHTML=window.ReadingHeadingsRenderer.shell(content,{state,teacher,writable:writable(),feedback:feedbackHtml,mobilePane,scale});
   else if(lessonRenderer())app.innerHTML=lessonRenderer().shell(content,{state,teacher,writable:writable(),feedback:feedbackHtml,mobilePane,scale});
-  else app.innerHTML=`<div class="lesson-head"><div><h1>${e(content.title)}</h1><div class="lesson-meta"><span>Matching Information · Câu 1–4</span><span>Nén cấp 1</span><span>8 đoạn đọc</span></div></div><div class="learner"><strong>Học viên minh họa</strong><span>· Lớp 6.0–7.0</span><button class="quiet" data-action="identity">Đổi người</button></div></div>${teacher?'<div class="notice teacher-notice"><strong>Giảng viên · Chỉ xem bản minh họa.</strong> Chưa kiểm đăng nhập hoặc quyền lớp thật. Nháp lưu lúc '+timeLabel(state.savedAt)+'.</div>':''}${isResult()?'<div class="notice result-note"><strong>Phản hồi mô phỏng để duyệt giao diện.</strong> Bài minh họa riêng; chưa gọi AI, ghi Docs hoặc tính điểm thật.</div>':''}${state.status==='waiting'?'<div class="notice waiting-card"><span class="spinner"></span><span><strong>Đang chờ chấm · Mô phỏng</strong><br>Bản gửi được giữ riêng. <button class="quiet" data-action="show-result">Xem kết quả mô phỏng →</button></span></div>':''}<div class="mobile-tabs" role="tablist" aria-label="Vùng làm bài"><button role="tab" id="tab-passage" aria-controls="pane-passage" aria-selected="${mobilePane==='passage'}" data-pane="passage">Bài đọc & nén đoạn</button><button role="tab" id="tab-questions" aria-controls="pane-questions" aria-selected="${mobilePane==='questions'}" data-pane="questions">Câu hỏi 1–4</button></div><div class="study-grid"><section class="study-pane ${mobilePane==='passage'?'active':''}" id="pane-passage" aria-label="Bài đọc và nén đoạn"><div class="pane-heading"><div><h2>Bài đọc & nén đoạn</h2><small>Đọc từng đoạn, tự viết bản nén</small></div><nav class="pane-jumps" aria-label="Chuyển đoạn">${content.paragraphs.map(p=>`<button data-paragraph="${p.id}" aria-label="Đến đoạn ${p.id}">${p.id}</button>`).join('')}</nav></div><div class="pane-scroll" id="scroll-passage"><button class="mobile-return" data-action="return-question" hidden>← Về câu đang làm</button><div class="source-intro"><h2>${e(content.title)}</h2><p>${e(content.subtitle)}</p></div>${content.paragraphs.map(paragraphHtml).join('')}</div></section><section class="study-pane ${mobilePane==='questions'?'active':''}" id="pane-questions" aria-label="Câu hỏi Matching Information"><div class="pane-heading"><div><h2>Matching Information</h2><small>Nén câu hỏi · tìm thông tin · chọn đoạn</small></div><nav class="pane-jumps" aria-label="Chuyển câu hỏi">${content.questions.map(q=>`<button data-question="${q.number}" class="${state.flags.includes(q.number)?'flagged':''}" aria-label="Đến câu ${q.number}">${q.number}</button>`).join('')}</nav></div><div class="pane-scroll" id="scroll-questions">${summaryHtml()}<p class="question-instruction">${e(content.instruction)}</p>${content.questions.map(questionHtml).join('')}<p class="minimum-note">Bài có 20 phần trả lời. Bạn có thể đổi qua lại giữa câu hỏi và bài đọc.</p></div></section></div><footer class="study-footer"><div class="progress-area"><div class="progress-label" id="progress-label"></div><div class="progress-track"><span id="progress-bar"></span></div></div><span class="save-state" id="save-state" aria-live="polite"></span><div class="footer-tools"><div class="font-control"><button class="quiet" data-font="-10" aria-label="Giảm cỡ chữ">A−</button><span id="font-scale">${scale}%</span><button class="quiet" data-font="10" aria-label="Tăng cỡ chữ">A+</button></div><button class="quiet notes-button" data-action="notes">Ghi chú</button><button class="quiet history-button" data-action="history">Lịch sử</button><button class="quiet" data-action="review">Rà soát</button>${teacher?'<span class="quiet">Chỉ xem</span>':isResult()?'<button class="primary" data-action="edit">Sửa bài</button>':state.status==='waiting'?'<button class="secondary" data-action="show-result">Xem mẫu</button>':'<button class="primary" id="grade-button" data-action="grade">Chấm bài</button>'}</div></footer><aside id="notes-panel" class="general-notes" hidden><header><strong>Ghi chú của bạn</strong><button class="close-button" data-action="close-notes" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="general-note">Chọn chữ trong bài đọc hoặc câu hỏi để Highlight / Note.</label><textarea id="general-note" placeholder="Ghi chú chung cho bài…" ${writable()?'':'readonly'}>${e(state.notes||'')}</textarea></div></aside>`;
+  else app.innerHTML=`<div class="lesson-head"><div><h1>${e(content.title)}</h1><div class="lesson-meta"><span>Matching Information · Câu 1–4</span><span>Nén cấp 1</span><span>8 đoạn đọc</span></div></div><div class="learner"><strong>Học viên minh họa</strong><span>· Lớp 6.0–7.0</span><button class="quiet" data-action="identity">Đổi người</button></div></div>${teacher?'<div class="notice teacher-notice"><strong>Giảng viên · Chỉ xem bản minh họa.</strong> Chưa kiểm đăng nhập hoặc quyền lớp thật. Nháp lưu lúc '+timeLabel(state.savedAt)+'.</div>':''}${isResult()?'<div class="notice result-note"><strong>Phản hồi mô phỏng để duyệt giao diện.</strong> Bài minh họa riêng; chưa gọi AI, ghi Docs hoặc tính điểm thật.</div>':''}${state.status==='waiting'?'<div class="notice waiting-card"><span class="spinner"></span><span><strong>Đang chờ chấm · Mô phỏng</strong><br>Bản gửi được giữ riêng. <button class="quiet" data-action="show-result">Xem kết quả mô phỏng →</button></span></div>':''}<div class="mobile-tabs" role="tablist" aria-label="Vùng làm bài"><button role="tab" id="tab-passage" aria-controls="pane-passage" aria-selected="${mobilePane==='passage'}" data-pane="passage">Bài đọc & nén đoạn</button><button role="tab" id="tab-questions" aria-controls="pane-questions" aria-selected="${mobilePane==='questions'}" data-pane="questions">Câu hỏi 1–4</button></div><div class="study-grid"><section class="study-pane ${mobilePane==='passage'?'active':''}" id="pane-passage" aria-label="Bài đọc và nén đoạn"><div class="pane-heading"><div><h2>Bài đọc & nén đoạn</h2><small>Đọc từng đoạn, tự viết bản nén</small></div><nav class="pane-jumps" aria-label="Chuyển đoạn">${content.paragraphs.map(p=>`<button data-paragraph="${p.id}" aria-label="Đến đoạn ${p.id}">${p.id}</button>`).join('')}</nav></div><div class="pane-scroll" id="scroll-passage"><button class="mobile-return" data-action="return-question" hidden>← Về câu đang làm</button><div class="source-intro"><h2>${e(content.title)}</h2><p>${e(content.subtitle)}</p></div>${content.paragraphs.map(paragraphHtml).join('')}</div></section><section class="study-pane ${mobilePane==='questions'?'active':''}" id="pane-questions" aria-label="Câu hỏi Matching Information"><div class="pane-heading"><div><h2>Matching Information</h2><small>Nén câu hỏi · tìm thông tin · chọn đoạn</small></div><nav class="pane-jumps" aria-label="Chuyển câu hỏi">${content.questions.map(q=>`<button data-question="${q.number}" class="${state.flags.includes(q.number)?'flagged':''}" aria-label="Đến câu ${q.number}">${q.number}</button>`).join('')}</nav></div><div class="pane-scroll" id="scroll-questions">${summaryHtml()}<details class="question-method"><summary>Cách nén câu hỏi</summary><p><strong>[Phân loại thông tin] Đối tượng : Đặc điểm</strong></p><p>Xác định loại thông tin cần tìm, rồi nén đối tượng và đặc điểm.</p></details><p class="question-instruction">${e(content.instruction)}</p>${content.questions.map(questionHtml).join('')}<p class="minimum-note">Đủ 16/20 phần để gửi chấm.</p></div></section></div><footer class="study-footer"><div class="progress-area"><div class="progress-label" id="progress-label"></div><div class="progress-track"><span id="progress-bar"></span></div></div><span class="save-state" id="save-state" aria-live="polite"></span><div class="footer-tools"><div class="font-control"><button class="quiet" data-font="-10" aria-label="Giảm cỡ chữ">A−</button><span id="font-scale">${scale}%</span><button class="quiet" data-font="10" aria-label="Tăng cỡ chữ">A+</button></div><button class="quiet notes-button" data-action="notes">Ghi chú</button><button class="quiet history-button" data-action="history">Lịch sử</button><button class="quiet" data-action="review">Rà soát</button>${teacher?'<span class="quiet">Chỉ xem</span>':isResult()?'<button class="primary" data-action="edit">Sửa bài</button>':state.status==='waiting'?'<button class="secondary" data-action="show-result">Xem mẫu</button>':'<button class="primary" id="grade-button" data-action="grade">Chấm bài</button>'}</div></footer><aside id="notes-panel" class="general-notes" hidden><header><strong>Ghi chú của bạn</strong><button class="close-button" data-action="close-notes" aria-label="Đóng ghi chú">×</button></header><div class="homework-notes"><label for="general-note">Chọn chữ trong bài đọc hoặc câu hỏi để Highlight / Note.</label><textarea id="general-note" placeholder="Ghi chú chung cho bài…" ${writable()?'':'readonly'}>${e(state.notes||'')}</textarea></div></aside>`;
   app.removeAttribute('aria-busy');
   document.querySelector('#scenario').value=scenario==='sample-current'?'draft':scenario;
   updateProgress();
@@ -91,9 +96,10 @@ function render(){
   if(serverMode)window.ReadingMaterialsExperience?.decorate();
   if(serverMode&&headings())window.ReadingSharePractice?.bind({content,teacher,client:serverClient,attemptId:state.serverAttempt?.attemptId,readonly:teacher||state.status!=='draft'});
   document.querySelectorAll('textarea[data-target]').forEach(autoGrow);
+  homeworkDemo?.decorate({content,state,showModal,reset:()=>{state=newState();originalDraft=structuredClone(state);history=[];draftStorage.removeItem(storageKey);render();}});
   requestAnimationFrame(()=>window.ReadingAnnotations?.install());
 }
-function autoGrow(input){input.style.height='auto';input.style.height=Math.max(80,input.scrollHeight+2)+'px';}
+function autoGrow(input){input.style.height='auto';input.style.height=Math.max(input.dataset.compactField==='true'?44:80,input.scrollHeight+2)+'px';}
 function updateProgress(){
   if(!content||!state)return;
   const count=completed();
@@ -102,6 +108,11 @@ function updateProgress(){
   const save=document.querySelector('#save-state');if(save)save.textContent=storageAvailable?(state.savedAt?`Đã lưu trên thiết bị · ${timeLabel(state.savedAt)}`:'Lưu tự động trên thiết bị'):'Chưa lưu được · Giữ trang đang mở';
   const grade=document.querySelector('#grade-button');if(grade)grade.setAttribute('aria-description',count<minimumRequired()?`Cần thêm ${minimumRequired()-count} phần để đủ điều kiện chấm`:`Đã đủ ${minimumRequired()} phần để chấm`);
   content.targets.forEach(t=>{const el=document.querySelector('[data-indicator="'+t.id+'"]');if(el)el.textContent=filled(t)?'Đã điền':'Chưa điền';});
+  if(tfng())window.ReadingTfngRenderer?.updateProgress?.(content,filled);
+  else document.querySelectorAll('[data-target]').forEach(input=>{
+    const field=input?.closest('.answer-field,.selection-field');
+    if(field){const value=filled({id:input.dataset.target})?'filled':'empty';if(field.dataset.fillState!==value)field.dataset.fillState=value;input.setAttribute('aria-description',value==='filled'?'Đã điền':'Chưa điền');}
+  });
   if(serverMode)adaptServerSave();
 }
 function setMobilePane(pane){
@@ -118,21 +129,22 @@ function jumpTo(kind,value){
   const target=document.querySelector('#'+kind+'-'+value);
   requestAnimationFrame(()=>{
     target?.scrollIntoView({block:'start',behavior:'instant'});
-    if(['tfng','green-roofs'].includes(content.type)&&matchMedia('(max-width:800px), (max-width:1000px) and (max-height:500px)').matches){
+    if(['tfng','green-roofs','matching_people','sentence_completion'].includes(content.type)&&matchMedia('(max-width:800px), (max-width:1000px) and (max-height:500px)').matches){
       const heading=target?.closest('.study-pane')?.querySelector('.pane-heading');
       if(heading&&target){const edge=heading.getBoundingClientRect().bottom+12,top=target.getBoundingClientRect().top;if(top<edge)scrollBy({top:top-edge,behavior:'instant'});}
     }
     target?.classList.remove('highlight-arrival');requestAnimationFrame(()=>target?.classList.add('highlight-arrival'));
   });
 }
-function jumpField(id){const t=content.targets.find(t=>t.id===id);if(!t)return;jumpTo(t.paragraph?'paragraph':'question',t.paragraph||t.question);setTimeout(()=>document.querySelector('[data-target="'+id+'"]')?.focus({preventScroll:true}),40);}
+function jumpField(id){if(content.type==='matching_people')return jumpRepairField(id);const t=content.targets.find(t=>t.id===id);if(!t)return;jumpTo(t.paragraph?'paragraph':'question',t.paragraph||t.question);setTimeout(()=>document.querySelector('[data-target="'+id+'"]')?.focus({preventScroll:true}),40);}
 // Đi đúng ô, kể cả ô dưới cùng của câu hỏi và select chỉ xem; không sửa giá trị.
 function jumpRepairField(id){
   const paragraph=content.paragraphs.find(p=>p.target===id||headings()&&p.id===content.targets.find(t=>t.id===id)?.paragraph||Object.values(p.targets||{}).includes(id));
   const question=content.questions.find(q=>Object.values(q.targets).includes(id));
-  if(!paragraph&&!question)return;
+  const person=content.type==='matching_people'&&content.people.find(p=>p.analyses.some(a=>Object.values(a.targets).includes(id)));
+  if(!paragraph&&!question&&!person)return;
   if(question)activeQuestion=question.number;
-  setMobilePane(question?'questions':'passage');
+  setMobilePane(question||person?'questions':'passage');
   requestAnimationFrame(()=>{
     const input=[...document.querySelectorAll('[data-target]')].find(el=>el.dataset.target===id);if(!input)return;
     input.scrollIntoView({block:'center',behavior:'instant'});
@@ -166,6 +178,7 @@ function review(){
   showModal('Rà soát bài làm',`<p>Đã điền <strong>${completed()}/${totalTargets()} phần</strong>. ${completed()<minimumRequired()?'Cần thêm '+(minimumRequired()-completed())+' phần để đủ điều kiện gửi chấm.':'Đã đủ khối lượng để chấm.'}</p><div class="review-groups">${groups.map(([label,kind])=>`<div class="review-group"><h3>${label}</h3><div class="review-items">${content.targets.filter(t=>t.kind===kind).map(t=>`<button data-jump-field="${t.id}" class="${filled(t)?'filled':''} ${state.flags.includes(t.question)?'flagged':''}" data-status="${filled(t)?'✓':'Trống'}" aria-label="${e(t.label)}">${t.paragraph||t.question}</button>`).join('')}</div></div>`).join('')}</div><p class="minimum-note">Chữ được tô là phần đã điền, chưa phải kết quả đúng. ⚑ là câu bạn muốn xem lại.</p>`,writable()?'<button class="primary" data-action="grade">Chấm bài</button>':'');
 }
 function grade(){
+  if(homeworkDemo){homeworkDemo.showFeedback(showModal);return;}
   if(serverMode)return serverGrade();
   closeModal();
   if(completed()<minimumRequired()){review();return;}
@@ -233,6 +246,7 @@ function historyModal(){
 }
 function toggleNotes(){generalNotesOpen=!generalNotesOpen;document.querySelector('#notes-panel').hidden=!generalNotesOpen;window.ReadingAnnotations?.refreshNotes();if(generalNotesOpen)document.querySelector('#general-note')?.focus();}
 async function action(name){
+  if(name==='tfng-help'&&tfng()){showModal('Cách làm T/F/NG',window.ReadingTfngRenderer.method());return;}
   if(serverMode&&name==='repair-start'){
     if(window.ReadingMaterialsExperience)window.ReadingMaterialsExperience.start();
     else{const problem=content.targets.find(t=>state.feedback?.[t.id]?.status!=='correct');if(problem)jumpField(problem.id);}
@@ -310,7 +324,7 @@ window.addEventListener('offline',()=>toast('Đang ngoại tuyến. Bản đang 
 async function bootstrap(){
   try{
     if(serverMode){
-      const loaded=await serverClient.initialize();teacher=!!loaded.teacher;content=loaded.content;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};
+      const loaded=await serverClient.initialize();teacher=!!loaded.teacher;content=loaded.content;activeQuestion=content.questions[0]?.number||1;scenario='current';state={...newState(),...loaded.draft.body,id:'draft-'+loaded.identity.ownerId,status:'draft',savedAt:loaded.draft.savedAt};
       window.ReadingMaterialsExperience?.bind({current:()=>({state,content,teacher}),history:()=>serverClient.initialHistory?.attempts||serverClient.initialHistory||[],
         draftRevision:()=>serverClient.revision,runNo:()=>serverClient.runNo,fetchAttempt:id=>serverClient.getAttempt(id),identity:()=>serverClient.identity,
         openAttempt:async id=>{closeModal();trackServerAttempt(await serverClient.getAttempt(id));},edit:()=>serverAction('repair-edit'),
@@ -324,8 +338,9 @@ async function bootstrap(){
       else if(!teacher)await window.ReadingMaterialsExperience?.restore(loaded.history);
       return;
     }
+    if(homeworkDemo){content=homeworkDemo.content;scenario='current';state=structuredClone(originalDraft);render();return;}
     const response=await fetch('/__prototype__/content');if(!response.ok)throw Error('Không đọc được đề riêng tư.');content=await response.json();
-    if(scenario==='sample-current'){const saved=localStorage.getItem(storageKey+':sample');if(saved){state=JSON.parse(saved);render();}else await changeScenario('draft');}
+    if(scenario==='sample-current'){const saved=draftStorage.getItem(storageKey+':sample');if(saved){state=JSON.parse(saved);render();}else await changeScenario('draft');}
     else if(['draft','waiting','review','empty','entry'].includes(scenario))await changeScenario(scenario);else{scenario='current';state=structuredClone(originalDraft);render();}
   }catch(err){app.innerHTML='<section class="notice" style="margin-top:30px"><h2>Chưa mở được bài</h2><p>'+e(err.message)+'</p><p>'+(serverMode?'Kiểm tra tài khoản, quyền lớp hoặc kết nối rồi tải lại trang.':'Hãy mở bằng máy chủ prototype trên máy này, rồi tải lại trang.')+'</p></section>';app.removeAttribute('aria-busy');}
 }
@@ -389,7 +404,7 @@ function trackServerAttempt(attempt,{announce=false}={}){
   });
 }
 function showServerAttempt(attempt,announce=false){
-  if(['green-roofs','matching_headings'].includes(content.type)&&state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
+  if(['green-roofs','matching_headings','matching_people','sentence_completion'].includes(content.type)&&state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
     const visible=value=>JSON.stringify([value.status,value.errorCode,value.result,value.snapshot,value.validationProgress,value.recovery]);
     if(visible(state.serverAttempt)===visible(attempt)){latestServerAttempt=attempt;return;}
     if(state.status==='waiting'&&['queued','processing'].includes(attempt.status)){

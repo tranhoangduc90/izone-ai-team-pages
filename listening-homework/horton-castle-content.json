@@ -1,0 +1,490 @@
+{
+  "code": "67-listening-horton-castle",
+  "version": "horton-castle-v1-20261031",
+  "runtimeVersion": "horton-castle-v1-20261031",
+  "title": "Horton Castle · Writing a case study",
+  "homeworkLesson": 8,
+  "minimumCompletion": 0.8,
+  "audioId": "homework-listening-horton-castle",
+  "groups": [],
+  "questions": [],
+  "chapters": [
+    {
+      "title": "Nghe và điền từ",
+      "start": 138,
+      "end": 178.3,
+      "ids": [
+        "D1",
+        "D2",
+        "D3",
+        "D4"
+      ]
+    },
+    {
+      "title": "Phỏng vấn và phân tích",
+      "start": 138,
+      "end": 205,
+      "contextCue": "cue-0",
+      "ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7"
+      ]
+    },
+    {
+      "title": "Trình bày và kết luận",
+      "start": 205,
+      "end": 256.5,
+      "contextCue": "cue-7",
+      "ids": [
+        "S8",
+        "S9",
+        "S10",
+        "S11",
+        "S12"
+      ]
+    }
+  ],
+  "transcript": [
+    {
+      "id": "cue-0",
+      "speaker": "Natalie",
+      "start": 138.0,
+      "end": 149.2,
+      "text": "So we’ll need to think about our interview questions and fix times and places for the meetings. It’s all going to take a lot of time."
+    },
+    {
+      "id": "cue-1",
+      "speaker": "Dave",
+      "start": 149.2,
+      "end": 159.0,
+      "text": "Mmm. And if we can, we should ask our interviewees if they can bring along some numerical data that we can add to support our findings."
+    },
+    {
+      "id": "cue-2",
+      "speaker": "Natalie",
+      "start": 159.0,
+      "end": 160.5,
+      "text": "And photographs?"
+    },
+    {
+      "id": "cue-3",
+      "speaker": "Dave",
+      "start": 160.5,
+      "end": 175.1,
+      "text": "I think we have plenty of those already. But Dr Baker also said we have to establish with our interviewees whether we can identify them in our case study, or whether they want to be anonymous."
+    },
+    {
+      "id": "cue-4",
+      "speaker": "Natalie",
+      "start": 175.1,
+      "end": 178.3,
+      "text": "Oh, I wouldn’t have thought of that."
+    },
+    {
+      "id": "cue-5",
+      "speaker": "Natalie",
+      "start": 178.3,
+      "end": 183.9,
+      "text": "OK, once we’ve got all this information, I suppose we have to analyse it."
+    },
+    {
+      "id": "cue-6",
+      "speaker": "Dave",
+      "start": 183.9,
+      "end": 205.0,
+      "text": "Yes, put it all together and choose what’s relevant to the problem we’re focusing on, and analyse that carefully to find out if we can identify any trends or regularities there. That’s the main thing at this stage, rather than concentrating on details or lots of facts."
+    },
+    {
+      "id": "cue-7",
+      "speaker": "Natalie",
+      "start": 205.0,
+      "end": 209.44,
+      "text": "OK. And then once we’ve analysed that, what next?"
+    },
+    {
+      "id": "cue-8",
+      "speaker": "Dave",
+      "start": 209.44,
+      "end": 222.1,
+      "text": "Well, then we need to think about what we do with the data we’ve selected to make it as clear as possible to our readers. Things like graphs, or tables, or charts."
+    },
+    {
+      "id": "cue-9",
+      "speaker": "Natalie",
+      "start": 222.1,
+      "end": 222.8,
+      "text": "Right."
+    },
+    {
+      "id": "cue-10",
+      "speaker": "Dave",
+      "start": 222.8,
+      "end": 253.68,
+      "text": "Then the case study itself is mostly quite standard; we begin by presenting the problem, and giving some background, then go through the main sections, but the thing that surprised me is that in a normal report we’d end with some suggestions to deal with the problem or need we identified, but in a case study we end up with a question or a series of questions to our readers, and they decide what ought to be done."
+    },
+    {
+      "id": "cue-11",
+      "speaker": "Natalie",
+      "start": 253.68,
+      "end": 256.5,
+      "text": "Oh, I hadn’t realised that."
+    }
+  ],
+  "transcriptScope": {
+    "start": 138,
+    "end": 256.5,
+    "label": "Phần luyện tập · 02:18–04:17"
+  },
+  "items": [
+    {
+      "id": "D1",
+      "group": "dictation",
+      "question": "Điền 5 từ: It’s all going to [Mục 1].",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 1
+    },
+    {
+      "id": "D2",
+      "group": "dictation",
+      "question": "Điền 1 từ: bring along some [Mục 2] data.",
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "displayNumber": 2
+    },
+    {
+      "id": "D3",
+      "group": "dictation",
+      "question": "Điền 2 từ: we have to [Mục 3] our interviewees whether we can identify them.",
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      },
+      "displayNumber": 3
+    },
+    {
+      "id": "D4",
+      "group": "dictation",
+      "question": "Điền 1 từ: whether they want to be [Mục 4].",
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      },
+      "displayNumber": 4
+    },
+    {
+      "id": "S1",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến “Prepare and carry out interview” trong câu hỏi?",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 5,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "Prepare and carry out interview. If possible collect statistics."
+    },
+    {
+      "id": "S2",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến “statistics” trong câu hỏi?",
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "displayNumber": 6,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "Prepare and carry out interview. If possible collect statistics."
+    },
+    {
+      "id": "S3",
+      "group": "analysis",
+      "question": "Phương án đúng là gì?",
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      },
+      "displayNumber": 7,
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "A",
+            "A · patterns"
+          ],
+          [
+            "B",
+            "B · names"
+          ],
+          [
+            "D",
+            "D · questions"
+          ],
+          [
+            "F",
+            "F · solutions"
+          ],
+          [
+            "G",
+            "G · headings"
+          ]
+        ]
+      },
+      "context": "Check whether 24 ____ of interviewees can be used"
+    },
+    {
+      "id": "S4",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến phương án đúng vừa tìm được?",
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      },
+      "displayNumber": 8,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "Check whether 24 ____ of interviewees can be used"
+    },
+    {
+      "id": "S5",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến “relevant information” trong câu hỏi?",
+      "evidenceContext": {
+        "contextCue": "cue-6",
+        "targetCue": "cue-6"
+      },
+      "displayNumber": 9,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "Select relevant information and try to identify 25 ____"
+    },
+    {
+      "id": "S6",
+      "group": "analysis",
+      "question": "Phương án đúng là gì?",
+      "evidenceContext": {
+        "contextCue": "cue-6",
+        "targetCue": "cue-6"
+      },
+      "displayNumber": 10,
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "A",
+            "A · patterns"
+          ],
+          [
+            "B",
+            "B · names"
+          ],
+          [
+            "D",
+            "D · questions"
+          ],
+          [
+            "F",
+            "F · solutions"
+          ],
+          [
+            "G",
+            "G · headings"
+          ]
+        ]
+      },
+      "context": "Select relevant information and try to identify 25 ____"
+    },
+    {
+      "id": "S7",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến phương án đúng vừa tìm được?",
+      "evidenceContext": {
+        "contextCue": "cue-6",
+        "targetCue": "cue-6"
+      },
+      "displayNumber": 11,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "Select relevant information and try to identify 25 ____"
+    },
+    {
+      "id": "S8",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến “form of visuals” trong câu hỏi? Nêu đủ ba dạng được Dave đưa ra; có thể trích ngắn hoặc diễn giải.",
+      "evidenceContext": {
+        "contextCue": "cue-8",
+        "targetCue": "cue-8"
+      },
+      "displayNumber": 12,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "Decide on the best form of visuals"
+    },
+    {
+      "id": "S9",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến “the best” trong câu hỏi?",
+      "evidenceContext": {
+        "contextCue": "cue-8",
+        "targetCue": "cue-8"
+      },
+      "displayNumber": 13,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "Decide on the best form of visuals"
+    },
+    {
+      "id": "S10",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến “Do NOT” trong câu hỏi?",
+      "evidenceContext": {
+        "contextCue": "cue-10",
+        "targetCue": "cue-10"
+      },
+      "displayNumber": 14,
+      "ui": {
+        "kind": "slots",
+        "slots": [
+          {
+            "key": "S10a",
+            "label": "(a) Cách kết thúc report thông thường"
+          },
+          {
+            "key": "S10b",
+            "label": "(b) Vế đối chiếu về case study"
+          }
+        ]
+      },
+      "context": "Do NOT end with 26 ____"
+    },
+    {
+      "id": "S11",
+      "group": "analysis",
+      "question": "Phương án đúng là gì?",
+      "evidenceContext": {
+        "contextCue": "cue-10",
+        "targetCue": "cue-10"
+      },
+      "displayNumber": 15,
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "A",
+            "A · patterns"
+          ],
+          [
+            "B",
+            "B · names"
+          ],
+          [
+            "D",
+            "D · questions"
+          ],
+          [
+            "F",
+            "F · solutions"
+          ],
+          [
+            "G",
+            "G · headings"
+          ]
+        ]
+      },
+      "context": "Do NOT end with 26 ____"
+    },
+    {
+      "id": "S12",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến phương án đúng vừa tìm được?",
+      "evidenceContext": {
+        "contextCue": "cue-10",
+        "targetCue": "cue-10"
+      },
+      "displayNumber": 16,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "Do NOT end with 26 ____"
+    }
+  ],
+  "dictation": [
+    {
+      "speaker": "Natalie",
+      "parts": [
+        "OK. So we’ll need to think about our interview questions and fix times and places for the meetings. It’s all going to ",
+        {
+          "id": "D1",
+          "words": 5
+        },
+        "."
+      ]
+    },
+    {
+      "speaker": "Dave",
+      "parts": [
+        "Mmm. And if we can, we should ask our interviewees if they can bring along some ",
+        {
+          "id": "D2",
+          "words": 1
+        },
+        " data that we can add to support our findings."
+      ]
+    },
+    {
+      "speaker": "Natalie",
+      "parts": [
+        "And photographs?"
+      ]
+    },
+    {
+      "speaker": "Dave",
+      "parts": [
+        "I think we have plenty of those already. But Dr Baker also said we have to ",
+        {
+          "id": "D3",
+          "words": 2
+        },
+        " our interviewees whether we can identify them in our case study, or whether they want to be ",
+        {
+          "id": "D4",
+          "words": 1
+        },
+        "."
+      ]
+    },
+    {
+      "speaker": "Natalie",
+      "parts": [
+        "Oh, I wouldn’t have thought of that."
+      ]
+    }
+  ],
+  "uiRevision": "horton-castle-20261031-v1"
+}

@@ -1,5 +1,6 @@
 // API giáo viên trả đáp án sau kiểm quyền; cập nhật nền chỉ thay câu có dữ liệu mới.
 import {questionPresentation} from './question-presentation.js?rev=20261022-parity-v1';
+import {questionReview} from './question-review.js?rev=20261030-the17-19-v1';
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const views=new WeakMap();
 const answerText=value=>Array.isArray(value)?value.map(v=>Array.isArray(v)?v.join(' / '):v).join(' · '):String(value||'');
@@ -8,7 +9,7 @@ export function renderThuyAnalytics(root,analytics,{definition}){
   if(!view||!view.header.isConnected){
     const header=node('div','','thuy-analytics-heading'),summary=node('small'),workspace=node('div','','thuy-question-workspace');
     const navigation=node('div','','thuy-question-list'),detail=node('div','','thuy-question-detail');
-    header.append(node('h2','Tổng quan lớp'),summary);workspace.append(navigation,detail);root.replaceChildren(header,workspace);
+    header.append(node('h2','Tổng quan lớp'));workspace.append(navigation,detail);root.replaceChildren(header,workspace);
     view={header,summary,navigation,detail,rows:new Map(),groups:new Map(),selected:root.dataset.selectedItem||null};views.set(root,view);
   }
   const summary=`${analytics.submittedCount}/${analytics.rosterCount} học viên có bài nộp hiện hành`;
@@ -38,23 +39,20 @@ export function renderThuyAnalytics(root,analytics,{definition}){
     const percent=graded?new Intl.NumberFormat('vi-VN',{maximumFractionDigits:1}).format(wrong/graded*100)+'%':null;
     const metadata=[part?.title,skills,type].filter(Boolean).join(' · '),result=state+(item.objective&&percent?' · '+percent:'');
     const navLabel=JSON.stringify([label,metadata,result]);
-    if(row.navLabel!==navLabel){row.choose.replaceChildren(node('span',label),node('small',metadata),node('small',result));row.navLabel=navLabel;}
+    if(row.navLabel!==navLabel){const copy=node('span','','thuy-question-copy'),stats=node('span','','thuy-question-stats');copy.append(node('span',label),node('small',metadata));stats.append(node('strong',item.objective&&graded?wrong+'/'+graded+' sai':state),node('small',item.objective&&percent?percent+' sai':''));row.choose.replaceChildren(copy,stats);row.navLabel=navLabel;}
     const fingerprint=JSON.stringify([item,source]);
     if(row.fingerprint!==fingerprint){
-      const card=node('section','','thuy-question-card');card.append(node('small','Câu '+number),node('h3',display.title));
-      if(source.helpText)card.append(node('p',source.helpText,'muted'));
-      for(const option of item.options||source.options||[])card.append(node('p',option.label));
-      for(const line of source.interactionConfig?.sentenceLines||[])card.append(node('p',line.parts.join(' […] ')));
-      if(item.objective)card.append(node('h4','Đáp án đúng'),node('p',answerText(item.correctAnswer)||'Chưa đọc được đáp án chuẩn.'));
+      const card=node('section','','thuy-question-card');
+      const expectedIds=item.correctOptionIds||[];
+      card.append(questionReview(source,{correctAnswer:item.correctAnswer??item.referenceAnswer,expectedIds,explanation:item.explanation,reference:!item.objective}));
       const percent=graded?new Intl.NumberFormat('vi-VN',{maximumFractionDigits:1}).format(wrong/graded*100)+'%':'Chưa có mẫu số';
       card.append(node('p',item.objective?`${wrong}/${graded} học viên đã chấm trả lời sai · ${percent}`:
         `${count.answered}/${count.visible} đã trả lời · Không chấm đúng/sai`));
-      card.append(node('small',`${count.pending||0} chờ chấm · ${count.manual||0} cần kiểm tra · ${count.ungraded||0} không chấm · ${count.hidden||0} không áp dụng`,'muted'));
       row.card=card;row.fingerprint=fingerprint;
     }
   }
   const desired=[];
-  for(const [index,label]of ['Có học viên trả lời sai','Chưa có học viên trả lời sai','Chưa có kết quả chấm','Không chấm điểm'].entries()){
+  for(const [index,label]of ['Thống kê theo câu hỏi','Chưa có học viên trả lời sai','Chưa có kết quả chấm','Không chấm điểm'].entries()){
     const members=items.filter(item=>group(item)===index);if(!members.length)continue;
     let heading=view.groups.get(index);if(!heading){heading=node('h3','','thuy-question-group');view.groups.set(index,heading);}
     const text=label+' · '+members.length;if(heading.textContent!==text)heading.textContent=text;

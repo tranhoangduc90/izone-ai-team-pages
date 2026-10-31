@@ -14,6 +14,16 @@ Preview ban đầu83file:10SDK/metadata và73host,145URL. Rà token/trivia độ
 
 ## Kiểm đã đạt
 
+### Ghép main ngày01/11/2026 — vẫn là bản nháp
+
+Đã ghép `main` tại `4aa5a9c3afb6ec040e7241cf86c42144837015ec` vào ứng viên SDK, xử lý 12 file/16 vùng xung đột bằng cách giữ mã nghiệp vụ mới của main rồi thêm lại riêng tham số `ej`. Các phiên bản workspace, demoEntry và selectiveReset của Substitute được giữ. Rà độc lập 108 host so với main: ngoài URL asset, code/trivia nguyên sau chuẩn hóa CRLF; 10 prefix test-config nguyên, suffix khớp artifact. Graph tĩnh gồm cả chuỗi trong script HTML có 179 cạnh, thêm một URL template động của Homework Demo; tổng 180 URL đổi phiên bản. Không đổi cờ bật log.
+
+Kiểm tại `E:/Codex-Data/pages-sdk-reconcile-20261101/`: lượt cuối chạy đủ 162 native Node trong 15 runner, không ghép số đếm từ lượt cũ. Khởi tạo/thoát trang 12 ca và đổi học viên/nháp 20 ca trên bốn Substitute đạt ở Edge headless cách ly; các source liên quan không đổi khi sửa chuỗi demo. Lượt native đầu có 2 ca Homework audio lỗi vì catalog của fixture Worker cũ thiếu Scandinavian; giữ log lỗi. Lượt cuối dùng cùng mã Worker với catalog hiện hành của Pages. Catalog này là fixture, không chứng minh cấu hình Cloudflare đang triển khai. 1.398 file input cuối giữ SHA trong lượt native; 10 bundle generated cũng đạt check.
+
+Homework Demo cần thêm cache revision ở import template `data.kind`, app loader và 31 entry. Trình duyệt Chrome cách ly kiểm đủ 31 trang: câu hỏi/ô nhập, thao tác demo, reset và viewport 390; chặn mạng ngoài, không gọi API học viên/AI. Bốn loại demo được kiểm riêng với HTTP cache thật, không dùng Playwright routing: làm nóng mã main, đổi sang ứng viên trong cùng browser context, xác nhận module chung vẫn lấy cache nhưng app/module động mới được fetch với `ej` đúng. Cùng phép thử RED khi phục vụ byte backup trước bản sửa động, GREEN ở bản cuối. Không suy bốn demo này thành cache/rollback của toàn bộ Term.
+
+PR vẫn draft trong khi hoàn thiện hệ log. Đây là bằng chứng tương thích của SDK với mốc main trên, chưa là Google thật, BFCache/OS kill, tải lớn hoặc toàn A–G. Logger production vẫn tắt.
+
 - 126native ID Node tập trung theo nhóm: startup/exit/package/bundle, clock/part rescue, Worker/Homework audio, cache/submission/teacher session và Git checkout autocrlf=true giữ SHA. `.gitattributes` chỉ scoped SDK giữ LF; host giữ newline hiện có. Đây không phải toàn bộ test Pages. Các lượt thiếu cấu hình fixture và guard v/rev cũ giữ nguyên log; runner mới kiểm ej đúng manifest.
 - Native Chrome cách ly, asset/entry thật: Term1K56 giờ đúng/nhanh30ngày/chậm30ngày, Term2K56 và MiniK56 giờ đúng; Reading35giây giữ DOM/focus/selection/scroll/nháp. Mạng ngoài bị chặn hoặc trả API giả, không gọi bài thật. SDK thực sự tải đều dùng revision trên.
 - Native journal handler/SQLite dùng code thật trên laptop qua route interception. Cả năm DB đã giải mã GCM độc lập, so payload/binding mọi event ACK và dựng text UTF16;74asset ghim. ACK lặp không thành event mới. Receipt `NATIVE_SDK_HOST_FIVE_CASE_READBACK_20261030.json`; không nhận thành collector HTTP từ xa.

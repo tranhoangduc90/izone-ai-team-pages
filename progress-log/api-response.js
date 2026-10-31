@@ -1,6 +1,6 @@
 // HTTP 200 chỉ xác nhận headers; chỉ dùng dữ liệu sau khi đã đọc và kiểm đủ JSON.
-function responseError(message,{code,status,httpStatus,retryable=false,cause}={}){
-  return Object.assign(new Error(message,{cause}),{code,status,httpStatus,retryable});
+function responseError(message,{code,status,httpStatus,retryable=false,cause,issues=[]}={}){
+  return Object.assign(new Error(message,{cause}),{code,status,httpStatus,retryable,issues});
 }
 
 export async function readLearningResponse(response,{signal}={}){
@@ -21,7 +21,7 @@ export async function readLearningResponse(response,{signal}={}){
     const message=status===401?'Phiên đăng nhập đã hết hạn; hãy đăng nhập lại.':
       payload?.message||(status===200?'Máy chủ chưa xác nhận yêu cầu. Hãy thử lại.':`Hệ thống trả về mã ${status}.`);
     throw responseError(message,{code:payload?.error||'API_ERROR',status,httpStatus:status,
-      retryable:status===408||status===429||status>=500});
+      retryable:status===408||status===429||status>=500,issues:Array.isArray(payload?.issues)?payload.issues:[]});
   }
   if(!payload||Array.isArray(payload)||typeof payload!=='object'||payload.ok!==true)
     throw responseError('Phản hồi dữ liệu chưa đúng định dạng. Đang thử lại.',

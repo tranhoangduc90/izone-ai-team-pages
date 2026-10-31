@@ -140,3 +140,49 @@ test('SW: đủ tám cấu hình trên mobile và lỗi đọc tạm không xóa
   assert(await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Không tràn ngang');
  }finally{await f.close();}}}finally{await browser.close();}
 });
+
+test('SW y tế: danh sách đếm đúng trao đổi mở và đưa bài vào nhóm cần hỗ trợ',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true}),f=await fixture(browser,{teacher:true,task:'writing-task2-public-health-spending'});
+ try{
+  const original=JSON.stringify(f.state.raw);
+  f.state.threads=Array.from({length:5},(_,i)=>({threadRef:'health-thread-'+i,fieldKey:'topic_sentence',status:'open',anchor:{quote:'topic_sentence',detached:false},messages:[{authorRole:'teacher',body:'Góp ý y tế '+i,createdAt:stamp}]}));
+  const card=f.page.locator('[data-student="fixture-student"]');
+  await card.filter({hasText:'5 trao đổi mở'}).waitFor({state:'attached',timeout:12000});
+  assert.equal(await card.getAttribute('data-state'),'support');
+  assert.match(await f.page.locator('#detail').innerText(),/5 trao đổi mở/);
+  for(const t of f.state.threads)t.status='addressed';
+  await card.filter({hasText:'0 trao đổi mở'}).waitFor({state:'attached',timeout:12000});
+  assert.equal(await card.getAttribute('data-state'),'complete');
+  assert.equal(JSON.stringify(f.state.raw),original,'Đếm/lọc trao đổi không ghi lại bài hoặc lịch sử');
+ }finally{await f.close();await browser.close();}
+});
+
+test('SW y tế: cả HV và GV dùng nhãn Giảng viên trên trao đổi thật',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true});
+ try{for(const teacher of [false,true]){const f=await fixture(browser,{teacher,task:'writing-task2-public-health-spending'});try{
+  const original=JSON.stringify(f.state.raw);
+  f.state.threads=[{threadRef:'health-author',fieldKey:'topic_sentence',status:'open',anchor:{quote:'topic_sentence',detached:false},messages:[{authorRole:'teacher',body:'Nhận xét giảng viên của bài y tế',createdAt:stamp}]}];
+  if(teacher)await f.page.locator('#detail [data-action="refresh"]').click();else await f.page.locator('[data-action="refresh"]').click();
+  await f.page.getByText('Nhận xét giảng viên của bài y tế',{exact:true}).first().waitFor({state:'attached'});
+  const text=await f.page.locator('#app').textContent();
+  assert.match(text,/Nhận xét giảng viên của bài y tế/);
+  assert.equal(text.includes('Giảng viên mẫu'),false,'Không ghi nhãn mẫu lên nhận xét thật');
+  assert.match(text,/GV · Giảng viên/);
+  assert.equal(JSON.stringify(f.state.raw),original);
+ }finally{await f.close();}}}finally{await browser.close();}
+});
+
+test('Shops cũ: danh sách và chi tiết cùng đếm trao đổi, không mang nhãn mẫu',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true}),f=await fixture(browser,{teacher:true,engine:'shops-writing'});
+ try{
+  const original=JSON.stringify(f.state.raw);
+  f.state.threads=[{threadRef:'shops-open-thread',fieldKey:'topic_sentence',status:'open',anchor:{quote:'topic_sentence',detached:false},messages:[{authorRole:'teacher',body:'Góp ý trên đường Shops cũ',createdAt:stamp}]}];
+  const card=f.page.locator('[data-student="fixture-student"]');
+  await card.filter({hasText:'1 trao đổi mở'}).waitFor({state:'attached',timeout:12000});
+  assert.equal(await card.getAttribute('data-state'),'support');
+  assert.equal((await f.page.locator('#detail').textContent()).includes('Giảng viên mẫu'),false);
+  f.state.threads[0].status='addressed';
+  await card.filter({hasText:'0 trao đổi mở'}).waitFor({state:'attached',timeout:12000});
+  assert.equal(await card.getAttribute('data-state'),'complete');assert.equal(JSON.stringify(f.state.raw),original);
+ }finally{await f.close();await browser.close();}
+});

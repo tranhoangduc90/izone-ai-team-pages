@@ -26,6 +26,7 @@ function harness(n, fail = false) {
   ctx.document.addEventListener=()=>{};
   ctx.Event=Event;ctx.crypto={randomUUID:()=> 'fixture-reset-signal'};
   ctx.window.dispatchEvent=()=>{};
+  ctx.window.localStorage=ctx.localStorage;ctx.window.sessionStorage=ctx.sessionStorage;
   ctx.document.getElementById=id=>id==='app'?root:null;
   vm.runInNewContext(read('term-tests/substitute-shared/state.js'),ctx);
   if(helper)vm.runInNewContext(helper,ctx);
@@ -57,7 +58,7 @@ for(const n of [1,2]) {
   test(`Sub ${n} reload reset uses the same cleanup before restoring state`,()=>{
     const b=read(`term-tests/substitute-test-${n}-k67-computer-based/bootstrap.js`);
     assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug)')>0);
-    assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug)')<b.indexOf('let state = readState()'));
+    assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug)')<b.indexOf('let state = await readState()'));
     const html=read(`term-tests/substitute-test-${n}-k67-computer-based/index.html`);
     assert.ok(html.indexOf('reset-storage.js')<html.indexOf('src="bootstrap.js'));
   });

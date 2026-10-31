@@ -1,17 +1,17 @@
-import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261027-l2-v1&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
-import {decodeBody,encodeBody,encodeAnswer} from './answer-codec.mjs?v=20261028-integration1';
+import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261031-horton1&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
+import {decodeBody,encodeBody,encodeAnswer} from './answer-codec.mjs?v=20261031-lessons1';
 import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
 export function createListeningWorkspace(options){
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Keep the original demo namespace and IDs so existing local drafts remain readable.
 
-const chapters=[{title:'Nghe và điền từ',start:156,end:182.62,ids:['D1','D2','D3']},{title:'Phân tích câu 24',start:182.62,end:218.12,ids:Array.from({length:8},(_,i)=>'S'+(i+1))},{title:'Phân tích câu 25',start:218.46,end:246.96,ids:Array.from({length:11},(_,i)=>'S'+(i+9))}];
+const chapters=options.data.chapters||[{title:'Nghe và điền từ',start:156,end:182.62,ids:['D1','D2','D3']},{title:'Phân tích câu 24',start:182.62,end:218.12,ids:Array.from({length:8},(_,i)=>'S'+(i+1))},{title:'Phân tích câu 25',start:218.46,end:246.96,ids:Array.from({length:11},(_,i)=>'S'+(i+9))}];
 let data=options.data,state={fields:{},flags:[],chapter:0,history:[],notes:'',fontPercent:100,views:{},legacy:{},legacyOriginal:{}},activeItem='D1',activeField=null,selectedText='',tapStart=null,currentWordRange=null,toastTimer;
 let audioTask=null,audioUrl=null,playIntent=0,clip={...chapters[0],label:chapters[0].title},lastCue=null,viewPane='passage',revealGeneration=0;
 const audio=$('audio');audio.volume=.8;const lifetime=new AbortController();const scopeListen=(el,event,fn,opts={})=>el.addEventListener(event,fn,{...opts,signal:lifetime.signal});let destroyed=false,lastBody='',feedback=null,feedbackKey='',annotations=[],downloadAbort=null;let reviewOpener=null;
 const mobile=()=>matchMedia('(max-width:980px)').matches;
-const itemId=key=>key.replace(/(?:quote|choice|[abc])$/,'');
+const itemId=key=>data.items.find(i=>i.id===key||i.ui?.slots?.some(s=>s.key===key))?.id||key.replace(/(?:quote|choice|[abc])$/,'');
 const number=id=>data?.items.findIndex(i=>i.id===id)+1;
 const itemLabel=id=>'Mục '+number(id);
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,2600);}
@@ -20,12 +20,12 @@ function save(){
  if(destroyed)return;options.onView?.({chapter:state.chapter,fontPercent:state.fontPercent,activeItem,views:state.views});
  const next=JSON.stringify(getBody());if(!options.readonly&&next!==lastBody){lastBody=next;options.onChange?.();}
 }
-function answer(id){return Object.hasOwn(state.legacy,id)?state.legacy[id]:encodeAnswer(id,state.fields);}
+function answer(id){return Object.hasOwn(state.legacy,id)?state.legacy[id]:encodeAnswer(id,state.fields,data.items.find(i=>i.id===id));}
 function progress(){
  const done=data.items.filter(i=>hasAnswerContent(answer(i.id))).length;
- $('progress').textContent=`${done}/22 đã nhập`;
+ $('progress').textContent=`${done}/${data.items.length} đã nhập`;
  chapters.forEach((c,n)=>$('count-'+n).textContent=c.ids.filter(id=>hasAnswerContent(answer(id))).length+'/'+c.ids.length);
- $('review-count').textContent=`${22-done} chưa nhập`;
+ $('review-count').textContent=`${data.items.length-done} chưa nhập`;
  $('flag-summary').textContent=state.flags.length?state.flags.length+' đã đánh dấu':'';
  document.querySelectorAll('[data-jump]').forEach(b=>{const id=b.dataset.jump,filled=hasAnswerContent(answer(id)),flagged=state.flags.includes(id),active=id===activeItem;
   b.classList.toggle('is-answered',filled);b.classList.toggle('is-flagged',flagged);b.classList.toggle('is-active',active);b.setAttribute('aria-current',String(active));b.setAttribute('aria-label',[itemLabel(id),filled?'đã nhập':'chưa nhập',flagged?'đã đánh dấu':''].filter(Boolean).join(', '));});
@@ -47,6 +47,11 @@ function fieldInput(key,label){return `<input class="evidence-input" id="field-$
 function quoteSlot(key,label='Dẫn chứng từ audio'){return `<div class="evidence-slot" data-slot="${key}"><div class="slot-heading"><label for="field-${key}">${label}</label><button class="cbt-tool-button evidence-button" data-evidence="${key}">Chọn trong Transcript</button></div><div class="evidence-row">${fieldInput(key,label)}<button class="text-button clear-field" data-clear="${key}" aria-label="Xóa ${escape(itemLabel(itemId(key))+' · '+label)}">×</button></div></div>`;}
 function choices(key,options){return `<div class="response-choices" role="group" aria-label="${escape(itemLabel(itemId(key))+' · Chọn ý')}">${options.map(([value,text])=>`<label class="cbt-choice cbt-choice-single-label"><input type="radio" name="${key}" data-field="${key}" value="${escape(value)}" ${state.fields[key]===value?'checked':''}><span>${text}</span></label>`).join('')}</div>`;}
 function itemBody(item){const id=item.id;
+ if(item.ui){
+  const context=item.context?`<p class="hw-original-stem">${escape(item.context)}</p>`:'';
+  if(item.ui.kind==='choice')return `<div class="m170-option-scroll" tabindex="0" aria-label="Câu hỏi và các phương án"><div class="m170-option-columns"><div>${context}<p>Chọn phương án phù hợp.</p></div><aside class="cbt-option-bank"><h4>Options</h4>${choices(id,item.ui.options)}</aside></div></div>`;
+  return context+(item.ui.slots?.length?item.ui.slots.map(s=>quoteSlot(s.key,s.label)).join(''):quoteSlot(id,item.ui.label||'Trích ngắn hoặc diễn giải đúng nghĩa'));
+ }
  if(id==='S1')return choices(id,[['Ý kiến riêng của một người','Ý kiến riêng một người'],['Lựa chọn cuối cùng được cả James và Beth đồng ý','Lựa chọn được cả hai đồng ý']]);
  if(id==='S5')return choices(id,[['Có','Có'],['Không','Không']]);
  if(id==='S4')return quoteSlot('S4a','(a) Mở lời nêu vướng mắc')+quoteSlot('S4b','(b) Đánh giá mức độ khó')+quoteSlot('S4c','(c) Đề nghị để sang dịp khác');
@@ -59,15 +64,16 @@ function mcq(n){const q=data.questions.find(q=>q.number===n);return `<section cl
 function blank(id,count,size=''){return `<span class="inline-blank ${size}" id="item-${id}"><span class="hw-blank-control"><input id="field-${id}" data-field="${id}" value="${escape(state.fields[id]||'')}" aria-label="${itemLabel(id)} · Điền ${count} từ" autocomplete="off" spellcheck="false"><button type="button" class="cbt-flag-button flag" data-flag="${id}" aria-pressed="false" aria-label="Đánh dấu ${itemLabel(id)}">⚑</button></span><label for="field-${id}">${itemLabel(id)} · ${count} từ</label><span id="feedback-${id}" class="hw-feedback"></span></span>`;}
 
 function render(){
- const c=chapters[state.chapter];$('readingView').dataset.homeworkChapter=state.chapter;$('section-title').textContent='Listening · 22 mục';
+ const c=chapters[state.chapter];$('readingView').dataset.homeworkChapter=state.chapter;$('section-title').textContent='Listening · '+data.items.length+' mục';
  document.querySelectorAll('[data-chapter]').forEach(b=>{const selected=+b.dataset.chapter===state.chapter;b.classList.toggle('is-active',selected);if(selected)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
- const range=[['1–3'],['4–11'],['12–22']][state.chapter][0];
+ const range=c.ids.length===1?number(c.ids[0]):number(c.ids[0])+'–'+number(c.ids.at(-1));
  const head=`<header class="cbt-passage-header hw-group-heading"><h3>Mục ${range} · ${c.title}</h3><p>${state.chapter===0?'Nghe lại và điền trực tiếp vào câu. Gợi ý số từ nằm dưới mỗi ô.':'Chọn ý chính, tìm dẫn chứng và giải thích theo cách hiểu của bạn.'}</p></header>`;
  let body;
- if(state.chapter===0)body=`<div class="dictation-passage"><div class="dictation-line"><span class="speaker">Beth</span><p>OK. Now how are you finding the courses you’re taking this term, James?</p></div><div class="dictation-line"><span class="speaker">James</span><p>Well, I’m really enjoying the one on Swedish cinema.</p></div><div class="dictation-line"><span class="speaker">Beth</span><p>That’ll continue next term, but the one on Scandinavian literature that’s running at the moment ${blank('D1',3)} by more ${blank('D2',1,'short')} courses. Oh, and by the way, if you’re interested in watching Danish television programmes, there’s going to be a course on that ${blank('D3',4,'long')}.</p></div><div class="dictation-line"><span class="speaker">James</span><p>That sounds good.</p></div></div><p class="hw-dictation-help">Bạn có thể tạm dừng, lùi 5 giây và nghe lại phần đang luyện. Câu trả lời được giữ khi chuyển phần.</p>`;
+ if(data.chapters)body=state.chapter===0?`<div class="dictation-passage">${data.dictation.map(line=>`<div class="dictation-line"><span class="speaker">${escape(line.speaker)}</span><p>${line.parts.map(p=>typeof p==='string'?escape(p):blank(p.id,p.words,p.words>3?'long':p.words===1?'short':'')).join('')}</p></div>`).join('')}</div><p class="hw-dictation-help">Nghe lại, tạm dừng hoặc lùi 5 giây. Transcript được mở trong phần phân tích.</p>`:data.items.filter(i=>c.ids.includes(i.id)).map(renderItem).join('');
+ else if(state.chapter===0)body=`<div class="dictation-passage"><div class="dictation-line"><span class="speaker">Beth</span><p>OK. Now how are you finding the courses you’re taking this term, James?</p></div><div class="dictation-line"><span class="speaker">James</span><p>Well, I’m really enjoying the one on Swedish cinema.</p></div><div class="dictation-line"><span class="speaker">Beth</span><p>That’ll continue next term, but the one on Scandinavian literature that’s running at the moment ${blank('D1',3)} by more ${blank('D2',1,'short')} courses. Oh, and by the way, if you’re interested in watching Danish television programmes, there’s going to be a course on that ${blank('D3',4,'long')}.</p></div><div class="dictation-line"><span class="speaker">James</span><p>That sounds good.</p></div></div><p class="hw-dictation-help">Bạn có thể tạm dừng, lùi 5 giây và nghe lại phần đang luyện. Câu trả lời được giữ khi chuyển phần.</p>`;
  else body=mcq(state.chapter===1?24:25)+'<h4 class="hw-analysis-heading">Phân tích ý nghĩa và dẫn chứng</h4>'+data.items.filter(i=>c.ids.includes(i.id)).map(renderItem).join('');
  $('exercise-content').innerHTML=head+body;$('transcript-panel').hidden=state.chapter===0;$('pane-switch').hidden=state.chapter===0;
- $('next').textContent=state.chapter===0?'Sang câu 24 →':state.chapter===1?'Sang câu 25 →':'Rà lại các mục';
+ $('next').textContent=data.chapters?(chapters[state.chapter+1]?'Sang phần tiếp →':'Rà lại các mục'):(state.chapter===0?'Sang câu 24 →':state.chapter===1?'Sang câu 25 →':'Rà lại các mục');
  $('content-viewport').dataset.fontSize=state.fontPercent;$('content-viewport').style.setProperty('--hw-scale',state.fontPercent/100);$('font-percent').textContent=state.fontPercent+'%';
  activeField=null;selectionTarget();clearSelection();progress();applyReadonly();paintFeedback();
 }
@@ -83,7 +89,7 @@ function setChapter(n,{focus=true,restore=false}={}){
  const saved=restore?state.views[n]:null;setPane(saved?.pane||(n===0?'passage':'questions'));
  $('exercise').scrollTop=saved?.exercise||0;
  if(saved&&Number.isFinite(saved.transcript))$('transcript-cues').scrollTop=saved.transcript;
- else if(n>0)revealContext(n===1?'cue-5':'cue-12',n===1?'cue-5':'cue-12');
+ else if(n>0){const cue=chapters[n].contextCue||(n===1?'cue-5':'cue-12');revealContext(cue,cue);}
  save();if(focus){if(mobile())$(n===0?'exercise':'transcript-panel').scrollIntoView({block:'start',behavior:'auto'});else $('exercise').focus({preventScroll:true});}
  document.querySelector(`[data-jump="${activeItem}"]`)?.scrollIntoView({block:'nearest',inline:'nearest'});
 }
@@ -192,16 +198,17 @@ $('seek').oninput=()=>{if(audioUrl)audio.currentTime=+$('seek').value;else $('se
 scopeListen(audio,'play',renderPlay);scopeListen(audio,'pause',renderPlay);scopeListen(audio,'timeupdate',updateAudio);scopeListen(audio,'ended',renderPlay);
 $('font-down').onclick=()=>setFont(-10);$('font-up').onclick=()=>setFont(10);$('notes-button').onclick=()=>toggleNotes($('notes-panel').hidden);$('close-notes').onclick=()=>toggleNotes(false);$('notes').oninput=()=>{state.notes=$('notes').value;save();};
 scopeListen(document,'keydown',e=>{if(e.key==='Escape'&&!$('notes-panel').hidden)toggleNotes(false);});
-$('next').onclick=()=>{if(state.chapter<2)setChapter(state.chapter+1);else{const blank=data.items.find(i=>!hasAnswerContent(answer(i.id)))||data.items[0];document.querySelector(`[data-jump="${blank.id}"]`).click();}};
+$('next').onclick=()=>{if(state.chapter<chapters.length-1)setChapter(state.chapter+1);else{const blank=data.items.find(i=>!hasAnswerContent(answer(i.id)))||data.items[0];document.querySelector(`[data-jump="${blank.id}"]`).click();}};
 $('sample-feedback').onclick=()=>openReview(feedback?.items.find(i=>i.feedback.status!=='correct')?.id||feedback?.items[0]?.id,$('sample-feedback'));$('history-button').onclick=()=>options.onHistory?.();bindDialog('explanation-dialog','close-review','sample-feedback');
 for(const id of ['exercise','transcript-cues'])scopeListen($(id),'scroll',()=>{rememberView();save();},{passive:true});
 scopeListen(document,'visibilitychange',()=>{if(document.hidden){stop();downloadAbort?.abort();rememberView();save();}});scopeListen(window,'pagehide',()=>{stop();downloadAbort?.abort();rememberView();save();});
 
 Object.assign(state,{chapter:options.initialView?.chapter||0,fontPercent:options.initialView?.fontPercent||100,views:options.initialView?.views||{}});
-if(![0,1,2].includes(state.chapter))state.chapter=0;
+if(!Number.isInteger(state.chapter)||state.chapter<0||state.chapter>=chapters.length)state.chapter=0;
+if(data.chapters){document.querySelector('.cbt-part-nav').innerHTML=chapters.map((c,n)=>`<button class="cbt-part-button" data-chapter="${n}">${escape(c.title)} <span id="count-${n}">0/${c.ids.length}</span></button>`).join('');document.querySelectorAll('[data-chapter]').forEach(b=>b.onclick=()=>setChapter(+b.dataset.chapter));}
 $('question-map').innerHTML=data.items.map(i=>`<button class="cbt-question-button" data-jump="${i.id}">${number(i.id)}</button>`).join('');renderTranscript();setBody(options.body||{answers:{},annotations:[],notes:'',flags:[]});setClip(chapters[state.chapter]);
 const dockObserver=new ResizeObserver(()=>document.body.style.setProperty('--hw-dock-height',Math.ceil(document.querySelector('.hw-question-dock').getBoundingClientRect().height)+'px'));dockObserver.observe(document.querySelector('.hw-question-dock'));
 $('lesson').hidden=false;
-requestAnimationFrame(()=>{if(state.chapter>0)revealContext(state.chapter===1?'cue-5':'cue-12',state.chapter===1?'cue-5':'cue-12');});
+requestAnimationFrame(()=>{if(state.chapter>0){const cue=chapters[state.chapter].contextCue||(state.chapter===1?'cue-5':'cue-12');revealContext(cue,cue);}});
 return {getBody,setBody,setFeedback,stop,openReview,destroy(){destroyed=true;dockObserver.disconnect();stop();lifetime.abort();clearTimeout(toastTimer);if(audioUrl)URL.revokeObjectURL(audioUrl);audio.removeAttribute('src');if($('explanation-dialog').open)$('explanation-dialog').close();}};
 }

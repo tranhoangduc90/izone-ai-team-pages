@@ -9,6 +9,7 @@
   let classCode = (query.get('class') || '').trim().toUpperCase();
   const demoMode = query.get('demo') || '';
   const localDemo = demoMode === 'exam' && query.get('grading') === 'server';
+  let startAtFirstSection = false;
   const storageSuffix = localDemo && query.get('grading') === 'server' ? ':server-grade' : '';
   const demoStudentRef = localDemo ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = localDemo ? (query.get('demoAttempt') || '').trim() : '';
@@ -29,7 +30,7 @@
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
       .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=ej-a176e4d58d3089a76456&recovery=20261026-v1&resilience=20261027-v1'))
-      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1'))
+      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -63,7 +64,7 @@
   const storageKey = window.SUBSTITUTE_STATE.key('izone-test:',storageNamespace,{lobby:true});
   const uiStorageKey = window.SUBSTITUTE_STATE.key('izone-test-ui:',storageNamespace,{lobby:true});
   const annotationStorageKey = window.SUBSTITUTE_STATE.key('izone-test-annotations:',storageNamespace,{lobby:true});
-  let state = readState();
+  let state = await readState();
   let legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
@@ -73,7 +74,7 @@
   let previewHeard = false;
   let preparing = false;
   let downloadController = null;
-  const localDemoClasses = Object.freeze(window.SUBSTITUTE_STATE.meta.classes || [
+  const localDemoClasses = Object.freeze([...(window.SUBSTITUTE_STATE.meta.classes || [
     {
       code: 'DEMO',
       name: 'DEMO · Chỉ kiểm tra, không gửi Portal'
@@ -82,7 +83,7 @@
       code: 'IC2264',
       name: 'IC2264 · Lớp đồng bộ Portal'
     }
-  ]);
+  ])].sort((a, b) => Number(a.code === 'DEMO') - Number(b.code === 'DEMO')));
 
   root.innerHTML = `
     <header class="topbar cbt-bootstrap-topbar">
@@ -193,13 +194,15 @@
   }
   document.getElementById('cancelIdentity').addEventListener('click', cancelIdentity);
   identityDialog.addEventListener('cancel', event => { event.preventDefault(); cancelIdentity(); });
-  document.getElementById('confirmIdentity').addEventListener('click', () => {
+  document.getElementById('confirmIdentity').addEventListener('click', async () => {
     if (!pendingStudent || preparing || state.listeningStartedAt) return;
     const student = pendingStudent;
     pendingStudent = null;
     identityDialog.close();
-    bindSelectedStudent(student);
-    prepareSelectedStudent();
+    try {
+      if (!await bindSelectedStudent(student)) return;
+      await prepareSelectedStudent();
+    } catch (error) { showNotice(error.message || 'Chưa mở được lượt thi. Hãy tải lại; nháp vẫn được giữ.', true); }
     return;
   });
 
@@ -207,17 +210,21 @@
     return `izone-substitute-lobby-v1:${testConfig.slug}:${window.SUBSTITUTE_STATE.meta.historyEpoch}:${selectedClass}:${studentRef}`;
   }
 
-  function bindSelectedStudent(student) {
+  async function bindSelectedStudent(student) {
     const selectedClass = elements.bootstrapClass.value || classCode;
+    const selectionGeneration = classLoadGeneration;
+    const selectedStudentValue = elements.bootstrapStudent.value;
     let restored = null;
     // Chỉ đọc con trỏ đúng người/lớp/lịch sử; nháp đầy đủ vẫn nằm trong khóa theo lượt.
     for (const storage of window.SUBSTITUTE_STATE.storages()) {
       try {
         const candidate = JSON.parse(storage.getItem(studentPointer(student.ref, selectedClass)) || 'null');
         if (candidate?.studentRef === student.ref && candidate.classCode === selectedClass
-            && window.SUBSTITUTE_STATE.accept(candidate, null)) { restored = candidate; break; }
+            && await window.SUBSTITUTE_STATE.verifyStoredRun(candidate) && window.SUBSTITUTE_STATE.accept(candidate, null)) { restored = candidate; break; }
       } catch { /* Không xóa nháp hỏng hoặc dữ liệu chưa xác định chủ. */ }
     }
+    if (selectionGeneration !== classLoadGeneration || elements.bootstrapClass.value !== selectedClass
+        || elements.bootstrapStudent.value !== selectedStudentValue) return false;
     if (restored) {
       window.SUBSTITUTE_STATE.bind(restored);
       const ownKey = window.SUBSTITUTE_STATE.key('izone-test:', selectedClass);
@@ -240,6 +247,7 @@
     void Promise.resolve(sharedIdentity.rememberSelected(selectedClass, student, selectionSnapshot)).then(result => {
     if (!['ok', 'demo'].includes(result.status)) showNotice('Bài vẫn giữ đúng người. Chưa ghi nhớ được người học để dùng ở bài khác.');
     }).catch(() => showNotice('Bài vẫn giữ đúng người. Chưa ghi nhớ được người học để dùng ở bài khác.'));
+    return true;
   }
 
   async function changeSharedStudent() {
@@ -268,11 +276,11 @@
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   }
 
-  function readState() {
+  async function readState() {
     for (const storage of window.SUBSTITUTE_STATE.storages(['sessionStorage'])) {
       try {
         const parsed = JSON.parse(storage.getItem(storageKey) || '{}');
-        if (window.SUBSTITUTE_STATE.accept(parsed,null) && sharedIdentity.mayRestore(parsed)) {
+        if (await window.SUBSTITUTE_STATE.verifyStoredRun(parsed) && window.SUBSTITUTE_STATE.accept(parsed,null) && sharedIdentity.mayRestore(parsed)) {
           if(parsed.studentRef)window.SUBSTITUTE_STATE.bind(parsed);
           return parsed;
         }
@@ -646,6 +654,7 @@
     });
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
+      startAtFirstSection,
       classCode: state.classCode || classCode,
       studentRef: state.studentRef,
       clientRunId: state.clientRunId,
@@ -669,7 +678,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=ej-a176e4d58d3089a76456&recovery=20261026-v1&resilience=20261027-v1');
-    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1');
+    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
@@ -737,6 +746,8 @@
     saveState({ audioVolume: volume });
   });
   elements.bootstrapStart.addEventListener('click', async () => {
+    // Chỉ vị trí giao diện: bắt đầu mới khác với tiếp tục lượt đang làm.
+    startAtFirstSection = !state.listeningStartedAt && !state.attemptToken && !legacyListeningResume;
     if (!encryptedAudio || preparing) return;
     preparing = true;
     elements.bootstrapStart.disabled = true;
@@ -894,7 +905,7 @@
     const result = sharedIdentity.selectFromRoster(classCode, roster);
     if (result.status !== 'unique' || !sharedIdentity.isCurrent(result.snapshot)) return false;
     selectionSnapshot = result.snapshot;
-    bindSelectedStudent(result.student);
+    if (!await bindSelectedStudent(result.student)) return false;
     await prepareSelectedStudent();
     return true;
   }

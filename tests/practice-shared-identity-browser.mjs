@@ -53,7 +53,7 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
     if (/\.(mp3|wav|m4a|enc|ogg)$/.test(url.pathname)) { external.push('audio blocked'); return route.abort(); }
     if (baseRevision && url.origin === origin && /^\/(reading|listening)-practice\/app.js$/.test(url.pathname)) return route.fulfill({contentType:'text/javascript',body:execFileSync('git',['show',baseRevision+':'+url.pathname.slice(1)],{cwd:root})});
     if (url.origin === origin && !url.pathname.startsWith('/api/')) return route.continue();
-    const headers = { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' };
+    const headers = { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type,authorization,x-izone-document,x-izone-assignment' };
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     const body = req.postDataJSON(); requests.push({ path: url.pathname, body });
     if(process.env.ENTRY_BENCHMARK)await new Promise(resolve=>setTimeout(resolve,80));
@@ -68,7 +68,8 @@ async function setup({ id, wrongDoc = false, blocked = false, delayLogin = false
       return send({ ok: true, status: 'unique', identity: { authority: 'erp-contact', id }, aliases });
     }
     if (url.origin !== origin) { external.push(url.origin); return route.abort(); }
-    if (url.pathname === '/api/open') return send({ classCode: 'IC2304', bindingId: 'binding-' + (wrongDoc ? b : a),
+    if(url.pathname==='/api/entry-context')return send({documentId:doc,assignmentCode:'7',entryMode:'shared',classId:'1293',classCode:'IC2304',bindingId:'binding-'+(wrongDoc?b:a),selectedStudentRef:wrongDoc?b:a,students:[{id:wrongDoc?b:a,name:wrongDoc?'Học viên B':'Học viên A'}],...(sharedListening?{lesson:sharedListeningLesson}:{lesson:{code:'7',lesson:7,title:'Fixture Reading',totalMs:1200000,questionIds:['14','15'],groups:[{kind:'headings',label:'Headings',start:14,end:15}]}})});
+    if (url.pathname === '/api/open') return send({ documentId:doc,assignmentCode:'fixture-code',classCode: 'IC2304', bindingId: 'binding-' + (wrongDoc ? b : a),
       selectedStudentRef: wrongDoc ? b : a, students: [{ id: a, name: 'Học viên A' }, { id: b, name: 'Học viên B' }] });
     if (url.pathname === '/api/library/7') return send({ ...(sharedListening ? {lesson: sharedListeningLesson} : {}), classes: [{ id: '1293', classCode: 'IC2304' }] });
     if (url.pathname === '/api/library/7/classes/1293') {if(delayRoster){loginSeen();await gate;}return send({ students: excludedRoster ? [{ id: b, name: 'Học viên B' }] : [{ id: a, name: 'Học viên A' }, { id: b, name: 'Học viên B' }] });}
@@ -96,7 +97,7 @@ async function run(name, options, fn) {
 }
 async function prep(page) { await page.locator('[data-action="begin"]').waitFor(); assert.equal(await page.locator('#login-form').count(), 0); }
 async function manual(page, shared = false) {
-  await page.locator('#class-select').selectOption(shared ? '1293' : 'IC2304'); await page.locator('#student-select').selectOption(a);
+  if(!await page.locator('#class-select').isDisabled())await page.locator('#class-select').selectOption(shared ? '1293' : 'IC2304'); await page.locator('#student-select').selectOption(a);
   await page.locator('#login-submit').click(); await prep(page);
 }
 try {
@@ -124,6 +125,21 @@ try {
       await other.evaluate(({key,value})=>localStorage.setItem(key,JSON.stringify(value)),{key,value:record('900002')});releaseLogin();
       await page.locator('#login-form').waitFor();assert.equal(requests.some(r=>r.path==='/api/shared-login'),false);
     });
+    await run(kind+'-modern-owned-link-auto',{id:'900001',sharedListening:kind==='listening'},async({page,requests})=>{
+      await page.goto(`${origin}/${kind}-practice/?lesson=7&mode=student&class=IC2304&documentId=${doc}`);await prep(page);
+      assert.equal(requests.filter(r=>r.path==='/api/shared-login').length,1);
+      assert.equal(await page.evaluate(()=>window.__plays),0);
+    });
+    await run(kind+'-modern-wrong-owner-confirmation',{id:'900001',wrongDoc:true,sharedListening:kind==='listening'},async({page,requests})=>{
+      await page.goto(`${origin}/${kind}-practice/?lesson=7&mode=student&class=IC2304&documentId=${doc}`);await page.locator('#login-form').waitFor();
+      assert.equal(requests.some(r=>r.path==='/api/shared-login'),false);assert.equal(await page.locator('#class-select').isDisabled(),true);
+      assert.deepEqual(await page.locator('#student-select option').evaluateAll(items=>items.filter(x=>x.value).map(x=>x.value)),[b]);
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity.id,key),'900001');
+      await page.screenshot({path:path.join(out,kind+'-owner-confirmation.png'),fullPage:true});
+      await page.locator('#login-submit').click();await prep(page);
+      assert.equal(requests.filter(r=>r.path==='/api/shared-login').at(-1).body.studentRef,b);
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity.id,key),'900002');
+    });
     await run(kind + '-remembered-skip-login', { id: '900001' }, async ({ page }) => {
       await page.goto(pageUrl(kind)); await prep(page); assert.match(await page.locator('.identity-bar').innerText(), /Học viên A/);
       assert.equal(await page.evaluate(() => window.__plays), 0);
@@ -143,6 +159,8 @@ try {
     await run(kind + '-wrong-document-owner', { id: '900001', wrongDoc: true }, async ({ page, requests }) => {
       await page.goto(pageUrl(kind)); await page.locator('#login-form').waitFor();
       assert.equal(requests.some(r => r.path === '/api/login'), false);
+      assert.equal(await page.locator('#class-select').isDisabled(),true);
+      assert.deepEqual(await page.locator('#student-select option').evaluateAll(items=>items.filter(x=>x.value).map(x=>x.value)),[b]);
       assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).identity.id, key), '900001');
     });
     await run(kind + '-pinned-session-after-other-tab-switch', { id: '900001' }, async ({ page, ctx }) => {
@@ -192,11 +210,10 @@ try {
     assert.match(await page.locator('.identity-bar').innerText(),/Học viên A/);
     await page.locator('#toast').filter({hasText:'chưa nhớ được'}).waitFor();
   });
-  await run('listening-shared-without-remembering', {sharedListening:true}, async({page})=>{
-    await page.goto(pageUrl('listening',true));await page.locator('#class-select').selectOption('1293');
-    await page.locator('#student-select').selectOption(a);await page.locator('#remember-student').uncheck();
-    await page.locator('#login-submit').click();await prep(page);
-    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity,key),null);
+  await run('listening-shared-automatic-memory', {sharedListening:true}, async({page})=>{
+    await page.goto(pageUrl('listening',true));await manual(page,true);
+    assert.equal(await page.locator('#remember-student').count(),0);
+    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).identity.id,key),'900001');
   });
   await run('listening-shared-missing-identity-explains-profile', {sharedListening:true,missingIdentity:true},async({page})=>{
     await page.goto(pageUrl('listening',true));await manual(page,true);

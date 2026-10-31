@@ -1,0 +1,3 @@
+import {loadData} from './common.mjs';
+try{const data=await loadData();document.title=`Demo · ${data.title}`;const module=await import(`./${data.kind}.mjs?v=20261030-ready2&ej=ej-a176e4d58d3089a76456`);await module.mount(data);document.body.dataset.demoReady='true';}
+catch(error){const main=document.querySelector('main')||document.body;main.replaceChildren();const h=document.createElement('h1');h.textContent='Chưa mở được bản demo';const p=document.createElement('p');p.textContent=error.message;const b=document.createElement('button');b.textContent='Thử tải lại';b.onclick=()=>location.reload();main.append(h,p,b);document.body.dataset.demoError='true';}

@@ -36,7 +36,7 @@ function renderAnswerGroups(host,{item,key,kind,readonly,onChange,onStructure,on
   const rows=readonly?(key.authoringState?.[item.itemVersionId]?.answerRows?.[blankId]||answerValues(item,key,kind,slot).map((value,i)=>({id:'readonly-'+item.itemVersionId+'-'+slot+'-'+i,value}))):answerRows(item,key,kind,slot);
   rows.forEach((row,index)=>{
    const line=el('div',undefined,'thuy-answer-row'),field=el('div',undefined,'thuy-answer-field'),input=el('input'),error=el('p','Hãy nhập đáp án hoặc bỏ ô đáp án này.','thuy-answer-error');
-   input.type='text';input.value=row.value;input.maxLength=300;input.disabled=readonly;input.dataset.answerRow=row.id;
+   input.type='text';input.value=row.value;input.maxLength=300;input.disabled=readonly;input.dataset.answerRow=row.id;input.dataset.validationField='answer';
    input.setAttribute('aria-label','Đáp án '+(index+1)+' '+(ids.length?'ô '+(slot+1)+' ':'')+'câu '+item.position);
    error.id='answer-error-'+row.id;error.hidden=true;error.setAttribute('aria-live','polite');input.setAttribute('aria-describedby',error.id);
    let touched=Boolean(row.touched);const check=()=>{const bad=touched&&!input.value.trim();error.hidden=!bad;input.setAttribute('aria-invalid',String(bad));};check();
@@ -60,7 +60,7 @@ function renderAnswerGroups(host,{item,key,kind,readonly,onChange,onStructure,on
 // Một vùng soạn liên tục. Mã ô là token không chỉnh trực tiếp; Bỏ ô giữ chữ gốc và key cùng nhau.
 export function mountGapAuthoring(parent,{item,key,kind,readonly=false,onChange=()=>{},onError=()=>{}}){
  const controller=new AbortController(),opts={signal:controller.signal},widget=el('div',undefined,'thuy-gap-authoring'),sentenceField=el('label',undefined,'field');
- const caption=el('span','Nội dung câu hỏi'),editor=el('div',undefined,'thuy-gap-text');editor.contentEditable=String(!readonly);editor.setAttribute('role','textbox');editor.setAttribute('aria-multiline','true');editor.setAttribute('aria-label','Nội dung câu hỏi');
+ const caption=el('span','Nội dung câu hỏi'),editor=el('div',undefined,'thuy-gap-text');editor.dataset.validationField='prompt';editor.contentEditable=String(!readonly);editor.setAttribute('role','textbox');editor.setAttribute('aria-multiline','true');editor.setAttribute('aria-label','Nội dung câu hỏi');
  sentenceField.append(caption,editor);const instructions=el('label',undefined,'field'),instructionInput=el('textarea');instructions.append(el('span','Yêu cầu của câu hỏi'),instructionInput);instructionInput.setAttribute('aria-label','Yêu cầu câu '+item.position);instructionInput.disabled=readonly;instructionInput.maxLength=2000;
  const notice=el('p','','help'),answers=el('div',undefined,'thuy-answer-groups'),popup=authoringAction(button('Tạo chỗ trống',createBlank),'add');popup.classList.add('thuy-selection-popup');popup.hidden=true;popup.disabled=readonly;popup.setAttribute('aria-label','Tạo chỗ trống câu '+item.position);
  widget.append(instructions,sentenceField,notice,popup,answers);parent.append(widget);let selected=null,composing=false,busy=false;

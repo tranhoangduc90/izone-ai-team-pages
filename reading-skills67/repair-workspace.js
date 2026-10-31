@@ -62,7 +62,8 @@
   document.querySelectorAll('.repair-source-context').forEach(el=>{if(el.dataset.repairContextFor!==current.nav.items[current.cursor]?.id)el.remove();});
   const item=current.nav.items[current.cursor],input=field(item?.id);if(!input)return;
   const {content,state}=current.bridge.current(),paragraph=content.paragraphs.find(p=>p.target===item.id||content.type==='matching_headings'&&p.id===item.paragraph||Object.values(p.targets||{}).includes(item.id)),question=content.questions.find(q=>Object.values(q.targets).includes(item.id));
-  const chosen=question&&content.paragraphs.find(p=>p.id===(question.sourceParagraph||state.answers[question.targets.section]));
+  const personRow=content.type==='matching_people'&&content.people.flatMap(p=>p.analyses).find(a=>Object.values(a.targets).includes(item.id));
+  const chosen=personRow?content.paragraphs.find(p=>p.id===state.answers[personRow.targets.paragraph_location]):question&&content.paragraphs.find(p=>p.id===(question.sourceParagraph||state.answers[question.targets.location||question.targets.section]));
   const signature=item.id+':'+(chosen?.id||'');
   let box=input.closest('.answer-field,.selection-field')?.querySelector('.repair-source-context');
   if(box?.dataset.signature===signature)return;

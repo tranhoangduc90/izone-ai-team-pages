@@ -1,7 +1,7 @@
 // Nhận đúng lớp/phiếu từ dashboard; gửi thay đổi có revision và giữ chữ đang nhập khi lỗi/đóng popup.
 // Lịch sử chỉ dùng API giảng viên; xem lại không tạo bài làm hoặc đổi điểm danh.
 import {bindDialogDismiss,node} from '../session-comments.js';
-import {renderSessionReview} from '../session-review.js?rev=20261028-the15-v1';
+import {renderSessionReview} from '../session-review.js?rev=20261030-the20-v2';
 const button=(label,action)=>{const b=node('button',label,'button');b.type='button';b.addEventListener('click',action);return b;};
 const date=value=>value?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'Chưa có';
 function dialog(title){
@@ -9,7 +9,7 @@ function dialog(title){
  head.append(node('h2',title),button('×',()=>d.close()));head.lastElementChild.setAttribute('aria-label','Đóng');d.append(head,body);document.body.append(d);bindDialogDismiss(d);
  let opener;d.addEventListener('close',()=>opener?.isConnected&&opener.focus());return {d,body,open(){opener=document.activeElement;d.showModal();}};
 }
-export function mountAssignmentManagement({host,getContext,request,onChanged}){
+export function mountAssignmentManagement({host,getContext,request,onChanged,showHistory=true}){
  const pending=new Map(),opened=new Set();let busy=false,lifecycle=0;
  function ownDialog(title){const view=dialog(title);opened.add(view.d);return view;}
  async function edit(action){
@@ -66,6 +66,6 @@ export function mountAssignmentManagement({host,getContext,request,onChanged}){
   }catch(error){view.body.replaceChildren(node('p','Chưa đọc được lịch sử: '+error.message));}
   view.d.addEventListener('close',()=>view.d.remove(),{once:true});
  }
- host.append(button('Gia hạn',()=>void edit('extend')),button('Thu hồi / thay bài',()=>void edit('withdraw')),button('Lịch sử thu hồi',()=>void history()));
+ host.append(button('Gia hạn',()=>void edit('extend')),button('Thu hồi / thay bài',()=>void edit('withdraw')));if(showHistory)host.append(button('Lịch sử thu hồi',()=>void history()));
  return {refresh(){const context=getContext();for(const [index,b]of [...host.querySelectorAll('button')].entries())b.disabled=index===2?!context?.classId:!context?.assignmentId;},dispose(){lifecycle++;for(const view of opened){view.close();view.remove();}opened.clear();pending.clear();busy=false;}};
 }

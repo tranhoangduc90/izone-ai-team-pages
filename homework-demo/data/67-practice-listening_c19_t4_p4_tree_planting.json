@@ -1,0 +1,167 @@
+{
+  "kind": "practice",
+  "subject": "listening",
+  "code": "67-practice-listening_c19_t4_p4_tree_planting",
+  "title": "Tree planting",
+  "version": "c19-t4-p4-tree-planting-20261027-v1",
+  "totalMs": 634670,
+  "definition": {
+    "mcq": [],
+    "audio": {
+      "sha256": "ccae2a651f44228d9c0e163e590ffda64abbb60036dcebde8efd479ceb510207",
+      "durationMs": 514670
+    },
+    "groups": [
+      {
+        "id": "reforestation",
+        "end": 34,
+        "kind": "completion",
+        "label": "Reforestation projects should:",
+        "start": 31,
+        "maxWords": 1,
+        "questions": [
+          {
+            "n": 31,
+            "text": "not include invasive species because of possible {blank} with native species.",
+            "maxWords": 1
+          },
+          {
+            "n": 32,
+            "text": "aim to capture carbon, protect the environment and provide sustainable sources of {blank} for local people",
+            "maxWords": 1
+          },
+          {
+            "n": 33,
+            "text": "use tree seeds with a high genetic diversity to increase resistance to {blank} and climate change",
+            "maxWords": 1
+          },
+          {
+            "n": 34,
+            "text": "plant trees on previously forested land which is in a bad condition, not select land which is being used for {blank}",
+            "maxWords": 1
+          }
+        ],
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer.",
+        "introduction": "● include a range of tree species"
+      },
+      {
+        "id": "large-scale",
+        "end": 36,
+        "kind": "completion",
+        "label": "Large-scale reforestation projects",
+        "start": 35,
+        "maxWords": 1,
+        "questions": [
+          {
+            "n": 35,
+            "text": "Base planning decisions on information from accurate {blank}.",
+            "maxWords": 1
+          },
+          {
+            "n": 36,
+            "text": "Drones are useful for identifying areas in Brazil which are endangered by keeping {blank} and illegal logging.",
+            "maxWords": 1
+          }
+        ],
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer.",
+        "introduction": ""
+      },
+      {
+        "id": "lampang",
+        "end": 38,
+        "kind": "completion",
+        "label": "Lampang Province, Northern Thailand",
+        "start": 37,
+        "maxWords": 1,
+        "questions": [
+          {
+            "n": 37,
+            "text": "increasing the {blank} of recovery by attracting animals and birds,",
+            "maxWords": 1
+          },
+          {
+            "n": 38,
+            "text": "e.g., {blank} were soon attracted to the area.",
+            "maxWords": 1
+          }
+        ],
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer.",
+        "introduction": "● A forest was restored in an area damaged by mining.\n● A variety of native fig trees were planted, which are important for\n    – supporting many wildlife species"
+      },
+      {
+        "id": "communities",
+        "end": 40,
+        "kind": "completion",
+        "label": "Involving local communities",
+        "start": 39,
+        "maxWords": 1,
+        "questions": [
+          {
+            "n": 39,
+            "text": "Destruction of mangrove forests in Madagascar made it difficult for people to make a living from {blank}.",
+            "maxWords": 1
+          },
+          {
+            "n": 40,
+            "text": "The mangrove reforestation project:\n– provided employment for local people\n– restored a healthy ecosystem\n– protects against the higher risk of {blank}.",
+            "maxWords": 1
+          }
+        ],
+        "instruction": "Complete the notes below. Write ONE WORD ONLY for each answer.",
+        "introduction": ""
+      }
+    ],
+    "lesson": {
+      "book": 19,
+      "code": "67-practice-listening_c19_t4_p4_tree_planting",
+      "part": 4,
+      "test": 4,
+      "title": "Tree planting",
+      "groups": [
+        {
+          "id": "reforestation",
+          "end": 34,
+          "kind": "completion",
+          "label": "Reforestation projects should:",
+          "start": 31
+        },
+        {
+          "id": "large-scale",
+          "end": 36,
+          "kind": "completion",
+          "label": "Large-scale reforestation projects",
+          "start": 35
+        },
+        {
+          "id": "lampang",
+          "end": 38,
+          "kind": "completion",
+          "label": "Lampang Province, Northern Thailand",
+          "start": 37
+        },
+        {
+          "id": "communities",
+          "end": 40,
+          "kind": "completion",
+          "label": "Involving local communities",
+          "start": 39
+        }
+      ],
+      "lesson": 12,
+      "audioMs": 514670,
+      "totalMs": 634670,
+      "reviewMs": 120000,
+      "paragraphs": [
+        "A"
+      ],
+      "sourceLabel": "Cambridge 19 · Test 4 · Part 4",
+      "preparationSteps": [
+        "Đọc lướt các chỗ trống cần điền đáp án. Khoanh tròn giới hạn từ cần điền.",
+        "Đoán nhanh loại từ cần điền: danh từ, động từ, tính từ hay trạng từ; xác định dạng từ như tên quốc gia, tên người, con số.",
+        "Xác định những từ khóa trong câu chứa chỗ trống cần điền.",
+        "Nghe và lựa chọn đáp án."
+      ]
+    },
+    "authored": true
+  }
+}

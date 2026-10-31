@@ -38,7 +38,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   const classSelect = $('class-select');
   const studentSelect = $('student-select');
   const button = $('open-homework');
-  const remember = $('remember-student');
+  const remember = $('remember-student') || { checked: true };
   const roster = new Map();
   let classes = [];
   let assignment = null;
@@ -65,7 +65,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
           && typeof saved.classCode === 'string' && saved.classCode.length > 0 && saved.classCode.length <= 128)))
       tabBinding = saved;
   } catch { /* Không có history thì đường chọn người hiện hành vẫn dùng được. */ }
-  if (tabBinding && !tabBinding.cleared) documentDropped = tabBinding.documentDropped === true;
+  // Link Docs luôn giữ chủ đã được máy chủ xác minh, kể cả history của bản cũ.
+  if (tabBinding && !tabBinding.cleared && !originalDocumentId) documentDropped = tabBinding.documentDropped === true;
   let requireManualSelection = tabBinding?.cleared === true;
   function bindTab(studentRef, classCode) {
     if (!sharedIdentityEnabled) return true;
@@ -86,7 +87,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   if (sharedIdentityEnabled) {
     $('forget-remembered').textContent = 'Đổi người học';
     const help = document.querySelector('#login-screen .memory-help');
-    if (help) help.textContent = 'Lần sau trình duyệt sẽ tự nhận đúng bạn để mở bài. Bỏ tick nếu đang dùng thiết bị chung.';
+    if (help) help.textContent = 'Trình duyệt sẽ nhớ người học sau khi mở bài. Dùng Đổi người học khi dùng chung thiết bị.';
   }
   function message(text, kind = '') {
     $('identity-message').textContent = [mismatchNotice, memoryNotice, text].filter(Boolean).join(' ');
@@ -142,6 +143,15 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       if (['draft', 'deleted', 'missing', 'ambiguous'].includes(next.assignmentStatus)) {
         throw new Error('Bài của lớp này chưa sẵn sàng để mở.');
       }
+      if (useDocument(code)) {
+        const owner = next.selectedStudentRef;
+        if (!uuid.test(owner || '') || next.students.filter(s => refOf(s) === owner).length !== 1)
+          throw new Error('Link Homework chưa có duy nhất chủ bài hợp lệ.');
+        next.students = next.students.filter(s => refOf(s) === owner);
+        const alias = sharedResolution && selectStudentIdentityAlias(sharedResolution, { classHint: code });
+        if (sharedMemory?.read().status === 'ok' && (!alias || alias.status !== 'unique' || alias.alias.studentRef !== owner))
+          mismatchNotice = 'Người học đã nhớ khác chủ link. Chỉ tiếp tục nếu đây là bài của bạn; thông tin đã nhớ được giữ đến khi bạn xác nhận.';
+      }
       const seen = new Set();
       const counts = new Map();
       for (const student of next.students) {
@@ -164,6 +174,10 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       $('remembered-identity').hidden = !studentSelect.value;
       $('forget-remembered').hidden = !studentSelect.value && sharedMemory?.read().status !== 'ok';
       contextText(next);
+      if (useDocument(code)) {
+        classSelect.disabled = true;
+        $('assignment-context').textContent = `Bài của ${roster.get(next.selectedStudentRef)} · ${code}. Nếu không phải bạn, hãy mở link Homework của mình.`;
+      }
       message(roster.size ? `Đã tải ${roster.size} học viên của lớp ${code}.${next.assignmentStatus === 'closed' ? ' Homework đã đóng. Chỉ học viên đã nộp bài mới có thể vào luyện thêm.' : useDocument(code) ? ' Bài sẽ được ghi vào đúng file Homework của link này.' : ''}` : 'Lớp này chưa có học viên hợp lệ để mở bài.');
     } catch (error) {
       if (current !== revision || error.name === 'AbortError') return;
@@ -248,13 +262,23 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
         originalAssignment = doc.assignment;
         originalClass = originalAssignment?.classCode || '';
         if (!originalClass) throw new Error('Chưa xác định được lớp của file Homework.');
-        if (allowWebReceipt && originalAssignment.intakeMode === 'document' && !requireManualSelection) {
+        if (allowWebReceipt && originalAssignment.intakeMode === 'document') {
           if(validateAssignment(originalAssignment)!==true || originalAssignment.students?.length!==1)
             throw new Error('Bản Docs chưa có duy nhất cấu hình bài riêng.');
           const profile=originalAssignment.students[0];
-          if ((hasShared || restore) && (!sharedResolution || !resolutionIsCurrent(sharedResolution)
-              || !sharedResolution.aliases.some(alias => alias.studentRef === refOf(profile))))
-            throw new Error('Link bài riêng chưa khớp người học đã nhớ. Hãy dùng Đổi người học hoặc mở đúng link bài của bạn.');
+          const wrongRemembered = (hasShared || restore) && (!sharedResolution || !resolutionIsCurrent(sharedResolution)
+              || !sharedResolution.aliases.some(alias => alias.studentRef === refOf(profile)));
+          if (wrongRemembered || requireManualSelection) {
+            assignment = originalAssignment; selectedCode = originalClass;
+            roster.set(refOf(profile), profile.name);
+            classSelect.replaceChildren(new Option('Bài riêng', originalClass)); classSelect.value = originalClass; classSelect.disabled = true;
+            studentSelect.replaceChildren(new Option('Chọn tên của bạn', ''), new Option(profile.name, refOf(profile)));
+            studentSelect.disabled = false; button.disabled = true;
+            $('assignment-context').textContent = `Link bài riêng của ${profile.name}. Nếu không phải bạn, hãy mở link Homework của mình.`;
+            mismatchNotice = wrongRemembered ? 'Link bài riêng khác người học đã nhớ. Xác nhận chủ bài để tiếp tục.' : '';
+            message('Chọn chủ bài rồi bấm Mở bài Speaking. Hồ sơ lớp đã nhớ được giữ nguyên.');
+            return;
+          }
           const opened=await requestJson(apiBase,'/session/start-selected',{
             assignmentCode,classCode:originalClass,documentId:originalDocumentId,
             studentRef:refOf(profile),identityConfirmed:true
@@ -298,14 +322,14 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
           classHint: useDocument(originalClass) ? originalClass : restore?.classCode || itemFor(classHint)?.classCode || '', allowedClassCodes,
           ...(restore ? { studentRef: restore.studentRef } : {}),
         });
-        if (choice.status === 'unique') { code=choice.alias.classCode; preferred=choice.alias.studentRef; }
+        if (choice.status === 'unique' && (!originalDocumentId || choice.alias.classCode === originalClass)) { code=choice.alias.classCode; preferred=choice.alias.studentRef; }
         else memoryNotice = choice.status === 'ambiguous'
           ? 'Đã nhận diện người học nhưng có nhiều lớp mở bài này. Chọn lớp muốn học, không cần chọn lại tên.'
           : 'Người học đã nhớ chưa có bài phù hợp với lớp hoặc link này. Hãy mở đúng bài của bạn hoặc Đổi người học.';
       }
       mismatchNotice = originalDocumentId && !documentDropped && resolved?.classCode && resolved.classCode !== code
         ? `Link Homework thuộc lớp ${code}; hồ sơ đã nhớ thuộc lớp ${resolved.classCode}. Hãy chọn đúng người trong lớp của link hoặc đổi lớp để mở bài của bạn.` : '';
-      classSelect.disabled = classSelect.options.length < 2;
+      classSelect.disabled = Boolean(originalDocumentId) || classSelect.options.length < 2;
       if (code && canOpenClass(code)) {
         classSelect.value = code;
         await loadRoster(code, preferred);
@@ -341,6 +365,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   }
   classSelect.addEventListener('change', () => {
     if (active) return;
+    if (originalDocumentId) { classSelect.value = originalClass; return; }
     const generation = ++selectionGeneration;
     if (originalClass && classSelect.value !== originalClass) {
       documentDropped = true;
@@ -385,7 +410,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     const studentName = roster.get(studentRef);
     const selectedAssignment = assignment;
     const selectionSnapshot = sharedClient?.captureSelection();
-    const identityRead = sharedClient && !automatic && remember.checked
+    const documentOnly = selectedAssignment.intakeMode === 'document';
+    const identityRead = sharedClient && !automatic && remember.checked && !documentOnly
       ? sharedClient.resolveSelection({ studentRef, classHint: code }).then(data => ({ data }), error => ({ error })) : null;
     active = true;
     activeIdentity = resolution?.identity || null;
@@ -402,9 +428,9 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
         || (body.documentId && session.documentId !== body.documentId)) {
         throw new Error('Phiên trả về chưa khớp người, lớp hoặc file Homework. Hãy thử lại.');
       }
-      const stored = writeMemory(storage, key, remember.checked ? studentRef : '');
+      const stored = documentOnly || writeMemory(storage, key, remember.checked ? studentRef : '');
       let sharedNotice = '';
-      if (sharedClient && !automatic) {
+      if (sharedClient && !automatic && !documentOnly) {
         if (remember.checked) {
           const identityResult = await identityRead;
           if (identityResult.error) sharedNotice = 'Đã mở bài nhưng chưa nhớ được người học dùng chung. Bạn vẫn làm bài bình thường.';
@@ -419,7 +445,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
           sharedNotice = 'Chưa quên được danh tính chung trên trình duyệt. Hãy kiểm lại trước khi dùng chung thiết bị.';
       }
       const notice = $('memory-status');
-      if (!bindTab(studentRef, code)) sharedNotice = 'Bài vẫn thuộc đúng người vừa mở, nhưng trình duyệt chưa giữ được người của tab khi tải lại.';
+      if (!documentOnly && !bindTab(studentRef, code)) sharedNotice = 'Bài vẫn thuộc đúng người vừa mở, nhưng trình duyệt chưa giữ được người của tab khi tải lại.';
+      if (documentOnly) sharedNotice = 'Bài được lưu theo bản Docs này. Hồ sơ lớp đã nhớ trên thiết bị được giữ nguyên.';
       notice.textContent = sharedNotice || (stored ? '' : 'Đã mở bài, nhưng trình duyệt không lưu hoặc xóa được hồ sơ ghi nhớ. Không dùng thiết bị chung nếu hồ sơ cũ chưa được xóa.');
       notice.hidden = !notice.textContent;
       $('active-student').textContent = studentName;
@@ -432,7 +459,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     } catch (error) {
       active = false;
       activeIdentity = null;
-      classSelect.disabled = false;
+      classSelect.disabled = Boolean(originalDocumentId);
       studentSelect.disabled = false;
       button.disabled = !studentSelect.value;
       message(`Chưa mở được bài: ${error.message}`, 'error');
@@ -458,10 +485,11 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     $('memory-status').hidden = true;
     $('lesson-hero').hidden = $('identity-confirmed').hidden = $('homework-content').hidden = true;
     $('login-screen').hidden = false;
-    classSelect.disabled = false;
+    classSelect.disabled = Boolean(originalDocumentId);
     // Giữ file CTA khi chọn người khác cùng lớp; đổi lớp mới bỏ ngữ cảnh Docs cũ.
     classSelect.value = selectedCode;
-    await loadRoster(selectedCode);
+    if (originalAssignment?.intakeMode === 'document') await start();
+    else await loadRoster(selectedCode);
     classSelect.focus();
   });
   window.addEventListener('storage', event => {

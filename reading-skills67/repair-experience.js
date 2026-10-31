@@ -10,14 +10,14 @@
   if(attempt.progress)return attempt.progress;
   const rows=content.targets.map(t=>({id:t.id,status:attempt.result?.feedback?.[t.id]?.status}));
   if(rows.length!==content.targets.length||new Set(rows.map(t=>t.id)).size!==content.targets.length||rows.some(t=>!['correct','partial','incorrect','blank'].includes(t.status)))return null;
-  const sections=new Set(content.questions.map(q=>q.targets.section||q.targets.answer));
+  const sections=new Set(content.type==='matching_people'?content.targets.filter(t=>!['compressed_level_1','compressed_statement'].includes(t.kind)).map(t=>t.id):content.questions.map(q=>q.targets.section||q.targets.answer));
   const matching=rows.filter(t=>sections.has(t.id)),compression=rows.filter(t=>!sections.has(t.id));
   const needsRepair=rows.filter(t=>t.status!=='correct').map(t=>t.id);
   return {kind:content.type==='green-roofs'?'green-roofs':undefined,matchingCorrect:matching.filter(t=>t.status==='correct').length,matchingTotal:matching.length,
    compressionCorrect:compression.filter(t=>t.status==='correct').length,compressionTotal:compression.length,
    total:rows.length,remainingCount:needsRepair.length,needsRepair,allCorrect:!needsRepair.length};
  }
- function description(p){if(p.kind==='tfng')return `Kết luận toàn câu: ${p.conclusionCorrect}/${p.conclusionTotal}. T/F/NG theo mảnh: ${p.labelCorrect}/${p.labelTotal}. Nội dung đối chiếu: ${p.evidenceCorrect}/${p.evidenceTotal}.`;return `${p.kind==='green-roofs'?'Multiple choice':bridge?.current().content.type==='matching_headings'?'Matching Headings':'Matching Information'}: đúng ${p.matchingCorrect}/${p.matchingTotal} câu. Phần nén: ${p.compressionCorrect}/${p.compressionTotal} phần đạt.`;}
+ function description(p){if(p.kind==='sentence_completion')return `Đáp án: ${p.matchingCorrect}/4. Phân tích từ khóa: ${p.analysisCorrect}/20. Nén hai cấp: ${p.paragraphCorrect}/4 phần đạt.`;if(p.kind==='tfng')return `Kết luận toàn câu: ${p.conclusionCorrect}/${p.conclusionTotal}. T/F/NG theo mảnh: ${p.labelCorrect}/${p.labelTotal}. Nội dung đối chiếu: ${p.evidenceCorrect}/${p.evidenceTotal}.`;return `${bridge?.current().content.type==='matching_people'?'Chọn người, đoạn và câu khớp':p.kind==='green-roofs'?'Multiple choice':bridge?.current().content.type==='matching_headings'?'Matching Headings':'Matching Information'}: đúng ${p.matchingCorrect}/${p.matchingTotal} ${bridge?.current().content.type==='matching_people'?'phần':'câu'}. Phần nén: ${p.compressionCorrect}/${p.compressionTotal} phần đạt.`;}
  function navigation(){
   if(!bridge)return null;
   const {state,content}=bridge.current();
@@ -36,7 +36,7 @@
  function next(){move(1);}
  function previous(){move(-1);}
  function targetLabel(id,content){
-  if(['tfng','green-roofs','matching_headings'].includes(content.type))return content.targets.find(t=>t.id===id)?.label||'Phần trả lời';
+  if(['tfng','green-roofs','matching_headings','matching_people','sentence_completion'].includes(content.type))return content.targets.find(t=>t.id===id)?.label||'Phần trả lời';
   const paragraph=content.paragraphs.find(p=>p.target===id);if(paragraph)return 'Nén cấp 1 đoạn '+paragraph.id;
   const question=content.questions.find(q=>Object.values(q.targets).includes(id));
   if(!question)return content.targets.find(t=>t.id===id)?.label||'Phần trả lời';
@@ -58,6 +58,7 @@
   const field=input?.closest('.answer-field,.selection-field');
   if(field){field.classList.add('repair-current');field.dataset.repairTarget=nav.items[cursor].id;field.setAttribute('aria-current','step');}
  }
+ function editLabel(){return 'Sửa bài';}
  function decorate(){
   if(!bridge)return;
   const {state,teacher}=bridge.current();
@@ -69,8 +70,9 @@
   let role=document.querySelector('#materials-role-label');
   if(!role){role=document.createElement('span');role.id='materials-role-label';role.className='materials-role-label';document.querySelector('#teacher')?.before(role);}
   role.textContent=teacher?(studentView?'Giảng viên đang xem như học viên · Chỉ xem':'Giao diện giảng viên'):'Giao diện học viên';
+  role.hidden=!teacher&&document.body.classList.contains('homework-concise');
   const grade=document.querySelector('#grade-button');if(grade&&state.status==='draft')grade.textContent=repair?'Nộp lại bài':'Nộp bài';
-  const edit=document.querySelector('[data-action="edit"]');if(edit)edit.textContent='Tôi sẽ sửa';
+  const edit=document.querySelector('[data-action="edit"]');if(edit)edit.textContent=editLabel();
   const selected=state.serverAttempt;
   if(selected){
    const notice=document.createElement('div');notice.className='notice attempt-context';
@@ -89,9 +91,15 @@
   const trigger=document.querySelector('[data-action="repair-start"]');if(trigger)trigger.hidden=cursor>=0;
   const p=current.progress,banner=document.createElement('div');banner.className='notice repair-banner';banner.dataset.state=p.allCorrect?'success':'attention';banner.setAttribute('role','status');
   if(edit&&p.allCorrect)edit.textContent='Sửa bài';
-  banner.append(document.createTextNode((p.allCorrect?'Đã đạt toàn bộ bài. ':`Còn ${p.remainingCount} phần cần sửa theo lần chấm gần nhất. `)+description(p)));
+  const headline=p.allCorrect?'Đã đạt toàn bộ bài. ':`Còn ${p.remainingCount} phần cần sửa theo lần chấm gần nhất. `;
+  banner.append(document.createTextNode(headline+(document.body.classList.contains('homework-concise')?'':description(p))));
+  if(document.body.classList.contains('homework-concise')){
+   const detail=document.createElement('details');detail.className='repair-summary-detail';
+   const title=document.createElement('summary');title.textContent='Chi tiết kết quả';
+   const text=document.createElement('p');text.textContent=description(p);detail.append(title,text);banner.append(detail);
+  }
   if(!teacher&&!p.allCorrect&&!(state.status==='draft'&&cursor>=0)){
-   const button=document.createElement('button');button.className='secondary';button.textContent=state.status==='draft'?'Phần cần sửa tiếp theo':'Tôi sẽ sửa';
+   const button=document.createElement('button');button.className='secondary';button.textContent=state.status==='draft'?'Phần cần sửa tiếp theo':editLabel();
    button.onclick=()=>state.status==='draft'?next():bridge.edit();banner.append(' ',button);
   }
   document.querySelector('.lesson-head')?.after(banner);
@@ -115,7 +123,7 @@
   shown.add(attempt.attemptId);
   bridge.modal(p.allCorrect?'Chúc mừng! Bạn đã sửa đúng toàn bộ bài.':`Còn ${p.remainingCount} phần cần sửa`,
    '<p>Bài đã được lưu và chấm.</p><p>'+escape(description(p))+'</p>',
-   p.allCorrect?'<button class="primary" data-close-modal>Xem kết quả</button>':'<button class="secondary" data-close-modal>Xem nhận xét</button><button class="primary" data-action="repair-edit">Tôi sẽ sửa</button>');
+   p.allCorrect?'<button class="primary" data-close-modal>Xem kết quả</button>':'<button class="secondary" data-close-modal>Xem nhận xét</button><button class="primary" data-action="repair-edit">'+escape(editLabel())+'</button>');
  }
  async function restore(history){
   const start=bridge.current().state;
@@ -126,6 +134,8 @@
  }
  async function menu(){
   if(!bridge){
+   const ownerLink=window.Reading67Access?.teacherEntryUrl;
+   if(ownerLink){location.href=ownerLink;return;}
    // Giữ đích bài ban đầu qua Google; teacher.js vẫn kiểm cùng origin/đúng trang.
    const target=new URL(location.href),login=new URL('teacher.html',location.href);
    if(target.searchParams.get('classId')&&target.searchParams.get('studentRef')){
