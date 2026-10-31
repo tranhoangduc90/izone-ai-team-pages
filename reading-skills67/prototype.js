@@ -107,7 +107,7 @@ function updateProgress(){
   const save=document.querySelector('#save-state');if(save)save.textContent=storageAvailable?(state.savedAt?`Đã lưu trên thiết bị · ${timeLabel(state.savedAt)}`:'Lưu tự động trên thiết bị'):'Chưa lưu được · Giữ trang đang mở';
   const grade=document.querySelector('#grade-button');if(grade)grade.setAttribute('aria-description',count<minimumRequired()?`Cần thêm ${minimumRequired()-count} phần để đủ điều kiện chấm`:`Đã đủ ${minimumRequired()} phần để chấm`);
   content.targets.forEach(t=>{const el=document.querySelector('[data-indicator="'+t.id+'"]');if(el)el.textContent=filled(t)?'Đã điền':'Chưa điền';});
-  if(tfng())window.ReadingTfngRenderer.updateProgress(content,filled);
+  if(tfng())window.ReadingTfngRenderer?.updateProgress?.(content,filled);
   if(serverMode)adaptServerSave();
 }
 function setMobilePane(pane){
