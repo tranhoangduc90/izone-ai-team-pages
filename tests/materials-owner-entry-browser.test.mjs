@@ -23,10 +23,11 @@ async function fixture(browser,options={}){
   }
   if(u.origin!=='https://ducizone.ddns.net')throw Error('Unexpected outside request '+u.origin);
   calls.push({path:p,method:req.method(),headers:req.headers(),body:req.postDataJSON()});
-  if(p.includes('/teacher-session-api/v1/restore/'))return send({ok:true});
-  if(p===api+'/config')return send({code,title:'Owner entry fixture',type:'tfng',autoRole:true,studentsOpen:true,ownerEntry:{classId:'1293',classCode:'IC2304'}});
+  if(p.includes('/teacher-session-api/v1/restore/'))return options.teacherSignedOut?send({error:'SSO_REQUIRED'},401):send({ok:true});
+  if(p.endsWith('/shared-session'))return send({error:'SSO_REQUIRED'},401);
+  if(p===api+'/config')return send({code,title:'Owner entry fixture',type:'tfng',demoGoogle:!!options.teacherSignedOut,autoRole:true,studentsOpen:true,ownerEntry:{classId:'1293',classCode:'IC2304'}});
   if(p===api+'/entry')return u.searchParams.get('documentId')===doc&&!options.revoked?send({entry:{documentId:doc,classId:'1293',studentRef:a,name:'Synthetic A',classCode:'IC2304',code}}):send({error:'HOMEWORK_ENTRY_NOT_FOUND'},403);
-  if(p.startsWith(api+'/teacher/'))return options.teacherDenied?send({error:'ACCESS_DENIED'},403):send({readonly:true,classes:[]});
+  if(p.startsWith(api+'/teacher/'))return options.teacherSignedOut?send({error:'TEACHER_LOGIN_REQUIRED'},401):options.teacherDenied?send({error:'ACCESS_DENIED'},403):send({readonly:true,classes:[]});
   if(p===api+'/classes')return send({classes:[{id:'1293',classCode:'IC2304'},{id:'9999',classCode:'OTHER'}]});
   if(p===api+'/classes/1293/students')return send({students:[a,b].map(ref=>({studentRef:ref,name:person(ref).name}))});
   if(p===api+'/identity/resolve'){const input=req.postDataJSON(),ref=(input.identity?.id==='900002'||input.studentRef===b)?b:a;return send({ok:true,status:'unique',identity:{authority:'erp-contact',id:person(ref).erpId},aliases:[{classId:'1293',classCode:'IC2304',studentRef:ref,studentName:person(ref).name}]});}
@@ -49,6 +50,9 @@ test('Lesson 12 owner-bound student and teacher entry',async t=>{
   });
   await t.test('Teacher switch before student login retains the document owner, not remembered B',async()=>{
    const f=await fixture(browser,{remembered:b});try{await f.open();await f.page.locator('#entry-owner').waitFor();const link=new URL(await f.page.evaluate(()=>Reading67Access.teacherEntryUrl));assert.equal(link.searchParams.get('studentRef'),a);assert.equal(link.searchParams.get('classId'),'1293');assert.equal(link.searchParams.get('mode'),'teacher');assert.equal(f.calls.some(c=>c.path===api+'/student/login'),false);assert.deepEqual(f.errors,[]);}finally{await f.context.close();}
+  });
+  await t.test('Signed-out teacher intent cannot borrow a remembered student session',async()=>{
+   const f=await fixture(browser,{remembered:a,saved:a,teacherSignedOut:true});try{await f.open('&teacher=1&classId=1293&studentRef='+a);await f.page.locator('#demo-teacher').waitFor();assert.equal(await f.page.locator('#entry-class').count(),0);assert.equal(f.calls.some(c=>/\/(lesson|draft|student\/login)$/.test(c.path)),false);assert.deepEqual(f.errors,[]);}finally{await f.context.close();}
   });
   for(const teacherDenied of [false,true])await t.test('Explicit teacher intent stays independent; denied='+teacherDenied,async()=>{
    const f=await fixture(browser,{remembered:b,teacherDenied});try{await f.open('&teacher=1&classId=1293&studentRef='+a);if(teacherDenied){await f.page.getByText('Tài khoản chưa có quyền lớp.',{exact:true}).waitFor();assert.equal(await f.page.locator('#entry-class').count(),0);}else{await f.page.locator('#ready').waitFor();assert.deepEqual(await f.page.evaluate(()=>entryResult),{teacher:true,person:null,readonly:true});}assert.equal(f.calls.some(c=>c.path===api+'/entry'||c.path===api+'/student/login'||c.path===api+'/draft'),false);assert.deepEqual(f.errors,[]);}finally{await f.context.close();}

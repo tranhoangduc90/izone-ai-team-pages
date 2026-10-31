@@ -85,7 +85,7 @@
     // teacher links stay denied; the student path still verifies membership.
     if(error.status!==401&&!(error.status===403&&studentEntry))throw error;
     teacher=false;
-    if(params.get('mode')==='teacher'){
+    if(params.get('mode')==='teacher'||config.ownerEntry&&teacherIntent){
      teacher=true;
      if(classId&&studentRef)return teacherLogin(classId,studentRef);
      location.replace('teacher.html');return new Promise(()=>{});
