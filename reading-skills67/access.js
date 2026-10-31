@@ -112,11 +112,15 @@
   if(!config.demo){const selection=await course.resolve({...(entryContext?{classCode:entryContext.classCode}:{}),allowedClassCodes:classes.map(c=>c.classCode)}).catch(()=>({status:'unavailable'}));if(selection.status==='unique'&&sameEntry(selection.alias.classId,selection.alias.studentRef)){await login(selection.alias.classId,selection.alias.studentRef,selection,classes);return {config};}}
   await choose(classes);return {config};
  }
+ function teacherEntryUrl(){
+  if(!entryContext)return null;
+  const target=new URL(location.href);target.searchParams.set('teacher','1');target.searchParams.set('mode','teacher');target.searchParams.set('classId',entryContext.classId);target.searchParams.set('studentRef',entryContext.studentRef);target.searchParams.delete('fresh');return target.href;
+ }
  async function change(){
   if(!config.demo){const forgotten=await course.forget();if(forgotten.status!=='empty')throw Error('Chưa đổi được người; nháp vẫn được giữ.');}
   await post('/student/logout',{});sessionStorage.removeItem(key);token='';person=null;
   if(entryContext){const target=new URL(location.href);target.searchParams.set('mode','student');target.searchParams.set('documentId',entryDocument);target.searchParams.set('fresh','1');location.href=target.href;}
   else location.href=location.pathname+'?server=1';
  }
- window.Reading67Access={open,request,change,get config(){return config;},get person(){return person;},get headers(){return token&&!teacher?{...entryHeaders(),Authorization:'Bearer '+token}:entryHeaders();},get teacherPath(){return '/teacher/work/'+encodeURIComponent(params.get('classId'))+'/'+encodeURIComponent(params.get('studentRef'));},get teacher(){return teacher;}};
+ window.Reading67Access={open,request,change,get config(){return config;},get person(){return person;},get headers(){return token&&!teacher?{...entryHeaders(),Authorization:'Bearer '+token}:entryHeaders();},get teacherEntryUrl(){return teacherEntryUrl();},get teacherPath(){return '/teacher/work/'+encodeURIComponent(params.get('classId'))+'/'+encodeURIComponent(params.get('studentRef'));},get teacher(){return teacher;}};
 }());
