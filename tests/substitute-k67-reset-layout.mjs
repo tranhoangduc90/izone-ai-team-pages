@@ -58,7 +58,7 @@ for(const n of [1,2]) {
   test(`Sub ${n} reload reset uses the same cleanup before restoring state`,()=>{
     const b=read(`term-tests/substitute-test-${n}-k67-computer-based/bootstrap.js`);
     assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug)')>0);
-    assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug)')<b.indexOf('let state = readState()'));
+    assert.ok(b.indexOf('window.SUBSTITUTE_STATE.clear(testConfig.slug)')<b.indexOf('let state = await readState()'));
     const html=read(`term-tests/substitute-test-${n}-k67-computer-based/index.html`);
     assert.ok(html.indexOf('reset-storage.js')<html.indexOf('src="bootstrap.js'));
   });
