@@ -171,3 +171,18 @@ test('SW y tế: cả HV và GV dùng nhãn Giảng viên trên trao đổi th�
   assert.equal(JSON.stringify(f.state.raw),original);
  }finally{await f.close();}}}finally{await browser.close();}
 });
+
+test('Shops cũ: danh sách và chi tiết cùng đếm trao đổi, không mang nhãn mẫu',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true}),f=await fixture(browser,{teacher:true,engine:'shops-writing'});
+ try{
+  const original=JSON.stringify(f.state.raw);
+  f.state.threads=[{threadRef:'shops-open-thread',fieldKey:'topic_sentence',status:'open',anchor:{quote:'topic_sentence',detached:false},messages:[{authorRole:'teacher',body:'Góp ý trên đường Shops cũ',createdAt:stamp}]}];
+  const card=f.page.locator('[data-student="fixture-student"]');
+  await card.filter({hasText:'1 trao đổi mở'}).waitFor({state:'attached',timeout:12000});
+  assert.equal(await card.getAttribute('data-state'),'support');
+  assert.equal((await f.page.locator('#detail').textContent()).includes('Giảng viên mẫu'),false);
+  f.state.threads[0].status='addressed';
+  await card.filter({hasText:'0 trao đổi mở'}).waitFor({state:'attached',timeout:12000});
+  assert.equal(await card.getAttribute('data-state'),'complete');assert.equal(JSON.stringify(f.state.raw),original);
+ }finally{await f.close();await browser.close();}
+});
