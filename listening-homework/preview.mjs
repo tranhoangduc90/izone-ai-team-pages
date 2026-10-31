@@ -1,5 +1,5 @@
 // Review-only state. The renderer, controls, audio transport and styles are shared with the real lesson.
-import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261029-grading2&audio=20261028-part-rescue-v1';
+import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261029-grading2&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
 import {setWorkspaceText as text} from './workspace-status.mjs?v=20261028-compact1';
 import {ASSETS} from '../shared/audio/catalog.mjs';
 const $=id=>document.getElementById(id);

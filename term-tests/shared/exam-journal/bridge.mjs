@@ -1,6 +1,7 @@
-import { IndexedOutbox } from './outbox.mjs';
-import { createRecorder,fetchTransport,observeDocument,observeAudio } from './recorder.mjs?v=20261024-startup-v2';
-import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-startup-v2';
+import { IndexedOutbox } from './outbox.mjs?ej=ej-a176e4d58d3089a76456';
+import { createRecorder,fetchTransport,observeDocument,observeAudio } from './recorder.mjs?ej=ej-a176e4d58d3089a76456';
+import {createDeliveryPump} from './delivery.mjs?ej=ej-a176e4d58d3089a76456';
+import {createAudioTransferObserver} from './audio-delivery.mjs?ej=ej-a176e4d58d3089a76456';
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const registryKey=Symbol.for('izone.examJournal.connections.v1');
@@ -31,7 +32,8 @@ export function contentFields(state) {
 
 // Nhận state qua callback chỉ đọc. Không thay fetch/confirm toàn cục, timer hoặc điều khiển bài thi.
 export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,build = 'unknown',
-  document:doc = globalThis.document,window:win = globalThis.window,onHealth = () => {},outbox:providedOutbox,fetcher = globalThis.fetch,adoptExistingState=true }) {
+  document:doc = globalThis.document,window:win = globalThis.window,onHealth = () => {},outbox:providedOutbox,fetcher = globalThis.fetch,
+  deliveryMode='adaptive',random=Math.random,adoptExistingState=true }) {
   if (!enabled || win?.IZONE_EXAM_DEVICE_BLOCKED) return null;
   const target = new URL(endpoint,win.location.href);
   if (!['http:','https:'].includes(target.protocol) || target.search || target.hash || target.username || target.password) throw new Error('INVALID_JOURNAL_ENDPOINT');
@@ -40,13 +42,24 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   const outbox = providedOutbox || new IndexedOutbox({ name:'izone-exam-journal-v2:' + target.origin + target.pathname });
   const visitId = crypto.randomUUID(); let current = null,ownerKey = '',requesting = '',lastProjection = '',nextContextTry = 0,stopped = false,unobservedSince=performance.now(),previousFields=new Set();
   const audioStops = new Map();
-  const bindingRequests=new Map(),bindingCache=new Map(),audioPending=new Set();let audioPendingBytes=0;
+  const bindingRequests=new Map(),bindingCache=new Map(),bindingDeadlines=new WeakMap(),audioPending=new Set();let audioPendingBytes=0;
+  // Cache pacing uses server lifetime plus elapsed page time, never the device date.
+  // The collector still verifies the signed ticket against its own clock.
+  const bindingFresh=context=>context&&bindingDeadlines.get(context)>performance.now()+5000;
   const health = data => {
+    if(data.pendingReauthorization)for(const [key,context]of bindingCache)
+      if(context.bindingId===data.expiredBindingId)bindingCache.delete(key);
     if (data.pendingReauthorization && data.expiredBindingId === current?.bindingId) {current=null;nextContextTry=0;}
     try { onHealth(data); } catch {}
   };
-  const recorder = createRecorder({ outbox,context:() => current,
-    transport:fetchTransport(target.href + '/journal-events',fetcher),build:String(build).slice(0,80)+'+startup-20261024-v2',onHealth:health });
+  let delivery;
+  const core=createRecorder({outbox,context:()=>current,transport:fetchTransport(target.href+'/journal-events',fetcher),build,onHealth:health,random,
+    onQueued:({bytes,type})=>delivery?.notify({bytes,urgent:['runtime_error','submission_observed'].includes(type)})});
+  delivery=createDeliveryPump({send:options=>core.flush(options),retryAt:()=>core.status().retryAt,mode:deliveryMode,random,onHealth:health});
+  const recorder={...core,flush:options=>delivery.flush(options),networkChanged:online=>delivery.setOnline(online),
+    suspendDelivery:()=>delivery.pause(),resumeDelivery:()=>delivery.wake(),
+    visibilityChanged:state=>{if(state==='hidden'){delivery.pause();void delivery.flush({force:true,keepalive:true});}
+      else{stateChanged('visibility');delivery.wake();}}};
   const proofOf = state => ({ testSlug,classCode:String(state.classCode || state.className || ''),
     attemptToken:String(state.attemptToken || ''),examSessionToken:String(state.examSessionToken || ''),
     clientRunId:String(state.clientRunId || ''),examSessionId:String(state.examSessionId || ''),historyEpoch:String(state.historyEpoch || state._substitute?.historyEpoch || ''),
@@ -55,16 +68,23 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   const audioRecord=(type,data,binding)=>{try{const work=recorder.record(type,data,binding);if(work?.catch)void work.catch(()=>health({status:'gap',errorCode:'JOURNAL_AUDIO_RECORD_FAILED'}));}catch{health({status:'gap',errorCode:'JOURNAL_AUDIO_RECORD_FAILED'});}};
   async function loadBinding(proof){
     if(stopped)throw Error('JOURNAL_STOPPED');const key=JSON.stringify(proof),cached=bindingCache.get(key);
-    if(cached&&Number(cached.expiresAt)>Date.now()+5000)return cached;
+    if(bindingFresh(cached))return cached;
     if(bindingRequests.has(key))return bindingRequests.get(key);
     if(bindingRequests.size>=8)throw Error('JOURNAL_CONTEXT_QUEUE_FULL');
     const work=(async()=>{
-      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),1500);
+      const began=performance.now(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),1500);
       try{
         const response=await fetcher(target.href+'/journal-context',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(proof),credentials:'omit',cache:'no-store',signal:controller.signal});
         if(!response.ok)throw Error('JOURNAL_CONTEXT_UNAVAILABLE');const context=await response.json();
         if(stopped)throw Error('JOURNAL_STOPPED');
         if(!context.ok||!/^[a-f0-9]{64}$/.test(context.bindingId||'')||typeof context.ticket!=='string'||!context.ticketId)throw Error('JOURNAL_CONTEXT_INVALID');
+        const issued=context.issuedAt,expires=context.expiresAt;
+        const serverNow=context.serverNow===undefined?issued:
+          typeof context.serverNow==='string'&&/Z$/.test(context.serverNow)?Date.parse(context.serverNow):NaN;
+        const lifetime=expires-Math.max(issued,serverNow);
+        if(Number.isSafeInteger(issued)&&Number.isSafeInteger(expires)&&Number.isFinite(serverNow)
+          &&expires>issued&&expires-issued<=7*86400000&&lifetime>0)
+          bindingDeadlines.set(context,began+lifetime);
         // Native authority comes from the API. Slow local ticket storage must not hide
         // observations; IndexedDB serializes renewal before subsequent writes.
         try{void Promise.resolve(outbox.renewBinding(context.bindingId,{ticket:context.ticket,ticketId:context.ticketId,issuedAt:context.issuedAt,expiresAt:context.expiresAt}))
@@ -79,7 +99,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     let state,proof,key;
     try { state = getState(); proof = proofOf(state); key = JSON.stringify(proof); } catch { return; }
     if (key !== ownerKey) { ownerKey = key; current = null;lastProjection = '';previousFields=new Set();unobservedSince=performance.now(); }
-    if (current || requesting === key || Date.now() < nextContextTry) return;
+    if (current || requesting === key || performance.now() < nextContextTry) return;
     requesting = key;
     try {
       const context = await loadBinding(proof);
@@ -93,7 +113,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       recorder.record('identity_observed',{identityConfirmed:context.identityConfirmed === true,generation:proof.generation});
       observer.snapshot('context_ready'); stateChanged('context_ready');
       void recorder.flush({force:true});
-    } catch { if (ownerKey === key) { nextContextTry = Date.now() + 5000; health({status:'degraded',errorCode:'JOURNAL_CONTEXT_UNAVAILABLE'}); } }
+    } catch { if (ownerKey === key) { nextContextTry = performance.now() + 5000+Math.floor(Math.random()*5000); health({status:'degraded',errorCode:'JOURNAL_CONTEXT_UNAVAILABLE'}); } }
     finally { if (requesting === key) requesting = ''; }
   }
   function stateChanged(cause = 'application_state') {
@@ -158,18 +178,18 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   const runtimeError = event => recorder.record('runtime_error',{errorCode:event.type === 'error' ? 'WINDOW_ERROR' : 'UNHANDLED_REJECTION',
     stack:event.type === 'error' ? {file:safeRoute(event.filename || ''),line:event.lineno || 0,column:event.colno || 0} : {},stage:String(getState().stage || '')});
   win.addEventListener('error',runtimeError);win.addEventListener('unhandledrejection',runtimeError);
-  const timer = setInterval(() => { void refresh();stateChanged('periodic');void recorder.flush(); },1000);
+  const timer = setInterval(() => { void refresh();stateChanged('periodic'); },1000);
   void refresh();
   const api={ stateChanged,recorder,
     adopt(reader){if(typeof reader==='function'){getState=reader;stateChanged('state_reader_changed');}return api;},
     prepareInitialization({classCode='' }={}) {
-      // Warm only the page scope. Never borrow an adopted native learner proof.
+      // The native lobby observes intent using page authority, never a learner ticket.
       return loadBinding(proofOf({classCode,generation:0}));
     },
     recordInitializationNow(rows,{classCode='',lostCount=0}={}) {
       if(stopped)return false;
       const context=bindingCache.get(JSON.stringify(proofOf({classCode,generation:0})));
-      if(!context||Number(context.expiresAt)<=Date.now()+5000)return false;
+      if(!bindingFresh(context))return false;
       if(context.identityConfirmed!==false)throw Error('JOURNAL_INITIALIZATION_SCOPE_INVALID');
       const binding=capturedBinding(context);
       if(lostCount)recorder.record('sequence_gap',{cause:'initialization_buffer_budget',lostCount,
@@ -179,10 +199,9 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
     },
     async recordInitialization(rows,{classCode='',lostCount=0}={}) {
       if(stopped)throw Error('JOURNAL_STOPPED');
-      // UI choices describe intent. Only native API proof can establish learner authority.
       await api.prepareInitialization({classCode});
       if(!api.recordInitializationNow(rows,{classCode,lostCount}))throw Error('JOURNAL_INITIALIZATION_SCOPE_UNAVAILABLE');
-      // The existing periodic/exit flush owns transport cadence and retry backoff.
+      // The delivery pump owns batching and retry; startup does not bypass it.
     },
     startAudioTransfer(metadata,{forceUnconfirmed=false,classCodeHint}={}) {
       try {
@@ -230,10 +249,10 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       const action = /phục hồi/i.test(message) ? 'restore' : /^Xóa/i.test(message) ? 'reset' : /nộp/i.test(message) ? 'submit' : 'confirm';
       recorder.record('dialog_observed',{action,outcome,stage:String(getState().stage || '')});
     },
-    async stop() { stopped = true;clearInterval(timer);mutation.disconnect();observer.stop();for (const stop of audioStops.values()) stop();
+    async stop() { stopped = true;clearInterval(timer);delivery.stop();mutation.disconnect();observer.stop();for (const stop of audioStops.values()) stop();
       for(const discard of [...audioPending])discard();bindingCache.clear();win[registryKey]?.delete(connectionKey);
       if(win.EXAM_JOURNAL_AUDIO_TRANSFER===audioFactory)win.EXAM_JOURNAL_AUDIO_TRANSFER=previousAudioFactory;
-      win.removeEventListener('error',runtimeError);win.removeEventListener('unhandledrejection',runtimeError);await recorder.idle();recorder.stop();await outbox.close(); }
+      win.removeEventListener('error',runtimeError);win.removeEventListener('unhandledrejection',runtimeError);await recorder.idle();await recorder.stop();await outbox.close(); }
   };
   const previousAudioFactory=win.EXAM_JOURNAL_AUDIO_TRANSFER,audioFactory=(metadata,options)=>api.startAudioTransfer(metadata,options);
   win.EXAM_JOURNAL_AUDIO_TRANSFER=audioFactory;if(!win[registryKey])win[registryKey]=new Map();win[registryKey].set(connectionKey,api);return api;

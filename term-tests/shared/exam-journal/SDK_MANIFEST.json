@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "kind": "exam-journal-browser-sdk",
+  "revision": "ej-a176e4d58d3089a76456",
+  "sourceHashes": {
+    "audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
+    "bootstrap-capture.mjs": "0a6f783a4f0f1172af53b57e76e2b82f23394ae66eae1e66d0b74622e7a96655",
+    "bridge.mjs": "ac81dd2e9adb18e8af08afa10366c5902e207a8db35c531f914fb19ae5cc8681",
+    "capture-entry.mjs": "64f8fddb070072cfafe15ae3a3ddafb3971f73e8e4aaf04e9c5de0a63ed7317f",
+    "delivery.mjs": "fce8200de77e2605b1371872ee7a2bbb0fc72732580726b0cfa142831245103d",
+    "lobby-capture.js": "099972d58039511a57a8cc84b2c42b8df9613b5a3623800f6e241439f11764b4",
+    "outbox.mjs": "ab0c1fc85e6bac239b4f0e9d969e25232ef88c2c940a2592c955fe3f367a0c9a",
+    "recorder.mjs": "193a561a9a827cce49e2c0ec17d2a0a01699af86ff7f2b40c88aeb9de9e547a8"
+  },
+  "assets": {
+    "audio-delivery.mjs": {
+      "sha256": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
+      "bytes": 4039,
+      "dependencies": [],
+      "dynamic": []
+    },
+    "bootstrap-capture.mjs": {
+      "sha256": "32390b9aa8dd5cbe5eb432982a2865a5f1a1ca9fab63d06f77031de795b3f72c",
+      "bytes": 1017,
+      "dependencies": [
+        "bridge.mjs"
+      ],
+      "dynamic": []
+    },
+    "bridge.mjs": {
+      "sha256": "49e173a7d36e29d263770a3766b99d5f3290bfc05d04a4ec61483befcbdde345",
+      "bytes": 20425,
+      "dependencies": [
+        "audio-delivery.mjs",
+        "delivery.mjs",
+        "outbox.mjs",
+        "recorder.mjs"
+      ],
+      "dynamic": []
+    },
+    "capture-entry.mjs": {
+      "sha256": "64f8fddb070072cfafe15ae3a3ddafb3971f73e8e4aaf04e9c5de0a63ed7317f",
+      "bytes": 3784,
+      "dependencies": [],
+      "dynamic": [
+        "bootstrapUrl"
+      ]
+    },
+    "delivery.mjs": {
+      "sha256": "fce8200de77e2605b1371872ee7a2bbb0fc72732580726b0cfa142831245103d",
+      "bytes": 5170,
+      "dependencies": [],
+      "dynamic": []
+    },
+    "lobby-capture.js": {
+      "sha256": "6aed205843b7f9decf8ab4ac466af9bb64c7f544ba5611221b58564c0107c269",
+      "bytes": 9141,
+      "dependencies": [],
+      "dynamic": [
+        "bridgeUrl"
+      ]
+    },
+    "outbox.mjs": {
+      "sha256": "ab0c1fc85e6bac239b4f0e9d969e25232ef88c2c940a2592c955fe3f367a0c9a",
+      "bytes": 13271,
+      "dependencies": [],
+      "dynamic": []
+    },
+    "recorder.mjs": {
+      "sha256": "193a561a9a827cce49e2c0ec17d2a0a01699af86ff7f2b40c88aeb9de9e547a8",
+      "bytes": 26122,
+      "dependencies": [],
+      "dynamic": []
+    }
+  },
+  "hostEntryRevisionRequired": true,
+  "productionEnabled": false
+}

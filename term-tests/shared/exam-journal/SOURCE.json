@@ -1,46 +1,84 @@
 {
   "version": 1,
   "source": "tools/exam-journal",
-  "release": "20261024-startup-exit-v2",
+  "release": "ej-a176e4d58d3089a76456",
+  "candidateSource": "Standalone SDK artifact; host candidate only, production logging remains paused",
   "files": [
-    {
-      "file": "outbox.mjs",
-      "source": "browser/outbox.mjs",
-      "sha256": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
-      "bytes": 11015
-    },
-    {
-      "file": "recorder.mjs",
-      "source": "browser/recorder.mjs",
-      "sha256": "e86dc995a63500c0000d44976469a05e1afb0db17d518d67d68246348b351565",
-      "bytes": 24283
-    },
     {
       "file": "audio-delivery.mjs",
       "source": "browser/audio-delivery.mjs",
       "sha256": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
-      "bytes": 4039
-    },
-    {
-      "file": "bridge.mjs",
-      "source": "browser/bridge.mjs",
-      "sha256": "751b4b6e082d3b86d471ea1b8a5a0077b27ceb1ba4782d01f5a6c81d9333bb73",
-      "bytes": 18762
+      "bytes": 4039,
+      "dependencies": [],
+      "dynamic": []
     },
     {
       "file": "bootstrap-capture.mjs",
       "source": "browser/bootstrap-capture.mjs",
-      "sha256": "525208d11e45ee7810f17cc8e031922e11aca2590829580c20e3d624742afbfd",
-      "bytes": 1012
+      "sha256": "32390b9aa8dd5cbe5eb432982a2865a5f1a1ca9fab63d06f77031de795b3f72c",
+      "bytes": 1017,
+      "dependencies": [
+        "bridge.mjs"
+      ],
+      "dynamic": []
+    },
+    {
+      "file": "bridge.mjs",
+      "source": "browser/bridge.mjs",
+      "sha256": "49e173a7d36e29d263770a3766b99d5f3290bfc05d04a4ec61483befcbdde345",
+      "bytes": 20425,
+      "dependencies": [
+        "audio-delivery.mjs",
+        "delivery.mjs",
+        "outbox.mjs",
+        "recorder.mjs"
+      ],
+      "dynamic": []
+    },
+    {
+      "file": "capture-entry.mjs",
+      "source": "browser/capture-entry.mjs",
+      "sha256": "64f8fddb070072cfafe15ae3a3ddafb3971f73e8e4aaf04e9c5de0a63ed7317f",
+      "bytes": 3784,
+      "dependencies": [],
+      "dynamic": [
+        "bootstrapUrl"
+      ]
+    },
+    {
+      "file": "delivery.mjs",
+      "source": "browser/delivery.mjs",
+      "sha256": "fce8200de77e2605b1371872ee7a2bbb0fc72732580726b0cfa142831245103d",
+      "bytes": 5170,
+      "dependencies": [],
+      "dynamic": []
     },
     {
       "file": "lobby-capture.js",
-      "source": "pages/term-tests/shared/exam-journal/lobby-capture.js",
-      "sha256": "bf7d5e0992dd17ec85a939fdc5e3dbc14d946034b6f6eb3b19ab20e04d927a09",
-      "bytes": 9136
+      "source": "browser/lobby-capture.js",
+      "sha256": "6aed205843b7f9decf8ab4ac466af9bb64c7f544ba5611221b58564c0107c269",
+      "bytes": 9141,
+      "dependencies": [],
+      "dynamic": [
+        "bridgeUrl"
+      ]
+    },
+    {
+      "file": "outbox.mjs",
+      "source": "browser/outbox.mjs",
+      "sha256": "ab0c1fc85e6bac239b4f0e9d969e25232ef88c2c940a2592c955fe3f367a0c9a",
+      "bytes": 13271,
+      "dependencies": [],
+      "dynamic": []
+    },
+    {
+      "file": "recorder.mjs",
+      "source": "browser/recorder.mjs",
+      "sha256": "193a561a9a827cce49e2c0ec17d2a0a01699af86ff7f2b40c88aeb9de9e547a8",
+      "bytes": 26122,
+      "dependencies": [],
+      "dynamic": []
     }
   ],
-  "baseRelease": "20261024-startup-candidate",
-  "candidateSource": "Pages term-tests/shared/exam-journal; based on tools/exam-journal browser release; no backend change",
-  "hashEncoding": "Git blob bytes, UTF-8; existing line endings preserved"
+  "hashEncoding": "UTF-8 LF artifact bytes; SDK_MANIFEST.json records source and emitted hashes"
 }

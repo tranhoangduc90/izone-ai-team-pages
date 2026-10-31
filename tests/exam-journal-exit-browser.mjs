@@ -48,12 +48,15 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({channel:'msedge',headless:true});
 const events=()=>logs.flatMap(r=>r.body.events);
 async function until(fn,ms=4500){const end=Date.now()+ms;while(!fn()){if(Date.now()>end)throw Error('Missing exit receipt');await new Promise(r=>setTimeout(r,25));}}
+// Normal observations use the SDK's <=15s batch cadence. Only warm-up/ordinary
+// selection waits get this allowance; departure receipts keep the 4.5s check.
+const warmupMs=20_000;
 async function run(name,fn){try{await fn();results.push({case:name,status:'PASS'});}catch(e){results.push({case:name,status:'FAIL',message:e.message});process.exitCode=1;}}
 try{
  for(const blocked of [false,true])await run('real change-learner navigation, storage '+(blocked?'stalled':'normal'),async()=>{
   const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const offset=events().length;await page.goto(url+'/fixture?class=ICFIXA'+(blocked?'&blockedStorage=1':''));
-  await until(()=>events().slice(offset).some(e=>e.data.action==='capture_started'));
+  await until(()=>events().slice(offset).some(e=>e.data.action==='capture_started'),warmupMs);
   const id=events().slice(offset).find(e=>e.data.action==='capture_started').pageVisitId;
   await page.selectOption('#bootstrapStudent','fixture-A');
   assert.equal(await page.locator('#answer').inputValue(),'unchanged');assert.equal(await page.locator('#bootstrapStart').isDisabled(),true);
@@ -62,7 +65,9 @@ try{
   // A normal IDB write can finish before unload while its network ACK is still
   // pending. Reopen the app in the same tab to verify durable replay as well.
   if(!blocked){await page.goto(url+'/fixture?class=ICFIXA');}
-  await until(()=>events().some(e=>e.pageVisitId===id&&e.data.action==='change_learner_requested'));
+  // The click can already be durable before departure; replay after reopening
+  // uses ordinary batch pacing. The page_hidden receipt above stays at 4.5s.
+  await until(()=>events().some(e=>e.pageVisitId===id&&e.data.action==='change_learner_requested'),warmupMs);
   const rows=events().filter(e=>e.pageVisitId===id);
   assert.ok(rows.some(e=>e.data.action==='change_learner_requested'));
   const exit=rows.find(e=>e.type==='page_hidden'&&e.data.stage==='initialization');
@@ -71,7 +76,7 @@ try{
  });
  await run('same-turn visibility/pagehide and return retain distinct lifecycle facts',async()=>{
   const page=await browser.newPage(),offset=events().length;await page.goto(url+'/fixture?class=ICFIXA');
-  await until(()=>events().slice(offset).some(e=>e.data.action==='capture_started'));
+  await until(()=>events().slice(offset).some(e=>e.data.action==='capture_started'),warmupMs);
   const id=events().slice(offset).find(e=>e.data.action==='capture_started').pageVisitId;
   const unchanged=await page.evaluate(()=>{
    Object.defineProperty(document,'visibilityState',{value:'hidden',configurable:true});document.dispatchEvent(new Event('visibilitychange'));
@@ -86,7 +91,7 @@ try{
  await run('slow context retains early selection without granting learner authority',async()=>{
   delay=600;const page=await browser.newPage(),offset=events().length;
   await page.goto(url+'/fixture?class=ICFIXA');await page.selectOption('#bootstrapStudent','fixture-A');
-  await until(()=>events().slice(offset).some(e=>e.data.action==='selection_changed'&&e.data.checkpointState?.selected?.value==='fixture-A'));
+  await until(()=>events().slice(offset).some(e=>e.data.action==='selection_changed'&&e.data.checkpointState?.selected?.value==='fixture-A'),warmupMs);
   const rows=events().slice(offset);assert.ok(rows.some(e=>e.data.action==='capture_started'));
   assert.ok(proofs.every(p=>!p.attemptToken&&!p.examSessionToken&&!p.studentRef));
   assert.equal(await page.locator('#answer').inputValue(),'unchanged');assert.equal(await page.locator('#bootstrapStart').isDisabled(),true);
