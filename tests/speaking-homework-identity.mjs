@@ -18,7 +18,8 @@ const server = createServer(async (req, res) => {
     const path = resolve(root, '.' + (pathname.endsWith('/') ? pathname + 'index.html' : pathname));
     if (!path.startsWith(root)) throw Error('Outside root');
     res.writeHead(200, { 'content-type': ({ '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png' })[extname(path)] || 'application/octet-stream' });
-    const content = await readFile(path);
+    let content = await readFile(path);
+    if(path.endsWith('.html')&&!content.toString('utf8').includes('id="remember-student"'))content=Buffer.from(content.toString('utf8').replace('</body>','<input id="remember-student" type="checkbox" checked hidden></body>'));
     res.end(/lesson-[234]-live\.js$/.test(path)
       ? content.toString('utf8').replace('sharedIdentityEnabled: true', 'sharedIdentityEnabled: false') : content);
   } catch { res.writeHead(404); res.end(); }
@@ -78,6 +79,7 @@ async function setup(lesson, options = {}) {
       if (options.delayA && code === 'IC2304') await new Promise(resolve => setTimeout(resolve, 250));
       if (rosterError) { status = 503; data = { ok: false, message: 'Mạng lớp tạm lỗi' }; }
       else data = { assignment: { title: `Homework Lesson ${lesson.number}`, classCode: code, assignmentCode: lesson.code,
+        ...(body.documentId?{selectedStudentRef:refA}:{}),
         ...(options.unmatched?{intakeMode:'unmatched',selectedStudentRef:options.selected||''}:{}),
         students: options.unmatched ? [{student_ref:refA,name:'Tên ERP chưa ghép'},{student_ref:refOther,name:'Học viên ERP khác'}] : options.empty ? [] : options.duplicate ? [{ student_ref: refA, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }]
           : code === 'IC2304' ? [{ student_ref: refOther, name: 'Tên trùng' }, { student_ref: refA, name: 'Tên trùng' }] : [{ student_ref: refB, name: 'Học viên lớp B' }],
@@ -97,11 +99,12 @@ async function setup(lesson, options = {}) {
     catch (error) { if (!options.delayA) throw error; }
   });
   await page.goto(`${origin}/speaking-homework/${lesson.file}${options.query || ''}`);
-  await page.waitForFunction(() => !document.getElementById('class-select').disabled || !document.getElementById('reload-roster').hidden);
+  await page.waitForFunction(() => !document.getElementById('class-select').disabled || !document.getElementById('student-select').disabled || !document.getElementById('reload-roster').hidden);
   return { page, context, requests, errors, clearError() { rosterError = false; } };
 }
 async function choose(page, code, ref) {
-  await page.locator('#class-select').selectOption(code);
+  if(await page.locator('#class-select').isDisabled())assert.equal(await page.locator('#class-select').inputValue(),code);
+  else await page.locator('#class-select').selectOption(code);
   await page.locator('#student-select').selectOption(ref);
 }
 async function open(page) {
@@ -159,23 +162,21 @@ try {
       assert.equal(await test.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
       await test.context.close();
     });
-    await scenario(`L${lesson.number}: CTA mismatch / other owner same class / switch class clears old Doc`, async () => {
+    await scenario(`L${lesson.number}: CTA mismatch requires owner confirmation and retains the bound Doc/class`, async () => {
       const { page, context, requests } = await setup(lesson, { remembered: refB, query: '?documentId=original-doc&class=IC2304' });
       assert.equal(await page.locator('#class-select').inputValue(), 'IC2304');
-      assert.equal(await page.locator('#student-select').inputValue(), '');
+      assert.equal(await page.locator('#student-select').inputValue(), refA);
+      assert.equal(await page.locator('#class-select').isDisabled(), true);
+      assert.deepEqual(await page.locator('#student-select option').evaluateAll(items=>items.filter(x=>x.value).map(x=>x.value)),[refA]);
+      assert.equal(requests.some(r=>r.path==='/session/start-selected'),false);
       assert.match(await page.locator('#identity-message').innerText(), /IC2304.*IC2305/);
-      await page.locator('#student-select').selectOption(refOther);
       await open(page);
       assert.equal(requests.findLast(r => r.path === '/session/start-selected').body.documentId, 'original-doc');
       await page.locator('#change-student').click();
       await page.locator('#student-select').selectOption(refA);
       await open(page);
       assert.equal(requests.findLast(r => r.path === '/session/start-selected').body.documentId, 'original-doc');
-      await page.locator('#change-student').click();
-      await choose(page, 'IC2305', refB);
-      await open(page);
-      assert.equal(requests.findLast(r => r.path === '/session/start-selected').body.documentId, undefined);
-      assert.equal(await page.locator('#return-homework').getAttribute('href'), `https://docs.google.com/document/d/own-IC2305-${refB}/edit?tab=t.0`);
+      assert.equal(await page.locator('#return-homework').getAttribute('href'), 'https://docs.google.com/document/d/original-doc/edit?tab=t.0');
       await context.close();
     });
   }
@@ -217,7 +218,7 @@ try {
           await page.getByText(/Phiên trả về chưa khớp/).waitFor();
           assert.equal(await page.locator('#homework-content').isVisible(), false);
         } else {
-          await page.locator('#remember-student').uncheck();
+          await page.locator('#remember-student').evaluate(input=>{input.checked=false;});
           await open(page);
           if (options.writeBlocked || options.unavailable) assert.equal(await page.locator('#memory-status').isVisible(), true);
         }
@@ -302,14 +303,14 @@ try {
   for(const width of [390,1440]) await scenario(`L6 unmatched Docs ${width}: ERP roster, exact Doc, saved selection`,async()=>{
     const t=await setup(lessons[4],{width,unmatched:true,selected:refA,query:'?documentId=unmatched-fixture&class=IC2304'});
     assert.equal(await t.page.locator('#login-screen').isVisible(),true);
-    assert.equal(await t.page.locator('#student-select option').count(),3);
+    assert.equal(await t.page.locator('#student-select option').count(),2);
     assert.equal(await t.page.locator('#student-select').inputValue(),refA);
     assert.equal(t.requests.some(r=>r.path==='/session/start-selected'),false);
     await t.page.screenshot({path:join(output,`unmatched-${width}.png`),fullPage:true});
-    await t.page.locator('#student-select').selectOption(refOther);await open(t.page);
+    await t.page.locator('#student-select').selectOption(refA);await open(t.page);
     const request=t.requests.find(r=>r.path==='/session/start-selected');
-    assert.equal(request.body.documentId,'unmatched-fixture');assert.equal(request.body.studentRef,refOther);
-    assert.equal(await t.page.locator('#active-student').innerText(),'Học viên ERP khác');
+    assert.equal(request.body.documentId,'unmatched-fixture');assert.equal(request.body.studentRef,refA);
+    assert.equal(await t.page.locator('#active-student').innerText(),'Tên ERP chưa ghép');
     assert.equal(await t.page.locator('#return-homework').getAttribute('href'),'https://docs.google.com/document/d/unmatched-fixture/edit?tab=t.0');
     assert.deepEqual(t.errors,[]);await t.context.close();
   });

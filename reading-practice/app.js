@@ -9,6 +9,8 @@ const API=window.READING_CONFIG.apiBase.replace(/\/$/,'');
 const MEMORY='reading-practice67-identity';
 const entryQuery=new URLSearchParams(location.search),requestedLesson=entryQuery.get('lesson')||'9';
 const docId=entryQuery.get('documentId')||`lesson:${requestedLesson}`;
+const personalEntry=entryQuery.has('documentId');
+let entryValidated=false;
 let sharedEntry=false,CLASSES=[],selectedClassId='',rosterGeneration=0;
 const SESSION=`reading-practice67-session:${docId}`,ENTRY=`reading-practice67-entry:${docId}`;
 const {createCourseStudentIdentity,requestMappingStudentIdentity}=await import('../shared/course-student-identity.js?v=20261018-identity-v1');
@@ -80,7 +82,7 @@ async function autoLoginRemembered(){
  if(selected){
   // Kết quả vừa xác minh vẫn thuộc lượt mở này, không cache quyền qua lượt sau.
   if(!courseIdentity.isCurrent(selected)||!STUDENTS.some(s=>(s.id||s.studentRef)===selected.alias.studentRef))return false;
- }else selected=await courseIdentity.resolve({classCode,studentRefs:STUDENTS.map(s=>s.id||s.studentRef),expectedRef:sharedEntry?'':entryInfo?.selectedStudentRef});
+ }else selected=await courseIdentity.resolve({classCode,studentRefs:STUDENTS.map(s=>s.id||s.studentRef),expectedRef:personalEntry?entryInfo?.selectedStudentRef:''});
  if(selected.status==='wrong_owner'){notify('Link bài thuộc người khác với người đã nhớ. Hãy kiểm tra link hoặc dùng Đổi người học.');return false;}
  if(selected.status!=='unique')return false;
  await loginSelected(selected.alias.studentRef,sharedEntry?selectedClassId:classCode,{selection:selected});return true;
@@ -118,7 +120,7 @@ async function request(path,body,teacher=false,keepalive=false){
  let token=sessionToken;
  if(teacher){try{token=sessionStorage.getItem('reading-teacher-token');}catch{token='';}}
  let response;try{
-  let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000),keepalive};
+  let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{ }),...(personalEntry&&entryValidated&&!teacher?{'X-Izone-Document':docId,'X-Izone-Assignment':entryInfo.assignmentCode}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000),keepalive};
   if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js?startup=20261026-v2');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
   response=await fetch(`${API}${path}`,options);}
  catch{networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
@@ -184,13 +186,14 @@ async function loadResult(no){
 function docsNotice(a){if(identity?.entryMode==='shared')return `<div class="note success">✓ Kết quả đã được lưu riêng cho bạn. <a href="teacher.html#submission=${encodeURIComponent(a.submissionId)}" target="_blank" rel="noopener noreferrer">Giảng viên xem kết quả ↗</a></div>`;const e=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed'),verified=e?.docs==='verified';return `<div class="note ${verified?'success':'warning'}">${verified?'✓ Đã cập nhật tình trạng trong tài liệu bài tập.':e?.docs==='blocked'?'Bài đã nộp. Chưa cập nhật được Docs; giảng viên cần kiểm tra ô trạng thái.':'Bài đã nộp và được lưu trên máy chủ. Đang cập nhật tình trạng trong Docs.'} <a href="${escape(identity.documentUrl)}" target="_blank" rel="noopener noreferrer">Mở tài liệu ↗</a></div>`;}
 function docs(){app.innerHTML=hero(`BUỔI ${LESSON.lesson} · READING THỰC CHIẾN`,LESSON.title,`${escape(AuthoredUI.sourceLabel(LESSON))} · ${total()} câu · ${FULL_TIME/60000} phút`)+`<section class="card card-pad"><h2>Làm bài thực chiến</h2><p>Chọn đúng lớp và tên trước khi bắt đầu. Bài đang làm được lưu để bạn tiếp tục bằng thời gian còn lại.</p>${btn('Mở bài Reading →','open-assignment')}${identity?.documentUrl?`<p><a target="_blank" rel="noopener noreferrer" href="${escape(identity.documentUrl)}">Mở tài liệu bài tập ↗</a></p>`:''}</section>`+footer();}
 function login(){
- const memory={}; // Bộ nhớ cũ được chuyển riêng; không lấy tên cũ để lấn danh tính chung.
+ const memory=personalEntry?{studentId:entryInfo.selectedStudentRef,classCode:entryInfo.classCode}:{}; // Chỉ chọn chủ đã được máy chủ đối chiếu.
  const selected=STUDENTS.some(s=>s.id===memory.studentId)&&(!sharedEntry||CLASSES.find(c=>c.id===selectedClassId)?.classCode===memory.classCode)?memory.studentId:'';
  const classOptions=sharedEntry?CLASSES.map(c=>`<option value="${escape(c.id)}" ${c.id===selectedClassId?'selected':''}>${escape(c.classCode)}</option>`).join(''):`<option value="${escape(entryInfo?.classCode)}" ${selected?'selected':''}>${escape(entryInfo?.classCode)}</option>`;
- app.innerHTML=`<div class="login-layout"><section><span class="kicker">BUỔI ${LESSON.lesson} · READING THỰC CHIẾN</span><h1>${escape(LESSON.title)}</h1><p class="login-copy">${LESSON.passages?'Luyện trọn 3 passage, 40 câu':'Luyện trọn một passage'} trong ${FULL_TIME/60000} phút.<br>Đọc kỹ, chốt ý và chọn đáp án.</p><ul class="login-tasks"><li><span>01</span><div><strong>Chuẩn bị</strong><p>${LESSON.authored?escape(LESSON.groups.map(AuthoredUI.groupDisplayLabel).join(' · ')):isRobots()?'Nhắc nhanh cách ghép tên, ghép vế câu và MCQ.':'Nhắc nhanh cách làm Headings và MCQ.'}</p></div></li><li><span>02</span><div><strong>Làm bài</strong><p>${total()} câu · Tự lưu · Có thể tiếp tục lần đang làm.</p></div></li><li><span>03</span><div><strong>Xem kết quả</strong><p>Điểm, đáp án và số lần làm bài.</p></div></li></ul></section><section class="card login-card"><h2>Bạn học lớp nào?</h2><p class="muted">Chọn đúng lớp và tên trước khi bắt đầu.</p><form id="login-form"><label for="class-select">Lớp</label><select id="class-select" required><option value="">Chọn lớp của bạn</option>${classOptions}</select><label for="student-select">Học viên</label><select id="student-select" required ${(sharedEntry?selectedClassId:selected)?'':'disabled'}><option value="">Chọn tên của bạn</option>${STUDENTS.map(s=>`<option value="${escape(s.id)}" ${s.id===selected?'selected':''}>${escape(s.name)}</option>`).join('')}</select><label class="check-line"><input id="remember-student" type="checkbox" checked> Ghi nhớ tôi trên thiết bị này</label><p class="memory-help">Lần sau sẽ chọn sẵn lớp và tên của bạn.<br>Bỏ tick nếu bạn đang dùng thiết bị chung.</p><button class="button full" id="login-submit" ${selected?'':'disabled'}><span>Mở bài Reading</span><span>→</span></button><p class="form-error" role="status" id="login-error"></p></form></section></div>`;
+ app.innerHTML=`<div class="login-layout"><section><span class="kicker">BUỔI ${LESSON.lesson} · READING THỰC CHIẾN</span><h1>${escape(LESSON.title)}</h1><p class="login-copy">${LESSON.passages?'Luyện trọn 3 passage, 40 câu':'Luyện trọn một passage'} trong ${FULL_TIME/60000} phút.<br>Đọc kỹ, chốt ý và chọn đáp án.</p><ul class="login-tasks"><li><span>01</span><div><strong>Chuẩn bị</strong><p>${LESSON.authored?escape(LESSON.groups.map(AuthoredUI.groupDisplayLabel).join(' · ')):isRobots()?'Nhắc nhanh cách ghép tên, ghép vế câu và MCQ.':'Nhắc nhanh cách làm Headings và MCQ.'}</p></div></li><li><span>02</span><div><strong>Làm bài</strong><p>${total()} câu · Tự lưu · Có thể tiếp tục lần đang làm.</p></div></li><li><span>03</span><div><strong>Xem kết quả</strong><p>Điểm, đáp án và số lần làm bài.</p></div></li></ul></section><section class="card login-card"><h2>${personalEntry?'Xác nhận người học':'Bạn học lớp nào?'}</h2><p class="muted">${personalEntry?`Bài của ${escape(STUDENTS[0]?.name)} · ${escape(entryInfo.classCode)}. Nếu không phải bạn, hãy mở link Homework của mình.`:'Chọn đúng lớp và tên trước khi bắt đầu.'}</p><form id="login-form"><label for="class-select">Lớp</label><select id="class-select" required ${personalEntry?'disabled':''}><option value="">Chọn lớp của bạn</option>${classOptions}</select><label for="student-select">Học viên</label><select id="student-select" required ${(sharedEntry?selectedClassId:selected)?'':'disabled'}><option value="">Chọn tên của bạn</option>${STUDENTS.map(s=>`<option value="${escape(s.id)}" ${s.id===selected?'selected':''}>${escape(s.name)}</option>`).join('')}</select><p class="memory-help">Trình duyệt sẽ nhớ người học sau khi mở bài. Dùng Đổi người học khi dùng chung thiết bị.</p><button class="button full" id="login-submit" ${selected?'':'disabled'}><span>Mở bài Reading</span><span>→</span></button><p class="form-error" role="status" id="login-error"></p></form></section></div>`;
 }
 // Đổi lớp chỉ cập nhật danh sách tương ứng; bỏ phản hồi cũ nếu học viên đã chọn lớp khác.
 async function selectSharedClass(classId){
+ if(personalEntry)return;
  const generation=++rosterGeneration;selectedClassId=classId;STUDENTS=[];
  const select=document.querySelector('#student-select'),button=document.querySelector('#login-submit');
  select.disabled=true;select.innerHTML='<option value="">'+(classId?'Đang tải danh sách…':'Chọn tên của bạn')+'</option>';button.disabled=true;
@@ -640,7 +643,7 @@ function saveAnswer(input){if(!writable())return;current().answers[input.dataset
 document.addEventListener('submit',async event=>{
  if(event.target.id!=='login-form')return;event.preventDefault();const button=document.querySelector('#login-submit');button.disabled=true;
  try{const id=document.querySelector('#student-select').value,classCode=document.querySelector('#class-select').value;
-  await loginSelected(id,classCode,{remember:document.querySelector('#remember-student').checked});
+  await loginSelected(id,classCode,{remember:true});
  }catch(e){const error=document.querySelector('#login-error');if(error)error.textContent=e.message;else notify(e.message);}finally{button.disabled=false;}
 });
 function recoverLocal(){
@@ -686,25 +689,34 @@ async function bootstrap(){
   const entry=new URLSearchParams(location.hash.split('?')[1]).get('entry');
   if(entry){try{sessionStorage.setItem(ENTRY,entry);}catch{}history.replaceState(history.state,'',location.pathname+location.search+'#login');}
   try{entryToken=entry||sessionStorage.getItem(ENTRY)||'';sessionToken=courseIdentity.canRestoreSession()?sessionStorage.getItem(SESSION)||'':'';}catch{entryToken=entry||'';sessionToken='';}
-  sharedEntry=!entryToken&&!entryQuery.has('documentId');
-  // Hai bước chỉ đọc chạy song song; vẫn kiểm phiên và link trước khi hiện bài.
-  const [savedState,openedEntry]=await Promise.allSettled([
-   sessionToken?request('/state'):Promise.resolve(null),
-   entryToken?request('/open',{entryToken}):Promise.resolve(null)
-  ]);
-  if(sessionToken){try{if(savedState.status==='rejected')throw savedState.reason;apply(savedState.value);recoverLocal();}catch(e){if(e.code==='UNAUTHORIZED'){sessionToken='';sessionStorage.removeItem(SESSION);}else throw e;}}
-  if(entryToken){if(openedEntry.status==='rejected')throw openedEntry.reason;entryInfo=openedEntry.value;STUDENTS=entryInfo.students;setLesson(entryInfo.lesson);
-   if(sessionToken&&identity.bindingId!==entryInfo.bindingId){sessionToken='';studentId='';identity=null;sessionStorage.removeItem(SESSION);}}
+  sharedEntry=!entryToken;
+  // Kiểm chủ link trước khi đọc bất kỳ bài/nháp nào của phiên đã lưu.
+  if(personalEntry){
+   entryInfo=entryToken?await request('/open',{entryToken}):await request(`/entry-context?documentId=${encodeURIComponent(docId)}&code=${encodeURIComponent(entryQuery.get('assignmentCode')||requestedLesson)}`);
+   if(entryInfo.documentId!==docId||!entryInfo.bindingId||!entryInfo.selectedStudentRef
+     ||entryQuery.has('assignmentCode')&&entryInfo.assignmentCode!==entryQuery.get('assignmentCode')
+     ||entryQuery.has('class')&&entryInfo.classCode!==entryQuery.get('class'))throw new Error('Chủ link, lớp hoặc mã bài chưa khớp. Hãy mở đúng link Homework.');
+   STUDENTS=entryInfo.students.filter(s=>(s.id||s.studentRef)===entryInfo.selectedStudentRef);
+   if(!entryToken&&entryInfo.entryMode==='homework')sharedEntry=false;
+   if(STUDENTS.length!==1)throw new Error('Link chưa có duy nhất chủ bài hợp lệ.');
+   setLesson(entryInfo.lesson);entryValidated=true;
+  }else if(entryToken){entryInfo=await request('/open',{entryToken});STUDENTS=entryInfo.students;setLesson(entryInfo.lesson);}
+  if(sessionToken){try{const saved=await request('/state');
+    if(personalEntry&&(saved.identity?.bindingId!==entryInfo.bindingId||saved.identity?.studentRef!==entryInfo.selectedStudentRef))throw Object.assign(new Error('Phiên khác chủ link.'),{code:'ENTRY_OWNER_MISMATCH'});
+    apply(saved);recoverLocal();
+   }catch(e){if(['UNAUTHORIZED','ENTRY_OWNER_MISMATCH'].includes(e.code)){sessionToken='';sessionStorage.removeItem(SESSION);}else throw e;}}
   if(sharedEntry){
    if(sessionToken&&identity?.entryMode!=='shared'){sessionToken='';studentId='';identity=null;sessionStorage.removeItem(SESSION);}
    let catalog;
-   try{catalog=await request(`/library/${encodeURIComponent(requestedLesson)}`);}catch(e){if(e.code!=='LESSON_NOT_OPEN'||!sessionToken)throw e;}
-   if(catalog){CLASSES=catalog.classes;entryInfo=catalog;setLesson(catalog.lesson);}
+   try{catalog=await request(`/library/${encodeURIComponent(personalEntry?entryInfo.assignmentCode:requestedLesson)}`);}catch(e){if(e.code!=='LESSON_NOT_OPEN'||!sessionToken)throw e;}
+   if(catalog){CLASSES=personalEntry?catalog.classes.filter(c=>c.id===entryInfo.classId&&c.classCode===entryInfo.classCode):catalog.classes;if(!personalEntry)entryInfo=catalog;setLesson(catalog.lesson);}
+   if(personalEntry&&!catalog&&sessionToken)CLASSES=[{id:entryInfo.classId,classCode:entryInfo.classCode}];
+   if(personalEntry&&CLASSES.length!==1)throw new Error('Chủ link chưa còn trong lớp được mở bài.');
    let memory={};try{memory=JSON.parse(localStorage.getItem(MEMORY))||{};}catch{}
-   selectedClassId=CLASSES.find(c=>c.classCode===(identity?.classCode||(courseIdentity.read().status==='ok'?'':memory.classCode)))?.id||'';
-   if(selectedClassId){const roster=await request(`/library/${encodeURIComponent(requestedLesson)}/classes/${encodeURIComponent(selectedClassId)}`);STUDENTS=roster.students;}
+   selectedClassId=personalEntry?entryInfo.classId:CLASSES.find(c=>c.classCode===(identity?.classCode||(courseIdentity.read().status==='ok'?'':memory.classCode)))?.id||'';
+   if(selectedClassId&&!personalEntry){const roster=await request(`/library/${encodeURIComponent(requestedLesson)}/classes/${encodeURIComponent(selectedClassId)}`);STUDENTS=roster.students;}
   }
-  if(!sharedEntry&&!sessionToken&&!entryToken)throw new Error('Hãy mở bài bằng nút CTA trong bản Homework của bạn.');
+  if(!sharedEntry&&!sessionToken&&!entryToken)throw new Error('Hãy mở lại bằng nút CTA trong bản Homework của bạn.');
   ready=true;
   if(sessionToken){courseIdentity.pin(identity.studentRef);navigate(['running','paused'].includes(current()?.status)?'resume':'prep');}
   else{let automatic=false;try{automatic=await autoLoginRemembered();}catch(e){notify(e.message);}if(!automatic)navigate('login');}
