@@ -10,6 +10,9 @@ const site='https://tranhoangduc90.github.io/izone-ai-team-pages',entry='/readin
 const code='67-reading-homework-butterflies-britain-tfng',doc='synthetic-owner-document-1234567890',a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222';
 const person=ref=>({ownerId:ref,courseId:'1293',erpId:ref===a?'900001':'900002',name:ref===a?'Synthetic A':'Synthetic B',className:'IC2304'});
 async function fixture(browser,options={}){
+ const code=options.code||'67-reading-homework-butterflies-britain-tfng',api=options.api||'/reading67-materials/api/reading-skills67/lesson12',entry=options.entry||'/reading-skills67/butterflies-britain-tfng/';
+ const classId=options.classId||'1293',classCode=options.classCode||'IC2304';
+ const person=ref=>({ownerId:ref,courseId:classId,erpId:ref===a?'900001':'900002',name:ref===a?'Synthetic A':'Synthetic B',className:classCode});
  const context=await browser.newContext(),calls=[],errors=[];
  await context.addInitScript(({remembered,saved,code})=>{
   if(remembered)localStorage.setItem('izone:student-identity:v1',JSON.stringify({version:1,identity:{authority:'erp-contact',id:remembered.erpId},revision:'synthetic-revision-123',updatedAt:new Date().toISOString()}));
@@ -25,18 +28,18 @@ async function fixture(browser,options={}){
   calls.push({path:p,method:req.method(),headers:req.headers(),body:req.postDataJSON()});
   if(p.includes('/teacher-session-api/v1/restore/'))return options.teacherSignedOut?send({error:'SSO_REQUIRED'},401):send({ok:true});
   if(p.endsWith('/shared-session'))return send({error:'SSO_REQUIRED'},401);
-  if(p===api+'/config')return send({code,title:'Owner entry fixture',type:'tfng',demoGoogle:!!options.teacherSignedOut,autoRole:true,studentsOpen:true,ownerEntry:{classId:'1293',classCode:'IC2304'}});
-  if(p===api+'/entry')return u.searchParams.get('documentId')===doc&&!options.revoked?send({entry:{documentId:doc,classId:'1293',studentRef:a,name:'Synthetic A',classCode:'IC2304',code}}):send({error:'HOMEWORK_ENTRY_NOT_FOUND'},403);
+  if(p===api+'/config')return send({code,title:'Owner entry fixture',type:'tfng',demoGoogle:!!options.teacherSignedOut,autoRole:true,studentsOpen:true,ownerEntry:{classes:[{classId,classCode},{classId:'9999',classCode:'OTHER'}]}});
+  if(p===api+'/entry')return u.searchParams.get('documentId')===doc&&!options.revoked?send({entry:{documentId:doc,classId,studentRef:a,name:'Synthetic A',classCode,code}}):send({error:'HOMEWORK_ENTRY_NOT_FOUND'},403);
   if(p.startsWith(api+'/teacher/'))return options.teacherSignedOut?send({error:'TEACHER_LOGIN_REQUIRED'},401):options.teacherDenied?send({error:'ACCESS_DENIED'},403):send({readonly:true,classes:[]});
-  if(p===api+'/classes')return send({classes:[{id:'1293',classCode:'IC2304'},{id:'9999',classCode:'OTHER'}]});
-  if(p===api+'/classes/1293/students')return send({students:[a,b].map(ref=>({studentRef:ref,name:person(ref).name}))});
-  if(p===api+'/identity/resolve'){const input=req.postDataJSON(),ref=(input.identity?.id==='900002'||input.studentRef===b)?b:a;return send({ok:true,status:'unique',identity:{authority:'erp-contact',id:person(ref).erpId},aliases:[{classId:'1293',classCode:'IC2304',studentRef:ref,studentName:person(ref).name}]});}
-  if(p===api+'/student/login'){const ref=req.postDataJSON().studentRef;assert.equal(req.headers()['x-reading-homework-document'],doc);assert.equal(ref,a);return send({token:'synthetic-'+ref,identity:person(ref)});}
-  if(p===api+'/lesson'||p===api+'/draft'){assert.equal(req.headers()['x-reading-homework-document'],doc);assert.equal(req.headers().authorization,'Bearer synthetic-'+a);return send(p.endsWith('/lesson')?{identity:person(a)}:{revision:7,body:{answers:{x:'UNMODIFIED DRAFT A'}}});}
+  if(p===api+'/classes')return send({classes:[{id:classId,classCode},{id:'9999',classCode:'OTHER'}]});
+  if(p===api+'/classes/'+classId+'/students')return send({students:[a,b].map(ref=>({studentRef:ref,name:person(ref).name}))});
+  if(p===api+'/identity/resolve'){const input=req.postDataJSON(),ref=(input.identity?.id==='900002'||input.studentRef===b)?b:a;return send({ok:true,status:'unique',identity:{authority:'erp-contact',id:person(ref).erpId},aliases:[{classId,classCode,studentRef:ref,studentName:person(ref).name}]});}
+  if(p===api+'/student/login'){const ref=req.postDataJSON().studentRef;assert.equal(req.headers()['x-reading-homework-document'],options.generic?undefined:doc);assert.equal(ref,a);return send({token:'synthetic-'+ref,identity:person(ref)});}
+  if(p===api+'/lesson'||p===api+'/draft'){assert.equal(req.headers()['x-reading-homework-document'],options.generic?undefined:doc);assert.equal(req.headers().authorization,'Bearer synthetic-'+a);return send(p.endsWith('/lesson')?{identity:person(a)}:{revision:7,body:{answers:{x:'UNMODIFIED DRAFT A'}}});}
   throw Error('Unexpected API '+req.method()+' '+p);
  });
  const page=await context.newPage();page.setDefaultTimeout(5000);page.on('pageerror',e=>errors.push(e.message));
- const open=query=>page.goto(site+entry+'access-harness.html?server=1&mode=student&class=IC2304&documentId='+doc+(query||''));
+ const open=query=>page.goto(site+entry+'access-harness.html?server=1'+(options.generic?'':'&mode=student&class='+classCode+'&documentId='+doc)+(query||''));
  return {context,page,calls,errors,open};
 }
 test('Lesson 12 owner-bound student and teacher entry',async t=>{
@@ -58,5 +61,17 @@ test('Lesson 12 owner-bound student and teacher entry',async t=>{
    const f=await fixture(browser,{remembered:b,teacherDenied});try{await f.open('&teacher=1&classId=1293&studentRef='+a);if(teacherDenied){await f.page.getByText('Tài khoản chưa có quyền lớp.',{exact:true}).waitFor();assert.equal(await f.page.locator('#entry-class').count(),0);}else{await f.page.locator('#ready').waitFor();assert.deepEqual(await f.page.evaluate(()=>entryResult),{teacher:true,person:null,readonly:true});}assert.equal(f.calls.some(c=>c.path===api+'/entry'||c.path===api+'/student/login'||c.path===api+'/draft'),false);assert.deepEqual(f.errors,[]);}finally{await f.context.close();}
   });
   await t.test('Unknown/revoked owner link fails closed, preserving memory',async()=>{const f=await fixture(browser,{remembered:b,revoked:true});try{await f.open();await f.page.getByText(/Chưa xác nhận được chủ/).waitFor();assert.equal(f.calls.some(c=>/\/(draft|lesson|student\/login)$/.test(c.path)),false);assert.deepEqual(f.errors,[]);}finally{await f.context.close();}});
+
+  for(const [slug,code,route] of [
+   ['materials-beyond-concrete','67-reading-materials-beyond-concrete-matching-information-nen-cap-1',''],
+   ['butterflies-britain-tfng','67-reading-homework-butterflies-britain-tfng','/lesson12'],
+   ['green-roofs','67-reading-green-roofs','/green-roofs'],
+   ['the-desolenator','67-reading-the-desolenator','/the-desolenator'],
+   ['athletes-and-stress','67-reading-athletes-and-stress','/athletes-and-stress'],
+   ['materials-beyond-concrete-matching-people','67-reading-materials-to-take-us-beyond-concrete-matching-people','/materials-beyond-concrete-matching-people']
+  ])for(const generic of [false,true])await t.test(slug+' multi-class entry; generic='+generic,async()=>{
+   const f=await fixture(browser,{code,api:'/reading67-materials/api/reading-skills67'+route,entry:'/reading-skills67/'+slug+'/',classId:'202',classCode:'CLASS-B',remembered:a,generic});
+   try{await f.open();await f.page.locator('#ready').waitFor();assert.equal(await f.page.evaluate(()=>entryResult.person.courseId),'202');assert.equal(await f.page.evaluate(()=>entryResult.teacher),false);assert.equal(f.calls.some(c=>c.path.includes('/teacher/')||c.path.includes('/teacher-session-api/')),false);assert.deepEqual(f.errors,[]);}finally{await f.context.close();}
+  });
  }finally{await browser.close();}
 });
