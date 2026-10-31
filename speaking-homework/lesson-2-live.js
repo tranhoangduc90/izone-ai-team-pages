@@ -1,7 +1,7 @@
 import { focusSpeakingStart } from './journey-focus.js';
 import {renderDocsProgress,docsProgressPending} from './docs-progress.js?v=20261025-progress1';
 import { analysisStatus, analysisPending } from './analysis-status.js?v=20261020-doctor-snapshot-v1';
-import { createSpeakingIdentity } from './speaking-identity.js?v=20261018-speaking-tab-v2';
+import { createSpeakingIdentity } from './speaking-identity.js?v=20261031-owner-entry1';
 import { createPendingPoller } from './pending-poller.js';
 import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
 import { parseShareUrl } from './logic.mjs';

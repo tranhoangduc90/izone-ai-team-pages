@@ -12,7 +12,7 @@ const base = String(speaking ? config.API_BASE_URL : config.apiBase).replace(/\/
 const progressPath = speaking ? '/api/speaking-homework-independent/teacher/progress' : '/teacher/progress';
 const titles = { speaking: 'Speaking Homework', reading: 'Reading thực chiến', listening: 'Listening thực chiến' };
 const defaults = { reading: query.get('lesson') === '7' ? '67-practice-reading_matching_heading_mcq' : '67-practice-reading_matching_names_sentence_endings_mcq', listening: '67-practice-listening_mcq_flowchart' };
-const state = { code: query.get('code') || defaults[product] || '', classes: [], classId: '', students: [], selected: null, detail: null, attemptId: null, focusRef: null };
+const state = { code: query.get('code') || (/^67-practice-/.test(query.get('lesson')||'') ? query.get('lesson') : '') || defaults[product] || '', classes: [], classId: '', students: [], selected: null, detail: null, attemptId: null, focusRef: null };
 const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uuid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value || '');
@@ -112,8 +112,9 @@ async function boot() {
     const entryToken = routeHash.get('entry');
     if(speaking&&routeQuery.get('documentId'))entry=await request(progressPath+'/entry?'+new URLSearchParams({assignmentCode:state.code,documentId:routeQuery.get('documentId')}));
     if (!speaking && entryToken) entry = await request(progressPath + '/entry', { entryToken });
+    if (!speaking && !entryToken && routeQuery.get('documentId')) entry = await request(progressPath + '/entry', { documentId:routeQuery.get('documentId'),code:state.code });
     if (epoch !== generation) return;
-    if (entry) { state.code = entry.code;state.selected = entry.id || (entry.unitIds?.length===1?entry.unitIds[0]:null);state.focusRef = speaking && uuid(entry.studentRef) ? entry.studentRef : null; }
+    if (entry) { state.code = entry.code;state.selected = entry.id || (entry.unitIds?.length===1?entry.unitIds[0]:null);state.focusRef = uuid(entry.studentRef) ? entry.studentRef : null; }
     if (speaking && uuid(routeHash.get('student'))) state.focusRef = routeHash.get('student');
     if (workId(routeHash.get('unit'))) state.selected = routeHash.get('unit');
     if (routeHash.get('view') === 'list') state.selected = null;
