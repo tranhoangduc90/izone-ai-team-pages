@@ -24,7 +24,7 @@ export function nativeState(s) {
       const detached=t.source !== s.responses[t.field] || start < 0;
       return {ref:t.id,field:t.field,section:Object.keys(SECTION_FIELDS).find(k=>SECTION_FIELDS[k].includes(t.field)) || 'draft',quote:t.quote,
         originalContent:t.source,status:t.resolved?'addressed':'open',anchor:{kind:t.quote?'quote':'field',start,end:start+t.quote.length,detached},
-        messages:t.messages.map(m=>({role:m.actor,authorName:m.actor==='teacher'?'Giảng viên mẫu':s.person.name,body:m.text,createdAt:m.at}))};
+        messages:t.messages.map(m=>({role:m.actor,authorName:m.actor==='teacher'?'Giảng viên':s.person.name,body:m.text,createdAt:m.at}))};
     }),
   };
 }
@@ -79,7 +79,7 @@ export function project(s) {
   const streak=s.steps[active]?.history.toReversed().findIndex(h=>h.status==='passed');
   const negatives=s.steps[active]?.history.filter(h=>h.status==='revision').length||0;
   return {studentRef:s.id,displayName:s.person.name,sessionRef:fresh?null:s.id,dashboard:fresh?null:{
-    state:state==='error'?'attention':state==='fresh'?'not_started':state==='complete'?'complete':state==='support'&&negatives<3?'revision':state,
+    state:state==='error'?'attention':state==='fresh'?'not_started':state==='complete'?'complete':state==='support'&&negatives<3&&!s.threads.some(t=>!t.resolved)?'revision':state,
     priority:state==='support'?0:state==='error'?1:state==='complete'?4:3,
     filled:Object.keys(LABELS).filter(k=>!k.startsWith('draft')&&s.responses[k]?.trim()).length,
     passed:completeCount(s),totalSections:3,current:active||null,sectionOrder:Object.keys(SECTION_FIELDS),
