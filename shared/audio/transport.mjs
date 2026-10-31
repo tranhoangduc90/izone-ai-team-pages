@@ -43,7 +43,7 @@ function startJournalAudioCapture(metadata,bootstrapUrl){
  }catch{return null;}
 }
 // END optional exam journal audio entry
-import {ASSETS} from './catalog.mjs';
+import {ASSETS} from './catalog.mjs?v=20261031-horton1';
 import {downloadAudio} from './chunks.mjs?v=20261028-part-rescue-v1';
 import {decodeBase64url,keyContext,sha256} from './protocol.mjs';
 import {WORKER_ORIGIN,SUBSTITUTE_ASSETS,REVIEW_ASSETS} from './config.mjs?v=20261026-term1-replay1';
