@@ -126,6 +126,8 @@
  }
  async function menu(){
   if(!bridge){
+   const ownerLink=window.Reading67Access?.teacherEntryUrl;
+   if(ownerLink){location.href=ownerLink;return;}
    // Giữ đích bài ban đầu qua Google; teacher.js vẫn kiểm cùng origin/đúng trang.
    const target=new URL(location.href),login=new URL('teacher.html',location.href);
    if(target.searchParams.get('classId')&&target.searchParams.get('studentRef')){
