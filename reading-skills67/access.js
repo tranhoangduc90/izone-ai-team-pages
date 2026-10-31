@@ -58,13 +58,16 @@
   // Phiên máy chủ quyết định vai trò; query cũ không cấp quyền hoặc đổi người học.
   if(config.autoRole){
    const classId=params.get('classId'),studentRef=params.get('studentRef');
+   const studentEntry=!teacher&&params.get('mode')!=='teacher'&&!classId&&!studentRef;
    teacher=true;
    try{
     if(classId&&studentRef)return {teacher:true,work:await request('/teacher/work/'+encodeURIComponent(classId)+'/'+encodeURIComponent(studentRef)),config};
     await request('/teacher/classes');
     location.replace('teacher.html');return new Promise(()=>{});
    }catch(error){
-    if(error.status!==401)throw error;
+    // A denied teacher probe does not revoke separate student access. Explicit
+    // teacher links stay denied; the student path still verifies membership.
+    if(error.status!==401&&!(error.status===403&&studentEntry))throw error;
     teacher=false;
     if(params.get('mode')==='teacher'){
      teacher=true;
