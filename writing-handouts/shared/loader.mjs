@@ -45,7 +45,7 @@ async function boot(){
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':'Lesson '+lesson.number+' · Writing · IZONE';
-  await import(view==='teacher'?'../lesson5/teacher.js?v=20261025-l11-ideas-v4&startup=20261026-v2':'../lesson5-thu/app.js?v=20261025-l11-ideas-v4');
+  await import(view==='teacher'?'../lesson5/teacher.js?v=20261025-l11-ideas-v4&startup=20261026-v2':'../lesson5-thu/app.js?v=20261025-l11-ideas-v4&check=20261101-v1');
  }catch{
   document.body.textContent='Chưa mở được bài học. Hãy tải lại trang khi kết nối ổn định; bài đã lưu vẫn được giữ.';
  }
