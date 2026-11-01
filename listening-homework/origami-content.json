@@ -1,0 +1,345 @@
+{
+  "code": "67-listening-origami",
+  "version": "origami-v1-20261101",
+  "runtimeVersion": "origami-v1-20261101",
+  "title": "Origami · Teaching maths",
+  "homeworkLesson": 4,
+  "minimumCompletion": 0.8,
+  "audioId": "homework-listening-origami",
+  "groups": [],
+  "questions": [],
+  "chapters": [
+    {
+      "title": "Nghe và điền từ",
+      "start": 0,
+      "end": 39.5,
+      "ids": [
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6"
+      ]
+    },
+    {
+      "title": "Phân tích phương án C",
+      "start": 0,
+      "end": 25,
+      "contextCue": "cue-0",
+      "ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ]
+    },
+    {
+      "title": "Đồng thuận và gây nhiễu",
+      "start": 0,
+      "end": 33.5,
+      "contextCue": "cue-0",
+      "ids": [
+        "S6",
+        "S7",
+        "S8",
+        "S9"
+      ]
+    }
+  ],
+  "transcript": [
+    {
+      "id": "cue-0",
+      "speaker": "Seb",
+      "start": 0,
+      "end": 22.34,
+      "text": "Well, anyway, I think we should try it out in our maths teaching practice with Year 3. I can see using origami is a really engaging way of reinforcing children’s knowledge of geometric shapes, like they were doing in the video, but I think it would also work really well for presenting fractions, which is coming up soon."
+    },
+    {
+      "id": "cue-1",
+      "speaker": "Lia",
+      "start": 22.34,
+      "end": 33.5,
+      "text": "Good idea – that’s something most of the kids in that class might struggle with. Origami would also be good practice for using symmetry - but I think they did that last term."
+    },
+    {
+      "id": "cue-2",
+      "speaker": "Seb",
+      "start": 33.82,
+      "end": 39.5,
+      "text": "OK – well let’s try and get some ideas together and plan the lesson next week."
+    }
+  ],
+  "transcriptScope": {
+    "start": 0,
+    "end": 39.5,
+    "label": "Phần luyện tập · 00:00–00:40"
+  },
+  "items": [
+    {
+      "id": "D1",
+      "group": "dictation",
+      "question": "Điền 3 từ: I think we should [Mục 1] in our maths teaching practice with Year 3.",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 1
+    },
+    {
+      "id": "D2",
+      "group": "dictation",
+      "question": "Điền 1 từ: a really engaging way of [Mục 2] children’s knowledge",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 2
+    },
+    {
+      "id": "D3",
+      "group": "dictation",
+      "question": "Điền 1 từ: children’s knowledge of [Mục 3] shapes",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 3
+    },
+    {
+      "id": "D4",
+      "group": "dictation",
+      "question": "Điền 2 từ: something most of the kids in that class might [Mục 4]",
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "displayNumber": 4
+    },
+    {
+      "id": "D5",
+      "group": "dictation",
+      "question": "Điền 1 từ: good practice for using [Mục 5]",
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "displayNumber": 5
+    },
+    {
+      "id": "D6",
+      "group": "dictation",
+      "question": "Điền 3 từ: well let’s [Mục 6] some ideas together",
+      "evidenceContext": {
+        "contextCue": "cue-2",
+        "targetCue": "cue-2"
+      },
+      "displayNumber": 6
+    },
+    {
+      "id": "S1",
+      "group": "analysis",
+      "question": "Câu 30 hỏi ý kiến cá nhân hay quyết định đồng thuận của hai người?",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 7,
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "Cá nhân",
+            "Ý kiến cá nhân của một người"
+          ],
+          [
+            "Đồng thuận",
+            "Quyết định đồng thuận của hai người"
+          ]
+        ]
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?"
+    },
+    {
+      "id": "S2",
+      "group": "analysis",
+      "question": "Cụm từ ngắn nào trong audio liên hệ đến “use origami”? Trích đúng cụm, không chép cả câu.",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 8,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích cụm từ ngắn trong transcript"
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?"
+    },
+    {
+      "id": "S3",
+      "group": "analysis",
+      "question": "Nội dung nào trong audio liên hệ đến “introduce” ở phương án C?",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 9,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?\nC · to introduce a new concept"
+    },
+    {
+      "id": "S4",
+      "group": "analysis",
+      "question": "Dấu hiệu nào cho thấy fractions là nội dung sắp được dạy? Liên hệ với “new” ở phương án C.",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 10,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?\nC · to introduce a new concept"
+    },
+    {
+      "id": "S5",
+      "group": "analysis",
+      "question": "Nội dung nào trong audio liên hệ đến “concept” ở phương án C?",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "displayNumber": 11,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?\nC · to introduce a new concept"
+    },
+    {
+      "id": "S6",
+      "group": "analysis",
+      "question": "Từ/cụm từ nào cho thấy thái độ của Lia trước đề xuất của Seb?",
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "displayNumber": 12,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?"
+    },
+    {
+      "id": "S7",
+      "group": "analysis",
+      "question": "Lia có đồng ý với Seb không?",
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "displayNumber": 13,
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "Có",
+            "Có, Lia đồng ý"
+          ],
+          [
+            "Không",
+            "Không, Lia không đồng ý"
+          ]
+        ]
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?"
+    },
+    {
+      "id": "S8",
+      "group": "analysis",
+      "question": "Nội dung nào trong audio dễ liên tưởng đến “challenge” ở phương án B?",
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "displayNumber": 14,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?\nB · to set a challenge"
+    },
+    {
+      "id": "S9",
+      "group": "analysis",
+      "question": "Audio có cho thấy hai người chủ động “set a challenge” không? Vì sao B là phương án gây nhiễu?",
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-1"
+      },
+      "displayNumber": 15,
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "30 · Why do the students decide to use origami in their maths teaching practice?\nB · to set a challenge\nC · to introduce a new concept"
+    }
+  ],
+  "dictation": [
+    {
+      "speaker": "Seb",
+      "parts": [
+        "Well, anyway, I think we should ",
+        {
+          "id": "D1",
+          "words": 3
+        },
+        " in our maths teaching practice with Year 3. I can see using origami is a really engaging way of ",
+        {
+          "id": "D2",
+          "words": 1
+        },
+        " children’s knowledge of ",
+        {
+          "id": "D3",
+          "words": 1
+        },
+        " shapes, like they were doing in the video, but I think it would also work really well for presenting fractions, which is coming up soon."
+      ]
+    },
+    {
+      "speaker": "Lia",
+      "parts": [
+        "Good idea – that’s something most of the kids in that class might ",
+        {
+          "id": "D4",
+          "words": 2
+        },
+        ". Origami would also be good practice for using ",
+        {
+          "id": "D5",
+          "words": 1
+        },
+        " – but I think they did that last term."
+      ]
+    },
+    {
+      "speaker": "Seb",
+      "parts": [
+        "OK – well let’s ",
+        {
+          "id": "D6",
+          "words": 3
+        },
+        " some ideas together and plan the lesson next week."
+      ]
+    }
+  ],
+  "uiRevision": "origami-20261101-v1"
+}
