@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 
-export async function createPracticeCompactApp({root,product}) {
+export async function createPracticeCompactApp({root,product,clientSource}) {
  const backend=process.env.TEST_SERVICES_NATIVE_PRACTICE_ROOT;
  if(!backend||!path.isAbsolute(backend)||!['reading','listening'].includes(product))throw Error('ISOLATED_PRACTICE_ROOT_REQUIRED');
  const productRoot=path.join(backend,'products',product+'-practice');
@@ -26,10 +26,14 @@ export async function createPracticeCompactApp({root,product}) {
    const file=(await fs.readdir(directory)).find(name=>name.endsWith('.mp3'));if(!file)throw Error('LOCAL_APPROVED_AUDIO_REQUIRED');
    audioFile=path.join(directory,file);audioHash=crypto.createHash('sha256').update(await fs.readFile(audioFile)).digest('hex');
    f.content.definition.audio.sha256=audioHash;
-   await f.pool.query('UPDATE listening_practice.content SET definition=$1 WHERE code=$2',[f.content.definition,f.content.code]);
+   const paragraphs=[{runs:[{text:'Synthetic fixture explanation and evidence.'}]}];
+   f.content.explanations.entries=Object.fromEntries(Object.keys(f.content.key).map(number=>[number,{number:Number(number),answer:f.content.key[number],kind:Number(number)<=25?'mcq':'flow',
+    reason:paragraphs,evidence:paragraphs,paragraph:'Fixture',...(Number(number)<=25?{options:['A','B','C'].map(letter=>({letter,correct:letter==='A',verdict:letter==='A'?'Correct synthetic option':'Incorrect synthetic option',reason:paragraphs,evidence:paragraphs}))}:{})}]));
+   await f.pool.query('UPDATE listening_practice.content SET definition=$1,explanations=$2 WHERE code=$3',[f.content.definition,f.content.explanations,f.content.code]);
   }
-  const requests=[],app=express(),controls={holdPulse:null},origins=[];
-  app.use((req,res,next)=>{const row={path:req.path,method:req.method,compact:req.query.ack==='compact-v1',started:Date.now()};requests.push(row);const json=res.json.bind(res);res.json=body=>{row.body=body;return json(body);};res.on('finish',()=>{row.status=res.statusCode;row.completed=true;});if(req.path==='/api/pulse'&&controls.holdPulse){const wait=controls.holdPulse;controls.holdPulse=null;row.held=true;wait.then(next);return;}next();});
+  const requests=[],app=express(),controls={holdPulse:null,dropPulseAck:false},origins=[];
+  app.use((req,res,next)=>{const row={path:req.path,method:req.method,compact:req.query.ack==='compact-v1',started:Date.now()};requests.push(row);const json=res.json.bind(res);res.json=body=>{row.body=body;if(req.path==='/api/pulse'&&controls.dropPulseAck){controls.dropPulseAck=false;row.dropped=true;res.writeHead(200,{'Content-Type':'application/json','Content-Length':String(Buffer.byteLength(JSON.stringify(body))+1)});res.write('{"');setTimeout(()=>res.destroy(),25);return res;}return json(body);};res.on('finish',()=>{row.status=res.statusCode;row.completed=true;});if(req.path==='/api/pulse'&&controls.holdPulse){const wait=controls.holdPulse;controls.holdPulse=null;row.held=true;wait.then(next);return;}next();});
+  if(clientSource)app.get('/'+product+'-practice/app.js',(req,res)=>res.type('application/javascript').send(clientSource));
   app.use(createApp({pool:f.pool,service:f.service,origins,googleClientId:'fixture-only-client',adminKey:'F'.repeat(43),verifyGoogle:async()=>null,staticRoot:root,audioFile,audioHash}));
   server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
   const origin='http://127.0.0.1:'+server.address().port,url=new URL(f.registered.entryUrl);url.protocol='http:';url.host=server.address().address+':'+server.address().port;
