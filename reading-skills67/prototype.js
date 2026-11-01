@@ -57,7 +57,7 @@ function filled(target){const v=normalize(state.answers[target.id]);return !!v&&
 function completed(){if(serverMode&&state?.serverAttempt)return state.serverAttempt.completeness.filled_cells;if(serverMode&&state?.status==='draft'&&serverClient.state.status==='saved'&&serverClient.state.completeness)return serverClient.state.completeness.filled_cells;return content.targets.filter(filled).length;}
 function timeLabel(iso){return iso?new Date(iso).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'chưa lưu';}
 function isResult(){return state.status==='review';}
-function writable(){return !teacher&&state?.status==='draft'&&(!headings()||homeworkDemo||window.ReadingSharePractice?.isAccepted()===true);}
+function writable(){return !teacher&&!serverClient?.state?.accessRevoked&&state?.status==='draft'&&(!headings()||homeworkDemo||window.ReadingSharePractice?.isAccepted()===true);}
 window.ReadingInteractionBridge={current:()=>state,scope:()=>content?.version+':'+state?.id,writable,save:persist,showPane:setMobilePane,closeGeneralNotes:()=>{generalNotesOpen=false;document.querySelector('#notes-panel')?.setAttribute('hidden','');}};
 function feedbackHtml(id){
   if(!isResult())return '';
@@ -81,6 +81,7 @@ function summaryHtml(){
   return `<div class="result-summary"><div><strong>${correct}/4</strong><p>Matching Information</p></div><div><strong>16 phần nén</strong><p>Phản hồi riêng dưới từng ô</p><small>Không quy đổi band IELTS</small></div></div>`;
 }
 function render(){
+  if(serverClient?.state?.accessRevoked){showAccessRevoked();return;}
   if(!content)return;
   document.body.classList.toggle('headings-homework',headings());
   document.body.classList.toggle('sentence-homework',content.type==='sentence_completion');
@@ -401,16 +402,38 @@ async function serverGrade(){
 // Reload hoặc lịch sử nối lại đúng job; phản hồi muộn chỉ nhắc khi đang sửa nháp.
 function trackServerAttempt(attempt,{announce=false}={}){
   showServerAttempt(attempt,announce);serverClient.stopPoll();
-  if(!['queued','processing'].includes(attempt.status))return;
+  if(!['queued','processing'].includes(attempt.status)&&!serverClient.access?.config?.capabilities?.stateStream)return;
   serverClient.poll(attempt.attemptId,value=>{
     if(value.status==='connection_error'){toast('Chưa đọc được tiến độ. Bản gửi vẫn giữ trên máy chủ; đang kết nối lại.');return;}
     latestServerAttempt=value;
     if(state.serverAttempt?.attemptId===value.attemptId&&state.status!=='draft')showServerAttempt(value,announce);
-    else if(value.status==='done')toast('Đã có phản hồi cho bản đã gửi. Mở Lịch sử để xem; nháp đang sửa được giữ.');
+    else if(value.status==='done'){window.ReadingMaterialsExperience?.outcome(value,{background:true});toast('Đã có phản hồi cho bản đã gửi. Mở Lịch sử để xem; nháp đang sửa được giữ.');}
   });
 }
 function showServerAttempt(attempt,announce=false){
-  if(['green-roofs','matching_headings','matching_people','sentence_completion'].includes(content.type)&&state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
+  // Cùng bản nộp: chỉ sửa các ô góp ý thay đổi, giữ bài đọc, ô nhập và vị trí xem.
+  const previous=state.serverAttempt;
+  if(state.status==='review'&&previous?.attemptId===attempt.attemptId&&attempt.status==='done'&&attempt.result?.feedback&&JSON.stringify(previous.snapshot)===JSON.stringify(attempt.snapshot)){
+    const changed=content.targets.map(t=>t.id).filter(id=>JSON.stringify(state.feedback?.[id])!==JSON.stringify(attempt.result.feedback[id]));
+    const nodes=changed.map(id=>({id,node:document.querySelector('[data-feedback="'+CSS.escape(id)+'"]'),feedback:attempt.result.feedback[id]}));
+    if(nodes.every(row=>row.node&&row.feedback)){
+      latestServerAttempt=attempt;state.serverAttempt=attempt;state.feedback=attempt.result.feedback;
+      fixture={answers:Object.fromEntries(content.targets.map(t=>[t.id,attempt.result.feedback[t.id]?.modelAnswer||'']))};
+      for(const {node,feedback} of nodes){
+        if(!node.classList.contains(feedback.status)){node.classList.remove('correct','partial','incorrect','blank');node.classList.add(feedback.status);}
+        const label=node.querySelector('.feedback-head strong'),reason=node.querySelector('p');
+        if(label&&label.textContent!==statusNames[feedback.status])label.textContent=statusNames[feedback.status];
+        if(reason&&reason.textContent!==feedback.reason)reason.textContent=feedback.reason;
+      }
+      const renderer=headings()?window.ReadingHeadingsRenderer:lessonRenderer(),summary=document.querySelector('.result-summary');
+      if(summary){const template=document.createElement('template');template.innerHTML=renderer?renderer.shell(content,{state,teacher,writable:false,feedback:feedbackHtml,mobilePane,scale}):summaryHtml();const next=template.content.querySelector('.result-summary');if(next&&summary.innerHTML!==next.innerHTML)summary.replaceChildren(...next.childNodes);}
+      const notice=document.querySelector('.result-note'),counts={correct:0,partial:0,incorrect:0,blank:0};Object.values(state.feedback).forEach(f=>{if(f.status in counts)counts[f.status]++;});
+      const countLabel=notice?.querySelector('span'),countText=' '+counts.correct+' đúng · '+counts.partial+' đúng một phần · '+counts.incorrect+' cần sửa · '+counts.blank+' bỏ trống';if(countLabel&&countLabel.textContent!==countText)countLabel.textContent=countText;
+      if(notice){const action=notice.querySelector('[data-action="repair-start"]'),needsRepair=content.targets.some(t=>state.feedback[t.id]?.status!=='correct');if(!needsRepair)action?.remove();else if(!action)notice.insertAdjacentHTML('beforeend','<button class="quiet" data-action="repair-start">Xem phần cần sửa ↓</button>');}
+      updateProgress();window.ReadingMaterialsExperience?.outcome(attempt,{background:true});return;
+    }
+  }
+  if(state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
     const visible=value=>JSON.stringify([value.status,value.errorCode,value.result,value.snapshot,value.validationProgress,value.recovery]);
     if(visible(state.serverAttempt)===visible(attempt)){latestServerAttempt=attempt;return;}
     if(state.status==='waiting'&&['queued','processing'].includes(attempt.status)){
@@ -450,4 +473,11 @@ async function serverAction(name){
   if(name==='edit')toast('Đang chỉnh nháp trên máy chủ. Bản đã chấm và phản hồi vẫn giữ riêng.');
 }
 window.addEventListener('reading67:server-state',()=>{if(serverMode&&content&&state)updateProgress();});
+function showAccessRevoked(){
+  if(!serverMode||!content)return;
+  if(modal.open)modal.close();if(explanation.open)explanation.close();
+  app.innerHTML='<section class="access-card"><h1>Cần kiểm tra lại quyền truy cập</h1><p>Bản đã lưu vẫn ở trên máy chủ. Phần chưa lưu được giữ trên thiết bị này.</p><p>Hãy mở lại link Homework hoặc tải lại để đăng nhập và kiểm quyền lớp.</p><button type="button" class="primary" id="reading-recheck-access">Tải lại để kiểm quyền</button></section>';
+  document.querySelector('#reading-recheck-access').onclick=()=>location.reload();
+}
+window.addEventListener('reading67:access-revoked',showAccessRevoked);
 window.addEventListener('reading67:access-warning',event=>toast(event.detail));

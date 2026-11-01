@@ -1,6 +1,6 @@
 /* Cập nhật riêng trạng thái Share; giữ vùng nhập/đọc, bỏ phản hồi của scope cũ. */
 (function(){
- 'use strict';let scope='',value=null,timer=null,generation=0,localUrl='',readonlyView=false,activeClient=null,wasLocked=true;
+ 'use strict';let scope='',value=null,timer=null,generation=0,localUrl='',readonlyView=false,activeClient=null,wasLocked=true,unwatch=null;
  const labels={PRACTICE_NOT_ACCEPTED:'Hãy hoàn thành và kiểm tra link luyện ChatGPT trước khi gửi chấm.',SHARE_URL_INVALID:'Dùng link chia sẻ cả hội thoại dạng https://chatgpt.com/share/…'};
  function paint(){
   const card=document.querySelector('.share-practice'),status=document.querySelector('#practice-status');if(!card)return;
@@ -20,7 +20,11 @@
   if(!content.practice||!client)return;
   readonlyView=readonly;activeClient=client;
   const person=client.identity,key=[person.ownerId,person.courseId,content.code,content.version,teacher?'teacher':'student',attemptId||'draft'].join(':');
-  if(scope!==key){scope=key;generation++;value=null;localUrl='';wasLocked=true;clearTimeout(timer);if(!readonly)try{localUrl=localStorage.getItem('reading-share-draft:'+scope)||'';}catch{}refresh(client,generation,attemptId);}
+  if(scope!==key){
+   unwatch?.();unwatch=null;scope=key;generation++;value=null;localUrl='';wasLocked=true;clearTimeout(timer);if(!readonly)try{localUrl=localStorage.getItem('reading-share-draft:'+scope)||'';}catch{}
+   const current=generation;unwatch=client.watchPractice?.(attemptId,next=>{if(current!==generation)return;value=next;const input=document.querySelector('#practice-share');if(input&&!localUrl&&next.url)input.value=next.url;paint();},()=>{if(current!==generation)return;unwatch?.();unwatch=null;refresh(client,current,attemptId);})||null;
+   if(!unwatch)refresh(client,current,attemptId);
+  }
   const input=document.querySelector('#practice-share'),button=document.querySelector('#practice-check');if(!input)return;
   const guide=document.querySelector('.share-practice details');
   if(guide&&!guide.querySelector('.share-guide-illustrations')){
@@ -32,7 +36,8 @@
   }
   input.readOnly=readonly;if(button)button.hidden=readonly;input.value=localUrl||value?.url||'';paint();
   input.oninput=()=>{localUrl=input.value;try{localStorage.setItem('reading-share-draft:'+scope,localUrl);}catch{}};
-  if(button)button.onclick=async()=>{const current=generation;button.disabled=true;try{const next=await client.savePractice({url:input.value.trim(),requestId:crypto.randomUUID()});if(current!==generation)return;value=next;localUrl='';try{localStorage.removeItem('reading-share-draft:'+scope);}catch{}paint();refresh(client,current);}catch(error){if(current!==generation)return;value={status:'retry',message:labels[error.code]||'Chưa kiểm được link. Nội dung bạn dán vẫn được giữ.'};paint();}finally{if(current===generation&&button.isConnected)button.disabled=false;}};
+  if(button)button.onclick=async()=>{const current=generation;button.disabled=true;try{const next=await client.savePractice({url:input.value.trim(),requestId:crypto.randomUUID()});if(current!==generation)return;value=next;localUrl='';try{localStorage.removeItem('reading-share-draft:'+scope);}catch{}paint();if(!unwatch)refresh(client,current);}catch(error){if(current!==generation)return;value={status:'retry',message:labels[error.code]||'Chưa kiểm được link. Nội dung bạn dán vẫn được giữ.'};paint();}finally{if(current===generation&&button.isConnected)button.disabled=false;}};
  }
  window.ReadingSharePractice={bind,isAccepted:()=>value?.status==='accepted',message:code=>labels[code]};
+ window.addEventListener('reading67:access-revoked',()=>{generation++;clearTimeout(timer);unwatch?.();unwatch=null;});
 }());
