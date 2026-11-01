@@ -114,6 +114,12 @@ for (const {variant,product,captured} of variants) test(`${variant}: chưa nộp
   assert.equal((await page.locator('body').innerText()).includes('Học viên B'), false);
   await page.getByRole('button', { name: 'Google thử' }).click();
   await page.getByRole('heading', { name: 'Học viên B', exact: true }).waitFor();
+  await page.evaluate(()=>window.dispatchEvent(new StorageEvent('storage',{key:'izone:teacher-sso-logout',newValue:'synthetic-logout'})));
+  await page.getByRole('button',{name:'Google thử'}).waitFor();assert.equal((await page.locator('body').innerText()).includes('Học viên B'),false);
+  await page.getByRole('button',{name:'Google thử'}).click();await page.getByRole('heading',{name:'Học viên B',exact:true}).waitFor();
+  signed=false;await page.evaluate(()=>window.dispatchEvent(new StorageEvent('storage',{key:'izone:teacher-sso-login',newValue:'synthetic-account-change'})));
+  await page.getByRole('button',{name:'Google thử'}).waitFor();assert.equal((await page.locator('body').innerText()).includes('Học viên B'),false);
+  await page.getByRole('button',{name:'Google thử'}).click();await page.getByRole('heading',{name:'Học viên B',exact:true}).waitFor();
   assert.deepEqual(await page.evaluate(() => [localStorage.getItem('fixture-student-memory'), localStorage.getItem('fixture-student-draft')]), ['Học viên đang nhớ', 'Bản nháp cần giữ']);
   assert.deepEqual(errors, []);assert.deepEqual(forbidden, []);
   assert.equal(calls.some(c => /\/(begin|open|pulse|submit|audio-access)(?:$|\?)/.test(c.path)), false);

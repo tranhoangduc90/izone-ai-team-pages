@@ -1,6 +1,7 @@
 import {patchReadingView} from './reading-view.mjs?v=20261027-reading1';
 import { teacherSessionRequestOptions } from './teacher-session-client.js?startup=20261026-v2';
 import { renderPracticeDefinitionHtml as definitionHtml } from './teacher-practice-definition.js?v=20261028-full-test1';
+import {createPracticeTeacherTracker} from './practice-teacher-tracking.mjs?v=20261102-tsto1';
 
 // Nhận dữ liệu chỉ đọc từ API của từng sản phẩm. Không dùng danh tính học viên,
 // không gọi begin/open/pulse/submit và không tạo trình phát hoặc yêu cầu audio.
@@ -21,12 +22,14 @@ const date = value => value && Number.isFinite(Date.parse(value)) ? new Date(val
 const status = unit => unit?.status === 'submitted' ? 'Đã nộp' : !unit || unit.status === 'not_started' ? 'Chưa có tiến trình' : unit.status === 'reset' ? 'Đã reset' : 'Có tiến trình chưa nộp';
 let generation = 0, controller = new AbortController(), timer, googleLoading;
 let bootGeneration = null, resumeBoot = false;
+let stateStreamEnabled=false,tracking=null,trackingKey=null;
 const back = new URL(query.get('back') || './index.html', location.href);
 $('student-return').href = back.origin === location.origin ? back.href : './index.html';
 $('page-title').textContent = titles[product];
 
 function notice(message, kind = '') { $('notice').textContent = message; $('notice').dataset.kind = kind; $('notice').hidden = !message; }
-function resetRequests() { generation++;controller.abort();controller = new AbortController();clearTimeout(timer);return generation; }
+function closeTracking(){tracking?.close();tracking=null;trackingKey=null;}
+function resetRequests() { closeTracking();generation++;controller.abort();controller = new AbortController();clearTimeout(timer);return generation; }
 function rememberView({ unitId = state.selected, attemptId = state.attemptId, view = 'detail', clearEntry = false } = {}) {
   // URL chỉ nhớ vị trí xem; máy chủ vẫn kiểm quyền lớp và bài ở mọi yêu cầu.
   const url = new URL(location.href), fragment = new URLSearchParams(url.hash.slice(1));
@@ -51,6 +54,7 @@ async function request(path, body, { method = body ? 'POST' : 'GET', signal = co
   return value;
 }
 function privateClear() {
+  closeTracking();
   state.students = [];state.detail = null;state.selected = null;state.attemptId = null;state.focusRef = null;
   $('search').value = '';
   $('rows').replaceChildren();$('detail').replaceChildren();$('detail').hidden = true;$('list-panel').hidden = false;$('workspace').hidden = true;document.body.classList.remove('teacher-view-detail');
@@ -65,7 +69,33 @@ async function handle(error, epoch = generation) {
 }
 function schedule() {
   clearTimeout(timer);
-  if (!document.hidden && !$('workspace').hidden) timer = setTimeout(() => refresh(true), 30000);
+  if (!document.hidden && !$('workspace').hidden) {if(stateStreamEnabled&&!speaking){ensureTracking();return;}timer = setTimeout(() => refresh(true), 30000);}
+}
+function ensureTracking(){
+  if(!stateStreamEnabled||speaking||document.hidden||$('workspace').hidden||!state.classId){closeTracking();return;}
+  const scope={classId:state.classId,code:state.code,unitId:state.selected||null},key=JSON.stringify(scope);if(tracking&&trackingKey===key)return;closeTracking();trackingKey=key;
+  const params=new URLSearchParams({classId:scope.classId,code:scope.code,...(scope.unitId?{unitId:scope.unitId}:{})}),epoch=generation;
+  const current=()=>generation===epoch&&trackingKey===key&&!document.hidden&&!$('workspace').hidden;
+  const listParams=new URLSearchParams({classId:scope.classId,code:scope.code});
+  let recovering=false;
+  tracking=createPracticeTeacherTracker({scope,url:base+progressPath+'/events?'+params,
+    poll:({signal})=>request(progressPath+'/status?'+params,undefined,{signal}),
+    loadStudents:({signal})=>request(progressPath+'/students?'+listParams,undefined,{signal}),
+    loadDetail:({signal})=>request(progressPath+'/units/'+encodeURIComponent(scope.unitId),undefined,{signal}),
+    onStudents(value){
+      if(!current())return;const changed=JSON.stringify(state.students)!==JSON.stringify(value.students);state.students=value.students;
+      if(changed)renderRows();
+      if(state.selected&&!state.students.some(student=>student.units.some(unit=>unit.id===state.selected))){
+        closeTracking();state.selected=null;state.detail=null;state.attemptId=null;$('detail').replaceChildren();$('detail').hidden=true;$('list-panel').hidden=false;document.body.classList.remove('teacher-view-detail');
+        notice('Bài vừa xem không còn trong danh sách được truy cập. Hãy chọn lại từ danh sách.','error');schedule();
+      }
+    },
+    onDetail(value){if(!current()||state.selected!==scope.unitId)return;state.detail=value;renderDetail();notice('Đã đọc bản lưu mới; chỉ xem bài học viên.');},
+    onError:error=>{if(current()){recovering=true;void handle(error,epoch);}},
+    onUnavailable(){if(current()){recovering=true;notice('Chưa đọc được trạng thái mới; giữ bản đang xem và tự thử lại.','error');}},
+    onSynchronized(){if(current()&&recovering){recovering=false;notice('Đã kiểm tra bản lưu; chỉ xem bài học viên.');}},
+    onUnsupported(){if(!current())return;closeTracking();stateStreamEnabled=false;schedule();}
+  });
 }
 function renderRows() {
   const search = $('search').value.trim().toLocaleLowerCase('vi');
@@ -122,6 +152,7 @@ async function boot() {
     const options = await request(progressPath + '/classes?' + new URLSearchParams(speaking ? { assignmentCode: state.code } : { code: state.code }));
     if (epoch !== generation) return;
     state.classes = options.classes;
+    stateStreamEnabled=!speaking&&options.capabilities?.teacherStateStream===true;
     if (!state.classes.length) throw new Error('Tài khoản chưa có lớp được cấp quyền cho bài này.');
     const wanted = entry?.classId || routeQuery.get('classId');
     const wantedName = routeQuery.get('class') || routeQuery.get('classCode');
@@ -158,9 +189,8 @@ function renderDetail() {
     content = attemptSelect + `<div class="teacher-grid"><section class="teacher-paper"><h2>Đề bài để đối chiếu</h2>${definitionHtml(data.definition,data.questionIds,data.code)}</section><section class="teacher-paper"><h2>Bài làm đã lưu</h2>${selected ? `<p class="small muted">${submitted ? `Đã nộp${Number.isFinite(selected.finalScore) ? ' · ' + selected.finalScore + ' câu đúng' : ''}` : 'Chưa nộp · Chưa có kết quả chính thức'}</p>${questions.length ? questions.map(n => `<div class="teacher-answer"><span>Câu ${escape(n)}</span><span>${escape(answers[n] || 'Chưa nhập')}</span></div>`).join('') : '<p class="muted">Chưa có câu trả lời được lưu.</p>'}<h3 style="margin-top:26px">Ghi chú học viên</h3><div class="teacher-notes">${escape(selected.notes || 'Chưa có ghi chú.')}</div>` : '<p class="muted">Chưa có lần làm nào được lưu. Việc xem trang này không tạo lượt làm bài.</p>'}</section></div>`;
   }
   const markup = `<a class="teacher-back" href="#students" id="detail-back">← Về danh sách học viên</a><p class="teacher-kicker">${escape($('page-title').textContent)}</p><div class="teacher-detail-heading"><div><h1>${escape(data.student.name)}</h1><span class="badge ${submitted ? 'done' : 'pending'}">${submitted ? 'Đã nộp · Chỉ xem' : 'Chưa nộp · Chỉ xem'}</span><p class="teacher-saved">${escape(data.student.classCode)} · ${date(data.savedAt || data.submittedAt || data.links?.at(-1)?.savedAt)}</p></div><button class="secondary" id="refresh-detail">Cập nhật bài đã lưu</button></div>${content}${safeLink(data.documentUrl) ? `<a class="teacher-document" target="_blank" rel="noopener noreferrer" href="${escape(safeLink(data.documentUrl))}">Mở tài liệu bài tập ↗</a>` : ''}`;
-  const fullListening=product==='listening'&&data.definition?.lesson?.parts?.length;
   const identity=JSON.stringify([state.code,state.classId,state.selected,state.attemptId]);
-  if(fullListening&&state.readingIdentity===identity&&$('detail').firstChild){
+  if(!speaking&&state.readingIdentity===identity&&$('detail').firstChild){
     // Vẫn đọc nền; chỉ sửa vùng đổi, giữ thẻ đang mở/đóng, bôi chọn và vị trí đọc.
     const template=document.createElement('template');template.innerHTML=markup;
     patchReadingView($('detail'),template.content,{
@@ -168,7 +198,7 @@ function renderDetail() {
       boundary:(existing,incoming)=>existing.nodeName==='DETAILS'&&incoming.nodeName==='DETAILS'&&existing.innerHTML===incoming.innerHTML?'keep':undefined
     });
   }else $('detail').innerHTML=markup;
-  state.readingIdentity=fullListening?identity:null;
+  state.readingIdentity=!speaking?identity:null;
   $('detail').hidden = false;$('list-panel').hidden = true;
 }
 async function loadDetail(id, epoch = resetRequests(), navigate = true) {
@@ -229,9 +259,13 @@ document.addEventListener('visibilitychange', () => {
     // Nếu đang kiểm quyền lần đầu, ghi nhớ để vào lại khi quay về tab; chưa có workspace để refresh.
     resumeBoot ||= bootGeneration !== null;
     clearTimeout(timer);controller.abort();generation++;
+    closeTracking();
   } else if (resumeBoot) { resumeBoot = false;boot(); }
   else if (!$('workspace').hidden) refresh(true);
 });
-window.addEventListener('storage', event => { if (event.key === `${product}-teacher-logout`) { resetRequests();privateClear();showLogin(); } });
+window.addEventListener('storage', event => {
+  if(event.key===`${product}-teacher-logout`||event.key==='izone:teacher-sso-logout'){resetRequests();privateClear();showLogin();}
+  else if(event.key==='izone:teacher-sso-login')boot();
+});
 window.addEventListener('popstate', () => boot());
 boot();

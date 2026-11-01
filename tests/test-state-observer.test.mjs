@@ -48,3 +48,16 @@ test('A silent connection falls back after its deadline and respects the existin
  // Keep the replacement connection alive while its rate-limited fallback waits.
  await time.advance(1000);second.write(': heartbeat\n\n');await settle();await time.advance(4000);assert.equal(polls,1);second.write(': heartbeat\n\n');await settle();await time.advance(4999);assert.equal(polls,1);await time.advance(1);assert.equal(polls,2);observer.close();await settle();
 });
+
+test('Opt-in renewal grace reconnects a healthy stream immediately without a duplicate polling read',async()=>{
+ const time=fakeClock(),first=pipe(),second=pipe();let streams=0,polls=0;
+ const observer=createTestStateObserver({url:'https://fixture.test/events',initialPollDelay:1000,reconnectGraceMs:1000,poll:async()=>({revision:'poll-'+(++polls)}),onState(){},fetcher:async()=>++streams===1?first.response:second.response,...time});
+ await settle();first.write('event: state\ndata: {"revision":"same"}\n\n');await settle();first.end();await settle();await time.advance(0);assert.equal(streams,2);assert.equal(polls,0);
+ second.write('event: state\ndata: {"revision":"same"}\n\n');await settle();await time.advance(3000);assert.equal(polls,0);observer.close();await settle();
+});
+
+test('A replacement stream that supplies no state cannot suppress the bounded fallback',async()=>{
+ const time=fakeClock(),first=pipe(),second=pipe();let streams=0,polls=0;
+ const observer=createTestStateObserver({url:'https://fixture.test/events',initialPollDelay:1000,reconnectGraceMs:1000,poll:async()=>({revision:'poll-'+(++polls)}),onState(){},fetcher:async()=>++streams===1?first.response:second.response,...time});
+ await settle();first.write('event: state\ndata: {"revision":"same"}\n\n');await settle();first.end();await settle();await time.advance(999);assert.equal(streams,2);assert.equal(polls,0);await time.advance(1);assert.equal(polls,1);observer.close();await settle();
+});

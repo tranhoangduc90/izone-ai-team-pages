@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 
-export async function createPracticeCompactApp({root,product,clientSource}) {
+export async function createPracticeCompactApp({root,product,clientSource,stateStreamEnabled=false,teacherIdentity=null,teacherSource}) {
  const backend=process.env.TEST_SERVICES_NATIVE_PRACTICE_ROOT;
  if(!backend||!path.isAbsolute(backend)||!['reading','listening'].includes(product))throw Error('ISOLATED_PRACTICE_ROOT_REQUIRED');
  const productRoot=path.join(backend,'products',product+'-practice');
@@ -34,10 +34,12 @@ export async function createPracticeCompactApp({root,product,clientSource}) {
   const requests=[],app=express(),controls={holdPulse:null,dropPulseAck:false},origins=[];
   app.use((req,res,next)=>{const row={path:req.path,method:req.method,compact:req.query.ack==='compact-v1',started:Date.now()};requests.push(row);const json=res.json.bind(res);res.json=body=>{row.body=body;if(req.path==='/api/pulse'&&controls.dropPulseAck){controls.dropPulseAck=false;row.dropped=true;res.writeHead(200,{'Content-Type':'application/json','Content-Length':String(Buffer.byteLength(JSON.stringify(body))+1)});res.write('{"');setTimeout(()=>res.destroy(),25);return res;}return json(body);};res.on('finish',()=>{row.status=res.statusCode;row.completed=true;});if(req.path==='/api/pulse'&&controls.holdPulse){const wait=controls.holdPulse;controls.holdPulse=null;row.held=true;wait.then(next);return;}next();});
   if(clientSource)app.get('/'+product+'-practice/app.js',(req,res)=>res.type('application/javascript').send(clientSource));
-  app.use(createApp({pool:f.pool,service:f.service,origins,googleClientId:'fixture-only-client',adminKey:'F'.repeat(43),verifyGoogle:async()=>null,staticRoot:root,audioFile,audioHash}));
+  if(teacherSource)app.get('/shared/teacher-progress.js',(req,res)=>res.type('application/javascript').send(teacherSource));
+  const nativeApp=createApp({pool:f.pool,service:f.service,origins,googleClientId:'fixture-only-client',adminKey:'F'.repeat(43),verifyGoogle:async()=>teacherIdentity,staticRoot:root,audioFile,audioHash,stateStreamEnabled,...(stateStreamEnabled?{teacherCookiePath:'/'}:{})});
+  app.use(nativeApp);
   server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
   const origin='http://127.0.0.1:'+server.address().port,url=new URL(f.registered.entryUrl);url.protocol='http:';url.host=server.address().address+':'+server.address().port;
   origins.push(origin);
-  return{...f,origin,url:url.href,requests,controls,async close(){await new Promise(resolve=>server.close(resolve));await f.close();}};
+  return{...f,origin,url:url.href,requests,controls,observationHub:nativeApp.locals.practiceObservation,async close(){await nativeApp.locals.practiceObservation?.close();await new Promise(resolve=>server.close(resolve));await f.close();}};
  }catch(error){server?.close();await f.close();throw error;}
 }

@@ -3,7 +3,8 @@
  * Kênh lỗi dùng hàm đọc dự phòng; đổi người/lượt phải đóng observer trước khi mở lại.
  * Chỉ chuyển snapshot đổi cho giao diện. Lỗi đọc không biến dữ liệu cũ thành rỗng.
  */
-export function createTestStateObserver({url,headers={},poll,onState,onUnavailable=()=>{},onRevoked=()=>{},onUnsupported=()=>{},fetcher=fetch,pollInterval=1500,pollErrorInterval=4000,reconnectInterval=1000,stallMs=40000,setTimer=setTimeout,clearTimer=clearTimeout}){
+export function createTestStateObserver({url,headers={},poll,onState,onUnavailable=()=>{},onRevoked=()=>{},onUnsupported=()=>{},fetcher=fetch,pollInterval=1500,pollErrorInterval=4000,reconnectInterval=1000,stallMs=40000,initialPollDelay=0,reconnectGraceMs=0,setTimer=setTimeout,clearTimer=clearTimeout}){
+ if(![initialPollDelay,reconnectGraceMs].every(value=>Number.isFinite(value)&&value>=0&&value<=5000))throw Error('STATE_GRACE_OPTIONS_INVALID');
  let closed=false,live=false,streaming=null,polling=null,streamController=null,streamReader=null,pollController=null,pollTimer=null,reconnectTimer=null,stallTimer=null,lastRevision=null,lastError=null,failures=0;
  const stats={streams:0,polls:0,states:0};
  let pollDelay=pollInterval;
@@ -24,10 +25,10 @@ export function createTestStateObserver({url,headers={},poll,onState,onUnavailab
   polling=(async()=>{try{stats.polls++;deliver(await poll({signal:controller.signal}));pollDelay=pollInterval;}catch(error){if(closed||controller.signal.aborted)return;pollDelay=Math.max(pollErrorInterval,Number.isFinite(error.retryAfterMs)?error.retryAfterMs:0);if([401,403,423].includes(error.status))revoked({code:error.code,status:error.status});else if([404,405].includes(error.status))unsupported();else unavailable(error);}})();
   try{await polling;}finally{polling=null;if(pollController===controller)pollController=null;schedulePoll();}
  }
- function scheduleConnect(){if(closed||reconnectTimer)return;reconnectTimer=timer(()=>{reconnectTimer=null;void connect();},Math.min(5000,reconnectInterval*2**Math.min(3,failures++)));}
+ function scheduleConnect(immediate=false){if(closed||reconnectTimer)return;reconnectTimer=timer(()=>{reconnectTimer=null;void connect();},immediate?0:Math.min(5000,reconnectInterval*2**Math.min(3,failures++)));}
  function armStall(controller){clearTimer(stallTimer);stallTimer=timer(()=>{unavailable({code:'STATE_STREAM_TIMEOUT'});controller.abort();void streamReader?.cancel().catch(()=>{});},stallMs);}
  async function connect(){
-  if(closed||streaming)return;const controller=new AbortController();streamController=controller;
+  if(closed||streaming)return;const controller=new AbortController();streamController=controller;let endedCleanly=false;
   streaming=(async()=>{
    let reader;
    try{
@@ -48,7 +49,7 @@ export function createTestStateObserver({url,headers={},poll,onState,onUnavailab
      if(field==='event')event=value;else if(field==='data')data.push(value);
     }
     while(!closed){
-     const next=await reader.read();if(next.done)break;armStall(controller);
+     const next=await reader.read();if(next.done){endedCleanly=true;break;}armStall(controller);
      for(const character of decoder.decode(next.value,{stream:true})){
       if(afterCR){afterCR=false;if(character==='\n')continue;}
       if(character==='\r'||character==='\n'){completeLine();line='';afterCR=character==='\r';}
@@ -59,8 +60,8 @@ export function createTestStateObserver({url,headers={},poll,onState,onUnavailab
    }catch(error){if(!closed)unavailable(error);}
    finally{clearTimer(stallTimer);try{await reader?.cancel();}catch{}if(streamReader===reader)streamReader=null;controller.abort();}
   })();
-  try{await streaming;}finally{streaming=null;if(streamController===controller)streamController=null;if(!closed){live=false;schedulePoll(0);scheduleConnect();}}
+  try{await streaming;}finally{streaming=null;if(streamController===controller)streamController=null;if(!closed){const renew=endedCleanly&&live&&!lastError&&reconnectGraceMs>0;live=false;schedulePoll(renew?reconnectGraceMs:0);scheduleConnect(renew);}}
  }
- schedulePoll(0);void connect();
+ schedulePoll(initialPollDelay);void connect();
  return {close,snapshot(){return {closed,live,...stats};}};
 }
