@@ -350,13 +350,19 @@ bootstrap();
 function adaptServerSave(){
   const target=document.querySelector('#save-state');if(!target)return;
   const saved=serverClient.state;
+  const compact=document.body.dataset.homeworkLayout==='compact';
+  let statusRow=target.parentElement;
+  if(compact&&!statusRow.classList.contains('footer-status')){
+    statusRow=document.createElement('div');statusRow.className='footer-status';target.before(statusRow);statusRow.append(target);
+  }
   target.textContent=saved.conflict?'Xung đột bản lưu · Bài trên máy vẫn được giữ':saved.status==='saving'?'Đang lưu lên máy chủ…':saved.status==='dirty'?'Có thay đổi chưa lưu máy chủ':saved.status==='error'?'Chưa lưu máy chủ · Giữ bản trên thiết bị':saved.savedAt?'Đã lưu máy chủ · '+timeLabel(saved.savedAt):'Chưa nhập bài · Máy chủ sẵn sàng';
   target.dataset.saveStatus=saved.status;
   if(!teacher&&saved.homework&&saved.homework.status!=='not_started'){
-    let notice=document.querySelector('.homework-sync');if(!notice){notice=document.createElement('div');notice.className='notice homework-sync';notice.setAttribute('role','status');document.querySelector('.lesson-head')?.after(notice);}
+    let notice=document.querySelector('.homework-sync');if(!notice){notice=document.createElement(compact?'span':'div');notice.className=compact?'save-state homework-sync':'notice homework-sync';notice.setAttribute('role','status');if(compact)statusRow.append(notice);else document.querySelector('.lesson-head')?.after(notice);}
     const h=saved.homework,blocked=h.status==='blocked'||h.jobs?.some(j=>j.status==='blocked'),missing=h.jobs?.some(j=>j.errorCode==='HOMEWORK_NOT_FOUND');
-    notice.textContent=blocked?'Bài đã được giữ trên máy chủ. Chưa đồng bộ được Homework; giảng viên cần kiểm tra.':h.status==='verified'&&h.cta==='verified'?'Đã cập nhật trạng thái và link vào Homework.':missing?'Bài đã lưu. Chưa có Homework cá nhân đúng mã; hệ thống sẽ nối khi được giao.':h.status==='unavailable'?'Chưa kiểm được trạng thái đồng bộ Homework. Xem trạng thái lưu bài ở thanh trên.':'Bài đã lưu. Đang đồng bộ trạng thái vào Homework.';
-  }
+    if(compact)notice.dataset.syncStatus=blocked||missing||h.status==='unavailable'?'attention':h.status==='verified'&&h.cta==='verified'?'saved':'pending';
+    notice.textContent=blocked?'Bài đã được giữ trên máy chủ. Chưa đồng bộ được Homework; giảng viên cần kiểm tra.':h.status==='verified'&&h.cta==='verified'?'Đã cập nhật trạng thái và link vào Homework.':missing?'Bài đã lưu. Chưa có Homework cá nhân đúng mã; hệ thống sẽ nối khi được giao.':h.status==='unavailable'?'Chưa kiểm được trạng thái đồng bộ Homework. Xem trạng thái lưu bài'+(compact?' bên cạnh.':' ở thanh trên.'):'Bài đã lưu. Đang đồng bộ trạng thái vào Homework.';
+  }else if(compact)document.querySelector('.homework-sync')?.remove();
   if(state.archived)target.textContent='Nháp cũ · Lưu lúc '+timeLabel(state.savedAt)+' · Chỉ xem';
   window.MaterialsRepairWorkspace?.updateSync();
 }

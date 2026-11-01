@@ -42,7 +42,7 @@
   const footer=$('.study-footer'),tools=footer?.querySelector('.footer-tools');
   if(footer?.querySelector('.repair-actions')){
    const primary=footer.querySelector('.repair-primary-slot button');if(primary&&tools)tools.append(primary);
-   const progress=footer.querySelector('.progress-area'),save=footer.querySelector('#save-state');
+   const progress=footer.querySelector('.progress-area'),save=footer.querySelector('.footer-status,#save-state');
    if(progress){progress.hidden=false;footer.append(progress);}if(save)footer.append(save);if(tools)footer.append(tools);
    footer.querySelectorAll('.repair-actions,.repair-secondary').forEach(el=>el.remove());
   }
@@ -51,6 +51,7 @@
   document.querySelectorAll('.repair-source-context').forEach(el=>el.remove());
  }
  function updateSync(){
+  if(document.body.dataset.homeworkLayout==='compact')return;
   if(!document.body.classList.contains('has-repair-workspace'))return;
   const notice=$('.homework-sync'),banner=$('.repair-banner');if(!notice||!banner)return;
   let details=banner.querySelector('.repair-sync');
@@ -82,7 +83,7 @@
  function ensureDock(){
   const footer=$('.study-footer');if(!footer)return null;
   let dock=footer.querySelector('.repair-docked');if(dock)return dock;
-  const tools=footer.querySelector('.footer-tools'),save=footer.querySelector('#save-state'),progress=footer.querySelector('.progress-area');
+  const tools=footer.querySelector('.footer-tools'),save=footer.querySelector('.footer-status,#save-state'),progress=footer.querySelector('.progress-area');
   if(progress)progress.hidden=true;
   const actions=document.createElement('div');actions.className='repair-actions';
   dock=document.createElement('nav');dock.className='repair-navigation repair-docked';dock.setAttribute('aria-label','Điều hướng phần cần sửa');
