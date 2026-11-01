@@ -71,6 +71,10 @@ function schedule() {
   clearTimeout(timer);
   if (!document.hidden && !$('workspace').hidden) {if(stateStreamEnabled&&!speaking){ensureTracking();return;}timer = setTimeout(() => refresh(true), 30000);}
 }
+function detailPath(id,attemptId=state.attemptId){
+  const path=progressPath+'/units/'+encodeURIComponent(id);
+  return speaking?path:path+'?'+new URLSearchParams({history:'on-demand-v1',...(uuid(attemptId)?{attemptId}:{})});
+}
 function ensureTracking(){
   if(!stateStreamEnabled||speaking||document.hidden||$('workspace').hidden||!state.classId){closeTracking();return;}
   const scope={classId:state.classId,code:state.code,unitId:state.selected||null},key=JSON.stringify(scope);if(tracking&&trackingKey===key)return;closeTracking();trackingKey=key;
@@ -81,7 +85,7 @@ function ensureTracking(){
   tracking=createPracticeTeacherTracker({scope,url:base+progressPath+'/events?'+params,
     poll:({signal})=>request(progressPath+'/status?'+params,undefined,{signal}),
     loadStudents:({signal})=>request(progressPath+'/students?'+listParams,undefined,{signal}),
-    loadDetail:({signal})=>request(progressPath+'/units/'+encodeURIComponent(scope.unitId),undefined,{signal}),
+    loadDetail:({signal})=>request(detailPath(scope.unitId),undefined,{signal}),
     onStudents(value){
       if(!current())return;const changed=JSON.stringify(state.students)!==JSON.stringify(value.students);state.students=value.students;
       if(changed)renderRows();
@@ -201,12 +205,15 @@ function renderDetail() {
   state.readingIdentity=!speaking?identity:null;
   $('detail').hidden = false;$('list-panel').hidden = true;
 }
-async function loadDetail(id, epoch = resetRequests(), navigate = true) {
+async function loadDetail(id, epoch = resetRequests(), navigate = true, requestedAttemptId) {
   if (!workId(id)) return;
+  const selectedAttemptId=requestedAttemptId??(state.selected===id?state.attemptId:null);
+  if(state.selected!==id)state.attemptId=null;
   state.selected = id;
   try {
-    const data = await request(progressPath + '/units/' + encodeURIComponent(id));
+    const data = await request(detailPath(id,selectedAttemptId));
     if (epoch !== generation || state.selected !== id) return;
+    if(!speaking)state.attemptId=selectedAttemptId;
     state.detail = data;renderDetail();if (navigate) rememberView();notice('Chỉ xem bản đã lưu; không khởi động, nộp hoặc chấm bài thay học viên.');schedule();
   } catch (error) { await handle(error, epoch); }
 }
@@ -253,7 +260,11 @@ $('detail').addEventListener('click', event => {
   if (event.target.closest('#refresh-detail')) loadDetail(state.selected);
   if (event.target.closest('#detail-back')) { event.preventDefault();resetRequests();state.selected = null;state.detail = null;state.attemptId = null;rememberView({ view: 'list' });$('detail').hidden = true;$('detail').replaceChildren();$('list-panel').hidden = false;document.body.classList.remove('teacher-view-detail');schedule(); }
 });
-$('detail').addEventListener('change', event => { if (event.target.id === 'attempt-select') { state.attemptId = event.target.value;renderDetail();rememberView(); } });
+$('detail').addEventListener('change', event => { if (event.target.id === 'attempt-select') {
+  const wanted=event.target.value;
+  if(!speaking&&wanted!==state.attemptId){event.target.value=state.attemptId;void loadDetail(state.selected,undefined,true,wanted);}
+  else {state.attemptId=wanted;renderDetail();rememberView();}
+} });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     // Nếu đang kiểm quyền lần đầu, ghi nhớ để vào lại khi quay về tab; chưa có workspace để refresh.

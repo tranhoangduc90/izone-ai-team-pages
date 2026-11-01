@@ -1,6 +1,7 @@
 (async () => {
 'use strict';
 const {expandPracticePulseAck}=await import('../shared/practice-pulse-ack.mjs?v=20261102-pulse1');
+const {expandPracticeHistory,practiceHistoryPath}=await import('../shared/practice-history.mjs?v=20261102-history1');
 let serverCapabilities={};
 const AuthoredUI=await import('./authored-ui.js?v=20261029-r3-labels2');
 let AUTHORED_DEF=null;
@@ -49,7 +50,7 @@ let teacherGoogleScript;
 const student=()=>({name:identity?.name});
 const record=()=>db.students[studentId];
 const current=()=>record()?.attempts.at(-1);
-const countAnswered=a=>Object.values(a?.answers||{}).filter(v=>String(v).trim()).length;
+const countAnswered=a=>a?.detailsLoaded===false?a.answeredCount:Object.values(a?.answers||{}).filter(v=>String(v).trim()).length;
 const resultFor=(a,start,end)=>a.result.rows.filter(r=>r.number>=start&&r.number<=end&&r.state==='correct').length;
 const isOnline=()=>navigator.onLine&&!networkFailed;
 function notify(message){const t=document.querySelector('#toast');t.textContent=message;t.hidden=false;clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.hidden=true,4000);}
@@ -109,6 +110,8 @@ function persist(schedule=true){
 }
 function showStorageError(){app.innerHTML=`<section class="notice-panel card card-pad"><h1>Chưa lưu được bài trên thiết bị</h1><p>Đồng hồ đã dừng. Giữ nguyên tab và cho phép trình duyệt lưu dữ liệu để bảo toàn phần vừa nhập.</p>${btn('Thử lưu lại','retry-save')}</section>`;}
 function apply(response,{preserve=false}={}){
+ response=expandPracticeHistory(response,{identity,attempts:record()?.attempts});
+ for(const attempt of response.attempts||[])if(attempt.detailsLoaded===false)resultCache.delete(attempt.id);
  serverCapabilities=response.capabilities||{};
  setLesson(response.lesson);
  identity=response.identity;studentId=identity.studentRef;checkpointKey=cacheKey();
@@ -120,6 +123,7 @@ function apply(response,{preserve=false}={}){
 }
 function snapshotFrom(a){return{answers:a.answers,flags:a.flags,notes:a.notes,annotations:a.annotations,scroll:a.scroll,activeQuestion:a.activeQuestion,tab:a.tab,mobilePane:a.mobilePane,notesOpen:a.notesOpen,highlighted:a.highlighted,sequence:a.sequence};}
 async function request(path,body,teacher=false,keepalive=false){
+ if(!teacher)path=practiceHistoryPath(path);
  let token=sessionToken;
  if(teacher){try{token=sessionStorage.getItem('reading-teacher-token');}catch{token='';}}
  let response;try{
@@ -184,7 +188,7 @@ function finish(method){if(busy||activating||!current()||!['running','paused'].i
 function reset(){if(busy||activating)return;consumeTime();rememberScroll();lastTick=0;const a=current();perform('reset',{attemptId:a.id,owner:TAB,...(['running','paused'].includes(a.status)&&lease?{lease,snapshot:snapshot()}:{} )});}
 async function loadResult(no){
  const a=record()?.attempts.find(a=>a.no===+no);if(!a)return;
- if(a.status==='submitted'&&!resultCache.has(a.id)){try{const response=await request(`/result/${a.id}`);resultCache.set(a.id,response);apply(response);MCQ=response.definition.mcq;}catch(e){notify(e.message);return;}}
+ if(a.status==='submitted'&&(a.detailsLoaded===false||!resultCache.has(a.id))){const owner=identity?.bindingId,token=sessionToken;try{const response=await request(`/result/${a.id}`);if(owner!==identity?.bindingId||token!==sessionToken)return;resultCache.set(a.id,response);apply(response);MCQ=response.definition.mcq;}catch(e){if(owner===identity?.bindingId&&token===sessionToken)notify(e.message);return;}}
  navigate(`result?attempt=${no}`);
 }
 function docsNotice(a){if(identity?.entryMode==='shared')return `<div class="note success">✓ Kết quả đã được lưu riêng cho bạn. <a href="teacher.html#submission=${encodeURIComponent(a.submissionId)}" target="_blank" rel="noopener noreferrer">Giảng viên xem kết quả ↗</a></div>`;const e=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed'),verified=e?.docs==='verified';return `<div class="note ${verified?'success':'warning'}">${verified?'✓ Đã cập nhật tình trạng trong tài liệu bài tập.':e?.docs==='blocked'?'Bài đã nộp. Chưa cập nhật được Docs; giảng viên cần kiểm tra ô trạng thái.':'Bài đã nộp và được lưu trên máy chủ. Đang cập nhật tình trạng trong Docs.'} <a href="${escape(identity.documentUrl)}" target="_blank" rel="noopener noreferrer">Mở tài liệu ↗</a></div>`;}
@@ -219,7 +223,7 @@ function render(){
  if(!['login','docs','teacher'].includes(route)&&!studentId)return navigate('login');
  if(route==='prep'&&['running','paused'].includes(current()?.status))return navigate('resume');
  if(route==='exercise'&&!Object.keys(PASSAGE).length)return navigate('resume');
- if(route==='result'){const a=record()?.attempts.find(x=>x.no===+(routeParams.get('attempt')||current()?.no));if(a?.status==='submitted'&&!resultCache.has(a.id)){loadResult(a.no);return;}}
+ if(route==='result'){const a=record()?.attempts.find(x=>x.no===+(routeParams.get('attempt')||current()?.no));if(a?.status==='submitted'&&(a.detailsLoaded===false||!resultCache.has(a.id))){loadResult(a.no);return;}}
  ({docs,login,prep,resume:resumeScreen,exercise,result:resultScreen,teacher:teacherScreen}[route]||login)();if(route!=='exercise')window.scrollTo(0,0);
  if(route==='login'&&!app.querySelector('[data-action="change-student"]'))app.insertAdjacentHTML('beforeend',textBtn('Đổi người học','change-student'));
 }
