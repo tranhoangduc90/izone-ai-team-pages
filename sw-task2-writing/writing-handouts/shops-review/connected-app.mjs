@@ -172,6 +172,9 @@ async function refresh({background=false}={}){
  const path=teacher?'admin/lesson9/sessions/':'lesson9/sessions/';
  const result=await api(path+ref);const threadData=await api((teacher?'admin/live/':'')+'sessions/'+ref+'/teacher-comments');
  if(epoch!==generation||ref!==current.sessionRef)return;
+ // A read started before our latest save cannot replace its acknowledged version.
+ // During a learner save, the save response owns reconciliation (including 409).
+ if(result.session.draftVersion<current.draftVersion||!teacher&&busy)return;
  if(!dirty){current=result.session;responses=working(current);}else if(result.session.draftVersion!==current.draftVersion){conflict=true;message('Máy chủ có bản mới. Bản đang gõ được giữ, chưa ghi đè.');}
  threads=threadData.threads;
  if(!editor&&!attestKey&&!document.activeElement?.matches('textarea,input,select'))draw({background});
