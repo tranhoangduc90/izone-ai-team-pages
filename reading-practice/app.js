@@ -1,5 +1,7 @@
 (async () => {
 'use strict';
+const {expandPracticePulseAck}=await import('../shared/practice-pulse-ack.mjs?v=20261102-pulse1');
+let serverCapabilities={};
 const AuthoredUI=await import('./authored-ui.js?v=20261029-r3-labels2');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
@@ -107,6 +109,7 @@ function persist(schedule=true){
 }
 function showStorageError(){app.innerHTML=`<section class="notice-panel card card-pad"><h1>Chưa lưu được bài trên thiết bị</h1><p>Đồng hồ đã dừng. Giữ nguyên tab và cho phép trình duyệt lưu dữ liệu để bảo toàn phần vừa nhập.</p>${btn('Thử lưu lại','retry-save')}</section>`;}
 function apply(response,{preserve=false}={}){
+ serverCapabilities=response.capabilities||{};
  setLesson(response.lesson);
  identity=response.identity;studentId=identity.studentRef;checkpointKey=cacheKey();
  const local=current();db.students[studentId]={attempts:response.attempts,events:response.events,firstCompleted:response.firstCompleted};
@@ -136,9 +139,10 @@ async function sendPulse(){
  return serial(async()=>{
   if(route!=='exercise'||current()?.status!=='running')return;
   consumeTime();rememberScroll();persist(false);
-  const id=current().id,proof=lease,draft=snapshot();
-  try{const response=await request('/pulse',{attemptId:id,lease:proof,snapshot:draft});
+  const id=current().id,proof=lease,draft=structuredClone(snapshot());
+  try{let response=await request('/pulse'+(serverCapabilities.compactPulseAck?'?ack=compact-v1':''),{attemptId:id,lease:proof,snapshot:draft});
    if(current()?.id!==id||lease?.id!==proof.id)return;
+   response=expandPracticePulseAck(response,{identity,lesson:LESSON,record:record(),lease:proof,snapshot:draft,capabilities:serverCapabilities});
    if(response.attempts.at(-1)?.status!=='submitted'&&(current().status!=='running'||route!=='exercise'))return;
    apply(response,{preserve:true});activeMs=Math.max(activeMs,current().usedMs-leaseBaseline);savedStatus('Đã lưu trên máy chủ');
    if(current().status==='submitted'){lastTick=0;await loadResult(current().no);}
