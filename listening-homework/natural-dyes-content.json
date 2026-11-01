@@ -1,0 +1,403 @@
+{
+  "code": "67-listening-natural-dyes",
+  "version": "natural-dyes-v1-20261101",
+  "runtimeVersion": "natural-dyes-v1-20261101",
+  "title": "Natural dyes",
+  "homeworkLesson": 6,
+  "minimumCompletion": 0.8,
+  "audioId": "homework-listening-natural-dyes",
+  "groups": [],
+  "questions": [],
+  "chapters": [
+    {
+      "title": "Nghe và điền từ",
+      "start": 98,
+      "end": 123.9,
+      "ids": [
+        "D1",
+        "D2",
+        "D3",
+        "D4"
+      ]
+    },
+    {
+      "title": "Cochineal: nhận diện bẫy",
+      "start": 112.85,
+      "end": 140.6,
+      "contextCue": "cue-5",
+      "ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ]
+    },
+    {
+      "title": "Metal oxide: kiểm chứng ý",
+      "start": 140.85,
+      "end": 167.1,
+      "contextCue": "cue-8",
+      "ids": [
+        "S5",
+        "S6",
+        "S7"
+      ]
+    }
+  ],
+  "transcript": [
+    {
+      "id": "cue-0",
+      "speaker": "Tutor",
+      "start": 98.0,
+      "end": 99.9,
+      "text": "Did you use any black dyes?"
+    },
+    {
+      "id": "cue-1",
+      "speaker": "Jim",
+      "start": 100.05,
+      "end": 105.72,
+      "text": "Logwood. That was quite complicated. I had to prepare the fabric so the dye would take."
+    },
+    {
+      "id": "cue-2",
+      "speaker": "Tutor",
+      "start": 105.72,
+      "end": 107.37,
+      "text": "I hope you were careful to wear gloves."
+    },
+    {
+      "id": "cue-3",
+      "speaker": "Jim",
+      "start": 107.37,
+      "end": 109.6,
+      "text": "Yes. I know the danger with that dye."
+    },
+    {
+      "id": "cue-4",
+      "speaker": "Tutor",
+      "start": 109.7,
+      "end": 112.7,
+      "text": "Good. It can be extremely dangerous if it’s ingested."
+    },
+    {
+      "id": "cue-5",
+      "speaker": "Tutor",
+      "start": 112.85,
+      "end": 117.85,
+      "text": "Now, presumably you had a look at an insect-based dye? Like cochineal, for example?"
+    },
+    {
+      "id": "cue-6",
+      "speaker": "Jim",
+      "start": 118.0,
+      "end": 135.86,
+      "text": "Yes. I didn’t actually make that, I didn’t have time to start crushing up insects to get the red colour  and anyway they’re not available here, but I managed to get the dye quite easily from a website. But it cost a fortune. I can see why it’s generally just used in cooking, and in small quantities."
+    },
+    {
+      "id": "cue-7",
+      "speaker": "Tutor",
+      "start": 135.86,
+      "end": 140.6,
+      "text": "Yes, it’s very effective, but that’s precisely why it’s not used as a dye."
+    },
+    {
+      "id": "cue-8",
+      "speaker": "Jim",
+      "start": 140.85,
+      "end": 149.55,
+      "text": "I also read about using metal oxide. Apparently you can allow iron to rust while it’s in contact with the fabric, and that colours it."
+    },
+    {
+      "id": "cue-9",
+      "speaker": "Tutor",
+      "start": 149.65,
+      "end": 167.1,
+      "text": "Yes, that works well for dyeing cotton. But you have to be careful as the metal can actually affect the fabric and so you can’t expect to get a lot of wear out of fabrics treated in this way. And the colours are quite subtle, not everyone likes them. Anyway, it looks as if you’ve done a lot of work …"
+    }
+  ],
+  "transcriptScope": {
+    "start": 98,
+    "end": 167.1,
+    "label": "Phần luyện tập · 01:38–02:47"
+  },
+  "items": [
+    {
+      "id": "D1",
+      "group": "dictation",
+      "question": "Điền 1 từ: I hope you were careful to wear [Mục 1].",
+      "displayNumber": 1,
+      "evidenceContext": {
+        "contextCue": "cue-2",
+        "targetCue": "cue-2"
+      }
+    },
+    {
+      "id": "D2",
+      "group": "dictation",
+      "question": "Điền 1 từ: It can be extremely dangerous if it’s [Mục 2].",
+      "displayNumber": 2,
+      "evidenceContext": {
+        "contextCue": "cue-4",
+        "targetCue": "cue-4"
+      }
+    },
+    {
+      "id": "D3",
+      "group": "dictation",
+      "question": "Điền 1 từ: an [Mục 3]-based dye",
+      "displayNumber": 3,
+      "evidenceContext": {
+        "contextCue": "cue-5",
+        "targetCue": "cue-5"
+      }
+    },
+    {
+      "id": "D4",
+      "group": "dictation",
+      "question": "Điền 3 từ: I didn’t have time to start [Mục 4] to get the red colour.",
+      "displayNumber": 4,
+      "evidenceContext": {
+        "contextCue": "cue-6",
+        "targetCue": "cue-6"
+      }
+    },
+    {
+      "id": "S1",
+      "group": "analysis",
+      "question": "Đoạn “they’re not available here” liên hệ đến phương án nào?",
+      "displayNumber": 5,
+      "evidenceContext": {
+        "contextCue": "cue-6",
+        "targetCue": "cue-6"
+      },
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "A",
+            "A · it is expensive"
+          ],
+          [
+            "D",
+            "D · it is very poisonous"
+          ],
+          [
+            "E",
+            "E · it can damage the fabric"
+          ],
+          [
+            "G",
+            "G · it is unsuitable for some fabrics"
+          ],
+          [
+            "H",
+            "H · it is not generally available"
+          ]
+        ]
+      },
+      "context": "Cochineal · Vấn đề của thuốc nhuộm, không phải nguyên liệu côn trùng."
+    },
+    {
+      "id": "S2",
+      "group": "analysis",
+      "question": "Nội dung nào thể hiện rằng phương án liên quan đến “they’re not available here” chỉ là phương án bẫy?",
+      "displayNumber": 6,
+      "evidenceContext": {
+        "contextCue": "cue-6",
+        "targetCue": "cue-6"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc giải thích đúng nghĩa"
+      },
+      "context": "Cochineal · Vấn đề của thuốc nhuộm, không phải nguyên liệu côn trùng."
+    },
+    {
+      "id": "S3",
+      "group": "analysis",
+      "question": "Phương án đúng ở đây là phương án nào?",
+      "displayNumber": 7,
+      "evidenceContext": {
+        "contextCue": "cue-6",
+        "targetCue": "cue-6"
+      },
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "A",
+            "A · it is expensive"
+          ],
+          [
+            "D",
+            "D · it is very poisonous"
+          ],
+          [
+            "E",
+            "E · it can damage the fabric"
+          ],
+          [
+            "G",
+            "G · it is unsuitable for some fabrics"
+          ],
+          [
+            "H",
+            "H · it is not generally available"
+          ]
+        ]
+      },
+      "context": "Cochineal · Vấn đề của thuốc nhuộm, không phải nguyên liệu côn trùng."
+    },
+    {
+      "id": "S4",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến phương án đúng vừa tìm được?",
+      "displayNumber": 8,
+      "evidenceContext": {
+        "contextCue": "cue-6",
+        "targetCue": "cue-6"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc giải thích đúng nghĩa"
+      },
+      "context": "Cochineal · Vấn đề của thuốc nhuộm, không phải nguyên liệu côn trùng."
+    },
+    {
+      "id": "S5",
+      "group": "analysis",
+      "question": "Đoạn “the colours are quite subtle, not everyone likes them” cho biết điều gì về màu sắc? Vì sao đoạn này chưa đủ chứng minh F · “the colour may be unexpected”?",
+      "displayNumber": 9,
+      "evidenceContext": {
+        "contextCue": "cue-9",
+        "targetCue": "cue-9"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc giải thích đúng nghĩa"
+      },
+      "context": "Metal oxide · Vấn đề của phương pháp nhuộm bằng gỉ sắt. F · the colour may be unexpected."
+    },
+    {
+      "id": "S6",
+      "group": "analysis",
+      "question": "Phương án đúng thực sự là gì?",
+      "displayNumber": 10,
+      "evidenceContext": {
+        "contextCue": "cue-9",
+        "targetCue": "cue-9"
+      },
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "A",
+            "A · it is expensive"
+          ],
+          [
+            "D",
+            "D · it is very poisonous"
+          ],
+          [
+            "E",
+            "E · it can damage the fabric"
+          ],
+          [
+            "F",
+            "F · the colour may be unexpected"
+          ],
+          [
+            "G",
+            "G · it is unsuitable for some fabrics"
+          ],
+          [
+            "H",
+            "H · it is not generally available"
+          ]
+        ]
+      },
+      "context": "Metal oxide · Vấn đề của phương pháp nhuộm bằng gỉ sắt."
+    },
+    {
+      "id": "S7",
+      "group": "analysis",
+      "question": "Nội dung nào liên hệ đến phương án đúng vừa tìm được?",
+      "displayNumber": 11,
+      "evidenceContext": {
+        "contextCue": "cue-9",
+        "targetCue": "cue-9"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc giải thích đúng nghĩa"
+      },
+      "context": "Metal oxide · Vấn đề của phương pháp nhuộm bằng gỉ sắt."
+    }
+  ],
+  "uiRevision": "natural-dyes-20261101-v1",
+  "dictation": [
+    {
+      "speaker": "Tutor",
+      "parts": [
+        "Did you use any black dyes?"
+      ]
+    },
+    {
+      "speaker": "Jim",
+      "parts": [
+        "Logwood. That was quite complicated. I had to prepare the fabric so the dye would take."
+      ]
+    },
+    {
+      "speaker": "Tutor",
+      "parts": [
+        "I hope you were careful to wear ",
+        {
+          "id": "D1",
+          "words": 1
+        },
+        "."
+      ]
+    },
+    {
+      "speaker": "Jim",
+      "parts": [
+        "Yes. I know the danger with that dye."
+      ]
+    },
+    {
+      "speaker": "Tutor",
+      "parts": [
+        "Good. It can be extremely dangerous if it’s ",
+        {
+          "id": "D2",
+          "words": 1
+        },
+        "."
+      ]
+    },
+    {
+      "speaker": "Tutor",
+      "parts": [
+        "Now, presumably you had a look at an ",
+        {
+          "id": "D3",
+          "words": 1
+        },
+        "-based dye? Like cochineal, for example?"
+      ]
+    },
+    {
+      "speaker": "Jim",
+      "parts": [
+        "Yes. I didn’t actually make that, I didn’t have time to start ",
+        {
+          "id": "D4",
+          "words": 3
+        },
+        " to get the red colour."
+      ]
+    }
+  ]
+}
