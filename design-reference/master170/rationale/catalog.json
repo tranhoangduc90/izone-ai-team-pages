@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "version": "master170@1.1-rationale-20261030",
-  "basedOn": "R3 đã chốt29/10 + nền Options29/10",
+  "version": "master170@1.1-rationale-20261101",
+  "basedOn": "R3 đã chốt29/10 + nền Options29/10; bổ sung diện tích và trạng thái Đức chốt 01/11",
   "scope": [
     "reading-practice",
     "listening-practice",
@@ -987,14 +987,14 @@
     {
       "id": "E02",
       "group": "Bố cục và diện tích làm việc",
-      "requirement": "Desktop đủ rộng dùng một hàng toolbar có vạch ngăn nhóm.",
-      "verification": "Kiểm thực chiều cao, không chỉ count phần tử.",
+      "requirement": "Toolbar gọn theo nhóm; ưu tiên chiều cao cho đề và bài làm, không thêm hàng chỉ để báo thành công thường lệ.",
+      "verification": "Đo vùng làm thực tế với tên bài/thông báo dài và cỡ A lớn; giữ chữ/nút theo profile.",
       "evidence_illustration": "E01",
       "status": "not_a_product_test_result",
       "rationale_ref": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/rationale/#rule/E02",
-      "rationale_version": "2026-10-30",
-      "why": "Nhóm nút một hàng khi đủ chỗ giảm chiều cao cố định; vạch ngăn mảnh cho biết nhóm chức năng.",
-      "antiPattern": "Dùng nhiều thẻ/khung trong toolbar hoặc co chữ khi không đủ chỗ.",
+      "rationale_version": "2026-11-01",
+      "why": "Mỗi hàng phụ hoặc khoảng trống làm giảm vùng đọc và nhập. Một nơi theo dõi trạng thái giúp biết bài đang được giữ ở đâu mà không phải dò nhiều khối.",
+      "antiPattern": "Trừ chiều cao hàng đã ẩn; đệm đáy lặp; footer thương hiệu trong workspace; báo lưu/chấm/Docs rải ở đầu và cuối; ép fixed lên màn hẹp làm mất ô cuối.",
       "sources": [
         "standard",
         "checklist",
@@ -1006,7 +1006,10 @@
       "exception": "Áp dụng khi thành phần/hành vi này tồn tại. Giá trị tham chiếu phải kiểm đúng profile; không tạo thêm tính năng hoặc quyền.",
       "screens": [],
       "types": [],
-      "evidenceStatus": "unverified_for_new_product"
+      "evidenceStatus": "unverified_for_new_product",
+      "updated": "2026-11-01",
+      "correction_source": "Yêu cầu trực tiếp của Đức trong chat tối ưu Reading Homework Lesson 12, mở rộng bốn sản phẩm 01/11/2026",
+      "intent_source": "WORKSPACE_SPACE_AND_STATUS_2026-11-01.md"
     },
     {
       "id": "E03",
@@ -1067,14 +1070,14 @@
     {
       "id": "E05",
       "group": "Bố cục và diện tích làm việc",
-      "requirement": "Pane lấy chiều cao còn lại sau header, toolbar và dock thật.",
-      "verification": "Màn 1359 × 686 và 1366 × 600 không bị khóa mất nội dung.",
+      "requirement": "Vùng bài làm nhận toàn bộ chiều cao còn lại sau header, toolbar và dock thật; không trừ hàng đã ẩn.",
+      "verification": "Đo trên desktop và 1366 × 600; màn hẹp/thấp vẫn đọc, nhập và cuộn tới ô cuối được.",
       "evidence_illustration": "E01",
       "status": "not_a_product_test_result",
       "rationale_ref": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/rationale/#rule/E05",
-      "rationale_version": "2026-10-30",
-      "why": "Tính theo chiều cao thực bảo vệ nội dung khi toolbar xuống dòng, zoom hoặc bàn phím mở.",
-      "antiPattern": "Dùng vh trừ một hằng số chỉ đúng trên máy chụp ảnh.",
+      "rationale_version": "2026-11-01",
+      "why": "Mỗi hàng phụ hoặc khoảng trống làm giảm vùng đọc và nhập. Một nơi theo dõi trạng thái giúp biết bài đang được giữ ở đâu mà không phải dò nhiều khối.",
+      "antiPattern": "Trừ chiều cao hàng đã ẩn; đệm đáy lặp; footer thương hiệu trong workspace; báo lưu/chấm/Docs rải ở đầu và cuối; ép fixed lên màn hẹp làm mất ô cuối.",
       "sources": [
         "standard",
         "checklist",
@@ -1088,19 +1091,22 @@
         "workspace-reading"
       ],
       "types": [],
-      "evidenceStatus": "unverified_for_new_product"
+      "evidenceStatus": "unverified_for_new_product",
+      "updated": "2026-11-01",
+      "correction_source": "Yêu cầu trực tiếp của Đức trong chat tối ưu Reading Homework Lesson 12, mở rộng bốn sản phẩm 01/11/2026",
+      "intent_source": "WORKSPACE_SPACE_AND_STATUS_2026-11-01.md"
     },
     {
       "id": "E06",
       "group": "Bố cục và diện tích làm việc",
-      "requirement": "Dock sát đáy, chỉ chừa phần bù đủ cho nội dung cuối không bị che.",
-      "verification": "Cuộn tới ô cuối, mở bàn phím giả lập và resize.",
+      "requirement": "Dock hoặc hàng thao tác cuối sát đáy cửa sổ khi đủ chỗ; không có dải trống chân trang thừa.",
+      "verification": "Không cộng đệm hai lần; giữ safe area/phần bù chống che ô cuối; kiểm resize, focus, popup và bàn phím.",
       "evidence_illustration": "E01",
       "status": "not_a_product_test_result",
       "rationale_ref": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/rationale/#rule/E06",
-      "rationale_version": "2026-10-30",
-      "why": "Dock cố định giúp tìm hành động cuối; phần bù đúng chiều cao bảo vệ câu cuối mà không tạo khoảng trắng dài.",
-      "antiPattern": "Dock che ô/cờ cuối hoặc thêm padding-bottom quá lớn để né lỗi.",
+      "rationale_version": "2026-11-01",
+      "why": "Mỗi hàng phụ hoặc khoảng trống làm giảm vùng đọc và nhập. Một nơi theo dõi trạng thái giúp biết bài đang được giữ ở đâu mà không phải dò nhiều khối.",
+      "antiPattern": "Trừ chiều cao hàng đã ẩn; đệm đáy lặp; footer thương hiệu trong workspace; báo lưu/chấm/Docs rải ở đầu và cuối; ép fixed lên màn hẹp làm mất ô cuối.",
       "sources": [
         "standard",
         "checklist",
@@ -1114,7 +1120,10 @@
         "workspace-reading"
       ],
       "types": [],
-      "evidenceStatus": "unverified_for_new_product"
+      "evidenceStatus": "unverified_for_new_product",
+      "updated": "2026-11-01",
+      "correction_source": "Yêu cầu trực tiếp của Đức trong chat tối ưu Reading Homework Lesson 12, mở rộng bốn sản phẩm 01/11/2026",
+      "intent_source": "WORKSPACE_SPACE_AND_STATUS_2026-11-01.md"
     },
     {
       "id": "E07",
@@ -1155,14 +1164,14 @@
     {
       "id": "E08",
       "group": "Bố cục và diện tích làm việc",
-      "requirement": "Bỏ footer thương hiệu và khối trạng thái thường lệ trùng lặp trong workspace.",
-      "verification": "Giữ lỗi có ý nghĩa; không xóa hướng dẫn cần cho bài.",
+      "requirement": "Bỏ footer thương hiệu và trạng thái thường lệ lặp trong workspace; không rút mất hướng dẫn hoặc cảnh báo cần thiết.",
+      "verification": "So trước/sau diện tích bài làm; lỗi đủ chữ và thao tác phục hồi vẫn dễ tìm.",
       "evidence_illustration": "E01",
       "status": "not_a_product_test_result",
       "rationale_ref": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/rationale/#rule/E08",
-      "rationale_version": "2026-10-30",
-      "why": "Workspace cần diện tích cho bài, không cần lặp thương hiệu hay tình trạng bình thường ở nhiều chỗ.",
-      "antiPattern": "Xóa thông báo lỗi có hành động với lý do đã bỏ trạng thái thường lệ.",
+      "rationale_version": "2026-11-01",
+      "why": "Mỗi hàng phụ hoặc khoảng trống làm giảm vùng đọc và nhập. Một nơi theo dõi trạng thái giúp biết bài đang được giữ ở đâu mà không phải dò nhiều khối.",
+      "antiPattern": "Trừ chiều cao hàng đã ẩn; đệm đáy lặp; footer thương hiệu trong workspace; báo lưu/chấm/Docs rải ở đầu và cuối; ép fixed lên màn hẹp làm mất ô cuối.",
       "sources": [
         "standard",
         "checklist",
@@ -1174,7 +1183,10 @@
       "exception": "Áp dụng khi thành phần/hành vi này tồn tại. Giá trị tham chiếu phải kiểm đúng profile; không tạo thêm tính năng hoặc quyền.",
       "screens": [],
       "types": [],
-      "evidenceStatus": "unverified_for_new_product"
+      "evidenceStatus": "unverified_for_new_product",
+      "updated": "2026-11-01",
+      "correction_source": "Yêu cầu trực tiếp của Đức trong chat tối ưu Reading Homework Lesson 12, mở rộng bốn sản phẩm 01/11/2026",
+      "intent_source": "WORKSPACE_SPACE_AND_STATUS_2026-11-01.md"
     },
     {
       "id": "F01",
@@ -1231,14 +1243,14 @@
     {
       "id": "F03",
       "group": "Toolbar và phân bố nút",
-      "requirement": "Nhóm trạng thái gồm thời gian khi có, tiến độ nhập và tình trạng lưu.",
-      "verification": "Không lẫn số đã nhập với số đúng hoặc số đạt.",
+      "requirement": "Tiến độ, lưu, nộp/chấm và đồng bộ Homework có cùng một khu vực trạng thái nhất quán; đủ ngang thì nằm cạnh nhau.",
+      "verification": "Hẹp thì xuống dòng trong cùng nhóm, không rải banner ở đầu/cuối. Phân biệt đã nhập/đúng/đạt, lưu thiết bị/máy chủ, chấm và Docs; ba nhịp nền giữ vùng đang đọc.",
       "evidence_illustration": "E01",
       "status": "not_a_product_test_result",
       "rationale_ref": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/rationale/#rule/F03",
-      "rationale_version": "2026-10-30",
-      "why": "Thời gian, số đã nhập và lưu trả lời ba câu khác nhau; nhóm gần nhau giúp rà trạng thái nhanh.",
-      "antiPattern": "Suy số đã nhập là đã lưu, hoặc dùng một chấm màu cho cả ba trạng thái.",
+      "rationale_version": "2026-11-01",
+      "why": "Mỗi hàng phụ hoặc khoảng trống làm giảm vùng đọc và nhập. Một nơi theo dõi trạng thái giúp biết bài đang được giữ ở đâu mà không phải dò nhiều khối.",
+      "antiPattern": "Trừ chiều cao hàng đã ẩn; đệm đáy lặp; footer thương hiệu trong workspace; báo lưu/chấm/Docs rải ở đầu và cuối; ép fixed lên màn hẹp làm mất ô cuối.",
       "sources": [
         "standard",
         "checklist",
@@ -1253,7 +1265,10 @@
         "workspace-listening"
       ],
       "types": [],
-      "evidenceStatus": "unverified_for_new_product"
+      "evidenceStatus": "unverified_for_new_product",
+      "updated": "2026-11-01",
+      "correction_source": "Yêu cầu trực tiếp của Đức trong chat tối ưu Reading Homework Lesson 12, mở rộng bốn sản phẩm 01/11/2026",
+      "intent_source": "WORKSPACE_SPACE_AND_STATUS_2026-11-01.md"
     },
     {
       "id": "F04",
@@ -5185,7 +5200,9 @@
         "J06",
         "K01",
         "K04",
-        "K05"
+        "K05",
+        "E02",
+        "E08"
       ],
       "decisions": [
         "Nguồn trái và câu hỏi phải có chiều rộng đọc được",
@@ -5194,7 +5211,8 @@
         "dãy số dẫn đúng passage/control",
         "dock không che câu cuối",
         "note giữ gốc/offset khi đổi bố cục",
-        "A+ tăng đủ hai pane."
+        "A+ tăng đủ hai pane.",
+        "Vùng bài làm dùng phần chiều cao còn lại; dock không có dải trống thừa; lưu/chấm/Docs nhóm nhất quán, giữ lỗi và cập nhật nền."
       ],
       "states": [
         "chưa nhập",
@@ -5220,7 +5238,11 @@
         "L05",
         "I07",
         "J02",
-        "F03"
+        "F03",
+        "E02",
+        "E05",
+        "E06",
+        "E08"
       ],
       "decisions": [
         "Audio một lượt nằm gần phần active",
@@ -5228,7 +5250,8 @@
         "note liên tục giữ đề mục;10 ô 31–40 không chia thành ba pane",
         "blank trong ngữ cảnh",
         "số đã nhập khác đã lưu",
-        "hết audio chuyển đúng120 giây rà."
+        "hết audio chuyển đúng120 giây rà.",
+        "Vùng bài làm dùng phần chiều cao còn lại; dock không có dải trống thừa; lưu/chấm/Docs nhóm nhất quán, giữ lỗi và cập nhật nền."
       ],
       "states": [
         "đang tải",
@@ -5251,7 +5274,12 @@
         "D08",
         "F06",
         "I01",
-        "H03"
+        "H03",
+        "E02",
+        "E05",
+        "E06",
+        "E08",
+        "F03"
       ],
       "decisions": [
         "Thân/ô viết18px phục vụ học và sửa",
@@ -5259,7 +5287,8 @@
         "matching có hai khung nhưng không khung mỗi câu",
         "bank phải nền riêng",
         "dock Lịch sử–Góp ý–Nộp ổn định",
-        "không dùng timer/key của bài thi để thay chấmAI."
+        "không dùng timer/key của bài thi để thay chấmAI.",
+        "Vùng bài làm dùng phần chiều cao còn lại; dock không có dải trống thừa; lưu/chấm/Docs nhóm nhất quán, giữ lỗi và cập nhật nền."
       ],
       "states": [
         "chưa làm",
@@ -5281,7 +5310,12 @@
         "C06",
         "D08",
         "K07",
-        "M05"
+        "M05",
+        "E02",
+        "E05",
+        "E06",
+        "E08",
+        "F03"
       ],
       "decisions": [
         "TFNG ở đây là quy trình phân tích học tập, không rút còn ba radio bài thi",
@@ -5289,7 +5323,8 @@
         "mỗi mảnh giữ quan hệ với nguồn",
         "vùng viết dài không cắt nội dung",
         "trạng thái theo ý bắt buộc",
-        "không chấm đạt từ việc có chữ."
+        "không chấm đạt từ việc có chữ.",
+        "Vùng bài làm dùng phần chiều cao còn lại; dock không có dải trống thừa; lưu/chấm/Docs nhóm nhất quán, giữ lỗi và cập nhật nền."
       ],
       "states": [
         "mảnh trống",
@@ -5310,7 +5345,12 @@
         "L03",
         "L09",
         "M07",
-        "F06"
+        "F06",
+        "E02",
+        "E05",
+        "E06",
+        "E08",
+        "F03"
       ],
       "decisions": [
         "Play/Pause và lùi5giây là quyền học",
@@ -5318,7 +5358,8 @@
         "phần chép và phân tích có cấu trúc",
         "transcript mở theo điều kiện từng phần",
         "slot dẫn chứng biết đang chọn cho ý nào",
-        "18px cho vùng học và sửa."
+        "18px cho vùng học và sửa.",
+        "Vùng bài làm dùng phần chiều cao còn lại; dock không có dải trống thừa; lưu/chấm/Docs nhóm nhất quán, giữ lỗi và cập nhật nền."
       ],
       "states": [
         "nghe",
@@ -5462,7 +5503,12 @@
         "M04",
         "M05",
         "M06",
-        "C06"
+        "C06",
+        "E02",
+        "E05",
+        "E06",
+        "E08",
+        "F03"
       ],
       "decisions": [
         "Giữ feedback cũ để biết hướng sửa",
@@ -5470,7 +5516,8 @@
         "câu hỏi và nguồn ngay cạnh",
         "dock Trước–chỉ số/tên–Tiếp",
         "Đã chỉnh là thao tác không phải điểm",
-        "mục cuối không tự nộp."
+        "mục cuối không tự nộp.",
+        "Vùng bài làm dùng phần chiều cao còn lại; dock không có dải trống thừa; lưu/chấm/Docs nhóm nhất quán, giữ lỗi và cập nhật nền."
       ],
       "states": [
         "chưa chỉnh",
@@ -5493,7 +5540,12 @@
         "M06",
         "M07",
         "L08",
-        "L09"
+        "L09",
+        "E02",
+        "E05",
+        "E06",
+        "E08",
+        "F03"
       ],
       "decisions": [
         "Slot active có nhãn rõ",
@@ -5501,7 +5553,8 @@
         "xóa một slot không ảnh hưởng slot khác",
         "clip có mốc dừng",
         "feedback cũ giữ khi gõ",
-        "lỗiAI không xóa dẫn chứng đã lưu."
+        "lỗiAI không xóa dẫn chứng đã lưu.",
+        "Vùng bài làm dùng phần chiều cao còn lại; dock không có dải trống thừa; lưu/chấm/Docs nhóm nhất quán, giữ lỗi và cập nhật nền."
       ],
       "states": [
         "slot trống",
@@ -5904,7 +5957,7 @@
         "matching"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-tfng",
-      "image": "assets/examples/reading-tfng.webp",
+      "image": "assets/illustrations/reading-tfng.webp",
       "imageStatus": "Ảnh fixture native30/10; hướng dẫn riêng TFNG/YNNG, cùng renderer R3.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -5932,7 +5985,7 @@
         "matching"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-ynng",
-      "image": "assets/examples/reading-ynng.webp",
+      "image": "assets/illustrations/reading-ynng.webp",
       "imageStatus": "Ảnh fixture native30/10; hướng dẫn riêng TFNG/YNNG, cùng renderer R3.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -5960,7 +6013,7 @@
         "mcq"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-mcq",
-      "image": "assets/examples/reading-mcq.webp",
+      "image": "../reference/demos/approved-r3/reading-mcq.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -5988,7 +6041,7 @@
         "mcq"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-multiple",
-      "image": "assets/examples/reading-multiple.webp",
+      "image": "../reference/demos/approved-r3/reading-multiple.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6016,7 +6069,7 @@
         "matching"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-information",
-      "image": "assets/examples/reading-information.webp",
+      "image": "../reference/demos/approved-r3/reading-information.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6043,7 +6096,7 @@
         "matching"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-headings",
-      "image": "assets/examples/reading-headings.webp",
+      "image": "../reference/demos/approved-r3/reading-headings.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6070,7 +6123,7 @@
         "matching"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-features",
-      "image": "assets/examples/reading-features.webp",
+      "image": "../reference/demos/approved-r3/reading-features.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6097,7 +6150,7 @@
         "matching"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-endings",
-      "image": "assets/examples/reading-endings.webp",
+      "image": "../reference/demos/approved-r3/reading-endings.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6124,7 +6177,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-summary",
-      "image": "assets/examples/reading-summary.webp",
+      "image": "../reference/demos/approved-r3/reading-summary.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6151,7 +6204,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-summary-bank",
-      "image": "assets/examples/reading-summary-bank.webp",
+      "image": "../reference/demos/approved-r3/reading-summary-bank.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6178,7 +6231,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-sentence",
-      "image": "assets/examples/reading-sentence.webp",
+      "image": "../reference/demos/approved-r3/reading-sentence.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6205,7 +6258,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-short",
-      "image": "assets/examples/reading-short.webp",
+      "image": "../reference/demos/approved-r3/reading-short.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6232,7 +6285,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-table",
-      "image": "assets/examples/reading-table.webp",
+      "image": "../reference/demos/approved-r3/reading-table.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6261,7 +6314,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-note",
-      "image": "assets/examples/listening-note.webp",
+      "image": "assets/illustrations/listening-note.webp",
       "imageStatus": "Ảnh fixture native30/10; một tờ đủ10ô31–40, cùng renderer R3.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6288,7 +6341,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-form",
-      "image": "assets/examples/listening-form.webp",
+      "image": "../reference/demos/approved-r3/listening-form.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6315,7 +6368,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-sentence",
-      "image": "assets/examples/listening-sentence.webp",
+      "image": "../reference/demos/approved-r3/listening-sentence.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6342,7 +6395,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-short",
-      "image": "assets/examples/listening-short.webp",
+      "image": "../reference/demos/approved-r3/listening-short.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6369,7 +6422,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-summary",
-      "image": "assets/examples/listening-summary.webp",
+      "image": "../reference/demos/approved-r3/listening-summary.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6396,7 +6449,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-table",
-      "image": "assets/examples/listening-table.webp",
+      "image": "../reference/demos/approved-r3/listening-table.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6423,7 +6476,7 @@
         "mcq"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-mcq",
-      "image": "assets/examples/listening-mcq.webp",
+      "image": "../reference/demos/approved-r3/listening-mcq.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6451,7 +6504,7 @@
         "mcq"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-pair",
-      "image": "assets/examples/listening-pair.webp",
+      "image": "../reference/demos/approved-r3/listening-pair.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6478,7 +6531,7 @@
         "matching"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-matching",
-      "image": "assets/examples/listening-matching.webp",
+      "image": "../reference/demos/approved-r3/listening-matching.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6505,7 +6558,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-diagram",
-      "image": "assets/examples/reading-diagram.webp",
+      "image": "../reference/demos/approved-r3/reading-diagram.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6532,7 +6585,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-flow",
-      "image": "assets/examples/reading-flow.webp",
+      "image": "../reference/demos/approved-r3/reading-flow.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6559,7 +6612,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-diagram",
-      "image": "assets/examples/listening-diagram.webp",
+      "image": "../reference/demos/approved-r3/listening-diagram.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6586,7 +6639,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-flow",
-      "image": "assets/examples/listening-flow.webp",
+      "image": "../reference/demos/approved-r3/listening-flow.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6613,7 +6666,7 @@
         "completion"
       ],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-map",
-      "image": "assets/examples/listening-map.webp",
+      "image": "../reference/demos/approved-r3/listening-map.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6639,7 +6692,7 @@
       "nativeBinding": "design-reference/master170/frame.mjs",
       "nativeKinds": [],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=remember",
-      "image": "assets/examples/remember.webp",
+      "image": "../reference/demos/approved-r3/remember.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6665,7 +6718,7 @@
       "nativeBinding": "design-reference/master170/homework-reading.html",
       "nativeKinds": [],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-homework",
-      "image": "assets/examples/reading-homework.webp",
+      "image": "../reference/demos/approved-r3/reading-homework.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6691,7 +6744,7 @@
       "nativeBinding": "design-reference/master170/homework-tfng.html",
       "nativeKinds": [],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=reading-homework-tfng",
-      "image": "assets/examples/reading-homework-tfng.webp",
+      "image": "../reference/demos/approved-r3/reading-homework-tfng.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     },
@@ -6717,7 +6770,7 @@
       "nativeBinding": "design-reference/master170/homework-listening.html",
       "nativeKinds": [],
       "demoUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/design-reference/master170/?case=listening-homework",
-      "image": "assets/examples/listening-homework.webp",
+      "image": "../reference/demos/approved-r3/listening-homework.webp",
       "imageStatus": "Ảnh fixture R3 29/10; màu nền Options đã bổ sung sau mốc chốt, xem demo live khi kiểm nền.",
       "evidence": "Fixture native, không xác nhận SSO/lưu/nộp/AI/Docs thật."
     }
@@ -6726,37 +6779,34 @@
     {
       "id": "r3",
       "title": "Ý đồ R3 và bổ sung nền Options của Đức",
-      "original": "docs/interface-master170/APPROVED_R3_2026-10-29.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\worktrees\\master170-rationale\\New project\\docs\\interface-master170\\APPROVED_R3_2026-10-29.md",
       "relative": "docs/interface-master170/APPROVED_R3_2026-10-29.md",
       "sha256": "bc77c11000eec4226a4c02d77bdc425b61cc59d8a3e8b75ed48c3c8a98acdbda",
       "limit": "Yêu cầu đã chốt; quyền phát hành vẫn riêng.",
-      "kind": "local-source-read",
-      "url": "https://github.com/tranhoangduc90/izone-AI-team/blob/30081d85/docs/interface-master170/APPROVED_R3_2026-10-29.md"
+      "kind": "local-source-read"
     },
     {
       "id": "standard",
       "title": "Master 1.1 và các profile",
-      "original": "docs/interface-master170/MASTER_STANDARD_V1_1.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\worktrees\\master170-rationale\\New project\\docs\\interface-master170\\MASTER_STANDARD_V1_1.md",
       "relative": "docs/interface-master170/MASTER_STANDARD_V1_1.md",
       "sha256": "63a47594f5a07854b92a6d3e265b41904fa2ce01505b7a2863166c6ce03969e6",
       "limit": "Chuẩn hiện hành; không dùng ảnh làm chứng nhận runtime.",
-      "kind": "local-source-read",
-      "url": "https://github.com/tranhoangduc90/izone-AI-team/blob/30081d85/docs/interface-master170/MASTER_STANDARD_V1_1.md"
+      "kind": "local-source-read"
     },
     {
       "id": "checklist",
       "title": "184 tiêu chí hiện hành",
-      "original": "docs/interface-master170/reference/checklist-v1.1.json",
+      "original": "C:\\Users\\ADMIN\\.codex\\worktrees\\master170-rationale\\New project\\docs\\interface-master170\\reference\\checklist-v1.1.json",
       "relative": "docs/interface-master170/reference/checklist-v1.1.json",
       "sha256": "336b90b5b1b2b0475448c96b05bf01ed9e9d77487ca303fca2c0918d4015e5e0",
       "limit": "Yêu cầu và cách kiểm; không phải 184 kết quả đạt.",
-      "kind": "local-source-read",
-      "url": "https://github.com/tranhoangduc90/izone-AI-team/blob/30081d85/docs/interface-master170/reference/checklist-v1.1.json"
+      "kind": "local-source-read"
     },
     {
       "id": "design",
       "title": "Vai trò chữ, màu, trạng thái",
-      "original": "Bộ nhớ thiết kế hệ thống / references/DESIGN.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\skills\\izone-web-design\\references\\DESIGN.md",
       "relative": "references/DESIGN.md",
       "sha256": "c66e2469c42436b53d05d12cfb4e93a0895d01eb44889a98f10060f0aa256377",
       "limit": "Phần tổng quát; giá trị cũ khác R3 không thắng profile hiện hành.",
@@ -6765,7 +6815,7 @@
     {
       "id": "composition",
       "title": "Phân nhóm, khoảng trắng và bố cục",
-      "original": "Bộ nhớ thiết kế hệ thống / references/COMPOSITION.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\skills\\izone-web-design\\references\\COMPOSITION.md",
       "relative": "references/COMPOSITION.md",
       "sha256": "efd2d34146df58f37087215eced21a34e272745756128605558a1b160a6c7e07",
       "limit": "Áp dụng theo công việc; không có một padding chung cho mọi lớp.",
@@ -6774,7 +6824,7 @@
     {
       "id": "product-ux",
       "title": "Hành vi và điều kiện hoàn thành",
-      "original": "Bộ nhớ thiết kế hệ thống / references/PRODUCT_UX.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\skills\\izone-web-design\\references\\PRODUCT_UX.md",
       "relative": "references/PRODUCT_UX.md",
       "sha256": "647e2288bc29dc701dd447c684d2f90b4747905532530a95461aec5911a4217d",
       "limit": "Phân biệt dữ liệu đã xác nhận với thao tác trên giao diện.",
@@ -6783,7 +6833,7 @@
     {
       "id": "ia",
       "title": "Kiến trúc thông tin và định hướng",
-      "original": "Bộ nhớ thiết kế hệ thống / references/INFORMATION_ARCHITECTURE.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\skills\\izone-web-design\\references\\INFORMATION_ARCHITECTURE.md",
       "relative": "references/INFORMATION_ARCHITECTURE.md",
       "sha256": "2971108f4728f23429048bd1bfdf3b4989c83949a708db75420d1d88b7d7fafb",
       "limit": "Định hướng link sâu, danh sách và điểm quay lại.",
@@ -6792,7 +6842,7 @@
     {
       "id": "workflow",
       "title": "Hành trình và phép thử nhiệm vụ",
-      "original": "Bộ nhớ thiết kế hệ thống / references/UX_WORKFLOW.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\skills\\izone-web-design\\references\\UX_WORKFLOW.md",
       "relative": "references/UX_WORKFLOW.md",
       "sha256": "bd05569a08ef23e0b4e1c8a7b6754d2083003f2992448810235eeb80eb156a01",
       "limit": "Walkthrough của Codex không thay nghiên cứu người dùng.",
@@ -6801,7 +6851,7 @@
     {
       "id": "review",
       "title": "Kiểm thiết kế theo tác động",
-      "original": "Bộ nhớ thiết kế hệ thống / references/DESIGN_REVIEW.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\skills\\izone-web-design\\references\\DESIGN_REVIEW.md",
       "relative": "references/DESIGN_REVIEW.md",
       "sha256": "0a9265814ba2a4a281eb1dae0c844180702254adf12563c616b9e54844e4a79a",
       "limit": "Không ép một bảng kiểm toàn hệ cho sửa nhỏ.",
@@ -6810,7 +6860,7 @@
     {
       "id": "course",
       "title": "Tình huống từ khóa UI/UX 10 buổi",
-      "original": "Bộ nhớ thiết kế hệ thống / references/UIUX_COURSE_CASES.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\skills\\izone-web-design\\references\\UIUX_COURSE_CASES.md",
       "relative": "references/UIUX_COURSE_CASES.md",
       "sha256": "97c03bc8db0bd24a723cda0287bd2965fd24c53090d206fcb380889ca81d4593",
       "limit": "Ví dụ giả lập, không gán thành sự cố hoặc thử nghiệm người thật.",
@@ -6819,7 +6869,7 @@
     {
       "id": "conflicts",
       "title": "Nguồn hệ thống đã tích hợp và giới hạn",
-      "original": "Bộ nhớ thiết kế hệ thống / references/SOURCES_AND_CONFLICTS.md",
+      "original": "C:\\Users\\ADMIN\\.codex\\skills\\izone-web-design\\references\\SOURCES_AND_CONFLICTS.md",
       "relative": "references/SOURCES_AND_CONFLICTS.md",
       "sha256": "437699fde652c54d894f9d8af0a00715ca7cabdbacf0d69cb49f102d8887fdce",
       "limit": "Krug/NNg/Impeccable/Refactoring UI là nguồn tích hợp có giới hạn, không tuyên bố đọc toàn bộ sách trả phí.",
@@ -6828,32 +6878,29 @@
     {
       "id": "layout-css",
       "title": "Adapter bố cục câu hỏi native",
-      "original": "shared/master170/question-layout-v1.1.css",
+      "original": "E:\\Codex-Projects\\izone-ai-team-pages\\shared\\master170\\question-layout-v1.1.css",
       "relative": "shared/master170/question-layout-v1.1.css",
       "sha256": "b360d2b8f51df07b80a5f2e9ffe62d8fa3ef96bdd700e2564d6e7ab4befbaf53",
       "limit": "Source đang có, không tự chứng minh mọi instance production đúng.",
-      "kind": "local-source-read",
-      "url": "https://github.com/tranhoangduc90/izone-ai-team-pages/blob/515520eebd0507b7e68f16bd595b1028e6587f8f/shared/master170/question-layout-v1.1.css"
+      "kind": "local-source-read"
     },
     {
       "id": "layout-js",
       "title": "Adapter giữ control, text node và handler",
-      "original": "shared/master170/question-layout-v1.1.mjs",
+      "original": "E:\\Codex-Projects\\izone-ai-team-pages\\shared\\master170\\question-layout-v1.1.mjs",
       "relative": "shared/master170/question-layout-v1.1.mjs",
       "sha256": "8a838cc39b4ba78cb8df0dfe390a722c2800b2cf6e30f2d45d545c8fd01ee16b",
       "limit": "Không dùng thay engine hoặc quyền dữ liệu.",
-      "kind": "local-source-read",
-      "url": "https://github.com/tranhoangduc90/izone-ai-team-pages/blob/515520eebd0507b7e68f16bd595b1028e6587f8f/shared/master170/question-layout-v1.1.mjs"
+      "kind": "local-source-read"
     },
     {
       "id": "demo",
       "title": "31 fixture demo native",
-      "original": "design-reference/master170/cases.json",
+      "original": "E:\\Codex-Projects\\izone-ai-team-pages\\design-reference\\master170\\cases.json",
       "relative": "design-reference/master170/cases.json",
       "sha256": "273c113dd1b6f51e9878e76cb16079e3aa40a1c32e2d3b98b6e822718af97e17",
       "limit": "Mô phỏng, không dữ liệu học viên.",
-      "kind": "local-source-read",
-      "url": "https://github.com/tranhoangduc90/izone-ai-team-pages/blob/515520eebd0507b7e68f16bd595b1028e6587f8f/design-reference/master170/cases.json"
+      "kind": "local-source-read"
     },
     {
       "id": "wcag-contrast",
@@ -6883,6 +6930,5 @@
       "limit": "Không bị che hoàn toàn ởAA khác với ưu tiên thấy trọn của dự án.",
       "kind": "official-web-read-2026-10-30"
     }
-  ],
-  "distribution": "Public reference; machine-specific original paths normalized. Hashes retain original source identity."
+  ]
 }

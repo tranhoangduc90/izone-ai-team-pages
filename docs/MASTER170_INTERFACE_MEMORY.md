@@ -1,5 +1,7 @@
 # Nguồn chuẩn hiện hành: master 170 v1.1 — 28/10/2026
 
+**Đức chốt 01/11/2026:** [Ưu tiên diện tích bài làm, không thừa chân trang và gom trạng thái](https://github.com/tranhoangduc90/izone-AI-team/blob/main/docs/interface-master170/WORKSPACE_SPACE_AND_STATUS_2026-11-01.md). Cụ thể hóa E02/E05/E06/E08/F03; giữ chữ/control, lỗi và engine. Adapter `shared/master170/workspace-space.css` chỉ bật ở bốn nhóm Reading/Listening Homework/thực chiến được giao; không ép fixed lên form dài/mobile hoặc mở rộng sang K56/Term/SW. Catalog tra cứu và bảy skill đã có đường đọc; bằng chứng runtime vẫn phải đọc theo revision thực tế.
+
 Bổ sung29/10: [thư viện31demo và phạm vi kiểm](MASTER170_REFERENCE_GALLERY.md), nối tới checklist/master/skill và ảnh trong DOCX. Demo chờ Đức duyệt; không thay chứng cứ sản phẩm đã phát trong PR348/351.
 
 Đức đã duyệt nâng cấp từ sản phẩm thực tế: [chuẩn 1.1](https://github.com/tranhoangduc90/izone-AI-team/blob/main/docs/interface-master170/MASTER_STANDARD_V1_1.md), [thông số và consumer](https://github.com/tranhoangduc90/izone-ai-team-pages/blob/main/shared/master170/consumers-v1.1.json). Bản này bổ sung trên nền1.0, thay các ngoại lệ font Term/Mini đã cũ và tách thang bài thi gọn/Homework18px. Mốc triển khai phải đọc từ hồ sơ mới; hướng dẫn không tự chứng nhận mọi consumer đã phát. Các ngoại lệ Writing, Speaking, Progress Log và K56 vẫn giữ.

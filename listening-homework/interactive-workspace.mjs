@@ -1,7 +1,9 @@
 import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261101-natural-dyes1&audio=20261028-part-rescue-v1';
 import {decodeBody,encodeBody,encodeAnswer} from './answer-codec.mjs?v=20261031-lessons1';
 import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
+import {mountWorkspaceStatus} from './workspace-status.mjs?v=20261101-space1';
 export function createListeningWorkspace(options){
+mountWorkspaceStatus();
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Keep the original demo namespace and IDs so existing local drafts remain readable.
