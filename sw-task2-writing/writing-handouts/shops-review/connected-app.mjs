@@ -1,3 +1,4 @@
+import {createCheckFeedback,missingCheckFields} from '../../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {PEOPLE,ACTIVITY,TASK,LABELS,fixture,wordCount} from './model.mjs';
 import {studentLayout,teacherLayout,esc,SECTION_FIELDS} from './lesson9-view.mjs?v=20261031-threads';
 import {connectedState,SECTION,serverField} from './connected-adapter.mjs';
@@ -10,6 +11,7 @@ import {readLegacyDraft} from './legacy-draft.mjs';
 import {patchReadingView} from '../../../shared/reading-view.mjs?v=20261027-draft-reading-v1';
 installStyles();
 const root=document.querySelector('#app'),teacher=document.body.dataset.view==='teacher',$=s=>root.querySelector(s);
+const checkFeedback=createCheckFeedback({root,serverField});let checkingRef=null;
 const namespace='izone:sw-task2:production:'+ACTIVITY+':',drafts=new Map(),composers=new Map();
 const openDetails=new Map(),historyCounts=new Map(),resultIndexes=new Map();let renderedOwner='login';
 const vocabularyRequests=new Set(),resultRequests=new Map();
@@ -91,6 +93,7 @@ function draw({background=false}={}){
  if(background)patchReadingView(root,view);else root.replaceChildren(...view.childNodes);
  const dialog=root.querySelector('#detail');if(teacher&&detailOpen&&dialog&&!dialog.open)dialog.showModal();
  const attest=root.querySelector('#attest-dialog');if(attest&&!attest.open){attest.showModal();attest.querySelector('input')?.focus();}
+ checkFeedback.sync(responses,current?.sessionRef);
  if(drawNotice)message(drawNotice);
  if(root.querySelector('#connected-draft-result'))void loadResult(current.sessionRef);
 }
@@ -167,7 +170,7 @@ async function save(){
  }catch(error){if(epoch===generation){if(error.status===409)conflict=true;dirty=true;cache();message(error.message+' Nội dung đang gõ được giữ, chưa ghi đè máy chủ.');}throw error;}finally{busy=false;}
 }
 async function refresh({background=false}={}){
- if($('#legacy-dialog')||$('#conflict-dialog'))return;
+ if($('#legacy-dialog')||$('#conflict-dialog')||$('#writing-check-dialog'))return;
  if(!current)return;const ref=current.sessionRef,epoch=generation;
  const path=teacher?'admin/lesson9/sessions/':'lesson9/sessions/';
  const result=await api(path+ref);const threadData=await api((teacher?'admin/live/':'')+'sessions/'+ref+'/teacher-comments');
@@ -189,10 +192,24 @@ async function action(kind,extra={}){
  current=result.session;responses=working(current);dirty=false;cache();return result.session;
 }
 async function check(key){
- if(editor)throw Error('Hãy lưu hoặc hủy ô đang chỉnh.');const epoch=generation,ref=current.sessionRef;await save();
- if(epoch!==generation||ref!==current.sessionRef)return;
- if(key==='draft'&&current.sections.draft.locked)await action('revise_draft');
- await api('lesson-sessions/'+ref+'/checks','POST',{section:SECTION[key],requestId:id()});if(epoch!==generation)return;await refresh();draw();
+ if(checkingRef)return;
+ const epoch=generation,ref=current.sessionRef,button=$(`[data-check="${key}"]`)||(key==='draft'?$('[data-action="grade"]'):null);
+ checkingRef=ref;
+ try{
+  if(editor)throw Error('Hãy lưu hoặc hủy ô đang chỉnh.');
+  let missing=missingCheckFields(current.sectionDefinitions,SECTION[key],responses);
+  if(missing.length){checkFeedback.missing(missing,responses,ref);return;}
+  checkFeedback.pending(true,responses,ref);
+  await save();if(epoch!==generation||ref!==current?.sessionRef)return;
+  if(dirty)throw Error('Nội dung vừa được sửa trong lúc lưu. Chữ mới vẫn được giữ; hãy nhấn Check lại để gửi bản mới nhất.');
+  missing=missingCheckFields(current.sectionDefinitions,SECTION[key],responses);
+  if(missing.length){checkFeedback.missing(missing,responses,ref);return;}
+  if(key==='draft'&&current.sections.draft.locked)await action('revise_draft');
+  await api('lesson-sessions/'+ref+'/checks','POST',{section:SECTION[key],requestId:id()});
+  if(epoch!==generation||ref!==current?.sessionRef)return;
+  await refresh();draw();
+ }catch(error){if(epoch===generation&&ref===current?.sessionRef)checkFeedback.error(error,button);}
+ finally{checkingRef=null;if(epoch===generation&&ref===current?.sessionRef)checkFeedback.pending(false,responses,ref);}
 }
 async function loadTeacher(render=true){
  const epoch=generation;
@@ -245,7 +262,7 @@ async function requestVocabulary(retry=false){
 }
 root.addEventListener('input',e=>{
  const el=e.target;
- if(el.dataset.field){responses[serverField(el.dataset.field,responses.body_choice)]=el.value;dirty=true;cache();if($('#save-state'))$('#save-state').textContent='Chưa lưu máy chủ';clearTimeout(saveTimer);saveTimer=setTimeout(()=>save().catch(()=>{}),900);
+ if(el.dataset.field){responses[serverField(el.dataset.field,responses.body_choice)]=el.value;dirty=true;cache();checkFeedback.sync(responses,current.sessionRef);if($('#save-state'))$('#save-state').textContent='Chưa lưu máy chủ';clearTimeout(saveTimer);saveTimer=setTimeout(()=>save().catch(()=>{}),900);
   if(el.dataset.field.startsWith((responses.body_choice||'body1')+'_idea')){const mirror=$('#field-idea'+el.dataset.field.at(-1));if(mirror)mirror.value=el.value;}
   if(['idea1','idea2'].includes(el.dataset.field)){const mirror=$('#field-'+(responses.body_choice||'body1')+'_'+el.dataset.field);if(mirror)mirror.value=el.value;}
   const view=state(),key=Object.keys(SECTION_FIELDS).find(k=>SECTION_FIELDS[k].includes(el.dataset.field))||'topic';
@@ -358,7 +375,7 @@ function selectQuote(){
 }
 root.addEventListener('mouseup',selectQuote);root.addEventListener('keyup',e=>{if(e.key==='Shift')selectQuote();});
 function closeDialog(){if(attestKey)attestKey=null;else{if(composer)composers.set(person.id,composer);detailOpen=false;}draw();$(`[data-student="${person?.id}"]`)?.focus();}
-root.addEventListener('cancel',e=>{if(e.target.tagName==='DIALOG'){e.preventDefault();if(e.target.id==='conflict-dialog'){e.target.remove();return;}closeDialog();}},true);
+root.addEventListener('cancel',e=>{if(e.target.id==='writing-check-dialog')return;if(e.target.tagName==='DIALOG'){e.preventDefault();if(e.target.id==='conflict-dialog'){e.target.remove();return;}closeDialog();}},true);
 let down=false;const outside=e=>{if(e.target.tagName!=='DIALOG')return false;const r=e.target.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom;};
 root.addEventListener('pointerdown',e=>down=outside(e));root.addEventListener('pointerup',e=>{if(down&&outside(e))closeDialog();down=false;});
 window.addEventListener('beforeunload',e=>{if(dirty||editor){cache();e.preventDefault();e.returnValue='';}});

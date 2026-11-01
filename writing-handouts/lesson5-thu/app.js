@@ -1,3 +1,4 @@
+import {createCheckFeedback,missingCheckFields} from '../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261025-l11-ideas-v4';
 import {createClient} from './client.mjs?v=20261025-l11-ideas-v4';
 import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261025-l11-ideas-v4';
@@ -26,6 +27,7 @@ if(isMulti(lesson))for(const n of [1,2])for(const [key,value] of Object.entries(
 const descriptions={topic:{title:'Chốt idea và Topic sentence',kicker:'01 · Chuẩn bị thân bài 2',instruction:'Topic sentence = Trọng tâm bàn luận + Tóm tắt ngắn gọn toàn bộ idea của đoạn văn.',button:'Check chất lượng Topic Sentence'},b:{title:'Chốt điểm cuối (B)',instruction:'Có cụ thể không? Nêu kết quả cuối cùng mà ý này muốn chứng minh, để người đọc hình dung rõ.',button:'Check chất lượng Điểm cuối'},a:{title:'Check điểm đầu (A)',instruction:lesson.aInstruction||'',button:'Check chất lượng điểm đầu A'},x:{title:'Xây X · Cầu nối từ A sang B',instruction:'Vì sao A dẫn đến B? Giải thích một cơ chế nối hai điểm đã đạt; không chỉ diễn đạt lại A hoặc B.',button:'Check chất lượng cầu nối X'}};
 if(isWhole(lesson)){descriptions.topic.instruction='Chọn hai lý do giải thích WHY. Topic sentence báo trước hiện tượng và bao quát hai nhóm lý do; không cần kể chi tiết cả hai ý.';}
 if(isPrepared(lesson)){labels.outline='Kế hoạch idea hai thân bài';labels.chosenSolution='Phương án bạn cho là tốt hơn';descriptions.outline={title:'Chốt idea của cả hai thân bài',instruction:'Chọn phương án bạn ủng hộ và nêu hai idea cho mỗi thân bài. Thân bài 1 chỉ ra hạn chế của phương án không chọn; có thể khen mở đầu rồi chuyển sang chê. Thân bài 2 tập trung khen phương án bạn chọn. Chưa viết Topic sentence hoặc A/X/B.',button:'Check idea của cả hai thân bài'};}
+const checkFeedback=createCheckFeedback({root:$('workspace'),serverField:key=>key,fieldLabel:key=>labels[key]||$('field-'+key)?.parentElement?.firstChild?.textContent.trim()||key});
 const statusLabels={draft:'Chưa check',revision:'Cần sửa',passed:'Đã đạt',pending:'Đang chấm…',technical_error:'Chưa chấm xong'};
 function field(name,disabled,readOnly=false){
   if(readOnly)return `<div class="student-field"><span>${escape(labels[name])} · Đã chốt</span>${savedContent(state,name,{editable:false})}</div>`;
@@ -101,6 +103,7 @@ function render(){
   }
   for(const id of openSteps)if($(id))$(id).open=true;
   for(const item of document.querySelectorAll('details.comment.history[data-history]'))if(historyStates.has(item.dataset.history))item.open=historyStates.get(item.dataset.history);
+  checkFeedback.sync(state.responses,state.ref);
 }
 function hasReplyDraft(){return [...document.querySelectorAll('[data-thread-reply] textarea')].some(el=>el.value.trim());}
 function revealThreads(refs){
@@ -179,9 +182,9 @@ function schedulePoll(){clearTimeout(pollTimer);if(!student)return;pollTimer=set
 async function poll(){
  const epoch=generation,watermark=mutationVersion,ref=state.ref;
  try {
-  if(!busy&&!conflict&&!featureDialog?.open&&!document.querySelector('.inline-edit-box')&&!hasReplyDraft()&&!Object.keys(dirty).length&&state.ref){
+  if(!busy&&!conflict&&!featureDialog?.open&&!$('writing-check-dialog')&&!document.querySelector('.inline-edit-box')&&!hasReplyDraft()&&!Object.keys(dirty).length&&state.ref){
    const next=(await api.read(state.ref)).session;
-   if(epoch===generation&&watermark===mutationVersion&&ref===state.ref&&!busy&&!conflict&&!featureDialog?.open&&!document.querySelector('.inline-edit-box')&&!hasReplyDraft()&&!Object.keys(dirty).length&&JSON.stringify(next)!==JSON.stringify(state)){apply(next);note('');}
+   if(epoch===generation&&watermark===mutationVersion&&ref===state.ref&&!busy&&!conflict&&!featureDialog?.open&&!$('writing-check-dialog')&&!document.querySelector('.inline-edit-box')&&!hasReplyDraft()&&!Object.keys(dirty).length&&JSON.stringify(next)!==JSON.stringify(state)){apply(next);note('');}
   }
  }catch(error){if(epoch===generation){note('Kết nối đang gián đoạn. Bài đã gửi vẫn được giữ; trang sẽ kiểm lại.');}}
  finally{if(epoch===generation)schedulePoll();}
@@ -267,7 +270,7 @@ $('read-latest').addEventListener('click',async()=>{
 $('restore-draft').addEventListener('click',()=>{if(busy||editingLocked)return;try{const saved=JSON.parse(localStorage.getItem(draftKey()));for(const [field,value] of Object.entries(saved.changes||saved.responses)){const key=ORDER.find(k=>FIELDS[k].includes(field));if(typeof value==='string'&&canEdit(state,key)&&state.responses[field]!==value){state.responses[field]=value;dirty[field]=value;}}render();$('restore-draft').hidden=true;if(Object.keys(dirty).length){keepDraft();void flush();}}catch{message('Chưa đọc được nháp trên thiết bị.');}});
 $('workspace').addEventListener('input',event=>{
  const field=event.target.dataset.field,key=ORDER.find(k=>FIELDS[k].includes(field));if(!field||editingLocked||conflict||!canEdit(state,key))return;
- state.responses[field]=event.target.value;dirty[field]=event.target.value;keepDraft();$('save-state').textContent='Đang lưu…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>void flush(),600);
+ state.responses[field]=event.target.value;dirty[field]=event.target.value;keepDraft();checkFeedback.sync(state.responses,state.ref);$('save-state').textContent='Đang lưu…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>void flush(),600);
  const count=document.querySelector(`[data-count="${key}"]`);if(count)count.textContent=FIELDS[key].reduce((total,f)=>total+state.responses[f].trim().split(/\s+/).filter(Boolean).length,0)+' từ';
 });
 $('workspace').addEventListener('click',async event=>{
@@ -280,7 +283,7 @@ $('workspace').addEventListener('click',async event=>{
  const next=button.id==='next-idea'||!!button.id?.endsWith('_next-idea'),bodyIndex=isMulti(lesson)?bodyIndexOf(key||button.id)||Number(button.closest('[data-body-index]')?.dataset.bodyIndex)||undefined:undefined;
  if(!key&&!next&&!button.dataset.vocabRetry)return;
  if((busy&&!saveInFlight)||conflict||editingLocked||button.disabled)return;
- if(key){const empty=FIELDS[key].find(f=>!state.responses[f].trim());if(empty){const el=$('error-'+key);el.hidden=false;el.textContent='Hãy nhập đủ nội dung vào các ô trước khi Check.';$('field-'+empty)?.focus();return;}}
+ if(key){const missing=missingCheckFields([{section:key,requiredFields:FIELDS[key]}],key,state.responses);if(missing.length){checkFeedback.missing(missing,state.responses,state.ref);return;}}
  button.disabled=true;editingLocked=true;const epoch=generation;
  fieldControls().forEach(el=>el.disabled=true);
  if(!await flush()||epoch!==generation){if(epoch===generation){editingLocked=false;button.disabled=false;fieldControls().forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});}return;}
@@ -288,7 +291,7 @@ $('workspace').addEventListener('click',async event=>{
  try {
   const result=key?await api.check(state.ref,{section:key,bodyIndex,baseVersion:state.version,requestId:crypto.randomUUID()}):next?await api.idea2(state.ref,bodyIndex):await api.vocabulary(state.ref,button.dataset.vocabRetry==='all'?'all':Number(button.dataset.vocabRetry),bodyIndex);
   if(epoch!==generation)return;busy=false;apply(result.session);note('');if(next)focusSection(bodyIndex?bodyKey(bodyIndex,'si2'):isWhole(lesson)?'si2':'b2');
- }catch(error){if(epoch===generation){failure(error);button.disabled=false;}}
+ }catch(error){if(epoch===generation){failure(error);button.disabled=false;if(key)checkFeedback.error({message:'Chưa gửi được yêu cầu Check. Nội dung được giữ nguyên; hãy thử lại sau khi kết nối ổn định.'},button);}}
  finally{if(epoch===generation){busy=false;editingLocked=false;fieldControls().forEach(el=>{const section=ORDER.find(k=>FIELDS[k].includes(el.dataset.field));el.disabled=conflict||!canEdit(state,section);});schedulePoll();}}
 });
 $('workspace').addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)&&event.target.dataset.threads){event.preventDefault();revealThreads(event.target.dataset.threads);}});
