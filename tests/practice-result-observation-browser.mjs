@@ -9,12 +9,12 @@ import {createPracticeCompactApp} from './fixtures/practice-compact-app.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url)),out=process.env.PRACTICE_RESULT_EVIDENCE;
 if(!out||!path.isAbsolute(out))throw Error('PRIVATE_RESULT_EVIDENCE_REQUIRED');await fs.mkdir(out,{recursive:true});
 const {chromium}=createRequire(path.join(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'))('playwright');
-const products=process.env.PRACTICE_COMPACT_PRODUCT?[process.env.PRACTICE_COMPACT_PRODUCT]:['reading','listening'],quick=process.env.PRACTICE_RESULT_QUICK==='true',records=[];let browser;
+const products=process.env.PRACTICE_COMPACT_PRODUCT?[process.env.PRACTICE_COMPACT_PRODUCT]:['reading','listening'],quick=process.env.PRACTICE_RESULT_QUICK==='true',variant=process.env.PRACTICE_RESULT_VARIANT||'legacy',records=[];let browser;
 const until=async(check,timeout=15000)=>{const end=performance.now()+timeout;while(performance.now()<end){if(await check())return;await new Promise(resolve=>setTimeout(resolve,40));}throw Error('RESULT_NATIVE_BROWSER_TIMEOUT');};
 test.before(async()=>{browser=await chromium.launch({channel:'chrome',headless:true});});
 test.after(async()=>{await browser?.close();await fs.writeFile(path.join(out,'summary.json'),JSON.stringify(records,null,2));});
-for(const product of products)test(`${product}: native Docs commit reaches learner without result rereads or interrupting the reading view`,{timeout:200000},async t=>{
- const f=await createPracticeCompactApp({root,product,stateStreamEnabled:true}),width=product==='reading'?1440:390;
+for(const product of products)test(`${product}/${variant}: native Docs commit reaches learner without result rereads or interrupting the reading view`,{timeout:200000},async t=>{
+ const withReview=product==='listening'&&variant!=='legacy',f=await createPracticeCompactApp({root,product,stateStreamEnabled:true,contentVariant:variant,withReview}),width=product==='reading'?1440:390;
  const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage();page.setDefaultTimeout(10000);
  t.after(async()=>{await context.close();await f.close();});const errors=[];page.on('pageerror',error=>errors.push(error.message));let holdResult=null,releaseHeld;
  await context.route('**/*',async route=>{
@@ -40,10 +40,14 @@ for(const product of products)test(`${product}: native Docs commit reaches learn
   await until(()=>resultReads()===1&&statusReads()>=1);await until(async()=>!await warning());
   // Let the barrier response finish painting before collecting stable DOM evidence.
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-  const number=Object.keys(f.content.key)[1];await page.locator(`[data-action="explanation-toggle"][data-question="${number}"]`).click();
-  const paneSelector=product==='reading'?'.explanation-dialog-detail-scroll':`#explanation-${number} .explanation-analysis`;
-  const paragraphSelector=product==='reading'?'.explanation-dialog-analysis > p':`#explanation-${number} .explanation-analysis p`;
-  const focusSelector=product==='reading'?'#explanation-dialog [data-action="explanation-next"]':`[data-action="explanation-toggle"][data-question="${number}"]`;
+  const number=variant==='full'?(product==='reading'?'14':'11'):Object.keys(f.content.key)[1];await page.locator(`[data-action="explanation-toggle"][data-question="${number}"]`).click();
+  const popup=product==='reading'||withReview,paneSelector=popup?'.explanation-dialog-detail-scroll':`#explanation-${number} .explanation-analysis`;
+  if(variant==='full'){
+   assert.equal(await page.locator('tr[data-result-question]').count(),40);assert.match(await page.locator('#explanation-dialog-title').textContent(),new RegExp('Câu '+number+'\\b'));
+   if(product==='reading'){assert.equal(await page.locator('#explanation-paragraph-p2_A').count(),1);assert.equal(await page.locator('#explanation-paragraph-p1_A').count(),0);}
+  }
+  const paragraphSelector=popup?(product==='reading'&&variant!=='legacy'?'.explanation-dialog-analysis .explanation-analysis > p':'.explanation-dialog-analysis > p'):`#explanation-${number} .explanation-analysis p`;
+  const focusSelector=product==='reading'?'#explanation-dialog [data-action="explanation-next"]':withReview?'#explanation-dialog [data-review-next]':`[data-action="explanation-toggle"][data-question="${number}"]`;
   await page.locator(paragraphSelector).first().waitFor();
   const baseline=await page.evaluate(({paneSelector,paragraphSelector,focusSelector})=>{
    const pane=document.querySelector(paneSelector),paragraph=document.querySelector(paragraphSelector),focus=document.querySelector(focusSelector);
@@ -61,12 +65,19 @@ for(const product of products)test(`${product}: native Docs commit reaches learn
   await until(()=>page.locator('[data-practice-docs]').evaluate(node=>node.textContent.includes('Đã cập nhật tình trạng')));
   await assertReading();assert.equal(resultReads(),initialReads);assert.deepEqual((await work()).rows,before);
   const verified=(await f.pool.query(`SELECT status FROM ${schema}.doc_job`)).rows;assert.ok(verified.length>1&&verified.every(row=>row.status==='verified'));
+  let audioBefore;
+  if(withReview){
+   await page.locator('#explanation-dialog [data-replay]').first().evaluate(button=>button.click());
+   await page.waitForFunction(()=>window.ListeningReview.debug().player.state==='playing'&&!document.querySelector('#review-audio').paused);
+   audioBefore=await page.evaluate(()=>({sequence:window.ListeningReview.debug().player.sequence,time:document.querySelector('#review-audio').currentTime}));
+  }
   // Same attempt, unchanged work timestamp, repaired explanations: one content read plus a fresh metadata barrier.
   f.content.explanations.entries[number].heading={runs:[{text:'Repaired synthetic explanation heading'}]};
   f.content.explanations.entries[number].prompt={runs:[{text:'Repaired synthetic explanation heading'}]};
   await f.pool.query(`UPDATE ${schema}.content SET explanations=$1`,[f.content.explanations]);f.observationHub.wake();
   await until(()=>resultReads()===initialReads+1&&statusReads()===initialStatus+1);
-  await until(()=>page.locator(product==='reading'?'#explanation-dialog':`#explanation-${number}`).evaluate(node=>node.textContent.includes('Repaired synthetic explanation heading')));
+  await until(()=>page.locator(popup?'#explanation-dialog':`#explanation-${number}`).evaluate(node=>node.textContent.includes('Repaired synthetic explanation heading')));
+  if(withReview){const audio=await page.evaluate(()=>({sequence:window.ListeningReview.debug().player.sequence,time:document.querySelector('#review-audio').currentTime,playing:!document.querySelector('#review-audio').paused,status:document.querySelector('#explanation-dialog .replay-status').textContent}));assert.equal(audio.sequence,audioBefore.sequence);assert.ok(audio.playing&&audio.time>=audioBefore.time);assert.match(audio.status,/Đang phát/);}
   await assertReading();assert.deepEqual((await work()).rows,before);
   // A failed metadata read keeps the owned result. Recovery of the same revision clears its warning without a full read.
   await f.pool.query(`UPDATE ${schema}.work SET state=jsonb_set(state,'{attempts,0,draft,answers}','[]'::jsonb)`);f.observationHub.wake();await until(warning);await assertReading();
@@ -81,6 +92,6 @@ for(const product of products)test(`${product}: native Docs commit reaches learn
   const storageBefore=await page.evaluate(()=>JSON.stringify({...localStorage}));f.setEligible(false);f.observationHub.wake();await page.waitForURL(/#login$/);
   assert.equal(await page.locator('.result-summary').count(),0);assert.equal(await page.locator('#explanation-dialog[open]').count(),0);assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage})),storageBefore);
   assert.deepEqual((await work()).rows,before);assert.deepEqual(errors,[]);
-  records.push({product,width,outcome:'passed',observedMs:performance.now()-started,realIntervalMs:30000,steadyScans:quick?0:3,steadyFullResultReads:0,steadyStatusReads:0,nativeDocsReadback:docs.reads,nativeDocsWrites:docs.writes,nativeCommitSignals:docs.signals.length,docsOnlyResultReads:0,repairedContentReads:1,preservedReadingState:true,metadataRecovery:true,lateResultDiscarded:true,revokedPrivateView:true,workUnchanged:true});
+  records.push({product,variant,withReview,width,outcome:'passed',observedMs:performance.now()-started,realIntervalMs:30000,steadyScans:quick?0:3,steadyFullResultReads:0,steadyStatusReads:0,nativeDocsReadback:docs.reads,nativeDocsWrites:docs.writes,nativeCommitSignals:docs.signals.length,docsOnlyResultReads:0,repairedContentReads:1,preservedReadingState:true,keptActiveReviewAudio:withReview,metadataRecovery:true,lateResultDiscarded:true,revokedPrivateView:true,workUnchanged:true});
  }catch(error){releaseHeld?.();await page.screenshot({path:path.join(out,product+'-failed.png')});await fs.writeFile(path.join(out,product+'-failure.private.json'),JSON.stringify({url:page.url(),errors,hub:f.observationHub.snapshot(),docs:f.resultDocs.snapshot(),requests:f.requests.map(row=>({path:row.path,status:row.status,completed:row.completed,code:row.body?.error?.code}))},null,2));throw error;}
 });

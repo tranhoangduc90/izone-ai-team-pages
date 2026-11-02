@@ -10,7 +10,7 @@ export async function createPracticeResultDocs({fixture:f,productRoot,hub}){
   for(let n=1;n<ends.length;n++){const start=ends[n-1],end=ends[n];if(start===end)continue;const link=marks.find(mark=>mark.start<=start&&mark.end>=end);parts.push({startIndex:index+start,endIndex:index+end,textRun:{content:value.slice(start,end),textStyle:link?{link:{url:link.url}}:{}}});}
   return{startIndex:index,endIndex:index+value.length+1,paragraph:{elements:[...parts,{startIndex:index+value.length,endIndex:index+value.length+1,textRun:{content:'\n',textStyle:{}}}]}};
  };
- const docs={
+ let docs={
   async read(id){reads++;if(id!==f.registration.documentId)throw Error('FIXTURE_DOCUMENT_MISMATCH');return{documentId:id,revisionId:'fixture-'+version,tabs:[{tabProperties:{tabId:f.registration.tabId},documentTab:{body:{content:[
    paragraph(1,f.content.code),paragraph(100,CTA,[{start:0,end:CTA.length,url:f.registered.entryUrl}]),
    {table:{tableRows:[{tableCells:[{content:[paragraph(200,STATUS_HEADING)]}]},{tableCells:[{content:[paragraph(300,text,links)]}]}]}}
@@ -23,7 +23,15 @@ export async function createPracticeResultDocs({fixture:f,productRoot,hub}){
    }version++;
   }
  };
+ let authored;
+ if(f.content.definition.authored){
+  const {homeworkDocsFixture}=await import(pathToFileURL(path.join(productRoot,'../test-support/homework-docs.js')));
+  const {READING_STATUS_HEADING}=await import(pathToFileURL(path.join(productRoot,'src/docs.js'))),reading=productRoot.endsWith('reading-practice');
+  authored=homeworkDocsFixture({code:f.content.code,documentId:f.registration.documentId,tabId:f.registration.tabId,cta:CTA,entryUrl:f.registered.entryUrl,prefix:(reading?'Reading':'Listening')+' thực chiến (tự động): ',heading:reading?READING_STATUS_HEADING:STATUS_HEADING,codeInTable:reading});
+  docs={async read(id){reads++;return authored.docs.read(id);},async write(id,plan){writes++;return authored.docs.write(id,plan);}};
+ }
  function assertRange(start,end){if(start<300||end<start||end>300+text.length)throw Error('FIXTURE_STATUS_RANGE_INVALID');}
  const detach=registerWorkPublisher(f.pool,lane=>{signals.push(lane);hub.wake();}),worker=createDocsWorker({pool:f.pool,docs});
- return{async drain(){for(let n=0;n<32;n++){const [job]=await worker.claim(1);if(!job)break;await worker.run(job);const row=(await f.pool.query(`SELECT status,error_code FROM ${productRoot.endsWith('reading-practice')?'reading_practice':'listening_practice'}.doc_job WHERE id=$1`,[job.id])).rows[0];if(row.status!=='verified')throw Error('FIXTURE_DOCS_NOT_VERIFIED:'+row.error_code);}return{reads,writes,signals:[...signals],text};},close:detach,snapshot:()=>({reads,writes,signals:[...signals],text})};
+ const snapshot=()=>({reads,writes,signals:[...signals],text:authored?.value??text});
+ return{async drain(){for(let n=0;n<32;n++){const [job]=await worker.claim(1);if(!job)break;await worker.run(job);const row=(await f.pool.query(`SELECT status,error_code FROM ${productRoot.endsWith('reading-practice')?'reading_practice':'listening_practice'}.doc_job WHERE id=$1`,[job.id])).rows[0];if(row.status!=='verified')throw Error('FIXTURE_DOCS_NOT_VERIFIED:'+row.error_code);}return snapshot();},close:detach,snapshot};
 }

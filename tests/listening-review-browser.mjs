@@ -204,8 +204,13 @@ test('a real background tab stops replay and does not autoplay on return',{skip:
   try{
     native=await chromium.connectOverCDP(process.env.LISTENING_NATIVE_CDP_URL,{noDefaults:true});
     const f=await fixture(t,{nativeContext:native.contexts()[0]});await f.enter();await f.ready();await f.open();await f.play();
-    const other=await f.ctx.newPage();await other.goto('about:blank');await other.bringToFront();
-    await f.page.waitForFunction(()=>document.hidden===true,{},{timeout:4000});
+    // Explicitly disable the debugging client's focus override; visibility must come from Chrome's selected tab.
+    const natural=await f.ctx.newCDPSession(f.page);await natural.send('Emulation.setFocusEmulationEnabled',{enabled:false});await natural.detach();
+    const other=await f.ctx.newPage();await other.goto('about:blank');const naturalOther=await f.ctx.newCDPSession(other);await naturalOther.send('Emulation.setFocusEmulationEnabled',{enabled:false});await naturalOther.detach();await other.bringToFront();
+    try{await f.page.waitForFunction(()=>document.hidden===true,{},{timeout:4000});}catch(error){
+      const visibility=async page=>{const session=await f.ctx.newCDPSession(page);try{return{url:page.url(),state:await page.evaluate(()=>({hidden:document.hidden,visibility:document.visibilityState,focused:document.hasFocus()})),window:await session.send('Browser.getWindowForTarget')};}finally{await session.detach();}};
+      t.diagnostic(JSON.stringify({reading:await visibility(f.page),other:await visibility(other)}));throw error;
+    }
     assert.equal(await f.page.locator('#review-audio').evaluate(a=>a.paused),true);
     await f.page.bringToFront();await f.page.waitForTimeout(100);
     assert.equal(await f.page.locator('#review-audio').evaluate(a=>a.paused),true);
