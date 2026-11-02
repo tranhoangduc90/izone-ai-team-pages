@@ -1,5 +1,6 @@
 // Chỉ dựng bản đã lưu do API giảng viên trả về; không mở phiên hoặc lấy audio.
 // Mỗi lượt giữ riêng; đổi người/lớp/đăng xuất loại phản hồi cũ và xóa nội dung hộp xem.
+import {patchReadingView} from '../../shared/reading-view.mjs?v=20261103-term-tracking1';
 let active=null,serial=0;
 const node=(tag,text='',className='')=>{const el=document.createElement(tag);el.textContent=text;if(className)el.className=className;return el;};
 const stamp=value=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('vi-VN'):'Chưa có';
@@ -15,32 +16,41 @@ export function openTeacherSavedProgress({student,className,testSlug,testTitle=t
  const header=node('header'),title=node('h2',student.name),close=node('button','Đóng','button button-secondary');close.type='button';
  const context=node('p',className+' · '+testTitle,'muted'),notice=node('p','','muted'),body=node('div'),refresh=node('button','Cập nhật bản đã lưu','button button-secondary');refresh.type='button';
  header.append(title,close);dialog.append(header,context,node('p','Chỉ hiện nội dung đã lưu lên hệ thống. Phần học viên còn đang gõ trên thiết bị có thể chưa xuất hiện.','muted'),refresh,notice,body);
- const current={dialog,timer:null,sequence:0,chosen:'',visibility(){clearTimeout(current.timer);if(!document.hidden)void load();}};active=current;
+ const current={dialog,timer:null,sequence:0,chosen:'',data:null,visibility(){clearTimeout(current.timer);if(!document.hidden)void load();}};active=current;
  const valid=()=>active===current&&serial===generation&&isCurrent();
  const schedule=()=>{clearTimeout(current.timer);if(valid()&&!document.hidden)current.timer=setTimeout(()=>void load(),30000);};
  function render(data){
-  body.replaceChildren();
-  if(!data.attempts.length){body.append(node('p','Chưa có lượt làm hoặc bản lưu trên hệ thống. Việc xem không tạo lượt mới.'));return;}
+  current.data=data;const next=document.createDocumentFragment();
+  if(!data.attempts.length){next.append(node('p','Chưa có lượt làm hoặc bản lưu trên hệ thống. Việc xem không tạo lượt mới.'));patchReadingView(body,next);return;}
   const latest=data.attempts.filter(a=>!a.superseded).at(-1)||data.attempts.at(-1);
   const selected=data.attempts.find(a=>a.viewId===current.chosen)||latest;current.chosen=selected.viewId;
   const label=node('label','Lượt làm'),select=node('select');select.setAttribute('aria-label','Lượt làm');
   data.attempts.forEach((a,i)=>{const option=node('option',`Lượt ${i+1} · ${stamp(a.createdAt)}${a.superseded?' · Đã được thay thế':''}`);option.value=a.viewId;option.selected=a.viewId===selected.viewId;select.append(option);});
-  label.append(select);body.append(label);select.addEventListener('change',()=>{current.chosen=select.value;render(data);});
-  body.append(node('p',`${selected.order==='read_first'?'Reading trước':'Listening trước'} · ${selected.delivery==='answer_sheet'?'Làm trên giấy':'Làm trên máy'} · Đề phiên bản ${selected.definitionVersion}`,'muted'));
+  label.dataset.readingKey='selector';label.append(select);next.append(label);
+  select.addEventListener('change',event=>{current.chosen=event.currentTarget.value;render(current.data);});
+  const metadata=node('p',`${selected.order==='read_first'?'Reading trước':'Listening trước'} · ${selected.delivery==='answer_sheet'?'Làm trên giấy':'Làm trên máy'} · Đề phiên bản ${selected.definitionVersion}`,'muted');metadata.dataset.readingKey='metadata';next.append(metadata);
   for(const [key,title] of [['listening','Listening'],['reading','Reading']]){
    const section=node('section'),part=selected[key]||{},entries=Object.entries(part.answers||{}).sort((a,b)=>Number(a[0])-Number(b[0]));
+   section.dataset.readingKey=key;section.dataset.viewId=selected.viewId;
    section.append(node('h3',title),node('p',part.submittedAt?'Đã nộp · '+stamp(part.submittedAt):part.startedAt||entries.length?'Chưa nộp · Bản lưu '+stamp(part.savedAt):'Chưa bắt đầu','muted'));
    if(!entries.length)section.append(node('p','Chưa có câu trả lời đã lưu.'));
    else{const table=node('table'),head=node('tr');head.append(node('th','Câu'),node('th','Câu trả lời đã lưu'));table.append(head);
     for(const [number,answer] of entries){const row=node('tr');row.append(node('td',number),node('td',String(answer||'Chưa nhập')));table.append(row);}section.append(table);}
-   body.append(section);
+   next.append(section);
   }
-  const writing=selected.writing||{},section=node('section');section.append(node('h3','Writing'),node('p',writing.submittedAt?'Đã nộp · '+stamp(writing.submittedAt):writing.startedAt?'Chưa nộp · Bản lưu '+stamp(writing.savedAt):'Chưa bắt đầu','muted'));
-  for(const [key,title] of [['task1','Task 1'],['task2','Task 2']])if(writing[key])section.append(node('h4',title),node('pre',writing[key]));
-  if(!writing.task1&&!writing.task2)section.append(node('p','Chưa có nội dung Writing đã lưu.'));body.append(section);
+  const writing=selected.writing||{},section=node('section');section.dataset.readingKey='writing';section.dataset.viewId=selected.viewId;
+  section.append(node('h3','Writing'),node('p',writing.submittedAt?'Đã nộp · '+stamp(writing.submittedAt):writing.startedAt?'Chưa nộp · Bản lưu '+stamp(writing.savedAt):'Chưa bắt đầu','muted'));
+  for(const [key,title] of [['task1','Task 1'],['task2','Task 2']])if(writing[key]){
+   const heading=node('h4',title),content=node('pre',writing[key]);heading.dataset.readingKey=key+'-heading';content.dataset.readingKey=key;
+   section.append(heading,content);
+  }
+  if(!writing.task1&&!writing.task2)section.append(node('p','Chưa có nội dung Writing đã lưu.'));next.append(section);
+  patchReadingView(body,next,{nodeKey:n=>n.dataset?.readingKey||'',boundary:(before,after)=>
+   before.dataset?.viewId!==after.dataset?.viewId?'replace':before.isEqualNode(after)?'keep':undefined});
+  body.querySelector('select').value=selected.viewId;
  }
  async function load(){
-  if(!valid()){if(active===current)clearTeacherSavedProgress();return;}const sequence=++current.sequence;clearTimeout(current.timer);notice.textContent='Đang đọc lại bản đã lưu…';
+  if(!valid()){if(active===current)clearTeacherSavedProgress();return;}const sequence=++current.sequence;clearTimeout(current.timer);if(!current.data)notice.textContent='Đang đọc lại bản đã lưu…';
   try{
    const data=await request('/api/term-tests/teacher/saved-progress?'+new URLSearchParams({class:className,test:testSlug,student:student.ref}));
    if(!valid()||sequence!==current.sequence)return;

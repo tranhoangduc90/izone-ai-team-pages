@@ -13,9 +13,10 @@ import {
   writingTaskStateLabel
 } from './model.js?rev=20260904-k56-demo-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v2';
-import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261019-v1';
+import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261103-term-tracking1';
 import {openTeacherAudioRecovery,clearTeacherAudioRecovery} from '../shared/teacher-audio-recovery.js?v=20261026-v1&resilience=20261027-v1';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
+import {createScopedTeacherResults,createTeacherReadingRegions,createTeacherResultSections} from '../shared/teacher-reading-state.mjs?v=20261103-term-tracking1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const sessionClient = createTeacherSessionClient({
@@ -23,6 +24,8 @@ const sessionClient = createTeacherSessionClient({
   sessionPath: '/api/auth/session'
 });
 let loginGeneration = 0;
+const renderReadingRegion=createTeacherReadingRegions();
+const commitResultSections=createTeacherResultSections();
 
 // Chỉ giữ ý định đăng xuất theo API, không giữ cookie hoặc dữ liệu giảng viên.
 const logoutApi = String(appConfig.API_BASE_URL || '');
@@ -159,17 +162,17 @@ function updateUrl() {
   window.history.replaceState({}, '', url);
 }
 
-async function apiRequest(path,options={}) {
+async function apiRequest(path,{isCurrent,...options}={}) {
   if (!appConfig.API_BASE_URL) throw new Error('Chưa cấu hình địa chỉ API.');
   if (!state.authenticated) throw new Error('Bạn chưa đăng nhập Google.');
   const generation = loginGeneration;
   const response = await fetch(`${appConfig.API_BASE_URL}${path}`, teacherSessionRequestOptions({ cache: 'no-store',...options })).catch(error => {
-    if (generation !== loginGeneration) error.staleSession = true;
+    if (generation !== loginGeneration||(isCurrent&&!isCurrent())) error.staleSession = true;
     throw error;
   });
   const payload = await response.json().catch(() => null);
   // Bỏ phản hồi đến muộn sau đăng xuất hoặc đổi tài khoản, không dựng lại dữ liệu cũ.
-  if (generation !== loginGeneration) {
+  if (generation !== loginGeneration||(isCurrent&&!isCurrent())) {
     throw Object.assign(new Error('Lượt đăng nhập đã thay đổi.'), { staleSession: true });
   }
   if (!response.ok) {
@@ -801,6 +804,7 @@ function renderAnalysisList(container, items, emptyText) {
 
 function renderDetailBlock(title, details) {
   const block = createNode('details', 'detail-block');
+  block.dataset.skill=title;
   const detailRows = details || [];
   const summary = createNode(
     'summary',
@@ -851,13 +855,15 @@ function savedProgressButton(student){
   const button=createNode('button','button button-secondary','Xem tiến trình đã lưu');button.type='button';
   button.addEventListener('click',()=>{
     const generation=loginGeneration,classId=state.selectedClassId,testSlug=state.selectedTestSlug;
-    openTeacherSavedProgress({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,request:apiRequest,
-      isCurrent:()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref});
+    const isCurrent=()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref;
+    openTeacherSavedProgress({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,
+      request:(path,options={})=>apiRequest(path,{...options,isCurrent}),isCurrent});
   });
   const support=createNode('button','button button-secondary','Hỗ trợ Listening');support.type='button';
   support.addEventListener('click',()=>{const generation=loginGeneration,classId=state.selectedClassId,testSlug=state.selectedTestSlug;
-    openTeacherAudioRecovery({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,request:apiRequest,
-      isCurrent:()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref});});
+    const isCurrent=()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref;
+    openTeacherAudioRecovery({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,
+      request:(path,options={})=>apiRequest(path,{...options,isCurrent}),isCurrent});});
   const controls=document.createDocumentFragment();controls.append(button,document.createTextNode(' '),support);return controls;
 }
 
@@ -964,30 +970,33 @@ function renderStudentResult(student) {
   performanceTable.append(performanceHead, performanceBody);
   performanceWrap.append(performanceTable);
   panel.append(heading, summaryGrid, questionDetails, analysisGrid, performanceWrap);
-  elements.studentView.replaceChildren(panel);
+  commitResultSections(elements.studentView,panel,JSON.stringify([loginGeneration,state.selectedClassId,state.selectedTestSlug,student.ref,student.completedAt]),[
+    {key:'heading',node:heading,value:[student,getSelectedClass(),getSelectedTest()]},
+    {key:'summary',node:summaryGrid,value:[result.listening.correct,result.listening.total,result.listening.band,result.reading.correct,result.reading.total,result.reading.band,writing]},
+    {key:'questions',node:questionDetails,value:[student.completedAt,result.listening,result.reading]},
+    {key:'analysis',node:analysisGrid,value:result.performance},
+    {key:'performance',node:performanceWrap,value:result.typeStats}
+  ]);
 }
 
 function renderActiveView() {
   const selectedStudent = state.students.find(student => student.ref === state.selectedTab);
   if (state.selectedTab !== 'overview' && !selectedStudent) state.selectedTab = 'overview';
-  renderTabs();
+  const scope=[loginGeneration,state.selectedClassId,state.selectedTestSlug];
+  renderReadingRegion('tabs',[scope,state.selectedTab,state.students.map(s=>[s.ref,s.name,s.temporary,s.status])],renderTabs);
   elements.overviewView.hidden = state.selectedTab !== 'overview';
   elements.studentView.hidden = state.selectedTab === 'overview';
-  if (state.selectedTab === 'overview') renderOverview();
-  else renderStudentResult(selectedStudent);
+  if (state.selectedTab === 'overview') renderReadingRegion('overview',[scope,state.students,getSelectedClass(),getSelectedTest()],renderOverview);
+  else renderReadingRegion('student',[scope,selectedStudent,getSelectedClass(),getSelectedTest()],()=>renderStudentResult(selectedStudent));
   updateUrl();
 }
 
-async function loadResults({ quiet = false } = {}) {
-  const selectedClass = getSelectedClass();
-  if (!selectedClass || !state.selectedTestSlug) return;
-  if (state.resultsLoading) return;
-  const generation = loginGeneration;
-  state.resultsLoading = true;
-  try {
-    if (!quiet) showNotice(`Đang tải kết quả ${selectedClass.name}...`);
-    const query = new URLSearchParams({ class: selectedClass.name, test: state.selectedTestSlug });
-    const payload = await apiRequest(`/api/term-tests/teacher/results?${query}`);
+const loadResults=createScopedTeacherResults({
+  current(){const cls=getSelectedClass();return state.authenticated&&cls?{generation:loginGeneration,classId:cls.id,className:cls.name,testSlug:state.selectedTestSlug}:null;},
+  request:apiRequest,
+  start(scope,quiet){state.resultsLoading=true;if(!quiet)showNotice(`Đang tải kết quả ${scope.className}...`);},
+  finish(){state.resultsLoading=false;},
+  apply(payload){
     state.students = payload.students || [];
     if (state.selectedTab !== 'overview' && !state.students.some(student => student.ref === state.selectedTab)) {
       state.selectedTab = 'overview';
@@ -996,10 +1005,8 @@ async function loadResults({ quiet = false } = {}) {
     const completed = state.students.filter(student => student.status === 'completed').length;
     const updatedAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     showNotice(`Đã tải ${state.students.length} học viên; ${completed} học viên đã hoàn thành · cập nhật ${updatedAt}.`, 'success');
-  } finally {
-    if (generation === loginGeneration) state.resultsLoading = false;
   }
-}
+});
 
 async function connectAfterGoogleLogin() {
   await loadOptions();
