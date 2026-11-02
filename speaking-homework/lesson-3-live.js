@@ -1,7 +1,7 @@
 import { focusSpeakingStart } from './journey-focus.js';
 import {renderDocsProgress,docsProgressPending} from './docs-progress.js?v=20261025-progress1';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261031-owner-entry1';
-import { createPendingPoller } from './pending-poller.js';
+import { createSpeakingLivePoller as createPendingPoller } from './live-tracking.js?v=20261102-speaking1';
 import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
 import { parseShareUrl } from './logic.mjs';
 
@@ -147,18 +147,23 @@ function renderLinks() {
   }
 }
 
+function applySnapshot(data,{preserveDocs=false}={}) {
+  state.links = new Map((data.links || []).map(link => [link.part, link]));
+  state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
+  if(!preserveDocs&&poller.acceptDocs(data.docsProgress||null,data.documentId||data.assignment?.documentId||documentId||null)){
+    state.docsProgress=data.docsProgress||null;renderDocsProgress(state.docsProgress);
+  }
+  renderLinks();
+  poller.settled();
+  autoSubmit.consider();
+}
 async function refresh() {
   if (!state.accessToken) return;
   const token = state.accessToken;
   const revision = state.refreshRevision = (state.refreshRevision || 0) + 1;
   const data = await post('/open', identity());
   if (token !== state.accessToken || revision !== state.refreshRevision) return;
-  state.links = new Map((data.links || []).map(link => [link.part, link]));
-  state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
-  state.docsProgress=data.docsProgress||null;renderDocsProgress(state.docsProgress);
-  renderLinks();
-  poller.settled();
-  autoSubmit.consider();
+  applySnapshot(data);poller.observed(data);
 }
 function allAccepted() {
   return parts.every(part => {
@@ -239,6 +244,10 @@ for (const part of parts) {
 // Chỉ tự tải khi máy chủ đang kiểm/phân tích; lỗi mạng tăng thời gian chờ.
 const poller = createPendingPoller({
   refresh,
+  getContext:()=>({base:apiBase,identity:identity(),unitId:workUnitId||null,documentId}),
+  readEpoch:()=>state.refreshRevision||0,isBusy:()=>Boolean(state.requestCount)||state.finishing,
+  onView:view=>applySnapshot(view.open,{preserveDocs:true}),
+  onDocs:value=>{state.docsProgress=value.docsProgress;renderDocsProgress(state.docsProgress);},
   hasSession: () => Boolean(state.accessToken),
   isPending: () => docsProgressPending(state.docsProgress)||[...state.links.values()].some(link => link.check_status === 'pending' || ['pending', 'queued', 'running', 'processing'].includes(link.analysis_status)),
   onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
@@ -250,6 +259,7 @@ const identityController = createSpeakingIdentity({
   apiBase: independentApi, identityBase, assignmentCode, lessonNumber: 3, originalDocumentId, classHint, allowWebReceipt: true,
   validateAssignment: assignment => assignment.parts?.length === 4,
   async onOpened(context) {
+    poller.stop();
     independent = Boolean(context.session.workUnitId);
     apiBase = context.session.intakeMode === 'legacy' ? 'https://ducizone.ddns.net/mapping-api/api/speaking-homework' : independentApi;
     workUnitId = context.session.workUnitId || '';

@@ -61,3 +61,42 @@ test('A replacement stream that supplies no state cannot suppress the bounded fa
  const observer=createTestStateObserver({url:'https://fixture.test/events',initialPollDelay:1000,reconnectGraceMs:1000,poll:async()=>({revision:'poll-'+(++polls)}),onState(){},fetcher:async()=>++streams===1?first.response:second.response,...time});
  await settle();first.write('event: state\ndata: {"revision":"same"}\n\n');await settle();first.end();await settle();await time.advance(999);assert.equal(streams,2);assert.equal(polls,0);await time.advance(1);assert.equal(polls,1);observer.close();await settle();
 });
+
+test('A polling response cancelled by a live stream cannot replace the newer stream state',async()=>{
+ const time=fakeClock(),wire=pipe(),states=[];let resolvePoll,signal;
+ const observer=createTestStateObserver({url:'https://fixture.test/events',poll:options=>{signal=options.signal;return new Promise(resolve=>{resolvePoll=resolve;});},
+  onState:value=>states.push(value),fetcher:async()=>wire.response,...time});
+ try{
+  await settle();await time.advance(0);assert.equal(typeof resolvePoll,'function');
+  wire.write('event: state\ndata: {"revision":"new-stream"}\n\n');await settle();assert.equal(signal.aborted,true);
+  resolvePoll({revision:'old-poll'});await settle();assert.deepEqual(states.map(value=>value.revision),['new-stream']);
+ }finally{observer.close();await settle();}
+});
+
+test('Opt-in unsupported409 preserves a valid Bearer session by handing control to native fallback',async()=>{
+ const time=fakeClock();let fallback=0,revoked=0;
+ const observer=createTestStateObserver({url:'https://fixture.test/events',unsupportedStatuses:[404,405,409],poll:async()=>{throw Object.assign(Error('cookie required'),{status:409});},
+  onState(){},onUnsupported(){fallback++;},onRevoked(){revoked++;},fetcher:async()=>new Response('{}',{status:409}),...time});
+ try{await settle();assert.equal(fallback,1);assert.equal(revoked,0);assert.equal(observer.snapshot().closed,true);}
+ finally{observer.close();await settle();}
+});
+
+test('Opt-in unavailable409 event stops the transport while the default retains normal unavailable handling',async()=>{
+ for(const optIn of [false,true]){
+  const time=fakeClock(),wire=pipe();let fallback=0,unavailable=0;
+  const observer=createTestStateObserver({url:'https://fixture.test/events',...(optIn?{unsupportedStatuses:[404,405,409]}:{}),poll:async()=>({revision:'poll'}),
+   onState(){},onUnsupported(){fallback++;},onUnavailable(){unavailable++;},fetcher:async()=>wire.response,...time});
+  try{await settle();wire.write('event: unavailable\ndata: {"code":"STATE_AUTH_COOKIE_REQUIRED","status":409}\n\n');await settle();
+   assert.equal(fallback,optIn?1:0);assert.equal(unavailable,optIn?0:1);
+  }finally{observer.close();await settle();}
+ }
+});
+
+test('A stream response arriving after its timeout cannot revoke the current valid polling session',async()=>{
+ const time=fakeClock(),states=[];let resolveStream,revoked=0,streamSignal;
+ const observer=createTestStateObserver({url:'https://fixture.test/events',stallMs:5000,poll:async()=>({revision:'fresh-poll'}),onState:value=>states.push(value),
+  onRevoked(){revoked++;},fetcher:(_url,options)=>{streamSignal=options.signal;return new Promise(resolve=>{resolveStream=resolve;});},...time});
+ try{await settle();await time.advance(5000);assert.equal(streamSignal.aborted,true);assert.ok(states.length);
+  resolveStream(new Response('{}',{status:401}));await settle();assert.equal(revoked,0);assert.equal(observer.snapshot().closed,false);
+ }finally{observer.close();await settle();}
+});

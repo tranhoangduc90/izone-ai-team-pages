@@ -2,7 +2,7 @@ import { focusSpeakingStart } from './journey-focus.js';
 import {renderDocsProgress,docsProgressPending} from './docs-progress.js?v=20261025-progress1';
 import { analysisStatus, analysisPending } from './analysis-status.js?v=20261020-doctor-snapshot-v1';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261031-owner-entry1';
-import { createPendingPoller } from './pending-poller.js';
+import { createSpeakingLivePoller as createPendingPoller } from './live-tracking.js?v=20261102-speaking1';
 import { createAutoSubmit } from './auto-submit.js?v=20261019-auto-submit-v1';
 import { parseShareUrl } from './logic.mjs';
 import { freestyleInstructions } from './assignment-instructions.js';
@@ -380,6 +380,20 @@ function render() {
   $('completion-card').hidden = !state.submitted;
   updateSubmitControl({ ready: allAccepted(), submitted: state.submitted, phase: state.submitPhase, error: state.submitError, onSubmit: () => autoSubmit.retry() });
 }
+function applySnapshot(data,doctor,{preserveDocs=false}={}) {
+  state.links = new Map((data.links || []).map(link => [link.part, link]));
+  state.practice = new Map((data.practiceLinks || []).map(link => [Number(link.slot), link]));
+  if (doctor) state.doctor = doctor;
+  if(!preserveDocs&&poller.acceptDocs(data.docsProgress||null,data.documentId||data.assignment?.documentId||documentId||null)){
+    state.docsProgress=data.docsProgress||null;renderDocsProgress(state.docsProgress);
+  }
+  state.doctorAnalysis = (data.processing?.analyze_homework || data.processing?.doctor_analyze)?.status;
+  state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
+  if (independent && data.status === 'submitted' && data.receipt?.id && !documentId) $('completion-message').textContent = `Biên nhận ${data.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
+  render();
+  poller.settled();
+  autoSubmit.consider();
+}
 async function refresh() {
   if (!state.accessToken) return;
   const token = state.accessToken;
@@ -388,16 +402,7 @@ async function refresh() {
     post('/open', identity()), post('/doctor/list', identity()).catch(() => null)
   ]);
   if (token !== state.accessToken || revision !== state.refreshRevision) return;
-  state.links = new Map((data.links || []).map(link => [link.part, link]));
-  state.practice = new Map((data.practiceLinks || []).map(link => [Number(link.slot), link]));
-  if (doctor) state.doctor = doctor;
-  state.docsProgress=data.docsProgress||null;renderDocsProgress(state.docsProgress);
-  state.doctorAnalysis = (data.processing?.analyze_homework || data.processing?.doctor_analyze)?.status;
-  state.submitted = state.submitted || (data.status === 'submitted' && Boolean(data.receipt?.id));
-  if (independent && data.status === 'submitted' && data.receipt?.id && !documentId) $('completion-message').textContent = `Biên nhận ${data.receipt.id} đã được lưu. Bạn có thể đóng trang và quay lại để xem bài hoặc luyện thêm.`;
-  render();
-  poller.settled();
-  autoSubmit.consider();
+  applySnapshot(data,doctor);poller.observed(data);
 }
 // Nhận kết quả đủ phần của đúng phiên; khóa sửa trong lúc gửi/đọc lại biên nhận.
 // Dữ liệu lỗi mạng vẫn được giữ, nút thử lại dùng cùng bộ chống gửi đôi.
@@ -549,6 +554,10 @@ $('extra-confirm').addEventListener('click', async () => {
 // Chỉ tự tải khi máy chủ đang kiểm/phân tích; lỗi mạng tăng thời gian chờ.
 const poller = createPendingPoller({
   refresh,
+  getContext:()=>({base:apiBase,identity:identity(),unitId:workUnitId||null,documentId}),
+  readEpoch:()=>state.refreshRevision||0,isBusy:()=>Boolean(state.requestCount)||state.finishing,
+  onView:view=>applySnapshot(view.open,view.doctor,{preserveDocs:true}),
+  onDocs:value=>{state.docsProgress=value.docsProgress;renderDocsProgress(state.docsProgress);},
   hasSession: () => Boolean(state.accessToken),
   isPending: () => docsProgressPending(state.docsProgress) || (state.submitted && analysisPending(state.doctorAnalysis))
     || [...state.links.values()].some(link => link.check_status === 'pending' || analysisPending(link.analysis_status))
@@ -570,6 +579,7 @@ const identityController = createSpeakingIdentity({
     && (lessonNumber !== 10 || assignment.parts.every(part => Number(part.min_questions) === 1))
     && Number(assignment.requiredPracticeCount) === 2 && assignment.doctorEnabled === true,
   async onOpened(context) {
+    poller.stop();
     independent = Boolean(context.session.workUnitId);
     apiBase = context.session.intakeMode === 'legacy' ? 'https://ducizone.ddns.net/mapping-api/api/speaking-homework' : identityApi;
     workUnitId = context.session.workUnitId || '';
