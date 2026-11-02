@@ -37,7 +37,7 @@ function rememberView({ unitId = state.selected, attemptId = state.attemptId, vi
   if (uuid(attemptId)) fragment.set('attempt', attemptId);else fragment.delete('attempt');
   if (view === 'list') fragment.set('view', 'list');else fragment.delete('view');
   url.hash = fragment.toString();
-  if (url.href !== location.href) history.pushState({}, '', url);
+  if (url.href !== location.href) try{history.pushState({}, '', url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 async function request(path, body, { method = body ? 'POST' : 'GET', signal = controller.signal } = {}) {
   const response = await fetch(base + path, teacherSessionRequestOptions({ method, cache: 'no-store',

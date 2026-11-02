@@ -260,5 +260,5 @@ document.getElementById('journeyLogout')?.addEventListener('click',async()=>{
  const identity=createCourseStudentIdentity({product:'progress-log',entry:'private-journey',requestIdentity:input=>requestMappingStudentIdentity(input,config.API_BASE_URL)});
  const result=await identity.forget();if(result.status!=='empty'){setNotice('Chưa xóa được ghi nhớ. Em hãy thử lại.','error');return;}
  markProgressLogout();startGeneration++;historyGeneration++;historyController?.abort();commentPoller.stop();accessToken='';journeyData=null;
- history.replaceState({},'',location.pathname+location.search);location.replace(new URL('./student.html',location.href));
+ try{history.replaceState({},'',location.pathname+location.search);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}location.replace(new URL('./student.html',location.href));
 });

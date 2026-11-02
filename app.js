@@ -54,7 +54,7 @@
 
   // Hai mã chỉ cần ở lần tải đầu; xóa khỏi thanh địa chỉ để hạn chế bị sao chép hoặc lưu lại ngoài ý muốn.
   if ((documentId || homework) && !localPreview) {
-    window.history.replaceState({}, document.title, window.location.pathname);
+    try{window.history.replaceState({}, document.title, window.location.pathname);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   }
 
   function setStage(stage) {

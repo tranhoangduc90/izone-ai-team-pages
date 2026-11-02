@@ -27,7 +27,7 @@ window.K56_EXAM_ORDER = Object.freeze({
     const url = new URL(window.location.href);
     const changed = (url.searchParams.get('mode') || 'lis_first') !== mode;
     url.searchParams.set('mode', mode);
-    window.history.replaceState(window.history.state, '', url.href);
+    try{window.history.replaceState(window.history.state, '', url.href);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
     Object.assign(state, {
       examMode: mode, nextSection: response.nextSection,
       attemptToken: response.attemptToken, examSessionToken: response.examSessionToken || '',

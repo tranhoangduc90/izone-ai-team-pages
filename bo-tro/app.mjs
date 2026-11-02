@@ -8,7 +8,7 @@ const classCode=new URLSearchParams(location.search).get('class')||'';
 const fragment=new URLSearchParams(location.hash.slice(1));
 classInput.value=classCode;
 student.value=(fragment.get('student')||'').normalize('NFC');
-if(location.hash)history.replaceState(null,'',location.pathname+location.search);
+if(location.hash)try{history.replaceState(null,'',location.pathname+location.search);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 let busy=false;
 function status(message,state){result.textContent=message;result.dataset.state=state;}
 if(classCode!=='IC2314'){send.disabled=true;status('Hãy mở đúng link IC2314 do giáo viên gửi.','error');}
