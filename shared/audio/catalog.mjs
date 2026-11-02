@@ -2086,5 +2086,60 @@ export const ASSETS = {
       }
     ],
     "key": "public-audio/c6cf44e8675f37dc919758a5db95b46fddb46f95d591ec4c690bc45fb2856057.mp3"
+  },
+  "homework-listening-origami": {
+    "id": "homework-listening-origami",
+    "sha256": "bdd06499e2b11bff03535ae6a4db53baa31d8a1debe6fae14273ca8c3105dd10",
+    "byteLength": 1696463,
+    "url": "https://tranhoangduc90.github.io/izone-ai-team-pages/listening-homework/audio-assets/origami-bdd06499e2b11bff.mp3",
+    "chunks": [
+      {"byteLength": 524288, "sha256": "79200f0b212659a85764f9de6519e0537f4249c2c8fdbba72b2f38403b56a599"},
+      {"byteLength": 524288, "sha256": "cba3bcf35957e60781fb459ea8fbc1d3b6d12fee702e6303d2607f30a401b6af"},
+      {"byteLength": 524288, "sha256": "97920c162987c186d240fdbcca9dd256c78f593dc8f1a58282db124c8e527d33"},
+      {"byteLength": 123599, "sha256": "baa3866f3397b20b7c2d7ea7747d07f14153c21e56721fc587bb7d2e6630d148"}
+    ],
+    "key": "public-audio/bdd06499e2b11bff03535ae6a4db53baa31d8a1debe6fae14273ca8c3105dd10.mp3"
+  },
+  "homework-listening-natural-dyes": {
+    "id": "homework-listening-natural-dyes",
+    "sha256": "9fe9bc88076d5273e2420962a1dd65512312a142e08c5209a8d707e3a6c67b21",
+    "byteLength": 2147465,
+    "url": "https://tranhoangduc90.github.io/izone-ai-team-pages/listening-homework/audio-assets/natural-dyes-9fe9bc88076d5273.mp3",
+    "chunks": [
+      {
+        "byteLength": 524288,
+        "sha256": "f884f1dc57e4a65218fa161f42c3b348d361381238ca49e1162d223218a9cd2e"
+      },
+      {
+        "byteLength": 524288,
+        "sha256": "1273fb3782e4e231e6a891478bad6c715373a1142b30c342c08cdccf8b9d175a"
+      },
+      {
+        "byteLength": 524288,
+        "sha256": "bfe695bb4361e93c95914f7a21c025a4e1f9e02769235f9feddb755565d5fd3e"
+      },
+      {
+        "byteLength": 524288,
+        "sha256": "4d3adb2a7fc5e2fc3989d9b308fe7a403f1fd02bd70567f724411c28e3594fbe"
+      },
+      {
+        "byteLength": 50313,
+        "sha256": "501cff06beb6248ab3fa89dcc76582234f793a305892546ad996ced3088b5af6"
+      }
+    ],
+    "key": "public-audio/9fe9bc88076d5273e2420962a1dd65512312a142e08c5209a8d707e3a6c67b21.mp3"
+  },
+  "homework-listening-paper-on-public-libraries": {
+    "id": "homework-listening-paper-on-public-libraries",
+    "sha256": "f07de9888f53efd789a664e0da98a35486a4346dbdb4c96f7b376bee47237c30",
+    "byteLength": 520704,
+    "url": "https://tranhoangduc90.github.io/izone-ai-team-pages/listening-homework/audio-assets/paper-on-public-libraries-f07de9888f53efd7.mp3",
+    "chunks": [
+      {
+        "byteLength": 520704,
+        "sha256": "f07de9888f53efd789a664e0da98a35486a4346dbdb4c96f7b376bee47237c30"
+      }
+    ],
+    "key": "public-audio/f07de9888f53efd789a664e0da98a35486a4346dbdb4c96f7b376bee47237c30.mp3"
   }
 };

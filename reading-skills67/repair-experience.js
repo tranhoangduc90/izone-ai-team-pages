@@ -88,6 +88,7 @@
   if(navigationScope!==current.attempt.attemptId){navigationScope=current.attempt.attemptId;cursor=-1;}
   const nav=navigation();
   if(nav){const restored=window.MaterialsRepairWorkspace?.prepare(nav,bridge);if(restored!==null&&restored!==undefined)cursor=restored;}
+  if(nav&&cursor>=nav.items.length)cursor=nav.items.length-1;
   const trigger=document.querySelector('[data-action="repair-start"]');if(trigger)trigger.hidden=cursor>=0;
   const p=current.progress,banner=document.createElement('div');banner.className='notice repair-banner';banner.dataset.state=p.allCorrect?'success':'attention';banner.setAttribute('role','status');
   if(edit&&p.allCorrect)edit.textContent='Sửa bài';
@@ -116,9 +117,11 @@
    if(repair.attempt.result?.feedback?.[id]){const b=document.createElement('button');b.className='quiet';b.textContent='Xem giải thích lần chấm trước';b.onclick=()=>bridge.explain(id,repair.attempt);note.append(' ',b);}
   }
  }
- function outcome(attempt,{announce=false}={}){
+ function outcome(attempt,{announce=false,background=false}={}){
   const p=progress(attempt,bridge.current().content);if(!p)return;
-  repair={attempt,progress:p};decorate();
+  const sameProgress=repair?.attempt?.attemptId===attempt.attemptId&&JSON.stringify(repair.progress)===JSON.stringify(p);
+  repair={attempt,progress:p};if(!background||!sameProgress)decorate();
+  if(background&&sameProgress&&bridge.current().state.status==='draft')for(const input of document.querySelectorAll('[data-target]')){const note=input.closest('.answer-field,.selection-field')?.querySelector('.repair-previous-reason'),reason='Nhận xét lần chấm trước: '+(attempt.result?.feedback?.[input.dataset.target]?.reason||'Đối chiếu lại câu trả lời.');if(note&&note.textContent!==reason)note.textContent=reason;}
   if(bridge.current().teacher||!announce||shown.has(attempt.attemptId))return;
   shown.add(attempt.attemptId);
   bridge.modal(p.allCorrect?'Chúc mừng! Bạn đã sửa đúng toàn bộ bài.':`Còn ${p.remainingCount} phần cần sửa`,
@@ -151,7 +154,7 @@
  document.addEventListener('click',async event=>{
   const b=event.target.closest('button');if(!b)return;
   try{
-   if(b.dataset.materialsView){studentView=b.dataset.materialsView==='student';const url=new URL(location.href);url.searchParams.set('view',studentView?'student':'teacher');window.history.replaceState(null,'',url);bridge.close();decorate();if(cursor>=0)move();}
+   if(b.dataset.materialsView){studentView=b.dataset.materialsView==='student';const url=new URL(location.href);url.searchParams.set('view',studentView?'student':'teacher');try{window.history.replaceState(null,'',url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}bridge.close();decorate();if(cursor>=0)move();}
    if(b.hasAttribute('data-materials-dashboard'))location.href='teacher.html';
    if(b.hasAttribute('data-materials-login')){await bridge.flush();const url=new URL(location.href),person=bridge.identity();const linked=url.searchParams.get('teacher')==='1'&&url.searchParams.get('classId')&&url.searchParams.get('studentRef');url.searchParams.set('mode','teacher');url.searchParams.set('teacher','1');if(!linked){url.searchParams.set('classId',person.courseId);url.searchParams.set('studentRef',person.ownerId);}location.href=url.href;}
    if(b.hasAttribute('data-materials-logout')){await window.IzoneTeacherSso.logout();location.href=location.pathname+'?server=1';}

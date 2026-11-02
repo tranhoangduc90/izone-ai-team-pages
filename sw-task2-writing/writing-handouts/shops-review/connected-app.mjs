@@ -1,3 +1,4 @@
+import {createCheckFeedback,missingCheckFields} from '../../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {PEOPLE,ACTIVITY,TASK,LABELS,fixture,wordCount} from './model.mjs';
 import {studentLayout,teacherLayout,esc,SECTION_FIELDS} from './lesson9-view.mjs?v=20261031-threads';
 import {connectedState,SECTION,serverField} from './connected-adapter.mjs';
@@ -10,23 +11,24 @@ import {readLegacyDraft} from './legacy-draft.mjs';
 import {patchReadingView} from '../../../shared/reading-view.mjs?v=20261027-draft-reading-v1';
 installStyles();
 const root=document.querySelector('#app'),teacher=document.body.dataset.view==='teacher',$=s=>root.querySelector(s);
+const checkFeedback=createCheckFeedback({root,serverField});let checkingRef=null;
 const namespace='izone:sw-task2:production:'+ACTIVITY+':',drafts=new Map(),composers=new Map();
 const openDetails=new Map(),historyCounts=new Map(),resultIndexes=new Map();let renderedOwner='login';
 const vocabularyRequests=new Set(),resultRequests=new Map();
 let legacyDraft=null;
-let pendingIdentity=null,rememberStudent=true;
+let pendingIdentity=null,rememberStudent=true,registrationBusy=false,registrationRequest=null;
 let classes=[],person=null,current=null,threads=[],rows=[],responses={},dirty=false,conflict=false,busy=false,saveTimer,pollTimer,generation=0;
 let teacherAuth='checking';
 let notice='',filter='all',query='',order='recent',detailOpen=false,editor=null,attestKey=null,composer=null,loggedIn=false,conflictServer=null;
 const id=()=>crypto.randomUUID();
 const apiBase=window.IZONE_SHOPS?.apiBase||'/api/v1/';
 const entry=new URL(location.href).searchParams;let requestedClass=null;
-function indexPeople(){PEOPLE.splice(0,PEOPLE.length,...classes.flatMap(c=>c.students.map(p=>({id:p.studentRef,name:p.displayAlias||p.displayName,classRef:c.classRef,classCode:c.className,scenario:'fresh',requiresAccessCode:!!p.requiresAccessCode}))));}
+function indexPeople(){PEOPLE.splice(0,PEOPLE.length,...classes.flatMap(c=>c.students.map(p=>({id:p.studentRef,name:p.displayAlias||p.alias||p.displayName,classRef:c.classRef,classCode:c.className,scenario:'fresh',requiresAccessCode:!!p.requiresAccessCode}))));}
 function authMessage(error){return error.status===403?'Tài khoản Google chưa có quyền xem lớp hoặc bài này.':error.status===401?'Chưa xác minh được phiên Google. Hãy đăng nhập lại.':error.status>=500?'Dịch vụ đăng nhập đang gián đoạn. Lời đang soạn được giữ; bạn có thể thử lại.':error.message;}
 async function api(path,method='GET',body){
  const response=await fetch(apiBase+path,{method,credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','X-Izone-Csrf':'1'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
  const data=await response.json().catch(()=>({}));
- if(!response.ok)throw Object.assign(Error(data.message||data.error||'Chưa kết nối được máy chủ.'),{status:response.status,code:data.error});return data;
+ if(!response.ok)throw Object.assign(Error(data.message||data.error||'Chưa kết nối được máy chủ.'),{status:response.status,code:data.error,data});return data;
 }
 function message(text){notice=text;const node=$('#notice');if(node){node.textContent=text;if(conflict)node.insertAdjacentHTML('beforeend',' <button class="secondary" data-action="compare-conflict">Đối chiếu hai bản</button>');}const modal=$('#comment-status');if(modal)modal.textContent=text;}
 function cache(){if(!current)return;try{localStorage.setItem(namespace+current.sessionRef,JSON.stringify({studentRef:person.id,classRef:person.classRef,responses,baseVersion:current.draftVersion,dirty}));}catch{message('Chưa lưu được bản dự phòng trên thiết bị; hãy giữ tab và lưu máy chủ.');}}
@@ -91,15 +93,54 @@ function draw({background=false}={}){
  if(background)patchReadingView(root,view);else root.replaceChildren(...view.childNodes);
  const dialog=root.querySelector('#detail');if(teacher&&detailOpen&&dialog&&!dialog.open)dialog.showModal();
  const attest=root.querySelector('#attest-dialog');if(attest&&!attest.open){attest.showModal();attest.querySelector('input')?.focus();}
+ checkFeedback.sync(responses,current?.sessionRef);
  if(drawNotice)message(drawNotice);
  if(root.querySelector('#connected-draft-result'))void loadResult(current.sessionRef);
 }
 function loginView(){
- return '<section id="identity" class="login-shell" aria-labelledby="login-title"><div class="login-card"><p class="kicker red">Speaking Writing chuyên sâu · Writing buổi '+esc(TASK.number)+'</p><h1 id="login-title">Bắt đầu bài học</h1><p class="login-description">Xây lập luận cho một thân bài,<br>từng bước từ ý tưởng đến A–X–B.</p><form id="identity-form"><label>Lớp của bạn<select id="identity-class" required><option value="">Chọn lớp của bạn</option>'+classes.map(c=>`<option value="${c.classRef}" ${classes.length===1?'selected':''}>${esc(c.className)}</option>`).join('')+'</select></label><label>Tên của bạn<select id="identity-person" required></select></label><label class="checkbox"><input id="identity-remember" type="checkbox" checked><span>Ghi nhớ tôi trên thiết bị này</span></label><button class="primary wide" type="submit">Tiếp tục <span aria-hidden="true">→</span></button></form><p class="fine-print">Chọn đúng tên của bạn. Bài làm và các lần nhận xét được lưu để bạn tiếp tục khi quay lại.</p></div></section>';
+ return '<section id="identity" class="login-shell" aria-labelledby="login-title"><div class="login-card"><p class="kicker red">Speaking Writing chuyên sâu · Writing buổi '+esc(TASK.number)+'</p><h1 id="login-title">Bắt đầu bài học</h1><p class="login-description">Xây lập luận cho một thân bài,<br>từng bước từ ý tưởng đến A–X–B.</p><form id="identity-form"><label>Lớp của bạn<select id="identity-class" required><option value="">Chọn lớp của bạn</option>'+classes.map(c=>`<option value="${c.classRef}" ${classes.length===1?'selected':''}>${esc(c.className)}</option>`).join('')+'</select></label><label>Tên của bạn<select id="identity-person" required></select></label><label class="checkbox"><input id="identity-remember" type="checkbox" checked><span>Ghi nhớ tôi trên thiết bị này</span></label><button class="primary wide" type="submit">Tiếp tục <span aria-hidden="true">→</span></button></form>'+provisionalEntryView()+'<p class="fine-print">Chọn đúng tên của bạn. Bài làm và các lần nhận xét được lưu để bạn tiếp tục khi quay lại.</p></div></section>';
 }
 function confirmLoginView(){const {p}=pendingIdentity;return '<section id="identity-confirm-screen" class="login-shell" aria-labelledby="confirm-title"><div class="login-card confirm-card"><p class="kicker red">Xác nhận người học</p><div class="avatar" aria-hidden="true">HV</div><h1 id="confirm-title">'+esc(p.name)+'</h1><p><span>'+esc(p.classCode)+'</span><br><strong>Writing · Buổi '+esc(TASK.number)+'</strong></p><button id="confirm-button" class="primary wide" data-action="confirm-identity">Đúng là tôi · mở bài làm →</button><button class="text-button" data-action="identity-back">Chọn lại tên</button><p class="fine-print">Chọn tên và xác nhận như Progress Log.</p></div></section>';}
 function pinControl(){const p=PEOPLE.find(p=>p.id===$('#identity-person')?.value);let box=$('#pin-box');if(!box&&$('#identity-form')){$('#identity-form .primary').insertAdjacentHTML('beforebegin','<label id="pin-box" hidden>Mã 4 số<input id="access-code" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off"></label>');box=$('#pin-box');}if(box){box.hidden=!p?.requiresAccessCode;$('#access-code').required=!!p?.requiresAccessCode;$('#access-code').value='';}}
-function fillPeople(){const c=classes.find(c=>c.classRef===$('#identity-class')?.value);if($('#identity-person')){$('#identity-person').innerHTML='<option value="">Chọn tên của bạn</option>'+(c?.students||[]).map(p=>`<option value="${p.studentRef}">${esc(p.displayAlias||p.displayName)}</option>`).join('');if(c?.students.some(p=>p.studentRef===entry.get('student')))$('#identity-person').value=entry.get('student');}pinControl();}
+function fillPeople(){const c=classes.find(c=>c.classRef===$('#identity-class')?.value);if($('#identity-person')){$('#identity-person').innerHTML='<option value="">Chọn tên của bạn</option>'+(c?.students||[]).map(p=>`<option value="${p.studentRef}">${esc(p.displayAlias||p.alias||p.displayName)}</option>`).join('');if(c?.students.some(p=>p.studentRef===entry.get('student')))$('#identity-person').value=entry.get('student');}pinControl();}
+function provisionalEntryView(){
+ return '<button class="text-button" type="button" data-action="show-provisional" aria-expanded="false" aria-controls="provisional-form">Không có tên trong danh sách</button><form id="provisional-form" hidden><h2>Thêm tên để làm bài</h2><p>Nhập họ tên đầy đủ và tự đặt mã 4 số. Hãy nhớ mã này để mở lại bài của bạn. Giảng viên có thể đối soát hồ sơ tạm sau.</p><label>Họ và tên<input id="provisional-name" autocomplete="name" minlength="2" maxlength="100" required></label><label>Mã 4 số<input id="provisional-pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="new-password" required></label><label>Nhập lại mã 4 số<input id="provisional-pin-confirm" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="new-password" required></label><label id="provisional-duplicate-row" class="checkbox" hidden><input id="provisional-duplicate" type="checkbox"><span>Tôi là người khác cùng tên</span></label><p id="provisional-status" role="status" aria-live="polite"></p><button id="provisional-submit" class="primary wide" type="submit">Tạo hồ sơ tạm</button><button class="text-button" type="button" data-action="cancel-provisional">Quay lại chọn tên</button></form>';
+}
+function resetRegistration(){registrationRequest=null;const form=$('#provisional-form');if(form){form.reset();form.hidden=true;$('#provisional-duplicate-row').hidden=true;$('#provisional-status').textContent='';}$('#identity-person')?.setCustomValidity('');const toggle=$('[data-action="show-provisional"]');if(toggle)toggle.setAttribute('aria-expanded','false');}
+function selectRegisteredStudent(group,student){
+ const existing=group.students.find(p=>p.studentRef===student.studentRef);
+ if(existing)Object.assign(existing,student);else group.students.push(student);
+ indexPeople();fillPeople();$('#identity-person').value=student.studentRef;pinControl();
+}
+async function registerProvisional(){
+ if(registrationBusy)return;
+ const group=classes.find(c=>c.classRef===$('#identity-class').value),form=$('#provisional-form'),status=$('#provisional-status');
+ const displayName=$('#provisional-name').value.trim().replace(/\s+/gu,' '),pin=$('#provisional-pin').value,confirmPin=$('#provisional-pin-confirm').value,duplicateConfirmed=$('#provisional-duplicate').checked;
+ if(!group){status.textContent='Hãy chọn lớp trước.';return;}
+ if(displayName.length<2||displayName.length>100){status.textContent='Họ và tên cần có từ 2 đến 100 ký tự.';return;}
+ if(!/^\d{4}$/.test(pin)||pin!==confirmPin){status.textContent='Hai ô mã phải giống nhau và gồm đúng 4 số.';return;}
+ const input={classRef:group.classRef,displayName,pin,duplicateConfirmed};
+ // Giữ requestId khi thử lại cùng dữ liệu để không tạo hai hồ sơ sau lỗi mạng.
+ if(!registrationRequest||JSON.stringify(registrationRequest.input)!==JSON.stringify(input))registrationRequest={input,requestId:id()};
+ registrationBusy=true;status.textContent='Đang tạo hồ sơ…';
+ const controls=[...root.querySelectorAll('#identity-form input,#identity-form select,#identity-form button,#provisional-form input,#provisional-form button,[data-action="show-provisional"]')].map(el=>[el,el.disabled]);
+ for(const [el] of controls)el.disabled=true;
+ try{
+  const {student}=await api('activities/'+encodeURIComponent(ACTIVITY)+'/provisional-students','POST',{...input,requestId:registrationRequest.requestId});
+  if(!student?.studentRef)throw Error('Máy chủ chưa xác nhận hồ sơ. Hãy thử lại.');
+  selectRegisteredStudent(group,{...student,provisional:true,requiresAccessCode:true});
+  resetRegistration();$('#access-code').value=pin;message('Đã tạo hồ sơ tạm. Kiểm tra đúng tên rồi bấm Tiếp tục.');
+ }catch(error){
+  if(['DUPLICATE_STUDENT_NAME','PROVISIONAL_STUDENT_EXISTS'].includes(error.code)){
+   $('#provisional-duplicate-row').hidden=false;
+   if(error.data?.current){selectRegisteredStudent(group,{...error.data.current,displayName,provisional:true,requiresAccessCode:true});$('#access-code').value='';}
+  }
+  status.textContent=error.message;
+ }finally{
+  for(const [el,disabled] of controls)el.disabled=disabled;
+  registrationBusy=false;if(form.hidden)$('#identity-person').focus();
+ }
+}
 function jump(key){const target=document.getElementById(key);if(!target)return;if(target.matches('details'))target.open=true;const inner=target.querySelector('details.prior-step');if(inner)inner.open=true;target.scrollIntoView({block:'start'});}
 async function openPerson(p,accessCode,rememberedRef){
  const epoch=++generation;person=p;
@@ -129,11 +170,14 @@ async function save(){
  }catch(error){if(epoch===generation){if(error.status===409)conflict=true;dirty=true;cache();message(error.message+' Nội dung đang gõ được giữ, chưa ghi đè máy chủ.');}throw error;}finally{busy=false;}
 }
 async function refresh({background=false}={}){
- if($('#legacy-dialog')||$('#conflict-dialog'))return;
+ if($('#legacy-dialog')||$('#conflict-dialog')||$('#writing-check-dialog'))return;
  if(!current)return;const ref=current.sessionRef,epoch=generation;
  const path=teacher?'admin/lesson9/sessions/':'lesson9/sessions/';
  const result=await api(path+ref);const threadData=await api((teacher?'admin/live/':'')+'sessions/'+ref+'/teacher-comments');
  if(epoch!==generation||ref!==current.sessionRef)return;
+ // A read started before our latest save cannot replace its acknowledged version.
+ // During a learner save, the save response owns reconciliation (including 409).
+ if(result.session.draftVersion<current.draftVersion||!teacher&&busy)return;
  if(!dirty){current=result.session;responses=working(current);}else if(result.session.draftVersion!==current.draftVersion){conflict=true;message('Máy chủ có bản mới. Bản đang gõ được giữ, chưa ghi đè.');}
  threads=threadData.threads;
  if(!editor&&!attestKey&&!document.activeElement?.matches('textarea,input,select'))draw({background});
@@ -148,10 +192,24 @@ async function action(kind,extra={}){
  current=result.session;responses=working(current);dirty=false;cache();return result.session;
 }
 async function check(key){
- if(editor)throw Error('Hãy lưu hoặc hủy ô đang chỉnh.');const epoch=generation,ref=current.sessionRef;await save();
- if(epoch!==generation||ref!==current.sessionRef)return;
- if(key==='draft'&&current.sections.draft.locked)await action('revise_draft');
- await api('lesson-sessions/'+ref+'/checks','POST',{section:SECTION[key],requestId:id()});if(epoch!==generation)return;await refresh();draw();
+ if(checkingRef)return;
+ const epoch=generation,ref=current.sessionRef,button=$(`[data-check="${key}"]`)||(key==='draft'?$('[data-action="grade"]'):null);
+ checkingRef=ref;
+ try{
+  if(editor)throw Error('Hãy lưu hoặc hủy ô đang chỉnh.');
+  let missing=missingCheckFields(current.sectionDefinitions,SECTION[key],responses);
+  if(missing.length){checkFeedback.missing(missing,responses,ref);return;}
+  checkFeedback.pending(true,responses,ref);
+  await save();if(epoch!==generation||ref!==current?.sessionRef)return;
+  if(dirty)throw Error('Nội dung vừa được sửa trong lúc lưu. Chữ mới vẫn được giữ; hãy nhấn Check lại để gửi bản mới nhất.');
+  missing=missingCheckFields(current.sectionDefinitions,SECTION[key],responses);
+  if(missing.length){checkFeedback.missing(missing,responses,ref);return;}
+  if(key==='draft'&&current.sections.draft.locked)await action('revise_draft');
+  await api('lesson-sessions/'+ref+'/checks','POST',{section:SECTION[key],requestId:id()});
+  if(epoch!==generation||ref!==current?.sessionRef)return;
+  await refresh();draw();
+ }catch(error){if(epoch===generation&&ref===current?.sessionRef)checkFeedback.error(error,button);}
+ finally{checkingRef=null;if(epoch===generation&&ref===current?.sessionRef)checkFeedback.pending(false,responses,ref);}
 }
 async function loadTeacher(render=true){
  const epoch=generation;
@@ -204,7 +262,7 @@ async function requestVocabulary(retry=false){
 }
 root.addEventListener('input',e=>{
  const el=e.target;
- if(el.dataset.field){responses[serverField(el.dataset.field,responses.body_choice)]=el.value;dirty=true;cache();if($('#save-state'))$('#save-state').textContent='Chưa lưu máy chủ';clearTimeout(saveTimer);saveTimer=setTimeout(()=>save().catch(()=>{}),900);
+ if(el.dataset.field){responses[serverField(el.dataset.field,responses.body_choice)]=el.value;dirty=true;cache();checkFeedback.sync(responses,current.sessionRef);if($('#save-state'))$('#save-state').textContent='Chưa lưu máy chủ';clearTimeout(saveTimer);saveTimer=setTimeout(()=>save().catch(()=>{}),900);
   if(el.dataset.field.startsWith((responses.body_choice||'body1')+'_idea')){const mirror=$('#field-idea'+el.dataset.field.at(-1));if(mirror)mirror.value=el.value;}
   if(['idea1','idea2'].includes(el.dataset.field)){const mirror=$('#field-'+(responses.body_choice||'body1')+'_'+el.dataset.field);if(mirror)mirror.value=el.value;}
   const view=state(),key=Object.keys(SECTION_FIELDS).find(k=>SECTION_FIELDS[k].includes(el.dataset.field))||'topic';
@@ -216,7 +274,7 @@ root.addEventListener('input',e=>{
  if(el.id==='search'){query=el.value;const caret=el.selectionStart;draw();$('#search').focus();$('#search').setSelectionRange(caret,caret);}
 });
 root.addEventListener('change',e=>{
- const el=e.target;if(el.id==='identity-class')fillPeople();
+ const el=e.target;if(el.id==='identity-class'){resetRegistration();fillPeople();}
  if(el.id==='identity-person')pinControl();
  if(el.id==='body-choice'){
   if(current?.sections.topic_sentence.locked){const value=el.value;if(!confirm('Đổi thân bài sẽ mở vòng Check mới. Nội dung và lịch sử cũ vẫn giữ. Tiếp tục?')){draw();return;}void action('change_body',{value,confirmed:true}).then(()=>draw()).catch(e=>message(e.message));return;}
@@ -254,6 +312,8 @@ root.addEventListener('click',async e=>{
   if(b.dataset.commentField){composer={personId:person.id,field:b.dataset.commentField,quote:''};draw();$('#comment-body').focus();return;}
   if(b.dataset.threadStatus){const t=threads.find(t=>t.threadRef===b.dataset.threadStatus);await api('admin/teacher-comments/'+t.threadRef+'/status','POST',{status:t.status==='addressed'?'open':'addressed',requestId:id()});await refresh();draw();return;}
   const a=b.dataset.action;
+  if(a==='show-provisional'){if(registrationBusy)return;if(!$('#identity-class').value){message('Hãy chọn lớp trước.');$('#identity-class').focus();return;}const form=$('#provisional-form');form.hidden=!form.hidden;b.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)$('#provisional-name').focus();return;}
+  if(a==='cancel-provisional'){if(registrationBusy)return;resetRegistration();$('[data-action="show-provisional"]').focus();return;}
   if(a==='confirm-identity'){const chosen=pendingIdentity;if(!chosen)throw Error('Hãy chọn lại tên của bạn.');rememberStudent=chosen.remember;await openPerson(chosen.p,chosen.accessCode);return;}
   if(a==='identity-back'){const chosen=pendingIdentity;pendingIdentity=null;draw();$('#identity-class').value=chosen.p.classRef;fillPeople();$('#identity-person').value=chosen.p.id;$('#identity-remember').checked=chosen.remember;pinControl();$('#identity-person').focus();return;}
   if(a==='legacy-compare'){
@@ -292,6 +352,7 @@ root.addEventListener('click',async e=>{
 root.addEventListener('submit',async e=>{
  e.preventDefault();const form=e.target;
  try{
+  if(form.id==='provisional-form'){await registerProvisional();return;}
   if(form.id==='identity-form'){const p=PEOPLE.find(p=>p.id===$('#identity-person').value&&p.classRef===$('#identity-class').value);if(!p)throw Error('Hãy chọn đúng người trong lớp.');pendingIdentity={p,accessCode:$('#access-code')?.value,remember:$('#identity-remember').checked};draw();$('#confirm-button').focus();}
   if(form.dataset.inlineField){await action('edit',{field:serverField(form.dataset.inlineField,responses.body_choice),value:form.querySelector('textarea').value});editor=null;draw();}
   if(form.id==='attest-form'){if(!$('#teacher-permission').checked)return;await action('attest',{section:SECTION[attestKey],confirmed:true});attestKey=null;draw();}
@@ -314,7 +375,7 @@ function selectQuote(){
 }
 root.addEventListener('mouseup',selectQuote);root.addEventListener('keyup',e=>{if(e.key==='Shift')selectQuote();});
 function closeDialog(){if(attestKey)attestKey=null;else{if(composer)composers.set(person.id,composer);detailOpen=false;}draw();$(`[data-student="${person?.id}"]`)?.focus();}
-root.addEventListener('cancel',e=>{if(e.target.tagName==='DIALOG'){e.preventDefault();if(e.target.id==='conflict-dialog'){e.target.remove();return;}closeDialog();}},true);
+root.addEventListener('cancel',e=>{if(e.target.id==='writing-check-dialog')return;if(e.target.tagName==='DIALOG'){e.preventDefault();if(e.target.id==='conflict-dialog'){e.target.remove();return;}closeDialog();}},true);
 let down=false;const outside=e=>{if(e.target.tagName!=='DIALOG')return false;const r=e.target.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom;};
 root.addEventListener('pointerdown',e=>down=outside(e));root.addEventListener('pointerup',e=>{if(down&&outside(e))closeDialog();down=false;});
 window.addEventListener('beforeunload',e=>{if(dirty||editor){cache();e.preventDefault();e.returnValue='';}});

@@ -2,7 +2,7 @@
 // Chỉ sau khi đủ cấu hình mới mở app. Thiếu bài hoặc lỗi mạng hiện cách tải lại, không mở nhầm bài.
 // Chỉ máy xem thử tại loopback dùng API cùng origin; trang phát hành giữ API HTTPS.
 const localPreview=['127.0.0.1','localhost'].includes(location.hostname)&&['3199','3211'].includes(location.port);
-import {lessonEntryClass} from './test-class-entry.mjs?v=20261018-test-class-v1';
+import {lessonEntryClass} from './test-class-entry.mjs?v=20261102-lesson-scope-v1';
 import {installTeacherEntry} from '../../shared/teacher-entry.js?v=20261019-v1';
 const apiBase=localPreview?location.origin+'/api/handout67/v1':'https://ducizone.ddns.net/api/handout67/v1';
 if(localPreview)globalThis.handout67ApiBase=apiBase;
@@ -36,7 +36,7 @@ async function boot(){
    document.querySelector('.why-guide>p').textContent='Đọc cả chuỗi để kiểm quan hệ giữa A, X và B; tự chọn hai ý phù hợp với từng quan điểm.';
    if(lesson.preparationMode==='ideas-first-v1'){
     document.querySelector('.journey-note p').textContent='Chốt idea cả hai thân bài trước, rồi viết Topic và phát triển từng chuỗi A → X → B.';
-    document.querySelector('.why-guide>p').textContent='Chê phương án không chọn và khen phương án chọn trên cùng khía cạnh giúp hai đoạn liên hệ rõ hơn; đây là gợi ý, không bắt buộc.';
+    document.querySelector('.why-guide>p').textContent=(lesson.preparationKind==='opinion-v1'?'Thân bài 1 bàn phương án không ủng hộ; thân bài 2 bảo vệ phương án ủng hộ. Đồng ý một phần vẫn cần phía nghiêng về và điều kiện rõ.':'Chê phương án không chọn và khen phương án chọn trên cùng khía cạnh giúp hai đoạn liên hệ rõ hơn; đây là gợi ý, không bắt buộc.');
     document.querySelector('.work-content>.page-title p:last-child').textContent='Chốt hướng so sánh và idea trước, rồi lần lượt phát triển từng thân bài.';
    }
   }
@@ -45,7 +45,7 @@ async function boot(){
   for(const el of document.querySelectorAll('[data-lesson-text]'))el.textContent=texts[el.dataset.lessonText];
   document.querySelector('[data-lesson-brand]')?.setAttribute('aria-label','IZONE Writing Lesson '+lesson.number);
   document.title=view==='teacher'?'Theo dõi Lesson '+lesson.number+' · IZONE Writing':'Lesson '+lesson.number+' · Writing · IZONE';
-  await import(view==='teacher'?'../lesson5/teacher.js?v=20261025-l11-ideas-v4&startup=20261026-v2':'../lesson5-thu/app.js?v=20261025-l11-ideas-v4');
+  await import(view==='teacher'?'../lesson5/teacher.js?v=20261102-l13-v1&startup=20261026-v2':'../lesson5-thu/app.js?v=20261102-l13-v1&check=20261101-v1');
  }catch{
   document.body.textContent='Chưa mở được bài học. Hãy tải lại trang khi kết nối ổn định; bài đã lưu vẫn được giữ.';
  }

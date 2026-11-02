@@ -27,7 +27,7 @@ function renderCourse() {
   const next = new URL(location.href);
   if (isAll) next.searchParams.delete('course');
   else next.searchParams.set('course', course);
-  history.replaceState(null, '', next);
+  try{history.replaceState(null, '', next);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 
 courseFilter.addEventListener('change', renderCourse);

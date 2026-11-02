@@ -43,8 +43,9 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   if(path==='/teacher/journey-plan')return send({ok:true,plan:{classId:'1294',className:'IC2305',totalSessions:11,highestKnownSession:11,revision:1,testSessionNumbers:[],testSources:[],sessionDates:[{sessionNumber:11,date:'2026-10-22',erpSessionId:'35822'}]}});
   if(path==='/teacher/classes/1294/overview')return send({ok:true,overview:{classId:'1294',className:'IC2305',totalSessions:11,counts:{currentStudents:2,complete:0},sessions:[{sessionNumber:11,sessionDate:'2026-10-22'}],students:students().map(student=>({...student,cells:[{sessionNumber:11,status:'not_submitted',sessionComment:student.sessionComment}]}))}});
   if(path.endsWith('/question-analytics'))return send({ok:true,analytics:{assignmentId:id,submittedCount:1,rosterCount:2,items:[{itemVersionId:item,position:1,prompt:'Câu hỏi gạch chân',objective:false,counts:{roster:2,submitted:1,visible:1,hidden:0,unanswered:0,answered:1,graded:0,correct:0,incorrect:0},choices:[{label:'go',count:1}],students:[{studentRef:A,name:'Học viên A',verdict:'ungraded'}]}]}});
-  if(path==='/teacher/session-comments'&&req.method()==='PUT'){
-   assert.equal(req.headers()['x-izone-csrf'],'1');const note={...body,revision:body.expectedRevision+1,visibility:'visible',teacherName:'Giảng viên mẫu',updatedAt:new Date().toISOString()};comments.set(body.studentRef,note);return send({ok:true,comment:note});
+  if(path==='/teacher/session-comments/editor')return send({ok:true,classId:u.searchParams.get('classId'),studentRef:u.searchParams.get('studentRef'),sessionNumber:Number(u.searchParams.get('sessionNumber')),comment:comments.get(u.searchParams.get('studentRef'))||null,draft:null});
+  if(path==='/teacher/session-comments/send'&&req.method()==='POST'){
+   assert.equal(req.headers()['x-izone-csrf'],'1');const note={...body,revision:body.expectedRevision+1,draftRevision:0,visibility:'visible',teacherName:'Giảng viên mẫu',updatedAt:new Date().toISOString()};comments.set(body.studentRef,note);return send({ok:true,comment:note});
   }
   if(path==='/teacher/form-library')return send({ok:true,entries:[]});
   if(path==='/teacher/form-publications')return send({ok:true,publications:[]});
@@ -84,9 +85,9 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   await page.locator('#thuyNextStudent').click();assert.match(await page.locator('#draftStudentName').innerText(),/Học viên B/);assert.equal(await draft.inputValue(),'');
   await page.locator('#thuyPreviousStudent').click();assert.equal(await draft.inputValue(),'Nháp riêng của A');assert.equal(writes.length,0);
   await page.locator(`[data-student="${B}"]`).click();assert.equal(await page.locator('#draftDialog').isVisible(),true);assert.match(await page.locator('#draftStudentName').innerText(),/Học viên B/);
-  await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog .session-comment-editor').getByRole('button',{name:'Lưu nhận xét',exact:true}).click();
-  await page.getByText('Đã lưu. Học viên đọc được khi mở hoặc làm mới hành trình.',{exact:true}).waitFor();assert.equal(comments.get(A).noteText,'Nháp riêng của A');assert.equal(writes.length,1);
-  await draft.fill('Sửa chưa công bố');await page.keyboard.press('Escape');assert.equal(await page.locator('#draftDialog').isVisible(),false);assert.equal(comments.get(A).noteText,'Nháp riêng của A');
+  await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog .session-comment-editor').getByRole('button',{name:'Gửi cho học viên',exact:true}).click();
+  await page.getByText('Đã gửi. Học viên đọc được khi mở hoặc làm mới Progress log.',{exact:true}).waitFor();assert.equal(comments.get(A).noteText,'Nháp riêng của A');assert.equal(writes.length,1);
+  await page.getByRole('button',{name:'Lựa chọn khác',exact:true}).click();await page.getByRole('button',{name:'Chỉnh sửa',exact:true}).click();await draft.fill('Sửa chưa công bố');await page.keyboard.press('Escape');assert.equal(await page.locator('#draftDialog').isVisible(),false);assert.equal(comments.get(A).noteText,'Nháp riêng của A');
   await page.locator(`[data-student="${A}"]`).click();assert.equal(await draft.inputValue(),'Sửa chưa công bố');
   await page.locator('#dashboardTitle').click();assert.equal(await page.locator('#draftDialog').isVisible(),false);
   await page.locator(`[data-student="${A}"]`).click();await page.locator('#draftDialog button[aria-label="Đóng chi tiết"]').click();assert.equal(await page.locator('#draftDialog').isVisible(),false);

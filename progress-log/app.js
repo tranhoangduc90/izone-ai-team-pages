@@ -3,7 +3,7 @@ import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
 import {renderSessionReview} from './session-review.js?rev=20261030-the20-v2';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
 import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
-import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261030-the20-v2';
+import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261102-the24-v1';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
@@ -12,8 +12,8 @@ import {comparisonTable} from './thuy-live/comparison-table.js?rev=20261022-pari
 import {docsSourceTable} from './docs-source-table.js?rev=20261025-docs-import-v1';
 import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
-import {createStudentSessionDashboard} from './student-session-dashboard.js';
-import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v2';
+import {createStudentSessionDashboard,dashboardSessionState,upcomingSession,renderUpcomingSession} from './student-session-dashboard.js?rev=20261102-the24-v1';
+import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut,consumeProgressStudentHandoff} from './student-session-memory.js?rev=20261102-the24-v1';
 import {writingResultLink} from './student-test-results.js?rev=20261030-the22-23-v1';
 import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRememberedStudent,
   writeMemory } from '../shared/student-memory.js?v=20260905-memory-v3';
@@ -27,8 +27,8 @@ import { allowedGroup, memoryKey, officialStudent, readMemory, resolveRemembered
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 const THUY_UI=location.pathname.endsWith('/thuy.html')||new URLSearchParams(location.search).get('presentation')==='thuy';
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261030-the22-23-v1'):null;
-if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./student-session-dashboard.css?rev=20261028-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL(path,import.meta.url);document.head.append(css);}}
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261102-the24-v1'):null;
+if(THUY_UI){document.body.classList.add('thuy-live','thuy-student');for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./student-session-dashboard.css?rev=20261028-v1','./the24.css?rev=20261102-the24-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL(path,import.meta.url);document.head.append(css);}}
 const AUTOSAVE_IDLE_MIN_MS = 5_000;
 const AUTOSAVE_IDLE_MAX_MS = 12_000;
 const AUTOSAVE_FORCE_MIN_MS = 25_000;
@@ -79,9 +79,11 @@ let courseIdentity=null;
 
 async function applyCommonStudentMemory(){
   if(!courseIdentity||studentMemory.busy||state.attempt)return;
+  const entryParams=new URLSearchParams(location.hash.slice(1)),expectedRef=entryParams.get('student');
+  const handoff=consumeProgressStudentHandoff({classId:state.assignment.class.id,studentRefs:state.assignment.roster.map(s=>s.studentRef),expectedRef});
+  if(handoff){courseIdentity.pin(handoff.studentRef,{classRef:handoff.classId});stampProgressStudent();elements.rememberStudent.checked=studentMemory.preference=handoff.remember;}
   const own=courseIdentity.getPinned();
   if(own&&progressPinWasLoggedOut())return;
-  const entryParams=new URLSearchParams(location.hash.slice(1)),expectedRef=entryParams.get('student');
   let selected,selection=null;
   if(own?.studentRef)selected=state.assignment.roster.find(s=>s.studentRef===own.studentRef);
   else{
@@ -267,20 +269,26 @@ async function openDashboardOnly(){
 }
 async function openDashboardSession(session,status){
   if(session.assignmentId===state.assignment.assignmentId&&(state.attempt||state.thuyReadOnly)){
+    showView('formView');
     elements.reflectionForm.scrollIntoView({behavior:'smooth',block:'start'});return;
   }
   if(status.readOnly){await openStudentJourneyDetail(session);return;}
+  if(!status.canLearn)return;
+  if(session.assignmentId===state.assignment.assignmentId&&state.confirmedStudent&&!state.attempt){
+    await startAttempt();elements.reflectionForm.scrollIntoView({behavior:'smooth',block:'start'});return;
+  }
   if(state.attempt&&!state.submissionPayload){
     if(storeLocalDraft()===false)return;await flushDraft();
     if(state.savedVersion!==state.changeVersion){setNotice('Chưa lưu xong nháp. Hãy thử lưu lại trước khi mở buổi khác.','error');return;}
   }
   if(!/^[0-9a-f-]{36}$/iu.test(session.publicToken||'')){setNotice('Chưa có đường mở phiếu hợp lệ.','error');return;}
-  location.hash='assignment='+encodeURIComponent(session.publicToken);location.reload();
+  location.hash=new URLSearchParams({assignment:session.publicToken,student:dashboardStudent()});location.reload();
 }
 function showView(id) {
   for (const viewId of viewIds) elements[viewId].hidden = viewId !== id;
   if(THUY_UI)for(const [button,active]of [[document.querySelector('#thuyLessonNav'),!['journeyView','journeyDetailView','journeyLoadingView'].includes(id)],
     [document.querySelector('#thuyJourneyNav'),['journeyView','journeyDetailView','journeyLoadingView'].includes(id)]]){button?.classList.toggle('active',active);button?.setAttribute('aria-pressed',String(active));}
+  if(THUY_UI){const nav=document.querySelector('#thuyJourneyNav');if(nav)nav.hidden=['identityView','journeyView','journeyLoadingView'].includes(id);}
   if(THUY_UI&&id==='formView'){elements.reflectionForm.hidden=Boolean(state.dashboardDenied)||!state.attempt&&!state.thuyReadOnly;if(!state.dashboardStarting)void loadStudentDashboard();}
   commentPoller?.refresh();
   if(THUY_UI){document.querySelector('#thuyGreeting')?.remove();const name=state.attempt?.identity.studentName||state.thuyReadOnly?.student.name||state.confirmedStudent?.name;if(name&&['formView','resultView'].includes(id)){const greeting=document.createElement('h1');greeting.id='thuyGreeting';greeting.textContent=name;document.querySelector('main').prepend(greeting);}}
@@ -1425,10 +1433,12 @@ function journeyPortalMessage(status) {
 let integratedSessionOwner='',integratedSessionCards=new Map();
 function renderIntegratedJourney(journey) {
   state.journeyData=journey;
-  const signature=JSON.stringify(journey,(key,value)=>['serverNow','generatedAt','capturedAt'].includes(key)?undefined:value);
+  const now=Date.now(),upcoming=upcomingSession(journey.sessions||[],now);
+  if(THUY_UI){let host=elements.journeyView.querySelector('#studentUpcoming');if(!host){host=document.createElement('section');host.id='studentUpcoming';elements.journeyView.prepend(host);}renderUpcomingSession(host,journey.sessions||[],{now,onOpen:openDashboardSession});}
+  const signature=JSON.stringify({journey,states:journey.sessions.map(s=>dashboardSessionState(s,now)),upcoming:upcoming?.sessionNumber},(key,value)=>['serverNow','generatedAt','capturedAt'].includes(key)?undefined:value);
   if(elements.journeySessions.dataset.signature===signature)return;
   elements.journeySessions.dataset.signature=signature;
-  elements.journeyStudentName.textContent = 'Chào '+journey.student.name+', đây là hành trình học của em';
+  elements.journeyStudentName.textContent = THUY_UI?journey.student.name:'Chào '+journey.student.name+', đây là hành trình học của em';
   elements.journeyClassName.textContent = journey.class.name;
   elements.attendedCount.textContent = journey.summary.attendedSessions;
   elements.submittedCount.textContent = journey.summary.submittedComplete;
@@ -1438,34 +1448,32 @@ function renderIntegratedJourney(journey) {
     elements.journeyPlanCount.textContent='Trong kế hoạch '+journey.summary.totalSessions+' buổi';
     elements.journeyCorrectCount.textContent=(journey.sessions||[]).reduce((n,s)=>n+(s.quizSummary?.correct||0),0);
     elements.journeyIncorrectCount.textContent=(journey.sessions||[]).reduce((n,s)=>n+(s.quizSummary?.incorrect||0),0);
-    elements.journeyListTitle.textContent=journey.summary.totalSessions+' buổi học, từng bước rõ ràng';
+    elements.journeyListTitle.textContent=THUY_UI?'Các buổi học':journey.summary.totalSessions+' buổi học, từng bước rõ ràng';
   }
   const owner=journey.class.classId+':'+journey.student.studentRef,keep=new Set();
   if(integratedSessionOwner!==owner){elements.journeySessions.replaceChildren();integratedSessionCards.clear();integratedSessionOwner=owner;}
-  const sessions = (journey.sessions || []).map(session => {
-    const status = sessionState(session, {assignmentId:session.assignmentId,
-      status:session.completeness==='complete'?'complete':session.testResult?'test_result':session.completeness==='incomplete'?'incomplete':session.conflict?'needs_review':'not_submitted'},
-      session.assignmentId?{title:session.title,status:session.assignmentStatus}:null);
-    if(session.completeness==='incomplete')Object.assign(status,{kind:'complete',label:'Đã nộp · còn câu trống',canLearn:false});
+  const sessions = [...(journey.sessions || [])].sort((a,b)=>Number(a.sessionNumber)-Number(b.sessionNumber)).map(session => {
+    const status = dashboardSessionState(session,now);
     const key=String(session.sessionNumber),cardSignature=JSON.stringify({session,status,current:state.assignment.sessionNumber}),cached=integratedSessionCards.get(key);keep.add(key);
     if(cached?.signature===cardSignature)return cached.element;
-    const completed = ['complete','incomplete'].includes(session.completeness)||Boolean(session.sessionComment?.noteText);
-    const learn = !completed&&status.canLearn && /^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
+    const completed = status.readOnly&&Boolean(status.action);
+    const learn = status.canLearn && /^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
     const item = document.createElement(learn?'a':completed?'button':'article');
     item.dataset.sessionNumber=String(session.sessionNumber);
     item.className = 'studentSessionCard session-'+status.kind;
+    item.classList.toggle('is-upcoming',session.sessionNumber===upcoming?.sessionNumber);
     if (learn) {
-      item.href=(THUY_UI?'./thuy.html':'./index.html')+'#assignment='+encodeURIComponent(session.publicToken);
+      item.href=(THUY_UI?'./thuy.html':'./index.html')+'#'+new URLSearchParams({assignment:session.publicToken,student:journey.student.studentRef});
       item.addEventListener('click',event=>{
-        if(new URL(item.href).pathname===window.location.pathname){event.preventDefault();window.location.hash='assignment='+encodeURIComponent(session.publicToken);window.location.reload();}
+        if(new URL(item.href).pathname===window.location.pathname){event.preventDefault();void openDashboardSession(session,status);}
       });
     }
     if (completed) {item.type='button';item.addEventListener('click',()=>void openStudentJourneyDetail(session));}
     const heading = document.createElement('div'); heading.className='studentSessionTop';
-    const number='BUỔI '+String(session.sessionNumber).padStart(2,'0');
+    const number=THUY_UI?'Buổi '+session.sessionNumber:'BUỔI '+String(session.sessionNumber).padStart(2,'0');
     const date=/^\d{4}-\d{2}-\d{2}$/u.test(session.sessionDate||'')?session.sessionDate.split('-').reverse().join('/'):'Chưa xác nhận ngày';
     heading.append(journeyText('b',number),journeyText('span',date));
-    const title=contentTitle(session,{title:session.assignmentId||session.sessionKind==='test'?session.title:''});
+    const title=contentTitle(session,{title:session.title});
     const bottom=document.createElement('div');bottom.className='studentSessionBottom';
     bottom.append(journeyText('i',status.label));
     if(session.quizSummary?.graded>0)bottom.append(journeyText('b',session.quizSummary.correct+'/'+session.quizSummary.graded));
@@ -1486,7 +1494,7 @@ function renderIntegratedJourney(journey) {
   for(const [key,card]of integratedSessionCards)if(!keep.has(key)){card.element.remove();integratedSessionCards.delete(key);}
   if(!sessions.length)elements.journeySessions.replaceChildren(journeyText('p', 'Chưa có buổi học nào được ghi nhận.', 'muted'));
   else for(const [index,card]of sessions.entries())if(elements.journeySessions.children[index]!==card)elements.journeySessions.insertBefore(card,elements.journeySessions.children[index]||null);
-  paintJourneyComments(elements.journeyView,elements.journeySessions,journey.sessions,session=>void openStudentJourneyDetail(session));
+  paintJourneyComments(elements.journeyView,elements.journeySessions,journey.sessions,session=>void openStudentJourneyDetail(session),{showLatest:!THUY_UI});
   const reports = (journey.reports || []).map(report => {
     const item = document.createElement('article');
     item.className = 'history-report';

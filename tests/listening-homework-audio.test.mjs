@@ -18,7 +18,7 @@ for(const mode of ['primary','partial','1027','429','truncated','corrupt','denie
   if(url.startsWith(WORKER_ORIGIN)){
    if(url.includes('/access/')){access++;if(mode==='denied')return Response.json({code:'SCOPE_DENIED'},{status:403});return worker.fetch(new Request(url,init),env);}
    primary++;
-   if(mode==='partial'&&primary>2)return new Response('temporary failure',{status:503});
+   if(mode==='partial'&&primary>Math.min(2,asset.chunks.length-1))return new Response('temporary failure',{status:503});
    if(mode==='1027')return new Response('Error code: 1027',{status:403});
    if(mode==='429')return new Response('quota',{status:429});
    if(mode==='truncated')return new Response(new Uint8Array(30));

@@ -49,7 +49,11 @@ function persist(){
 }
 function promoteDraft(){
   scenario=state.isSample?'sample-current':'current';
-  const url=new URL(location.href);if(state.isSample)url.searchParams.set('scenario','sample-current');else url.searchParams.delete('scenario');window.history.replaceState(null,'',url);
+  // Sửa URL chỉ để giữ ngữ cảnh màn hình; lỗi History API không được chặn nhận/lưu đáp án.
+  try{
+    const url=new URL(location.href);if(state.isSample)url.searchParams.set('scenario','sample-current');else url.searchParams.delete('scenario');
+    if(url.href!==location.href)window.history.replaceState(null,'',url.href);
+  }catch{/* Trình duyệt từ chối sửa URL vẫn cho phép tiếp tục ghi nhận bài làm. */}
   const picker=document.querySelector('#scenario');if(picker)picker.value=state.isSample?'draft':'current';
 }
 function normalize(value){return String(value||'').normalize('NFKC').replace(/\s+/g,' ').trim().toLowerCase();}
@@ -57,7 +61,7 @@ function filled(target){const v=normalize(state.answers[target.id]);return !!v&&
 function completed(){if(serverMode&&state?.serverAttempt)return state.serverAttempt.completeness.filled_cells;if(serverMode&&state?.status==='draft'&&serverClient.state.status==='saved'&&serverClient.state.completeness)return serverClient.state.completeness.filled_cells;return content.targets.filter(filled).length;}
 function timeLabel(iso){return iso?new Date(iso).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'chưa lưu';}
 function isResult(){return state.status==='review';}
-function writable(){return !teacher&&state?.status==='draft'&&(!headings()||homeworkDemo||window.ReadingSharePractice?.isAccepted()===true);}
+function writable(){return !teacher&&!serverClient?.state?.accessRevoked&&state?.status==='draft'&&(!headings()||homeworkDemo||window.ReadingSharePractice?.isAccepted()===true);}
 window.ReadingInteractionBridge={current:()=>state,scope:()=>content?.version+':'+state?.id,writable,save:persist,showPane:setMobilePane,closeGeneralNotes:()=>{generalNotesOpen=false;document.querySelector('#notes-panel')?.setAttribute('hidden','');}};
 function feedbackHtml(id){
   if(!isResult())return '';
@@ -81,6 +85,7 @@ function summaryHtml(){
   return `<div class="result-summary"><div><strong>${correct}/4</strong><p>Matching Information</p></div><div><strong>16 phần nén</strong><p>Phản hồi riêng dưới từng ô</p><small>Không quy đổi band IELTS</small></div></div>`;
 }
 function render(){
+  if(serverClient?.state?.accessRevoked){showAccessRevoked();return;}
   if(!content)return;
   document.body.classList.toggle('headings-homework',headings());
   document.body.classList.toggle('sentence-homework',content.type==='sentence_completion');
@@ -189,7 +194,7 @@ async function getFixture(){if(!fixture){const r=await fetch('/__prototype__/rev
 async function changeScenario(next){
   if(state&&writable()&&state.savedAt)persist();
   scenario=next;
-  const nextUrl=new URL(location.href);if(next==='current')nextUrl.searchParams.delete('scenario');else nextUrl.searchParams.set('scenario',next);window.history.replaceState(null,'',nextUrl);
+  const nextUrl=new URL(location.href);if(next==='current')nextUrl.searchParams.delete('scenario');else nextUrl.searchParams.set('scenario',next);try{window.history.replaceState(null,'',nextUrl);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   if(next==='current')state=structuredClone(originalDraft);
   else if(next==='empty'||next==='entry')state=newState();
   else {
@@ -350,13 +355,19 @@ bootstrap();
 function adaptServerSave(){
   const target=document.querySelector('#save-state');if(!target)return;
   const saved=serverClient.state;
+  const compact=document.body.dataset.homeworkLayout==='compact';
+  let statusRow=target.parentElement;
+  if(compact&&!statusRow.classList.contains('footer-status')){
+    statusRow=document.createElement('div');statusRow.className='footer-status';target.before(statusRow);statusRow.append(target);
+  }
   target.textContent=saved.conflict?'Xung đột bản lưu · Bài trên máy vẫn được giữ':saved.status==='saving'?'Đang lưu lên máy chủ…':saved.status==='dirty'?'Có thay đổi chưa lưu máy chủ':saved.status==='error'?'Chưa lưu máy chủ · Giữ bản trên thiết bị':saved.savedAt?'Đã lưu máy chủ · '+timeLabel(saved.savedAt):'Chưa nhập bài · Máy chủ sẵn sàng';
   target.dataset.saveStatus=saved.status;
   if(!teacher&&saved.homework&&saved.homework.status!=='not_started'){
-    let notice=document.querySelector('.homework-sync');if(!notice){notice=document.createElement('div');notice.className='notice homework-sync';notice.setAttribute('role','status');document.querySelector('.lesson-head')?.after(notice);}
+    let notice=document.querySelector('.homework-sync');if(!notice){notice=document.createElement(compact?'span':'div');notice.className=compact?'save-state homework-sync':'notice homework-sync';notice.setAttribute('role','status');if(compact)statusRow.append(notice);else document.querySelector('.lesson-head')?.after(notice);}
     const h=saved.homework,blocked=h.status==='blocked'||h.jobs?.some(j=>j.status==='blocked'),missing=h.jobs?.some(j=>j.errorCode==='HOMEWORK_NOT_FOUND');
-    notice.textContent=blocked?'Bài đã được giữ trên máy chủ. Chưa đồng bộ được Homework; giảng viên cần kiểm tra.':h.status==='verified'&&h.cta==='verified'?'Đã cập nhật trạng thái và link vào Homework.':missing?'Bài đã lưu. Chưa có Homework cá nhân đúng mã; hệ thống sẽ nối khi được giao.':h.status==='unavailable'?'Chưa kiểm được trạng thái đồng bộ Homework. Xem trạng thái lưu bài ở thanh trên.':'Bài đã lưu. Đang đồng bộ trạng thái vào Homework.';
-  }
+    if(compact)notice.dataset.syncStatus=blocked||missing||h.status==='unavailable'?'attention':h.status==='verified'&&h.cta==='verified'?'saved':'pending';
+    notice.textContent=blocked?'Bài đã được giữ trên máy chủ. Chưa đồng bộ được Homework; giảng viên cần kiểm tra.':h.status==='verified'&&h.cta==='verified'?'Đã cập nhật trạng thái và link vào Homework.':missing?'Bài đã lưu. Chưa có Homework cá nhân đúng mã; hệ thống sẽ nối khi được giao.':h.status==='unavailable'?'Chưa kiểm được trạng thái đồng bộ Homework. Xem trạng thái lưu bài'+(compact?' bên cạnh.':' ở thanh trên.'):'Bài đã lưu. Đang đồng bộ trạng thái vào Homework.';
+  }else if(compact)document.querySelector('.homework-sync')?.remove();
   if(state.archived)target.textContent='Nháp cũ · Lưu lúc '+timeLabel(state.savedAt)+' · Chỉ xem';
   window.MaterialsRepairWorkspace?.updateSync();
 }
@@ -395,16 +406,38 @@ async function serverGrade(){
 // Reload hoặc lịch sử nối lại đúng job; phản hồi muộn chỉ nhắc khi đang sửa nháp.
 function trackServerAttempt(attempt,{announce=false}={}){
   showServerAttempt(attempt,announce);serverClient.stopPoll();
-  if(!['queued','processing'].includes(attempt.status))return;
+  if(!['queued','processing'].includes(attempt.status)&&!serverClient.access?.config?.capabilities?.stateStream)return;
   serverClient.poll(attempt.attemptId,value=>{
     if(value.status==='connection_error'){toast('Chưa đọc được tiến độ. Bản gửi vẫn giữ trên máy chủ; đang kết nối lại.');return;}
     latestServerAttempt=value;
     if(state.serverAttempt?.attemptId===value.attemptId&&state.status!=='draft')showServerAttempt(value,announce);
-    else if(value.status==='done')toast('Đã có phản hồi cho bản đã gửi. Mở Lịch sử để xem; nháp đang sửa được giữ.');
+    else if(value.status==='done'){window.ReadingMaterialsExperience?.outcome(value,{background:true});toast('Đã có phản hồi cho bản đã gửi. Mở Lịch sử để xem; nháp đang sửa được giữ.');}
   });
 }
 function showServerAttempt(attempt,announce=false){
-  if(['green-roofs','matching_headings','matching_people','sentence_completion'].includes(content.type)&&state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
+  // Cùng bản nộp: chỉ sửa các ô góp ý thay đổi, giữ bài đọc, ô nhập và vị trí xem.
+  const previous=state.serverAttempt;
+  if(state.status==='review'&&previous?.attemptId===attempt.attemptId&&attempt.status==='done'&&attempt.result?.feedback&&JSON.stringify(previous.snapshot)===JSON.stringify(attempt.snapshot)){
+    const changed=content.targets.map(t=>t.id).filter(id=>JSON.stringify(state.feedback?.[id])!==JSON.stringify(attempt.result.feedback[id]));
+    const nodes=changed.map(id=>({id,node:document.querySelector('[data-feedback="'+CSS.escape(id)+'"]'),feedback:attempt.result.feedback[id]}));
+    if(nodes.every(row=>row.node&&row.feedback)){
+      latestServerAttempt=attempt;state.serverAttempt=attempt;state.feedback=attempt.result.feedback;
+      fixture={answers:Object.fromEntries(content.targets.map(t=>[t.id,attempt.result.feedback[t.id]?.modelAnswer||'']))};
+      for(const {node,feedback} of nodes){
+        if(!node.classList.contains(feedback.status)){node.classList.remove('correct','partial','incorrect','blank');node.classList.add(feedback.status);}
+        const label=node.querySelector('.feedback-head strong'),reason=node.querySelector('p');
+        if(label&&label.textContent!==statusNames[feedback.status])label.textContent=statusNames[feedback.status];
+        if(reason&&reason.textContent!==feedback.reason)reason.textContent=feedback.reason;
+      }
+      const renderer=headings()?window.ReadingHeadingsRenderer:lessonRenderer(),summary=document.querySelector('.result-summary');
+      if(summary){const template=document.createElement('template');template.innerHTML=renderer?renderer.shell(content,{state,teacher,writable:false,feedback:feedbackHtml,mobilePane,scale}):summaryHtml();const next=template.content.querySelector('.result-summary');if(next&&summary.innerHTML!==next.innerHTML)summary.replaceChildren(...next.childNodes);}
+      const notice=document.querySelector('.result-note'),counts={correct:0,partial:0,incorrect:0,blank:0};Object.values(state.feedback).forEach(f=>{if(f.status in counts)counts[f.status]++;});
+      const countLabel=notice?.querySelector('span'),countText=' '+counts.correct+' đúng · '+counts.partial+' đúng một phần · '+counts.incorrect+' cần sửa · '+counts.blank+' bỏ trống';if(countLabel&&countLabel.textContent!==countText)countLabel.textContent=countText;
+      if(notice){const action=notice.querySelector('[data-action="repair-start"]'),needsRepair=content.targets.some(t=>state.feedback[t.id]?.status!=='correct');if(!needsRepair)action?.remove();else if(!action)notice.insertAdjacentHTML('beforeend','<button class="quiet" data-action="repair-start">Xem phần cần sửa ↓</button>');}
+      updateProgress();window.ReadingMaterialsExperience?.outcome(attempt,{background:true});return;
+    }
+  }
+  if(state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
     const visible=value=>JSON.stringify([value.status,value.errorCode,value.result,value.snapshot,value.validationProgress,value.recovery]);
     if(visible(state.serverAttempt)===visible(attempt)){latestServerAttempt=attempt;return;}
     if(state.status==='waiting'&&['queued','processing'].includes(attempt.status)){
@@ -437,11 +470,18 @@ async function serverAction(name){
   else await serverClient.flush();
   const draft=await serverClient.getDraft();scenario='current';state={...newState(),...draft.body,id:'draft-'+serverClient.identity.ownerId,status:'draft',savedAt:draft.savedAt};render();
   if(name==='repair-edit'||name==='edit'){
-    const url=new URL(location.href);url.searchParams.delete('attemptId');url.searchParams.delete('attempt');window.history.replaceState(null,'',url);
+    const url=new URL(location.href);url.searchParams.delete('attemptId');url.searchParams.delete('attempt');try{window.history.replaceState(null,'',url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
     const history=await serverClient.getHistory();await window.ReadingMaterialsExperience?.restore(history);window.ReadingMaterialsExperience?.focusCurrent();
   }
   focusHistoryDestination();
   if(name==='edit')toast('Đang chỉnh nháp trên máy chủ. Bản đã chấm và phản hồi vẫn giữ riêng.');
 }
 window.addEventListener('reading67:server-state',()=>{if(serverMode&&content&&state)updateProgress();});
+function showAccessRevoked(){
+  if(!serverMode||!content)return;
+  if(modal.open)modal.close();if(explanation.open)explanation.close();
+  app.innerHTML='<section class="access-card"><h1>Cần kiểm tra lại quyền truy cập</h1><p>Bản đã lưu vẫn ở trên máy chủ. Phần chưa lưu được giữ trên thiết bị này.</p><p>Hãy mở lại link Homework hoặc tải lại để đăng nhập và kiểm quyền lớp.</p><button type="button" class="primary" id="reading-recheck-access">Tải lại để kiểm quyền</button></section>';
+  document.querySelector('#reading-recheck-access').onclick=()=>location.reload();
+}
+window.addEventListener('reading67:access-revoked',showAccessRevoked);
 window.addEventListener('reading67:access-warning',event=>toast(event.detail));

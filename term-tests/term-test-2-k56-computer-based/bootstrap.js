@@ -12,7 +12,7 @@
     query.delete('demo');
     query.delete('grading');
     const cleanQuery = query.toString();
-    history.replaceState(null, '', `${location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${location.hash}`);
+    try{history.replaceState(null, '', `${location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${location.hash}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   }
   const demoMode = localPreview ? (query.get('demo') || '') : '';
   const localDemo = localPreview && demoMode === 'exam' && classCode === 'CODEXDEMO56';
@@ -70,7 +70,7 @@
         if (entryIdentity.status === 'unique') {
           classCode = entryIdentity.resolution.aliases[0].classCode;
           query.set('class', classCode);
-          history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);
+          try{history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
           sharedIdentity = createIdentity();
         } else if (entryIdentity.status === 'ambiguous') {
           rememberedClasses = [...new Set(entryIdentity.resolution.aliases.map(alias => alias.classCode))];
@@ -856,7 +856,7 @@
         legacyListeningResume = false;
         const cleanQuery = new URLSearchParams(window.location.search);
         cleanQuery.delete('reset');
-        history.replaceState(history.state, '', window.location.pathname + '?' + cleanQuery.toString() + window.location.hash);
+        try{history.replaceState(history.state, '', window.location.pathname + '?' + cleanQuery.toString() + window.location.hash);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
         await enterExam(started, officialAudio);
         return;
       }

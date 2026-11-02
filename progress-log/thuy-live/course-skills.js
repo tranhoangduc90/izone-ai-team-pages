@@ -53,7 +53,7 @@ function writingFeedback(result,full=false){
   const feedback=writing?.tasks?.[task]?.feedback;
   const text=node('p',`Task ${task}: ${typeof feedback==='string'&&feedback.trim()?feedback:'Chưa có nhận xét'}`,full?'':'thuy-feedback-excerpt');section.append(text);
  }
- if(!full&&[1,2].some(task=>writing?.tasks?.[task]?.feedback?.trim()))section.append(action('Đọc đủ',()=>modal(result.title||'Nhận xét Writing',writingFeedback(result,true)),'button text-button'));
+ if(!full&&[1,2].some(task=>writing?.tasks?.[task]?.feedback?.trim()))section.append(action('Xem thêm',()=>modal(result.title||'Nhận xét Writing',writingFeedback(result,true)),'button text-button'));
  return section;
 }
 function explanation(){
@@ -87,7 +87,7 @@ export function renderPersonSkills(root,course,person,{onOpen,history=true,stude
    const latest=latestSkillTest(allRecords,skill),analysis=latest?.[skill]?.analysis;
    if(!latest)section.append(node('p','Chưa có kết quả Test có ngày làm bài để chọn bài mới nhất.','muted'));
    else{
-    section.append(node('small',(latest.title||latest.testSlug)+' · '+new Date(latest[skill]?.completedAt||latest.completedAt).toLocaleDateString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})));
+    section.append(node('small',(latest.title||latest.testSlug).split(/\s*·\s*Khóa\s*/iu)[0]));
     if(analysis?.status!=='available')section.append(node('p','Chưa có phân tích dạng bài.','muted'));
     else if(!analysis.needsImprovement?.length)section.append(node('p','Không có dạng cần cải thiện theo phân tích của Test.'));
     else for(const type of analysis.needsImprovement)section.append(node('p',type.label||type.type));
@@ -96,7 +96,7 @@ export function renderPersonSkills(root,course,person,{onOpen,history=true,stude
   if(summary.flagged)card.append(node('p','Ưu tiên xem · TB ba buổi gần nhất '+percent(summary.recentAverage),'thuy-priority'));grid.append(card);}
  const speaking=speakingSummary(course.sessions,person.studentRef),speech=node('section','','card');speech.append(node('h3','Speaking'));
  if(studentView){
-  if(speaking.latest){const feedback=node('section','','thuy-skill-block');feedback.append(node('h4','Nhận xét của giảng viên'),node('small','Buổi '+speaking.latest.number),node('p',speaking.latest.text,'thuy-feedback-excerpt'),action('Đọc đủ',()=>modal('Nhận xét Speaking · Buổi '+speaking.latest.number,node('p',speaking.latest.text)),'button text-button'));speech.append(feedback);}
+  if(speaking.latest){const feedback=node('section','','thuy-skill-block');feedback.append(node('h4','Nhận xét của giảng viên'),node('small','Buổi '+speaking.latest.number),node('p',speaking.latest.text,'thuy-feedback-excerpt'),action('Xem thêm',()=>modal('Nhận xét Speaking · Buổi '+speaking.latest.number,node('p',speaking.latest.text)),'button text-button'));speech.append(feedback);}
   const self=node('section','','thuy-skill-block');self.append(node('h4','Tự nhận xét'));for(const group of speaking.frequencies)self.append(node('p',group.label));
   if(!speaking.frequencies.length)self.append(node('p','Chưa có tự nhận xét Speaking.','muted'));speech.append(self);
  }else{
@@ -146,19 +146,20 @@ export function renderTeacherSkills(root,course,{onSummary,onOpen,onViewChange})
   const nav=node('nav','','thuy-skill-tabs');nav.setAttribute('aria-label','Bốn kỹ năng');for(const [key,label]of Object.entries(skills)){const button=action(label,()=>{skill=key;filter='all';order='name';paint();});button.setAttribute('aria-pressed',String(skill===key));nav.append(button);}
   const toolbar=node('div','','thuy-roster-tools'),input=node('input');input.type='search';input.value=query;input.placeholder='Tìm học viên';input.setAttribute('aria-label','Tìm trong hành trình lớp');input.addEventListener('input',()=>{query=input.value;paint();const restored=root.querySelector('input');restored.focus();});
   const select=node('select');select.setAttribute('aria-label','Lọc dữ liệu kỹ năng');for(const [id,label]of [['all','Tất cả học viên'],['data','Có dữ liệu'],['missing','Chưa có dữ liệu'],...(['listening','reading'].includes(skill)?[['priority','Ưu tiên xem']]:[])]){const option=node('option',label);option.value=id;select.append(option);}select.value=filter;select.addEventListener('change',()=>{filter=select.value;paint();});
-  const sort=node('select');sort.setAttribute('aria-label','Sắp xếp kỹ năng');for(const [id,label]of [['name','Tên học viên'],...(['listening','reading'].includes(skill)?[['low','TB thấp lên trước'],['high','TB cao lên trước']]:skill==='writing'?tests.flatMap((name,index)=>[['test-low-'+index,name+' ↑'],['test-high-'+index,name+' ↓']]):[])]){const option=node('option',label);option.value=id;sort.append(option);}sort.value=order;sort.addEventListener('change',()=>{order=sort.value;paint();});toolbar.append(input,select,sort);
+  const writingTests=[1,2];
+  const sort=node('select');sort.setAttribute('aria-label','Sắp xếp kỹ năng');for(const [id,label]of [['name','Tên học viên'],...(['listening','reading'].includes(skill)?[['low','TB thấp lên trước'],['high','TB cao lên trước']]:skill==='writing'?writingTests.flatMap(index=>[['test-low-'+index,tests[index]+' ↑'],['test-high-'+index,tests[index]+' ↓']]):[])]){const option=node('option',label);option.value=id;sort.append(option);}sort.value=order;sort.addEventListener('change',()=>{order=sort.value;paint();});toolbar.append(input,select,sort);
   const people=course.people.map(person=>{
    const summary=priority(skillReports(course,person.studentRef,skill));
-   const hasData=['listening','reading'].includes(skill)?summary.count>0:skill==='speaking'?speakingSummary(course.sessions,person.studentRef).frequencies.length>0||Boolean(speakingSummary(course.sessions,person.studentRef).latest):testRecords(person).some(r=>Number.isFinite(r.writing?.score)||[1,2].some(t=>r.writing?.tasks?.[t]?.feedback?.trim()));
+   const hasData=['listening','reading'].includes(skill)?summary.count>0:skill==='speaking'?speakingSummary(course.sessions,person.studentRef).frequencies.length>0||Boolean(speakingSummary(course.sessions,person.studentRef).latest):testRecords(person).some(r=>writingTests.includes(testIndex(r))&&(Number.isFinite(r.writing?.score)||[1,2].some(t=>Number.isFinite(r.writing?.tasks?.[t]?.score)||r.writing?.tasks?.[t]?.feedback?.trim())));
    return {person,summary,hasData};
   }).filter(({person,summary,hasData})=>person.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))&&(filter==='all'||filter==='priority'&&summary.flagged||filter==='data'&&hasData||filter==='missing'&&!hasData));
   people.sort((a,b)=>{if(order==='name')return (['listening','reading'].includes(skill)?Number(b.summary.flagged)-Number(a.summary.flagged)||Number(b.hasData)-Number(a.hasData):0)||a.person.name.localeCompare(b.person.name,'vi');const score=value=>order.startsWith('test-')?namedTest(value.person,Number(order.split('-').at(-1)))?.writing?.score:value.summary.average,aa=score(a),bb=score(b);return Number(!Number.isFinite(aa))-Number(!Number.isFinite(bb))||(Number.isFinite(aa)&&Number.isFinite(bb)?(aa-bb)*(order==='high'||order.startsWith('test-high')?-1:1):0)||a.person.name.localeCompare(b.person.name,'vi');});
   views.get(root).people=people.map(value=>value.person);
   const content=node('div'),table=node('table','','thuy-roster'),head=node('tr'),sessions=[...course.sessions].sort((a,b)=>a.number-b.number);
   if(skill==='speaking')table.classList.add('thuy-speaking-roster');
-  const columns=skill==='writing'?['Học viên',...tests]:skill==='speaking'?['Học viên','Nhận xét của giảng viên','Tự nhận xét của học viên']:['Học viên','TB Progress Log',...tests];for(const label of columns)head.append(node('th',label));const thead=node('thead');thead.append(head);table.append(thead);const tbody=node('tbody');
+  const columns=skill==='writing'?['Học viên',...writingTests.map(i=>tests[i])]:skill==='speaking'?['Học viên','Nhận xét của giảng viên','Tự nhận xét của học viên']:['Học viên','TB Progress Log',...tests];for(const label of columns)head.append(node('th',label));const thead=node('thead');thead.append(head);table.append(thead);const tbody=node('tbody');
   for(const {person,summary}of people){const row=node('tr'),name=node('td');name.append(action(person.name,()=>onSummary(person),'button text-button'));if(person.current===false)name.append(node('small','Hồ sơ lịch sử · Không thuộc danh sách hiện tại'));if(summary.flagged)name.append(node('small','Ưu tiên xem · TB 3 buổi: '+percent(summary.recentAverage),'thuy-priority'));row.append(name);
-   if(skill==='writing')for(let i=0;i<3;i++){const cell=node('td');cell.append(writingFeedback(namedTest(person,i)));row.append(cell);}
+   if(skill==='writing')for(const i of writingTests){const cell=node('td');cell.append(writingFeedback(namedTest(person,i)));row.append(cell);}
    else if(skill==='speaking'){
     const value=speakingSummary(course.sessions,person.studentRef),comments=publishedSpeakingComments(course,person.studentRef),teacher=node('td'),self=node('td');
     for(const comment of comments)teacher.append(node('p','Buổi '+comment.sessionNumber+': '+comment.text,'thuy-speaking-comment'));

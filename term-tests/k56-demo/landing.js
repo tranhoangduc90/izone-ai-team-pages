@@ -33,7 +33,7 @@ function updateLandingUrl() {
   const classCode = selectedClassCode();
   if (validClassCode(classCode)) landingQuery.set('class', classCode);
   else landingQuery.delete('class');
-  window.history.replaceState(window.history.state, '', `?${landingQuery.toString()}`);
+  try{window.history.replaceState(window.history.state, '', `?${landingQuery.toString()}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 function testLink(destination, classCode) {
   const params = new URLSearchParams({ class: classCode });

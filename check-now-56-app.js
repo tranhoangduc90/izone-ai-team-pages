@@ -43,7 +43,7 @@
   warningThreshold.textContent = `${minimumCompletionPercent}%`;
 
   if ((documentId || assignmentCode) && !localPreview) {
-    window.history.replaceState({}, document.title, window.location.pathname);
+    try{window.history.replaceState({}, document.title, window.location.pathname);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   }
 
   function setStage(stage) {

@@ -789,7 +789,7 @@
         legacyListeningResume = false;
         const cleanQuery = new URLSearchParams(window.location.search);
         cleanQuery.delete('reset');
-        history.replaceState(history.state, '', window.location.pathname + '?' + cleanQuery.toString() + window.location.hash);
+        try{history.replaceState(history.state, '', window.location.pathname + '?' + cleanQuery.toString() + window.location.hash);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
         await enterExam(started, officialAudio);
         return;
       }
@@ -861,7 +861,7 @@
     classCode = selectedClass?.code || '';
     if (classCode) query.set('class', classCode);
     else query.delete('class');
-    history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);
+    try{history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
     try {
       const loaded = await loadDemoRoster(selectedClass);
       if (generation !== classLoadGeneration) return;

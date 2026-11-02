@@ -90,7 +90,7 @@ function updateUrl() {
   if (state.selectedTestSlug) url.searchParams.set('test', state.selectedTestSlug);
   if (state.selectedTab !== 'overview') url.searchParams.set('student', state.selectedTab);
   else url.searchParams.delete('student');
-  window.history.replaceState({}, '', url);
+  try{window.history.replaceState({}, '', url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 
 async function apiRequest(path,options={}) {

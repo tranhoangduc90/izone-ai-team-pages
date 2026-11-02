@@ -185,5 +185,21 @@
     "optionsPosition": "right",
     "imageRowDividers": false,
     "demoMinimumQuestions": 2
+  },
+  "workspaceSpaceAndStatus": {
+    "updated": "2026-11-01",
+    "priority": "exercise-content",
+    "viewport": "remaining-height-after-real-chrome",
+    "footer": "no-unused-bottom-gap",
+    "status": "one-consistent-area",
+    "retain": [
+      "profile-type-scale",
+      "touch-targets",
+      "complete-errors-and-recovery",
+      "safe-area-and-last-field",
+      "native-timer-audio-identity-data",
+      "unchanged-background-reading-state"
+    ],
+    "source": "https://github.com/tranhoangduc90/izone-AI-team/blob/main/docs/interface-master170/WORKSPACE_SPACE_AND_STATUS_2026-11-01.md"
   }
 }

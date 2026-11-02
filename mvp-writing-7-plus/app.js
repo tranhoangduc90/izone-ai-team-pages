@@ -127,7 +127,7 @@ function render(focus = false) {
 function go(nextIndex) {
   if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= steps.length) return;
   index = nextIndex;
-  history.pushState(null,"",`#buoc=${index+1}`);
+  try{history.pushState(null,"",`#buoc=${index+1}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   render(true);
 }
 document.querySelector("#previous").addEventListener("click", () => go(index - 1));

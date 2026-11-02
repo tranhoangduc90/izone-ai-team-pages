@@ -12,7 +12,7 @@ window.K67_EXAM_ORDER = Object.freeze({
   apply: (state, response) => {
     if (!response.examMode) return;
     const url = new URL(location.href); url.searchParams.set('mode',response.examMode);
-    history.replaceState(history.state,'',url.href);
+    try{history.replaceState(history.state,'',url.href);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
     for (const field of ['examMode','examDelivery','nextSection','readingSubmitted','listeningSubmitted','completed',
       'readingStartedAt','readingDeadlineAt','listeningStartedAt','listeningDeadlineAt'])
       if (field in response) state[field] = response[field];

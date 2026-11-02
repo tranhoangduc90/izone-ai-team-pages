@@ -1,7 +1,9 @@
-import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261031-horton1&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
+import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261101-natural-dyes1&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
 import {decodeBody,encodeBody,encodeAnswer} from './answer-codec.mjs?v=20261031-lessons1';
 import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
+import {mountWorkspaceStatus} from './workspace-status.mjs?v=20261101-space1';
 export function createListeningWorkspace(options){
+mountWorkspaceStatus();
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Keep the original demo namespace and IDs so existing local drafts remain readable.
@@ -119,17 +121,17 @@ async function prepareAudio(preferFallback=false){
  $('play').disabled=true;$('audio-status').dataset.state='loading';$('audio-status').textContent='Đang chuẩn bị audio…';$('fallback').hidden=true;
  const work=(async()=>{
   downloadAbort=new AbortController();const signal=AbortSignal.any([lifetime.signal,downloadAbort.signal]);
-  const manifest=await options.audioManifest();if(destroyed)throw new DOMException('Identity changed','AbortError');
+  const manifest=await options.audioManifest();if(destroyed||options.accessRevoked)throw new DOMException('Identity changed','AbortError');
   const blob=await downloadPreferred(manifest,{signal,preferFallback,onProgress:p=>{if(!destroyed)$('audio-status').textContent=`Đang tải audio · ${Math.min(100,Math.round(p.loaded/p.total*100))}%`;},onEvent:e=>{if(!destroyed&&e.source==='pages')$('audio-status').textContent='Đang tải từ nguồn dự phòng…';}});
-  if(destroyed)throw new DOMException('Identity changed','AbortError');
+  if(destroyed||options.accessRevoked)throw new DOMException('Identity changed','AbortError');
   if(!blob)throw Error('Audio unavailable');audioUrl=URL.createObjectURL(blob);audio.src=audioUrl;
   await new Promise((resolve,reject)=>{if(audio.readyState>=1)return resolve();scopeListen(audio,'loadedmetadata',resolve,{once:true});scopeListen(audio,'error',reject,{once:true});});
   if(destroyed)throw new DOMException('Identity changed','AbortError');audio.currentTime=clip.start;$('audio-status').dataset.state='routine';$('audio-status').textContent='Sẵn sàng · Có thể nghe lại từng đoạn.';
  })();audioTask=work;
- try{await work;}finally{audioTask=null;$('play').disabled=false;}
+ try{await work;}finally{audioTask=null;$('play').disabled=!!options.accessRevoked;}
 }
 function audioError(error){$('audio-status').dataset.state='error';const denied=error.accessDenied||error.status===401||error.status===403;$('audio-status').textContent=denied?'Chưa xác nhận được quyền audio. Hãy giữ bài và báo giáo viên.':error.name==='NotAllowedError'?'Audio đã sẵn sàng. Bấm phát để nghe.':'Chưa tải được audio. Bài đang nhập được giữ; hãy thử lại.';$('fallback').hidden=!!denied||error.name==='NotAllowedError';}
-async function playClip(c,preferFallback=false){stop();if(c)setClip(c);const intent=++playIntent;try{await prepareAudio(preferFallback);if(intent!==playIntent||document.hidden)return;if(audio.currentTime<clip.start||audio.currentTime>=clip.end-.1)audio.currentTime=clip.start;audio.playbackRate=+$('speed').value;await audio.play();}catch(e){if(intent===playIntent)audioError(e);}}
+async function playClip(c,preferFallback=false){if(options.accessRevoked)return;stop();if(c)setClip(c);const intent=++playIntent;try{await prepareAudio(preferFallback);if(intent!==playIntent||document.hidden||options.accessRevoked)return;if(audio.currentTime<clip.start||audio.currentTime>=clip.end-.1)audio.currentTime=clip.start;audio.playbackRate=+$('speed').value;await audio.play();}catch(e){if(intent===playIntent)audioError(e);}}
 function renderPlay(){const playing=!audio.paused;$('audio-status').dataset.state=playing?'routine':$('audio-status').dataset.state||'routine';$('play').innerHTML=playing?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>';$('play').setAttribute('aria-label',playing?'Tạm dừng audio':'Phát đoạn đang luyện');}
 function updateAudio(){const t=audio.currentTime;if(t>=clip.end&&!audio.paused){audio.pause();audio.currentTime=clip.end;}$('seek').value=Math.min(clip.end,Math.max(clip.start,t));$('time').textContent=clock(Math.max(clip.start,t))+' / '+clock(clip.end);const cue=data.transcript.find(c=>t>=c.start&&t<c.end);if(cue?.id!==lastCue){if(lastCue)$(lastCue)?.classList.remove('current');lastCue=cue?.id;if(lastCue)$(lastCue)?.classList.add('current');}}
 
@@ -153,20 +155,32 @@ function paintFeedback(){
  }
 }
 function statusLabel(f){return {correct:'Đạt ý',partial:'Cần bổ sung',incorrect:'Cần đối chiếu lại',blank:'Chưa trả lời'}[f.status]||'Góp ý';}
+function paintReview(){
+ const dialog=$('explanation-dialog'),row=feedback?.items.find(i=>i.id===dialog.dataset.reviewItem);if(!row)return;
+ const f=row.feedback,set=(id,value)=>{const node=$(id),text=String(value||'');if(node.textContent!==text)node.textContent=text;};
+ dialog.dataset.feedbackStatus=f.status;
+ set('review-feedback-label','Bản nộp · '+feedback.label);
+ set('review-feedback-status',statusLabel(f)+(f.totalUnits>1?` · ${f.metUnits}/${f.totalUnits} ý`:''));
+ set('review-answer',row.answer||'(Chưa trả lời)');set('review-reason',f.reason);
+ $('review-next').hidden=!f.nextStep;set('review-next-text',f.nextStep);
+ $('review-writing').hidden=!f.writingNotes?.length;set('review-writing',f.writingNotes?.length?'Góp ý cách viết: '+f.writingNotes.join(' '):'');
+ $('review-model').hidden=!f.modelAnswer;set('review-model-text',f.modelAnswer);
+}
 function openReview(id,opener){
  const row=feedback?.items.find(i=>i.id===id);if(!row)return;stop();reviewOpener=opener;
  const item=data.items.find(i=>i.id===id),f=row.feedback,context=item.evidenceContext;
  const first=context?.contextCue||'cue-1',last=context?.targetCue||'cue-4',from=data.transcript.findIndex(c=>c.id===first),to=data.transcript.findIndex(c=>c.id===last);
  const cues=data.transcript.slice(from,to+1),start=cues[0].start,end=cues.at(-1).end;
- $('review-title').textContent='Góp ý · '+itemLabel(id);$('explanation-dialog').dataset.feedbackStatus=f.status;
- $('review-content').innerHTML=`<div class="explanation-dialog-columns"><section class="explanation-dialog-passage"><div class="explanation-dialog-pane-head"><strong>Transcript</strong><span>${clock(start)}–${clock(end)}</span></div><div class="explanation-dialog-passage-scroll">${cues.map(c=>`<strong>${escape(c.speaker)}</strong><p>${escape(c.text)}</p>`).join('')}<button id="replay-review" class="replay-button">▷ Nghe lại đoạn dẫn chứng</button></div></section><section class="explanation-dialog-detail"><div class="explanation-dialog-detail-scroll"><p class="hw-review-caption">${escape(item.question)}</p><p class="hw-review-caption">Bản nộp · ${escape(feedback.label)}</p><h3 class="hw-review-status">${escape(statusLabel(f))}${f.totalUnits>1?` · ${f.metUnits}/${f.totalUnits} ý`:''}</h3><blockquote class="hw-review-quote">${escape(row.answer||'(Chưa trả lời)')}</blockquote><p>${escape(f.reason)}</p>${f.nextStep?`<p><strong>Bước tiếp theo:</strong> ${escape(f.nextStep)}</p>`:''}${f.writingNotes?.length?`<p>Góp ý cách viết: ${escape(f.writingNotes.join(' '))}</p>`:''}${f.modelAnswer?`<details><summary>Đối chiếu đáp án gợi ý</summary><p>${escape(f.modelAnswer)}</p></details>`:''}</div></section></div><div class="hw-review-actions"><button id="revise-item" class="button">${options.readonly?'Về '+itemLabel(id):'Về '+itemLabel(id)+' để bổ sung'} →</button></div>`;
+ $('review-title').textContent='Góp ý · '+itemLabel(id);$('explanation-dialog').dataset.reviewItem=id;
+ $('review-content').innerHTML=`<div class="explanation-dialog-columns"><section class="explanation-dialog-passage"><div class="explanation-dialog-pane-head"><strong>Transcript</strong><span>${clock(start)}–${clock(end)}</span></div><div class="explanation-dialog-passage-scroll">${cues.map(c=>`<strong>${escape(c.speaker)}</strong><p>${escape(c.text)}</p>`).join('')}<button id="replay-review" class="replay-button">▷ Nghe lại đoạn dẫn chứng</button></div></section><section class="explanation-dialog-detail"><div class="explanation-dialog-detail-scroll"><p class="hw-review-caption">${escape(item.question)}</p><p id="review-feedback-label" class="hw-review-caption"></p><h3 id="review-feedback-status" class="hw-review-status"></h3><blockquote id="review-answer" class="hw-review-quote"></blockquote><p id="review-reason"></p><p id="review-next" hidden><strong>Bước tiếp theo:</strong> <span id="review-next-text"></span></p><p id="review-writing" hidden></p><details id="review-model" hidden><summary>Đối chiếu đáp án gợi ý</summary><p id="review-model-text"></p></details></div></section></div><div class="hw-review-actions"><button id="revise-item" class="button">${options.readonly?'Về '+itemLabel(id):'Về '+itemLabel(id)+' để bổ sung'} →</button></div>`;
+ paintReview();$('replay-review').disabled=!!options.accessRevoked;
  $('replay-review').onclick=()=>playClip({start,end,label:'Dẫn chứng · '+itemLabel(id)});
  $('revise-item').onclick=()=>{$('explanation-dialog').skipReturnFocus=true;$('explanation-dialog').close();document.querySelector(`[data-jump="${id}"]`).click();};$('explanation-dialog').showModal();
 }
 function setFeedback(value){
  const key=JSON.stringify(value);if(key===feedbackKey)return;feedbackKey=key;
  if(feedback?.attemptId!==value?.attemptId&&$('explanation-dialog').open)$('explanation-dialog').close();
- feedback=value;paintFeedback();
+ feedback=value;paintFeedback();if($('explanation-dialog').open)paintReview();
 }
 function setBody(value,{restart=false}={}){
  if(restart){stop();state.chapter=0;state.views={};activeItem=data.items[0].id;setClip(chapters[0]);}
@@ -210,5 +224,5 @@ $('question-map').innerHTML=data.items.map(i=>`<button class="cbt-question-butto
 const dockObserver=new ResizeObserver(()=>document.body.style.setProperty('--hw-dock-height',Math.ceil(document.querySelector('.hw-question-dock').getBoundingClientRect().height)+'px'));dockObserver.observe(document.querySelector('.hw-question-dock'));
 $('lesson').hidden=false;
 requestAnimationFrame(()=>{if(state.chapter>0){const cue=chapters[state.chapter].contextCue||(state.chapter===1?'cue-5':'cue-12');revealContext(cue,cue);}});
-return {getBody,setBody,setFeedback,stop,openReview,destroy(){destroyed=true;dockObserver.disconnect();stop();lifetime.abort();clearTimeout(toastTimer);if(audioUrl)URL.revokeObjectURL(audioUrl);audio.removeAttribute('src');if($('explanation-dialog').open)$('explanation-dialog').close();}};
+return {getBody,setBody,setFeedback,stop,openReview,revokeAccess(){options.readonly=true;options.accessRevoked=true;applyReadonly();stop();downloadAbort?.abort();for(const id of ['play','seek','speed','replay-review'])if($(id))$(id).disabled=true;},destroy(){destroyed=true;dockObserver.disconnect();stop();lifetime.abort();clearTimeout(toastTimer);if(audioUrl)URL.revokeObjectURL(audioUrl);audio.removeAttribute('src');if($('explanation-dialog').open)$('explanation-dialog').close();}};
 }

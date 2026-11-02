@@ -649,7 +649,7 @@ async function bootstrap(){
  try{
   if(location.pathname.endsWith('/teacher.html')){ready=true;route='teacher';await teacherScreen();return;}
   const entry=new URLSearchParams(location.hash.split('?')[1]).get('entry');
-  if(entry){try{sessionStorage.setItem(ENTRY,entry);}catch{}history.replaceState(history.state,'',location.pathname+location.search+'#login');}
+  if(entry){try{sessionStorage.setItem(ENTRY,entry);}catch{}try{history.replaceState(history.state,'',location.pathname+location.search+'#login');}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}}
   try{entryToken=entry||sessionStorage.getItem(ENTRY)||'';sessionToken=courseIdentity.canRestoreSession()?sessionStorage.getItem(SESSION)||'':'';}catch{entryToken=entry||'';sessionToken='';}
   sharedEntry=!entryToken;
   // Kiểm chủ link trước khi đọc bất kỳ bài/nháp nào của phiên đã lưu.

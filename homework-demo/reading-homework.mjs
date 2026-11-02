@@ -18,7 +18,7 @@ export async function mount(data){
   const name={'tfng':'ReadingTfngRenderer','green-roofs':'ReadingGreenRoofsRenderer','people':'ReadingPeopleRenderer','sentence':'ReadingSentenceRenderer','headings':'ReadingHeadingsRenderer'}[renderer];
   await window[name]?.ready;
  }
- await loadScript(new URL('../reading-skills67/prototype.js?v=20261030-cta31-demo1',import.meta.url).href);
+ await loadScript(new URL('../reading-skills67/prototype.js?v=20261030-cta31-demo1&history=20261102-1',import.meta.url).href);
  await loadScript(new URL('../reading-practice/annotations.js?v=20261024-master170-notes6',import.meta.url).href);
  await new Promise((resolve,reject)=>{let tries=0;const check=()=>{if(document.querySelector('[data-target]'))resolve();else if(++tries>100)reject(Error('Chưa dựng được bài Reading.'));else setTimeout(check,40);};check();});
 }

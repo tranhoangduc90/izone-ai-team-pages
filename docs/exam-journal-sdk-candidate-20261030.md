@@ -14,6 +14,16 @@ Preview ban đầu83file:10SDK/metadata và73host,145URL. Rà token/trivia độ
 
 ## Kiểm đã đạt
 
+### Ghép main ngày03/11/2026 — vẫn là bản nháp, phải duyệt trước production
+
+Ứng viên đã ghép main tại `dca4ffa28522776f5fb24b3a050e37a55e7c2823`, xử lý 24 vùng xung đột trên 24 file bằng cách giữ phần nghiệp vụ của main rồi áp riêng revision SDK. Thêm ba host Listening Homework mới vào chuỗi cache đang có. Rà độc lập 111 host: giữ byte native, gồm cả định dạng, ngoài URL asset đã kiểm; 10 prefix test-config nguyên byte và suffix khớp artifact. SDK 8 asset và revision ở trên không đổi. Graph tĩnh hiện có 151 cạnh phụ thuộc; so với main có 183 URL đổi phiên bản, gồm import template Homework Demo đã được kiểm riêng. Không đổi cờ bật log, xác thực, hạn giờ, nộp bài hoặc điểm.
+
+Lượt mới tại `E:/Codex-Data/pages-sdk-reconcile-20261103/` chạy đủ 181 test Node liên quan trong 18 runner: 181 đạt, không lỗi hoặc bỏ qua. Có thêm hồi quy History API, observer và Listening Homework public libraries của main. 1.433 file đầu vào giữ SHA trong lượt kiểm và được đọc lại sau các lượt trình duyệt. Sáu runner trình duyệt cách ly đạt 32 ca: khởi tạo 6, thoát trang 6 và bốn Substitute mỗi host 5 ca. API/audio/mạng ngoài dùng fixture; không gọi Google, AI hoặc API bài thi thật. Fixture audio dùng catalog native hiện hành cùng mã Worker đã ghim, không xác minh Cloudflare production.
+
+Kiểm UTF-8 nghiêm ngặt đủ 274 file text đang staged khi ghép main; không có NUL. Ba file newline trộn đã có cùng trạng thái ở main. Generated startup đạt đủ 10 bundle; kiểm diff không lỗi whitespace. Các kiểm cache nóng Homework Demo của ngày01/11 dưới đây là bằng chứng lịch sử, chưa chạy lại trên mốc main mới. Term cache nóng/rollback, BFCache/OS kill thực, Google thật và toàn kế hoạch A–G vẫn chưa được xác nhận đủ.
+
+PR giữ draft. GitHub Pages đang phát hành từ `main:/`; chỉ cập nhật branch ứng viên, chưa nhập main hoặc phát hành. Theo yêu cầu trực tiếp của Đức, phải hoàn thiện và kiểm gói triển khai, trình gói rồi chờ Đức đồng ý rõ ràng ngay trước production.
+
 ### Ghép main ngày01/11/2026 — vẫn là bản nháp
 
 Đã ghép `main` tại `4aa5a9c3afb6ec040e7241cf86c42144837015ec` vào ứng viên SDK, xử lý 12 file/16 vùng xung đột bằng cách giữ mã nghiệp vụ mới của main rồi thêm lại riêng tham số `ej`. Các phiên bản workspace, demoEntry và selectiveReset của Substitute được giữ. Rà độc lập 108 host so với main: ngoài URL asset, code/trivia nguyên sau chuẩn hóa CRLF; 10 prefix test-config nguyên, suffix khớp artifact. Graph tĩnh gồm cả chuỗi trong script HTML có 179 cạnh, thêm một URL template động của Homework Demo; tổng 180 URL đổi phiên bản. Không đổi cờ bật log.

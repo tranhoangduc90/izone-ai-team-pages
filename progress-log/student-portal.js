@@ -1,5 +1,5 @@
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
-import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v2';
+import {stampProgressStudent,markProgressLogout,progressPinWasLoggedOut,handoffProgressStudent} from './student-session-memory.js?rev=20261102-the24-v1';
 const config=window.PROGRESS_LOG_CONFIG,byId=id=>document.getElementById(id);
 const [status,identityView,home,classSelect,studentSelect,remember,enter,retry,logout]=['portalStatus','portalIdentity','portalHome','portalClass','portalStudent','portalRemember','portalContinue','portalRetry','portalLogout'].map(byId);
 const identity=createCourseStudentIdentity({product:'progress-log',entry:'portal',requestIdentity:input=>requestMappingStudentIdentity(input,config.API_BASE_URL)});
@@ -49,6 +49,8 @@ async function openStudent({selection=null}={}){
     }
     identityView.hidden=true;home.hidden=false;logout.hidden=false;retry.hidden=true;
     notice(['ok','empty'].includes(saved.status)?'':'Em đã vào đúng người. Thiết bị chưa lưu được ghi nhớ cho lần sau.');
+    const transferred=handoffProgressStudent({classId:selectedContext.class.classId,studentRef:student.studentRef,remember:remember.checked});
+    if(transferred||saved.status==='ok')location.assign(byId('portalJourney').href);
   }catch(error){if(current()){chooseView();notice(abort.signal.aborted?'Quá thời gian chờ. Em hãy thử lại.':error.message);retry.hidden=false;}}
   finally{clearTimeout(timer);if(current()){busy=false;classSelect.disabled=false;studentSelect.disabled=false;enter.disabled=!studentSelect.value;}}
 }

@@ -28,7 +28,7 @@ function stub(content){
  function complete(attempt){attempt.status='done';attempt.result=result(attempt.snapshot,attempt.draftRevision>1);attempt.progress=progress(attempt.draftRevision>1);return attempt;}
  if(teacher){body.answers=answers();serial=1;attempts=[complete({attemptId:'synthetic-1',runNo:1,draftRevision:2,createdAt:'2026-10-27T01:00:00Z',snapshot:clone(body),completeness:{filled_cells:42,total_cells:42}})];}
  const identity={ownerId:'synthetic-owner',courseId:'1124',name:'Học viên thử',className:'LỚP THỬ'};
- const C={identity,access:{teacher,config:{demo:true,type:'tfng',lesson:12}},initialHistory:{attempts},state:{status:'saved',savedAt:null,completeness:{filled_cells:0,total_cells:42}},runNo:1,revision:0,
+ const C={identity,access:{teacher,config:{demo:true,type:'tfng',lesson:12}},initialHistory:{attempts},state:{status:'saved',savedAt:null,completeness:{filled_cells:0,total_cells:42},homework:{status:'verified',cta:'verified'}},runNo:1,revision:0,
   initialize:async()=>({content,identity,teacher,draft:{body:clone(body),savedAt:null},history:clone(attempts),config:{demo:true,type:'tfng',lesson:12},restored:false}),
   schedule(value){if(teacher)throw Error('Teacher attempted a write');body=clone(value);revision++;C.revision=revision;C.state.completeness.filled_cells=Object.values(body.answers).filter(Boolean).length;C.state.savedAt='2026-10-27T01:00:00Z';window.dispatchEvent(new Event('reading67:server-state'));return false;},
   flush:async()=>{},getDraft:async()=>({body:clone(body),savedAt:C.state.savedAt,runNo:1,revision}),
@@ -86,10 +86,18 @@ try{
    await page.locator('#grade-button').click();await page.waitForSelector('.repair-banner');await page.locator('[data-close-modal]').first().click();assert.match(await page.locator('.repair-banner').textContent(),/Còn 4 phần/);
    assert.equal(await page.locator('[data-action="edit"]').textContent(),'Sửa bài');
    await page.locator('[data-action="edit"]').click();await page.waitForSelector('.repair-current');
+   assert.equal(await page.locator('.study-footer .footer-status #save-state').count(),1);
+   assert.equal(await page.locator('.study-footer .footer-status .homework-sync').count(),1);
+   assert.equal(await page.locator('.repair-sync,.lesson-head + .homework-sync').count(),0);
    const oldReason=await page.locator('[data-target="q4.m2.evidence"]').locator('..').locator('.repair-previous-reason').textContent();
    for(const id of wrong){const el=page.locator('[data-target="'+id+'"]');if(id.endsWith('.evidence'))await el.fill('Synthetic source evidence');else await el.selectOption('TRUE');}
    assert.match(await page.locator('.repair-banner').textContent(),/Còn 4 phần/);assert.equal(await page.locator('[data-target="q4.m2.evidence"]').locator('..').locator('.repair-previous-reason').textContent(),oldReason);
-   await page.screenshot({path:out+'/repair-'+width+'.png'});await page.locator('#grade-button').click();await page.waitForFunction(()=>document.querySelector('.repair-banner')?.textContent.includes('Đã đạt toàn bộ'));
+   await page.screenshot({path:out+'/repair-'+width+'.png'});
+   if(width>1000){
+    const layout=await page.evaluate(()=>({gap:innerHeight-document.querySelector('.study-footer').getBoundingClientRect().bottom,y:scrollY,body:document.body.getBoundingClientRect().height,app:document.querySelector('#app').getBoundingClientRect().height,children:[...document.body.children].map(el=>({tag:el.tagName,id:el.id,height:el.getBoundingClientRect().height,position:getComputedStyle(el).position,flex:getComputedStyle(el).flex}))}));
+    assert.ok(Math.abs(layout.gap)<=1,JSON.stringify(layout));
+   }
+   await page.locator('#grade-button').click();await page.waitForFunction(()=>document.querySelector('.repair-banner')?.textContent.includes('Đã đạt toàn bộ'));
    await page.locator('[data-close-modal]').first().click();assert.equal(await page.locator('.feedback.correct').count(),42);assert.deepEqual(await page.evaluate(()=>window.__tfngTest.attempts().map(a=>a.progress.remainingCount)),[0,4]);
    for(let q=1;q<=6;q++){const trigger=page.locator('[data-explain="q'+q+'.conclusion"]');await trigger.click();assert.match(await page.locator('#explanation-dialog-title').textContent(),new RegExp('Câu '+q));assert.equal(await page.locator('#explanation-dialog .popup-paragraph').count(),9);if(q===6){await page.screenshot({path:out+'/explanation-'+width+'.png'});assert.equal(await page.locator('[data-explain-offset="1"]').isDisabled(),true);}await page.keyboard.press('Escape');}
    await page.locator('[data-action="history"]').click();assert.equal(await page.locator('[data-server-attempt]').count(),2);await page.keyboard.press('Escape');

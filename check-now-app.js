@@ -61,7 +61,7 @@
 
   // Hai mã chỉ cần ở lần tải đầu; xóa khỏi thanh địa chỉ để hạn chế bị sao chép hoặc lưu lại ngoài ý muốn.
   if (/^[A-Za-z0-9_-]{20,200}$/.test(documentId) && /^67-(reading-0[1-6]|listening-0[1-5])$/.test(assignmentCode) && !localPreview) {
-    window.history.replaceState({}, document.title, window.location.pathname);
+    try{window.history.replaceState({}, document.title, window.location.pathname);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   }
 
   function setStage(stage) {

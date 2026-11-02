@@ -52,7 +52,7 @@ async function boot() {
       } catch (error) { notice.textContent = error.message; resetButton.disabled = false; }
     });
   }
-  await import('../app.js?rev=20261030-the22-23-v1');
+  await import('../app.js?rev=20261102-the24-v1');
 }
 
 boot().catch(error => {
