@@ -43,7 +43,7 @@ for(const product of products)for(const width of widths)for(const mode of modes)
   await page.locator('[data-action="request-submit"]').first().click();await page.locator('[data-action="confirm-modal"]').click();await page.waitForURL(/#result\?attempt=1$/);
   await page.locator('.result-summary').waitFor({state:'visible'});await page.locator('.history [data-action="result-attempt"]').first().waitFor({state:'visible'});
   const final=await f.service.read({token:f.token});assert.equal(final.attempts.length,1);assert.equal(final.attempts[0].id,initial.id);assert.equal(final.attempts[0].status,'submitted');assert.equal(final.attempts[0].notes,latest);assert.equal(final.firstCompleted,1);
-  assert.equal(f.requests.filter(r=>r.path==='/api/submit').length,1);
+  assert.equal(f.requests.filter(r=>r.path==='/api/submit').length,1);assert.equal(f.requests.some(row=>row.path.startsWith('/api/student-progress/')),false);
   const jobs=(await f.pool.query(`SELECT sequence,kind FROM ${product}_practice.doc_job WHERE binding_id=$1 ORDER BY sequence`,[f.registered.bindingId])).rows;assert.equal(jobs.length,3);assert.equal(jobs.filter(job=>job.kind==='status').length,2);
   assert.deepEqual(errors,[]);await page.screenshot({path:path.join(out,label+'-recovered-result.png')});records.push({product,width,mode,outcome:'passed',lostAckCommitted:true,sameAttempt:true,notesRecovered:true,submissionRequests:1,docJobs:3});
  }catch(error){await page.screenshot({path:path.join(out,label+'-failed.png')});await fs.writeFile(path.join(out,label+'-failure.json'),JSON.stringify({errors,url:page.url(),requests:f.requests},null,2));throw error;}

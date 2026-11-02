@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
+import {createPracticeResultDocs} from './practice-result-docs.mjs';
 
 export async function createPracticeCompactApp({root,product,clientSource,stateStreamEnabled=false,teacherIdentity=null,teacherSource}) {
  const backend=process.env.TEST_SERVICES_NATIVE_PRACTICE_ROOT;
@@ -12,8 +13,9 @@ export async function createPracticeCompactApp({root,product,clientSource,stateS
  const require=createRequire(path.join(productRoot,'package.json')),express=require('express');
  const {fixture}=await import(pathToFileURL(path.join(productRoot,'test/helpers.js')));
  const {createApp}=await import(pathToFileURL(path.join(productRoot,'src/app.js')));
- const f=await fixture();let server;
+ const f=await fixture();let server,resultDocs,nativeApp;
  try{
+  f.content.code??=(await import(pathToFileURL(path.join(productRoot,'src/domain.js')))).CODE;
   f.context.classes=async()=>[{id:'1124',classCode:'FIXTURE 67'}];
   const ownerProof={classId:'1124',studentRef:f.studentRef,code:f.content.code,documentId:f.registration.documentId,tabId:f.registration.tabId,courseId:'11',courseWorkId:'22',submissionId:'33',googleUserId:'44',verifiedAt:new Date().toISOString()};
   await f.pool.query(`UPDATE ${product}_practice.binding SET owner_proof=$1 WHERE id=$2`,[ownerProof,f.registered.bindingId]);
@@ -21,6 +23,11 @@ export async function createPracticeCompactApp({root,product,clientSource,stateS
   const services=await import(pathToFileURL(path.join(productRoot,'src/service.js')));
   f.service=services[product==='reading'?'createReadingService':'createListeningService']({pool:f.pool,context:f.context,clock:Date.now,pageBase:'https://example.test/'+product+'-practice/'});
   let audioFile,audioHash;
+  if(product==='reading'){
+   const paragraph=text=>({runs:[{text}]});
+   f.content.explanations.entries=Object.fromEntries(Object.keys(f.content.key).map(number=>[number,{number:Number(number),kind:Number(number)<=20?'headings':Number(number)<=23?'mcq':'summary',answer:f.content.key[number],paragraph:'A',prompt:paragraph('Synthetic fixture question.'),heading:paragraph('Synthetic fixture heading.'),evidence:[paragraph('Synthetic fixture evidence. '.repeat(40))],reason:[paragraph('Synthetic fixture reasoning. '.repeat(40))],options:['A','B','C','D'].map(letter=>({letter,correct:letter==='A',verdict:'Synthetic verdict',reason:[paragraph('Synthetic option reason.')],evidence:[paragraph('Synthetic option evidence.')]}))}]));
+   await f.pool.query('UPDATE reading_practice.content SET explanations=$1 WHERE code=$2',[f.content.explanations,f.content.code]);
+  }
   if(product==='listening'){
    const directory=path.join(root,'listening-homework/audio-assets');
    const file=(await fs.readdir(directory)).find(name=>name.endsWith('.mp3'));if(!file)throw Error('LOCAL_APPROVED_AUDIO_REQUIRED');
@@ -35,11 +42,12 @@ export async function createPracticeCompactApp({root,product,clientSource,stateS
   app.use((req,res,next)=>{const row={path:req.path,method:req.method,compact:req.query.ack==='compact-v1',started:Date.now()};requests.push(row);const json=res.json.bind(res);res.json=body=>{row.body=body;if(req.path==='/api/pulse'&&controls.dropPulseAck){controls.dropPulseAck=false;row.dropped=true;res.writeHead(200,{'Content-Type':'application/json','Content-Length':String(Buffer.byteLength(JSON.stringify(body))+1)});res.write('{"');setTimeout(()=>res.destroy(),25);return res;}return json(body);};res.on('finish',()=>{row.status=res.statusCode;row.completed=true;});if(req.path==='/api/pulse'&&controls.holdPulse){const wait=controls.holdPulse;controls.holdPulse=null;row.held=true;wait.then(next);return;}next();});
   if(clientSource)app.get('/'+product+'-practice/app.js',(req,res)=>res.type('application/javascript').send(clientSource));
   if(teacherSource)app.get('/shared/teacher-progress.js',(req,res)=>res.type('application/javascript').send(teacherSource));
-  const nativeApp=createApp({pool:f.pool,service:f.service,origins,googleClientId:'fixture-only-client',adminKey:'F'.repeat(43),verifyGoogle:async()=>teacherIdentity,staticRoot:root,audioFile,audioHash,stateStreamEnabled,...(stateStreamEnabled?{teacherCookiePath:'/'}:{})});
+  nativeApp=createApp({pool:f.pool,service:f.service,origins,googleClientId:'fixture-only-client',adminKey:'F'.repeat(43),verifyGoogle:async()=>teacherIdentity,staticRoot:root,audioFile,audioHash,stateStreamEnabled,...(stateStreamEnabled?{teacherCookiePath:'/'}:{})});
+  resultDocs=stateStreamEnabled?await createPracticeResultDocs({fixture:f,productRoot,hub:nativeApp.locals.practiceObservation}):null;
   app.use(nativeApp);
   server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
   const origin='http://127.0.0.1:'+server.address().port,url=new URL(f.registered.entryUrl);url.protocol='http:';url.host=server.address().address+':'+server.address().port;
   origins.push(origin);
-  return{...f,origin,url:url.href,requests,controls,observationHub:nativeApp.locals.practiceObservation,async close(){await nativeApp.locals.practiceObservation?.close();await new Promise(resolve=>server.close(resolve));await f.close();}};
- }catch(error){server?.close();await f.close();throw error;}
+  return{...f,origin,url:url.href,requests,controls,resultDocs,observationHub:nativeApp.locals.practiceObservation,async close(){resultDocs?.close();await nativeApp.locals.practiceObservation?.close();await new Promise(resolve=>server.close(resolve));await f.close();}};
+ }catch(error){resultDocs?.close();await nativeApp?.locals.practiceObservation?.close();server?.close();await f.close();throw error;}
 }

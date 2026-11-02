@@ -64,7 +64,7 @@ window.ListeningReview = (() => {
     }
   }
   function close(){player?.stop('close');if(dialog().open)dialog().close();}
-  function render() {
+  function render(patch) {
     const d=dialog(),data=context.data,a=context.attempt,e=data.explanations.entries[number];
     const lesson=data.lesson,ids=lesson?.questionIds?.map(Number)||Array.from({length:10},(_,i)=>i+21),index=ids.indexOf(number);
     const q=data.review.questions[number],raw=document.createElement('template');
@@ -80,13 +80,14 @@ window.ListeningReview = (() => {
     const prompt=[e.prompt];if(e.kind==='mcq'&&e.options?.find(o=>o.correct))prompt.push(e.options.find(o=>o.correct).label);
     const answer=e.answer.join(' / '),row=a.result.rows.find(r=>r.number===number);
     const bank=e.kind==='flowchart'&&data.definition.bank?data.definition.bank.find(x=>x[0]===answer):null;
-    d.innerHTML=`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI ${lesson?.lesson||8} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(lesson?.groups.find(g=>number>=g.start&&number<=g.end)?.label||(e.kind==='mcq'?'Multiple Choice':'Flow-chart Completion'))}</h2></div><button type="button" class="explanation-dialog-close" data-review-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Transcript"><div class="explanation-dialog-pane-head"><strong>Transcript · ${escape(lesson?.title||'Clare – Jake')}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(context.data.lesson?.title||'Science experiment for Year 12 students')}</p>${transcript(q.replay)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}${bank?' · '+escape(bank[1]):''}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[number]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và transcript</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${context.renderParagraphs(prompt)}</section><section><h4>Bằng chứng trong transcript</h4>${pieces(q.replay)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis.innerHTML}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index+1}/${ids.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-review-prev ${index===0?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-review-next ${index===ids.length-1?'disabled':''}>Câu sau →</button></nav></footer></div>`;
+    const markup=`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI ${lesson?.lesson||8} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${number} · ${escape(lesson?.groups.find(g=>number>=g.start&&number<=g.end)?.label||(e.kind==='mcq'?'Multiple Choice':'Flow-chart Completion'))}</h2></div><button type="button" class="explanation-dialog-close" data-review-close aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Transcript"><div class="explanation-dialog-pane-head"><strong>Transcript · ${escape(lesson?.title||'Clare – Jake')}</strong><span>Câu ${number}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">${escape(context.data.lesson?.title||'Science experiment for Year 12 students')}</p>${transcript(q.replay)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}${bank?' · '+escape(bank[1]):''}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[number]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và transcript</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${context.renderParagraphs(prompt)}</section><section><h4>Bằng chứng trong transcript</h4>${pieces(q.replay)}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis.innerHTML}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${index+1}/${ids.length}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-review-prev ${index===0?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-review-next ${index===ids.length-1?'disabled':''}>Câu sau →</button></nav></footer></div>`;
+    if(patch)patch(d,markup);else d.innerHTML=markup;
     d.querySelector('[data-review-close]').onclick=close;
     d.querySelector('[data-review-prev]').onclick=()=>{player.stop('change-question');number=ids[index-1];render();};
     d.querySelector('[data-review-next]').onclick=()=>{player.stop('change-question');number=ids[index+1];render();};
     d.querySelectorAll('[data-replay]').forEach(button=>button.onclick=()=>player.play(allSegments().find(r=>r.id===button.dataset.replay)));
-    d.querySelector('[data-review-close]').focus({preventScroll:true});
-    requestAnimationFrame(()=>scrollEvidence(q.replay[0].id));
+    if(!patch)d.querySelector('[data-review-close]').focus({preventScroll:true});
+    if(!patch)requestAnimationFrame(()=>scrollEvidence(q.replay[0].id));
   }
   function initPlayer() {
     if(!player){
@@ -152,6 +153,10 @@ window.ListeningReview = (() => {
   }
   // Called after an authorized submitted result is visible; it never opens a
   // popup or plays. The click joins this exact job, including its API grant.
+  function refresh(input,patch){
+    if(!context||!dialog().open||context.attempt.id!==input.attempt?.id||context.owner!==input.owner||context.role!==input.role||context.token!==input.token)return;
+    if(!useResult(input)||!dialog().open)return;context={...context,...input};render(patch);
+  }
   function warm(input){if(useResult(input)&&!document.hidden)void prepareAudio().catch(()=>{});}
   function open(input) {
     if(!useResult(input))return;
@@ -164,5 +169,5 @@ window.ListeningReview = (() => {
   }
   // Đăng xuất phải xóa cả dữ liệu/audio đang xem, kể cả từ tab khác.
   function reset(){close();cancelPreparation();resultScope=null;context=null;dialog().replaceChildren();releaseMedia();}
-  return {open,close,reset,warm,debug:()=>({player,number,attemptId:context?.attempt.id,ready:preparation?.ready===true})};
+  return {open,close,reset,warm,refresh,debug:()=>({player,number,attemptId:context?.attempt.id,ready:preparation?.ready===true})};
 })();

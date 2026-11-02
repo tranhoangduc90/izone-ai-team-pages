@@ -2,6 +2,7 @@
 'use strict';
 const {expandPracticePulseAck}=await import('../shared/practice-pulse-ack.mjs?v=20261102-pulse1');
 const {expandPracticeHistory,practiceHistoryPath}=await import('../shared/practice-history.mjs?v=20261102-history1');
+const {createPracticeResultView,patchPracticeResultView,patchPracticeResultPart}=await import('../shared/practice-result-view.mjs?v=20261102-result1');
 let serverCapabilities={};
 const AuthoredUI=await import('./authored-ui.js?v=20261029-r3-labels2');
 let AUTHORED_DEF=null;
@@ -45,6 +46,32 @@ let db={students:{}},studentId='',route='',routeParams=new URLSearchParams(),las
 let saveError=false,simulatedOffline=false,toastTimeout,modalAction=null,fontSize=17,lease=null,queue=Promise.resolve(),debounce,networkFailed=false,busy=false,ready=false;
 let activeMs=0,leaseBaseline=0,lastPulse=0,checkpointKey='',pendingOperation=null,pulsePending=false,activating=false;
 const resultCache=new Map();
+let backgroundExplanation=false;
+const resultView=createPracticeResultView({root:app,api:API,context:resultTrackingContext,
+ request:(path,options)=>request(path,undefined,false,false,options),
+ loadResult:({signal,scope})=>serial(async()=>{signal.throwIfAborted();return request('/result/'+encodeURIComponent(scope.attemptId),undefined,false,false,{signal});}),
+ acceptResult:acceptObservedResult,acceptProgress:acceptResultProgress,onRevoked:revokeResultView});
+function resultTrackingContext(){
+ if(route!=='result'||!sessionToken||!serverCapabilities.studentStateStream||!serverCapabilities.studentResultRevision||location.pathname.endsWith('/teacher.html'))return null;
+ const a=record()?.attempts.find(value=>value.no===+(routeParams.get('attempt')||current()?.no));if(a?.status!=='submitted'||a.detailsLoaded===false||!resultCache.has(a.id))return null;
+ return{token:sessionToken,initialResult:resultCache.get(a.id),scope:{bindingId:identity.bindingId,studentRef:identity.studentRef,assignmentId:identity.assignmentId,attemptId:a.id,attemptNo:a.no,code:LESSON.code},
+  headers:{Authorization:'Bearer '+sessionToken,...(personalEntry&&entryValidated?{'X-Izone-Document':docId,'X-Izone-Assignment':entryInfo.assignmentCode}:{})}};
+}
+function putResultMarkup(markup,preserve){if(preserve)patchPracticeResultView(app,markup);else app.innerHTML=markup;}
+function acceptObservedResult(data){
+ resultCache.set(data.attempt.id,data);apply(data,{preserve:true});MCQ=data.definition.mcq;resultScreen({preserve:true});
+ if(explanationDialog.open&&explanationAttempt?.id===data.attempt.id){explanationAttempt=record().attempts.find(a=>a.id===data.attempt.id);backgroundExplanation=true;try{renderExplanation();}finally{backgroundExplanation=false;}}
+}
+function acceptResultProgress(value){
+ const rec=record(),a=rec?.attempts.find(attempt=>attempt.id===value.attemptId);if(!a)return;
+ const changedFirst=rec.firstCompleted!==value.firstCompleted;identity={...identity,...value.identity};
+ rec.events=[...(rec.events||[]).filter(event=>event.attempt!==a.no),...value.events].sort((a,b)=>a.sequence-b.sequence);rec.firstCompleted=value.firstCompleted;networkFailed=false;
+ if(changedFirst)resultScreen({preserve:true});else{patchPracticeResultPart(app,'[data-practice-docs]',docsNotice(a));patchPracticeResultPart(app,'.identity-bar',identityBar());}
+}
+function revokeResultView(){
+ resultView.close();closeExplanation();explanationDialog.replaceChildren();resultCache.clear();try{sessionStorage.removeItem(SESSION);}catch{}sessionToken='';studentId='';identity=null;app.replaceChildren();navigate('login');notify('Phiên xem kết quả đã đổi. Hãy xác nhận lại người học; bản nháp trên thiết bị vẫn được giữ.');
+}
+
 let explanationAttempt=null,explanationNumber=14,explanationTrigger=null;
 let teacherGoogleScript;
 const student=()=>({name:identity?.name});
@@ -91,6 +118,7 @@ async function autoLoginRemembered(){
  await loginSelected(selected.alias.studentRef,sharedEntry?selectedClassId:classCode,{selection:selected});return true;
 }
 async function changeStudent(){
+ resultView.close();
  if(current()&&!persist(false))return;
  pause('identity',false);await queue;
  if((await courseIdentity.forget()).status!=='empty'){notify('Chưa đổi được người học. Bài và nháp vẫn được giữ.');return;}
@@ -122,16 +150,16 @@ function apply(response,{preserve=false}={}){
  return a;
 }
 function snapshotFrom(a){return{answers:a.answers,flags:a.flags,notes:a.notes,annotations:a.annotations,scroll:a.scroll,activeQuestion:a.activeQuestion,tab:a.tab,mobilePane:a.mobilePane,notesOpen:a.notesOpen,highlighted:a.highlighted,sequence:a.sequence};}
-async function request(path,body,teacher=false,keepalive=false){
+async function request(path,body,teacher=false,keepalive=false,{signal}={}){
  if(!teacher)path=practiceHistoryPath(path);
  let token=sessionToken;
  if(teacher){try{token=sessionStorage.getItem('reading-teacher-token');}catch{token='';}}
  let response;try{
-  let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{ }),...(personalEntry&&entryValidated&&!teacher?{'X-Izone-Document':docId,'X-Izone-Assignment':entryInfo.assignmentCode}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(5000),keepalive};
+  let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{ }),...(personalEntry&&entryValidated&&!teacher?{'X-Izone-Document':docId,'X-Izone-Assignment':entryInfo.assignmentCode}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:signal?AbortSignal.any([signal,AbortSignal.timeout(5000)]):AbortSignal.timeout(5000),keepalive};
   if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js?startup=20261026-v2');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
   response=await fetch(`${API}${path}`,options);}
- catch{networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
- const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{code:value.error.code});networkFailed=false;return value;
+ catch(error){if(signal?.aborted)throw signal.reason||error;networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
+ const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{status:response.status,code:value.error.code});networkFailed=false;return value;
 }
 function serial(fn){const next=queue.then(fn);queue=next.catch(()=>{});return next;}
 function consumeTime(){const a=current();if(!a||a.status!=='running'||a.owner!==TAB||!lastTick)return;const now=performance.now(),delta=now-lastTick;activeMs+=delta;a.remainingMs=Math.max(0,FULL_TIME-leaseBaseline-activeMs);lastTick=now;}
@@ -191,7 +219,7 @@ async function loadResult(no){
  if(a.status==='submitted'&&(a.detailsLoaded===false||!resultCache.has(a.id))){const owner=identity?.bindingId,token=sessionToken;try{const response=await request(`/result/${a.id}`);if(owner!==identity?.bindingId||token!==sessionToken)return;resultCache.set(a.id,response);apply(response);MCQ=response.definition.mcq;}catch(e){if(owner===identity?.bindingId&&token===sessionToken)notify(e.message);return;}}
  navigate(`result?attempt=${no}`);
 }
-function docsNotice(a){if(identity?.entryMode==='shared')return `<div class="note success">✓ Kết quả đã được lưu riêng cho bạn. <a href="teacher.html#submission=${encodeURIComponent(a.submissionId)}" target="_blank" rel="noopener noreferrer">Giảng viên xem kết quả ↗</a></div>`;const e=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed'),verified=e?.docs==='verified';return `<div class="note ${verified?'success':'warning'}">${verified?'✓ Đã cập nhật tình trạng trong tài liệu bài tập.':e?.docs==='blocked'?'Bài đã nộp. Chưa cập nhật được Docs; giảng viên cần kiểm tra ô trạng thái.':'Bài đã nộp và được lưu trên máy chủ. Đang cập nhật tình trạng trong Docs.'} <a href="${escape(identity.documentUrl)}" target="_blank" rel="noopener noreferrer">Mở tài liệu ↗</a></div>`;}
+function docsNotice(a){if(identity?.entryMode==='shared')return `<div data-practice-docs="${escape(a.id)}" class="note success">✓ Kết quả đã được lưu riêng cho bạn. <a href="teacher.html#submission=${encodeURIComponent(a.submissionId)}" target="_blank" rel="noopener noreferrer">Giảng viên xem kết quả ↗</a></div>`;const e=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed'),verified=e?.docs==='verified';return `<div data-practice-docs="${escape(a.id)}" class="note ${verified?'success':'warning'}">${verified?'✓ Đã cập nhật tình trạng trong tài liệu bài tập.':e?.docs==='blocked'?'Bài đã nộp. Chưa cập nhật được Docs; giảng viên cần kiểm tra ô trạng thái.':'Bài đã nộp và được lưu trên máy chủ. Đang cập nhật tình trạng trong Docs.'} <a href="${escape(identity.documentUrl)}" target="_blank" rel="noopener noreferrer">Mở tài liệu ↗</a></div>`;}
 function docs(){app.innerHTML=hero(`BUỔI ${LESSON.lesson} · READING THỰC CHIẾN`,LESSON.title,`${escape(AuthoredUI.sourceLabel(LESSON))} · ${total()} câu · ${FULL_TIME/60000} phút`)+`<section class="card card-pad"><h2>Làm bài thực chiến</h2><p>Chọn đúng lớp và tên trước khi bắt đầu. Bài đang làm được lưu để bạn tiếp tục bằng thời gian còn lại.</p>${btn('Mở bài Reading →','open-assignment')}${identity?.documentUrl?`<p><a target="_blank" rel="noopener noreferrer" href="${escape(identity.documentUrl)}">Mở tài liệu bài tập ↗</a></p>`:''}</section>`+footer();}
 function login(){
  const memory=personalEntry?{studentId:entryInfo.selectedStudentRef,classCode:entryInfo.classCode}:{}; // Chỉ chọn chủ đã được máy chủ đối chiếu.
@@ -214,8 +242,9 @@ async function selectSharedClass(classId){
  }catch(error){if(generation===rosterGeneration){select.innerHTML='<option value="">Chưa tải được danh sách</option>';notify(error.message);}}
 }
 
-function navigate(hash){if(route==='exercise'&&hash.split('?')[0]!=='exercise'&&current()?.status==='running')pause('leave',false);if(saveError)return;if(location.hash.slice(1)===hash)render();else location.hash=hash;}
+function navigate(hash){resultView.close();if(route==='exercise'&&hash.split('?')[0]!=='exercise'&&current()?.status==='running')pause('leave',false);if(saveError)return;if(location.hash.slice(1)===hash)render();else location.hash=hash;}
 function render(){
+ resultView.close();
  if(saveError)return showStorageError();if(!ready)return;
  const [name,query]=location.hash.slice(1).split('?');const next=name||'login';
  if(route==='exercise'&&next!=='exercise'&&current()?.status==='running')pause('leave',false);
@@ -549,36 +578,37 @@ function robotsPassageWithEvidence(e){
 
 function passageWithEvidence(...args){return (args[0]?.evidenceGroups?robotsPassageWithEvidence:legacyPassageWithEvidence)(...args);}
 
+function putExplanationMarkup(markup){if(backgroundExplanation)patchPracticeResultView(explanationDialog,markup);else explanationDialog.innerHTML=markup;}
 function legacyRenderExplanation(){
  const a=explanationAttempt,e=resultCache.get(a.id)?.explanations?.entries?.[explanationNumber];
- if(!e){explanationDialog.innerHTML='<p>Chưa tải được phần giải thích.</p>';return;}
+ if(!e){putExplanationMarkup('<p>Chưa tải được phần giải thích.</p>');return;}
  const raw=document.createElement('template');raw.innerHTML=explanationContent(e);
  const analysis=raw.content.querySelector('.explanation-analysis')?.innerHTML||'';
  const evidence=e.kind==='mcq'?e.options.find(option=>option.correct)?.evidence:e.evidence;
  const prompt=e.heading?[e.heading]:e.prompt?[e.prompt]:[];
  const row=a.result.rows.find(item=>item.number===explanationNumber),answer=e.answer.join(' / ');
- explanationDialog.innerHTML=`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI ${LESSON.lesson} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${explanationNumber} · ${e.kind==='headings'?'Matching Headings':e.kind==='mcq'?'Multiple Choice':'Summary Completion'}</h2></div><button type="button" class="explanation-dialog-close" data-action="explanation-close" aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Toàn bài đọc"><div class="explanation-dialog-pane-head"><strong>Bài đọc · ${escape(LESSON.title)}</strong><span>Đoạn ${escape(e.paragraph)}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">The successes and failures of the Doble brothers and their steam cars</p>${passageWithEvidence(e)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[explanationNumber]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và bài đọc</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>${e.kind==='headings'?'Heading cần chọn':'Nội dung đề bài'}</h4>${explanationParagraphs(prompt)}</section><section><h4>Bằng chứng · Đoạn ${escape(e.paragraph)}</h4>${explanationParagraphs(evidence||[])}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${explanationNumber-firstQuestion()+1}/${total()}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-action="explanation-prev" ${explanationNumber===firstQuestion()?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-action="explanation-next" ${explanationNumber===lastQuestion()?'disabled':''}>Câu sau →</button></nav></footer></div>`;
- explanationDialog.querySelector('[data-action="explanation-close"]').focus({preventScroll:true});
- setTimeout(alignExplanationEvidence,60);
+ putExplanationMarkup(`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI ${LESSON.lesson} · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${explanationNumber} · ${e.kind==='headings'?'Matching Headings':e.kind==='mcq'?'Multiple Choice':'Summary Completion'}</h2></div><button type="button" class="explanation-dialog-close" data-action="explanation-close" aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Toàn bài đọc"><div class="explanation-dialog-pane-head"><strong>Bài đọc · ${escape(LESSON.title)}</strong><span>Đoạn ${escape(e.paragraph)}</span></div><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">The successes and failures of the Doble brothers and their steam cars</p>${passageWithEvidence(e)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[explanationNumber]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và bài đọc</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>${e.kind==='headings'?'Heading cần chọn':'Nội dung đề bài'}</h4>${explanationParagraphs(prompt)}</section><section><h4>Bằng chứng · Đoạn ${escape(e.paragraph)}</h4>${explanationParagraphs(evidence||[])}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${analysis}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${explanationNumber-firstQuestion()+1}/${total()}</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-action="explanation-prev" ${explanationNumber===firstQuestion()?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-action="explanation-next" ${explanationNumber===lastQuestion()?'disabled':''}>Câu sau →</button></nav></footer></div>`);
+ if(!backgroundExplanation)explanationDialog.querySelector('[data-action="explanation-close"]').focus({preventScroll:true});
+ if(!backgroundExplanation)setTimeout(alignExplanationEvidence,60);
 }
 
 function robotsRenderExplanation(){
  const a=explanationAttempt,e=resultCache.get(a.id)?.explanations?.entries?.[explanationNumber];
- if(!e){explanationDialog.innerHTML='<p>Chưa tải được phần giải thích.</p>';return;}
+ if(!e){putExplanationMarkup('<p>Chưa tải được phần giải thích.</p>');return;}
  const row=a.result.rows.find(item=>item.number===explanationNumber),answer=e.answer.join(' / '),kind={names:'Matching Names',endings:'Matching Sentence Endings',mcq:'Multiple Choice'}[e.kind];
  const completion=e.completion?`<div class="explanation-matched-ending"><strong>Vế được ghép</strong>${explanationParagraphs([e.completion])}</div>`:'';
- explanationDialog.innerHTML=`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI 9 · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${explanationNumber} · ${kind}</h2></div><button type="button" class="explanation-dialog-close" data-action="explanation-close" aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Toàn bài đọc"><div class="explanation-dialog-pane-head"><strong>Bài đọc · Robots and us</strong><span>${e.evidenceGroups.length>1?'Đối chiếu '+e.evidenceGroups.length+' vị trí':'Đoạn '+e.evidenceGroups[0].paragraph}</span></div><nav class="explanation-anchor-nav" aria-label="Vị trí dẫn chứng">${e.evidenceGroups.map(g=>`<button type="button" class="button outline" data-evidence-paragraph="${g.paragraph}">Đoạn ${g.paragraph} · ${escape(g.speaker)}</button>`).join('')}</nav><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">Three leaders in their fields answer questions about our relationships with robots</p>${passageWithEvidence(e)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[explanationNumber]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và bài đọc</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${explanationParagraphs([e.prompt])}${completion}</section><section><h4>Bằng chứng</h4>${e.evidenceGroups.map(g=>`<div class="explanation-evidence-group" data-evidence-id="${g.paragraph}"><button type="button" class="evidence-location" data-evidence-paragraph="${g.paragraph}">Đoạn ${g.paragraph} · ${escape(g.speaker)} ↗</button>${explanationParagraphs(g.paragraphs)}</div>`).join('')}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${explanationContent(e)}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${explanationNumber-26}/14</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-action="explanation-prev" ${explanationNumber===27?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-action="explanation-next" ${explanationNumber===40?'disabled':''}>Câu sau →</button></nav></footer></div>`;
- explanationDialog.querySelector('[data-action="explanation-close"]').focus({preventScroll:true});
- explanationDialog.querySelectorAll('[data-evidence-paragraph]').forEach(b=>b.addEventListener('click',()=>alignExplanationEvidence(b.dataset.evidenceParagraph)));
- setTimeout(()=>alignExplanationEvidence(),60);
+ putExplanationMarkup(`<div class="explanation-dialog-shell"><header class="explanation-dialog-header"><div><span class="kicker">BUỔI 9 · ĐÁP ÁN VÀ GIẢI THÍCH</span><h2 id="explanation-dialog-title">Câu ${explanationNumber} · ${kind}</h2></div><button type="button" class="explanation-dialog-close" data-action="explanation-close" aria-label="Đóng giải thích">×</button></header><div class="explanation-dialog-columns"><section class="explanation-dialog-passage" aria-label="Toàn bài đọc"><div class="explanation-dialog-pane-head"><strong>Bài đọc · Robots and us</strong><span>${e.evidenceGroups.length>1?'Đối chiếu '+e.evidenceGroups.length+' vị trí':'Đoạn '+e.evidenceGroups[0].paragraph}</span></div><nav class="explanation-anchor-nav" aria-label="Vị trí dẫn chứng">${e.evidenceGroups.map(g=>`<button type="button" class="button outline" data-evidence-paragraph="${g.paragraph}">Đoạn ${g.paragraph} · ${escape(g.speaker)}</button>`).join('')}</nav><div class="explanation-dialog-passage-scroll"><p class="passage-subtitle">Three leaders in their fields answer questions about our relationships with robots</p>${passageWithEvidence(e)}</div></section><section class="explanation-dialog-detail" aria-label="Đáp án và giải thích"><div class="explanation-dialog-detail-scroll"><div class="explanation-dialog-answer"><span>Đáp án đúng <strong>${escape(answer)}</strong></span><span>Bài làm của bạn <strong>${escape(a.answers[explanationNumber]||'—')}</strong></span><span class="result-${row.state}">${row.state==='correct'?'Đúng':row.state==='blank'?'Bỏ trống':'Sai'}</span></div><h3>Đối chiếu ý trong đề và bài đọc</h3><p class="explanation-dialog-hint">Các màu giống nhau chỉ ý tương ứng, kể cả khi cách diễn đạt khác nhau.</p><div class="explanation-dialog-compare"><section><h4>Nội dung đề bài</h4>${explanationParagraphs([e.prompt])}${completion}</section><section><h4>Bằng chứng</h4>${e.evidenceGroups.map(g=>`<div class="explanation-evidence-group" data-evidence-id="${g.paragraph}"><button type="button" class="evidence-location" data-evidence-paragraph="${g.paragraph}">Đoạn ${g.paragraph} · ${escape(g.speaker)} ↗</button>${explanationParagraphs(g.paragraphs)}</div>`).join('')}</section></div><section class="explanation-dialog-analysis"><h3>Giải thích chi tiết</h3>${explanationContent(e)}</section></div></section></div><footer class="explanation-dialog-footer"><span>Câu ${explanationNumber-26}/14</span><nav aria-label="Chuyển câu giải thích"><button type="button" class="button outline" data-action="explanation-prev" ${explanationNumber===27?'disabled':''}>← Câu trước</button><button type="button" class="button outline" data-action="explanation-next" ${explanationNumber===40?'disabled':''}>Câu sau →</button></nav></footer></div>`);
+ if(!backgroundExplanation)explanationDialog.querySelector('[data-action="explanation-close"]').focus({preventScroll:true});
+ explanationDialog.querySelectorAll('[data-evidence-paragraph]').forEach(b=>b.onclick=()=>alignExplanationEvidence(b.dataset.evidenceParagraph));
+ if(!backgroundExplanation)setTimeout(()=>alignExplanationEvidence(),60);
 }
 
 function renderExplanation(...args){
  if(LESSON.authored){
-  explanationDialog.innerHTML=AuthoredUI.dialogHtml(LESSON,resultCache.get(explanationAttempt.id),explanationAttempt,explanationNumber,explanationParagraphs);
-  explanationDialog.querySelector('[data-action="explanation-close"]').focus({preventScroll:true});
-  explanationDialog.querySelectorAll('[data-evidence-paragraph]').forEach(button=>button.addEventListener('click',()=>alignExplanationEvidence(button.dataset.evidenceParagraph)));
-  setTimeout(()=>alignExplanationEvidence(),60);return;
+  putExplanationMarkup(AuthoredUI.dialogHtml(LESSON,resultCache.get(explanationAttempt.id),explanationAttempt,explanationNumber,explanationParagraphs));
+  if(!backgroundExplanation)explanationDialog.querySelector('[data-action="explanation-close"]').focus({preventScroll:true});
+  explanationDialog.querySelectorAll('[data-evidence-paragraph]').forEach(button=>button.onclick=()=>alignExplanationEvidence(button.dataset.evidenceParagraph));
+  if(!backgroundExplanation)setTimeout(()=>alignExplanationEvidence(),60);return;
  }
  return (isRobots()?robotsRenderExplanation:legacyRenderExplanation)(...args);}
 
@@ -604,11 +634,12 @@ function attemptHistory(rec,selected,teacher=false,id=studentId) {
     return `<div class="history">${rec.attempts.map(a=>`<button type="button" data-action="${teacher?'teacher-attempt':'result-attempt'}" data-student="${id}" data-attempt="${a.no}" class="${a.no===selected?'selected':''}">Lần ${a.no}<span>${a.status==='submitted'?`${a.finalScore}/${total()} · Đã nộp`:a.status==='reset'?'Đã reset':`Đang làm · ${countAnswered(a)}/${total()}`}</span></button>`).join('')}</div>`;
   }
 
-function resultScreen() {
+function resultScreen({preserve=false}={}) {
     const rec=record(); const a=rec?.attempts.find(a=>a.no===+(routeParams.get('attempt') || current()?.no));
     if(!a) { navigate('prep'); return; }
     const submitted=a.status==='submitted';
-    app.innerHTML=hero(submitted?`BUỔI ${LESSON.lesson} · KẾT QUẢ READING`:`BUỔI ${LESSON.lesson} · LỊCH SỬ LÀM BÀI`,submitted?(LESSON.passages?'Bạn đã hoàn thành bài Reading':'Bạn đã hoàn thành passage'):`Lần ${a.no} đã ${a.status==='reset'?'reset':'tạm dừng'}`,submitted?completionCopy(a):'Bài này chưa được nộp. Đáp án đúng chỉ mở sau khi hoàn thành.')+identityBar()+`<div class="meta-row section"><span>Lần làm bài <strong>${a.no}</strong></span><span>${submitted?(a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Bạn chủ động nộp bài'):'Chưa nộp bài'}</span><span>Đã làm <strong>${timeLabel(FULL_TIME-a.remainingMs)}</strong></span></div>${submitted?`<section class="result-summary"><div class="score-box"><strong>${a.finalScore}<span>/${total()}</span></strong><small>Số câu trả lời đúng<br>${LESSON.passages?'Điểm của toàn bài Reading':'Điểm của riêng passage này'}</small></div><div class="score-details"><h2>${escape(LESSON.title)}</h2><p class="small muted">${escape(AuthoredUI.sourceLabel(LESSON))} · Câu ${firstQuestion()}–${lastQuestion()}</p><div class="type-scores">${(LESSON.passages||LESSON.groups).map(g=>`<div><strong>${resultFor(a,g.start,g.end)}/${g.end-g.start+1}</strong><span>${escape(g.label)}</span></div>`).join('')}</div></div></section>${docsNotice(a)}`:`<div class="note">${countAnswered(a)}/${total()} câu đã trả lời. ${a.status==='reset'?'Lần này được lưu trong lịch sử nhưng không có điểm hoàn thành.':'Bạn có thể tiếp tục bằng thời gian còn lại.'}</div>`}<div class="actions section">${current()?.status==='paused'?btn('Tiếp tục lần đang làm','resume'):''}${btn('Reset và làm lại từ đầu','request-reset','outline')}${textBtn(identity?.documentUrl?'Về tài liệu bài tập':'Về đầu bài','show-docs')}</div><section class="section"><h3>Lịch sử làm bài</h3>${attemptHistory(rec,a.no)}</section>${submitted?resultTable(a):''}`+footer();
+    const markup=hero(submitted?`BUỔI ${LESSON.lesson} · KẾT QUẢ READING`:`BUỔI ${LESSON.lesson} · LỊCH SỬ LÀM BÀI`,submitted?(LESSON.passages?'Bạn đã hoàn thành bài Reading':'Bạn đã hoàn thành passage'):`Lần ${a.no} đã ${a.status==='reset'?'reset':'tạm dừng'}`,submitted?completionCopy(a):'Bài này chưa được nộp. Đáp án đúng chỉ mở sau khi hoàn thành.')+identityBar()+`<div class="meta-row section"><span>Lần làm bài <strong>${a.no}</strong></span><span>${submitted?(a.method==='timeout'?'Hệ thống thu bài khi hết giờ':'Bạn chủ động nộp bài'):'Chưa nộp bài'}</span><span>Đã làm <strong>${timeLabel(FULL_TIME-a.remainingMs)}</strong></span></div>${submitted?`<section class="result-summary"><div class="score-box"><strong>${a.finalScore}<span>/${total()}</span></strong><small>Số câu trả lời đúng<br>${LESSON.passages?'Điểm của toàn bài Reading':'Điểm của riêng passage này'}</small></div><div class="score-details"><h2>${escape(LESSON.title)}</h2><p class="small muted">${escape(AuthoredUI.sourceLabel(LESSON))} · Câu ${firstQuestion()}–${lastQuestion()}</p><div class="type-scores">${(LESSON.passages||LESSON.groups).map(g=>`<div><strong>${resultFor(a,g.start,g.end)}/${g.end-g.start+1}</strong><span>${escape(g.label)}</span></div>`).join('')}</div></div></section>${docsNotice(a)}`:`<div class="note">${countAnswered(a)}/${total()} câu đã trả lời. ${a.status==='reset'?'Lần này được lưu trong lịch sử nhưng không có điểm hoàn thành.':'Bạn có thể tiếp tục bằng thời gian còn lại.'}</div>`}<div class="actions section">${current()?.status==='paused'?btn('Tiếp tục lần đang làm','resume'):''}${btn('Reset và làm lại từ đầu','request-reset','outline')}${textBtn(identity?.documentUrl?'Về tài liệu bài tập':'Về đầu bài','show-docs')}</div><section class="section"><h3>Lịch sử làm bài</h3>${attemptHistory(rec,a.no)}</section>${submitted?resultTable(a):''}`+footer();
+    putResultMarkup(markup,preserve);if(submitted)resultView.sync();else resultView.close();
   }
 // Các thao tác chỉ ghi khi tab đang giữ lượt làm. Chọn chữ dùng adapter nguyên bản của Term Test.
 document.addEventListener('click',event=>{
@@ -662,12 +693,12 @@ function recoverLocal(){
   a.status='paused';a.owner=null;
  }catch{saveError=true;showStorageError();}
 }
-window.addEventListener('hashchange',()=>{if(location.pathname.endsWith('/teacher.html')){route='teacher';teacherScreen();}else render();});
+window.addEventListener('hashchange',()=>{resultView.close();if(location.pathname.endsWith('/teacher.html')){route='teacher';teacherScreen();}else render();});
 window.addEventListener('offline',()=>pause('offline'));
 window.addEventListener('online',()=>{networkFailed=false;if(route==='resume')render();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('hidden');});
-window.addEventListener('pagehide',()=>pause('closed',false));
-window.addEventListener('beforeunload',()=>pause('closed',false));
+document.addEventListener('visibilitychange',()=>{if(document.hidden){resultView.close();pause('hidden');}else resultView.sync();});
+window.addEventListener('pagehide',()=>{resultView.close();pause('closed',false);});
+window.addEventListener('beforeunload',()=>{resultView.close();pause('closed',false);});
 window.addEventListener('storage',event=>{
  if(event.key==='reading-teacher-logout'&&location.pathname.endsWith('/teacher.html')){
   try{sessionStorage.removeItem('reading-teacher-token');}catch{}
