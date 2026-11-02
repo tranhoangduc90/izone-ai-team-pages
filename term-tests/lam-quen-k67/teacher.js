@@ -16,7 +16,7 @@ function notice(text){$('notice').textContent=text;}
 function cancel(){generation++;detailGeneration++;controller.abort();controller=new AbortController();clearTimeout(timer);}
 function clearDetail(){detailGeneration++;selected='';detail=null;chosen='';$('detail').replaceChildren();$('detail').hidden=true;}
 function clearPrivate(){clearDetail();students=[];$('rows').replaceChildren();$('workspace').hidden=true;}
-function remember(ref=''){const url=new URL(location.href);url.searchParams.set('classId',classId);url.hash=ref?new URLSearchParams({student:ref,...(chosen?{view:chosen}:{})}).toString():'';history.replaceState({},'',url);}
+function remember(ref=''){const url=new URL(location.href);url.searchParams.set('classId',classId);url.hash=ref?new URLSearchParams({student:ref,...(chosen?{view:chosen}:{})}).toString():'';try{history.replaceState({},'',url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}}
 async function request(path){
  const response=await fetch(base+root+path,teacherSessionRequestOptions({cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)])}));
  const data=await response.json().catch(()=>({}));if(!response.ok||data.ok===false)throw Object.assign(new Error(data.message||'Chưa đọc được bản đã lưu.'),{status:response.status});return data;

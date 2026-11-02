@@ -14,18 +14,19 @@ const refs={A:'11111111-1111-4111-8111-111111111111',B:'22222222-2222-4222-8222-
 const documentId='fixture-homework-document-owner-b-123456789';
 const record=id=>({version:1,identity:{authority:'erp-contact',id},revision:'fixture_initial_revision_'+id,updatedAt:new Date().toISOString()});
 const rows=[['scandinavian-studies','interactive-content.json'],['horton-castle','horton-castle-content.json']];
-async function fixture(t,slug,{remembered,storageBlocked=false,teacher=false,teacherStatus=200,entryStatus=200,polling=false,entryDelay=0}={}){
+async function fixture(t,slug,{remembered,storageBlocked=false,teacher=false,teacherStatus=200,entryStatus=200,polling=false,entryDelay=0,historyBlocked=false}={}){
  const presentation=JSON.parse(await readFile(path.join(root,'listening-homework',rows.find(x=>x[0]===slug)[1]),'utf8'));
  const content={code:presentation.code,version:presentation.runtimeVersion,title:presentation.title,minimumCompletion:.8,items:presentation.items.map(({id,group,question})=>({id,group,question}))};
  const context=await browser.newContext({serviceWorkers:'block',viewport:{width:1440,height:1000}}),requests=[],errors=[],external=[],drafts=new Map();
  let teacherActive=teacher,attemptReads=0;
  context.on('page',p=>{p.setDefaultTimeout(8000);p.on('pageerror',e=>errors.push(e.message));});
- await context.addInitScript(({key,initial,blocked,origin})=>{
+ await context.addInitScript(({key,initial,blocked,origin,historyBlocked})=>{
   if(location.origin!==origin)return;
   if(initial&&!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(initial));
   window.__fixturePlays=0;HTMLMediaElement.prototype.play=function(){window.__fixturePlays++;return Promise.resolve();};
+  if(historyBlocked)history.replaceState=()=>{throw new DOMException('Fixture History API denied','SecurityError');};
   if(blocked)for(const name of ['sessionStorage','localStorage'])Object.defineProperty(window,name,{configurable:true,get(){throw new DOMException('Fixture storage blocked','SecurityError');}});
- },{key,initial:remembered?record(erp[remembered]):null,blocked:storageBlocked,origin:site.origin});
+ },{key,initial:remembered?record(erp[remembered]):null,blocked:storageBlocked,origin:site.origin,historyBlocked});
  const who=ref=>({ownerId:ref,courseId:'1293',name:ref===refs.A?'Fixture A':'Fixture B',className:'IC2304'});
  const entry={documentId,classId:'1293',studentRef:refs.B,name:'Fixture B',classCode:'IC2304',code:content.code,version:content.version};
  const draft=ref=>{if(!drafts.has(ref))drafts.set(ref,{revision:1,runNo:1,body:{answers:{D1:ref===refs.A?'Draft A':'Draft B'},annotations:[],notes:'',flags:[]},savedAt:new Date().toISOString()});return drafts.get(ref);};
@@ -84,7 +85,10 @@ for(const [slug]of rows){
  });
  test(slug+': remembered A opening Doc B waits for owner confirmation; two tabs and reload preserve A draft and global B memory',async t=>{
   const f=await fixture(t,slug,{remembered:'A'});await f.page.goto(f.url());await loaded(f.page);assert.equal(await f.page.locator('#field-D1').inputValue(),'Draft A');
-  await f.page.locator('#field-D1').fill('Saved in tab A');await f.page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Đã lưu nháp'));
+  await f.page.locator('#field-D1').fill('Saved in tab A');
+  // Chờ đúng bản ghi mới ở biên lưu; dòng “Đã lưu nháp” có thể còn là ACK của bản trước.
+  const saveDeadline=Date.now()+8000;while(f.drafts.get(refs.A)?.body.answers.D1!=='Saved in tab A'&&Date.now()<saveDeadline)await new Promise(r=>setTimeout(r,20));
+  assert.equal(f.drafts.get(refs.A)?.body.answers.D1,'Saved in tab A');await f.page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Đã lưu nháp'));
   const before=f.requests.length,p=await f.context.newPage();await p.goto(f.url(true));await p.waitForFunction(()=>document.querySelector('#access-title')?.textContent==='Xác nhận người học'||document.querySelector('#field-D1'));assert.equal(privateReads(f.requests.slice(before)).length,0);await p.locator('#student-form').waitFor({state:'visible'});assert.equal(await memoryId(p),erp.A);assert.equal(await p.locator('#student').inputValue(),refs.B);
   await p.locator('#entry-submit').click();await loaded(p);assert.equal(await memoryId(p),erp.B);assert.equal(await f.page.locator('#field-D1').inputValue(),'Saved in tab A');
   await f.page.reload();await loaded(f.page);assert.match(await f.page.locator('#person').innerText(),/Fixture A/);assert.equal(await f.page.locator('#field-D1').inputValue(),'Saved in tab A');assert.equal(await memoryId(f.page),erp.B);
@@ -112,4 +116,13 @@ for(const [slug]of rows){
 }
 test('Legacy Lesson 2 alias preserves bound context while reaching canonical Scandinavian page',async t=>{
  const f=await fixture(t,'scandinavian-studies',{remembered:'B'});await f.page.goto(f.url(true).replace('scandinavian-studies.html','lesson-2.html').replace(f.content.code,'67-listening-02'));await loaded(f.page);assert.equal(new URL(f.page.url()).searchParams.get('assignmentCode'),f.content.code);assert.equal(new URL(f.page.url()).searchParams.get('documentId'),documentId);
+});
+test('History API denied: legacy alias still verifies owner and loads saved Homework',async t=>{
+ const f=await fixture(t,'scandinavian-studies',{remembered:'B',historyBlocked:true});
+ await f.page.goto(f.url(true).replace(f.content.code,'67-listening-02'));
+ await loaded(f.page);assert.equal(await f.page.locator('#field-D1').inputValue(),'Draft B');assert.match(await f.page.locator('#person').innerText(),/Fixture B/);assert.equal(f.requests.filter(r=>r.api==='/teacher/login').length,0);
+});
+for(const [slug]of rows)test('History API denied: '+slug+' teacher switch still verifies role and stays readonly',async t=>{
+ const f=await fixture(t,slug,{teacher:true,historyBlocked:true});await f.page.goto(f.url(true));await f.page.locator('#student-form').waitFor({state:'visible'});
+ await f.page.locator('#teacher-entry').click();await loaded(f.page);assert.match(await f.page.locator('#person').innerText(),/Fixture B/);assert.equal(await f.page.locator('#submit').isVisible(),false);assert.equal(f.requests.filter(r=>r.api==='/student/login').length,0);
 });

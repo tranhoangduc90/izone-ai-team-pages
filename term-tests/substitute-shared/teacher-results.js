@@ -127,7 +127,7 @@ async function loadResults(){
   if(generation!==state.generation)return;
   if(data.testSlug!==test||data.classCode!==classCode||!Array.isArray(data.results))throw new Error('Dữ liệu kết quả không đúng phạm vi đã chọn.');
   state.rows=data.results;state.hasMore=data.hasMore===true;renderRows();$('updated-at').textContent='Cập nhật '+time(new Date().toISOString());
-  const url=new URL(location.href);url.searchParams.set('test',test);url.searchParams.set('class',classCode);history.replaceState(null,'',url);
+  const url=new URL(location.href);url.searchParams.set('test',test);url.searchParams.set('class',classCode);try{history.replaceState(null,'',url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
  }catch(error){handleError(error,generation);}finally{if(generation===state.generation)$('load-results').disabled=false;}
 }
 async function signIn(response){

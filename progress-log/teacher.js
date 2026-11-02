@@ -122,7 +122,7 @@ if(managementHost){managementHost.className='thuy-assignment-actions';management
 const assignmentManagement=THUY_UI?mountAssignmentManagement({host:managementHost,getContext:()=>state.dashboard||{
   classId:thuyLayout.classes.value,className:state.classes.find(c=>String(c.class_id)===thuyLayout.classes.value)?.class_name||''},
   request:apiRequest,onChanged:async(context,action)=>{
-    if(action==='withdraw'){history.replaceState(null,'',location.pathname+location.search);await loadWorkspace();if(thuyLayout){thuyLayout.classes.value=String(context.classId);elements.overviewClassSelect.value=String(context.classId);refreshAssignmentSelect();}await loadDashboard();
+    if(action==='withdraw'){try{history.replaceState(null,'',location.pathname+location.search);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}await loadWorkspace();if(thuyLayout){thuyLayout.classes.value=String(context.classId);elements.overviewClassSelect.value=String(context.classId);refreshAssignmentSelect();}await loadDashboard();
       setNotice('Đã thu hồi và giữ lịch sử. Vào Kho bài tập để giao phiếu thay thế cho buổi '+context.sessionNumber+'.');}
     else if(state.dashboard?.assignmentId===context.assignmentId)await loadDashboard();
   }}):null;
@@ -136,7 +136,7 @@ function showThuyMode(mode){
 function showClassPortal(){
   liveUpdates.stop();state.dashboardGeneration++;state.analyticsGeneration++;state.analyticsController?.abort();
   for(const dialog of [elements.draftDialog,elements.journeyDetailDialog])if(dialog.open)dialog.close();
-  history.replaceState(null,'',location.pathname+location.search);
+  try{history.replaceState(null,'',location.pathname+location.search);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   renderTeacherClassPortal(classPortal,{classes:state.classes,assignments:state.assignments,onOpen:openClass});
   switchPanel('classes');
 }
@@ -1579,7 +1579,7 @@ async function loadDashboard({ quiet = false } = {}) {
   const assignmentId = elements.assignmentSelect.value;
   const selected=state.assignments.find(a=>a.assignment_id===assignmentId);
   state.liveEnabled=state.liveAvailable&&selected?.live_updates_enabled!==false;
-  if(selected)history.replaceState(null,'',location.pathname+location.search+'#assignment='+encodeURIComponent(selected.public_token));
+  if(selected)try{history.replaceState(null,'',location.pathname+location.search+'#assignment='+encodeURIComponent(selected.public_token));}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   if(state.dashboard?.assignmentId!==assignmentId){
     liveUpdates.stop();state.dashboardGeneration++;state.analyticsGeneration++;state.analyticsController?.abort();
     if(elements.draftDialog.open)elements.draftDialog.close();

@@ -154,7 +154,7 @@
  document.addEventListener('click',async event=>{
   const b=event.target.closest('button');if(!b)return;
   try{
-   if(b.dataset.materialsView){studentView=b.dataset.materialsView==='student';const url=new URL(location.href);url.searchParams.set('view',studentView?'student':'teacher');window.history.replaceState(null,'',url);bridge.close();decorate();if(cursor>=0)move();}
+   if(b.dataset.materialsView){studentView=b.dataset.materialsView==='student';const url=new URL(location.href);url.searchParams.set('view',studentView?'student':'teacher');try{window.history.replaceState(null,'',url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}bridge.close();decorate();if(cursor>=0)move();}
    if(b.hasAttribute('data-materials-dashboard'))location.href='teacher.html';
    if(b.hasAttribute('data-materials-login')){await bridge.flush();const url=new URL(location.href),person=bridge.identity();const linked=url.searchParams.get('teacher')==='1'&&url.searchParams.get('classId')&&url.searchParams.get('studentRef');url.searchParams.set('mode','teacher');url.searchParams.set('teacher','1');if(!linked){url.searchParams.set('classId',person.courseId);url.searchParams.set('studentRef',person.ownerId);}location.href=url.href;}
    if(b.hasAttribute('data-materials-logout')){await window.IzoneTeacherSso.logout();location.href=location.pathname+'?server=1';}

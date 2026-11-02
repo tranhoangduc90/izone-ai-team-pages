@@ -82,7 +82,7 @@
         if (entryIdentity.status === 'unique') {
           classCode = entryIdentity.resolution.aliases[0].classCode;
           query.set('class', classCode);
-          history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);
+          try{history.replaceState(history.state, '', `${location.pathname}?${query.toString()}${location.hash}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
           sharedIdentity = createIdentity();
         } else if (entryIdentity.status === 'ambiguous') {
           rememberedClasses = [...new Set(entryIdentity.resolution.aliases.map(alias => alias.classCode))];
