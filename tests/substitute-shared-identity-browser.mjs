@@ -161,12 +161,19 @@ try {
       await f.page.locator('#bootstrapPreview').click();
       await f.page.locator('#bootstrapStart:enabled').click();
       await f.page.locator('#listeningView').waitFor({ state: 'visible' });
-      const field = f.page.locator('input[name="question-1"]').first();
+      // The native enhancer moves the original controls into the exam layout.
+      // Wait for that usable layout so typing cannot race its focus change.
+      const field = f.page.locator('#listeningView .cbt-semantic-pane input[name="question-1"]:visible').first();
       await field.fill('NHÁP TRONG RAM A');
+      assert.equal(await field.inputValue(), 'NHÁP TRONG RAM A', 'the answer must exist before testing Change student');
+      const originalField = await field.elementHandle();
       assert.equal(await f.page.evaluate(() => window.TERM_TEST_BOOTSTRAP.studentRef), chosen);
       await f.page.locator('#termTestChangeStudent').click();
       assert.equal(await f.page.locator('#listeningView').isVisible(), true);
       assert.equal(await field.inputValue(), 'NHÁP TRONG RAM A');
+      assert.equal(await originalField.evaluate(element => element.isConnected
+        && element === document.querySelector('#listeningView input[name="question-1"]')), true);
+      assert.equal(await f.page.locator('#readingView [name="question-1"]').inputValue(), '');
       assert.match(await f.page.locator('#localSaveWarning').innerText(), /nháp|lưu/i);
     });
   outcome = 'passed';

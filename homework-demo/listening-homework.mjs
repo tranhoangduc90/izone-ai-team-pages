@@ -1,4 +1,4 @@
-import {createListeningWorkspace} from '../listening-homework/interactive-workspace.mjs?v=20261029-grading2&audio=20261028-part-rescue-v1';
+import {createListeningWorkspace} from '../listening-homework/interactive-workspace.mjs?v=20261029-grading2&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
 import {ASSETS} from '../shared/audio/catalog.mjs';
 import {installBanner,feedbackHtml,wireDialog} from './common.mjs';
 export async function mount(data){

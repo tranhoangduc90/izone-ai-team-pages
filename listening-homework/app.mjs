@@ -1,6 +1,6 @@
 import {setWorkspaceText} from './workspace-status.mjs?v=20261101-space1';
 import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
-import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261102-state1&audio=20261028-part-rescue-v1';
+import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261102-state1&audio=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
 import {createCourseStudentIdentity} from '../shared/course-student-identity.js?v=20261101-listening-owner1';
 import {createTestStateObserver} from '../shared/test-state-observer.mjs?v=20261101-state1';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);

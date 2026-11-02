@@ -86,7 +86,7 @@ function save(id,bytes){const r={id,bytes,expiresAt:Date.now()+TTL};memory.set(i
 export async function downloadPreferred(m,options={}){
   if(m?.cloudflare?.version!==1||m.cloudflare.policy!=='public-mp3-v1')return null;
   const a=Object.values(ASSETS).find(x=>x.sha256===m.sha256&&x.url===m.url&&x.byteLength===m.byteLength);
-  const journal=startJournalAudioCapture({assetId:a?.id,sha256:m.sha256,byteLength:m.byteLength,transportRevision:'20261024-cf512-1'},new URL('../../term-tests/shared/exam-journal/bootstrap-capture.mjs?v=20261024-audio-v1&resilience=20261027-v1',import.meta.url).href);
+  const journal=startJournalAudioCapture({assetId:a?.id,sha256:m.sha256,byteLength:m.byteLength,transportRevision:'20261024-cf512-1'},new URL('../../term-tests/shared/exam-journal/bootstrap-capture.mjs?ej=ej-a176e4d58d3089a76456',import.meta.url).href);
   const onEvent=row=>{journal?.event(row);try{globalThis.window?.dispatchEvent(new CustomEvent('term-test:audio-source',{detail:{source:row.source,index:row.index,scope:row.scope}}));}catch{}try{const work=options.onEvent?.(row);if(work?.catch)void work.catch(()=>{});}catch{}};
   try{
   if(!a||m.envelopeVersion!=='MP3')throw Error('AUDIO_CATALOG_MISMATCH');

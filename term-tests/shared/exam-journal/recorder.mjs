@@ -28,12 +28,16 @@ function assertAcknowledged(current,batch,reply){
 
 export function createRecorder({ outbox, context, transport, build, onHealth = () => {},
   uuid = () => crypto.randomUUID(), clock = () => Date.now(), monotonic = () => performance.now(),
-  maxPending = 128, maxMemoryBytes = 1024 * 1024 }) {
+  maxPending = 128, maxMemoryBytes = 1024 * 1024, coordinateTabs = true,onQueued=()=>{},random=Math.random }) {
   const pageVisitId = uuid(), started = monotonic(), fields = new Map(), sequences = new Map(), fallback = [],losses=new Map(),writes=[];
     let sequence = 0, serial = Promise.resolve(), queued = 0, activeWrites=[],draining = false, flushing = false,liveFlushing=false,exitFlushing=false,memoryBytes = 0,
     lost = 0, nextTry = 0, failures = 0, stopped = false, lastBinding = '',storageReported=false,exitBytes=0,exitRequests=0;
   const exitPending=new Set();
   const health = data => { try { onHealth(data); } catch { /* Observability must not interrupt exams. */ } };
+  const retryDelay=()=>{
+    let sample=0.5;try{const n=Number(random());if(Number.isFinite(n))sample=Math.max(0,Math.min(1,n));}catch{}
+    return Math.ceil(Math.min(60_000,5000*2**Math.min(4,failures-1))*(0.5+sample*0.5));
+  };
   const scope = () => {
     try {
       const current = context();
@@ -72,7 +76,9 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
       sequence = (sequences.get(captured.bindingId) || 0) + 1; sequences.set(captured.bindingId, sequence);
       const event = { id: uuid(), pageVisitId, sequence, schemaVersion: 1, eventVersion: 1,
         type, occurredAt: new Date(clock()).toISOString(), elapsedMs: Math.max(0, monotonic() - started), build, data: details };
-      if (size(event) > 94 * 1024) { markLost(captured,'event_too_large'); health({ status: 'gap', errorCode: 'EVENT_TOO_LARGE', lostCount: lost }); return null; }
+      const bytes=size(event);
+      if (bytes > 94 * 1024) { markLost(captured,'event_too_large'); health({ status: 'gap', errorCode: 'EVENT_TOO_LARGE', lostCount: lost }); return null; }
+      try{onQueued({bytes,type});}catch{}
       if (queued >= maxPending) { reserve(captured.bindingId, event,captured.auth); health({ status: 'degraded', errorCode: 'LOCAL_QUEUE_BUSY' }); return event.id; }
       queued++;
       writes.push({binding:captured.bindingId,event,auth:captured.auth,captured});
@@ -124,8 +130,7 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
     if(keepalive)rows.sort((a,b)=>Number(['page_hidden','page_visibility'].includes(b.event.type))-Number(['page_hidden','page_visibility'].includes(a.event.type)));
     for(const row of rows)if(active&&row.binding===active.bindingId&&row.auth?.ticketId!==active.auth?.ticketId){row.auth=active.auth;row.blocked=false;}
     const groups=new Map();let bytes=0,count=0;
-    // Leave room under the browser's shared 64 KiB keepalive budget for a later
-    // pagehide after visibilitychange. Only new IDs enter concurrent tail sends.
+    // Share the browser exit budget with a later lifecycle tail, including durable sends.
     const maxBytes=keepalive?Math.min(46*1024,60*1024-exitBytes):256*1024,maxGroups=keepalive?4-exitRequests:1;
     for(const row of rows){
       if(count>=100)break;
@@ -144,7 +149,7 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
     if(!count)return null;
     if(keepalive){
       exitBytes+=bytes;exitRequests+=groups.size;
-      for(const {selected} of groups.values())for(const row of selected)exitPending.add(row.event.id);
+      for(const {selected}of groups.values())for(const row of selected)exitPending.add(row.event.id);
     }else liveFlushing=true;
     return (async()=>{
       try{
@@ -167,17 +172,17 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
           }
         }));
         const failed=results.find(result=>result.status!=='server_confirmed');
-        if(failed){failures++;nextTry=clock()+Math.min(60_000,1000*2**Math.min(6,failures-1));}
+        if(failed){failures++;nextTry=clock()+retryDelay();}
         else{failures=0;nextTry=0;health({status:'degraded',saveState:'server_confirmed_local_pending',memoryBytes,lostCount:lost});}
         return {status:failed?.status||'server_confirmed',acknowledgedCount:results.reduce((sum,row)=>sum+row.acknowledgedCount,0)};
       }finally{
         if(keepalive){exitBytes-=bytes;exitRequests-=groups.size;
-          for(const {selected} of groups.values())for(const row of selected)exitPending.delete(row.event.id);
+          for(const {selected}of groups.values())for(const row of selected)exitPending.delete(row.event.id);
         }else liveFlushing=false;
       }
     })();
   }
-  async function flush({ force = false, keepalive = false } = {}) {
+  async function flushCore({ force = false, keepalive = false } = {}) {
     if (stopped || (!force && clock() < nextTry)) return { status: 'deferred' };
     if(keepalive&&(exitFlushing||exitRequests))return flushPending(true)||{status:'deferred'};
     if(keepalive||draining||flushing){const live=flushPending(keepalive);if(live)return live;}
@@ -189,10 +194,10 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
       await serial;
       // Drain durable events first: a full disk outbox must be able to make space.
       const options = { maxCount:100,maxBytes:keepalive ? 46 * 1024 : 256 * 1024 };
-      let batch=[],fromMemory=false,storageUnavailable=false;
+      let batch=[],fromMemory=false,storageUnavailable=false,morePending=false;
       try {
         const durable = outbox.nextBatch ? await outbox.nextBatch(options) : null;
-        if (durable) current = durable;
+        if (durable) {current = durable;morePending=durable.morePending===true;}
         if (current) batch = durable?.events || await outbox.list(current.bindingId, options);
       } catch {storageUnavailable=true;}
       if (!batch.length && fallback.length) {
@@ -228,7 +233,7 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
       if (!storageUnavailable) await recoverMemory(); failures = 0; nextTry = 0;
       let queueBytes=null;try {queueBytes=await outbox.size();}catch {storageUnavailable=true;}
       health({ status: storageUnavailable?'degraded':'ok',...(storageUnavailable?{errorCode:'OUTBOX_UNAVAILABLE',saveState:'memory_only'}:{}),queueBytes, memoryBytes, lostCount: lost });
-      return { status: storageUnavailable?'memory_only':'ok', acknowledgedCount: batch.length };
+      return { status: storageUnavailable?'memory_only':'ok', acknowledgedCount: batch.length,...morePending?{morePending:true}:{} };
     } catch (error) {
       if (['JOURNAL_TICKET_EXPIRED','JOURNAL_TICKET_INVALID'].includes(error.code) && current?.auth?.ticketId && outbox.blockContext) {
         try {await outbox.blockContext(current.bindingId,current.auth.ticketId);}catch {}
@@ -237,12 +242,27 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
         health({status:'degraded',errorCode:error.code,expiredBindingId:current.bindingId,pendingReauthorization:true});
         return {status:'pending_reauthorization'};
       }
-      failures++; nextTry = clock() + Math.min(60_000, 1000 * 2 ** Math.min(6, failures - 1));
+      failures++; nextTry = clock() + retryDelay();
       health({ status: 'degraded', errorCode: /^[A-Z0-9_]{1,80}$/.test(error.message || '')?error.message:'JOURNAL_UNAVAILABLE', memoryBytes, lostCount: lost });
       return { status: 'degraded' };
     } finally { flushing = false;if(keepalive){exitFlushing=false;
       if(exitReservation){exitBytes-=exitReservation;exitRequests--;for(const id of exitReservedIds)exitPending.delete(id);}
     } }
+  }
+  async function flush(options={}) {
+    if(stopped||(!options.force&&clock()<nextTry))return {status:'deferred'};
+    // Pending local writes and exit delivery use page-owned snapshots; never wait
+    // for another tab before starting the bounded keepalive request.
+    if(options.keepalive||draining||flushing||!coordinateTabs||typeof outbox.claimDelivery!=='function')return flushCore(options);
+    let claimed=null;
+    try{claimed=await outbox.claimDelivery(pageVisitId,{now:clock()});}
+    catch{health({status:'degraded',errorCode:'OUTBOX_DELIVERY_COORDINATION_UNAVAILABLE'});}
+    if(claimed===false)return {status:'deferred',reason:'other_tab_sending'};
+    try{return await flushCore(options);}
+    finally{
+      if(claimed===true)try{await outbox.releaseDelivery(pageVisitId);}
+      catch{health({status:'degraded',errorCode:'OUTBOX_DELIVERY_RELEASE_UNAVAILABLE'});}
+    }
   }
   function identity(details = {}) {
     const current = scope(); if (!current || current.bindingId === lastBinding) return;
@@ -250,8 +270,12 @@ export function createRecorder({ outbox, context, transport, build, onHealth = (
     record('identity_observed', { ...details, identityConfirmed: true }, current);
   }
   return { record, content, flush, identity, idle: async () => {let observed;do{observed=serial;await observed;}while(observed!==serial);},
-    status: () => ({ pageVisitId, lastSequence: sequence, queued, memoryBytes, lostCount: lost }),
-    stop: () => { stopped = true; } };
+    status: () => ({ pageVisitId, lastSequence: sequence, queued, memoryBytes, lostCount: lost,retryAt:nextTry,retryFailures:failures }),
+    stop: async () => {stopped=true;
+      // This is a delivery optimization, not an ACK/fencing authority. Releasing
+      // on teardown may replay an in-flight batch; server IDs make that safe.
+      if(coordinateTabs&&typeof outbox.releaseDelivery==='function')try{await outbox.releaseDelivery(pageVisitId);}catch{}
+    } };
 }
 
 export function fetchTransport(endpoint, fetcher = globalThis.fetch) {
@@ -326,12 +350,15 @@ export function observeDocument({ recorder, document: doc = globalThis.document,
     recorder.record('selection_changed', { fieldId: value.fieldId,
       selectionStart: event.target.selectionStart, selectionEnd: event.target.selectionEnd });
   }, true);
-  listen(doc, 'visibilitychange', () => { snapshot('visibility'); recorder.record('page_visibility', { visibility: doc.visibilityState }); });
+  listen(doc, 'visibilitychange', () => { snapshot('visibility'); recorder.record('page_visibility', { visibility: doc.visibilityState });recorder.visibilityChanged?.(doc.visibilityState); });
   for (const type of ['focus', 'blur']) listen(win, type, () => recorder.record('page_focus', { action: type }));
-  listen(win, 'pagehide', event => { snapshot('pagehide'); recorder.record('page_hidden', { persisted: event.persisted }); void recorder.flush({ force: true, keepalive: true }); });
-  listen(win, 'pageshow', event => recorder.record('page_shown', { persisted: event.persisted }));
+  listen(win, 'pagehide', event => {recorder.suspendDelivery?.(); snapshot('pagehide'); recorder.record('page_hidden', { persisted: event.persisted }); void recorder.flush({ force: true, keepalive: true }); });
+  listen(win, 'pageshow', event => {recorder.record('page_shown', { persisted: event.persisted });recorder.resumeDelivery?.();});
+  listen(doc,'freeze',()=>recorder.suspendDelivery?.());listen(doc,'resume',()=>recorder.resumeDelivery?.());
   for (const type of ['online', 'offline']) listen(win, type, () => {
-    recorder.record('network_observed', { online: type === 'online' }); if (type === 'online') void recorder.flush({ force: true });
+    recorder.record('network_observed', { online: type === 'online' });
+    if(typeof recorder.networkChanged==='function')recorder.networkChanged(type==='online');
+    else if(type==='online')void recorder.flush({force:true});
   });
   recorder.record('page_opened', { navigationType: win.performance?.getEntriesByType('navigation')?.[0]?.type || 'unknown' });
   function environment() { recorder.record('environment_observed', { browser: String(win.navigator.userAgent).slice(0, 1000),

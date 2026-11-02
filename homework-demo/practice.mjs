@@ -1,6 +1,6 @@
 import {esc,installBanner,feedbackHtml,wireDialog,loadScript} from './common.mjs';
 import {ASSETS} from '../shared/audio/catalog.mjs';
-import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261028-part-rescue-v1';
+import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261028-part-rescue-v1&ej=ej-a176e4d58d3089a76456';
 export async function mount(data){
  const listening=data.subject==='listening';
  const ui=await import(listening?'../listening-practice/authored-ui.js?v=20261029-approved-r3':'../reading-practice/authored-ui.js?v=20261030-sentence-r3-2');

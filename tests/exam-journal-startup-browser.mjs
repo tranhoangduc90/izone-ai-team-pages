@@ -52,7 +52,8 @@ const server=createServer(async(q,s)=>{
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await chromium.launch({channel:'msedge',headless:true});const results=[];
 const url='http://127.0.0.1:'+server.address().port;
-async function until(predicate){const deadline=Date.now()+12000;while(!predicate()){if(Date.now()>deadline)throw Error('Expected journal evidence did not arrive');await new Promise(r=>setTimeout(r,50));}}
+// Normal observations may wait for the adaptive <=15s batch; this is not an exit deadline.
+async function until(predicate){const deadline=Date.now()+20000;while(!predicate()){if(Date.now()>deadline)throw Error('Expected journal evidence did not arrive');await new Promise(r=>setTimeout(r,50));}}
 try{
  const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',route=>new URL(route.request().url()).origin===url?route.continue():route.abort());

@@ -17,6 +17,7 @@ const studentEntries = [
 ];
 
 test('mọi trang Term/Mini Test có đủ tài nguyên local và URL script/style chống cache cũ', async () => {
+  const sdk=JSON.parse(await readFile(path.join(repoRoot,'term-tests/shared/exam-journal/SDK_MANIFEST.json'),'utf8'));
   for (const relativeEntry of studentEntries) {
     const entryPath = path.join(repoRoot, relativeEntry);
     const html = await readFile(entryPath, 'utf8');
@@ -28,7 +29,8 @@ test('mọi trang Term/Mini Test có đủ tài nguyên local và URL script/sty
       const url = new URL(asset.replaceAll('&amp;', '&'), `https://fixture.invalid/${relativeEntry}`);
       await access(path.join(repoRoot, decodeURIComponent(url.pathname)));
       if (/\.(?:css|m?js)$/.test(url.pathname)) {
-        assert.ok(url.searchParams.get('v') || url.searchParams.get('rev'), `${relativeEntry}: ${asset} thiếu mã chống cache cũ`);
+        if(url.pathname.includes('/shared/exam-journal/'))assert.equal(url.search,'?ej='+sdk.revision);
+        else assert.ok(url.searchParams.get('v') || url.searchParams.get('rev'), `${relativeEntry}: ${asset} thiếu mã chống cache cũ`);
       }
     }
   }
