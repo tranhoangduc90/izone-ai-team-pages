@@ -1,6 +1,6 @@
 // Link Hành trình riêng dùng đúng access token hiện hành; chỉ đọc bài của chính học viên.
 // Lỗi một nguồn giữ lịch sử cũ để xem, không suy điểm trống hoặc ghi bài/điểm danh.
-import {buildSkillCourse,renderPersonSkills} from './course-skills.js?rev=20261030-the22-23-v1';
+import {buildSkillCourse,renderPersonSkills} from './course-skills.js?rev=20261102-the24-v1';
 import {legacyFeedbackForView} from './feedback-policy.js';
 import {writingResultLink} from '../student-test-results.js?rev=20261030-the22-23-v1';
 export async function mountStudentSkillJourney(host,journey,request,resultContext={}){

@@ -6,59 +6,120 @@ function store(key,value) {try{const storage=draftStorage();value?storage.setIte
 export function clearCommentDrafts(teacherEmail) {
   const storage=draftStorage();for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key.startsWith(prefix+teacherEmail+':'))storage.removeItem(key);}
 }
-// Nháp theo tài khoản/lớp/người/buổi. Retry giữ operationId; đổi nội dung tạo thao tác mới.
+// Nháp máy chủ theo tài khoản/lớp/người/buổi; bộ đệm trình duyệt giữ chữ khi lỗi mạng.
 export function commentEditor({target,studentName,comment,reviewerKey,request,current,onSaved,compact=false}) {
   const key=prefix+reviewerKey+':'+target.classId+':'+target.studentRef+':'+target.sessionNumber;
-  let saved=comment,draft=stored(key),operationId=draft?.operationId||crypto.randomUUID(),busy=false;
-  let revision=Number(draft?.expectedRevision??comment?.revision??0),action=draft?.action||'save';
+  const local=stored(key);
+  let saved=comment,revision=Number(comment?.revision||0),draftRevision=0,ready=false,busy=false;
+  let pending=local?.pending||null,editing=Boolean(local),focusWhenReady=false;
   const section=node('section','','session-comment-editor');
   section.append(node('h3','Nhận xét dành cho học viên'),node('p',`${studentName} · Buổi ${target.sessionNumber} · Tùy chọn`,'muted'));
-  const input=node('textarea');input.value=draft?.noteText??(comment?.visibility==='hidden'?'':comment?.noteText||'');
+  const input=node('textarea');input.value=local?.noteText??(comment?.visibility==='hidden'?'':comment?.noteText||'');input.disabled=true;
   input.rows=5;input.setAttribute('aria-label','Nhận xét dành cho '+studentName);input.placeholder='Viết nhận xét cho buổi học này…';
   const count=node('small'),status=node('p','','notice');status.setAttribute('role','status');
-  const actions=node('div','','comment-actions'),save=node('button',compact?'Lưu nhận xét':'Lưu và hiển thị với học viên','button primary'),hide=node('button','Ẩn nhận xét','mini-action');
+  const hint=node('p','','comment-published-hint');
+  const actions=node('div','','comment-actions'),save=node('button','Lưu nháp','button'),send=node('button','Gửi cho học viên','button primary');
+  const more=node('button','⋮','mini-action comment-more');more.title='Lựa chọn khác';more.setAttribute('aria-label','Lựa chọn khác');more.setAttribute('aria-expanded','false');
+  const menu=node('div','','comment-menu');menu.hidden=true;menu.setAttribute('role','group');menu.setAttribute('aria-label','Tùy chọn nhận xét đã gửi');
+  const edit=node('button','Chỉnh sửa','mini-action'),remove=node('button','Xóa','mini-action comment-delete');menu.append(edit,remove);
   const history=node('button','Xem lịch sử','mini-action'),historyBox=node('div');
-  for(const button of [save,hide,history])button.type='button';
-  hide.hidden=!saved||saved.visibility==='hidden';
-  const persist=()=>{const ok=store(key,{noteText:input.value,expectedRevision:revision,operationId,action});if(!ok)status.textContent='Chưa giữ được nháp trên trình duyệt. Giữ trang đang mở hoặc sao chép nội dung trước khi chuyển người.';return ok;};
+  for(const button of [save,send,more,edit,remove,history])button.type='button';
+  const visible=()=>saved?.visibility==='visible';
+  const active=()=>current()&&section.isConnected;
+  const persist=()=>{const ok=store(key,{noteText:input.value,expectedRevision:revision,expectedDraftRevision:draftRevision,pending});if(!ok)status.textContent='Chưa giữ được bộ đệm trên trình duyệt. Giữ trang đang mở hoặc sao chép nội dung trước khi chuyển người.';return ok;};
   const recount=()=>{count.textContent=[...input.value.trim()].length+' / 1.000 ký tự';};recount();
-  input.addEventListener('input',()=>{operationId=crypto.randomUUID();action='save';persist();recount();});
-  async function mutate(hiding=false) {
-    if(busy||!current())return;
+  function buttons(){
+    save.disabled=send.disabled=!ready||busy||!editing;more.disabled=!ready||busy;more.hidden=!visible();
+    edit.disabled=remove.disabled=!ready||busy;input.readOnly=!editing;
+    hint.textContent=visible()?(editing?'Học viên vẫn đang thấy nhận xét đã gửi trước đó cho đến khi bạn gửi lại.':'Nhận xét này đã gửi cho học viên. Chọn Chỉnh sửa trong Lựa chọn khác để sửa.'):'Nháp chỉ có giảng viên đang soạn đọc được.';
+  }
+  const closeMenu=()=>{menu.hidden=true;more.setAttribute('aria-expanded','false');};
+  more.addEventListener('click',()=>{menu.hidden=!menu.hidden;more.setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden)edit.focus();});
+  section.addEventListener('keydown',event=>{if(event.key==='Escape'&&!menu.hidden){event.stopPropagation();closeMenu();more.focus();}});
+  section.addEventListener('focusout',event=>{if(!section.contains(event.relatedTarget))closeMenu();});
+  const outside=event=>{if(!section.isConnected){document.removeEventListener('pointerdown',outside);return;}if(!actions.contains(event.target))closeMenu();};
+  document.addEventListener('pointerdown',outside);
+  edit.addEventListener('click',()=>{closeMenu();editing=true;buttons();input.focus();});
+  input.addEventListener('input',()=>{pending=null;editing=true;persist();recount();status.textContent='Chưa lưu thay đổi này vào tài khoản.';});
+  async function load({preserve=false}={}){
+    if(busy||!current())return;busy=true;buttons();status.textContent='Đang đọc nhận xét và nháp riêng…';
+    const before=input.value,controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),25000);
+    try{
+      const data=await request('/teacher/session-comments/editor?'+new URLSearchParams(target),{signal:controller.signal});
+      if(!active())return;
+      if(String(data.classId)!==String(target.classId)||data.studentRef!==target.studentRef||data.sessionNumber!==target.sessionNumber
+        ||data.draft&&(data.draft.studentRef!==target.studentRef||data.draft.sessionNumber!==target.sessionNumber))throw Error('Nháp trả về không khớp học viên/buổi.');
+      saved=data.comment;draftRevision=Number(data.draft?.revision||0);revision=Number(saved?.revision||0);
+      if(!preserve&&local){
+        revision=Number(local.expectedRevision??data.draft?.baseCommentRevision??revision);
+        draftRevision=Number(local.expectedDraftRevision??draftRevision);editing=true;
+        status.textContent='Đã khôi phục nội dung trên thiết bị này. Bấm Lưu nháp để lưu vào tài khoản hoặc Gửi cho học viên.';
+      }else if(preserve){input.value=before;pending=null;editing=true;persist();status.textContent='Đã đọc bản hiện hành, giữ nội dung đang gõ. Kiểm tra trước khi lưu hoặc gửi.';}
+      else{
+        const hasDraft=data.draft?.noteText!=null;input.value=hasDraft?data.draft.noteText:visible()?saved.noteText:'';editing=hasDraft||!visible();
+        if(hasDraft)revision=Number(data.draft.baseCommentRevision);
+        status.textContent=hasDraft?'Đã mở nháp riêng trong tài khoản. Học viên chưa thấy bản này.':visible()?'Đã đọc nhận xét đã gửi.':'Chưa có nhận xét.';
+      }
+      ready=true;input.disabled=false;recount();if(focusWhenReady&&editing)input.focus();
+    }catch(error){if(active()){
+      ready=false;status.textContent=controller.signal.aborted?'Chưa đọc được nháp trong thời gian chờ. Nội dung trên thiết bị vẫn được giữ.':error.message;
+      const retry=node('button','Thử đọc lại nháp','mini-action');retry.type='button';retry.addEventListener('click',()=>void load({preserve}));status.append(' ',retry);
+    }}finally{clearTimeout(timeout);busy=false;buttons();}
+  }
+  async function mutate(action) {
+    if(busy||!ready||!active())return;
     const text=input.value.trim();
-    if(!hiding&&(!text||[...text].length>1000)){status.textContent='Nhận xét cần từ 1 đến 1.000 ký tự. Để trống không xóa nhận xét đã lưu.';return;}
-    if(hiding&&!window.confirm('Ẩn nhận xét này khỏi hành trình học viên? Lịch sử vẫn được giữ.'))return;
-    if(action!==(hiding?'hide':'save'))operationId=crypto.randomUUID();action=hiding?'hide':'save';persist();
-    const fingerprint=JSON.stringify([text,revision,operationId]);
-    busy=true;save.disabled=hide.disabled=true;status.textContent='Đang lưu…';
+    if(action!=='delete'&&(!text||[...text].length>1000)){status.textContent='Nhận xét cần từ 1 đến 1.000 ký tự. Để trống không xóa nhận xét đã gửi.';return;}
+    if(action==='delete'&&!window.confirm(`Xóa nhận xét đã gửi cho ${studentName} · Buổi ${target.sessionNumber}? Học viên sẽ không còn thấy bản này; lịch sử vẫn được giữ.`))return;
+    closeMenu();
+    // Xóa bản đã gửi đang đọc; revision của nháp có thể vẫn dựa trên một bản gửi cũ.
+    const expectedRevision=action==='delete'?Number(saved?.revision||0):revision;
+    const fingerprint=JSON.stringify([action,text,expectedRevision,draftRevision]);
+    if(pending?.fingerprint!==fingerprint)pending={fingerprint,action,body:{...target,expectedRevision,operationId:crypto.randomUUID(),
+      ...(action!=='delete'?{noteText:text,expectedDraftRevision:draftRevision}:{})}};
+    const operation=pending;persist();busy=true;buttons();status.textContent=action==='draft'?'Đang lưu nháp vào tài khoản…':action==='send'?'Đang gửi cho học viên…':'Đang xóa nhận xét đã gửi…';
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),25000);
     try{
-      const data=await request(hiding?'/teacher/session-comments/hide':'/teacher/session-comments',{
-        method:hiding?'POST':'PUT',signal:controller.signal,body:{...target,expectedRevision:revision,operationId,...(!hiding?{noteText:text}:{})}});
-      if(!current()||!section.isConnected)return;
-      const note=data.comment;
-      if(note.studentRef!==target.studentRef||note.sessionNumber!==target.sessionNumber||note.revision!==revision+1
-        ||(!hiding&&note.noteText!==text))throw Error('Nhận xét trả về không khớp học viên/buổi/nội dung.');
-      saved=note;revision=note.revision;hide.hidden=hiding;onSaved(note);
-      if(fingerprint===JSON.stringify([input.value.trim(),revision-1,operationId])){store(key,null);operationId=crypto.randomUUID();}
-      else persist();
-      status.textContent=hiding?'Đã ẩn khỏi hành trình học viên.':'Đã lưu. Học viên đọc được khi mở hoặc làm mới hành trình.';
-    }catch(error){if(current()){
-      status.textContent=controller.signal.aborted?'Chưa xác định được kết quả lưu. Bản đang gõ được giữ; bấm lại để kiểm tra cùng thao tác.':error.message;
-      if(error.status===409){const reload=node('button','Tải nhận xét hiện hành, giữ bản đang gõ','mini-action');reload.type='button';reload.addEventListener('click',async()=>{
-        try{const data=await request('/teacher/session-comments/history?'+new URLSearchParams(target));if(!current())return;
-          saved=data.history[0]||null;revision=Number(saved?.revision||0);operationId=crypto.randomUUID();action='save';persist();
-          historyBox.replaceChildren(...(saved?[commentPanel({...saved,visibility:'visible'})]:[]));status.textContent='Đã đọc bản hiện hành. Kiểm tra trước khi lưu bản bạn đang gõ.';
-        }catch(e){status.textContent=e.message;}
-      });status.append(' ',reload);}
-    }}finally{clearTimeout(timeout);busy=false;save.disabled=hide.disabled=false;}
+      const data=await request('/teacher/session-comments/'+action,{method:action==='draft'?'PUT':'POST',signal:controller.signal,body:operation.body});
+      if(!active())return;
+      const note=action==='draft'?data.draft:data.comment;
+      if(!note||note.studentRef!==target.studentRef||note.sessionNumber!==target.sessionNumber
+        ||note.revision!==(action==='draft'?operation.body.expectedDraftRevision:operation.body.expectedRevision)+1
+        ||action!=='delete'&&note.noteText!==text||action==='delete'&&note.visibility!=='hidden')throw Error('Nhận xét trả về không khớp học viên/buổi/nội dung.');
+      if(note.replayed){
+        const latest=await request('/teacher/session-comments/editor?'+new URLSearchParams(target),{signal:controller.signal});
+        if(!active())return;
+        if(String(latest.classId)!==String(target.classId)||latest.studentRef!==target.studentRef||latest.sessionNumber!==target.sessionNumber)throw Error('Bản hiện hành không khớp học viên/buổi.');
+        if(action==='draft'?latest.draft?.revision!==note.revision:
+          latest.comment?.revision!==note.revision||action==='send'&&Number(latest.draft?.revision||0)!==note.draftRevision){
+          saved=latest.comment;revision=Number(saved?.revision||0);draftRevision=Number(latest.draft?.revision||0);
+          pending=null;editing=true;persist();if(saved)onSaved(saved);
+          status.textContent='Thao tác trước đã thành công, nhưng bản hiện hành đã thay đổi sau đó. Nội dung đang gõ được giữ; kiểm tra trước khi lưu hoặc gửi lại.';
+          return;
+        }
+      }
+      if(action==='draft')draftRevision=note.revision;
+      else{saved=note;revision=note.revision;if(action==='send')draftRevision=note.draftRevision;onSaved(note);}
+      const unchanged=input.value.trim()===text;
+      pending=null;
+      if(unchanged){store(key,null);if(action==='send')editing=false;}
+      else{editing=true;persist();}
+      status.textContent=action==='draft'?'Đã lưu nháp vào tài khoản. Có thể mở trên thiết bị khác; học viên chưa thấy bản này.':
+        action==='send'?'Đã gửi. Học viên đọc được khi mở hoặc làm mới Progress log.':'Đã xóa nhận xét đã gửi. Lịch sử và các bản nháp riêng được giữ.';
+      if(!unchanged)status.textContent+=' Phần vừa gõ thêm chưa được lưu.';
+      if(action==='delete'&&unchanged){editing=true;persist();}
+    }catch(error){if(active()){
+      status.textContent=controller.signal.aborted?'Chưa xác định được kết quả. Nội dung được giữ; bấm lại cùng nút để kiểm tra thao tác.':error.message;
+      if(error.status===409){const reload=node('button','Tải bản hiện hành, giữ nội dung đang gõ','mini-action');reload.type='button';reload.addEventListener('click',()=>void load({preserve:true}));status.append(' ',reload);}
+    }}finally{clearTimeout(timeout);busy=false;buttons();}
   }
-  save.addEventListener('click',()=>void mutate());hide.addEventListener('click',()=>void mutate(true));
+  save.addEventListener('click',()=>void mutate('draft'));send.addEventListener('click',()=>void mutate('send'));remove.addEventListener('click',()=>void mutate('delete'));
   history.addEventListener('click',async()=>{try{const data=await request('/teacher/session-comments/history?'+new URLSearchParams(target));if(!current())return;
     historyBox.replaceChildren(...data.history.map(note=>{const box=commentPanel({...note,visibility:'visible'});box.prepend(node('small',`Bản ${note.revision} · ${note.action==='hide'?'Đã ẩn':'Đã lưu'}`));return box;}));
   }catch(error){status.textContent=error.message;}});
-  actions.append(save,hide);if(!compact)actions.append(history);section.append(input,count,actions,status,historyBox);
-  return {element:section,focus(){input.focus();input.scrollIntoView({block:'center',behavior:'smooth'});}};
+  actions.append(save,send,more,menu);if(!compact)actions.append(history);section.append(hint,input,count,actions,status,historyBox);buttons();
+  queueMicrotask(()=>void load());
+  return {element:section,focus(){focusWhenReady=true;if(ready&&editing)input.focus();input.scrollIntoView({block:'center',behavior:'smooth'});}};
 }
 export function journeyLinkManager({request,target,studentName,current}) {
   const dialog=node('dialog','','draft-dialog journey-link-dialog'),close=node('button','Đóng','mini-action');close.type='button';

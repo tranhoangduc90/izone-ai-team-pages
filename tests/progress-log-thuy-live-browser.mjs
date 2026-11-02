@@ -37,6 +37,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   if(u.origin!==origin){unexpected.push(u.origin);return route.abort();}
   if(!u.pathname.startsWith('/api/learning/'))return route.continue();
   const path=u.pathname.slice('/api/learning'.length);requests.push({path,body});
+  if(path==='/student/portal-classes')return send({ok:true,classes:[]});
   if(path==='/assignments/open')return send({ok:true,assignment:{assignmentId,publicToken:assignmentId,class:{id:'1294',name:'IC2305'},courseCode:'56',sessionNumber:11,definition,definitionHash:'a'.repeat(64),roster:[person(A),person(B)],blockReleases:[{blockId:block1,status:'open'},{blockId:block2,status:'open'}],submissionWindow:window()}});
   if(path==='/student/course-journey'){if(journeyFailure==='denied')return send({ok:false,message:'Quyền đọc đã bị thu hồi'},403);if(journeyFailure)return send({ok:false,message:'Nguồn danh sách tạm lỗi'},503);return send({ok:true,journey:{student:person(body.studentRef),class:{classId:'1294',name:'IC2305'},summary:{totalSessions:11,submittedComplete:0,attendedSessions:0,availableReports:0},sessions:[{assignmentId,publicToken:assignmentId,sessionNumber:11,sessionDate:'2026-01-01',title:definition.title,assignmentStatus:'published',submissionWindow:window(),completeness:state(body.studentRef).final?'incomplete':null}],reports:[]}});}
   if(path==='/student/course-session-detail'){
@@ -60,15 +61,16 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   unexpected.push(path);return send({ok:false,message:'Ngoài phạm vi fixture'},503);
  });
  ctx.on('page',page=>{page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(8000);});
- let page=await ctx.newPage();await page.clock.install();const url=origin+'/progress-log/index.html#assignment='+assignmentId;
+ let page=await ctx.newPage();await page.clock.install({time:new Date('2026-01-01T12:00:00Z')});const url=origin+'/progress-log/index.html#assignment='+assignmentId;
  async function openManual(ref=A){await page.goto(url);await page.locator('#studentSelect').selectOption(ref);await page.locator('#chooseStudentButton').click();await page.locator('#confirmButton').click();await page.locator('#formView').waitFor();}
+ async function changeLearner(ref){await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.waitForURL('**/student.html');await openManual(ref);}
  try{
   await openManual();assert.equal(requests.filter(r=>r.path.includes('/submit')).length,0);
   await page.locator('#studentDashboardSessions').getByRole('heading',{name:'Tất cả buổi học',exact:true}).waitFor();
   await page.locator('#studentDashboardLatest [data-session-number="11"]').waitFor();assert.equal(await page.locator('#journeyView').isVisible(),false);
-  await page.locator('#thuyLessonNav').click();assert.equal(await page.locator('#formView').isVisible(),true);assert.equal(await page.locator('#confirmView').isVisible(),false);
+  assert.equal(await page.locator('#thuyLessonNav').count(),0);assert.equal(await page.locator('#formView').isVisible(),true);assert.equal(await page.locator('#confirmView').isVisible(),false);
   journeyFailure='denied';await page.clock.fastForward(31_000);await page.locator('#studentDashboardLatest').getByText(/Quyền đọc đã bị thu hồi/).waitFor();
-  assert.equal(await page.locator('#reflectionForm').isVisible(),false);await page.locator('#thuyLessonNav').click();assert.equal(await page.locator('#reflectionForm').isVisible(),false);
+  assert.equal(await page.locator('#reflectionForm').isVisible(),false);assert.equal(await page.locator('#thuyLessonNav').count(),0);
   journeyFailure=false;await page.locator('#studentDashboardLatest').getByRole('button',{name:'Thử lại',exact:true}).click();await page.locator('.thuy-part').first().waitFor();
   await page.locator(`[data-part="${block1}"]`).getByRole('button',{name:'Bắt đầu làm',exact:true}).click();
   assert.equal(await page.locator('.thuy-keyword-question>.thuy-question-heading').innerText(),'Câu 1','Số câu phải hiển thị riêng khỏi nội dung');
@@ -91,24 +93,24 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   }
   await speaking.locator('input[value=B]').check();assert.equal(await speaking.locator('input[value=B]').isChecked(),true);
   await page.setViewportSize({width:1440,height:1000});
-  failSave=true;await page.getByRole('button',{name:'Đổi người học',exact:true}).click();await page.locator('#notice').filter({hasText:'Chưa lưu xong'}).waitFor();
+  failSave=true;await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.locator('#notice').filter({hasText:'Chưa lưu xong'}).waitFor();
   assert.match(await page.locator('#studentNameLabel').innerText(),/Học viên A/);assert.equal(await page.locator('#thuyRetrySave').isVisible(),true);
   failSave=false;await page.locator('#thuyRetrySave').click();await page.locator('#saveState').filter({hasText:'Đã lưu'}).waitFor();
-  await page.getByRole('button',{name:'Đổi người học',exact:true}).click();await page.locator('#studentSelect').selectOption(B);await page.locator('#chooseStudentButton').click();await page.locator('#confirmButton').click();
+  await changeLearner(B);
   await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Bắt đầu làm',exact:true}).click();assert.equal(await page.locator('.thuy-comparison textarea').nth(0).inputValue(),'');
-  await page.getByRole('button',{name:'Đổi người học',exact:true}).click();await page.locator('#studentSelect').selectOption(A);await page.locator('#chooseStudentButton').click();await page.locator('#confirmButton').click();
+  await changeLearner(A);
   await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Tiếp tục làm',exact:true}).click();assert.equal(await page.locator('.thuy-comparison textarea').nth(0).inputValue(),'Nháp A giữ đủ dấu');
   await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Nộp phần này',exact:true}).click();await page.getByText('Đã nộp 1/2 phần',{exact:true}).waitFor();assert.equal(state(A).final,false);assert.equal(await page.locator('.thuy-comparison textarea').nth(0).isDisabled(),true);
   await page.locator(`[data-part="${block1}"]`).getByRole('button',{name:'Tiếp tục làm',exact:true}).click();assert.equal(await page.locator('[data-keyword=w3]').getAttribute('aria-pressed'),'true');
   await page.locator(`[data-part="${block1}"]`).getByRole('button',{name:'Nộp phần này',exact:true}).click();await page.getByText('Đã nộp 2/2 phần',{exact:true}).waitFor();assert.equal(state(A).final,true);
   assert.equal(await page.locator('#submitButton').isVisible(),false);assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);
-  const starts=requests.filter(r=>r.path==='/attempts/start').length;await page.close();page=await ctx.newPage();await page.goto(url);await page.locator('#formView').waitFor();
+  const starts=requests.filter(r=>r.path==='/attempts/start').length;await page.close();page=await ctx.newPage();await page.clock.install({time:new Date('2026-01-01T12:00:00Z')});await page.goto(url);await page.locator('#formView').waitFor();
   await page.getByText('Phiếu đã nộp · Chỉ đọc',{exact:true}).waitFor();assert.equal(requests.filter(r=>r.path==='/attempts/start').length,starts);
   await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Xem bài đã nộp',exact:true}).click();
   await page.getByText('Đáp án tham khảo: Tham khảo sau khi mở lại',{exact:true}).waitFor();
   assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'learner-completed.png'),fullPage:true});}
-  closed=true;journeyFailure=true;await page.getByRole('button',{name:'Đổi người học',exact:true}).click();await page.reload();
+  closed=true;journeyFailure=true;await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.waitForURL('**/student.html');await page.goto(url);
   await page.locator('#studentSelect').selectOption(B);await page.locator('#chooseStudentButton').click();
   await page.getByRole('button',{name:'Đúng là em · xem các buổi học',exact:true}).click();
   await page.locator('#studentDashboardLatest').getByText(/Chưa tải được danh sách: Nguồn danh sách tạm lỗi/).waitFor();

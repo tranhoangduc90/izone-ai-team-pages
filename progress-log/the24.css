@@ -1,0 +1,75 @@
+/* Thẻ 24: chỉ thay các vùng tổng quan và nhận xét đã được duyệt. */
+.thuy-student .shell:has(>#journeyView:not([hidden])){max-width:1920px}
+.thuy-student #journeyView{max-width:none}
+.thuy-student .shell:has(>#journeyView:not([hidden]))>#submissionWindowNotice{display:none}
+.thuy-student #journeyView>.journey-summary{display:none}
+.thuy-student #journeyView .studentPortalHero{padding:0;display:block}
+.thuy-student #journeyView .studentPortalHero h1{font:600 26px/1.35 Geologica,sans-serif;margin:0 0 8px;color:var(--navy,#174266);letter-spacing:0}
+.thuy-student #journeyView #journeyStudentName,.thuy-student #journeyView #journeyClassName{margin:4px 0;font-size:14px}
+.thuy-student .student-nav .button[hidden]{display:none!important}
+.thuy-student .student-nav:not(:has(.button:not([hidden]))){display:none}
+.thuy-student #progressLogChangeStudent{margin-left:auto}
+.thuy-student #journeyView .studentJourneyHeading .studentPortalEyebrow{display:none}
+.thuy-student .student-upcoming,.student-upcoming{display:flex;align-items:center;justify-content:space-between;gap:24px;position:relative;background:#fff;border:1px solid #e2e7eb;border-left:4px solid #e3082a;border-radius:8px;padding:20px 24px;margin:0 0 24px;color:#174266;min-width:0}
+.student-upcoming-copy{min-width:0}.student-upcoming .eyebrow{font-size:11px;line-height:16px;font-weight:600;margin:0 0 8px;color:#586477}
+.student-upcoming h2{font-size:22px;line-height:1.4;margin:0 0 12px;color:#174266;overflow-wrap:anywhere}
+.student-upcoming>.button{flex-shrink:0;white-space:normal;min-height:44px}
+.student-upcoming .upcoming-state{display:inline-flex;align-items:center;gap:8px;border-radius:4px;background:#fff4df;color:#8e5800;font-size:14px;padding:6px 10px}
+.student-upcoming .upcoming-state::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.student-upcoming .upcoming-state.state-complete{background:#e8f5ee;color:#18734c}
+.student-upcoming .upcoming-state:is(.state-locked,.state-empty,.state-review){background:#eef1f4;color:#586477}
+.student-dashboard-latest{background:transparent!important;border:0!important;padding:0!important;margin:16px 0!important}
+.student-dashboard-latest>p:empty{display:none}
+.thuy-student #journeyView :is(#journeySessions,#sessionList),.thuy-student .student-dashboard-sessions .studentSessionGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{display:flex;flex-direction:column;align-items:stretch;gap:8px;height:auto;min-height:160px;min-width:0;padding:16px;text-align:left;background:#fff;border:1px solid #e2e7eb;border-radius:8px;box-shadow:none;color:#174266;text-decoration:none}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard.is-upcoming{border-top:3px solid #174266;padding-top:14px}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop{display:block;grid-row:auto}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop b{font-size:14px;line-height:20px;font-weight:600;color:#174266}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop span{display:none}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>strong{margin:0;font-size:14px;line-height:22px;font-weight:400;overflow-wrap:anywhere}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>small:not(.badge),.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>:is([data-session-comment],.sessionTestScore){display:none}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionBottom{grid-column:auto;grid-row:auto;display:flex;flex-wrap:wrap;align-items:start;gap:8px;margin-top:auto;padding-top:12px}
+.thuy-student :is(#journeySessions,#sessionList) .studentSessionBottom i{font-size:11px;line-height:16px;font-style:normal;font-weight:400;background:#eef1f4;color:#586477;padding:4px 7px;border-radius:4px}
+.thuy-student :is(#journeySessions,#sessionList) .session-complete .studentSessionBottom i{background:#e8f5ee;color:#18734c}
+.thuy-student :is(#journeySessions,#sessionList) .session-active .studentSessionBottom i{background:#fff4df;color:#8e5800}
+.thuy-student-skills .thuy-four-skills>.card{padding:16px!important;min-width:0;border:1px solid #e2e7eb;border-radius:8px;box-shadow:none;background:#fff}
+.thuy-student-skills .thuy-four-skills p{font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.thuy-teacher #journeyDetailContent{container-type:inline-size}
+.thuy-teacher #journeyDetailDialog .thuy-four-skills{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.thuy-teacher #draftDialog .report-heading .eyebrow{display:none}
+.session-comment-editor .comment-published-hint{font-size:12px;line-height:1.5;color:#586477}
+.session-comment-editor textarea[readonly]{background:#f3f5f7;color:#174266}
+.session-comment-editor .comment-actions{position:relative}
+.session-comment-editor .comment-more{min-width:36px;min-height:36px;font-size:24px;line-height:1;font-family:inherit}
+.session-comment-editor .comment-menu{position:absolute;right:0;top:100%;z-index:5;display:flex;flex-direction:column;gap:6px;padding:8px;background:#fff;border:1px solid #e2e7eb;box-shadow:0 3px 12px #17426620;border-radius:8px;min-width:150px}
+.session-comment-editor .comment-menu[hidden]{display:none}
+.session-comment-editor .comment-delete{color:#d90429;border-color:#d90429}
+@container(min-width:440px){.thuy-teacher #journeyDetailDialog .thuy-four-skills{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1001px){
+ .student-upcoming{padding:28px 36px}
+ .student-upcoming .eyebrow{font-size:14px;line-height:20px;margin-bottom:12px}
+ .student-upcoming h2{font-size:28px;margin-bottom:18px}
+ .student-upcoming>.button{font-size:16px;padding:16px 24px}
+ .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{padding:22px;min-height:200px;gap:12px}
+ .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard.is-upcoming{padding-top:20px}
+ .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop b{font-size:20px;line-height:28px}
+ .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>strong{font-size:18px;line-height:1.5}
+ .thuy-student :is(#journeySessions,#sessionList) .studentSessionBottom i{font-size:14px;line-height:20px;padding:6px 9px;display:inline-flex;align-items:center;gap:8px}
+ .thuy-student :is(#journeySessions,#sessionList) .studentSessionBottom i::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+}
+@media(min-width:1700px){
+ .student-upcoming .eyebrow{font-size:16px}
+ .student-upcoming h2{font-size:34px}
+ .student-upcoming>.button{font-size:18px;padding:20px 24px}
+ .student-upcoming .upcoming-state{font-size:17px}
+ .thuy-student #journeyView :is(#journeySessions,#sessionList){gap:18px}
+ .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{min-height:220px;padding:24px}
+ .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard.is-upcoming{padding-top:22px}
+ .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop b{font-size:23px;line-height:32px}
+ .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>strong{font-size:20px}
+ .thuy-student :is(#journeySessions,#sessionList) .studentSessionBottom i{font-size:16px}
+}
+@media(min-width:1700px){.thuy-student #journeyView :is(#journeySessions,#sessionList){grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:1000px){.thuy-student #journeyView :is(#journeySessions,#sessionList),.thuy-student .student-dashboard-sessions .studentSessionGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.student-upcoming{align-items:stretch;flex-direction:column;padding:16px;gap:16px}.student-upcoming h2{font-size:19px}.student-upcoming>.button{width:100%}.session-comment-editor .comment-more{width:44px;min-height:44px}.session-comment-editor .comment-menu .mini-action{min-height:44px}.thuy-student #journeyView .studentPortalHero h1{font-size:24px}}
+@media(max-width:550px){.thuy-student #journeyView :is(#journeySessions,#sessionList),.thuy-student .student-dashboard-sessions .studentSessionGrid{grid-template-columns:minmax(0,1fr)}}

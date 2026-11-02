@@ -44,13 +44,13 @@ test('Thẻ 20 chi tiết có tên lớn và một khối tóm tắt; số tự 
 test('Thẻ 20 cổng học viên chọn, nhớ, reload và đăng xuất; không start/nộp bài',async()=>{
  const before=fixture.calls.length,{page,errors}=await pageFor('/progress-log/student.html');
  await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();
- await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#portalHome:not([hidden])').waitFor();
- assert.match(await page.locator('#portalName').textContent(),/Học viên A/u);assert.match(await page.locator('#portalJourney').getAttribute('href'),/view=journey/u);
- await page.reload();await page.locator('#portalHome:not([hidden])').waitFor();
+ await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
+ assert.match(await page.locator('#journeyStudentName').textContent(),/Học viên A/u);assert.match(page.url(),/view=journey/u);
+ await page.reload();await page.locator('#journeyView:not([hidden])').waitFor();
  await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.locator('#portalIdentity:not([hidden])').waitFor();await page.reload();await page.locator('#portalClass:not([disabled])').waitFor();
  assert.equal(await page.locator('#portalHome').isVisible(),false);
- await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();await page.locator('#portalStudent').selectOption(b);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#portalHome:not([hidden])').waitFor();
- assert.equal(await page.locator('#portalName').textContent(),'Học viên B');assert.equal(fixture.calls.slice(before).some(c=>/attempts\/(start|submit)|checkpoint/u.test(c.path)),false);
+ await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();await page.locator('#portalStudent').selectOption(b);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
+ assert.equal(await page.locator('#journeyStudentName').textContent(),'Học viên B');assert.equal(fixture.calls.slice(before).some(c=>/attempts\/(start|submit)|checkpoint/u.test(c.path)),false);
  assert.deepEqual(errors,[]);if(out)await page.screenshot({path:out+'/portal-remember.png',fullPage:true});
 });
 test('Thẻ 20 Writing mở điểm 0 và Task 2 đầy đủ, chỉ đọc và không chạy script trong nhận xét',async()=>{
@@ -65,9 +65,8 @@ test('Thẻ 20 Writing mở điểm 0 và Task 2 đầy đủ, chỉ đọc và 
 test('Thẻ 20 từ cổng vào Journey, xem bài, mở Writing và đăng xuất trở lại chọn lớp không tạo attempt',async()=>{
  const before=fixture.calls.length,{page,errors}=await pageFor('/progress-log/student.html',{width:390});
  await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();
- await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#portalHome:not([hidden])').waitFor();
- await page.getByRole('link',{name:'Hành trình của em',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
- assert.equal(await page.getByRole('button',{name:'Hành trình của em',exact:true}).getAttribute('aria-pressed'),'true');
+ await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
+ assert.equal(await page.locator('#journeyView h1').textContent(),'Progress log');
  await page.locator('#journeySessions button.studentSessionCard').first().click();await page.locator('#journeyDetailContent .reviewStudentName').waitFor();
  assert.equal(await page.locator('#journeyDetailContent .reviewStudentName').count(),1);assert.ok(await page.locator('#journeyDetailBackButton').evaluate(e=>e.getBoundingClientRect().height>=44&&parseFloat(getComputedStyle(e).fontSize)>=16));await page.locator('#journeyDetailBackButton').click();
  await page.getByRole('link',{name:/Task 1 Term Test 1 điểm 0/u}).click();await page.locator('#resultContent:not([hidden])').waitFor();
@@ -103,10 +102,9 @@ test('Thẻ 20 lỗi nguồn có thể thử lại, không giữ nội dung Writ
 test('Thẻ 20 ba nhịp cập nhật thật giữ DOM, vùng đọc và lựa chọn trên Journey chung/riêng; nhận xét đổi đúng buổi',{timeout:125000},async()=>{
  const primary=await pageFor('/progress-log/student.html',{width:1280}),page=primary.page;
  await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();
- await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#portalHome:not([hidden])').waitFor();
- await page.getByRole('link',{name:'Hành trình của em',exact:true}).click();await page.locator('#thuyStudentSkills h2').waitFor();
+ await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#thuyStudentSkills h2').waitFor();
  const privateView=await pageFor('/progress-log/journey.html#access='+ 'x'.repeat(48),{width:1280});
- await privateView.page.locator('#thuyStudentJourneySkills h2').waitFor();await privateView.page.locator('#timelineToggle').click();
+ await privateView.page.locator('#thuyStudentJourneySkills h2').waitFor();assert.equal(await privateView.page.locator('#timeline').isVisible(),true);
  let changed=false;
  for(const current of [page,privateView.page])await current.route('**/api/learning/student/session-comments',async route=>{
   if(!changed)return route.continue();const response=await route.fetch(),data=await response.json();data.comments[0].noteText='Nhận xét mới đúng buổi 2';await route.fulfill({response,json:data});
@@ -139,7 +137,6 @@ test('Thẻ 20 lịch và tổng quan nhiều buổi có thời hạn đọc ri�
  });
  await page.route('**/api/learning/student/course-session-detail',async route=>{await new Promise(done=>setTimeout(done,4000));await route.continue();});
  await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();await page.locator('#portalStudent').selectOption(a);
- await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#portalHome:not([hidden])').waitFor();
- await page.getByRole('link',{name:'Hành trình của em',exact:true}).click();await page.locator('#thuyStudentSkills h2').waitFor({timeout:40000});
+ await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#thuyStudentSkills h2').waitFor({timeout:40000});
  assert.equal(await page.locator('#thuyStudentSkills h2').textContent(),'Tổng quan');assert.doesNotMatch(await page.locator('#thuyStudentSkills').textContent(),/Hết thời gian chờ/u);assert.deepEqual(errors,[]);
 });
