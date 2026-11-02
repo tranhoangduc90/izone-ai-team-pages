@@ -35,7 +35,7 @@ function hasLogoutIntent() {
 function rememberLogoutIntent() {
   try { window.localStorage.setItem(logoutIntentKey, '1'); } catch { /* URL giữ ý định khi storage bị chặn. */ }
   const url = new URL(window.location.href); url.searchParams.set('signed_out', logoutApi);
-  window.history.replaceState({}, '', url);
+  try{window.history.replaceState({}, '', url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 function clearLogoutIntent() {
   const url = new URL(window.location.href);

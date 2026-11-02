@@ -18,7 +18,7 @@ const definition={schemaVersion:'FormDefinitionV1',formVersionId:uid(20),title:'
  {itemVersionId:uid(23),itemFamilyId:uid(33),position:2,prompt:'Reading',skillCodes:['reading'],interactionType:'number_score',layoutType:'score_fraction',graderType:'none',maxScore:0,options:[],interactionConfig:{max:10}},
  {itemVersionId:uid(24),itemFamilyId:uid(34),position:3,prompt:'Khó khăn Speaking',skillCodes:['speaking'],interactionType:'multi_choice_group',layoutType:'speaking_issue_checklist',graderType:'none',maxScore:0,options:[{id:'vocab',label:'Thiếu từ vựng để diễn đạt ý'},{id:'pause',label:'Còn ngập ngừng'}],interactionConfig:{maxSelections:2}},
 ]}]};
-export async function startThe22Server({port=0}={}){
+export async function startThe22Server({port=0,extraApi,studentMemory=false}={}){
  const calls=[],faults={},overviewWarnings={},longComment='Nhận xét dài đã công bố, đọc đầy đủ ngay trong bảng. '.repeat(12);
  const assignments=[1,2,3].map(n=>({assignment_id:uid(100+n),public_token:uid(100+n),class_id:'1294',class_name:'Lớp giả Thẻ 22–23',session_number:n,title:'Buổi '+n+' · Listening + Speaking',status:'published',origin_scope:n===1?'izone':'personal'}));
  const payload=newEditorPayload('Phiếu kiểm thử — KHÔNG GIAO LỚP');payload.definition.courseCode='56';payload.definition.blocks[0].items[0].skillCodes=['general'];
@@ -34,12 +34,13 @@ export async function startThe22Server({port=0}={}){
   const u=new URL(req.url,'http://local');
   const send=(value,status=200)=>{res.writeHead(status,{'content-type':'application/json'});res.end(JSON.stringify(value));};
   try{
-   if(u.pathname==='/progress-log/config.js'){res.setHeader('content-type','text/javascript');return res.end(`window.PROGRESS_LOG_CONFIG={API_BASE_URL:location.origin,THUY_PILOT_CLASS_IDS:['1294'],STUDENT_MEMORY:{enabled:false}};`);}
+   if(u.pathname==='/progress-log/config.js'){res.setHeader('content-type','text/javascript');return res.end(`window.PROGRESS_LOG_CONFIG={API_BASE_URL:location.origin,THUY_PILOT_CLASS_IDS:['1294'],STUDENT_MEMORY:{enabled:${Boolean(studentMemory)},allClasses:true}};`);}
    if(u.pathname.startsWith('/api/')){
     let raw='';for await(const part of req)raw+=part;const body=raw?JSON.parse(raw):{};calls.push({path:u.pathname,method:req.method,body});
     if(u.pathname==='/api/auth/session')return send({ok:true,reviewer:{email:'teacher@example.test'}});
     const p=u.pathname.replace('/api/learning','');
     if(faults[p])return send({ok:false,message:'Lỗi nguồn giả để kiểm',error:'FIXTURE_ERROR'},503);
+    if(extraApi&&await extraApi({path:p,url:u,body,method:req.method,send,res}))return;
     if(p==='/teacher/options')return send({ok:true,reviewer:{name:'Giảng viên giả',email:'teacher@example.test'},classes:[{class_id:'1294',class_name:plan.className,student_count:2}],assignments});
     if(p==='/teacher/question-library')return send({ok:true,items:[]});
     if(p==='/teacher/journey-plan')return send({ok:true,plan});

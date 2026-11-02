@@ -12,7 +12,7 @@ const homeworkUrl = safeHomeworkUrl(query.get('returnUrl') || '');
 if (query.has('returnUrl')) {
   query.delete('returnUrl');
   const cleanQuery = query.toString();
-  history.replaceState(null, '', `${location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${location.hash}`);
+  try{history.replaceState(null, '', `${location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${location.hash}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 
 const $ = (id) => document.getElementById(id);

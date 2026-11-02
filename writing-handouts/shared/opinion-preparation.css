@@ -1,0 +1,22 @@
+/* Biến thể lập trường của Handout67; R3 opt-in, giữ nguyên bố cục và token các bài cũ. */
+body[data-handout-preparation='opinion-v1'] :is(.student-field textarea,.comments p,.prompt>p,.snapshot,.saved-text,.recap-table td){font-size:18px;line-height:1.65}
+body[data-handout-preparation='opinion-v1'] .student-field select{font-size:18px;min-height:44px;max-width:100%}
+html[data-izone-theme='master170'] body[data-m170-product='handout'][data-handout-preparation='opinion-v1'][data-handout-theme='reading'] .student-field textarea{background:#fff!important}
+html[data-izone-theme='master170'] body[data-m170-product='handout'][data-handout-preparation='opinion-v1'] :is(input,select,textarea):focus{outline:2px solid #152B4E18;outline-offset:2px;border-color:#152B4E!important}
+html[data-izone-theme='master170'] body[data-m170-product='handout'][data-handout-preparation='opinion-v1'] :is(input,select,textarea):focus-visible{outline:3px solid #2156A033;outline-offset:2px}
+body[data-handout-preparation='opinion-v1'] .step-heading h3{background:transparent!important;color:#174265!important;border-radius:0;padding-left:0}
+body[data-handout-preparation='opinion-v1'] .step-grid{gap:16px}
+body[data-handout-preparation='opinion-v1'] :is(.answer-card,.comments){padding:24px;border-radius:8px;box-shadow:none}
+body[data-handout-preparation='opinion-v1'] .preparation-body{border-top:1px solid #D8DEE5;padding-top:20px;margin-top:24px}
+body[data-handout-preparation='opinion-v1'] .field-grid{gap:16px}
+body[data-handout-preparation='opinion-v1'] .recap-table :is(th,td){padding:12px 9px;border-color:#D8DEE5}
+body[data-handout-preparation='opinion-v1'] .page-footer{display:none}
+body[data-handout-preparation='opinion-v1'] .context{gap:12px;flex-wrap:wrap}
+body[data-handout-preparation='opinion-v1'] .context-actions{flex-wrap:wrap}
+body[data-handout-preparation='opinion-v1'] .work-content{min-width:0}
+body[data-handout-preparation='opinion-v1'] .student-field textarea{min-height:132px}
+@media(max-width:760px){
+ body[data-handout-preparation='opinion-v1'] :is(.answer-card,.comments){padding:16px}
+ body[data-handout-preparation='opinion-v1'] .field-grid{grid-template-columns:minmax(0,1fr)}
+ body[data-handout-preparation='opinion-v1'] .context-actions{gap:8px}
+}

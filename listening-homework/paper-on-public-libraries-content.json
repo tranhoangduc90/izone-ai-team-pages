@@ -1,0 +1,366 @@
+{
+  "code": "67-listening-paper-on-public-libraries",
+  "version": "paper-on-public-libraries-v1-20261102",
+  "runtimeVersion": "paper-on-public-libraries-v1-20261102",
+  "title": "Paper on Public Libraries",
+  "homeworkLesson": 1,
+  "minimumCompletion": 0.8,
+  "audioId": "homework-listening-paper-on-public-libraries",
+  "groups": [],
+  "questions": [],
+  "chapters": [
+    {
+      "title": "Nghe và điền từ",
+      "start": 0,
+      "end": 30.45,
+      "ids": [
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6",
+        "D7"
+      ]
+    },
+    {
+      "title": "Người nói và A/B",
+      "start": 0,
+      "end": 20.9,
+      "contextCue": "cue-0",
+      "ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ]
+    },
+    {
+      "title": "Dự đoán và kết luận",
+      "start": 12,
+      "end": 30.45,
+      "contextCue": "cue-2",
+      "ids": [
+        "S7",
+        "S8",
+        "S9"
+      ]
+    }
+  ],
+  "transcript": [
+    {
+      "id": "cue-0",
+      "speaker": "Trudie",
+      "start": 0,
+      "end": 3.7,
+      "text": "Mm. I expect that libraries will go on evolving in the next few years."
+    },
+    {
+      "id": "cue-1",
+      "speaker": "Trudie",
+      "start": 3.7,
+      "end": 12,
+      "text": "Some have already become centres where community activities take place, like local clubs meeting there. I think that’ll become even more common."
+    },
+    {
+      "id": "cue-2",
+      "speaker": "Stewart",
+      "start": 12,
+      "end": 20.9,
+      "text": "I’d like to think so, and that they’ll still be serving their traditional function, but I’m not so sure. There are financial implications, after all."
+    },
+    {
+      "id": "cue-3",
+      "speaker": "Stewart",
+      "start": 20.9,
+      "end": 30.45,
+      "text": "What I’m afraid will happen is that books and magazines will all disappear, and there’ll just be rows and rows of computers. They won’t look anything like the libraries we’re used to."
+    }
+  ],
+  "transcriptScope": {
+    "start": 0,
+    "end": 30.45,
+    "label": "Phần luyện tập · 00:00–00:31"
+  },
+  "items": [
+    {
+      "id": "D1",
+      "group": "dictation",
+      "question": "Điền 3 từ (từ rút gọn tính là 1 từ): libraries will [Mục 1] in the next few years",
+      "displayNumber": 1,
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      }
+    },
+    {
+      "id": "D2",
+      "group": "dictation",
+      "question": "Điền 2 từ (từ rút gọn tính là 1 từ): I think [Mục 2] even more common",
+      "displayNumber": 2,
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      }
+    },
+    {
+      "id": "D3",
+      "group": "dictation",
+      "question": "Điền 1 từ (từ rút gọn tính là 1 từ): they’ll still be [Mục 3] their traditional function",
+      "displayNumber": 3,
+      "evidenceContext": {
+        "contextCue": "cue-2",
+        "targetCue": "cue-2"
+      }
+    },
+    {
+      "id": "D4",
+      "group": "dictation",
+      "question": "Điền 5 từ (từ rút gọn tính là 1 từ): their traditional function, [Mục 4]",
+      "displayNumber": 4,
+      "evidenceContext": {
+        "contextCue": "cue-2",
+        "targetCue": "cue-2"
+      }
+    },
+    {
+      "id": "D5",
+      "group": "dictation",
+      "question": "Điền 2 từ (từ rút gọn tính là 1 từ): There are [Mục 5], after all",
+      "displayNumber": 5,
+      "evidenceContext": {
+        "contextCue": "cue-2",
+        "targetCue": "cue-2"
+      }
+    },
+    {
+      "id": "D6",
+      "group": "dictation",
+      "question": "Điền 6 từ (từ rút gọn tính là 1 từ): What I’m afraid will happen is that [Mục 6]",
+      "displayNumber": 6,
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      }
+    },
+    {
+      "id": "D7",
+      "group": "dictation",
+      "question": "Điền 4 từ (từ rút gọn tính là 1 từ): They [Mục 7] the libraries we’re used to",
+      "displayNumber": 7,
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      }
+    },
+    {
+      "id": "S1",
+      "group": "analysis",
+      "question": "Câu 23 hỏi dự đoán của ai?",
+      "displayNumber": 8,
+      "evidenceContext": {
+        "contextCue": "cue-0",
+        "targetCue": "cue-0"
+      },
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "Trudie",
+            "Trudie"
+          ],
+          [
+            "Stewart",
+            "Stewart"
+          ]
+        ]
+      },
+      "context": "23 · Stewart expects that in the future libraries will…"
+    },
+    {
+      "id": "S2",
+      "group": "analysis",
+      "question": "Nội dung nào trong lời Trudie liên hệ đến “for local communities” ở B?",
+      "displayNumber": 9,
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "23 · Stewart expects that in the future libraries will…\nB · become centres for local communities."
+    },
+    {
+      "id": "S3",
+      "group": "analysis",
+      "question": "Chỉ từ lời Trudie, đã có thể kết luận B là đáp án câu 23 chưa? Vì sao?",
+      "displayNumber": 10,
+      "evidenceContext": {
+        "contextCue": "cue-1",
+        "targetCue": "cue-1"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "23 · Stewart expects that in the future libraries will…\nB · become centres for local communities."
+    },
+    {
+      "id": "S4",
+      "group": "analysis",
+      "question": "Cụm nào trong lời Stewart liên hệ đến “maintain” ở A?",
+      "displayNumber": 11,
+      "evidenceContext": {
+        "contextCue": "cue-2",
+        "targetCue": "cue-2"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "23 · Stewart expects that in the future libraries will…\nA · maintain their traditional function."
+    },
+    {
+      "id": "S5",
+      "group": "analysis",
+      "question": "Tìm dấu hiệu Stewart mong A/B xảy ra và dấu hiệu anh ấy chưa chắc chúng sẽ xảy ra.",
+      "displayNumber": 12,
+      "evidenceContext": {
+        "contextCue": "cue-2",
+        "targetCue": "cue-2"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "23 · Stewart expects that in the future libraries will…\nA · maintain their traditional function.\nB · become centres for local communities."
+    },
+    {
+      "id": "S6",
+      "group": "analysis",
+      "question": "Đến đây, Stewart đã khẳng định A hoặc B là dự đoán của mình chưa? Giải thích sự khác nhau giữa mong muốn và mức tin chắc.",
+      "displayNumber": 13,
+      "evidenceContext": {
+        "contextCue": "cue-2",
+        "targetCue": "cue-2"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "23 · Stewart expects that in the future libraries will…\nA · maintain their traditional function.\nB · become centres for local communities."
+    },
+    {
+      "id": "S7",
+      "group": "analysis",
+      "question": "Nội dung nào trong lời Stewart liên hệ đến “no longer contain any books” ở C?",
+      "displayNumber": 14,
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "23 · Stewart expects that in the future libraries will…\nC · no longer contain any books."
+    },
+    {
+      "id": "S8",
+      "group": "analysis",
+      "question": "Cụm nào cho thấy Stewart đang nêu điều anh ấy lo sẽ xảy ra, phù hợp với “expects” trong đề?",
+      "displayNumber": 15,
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      },
+      "ui": {
+        "kind": "quote",
+        "label": "Trích ngắn hoặc diễn giải đúng nghĩa"
+      },
+      "context": "23 · Stewart expects that in the future libraries will…"
+    },
+    {
+      "id": "S9",
+      "group": "analysis",
+      "question": "Đáp án câu 23 là phương án nào?",
+      "displayNumber": 16,
+      "evidenceContext": {
+        "contextCue": "cue-3",
+        "targetCue": "cue-3"
+      },
+      "ui": {
+        "kind": "choice",
+        "options": [
+          [
+            "A",
+            "A · maintain their traditional function."
+          ],
+          [
+            "B",
+            "B · become centres for local communities."
+          ],
+          [
+            "C",
+            "C · no longer contain any books."
+          ]
+        ]
+      },
+      "context": "23 · Stewart expects that in the future libraries will…"
+    }
+  ],
+  "dictation": [
+    {
+      "speaker": "Trudie",
+      "parts": [
+        "Mm. I expect that libraries will ",
+        {
+          "id": "D1",
+          "words": 3
+        },
+        " in the next few years. Some have already become centres where community activities take place, like local clubs meeting there. I think ",
+        {
+          "id": "D2",
+          "words": 2
+        },
+        " even more common."
+      ]
+    },
+    {
+      "speaker": "Stewart",
+      "parts": [
+        "I’d like to think so, and that they’ll still be ",
+        {
+          "id": "D3",
+          "words": 1
+        },
+        " their traditional function, ",
+        {
+          "id": "D4",
+          "words": 5
+        },
+        ". There are ",
+        {
+          "id": "D5",
+          "words": 2
+        },
+        ", after all. What I’m afraid will happen is that ",
+        {
+          "id": "D6",
+          "words": 6
+        },
+        ", and there’ll just be rows and rows of computers. They ",
+        {
+          "id": "D7",
+          "words": 4
+        },
+        " the libraries we’re used to."
+      ]
+    }
+  ],
+  "uiRevision": "paper-on-public-libraries-20261102-v1"
+}

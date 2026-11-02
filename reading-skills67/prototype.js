@@ -49,7 +49,11 @@ function persist(){
 }
 function promoteDraft(){
   scenario=state.isSample?'sample-current':'current';
-  const url=new URL(location.href);if(state.isSample)url.searchParams.set('scenario','sample-current');else url.searchParams.delete('scenario');window.history.replaceState(null,'',url);
+  // Sửa URL chỉ để giữ ngữ cảnh màn hình; lỗi History API không được chặn nhận/lưu đáp án.
+  try{
+    const url=new URL(location.href);if(state.isSample)url.searchParams.set('scenario','sample-current');else url.searchParams.delete('scenario');
+    if(url.href!==location.href)window.history.replaceState(null,'',url.href);
+  }catch{/* Trình duyệt từ chối sửa URL vẫn cho phép tiếp tục ghi nhận bài làm. */}
   const picker=document.querySelector('#scenario');if(picker)picker.value=state.isSample?'draft':'current';
 }
 function normalize(value){return String(value||'').normalize('NFKC').replace(/\s+/g,' ').trim().toLowerCase();}
@@ -190,7 +194,7 @@ async function getFixture(){if(!fixture){const r=await fetch('/__prototype__/rev
 async function changeScenario(next){
   if(state&&writable()&&state.savedAt)persist();
   scenario=next;
-  const nextUrl=new URL(location.href);if(next==='current')nextUrl.searchParams.delete('scenario');else nextUrl.searchParams.set('scenario',next);window.history.replaceState(null,'',nextUrl);
+  const nextUrl=new URL(location.href);if(next==='current')nextUrl.searchParams.delete('scenario');else nextUrl.searchParams.set('scenario',next);try{window.history.replaceState(null,'',nextUrl);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
   if(next==='current')state=structuredClone(originalDraft);
   else if(next==='empty'||next==='entry')state=newState();
   else {
@@ -466,7 +470,7 @@ async function serverAction(name){
   else await serverClient.flush();
   const draft=await serverClient.getDraft();scenario='current';state={...newState(),...draft.body,id:'draft-'+serverClient.identity.ownerId,status:'draft',savedAt:draft.savedAt};render();
   if(name==='repair-edit'||name==='edit'){
-    const url=new URL(location.href);url.searchParams.delete('attemptId');url.searchParams.delete('attempt');window.history.replaceState(null,'',url);
+    const url=new URL(location.href);url.searchParams.delete('attemptId');url.searchParams.delete('attempt');try{window.history.replaceState(null,'',url);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
     const history=await serverClient.getHistory();await window.ReadingMaterialsExperience?.restore(history);window.ReadingMaterialsExperience?.focusCurrent();
   }
   focusHistoryDestination();

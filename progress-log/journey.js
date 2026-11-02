@@ -1,8 +1,9 @@
 import {contentTitle,sessionHeading,sessionState,skillsLabel} from './session-presentation.js';
 import {renderSessionReview} from './session-review.js?rev=20261030-the20-v2';
-import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261030-the20-v2';
+import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261102-the24-v1';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {markProgressLogout,stampProgressStudent,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v2';
+import {dashboardSessionState,upcomingSession,renderUpcomingSession} from './student-session-dashboard.js?rev=20261102-the24-v1';
 'use strict';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
@@ -102,20 +103,19 @@ function submissionLabel(session) {
 
 // Link Journey cũ dùng cùng nhãn/bài chỉ đọc; quyền truy cập vẫn được API kiểm.
 function buildSession(session) {
-  const view=sessionState(session,{assignmentId:session.assignmentId,status:session.completeness==='complete'?'complete':session.testResult?'test_result':'not_submitted'},
-    session.assignmentId?{title:session.title,status:session.assignmentStatus}:null);
-  if(session.completeness==='incomplete')Object.assign(view,{kind:'complete',label:'Đã nộp · còn câu trống',canLearn:false});
-  const read=['complete','incomplete'].includes(session.completeness)||Boolean(session.sessionComment?.noteText);
-  const learn=!read&&view.canLearn&&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
+  const view=dashboardSessionState(session);
+  const read=view.readOnly&&Boolean(view.action);
+  const learn=view.canLearn&&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
   const item=document.createElement(learn?'a':read?'button':'article');
   item.dataset.sessionNumber=String(session.sessionNumber);
   item.className='studentSessionCard session-'+view.kind;
-  if(learn)item.href='./index.html#assignment='+encodeURIComponent(session.publicToken);
+  item.classList.toggle('is-upcoming',session.sessionNumber===upcomingSession(journeyData.sessions)?.sessionNumber);
+  if(learn)item.href='./thuy.html#'+new URLSearchParams({assignment:session.publicToken,student:journeyData.student.studentRef});
   if(read){item.type='button';item.addEventListener('click',()=>void openHistory(session));}
   const top=document.createElement('div');top.className='studentSessionTop';
-  const b=document.createElement('b');b.textContent='BUỔI '+String(session.sessionNumber).padStart(2,'0');
+  const b=document.createElement('b');b.textContent='Buổi '+session.sessionNumber;
   const d=document.createElement('span');d.textContent=session.sessionDate?.split('-').reverse().join('/')||'Chưa xác nhận ngày';top.append(b,d);
-  const title=document.createElement('strong');title.textContent=contentTitle(session,{title:session.assignmentId||session.sessionKind==='test'?session.title:''});
+  const title=document.createElement('strong');title.textContent=contentTitle(session,{title:session.title});
   const skills=document.createElement('small');skills.textContent=skillsLabel(title.textContent)||'Trong kế hoạch khóa học';
   const bottom=document.createElement('div');bottom.className='studentSessionBottom';const status=document.createElement('i');status.textContent=view.label;bottom.append(status);
   if(session.quizSummary?.graded>0){const score=document.createElement('b');score.textContent=session.quizSummary.correct+'/'+session.quizSummary.graded;bottom.append(score);}
@@ -130,7 +130,8 @@ function paintSessionCards(){
  const owner=journeyData.class.classId+':'+journeyData.student.studentRef;
  if(owner!==sessionOwner){elements.sessionList.replaceChildren();sessionCards.clear();sessionOwner=owner;}
  const keep=new Set(),ordered=[];
- for(const session of journeyData.sessions){const key=String(session.sessionNumber),state=sessionState(session,{assignmentId:session.assignmentId,status:session.completeness==='complete'?'complete':session.testResult?'test_result':'not_submitted'},session.assignmentId?{title:session.title,status:session.assignmentStatus}:null),signature=JSON.stringify({session,state});
+ const upcoming=upcomingSession(journeyData.sessions)?.sessionNumber;
+ for(const session of [...journeyData.sessions].sort((a,b)=>Number(a.sessionNumber)-Number(b.sessionNumber))){const key=String(session.sessionNumber),state=dashboardSessionState(session),signature=JSON.stringify({session,state,upcoming:session.sessionNumber===upcoming});
   keep.add(key);let card=sessionCards.get(key);if(!card||card.signature!==signature){const element=buildSession(session);if(card)card.element.replaceWith(element);card={element,signature};sessionCards.set(key,card);}ordered.push(card.element);
  }
  for(const [key,card]of sessionCards)if(!keep.has(key)){card.element.remove();sessionCards.delete(key);}
@@ -142,6 +143,14 @@ const historyStatus=document.createElement('p');historyStatus.setAttribute('role
 const historyContent=document.createElement('div'),retry=document.createElement('button');retry.textContent='Thử lại';retry.className='button';retry.hidden=true;
 bindDialogDismiss(historyDialog);
 let historySession=null;retry.addEventListener('click',()=>void openHistory(historySession));historyDialog.append(close,historyStatus,historyContent,retry);document.body.append(historyDialog);
+function paintUpcoming(){
+  if(!journeyData||!document.body.classList.contains('thuy-student'))return;
+  let host=document.querySelector('#studentUpcoming');if(!host){host=document.createElement('section');host.id='studentUpcoming';host.setAttribute('aria-label','Buổi học sắp tới');elements.journeyClassName.after(host);}
+  renderUpcomingSession(host,journeyData.sessions,{onOpen:(session,state)=>{
+    if(state.readOnly){void openHistory(session);return;}
+    if(state.canLearn&&/^[0-9a-f-]{36}$/iu.test(session.publicToken||''))location.assign('./thuy.html#'+new URLSearchParams({assignment:session.publicToken,student:journeyData.student.studentRef}));
+  }});
+}
 historyDialog.addEventListener('close',()=>{if(historyDialog.open)return;historyGeneration++;historyController?.abort();historyContent.replaceChildren();});
 async function openHistory(session){
   historyController?.abort();const generation=++historyGeneration;historySession=session;
@@ -172,10 +181,11 @@ function renderJourney(journey) {
   journeyData=journey;
   if(config.THUY_PILOT_CLASS_IDS?.includes(String(journey.class.classId))&&new URLSearchParams(location.search).get('presentation')!=='legacy'){
     document.body.classList.add('thuy-live','thuy-student');
+    paintUpcoming();elements.timeline.hidden=false;elements.timelineToggle.hidden=true;
     if(!document.querySelector('#thuyStudentJourneySkills')){
-      const css=document.createElement('link');css.rel='stylesheet';css.href='./thuy-live/styles.css?rev=20261022-final-choice';document.head.append(css);
-      const root=document.createElement('section');root.id='thuyStudentJourneySkills';elements.journeyView.prepend(root);
-      void import('./thuy-live/student-skills-journey.js?rev=20261030-the22-23-v1').then(({mountStudentSkillJourney})=>mountStudentSkillJourney(root,journey,async sessionNumber=>{
+      for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./the24.css?rev=20261102-the24-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=path;document.head.append(css);}
+      const root=document.createElement('section');root.id='thuyStudentJourneySkills';document.querySelector('#studentUpcoming').after(root);
+      void import('./thuy-live/student-skills-journey.js?rev=20261102-the24-v1').then(({mountStudentSkillJourney})=>mountStudentSkillJourney(root,journey,async sessionNumber=>{
         const response=await fetch(config.API_BASE_URL+'/api/learning/student/course-session-detail',{method:'POST',headers:{'content-type':'application/json'},
           body:JSON.stringify({accessToken,sessionNumber}),cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
         const payload=await response.json();if(!response.ok||!payload.ok)throw Error(payload.message||'Chưa đọc được bài buổi này.');return payload;
@@ -204,7 +214,7 @@ function renderJourney(journey) {
   elements.latestSpeakingFeedbackText.textContent = latestFeedbackSession?.teacherSessionFeedback.noteText || '';
   elements.timelineCount.textContent = `${journey.summary.totalSessions} buổi`;
   paintSessionCards();
-  paintJourneyComments(elements.journeyView,elements.sessionList,journey.sessions,session=>void openHistory(session));
+  paintJourneyComments(elements.journeyView,elements.sessionList,journey.sessions,session=>void openHistory(session),{showLatest:!document.body.classList.contains('thuy-student')});
   elements.reportHistory.hidden = !journey.reports.length;
   elements.reportList.replaceChildren(...journey.reports.map(buildReport));
   elements.journeyView.hidden = false;
@@ -243,7 +253,7 @@ let commentPoller=createCommentPoller({context:()=>journeyData&&accessToken?{acc
   request:async(path,options)=>{const response=await fetch(config.API_BASE_URL+'/api/learning'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(options.body),signal:options.signal,cache:'no-store',referrerPolicy:'no-referrer'});const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'Chưa đọc được nhận xét.');return data;},
   onData:data=>{if(!journeyData||data.studentRef!==journeyData.student.studentRef||String(data.classId)!==String(journeyData.class.classId))return;
     const byNumber=new Map(data.comments.map(note=>[note.sessionNumber,note]));journeyData.sessions=journeyData.sessions.map(session=>({...session,sessionComment:byNumber.get(session.sessionNumber)||null}));
-    paintSessionCards();paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session));
+    paintSessionCards();paintUpcoming();paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session),{showLatest:!document.body.classList.contains('thuy-student')});
     studentSkillView?.refreshComments(data.comments);
     if(historyDialog.open&&historySession){const existing=[...historyContent.querySelectorAll('[data-session-comment]')],panel=commentPanel(byNumber.get(historySession.sessionNumber));
       if(existing.length!==(panel?1:0)||existing[0]?.outerHTML!==panel?.outerHTML){existing.forEach(box=>box.remove());if(panel)historyContent.append(panel);}}
@@ -252,7 +262,7 @@ stampProgressStudent();void start();
 window.addEventListener('pageshow',event=>{if(event.persisted&&progressPinWasLoggedOut()){journeyData=null;accessToken='';elements.journeyView.hidden=true;location.replace(new URL('./student.html',location.href));}});
 
 // Đồng hồ chỉ làm mới thẻ; không gọi API và không thay quyền mở phần.
-function repaintSessionCards(){if(!journeyData)return;paintSessionCards();paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session));}
+function repaintSessionCards(){if(!journeyData)return;paintSessionCards();paintUpcoming();paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session),{showLatest:!document.body.classList.contains('thuy-student')});}
 function refreshClock(){repaintSessionCards();setTimeout(refreshClock,60000-Date.now()%60000+20);}
 setTimeout(refreshClock,60000-Date.now()%60000+20);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)repaintSessionCards();});
@@ -260,5 +270,5 @@ document.getElementById('journeyLogout')?.addEventListener('click',async()=>{
  const identity=createCourseStudentIdentity({product:'progress-log',entry:'private-journey',requestIdentity:input=>requestMappingStudentIdentity(input,config.API_BASE_URL)});
  const result=await identity.forget();if(result.status!=='empty'){setNotice('Chưa xóa được ghi nhớ. Em hãy thử lại.','error');return;}
  markProgressLogout();startGeneration++;historyGeneration++;historyController?.abort();commentPoller.stop();accessToken='';journeyData=null;
- history.replaceState({},'',location.pathname+location.search);location.replace(new URL('./student.html',location.href));
+ try{history.replaceState({},'',location.pathname+location.search);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}location.replace(new URL('./student.html',location.href));
 });

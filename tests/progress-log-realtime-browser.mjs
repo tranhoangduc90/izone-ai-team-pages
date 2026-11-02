@@ -50,6 +50,7 @@ async function fixture({libraryUnavailable=false,liveAllowed=true}={}){
           assignments:[{assignment_id:assignmentId,public_token:assignmentId,class_id:'1294',class_name:'IC2305',session_number:11,title:definition.title,status:'published',live_updates_enabled:liveAllowed}]});
         if(path==='/teacher/dashboard')return json({ok:true,dashboard:dashboard()});
         if(path==='/teacher/live-drafts')return json({ok:true,live:live()});
+        if(path==='/teacher/session-comments/editor')return json({ok:true,classId:u.searchParams.get('classId'),studentRef:u.searchParams.get('studentRef'),sessionNumber:Number(u.searchParams.get('sessionNumber')),comment:null,draft:null});
         if(path.endsWith('/question-analytics'))return json({ok:true,analytics:analytics()});
         if(path==='/teacher/question-library')return libraryUnavailable?json({ok:false,message:'Kho câu hỏi đang lỗi'},503):json({ok:true,items:[]});
         if(path==='/teacher/journey-plan')return json({ok:true,plan:{classId:'1294',className:'IC2305',totalSessions:11,highestKnownSession:11,revision:1,testSessionNumbers:[],testSources:[],sessionDates:[]}});
