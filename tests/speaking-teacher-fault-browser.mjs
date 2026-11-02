@@ -56,6 +56,18 @@ try{
  assert.match(await page.locator('#notice').innerText(),/chưa có quyền xem lớp/);
  assert.equal(await page.evaluate(()=>localStorage.getItem('fixture-student-draft')),'Nháp riêng vẫn còn');
  await save('new-cookie-narrower-role-clears-late-a',{workspaceHidden:true,detailEmpty:true,rowsEmpty:true,draftPreserved:true});
+ // HTTP429 ở stream thật: cả reconnect và fallback đều tôn trọng quote20s.
+ await page.close();f.control.cookie='observe_teacher='+'t'.repeat(43);
+ f.control.failures.push({path:path+'/events',status:429,retryAfter:20});const quoteStart=f.requests.length;
+ const quotaPage=await context.newPage();quotaPage.on('pageerror',error=>errors.push(error.message));
+ await quotaPage.goto(f.origin+'/speaking-homework/teacher-progress.html?code='+f.code+'&classId=2304');
+ await until(()=>f.requests.slice(quoteStart).some(row=>row.path===path+'/events'&&row.status===429));
+ const quoted=f.requests.slice(quoteStart).find(row=>row.path===path+'/events'&&row.status===429);await wait(16000);
+ assert.equal(f.requests.slice(quoteStart).filter(row=>row.path===path+'/events').length,1);
+ assert.equal(f.requests.slice(quoteStart).filter(row=>row.path===path+'/state').length,0);
+ await until(()=>f.requests.slice(quoteStart).some(row=>row.path===path+'/events'&&row.status===200),10000);
+ const retry=f.requests.slice(quoteStart).find(row=>row.path===path+'/events'&&row.status===200);
+ assert.ok(retry.at-quoted.at>=19500);await save('real-http429-stream-retry-after20s',{gapMs:retry.at-quoted.at,noEarlyFallback:true});
  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);succeeded=true;
 }finally{
  await browser?.close();await f.close();const sourceHashes={};

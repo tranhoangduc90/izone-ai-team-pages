@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createTestStateObserver} from '../shared/test-state-observer.mjs';
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
-function fakeClock(){let now=0,id=0;const pending=new Map();return {setTimer(fn,delay){const t={id:++id,unref(){}};pending.set(t.id,{fn,at:now+delay});return t;},clearTimer(t){if(t)pending.delete(t.id);},async advance(ms){const end=now+ms;let steps=0;while(true){const next=[...pending].filter(([,t])=>t.at<=end).sort(([,a],[,b])=>a.at-b.at)[0];if(!next)break;if(++steps>100)throw Error('Timer loop');now=next[1].at;pending.delete(next[0]);next[1].fn();await settle();}now=end;await settle();}};}
+function fakeClock(){let now=0,id=0;const pending=new Map();return {now:()=>now,setTimer(fn,delay){const t={id:++id,unref(){}};pending.set(t.id,{fn,at:now+delay});return t;},clearTimer(t){if(t)pending.delete(t.id);},async advance(ms){const end=now+ms;let steps=0;while(true){const next=[...pending].filter(([,t])=>t.at<=end).sort(([,a],[,b])=>a.at-b.at)[0];if(!next)break;if(++steps>100)throw Error('Timer loop');now=next[1].at;pending.delete(next[0]);next[1].fn();await settle();}now=end;await settle();}};}
 function pipe(){let control;const body=new ReadableStream({start(c){control=c;}}),encoder=new TextEncoder();return {response:new Response(body,{headers:{'Content-Type':'text/event-stream'}}),write:text=>control.enqueue(encoder.encode(text)),end:()=>control.close()};}
 
 test('Fetch stream keeps authorization in headers, parses split CRLF/Unicode frames and suppresses unchanged snapshots',async()=>{
@@ -99,4 +99,33 @@ test('A stream response arriving after its timeout cannot revoke the current val
  try{await settle();await time.advance(5000);assert.equal(streamSignal.aborted,true);assert.ok(states.length);
   resolveStream(new Response('{}',{status:401}));await settle();assert.equal(revoked,0);assert.equal(observer.snapshot().closed,false);
  }finally{observer.close();await settle();}
+});
+
+test('A429 stream quote delays both reconnect and fallback until Retry-After even beyond max reconnect backoff',async()=>{
+ const time=fakeClock();let streams=0,polls=0;
+ const observer=createTestStateObserver({url:'https://fixture.test/events',initialPollDelay:1000,maxReconnectDelay:5000,
+  poll:async()=>({revision:'poll-'+(++polls)}),onState(){},fetcher:async()=>{streams++;return new Response('{}',{status:429,headers:{'retry-after':'90'}});},...time});
+ try{await settle();await time.advance(89999);assert.equal(streams,1);assert.equal(polls,0);await time.advance(1);assert.equal(streams,2);assert.equal(polls,1);}
+ finally{observer.close();await settle();}
+});
+
+test('A503 stream HTTP-date quote is honored while malformed Retry-After retains native fallback timing',async()=>{
+ for(const valid of [true,false]){
+  const time=fakeClock();let streams=0,polls=0;
+  const observer=createTestStateObserver({url:'https://fixture.test/events',initialPollDelay:1000,
+   poll:async()=>({revision:'poll-'+(++polls)}),onState(){},fetcher:async()=>{streams++;return new Response('{}',{status:503,headers:{'retry-after':valid?new Date(Date.now()+90000).toUTCString():'not-a-delay'}});},...time});
+  try{await settle();if(valid){await time.advance(89000);assert.equal(streams,1);assert.equal(polls,0);}else{await time.advance(1000);assert.equal(streams,2);assert.ok(polls>=1);}}
+  finally{observer.close();await settle();}
+ }
+});
+
+test('A buffered reader chunk arriving after a stream deadline cannot revoke the valid polling session',async()=>{
+ const time=fakeClock(),states=[];let resolveRead,revoked=0,signal;
+ const reader={read:()=>new Promise(resolve=>{resolveRead=resolve;}),cancel:async()=>{}};
+ const observer=createTestStateObserver({url:'https://fixture.test/events',stallMs:5000,poll:async()=>({revision:'fresh-poll'}),onState:value=>states.push(value),onRevoked(){revoked++;},
+  fetcher:async(_url,options)=>{signal=options.signal;return{ok:true,status:200,headers:new Headers({'content-type':'text/event-stream'}),body:{getReader:()=>reader}};},...time});
+ try{await settle();await time.advance(5000);assert.equal(signal.aborted,true);assert.ok(states.length);
+  resolveRead({done:false,value:new TextEncoder().encode('event: access_revoked\ndata: {"status":401,"code":"OLD_STREAM"}\n\n')});await settle();
+  assert.equal(revoked,0);assert.equal(observer.snapshot().closed,false);assert.equal(states.at(-1).revision,'fresh-poll');
+ }finally{observer.close();resolveRead?.({done:true});await settle();}
 });

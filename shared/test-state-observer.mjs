@@ -3,14 +3,19 @@
  * Kênh lỗi dùng hàm đọc dự phòng; đổi người/lượt phải đóng observer trước khi mở lại.
  * Chỉ chuyển snapshot đổi cho giao diện. Lỗi đọc không biến dữ liệu cũ thành rỗng.
  */
-export function createTestStateObserver({url,headers={},poll,onState,onUnavailable=()=>{},onRevoked=()=>{},onUnsupported=()=>{},fetcher=fetch,pollInterval=1500,pollErrorInterval=4000,reconnectInterval=1000,maxReconnectDelay=5000,stallMs=40000,initialPollDelay=0,reconnectGraceMs=0,unsupportedStatuses=[],setTimer=setTimeout,clearTimer=clearTimeout}){
+export function createTestStateObserver({url,headers={},poll,onState,onUnavailable=()=>{},onRevoked=()=>{},onUnsupported=()=>{},fetcher=fetch,pollInterval=1500,pollErrorInterval=4000,reconnectInterval=1000,maxReconnectDelay=5000,stallMs=40000,initialPollDelay=0,reconnectGraceMs=0,unsupportedStatuses=[],setTimer=setTimeout,clearTimer=clearTimeout,now=()=>performance.now()}){
  if(![initialPollDelay,reconnectGraceMs].every(value=>Number.isFinite(value)&&value>=0&&value<=5000))throw Error('STATE_GRACE_OPTIONS_INVALID');
  if(!Array.isArray(unsupportedStatuses)||unsupportedStatuses.some(status=>![404,405,409].includes(status)))throw Error('STATE_UNSUPPORTED_OPTIONS_INVALID');
  const unsupportedCodes=new Set([404,405,...unsupportedStatuses]);
  if(!Number.isFinite(maxReconnectDelay)||maxReconnectDelay<1||maxReconnectDelay>60000)throw Error('STATE_RECONNECT_OPTIONS_INVALID');
  let closed=false,live=false,streaming=null,polling=null,streamController=null,streamReader=null,pollController=null,pollTimer=null,reconnectTimer=null,stallTimer=null,lastRevision=null,lastError=null,failures=0;
  const stats={streams:0,polls:0,states:0};
- let pollDelay=pollInterval;
+ let pollDelay=pollInterval,blockedUntil=0;
+ function retryAfter(response){
+  const raw=response.headers.get('retry-after')?.trim();if(!raw)return 0;
+  const delay=/^\d+$/.test(raw)?Math.min(Number(raw)*1000,2147483647):Date.parse(raw)-Date.now();
+  return Number.isFinite(delay)?Math.max(0,Math.min(delay,2147483647)):0;
+ }
  function timer(fn,delay){const t=setTimer(fn,delay);t?.unref?.();return t;}
  function unavailable(error){if(closed)return;const code=error.code||'STATE_CONNECTION_ERROR';if(lastError!==code){lastError=code;onUnavailable({code,status:error.status||503});}}
  function close(){if(closed)return;closed=true;live=false;for(const t of [pollTimer,reconnectTimer,stallTimer])clearTimer(t);streamController?.abort();pollController?.abort();void streamReader?.cancel().catch(()=>{});}
@@ -22,13 +27,13 @@ export function createTestStateObserver({url,headers={},poll,onState,onUnavailab
   if(fromStream){live=true;failures=0;clearTimer(pollTimer);pollTimer=null;pollController?.abort();}
   if(lastRevision!==value.revision||lastError){lastRevision=value.revision;lastError=null;stats.states++;onState(value);}
  }
- function schedulePoll(delay=pollDelay){if(closed||live||pollTimer||polling)return;pollTimer=timer(()=>{pollTimer=null;void check();},delay);}
+ function schedulePoll(delay=pollDelay){if(closed||live||pollTimer||polling)return;pollTimer=timer(()=>{pollTimer=null;void check();},Math.max(delay,blockedUntil-now()));}
  async function check(){
   if(closed||live||polling)return;pollController=new AbortController();const controller=pollController;
   polling=(async()=>{try{stats.polls++;const value=await poll({signal:controller.signal});if(closed||controller.signal.aborted)return;deliver(value);pollDelay=pollInterval;}catch(error){if(closed||controller.signal.aborted)return;pollDelay=Math.max(pollErrorInterval,Number.isFinite(error.retryAfterMs)?error.retryAfterMs:0);if([401,403,423].includes(error.status))revoked({code:error.code,status:error.status});else if(unsupportedCodes.has(error.status))unsupported();else unavailable(error);}})();
   try{await polling;}finally{polling=null;if(pollController===controller)pollController=null;schedulePoll();}
  }
- function scheduleConnect(immediate=false){if(closed||reconnectTimer)return;reconnectTimer=timer(()=>{reconnectTimer=null;void connect();},immediate?0:Math.min(maxReconnectDelay,reconnectInterval*2**Math.min(3,failures++)));}
+ function scheduleConnect(immediate=false){if(closed||reconnectTimer)return;reconnectTimer=timer(()=>{reconnectTimer=null;void connect();},Math.max(blockedUntil-now(),immediate?0:Math.min(maxReconnectDelay,reconnectInterval*2**Math.min(3,failures++))));}
  function armStall(controller){clearTimer(stallTimer);stallTimer=timer(()=>{unavailable({code:'STATE_STREAM_TIMEOUT'});controller.abort();void streamReader?.cancel().catch(()=>{});},stallMs);}
  async function connect(){
   if(closed||streaming)return;const controller=new AbortController();streamController=controller;let endedCleanly=false;
@@ -40,7 +45,7 @@ export function createTestStateObserver({url,headers={},poll,onState,onUnavailab
     if(closed||controller.signal.aborted){void response.body?.cancel().catch(()=>{});return;}
     if([401,403,423].includes(response.status)){let value;try{value=await response.json();}catch{}return revoked({code:value?.error||'ACCESS_DENIED',status:response.status});}
     if(unsupportedCodes.has(response.status))return unsupported();
-    if(!response.ok||!response.body||!response.headers.get('content-type')?.includes('text/event-stream'))throw Object.assign(Error('STATE_STREAM_UNAVAILABLE'),{code:'STATE_STREAM_UNAVAILABLE',status:response.status});
+    if(!response.ok||!response.body||!response.headers.get('content-type')?.includes('text/event-stream'))throw Object.assign(Error('STATE_STREAM_UNAVAILABLE'),{code:'STATE_STREAM_UNAVAILABLE',status:response.status,...([429,503].includes(response.status)?{retryAfterMs:retryAfter(response)}:{})});
     reader=response.body.getReader();streamReader=reader;const decoder=new TextDecoder();let line='',afterCR=false,event='message',data=[],size=0;
     function completeLine(){
      if(!line){
@@ -52,7 +57,7 @@ export function createTestStateObserver({url,headers={},poll,onState,onUnavailab
      if(field==='event')event=value;else if(field==='data')data.push(value);
     }
     while(!closed){
-     const next=await reader.read();if(next.done){endedCleanly=true;break;}armStall(controller);
+     const next=await reader.read();if(closed||controller.signal.aborted)break;if(next.done){endedCleanly=true;break;}armStall(controller);
      for(const character of decoder.decode(next.value,{stream:true})){
       if(afterCR){afterCR=false;if(character==='\n')continue;}
       if(character==='\r'||character==='\n'){completeLine();line='';afterCR=character==='\r';}
@@ -60,7 +65,7 @@ export function createTestStateObserver({url,headers={},poll,onState,onUnavailab
       if(closed)break;
      }
     }
-   }catch(error){if(!closed)unavailable(error);}
+   }catch(error){if(!closed){if(error.retryAfterMs>0){blockedUntil=Math.max(blockedUntil,now()+error.retryAfterMs);clearTimer(pollTimer);pollTimer=null;}unavailable(error);}}
    finally{clearTimer(stallTimer);try{await reader?.cancel();}catch{}if(streamReader===reader)streamReader=null;controller.abort();}
   })();
   try{await streaming;}finally{streaming=null;if(streamController===controller)streamController=null;if(!closed){const renew=endedCleanly&&live&&!lastError&&reconnectGraceMs>0;live=false;schedulePoll(renew?reconnectGraceMs:0);scheduleConnect(renew);}}
