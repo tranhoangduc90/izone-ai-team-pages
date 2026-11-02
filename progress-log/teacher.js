@@ -1,6 +1,6 @@
 import {renderClassAnalytics,renderStudentClassSummary} from './class-analytics-view.js?rev=20261007-comments';
 import {commentPanel,bindDialogDismiss} from './session-comments.js?rev=20261007-comments';
-import {commentEditor,journeyLinkManager,openStudentJourney,clearCommentDrafts} from './teacher-session-comments.js?rev=20261028-thuy-v1';
+import {commentEditor,journeyLinkManager,openStudentJourney,clearCommentDrafts} from './teacher-session-comments.js?rev=20261102-the24-v1';
 import {contentTitle,sessionHeading} from './session-presentation.js';
 import {createTeacherLiveUpdates,paintConnection} from './teacher-live-updates.js?rev=20261023-read-recovery-v2';
 import {writingResultLink} from './student-test-results.js?rev=20261030-the22-23-v1';
@@ -28,7 +28,7 @@ import {mountAssignmentManagement} from './thuy-live/assignment-management.js?re
 const config = window.PROGRESS_LOG_CONFIG || {};
 // Link chung luôn dùng preset đã duyệt; giữ tham số cũ chỉ cho đường tương thích được chỉ định rõ.
 const THUY_UI=new URLSearchParams(location.search).get('presentation')!=='legacy';
-const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261030-the22-23-v1'):null;
+const thuySkills=THUY_UI?await import('./thuy-live/course-skills.js?rev=20261102-the24-v1'):null;
 if(THUY_UI)document.body.classList.add('thuy-live','thuy-teacher');
 const sessionClient = createTeacherSessionClient({
   apiBaseUrl: config.API_BASE_URL,
@@ -308,13 +308,13 @@ async function loadCourseOverview({preserve=true}={}) {
       +(state.overview.testCoverage==='temporarily_unavailable'?' · Chưa đọc được nguồn Test.':'')
       +(state.overview.planOutdated?' · Kế hoạch cần giảng viên xác nhận lại.':'');
     if(state.overview.rosterCoverage==='mapping_unverified') elements.overviewStatus.textContent+=' · Danh sách chưa được đối chiếu snapshot ERP mới nhất.';
-    if(state.overview.scheduleStatus==='needs_review') elements.overviewStatus.textContent+=' · Có lịch cần đối chiếu; các mốc đã chốt vẫn được giữ. Mở Kế hoạch buổi học để xem ngày trước/sau.';
+    if(!THUY_UI&&state.overview.scheduleStatus==='needs_review') elements.overviewStatus.textContent+=' · Có lịch cần đối chiếu; các mốc đã chốt vẫn được giữ. Mở Kế hoạch buổi học để xem ngày trước/sau.';
     if(state.overview.scheduleStatus==='temporarily_unavailable') elements.overviewStatus.textContent+=' · Chưa đọc được lịch hiện hành; đang giữ dữ liệu đã lưu.';
     if(THUY_UI)elements.overviewStatus.textContent=[
       state.overview.testCoverage==='temporarily_unavailable'&&'Chưa tải đủ điểm Test. Hãy làm mới để thử lại.',
       state.overview.planOutdated&&'Kế hoạch cần giảng viên xác nhận lại.',
       state.overview.rosterCoverage==='mapping_unverified'&&'Danh sách chưa được đối chiếu snapshot ERP mới nhất.',
-      state.overview.scheduleStatus==='needs_review'&&'Có lịch cần đối chiếu. Mở Kế hoạch buổi học để xem ngày trước/sau.',
+      !THUY_UI&&state.overview.scheduleStatus==='needs_review'&&'Có lịch cần đối chiếu. Mở Kế hoạch buổi học để xem ngày trước/sau.',
       state.overview.scheduleStatus==='temporarily_unavailable'&&'Chưa đọc được lịch hiện hành; đang giữ dữ liệu đã lưu.'
     ].filter(Boolean).join(' · ');
     paintCourseOverview();
@@ -731,15 +731,19 @@ function draftAnswerCards(live){
     return card;
   });
 }
+function draftAnswerSignature(live){return JSON.stringify({assignmentId:state.dashboard?.assignmentId,definition:state.dashboard?.definition,live},
+  (key,value)=>['generatedAt','observedAt','capturedAt','serverNow'].includes(key)?undefined:value);}
 function paintOpenDraft(){
   if(!elements.draftDialog.open||!state.draftStudent)return;
   const student=state.dashboard?.students.find(s=>s.studentRef===state.draftStudent.studentRef);
   if(!student){elements.draftDialog.close();return;}
   state.draftStudent=student;const live=state.liveByStudent.get(student.studentRef)||{};
   const answers=elements.draftAnswers.querySelector('[data-live-answers]');
-  if(answers){const scroll=elements.draftDialog.scrollTop;answers.replaceChildren(...draftAnswerCards(live));elements.draftDialog.scrollTop=scroll;}
+  const signature=draftAnswerSignature(live);
+  if(answers&&answers.dataset.signature!==signature){const scroll=elements.draftDialog.scrollTop;answers.replaceChildren(...draftAnswerCards(live));answers.dataset.signature=signature;elements.draftDialog.scrollTop=scroll;}
   elements.draftStatus.textContent=live.submissionId?`Đã nộp lúc ${formatSavedAt(live.submittedAt)} · đây là bản cuối.`:
     live.attemptId?`Bản lưu số ${live.draftRevision||0} · lưu lúc ${formatSavedAt(live.draftUpdatedAt)}.`:'Chưa bắt đầu · Chưa có bài làm';
+  elements.draftStatus.hidden=THUY_UI&&Boolean(live.submissionId);
 }
 function openDraft(student,focusComment=false) {
   const live = state.liveByStudent.get(student.studentRef)||{};
@@ -762,7 +766,9 @@ function openDraft(student,focusComment=false) {
   elements.draftStatus.textContent = THUY_UI&&!live.attemptId?'Chưa bắt đầu · Chưa có bài làm':live.submissionId
     ? `Đã nộp lúc ${formatSavedAt(live.submittedAt)} · đây là bản cuối.`
     : `Bản lưu số ${live.draftRevision || 0} · lưu lúc ${formatSavedAt(live.draftUpdatedAt)}. Nội dung có thể chậm hơn thao tác gõ vài giây.`;
+  elements.draftStatus.hidden=THUY_UI&&Boolean(live.submissionId);
   const answers=document.createElement('div');answers.dataset.liveAnswers='1';answers.append(...draftAnswerCards(live));
+  answers.dataset.signature=draftAnswerSignature(live);
   elements.draftAnswers.replaceChildren(answers);
   if(THUY_UI)showThuyDetail(elements.draftDialog);else elements.draftDialog.showModal();
   if(state.dashboard.journeyCommentsEnabled) mountCommentEditor(elements.draftAnswers,elements.draftDialog,

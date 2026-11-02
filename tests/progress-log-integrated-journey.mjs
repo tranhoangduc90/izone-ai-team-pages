@@ -1,13 +1,17 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from '../progress-log/session-presentation.js';
+import {upcomingSession,dashboardSessionState} from '../progress-log/student-session-dashboard.js';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 
 class Node {
-  constructor() { this.children = []; this.textContent = ''; this.hidden = false; this.dataset={}; }
-  append(...children) { this.children.push(...children); }
-  replaceChildren(...children) { this.children = children; }
+  constructor() { this.children = []; this.textContent = ''; this.hidden = false; this.dataset={};this.classList={toggle(){}}; }
+  append(...children) { for(const child of children){child.parent=this;this.children.push(child);} }
+  replaceChildren(...children) { this.children = [];this.append(...children); }
+  insertBefore(child,before){if(child.parent)child.remove();child.parent=this;const i=this.children.indexOf(before);this.children.splice(i<0?this.children.length:i,0,child);}
+  remove(){if(this.parent){this.parent.children=this.parent.children.filter(c=>c!==this);this.parent=null;}}
+  replaceWith(child){const parent=this.parent;if(parent){parent.insertBefore(child,this);this.remove();}}
   setAttribute() {}
   addEventListener() {}
 }
@@ -33,7 +37,7 @@ function contextFor(journey) {
   };
   const calls = [];
   const context = { THUY_UI:false,
-    contentTitle,skillsLabel,sessionHeading,sessionState,commentPanel:()=>null,paintJourneyComments:()=>{}, AbortController, setTimeout, clearTimeout,
+    contentTitle,skillsLabel,sessionHeading,sessionState,upcomingSession,dashboardSessionState,commentPanel:()=>null,paintJourneyComments:()=>{}, AbortController, setTimeout, clearTimeout,
     document: { createElement: () => new Node() }, elements, state,
     apiRequest: async (path, options) => { calls.push({ path, options }); return { journey }; },
     showView: view => calls.push({ view }),

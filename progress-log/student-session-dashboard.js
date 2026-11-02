@@ -1,4 +1,4 @@
-import {contentTitle,sessionState,startsAt} from './session-presentation.js';
+import {contentTitle,sessionState,startsAt,vietnamDate} from './session-presentation.js';
 import {commentPanel,node} from './session-comments.js';
 
 // Chỉ đọc danh sách đã được API giới hạn đúng người/lớp. Không tạo lượt làm hay điểm danh.
@@ -8,23 +8,43 @@ export function latestAssignedSession(sessions){
   return [...assigned].sort((a,b)=>(dated?startsAt(b.sessionDate)-startsAt(a.sessionDate):0)
     ||Number(b.sessionNumber)-Number(a.sessionNumber)||String(a.assignmentId).localeCompare(String(b.assignmentId)))[0]||null;
 }
+// Chọn từ lịch đã xác nhận, kể cả buổi chưa được giao phiếu.
+export function upcomingSession(sessions,now=Date.now()){
+  const today=vietnamDate(now);
+  return [...sessions].filter(s=>startsAt(s.sessionDate)!==null&&s.sessionDate>=today)
+    .sort((a,b)=>a.sessionDate.localeCompare(b.sessionDate)||Number(a.sessionNumber)-Number(b.sessionNumber))[0]||null;
+}
 export function dashboardSessionState(session,now=Date.now()){
   const saved=['complete','incomplete'].includes(session.completeness);
   if(saved)return {kind:'complete',label:session.completeness==='complete'?'Đã nộp':'Đã nộp · còn câu trống',action:'Xem bài đã nộp',readOnly:true};
   const status=sessionState(session,{assignmentId:session.assignmentId,status:session.testResult?'test_result':session.conflict?'needs_review':session.attemptStatus==='not_assigned'?'not_assigned':'not_submitted'},
     session.assignmentId?{title:session.title,status:session.assignmentStatus}:null,now);
-  if(session.submissionWindow?.canSubmit===false){
+  if(session.assignmentId&&status.kind!=='review'&&session.submissionWindow?.canSubmit===false){
     const reason=session.submissionWindow.reason;
     return {...status,canLearn:false,kind:'locked',label:reason==='not_open'?'Chưa đến giờ mở phiếu':reason==='deadline_invalid'?'Hạn nhận bài cần được kiểm tra':'Phiếu đã đóng nhận bài',action:session.sessionComment||session.testResult?'Xem kết quả và nhận xét':null,readOnly:true};
   }
   return {...status,action:status.canLearn?'Mở phiếu':session.sessionComment||session.testResult?'Xem kết quả và nhận xét':null,readOnly:!status.canLearn};
+}
+const upcomingViews=new WeakMap();
+export function renderUpcomingSession(host,sessions,{now=Date.now(),onOpen}={}){
+  const session=upcomingSession(sessions,now),state=session?dashboardSessionState(session,now):null;
+  const fingerprint=JSON.stringify({session:session&&{sessionNumber:session.sessionNumber,sessionDate:session.sessionDate,title:session.title,assignmentId:session.assignmentId,publicToken:session.publicToken,sessionKind:session.sessionKind},state});if(host.childElementCount&&upcomingViews.get(host)===fingerprint)return;
+  upcomingViews.set(host,fingerprint);host.classList.add('student-upcoming');
+  const copy=node('div','','student-upcoming-copy');copy.append(node('p','BUỔI HỌC SẮP TỚI','eyebrow'));
+  if(!session){delete host.dataset.sessionNumber;copy.append(node('p',sessions.some(s=>startsAt(s.sessionDate)!==null)?'Chưa có buổi học sắp tới trong lịch đã xác nhận.':'Chưa có ngày học được xác nhận.','muted'));host.replaceChildren(copy);return;}
+  host.dataset.sessionNumber=String(session.sessionNumber);
+  const title=contentTitle(session,{title:session.title});
+  copy.append(node('h2','Buổi '+session.sessionNumber+' · '+title),node('span',state.kind==='active'?'Chưa hoàn thành':state.label,'upcoming-state state-'+state.kind));
+  if(!state.canLearn&&!state.action){host.replaceChildren(copy);return;}
+  const button=node('button',state.canLearn?'Bấm vào đây để bắt đầu làm bài →':state.action,'button primary');button.type='button';
+  button.addEventListener('click',()=>onOpen?.(session,state));host.replaceChildren(copy,button);
 }
 const signature=session=>JSON.stringify({...session,submissionWindow:session.submissionWindow?{
   canSubmit:session.submissionWindow.canSubmit,reason:session.submissionWindow.reason,effectiveClosesAt:session.submissionWindow.effectiveClosesAt}:null});
 export function createStudentSessionDashboard({before,after,onOpen,onJourney,onRetry}){
   const latest=node('section','','student-dashboard-latest'),status=node('p','','muted'),retry=node('button','Thử lại','button');
   status.setAttribute('role','status');retry.type='button';retry.hidden=true;retry.addEventListener('click',onRetry);
-  latest.append(node('p','BUỔI GẦN NHẤT ĐÃ GIAO','eyebrow'),status,retry);before.append(latest);
+  latest.append(status,retry);before.append(latest);
   const latestHost=node('div');latest.append(latestHost);
   const section=node('section','','student-dashboard-sessions'),head=node('div','','student-dashboard-heading'),journey=node('button','Kết quả học tập và nhận xét','button');
   journey.type='button';journey.addEventListener('click',onJourney);head.append(node('h2','Tất cả buổi học'),journey);
@@ -47,10 +67,10 @@ export function createStudentSessionDashboard({before,after,onOpen,onJourney,onR
     error(message){status.textContent='Chưa tải được danh sách: '+message;retry.hidden=false;},
     render(journey,{currentId,now=Date.now()}={}){
       const key=journey.class.classId+':'+journey.student.studentRef;if(owner!==key){this.clear();owner=key;}
-      const sessions=journey.sessions||[],newest=latestAssignedSession(sessions);retry.hidden=true;status.textContent=newest?'':'Chưa có phiếu nào được giao.';
+      const sessions=journey.sessions||[],newest=upcomingSession(sessions,now);retry.hidden=true;status.textContent='';
       const fingerprint=session=>signature(session)+':'+JSON.stringify(dashboardSessionState(session,now))+':'+currentId;
       const nextLatest=newest?fingerprint(newest):'empty';
-      if(latestSignature!==nextLatest){latestHost.replaceChildren(...(newest?[card(newest,currentId,now)]:[]));latestSignature=nextLatest;}
+      renderUpcomingSession(latestHost,sessions,{now,onOpen});latestSignature=nextLatest;
       const keep=new Set();
       for(const session of [...sessions].sort((a,b)=>Number(a.sessionNumber)-Number(b.sessionNumber))){
         const id=String(session.sessionNumber)+':'+(session.assignmentId||''),sig=fingerprint(session);keep.add(id);

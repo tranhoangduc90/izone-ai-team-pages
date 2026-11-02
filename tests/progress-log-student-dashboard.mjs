@@ -31,18 +31,19 @@ test('R03/C20: cập nhật ba nhịp giữ node, cuộn và bôi chọn; thay n
       const data={class:{classId:'class'},student:{studentRef:'A'},sessions:[{assignmentId:'old',sessionNumber:1,sessionDate:'2026-01-01',title:'Bài cũ',assignmentStatus:'closed',completeness:'complete'},
         {assignmentId:'new',sessionNumber:2,sessionDate:'2026-01-02',title:'Bài mới',assignmentStatus:'published',submissionWindow:{canSubmit:true,serverNow:'2026-10-28T00:00:00Z'}},
         {sessionNumber:3,sessionDate:null,title:'Buổi 3'}]};
-      ui.render(data,{currentId:'new'});const latest=document.querySelector('#before [data-session-number="2"]'),card=document.querySelector('#after [data-session-number="1"]'),text=card.querySelector('h3').firstChild;
+      const now=Date.parse('2026-01-02T12:00:00Z');
+      ui.render(data,{currentId:'new',now});const latest=document.querySelector('#before [data-session-number="2"]'),card=document.querySelector('#after [data-session-number="1"]'),text=card.querySelector('h3').firstChild;
       const range=document.createRange();range.selectNodeContents(text);getSelection().removeAllRanges();getSelection().addRange(range);scrollTo(0,500);const scroll=scrollY;
-      for(let tick=1;tick<=3;tick++){const copy=structuredClone(data);copy.sessions[1].submissionWindow.serverNow='2026-10-28T00:00:0'+tick+'Z';ui.render(copy,{currentId:'new'});}
+      for(let tick=1;tick<=3;tick++){const copy=structuredClone(data);copy.sessions[1].submissionWindow.serverNow='2026-10-28T00:00:0'+tick+'Z';ui.render(copy,{currentId:'new',now});}
       const stable=latest===document.querySelector('#before [data-session-number="2"]')&&card===document.querySelector('#after [data-session-number="1"]')&&getSelection().toString()==='Bài cũ'&&scrollY===scroll;
-      data.sessions[0].sessionComment={noteText:'Nhận xét vừa sửa',visibility:'visible',sessionNumber:1};ui.render(data,{currentId:'new'});
+      data.sessions[0].sessionComment={noteText:'Nhận xét vừa sửa',visibility:'visible',sessionNumber:1};ui.render(data,{currentId:'new',now});
       const latestUnchanged=latest===document.querySelector('#before [data-session-number="2"]');
       ui.render({class:data.class,student:{studentRef:'B'},sessions:[]});const oldRemoved=!document.querySelector('[data-session-number]'),emptyText=document.querySelector('#before').textContent;
       const scheduled={class:data.class,student:{studentRef:'B'},sessions:[{assignmentId:'scheduled',sessionNumber:7,sessionDate:'2026-10-28',title:'Qua giờ mở',assignmentStatus:'published',submissionWindow:{canSubmit:true}}]};
-      ui.render(scheduled,{now:Date.parse('2026-10-28T18:24:00+07:00')});const locked=document.querySelector('#before article'),before=locked.textContent;
-      ui.render(scheduled,{now:Date.parse('2026-10-28T18:26:00+07:00')});const open=document.querySelector('#before article'),opened=open.textContent.includes('Mở phiếu');
-      ui.render(scheduled,{now:Date.parse('2026-10-28T18:27:00+07:00')});return {stable,latestUnchanged,oldRemoved,text:emptyText,before,opened,clockChanged:locked!==open,clockStable:open===document.querySelector('#before article')};
-    });assert.equal(result.stable,true);assert.equal(result.latestUnchanged,true);assert.equal(result.oldRemoved,true);assert.match(result.text,/Chưa có phiếu nào được giao/);
+      ui.render(scheduled,{now:Date.parse('2026-10-28T18:24:00+07:00')});const locked=document.querySelector('#before .student-upcoming>div'),before=locked.textContent;
+      ui.render(scheduled,{now:Date.parse('2026-10-28T18:26:00+07:00')});const open=document.querySelector('#before .student-upcoming>div'),opened=document.querySelector('#before').textContent.includes('Bấm vào đây để bắt đầu làm bài');
+      ui.render(scheduled,{now:Date.parse('2026-10-28T18:27:00+07:00')});return {stable,latestUnchanged,oldRemoved,text:emptyText,before,opened,clockChanged:locked!==open,clockStable:open===document.querySelector('#before .student-upcoming>div')};
+    });assert.equal(result.stable,true);assert.equal(result.latestUnchanged,true);assert.equal(result.oldRemoved,true);assert.match(result.text,/Chưa có ngày học được xác nhận/);
     assert.match(result.before,/Chưa đến buổi học/);assert.equal(result.opened,true);assert.equal(result.clockChanged,true);assert.equal(result.clockStable,true);
   }finally{await browser.close();await new Promise(done=>server.close(done));}
 });
