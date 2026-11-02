@@ -49,7 +49,11 @@ function persist(){
 }
 function promoteDraft(){
   scenario=state.isSample?'sample-current':'current';
-  const url=new URL(location.href);if(state.isSample)url.searchParams.set('scenario','sample-current');else url.searchParams.delete('scenario');window.history.replaceState(null,'',url);
+  // Sửa URL chỉ để giữ ngữ cảnh màn hình; lỗi History API không được chặn nhận/lưu đáp án.
+  try{
+    const url=new URL(location.href);if(state.isSample)url.searchParams.set('scenario','sample-current');else url.searchParams.delete('scenario');
+    if(url.href!==location.href)window.history.replaceState(null,'',url.href);
+  }catch{/* Trình duyệt từ chối sửa URL vẫn cho phép tiếp tục ghi nhận bài làm. */}
   const picker=document.querySelector('#scenario');if(picker)picker.value=state.isSample?'draft':'current';
 }
 function normalize(value){return String(value||'').normalize('NFKC').replace(/\s+/g,' ').trim().toLowerCase();}
