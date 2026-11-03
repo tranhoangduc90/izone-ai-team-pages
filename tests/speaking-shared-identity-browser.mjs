@@ -101,11 +101,13 @@ async function setup(options = {}) {
       students: [{ student_ref: refA, name: 'Chủ Docs thử' }],
       parts: lessonParts.map(([part_key, min_questions]) => ({ part_key, min_questions })), requiredPracticeCount: 2, doctorEnabled: true,
     } });
+    if (endpoint === '/assignment/open' && options.unmatched) return send({ assignment: { classCode: 'IC2304',
+      intakeMode: 'unmatched', assignmentStatus: 'open', selectedStudentRef: '' } });
     if (endpoint === '/assignment/open') return send({ assignment: { classCode: 'IC2305',
       assignmentStatus: 'open', selectedStudentRef: refB } });
     if (endpoint === '/assignment/roster') return send({ assignment: {
       assignmentCode, classCode: code, title: 'Bài Speaking thử', assignmentStatus: 'open',
-      ...(body.documentId ? { selectedStudentRef: refB } : {}),
+      ...(body.documentId ? options.unmatched ? { intakeMode: 'unmatched', selectedStudentRef: '' } : { selectedStudentRef: refB } : {}),
       students: code === 'IC2305' ? [{ student_ref: refB, name: 'Học viên thử B' }]
         : [{ student_ref: refOther, name: 'Học viên thử A' }, { student_ref: refA, name: 'Học viên thử A' }],
       parts: lessonParts.map(([part_key, min_questions]) => ({ part_key, min_questions })),
@@ -153,6 +155,20 @@ async function scenario(name, options, run) {
   } finally { await fixture.context.close(); }
 }
 try {
+  for (const identity of [null, a]) await scenario('Docs chưa khớp luôn chờ chọn tên, kể cả đã nhớ người',
+    { identity, unmatched: true, independent: true, query: '?documentId=fixture-unmatched-doc&class=IC2304' }, async f => {
+      await f.page.locator('#student-select option[value="' + refA + '"]').waitFor({ state: 'attached' });
+      assert.equal(await f.page.locator('#student-select').inputValue(), '');
+      assert.equal(f.sessionRequests().length, 0);
+      assert.equal(await f.page.locator('#class-select').inputValue(), 'IC2304');
+      assert.equal(await f.page.locator('#class-select').isDisabled(), true);
+      await f.page.locator('#student-select').selectOption(refA);
+      await f.page.locator('#open-homework').click();
+      await f.page.locator('#homework-content').waitFor({ state: 'visible' });
+      assert.equal(f.sessionRequests().length, 1);
+      assert.equal(f.sessionRequests()[0].body.documentId, 'fixture-unmatched-doc');
+      assert.equal(f.sessionRequests()[0].body.studentRef, refA);
+    });
   await scenario('Đã nhớ ở nơi khác: bỏ màn đăng nhập và mở đúng UUID dù trùng tên', { identity: a }, async f => {
     await f.page.locator('#homework-content').waitFor({ state: 'visible' });
     assert.equal(await f.page.locator('#login-screen').isHidden(), true);
