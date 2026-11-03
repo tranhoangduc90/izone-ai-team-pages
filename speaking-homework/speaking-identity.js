@@ -143,7 +143,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       if (['draft', 'deleted', 'missing', 'ambiguous'].includes(next.assignmentStatus)) {
         throw new Error('Bài của lớp này chưa sẵn sàng để mở.');
       }
-      if (useDocument(code)) {
+      const chooseUnmatched = useDocument(code) && next.intakeMode === 'unmatched' && !next.selectedStudentRef;
+      if (useDocument(code) && !chooseUnmatched) {
         const owner = next.selectedStudentRef;
         if (!uuid.test(owner || '') || next.students.filter(s => refOf(s) === owner).length !== 1)
           throw new Error('Link Homework chưa có duy nhất chủ bài hợp lệ.');
@@ -168,7 +169,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
         studentSelect.add(new Option(student.name + (counts.get(student.name) > 1 ? ` · ${ref.slice(-4)}` : ''), ref));
       }
       studentSelect.disabled = !roster.size;
-      const suggested = next.selectedStudentRef || preferred;
+      const suggested = chooseUnmatched ? '' : next.selectedStudentRef || preferred;
       studentSelect.value = roster.has(suggested) ? suggested : '';
       button.disabled = !studentSelect.value;
       $('remembered-identity').hidden = !studentSelect.value;
@@ -176,7 +177,9 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       contextText(next);
       if (useDocument(code)) {
         classSelect.disabled = true;
-        $('assignment-context').textContent = `Bài của ${roster.get(next.selectedStudentRef)} · ${code}. Nếu không phải bạn, hãy mở link Homework của mình.`;
+        $('assignment-context').textContent = chooseUnmatched
+          ? `Bài của lớp ${code}. Chọn đúng tên của bạn để làm bài trong file Homework này.`
+          : `Bài của ${roster.get(next.selectedStudentRef)} · ${code}. Nếu không phải bạn, hãy mở link Homework của mình.`;
       }
       message(roster.size ? `Đã tải ${roster.size} học viên của lớp ${code}.${next.assignmentStatus === 'closed' ? ' Homework đã đóng. Chỉ học viên đã nộp bài mới có thể vào luyện thêm.' : useDocument(code) ? ' Bài sẽ được ghi vào đúng file Homework của link này.' : ''}` : 'Lớp này chưa có học viên hợp lệ để mở bài.');
     } catch (error) {
@@ -347,7 +350,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     }
   }
   async function tryAutoOpen(generation) {
-    if (requireManualSelection || !sharedResolution || !resolutionIsCurrent(sharedResolution) || active
+    if ((useDocument(selectedCode) && assignment?.intakeMode === 'unmatched' && !assignment.selectedStudentRef)
+        || requireManualSelection || !sharedResolution || !resolutionIsCurrent(sharedResolution) || active
         || generation !== selectionGeneration || !assignment || !canOpenClass(selectedCode)) return;
     const choice = selectStudentIdentityAlias(sharedResolution, { classHint: selectedCode });
     if (choice.status !== 'unique' || !roster.has(choice.alias.studentRef)) return;
