@@ -774,11 +774,7 @@
             classCode,
             studentRef: state.studentRef,
             attemptToken: state.attemptToken,
-            promptVersion,
-            listeningAnswers: state.drafts.listening,
-            readingAnswers: state.drafts.reading,
-            task1: state.drafts.writing.task1,
-            task2: state.drafts.writing.task2
+            promptVersion
           })
         })
         : await apiRequest('/api/term-tests/result', {
