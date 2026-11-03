@@ -31,20 +31,33 @@
         const {createTestStateObserver}=await import(observerModule);if(version!==observationGeneration||blocked)return;
         const active=()=>version===observationGeneration&&scope===generation&&!blocked;
         const path=prefix+(access?.teacher?window.Reading67Access.teacherPath:''),query=id?'?attemptId='+encodeURIComponent(id):'';
-        let desired=null,applied=null,loading=false,retryTimer=null;const attemptController=new AbortController();
+        let desired=null,applied=null,loading=false,retryTimer=null,detailEpoch=0,acceptedAttempt=null;const attemptController=new AbortController();
         observerCleanup=()=>{clearTimeout(retryTimer);attemptController.abort();};
         async function loadAttempt(){
-          if(loading||!id)return;loading=true;
-          try{while(active()&&desired!==applied){const target=desired,value=await getAttempt(id,{signal:attemptController.signal});if(!active())return;if(target===desired){applied=target;deliverAttempt(value);}}}
-          catch(error){if(active()){if([401,403,423].includes(error.status)){revoke({code:error.code,status:error.status});return;}callback?.({status:'connection_error',errorCode:error.code});clearTimeout(retryTimer);retryTimer=setTimeout(()=>{if(active())void loadAttempt();},Math.max(4000,error.retryAfterMs||0));}}
+          if(loading||!id)return;loading=true;let readEpoch=detailEpoch;
+          try{while(active()&&desired!==applied){const target=desired;readEpoch=detailEpoch;const value=await getAttempt(id,{signal:attemptController.signal});if(!active())return;if(target===desired&&readEpoch===detailEpoch){applied=target;acceptedAttempt=value;deliverAttempt(value);}}}
+          catch(error){if(active()&&readEpoch===detailEpoch){if([401,403,423].includes(error.status)){revoke({code:error.code,status:error.status});return;}callback?.({status:'connection_error',errorCode:error.code});clearTimeout(retryTimer);retryTimer=setTimeout(()=>{if(active())void loadAttempt();},Math.max(4000,error.retryAfterMs||0));}}
           finally{loading=false;}
         }
-        observer=createTestStateObserver({url:path+'/events'+query,headers:{...window.Reading67Access?.headers},poll:({signal})=>request(path+'/status'+query,{signal},false),
+        // Khi cần REST dự phòng cho bài đang chờ, đọc hai nguồn độc lập cùng lúc.
+        // Vẫn trả nguyên snapshot đầy đủ; bài kết thúc chỉ còn đọc trạng thái gọn.
+        async function pollState({signal}){
+          const statusRead=request(path+'/status'+query,{signal},false);
+          const knownAttempt=acceptedAttempt||lastAttempt;
+          if(!id||knownAttempt?.attemptId===id&&!['queued','processing'].includes(knownAttempt.status))return statusRead;
+          const [value,attempt]=await Promise.all([statusRead,getAttempt(id,{signal})]);
+          if(attempt.attemptId!==id)throw Object.assign(Error('ATTEMPT_IDENTITY_MISMATCH'),{code:'ATTEMPT_IDENTITY_MISMATCH',status:409});
+          return {...value,status:attempt.status,errorCode:attempt.errorCode,revision:JSON.stringify([value.revision,visibleAttempt(attempt)]),polledAttempt:attempt};
+        }
+        observer=createTestStateObserver({url:path+'/events'+query,headers:{...window.Reading67Access?.headers},poll:pollState,
           onState(value){
             if(!active())return;state.trackingError=null;
             deliverPractice(value,id);
             if(access?.config?.homeworkEnabled&&!access.teacher){const jobs=value.jobs||[],last=jobs.filter(j=>j.kind==='status').at(-1),cta=jobs.find(j=>j.kind==='cta');const next={status:last?.status||'not_started',cta:cta?.status||'pending',jobs,hasTarget:value.hasDocumentTarget};if(JSON.stringify(next)!==JSON.stringify(state.homework)){state.homework=next;emit();}}
-            if(id&&value.attemptId===id){desired=JSON.stringify([id,value.status,value.errorCode,value.resultRevision,value.validationRevision,value.recoveryRevision]);void loadAttempt();}
+            if(id&&value.attemptId===id){desired=JSON.stringify([id,value.status,value.errorCode,value.resultRevision,value.validationRevision,value.recoveryRevision]);if(value.polledAttempt?.attemptId===id){detailEpoch++;acceptedAttempt=value.polledAttempt;
+              // Hai GET song song không cùng snapshot: không gắn revision metadata vào chi tiết.
+              desired=applied=JSON.stringify(['polled',visibleAttempt(value.polledAttempt)]);deliverAttempt(value.polledAttempt);
+            }else void loadAttempt();}
           },
           onUnavailable(value){if(active()){state.trackingError=value.code;if(practiceWatch){practiceWatch.last=null;practiceWatch.update({status:'unavailable',message:'Chưa đọc được trạng thái link; bài đang viết vẫn được giữ.'});}callback?.({status:'connection_error',errorCode:value.code});}},
           onRevoked(value){if(active())revoke(value);},
