@@ -17,7 +17,7 @@ test.before(async()=>{
   const url=new URL(req.url,'http://localhost');
   const file=resolve(root,'.'+(url.pathname.endsWith('/')?url.pathname+'index.html':url.pathname));
   if(!file.startsWith(root+sep))return res.writeHead(403).end();
-  try{const bytes=await readFile(file);res.writeHead(200,{'content-type':({'.html':'text/html','.js':'text/javascript','.css':'text/css'})[extname(file)]||'application/octet-stream'}).end(bytes);}catch{res.writeHead(404).end();}
+  try{const bytes=await readFile(file);res.writeHead(200,{'content-type':({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css'})[extname(file)]||'application/octet-stream'}).end(bytes);}catch{res.writeHead(404).end();}
  });
  await new Promise(done=>server.listen(0,'127.0.0.1',done));base='http://127.0.0.1:'+server.address().port;
  browser=await chromium.launch({channel:'chrome',headless:true});
@@ -59,7 +59,7 @@ async function fixture(classCode,{storageState,loginFailureApi,sessionRegistry=n
    }
    if(!isAuthenticated(request,kind))return reply({ok:false},401);
    if(url.pathname.endsWith('/teacher/options'))return reply({ok:true,reviewer:{displayName:'Giảng viên giả'},classes:[{id:'class-'+kind,name:kind==='demo'?'CODEXDEMO56':classCode==='CODEXDEMO56'?'IC2264':classCode}],tests:[{slug:'term-test-1-k56',title:'Bài thi giả',scoreMode:'raw',sectionTotals:{listening:40,reading:26},writingTasks:[2]}]});
-   if(url.pathname.endsWith('/teacher/results'))return reply({ok:true,students:[]});
+   if(url.pathname.endsWith('/teacher/results'))return reply({ok:true,class:{id:'class-'+kind,name:kind==='demo'?'CODEXDEMO56':classCode==='CODEXDEMO56'?'IC2264':classCode},test:{slug:'term-test-1-k56'},students:[]});
    return reply({ok:false},404);
   }
   if(url.origin===base)return route.continue();return route.abort();

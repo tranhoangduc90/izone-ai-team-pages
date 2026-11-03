@@ -24,6 +24,10 @@ for(const family of ['k67','k56'])test(`Term/Mini ${family}: từ CTA tới đú
   if(url.hostname==='accounts.google.com')return route.fulfill({contentType:'text/javascript',body:'window.google={accounts:{id:{initialize(){},renderButton(){},prompt(){},disableAutoSelect(){}}}};'});
   if(url.hostname==='127.0.0.1')return route.continue();
   if(url.hostname!=='ducizone.ddns.net'){forbidden.push(url.href);return route.abort();}
+  // Entry học viên hiện đọc ngữ cảnh nhật ký bằng POST; mô phỏng nguồn chưa sẵn sàng.
+  // Mọi thao tác mở/nộp/chấm khác vẫn bị chặn trước khi ra mạng.
+  if(req.method()==='POST'&&/\/api\/term-tests\/(?:term-test-[12](?:-k56)?|mini-test-(?:k56|lesson-5))\/journal-context$/.test(path))
+   return route.fulfill({status:503,json:{ok:false,error:'FIXTURE_JOURNAL_CONTEXT_UNAVAILABLE'}});
   calls.push({path,method:req.method()});if(req.method()!=='GET'){forbidden.push(req.method()+' '+path);return route.abort();}
   if(!signed)return route.fulfill({status:401,json:{ok:false,error:'LOGIN_REQUIRED'}});
   const reviewer={email:'teacher@fixture.test',displayName:'GV thử',role:'teacher'},cls={id:'1293',name:'IC2304',accessMode:'assigned_teacher',isAssignedTeacher:true};
