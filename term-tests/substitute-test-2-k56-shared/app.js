@@ -761,10 +761,7 @@
           body: JSON.stringify({
             classCode,
             studentRef: state.studentRef,
-            attemptToken: state.attemptToken,
-            listeningAnswers: state.drafts.listening,
-            readingAnswers: state.drafts.reading,
-            task1: state.drafts.writing.task1
+            attemptToken: state.attemptToken
           })
         })
         : await apiRequest('/api/term-tests/result', {
