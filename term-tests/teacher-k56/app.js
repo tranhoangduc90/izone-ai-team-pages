@@ -13,10 +13,11 @@ import {
   writingTaskStateLabel
 } from './model.js?rev=20260904-k56-demo-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v2';
-import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261103-term-tracking1';
+import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261103-t4r1';
 import {openTeacherAudioRecovery,clearTeacherAudioRecovery} from '../shared/teacher-audio-recovery.js?v=20261026-v1&resilience=20261027-v1';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 import {createScopedTeacherResults,createTeacherReadingRegions,createTeacherResultSections} from '../shared/teacher-reading-state.mjs?v=20261103-term-tracking1';
+import {createTermTeacherDashboardTracking} from '../shared/teacher-state-tracking.mjs?v=20261103-t4r1';
 
 const appConfig = window.TERM_TEST_APP_CONFIG || {};
 const sessionClient = createTeacherSessionClient({
@@ -76,6 +77,8 @@ const state = {
   selectedTestSlug: '',
   selectedTab: initialParams.get('student') || 'overview',
   resultsLoading: false,
+  teacherStateEnabled:false,
+  teacherSavedProgressEnabled:false,
   writingDetailCache: new Map(),
   attemptReviewCache: new Map(),
   connected: false
@@ -215,6 +218,8 @@ async function loadOptions() {
   state.reviewer = payload.reviewer;
   state.classes = payload.classes || [];
   state.tests = payload.tests || [];
+  state.teacherStateEnabled=payload.capabilities?.teacherStateVersion===1;
+  state.teacherSavedProgressEnabled=state.teacherStateEnabled&&payload.capabilities?.teacherSavedProgressVersion===1;
   if (!state.classes.length) throw new Error('Tài khoản chưa được cấp quyền xem lớp nào.');
   if (!state.tests.length) throw new Error('Chưa có bài test nào đang hoạt động.');
   fillSelect(elements.classSelect, state.classes, 'id', 'name');
@@ -857,6 +862,7 @@ function savedProgressButton(student){
     const generation=loginGeneration,classId=state.selectedClassId,testSlug=state.selectedTestSlug;
     const isCurrent=()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref;
     openTeacherSavedProgress({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,
+      compact:state.teacherSavedProgressEnabled,apiBaseUrl:appConfig.API_BASE_URL,
       request:(path,options={})=>apiRequest(path,{...options,isCurrent}),isCurrent});
   });
   const support=createNode('button','button button-secondary','Hỗ trợ Listening');support.type='button';
@@ -991,7 +997,7 @@ function renderActiveView() {
   updateUrl();
 }
 
-const loadResults=createScopedTeacherResults({
+const loadFullResults=createScopedTeacherResults({
   current(){const cls=getSelectedClass();return state.authenticated&&cls?{generation:loginGeneration,classId:cls.id,className:cls.name,testSlug:state.selectedTestSlug}:null;},
   request:apiRequest,
   start(scope,quiet){state.resultsLoading=true;if(!quiet)showNotice(`Đang tải kết quả ${scope.className}...`);},
@@ -1007,6 +1013,26 @@ const loadResults=createScopedTeacherResults({
     showNotice(`Đã tải ${state.students.length} học viên; ${completed} học viên đã hoàn thành · cập nhật ${updatedAt}.`, 'success');
   }
 });
+const teacherTracking=createTermTeacherDashboardTracking({
+  current(){const cls=getSelectedClass();return state.authenticated&&cls?{enabled:state.teacherStateEnabled,generation:loginGeneration,
+    apiBase:appConfig.API_BASE_URL,className:cls.name,testSlug:state.selectedTestSlug,studentRef:null}:null;},
+  request:apiRequest,loadContent:loadFullResults,
+  onError(error){
+    if(error.staleSession)return;
+    if([401,403,423].includes(error.status)){
+      resetLoginAfterError();
+      if(error.status===401){authView.signedOut();setupGoogleSignIn();}
+      else authView.failed({status:403,message:'Tài khoản không còn quyền xem lớp này.'});
+    }else showNotice('Chưa cập nhật được kết quả. Hệ thống đang thử lại.','error');
+  },
+  onUnavailable(){if(state.connected)showNotice('Chưa cập nhật được trạng thái mới. Hệ thống đang thử lại.','error');},
+  onSynchronized(){if(state.connected){
+    const completed=state.students.filter(student=>student.status==='completed').length;
+    const updatedAt=new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    showNotice(`Đã tải ${state.students.length} học viên; ${completed} học viên đã hoàn thành · cập nhật ${updatedAt}.`,'success');
+  }}
+});
+const loadResults=options=>teacherTracking.load(options);
 
 async function connectAfterGoogleLogin() {
   await loadOptions();
@@ -1014,6 +1040,7 @@ async function connectAfterGoogleLogin() {
 }
 
 function resetLoginAfterError() {
+  teacherTracking.close();state.teacherStateEnabled=false;state.teacherSavedProgressEnabled=false;
   clearTeacherSavedProgress();clearTeacherAudioRecovery();
   loginGeneration += 1;
   state.authenticated = false;
@@ -1215,3 +1242,7 @@ window.setInterval(() => {
     showNotice(`Không thể tự làm mới: ${error.message}`, 'error');
   });
 }, 30_000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)teacherTracking.close();
+  else if(state.connected)loadResults({quiet:true}).catch(error=>{if(!error.staleSession)showNotice(`Không thể tự làm mới: ${error.message}`,'error');});
+});
