@@ -13,7 +13,7 @@ import {
   writingTaskStateLabel
 } from './model.js?rev=20260904-k56-demo-v1';
 import { createTeacherSessionClient, teacherSessionRequestOptions, hasK56LogoutIntent } from '../k56-shared/teacher-session-client.js?rev=20261022-v1&startup=20261026-v2';
-import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261103-t4r1';
+import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261103-t4r2';
 import {openTeacherAudioRecovery,clearTeacherAudioRecovery} from '../shared/teacher-audio-recovery.js?v=20261026-v1&resilience=20261027-v1';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 import {createScopedTeacherResults,createTeacherReadingRegions,createTeacherResultSections} from '../shared/teacher-reading-state.mjs?v=20261103-term-tracking1';

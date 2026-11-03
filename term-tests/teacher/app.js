@@ -18,7 +18,7 @@ import {
 import { createTeacherLoginPreference } from '../../shared/teacher-login-preference.js?rev=20260918-v1';
 import { createTeacherAuthState } from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
-import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261103-t4r1';
+import {openTeacherSavedProgress,clearTeacherSavedProgress} from '../shared/teacher-saved-progress.js?rev=20261103-t4r2';
 import {openTeacherAudioRecovery,clearTeacherAudioRecovery} from '../shared/teacher-audio-recovery.js?v=20261026-v1&resilience=20261027-v1';
 import {createScopedTeacherResults,createTeacherReadingRegions,createTeacherResultSections} from '../shared/teacher-reading-state.mjs?v=20261103-term-tracking1';
 import {createTermTeacherDashboardTracking} from '../shared/teacher-state-tracking.mjs?v=20261103-t4r1';

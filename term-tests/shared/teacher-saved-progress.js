@@ -54,13 +54,22 @@ export function openTeacherSavedProgress({student,className,testSlug,testTitle=t
  }
  const params=extra=>new URLSearchParams({class:className,test:testSlug,student:student.ref,...extra});
  const read=(extra,signal=current.controller.signal)=>request('/api/term-tests/teacher/saved-progress?'+params(extra),{signal});
- const check=data=>{
+ const check=(data,legacy=false)=>{
   if(data.student?.ref!==student.ref||data.test?.slug!==testSlug||!Array.isArray(data.attempts))throw Error('Dữ liệu trả về chưa khớp học viên và bài đang chọn.');
   const ids=new Set();for(const item of data.attempts){
-   if(!/^[a-f0-9]{64}$/.test(item.viewId)||!/^[a-f0-9]{32}$/.test(item.revision)||ids.has(item.viewId))throw Error('Danh mục lượt làm chưa hợp lệ.');
+   if(!/^[a-f0-9]{64}$/.test(item.viewId)||(!legacy&&!/^[a-f0-9]{32}$/.test(item.revision))||ids.has(item.viewId))throw Error('Danh mục lượt làm chưa hợp lệ.');
    ids.add(item.viewId);
   }
  };
+ // Chỉ đổi giao thức sau khi API cũ trả bản đầy đủ đúng người/bài/lượt.
+ // Lỗi tạm hoặc mất quyền không được coi là tín hiệu tắt chế độ gọn.
+ async function tryLegacy(error,sequence){
+  if(![400,404,405].includes(error.status))return false;
+  const data=await read({});if(!valid()||sequence!==current.sequence)return true;
+  check(data,true);if(data.format)throw Error('Bản đọc đầy đủ chưa đúng phiên bản.');
+  compact=false;current.tracking?.close();current.tracking=null;current.index=null;current.cache.clear();current.needsRetry=false;
+  render(data);synchronized();schedule();return true;
+ }
  async function showCompact(index,sequence){
   const latest=index.attempts.filter(a=>!a.superseded).at(-1)||index.attempts.at(-1);
   const selected=index.attempts.find(a=>a.viewId===current.chosen)||latest;
@@ -79,7 +88,7 @@ export function openTeacherSavedProgress({student,className,testSlug,testTitle=t
   try{
    await showCompact(current.index,sequence);if(!valid()||sequence!==current.sequence)return;
    current.needsRetry=false;synchronized();schedule();
-  }catch(error){if(valid()&&sequence===current.sequence)throw error;}
+  }catch(error){if(valid()&&sequence===current.sequence&&!await tryLegacy(error,sequence))throw error;}
  }
  async function loadCompact(){
   const sequence=++current.sequence;
@@ -89,9 +98,9 @@ export function openTeacherSavedProgress({student,className,testSlug,testTitle=t
    current.index=index;const ids=new Set(index.attempts.map(a=>a.viewId));for(const id of current.cache.keys())if(!ids.has(id))current.cache.delete(id);
    await showCompact(index,sequence);if(!valid()||sequence!==current.sequence)return;
    current.needsRetry=false;schedule();
-  }catch(error){if(valid()&&sequence===current.sequence)throw error;}
+  }catch(error){if(valid()&&sequence===current.sequence&&!await tryLegacy(error,sequence))throw error;}
  }
- function synchronized(){if(valid())notice.textContent='Đã đọc lúc '+new Date().toLocaleTimeString('vi-VN')+' · Theo dõi thay đổi mỗi 30 giây khi trang đang mở.';}
+ function synchronized(){if(valid())notice.textContent='Đã đọc lúc '+new Date().toLocaleTimeString('vi-VN')+(compact?' · Theo dõi thay đổi mỗi 30 giây khi trang đang mở.':' · Tự đọc lại sau 30 giây khi trang đang mở.');}
  function report(error){
   if(!valid()||current.controller.signal.aborted)return;current.needsRetry=true;
   if([401,403,423].includes(error.status)){body.replaceChildren();current.cache.clear();current.index=null;current.tracking?.close();}
@@ -99,7 +108,7 @@ export function openTeacherSavedProgress({student,className,testSlug,testTitle=t
   notice.textContent='Chưa cập nhật được: '+error.message;schedule();
  }
  current.tracking=compact?createTermTeacherDashboardTracking({
-  current:()=>valid()?{enabled:true,generation,apiBase:apiBaseUrl,className,testSlug,studentRef:student.ref}:null,
+  current:()=>valid()&&compact?{enabled:true,generation,apiBase:apiBaseUrl,className,testSlug,studentRef:student.ref}:null,
   request,loadContent:loadCompact,onError:report,
   onUnavailable:()=>{if(valid())notice.textContent='Chưa kiểm tra được thay đổi. Nội dung đã đọc vẫn được giữ; hệ thống sẽ thử lại.';},
   onSynchronized:synchronized
@@ -118,7 +127,7 @@ export function openTeacherSavedProgress({student,className,testSlug,testTitle=t
    render(data);notice.textContent='Đã đọc lúc '+new Date().toLocaleTimeString('vi-VN')+' · Tự đọc lại sau 30 giây khi trang đang mở.';schedule();
   }catch(error){
    if(!valid()||sequence!==current.sequence)return;
-   if(error.status===401||error.status===403)body.replaceChildren();
+   if([401,403,423].includes(error.status))body.replaceChildren();
    notice.textContent='Chưa cập nhật được: '+error.message;schedule();
   }
  }
