@@ -2,7 +2,7 @@
 import '../../shared/teacher-single-sign-on.js?v=20261026-startup2&startup=20261026-v2';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup1';
 import {appendWritingFeedback as appendFeedback} from './feedback-renderer.js?rev=20261009-results-v2';
-import {createProgressPanel} from './teacher-progress-panel.js?rev=20261019-v1';
+import {createProgressPanel} from './teacher-progress-panel.js?rev=20261019-v1&reading=20261103-t5r2';
 const API='https://ducizone.ddns.net/substitute-teacher-api';
 const TITLES={'substitute-test-1-k56':'Substitute Test 1 · Khóa 56','substitute-test-2-k56':'Substitute Test 2 · Khóa 56','substitute-test-1-k67':'Substitute Test 1 · Khóa 67','substitute-test-2-k67':'Substitute Test 2 · Khóa 67'};
 const $=id=>document.getElementById(id);

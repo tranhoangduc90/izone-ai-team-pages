@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { serve } from './helpers/result-details-browser-fixture.mjs';
 const imported=await import(process.env.PLAYWRIGHT_MODULE?pathToFileURL(process.env.PLAYWRIGHT_MODULE).href:'playwright');
 const {chromium}=imported.chromium?imported:imported.default;
@@ -14,13 +15,18 @@ for(const suffix of ['1-k56','2-k56','1-k67','2-k67'])test('Substitute '+suffix+
  const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage();page.setDefaultTimeout(7000);
  let signed=true,delayA=false,many=false;const errors=[],forbidden=[],calls=[];
  page.on('pageerror',error=>errors.push(error.message));
+ // Fixture giả lập cả phiên chung lẫn Google; kiểm Google/cookie thật nằm ở readback riêng.
+ await context.addInitScript(()=>{window.IzoneTeacherSso={restore:async()=>false,login:async()=>{},logout:async()=>{}};});
  await context.addInitScript(()=>localStorage.setItem('fixture-student-draft','Nháp cần giữ nguyên'));
+ if(process.env.SUBSTITUTE_PROGRESS_PANEL_BASELINE)await context.route('**/teacher-progress-panel.js*',route=>route.fulfill({contentType:'text/javascript',body:readFileSync(process.env.SUBSTITUTE_PROGRESS_PANEL_BASELINE,'utf8')}));
  await context.route('**/*',async route=>{
   const req=route.request(),url=new URL(req.url()),path=url.pathname;
   if(req.resourceType()==='media'||/\.(mp3|wav|ogg|enc)$/.test(path)){forbidden.push(path);return route.abort();}
   if(url.hostname==='accounts.google.com')return route.fulfill({contentType:'text/javascript',body:'window.google={accounts:{id:{initialize(options){window.fakeTeacherSignIn=options.callback},renderButton(){},disableAutoSelect(){}}}};'});
   if(url.hostname==='127.0.0.1')return route.continue();
   if(url.hostname!=='ducizone.ddns.net'){forbidden.push(url.href);return route.abort();}
+  // Bootstrap nhật ký của trang học viên là luồng phụ chỉ đọc; fixture không bật logger thật.
+  if(path===`/substitute-journal-api/${slug}/journal-context`&&req.method()==='POST')return route.fulfill({status:503,json:{code:'FIXTURE_JOURNAL_DISABLED'}});
   if(path.startsWith('/webhook/')){
    const data=JSON.parse(req.postData()||'{}');calls.push(data.route);
    if(!['/api/test/history','/api/test/catalog','/api/test/roster'].includes(data.route)){forbidden.push(data.route);return route.abort();}
