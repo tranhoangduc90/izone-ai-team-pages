@@ -1,6 +1,6 @@
 import {createCheckFeedback,missingCheckFields} from '../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {createState,canEdit,available,ideaPassed} from '../lesson5-demo/core.mjs?v=20261102-l13-v1';
-import {createClient} from './client.mjs?v=20261102-l13-v1';
+import {createClient} from './client.mjs?v=20261102-l13-v1&poll=20261104-v1';
 import {renderJourney,renderProcessing,renderRecap} from './recovery-ui.mjs?v=20261102-l13-v1';
 import {savedContent,threadsView,approvalLabel,installStyles} from './features.mjs?v=20261007-1';
 import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,planFields,solutionsFor,AGREEMENT_LEVELS,requiredFields,preparationError,bodyView,bodyKey,bodyIndexOf,localKey} from '../shared/workflow.mjs?v=20261102-l13-v1';
@@ -20,6 +20,7 @@ const courseIdentity=createCourseStudentIdentity({product:'handout67',entry:less
 const {order:ORDER,fields:FIELDS}=workflowFor(lesson);
 const names={};let classes=[],state=createState(0,lesson),student='',generation=0,busy=false,saveInFlight=false,conflict=false,editingLocked=false;
 let mutationVersion=0;
+let pollEtag;
 let featureDialog=null;
 let dirty={},saveTimer,pollTimer,toastTimer,serial=Promise.resolve();
 const labels={idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic sentence của thân bài 2',b1:'Điểm cuối B · Ý 1',a1:'Điểm đầu A · Ý 1',x1:'Cầu nối X · Ý 1',b2:'Điểm cuối B · Ý 2',a2:'Điểm đầu A · Ý 2',x2:'Cầu nối X · Ý 2'};
@@ -187,8 +188,11 @@ async function poll(){
  const epoch=generation,watermark=mutationVersion,ref=state.ref;
  try {
   if(!busy&&!conflict&&!featureDialog?.open&&!$('writing-check-dialog')&&!document.querySelector('.inline-edit-box')&&!hasReplyDraft()&&!Object.keys(dirty).length&&state.ref){
-   const next=(await api.read(state.ref)).session;
-   if(epoch===generation&&watermark===mutationVersion&&ref===state.ref&&!busy&&!conflict&&!featureDialog?.open&&!$('writing-check-dialog')&&!document.querySelector('.inline-edit-box')&&!hasReplyDraft()&&!Object.keys(dirty).length&&JSON.stringify(next)!==JSON.stringify(state)){apply(next);note('');}
+   const result=await api.read(ref,pollEtag);
+   if(epoch===generation&&watermark===mutationVersion&&ref===state.ref&&!busy&&!conflict&&!featureDialog?.open&&!$('writing-check-dialog')&&!document.querySelector('.inline-edit-box')&&!hasReplyDraft()&&!Object.keys(dirty).length&&result.session){
+    if(JSON.stringify(result.session)!==JSON.stringify(state)){apply(result.session);note('');}
+    pollEtag=result.etag;
+   }
   }
  }catch(error){if(epoch===generation){note('Kết nối đang gián đoạn. Bài đã gửi vẫn được giữ; trang sẽ kiểm lại.');}}
  finally{if(epoch===generation)schedulePoll();}
@@ -202,7 +206,7 @@ async function enter({selection=null,pinned=false}={}){
   if(epoch!==generation||student!==selectedStudent||$('class-select').value!==classRef)return;
   if(selection&&!courseIdentity.isCurrent(selection))throw new Error('IDENTITY_CHANGED');
   if(!result.token||result.session?.activity!==lesson.activity||result.session.classRef!==classRef||result.session.studentRef!==selectedStudent)throw new Error('SESSION_OWNER_MISMATCH');
-  api.setToken(result.token);dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
+  api.setToken(result.token);pollEtag=undefined;dirty={};conflict=false;busy=false;saveInFlight=false;editingLocked=false;serial=Promise.resolve();state=result.session;
   if(!pinned)await courseIdentity.commit(context,{automatic:Boolean(selection),remember:$('remember').checked}).then(value=>{
    if(!['ok','empty'].includes(value.status))message('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.');
   }).catch(()=>message('Bài đã mở đúng người; trình duyệt chưa nhớ được cho bài khác.'));
@@ -242,7 +246,7 @@ async function changeStudent(){
  if(busy||editingLocked)return;
  if(!await flush()||Object.keys(dirty).length){message('Chưa lưu xong nháp; bài vẫn giữ nguyên người.');return;}
  if((await courseIdentity.forget()).status!=='empty'){message('Chưa bỏ được ghi nhớ. Bài và nháp vẫn được giữ.');return;}
- generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');student='';dirty={};state=createState(0,lesson);
+ generation++;clearTimeout(pollTimer);clearTimeout(saveTimer);api.setToken('');pollEtag=undefined;student='';dirty={};state=createState(0,lesson);
  $('student-select').value='';show('identity');
 }
 async function bootstrap(){
