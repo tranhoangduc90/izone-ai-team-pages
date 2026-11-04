@@ -345,6 +345,17 @@ export function observeDocument({ recorder, document: doc = globalThis.document,
   return { snapshot,environment, stop: () => remove.forEach(stop => stop()) };
 }
 
+export function viewportSnapshot(win) {
+  const viewport = { width: win.innerWidth, height: win.innerHeight, dpr: win.devicePixelRatio };
+  const visual = win.visualViewport;
+  if (visual && [visual.width, visual.height, visual.scale].every(Number.isFinite)) {
+    viewport.visualWidth = Math.round(visual.width);
+    viewport.visualHeight = Math.round(visual.height);
+    viewport.visualScale = Math.round(visual.scale * 100) / 100;
+  }
+  return viewport;
+}
+
 export function observeAudio({ recorder, audio, fieldId = 'listening:audio', intervalMs = 5000 }) {
   const listeners = []; let lastTimeUpdate = -Infinity;
   const snapshot = action => {
