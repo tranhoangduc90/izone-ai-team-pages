@@ -10,7 +10,7 @@ import {PART_TYPES,PART_SKILLS,selectedLimit,preparePartItem,missingSkills} from
 import {editorItemKind} from './item-kind.js?rev=20261028-the15-v1';
 import {changeQuestionKind,incompleteAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
 import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261030-the22-23-v1';
-import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261105-class-scope-v1';
+import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261105-ic-order-v1';
 import {authoringAction} from './authoring-action.js?rev=20261029-authoring-actions-v2';
 import {collectPublishIssues,schemaFieldIssues,showAuthoringIssues} from './authoring-validation.js?rev=20261030-the22-23-v1';
 import {AI_IMPORT_EXAMPLE} from './ai-import-example.js?rev=20261030-the22-23-v1';

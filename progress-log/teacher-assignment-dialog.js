@@ -8,6 +8,7 @@ const refreshErrors=new Set(['ERP_SESSION_NOT_CONFIRMED','ERP_SCHEDULE_UNAVAILAB
   'ASSIGNMENT_SESSION_CONFLICT','DRAFT_ROSTER_UNVERIFIED','DRAFT_ROSTER_CHANGED','CLASS_ACCESS_DENIED',
   'CLASS_STATUS_UNAVAILABLE','CLASS_NOT_ONGOING']);
 const displayDate=date=>date?' · '+date.split('-').reverse().join('/'):'';
+const icClassNumber=name=>Number(String(name??'').trim().match(/^IC\s*(\d+)\b/i)?.[1]??-1);
 export function createAssignmentDialog({request,getClasses,getPreferredClass,getClassStatus=()=> 'ready',onAssigned=()=>{}}){
   const pending=new Map();let lifecycle=0;
   return {open(entry){
@@ -41,8 +42,10 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
       }
       function fillClassChoices(select,preferred){
         const available=getClasses();
+        const ordered=available.map(item=>({item,icNumber:icClassNumber(item.class_name)}))
+          .sort((a,b)=>b.icNumber-a.icNumber);
         select.replaceChildren(new Option('Chọn lớp',''));
-        for(const item of available)select.append(new Option(item.class_name+(item.student_count!=null?' · '+item.student_count+' học viên':''),String(item.class_id)));
+        for(const {item} of ordered)select.append(new Option(item.class_name+(item.student_count!=null?' · '+item.student_count+' học viên':''),String(item.class_id)));
         select.disabled=!available.length;
         select.value=available.some(item=>String(item.class_id)===preferred)?preferred:'';
         classNotice.textContent=available.length?'':getClassStatus()==='unavailable'
