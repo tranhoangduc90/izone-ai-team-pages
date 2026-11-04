@@ -17,7 +17,7 @@ import { createTeacherLoginPreference } from '../shared/teacher-login-preference
 import { createTeacherAuthState } from '../shared/teacher-auth-state.js?v=20261026-startup1';
 import { createTeacherSessionClient, teacherSessionRequestOptions } from '../shared/teacher-session-client.js?rev=20261026-startup1&startup=20261026-v2';
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261030-the20-v2';
-import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261104-assign-schedule-v1';
+import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261104-assign-portal-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
 import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261104-the25-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
@@ -145,29 +145,7 @@ function openClass(classId){
   refreshAssignmentSelect();switchPanel('dashboard');
 }
 
-let assignmentScheduleReturn=null;
-function openAssignmentSchedule(classId,resume){
-  const target=state.classes.find(row=>String(row.class_id)===classId);
-  if(!target){resume();return;}
-  const previousClass=thuyLayout.classes.value;
-  const select=elements.overviewClassSelect;
-  if(!Array.from(select.options).some(option=>option.value===classId))select.add(new Option(target.class_name,classId));
-  thuyLayout.classes.value=elements.teacherClassSelect.value=select.value=classId;
-  for(const dialog of document.querySelectorAll('dialog.thuy-library-detail[open]'))dialog.close();
-  assignmentScheduleReturn?.button.remove();
-  const button=document.createElement('button');
-  button.type='button';button.className='button';button.textContent='Quay lại Giao bài';
-  button.addEventListener('click',()=>switchPanel('create'));
-  elements.overviewPlanHost.prepend(button);
-  assignmentScheduleReturn={button,previousClass,previousAssignment:elements.assignmentSelect.value,resume};
-  elements.journeyPlanSection.open=true;
-  elements.journeyPlanDatesDetails.open=true;
-  switchPanel('overview');
-  requestAnimationFrame(()=>{if(state.activePanel==='overview'&&select.value===classId)elements.journeyPlanSection.scrollIntoView({block:'start'});});
-}
-
 const formEditor=createFormDraftEditor({host:document.getElementById('formDraftEditor'),apiRequest,libraryEnabled:THUY_UI,
-  onConfirmSchedule:openAssignmentSchedule,
   onManagementChanged:async()=>{await loadWorkspace();await loadDashboard();},
   onPublished:published=>{
     if(!state.assignments.some(row=>row.assignment_id===published.assignmentId))state.assignments.unshift({assignment_id:published.assignmentId,public_token:published.publicToken,
@@ -222,12 +200,6 @@ function fillSelect(select, items, valueKey, labelBuilder) {
 
 function switchPanel(panel,{returning=false}={}) {
   const previous=state.activePanel;state.panelScroll??=new Map();if(previous)state.panelScroll.set(previous,window.scrollY);
-  const returningToAssignment=panel==='create'?assignmentScheduleReturn:null;
-  if(returningToAssignment){
-    assignmentScheduleReturn=null;returningToAssignment.button.remove();
-    thuyLayout.classes.value=elements.teacherClassSelect.value=elements.overviewClassSelect.value=returningToAssignment.previousClass;
-    refreshAssignmentSelect(returningToAssignment.previousAssignment);
-  }
   if(THUY_UI&&panel==='create'&&previous!=='create'){
     state.classPanel=previous;state.suspendedDialogs=[elements.draftDialog,elements.journeyDetailDialog].filter(dialog=>dialog.open);
     for(const dialog of state.suspendedDialogs)dialog.hidden=true;document.body.classList.remove('has-thuy-detail');
@@ -250,7 +222,6 @@ function switchPanel(panel,{returning=false}={}) {
   if (panel === 'dashboard') void loadDashboard({quiet:returning});
   if (panel === 'overview') { void loadCourseOverview({preserve:returning});void loadJourneyPlan(); }
   if(previous==='create'||panel==='create')requestAnimationFrame(()=>{if(state.activePanel===panel)window.scrollTo(0,state.panelScroll.get(panel)||0);});
-  returningToAssignment?.resume();
 }
 
 function showThuyPersonSummary(person,{open=true}={}) {
@@ -1794,7 +1765,6 @@ function initializeGoogle(attempt = 0) {
 }
 
 function clearTeacherLogin() {
-  assignmentScheduleReturn?.button.remove();assignmentScheduleReturn=null;
   state.activePanel=null;state.classPanel=null;state.panelScroll=new Map();state.suspendedDialogs=[];
   for(const dialog of [elements.draftDialog,elements.journeyDetailDialog]){if(dialog.open)dialog.close();dialog.hidden=false;}
   liveUpdates.stop();classPortal.replaceChildren();classPortal.hidden=true;

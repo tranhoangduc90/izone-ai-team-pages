@@ -6,28 +6,15 @@ import {resolve} from 'node:path';
 import {startThe22Server,uid,rootDraft} from './fixtures/progress-the22-23-server.mjs';
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 
-test('Chrome Giao bài: đi xác nhận đúng lớp chưa có phiếu rồi quay lại giữ đích khác',{timeout:45000},async()=>{
- const date='2026-11-08',classId='1295',className='Lớp giả chưa giao phiếu';let confirmed=false;
- const fixture=await startThe22Server({additionalClasses:[{class_id:classId,class_name:className,student_count:1}],extraApi({path,url,method,body,send}){
+test('Chrome Giao bài: chọn buổi từ Portal ngay ở lớp chưa có phiếu',{timeout:45000},async()=>{
+ const classId='1295',className='Lớp giả chưa giao phiếu',date='2026-11-08';
+ const fixture=await startThe22Server({additionalClasses:[{class_id:classId,class_name:className,student_count:1}],extraApi({path,url,send}){
+  if(path!=='/teacher/assignment-sessions')return false;
   const selected=url.searchParams.get('classId');
-  const slot={sessionNumber:1,date,erpSessionId:'2001'};
-  const plan={classId,className,totalSessions:confirmed?1:null,highestKnownSession:0,revision:confirmed?1:0,testSessionNumbers:[],testSources:[],sessionDates:confirmed?[slot]:[]};
-  if(path==='/teacher/assignment-sessions'){
-   send({ok:true,availability:{classId:selected,rosterStatus:'verified',scheduleStatus:selected==='1294'||confirmed?'ready':'unconfirmed',
-    sessions:selected==='1294'?[{sessionNumber:4,date,status:'available'}]:confirmed?[{...slot,status:'available'}]:[],
-    proposals:selected===classId&&!confirmed?[slot]:[]}});return true;
-  }
-  if(path==='/teacher/classes/'+classId+'/overview'){
-   send({ok:true,overview:{classId,className,totalSessions:0,counts:{currentStudents:1,complete:0},sessions:[],students:[]}});return true;
-  }
-  if(path==='/teacher/journey-plan'&&selected===classId){send({ok:true,plan});return true;}
-  if(path==='/teacher/journey-plan'&&method==='PUT'&&body.classId===classId){
-   assert.deepEqual(body.sessionDates,[slot]);confirmed=true;send({ok:true,plan:{...plan,totalSessions:1,revision:1,sessionDates:[slot]}});return true;
-  }
-  if(path==='/teacher/erp-schedule'&&selected===classId){
-   send({ok:true,schedule:{classId,fingerprint:'a'.repeat(64),ambiguous:false,sessions:[{...slot,erpSessionNumber:1,proposalEligible:true,statusCode:0,startsAt:date+' 18:30:00',endsAt:date+' 21:00:00'}]}});return true;
-  }
-  return false;
+  assert.equal(url.searchParams.get('source'),'portal');
+  send({ok:true,availability:{classId:selected,rosterStatus:'verified',scheduleStatus:'ready',
+   sessions:[{sessionNumber:selected===classId?1:4,date,status:'available',portalTarget:{id:selected===classId?'2001':'1004',startsAt:date+' 18:30:00'}}]}});
+  return true;
  }});
  const browser=await chromium.launch({channel:'chrome',headless:true});
  try{
@@ -40,18 +27,11 @@ test('Chrome Giao bài: đi xác nhận đúng lớp chưa có phiếu rồi qua
   const first=dialog.getByLabel('Chọn buổi học 1',{exact:true}),second=dialog.getByLabel('Chọn buổi học 2',{exact:true});
   await first.selectOption('4');await dialog.getByRole('button',{name:'+ Thêm lớp nhận bài tập',exact:true}).click();
   await dialog.getByLabel('Chọn lớp nhận bài 2',{exact:true}).selectOption(classId);
-  await dialog.getByRole('button',{name:'Xác nhận lịch của lớp',exact:true}).click();
-  await page.getByRole('button',{name:'Quay lại Giao bài',exact:true}).waitFor();
-  assert.equal(await page.locator('#overviewClassSelect').inputValue(),classId);
-  assert.equal(await page.locator('#journeyPlanSection').evaluate(details=>details.open),true);
-  await page.locator('#journeyErpScheduleStatus').filter({hasText:'Đã đọc 1 buổi ERP'}).waitFor();
-  const [saved]=await Promise.all([page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/teacher/journey-plan')),page.locator('#saveJourneyPlanButton').click()]);
-  assert.equal(saved.ok(),true);
-  assert.equal(confirmed,true);
-  await page.getByRole('button',{name:'Quay lại Giao bài',exact:true}).click();
   await second.selectOption('1');assert.equal(await first.inputValue(),'4');
+  assert.match(await second.locator('option:checked').textContent(),/Buổi 1 · 08[/]11[/]2026/);
   assert.equal(await dialog.getByRole('button',{name:'Giao bài',exact:true}).isEnabled(),true);
-  assert.equal(fixture.calls.some(call=>call.method==='POST'&&call.path.endsWith('/assign')),false);
+  assert.equal(await dialog.getByRole('button',{name:'Xác nhận lịch của lớp',exact:true}).count(),0);
+  assert.equal(fixture.calls.some(call=>call.method==='PUT'&&call.path.endsWith('/journey-plan')),false);
  }finally{await browser.close();await fixture.close();}
 });
 

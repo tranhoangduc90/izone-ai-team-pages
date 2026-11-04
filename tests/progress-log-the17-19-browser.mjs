@@ -38,7 +38,7 @@ test('T19 giao xong rồi thêm lớp mới mở lại nút và ghép biên nh�
   const {createAssignmentDialog}=await import('/progress-log/teacher-assignment-dialog.js');
   window.deliveryCalls=[];
   const request=async(path,options={})=>{
-   if(path.startsWith('/teacher/assignment-sessions'))return {availability:{classId:new URLSearchParams(path.split('?')[1]).get('classId'),rosterStatus:'verified',scheduleStatus:'ready',sessions:Array.from({length:12},(_,i)=>({sessionNumber:i+1,status:'available'})),proposals:[]}};
+   if(path.startsWith('/teacher/assignment-sessions'))return {availability:{classId:new URLSearchParams(path.split('?')[1]).get('classId'),rosterStatus:'verified',scheduleStatus:'ready',sessions:Array.from({length:12},(_,i)=>({sessionNumber:i+1,status:'available',portalTarget:{id:String(8000+i+1),startsAt:'2026-11-04 18:30:00'}}))}};
    window.deliveryCalls.push(structuredClone(options.body));
    return {delivery:{results:options.body.targets.map(target=>({...target,ok:true,delivery:{formVersionId:'version-fixture',rosterCount:target.classId==='a'?17:9}})).reverse()}};
   };
@@ -57,7 +57,8 @@ test('T19 giao xong rồi thêm lớp mới mở lại nút và ghép biên nh�
  await dialog.getByLabel('Chọn buổi học 3',{exact:true}).selectOption('9');
  await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();
  await dialog.getByText('Đã giao · 9 học viên',{exact:true}).first().waitFor();
- assert.deepEqual(await page.evaluate(()=>window.deliveryCalls.map(c=>c.targets)),[[{classId:'a',sessionNumber:7}],[{classId:'b',sessionNumber:8},{classId:'c',sessionNumber:9}]]);
+ const target=(classId,sessionNumber)=>({classId,sessionNumber,portalTarget:{id:String(8000+sessionNumber),startsAt:'2026-11-04 18:30:00'}});
+ assert.deepEqual(await page.evaluate(()=>window.deliveryCalls.map(c=>c.targets)),[[target('a',7)],[target('b',8),target('c',9)]]);
  assert.equal(await dialog.locator('footer [role=status]').evaluate(e=>e.classList.contains('success')),true);
  await readable(dialog.locator('footer [role=status]'));
  await shot(page,'assignment-success');
@@ -135,7 +136,7 @@ test('Kho cá nhân: Giao nháp mở chọn lớp, chỉ chốt bản riêng khi
   window.requests=[];window.pubAttempts=0;window.d={id:'private',revision:4,contentHash:'h4',status:'draft',sessionNumber:7,definition:{formVersionId:'v',title:'Nháp riêng',blocks:[{items:[]}]},gradingKey:{items:{}}};
   const request=async(path,options={})=>{window.requests.push({path,body:options.body});
    if(path==='/teacher/form-drafts/private')return {draft:structuredClone(window.d)};
-   if(path.startsWith('/teacher/assignment-sessions'))return {availability:{classId:'a',rosterStatus:'verified',scheduleStatus:'ready',sessions:[{sessionNumber:7,status:'available'}],proposals:[]}};
+   if(path.startsWith('/teacher/assignment-sessions'))return {availability:{classId:'a',rosterStatus:'verified',scheduleStatus:'ready',sessions:[{sessionNumber:7,status:'available',portalTarget:{id:'8007',startsAt:'2026-11-04 18:30:00'}}]}};
    if(path.endsWith('/approve')){window.d.status='approved';return {draft:structuredClone(window.d)};}
    if(path.endsWith('/publish-library')){window.pubAttempts++;if(window.pubAttempts===1)throw Error('Mất kết nối khi chốt phiên bản');return {publication:{id:'p',draftId:'private',revision:4,formVersionId:'v'}};}
    if(path.endsWith('/assign'))return {delivery:{results:options.body.targets.map(target=>({...target,ok:true,delivery:{formVersionId:'v',rosterCount:2}}))}};
@@ -164,7 +165,7 @@ test('Kho cá nhân: phiên bản đổi hoặc máy chủ từ chối duyệt k
  const {page}=await fixture(t);await page.evaluate(async()=>{
   const {createAssignmentDialog}=await import('/progress-log/teacher-assignment-dialog.js');window.calls=[];window.scenario='stale';
   window.d={id:'d',revision:4,contentHash:'h4',status:'draft',definition:{formVersionId:'v',blocks:[]}};
-  window.dialog=createAssignmentDialog({getClasses:()=>[{class_id:'a',class_name:'Lớp giả'}],getPreferredClass:()=> 'a',request:async path=>{window.calls.push(path);if(path.startsWith('/teacher/assignment-sessions'))return {availability:{classId:'a',rosterStatus:'verified',scheduleStatus:'ready',sessions:[{sessionNumber:7,status:'available'}],proposals:[]}};if(path==='/teacher/form-drafts/d')return {draft:{...window.d,revision:window.scenario==='stale'?5:4}};throw Error('Không có quyền duyệt hoặc còn thiếu đáp án');}});
+  window.dialog=createAssignmentDialog({getClasses:()=>[{class_id:'a',class_name:'Lớp giả'}],getPreferredClass:()=> 'a',request:async path=>{window.calls.push(path);if(path.startsWith('/teacher/assignment-sessions'))return {availability:{classId:'a',rosterStatus:'verified',scheduleStatus:'ready',sessions:[{sessionNumber:7,status:'available',portalTarget:{id:'8007',startsAt:'2026-11-04 18:30:00'}}]}};if(path==='/teacher/form-drafts/d')return {draft:{...window.d,revision:window.scenario==='stale'?5:4}};throw Error('Không có quyền duyệt hoặc còn thiếu đáp án');}});
   window.open=()=>window.dialog.open({id:'d',title:'Nháp riêng',draft:window.d,detail:structuredClone(window.d),definition:window.d.definition,sessionNumber:7});window.open();
  });const dialog=page.locator('.thuy-assignment-dialog');await dialog.getByLabel('Chọn buổi học 1').selectOption('7');await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByRole('status').filter({hasText:'Phiếu đã được chỉnh sửa'}).waitFor();assert.equal(await page.evaluate(()=>window.calls.some(p=>p.endsWith('/approve'))),false);
  await dialog.getByRole('button',{name:'Đóng',exact:true}).click();await dialog.waitFor({state:'detached'});await page.evaluate(()=>{window.scenario='denied';window.open();});await dialog.getByRole('button',{name:'Giao bài',exact:true}).click();await dialog.getByRole('status').filter({hasText:'Không có quyền duyệt hoặc còn thiếu đáp án'}).waitFor();assert.equal(await page.evaluate(()=>window.calls.some(p=>p.endsWith('/publish-library')||p.endsWith('/assign'))),false);
