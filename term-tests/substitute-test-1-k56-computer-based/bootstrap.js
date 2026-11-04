@@ -176,6 +176,7 @@
     elements.bootstrapPreview.disabled = true;
     elements.bootstrapVolume.disabled = true;
     elements.bootstrapStart.disabled = true;
+    window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart);
     elements.bootstrapRetry.hidden = true;
     elements.bootstrapNotice.hidden = true;
     elements.bootstrapPreview.textContent = 'Nghe thử 30 giây đầu';
@@ -390,6 +391,7 @@
     const ready = Boolean(encryptedAudio && (previewHeard || resumed));
     elements.bootstrapStart.disabled = !ready || preparing;
     elements.bootstrapStart.textContent = resumed ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
+    window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart, previewHeard && !resumed);
     elements.bootstrapStartStatus.textContent = resumed
       ? 'Đồng hồ máy chủ vẫn đang chạy. Tiếp tục ngay sau khi audio tải đủ.'
       : 'Sau khi bấm, đồng hồ máy chủ bắt đầu và đề mới được mở.';
@@ -422,6 +424,7 @@
     elements.bootstrapPreview.disabled = true;
     elements.bootstrapVolume.disabled = true;
     elements.bootstrapStart.disabled = true;
+    window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart);
     elements.bootstrapDownloadProgress.max = 1;
     elements.bootstrapDownloadProgress.value = 0;
     elements.bootstrapDownloadStatus.textContent = 'Đang tải audio khóa 56...';
@@ -842,6 +845,8 @@
       showNotice(`Chưa thể bắt đầu: ${error.userMessage || error.message}. Đề vẫn đang khóa.`, true);
       elements.bootstrapStart.textContent = state.listeningStartedAt ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
       elements.bootstrapStart.disabled = false;
+      window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart,
+        previewHeard && !state.listeningStartedAt && !legacyListeningResume);
     } finally {
       preparing = false;
     }
