@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <title>IZONE · Xác nhận họ và tên</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="confirmation.css?v=20261104-1">
+  <script type="module" src="confirmation.js?v=20261104-1"></script>
+</head>
+<body>
+  <main class="card">
+    <p class="brand">IZONE · Google Classroom</p>
+    <h1>Xác nhận họ và tên của bạn</h1>
+    <p id="status" role="status" aria-live="polite">Đang kiểm tra bài được giao…</p>
+    <form id="selection" hidden>
+      <p id="account"></p>
+      <label for="student">Họ và tên</label>
+      <select id="student" required><option value="">Chọn tên của bạn</option></select>
+      <button type="submit" id="next" disabled>Tiếp tục</button>
+    </form>
+    <p><a id="fallback" hidden>Không thấy tên của tôi</a></p>
+  </main>
+  <dialog id="confirmation" aria-labelledby="dialog-title">
+    <h2 id="dialog-title">Xác nhận tài khoản và họ tên</h2>
+    <p id="summary"></p>
+    <div class="actions">
+      <button type="button" class="secondary" id="back">Quay lại</button>
+      <button type="button" id="confirm">Xác nhận và vào bài</button>
+    </div>
+  </dialog>
+</body>
+</html>

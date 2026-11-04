@@ -17,6 +17,7 @@ const MEMORY='listening-practice67-identity';
 const entryQuery=new URLSearchParams(location.search),requestedLesson=entryQuery.get('lesson')||entryQuery.get('assignmentCode')||CODE;
 const docId=entryQuery.get('documentId')||`lesson:${requestedLesson}`;
 const personalEntry=entryQuery.has('documentId');
+const forceNamePicker=!personalEntry&&entryQuery.get('fresh')==='1';
 let entryValidated=false;
 let sharedEntry=false,CLASSES=[],selectedClassId='',rosterGeneration=0;
 const SESSION=`listening-practice67-session:${docId}`,ENTRY=`listening-practice67-entry:${docId}`;
@@ -104,6 +105,7 @@ async function loginSelected(id,classCode,{selection=null,remember=true}={}){
  navigate(['running','paused'].includes(current()?.status)?'resume':'prep');
 }
 async function autoLoginRemembered(){
+ if(forceNamePicker)return false;
  if(sessionToken)return true;
  let selected;
  if(sharedEntry&&!selectedClassId){
@@ -687,7 +689,7 @@ async function bootstrap(){
   if(location.pathname.endsWith('/teacher.html')){ready=true;route='teacher';await teacherScreen();return;}
   const entry=new URLSearchParams(location.hash.split('?')[1]).get('entry');
   if(entry){try{sessionStorage.setItem(ENTRY,entry);}catch{}try{history.replaceState(history.state,'',location.pathname+location.search+'#login');}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}}
-  try{entryToken=entry||sessionStorage.getItem(ENTRY)||'';sessionToken=courseIdentity.canRestoreSession()?sessionStorage.getItem(SESSION)||'':'';}catch{entryToken=entry||'';sessionToken='';}
+  try{entryToken=entry||sessionStorage.getItem(ENTRY)||'';sessionToken=!forceNamePicker&&courseIdentity.canRestoreSession()?sessionStorage.getItem(SESSION)||'':'';}catch{entryToken=entry||'';sessionToken='';}
   sharedEntry=!entryToken;
   // Kiểm chủ link trước khi đọc bất kỳ bài/nháp nào của phiên đã lưu.
   if(personalEntry){
@@ -712,7 +714,7 @@ async function bootstrap(){
    if(personalEntry&&!catalog&&sessionToken)CLASSES=[{id:entryInfo.classId,classCode:entryInfo.classCode}];
    if(personalEntry&&CLASSES.length!==1)throw new Error('Chủ link chưa còn trong lớp được mở bài.');
    let memory={};try{memory=JSON.parse(localStorage.getItem(MEMORY))||{};}catch{}
-   selectedClassId=personalEntry?entryInfo.classId:CLASSES.find(c=>c.classCode===(identity?.classCode||(courseIdentity.read().status==='ok'?'':memory.classCode)))?.id||'';
+   selectedClassId=personalEntry?entryInfo.classId:CLASSES.find(c=>c.classCode===(forceNamePicker?entryQuery.get('class'):identity?.classCode||(courseIdentity.read().status==='ok'?'':memory.classCode)))?.id||'';
    if(selectedClassId&&!personalEntry){const roster=await request(`/library/${encodeURIComponent(requestedLesson)}/classes/${encodeURIComponent(selectedClassId)}`);STUDENTS=roster.students;}
   }
   if(!sharedEntry&&!sessionToken&&!entryToken)throw new Error('Hãy mở lại bằng nút CTA trong bản Homework của bạn.');

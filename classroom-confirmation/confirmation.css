@@ -1,0 +1,36 @@
+:root {
+  color-scheme: light;
+  font: 17px/1.5 "Source Sans 3", system-ui, sans-serif;
+  color: #152b4e;
+  background: #f6f9fc;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: clamp(16px, 5vw, 72px); }
+.card, dialog {
+  width: min(100%, 34rem);
+  margin-inline: auto;
+  padding: clamp(18px, 4vw, 32px);
+  background: white;
+  border: 1px solid #c6d4e4;
+  border-radius: 14px;
+}
+.brand { font-weight: 700; margin: 0 0 6px; }
+h1, h2 { margin: 0 0 12px; line-height: 1.2; }
+p { overflow-wrap: anywhere; }
+label { display: block; font-weight: 700; }
+select { display: block; width: 100%; margin: 6px 0 16px; }
+button, select {
+  min-height: 44px;
+  padding: 7px 14px;
+  border: 1px solid #496383;
+  border-radius: 7px;
+  font: inherit;
+}
+button { background: #152b4e; color: white; cursor: pointer; }
+button:disabled { opacity: .55; cursor: default; }
+.secondary { background: white; color: #152b4e; }
+a { color: #163d70; }
+:where(a,button,select):focus-visible { outline: 3px solid #a01930; outline-offset: 3px; }
+dialog { margin: auto; width: min(calc(100% - 32px),34rem); }
+dialog::backdrop { background: #14294666; }
+.actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 8px; }

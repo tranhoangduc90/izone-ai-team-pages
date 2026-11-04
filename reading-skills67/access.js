@@ -40,6 +40,10 @@
   classInput.onchange=async()=>{await loadRoster();if(entryContext){for(const option of [...studentInput.options])if(option.value&&option.value!==entryContext.studentRef)option.remove();}};
   studentInput.onchange=()=>button.disabled=!studentInput.value;
   if(entryContext){classInput.value=entryContext.classId;classInput.disabled=true;classInput.onchange();}
+  else if(params.get('fresh')==='1'){
+   const requested=classes.find(c=>c.classCode===params.get('class'));
+   if(requested){classInput.value=requested.id;classInput.onchange();}
+  }
   return new Promise(resolve=>{button.onclick=async()=>{button.disabled=true;error.textContent='';try{await login(classInput.value,studentInput.value,null,classes);resolve();}catch(e){error.textContent=e.message;button.disabled=false;}};});
  }
  // Reading thực chiến: đăng nhập ngay tại link Homework, giữ đúng học viên/lượt.
@@ -103,14 +107,14 @@
   course=createCourseStudentIdentity({product:'reading-skills67',entry:config.code,requestIdentity:value=>post('/identity/resolve',value)});
   course.subscribe(()=>{if(person)window.dispatchEvent(new CustomEvent('reading67:access-warning',{detail:'Người đã nhớ ở tab khác vừa đổi. Bài tại tab này vẫn giữ đúng người.'}));});
   let saved;try{saved=JSON.parse(sessionStorage.getItem(key)||'null');}catch{saved=null;}
-  if(saved&&sameEntry(saved.person?.courseId,saved.person?.ownerId)&&course.canRestoreSession()){
+  if(!params.has('fresh')&&saved&&sameEntry(saved.person?.courseId,saved.person?.ownerId)&&course.canRestoreSession()){
    token=saved.token;
    try{const check=await request('/lesson');if(check.identity.ownerId!==saved.person.ownerId||check.identity.courseId!==saved.person.courseId)throw Error('Chủ phiên không khớp.');person=check.identity;return {config};}
    catch(e){token='';if(e.status!==401&&e.status!==403)throw e;sessionStorage.removeItem(key);}
   }
   const classes=(await request('/classes')).classes;
   if(config.demo&&params.get('demoReview')==='1'){await login(config.demoStudent.classId,config.demoStudent.studentRef,null,classes);return {config};}
-  if(!config.demo){const selection=await course.resolve({...(entryContext?{classCode:entryContext.classCode}:{}),allowedClassCodes:classes.map(c=>c.classCode)}).catch(()=>({status:'unavailable'}));if(selection.status==='unique'&&sameEntry(selection.alias.classId,selection.alias.studentRef)){await login(selection.alias.classId,selection.alias.studentRef,selection,classes);return {config};}}
+  if(!config.demo&&!params.has('fresh')){const selection=await course.resolve({...(entryContext?{classCode:entryContext.classCode}:{}),allowedClassCodes:classes.map(c=>c.classCode)}).catch(()=>({status:'unavailable'}));if(selection.status==='unique'&&sameEntry(selection.alias.classId,selection.alias.studentRef)){await login(selection.alias.classId,selection.alias.studentRef,selection,classes);return {config};}}
   await choose(classes);return {config};
  }
  function teacherEntryUrl(){
