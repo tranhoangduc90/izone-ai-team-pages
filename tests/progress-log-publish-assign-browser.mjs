@@ -13,14 +13,15 @@ const express=requireBackend('express'),supertest=requireBackend('supertest'),{P
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const load=name=>import(pathToFileURL(resolve(backend,'src',name)).href);
 
-test('Chrome: một lớp, nhiều lớp, lịch chưa chốt, lỗi từng đích và gửi lại đúng buổi',{timeout:150000},async()=>{
-  const [{createLearningDemoApp,createPGlitePool,initializeLearningDemoDatabase},{createLearningRouter}]=await Promise.all([load('learning-demo.js'),load('learning-routes.js')]);
+test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều lớp và gửi lại đúng buổi',{timeout:150000},async()=>{
+  const [{createLearningDemoApp,createPGlitePool,initializeLearningDemoDatabase},{createLearningRouter},{createPortalAssignmentScheduleReader}]=
+    await Promise.all([load('learning-demo.js'),load('learning-routes.js'),load('learning-portal-assignment-schedule.js')]);
   const sourceDb=new PGlite(),demoDb=new PGlite(),secret='fixture-only-preview-secret-01234567890123456789';
   let server,browser;
   try{
     await initializeLearningDemoDatabase(sourceDb);await initializeLearningDemoDatabase(demoDb);
     await sourceDb.exec("ALTER TABLE mapping.reviewer_account ADD COLUMN role text DEFAULT 'teacher', ADD COLUMN can_access_all_classes boolean DEFAULT false;");
-    for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql'])
+    for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql','202611040001_form_assignment_portal_target.sql'])
       await sourceDb.exec(await readFile(resolve(backend,'ops/learning-migrations',file),'utf8'));
     await sourceDb.exec(`INSERT INTO mapping.classroom_course_mapping VALUES(1294,'Lớp mẫu A','approved',NULL,NULL),(1295,'Lớp mẫu B','approved',NULL,NULL),
       (1296,'Lớp mẫu trống','approved',NULL,NULL),(1298,'Lớp mẫu lỗi ERP','approved',NULL,NULL),(1299,'Lớp mẫu cần đối chiếu','approved',NULL,NULL);
@@ -30,26 +31,26 @@ test('Chrome: một lớp, nhiều lớp, lịch chưa chốt, lỗi từng đí
       INSERT INTO mapping.erp_class_membership_snapshot VALUES(1294,123),(1295,124);
       INSERT INTO learning.course_content_authority(reviewer_email,course_code,can_self_approve_scored_forms,grant_reference) VALUES('owner@example.test','56',true,'Browser fixture only');`);
     const reviewer={email:'owner@example.test',canAccessAllClasses:false},pool=createPGlitePool(sourceDb),sourceApp=express();sourceApp.use(express.json());
-    const erpScheduleReader=async classId=>{
-      if(classId==='1298')throw Error('Invalid ERP time');
-      return {classId,sessions:Array.from({length:classId==='1296'?0:6},(_,index)=>{
-        const date=`2026-11-${String((classId==='1294'?4:14)+index).padStart(2,'0')}`;
-        return {erpSessionId:String(Number(classId)*10+index),date,startsAt:date+' 18:30:00',endsAt:date+' 21:00:00',statusCode:classId==='1299'&&index===0?4:0};
-      })};
+    const target=(classId,sessionNumber)=>{
+      const date=`2026-11-${String((classId==='1294'?3:13)+sessionNumber).padStart(2,'0')}`;
+      return {classId,sessionNumber,portalTarget:{id:String(Number(classId)*10+sessionNumber-1),startsAt:date+' 18:30:00'}};
     };
-    sourceApp.use('/api/learning',createLearningRouter({pool,erpScheduleReader,demoSourceSecret:secret,authenticate(req,_res,next){req.reviewer=reviewer;next();}}));
-    const confirmSchedule=async classId=>{
-      const prefix='/api/learning/teacher',client=supertest(sourceApp);
-      const {body:{schedule}}=await client.get(prefix+'/erp-schedule').query({classId}).expect(200);
-      await client.put(prefix+'/journey-plan').send({classId,totalSessions:6,testSessionNumbers:[],expectedRevision:0,
-        operationId:randomUUID(),expectedScheduleFingerprint:schedule.fingerprint,
-        sessionDates:schedule.sessions.map(row=>({sessionNumber:row.erpSessionNumber,date:row.date,erpSessionId:row.erpSessionId}))}).expect(200);
-    };
-    await confirmSchedule('1294');
-    const denied=await supertest(sourceApp).get('/api/learning/teacher/assignment-sessions?classId=1297').expect(403);
+    const portalAssignmentScheduleReader=createPortalAssignmentScheduleReader({fetchImpl:async url=>{
+      const classId=new URL(url).pathname.split('/').at(-2);
+      if(classId==='1298')return new Response('',{status:503});
+      const rows=Array.from({length:classId==='1296'?0:6},(_,index)=>{
+        const slot=target(classId,index+1).portalTarget;
+        return {course_class_id:Number(classId),class_session_id:Number(slot.id),session_start_datetime:slot.startsAt.replace(' ','T'),
+          session_end_datetime:classId==='1294'&&index===1?'2026-10-29T21:00:00':slot.startsAt.slice(0,10)+'T21:00:00',
+          status:classId==='1299'&&index===0?4:0};
+      });
+      return Response.json(rows.reverse());
+    }});
+    sourceApp.use('/api/learning',createLearningRouter({pool,portalAssignmentScheduleReader,demoSourceSecret:secret,authenticate(req,_res,next){req.reviewer=reviewer;next();}}));
+    const denied=await supertest(sourceApp).get('/api/learning/teacher/assignment-sessions?classId=1297&source=portal').expect(403);
     assert.equal(denied.body.error,'CLASS_ACCESS_DENIED');
     for(const [id,status] of [['1296','empty'],['1298','unavailable'],['1299','needs_review']]){
-      const {body:{availability}}=await supertest(sourceApp).get('/api/learning/teacher/assignment-sessions').query({classId:id}).expect(200);
+      const {body:{availability}}=await supertest(sourceApp).get('/api/learning/teacher/assignment-sessions').query({classId:id,source:'portal'}).expect(200);
       assert.equal(availability.classId,id);assert.equal(availability.scheduleStatus,status);assert.equal(availability.rosterStatus,'empty');
       assert.deepEqual(availability.proposals,[]);
     }
@@ -69,7 +70,7 @@ test('Chrome: một lớp, nhiều lớp, lịch chưa chốt, lỗi từng đí
       const {createFormDraftEditor}=await import('/progress-log/teacher-form-editor.js');
       const request=async(path,options={})=>{const response=await fetch('/source/api/learning'+path,{method:options.method||'GET',headers:{'content-type':'application/json'},...(options.body?{body:JSON.stringify(options.body)}:{})});const body=await response.json();if(!response.ok||!body.ok){const error=Error(body.message||body.error);error.status=response.status;throw error;}return body;};
       window.deliveries=[];window.editor=createFormDraftEditor({host:document.querySelector('#formDraftEditor'),apiRequest:request,libraryEnabled:true,
-        onPublished:value=>window.deliveries.push(value),onConfirmSchedule:(classId,resume)=>{window.confirmingClass=classId;window.returnToAssignment=resume;}});
+        onPublished:value=>window.deliveries.push(value)});
       window.editor.setWorkspace({classes:[{class_id:'1294',class_name:'Lớp mẫu A'},{class_id:'1295',class_name:'Lớp mẫu B'}],assignments:[],classId:'1294',sessionNumber:3});
     });
     await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByLabel('Tên bài tập',{exact:true}).fill('Phiếu tích hợp R22');await page.getByLabel('Trình độ',{exact:true}).selectOption('56');
@@ -102,50 +103,47 @@ test('Chrome: một lớp, nhiều lớp, lịch chưa chốt, lỗi từng đí
     const statuses=dialog.getByRole('status');
     await sessionAt(1).selectOption('2');await send.click();
     await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
-    assert.deepEqual(sent.map(call=>call.targets),[[{classId:'1294',sessionNumber:2}]]);
+    assert.deepEqual(sent.map(call=>call.targets),[[target('1294',2)]]);
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_assignment')).rows[0].n,1);
 
     await add.click();assert.equal(await classAt(2).inputValue(),'');
     await classAt(2).selectOption('1294');
     await sessionAt(2).selectOption('3');
-    const {body:{availability:afterFirst}}=await supertest(sourceApp).get('/api/learning/teacher/assignment-sessions?classId=1294').expect(200);
-    assert.equal(afterFirst.sessions.find(slot=>slot.sessionNumber===2)?.status,'occupied');
-    assert.equal(await sessionAt(2).locator('option[value="2"]').evaluate(option=>option.disabled),true);
+    assert.equal(await sessionAt(2).locator('option[value="2"]').count(),0);
     await add.click();
     let resolveRead,releaseRead;
     const captured=new Promise(resolve=>{resolveRead=resolve;}),holdRead=new Promise(resolve=>{releaseRead=resolve;});
-    await page.route('**/teacher/assignment-sessions?classId=1295',async route=>{
+    await page.route('**/teacher/assignment-sessions?classId=1295&source=portal',async route=>{
       const response=await route.fetch();resolveRead();await holdRead;await route.fulfill({response});
     },{times:1});
     await classAt(3).selectOption('1295');await captured;
     await classAt(3).selectOption('1294');await sessionAt(3).selectOption('1');releaseRead();
     assert.equal(await sessionAt(3).inputValue(),'1');
     await classAt(3).selectOption('1295');
-    await statuses.filter({hasText:'Lịch ERP của lớp chưa được xác nhận.'}).waitFor();
-    assert.equal(await sessionAt(3).locator('option[value^="proposal:"]').count(),6);
-    assert.equal(await send.isDisabled(),true);
-    await dialog.getByRole('button',{name:'Xác nhận lịch của lớp'}).click();
-    assert.equal(await page.evaluate(()=>window.confirmingClass),'1295');
-    await confirmSchedule('1295');await page.evaluate(()=>window.returnToAssignment());
     await sessionAt(3).selectOption('4');
     assert.equal(await sessionAt(2).inputValue(),'3');
 
     await supertest(sourceApp).post('/api/learning/teacher/form-publications/'+published.id+'/assign')
-      .send({operationId:randomUUID(),targets:[{classId:'1295',sessionNumber:4}],origin:{source:'draft',id:published.source_draft_id}}).expect(200);
+      .send({operationId:randomUUID(),targets:[target('1295',4)],origin:{source:'draft',id:published.source_draft_id}}).expect(200);
     if(process.env.PROGRESS_LOG_EVIDENCE_DIR){await mkdir(process.env.PROGRESS_LOG_EVIDENCE_DIR,{recursive:true});await dialog.screenshot({path:resolve(process.env.PROGRESS_LOG_EVIDENCE_DIR,'assignment-desktop.png')});}
     await send.click();await statuses.filter({hasText:'Một số đích chưa giao được'}).waitFor();
     await sessionAt(3).selectOption('5');await send.click();
     await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
     assert.deepEqual(sent.slice(1).map(call=>call.targets),[
-      [{classId:'1294',sessionNumber:3},{classId:'1295',sessionNumber:4}],
-      [{classId:'1295',sessionNumber:5}]
+      [target('1294',3),target('1295',4)],
+      [target('1295',5)]
     ]);
     await add.click();await classAt(4).selectOption('1294');await sessionAt(4).selectOption('4');
     await add.click();await classAt(5).selectOption('1295');await sessionAt(5).selectOption('6');
     await send.click();await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
-    assert.deepEqual(sent.at(-1).targets,[{classId:'1294',sessionNumber:4},{classId:'1295',sessionNumber:6}]);
+    assert.deepEqual(sent.at(-1).targets,[target('1294',4),target('1295',6)]);
     const rows=(await sourceDb.query('SELECT erp_course_class_id::text class_id,session_number,form_version_id FROM learning.form_assignment ORDER BY erp_course_class_id,session_number')).rows;
     assert.deepEqual(rows.map(row=>[row.class_id,row.session_number]),[['1294',2],['1294',3],['1294',4],['1295',4],['1295',5],['1295',6]]);assert.ok(rows.every(row=>row.form_version_id===published.form_version_id));assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.outbox_job')).rows[0].n,0);
+    const pinned=(await sourceDb.query(`SELECT a.erp_course_class_id::text class_id,a.session_number,t.portal_session_id::text portal_id,t.starts_at
+      FROM learning.form_assignment_portal_target t JOIN learning.form_assignment a ON a.id=t.assignment_id ORDER BY class_id,session_number`)).rows;
+    assert.deepEqual(pinned,rows.map(row=>{const {portalTarget}=target(row.class_id,row.session_number);
+      return {class_id:row.class_id,session_number:row.session_number,portal_id:portalTarget.id,starts_at:portalTarget.startsAt};}));
+    assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.class_journey_plan')).rows[0].n,0);
     const roster=(await sourceDb.query(`SELECT a.erp_course_class_id::text class_id, s.erp_student_contact_id::text student_id, count(*)::int n
       FROM learning.form_assignment a JOIN learning.form_assignment_roster s ON s.assignment_id=a.id
       GROUP BY a.erp_course_class_id,s.erp_student_contact_id ORDER BY a.erp_course_class_id`)).rows;
