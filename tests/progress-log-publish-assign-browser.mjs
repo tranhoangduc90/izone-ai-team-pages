@@ -24,8 +24,8 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     await sourceDb.exec("ALTER TABLE mapping.reviewer_account ADD COLUMN role text DEFAULT 'teacher', ADD COLUMN can_access_all_classes boolean DEFAULT false;");
     for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql','202611040001_form_assignment_portal_target.sql','202611050001_progress_log_course_viewer.sql'])
       await sourceDb.exec(await readFile(resolve(backend,'ops/learning-migrations',file),'utf8'));
-    await sourceDb.exec(`INSERT INTO mapping.classroom_course_mapping VALUES(1294,'Lớp mẫu A','approved',NULL,NULL),(1295,'Lớp mẫu B','approved',NULL,NULL),
-      (1296,'Lớp mẫu trống','approved',NULL,NULL),(1298,'Lớp mẫu lỗi ERP','approved',NULL,NULL),(1299,'Lớp mẫu cần đối chiếu','approved',NULL,NULL),
+    await sourceDb.exec(`INSERT INTO mapping.classroom_course_mapping VALUES(1294,'IC1000','approved',NULL,NULL),(1295,'Lớp mẫu B','approved',NULL,NULL),
+      (1296,'Lớp mẫu trống','approved',NULL,NULL),(1298,'IC999','approved',NULL,NULL),(1299,'Lớp mẫu cần đối chiếu','approved',NULL,NULL),
       (1300,'Lớp mẫu đã kết thúc','approved',NULL,NULL),(1301,'Lớp mẫu chưa bắt đầu','approved',NULL,NULL);
       INSERT INTO mapping.reviewer_account(email,status) VALUES('owner@example.test','active'),('viet@example.test','active'),('thuy@example.test','active'),('admin@example.test','active');
       INSERT INTO mapping.reviewer_class_access VALUES('owner@example.test',1294),('owner@example.test',1295),('owner@example.test',1296),('owner@example.test',1298),('owner@example.test',1299);
@@ -53,10 +53,10 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
       return Response.json(rows.reverse());
     }});
     const catalog=[
-      ['1294','Lớp mẫu A','4','on_going','2026-10-01'],
+      ['1294','IC1000','4','on_going','2026-09-01'],
       ['1295','Lớp mẫu B','5','on_going','2026-11-01'],
       ['1296','Lớp mẫu trống','4','on_going','2026-09-02'],
-      ['1298','Lớp mẫu lỗi ERP','5','on_going','2026-09-02'],
+      ['1298','IC999','5','on_going','2026-09-02'],
       ['1299','Lớp mẫu cần đối chiếu','5','on_going','2026-09-02'],
       ['1300','Lớp mẫu đã kết thúc','4','completed','2026-10-12'],
       ['1301','Lớp mẫu chưa bắt đầu','5','on_going','2026-11-09'],
@@ -128,7 +128,10 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     const add=dialog.getByRole('button',{name:'+ Thêm lớp nhận bài tập',exact:true});
     const send=dialog.getByRole('button',{name:'Giao bài',exact:true});
     const statuses=dialog.getByRole('status');
-    assert.deepEqual(await classAt(1).locator('option').evaluateAll(options=>options.map(option=>option.value)),['','1295','1294','1299','1298','1296']);
+    const classChoices=select=>select.locator('option').evaluateAll(options=>options.map(option=>option.value));
+    const expectedClasses=['','1294','1298','1295','1299','1296'];
+    assert.deepEqual(await classChoices(classAt(1)),expectedClasses);
+    assert.equal(await classAt(1).inputValue(),'1294');
     const font=selector=>dialog.locator(selector).first().evaluate(node=>getComputedStyle(node).fontSize);
     assert.equal(await font('.thuy-management-head h2'),'20px');
     assert.equal(await font('.thuy-assignment-summary h2'),'16px');
@@ -141,6 +144,7 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_assignment')).rows[0].n,1);
 
     await add.click();assert.equal(await classAt(2).inputValue(),'');
+    assert.deepEqual(await classChoices(classAt(2)),expectedClasses);
     await classAt(2).selectOption('1294');
     await sessionAt(2).selectOption('3');
     assert.equal(await sessionAt(2).locator('option[value="2"]').count(),0);
