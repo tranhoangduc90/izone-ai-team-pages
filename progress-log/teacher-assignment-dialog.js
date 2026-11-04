@@ -5,9 +5,10 @@ const scheduleLabels={empty:'Portal chưa có lịch cho lớp này.',unavailabl
   needs_review:'Lịch trên Portal có buổi chưa rõ thứ tự hoặc trạng thái. Hãy đối chiếu tại Portal.'};
 const rosterLabels={empty:'Lớp chưa có học viên hợp lệ.',unverified:'Danh sách học viên của lớp cần đối chiếu ERP.'};
 const refreshErrors=new Set(['ERP_SESSION_NOT_CONFIRMED','ERP_SCHEDULE_UNAVAILABLE','ERP_SESSION_REVIEW_REQUIRED',
-  'ASSIGNMENT_SESSION_CONFLICT','DRAFT_ROSTER_UNVERIFIED','DRAFT_ROSTER_CHANGED','CLASS_ACCESS_DENIED']);
+  'ASSIGNMENT_SESSION_CONFLICT','DRAFT_ROSTER_UNVERIFIED','DRAFT_ROSTER_CHANGED','CLASS_ACCESS_DENIED',
+  'CLASS_STATUS_UNAVAILABLE','CLASS_NOT_ONGOING']);
 const displayDate=date=>date?' · '+date.split('-').reverse().join('/'):'';
-export function createAssignmentDialog({request,getClasses,getPreferredClass,onAssigned=()=>{}}){
+export function createAssignmentDialog({request,getClasses,getPreferredClass,getClassStatus=()=> 'ready',onAssigned=()=>{}}){
   const pending=new Map();let lifecycle=0;
   return {open(entry){
     if(!entry.publication?.id&&!entry.draft?.id)throw Error('Chưa xác định được phiếu cần giao.');
@@ -21,7 +22,8 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
       summary.append(node('h2',entry.title));for(const skill of new Set((entry.definition?.blocks||[]).flatMap(b=>b.items.flatMap(i=>i.skillCodes||[]))))tags.append(node('span',({general:'Chung',listening:'Listening',reading:'Reading',speaking:'Speaking',writing:'Writing'})[skill]||skill));summary.append(tags);
       const targets=node('div','','thuy-assignment-targets'),status=node('p','','notice');status.setAttribute('role','status');
       const footer=node('footer','','thuy-assignment-footer'),back=button('Quay lại bài tập',()=>dialog.close()),submit=button('Giao bài',()=>void assign()),add=button('+ Thêm lớp nhận bài tập',()=>addTarget(''));submit.classList.add('primary');
-      body.append(summary,targets,add);footer.append(status,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
+      const classNotice=node('p','','thuy-assignment-class-notice');classNotice.setAttribute('role','status');
+      body.append(summary,classNotice,targets,add);footer.append(status,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
       const rows=[],reads=new Map(),operationId=crypto.randomUUID(),publicationOperationId=crypto.randomUUID();let busy=false,opener=null;
       const canSend=row=>Boolean(row.classes.value&&row.sessions.value&&!row.loading&&!row.sessions.selectedOptions[0]?.disabled);
       function syncSubmit(){
@@ -37,6 +39,17 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
         }
         return reads.get(classId);
       }
+      function fillClassChoices(select,preferred){
+        const available=getClasses();
+        select.replaceChildren(new Option('Chọn lớp',''));
+        for(const item of available)select.append(new Option(item.class_name+(item.student_count!=null?' · '+item.student_count+' học viên':''),String(item.class_id)));
+        select.disabled=!available.length;
+        select.value=available.some(item=>String(item.class_id)===preferred)?preferred:'';
+        classNotice.textContent=available.length?'':getClassStatus()==='unavailable'
+          ?'Chưa tải được trạng thái lớp từ ERP. Hãy làm mới Progress Log và thử lại.'
+          :'Bạn chưa có lớp đang học được phép giao bài.';
+        add.hidden=!available.length;
+      }
       async function addTarget(preferred=getPreferredClass()){
         if(rows.length&&rows.every(row=>row.done)&&status.classList.contains('success')){
           status.firstChild.textContent='Các lượt giao đã xác nhận.';
@@ -46,7 +59,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
         const retry=button('Thử đọc lại lịch',()=>void readPlan(sessions.value));
         retry.hidden=true;controls.append(availabilityNote,retry);
         classes.setAttribute('aria-label','Chọn lớp nhận bài '+(rows.length+1));sessions.setAttribute('aria-label','Chọn buổi học '+(rows.length+1));
-        classes.append(new Option('Chọn lớp',''));for(const item of getClasses())classes.append(new Option(item.class_name+(item.student_count!=null?' · '+item.student_count+' học viên':''),String(item.class_id)));
+        fillClassChoices(classes,String(preferred||''));
         classLabel.append(classes);sessionLabel.append(sessions);row.append(classLabel,sessionLabel,controls,message);targets.append(row);
         const state={classes,sessions,message,retry,portalTargets:new Map(),generation:0,done:false,loading:false,refresh:readPlan};rows.push(state);
         async function readPlan(preferredSession=''){
@@ -87,7 +100,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
         }
         classes.addEventListener('change',()=>{message.textContent='';void readPlan();});
         sessions.addEventListener('change',syncSubmit);
-        classes.value=String(preferred||'');await readPlan(String(entry.sessionNumber||''));
+        await readPlan(String(entry.sessionNumber||''));
       }
       async function assign(){
         if(busy)return;
@@ -152,7 +165,11 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,onA
       dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
       dialog.addEventListener('close',()=>{if(dialog.open)return;dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});});
       view={dialog,show(){if(dialog.open)return;opener=document.activeElement;document.body.append(dialog);dialog.showModal();},
-        refresh(){if(!busy)for(const row of rows)if(!row.done&&row.classes.value)void row.refresh(row.sessions.value);}};
+        refresh(){if(!busy)for(const row of rows)if(!row.done){
+          const previous=row.classes.value;
+          fillClassChoices(row.classes,previous);
+          void row.refresh(row.classes.value===previous?row.sessions.value:'');
+        }}};
       pending.set(viewKey,view);void addTarget();
     }
     view.show();
