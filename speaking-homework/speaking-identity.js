@@ -38,6 +38,11 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   const classSelect = $('class-select');
   const studentSelect = $('student-select');
   const button = $('open-homework');
+  const buttonText = button.querySelector('span') || button;
+  const initialButtonText = buttonText.textContent;
+  const heading = document.querySelector('#login-screen .identity-card h2');
+  const initialHeading = heading?.textContent;
+  const memoryHelp = document.querySelector('#login-screen .memory-help');
   const remember = $('remember-student') || { checked: true };
   const roster = new Map();
   let classes = [];
@@ -54,6 +59,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   let selectionGeneration = 0;
   let sharedResolution = null;
   let activeIdentity = null;
+  let selfMatchForm = null;
+  let matchUi;
   // Giữ mã người/lớp theo chính lượt trang này qua reload; không lưu token hoặc quyền.
   // Tab mới vẫn lấy danh tính chung; máy chủ phải kiểm lại roster và cấp phiên mới.
   const entry = location.pathname + location.search;
@@ -86,14 +93,15 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   }
   if (sharedIdentityEnabled) {
     $('forget-remembered').textContent = 'Đổi người học';
-    const help = document.querySelector('#login-screen .memory-help');
-    if (help) help.textContent = 'Trình duyệt sẽ nhớ người học sau khi mở bài. Dùng Đổi người học khi dùng chung thiết bị.';
+    if (memoryHelp) memoryHelp.textContent = 'Trình duyệt sẽ nhớ người học sau khi mở bài. Dùng Đổi người học khi dùng chung thiết bị.';
   }
+  const initialMemoryHelp = memoryHelp?.textContent;
   function message(text, kind = '') {
     $('identity-message').textContent = [mismatchNotice, memoryNotice, text].filter(Boolean).join(' ');
     $('identity-message').dataset.kind = kind || (mismatchNotice || memoryNotice ? 'warning' : '');
   }
   function loading(text) {
+    setSelfMatchForm(null);
     assignment = null;
     roster.clear();
     studentSelect.disabled = true;
@@ -102,6 +110,67 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     $('remembered-identity').hidden = true;
     $('forget-remembered').hidden = sharedMemory?.read().status !== 'ok';
     $('reload-roster').hidden = true;
+  }
+  function setSelfMatchForm(form) {
+    selfMatchForm = form;
+    if (form && !matchUi) {
+      const account = document.createElement('p');
+      account.className = 'self-match-account';
+      const fallback = document.createElement('button');
+      fallback.type = 'button';
+      fallback.className = 'text-button self-match-fallback';
+      fallback.textContent = 'Không thấy tên của tôi';
+      fallback.addEventListener('click', () => {
+        if (active || !assignment || !selfMatchForm) return;
+        setSelfMatchForm(null);
+        renderNames(assignment.students, '');
+        if (memoryHelp) memoryHelp.textContent = 'Tên bạn chọn dùng cho bài đang mở.';
+        message('Chọn đúng tên của bạn từ danh sách của lớp.');
+        studentSelect.focus();
+      });
+      studentSelect.before(account);
+      button.after(fallback);
+      const dialog = document.createElement('dialog');
+      dialog.className = 'self-match-dialog';
+      dialog.setAttribute('aria-labelledby', 'speaking-self-match-title');
+      dialog.innerHTML = `<h2 id="speaking-self-match-title">Kiểm tra thông tin trước khi vào bài</h2>
+        <p data-match-summary></p><p>Bạn xác nhận đây là tài khoản và họ tên của mình chứ?</p>
+        <div class="self-match-actions"><button type="button" class="button button-outline" autofocus>Quay lại</button>
+        <button type="button" class="button button-primary">Xác nhận và vào bài</button></div>`;
+      const [back, confirm] = dialog.querySelectorAll('button');
+      back.addEventListener('click', () => dialog.close());
+      dialog.addEventListener('close', () => { if (!active && !button.disabled) button.focus(); });
+      confirm.addEventListener('click', () => {
+        const snapshot = matchUi.snapshot;
+        dialog.close();
+        if (snapshot?.assignment === assignment && snapshot.studentRef === studentSelect.value && selfMatchForm)
+          void openSelected({confirmedMatch: selfMatchForm});
+      });
+      document.body.append(dialog);
+      matchUi = {account, fallback, dialog, summary: dialog.querySelector('[data-match-summary]')};
+    }
+    if (!matchUi) return;
+    if (!form && matchUi.dialog.open) matchUi.dialog.close();
+    matchUi.account.hidden = matchUi.fallback.hidden = !form;
+    matchUi.account.textContent = form ? `Bài này được giao cho tài khoản Google ${form.account}` : '';
+    if (heading) heading.textContent = form ? 'Xác nhận họ và tên của bạn' : initialHeading;
+    buttonText.textContent = form ? 'Tiếp tục' : initialButtonText;
+    if (memoryHelp) memoryHelp.textContent = form ? 'Thông tin sẽ được ghi nhớ sau khi hệ thống xác nhận thành công.' : initialMemoryHelp;
+  }
+  function renderNames(students, preferred) {
+    const counts = new Map();
+    for (const student of students) counts.set(student.name, (counts.get(student.name) || 0) + 1);
+    roster.clear();
+    studentSelect.replaceChildren(new Option('Chọn tên của bạn', ''));
+    for (const student of students) {
+      const ref = refOf(student);
+      roster.set(ref, student.name);
+      studentSelect.add(new Option(student.name + (counts.get(student.name) > 1 ? ` · ${ref.slice(-4)}` : ''), ref));
+    }
+    studentSelect.disabled = !roster.size;
+    studentSelect.value = roster.has(preferred) ? preferred : '';
+    button.disabled = !studentSelect.value;
+    $('remembered-identity').hidden = !studentSelect.value;
   }
   function itemFor(code) { return classes.find(item => item.classCode === code || item.classRef === code); }
   function useDocument(code) { return originalDocumentId && !documentDropped && originalClass === code; }
@@ -155,25 +224,17 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
           mismatchNotice = 'Người học đã nhớ khác chủ link. Chỉ tiếp tục nếu đây là bài của bạn; thông tin đã nhớ được giữ đến khi bạn xác nhận.';
       }
       const seen = new Set();
-      const counts = new Map();
       for (const student of next.students) {
         const ref = refOf(student);
         if (!uuid.test(ref) || seen.has(ref)) throw new Error('Danh sách học viên chưa có mã hồ sơ duy nhất. Nhờ giảng viên kiểm tra.');
         seen.add(ref);
-        counts.set(student.name, (counts.get(student.name) || 0) + 1);
       }
       assignment = next;
-      studentSelect.replaceChildren(new Option('Chọn tên của bạn', ''));
-      for (const student of next.students) {
-        const ref = refOf(student);
-        roster.set(ref, student.name);
-        studentSelect.add(new Option(student.name + (counts.get(student.name) > 1 ? ` · ${ref.slice(-4)}` : ''), ref));
-      }
-      studentSelect.disabled = !roster.size;
       const suggested = chooseUnmatched ? '' : next.selectedStudentRef || preferred;
-      studentSelect.value = roster.has(suggested) ? suggested : '';
-      button.disabled = !studentSelect.value;
-      $('remembered-identity').hidden = !studentSelect.value;
+      const form = chooseUnmatched && next.selfMatch;
+      const candidates = form && Array.isArray(form.studentRefs) ? next.students.filter(s => form.studentRefs.includes(refOf(s))) : [];
+      setSelfMatchForm(candidates.length && typeof form.account === 'string' && typeof form.token === 'string' ? form : null);
+      renderNames(selfMatchForm ? candidates : next.students, suggested);
       $('forget-remembered').hidden = !studentSelect.value && sharedMemory?.read().status !== 'ok';
       contextText(next);
       if (useDocument(code)) {
@@ -406,7 +467,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     studentSelect.focus();
   });
   $('reload-roster').addEventListener('click', () => classes.length && selectedCode ? loadRoster(selectedCode) : start());
-  async function openSelected({ automatic = false, resolution = null } = {}) {
+  async function openSelected({ automatic = false, resolution = null, confirmedMatch = null } = {}) {
     if (active || !assignment || !roster.has(studentSelect.value)) return;
     if (automatic && (!resolution || !resolutionIsCurrent(resolution)
         || !resolution.aliases.some(alias => alias.classCode === selectedCode && alias.studentRef === studentSelect.value))) return;
@@ -416,28 +477,35 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     const selectedAssignment = assignment;
     const selectionSnapshot = sharedClient?.captureSelection();
     const documentOnly = selectedAssignment.intakeMode === 'document';
-    const identityRead = sharedClient && !automatic && remember.checked && !documentOnly
-      ? sharedClient.resolveSelection({ studentRef, classHint: code }).then(data => ({ data }), error => ({ error })) : null;
+    const fallbackOnly = Boolean(selectedAssignment.selfMatch && !confirmedMatch);
+    const resolveSelection = () => sharedClient.resolveSelection({ studentRef, classHint: code })
+      .then(data => ({ data }), error => ({ error }));
+    const identityRead = sharedClient && !automatic && remember.checked && !documentOnly && !fallbackOnly && !confirmedMatch ? resolveSelection() : null;
     active = true;
     activeIdentity = resolution?.identity || null;
     ++revision;
     controller?.abort();
     classSelect.disabled = studentSelect.disabled = button.disabled = true;
-    message('Đang mở bài Speaking…');
+    message(confirmedMatch ? 'Đang ghi nhớ thông tin đăng nhập của bạn…' : 'Đang mở bài Speaking…');
     try {
       const body = { assignmentCode, classCode: code, studentRef, identityConfirmed: true };
       if (useDocument(code)) body.documentId = originalDocumentId;
+      if (confirmedMatch) {
+        body.selfMatchToken = confirmedMatch.token;
+        body.selfMatchStudentRefs = confirmedMatch.studentRefs;
+      }
       const data = await requestJson(apiBase, '/session/start-selected', body);
       const session = data.session;
       if (!session?.accessToken || session.studentRef !== studentRef || session.classCode !== code || (!session.documentId && !(allowWebReceipt && session.workUnitId))
-        || (body.documentId && session.documentId !== body.documentId)) {
+        || (body.documentId && session.documentId !== body.documentId)
+        || (confirmedMatch && !uuid.test(session.selfMatchDecisionId || ''))) {
         throw new Error('Phiên trả về chưa khớp người, lớp hoặc file Homework. Hãy thử lại.');
       }
-      const stored = documentOnly || writeMemory(storage, key, remember.checked ? studentRef : '');
+      const stored = documentOnly || fallbackOnly || writeMemory(storage, key, remember.checked ? studentRef : '');
       let sharedNotice = '';
-      if (sharedClient && !automatic && !documentOnly) {
+      if (sharedClient && !automatic && !documentOnly && !fallbackOnly) {
         if (remember.checked) {
-          const identityResult = await identityRead;
+          const identityResult = await (identityRead || resolveSelection());
           if (identityResult.error) sharedNotice = 'Đã mở bài nhưng chưa nhớ được người học dùng chung. Bạn vẫn làm bài bình thường.';
           else {
             activeIdentity = identityResult.data.identity || null;
@@ -470,7 +538,14 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       message(`Chưa mở được bài: ${error.message}`, 'error');
     }
   }
-  button.addEventListener('click', () => openSelected());
+  button.addEventListener('click', () => {
+    if (!selfMatchForm) return openSelected();
+    const studentRef = studentSelect.value;
+    if (active || !roster.has(studentRef) || matchUi.dialog.open) return;
+    matchUi.snapshot = {assignment, studentRef};
+    matchUi.summary.textContent = `Tài khoản Google ${selfMatchForm.account} · ${roster.get(studentRef)} · ${selectedCode}`;
+    matchUi.dialog.showModal();
+  });
   $('change-student').addEventListener('click', async () => {
     if ($('change-student').disabled) return;
     const beforeReset = sharedMemory?.read();
