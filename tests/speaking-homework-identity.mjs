@@ -300,11 +300,11 @@ try {
     assert.equal(test.requests.some(r => r.path === '/session/start-selected'), false);
     await test.context.close();
   });
-  for(const width of [390,1440]) await scenario(`L6 unmatched Docs ${width}: ERP roster, exact Doc, saved selection`,async()=>{
+  for(const width of [390,1440]) await scenario(`L6 unmatched Docs ${width}: full ERP roster and manual selection`,async()=>{
     const t=await setup(lessons[4],{width,unmatched:true,selected:refA,query:'?documentId=unmatched-fixture&class=IC2304'});
     assert.equal(await t.page.locator('#login-screen').isVisible(),true);
-    assert.equal(await t.page.locator('#student-select option').count(),2);
-    assert.equal(await t.page.locator('#student-select').inputValue(),refA);
+    assert.equal(await t.page.locator('#student-select option').count(),3);
+    assert.equal(await t.page.locator('#student-select').inputValue(),'');
     assert.equal(t.requests.some(r=>r.path==='/session/start-selected'),false);
     await t.page.screenshot({path:join(output,`unmatched-${width}.png`),fullPage:true});
     await t.page.locator('#student-select').selectOption(refA);await open(t.page);
