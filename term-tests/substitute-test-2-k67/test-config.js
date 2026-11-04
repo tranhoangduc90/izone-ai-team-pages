@@ -18,7 +18,7 @@
   const win=window,doc=document,cfg=win.TERM_TEST_APP_CONFIG,slug=win.TERM_TEST_CONFIG?.slug;
   if(cfg?.EXAM_JOURNAL_ENABLED!==true||typeof slug!=='string'||win.EXAM_JOURNAL_STARTUP)return;
   const script=doc.currentScript,standalone=new URL(script.src).pathname.endsWith('/exam-journal/lobby-capture.js');
-  const bridgeUrl=new URL((standalone?'./':'../shared/exam-journal/')+'bridge.mjs?v=20261024-startup-v2',script.src).href;
+  const bridgeUrl=new URL((standalone?'./':'../shared/exam-journal/')+'bridge.mjs?v=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v1',script.src).href;
   const endpoint=cfg.EXAM_JOURNAL_BASE_URL||(slug.startsWith('substitute-')
     ?new URL(cfg.API_BASE_URL,win.location.href).origin+'/substitute-journal-api/'+slug
     :cfg.API_BASE_URL+'/api/term-tests/'+slug);
@@ -26,6 +26,7 @@
   const changes=new Set(['bootstrap-change-remembered-student','change-remembered-student','termTestChangeStudent','bootstrapChangeStudent','miniPaperChange','changeStudent','changeStudentButton']);
   const lobbyActions=new Set(['confirmIdentity','bootstrapConfirm','bootstrapConfirmPrefilled','bootstrapStart','bootstrapPreview','bootstrapRetry','bootstrapContinue','miniPaperEnter']);
   const queue=[],last=new Map(),listeners=[];
+  let openIdentityDialog=null;
   let bridge=null,loading=false,busy=false,stopped=false,bytes=0,lost=0,ordinal=0,nextTry=0;
   const classCode=()=>{
     const value=doc.getElementById('classCode')?.value||doc.getElementById('bootstrapClass')?.value
@@ -48,8 +49,29 @@
     return {value:String(element.value||'').slice(0,160),
       label:element.tagName==='SELECT'?String(element.selectedOptions?.[0]?.textContent||'').trim().slice(0,160):''};
   }
+  function scanIdentityDialog(){
+    const dialog=doc.querySelector('#identityConfirm[open],.cbt-identity-confirmation-dialog[open]');
+    if(dialog===openIdentityDialog)return;
+    openIdentityDialog=dialog;
+    if(!dialog)return;
+    const rect=dialog.getBoundingClientRect(),visual=win.visualViewport;
+    const viewport={width:win.innerWidth,height:win.innerHeight,dpr:win.devicePixelRatio};
+    const left=visual?.offsetLeft||0,top=visual?.offsetTop||0;
+    const width=visual?.width??viewport.width,height=visual?.height??viewport.height;
+    if(visual)Object.assign(viewport,{visualWidth:Math.round(width),visualHeight:Math.round(height),
+      visualScale:Math.round(visual.scale*100)/100,visualLeft:Math.round(left),visualTop:Math.round(top)});
+    const style=win.getComputedStyle(dialog);
+    let visibility='inside_viewport';
+    if(!rect.width||!rect.height||dialog.checkVisibility?.({opacityProperty:true,visibilityProperty:true})===false||style.visibility==='hidden'||style.visibility==='collapse'||Number(style.opacity)===0)visibility='hidden';
+    else if(rect.right<=left||rect.bottom<=top||rect.left>=left+width||rect.top>=top+height)visibility='outside_viewport';
+    else if(rect.left<left-1||rect.top<top-1||rect.right>left+width+1||rect.bottom>top+height+1)visibility='partly_outside';
+    enqueue('dialog_observed',{action:'identity_confirmation',outcome:'opened',identityConfirmed:false,viewport,
+      checkpointState:{presentation:'html_dialog',visibility,rect:{x:Math.round(rect.x),y:Math.round(rect.y),
+        width:Math.round(rect.width),height:Math.round(rect.height)}}});
+  }
   function scan(cause,event){
     try{
+      try{scanIdentityDialog();}catch{}
       for(const id of controls){
         const el=doc.getElementById(id);if(!el||!el.matches('input,select,textarea')||el.type==='password')continue;
         const selected=selection(el),state={...selected,disabled:!!el.disabled,count:el.options?.length||0},old=last.get(id);
@@ -120,7 +142,7 @@
   listen(win,'pagehide',event=>departure('pagehide',event));
   listen(doc,'visibilitychange',event=>departure('visibilitychange',event));
   const mutation=new MutationObserver(()=>scan('dom_updated'));
-  mutation.observe(doc.body||doc.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected']});
+  mutation.observe(doc.body||doc.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected','open']});
   // A programmatic .value restore need not emit a DOM mutation or change event.
   const timer=win.setInterval(()=>{scan('periodic_snapshot');void drain();},1000);
   win.EXAM_JOURNAL_STARTUP={

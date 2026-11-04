@@ -61,6 +61,14 @@ try{
  await page.selectOption('#bootstrapStudent','fixture-A');
  await page.selectOption('#bootstrapStudent','fixture-B');
  await page.locator('#confirmIdentity').click();
+ // The first open is inside a small viewport. The second deliberately exceeds it.
+ await page.setViewportSize({width:480,height:640});
+ await page.evaluate(()=>{
+  const dialog=document.createElement('dialog');
+  dialog.id='identityConfirm';dialog.textContent='Synthetic dialog text must stay in UI';
+  document.body.append(dialog);dialog.showModal();
+ });
+ await page.waitForFunction(()=>document.querySelector('#identityConfirm').open);
  const selectedAt=Date.now();
  // Audio was the first journal attachment in the old implementation.
  await page.evaluate(async()=>{
@@ -79,6 +87,27 @@ try{
  assert.ok(changes.every(r=>r.event.data.identityConfirmed===false&&Date.parse(r.event.data.checkpointState.observedAt)<=selectedAt));
  assert.ok(proofs.every(p=>!p.attemptToken&&!p.examSessionToken&&!p.studentRef),'DOM selection must not mint student authority');
  assert.ok(logs.some(r=>r.event.data.action==='capture_started'));
+ await until(()=>logs.some(r=>r.event.type==='dialog_observed'));
+ const firstDialog=logs.find(r=>r.event.type==='dialog_observed');
+ assert.equal(firstDialog.bindingId,'a'.repeat(64));
+ assert.equal(firstDialog.event.data.identityConfirmed,false);
+ assert.equal(firstDialog.event.data.viewport.width,480);
+ assert.equal(firstDialog.event.data.checkpointState.visibility,'inside_viewport');
+ await page.evaluate(()=>document.querySelector('#identityConfirm').close());
+ await page.waitForFunction(()=>!document.querySelector('#identityConfirm').open);
+ await page.evaluate(()=>{
+  const dialog=document.querySelector('#identityConfirm');
+  Object.assign(dialog.style,{position:'fixed',inset:'0 auto auto -20px',margin:'0'});
+  dialog.showModal();
+ });
+ await until(()=>logs.filter(r=>r.event.type==='dialog_observed').length===2);
+ const clipped=logs.findLast(r=>r.event.type==='dialog_observed');
+ assert.equal(clipped.event.data.checkpointState.visibility,'partly_outside');
+ assert.equal(clipped.event.data.checkpointState.rect.x,-20);
+ await page.evaluate(()=>document.querySelector('#identityConfirm').close());
+ assert.equal(JSON.stringify(logs).includes('Synthetic dialog text must stay in UI'),false);
+ results.push({case:'unconfirmed HTML dialog in small viewport and clipped placement',status:'PASS'});
+
  await until(()=>logs.some(r=>r.event.type==='button_clicked'&&r.event.data.action==='confirmIdentity'));
  assert.equal(await page.locator('#answer').inputValue(),'unchanged');
  assert.equal(await page.locator('#bootstrapStart').isDisabled(),true);

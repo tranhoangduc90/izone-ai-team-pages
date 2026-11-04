@@ -1,5 +1,5 @@
 import { IndexedOutbox } from './outbox.mjs';
-import { createRecorder,fetchTransport,observeDocument,observeAudio } from './recorder.mjs?v=20261024-startup-v2';
+import { createRecorder,fetchTransport,observeDocument,observeAudio,viewportSnapshot } from './recorder.mjs?v=20261105-diagnostics-v1';
 import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-startup-v2';
 
 const copy = value => JSON.parse(JSON.stringify(value));
@@ -137,8 +137,15 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
         : String(element.value ?? element.textContent ?? '');
       return {fieldId,text,stage};
     },
-    resolveAction:element => ({action:String(element.dataset.action || element.id || element.getAttribute('name') || element.tagName.toLowerCase()).slice(0,120),
-      label:String(element.getAttribute('aria-label') || element.textContent || element.value || '').trim().slice(0,160),stage:String(getState().stage || '')}) });
+    resolveAction:element => {
+      const state=getState();
+      if(current && element.matches?.('#k67ReportAudio,.cbt-audio-incident') && JSON.stringify(proofOf(state))===ownerKey){
+        const official=win.TERM_TEST_BOOTSTRAP?.officialAudioElement;
+        audioStops.get(official)?.snapshot('reported_unheard');
+      }
+      return {action:String(element.dataset.action || element.id || element.getAttribute('name') || element.tagName.toLowerCase()).slice(0,120),
+        label:String(element.getAttribute('aria-label') || element.textContent || element.value || '').trim().slice(0,160),stage:String(state.stage || '')};
+    } });
   function attachPlayers() {
     const players=new Set(doc.querySelectorAll('audio'));
     // Native CBT may retain its official player after moving/removing its UI.
@@ -227,8 +234,11 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
         ...(Number.isSafeInteger(result?.revision) ? {ackRevision:result.revision} : {}) },captured);stateChanged('request_finished'); }};
     },
     dialog(message,outcome) {
+      const state=getState();
+      if(!current || JSON.stringify(proofOf(state))!==ownerKey)return;
       const action = /phục hồi/i.test(message) ? 'restore' : /^Xóa/i.test(message) ? 'reset' : /nộp/i.test(message) ? 'submit' : 'confirm';
-      recorder.record('dialog_observed',{action,outcome,stage:String(getState().stage || '')});
+      recorder.record('dialog_observed',{action,outcome,stage:String(state.stage || ''),viewport:viewportSnapshot(win),
+        checkpointState:{presentation:'browser_confirm',visibility:'unknown'}});
     },
     async stop() { stopped = true;clearInterval(timer);mutation.disconnect();observer.stop();for (const stop of audioStops.values()) stop();
       for(const discard of [...audioPending])discard();bindingCache.clear();win[registryKey]?.delete(connectionKey);
