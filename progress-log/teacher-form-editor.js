@@ -1,7 +1,7 @@
 /* Nhận lớp, phiếu nguồn và API của phiên giảng viên. Soạn đúng 8 dạng đang dùng,
  * lưu nháp ở máy chủ, đối chiếu khi xung đột, xem thử tách biệt rồi duyệt/phát hành.
  * Đáp án chỉ giữ trong bộ nhớ tab; lỗi mạng giữ phần đang soạn và không báo đã lưu. */
-import {createFormLibrary} from './teacher-form-library.js?rev=20261030-the22-23-v1';
+import {createFormLibrary} from './teacher-form-library.js?rev=20261105-class-scope-v1';
 import {bindDialogDismiss} from './session-comments.js';
 import {openWorksheetPreview} from './worksheet-preview.js?rev=20261030-personal-assign-v1';
 import {importReviewCard} from './docs-import-review.js?rev=20261025-docs-import-v1';
@@ -10,7 +10,7 @@ import {PART_TYPES,PART_SKILLS,selectedLimit,preparePartItem,missingSkills} from
 import {editorItemKind} from './item-kind.js?rev=20261028-the15-v1';
 import {changeQuestionKind,incompleteAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
 import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261030-the22-23-v1';
-import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261104-assign-portal-v1';
+import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261105-class-scope-v1';
 import {authoringAction} from './authoring-action.js?rev=20261029-authoring-actions-v2';
 import {collectPublishIssues,schemaFieldIssues,showAuthoringIssues} from './authoring-validation.js?rev=20261030-the22-23-v1';
 import {AI_IMPORT_EXAMPLE} from './ai-import-example.js?rev=20261030-the22-23-v1';
@@ -76,7 +76,7 @@ export function newEditorPayload(title='Phiếu học tập mới') {
 }
 
 export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onManagementChanged=()=>{},libraryEnabled=false}) {
-  let classes=[],assignments=[],draft=null,dirty=false,busy=false,backgroundBusy=false,generation=0,reviewMode=false,
+  let classes=[],assignmentClasses=[],assignmentClassStatus='ready',assignments=[],draft=null,dirty=false,busy=false,backgroundBusy=false,generation=0,reviewMode=false,
     publishOperationId=null,conflict=null,importPreview=null,importText='',docsUrl='',importOpen=false,aiPopupOpen=false,importTargetBlockId=null,list=[];
   const lockedControls=new Map(),librarySaves=new Map(),publishedByDraft=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false,docsBatch;
   let gapWidgets=[],thuyActionButtons,backgroundCompletion,queuedForeground=false,aiView=null,aiApplied=null;const previews=new Set();
@@ -104,7 +104,8 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   }
   const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),saveState=el('small','',{className:'thuy-editor-save-state'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
-  const assignmentDialog=createAssignmentDialog({request,getClasses:()=>classes,getPreferredClass:()=>classSelect.value,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
+  const assignmentDialog=createAssignmentDialog({request,getClasses:()=>assignmentClasses,getPreferredClass:()=>classSelect.value,
+    getClassStatus:()=>assignmentClassStatus,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
   const notice=message=>{status.textContent=message;status.hidden=libraryEnabled&&/^(Đã lưu nháp|Có thay đổi chưa lưu|Chọn lớp để soạn)/u.test(message);if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}if(libraryEnabled)paintSaveState();};
   function paintSaveState(){saveState.textContent=!draft?'':busy?(backgroundBusy?'Đang lưu…':'Đang xử lý…'):saveFailed?'Lưu lỗi':draft.status==='published'?'Đã xuất bản':dirty?'Chưa lưu':'Đã lưu';}
   function field(parent,label,value,onChange,{kind='text',options=null,min,max,disabled=false}={}) {
@@ -771,11 +772,12 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   return {
     hasUnsavedChanges:()=>dirty,
     confirmDiscard:canDiscard,
-    setWorkspace({classes:newClasses,assignments:newAssignments,classId,sessionNumber}) {
+    setWorkspace({classes:newClasses,assignmentClasses:newTargets=newClasses,assignmentClassStatus:newStatus='ready',assignments:newAssignments,classId,sessionNumber}) {
       const selectedClass=draft?.classId||classId||classSelect.value,selectedSource=sourceSelect.value;
-      classes=newClasses;assignments=newAssignments;classSelect.replaceChildren();sourceSelect.replaceChildren(el('option','Chọn phiếu nguồn',{value:''}));
+      classes=newClasses.filter(row=>row.can_manage!==false);assignmentClasses=newTargets;assignmentClassStatus=newStatus;
+      assignments=newAssignments;classSelect.replaceChildren();sourceSelect.replaceChildren(el('option','Chọn phiếu nguồn',{value:''}));
       for(const value of classes)classSelect.append(el('option',value.class_name,{value:String(value.class_id)}));
-      for(const value of assignments)sourceSelect.append(el('option',`${value.class_name} · buổi ${value.session_number} · ${value.title}`,{value:value.assignment_id}));
+      for(const value of assignments.filter(row=>row.can_manage!==false))sourceSelect.append(el('option',`${value.class_name} · buổi ${value.session_number} · ${value.title}`,{value:value.assignment_id}));
       if(classes.some(value=>String(value.class_id)===String(selectedClass)))classSelect.value=String(selectedClass);
       if(!draft&&sessionNumber)session.value=String(sessionNumber);
       library?.setUsed(assignments);
@@ -786,7 +788,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     setContext({classId,sessionNumber}){if(draft||dirty||busy)return;classSelect.value=String(classId);if(sessionNumber)session.value=String(sessionNumber);library?.setUsed(assignments);void run(refreshList);},
     clear() {generation+=1;clearTimeout(autosaveTimer);docsBatch?.dispose();authoring=!libraryEnabled;draft=null;dirty=false;busy=false;backgroundBusy=false;queuedForeground=false;lockControls();conflict=null;importPreview=null;pendingCreate=null;pendingCopy=null;
       aiView?.close();aiApplied=null;for(const preview of previews)preview.close();previews.clear();library?.clear();assignmentDialog.clear();
-      importText='';importOpen=false;classSelect.replaceChildren();sourceSelect.replaceChildren();draftList.replaceChildren();paint();notice('Đăng nhập để soạn phiếu.');},
+      importText='';importOpen=false;assignmentClasses=[];classSelect.replaceChildren();sourceSelect.replaceChildren();draftList.replaceChildren();paint();notice('Đăng nhập để soạn phiếu.');},
     // Dùng cùng đường render thật trong kiểm thử để đối chiếu definition/key trước và sau khi soạn.
     openDraft:value=>adopt(value),getPayload:()=>draft?payload():null
   };

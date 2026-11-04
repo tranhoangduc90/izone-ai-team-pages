@@ -76,13 +76,14 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     const opener=document.activeElement,dialog=node('dialog','','thuy-management-dialog thuy-library-detail'),head=node('header','','thuy-management-head'),body=node('div','','thuy-management-body'),notice=node('p','Đang đọc phiếu…');notice.setAttribute('role','status');
     const close=button('×',()=>dialog.close());close.setAttribute('aria-label','Đóng');
     const edit=button('Sửa bài',async()=>{try{const result=entry.draft?await onOpenDraft(entry):entry.source==='used'?await onCopyUsed(entry):await onCopy(entry);if(result!==false)dialog.close();}catch(error){notice.textContent=error.message;}});
-    head.append(node('h2',entry.title),edit);
+    head.append(node('h2',entry.title));
+    if(entry.assignment?.can_manage!==false)head.append(edit);
     if(entry.source!=='used'){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');head.append(assign);}
     head.append(close);body.append(notice);dialog.append(head,body);document.body.append(dialog);dialogs.add(dialog);bindDialogDismiss(dialog);dialog.showModal();
     dialog.addEventListener('close',()=>{dialogs.delete(dialog);dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});},{once:true});
     try{
       const full=await readEntry(entry);if(run!==lifecycle||!dialog.open)return;
-      if(entry.source==='used'){
+      if(entry.source==='used'&&entry.assignment.can_manage!==false){
         const host=node('div','','thuy-assignment-actions');body.append(host);
         const a=entry.assignment;const management=mountAssignmentManagement({host,getContext:()=>({assignmentId:entry.id,classId:String(a.class_id),className:a.class_name,sessionNumber:Number(a.session_number),title:entry.title}),request,onChanged:onManagementChanged,showHistory:false});managers.add(management);management.refresh();
       }

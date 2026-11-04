@@ -14,19 +14,24 @@ const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-prima
 const load=name=>import(pathToFileURL(resolve(backend,'src',name)).href);
 
 test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều lớp và gửi lại đúng buổi',{timeout:150000},async()=>{
-  const [{createLearningDemoApp,createPGlitePool,initializeLearningDemoDatabase},{createLearningRouter},{createPortalAssignmentScheduleReader}]=
-    await Promise.all([load('learning-demo.js'),load('learning-routes.js'),load('learning-portal-assignment-schedule.js')]);
+  const [{createLearningDemoApp,createPGlitePool,initializeLearningDemoDatabase},{createLearningRouter},{createPortalAssignmentScheduleReader},{createLearningClassPolicy}]=
+    await Promise.all([load('learning-demo.js'),load('learning-routes.js'),load('learning-portal-assignment-schedule.js'),load('learning-class-policy.js')]);
   const sourceDb=new PGlite(),demoDb=new PGlite(),secret='fixture-only-preview-secret-01234567890123456789';
   let server,browser;
   try{
     await initializeLearningDemoDatabase(sourceDb);await initializeLearningDemoDatabase(demoDb);
     await sourceDb.exec("ALTER TABLE mapping.reviewer_account ADD COLUMN role text DEFAULT 'teacher', ADD COLUMN can_access_all_classes boolean DEFAULT false;");
-    for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql','202611040001_form_assignment_portal_target.sql'])
+    for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql','202611040001_form_assignment_portal_target.sql','202611050001_progress_log_course_viewer.sql'])
       await sourceDb.exec(await readFile(resolve(backend,'ops/learning-migrations',file),'utf8'));
     await sourceDb.exec(`INSERT INTO mapping.classroom_course_mapping VALUES(1294,'Lớp mẫu A','approved',NULL,NULL),(1295,'Lớp mẫu B','approved',NULL,NULL),
-      (1296,'Lớp mẫu trống','approved',NULL,NULL),(1298,'Lớp mẫu lỗi ERP','approved',NULL,NULL),(1299,'Lớp mẫu cần đối chiếu','approved',NULL,NULL);
-      INSERT INTO mapping.reviewer_account(email,status) VALUES('owner@example.test','active');
+      (1296,'Lớp mẫu trống','approved',NULL,NULL),(1298,'Lớp mẫu lỗi ERP','approved',NULL,NULL),(1299,'Lớp mẫu cần đối chiếu','approved',NULL,NULL),
+      (1300,'Lớp mẫu đã kết thúc','approved',NULL,NULL),(1301,'Lớp mẫu chưa bắt đầu','approved',NULL,NULL);
+      INSERT INTO mapping.reviewer_account(email,status) VALUES('owner@example.test','active'),('viet@example.test','active'),('thuy@example.test','active'),('admin@example.test','active');
       INSERT INTO mapping.reviewer_class_access VALUES('owner@example.test',1294),('owner@example.test',1295),('owner@example.test',1296),('owner@example.test',1298),('owner@example.test',1299);
+      INSERT INTO mapping.reviewer_class_access VALUES('owner@example.test',1300),('owner@example.test',1301),
+        ('viet@example.test',1294),('viet@example.test',1300),('thuy@example.test',1295);
+      INSERT INTO learning.progress_log_course_viewer(reviewer_email,course_id) VALUES('thuy@example.test',4);
+      INSERT INTO learning.progress_log_admin(reviewer_email,grant_reference) VALUES('admin@example.test','Browser fixture global role');
       INSERT INTO mapping.student_mapping_review(erp_course_class_id,erp_student_contact_id,erp_student_name_snapshot) VALUES(1294,123,'Học viên giả A'),(1295,124,'Học viên giả B');
       INSERT INTO mapping.erp_class_membership_snapshot VALUES(1294,123),(1295,124);
       INSERT INTO learning.course_content_authority(reviewer_email,course_code,can_self_approve_scored_forms,grant_reference) VALUES('owner@example.test','56',true,'Browser fixture only');`);
@@ -46,7 +51,23 @@ test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều l
       });
       return Response.json(rows.reverse());
     }});
-    sourceApp.use('/api/learning',createLearningRouter({pool,portalAssignmentScheduleReader,demoSourceSecret:secret,authenticate(req,_res,next){req.reviewer=reviewer;next();}}));
+    const catalog=[
+      ['1294','Lớp mẫu A','4','on_going','2026-10-01'],
+      ['1295','Lớp mẫu B','5','on_going','2026-11-01'],
+      ['1296','Lớp mẫu trống','4','on_going','2026-09-02'],
+      ['1298','Lớp mẫu lỗi ERP','5','on_going','2026-09-02'],
+      ['1299','Lớp mẫu cần đối chiếu','5','on_going','2026-09-02'],
+      ['1300','Lớp mẫu đã kết thúc','4','completed','2026-10-12'],
+      ['1301','Lớp mẫu chưa bắt đầu','5','on_going','2026-11-09'],
+      ['1302','Lớp mẫu chưa nối Progress Log','4','pending','2026-11-18']
+    ].map(([class_id,class_name,course_id,class_status,class_started_at])=>({class_id,class_name,course_id,class_status,class_started_at}));
+    const classPolicy=createLearningClassPolicy({pool,directoryReader:async()=>structuredClone(catalog),now:()=>new Date('2026-11-05T05:00:00Z')});
+    const fixtureActors={owner:reviewer,viet:{email:'viet@example.test',role:'teacher',canAccessAllClasses:true},
+      thuy:{email:'thuy@example.test',role:'teacher',canAccessAllClasses:false},
+      admin:{email:'admin@example.test',role:'teacher',canAccessAllClasses:false}};
+    sourceApp.use('/api/learning',createLearningRouter({pool,portalAssignmentScheduleReader,classPolicy,demoSourceSecret:secret,authenticate(req,_res,next){
+      req.reviewer=fixtureActors[req.get('x-fixture-actor')]||reviewer;next();
+    }}));
     const denied=await supertest(sourceApp).get('/api/learning/teacher/assignment-sessions?classId=1297&source=portal').expect(403);
     assert.equal(denied.body.error,'CLASS_ACCESS_DENIED');
     for(const [id,status] of [['1296','empty'],['1298','unavailable'],['1299','needs_review']]){
@@ -71,7 +92,12 @@ test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều l
       const request=async(path,options={})=>{const response=await fetch('/source/api/learning'+path,{method:options.method||'GET',headers:{'content-type':'application/json'},...(options.body?{body:JSON.stringify(options.body)}:{})});const body=await response.json();if(!response.ok||!body.ok){const error=Error(body.message||body.error);error.status=response.status;throw error;}return body;};
       window.deliveries=[];window.editor=createFormDraftEditor({host:document.querySelector('#formDraftEditor'),apiRequest:request,libraryEnabled:true,
         onPublished:value=>window.deliveries.push(value)});
-      window.editor.setWorkspace({classes:[{class_id:'1294',class_name:'Lớp mẫu A'},{class_id:'1295',class_name:'Lớp mẫu B'}],assignments:[],classId:'1294',sessionNumber:3});
+      window.fixtureRead=async(actor,path)=>{
+        const response=await fetch('/source/api/learning'+path,{headers:{'x-fixture-actor':actor}});
+        return {status:response.status,body:await response.json()};
+      };
+      const {body}=await window.fixtureRead('owner','/teacher/options');
+      window.editor.setWorkspace({...body,classId:'1294',sessionNumber:3});
     });
     await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByLabel('Tên bài tập',{exact:true}).fill('Phiếu tích hợp R22');await page.getByLabel('Trình độ',{exact:true}).selectOption('56');
     await page.getByRole('button',{name:'+ Trắc nghiệm',exact:true}).click();await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('reading');await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Chọn ý phù hợp');
@@ -101,6 +127,12 @@ test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều l
     const add=dialog.getByRole('button',{name:'+ Thêm lớp nhận bài tập',exact:true});
     const send=dialog.getByRole('button',{name:'Giao bài',exact:true});
     const statuses=dialog.getByRole('status');
+    assert.deepEqual(await classAt(1).locator('option').evaluateAll(options=>options.map(option=>option.value)),['','1295','1294','1299','1298','1296']);
+    const font=selector=>dialog.locator(selector).first().evaluate(node=>getComputedStyle(node).fontSize);
+    assert.equal(await font('.thuy-management-head h2'),'20px');
+    assert.equal(await font('.thuy-assignment-summary h2'),'16px');
+    assert.equal(await font('.thuy-assignment-target select'),'14px');
+    assert.equal(await font('.thuy-assignment-footer .button'),'14px');
     await sessionAt(1).selectOption('2');await send.click();
     await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
     assert.deepEqual(sent.map(call=>call.targets),[[target('1294',2)]]);
@@ -149,6 +181,7 @@ test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều l
       GROUP BY a.erp_course_class_id,s.erp_student_contact_id ORDER BY a.erp_course_class_id`)).rows;
     assert.deepEqual(roster,[{class_id:'1294',student_id:'123',n:3},{class_id:'1295',student_id:'124',n:3}]);
     await page.setViewportSize({width:390,height:844});assert.equal(await dialog.evaluate(element=>element.scrollWidth>element.clientWidth),false);
+    assert.equal(await font('.thuy-assignment-target select'),'16px');
     if(process.env.PROGRESS_LOG_EVIDENCE_DIR)await dialog.screenshot({path:resolve(process.env.PROGRESS_LOG_EVIDENCE_DIR,'assignment-mobile.png')});
     assert.deepEqual((await sourceDb.query('SELECT source_scope FROM learning.form_assignment_origin ORDER BY assignment_id')).rows.map(r=>r.source_scope),Array(6).fill('personal'));
     await page.setViewportSize({width:1440,height:1000});await page.keyboard.press('Escape');
@@ -161,6 +194,33 @@ test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều l
     assert.ok((await sourceDb.query('SELECT form_version_id FROM learning.form_assignment')).rows.every(r=>r.form_version_id===published.form_version_id));
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_worksheet')).rows[0].n,1);
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_publication')).rows[0].n,2);
+    const roles=await page.evaluate(async()=>{
+      const read=window.fixtureRead,opts=actor=>read(actor,'/teacher/options');
+      const [viet,thuy,admin,other,k56,unmapped,readonlySchedule]=await Promise.all([
+        opts('viet'),opts('thuy'),opts('admin'),read('viet','/teacher/classes/1295/overview'),
+        read('thuy','/teacher/classes/1294/overview'),read('thuy','/teacher/classes/1302/overview'),
+        read('thuy','/teacher/assignment-sessions?classId=1294&source=portal')
+      ]);
+      return {viet:viet.body,thuy:thuy.body,admin:admin.body,statuses:[other.status,k56.status,unmapped.status,readonlySchedule.status],
+        unmapped:unmapped.body.overview?.progressLogMapped};
+    });
+    assert.equal(roles.viet.reviewer.canAccessAllClasses,false);
+    assert.deepEqual(roles.viet.classes.map(row=>row.class_id).sort(),['1294','1300']);
+    assert.deepEqual(roles.viet.assignmentClasses.map(row=>row.class_id),['1294']);
+    assert.equal(roles.thuy.reviewer.canReadCourse56,true);
+    assert.equal(roles.thuy.classes.find(row=>row.class_id==='1294').can_manage,false);
+    assert.equal(roles.thuy.classes.some(row=>row.class_id==='1298'),false);
+    assert.deepEqual(roles.thuy.assignmentClasses.map(row=>row.class_id),['1295']);
+    assert.equal(roles.admin.reviewer.canAccessAllClasses,true);
+    assert.deepEqual(roles.statuses,[403,200,200,403]);assert.equal(roles.unmapped,false);
+    const deniedWrite=await supertest(sourceApp).post('/api/learning/teacher/form-publications/'+published.id+'/assign')
+      .set('x-fixture-actor','thuy').send({operationId:randomUUID(),targets:[target('1294',1)]}).expect(200);
+    assert.equal(deniedWrite.body.delivery.results[0].error,'DRAFT_CLASS_ACCESS_DENIED');
+    catalog.find(row=>row.class_id==='1295').class_status='completed';
+    const ended=await supertest(sourceApp).post('/api/learning/teacher/form-publications/'+published.id+'/assign')
+      .send({operationId:randomUUID(),targets:[target('1295',1)]}).expect(200);
+    assert.equal(ended.body.delivery.results[0].error,'CLASS_NOT_ONGOING');
+    assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_assignment')).rows[0].n,6);
     assert.deepEqual(errors,[]);
   }finally{await browser?.close();if(server)await new Promise(done=>server.close(done));await sourceDb.close();await demoDb.close();}
 });

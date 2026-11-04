@@ -16,7 +16,8 @@ export function renderTeacherClassPortal(root,{classes,assignments,onOpen}) {
     const visible=classes.filter(c=>(group==='all'||c.class_status===group)&&normalize(c.class_name).includes(normalize(input.value)));
     const cards=visible.map(c=>{
       const card=node('button','','thuy-class-card');card.type='button';
-      card.append(node('b',c.class_name),node('span',c.class_status==='on_going'?'Đang học':c.class_status==='completed'?'Đã kết thúc':'Chưa có trạng thái lớp','muted'));
+      const status={on_going:'Đang học',completed:'Đã kết thúc',pending:'Chưa bắt đầu',cancelled:'Đã hủy'}[c.class_status]||'Chưa có trạng thái lớp';
+      card.append(node('b',c.class_name),node('span',status+(c.can_manage===false?' · Chỉ đọc':''),'muted'));
       const forms=assignments.filter(a=>String(a.class_id)===String(c.class_id));
       card.append(node('small',forms.length?forms.length+' phiếu · Mở lớp →':'Chưa giao bài · Mở lớp →'));
       card.addEventListener('click',()=>onOpen(String(c.class_id)));return card;
