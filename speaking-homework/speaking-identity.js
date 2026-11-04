@@ -143,7 +143,8 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
       if (['draft', 'deleted', 'missing', 'ambiguous'].includes(next.assignmentStatus)) {
         throw new Error('Bài của lớp này chưa sẵn sàng để mở.');
       }
-      const chooseUnmatched = useDocument(code) && next.intakeMode === 'unmatched' && !next.selectedStudentRef;
+      // A saved draft selection does not establish Classroom ownership.
+      const chooseUnmatched = useDocument(code) && next.intakeMode === 'unmatched';
       if (useDocument(code) && !chooseUnmatched) {
         const owner = next.selectedStudentRef;
         if (!uuid.test(owner || '') || next.students.filter(s => refOf(s) === owner).length !== 1)
@@ -350,7 +351,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     }
   }
   async function tryAutoOpen(generation) {
-    if ((useDocument(selectedCode) && assignment?.intakeMode === 'unmatched' && !assignment.selectedStudentRef)
+    if ((useDocument(selectedCode) && assignment?.intakeMode === 'unmatched')
         || requireManualSelection || !sharedResolution || !resolutionIsCurrent(sharedResolution) || active
         || generation !== selectionGeneration || !assignment || !canOpenClass(selectedCode)) return;
     const choice = selectStudentIdentityAlias(sharedResolution, { classHint: selectedCode });
