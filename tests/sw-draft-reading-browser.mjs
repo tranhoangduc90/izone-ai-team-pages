@@ -25,9 +25,12 @@ function rawSession(task,student='fixture-student'){
 }
 const blocks=text=>({type:'doc',content:[{type:'paragraph',content:[{type:'text',text}]}]});
 function resultPayload(label='Bản chấm đầu',count=3){return {essays:Array.from({length:count},(_,i)=>({id:'sentence-'+i,index:i,content:blocks('Synthetic original sentence '+i),suggestedContent:blocks('Synthetic suggestion '+i),comments:['<p>'+label+' · Thẻ '+(i+1)+'. '+('Nhận xét dài để kiểm vị trí đọc. '.repeat(45))+'</p>']})),updatedAt:stamp,...(count?{}:{noCorrections:true,readbackOk:true})};}
-async function fixture(browser,{task=tasks[0],teacher=false,width=1440,engine='sw-task2-writing'}={}){
+async function fixture(browser,{task=tasks[0],teacher=false,width=1440,engine='sw-task2-writing',overviewOnly=false}={}){
  const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage();
  const state={raw:rawSession(task),result:resultPayload(),threads:[],calls:[],errors:[],escaped:[],resultStatus:200,sessionStatus:200,resultDelay:80};
+ const roster=overviewOnly
+  ? Array.from({length:20},(_,i)=>({studentRef:'fixture-'+i,displayName:'Học viên thử '+i}))
+  : [{studentRef:'fixture-student',displayName:'Học viên thử'},{studentRef:'fixture-other',displayName:'Người thử khác'}];
  await context.addInitScript(({task})=>localStorage.setItem('izone:sw-task2:production:'+task+':identity',JSON.stringify({id:'fixture-student',classRef:'fixture-class',sessionRef:'fixture-student-session'})),{task});
  await context.route('**/*',async route=>{
   const req=route.request(),u=new URL(req.url()),p=u.pathname;
@@ -40,24 +43,72 @@ async function fixture(browser,{task=tasks[0],teacher=false,width=1440,engine='s
   if(p.includes('/restore/')||p.endsWith('/auth/session'))return route.fulfill({json:{ok:true}});
   if(p.endsWith('/shared-session'))return route.fulfill({status:401,json:{error:'FIXTURE_NO_SESSION'}});
   if(p.endsWith('/admin/me'))return route.fulfill({json:{reviewer:{role:'admin'},classes:[{classCode:'CS-FIXTURE'}]}});
-  if(p.endsWith('/roster'))return route.fulfill({json:{classes:[{classRef:'fixture-class',className:'CS-FIXTURE',students:[{studentRef:'fixture-student',displayName:'Học viên thử'},{studentRef:'fixture-other',displayName:'Người thử khác'}]}]}});
+  if(p.endsWith('/roster'))return route.fulfill({json:{classes:[{classRef:'fixture-class',className:'CS-FIXTURE',students:roster}]}});
   if(p.endsWith('/sw/status')||p.endsWith('/shops/status'))return route.fulfill({json:{ok:true}});
-  if(p.includes('/admin/live/activities/'))return route.fulfill({json:{students:[{studentRef:'fixture-student',classRef:'fixture-class',sessionRef:state.raw.sessionRef}]}});
+  if(p.includes('/admin/sw/lesson9/overview/')){
+   if(!overviewOnly)return route.fulfill({status:404,json:{error:'NOT_FOUND'}});
+   return route.fulfill({json:{activitySlug:task,classRef:'fixture-class',students:roster.map(student=>({
+    studentRef:student.studentRef,classRef:'fixture-class',sessionRef:student.studentRef+'-session',updatedAt:stamp,
+    responses:Object.fromEntries(fields.map(field=>[field,field==='body_choice'?'body1':'x'])),
+    steps:Object.fromEntries(['topic_sentence','supporting_idea_1','supporting_idea_2','draft'].map(section=>[section,{status:'passed',locked:true,checks:1,negatives:0,ai:1}])),
+    openThreads:student.studentRef==='fixture-19'?1:0,idea2Open:true,draftEdited:false,editedFields:[],approvals:[]
+   }))}});
+  }
+  if(p.includes('/admin/live/activities/'))return route.fulfill({json:{students:overviewOnly
+   ? roster.map(student=>({studentRef:student.studentRef,classRef:'fixture-class',sessionRef:student.studentRef+'-session'}))
+   : [{studentRef:'fixture-student',classRef:'fixture-class',sessionRef:state.raw.sessionRef}]}});
   if(p.endsWith('/teacher-comments'))return route.fulfill({json:{threads:state.threads}});
   if(p.endsWith('/lesson9/sessions')&&req.method()==='POST'){state.raw=rawSession(task,req.postDataJSON().studentRef);state.result=resultPayload('Người học mới',1);return route.fulfill({json:{session:state.raw}});}
   if(p.endsWith('/draft-result')){const data=structuredClone(state.result),status=state.resultStatus;await new Promise(r=>setTimeout(r,state.resultDelay));return route.fulfill({status,json:status===200?{ok:true,result:data}:{error:'FIXTURE_RESULT_UNAVAILABLE'}});}
-  if(p.includes('/lesson9/sessions/'))return route.fulfill({status:state.sessionStatus,json:state.sessionStatus===200?{session:state.raw}:{error:'FIXTURE_SESSION_UNAVAILABLE'}});
+  if(p.includes('/lesson9/sessions/')){
+   const raw=overviewOnly?rawSession(task,p.split('/').at(-1).replace(/-session$/,'')):state.raw;
+   return route.fulfill({status:state.sessionStatus,json:state.sessionStatus===200?{session:raw}:{error:'FIXTURE_SESSION_UNAVAILABLE'}});
+  }
   if(p.endsWith('/responses')&&req.method()==='PUT'){state.raw.responses={...state.raw.responses,...req.postDataJSON().responses};state.raw.draftVersion++;return route.fulfill({json:{session:state.raw}});}
   state.errors.push('Unexpected fixture '+req.method()+' '+p);return route.fulfill({status:500,json:{error:'UNEXPECTED_FIXTURE'}});
  });
  page.on('pageerror',e=>state.errors.push(e.message));
- const entry=engine==='sw-task2-writing'?'/sw-task2-writing/'+(teacher?'teacher':'index')+'.html?task='+task+(teacher?'&student=fixture-student':''):'/shops-writing/writing-handouts/shops-review/connected-teacher.html?student=fixture-student';
+ const entry=engine==='sw-task2-writing'?'/sw-task2-writing/'+(teacher?'teacher':'index')+'.html?task='+task+(teacher&&!overviewOnly?'&student=fixture-student':''):'/shops-writing/writing-handouts/shops-review/connected-teacher.html?student=fixture-student';
  await page.goto(origin+prefix+entry);
- try{await page.locator('#connected-draft-result .lms-page-status').waitFor({state:'attached',timeout:15000});}
+ try{await page.locator(overviewOnly?'#dashboard #students':'#connected-draft-result .lms-page-status').waitFor({state:'attached',timeout:15000});}
  catch(error){console.log(JSON.stringify({engine,teacher,errors:state.errors,calls:state.calls.slice(-8),body:(await page.locator('body').innerText()).slice(-1800)}));throw error;}
- if(teacher){const draft=page.locator('.teacher-draft-read');await draft.evaluate(el=>el.open=true);}
+ if(teacher&&!overviewOnly){const draft=page.locator('.teacher-draft-read');await draft.evaluate(el=>el.open=true);}
  return {context,page,state,resultCalls:()=>state.calls.filter(c=>c.path.endsWith('/draft-result')).length,sessionCalls:()=>state.calls.filter(c=>c.path.includes('/lesson9/sessions/')).length,async close(){assert.deepEqual(state.escaped,[]);assert.deepEqual(state.errors,[]);assert(state.calls.every(c=>c.method==='GET'||c.method==='PUT'&&c.path.endsWith('/responses')||c.method==='POST'&&c.path.endsWith('/lesson9/sessions')||c.path.includes('/restore/')||c.path.endsWith('/shared-session')));await context.close();}};
 }
+
+for(const tabs of [1,4])test('SW giáo viên: tổng quan 20 phiên chỉ đọc một lần mỗi tab, '+tabs+' tab',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true}),fixtures=[];
+ try{
+  fixtures.push(...await Promise.all(Array.from({length:tabs},()=>fixture(browser,{teacher:true,overviewOnly:true}))));
+  const overviewReads=f=>f.state.calls.filter(call=>call.method==='GET'&&(/\/admin\/live\/activities\/|\/lesson9\/sessions\/|\/teacher-comments$|\/admin\/sw\/lesson9\/overview\//).test(call.path)).length;
+  const first=fixtures.map(overviewReads);
+  for(const f of fixtures)assert.equal(await f.page.locator('#students [data-student]').count(),20);
+  console.log(JSON.stringify({tabs,students:20,firstOverviewGet:first}));
+  assert.deepEqual(first,Array(tabs).fill(1),'20 phiên phải được đọc qua một request tổng quan');
+  await Promise.all(fixtures.map(f=>f.page.waitForResponse(response=>response.url().includes('/admin/sw/lesson9/overview/'),{timeout:8000})));
+  const next=fixtures.map((f,i)=>overviewReads(f)-first[i]);
+  assert.deepEqual(next,Array(tabs).fill(1));
+  console.log(JSON.stringify({tabs,students:20,backgroundOverviewGet:next}));
+  const [f]=fixtures;
+  await f.page.locator('#summary [data-filter="support"]').click();
+  assert.equal(await f.page.locator('#students [data-student]').count(),1);
+  const before=f.state.calls.length;
+  await f.page.locator('#students [data-student="fixture-19"]').click();
+  await f.page.locator('#detail').waitFor({state:'visible'});
+  const detail=f.state.calls.slice(before).filter(call=>call.path.includes('/lesson9/sessions/')||call.path.endsWith('/teacher-comments'));
+  assert.equal(detail.length,2);
+  assert(detail.every(call=>call.path.includes('/fixture-19-session')));
+  if(tabs===1){
+   await f.page.locator('.teacher-draft-read').evaluate(el=>el.open=true);
+   await f.page.locator('#connected-draft-result .lms-page-status').waitFor();
+   await rememberReading(f.page);
+   await f.page.waitForResponse(response=>response.url().endsWith('/draft-result'),{timeout:8000});
+   await assertReading(f.page);
+   f.state.result=resultPayload('Tổng quan mới vẫn đọc sửa trong cùng lượt');
+   await f.page.locator('#connected-draft-result').filter({hasText:'Tổng quan mới vẫn đọc sửa trong cùng lượt'}).waitFor({timeout:9000});
+  }
+ }finally{await Promise.all(fixtures.map(f=>f.close()));await browser.close();}
+});
 async function rememberReading(page){
  await page.locator('#connected-draft-result .lms-page-button').last().click();
  return page.evaluate(()=>{

@@ -27,7 +27,7 @@ export function fixture(person) {
 }
 export function dashboardState(s) {
   if (Object.values(s.steps).some(p => p.status === 'technical_error')) return 'error';
-  if (s.threads.some(t => !t.resolved) || Object.values(s.steps).some(p => p.status === 'revision')) return 'support';
+  if ((s.openThreadCount ?? s.threads.some(t => !t.resolved)) || Object.values(s.steps).some(p => p.status === 'revision')) return 'support';
   if (s.steps.draft.status === 'passed' && !s.steps.draft.edited) return 'complete';
   if (Object.values(s.steps).some(p => p.status === 'pending')) return 'pending';
   if (!Object.values(s.responses).some(Boolean)) return 'fresh';

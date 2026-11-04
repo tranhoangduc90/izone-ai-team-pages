@@ -4,7 +4,7 @@ import { savedContent, threadsView, approvalLabel } from '../lesson5-thu/feature
 import { card, states, ordered } from '../lesson5/teacher-dashboard.mjs';
 import { renderActivityList } from '../lesson5/activity-ui.mjs';
 import { available } from '../shared/workflow.mjs';
-import { PEOPLE, LABELS, SECTIONS, STATUS, STATEMENT, TASK, VOCABULARY, canOpen, completeCount, wordCount, dashboardState } from './model.mjs';
+import { PEOPLE, LABELS, SECTIONS, STATUS, STATEMENT, TASK, VOCABULARY, canOpen, completeCount, wordCount, dashboardState } from './model.mjs?v=20261104-overview-v1';
 export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const SECTION_FIELDS = { topic: ['idea1','idea2','topicSentence'], si1: ['a1','x1','b1'], si2: ['a2','x2','b2'] };
 const plus = '<span class="expand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path class="vertical" d="M12 5v14"/></svg></span>';
@@ -74,19 +74,20 @@ function resultView(s) {
   return `<section class="completed" id="result"><span class="badge passed">Kết quả mô phỏng</span><h2>Nhận xét đoạn & từng câu</h2><p>Thẻ dưới minh họa giao diện, không phải AI đánh giá nội dung vừa nhập.</p>${s.steps.draft.edited?'<p class="edited-note">Bạn đã sửa Draft; bản gửi trước được giữ trong kết quả này.</p>':''}<details><summary>Xem Draft 2 đã gửi</summary><p lang="en">${esc(h.snapshot.draft2)}</p></details><div class="shops-sentence-nav">${sentences.map((_,i)=>`<button class="secondary" data-sentence="${i}" aria-pressed="${i===0}">${i+1}</button>`).join('')}</div>${sentences.map((text,i)=>`<article class="comment" data-sentence-card="${i}" ${i?'hidden':''}><div class="comment-header">Câu ${i+1}/${sentences.length}</div><div class="comment-body"><blockquote lang="en">${esc(text)}</blockquote><h3>Nhận xét minh họa</h3><p>Câu này đang nêu ý, giải thích cầu nối hay chốt hệ quả? Hãy đối chiếu với ý đã chuẩn bị. Đây là gợi ý mẫu cố định.</p>${i===sentences.length-1?'<p>Đây là câu cuối của bản đã gửi.</p>':''}</div></article>`).join('')}</section>`;
 }
 export function project(s) {
-  const n=nativeState(s),state=dashboardState(s),fresh=state==='fresh';
+  const state=dashboardState(s),fresh=state==='fresh';
   const active=Object.keys(SECTION_FIELDS).find(k=>s.steps[k].status!=='passed');
-  const streak=s.steps[active]?.history.toReversed().findIndex(h=>h.status==='passed');
-  const negatives=s.steps[active]?.history.filter(h=>h.status==='revision').length||0;
+  const negatives=s.steps[active]?.negatives??s.steps[active]?.history.filter(h=>h.status==='revision').length??0;
+  const openThreads=s.openThreadCount??s.threads.filter(t=>!t.resolved).length;
   return {studentRef:s.id,displayName:s.person.name,sessionRef:fresh?null:s.id,dashboard:fresh?null:{
-    state:state==='error'?'attention':state==='fresh'?'not_started':state==='complete'?'complete':state==='support'&&negatives<3&&!s.threads.some(t=>!t.resolved)?'revision':state,
+    state:state==='error'?'attention':state==='fresh'?'not_started':state==='complete'?'complete':state==='support'&&negatives<3&&!openThreads?'revision':state,
     priority:state==='support'?0:state==='error'?1:state==='complete'?4:3,
     filled:Object.keys(LABELS).filter(k=>!k.startsWith('draft')&&s.responses[k]?.trim()).length,
     passed:completeCount(s),totalSections:3,current:active||null,sectionOrder:Object.keys(SECTION_FIELDS),
     sectionPolicy:{order:Object.keys(SECTION_FIELDS)},sectionFields:SECTION_FIELDS,
     stepStates:Object.fromEntries(Object.keys(SECTION_FIELDS).map(k=>[k,{status:s.steps[k].status,available:available(s,k)}])),
-    checks:Object.values(s.steps).reduce((n,p)=>n+p.history.length,0),aiComments:Object.values(s.steps).reduce((n,p)=>n+p.history.filter(h=>!h.feedback.startsWith('Học viên tự')).length,0),
-    openThreads:s.threads.filter(t=>!t.resolved).length,attested:Object.values(s.steps).filter(p=>p.approval).length,edited:Object.values(s.steps).some(p=>p.edited),
+    checks:Object.values(s.steps).reduce((n,p)=>n+(p.checks??p.history.length),0),
+    aiComments:Object.values(s.steps).reduce((n,p)=>n+(p.ai??p.history.filter(h=>!h.feedback.startsWith('Học viên tự')).length),0),
+    openThreads,attested:Object.values(s.steps).filter(p=>p.approval).length,edited:Object.values(s.steps).some(p=>p.edited),
     negativeStreak:negatives,supportLevel:Math.floor(negatives/3),activity:{studentAt:Date.parse(s.updatedAt),lastAt:Date.parse(s.updatedAt)},processing:{},
   }};
 }

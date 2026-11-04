@@ -1,7 +1,7 @@
 import {createCheckFeedback,missingCheckFields} from '../../../shared/writing-check-feedback.mjs?v=20261101-v1';
-import {PEOPLE,ACTIVITY,TASK,LABELS,fixture,wordCount} from './model.mjs';
-import {studentLayout,teacherLayout,esc,SECTION_FIELDS} from './lesson9-view.mjs?v=20261031-threads';
-import {connectedState,SECTION,serverField} from './connected-adapter.mjs';
+import {PEOPLE,ACTIVITY,TASK,LABELS,fixture,wordCount} from './model.mjs?v=20261104-overview-v1';
+import {studentLayout,teacherLayout,esc,SECTION_FIELDS} from './lesson9-view.mjs?v=20261031-threads&overview=20261104-v1';
+import {connectedState,overviewState,SECTION,serverField} from './connected-adapter.mjs?v=20261104-overview-v1';
 import {appendMarkdown} from '../js/markdown.js';
 import {renderLmsDraftResult} from '../js/lms-draft-result.js';
 import {installStyles} from '../lesson5-thu/features.mjs';
@@ -18,6 +18,7 @@ const vocabularyRequests=new Set(),resultRequests=new Map();
 let legacyDraft=null;
 let pendingIdentity=null,rememberStudent=true,registrationBusy=false,registrationRequest=null;
 let classes=[],person=null,current=null,threads=[],rows=[],responses={},dirty=false,conflict=false,busy=false,saveTimer,pollTimer,generation=0;
+let teacherOverviewRequest=0;
 let teacherAuth='checking';
 let notice='',filter='all',query='',order='recent',detailOpen=false,editor=null,attestKey=null,composer=null,loggedIn=false,conflictServer=null;
 const id=()=>crypto.randomUUID();
@@ -211,24 +212,60 @@ async function check(key){
  }catch(error){if(epoch===generation&&ref===current?.sessionRef)checkFeedback.error(error,button);}
  finally{checkingRef=null;if(epoch===generation&&ref===current?.sessionRef)checkFeedback.pending(false,responses,ref);}
 }
+function readTeacherDetail(ref,linked){
+ return Promise.all([
+  linked||api('admin/lesson9/sessions/'+ref).then(data=>data.session),
+  api('admin/live/sessions/'+ref+'/teacher-comments').then(data=>data.threads)
+ ]);
+}
+async function openTeacherDetail(ref,{linked,onlyIfOpen=false}={}){
+ const epoch=generation,selected=person;
+ const stillCurrent=()=>epoch===generation&&person===selected&&loggedIn&&(!onlyIfOpen||detailOpen);
+ let raw,comments;
+ try{[raw,comments]=ref?await readTeacherDetail(ref,linked):[null,[]];}
+ catch(error){if(!stillCurrent())return false;throw error;}
+ if(!stillCurrent())return false;
+ if(raw&&(raw.sessionRef!==ref||raw.activitySlug!==ACTIVITY||raw.studentRef!==selected.id||raw.classRef!==selected.classRef))throw Error('SESSION_OWNER_MISMATCH');
+ current=raw;responses=raw?working(raw):{};threads=comments;dirty=false;detailOpen=true;
+ return true;
+}
 async function loadTeacher(render=true){
- const epoch=generation;
- const classRef=person?.classRef||classes[0]?.classRef;
- const data=await api('admin/live/activities/'+ACTIVITY+'?classRef='+encodeURIComponent(classRef));
- if(epoch!==generation||!loggedIn)return;
- rows=[];
- for(const row of data.students||[]){
-  const p=PEOPLE.find(p=>p.id===row.studentRef&&p.classRef===row.classRef);if(!p)continue;
-  if(row.sessionRef){
-   // Đọc bài và trao đổi cùng hồ sơ; trạng thái danh sách phải khớp chi tiết.
-   const [sessionData,threadData]=await Promise.all([api('admin/lesson9/sessions/'+row.sessionRef),api('admin/live/sessions/'+row.sessionRef+'/teacher-comments')]);
-   if(epoch!==generation||!loggedIn)return;
-   const raw=sessionData.session;rows.push(connectedState(raw,p,threadData.threads));
-   if((current?.sessionRef===raw.sessionRef||detailOpen&&!current&&person?.id===p.id)&&!editor){current=raw;responses=working(raw);}
+ const epoch=generation,classRef=person?.classRef||classes[0]?.classRef,request=++teacherOverviewRequest;
+ const stillCurrent=()=>epoch===generation&&request===teacherOverviewRequest&&loggedIn&&person?.classRef===classRef;
+ const query='?classRef='+encodeURIComponent(classRef),slug=encodeURIComponent(ACTIVITY);
+ let nextRows;
+ try{
+  const data=await api('admin/sw/lesson9/overview/'+slug+query);
+  if(!stillCurrent())return;
+  if(data.activitySlug!==ACTIVITY||data.classRef!==classRef)throw Error('OVERVIEW_CLASS_MISMATCH');
+  const sessions=new Map(data.students.map(row=>[row.studentRef,row]));
+  nextRows=PEOPLE.filter(p=>p.classRef===classRef).map(p=>{
+   const row=sessions.get(p.id);
+   return row?overviewState(row,p):{...fixture(p),connected:true};
+  });
+ }catch(error){
+  if(!stillCurrent())return;
+  // The previous API only serves the original dashboard route during rollback.
+  if(error.status!==404||error.code!=='NOT_FOUND')throw error;
+  const data=await api('admin/live/activities/'+slug+query);
+  nextRows=[];
+  for(const row of data.students||[]){
+   if(!stillCurrent())return;
+   const p=PEOPLE.find(p=>p.id===row.studentRef&&p.classRef===classRef&&row.classRef===classRef);
+   if(!p)continue;
+   if(!row.sessionRef){nextRows.push({...fixture(p),connected:true});continue;}
+   const [raw,comments]=await readTeacherDetail(row.sessionRef);
+   nextRows.push(connectedState(raw,p,comments));
   }
-  else rows.push({...fixture(p,'fresh'),connected:true});
  }
- if(render)draw();else if(detailOpen)await refresh({background:true});else if(!document.activeElement?.matches('input,textarea,select'))draw({background:true});
+ if(!stillCurrent())return;
+ rows=nextRows;
+ if(detailOpen&&!render){
+  const selected=rows.find(row=>row.id===person.id),ref=selected?.sessionRef;
+  if(ref&&ref===current?.sessionRef){await refresh({background:true});return;}
+  if(ref||current){if(await openTeacherDetail(ref,{onlyIfOpen:true}))draw({background:true});return;}
+ }
+ if(render||!document.activeElement?.matches('input,textarea,select'))draw({background:!render});
 }
 // Lượt chấm là ranh giới của trạng thái đọc; cùng phiên có thể có nhiều lượt.
 function resultKey(){
@@ -281,7 +318,7 @@ root.addEventListener('change',e=>{
   responses.body_choice=el.value;dirty=true;cache();draw();
  }
  if(el.id==='status-filter'){filter=el.value;draw();}if(el.id==='order'){order=el.value;draw();}
- if(el.id==='teacher-class'){const p=PEOPLE.find(p=>p.classCode===el.value);if(p){const previous=person;person=p;detailOpen=false;current=null;void loadTeacher().catch(e=>{person=previous;draw();message(e.message);});}}
+ if(el.id==='teacher-class'){const p=PEOPLE.find(p=>p.classCode===el.value);if(p){const previous=person,epoch=++generation;person=p;detailOpen=false;current=null;void loadTeacher().catch(e=>{if(epoch!==generation)return;if([401,403].includes(e.status)){invalidateTeacher(authMessage(e));return;}person=previous;draw();message(e.message);});}}
  if(el.id==='comment-field')composer={personId:person.id,field:el.value,quote:''};
  if(el.id==='teacher-permission')$('#attest-submit').disabled=!el.checked;
 });
@@ -305,9 +342,10 @@ root.addEventListener('click',async e=>{
   if(b.id==='next-idea'){await action('open_idea2');draw();jump('idea2');return;}
   if(b.dataset.filter){filter=filter===b.dataset.filter?'all':b.dataset.filter;draw();return;}
   if(b.dataset.student){
-   if(composer&&person)composers.set(person.id,composer);person=PEOPLE.find(p=>p.id===b.dataset.student);composer=composers.get(person.id)||null;
-   const row=rows.find(r=>r.id===person.id);if(!row?.sessionRef){current=null;responses={};threads=[];detailOpen=true;generation++;draw();return;}
-   current=(await api('admin/lesson9/sessions/'+row.sessionRef)).session;responses=working(current);dirty=false;threads=(await api('admin/live/sessions/'+current.sessionRef+'/teacher-comments')).threads;detailOpen=true;generation++;draw();return;
+   if(composer&&person)composers.set(person.id,composer);
+   const row=rows.find(r=>r.id===b.dataset.student);if(!row)return;
+   generation++;person=row.person;composer=composers.get(person.id)||null;current=null;detailOpen=false;
+   if(await openTeacherDetail(row.sessionRef))draw();return;
   }
   if(b.dataset.commentField){composer={personId:person.id,field:b.dataset.commentField,quote:''};draw();$('#comment-body').focus();return;}
   if(b.dataset.threadStatus){const t=threads.find(t=>t.threadRef===b.dataset.threadStatus);await api('admin/teacher-comments/'+t.threadRef+'/status','POST',{status:t.status==='addressed'?'open':'addressed',requestId:id()});await refresh();draw();return;}
@@ -340,7 +378,7 @@ root.addEventListener('click',async e=>{
   }
   if(a==='retry-login'){await restoreTeacher();}
   if(a==='teacher-logout'){try{await api('auth/session','DELETE');}catch(error){if(error.status!==401)throw error;}invalidateTeacher('Đã đăng xuất phiên dùng chung. Lời đang soạn được giữ trong tab.');return;}
-  if(a==='refresh'){if(dirty)await save();await refresh();draw();}
+  if(a==='refresh'){if(teacher&&!detailOpen){await loadTeacher();return;}if(dirty)await save();await refresh();draw();}
   if(a==='identity'){await save();current=null;generation++;clearTimeout(pollTimer);draw();fillPeople();}
   if(a==='close-detail'){if(person&&composer)composers.set(person.id,composer);detailOpen=false;draw();$(`[data-student="${person.id}"]`)?.focus();}
   if(a==='cancel-attest'){attestKey=null;draw();}
@@ -416,7 +454,10 @@ async function setupTeacher(){
  if(entry.has('session')){linked=(await api('admin/lesson9/sessions/'+encodeURIComponent(entry.get('session')))).session;if(linked.activitySlug!==ACTIVITY||requestedClass&&linked.classRef!==requestedClass.classRef)throw Error('Bài trong link không thuộc đúng đề/lớp.');selected=PEOPLE.find(p=>p.id===linked.studentRef&&p.classRef===linked.classRef);}
  if(epoch!==generation)return;if(!selected)throw Error('Tài khoản chưa có quyền lớp hoặc học viên trong đường link.');
  loggedIn=true;notice='';person=selected;await loadTeacher();if(epoch!==generation)return;
- if(linked||entry.has('student')){const row=rows.find(r=>r.id===person.id);current=linked||(row?.sessionRef?(await api('admin/lesson9/sessions/'+row.sessionRef)).session:null);responses=current?working(current):{};threads=current?(await api('admin/live/sessions/'+current.sessionRef+'/teacher-comments')).threads:[];detailOpen=true;draw();}
+ if(linked||entry.has('student')){
+  const row=rows.find(r=>r.id===person.id);
+  if(await openTeacherDetail(linked?.sessionRef||row?.sessionRef,{linked}))draw();
+ }
  startPoll();
 }
 function invalidateTeacher(text){teacherAuth='signedOut';if(composer&&person)composers.set(person.id,composer);loggedIn=false;detailOpen=false;current=null;threads=[];generation++;clearTimeout(pollTimer);draw();message(text);}
