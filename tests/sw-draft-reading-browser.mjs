@@ -98,6 +98,15 @@ for(const tabs of [1,4])test('SW giáo viên: tổng quan 20 phiên chỉ đọc
   const detail=f.state.calls.slice(before).filter(call=>call.path.includes('/lesson9/sessions/')||call.path.endsWith('/teacher-comments'));
   assert.equal(detail.length,2);
   assert(detail.every(call=>call.path.includes('/fixture-19-session')));
+  if(tabs===1){
+   await f.page.locator('.teacher-draft-read').evaluate(el=>el.open=true);
+   await f.page.locator('#connected-draft-result .lms-page-status').waitFor();
+   await rememberReading(f.page);
+   await f.page.waitForResponse(response=>response.url().endsWith('/draft-result'),{timeout:8000});
+   await assertReading(f.page);
+   f.state.result=resultPayload('Tổng quan mới vẫn đọc sửa trong cùng lượt');
+   await f.page.locator('#connected-draft-result').filter({hasText:'Tổng quan mới vẫn đọc sửa trong cùng lượt'}).waitFor({timeout:9000});
+  }
  }finally{await Promise.all(fixtures.map(f=>f.close()));await browser.close();}
 });
 async function rememberReading(page){
