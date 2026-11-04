@@ -13,7 +13,8 @@ const express=requireBackend('express'),supertest=requireBackend('supertest'),{P
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const load=name=>import(pathToFileURL(resolve(backend,'src',name)).href);
 
-test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều lớp và gửi lại đúng buổi',{timeout:150000},async()=>{
+test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhiều lớp',{timeout:150000},async t=>{
+  t.mock.timers.enable({apis:['Date'],now:new Date('2026-11-04T17:00:00Z')});
   const [{createLearningDemoApp,createPGlitePool,initializeLearningDemoDatabase},{createLearningRouter},{createPortalAssignmentScheduleReader},{createLearningClassPolicy}]=
     await Promise.all([load('learning-demo.js'),load('learning-routes.js'),load('learning-portal-assignment-schedule.js'),load('learning-class-policy.js')]);
   const sourceDb=new PGlite(),demoDb=new PGlite(),secret='fixture-only-preview-secret-01234567890123456789';
@@ -134,6 +135,7 @@ test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều l
     assert.equal(await font('.thuy-assignment-target select'),'14px');
     assert.equal(await font('.thuy-assignment-footer .button'),'14px');
     await sessionAt(1).selectOption('2');await send.click();
+    assert.equal(await sessionAt(1).locator('option[value="1"]').count(),0);
     await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
     assert.deepEqual(sent.map(call=>call.targets),[[target('1294',2)]]);
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_assignment')).rows[0].n,1);
@@ -149,8 +151,8 @@ test('Chrome: giao từ Portal không cần kế hoạch, một lớp, nhiều l
       const response=await route.fetch();resolveRead();await holdRead;await route.fulfill({response});
     },{times:1});
     await classAt(3).selectOption('1295');await captured;
-    await classAt(3).selectOption('1294');await sessionAt(3).selectOption('1');releaseRead();
-    assert.equal(await sessionAt(3).inputValue(),'1');
+    await classAt(3).selectOption('1294');await sessionAt(3).selectOption('5');releaseRead();
+    assert.equal(await sessionAt(3).inputValue(),'5');
     await classAt(3).selectOption('1295');
     await sessionAt(3).selectOption('4');
     assert.equal(await sessionAt(2).inputValue(),'3');
