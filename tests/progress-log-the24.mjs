@@ -1,25 +1,36 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {upcomingSession,dashboardSessionState} from '../progress-log/student-session-dashboard.js';
+import {latestAssignedSession,visibleStudentSessions,dashboardSessionState,studentEntryState} from '../progress-log/student-session-dashboard.js';
 import {handoffProgressStudent,consumeProgressStudentHandoff,markProgressLogout} from '../progress-log/student-session-memory.js';
 const now=Date.parse('2026-11-02T12:00:00Z');
 const old={sessionNumber:6,sessionDate:'2026-10-30',assignmentId:'old',assignmentStatus:'published'};
 const next={sessionNumber:7,sessionDate:'2026-11-03',assignmentId:'next',assignmentStatus:'published'};
-test('Thẻ 24 chọn theo ngày học từ hôm nay, không theo giao gần nhất hoặc bài cũ chưa xong',()=>{
-  assert.equal(upcomingSession([next,old],now),next);
+test('Thẻ 25 chọn buổi gần nhất có phiếu đã giao, gồm hôm nay theo ngày Việt Nam',()=>{
+  assert.equal(latestAssignedSession([next,old],now),old);
   const today={...next,sessionNumber:8,sessionDate:'2026-11-02',completeness:'complete'};
-  assert.equal(upcomingSession([next,old,today],now),today);
+  assert.equal(latestAssignedSession([next,old,today],now),today);
   assert.equal(dashboardSessionState(today,now).readOnly,true);
   const unassigned={sessionNumber:7,sessionDate:'2026-11-02'};
-  assert.equal(upcomingSession([next,unassigned],now),unassigned);
+  assert.equal(latestAssignedSession([next,unassigned],now),null);
   assert.equal(dashboardSessionState(unassigned,now).canLearn,false);
 });
-test('Thẻ 24 mốc nửa đêm Việt Nam, thứ tự ổn định và lịch thiếu',()=>{
-  const today={sessionNumber:8,sessionDate:'2026-11-02'},tomorrow={sessionNumber:9,sessionDate:'2026-11-03'};
-  assert.equal(upcomingSession([tomorrow,today],Date.parse('2026-11-02T16:59:59Z')),today);
-  assert.equal(upcomingSession([tomorrow,today],Date.parse('2026-11-02T17:00:00Z')),tomorrow);
-  assert.equal(upcomingSession([old,{sessionDate:'2026-02-30'}],now),null);
-  assert.equal(upcomingSession([{...today,sessionNumber:10},today],now),today);
+test('Thẻ 25 mốc nửa đêm Việt Nam, thứ tự ổn định và lịch thiếu',()=>{
+  const today={...old,sessionNumber:8,sessionDate:'2026-11-02'},tomorrow={...next,sessionNumber:9};
+  assert.equal(latestAssignedSession([tomorrow,today],Date.parse('2026-11-02T16:59:59Z')),today);
+  assert.equal(latestAssignedSession([tomorrow,today],Date.parse('2026-11-02T17:00:00Z')),tomorrow);
+  assert.deepEqual(visibleStudentSessions([old,{...next,sessionDate:'2026-02-30'}, {...today,attemptStatus:'not_assigned'}],now),[old]);
+  assert.equal(latestAssignedSession([{...today,sessionNumber:10},today],now).sessionNumber,10);
+  assert.equal(latestAssignedSession([{...today,sessionNumber:10,sessionStartTime:'08:00:00'},
+    {...today,sessionStartTime:'16:00:00'}],now).sessionNumber,8);
+});
+test('Thẻ 25 chỉ mở bài khi phần đầu mở và còn quyền, kể cả trước 18:25',()=>{
+  const active={...old,sessionDate:'2026-11-02',firstBlockStatus:'open',publicToken:'40000000-0000-4000-8000-000000000001',
+    submissionWindow:{canSubmit:true,effectiveClosesAt:'2026-11-02T14:00:00Z'}};
+  assert.equal(studentEntryState(active,Date.parse('2026-11-02T03:00:00Z')).canLearn,true);
+  for(const firstBlockStatus of ['closed','locked',null,undefined])assert.equal(studentEntryState({...active,firstBlockStatus},now).canLearn,false);
+  assert.equal(studentEntryState(active,Date.parse('2026-11-02T14:00:00Z')).canLearn,false);
+  assert.equal(studentEntryState(active,now,false).canLearn,false);
+  assert.equal(studentEntryState({...active,completeness:'complete'},now).action,'Xem bài đã nộp');
 });
 test('Thẻ 24 không cho bắt đầu phiếu đóng hoặc chưa tới giờ; nhận xét không biến thành đã hoàn thành',()=>{
   const active={...next,sessionDate:'2026-11-02',sessionComment:{noteText:'Đã nhận xét'}};

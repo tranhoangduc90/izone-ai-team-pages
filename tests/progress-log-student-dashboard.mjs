@@ -8,11 +8,12 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const root=fileURLToPath(new URL('../',import.meta.url));
-test('R03: buổi gần nhất theo lịch; thiếu ngày dùng số buổi; sửa/giao lại không đổi thứ tự',()=>{
+test('Buổi gần nhất theo lịch; loại phiếu thiếu ngày; sửa/giao lại không đổi thứ tự',()=>{
   const sessions=[{assignmentId:'a',sessionNumber:1,sessionDate:'2026-10-20',updatedAt:'2030-01-01T00:00:00Z'},
     {assignmentId:'b',sessionNumber:2,sessionDate:'2026-10-22'}, {assignmentId:null,sessionNumber:3,sessionDate:'2026-10-24'}];
-  assert.equal(latestAssignedSession(sessions).assignmentId,'b');
-  assert.equal(latestAssignedSession([...sessions,{assignmentId:'c',sessionNumber:4,sessionDate:null}]).assignmentId,'c');
+  const now=Date.parse('2026-10-28T12:00:00Z');
+  assert.equal(latestAssignedSession(sessions,now).assignmentId,'b');
+  assert.equal(latestAssignedSession([...sessions,{assignmentId:'c',sessionNumber:4,sessionDate:null}],now).assignmentId,'b');
   assert.equal(latestAssignedSession([]),null);
   assert.equal(dashboardSessionState(sessions[2]).action,null);
   assert.equal(dashboardSessionState({...sessions[0],assignmentStatus:'published',submissionWindow:{canSubmit:false,reason:'manual_cutoff'}}).canLearn,false);
@@ -32,18 +33,17 @@ test('R03/C20: cập nhật ba nhịp giữ node, cuộn và bôi chọn; thay n
         {assignmentId:'new',sessionNumber:2,sessionDate:'2026-01-02',title:'Bài mới',assignmentStatus:'published',submissionWindow:{canSubmit:true,serverNow:'2026-10-28T00:00:00Z'}},
         {sessionNumber:3,sessionDate:null,title:'Buổi 3'}]};
       const now=Date.parse('2026-01-02T12:00:00Z');
-      ui.render(data,{currentId:'new',now});const latest=document.querySelector('#before [data-session-number="2"]'),card=document.querySelector('#after [data-session-number="1"]'),text=card.querySelector('h3').firstChild;
+      ui.render(data,{currentId:'new',now,showLatest:true});const latest=document.querySelector('#before .student-upcoming h2'),card=document.querySelector('#after [data-session-number="1"]'),text=card.querySelector('h3').firstChild;
       const range=document.createRange();range.selectNodeContents(text);getSelection().removeAllRanges();getSelection().addRange(range);scrollTo(0,500);const scroll=scrollY;
-      for(let tick=1;tick<=3;tick++){const copy=structuredClone(data);copy.sessions[1].submissionWindow.serverNow='2026-10-28T00:00:0'+tick+'Z';ui.render(copy,{currentId:'new',now});}
-      const stable=latest===document.querySelector('#before [data-session-number="2"]')&&card===document.querySelector('#after [data-session-number="1"]')&&getSelection().toString()==='Bài cũ'&&scrollY===scroll;
-      data.sessions[0].sessionComment={noteText:'Nhận xét vừa sửa',visibility:'visible',sessionNumber:1};ui.render(data,{currentId:'new',now});
-      const latestUnchanged=latest===document.querySelector('#before [data-session-number="2"]');
-      ui.render({class:data.class,student:{studentRef:'B'},sessions:[]});const oldRemoved=!document.querySelector('[data-session-number]'),emptyText=document.querySelector('#before').textContent;
-      const scheduled={class:data.class,student:{studentRef:'B'},sessions:[{assignmentId:'scheduled',sessionNumber:7,sessionDate:'2026-10-28',title:'Qua giờ mở',assignmentStatus:'published',submissionWindow:{canSubmit:true}}]};
-      ui.render(scheduled,{now:Date.parse('2026-10-28T18:24:00+07:00')});const locked=document.querySelector('#before .student-upcoming>div'),before=locked.textContent;
-      ui.render(scheduled,{now:Date.parse('2026-10-28T18:26:00+07:00')});const open=document.querySelector('#before .student-upcoming>div'),opened=document.querySelector('#before').textContent.includes('Bấm vào đây để bắt đầu làm bài');
-      ui.render(scheduled,{now:Date.parse('2026-10-28T18:27:00+07:00')});return {stable,latestUnchanged,oldRemoved,text:emptyText,before,opened,clockChanged:locked!==open,clockStable:open===document.querySelector('#before .student-upcoming>div')};
-    });assert.equal(result.stable,true);assert.equal(result.latestUnchanged,true);assert.equal(result.oldRemoved,true);assert.match(result.text,/Chưa có ngày học được xác nhận/);
-    assert.match(result.before,/Chưa đến buổi học/);assert.equal(result.opened,true);assert.equal(result.clockChanged,true);assert.equal(result.clockStable,true);
+      for(let tick=1;tick<=3;tick++){const copy=structuredClone(data);copy.sessions[1].submissionWindow.serverNow='2026-10-28T00:00:0'+tick+'Z';ui.render(copy,{currentId:'new',now,showLatest:true});}
+      const stable=latest===document.querySelector('#before .student-upcoming h2')&&card===document.querySelector('#after [data-session-number="1"]')&&getSelection().toString()==='Bài cũ'&&scrollY===scroll;
+      data.sessions[0].sessionComment={noteText:'Nhận xét vừa sửa',visibility:'visible',sessionNumber:1};ui.render(data,{currentId:'new',now,showLatest:true});
+      const latestUnchanged=latest===document.querySelector('#before .student-upcoming h2');
+      ui.render({class:data.class,student:{studentRef:'B'},sessions:[]},{showLatest:true});const oldRemoved=!document.querySelector('[data-session-number]'),emptyText=document.querySelector('#after').textContent;
+      ui.render(data,{currentId:'old',now,showLatest:false});
+      const detailHasNoHero=!document.querySelector('#before .student-upcoming h2');
+      return {stable,latestUnchanged,oldRemoved,text:emptyText,detailHasNoHero};
+    });assert.equal(result.stable,true);assert.equal(result.latestUnchanged,true);assert.equal(result.oldRemoved,true);assert.match(result.text,/Chưa có buổi học để hiển thị/);
+    assert.equal(result.detailHasNoHero,true);
   }finally{await browser.close();await new Promise(done=>server.close(done));}
 });

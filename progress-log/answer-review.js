@@ -2,6 +2,7 @@
 // Giữ nguyên câu, lựa chọn, ô điền và xuống dòng. Không tự chấm hoặc suy đáp án đúng.
 import {legacySentences} from './legacy-sentences.js';
 import {effectiveItemKind} from './item-kind.js?rev=20261028-the15-v1';
+import {studentInstructions} from './student-instructions.js?rev=20261104-the25-v1';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const verdicts={correct:'✓ Đúng',incorrect:'✕ Sai',partial:'Đúng một phần',pending:'Đang chờ chấm',manual_review:'Cần giảng viên kiểm tra',ungraded:'Chưa chấm đúng/sai',blank:'Để trống'};
 function plain(value){
@@ -13,7 +14,7 @@ function plain(value){
   return String(value);
 }
 function selected(value,id){return Array.isArray(value)?value.includes(id):value===id;}
-export function reviewItems(detail){
+export function reviewItems(detail,{studentView=false}={}){
   const responses=detail.responses||{};
   return (detail.definition?.blocks||[]).map(block=>{
     const articles=(block.items||[]).map((item,index)=>{
@@ -53,6 +54,7 @@ export function reviewItems(detail){
       }
       return '<article data-review-item="'+esc(item.itemVersionId)+'"><div class="reviewQuestionTop"><span class="reviewQuestionNumber">'+esc(item.displayNumber??item.position??index+1)+'</span><div><small>CÂU '+esc(item.displayNumber??item.position??index+1)+(item.required?' · BẮT BUỘC':'')+'</small><h3>'+esc(item.prompt)+'</h3></div></div>'+((item.helpText||item.instructions)?'<p class="reviewInstructions">'+esc(item.helpText||item.instructions)+'</p>':'')+answer+'<p class="reviewVerdict '+esc(verdict)+'">'+esc(label+score)+'</p></article>';
     }).join('');
-    return '<section class="studentAnswerReview"><div class="studentJourneyHeading"><div><span class="studentPortalEyebrow">CÂU TRẢ LỜI CỦA EM · PHẦN '+esc(block.checkpoint??'')+'</span><h2>'+esc(block.title||'Nội dung đã ghi')+'</h2></div></div>'+(block.instructions?'<p class="reviewInstructions">'+esc(block.instructions)+'</p>':'')+articles+'</section>';
+    const instructions=studentView?studentInstructions(block.instructions||''):block.instructions;
+    return '<section class="studentAnswerReview"><div class="studentJourneyHeading"><div><span class="studentPortalEyebrow">'+(studentView?'':'CÂU TRẢ LỜI CỦA EM · ')+'PHẦN '+esc(block.checkpoint??'')+'</span><h2>'+esc(block.title||'Nội dung đã ghi')+'</h2></div></div>'+(instructions?'<p class="reviewInstructions">'+esc(instructions)+'</p>':'')+articles+'</section>';
   }).join('');
 }

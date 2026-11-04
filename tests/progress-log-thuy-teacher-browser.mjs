@@ -57,6 +57,8 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.ok(page.url().includes('/teacher.html#assignment='+id),'Cổng chung giữ deep link và không chuyển sang trang theo tên giảng viên');
   assert.equal(await page.locator('.thuy-roster th').filter({hasText:'Điểm danh'}).count(),1);
   assert.equal(await page.locator('.thuy-roster th').filter({hasText:'Portal'}).count(),0);
+  assert.equal(await page.locator('#journeyPlanSection').isVisible(),false);
+  assert.equal(await page.locator('#dashboardPanel .thuy-extra-tools,#dashboardPanel #dashboardSummary').count(),0);
   await page.locator('.thuy-roster').getByText('Đã điểm danh',{exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   const modes=await page.locator('[data-thuy-mode]').evaluateAll(nodes=>nodes.map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height,font:parseFloat(getComputedStyle(node).fontSize)})));
@@ -95,6 +97,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'teacher-panel.png'),fullPage:true});}
   await page.keyboard.press('Escape');await page.locator('#overviewTab').click();await page.locator('#courseOverview .thuy-skill-tabs').waitFor();
+  assert.equal(await page.locator('#overviewPlanHost #journeyPlanSection').isVisible(),true);
   await page.locator('#courseOverview .thuy-skill-tabs').getByRole('button',{name:'Writing',exact:true}).click();
   assert.equal(await page.locator('#courseOverview tbody tr').count(),2);
   await page.locator('#courseOverview tbody tr').first().getByRole('button',{name:'Học viên A',exact:true}).click();

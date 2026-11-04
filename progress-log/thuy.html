@@ -53,7 +53,7 @@
 
       <section id="formView" hidden>
         <div class="context-bar">
-          <div><b id="studentNameLabel">—</b><small id="formContextLabel">—</small></div>
+          <div><b id="studentNameLabel" hidden></b><small id="formContextLabel">—</small></div>
           <div><span id="saveState" class="save-state">Chưa có thay đổi</span><button id="thuyRetrySave" class="button" type="button" hidden>Thử lưu lại</button></div>
         </div>
         <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
@@ -109,8 +109,7 @@
         <button id="journeySummaryButton" class="studentCumulativeReport" type="button"><span class="cumulativeReportIcon">▤</span><span class="cumulativeReportCopy"><small>TỔNG KẾT TỪ CÁC PHIẾU ĐÃ CÓ</small><strong>Nhìn lại kết quả của em</strong><em>Bài đã nộp, câu đúng và những câu cần xem lại</em></span><span class="cumulativeReportAction">Xem kết quả →</span></button>
         <p hidden><span id="attendedCount">0</span><span id="reportCount">0</span></p>
         <section class="studentJourney"><div class="studentJourneyHeading"><div><p class="studentPortalEyebrow">HÀNH TRÌNH CỦA EM</p><h2 id="journeyListTitle">Các buổi học, từng bước rõ ràng</h2></div></div>
-        <p class="journey-normal-note">Buổi chưa tạo Progress Log là bình thường. Các buổi này vẫn nằm trong kế hoạch khóa học.</p>
-        <p class="muted" id="journeyStatus" role="status"></p>
+        <p class="muted" id="journeyStatus" role="status" hidden></p>
         <div class="studentSessionGrid" id="journeySessions"></div>
         <section class="report-history" id="journeyReports" hidden>
           <h2>Các lần tổng kết</h2>
@@ -136,6 +135,6 @@
     <dialog id="journeySummaryDialog" class="draft-dialog referenceRegion"><form method="dialog"><button class="button text-button" value="close">Đóng tổng kết</button></form><h2>Kết quả từ các phiếu đã có</h2><p class="muted">Chỉ tính câu có kết quả chấm đúng/sai; câu mở và điểm tự khai không tính.</p><div id="journeySummaryContent" class="basicStudentScores"></div></dialog>
     <script src="config.js?rev=20261022-official-v2"></script>
     <link rel="stylesheet" href="session-comments.css?rev=20261007">
-    <script type="module" src="app.js?rev=20261102-the24-v1"></script>
+    <script type="module" src="app.js?rev=20261104-the25-v1"></script>
   </body>
 </html>

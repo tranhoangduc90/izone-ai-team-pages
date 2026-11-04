@@ -1,18 +1,28 @@
 import {contentTitle,sessionState,startsAt,vietnamDate} from './session-presentation.js';
 import {commentPanel,node} from './session-comments.js';
 
-// Chỉ đọc danh sách đã được API giới hạn đúng người/lớp. Không tạo lượt làm hay điểm danh.
-export function latestAssignedSession(sessions){
-  const assigned=sessions.filter(s=>s.assignmentId);
-  const dated=assigned.every(s=>startsAt(s.sessionDate)!==null);
-  return [...assigned].sort((a,b)=>(dated?startsAt(b.sessionDate)-startsAt(a.sessionDate):0)
+// Chỉ dùng ngày đã xác nhận và phiếu thuộc roster của học viên.
+export function visibleStudentSessions(sessions,now=Date.now()){
+  const today=vietnamDate(now);
+  return sessions.filter(s=>s.assignmentId&&s.attemptStatus!=='not_assigned'&&startsAt(s.sessionDate)!==null&&s.sessionDate<=today);
+}
+export function latestAssignedSession(sessions,now=Date.now()){
+  const visible=visibleStudentSessions(sessions,now);
+  const latestDate=visible.reduce((date,session)=>session.sessionDate>date?session.sessionDate:date,'');
+  const latest=visible.filter(session=>session.sessionDate===latestDate);
+  const knownTimes=latest.every(session=>/^\d{2}:\d{2}:\d{2}$/u.test(session.sessionStartTime||''));
+  return latest.sort((a,b)=>(knownTimes?b.sessionStartTime.localeCompare(a.sessionStartTime):0)
     ||Number(b.sessionNumber)-Number(a.sessionNumber)||String(a.assignmentId).localeCompare(String(b.assignmentId)))[0]||null;
 }
-// Chọn từ lịch đã xác nhận, kể cả buổi chưa được giao phiếu.
-export function upcomingSession(sessions,now=Date.now()){
-  const today=vietnamDate(now);
-  return [...sessions].filter(s=>startsAt(s.sessionDate)!==null&&s.sessionDate>=today)
-    .sort((a,b)=>a.sessionDate.localeCompare(b.sessionDate)||Number(a.sessionNumber)-Number(b.sessionNumber))[0]||null;
+// Nhịp đọc trạng thái phiếu có thể trả sau nhịp đọc nhận xét. Chỉ giữ nhận xét
+// đã hiển thị cho đúng lớp, người, số buổi và phiếu cho tới lần đọc nhận xét kế tiếp.
+export function preserveSessionComments(previous,journey){
+  if(previous?.class.classId!==journey.class.classId||previous?.student.studentRef!==journey.student.studentRef)return journey;
+  const key=session=>JSON.stringify([session.sessionNumber,session.assignmentId]);
+  const comments=new Map(previous.sessions.filter(session=>session.sessionComment!==undefined)
+    .map(session=>[key(session),session.sessionComment]));
+  return {...journey,sessions:journey.sessions.map(session=>comments.has(key(session))
+    ?{...session,sessionComment:comments.get(key(session))}:session)};
 }
 export function dashboardSessionState(session,now=Date.now()){
   const saved=['complete','incomplete'].includes(session.completeness);
@@ -25,18 +35,45 @@ export function dashboardSessionState(session,now=Date.now()){
   }
   return {...status,action:status.canLearn?'Mở phiếu':session.sessionComment||session.testResult?'Xem kết quả và nhận xét':null,readOnly:!status.canLearn};
 }
-const upcomingViews=new WeakMap();
-export function renderUpcomingSession(host,sessions,{now=Date.now(),onOpen}={}){
-  const session=upcomingSession(sessions,now),state=session?dashboardSessionState(session,now):null;
-  const fingerprint=JSON.stringify({session:session&&{sessionNumber:session.sessionNumber,sessionDate:session.sessionDate,title:session.title,assignmentId:session.assignmentId,publicToken:session.publicToken,sessionKind:session.sessionKind},state});if(host.childElementCount&&upcomingViews.get(host)===fingerprint)return;
-  upcomingViews.set(host,fingerprint);host.classList.add('student-upcoming');
-  const copy=node('div','','student-upcoming-copy');copy.append(node('p','BUỔI HỌC SẮP TỚI','eyebrow'));
-  if(!session){delete host.dataset.sessionNumber;copy.append(node('p',sessions.some(s=>startsAt(s.sessionDate)!==null)?'Chưa có buổi học sắp tới trong lịch đã xác nhận.':'Chưa có ngày học được xác nhận.','muted'));host.replaceChildren(copy);return;}
+export function studentEntryState(session,now=Date.now(),available=true){
+  const state=dashboardSessionState(session,now);
+  if(['complete','incomplete'].includes(session.completeness))return state;
+  const submissionWindow=session.submissionWindow;
+  const closesAt=Date.parse(submissionWindow?.effectiveClosesAt);
+  const canLearn=available&&state.kind!=='review'&&session.attemptStatus!=='not_assigned'
+    &&session.assignmentStatus==='published'&&session.firstBlockStatus==='open'
+    &&submissionWindow?.canSubmit===true&&(!Number.isFinite(closesAt)||now<closesAt)
+    &&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
+  if(canLearn)return {kind:'active',label:'Mở Progress Log của buổi học',canLearn:true,action:'Mở phiếu',readOnly:false};
+  const label=submissionWindow?.canSubmit===false||session.assignmentStatus!=='published'||state.kind==='review'
+    ?state.label:!available||!submissionWindow?'Chưa kiểm tra được quyền mở phiếu'
+      :session.firstBlockStatus==='open'?'Phiếu đã đóng nhận bài':'Chưa mở phần đầu';
+  return {...state,kind:state.kind==='review'?'review':'locked',label,canLearn:false,
+    action:session.sessionComment||session.testResult?'Xem kết quả và nhận xét':null,readOnly:true};
+}
+export function assignmentAllowsEntry(assignment,session,{studentRef,classId}){
+  const first=assignment?.definition?.blocks?.[0];
+  return Boolean(first&&assignment.assignmentId===session.assignmentId
+    &&String(assignment.class?.id)===String(classId)&&Number(assignment.sessionNumber)===Number(session.sessionNumber)
+    &&assignment.roster?.some(student=>student.studentRef===studentRef)
+    &&assignment.submissionWindow?.canSubmit===true
+    &&assignment.blockReleases?.some(release=>release.blockId===first.blockId&&release.status==='open'));
+}
+const latestViews=new WeakMap();
+export function renderLatestSession(host,sessions,{now=Date.now(),onOpen,available=true,show=true}={}){
+  const session=show?latestAssignedSession(sessions,now):null;
+  host.hidden=!session;
+  if(!session){delete host.dataset.sessionNumber;latestViews.delete(host);if(host.childElementCount)host.replaceChildren();return;}
+  const state=studentEntryState(session,now,available);
+  const fingerprint=JSON.stringify([session.assignmentId,session.publicToken,session.sessionNumber,session.title,state.canLearn]);
+  if(latestViews.get(host)===fingerprint)return;
+  latestViews.set(host,fingerprint);host.classList.add('student-upcoming');
+  const copy=node('div','','student-upcoming-copy');copy.append(node('p','BUỔI HỌC GẦN NHẤT','eyebrow'));
   host.dataset.sessionNumber=String(session.sessionNumber);
   const title=contentTitle(session,{title:session.title});
-  copy.append(node('h2','Buổi '+session.sessionNumber+' · '+title),node('span',state.kind==='active'?'Chưa hoàn thành':state.label,'upcoming-state state-'+state.kind));
-  if(!state.canLearn&&!state.action){host.replaceChildren(copy);return;}
-  const button=node('button',state.canLearn?'Bấm vào đây để bắt đầu làm bài →':state.action,'button primary');button.type='button';
+  copy.append(node('h2','Buổi '+session.sessionNumber+' · '+title));
+  const button=node('button','Nhấn vào đây để làm bài','button primary');button.type='button';
+  button.disabled=!state.canLearn;
   button.addEventListener('click',()=>onOpen?.(session,state));host.replaceChildren(copy,button);
 }
 const signature=session=>JSON.stringify({...session,submissionWindow:session.submissionWindow?{
@@ -45,13 +82,14 @@ export function createStudentSessionDashboard({before,after,onOpen,onJourney,onR
   const latest=node('section','','student-dashboard-latest'),status=node('p','','muted'),retry=node('button','Thử lại','button');
   status.setAttribute('role','status');retry.type='button';retry.hidden=true;retry.addEventListener('click',onRetry);
   latest.append(status,retry);before.append(latest);
-  const latestHost=node('div');latest.append(latestHost);
+  const latestHost=node('div');latestHost.hidden=true;latest.append(latestHost);
   const section=node('section','','student-dashboard-sessions'),head=node('div','','student-dashboard-heading'),journey=node('button','Kết quả học tập và nhận xét','button');
-  journey.type='button';journey.addEventListener('click',onJourney);head.append(node('h2','Tất cả buổi học'),journey);
-  const list=node('div','','studentSessionGrid');section.append(head,node('p','Buổi chưa có phiếu vẫn nằm trong kế hoạch lớp; chưa có điểm hoặc kết luận vắng.','muted'),list);after.append(section);
-  let owner='',latestSignature='',cards=new Map();
-  function card(session,currentId,now){
-    const state=dashboardSessionState(session,now),box=node('article','','studentSessionCard session-'+state.kind);box.dataset.sessionNumber=String(session.sessionNumber);
+  journey.type='button';journey.addEventListener('click',onJourney);head.append(node('h2','Các buổi học'),journey);
+  const list=node('div','','studentSessionGrid'),empty=node('p','Chưa có buổi học để hiển thị.','muted');empty.hidden=true;
+  section.append(head,empty,list);after.append(section);
+  let owner='',cards=new Map();
+  function card(session,currentId,state){
+    const box=node('article','','studentSessionCard session-'+state.kind);box.dataset.sessionNumber=String(session.sessionNumber);
     const top=node('div','','studentSessionTop'),date=startsAt(session.sessionDate)!==null?session.sessionDate.split('-').reverse().join('/'):'Chưa xác nhận ngày';
     top.append(node('b','BUỔI '+String(session.sessionNumber).padStart(2,'0')),node('span',date));
     box.append(top,node('h3',contentTitle(session,{title:session.assignmentId||session.sessionKind==='test'?session.title:''})),node('p',state.label));
@@ -62,25 +100,23 @@ export function createStudentSessionDashboard({before,after,onOpen,onJourney,onR
     return box;
   }
   return {
-    clear(){owner='';latestSignature='';cards.clear();latestHost.replaceChildren();list.replaceChildren();status.textContent='';retry.hidden=true;},
+    clear(){owner='';cards.clear();renderLatestSession(latestHost,[]);list.replaceChildren();empty.hidden=true;status.textContent='';retry.hidden=true;},
     loading(){status.textContent='Đang đọc các buổi học…';retry.hidden=true;},
     error(message){status.textContent='Chưa tải được danh sách: '+message;retry.hidden=false;},
-    render(journey,{currentId,now=Date.now()}={}){
+    render(journey,{currentId,now=Date.now(),showLatest=false,available=true}={}){
       const key=journey.class.classId+':'+journey.student.studentRef;if(owner!==key){this.clear();owner=key;}
-      const sessions=journey.sessions||[],newest=upcomingSession(sessions,now);retry.hidden=true;status.textContent='';
-      const fingerprint=session=>signature(session)+':'+JSON.stringify(dashboardSessionState(session,now))+':'+currentId;
-      const nextLatest=newest?fingerprint(newest):'empty';
-      renderUpcomingSession(latestHost,sessions,{now,onOpen});latestSignature=nextLatest;
+      const sessions=visibleStudentSessions(journey.sessions||[],now).sort((a,b)=>Number(a.sessionNumber)-Number(b.sessionNumber));
+      empty.hidden=Boolean(sessions.length);retry.hidden=true;status.textContent='';
+      renderLatestSession(latestHost,sessions,{now,onOpen,available,show:showLatest});
       const keep=new Set();
-      for(const session of [...sessions].sort((a,b)=>Number(a.sessionNumber)-Number(b.sessionNumber))){
-        const id=String(session.sessionNumber)+':'+(session.assignmentId||''),sig=fingerprint(session);keep.add(id);
-        let record=cards.get(id);if(!record||record.signature!==sig){const element=card(session,currentId,now);if(record)record.element.replaceWith(element);record={element,signature:sig};cards.set(id,record);}
+      for(const session of sessions){
+        const state=studentEntryState(session,now,available);
+        const id=String(session.sessionNumber)+':'+session.assignmentId,sig=signature(session)+':'+JSON.stringify(state)+':'+currentId;keep.add(id);
+        let record=cards.get(id);if(!record||record.signature!==sig){const element=card(session,currentId,state);if(record)record.element.replaceWith(element);record={element,signature:sig};cards.set(id,record);}
       }
       for(const [id,record]of cards)if(!keep.has(id)){record.element.remove();cards.delete(id);}
-      const ordered=[...sessions].sort((a,b)=>Number(a.sessionNumber)-Number(b.sessionNumber)).map(s=>cards.get(String(s.sessionNumber)+':'+(s.assignmentId||'')).element);
+      const ordered=sessions.map(s=>cards.get(String(s.sessionNumber)+':'+s.assignmentId).element);
       for(let i=0;i<ordered.length;i++)if(list.children[i]!==ordered[i])list.insertBefore(ordered[i],list.children[i]||null);
-      if(!sessions.length)list.textContent='Chưa có dữ liệu buổi học.';
-      else for(const child of [...list.childNodes])if(child.nodeType===3)child.remove();
     }
   };
 }

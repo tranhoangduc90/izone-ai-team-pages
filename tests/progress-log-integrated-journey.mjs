@@ -1,5 +1,5 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from '../progress-log/session-presentation.js';
-import {upcomingSession,dashboardSessionState} from '../progress-log/student-session-dashboard.js';
+import {dashboardSessionState} from '../progress-log/student-session-dashboard.js';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
@@ -37,7 +37,7 @@ function contextFor(journey) {
   };
   const calls = [];
   const context = { THUY_UI:false,
-    contentTitle,skillsLabel,sessionHeading,sessionState,upcomingSession,dashboardSessionState,commentPanel:()=>null,paintJourneyComments:()=>{}, AbortController, setTimeout, clearTimeout,
+    contentTitle,skillsLabel,sessionHeading,sessionState,dashboardSessionState,commentPanel:()=>null,paintJourneyComments:()=>{}, AbortController, setTimeout, clearTimeout,
     document: { createElement: () => new Node() }, elements, state,
     apiRequest: async (path, options) => { calls.push({ path, options }); return { journey }; },
     showView: view => calls.push({ view }),
