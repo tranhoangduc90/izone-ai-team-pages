@@ -1,13 +1,26 @@
-import {fixture,ACTIVITY} from './model.mjs';
+import {fixture,ACTIVITY} from './model.mjs?v=20261104-overview-v1';
 import {vocabularyPoint,legacyVocabularyRows} from './vocabulary-adapter.mjs';
 export const SECTION={topic:'topic_sentence',si1:'supporting_idea_1',si2:'supporting_idea_2',draft:'draft'};
 export const FIELD={topicSentence:'topic_sentence',a1:'idea1_a',x1:'idea1_x',b1:'idea1_b',a2:'idea2_a',x2:'idea2_x',b2:'idea2_b',draft1:'draft1',draft2:'draft2'};
 export const viewField=(field,body='body1')=>field===body+'_idea1'?'idea1':field===body+'_idea2'?'idea2':Object.keys(FIELD).find(k=>FIELD[k]===field)||field;
 export const serverField=(field,body='body1')=>field==='idea1'?body+'_idea1':field==='idea2'?body+'_idea2':FIELD[field]||field;
 const resultStatus=status=>status==='passed'?'passed':status==='needs_revision'?'revision':status==='queued'||status==='leased'?'pending':status==='technical_error'||status==='failed'?'technical_error':'draft';
+const editedIn=(fields, key, body)=>fields.some(f=>Object.entries(FIELD).some(([alias,actual])=>actual===f&&alias.endsWith(key.slice(-1)))||(key==='topic'&&(f==='topic_sentence'||f.startsWith(body+'_idea'))));
 export function viewResponses(responses){
  const body=responses.body_choice==='body2'?'body2':'body1';
  return {...responses,...Object.fromEntries(Object.entries(FIELD).map(([key,field])=>[key,responses[field]||''])),idea1:responses[body+'_idea1']||'',idea2:responses[body+'_idea2']||''};
+}
+export function overviewState(raw,person){
+ if(raw.studentRef!==person.id||raw.classRef!==person.classRef)throw Error('SESSION_OWNER_MISMATCH');
+ const bodyChoice=raw.responses.body_choice==='body2'?'body2':'body1';
+ const steps=Object.fromEntries(Object.entries(SECTION).map(([key,section])=>{
+  const step=raw.steps[section];
+  return [key,{status:step.status,checks:step.checks,negatives:step.negatives,ai:step.ai,
+   approval:raw.approvals.includes(section),
+   edited:key==='draft'&&step.locked?raw.draftEdited:editedIn(raw.editedFields,key,bodyChoice)}];
+ }));
+ return {...fixture(person),connected:true,sessionRef:raw.sessionRef,updatedAt:raw.updatedAt,idea2Open:raw.idea2Open,
+  responses:viewResponses(raw.responses),steps,openThreadCount:raw.openThreads};
 }
 export function connectedState(raw,person,threads=[]){
  if(raw.activitySlug!==ACTIVITY)throw Error('SESSION_ACTIVITY_MISMATCH');
@@ -18,7 +31,7 @@ export function connectedState(raw,person,threads=[]){
  for(const [key,section] of Object.entries(SECTION)){
   const state=raw.sections[section]||{},attempts=raw.attempts.filter(a=>a.section===section),latest=attempts[0];
   const history=comments.filter(c=>c.section===section&&['passed','needs_revision'].includes(c.resultStatus)).map(c=>({status:resultStatus(c.resultStatus),at:c.createdAt,feedback:c.feedback,snapshot:viewResponses(attempts.find(a=>a.attemptRef===c.attemptRef)?.snapshot||{}),attemptRef:c.attemptRef}));
-  s.steps[key]={status:resultStatus(state.status),history,submitted:!!attempts.length,attemptCount:attempts.length,edited:(ui.editedFields||[]).some(f=>Object.entries(FIELD).some(([alias,actual])=>actual===f&&alias.endsWith(key.slice(-1)))||(key==='topic'&&(f==='topic_sentence'||f.startsWith(s.bodyChoice+'_idea')))),approval:ui.approvals?.[section]||null};
+  s.steps[key]={status:resultStatus(state.status),history,submitted:!!attempts.length,attemptCount:attempts.length,edited:editedIn(ui.editedFields||[],key,s.bodyChoice),approval:ui.approvals?.[section]||null};
   if(latest?.status==='failed'&&!state.locked)s.steps[key].status='technical_error';
   if(key==='draft'&&state.locked){const old=attempts.find(a=>a.status==='completed'&&a.resultStatus==='passed');s.steps[key].edited=!!old&&['draft1','draft2'].some(f=>old.snapshot?.[f]!==raw.responses[f]);}
   if(['queued','leased'].includes(latest?.status))s.steps[key].job={id:latest.attemptRef};
