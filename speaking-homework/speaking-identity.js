@@ -413,8 +413,14 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
   }
   async function tryAutoOpen(generation) {
     if ((useDocument(selectedCode) && assignment?.intakeMode === 'unmatched')
-        || requireManualSelection || !sharedResolution || !resolutionIsCurrent(sharedResolution) || active
+        || requireManualSelection || active
         || generation !== selectionGeneration || !assignment || !canOpenClass(selectedCode)) return;
+    if (canAutoOpenVerifiedDoc()) {
+      studentSelect.value = assignment.selectedStudentRef;
+      await openSelected({ automatic: true, verifiedDirect: true });
+      return;
+    }
+    if (!sharedResolution || !resolutionIsCurrent(sharedResolution)) return;
     const choice = selectStudentIdentityAlias(sharedResolution, { classHint: selectedCode });
     if (choice.status !== 'unique' || !roster.has(choice.alias.studentRef)) return;
     if (useDocument(selectedCode) && assignment.selectedStudentRef
@@ -428,6 +434,13 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     studentSelect.value = choice.alias.studentRef;
     button.disabled = false;
     await openSelected({ automatic: true, resolution: sharedResolution });
+  }
+  function canAutoOpenVerifiedDoc() {
+    const rememberedState = sharedMemory?.read();
+    return !requireManualSelection && !tabBinding && !sharedResolution && useDocument(selectedCode)
+      && assignment?.intakeMode === 'linked' && assignment.directDocEntry === true
+      && roster.size === 1 && roster.has(assignment.selectedStudentRef)
+      && rememberedState?.status === 'empty' && rememberedState.revision === null;
   }
   classSelect.addEventListener('change', () => {
     if (active) return;
@@ -467,9 +480,10 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
     studentSelect.focus();
   });
   $('reload-roster').addEventListener('click', () => classes.length && selectedCode ? loadRoster(selectedCode) : start());
-  async function openSelected({ automatic = false, resolution = null, confirmedMatch = null } = {}) {
+  async function openSelected({ automatic = false, resolution = null, confirmedMatch = null, verifiedDirect = false } = {}) {
     if (active || !assignment || !roster.has(studentSelect.value)) return;
-    if (automatic && (!resolution || !resolutionIsCurrent(resolution)
+    if (verifiedDirect && (!canAutoOpenVerifiedDoc() || studentSelect.value !== assignment.selectedStudentRef)) return;
+    if (automatic && !verifiedDirect && (!resolution || !resolutionIsCurrent(resolution)
         || !resolution.aliases.some(alias => alias.classCode === selectedCode && alias.studentRef === studentSelect.value))) return;
     const studentRef = studentSelect.value;
     const code = selectedCode;
@@ -501,7 +515,7 @@ export function createSpeakingIdentity({ apiBase, identityBase, assignmentCode, 
         || (confirmedMatch && !uuid.test(session.selfMatchDecisionId || ''))) {
         throw new Error('Phiên trả về chưa khớp người, lớp hoặc file Homework. Hãy thử lại.');
       }
-      const stored = documentOnly || fallbackOnly || writeMemory(storage, key, remember.checked ? studentRef : '');
+      const stored = documentOnly || fallbackOnly || verifiedDirect || writeMemory(storage, key, remember.checked ? studentRef : '');
       let sharedNotice = '';
       if (sharedClient && !automatic && !documentOnly && !fallbackOnly) {
         if (remember.checked) {
