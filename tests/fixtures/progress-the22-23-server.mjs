@@ -18,7 +18,7 @@ const definition={schemaVersion:'FormDefinitionV1',formVersionId:uid(20),title:'
  {itemVersionId:uid(23),itemFamilyId:uid(33),position:2,prompt:'Reading',skillCodes:['reading'],interactionType:'number_score',layoutType:'score_fraction',graderType:'none',maxScore:0,options:[],interactionConfig:{max:10}},
  {itemVersionId:uid(24),itemFamilyId:uid(34),position:3,prompt:'Khó khăn Speaking',skillCodes:['speaking'],interactionType:'multi_choice_group',layoutType:'speaking_issue_checklist',graderType:'none',maxScore:0,options:[{id:'vocab',label:'Thiếu từ vựng để diễn đạt ý'},{id:'pause',label:'Còn ngập ngừng'}],interactionConfig:{maxSelections:2}},
 ]}]};
-export async function startThe22Server({port=0,extraApi,studentMemory=false}={}){
+export async function startThe22Server({port=0,extraApi,studentMemory=false,additionalClasses=[]}={}){
  const calls=[],faults={},overviewWarnings={},longComment='Nhận xét dài đã công bố, đọc đầy đủ ngay trong bảng. '.repeat(12);
  const assignments=[1,2,3].map(n=>({assignment_id:uid(100+n),public_token:uid(100+n),class_id:'1294',class_name:'Lớp giả Thẻ 22–23',session_number:n,title:'Buổi '+n+' · Listening + Speaking',status:'published',origin_scope:n===1?'izone':'personal'}));
  const payload=newEditorPayload('Phiếu kiểm thử — KHÔNG GIAO LỚP');payload.definition.courseCode='56';payload.definition.blocks[0].items[0].skillCodes=['general'];
@@ -41,7 +41,7 @@ export async function startThe22Server({port=0,extraApi,studentMemory=false}={})
     const p=u.pathname.replace('/api/learning','');
     if(faults[p])return send({ok:false,message:'Lỗi nguồn giả để kiểm',error:'FIXTURE_ERROR'},503);
     if(extraApi&&await extraApi({path:p,url:u,body,method:req.method,send,res}))return;
-    if(p==='/teacher/options')return send({ok:true,reviewer:{name:'Giảng viên giả',email:'teacher@example.test'},classes:[{class_id:'1294',class_name:plan.className,student_count:2}],assignments});
+    if(p==='/teacher/options')return send({ok:true,reviewer:{name:'Giảng viên giả',email:'teacher@example.test'},classes:[{class_id:'1294',class_name:plan.className,student_count:2},...additionalClasses],assignments});
     if(p==='/teacher/question-library')return send({ok:true,items:[]});
     if(p==='/teacher/journey-plan')return send({ok:true,plan});
     if(p==='/teacher/classes/1294/overview')return send({ok:true,overview:overview()});

@@ -6,6 +6,55 @@ import {resolve} from 'node:path';
 import {startThe22Server,uid,rootDraft} from './fixtures/progress-the22-23-server.mjs';
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 
+test('Chrome Giao bài: đi xác nhận đúng lớp chưa có phiếu rồi quay lại giữ đích khác',{timeout:45000},async()=>{
+ const date='2026-11-08',classId='1295',className='Lớp giả chưa giao phiếu';let confirmed=false;
+ const fixture=await startThe22Server({additionalClasses:[{class_id:classId,class_name:className,student_count:1}],extraApi({path,url,method,body,send}){
+  const selected=url.searchParams.get('classId');
+  const slot={sessionNumber:1,date,erpSessionId:'2001'};
+  const plan={classId,className,totalSessions:confirmed?1:null,highestKnownSession:0,revision:confirmed?1:0,testSessionNumbers:[],testSources:[],sessionDates:confirmed?[slot]:[]};
+  if(path==='/teacher/assignment-sessions'){
+   send({ok:true,availability:{classId:selected,rosterStatus:'verified',scheduleStatus:selected==='1294'||confirmed?'ready':'unconfirmed',
+    sessions:selected==='1294'?[{sessionNumber:4,date,status:'available'}]:confirmed?[{...slot,status:'available'}]:[],
+    proposals:selected===classId&&!confirmed?[slot]:[]}});return true;
+  }
+  if(path==='/teacher/classes/'+classId+'/overview'){
+   send({ok:true,overview:{classId,className,totalSessions:0,counts:{currentStudents:1,complete:0},sessions:[],students:[]}});return true;
+  }
+  if(path==='/teacher/journey-plan'&&selected===classId){send({ok:true,plan});return true;}
+  if(path==='/teacher/journey-plan'&&method==='PUT'&&body.classId===classId){
+   assert.deepEqual(body.sessionDates,[slot]);confirmed=true;send({ok:true,plan:{...plan,totalSessions:1,revision:1,sessionDates:[slot]}});return true;
+  }
+  if(path==='/teacher/erp-schedule'&&selected===classId){
+   send({ok:true,schedule:{classId,fingerprint:'a'.repeat(64),ambiguous:false,sessions:[{...slot,erpSessionNumber:1,proposalEligible:true,statusCode:0,startsAt:date+' 18:30:00',endsAt:date+' 21:00:00'}]}});return true;
+  }
+  return false;
+ }});
+ const browser=await chromium.launch({channel:'chrome',headless:true});
+ try{
+  const context=await browser.newContext({serviceWorkers:'block'}),page=await context.newPage();page.setDefaultTimeout(10000);
+  await context.route('**/*',route=>new URL(route.request().url()).origin===fixture.origin?route.continue():route.abort());
+  await page.goto(fixture.origin+'/progress-log/teacher.html#assignment='+uid(103));
+  await page.getByRole('button',{name:'Quản lý bài tập',exact:true}).click();await page.getByRole('tab',{name:/Kho cá nhân/}).click();
+  await page.getByRole('button',{name:'Giao bài',exact:true}).click();
+  const dialog=page.locator('.thuy-assignment-dialog');
+  const first=dialog.getByLabel('Chọn buổi học 1',{exact:true}),second=dialog.getByLabel('Chọn buổi học 2',{exact:true});
+  await first.selectOption('4');await dialog.getByRole('button',{name:'+ Thêm lớp nhận bài tập',exact:true}).click();
+  await dialog.getByLabel('Chọn lớp nhận bài 2',{exact:true}).selectOption(classId);
+  await dialog.getByRole('button',{name:'Xác nhận lịch của lớp',exact:true}).click();
+  await page.getByRole('button',{name:'Quay lại Giao bài',exact:true}).waitFor();
+  assert.equal(await page.locator('#overviewClassSelect').inputValue(),classId);
+  assert.equal(await page.locator('#journeyPlanSection').evaluate(details=>details.open),true);
+  await page.locator('#journeyErpScheduleStatus').filter({hasText:'Đã đọc 1 buổi ERP'}).waitFor();
+  const [saved]=await Promise.all([page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/teacher/journey-plan')),page.locator('#saveJourneyPlanButton').click()]);
+  assert.equal(saved.ok(),true);
+  assert.equal(confirmed,true);
+  await page.getByRole('button',{name:'Quay lại Giao bài',exact:true}).click();
+  await second.selectOption('1');assert.equal(await first.inputValue(),'4');
+  assert.equal(await dialog.getByRole('button',{name:'Giao bài',exact:true}).isEnabled(),true);
+  assert.equal(fixture.calls.some(call=>call.method==='POST'&&call.path.endsWith('/assign')),false);
+ }finally{await browser.close();await fixture.close();}
+});
+
 test('Thẻ 22–23 Chrome: cùng phiếu, lỗi cạnh ô, Speaking đầy đủ, chia đôi và link Writing chỉ đọc',{timeout:180000},async()=>{
  const fixture=await startThe22Server(),browser=await chromium.launch({channel:'chrome',headless:true}),ctx=await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block'}),page=await ctx.newPage(),errors=[];
  page.setDefaultTimeout(10000);page.on('pageerror',e=>errors.push(e.message));

@@ -10,7 +10,7 @@ import {PART_TYPES,PART_SKILLS,selectedLimit,preparePartItem,missingSkills} from
 import {editorItemKind} from './item-kind.js?rev=20261028-the15-v1';
 import {changeQuestionKind,incompleteAnswerRows} from './authoring-answers.js?rev=20261028-the15-v1';
 import {mountGapAuthoring,mountSlotAnswers} from './gap-authoring.js?rev=20261030-the22-23-v1';
-import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261030-the22-23-v1';
+import {createAssignmentDialog} from './teacher-assignment-dialog.js?rev=20261104-assign-schedule-v1';
 import {authoringAction} from './authoring-action.js?rev=20261029-authoring-actions-v2';
 import {collectPublishIssues,schemaFieldIssues,showAuthoringIssues} from './authoring-validation.js?rev=20261030-the22-23-v1';
 import {AI_IMPORT_EXAMPLE} from './ai-import-example.js?rev=20261030-the22-23-v1';
@@ -75,7 +75,7 @@ export function newEditorPayload(title='Phiếu học tập mới') {
     gradingKey:{schemaVersion:'FormGradingKeyV1',formVersionId:version,graderVersion:1,items:{},groups:{}}};
 }
 
-export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onManagementChanged=()=>{},libraryEnabled=false}) {
+export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onManagementChanged=()=>{},libraryEnabled=false,onConfirmSchedule}) {
   let classes=[],assignments=[],draft=null,dirty=false,busy=false,backgroundBusy=false,generation=0,reviewMode=false,
     publishOperationId=null,conflict=null,importPreview=null,importText='',docsUrl='',importOpen=false,aiPopupOpen=false,importTargetBlockId=null,list=[];
   const lockedControls=new Map(),librarySaves=new Map(),publishedByDraft=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false,docsBatch;
@@ -104,7 +104,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
   }
   const status=el('p','Chọn lớp để soạn phiếu.',{role:'status'}),saveState=el('small','',{className:'thuy-editor-save-state'}),classSelect=el('select'),session=el('input',undefined,{type:'number',min:'1',max:'100',value:'1'}),
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
-  const assignmentDialog=createAssignmentDialog({request,getClasses:()=>classes,getPreferredClass:()=>classSelect.value,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
+  const assignmentDialog=createAssignmentDialog({request,getClasses:()=>classes,getPreferredClass:()=>classSelect.value,onConfirmSchedule,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
   const notice=message=>{status.textContent=message;status.hidden=libraryEnabled&&/^(Đã lưu nháp|Có thay đổi chưa lưu|Chọn lớp để soạn)/u.test(message);if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}if(libraryEnabled)paintSaveState();};
   function paintSaveState(){saveState.textContent=!draft?'':busy?(backgroundBusy?'Đang lưu…':'Đang xử lý…'):saveFailed?'Lưu lỗi':draft.status==='published'?'Đã xuất bản':dirty?'Chưa lưu':'Đã lưu';}
   function field(parent,label,value,onChange,{kind='text',options=null,min,max,disabled=false}={}) {
