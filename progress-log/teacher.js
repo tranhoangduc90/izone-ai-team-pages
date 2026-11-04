@@ -19,7 +19,7 @@ import { createTeacherSessionClient, teacherSessionRequestOptions } from '../sha
 import { renderCourseOverview, renderQuestionAnalytics, renderSessionDetail } from './teacher-course-overview.js?rev=20261030-the20-v2';
 import {createFormDraftEditor} from './teacher-form-editor.js?rev=20261030-the22-23-v1';
 import {resolveTeacherAssignment} from './teacher-entry-context.js?rev=20261019-v1';
-import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261030-the22-23-v1';
+import {renderThuyRoster,showThuyDetail,mountThuyTeacherLayout} from './thuy-live/teacher-view.js?rev=20261104-the25-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
 import {renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261030-the17-19-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
@@ -217,7 +217,7 @@ function switchPanel(panel,{returning=false}={}) {
   elements.createTab.classList.toggle('active', creating);
   elements.dashboardTab.classList.toggle('active', panel === 'dashboard');
   elements.overviewTab.classList.toggle('active', panel === 'overview');
-  (panel==='overview'?elements.overviewPlanHost:elements.dashboardPlanHost).append(elements.journeyPlanSection);
+  (THUY_UI||panel==='overview'?elements.overviewPlanHost:elements.dashboardPlanHost).append(elements.journeyPlanSection);
   if (panel === 'dashboard') void loadDashboard({quiet:returning});
   if (panel === 'overview') { void loadCourseOverview({preserve:returning});void loadJourneyPlan(); }
   if(previous==='create'||panel==='create')requestAnimationFrame(()=>{if(state.activePanel===panel)window.scrollTo(0,state.panelScroll.get(panel)||0);});
@@ -1566,10 +1566,10 @@ function applyLiveUpdate(update){
     elements.dashboardTitle.textContent=state.dashboard.title;
     const deadlineHost=document.getElementById('teacherSubmissionWindow');
     deadlineHost.textContent=submissionWindowMessage(observeSubmissionWindow(state.dashboard.submissionWindow,performance.now()),performance.now());deadlineHost.hidden=!deadlineHost.textContent;
-    elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
+    if(!THUY_UI)elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
     elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));renderClassInsights(state.dashboard.classInsights||[]);
     if(!previous||update.full||JSON.stringify(previous.submissionWindow)!==JSON.stringify(state.dashboard.submissionWindow))assignmentManagement?.refresh();
-    if(previous?.assignmentId!==state.dashboard.assignmentId)void loadJourneyPlan();
+    if(!THUY_UI&&previous?.assignmentId!==state.dashboard.assignmentId)void loadJourneyPlan();
   }
   if(update.live){
     if(!update.live.partial)state.liveByStudent.clear();
@@ -1620,10 +1620,10 @@ async function loadDashboard({ quiet = false } = {}) {
     }
     if (previousAssignmentId !== assignmentId) {
       state.liveByStudent.clear();
-      void loadJourneyPlan();
+      if(!THUY_UI)void loadJourneyPlan();
     }
     elements.dashboardTitle.textContent = THUY_UI?state.dashboard.title:state.dashboard.className+' · '+sessionHeading(state.dashboard,{title:state.dashboard.title||state.dashboard.definition?.title});
-    elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
+    if(!THUY_UI)elements.dashboardSummary.replaceChildren(...buildSummary(state.dashboard.students));
     elements.blockControls.replaceChildren(...state.dashboard.blockReleases.map(buildBlockControl));
     renderClassInsights(state.dashboard.classInsights || []);
     renderStudentList();

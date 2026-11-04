@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {mkdir} from 'node:fs/promises';
-import {startThe20Server,a,b,detail,token} from './fixtures/progress-the20-server.mjs';
+import {startThe20Server,a,b,definition,detail,journey,token} from './fixtures/progress-the20-server.mjs';
 const {chromium}=createRequire(process.env.PLAYWRIGHT_PACKAGE||'C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const fixture=await startThe20Server(),browser=await chromium.launch({channel:'chrome',headless:true}),out=process.env.THE20_EVIDENCE_DIR;
 if(out)await mkdir(out,{recursive:true});
@@ -32,10 +32,10 @@ test('Thẻ 20 tổng quan học viên gọn, đúng kỹ năng/Test, Speaking h
  assert.equal(await page.evaluate(()=>window.kept===document.querySelector('#student .thuy-four-skills>.card')),true);
  assert.deepEqual(errors,[]);if(out)await page.screenshot({path:out+'/overview-desktop.png',fullPage:true});
 });
-test('Thẻ 20 chi tiết có tên lớn và một khối tóm tắt; số tự báo không bị chấm',async()=>{
+test('Chi tiết học viên có một khối kết quả gọn; số tự báo không bị chấm',async()=>{
  const {page,errors}=await pageFor('/fixture/skills.html',{width:390});await page.waitForFunction(()=>window.detail);
  await page.evaluate(value=>window.detail(value),detail());
- assert.equal(await page.locator('#detail .reviewStudentName').count(),1);assert.equal(await page.locator('#detail .studentDetailHeader .studentDetailScore').count(),1);
+ assert.equal(await page.locator('#detail .reviewStudentName').count(),0);assert.equal(await page.locator('#detail .studentDetailHeader .studentDetailScore').innerText(),'KẾT QUẢ\n1/1');
  assert.equal(await page.locator('#detail .studentDetailPage>.studentDetailScore').count(),0);assert.doesNotMatch(await page.locator('#detail').innerText(),/tự khai/u);
  assert.match(await page.locator('#detail').innerText(),/Câu trả lời của em/u);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual(errors,[]);
@@ -45,13 +45,98 @@ test('Thẻ 20 cổng học viên chọn, nhớ, reload và đăng xuất; khôn
  const before=fixture.calls.length,{page,errors}=await pageFor('/progress-log/student.html');
  await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();
  await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
- assert.match(await page.locator('#journeyStudentName').textContent(),/Học viên A/u);assert.match(page.url(),/view=journey/u);
+ assert.match(await page.locator('#progressLogStudentName').textContent(),/Học viên A/u);assert.match(page.url(),/view=journey/u);
  await page.reload();await page.locator('#journeyView:not([hidden])').waitFor();
  await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.locator('#portalIdentity:not([hidden])').waitFor();await page.reload();await page.locator('#portalClass:not([disabled])').waitFor();
  assert.equal(await page.locator('#portalHome').isVisible(),false);
  await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();await page.locator('#portalStudent').selectOption(b);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
- assert.equal(await page.locator('#journeyStudentName').textContent(),'Học viên B');assert.equal(fixture.calls.slice(before).some(c=>/attempts\/(start|submit)|checkpoint/u.test(c.path)),false);
+ assert.equal(await page.locator('#progressLogStudentName').textContent(),'Học viên B');assert.equal(fixture.calls.slice(before).some(c=>/attempts\/(start|submit)|checkpoint/u.test(c.path)),false);
  assert.deepEqual(errors,[]);if(out)await page.screenshot({path:out+'/portal-remember.png',fullPage:true});
+});
+test('Thẻ 25 màn khởi đầu: lọc buổi, nút theo phần đầu, khóa khi vừa đóng và xem lại phiếu cũ',{timeout:40000},async()=>{
+ const {page,errors}=await pageFor('/fixture/skills.html',{width:390});
+ const latestToken='30000000-0000-4000-8000-000000000025',now=new Date('2026-11-04T03:00:00Z');
+ const laterBlock='50000000-0000-4000-8000-000000000050';
+ const redundant='Trả lời ngắn gọn theo trải nghiệm thật của em.';
+ const compactDefinition={...definition,title:'Writing 1',blocks:[{...definition.blocks[0],instructions:redundant+'\nGiữ hướng dẫn riêng của bài.'}]};
+ let blockStatus='closed',raceClosed=false,readFailed=false,starts=0;
+ await page.clock.install({time:now});
+ const submissionWindow=()=>({canSubmit:true,serverNow:new Date().toISOString(),effectiveClosesAt:null});
+ const latest={sessionNumber:5,sessionDate:'2026-11-04',title:'Bài đúng của buổi gần nhất',assignmentId:latestToken,
+   publicToken:latestToken,assignmentStatus:'published',completeness:null,sessionKind:'lesson'};
+ await page.route('**/api/learning/student/course-journey',async route=>{
+  if(readFailed)return route.fulfill({status:503,json:{ok:false,message:'Nguồn đọc tạm lỗi'}});
+  const data=journey(route.request().postDataJSON().studentRef||a);
+  data.sessions.push({...latest,firstBlockStatus:blockStatus,submissionWindow:submissionWindow()},
+    {...latest,sessionNumber:6,sessionDate:'2026-11-05'},{...latest,sessionNumber:7,sessionDate:null});
+  await route.fulfill({json:{ok:true,journey:data}});
+ });
+ await page.route('**/api/learning/assignments/open',async route=>{
+  if(route.request().postDataJSON().publicToken!==latestToken)return route.fallback();
+  const definition={...compactDefinition,title:latest.title,blocks:[...compactDefinition.blocks,{blockId:laterBlock,checkpoint:2,title:'Phần sau',items:[]}]};
+  const assignment={assignmentId:latestToken,publicToken:latestToken,class:{id:'1294',name:'IC_TEST20'},courseCode:'56',sessionNumber:5,
+    definition,definitionHash:'d'.repeat(64),roster:[journey(a).student,journey(b).student],submissionWindow:submissionWindow(),
+    blockReleases:[{blockId:definition.blocks[0].blockId,status:raceClosed?'closed':blockStatus},{blockId:laterBlock,status:'open'}]};
+  await route.fulfill({json:{ok:true,assignment}});
+ });
+ await page.route('**/api/learning/student/course-session-detail',async route=>{
+  const {sessionNumber,studentRef}=route.request().postDataJSON();
+  if(sessionNumber===5)return route.fulfill({status:404,json:{ok:false,error:'JOURNEY_SUBMISSION_NOT_READY'}});
+  const result=detail(studentRef||a,sessionNumber);
+  result.definition=compactDefinition;
+  result.gradingItems.push({itemVersionId:'50000000-0000-4000-8000-000000000099',maxScore:1,verdict:'incorrect'});
+  await route.fulfill({json:{ok:true,detail:result}});
+ });
+ await page.route('**/api/learning/attempts/start',async route=>{
+  const input=route.request().postDataJSON();
+  assert.equal(input.publicToken,latestToken);assert.equal(input.studentRef,a);
+  starts++;
+  await route.fulfill({json:{ok:true,attempt:{attemptToken:'60000000-0000-4000-8000-000000000025',assignmentId:latestToken,
+    identity:{studentRef:a,studentName:journey(a).student.name,classId:'1294',sessionNumber:5},
+    definitionHash:'d'.repeat(64),draftRevision:0,draftResponses:{},checkpoints:[],submissionWindow:submissionWindow()}}});
+ });
+ await page.goto(fixture.origin+'/progress-log/student.html');
+ await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');
+ await page.locator('#portalStudent:not([disabled])').waitFor();await page.locator('#portalStudent').selectOption(a);
+ await page.locator('#portalContinue').click();await page.locator('#journeyView:not([hidden])').waitFor();
+ const button=page.getByRole('button',{name:'Nhấn vào đây để làm bài',exact:true});
+ await button.waitFor();
+ assert.equal(await page.locator('#studentUpcoming').getAttribute('data-session-number'),'5');
+ assert.deepEqual(await page.locator('#journeySessions [data-session-number]').evaluateAll(nodes=>nodes.map(node=>node.dataset.sessionNumber)),['1','2','5']);
+ assert.equal(await button.isDisabled(),true);assert.equal(await button.evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(238, 241, 244)');
+ assert.doesNotMatch(await page.locator('#journeyView').innerText(),/Chưa tạo Progress Log|Giảng viên đã xác nhận kế hoạch|Buổi chưa tạo/u);
+ assert.ok(await page.locator('#journeyListTitle').evaluate(node=>parseFloat(getComputedStyle(node).fontSize)>parseFloat(getComputedStyle(document.querySelector('#journeySessions .studentSessionTop b')).fontSize)));
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ if(out)await page.screenshot({path:out+'/the25-locked-390.png',fullPage:true});
+ await page.locator('#journeySessions [data-session-number="2"]').click();
+ await page.locator('#journeyDetailContent .studentDetailHeader').waitFor();
+ assert.equal(await button.isVisible(),false);
+ const review=await page.locator('#journeyDetailContent').innerText();
+ assert.match(review,/BUỔI 02[\s\S]*Writing 1[\s\S]*✓ Đã hoàn thành[\s\S]*KẾT QUẢ\s+1\/2/u);
+ assert.match(review,/PHẦN 1[\s\S]*Giữ hướng dẫn riêng của bài/u);
+ assert.doesNotMatch(review,/KẾT QUẢ CÂU ĐÃ CHẤM|CÂU TRẢ LỜI CỦA EM ·|Trả lời ngắn gọn theo trải nghiệm thật/u);
+ if(out)await page.screenshot({path:out+'/the25-review-390.png',fullPage:true});
+ await page.locator('#journeyDetailBackButton').click();
+ const refresh=async()=>{const response=page.waitForResponse(r=>r.url().endsWith('/student/course-journey'));await page.clock.fastForward(31_000);await response;};
+ blockStatus='open';await refresh();await page.waitForFunction(()=>!document.querySelector('#studentUpcoming button').disabled);
+ if(out)await page.screenshot({path:out+'/the25-open-390.png',fullPage:true});
+ for(const width of [768,1440]){
+  await page.setViewportSize({width,height:1000});
+  await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  assert.ok(await page.locator('#journeyListTitle').evaluate(node=>parseFloat(getComputedStyle(node).fontSize)>parseFloat(getComputedStyle(document.querySelector('#journeySessions .studentSessionTop b')).fontSize)));
+  if(out)await page.screenshot({path:out+'/the25-open-'+width+'.png',fullPage:true});
+ }
+ raceClosed=true;blockStatus='closed';await button.click();await page.waitForFunction(()=>document.querySelector('#studentUpcoming button').disabled);
+ assert.equal(starts,0);assert.equal(await page.locator('#journeyView').isVisible(),true);
+ readFailed=true;await refresh();assert.equal(await button.isDisabled(),true);
+ readFailed=false;raceClosed=false;blockStatus='open';await refresh();await page.waitForFunction(()=>!document.querySelector('#studentUpcoming button').disabled);
+ await button.click();await page.locator('#reflectionForm:not([hidden]) .thuy-part').first().waitFor();
+ assert.equal(starts,1);
+ await page.locator('.thuy-part').first().getByRole('button',{name:'Bắt đầu làm',exact:true}).click();
+ assert.match(await page.locator('.thuy-part-body').first().innerText(),/Giữ hướng dẫn riêng của bài/u);
+ assert.doesNotMatch(await page.locator('.thuy-part-body').first().innerText(),/Trả lời ngắn gọn theo trải nghiệm thật/u);
+ assert.equal(await button.isVisible(),false);assert.deepEqual(errors,[]);
 });
 test('Thẻ 20 Writing mở điểm 0 và Task 2 đầy đủ, chỉ đọc và không chạy script trong nhận xét',async()=>{
  const before=fixture.calls.length,{page,errors}=await pageFor('/term-tests/writing-result/#test=term-test-1&result='+ 'a'.repeat(64)+'&task=1&assignment=30000000-0000-4000-8000-000000000001&student='+a);
@@ -67,8 +152,8 @@ test('Thẻ 20 từ cổng vào Journey, xem bài, mở Writing và đăng xuấ
  await page.locator('#portalClass:not([disabled])').waitFor();await page.locator('#portalClass').selectOption('1294');await page.locator('#portalStudent:not([disabled])').waitFor();
  await page.locator('#portalStudent').selectOption(a);await page.getByRole('button',{name:'Tiếp tục',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
  assert.equal(await page.locator('#journeyView h1').textContent(),'Progress log');
- await page.locator('#journeySessions button.studentSessionCard').first().click();await page.locator('#journeyDetailContent .reviewStudentName').waitFor();
- assert.equal(await page.locator('#journeyDetailContent .reviewStudentName').count(),1);assert.ok(await page.locator('#journeyDetailBackButton').evaluate(e=>e.getBoundingClientRect().height>=44&&parseFloat(getComputedStyle(e).fontSize)>=16));await page.locator('#journeyDetailBackButton').click();
+ await page.locator('#journeySessions button.studentSessionCard').first().click();await page.locator('#journeyDetailContent .studentDetailHeader').waitFor();
+ assert.equal(await page.locator('#journeyDetailContent .reviewStudentName').count(),0);assert.ok(await page.locator('#journeyDetailBackButton').evaluate(e=>e.getBoundingClientRect().height>=44&&parseFloat(getComputedStyle(e).fontSize)>=16));await page.locator('#journeyDetailBackButton').click();
  await page.getByRole('link',{name:/Task 1 Term Test 1 điểm 0/u}).click();await page.locator('#resultContent:not([hidden])').waitFor();
  await page.getByRole('link',{name:'← Hành trình của em',exact:true}).click();await page.locator('#journeyView:not([hidden])').waitFor();
  assert.equal(await page.locator('#progressLogChangeStudent').evaluate(e=>{const r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===e;}),true);

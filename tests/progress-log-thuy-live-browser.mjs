@@ -66,8 +66,9 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
  async function changeLearner(ref){await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.waitForURL('**/student.html');await openManual(ref);}
  try{
   await openManual();assert.equal(requests.filter(r=>r.path.includes('/submit')).length,0);
-  await page.locator('#studentDashboardSessions').getByRole('heading',{name:'Tất cả buổi học',exact:true}).waitFor();
-  await page.locator('#studentDashboardLatest [data-session-number="11"]').waitFor();assert.equal(await page.locator('#journeyView').isVisible(),false);
+  await page.locator('#studentDashboardSessions').getByRole('heading',{name:'Các buổi học',exact:true}).waitFor();
+  await page.locator('#studentDashboardSessions [data-session-number="11"]').waitFor();assert.equal(await page.locator('#journeyView').isVisible(),false);
+  assert.equal(await page.getByText('BUỔI HỌC GẦN NHẤT',{exact:true}).count(),0);
   assert.equal(await page.locator('#thuyLessonNav').count(),0);assert.equal(await page.locator('#formView').isVisible(),true);assert.equal(await page.locator('#confirmView').isVisible(),false);
   journeyFailure='denied';await page.clock.fastForward(31_000);await page.locator('#studentDashboardLatest').getByText(/Quyền đọc đã bị thu hồi/).waitFor();
   assert.equal(await page.locator('#reflectionForm').isVisible(),false);assert.equal(await page.locator('#thuyLessonNav').count(),0);
@@ -94,7 +95,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   await speaking.locator('input[value=B]').check();assert.equal(await speaking.locator('input[value=B]').isChecked(),true);
   await page.setViewportSize({width:1440,height:1000});
   failSave=true;await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.locator('#notice').filter({hasText:'Chưa lưu xong'}).waitFor();
-  assert.match(await page.locator('#studentNameLabel').innerText(),/Học viên A/);assert.equal(await page.locator('#thuyRetrySave').isVisible(),true);
+  assert.match(await page.locator('#progressLogStudentName').innerText(),/Học viên A/);assert.equal(await page.locator('#thuyRetrySave').isVisible(),true);
   failSave=false;await page.locator('#thuyRetrySave').click();await page.locator('#saveState').filter({hasText:'Đã lưu'}).waitFor();
   await changeLearner(B);
   await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Bắt đầu làm',exact:true}).click();assert.equal(await page.locator('.thuy-comparison textarea').nth(0).inputValue(),'');
@@ -105,18 +106,17 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   await page.locator(`[data-part="${block1}"]`).getByRole('button',{name:'Nộp phần này',exact:true}).click();await page.getByText('Đã nộp 2/2 phần',{exact:true}).waitFor();assert.equal(state(A).final,true);
   assert.equal(await page.locator('#submitButton').isVisible(),false);assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);
   const starts=requests.filter(r=>r.path==='/attempts/start').length;await page.close();page=await ctx.newPage();await page.clock.install({time:new Date('2026-01-01T12:00:00Z')});await page.goto(url);await page.locator('#formView').waitFor();
-  await page.getByText('Phiếu đã nộp · Chỉ đọc',{exact:true}).waitFor();assert.equal(requests.filter(r=>r.path==='/attempts/start').length,starts);
-  await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Xem bài đã nộp',exact:true}).click();
-  await page.getByText('Đáp án tham khảo: Tham khảo sau khi mở lại',{exact:true}).waitFor();
+  await page.locator('#questionList .studentDetailHeader').waitFor();assert.equal(requests.filter(r=>r.path==='/attempts/start').length,starts);
+  await page.getByText('Tham khảo sau khi mở lại',{exact:true}).waitFor();
   assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'learner-completed.png'),fullPage:true});}
   closed=true;journeyFailure=true;await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.waitForURL('**/student.html');await page.goto(url);
   await page.locator('#studentSelect').selectOption(B);await page.locator('#chooseStudentButton').click();
   await page.getByRole('button',{name:'Đúng là em · xem các buổi học',exact:true}).click();
   await page.locator('#studentDashboardLatest').getByText(/Chưa tải được danh sách: Nguồn danh sách tạm lỗi/).waitFor();
-  assert.equal(await page.locator('#reflectionForm').isVisible(),false);assert.match(await page.locator('#studentNameLabel').innerText(),/Học viên B/);
+  assert.equal(await page.locator('#reflectionForm').isVisible(),false);assert.match(await page.locator('#progressLogStudentName').innerText(),/Học viên B/);
   journeyFailure=false;await page.locator('#studentDashboardLatest').getByRole('button',{name:'Thử lại',exact:true}).click();
-  await page.locator('#studentDashboardLatest').getByText('Phiếu đã đóng nhận bài',{exact:true}).waitFor();
+  await page.locator('#studentDashboardSessions').getByText('Phiếu đã đóng nhận bài',{exact:true}).waitFor();
   assert.equal(requests.filter(r=>r.path==='/attempts/start').length,starts,'Vẽ dashboard phiếu đóng không tạo lượt làm mới');
   assert.equal(await page.locator('#studentDashboardLatest').getByRole('button',{name:'Mở phiếu',exact:true}).count(),0);
  }finally{await ctx.close();await browser.close();await new Promise(done=>server.close(done));}

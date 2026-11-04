@@ -130,7 +130,7 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   elements.overviewPanel.querySelector('.section-heading').hidden=true;
   elements.overviewPanel.querySelector('#showAllJourneyClasses').closest('label').hidden=true;
   for(const text of elements.overviewPanel.querySelectorAll(':scope>p.muted'))text.hidden=true;
-  const extras=node('details','','thuy-extra-tools');extras.append(node('summary','Thông tin và công cụ của buổi'));extras.append(elements.dashboardSummary);dashboard.append(extras);
+  elements.dashboardSummary.remove();
   const count=node('span','','thuy-class-count');pickers.append(count);
   return {context,classes,home,count,learner,setMode(value){mode=value;applyResultTab();},setPanel(panel){
     context.hidden=['create','classes'].includes(panel);home.classList.toggle('active',panel!=='create');

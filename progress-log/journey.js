@@ -1,9 +1,9 @@
 import {contentTitle,sessionHeading,sessionState,skillsLabel} from './session-presentation.js';
-import {renderSessionReview} from './session-review.js?rev=20261030-the20-v2';
+import {renderSessionReview} from './session-review.js?rev=20261104-the25-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261102-the24-v1';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {markProgressLogout,stampProgressStudent,progressPinWasLoggedOut} from './student-session-memory.js?rev=20261030-the20-v2';
-import {dashboardSessionState,upcomingSession,renderUpcomingSession} from './student-session-dashboard.js?rev=20261102-the24-v1';
+import {assignmentAllowsEntry,dashboardSessionState,latestAssignedSession,preserveSessionComments,renderLatestSession,studentEntryState,visibleStudentSessions} from './student-session-dashboard.js?rev=20261104-the25-v1';
 'use strict';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
@@ -42,7 +42,7 @@ async function apiRequest(token) {
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok || !payload?.ok) {
-    throw new Error(payload?.message || 'Link không còn sử dụng được.');
+    throw Object.assign(new Error(payload?.message || 'Link không còn sử dụng được.'),{status:response.status});
   }
   return payload.journey;
   } finally {clearTimeout(timeout);}
@@ -102,15 +102,15 @@ function submissionLabel(session) {
 }
 
 // Link Journey cũ dùng cùng nhãn/bài chỉ đọc; quyền truy cập vẫn được API kiểm.
-function buildSession(session) {
-  const view=dashboardSessionState(session);
+function buildSession(session,view,highlight) {
   const read=view.readOnly&&Boolean(view.action);
   const learn=view.canLearn&&/^[0-9a-f-]{36}$/iu.test(session.publicToken||'');
-  const item=document.createElement(learn?'a':read?'button':'article');
+  const item=document.createElement(learn&&!isThuy()?'a':read||learn?'button':'article');
   item.dataset.sessionNumber=String(session.sessionNumber);
   item.className='studentSessionCard session-'+view.kind;
-  item.classList.toggle('is-upcoming',session.sessionNumber===upcomingSession(journeyData.sessions)?.sessionNumber);
-  if(learn)item.href='./thuy.html#'+new URLSearchParams({assignment:session.publicToken,student:journeyData.student.studentRef});
+  item.classList.toggle('is-upcoming',highlight);
+  if(learn&&isThuy()){item.type='button';item.addEventListener('click',()=>void openLatest(session,view));}
+  else if(learn)item.href='./thuy.html#'+new URLSearchParams({assignment:session.publicToken,student:journeyData.student.studentRef});
   if(read){item.type='button';item.addEventListener('click',()=>void openHistory(session));}
   const top=document.createElement('div');top.className='studentSessionTop';
   const b=document.createElement('b');b.textContent='Buổi '+session.sessionNumber;
@@ -125,14 +125,24 @@ function buildSession(session) {
   return item;
 }
 let historyGeneration=0,historyController=null,journeyData=null,sessionOwner='',sessionCards=new Map();
+const isThuy=()=>document.body.classList.contains('thuy-student');
+const displayedSessions=()=>isThuy()?visibleStudentSessions(journeyData.sessions):journeyData.sessions;
+let accessStale=false,refreshingAccess=false,openingLatest=false;
+const emptySessions=document.createElement('p');emptySessions.textContent='Chưa có buổi học để hiển thị.';emptySessions.className='muted';
+emptySessions.hidden=true;elements.sessionList.before(emptySessions);
 function paintSessionCards(){
  if(!journeyData)return;
  const owner=journeyData.class.classId+':'+journeyData.student.studentRef;
  if(owner!==sessionOwner){elements.sessionList.replaceChildren();sessionCards.clear();sessionOwner=owner;}
  const keep=new Set(),ordered=[];
- const upcoming=upcomingSession(journeyData.sessions)?.sessionNumber;
- for(const session of [...journeyData.sessions].sort((a,b)=>Number(a.sessionNumber)-Number(b.sessionNumber))){const key=String(session.sessionNumber),state=dashboardSessionState(session),signature=JSON.stringify({session,state,upcoming:session.sessionNumber===upcoming});
-  keep.add(key);let card=sessionCards.get(key);if(!card||card.signature!==signature){const element=buildSession(session);if(card)card.element.replaceWith(element);card={element,signature};sessionCards.set(key,card);}ordered.push(card.element);
+ const sessions=displayedSessions(),latest=isThuy()?latestAssignedSession(sessions)?.sessionNumber:null;
+ emptySessions.hidden=!isThuy()||Boolean(sessions.length);
+ if(isThuy())elements.timelineCount.textContent='';
+ for(const session of [...sessions].sort((a,b)=>Number(a.sessionNumber)-Number(b.sessionNumber))){
+  const key=String(session.sessionNumber),state=isThuy()?studentEntryState(session,Date.now(),!accessStale):dashboardSessionState(session);
+  const highlight=session.sessionNumber===latest;
+  const signature=JSON.stringify({session,state,highlight},(key,value)=>key==='serverNow'?undefined:value);
+  keep.add(key);let card=sessionCards.get(key);if(!card||card.signature!==signature){const element=buildSession(session,state,highlight);if(card)card.element.replaceWith(element);card={element,signature};sessionCards.set(key,card);}ordered.push(card.element);
  }
  for(const [key,card]of sessionCards)if(!keep.has(key)){card.element.remove();sessionCards.delete(key);}
  for(const [index,card]of ordered.entries())if(elements.sessionList.children[index]!==card)elements.sessionList.insertBefore(card,elements.sessionList.children[index]||null);
@@ -143,13 +153,26 @@ const historyStatus=document.createElement('p');historyStatus.setAttribute('role
 const historyContent=document.createElement('div'),retry=document.createElement('button');retry.textContent='Thử lại';retry.className='button';retry.hidden=true;
 bindDialogDismiss(historyDialog);
 let historySession=null;retry.addEventListener('click',()=>void openHistory(historySession));historyDialog.append(close,historyStatus,historyContent,retry);document.body.append(historyDialog);
-function paintUpcoming(){
-  if(!journeyData||!document.body.classList.contains('thuy-student'))return;
-  let host=document.querySelector('#studentUpcoming');if(!host){host=document.createElement('section');host.id='studentUpcoming';host.setAttribute('aria-label','Buổi học sắp tới');elements.journeyClassName.after(host);}
-  renderUpcomingSession(host,journeyData.sessions,{onOpen:(session,state)=>{
-    if(state.readOnly){void openHistory(session);return;}
-    if(state.canLearn&&/^[0-9a-f-]{36}$/iu.test(session.publicToken||''))location.assign('./thuy.html#'+new URLSearchParams({assignment:session.publicToken,student:journeyData.student.studentRef}));
-  }});
+async function openLatest(session,state){
+  if(!state.canLearn||openingLatest||!journeyData)return;
+  const {studentRef}=journeyData.student,{classId}=journeyData.class,token=accessToken;
+  const current=()=>accessToken===token&&journeyData?.student.studentRef===studentRef&&!historyDialog.open;
+  openingLatest=true;
+  try{
+    const response=await fetch(config.API_BASE_URL+'/api/learning/assignments/open',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({publicToken:session.publicToken}),cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
+    const payload=await response.json();
+    if(!current())return;
+    if(!response.ok||!assignmentAllowsEntry(payload.assignment,session,{studentRef,classId}))throw Error('Phiếu hoặc phần đầu hiện không mở.');
+    location.assign('./thuy.html#'+new URLSearchParams({assignment:session.publicToken,student:studentRef,view:'learn'}));
+  }catch(error){if(current()){accessStale=true;repaintSessionCards();setNotice(error.message,'error');}}
+  finally{openingLatest=false;}
+}
+function paintLatest(){
+  if(!journeyData||!isThuy())return;
+  let host=document.querySelector('#studentUpcoming');
+  if(!host){host=document.createElement('section');host.id='studentUpcoming';host.setAttribute('aria-label','Buổi học gần nhất');elements.journeyClassName.after(host);}
+  renderLatestSession(host,journeyData.sessions,{onOpen:openLatest,available:!accessStale});
 }
 historyDialog.addEventListener('close',()=>{if(historyDialog.open)return;historyGeneration++;historyController?.abort();historyContent.replaceChildren();});
 async function openHistory(session){
@@ -181,9 +204,11 @@ function renderJourney(journey) {
   journeyData=journey;
   if(config.THUY_PILOT_CLASS_IDS?.includes(String(journey.class.classId))&&new URLSearchParams(location.search).get('presentation')!=='legacy'){
     document.body.classList.add('thuy-live','thuy-student');
-    paintUpcoming();elements.timeline.hidden=false;elements.timelineToggle.hidden=true;
+    paintLatest();elements.timeline.hidden=false;elements.timelineToggle.hidden=true;
+    const heading=document.createElement('h2');heading.textContent='Các buổi học';
+    elements.timeline.querySelector('.timeline-heading .eyebrow')?.replaceWith(heading);
     if(!document.querySelector('#thuyStudentJourneySkills')){
-      for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./the24.css?rev=20261102-the24-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=path;document.head.append(css);}
+      for(const path of ['./thuy-live/styles.css?rev=20261022-final-choice','./the24.css?rev=20261104-the25-v1']){const css=document.createElement('link');css.rel='stylesheet';css.href=path;document.head.append(css);}
       const root=document.createElement('section');root.id='thuyStudentJourneySkills';document.querySelector('#studentUpcoming').after(root);
       void import('./thuy-live/student-skills-journey.js?rev=20261102-the24-v1').then(({mountStudentSkillJourney})=>mountStudentSkillJourney(root,journey,async sessionNumber=>{
         const response=await fetch(config.API_BASE_URL+'/api/learning/student/course-session-detail',{method:'POST',headers:{'content-type':'application/json'},
@@ -193,7 +218,8 @@ function renderJourney(journey) {
     }
   }
   commentPoller?.refresh();
-  elements.journeyStudentName.textContent = journey.student.name;
+  elements.journeyStudentName.textContent = isThuy()?'':journey.student.name;
+  document.querySelector('#journeyAccountName').textContent=isThuy()?journey.student.name:'';
   elements.journeyClassName.textContent = journey.class.name;
   elements.attendedCount.textContent = journey.summary.attendedSessions;
   elements.submittedCount.textContent = journey.summary.submittedComplete;
@@ -214,7 +240,7 @@ function renderJourney(journey) {
   elements.latestSpeakingFeedbackText.textContent = latestFeedbackSession?.teacherSessionFeedback.noteText || '';
   elements.timelineCount.textContent = `${journey.summary.totalSessions} buổi`;
   paintSessionCards();
-  paintJourneyComments(elements.journeyView,elements.sessionList,journey.sessions,session=>void openHistory(session),{showLatest:!document.body.classList.contains('thuy-student')});
+  paintJourneyComments(elements.journeyView,elements.sessionList,displayedSessions(),session=>void openHistory(session),{showLatest:!isThuy()});
   elements.reportHistory.hidden = !journey.reports.length;
   elements.reportList.replaceChildren(...journey.reports.map(buildReport));
   elements.journeyView.hidden = false;
@@ -253,7 +279,7 @@ let commentPoller=createCommentPoller({context:()=>journeyData&&accessToken?{acc
   request:async(path,options)=>{const response=await fetch(config.API_BASE_URL+'/api/learning'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(options.body),signal:options.signal,cache:'no-store',referrerPolicy:'no-referrer'});const data=await response.json();if(!response.ok||!data.ok)throw Error(data.message||'Chưa đọc được nhận xét.');return data;},
   onData:data=>{if(!journeyData||data.studentRef!==journeyData.student.studentRef||String(data.classId)!==String(journeyData.class.classId))return;
     const byNumber=new Map(data.comments.map(note=>[note.sessionNumber,note]));journeyData.sessions=journeyData.sessions.map(session=>({...session,sessionComment:byNumber.get(session.sessionNumber)||null}));
-    paintSessionCards();paintUpcoming();paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session),{showLatest:!document.body.classList.contains('thuy-student')});
+    repaintSessionCards();
     studentSkillView?.refreshComments(data.comments);
     if(historyDialog.open&&historySession){const existing=[...historyContent.querySelectorAll('[data-session-comment]')],panel=commentPanel(byNumber.get(historySession.sessionNumber));
       if(existing.length!==(panel?1:0)||existing[0]?.outerHTML!==panel?.outerHTML){existing.forEach(box=>box.remove());if(panel)historyContent.append(panel);}}
@@ -262,13 +288,37 @@ stampProgressStudent();void start();
 window.addEventListener('pageshow',event=>{if(event.persisted&&progressPinWasLoggedOut()){journeyData=null;accessToken='';elements.journeyView.hidden=true;location.replace(new URL('./student.html',location.href));}});
 
 // Đồng hồ chỉ làm mới thẻ; không gọi API và không thay quyền mở phần.
-function repaintSessionCards(){if(!journeyData)return;paintSessionCards();paintUpcoming();paintJourneyComments(elements.journeyView,elements.sessionList,journeyData.sessions,session=>void openHistory(session),{showLatest:!document.body.classList.contains('thuy-student')});}
+function repaintSessionCards(){if(!journeyData)return;paintSessionCards();paintLatest();paintJourneyComments(elements.journeyView,elements.sessionList,displayedSessions(),session=>void openHistory(session),{showLatest:!isThuy()});}
+async function refreshSessionAccess(){
+  if(!isThuy()||!journeyData||!accessToken||document.hidden||refreshingAccess)return;
+  const token=accessToken,{studentRef}=journeyData.student,{classId}=journeyData.class;
+  const current=()=>token===accessToken&&journeyData?.student.studentRef===studentRef;
+  refreshingAccess=true;
+  try{
+    const latest=await apiRequest(token);
+    if(!current())return;
+    if(latest.student?.studentRef!==studentRef||String(latest.class?.classId)!==String(classId))throw Error('Dữ liệu chưa khớp học viên và lớp.');
+    journeyData=preserveSessionComments(journeyData,latest);
+    accessStale=false;
+  }catch(error){
+    if(!current())return;
+    if([401,403,404].includes(error.status)){
+      historyGeneration++;historyController?.abort();historyDialog.close();journeyData=null;accessToken='';
+      elements.journeyView.hidden=true;elements.journeyError.hidden=false;elements.journeyErrorMessage.textContent=error.message;
+      document.querySelector('#journeyAccountName').textContent='';commentPoller.stop();return;
+    }
+    accessStale=true;setNotice('Chưa cập nhật được quyền mở phiếu. Em có thể xem lại bài đã nộp.','error');
+  }finally{refreshingAccess=false;}
+  if(current())repaintSessionCards();
+}
+setInterval(()=>void refreshSessionAccess(),30_000);
 function refreshClock(){repaintSessionCards();setTimeout(refreshClock,60000-Date.now()%60000+20);}
 setTimeout(refreshClock,60000-Date.now()%60000+20);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)repaintSessionCards();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){repaintSessionCards();void refreshSessionAccess();}});
 document.getElementById('journeyLogout')?.addEventListener('click',async()=>{
  const identity=createCourseStudentIdentity({product:'progress-log',entry:'private-journey',requestIdentity:input=>requestMappingStudentIdentity(input,config.API_BASE_URL)});
  const result=await identity.forget();if(result.status!=='empty'){setNotice('Chưa xóa được ghi nhớ. Em hãy thử lại.','error');return;}
  markProgressLogout();startGeneration++;historyGeneration++;historyController?.abort();commentPoller.stop();accessToken='';journeyData=null;
+ document.querySelector('#journeyAccountName').textContent='';elements.journeyView.hidden=true;
  try{history.replaceState({},'',location.pathname+location.search);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}location.replace(new URL('./student.html',location.href));
 });

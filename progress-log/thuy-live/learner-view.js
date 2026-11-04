@@ -1,13 +1,14 @@
 // Đầu vào là trạng thái thật của app chung. Chỉ sắp xếp các phần trong một trang;
 // mở phần, lưu, nộp và quyền đáp án vẫn lấy từ máy chủ, không dùng kho dữ liệu demo.
 import {partFeedback} from './part-feedback.js?rev=20261030-the17-19-v1';
+import {studentInstructions} from '../student-instructions.js?rev=20261104-the25-v1';
 function node(tag,text='',className='') {const e=document.createElement(tag);e.textContent=text;e.className=className;return e;}
 export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmit,releaseFor,onSubmit,onRetry,onJourney,onRefresh}) {
   const root=elements.questionList,expanded=state.thuyExpanded??=new Set();
   root.replaceChildren();
   elements.checkpointLabel.textContent=`${state.assignment.class.name} · BUỔI ${state.assignment.sessionNumber}`;
   elements.checkpointTitle.textContent=state.assignment.definition.title;
-  elements.checkpointInstructions.textContent=state.assignment.definition.instructions||'';
+  elements.checkpointInstructions.textContent=studentInstructions(state.assignment.definition.instructions||'');
   elements.checkpointInstructions.hidden=!elements.checkpointInstructions.textContent;
   const count=blocks.filter(b=>state.checkpointSubmissions.has(b.blockId)).length;
   const savedResult=state.thuyReadOnly?{items:(state.thuyReadOnly.gradingItems||[]).map(item=>({
@@ -28,7 +29,8 @@ export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmi
     head.append(copy,node('span',submitted?'Đã nộp':open?'Đã mở':release?.status==='closed'?'Đã đóng':'Chưa mở',submitted?'badge green':open?'badge blue':'badge'));
     part.append(head);
     if(expanded.has(block.blockId)) {
-      const body=node('div','','thuy-part-body');if(block.instructions)body.append(node('p',block.instructions,'help'));
+      const body=node('div','','thuy-part-body'),instructions=studentInstructions(block.instructions||'');
+      if(instructions)body.append(node('p',instructions,'help'));
       const feedback=submitted?partFeedback(block,state.submissionPayload?.result||state.checkpointSubmissions.get(block.blockId)?.result||savedResult):null;
       if(feedback)body.append(feedback);else body.append(...buildQuestions(block.items.filter(i=>i.layoutType!=='inline_option_text')));
       const locked=submitted||!open||!canSubmit||Boolean(state.submissionPayload)||state.submitting;

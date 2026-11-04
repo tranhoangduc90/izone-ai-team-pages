@@ -10,7 +10,7 @@ async function request(path,body,signal){
     ...(body?{body:JSON.stringify(body)}:{}),cache:'no-store',referrerPolicy:'no-referrer',signal});
   const data=await response.json().catch(()=>null);if(!response.ok||!data?.ok)throw Error(data?.message||'Chưa đọc được dữ liệu học viên.');return data;
 }
-function chooseView(){home.hidden=true;identityView.hidden=false;logout.hidden=true;currentStudent=null;}
+function chooseView(){home.hidden=true;identityView.hidden=false;logout.hidden=true;byId('portalName').textContent='';currentStudent=null;}
 function lastClass(){try{return localStorage.getItem('izone:progress-log:class:v1')||'';}catch{return '';}}
 function rememberClass(id){try{localStorage.setItem('izone:progress-log:class:v1',id);}catch{/* Lựa chọn phiên hiện tại vẫn dùng được. */}}
 function validStudent(value){return value&&/^[0-9a-f-]{36}$/iu.test(value.studentRef)&&/^[0-9a-f-]{36}$/iu.test(value.publicToken)&&typeof value.name==='string';}
@@ -56,6 +56,7 @@ async function openStudent({selection=null}={}){
 }
 async function boot(){
   controller?.abort();generation++;const bootVersion=++bootGeneration;busy=false;home.hidden=identityView.hidden=logout.hidden=true;currentStudent=null;retry.hidden=true;classSelect.disabled=true;notice('Đang kiểm tra người đã ghi nhớ…');
+  byId('portalName').textContent='';
   const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),15000);
   try{
     const data=await request('/student/portal-classes',null,abort.signal);if(bootVersion!==bootGeneration)return;classes=data.classes;

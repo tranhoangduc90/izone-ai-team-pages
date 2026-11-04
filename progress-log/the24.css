@@ -1,32 +1,40 @@
 /* Thẻ 24: chỉ thay các vùng tổng quan và nhận xét đã được duyệt. */
 .thuy-student .shell:has(>#journeyView:not([hidden])){max-width:1920px}
 .thuy-student #journeyView{max-width:none}
-.thuy-student .shell:has(>#journeyView:not([hidden]))>#submissionWindowNotice{display:none}
+.thuy-student .shell:has(>:is(#journeyView,#journeyDetailView):not([hidden]),#formView:not([hidden]) .student-review-compact)>#submissionWindowNotice{display:none}
 .thuy-student #journeyView>.journey-summary{display:none}
 .thuy-student #journeyView .studentPortalHero{padding:0;display:block}
 .thuy-student #journeyView .studentPortalHero h1{font:600 26px/1.35 Geologica,sans-serif;margin:0 0 8px;color:var(--navy,#174266);letter-spacing:0}
 .thuy-student #journeyView #journeyStudentName,.thuy-student #journeyView #journeyClassName{margin:4px 0;font-size:14px}
 .thuy-student .student-nav .button[hidden]{display:none!important}
 .thuy-student .student-nav:not(:has(.button:not([hidden]))){display:none}
-.thuy-student #progressLogChangeStudent{margin-left:auto}
+.student-account{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;margin-left:auto}
+.student-account>span{font-size:13px;line-height:1.45;overflow-wrap:anywhere;text-align:right}
+.student-account>span:empty{display:none}
+.student-account>.button{flex:none;margin:0!important;white-space:nowrap}
+.thuy-student #studentNameLabel[hidden],.thuy-student .panel-heading[hidden]{display:none}
+.thuy-student #formView:has(.student-review-compact)>.progress-track{display:none}
+.student-review-compact .portalCompleteBadge{justify-self:start}
 .thuy-student #journeyView .studentJourneyHeading .studentPortalEyebrow{display:none}
 .thuy-student .student-upcoming,.student-upcoming{display:flex;align-items:center;justify-content:space-between;gap:24px;position:relative;background:#fff;border:1px solid #e2e7eb;border-left:4px solid #e3082a;border-radius:8px;padding:20px 24px;margin:0 0 24px;color:#174266;min-width:0}
 .student-upcoming-copy{min-width:0}.student-upcoming .eyebrow{font-size:11px;line-height:16px;font-weight:600;margin:0 0 8px;color:#586477}
-.student-upcoming h2{font-size:22px;line-height:1.4;margin:0 0 12px;color:#174266;overflow-wrap:anywhere}
+.student-upcoming h2{font-size:22px;line-height:1.4;margin:0;color:#174266;overflow-wrap:anywhere}
 .student-upcoming>.button{flex-shrink:0;white-space:normal;min-height:44px}
-.student-upcoming .upcoming-state{display:inline-flex;align-items:center;gap:8px;border-radius:4px;background:#fff4df;color:#8e5800;font-size:14px;padding:6px 10px}
-.student-upcoming .upcoming-state::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
-.student-upcoming .upcoming-state.state-complete{background:#e8f5ee;color:#18734c}
-.student-upcoming .upcoming-state:is(.state-locked,.state-empty,.state-review){background:#eef1f4;color:#586477}
+.thuy-student .student-upcoming>.button:disabled{color:#586477;background:#eef1f4;border-color:#d6dde3;opacity:1;cursor:not-allowed}
+.thuy-student .student-upcoming[hidden],.student-dashboard-latest:not(:has(.student-upcoming:not([hidden]),p:not(:empty),button:not([hidden]))){display:none}
+body:has(#journeyDetailDialog[open]) #studentUpcoming{visibility:hidden}
 .student-dashboard-latest{background:transparent!important;border:0!important;padding:0!important;margin:16px 0!important}
 .student-dashboard-latest>p:empty{display:none}
 .thuy-student #journeyView :is(#journeySessions,#sessionList),.thuy-student .student-dashboard-sessions .studentSessionGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{display:flex;flex-direction:column;align-items:stretch;gap:8px;height:auto;min-height:160px;min-width:0;padding:16px;text-align:left;background:#fff;border:1px solid #e2e7eb;border-radius:8px;box-shadow:none;color:#174266;text-decoration:none}
 .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard.is-upcoming{border-top:3px solid #174266;padding-top:14px}
 .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop{display:block;grid-row:auto}
-.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop b{font-size:14px;line-height:20px;font-weight:600;color:#174266}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop b{font-size:15px;line-height:22px;font-weight:600;color:#174266}
 .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop span{display:none}
 .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>strong{margin:0;font-size:14px;line-height:22px;font-weight:400;overflow-wrap:anywhere}
+.thuy-student :is(#journeyListTitle,.student-dashboard-heading h2,.timeline-heading h2){font-size:20px;line-height:28px;color:#174266}
+.thuy-student .student-dashboard-sessions .studentSessionTop b{font-size:15px;line-height:22px}
+.thuy-student .student-dashboard-sessions .studentSessionCard h3{font-size:14px;line-height:22px}
 .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>small:not(.badge),.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>:is([data-session-comment],.sessionTestScore){display:none}
 .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionBottom{grid-column:auto;grid-row:auto;display:flex;flex-wrap:wrap;align-items:start;gap:8px;margin-top:auto;padding-top:12px}
 .thuy-student :is(#journeySessions,#sessionList) .studentSessionBottom i{font-size:11px;line-height:16px;font-style:normal;font-weight:400;background:#eef1f4;color:#586477;padding:4px 7px;border-radius:4px}
@@ -48,12 +56,10 @@
 @media(min-width:1001px){
  .student-upcoming{padding:28px 36px}
  .student-upcoming .eyebrow{font-size:14px;line-height:20px;margin-bottom:12px}
- .student-upcoming h2{font-size:28px;margin-bottom:18px}
+ .student-upcoming h2{font-size:28px}
  .student-upcoming>.button{font-size:16px;padding:16px 24px}
  .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{padding:22px;min-height:200px;gap:12px}
  .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard.is-upcoming{padding-top:20px}
- .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop b{font-size:20px;line-height:28px}
- .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>strong{font-size:18px;line-height:1.5}
  .thuy-student :is(#journeySessions,#sessionList) .studentSessionBottom i{font-size:14px;line-height:20px;padding:6px 9px;display:inline-flex;align-items:center;gap:8px}
  .thuy-student :is(#journeySessions,#sessionList) .studentSessionBottom i::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
 }
@@ -61,12 +67,9 @@
  .student-upcoming .eyebrow{font-size:16px}
  .student-upcoming h2{font-size:34px}
  .student-upcoming>.button{font-size:18px;padding:20px 24px}
- .student-upcoming .upcoming-state{font-size:17px}
  .thuy-student #journeyView :is(#journeySessions,#sessionList){gap:18px}
  .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{min-height:220px;padding:24px}
  .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard.is-upcoming{padding-top:22px}
- .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop b{font-size:23px;line-height:32px}
- .thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>strong{font-size:20px}
  .thuy-student :is(#journeySessions,#sessionList) .studentSessionBottom i{font-size:16px}
 }
 @media(min-width:1700px){.thuy-student #journeyView :is(#journeySessions,#sessionList){grid-template-columns:repeat(6,minmax(0,1fr))}}
