@@ -22,14 +22,14 @@ export function createSpeakingLivePoller({refresh,hasSession,isPending,onError,g
   if(progress&&value&&(less(decimal(value.sequence),decimal(progress.sequence))||less(decimal(value.applied_sequence),decimal(progress.applied_sequence))))return false;
   if(!value&&progress)return false;progress=value;return true;
  }
- function synchronize(){
+ function synchronize(deferLegacyStart=false){
   if(!hasSession()){close();native.stop();return;}
   const selected=context();
   if(revoked){close();native.stop();return;}
   const pending=expected||isPending();
   if(!pending){close();native.stop();return;}
   if(!supported||blocked||documentObject.hidden){close();if(expected)native.expect();else native.update();return;}
-  native.stop();if(tracker)return;
+  native.stop();if(tracker||(deferLegacyStart&&selected.base.endsWith('/api/speaking-homework')))return;
   const binding=key;
   const current=()=>hasSession()&&key===binding&&contextKey(getContext())===binding;
   tracker=trackerFactory({base:selected.base,identity:selected.identity,unitId:uuid.test(selected.unitId||'')?selected.unitId:null,readEpoch:()=>JSON.stringify([readEpoch(),intent]),isCurrent:current,canRead:()=>!isBusy(),
@@ -50,7 +50,8 @@ export function createSpeakingLivePoller({refresh,hasSession,isPending,onError,g
    record(data.docsProgress||null,data.documentId||data.assignment?.documentId||selected.documentId||null);synchronize();
   },
   acceptDocs(value,documentId){const selected=context();return record(value,documentId??selected.documentId??null);},
-  expect(){intent++;expected=true;synchronize();},retry(){intent++;expected=true;if(supported&&!blocked&&!documentObject.hidden)synchronize();else native.retry();},
+  // Legacy shares an IP limit with the save, so open a new stream after its native readback.
+  expect(){intent++;expected=true;synchronize(true);},retry(){intent++;expected=true;if(supported&&!blocked&&!documentObject.hidden)synchronize();else native.retry();},
   update(){synchronize();},settled(){expected=false;if(!supported||blocked||documentObject.hidden)native.settled();synchronize();},
   stop(){close();native.stop();key=null;supported=false;blocked=false;revoked=false;expected=false;progress=null;progressDocument=null;},
   dispose(){this.stop();documentObject.removeEventListener('visibilitychange',visibility);},

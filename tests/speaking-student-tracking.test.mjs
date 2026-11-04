@@ -51,6 +51,29 @@ function controller(){
  return{poller,modes,native,applied,doc,listeners,setPending:value=>{pending=value;},setContext:value=>{current=value;},getContext:()=>current,setSession:value=>{session=value;}};
 }
 const capabilities={studentStateStream:true,studentCombinedView:true};
+test('Speaking independent keeps its current stream startup when a save starts',()=>{
+ const f=controller();
+ try{
+  f.setContext({...f.getContext(),base:'https://fixture.test/api/speaking-homework-independent'});
+  f.poller.observed({capabilities});
+  f.poller.expect();
+  assert.equal(f.modes.length,1,'Keep independent stream startup');
+ }finally{f.poller.dispose();}
+});
+test('Speaking legacy starts a new stream after the foreground save and still tracks an uncertain response',()=>{
+ const f=controller();
+ f.setContext({...f.getContext(),base:'https://fixture.test/api/speaking-homework',unitId:null});
+ try{
+  f.poller.observed({capabilities});
+  f.poller.expect();
+  assert.equal(f.modes.length,0,'The save should not compete with a new observer');
+  f.poller.update();
+  assert.equal(f.modes.length,1,'A settled request with an uncertain response still needs tracking');
+  f.poller.expect();
+  assert.equal(f.modes[0].closed,false,'Keep an already open stream');
+  assert.equal(f.modes.length,1);
+ }finally{f.poller.dispose();}
+});
 test('Speaking live controller stays idle without pending work and keeps native/hidden/unsupported fallback',()=>{
  const f=controller();try{f.poller.observed({capabilities});assert.equal(f.modes.length,0);f.setPending(true);f.poller.update();assert.equal(f.modes.length,1);
   f.doc.hidden=true;f.listeners.get('visibilitychange')();assert.equal(f.modes[0].closed,true);assert.equal(f.native.at(-1),'update');
