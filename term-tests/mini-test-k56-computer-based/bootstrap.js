@@ -4,6 +4,7 @@
   const testConfig = window.TERM_TEST_CONFIG;
   const appConfig = window.TERM_TEST_APP_CONFIG;
   const audioLoader = window.TERM_TEST_AUDIO_LOADER;
+  const startListeningLabel = 'Âm thanh đã vừa tai - Bắt đầu thi';
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
   let classCode = (query.get('class') || '').trim().toUpperCase();
@@ -172,7 +173,7 @@
             <div class="cbt-lobby-step-body">
               <h3>Bắt đầu thi</h3>
               <p id="bootstrapStartStatus">Đề và audio chính chỉ mở sau nút này.</p>
-              <button class="button button-primary" id="bootstrapStart" type="button" disabled>Bắt đầu thi Listening</button>
+              <button class="button button-primary" id="bootstrapStart" type="button" disabled>${startListeningLabel}</button>
             </div>
           </section>
         </div>
@@ -463,7 +464,7 @@
     const resumed = Boolean(state.listeningStartedAt || legacyListeningResume);
     const ready = Boolean(encryptedAudio && (previewHeard || resumed));
     elements.bootstrapStart.disabled = !ready || preparing;
-    elements.bootstrapStart.textContent = resumed ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
+    elements.bootstrapStart.textContent = resumed ? 'Tiếp tục bài thi Listening' : startListeningLabel;
     elements.bootstrapStartStatus.textContent = resumed
       ? 'Đồng hồ máy chủ vẫn đang chạy. Tiếp tục ngay sau khi audio tải đủ.'
       : 'Sau khi bấm, audio phát từ đầu và đề mới được mở.';
@@ -965,7 +966,7 @@
         officialObjectUrl = '';
       }
       showNotice(`Chưa thể bắt đầu: ${error.userMessage || error.message}. Đề vẫn đang khóa.`, true);
-      elements.bootstrapStart.textContent = state.listeningStartedAt ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
+      elements.bootstrapStart.textContent = state.listeningStartedAt ? 'Tiếp tục bài thi Listening' : startListeningLabel;
       elements.bootstrapStart.disabled = false;
     } finally {
       preparing = false;
