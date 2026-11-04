@@ -22,6 +22,7 @@ function fixture(api={}){
  const source=fs.readFileSync(root+'/lesson5-thu/app.js','utf8').replace(/^import .*\r?\n/gm,'').replace('void bootstrap();','');
  vm.runInContext(source,context);
  const run=code=>vm.runInContext(code,context);
+ context.document.getElementById=id=>id==='writing-check-dialog'?null:el(id);
  run("render=()=>{};state.ref='a-ref';state.responses.idea1='Old draft';student='A';");
  return {run,el,textarea,storage,context};
 }
@@ -78,8 +79,26 @@ test('R-UI-POLL · poll trước save không hạ version sau ACK',async()=>{
  const read=deferred(),h=fixture({read:()=>read.promise,save:async()=>({session:{version:2}})});
  const old=h.run('structuredClone(state)');const pending=h.run('poll()');
  h.run("dirty={idea1:'New draft'};state.responses.idea1='New draft';");await h.run('flush()');
- read.resolve({session:old});await pending;
+ read.resolve({session:old,etag:'stale-tag'});await pending;
  assert.equal(h.run('state.version'),2);assert.equal(h.run('state.responses.idea1'),'New draft');
+ assert.equal(h.run('pollEtag'),undefined);
+});
+test('R-UI-CONDITIONAL · 304 không thay bài, rollback API đọc lại bình thường',async()=>{
+ const seen=[];
+ const api=createClient('https://fixture.invalid',async(_url,options)=>{
+  seen.push(options.headers['If-None-Match']);
+  if(seen.length===2)return new Response(null,{status:304});
+  if(seen.length===3)throw new TypeError('Old API preflight');
+  return new Response(JSON.stringify({ok:true,session:{ref:'a-ref'}}),{headers:seen.length===1?{ETag:'W/"fixture"'}:{}});
+ });
+ const initial=await api.read('a-ref');
+ const h=fixture({read:(ref,etag)=>api.read(ref,etag)});
+ h.run(`pollEtag=${JSON.stringify(initial.etag)};`);
+ const original=h.run('state');await h.run('poll()');
+ assert.equal(h.run('state'),original);
+ const afterRollback=await api.read('a-ref',initial.etag);
+ assert.equal(afterRollback.session.ref,'a-ref');
+ assert.deepEqual(seen,[undefined,initial.etag,initial.etag,undefined]);
 });
 test('R-UI-TYPING · input trong autosave được giữ trong state và nháp',async()=>{
  const save=deferred(),h=fixture({save:()=>save.promise});h.run("dirty={idea1:'Old draft'};");const pending=h.run('flush()');await Promise.resolve();
