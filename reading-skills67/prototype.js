@@ -366,7 +366,9 @@ function adaptServerSave(){
     let notice=document.querySelector('.homework-sync');if(!notice){notice=document.createElement(compact?'span':'div');notice.className=compact?'save-state homework-sync':'notice homework-sync';notice.setAttribute('role','status');if(compact)statusRow.append(notice);else document.querySelector('.lesson-head')?.after(notice);}
     const h=saved.homework,blocked=h.status==='blocked'||h.jobs?.some(j=>j.status==='blocked'),missing=h.jobs?.some(j=>j.errorCode==='HOMEWORK_NOT_FOUND');
     if(compact)notice.dataset.syncStatus=blocked||missing||h.status==='unavailable'?'attention':h.status==='verified'&&h.cta==='verified'?'saved':'pending';
-    notice.textContent=blocked?'Bài đã được giữ trên máy chủ. Chưa đồng bộ được Homework; giảng viên cần kiểm tra.':h.status==='verified'&&h.cta==='verified'?'Đã cập nhật trạng thái và link vào Homework.':missing?'Bài đã lưu. Chưa có Homework cá nhân đúng mã; hệ thống sẽ nối khi được giao.':h.status==='unavailable'?'Chưa kiểm được trạng thái đồng bộ Homework. Xem trạng thái lưu bài'+(compact?' bên cạnh.':' ở thanh trên.'):'Bài đã lưu. Đang đồng bộ trạng thái vào Homework.';
+    const waitingForWrite=h.syncErrorCode==='DOC_WRITE_UNAVAILABLE';
+    const syncText=waitingForWrite?'Bài đã lưu. Homework Docs đang chờ quyền ghi; hệ thống sẽ tự thử lại.':blocked?'Bài đã được giữ trên máy chủ. Chưa đồng bộ được Homework; giảng viên cần kiểm tra.':h.status==='verified'&&h.cta==='verified'?'Đã cập nhật trạng thái và link vào Homework.':missing?'Bài đã lưu. Chưa có Homework cá nhân đúng mã; hệ thống sẽ nối khi được giao.':h.status==='unavailable'?'Chưa kiểm được trạng thái đồng bộ Homework. Xem trạng thái lưu bài'+(compact?' bên cạnh.':' ở thanh trên.'):'Bài đã lưu. Đang đồng bộ trạng thái vào Homework.';
+    if(notice.textContent!==syncText)notice.textContent=syncText;
   }else if(compact)document.querySelector('.homework-sync')?.remove();
   if(state.archived)target.textContent='Nháp cũ · Lưu lúc '+timeLabel(state.savedAt)+' · Chỉ xem';
   window.MaterialsRepairWorkspace?.updateSync();
