@@ -24,28 +24,30 @@ function receiptData(status,input){
     ||canonical(r.answers)!==canonical(input.body.answers))throw failure();
   return validateSubmission(status.response,input);
 }
-export async function submitSection({state,section,body,testSlug,owner,getOwner,save,send,read}){
+export async function submitSection({state,section,body,testSlug,owner,getOwner,operationId,save,send,read}){
   state.pendingSubmissions ||= {};
   let previous=state.pendingSubmissions[section];
   if(previous&&previous.owner!==owner)throw Object.assign(failure(),{code:'SUBMISSION_OWNER_CHANGED'});
   // Quyền audio luôn lấy từ request hiện tại; bản lưu chỉ giữ payload nộp, không giữ bằng chứng quyền cũ.
   if(previous)body={...body,...previous.body};
+  const traceId=uuid(previous?.operationId)?previous.operationId:uuid(operationId)?operationId:undefined;
   const input={section,body,testSlug};
   const checkOwner=()=>{if(getOwner()!==owner)throw Object.assign(failure(),{code:'SUBMISSION_OWNER_CHANGED'});};
   const accept=data=>{checkOwner();delete state.pendingSubmissions[section];save();return data;};
   if(previous){
-    const status=await read(body);checkOwner();
+    if(traceId&&!uuid(previous.operationId))previous.operationId=traceId;
+    const status=await read(body,traceId);checkOwner();
     if(status?.persisted===true)return accept(receiptData(status,input));
     if(status?.ok!==true||status.persisted!==false)throw failure();
   }else{
     const stored={...body};for(const key of ['ownerId','ownerProof','ownerEpoch','audioOwnerId'])delete stored[key];
-    state.pendingSubmissions[section]={owner,body:stored,answers:{...body.answers}};save();
+    state.pendingSubmissions[section]={owner,body:stored,answers:{...body.answers},...(traceId?{operationId:traceId}:{})};save();
   }
-  try{return accept(validateSubmission(await send(body),input));}
+  try{return accept(validateSubmission(await send(body,traceId),input));}
   catch(error){
     checkOwner();
     try{
-      const status=await read(body);checkOwner();
+      const status=await read(body,traceId);checkOwner();
       if(status?.persisted===true)return accept(receiptData(status,input));
       // HTTP lỗi đã kết thúc + đọc thấy chưa lưu: cho sửa bài theo deadline. Lỗi truyền tải vẫn giữ snapshot.
       if(status?.ok===true&&status.persisted===false&&Number(error.status)>=400){delete state.pendingSubmissions[section];save();}

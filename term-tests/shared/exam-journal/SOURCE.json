@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "tools/exam-journal",
-  "release": "20261105-diagnostics-v1",
+  "release": "20261105-diagnostics-v2",
   "files": [
     {
       "file": "outbox.mjs",
@@ -24,23 +24,23 @@
     {
       "file": "bridge.mjs",
       "source": "browser/bridge.mjs",
-      "sha256": "cc93ced4dd4f68768dd0b144e229c3b188e41b210f4119b58a7f0cb2e3ba0e17",
-      "bytes": 19336
+      "sha256": "c6c09b8d612ddab8c5da738afa2d4b0bc738bd6ea08c79c38482bb1e73aecba2",
+      "bytes": 19912
     },
     {
       "file": "bootstrap-capture.mjs",
       "source": "browser/bootstrap-capture.mjs",
-      "sha256": "f3935beafe64177f12b44d7077bcfe2bf1edb34a0bda34e1113fba85f1161522",
+      "sha256": "7cdf9d51701ee3dd59699feb8bb6a94b87944076406d48dc65cb93b4ed6cf65d",
       "bytes": 1059
     },
     {
       "file": "lobby-capture.js",
       "source": "pages/term-tests/shared/exam-journal/lobby-capture.js",
-      "sha256": "1428aa9756a57990aade248724a5de2d13b07c9c6e2e5f30a52173d264011bf7",
-      "bytes": 10870
+      "sha256": "883f991001b4cf98ed811d215e79b553848000072e653f9d248a986b43c37750",
+      "bytes": 11201
     }
   ],
-  "baseRelease": "20261024-startup-exit-v2",
-  "candidateSource": "Pages exam journal release with bounded audio and dialog diagnostics",
+  "baseRelease": "20261105-diagnostics-v1",
+  "candidateSource": "Pages exam journal release with per-request Term and Mini traces",
   "hashEncoding": "Git blob bytes, UTF-8; existing line endings preserved"
 }

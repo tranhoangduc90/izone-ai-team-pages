@@ -39,7 +39,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v1'))
+      .then(() => loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1'))
       .then(() => loadScript('enhance.js?v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
@@ -749,7 +749,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v1');
+    await loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2');
     await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1');
     await loadScript('enhance.js?v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1');
     await loadScript('annotations.js?v=20261018-identity-v1');

@@ -18,7 +18,7 @@
   const win=window,doc=document,cfg=win.TERM_TEST_APP_CONFIG,slug=win.TERM_TEST_CONFIG?.slug;
   if(cfg?.EXAM_JOURNAL_ENABLED!==true||typeof slug!=='string'||win.EXAM_JOURNAL_STARTUP)return;
   const script=doc.currentScript,standalone=new URL(script.src).pathname.endsWith('/exam-journal/lobby-capture.js');
-  const bridgeUrl=new URL((standalone?'./':'../shared/exam-journal/')+'bridge.mjs?v=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v1',script.src).href;
+  const bridgeUrl=new URL((standalone?'./':'../shared/exam-journal/')+'bridge.mjs?v=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2',script.src).href;
   const endpoint=cfg.EXAM_JOURNAL_BASE_URL||(slug.startsWith('substitute-')
     ?new URL(cfg.API_BASE_URL,win.location.href).origin+'/substitute-journal-api/'+slug
     :cfg.API_BASE_URL+'/api/term-tests/'+slug);
@@ -147,13 +147,17 @@
   const timer=win.setInterval(()=>{scan('periodic_snapshot');void drain();},1000);
   win.EXAM_JOURNAL_STARTUP={
     snapshot:scan,
-    startRequest(route,options={}){
+    startRequest(route,options={},trace){
       try{
         const url=new URL(route,win.location.href),safe=url.pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi,':id').slice(0,240);
         const requestId=crypto.randomUUID(),began=performance.now(),capturedClass=classCode();
-        enqueue('request_started',{requestId,route:safe,method:String(options.method||'GET').slice(0,12)},capturedClass);
+        const method=String(options.method||'GET').slice(0,12);
+        const details=trace&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(trace.operationId)
+          &&['single','send','readback'].includes(trace.phase)
+          ? {checkpointState:{operationId:trace.operationId,phase:trace.phase}} : {};
+        enqueue('request_started',{requestId,route:safe,method,...details},capturedClass);
         let done=false;return {done(result,error,status){if(done)return;done=true;
-          enqueue(error?'request_failed':'request_finished',{requestId,route:safe,durationMs:performance.now()-began,
+          enqueue(error?'request_failed':'request_finished',{requestId,route:safe,method,durationMs:performance.now()-began,...details,
             ...(Number.isInteger(status)?{status}:{}),operationStatus:error?'client_handler_failed':'client_handler_returned',
             errorCode:error?String(error.name||'Error').slice(0,80):''},capturedClass);scan('request_finished');}};
       }catch{return null;}
