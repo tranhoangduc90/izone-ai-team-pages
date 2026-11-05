@@ -45,6 +45,7 @@ try{
    }
    if(u.hostname==='accounts.google.com'){googleLoads++;return route.fulfill({contentType:'text/javascript',body:gis});}
    if(u.hostname!=='ducizone.ddns.net'){escaped.push(u.origin);return route.abort();}
+   if(p.endsWith('/learning/frontend-release'))return route.fulfill({status:503,json:{ok:false,error:'FRONTEND_RELEASE_UNAVAILABLE'}});
    calls.push({path:p,method:req.method(),at:performance.now()});
    await delay(150);
    if(p.includes('/restore/')&&['missing','forbidden','offline'].includes(mode))return route.fulfill({status:{missing:401,forbidden:403,offline:503}[mode],json:{error:'FIXTURE_'+mode}});

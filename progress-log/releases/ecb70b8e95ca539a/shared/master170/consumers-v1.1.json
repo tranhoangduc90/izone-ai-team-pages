@@ -1,0 +1,108 @@
+{
+  "version": "1.1",
+  "approved": "2026-10-28",
+  "spec": "https://github.com/tranhoangduc90/izone-AI-team/blob/main/docs/interface-master170/MASTER_STANDARD_V1_1.md",
+  "tokens": "shared/master170/master170-v1.1.json",
+  "adapter": "shared/master170/assessment-v1.1.css",
+  "consumers": [
+    {
+      "id": "reading-practice",
+      "profile": "exam-compact",
+      "paths": [
+        "reading-practice/"
+      ],
+      "keep": [
+        "timer",
+        "notes",
+        "highlight",
+        "review",
+        "history"
+      ]
+    },
+    {
+      "id": "listening-practice",
+      "profile": "exam-compact",
+      "paths": [
+        "listening-practice/"
+      ],
+      "keep": [
+        "one-play",
+        "review-time",
+        "recovery",
+        "audio-evidence"
+      ]
+    },
+    {
+      "id": "reading-homework",
+      "profile": "skill-homework",
+      "paths": [
+        "reading-skills67/"
+      ],
+      "keep": [
+        "repair-dock",
+        "AI-by-unit",
+        "source-context",
+        "snapshot"
+      ]
+    },
+    {
+      "id": "listening-homework",
+      "profile": "skill-homework",
+      "paths": [
+        "listening-homework/"
+      ],
+      "keep": [
+        "replay",
+        "evidence-slots",
+        "CAS",
+        "compact-header"
+      ]
+    },
+    {
+      "id": "term-mini-k67",
+      "profile": "exam-compact",
+      "paths": [
+        "term-tests/term-test-1/",
+        "term-tests/term-test-2/",
+        "term-tests/mini-test-lesson-5/",
+        "term-tests/term-test-1-computer-based/",
+        "term-tests/term-test-2-computer-based/",
+        "term-tests/mini-test-lesson-5-computer-based/",
+        "term-tests/term-test-2-rescue/",
+        "term-tests/term-test-1-listening-retake/",
+        "term-tests/teacher/"
+      ],
+      "keep": [
+        "two-orders",
+        "paper",
+        "CBT",
+        "Writing",
+        "teacher"
+      ]
+    },
+    {
+      "id": "substitute-k67",
+      "profile": "exam-compact",
+      "paths": [
+        "term-tests/substitute-test-1-k67-computer-based/",
+        "term-tests/substitute-test-2-k67-computer-based/",
+        "term-tests/substitute-test-1-k67-results/",
+        "term-tests/substitute-test-2-k67-results/"
+      ],
+      "keep": [
+        "K56-unchanged",
+        "exam-sessions",
+        "keys",
+        "publication-rights"
+      ],
+      "adapter": "shared/master170/substitute-v1.1.css",
+      "scopedPaths": [
+        {
+          "path": "term-tests/substitute-test-1-k56-dashboard/",
+          "selector": ".test-row[data-course=\"k67\"]",
+          "keep": "Mixed hub chrome and K56 rows retain their current presentation."
+        }
+      ]
+    }
+  ]
+}

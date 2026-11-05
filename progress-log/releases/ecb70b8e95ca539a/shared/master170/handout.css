@@ -1,0 +1,43 @@
+/* Một adapter cho Lesson 5/7/9, cả HV/GV. Không đổi hành trình B–A–X hoặc whole-chain. */
+body[data-m170-product='handout'] {
+  --navy: var(--m170-action); --red: var(--m170-brand); --ink: var(--m170-ink);
+  --muted: var(--m170-muted); --line: var(--m170-line); --canvas: var(--m170-canvas);
+  --yellow: var(--m170-surface); --green: var(--m170-success-fg);
+}
+body[data-m170-product='handout'] .topbar { background: var(--m170-surface); color: var(--m170-structure); }
+body[data-m170-product='handout'] :is(h1, .page-title h1) { font-size: 28px; letter-spacing: normal; }
+body[data-m170-product='handout'] h2 { font-size: 22px; }
+body[data-m170-product='handout'] h3 { font-size: 18px; }
+body[data-m170-product='handout'] :is(.login-card, .answer-card, .prompt, .teacher-detail) { border-radius: 12px; box-shadow: none; }
+body[data-m170-product='handout'] :is(input, select, textarea, button) { border-radius: 8px; }
+body[data-m170-product='handout'] :is(input, select) { border-color: var(--m170-control); }
+body[data-m170-product='handout'] :is(.student-field textarea, .inline-edit-box textarea, .h67-thread textarea) { background: var(--m170-surface) !important; border-color: var(--m170-control) !important; color: var(--m170-ink); font-size: 18px; line-height: 1.65; }
+body[data-m170-product='handout'] :is(.comments, .login-description, .argument-point p, .recap-table td) { font-size: 18px; line-height: 1.65; }
+body[data-m170-product='handout'] :is(.fine-print, .preview-label, .badge, .thread-status) { font-size: 14px; }
+body[data-m170-product='handout'] .primary { background: var(--m170-action); border-color: var(--m170-action); }
+body[data-m170-product='handout'] .primary:hover { background: var(--m170-action-hover); }
+body[data-m170-product='handout'] .badge.passed { background: var(--m170-success-bg); color: var(--m170-success-fg); }
+body[data-m170-product='handout'] .badge.pending { background: var(--m170-pending-bg); color: var(--m170-pending-fg); }
+body[data-m170-product='handout'] .badge.revision { background: var(--m170-attention-bg); color: var(--m170-attention-fg); }
+body[data-m170-product='handout'] :is(.badge.technical_error, .support, .grading-error) { background: var(--m170-error-bg); color: var(--m170-error-fg); border-color: var(--m170-line); }
+body[data-m170-product='handout'] .step[data-status='revision'] :is(.answer-card, .comments) { border-color: var(--m170-attention-fg); }
+body[data-m170-product='handout'] .step[data-status='revision'] .step-heading { background: var(--m170-attention-bg); border-color: var(--m170-line); }
+body[data-m170-product='handout'] .step[data-status='revision'] .step-heading h3 { background: var(--m170-attention-fg); }
+body[data-m170-product='handout'] .step[data-status='technical_error'] :is(.answer-card, .comments) { border-color: var(--m170-error-fg); }
+body[data-m170-product='handout'] .step[data-status='technical_error'] .step-heading { background: var(--m170-error-bg); border-color: var(--m170-line); }
+body[data-m170-product='handout'] .step[data-status='technical_error'] .step-heading h3 { background: var(--m170-error-fg); }
+body[data-m170-product='handout'] .nav-item.done,
+body[data-m170-product='handout'] .prior-step[data-status='passed'] > summary { background: var(--m170-success-bg); color: var(--m170-success-fg); border-color: var(--m170-line); }
+body[data-m170-product='handout'] .nav-item.done > span:first-child { background: var(--m170-success-bg); color: var(--m170-success-fg); border-color: var(--m170-line); }
+body[data-m170-product='handout'] .error { color: var(--m170-error-fg); }
+html[data-izone-theme='master170'] body[data-m170-product='handout'] .teacher-student-card { background:var(--m170-surface);border-color:var(--m170-line);box-shadow:none; }
+html[data-izone-theme='master170'] body[data-m170-product='handout'] :is(.teacher-detail pre,.teacher-detail .saved-text,.teacher-detail .attempt-content p,.teacher-detail .h67-thread p,#comment-text) {font-family:inherit;font-size:18px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;}
+html[data-izone-theme='master170'] body[data-m170-product='handout'] :is(.status[data-state='support'],.status[data-state='attention'],.status[data-state='revision'],.step-status.revision) {background:var(--m170-attention-bg);color:var(--m170-attention-fg);}
+html[data-izone-theme='master170'] body[data-m170-product='handout'] :is(.status[data-state='pending'],.status[data-state='working'],.step-status.pending) {background:var(--m170-pending-bg);color:var(--m170-pending-fg);}
+html[data-izone-theme='master170'] body[data-m170-product='handout'] :is(.status[data-state='complete'],.step-status.passed) {background:var(--m170-success-bg);color:var(--m170-success-fg);}
+html[data-izone-theme='master170'] body[data-m170-product='handout'] :is(.status[data-state='not_started'],.step-status.draft) {background:var(--m170-neutral-bg);color:var(--m170-neutral-fg);}
+html[data-izone-theme='master170'] body[data-m170-product='handout'] .step-status.technical_error {background:var(--m170-error-bg);color:var(--m170-error-fg);}
+html[data-izone-theme='master170'] body[data-m170-product='handout'] :is(#detail,#workspace) .thread-status[data-state]:not(:empty) {font-size:16px;line-height:1.5;padding:8px 10px;border-radius:6px;}
+html[data-izone-theme='master170'] body[data-m170-product='handout'] .thread-status[data-state='pending'] {background:var(--m170-pending-bg);color:var(--m170-pending-fg);}
+html[data-izone-theme='master170'] body[data-m170-product='handout'] .thread-status[data-state='error'] {background:var(--m170-error-bg);color:var(--m170-error-fg);}
+@media (max-width: 600px) { body[data-m170-product='handout'] :is(h1, .page-title h1) { font-size: 26px; } }

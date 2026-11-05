@@ -58,6 +58,7 @@ async function setup(mode,{completed=false}={}){
     if(url.pathname.endsWith('/assignments/open'))return send({assignment:{assignmentId:uid(300),publicToken:uid(300),
       sessionNumber:6,class:{id:'-99',name:'Lớp giả'},roster:[{studentRef:uid(400),name:'Học viên giả'}],
       definitionHash:'a'.repeat(64),definition:{title:'Phiếu thử',blocks:[block]},blockReleases:[{blockId:block.blockId,status:'open'}]}});
+    if(url.pathname.endsWith('/attempts/resume'))return route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({ok:false,error:'ATTEMPT_NOT_FOUND'})});
     if(url.pathname.endsWith('/attempts/start'))return send({attempt:{attemptToken:uid(500),
       draft:completed?Object.fromEntries(items.map((item,i)=>[item.itemVersionId,i%2?'B':'A'])):{},draftRevision:0,
       identity:{studentRef:uid(400),studentName:'Học viên giả',classId:'-99',className:'Lớp giả',sessionNumber:6},

@@ -44,6 +44,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
    const s=state(body.studentRef);if(!s.final)return send({ok:false,error:'JOURNEY_SUBMISSION_NOT_READY',message:'Buổi này chưa có bài nộp cuối'},409);
    return send({ok:true,detail:{classId:'1294',sessionNumber:11,student:person(body.studentRef),submissionId:uid(40),definition,responses:s.draft,gradingItems:result(s).items.map(item=>item.itemVersionId===uid(90)?{...item,expectedAnswer:['Tham khảo sau khi mở lại']}:item),status:'incomplete'}});
   }
+  if(path==='/attempts/resume')return route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({ok:false,error:'ATTEMPT_NOT_FOUND'})});
   if(path==='/attempts/start'){
    const s=state(body.studentRef);return send({ok:true,attempt:{attemptToken:s.attemptToken,assignmentId,definitionHash:'a'.repeat(64),draft:s.draft,draftRevision:s.rev,checkpointSubmissions:s.checkpoints,
     identity:{studentRef:body.studentRef,studentName:person(body.studentRef).name,classId:'1294',className:'IC2305',sessionNumber:11}}});
@@ -100,7 +101,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   await page.setViewportSize({width:1440,height:1000});
   failSave=true;await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.locator('#notice').filter({hasText:'Chưa lưu xong'}).waitFor();
   assert.match(await page.locator('#progressLogStudentName').innerText(),/Học viên A/);assert.equal(await page.locator('#thuyRetrySave').isVisible(),true);
-  failSave=false;await page.locator('#thuyRetrySave').click();await page.locator('#saveState').filter({hasText:'Đã lưu'}).waitFor();
+  failSave=false;await page.locator('#thuyRetrySave').click();await page.waitForFunction(()=>document.querySelector('#saveState')?.textContent==='Đã lưu');assert.equal(await page.locator('#thuyRetrySave').isVisible(),false);
   await changeLearner(B);
   await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Bắt đầu làm',exact:true}).click();assert.equal(await page.locator('.thuy-comparison textarea').nth(0).inputValue(),'');
   await changeLearner(A);

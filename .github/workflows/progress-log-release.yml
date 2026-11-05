@@ -1,0 +1,39 @@
+name: Package Progress Log release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'progress-log/**'
+      - '!progress-log/releases/**'
+      - '!progress-log/release.json'
+      - 'shared/**'
+      - 'tools/build-progress-release.mjs'
+      - '.github/workflows/progress-log-release.yml'
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: progress-log-package
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node tools/build-progress-release.mjs
+      - name: Preserve immutable packages and publish through the existing Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add progress-log/releases progress-log/release.json progress-log/index.html progress-log/thuy.html progress-log/teacher.html progress-log/teacher-thuy.html progress-log/student.html progress-log/journey.html
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Package immutable Progress Log release'
+            git push origin HEAD:main
+          fi
+          gh api --method POST repos/${{ github.repository }}/pages/builds
