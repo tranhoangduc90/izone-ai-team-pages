@@ -34,6 +34,7 @@
   const usesObservation=()=>!unsupported&&!blocked&&access?.config?.capabilities?.stateStream===true;
   function closeObservation(){observationGeneration++;practiceFrame=null;clearTimeout(observerTimer);observerTimer=null;observerStarting=false;observerCleanup?.();observerCleanup=null;observer?.close();observer=null;}
   function revoke(value){if(blocked)return;blocked=value;closeObservation();generation++;homeworkRead++;clearTimeout(timer);clearTimeout(pollTimer);clearTimeout(homeworkTimer);state.accessRevoked=value;state.error=value.code;state.status='error';emit();window.dispatchEvent(new CustomEvent('reading67:access-revoked',{detail:value}));}
+  function reportAttemptConnectionError(callback,error){lastVisible=null;callback?.({status:'connection_error',errorCode:error.code});}
   function deliverAttempt(value){const next=visibleAttempt(value);if(lastVisible===next)return;lastVisible=next;watchedUpdate?.(value);}
   function restartObservation(){
     if(!usesObservation())return false;
@@ -49,7 +50,7 @@
         async function loadAttempt(){
           if(loading||!id)return;loading=true;let readEpoch=detailEpoch;
           try{while(active()&&desired!==applied){const target=desired;readEpoch=detailEpoch;const value=await getAttempt(id,{signal:attemptController.signal});if(!active())return;if(target===desired&&readEpoch===detailEpoch){applied=target;acceptedAttempt=value;deliverAttempt(value);}}}
-          catch(error){if(active()&&readEpoch===detailEpoch){if([401,403,423].includes(error.status)){revoke({code:error.code,status:error.status});return;}callback?.({status:'connection_error',errorCode:error.code});clearTimeout(retryTimer);retryTimer=setTimeout(()=>{if(active())void loadAttempt();},Math.max(4000,error.retryAfterMs||0));}}
+          catch(error){if(active()&&readEpoch===detailEpoch){if([401,403,423].includes(error.status)){revoke({code:error.code,status:error.status});return;}reportAttemptConnectionError(callback,error);clearTimeout(retryTimer);retryTimer=setTimeout(()=>{if(active())void loadAttempt();},Math.max(4000,error.retryAfterMs||0));}}
           finally{loading=false;}
         }
         // Khi cần REST dự phòng cho bài đang chờ, đọc hai nguồn độc lập cùng lúc.
@@ -70,9 +71,9 @@
             if(id&&value.attemptId===id){desired=JSON.stringify([id,value.status,value.errorCode,value.resultRevision,value.validationRevision,value.recoveryRevision]);if(value.polledAttempt?.attemptId===id){detailEpoch++;acceptedAttempt=value.polledAttempt;
               // Hai GET song song không cùng snapshot: không gắn revision metadata vào chi tiết.
               desired=applied=JSON.stringify(['polled',visibleAttempt(value.polledAttempt)]);deliverAttempt(value.polledAttempt);
-            }else void loadAttempt();}
+            }else if(desired===applied&&acceptedAttempt)deliverAttempt(acceptedAttempt);else void loadAttempt();}
           },
-          onUnavailable(value){if(active()){state.trackingError=value.code;if(practiceWatch){practiceWatch.last=null;practiceWatch.update({status:'unavailable',message:'Chưa đọc được trạng thái link; bài đang viết vẫn được giữ.'});}callback?.({status:'connection_error',errorCode:value.code});}},
+          onUnavailable(value){if(active()){state.trackingError=value.code;if(practiceWatch){practiceWatch.last=null;practiceWatch.update({status:'unavailable',message:'Chưa đọc được trạng thái link; bài đang viết vẫn được giữ.'});}reportAttemptConnectionError(callback,value);}},
           onRevoked(value){if(active())revoke(value);},
           onUnsupported(){if(!active())return;unsupported=true;closeObservation();practiceFallback();refreshHomework();if(watchedId&&watchedUpdate)legacyPoll(watchedId,watchedUpdate,generation);}
         });
@@ -165,7 +166,7 @@
   async function getAttempt(id,options={}){const scope=generation,value=await request(prefix+(access?.teacher?window.Reading67Access.teacherPath:'')+'/attempts/'+encodeURIComponent(id),options);if(scope===generation)lastAttempt=value;return value;}
   function stopPoll(){generation++;clearTimeout(pollTimer);watchedId=null;watchedUpdate=null;lastVisible=null;if(usesObservation())restartObservation();}
   function legacyPoll(id,onUpdate,scope){
-    const work=async()=>{try{const value=await getAttempt(id);if(scope!==generation||blocked)return;deliverAttempt(value);refreshHomework();if(['queued','processing'].includes(value.status))pollTimer=setTimeout(work,1500);}catch(error){if(scope!==generation||blocked)return;onUpdate({status:'connection_error',errorCode:error.code});pollTimer=setTimeout(work,4000);}};work();
+    const work=async()=>{try{const value=await getAttempt(id);if(scope!==generation||blocked)return;deliverAttempt(value);refreshHomework();if(['queued','processing'].includes(value.status))pollTimer=setTimeout(work,1500);}catch(error){if(scope!==generation||blocked)return;reportAttemptConnectionError(onUpdate,error);pollTimer=setTimeout(work,4000);}};work();
   }
   function poll(id,onUpdate){
     stopPoll();const scope=generation;

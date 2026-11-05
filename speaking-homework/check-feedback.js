@@ -1,3 +1,5 @@
+import {renderGradingStatus} from '../shared/grading-status.mjs?v=1';
+
 // Nhận kết quả do API đã xác minh; hiển thị căn cứ công nhận và việc cần làm.
 // Không suy ra chưa đủ chỉ từ số đếm hoặc lỗi dịch vụ.
 export function acceptanceMessage(link, fallback = 'Đã công nhận phần luyện này.') {
@@ -31,7 +33,9 @@ export function technicalCheckFeedback(link) {
 export function renderCheckResult(element, kind, title, message) {
   const signature = JSON.stringify([kind, title, message]);
   if (element.dataset.checkSignature !== signature) {
-    const strong = document.createElement('strong'); strong.textContent = title;
+    const strong = document.createElement('strong');
+    if (kind === 'loading') renderGradingStatus(strong, {label:title,busy:true});
+    else strong.textContent = title;
     const span = document.createElement('span'); span.textContent = message;
     element.replaceChildren(strong, span);
     element.className = `check-result is-${kind}`;
@@ -69,9 +73,10 @@ export function updateSubmitControl({ ready, submitted, phase = 'idle', error = 
   const failed = phase === 'failed';
   button.hidden = !failed; button.disabled = !failed; button.textContent = 'Thử nộp lại';
   card.setAttribute('aria-busy', String(['sending', 'verifying'].includes(phase)));
-  document.getElementById('submit-status-title').textContent = failed ? 'Chưa nộp xong'
+  const label = failed ? 'Chưa nộp xong'
     : phase === 'verifying' ? 'Đang kiểm tra trạng thái nộp bài…'
     : phase === 'waiting' ? 'Đang chờ kết nối để nộp lại…' : 'Đang nộp bài…';
+  renderGradingStatus(document.getElementById('submit-status-title'), {label,busy:['sending','verifying'].includes(phase)});
   document.getElementById('submit-status-message').textContent = failed
     ? `${error ? error + ' ' : ''}Các hội thoại đã xác nhận vẫn được giữ. Hãy kiểm tra kết nối rồi thử nộp lại; nếu vẫn lỗi, hãy báo giảng viên.`
     : phase === 'sending' || phase === 'idle'

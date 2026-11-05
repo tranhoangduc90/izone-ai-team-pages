@@ -41,6 +41,29 @@ for(const product of products)for(const width of widths)test(`${product}/${width
   assert.equal(stable.same,true);assert.equal(stable.focus,true);assert.deepEqual(stable.selection,[2,9]);assert.equal(stable.scroll,0);assert.equal(stable.value,'Newer edit must survive the older receipt');assert.notEqual(stable.timer,before.timer);
   const pulses=f.requests.filter(r=>r.path==='/api/pulse'&&r.completed&&r.status===200);assert.ok(pulses.length>=3);assert.ok(pulses.every(r=>r.compact&&r.body?.ack==='practice-pulse-v1'));
   assert.ok(pulses.at(-1).body.attempt.usedMs>5000,'Native server time must advance with real playback/browser time');
+  if(width===390){
+   let releaseSubmit,releaseResult,failedResult=false;
+   const submitDelay=new Promise(resolve=>{releaseSubmit=resolve;}),resultDelay=new Promise(resolve=>{releaseResult=resolve;});
+   await context.route(/\/api\/submit(?:\?|$)/,async route=>{await submitDelay;await route.continue();});
+   await context.route(/\/api\/result\//,async route=>{
+    if(failedResult)return route.continue();
+    await resultDelay;failedResult=true;await route.fulfill({status:503,json:{error:'SYNTHETIC_RESULT_UNAVAILABLE'}});
+   });
+   const toast=page.locator('#toast');
+   try{
+    await page.locator('[data-action="request-submit"]:visible').first().click();
+    await page.locator('#modal').getByRole('button',{name:'Nộp bài',exact:true}).click();
+    await toast.getByText('Đang gửi bài…',{exact:true}).waitFor();
+    await toast.locator('.izone-grading-spinner').waitFor();
+    releaseSubmit();
+    await toast.getByText('Đã nộp · Đang mở kết quả',{exact:true}).waitFor();
+    releaseResult();
+    await toast.getByRole('button',{name:'Mở lại kết quả'}).click();
+    await page.locator('.result-summary').waitFor();
+    assert.equal(f.requests.filter(r=>r.path==='/api/submit'&&r.method==='POST').length,1);
+    assert.equal((await f.service.read({token:f.token})).attempts.at(-1).id,native.attempts[0].id);
+   }finally{releaseSubmit();releaseResult();}
+  }
   assert.deepEqual(errors,[]);await page.screenshot({path:path.join(out,product+'-'+width+'-native-compact.png')});records.push({product,width,outcome:'passed',pulses:pulses.length,maxAckBytes:Math.max(...pulses.map(r=>JSON.stringify(r.body).length)),sameNode:stable.same,clockAdvanced:true});
  }catch(error){await page.screenshot({path:path.join(out,product+'-'+width+'-failed.png')});await fs.writeFile(path.join(out,product+'-'+width+'-failure.json'),JSON.stringify({errors,url:page.url(),requests:f.requests},null,2));throw error;}
 });
