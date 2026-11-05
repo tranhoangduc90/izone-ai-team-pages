@@ -44,6 +44,7 @@ export async function completedPage(browser,base,routeName,{writingResult=null,e
    // K56 xác minh lượt đã lưu trước khi chuẩn bị; dữ liệu giả trả đúng hai token hiện hành.
    else if(route.endsWith('/attempt/active'))data={found:true,attemptToken:payload.attemptToken,examSessionToken:epoch,studentName:payload.studentName};
    else if(route.endsWith('/attempt/prepare')||route.endsWith('/session/prepare')||route.endsWith('/session/resume-attempt'))data={...payload,attemptMode:paperMini?'answer_sheet':'cbt',generation:1,policy:{timed:cbt,autoSubmit:cbt},nextSection:'complete',examMode:body?.mode||'lis_first',listeningSubmitted:true,readingSubmitted:true,writingStartedAt:paperMini?'':now,writingSubmittedAt:paperMini?'':now,serverNow:now,content:{variant:'semantic-html',timing:{},listening:{sections:[]},reading:{passages:[]},writing:{tasks:[{id:slug==='term-test-2-k56'?'task1':'task2',label:'Writing giả',prompt:'Đề giả',minimumWords:0}]}}};
+   else if(route==='/api/term-tests/result/explanations')data={ok:true,available:false};
    else if(route==='/api/term-tests/result/stream'){status=404;data={};}
    else if(route==='/api/term-tests/result'){polls++;data=structuredClone(payload);if(data.writing)data.writing.grading=writingResult||(phase==='ready'?{ready:true,status:'ready',writingScore:7,tasks:[]}:payload.writing.grading);}
    // Biên nhận accepted là contract hiện hành của Substitute; thiếu nó UI phải giữ trạng thái chưa xác nhận.
@@ -90,7 +91,12 @@ export async function completedPage(browser,base,routeName,{writingResult=null,e
   const details=await waitForDetails();
   await page.evaluate(()=>document.fonts.ready);return details;
  }
- const details=await enter();
+ let details;
+ try { details=await enter(); }
+ catch(error) {
+  const visible=await page.evaluate(()=>({notice:document.querySelector('#notice')?.textContent,bootstrap:document.querySelector('#bootstrapNotice')?.textContent,text:document.body.innerText.slice(-1400)}));
+  await context.close();throw new Error(JSON.stringify({routeName,errors,visible,requests:requests.slice(-14),cause:error.message}));
+ }
  async function switchSession({student=true,group=true,attempt=true,marker='NEW-RUN'}={}){
   const nextId=student?'55555555-5555-4555-8555-555555555555':payload.studentRef,nextToken=attempt?'66666666-6666-4666-8666-666666666666':payload.attemptToken,nextRun=attempt?'77777777-7777-4777-8777-777777777777':session.clientRunId,nextClass=group?'IC9998':payload.className;
   payload.studentRef=nextId;payload.studentName=student?'Học viên giả B':payload.studentName;payload.attemptToken=nextToken;payload.className=nextClass;
