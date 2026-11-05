@@ -16,7 +16,23 @@ for(const mode of ['current-poll','old-client'])for(const width of [1440,390])te
  await page.locator('footer [data-action="edit"]').click();await page.locator('.repair-current[aria-current="step"]').waitFor();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));if(width===390)await page.locator('[data-pane="passage"]').click();
  const field=page.locator('textarea[data-target]:visible').first(),id=await field.getAttribute('data-target'),text='Nội dung đã sửa, cần giữ sau reload và nộp lại.';await field.fill(text);await page.waitForFunction(()=>window.ReadingServerClient.state.status==='saved');assert.equal((await f.store.draft(f.scope)).body.answers[id],text);
  await page.reload();await page.waitForFunction(()=>window.ReadingInteractionBridge.current()?.status==='draft');assert.equal(await page.locator('[data-target="'+id+'"]').inputValue(),text);
- await page.locator('#grade-button').click();await page.locator('.waiting-card').waitFor();const sent=(await f.store.history(f.scope))[0];assert.equal(sent.status,'queued');await f.completePending();await page.waitForFunction(()=>window.ReadingInteractionBridge.current().serverAttempt?.status==='done');assert.equal(await page.locator('.repair-banner').getAttribute('data-state'),'success');
+ await page.locator('#grade-button').click();await page.locator('.waiting-card').waitFor();const sent=(await f.store.history(f.scope))[0];assert.equal(sent.status,'queued');
+ if(mode==='current-poll'){
+  const attemptUrl=new RegExp('/attempts/'+sent.attemptId+'(?:\\?|$)');
+  let checkedItems=3;
+  await context.route(attemptUrl,async route=>{
+   const response=await route.fetch(),value=await response.json();
+   if(value.status==='queued')value.validationProgress={phase:'review',itemProgress:{checkedItems,totalItems:f.content.targets.length}};
+   await route.fulfill({response,json:value});
+  });
+  const waiting=page.locator('.waiting-card');
+  await waiting.getByText('3/'+f.content.targets.length,{exact:true}).waitFor();
+  checkedItems=5;
+  await waiting.getByText('5/'+f.content.targets.length,{exact:true}).waitFor();
+  assert.equal(await waiting.locator('progress').evaluate(node=>node.value),5);
+  await context.unroute(attemptUrl);
+ }
+ await f.completePending();await page.waitForFunction(()=>window.ReadingInteractionBridge.current().serverAttempt?.status==='done');assert.equal(await page.locator('.repair-banner').getAttribute('data-state'),'success');
  await page.goto(entry+'&attemptId='+sent.attemptId);await page.waitForFunction(()=>document.querySelector('#entry-class')||document.querySelector('.result-note'));
  // Link kết quả mới có thể yêu cầu chọn lại người theo chính sách đường vào native.
  if(await page.locator('#entry-class').count()){await page.locator('#entry-class').selectOption('1124');await page.locator('#entry-student').selectOption(f.scope.ownerId);await page.getByRole('button',{name:'Vào bài',exact:true}).click();}

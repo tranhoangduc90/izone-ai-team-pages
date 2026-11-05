@@ -14,11 +14,11 @@ const refs={A:'11111111-1111-4111-8111-111111111111',B:'22222222-2222-4222-8222-
 const documentId='fixture-homework-document-owner-b-123456789';
 const record=id=>({version:1,identity:{authority:'erp-contact',id},revision:'fixture_initial_revision_'+id,updatedAt:new Date().toISOString()});
 const rows=[['scandinavian-studies','interactive-content.json'],['horton-castle','horton-castle-content.json']];
-async function fixture(t,slug,{remembered,storageBlocked=false,teacher=false,teacherStatus=200,entryStatus=200,polling=false,entryDelay=0,historyBlocked=false}={}){
+async function fixture(t,slug,{remembered,storageBlocked=false,teacher=false,teacherStatus=200,entryStatus=200,polling=false,entryDelay=0,historyBlocked=false,viewport={width:1440,height:1000},reducedMotion='no-preference'}={}){
  const presentation=JSON.parse(await readFile(path.join(root,'listening-homework',rows.find(x=>x[0]===slug)[1]),'utf8'));
  const content={code:presentation.code,version:presentation.runtimeVersion,title:presentation.title,minimumCompletion:.8,items:presentation.items.map(({id,group,question})=>({id,group,question}))};
- const context=await browser.newContext({serviceWorkers:'block',viewport:{width:1440,height:1000}}),requests=[],errors=[],external=[],drafts=new Map();
- let teacherActive=teacher,attemptReads=0;
+ const context=await browser.newContext({serviceWorkers:'block',viewport,reducedMotion}),requests=[],errors=[],external=[],drafts=new Map();
+ let teacherActive=teacher,attemptReads=0,itemProgress;
  context.on('page',p=>{p.setDefaultTimeout(8000);p.on('pageerror',e=>errors.push(e.message));});
  await context.addInitScript(({key,initial,blocked,origin,historyBlocked})=>{
   if(location.origin!==origin)return;
@@ -61,7 +61,7 @@ async function fixture(t,slug,{remembered,storageBlocked=false,teacher=false,tea
   if(api==='/draft'&&req.method()==='GET')return send(draft(ref));
   if(api==='/draft'&&req.method()==='PUT'){const value={...draft(ref),revision:draft(ref).revision+1,body:body.body};drafts.set(ref,value);return send(value);}
   if(api==='/attempts')return send({attempts:attempts()});
-  if(api.startsWith('/attempts/')){attemptReads++;return send({...attempts()[0],validationProgress:{phase:'review'},snapshot:{answers:{D1:'Older draft'}},result:null});}
+  if(api.startsWith('/attempts/')){attemptReads++;return send({...attempts()[0],validationProgress:{phase:'review',itemProgress},snapshot:{answers:{D1:'Older draft'}},result:null});}
   if(api==='/homework')return send({ok:true,status:'not_applicable'});
   if(/^\/teacher\/work\//.test(api)){const selected=api.includes(refs.A)?refs.A:refs.B;return send({ok:true,content,identity:who(selected),draft:draft(selected),attempts:[],readonly:true});}
   if(api==='/audio')return send({error:'AUDIO_UNAVAILABLE'},503);
@@ -70,7 +70,7 @@ async function fixture(t,slug,{remembered,storageBlocked=false,teacher=false,tea
  });
  const page=await context.newPage(),url=(personal=false,tail='')=>`${site.origin}/listening-homework/${slug}.html?assignmentCode=${content.code}${personal?'&mode=student&class=IC2304&documentId='+documentId:''}${tail}`;
  t.after(async()=>{try{assert.deepEqual(errors,[]);assert.deepEqual(external,[]);for(const p of context.pages())assert.equal(await p.evaluate(()=>window.__fixturePlays||0).catch(()=>0),0);}finally{await context.close();}});
- return {context,page,url,requests,drafts,content,get attemptReads(){return attemptReads;}};
+ return {context,page,url,requests,drafts,content,get attemptReads(){return attemptReads;},setItemProgress(value){itemProgress=value;}};
 }
 const memoryId=page=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null')?.identity?.id,key);
 const privateReads=requests=>requests.filter(r=>/^\/(lesson|draft|attempts|homework|audio)(\/|$)/.test(r.api));
@@ -125,4 +125,26 @@ test('History API denied: legacy alias still verifies owner and loads saved Home
 for(const [slug]of rows)test('History API denied: '+slug+' teacher switch still verifies role and stays readonly',async t=>{
  const f=await fixture(t,slug,{teacher:true,historyBlocked:true});await f.page.goto(f.url(true));await f.page.locator('#student-form').waitFor({state:'visible'});
  await f.page.locator('#teacher-entry').click();await loaded(f.page);assert.match(await f.page.locator('#person').innerText(),/Fixture B/);assert.equal(await f.page.locator('#submit').isVisible(),false);assert.equal(f.requests.filter(r=>r.api==='/student/login').length,0);
+});
+
+
+for(const width of [1366,390,320])test('Checked items update within the existing Listening status line at '+width+'px',async t=>{
+ const reducedMotion=width===320?'reduce':'no-preference';
+ const f=await fixture(t,'scandinavian-studies',{remembered:'B',polling:true,viewport:{width,height:600},reducedMotion});
+ const page=f.page;await page.goto(f.url(true));await loaded(page);
+ const status=page.locator('#grade-status'),spinner=status.locator('.izone-grading-spinner');
+ await spinner.waitFor();
+ await page.waitForFunction(()=>[...document.styleSheets].some(s=>s.href?.includes('/grading-status.css')));
+ assert.equal(await spinner.evaluate(node=>getComputedStyle(node).animationName),reducedMotion==='reduce'?'none':'izone-grade-spin');
+ const input=page.locator('#field-D1');
+ await input.evaluate(node=>{node.focus();node.setSelectionRange(1,3);window.keptInput=node;});
+ const layout=()=>page.evaluate(()=>['.cbt-semantic-stage','.hw-question-dock','#grade-status'].map(selector=>document.querySelector(selector).getBoundingClientRect().height));
+ const before=await layout();
+ for(const checkedItems of [7,15,22]){
+  f.setItemProgress({checkedItems,totalItems:22});
+  await status.getByText(checkedItems+'/22',{exact:true}).waitFor();
+  assert.deepEqual(await layout(),before);
+  assert.equal(await input.evaluate(node=>node===window.keptInput&&node===document.activeElement&&node.selectionStart===1&&node.selectionEnd===3),true);
+ }
+ assert.match(await status.innerText(),/Đã kiểm đủ/);
 });

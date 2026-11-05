@@ -1,3 +1,4 @@
+import {gradingStatus,renderGradingStatus} from '../shared/grading-status.mjs?v=1';
 import {setWorkspaceText} from './workspace-status.mjs?v=20261101-space1';
 import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
 import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261102-state1&audio=20261028-part-rescue-v1';
@@ -22,7 +23,14 @@ let loginPending=false,teacherReadGeneration=0,view=null,presentation=null,submi
 let observer=null,observationUnsupported=false,accessRevoked=false,visibleAttempt=null;
 const rosterGeneration={student:0,teacher:0};
 const memory=createCourseStudentIdentity({product:'listening-homework67',entry:code,requestIdentity:input=>request('/identity/resolve',{method:'POST',body:input})});
-const text=setWorkspaceText;
+const text=(id,value)=>{
+ if(id==='grade-status'&&$(id).firstElementChild)$(id).replaceChildren();
+ setWorkspaceText(id,value);
+};
+function renderGradeWait(value,reconnecting=false){
+ if(!value||!['queued','processing'].includes(value.status)||dirty||pendingSave)return;
+ renderGradingStatus($('grade-status'),gradingStatus(value,{reconnecting}));
+}
 function problem(error){if(error.name==='TypeError'||error.name==='TimeoutError'||error.name==='AbortError')return 'Kết nối chưa được xác nhận. Bản đang nhập được giữ trên thiết bị; hãy thử lại.';const messages={HOMEWORK_ENTRY_NOT_FOUND:'Chưa xác nhận được chủ link Homework này. Hãy mở lại đúng bản của bạn.',HOMEWORK_ENTRY_OWNER_MISMATCH:'Người đang mở chưa khớp chủ link Homework. Chưa đọc hoặc ghi bài của người khác.',OWNER_SOURCE_UNAVAILABLE:'Chưa kiểm được nguồn chủ bài. Hãy thử lại; dữ liệu vẫn được giữ.',DRAFT_REVISION_CONFLICT:'Có nháp mới hơn trên hệ thống. Bản đang nhập vẫn được giữ trên thiết bị; hãy tải bản này trước khi mở lại trang.',WEB_UNAUTHORIZED:'Phiên học viên đã hết hoặc chưa được xác nhận. Hãy vào lại bằng đúng lớp và tên của bạn.',CLASS_NOT_OPEN:'Bài này chưa mở cho lớp.',BELOW_COMPLETION_THRESHOLD:'Bạn cần điền ít nhất 80% số mục trước khi nộp.',PREVIOUS_GRADING_NEEDS_REVIEW:'Lượt chấm trước đang cần kiểm tra kết nối. Bài đã nộp được giữ nguyên; chưa thể gửi trùng lượt đó.'};return messages[error.code]||error.message||'Chưa thực hiện được thao tác. Bài đang nhập vẫn được giữ; bạn có thể thử lại.';}
 async function request(path,options={}){
  const url=new URL(API+path,location.origin);url.searchParams.set('assignmentCode',code);
@@ -58,12 +66,12 @@ function watchAttempt(id=lastAttempt){
    while(current()&&latest?.attemptId&&change(latest)!==applied){
     const wanted=latest,revision=change(wanted);
     try{const value=await attempt(wanted.attemptId,{signal:controller.signal});if(!current())return;if(change(latest)!==revision)continue;await showAttempt(value);if(!current())return;applied=revision;}
-    catch(error){if(!current()||controller.signal.aborted)return;if([401,403,423].includes(error.status))return revokeAccess(error);text('grade-status',problem(error)+' Kết quả đã hiển thị vẫn được giữ; đang thử đọc lại.');retry=setTimeout(()=>{retry=null;void readResult();},4000);return;}
+    catch(error){if(!current()||controller.signal.aborted)return;if([401,403,423].includes(error.status))return revokeAccess(error);if(visibleAttempt?.attemptId===wanted.attemptId)renderGradeWait(visibleAttempt,true);retry=setTimeout(()=>{retry=null;void readResult();},4000);return;}
    }
   })();
   try{await reading;}finally{reading=null;}
  }
- transport=createTestStateObserver({url:url.href,headers:{...(token&&!readonly?{Authorization:'Bearer '+token}:{}),...(entryDocument!==null&&!readonly?{'X-Reading-Homework-Document':entryDocument}:{})},poll:({signal})=>request(base+'/status'+query,{signal}),onState(value){if(!current())return;showDocs({jobs:value.jobs});latest=value;void readResult();},onRevoked(error){if(current())revokeAccess(error);},onUnavailable(){if(current())text('docs-status','Đang kiểm tra lại kết nối theo dõi. Bài đã lưu trên hệ thống vẫn được giữ.');},onUnsupported(){if(!current())return;observationUnsupported=true;stopObservation();if(visibleAttempt)void showAttempt(visibleAttempt);void docsStatus();}});
+ transport=createTestStateObserver({url:url.href,headers:{...(token&&!readonly?{Authorization:'Bearer '+token}:{}),...(entryDocument!==null&&!readonly?{'X-Reading-Homework-Document':entryDocument}:{})},poll:({signal})=>request(base+'/status'+query,{signal}),onState(value){if(!current())return;showDocs({jobs:value.jobs});latest=value;if(visibleAttempt?.attemptId===value.attemptId&&change(value)===applied)renderGradeWait(visibleAttempt);void readResult();},onRevoked(error){if(current())revokeAccess(error);},onUnavailable(){if(current()){text('docs-status','Đang kiểm tra lại kết nối theo dõi. Bài đã lưu trên hệ thống vẫn được giữ.');if(visibleAttempt?.attemptId===id)renderGradeWait(visibleAttempt,true);}},onUnsupported(){if(!current())return;observationUnsupported=true;stopObservation();if(visibleAttempt)void showAttempt(visibleAttempt);void docsStatus();}});
  return true;
 }
 
@@ -136,7 +144,7 @@ async function history(){const generation=identityGeneration,read=++historyGener
 const attempt=(id,options)=>request((readonly?`/teacher/work/${person.courseId}/${person.ownerId}`:'')+'/attempts/'+encodeURIComponent(id),options);
 async function showAttempt(value){if(!draft||accessRevoked||value.runNo!==draft.runNo)return;lastAttempt=value.attemptId;visibleAttempt=value;clearTimeout(pollTimer);const grade=value.result,watching=watchAttempt(value.attemptId);
  if(value.status==='done'&&grade){const key=JSON.stringify([value.attemptId,grade]);if(key!==feedbackRevision){feedbackRevision=key;view.setFeedback({attemptId:value.attemptId,label:`Lượt ${value.runNo} · Nháp ${value.draftRevision}`,items:content.items.map(i=>({id:i.id,answer:value.snapshot.answers?.[i.id]||'',feedback:grade.feedback[i.id]})).filter(i=>i.feedback)});}const p=grade.grading.summary;text('grade-status',value.draftRevision!==draft.revision?'Nhận xét thuộc bản nộp trước. Bạn đang có nháp mới hơn; nộp lại để kiểm tra bản sửa.':p.allCorrect?`Đã đạt đủ ${p.total}/${p.total} mục.`:`Đã có góp ý: đạt ${p.correctCount}/${p.total} mục. Sửa các mục còn thiếu rồi nộp lại.`);}
- else if(['queued','processing'].includes(value.status)){const progress=value.validationProgress;text('grade-status',value.status==='queued'?'Bài đã nộp được giữ nguyên, đang chờ đến lượt đối chiếu.':progress?.phase==='review'?'AI đang kiểm lại ý nghĩa và nhận xét trước khi trả kết quả.':'Bài đã nộp được giữ nguyên. AI đang đối chiếu câu trả lời.');if(!watching){const generation=identityGeneration;pollTimer=setTimeout(async()=>{if(generation!==identityGeneration||accessRevoked)return;try{const next=await attempt(value.attemptId);if(generation!==identityGeneration||lastAttempt!==value.attemptId)return;await showAttempt(next);await docsStatus();}catch(e){text('grade-status',problem(e)+' Bấm tải lại lịch sử để tiếp tục xem.');}},2500);}}
+ else if(['queued','processing'].includes(value.status)){renderGradeWait(value);if(!watching){const generation=identityGeneration;pollTimer=setTimeout(async()=>{if(generation!==identityGeneration||accessRevoked)return;try{const next=await attempt(value.attemptId);if(generation!==identityGeneration||lastAttempt!==value.attemptId)return;await showAttempt(next);await docsStatus();}catch(e){if(generation===identityGeneration&&lastAttempt===value.attemptId){if([401,403,423].includes(e.status))return revokeAccess(e);text('grade-status',problem(e)+' Bấm tải lại lịch sử để tiếp tục xem.');}}},2500);}}
  else text('grade-status','Bài đã nộp được giữ nguyên; lượt chấm chưa hoàn tất. '+(value.status==='needs_review'?(value.errorCode==='AI_VALIDATION_NEEDS_REVIEW'?'Nhận xét còn điểm cần giảng viên kiểm tra trước khi công bố.':'Cần kiểm tra kết nối trước khi gọi AI lại.'):'Bạn có thể tải lại lịch sử để kiểm tra.'));
  if(dirty||pendingSave)text('grade-status','Bạn đang sửa nháp. Nhận xét đang hiện thuộc lần nộp trước; nộp lại để được kiểm tra bản sửa.');
 }
