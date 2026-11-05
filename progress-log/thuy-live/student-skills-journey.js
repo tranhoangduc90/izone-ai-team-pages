@@ -6,7 +6,7 @@ import {writingResultLink} from '../student-test-results.js?rev=20261030-the22-2
 export async function mountStudentSkillJourney(host,journey,request,resultContext={}){
  host.textContent='Đang đọc kết quả bốn kỹ năng…';
  try{
-  const records=new Map(),sessions=journey.sessions.filter(s=>['complete','incomplete'].includes(s.completeness));
+  const records=new Map((journey.skillForms||[]).map(form=>[form.sessionNumber,form])),sessions=journey.skillForms?[]:journey.sessions.filter(s=>['complete','incomplete'].includes(s.completeness));
   for(let offset=0;offset<sessions.length;offset+=3){
    const details=await Promise.all(sessions.slice(offset,offset+3).map(async session=>{
     const {detail}=await request(session.sessionNumber);
@@ -15,7 +15,7 @@ export async function mountStudentSkillJourney(host,journey,request,resultContex
    }));for(const detail of details)records.set(detail.sessionNumber,detail);
   }
   const person={...journey.student,externalTests:journey.externalTests||[],cells:journey.sessions},overview={classId:journey.class.classId,sessions:journey.sessions,students:[person],coverage:journey.coverage};
-  const forms=journey.sessions.map(session=>{const detail=records.get(session.sessionNumber),student={...person,submissionId:detail?.submissionId,sessionComment:session.sessionComment,teacherSessionFeedback:detail?.teacherSessionFeedback};
+  const forms=journey.sessions.map(session=>{const detail=records.get(session.sessionNumber),student={...person,submissionId:detail?.submissionId,sessionComment:session.sessionComment,teacherSessionFeedback:session.teacherSessionFeedback||detail?.teacherSessionFeedback};
    return {sessionNumber:session.sessionNumber,definition:detail?.definition||{blocks:[]},dashboard:{students:[student]},live:{students:[{studentRef:person.studentRef,submissionId:detail?.submissionId,finalResponses:detail?.responses||{}}]}};});
   const course=buildSkillCourse(overview,forms),paint=()=>renderPersonSkills(host,course,person,{history:false,studentView:true,
     writingResultUrl:(result,task)=>writingResultLink(result,task,resultContext)});

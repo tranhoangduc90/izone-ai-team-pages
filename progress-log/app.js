@@ -1,4 +1,5 @@
 import {contentTitle,skillsLabel,sessionHeading,sessionState} from './session-presentation.js';
+import {createReadCoordinator} from './read-coordinator.js';
 import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
 import {renderSessionReview} from './session-review.js?rev=20261104-the25-v1';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
@@ -265,7 +266,7 @@ async function loadStudentDashboard({force=false}={}){
   const current=()=>state.dashboardGeneration===generation&&dashboardStudent()===studentRef&&publicToken===state.publicToken&&assignment===state.assignment;
   const timer=setTimeout(()=>controller.abort(),15_000);
   try{
-    const {journey}=await apiRequest('/student/course-journey',{body:{publicToken,studentRef,identityConfirmed:true},signal:controller.signal});
+    const {journey}=await apiRequest('/student/course-journey',{body:{publicToken,studentRef,identityConfirmed:true,includeSkills:true},signal:controller.signal});
     if(!current())return;
     if(journey.student?.studentRef!==studentRef||String(journey.class?.classId)!==String(assignment.class.id))throw Error('Danh sách chưa khớp học viên và lớp.');
     state.journeyData=preserveSessionComments(state.journeyData,journey);
@@ -359,7 +360,7 @@ function renderSubmissionWindow() {
   const now = performance.now();
   const host = document.getElementById('submissionWindowNotice');
   if(THUY_UI){
-    if(host){host.textContent=submissionWindowMessage(observedWindow,now);host.hidden=!host.textContent;}
+    if(host){host.textContent=submissionWindowMessage(observedWindow,now);host.hidden=!host.textContent||windowCanSubmit(observedWindow,now);}
     const open=windowCanSubmit(observedWindow,now);
     elements.confirmButton.hidden=false;
     elements.confirmButton.textContent=open&&!state.journeyOnly?'Đúng là em · làm phiếu':'Đúng là em · xem các buổi học';
@@ -420,7 +421,12 @@ function readPublicToken() {
   return /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(token) ? token : '';
 }
 
-async function apiRequest(path, { method = 'POST', body, signal } = {}) {
+const coordinatedRead=createReadCoordinator();
+function apiRequest(path,options={}){
+  if(/^\/(?:student\/|assignments\/open|attempts\/(?:result|resume))/.test(path))return coordinatedRead(path+JSON.stringify(options.body||null),signal=>performApiRequest(path,{...options,signal}),{signal:options.signal});
+  return performApiRequest(path,options);
+}
+async function performApiRequest(path, { method = 'POST', body, signal } = {}) {
   if (!config.API_BASE_URL) throw new Error('Trang chưa được cấu hình địa chỉ API.');
   const response = await fetch(`${config.API_BASE_URL}/api/learning${path}`, {
     method,
@@ -519,6 +525,7 @@ function setSaveState(label, kind = '') {
   elements.saveState.textContent = label;
   elements.saveState.className = `save-state${kind ? ` ${kind}` : ''}`;
   const retry=document.querySelector('#thuyRetrySave');if(retry)retry.hidden=!label.startsWith('Chưa lưu');
+  elements.saveState.closest('.context-bar')?.classList.toggle('has-save-error',label.startsWith('Chưa lưu'));
 }
 
 function randomDelay(minimum, maximum) {
@@ -1552,7 +1559,7 @@ function renderIntegratedJourney(journey) {
     const title=contentTitle(session,{title:session.title});
     const bottom=document.createElement('div');bottom.className='studentSessionBottom';
     bottom.append(journeyText('i',status.label));
-    if(session.quizSummary?.graded>0)bottom.append(journeyText('b',session.quizSummary.correct+'/'+session.quizSummary.graded));
+    if(session.quizSummary?.graded>0)heading.append(journeyText('b',session.quizSummary.correct+'/'+session.quizSummary.graded,'studentSessionScore'));
     item.append(heading,journeyText('strong',title),journeyText('small',skillsLabel(title)||'Trong kế hoạch khóa học'),bottom);
     if(THUY_UI&&session.sessionNumber===activeSessionNumber)item.append(journeyText('small','Đang xem','badge blue'));
     const comment=commentPanel(session.sessionComment,{compact:THUY_UI});if(comment)item.append(comment);
@@ -1618,8 +1625,10 @@ function renderPersonSkillsForStudent(root,overview,forms,person){
 async function loadThuyStudentSkills(journey,{signal,current}){
   let root=elements.journeyView.querySelector('#thuyStudentSkills');
   if(!root){root=document.createElement('section');root.id='thuyStudentSkills';elements.journeyView.querySelector('.studentJourney').before(root);}
-  root.textContent='Đang đọc kết quả bốn kỹ năng…';
-  const records=new Map(),finals=journey.sessions.filter(session=>['complete','incomplete'].includes(session.completeness));
+  const signature=JSON.stringify([journey.student,journey.skillForms,journey.sessions,journey.externalTests]);
+  if(root.dataset.signature===signature)return;
+  if(!root.hasChildNodes())root.textContent='Đang đọc kết quả bốn kỹ năng…';
+  const records=new Map((journey.skillForms||[]).map(form=>[form.sessionNumber,form])),finals=journey.skillForms?[]:journey.sessions.filter(session=>['complete','incomplete'].includes(session.completeness));
   try{
     for(let offset=0;offset<finals.length;offset+=3){
       const details=await Promise.all(finals.slice(offset,offset+3).map(async session=>{
@@ -1632,10 +1641,11 @@ async function loadThuyStudentSkills(journey,{signal,current}){
   const overview={classId:journey.class.classId,sessions:journey.sessions,students:[person],coverage:journey.coverage};
     const forms=journey.sessions.map(session=>{
       const source=records.get(session.sessionNumber),detail=source?legacyFeedbackForView(source):null,definition=detail?.definition||{blocks:[]};
-      const student={...journey.student,submissionId:detail?.submissionId,sessionComment:session.sessionComment,teacherSessionFeedback:detail?.teacherSessionFeedback};
+      const student={...journey.student,submissionId:detail?.submissionId,sessionComment:session.sessionComment,teacherSessionFeedback:session.teacherSessionFeedback||detail?.teacherSessionFeedback};
       return {sessionNumber:session.sessionNumber,definition,dashboard:{students:[student]},live:{students:[{studentRef:person.studentRef,submissionId:detail?.submissionId,finalResponses:detail?.responses||{}}]}};
     });
     renderPersonSkillsForStudent(root,overview,forms,person);
+    root.dataset.signature=signature;
   }catch(error){if(current()){root.textContent='Chưa đọc đủ kết quả kỹ năng: '+(signal.aborted?'Hết thời gian chờ.':error.message)+' Lịch sử bên dưới vẫn xem được.';}}
 }
 
@@ -1712,7 +1722,7 @@ async function openIntegratedJourney(returnView) {
   setNotice('Đang tải hành trình…');
   try {
     const payload = await apiRequest('/student/course-journey', {
-      body: { publicToken, studentRef, identityConfirmed: true }, signal: controller.signal
+      body: { publicToken, studentRef, identityConfirmed: true,includeSkills:THUY_UI }, signal: controller.signal
     });
     if (!current()) return;
     const journey = payload.journey;
@@ -1861,13 +1871,11 @@ async function startAttempt({selection=null,pinned=false}={}) {
       body: { attemptToken: remembered.attemptToken }, signal: AbortSignal.timeout(15000)
     }) : null;
     if (remembered && !savedOutcome?.receipt) throw new Error('Chưa đọc lại được bài đã nộp. Hãy thử lại.');
-    const payload = remembered ? { attempt: remembered } : await apiRequest('/attempts/start', {
-      body: {
-        publicToken: state.publicToken,
-        studentRef: state.confirmedStudent.studentRef,
-        clientIdempotencyKey: crypto.randomUUID(),
-        identityConfirmed: true
-      }
+    const openInput={
+        publicToken:state.publicToken,studentRef:state.confirmedStudent.studentRef,clientIdempotencyKey:crypto.randomUUID(),identityConfirmed:true
+    };
+    const payload = remembered ? { attempt: remembered } : await apiRequest('/attempts/resume',{body:openInput}).catch(error=>{
+      if(error.status!==404)throw error;return apiRequest('/attempts/start',{body:openInput});
     });
     if(selection&&courseIdentity&&!courseIdentity.isCurrent(selection))throw new Error('Người đã nhớ vừa đổi. Phiếu chưa nhận phản hồi cũ; hãy chọn lại tên.');
     const opened=payload.attempt;
@@ -2081,6 +2089,20 @@ document.querySelector('#thuyJourneyNav')?.addEventListener('click',()=>{
   if(!state.selectedStudent&&!state.attempt&&!state.thuyReadOnly){setNotice('Chọn đúng tên để xem kết quả học tập.');return;}
   void openIntegratedJourney(state.attempt||state.thuyReadOnly?'formView':'confirmView');
 });
+window.progressLogUpdateGuard=()=>!state.submitting&&(state.submissionPayload||state.savedVersion===state.changeVersion)
+  &&(!elements.journeyView.hidden||!elements.resultView.hidden)&&!document.querySelector('dialog[open]')&&!getSelection()?.toString();
+if(THUY_UI){
+ const brand=document.querySelector('.topbar .brand');brand.tabIndex=0;brand.setAttribute('role','button');brand.setAttribute('aria-label','Về trang chủ Progress Log');
+ const back=document.createElement('button');back.type='button';back.className='button thuy-lesson-home';back.textContent='← Progress log';elements.formView.prepend(back);
+ const home=async()=>{
+  if(state.submitting)return;
+  if(!state.selectedStudent&&!state.attempt&&!state.thuyReadOnly)return;
+  if(state.attempt){if(!storeLocalDraft())return;await flushDraft();if(state.savedVersion!==state.changeVersion){setNotice('Chưa lưu xong. Nội dung vẫn được giữ; hãy thử lưu lại.','error');return;}}
+  void openIntegratedJourney(state.attempt||state.thuyReadOnly?'formView':'confirmView');
+ };
+ back.addEventListener('click',()=>void home());brand.addEventListener('click',()=>void home());brand.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();void home();}});
+ window.progressLogUpdateGuard=()=>!state.submitting&&state.savedVersion===state.changeVersion&&elements.journeyView.hidden===false&&!document.querySelector('dialog[open]')&&!getSelection()?.toString();
+}
 window.addEventListener('pagehide', () => {
   storeLocalDraft();
   clearSaveTimers();

@@ -38,6 +38,7 @@ const check=async (page,{origin}={}) => {
     }
     if (url.includes('/api/learning/assignments/open')) return json({ ok: true, assignment });
     if (url.includes('/api/learning/student/session-comments')) return json({ok:true,comments:[]});
+    if (url.includes('/api/learning/attempts/resume')) return json({ok:false,error:'ATTEMPT_NOT_FOUND'},404);
     if (url.includes('/api/learning/attempts/start')) {
       const body = request.postDataJSON(); calls.start.push(body);
       if (failStart) return json({ ok: false, message: 'Mở phiếu thử thất bại.' }, 503);
