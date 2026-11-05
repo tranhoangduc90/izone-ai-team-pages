@@ -797,7 +797,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       aiView?.close();aiApplied=null;for(const preview of previews)preview.close();previews.clear();library?.clear();assignmentDialog.clear();
       importText='';importOpen=false;assignmentClasses=[];classSelect.replaceChildren();sourceSelect.replaceChildren();draftList.replaceChildren();paint();notice('Đăng nhập để soạn phiếu.');},
     // Dùng cùng đường render thật trong kiểm thử để đối chiếu definition/key trước và sau khi soạn.
-    openDraft:value=>adopt(value),getPayload:()=>draft?payload():null,canUpdate:()=>!busy&&!dirty&&!saveFailed&&!authoring,
+    openDraft:value=>adopt(value),getPayload:()=>draft?payload():null,canUpdate:()=>!busy&&!dirty&&!saveFailed&&(!authoring||!draft),
     captureNavigation:()=>({classId:classSelect.value,library:library?.navigation()}),restoreNavigation:value=>library?.restoreNavigation(value?.library)
   };
 }

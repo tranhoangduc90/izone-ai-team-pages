@@ -2089,6 +2089,8 @@ document.querySelector('#thuyJourneyNav')?.addEventListener('click',()=>{
   if(!state.selectedStudent&&!state.attempt&&!state.thuyReadOnly){setNotice('Chọn đúng tên để xem kết quả học tập.');return;}
   void openIntegratedJourney(state.attempt||state.thuyReadOnly?'formView':'confirmView');
 });
+window.progressLogUpdateGuard=()=>!state.submitting&&(state.submissionPayload||state.savedVersion===state.changeVersion)
+  &&(!elements.journeyView.hidden||!elements.resultView.hidden)&&!document.querySelector('dialog[open]')&&!getSelection()?.toString();
 if(THUY_UI){
  const brand=document.querySelector('.topbar .brand');brand.tabIndex=0;brand.setAttribute('role','button');brand.setAttribute('aria-label','Về trang chủ Progress Log');
  const back=document.createElement('button');back.type='button';back.className='button thuy-lesson-home';back.textContent='← Progress log';elements.formView.prepend(back);

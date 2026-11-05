@@ -1,0 +1,20 @@
+body[data-m170-product='writing-library'] {
+  --ink: var(--m170-ink); --muted: var(--m170-muted); --line: var(--m170-line);
+  --surface: var(--m170-surface); --surface-soft: var(--m170-canvas);
+  --navy: var(--m170-action); --blue: var(--m170-action); --green: var(--m170-success-fg);
+  --amber: var(--m170-attention-fg); --shadow: none;
+}
+body[data-m170-product='writing-library'] .library-hero { padding-top: 32px; padding-bottom: 32px; background: var(--m170-surface); color: var(--m170-ink); border-bottom: 1px solid var(--m170-line); }
+body[data-m170-product='writing-library'] .library-hero .m170-logo { margin-bottom: 24px; }
+body[data-m170-product='writing-library'] .library-hero h1 { font-size: 28px; letter-spacing: normal; }
+body[data-m170-product='writing-library'] .library-hero p:not(.eyebrow) { color: var(--m170-muted); font-size: 18px; line-height: 1.65; }
+body[data-m170-product='writing-library'] .eyebrow { color: var(--m170-muted); font-size: 14px; letter-spacing: normal; text-transform: none; font-weight: 600; }
+body[data-m170-product='writing-library'] :is(.panel, .handout-card) { border-radius: 12px; box-shadow: none; }
+body[data-m170-product='writing-library'] :is(.auth-card h2, .toolbar h2) { font-size: 22px; }
+body[data-m170-product='writing-library'] .toolbar label { font-size: 14px; }
+body[data-m170-product='writing-library'] select { border-color: var(--m170-control); border-radius: 8px; }
+body[data-m170-product='writing-library'] .handout-lesson { background: var(--m170-selected); color: var(--m170-structure); }
+body[data-m170-product='writing-library'] .handout-lesson span { color: var(--m170-muted); font-size: 14px; letter-spacing: normal; text-transform: none; }
+body[data-m170-product='writing-library'] .notice { background: var(--m170-success-bg); color: var(--m170-success-fg); border: 0; border-radius: 8px; }
+body[data-m170-product='writing-library'] .notice.error { background: var(--m170-error-bg); color: var(--m170-error-fg); }
+@media (max-width: 600px) { body[data-m170-product='writing-library'] .library-hero h1 { font-size: 26px; } }

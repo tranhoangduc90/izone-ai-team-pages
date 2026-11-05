@@ -1,0 +1,106 @@
+/* Lớp nối cho editor gốc, trạng thái thiếu dữ liệu và mở file riêng trên Pages. */
+.fileEntry{max-width:560px;margin:64px auto;padding:32px;background:white;border:1px solid var(--line);border-radius:8px}
+.fileEntry .brand{padding:0 0 24px}.fileEntry p{margin:16px 0}.fileEntry input[type=file]{display:block;margin:16px 0;width:100%}
+.fileEntry .btn{display:inline-flex}.fileEntry h1{font-size:24px;line-height:32px}
+/* Nền điều khiển có độ ưu tiên thấp để không đè khoảng đệm riêng của editor gốc. */
+:where(.exercise-editor) button{background:white;border:1px solid var(--control-border);border-radius:6px;padding:6px 12px;line-height:20px;color:var(--navy)}
+#exerciseAiDialog button{background:white;border:1px solid var(--control-border);border-radius:6px;padding:8px 12px;line-height:20px;color:var(--navy)}
+.exercise-editor button.primary,#exerciseAiDialog button.primary{color:white;background:var(--red);border-color:var(--red)}
+.exercise-editor button.primary:hover,#exerciseAiDialog button.primary:hover{background:#b90622}
+.exercise-editor .ghost{background:transparent;border-color:transparent}.exercise-editor :where(.repo-field){display:block;min-width:0;margin-bottom:16px}
+.exercise-editor .repo-field>span{display:block;font-size:12px;line-height:16px;margin-bottom:8px;color:var(--muted)}
+:where(.exercise-editor) :where(input:not([type=radio]):not([type=checkbox]),select){border:1px solid var(--control-border);border-radius:6px;background:white;max-width:100%;padding:6px 8px;min-width:0}
+.exercise-editor .repo-field input,.exercise-editor .repo-field select{width:100%}.exercise-editor textarea{min-height:72px}.exercise-student-preview>.exercise-part{padding:24px}
+.repo-error{color:var(--red);padding:12px;background:var(--pink);border-radius:6px;margin:12px 0}
+.repo-error[hidden]{display:none}.exercise-question-head .actions{flex-shrink:0}
+.ownForms{margin-top:20px}.repoTable td:last-child{white-space:nowrap}.repoTable td:last-child .btn+ .btn{margin-left:8px}
+.repoTable [data-library-row]{cursor:pointer}.repoTable [data-library-row]:hover,.repoTable [data-library-row]:focus-within{background:var(--pink)}
+.dialogHeadActions{display:flex;align-items:center;gap:8px;flex-shrink:0}.libraryDialog .dialogHead{position:sticky;top:0;background:var(--white);z-index:2}.libraryDialog .dialogHead h2{overflow-wrap:anywhere}
+.questionHint{margin-top:12px;font-size:14px;line-height:22px}.questionHint summary{cursor:pointer;color:var(--navy);font-weight:500;padding:8px 0}.questionHint p{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 0;padding:12px;background:var(--canvas);border-radius:6px}.studentMain .questionHint summary{min-height:44px}
+.correctOption,.correctAnswer{background:#eef8f2;color:#18734c;border:1px solid #b9dcca!important;border-radius:6px;padding:10px 12px;white-space:pre-wrap}
+.correctOption b{display:block;margin-top:4px;font-size:12px}.correctAnswer{margin:8px 0 16px;font-size:14px}
+.worksheetInstructions{margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.worksheetInstructions h2{font-size:16px;margin:0 0 8px}.worksheetInstructions p,.answerExplanation{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.answerExplanation{margin:8px 0 16px}
+.studentPart .studentAnswerReview>.studentJourneyHeading{display:none}
+.studentSaveState{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.studentSaveState [data-save-status]{overflow-wrap:anywhere}
+.studentSaveState button[hidden]{display:none}
+.studentMain .studentSaveState .btn{flex-shrink:0;min-height:36px}
+@media(max-width:650px){.studentMain .studentSaveState .btn{min-height:44px}}
+/* Chữa bài học viên theo mẫu Thủy: trả lời trước, lựa chọn đầy đủ mở khi cần. */
+.student-screen .compactReview{margin:8px 0 0}
+.student-screen .compactReview article{padding:16px 0}
+.student-screen .compactReview .reviewQuestionTop{align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.student-screen .compactReview .reviewQuestionTop h3{flex:1 1 240px;min-width:0;margin:0;overflow-wrap:anywhere;font-weight:500}
+.student-screen .compactReview .reviewVerdict{flex-shrink:0;margin:0;padding:3px 8px;border-radius:4px;background:var(--hover);line-height:18px}
+.student-screen .compactReview .reviewVerdict.correct{background:#e9f5ef}
+.student-screen .compactReview .reviewVerdict.incorrect{background:var(--pink)}
+.student-screen .compactReview .reviewAnswer{padding:0;background:none;margin:8px 0;border-radius:0}
+.student-screen .compactReview .correctAnswer{padding:0;background:none;border:0!important;margin:8px 0;font-size:14px;line-height:22px}
+.student-screen .compactReview .answerExplanation{margin:8px 0;color:var(--muted)}
+.student-screen .compactReview .reviewChoices{margin-top:8px;font-size:14px;line-height:22px}
+.student-screen .compactReview .reviewChoices summary{cursor:pointer;color:var(--navy);width:fit-content;padding:4px 0}
+.student-screen .compactReview .reviewChoices[open] summary{margin-bottom:8px}
+.student-screen .compactReview .reviewChoices .reviewOptions{margin:0}
+@media(max-width:650px){.student-screen .compactReview .reviewChoices summary{min-height:44px;display:flex;align-items:center;gap:6px}.student-screen .compactReview .reviewChoices summary:before{content:'▸'}.student-screen .compactReview .reviewChoices[open] summary:before{content:'▾'}}
+.writingTask{margin-top:12px}.writingTask p{margin-top:4px}.originalExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:pre-wrap}
+.fullFeedback{white-space:pre-wrap;overflow-wrap:anywhere}.dialogBody li{margin:8px 0}.matchingFields{display:grid;gap:12px}.matchingFields label{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+
+/* Tổng quan giữ đoạn gốc ngắn; nhận xét đầy đủ mở riêng như mẫu Thủy. */
+.studentSkillCard{display:flex;flex-direction:column}
+.studentSkillCard>p.studentSpeakingExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;overflow:hidden}
+.studentSkillCard>p.studentWritingExcerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:12px;line-height:18px;margin:12px 0 0}
+.studentSkillCard>p.studentWritingSource{font-size:12px;line-height:18px;margin:12px 0 0}
+.studentSkillCard .studentSkillAction{display:flex;align-items:center;justify-content:space-between;align-self:stretch;margin-top:auto;padding:12px 0 0;min-height:44px;text-align:left;font-size:12px}
+.studentSkillCard dt{flex-shrink:0}.studentSkillCard dd{min-width:0}
+.studentSessionRow>span:first-child{min-width:0;overflow-wrap:anywhere}.studentSessionRow em{font-style:normal;color:var(--navy)}
+.studentJourneyDialog{width:700px;overflow:hidden}.studentJourneyDialog[open]{display:flex;flex-direction:column}
+.studentJourneyDialog .dialogHead{flex-shrink:0;padding:16px 20px}.studentJourneyDialog .dialogBody{min-height:0;padding:24px}
+.studentJourneyDialog .dialogFoot{flex-shrink:0;padding:8px 24px;justify-content:center;color:var(--muted)}.studentJourneyDialog .dialogFoot:has([hidden]){display:none}
+.studentFeedbackEntry{padding:16px 0;border-bottom:1px solid var(--line)}.studentFeedbackEntry:first-child{padding-top:0}.studentFeedbackEntry:last-child{border-bottom:0;padding-bottom:0}
+.studentFeedbackEntry h3{font-size:16px;line-height:24px}.studentFeedbackEntry p{margin:8px 0;line-height:22px}
+.studentTestHeading{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap}.studentTestHeading strong{white-space:nowrap}
+@media(max-width:759px){.studentJourneyDialog{width:100%;height:100dvh;max-width:100%;max-height:100dvh;margin:0;inset:0;border:0;border-radius:0}.studentJourneyDialog .dialogBody{padding:20px 16px}.studentJourneyDialog .dialogHead{padding:12px 16px}}
+.matchingFields label{min-width:0}.matchingFields span{overflow-wrap:anywhere}.matchingFields select{width:100%;min-width:0;min-height:40px;border:1px solid var(--line);border-radius:6px;background:white;padding:8px 12px;font:inherit}.studentMain .matchingFields select{min-height:44px;font-size:16px}
+.exercise-preview-question .scoreInput input{width:100px;min-height:40px}.exercise-preview-question .scoreInput span{white-space:nowrap}
+@media(max-width:650px){.matchingFields select,.exercise-preview-question .scoreInput input{min-height:44px;font-size:16px}}
+.identityEntry{max-width:560px;margin:24px auto;padding:32px;background:white;border:1px solid var(--line);border-radius:8px}.identityEntry h1{margin:0 0 16px}.identityEntry select,.identityEntry .btn{width:100%;margin-top:16px}.identityEntry p{margin-top:12px}
+@media(max-width:650px){.fileEntry{margin:24px 16px;padding:24px}.repoTable td:last-child{white-space:normal}.repoTable td:last-child .btn{margin:4px 0!important}.exercise-editor .exercise-toolbar .actions{width:100%}.exercise-editor .exercise-toolbar .actions button{flex:1}.identityEntry{padding:24px}.matchingFields label{grid-template-columns:1fr}}
+
+/* Phản hồi duyệt 21/10: trạng thái ngắn, dấu nhắc cuộn và thao tác phân bố luôn nhìn thấy. */
+.attendanceStatus{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:0;border:0;background:transparent;padding:2px 0;color:var(--navy);text-align:left;cursor:pointer}
+.attendanceStatus .badge{border-bottom:1px dotted currentColor}.attendanceStatus small{font-size:12px;color:#8b4b08}
+.peopleScrollCue{position:fixed;bottom:16px;left:calc(50% + 100px);transform:translateX(-50%);z-index:20;max-width:calc(100vw - 48px);padding:10px 18px;border:1px solid var(--navy);border-radius:24px;background:var(--navy);color:white;font-size:14px;box-shadow:0 3px 14px #17426633;cursor:pointer}
+.questionDetailFrame{min-width:0;border:1px solid var(--line);border-radius:8px;background:white;overflow:hidden}
+.questionDetailActions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:12px;border-bottom:1px solid var(--line);background:#f7f9fb}
+.questionDetailActions .btn{min-height:36px}.questionDetailActions .caption{white-space:nowrap}
+.questionDetailFrame .questionDetail{border:0;border-radius:0;max-height:280px;scrollbar-gutter:stable}
+@media(max-width:1050px){.questionDetailFrame .questionDetail{max-height:260px}}
+@media(max-width:1000px){.peopleScrollCue{left:calc(50% + 70px)}}
+@media(max-width:650px){.peopleScrollCue{left:50%;bottom:12px;font-size:13px;padding:10px 14px}}
+
+/* Hai lối vào ngang hàng, thanh ghim chỉ thay cách di chuyển trên cùng nội dung. */
+.resultsEntries{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px}
+.resultsEntries.isPast{visibility:hidden}
+.resultsEntry{min-width:0;display:flex;flex-direction:column;gap:5px;align-items:stretch;text-align:left;padding:14px 16px;border:1px solid var(--control-border);border-radius:8px;background:white;color:var(--navy);cursor:pointer}
+.resultsEntry strong{display:flex;justify-content:space-between;gap:12px;font-size:16px;line-height:24px;font-weight:600}
+.resultsEntry>span{font-size:14px;line-height:20px}.resultsEntry small{font-size:12px;line-height:18px;color:var(--muted)}
+.resultsEntry:hover{border-color:var(--navy);background:var(--hover)}
+.resultsEntry[aria-current]{border-color:var(--navy);box-shadow:inset 3px 0 var(--navy)}
+.resultsQuickBar{position:fixed;top:8px;z-index:25;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:white;border:1px solid var(--line);border-radius:8px;box-shadow:0 3px 12px #17426624}
+.resultsQuickBar button{min-width:0;min-height:40px;padding:8px 12px;border:0;border-radius:5px;background:white;color:var(--navy);font-size:14px;line-height:20px;font-weight:600;cursor:pointer}
+.resultsQuickBar button[aria-current]{background:var(--pink);color:var(--red)}
+.teacher-screen.results-nav-pinned .detailPanel{top:var(--results-nav-offset);max-height:calc(100dvh - var(--results-nav-offset) - 16px)}
+/* Nhãn bài làm phải đọc được trên laptop, giữ nguyên cỡ nội dung và mật độ bảng. */
+.teacher-screen :is(.reviewQuestionTop small,.reviewOption b,.reviewAnswer small,.reviewVerdict,.studentPortalEyebrow){font-size:12px;line-height:18px}
+.teacher-screen .reviewOption b{white-space:normal}
+.partAvailability{font-size:14px;line-height:22px;color:var(--muted);margin-top:8px}
+.sessionStorageNotice{flex-basis:100%;font-size:12px;line-height:18px;margin:0 0 8px;overflow-wrap:anywhere}
+.exercise-editor textarea[rows="2"]{min-height:0}
+@media(max-width:650px){
+  .iconBtn{width:44px;height:44px;min-width:44px;min-height:44px}
+  .student-screen :is(.studentDemoTools button,.studentDemoTools a,.studentDemoTools select,.collapsePart,.questionHint summary){min-height:44px}
+}
+@media(max-width:650px){.resultsEntries{gap:8px}.resultsEntry{padding:10px;gap:6px}.resultsEntry strong{font-size:14px;line-height:20px;gap:4px}.resultsEntry>span{font-size:12px;line-height:18px}.resultsEntry small{font-size:12px;line-height:18px}.resultsQuickBar button{font-size:12px;line-height:18px;padding:8px 4px}.teacher-screen.results-nav-pinned .detailPanel{max-height:none}}
+/* Hạn mô phỏng/gia hạn cùng kiểu điều khiển hiện có, đủ rộng và dễ bấm trên màn hẹp. */
+.deadlineFields{display:grid;gap:10px;margin:16px 0}.deadlineFields label{font-weight:600}.deadlineFields input,.deadlineFields textarea{width:100%;min-width:0;min-height:44px;border:1px solid var(--line);border-radius:6px;padding:10px;font:inherit;color:var(--ink);background:#fff}.deadlineFields textarea{resize:vertical}.deadlineHistory{margin-top:18px}.deadlineHistory summary{cursor:pointer;font-weight:600}.deadlineHistory article{border-top:1px solid var(--line);padding:12px 0}.sessionContext{margin-top:6px}

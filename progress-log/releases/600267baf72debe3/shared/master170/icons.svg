@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="notes" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H5v18h14V8zm0 0v5h5M8 12h8M8 16h8"/></g></symbol>
+  <symbol id="previous" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m14 5-7 7 7 7M7 12h14"/></symbol>
+  <symbol id="next" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m10 5 7 7-7 7M3 12h14"/></symbol>
+  <symbol id="play" viewBox="0 0 24 24"><path fill="currentColor" d="m8 5 11 7-11 7z"/></symbol>
+  <symbol id="pause" viewBox="0 0 24 24"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></symbol>
+  <symbol id="rewind" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6M4 10a8 8 0 1 1 1 8"/></symbol>
+  <symbol id="volume" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 9h4l5-4v14l-5-4H4zm12 0a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></symbol>
+</svg>
