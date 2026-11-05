@@ -21,9 +21,15 @@ try{for(const [slug,mod]of routes)for(const mode of ['lis_first','read_first'])f
   await page.goto(server.base+'term-tests/shared/harness');
   await page.setContent('<form id="readingView"><div id="questions"><input value="A"></div><button id="submitReading" type="submit">Nộp</button></form>');
   await page.evaluate(({slug,mode,scenario})=>{
-   window.args={slug,mode,scenario};window.audit={calls:0,stages:[],notices:[]};window.confirm=()=>scenario!=='cancel';
+   window.args={slug,mode,scenario};window.audit={calls:0,stages:[],notices:[],sent:[],traces:[]};
+   window.fixtureJournal={startRequest(path,options,trace){
+    const requestId=crypto.randomUUID(),entry={requestId,path,method:options.method,...trace};
+    audit.traces.push(entry);
+    return {requestId,done(data,error,status){entry.terminal=error?'failed':'returned';entry.status=status;}};
+   }};window.confirm=()=>scenario!=='cancel';
    window.TERM_TEST_APP_CONFIG={API_BASE_URL:'https://fixture.invalid'};let stored=null;
    window.fetch=async(url,options)=>{
+    audit.sent.push({path:new URL(url).pathname,requestId:new Headers(options.headers).get('x-exam-journal-request-id')});
     if(url.endsWith('/submission-status'))return new Response(JSON.stringify(stored||{ok:true,persisted:false}));
     if(!url.endsWith('/reading'))throw Error('Unexpected API '+url);
     audit.calls++;if(scenario==='double-pending')await new Promise(r=>setTimeout(r,100));
@@ -42,6 +48,7 @@ try{for(const [slug,mod]of routes)for(const mode of ['lis_first','read_first'])f
   const testConfig=sandbox.window.TERM_TEST_CONFIG;
   await page.addScriptTag({content:`(()=>{
     const {slug,mode,scenario}=window.args;
+    const examJournal=window.fixtureJournal;
     const testConfig=${JSON.stringify(testConfig)},appConfig=window.TERM_TEST_APP_CONFIG;
     const query=new URLSearchParams('class=FIXTURE'),classCode='FIXTURE',storageKey='fixture',storageScope='';
     const miniAnswerSheet=false,miniConfirmed=false,miniGeneration=0,miniEpoch=0,miniPrefix='',paperMini=false,paperEpoch=0,paperBusy=0,paperChange=null,demoMode='',serverGradingMode=false,writingConfig=null,readingMinutes=60;
@@ -63,7 +70,13 @@ try{for(const [slug,mod]of routes)for(const mode of ['lis_first','read_first'])f
   const observed=await page.evaluate(()=>({...audit,submitted:Boolean(auditState.readingSubmitted),completed:Boolean(auditState.completed),pending:Boolean(auditState.pendingSubmissions?.reading)}));
   const failed=['cancel','http-error','empty-200'].includes(scenario);
   const passed=failed?!observed.submitted&&observed.stages.length===0&&(scenario!=='cancel'||observed.calls===0):observed.submitted&&observed.calls===1&&observed.completed===(mode==='lis_first');
-  results.push({slug,mode,scenario,outcome:passed?'passed':'failed',...observed,errors});
+  const traced=observed.sent.length===observed.traces.length&&
+    observed.sent.every((attempt,index)=>attempt.requestId===observed.traces[index].requestId&&attempt.path===observed.traces[index].path)&&
+    new Set(observed.traces.map(attempt=>attempt.requestId)).size===observed.traces.length&&
+    (!observed.traces.length||new Set(observed.traces.map(attempt=>attempt.operationId)).size===1&&!!observed.traces[0].operationId)&&
+    (scenario!=='lost-reply'||observed.traces.length===2&&observed.traces[0].phase==='send'&&observed.traces[0].terminal==='failed'&&
+      observed.traces[1].phase==='readback'&&observed.traces[1].status===200);
+  results.push({slug,mode,scenario,outcome:passed&&traced?'passed':'failed',...observed,errors});
  }catch(error){results.push({slug,mode,scenario,outcome:'harness_error',message:error.message,errors});}finally{await context.close();}
 }}finally{await browser.close();await server.close();fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2),'utf8');}
 console.log(JSON.stringify({cases:results.length,passed:results.filter(r=>r.outcome==='passed').length,failures:results.filter(r=>r.outcome!=='passed').slice(0,3)}));

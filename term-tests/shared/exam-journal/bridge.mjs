@@ -224,14 +224,26 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
         return observer;
       }catch{return null;}
     },
-    startRequest(path,options = {}) {
-      if (!current) return null;
+    startRequest(path,options = {},trace) {
+      if (!current || JSON.stringify(proofOf(getState()))!==ownerKey) return null;
       const captured=copy(current),requestId = crypto.randomUUID(),route = safeRoute(path),began = performance.now();
-      recorder.record('request_started',{requestId,route,method:String(options.method || 'GET')},captured);
-      return {requestId,done(result,error) { recorder.record(error ? 'request_failed' : 'request_finished',{
-        requestId,route,durationMs:performance.now() - began,operationStatus:error ? 'client_handler_failed' : 'client_handler_returned',
-        errorCode:error ? String(error.name || 'Error').slice(0,80) : '',
-        ...(Number.isSafeInteger(result?.revision) ? {ackRevision:result.revision} : {}) },captured);stateChanged('request_finished'); }};
+      const method=String(options.method || 'GET');
+      const details=trace&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(trace.operationId)
+        &&['single','send','readback'].includes(trace.phase)
+        ? {checkpointState:{operationId:trace.operationId,phase:trace.phase}} : {};
+      recorder.record('request_started',{requestId,route,method,...details},captured);
+      let finished=false;
+      return {requestId,done(result,error,status) {
+        if(finished)return;
+        finished=true;
+        recorder.record(error ? 'request_failed' : 'request_finished',{
+          requestId,route,method,durationMs:performance.now() - began,...details,
+          operationStatus:error ? 'client_handler_failed' : 'client_handler_returned',
+          ...(Number.isInteger(status)&&status>=100&&status<=599?{status}:{}),
+          errorCode:error ? String(error.name || 'Error').slice(0,80) : '',
+          ...(Number.isSafeInteger(result?.revision) ? {ackRevision:result.revision} : {}) },captured);
+        stateChanged('request_finished');
+      }};
     },
     dialog(message,outcome) {
       const state=getState();

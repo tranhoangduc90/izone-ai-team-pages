@@ -140,7 +140,7 @@
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null;
   if (appConfig.EXAM_JOURNAL_ENABLED === true) {
-    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v1').then(({ connectExamJournal }) => {
+    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug,
         testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
@@ -800,29 +800,29 @@
   }
 
   async function apiRequest(path, options = {}) {
-    let journalRequest;
-    try { if (typeof examJournal !== 'undefined') journalRequest = examJournal?.startRequest(path, options); } catch {}
-    try { if (!journalRequest) journalRequest = window.EXAM_JOURNAL_STARTUP?.startRequest(path, options); } catch {}
-    if (journalRequest?.requestId) { try { const headers = new Headers(options.headers || {}); headers.set('x-exam-journal-request-id', journalRequest.requestId); options = { ...options, headers: Object.fromEntries(headers) }; } catch {} }
-    const journalRun = async () => {
+    let operationId;
+    try {
+      if ((typeof examJournal !== 'undefined' && examJournal) || window.EXAM_JOURNAL_STARTUP) operationId = crypto.randomUUID();
+    } catch {}
     const match = path.match(/^\/api\/term-tests\/([^/]+)\/(listening|reading)$/);
     if (options.method !== 'POST' || !match) {
-      const data = await rawApiRequest(path, options);
+      const data = await rawApiRequest(path, options, operationId ? { operationId, phase: 'single' } : undefined);
       // Những thao tác ngoài nộp L/R giữ contract hiện hành.
       return data;
     }
     const section = match[2], testSlug = match[1];
     const getOwner = () => JSON.stringify([storageKey, state.studentRef, state.examSessionToken, state.attemptToken, state.generation || 0]);
     const owner = getOwner();
+    const trace = (id, phase) => id && getOwner() === owner ? { operationId: id, phase } : undefined;
     const body = { ...JSON.parse(options.body || '{}'), ...(paperMini ? { generation: state.generation || 0 } : {}) };
-    const { submitSection } = await import('../shared/section-submission.mjs?v=20261023-v1');
-    const data = await submitSection({ state, section, body, testSlug, owner, getOwner, save: saveSession,
-      send: value => rawApiRequest(path, { ...options, body: JSON.stringify(value) }),
-      read: async value => {
+    const { submitSection } = await import('../shared/section-submission.mjs?v=20261023-v1&diagnostics=20261105-v2');
+    const data = await submitSection({ state, section, body, testSlug, owner, getOwner, operationId, save: saveSession,
+      send: (value, id) => rawApiRequest(path, { ...options, body: JSON.stringify(value) }, trace(id, 'send')),
+      read: async (value, id) => {
         try { return await rawApiRequest(`/api/term-tests/${testSlug}/submission-status`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...value, section })
-        }); } catch (error) {
+        }, trace(id, 'readback')); } catch (error) {
           if (error.status === 404 && error.code === 'SUBMISSION_NOT_FOUND') return { ok: true, persisted: false };
           throw error;
         }
@@ -830,14 +830,9 @@
     });
     // Chỉ trả bản đã được xác nhận; handler mới được chuyển phần.
     return data;
-
-    };
-    if (!journalRequest) return journalRun();
-    try { const result = await journalRun(); try { journalRequest.done(result); } catch {} return result; }
-    catch (error) { try { journalRequest.done(undefined, error); } catch {} throw error; }
   }
 
-  async function rawApiRequest(path, options = {}) {
+  async function rawApiRequest(path, options = {}, trace) {
     if (window.K56_DEMO_RESETTING) throw new Error('Lượt demo đang được reset. Hãy chọn lại học viên sau khi tải trang.');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -848,12 +843,28 @@
       options={...options,body:JSON.stringify({...JSON.parse(options.body||'{}'),attemptMode:'answer_sheet',generation:state.generation||0})};
     }
     if(mutating){++paperBusy;if(paperChange)paperChange.disabled=true;}
+    let observation, status;
     try {
+      if (trace) {
+        try {
+          observation = (typeof examJournal !== 'undefined' && examJournal?.startRequest(path, options, trace))
+            || window.EXAM_JOURNAL_STARTUP?.startRequest(path, options, trace);
+        } catch {}
+      }
+      let headers = { ...(options.headers || {}) };
+      if (observation?.requestId) {
+        try {
+          const tracedHeaders = new Headers(options.headers || {});
+          tracedHeaders.set('x-exam-journal-request-id', observation.requestId);
+          headers = Object.fromEntries(tracedHeaders);
+        } catch {}
+      }
       const response = await fetch(`${appConfig.API_BASE_URL}${path}`, {
         ...options,
         signal: controller.signal,
-        headers: { ...(options.headers || {}) }
+        headers
       });
+      status = response.status;
       const data = await response.json().catch(() => ({}));
       if(paperMini&&!identityRead&&(epoch!==paperEpoch||owner!==storageKey)) throw new Error('Bạn đã đổi người học. Phản hồi cũ không được dùng.');
       if (window.K56_DEMO_RESETTING) throw new Error('Phản hồi thuộc lượt demo vừa reset đã được bỏ qua.');
@@ -865,8 +876,10 @@
           ? Number(retryAfter) * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now()) || 0;
         throw requestError;
       }
+      try { observation?.done(data, undefined, status); } catch {}
       return data;
     } catch (error) {
+      try { observation?.done(undefined, error, status); } catch {}
       if (error.name === 'AbortError') throw new Error('Máy chủ phản hồi quá chậm. Vui lòng thử lại.');
       throw error;
     } finally {

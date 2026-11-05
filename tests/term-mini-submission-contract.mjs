@@ -20,9 +20,12 @@ test('Commit rồi mất phản hồi: đọc lại đúng bài, một yêu cầ
  assert.equal((await h.run()).attemptToken,token);assert.deepEqual(h.state.pendingSubmissions,{});
 });
 test('Phản hồi rỗng và đọc cũng lỗi: giữ snapshot qua reload, retry không gửi bài vừa sửa',async()=>{
- const h=harness({send:async()=>({}),read:async()=>{throw Error('offline');}});
- await assert.rejects(h.run());const restored=JSON.parse(JSON.stringify(h.state));let writes=0;
- const out=await submitSection({...input(),body:{...input().body,answers:{1:'B'}},state:restored,owner:'owner',getOwner:()=>'owner',save(){},send:async b=>{writes++;assert.equal(b.answers[1],'A');return response();},read:async()=>({ok:true,persisted:false})});
+ const operationId='66666666-6666-4666-8666-666666666666';
+ const h=harness({send:async(_body,operation)=>{assert.equal(operation,operationId);return {};},read:async()=>{throw Error('offline');}});
+ await assert.rejects(h.run({operationId}));const restored=JSON.parse(JSON.stringify(h.state));let writes=0;
+ const out=await submitSection({...input(),body:{...input().body,answers:{1:'B'}},state:restored,owner:'owner',getOwner:()=>'owner',save(){},operationId:'77777777-7777-4777-8777-777777777777',
+  send:async (b,operation)=>{writes++;assert.equal(b.answers[1],'A');assert.equal(operation,operationId);return response();},
+  read:async(_body,operation)=>{assert.equal(operation,operationId);return {ok:true,persisted:false};}});
  assert.equal(out.attemptToken,token);assert.equal(writes,1);
 });
 test('Retry đọc thấy đã lưu: không gửi lại/chấm lại',async()=>{const h=harness({send:async()=>({}),read:async()=>{throw Error('offline');}});await assert.rejects(h.run());assert.equal((await h.run({read:async()=>receipt(),send:async()=>assert.fail('must not write')})).attemptToken,token);});
