@@ -6,12 +6,25 @@
   if(new URLSearchParams(location.search).get('server')!=='1'&&!window.READING67_API_BASE)return;
   const prefix=window.READING67_API_BASE||new URL('../api/reading-skills67',location.href).pathname;
   const observerModule=new URL('../shared/test-state-observer.mjs?v=20261101-state1',document.currentScript?.src||new URL('web-client.js',location.href)).href;
+  const journalModule=new URL('../shared/reading-homework-journal.mjs?v=20261105-r1',document.currentScript?.src||new URL('web-client.js',location.href)).href;
   let revision=0,identity=null,content=null,pending=null,processing=null,timer=null,pollTimer=null,generation=0,backupKey='',submitKey='',access=null,runNo=1,initialHistory=null;
   const state={status:'loading',savedAt:null,error:null,conflict:false,completeness:null,homework:null};
   let homeworkTimer=null,homeworkRead=0;
   let observer=null,observerTimer=null,observerStarting=false,observerCleanup=null,observationGeneration=0,unsupported=false,blocked=null,watchedId=null,watchedUpdate=null,lastAttempt=null,lastVisible=null;
   const visibleAttempt=value=>JSON.stringify([value.attemptId,value.status,value.errorCode,value.snapshot,value.result,value.validationProgress,value.recovery]);
   let practiceWatch=null,practiceFrame=null;
+  let journal=null,journalBinding=null,journalEpoch=0;
+  function bindJournal(context){
+    const epoch=++journalEpoch;journalBinding=null;
+    if(!context||context.ownerId!==identity?.ownerId||context.courseId!==identity?.courseId||context.runNo!==runNo){
+      journal?.stop();journal=null;return;
+    }
+    if(journal){journalBinding=journal.bind(context);return;}
+    void import(journalModule).then(module=>{
+      if(epoch!==journalEpoch)return;
+      journal=module.startReadingHomeworkJournal(prefix+'/journal-events');journalBinding=journal.bind(context);
+    }).catch(()=>{});
+  }
   function deliverPractice(frame,id){
     practiceFrame={frame,id};const watch=practiceWatch;if(!watch)return;
     const value=watch.attemptId?(watch.attemptId===id?frame.attemptPractice:null):frame.practice;if(!value)return;
@@ -69,12 +82,16 @@
     return true;
   }
   function emit(){window.dispatchEvent(new CustomEvent('reading67:server-state',{detail:{...state,revision}}));}
-  async function request(url,options={},repeat=true){
+  async function request(url,options={},repeat=true,observation){
     let response;
     if(blocked)throw Object.assign(new Error(blocked.code),{code:blocked.code,status:blocked.status});
+    let observe;try{observe=observation?.binding?.begin(observation);}catch{}
+    const report=(...args)=>{try{observe?.(...args);}catch{}};
     try{response=await fetch(url,{credentials:'include',...options,headers:{'Content-Type':'application/json',...window.Reading67Access?.headers,...options.headers},signal:options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(30000)]):AbortSignal.timeout(30000)});}
-    catch(error){if(options.signal?.aborted)throw error;if(repeat)return request(url,options,false);throw Object.assign(new Error('Mất kết nối máy chủ. Bản đang viết được giữ trên thiết bị.'),{code:'NETWORK_ERROR'});}
-    const value=await response.json();if(!response.ok){const error=Object.assign(new Error(value.error),{code:value.error,details:value.details,status:response.status});const retry=response.headers.get('Retry-After');if(retry)error.retryAfterMs=/^\d+$/.test(retry)?Number(retry)*1000:Math.max(0,Date.parse(retry)-Date.now());throw error;}return value;
+    catch(error){report('unknown');if(options.signal?.aborted)throw error;if(repeat)return request(url,options,false,observation);throw Object.assign(new Error('Mất kết nối máy chủ. Bản đang viết được giữ trên thiết bị.'),{code:'NETWORK_ERROR'});}
+    let value;try{value=await response.json();}catch(error){report('unknown',response.status);throw error;}
+    report(response.ok?'confirmed':'rejected',response.status,value?.revision??value?.draftRevision);
+    if(!response.ok){const error=Object.assign(new Error(value.error),{code:value.error,details:value.details,status:response.status});const retry=response.headers.get('Retry-After');if(retry)error.retryAfterMs=/^\d+$/.test(retry)?Number(retry)*1000:Math.max(0,Date.parse(retry)-Date.now());throw error;}return value;
   }
   const json=(method,body)=>({method,body:JSON.stringify(body)});
   // Chỉ đọc trạng thái SQL; Google xử lý riêng. Không đổi ACK lưu bài khi Docs lỗi.
@@ -101,10 +118,13 @@
     if(state.conflict)throw Object.assign(new Error('Bản máy chủ đã thay đổi. Giữ bản đang viết và đối chiếu trước khi ghi tiếp.'),{code:'DRAFT_REVISION_CONFLICT'});
     if(!pending)return;
     const operation=pending;operation.baseRevision=revision;saveBackup();
+    const captured=journalBinding;
+    try{captured?.queued(operation.mutationId,operation.baseRevision);}catch{}
     state.status='saving';emit();
     processing=(async()=>{
       try{
-        const value=await request(prefix+'/draft'+(access?.config?.capabilities?.compactDraftAck?'?ack=compact-v1':''),json('PUT',operation));
+        const value=await request(prefix+'/draft'+(access?.config?.capabilities?.compactDraftAck?'?ack=compact-v1':''),json('PUT',operation),true,
+          {binding:captured,kind:'draft.exchange',traceId:operation.mutationId,baseRevision:operation.baseRevision});
         revision=value.revision;runNo=value.runNo||runNo;state.savedAt=value.savedAt;state.completeness=value.completeness;
         if(pending===operation){pending=null;localStorage.removeItem(backupKey);state.status='saved';}
         else{pending.baseRevision=revision;saveBackup();state.status='dirty';}
@@ -122,8 +142,10 @@
     identity=lesson.identity;content=lesson.content;
     backupKey='reading67-web-backup:'+identity.ownerId+':'+(['tfng','green-roofs','matching_people','sentence_completion'].includes(content.type)?identity.courseId+':':'')+content.code+':'+content.version;
     submitKey=backupKey+':submit';
-    const [draft,history]=await Promise.all([request(prefix+'/draft'),request(prefix+'/attempts')]);
+    const [draftReceipt,history]=await Promise.all([request(prefix+'/draft'),request(prefix+'/attempts')]);
+    const {readingJournal,...draft}=draftReceipt;
     revision=draft.revision;runNo=draft.runNo||1;initialHistory=history;state.savedAt=draft.savedAt;state.completeness=draft.completeness;state.status='saved';
+    bindJournal(readingJournal);
     let restored=false;
     try{const backup=JSON.parse(localStorage.getItem(backupKey)||'null');
       if(backup?.body&&backup.baseRevision===revision){pending=backup;draft.body=backup.body;state.status='dirty';restored=true;}
@@ -136,7 +158,9 @@
     try{remembered=JSON.parse(localStorage.getItem(submitKey)||'null');}catch{}
     const requestId=remembered?.revision===revision?remembered.requestId:crypto.randomUUID();
     localStorage.setItem(submitKey,JSON.stringify({revision,requestId}));
-    const value=await request(prefix+'/submit',json('POST',{revision,requestId}));lastAttempt=value;refreshHomework();return value;
+    const value=await request(prefix+'/submit',json('POST',{revision,requestId}),true,
+      {binding:journalBinding,kind:'submit.exchange',traceId:requestId,revision});
+    lastAttempt=value;refreshHomework();return value;
   }
   async function getAttempt(id,options={}){const scope=generation,value=await request(prefix+(access?.teacher?window.Reading67Access.teacherPath:'')+'/attempts/'+encodeURIComponent(id),options);if(scope===generation)lastAttempt=value;return value;}
   function stopPoll(){generation++;clearTimeout(pollTimer);watchedId=null;watchedUpdate=null;lastVisible=null;if(usesObservation())restartObservation();}
@@ -148,15 +172,16 @@
     watchedId=id;watchedUpdate=onUpdate;lastVisible=lastAttempt?.attemptId===id?visibleAttempt(lastAttempt):null;
     if(!restartObservation())legacyPoll(id,onUpdate,scope);
   }
-  async function changePerson(person){await flush();stopPoll();closeObservation();await request('/_preview/session',json('POST',{person}));location.href=location.pathname+'?server=1';}
+  async function changePerson(person){await flush();stopPoll();closeObservation();bindJournal(null);await request('/_preview/session',json('POST',{person}));location.href=location.pathname+'?server=1';}
   async function getDraft(){
-    const value=access?.teacher?(await request(prefix+window.Reading67Access.teacherPath)).draft:await request(prefix+'/draft');
-    revision=value.revision;runNo=value.runNo||runNo;state.savedAt=value.savedAt;state.completeness=value.completeness;return value;
+    const {readingJournal,...value}=access?.teacher?(await request(prefix+window.Reading67Access.teacherPath)).draft:await request(prefix+'/draft');
+    revision=value.revision;runNo=value.runNo||runNo;state.savedAt=value.savedAt;state.completeness=value.completeness;
+    if(!access?.teacher)bindJournal(readingJournal);return value;
   }
   async function getHistory(){const value=await historyDetail();initialHistory=value;return value.attempts;}
   async function historyDetail(){return access?.teacher?await request(prefix+window.Reading67Access.teacherPath):await request(prefix+'/attempts');}
-  async function changeIdentity(){await flush();stopPoll();closeObservation();await window.Reading67Access.change();}
-  async function reset(){if(access?.teacher)throw Error('Giảng viên chỉ xem.');await flush();const receipt=await request(prefix+'/reset',json('POST',{baseRevision:revision,mutationId:crypto.randomUUID()}));stopPoll();revision=receipt.revision;runNo=receipt.runNo;state.savedAt=receipt.savedAt;state.completeness=receipt.completeness;refreshHomework();return receipt;}
+  async function changeIdentity(){await flush();stopPoll();closeObservation();bindJournal(null);await window.Reading67Access.change();}
+  async function reset(){if(access?.teacher)throw Error('Giảng viên chỉ xem.');await flush();const {readingJournal,...receipt}=await request(prefix+'/reset',json('POST',{baseRevision:revision,mutationId:crypto.randomUUID()}));stopPoll();revision=receipt.revision;runNo=receipt.runNo;state.savedAt=receipt.savedAt;state.completeness=receipt.completeness;bindJournal(readingJournal);refreshHomework();return receipt;}
   async function practice(attemptId){const path=access?.teacher?'/teacher/work/'+encodeURIComponent(identity.courseId)+'/'+encodeURIComponent(identity.ownerId)+'/practice':'/practice';return request(prefix+path+(attemptId?'?attemptId='+encodeURIComponent(attemptId):''),{},false);}
   async function savePractice(body){return request(prefix+'/practice',json('POST',body));}
   function watchPractice(attemptId,update,fallback){
