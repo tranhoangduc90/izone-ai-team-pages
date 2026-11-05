@@ -1,7 +1,7 @@
 import {createCheckFeedback,missingCheckFields} from '../../../shared/writing-check-feedback.mjs?v=20261101-v1';
 import {PEOPLE,ACTIVITY,TASK,LABELS,fixture,wordCount} from './model.mjs?v=20261104-overview-v1';
 import {studentLayout,teacherLayout,esc,SECTION_FIELDS} from './lesson9-view.mjs?v=20261031-threads&overview=20261104-v1';
-import {connectedState,overviewState,SECTION,serverField} from './connected-adapter.mjs?v=20261104-overview-v1';
+import {connectedState,overviewState,SECTION,serverField} from './connected-adapter.mjs?v=20261104-overview-v1&vocabulary=20261105-v1';
 import {appendMarkdown} from '../js/markdown.js';
 import {renderLmsDraftResult} from '../js/lms-draft-result.js';
 import {installStyles} from '../lesson5-thu/features.mjs';
@@ -33,7 +33,7 @@ async function api(path,method='GET',body){
 }
 function message(text){notice=text;const node=$('#notice');if(node){node.textContent=text;if(conflict)node.insertAdjacentHTML('beforeend',' <button class="secondary" data-action="compare-conflict">Đối chiếu hai bản</button>');}const modal=$('#comment-status');if(modal)modal.textContent=text;}
 function cache(){if(!current)return;try{localStorage.setItem(namespace+current.sessionRef,JSON.stringify({studentRef:person.id,classRef:person.classRef,responses,baseVersion:current.draftVersion,dirty}));}catch{message('Chưa lưu được bản dự phòng trên thiết bị; hãy giữ tab và lưu máy chủ.');}}
-function state(raw=current,p=person,t=threads){return connectedState({...raw,responses:raw===current?responses:raw.responses},p,t);}
+function state(raw=current,p=person,t=threads){return connectedState({...raw,responses:raw===current?{...raw.responses,...responses}:raw.responses},p,t);}
 function banner(){return '';}
 function top(){return `<header class="topbar"><a class="brand" href="./index.html?task=${encodeURIComponent(ACTIVITY)}" aria-label="IZONE Writing"><img class="m170-logo handout-brand-mark" src="./shared/master170/assets/izone-logo-color.png" alt="IZONE — IELTS chiến lược" width="145" height="48"><span class="brand-divider"></span><span class="brand-product">Writing<span>Handout trên lớp</span></span></a><span>Speaking Writing chuyên sâu · Bài ${TASK?.number||'?'} · ${esc(TASK?.shortTitle||'Đề chưa xác định')}</span></header>`;}
 function fallbackPerson(){return person||PEOPLE[0];}
@@ -71,7 +71,7 @@ function draw({background=false}={}){
   if(save)save.parentElement.insertAdjacentHTML('beforeend','<button class="text-button" data-action="save">Lưu máy chủ</button><button class="text-button" data-action="refresh">Đọc cập nhật</button>');
   if(!teacher&&['shops-lesson9-v1','sw-task2-lesson9-v1'].includes(current.ui?.version)&&['topic_sentence','supporting_idea_1','supporting_idea_2'].every(key=>current.sections[key]?.locked)){
    if((current.ui.data.editedFields||[]).length&&$('#completion'))$('#completion').insertAdjacentHTML('beforeend','<p class="preview-vocab-note">Gợi ý thuộc bản nội dung đã chốt. Sau khi sửa, bạn có thể <button class="text-button" data-vocab-retry="all">lấy lại từ vựng</button>.</p>');
-   if(current.uiVocabulary?.status==='missing'&&!dirty&&!editor)void requestVocabulary();
+   if(current.uiVocabulary?.status==='missing'&&!s.deferredVocabulary&&!dirty&&!editor)void requestVocabulary();
   }
   for(const details of view.querySelectorAll('[data-history]')){
    const label=details.querySelector('.section-title')?.textContent||'',section=details.closest('[id^="step-"]')?.id.slice(5),index=Number(label.match(/Lần (\d+)/)?.[1])-1;
