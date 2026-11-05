@@ -7,7 +7,7 @@ import {learners,lessons,share} from './speaking-draft-server.mjs';
 
 // Renderer/module thật, fetch chỉ được đổi đích sang loopback. CSP của fixture
 // chặn mọi kết nối ngoài máy; không có DB, AI, Docs hoặc danh tính học viên thật.
-export async function startTrackingFixture(root,{port=0,journal=null,journalEnabled=false}={}){
+export async function startTrackingFixture(root,{port=0,journal=null,journalEnabled=false,nativeApi=null,nativeRef=null}={}){
  root=resolve(root);const records=new Map(),requests=[],streams=new Set();
  const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
  function record(number,ref=learners[0],store='independent'){
@@ -46,6 +46,8 @@ export async function startTrackingFixture(root,{port=0,journal=null,journalEnab
     for(const entry of streams)if(entry.current===current)send(entry);json(res,{});return;
    }
    if(url.pathname==='/__fixture/bootstrap.js'){
+    const target=typeof nativeApi==='function'?nativeApi():nativeApi;
+    if(target&&!/^http:\/\/127\.0\.0\.1:\d+\/api\/speaking-homework-independent$/.test(target))throw Error('FIXTURE_NATIVE_ENDPOINT_INVALID');
     res.writeHead(200,{'content-type':'text/javascript','cache-control':'no-store'});res.end(`{
      const nativeFetch=window.fetch.bind(window);window.__fixtureErrors=[];
      window.addEventListener('error',event=>window.__fixtureErrors.push(event.message));
@@ -54,7 +56,7 @@ export async function startTrackingFixture(root,{port=0,journal=null,journalEnab
       const source=typeof input==='string'?input:input instanceof URL?input.href:null;
       if(!source)return nativeFetch(input,options);
       const url=new URL(source,location.href),prefix='https://ducizone.ddns.net/mapping-api';
-      if(url.href.startsWith(prefix+'/api/speaking-homework-independent'))return nativeFetch('/__api/independent'+url.href.slice((prefix+'/api/speaking-homework-independent').length),options);
+      if(url.href.startsWith(prefix+'/api/speaking-homework-independent'))return nativeFetch((${JSON.stringify(target)}||'/__api/independent')+url.href.slice((prefix+'/api/speaking-homework-independent').length),options);
       if(url.href.startsWith(prefix+'/api/speaking-homework'))return nativeFetch('/__api/legacy'+url.href.slice((prefix+'/api/speaking-homework').length),options);
       if(url.href.startsWith(prefix+'/'))return nativeFetch('/__api/identity'+url.href.slice(prefix.length),options);
       return nativeFetch(input,options);
@@ -74,8 +76,9 @@ export async function startTrackingFixture(root,{port=0,journal=null,journalEnab
      const reply=await journal.collect(body,req.headers.origin);json(res,reply.body,reply.status);return;
     }
     if(path==='/api/student-identity/resolve'){
-     const index=body.studentRef?learners.indexOf(body.studentRef):body.identity?.id==='67890'?1:0;if(index<0)throw Error('FIXTURE_LEARNER_UNKNOWN');
-     json(res,{status:'unique',identity:{authority:'erp-contact',id:index?'67890':'12345'},aliases:[{classId:'111',classCode:'IC2304',studentRef:learners[index],studentName:`Hồ sơ thử ${index+1}`}]});return;
+     const fixed=typeof nativeRef==='function'?nativeRef():nativeRef;
+     const index=body.studentRef?body.studentRef===fixed?0:learners.indexOf(body.studentRef):body.identity?.id==='67890'?1:0;if(index<0)throw Error('FIXTURE_LEARNER_UNKNOWN');
+     json(res,{status:'unique',identity:{authority:'erp-contact',id:index?'67890':'12345'},aliases:[{classId:fixed?'1293':'111',classCode:'IC2304',studentRef:fixed&&index===0?fixed:learners[index],studentName:`Hồ sơ thử ${index+1}`}]});return;
     }
     if(path==='/classes'){json(res,{classes:[{classCode:'IC2304',ready:true,assignmentStatus:'open'}]});return;}
     if(path==='/identity/resolve'){json(res,{status:'unique',classCode:'IC2304',studentRef:current.ref});return;}
@@ -116,7 +119,9 @@ export async function startTrackingFixture(root,{port=0,journal=null,journalEnab
    let content=await readFile(file);
    if(file.endsWith(sep+'shared'+sep+'speaking-homework-journal.mjs')&&journalEnabled)
     content=content.toString().replace('export const speakingJournalEnabled=false;','export const speakingJournalEnabled=true;');
-   if(extname(file)==='.html')content=content.toString().replace("connect-src 'self' https://ducizone.ddns.net","connect-src 'self'")
+   const target=typeof nativeApi==='function'?nativeApi():nativeApi;
+   if(target&&!/^http:\/\/127\.0\.0\.1:\d+\/api\/speaking-homework-independent$/.test(target))throw Error('FIXTURE_NATIVE_ENDPOINT_INVALID');
+   if(extname(file)==='.html')content=content.toString().replace("connect-src 'self' https://ducizone.ddns.net","connect-src 'self'"+(target?' '+new URL(target).origin:''))
     .replace('<head>','<head><script src="/__fixture/bootstrap.js"></script>');
    res.writeHead(200,{'content-type':({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'})[extname(file)]||'application/octet-stream','cache-control':'no-store'});res.end(content);
   }catch(error){json(res,{error:'FIXTURE_ERROR',message:error.message},400);}
