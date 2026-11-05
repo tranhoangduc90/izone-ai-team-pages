@@ -1,5 +1,7 @@
 # AGENTS.md — izone-ai-team-pages (Frontend Pages)
 
+**Favicon chung — Đức yêu cầu 05/11/2026:** mọi web trong Pages dùng đúng biểu tượng logo của Progress Log tại `shared/izone-favicon.svg`, gồm trang học viên, giảng viên, bài mới và demo. Khai báo một `<link rel="icon" type="image/svg+xml">` với đường dẫn tương đối đúng theo URL và `<base>`; không dùng `data:,` hoặc icon chữ tự vẽ. Giữ các gói release bất biến; cập nhật qua gói mới. Xem [hướng dẫn và cách kiểm](docs/IZONE_FAVICON.md).
+
 ## 1. Phạm vi
 
 **Bảo toàn giao diện khi sửa hoặc tạo sản phẩm:** đọc [mốc master #170 và cách kiểm consumer](docs/MASTER170_INTERFACE_MEMORY.md). Kế thừa theme/adapter và bản sửa đã phát; không phục hồi Nunito/palette/DOM cũ từ skill/demo khi sản phẩm đã chuyển. Web mới trong phạm vi mặc định dùng master; lesson mới dùng engine/giao diện hiện hành. Giữ ngoại lệ toàn bộ Test, Progress Log và mọi handout Writing SW cùng nguồn dùng chung liên quan. Kiểm đúng màn/popup/trạng thái và consumer chịu tác động, kể cả nhóm loại trừ; báo rõ phần chưa kiểm. Đây là hướng dẫn chất lượng, không thêm cổng công cụ, Git hoặc phát hành.
