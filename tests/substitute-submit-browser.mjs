@@ -125,8 +125,13 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
   const ids=slug==='substitute-test-2-k67'?['task1','task2']:['task'+TESTS[slug].taskNumber];
   for(const [index,task]of ids.entries()){const editor=page.locator(`textarea[data-writing-task="${task}"]`);if(!await editor.isVisible())await page.locator('#writingTaskTabs button').nth(index).click();await editor.fill('Fictional original essay. '.repeat(85));}
   for(const failure of ['http','empty','malformed']){
-   fault=failure;const response=page.waitForResponse(r=>r.request().postData()?.includes('/api/test/writing'));await page.locator('#submitWriting').click();await response;
-   await page.waitForFunction(()=>document.querySelector('#notice')?.textContent.includes('Writing'));
+   fault=failure;
+   const response=page.waitForResponse(r=>{
+    try{return JSON.parse(r.request().postData()||'{}').route==='/api/test/writing';}catch{return false;}
+   });
+   await page.locator('#submitWriting').click();await response;
+   // Đợi cả bước đối soát status kết thúc; thông báo "đang gửi" chưa phải lỗi đã xử lý xong.
+   await page.waitForFunction(()=>document.querySelector('#notice')?.textContent.includes('Chưa xác nhận được trạng thái nộp Writing.'));
    assert.equal(await page.locator('#writingView').isVisible(),true);assert.equal(acceptedWriting,0);
   }
   const writingBefore=acceptedWriting;

@@ -25,4 +25,6 @@ API Substitute phải có phép sửa `writing-dispatch-receipt.mjs` ở repo ch
 
 Bằng chứng riêng máy Đức: `E:/Codex-Data/investigations/substitute-submit-20261104/`. Có ảnh desktop/hẹp, RED/GREEN, các runner cuối và readback phát hành. Bộ ca dùng dữ liệu giả không chứng minh một lớp thật mới đã thi trọn vẹn; không nộp/chấm lại bài học viên để lấp phần này.
 
+Hậu kiểm public 05/11: 38 tài nguyên khớp nội dung đã merge; sáu Term/Mini đạt kiểm trạng thái, ready và ba nhịp polling; cả bốn Substitute đạt hành trình gửi lặp, lỗi mạng, kiểm trạng thái và reload. Runner lỗi Writing chờ đúng response `/api/test/writing` và thông báo lỗi sau đối soát, tránh nhận nhầm response `/status` hoặc thông báo “đang gửi” là hoàn tất. API được giả lập trong browser; không gọi AI/Portal.
+
 Rollback frontend bằng commit hoàn tác, API bằng snapshot riêng của đúng workflow; giữ dữ liệu mới. Không reset storage hoặc restore dump để quay code.
