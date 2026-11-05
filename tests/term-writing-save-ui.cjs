@@ -37,6 +37,10 @@ test.before(async () => {
       const app=await readFile(sourceApp,'utf8');
       return res.end(process.env.D08_DEBUG==='1'?app.replace('function handleWritingSaveError(error) {','function handleWritingSaveError(error) { console.error(error.stack);'):app);
     }
+    if (req.url.split('?')[0] === '/term-tests/shared/writing-submission.mjs') {
+      res.writeHead(200, {'Content-Type':'text/javascript; charset=utf-8'});
+      return res.end(await readFile(join(root,'term-tests/shared/writing-submission.mjs'),'utf8'));
+    }
     if (req.url === '/term-tests/k56-exam-order.js') { res.writeHead(200, {'Content-Type':'text/javascript; charset=utf-8'}); return res.end(await readFile(join(root,'term-tests/k56-exam-order.js'),'utf8')); }
     if (req.url.split('?')[0] === '/term-tests/shared/exam-clock.js') {
       res.writeHead(200, {'Content-Type':'text/javascript; charset=utf-8'});

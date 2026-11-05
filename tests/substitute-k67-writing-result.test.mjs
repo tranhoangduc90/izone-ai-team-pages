@@ -15,6 +15,9 @@ function render(grading, twoTaskWriting = false) {
   const target = new Element();
   let opened;
   const context = {
+    // Controller được kiểm riêng; ca này chỉ sở hữu cách render điểm và chọn đúng Task.
+    writingSubmission: {sync() {}, owner: () => 'fixture-writing'},
+    writingSubmissionRenderSignature: '',
     twoTaskWriting,
     writingConfig: {tasks: twoTaskWriting ? [{id:'task1',label:'Writing Task 1'},{id:'task2',label:'Writing Task 2'}] : [{id: 'task2', label: 'Writing Task 2'}]},
     state: {writingSubmitted: true, result: {writing: {grading}}},
