@@ -7,7 +7,7 @@ import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss}
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
 import {createCourseStudentIdentity,requestMappingStudentIdentity} from '../shared/course-student-identity.js?v=20261018-identity-v1';
 import {keywordSelection} from './thuy-live/keyword-selection.js';
-import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261104-the25-v1';
+import {renderThuyLearner} from './thuy-live/learner-view.js?rev=20261105-lesson-only-v1';
 import {comparisonTable} from './thuy-live/comparison-table.js?rev=20261022-parity-v1';
 import {docsSourceTable} from './docs-source-table.js?rev=20261025-docs-import-v1';
 import {questionPresentation,buildKeywordGroup} from './thuy-live/question-presentation.js?rev=20261022-parity-v1';
@@ -242,12 +242,14 @@ function installStudentMemory() {
 let commentPoller=null;
 let studentDashboard=null;
 if(THUY_UI&&!config.DEMO_COMPACT_PREVIEW){
-  const before=document.createElement('div'),after=document.createElement('div');before.id='studentDashboardLatest';after.id='studentDashboardSessions';
+  const before=document.createElement('div'),after=document.createElement('div');before.id='studentDashboardLatest';after.id='studentDashboardSessions';after.hidden=true;
   elements.reflectionForm.before(before);elements.reflectionForm.after(after);
   studentDashboard=createStudentSessionDashboard({before,after,onOpen:openDashboardSession,onRetry:()=>void loadStudentDashboard({force:true}),onJourney:()=>void openIntegratedJourney('formView')});
 }
 const dashboardStudent=()=>state.attempt?.identity?.studentRef||state.thuyReadOnly?.student?.studentRef||state.confirmedStudent?.studentRef;
 function renderDashboardViews(){
+  const sessions=document.getElementById('studentDashboardSessions');
+  if(sessions)sessions.hidden=Boolean(state.attempt||state.thuyReadOnly);
   if(!state.journeyData)return;
   if(!elements.journeyView.hidden)renderIntegratedJourney(state.journeyData);
   if(!elements.formView.hidden)studentDashboard?.render(state.journeyData,{currentId:state.assignment.assignmentId,
@@ -1314,7 +1316,7 @@ function renderCheckpoint() {
     elements.questionList.classList.remove('referenceRegion','student-review-compact');
     renderThuyLearner({state,elements,blocks:allBlocks(),buildQuestions:buildCheckpointQuestions,
       canSubmit:!state.dashboardDenied&&!state.thuyReadOnly&&windowCanSubmit(observedWindow,performance.now()),releaseFor,onSubmit:index=>{if(!state.dashboardDenied)void submitThuyPart(index);},
-      onRetry:()=>void completeThuyForm(),onJourney:()=>void openIntegratedJourney('formView'),onRefresh:renderCheckpoint});
+      onRetry:()=>void completeThuyForm(),onRefresh:renderCheckpoint});
     const comments=document.createElement('div');comments.id='thuyComments';const comment=commentPanel(state.thuyComments?.find(n=>n.sessionNumber===state.assignment.sessionNumber));if(comment)comments.append(comment);elements.questionList.append(comments);
     refreshConditionalQuestions();renderSubmissionWindow();
     window.requestAnimationFrame(()=>{for(const control of elements.questionList.querySelectorAll('.sentence-blank'))resizeSentenceBlank(control);});return;

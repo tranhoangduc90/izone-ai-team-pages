@@ -3,7 +3,7 @@
 import {partFeedback} from './part-feedback.js?rev=20261030-the17-19-v1';
 import {studentInstructions} from '../student-instructions.js?rev=20261104-the25-v1';
 function node(tag,text='',className='') {const e=document.createElement(tag);e.textContent=text;e.className=className;return e;}
-export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmit,releaseFor,onSubmit,onRetry,onJourney,onRefresh}) {
+export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmit,releaseFor,onSubmit,onRetry,onRefresh}) {
   const root=elements.questionList,expanded=state.thuyExpanded??=new Set();
   root.replaceChildren();
   elements.checkpointLabel.textContent=`${state.assignment.class.name} · BUỔI ${state.assignment.sessionNumber}`;
@@ -51,5 +51,4 @@ export function renderThuyLearner({state,elements,blocks,buildQuestions,canSubmi
   }
   elements.previousButton.hidden=elements.nextButton.hidden=elements.submitButton.hidden=true;
   elements.progressBar.style.width=`${blocks.length?count/blocks.length*100:0}%`;
-  const journey=node('button','Kết quả học tập','button');journey.type='button';journey.addEventListener('click',onJourney);root.append(journey);
 }
