@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://ducizone.ddns.net https://tranhoangduc90.github.io https://res.cloudinary.com; media-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
+<link rel="stylesheet" href="style.css?v=20261105-v1"><title>Listening thi lại · IC2311 · IZONE</title>
+</head><body>
+<header class="brand"><img src="../substitute-shared/izone-logo-color.png" alt="IZONE · IELTS Chiến lược" width="120" height="44"><a href="teacher.html">Giảng viên</a></header>
+<main>
+ <div class="title"><span class="eyebrow">LISTENING · THI LẠI</span><h1>Listening · IC2311</h1><p>Substitute Test 1 · Khóa 56 · 40 câu · nghe một lượt và 5 phút rà đáp án</p></div>
+ <section id="identity" class="card"><h2>Xác nhận học viên</h2>
+  <div class="identity-grid"><label>Lớp<select id="class" disabled><option>IC2311</option></select></label><label>Họ và tên<select id="student"><option value="">Đang tải danh sách…</option></select></label></div>
+  <label class="check"><input type="checkbox" id="identity-confirm">Tôi xác nhận đã chọn đúng tên của mình.</label>
+  <button id="prepare" disabled>Chuẩn bị bài thi</button><p id="identity-status" role="status"></p>
+ </section>
+ <section id="preparation" class="card" hidden><h2>Chuẩn bị và kiểm tra âm thanh</h2>
+  <ol id="checks"><li id="check-content">Nội dung bài và sơ đồ</li><li id="check-storage">Bộ nhớ lưu bài trên thiết bị</li><li id="check-permit">Quyền thi khi mất mạng</li><li id="check-audio">Tải toàn bộ audio và kiểm tra file</li><li id="check-player">Trình phát đã sẵn sàng</li></ol>
+  <progress id="download" max="1" value="0" aria-label="Tiến độ tải audio"></progress><p id="prepare-status" role="status"></p>
+  <button id="retry-preparation" hidden>Thử chuẩn bị lại</button>
+  <div id="trial" hidden><p>Đeo tai nghe, kiểm tra âm lượng rồi bấm nghe thử. Hệ thống kiểm tra khoảng 11 giây phát thực tế trước khi cho bắt đầu.</p>
+   <button id="preview">Nghe thử</button><span id="preview-status" role="status"></span>
+   <label class="volume">Âm lượng<input id="volume" type="range" min="0.1" max="1" step="0.05" value="1"></label>
+   <label class="check"><input id="heard" type="checkbox" disabled>Tôi đã nghe rõ và sẵn sàng làm bài.</label>
+   <button id="start" disabled>Bắt đầu thi Listening</button>
+  </div>
+ </section>
+ <div id="notice" class="notice" role="status" hidden></div>
+ <section id="exam" hidden>
+  <div class="exam-bar"><div><strong id="learner"></strong><span id="phase-label"></span><span id="save-status" role="status"></span></div><div><button class="secondary" id="audio-problem">Tôi không nghe được</button><button id="submit">Nộp bài Listening</button></div></div>
+  <nav id="section-nav" aria-label="Chọn phần nghe"></nav>
+  <form id="answers" autocomplete="off"><div id="questions"></div></form>
+ </section>
+ <section id="finished" class="card" hidden><h2 id="finish-title">Bài làm đã được khóa</h2><p id="finish-message" role="status"></p><p id="receipt"></p><button id="sync-now" class="secondary">Kiểm tra và gửi lại</button><button id="check-new-attempt" class="secondary" hidden>Kiểm tra lượt mới do giảng viên cấp</button></section>
+ <audio id="audio" preload="none"></audio>
+</main>
+<dialog id="confirm-submit"><h2>Nộp bài Listening?</h2><p id="confirm-text"></p><p>Sau khi xác nhận, bài làm sẽ được khóa. Nếu mất mạng, bài được giữ trên thiết bị để gửi lại.</p><div class="dialog-actions"><button id="cancel-submit" class="secondary">Tiếp tục làm bài</button><button id="accept-submit">Xác nhận nộp bài</button></div></dialog>
+<dialog id="technical"><h2>Kiểm tra âm thanh</h2><p id="technical-text">Audio đã tạm dừng. Kiểm tra tai nghe, dây kết nối và âm lượng. Khi nghe được, bạn có thể thử tiếp tục một lần ở đúng vị trí đang dừng.</p><div class="dialog-actions"><button id="stop-technical" class="secondary">Dừng và liên hệ giảng viên</button><button id="resume-technical">Đã kiểm tra thiết bị · Tiếp tục</button></div></dialog>
+<script src="boot.js?v=20261105-v1"></script>
+</body></html>

@@ -1,0 +1,23 @@
+// Schema v1 pinned to services/listening-retake/src/observability.mjs; parity tested.
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const safeText=new Set(['eventName','emitter','errorCode','errorOrigin','phase','exceptionName','buildVersion','runtimeId','runtimeInstanceId','contentVersion','controllerVersion','product','testSlug','classCode','studentInternalId','endpointId','method','outcome','abortReason','reason','actor','callsiteId','controllerStateBefore','controllerStateAfter','sourceKind','assetId','verifiedAudioSha256','operationKind','dbStatementId','serverOutcome','submitReason','gapReason','responseDecision','sqlState']);
+const ids=new Set(['eventId','requestId','operationId','attemptId','tabId','audioOwnerId','recoveryId','pageInstanceId','spanId','parentSpanId','decisionId','commandId','causedByRequestId','causedByEventId','receiptId']);
+const times=new Set(['occurredAt','receivedAt','serverAckedAt','lastPositionAdvanceAt','assetVerifiedAt','windowStart','windowEnd','firstDroppedAt','lastDroppedAt']);
+const booleans=new Set(['paused','ended','muted','connectionClosed','responseFinished','clientRequestIdAccepted','retryable','persisted','dataUnavailable']);
+const numbers=new Set(['schemaVersion','sequence','generation','retryIndex','clientMonoMs','timeoutMs','elapsedMs','headerElapsedMs','bodyElapsedMs','httpStatus','upstreamStatus','queueWaitMs','dbPoolWaitMs','dbExecutionMs','dbCommitMs','handlerMs','totalMs','revisionSent','revisionReceived','revisionBefore','revisionAfter','revisionApplied','acceptedRevision','serverAckedHeardSeconds','playerCurrentTime','readyState','mediaErrorCode','playbackRate','volume','verifiedAudioBytes','lastPositionAdvanceMonoMs','lastAdvancedPosition','lastAdvanceAgeMs','positionBefore','positionAfter','targetSeconds','observedSeconds','consecutiveNoProgressRecoveries','recoveryAttemptIndex','droppedCount','firstDroppedSequence','lastDroppedSequence','activeRequests','queuedRequests','sampleCount','timeoutCount','status429','status5xx','maxMs','p95Ms','poolInUse','poolIdle','poolMax','poolWaiting','cpuPercent','ramBytes','eventLoopP95Ms','eventLoopMaxMs','cpuThrottledUsec','cpuThrottledCount','cpuQuotaMicros','cpuPeriodMicros']);
+const errorCodes=new Set(['UNCLASSIFIED_EXCEPTION','CLIENT_TIMEOUT','FIRST_BYTE_TIMEOUT','DOWNLOAD_STALLED','NETWORK_UNREACHABLE','FETCH_FAILED_UNCLASSIFIED','USER_CANCELLED','NAVIGATION_ABORTED','SUPERSEDED_REQUEST_ABORTED','HTTP_ERROR','API_CONTRACT_MISMATCH','API_UNAVAILABLE','UPSTREAM_TIMEOUT','RATE_LIMITED','AUDIO_HTTP_ERROR','AUDIO_SIZE_MISMATCH','AUDIO_HASH_MISMATCH','AUDIO_DURATION_MISMATCH','AUDIO_BLOB_UNAVAILABLE','AUDIO_SOURCES_EXHAUSTED','AUDIO_RESPONSE_STALE','AUDIO_PROGRESS_STALE','AUDIO_GENERATION_STALE','AUDIO_OWNER_CONFLICT','AUDIO_CONTRACT_MISMATCH','OPERATION_CONFLICT','PLAYER_NO_PROGRESS','PLAYER_NOT_REAL_TIME','PLAY_NOT_ALLOWED','PLAY_NOT_SUPPORTED','PLAY_FAILED','MEDIA_COMMAND_FAILED','LOCAL_PERSIST_FAILED','LOG_QUEUE_DROPPED','LOG_COLLECTOR_UNAVAILABLE','LOG_ARCHIVE_EXPORT_FAILED','DB_POOL_TIMEOUT','DB_CONNECTION_UNAVAILABLE','DB_EXECUTION_FAILED','DB_COMMIT_OUTCOME_UNKNOWN','PERMIT_INVALID','STUDENT_NOT_ALLOWED','ATTEMPT_LOCKED','ATTEMPT_NOT_FOUND','ALREADY_SUBMITTED','TEACHER_REOPEN_REQUIRED','SSO_LOGIN_REQUIRED','SSO_UNAVAILABLE','TEACHER_NOT_ALLOWED','CSRF_DENIED','ORIGIN_DENIED','NOT_FOUND','REQUEST_TOO_LARGE','JSON_INVALID','PREPARE_INVALID','FILTER_INVALID','EVENTS_INVALID','OPERATION_INVALID','SNAPSHOT_INVALID','ANSWERS_INVALID','TIMING_INVALID','SUBMISSION_INVALID','AUDIO_NOT_FINISHED','REOPEN_NOT_ALLOWED']);
+numbers.add('dbPoolP95Ms');numbers.add('dbPoolMaxMs');
+export function sanitize(input){
+ const out={};if(!input||typeof input!=='object')return out;
+ for(const[k,v]of Object.entries(input)){
+  if(safeText.has(k)&&typeof v==='string'&&v.length<=120&&/^[\w.:-]*$/.test(v))out[k]=v;
+  else if(ids.has(k)&&(v===null||UUID.test(v)))out[k]=v;
+  else if(times.has(k)&&(v===null||typeof v==='string'&&/Z$/.test(v)&&Number.isFinite(Date.parse(v))))out[k]=v;
+  else if(booleans.has(k)&&typeof v==='boolean')out[k]=v;
+  else if(numbers.has(k)&&(v===null||typeof v==='number'&&Number.isFinite(v)))out[k]=v;
+  else if(['audioBefore','audioAfter'].includes(k)&&v&&typeof v==='object')out[k]=sanitize(v);
+ }
+ if(out.errorCode&&!errorCodes.has(out.errorCode))out.errorCode='UNCLASSIFIED_EXCEPTION';
+ if(out.exceptionName&&!['AbortError','TimeoutError','TypeError','Error','Fault','DOMException','NotAllowedError','NotSupportedError','OtherError'].includes(out.exceptionName))out.exceptionName='OtherError';
+ return out;
+}
