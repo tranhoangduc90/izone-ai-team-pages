@@ -115,7 +115,17 @@ export async function startFixture(root, options = {}) {
       res.end(content);
     } catch (error) { res.writeHead(400); res.end(error.message); }
   });
-  await new Promise(resolve => server.listen(options.port || 0, '127.0.0.1', resolve));
+  const listen=port=>new Promise((resolve,reject)=>{
+    const fail=error=>reject(error);server.once('error',fail);
+    server.listen(port,'127.0.0.1',()=>{server.off('error',fail);resolve();});
+  });
+  await listen(options.port || 0);
+  // Windows may assign 2049 for port0; Chromium blocks that NFS port.
+  if(server.address().port===2049){
+    await new Promise(resolve=>server.close(resolve));
+    for(let attempt=0;;attempt++)try{await listen(49152+Math.floor(Math.random()*16000));break;}
+      catch(error){if(error.code!=='EADDRINUSE'||attempt>=2)throw error;}
+  }
   return { origin: `http://127.0.0.1:${server.address().port}`, requests, record, get openCount() { return openCount; },
     setFailOpen(value) { failOpen = value; }, close: () => new Promise(resolve => server.close(resolve)) };
 }

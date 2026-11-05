@@ -7,7 +7,7 @@ import {learners,lessons,share} from './speaking-draft-server.mjs';
 
 // Renderer/module thật, fetch chỉ được đổi đích sang loopback. CSP của fixture
 // chặn mọi kết nối ngoài máy; không có DB, AI, Docs hoặc danh tính học viên thật.
-export async function startTrackingFixture(root,{port=0}={}){
+export async function startTrackingFixture(root,{port=0,journal=null,journalEnabled=false}={}){
  root=resolve(root);const records=new Map(),requests=[],streams=new Set();
  const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
  function record(number,ref=learners[0],store='independent'){
@@ -68,6 +68,11 @@ export async function startTrackingFixture(root,{port=0}={}){
     const lesson=lessons.find(item=>item.code===body.assignmentCode)||selected?.lesson||lessons.find(item=>item.number===8);
     const current=selected||record(lesson.number,body.studentRef||learners[0],intake);
     requests.push({at:Date.now(),path,store,number:current.number,ref:current.ref});
+    const requestId=req.headers['x-exam-journal-request-id'];
+    if(typeof requestId==='string'&&/^[a-f0-9-]{36}$/i.test(requestId)){requests.at(-1).requestId=requestId;res.setHeader('x-exam-journal-request-id',requestId);}
+    if(path==='/journal-events'&&journal){
+     const reply=await journal.collect(body,req.headers.origin);json(res,reply.body,reply.status);return;
+    }
     if(path==='/api/student-identity/resolve'){
      const index=body.studentRef?learners.indexOf(body.studentRef):body.identity?.id==='67890'?1:0;if(index<0)throw Error('FIXTURE_LEARNER_UNKNOWN');
      json(res,{status:'unique',identity:{authority:'erp-contact',id:index?'67890':'12345'},aliases:[{classId:'111',classCode:'IC2304',studentRef:learners[index],studentName:`Hồ sơ thử ${index+1}`}]});return;
@@ -80,10 +85,20 @@ export async function startTrackingFixture(root,{port=0}={}){
     if(path==='/session/start-selected'){json(res,{session:{accessToken:current.token,classCode:'IC2304',studentRef:current.ref,documentId:current.documentId,
      ...(intake==='legacy'?{intakeMode:'legacy'}:{workUnitId:current.unitId})}});return;}
     if(!selected||selected.store!==store){json(res,{error:'SESSION_INVALID',message:'Phiên giả không hợp lệ'},403);return;}
+    if(path==='/journal-context'&&journal){
+     if(journal.contextUnavailable){json(res,{error:'FIXTURE_JOURNAL_UNAVAILABLE'},503);return;}
+     if(journal.contextDelayMs)setTimeout(()=>{if(!res.destroyed)json(res,{journalContext:journal.context(current)});},journal.contextDelayMs);
+     else json(res,{journalContext:journal.context(current)});return;
+    }
     if(current.failStatus){json(res,{error:'FIXTURE_READ_ERROR',message:'Lỗi đọc thử nghiệm'},current.failStatus);return;}
     if(path==='/open'){json(res,open(current));return;}
     if(path==='/doctor/list'){json(res,doctor());return;}
     if(path==='/finish'){current.submitted=true;json(res,{receipt:{id:'synthetic-receipt'}});return;}
+    if(path==='/checks/request'){
+     const link=current.links.find(row=>row.part===body.part);if(!link)throw Error('FIXTURE_PART_UNKNOWN');
+     link.share_url=body.url;link.check_status='pending';link.linkId=current.unitId;
+     json(res,{check:{id:link.linkId,status:'pending'}},202);return;
+    }
     if(path==='/observation/student/status'){json(res,{state:state(current)});return;}
     if(path==='/observation/student/view'){
      const view={kind:'speaking-student-view-v1',unitId:current.unitId,contentRevision:contentRevision(current),open:open(current),doctor:doctor()};
@@ -99,6 +114,8 @@ export async function startTrackingFixture(root,{port=0}={}){
    }
    const file=resolve(root,'.'+decodeURIComponent(url.pathname));if(!file.startsWith(root+sep))throw Error('FIXTURE_PATH_OUTSIDE_ROOT');
    let content=await readFile(file);
+   if(file.endsWith(sep+'shared'+sep+'speaking-homework-journal.mjs')&&journalEnabled)
+    content=content.toString().replace('export const speakingJournalEnabled=false;','export const speakingJournalEnabled=true;');
    if(extname(file)==='.html')content=content.toString().replace("connect-src 'self' https://ducizone.ddns.net","connect-src 'self'")
     .replace('<head>','<head><script src="/__fixture/bootstrap.js"></script>');
    res.writeHead(200,{'content-type':({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'})[extname(file)]||'application/octet-stream','cache-control':'no-store'});res.end(content);
