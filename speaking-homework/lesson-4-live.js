@@ -634,4 +634,4 @@ window.addEventListener('beforeunload', event => {
   saveDraft(); event.preventDefault(); event.returnValue = '';
 });
 identityController.start();
-import { acceptanceMessage, checkReason, updateSubmitControl, technicalCheckFeedback, renderCheckResult, updateCheckControl } from './check-feedback.js?v=20261029-check-retry-v1';
+import { acceptanceMessage, checkReason, updateSubmitControl, technicalCheckFeedback, renderCheckResult, updateCheckControl } from './check-feedback.js?v=20261029-check-retry-v1&gradeProgress=1';

@@ -1,3 +1,19 @@
+const gradeStatusView=import('../shared/grading-status.mjs?v=1').catch(()=>null);
+function renderReadingGradeWait(attempt,reconnecting=false){
+ const host=document.querySelector('.waiting-card strong');
+ if(!host||!attempt)return;
+ const card=host.closest('.waiting-card');
+ card.setAttribute('role','status');
+ const spinner=card.querySelector('.spinner');
+ if(spinner)spinner.hidden=reconnecting||Boolean(attempt.validationProgress?.service_error);
+ const stamp=JSON.stringify([attempt.attemptId,attempt.status,attempt.validationProgress,reconnecting]);
+ if(host.dataset.gradeStatus===stamp)return;
+ host.dataset.gradeStatus=stamp;
+ gradeStatusView.then(view=>{
+  if(!host.isConnected||host.dataset.gradeStatus!==stamp||!view)return;
+  view.renderGradingStatus(host,{...view.gradingStatus(attempt,{reading:true,reconnecting}),busy:false});
+ });
+}
 /* Prototype đầy đủ bài luyện nén: nhận đề riêng tư qua máy chủ localhost.
    Chỉ lưu nháp trên thiết bị; chấm và danh tính đều là mô phỏng có nhãn rõ.
    Không gọi Google, AI, n8n hoặc API production. Lỗi lưu/tải luôn được hiện ra. */
@@ -386,9 +402,10 @@ function adaptServerScreen(){
     result.innerHTML='<strong>Đã có bài chấm · Lượt làm '+(state.serverAttempt?.runNo||1)+'</strong><span> '+counts.correct+' đúng · '+counts.partial+' đúng một phần · '+counts.incorrect+' cần sửa · '+counts.blank+' bỏ trống</span>'+(problem?'<button class="quiet" data-action="repair-start">Xem phần cần sửa ↓</button>':'')+(state.serverAttempt?.fromCache?'<small> Bài không đổi — dùng lại kết quả đã lưu.</small>':'');
     if(state.serverAttempt?.recovery){const receipt=document.createElement('small');receipt.textContent='Đã phục hồi lượt chấm trước đó bị lỗi. Giữ nguyên bản nộp và lượt làm; lịch sử xử lý được lưu trên máy chủ.';result.append(receipt);}
   }
-  const stage=latestServerAttempt?.validationProgress;
-  const waitingLabel=stage?.service_error?'Đang chờ dịch vụ AI · Bài đã được lưu':stage?.phase==='repair'?'Đang bổ sung nhận xét cho một số phần':stage?.phase==='review'?'Đang kiểm tra nội dung chấm':stage&&latestServerAttempt?.status==='queued'?'Đang chờ dịch vụ AI · Bài đã được lưu':latestServerAttempt?.status==='processing'?'Đang chấm bằng Read 67':'Đã nhận bài · Đang chờ chấm';
-  const waiting=document.querySelector('.waiting-card');if(waiting)waiting.innerHTML='<span class="spinner"></span><span><strong>'+waitingLabel+'</strong><br>Bài gửi đã được lưu. Kết quả chỉ hoàn tất sau khi đủ nội dung và qua kiểm tra. <button class="quiet" data-action="server-return-draft">Tiếp tục chỉnh nháp →</button></span>';
+  const waiting=document.querySelector('.waiting-card');if(waiting){
+    waiting.innerHTML='<span class="spinner" aria-hidden="true"></span><span><strong>Đã nhận bài · Đang chờ chấm</strong><br>Bài gửi đã được lưu. Kết quả chỉ hoàn tất sau khi đủ nội dung và qua kiểm tra. <button class="quiet" data-action="server-return-draft">Tiếp tục chỉnh nháp →</button></span>';
+    renderReadingGradeWait(latestServerAttempt);
+  }
   if(state.status==='waiting')document.querySelector('.footer-tools [data-action="show-result"]')?.setAttribute('hidden','');
   if(teacher){document.querySelector('.footer-tools [data-action="edit"]')?.remove();document.querySelector('#grade-button')?.remove();}
   else if(state.status==='draft'){const b=document.querySelector('#grade-button');if(b)b.textContent=serverClient.initialHistory?.attempts?.some(a=>a.status==='done')?'Chấm lại bản sửa':'Nộp bài để chấm';}
@@ -410,7 +427,7 @@ function trackServerAttempt(attempt,{announce=false}={}){
   showServerAttempt(attempt,announce);serverClient.stopPoll();
   if(!['queued','processing'].includes(attempt.status)&&!serverClient.access?.config?.capabilities?.stateStream)return;
   serverClient.poll(attempt.attemptId,value=>{
-    if(value.status==='connection_error'){toast('Chưa đọc được tiến độ. Bản gửi vẫn giữ trên máy chủ; đang kết nối lại.');return;}
+    if(value.status==='connection_error'){if(state.status==='waiting'&&state.serverAttempt?.attemptId===attempt.attemptId)renderReadingGradeWait(state.serverAttempt,true);toast('Chưa đọc được tiến độ. Bản gửi vẫn giữ trên máy chủ; đang kết nối lại.');return;}
     latestServerAttempt=value;
     if(state.serverAttempt?.attemptId===value.attemptId&&state.status!=='draft')showServerAttempt(value,announce);
     else if(value.status==='done'){window.ReadingMaterialsExperience?.outcome(value,{background:true});toast('Đã có phản hồi cho bản đã gửi. Mở Lịch sử để xem; nháp đang sửa được giữ.');}
@@ -441,11 +458,10 @@ function showServerAttempt(attempt,announce=false){
   }
   if(state.status!=='draft'&&state.serverAttempt?.attemptId===attempt.attemptId){
     const visible=value=>JSON.stringify([value.status,value.errorCode,value.result,value.snapshot,value.validationProgress,value.recovery]);
-    if(visible(state.serverAttempt)===visible(attempt)){latestServerAttempt=attempt;return;}
+    if(visible(state.serverAttempt)===visible(attempt)){latestServerAttempt=attempt;if(state.status==='waiting')renderReadingGradeWait(attempt);return;}
     if(state.status==='waiting'&&['queued','processing'].includes(attempt.status)){
       latestServerAttempt=attempt;state.serverAttempt=attempt;
-      const stage=attempt.validationProgress,label=stage?.service_error?'Đang chờ dịch vụ AI · Bài đã được lưu':stage?.phase==='repair'?'Đang bổ sung nhận xét cho một số phần':stage?.phase==='review'?'Đang kiểm tra nội dung chấm':attempt.status==='processing'?'Đang chấm bằng Read 67':'Đã nhận bài · Đang chờ chấm';
-      const notice=document.querySelector('.waiting-card strong');if(notice&&notice.textContent!==label)notice.textContent=label;
+      renderReadingGradeWait(attempt);
       return;
     }
   }

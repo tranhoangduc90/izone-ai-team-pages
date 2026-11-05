@@ -1,5 +1,6 @@
 (async () => {
 'use strict';
+const {renderGradingStatus}=await import('../shared/grading-status.mjs?v=1');
 const {expandPracticePulseAck}=await import('../shared/practice-pulse-ack.mjs?v=20261102-pulse1');
 const {expandPracticeHistory,practiceHistoryPath}=await import('../shared/practice-history.mjs?v=20261102-history1');
 const {createPracticeResultView,patchPracticeResultView,patchPracticeResultPart}=await import('../shared/practice-result-view.mjs?v=20261102-result1');
@@ -81,7 +82,19 @@ const current=()=>record()?.attempts.at(-1);
 const countAnswered=a=>a?.detailsLoaded===false?a.answeredCount:Object.values(a?.answers||{}).filter(v=>String(v).trim()).length;
 const resultFor=(a,start,end)=>a.result.rows.filter(r=>r.number>=start&&r.number<=end&&r.state==='correct').length;
 const isOnline=()=>navigator.onLine&&!networkFailed;
-function notify(message){const t=document.querySelector('#toast');t.textContent=message;t.hidden=false;clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.hidden=true,4000);}
+function showActivity(label,busy=true,onRetry){
+ const toast=document.querySelector('#toast'),host=document.createElement('span');
+ clearTimeout(toastTimeout);
+ toast.replaceChildren(host);toast.dataset.gradingActivity='';toast.hidden=false;
+ renderGradingStatus(host,{label,busy});
+ if(onRetry){
+  const retry=document.createElement('button');
+  retry.type='button';retry.textContent='Mở lại kết quả';
+  retry.addEventListener('click',onRetry,{once:true});toast.append(' ',retry);
+ }
+ return ()=>{if(host.parentNode===toast){toast.replaceChildren();delete toast.dataset.gradingActivity;toast.hidden=true;}};
+}
+function notify(message){const t=document.querySelector('#toast');delete t.dataset.gradingActivity;t.textContent=message;t.hidden=false;clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.hidden=true,4000);}
 function footer(){return `<footer class="page-footer">IZONE · Reading thực chiến · Buổi ${LESSON.lesson}</footer>`;}
 courseIdentity.subscribe(()=>{if(identity)notify('Người đã nhớ ở tab khác vừa đổi. Bài tại đây vẫn giữ nguyên người và nháp.');});
 async function loginSelected(id,classCode,{selection=null,remember=true}={}){
@@ -189,6 +202,7 @@ function tick(){if(current()?.status!=='running'||route!=='exercise')return;if(d
 async function perform(action,payload){
  if(busy||activating)return;busy=true;clearTimeout(debounce);
  const op=pendingOperation?.action===action?pendingOperation:{action,payload:{operationId:crypto.randomUUID(),...payload}};pendingOperation=op;
+ const clearActivity=action==='submit'?showActivity('Đang gửi bài…'):null;
  try{sessionStorage.setItem(`reading-operation:${identity.bindingId}`,JSON.stringify(op));persist(false);
  await serial(async()=>{const response=await request(`/${action}`,op.payload);pendingOperation=null;sessionStorage.removeItem(`reading-operation:${identity.bindingId}`);apply(response);persist(false);lastPulse=performance.now();
   if(current()?.status==='submitted'){lastTick=0;await loadResult(current().no);}else if(response.lease){
@@ -196,7 +210,7 @@ async function perform(action,payload){
    const id=current().id,proof=lease;current().status='running';lastTick=performance.now();activating=true;busy=false;navigate('exercise');
    try{const activated=await request('/activate',{attemptId:id,lease:proof});if(current()?.id===id&&lease?.id===proof.id&&current().status==='running'&&route==='exercise')apply(activated,{preserve:true});}finally{setActivating(false);}
   }else{lastTick=0;current().status='paused';lease=null;navigate('resume');}
- });}catch(e){stopLocal(e.code);notify(e.message);}finally{busy=false;}
+ });}catch(e){stopLocal(e.code);notify(e.message);}finally{clearActivity?.();busy=false;}
 }
 function begin(){if(current()?.status==='submitted'){loadResult(current().no);return;}if(current())return resume();perform('begin',{owner:TAB});}
 function resume(){
@@ -216,10 +230,24 @@ function pause(reason='manual',shouldRender=true){
 }
 function finish(method){if(busy||activating||!current()||!['running','paused'].includes(current().status))return;consumeTime();rememberScroll();lastTick=0;persist(false);perform('submit',{attemptId:current().id,lease,snapshot:snapshot(),method});}
 function reset(){if(busy||activating)return;consumeTime();rememberScroll();lastTick=0;const a=current();perform('reset',{attemptId:a.id,owner:TAB,...(['running','paused'].includes(a.status)&&lease?{lease,snapshot:snapshot()}:{} )});}
+let resultRead=0,clearResultRetry;
 async function loadResult(no){
+ clearResultRetry?.();clearResultRetry=null;
  const a=record()?.attempts.find(a=>a.no===+no);if(!a)return;
- if(a.status==='submitted'&&(a.detailsLoaded===false||!resultCache.has(a.id))){const owner=identity?.bindingId,token=sessionToken;try{const response=await request(`/result/${a.id}`);if(owner!==identity?.bindingId||token!==sessionToken)return;resultCache.set(a.id,response);apply(response);MCQ=response.definition.mcq;}catch(e){if(owner===identity?.bindingId&&token===sessionToken)notify(e.message);return;}}
- navigate(`result?attempt=${no}`);
+ const owner=identity?.bindingId,token=sessionToken,hash=location.hash,read=++resultRead;
+ const currentRead=()=>read===resultRead&&owner===identity?.bindingId&&token===sessionToken&&hash===location.hash;
+ if(a.status==='submitted'&&(a.detailsLoaded===false||!resultCache.has(a.id))){
+  const clearActivity=showActivity('Đã nộp · Đang mở kết quả');
+  try{
+   const response=await request('/result/'+encodeURIComponent(a.id));
+   if(!currentRead())return;
+   resultCache.set(a.id,response);apply(response);MCQ=response.definition.mcq;
+  }catch(e){
+   if(currentRead())clearResultRetry=showActivity('Bài đã lưu · Chưa mở được kết quả',false,()=>{if(currentRead())void loadResult(no);});
+   return;
+  }finally{clearActivity();}
+ }
+ if(currentRead())navigate(`result?attempt=${no}`);
 }
 function docsNotice(a){
  const event=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed');
@@ -703,7 +731,7 @@ function recoverLocal(){
   a.status='paused';a.owner=null;
  }catch{saveError=true;showStorageError();}
 }
-window.addEventListener('hashchange',()=>{resultView.close();if(location.pathname.endsWith('/teacher.html')){route='teacher';teacherScreen();}else render();});
+window.addEventListener('hashchange',()=>{resultRead++;clearResultRetry?.();clearResultRetry=null;resultView.close();if(location.pathname.endsWith('/teacher.html')){route='teacher';teacherScreen();}else render();});
 window.addEventListener('offline',()=>pause('offline'));
 window.addEventListener('online',()=>{networkFailed=false;if(route==='resume')render();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){resultView.close();pause('hidden');}else resultView.sync();});
