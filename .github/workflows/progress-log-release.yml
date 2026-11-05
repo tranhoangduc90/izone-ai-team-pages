@@ -37,3 +37,17 @@ jobs:
             git push origin HEAD:main
           fi
           gh api --method POST repos/${{ github.repository }}/pages/builds
+      - name: Wait for the verified release to become active
+        run: |
+          expected=$(node -p "require('./progress-log/release.json').version")
+          for attempt in $(seq 1 60); do
+            curl -fsS --max-time 10 https://ducizone.ddns.net/mapping-api/api/learning/frontend-release -o /tmp/progress-release.json || true
+            actual=$(node -e "try{const p=require('/tmp/progress-release.json');if(p.ok)process.stdout.write(p.version)}catch{}")
+            if [ "$actual" = "$expected" ]; then
+              echo "Verified Progress Log release is active: $actual"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Progress Log release is not active; previous verified package is retained." >&2
+          exit 1

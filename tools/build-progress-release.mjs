@@ -15,6 +15,22 @@ const source=new Map(await Promise.all(files.map(async f=>{const bytes=await rea
 const entries=['index.html','thuy.html','teacher.html','teacher-thuy.html','student.html','journey.html'];
 // The loader's fallback is generated output, excluded from the source identity.
 for(const entry of entries){const f='progress-log/'+entry;if(source.has(f))source.set(f,Buffer.from(source.get(f).toString().replace(/data-fallback="[a-f0-9]*"/g,'data-fallback=""')));}
+// Include the runtime dependency graph, never old review snapshots or test datasets.
+const requiredRuntime=['progress-log/release-runtime.js','progress-log/release-updater.js'];
+const included=new Set(),queue=[...entries.map(entry=>'progress-log/'+entry),'progress-log/demo/index.html','progress-log/demo/thuy.html',...requiredRuntime];
+while(queue.length){
+ const file=queue.pop();if(included.has(file)||!source.has(file))continue;included.add(file);
+ if(!/\.(?:js|mjs|html|css|json|svg)$/.test(file))continue;
+ const content=source.get(file).toString(),references=[...content.matchAll(/["']([^"'\r\n]+)["']/g)].map(m=>m[1]);
+ if(file.endsWith('.css'))references.push(...[...content.matchAll(/url\(\s*([^'")\s]+)\s*\)/g)].map(m=>m[1]));
+ for(const spec of references){
+  if(/^(?:https?:|data:|\/|#)/.test(spec)||/\s/.test(spec)||!/\.(?:js|mjs|css|html|json|svg|png|jpg|webp|woff2?|ico)(?:[?#].*)?$/i.test(spec))continue;
+  const resolved=path.posix.normalize(path.posix.join(path.posix.dirname(file),spec.split(/[?#]/)[0]));
+  if(source.has(resolved)&&!included.has(resolved))queue.push(resolved);
+ }
+}
+files.splice(0,files.length,...files.filter(file=>included.has(file)));
+if(!requiredRuntime.every(file=>included.has(file)))throw Error('Missing release runtime');
 const version=hash(Buffer.concat([Buffer.from((await readFile(fileURLToPath(import.meta.url),'utf8')).replaceAll('\r\n','\n')),...files.flatMap(f=>[Buffer.from(f+'\0'),source.get(f)])])).slice(0,16);
 const base='/izone-ai-team-pages/progress-log/releases/'+version+'/';
 const output=path.join(repo,'progress-log/releases',version),assets=[];
