@@ -25,3 +25,43 @@ for(const module of modules){
   await assert.rejects(harness(module,receipt)('/api/test/grade',{body:JSON.stringify({examId:'listening'})}));
  });
 }
+
+
+for (const module of modules) for (const switchOwner of [false, true]) test(module+': mất phản hồi, truy vết theo lượt, đổi người='+switchOwner, async () => {
+ const source=fs.readFileSync(new URL('../term-tests/'+module+'/app.js',import.meta.url),'utf8');
+ const extract=name=>{
+  let start=source.indexOf('  async function '+name+'(');
+  if(start<0)start=source.indexOf('  function '+name+'(');
+  assert.ok(start>=0,name);
+  return source.slice(start,source.indexOf('\n  }',start)+4);
+ };
+ const sent=[],logs=[],slug='substitute-test-2-k56';
+ const state={studentRef:'FIXTURE-A',historyEpoch:'epoch-a'};
+ const ids={testSlug:slug,classCode:'FIXTURE',studentRef:'FIXTURE-A',clientRunId:'fixture-run',historyEpoch:'epoch-a'};
+ const section={correct:0,total:40,typeStats:[],details:Array.from({length:40},(_,i)=>({number:i+1,result:'blank',studentAnswer:'',correctAnswer:'Fixture'}))};
+ const context=vm.createContext({URL,AbortController,setTimeout,clearTimeout,crypto,state,
+  window:{location:{origin:'https://fixture.invalid'},TERM_TEST_BOOTSTRAP:{examSessionId:'fixture',clientRunId:'fixture-run'},
+   SUBSTITUTE_STATE:{track:()=>()=>{},payload:x=>({...x,...ids}),stop(){}}},
+  testConfig:{slug},appConfig:{API_BASE_URL:'https://fixture.invalid'},serverGradingMode:true,
+  examJournal:{startRequest(path,_options,trace){
+   const requestId=crypto.randomUUID(),event={path,requestId,operationId:trace.operationId,phase:trace.phase};logs.push(event);
+   return {requestId,done(_value,error,status){event.failed=!!error;event.status=status;}};
+  }},
+  fetch:async (_url,options)=>{
+   const item=JSON.parse(options.body);sent.push(item);
+   assert.equal(options.headers['Content-Type'],'text/plain;charset=UTF-8');
+   assert.equal(Object.hasOwn(item.payload,'journalRequestId'),false);
+   if (item.route==='/api/test/grade') {if(switchOwner)state.studentRef='FIXTURE-B';throw TypeError('lost response');}
+   return {ok:true,status:200,json:async()=>({...ids,skill:'listening',persisted:sent.length===3,
+    ...(sent.length===3?{section,submittedAt:'2026-10-15T00:00:00Z',snapshotHash:'a'.repeat(64)}:{})})};
+  }});
+ vm.runInContext(['journalSubmissionOwner','apiRequest','submitSection'].map(extract).join('\n'),context);
+ assert.equal((await context.submitSection('listening',{1:'fixture'})).persisted,true);
+ assert.deepEqual(sent.map(x=>x.route),['/api/test/exam/section-status','/api/test/grade','/api/test/exam/section-status']);
+ assert.deepEqual(logs.map(e=>e.phase),switchOwner?['readback','send']:['readback','send','readback']);
+ assert.equal(new Set(logs.map(e=>e.operationId)).size,1);
+ assert.equal(new Set(logs.map(e=>e.requestId)).size,logs.length);
+ assert.equal(logs[1].failed,true);
+ for (let i=0;i<logs.length;i++) assert.equal(logs[i].requestId,sent[i].journalRequestId);
+ if(switchOwner)assert.equal(sent[2].journalRequestId,undefined);
+});
