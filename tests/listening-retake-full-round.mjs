@@ -10,7 +10,7 @@ try{
  const students=(process.env.RETAKE_FULL_STUDENTS||'1,2').split(',').map(Number);
  for(const[student,offline]of [[students[0],false],[students[1],true]]){
   const context=await browser.newContext(),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(base);await page.locator('#student option').nth(1).waitFor({state:'attached'});await page.selectOption('#student',{index:student});await page.check('#identity-confirm');await page.click('#prepare');await page.locator('#trial').waitFor({state:'visible',timeout:30000});
+  await page.goto(base);await page.locator('#student option').nth(1).waitFor({state:'attached'});await page.selectOption('#student',{index:student});await page.check('#identity-confirm');await page.click('#prepare');await page.locator('#trial[data-ready="true"]').waitFor({state:'visible',timeout:30000});
   if(offline)await context.setOffline(true);
   await page.click('#preview');await page.locator('#heard').waitFor({state:'visible'});await page.waitForFunction(()=>!document.getElementById('heard').disabled,null,{timeout:20000});await page.check('#heard');await page.click('#start');await page.locator('#exam').waitFor({state:'visible'});
   await page.locator('[data-question="1"]').fill('fixture-one');await page.locator('#section-nav button').nth(1).click();await page.locator('[data-question="16"]').selectOption('B');

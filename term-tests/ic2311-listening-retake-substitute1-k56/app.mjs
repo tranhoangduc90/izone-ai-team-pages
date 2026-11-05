@@ -1,8 +1,10 @@
-import {API,BUILD,AUDIO,CONTENT_VERSION,REVIEW_MS} from './config.mjs';
+import {API,BUILD,AUDIO,CONTENT_VERSION,REVIEW_MS} from './config.mjs?v=20261106-native-v2';
 import {DurableStore} from './storage.mjs';
-import {Telemetry} from './telemetry.mjs';
+import {Telemetry} from './telemetry.mjs?v=20261106-native-v2';
 import {LocalPlayer,downloadAudio} from './audio.mjs';
-const $=id=>document.getElementById(id),show=(id,value=true)=>$(id).hidden=!value,text=(id,value)=>$(id).textContent=value;
+import {mountNativeListening,nativeLayout,nativeAnnotations} from './native-ui.mjs?v=20261106-native-v2';
+const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value;
+function show(id,value=true){$(id).hidden=!value;if(id==='exam'){$('listeningView').hidden=!value;$('identityView').hidden=!value;$('page-shell').classList.toggle('cbt-bootstrap-shell',!value);if(value)$('lobby').hidden=true;}if(id==='finished'&&value)$('lobby').hidden=true;}
 const storage=await new DurableStore().open().catch(e=>{text('identity-status',e.message);throw e;});
 let state=await storage.get('current'),preparation=await storage.get('preparation'),busy=false,syncing=false,syncFailures=0,retryAt=0,content,roster,prepared=false,reviewMono=null,holdTimer;
 const tabId=crypto.randomUUID(),audioOwnerId=state?.identity?.audioOwnerId||preparation?.audioOwnerId||crypto.randomUUID();
@@ -53,17 +55,15 @@ async function technicalStop(reason){
 }
 async function seal(reason){
  if(!['playing','review'].includes(state?.phase)||busy)return;busy=true;
- try{state.submitReason=reason;state.phase='submitted';state.sealed=snapshot('submitted');state.pending=structuredClone(state.sealed);player.finish('submitted',reason);$('answers').inert=true;await persist();journal.emit('submission_sealed',{operationId:state.sealed.operationId,revisionSent:state.sealed.revision,submitReason:reason});renderFinished();void synchronize(true);}
+ try{state.submitReason=reason;state.phase='submitted';state.sealed=snapshot('submitted');state.pending=structuredClone(state.sealed);player.finish('submitted',reason);$('listeningView').inert=true;await persist();journal.emit('submission_sealed',{operationId:state.sealed.operationId,revisionSent:state.sealed.revision,submitReason:reason});renderFinished();void synchronize(true);}
  catch{note('Chưa lưu được bài đã khóa trên thiết bị. Giữ trang mở và liên hệ giảng viên ngay.');show('finished');text('finish-message','Chưa xác nhận lưu được bài trên thiết bị. Không đóng trang; hãy liên hệ giảng viên.');}
  finally{busy=false;}
 }
-function renderContent(){
- const root=$('questions');for(const[sectionIndex,section]of content.listening.sections.entries()){
-  const article=document.createElement('section');article.className='listening-section';article.hidden=sectionIndex!==0;article.innerHTML=section.html;root.append(article);
-  const button=document.createElement('button');button.type='button';button.textContent='Phần '+(sectionIndex+1);button.classList.toggle('active',sectionIndex===0);button.addEventListener('click',()=>{for(const[s,i]of [...root.children].map((s,i)=>[s,i]))s.hidden=i!==sectionIndex;for(const[b,i]of [...$('section-nav').children].map((b,i)=>[b,i]))b.classList.toggle('active',i===sectionIndex);});$('section-nav').append(button);
- }
- for(const c of content.controls){const slot=root.querySelector('[data-answer-slot="'+c.number+'"]');if(!slot)throw Error('QUESTION_MISSING');const el=document.createElement(c.kind==='select'?'select':'input');el.dataset.question=String(c.number);el.setAttribute('aria-label','Câu '+c.number);if(c.kind==='select'){el.add(new Option('—',''));for(const v of c.options)el.add(new Option(v,v));}else{el.type='text';el.maxLength=250;el.spellcheck=false;}slot.append(el);}
- $('answers').addEventListener('submit',e=>e.preventDefault());$('answers').addEventListener('input',e=>{const n=e.target.dataset.question;if(!n||!['playing','review'].includes(state.phase))return;state.answers[n]=e.target.value;void queueDraft();});
+async function renderContent(){
+ const uiState=await storage.get('ui:'+state?.identity?.attemptId)||{flags:{listening:{}},activeSection:{listening:0},fontSize:{listening:100}};
+ mountNativeListening({content,grid:$('listeningQuestions'),form:$('listeningView'),heading:$('exam-heading'),uiState,onUiState:value=>{if(state?.identity)void storage.put('ui:'+state.identity.attemptId,value).catch(()=>note('Chưa lưu được đánh dấu/cỡ chữ trên thiết bị. Đáp án được lưu riêng.'));}});
+ $('listeningView').addEventListener('submit',event=>event.preventDefault());$('listeningView').addEventListener('input',event=>{const n=event.target.dataset.question;if(!n||!['playing','review'].includes(state.phase))return;state.answers[n]=event.target.value;void queueDraft();});
+ await nativeLayout(content.controls);
 }
 async function prepare(){
  if(busy)return;busy=true;$('prepare').disabled=true;show('preparation');show('retry-preparation',false);
@@ -73,30 +73,30 @@ async function prepare(){
    if(r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.audioHash!==AUDIO.hash||r.value.identity.studentRef!==studentRef)throw Error('PREPARE_CONTRACT_MISMATCH');
    state={permit:r.value.permit,identity:r.value.identity,revision:r.value.revision,answers:Object.fromEntries(Array.from({length:40},(_,i)=>[i+1,''])),phase:'prepared',pending:null,serverConfirmed:false};await persist();
   }
-  await acquireOwner();if(!journal.permit)journal.bind(state.identity,state.permit);done('check-permit');$('student').disabled=true;$('identity-confirm').disabled=true;show('identity',false);
+  await acquireOwner();if(!journal.permit)journal.bind(state.identity,state.permit);done('check-permit');$('student').disabled=true;$('identity-confirm').disabled=true;
   const asset=await downloadAudio({journal,onProgress:(n,total,source)=>{$('download').value=n/total;text('prepare-status','Đang tải audio '+Math.round(n/total*100)+'% · '+(source==='github_pages'?'GitHub Pages':'Cloudinary'));}});
-  done('check-audio');await player.attach(asset);done('check-player');prepared=true;show('trial');text('prepare-status','Sẵn sàng trên thiết bị. Nếu mất mạng từ bây giờ, bạn vẫn nghe thử, bắt đầu và làm hết bài được.');journal.emit('app_ready',{phase:'ready',audioAfter:player.snapshot()});
+  done('check-audio');await player.attach(asset);await document.fonts.ready;if([...document.querySelectorAll('link[data-native-style]')].some(link=>!link.sheet))throw Object.assign(Error(),{code:'NATIVE_STYLE_UNAVAILABLE'});await nativeAnnotations({content,identity:state.identity,storage,onError:()=>note('Chưa lưu được Highlight/Note. Đáp án vẫn được lưu riêng; hãy giữ trang mở.')});done('check-player');prepared=true;$('trial').dataset.ready='true';$('preview').disabled=false;$('download-step').dataset.state='complete';$('preview-step').dataset.state='active';show('trial');text('prepare-status','Sẵn sàng trên thiết bị. Nếu mất mạng từ bây giờ, bạn vẫn nghe thử, bắt đầu và làm hết bài được.');journal.emit('app_ready',{phase:'ready',audioAfter:player.snapshot()});
  }catch(e){text('prepare-status','Chưa chuẩn bị được bài thi ('+(e.code||'PREPARATION_FAILED')+'). Bạn chưa nên bắt đầu. Hãy thử lại; nếu vẫn lỗi, liên hệ giảng viên để được tổ chức thi lại.');show('retry-preparation');}
- finally{busy=false;$('prepare').disabled=false;}
+ finally{busy=false;$('prepare').disabled=prepared||!$('identity-confirm').checked;}
 }
 $('identity-confirm').addEventListener('change',()=>{$('prepare').disabled=!$('identity-confirm').checked||!$('student').value;});$('student').addEventListener('change',()=>{$('identity-confirm').checked=false;$('prepare').disabled=true;});$('prepare').onclick=prepare;$('retry-preparation').onclick=prepare;
 $('preview').onclick=async()=>{
  if(!prepared||busy)return;busy=true;$('preview').disabled=true;$('heard').disabled=true;$('start').disabled=true;
- try{await player.preview(p=>text('preview-status','Đang kiểm tra phát âm thanh · '+Math.round(p*100)+'%'));text('preview-status','Phát bình thường. Nếu nghe rõ, tích xác nhận bên dưới.');$('heard').disabled=false;}
+ try{await player.preview(p=>text('preview-status','Đang kiểm tra phát âm thanh · '+Math.round(p*100)+'%'));text('preview-status','Phát bình thường. Nếu nghe rõ, tích xác nhận bên dưới.');$('heard').disabled=false;$('preview-step').dataset.state='complete';}
  catch(e){text('preview-status','Âm thanh chưa ổn định ('+(e.code||'PLAY_FAILED')+'). Chưa bắt đầu thi. Hãy kiểm tra thiết bị hoặc liên hệ giảng viên.');}
  finally{busy=false;$('preview').disabled=false;}
 };
-$('heard').onchange=()=>{$('start').disabled=!$('heard').checked;};$('volume').oninput=()=>player.setVolume(Number($('volume').value));
+$('heard').onchange=()=>{$('start').disabled=!$('heard').checked;$('start-step').dataset.state=$('heard').checked?'active':'locked';};for(const id of ['volume','exam-volume'])$(id).oninput=()=>{const v=Number($(id).value);player.setVolume(v);$('volume').value=v;$('exam-volume').value=v;};
 $('start').onclick=async()=>{
  if(busy||!prepared||!$('heard').checked)return;busy=true;$('start').disabled=true;
- try{await player.start();state.phase='playing';state.startedAt=new Date().toISOString();state.startedMono=performance.now();await persist();show('preparation',false);show('exam');text('learner',roster.students.find(s=>s.studentRef===state.identity.studentRef)?.name+' · IC2311');text('phase-label','Đang nghe');journal.emit('official_player_started',{phase:'playing',audioAfter:player.snapshot()});await queueDraft();}
+ try{await player.start();state.phase='playing';state.startedAt=new Date().toISOString();state.startedMono=performance.now();await persist();show('preparation',false);show('exam');text('learner',roster.students.find(s=>s.studentRef===state.identity.studentRef)?.name);text('phase-label','Đang nghe');journal.emit('official_player_started',{phase:'playing',audioAfter:player.snapshot()});await queueDraft();}
  catch(e){if(state?.phase==='playing')await technicalStop('LOCAL_PERSIST_FAILED');else{text('preview-status','Chưa bắt đầu được audio ('+(e.code||'PLAY_FAILED')+'). Nhấn Bắt đầu để thử lại.');$('start').disabled=false;}}
  finally{busy=false;}
 };
 player.onEnded=async()=>{if(state?.phase!=='playing')return;state.phase='review';state.audioEndedAt=new Date().toISOString();reviewMono=performance.now();journal.emit('audio_natural_ended',{phase:'review',audioAfter:player.snapshot()});$('audio-problem').disabled=true;await queueDraft();};
-function hold(reason){if(state?.phase!=='playing')return;state.recoveryId=crypto.randomUUID();journal.recoveryId=state.recoveryId;if(player.recoveryCount>=1){void technicalStop('RECOVERY_LIMIT_REACHED');return;}state.phase='technical_hold';player.hold(reason,state.recoveryId,reason==='LEARNER_CANNOT_HEAR'?'learner':reason==='MEDIA_ERROR'?'media_event':'watchdog');$('answers').inert=true;$('technical').showModal();holdTimer=setTimeout(()=>void technicalStop('TECHNICAL_HOLD_EXPIRED'),60000);void persist();}
+function hold(reason){if(state?.phase!=='playing')return;state.recoveryId=crypto.randomUUID();journal.recoveryId=state.recoveryId;if(player.recoveryCount>=1){void technicalStop('RECOVERY_LIMIT_REACHED');return;}state.phase='technical_hold';player.hold(reason,state.recoveryId,reason==='LEARNER_CANNOT_HEAR'?'learner':reason==='MEDIA_ERROR'?'media_event':'watchdog');$('listeningView').inert=true;$('technical').showModal();holdTimer=setTimeout(()=>void technicalStop('TECHNICAL_HOLD_EXPIRED'),60000);void persist();}
 player.onFault=hold;$('audio-problem').onclick=()=>hold('LEARNER_CANNOT_HEAR');$('technical').addEventListener('cancel',e=>e.preventDefault());$('stop-technical').onclick=()=>void technicalStop('LEARNER_STOPPED');
-$('resume-technical').onclick=async()=>{$('resume-technical').disabled=true;try{void journal.request('/attempt',{recoveryId:state.recoveryId}).then(r=>journal.emit('recovery_reconcile_acked',{requestId:r.requestId,revisionReceived:r.value.revision})).catch(()=>{});await player.resume(()=>{state.phase='playing';$('answers').inert=false;$('technical').close();text('phase-label','Đang nghe · kiểm tra phát ổn định');});clearTimeout(holdTimer);await queueDraft();}catch{await technicalStop('RECOVERY_FAILED');}};
+$('resume-technical').onclick=async()=>{$('resume-technical').disabled=true;try{void journal.request('/attempt',{recoveryId:state.recoveryId}).then(r=>journal.emit('recovery_reconcile_acked',{requestId:r.requestId,revisionReceived:r.value.revision})).catch(()=>{});await player.resume(()=>{state.phase='playing';$('listeningView').inert=false;$('technical').close();text('phase-label','Đang nghe · kiểm tra phát ổn định');});clearTimeout(holdTimer);await queueDraft();}catch{await technicalStop('RECOVERY_FAILED');}};
 $('submit').onclick=()=>{if(!['playing','review'].includes(state?.phase))return;const empty=Object.values(state.answers).filter(v=>!v.trim()).length;text('confirm-text','Bạn còn '+empty+' câu chưa trả lời.'+(state.phase==='playing'?' Nộp bây giờ sẽ kết thúc phần nghe.':''));$('confirm-submit').showModal();};
 $('cancel-submit').onclick=()=>$('confirm-submit').close();$('accept-submit').onclick=()=>{$('confirm-submit').close();void seal('manual');};$('confirm-submit').addEventListener('click',e=>{if(e.target===$('confirm-submit'))$('confirm-submit').close();});
 $('sync-now').onclick=()=>{retryAt=0;void synchronize(true);};
@@ -116,7 +116,7 @@ try{
   const results=await Promise.all([fetch('content.json?v='+CONTENT_VERSION).then(r=>{if(!r.ok)throw Error();return r.json();}),journal.request('/roster',null,{permit:null,method:'GET'})]);content=results[0];roster=results[1].value;
   if(roster.classCode!=='IC2311'||roster.contentVersion!==CONTENT_VERSION||content.contentVersion!==CONTENT_VERSION||content.sourceSlug!=='substitute-test-1-k56'||content.listening.sections.length!==4||content.controls.length!==40||new Set(content.controls.map(c=>c.number)).size!==40||content.controls.some(c=>!Number.isInteger(c.number)||c.number<1||c.number>40))throw Error('CONTENT_CONTRACT_MISMATCH');
   const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src='assets/kinney-hotel-plan.png';});
-  $('student').replaceChildren(new Option('Chọn tên của bạn',''));for(const s of roster.students)$('student').add(new Option(s.name,s.studentRef));renderContent();
+  $('student').replaceChildren(new Option('Chọn tên của bạn',''));for(const s of roster.students)$('student').add(new Option(s.name,s.studentRef));await renderContent();
   if(state?.phase==='prepared'){$('student').value=state.identity.studentRef;$('identity-confirm').checked=true;void prepare();}
  }
 }catch(e){if(e.code==='AUDIO_OWNER_CONFLICT'){show('identity',false);note('Bài Listening đang mở ở tab khác. Hãy quay lại tab đó để tiếp tục; trang này không thay đổi bài đang làm.');}else text('identity-status','Chưa tải được nội dung hoặc danh sách học viên. Hãy kết nối mạng và tải lại trước khi bắt đầu.');}

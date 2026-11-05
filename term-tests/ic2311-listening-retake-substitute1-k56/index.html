@@ -1,40 +1,33 @@
 <!doctype html>
-<html lang="vi"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="strict-origin-when-cross-origin">
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://ducizone.ddns.net https://tranhoangduc90.github.io https://res.cloudinary.com; media-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
-<link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
-<link rel="stylesheet" href="style.css?v=20261105-v1"><title>Listening thi lại · IC2311 · IZONE</title>
-</head><body>
-<header class="brand"><img src="../substitute-shared/izone-logo-color.png" alt="IZONE · IELTS Chiến lược" width="120" height="44"><a href="teacher.html">Giảng viên</a></header>
-<main>
- <div class="title"><span class="eyebrow">LISTENING · THI LẠI</span><h1>Listening · IC2311</h1><p>Substitute Test 1 · Khóa 56 · 40 câu · nghe một lượt và 5 phút rà đáp án</p></div>
- <section id="identity" class="card"><h2>Xác nhận học viên</h2>
-  <div class="identity-grid"><label>Lớp<select id="class" disabled><option>IC2311</option></select></label><label>Họ và tên<select id="student"><option value="">Đang tải danh sách…</option></select></label></div>
-  <label class="check"><input type="checkbox" id="identity-confirm">Tôi xác nhận đã chọn đúng tên của mình.</label>
-  <button id="prepare" disabled>Chuẩn bị bài thi</button><p id="identity-status" role="status"></p>
- </section>
- <section id="preparation" class="card" hidden><h2>Chuẩn bị và kiểm tra âm thanh</h2>
-  <ol id="checks"><li id="check-content">Nội dung bài và sơ đồ</li><li id="check-storage">Bộ nhớ lưu bài trên thiết bị</li><li id="check-permit">Quyền thi khi mất mạng</li><li id="check-audio">Tải toàn bộ audio và kiểm tra file</li><li id="check-player">Trình phát đã sẵn sàng</li></ol>
-  <progress id="download" max="1" value="0" aria-label="Tiến độ tải audio"></progress><p id="prepare-status" role="status"></p>
-  <button id="retry-preparation" hidden>Thử chuẩn bị lại</button>
-  <div id="trial" hidden><p>Đeo tai nghe, kiểm tra âm lượng rồi bấm nghe thử. Hệ thống kiểm tra khoảng 11 giây phát thực tế trước khi cho bắt đầu.</p>
-   <button id="preview">Nghe thử</button><span id="preview-status" role="status"></span>
-   <label class="volume">Âm lượng<input id="volume" type="range" min="0.1" max="1" step="0.05" value="1"></label>
-   <label class="check"><input id="heard" type="checkbox" disabled>Tôi đã nghe rõ và sẵn sàng làm bài.</label>
-   <button id="start" disabled>Bắt đầu thi Listening</button>
-  </div>
- </section>
- <div id="notice" class="notice" role="status" hidden></div>
- <section id="exam" hidden>
-  <div class="exam-bar"><div><strong id="learner"></strong><span id="phase-label"></span><span id="save-status" role="status"></span></div><div><button class="secondary" id="audio-problem">Tôi không nghe được</button><button id="submit">Nộp bài Listening</button></div></div>
-  <nav id="section-nav" aria-label="Chọn phần nghe"></nav>
-  <form id="answers" autocomplete="off"><div id="questions"></div></form>
- </section>
- <section id="finished" class="card" hidden><h2 id="finish-title">Bài làm đã được khóa</h2><p id="finish-message" role="status"></p><p id="receipt"></p><button id="sync-now" class="secondary">Kiểm tra và gửi lại</button><button id="check-new-attempt" class="secondary" hidden>Kiểm tra lượt mới do giảng viên cấp</button></section>
- <audio id="audio" preload="none"></audio>
-</main>
-<dialog id="confirm-submit"><h2>Nộp bài Listening?</h2><p id="confirm-text"></p><p>Sau khi xác nhận, bài làm sẽ được khóa. Nếu mất mạng, bài được giữ trên thiết bị để gửi lại.</p><div class="dialog-actions"><button id="cancel-submit" class="secondary">Tiếp tục làm bài</button><button id="accept-submit">Xác nhận nộp bài</button></div></dialog>
-<dialog id="technical"><h2>Kiểm tra âm thanh</h2><p id="technical-text">Audio đã tạm dừng. Kiểm tra tai nghe, dây kết nối và âm lượng. Khi nghe được, bạn có thể thử tiếp tục một lần ở đúng vị trí đang dừng.</p><div class="dialog-actions"><button id="stop-technical" class="secondary">Dừng và liên hệ giảng viên</button><button id="resume-technical">Đã kiểm tra thiết bị · Tiếp tục</button></div></dialog>
-<script src="boot.js?v=20261105-v1"></script>
-</body></html>
+<title>Substitute Test 1 · Listening thi lại IC2311</title><link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
+<link data-native-style rel="stylesheet" href="../substitute-k56-shared/styles.css?rev=20261003-writing-save-cas-v1">
+<link data-native-style rel="stylesheet" href="../substitute-test-1-k56-computer-based/styles.css?v=20261030-reading-heading-scroll">
+<link data-native-style rel="stylesheet" href="../substitute-test-1-k56-computer-based/demo-reset.css">
+<link data-native-style rel="stylesheet" href="../substitute-test-1-k56-computer-based/layout-updates.css">
+<link data-native-style rel="stylesheet" href="../substitute-shared/brand.css?v=20261014-exam-source-v1">
+<link data-native-style rel="stylesheet" href="../substitute-shared/exam-controls.css?v=20261031-reading-workspace-v1">
+<link rel="stylesheet" href="../../shared/red-focus-glow.css?v=20261102-r1"><link rel="stylesheet" href="../../shared/teacher-entry.css?v=20261019-v1"><link rel="stylesheet" href="style.css?v=20261106-native-v2">
+</head><body class="cbt-mode cbt-semantic-mode">
+<nav class="test-teacher-entry" aria-label="Lối vào giảng viên"><a class="teacher-entry-link" href="teacher.html" target="_blank" rel="noopener noreferrer">Giảng viên</a></nav>
+<div class="substitute-brandbar" aria-label="IZONE"><img src="../substitute-shared/izone-logo-color.png" alt="IZONE · IELTS Chiến lược" width="120" height="44"></div>
+<div id="app"><header class="topbar cbt-bootstrap-topbar"><h1>Substitute Test 1 · Khóa 56</h1><section id="identityView" class="identity-panel cbt-identity-panel" hidden><div class="identity-copy"><p id="classLabel" class="eyebrow cbt-class-label">IC2311</p></div><label class="cbt-student-select"><select id="studentSelect" aria-label="Họ và tên đã xác nhận" disabled><option id="learner"></option></select></label></section></header>
+<main id="page-shell" class="page-shell cbt-bootstrap-shell">
+<section id="lobby" class="panel cbt-bootstrap-card" aria-labelledby="securePrepTitle">
+<header class="cbt-lobby-header"><span class="cbt-lobby-badge">Phòng chờ bài thi lại</span><h2 id="securePrepTitle">Kiểm tra âm thanh trước khi bắt đầu</h2><p>Chọn đúng lớp và họ tên của bạn. Đề thi vẫn khóa cho đến khi hoàn tất bước xác nhận.</p></header>
+<div id="identity" class="cbt-bootstrap-identity"><label>Lớp<select id="class" disabled><option>IC2311</option></select></label><label>Họ và tên<select id="student"><option value="">Đang tải danh sách…</option></select></label><p class="cbt-roster-note">Danh sách chỉ hiển thị học viên cần thi lại Listening của lớp IC2311.</p><label class="retake-identity-confirm"><input type="checkbox" id="identity-confirm">Tôi xác nhận đã chọn đúng tên của mình.</label><button class="button button-secondary" id="prepare" disabled>Chuẩn bị bài thi</button><p id="identity-status" role="status"></p></div>
+<div id="preparation"><div class="cbt-lobby-steps">
+<section class="cbt-lobby-step" id="download-step" data-state="locked"><span class="cbt-lobby-step-number">1</span><div class="cbt-lobby-step-body"><h3>Tải đủ audio và chuẩn bị offline</h3><p>Chọn đúng lớp và họ tên rồi chờ kiểm tra hoàn tất.</p><strong id="prepare-status" class="cbt-audio-status cbt-lobby-download-status" role="status">Chọn tên và bấm Chuẩn bị bài thi.</strong><progress id="download" class="cbt-audio-progress" max="1" value="0" aria-label="Tiến độ tải audio"></progress><details class="retake-checks"><summary>Kiểm tra trước khi thi</summary><ol id="checks"><li id="check-content">Nội dung bài và sơ đồ</li><li id="check-storage">Bộ nhớ lưu bài trên thiết bị</li><li id="check-permit">Quyền thi khi mất mạng</li><li id="check-audio">Toàn bộ file audio đúng byte và hash</li><li id="check-player">Trình phát đã sẵn sàng</li></ol></details><button class="button button-secondary" id="retry-preparation" hidden>Thử chuẩn bị lại</button></div></section>
+<section class="cbt-lobby-step" id="preview-step" data-state="locked"><span class="cbt-lobby-step-number">2</span><div class="cbt-lobby-step-body" id="trial"><h3>Nghe thử</h3><p>Nghe thử khoảng 11 giây để hệ thống kiểm tra tốc độ phát. Âm lượng này được giữ cho bài thi chính.</p><div class="cbt-lobby-preview-controls"><button class="button button-secondary" id="preview" disabled>Nghe thử</button><label class="cbt-volume cbt-lobby-volume"><span>Âm lượng</span><input id="volume" type="range" min="0.1" max="1" step="0.05" value="1"></label></div><span id="preview-status" class="cbt-preview-status" role="status">Chờ tải audio xong.</span><label class="retake-heard"><input id="heard" type="checkbox" disabled>Tôi đã nghe rõ và sẵn sàng làm bài.</label></div></section>
+<section class="cbt-lobby-step" id="start-step" data-state="locked"><span class="cbt-lobby-step-number">3</span><div class="cbt-lobby-step-body"><h3>Bắt đầu thi</h3><p>Đề và audio chính chỉ mở sau nút này. Khi đã Sẵn sàng, bạn vẫn làm hết bài được dù mất mạng.</p><button class="button button-primary" id="start" disabled>Bắt đầu thi Listening</button></div></section>
+</div></div></section>
+<div id="notice" class="notice" role="status" hidden></div>
+<section id="exam" class="retake-exam-wrapper" hidden><form id="listeningView" class="panel test-panel cbt-test-form cbt-listening-form" hidden autocomplete="off">
+<div id="exam-heading" class="section-heading"><div><p class="eyebrow">Phần 1</p><h2 id="listeningTitle">Listening – 40 câu</h2><ul class="instructions"><li>Nghe một lượt và 5 phút rà đáp án. Không tải lại hoặc đóng tab khi audio đang phát.</li></ul></div><div class="cbt-audio-card"><div class="cbt-audio-copy"><span id="phase-label" class="cbt-audio-status" role="status">Đang nghe</span></div><div class="cbt-audio-controls"><label class="cbt-volume"><span>Âm lượng</span><input id="exam-volume" type="range" min="0.1" max="1" step="0.05" value="1"></label><button class="cbt-audio-retry" type="button" id="audio-problem">Tôi không nghe được</button></div></div><div class="cbt-heading-actions"><span id="save-status" class="autosave-status" role="status"></span><span class="answer-count" id="answer-count">0/40 đã nhập</span><button id="submit" class="button button-primary cbt-heading-submit" type="button">Nộp bài Listening</button></div></div>
+<div class="questions-grid cbt-semantic-stage" id="listeningQuestions"></div></form></section>
+<section id="finished" class="panel transition-card" hidden><div class="transition-icon">✓</div><p class="eyebrow">Listening thi lại · IC2311</p><h2 id="finish-title">Bài làm đã được khóa</h2><p id="finish-message" role="status"></p><p id="receipt"></p><div class="form-actions transition-actions"><button id="sync-now" class="button button-secondary">Kiểm tra và gửi lại</button><button id="check-new-attempt" class="button button-secondary" hidden>Kiểm tra lượt mới do giảng viên cấp</button></div></section>
+<audio id="audio" preload="none" hidden></audio></main></div>
+<dialog id="confirm-submit" class="cbt-identity-confirm"><h2>Nộp bài Listening?</h2><p id="confirm-text"></p><p>Sau khi xác nhận, bài làm sẽ được khóa. Nếu mất mạng, bài được giữ trên thiết bị để gửi lại.</p><div class="cbt-confirm-actions"><button id="cancel-submit" class="button button-secondary">Tiếp tục làm bài</button><button id="accept-submit" class="button button-primary">Xác nhận nộp bài</button></div></dialog>
+<dialog id="technical" class="cbt-identity-confirm"><h2>Kiểm tra âm thanh</h2><p>Audio đã tạm dừng. Kiểm tra tai nghe, dây kết nối và âm lượng. Khi nghe được, bạn có thể thử tiếp tục một lần ở đúng vị trí đang dừng.</p><div class="cbt-confirm-actions"><button id="stop-technical" class="button button-secondary">Dừng và liên hệ giảng viên</button><button id="resume-technical" class="button button-primary">Đã kiểm tra thiết bị · Tiếp tục</button></div></dialog>
+<script src="boot.js?v=20261106-native-v2"></script></body></html>
