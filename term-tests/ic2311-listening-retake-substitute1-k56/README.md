@@ -6,7 +6,7 @@ Tải đủ chương trình/đề/sơ đồ, chuẩn bị vé offline, thử b�
 
 Audio, thời gian rà và nhập bài chạy cục bộ. Bài đã bấm nộp được khóa và ghi bền trước khi gửi. Mạng/server lỗi giữ bài chờ đồng bộ; chỉ có receipt đúng người/lượt/generation/operation/revision mới báo thành công. Đóng trang thì đồng bộ tiếp khi mở lại cùng thiết bị/trình duyệt; không hứa gửi khi browser đã tắt.
 
-Không import bootstrap/enhancer/controller hoặc demo-reset cũ. Không có Reading/Writing, key trong frontend hoặc tự thay điểm Portal. Mất mốc/gián đoạn nghe không phục hồi an toàn thì dừng để giảng viên hỗ trợ, không phát lại từ 0. Một controller độc quyền player; Web Lock chặn tab thứ hai can thiệp lượt đang chạy.
+Không import bootstrap/enhancer/controller hoặc demo-reset cũ. Không có Reading/Writing, key trong frontend hoặc key ghi Portal trong frontend. Mất mốc/gián đoạn nghe không phục hồi an toàn thì dừng để giảng viên hỗ trợ, không phát lại từ 0. Một controller độc quyền player; Web Lock chặn tab thứ hai can thiệp lượt đang chạy.
 
 `teacher-sso.js` là bản ghim của `shared/teacher-single-sign-on.js` tại nền Pages d8ed2edbaa718362ba78b9429a5c23957564d238, thêm đúng source identity `listeningretake` cho entry riêng. Giữ chung cookie/broker/discovery/login/logout và thời hạn 90/365; không đổi asset của consumer cũ. Nâng bản ghim sau này phải đối chiếu contract/bộ kiểm SSO, không chép phiên bản cũ làm mất sửa đã phát.
 
@@ -21,3 +21,9 @@ Dùng nguyên thứ tự stylesheet/font/asset của Substitute Test 1 K56. `nat
 CSS local chỉ dành cho phần thêm: readiness/offline, xác nhận nghe rõ, cảnh báo và trạng thái nộp. Highlight/Note, cờ và cỡ chữ lưu trong namespace retake theo attempt, không ghi vào kho Substitute gốc. `native-upgrades.css` chỉ chứa các trạng thái bổ sung. Giữ nguyên `style.css` và đường CSS cũ cho trang giảng viên và cache của bản trước.
 
 So hình thức dùng original demo DOM ở trạng thái Listening, cùng Edge/viewport/font; không gọi start/submit của bài gốc. Ghi rõ bản demo không có identity/audio đang phát nên phần toolbar đó chỉ so với source thực, không tuyên bố toàn ảnh pixel-identical. Test `tests/listening-retake-native-ui.mjs` so token/geometry, kiểm cờ/cỡ chữ/Highlight/Note, nghe thử/start/nộp offline và receipt bằng người giả.
+
+## Cập nhật 06/11/2026 — nút và điểm
+
+Nút xác nhận đúng tên bắt đầu chuẩn bị và tải audio; bỏ checkbox riêng. Nghe thử thành công mới mở nút Bắt đầu thi Listening; nhấn nút là xác nhận nghe rõ. Giữ nguyên native layout và các cổng offline, Blob, trial, ownership, sealed snapshot và receipt.
+
+Theo yêu cầu mới của Đức, bài đã nộp được chấm /40 và ghi thay đúng bản ghi Term Test 1 Listening của IC2311, giữ nguyên Reading/Writing. Backend giữ hàng chờ điểm bền riêng, qua Portal Hub đang vận hành; không ghi bảng điểm trực tiếp từ browser. Trang giảng viên phân biệt nhận bài với xác nhận điểm trên Portal. Điểm/bản ghi bị sửa ngoài baseline sẽ chờ đối soát; không ghi đè mù. Không backfill lượt dùng thử hoặc bài trước khi bật tính năng.
