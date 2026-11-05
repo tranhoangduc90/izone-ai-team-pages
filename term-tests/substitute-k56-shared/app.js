@@ -225,15 +225,24 @@
     return saved > 0;
   }
 
+  function journalSubmissionOwner() {
+    const current=window.TERM_TEST_BOOTSTRAP;
+    return JSON.stringify([state.studentRef,state.historyEpoch,current?.examSessionId,current?.clientRunId]);
+  }
+
   async function submitSection(examId, answers) {
+    let operationId;
+    try { operationId = crypto.randomUUID(); } catch {}
+    const owner = journalSubmissionOwner();
+    const trace = phase => operationId ? { operationId, phase, owner } : undefined;
     const options = { method: 'POST', body: JSON.stringify({ examId, answers }) };
-    if (!window.TERM_TEST_BOOTSTRAP?.examSessionId) return apiRequest('/api/test/grade', options);
+    if (!window.TERM_TEST_BOOTSTRAP?.examSessionId) return apiRequest('/api/test/grade', options, trace('send'));
     const read = () => apiRequest('/api/test/exam/section-status', {
       method: 'POST', body: JSON.stringify({ examId })
-    });
+    }, trace('readback'));
     const existing = await read();
     if (existing.persisted) return existing;
-    try { return await apiRequest('/api/test/grade', options); }
+    try { return await apiRequest('/api/test/grade', options, trace('send')); }
     catch (error) {
       try { const saved = await read(); if (saved.persisted) return saved; } catch {}
       throw error;
@@ -592,10 +601,14 @@
     return answered;
   }
 
-  async function apiRequest(path, options = {}) {
-    let journalRequest;
-    try { if (typeof examJournal !== 'undefined') journalRequest = examJournal?.startRequest(path, options); } catch {}
-    try { if (!journalRequest) journalRequest = window.EXAM_JOURNAL_STARTUP?.startRequest(path, options); } catch {}
+  async function apiRequest(path, options = {}, trace) {
+    let journalRequest, journalStatus;
+    try {
+      if (!trace || trace.owner === journalSubmissionOwner()) {
+        journalRequest = (typeof examJournal !== 'undefined' && examJournal?.startRequest(path, options, trace))
+          || window.EXAM_JOURNAL_STARTUP?.startRequest(path, options, trace);
+      }
+    } catch {}
     const journalRun = async () => {
     const controller = new AbortController();
     const untrack=window.SUBSTITUTE_STATE?.track(controller) || (()=>{});
@@ -609,10 +622,12 @@
       }
       const response = await fetch(appConfig.API_BASE_URL, {
         method: 'POST',
-        body: JSON.stringify({ route: requestUrl.pathname, payload:serverGradingMode ? window.SUBSTITUTE_STATE.payload(payload) : payload }),
+        body: JSON.stringify({ route: requestUrl.pathname, payload:serverGradingMode ? window.SUBSTITUTE_STATE.payload(payload) : payload,
+          ...(journalRequest?.requestId ? { journalRequestId:journalRequest.requestId } : {}) }),
         signal: controller.signal,
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
       });
+      journalStatus = response.status;
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.ok === false) {
         const requestError = new Error(data.message || `Lỗi HTTP ${response.status}`);
@@ -666,8 +681,8 @@
 
     };
     if (!journalRequest) return journalRun();
-    try { const result = await journalRun(); try { journalRequest.done(result); } catch {} return result; }
-    catch (error) { try { journalRequest.done(undefined, error); } catch {} throw error; }
+    try { const result = await journalRun(); try { journalRequest.done(result, undefined, journalStatus); } catch {} return result; }
+    catch (error) { try { journalRequest.done(undefined, error, journalStatus); } catch {} throw error; }
   }
 
   window.addEventListener('term-test:listening-timing-updated', event => {
