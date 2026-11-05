@@ -51,7 +51,10 @@ export class SubstituteStore {
     if (!this.attempts.has(index)) this.attempts.set(index,{ ...input, status:'queued', submittedAt:new Date().toISOString() });
     return structuredClone(this.attempts.get(index));
   }
-  read(input) { assert.ok(this.attempts.has(key(input))); return structuredClone(this.attempts.get(key(input))); }
+  read(input) {
+    if (!this.attempts.has(key(input))) throw Object.assign(new Error('ATTEMPT_NOT_FOUND'),{code:'ATTEMPT_NOT_FOUND',status:404});
+    return structuredClone(this.attempts.get(key(input)));
+  }
   close() { this.attempts.clear(); this.exams.clear(); this.sections.clear(); }
 }
 export function gradingFromReadback(saved) {

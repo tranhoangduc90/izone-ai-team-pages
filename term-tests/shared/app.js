@@ -27,6 +27,7 @@
     : '';
 
   if (!testConfig || !appConfig || !root) return;
+  const { createWritingSubmission } = await import('../shared/writing-submission.mjs?v=20261105-writing-submit-v1');
   if(!window.IZONE_EXAM_CLOCK)await import('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
 
   if (!classCode && !window.TERM_TEST_CONTENT && !demoMode) {
@@ -1389,6 +1390,18 @@
 
   window.TERM_TEST_DEADLINE_GUARD_ACTIVE = true;
 
+  // Giữ trạng thái nộp Writing riêng với lỗi đọc kết quả; không đổi luồng Listening/Reading.
+  let writingSubmissionRenderSignature = '';
+  const writingSubmission = createWritingSubmission({
+    owner: () => JSON.stringify([testConfig.slug,classCode,state.studentRef,state.attemptToken,state.historyEpoch,
+      window.TERM_TEST_BOOTSTRAP?.clientRunId]),
+    submitted: () => Boolean(state.writingSubmitted),
+    grading: () => state.result?.writing?.grading || state.testGrades?.writing?.grading,
+    notify: showNotice, check: () => refreshWritingGrading(),
+    hosts: () => [elements.writingView, elements.writingSubmissionResult],
+    storage: () => { try { return window.SUBSTITUTE_STATE?.storages?.() || [window.sessionStorage,window.localStorage]; } catch { return []; } }
+  });
+
   let writingSaveTimer = 0;
   let writingForceSaveTimer = 0;
   let writingRetryTimer = 0;
@@ -1508,6 +1521,7 @@
     }
     writingGradingRefreshRequested = false;
     writingGradingPollInFlight = true;
+    const requestedWritingOwner = writingSubmission.owner();
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
       const payload = await apiRequest('/api/term-tests/result', {
@@ -1515,6 +1529,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attemptToken: state.attemptToken })
       });
+      if (!writingSubmission.current(requestedWritingOwner)) return;
+      writingSubmission.readAvailable();
       applyWritingFromServer(payload.writing, Boolean(payload.writing?.submitted));
       renderResult(payload);
       if (payload.writing?.grading?.ready) {
@@ -1522,6 +1538,7 @@
         if (!wasReady) showNotice('Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.', 'success');
       }
     } catch {
+      if (writingSubmission.current(requestedWritingOwner)) writingSubmission.readUnavailable();
       // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
     } finally {
       writingGradingPollInFlight = false;
@@ -2598,6 +2615,10 @@
 
   function renderWritingSubmission() {
     if (!writingConfig || !elements.writingSubmissionResult) return;
+    writingSubmission.sync();
+    const submissionSignature = JSON.stringify([writingSubmission.owner(),state.writingSubmitted,state.result?.writing?.grading]);
+    if (writingSubmissionRenderSignature === submissionSignature) return;
+    writingSubmissionRenderSignature = submissionSignature;
     elements.writingSubmissionResult.hidden = !state.writingSubmitted;
     if (!state.writingSubmitted) {
       elements.writingSubmissionResult.replaceChildren();
@@ -2689,6 +2710,7 @@
 
     section.append(heading, gradingArea);
     elements.writingSubmissionResult.replaceChildren(section);
+      writingSubmission.sync();
   }
 
   function addSummaryCard(label, value) {
@@ -3484,6 +3506,7 @@
 
     elements.writingView.addEventListener('submit', async event => {
       event.preventDefault();
+      if (writingSubmission.busy || state.writingSubmitted) { await writingSubmission.inspect(); return; }
       const automatic = event.submitter?.dataset.autoSubmit === 'true'
         || elements.writingView.dataset.writingTimeExpired === 'true';
       const belowMinimum = Array.from(writingConfig.tasks || []).map(task => ({
@@ -3496,44 +3519,50 @@
         if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
       }
 
-      if (demoMode) {
-        state.writingSubmitted = true;
-        saveSession();
-        renderResult(buildDemoPayload('complete'));
-        showNotice('Bản demo: Writing đã nộp; kết quả Listening và Reading đã được mở.', 'success');
-        setStage('result');
-        return;
-      }
-
-      window.clearTimeout(writingSaveTimer);
-      window.clearTimeout(writingForceSaveTimer);
-      window.clearTimeout(writingRetryTimer);
-      elements.writingView.dataset.writingSubmitting = 'true';
-      setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài Writing');
-      for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
-      if (automatic) showNotice(`Đã hết ${writingMinutes} phút. Hệ thống đang tự lưu và thu bài Writing...`);
+      const writingOwner = writingSubmission.begin();
+      if (writingOwner === null) return;
       try {
-        // Dàn ý lưu riêng trước khi nộp; lỗi dàn ý không được làm mất quyền nộp bài luận khi hết giờ.
-        await Promise.race([
-          writingPlanning?.flush(),
-          new Promise((_, reject) => window.setTimeout(() => reject(new Error('Dàn ý đang chờ đồng bộ.')), 2000))
-        ]).catch(() => {
-          showNotice('Dàn ý chưa đồng bộ hết và vẫn được giữ trên thiết bị. Hệ thống tiếp tục nộp bài viết.');
-        });
-        const saved = await saveWritingToServer('submit');
-        if (!saved.writing?.submitted) throw new Error('Máy chủ chưa xác nhận bài Writing đã được nộp.');
-        state.writingSubmitted = true;
-        state.writingDirty = false;
-        saveSession();
-        elements.writingView.dispatchEvent(new CustomEvent('term-test:writing-submitted'));
-        setStage('result-ready');
-        showNotice(saved.writing.accepted === false
-          ? 'Hệ thống đã chốt bản lưu đúng hạn. Bản khác trên máy được giữ trong mục phục hồi để bạn đọc và sao chép.'
-          : automatic
-            ? `Đã hết ${writingMinutes} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
-            : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
-        await loadResult(elements.viewResult);
+        if (demoMode) {
+          state.writingSubmitted = true;
+          saveSession();
+          renderResult(buildDemoPayload('complete'));
+          showNotice('Bản demo: Writing đã nộp; kết quả Listening và Reading đã được mở.', 'success');
+          setStage('result');
+          return;
+        }
+
+        window.clearTimeout(writingSaveTimer);
+        window.clearTimeout(writingForceSaveTimer);
+        window.clearTimeout(writingRetryTimer);
+        elements.writingView.dataset.writingSubmitting = 'true';
+        setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài Writing');
+        for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
+        if (automatic) showNotice(`Đã hết ${writingMinutes} phút. Hệ thống đang tự lưu và thu bài Writing...`);
+        try {
+          // Dàn ý lưu riêng trước khi nộp; lỗi dàn ý không được làm mất quyền nộp bài luận khi hết giờ.
+          await Promise.race([
+            writingPlanning?.flush(),
+            new Promise((_, reject) => window.setTimeout(() => reject(new Error('Dàn ý đang chờ đồng bộ.')), 2000))
+          ]).catch(() => {
+            showNotice('Dàn ý chưa đồng bộ hết và vẫn được giữ trên thiết bị. Hệ thống tiếp tục nộp bài viết.');
+          });
+          const saved = await saveWritingToServer('submit');
+          if (!writingSubmission.current(writingOwner)) return;
+          if (!saved.writing?.submitted) throw new Error('Máy chủ chưa xác nhận bài Writing đã được nộp.');
+          state.writingSubmitted = true;
+          state.writingDirty = false;
+          saveSession();
+          elements.writingView.dispatchEvent(new CustomEvent('term-test:writing-submitted'));
+          setStage('result-ready');
+          showNotice(saved.writing.accepted === false
+            ? 'Hệ thống đã chốt bản lưu đúng hạn. Bản khác trên máy được giữ trong mục phục hồi để bạn đọc và sao chép.'
+            : automatic
+              ? `Đã hết ${writingMinutes} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
+              : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
+          await loadResult(elements.viewResult);
       } catch (error) {
+        if (!writingSubmission.current(writingOwner)) return;
+        if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
         showNotice(automatic
           ? `Hết giờ nhưng chưa thể nộp Writing: ${error.message}. Bài đã được khóa và hệ thống sẽ tự thử lại; không làm mới trang.`
           : `Không thể nộp Writing: ${error.message}. Bài vẫn được giữ trên máy để bạn thử lại.`, 'error');
@@ -3545,6 +3574,20 @@
         const timeExpired = elements.writingView.dataset.writingTimeExpired === 'true';
         for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = timeExpired;
         setBusy(elements.submitWriting, false, 'Đang lưu và nộp...', 'Nộp bài Writing');
+      }
+      } catch (error) {
+        if (!writingSubmission.current(writingOwner)) return;
+        if (state.writingSubmitted) {
+          writingSubmission.readUnavailable();
+          showNotice('Bài Writing đã được nhận. Hiện chưa mở được kết quả mới; bạn không cần nộp lại.', '');
+        } else {
+          showNotice(`Chưa xác nhận được trạng thái nộp Writing: ${error.message}. Bản đã gửi vẫn được giữ.`, 'error');
+        }
+      } finally {
+        writingSubmission.end(writingOwner);
+        if (writingSubmission.current(writingOwner) && writingSubmission.pending() && !state.writingSubmitted) {
+          for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
+        }
       }
     });
   }
