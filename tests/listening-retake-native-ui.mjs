@@ -27,10 +27,10 @@ try{
  await source.waitForFunction(()=>document.body.dataset.substituteWorkspace==='active');await source.evaluate(()=>document.fonts.ready);
  await source.screenshot({path:path.join(output,'reference-exam.png')});
  report.reference=await measure(source);
- await target.goto(base+'ic2311-listening-retake-substitute1-k56/');await target.locator('#student option').nth(1).waitFor({state:'attached'});await target.evaluate(()=>document.fonts.ready);
+ let releaseLayout;const layoutReady=new Promise(resolve=>releaseLayout=resolve);await target.route('**/substitute-shared/exam-controls.js?*',async route=>{await layoutReady;await route.continue();});await target.goto(base+'ic2311-listening-retake-substitute1-k56/');await target.locator('#student option').nth(1).waitFor({state:'attached'});await target.evaluate(()=>document.fonts.ready);
  await target.screenshot({path:path.join(output,'target-lobby.png'),fullPage:true});report.lobby=await measure(target);
  assert.equal(report.lobby[0].fontFamily,report.reference[0].fontFamily);assert.equal(report.lobby[0].background,report.reference[0].background);
- await target.selectOption('#student',{index:1});await target.check('#identity-confirm');await target.click('#prepare');await target.locator('#trial[data-ready="true"]').waitFor({state:'visible',timeout:30000});
+ await target.selectOption('#student',{index:1});await target.check('#identity-confirm');assert.equal(await target.locator('#prepare').isDisabled(),true,'essential native layout module must finish before preparation');releaseLayout();await target.locator('#prepare').waitFor({state:'visible'});await target.click('#prepare');await target.locator('#trial[data-ready="true"]').waitFor({state:'visible',timeout:30000});
  await context.setOffline(true);await target.click('#preview');await target.waitForFunction(()=>!document.getElementById('heard').disabled,null,{timeout:20000});await target.check('#heard');await target.click('#start');await target.locator('#exam').waitFor({state:'visible'});
  await target.waitForFunction(()=>document.body.dataset.substituteWorkspace==='active');await target.screenshot({path:path.join(output,'target-exam.png')});report.exam=await measure(target);
  const parity=[];

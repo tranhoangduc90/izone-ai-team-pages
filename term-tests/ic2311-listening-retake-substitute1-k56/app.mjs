@@ -6,7 +6,7 @@ import {mountNativeListening,nativeLayout,nativeAnnotations} from './native-ui.m
 const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value;
 function show(id,value=true){$(id).hidden=!value;if(id==='exam'){$('listeningView').hidden=!value;$('identityView').hidden=!value;$('page-shell').classList.toggle('cbt-bootstrap-shell',!value);if(value)$('lobby').hidden=true;}if(id==='finished'&&value)$('lobby').hidden=true;}
 const storage=await new DurableStore().open().catch(e=>{text('identity-status',e.message);throw e;});
-let state=await storage.get('current'),preparation=await storage.get('preparation'),busy=false,syncing=false,syncFailures=0,retryAt=0,content,roster,prepared=false,reviewMono=null,holdTimer;
+let state=await storage.get('current'),preparation=await storage.get('preparation'),busy=false,syncing=false,syncFailures=0,retryAt=0,content,roster,prepared=false,reviewMono=null,holdTimer,presentationReady=false;
 const tabId=crypto.randomUUID(),audioOwnerId=state?.identity?.audioOwnerId||preparation?.audioOwnerId||crypto.randomUUID();
 let releaseOwner,ownerHeld=false;
 async function acquireOwner(){
@@ -63,10 +63,10 @@ async function renderContent(){
  const uiState=await storage.get('ui:'+state?.identity?.attemptId)||{flags:{listening:{}},activeSection:{listening:0},fontSize:{listening:100}};
  mountNativeListening({content,grid:$('listeningQuestions'),form:$('listeningView'),heading:$('exam-heading'),uiState,onUiState:value=>{if(state?.identity)void storage.put('ui:'+state.identity.attemptId,value).catch(()=>note('Chưa lưu được đánh dấu/cỡ chữ trên thiết bị. Đáp án được lưu riêng.'));}});
  $('listeningView').addEventListener('submit',event=>event.preventDefault());$('listeningView').addEventListener('input',event=>{const n=event.target.dataset.question;if(!n||!['playing','review'].includes(state.phase))return;state.answers[n]=event.target.value;void queueDraft();});
- await nativeLayout(content.controls);
+ await nativeLayout(content.controls);presentationReady=true;$('prepare').disabled=!presentationReady||!$('identity-confirm').checked||!$('student').value;text('identity-status','');
 }
 async function prepare(){
- if(busy)return;busy=true;$('prepare').disabled=true;show('preparation');show('retry-preparation',false);
+ if(busy||!presentationReady)return;busy=true;$('prepare').disabled=true;show('preparation');show('retry-preparation',false);
  try{
   done('check-content');done('check-storage');
   if(!state?.permit){const studentRef=$('student').value;if(preparation?.studentRef!==studentRef)preparation={studentRef,audioOwnerId,operationId:crypto.randomUUID()};await storage.put('preparation',preparation);const operationId=preparation.operationId;const r=await journal.request('/prepare',{classCode:'IC2311',studentRef,audioOwnerId,tabId,operationId},{permit:null,operationId});
@@ -79,7 +79,7 @@ async function prepare(){
  }catch(e){text('prepare-status','Chưa chuẩn bị được bài thi ('+(e.code||'PREPARATION_FAILED')+'). Bạn chưa nên bắt đầu. Hãy thử lại; nếu vẫn lỗi, liên hệ giảng viên để được tổ chức thi lại.');show('retry-preparation');}
  finally{busy=false;$('prepare').disabled=prepared||!$('identity-confirm').checked;}
 }
-$('identity-confirm').addEventListener('change',()=>{$('prepare').disabled=!$('identity-confirm').checked||!$('student').value;});$('student').addEventListener('change',()=>{$('identity-confirm').checked=false;$('prepare').disabled=true;});$('prepare').onclick=prepare;$('retry-preparation').onclick=prepare;
+$('identity-confirm').addEventListener('change',()=>{$('prepare').disabled=!presentationReady||!$('identity-confirm').checked||!$('student').value;});$('student').addEventListener('change',()=>{$('identity-confirm').checked=false;$('prepare').disabled=true;});$('prepare').onclick=prepare;$('retry-preparation').onclick=prepare;
 $('preview').onclick=async()=>{
  if(!prepared||busy)return;busy=true;$('preview').disabled=true;$('heard').disabled=true;$('start').disabled=true;
  try{await player.preview(p=>text('preview-status','Đang kiểm tra phát âm thanh · '+Math.round(p*100)+'%'));text('preview-status','Phát bình thường. Nếu nghe rõ, tích xác nhận bên dưới.');$('heard').disabled=false;$('preview-step').dataset.state='complete';}
@@ -112,7 +112,7 @@ setInterval(()=>{if(state?.phase==='review'&&reviewMono!==null){const left=Math.
 try{
  if(state?.permit){if(!['submitted','technical_stop'].includes(state.phase))await acquireOwner();journal.bind(state.identity,state.permit);if(['submitted','technical_stop'].includes(state.phase)){renderFinished();void synchronize(true);}else if(state.phase!=='prepared'){await technicalStop('PAGE_RELOADED_DURING_EXAM');}}
  if(!state||state.phase==='prepared'){
-  if(![...document.styleSheets].some(sheet=>sheet.href?.includes('/style.css')))throw Error('STYLESHEET_UNAVAILABLE');
+  if(![...document.styleSheets].some(sheet=>sheet.href?.includes('/native-upgrades.css')))throw Error('STYLESHEET_UNAVAILABLE');
   const results=await Promise.all([fetch('content.json?v='+CONTENT_VERSION).then(r=>{if(!r.ok)throw Error();return r.json();}),journal.request('/roster',null,{permit:null,method:'GET'})]);content=results[0];roster=results[1].value;
   if(roster.classCode!=='IC2311'||roster.contentVersion!==CONTENT_VERSION||content.contentVersion!==CONTENT_VERSION||content.sourceSlug!=='substitute-test-1-k56'||content.listening.sections.length!==4||content.controls.length!==40||new Set(content.controls.map(c=>c.number)).size!==40||content.controls.some(c=>!Number.isInteger(c.number)||c.number<1||c.number>40))throw Error('CONTENT_CONTRACT_MISMATCH');
   const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src='assets/kinney-hotel-plan.png';});
