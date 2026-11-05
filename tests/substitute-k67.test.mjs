@@ -9,7 +9,7 @@ const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
 
 test('dashboard exposes both K56 and K67 substitute tests', () => {
   const html = read('term-tests/substitute-test-1-k56-dashboard/index.html');
-  assert.match(html, /value="k67"/u);
+  assert.match(html, /data-course="k67" type="button" aria-label="Chọn Khóa 67"/u);
   assert.match(html, /substitute-test-1-k67-computer-based/u);
   assert.match(html, /substitute-test-2-k67-computer-based/u);
 });
