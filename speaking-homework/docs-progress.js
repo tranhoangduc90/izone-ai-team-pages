@@ -7,7 +7,9 @@ export function renderDocsProgress(value){
     if(progress)progress.insertAdjacentElement('afterend',node);else host.append(node);}
   if(!node)return;
   node.hidden=!value;
-  node.textContent=!value?'':value.status==='verified'?'Đã cập nhật tiến độ về Docs.':value.status==='blocked'
+  const message=!value?'':value.status==='verified'?'Đã cập nhật tiến độ về Docs.':value.error_code==='DOC_WRITE_UNAVAILABLE'&&value.status!=='blocked'
+    ?'Tiến độ đã lưu. Docs đang chờ quyền ghi; hệ thống sẽ tự thử lại.':value.status==='blocked'
     ?'Bài đã được lưu. Chưa cập nhật được Docs; hệ thống cần kiểm tra lại.'
     :'Bài đã được lưu — đang cập nhật tiến độ về Docs…';
+  if(node.textContent!==message)node.textContent=message;
 }

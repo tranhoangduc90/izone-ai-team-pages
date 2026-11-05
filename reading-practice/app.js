@@ -221,7 +221,15 @@ async function loadResult(no){
  if(a.status==='submitted'&&(a.detailsLoaded===false||!resultCache.has(a.id))){const owner=identity?.bindingId,token=sessionToken;try{const response=await request(`/result/${a.id}`);if(owner!==identity?.bindingId||token!==sessionToken)return;resultCache.set(a.id,response);apply(response);MCQ=response.definition.mcq;}catch(e){if(owner===identity?.bindingId&&token===sessionToken)notify(e.message);return;}}
  navigate(`result?attempt=${no}`);
 }
-function docsNotice(a){if(identity?.entryMode==='shared')return `<div data-practice-docs="${escape(a.id)}" class="note success">✓ Kết quả đã được lưu riêng cho bạn. <a href="teacher.html#submission=${encodeURIComponent(a.submissionId)}" target="_blank" rel="noopener noreferrer">Giảng viên xem kết quả ↗</a></div>`;const e=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed'),verified=e?.docs==='verified';return `<div data-practice-docs="${escape(a.id)}" class="note ${verified?'success':'warning'}">${verified?'✓ Đã cập nhật tình trạng trong tài liệu bài tập.':e?.docs==='blocked'?'Bài đã nộp. Chưa cập nhật được Docs; giảng viên cần kiểm tra ô trạng thái.':'Bài đã nộp và được lưu trên máy chủ. Đang cập nhật tình trạng trong Docs.'} <a href="${escape(identity.documentUrl)}" target="_blank" rel="noopener noreferrer">Mở tài liệu ↗</a></div>`;}
+function docsNotice(a){
+ const event=record()?.events.findLast(e=>e.attempt===a.no&&e.type==='completed');
+ const waiting=event?.docsIssue==='write_unavailable'&&event.docs!=='blocked';
+ const waitingText='Kết quả đã lưu. Docs đang chờ quyền ghi; hệ thống sẽ tự thử lại.';
+ if(identity?.entryMode==='shared')return `<div data-practice-docs="${escape(a.id)}" class="note ${waiting?'warning':'success'}">${waiting?waitingText:'✓ Kết quả đã được lưu riêng cho bạn.'} <a href="teacher.html#submission=${encodeURIComponent(a.submissionId)}" target="_blank" rel="noopener noreferrer">Giảng viên xem kết quả ↗</a></div>`;
+ const verified=event?.docs==='verified';
+ const message=verified?'✓ Đã cập nhật tình trạng trong tài liệu bài tập.':waiting?waitingText:event?.docs==='blocked'?'Bài đã nộp. Chưa cập nhật được Docs; giảng viên cần kiểm tra ô trạng thái.':'Bài đã nộp và được lưu trên máy chủ. Đang cập nhật tình trạng trong Docs.';
+ return `<div data-practice-docs="${escape(a.id)}" class="note ${verified?'success':'warning'}">${message} <a href="${escape(identity.documentUrl)}" target="_blank" rel="noopener noreferrer">Mở tài liệu ↗</a></div>`;
+}
 function docs(){app.innerHTML=hero(`BUỔI ${LESSON.lesson} · READING THỰC CHIẾN`,LESSON.title,`${escape(AuthoredUI.sourceLabel(LESSON))} · ${total()} câu · ${FULL_TIME/60000} phút`)+`<section class="card card-pad"><h2>Làm bài thực chiến</h2><p>Chọn đúng lớp và tên trước khi bắt đầu. Bài đang làm được lưu để bạn tiếp tục bằng thời gian còn lại.</p>${btn('Mở bài Reading →','open-assignment')}${identity?.documentUrl?`<p><a target="_blank" rel="noopener noreferrer" href="${escape(identity.documentUrl)}">Mở tài liệu bài tập ↗</a></p>`:''}</section>`+footer();}
 function login(){
  const memory=personalEntry?{studentId:entryInfo.selectedStudentRef,classCode:entryInfo.classCode}:{}; // Chỉ chọn chủ đã được máy chủ đối chiếu.
