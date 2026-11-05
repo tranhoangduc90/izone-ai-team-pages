@@ -1,3 +1,4 @@
+import {BUILD} from '../term-tests/ic2311-listening-retake-substitute1-k56/config.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Telemetry} from '../term-tests/ic2311-listening-retake-substitute1-k56/telemetry.mjs';
@@ -18,6 +19,6 @@ test('HTTP 503 with a non-JSON body remains HTTP_ERROR with its status; body is 
  globalThis.fetch=async()=>new Response('<html>fixture-private-message</html>',{status:503});const j=make();await assert.rejects(j.request('/snapshot',{}),e=>e.code==='HTTP_ERROR');const r=j.rows.find(r=>r.eventName==='client_request_completed');assert.equal(r.httpStatus,503);assert.equal(r.errorOrigin,'proxy_or_api');assert.equal(JSON.stringify(j.rows).includes('fixture-private-message'),false);
 });
 test('retry keeps operation ID, changes request ID and preserves readable build/error fields',async()=>{
- globalThis.fetch=async()=>new Response(JSON.stringify({ok:true,revision:7}),{status:200});const j=make(),operationId=crypto.randomUUID();const a=await j.request('/snapshot',{operationId}),b=await j.request('/snapshot',{operationId});assert.notEqual(a.requestId,b.requestId);const rows=j.rows.filter(r=>r.eventName==='client_request_sent');assert.ok(rows.every(r=>r.operationId===operationId));assert.ok(rows.every(r=>r.buildVersion==='listening-retake-20261105-v1'));
+ globalThis.fetch=async()=>new Response(JSON.stringify({ok:true,revision:7}),{status:200});const j=make(),operationId=crypto.randomUUID();const a=await j.request('/snapshot',{operationId}),b=await j.request('/snapshot',{operationId});assert.notEqual(a.requestId,b.requestId);const rows=j.rows.filter(r=>r.eventName==='client_request_sent');assert.ok(rows.every(r=>r.operationId===operationId));assert.ok(rows.every(r=>r.buildVersion===BUILD));
  const clean=sanitize({errorCode:'AUDIO_GENERATION_STALE',buildVersion:'release-v1',exceptionName:'TypeError',body:{answers:{1:'private'}},token:'private',message:'private'});assert.equal(clean.errorCode,'AUDIO_GENERATION_STALE');assert.equal(clean.buildVersion,'release-v1');assert.equal(clean.body,undefined);assert.equal(clean.message,undefined);assert.equal(clean.token,undefined);
 });

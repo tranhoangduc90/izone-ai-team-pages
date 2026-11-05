@@ -1,4 +1,4 @@
-import {API,BUILD,PRODUCT,SLUG} from './config.mjs';
+import {API,BUILD,PRODUCT,SLUG} from './config.mjs?v=20261106-native-v2';
 import {sanitize} from './log-contract.mjs';
 const K='izone-listening-retake:log:v1:';
 const code=v=>typeof v==='string'&&/^[A-Z][A-Z0-9_]{1,79}$/.test(v)?v:'UNCLASSIFIED_EXCEPTION';
