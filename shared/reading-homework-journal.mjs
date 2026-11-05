@@ -1,6 +1,20 @@
 import { IndexedOutbox } from '../term-tests/shared/exam-journal/outbox.mjs?v=20261105-diagnostics-v2';
 import { createRecorder, fetchTransport } from '../term-tests/shared/exam-journal/recorder.mjs?v=20261105-diagnostics-v2';
 
+const semanticFields = {
+  'submit.gate': ['phase', 'validCount', 'totalCount', 'requiredCount', 'minimumPermille', 'allowed'],
+  'audio.state': ['phase', 'positionMs', 'bufferedMs', 'volumePermille', 'muted', 'paused', 'readyState', 'networkState', 'ratePermille', 'tabHidden', 'errorCode'],
+  'audio.transfer': ['phase', 'assetId', 'expectedHash', 'byteLength', 'source', 'verified', 'errorCode', 'durationMs'],
+};
+function selectFields(kind, fields) {
+  return Object.fromEntries((semanticFields[kind] || []).flatMap(key => {
+    const value = fields?.[key];
+    if (typeof value === 'boolean' || Number.isSafeInteger(value)) return [[key, value]];
+    if (typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/.test(value)) return [[key, value]];
+    return [];
+  }));
+}
+
 function packet(event) {
   const { id, pageVisitId, sequence, occurredAt, elapsedMs, build, type, data } = event;
   const base = { id, pageVisitId, sequence, occurredAt, elapsedMs, build, dataSchemaVersion: 1 };
@@ -10,20 +24,26 @@ function packet(event) {
   if (type === 'storage_degraded') return {
     ...base, kind: 'capture.health', traceId: id, data: { state: 'memory_only' },
   };
-  const { kind, traceId, requestId, phase, revision, baseRevision, httpStatus, durationMs } = data;
+  const { kind, traceId, requestId, phase, revision, baseRevision, httpStatus, durationMs, errorCode } = data;
   return {
     ...base, kind, traceId, ...(requestId === undefined ? {} : { requestId }),
-    data: Object.fromEntries(Object.entries({ phase, revision, baseRevision, httpStatus, durationMs })
-      .filter(([, value]) => value !== undefined)),
+    data: data.fields ? selectFields(kind, data.fields)
+      : Object.fromEntries(Object.entries({ phase, revision, baseRevision, httpStatus, durationMs, errorCode })
+        .filter(([, value]) => value !== undefined)),
   };
 }
 
 export function startReadingHomeworkJournal(endpoint) {
-  const outbox = new IndexedOutbox({ name: 'izone-reading-homework-journal-v1', maxBytes: 2 * 1024 * 1024 });
-  const send = fetchTransport(endpoint);
+  return startHomeworkJournal(endpoint, 'reading-homework');
+}
+
+export function startHomeworkJournal(endpoint, product, {fetcher = globalThis.fetch} = {}) {
+  if (!['reading-homework', 'listening-homework'].includes(product)) throw Error('JOURNAL_PRODUCT_DENIED');
+  const outbox = new IndexedOutbox({ name: 'izone-' + product + '-journal-v1', maxBytes: 2 * 1024 * 1024 });
+  const send = fetchTransport(endpoint, fetcher);
   let active = null, stopped = false;
   const recorder = createRecorder({
-    outbox, context: () => active, build: 'reading-homework-journal-20261105',
+    outbox, context: () => active, build: product + '-journal-20261105',
     transport: (body, options) => send({ ...body, events: body.events.map(packet) }, options),
   });
   const flush = options => { void recorder.flush(options).catch(() => {}); };
@@ -41,7 +61,7 @@ export function startReadingHomeworkJournal(endpoint) {
     const captured = { bindingId, auth: { ticket, ticketId, issuedAt, expiresAt } };
     active = captured;
     void outbox.renewBinding(bindingId, captured.auth).catch(() => {});
-    const emit = data => recorder.record('reading_exchange', data, captured);
+    const emit = data => recorder.record('homework_exchange', data, captured);
     return {
       queued(traceId, baseRevision) {
         emit({ kind: 'draft.exchange', traceId, phase: 'local_queued', baseRevision });
@@ -50,10 +70,14 @@ export function startReadingHomeworkJournal(endpoint) {
         const requestId = crypto.randomUUID(), started = performance.now();
         const identity = { kind, traceId, requestId, revision, baseRevision };
         emit({ ...identity, phase: 'sent' });
-        return (phase, httpStatus, nativeRevision) => {
+        return (phase, httpStatus, nativeRevision, errorCode) => {
           emit({ ...identity, phase, httpStatus, revision: nativeRevision ?? revision,
+            ...(typeof errorCode === 'string' && /^[A-Z][A-Z0-9_]{0,79}$/.test(errorCode) ? { errorCode } : {}),
             durationMs: Math.min(600_000, Math.max(0, Math.round(performance.now() - started))) });
         };
+      },
+      observe(kind, fields, traceId = crypto.randomUUID()) {
+        if (semanticFields[kind]) emit({ kind, fields: selectFields(kind, fields), traceId });
       },
     };
   }
