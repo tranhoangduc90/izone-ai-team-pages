@@ -1,5 +1,5 @@
 import { focusSpeakingStart } from './journey-focus.js';
-import {startSpeakingHomeworkJournal} from '../shared/speaking-homework-journal.mjs?v=20261106-r1';
+import {startSpeakingHomeworkJournal} from '../shared/speaking-homework-journal.mjs?v=20261107-enabled-r1';
 const speakingJournal=startSpeakingHomeworkJournal();
 import {renderDocsProgress,docsProgressPending} from './docs-progress.js?v=20261105-docs-recovery1';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261104-self-match1';
