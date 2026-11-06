@@ -100,6 +100,7 @@ export class Term2Offline extends EventTarget{
   try{ownerId=localStorage.getItem(ownerKey)||crypto.randomUUID();localStorage.setItem(ownerKey,ownerId);}catch{throw failure();}
   const response=await this.post('/offline/prepare',{attemptToken:prepared.attemptToken,examSessionToken:prepared.examSessionToken,generation:Number(prepared.generation)||0,ownerId,classCode,studentRef,mode},false);
   if(response.offline?.policy!=='term2-offline-v1'||response.attemptToken!==prepared.attemptToken)throw Error('Chưa có quyền offline khớp lượt.');
+  if(this.record&&this.record.prepared.attemptToken!==response.attemptToken)await this.detachLatest();
   this.record={classCode,studentRef,prepared:{...prepared,...response},snapshot:null,operations:[],receipts:{},sections:{},ready:false,player:{position:0,ended:false}};
   this.key='run:'+response.attemptToken;await this.claim();this.anchor();await this.persist();
   await this.store.put('latest:'+classCode,{key:this.key});return this.record.prepared;

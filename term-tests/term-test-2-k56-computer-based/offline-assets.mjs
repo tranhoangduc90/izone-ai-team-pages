@@ -323,8 +323,8 @@ export const ASSET_HASHES={
   "index.html": "c57163097a71c549948ee7da584a2a23c435390d5a151d10f966cf35ca979e38",
   "layout-updates.css": "f4e81684b6a9c416b72bc7c3ceccdc2e39dda0d0c569f2cd11a6dd7daff3fe9a",
   "offline-worker.js": "7aab4a53332ed8c82e1bdd7356877a2b11cedfa57a6b1e9da42fa476d0fb17e8",
-  "offline.mjs": "efe865515c884e06c32b47d0be92e770c2c8c2e432f861c4f0e329e229da61e2",
+  "offline.mjs": "75cf5bf12b66492327d48b51749ba5b409271632d1fdfc2640c9149158f7ff86",
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="7c72d203a471ec7096e0c95a206c346d31be532b42e8e26dc4ce293fd7bf4e4c";
+export const ASSET_BUILD_ID="a0c30b7f8be4a6b436c0fdb0c406c1aa826ad2afab9955d106009ef61af13df3";

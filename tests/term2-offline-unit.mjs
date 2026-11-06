@@ -39,6 +39,15 @@ test('Đổi người giữ run cũ và bỏ ACK đang bay, không gắn vào l�
  await r.detachLatest();finish(response({ok:true,persisted:false}));await new Promise(ok=>setTimeout(ok,20));
  assert.equal(r.record,null);assert.equal((await r.store.get('latest:FIXTURE')).key,null);assert.equal((await r.store.get(key)).operations.length,1);
 });
+test('Đổi người sau lỗi chuẩn bị phải nhả lock lượt cũ và claim lượt mới',async()=>{
+ const r=await runtime(async()=>{throw Error('offline');}),storage=local(),previous=globalThis.localStorage;globalThis.localStorage=storage;
+ try{r.record.ready=false;r.record.snapshot={drafts:{writing:{task1:'kept old run'}}};const oldKey=r.key;let released=false;r.release=()=>{released=true;};
+  const prepared={...r.record.prepared,attemptToken:crypto.randomUUID(),examSessionToken:crypto.randomUUID()};
+  r.post=async()=>({...prepared,offline:{...prepared.offline,policy:'term2-offline-v1'}});
+  r.claim=async()=>{assert.equal(released,true);assert.equal(r.owned,false);assert.equal(r.record.prepared.attemptToken,prepared.attemptToken);r.owned=true;};
+  await r.prepare(prepared,{classCode:'FIXTURE',studentRef:crypto.randomUUID(),mode:'lis_first'});assert.equal((await r.store.get(oldKey)).snapshot.drafts.writing.task1,'kept old run');assert.equal(r.key,'run:'+prepared.attemptToken);
+ }finally{globalThis.localStorage=previous;}
+});
 test('Giờ máy lùi khi mở lại được đánh dấu đối soát, không giả giờ hợp lệ',async()=>{
  const r=await runtime(async()=>{throw Error('offline');});r.record.lastNow=Date.now();r.record.savedWall=Date.now()+60000;
  const before=r.record.lastNow;r.anchor();assert.equal(r.record.timeValid,false);assert.ok(r.now()>=before);assert.ok(r.now()<before+1000);
