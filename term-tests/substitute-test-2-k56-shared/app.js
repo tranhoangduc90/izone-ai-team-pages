@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   'use strict';
 
   const testConfig = window.TERM_TEST_CONFIG;
@@ -18,6 +18,7 @@
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
   if (!testConfig || !appConfig || !root) return;
+  const { createWritingSubmission } = await import('../shared/writing-submission.mjs?v=20261105-writing-submit-v1');
 
   if(serverGradingMode)window.SUBSTITUTE_STATE.bind({...window.TERM_TEST_BOOTSTRAP,classCode});
   const storageKey = serverGradingMode ? window.SUBSTITUTE_STATE.key('izone-test:',classCode) : `izone-test:${testConfig.slug}:${classCode}${demoMode ? ':preview:'+demoMode : ''}`;
@@ -239,7 +240,7 @@
         <h2>Chuẩn bị phần Writing</h2>
         <p>Kết quả Listening và Reading đang được giữ kín. Khi sẵn sàng, hãy bắt đầu Writing ${writingConfig.tasks?.[0]?.label || ''}.</p>
         <ul class="writing-prep-list">
-          <li>Tổng thời gian: ${writingConfig.totalMinutes || 30} phút${writingConfig.planningMinutes ? `, gồm ${writingConfig.planningMinutes} phút lập dàn ý và ${writingConfig.writingMinutes || (writingConfig.totalMinutes - writingConfig.planningMinutes)} phút viết bài` : ''}.</li>
+          <li>Tổng thời gian: ${writingConfig.totalMinutes || 30} phút.</li>
           <li>${writingConfig.tasks?.[0]?.label || 'Writing'}: viết ít nhất ${writingConfig.tasks?.[0]?.minimumWords || 150} từ.</li>
           <li>Bài viết được tự lưu trên hệ thống; đóng tab rồi mở lại vẫn có thể tiếp tục.</li>
         </ul>
@@ -744,6 +745,18 @@
     return Number.isFinite(deadline) && Date.now() + (Number(state.serverTimeOffsetMs) || 0) >= deadline;
   }
 
+  // Giữ trạng thái nộp Writing riêng với lỗi đọc kết quả; không đổi luồng Listening/Reading.
+  let writingSubmissionRenderSignature = '';
+  const writingSubmission = createWritingSubmission({
+    owner: () => JSON.stringify([testConfig.slug,classCode,state.studentRef,state.attemptToken,state.historyEpoch,
+      window.TERM_TEST_BOOTSTRAP?.clientRunId]),
+    submitted: () => Boolean(state.writingSubmitted),
+    grading: () => state.result?.writing?.grading || state.testGrades?.writing?.grading,
+    notify: showNotice, check: () => refreshWritingGrading(),
+    hosts: () => [elements.writingView, elements.writingSubmissionResult],
+    storage: () => { try { return window.SUBSTITUTE_STATE?.storages?.() || [window.sessionStorage,window.localStorage]; } catch { return []; } }
+  });
+
   let writingSaveTimer = 0;
   let writingRetryTimer = 0;
   let writingSavePromise = Promise.resolve();
@@ -767,6 +780,7 @@
     const requestedAttempt = state.attemptToken;
     const requestedStudent = state.studentRef;
     writingGradingPollInFlight = true;
+    const requestedWritingOwner = writingSubmission.owner();
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
       const payload = serverGradingMode
@@ -784,6 +798,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ attemptToken: state.attemptToken })
         });
+      if (!writingSubmission.current(requestedWritingOwner)) return;
+      writingSubmission.readAvailable();
       if (state.attemptToken !== requestedAttempt || state.studentRef !== requestedStudent
         || (serverGradingMode && window.SUBSTITUTE_STATE.blocked)) return;
       if (serverGradingMode) {
@@ -806,8 +822,11 @@
           'success'
         );
       }
+      return grading?.ready ? 'ready' : 'pending';
     } catch {
+      if (writingSubmission.current(requestedWritingOwner)) writingSubmission.readUnavailable();
       // Việc chấm vẫn nằm trên máy chủ; lần kế tiếp tiếp tục kiểm tra mà không làm mất màn hình kết quả.
+      return 'unavailable';
     } finally {
       writingGradingPollInFlight = false;
       if (!state.result?.writing?.grading?.ready) scheduleWritingGradingRefresh();
@@ -1226,28 +1245,7 @@
       promptHeader.append(promptTitle);
       const promptBody = document.createElement('div');
       promptBody.className = 'writing-prompt-body';
-      const outline = document.createElement('section');
-      outline.className = 'writing-outline-card';
-      const outlineHeader = document.createElement('header');
-      const outlineTitle = document.createElement('strong');
-      outlineTitle.textContent = 'Dàn ý';
-      const outlineHint = document.createElement('span');
-      outlineHint.textContent = '15 phút';
-      outlineHeader.append(outlineTitle);
-      const outlineEditor = document.createElement('textarea');
-      outlineEditor.className = 'writing-outline-editor';
-      outlineEditor.dataset.writingOutline = 'true';
-      outlineEditor.value = state.drafts.writing.outline || '';
-      outlineEditor.spellcheck = false;
-      outlineEditor.setAttribute('aria-label', 'Dàn ý Writing Task 1');
-      outlineEditor.addEventListener('input', () => {
-        state.drafts.writing.outline = outlineEditor.value;
-        state.writingDirty = true;
-        state.writingRevision += 1;
-        saveSession();
-        scheduleWritingSave();
-      });
-      outline.append(outlineHeader, outlineEditor);
+      // Giữ outline cũ trong state/recovery; màn làm bài chỉ còn đề và bài viết.
       const guidance = document.createElement('p');
       guidance.className = 'writing-guidance';
       guidance.textContent = `You should spend about ${task.recommendedMinutes} minutes on this task.`;
@@ -1273,7 +1271,7 @@
       const minimum = document.createElement('p');
       minimum.className = 'writing-minimum';
       minimum.textContent = `Write at least ${task.minimumWords} words.`;
-      promptBody.append(minimum, outline);
+      promptBody.append(minimum);
       promptPane.append(promptHeader, promptBody);
 
       const separator = document.createElement('button');
@@ -1769,6 +1767,10 @@
 
   function renderWritingSubmission() {
     if (!writingConfig || !elements.writingSubmissionResult) return;
+    writingSubmission.sync();
+    const submissionSignature = JSON.stringify([writingSubmission.owner(),state.writingSubmitted,state.result?.writing?.grading]);
+    if (writingSubmissionRenderSignature === submissionSignature) return;
+    writingSubmissionRenderSignature = submissionSignature;
     elements.writingSubmissionResult.hidden = !state.writingSubmitted;
     if (!state.writingSubmitted) {
       elements.writingSubmissionResult.replaceChildren();
@@ -1848,6 +1850,7 @@
 
     section.append(heading, gradingArea);
     elements.writingSubmissionResult.replaceChildren(section);
+      writingSubmission.sync();
   }
 
   function addSummaryCard(label, value) {
@@ -2422,6 +2425,7 @@
 
     elements.writingView.addEventListener('submit', async event => {
       event.preventDefault();
+      if (writingSubmission.busy || state.writingSubmitted) { await writingSubmission.inspect(); return; }
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
       const automatic = event.submitter?.dataset.autoSubmit === 'true'
         || elements.writingView.dataset.writingTimeExpired === 'true';
@@ -2435,61 +2439,72 @@
         if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
       }
 
-      if (demoMode) {
-        if (serverGradingMode) {
-          try {
-            ensureValidAttemptToken();
-            state.testGrades.writing = await apiRequest('/api/test/writing', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                classCode,
-                studentRef: state.studentRef,
-                attemptToken: state.attemptToken,
-                listeningAnswers: state.drafts.listening,
-                readingAnswers: state.drafts.reading,
-                outline: state.drafts.writing.outline,
-                task1: state.drafts.writing.task1,
-                task2: state.drafts.writing.task2
-              })
-            });
-          } catch (error) {
-            showNotice(`Backend test chưa nhận được Writing: ${error.message}`, 'error');
-            return;
-          }
-        }
-        state.writingSubmitted = true;
-        saveSession();
-        renderResult(buildDemoPayload('complete'));
-        showNotice(serverGradingMode
-          ? 'Writing đã được nhận và đang chấm bằng AI. Kết quả sẽ tự cập nhật khi hoàn tất.'
-          : 'Bản demo: Writing đã nộp; kết quả Listening và Reading đã được mở.', 'success');
-        setStage('result');
-        if (serverGradingMode) scheduleWritingGradingRefresh();
-        return;
-      }
-
-      window.clearTimeout(writingSaveTimer);
-      window.clearTimeout(writingRetryTimer);
-      elements.writingView.dataset.writingSubmitting = 'true';
-      setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài');
-      for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
-      if (automatic) showNotice(`Đã hết ${writingConfig.totalMinutes || 30} phút. Hệ thống đang tự lưu và thu bài Writing...`);
+      if (serverGradingMode) ensureValidAttemptToken();
+      const writingOwner = writingSubmission.begin();
+      if (writingOwner === null) return;
       try {
-        const saved = await saveWritingToServer('submit');
-        if (!saved.writing?.submitted) throw new Error('Máy chủ chưa xác nhận bài Writing đã được nộp.');
-        state.writingSubmitted = true;
-        state.writingDirty = false;
-        saveSession();
-        elements.writingView.dispatchEvent(new CustomEvent('term-test:writing-submitted'));
-        setStage('result-ready');
-        showNotice(saved.writing?.accepted === false
-          ? 'Hệ thống đã chốt bản lưu đúng hạn. Bản khác trên máy được giữ trong mục phục hồi.'
-          : automatic
-          ? `Đã hết ${writingConfig.totalMinutes || 30} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
-          : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
-        await loadResult(elements.viewResult);
+        if (demoMode) {
+          if (serverGradingMode) {
+            try {
+              ensureValidAttemptToken();
+              state.testGrades.writing = await writingSubmission.submitOnline({
+                payload: {
+                  classCode,
+                  studentRef: state.studentRef,
+                  attemptToken: state.attemptToken,
+                  listeningAnswers: state.drafts.listening,
+                  readingAnswers: state.drafts.reading,
+                  outline: state.drafts.writing.outline,
+                  task1: state.drafts.writing.task1,
+                  task2: state.drafts.writing.task2
+                },
+                send: value => apiRequest('/api/test/writing', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)}),
+                read: value => apiRequest('/api/test/writing/status', {method:'POST',headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({classCode:value.classCode,studentRef:value.studentRef,attemptToken:value.attemptToken,promptVersion:value.promptVersion})})
+              });
+              if (!writingSubmission.current(writingOwner)) return;
+            } catch (error) {
+              if (!writingSubmission.current(writingOwner)) return;
+              if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
+              showNotice(`Chưa xác nhận được trạng thái nộp Writing. Bản đã gửi vẫn được giữ. Chi tiết: ${error.message}`, 'error');
+              return;
+            }
+          }
+          state.writingSubmitted = true;
+          saveSession();
+          renderResult(buildDemoPayload('complete'));
+          showNotice(serverGradingMode
+            ? writingSubmission.message()
+            : 'Bản demo: Writing đã nộp; kết quả Listening và Reading đã được mở.', 'success');
+          setStage('result');
+          if (serverGradingMode) scheduleWritingGradingRefresh();
+          return;
+        }
+
+        window.clearTimeout(writingSaveTimer);
+        window.clearTimeout(writingRetryTimer);
+        elements.writingView.dataset.writingSubmitting = 'true';
+        setBusy(elements.submitWriting, true, 'Đang lưu và nộp...', 'Nộp bài');
+        for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
+        if (automatic) showNotice(`Đã hết ${writingConfig.totalMinutes || 30} phút. Hệ thống đang tự lưu và thu bài Writing...`);
+        try {
+          const saved = await saveWritingToServer('submit');
+          if (!writingSubmission.current(writingOwner)) return;
+          if (!saved.writing?.submitted) throw new Error('Máy chủ chưa xác nhận bài Writing đã được nộp.');
+          state.writingSubmitted = true;
+          state.writingDirty = false;
+          saveSession();
+          elements.writingView.dispatchEvent(new CustomEvent('term-test:writing-submitted'));
+          setStage('result-ready');
+          showNotice(saved.writing?.accepted === false
+            ? 'Hệ thống đã chốt bản lưu đúng hạn. Bản khác trên máy được giữ trong mục phục hồi.'
+            : automatic
+            ? `Đã hết ${writingConfig.totalMinutes || 30} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
+            : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
+          await loadResult(elements.viewResult);
       } catch (error) {
+        if (!writingSubmission.current(writingOwner)) return;
+        if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
         showNotice(automatic
           ? `Hết giờ nhưng chưa thể nộp Writing: ${error.message}. Bài đã được khóa và hệ thống sẽ tự thử lại; không làm mới trang.`
           : `Không thể nộp Writing: ${error.message}. Bài vẫn được giữ trên máy để bạn thử lại.`, 'error');
@@ -2501,6 +2516,20 @@
         const timeExpired = elements.writingView.dataset.writingTimeExpired === 'true';
         for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = timeExpired;
         setBusy(elements.submitWriting, false, 'Đang lưu và nộp...', 'Nộp bài');
+      }
+      } catch (error) {
+        if (!writingSubmission.current(writingOwner)) return;
+        if (state.writingSubmitted) {
+          writingSubmission.readUnavailable();
+          showNotice('Bài Writing đã được nhận. Hiện chưa mở được kết quả mới; bạn không cần nộp lại.', '');
+        } else {
+          showNotice(`Chưa xác nhận được trạng thái nộp Writing: ${error.message}. Bản đã gửi vẫn được giữ.`, 'error');
+        }
+      } finally {
+        writingSubmission.end(writingOwner);
+        if (writingSubmission.current(writingOwner) && writingSubmission.pending() && !state.writingSubmitted) {
+          for (const editor of elements.writingView.querySelectorAll('textarea[data-writing-task], textarea[data-writing-outline]')) editor.readOnly = true;
+        }
       }
     });
   }

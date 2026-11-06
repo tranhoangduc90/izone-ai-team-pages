@@ -11,6 +11,7 @@ test('Bài tập nhiều chọn chặn lựa chọn vượt key; bỏ/đổi đ�
   if(url.pathname.endsWith('/progress-log/config.js'))return route.fulfill({contentType:'text/javascript',body:`window.PROGRESS_LOG_CONFIG={API_BASE_URL:'${origin}'};`});
   if(!url.pathname.includes('/api/learning/'))return url.origin===origin?route.continue():route.abort();
   if(url.pathname.endsWith('/assignments/open'))return json({assignment:{assignmentId:id(3),publicToken:id(3),sessionNumber:1,class:{id:'fixture',name:'Lớp giả'},roster:[{studentRef:id(4),name:'Người thử giả'}],definitionHash:'a'.repeat(64),definition:{title:'Phiếu giới hạn chọn',kind:'mixed',blocks:[{blockId:id(5),checkpoint:1,title:'Phần giả',items}]},blockReleases:[{blockId:id(5),status:'open'}]}});
+  if(url.pathname.endsWith('/attempts/resume'))return route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({ok:false,error:'ATTEMPT_NOT_FOUND'})});
   if(url.pathname.endsWith('/attempts/start'))return json({attempt:{attemptToken:id(6),draft:{},draftRevision:0,identity:{studentRef:id(4),studentName:'Người thử giả',classId:'fixture',className:'Lớp giả',sessionNumber:1},checkpointSubmissions:[]}});
   if(url.pathname.endsWith('/attempts/draft')){saved=req.postDataJSON().responses;return json({draft:{revision:req.postDataJSON().revision}});}
   if(url.pathname.endsWith('/student/session-comments'))return json({comments:[]});

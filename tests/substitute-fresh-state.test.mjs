@@ -16,9 +16,10 @@ for(const app of apps) test(app+': không khôi phục bài khác học viên ho
  vm.runInContext(source.slice(start,end),context);
  assert.equal(JSON.stringify(vm.runInContext('readSession()',context)),'{}');
 });
-test('dashboard: đủ bốn số riêng khi xem tất cả',()=>{
+test('dashboard: yêu cầu chọn khóa trước khi hiện các kì thi',()=>{
  const html=read('term-tests/substitute-test-1-k56-dashboard/index.html');
- assert.deepEqual([...html.matchAll(/class="test-number"[^>]*>(\d+)</g)].map(m=>m[1]),['01','02','03','04']);
+ assert.match(html,/id="test-picker"[^>]+hidden/u);
+ assert.deepEqual([...html.matchAll(/class="course course-choice" data-course="(k56|k67)"[^>]*aria-pressed="false"/gu)].map(m=>m[1]),['k56','k67']);
 });
 
 if(!process.env.REGRESSION_BASE)for(const app of apps)test(app+': chưa có grade không dựng điểm 0, nhưng giữ điểm 0 thật',()=>{

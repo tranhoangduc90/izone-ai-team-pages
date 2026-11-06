@@ -42,6 +42,7 @@ test('Thẻ 22–23 Chrome: cùng phiếu, lỗi cạnh ô, Speaking đầy đ�
  const evidence=process.env.PROGRESS_LOG_EVIDENCE_DIR||'E:/Codex-Data/progress-thuy-the22-23-implementation-20261030/browser';await mkdir(evidence,{recursive:true});
  try{
   await page.goto(fixture.origin+'/progress-log/teacher.html#assignment='+uid(103));
+  await page.waitForFunction(()=>document.querySelector('#overviewClassSelect')?.value==='1294');
   await page.getByRole('button',{name:'Hành trình lớp',exact:true}).click();
   await page.locator('#courseOverview .thuy-skill-tabs').waitFor();
   await page.locator('#courseOverview').getByRole('button',{name:'Speaking',exact:true}).click();

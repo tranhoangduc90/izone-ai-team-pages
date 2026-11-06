@@ -1,5 +1,5 @@
 import {fixture,ACTIVITY} from './model.mjs?v=20261104-overview-v1';
-import {vocabularyPoint,legacyVocabularyRows} from './vocabulary-adapter.mjs';
+import {vocabularyPoint,legacyVocabularyRows,sameVocabularySource} from './vocabulary-adapter.mjs?v=20261105-vocabulary-v1';
 export const SECTION={topic:'topic_sentence',si1:'supporting_idea_1',si2:'supporting_idea_2',draft:'draft'};
 export const FIELD={topicSentence:'topic_sentence',a1:'idea1_a',x1:'idea1_x',b1:'idea1_b',a2:'idea2_a',x2:'idea2_x',b2:'idea2_b',draft1:'draft1',draft2:'draft2'};
 export const viewField=(field,body='body1')=>field===body+'_idea1'?'idea1':field===body+'_idea2'?'idea2':Object.keys(FIELD).find(k=>FIELD[k]===field)||field;
@@ -38,7 +38,13 @@ export function connectedState(raw,person,threads=[]){
  }
  if(raw.ui?.version==='legacy-v1')s.idea2Open=s.steps.si1.status==='passed'||!!raw.responses.idea2_a;
  // Chỉ dùng định danh A1/X1/B1/A2/X2/B2 do artifact khai báo; không ghép theo thứ tự mảng.
- const vocabulary=comments.toReversed().find(c=>c.section==='supporting_idea_2'&&c.resultStatus==='passed'&&c.artifacts?.vocabulary)?.artifacts.vocabulary;
+ const vocabularyComment=comments.toReversed().find(c=>c.section==='supporting_idea_2'&&c.resultStatus==='passed');
+ const sourceAttempt=raw.attempts.find(a=>a.attemptRef===vocabularyComment?.attemptRef);
+ const deferred=vocabularyComment?.artifacts?.vocabularyTaskVersion==='deferred-v1';
+ s.deferredVocabulary=deferred;
+ const stale=deferred&&!sameVocabularySource(sourceAttempt?.snapshot,raw.responses);
+ const vocabulary=stale?undefined:vocabularyComment?.artifacts?.vocabulary;
+ if(stale||vocabularyComment?.artifacts?.vocabularyStatus==='unavailable')s.vocabStatus='failed';
  if(Array.isArray(vocabulary)){
   for(const row of vocabulary){
    const point=vocabularyPoint(row)||'';

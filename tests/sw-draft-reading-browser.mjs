@@ -223,6 +223,34 @@ test('SW y tế: cả HV và GV dùng nhãn Giảng viên trên trao đổi th�
  }finally{await f.close();}}}finally{await browser.close();}
 });
 
+test('SW từ vựng riêng: nhận xét mở Draft trước, từ vựng đến sau giữ vùng đang đọc',async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true}),f=await fixture(browser);
+ try{
+  const raw=f.state.raw,si2=raw.attempts.find(a=>a.section==='supporting_idea_2');
+  raw.uiVocabulary={status:'missing'};raw.sections.draft={status:'draft',locked:false};
+  raw.attempts=raw.attempts.filter(a=>a.section!=='draft');raw.comments=raw.comments.filter(c=>c.section!=='draft');
+  const comment=raw.comments.find(c=>c.attemptRef===si2.attemptRef);
+  comment.artifacts={vocabularyTaskVersion:'deferred-v1',vocabularyStatus:'pending'};
+  comment.feedback='Nhận xét đã xong, không đợi bảng từ vựng.';
+  await f.page.locator('[data-action="refresh"]').click();
+  await f.page.getByText(comment.feedback,{exact:true}).first().waitFor({state:'attached'});
+  await f.page.locator('#draft textarea').first().waitFor({state:'visible'});
+  assert.match(await f.page.locator('#completion').textContent(),/Đang chuẩn bị từ vựng/);
+  const draft=await f.page.locator('#draft').elementHandle();
+  await f.page.locator('#draft .group-header p').evaluate(el=>{el.scrollIntoView({block:'center'});const r=document.createRange();r.selectNodeContents(el);getSelection().removeAllRanges();getSelection().addRange(r);});
+  const selected=await f.page.evaluate(()=>getSelection().toString());
+  const before=f.sessionCalls();
+  await f.page.waitForTimeout(16000);
+  assert(f.sessionCalls()>=before+3);
+  assert.equal(await draft.evaluate(el=>el===document.querySelector('#draft')),true);
+  comment.artifacts={...comment.artifacts,vocabularyStatus:'available',vocabulary:['A1','X1','B1','A2','X2','B2'].map(point=>({point,terms:[{phrase:'Late keyword '+point,meaningVi:'Từ vựng đến sau'}]}))};
+  await f.page.getByText('Late keyword A1',{exact:true}).waitFor({state:'attached',timeout:12000});
+  assert.equal(await draft.evaluate(el=>el===document.querySelector('#draft')),true);
+  assert.equal(await f.page.evaluate(()=>getSelection().toString()),selected);
+  assert.match(await f.page.locator('#app').textContent(),/Nhận xét đã xong, không đợi bảng từ vựng/);
+ }finally{try{await f.close();}finally{await browser.close();}}
+});
+
 test('Shops cũ: danh sách và chi tiết cùng đếm trao đổi, không mang nhãn mẫu',async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true}),f=await fixture(browser,{teacher:true,engine:'shops-writing'});
  try{

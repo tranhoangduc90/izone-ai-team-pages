@@ -1,0 +1,27 @@
+/* Giữ adapter Writing; chỉ thu gọn các vùng vừa thay đổi. */
+.handout-copy-tools{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 0;background:var(--surface,#fff);border-bottom:1px solid #d8dfeb}
+.handout-copy-tools [hidden]{display:none!important}
+.handout-copy-tools span{font-size:14px;color:#52657d}
+.handout-copy-table{margin-top:20px}.handout-copy-table fieldset{min-width:0;border:1px solid #d8dfeb;border-radius:8px;padding:12px;margin:16px 0}
+.handout-copy-field textarea{min-height:96px!important;height:auto;font:inherit;line-height:1.6;text-align:justify;resize:vertical}
+.handout-keyword-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px}.handout-keyword-edit>*{min-width:0}.handout-keyword-edit input{width:100%}
+#essay[aria-invalid=true]{border:2px solid #bd1737!important;outline-color:#bd1737!important}
+.alignment-panel[hidden]{display:none!important}
+.rich-review-toolbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rich-review-toolbar button{font-size:14px;min-height:32px;padding:4px 10px}
+.feedback-rich[contenteditable=true]{border:1px solid #8d9cb4;border-radius:8px;background:#fff;padding:12px;min-height:110px;max-height:45vh;overflow:auto;outline-offset:2px;cursor:text}
+.feedback-rich[contenteditable=true]:focus{outline:2px solid #152b4e}.feedback-rich[contenteditable=true] p{margin:0 0 8px}
+.feedback-review-section{margin-top:16px}.feedback-edit{margin-top:8px}.feedback-edit summary{font-size:14px}
+.split-divider>span{width:18px;height:44px;line-height:40px;background:#edf2f7;border:1px solid #a6b5ca;border-radius:8px;font-size:20px;color:#152b4e}
+.source-handout-link:empty{display:none}
+.editor-bottom{position:sticky;bottom:0;z-index:4;background:#fff;border-top:1px solid #d8dfeb;padding:10px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+#submit-progress:empty{display:none}#submit-progress{color:#174265;font-size:14px}
+.card-comparison{gap:12px}.feedback-card-header{padding-top:12px;padding-bottom:12px}.card-explanation{padding-top:12px;padding-bottom:12px}
+.card-comparison .field{margin:0}.card-comparison .original>div{max-height:23vh;overflow:auto}
+@media(min-width:1001px){
+ .student-layout .editor-card,.student-layout .study-context,.review-layout>.source-column,.review-layout>.review-column,.alignment-review-grid>.card{height:var(--workspace-height);max-height:var(--workspace-height);min-height:0!important;overflow-y:auto;scrollbar-gutter:stable}
+ .student-layout{align-items:start}.student-layout .editor-card{position:relative;max-height:var(--workspace-height,calc(100dvh - 190px));overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable}
+ .student-layout .writing-area{min-height:260px!important;height:clamp(260px,42vh,640px)!important;resize:vertical}
+ .student-layout .editor-head{padding-bottom:12px}.student-layout .writing-prompt{margin-top:0;padding:12px 0}
+ .review-form{padding:20px}.review-toolbar .section-heading{margin-bottom:8px}.review-toolbar h2{font-size:20px}.review-submit{gap:8px}.review-submit .section-note{font-size:14px;margin:4px 0}
+}
+@media(max-width:600px){.handout-keyword-edit{grid-template-columns:1fr}.editor-bottom .actions{width:100%}.editor-bottom .actions button{flex:1}.rich-review-toolbar button{flex:1}}

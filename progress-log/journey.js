@@ -36,7 +36,7 @@ async function apiRequest(token) {
   const response = await fetch(`${config.API_BASE_URL}/api/learning/student/course-journey`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ accessToken: token }),
+    body: JSON.stringify({ accessToken: token,includeSkills:true }),
     cache: 'no-store',
     referrerPolicy: 'no-referrer',signal:controller.signal
   });
@@ -118,7 +118,7 @@ function buildSession(session,view,highlight) {
   const title=document.createElement('strong');title.textContent=contentTitle(session,{title:session.title});
   const skills=document.createElement('small');skills.textContent=skillsLabel(title.textContent)||'Trong kế hoạch khóa học';
   const bottom=document.createElement('div');bottom.className='studentSessionBottom';const status=document.createElement('i');status.textContent=view.label;bottom.append(status);
-  if(session.quizSummary?.graded>0){const score=document.createElement('b');score.textContent=session.quizSummary.correct+'/'+session.quizSummary.graded;bottom.append(score);}
+  if(session.quizSummary?.graded>0){const score=document.createElement('b');score.className='studentSessionScore';score.textContent=session.quizSummary.correct+'/'+session.quizSummary.graded;top.append(score);}
   item.append(top,title,skills,bottom);
   const comment=commentPanel(session.sessionComment,{compact:true});if(comment)item.append(comment);
   if(session.testResult){const p=document.createElement('p');p.className='sessionTestScore';p.textContent=Object.entries(session.testResult).filter(([k,v])=>['listening','reading','writing'].includes(k)&&v).map(([k,v])=>k==='writing'?'Writing: '+(v.status==='ready'?v.score:v.status==='pending'?'đã nộp, đang chờ điểm':'chưa có bài'):k[0].toUpperCase()+k.slice(1)+': '+v.correct+'/'+v.total).join(' · ');item.append(p);}
@@ -322,3 +322,5 @@ document.getElementById('journeyLogout')?.addEventListener('click',async()=>{
  document.querySelector('#journeyAccountName').textContent='';elements.journeyView.hidden=true;
  try{history.replaceState({},'',location.pathname+location.search);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}location.replace(new URL('./student.html',location.href));
 });
+
+window.progressLogUpdateGuard=()=>Boolean(journeyData)&&!historyDialog.open&&!getSelection()?.toString();

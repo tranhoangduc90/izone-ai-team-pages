@@ -156,6 +156,9 @@ const formEditor=createFormDraftEditor({host:document.getElementById('formDraftE
       session_number:published.sessionNumber,title:published.title,status:'published'});
     refreshAssignmentSelect(published.assignmentId);
   }});
+window.progressLogUpdateGuard=()=>state.authenticated&&!document.querySelector('dialog[open]')&&!getSelection()?.toString()
+  &&(state.activePanel==='classes'||state.activePanel==='create'&&formEditor.canUpdate());
+window.progressLogCapturePresentation=()=>({panel:state.activePanel,editor:formEditor.captureNavigation()});
 
 function setNotice(message, kind = '') {
   elements.teacherNotice.textContent = message;
@@ -180,7 +183,7 @@ async function apiRequest(path, { method = 'GET', body, signal } = {}) {
   catch(error){
     if (generation !== state.authGeneration) throw new Error('Lượt đăng nhập đã thay đổi.');
     const deniedAssignmentClass=path.startsWith('/teacher/assignment-sessions?')&&error.code==='CLASS_ACCESS_DENIED';
-    if (error.status === 401 || (error.status === 403 && !path.startsWith('/teacher/form-drafts')&&!deniedAssignmentClass)) {
+    if (error.status === 401 || (error.status === 403 && !/^\/teacher\/form-(drafts|library|catalog|publications)/.test(path)&&!deniedAssignmentClass)) {
       clearTeacherLogin();
       setNotice(error.message, 'error');
       if(error.status===401){authView.signedOut();initializeGoogle();}else authView.failed(error);
@@ -647,6 +650,11 @@ async function loadWorkspace() {
   elements.teacherAccessView.hidden = true;
   elements.teacherWorkspace.hidden = false;
   if(entryAssignment||!THUY_UI)switchPanel('dashboard');else showClassPortal();
+  const restored=window.progressLogUpdatePresentation;
+  if(THUY_UI&&!entryAssignment&&restored?.panel==='create'){
+    if(state.classes.some(c=>String(c.class_id)===restored.editor?.classId))thuyLayout.classes.value=restored.editor.classId;
+    switchPanel('create');formEditor.restoreNavigation(restored.editor);delete window.progressLogUpdatePresentation;
+  }
   setNotice(state.classes.length ? 'Sẵn sàng.' : 'Tài khoản chưa được cấp lớp nào.', state.classes.length ? '' : 'error');
 }
 

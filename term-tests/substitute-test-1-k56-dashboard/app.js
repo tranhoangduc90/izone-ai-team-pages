@@ -1,34 +1,52 @@
-const courseFilter = document.querySelector('#course-filter');
-const rows = [...document.querySelectorAll('[data-course]')];
-const params = new URLSearchParams(location.search);
-const requested = params.get('course');
-const allowedCourses = new Set(['all', 'k56', 'k67']);
-if (allowedCourses.has(requested)) courseFilter.value = requested;
+const courseChoices = [...document.querySelectorAll('.course-choice')];
+const testGroups = [...document.querySelectorAll('.test-group')];
+const steps = [...document.querySelectorAll('.step')];
+const picker = document.querySelector('#test-picker');
+const heading = document.querySelector('#test-heading');
+const courseLabel = document.querySelector('#test-course');
+const hint = document.querySelector('#course-hint');
+const allowedCourses = new Set(courseChoices.map(choice => choice.dataset.course));
 
-function renderCourse() {
-  const course = courseFilter.value;
-  let visible=0;
-  rows.forEach((row,index)=>{
-    row.hidden=!(course==='all'||row.dataset.course===course);
-    if(!row.hidden)visible++;
-    row.querySelector('.test-number').textContent=String(course==='all'?index+1:visible).padStart(2,'0');
-  });
-  const isAll = course === 'all';
-  const isK67 = course === 'k67';
-  document.querySelector('#record-count').textContent = isAll ? '4 bài' : '2 bài';
-  document.querySelector('#portal-badge').textContent = isAll
-    ? 'Bản online · K56 + K67'
-    : `Bản online · Khóa ${isK67 ? '67' : '56'}`;
-  document.querySelector('#privacy-note').textContent = isAll
-    ? 'Danh sách lớp được tải từ hệ thống Substitute. DEMO không gửi Portal; giáo viên chỉ xem lớp phụ trách, quản trị xem toàn bộ.'
-    : isK67
-      ? 'Các lớp Khóa 67 đồng bộ vào cột Phase thi lại tương ứng. DEMO không gửi Portal.'
-      : 'Các lớp Khóa 56 đồng bộ vào cột Term Test thi lại tương ứng. DEMO không gửi Portal.';
-  const next = new URL(location.href);
-  if (isAll) next.searchParams.delete('course');
-  else next.searchParams.set('course', course);
-  try{history.replaceState(null, '', next);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
+function showCourse(course) {
+  for (const choice of courseChoices) {
+    const selected = choice.dataset.course === course;
+    choice.setAttribute('aria-pressed', String(selected));
+    choice.querySelector('.arrow').textContent = selected ? '✓' : '→';
+  }
+  for (const group of testGroups) {
+    group.hidden = group.dataset.course !== course;
+  }
+  steps[0].removeAttribute('aria-current');
+  steps[0].setAttribute('data-complete', '');
+  steps[1].setAttribute('aria-current', 'step');
+  courseLabel.textContent = 'Bạn đang chọn Khóa ' + course.slice(1) + '.';
+  picker.hidden = false;
+  hint.hidden = true;
 }
 
-courseFilter.addEventListener('change', renderCourse);
-renderCourse();
+const requested = new URLSearchParams(location.search).get('course');
+if (allowedCourses.has(requested)) showCourse(requested);
+
+for (const button of courseChoices) {
+  button.addEventListener('click', () => {
+    const course = button.dataset.course;
+    showCourse(course);
+    heading.focus();
+    const next = new URL(location.href);
+    next.searchParams.set('course', course);
+    try { history.replaceState(null, '', next); } catch { /* Luồng chọn bài vẫn hoạt động nếu URL bị khóa. */ }
+  });
+}
+
+const teacher = document.querySelector('#teacher');
+const dialog = document.querySelector('#teacher-dialog');
+teacher.addEventListener('click', () => dialog.showModal());
+dialog.querySelector('.close').addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', event => {
+  if (event.target !== dialog) return;
+  const {left, right, top, bottom} = dialog.getBoundingClientRect();
+  if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) {
+    dialog.close();
+  }
+});
+dialog.addEventListener('close', () => teacher.focus());

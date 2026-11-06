@@ -78,7 +78,7 @@ export function newEditorPayload(title='Phiếu học tập mới') {
 export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onManagementChanged=()=>{},libraryEnabled=false}) {
   let classes=[],assignmentClasses=[],assignmentClassStatus='ready',assignments=[],draft=null,dirty=false,busy=false,backgroundBusy=false,generation=0,reviewMode=false,
     publishOperationId=null,conflict=null,importPreview=null,importText='',docsUrl='',importOpen=false,aiPopupOpen=false,importTargetBlockId=null,list=[];
-  const lockedControls=new Map(),librarySaves=new Map(),publishedByDraft=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false,docsBatch;
+  const lockedControls=new Map(),librarySaves=new Map(),publishedByDraft=new Map();let library,authoring=!libraryEnabled,autosaveTimer,saveFailed=false,docsBatch,createScope='personal';
   let gapWidgets=[],thuyActionButtons,backgroundCompletion,queuedForeground=false,aiView=null,aiApplied=null;const previews=new Set();
   const skillErrors=new Set();
   let publishAttempted=false;
@@ -106,7 +106,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     sourceSelect=el('select'),draftList=el('div'),editor=el('div'),actions=el('div',undefined,{className:'editor-actions'});
   const assignmentDialog=createAssignmentDialog({request,getClasses:()=>assignmentClasses,getPreferredClass:()=>classSelect.value,
     getClassStatus:()=>assignmentClassStatus,onAssigned:value=>{onPublished(value);library?.setUsed(assignments);}});
-  const notice=message=>{status.textContent=message;status.hidden=libraryEnabled&&/^(Đã lưu nháp|Có thay đổi chưa lưu|Chọn lớp để soạn)/u.test(message);if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}if(libraryEnabled)paintSaveState();};
+  const notice=message=>{status.textContent=message;status.hidden=libraryEnabled&&!saveFailed&&/^(Đã lưu nháp|Có thay đổi chưa lưu|Chọn lớp để soạn)/u.test(message);if(saveFailed&&libraryEnabled){status.append(' ',button('Thử lưu lại',()=>{clearTimeout(autosaveTimer);void run(save);}));}if(libraryEnabled)paintSaveState();};
   function paintSaveState(){saveState.textContent=!draft?'':busy?(backgroundBusy?'Đang lưu…':'Đang xử lý…'):saveFailed?'Lưu lỗi':draft.status==='published'?'Đã xuất bản':dirty?'Chưa lưu':'Đã lưu';}
   function field(parent,label,value,onChange,{kind='text',options=null,min,max,disabled=false}={}) {
     const wrap=el('label',undefined,{className:'field'});wrap.append(el('span',label));
@@ -298,10 +298,15 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       }
       publishOperationId??=uuid();
       const reply=await request('/teacher/form-drafts/'+draft.id+'/publish-library',{method:'POST',body:{expectedRevision:draft.revision,operationId:publishOperationId}});
+      if(current!==generation)return;
+      if(createScope==='izone'){
+        const key=draft.id+':shared';if(!librarySaves.has(key))librarySaves.set(key,uuid());
+        await request('/teacher/form-library',{method:'POST',body:{draftId:draft.id,expectedRevision:draft.revision,expectedHash:draft.contentHash,scope:'izone',operationId:librarySaves.get(key)}});
+      }
       if(current!==generation)return;publishedByDraft.set(draft.id,reply.publication);draft.publication=reply.publication;draft.status='published';dirty=false;
-      const publishedId=draft.id;authoring=false;paint();library.showPersonal(publishedId);
+      const publishedId=draft.id;authoring=false;paint();library.showPersonal(publishedId,{scope:createScope});
       notice('Đã xuất bản vào kho.');
-      const reload=async()=>{await refreshList();const loaded=await library.refresh();if(loaded===false)throw Error('Danh sách kho chưa tải được.');if(current===generation&&!authoring)library.showPersonal(publishedId,{published:true});};
+      const reload=async()=>{await refreshList();const loaded=await library.refresh();if(loaded===false)throw Error('Danh sách kho chưa tải được.');if(current===generation&&!authoring)library.showPersonal(publishedId,{published:true,scope:createScope});};
       try{await reload();}
       catch(error){if(current===generation&&!authoring)library.showPersonal(publishedId,{published:true,error:error.message,retry:reload});}
     }));publish.classList.add('primary');thuyActionButtons={preview,saveButton,publish};}
@@ -742,10 +747,12 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
     // Ngữ cảnh lớp/buổi vẫn phục vụ quyền và lưu nháp, chỉ chọn đích giao trong Giao bài.
     header.hidden=true;
     const copies=new Map();library=createFormLibrary({host:libraryRoot,request,onAssign:entry=>assignmentDialog.open(entry),onRefresh:refreshList,
-      getClassContext:()=>({classId:classSelect.value,className:classes.find(c=>String(c.class_id)===classSelect.value)?.class_name||''}),onManagementChanged,onCreate:()=>{
+      getClassContext:()=>({classId:classSelect.value,className:classes.find(c=>String(c.class_id)===classSelect.value)?.class_name||''}),onManagementChanged,onCreate:scope=>{
+    createScope=scope;
     if(!canDiscard())return;const value=newEditorPayload('Bài tập chưa đặt tên');value.definition.blocks[0].title='Bài tập';value.definition.blocks[0].kind='exercise';value.definition.blocks[0].items=[];
     adopt({...value,id:null,classId:classSelect.value,sessionNumber:Number(session.value),status:'draft',revision:0});markDirty();paint();
   },onOpenDraft:async entry=>{
+    createScope='personal';
     if(!canDiscard())return false;let opened=false;await run(async current=>{const review=Boolean(entry.draft?.reviewMode);let result=await request('/teacher/form-drafts/'+entry.id+(review?'/review':''));
       if(!review){
         const key='published:'+entry.id+':'+classSelect.value+':'+session.value;if(!copies.has(key))copies.set(key,uuid());
@@ -790,6 +797,7 @@ export function createFormDraftEditor({host,apiRequest,onPublished=()=>{},onMana
       aiView?.close();aiApplied=null;for(const preview of previews)preview.close();previews.clear();library?.clear();assignmentDialog.clear();
       importText='';importOpen=false;assignmentClasses=[];classSelect.replaceChildren();sourceSelect.replaceChildren();draftList.replaceChildren();paint();notice('Đăng nhập để soạn phiếu.');},
     // Dùng cùng đường render thật trong kiểm thử để đối chiếu definition/key trước và sau khi soạn.
-    openDraft:value=>adopt(value),getPayload:()=>draft?payload():null
+    openDraft:value=>adopt(value),getPayload:()=>draft?payload():null,canUpdate:()=>!busy&&!dirty&&!saveFailed&&(!authoring||!draft),
+    captureNavigation:()=>({classId:classSelect.value,library:library?.navigation()}),restoreNavigation:value=>library?.restoreNavigation(value?.library)
   };
 }

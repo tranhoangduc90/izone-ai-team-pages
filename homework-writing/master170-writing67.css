@@ -1,0 +1,56 @@
+/* #264: adapter cho DOM Writing mới; không nạp assessment hoặc writing-flow.
+   Nguồn: Master170 1.1/R3, Pages c6bc392 + main đã đối chiếu 29/10/2026.
+   Giữ bố cục toàn chiều ngang, căn hai lề và ô viết 640/480px của Linh. */
+@font-face {
+  font-family: 'Source Sans 3 Writing67';
+  src: url('./assets/SourceSans3-Variable.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Source Sans 3 Writing67';
+  src: url('./assets/SourceSans3-Italic-Variable.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+html[data-izone-theme='master170'] body[data-m170-product='writing'][data-m170-course='67'] {
+  --m170-input-focus: #152B4E;
+  --m170-pointer-ring: #152B4E18;
+  --m170-keyboard-ring: #2156A033;
+  font-family: 'Source Sans 3 Writing67', 'Source Sans 3', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+html[data-izone-theme='master170'] body[data-m170-product='writing'][data-m170-course='67'] :where(
+  .writing-area, .question-text, .feedback-text, .feedback-rendered,
+  .feedback-rich, .review-form textarea, .teacher-comment-editor textarea,
+  .source-text, .handout-cell-content, .handout-keywords
+) {
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+html[data-izone-theme='master170'] body[data-m170-product='writing'][data-m170-course='67'] :where(
+  input:not([type='checkbox']):not([type='radio']), select, textarea
+):focus {
+  border-color: var(--m170-input-focus);
+  box-shadow: 0 0 0 2px var(--m170-pointer-ring);
+}
+
+html[data-izone-theme='master170'] body[data-m170-product='writing'][data-m170-course='67'] :where(
+  input:not([type='checkbox']):not([type='radio']), select, textarea
+):focus-visible {
+  outline: 3px solid var(--m170-input-focus);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--m170-keyboard-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-izone-theme='master170']:has(body[data-m170-product='writing'][data-m170-course='67']) {
+    scroll-behavior: auto;
+  }
+}

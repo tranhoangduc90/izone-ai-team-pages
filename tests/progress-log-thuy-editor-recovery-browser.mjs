@@ -23,6 +23,7 @@ test('Thủy editor: đúng lớp, tự lưu, mất phản hồi, giữ node qua
     const body=structuredClone(options.body);window.calls.push({path,...options,body});
     if(path.startsWith('/teacher/form-library?'))return {entries:[]};
     if(path==='/teacher/form-publications')return {publications:[]};
+    if(path==='/teacher/form-drafts/draft-a/edit')return {draft:structuredClone(window.savedDraft)};
     if(path.startsWith('/teacher/form-drafts/review-queue'))return {drafts:[]};
     if(path.startsWith('/teacher/form-drafts?'))return {drafts:window.savedDraft?[{id:window.savedDraft.id,title:window.savedDraft.definition.title,sessionNumber:window.savedDraft.sessionNumber,revision:window.savedDraft.revision,status:window.savedDraft.status}]:[]};
     if(path==='/teacher/form-drafts'&&options.method==='POST'){
@@ -50,7 +51,8 @@ test('Thủy editor: đúng lớp, tự lưu, mất phản hồi, giữ node qua
   assert.equal(await page.getByLabel('Nội dung câu hỏi',{exact:true}).inputValue(),'Nội dung trước lỗi');
   await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Nội dung mới sau khi mất phản hồi');
   await page.getByRole('button',{name:'Thử lưu lại',exact:true}).click();
-  await page.getByRole('status').filter({hasText:'Đã lưu nháp'}).waitFor();
+  await page.waitForFunction(()=>window.savedDraft.definition.blocks[0].items[0].prompt==='Nội dung mới sau khi mất phản hồi');
+  assert.equal(await page.locator('.thuy-editor-save-state').textContent(),'Đã lưu');
   const state=await page.evaluate(()=>({draft:window.savedDraft,calls:window.calls.map(c=>({path:c.path,body:c.body,method:c.method})),keys:[...Object.keys(localStorage),...Object.keys(sessionStorage)]}));
   assert.equal(state.draft.classId,'1294');assert.equal(state.draft.sessionNumber,11);assert.equal(state.draft.definition.blocks[0].items[0].prompt,'Nội dung mới sau khi mất phản hồi');
   const creates=state.calls.filter(c=>c.path==='/teacher/form-drafts'&&c.method==='POST');assert.equal(creates.length,2);assert.deepEqual(creates[0].body,creates[1].body);assert.deepEqual(state.keys,[]);
@@ -70,14 +72,13 @@ test('Thủy editor: đúng lớp, tự lưu, mất phản hồi, giữ node qua
   await page.waitForFunction(()=>window.savedDraft.definition.blocks[0].items[0].prompt==='Tiếp tục gõ trong khi phản hồi cũ chưa tới');
   assert.equal(await page.getByLabel('Nội dung câu hỏi',{exact:true}).inputValue(),'Tiếp tục gõ trong khi phản hồi cũ chưa tới');
   assert.equal(await page.evaluate(()=>window.readingNode===document.querySelector('textarea[aria-label="Nội dung câu hỏi"]')),true);
-  await page.getByRole('button',{name:'AI chuyển nội dung có sẵn',exact:true}).click();
+  await page.getByRole('button',{name:'Tạo bài tập bằng AI',exact:true}).click();
   await page.getByRole('dialog').getByLabel('Nội dung câu hỏi có sẵn',{exact:true}).fill('Nội dung nguồn giữ khi đóng AI');
   await page.getByRole('button',{name:'Đóng AI',exact:true}).click();
-  await page.getByRole('button',{name:'AI chuyển nội dung có sẵn',exact:true}).click();
+  await page.getByRole('button',{name:'Tạo bài tập bằng AI',exact:true}).click();
   assert.equal(await page.getByRole('dialog').getByLabel('Nội dung câu hỏi có sẵn',{exact:true}).inputValue(),'Nội dung nguồn giữ khi đóng AI');
-  await page.getByRole('dialog').getByRole('button',{name:'AI chuyển nội dung có sẵn thành câu hỏi',exact:true}).click();
-  await page.getByRole('dialog').getByRole('button',{name:'Xác nhận thêm lô này vào nháp',exact:true}).click();
-  await page.getByRole('status').filter({hasText:'Đã thêm cả lô vào nháp'}).waitFor();
+  await page.getByRole('dialog').getByRole('button',{name:'Tạo bài',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'Đã thêm và lưu 1 câu trong phiếu.'}).waitFor();
   assert.equal(await page.getByRole('dialog').count(),0);
   const final=await page.evaluate(()=>window.savedDraft);assert.equal(final.definition.blocks.length,1);assert.equal(final.definition.blocks[0].items.length,2);assert.equal(final.definition.blocks[0].items[1].prompt,'Câu AI có sẵn từ nguồn');
   assert.deepEqual(errors,[]);

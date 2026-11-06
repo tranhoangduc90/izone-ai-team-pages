@@ -44,6 +44,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
    const s=state(body.studentRef);if(!s.final)return send({ok:false,error:'JOURNEY_SUBMISSION_NOT_READY',message:'Buổi này chưa có bài nộp cuối'},409);
    return send({ok:true,detail:{classId:'1294',sessionNumber:11,student:person(body.studentRef),submissionId:uid(40),definition,responses:s.draft,gradingItems:result(s).items.map(item=>item.itemVersionId===uid(90)?{...item,expectedAnswer:['Tham khảo sau khi mở lại']}:item),status:'incomplete'}});
   }
+  if(path==='/attempts/resume')return route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({ok:false,error:'ATTEMPT_NOT_FOUND'})});
   if(path==='/attempts/start'){
    const s=state(body.studentRef);return send({ok:true,attempt:{attemptToken:s.attemptToken,assignmentId,definitionHash:'a'.repeat(64),draft:s.draft,draftRevision:s.rev,checkpointSubmissions:s.checkpoints,
     identity:{studentRef:body.studentRef,studentName:person(body.studentRef).name,classId:'1294',className:'IC2305',sessionNumber:11}}});
@@ -66,8 +67,9 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
  async function changeLearner(ref){await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.waitForURL('**/student.html');await openManual(ref);}
  try{
   await openManual();assert.equal(requests.filter(r=>r.path.includes('/submit')).length,0);
-  await page.locator('#studentDashboardSessions').getByRole('heading',{name:'Các buổi học',exact:true}).waitFor();
-  await page.locator('#studentDashboardSessions [data-session-number="11"]').waitFor();assert.equal(await page.locator('#journeyView').isVisible(),false);
+  assert.equal(await page.locator('#studentDashboardSessions').isVisible(),false,'Trang làm phiếu không hiện lại danh sách kết quả và các buổi học');
+  assert.equal(await page.locator('#reflectionForm').getByRole('button',{name:'Kết quả học tập',exact:true}).count(),0);
+  assert.equal(await page.locator('#journeyView').isVisible(),false);
   assert.equal(await page.getByText('BUỔI HỌC GẦN NHẤT',{exact:true}).count(),0);
   assert.equal(await page.locator('#thuyLessonNav').count(),0);assert.equal(await page.locator('#formView').isVisible(),true);assert.equal(await page.locator('#confirmView').isVisible(),false);
   journeyFailure='denied';await page.clock.fastForward(31_000);await page.locator('#studentDashboardLatest').getByText(/Quyền đọc đã bị thu hồi/).waitFor();
@@ -87,7 +89,10 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   const speaking=page.locator(`[data-item-version-id="${uid(90)}"]`);
   for(const width of [1440,768,390]){
    await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+   assert.equal(await page.locator('#studentDashboardSessions').isVisible(),false);
+   assert.equal(await page.locator('#reflectionForm').getByRole('button',{name:'Kết quả học tập',exact:true}).count(),0);
    if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await speaking.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,`speaking-choice-${width}.png`)});}
+   if(process.env.THUY_EVIDENCE_DIR)await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,`learner-lesson-${width}.png`),fullPage:true});
    const typography=await speaking.locator('.choice-text').first().evaluate(el=>({size:getComputedStyle(el).fontSize,line:getComputedStyle(el).lineHeight}));
    assert.deepEqual(typography,{size:'16px',line:'24px'},'Phương án Speaking phải đúng preset form học viên 16/24px');
    assert.ok(await speaking.locator('.choice').first().evaluate(el=>el.getBoundingClientRect().height>=48));
@@ -96,7 +101,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   await page.setViewportSize({width:1440,height:1000});
   failSave=true;await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await page.locator('#notice').filter({hasText:'Chưa lưu xong'}).waitFor();
   assert.match(await page.locator('#progressLogStudentName').innerText(),/Học viên A/);assert.equal(await page.locator('#thuyRetrySave').isVisible(),true);
-  failSave=false;await page.locator('#thuyRetrySave').click();await page.locator('#saveState').filter({hasText:'Đã lưu'}).waitFor();
+  failSave=false;await page.locator('#thuyRetrySave').click();await page.waitForFunction(()=>document.querySelector('#saveState')?.textContent==='Đã lưu');assert.equal(await page.locator('#thuyRetrySave').isVisible(),false);
   await changeLearner(B);
   await page.locator(`[data-part="${block2}"]`).getByRole('button',{name:'Bắt đầu làm',exact:true}).click();assert.equal(await page.locator('.thuy-comparison textarea').nth(0).inputValue(),'');
   await changeLearner(A);
@@ -107,6 +112,7 @@ test('Bản Thủy thật: gạch chân, bảng điền, nháp riêng, nộp đ�
   assert.equal(await page.locator('#submitButton').isVisible(),false);assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);
   const starts=requests.filter(r=>r.path==='/attempts/start').length;await page.close();page=await ctx.newPage();await page.clock.install({time:new Date('2026-01-01T12:00:00Z')});await page.goto(url);await page.locator('#formView').waitFor();
   await page.locator('#questionList .studentDetailHeader').waitFor();assert.equal(requests.filter(r=>r.path==='/attempts/start').length,starts);
+  assert.equal(await page.locator('#studentDashboardSessions').isVisible(),false,'Xem lại bài chỉ đọc cũng không lặp danh sách buổi học');
   await page.getByText('Tham khảo sau khi mở lại',{exact:true}).waitFor();
   assert.equal(requests.filter(r=>r.path==='/attempts/submit').length,1);assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
   if(process.env.THUY_EVIDENCE_DIR){await mkdir(process.env.THUY_EVIDENCE_DIR,{recursive:true});await page.screenshot({path:resolve(process.env.THUY_EVIDENCE_DIR,'learner-completed.png'),fullPage:true});}
