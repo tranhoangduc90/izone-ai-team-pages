@@ -9,7 +9,7 @@ function fixture(source,restored){
  const init=source.indexOf('  const state = {'),initEnd=source.indexOf('\n  };',init)+5;
  const save=source.indexOf('  function saveSession()'),saveEnd=source.indexOf('\n  }',save)+4;
  assert.ok(init>=0&&initEnd>init&&save>=0&&saveEnd>save);
- const context=vm.createContext({window:{},document:{getElementById:()=>null},availableStorages:()=>[storage],restoredSession:restored});
+ const context=vm.createContext({offline:null,window:{},document:{getElementById:()=>null},availableStorages:()=>[storage],restoredSession:restored});
  vm.runInContext(`const miniAnswerSheet=false,miniConfirmed=false,miniGeneration=0,paperMini=false,paperConfirmed=false,paperIdentity=null,storageKey='fixture',classCode='FIXTURE';${source.slice(init,initEnd)}\n${source.slice(save,saveEnd)}\nsaveSession();`,context);
  return JSON.parse(data.get('fixture'));
 }

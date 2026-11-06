@@ -24,7 +24,7 @@ export function fixture(source, restored = {}) {
     writingConflict: node(), writingConflictDrafts: node(), writingKeepLocal: node() };
   let transport = () => ({ ok: true, writing: { accepted: true, revision: 6,
     task1: 'local task 1', task2: 'local task 2', started: true, submitted: false, reason: 'saved' } });
-  const context = vm.createContext({ console, elements,
+  const context = vm.createContext({ offline:null, appConfig:{}, console, elements,
     document: { createElement: node, getElementById() { return null; } },
     availableStorages() { return [context.sessionStorage, context.localStorage]; },
     window: { clearTimeout() {}, setTimeout() { return 1; } },
@@ -212,7 +212,8 @@ export function registerWritingRevisionContract({ name, sourcePath, cachePaths }
         // Trang CBT chỉ nạp bootstrap; bootstrap chính/dự phòng đã kiểm đúng app ở ca cùng bảng.
         const bootstrapUrls = [...text.matchAll(/bootstrap\.js\?[^\s'"<>`]*/g)].map(match => match[0]);
         assert.ok(bootstrapUrls.length > 0, `Thiếu bootstrap trong ${path}`);
-        const bootstrapRevision=k56?cacheRevision:currentRevision;
+        // Revision bootstrap thuộc transport hiện hành; app Writing vẫn giữ D08.
+        const bootstrapRevision='20261024-cf512-1';
         for (const url of bootstrapUrls) assert.equal(revisionOf(url), bootstrapRevision, path);
       } else {
         assert.ok(writingUrls.length > 0, `Thiếu đúng Writing app ${writingApp} trong ${path}`);

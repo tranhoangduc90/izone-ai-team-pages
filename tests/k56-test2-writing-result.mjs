@@ -12,7 +12,7 @@ class Element {
 }
 function fixture(grading,submitted=true,classCode='CODEXDEMO56'){
  const target=new Element('section');const opened=[];
- const context=vm.createContext({document:{createElement:tag=>new Element(tag)},writingConfig:{tasks:[{id:'task1'}]},elements:{writingSubmissionResult:target},state:{classCode,writingSubmitted:submitted,result:{writing:{grading}}},formatBand:value=>value==null?'—':String(value),openWritingFeedback:task=>opened.push(task),refreshWritingGrading:async()=>{}});
+ const context=vm.createContext({writingSubmission:{sync(){},owner:()=> 'fixture'},writingSubmissionRenderSignature:null,document:{createElement:tag=>new Element(tag)},writingConfig:{tasks:[{id:'task1'}]},elements:{writingSubmissionResult:target},state:{classCode,writingSubmitted:submitted,result:{writing:{grading}}},formatBand:value=>value==null?'—':String(value),openWritingFeedback:task=>opened.push(task),refreshWritingGrading:async()=>{}});
  vm.runInContext(render,context);context.renderWritingSubmission();return {target,opened};
 }
 function flatten(node){return [node,...node.children.flatMap(flatten)];}
@@ -33,6 +33,9 @@ test('đang chấm không tạo thẻ điểm giả',()=>{
 test('chưa nộp ẩn và xóa phần kết quả Writing',()=>{
  const {target}=fixture(null,false);assert.equal(target.hidden,true);assert.equal(target.children.length,0);
 });
-test('bộ nạp và Answer Sheet dùng cache mới cho thẻ Task 1',()=>{
- for(const file of ['term-tests/term-test-2-k56-computer-based/bootstrap.js','term-tests/term-test-2-k56-computer-based/index.html','term-tests/term-test-2-k56/index.html'])assert.match(fs.readFileSync(file,'utf8'),file.includes('computer-based/index.html')?/bootstrap\.js\?(?:rev|v)=20261018-draft-network-r87/:/20261018-draft-network-r87/);
+test('Điểm 0 theo blank_rule hiển thị là 0 và mở đúng kết quả Task 1',()=>{
+ const task={taskNumber:1,taskScore:0,criteria:[],gradingMethod:'blank_rule',reasonCode:'BLANK_SUBMISSION'};
+ const {target,opened}=fixture({ready:true,status:'ready',writingScore:0,tasks:[task]});const nodes=flatten(target);
+ assert.equal(nodes.filter(n=>n.textContent==='Band 0').length,2);assert.ok(!nodes.some(n=>n.textContent==='Band —'));
+ nodes.find(n=>n.className==='writing-score-card is-action').events.click();assert.equal(opened[0].gradingMethod,'blank_rule');
 });

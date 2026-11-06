@@ -19,7 +19,7 @@ function fixture(module, random = .3) {
   const math=Object.create(Math);math.random=()=>random;
   let now=Date.parse('2026-10-18T05:00:00Z');
   class ClockDate extends Date { static now(){return now;} }
-  const context=vm.createContext({state,demoMode:false,paperMini:false,paperConfirmed:true,paperEpoch:0,
+  const context=vm.createContext({offline:null,state,demoMode:false,paperMini:false,paperConfirmed:true,paperEpoch:0,
     storageKey:'fake-a',appConfig:{API_BASE_URL:'https://fake.invalid'},testConfig:{slug:'fake'},Math:math,Date:ClockDate,
     navigator:{onLine:true},AbortController,setTimeout:setTimer,clearTimeout:clearTimer,
     window:{setTimeout:setTimer,clearTimeout:clearTimer},elements:{readingQuestions:{},notice:{scrollIntoView(){}}},
