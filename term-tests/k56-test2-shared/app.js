@@ -276,7 +276,7 @@
         <h2>Chuẩn bị phần Writing</h2>
         <p>Kết quả Listening và Reading đang được giữ kín. Khi sẵn sàng, hãy bắt đầu Writing Task 1.</p>
         <ul class="writing-prep-list">
-          <li>Tổng thời gian: ${writingConfig.totalMinutes || 30} phút, gồm ${writingConfig.planningMinutes || 10} phút lập dàn ý và 20 phút viết bài.</li>
+          <li>Tổng thời gian: ${writingConfig.totalMinutes || 30} phút.</li>
           <li>Task 1: viết ít nhất 150 từ.</li>
           <li>Bài viết được tự lưu trên hệ thống; đóng tab rồi mở lại vẫn có thể tiếp tục.</li>
         </ul>
@@ -1427,26 +1427,7 @@
       promptHeader.append(promptTitle);
       const promptBody = document.createElement('div');
       promptBody.className = 'writing-prompt-body';
-      const outline = document.createElement('section');
-      outline.className = 'writing-outline-card';
-      const outlineHeader = document.createElement('header');
-      const outlineTitle = document.createElement('strong');
-      outlineTitle.textContent = 'Dàn ý';
-      outlineHeader.append(outlineTitle);
-      const outlineEditor = document.createElement('textarea');
-      outlineEditor.className = 'writing-outline-editor';
-      outlineEditor.dataset.writingOutline = 'true';
-      outlineEditor.value = state.drafts.writing.outline || '';
-      outlineEditor.spellcheck = false;
-      outlineEditor.setAttribute('aria-label', 'Dàn ý Writing Task 1');
-      outlineEditor.addEventListener('input', () => {
-        state.drafts.writing.outline = outlineEditor.value;
-        state.writingDirty = true;
-        state.writingRevision += 1;
-        saveSession();
-        scheduleWritingSave();
-      });
-      outline.append(outlineHeader, outlineEditor);
+      // Giữ outline cũ trong state/recovery; màn làm bài chỉ còn đề và bài viết.
       const guidance = document.createElement('p');
       guidance.className = 'writing-guidance';
       guidance.textContent = `You should spend about ${task.recommendedMinutes} minutes on this task.`;
@@ -1472,7 +1453,7 @@
       const minimum = document.createElement('p');
       minimum.className = 'writing-minimum';
       minimum.textContent = `Write at least ${task.minimumWords} words.`;
-      promptBody.append(minimum, outline);
+      promptBody.append(minimum);
       promptPane.append(promptHeader, promptBody);
 
       const separator = document.createElement('button');
