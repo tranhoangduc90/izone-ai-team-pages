@@ -1,0 +1,13 @@
+.split-divider[hidden]{display:none!important}
+@media(min-width:801px){
+  .resizable-split[data-split-active="true"]{display:grid;grid-template-columns:minmax(0,var(--split-left)) 24px minmax(0,var(--split-right));column-gap:0}
+  .resizable-split[data-split-active="true"]> :not(.split-divider){min-width:0}
+  .split-divider{position:relative;align-self:stretch;min-height:64px;display:flex;align-items:center;justify-content:center;cursor:col-resize;touch-action:none;user-select:none;border-radius:6px;outline-offset:-3px}
+  .split-divider::before{content:'';position:absolute;top:8px;bottom:8px;width:2px;background:#BDC8D6;border-radius:2px}
+  .split-divider>span{position:relative;width:6px;height:40px;border-radius:4px;background:var(--control);border:1px solid var(--surface)}
+  .split-divider:hover,.split-divider:focus-visible{background:var(--selected)}
+  .split-divider:hover>span,.split-divider:focus-visible>span{background:var(--navy)}
+  body.split-is-dragging,body.split-is-dragging *{cursor:col-resize!important;user-select:none!important}
+}
+
+.split-divider>span{font-size:18px;line-height:40px;text-align:center}

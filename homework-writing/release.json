@@ -1,0 +1,234 @@
+{
+  "source": {
+    "revision": "0626ad9ea248c9560d3580d1cc77ea63c02e0935b7a9d64dd0c6ae6812ad8e19",
+    "files": 207
+  },
+  "createdAt": "2026-11-05T10:02:47.968Z",
+  "public": {
+    "mode": "online",
+    "apiBase": "https://ducizone.ddns.net/homework-writing-api/api",
+    "ssoScript": "https://tranhoangduc90.github.io/izone-ai-team-pages/shared/teacher-single-sign-on.js"
+  },
+  "frontendUrl": "https://tranhoangduc90.github.io/izone-ai-team-pages/homework-writing/",
+  "files": [
+    {
+      "path": ".nojekyll",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "app.js",
+      "bytes": 46025,
+      "sha256": "0fc075d225ec7774832e625afe6f06b165ed38941c2e87af16621c2a95011dac"
+    },
+    {
+      "path": "assets/SourceSans3-Italic-Variable.woff2",
+      "bytes": 132332,
+      "sha256": "2cac627e742dec5b6fa73a0ad243a97e189c362ea11ae85c22b2e52b214d00a3"
+    },
+    {
+      "path": "assets/SourceSans3-LICENSE.md",
+      "bytes": 4486,
+      "sha256": "56af9b9c6715597e458284a474dc118a50a4150e9d547c70f7b4a33c3e6a9328"
+    },
+    {
+      "path": "assets/SourceSans3-Variable.woff2",
+      "bytes": 170188,
+      "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
+    },
+    {
+      "path": "assets/logo.png",
+      "bytes": 261875,
+      "sha256": "a1ec7231da90c5948327196a31b1c0cec419c4853cbac2a859943d757fd31646"
+    },
+    {
+      "path": "assets/map.svg",
+      "bytes": 902,
+      "sha256": "5b6a5c3c6178fb2b54e4da2021521f3bb5c6b201f74952e376467d01c5c902ac"
+    },
+    {
+      "path": "assignment-status.js",
+      "bytes": 1311,
+      "sha256": "425785cac81ed43f2e706b761c6c3d5eb34d9739d2df7b83308ace4051d596a0"
+    },
+    {
+      "path": "drafts.js",
+      "bytes": 2344,
+      "sha256": "51902836633f857b9fd8d09382a15e0f59bd7ce6bb4ef33092a174cebc361911"
+    },
+    {
+      "path": "feedback-cards.js",
+      "bytes": 7375,
+      "sha256": "a6285d8624d30a6bdd52a32fc5f597ba655f334f42a1f49d69c3f47ed715e471"
+    },
+    {
+      "path": "feedback-format.js",
+      "bytes": 4057,
+      "sha256": "2a58e29c4f9785334ea48b73c9b23cac2b833087486969e75df21bf7ccae2f83"
+    },
+    {
+      "path": "feedback-tabs.js",
+      "bytes": 6268,
+      "sha256": "36e01107c0c528ed06edc52aa69b175d23893de404f45c5664e370b67821540f"
+    },
+    {
+      "path": "handout-alignment.js",
+      "bytes": 7118,
+      "sha256": "b3288d94ab11518e63490feee06f29acc1ade9d115366899bc25ce5fe7df82a8"
+    },
+    {
+      "path": "handout-editor.js",
+      "bytes": 6395,
+      "sha256": "cec363ddc32e7b45f4bfe9f3e14907b00b475740f386384b06611eb853d53aa0"
+    },
+    {
+      "path": "handout-preview.js",
+      "bytes": 5354,
+      "sha256": "2a88c4b1816fd4b5caa3f464cd4452eca63b87a0fec4fbd42c60a66f1daf3869"
+    },
+    {
+      "path": "handout-tables.js",
+      "bytes": 2053,
+      "sha256": "b793f61ecfe62cfb62da96ed6303adbf95342b32881d77ad8b5f901d6a904d60"
+    },
+    {
+      "path": "handout-view.js",
+      "bytes": 3020,
+      "sha256": "03c2aee258927cf3566681addfae05ee860d3d64d86bfc6b8c02e0ef58cf2180"
+    },
+    {
+      "path": "identity/course-student-identity.js",
+      "bytes": 4667,
+      "sha256": "582d80fe0b557eefcd3e2a5c753abea9979d2222af8c0e221c620cb806816a58"
+    },
+    {
+      "path": "identity/student-identity-client.js",
+      "bytes": 6276,
+      "sha256": "dfcb759d46bf757672d9db54e814b95bf546bdf380213a6e8c8ae83b0fe449d4"
+    },
+    {
+      "path": "identity/student-identity-migration.js",
+      "bytes": 5204,
+      "sha256": "aae5ddab692b9b7d31ac578b208ce6a2dd0493e78dbd2978ddd16a562337d03c"
+    },
+    {
+      "path": "identity/student-identity.js",
+      "bytes": 7422,
+      "sha256": "7ebfce327fae4c12fa8e6079605e49cf79987841dcff1786a5bb166a2addb625"
+    },
+    {
+      "path": "index.html",
+      "bytes": 1577,
+      "sha256": "8f0582b24ca18f2299b396e6bfce94d24485f175719ed51c2e613929d29c101e"
+    },
+    {
+      "path": "language-cards.js",
+      "bytes": 1857,
+      "sha256": "76f2ec782ca7526a585c07b2d57e4694a3bab4223d17a526ddfcd5b583215218"
+    },
+    {
+      "path": "login-form.js",
+      "bytes": 1851,
+      "sha256": "485adc70c498ee42683b724c564634cc1dba446adf689dbeb8b41ca0016d658d"
+    },
+    {
+      "path": "master170-writing67.css",
+      "bytes": 2079,
+      "sha256": "fa9a295378d06d87b853427f13542c51850a967e297d1cf575d5dc466035fb18"
+    },
+    {
+      "path": "master170-writing67.js",
+      "bytes": 728,
+      "sha256": "84080330164bd4776ad97811e91091e47587855ca3c05c3f7e2e346d506b6e47"
+    },
+    {
+      "path": "online-access.js",
+      "bytes": 16782,
+      "sha256": "89eac8a910ae348a7ac4af47468af6ef1bea110825fdf9a122a98ceb32c9ca23"
+    },
+    {
+      "path": "review-highlights.js",
+      "bytes": 3701,
+      "sha256": "692adc73c0c542735d3cdd52e3fa5d6a26347b00e3f2af4e20cf59db93fbde74"
+    },
+    {
+      "path": "revision-draft.js",
+      "bytes": 893,
+      "sha256": "18ca63f2eb90ed8884b58000f890570226b59150d0d9fd07f9740fd520a591fc"
+    },
+    {
+      "path": "rich-review.js",
+      "bytes": 4525,
+      "sha256": "b1b965a41f2b85414e58d7dbe0183caeb1938a775feefff252e5f615c6e268a3"
+    },
+    {
+      "path": "runtime-config.js",
+      "bytes": 290,
+      "sha256": "c3ac82f271f25d69c00bcab8e1dedf56066392c46554b1f894ea417d7ba37ec4"
+    },
+    {
+      "path": "source-versions.js",
+      "bytes": 1976,
+      "sha256": "88cdfeecf92ceb94b6e9471257b3914332d5713ed381f66cea077d3d0ab53553"
+    },
+    {
+      "path": "split-panes.css",
+      "bytes": 1131,
+      "sha256": "9780d0b1d383b172dad766d413ad67e007d998aa6e79d2aeff6c8c746800b99b"
+    },
+    {
+      "path": "split-panes.js",
+      "bytes": 5889,
+      "sha256": "d21ab0d97e36b85440338d80499fa8e9d210ab5bc2110867180cb7ca84eecbdc"
+    },
+    {
+      "path": "student-filters.js",
+      "bytes": 2383,
+      "sha256": "126d387742bbbdcd20ceb014512ba2a02875bb1d7e928deb734fc15542270eda"
+    },
+    {
+      "path": "submission-check.js",
+      "bytes": 442,
+      "sha256": "46578d7cf8caa52c1d87db3a3a43083ca11a444c6f265e3a453236a5ca5ff31b"
+    },
+    {
+      "path": "submission-language.js",
+      "bytes": 3780,
+      "sha256": "c612787e3aa62569c943aa9b19a303210117b09a38cef2a2228329ebc756a709"
+    },
+    {
+      "path": "teacher-comments.js",
+      "bytes": 6774,
+      "sha256": "86dbb06df1bebeadaf1fcd5dc175bfe354e42784bef5cdeac0b583e5b518e444"
+    },
+    {
+      "path": "teacher-filters.js",
+      "bytes": 4355,
+      "sha256": "ff06c7924f170ccfd66aaf70b58829c8fe45b6f0cb4cbef33d192ee3c798b0f6"
+    },
+    {
+      "path": "text-highlights.js",
+      "bytes": 1530,
+      "sha256": "4d5b7ef9e4c37e6144fc01e0715ce3b1f134cfbd3ea605673b33da6212176d1c"
+    },
+    {
+      "path": "upgrade0211.css",
+      "bytes": 3337,
+      "sha256": "890dd234003648345ca3e0c5be229e583b213982179bc30a89b39414feb52d0a"
+    },
+    {
+      "path": "views.js",
+      "bytes": 28055,
+      "sha256": "f57d59ef8dce4a9be2498f85f2f59e9adfc96e7fee0b26572a27c3e9fd6bf6aa"
+    },
+    {
+      "path": "workspace.css",
+      "bytes": 37861,
+      "sha256": "e759b521e6021c7ae1b12f1f4763b3db4f691da0752d73c949b812e51633f973"
+    }
+  ],
+  "limits": [
+    "Prepared static package only; no publish, real SSO/Google, API activation or private data included.",
+    "Consumer homeworkwriting must be registered separately before use."
+  ]
+}
