@@ -27,7 +27,8 @@
   // Kết quả: tải lại trang vẫn trở về đúng ngữ cảnh học viên đang làm.
   // Khi lỗi: dùng cấu hình mặc định; luồng lưu bài của shared/app.js không bị ảnh hưởng.
   function readUiState() {
-    let stored = {};
+    let stored = window.K56_TERM2_OFFLINE?.active ? window.K56_TERM2_OFFLINE.record.ui || {} : {};
+    if (!Object.keys(stored).length)
     for (const storage of availableStorages()) {
       try {
         stored = JSON.parse(storage.getItem(uiStorageKey) || '{}');
@@ -66,6 +67,7 @@
   }
 
   function saveUiState() {
+    if(window.K56_TERM2_OFFLINE?.active){window.K56_TERM2_OFFLINE.record.ui=structuredClone(uiState);void window.K56_TERM2_OFFLINE.persist().catch(()=>{});}
     const serialized = JSON.stringify(uiState);
     for (const storage of availableStorages()) {
       try {
@@ -784,6 +786,17 @@
     examCard.append(examCopy, examControls);
     listeningForm.source.toolbar.append(examCard);
 
+    if (protectedBootstrap?.officialAudioElement && window.K56_TERM2_OFFLINE?.active) {
+      const runtime=window.K56_TERM2_OFFLINE,player=protectedBootstrap.officialAudioElement;
+      player.volume=uiState.audio.volume;
+      const manualButton=makeButton('cbt-audio-incident','Tôi không nghe được');examControls.append(manualButton);
+      setListeningVisible(true);examRetryButton.hidden=true;
+      const controller=runtime.attachPlayer({audio:player,resumeButton,manualButton,form:listeningForm.form,
+        render(prefix,current,duration){playbackProgress.max=duration||1;playbackProgress.value=current||0;examStatus.textContent=prefix+' · '+formatTime(current)+' / '+formatTime(duration);uiState.audio.started=true;uiState.audio.time=Number(current)||0;}});
+      examVolumeInput.addEventListener('input',()=>{player.volume=Number(examVolumeInput.value);uiState.audio.volume=player.volume;saveUiState();});
+      listeningForm.form.addEventListener('term-test:listening-submitted',()=>controller.finish());
+      return;
+    }
     if (protectedBootstrap?.officialAudioElement && !query.get('demo') && window.K56AudioRecovery) {
       const appConfig = window.TERM_TEST_APP_CONFIG;
       const manualButton = makeButton('cbt-audio-incident', 'Tôi không nghe được');
@@ -1283,6 +1296,7 @@
   // Kết quả: audio kết thúc không tạo thêm thời gian làm vô hạn; lần thử lại vẫn dùng bản đáp án đã khóa.
   // Khi lỗi mạng: form tiếp tục bị khóa và shared/app.js tự thử gửi lại cùng một payload.
   function setupListeningTimer(listeningForm) {
+    if(window.K56_TERM2_OFFLINE?.active)return; // Chỉ ended hợp lệ mới được tự thu Listening v2.
     if (!listeningForm) return;
     const autoSubmit = makeButton('cbt-listening-auto-submit', 'Tự nộp bài Listening');
     autoSubmit.type = 'submit';
@@ -1402,7 +1416,7 @@
     function renderTimer() {
       if (readingForm.form.hidden || !uiState.readingTimer.deadline) return;
       const now = Date.now();
-      const remainingMs = Math.max(0, uiState.readingTimer.deadline - (window.IZONE_EXAM_CLOCK?.now() ?? now));
+      const remainingMs = Math.max(0, uiState.readingTimer.deadline - (window.K56_TERM2_OFFLINE?.active?window.K56_TERM2_OFFLINE.now():(window.IZONE_EXAM_CLOCK?.now() ?? now)));
       if (!Number.isFinite(remainingMs)) return;
       const remainingSeconds = Math.ceil(remainingMs / 1000);
       if (remainingSeconds !== lastRenderedSecond) {
@@ -1516,7 +1530,7 @@
     function renderTimer() {
       if (form.hidden || !uiState.writingTimer.deadline) return;
       const now = Date.now();
-      const remainingMs = Math.max(0, uiState.writingTimer.deadline - (window.IZONE_EXAM_CLOCK?.now() ?? now));
+      const remainingMs = Math.max(0, uiState.writingTimer.deadline - (window.K56_TERM2_OFFLINE?.active?window.K56_TERM2_OFFLINE.now():(window.IZONE_EXAM_CLOCK?.now() ?? now)));
       if (!Number.isFinite(remainingMs)) return;
       const remainingSeconds = Math.ceil(remainingMs / 1000);
       if (remainingSeconds !== lastRenderedSecond) {

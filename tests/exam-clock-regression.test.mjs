@@ -10,7 +10,7 @@ for(const app of apps)test(`${app}: changing Windows time cannot expire or exten
   const DateFixture=class extends Date{static now(){return wall;}};
   const state={serverTimeOffsetMs:0,listeningDeadlineAt:new Date(epoch+60000).toISOString(),readingDeadlineAt:new Date(epoch+60000).toISOString()};
   const window={addEventListener(){},dispatchEvent(){}};
-  const context=vm.createContext({window,document:{addEventListener(){}},Date:DateFixture,performance:{now:()=>mono},state,miniAnswerSheet:false,paperMini:false,console,AbortSignal,CustomEvent:class{},setTimeout,clearTimeout});
+  const context=vm.createContext({offline:null,window,document:{addEventListener(){}},Date:DateFixture,performance:{now:()=>mono},state,miniAnswerSheet:false,paperMini:false,console,AbortSignal,CustomEvent:class{},setTimeout,clearTimeout});
   if(fs.existsSync(clockPath))vm.runInContext(fs.readFileSync(clockPath,'utf8'),context);
   window.IZONE_EXAM_CLOCK?.sync(new Date(epoch).toISOString());
   const source=fs.readFileSync(new URL(`../term-tests/${app}/app.js`,import.meta.url),'utf8');
