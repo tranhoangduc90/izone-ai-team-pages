@@ -32,3 +32,7 @@ Hai test mới bảo vệ hai rủi ro riêng: hành vi nhìn thấy và dữ li
 Nhóm VM cũ `k56-term-outline-regression`, `k56-mini-outline-recovery`, `k56-mini-writing-revision`, `k56-test2-writing-revision` có 54 ca thất bại trên cả trước và sau sửa: fixture thiếu `appConfig`, hai ca còn kỳ vọng revision bootstrap cũ. Không sửa hoặc bỏ assertion để báo xanh; không coi nhóm này là bằng chứng đạt. Luồng lưu/phục hồi được kiểm bằng Chrome ở các nhóm trên. Không tuyên bố toàn repository xanh.
 
 Ảnh/log ở worktree `output/playwright/k56-no-outline/` và `output/no-outline/`; đều dùng dữ liệu giả. Chưa kiểm bằng bài học viên thật trên thiết bị riêng; không nộp/chấm/reset bài thật để kiểm giao diện.
+
+## Phục hồi phát hành
+
+Gói ứng dụng đã nhập main qua PR456 (`810cdc38a2c28e825087e3d04127fa232c097a61`). Run Pages `42152139023` build thành công nhưng deploy timeout ở `syncing_files`; chạy lại riêng deploy cũng timeout, API deployment trả trạng thái rỗng. Dựng lại qua Pages API tạo run `42154457417`, vẫn dùng cùng mã deployment và trạng thái rỗng nên đã yêu cầu hủy. Commit bổ sung hồ sơ này tạo mã phiên phát hành khác để thử phục hồi; mọi byte ứng dụng vẫn giữ đúng gói đã kiểm. Thành công chỉ được xác nhận bằng trạng thái Pages và đối chiếu tài nguyên public sau phát hành, không suy từ việc merge.
