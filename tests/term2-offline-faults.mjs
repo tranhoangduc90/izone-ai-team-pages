@@ -75,3 +75,13 @@ test('Worker mới dùng cache riêng và không chiếm tab đang làm',{timeou
   await other.close();
  }finally{await f.close();}
 });
+test('Player tụt về 0 khi lỗi phải phục hồi đúng checkpoint, không phát lại từ đầu',{timeout:100000},async()=>{
+ const f=await fixture('lis_first');try{const p=f.page;await ready(f);await p.click('#bootstrapPreview');await p.waitForTimeout(11000);await p.click('#bootstrapStart');await wait(p,()=>window.K56_TERM2_OFFLINE.playerReady,'Player');await p.waitForTimeout(7500);
+  const marker=await p.evaluate(()=>{const r=window.K56_TERM2_OFFLINE,pos=r.record.player.position;r.player.currentTime=0;r.player.dispatchEvent(new Event('error'));return pos;});assert.ok(marker>6);
+  await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).click();await p.waitForTimeout(3600);
+  const state=await p.evaluate(()=>({position:window.K56_TERM2_OFFLINE.player.currentTime,sealed:window.K56_TERM2_OFFLINE.record.sections.listening.sealed,paused:window.K56_TERM2_OFFLINE.player.paused}));assert.ok(state.position>=marker+1,'Đã phát lại từ 0 thay vì checkpoint');assert.equal(state.sealed,false);assert.equal(state.paused,false);
+  await p.getByRole('button',{name:'Tôi không nghe được',exact:true}).click();await p.waitForTimeout(400);await p.reload();await wait(p,()=>window.K56_TERM2_OFFLINE?.playerReady,'Khôi phục trạng thái dừng');assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.player.paused),true);assert.equal(await p.locator('#listeningQuestions input[data-number]').first().isDisabled(),true);
+  await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).click();await p.waitForTimeout(1100);await p.getByRole('button',{name:'Tôi không nghe được',exact:true}).click();await p.waitForTimeout(2500);
+  assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.record.player.held),true);assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.player.paused),true);assert.equal(await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).isVisible(),true);
+ }finally{await f.close();}
+});

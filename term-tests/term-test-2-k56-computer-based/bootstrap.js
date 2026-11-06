@@ -799,14 +799,14 @@
     const audio=document.createElement('audio');audio.hidden=true;audio.src=officialObjectUrl;document.body.append(audio);
     await waitForAudioMetadata(audio);
     const progress=runtime.record.player.position||0;
-    if (progress>0) audio.currentTime=Math.min(progress,audio.duration);
+    if (progress>0) audio.currentTime=Math.min(progress,Math.max(0,audio.duration-.25));
     const started=await runtime.start('listening');
     state.preparedAttempt={...prepared,...started};
     saveState({...started,studentRef:runtime.record.studentRef,identityConfirmed:true});
     await enterExam({...prepared,...started},audio);
     if (!runtime.playerReady) throw new Error('Bộ điều khiển audio chưa sẵn sàng. Bài được giữ.');
-    if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended) {
-      try { await audio.play(); } catch { document.querySelector('.cbt-audio-play')?.removeAttribute('hidden'); }
+    if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended && !runtime.record.player.held) {
+      try { await audio.play(); } catch { window.K56_LISTENING_AUDIO?.hold('Trình duyệt chưa cho phát. Hãy bấm tiếp tục audio'); }
     } else if(runtime.record.player.ended&&!runtime.record.sections.listening.sealed) {
       const form=document.getElementById('listeningView'),submit=document.createElement('button');submit.type='submit';submit.hidden=true;submit.dataset.autoSubmit='true';form.append(submit);form.requestSubmit(submit);
     }

@@ -316,15 +316,15 @@ export const ASSET_HASHES={
   "assets/figures/writing-waste.png": "c77f854bcb39a1481d525d768ccbab8532c09dc5dbfe549c100c3149a8e8688d",
   "audio-loader.js": "aa28719a6095085ff3faf9167802f7c8e3dfc6debf8db3e996e2eb0d7c10a1a2",
   "audio-whole.mjs": "4afd4ed1750aa03cf65b73510d5a335ab399fa0ac54d7a434d5c31031b5632fc",
-  "bootstrap.js": "b866aeab8206ff5e2e21bea13d92d69ee563cfe98eb8a7e64cd296857ab32959",
+  "bootstrap.js": "8e16bf7bb221d1d0d519a184e6f7ba20f4b940c6e65056d29c40549624856643",
   "content.js": "61653a59ae0b7427f5de300cbbc6ceb0121a668664811436802cdfa89a370aa5",
   "enhance.js": "ddb7943e7733ee78d7607754e79423b403ccadfdcd4ed653df8ea94a995b37a3",
   "exam.css": "b89325ce97e1efef761f3f8996aecef28a35b02cef20ac1a24f6521d1ada3012",
   "index.html": "c57163097a71c549948ee7da584a2a23c435390d5a151d10f966cf35ca979e38",
   "layout-updates.css": "f4e81684b6a9c416b72bc7c3ceccdc2e39dda0d0c569f2cd11a6dd7daff3fe9a",
-  "offline-worker.js": "94dc833c1259ec1de6acbad4781335a8261dfac58e1df9cc4671bdc1c28e4869",
-  "offline.mjs": "9fda66ec13dfa09b4d09201cd90858b4372a7e8e7613dd60edca332dd3066b48",
+  "offline-worker.js": "7aab4a53332ed8c82e1bdd7356877a2b11cedfa57a6b1e9da42fa476d0fb17e8",
+  "offline.mjs": "efe865515c884e06c32b47d0be92e770c2c8c2e432f861c4f0e329e229da61e2",
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="f8ff22f10bb14bce88594fa993d32b6962fc198c9adab9846118344cd506e28a";
+export const ASSET_BUILD_ID="7c72d203a471ec7096e0c95a206c346d31be532b42e8e26dc4ce293fd7bf4e4c";

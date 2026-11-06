@@ -115,7 +115,7 @@ export class Term2Offline extends EventTarget{
   if(actual!==this.record.audioHash)throw Error('Audio lưu trong máy chưa khớp. Bài làm được giữ.');return saved.blob;}
  async prepareCache(){
   if(!navigator.serviceWorker)throw Error('Trình duyệt chưa hỗ trợ mở lại bài offline.');
-  const registration=await navigator.serviceWorker.register('./offline-worker.js?v='+BUILD,{scope:'./',type:'module'});
+  const registration=await navigator.serviceWorker.register('./offline-worker.js?v='+BUILD,{scope:'./',type:'module',updateViaCache:'none'});
   if(registration.installing)await new Promise((ok,no)=>{const worker=registration.installing;worker.addEventListener('statechange',()=>{if(['installed','activated'].includes(worker.state))ok();if(worker.state==='redundant')no(Error('Chưa tải đủ gói web offline.'));});});
   if(registration.waiting){
    const waiting=registration.waiting;
@@ -205,11 +205,11 @@ export class Term2Offline extends EventTarget{
   button.addEventListener('click',async()=>{try{await this.capture(snapshot());}catch{}const html=exportHtml(this.record),url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download=`Term-Test-2-K56-${this.classCode}-${this.scope.attemptToken.slice(0,8)}-r${this.record._revision||0}.html`;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);copy.textContent='Đã tạo file tải xuống. Hãy kiểm tra file trong thư mục tải về.';});
  }
  attachPlayer({audio,resumeButton,manualButton,render,form}){
-  let held=false,submitted=false,last=audio.currentTime,lastAt=performance.now(),persistAt=0;const oldPosition=this.record.player.position||0;
-  if(oldPosition>0&&!this.record.player.ended)audio.currentTime=oldPosition;
-  const lock=value=>{for(const input of form.querySelectorAll('input,select,textarea'))input.disabled=value;};
+  let held=Boolean(this.record.player.held),holdEpoch=0,submitted=false,last=audio.currentTime,lastAt=performance.now(),persistAt=0;const oldPosition=this.record.player.position||0;
+  if(oldPosition>0&&!this.record.player.ended)audio.currentTime=Math.min(oldPosition,Math.max(0,audio.duration-.25));
+  const lock=value=>{for(const input of form.querySelectorAll('input:not([type="range"]),select,textarea'))input.disabled=value;};
   const update=()=>{render(held?'Audio đang dừng — bài làm đã giữ':audio.ended?'Đã phát hết audio':'Đang phát bài thi',audio.currentTime,audio.duration);};
-  const hold=reason=>{if(submitted||audio.ended)return;held=true;this.observe('audio_command',{command:'pause',actor:'media_or_learner',position:audio.currentTime,ended:audio.ended,paused:audio.paused});audio.pause();lock(true);resumeButton.hidden=false;render(reason+' · Không tự thu bài khi chưa nghe hết',audio.currentTime,audio.duration);};
+  const hold=reason=>{if(submitted||audio.ended)return;held=true;holdEpoch++;this.record.player.held=true;this.observe('audio_command',{command:'pause',actor:'media_or_learner',position:audio.currentTime,ended:audio.ended,paused:audio.paused});audio.pause();lock(true);resumeButton.hidden=false;render(reason+' · Không tự thu bài khi chưa nghe hết',audio.currentTime,audio.duration);void this.persist().catch(()=>{});};
   manualButton.addEventListener('click',()=>hold('Hãy kiểm tra tai nghe rồi tiếp tục đúng mốc'));
   audio.addEventListener('error',()=>hold('Trình phát gặp sự cố; bài làm và mốc nghe được giữ'));
   audio.addEventListener('playing',()=>{lastAt=performance.now();});
@@ -225,10 +225,21 @@ export class Term2Offline extends EventTarget{
    this.observe('audio_ended',{position:audio.currentTime,duration:audio.duration});this.record.player={position:audio.currentTime,ended:true};await this.persist();
    const button=document.createElement('button');button.type='submit';button.hidden=true;button.dataset.autoSubmit='true';form.append(button);form.requestSubmit(button);
   });
-  resumeButton.addEventListener('click',async()=>{const before=audio.currentTime;try{await audio.play();await new Promise(ok=>setTimeout(ok,3000));if(audio.currentTime<=before+.5)throw Error('Audio chưa tiến lên. Hãy báo giảng viên; bài vẫn được giữ.');held=false;lastAt=performance.now();lock(false);resumeButton.hidden=true;update();}catch(e){hold(e.message);}});
+  const waitMedia=(event,action)=>new Promise((ok,no)=>{const clean=()=>{clearTimeout(timer);audio.removeEventListener(event,done);audio.removeEventListener('error',bad);},done=()=>{clean();ok();},bad=()=>{clean();no(Error('Chưa khôi phục được trình phát; bài và mốc nghe vẫn giữ.'));},timer=setTimeout(bad,10000);audio.addEventListener(event,done,{once:true});audio.addEventListener('error',bad,{once:true});try{action();}catch(e){clean();no(e);}});
+  resumeButton.addEventListener('click',async()=>{if(resumeButton.disabled)return;const resumeEpoch=holdEpoch;resumeButton.disabled=true;try{
+   if(audio.error||!Number.isFinite(audio.duration)){this.observe('audio_command',{command:'load',actor:'local_recovery',reasonCode:'RESET_LOCAL_DECODER'});await waitMedia('loadedmetadata',()=>audio.load());}
+   if(!Number.isFinite(audio.duration)||audio.duration<=0)throw Error('Chưa đọc được thời lượng audio để tiếp tục đúng mốc.');
+   const checkpoint=Math.min(this.record.player.position||0,Math.max(0,audio.duration-.25));
+   if(audio.currentTime<checkpoint-.25){this.observe('audio_command',{command:'seek',actor:'local_recovery',position:audio.currentTime,target:checkpoint,reasonCode:'RESTORE_LOCAL_CHECKPOINT'});await waitMedia('seeked',()=>{audio.currentTime=checkpoint;});}
+   if(resumeEpoch!==holdEpoch)return;
+   const before=audio.currentTime;await audio.play();await new Promise(ok=>setTimeout(ok,3000));if(resumeEpoch!==holdEpoch)return;
+   if(!this.record.player.ended&&audio.currentTime<=before+.5)throw Error('Audio chưa tiến lên. Hãy báo giảng viên; bài vẫn được giữ.');
+   held=false;this.record.player.held=false;last=audio.currentTime;lastAt=performance.now();lock(false);resumeButton.hidden=true;void this.persist().catch(()=>{});update();
+  }catch(e){hold(e.message);}finally{resumeButton.disabled=false;}});
   const timer=setInterval(()=>{if(!this.record.sections.listening?.startedAt||this.record.sections.listening.sealed||form.hidden||held||submitted)return;
    if(!audio.ended&&performance.now()-lastAt>5000)hold('Audio chưa tiến lên. Giữ đúng mốc để phục hồi');},1000);
-  const controller={beforeAutoSubmit:async()=>({submit:Boolean(this.record.player.ended),deadlineChanged:!this.record.player.ended}),submitting(){},submitFailed(){},finish(){submitted=true;audio.pause();clearInterval(timer);}};
+  const controller={hold,beforeAutoSubmit:async()=>({submit:Boolean(this.record.player.ended),deadlineChanged:!this.record.player.ended}),submitting(){},submitFailed(){},finish(){submitted=true;audio.pause();clearInterval(timer);}};
+  if(held){lock(true);resumeButton.hidden=false;}
   window.K56_LISTENING_AUDIO=controller;this.player=audio;this.playerReady=true;update();return controller;
  }
 }

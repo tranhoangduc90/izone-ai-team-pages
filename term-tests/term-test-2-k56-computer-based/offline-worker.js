@@ -13,7 +13,8 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
  // Ghi theo lô nhỏ để không dồn hàng trăm request lên mạng của lớp.
  for(let i=0;i<ASSETS.length;i+=6)await Promise.all(ASSETS.slice(i,i+6).map(async asset=>{
-  const response=await verified(await fetch(url(asset),{cache:'reload'}),asset);await cache.put(url(asset),response);
+  const source=new URL(url(asset));source.searchParams.set('term2Build',ASSET_BUILD_ID);
+  const response=await verified(await fetch(source,{cache:'reload'}),asset);await cache.put(url(asset),response);
  }));
 })()));
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
