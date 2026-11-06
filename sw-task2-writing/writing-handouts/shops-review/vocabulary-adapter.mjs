@@ -4,6 +4,11 @@ export function vocabularyPoint(row){
  const field=/^idea([12])_([axb])$/.exec(row?.sourceField||'');
  return field?field[2].toUpperCase()+field[1]:null;
 }
+// Draft text does not invalidate vocabulary; changes to the approved arguments do.
+export function sameVocabularySource(before,after){
+ return ['body_choice','topic_sentence','body1_idea1','body1_idea2','body2_idea1','body2_idea2',
+  'idea1_a','idea1_x','idea1_b','idea2_a','idea2_x','idea2_b'].every(k=>(before?.[k]||'')===(after?.[k]||''));
+}
 export function legacyVocabularyRows(rows){
  if(!Array.isArray(rows))return [];
  return rows.filter(row=>!vocabularyPoint(row)).slice(0,30).map(row=>({

@@ -12,10 +12,10 @@ export function currentLibraryRows(entries,drafts,used){
   return [...values.values()];
 }
 export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDraft=()=>{},onCopyUsed=()=>{},onAssign=()=>{},onRefresh=()=>{},getClassContext=()=>({}),onManagementChanged=()=>{}}){
-  let scope='izone',generation=0,lifecycle=0,entries=[],used=[],drafts=[],publicationRows=[],publications=new Map(),listSignature='';
+  let scope='izone',canManageShared=false,generation=0,lifecycle=0,entries=[],used=[],drafts=[],publicationRows=[],publications=new Map(),listSignature='';
   const dialogs=new Set(),managers=new Set();
   const sourceOperations=new Map();
-  const heading=node('div','','thuy-library-heading'),create=button('+ Tạo bài tập',onCreate);create.classList.add('primary');heading.append(node('h1','Quản lý bài tập'),create);
+  const heading=node('div','','thuy-library-heading'),create=button('+ Tạo bài tập',()=>onCreate(scope==='izone'&&canManageShared?'izone':'personal'));create.classList.add('primary');heading.append(node('h1','Quản lý bài tập'),create);
   const panel=node('section','','thuy-library-panel'),nav=node('nav','','editor-library-tabs'),tools=node('div','','thuy-library-tools'),search=node('input'),status=node('span'),list=node('div');
   search.type='search';search.placeholder='Tìm tên bài tập';search.setAttribute('aria-label','Tìm bài tập');status.setAttribute('role','status');nav.setAttribute('role','tablist');nav.setAttribute('aria-label','Nguồn bài tập');
   const tabs=new Map(),sourceName=s=>({izone:'Kho chung',personal:'Kho cá nhân',used:'Phiếu đã giao'})[s];
@@ -30,7 +30,8 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     const values=all(),selected=values.filter(entry=>entry.source===scope&&fold(entry.title).includes(fold(search.value)));
     for(const [id,b]of tabs){b.setAttribute('aria-selected',String(scope===id));b.tabIndex=scope===id?0:-1;b.querySelector('span').textContent=String(values.filter(e=>e.source===id).length);}
     status.textContent=selected.length+' bài tập';
-    const signature=JSON.stringify([scope,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.publication])]);
+    create.title=scope==='izone'&&canManageShared?'Tạo bài trong Kho chung':'Tạo bài trong Kho cá nhân';
+    const signature=JSON.stringify([scope,canManageShared,search.value,selected.map(e=>[e.id,e.source,e.title,e.meta,e.itemCount,e.publication])]);
     if(signature===listSignature)return;listSignature=signature;list.replaceChildren();
     if(!selected.length){list.append(node('p',scope==='izone'?'Chưa có bài chuẩn trong Kho chung.':scope==='personal'?'Chưa có bài trong Kho cá nhân.':'Chưa có phiếu đã giao phù hợp.','thuy-library-empty'));return;}
     const wrap=node('div','','thuy-library-scroll'),table=node('table'),head=node('tr'),thead=node('thead'),body=node('tbody');
@@ -39,13 +40,24 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
       const row=node('tr'),name=node('td'),open=button(entry.title,()=>void preview(entry));row.tabIndex=0;row.dataset.entryId=entry.id;row.classList.toggle('thuy-library-published',entry.id===highlighted);row.setAttribute('aria-label','Xem '+entry.title);open.className='thuy-library-name';
       name.append(open,node('small',entry.meta||`${entry.itemCount||0} câu`));const actions=node('td');
       if(entry.source!=='used'){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');actions.append(assign);}
+      if(entry.source==='personal'&&!entry.draft?.reviewMode||entry.source==='izone'&&canManageShared){
+        const remove=button('Xóa bài',()=>void archiveEntry(entry));actions.append(remove);
+      }
       row.append(name,node('td',entry.source==='used'?sourceName(entry.assignment.origin_scope)||'Chưa xác định nguồn':sourceName(entry.source)),actions);
       row.addEventListener('click',event=>{if(!event.target.closest('button,a')&&!getSelection()?.toString())void preview(entry);});
       row.addEventListener('keydown',event=>{if(event.target===row&&['Enter',' '].includes(event.key)){event.preventDefault();void preview(entry);}});body.append(row);
     }wrap.append(table);list.append(wrap);
   }
+  async function archiveEntry(entry){
+    if(!window.confirm('Xóa “'+entry.title+'” khỏi '+sourceName(entry.source)+'? Phiếu đã giao, nháp lưu trữ và bài học viên được giữ nguyên.'))return;
+    const key='archive:'+entry.source+':'+entry.id;if(!sourceOperations.has(key))sourceOperations.set(key,crypto.randomUUID());
+    const run=lifecycle;status.textContent='Đang xóa bài khỏi kho…';
+    try{await request('/teacher/form-catalog/'+(entry.source==='personal'?(entry.draft?.id||entry.sourceDraftId):entry.id)+'/archive',{method:'POST',body:{source:entry.source,operationId:sourceOperations.get(key)}});
+      if(run!==lifecycle)return;await onRefresh();await load();status.textContent='Đã xóa bài khỏi kho. Phiếu đã giao và bài học viên được giữ nguyên.';
+    }catch(error){if(run===lifecycle)status.textContent='Chưa xác nhận xóa bài: '+error.message;}
+  }
   async function load(){const run=++generation;status.textContent='Đang đọc kho…';
-    try{const replies=await Promise.all(['izone','personal'].map(source=>request('/teacher/form-library?scope='+source).then(reply=>(reply.entries||[]).map(entry=>({...entry,source,...(source==='personal'&&entry.editableDraftId?{id:entry.editableDraftId,sourceDraftId:entry.editableDraftId,sourceRevision:entry.editableDraftRevision,draft:{id:entry.editableDraftId,revision:entry.editableDraftRevision,status:entry.editableDraftStatus}}:{})})))));if(run!==generation)return false;entries=replies.flat();paint();return true;}
+    try{const replies=await Promise.all(['izone','personal'].map(async source=>{const reply=await request('/teacher/form-library?scope='+source);return {canManageShared:reply.canManageShared===true,entries:(reply.entries||[]).map(entry=>({...entry,source,...(source==='personal'&&entry.editableDraftId?{id:entry.editableDraftId,sourceDraftId:entry.editableDraftId,sourceRevision:entry.editableDraftRevision,draft:{id:entry.editableDraftId,revision:entry.editableDraftRevision,status:entry.editableDraftStatus}}:{})}))};}));if(run!==generation)return false;canManageShared=replies.every(r=>r.canManageShared);entries=replies.flatMap(r=>r.entries);paint();return true;}
     catch(error){if(run===generation){status.textContent='Chưa đọc được kho: '+error.message;const retry=button('Thử đọc lại kho',()=>void load());list.replaceChildren(retry);}return false;}
   }
   async function readEntry(entry){
@@ -95,9 +107,9 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
   for(const [value,label]of [['izone','Kho chung'],['personal','Kho cá nhân'],['used','Phiếu đã giao']]){const b=button('',()=>{scope=value;paint();});b.setAttribute('role','tab');b.append(document.createTextNode(label+' '),node('span','0'));tabs.set(value,b);nav.append(b);}
   nav.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const keys=[...tabs.keys()],index=keys.indexOf(scope);scope=keys[event.key==='Home'?0:event.key==='End'?keys.length-1:(index+(event.key==='ArrowRight'?1:keys.length-1))%keys.length];event.preventDefault();paint();tabs.get(scope).focus();});
   search.addEventListener('input',paint);tools.append(search,status);panel.append(nav,publicationNotice,tools,historyTools,list);host.append(heading,panel);paint();
-  return {refresh:load,showPersonal(id,{published=false,error,retry}={}){
-    scope='personal';search.value='';highlighted=id;listSignature='';paint();publicationNotice.hidden=false;
-    publicationNotice.textContent=error?'Đã xuất bản thành công. Chưa cập nhật đủ danh sách kho: '+error:published?'Đã xuất bản thành công. Phiếu mới được đánh dấu trong Kho cá nhân.':'Đã xuất bản. Đang cập nhật Kho cá nhân…';
+  return {refresh:load,navigation:()=>({scope,search:search.value}),restoreNavigation(value){if(['izone','personal','used'].includes(value?.scope))scope=value.scope;if(typeof value?.search==='string')search.value=value.search;paint();},showPersonal(id,{published=false,error,retry,scope:targetScope='personal'}={}){
+    scope=targetScope;search.value='';highlighted=id;listSignature='';paint();publicationNotice.hidden=false;
+    publicationNotice.textContent=error?'Đã xuất bản thành công. Chưa cập nhật đủ danh sách kho: '+error:published?'Đã xuất bản thành công vào '+sourceName(scope)+'.':'Đã xuất bản. Đang cập nhật '+sourceName(scope)+'…';
     if(retry)publicationNotice.append(button('Tải lại danh sách',async()=>{try{await retry();}catch(e){publicationNotice.firstChild.textContent='Đã xuất bản. Chưa tải lại được: '+e.message;}}));
     requestAnimationFrame(()=>{list.querySelector('[data-entry-id="'+CSS.escape(id)+'"]')?.scrollIntoView({block:'center'});});
   },setPublications(rows){publicationRows=rows;publications=new Map(rows.filter(row=>row.draftId).map(row=>[row.draftId,row]));paint();},setUsed(assignments){used=assignments.map(a=>({id:a.assignment_id,title:a.title,source:'used',meta:a.class_name+' · Buổi '+a.session_number,assignment:a}));paint();},setDrafts(rows){drafts=rows.map(d=>({id:d.id,title:d.definition?.title||d.title||'Phiếu chưa đặt tên',source:'personal',draft:d,sourceDraftId:d.id,worksheetId:d.worksheetId,definition:d.definition,meta:'Buổi '+d.sessionNumber+' · Bản '+d.revision+' · '+({draft:'Nháp',pending_review:'Chờ duyệt',approved:'Đã duyệt',published:'Đã xuất bản'}[d.status]||d.status)}));paint();},clear(){generation++;lifecycle++;publicationNotice.hidden=true;highlighted=null;for(const dialog of dialogs){dialog.close();dialog.remove();}dialogs.clear();for(const manager of managers)manager.dispose?.();managers.clear();managers.add(historyManagement);entries=[];used=[];drafts=[];publicationRows=[];publications.clear();sourceOperations.clear();listSignature='';list.replaceChildren();status.textContent='Đăng nhập để mở kho bài.';}};

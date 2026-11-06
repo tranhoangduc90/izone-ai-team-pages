@@ -34,14 +34,25 @@ async function scenario(name,fn,{width=1366,height=900}={}){
  finally{await context.close();}
 }
 try{
- for(const width of [1366,390])await scenario('Trang tổng: chỉ mở Substitute, giữ bốn bài và bộ lọc · '+width,async({page})=>{
+ for(const width of [1366,390])await scenario('Trang tổng: chọn khóa rồi mở đúng kì thi · '+width,async({page})=>{
   await page.goto(base+'/term-tests/substitute-test-1-k56-dashboard/');
   assert.equal(await page.locator('a[href*="/demo/"]').count(),0,'Không còn liên kết đi sang demo Term/Mini');
   assert.equal(await page.locator('#demo-heading').count(),0);
-  assert.equal(await page.locator('.test-row').count(),4);
-  assert.deepEqual(await page.locator('.test-number').allTextContents(),['01','02','03','04']);
-  await page.locator('#course-filter').selectOption('k67');assert.equal(await page.locator('.test-row:visible').count(),2);
-  await page.locator('#course-filter').selectOption('all');assert.equal(await page.locator('.test-row:visible').count(),4);
+  assert.equal(await page.locator('.test-option:visible').count(),0);
+  for(const course of ['56','67']){
+   await page.getByRole('button',{name:'Chọn Khóa '+course,exact:true}).click();
+   assert.deepEqual(await page.locator('.test-option:visible strong').allTextContents(),['Kì 1','Kì 2']);
+   for(const test of ['1','2']){
+    const link=page.getByRole('link',{name:'Kì '+test,exact:true});
+    assert.equal(await link.getAttribute('href'),'../substitute-test-'+test+'-k'+course+'-computer-based/?demo=exam&grading=server');
+   }
+   assert.equal(new URL(page.url()).searchParams.get('course'),'k'+course);
+  }
+  await page.reload();
+  assert.equal(await page.getByRole('button',{name:'Chọn Khóa 67',exact:true}).getAttribute('aria-pressed'),'true');
+  await page.getByRole('button',{name:'Kết quả giảng viên',exact:true}).click();
+  assert.equal(await page.getByRole('dialog').getByRole('link').count(),4);
+  await page.keyboard.press('Escape');
   assert.equal(await page.locator('a[href*="-computer-based/"]').count(),4);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
   await page.screenshot({path:path.join(out,'dashboard-'+width+'.png'),fullPage:true});

@@ -169,11 +169,20 @@ async function initialize(){
  logout();
  authView.checking();$('login-heading').textContent='Đang mở quyền giảng viên…';
  try{
-  if(await window.IzoneTeacherSso.restore('substitute')){
+  let restored=false;
+  let restoreInterrupted=false;
+  try{
+   restored=await window.IzoneTeacherSso.restore('substitute');
+  }catch(error){
+   if(!(error instanceof TypeError)&&error?.name!=='TimeoutError')throw error;
+   restoreInterrupted=true;
+  }
+  if(restored){
    try{await signIn({restored:true});if(state.token){authView.ready();$('login-heading').textContent='Quyền xem kết quả';return;}}
    catch(error){if(error.status!==401)throw error;}
   }
   authView.signedOut();$('login-heading').textContent='Đăng nhập xem kết quả';
+  if(restoreInterrupted)$('login-status').textContent='Kết nối khi khôi phục phiên bị gián đoạn. Hãy đăng nhập lại bằng Google.';
   const config=await request('/teacher/config',{},undefined,false);
   if(!window.google?.accounts?.id)await new Promise((resolve,reject)=>{const script=document.createElement('script'),timer=setTimeout(()=>{script.remove();reject(new Error('Không tải được Google đăng nhập. Hãy tải lại trang.'));},15000);script.src='https://accounts.google.com/gsi/client';script.async=true;script.addEventListener('load',()=>{clearTimeout(timer);resolve();},{once:true});script.addEventListener('error',()=>{clearTimeout(timer);script.remove();reject(new Error('Trình duyệt không tải được Google đăng nhập.'));},{once:true});document.head.append(script);});
   window.google.accounts.id.initialize({client_id:config.googleClientId,callback:signIn,auto_select:false});

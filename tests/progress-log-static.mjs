@@ -80,9 +80,9 @@ test('trang giảng viên chỉ soạn từ thư viện và override phải có 
   assert.match(app, /void loadDashboard\(\{ quiet: true \}\)/);
 });
 
-test('link học viên thiếu mã phiếu hướng dẫn giảng viên lấy đúng link', async () => {
+test('link học viên thiếu mã phiếu mở cổng chọn lớp và tên hiện hành', async () => {
   const app = await source('app.js');
-  assert.match(app, /nhờ giảng viên chọn phiếu trong dashboard rồi bấm “Sao chép link”/);
+  assert.match(app, /if \(!state\.publicToken\)\s*\{\s*location\.replace\(new URL\('\.\/student\.html',location\.href\)\)/);
 });
 
 test('link sao chép từ dashboard mang mã phiếu để trang học viên mở được', async () => {
@@ -96,7 +96,7 @@ test('link sao chép từ dashboard mang mã phiếu để trang học viên m�
   assert.equal(link.pathname, '/progress-log/');
   assert.equal(link.hash, `#assignment=${token}`);
   const readToken = vm.runInNewContext(
-    `${app.slice(app.indexOf('function readPublicToken('), app.indexOf('async function apiRequest('))}\nreadPublicToken`,
+    `${app.slice(app.indexOf('function readPublicToken('), app.indexOf('const coordinatedRead='))}\nreadPublicToken`,
     { URLSearchParams, window: { location: link } }
   );
   assert.equal(readToken(), token);
@@ -146,7 +146,7 @@ test('hành trình dùng link cá nhân trong fragment và chỉ mở timeline k
   assert.match(html, /PHÂN TÍCH|TỔNG KẾT GẦN NHẤT/);
   assert.match(html, /LỜI NHẮN TỪ GIẢNG VIÊN/);
   assert.match(app, /window\.location\.hash/);
-  assert.doesNotMatch(app, /history\.replaceState/); // Giữ fragment để reload vẫn mở đúng link riêng.
+  assert.match(app, /params\.get\('access'\)/); // Access stays in the fragment; logout may explicitly clear it.
   assert.match(app, /\/student\/course-journey/);
   assert.match(app, /referrerPolicy:\s*'no-referrer'/);
   assert.doesNotMatch(app, /searchParams\.get\(['"]access/);

@@ -1,0 +1,303 @@
+{
+  "sourceSlug": "substitute-test-1-k56",
+  "audio": {
+    "src": "assets/private/listening-substitute-test-1-k56.mp3",
+    "label": "Substitute Test 1 · Khóa 56 · Listening",
+    "durationLabel": "28 phút 48 giây"
+  },
+  "listening": {
+    "instructions": [
+      "Bài nghe gồm 4 phần, 40 câu; nghe một lượt và 5 phút rà đáp án sau khi audio kết thúc."
+    ],
+    "sections": [
+      {
+        "label": "Section 1",
+        "range": "Questions 1–10",
+        "html": "\n    <header class=\"cbt-section-intro\">\n      <span class=\"cbt-kicker\">SECTION 1 · QUESTIONS 1–10</span>\n      <h3>Cianfanelli Property Loss/Damage Report Form</h3>\n      <p>Questions 1–3: Write <strong>NO MORE THAN TWO WORDS AND/OR A NUMBER</strong> for each answer.</p>\n    </header>\n    <div class=\"cbt-form-card\">\n      <div class=\"cbt-form-row is-example\"><span>Name</span><span>Cirilla Fionna</span></div>\n      <div class=\"cbt-form-row\"><span>Phone number</span>\n    <span class=\"cbt-answer-control\" data-question-number=\"1\">\n      <strong class=\"cbt-blank-number\">1</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"1\"></span>\n    </span></div>\n      <div class=\"cbt-form-row\"><span>Address</span><span>\n    <span class=\"cbt-answer-control\" data-question-number=\"2\">\n      <strong class=\"cbt-blank-number\">2</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"2\"></span>\n    </span>, Toussaint</span></div>\n      <div class=\"cbt-form-row\"><span>Shipping company</span><span>EA Merchant Marine</span></div>\n      <div class=\"cbt-form-row\"><span>Date of arrival</span>\n    <span class=\"cbt-answer-control\" data-question-number=\"3\">\n      <strong class=\"cbt-blank-number\">3</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"3\"></span>\n    </span></div>\n      <div class=\"cbt-form-row\"><span>Shipment code</span><span>GTX-1060</span></div>\n    </div>\n    <header class=\"cbt-section-intro is-compact\">\n      <span class=\"cbt-kicker\">QUESTIONS 4–10</span>\n      <p>Complete the table. Write <strong>NO MORE THAN TWO WORDS AND/OR A NUMBER</strong> for each answer.</p>\n    </header>\n    <div class=\"cbt-table-wrap\">\n      <table class=\"cbt-data-table\">\n        <thead><tr><th>Items</th><th>Problems</th><th>Estimated cost</th></tr></thead>\n        <tbody>\n          <tr><td>\n    <span class=\"cbt-answer-control\" data-question-number=\"4\">\n      <strong class=\"cbt-blank-number\">4</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"4\"></span>\n    </span></td><td>a lot of \n    <span class=\"cbt-answer-control\" data-question-number=\"5\">\n      <strong class=\"cbt-blank-number\">5</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"5\"></span>\n    </span> are missing</td><td>$40</td></tr>\n          <tr><td rowspan=\"2\">Violin</td><td>a huge crack on the body</td><td rowspan=\"2\">no less than \n    <span class=\"cbt-answer-control\" data-question-number=\"7\">\n      <strong class=\"cbt-blank-number\">7</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"7\"></span>\n    </span></td></tr>\n          <tr><td>the \n    <span class=\"cbt-answer-control\" data-question-number=\"6\">\n      <strong class=\"cbt-blank-number\">6</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"6\"></span>\n    </span> is detached</td></tr>\n          <tr><td>\n    <span class=\"cbt-answer-control\" data-question-number=\"8\">\n      <strong class=\"cbt-blank-number\">8</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"8\"></span>\n    </span></td><td>\n    <span class=\"cbt-answer-control\" data-question-number=\"9\">\n      <strong class=\"cbt-blank-number\">9</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"9\"></span>\n    </span></td><td>$30</td></tr>\n          <tr><td>Electric pressure cooker</td><td>the \n    <span class=\"cbt-answer-control\" data-question-number=\"10\">\n      <strong class=\"cbt-blank-number\">10</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"10\"></span>\n    </span> needs replacing</td><td>unknown</td></tr>\n        </tbody>\n      </table>\n    </div>"
+      },
+      {
+        "label": "Section 2",
+        "range": "Questions 11–20",
+        "html": "\n    <header class=\"cbt-section-intro\">\n      <span class=\"cbt-kicker\">SECTION 2 · QUESTIONS 11–20</span>\n      <h3>Kinney Hotel</h3>\n      <p>Questions 11–15: Write <strong>NO MORE THAN TWO WORDS</strong> for each answer.</p>\n    </header>\n    <div class=\"cbt-note-group\">\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"11\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">11</strong>\n        <p class=\"cbt-sentence-question\"><span>Located in the town centre, near the</span><span class=\"cbt-inline-answer\" data-answer-slot=\"11\"></span><span>.</span></p>\n      </div>\n    </div>\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"12\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">12</strong>\n        <p class=\"cbt-sentence-question\"><span>Rated 4-star by a</span><span class=\"cbt-inline-answer\" data-answer-slot=\"12\"></span><span>.</span></p>\n      </div>\n    </div>\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"13\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">13</strong>\n        <p class=\"cbt-sentence-question\"><span>The most luxurious and expensive room in the hotel is the</span><span class=\"cbt-inline-answer\" data-answer-slot=\"13\"></span><span>.</span></p>\n      </div>\n    </div>\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"14\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">14</strong>\n        <p class=\"cbt-sentence-question\"><span>Has a restaurant specialising in Norwegian</span><span class=\"cbt-inline-answer\" data-answer-slot=\"14\"></span><span>on ground floor.</span></p>\n      </div>\n    </div>\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"15\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">15</strong>\n        <p class=\"cbt-sentence-question\"><span>Has a special</span><span class=\"cbt-inline-answer\" data-answer-slot=\"15\"></span><span>on the 15th floor.</span></p>\n      </div>\n    </div>\n    </div>\n    <header class=\"cbt-section-intro is-compact\">\n      <span class=\"cbt-kicker\">QUESTIONS 16–20</span>\n      <p>Label the plan below. Write the correct letter <strong>A–G</strong>.</p>\n    </header>\n    <div class=\"k56-side-layout k56-map-layout\">\n      <figure class=\"cbt-park-map\" aria-label=\"Ground floor of Kinney Hotel\">\n        <img src=\"assets/kinney-hotel-plan.png\" width=\"1900\" height=\"1040\" alt=\"Ground floor of Kinney Hotel with locations A to G, the elevator, reception and entrance.\">\n      </figure>\n      <div class=\"cbt-short-answer-list\">\n        \n    <div class=\"cbt-question-card\" data-question-number=\"16\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">16</strong><span>Art gallery</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"16\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"17\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">17</strong><span>Fountain</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"17\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"18\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">18</strong><span>Restaurant</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"18\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"19\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">19</strong><span>Bakery</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"19\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"20\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">20</strong><span>Bar</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"20\"></span></div>\n    </div>\n      </div>\n    </div>"
+      },
+      {
+        "label": "Section 3",
+        "range": "Questions 21–30",
+        "html": "\n    <header class=\"cbt-section-intro\">\n      <span class=\"cbt-kicker\">SECTION 3 · QUESTIONS 21–30</span>\n      <h3>Student Information</h3>\n      <p>Questions 21–24: Write <strong>NO MORE THAN TWO WORDS AND/OR A NUMBER</strong> for each answer.</p>\n    </header>\n    <div class=\"cbt-form-card\">\n      <div class=\"cbt-form-row is-example\"><span>Name</span><span>Denise Gough</span></div>\n      <div class=\"cbt-form-row\"><span>Faculty</span>\n    <span class=\"cbt-answer-control\" data-question-number=\"21\">\n      <strong class=\"cbt-blank-number\">21</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"21\"></span>\n    </span></div>\n      <div class=\"cbt-form-row\"><span>Phone number</span><span>8918220</span></div>\n      <div class=\"cbt-form-row\"><span>Address</span><span>\n    <span class=\"cbt-answer-control\" data-question-number=\"22\">\n      <strong class=\"cbt-blank-number\">22</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"22\"></span>\n    </span>, Ennis</span></div>\n      <div class=\"cbt-form-row\"><span>Previous jobs</span><span>private tutor<br>\n    <span class=\"cbt-answer-control\" data-question-number=\"23\">\n      <strong class=\"cbt-blank-number\">23</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"23\"></span>\n    </span></span></div>\n      <div class=\"cbt-form-row\"><span>Skills</span><span>fluent in Polish and \n    <span class=\"cbt-answer-control\" data-question-number=\"24\">\n      <strong class=\"cbt-blank-number\">24</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"24\"></span>\n    </span><br>can play the violin</span></div>\n      <div class=\"cbt-form-row\"><span>Special interests</span><span>sport; videogames</span></div>\n    </div>\n    <header class=\"cbt-section-intro is-compact\">\n      <span class=\"cbt-kicker\">QUESTIONS 25–30</span>\n      <p>Complete the table. Write <strong>NO MORE THAN THREE WORDS AND/OR A NUMBER</strong> for each answer.</p>\n    </header>\n    <div class=\"cbt-table-wrap\">\n      <table class=\"cbt-data-table\">\n        <thead><tr><th>Job vacancy</th><th>Important details</th><th>Schedule</th><th>Main problems</th></tr></thead>\n        <tbody>\n          <tr><td>\n    <span class=\"cbt-answer-control\" data-question-number=\"25\">\n      <strong class=\"cbt-blank-number\">25</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"25\"></span>\n    </span></td><td>check if customers are over the drinking age</td><td>8 pm–2 am<br>\n    <span class=\"cbt-answer-control\" data-question-number=\"26\">\n      <strong class=\"cbt-blank-number\">26</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"26\"></span>\n    </span></td><td>too late at night</td></tr>\n          <tr><td>violin teacher</td><td>take care of \n    <span class=\"cbt-answer-control\" data-question-number=\"27\">\n      <strong class=\"cbt-blank-number\">27</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"27\"></span>\n    </span></td><td>6 pm–8 pm every weekend</td><td>student hates \n    <span class=\"cbt-answer-control\" data-question-number=\"28\">\n      <strong class=\"cbt-blank-number\">28</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"28\"></span>\n    </span></td></tr>\n          <tr><td>\n    <span class=\"cbt-answer-control\" data-question-number=\"29\">\n      <strong class=\"cbt-blank-number\">29</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"29\"></span>\n    </span> for a game developer</td><td>having a \n    <span class=\"cbt-answer-control\" data-question-number=\"30\">\n      <strong class=\"cbt-blank-number\">30</strong>\n      <span class=\"cbt-inline-answer\" data-answer-slot=\"30\"></span>\n    </span> is a major bonus</td><td>flexible (except for Monday)</td><td>too far from home</td></tr>\n        </tbody>\n      </table>\n    </div>"
+      },
+      {
+        "label": "Section 4",
+        "range": "Questions 31–40",
+        "html": "\n    <header class=\"cbt-section-intro\">\n      <span class=\"cbt-kicker\">SECTION 4 · QUESTIONS 31–40</span>\n      <h3>Winchester Haunted House</h3>\n      <p>Questions 31–34: Write <strong>NO MORE THAN THREE WORDS AND/OR A NUMBER</strong> for each answer.</p>\n    </header>\n    <div class=\"cbt-note-group\">\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"31\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">31</strong>\n        <p class=\"cbt-sentence-question\"><span>The attraction was inspired by</span><span class=\"cbt-inline-answer\" data-answer-slot=\"31\"></span><span>.</span></p>\n      </div>\n    </div>\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"32\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">32</strong>\n        <p class=\"cbt-sentence-question\"><span>It is located in the</span><span class=\"cbt-inline-answer\" data-answer-slot=\"32\"></span><span>.</span></p>\n      </div>\n    </div>\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"33\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">33</strong>\n        <p class=\"cbt-sentence-question\"><span></span><span class=\"cbt-inline-answer\" data-answer-slot=\"33\"></span><span>are not allowed to enter.</span></p>\n      </div>\n    </div>\n      \n    <div class=\"cbt-question-card cbt-sentence-card\" data-question-number=\"34\">\n      <div class=\"cbt-question-heading\">\n        <strong class=\"cbt-question-number\">34</strong>\n        <p class=\"cbt-sentence-question\"><span>It is closed on</span><span class=\"cbt-inline-answer\" data-answer-slot=\"34\"></span><span>.</span></p>\n      </div>\n    </div>\n    </div>\n    <header class=\"cbt-section-intro is-compact\">\n      <span class=\"cbt-kicker\">QUESTIONS 35–40</span>\n      <p>Which feature is found in each room? Choose the correct letter <strong>A–H</strong>.</p>\n    </header>\n    <div class=\"k56-side-layout k56-answers-left\">\n      <div class=\"cbt-option-bank\">\n        <p><strong>A</strong> a religious tradition of resurrecting the deceased</p>\n        <p><strong>B</strong> a horror story told by people in China</p>\n        <p><strong>C</strong> an investigator pursuing a notorious criminal</p>\n        <p><strong>D</strong> an abandoned hospital in England</p>\n        <p><strong>E</strong> a true origin mistaken by many people</p>\n        <p><strong>F</strong> the house of a young girl brutally killed by a gun</p>\n        <p><strong>G</strong> special sound effects</p>\n        <p><strong>H</strong> a murderer confronting the spirits of his victims</p>\n      </div>\n      <div class=\"cbt-short-answer-list\">\n        \n    <div class=\"cbt-question-card\" data-question-number=\"35\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">35</strong><span>Asylum</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"35\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"36\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">36</strong><span>Tomb</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"36\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"37\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">37</strong><span>Operation room</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"37\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"38\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">38</strong><span>Altar room</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"38\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"39\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">39</strong><span>Warehouse</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"39\"></span></div>\n    </div>\n        \n    <div class=\"cbt-question-card\" data-question-number=\"40\">\n      <div class=\"cbt-question-heading\"><strong class=\"cbt-question-number\">40</strong><span>Hall</span></div>\n      <div class=\"cbt-answer-row\"><span class=\"cbt-inline-answer\" data-answer-slot=\"40\"></span></div>\n    </div>\n      </div>\n    </div>"
+      }
+    ]
+  },
+  "controls": [
+    {
+      "number": 1,
+      "kind": "text"
+    },
+    {
+      "number": 2,
+      "kind": "text"
+    },
+    {
+      "number": 3,
+      "kind": "text"
+    },
+    {
+      "number": 4,
+      "kind": "text"
+    },
+    {
+      "number": 5,
+      "kind": "text"
+    },
+    {
+      "number": 6,
+      "kind": "text"
+    },
+    {
+      "number": 7,
+      "kind": "text"
+    },
+    {
+      "number": 8,
+      "kind": "text"
+    },
+    {
+      "number": 9,
+      "kind": "text"
+    },
+    {
+      "number": 10,
+      "kind": "text"
+    },
+    {
+      "number": 11,
+      "kind": "text"
+    },
+    {
+      "number": 12,
+      "kind": "text"
+    },
+    {
+      "number": 13,
+      "kind": "text"
+    },
+    {
+      "number": 14,
+      "kind": "text"
+    },
+    {
+      "number": 15,
+      "kind": "text"
+    },
+    {
+      "number": 16,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G"
+      ]
+    },
+    {
+      "number": 17,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G"
+      ]
+    },
+    {
+      "number": 18,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G"
+      ]
+    },
+    {
+      "number": 19,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G"
+      ]
+    },
+    {
+      "number": 20,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G"
+      ]
+    },
+    {
+      "number": 21,
+      "kind": "text"
+    },
+    {
+      "number": 22,
+      "kind": "text"
+    },
+    {
+      "number": 23,
+      "kind": "text"
+    },
+    {
+      "number": 24,
+      "kind": "text"
+    },
+    {
+      "number": 25,
+      "kind": "text"
+    },
+    {
+      "number": 26,
+      "kind": "text"
+    },
+    {
+      "number": 27,
+      "kind": "text"
+    },
+    {
+      "number": 28,
+      "kind": "text"
+    },
+    {
+      "number": 29,
+      "kind": "text"
+    },
+    {
+      "number": 30,
+      "kind": "text"
+    },
+    {
+      "number": 31,
+      "kind": "text"
+    },
+    {
+      "number": 32,
+      "kind": "text"
+    },
+    {
+      "number": 33,
+      "kind": "text"
+    },
+    {
+      "number": 34,
+      "kind": "text"
+    },
+    {
+      "number": 35,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 36,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 37,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 38,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 39,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    },
+    {
+      "number": 40,
+      "kind": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H"
+      ]
+    }
+  ],
+  "contentVersion": "substitute1-k56-listening-20261105-v1"
+}

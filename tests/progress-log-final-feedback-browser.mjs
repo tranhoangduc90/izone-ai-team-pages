@@ -55,6 +55,7 @@ for(const mode of ['one','multi','hidden','lost-receipt','reload','closed-after-
         sessionNumber:7,class:{id:'-99',name:'Lớp giả'},roster:[{studentRef:uid(400),name:'Học viên giả'}],
         definitionHash:'a'.repeat(64),definition:{title:'Phiếu kiểm luồng cuối',blocks},
         blockReleases:blocks.map(block=>({blockId:block.blockId,status:'open'}))}});
+      if(url.pathname.endsWith('/attempts/resume'))return route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({ok:false,error:'ATTEMPT_NOT_FOUND'})});
       if(url.pathname.endsWith('/attempts/start'))return json({attempt:{attemptToken:uid(500),draft,draftRevision:1,
         identity:{studentRef:uid(400),studentName:'Học viên giả',classId:'-99',className:'Lớp giả',sessionNumber:7},
         checkpointSubmissions:received?[]:[...checkpoints.values()]}});

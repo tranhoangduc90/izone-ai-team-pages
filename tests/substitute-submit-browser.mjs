@@ -17,8 +17,9 @@ const {SubstituteStore,TESTS,gradingFromReadback}=fixture
    ...(await import(pathToFileURL(path.join(backend,'src/transport-bridge.mjs'))))};
 if(!process.env.PLAYWRIGHT_MODULE)throw new Error('Cần đường dẫn Playwright đã cài.');
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
-const server=createServer((req,res)=>{const p=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{const file=fs.statSync(p).isDirectory()?path.join(p,'index.html'):p;res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
-await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+const server=createServer((req,res)=>{const p=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{const file=fs.statSync(p).isDirectory()?path.join(p,'index.html'):p;res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const base=process.env.SUBSTITUTE_PUBLIC_BASE?.replace(/\/$/,'')||'http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'msedge',headless:true});
 try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TEST_SLUG||slug===process.env.SUBSTITUTE_TEST_SLUG)){
  const store=new SubstituteStore({encryptionKey:randomBytes(32)});store.configureWritingRelease('substitute-test-2-k67','open');
@@ -58,6 +59,7 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
     response=store.saveSectionSubmission({...id,clientRunId:payload.examSessionId,skill:payload.examId,section});
     if(fault==='lost-ack'){fault=null;return route.abort();}
    }else if(api==='/api/test/writing'){
+    await new Promise(resolve=>setTimeout(resolve,150));
     const taskNumber=TESTS[slug].taskNumber,writing={...id,taskNumber,studentName:'Học viên giả',scores:{listening:{raw:1,max:40,band:2.5},reading:{raw:1,max:TESTS[slug].readingMax,band:2.5}},
      ...(payload.examVersion?{tasks:[1,2].map(taskNumber=>({taskNumber,essay:payload['task'+taskNumber]}))}:{essay:payload['task'+taskNumber]})};
     const saved=store.submit(writing);acceptedWriting++;response={accepted:true,grading:gradingFromReadback(saved),portalSync:{status:'not_applicable'}};
@@ -123,17 +125,39 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
   const ids=slug==='substitute-test-2-k67'?['task1','task2']:['task'+TESTS[slug].taskNumber];
   for(const [index,task]of ids.entries()){const editor=page.locator(`textarea[data-writing-task="${task}"]`);if(!await editor.isVisible())await page.locator('#writingTaskTabs button').nth(index).click();await editor.fill('Fictional original essay. '.repeat(85));}
   for(const failure of ['http','empty','malformed']){
-   fault=failure;const response=page.waitForResponse(r=>r.request().postData()?.includes('/api/test/writing'));await page.locator('#submitWriting').click();await response;
-   await page.waitForFunction(()=>document.querySelector('#notice')?.textContent.includes('Writing'));
+   fault=failure;
+   const response=page.waitForResponse(r=>{
+    try{return JSON.parse(r.request().postData()||'{}').route==='/api/test/writing';}catch{return false;}
+   });
+   await page.locator('#submitWriting').click();await response;
+   // Đợi cả bước đối soát status kết thúc; thông báo "đang gửi" chưa phải lỗi đã xử lý xong.
+   await page.waitForFunction(()=>document.querySelector('#notice')?.textContent.includes('Chưa xác nhận được trạng thái nộp Writing.'));
    assert.equal(await page.locator('#writingView').isVisible(),true);assert.equal(acceptedWriting,0);
   }
-  await page.locator('#submitWriting').click();await page.locator('#resultView').waitFor({state:'visible'});
+  const writingBefore=acceptedWriting;
+  await page.evaluate(()=>{
+   const form=document.querySelector('#writingView');
+   for(let i=0;i<3;i++)form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+  });
+  await page.locator('#resultView').waitFor({state:'visible'});
+  assert.equal(acceptedWriting,writingBefore+1,'Ba thao tác submit chỉ gửi Writing một lần');
   const summary=await page.locator('#summaryGrid').innerText();assert.match(summary,/Listening/);assert.match(summary,/Reading/);assert.match(summary,emptyListening?/0\/40/:/1\/40/);
   assert.equal(await page.locator('#questionDetails details').count(),2);
   assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);
+  const statusPanel=page.locator('.writing-submission-status:visible').first();
+  await statusPanel.waitFor();assert.match(await statusPanel.innerText(),/Đã nộp.*chờ chấm/);
+  await statusPanel.evaluate(el=>{window.writingStatusNode=el;});
+  const submittedOnce=acceptedWriting;
+  for(let i=0;i<3;i++){
+   await statusPanel.getByRole('button',{name:'Kiểm tra trạng thái Writing'}).click();
+   await statusPanel.getByRole('button',{name:'Kiểm tra trạng thái Writing'}).waitFor();
+  }
+  assert.equal(acceptedWriting,submittedOnce,'Kiểm tra trạng thái không gửi lại bài');
+  assert.equal(await statusPanel.evaluate(el=>el===window.writingStatusNode),true);
+  if(process.env.WRITING_UX_EVIDENCE){fs.mkdirSync(process.env.WRITING_UX_EVIDENCE,{recursive:true});await page.screenshot({path:path.join(process.env.WRITING_UX_EVIDENCE,slug+'-queued.png'),fullPage:true});}
   await page.reload();await page.locator('#resultView').waitFor({state:'visible'});assert.match(await page.locator('#summaryGrid').innerText(),emptyListening?/0\/40/:/1\/40/);
   assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);assert.deepEqual(errors,[]);
   console.log(JSON.stringify({slug,ok:true,answeredListening:emptyListening?0:completeListening?40:39,staleClassUrl,earlyBeforeAudioEnd:true,failuresKeepDrafts:true,lostAckRecovered:true,doubleSubmitNoDuplicate:true,resultsAfterWriting:true,reloadNoDuplicate:true,realAI:false,portalWrites:0}));
- }catch(error){console.error(JSON.stringify({slug,errors,...await page.evaluate(()=>({notice:document.querySelector('#bootstrapNotice')?.textContent,download:document.querySelector('#bootstrapDownloadStatus')?.textContent}))}));throw error;}
+ }catch(error){console.error(JSON.stringify({slug,errors,...await page.evaluate(()=>({notice:document.querySelector('#notice')?.textContent,bootstrap:document.querySelector('#bootstrapNotice')?.textContent,download:document.querySelector('#bootstrapDownloadStatus')?.textContent}))}));throw error;}
  finally{await context.unrouteAll({behavior:'ignoreErrors'});await context.close();store.close();}
 }}finally{await browser.close();await new Promise(r=>server.close(r));}

@@ -24,10 +24,12 @@ try{
    assert.equal(await page.locator('body').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(246, 247, 251)');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   };
-  await checkBrand();
-  assert.deepEqual(await page.locator('.test-number').allTextContents(),['01','02','03','04']);
-  await page.locator('#course-filter').selectOption('k67');assert.deepEqual(await page.locator('.test-row:visible .test-number').allTextContents(),['01','02']);
-  await page.locator('#course-filter').selectOption('all');await page.screenshot({path:path.join(out,'dashboard-'+size.width+'.png'),fullPage:true});
+  assert.ok(await page.locator('.brand').evaluate(e=>e.complete&&e.naturalWidth>0));
+  assert.equal(await page.locator('.test-option:visible').count(),0);
+  await page.getByRole('button',{name:'Chọn Khóa 67',exact:true}).click();
+  assert.deepEqual(await page.locator('.test-option:visible strong').allTextContents(),['Kì 1','Kì 2']);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.screenshot({path:path.join(out,'dashboard-'+size.width+'.png'),fullPage:true});
   for(const slug of ['substitute-test-1-k56','substitute-test-2-k56','substitute-test-1-k67','substitute-test-2-k67']){
    await page.goto(base+'/term-tests/'+slug+'-computer-based/?demo=writing&class=DEMO');
    await page.locator('#writingView').waitFor({state:'visible'});

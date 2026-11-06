@@ -76,3 +76,19 @@ body:has(#journeyDetailDialog[open]) #studentUpcoming{visibility:hidden}
 @media(max-width:1000px){.thuy-student #journeyView :is(#journeySessions,#sessionList),.thuy-student .student-dashboard-sessions .studentSessionGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.student-upcoming{align-items:stretch;flex-direction:column;padding:16px;gap:16px}.student-upcoming h2{font-size:19px}.student-upcoming>.button{width:100%}.session-comment-editor .comment-more{width:44px;min-height:44px}.session-comment-editor .comment-menu .mini-action{min-height:44px}.thuy-student #journeyView .studentPortalHero h1{font-size:24px}}
 @media(max-width:550px){.thuy-student #journeyView :is(#journeySessions,#sessionList),.thuy-student .student-dashboard-sessions .studentSessionGrid{grid-template-columns:minmax(0,1fr)}}
+
+/* Thẻ 26: compact history, a score beside the session label, one home destination. */
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{min-height:100px;padding:12px;gap:6px}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionTop{display:flex;flex-direction:row;justify-content:space-between;align-items:baseline;gap:8px}
+.thuy-student .studentSessionScore{white-space:nowrap;font-weight:600}
+.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard>.studentSessionBottom{padding-top:2px;margin-top:0}
+.thuy-student #journeyBackButton,.thuy-student #thuyJourneyNav{display:none!important}
+.thuy-student .context-bar{display:none}
+.thuy-student .context-bar.has-save-error{display:flex}
+.thuy-student .context-bar.has-save-error>div:first-child{display:none}
+.thuy-student .topbar .brand[role=button]{cursor:pointer}
+.thuy-student .thuy-lesson-home{margin:0 0 12px}
+.thuy-student #formView:has(#reflectionForm[hidden])>.thuy-lesson-home{display:none}
+.progress-release-notice{position:fixed;bottom:16px;right:16px;z-index:5000;max-width:420px;padding:12px;background:#fff;border:1px solid #e2e7eb;border-radius:8px;box-shadow:0 2px 12px #17426622;display:flex;gap:12px;align-items:center;font-size:13px}
+@media(min-width:1001px){.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{min-height:100px}}
+@media(min-width:1700px){.thuy-student :is(#journeySessions,#sessionList)>.studentSessionCard{min-height:110px}}

@@ -1,52 +1,91 @@
 <!doctype html>
 <html lang="vi">
 <head>
+    <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://ducizone.ddns.net; base-uri 'none'; form-action 'self'">
   <title>Substitute Test · Khóa 56 và 67</title>
-  <link rel="stylesheet" href="/izone-ai-team-pages/term-tests/substitute-k56-shared/styles.css?rev=20261003-writing-save-cas-v1">
-  <link rel="stylesheet" href="/izone-ai-team-pages/term-tests/substitute-test-1-k56-dashboard/styles.css">
-  <link rel="stylesheet" href="../substitute-shared/brand.css?v=20261014-exam-source-v1">
-  <link rel="stylesheet" href="../../shared/master170/substitute-v1.1.css?v=20261028-master11">
-<script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261105-ky-thi">
+  <script defer src="./app.js?v=20261105-ky-thi"></script>
 </head>
-<body data-izone-substitute-hub="master170@1.1">
-    <div class="substitute-brandbar" aria-label="IZONE">
-      <img src="../substitute-shared/izone-logo-color.png" alt="IZONE · IELTS Chiến lược" width="120" height="44">
+<body>
+  <header class="bar">
+    <div class="wrap bar-inner">
+      <img class="brand" src="../substitute-shared/izone-logo-color.png" width="114" height="42" alt="IZONE · IELTS Chiến lược">
+      <button id="teacher" class="teacher" type="button">
+        <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+        Kết quả giảng viên
+      </button>
     </div>
-  <header class="hub-header">
-    <div><p class="eyebrow">IZONE · SUBSTITUTE TEST</p><h1>Danh sách bài kiểm tra</h1><p>Tất cả bài Substitute Test của Khóa 56 và Khóa 67 trên cùng một trang.</p></div>
-    <span class="local-badge" id="portal-badge">Bản online · K56 + K67</span>
   </header>
-  <main class="hub-shell">
-    <section class="control-panel panel" aria-labelledby="filter-heading">
-      <div><p class="eyebrow">Phạm vi đang xem</p><h2 id="filter-heading">Khóa học và đợt kiểm tra</h2></div>
-      <label>Khóa học<select id="course-filter"><option value="all" selected>Tất cả khóa học</option><option value="k56">Khóa 56</option><option value="k67">Khóa 67</option></select></label>
+  <main class="wrap">
+    <div class="hero">
+      <p class="eyebrow">IZONE · Cổng thi lại</p>
+      <h1>Substitute Test</h1>
+      <p class="intro">Chọn khóa và bài thi theo thông báo của IZONE.</p>
+    </div>
+    <ol class="steps" aria-label="Các bước vào bài thi">
+      <li class="step" aria-current="step"><span aria-hidden="true">1</span> Chọn khóa</li>
+      <li class="step"><span aria-hidden="true">2</span> Chọn kì thi</li>
+    </ol>
+    <section class="panel" id="pick-course" aria-labelledby="course-heading">
+      <h2 id="course-heading" tabindex="-1">Bạn đang học khóa nào?</h2>
+      <p class="description">Chọn theo tên khóa trong thông báo thi của IZONE.</p>
+      <div class="courses">
+        <button class="course course-choice" data-course="k56" type="button" aria-label="Chọn Khóa 56" aria-pressed="false">
+          <span class="course-mark" aria-hidden="true">K56</span>
+          <span><strong>Khóa 56</strong><small>Substitute Test 1 và Test 2</small></span>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="course course-choice" data-course="k67" type="button" aria-label="Chọn Khóa 67" aria-pressed="false">
+          <span class="course-mark" aria-hidden="true">K67</span>
+          <span><strong>Khóa 67</strong><small>Substitute Test 1 và Test 2</small></span>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+      <section class="test-picker" id="test-picker" aria-labelledby="test-heading" hidden>
+        <h3 id="test-heading" tabindex="-1">Bạn đang thi cho bài thi kỳ nào?</h3>
+        <p class="description" id="test-course"></p>
+        <div class="courses test-group" data-course="k56" hidden>
+          <a class="course test-option" href="../substitute-test-1-k56-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 1</strong><span class="arrow" aria-hidden="true">↗</span></a>
+          <a class="course test-option" href="../substitute-test-2-k56-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 2</strong><span class="arrow" aria-hidden="true">↗</span></a>
+        </div>
+        <div class="courses test-group" data-course="k67" hidden>
+          <a class="course test-option" href="../substitute-test-1-k67-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 1</strong><span class="arrow" aria-hidden="true">↗</span></a>
+          <a class="course test-option" href="../substitute-test-2-k67-computer-based/?demo=exam&amp;grading=server" target="_blank" rel="noopener noreferrer"><strong>Kì 2</strong><span class="arrow" aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+      <p class="hint" id="course-hint">
+        <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9v1"/></svg>
+        Mỗi khóa có đề riêng. Chọn khóa trước để xem hai bài thi của khóa đó.
+      </p>
     </section>
-    <section class="panel tests-panel" aria-labelledby="tests-heading">
-      <div class="section-title"><div><p class="eyebrow">Substitute Tests</p><h2 id="tests-heading">Các bài đang mở</h2></div><span class="record-count" id="record-count">4 bài</span></div>
-      <article class="test-row" data-course="k56">
-        <div class="test-number" aria-hidden="true">01</div><div class="test-copy"><div class="test-title-line"><h3>Substitute Test 1</h3><span class="status-pill status-open">Đang mở</span></div><p>Listening 40 câu · Reading 26 câu · Writing Task 2</p><div class="test-meta"><span>Khóa 56</span></div></div>
-        <div class="test-actions"><a class="button button-secondary" href="/izone-ai-team-pages/term-tests/substitute-test-1-k56-computer-based/?demo=exam&amp;grading=server">Mở bài thi</a><a class="button button-primary" href="/izone-ai-team-pages/term-tests/substitute-test-1-k56-results/?test=substitute-test-1-k56">Xem kết quả</a></div>
-      </article>
-      <article class="test-row" data-course="k56">
-        <div class="test-number" aria-hidden="true">02</div><div class="test-copy"><div class="test-title-line"><h3>Substitute Test 2</h3><span class="status-pill status-open">Đang mở</span></div><p>Listening 40 câu · Reading 40 câu · Writing Task 1</p><div class="test-meta"><span>Khóa 56</span></div></div>
-        <div class="test-actions"><a class="button button-secondary" href="/izone-ai-team-pages/term-tests/substitute-test-2-k56-computer-based/?demo=exam&amp;grading=server">Mở bài thi</a><a class="button button-primary" href="/izone-ai-team-pages/term-tests/substitute-test-2-k56-results/?test=substitute-test-2-k56">Xem kết quả</a></div>
-      </article>
-      <article class="test-row" data-course="k67">
-        <div class="test-number" aria-hidden="true">03</div><div class="test-copy"><div class="test-title-line"><h3>Substitute Test 1</h3><span class="status-pill status-open">Đang mở</span></div><p>Listening 40 câu · Reading 40 câu · Writing Task 2</p><div class="test-meta"><span>Khóa 67</span></div></div>
-        <div class="test-actions"><a class="button button-secondary" href="/izone-ai-team-pages/term-tests/substitute-test-1-k67-computer-based/?demo=exam&amp;grading=server">Mở bài thi</a><a class="button button-primary" href="/izone-ai-team-pages/term-tests/substitute-test-1-k67-results/?test=substitute-test-1-k67">Xem kết quả</a></div>
-      </article>
-      <article class="test-row" data-course="k67">
-        <div class="test-number" aria-hidden="true">04</div><div class="test-copy"><div class="test-title-line"><h3>Substitute Test 2</h3><span class="status-pill status-open">Đang mở</span></div><p>Listening 40 câu · Reading 40 câu · Writing Task 1 + Task 2</p><div class="test-meta"><span>Khóa 67</span></div></div>
-        <div class="test-actions"><a class="button button-secondary" href="/izone-ai-team-pages/term-tests/substitute-test-2-k67-computer-based/?demo=exam&amp;grading=server">Mở bài thi</a><a class="button button-primary" href="/izone-ai-team-pages/term-tests/substitute-test-2-k67-results/?test=substitute-test-2-k67">Xem kết quả</a></div>
-      </article>
-    </section>
-    <p class="privacy-note" id="privacy-note">Danh sách lớp được tải từ hệ thống Substitute. DEMO không gửi Portal; các lớp thật đồng bộ vào cột thi lại tương ứng. Giáo viên chỉ xem lớp phụ trách, quản trị xem toàn bộ.</p>
+
+    <p class="footer">Danh sách lớp được tải từ hệ thống Substitute. Bài thi mở trong tab mới.</p>
   </main>
-  <script type="module" src="/izone-ai-team-pages/term-tests/substitute-test-1-k56-dashboard/app.js?v=20261014-exam-source-v1"></script>
+
+  <dialog id="teacher-dialog" aria-labelledby="teacher-heading">
+    <div class="dialog-head">
+      <h2 id="teacher-heading">Kết quả giảng viên</h2>
+      <button type="button" class="button secondary close" aria-label="Đóng">×</button>
+    </div>
+    <p class="description">Trang kết quả hiện hành mở trong tab mới và yêu cầu đăng nhập.</p>
+    <div class="result-links">
+      <div>
+        <h3>Khóa 56</h3>
+        <a href="../substitute-test-1-k56-results/?test=substitute-test-1-k56" target="_blank" rel="noopener noreferrer">Kết quả Test 1</a>
+        <a href="../substitute-test-2-k56-results/?test=substitute-test-2-k56" target="_blank" rel="noopener noreferrer">Kết quả Test 2</a>
+      </div>
+      <div>
+        <h3>Khóa 67</h3>
+        <a href="../substitute-test-1-k67-results/?test=substitute-test-1-k67" target="_blank" rel="noopener noreferrer">Kết quả Test 1</a>
+        <a href="../substitute-test-2-k67-results/?test=substitute-test-2-k67" target="_blank" rel="noopener noreferrer">Kết quả Test 2</a>
+      </div>
+    </div>
+  </dialog>
+
 </body>
 </html>

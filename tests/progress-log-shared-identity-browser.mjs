@@ -57,6 +57,7 @@ async function setup(options) {
         { itemVersionId: itemId, itemFamilyId: itemId, position: 1, skillCodes: [], interactionType: 'long_text', required: true, prompt: 'Em đã làm được gì?', maxLength: 600 }] }] },
       blockReleases: [{ blockId, status: 'open' }], submissionWindow: { canSubmit: !options.closed, serverNow: new Date().toISOString(),
         effectiveClosesAt: new Date(Date.now() + (options.closed ? -3600000 : 3600000)).toISOString(), completeStudents: 0 } } });
+    if (endpoint === '/attempts/resume')return route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({ok:false,error:'ATTEMPT_NOT_FOUND'})});
     if (endpoint === '/attempts/start') {
       started(); if (options.delay) await gate;
       const ref = options.wrongOwner ? b : body.studentRef;
