@@ -117,8 +117,8 @@ export async function startTrackingFixture(root,{port=0,journal=null,journalEnab
    }
    const file=resolve(root,'.'+decodeURIComponent(url.pathname));if(!file.startsWith(root+sep))throw Error('FIXTURE_PATH_OUTSIDE_ROOT');
    let content=await readFile(file);
-   if(file.endsWith(sep+'shared'+sep+'speaking-homework-journal.mjs')&&journalEnabled)
-    content=content.toString().replace('export const speakingJournalEnabled=false;','export const speakingJournalEnabled=true;');
+   if(file.endsWith(sep+'shared'+sep+'speaking-homework-journal.mjs'))
+    content=content.toString().replace(/export const speakingJournalEnabled=(?:false|true);/,`export const speakingJournalEnabled=${journalEnabled?'true':'false'};`);
    const target=typeof nativeApi==='function'?nativeApi():nativeApi;
    if(target&&!/^http:\/\/127\.0\.0\.1:\d+\/api\/speaking-homework-independent$/.test(target))throw Error('FIXTURE_NATIVE_ENDPOINT_INVALID');
    if(extname(file)==='.html')content=content.toString().replace("connect-src 'self' https://ducizone.ddns.net","connect-src 'self'"+(target?' '+new URL(target).origin:''))
