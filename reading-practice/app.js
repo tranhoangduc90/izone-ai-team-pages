@@ -49,6 +49,61 @@ let saveError=false,simulatedOffline=false,toastTimeout,modalAction=null,fontSiz
 let activeMs=0,leaseBaseline=0,lastPulse=0,checkpointKey='',pendingOperation=null,pulsePending=false,activating=false;
 const resultCache=new Map();
 let backgroundExplanation=false;
+let readingJournalBridge=null,readingJournalReady=null,readingJournalScope=null,readingJournalEpoch=0,readingJournalPending=0,lastJournalTimer='';
+const readingDialogStates=new WeakMap();
+function clearReadingJournal(){readingJournalEpoch++;readingJournalReady=null;readingJournalScope=null;lastJournalTimer='';try{readingJournalBridge?.clear();}catch{}}
+function configureReadingJournal(context){
+ const a=current();
+ if(location.pathname.endsWith('/teacher.html')||!identity||!a){if(readingJournalScope)clearReadingJournal();return;}
+ if(!context){if(readingJournalScope&&(readingJournalScope.studentRef!==identity.studentRef||readingJournalScope.classCode!==identity.classCode||readingJournalScope.attemptId!==a.id))clearReadingJournal();return;}
+ if(context.studentRef!==identity.studentRef||context.classCode!==identity.classCode||context.attemptId!==a.id||context.attemptNo!==a.no){clearReadingJournal();return;}
+ if(readingJournalScope?.bindingId!==context.bindingId)clearReadingJournal();
+ readingJournalScope={bindingId:context.bindingId,studentRef:identity.studentRef,classCode:identity.classCode,attemptId:a.id,attemptNo:a.no};
+ const epoch=readingJournalEpoch;
+ readingJournalReady=import('../shared/reading-practice-journal.mjs?v=20261105-reading-r2').then(({startReadingPracticeJournal})=>{
+  if(epoch!==readingJournalEpoch)return null;
+  readingJournalBridge??=startReadingPracticeJournal(API+'/journal-events');return readingJournalBridge.bind(context);
+ }).catch(()=>null);
+}
+function emitReadingJournal(method,fields,traceId,requestId){
+ if(!readingJournalReady||readingJournalPending>=64)return;
+ const ready=readingJournalReady;readingJournalPending++;
+ void ready.then(channel=>channel?.[method](fields,traceId,requestId)).catch(()=>{}).finally(()=>readingJournalPending--);
+}
+function readingJournalRequest(path,body){
+ if(!readingJournalReady||!body||body.attemptId&&body.attemptId!==readingJournalScope?.attemptId)return null;
+ const route=/^\/(begin|resume|reset|submit|pause|activate|pulse)(?:\?|$)/.exec(path)?.[1];if(!route)return null;
+ const action=route==='pulse'?'checkpoint':route,traceId=body.operationId||crypto.randomUUID(),requestId=crypto.randomUUID(),started=performance.now();
+ const fields={action,sequence:body.snapshot?.sequence??body.recovery?.snapshot?.sequence??current()?.sequence??0},ready=readingJournalReady;
+ const checkpoint=action==='checkpoint'?ready.then(channel=>channel?.checkpoint(fields.sequence)):null;
+ if(!checkpoint)emitReadingJournal('control',{...fields,phase:'sent'},traceId,requestId);
+ let finished=false;
+ return(phase,httpStatus,errorCode)=>{
+  if(finished)return;finished=true;
+  const known=['NETWORK','STALE_DRAFT','ATTEMPT_CLOSED','ATTEMPT_CHANGED','ORIGIN_DENIED','UNAUTHORIZED','STUDENT_NOT_ELIGIBLE','LEASE_LOST','LEASE_EXPIRED','LEASE_REACTIVATION_REQUIRED','ATTEMPT_PAUSED','TIME_NOT_EXHAUSTED','OPERATION_CONFLICT','INVALID_DRAFT'];
+  const data={...fields,phase,...(httpStatus?{httpStatus}:{}),...(errorCode?{errorCode:known.includes(errorCode)?errorCode:'UNKNOWN'}:{}),durationMs:Math.min(600000,Math.max(0,Math.round(performance.now()-started)))};
+  if(checkpoint){void checkpoint.then(finish=>finish?.(phase)).catch(()=>{});if(phase==='confirmed')return;}
+  void ready.then(channel=>channel?.control(data,traceId,requestId)).catch(()=>{});
+ };
+}
+function observeReadingTimer(state,reason='unknown'){
+ try{
+  const a=current();if(!a||a.id!==readingJournalScope?.attemptId)return;
+  const why=({manual:'user',hidden:'hidden',offline:'offline',closed:'closed',identity:'identity',conflict:'conflict',NETWORK:'network',LEASE_LOST:'lease',LEASE_EXPIRED:'lease',LEASE_REACTIVATION_REQUIRED:'lease',storage:'storage',timeout:'timeout',user:'user'}[reason]||'unknown');
+  const key=[readingJournalScope.bindingId,state,why].join(':');if(key===lastJournalTimer)return;lastJournalTimer=key;
+  emitReadingJournal('timer',{state,reason:why,remainingMs:Math.max(0,Math.round(a.remainingMs)),activeMs:Math.max(0,Math.round(activeMs)),sequence:a.sequence});
+ }catch{}
+}
+function observeReadingDialog(element,dialog,phase){
+ try{
+  if(!readingJournalScope||dialog==='explanation'&&explanationAttempt?.id!==readingJournalScope.attemptId||phase==='closed'&&element.open)return;
+  const previous=readingDialogStates.get(element),key=readingJournalScope.bindingId+':'+dialog+':'+phase;if(previous===key)return;readingDialogStates.set(element,key);
+  const r=element.getBoundingClientRect(),number=(value,min=0)=>Math.max(min,Math.min(20000,Math.round(value)));
+  emitReadingJournal('dialog',{dialog,phase,visible:element.open&&r.width>0&&r.height>0&&r.right>0&&r.bottom>0&&r.x<innerWidth&&r.y<innerHeight,
+   x:number(r.x,-20000),y:number(r.y,-20000),width:number(r.width),height:number(r.height),viewportWidth:number(innerWidth),viewportHeight:number(innerHeight)});
+ }catch{}
+}
+let readingModalKind='confirmation';
 const resultView=createPracticeResultView({root:app,api:API,context:resultTrackingContext,
  request:(path,options)=>request(path,undefined,false,false,options),
  loadResult:({signal,scope})=>serial(async()=>{signal.throwIfAborted();return request('/result/'+encodeURIComponent(scope.attemptId),undefined,false,false,{signal});}),
@@ -71,6 +126,7 @@ function acceptResultProgress(value){
  if(changedFirst)resultScreen({preserve:true});else{patchPracticeResultPart(app,'[data-practice-docs]',docsNotice(a));patchPracticeResultPart(app,'.identity-bar',identityBar());}
 }
 function revokeResultView(){
+ clearReadingJournal();
  resultView.close();closeExplanation();explanationDialog.replaceChildren();resultCache.clear();try{sessionStorage.removeItem(SESSION);}catch{}sessionToken='';studentId='';identity=null;app.replaceChildren();navigate('login');notify('Phiên xem kết quả đã đổi. Hãy xác nhận lại người học; bản nháp trên thiết bị vẫn được giữ.');
 }
 
@@ -138,6 +194,7 @@ async function changeStudent(){
  pause('identity',false);await queue;
  if((await courseIdentity.forget()).status!=='empty'){notify('Chưa đổi được người học. Bài và nháp vẫn được giữ.');return;}
  try{sessionStorage.removeItem(SESSION);}catch{}
+ clearReadingJournal();
  sessionToken='';studentId='';identity=null;navigate('login');
 }
 
@@ -149,10 +206,11 @@ function persist(schedule=true){
  if(!current())return true;
  try{current().sequence++;localStorage.setItem(cacheKey(),JSON.stringify({attemptId:current().id,lease,snapshot:snapshot(),remainingMs:current().remainingMs,pendingOperation}));lastSave=performance.now();
   if(schedule&&route==='exercise'&&current().status==='running'){clearTimeout(debounce);debounce=setTimeout(()=>sendPulse(),500);}return true;
- }catch{saveError=true;lastTick=0;if(current())current().status='paused';showStorageError();return false;}
+ }catch{saveError=true;lastTick=0;if(current())current().status='paused';observeReadingTimer('paused','storage');showStorageError();return false;}
 }
 function showStorageError(){app.innerHTML=`<section class="notice-panel card card-pad"><h1>Chưa lưu được bài trên thiết bị</h1><p>Đồng hồ đã dừng. Giữ nguyên tab và cho phép trình duyệt lưu dữ liệu để bảo toàn phần vừa nhập.</p>${btn('Thử lưu lại','retry-save')}</section>`;}
 function apply(response,{preserve=false}={}){
+ const journalContext=response.readingJournal;
  response=expandPracticeHistory(response,{identity,attempts:record()?.attempts});
  for(const attempt of response.attempts||[])if(attempt.detailsLoaded===false)resultCache.delete(attempt.id);
  serverCapabilities=response.capabilities||{};
@@ -162,6 +220,7 @@ function apply(response,{preserve=false}={}){
  const a=current();if(preserve&&local&&a?.id===local.id&&a.status==='running'&&local.sequence>=a.sequence){Object.assign(a,snapshotFrom(local));a.remainingMs=Math.min(local.remainingMs,a.remainingMs);a.owner=TAB;}
  if(response.definition){AUTHORED_DEF=response.definition;({passage:PASSAGE,headings:HEADINGS,mcq:MCQ,summary:SUMMARY,names:NAMES=[],endings:ENDINGS=[],experts:EXPERTS=[],endingOptions:ENDING_OPTIONS=[]}=response.definition);}
  if(response.lease){lease=response.lease;activeMs=0;leaseBaseline=a.usedMs;a.owner=TAB;pendingOperation=null;}
+ configureReadingJournal(journalContext);if(a?.status==='submitted')observeReadingTimer('submitted',a.method==='timeout'?'timeout':'user');
  return a;
 }
 function snapshotFrom(a){return{answers:a.answers,flags:a.flags,notes:a.notes,annotations:a.annotations,scroll:a.scroll,activeQuestion:a.activeQuestion,tab:a.tab,mobilePane:a.mobilePane,notesOpen:a.notesOpen,highlighted:a.highlighted,sequence:a.sequence};}
@@ -169,12 +228,15 @@ async function request(path,body,teacher=false,keepalive=false,{signal}={}){
  if(!teacher)path=practiceHistoryPath(path);
  let token=sessionToken;
  if(teacher){try{token=sessionStorage.getItem('reading-teacher-token');}catch{token='';}}
+ const journalFinish=teacher?null:readingJournalRequest(path,body);
  let response;try{
   let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{ }),...(personalEntry&&entryValidated&&!teacher?{'X-Izone-Document':docId,'X-Izone-Assignment':entryInfo.assignmentCode}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:signal?AbortSignal.any([signal,AbortSignal.timeout(5000)]):AbortSignal.timeout(5000),keepalive};
   if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js?startup=20261026-v2');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
   response=await fetch(`${API}${path}`,options);}
- catch(error){if(signal?.aborted)throw signal.reason||error;networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
- const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{status:response.status,code:value.error.code});networkFailed=false;return value;
+ catch(error){journalFinish?.('unknown',undefined,'NETWORK');if(signal?.aborted)throw signal.reason||error;networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
+ let value;try{value=await response.json();}catch(error){journalFinish?.('unknown',response.status);throw error;}
+ journalFinish?.(response.ok?'confirmed':'rejected',response.status,value?.error?.code);
+ if(!response.ok)throw Object.assign(new Error(value.error.message),{status:response.status,code:value.error.code});networkFailed=false;return value;
 }
 function serial(fn){const next=queue.then(fn);queue=next.catch(()=>{});return next;}
 function consumeTime(){const a=current();if(!a||a.status!=='running'||a.owner!==TAB||!lastTick)return;const now=performance.now(),delta=now-lastTick;activeMs+=delta;a.remainingMs=Math.max(0,FULL_TIME-leaseBaseline-activeMs);lastTick=now;}
@@ -197,7 +259,7 @@ async function sendPulse(){
  }).finally(()=>pulsePending=false);
 }
 function savedStatus(text){const el=document.querySelector('.autosave-status');if(el)el.textContent=text;}
-function stopLocal(reason){consumeTime();rememberScroll();lastTick=0;clearTimeout(debounce);if(current()){current().status='paused';current().pauseReason=reason;persist(false);}closeModal();if(!saveError)navigate('resume');}
+function stopLocal(reason){consumeTime();rememberScroll();lastTick=0;clearTimeout(debounce);if(current()){current().status='paused';current().pauseReason=reason;persist(false);observeReadingTimer('paused',reason);}closeModal();if(!saveError)navigate('resume');}
 function tick(){if(current()?.status!=='running'||route!=='exercise')return;if(document.hidden||!navigator.onLine){pause(document.hidden?'hidden':'offline');return;}consumeTime();updateProgress();if(performance.now()-lastSave>900)persist(false);if(current().remainingMs<=0){finish('timeout');return;}if(performance.now()-lastPulse>4500)sendPulse();}
 async function perform(action,payload){
  if(busy||activating)return;busy=true;clearTimeout(debounce);
@@ -207,7 +269,7 @@ async function perform(action,payload){
  await serial(async()=>{const response=await request(`/${action}`,op.payload);pendingOperation=null;sessionStorage.removeItem(`reading-operation:${identity.bindingId}`);apply(response);persist(false);lastPulse=performance.now();
   if(current()?.status==='submitted'){lastTick=0;await loadResult(current().no);}else if(response.lease){
    // Đề mở sau ACK tạo lượt. Gửi mốc kích hoạt cùng lúc mở đề, không chờ thêm ACK để chạy giờ.
-   const id=current().id,proof=lease;current().status='running';lastTick=performance.now();activating=true;busy=false;navigate('exercise');
+   const id=current().id,proof=lease;current().status='running';lastTick=performance.now();activating=true;busy=false;observeReadingTimer('running','user');navigate('exercise');
    try{const activated=await request('/activate',{attemptId:id,lease:proof});if(current()?.id===id&&lease?.id===proof.id&&current().status==='running'&&route==='exercise')apply(activated,{preserve:true});}finally{setActivating(false);}
   }else{lastTick=0;current().status='paused';lease=null;navigate('resume');}
  });}catch(e){stopLocal(e.code);notify(e.message);}finally{clearActivity?.();busy=false;}
@@ -225,6 +287,7 @@ function pause(reason='manual',shouldRender=true){
  const a=current();if(!a||a.status!=='running'||a.owner!==TAB)return;
  consumeTime();rememberScroll();persist(false);const input={attemptId:a.id,lease,snapshot:snapshot()};
  a.status='paused';a.pauseReason=reason;lastTick=0;clearTimeout(debounce);closeModal();
+ observeReadingTimer('paused',reason);
  if(navigator.onLine)serial(async()=>{try{const response=await request('/pause',input,false,true);if(current()?.id===input.attemptId&&lease?.id===input.lease.id){apply(response,{preserve:true});persist(false);if(current().status==='submitted')await loadResult(current().no);}}catch(e){notify(e.message);}});
  if(shouldRender&&!saveError)navigate('resume');
 }
@@ -329,13 +392,14 @@ function teacherHistory(response,selected){
  return '<section class="section"><h2>Lịch sử làm bài</h2><p class="small muted">Lần hoàn thành đầu tiên: '+(response.firstCompleted||'Chưa có')+'</p><div class="history">'+response.attempts.map(a=>a.status==='submitted'?`<button type="button" data-action="teacher-result" data-submission="${a.submissionId}" class="${a.id===selected.id?'selected':''}">Lần ${a.no}<span>${a.finalScore}/${total()} · Đã nộp</span></button>`:`<details class="card card-pad"><summary>Lần ${a.no} · ${a.status==='reset'?'Đã reset':'Chưa nộp'} · ${countAnswered(a)}/${total()} đã nhập</summary><p>Bắt đầu: ${dateLabel(a.startedAt)} · Còn ${timeLabel(a.remainingMs)}</p><div class="table-wrap"><table><thead><tr><th>Câu</th><th>Bài làm đã lưu</th></tr></thead><tbody>${Object.keys(KEY).map(n=>`<tr><td>${n}</td><td>${escape(a.answers[n]||'—')}</td></tr>`).join('')}</tbody></table></div><p style="white-space:pre-wrap">${escape(a.notes||'Chưa có ghi chú.')}</p></details>`).join('')+'</div></section>';
 }
 
-function openModal(title,body,confirmLabel,confirm,style='') {
+function openModal(title,body,confirmLabel,confirm,style='',journalKind='confirmation') {
     closeModal(); modalAction=confirm;
     modal.innerHTML=`<h2 id="modal-title">${title}</h2>${body}<div class="actions">${btn('Quay lại','close-modal','outline')}${btn(confirmLabel,'confirm-modal',style)}</div>`;
     modal.showModal(); modal.querySelector('[data-action="close-modal"]').focus();
+    readingModalKind=journalKind;observeReadingDialog(modal,journalKind,'opened');
   }
 
-function closeModal() { if (modal.open) modal.close(); modalAction=null; }
+function closeModal() { if (modal.open){modal.close();observeReadingDialog(modal,readingModalKind,'closed');} modalAction=null; }
 
 function rememberScroll() {
     const a=current(); if(!a || route!=='exercise' || a.owner!==TAB)return;
@@ -353,12 +417,12 @@ function rememberScroll() {
 
 function requestReset() {
     const n=current()?.no;
-    openModal('Làm lại từ đầu?',`<p>Bạn sẽ bắt đầu <strong>lần làm bài số ${n+1}</strong> với đủ ${FULL_TIME/60000} phút. Đáp án lần hiện tại sẽ không chuyển sang lần mới.</p><p>Lịch sử lần ${n} vẫn được giữ. Kết quả và tài liệu bài tập sẽ ghi rõ số lần reset.</p>`,'Reset và bắt đầu lại',reset,'red');
+    openModal('Làm lại từ đầu?',`<p>Bạn sẽ bắt đầu <strong>lần làm bài số ${n+1}</strong> với đủ ${FULL_TIME/60000} phút. Đáp án lần hiện tại sẽ không chuyển sang lần mới.</p><p>Lịch sử lần ${n} vẫn được giữ. Kết quả và tài liệu bài tập sẽ ghi rõ số lần reset.</p>`,'Reset và bắt đầu lại',reset,'red','reset');
   }
 
 function requestSubmit() {
     const blank=total()-countAnswered(current());
-    openModal('Nộp bài Reading?',`<p>Bạn đã trả lời <strong>${total()-blank}/${total()} câu</strong>${blank?` và còn <strong>${blank} câu trống</strong>`:''}.</p><p>Sau khi nộp, bạn có thể xem điểm, đáp án và bằng chứng. Muốn làm tiếp một lượt mới, hãy dùng Reset.</p>`,'Nộp bài',()=>finish('manual'));
+    openModal('Nộp bài Reading?',`<p>Bạn đã trả lời <strong>${total()-blank}/${total()} câu</strong>${blank?` và còn <strong>${blank} câu trống</strong>`:''}.</p><p>Sau khi nộp, bạn có thể xem điểm, đáp án và bằng chứng. Muốn làm tiếp một lượt mới, hãy dùng Reset.</p>`,'Nộp bài',()=>finish('manual'),'','submit');
   }
 
 function hero(kicker,title,copy) { return `<section class="hero"><div><span class="kicker">${kicker}</span><h1>${title}</h1><p class="hero-copy">${copy}</p></div><span class="lesson-index" aria-hidden="true">${String(LESSON.lesson).padStart(2,'0')}</span></section>`; }
@@ -655,7 +719,7 @@ function toggleExplanation(number,button){
  const attempt=record()?.attempts.find(item=>item.id===attemptId)||resultCache.get(attemptId)?.attempt;
  if(!attempt||!resultCache.get(attempt.id))return;
  explanationAttempt=attempt;explanationNumber=number;explanationTrigger=button;
- explanationDialog.showModal();renderExplanation();
+ explanationDialog.showModal();renderExplanation();observeReadingDialog(explanationDialog,'explanation','opened');
 }
 
 function resultTable(a) {
@@ -725,16 +789,21 @@ document.addEventListener('submit',async event=>{
 });
 function recoverLocal(){
  const a=current();try{pendingOperation=JSON.parse(sessionStorage.getItem(`reading-operation:${identity.bindingId}`)||'null');}catch{pendingOperation=null;}if(!a||!['running','paused'].includes(a.status))return;
+ const serverSequence=a.sequence;
  try{const local=JSON.parse(localStorage.getItem(cacheKey()));
   if(local?.attemptId===a.id&&local.lease?.id===a.leaseId&&local.snapshot.sequence>=a.sequence){Object.assign(a,local.snapshot);a.remainingMs=Math.min(a.remainingMs,local.remainingMs);lease=local.lease;activeMs=local.snapshot.activeMs;pendingOperation=pendingOperation||local.pendingOperation||null;}
   else{lease=null;activeMs=0;}
+  emitReadingJournal('restore',{state:local?local?.attemptId===a.id&&local.lease?.id===a.leaseId&&local.snapshot.sequence>=serverSequence?'local':'rejected':'server',
+   serverSequence,...(Number.isSafeInteger(local?.snapshot?.sequence)?{localSequence:local.snapshot.sequence}:{}),
+   leaseMatches:Boolean(local&&local.lease?.id===a.leaseId),attemptMatches:Boolean(local&&local.attemptId===a.id),remainingMs:Math.max(0,Math.round(a.remainingMs))});
   a.status='paused';a.owner=null;
- }catch{saveError=true;showStorageError();}
+  observeReadingTimer('paused','unknown');
+ }catch{emitReadingJournal('restore',{state:'storage_unavailable',serverSequence,remainingMs:Math.max(0,Math.round(a.remainingMs))});observeReadingTimer('paused','storage');saveError=true;showStorageError();}
 }
 window.addEventListener('hashchange',()=>{resultRead++;clearResultRetry?.();clearResultRetry=null;resultView.close();if(location.pathname.endsWith('/teacher.html')){route='teacher';teacherScreen();}else render();});
 window.addEventListener('offline',()=>pause('offline'));
 window.addEventListener('online',()=>{networkFailed=false;if(route==='resume')render();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){resultView.close();pause('hidden');}else resultView.sync();});
+document.addEventListener('visibilitychange',()=>{if(readingJournalScope)emitReadingJournal('visibility',{hidden:document.hidden,sequence:current()?.sequence||0});if(document.hidden){resultView.close();pause('hidden');}else resultView.sync();});
 window.addEventListener('pagehide',()=>{resultView.close();pause('closed',false);});
 window.addEventListener('beforeunload',()=>{resultView.close();pause('closed',false);});
 window.addEventListener('storage',event=>{
@@ -743,15 +812,16 @@ window.addEventListener('storage',event=>{
   resultCache.clear();db={students:{}};identity=null;app.replaceChildren();teacherScreen();return;
  }
  if(event.key!==checkpointKey||!event.newValue||!current())return;
- try{const fresh=JSON.parse(event.newValue);if(fresh.attemptId!==current().id||fresh.lease?.id!==lease?.id){lastTick=0;current().status='paused';current().pauseReason='conflict';lease=null;navigate('resume');}}catch{}
+ try{const fresh=JSON.parse(event.newValue);if(fresh.attemptId!==current().id||fresh.lease?.id!==lease?.id){lastTick=0;current().status='paused';current().pauseReason='conflict';lease=null;observeReadingTimer('paused','conflict');navigate('resume');}}catch{}
 });
 modal.addEventListener('cancel',()=>modalAction=null);
+modal.addEventListener('close',()=>observeReadingDialog(modal,readingModalKind,'closed'));
 let explanationPressedOutside=false;
 function outsideExplanation(event){const rect=explanationDialog.getBoundingClientRect();return event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom;}
 explanationDialog.addEventListener('pointerdown',event=>{explanationPressedOutside=event.target===explanationDialog&&outsideExplanation(event);});
 explanationDialog.addEventListener('pointerup',event=>{const close=explanationPressedOutside&&event.target===explanationDialog&&outsideExplanation(event);explanationPressedOutside=false;if(close)closeExplanation();});
 explanationDialog.addEventListener('pointercancel',()=>{explanationPressedOutside=false;});
-explanationDialog.addEventListener('close',()=>{explanationTrigger?.focus();explanationTrigger=null;});
+explanationDialog.addEventListener('close',()=>{observeReadingDialog(explanationDialog,'explanation','closed');explanationTrigger?.focus();explanationTrigger=null;});
 window.addEventListener('resize',()=>{if(explanationDialog.open)setTimeout(alignExplanationEvidence,60);});
 window.ReadingInteractionBridge={current,questionIds:()=>LESSON.questionIds,scope:()=>`${identity?.bindingId}:${current()?.id||''}`,writable,
  revealAnnotation:annotation=>{const id=/^reading-(?:passage|questions)-(.+)$/.exec(annotation.rootKey||'')?.[1];if(LESSON.passages?.some(p=>p.id===id))changePassage(id);},

@@ -15,7 +15,7 @@ async function boot(kind,{mode='same',n=0}={}){
  const context={app:{innerHTML:''},location:{pathname:`/${kind}-practice/`,hash:'#login',search:''},
   history:{replaceState(){}},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
   ENTRY:'entry',SESSION:'session',entryToken:'',sessionToken:'',studentId:'',identity:null,entryInfo:null,STUDENTS:[],ready:false,
-  sharedEntry:false,personalEntry:true,entryValidated:false,docId:'fixture-document',entryQuery:new URLSearchParams('documentId=fixture-document'),requestedLesson:'9',CLASSES:[],selectedClassId:'',
+  sharedEntry:false,personalEntry:true,entryValidated:false,forceNamePicker:false,docId:'fixture-document',entryQuery:new URLSearchParams('documentId=fixture-document'),requestedLesson:'9',CLASSES:[],selectedClassId:'',
   URLSearchParams,Promise,escape:String,
   courseIdentity:{canRestoreSession:()=>true,pin(){}},autoLoginRemembered:async()=>false,notify(){},
   async request(path,body){
