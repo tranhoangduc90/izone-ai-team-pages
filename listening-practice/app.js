@@ -52,6 +52,53 @@ let PASSAGE={},HEADINGS=[],MCQ=[],BANK=[],FLOW=[],SUMMARY=[],STUDENTS=[],identit
 let db={students:{}},studentId='',route='',routeParams=new URLSearchParams(),lastTick=0,lastSave=0;
 let saveError=false,simulatedOffline=false,toastTimeout,modalAction=null,fontSize=17,lease=null,queue=Promise.resolve(),debounce,networkFailed=false,busy=false,ready=false;
 let activeMs=0,leaseBaseline=0,lastPulse=0,checkpointKey='',pendingOperation=null,pulsePending=false,activating=false;
+let journalBridge=null,journalReady=null,journalScope=null,journalEpoch=0,journalPending=0,audioJournalTrace='';
+function stopListeningJournal(){journalEpoch++;journalReady=null;journalScope=null;try{journalBridge?.stop();}catch{}journalBridge=null;}
+function configureListeningJournal(context){
+ const a=current();
+ if(location.pathname.endsWith('/teacher.html')||!identity||!a){if(journalScope)stopListeningJournal();return;}
+ if(!context){if(journalScope&&(journalScope.studentRef!==identity.studentRef||journalScope.classCode!==identity.classCode||journalScope.attemptId!==a.id))stopListeningJournal();return;}
+ if(context.studentRef!==identity.studentRef||context.classCode!==identity.classCode||context.attemptId!==a.id||context.attemptNo!==a.no){stopListeningJournal();return;}
+ if(journalScope?.bindingId!==context.bindingId)stopListeningJournal();
+ journalScope={bindingId:context.bindingId,studentRef:identity.studentRef,classCode:identity.classCode,attemptId:a.id,attemptNo:a.no};
+ const epoch=journalEpoch;
+ journalReady=import('../shared/listening-practice-journal.mjs?v=20261105-r1').then(({startListeningPracticeJournal})=>{
+  if(epoch!==journalEpoch)return null;
+  journalBridge??=startListeningPracticeJournal(API+'/journal-events');
+  return journalBridge.bind(context);
+ }).catch(()=>null);
+}
+function emitListeningJournal(method,fields,traceId,requestId){
+ if(!journalReady||journalPending>=64)return;
+ const ready=journalReady;journalPending++;
+ void ready.then(channel=>channel?.[method](fields,traceId,requestId)).catch(()=>{}).finally(()=>journalPending--);
+}
+function journalControl(path,body){
+ if(!journalScope||body?.attemptId!==journalScope.attemptId)return null;
+ const action=/^\/(begin|resume|reset|submit|pause)(?:\?|$)/.exec(path)?.[1];if(!action)return null;
+ const traceId=body.operationId||crypto.randomUUID(),requestId=crypto.randomUUID(),started=performance.now();
+ const fields={action,sequence:body.snapshot?.sequence??body.recovery?.snapshot?.sequence??current()?.sequence??0};
+ // Capture this channel before an ACK can change the current learner or attempt.
+ const ready=journalReady;
+ emitListeningJournal('control',{...fields,phase:'sent'},traceId,requestId);
+ let finished=false;
+ return(phase,httpStatus)=>{
+  if(finished)return;finished=true;
+  const data={...fields,phase,...(httpStatus?{httpStatus}:{}),durationMs:Math.min(600000,Math.max(0,Math.round(performance.now()-started)))};
+  void ready?.then(channel=>channel?.control(data,traceId,requestId)).catch(()=>{});
+ };
+}
+function observeListeningAudio(state,reason,extra={},attemptId=current()?.id){
+ if(!journalScope||attemptId!==journalScope.attemptId||attemptId!==current()?.id)return;
+ try{
+ const ms=value=>Math.max(0,Math.round(Number.isFinite(value)?value*1000:0));
+ const fields={state,...(reason?{reason}:{}),volumePermille:Math.min(1000,ms(audio.volume)),mediaMuted:audio.muted,
+  audioPositionMs:ms(audio.currentTime),bufferedUntilMs:audio.buffered.length?ms(audio.buffered.end(audio.buffered.length-1)):0,
+  readyState:audio.readyState,networkState:audio.networkState,...(audio.error?{mediaError:audio.error.code}:{}),...extra};
+ emitListeningJournal('audio',fields,audioJournalTrace||undefined);
+ }catch{}
+}
+const journalPauseReason=reason=>({hidden:'hidden','audio-buffering':'buffering','audio-error':'media_error',offline:'network',manual:'user',identity:'user',closed:'aborted'}[reason]||'unknown');
 const resultCache=new Map();
 const resultView=createPracticeResultView({root:app,api:API,context:resultTrackingContext,
  request:(path,options)=>request(path,undefined,false,false,options),
@@ -75,7 +122,7 @@ function acceptResultProgress(value){
  if(changedFirst)resultScreen({preserve:true});else{patchPracticeResultPart(app,'[data-practice-docs]',docsNotice(a));patchPracticeResultPart(app,'.identity-bar',identityBar());}
 }
 function revokeResultView(){
- resultView.close();window.ListeningReview?.reset();resultCache.clear();try{sessionStorage.removeItem(SESSION);}catch{}sessionToken='';studentId='';identity=null;app.replaceChildren();navigate('login');notify('Phiên xem kết quả đã đổi. Hãy xác nhận lại người học; bản nháp trên thiết bị vẫn được giữ.');
+ resultView.close();stopListeningJournal();window.ListeningReview?.reset();resultCache.clear();try{sessionStorage.removeItem(SESSION);}catch{}sessionToken='';studentId='';identity=null;app.replaceChildren();navigate('login');notify('Phiên xem kết quả đã đổi. Hãy xác nhận lại người học; bản nháp trên thiết bị vẫn được giữ.');
 }
 
 let teacherGoogleScript,teacherResultGeneration=0;
@@ -143,7 +190,7 @@ async function changeStudent(){
  pause('identity',false);await queue;
  if((await courseIdentity.forget()).status!=='empty'){notify('Chưa đổi được người học. Bài và nháp vẫn được giữ.');return;}
  try{sessionStorage.removeItem(SESSION);}catch{}
- window.ListeningReview?.reset();clearListeningAudioMemory();resultCache.clear();
+ stopListeningJournal();window.ListeningReview?.reset();clearListeningAudioMemory();resultCache.clear();
  sessionToken='';studentId='';identity=null;navigate('login');
 }
 function completionCopy(a){const first=record()?.firstCompleted;return a.no===1?'Hoàn thành ngay từ lần đầu.':first&&first!==a.no?`Kết quả lượt luyện lại số ${a.no} · Lần hoàn thành đầu tiên: lượt ${first}.`:`Hoàn thành sau ${a.no-1} lần reset · Kết quả của lần làm bài số ${a.no}.`;}
@@ -167,18 +214,22 @@ function apply(response,{preserve=false}={}){
  const a=current();if(preserve&&local&&a?.id===local.id&&['running','paused'].includes(a.status)&&local.sequence>=a.sequence){Object.assign(a,snapshotFrom(local));a.remainingMs=Math.min(local.remainingMs,a.remainingMs);a.owner=TAB;}
  if(response.definition){AUTHORED_DEF=response.definition;({mcq:MCQ,bank:BANK,flow:FLOW}=response.definition);PASSAGE={loaded:true};}
  if(response.lease){lease=response.lease;activeMs=0;leaseBaseline=a.usedMs;a.owner=TAB;pendingOperation=null;}
+ configureListeningJournal(response.listeningJournal);
  return a;
 }
 function snapshotFrom(a){return{phase:a.phase,audioPosition:a.audioPosition,answers:a.answers,flags:a.flags,notes:a.notes,annotations:a.annotations,scroll:a.scroll,activeQuestion:a.activeQuestion,tab:a.tab,mobilePane:a.mobilePane,notesOpen:a.notesOpen,highlighted:a.highlighted,sequence:a.sequence};}
 async function request(path,body,teacher=false,keepalive=false,{signal}={}){
+ const journalFinish=teacher?null:journalControl(path,body);
  if(!teacher)path=practiceHistoryPath(path);
  const token=teacher?legacyTeacherToken():sessionToken;
  let response;try{
   let options={method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{ }),...(personalEntry&&entryValidated&&!teacher?{'X-Izone-Document':docId,'X-Izone-Assignment':entryInfo.assignmentCode}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:signal?AbortSignal.any([signal,AbortSignal.timeout(5000)]):AbortSignal.timeout(5000),keepalive};
   if(teacher){const {teacherSessionRequestOptions}=await import('../shared/teacher-session-client.js?startup=20261026-v2');options=teacherSessionRequestOptions({...options,cache:'no-store'});}
   response=await fetch(`${API}${path}`,options);}
- catch(error){if(signal?.aborted)throw signal.reason||error;networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
- const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error.message),{status:response.status,code:value.error.code,httpStatus:response.status});networkFailed=false;return value;
+ catch(error){journalFinish?.('unknown');if(signal?.aborted)throw signal.reason||error;networkFailed=true;throw Object.assign(new Error('Chưa kết nối được máy chủ. Bài đã tạm dừng; bản nháp được giữ trên thiết bị.'),{code:'NETWORK'});}
+ let value;try{value=await response.json();}catch(error){journalFinish?.('unknown',response.status);throw error;}
+ journalFinish?.(response.ok?'confirmed':'rejected',response.status);
+ if(!response.ok)throw Object.assign(new Error(value.error.message),{status:response.status,code:value.error.code,httpStatus:response.status});networkFailed=false;return value;
 }
 function serial(fn){const next=queue.then(fn);queue=next.catch(()=>{});return next;}
 function setActivating(value){activating=value;document.querySelectorAll('[data-action="request-reset"],[data-action="request-submit"]').forEach(button=>button.disabled=value||!isOnline());}
@@ -201,7 +252,7 @@ async function sendPulse(){
 }
 function savedStatus(text){const el=document.querySelector('.autosave-status');if(el)el.textContent=text;}
 let recoveryNotice='';
-function stopLocal(reason,message=''){recoveryNotice=message;consumeTime();stopAudio();setActivating(false);rememberScroll();lastTick=0;clearTimeout(debounce);if(current()){current().status='paused';current().pauseReason=reason;persist(false);}closeModal();if(!saveError)navigate('resume');}
+function stopLocal(reason,message=''){recoveryNotice=message;consumeTime();stopAudio();observeListeningAudio('failed',reason==='NETWORK'?'network':'unknown');setActivating(false);rememberScroll();lastTick=0;clearTimeout(debounce);if(current()){current().status='paused';current().pauseReason=reason;persist(false);}closeModal();if(!saveError)navigate('resume');}
 function tick(){if(current()?.status!=='running'||route!=='exercise')return;if(document.hidden||!navigator.onLine){pause(document.hidden?'hidden':'offline');return;}consumeTime();updateProgress();if(performance.now()-lastSave>900)persist(false);if(current().remainingMs<=0){finish('timeout');return;}if(performance.now()-lastPulse>4500)sendPulse();}
 function clearPendingOperation(){
  pendingOperation=null;sessionStorage.removeItem(`listening-operation:${identity.bindingId}`);
@@ -244,6 +295,8 @@ function updateAudioToolbar() {
 
 async function startPlayback(id,proof){
  const generation=++playbackGeneration;audioStarted=false;seekingAudio=true;
+ if(journalScope)audioJournalTrace=crypto.randomUUID();
+ const audioLoadStarted=performance.now();observeListeningAudio('loading',undefined,{},id);
  const a=current();
  if(a.phase==='listening'){
   if(audioBlobAttempt!==id){
@@ -253,29 +306,32 @@ async function startPlayback(id,proof){
    const controller=audioFetchController=new AbortController(),timer=setTimeout(()=>controller.abort(),120000);
    let blob;
    try{blob=await fetchListeningAudio(`${API}/audio/${id}`,{headers:{Authorization:`Bearer ${sessionToken}`},signal:controller.signal});}
+   catch(error){const reason=error.name==='AbortError'?'aborted':[401,403].includes(error.httpStatus)?'access_denied':error.httpStatus?'http_error':error.message==='AUDIO_VERSION_MISMATCH'?'integrity':error.name==='TypeError'?'network':'unknown';observeListeningAudio('failed',reason,error.httpStatus?{httpStatus:error.httpStatus}:{},id);throw error;}
    finally{clearTimeout(timer);if(audioFetchController===controller)audioFetchController=null;}
    if(generation!==playbackGeneration||current()?.id!==id)return;
    if(audioBlob)URL.revokeObjectURL(audioBlob);audioBlob=URL.createObjectURL(blob);audioBlobAttempt=id;audio.src=audioBlob;
   }
   if(audio.readyState===0)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{cleanup();reject(new Error('Audio chưa sẵn sàng.'));},10000);const done=()=>{cleanup();resolve();};const error=()=>{cleanup();reject(new Error('Không giải mã được audio.'));};const cleanup=()=>{clearTimeout(timer);audio.removeEventListener('loadedmetadata',done);audio.removeEventListener('error',error);};audio.addEventListener('loadedmetadata',done);audio.addEventListener('error',error);audio.load();});
   if(generation!==playbackGeneration||current()?.id!==id||current()?.status!=='running')return;
+  observeListeningAudio('ready',undefined,{durationMs:Math.min(600000,Math.round(performance.now()-audioLoadStarted))},id);
   audio.currentTime=Math.min(a.audioPosition||0,AUDIO_DURATION);audio.playbackRate=1;seekingAudio=false;
  }
  const activated=await request('/activate',{attemptId:id,lease:proof});
  if(generation!==playbackGeneration||current()?.id!==id||lease?.id!==proof.id||current()?.status!=='running'||route!=='exercise')return;
  apply(activated,{preserve:true});
  if(a.phase==='listening'){
-  try{await audio.play();}catch(e){if(e.name==='NotAllowedError'){setActivating(false);const status=document.querySelector('#audio-status'),button=document.querySelector('#audio-play');if(status)status.textContent='Nhấn Phát audio để bắt đầu';if(button)button.hidden=false;return;}throw e;}
+  try{await audio.play();}catch(e){if(e.name==='NotAllowedError'){observeListeningAudio('autoplay_blocked',undefined,{},id);setActivating(false);const status=document.querySelector('#audio-status'),button=document.querySelector('#audio-play');if(status)status.textContent='Nhấn Phát audio để bắt đầu';if(button)button.hidden=false;return;}observeListeningAudio('failed','media_error',{},id);throw e;}
  }
  if(generation!==playbackGeneration||current()?.id!==id||current()?.status!=='running'||route!=='exercise'){audio.pause();return;}
  lastTick=performance.now();setActivating(false);document.querySelector('#audio-play').hidden=true;
  if(a.phase==='listening')document.querySelector('#audio-status').textContent='Đang nghe · tốc độ gốc';
 }
 function audioFinished(){const a=current();if(a?.status!=='running'||a.owner!==TAB||a.phase!=='listening')return;consumeTime();a.audioPosition=AUDIO_DURATION;activeMs=Math.max(activeMs,AUDIO_DURATION*1000-leaseBaseline);a.phase='review';a.reviewRemainingMs=REVIEW_TIME;lastTick=performance.now();persist(false);updateProgress();sendPulse();}
-audio.addEventListener('ended',audioFinished);
-audio.addEventListener('playing',()=>{audioStarted=true;});
-audio.addEventListener('waiting',()=>{if(audioStarted&&current()?.status==='running')pause('audio-buffering');});
-audio.addEventListener('error',()=>{if(current()?.status==='running')pause('audio-error');});
+audio.addEventListener('ended',()=>{observeListeningAudio('ended');audioFinished();});
+audio.addEventListener('playing',()=>{audioStarted=true;observeListeningAudio('playing');});
+audio.addEventListener('waiting',()=>{observeListeningAudio('waiting','buffering');if(audioStarted&&current()?.status==='running')pause('audio-buffering');});
+audio.addEventListener('error',()=>{observeListeningAudio('failed','media_error');if(current()?.status==='running')pause('audio-error');});
+audio.addEventListener('volumechange',()=>observeListeningAudio(audio.paused?'paused':'playing','user'));
 document.addEventListener('input',e=>{if(e.target.id==='audio-volume')audio.volume=Number(e.target.value);});
 
 function begin(){if(current()?.status==='submitted'){loadResult(current().no);return;}if(current())return resume();perform('begin',{owner:TAB});}
@@ -291,7 +347,7 @@ function resume(){
 }
 function pause(reason='manual',shouldRender=true){
  const a=current();if(!a||a.status!=='running'||a.owner!==TAB)return;
- consumeTime();stopAudio();setActivating(false);rememberScroll();persist(false);const input={attemptId:a.id,lease,snapshot:snapshot()};
+ consumeTime();stopAudio();observeListeningAudio('paused',journalPauseReason(reason));setActivating(false);rememberScroll();persist(false);const input={attemptId:a.id,lease,snapshot:snapshot()};
  a.status='paused';a.pauseReason=reason;lastTick=0;clearTimeout(debounce);closeModal();
  if(navigator.onLine)serial(async()=>{try{
   if(current()?.id!==input.attemptId||lease?.id!==input.lease.id)return;
@@ -692,7 +748,10 @@ function recoverLocal(){
 window.addEventListener('hashchange',()=>{resultRead++;clearResultRetry?.();clearResultRetry=null;resultView.close();window.ListeningReview?.reset();if(location.pathname.endsWith('/teacher.html')){route='teacher';teacherScreen();}else render();});
 window.addEventListener('offline',()=>pause('offline'));
 window.addEventListener('online',()=>{networkFailed=false;if(route==='resume')render();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){resultView.close();pause('hidden');}else resultView.sync();});
+document.addEventListener('visibilitychange',()=>{
+ if(journalScope)emitListeningJournal('visibility',{hidden:document.hidden,audioPositionMs:Math.max(0,Math.round((audio.currentTime||0)*1000)),sequence:current()?.sequence||0});
+ if(document.hidden){resultView.close();pause('hidden');}else resultView.sync();
+});
 window.addEventListener('pagehide',()=>{resultView.close();pause('closed',false);});
 window.addEventListener('beforeunload',()=>{resultView.close();pause('closed',false);});
 window.addEventListener('storage',event=>{

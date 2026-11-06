@@ -1,4 +1,6 @@
 import { focusSpeakingStart } from './journey-focus.js';
+import {startSpeakingHomeworkJournal} from '../shared/speaking-homework-journal.mjs?v=20261106-r1';
+const speakingJournal=startSpeakingHomeworkJournal();
 import {renderDocsProgress,docsProgressPending} from './docs-progress.js?v=20261105-docs-recovery1';
 import { analysisStatus, analysisPending } from './analysis-status.js?v=20261020-doctor-snapshot-v1';
 import { createSpeakingIdentity } from './speaking-identity.js?v=20261104-self-match1';
@@ -71,15 +73,16 @@ const state = {
 };
 
 async function post(path, body, timeout = 20_000) {
+  const capture=speakingJournal.begin(path,body);let logResponse,logData,logError;
   const changeButton = $('change-student');
   state.requestCount = (state.requestCount || 0) + 1;
   changeButton.disabled = true;
   try {
-  const response = await fetch(`${apiBase}${path}`, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
+  const response = logResponse = await fetch(`${apiBase}${path}`, {
+    method: 'POST', headers: { 'content-type': 'application/json',...capture?.headers },
     body: JSON.stringify(body), cache: 'no-store', signal: AbortSignal.timeout(timeout)
   });
-  const data = await response.json().catch(() => ({}));
+  const data = logData = await response.json().catch(() => ({}));
   if (!response.ok || data.ok !== true) {
     const error = new Error(data.message || 'Hệ thống chưa xử lý được yêu cầu. Hãy thử lại.');
     error.code = data.error || `HTTP_${response.status}`;
@@ -90,7 +93,8 @@ async function post(path, body, timeout = 20_000) {
     throw error;
   }
   return data;
-  } finally {
+  } catch(error) {logError=error;throw error;} finally {
+    capture?.finish({response:logResponse,data:logData,error:logError});
     state.requestCount -= 1;
     changeButton.disabled = state.requestCount > 0 || state.finishing;
   }
@@ -381,6 +385,7 @@ function render() {
   updateSubmitControl({ ready: allAccepted(), submitted: state.submitted, phase: state.submitPhase, error: state.submitError, onSubmit: () => autoSubmit.retry() });
 }
 function applySnapshot(data,doctor,{preserveDocs=false}={}) {
+  speakingJournal.observe({open:data});
   state.links = new Map((data.links || []).map(link => [link.part, link]));
   state.practice = new Map((data.practiceLinks || []).map(link => [Number(link.slot), link]));
   if (doctor) state.doctor = doctor;
@@ -553,16 +558,17 @@ $('extra-confirm').addEventListener('click', async () => {
 });
 // Chỉ tự tải khi máy chủ đang kiểm/phân tích; lỗi mạng tăng thời gian chờ.
 const poller = createPendingPoller({
+  fetcher:speakingJournal.fetch,
   refresh,
   getContext:()=>({base:apiBase,identity:identity(),unitId:workUnitId||null,documentId}),
   readEpoch:()=>state.refreshRevision||0,isBusy:()=>Boolean(state.requestCount)||state.finishing,
   onView:view=>applySnapshot(view.open,view.doctor,{preserveDocs:true}),
-  onDocs:value=>{state.docsProgress=value.docsProgress;renderDocsProgress(state.docsProgress);},
+  onDocs:value=>{speakingJournal.observe({unitId:value.unitId,docs:value.docsProgress});state.docsProgress=value.docsProgress;renderDocsProgress(state.docsProgress);},
   hasSession: () => Boolean(state.accessToken),
   isPending: () => docsProgressPending(state.docsProgress) || (state.submitted && analysisPending(state.doctorAnalysis))
     || [...state.links.values()].some(link => link.check_status === 'pending' || analysisPending(link.analysis_status))
     || [...state.practice.values()].some(link => link.status === 'pending' || analysisPending(link.analysis_status)),
-  onError: () => { $('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
+  onError: error => { speakingJournal.observe({unitId:workUnitId,error});$('draft-status').textContent = 'Tạm mất kết nối; các link đã gửi vẫn được giữ. Trang sẽ tự thử lại.'; },
 });
 
 // Nhận lớp/tên đã xác nhận và phiên máy chủ; giữ đích Docs trong suốt lượt làm.
@@ -586,6 +592,7 @@ const identityController = createSpeakingIdentity({
     if (state.accessToken !== context.session.accessToken) state.finishing = false;
     state.studentRef = context.studentRef;
     state.accessToken = context.session.accessToken;
+    try{speakingJournal.opened({apiBase,identity:identity(),unitId:workUnitId,independent:independent&&context.session.intakeMode!=='legacy'});}catch{}
     state.assignment = context.assignment;
     // Dùng ngưỡng của bài đang mở, không áp yêu cầu IC2304 cho lớp khác.
     if (parts.some(part => part.key === 'freestyle')) {
@@ -610,6 +617,7 @@ const identityController = createSpeakingIdentity({
   onReset() {
     // Chưa giữ được nháp thì giữ nguyên người và nội dung đang gõ; không chuyển sang màn chọn người.
     if (saveDraft() === false) return false;
+    speakingJournal.reset();
     autoSubmit.reset();
     poller.stop();
     state.studentRef = ''; state.accessToken = '';

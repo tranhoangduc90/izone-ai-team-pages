@@ -6,7 +6,7 @@ const less=(a,b)=>a!==null&&b!==null&&(a.length<b.length||(a.length===b.length&&
 
 // Giữ poller cũ cho backend/tab cũ và khi không hỗ trợ stream. Chỉ đăng ký khi
 // có việc chờ; tab ẩn vẫn giữ nhịp60giây native, idle không tạo polling/SSE mới.
-export function createSpeakingLivePoller({refresh,hasSession,isPending,onError,getContext,onView,onDocs,readEpoch=()=>0,isBusy=()=>false,
+export function createSpeakingLivePoller({refresh,hasSession,isPending,onError,getContext,onView,onDocs,readEpoch=()=>0,isBusy=()=>false,fetcher,
  trackerFactory=createSpeakingStudentTracker,nativePollerFactory=createPendingPoller,documentObject=document}){
  const native=nativePollerFactory({refresh,hasSession,isPending,onError});
  let tracker=null,key=null,supported=false,blocked=false,revoked=false,expected=false,progress=null,progressDocument=null,intent=0;
@@ -32,7 +32,7 @@ export function createSpeakingLivePoller({refresh,hasSession,isPending,onError,g
   native.stop();if(tracker)return;
   const binding=key;
   const current=()=>hasSession()&&key===binding&&contextKey(getContext())===binding;
-  tracker=trackerFactory({base:selected.base,identity:selected.identity,unitId:uuid.test(selected.unitId||'')?selected.unitId:null,readEpoch:()=>JSON.stringify([readEpoch(),intent]),isCurrent:current,canRead:()=>!isBusy(),
+  tracker=trackerFactory({base:selected.base,identity:selected.identity,fetcher,unitId:uuid.test(selected.unitId||'')?selected.unitId:null,readEpoch:()=>JSON.stringify([readEpoch(),intent]),isCurrent:current,canRead:()=>!isBusy(),
    onView:async view=>{if(!current()||isBusy())return false;return onView(view);},
    onDocs:value=>{if(current()&&record(value.docsProgress,value.documentId||null))onDocs(value);},
    onSynchronized:()=>{if(current())synchronize();},
