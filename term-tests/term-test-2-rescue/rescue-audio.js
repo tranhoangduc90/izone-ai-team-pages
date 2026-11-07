@@ -10,6 +10,7 @@
     document.getElementById('app').textContent = 'Link dự phòng này dành cho Term Test 2 lớp IC2213 hoặc IC2207. Hãy dùng đúng link giáo viên gửi.';
     return;
   }
+  window.K67_RESCUE_AUDIO_SOURCE = 'pages';
   const download = current.download;
   window.K67_PUBLIC_AUDIO = Object.freeze({
     ...current,

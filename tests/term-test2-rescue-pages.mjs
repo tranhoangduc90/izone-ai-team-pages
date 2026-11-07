@@ -18,18 +18,20 @@ for (const classCode of ['IC2213','IC2207']) test(`${classCode} giữ xác minh 
   assert.ok(manifest.cloudflare);
   assert.equal(f.calls[0].options,options);
   assert.equal(f.win.K67_PUBLIC_AUDIO.verify,f.verify);
+  assert.equal(f.win.K67_RESCUE_AUDIO_SOURCE,'pages');
   assert.equal(f.win.TERM_TEST_APP_CONFIG.native,true);
 });
 test('link sai lớp/bài dừng trước khởi động API',()=>{
   for(const [code,slug] of [['OTHER','term-test-2'],['IC2213','term-test-1']]){
-    const f=boot(code,slug);assert.equal(f.win.TERM_TEST_APP_CONFIG,undefined);assert.match(f.notice.textContent,/IC2213/);assert.equal(f.calls.length,0);
+    const f=boot(code,slug);assert.equal(f.win.TERM_TEST_APP_CONFIG,undefined);assert.equal(f.win.K67_RESCUE_AUDIO_SOURCE,undefined);
+    assert.match(f.notice.textContent,/IC2213/);assert.equal(f.calls.length,0);
   }
 });
 test('entry giữ engine/config/controller gốc; mọi script và CSS cùng origin có file thật',()=>{
   const entry=new URL('../term-tests/term-test-2-rescue/index.html',import.meta.url),html=readFileSync(entry,'utf8');
-  assert.match(html,/\.\.\/term-test-2-computer-based\/bootstrap\.js/);
+  assert.match(html,/\.\.\/term-test-2-computer-based\/bootstrap-terms-cbt\.js/);
   assert.match(html,/\.\.\/k67-shared\/config\.js/);
-  assert.ok(html.indexOf('rescue-audio.js')<html.indexOf('src="../term-test-2-computer-based/bootstrap.js'));
+  assert.ok(html.indexOf('rescue-audio.js')<html.indexOf('src="../term-test-2-computer-based/bootstrap-terms-cbt.js'));
   for(const [,src] of html.matchAll(/(?:src|href)="([^"#]+)"/g)){
     if(/^(?:data:|https:)/.test(src))continue;
     assert.ok(existsSync(fileURLToPath(new URL(src.split('?')[0],entry))),src);
