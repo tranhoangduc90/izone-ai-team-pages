@@ -634,6 +634,7 @@
         window.K67_AUDIO_OWNER=await window.K67_CREATE_AUDIO_OWNER({apiBase:appConfig.API_BASE_URL,slug:testConfig.slug,
           token:state.examSessionToken,generation:Number(state.generation)||0,recoverPreparationEpoch:expectedOwnerEpoch});
       }
+      if (resuming && await replayMiniListeningSeal()) return;
       try {
         const access = await requestAudioAccess();
         signal.throwIfAborted();
@@ -945,15 +946,16 @@
     return `${base}/${fileName}?rev=${revision}`;
   }
 
-  async function enterExam(started, audioElement = null) {
+  async function enterExam(started, audioElement = null, offlineSection = '') {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
+    const boundIdentity = sharedIdentity && started.examSessionToken === state.examSessionToken
+      && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
+      ? Object.freeze({ testSlug: testConfig.slug, classCode, studentRef: state.studentRef,
+        studentName: started.studentName, examSessionToken: state.examSessionToken, attemptToken: state.attemptToken || '' }) : null;
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
       restoredIdentity,
-      verifiedIdentity: sharedIdentity && started.examSessionToken === state.examSessionToken
-        && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
-        ? Object.freeze({ testSlug: testConfig.slug, classCode, studentRef: state.studentRef,
-          studentName: started.studentName, examSessionToken: state.examSessionToken,
-          attemptToken: state.attemptToken || '' }) : null,
+      verifiedIdentity: offlineSection ? null : boundIdentity,
+      offlineSectionIdentity: offlineSection && boundIdentity ? { ...boundIdentity, section: offlineSection } : null,
       sessionState: sharedIdentity ? structuredClone(state) : null,
       examSessionToken: state.examSessionToken,
       listeningDeadlineAt: started.listeningDeadlineAt,
@@ -961,15 +963,53 @@
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted)
+      skipListeningAudio: Boolean(offlineSection) || (started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted))
     });
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':''));
+    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1&miniSync=20261107-v1':''));
     await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
+  }
+
+  function miniCbtScope() {
+    return { classCode, studentRef: state.studentRef, examSessionToken: state.examSessionToken,
+      attemptToken: state.attemptToken, generation: Number(state.generation) || 0 };
+  }
+
+  async function replayMiniListeningSeal() {
+    if (testConfig.slug !== 'mini-test-lesson-5' || navigator.onLine === false || !state.studentRef || !state.examSessionToken) return false;
+    const scope = miniCbtScope();
+    const current = () => scope.examSessionToken === state.examSessionToken && scope.studentRef === state.studentRef && scope.classCode === classCode;
+    const { openCbtResilience } = await import('../mini-test-lesson-5-computer-based/resilience.mjs?v=20261107-cbt-sync-v1');
+    const runtime = await openCbtResilience({ scope, current, request: apiRequest, clock: Date.now, notify: () => {} }).catch(() => null);
+    if (!runtime) return false;
+    let receipt;
+    try {
+      receipt = await runtime.syncPending('listening').catch(() => null);
+      if (!receipt || !current()) return false;
+      saveState({ attemptToken: receipt.attemptToken, listeningSubmitted: true, completed: receipt.completed, nextSection: receipt.nextSection });
+      await runtime.applied('listening');
+    } finally { runtime.close(); }
+    await resumeAfterListening();
+    return true;
+  }
+
+  async function resumeMiniOffline(transportUnavailable = false) {
+    if (testConfig.slug !== 'mini-test-lesson-5' || (!transportUnavailable && navigator.onLine !== false) || !sharedIdentity
+        || !isUuid(state.studentRef) || !isUuid(state.examSessionToken) || state.completed) return false;
+    const section = state.readingDeadlineAt && !state.readingSubmitted ? 'reading' : 'listening';
+    if (state[section + 'Submitted']) return false;
+    const { restoreOfflineSection } = await import('../mini-test-lesson-5-computer-based/resilience.mjs?v=20261107-cbt-sync-v1');
+    const saved = await restoreOfflineSection(miniCbtScope(), section);
+    if (!saved) return false;
+    const { entry, content } = saved;
+    saveState({ examMode: entry.examMode, nextSection: section, listeningSubmitted: entry.listeningSubmitted, readingSubmitted: entry.readingSubmitted,
+      [section + 'StartedAt']: entry[section + 'StartedAt'], [section + 'DeadlineAt']: entry[section + 'DeadlineAt'] });
+    await enterExam({ ...entry, content, nextSection: section }, null, section);
+    return true;
   }
 
   async function resumeAfterListening() {
@@ -1392,6 +1432,7 @@
       showNotice('Không thể mở lượt thi bù bằng liên kết này.', true);
       return;
     }
+    try { if (await resumeMiniOffline()) return; } catch { /* Standard lobby retains the local draft. */ }
     let restoreError=null;
     // Có mã lượt: xác minh trực tiếp, không dựng lại danh sách cả lớp để mở lại bài.
     // Lỗi giữ nguyên token/nháp và không tự tạo lượt mới hoặc bắt đầu đồng hồ.
@@ -1402,6 +1443,9 @@
       elements.bootstrapDownloadStatus.textContent='Đang tiếp tục bài đã lưu...';
       try {await resumeAfterListening();return;}
       catch(error) {
+        if (!error.status || error.status >= 500) {
+          try { if (await resumeMiniOffline(true)) return; } catch { /* Keep the native error and local draft. */ }
+        }
         restoreError=error;
         identity.hidden=false;
         if(![400,404,409].includes(error.status)) {

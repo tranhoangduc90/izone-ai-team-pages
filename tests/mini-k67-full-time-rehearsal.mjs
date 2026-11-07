@@ -12,6 +12,8 @@ assert.ok(['lis_first', 'read_first'].includes(mode));
 const backend = process.argv[3];
 assert.ok(backend, 'Supply the isolated K67 backend package.');
 const checkNativeEof = process.env.K67_REHEARSAL_NATIVE_EOF === '1';
+const checkOffline = process.env.K67_REHEARSAL_OFFLINE_SYNC === '1';
+assert.ok(!checkOffline || checkNativeEof, 'Offline CBT rehearsal requires the native EOF gate.');
 const pages = fileURLToPath(new URL('../', import.meta.url));
 const reservation = createServer().listen(0, '127.0.0.1');
 await once(reservation, 'listening');
@@ -20,12 +22,13 @@ await new Promise(resolve => reservation.close(resolve));
 const base = `http://127.0.0.1:${port}`;
 const fixture = spawn(process.execPath, ['tools/preview-exam-order.mjs', pages], { cwd: backend, windowsHide: true,
   env: { ...process.env, K67_ORDER_NATIVE_URL: '', K67_PREVIEW_PORT: String(port), K67_PREVIEW_REAL_MINI_AUDIO: 'true',
-    K67_PREVIEW_AUDIO_PROTECTION: 'true', K67_PREVIEW_AUDIO_OWNER: 'true', K67_PREVIEW_MINI_EOF: String(checkNativeEof) }, stdio: ['ignore','pipe','pipe'] });
+    K67_PREVIEW_AUDIO_PROTECTION: 'true', K67_PREVIEW_AUDIO_OWNER: 'true', K67_PREVIEW_MINI_EOF: String(checkNativeEof),
+    K67_PREVIEW_MINI_CBT_OFFLINE: checkOffline ? 'on' : 'off' }, stdio: ['ignore','pipe','pipe'] });
 let browser;
 fixture.stdout.pipe(process.stderr);
 fixture.stderr.pipe(process.stderr);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const log = (phase, details = {}) => console.log(JSON.stringify({ at: new Date().toISOString(), mode, phase, checkNativeEof, ...details }));
+const log = (phase, details = {}) => console.log(JSON.stringify({ at: new Date().toISOString(), mode, phase, checkNativeEof, checkOffline, ...details }));
 const endpoint = '/api/term-tests/mini-test-lesson-5';
 
 try {
@@ -65,6 +68,9 @@ try {
       if (path === endpoint + (skill === 'reading' ? '/reading/start' : '/session/start') ||
           (skill === 'listening' && path === endpoint + '/listening/start')) clock.start ??= performance.now();
       if (path === endpoint + '/' + skill) clock.submit ??= performance.now();
+      if (checkOffline && path === endpoint + '/cbt-offline/seal' && response.request().postDataJSON()?.section === skill) {
+        clock.submit ??= performance.now();
+      }
     };
     page.on('response', network);
     try {
@@ -91,6 +97,7 @@ try {
       log('section_started', { skill });
       const stop = performance.now() + 22 * 60_000;
       let heartbeat = 0;
+      let disconnected = false, sawLocalSeal = false;
       while (!clock.submit && performance.now() < stop) {
         const state = skill === 'listening' ? await page.evaluate(() => ({ ...window.fullRehearsal,
           position: window.TERM_TEST_BOOTSTRAP.officialAudioElement.currentTime,
@@ -101,10 +108,22 @@ try {
           assert.ok(Math.abs(state.duration - 972) < 2);
           log('native_eof', { duration: state.duration });
         }
+        if (checkOffline && !disconnected && (skill === 'reading' ? performance.now() - clock.start >= 1_150_000 : state.reviewElapsedMs >= 60_000)) {
+          await context.setOffline(true);
+          disconnected = true;
+          log('network_disconnected', { skill });
+        }
+        if (checkOffline && disconnected && !sawLocalSeal && await page.getByText('Đã lưu trên máy · Chờ đồng bộ', { exact: true }).first().isVisible()) {
+          assert.equal(clock.submit, null);
+          sawLocalSeal = true;
+          log('offline_seal_confirmed_locally', { skill });
+          await context.setOffline(false);
+        }
         if (performance.now() >= heartbeat) { log('heartbeat', { skill, seconds: Math.round((performance.now() - clock.start) / 1000), ...state }); heartbeat = performance.now() + 15_000; }
         await sleep(500);
       }
       assert.ok(clock.submit, 'Native auto-submission did not commit');
+      if (checkOffline) assert.ok(sawLocalSeal, 'The section bypassed the offline receipt flow.');
       if (skill === 'reading') assert.ok(clock.submit - clock.start >= 1198_000, 'Reading submitted before 20 minutes');
       else {
         const elapsedAfterEnd = await page.evaluate(() => window.fullRehearsal.eof === null ? -1 : performance.now() - window.fullRehearsal.eof);
@@ -117,7 +136,7 @@ try {
 
   for (const skill of mode === 'lis_first' ? ['listening','reading'] : ['reading','listening']) await round(skill);
   await page.locator('#resultReadyView:visible, #resultView:visible').first().waitFor({ state: 'visible', timeout: 30_000 });
-  log('passed', { scope: 'native Mini K67 CBT timing with real audio and isolated data' });
+  log('passed', { scope: checkOffline ? 'Mini K67 real timing with offline seals and isolated data' : 'native Mini K67 CBT timing with real audio and isolated data' });
 } finally {
   await browser?.close();
   if (fixture.exitCode === null) fixture.kill();

@@ -116,6 +116,7 @@ export const ASSETS=[
   "../k67-shared/answer-explanations.js",
   "../k67-shared/config.js",
   "../k67-shared/review-audio.js",
+  "../mini-test-lesson-5-computer-based/resilience.mjs",
   "../mini-test-lesson-5/offline.mjs",
   "../shared/app.js",
   "../shared/attempt-review.js",
@@ -286,8 +287,9 @@ export const ASSET_HASHES={
   "../k67-shared/answer-explanations.js": "9760a6122a1f0f0205c4808f7f8db712fc0e5883bae601d44608ec1dfae7a3e6",
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
+  "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "1cf42cff36f54bb0ae4cfe8da2de42a9dd79e2b5cec3b2641b9fc4e9441c84f7",
-  "../shared/app.js": "95cd7248a128d47d41f608c88cd4a0cd587d085ccc0f0c9dd5f65081f487417d",
+  "../shared/app.js": "3304023dc5d5d27a5d98bb716a7b3eccbe66fa0d0ab1fb4ffbd8e09a21a486e8",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
   "../shared/cbt-audio-start-label.js": "2f19d0a786e5e2226f40f329927ae8ad5bec41cd20b5e48f2ebe63452f378e29",
@@ -339,4 +341,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="67e14946a59d3bd7f860474922fa8ff1bdc502b65acecfba9a7a6dba911c3ad2";
+export const ASSET_BUILD_ID="d78a87280c889752c84deba24c552c97a7e6584064a8189cc214b4444a29faed";

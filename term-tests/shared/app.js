@@ -12,6 +12,7 @@
   let miniGeneration = 0;
   let miniEpoch = 0;
   let miniOffline = null;
+  let miniCbt = null;
   const miniPrefix = '/api/term-tests/mini-test-lesson-5/answer-sheet';
   const requestedDemo = query.get('demo') || '';
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
@@ -64,7 +65,10 @@
   let storageKey = paperIdentity ? paperPointerKey : `izone-test:${testConfig.slug}:${classCode}${storageScope}`;
   const persistedSession = paperIdentity ? paperIdentity.current().state : miniAnswerSheet ? {} : readSession();
   const incoming = window.TERM_TEST_BOOTSTRAP?.sessionState;
-  const incomingIdentity = window.TERM_TEST_BOOTSTRAP?.verifiedIdentity || window.TERM_TEST_BOOTSTRAP?.restoredIdentity;
+  const offlineIdentity = window.TERM_TEST_BOOTSTRAP?.offlineSectionIdentity;
+  const offlineReadingIdentity = offlineIdentity?.section === 'reading';
+  const offlineListeningIdentity = offlineIdentity?.section === 'listening';
+  const incomingIdentity = window.TERM_TEST_BOOTSTRAP?.verifiedIdentity || offlineIdentity || window.TERM_TEST_BOOTSTRAP?.restoredIdentity;
   const canUseIncoming = incoming && incomingIdentity?.testSlug === testConfig.slug && incomingIdentity.classCode === classCode
     && incomingIdentity.studentRef === incoming.studentRef
     && ((incomingIdentity.attemptToken && incomingIdentity.attemptToken === incoming.attemptToken)
@@ -183,6 +187,7 @@
     if (miniAnswerSheet && !miniConfirmed) return true;
     if (!storageKey) return !state.studentRef;
     if (activeMiniOffline()) miniOffline.saveSnapshot(miniOfflineSnapshot());
+    if (miniCbt) void miniCbt.saveDrafts(state.drafts, state.draftRevisions).catch(() => {});
     const serialized = JSON.stringify({
       generation: miniGeneration,
       studentRef: state.studentRef,
@@ -953,7 +958,7 @@
     return miniOffline.seal(section, data, data.draftRevision, 'manual');
   }
 
-  async function apiRequest(path, options = {}) {
+  async function apiRequest(path, options = {}, submission = null) {
     if (options.method === 'POST' && activeMiniOffline()) {
       const local = await localMiniRequest(path, options);
       if (local) {
@@ -972,6 +977,11 @@
       return data;
     }
     const section = match[2], testSlug = match[1];
+    if (miniCbt && testSlug === 'mini-test-lesson-5' && submission && !state.pendingSubmissions?.[section]) {
+      const body = JSON.parse(options.body || '{}');
+      const local = await miniCbt.submit(section, body, submission.automatic, state[section + 'DeadlineAt']);
+      if (local) { window.K67_EXAM_ORDER?.apply(state, local); return local; }
+    }
     const getOwner = () => JSON.stringify([storageKey, state.studentRef, state.examSessionToken, state.attemptToken, miniGeneration]);
     const owner = getOwner();
     const trace = (id, phase) => id && getOwner() === owner ? { operationId: id, phase } : undefined;
@@ -1223,6 +1233,7 @@
   }
 
   function queueSectionDraft(skill) {
+    if (miniCbt?.pending(skill)) return Promise.resolve(null);
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return Promise.resolve(null);
     if (demoMode) return Promise.resolve(null);
     const queuedOwner = storageKey;
@@ -1237,6 +1248,7 @@
     const revision = Number(state.draftRevisions[skill]) || 0;
     const answers = { ...(state.drafts[skill] || {}) };
     const operation = flow.promise.catch(() => undefined).then(async () => {
+      if (miniCbt?.pending(skill)) return null;
       if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return null;
       // Nháp xếp hàng phải giữ đúng người; đổi người không được gửi nháp này bằng token mới.
       if (miniAnswerSheet && (!miniConfirmed || queuedOwner !== storageKey || queuedEpoch !== miniEpoch)) return null;
@@ -1285,6 +1297,7 @@
   }
 
   function scheduleSectionDraft(skill, delay = null) {
+    if (miniCbt?.pending(skill)) return;
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return;
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
     if (window.K67_EXAM_ORDER && state[skill + 'Submitted']) return;
@@ -1319,6 +1332,9 @@
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return false;
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.canAutoSubmit?.() === false) return false;
     if (miniAnswerSheet) return false;
+    // The reopened page has no proof of when edits made during the outage were typed.
+    // Preserve them, but never give a newly created seal an earlier timestamp.
+    if (offlineIdentity?.section === skill) return false;
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const deadline = Date.parse(deadlineValue || '');
     return Number.isFinite(deadline) && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + (Number(state.serverTimeOffsetMs) || 0))) >= deadline;
@@ -1396,6 +1412,13 @@
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const token = skill === 'listening' ? state.examSessionToken : state.attemptToken;
     if (!form || !submitButton || !token || !Number.isFinite(Date.parse(deadlineValue || ''))) return;
+    if (miniCbt && !offlineIdentity) void miniCbt.grant(skill, state.attemptToken).then(grant => {
+      if (!grant) return;
+      return miniCbt.prepareSection(skill, { studentRef: state.studentRef, studentName: state.studentName,
+        examSessionToken: state.examSessionToken, attemptToken: state.attemptToken, generation: grant.generation,
+        examMode: state.examMode, listeningSubmitted: state.listeningSubmitted, readingSubmitted: state.readingSubmitted,
+        [skill + 'StartedAt']: grant.startedAt, [skill + 'DeadlineAt']: grant.deadlineAt }, window.TERM_TEST_CONTENT);
+    }).catch(() => {});
     if (guard.interval) return;
     sendClientEvent('deadline_guard_started', skill, {
       revision: Number(state.draftRevisions[skill]) || 0,
@@ -1403,6 +1426,7 @@
     });
     const tick = () => {
       if (form.hidden || form.dataset[`${skill}Submitting`] === 'true') return;
+      if (miniCbt?.pending(skill)) return;
       if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return;
       if ((skill === 'reading' && (state.readingSubmitted || state.completed)) || (skill === 'listening' && state.listeningSubmitted)) {
         stopSectionDeadlineGuard(skill);
@@ -1945,14 +1969,14 @@
       return fetch(`${appConfig.API_BASE_URL}${path}`, window.K67_EXAM_ORDER && path !== '/api/term-tests/writing'
         ? window.K67_EXAM_ORDER.request(options) : options).catch(() => null);
     };
-    if (state.examSessionToken && !state.listeningSubmitted && state.draftRevisions.listening > state.draftAckRevisions.listening) {
+    if (state.examSessionToken && !state.listeningSubmitted && !miniCbt?.pending('listening') && state.draftRevisions.listening > state.draftAckRevisions.listening) {
       post(`/api/term-tests/${testConfig.slug}/listening/draft`, {
         examSessionToken: state.examSessionToken,
         revision: Number(state.draftRevisions.listening) || 0,
         answers: state.drafts.listening || {}
       });
     }
-    if (state.attemptToken && state.draftRevisions.reading > state.draftAckRevisions.reading && !state.completed && !state.readingSubmitted) {
+    if (state.attemptToken && !miniCbt?.pending('reading') && state.draftRevisions.reading > state.draftAckRevisions.reading && !state.completed && !state.readingSubmitted) {
       post(`/api/term-tests/${testConfig.slug}/reading/draft`, {
         attemptToken: state.attemptToken,
         revision: Number(state.draftRevisions.reading) || 0,
@@ -3274,6 +3298,7 @@
 
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
+    if (offlineListeningIdentity) return;
     if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
@@ -3283,13 +3308,14 @@
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.listeningView.dataset.listeningTimeExpired === 'true';
     if (automatic && window.K67_ACTIVE_LISTENING?.canAutoSubmit?.() === false) return;
-    let answers = state.pendingSubmissions?.listening?.answers || state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
+    const pendingCbt = miniCbt?.pending('listening');
+    let answers = pendingCbt?.answers || state.pendingSubmissions?.listening?.answers || state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
     if (automatic && !state.frozenAnswers.listening) {
       state.frozenAnswers.listening = Object.freeze({ ...answers });
       answers = state.frozenAnswers.listening;
     }
     const answered = Object.values(answers).filter(Boolean).length;
-    if (!automatic && !confirmIncomplete(answered, 'Listening')) return;
+    if (!automatic && !pendingCbt && !confirmIncomplete(answered, 'Listening')) return;
     if (!state.clientSubmissionId || state.clientSubmissionStudentRef !== state.studentRef) {
       state.clientSubmissionId = crypto.randomUUID();
       state.clientSubmissionStudentRef = state.studentRef;
@@ -3318,7 +3344,7 @@
           draftRevision: Number(state.draftRevisions.listening) || 0,
           answers
         })
-      });
+      }, { automatic });
       state.attemptToken = response.attemptToken;
       if (miniAnswerSheet) {
         storageKey = `izone-mini-answer:v2:${testConfig.slug}:${classCode}:${state.studentRef}:${state.attemptToken}`;
@@ -3338,6 +3364,7 @@
       stopSectionDeadlineGuard('listening');
       saveSession();
       submitted = true;
+      if (response.cbtOfflineReceipt) await miniCbt.applied('listening');
       elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
       if (response.localOnly) {
         showNotice('Listening đã lưu trên máy. Hệ thống sẽ đồng bộ khi có mạng.', 'success');
@@ -3369,7 +3396,7 @@
         answeredCount: countAnswered(answers),
         status: Number(error.status) || 0
       });
-      showNotice(automatic
+      showNotice(error.code === 'CBT_OFFLINE_PENDING' ? error.message : automatic
         ? `Hết giờ nhưng chưa thể nộp Listening: ${error.message}. Bài đã khóa và hệ thống sẽ tự thử lại.`
         : `Không thể lưu Listening: ${error.message}`, 'error');
     } finally {
@@ -3383,13 +3410,13 @@
         elements.listeningView.dataset.listeningTimeExpired = 'true';
         state.frozenAnswers.listening ||= { ...answers };
         saveSession();
-      } else if (!automatic && !submitted) {
+      } else if (!automatic && !submitted && !miniCbt?.pending('listening')) {
         setAnswerControlsLocked('listening', false);
         scheduleSectionDraft('listening', 0);
       }
       if (!submitted && isSectionExpired('listening')) startSectionDeadlineGuard('listening');
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
-      if (state.pendingSubmissions?.listening) setAnswerControlsLocked('listening', true);
+      if (state.pendingSubmissions?.listening || miniCbt?.pending('listening')) setAnswerControlsLocked('listening', true);
       if (!submitted && window.K67_ACTIVE_LISTENING?.isHeld()) elements.submitListening.disabled = true;
     }
   });
@@ -3428,13 +3455,14 @@
     if (state.readingSubmitted || elements.readingView.dataset.readingSubmitting === 'true') return;
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.readingView.dataset.readingTimeExpired === 'true';
-    let answers = state.pendingSubmissions?.reading?.answers || state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
+    const pendingCbt = miniCbt?.pending('reading');
+    let answers = pendingCbt?.answers || state.pendingSubmissions?.reading?.answers || state.frozenAnswers.reading || collectAnswers(elements.readingQuestions);
     if (automatic && !state.frozenAnswers.reading) {
       state.frozenAnswers.reading = Object.freeze({ ...answers });
       answers = state.frozenAnswers.reading;
     }
     const answered = Object.values(answers).filter(Boolean).length;
-    if (!automatic && !confirmIncomplete(answered, 'Reading')) return;
+    if (!automatic && !pendingCbt && !confirmIncomplete(answered, 'Reading')) return;
     elements.readingView.dataset.readingSubmitting = 'true';
     state.drafts.reading = answers;
     saveSession();
@@ -3458,7 +3486,7 @@
           draftRevision: Number(state.draftRevisions.reading) || 0,
           answers
         })
-      });
+      }, { automatic });
       state.completed = response.examMode ? Boolean(response.completed) : true;
       state.readingSubmitted = true;
       state.frozenAnswers.reading = null;
@@ -3470,6 +3498,7 @@
       stopSectionDeadlineGuard('reading');
       saveSession();
       submitted = true;
+      if (response.cbtOfflineReceipt) await miniCbt.applied('reading');
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
       if (response.examMode === 'read_first' && !response.completed) {
         showNotice(response.localOnly ? 'Reading đã lưu trên máy. Tiếp tục Listening khi bạn sẵn sàng.'
@@ -3492,7 +3521,7 @@
         answeredCount: countAnswered(answers),
         status: Number(error.status) || 0
       });
-      showNotice(automatic
+      showNotice(error.code === 'CBT_OFFLINE_PENDING' ? error.message : automatic
         ? `Hết giờ nhưng chưa thể nộp Reading: ${error.message}. Hệ thống sẽ tự thử lại; không làm mới trang.`
         : `Không thể lưu Reading: ${error.message}`, 'error');
     } finally {
@@ -3501,13 +3530,13 @@
         elements.readingView.dataset.readingTimeExpired = 'true';
         state.frozenAnswers.reading ||= { ...answers };
         saveSession();
-      } else if (!automatic && !submitted) {
+      } else if (!automatic && !submitted && !miniCbt?.pending('reading')) {
         setAnswerControlsLocked('reading', false);
         scheduleSectionDraft('reading', 0);
       }
       if (!submitted && isSectionExpired('reading')) startSectionDeadlineGuard('reading');
       setBusy(elements.submitReading, false, 'Đang lưu và chấm...', 'Nộp bài Reading');
-      if (state.pendingSubmissions?.reading) setAnswerControlsLocked('reading', true);
+      if (state.pendingSubmissions?.reading || miniCbt?.pending('reading')) setAnswerControlsLocked('reading', true);
     }
   });
 
@@ -3997,6 +4026,69 @@
     }catch(error){showNotice(`Chưa tải được lớp: ${error.message}. Tải lại trang để thử lại.`,'error');}
   }
 
+  async function initializeCbtResilience(verified) {
+    if (testConfig.slug !== 'mini-test-lesson-5' || miniAnswerSheet || !verified?.examSessionToken
+        || verified.studentRef !== state.studentRef || verified.examSessionToken !== state.examSessionToken) return;
+    const scope = { classCode, studentRef: state.studentRef, examSessionToken: state.examSessionToken,
+      generation: Number(incoming?.generation) || 0 };
+    const current = () => scope.classCode === classCode && scope.studentRef === state.studentRef && scope.examSessionToken === state.examSessionToken;
+    const host = document.querySelector('.topbar') || root;
+    const note = document.createElement('span');
+    note.setAttribute('role', 'status');
+    const { openCbtResilience } = await import('../mini-test-lesson-5-computer-based/resilience.mjs?v=20261107-cbt-sync-v1');
+    miniCbt = await openCbtResilience({ scope, current, request: rawApiRequest,
+      clock: () => (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + (Number(state.serverTimeOffsetMs) || 0))),
+      onQueued: section => { if (section === 'listening') window.K67_ACTIVE_LISTENING?.stop(); },
+      notify: text => { if (current() && note.textContent !== text) note.textContent = text; } });
+    if (!miniCbt) return;
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'button button-secondary'; button.textContent = 'Tải bài làm về máy';
+    button.addEventListener('click', () => { if (current()) miniCbt.download(state.studentName, state.drafts); });
+    host.append(note, button);
+    if (offlineListeningIdentity) {
+      const reconnect = document.createElement('button');
+      reconnect.type = 'button'; reconnect.className = 'button button-secondary';
+      reconnect.textContent = 'Kết nối lại Listening'; reconnect.disabled = navigator.onLine === false;
+      window.addEventListener('online', () => { reconnect.disabled = false; });
+      window.addEventListener('offline', () => { reconnect.disabled = true; });
+      reconnect.addEventListener('click', () => { if (current() && navigator.onLine !== false) { allowExamNavigation = true; location.reload(); } });
+      host.append(reconnect);
+    }
+    const saved = miniCbt.restored();
+    for (const section of ['listening', 'reading']) {
+      if (miniCbt.pending(section)) {
+        note.textContent = 'Đã lưu trên máy · Chờ đồng bộ';
+        if (!state[section + 'Submitted']) {
+          const pending = miniCbt.pending(section);
+          applySectionDraft(section, pending.answers, pending.revision, true);
+          setAnswerControlsLocked(section, true);
+        }
+      } else if ((Number(saved.revisions[section]) || 0) > (Number(state.draftRevisions[section]) || 0)) {
+        applySectionDraft(section, saved.drafts[section], saved.revisions[section]);
+      }
+    }
+    function retry() {
+      if (!current() || navigator.onLine === false) return;
+      for (const section of ['listening', 'reading']) {
+        if (section === 'listening' && offlineListeningIdentity) continue;
+        if (!miniCbt.shouldRetry(section)) continue;
+        const form = elements[section + 'View'];
+        if (!form.hidden && form.dataset[section + 'Submitting'] !== 'true' && !state[section + 'Submitted']) {
+          form.requestSubmit(elements[section === 'listening' ? 'submitListening' : 'submitReading']);
+        }
+      }
+    }
+    for (const section of ['listening','reading']) if (state[section + 'Submitted'] && miniCbt.pending(section)) {
+      void miniCbt.reconcile(section).then(confirmed => { if (confirmed && current()) return miniCbt.applied(section); }).catch(() => {});
+    }
+    const timer = setInterval(retry, 10_000);
+    window.addEventListener('online', retry);
+    window.addEventListener('pagehide', event => {
+      if (event.persisted) return;
+      clearInterval(timer); window.removeEventListener('online', retry); miniCbt.close();
+    }, { once: true });
+  }
+
   async function initialize() {
     elements.listeningTitle.textContent = testConfig.listening.title;
     elements.readingTitle.textContent = testConfig.reading.title;
@@ -4071,7 +4163,7 @@
         &&restored?.testSlug===testConfig.slug&&restored.classCode===classCode
         &&restored.studentRef===state.studentRef&&restored.attemptToken===state.attemptToken
         &&Boolean(state.attemptToken);
-      const verified = window.TERM_TEST_BOOTSTRAP?.verifiedIdentity;
+      const verified = window.TERM_TEST_BOOTSTRAP?.verifiedIdentity || offlineIdentity;
       const canReuseVerified = verified?.testSlug === testConfig.slug && verified.classCode === classCode
         && verified.studentRef === state.studentRef && verified.examSessionToken === state.examSessionToken
         && Boolean(state.examSessionToken) && Boolean(verified.studentName);
@@ -4089,7 +4181,7 @@
       if (!state.roster.length && !testConfig.allowTemporaryStudents) {
         throw new Error('Lớp chưa có học viên trong hệ thống matching.');
       }
-      if (state.attemptToken) {
+      if (state.attemptToken && !offlineIdentity) {
         try {
           const resumed = await restoreAttemptFromServer();
           if (writingConfig && state.completed && state.writingSubmitted && !resumed?.writing?.submitted) {
@@ -4099,6 +4191,7 @@
           showNotice(`Chưa đọc được bản lưu trên hệ thống: ${error.message}. Hệ thống đang dùng bản giữ trên máy.`, 'error');
         }
       }
+      if (canReuseVerified) await initializeCbtResilience(verified).catch(() => {});
       elements.readingStudentName.textContent = state.studentName;
       if (state.completed && state.attemptToken) {
         if (writingConfig && !state.writingSubmitted) {
@@ -4120,7 +4213,8 @@
         if (state.readingDeadlineAt) {
           setStage('reading');
           startSectionDeadlineGuard('reading');
-          hideNotice();
+          if (offlineReadingIdentity) showNotice('Đã mở bản trên thiết bị. Nháp vẫn được lưu. Giờ thi sẽ được đối chiếu khi có mạng.');
+          else hideNotice();
         } else {
           setStage('listening-saved');
           showNotice(listeningOnly
@@ -4131,6 +4225,10 @@
         setStage('listening');
         startSectionDeadlineGuard('listening');
         hideNotice();
+      }
+      if (offlineListeningIdentity) {
+        elements.submitListening.disabled = true;
+        showNotice('Đã mở bản nháp Listening trên máy. Bấm “Kết nối lại Listening” khi có mạng để xác nhận mốc nghe hoặc đồng bộ bài đã khóa.');
       }
     } catch (error) {
       elements.loadingView.hidden = true;
