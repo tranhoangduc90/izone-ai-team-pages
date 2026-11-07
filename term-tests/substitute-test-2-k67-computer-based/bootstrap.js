@@ -30,7 +30,7 @@
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
       .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1'))
-      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1'))
+      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -682,7 +682,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1');
-    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1');
+    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
@@ -778,11 +778,12 @@
         if(timing)saveState({...timing,serverTimeOffsetMs:(window.IZONE_EXAM_CLOCK?.offset(timing.serverNow) ?? (Date.parse(timing.serverNow)-Date.now()))});
         // Bắt mốc trước play: audio có thể kết thúc trong lúc app/enhance đang tải khi resume.
         officialAudio.addEventListener('ended',()=>{
-          if(!state.examSessionId||state.audioEndedAt||window.SUBSTITUTE_STATE.blocked)return;
+          if(!state.examSessionId||state.audioEndedAt||window.SUBSTITUTE_STATE.blocked
+            ||!window.SUBSTITUTE_EXAM?.validAudioEnd(officialAudio))return;
           const audioEndedAt=new Date((window.IZONE_EXAM_CLOCK?.estimate(state.serverTimeOffsetMs) ?? (Date.now()+(Number(state.serverTimeOffsetMs)||0)))).toISOString();
           saveState({audioEndedAt,listeningDeadlineAt:new Date(Date.parse(audioEndedAt)+300000).toISOString()});
           if(window.TERM_TEST_BOOTSTRAP?.clientRunId===state.clientRunId)window.SUBSTITUTE_EXAM?.ended(officialAudio,audioEndedAt);
-        },{once:true});
+        });
         const existingStart = Date.parse(state.listeningStartedAt || '');
         // Bookmark đã được kiểm đúng người/lượt/epoch; thời gian gián đoạn không phải đoạn đã nghe.
         const heardSeconds = readLegacyUiState().audioTime;

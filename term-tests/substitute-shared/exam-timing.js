@@ -3,6 +3,13 @@
  const VERSION='substitute-audio-transfer-20261014-v1';
  const endedByRun=new Map();
  const confirmingRuns=new Set(),confirmedRuns=new Set();
+ function validAudioEnd(audio){
+  if(window.TERM_TEST_CONFIG?.slug!=='substitute-test-2-k67')return true;
+  const expected=Number(window.TERM_TEST_CONFIG.listening?.durationSeconds);
+  const duration=Number(audio?.duration),position=Number(audio?.currentTime);
+  return Number.isFinite(expected)&&expected>0&&Number.isFinite(duration)&&Number.isFinite(position)
+   &&Math.abs(duration-expected)<=2&&position>=duration-1&&position<=duration+0.25;
+ }
  async function request(route,payload){
   const controller=new AbortController(),untrack=window.SUBSTITUTE_STATE.track(controller),timer=setTimeout(()=>controller.abort(),20000);
   try{
@@ -23,7 +30,7 @@
   return {...data,...provisional,examSessionId:data.clientRunId};
  }
  function ended(audio,observedAudioEndedAt){
-  const bootstrap=window.TERM_TEST_BOOTSTRAP;if(!bootstrap?.examSessionId||window.SUBSTITUTE_STATE.blocked)return;
+  const bootstrap=window.TERM_TEST_BOOTSTRAP;if(!bootstrap?.examSessionId||window.SUBSTITUTE_STATE.blocked||!validAudioEnd(audio))return false;
   const audioEndedAt=endedByRun.get(bootstrap.clientRunId)||observedAudioEndedAt||bootstrap.audioEndedAt||new Date((window.IZONE_EXAM_CLOCK?.estimate(bootstrap.serverTimeOffsetMs) ?? (Date.now()+(Number(bootstrap.serverTimeOffsetMs)||0)))).toISOString();
   endedByRun.set(bootstrap.clientRunId,audioEndedAt);
   const patch={audioEndedAt,listeningDeadlineAt:new Date(Date.parse(audioEndedAt)+300000).toISOString()};
@@ -40,6 +47,7 @@
     confirmedRuns.add(bootstrap.clientRunId);confirmingRuns.delete(bootstrap.clientRunId);
    }catch{if(!window.SUBSTITUTE_STATE.blocked)setTimeout(confirm,15000);}
   }confirm();
+  return true;
  }
- window.SUBSTITUTE_EXAM=Object.freeze({start,ended});
+ window.SUBSTITUTE_EXAM=Object.freeze({start,ended,validAudioEnd});
 }());

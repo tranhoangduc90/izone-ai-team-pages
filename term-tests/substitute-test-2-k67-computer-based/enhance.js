@@ -1054,6 +1054,12 @@
         previewStatus.textContent = 'Đã nghe hết đoạn thử. Nếu âm lượng vừa tai, bạn có thể bắt đầu thi.';
         return;
       }
+      if (protectedBootstrap?.examSessionId && !window.SUBSTITUTE_EXAM?.validAudioEnd(audio)) {
+        examRetryButton.hidden = false;
+        updateExamStatus('Audio dừng trước khi nghe đủ · nhấn Khôi phục audio');
+        saveUiState();
+        return;
+      }
       uiState.audio.time = audio.duration || uiState.audio.time;
       window.SUBSTITUTE_EXAM?.ended(audio);
       resumeButton.hidden = true;
