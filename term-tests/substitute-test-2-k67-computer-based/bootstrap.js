@@ -66,7 +66,7 @@
         '../../shared/teacher-entry.js','../../shared/master170/question-layout-v1.1.mjs',
         '../shared/audio-source-choice.js','../../shared/audio/transport.mjs',
         '../substitute-shared/backup-export.mjs?v=20261107-v1','../substitute-shared/audio-preparation.mjs?v=20261107-substitute-r2-v1',
-        '../../shared/audio/direct-substitute.mjs?v=20261107-substitute-r2-v1',
+        '../../shared/audio/direct.mjs?v=20261107-substitute-r2-v1',
         '../../shared/audio/catalog.mjs?v=20261107-r2-direct1','../../shared/audio/direct-cache.mjs?v=20261107-r2-direct1'])
         urls.push(new URL(path,location.href).href);
       registration.active?.postMessage({type:'PRECACHE',urls});

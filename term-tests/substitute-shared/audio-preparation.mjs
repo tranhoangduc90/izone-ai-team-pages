@@ -1,4 +1,4 @@
-import {DIRECT_POLICY,directAsset,downloadDirect,supportsDirect} from '../../shared/audio/direct-substitute.mjs?v=20261107-substitute-r2-v1';
+import {DIRECT_POLICY,directAsset,downloadDirect,supportsDirect} from '../../shared/audio/direct.mjs?v=20261107-substitute-r2-v1';
 
 const fields=['testSlug','classCode','studentRef','clientRunId','historyEpoch','examOrder','deviceId','generation'];
 const same=(scope,binding)=>Boolean(binding&&fields.every(key=>binding[key]===scope[key]));
@@ -22,7 +22,7 @@ export async function authorizeSubstituteAudio(scope,request,{signal}={}){
  if(!await read(signal))return null;
  return Object.freeze({
   async download(options={}){
-   return downloadDirect(latest.manifest,latest.audioDownload,{...options,signal:options.signal??signal,testSlug:scope.testSlug,
+   return downloadDirect(latest.manifest,latest.audioDownload,{...options,signal:options.signal??signal,termSlug:scope.testSlug,
     preferFallback:latest.audioDownload===null,refresh:async({signal:nextSignal})=>{
      const next=await read(nextSignal);
      return next?{manifest:next.manifest,download:next.audioDownload}:{manifest:latest.manifest,download:null};

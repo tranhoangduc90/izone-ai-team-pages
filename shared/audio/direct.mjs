@@ -9,7 +9,9 @@ export function supportsDirect(){return !!(globalThis.crypto?.subtle&&globalThis
 export function directAsset(manifest,termSlug){
  const candidates=termSlug===undefined
   ? Object.values(ASSETS).filter(x=>/^(homework-|listening-)/.test(x.id))
-  : ['term-test-1-k56','term-test-2-k56','mini-test-k56','mini-test-lesson-5'].filter(slug=>slug===termSlug).map(slug=>ASSETS[slug]);
+  : ['term-test-1-k56','term-test-2-k56','mini-test-k56','mini-test-lesson-5',
+    'substitute-test-1-k56','substitute-test-2-k56','substitute-test-1-k67','substitute-test-2-k67']
+   .filter(slug=>slug===termSlug).map(slug=>ASSETS[slug]);
  const asset=candidates.find(x=>x.sha256===manifest?.sha256&&x.byteLength===manifest?.byteLength&&x.url===manifest?.url);
  if(!asset||manifest.envelopeVersion!=='MP3')throw Error('AUDIO_MANIFEST_DENIED');
  return asset;
@@ -23,7 +25,8 @@ export function validateDirectGrant(manifest,grant){validate(grant,directAsset(m
 // Receives a native-authorized immutable manifest and ephemeral GET descriptor.
 // Never starts/changes an attempt; every renewal goes through the caller's native API.
 export async function downloadDirect(manifest,initialGrant,options={}){
- const asset=directAsset(manifest,options.termSlug);validate(initialGrant,asset);
+ const asset=directAsset(manifest,options.termSlug);
+ if(initialGrant||options.preferFallback!==true)validate(initialGrant,asset);
  const cache=options.cache||createDirectCache(),fetcher=options.fetchImpl||fetch;
  const outer=options.signal,overall=new AbortController(),overallTimer=setTimeout(()=>overall.abort(),options.totalTimeoutMs??120000);
  const abortOuter=()=>overall.abort(outer.reason);outer?.addEventListener('abort',abortOuter,{once:true});if(outer?.aborted)abortOuter();
