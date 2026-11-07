@@ -20,7 +20,7 @@
   if (!testConfig || !appConfig || !root) return;
   let offline=window.K56_MINI_OFFLINE?.active?window.K56_MINI_OFFLINE:null;
   let paperRuntime=null;
-  if(paperMini&&!demoMode&&classCode&&classCode!=='CODEXDEMO56'){
+  if(paperMini&&!demoMode&&classCode&&classCode!=='CODEXDEMO56'&&navigator.locks?.request&&navigator.serviceWorker&&globalThis.crypto?.subtle){
     try{
       const {OfflineRuntime,ExamStore}=await import('../mini-test-k56/offline.mjs?v=20261107-mini-v1');
       paperRuntime=new OfflineRuntime({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});

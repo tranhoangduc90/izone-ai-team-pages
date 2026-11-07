@@ -271,7 +271,7 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
-  "../k56-mini-shared/app.js": "7dd89675804ba75e65d14a8ecfa5dcfc16fe284e8f37d84b768c37aecd12f7bb",
+  "../k56-mini-shared/app.js": "58d65e9e09427ddf3f4225fa65ae4b656d774163f4ff6d331e25067cf5d00e42",
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
@@ -333,16 +333,16 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader.js": "aa28719a6095085ff3faf9167802f7c8e3dfc6debf8db3e996e2eb0d7c10a1a2",
   "audio-whole.mjs": "23721b5b7ad9fb99c265d54bdea4c4a90c55a9b582b1b888596b2ebc28506635",
-  "bootstrap.js": "6c88de82bb52ed6ad01015beee06c43a446feb35efb3933ce56ba8b6ba2497c7",
+  "bootstrap.js": "556f6d65795af8ad6cc8ef872b4043887e5971ec63d67ccb250f6a78a04fa40e",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
   "enhance.js": "afd29a6da337ac4112d46a3249c569d3ffa75acf8b9b3e8d1f7c74d60c101618",
   "exam.css": "12a46e66c5cce7095e5bb41c0cc8166c99e10fa74036fd176ecd87b231cd2939",
-  "index.html": "8bc3c4935896abe0749c94f75a9cf92059a09af33a757b1c30769345a7fdd1d5",
+  "index.html": "172d0004df514b8497a5270d5d9b5ef76a2976ffab5a036443835abae86f71b2",
   "offline-worker.js": "4daa4893dacf330954e9a9c4ffa59e5d5ec6a79fc24928fbaeb56d0a4ed67bda",
   "offline.mjs": "88eedf89730bdb70b5c0f20c859a83057b8a789428d7c3c0a552cb5558a4294f",
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="66f3bdbf2ad71cc44631509197681179f6bbf3fcdd7f9d0580228be845126cdc";
+export const ASSET_BUILD_ID="be77d8cb10fef05166c51ea6f5e0e8ca137d99d19677402636ca9eb22142b266";

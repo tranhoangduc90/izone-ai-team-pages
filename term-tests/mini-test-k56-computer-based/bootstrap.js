@@ -21,7 +21,8 @@
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   let miniOffline = null;
-  if (!localDemo && classCode && classCode !== 'CODEXDEMO56') {
+  const supportsOffline=Boolean(navigator.locks?.request&&navigator.serviceWorker&&globalThis.crypto?.subtle);
+  if (supportsOffline && !localDemo && classCode && classCode !== 'CODEXDEMO56') {
     const {OfflineRuntime, ExamStore} = await import('./offline.mjs?v=20261107-mini-v1');
     miniOffline = new OfflineRuntime({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try { await miniOffline.open(); window.K56_MINI_OFFLINE = miniOffline; }
@@ -92,7 +93,7 @@
     }
   }
   // Entry không có mã lớp có thể vừa được identity resolver gắn đúng lớp.
-  if(!miniOffline&&!localDemo&&classCode&&classCode!=='CODEXDEMO56'){
+  if(supportsOffline&&!miniOffline&&!localDemo&&classCode&&classCode!=='CODEXDEMO56'){
     const {OfflineRuntime,ExamStore}=await import('./offline.mjs?v=20261107-mini-v1');
     miniOffline=new OfflineRuntime({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try{await miniOffline.open();window.K56_MINI_OFFLINE=miniOffline;}catch(error){root.textContent=error.message;return;}
@@ -830,7 +831,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v1');
+    await loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v2');
     if(miniOffline?.active){
       const began=performance.now();
       while(!window.K56_MINI_APP_READY){
