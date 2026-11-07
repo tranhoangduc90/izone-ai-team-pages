@@ -65,6 +65,11 @@
     const bound = identity(options);
     const ownerId=ownerFor(bound);
     let memory = { ...read(bound), identity: bound };
+    let reportedEpisode = memory.manual ? memory.recoveryId : null;
+    function observeListening(phase, incidentId, extra = {}) {
+      if (!options.observeListening || !incidentId) return;
+      try { options.observeListening({phase, incidentId, ...extra}); } catch {}
+    }
     let phase = memory.manual ? 'technical_pause' : options.initial.audioAutoplayBlocked ? 'awaiting_user' : 'playing';
     let lastAdvance = performance.now(), observed = audio.currentTime || 0;
     let lastBucket = -1, timer = 0, queue = Promise.resolve(), recoveryPromise = null;
@@ -127,9 +132,11 @@
     function send(state, keepalive = false) {
       const snapshot = { examSessionToken: token, heardSeconds: Math.max(0, Number(memory.heardSeconds) || 0, Number(audio.currentTime) || 0),
         state, recoveryId: memory.recoveryId || uuid() };
+      const manualRecovery = state === 'recovered' && snapshot.recoveryId === reportedEpisode;
       const execute = async () => {
         if (state === 'playing' && memory.pending) return null;
         if (state === 'playing' && snapshot.heardSeconds + 0.25 < (Number(memory.ackedHeard) || 0)) return null;
+        if (manualRecovery) observeListening('recovery_sent', snapshot.recoveryId);
         const response = await fetch(`${apiBase}/api/term-tests/${slug}/session/audio-progress`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...snapshot,
             audioStateRevision: revision, generation: Number(generation) || 0, audioOwnerId: ownerId }),
@@ -138,9 +145,20 @@
         const payload = await response.json();
         if (!response.ok || !payload.ok) throw Object.assign(new Error(payload.message || 'Chưa đồng bộ được mốc nghe.'),
           { code: payload.error || 'AUDIO_SYNC_FAILED', retryable: response.status >= 500 || response.status === 429 });
-        return apply(payload);
+        const applied = apply(payload);
+        if (manualRecovery && !terminal() && !navigating) {
+          observeListening('recovery_ack', snapshot.recoveryId, {
+            grantedRecoverySeconds: applied.grantedRecoverySeconds,
+            totalRecoverySeconds: applied.listeningRecoverySeconds
+          });
+        }
+        return applied;
       };
-      const operation = keepalive ? execute() : queue.catch(() => null).then(execute);
+      const work = keepalive ? execute() : queue.catch(() => null).then(execute);
+      const operation = manualRecovery && options.observeListening ? work.catch(error => {
+        if (!terminal() && !navigating) observeListening('recovery_failed', snapshot.recoveryId);
+        throw error;
+      }) : work;
       queue = operation.catch(() => null);
       return operation;
     }
@@ -234,6 +252,8 @@
       if (terminal() || navigating) return;
       if (recoveryPromise) memory.recoveryId = uuid();
       episode('manual', true); phase = 'technical_pause'; audio.pause();
+      reportedEpisode = memory.recoveryId;
+      observeListening('manual_pause', reportedEpisode);
       send('pause').catch(failed); notice('Audio đang dừng do sự cố. Nhấn Tiếp tục audio khi nghe được.');
       emit('audio_manual_pause', { recoveryId: memory.recoveryId });
     });

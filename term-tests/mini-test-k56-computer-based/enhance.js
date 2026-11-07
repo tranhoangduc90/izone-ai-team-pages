@@ -787,12 +787,26 @@
     examCard.append(examCopy, examControls);
     listeningForm.source.toolbar.append(examCard);
 
+    function observeListening(player, detail) {
+      try {
+        const config = window.TERM_TEST_APP_CONFIG;
+        if (config?.EXAM_JOURNAL_ENABLED !== true) return;
+        const endpoint = config.EXAM_JOURNAL_BASE_URL || config.API_BASE_URL + '/api/term-tests/' + testConfig.slug;
+        const key = JSON.stringify([new URL(endpoint, location.href).href, testConfig.slug]);
+        window[Symbol.for('izone.examJournal.connections.v1')]?.get(key)?.recordMiniListening?.(protectedBootstrap, {
+          ...detail, positionSeconds: player.currentTime, durationSeconds: player.duration,
+          paused: player.paused, ended: player.ended, volume: player.volume, muted: player.muted
+        });
+      } catch { /* Việc ghi log không được cản thao tác trên bài. */ }
+    }
+
     if (protectedBootstrap?.officialAudioElement && window.K56_MINI_OFFLINE?.active) {
       const runtime=window.K56_MINI_OFFLINE,player=protectedBootstrap.officialAudioElement;
       player.volume=uiState.audio.volume;
       const manualButton=makeButton('cbt-audio-incident','Tôi không nghe được');examControls.append(manualButton);
       setListeningVisible(true);examRetryButton.hidden=true;
       const controller=runtime.attachPlayer({audio:player,resumeButton,manualButton,form:listeningForm.form,
+        observeListening:detail=>observeListening(player,{mode:'offline',...detail}),
         render(prefix,current,duration){playbackProgress.max=duration||1;playbackProgress.value=current||0;examStatus.textContent=prefix+' · '+formatTime(current)+' / '+formatTime(duration);uiState.audio.started=true;uiState.audio.time=Number(current)||0;}});
       examVolumeInput.addEventListener('input',()=>{player.volume=Number(examVolumeInput.value);uiState.audio.volume=player.volume;saveUiState();});
       listeningForm.form.addEventListener('term-test:listening-submitted',()=>controller.finish());
@@ -811,6 +825,7 @@
         studentRef: protectedBootstrap.studentRef, generation: protectedBootstrap.generation,
         apiBase: appConfig.API_BASE_URL, classCode, initial: protectedBootstrap.audioRecoveryInitial,
         resumeButton, manualButton,
+        observeListening: detail => observeListening(player, {mode:'online',...detail}),
         render(prefix, current, duration) {
           playbackProgress.max = duration || 1; playbackProgress.value = current || 0;
           examStatus.textContent = prefix + ' · ' + formatTime(current) + ' / ' + formatTime(duration);

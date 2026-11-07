@@ -244,13 +244,20 @@ class OfflineRuntime extends EventTarget{
   const render=()=>{if(copy.textContent!==this.message)copy.textContent=this.message;};this.addEventListener('change',render);render();
   button.addEventListener('click',async()=>{try{await this.capture(snapshot());}catch{}const html=exportHtml(this.record),url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download=`${profile.filePrefix}-${this.classCode}-${this.scope.attemptToken.slice(0,8)}-r${this.record._revision||0}.html`;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);copy.textContent='Đã tạo file tải xuống. Hãy kiểm tra file trong thư mục tải về.';});
  }
- attachPlayer({audio,resumeButton,manualButton,render,form}){
+ attachPlayer({audio,resumeButton,manualButton,render,form,observeListening}){
   let held=Boolean(this.record.player.held),holdEpoch=0,submitted=false,last=audio.currentTime,lastAt=performance.now(),persistAt=0;const oldPosition=this.record.player.position||0;
+  let incidentId=null;
+  const eofObserved=new Set();
+  const diagnose=(phase,details={})=>{try{observeListening?.({phase,...details});}catch{}};
   if(oldPosition>0&&!this.record.player.ended)audio.currentTime=Math.min(oldPosition,Math.max(0,audio.duration-.25));
   const lock=value=>{for(const input of form.querySelectorAll('input:not([type="range"]),select,textarea'))input.disabled=value;};
   const update=()=>{render(held?'Audio đang dừng — bài làm đã giữ':audio.ended?'Đã phát hết audio':'Đang phát bài thi',audio.currentTime,audio.duration);};
   const hold=reason=>{if(submitted||audio.ended)return;held=true;holdEpoch++;this.record.player.held=true;this.observe('audio_command',{command:'pause',actor:'media_or_learner',position:audio.currentTime,ended:audio.ended,paused:audio.paused});audio.pause();lock(true);resumeButton.hidden=false;render(reason+' · Không tự thu bài khi chưa nghe hết',audio.currentTime,audio.duration);void this.persist().catch(()=>{});};
-  manualButton.addEventListener('click',()=>hold('Hãy kiểm tra tai nghe rồi tiếp tục đúng mốc'));
+  manualButton.addEventListener('click',()=>{
+   const report=observeListening&&!submitted&&!audio.ended;
+   hold('Hãy kiểm tra tai nghe rồi tiếp tục đúng mốc');
+   if(report){try{incidentId ||= crypto.randomUUID();diagnose('manual_pause',{incidentId});}catch{}}
+  });
   audio.addEventListener('error',()=>hold('Trình phát gặp sự cố; bài làm và mốc nghe được giữ'));
   audio.addEventListener('playing',()=>{lastAt=performance.now();});
   audio.addEventListener('pause',()=>{if(!held&&!submitted&&!audio.ended&&this.record.sections.listening?.startedAt&&!this.record.sections.listening.sealed)hold('Audio đang dừng; thời gian chờ không được thu bài');});
@@ -262,8 +269,16 @@ class OfflineRuntime extends EventTarget{
   });
   audio.addEventListener('ended',async event=>{
    const expected=Number(this.record.prepared.timing.listeningDurationSeconds);
-   if(!event.isTrusted||!audio.ended||audio.seeking||!Number.isFinite(audio.duration)||Math.abs(audio.duration-expected)>2
-     ||submitted||!this.record.sections.listening?.startedAt||audio.currentTime<audio.duration-.5)return;
+   if(submitted||!this.record.sections.listening?.startedAt)return;
+   let decision='eof_accepted';
+   if(!event.isTrusted)decision='eof_untrusted';
+   else if(!audio.ended||audio.seeking||!Number.isFinite(audio.duration))decision='eof_media_state';
+   else if(Math.abs(audio.duration-expected)>2)decision='eof_duration_mismatch';
+   else if(audio.currentTime<audio.duration-.5)decision='eof_position_short';
+   if(observeListening&&!eofObserved.has(decision)){
+    eofObserved.add(decision);diagnose(decision,{configuredDurationSeconds:expected});
+   }
+   if(decision!=='eof_accepted')return;
    this.observe('audio_ended',{position:audio.currentTime,duration:audio.duration});this.record.player={position:audio.currentTime,ended:true};await this.persist();
    const button=document.createElement('button');button.type='submit';button.hidden=true;button.dataset.autoSubmit='true';form.append(button);form.requestSubmit(button);
   });
@@ -277,6 +292,7 @@ class OfflineRuntime extends EventTarget{
    const before=audio.currentTime;await audio.play();await new Promise(ok=>setTimeout(ok,3000));if(resumeEpoch!==holdEpoch)return;
    if(!this.record.player.ended&&audio.currentTime<=before+.5)throw Error('Audio chưa tiến lên. Hãy báo giảng viên; bài vẫn được giữ.');
    held=false;this.record.player.held=false;last=audio.currentTime;lastAt=performance.now();lock(false);resumeButton.hidden=true;void this.persist().catch(()=>{});update();
+   if(incidentId){diagnose('local_resumed',{incidentId});incidentId=null;}
   }catch(e){hold(e.message);}finally{resumeButton.disabled=false;}});
   const timer=setInterval(()=>{if(!this.record.sections.listening?.startedAt||this.record.sections.listening.sealed||form.hidden||held||submitted)return;
    if(!audio.ended&&performance.now()-lastAt>5000)hold('Audio chưa tiến lên. Giữ đúng mốc để phục hồi');},1000);

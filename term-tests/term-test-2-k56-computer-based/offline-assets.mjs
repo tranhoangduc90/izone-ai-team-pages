@@ -258,7 +258,7 @@ export const ASSET_HASHES={
   "../../speaking-homework/fonts/nunito.css": "a6b6f9ccb2e3105406b58fec8d7bd865b8642548b334c04892492d3320820b7c",
   "../demo/model.js": "fcf87b5a54be6e5a3cdcbc477c1b7a7b2198bd35a579e264498550fbb63fbe76",
   "../demo/reset-listener.js": "739a3b589d8a34419c6b31b55e35d1f9a0f5f394cc81a92a65ed75d08800e18e",
-  "../k56-audio-recovery.js": "3dc2c94beea2d5f5dc30d896d0d141062c8a2b2ecadccb8534e9219ef1fe5803",
+  "../k56-audio-recovery.js": "aac99c11879525f158a8383df2837e1e72b107a727babcb3447faa15b1e0eeab",
   "../k56-demo-reset/app.js": "38caf4e57010fbc951d78d18521117d9dd86f9303f1eb58c8218c64f6a03133e",
   "../k56-demo-reset/styles.css": "c31c8f3116187a38574b1ac32187c87af2cd5e4bd7d12f57566be64dbad42b9f",
   "../k56-design/assets/SourceSans3-Variable.woff2": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
@@ -270,7 +270,7 @@ export const ASSET_HASHES={
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime.mjs": "982dd1b35f381b3a7778a52e9b80f6d0dbde0d8055005aac40eafae8ead6a73f",
+  "../k56-offline-shared/runtime.mjs": "8c750d2f6b142f84aa1cc3ca910e2e2833ad7fe9e15145125adffe7565019fc2",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
@@ -341,4 +341,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="d32881f5a58c1e7209aaabd4790e176b47acdbdf1b0197ae7370206ef7409dcb";
+export const ASSET_BUILD_ID="339d07d5de8d04d1b1839f64cbc7e10ca135ad8a284d4714d929d1a9d2c6751f";
