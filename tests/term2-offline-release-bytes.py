@@ -3,7 +3,8 @@ from pathlib import Path
 import subprocess,json,hashlib,sys
 profile=sys.argv[1] if len(sys.argv)>1 else '2'
 entry={'1':'term-test-1-k56-computer-based','2':'term-test-2-k56-computer-based',
- 'mini-cbt':'mini-test-k56-computer-based','mini-paper':'mini-test-k56'}[profile]
+ 'mini-cbt':'mini-test-k56-computer-based','mini-paper':'mini-test-k56',
+ 'mini-k67-paper':'mini-test-lesson-5'}[profile]
 root=Path(__file__).resolve().parents[1];route=root/'term-tests'/entry
 raw=(route/'offline-assets.mjs').read_text(encoding='utf-8')
 hashes=json.loads(raw.split('export const ASSET_HASHES=',1)[1].split(';',1)[0])

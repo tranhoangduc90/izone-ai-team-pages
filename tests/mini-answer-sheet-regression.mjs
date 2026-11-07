@@ -17,7 +17,7 @@ before(async()=>{
   server=createServer(async(req,res)=>{try{
     let p=new URL(req.url,'http://localhost').pathname;if(p.endsWith('/'))p+='index.html';
     const f=resolve(root,'.'+p);if(!f.startsWith(resolve(root)))throw new Error('outside');
-    res.setHeader('Content-Type',({'.js':'text/javascript','.css':'text/css','.html':'text/html'})[extname(f)]||'text/plain');res.end(await readFile(f));
+    res.setHeader('Content-Type',({'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html'})[extname(f)]||'text/plain');res.end(await readFile(f));
   }catch{res.writeHead(404).end();}});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));base=`http://127.0.0.1:${server.address().port}`;
   browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN||'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'});

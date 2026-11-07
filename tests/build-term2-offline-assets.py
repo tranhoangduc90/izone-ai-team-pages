@@ -10,9 +10,12 @@ slug,entry,app={
  '2':('term-test-2-k56','term-test-2-k56-computer-based','k56-test2-shared'),
  'mini-cbt':('mini-test-k56','mini-test-k56-computer-based','k56-mini-shared'),
  'mini-paper':('mini-test-k56','mini-test-k56','k56-mini-shared'),
+ 'mini-k67-paper':('mini-test-lesson-5','mini-test-lesson-5','shared'),
 }[profile]
 route=root/'term-tests'/entry
 dirs=[f'term-tests/{entry}',f'term-tests/{app}','term-tests/k56-offline-shared','term-tests/shared','shared','term-tests/k56-design','term-tests/k56-demo-reset','term-tests/k56-exam-integrity','term-tests/k56-writing-feedback']
+if profile=='mini-k67-paper':
+ dirs=[f'term-tests/{entry}']
 allowed={'.js','.mjs','.css','.html','.woff2','.png','.svg'}
 optional_journal=root/'term-tests/shared/exam-journal'
 
@@ -21,7 +24,8 @@ def is_shell_asset(path):
  return path.name!='offline-assets.mjs' and not path.is_relative_to(optional_journal)
 
 files={p for d in dirs for p in (root/d).rglob('*') if p.is_file() and p.suffix in allowed and 'private' not in p.parts and is_shell_asset(p)}
-files.update(root/p for p in ['term-tests/k56-audio-recovery.js','term-tests/k56-exam-order.js',f'term-tests/{slug}/test-config.js','term-tests/demo/reset-listener.js'])
+if profile!='mini-k67-paper':
+ files.update(root/p for p in ['term-tests/k56-audio-recovery.js','term-tests/k56-exam-order.js',f'term-tests/{slug}/test-config.js','term-tests/demo/reset-listener.js'])
 queue=list(files)
 while queue:
  p=queue.pop()
