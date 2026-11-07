@@ -13,14 +13,14 @@ const root=resolve(fileURLToPath(new URL('../',import.meta.url))),output=process
 const modules=process.env.CODEX_NODE_MODULES||resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const {chromium}=createRequire(pathToFileURL(resolve(modules,'playwright/package.json')))('playwright');
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.mp3':'audio/mpeg'};
-export async function fixture(mode,{profile,native,product=2,paper=false}={}){
+export async function fixture(mode,{profile,native,product=2,paper=false,port=0}={}){
  await mkdir(output,{recursive:true});
  const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,r2Audio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
  const server=createServer(async(req,res)=>{const url=new URL(req.url,'http://localhost'),p=resolve(root,'.'+(url.pathname.endsWith('/')?url.pathname+'index.html':url.pathname));
   if(!p.startsWith(root+sep)&&p!==root)return res.writeHead(403).end();
   if(controls.assetFailures.has(url.pathname))return res.writeHead(503).end('Fixture unavailable asset');
   try{let data=controls.assetOverrides.has(url.pathname)?Buffer.from(controls.assetOverrides.get(url.pathname)):await readFile(p);if(['.html','.js','.mjs','.css','.svg'].includes(extname(p)))data=Buffer.from(data.toString('utf8').replace(/\r\n/g,'\n'));res.writeHead(200,{'content-type':mime[extname(p)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404).end();}});
- await new Promise(ok=>server.listen(0,'127.0.0.1',ok));const base=`http://127.0.0.1:${server.address().port}`;
+ await new Promise((ok,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',ok);});const base=`http://127.0.0.1:${server.address().port}`;
  const launchOptions={channel:process.env.TERM2_BROWSER_CHANNEL||'msedge',headless:true,args:['--autoplay-policy=no-user-gesture-required']},contextOptions={acceptDownloads:true,viewport:{width:1440,height:1000}};
  const profileDir=profile?resolve(output,profile):null;
  let browser,context,page;
@@ -74,7 +74,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false}={}){
   }
   if(endpoint.endsWith('/offline/status'))return route.fulfill({json:{ok:true,persisted:receipts.has(body.operationId),receipt:receipts.get(body.operationId)||null}});
   if(endpoint.endsWith('/offline/operation')){
-   const receipt={version:1,receiptId:randomUUID(),operationId:body.operationId,payloadHash:createHash('sha256').update(canonical(body)).digest('hex'),attemptToken:id,examSessionToken:session,generation:0,section:body.section,kind:body.kind,acceptedRevision:body.revision,status:'accepted',serverCommittedAt:new Date().toISOString()};
+   const receipt={version:1,receiptId:randomUUID(),operationId:body.operationId,payloadHash:createHash('sha256').update(canonical(body)).digest('hex'),attemptToken:id,examSessionToken:session,generation:0,...controls.recoveredRun,section:body.section,kind:body.kind,acceptedRevision:body.revision,status:'accepted',serverCommittedAt:new Date().toISOString()};
    if(mini&&body.kind==='seal'&&body.section==='writing'&&!body.payload.task2.replace(/[\s\p{Default_Ignorable_Code_Point}]/gu,''))receipt.writingBlank=true;
    receipts.set(body.operationId,receipt);
    if(controls.loseAck&&!controls.ackLost&&body.kind==='seal'){controls.ackLost=true;return route.abort();}
