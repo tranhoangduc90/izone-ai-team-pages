@@ -103,3 +103,21 @@ if(!full)for(const fault of ['sources','native','shell']){
   }finally{await f.close();}
  });
 }
+
+if(!full)for(const paper of [true,false]){
+ test('Mini giữ luồng cũ khi thiếu Web Locks '+(paper?'phiếu':'CBT'),{timeout:30000},async()=>{
+  const f=await fixture('read_first',{product:'mini',paper});
+  try{
+   const p=f.page;
+   await p.addInitScript(()=>Object.defineProperty(Navigator.prototype,'locks',{get:()=>undefined}));
+   await p.goto(f.url);
+   const id=paper?'#studentSelect':'#bootstrapStudent';
+   await p.locator(`${id} option[value="${f.student}"]`).waitFor({state:'attached'});
+   await p.selectOption(id,f.student);await p.click(paper?'#miniPaperEnter':'#confirmIdentity');
+   await p.locator('#k56SectionReady:not([hidden]) button').filter({hasText:'Reading'}).waitFor();
+   assert.equal(f.calls.some(path=>path.endsWith('/offline/prepare')),false);
+   assert.deepEqual(f.controls.audioCalls,[]);
+   assert.deepEqual(f.errors,[]);
+  }finally{await f.close();}
+ });
+}

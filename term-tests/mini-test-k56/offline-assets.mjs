@@ -256,7 +256,7 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/app.js": "ac6c9207775d9dcb4877f06f5da6b3c706a9b92ba26ac253eff17f10f66b513f",
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
-  "../k56-mini-shared/app.js": "7dd89675804ba75e65d14a8ecfa5dcfc16fe284e8f37d84b768c37aecd12f7bb",
+  "../k56-mini-shared/app.js": "58d65e9e09427ddf3f4225fa65ae4b656d774163f4ff6d331e25067cf5d00e42",
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
@@ -312,9 +312,9 @@ export const ASSET_HASHES={
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
-  "index.html": "e0de95eff89d842169a9e3df016acb1da20f0ccb384d1276a349d095dd6276b5",
+  "index.html": "632c8b2c74b4c91e20db5cff13622eb4632cb9ce78d82f490803a48f0652c302",
   "offline-worker.js": "673d15409f3225e26be78b444f3664df90c347eb8f60364e6a87c3389d5c05a2",
   "offline.mjs": "c9000c4f2e5bc2d2677686bb8d85da2ee4c0c35f45c111d90c070b13325c6ff1",
   "test-config.js": "44e259fb28a2646b9429e7662add638a66183b8bd844c662c4790ffe1f1efb18"
 };
-export const ASSET_BUILD_ID="aec40be618f08986a92107edc51d6eb1c95c5936593ced8535b187ad9a0ab4b9";
+export const ASSET_BUILD_ID="0f3f284239af53f083e21c6ba8271345b544988732e8f798f6eb268d380e19a8";
