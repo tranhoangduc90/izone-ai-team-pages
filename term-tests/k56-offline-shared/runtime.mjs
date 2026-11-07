@@ -2,6 +2,7 @@
 export function createOfflineRuntime(profile){
 // Bài làm được ghi ở máy trước; sync chỉ chuyển dữ liệu, không điều khiển audio.
 const BUILD=profile.build;
+const mini=profile.slug==='mini-test-k56';
 const canonical=value=>JSON.stringify(value&&typeof value==='object'?(Array.isArray(value)?value.map(x=>JSON.parse(canonical(x))):Object.fromEntries(Object.keys(value).sort().map(k=>[k,JSON.parse(canonical(value[k]))]))):value);
 async function hash(value){const bytes=new TextEncoder().encode(canonical(value));return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join('');}
 const clone=x=>structuredClone(x),failure=()=>Object.assign(Error('Chưa lưu được bài trên thiết bị. Hãy tải bài về máy và báo giảng viên.'),{code:'LOCAL_PERSIST_FAILED'});
@@ -51,7 +52,11 @@ class OfflineRuntime extends EventTarget{
   await this.store.open();const pointer=await this.store.get('latest:'+this.classCode);
   if(pointer?.key){this.record=await this.store.get(pointer.key);this.key=pointer.key;}
   if(this.record){await this.claim();this.anchor();}
-  globalThis.addEventListener?.('online',()=>{this.retryAt=0;void this.flush();});
+  globalThis.addEventListener?.('online',()=>{
+   this.retryAt=0;
+   if(mini)this.failures=0;
+   void this.flush();
+  });
   this.timer=setInterval(()=>{this.drainDiagnostics();void this.flush();},5000);this.timer.unref?.();return this;
  }
  observe(action,details={}){
@@ -195,6 +200,7 @@ class OfflineRuntime extends EventTarget{
  }
  async flush(){
   if(!this.active||this.busy||!this.pending||performance.now()<this.retryAt||this.record.review)return;
+  if(mini&&globalThis.navigator?.onLine===false)return;
   const run=this.record;this.busy=true;
   try{while(this.pending){const op=clone(this.record.operations[0]);this.inFlight=op.operationId;
    const status=await this.post('/offline/status',{...this.scope,operationId:op.operationId});
@@ -207,7 +213,14 @@ class OfflineRuntime extends EventTarget{
    if(r.status!=='accepted'){this.record.review=r.reason||'REVIEW_REQUIRED';await this.persist();break;}
    this.record.operations=this.record.operations.filter(x=>x.operationId!==op.operationId);await this.persist();
   }this.failures=0;this.retryAt=0;}
-  catch(e){if(this.record!==run||!this.owned)return;this.retryAt=performance.now()+Math.min(60000,1000*2**Math.min(6,this.failures++));if([400,401,403,409,422].includes(e.status))this.record.review=e.code||'REVIEW_REQUIRED';this.lastError='Bài vẫn được giữ trên thiết bị. '+e.message;this.changed();try{await this.store.put(this.key,this.record);}catch{}}
+  catch(e){
+   if(this.record!==run||!this.owned)return;
+   if(mini&&globalThis.navigator?.onLine===false)return;
+   this.retryAt=performance.now()+Math.min(60000,1000*2**Math.min(6,this.failures++));
+   if([400,401,403,409,422].includes(e.status))this.record.review=e.code||'REVIEW_REQUIRED';
+   this.lastError='Bài vẫn được giữ trên thiết bị. '+e.message;this.changed();
+   try{await this.store.put(this.key,this.record);}catch{}
+  }
   finally{this.inFlight=null;this.busy=false;this.changed();}
  }
  mount({snapshot,host}){

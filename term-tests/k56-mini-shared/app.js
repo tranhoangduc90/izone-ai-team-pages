@@ -421,7 +421,7 @@
         <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
         <h2>Kết quả của bạn đã sẵn sàng</h2>
         <p>${writingConfig
-          ? 'Listening và Reading đã được chấm, phân tích. Writing đang được chấm riêng và sẽ hiện điểm khi đủ cả hai Task.'
+          ? 'Xem kết quả Listening và Reading. Link LMS của đoạn văn sẽ hiện khi bài chữa sẵn sàng.'
           : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
         <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
       </section>
@@ -2997,11 +2997,17 @@
     if(examJournal)offline.setJournal(examJournal);
     offline.mount({snapshot:currentSnapshot,host:document.querySelector('.page-shell')});
     const title=elements.resultReadyView.querySelector('h2');
+    const help=elements.resultReadyView.querySelector('p:last-of-type');
     const updateResultTitle=()=>{
       if(!title)return;
       const blank=Object.values(offline.record.receipts).some(receipt=>receipt.kind==='seal'&&receipt.section==='writing'&&receipt.status==='accepted'&&receipt.writingBlank);
       const label=blank?'Đã nộp · Bài trắng':'Bài làm đã khóa trên thiết bị';
       if(title.textContent!==label)title.textContent=label;
+      const message=offline.pending?'Bài đã lưu trên thiết bị và đang chờ máy chủ xác nhận.'
+        :blank?'Máy chủ đã nhận đoạn văn để trống.'
+        :paperMini?'Mở kết quả Listening và Reading khi có mạng.'
+        :'Mở kết quả để xem điểm Listening, Reading và Link LMS khi bài chữa sẵn sàng.';
+      if(help&&help.textContent!==message)help.textContent=message;
     };
     offline.addEventListener('change',updateResultTitle);updateResultTitle();
     saveSession();window.K56_MINI_APP_READY=true;

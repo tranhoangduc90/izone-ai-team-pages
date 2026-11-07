@@ -70,6 +70,7 @@ for(const paper of [true,false])for(const mode of ['lis_first','read_first']){
    await p.locator('#resultReadyView').waitFor({state:'visible'});
    if(paper)assert.deepEqual(f.controls.audioCalls,[]);
    else assert.equal(f.controls.audioCalls.length,mode==='read_first'?2:1);
+   if(!paper)assert.equal(await p.evaluate(()=>window.K56_MINI_OFFLINE.failures),0,'Offline phải giữ bài tại chỗ, không tăng backoff');
    f.disconnected=false;await f.context.setOffline(false);
    await wait(p,()=>document.querySelector('.writing-save-status')?.textContent.includes('Máy chủ đã xác nhận'),'Đã đối chiếu máy chủ');
    const seals=[...f.receipts.values()].filter(receipt=>receipt.kind==='seal');

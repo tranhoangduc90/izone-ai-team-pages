@@ -256,11 +256,11 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/app.js": "ac6c9207775d9dcb4877f06f5da6b3c706a9b92ba26ac253eff17f10f66b513f",
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
-  "../k56-mini-shared/app.js": "58d65e9e09427ddf3f4225fa65ae4b656d774163f4ff6d331e25067cf5d00e42",
+  "../k56-mini-shared/app.js": "7160bc1da9d7846b52148afb29a1d3d4531d3b70684e6dbd18b043b18aa9115f",
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime.mjs": "d147773bf61ea19e57410fbb1563af8548357a9b9fa01201a75d323e3a6b9e2c",
+  "../k56-offline-shared/runtime.mjs": "6aa17d4fc03633e6fdf90c5da63b0085ed566f3bae3eb0e99349491014426488",
   "../k56-offline-shared/whole-audio.mjs": "7ef8fe668795f691b69a1412ce209c446c9f23d86f58f068adb929c1a48c34a9",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
@@ -312,9 +312,9 @@ export const ASSET_HASHES={
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
-  "index.html": "632c8b2c74b4c91e20db5cff13622eb4632cb9ce78d82f490803a48f0652c302",
-  "offline-worker.js": "673d15409f3225e26be78b444f3664df90c347eb8f60364e6a87c3389d5c05a2",
-  "offline.mjs": "c9000c4f2e5bc2d2677686bb8d85da2ee4c0c35f45c111d90c070b13325c6ff1",
+  "index.html": "4c777d383eb4e7e113d4b03b7c015198ad807b02eee5788707f214ff24315bbf",
+  "offline-worker.js": "20e6437ed9a17c55e9a95bb821a6f38111c861ec32659e9fe236f1babcecbde7",
+  "offline.mjs": "eaad6811b24c1e5ccf4ccf46489e53317fee901864635e3269a8cae9cd86714b",
   "test-config.js": "44e259fb28a2646b9429e7662add638a66183b8bd844c662c4790ffe1f1efb18"
 };
-export const ASSET_BUILD_ID="0f3f284239af53f083e21c6ba8271345b544988732e8f798f6eb268d380e19a8";
+export const ASSET_BUILD_ID="fa221719942807d3aac3d7555700340e675785ec5e1d45a3729fc470b1619f51";
