@@ -16,6 +16,24 @@ test('reload reuses verified prefix; corrupt cached next block does not pass',as
 test('expired source renews once through native route',async()=>{let n=0,r=0;await downloadDirect(manifest,grant,{cache:cache(),refresh:async()=>{r++;return renew();},fetchImpl:async()=>n++===0?new Response(null,{status:403}):response()});assert.equal(r,1);assert.equal(n,2);});
 test('native denied renewal stops before retry or Pages',async()=>{let n=0;await assert.rejects(downloadDirect(manifest,grant,{cache:cache(),refresh:async()=>{throw Object.assign(Error('NATIVE_DENIED'),{status:403});},fetchImpl:async()=>{n++;return new Response(null,{status:403});}}),e=>e.accessDenied&&e.message==='NATIVE_DENIED');assert.equal(n,1);});
 test('source failure falls back to exact Pages URL after bounded renewal',async()=>{let n=0;const urls=[];await downloadDirect(manifest,grant,{cache:cache(),refresh:renew,fetchImpl:async(u)=>{urls.push(u);return n++<2?new Response(null,{status:503}):response();}});assert.deepEqual(urls,[grant.url,grant.url,a.url]);});
+test('Mini K67 tries R2 first and only falls back to identical pinned Pages bytes when renewal is unavailable', async () => {
+  const mini = ASSETS['mini-test-lesson-5'];
+  const pinned = { ...mini, envelopeVersion: 'MP3' };
+  const signed = { ...grant, url: grant.url.replace(a.key, mini.key), sha256: mini.sha256, byteLength: mini.byteLength };
+  const mp3 = await readFile(new URL('../term-tests/k67-audio-assets/'+new URL(mini.url).pathname.split('/').at(-1), import.meta.url));
+  const fetched = [];
+  const blob = await downloadDirect(pinned, signed, {
+    termSlug: mini.id, cache: cache(),
+    refresh: async () => { throw Object.assign(new Error('temporary outage'), { audioRefreshUnavailable: true }); },
+    fetchImpl: async url => {
+      fetched.push(url);
+      return url === signed.url ? new Response(null, { status: 403 }) : new Response(mp3);
+    }
+  });
+  assert.deepEqual(fetched, [signed.url, mini.url]);
+  assert.equal(blob.size, mini.byteLength);
+  await assert.rejects(downloadDirect(pinned, signed, { termSlug: 'mini-test-k56' }), /AUDIO_MANIFEST_DENIED/);
+});
 test('persistent source/CORS failure has at most three requests',async()=>{let n=0;await assert.rejects(downloadDirect(manifest,grant,{cache:cache(),refresh:renew,fetchImpl:async()=>{n++;throw new TypeError('Failed to fetch');}}));assert.equal(n,3);});
 test('idle timeout is separate from whole-download timeout',async()=>{let n=0;const b=await downloadDirect(manifest,grant,{cache:cache(),idleTimeoutMs:10,totalTimeoutMs:1000,refresh:renew,fetchImpl:async(u,o)=>{if(n++===0)return new Promise((_,reject)=>o.signal.addEventListener('abort',()=>reject(new DOMException('timeout','AbortError')),{once:true}));return response();}});assert.equal(b.size,a.byteLength);assert.equal(n,2);});
 test('cancel after verified part retains cache but never returns playback bytes',async()=>{const c=cache(),abort=new AbortController();await assert.rejects(downloadDirect(manifest,grant,{cache:c,signal:abort.signal,onVerifiedPart:()=>abort.abort(),fetchImpl:async()=>response()}),{name:'AbortError'});assert.ok(c.map.has(0));});

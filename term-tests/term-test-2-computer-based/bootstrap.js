@@ -520,6 +520,14 @@
     elements.bootstrapNotice.textContent = '';
   }
 
+  function requestAudioAccess(examSessionToken = state.examSessionToken, generation = Number(state.generation) || 0) {
+    return apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-access`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({examSessionToken, generation, publicAudioVersion: 1,
+        ...(testConfig.slug === 'mini-test-lesson-5' ? { audioTransport: 'r2-direct-v1' } : {})})
+    });
+  }
+
   async function apiRequest(path, options = {}, timeoutMs = 30_000) {
     // Quy đổi danh tính chỉ đọc không nhận các trường dành cho lượt thi/audio.
     if (!path.endsWith('/student-identity')) {
@@ -571,10 +579,38 @@
     previewObjectUrl = '';
   }
 
+  async function verifyPreviewDuration(expectedSeconds, signal) {
+    await new Promise((resolve, reject) => {
+      const rejectDecode = () => finish(new Error('Trình duyệt chưa đọc được file audio của bài thi.'));
+      const abort = () => finish(signal.reason);
+      const ready = () => {
+        const actual = previewAudio.duration;
+        finish(Number.isFinite(actual) && Math.abs(actual - expectedSeconds) <= 1 ? null
+          : new Error('Thời lượng audio không khớp bản đề. Hãy thử tải lại.'));
+      };
+      const timeout = setTimeout(rejectDecode, 10000);
+      function finish(error) {
+        clearTimeout(timeout);
+        previewAudio.removeEventListener('loadedmetadata', ready);
+        previewAudio.removeEventListener('error', rejectDecode);
+        signal.removeEventListener('abort', abort);
+        if (error) reject(error); else resolve();
+      }
+      if (signal.aborted) { abort(); return; }
+      if (previewAudio.error) { rejectDecode(); return; }
+      if (previewAudio.readyState >= HTMLMediaElement.HAVE_METADATA) { ready(); return; }
+      previewAudio.addEventListener('loadedmetadata', ready, { once: true });
+      previewAudio.addEventListener('error', rejectDecode, { once: true });
+      signal.addEventListener('abort', abort, { once: true });
+      previewAudio.load();
+    });
+  }
+
   async function downloadForSession(session) {
     hideNotice();
     downloadController?.abort();
     downloadController = new AbortController();
+    const signal = downloadController.signal;
     encryptedAudio = null;
     audioAccess = null; audioScope = null; audioFromCache = false; audioCacheStatus = '';
     cacheStatus.textContent = 'Đang xác thực quyền tải hoặc khôi phục audio...';
@@ -599,10 +635,9 @@
           token:state.examSessionToken,generation:Number(state.generation)||0,recoverPreparationEpoch:expectedOwnerEpoch});
       }
       try {
-        audioAccess = await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-access`, {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({examSessionToken: state.examSessionToken, generation: Number(state.generation) || 0, publicAudioVersion: 1})
-        });
+        const access = await requestAudioAccess();
+        signal.throwIfAborted();
+        audioAccess = access;
       } catch (error) {
         if (error.status !== 404 || error.code) throw error; // Backend cũ chưa có endpoint: vẫn phải online start.
       }
@@ -650,7 +685,7 @@
       const previewUrl = appConfig.API_BASE_URL + session.previewAudioUrl;
       const [encrypted, previewResponse] = await Promise.all([
         loadEncryptedAudio(audioUrl, {
-          signal: downloadController.signal,
+          signal,
           onProgress: ({ loaded, total, complete }) => {
             if (total > 0) {
               elements.bootstrapDownloadProgress.max = total;
@@ -663,15 +698,21 @@
             }
           }
         }),
-        resuming || audioAccess?.audioManifest?.envelopeVersion === 'MP3' ? null : fetch(previewUrl, { cache: 'no-store', signal: downloadController.signal })
+        resuming || audioAccess?.audioManifest?.envelopeVersion === 'MP3' ? null : fetch(previewUrl, { cache: 'no-store', signal })
       ]);
+      signal.throwIfAborted();
       if (previewResponse && !previewResponse.ok) throw new Error('Không tải được bản nghe thử.');
-      encryptedAudio = encrypted;
       revokePreview();
       if (previewResponse || (!resuming && audioAccess?.audioManifest?.envelopeVersion === 'MP3')) {
-        previewObjectUrl = URL.createObjectURL(previewResponse ? await previewResponse.blob() : encrypted);
+        const previewBlob = previewResponse ? await previewResponse.blob() : encrypted;
+        signal.throwIfAborted();
+        previewObjectUrl = URL.createObjectURL(previewBlob);
         previewAudio.src = previewObjectUrl;
+        if (audioAccess?.audioTransport === 'r2-direct-v1') {
+          await verifyPreviewDuration(Number(audioAccess.listeningDurationSeconds), signal);
+        }
       }
+      encryptedAudio = encrypted;
       previewAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       elements.bootstrapDownloadProgress.max = 1;
       elements.bootstrapDownloadProgress.value = 1;
@@ -691,7 +732,7 @@
       }
       setStartAvailability();
     } catch (error) {
-      if (error.name === 'AbortError') return;
+      if (signal.aborted || error.name === 'AbortError') return;
       elements.bootstrapDownloadStep.dataset.state = 'error';
       elements.bootstrapDownloadStatus.textContent = 'Chưa tải đủ audio. Bài thi vẫn đang khóa.';
       elements.bootstrapRetry.textContent = 'Thử tải lại audio';
@@ -705,7 +746,27 @@
 
   async function loadEncryptedAudio(url, options, skipCache = false) {
     if (audioAccess?.audioManifest?.envelopeVersion === 'MP3') {
-      const blob = await window.K67_PUBLIC_AUDIO.download(audioAccess.audioManifest, options);
+      const manifest = audioAccess.audioManifest;
+      let blob;
+      if (testConfig.slug === 'mini-test-lesson-5' && audioAccess.audioTransport === 'r2-direct-v1') {
+        const { examSessionToken, generation } = audioAccess;
+        const { downloadTermAudio } = await import('../k56-offline-shared/whole-audio.mjs?v=20261107-mini-v1');
+        const refresh = async ({ signal }) => {
+          let updated;
+          try { updated = await requestAudioAccess(examSessionToken, generation); }
+          catch (error) {
+            if (!error.status || error.status >= 500) error.audioRefreshUnavailable = true;
+            throw error;
+          }
+          signal.throwIfAborted();
+          return { manifest: updated.audioManifest, download: updated.audioDownload };
+        };
+        blob = await downloadTermAudio(testConfig.slug,
+          { pagesUrl: manifest.url, sha256: manifest.sha256, bytes: manifest.byteLength },
+          { ...options, audioDownload: audioAccess.audioDownload, refresh });
+      } else {
+        blob = await window.K67_PUBLIC_AUDIO.download(manifest, options);
+      }
       audioCacheStatus = 'Đã kiểm đúng phiên bản và tải đủ audio. Khi vào lại vẫn cần mạng để xác thực phiên thi.';
       return blob;
     }

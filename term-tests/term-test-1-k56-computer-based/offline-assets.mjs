@@ -169,7 +169,7 @@ export const ASSET_HASHES={
   "../../shared/audio/chunks.mjs": "6796d41d2da64a33b5981fb16a612535770d61ab24bfda755309fb0beb5f941c",
   "../../shared/audio/config.mjs": "8c6f4f6f92d15e44fab4016d73f76d06d1a6695b10095d32226a853a3456ef1d",
   "../../shared/audio/direct-cache.mjs": "db458244476e95128789ee499ff9ed7041f7bb9f5c0ee4db35d0717c39ab9256",
-  "../../shared/audio/direct.mjs": "d5d8df9813f99c845c7a265c0b3ebead3ae7f2a3722b9897369ce2c6d8262c26",
+  "../../shared/audio/direct.mjs": "e04771e87e6c10dc5ba9c9e85ccaaf1e0c32a2c0a9f0bee10bc9e25fe5c84037",
   "../../shared/audio/protocol.mjs": "eebab8f26eefbc300fc5093e2190b281b3b170a6a2e805eba0f6d7233b4ee6f4",
   "../../shared/audio/transport.mjs": "a7a4cb95e2fb1fe0bdb9911af1901ad8142d8c384975a639c7fec27c07625901",
   "../../shared/course-student-identity.js": "0e26a37332856b1cedd2860920094fc2b36310cb067e9e230a1689ae2577bcc1",
@@ -265,7 +265,7 @@ export const ASSET_HASHES={
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
   "../k56-offline-shared/runtime.mjs": "6aa17d4fc03633e6fdf90c5da63b0085ed566f3bae3eb0e99349491014426488",
-  "../k56-offline-shared/whole-audio.mjs": "7ef8fe668795f691b69a1412ce209c446c9f23d86f58f068adb929c1a48c34a9",
+  "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/app.js": "eaf7262bdd4886ce3defea22d7d90cfbbede119d82f6b2868a64ffccd025bbc8",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
@@ -329,4 +329,4 @@ export const ASSET_HASHES={
   "offline.mjs": "83616543d78814b23a5c03e3e60fcbb720e34247683e5732e4d166b194edd174",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="b60f0968c66ffd9c81ef23af36438e3ca8813c568c07bd0c300872dfe722f66e";
+export const ASSET_BUILD_ID="3b3f840bc70d7d3897d598b9ca2c4eda436f42740fc0cb6ab42f57c79827abc4";

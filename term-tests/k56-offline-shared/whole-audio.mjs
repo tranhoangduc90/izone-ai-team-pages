@@ -1,12 +1,12 @@
 import {downloadDirect} from '../../shared/audio/direct.mjs?v=20261107-mini-v1';
 
 // The capability is transient. Only the verified Blob reaches the exam store.
-export async function downloadTermAudio(slug,metadata,{audioDownload,signal,onProgress=()=>{},fetchImpl=fetch}={}){
+export async function downloadTermAudio(slug,metadata,{audioDownload,signal,onProgress=()=>{},fetchImpl=fetch,refresh}={}){
  const manifest={envelopeVersion:'MP3',url:metadata.pagesUrl,sha256:metadata.sha256,byteLength:metadata.bytes};
  if(audioDownload){
   let pagesAttempted=false;
   try{
-   const blob=await downloadDirect(manifest,audioDownload,{termSlug:slug,signal,fetchImpl,
+   const blob=await downloadDirect(manifest,audioDownload,{termSlug:slug,signal,fetchImpl,refresh,
     onProgress:progress=>onProgress({...progress,complete:false}),
     onEvent:event=>{if(event.source==='pages')pagesAttempted=true;}});
    onProgress({loaded:blob.size,total:blob.size,complete:true});
