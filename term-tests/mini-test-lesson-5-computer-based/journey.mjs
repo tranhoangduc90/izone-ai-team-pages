@@ -11,6 +11,27 @@ const hash = async value => hex(await crypto.subtle.digest('SHA-256', value));
 const text = new TextEncoder();
 const ordered = answers => Object.fromEntries(Object.entries(answers).sort(([a],[b])=>a.localeCompare(b)));
 const id = value => typeof value === 'string' && /^[a-f0-9-]{36}$/i.test(value);
+const nameKey = value => String(value||'').normalize('NFC').trim().replace(/\s+/gu,' ').toLocaleLowerCase('vi');
+
+export async function miniJourneyRecovery(classCode,mode){
+  if(!navigator.locks||!crypto.subtle)return null;
+  const store=await new ExamStore().open();
+  const candidates=[];
+  for(const key of await store.keys(classCode+':')){
+    if(key.endsWith(':audio'))continue;
+    const record=await store.get(key).catch(()=>null);
+    const bundle=record?.package;
+    if(!record?.ready||!record.activatedAt||bundle?.version!==version||!id(bundle.studentRef)||!id(bundle.examSessionToken)
+        ||(mode&&bundle.examMode!==mode)||keyOf({...bundle,classCode})!==key)continue;
+    candidates.push({bundle,activatedAt:record.activatedAt});
+  }
+  if(!candidates.length)return null;
+  return studentName=>{
+    const matches=candidates.filter(({bundle})=>nameKey(bundle.studentName)===nameKey(studentName));
+    if(new Set(matches.map(({bundle})=>bundle.studentRef)).size!==1)return null;
+    return matches.sort((a,b)=>b.activatedAt-a.activatedAt)[0].bundle;
+  };
+}
 
 export async function findMiniJourney(scope) {
   if (!navigator.locks || !crypto.subtle || !id(scope.examSessionToken) || !id(scope.studentRef)) return null;
@@ -33,7 +54,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false}) {
     }).catch(reject);
   });
   if(!release) throw new Error('Bài đang mở ở tab khác. Hãy trở lại tab đang giữ bài.');
-  let record = existing?.record || await store.get(key);
+  let record;
   const changed = new EventTarget();
   let busy=false, retryAt=0, message='', stopped=false, timer;
   let playing=null;
@@ -53,6 +74,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false}) {
   }
 
   try {
+    record=await store.get(key);
     if (!record?.ready) {
       if(!prepare || navigator.onLine===false){await close();return null;}
       record ||= {deviceProof:hex(crypto.getRandomValues(new Uint8Array(32))),sections:{},drafts:{},revisions:{},pending:[],receipts:{}};

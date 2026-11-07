@@ -1014,6 +1014,34 @@
     return true;
   }
 
+  async function offerMiniJourneyRecovery(){
+    if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||listeningOnly||state.studentRef)return false;
+    if(document.getElementById('miniJourneyRecovery'))return true;
+    const mode=query.get('mode');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1');
+    const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'');
+    if(!match)return false;
+    const form=document.createElement('form');form.id='miniJourneyRecovery';
+    const label=document.createElement('label');label.textContent='Họ và tên dùng khi vào thi';
+    const input=document.createElement('input');input.required=true;input.maxLength=180;input.autocomplete='off';label.append(input);
+    const button=document.createElement('button');button.className='button button-primary';button.textContent='Mở bài đã lưu';
+    const status=document.createElement('p');status.setAttribute('role','status');
+    status.textContent='Có bài Mini K67 lưu trên trình duyệt này. Nhập đúng họ tên đã chọn để tiếp tục.';
+    form.append(status,label,button);elements.bootstrapDownloadStep.before(form);
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const bundle=match(input.value);
+      if(!bundle){status.textContent='Chưa xác định được bài đúng họ tên và lớp. Khi có mạng, hãy mở lại từ danh sách lớp.';return;}
+      button.disabled=true;
+      try{
+        bindSharedStudent({ref:bundle.studentRef,name:bundle.studentName});
+        saveState({examSessionToken:bundle.examSessionToken,generation:bundle.generation});
+        if(!await openJourneyLobby())throw new Error('Chưa mở được bản đã lưu.');
+      }catch(error){button.disabled=false;status.textContent=error.message;}
+    });
+    return true;
+  }
+
   async function replayMiniListeningSeal() {
     if (testConfig.slug !== 'mini-test-lesson-5' || navigator.onLine === false || !state.studentRef || !state.examSessionToken) return false;
     const scope = miniCbtScope();
@@ -1478,6 +1506,7 @@
     }
     try {if(await openJourneyLobby()) {setStartAvailability();return;}}
     catch(error){showNotice(error.message,true);return;}
+    if(navigator.onLine===false){try{if(await offerMiniJourneyRecovery())return;}catch{/* Keep the standard retry control. */}}
     try { if (await resumeMiniOffline()) return; } catch { /* Standard lobby retains the local draft. */ }
     let restoreError=null;
     // Có mã lượt: xác minh trực tiếp, không dựng lại danh sách cả lớp để mở lại bài.
@@ -1607,6 +1636,7 @@
       }
     } catch (error) {
       roster = [];
+      try{if(await offerMiniJourneyRecovery())return;}catch{/* Keep the standard retry control. */}
       elements.bootstrapDownloadStep.dataset.state = 'error';
       elements.bootstrapDownloadStatus.textContent = 'Không kết nối được máy chủ. Hãy kiểm tra mạng hoặc thử lại.';
       elements.bootstrapRetry.textContent = 'Thử tải danh sách lại';

@@ -148,7 +148,7 @@ export const ASSET_HASHES={
   "../design-demo/skin.css": "d71ce4a4e2f75345c805fb0ca192c95cf4973e8ee7d35bf36d29bdeea66b0048",
   "../design-demo/theme.css": "afe1789ef3b18a8ef53fae51e22efdc0a9f83f91e6eb6b73fabc3257784d64b5",
   "../design-full/native.css": "54aa42e4a564376e71b7e99c0e0d9e4c396e44d298bfbb69a6d1954ce8bea2be",
-  "../k56-offline-shared/runtime.mjs": "6aa17d4fc03633e6fdf90c5da63b0085ed566f3bae3eb0e99349491014426488",
+  "../k56-offline-shared/runtime.mjs": "982dd1b35f381b3a7778a52e9b80f6d0dbde0d8055005aac40eafae8ead6a73f",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k67-design/appearance.css": "3ad160b70e0bfa79d2570280cbc63c745053abc039efd957068cd38ae5f2b0a0",
@@ -194,13 +194,13 @@ export const ASSET_HASHES={
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-2-computer-based/audio-loader.js": "aa28719a6095085ff3faf9167802f7c8e3dfc6debf8db3e996e2eb0d7c10a1a2",
-  "../term-test-2-computer-based/bootstrap.js": "1c5c5c20c0dab8314c0b1d1312cf697f8966420aaa94fc02f072ccc019247f71",
+  "../term-test-2-computer-based/bootstrap.js": "42ee1c9d58b5ab9d3a96251f2430dee75d6f6da01c8b8e0ae6c091e311fbc003",
   "../term-test-2-computer-based/enhance.js": "1c0ef8c64e70dc032d3290a3bbcd210a7432b83e468521cbb4b4a4d258d67b17",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
   "index.html": "a1bce01564ec54f2b52a79e8f0f64243088ac183f53ebe1e530f9b08128caa59",
-  "journey.mjs": "2e27f20c699bc2ef5ff0fabca25d7ca974e05fb94e650614764bc3f777c555cd",
+  "journey.mjs": "9ba8bdf8841beb69777e37ffee792dccb2766a587d3a36fe9310bca7133022fd",
   "offline-worker.js": "180f1ae141f5fe675cd4a161cae972053351fa9b98219ca2c3b72dc31f59da36",
   "resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f"
 };
-export const ASSET_BUILD_ID="44c0531c1cc881f1cffdb10d51506a574e78b1d96749b5adf579f66ec0df7db7";
+export const ASSET_BUILD_ID="eb6baf04120709d56211bbb3b8eef141ae1718db56b24f7fbfeeee09d6b0e0d9";

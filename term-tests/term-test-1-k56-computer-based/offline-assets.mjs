@@ -265,7 +265,7 @@ export const ASSET_HASHES={
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime.mjs": "6aa17d4fc03633e6fdf90c5da63b0085ed566f3bae3eb0e99349491014426488",
+  "../k56-offline-shared/runtime.mjs": "982dd1b35f381b3a7778a52e9b80f6d0dbde0d8055005aac40eafae8ead6a73f",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/app.js": "eaf7262bdd4886ce3defea22d7d90cfbbede119d82f6b2868a64ffccd025bbc8",
@@ -331,4 +331,4 @@ export const ASSET_HASHES={
   "offline.mjs": "83616543d78814b23a5c03e3e60fcbb720e34247683e5732e4d166b194edd174",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="ea6ab2d7182f6f5e7a7fdd716c442d8da5e4350b4b9291ae084ef9d952088894";
+export const ASSET_BUILD_ID="a93b644021ed60eae272ff1099c86599a12245fdbd907bf745003089b1d0bcb5";

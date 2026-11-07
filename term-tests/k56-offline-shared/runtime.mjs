@@ -18,6 +18,20 @@ class ExamStore{
   if(a&&b&&a._revision===b._revision&&canonical(a)!==canonical(b))throw Object.assign(failure(),{code:'LOCAL_REVISION_CONFLICT'});
   const selected=!a?b:!b?a:a._revision>=b._revision?a:b;this.revision=Math.max(this.revision,selected?._revision||0);return selected||null;
  }
+ async keys(prefix){
+  const keys=new Set();
+  const localPrefix=profile.localPrefix+prefix;
+  try{for(let i=0;i<this.local.length;i+=1){const key=this.local.key(i);if(key?.startsWith(localPrefix))keys.add(key.slice(profile.localPrefix.length));}}catch{}
+  if(this.db)try{
+   const stored=await new Promise((resolve,reject)=>{
+    const range=IDBKeyRange.bound(prefix,prefix+'\uffff');
+    const request=this.db.transaction('records').objectStore('records').getAllKeys(range);
+    request.onsuccess=()=>resolve(request.result);request.onerror=reject;
+   });
+   for(const key of stored)keys.add(key);
+  }catch{}
+  return [...keys];
+ }
  put(key,value){
   const copy=clone({...value,_revision:++this.revision});let local=false;
   if(!key.endsWith(':audio'))try{const raw=JSON.stringify(copy);this.local.setItem(profile.localPrefix+key,raw);local=this.local.getItem(profile.localPrefix+key)===raw;}catch{}
