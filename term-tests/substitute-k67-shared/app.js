@@ -18,7 +18,7 @@
     ? requestedDemo
     : '';
   const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
-  const readingFirst = serverGradingMode && twoTaskWriting
+  const readingFirst = serverGradingMode
     && window.TERM_TEST_BOOTSTRAP?.examOrder === 'reading-first';
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
@@ -431,7 +431,7 @@
     });
     root.querySelector('.topbar').append(change);
   }
-  if(twoTaskWriting&&serverGradingMode&&window.SUBSTITUTE_OFFLINE){
+  if(serverGradingMode&&window.SUBSTITUTE_OFFLINE){
     const download=document.createElement('button');download.type='button';
     download.className='button button-secondary';download.textContent='Tải bài làm về máy';
     download.addEventListener('click',async()=>{

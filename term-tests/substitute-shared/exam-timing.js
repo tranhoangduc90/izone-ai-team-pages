@@ -5,7 +5,7 @@
  const provisionalStarts=new Map(),syncingStarts=new Set();
  const confirmingRuns=new Set(),confirmedRuns=new Set();
  function validAudioEnd(audio){
-  if(window.TERM_TEST_CONFIG?.slug!=='substitute-test-2-k67')return true;
+  if(!/^substitute-test-[12]-k(?:56|67)$/.test(window.TERM_TEST_CONFIG?.slug||''))return true;
   const expected=Number(window.TERM_TEST_CONFIG.listening?.durationSeconds);
   const duration=Number(audio?.duration),position=Number(audio?.currentTime);
   return Number.isFinite(expected)&&expected>0&&Number.isFinite(duration)&&Number.isFinite(position)
@@ -29,10 +29,10 @@
   let data;
   try{data=await request('/api/test/exam/session',{classCode:state.classCode,studentRef:state.studentRef,clientRunId:state.clientRunId,
    ...(state.examOrder?{examOrder:state.examOrder}:{}),...(audioPreparation||{}),
-   ...(state.classCode&&window.TERM_TEST_CONFIG?.slug==='substitute-test-2-k67'
+   ...(state.classCode&&/^substitute-test-[12]-k(?:56|67)$/.test(window.TERM_TEST_CONFIG?.slug||'')
     ?{deviceId:state.annotationRunId,generation:Number(state.generation)||0}:{})});}
   catch(error){
-   if(error.accessDenied||window.TERM_TEST_CONFIG?.slug!=='substitute-test-2-k67'||!state.offlinePermit
+   if(error.accessDenied||!/^substitute-test-[12]-k(?:56|67)$/.test(window.TERM_TEST_CONFIG?.slug||'')||!state.offlinePermit
     ||state.examSessionId!==state.clientRunId||!state.offlineDeviceId||state.offlineDeviceId!==state.annotationRunId)throw error;
    data={testSlug:window.TERM_TEST_CONFIG.slug,classCode:state.classCode,studentRef:state.studentRef,
     clientRunId:state.clientRunId,historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,timingVersion:VERSION,

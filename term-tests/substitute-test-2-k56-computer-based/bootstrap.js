@@ -29,8 +29,8 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&outline=20261106-v1'))
-      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1'))
+      .then(() => loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1&offline=20261107-v3'))
+      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -39,15 +39,37 @@
   }
 
   if(!localDemo){query.set('demo','exam');query.set('grading','server');location.replace(location.pathname+'?'+query.toString());return;}
+  const offline=await import('./offline.mjs?v=20261107-r2-three-v1').catch(()=>null);
   try {
     if(query.get('reset')==='1'){
       if(query.get('resetOwner')!=='done'&&window.SUBSTITUTE_STATE.canReset(testConfig.slug))window.SUBSTITUTE_STATE.clear(testConfig.slug);
       query.delete('reset');query.delete('resetOwner');
       location.replace(location.pathname+'?'+query.toString());return;
     }
-    await window.SUBSTITUTE_STATE.initialize(testConfig,appConfig);
+    await window.SUBSTITUTE_STATE.initialize(testConfig,appConfig,offline?{
+      readOfflineMeta:offline.loadMeta,writeOfflineMeta:offline.saveMeta}:undefined);
   } catch(error) {
     root.textContent=error.message||'Không mở được phiên thi. Hãy tải lại trang.';return;
+  }
+  function prepareShellCache(){
+    if(!offline||!('serviceWorker' in navigator)||!('caches' in window))return;
+    navigator.serviceWorker.addEventListener('message',event=>{
+      if(event.data?.type==='PRECACHE_RESULT')window.SUBSTITUTE_OFFLINE_SHELL_STATUS=event.data.ok?'ready':'partial';
+    });
+    void navigator.serviceWorker.register('./offline-sw.js?v=20261107-r2-three-v1').then(async()=>{
+      const registration=await navigator.serviceWorker.ready;
+      const urls=[...document.querySelectorAll('script[src],link[href],img[src]')]
+        .map(element=>element.src||element.href).filter(url=>url&&!new URL(url).pathname.includes('/exam-journal/'));
+      for(const path of ['./offline.mjs','../substitute-test-2-k56-shared/app.js','./enhance.js',
+        './annotations.js','../substitute-shared/backup-export.mjs?v=20261107-v1','../substitute-shared/audio-preparation.mjs?v=20261107-substitute-r2-v1',
+        '../../shared/audio/direct.mjs?v=20261107-substitute-r2-v1',
+        '../../shared/audio/catalog.mjs?v=20261107-r2-direct1','../../shared/audio/direct-cache.mjs?v=20261107-r2-direct1','../shared/writing-submission.mjs','../../shared/substitute-student-identity.js',
+        '../../shared/student-identity.js','../../shared/student-identity-migration.js',
+        '../../shared/teacher-entry.js','../../shared/master170/question-layout-v1.1.mjs',
+        '../shared/audio-source-choice.js','../../shared/audio/transport.mjs'])
+        urls.push(new URL(path,location.href).href);
+      registration.active?.postMessage({type:'PRECACHE',urls});
+    }).catch(()=>{window.SUBSTITUTE_OFFLINE_STATUS='shell_cache_failed';});
   }
   let sharedIdentity;
   try {
@@ -65,6 +87,22 @@
   const uiStorageKey = window.SUBSTITUTE_STATE.key('izone-test-ui:',storageNamespace,{lobby:true});
   const annotationStorageKey = window.SUBSTITUTE_STATE.key('izone-test-annotations:',storageNamespace,{lobby:true});
   let state = await readState();
+  const offlineScope=()=>({testSlug:testConfig.slug,historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,
+    classCode:state.classCode||classCode,studentRef:state.studentRef,clientRunId:state.clientRunId,
+    deviceId:state.annotationRunId,generation:Number(state.generation)||0});
+  window.SUBSTITUTE_OFFLINE=offline?Object.freeze({
+    saveSnapshot:(kind,value)=>offline.saveSnapshot(offlineScope(),kind,value),
+    loadSnapshot:kind=>offline.loadSnapshot(offlineScope(),kind),
+    saveAudio:blob=>offline.saveAudio(offlineScope(),blob),
+    loadAudio:()=>offline.loadAudio(offlineScope()),
+    queueSection:(skill,answers)=>offline.queueSection(offlineScope(),skill,answers),
+    pendingSections:()=>offline.pendingSections(offlineScope()),
+    acknowledgeSection:(skill,receipt)=>offline.acknowledgeSection(offlineScope(),skill,receipt),
+    queueWriting:payload=>offline.queueWriting(offlineScope(),payload),
+    pendingWriting:()=>offline.pendingWriting(offlineScope()),
+    acknowledgeWriting:receipt=>offline.acknowledgeWriting(offlineScope(),receipt),
+    makeDownload:appState=>offline.makeDownload(offlineScope(),appState)
+  }):null;
   let legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
@@ -74,6 +112,7 @@
   let previewHeard = false;
   let preparing = false;
   let downloadController = null;
+  let preparedAudio = null;
   const localDemoClasses = Object.freeze([...(window.SUBSTITUTE_STATE.meta.classes || [
     {
       code: 'DEMO',
@@ -110,6 +149,12 @@
           <p class="cbt-roster-note">Danh sách chỉ hiển thị học viên được xếp tham gia bài thi lại của lớp đã chọn.</p>
           <button class="button button-secondary" id="bootstrapChangeStudent" type="button">Đổi người học</button>
         </div>
+        <label id="bootstrapOrderLabel" ${window.SUBSTITUTE_STATE.meta.readingFirstEnabled===true||state.examOrder==='reading-first'?'':'hidden'}>Thứ tự làm bài
+          <select id="bootstrapOrder">
+            <option value="listening-first">Listening trước · Reading sau</option>
+            <option value="reading-first">Reading trước · Listening sau</option>
+          </select>
+        </label>
         <div class="cbt-lobby-steps">
           <section class="cbt-lobby-step" id="bootstrapDownloadStep" data-state="locked">
             <span class="cbt-lobby-step-number">1</span>
@@ -158,8 +203,15 @@
     'bootstrapStudent', 'bootstrapClass', 'bootstrapDownloadStep', 'bootstrapDownloadStatus',
     'bootstrapDownloadProgress', 'bootstrapRetry', 'bootstrapPreviewStep', 'bootstrapPreview',
     'bootstrapVolume', 'bootstrapPreviewStatus', 'bootstrapStartStep', 'bootstrapStartStatus',
-    'bootstrapStart', 'bootstrapNotice'
+    'bootstrapStart', 'bootstrapNotice', 'bootstrapOrder'
   ].map(id => [id, document.getElementById(id)]));
+  elements.bootstrapOrder.value=state.examOrder==='reading-first'?'reading-first':'listening-first';
+  elements.bootstrapOrder.disabled=Boolean(state.examSessionId);
+  elements.bootstrapOrder.addEventListener('change',()=>{
+    if(state.examSessionId){elements.bootstrapOrder.value=state.examOrder||'listening-first';return;}
+    saveState({examOrder:elements.bootstrapOrder.value});
+    setStartAvailability();
+  });
   const previewAudio = document.createElement('audio');
   previewAudio.hidden = true;
   document.body.append(previewAudio);
@@ -224,6 +276,15 @@
             && await window.SUBSTITUTE_STATE.verifyStoredRun(candidate) && window.SUBSTITUTE_STATE.accept(candidate, null)) { restored = candidate; break; }
       } catch { /* Không xóa nháp hỏng hoặc dữ liệu chưa xác định chủ. */ }
     }
+    if(!restored&&offline){
+      try{
+        const candidate=await offline.latestLobby({historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,
+          classCode:selectedClass,studentRef:student.ref});
+        if(candidate?.studentRef===student.ref&&candidate.classCode===selectedClass
+          &&await window.SUBSTITUTE_STATE.verifyStoredRun(candidate)
+          &&window.SUBSTITUTE_STATE.accept(candidate,null))restored=candidate;
+      }catch{/* Nếu IndexedDB lỗi, vẫn dùng lượt đã xác nhận trên máy chủ. */}
+    }
     if (selectionGeneration !== classLoadGeneration || elements.bootstrapClass.value !== selectedClass
         || elements.bootstrapStudent.value !== selectedStudentValue) return false;
     if (restored) {
@@ -238,9 +299,12 @@
         } catch { /* Giữ bản phòng chờ của cùng lượt nếu bản đầy đủ không đọc được. */ }
       }
     }
-    state = restored || { audioVolume: state.audioVolume, classCode: selectedClass };
+    const chosenOrder=elements.bootstrapOrder.value;
+    state = restored || { audioVolume: state.audioVolume, classCode: selectedClass,examOrder:chosenOrder };
     saveState({ classCode: selectedClass, studentRef: student.ref, studentName: student.name,
       identityConfirmed: true, annotationRunId: state.annotationRunId || crypto.randomUUID() });
+    elements.bootstrapOrder.value=state.examOrder==='reading-first'?'reading-first':'listening-first';
+    elements.bootstrapOrder.disabled=Boolean(state.examSessionId);
     elements.bootstrapClass.disabled = true;
     elements.bootstrapStudent.value = student.ref;
     legacyUiState = readLegacyUiState();
@@ -332,6 +396,10 @@
         catch { /* Không xóa con trỏ/bài cũ khi bộ nhớ hết chỗ. */ }
       }
     }
+    if(state.studentRef&&state.clientRunId)
+      void window.SUBSTITUTE_OFFLINE?.saveSnapshot('lobby',state)?.catch(()=>{
+        window.SUBSTITUTE_OFFLINE_STATUS='checkpoint_failed';
+      });
     if (localDemo) {
       history.replaceState({ ...(history.state || {}), k56DemoState: state }, '', window.location.href);
     }
@@ -386,12 +454,15 @@
   }
 
   function setStartAvailability() {
-    const resumed = Boolean(state.listeningStartedAt || legacyListeningResume);
+    const resumed = Boolean(state.listeningStartedAt || state.readingStartedAt || legacyListeningResume);
     const ready = Boolean(encryptedAudio && (previewHeard || resumed));
     elements.bootstrapStart.disabled = !ready || preparing;
     elements.bootstrapStart.textContent = resumed ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
     window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart, previewHeard && !resumed);
-    elements.bootstrapStartStatus.textContent = resumed
+    if(elements.bootstrapOrder.value==='reading-first')elements.bootstrapStart.textContent=resumed?'Tiếp tục lượt thi':'Bắt đầu thi Reading';
+    elements.bootstrapStartStatus.textContent = elements.bootstrapOrder.value==='reading-first'
+      ? (resumed?'Tiến độ Reading và Listening của lượt này được giữ.':'Reading mở trước; audio Listening chỉ phát sau khi Reading đã được lưu.')
+      : resumed
       ? 'Đồng hồ máy chủ vẫn đang chạy. Tiếp tục ngay sau khi audio tải đủ.'
       : 'Sau khi bấm, đồng hồ máy chủ bắt đầu và đề mới được mở.';
   }
@@ -410,11 +481,42 @@
     });
   }
 
+  const audioScope=()=>({...offlineScope(),examOrder:state.examOrder||'listening-first'});
+
+  async function requestAudioPreparation(input,signal){
+    const controller=new AbortController();
+    const cancel=()=>controller.abort(signal?.reason);
+    signal?.addEventListener('abort',cancel,{once:true});
+    if(signal?.aborted)cancel();
+    const timeout=window.setTimeout(()=>controller.abort(),20_000);
+    const untrack=window.SUBSTITUTE_STATE.track(controller);
+    try{
+      const response=await fetch(appConfig.API_BASE_URL,{method:'POST',cache:'no-store',signal:controller.signal,
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({route:'/api/test/exam/audio/prepare',payload:window.SUBSTITUTE_STATE.payload(input)})});
+      if(!response.ok)throw Object.assign(new Error('Chưa xác nhận được quyền tải audio. Hãy thử lại.'),
+        {accessDenied:response.status<500,audioRefreshUnavailable:response.status>=500});
+      return await response.json();
+    }catch(error){
+      signal?.throwIfAborted();
+      if(error instanceof TypeError||error.name==='AbortError')error.audioRefreshUnavailable=true;
+      throw error;
+    }finally{
+      window.clearTimeout(timeout);signal?.removeEventListener('abort',cancel);untrack();
+    }
+  }
+
+  async function authorizeAudio(scope,signal){
+    const {authorizeSubstituteAudio}=await import('../substitute-shared/audio-preparation.mjs?v=20261107-substitute-r2-v1');
+    return authorizeSubstituteAudio(scope,requestAudioPreparation,{signal});
+  }
+
   async function downloadLocalDemoAudio() {
     downloadController?.abort();
     downloadController = new AbortController();
     encryptedAudio = null;
-    const resuming = Boolean(state.listeningStartedAt);
+    preparedAudio = null;
+    const resuming = Boolean(state.listeningStartedAt || state.readingStartedAt);
     previewHeard = resuming;
     elements.bootstrapDownloadStep.dataset.state = 'active';
     elements.bootstrapPreviewStep.dataset.state = 'locked';
@@ -430,7 +532,22 @@
     try {
       const source = window.K56_SUBSTITUTE_TEST_2_CONTENT?.audio?.src;
       if (!source) throw new Error('Không tìm thấy đường dẫn audio khóa 56.');
-      const audioBlob = await audioLoader.downloadAudio(source, {
+      const scope=audioScope();
+      const canResumeAudio=state.offlinePermit&&state.examSessionId===scope.clientRunId&&
+        state.offlineDeviceId===scope.deviceId&&state.offlineGeneration===scope.generation;
+      let preparation=null,preparationError=null;
+      if(window.SUBSTITUTE_STATE.meta?.r2DirectEnabled===true&&(navigator.onLine!==false||!canResumeAudio)){
+        try{preparation=await authorizeAudio(scope,downloadController.signal);}
+        catch(error){
+          if(!canResumeAudio||!error.audioRefreshUnavailable)throw error;
+          preparationError=error;
+        }
+      }
+      let audioBlob=null;
+      try{audioBlob=await window.SUBSTITUTE_OFFLINE?.loadAudio();}catch{/* Tải lại từ nguồn có kiểm hash. */}
+      if(!audioBlob&&preparationError)throw preparationError;
+      const fromCache=Boolean(audioBlob);
+      const options={
         signal: downloadController.signal,
         onProgress: ({ loaded, total, complete }) => {
           if (total > 0) {
@@ -443,7 +560,12 @@
             elements.bootstrapDownloadStatus.textContent = `Đang tải audio · ${formatBytes(loaded)}`;
           }
         }
-      });
+      };
+      if(!audioBlob)audioBlob = await (preparation?preparation.download(options):audioLoader.downloadAudio(source,options));
+      preparation?.startFields(audioScope());
+      preparedAudio=preparation;
+      if(audioBlob&&!fromCache)
+        void window.SUBSTITUTE_OFFLINE?.saveAudio(audioBlob)?.catch(()=>{window.SUBSTITUTE_OFFLINE_STATUS='audio_cache_failed';});
       encryptedAudio = audioBlob;
       revokePreview();
       previewObjectUrl = URL.createObjectURL(audioBlob);
@@ -652,8 +774,18 @@
   }
 
   async function enterExam(started, audioElement = null) {
+    let appCheckpoint=null,uiCheckpoint=null;
+    try{[appCheckpoint,uiCheckpoint]=await Promise.all([
+      window.SUBSTITUTE_OFFLINE?.loadSnapshot('app'),window.SUBSTITUTE_OFFLINE?.loadSnapshot('ui')]);}
+    catch{/* App sẽ dùng bản sessionStorage/RAM hiện có. */}
     window.addEventListener('term-test:listening-timing-updated',event=>{
       if(state.examSessionId&&event.detail?.audioEndedAt)saveState({audioEndedAt:event.detail.audioEndedAt,listeningDeadlineAt:event.detail.listeningDeadlineAt});
+    });
+    window.addEventListener('term-test:listening-phase-started',event=>{
+      if(state.examSessionId&&event.detail?.clientRunId===state.clientRunId)
+        saveState({listeningStartedAt:event.detail.listeningStartedAt,
+          offlineListeningPending:event.detail.offlineListeningPending===true,serverTimeOffsetMs:
+          (window.IZONE_EXAM_CLOCK?.offset(event.detail.serverNow) ?? (Date.parse(event.detail.serverNow)-Date.now()))});
     });
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
@@ -662,6 +794,14 @@
       studentRef: state.studentRef,
       clientRunId: state.clientRunId,
       examSessionId:state.examSessionId,
+      examOrder:state.examOrder||'listening-first',
+      readingStartedAt:state.readingStartedAt||'',
+      readingDeadlineAt:state.readingDeadlineAt||'',
+      offlinePermit:state.offlinePermit||'',
+      offlineDeviceId:state.offlineDeviceId||'',
+      offlineGeneration:state.offlineGeneration??null,
+      offlineListeningPending:state.offlineListeningPending===true,
+      uiState:uiCheckpoint,
       audioEndedAt:state.audioEndedAt,
       serverTimeOffsetMs:state.serverTimeOffsetMs,
       attemptToken: state.attemptToken,
@@ -673,15 +813,16 @@
       serverNow: started.serverNow,
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
+      preloadedAudioBlob:state.examOrder==='reading-first'&&!state.listeningStartedAt?encryptedAudio:null,
       officialAudioUrl: officialObjectUrl,
       skipListeningAudio: Boolean(state.attemptToken || started.listeningSubmitted),
-      sessionState: Object.freeze({ ...state }),
+      sessionState: Object.freeze(appCheckpoint??{ ...state }),
       annotationRunId: state.annotationRunId
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&outline=20261106-v1');
-    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1');
+    await loadScript('../substitute-test-2-k56-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1&offline=20261107-v3');
+    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
@@ -750,7 +891,8 @@
   });
   elements.bootstrapStart.addEventListener('click', async () => {
     // Chỉ vị trí giao diện: bắt đầu mới khác với tiếp tục lượt đang làm.
-    startAtFirstSection = !state.listeningStartedAt && !state.attemptToken && !legacyListeningResume;
+    startAtFirstSection = !state.examSessionId && !state.listeningStartedAt && !state.readingStartedAt
+      && !state.attemptToken && !legacyListeningResume;
     if (!encryptedAudio || preparing) return;
     preparing = true;
     elements.bootstrapStart.disabled = true;
@@ -765,18 +907,34 @@
         officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
         document.body.append(officialAudio);
         await waitForAudioMetadata(officialAudio);
-        const timing=await window.SUBSTITUTE_EXAM?.start(state);
+        const scope=audioScope();
+        if(preparedAudio&&!preparedAudio.isCurrent(scope))preparedAudio=await authorizeAudio(scope);
+        const timing=await window.SUBSTITUTE_EXAM?.start(state,preparedAudio?.startFields(scope));
         if(timing)saveState({...timing,serverTimeOffsetMs:(window.IZONE_EXAM_CLOCK?.offset(timing.serverNow) ?? (Date.parse(timing.serverNow)-Date.now()))});
+        if(timing?.offlinePermit)prepareShellCache();
+        if(timing?.examOrder==='reading-first'&&!timing.listeningStartedAt){
+          elements.bootstrapOrder.disabled=true;
+          const readingDeadlineAt=new Date(Date.parse(timing.readingStartedAt)+Number(testConfig.reading.durationMinutes)*60000).toISOString();
+          saveState({examOrder:'reading-first',readingStartedAt:timing.readingStartedAt,readingDeadlineAt,
+            listeningStartedAt:'',listeningDeadlineAt:''});
+          await enterExam({content:window.K56_SUBSTITUTE_TEST_2_CONTENT,serverNow:timing.serverNow,
+            readingStartedAt:timing.readingStartedAt,readingDeadlineAt,listeningStartedAt:'',listeningDeadlineAt:'',listeningSubmitted:false},null);
+          return;
+        }
         // Bắt mốc trước play: audio có thể kết thúc trong lúc app/enhance đang tải khi resume.
         officialAudio.addEventListener('ended',()=>{
-          if(!state.examSessionId||state.audioEndedAt||window.SUBSTITUTE_STATE.blocked)return;
+          if(!state.examSessionId||state.audioEndedAt||window.SUBSTITUTE_STATE.blocked
+            ||!window.SUBSTITUTE_EXAM?.validAudioEnd(officialAudio))return;
           const audioEndedAt=new Date((window.IZONE_EXAM_CLOCK?.estimate(state.serverTimeOffsetMs) ?? (Date.now()+(Number(state.serverTimeOffsetMs)||0)))).toISOString();
           saveState({audioEndedAt,listeningDeadlineAt:new Date(Date.parse(audioEndedAt)+300000).toISOString()});
           if(window.TERM_TEST_BOOTSTRAP?.clientRunId===state.clientRunId)window.SUBSTITUTE_EXAM?.ended(officialAudio,audioEndedAt);
-        },{once:true});
+        });
         const existingStart = Date.parse(state.listeningStartedAt || '');
         // Bookmark đã được kiểm đúng người/lượt/epoch; thời gian gián đoạn không phải đoạn đã nghe.
-        const heardSeconds = readLegacyUiState().audioTime;
+        let savedUi=null;
+        try{savedUi=await window.SUBSTITUTE_OFFLINE?.loadSnapshot('ui');}catch{}
+        const heardSeconds = Math.max(readLegacyUiState().audioTime,
+          Number(savedUi?.audio?.time)||0);
         officialAudio.currentTime = state.audioEndedAt ? officialAudio.duration
           : Math.min(Math.max(0, heardSeconds), Math.max(0, officialAudio.duration - 0.05));
         if (!state.audioEndedAt) await officialAudio.play();
@@ -853,7 +1011,22 @@
   elements.bootstrapRetry.addEventListener('click', prepareSelectedStudent);
   async function loadDemoRoster(selectedClass) {
     if (!selectedClass) return [];
-    const data = await apiRequest(`/api/test/roster?class=${encodeURIComponent(selectedClass.code)}`);
+    if (selectedClass.code === 'DEMO') return [{ ref: 'demo-sub2-01', name: 'Học viên Demo K56' }];
+    let response;
+    try{response = await fetch(appConfig.API_BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ route: '/api/test/roster', payload: { classCode: selectedClass.code } }),
+      cache: 'no-store'
+    });}
+    catch(error){
+      const cached=await offline?.cachedStudents({historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,
+        classCode:selectedClass.code}).catch(()=>[]);
+      if(cached?.length)return cached;
+      throw error;
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Không tải được danh sách lớp từ Portal.');
     return Array.isArray(data.students) ? data.students : [];
   }
 
@@ -946,7 +1119,7 @@
         for (const item of localDemoClasses) classOptions.push(new Option(item.name, item.code));
         elements.bootstrapClass.replaceChildren(...classOptions);
         const savedClass = localDemoClasses.find(item => item.code === (state.classCode || classCode));
-        if (savedClass && state.studentRef && (state.listeningStartedAt || state.attemptToken)) {
+        if (savedClass && state.studentRef && (state.listeningStartedAt || state.readingStartedAt || state.attemptToken)) {
           roster = await loadDemoRoster(savedClass);
           elements.bootstrapClass.value = savedClass.code;
           elements.bootstrapClass.disabled = true;
@@ -1019,7 +1192,7 @@
         await prepareSelectedStudent();
         return;
       }
-      if (state.studentRef && (state.listeningStartedAt || state.attemptToken || legacyListeningResume) && roster.some(student => student.ref === state.studentRef)) {
+      if (state.studentRef && (state.listeningStartedAt || state.readingStartedAt || state.attemptToken || legacyListeningResume) && roster.some(student => student.ref === state.studentRef)) {
         elements.bootstrapStudent.value = state.studentRef;
         await prepareSelectedStudent();
       } else {
