@@ -100,8 +100,8 @@ try{
   Object.assign(dialog.style,{position:'fixed',inset:'0 auto auto -20px',margin:'0'});
   dialog.showModal();
  });
- await until(()=>logs.filter(r=>r.event.type==='dialog_observed').length===2);
- const clipped=logs.findLast(r=>r.event.type==='dialog_observed');
+ await until(()=>logs.filter(r=>r.event.type==='dialog_observed'&&r.event.data.outcome==='opened').length===2);
+ const clipped=logs.findLast(r=>r.event.type==='dialog_observed'&&r.event.data.outcome==='opened');
  assert.equal(clipped.event.data.checkpointState.visibility,'partly_outside');
  assert.equal(clipped.event.data.checkpointState.rect.x,-20);
  await page.evaluate(()=>document.querySelector('#identityConfirm').close());
