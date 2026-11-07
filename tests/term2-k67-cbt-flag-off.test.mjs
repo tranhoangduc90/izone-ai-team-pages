@@ -21,7 +21,7 @@ test('Term 2 CBT flag off keeps legacy entrance', {timeout:90_000}, async()=>{
   const base=`http://127.0.0.1:${port}`;
   const fixture=spawn(process.execPath,['tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
     env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_MINI_CBT_JOURNEY:'off',
-      K67_PREVIEW_TERM2_CBT_JOURNEY:'off',K67_PREVIEW_TERM2_CBT_JOURNEY:'off',
+      K67_PREVIEW_TERM2_CBT_JOURNEY:'off',
       K67_PREVIEW_AUDIO_PROTECTION:'true',K67_PREVIEW_AUDIO_SECONDS:'8'},stdio:['ignore','ignore','pipe']});
   let browser;
   try{
