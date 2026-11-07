@@ -1,15 +1,39 @@
 (function(){
  'use strict';
  const VERSION='substitute-audio-transfer-20261014-v1';
+ const substituteSlug=/^substitute-test-[12]-k(?:56|67)$/;
  const endedByRun=new Map();
  const provisionalStarts=new Map(),syncingStarts=new Set();
  const confirmingRuns=new Set(),confirmedRuns=new Set();
- function validAudioEnd(audio){
-  if(!/^substitute-test-[12]-k(?:56|67)$/.test(window.TERM_TEST_CONFIG?.slug||''))return true;
+ function officialOwner(audio){
+  const owner=window.TERM_TEST_BOOTSTRAP;
+  return owner?.officialAudioElement===audio?owner:null;
+ }
+ function observeEnd(audio,owner,decision,review={}){
+  try{
+   if(!owner?.examSessionId||owner!==window.TERM_TEST_BOOTSTRAP||window.SUBSTITUTE_STATE.blocked)return;
+   const app=window.TERM_TEST_APP_CONFIG,slug=window.TERM_TEST_CONFIG?.slug;
+   if(app?.EXAM_JOURNAL_ENABLED!==true||!substituteSlug.test(slug||''))return;
+   const endpoint=app.EXAM_JOURNAL_BASE_URL||new URL(app.API_BASE_URL).origin+'/substitute-journal-api/'+slug;
+   const key=JSON.stringify([new URL(endpoint,window.location.href).href,slug]);
+   const measured=(name,value)=>Number.isFinite(value)&&value>=0&&value<=86400?{[name]:value}:{};
+   window[Symbol.for('izone.examJournal.connections.v1')]?.get(key)?.recordListeningEnd(owner,{
+    ...measured('durationSeconds',audio?.duration),...measured('positionSeconds',audio?.currentTime),
+    ...(typeof audio?.ended==='boolean'?{ended:audio.ended}:{}),
+    checkpointState:{telemetryVersion:1,decision,assetId:slug,
+     ...measured('configuredDurationSeconds',Number(window.TERM_TEST_CONFIG.listening?.durationSeconds)),...review}
+   });
+  }catch{} // Lỗi quan sát không được ngăn xác nhận giờ thi.
+ }
+ function validAudioEnd(audio,owner=officialOwner(audio)){
+  if(!substituteSlug.test(window.TERM_TEST_CONFIG?.slug||''))return true;
   const expected=Number(window.TERM_TEST_CONFIG.listening?.durationSeconds);
   const duration=Number(audio?.duration),position=Number(audio?.currentTime);
-  return Number.isFinite(expected)&&expected>0&&Number.isFinite(duration)&&Number.isFinite(position)
-   &&Math.abs(duration-expected)<=2&&position>=duration-1&&position<=duration+0.25;
+  const failure=!Number.isFinite(expected)||expected<=0||!Number.isFinite(duration)||!Number.isFinite(position)
+   ?'metadata_unavailable':Math.abs(duration-expected)>2?'duration_mismatch':
+    position<duration-1||position>duration+0.25?'position_outside_end':null;
+  if(failure)observeEnd(audio,owner,failure);
+  return !failure;
  }
  async function request(route,payload){
   const controller=new AbortController(),untrack=window.SUBSTITUTE_STATE.track(controller),timer=setTimeout(()=>controller.abort(),20000);
@@ -103,11 +127,16 @@
    ||(bootstrap.offlineListeningPending?bootstrap.listeningStartedAt:'');
   if(startedAt)void syncProvisionalListening(bootstrap,startedAt);
  });
- function ended(audio,observedAudioEndedAt){
-  const bootstrap=window.TERM_TEST_BOOTSTRAP;if(!bootstrap?.examSessionId||window.SUBSTITUTE_STATE.blocked||!validAudioEnd(audio))return false;
-  const audioEndedAt=endedByRun.get(bootstrap.clientRunId)||observedAudioEndedAt||bootstrap.audioEndedAt||new Date((window.IZONE_EXAM_CLOCK?.estimate(bootstrap.serverTimeOffsetMs) ?? (Date.now()+(Number(bootstrap.serverTimeOffsetMs)||0)))).toISOString();
+ function ended(audio,observedAudioEndedAt,owner=officialOwner(audio)){
+  const bootstrap=window.TERM_TEST_BOOTSTRAP;if(!bootstrap?.examSessionId||window.SUBSTITUTE_STATE.blocked||!validAudioEnd(audio,owner))return false;
+  const previousEnd=endedByRun.get(bootstrap.clientRunId);
+  const audioEndedAt=previousEnd||observedAudioEndedAt||bootstrap.audioEndedAt||new Date((window.IZONE_EXAM_CLOCK?.estimate(bootstrap.serverTimeOffsetMs) ?? (Date.now()+(Number(bootstrap.serverTimeOffsetMs)||0)))).toISOString();
   endedByRun.set(bootstrap.clientRunId,audioEndedAt);
   const patch={audioEndedAt,listeningDeadlineAt:new Date(Date.parse(audioEndedAt)+300000).toISOString()};
+  observeEnd(audio,owner,'review_started',{
+   clockSource:previousEnd||bootstrap.audioEndedAt?'saved_end':observedAudioEndedAt?'media_end_sample':'media_end_estimate',
+   reviewStartedAt:patch.audioEndedAt,reviewDeadlineAt:patch.listeningDeadlineAt
+  });
   window.dispatchEvent(new CustomEvent('term-test:listening-timing-updated',{detail:patch}));
   if(confirmingRuns.has(bootstrap.clientRunId)||confirmedRuns.has(bootstrap.clientRunId))return;
   confirmingRuns.add(bootstrap.clientRunId);
@@ -117,6 +146,10 @@
     const data=await request('/api/test/exam/audio-ended',{classCode:bootstrap.classCode,studentRef:bootstrap.studentRef,clientRunId:bootstrap.clientRunId,
      audioEndedAt,heardSeconds:audio.duration});
     if(data.clientRunId!==bootstrap.clientRunId||data.timingVersion!==VERSION)throw new Error('EXAM_TIMING_CONFLICT');
+    if(Number.isFinite(Date.parse(data.audioEndedAt))&&Number.isFinite(Date.parse(data.listeningDeadlineAt))){
+     observeEnd(audio,owner,'review_confirmed',{clockSource:'server_ack',
+      reviewStartedAt:new Date(data.audioEndedAt).toISOString(),reviewDeadlineAt:new Date(data.listeningDeadlineAt).toISOString()});
+    }
     window.dispatchEvent(new CustomEvent('term-test:listening-timing-updated',{detail:data}));
     confirmedRuns.add(bootstrap.clientRunId);confirmingRuns.delete(bootstrap.clientRunId);
    }catch{if(!window.SUBSTITUTE_STATE.blocked)setTimeout(confirm,15000);}

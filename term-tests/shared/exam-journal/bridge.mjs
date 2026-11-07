@@ -4,6 +4,10 @@ import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-start
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const registryKey=Symbol.for('izone.examJournal.connections.v1');
+const listeningEndDecisions=new Set(['metadata_unavailable','duration_mismatch','position_outside_end','review_started','review_confirmed']);
+const listeningEndClocks=new Set(['saved_end','media_end_sample','media_end_estimate','server_ack']);
+const listeningEndNumber=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=86400;
+const listeningEndTime=value=>typeof value==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value)&&Number.isFinite(Date.parse(value));
 export function safeRoute(path) {
   try { return new URL(path,globalThis.location?.href || 'https://fixture.invalid').pathname
     .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi,':id').slice(0,240); } catch { return 'unknown'; }
@@ -40,6 +44,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   const outbox = providedOutbox || new IndexedOutbox({ name:'izone-exam-journal-v2:' + target.origin + target.pathname });
   const visitId = crypto.randomUUID(); let current = null,ownerKey = '',requesting = '',lastProjection = '',nextContextTry = 0,stopped = false,unobservedSince=performance.now(),previousFields=new Set();
   const audioStops = new Map();
+  const recordedListeningEnds=new WeakMap();
   const bindingRequests=new Map(),bindingCache=new Map(),audioPending=new Set();let audioPendingBytes=0;
   const health = data => {
     if (data.pendingReauthorization && data.expiredBindingId === current?.bindingId) {current=null;nextContextTry=0;}
@@ -223,6 +228,30 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
         }
         return observer;
       }catch{return null;}
+    },
+    recordListeningEnd(owner,data) {
+      if(stopped||!current||!owner?.examSessionId||owner!==win.TERM_TEST_BOOTSTRAP)return false;
+      const state=getState(),proof=proofOf(state),context=bindingCache.get(ownerKey),detail=data?.checkpointState;
+      if(!/^substitute-test-[12]-k(?:56|67)$/.test(testSlug)||detail?.assetId!==testSlug
+        ||!listeningEndDecisions.has(detail.decision)||detail.telemetryVersion!==1
+        ||!proof.clientRunId||proof.clientRunId!==owner.clientRunId||proof.examSessionId!==owner.examSessionId
+        ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return false;
+      const seen=recordedListeningEnds.get(owner)||new Set();
+      if(seen.has(detail.decision))return false;
+      const metadata={telemetryVersion:1,assetId:testSlug,decision:detail.decision};
+      if(listeningEndNumber(detail.configuredDurationSeconds))metadata.configuredDurationSeconds=detail.configuredDurationSeconds;
+      if(detail.decision==='review_started'||detail.decision==='review_confirmed'){
+        if(!listeningEndClocks.has(detail.clockSource)||((detail.clockSource==='server_ack')!==(detail.decision==='review_confirmed'))
+          ||!listeningEndTime(detail.reviewStartedAt)||!listeningEndTime(detail.reviewDeadlineAt)
+          ||Date.parse(detail.reviewDeadlineAt)<Date.parse(detail.reviewStartedAt))return false;
+        Object.assign(metadata,{clockSource:detail.clockSource,reviewStartedAt:detail.reviewStartedAt,reviewDeadlineAt:detail.reviewDeadlineAt});
+      }
+      const measurements={};
+      for(const field of ['durationSeconds','positionSeconds'])if(listeningEndNumber(data[field]))measurements[field]=data[field];
+      if(typeof data.ended==='boolean')measurements.ended=data.ended;
+      const id=recorder.record('audio_observed',{action:'listening_end_decision',...measurements,checkpointState:metadata},current);
+      if(!id)return false;
+      seen.add(detail.decision);recordedListeningEnds.set(owner,seen);return true;
     },
     startRequest(path,options = {},trace) {
       if (!current || JSON.stringify(proofOf(getState()))!==ownerKey) return null;
