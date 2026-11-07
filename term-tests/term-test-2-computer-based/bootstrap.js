@@ -109,6 +109,7 @@
   let audioAccess = null, audioScope = null, audioFromCache = false, audioCacheStatus = '';
   let previewObjectUrl = '';
   let officialObjectUrl = '';
+  let miniJourney = null;
   let previewHeard = false;
   let preparing = false;
   let bootstrapSelectionBusy = false;
@@ -564,6 +565,7 @@
   }
 
   function setStartAvailability() {
+    if(miniJourney){elements.bootstrapStart.disabled=preparing||(miniJourney.view().examMode!=='read_first'&&!previewHeard);return;}
     const resumed = Boolean(state.listeningStartedAt || legacyListeningResume);
     const ready = Boolean(encryptedAudio && (previewHeard || resumed));
     elements.bootstrapStart.disabled = !ready || preparing;
@@ -864,6 +866,7 @@
         }
       });
       window.K67_EXAM_ORDER?.apply(state, prepared);
+      if(await openJourneyLobby(true))return;
       if (state.attemptToken || prepared.listeningSubmitted) {
         await resumeAfterListening();
         return;
@@ -946,7 +949,7 @@
     return `${base}/${fileName}?rev=${revision}`;
   }
 
-  async function enterExam(started, audioElement = null, offlineSection = '') {
+  async function enterExam(started, audioElement = null, offlineSection = '', journey = null) {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     const boundIdentity = sharedIdentity && started.examSessionToken === state.examSessionToken
       && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
@@ -956,6 +959,7 @@
       restoredIdentity,
       verifiedIdentity: offlineSection ? null : boundIdentity,
       offlineSectionIdentity: offlineSection && boundIdentity ? { ...boundIdentity, section: offlineSection } : null,
+      miniJourney:journey,
       sessionState: sharedIdentity ? structuredClone(state) : null,
       examSessionToken: state.examSessionToken,
       listeningDeadlineAt: started.listeningDeadlineAt,
@@ -963,7 +967,7 @@
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: Boolean(offlineSection) || (started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted))
+      skipListeningAudio: Boolean(offlineSection||journey) || (started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted))
     });
     previewAudio.remove();
     revokePreview();
@@ -977,6 +981,37 @@
   function miniCbtScope() {
     return { classCode, studentRef: state.studentRef, examSessionToken: state.examSessionToken,
       attemptToken: state.attemptToken, generation: Number(state.generation) || 0 };
+  }
+
+  async function enterJourney(){
+    const view=miniJourney.view();
+    saveState({...view,drafts:{...state.drafts,...miniJourney.drafts()},draftRevisions:miniJourney.revisions()});
+    await enterExam({...view,content:miniJourney.content},null,'',miniJourney);
+  }
+
+  async function openJourneyLobby(prepare=false){
+    if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1');
+    const scope=miniCbtScope();
+    const existing=await findMiniJourney(scope);
+    if(!existing&&(!prepare||state.completed))return false;
+    miniJourney=await openMiniJourney({scope,request:apiRequest,existing,prepare});
+    if(!miniJourney)return false;
+    if(miniJourney.activated()){await enterJourney();return true;}
+    revokePreview();
+    previewObjectUrl=URL.createObjectURL(await miniJourney.verifiedAudio());
+    previewAudio.src=previewObjectUrl;
+    previewAudio.volume=Number(elements.bootstrapVolume.value)||1;
+    elements.bootstrapPreview.disabled=false;
+    elements.bootstrapVolume.disabled=false;
+    elements.bootstrapPreviewStep.dataset.state='active';
+    elements.bootstrapPreviewStatus.textContent='Bấm nghe thử để chỉnh âm lượng.';
+    elements.bootstrapDownloadStep.dataset.state='complete';
+    elements.bootstrapDownloadStatus.textContent='Đã chuẩn bị hai phần và lưu audio trên thiết bị.';
+    elements.bootstrapStartStep.dataset.state='active';
+    elements.bootstrapStart.textContent='Bắt đầu bài Mini K67';
+    elements.bootstrapStartStatus.textContent='Hãy có mạng khi bấm bắt đầu. Sau đó có thể làm tiếp khi mất mạng.';
+    return true;
   }
 
   async function replayMiniListeningSeal() {
@@ -1101,7 +1136,7 @@
   });
   // Bản nghe thử dùng chính file đã kiểm, dừng ở 30 giây và không bắt đầu đồng hồ thi.
   previewAudio.addEventListener('timeupdate', () => {
-    if (audioAccess?.audioManifest?.envelopeVersion === 'MP3' && previewAudio.currentTime >= 30 && !previewAudio.paused) {
+    if ((miniJourney||audioAccess?.audioManifest?.envelopeVersion === 'MP3') && previewAudio.currentTime >= 30 && !previewAudio.paused) {
       previewAudio.pause();
       elements.bootstrapPreview.textContent = 'Nghe lại 30 giây đầu';
       elements.bootstrapPreviewStatus.textContent = 'Đã nghe hết bản thử. Bạn có thể bắt đầu thi.';
@@ -1113,6 +1148,15 @@
     saveState({ audioVolume: volume });
   });
   elements.bootstrapStart.addEventListener('click', async () => {
+    if(miniJourney){
+      if(preparing)return;
+      preparing=true;setStartAvailability();
+      previewAudio.pause();
+      try{await miniJourney.begin();await enterJourney();}
+      catch(error){showNotice(error.message,true);}
+      finally{preparing=false;setStartAvailability();}
+      return;
+    }
     if (!encryptedAudio || preparing) return;
     preparing = true;
     elements.bootstrapStart.disabled = true;
@@ -1432,6 +1476,8 @@
       showNotice('Không thể mở lượt thi bù bằng liên kết này.', true);
       return;
     }
+    try {if(await openJourneyLobby()) {setStartAvailability();return;}}
+    catch(error){showNotice(error.message,true);return;}
     try { if (await resumeMiniOffline()) return; } catch { /* Standard lobby retains the local draft. */ }
     let restoreError=null;
     // Có mã lượt: xác minh trực tiếp, không dựng lại danh sách cả lớp để mở lại bài.
@@ -1569,7 +1615,8 @@
     }
   }
 
-  window.addEventListener('pagehide', () => {
+  window.addEventListener('pagehide', event => {
+    if(!event.persisted)void miniJourney?.close();
     document.removeEventListener('keydown', blockInPageSearchShortcuts, { capture: true });
     window.clearTimeout(shortcutNoticeTimer);
     downloadController?.abort();

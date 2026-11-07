@@ -13,6 +13,7 @@
   let miniEpoch = 0;
   let miniOffline = null;
   let miniCbt = null;
+  const miniJourney=window.TERM_TEST_BOOTSTRAP?.miniJourney;
   const miniPrefix = '/api/term-tests/mini-test-lesson-5/answer-sheet';
   const requestedDemo = query.get('demo') || '';
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
@@ -188,6 +189,7 @@
     if (!storageKey) return !state.studentRef;
     if (activeMiniOffline()) miniOffline.saveSnapshot(miniOfflineSnapshot());
     if (miniCbt) void miniCbt.saveDrafts(state.drafts, state.draftRevisions).catch(() => {});
+    if (miniJourney) void miniJourney.saveDrafts(state.drafts,state.draftRevisions).catch(()=>showNotice('Chưa lưu được nháp trên máy. Hãy tải bài làm về máy.','error'));
     const serialized = JSON.stringify({
       generation: miniGeneration,
       studentRef: state.studentRef,
@@ -959,6 +961,22 @@
   }
 
   async function apiRequest(path, options = {}, submission = null) {
+    if(miniJourney){
+      const match=/^\/api\/term-tests\/mini-test-lesson-5\/(reading|listening)(?:\/(start|draft))?$/.exec(path);
+      if(match&&options.method==='POST'){
+        const [,section,action]=match;
+        const input=JSON.parse(options.body||'{}');
+        const result=action==='start'?await miniJourney.start(section):action==='draft'?miniJourney.view():
+          await miniJourney.seal(section,input.answers,input.draftRevision,Boolean(submission?.automatic));
+        window.K67_EXAM_ORDER?.apply(state,result);
+        return result;
+      }
+      if(path==='/api/term-tests/result'&&options.method==='POST'){
+        const token=miniJourney.resultToken();
+        if(!token)throw new Error('Bài vẫn lưu trên máy. Kết quả mở khi máy chủ nhận đủ hai phần.');
+        return rawApiRequest(path,{...options,body:JSON.stringify({...JSON.parse(options.body||'{}'),attemptToken:token})});
+      }
+    }
     if (options.method === 'POST' && activeMiniOffline()) {
       const local = await localMiniRequest(path, options);
       if (local) {
@@ -1233,6 +1251,7 @@
   }
 
   function queueSectionDraft(skill) {
+    if(miniJourney)return Promise.resolve(null);
     if (miniCbt?.pending(skill)) return Promise.resolve(null);
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return Promise.resolve(null);
     if (demoMode) return Promise.resolve(null);
@@ -1297,6 +1316,7 @@
   }
 
   function scheduleSectionDraft(skill, delay = null) {
+    if(miniJourney)return;
     if (miniCbt?.pending(skill)) return;
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return;
     if (demoMode || (skill === 'listening' && !state.examSessionToken) || (skill === 'reading' && !state.attemptToken)) return;
@@ -1329,6 +1349,10 @@
   }
 
   function isSectionExpired(skill) {
+    if(miniJourney){
+      const deadline=Date.parse(miniJourney.view()[skill+'DeadlineAt']||'');
+      return Number.isFinite(deadline)&&miniJourney.now()>=deadline&&(skill!=='listening'||miniJourney.reviewComplete());
+    }
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return false;
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.canAutoSubmit?.() === false) return false;
     if (miniAnswerSheet) return false;
@@ -1948,6 +1972,7 @@
   // Kết quả: thay đổi cuối cùng có thêm cơ hội tới server trước khi trang biến mất; submit cuối vẫn là đường chốt chính thức.
   // Khi lỗi mạng: localStorage vẫn giữ bản mới nhất để lần mở sau gửi lại.
   function flushDraftsOnPageHide() {
+    if(miniJourney){saveSession();return;}
     if (miniAnswerSheet) {
       if (!miniConfirmed) return;
       saveSession();
@@ -3503,6 +3528,7 @@
       if (response.examMode === 'read_first' && !response.completed) {
         showNotice(response.localOnly ? 'Reading đã lưu trên máy. Tiếp tục Listening khi bạn sẵn sàng.'
           : 'Reading đã được lưu. Tiếp tục Listening khi bạn sẵn sàng.', 'success');
+        if(miniJourney){await showJourneyListening();return;}
         if (document.body.classList.contains('cbt-mode')) { allowExamNavigation=true;window.location.reload();return; }
         setStage('listening');
       } else if (writingConfig) {
@@ -4089,7 +4115,51 @@
     }, { once: true });
   }
 
+  async function showJourneyListening(){
+    setStage('listening');
+    if(document.getElementById('miniJourneyPlayer'))return;
+    const host=document.createElement('div');host.id='miniJourneyPlayer';
+    (document.querySelector('.topbar')||root).append(host);
+    const play=()=>miniJourney.mountPlayer({host,volume:Number(state.audioVolume ?? 1),onReview:deadline=>{
+      state.listeningDeadlineAt=new Date(deadline).toISOString();
+    },onAuto:()=>{
+      if(state.listeningSubmitted||elements.listeningView.dataset.listeningSubmitting==='true')return;
+      const submit=document.createElement('button');submit.type='submit';submit.hidden=true;submit.dataset.autoSubmit='true';
+      elements.listeningView.append(submit);elements.listeningView.requestSubmit(submit);submit.remove();
+    }});
+    if(miniJourney.view().listeningStartedAt){await play();return;}
+    const start=document.createElement('button');start.type='button';start.className='button button-primary';start.textContent='Bắt đầu Listening';
+    elements.submitListening.disabled=true;
+    setAnswerControlsLocked('listening',true);
+    start.addEventListener('click',async()=>{
+      start.disabled=true;
+      try{await miniJourney.start('listening');start.remove();setAnswerControlsLocked('listening',false);elements.submitListening.disabled=false;await play();}
+      catch(error){start.disabled=false;showNotice(error.message,'error');}
+    });
+    host.append(start);
+  }
+
+  async function initializeMiniJourney(){
+    const view=miniJourney.view();
+    Object.assign(state,view);
+    Object.assign(state.drafts,miniJourney.drafts());
+    Object.assign(state.draftRevisions,miniJourney.revisions());
+    for(const skill of ['listening','reading'])renderQuestionControls(testConfig[skill],elements[skill+'Questions'],skill);
+    elements.readingStudentName.textContent=state.studentName;
+    const host=document.querySelector('.topbar')||root;
+    const status=document.createElement('span');status.setAttribute('role','status');
+    const render=()=>{const message=miniJourney.message();if(status.textContent!==message)status.textContent=message;};
+    const download=document.createElement('button');download.type='button';download.className='button button-secondary';download.textContent='Tải bài làm về máy';
+    download.addEventListener('click',()=>miniJourney.download());host.append(status,download);miniJourney.changed.addEventListener('change',render);render();
+    if(view.nextSection==='listening')await showJourneyListening();
+    else if(view.nextSection==='reading'){
+      setStage(view.readingStartedAt?'reading':'listening-saved');
+      if(view.readingStartedAt)startSectionDeadlineGuard('reading');
+    }else setStage('result-ready');
+  }
+
   async function initialize() {
+    if(miniJourney){await initializeMiniJourney();return;}
     elements.listeningTitle.textContent = testConfig.listening.title;
     elements.readingTitle.textContent = testConfig.reading.title;
     appendInstructions(elements.listeningInstructions, testConfig.listening.description);
