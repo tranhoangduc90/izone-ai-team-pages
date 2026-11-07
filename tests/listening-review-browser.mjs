@@ -6,6 +6,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {serveDirectory} from './fixtures/static-ui-server.mjs';
+import {ASSETS} from '../shared/audio/catalog.mjs';
 
 // Real app, decoder and public-audio loader. Only the remote API/media boundary
 // is a fixture; every external request is blocked and all answers are synthetic.
@@ -36,6 +37,8 @@ async function fixture(t,{lessonNumber=8,teacher=false,delay=0,denied=false,subm
     encryptedByteLength:bytes.length,chunkSize:1048576,
     url:`https://tranhoangduc90.github.io/izone-ai-team-pages/listening-practice/audio-assets/${file}`,
     chunks:Array.from({length:Math.ceil(bytes.length/1048576)},(_,i)=>{const part=bytes.subarray(i*1048576,(i+1)*1048576);return{byteLength:part.length,sha256:hash(part)};})};
+  const asset=Object.values(ASSETS).find(a=>a.sha256===sha256);
+  const audioDownload=process.env.LISTENING_REVIEW_R2==='1'?{version:1,policy:'r2-direct-v1',method:'GET',sha256,byteLength:bytes.length,validForSeconds:600,fallback:'public-pages',url:'https://e340869dcc6ff285504947407d148104.r2.cloudflarestorage.com/izone-audio-r2-lab-20261023/'+asset.key+'?fixture=1'}:undefined;
   const attempt={id:'fixture-attempt',submissionId:'fixture-submission',no:1,status:submitted?'submitted':'paused',finalScore:10,
     startedAt:'2026-10-26T00:00:00Z',completedAt:'2026-10-26T00:10:00Z',method:'manual',remainingMs:0,
     flags:[],annotations:[],highlighted:[],scroll:{passage:0,questions:{}},phase:'listening',audioPosition:0,sequence:0,
@@ -72,13 +75,17 @@ async function fixture(t,{lessonNumber=8,teacher=false,delay=0,denied=false,subm
       if(revoked&&u.pathname.includes('/result/'))return route.fulfill({status:401,contentType:'application/json',body:JSON.stringify({error:{code:'TEACHER_LOGIN_REQUIRED',message:'Fixture logout'}})});
       if(u.pathname.includes('/review-audio/')||u.pathname.startsWith('/api/audio/')){
         grants++;const grantStatus=status;if(grantDelay)await new Promise(r=>setTimeout(r,grantDelay));
-        return route.fulfill({status:grantStatus,contentType:'application/json',body:JSON.stringify(grantStatus===200?{audioManifest:manifest}:{error:{code:'ACCESS_DENIED',message:'Fixture denied'}})}).catch(()=>{});
+        return route.fulfill({status:grantStatus,contentType:'application/json',body:JSON.stringify(grantStatus===200?{audioManifest:manifest,...(audioDownload?{audioDownload}:{})}:{error:{code:'ACCESS_DENIED',message:'Fixture denied'}})}).catch(()=>{});
       }
       const value=u.pathname.includes('/result/')?result:u.pathname==='/api/state'?state:
         u.pathname==='/api/config'?{googleClientId:''}:u.pathname==='/api/teacher/logout'?{ok:true}:u.pathname.endsWith('/classes/1')?{students:[]}:
         u.pathname.startsWith('/api/library/')?{lesson,classes:[{id:'1',classCode:'DEMO'}]}:null;
       if(value)return route.fulfill({contentType:'application/json',body:JSON.stringify(value)});
       throw Error('Unexpected API request: '+req.method()+' '+u.pathname);
+    }
+    if(audioDownload&&req.url()===audioDownload.url){
+      transfers++;const range=/bytes=(\d+)-/.exec(req.headers().range||'');const start=range?+range[1]:0;
+      return route.fulfill({status:range?206:200,contentType:'audio/mpeg',headers:{'Access-Control-Allow-Origin':'*',...(range?{'Content-Range':`bytes ${start}-${bytes.length-1}/${bytes.length}`}:{})},body:bytes.subarray(start)});
     }
     if(req.url()===manifest.url){
       transfers++;const range=/bytes=(\d+)-(\d+)/.exec(req.headers().range||'');

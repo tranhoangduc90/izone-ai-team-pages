@@ -65,8 +65,8 @@ test('an in-flight download cannot refill complete-file memory after logout', as
   const f=await setup(t);let release;
   f.delay=new Promise(resolve=>{release=resolve;});const pending=f.load();
   while(!f.counts().transfers)await new Promise(resolve=>setImmediate(resolve));
-  f.loader.clearListeningAudioMemory();release();const old=await pending;
-  assert.notStrictEqual(await f.load(),old);
+  f.loader.clearListeningAudioMemory();release();await assert.rejects(pending,{name:'AbortError'});
+  await f.load();assert.equal(f.counts().grants,2);
 });
 test('legacy API remains usable and a review still verifies its expected hash', async t => {
   const f=await setup(t), bytes=Buffer.from('legacy audio fixture');
