@@ -16,8 +16,14 @@ const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript'
 export async function fixture(mode,{profile,native,product=2,paper=false,port=0}={}){
  await mkdir(output,{recursive:true});
  const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,r2Audio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
+ const blockJournalAssets=process.env.K56_BLOCK_JOURNAL_ASSETS==='1';
+ const blockedJournalAssets=new Set();
  const server=createServer(async(req,res)=>{const url=new URL(req.url,'http://localhost'),p=resolve(root,'.'+(url.pathname.endsWith('/')?url.pathname+'index.html':url.pathname));
   if(!p.startsWith(root+sep)&&p!==root)return res.writeHead(403).end();
+  if(blockJournalAssets&&url.pathname.startsWith('/term-tests/shared/exam-journal/')){
+   blockedJournalAssets.add(url.pathname);
+   return res.writeHead(503,{'cache-control':'no-store'}).end('Fixture unavailable journal asset');
+  }
   if(controls.assetFailures.has(url.pathname))return res.writeHead(503).end('Fixture unavailable asset');
   try{let data=controls.assetOverrides.has(url.pathname)?Buffer.from(controls.assetOverrides.get(url.pathname)):await readFile(p);if(['.html','.js','.mjs','.css','.svg'].includes(extname(p)))data=Buffer.from(data.toString('utf8').replace(/\r\n/g,'\n'));res.writeHead(200,{'content-type':mime[extname(p)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404).end();}});
  await new Promise((ok,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',ok);});const base=`http://127.0.0.1:${server.address().port}`;
@@ -85,6 +91,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0}
  await context.route('**/*',routeHandler);
  const url=base+`/term-tests/${slug}${paper?'':'-computer-based'}/?class=IC5601&mode=`+mode;
  return {get page(){return page;},get context(){return context;},get browser(){return browser;},server,url,student,calls,errors,receipts,controls,get disconnected(){return disconnected;},set disconnected(v){disconnected=v;},
+  assertJournalFaultExercised(){if(blockJournalAssets)assert.ok(blockedJournalAssets.has('/term-tests/shared/exam-journal/bridge.mjs'),'Expected the exam journal bridge request to fail');},
   reopen:async({offline=false}={})=>{assert.ok(profileDir);await browser.close();context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());await context.route('**/*',routeHandler);await context.setOffline(offline);},
   close:async()=>{await browser.close();await new Promise(ok=>server.close(ok));}};
 }
@@ -135,6 +142,7 @@ if(!process.env.TERM2_FULL_ROUND&&!process.env.K56_FIXTURE_IMPORT_ONLY)for(const
   assert.ok(await p.evaluate(()=>window.K56_TERM2_OFFLINE.pending)>0);
   f.disconnected=false;await f.context.setOffline(false);await p.evaluate(()=>{window.K56_TERM2_OFFLINE.retryAt=0;return window.K56_TERM2_OFFLINE.flush();});
   await wait(p,()=>window.K56_TERM2_OFFLINE.pending===0,'Gửi lại đủ operation');
+  f.assertJournalFaultExercised();
   assert.equal(f.calls.some(x=>x.includes('writing-grading')),false);
   await writeFile(resolve(output,mode+'-result.json'),JSON.stringify({mode,calls:f.calls,errors:f.errors,receipts:[...f.receipts.values()]},null,2));
   assert.deepEqual(f.errors,[]);

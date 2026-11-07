@@ -14,7 +14,13 @@ slug,entry,app={
 route=root/'term-tests'/entry
 dirs=[f'term-tests/{entry}',f'term-tests/{app}','term-tests/k56-offline-shared','term-tests/shared','shared','term-tests/k56-design','term-tests/k56-demo-reset','term-tests/k56-exam-integrity','term-tests/k56-writing-feedback']
 allowed={'.js','.mjs','.css','.html','.woff2','.png','.svg'}
-files={p for d in dirs for p in (root/d).rglob('*') if p.is_file() and p.suffix in allowed and 'private' not in p.parts}
+optional_journal=root/'term-tests/shared/exam-journal'
+
+def is_shell_asset(path):
+ # Telemetry imports are optional, even when referenced by a required file.
+ return path.name!='offline-assets.mjs' and not path.is_relative_to(optional_journal)
+
+files={p for d in dirs for p in (root/d).rglob('*') if p.is_file() and p.suffix in allowed and 'private' not in p.parts and is_shell_asset(p)}
 files.update(root/p for p in ['term-tests/k56-audio-recovery.js','term-tests/k56-exam-order.js',f'term-tests/{slug}/test-config.js','term-tests/demo/reset-listener.js'])
 queue=list(files)
 while queue:
@@ -24,8 +30,8 @@ while queue:
   parsed=urlparse(html.unescape(ref))
   if parsed.scheme or parsed.netloc:continue
   candidate=(root/parsed.path.lstrip('/') if parsed.path.startswith('/') else p.parent/unquote(parsed.path)).resolve()
-  if candidate.is_relative_to(root) and candidate.is_file() and candidate not in files:files.add(candidate);queue.append(candidate)
-files={p for p in files if p.name!='offline-assets.mjs'}
+  if candidate.is_relative_to(root) and candidate.is_file() and candidate not in files and is_shell_asset(candidate):
+   files.add(candidate);queue.append(candidate)
 import os
 assets=sorted(os.path.relpath(p,route).replace('\\','/') for p in files)
 def published_bytes(path):

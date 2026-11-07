@@ -122,12 +122,6 @@ export const ASSETS=[
   "../shared/desktop-exam-guard.css",
   "../shared/desktop-exam-guard.js",
   "../shared/exam-clock.js",
-  "../shared/exam-journal/audio-delivery.mjs",
-  "../shared/exam-journal/bootstrap-capture.mjs",
-  "../shared/exam-journal/bridge.mjs",
-  "../shared/exam-journal/lobby-capture.js",
-  "../shared/exam-journal/outbox.mjs",
-  "../shared/exam-journal/recorder.mjs",
   "../shared/exam-order.js",
   "../shared/landing-model.js",
   "../shared/landing.js",
@@ -281,12 +275,6 @@ export const ASSET_HASHES={
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
-  "../shared/exam-journal/audio-delivery.mjs": "1e3e7f49ee090a9142e6259488f791bb2d50d56ec7b4b93b9e309a0e233ea1f4",
-  "../shared/exam-journal/bootstrap-capture.mjs": "7cdf9d51701ee3dd59699feb8bb6a94b87944076406d48dc65cb93b4ed6cf65d",
-  "../shared/exam-journal/bridge.mjs": "c6c09b8d612ddab8c5da738afa2d4b0bc738bd6ea08c79c38482bb1e73aecba2",
-  "../shared/exam-journal/lobby-capture.js": "3642e0d9d2a484ee1e738ddd660cee86919cd665ad551f08b19eb9df93fa26bc",
-  "../shared/exam-journal/outbox.mjs": "761281d3f674d65ba68cd1a2884fc835f462e7eba19a6e350cf4a277d2db0b1f",
-  "../shared/exam-journal/recorder.mjs": "bdf8b0403e32ebc29ad27042cf788042b93fe2a58951fa285eeb86304f664fd4",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
   "../shared/landing-model.js": "040a785315efcd45415c9df3539bcce03c16ad5436fbb21eaedd5caea67ead89",
   "../shared/landing.js": "1426b994a816cdfc790f300b0c0f590aa9ce77ae03a8837e26046182f9db4ce6",
@@ -317,4 +305,4 @@ export const ASSET_HASHES={
   "offline.mjs": "eaad6811b24c1e5ccf4ccf46489e53317fee901864635e3269a8cae9cd86714b",
   "test-config.js": "44e259fb28a2646b9429e7662add638a66183b8bd844c662c4790ffe1f1efb18"
 };
-export const ASSET_BUILD_ID="fa221719942807d3aac3d7555700340e675785ec5e1d45a3729fc470b1619f51";
+export const ASSET_BUILD_ID="bdeb9ad2dc3dac7d7d33e02b3912b4d9cd90bd9d328a3ed9893c9c7ca7cfc771";
