@@ -125,7 +125,7 @@ export const ASSET_HASHES={
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../term-test-1/test-config.js": "e2bfb0a33b5fde631ce807e6a3400438879bbaecf863bd07fd27bc3e98dbfebb",
   "../term-test-2-computer-based/audio-loader.js": "aa28719a6095085ff3faf9167802f7c8e3dfc6debf8db3e996e2eb0d7c10a1a2",
-  "../term-test-2-computer-based/bootstrap-retake.js": "0707ec8b81b41d34e78a704ca1093fe51b8401023720cddc0f52757899ed26ff",
+  "../term-test-2-computer-based/bootstrap-retake.js": "68ac4ab80e6cb00144cd3622b3aca028d51996533ed5429d1ca9b03c68bf4de9",
   "../term-test-2-computer-based/enhance.js": "1c0ef8c64e70dc032d3290a3bbcd210a7432b83e468521cbb4b4a4d258d67b17",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
