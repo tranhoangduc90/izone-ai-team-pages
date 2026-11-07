@@ -144,7 +144,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           if(term2)assert.equal(await form.locator('textarea[data-writing-task="task1"]').inputValue(),'Báo cáo Task 1 giả để kiểm khôi phục.');
           log('offline_writing_resumed');
         }
-        await form.waitFor({state:'hidden',timeout:full?2_500_000:25000});
+        await form.waitFor({state:'hidden',timeout:full?(term2?3_900_000:2_500_000):25_000});
         assert.deepEqual(seals,[]);
         log('section_sealed_offline',{section});
         continue;
