@@ -35,6 +35,7 @@ test('ended giả và seek sát EOF không tự khóa Listening chưa nghe hết
 test('Đổi người sau Ready nhả latest/lock, giữ nguyên run và câu trả lời cũ',{timeout:50000},async()=>{
  const f=await fixture('read_first',{product:1}),p=f.page;try{await ready(f);await p.getByRole('button',{name:'Bắt đầu Reading',exact:false}).first().click();const field=p.locator('#readingQuestions input[data-number]').first(),answerKey=await field.getAttribute('data-number');await field.fill('Answer of prior owner');
  const key=await p.evaluate(async()=>{const r=window.K56_TERM1_OFFLINE;await r.persist();await r.store.queue;return r.key;});
+ await p.evaluate(()=>{const set=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key.startsWith('izone-test:')||key.startsWith('term1-k56:run:'))throw new DOMException('Fixture native mirror quota','QuotaExceededError');return set.call(this,key,value);};});
  await p.getByRole('button',{name:'Đổi người học',exact:true}).click();await wait(p,()=>Boolean(document.getElementById('bootstrapStudent'))&&!window.K56_TERM1_OFFLINE?.active,'Chọn người mới');
  const previous=await p.evaluate(async key=>{const r=window.K56_TERM1_OFFLINE;return {latest:await r.store.get('latest:IC5601'),old:await r.store.get(key)};},key);assert.equal(previous.latest.key,null);assert.equal(previous.old.snapshot.drafts.reading[answerKey],'Answer of prior owner');assert.equal(previous.old.sections.reading.sealed,false);assert.deepEqual(f.errors,[]);
  }finally{await f.close();}

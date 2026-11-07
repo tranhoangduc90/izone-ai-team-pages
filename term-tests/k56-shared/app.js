@@ -451,7 +451,17 @@
     change.id = 'termTestChangeStudent'; change.textContent = 'Đổi người học';
     change.addEventListener('click', async () => {
       // Giữ bản nháp theo đúng người trước khi rời; đồng hồ trên máy chủ vẫn chạy.
-      if (!saveSession()) {
+      if (offline) {
+        saveSession();
+        try {
+          for (const skill of ['listening','reading']) if (!state[skill+'Submitted']) state.drafts[skill]=collectAnswers(elements[skill+'Questions']);
+          if (!state.writingSubmitted) for (const editor of elements.writingView.querySelectorAll('[data-writing-task]')) state.drafts.writing[editor.dataset.writingTask]=editor.value;
+          await offline.capture(structuredClone(state));
+        } catch {
+          showNotice('Chưa giữ được nháp trên thiết bị. Hãy tải bài về máy trước khi đổi người.', 'error');
+          return;
+        }
+      } else if (!saveSession()) {
         showNotice('Chưa giữ được nháp trên thiết bị. Hãy giải phóng chỗ lưu hoặc sao chép bài trước khi đổi người.', 'error');
         return;
       }
