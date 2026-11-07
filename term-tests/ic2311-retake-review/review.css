@@ -1,0 +1,18 @@
+.retake-review [hidden] { display: none !important; }
+.retake-review .review-shell { width: min(1040px, calc(100% - 32px)); margin-inline: auto; }
+.retake-review .review-progress { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.retake-review .review-progress .done { background: #e2f4e9; color: #145a40; }
+.retake-review .review-progress .active { background: #fff; border-bottom: 3px solid #db0829; }
+.retake-review #resultView { box-sizing: border-box; max-width: 980px; margin: 16px auto; padding: 22px; }
+.retake-review #review-details, .retake-review #review-analysis { margin-top: 26px; }
+.retake-review #result-status:empty, .retake-review #result-meta:empty { display: none; }
+.retake-review #result-status { color: #526378; overflow-wrap: anywhere; }
+.retake-review .detail-table td { overflow-wrap: anywhere; }
+.retake-review .detail-table-wrap { overflow-x: auto; }
+.retake-review .review-figure { width: 100%; height: auto; }
+@media (max-width: 600px) {
+  .retake-review .review-shell { width: calc(100% - 16px); }
+  .retake-review #resultView { padding: 14px; }
+  .retake-review .analysis-grid { grid-template-columns: 1fr; }
+  .retake-review .detail-table { min-width: 430px; }
+}
