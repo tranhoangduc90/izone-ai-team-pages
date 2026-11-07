@@ -1,6 +1,6 @@
 import { createOfflineRuntime } from '../k56-offline-shared/runtime.mjs?v=20261107-mini-v3';
 import { downloadTermAudio } from '../k56-offline-shared/whole-audio-terms-cbt.mjs?v=20261107-terms-cbt-v1';
-import { createListeningEofGate } from '../k67-shared/listening-eof.mjs?v=20261107-v1';
+import { createListeningEofGate, createK67EofObserver } from '../k67-shared/listening-eof.mjs?v=20261108-journal-v1';
 
 const miniSlug='mini-test-lesson-5';
 const term1Slug='term-test-1';
@@ -307,8 +307,10 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     const url=URL.createObjectURL(blob);
     audio.src=url;audio.preload='metadata';
     const anchor=s.position||0;
-    const gate=createListeningEofGate({audio,anchorSeconds:anchor,reviewSeconds:record.package.timing.listeningReviewSeconds});
     let last=anchor, stoppedPlayer=false, reviewing=false, lastAuto=-Infinity;
+    const observeDecision=createK67EofObserver(audio,{mode:'offline',owner:window.TERM_TEST_BOOTSTRAP,
+      configuredDurationSeconds:record.package.timing.listeningDurationSeconds,active:()=>!stoppedPlayer});
+    const gate=createListeningEofGate({audio,anchorSeconds:anchor,reviewSeconds:record.package.timing.listeningReviewSeconds,observeDecision});
     let reviewEnd=null;
     function covered(){
       let value=anchor;
@@ -324,12 +326,13 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
       else if(reviewEnd!==null)s.reviewRemaining=Math.max(0,Math.ceil(reviewEnd-performance.now()));
       await persist();
     }
-    function startReview(){
+    function startReview(restored=false){
       reviewing=true;button.disabled=true;
       reviewEnd=performance.now()+(s.reviewRemaining??record.package.timing.listeningReviewSeconds*1_000);
       onReview(s.deadline);
+      gate.recordReview(restored?'review_restored':'review_local',s.eofAt,s.deadline);
     }
-    if(s.eofAt) startReview();
+    if(s.eofAt) startReview(true);
     audio.addEventListener('loadedmetadata',()=>{
       if(!s.eofAt&&anchor>0)audio.currentTime=Math.min(anchor,Math.max(0,audio.duration-.02));
     });
@@ -343,7 +346,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
       if(!gate.confirmEnd(event))return;
       s.position=audio.duration;s.eofAt=now();s.reviewRemaining=record.package.timing.listeningReviewSeconds*1_000;
       s.deadline=s.eofAt+s.reviewRemaining;
-      void persist().then(startReview).catch(()=>{status.textContent='Chưa lưu được mốc nghe. Bài sẽ chưa tự nộp.';});
+      void persist().then(()=>startReview()).catch(()=>{status.textContent='Chưa lưu được mốc nghe. Bài sẽ chưa tự nộp.';});
     });
     button.addEventListener('click',async()=>{
       try{await audio.play();button.disabled=true;}

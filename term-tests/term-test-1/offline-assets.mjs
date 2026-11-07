@@ -144,7 +144,7 @@ export const ASSET_HASHES={
   "../k67-shared/answer-explanations.css": "94df8adc3ed8c8ca7ffcb3eaa5b3022ab2eab0c6bc63f10f5168a3b57ed74d24",
   "../k67-shared/answer-explanations.js": "9760a6122a1f0f0205c4808f7f8db712fc0e5883bae601d44608ec1dfae7a3e6",
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
-  "../k67-shared/listening-eof.mjs": "6ae73a8c869e28f3c9dcbca62e8c12796221d9b46fcc06a8b2b93a8612cfb0f9",
+  "../k67-shared/listening-eof.mjs": "b411d6b8cd0c79882c5d6a917a9d5bc7b6f4449589fdcbeba1400880296c42b5",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "1cf42cff36f54bb0ae4cfe8da2de42a9dd79e2b5cec3b2641b9fc4e9441c84f7",
@@ -171,6 +171,6 @@ export const ASSET_HASHES={
   "../term-paper-shared/journey.mjs": "460b83a64ac125028e2ee95adb58ae3f2dbf5be8a23bcbb799f79d73e5956dac",
   "index.html": "4c575dfee39031a02c75709266a1a7c8f1331ce2def8e5ae35349c1f8eed007d",
   "offline-worker.js": "117bb977e4d242f955bc39104a6b1f72e32ec27055dd2e94e534d1c6fd194c8f",
-  "test-config.js": "e2bfb0a33b5fde631ce807e6a3400438879bbaecf863bd07fd27bc3e98dbfebb"
+  "test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b"
 };
-export const ASSET_BUILD_ID="da6f4ad9b7ec10947242b5c79ef8e0a9daf86e4a33c9753222a8259c22c602e3";
+export const ASSET_BUILD_ID="19941e5c73d5d9dd7037e9e2e196ebdd4ba1a07399df312a69a35a7fb70a0e91";
