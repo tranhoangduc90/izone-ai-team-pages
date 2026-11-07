@@ -15,7 +15,7 @@ const api=createServer(fixture.app);
 const web=createServer(async(req,res)=>{try{
   let p=new URL(req.url,'http://localhost').pathname;if(p.endsWith('/'))p+='index.html';
   const f=resolve(root,'.'+p);if(!f.startsWith(resolve(root)))throw new Error('outside');
-  res.setHeader('Content-Type',({'.js':'text/javascript','.css':'text/css','.html':'text/html'})[extname(f)]||'text/plain');res.end(await readFile(f));
+  res.setHeader('Content-Type',({'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html'})[extname(f)]||'text/plain');res.end(await readFile(f));
 }catch{res.writeHead(404).end();}});
 await Promise.all([new Promise(r=>api.listen(0,'127.0.0.1',r)),new Promise(r=>web.listen(0,'127.0.0.1',r))]);
 const apiBase=`http://127.0.0.1:${api.address().port}`;
@@ -55,7 +55,8 @@ try{
   await field.fill('A');
   // Giả lập mất mạng khi lưu nháp; tải lại phải lấy lại bản local cùng chủ/lượt.
   offlineDraft=true;await page.clock.fastForward(5000);await page.reload();
-  await page.locator('#studentSelect').waitFor({state:'visible'});await enter(first);
+  await page.locator('#readingView:visible, #studentSelect:visible:enabled').first().waitFor({state:'visible'});
+  if (!await page.locator('#readingView').isVisible()) await enter(first);
   await page.locator('#readingView').waitFor({state:'visible'});assert.equal(await field.inputValue(),'A');
   offlineDraft=false;await field.fill('A');await page.clock.runFor(6000);
   await page.locator('#readingSaveStatus').filter({hasText:'Đã lưu trên hệ thống'}).waitFor({state:'visible'});
