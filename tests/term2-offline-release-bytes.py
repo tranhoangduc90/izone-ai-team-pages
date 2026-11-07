@@ -1,7 +1,9 @@
 """So hash cache với blob qua bộ lọc Git thật, độc lập cách chuẩn hóa của generator."""
 from pathlib import Path
-import subprocess,json,hashlib
-root=Path(__file__).resolve().parents[1];route=root/'term-tests/term-test-2-k56-computer-based'
+import subprocess,json,hashlib,sys
+number=int(sys.argv[1]) if len(sys.argv)>1 else 2
+assert number in (1,2)
+root=Path(__file__).resolve().parents[1];route=root/f'term-tests/term-test-{number}-k56-computer-based'
 raw=(route/'offline-assets.mjs').read_text(encoding='utf-8')
 hashes=json.loads(raw.split('export const ASSET_HASHES=',1)[1].split(';',1)[0])
 names=[]

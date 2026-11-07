@@ -12,7 +12,7 @@ const root=resolve(fileURLToPath(new URL('../',import.meta.url))),output=process
 const modules=process.env.CODEX_NODE_MODULES||resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const {chromium}=createRequire(pathToFileURL(resolve(modules,'playwright/package.json')))('playwright');
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.mp3':'audio/mpeg'};
-export async function fixture(mode,{profile,native}={}){
+export async function fixture(mode,{profile,native,product=2}={}){
  await mkdir(output,{recursive:true});
  const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
  const server=createServer(async(req,res)=>{const url=new URL(req.url,'http://localhost'),p=resolve(root,'.'+(url.pathname.endsWith('/')?url.pathname+'index.html':url.pathname));
@@ -28,7 +28,7 @@ export async function fixture(mode,{profile,native}={}){
  page=await context.newPage();
  const id=native?.a||randomUUID(),session=native?.s||randomUUID(),student=randomUUID(),receipts=new Map(),calls=[],errors=[];let disconnected=false,fixtureContent;
  page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
- const audio=await readFile(resolve(root,'term-tests/k56-audio-assets/term-test-2-k56-3600563c0af62fd5.mp3'));
+ const audio=await readFile(resolve(root,product===2?'term-tests/k56-audio-assets/term-test-2-k56-3600563c0af62fd5.mp3':'term-tests/k56-audio-assets/term-test-1-k56-c7766f97758ec5ec.mp3'));
  const routeHandler=async route=>{
   const request=route.request(),u=new URL(request.url());
   const fulfill=route.fulfill.bind(route);route.fulfill=options=>fulfill({...options,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,OPTIONS',...options.headers}});
@@ -40,6 +40,8 @@ export async function fixture(mode,{profile,native}={}){
   if(controls.apiDelayMs&&endpoint.includes('/offline/')){await new Promise(ok=>setTimeout(ok,controls.apiDelayMs));return route.fulfill({status:503,json:{ok:false,error:'FIXTURE_SLOW_UNAVAILABLE'}}).catch(()=>{});}
   if(endpoint.startsWith('roster'))return route.fulfill({json:{class:{name:'IC5601'},students:[{ref:student,name:'Học viên giả Term 2'}]}});
   if(endpoint.endsWith('student-identity'))return route.fulfill({json:{ok:true,status:'missing'}});
+  if(endpoint==='result'&&controls.resultResponse)return route.fulfill({json:controls.resultResponse});
+  if(endpoint==='result/stream')return route.fulfill({status:404,json:{ok:false}});
   const content=fixtureContent||(fixtureContent=await page.evaluate(()=>window.K56_TERM_TEST_CONTENT));
   if(native&&endpoint.includes('/offline/')){
    Object.assign(native.content,content);
@@ -47,9 +49,9 @@ export async function fixture(mode,{profile,native}={}){
    return route.fulfill({status:response.status,json:await response.json()});
   }
   const prepared={ok:true,attemptToken:id,examSessionToken:session,studentRef:student,studentName:'Học viên giả Term 2',generation:0,examMode:mode,nextSection:mode==='read_first'?'reading':'listening',serverNow:new Date().toISOString(),
-   listeningSubmitted:false,readingSubmitted:false,content,timing:{listeningDurationSeconds:1824,listeningReviewSeconds:0,readingDurationMinutes:60,writingDurationMinutes:30}};
+   listeningSubmitted:false,readingSubmitted:false,content,timing:product===2?{listeningDurationSeconds:1824,listeningReviewSeconds:0,readingDurationMinutes:60,writingDurationMinutes:30}:{listeningDurationSeconds:1848,listeningReviewSeconds:0,readingDurationMinutes:40,writingDurationMinutes:55},...controls.preparedOverride};
   if(endpoint.endsWith('/attempt/prepare'))return route.fulfill({json:prepared});
-  if(endpoint.endsWith('/offline/prepare'))return route.fulfill({json:{...prepared,offline:{policy:'term2-offline-v1',permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow}}});
+  if(endpoint.endsWith('/offline/prepare'))return route.fulfill({json:{...prepared,offline:{policy:`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow}}});
   if(endpoint.endsWith('/offline/status'))return route.fulfill({json:{ok:true,persisted:receipts.has(body.operationId),receipt:receipts.get(body.operationId)||null}});
   if(endpoint.endsWith('/offline/operation')){
    const receipt={version:1,receiptId:randomUUID(),operationId:body.operationId,payloadHash:createHash('sha256').update(canonical(body)).digest('hex'),attemptToken:id,examSessionToken:session,generation:0,section:body.section,kind:body.kind,acceptedRevision:body.revision,status:'accepted',serverCommittedAt:new Date().toISOString()};
@@ -58,13 +60,13 @@ export async function fixture(mode,{profile,native}={}){
   return route.fulfill({status:404,json:{ok:false,error:'FIXTURE_UNEXPECTED',message:endpoint}});
  };
  await context.route('**/*',routeHandler);
- const url=base+'/term-tests/term-test-2-k56-computer-based/?class=IC5601&mode='+mode;
+ const url=base+`/term-tests/term-test-${product}-k56-computer-based/?class=IC5601&mode=`+mode;
  return {get page(){return page;},get context(){return context;},get browser(){return browser;},server,url,student,calls,errors,receipts,controls,get disconnected(){return disconnected;},set disconnected(v){disconnected=v;},
   reopen:async({offline=false}={})=>{assert.ok(profileDir);await browser.close();context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());await context.route('**/*',routeHandler);await context.setOffline(offline);},
   close:async()=>{await browser.close();await new Promise(ok=>server.close(ok));}};
 }
 export async function wait(page,fn,label,timeout=60000){try{await page.waitForFunction(fn,{},{timeout});}catch(e){throw Error(label+': '+JSON.stringify({text:(await page.locator('body').innerText()).slice(0,2000),errors:await page.evaluate(()=>window.__errors||[])}),{cause:e});}}
-if(!process.env.TERM2_FULL_ROUND)for(const mode of ['lis_first','read_first'])test('Term 2 offline/phục hồi/tải file: '+mode,{timeout:180000},async()=>{
+if(!process.env.TERM2_FULL_ROUND&&!process.env.K56_FIXTURE_IMPORT_ONLY)for(const mode of ['lis_first','read_first'])test('Term 2 offline/phục hồi/tải file: '+mode,{timeout:180000},async()=>{
  const f=await fixture(mode),p=f.page;
  try{
   await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});
