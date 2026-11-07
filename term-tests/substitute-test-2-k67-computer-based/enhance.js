@@ -1183,6 +1183,8 @@
       const officialTime = examStarted ? uiState.audio.time : 0;
       audio.currentTime = Math.min(Math.max(0, officialTime), Math.max(0, (audio.duration || 1) - 1));
       try {
+        if(protectedBootstrap?.examSessionId&&protectedBootstrap.examOrder==='reading-first'
+          &&!protectedBootstrap.listeningStartedAt)await window.SUBSTITUTE_EXAM.startListeningPhase();
         await audio.play();
         examStarted = true;
         uiState.audio.started = true;
@@ -1195,7 +1197,7 @@
         saveUiState();
       } catch {
         allowPause = false;
-        downloadStatus.textContent = 'Trình duyệt chưa cho phép phát audio. Hãy nhấn lại “Bắt đầu thi Listening”.';
+        downloadStatus.textContent = 'Chưa mở hoặc phát được Listening. Bài Reading vẫn được giữ; hãy nhấn lại “Bắt đầu thi Listening”.';
       }
     });
     resumeButton.addEventListener('click', () => recoverInterruptedAudio('pause', true));
@@ -1241,7 +1243,10 @@
       saveUiState();
     } else {
       setListeningVisible(false);
-      downloadFullAudio();
+      if(protectedBootstrap?.preloadedAudioBlob instanceof Blob){
+        objectUrl=URL.createObjectURL(protectedBootstrap.preloadedAudioBlob);
+        audio.src=objectUrl;audio.load();
+      }else downloadFullAudio();
     }
     audioWatchdog = window.setInterval(() => {
       if (!examStarted || !ready || audio.ended || allowPause || examCard.hidden) return;

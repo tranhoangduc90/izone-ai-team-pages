@@ -20,14 +20,27 @@
  }
  async function start(state){
   if(window.SUBSTITUTE_STATE.meta?.examTimingVersion!==VERSION||state.listeningStartedAt&&!state.examSessionId)return null;
-  const data=await request('/api/test/exam/session',{classCode:state.classCode,studentRef:state.studentRef,clientRunId:state.clientRunId});
+  const data=await request('/api/test/exam/session',{classCode:state.classCode,studentRef:state.studentRef,clientRunId:state.clientRunId,
+   ...(state.examOrder?{examOrder:state.examOrder}:{})});
   if(data.clientRunId!==state.clientRunId||data.classCode!==state.classCode||data.studentRef!==state.studentRef||data.timingVersion!==VERSION)throw new Error('Thời gian trả về không đúng lượt thi.');
+  if(state.examOrder&&data.examOrder!==state.examOrder)throw new Error('Thứ tự làm bài không đúng lượt thi.');
   // Cùng lượt: mốc provisional đã lưu không bị phản hồi chưa xác nhận của server xóa đi.
   // Khi server đã có mốc xác nhận, luôn dùng deadline của server.
   const provisional=!data.audioEndedAt&&state.audioEndedAt&&Number.isFinite(Date.parse(state.listeningDeadlineAt||''))
    ?{audioEndedAt:state.audioEndedAt,listeningDeadlineAt:state.listeningDeadlineAt}:{};
   window.IZONE_EXAM_CLOCK?.observe(data);
   return {...data,...provisional,examSessionId:data.clientRunId};
+ }
+ async function startListeningPhase(){
+  const bootstrap=window.TERM_TEST_BOOTSTRAP;
+  if(!bootstrap?.examSessionId||bootstrap.examOrder!=='reading-first'||window.SUBSTITUTE_STATE.blocked)throw new Error('LISTENING_PHASE_NOT_ALLOWED');
+  const data=await request('/api/test/exam/listening/start',{classCode:bootstrap.classCode,studentRef:bootstrap.studentRef,
+   clientRunId:bootstrap.clientRunId});
+  if(data.clientRunId!==bootstrap.clientRunId||data.examOrder!=='reading-first'||data.timingVersion!==VERSION
+   ||!Number.isFinite(Date.parse(data.listeningStartedAt||'')))throw new Error('EXAM_TIMING_CONFLICT');
+  window.IZONE_EXAM_CLOCK?.observe(data);
+  window.dispatchEvent(new CustomEvent('term-test:listening-phase-started',{detail:data}));
+  return data;
  }
  function ended(audio,observedAudioEndedAt){
   const bootstrap=window.TERM_TEST_BOOTSTRAP;if(!bootstrap?.examSessionId||window.SUBSTITUTE_STATE.blocked||!validAudioEnd(audio))return false;
@@ -49,5 +62,5 @@
   }confirm();
   return true;
  }
- window.SUBSTITUTE_EXAM=Object.freeze({start,ended,validAudioEnd});
+ window.SUBSTITUTE_EXAM=Object.freeze({start,startListeningPhase,ended,validAudioEnd});
 }());

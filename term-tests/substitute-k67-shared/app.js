@@ -18,6 +18,8 @@
     ? requestedDemo
     : '';
   const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
+  const readingFirst = serverGradingMode && twoTaskWriting
+    && window.TERM_TEST_BOOTSTRAP?.examOrder === 'reading-first';
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
   if (!testConfig || !appConfig || !root) return;
@@ -57,6 +59,7 @@
     examSessionToken: '',
     attemptToken: '',
     listeningStartedAt: '',
+    examOrder: 'listening-first',
     readingStartedAt: '',
     writingStartedAt: '',
     listeningDeadlineAt: '',
@@ -118,6 +121,9 @@
     state.identityConfirmed = true;
     state.listeningStartedAt ||= window.TERM_TEST_BOOTSTRAP.listeningStartedAt || '';
     state.listeningDeadlineAt ||= window.TERM_TEST_BOOTSTRAP.listeningDeadlineAt || '';
+    state.examOrder = readingFirst ? 'reading-first' : 'listening-first';
+    state.readingStartedAt ||= window.TERM_TEST_BOOTSTRAP.readingStartedAt || '';
+    state.readingDeadlineAt ||= window.TERM_TEST_BOOTSTRAP.readingDeadlineAt || '';
   }
 
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
@@ -190,6 +196,7 @@
       attemptToken: state.attemptToken,
       promptVersion,
       listeningStartedAt: state.listeningStartedAt,
+      examOrder: state.examOrder,
       readingStartedAt: state.readingStartedAt,
       writingStartedAt: state.writingStartedAt,
       listeningDeadlineAt: state.listeningDeadlineAt,
@@ -237,8 +244,8 @@
   }
 
   const progressMarkup = writingConfig
-    ? `<div class="progress-step" data-progress="listening">1. Listening</div>
-        <div class="progress-step" data-progress="reading">2. Reading</div>
+    ? `<div class="progress-step" data-progress="${readingFirst?'reading':'listening'}">1. ${readingFirst?'Reading':'Listening'}</div>
+        <div class="progress-step" data-progress="${readingFirst?'listening':'reading'}">2. ${readingFirst?'Listening':'Reading'}</div>
         <div class="progress-step" data-progress="writing">3. Writing</div>
         <div class="progress-step" data-progress="result">4. Kết quả</div>`
     : `<div class="progress-step" data-progress="listening">1. Listening</div>
@@ -325,7 +332,7 @@
       <form class="panel test-panel" id="listeningView" hidden>
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Phần 1</p>
+            <p class="eyebrow">Phần ${readingFirst?2:1}</p>
             <h2 id="listeningTitle"></h2>
             <ul class="instructions" id="listeningInstructions"></ul>
           </div>
@@ -350,7 +357,7 @@
       <form class="panel test-panel" id="readingView" hidden>
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Phần 2 · <span id="readingStudentName"></span></p>
+            <p class="eyebrow">Phần ${readingFirst?1:2} · <span id="readingStudentName"></span></p>
             <h2 id="readingTitle"></h2>
             <ul class="instructions" id="readingInstructions"></ul>
           </div>
@@ -457,15 +464,15 @@
       : stage === 'reading' ? 'reading'
         : stage === 'writing-prep' || stage === 'writing' ? 'writing'
           : stage === 'result-ready' || stage === 'result' ? 'result' : '';
-    const order = writingConfig ? ['listening', 'reading', 'writing', 'result'] : ['listening', 'reading', 'result'];
+    const order = writingConfig ? (readingFirst?['reading','listening','writing','result']:['listening','reading','writing','result']) : ['listening', 'reading', 'result'];
     const activeIndex = order.indexOf(activeProgress);
     for (const step of progressSteps) {
       const index = order.indexOf(step.dataset.progress);
       step.classList.toggle('active', index === activeIndex);
       const completed = step.dataset.progress === 'listening'
-        ? Boolean(state.attemptToken || state.result?.result?.listening)
+        ? Boolean(state.testGrades?.listening || state.attemptToken || state.result?.result?.listening)
         : step.dataset.progress === 'reading'
-          ? Boolean(state.completed || state.result?.result?.reading)
+          ? Boolean(state.testGrades?.reading || state.completed || state.result?.result?.reading)
           : step.dataset.progress === 'writing'
             ? Boolean(state.writingSubmitted)
             : false;
@@ -701,6 +708,15 @@
     if (!Number.isFinite(Date.parse(deadlineAt))) return;
     state.listeningDeadlineAt = deadlineAt;
     if (Number.isFinite(Date.parse(serverNow))) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(serverNow) ?? (Date.parse(serverNow) - Date.now()));
+    saveSession();
+  });
+  window.addEventListener('term-test:listening-phase-started',event=>{
+    if(!readingFirst||event.detail?.clientRunId!==window.TERM_TEST_BOOTSTRAP?.clientRunId)return;
+    const startedAt=String(event.detail.listeningStartedAt||'');
+    if(!Number.isFinite(Date.parse(startedAt)))return;
+    state.listeningStartedAt=startedAt;
+    if(Number.isFinite(Date.parse(event.detail.serverNow||'')))
+      state.serverTimeOffsetMs=(window.IZONE_EXAM_CLOCK?.offset(event.detail.serverNow) ?? (Date.parse(event.detail.serverNow)-Date.now()));
     saveSession();
   });
 
@@ -2269,22 +2285,23 @@
     let submitted = false;
     try {
       if (demoMode === 'exam') {
-        if(serverGradingMode && (!window.TERM_TEST_BOOTSTRAP?.clientRunId || !window.TERM_TEST_BOOTSTRAP?.listeningStartedAt)){showNotice('Hãy bắt đầu lượt thi từ phòng chờ.','error');return;}
+        if(serverGradingMode && (!window.TERM_TEST_BOOTSTRAP?.clientRunId
+          || !(readingFirst?state.listeningStartedAt:window.TERM_TEST_BOOTSTRAP.listeningStartedAt))){showNotice('Hãy bắt đầu lượt thi từ phòng chờ.','error');return;}
         if (serverGradingMode) {
           const grade = await submitSection('listening', answers);
           state.testGrades.listening = grade.section;
         }
         ensureValidAttemptToken();
         state.studentName = state.studentName || 'Học viên Demo';
-        state.completed = false;
+        state.completed = readingFirst && Boolean(state.testGrades.reading);
         state.frozenAnswers.listening = null;
         saveSession();
         submitted = true;
         elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
         showNotice(serverGradingMode
-          ? 'Đã nhận bài Listening.'
+          ? (readingFirst?'Đã nhận bài Listening. Hãy tiếp tục Writing.':'Đã nhận bài Listening.')
           : 'Bản demo: Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
-        setStage('listening-saved');
+        setStage(readingFirst?'writing-prep':'listening-saved');
         return;
       }
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/listening`, {
@@ -2391,15 +2408,15 @@
           const grade = await submitSection('reading', answers);
           state.testGrades.reading = grade.section;
         }
-        state.completed = true;
+        state.completed = !readingFirst;
         state.frozenAnswers.reading = null;
         saveSession();
         submitted = true;
         elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
         showNotice(serverGradingMode
-          ? 'Đã nhận bài Reading. Hãy tiếp tục phần Writing.'
+          ? (readingFirst?'Đã nhận bài Reading. Hãy tiếp tục Listening.':'Đã nhận bài Reading. Hãy tiếp tục phần Writing.')
           : 'Bản demo: Reading đã được lưu. Kết quả sẽ mở sau Writing.', 'success');
-        setStage('writing-prep');
+        setStage(readingFirst?'listening':'writing-prep');
         return;
       }
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/reading`, {
@@ -2754,6 +2771,16 @@
         if (serverGradingMode && state.completed && state.testGrades.reading) {
           showNotice('Backend test đã khôi phục bài Reading. Tiếp tục hoặc nộp Writing khi sẵn sàng.', 'success');
           setStage(state.writingStarted ? 'writing' : 'writing-prep');
+          return;
+        }
+        if(readingFirst){
+          if(state.testGrades.reading){
+            showNotice('Backend test đã khôi phục bài Reading. Tiếp tục Listening từ vị trí đã nghe.', 'success');
+            setStage('listening');
+          }else{
+            elements.readingStudentName.textContent=state.studentName;
+            hideNotice();setStage('reading');
+          }
           return;
         }
         if (serverGradingMode && state.testGrades.listening) {
