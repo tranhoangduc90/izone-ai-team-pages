@@ -1,4 +1,4 @@
-const CACHE='substitute-test-2-k67-shell-20261107-v2';
+const CACHE='substitute-test-2-k67-shell-20261107-v4';
 const SHELL=new URL('./',self.location.href);
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.add(SHELL.href)).then(()=>self.skipWaiting()));

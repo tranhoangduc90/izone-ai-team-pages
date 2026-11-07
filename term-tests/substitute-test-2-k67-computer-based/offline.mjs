@@ -1,3 +1,5 @@
+import {makeSubstituteBackup} from '../substitute-shared/backup-export.mjs?v=20261107-v1';
+
 const DB_NAME='izone-substitute-test-2-k67-offline-v1';
 const AUDIO_SHA='3881716311bc53826cbcae5fc7e791b226777c46b438e88637d4d63e9794f0cd';
 const AUDIO_BYTES=41881391;
@@ -138,14 +140,10 @@ export async function acknowledgeSection(identity,skill,receipt){
  if(!row||receipt?.persisted!==true||!receipt.snapshotHash||!receipt.submittedAt)throw Error('OFFLINE_RECEIPT_INVALID');
  return put('outbox',{...row,status:'acknowledged',receipt:{snapshotHash:receipt.snapshotHash,submittedAt:receipt.submittedAt},acknowledgedAt:Date.now()});
 }
-const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 export async function makeDownload(identity,appFallback=null){
  const scope=normalizeScope(identity);
- const [lobby,app,ui,sections]=await Promise.all([loadSnapshot(scope,'lobby').catch(()=>null),
-  loadSnapshot(scope,'app').catch(()=>appFallback),loadSnapshot(scope,'ui').catch(()=>null),allSections(scope).catch(()=>[])]);
- const writing=await get('outbox',key(scope,'writing')).catch(()=>null);
- const record={version:1,exportedAt:new Date().toISOString(),scope,lobby,app:app??appFallback,ui,sections,writing};
- const json=JSON.stringify(record,null,2);
- const html=`<!doctype html><html lang="vi"><meta charset="utf-8"><title>Bài làm Substitute Test 2 K67</title><style>body{font:16px/1.6 system-ui;max-width:960px;margin:auto;padding:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>Bài làm Substitute Test 2 K67</h1><p>Bản lưu ngoại tuyến để giữ câu trả lời. Hãy giữ file này và liên hệ giáo viên nếu trang thi không đồng bộ được.</p><pre>${escapeHtml(json)}</pre></html>`;
- return {blob:new Blob([html],{type:'text/html;charset=utf-8'}),name:`substitute-test-2-k67-${scope.classCode}-${scope.studentRef}-${scope.clientRunId.slice(0,8)}.html`};
+ const [lobby,app,sections,writing]=await Promise.all([loadSnapshot(scope,'lobby').catch(()=>null),
+  loadSnapshot(scope,'app').catch(()=>null),allSections(scope).catch(()=>[]),
+  get('outbox',key(scope,'writing')).catch(()=>null)]);
+ return makeSubstituteBackup({scope,lobby,app:appFallback??app,sections,writing,title:'Bài làm Substitute Test 2 K67'});
 }

@@ -16,18 +16,23 @@
   try{
    const response=await fetch(window.TERM_TEST_APP_CONFIG.API_BASE_URL,{method:'POST',cache:'no-store',headers:{'Content-Type':'text/plain;charset=UTF-8'},
     body:JSON.stringify({route,payload:window.SUBSTITUTE_STATE.payload(payload)}),signal:controller.signal});
-   const result=await response.json();if(!response.ok)throw new Error(result.code||'Không xác nhận được thời gian làm bài.');return result;
+   if(!response.ok){
+    const result=await response.json().catch(()=>null);
+    throw Object.assign(new Error(result?.code||'Không xác nhận được thời gian làm bài.'),
+     {accessDenied:[400,401,403,409,410,422].includes(response.status)});
+   }
+   return await response.json();
   }finally{clearTimeout(timer);untrack();}
  }
- async function start(state){
+ async function start(state,audioPreparation){
   if(window.SUBSTITUTE_STATE.meta?.examTimingVersion!==VERSION||state.listeningStartedAt&&!state.examSessionId)return null;
   let data;
   try{data=await request('/api/test/exam/session',{classCode:state.classCode,studentRef:state.studentRef,clientRunId:state.clientRunId,
-   ...(state.examOrder?{examOrder:state.examOrder}:{}),
+   ...(state.examOrder?{examOrder:state.examOrder}:{}),...(audioPreparation||{}),
    ...(state.classCode&&window.TERM_TEST_CONFIG?.slug==='substitute-test-2-k67'
     ?{deviceId:state.annotationRunId,generation:Number(state.generation)||0}:{})});}
   catch(error){
-   if(window.TERM_TEST_CONFIG?.slug!=='substitute-test-2-k67'||!state.offlinePermit
+   if(error.accessDenied||window.TERM_TEST_CONFIG?.slug!=='substitute-test-2-k67'||!state.offlinePermit
     ||state.examSessionId!==state.clientRunId||!state.offlineDeviceId||state.offlineDeviceId!==state.annotationRunId)throw error;
    data={testSlug:window.TERM_TEST_CONFIG.slug,classCode:state.classCode,studentRef:state.studentRef,
     clientRunId:state.clientRunId,historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,timingVersion:VERSION,

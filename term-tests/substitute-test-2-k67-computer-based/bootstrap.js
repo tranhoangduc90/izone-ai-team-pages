@@ -39,7 +39,7 @@
   }
 
   if(!localDemo){query.set('demo','exam');query.set('grading','server');location.replace(location.pathname+'?'+query.toString());return;}
-  const offline=await import('./offline.mjs?v=20261107-substitute-offline-pilot-v3').catch(()=>null);
+  const offline=await import('./offline.mjs?v=20261107-substitute-offline-pilot-v4').catch(()=>null);
   try {
     if(query.get('reset')==='1'){
       if(query.get('resetOwner')!=='done'&&window.SUBSTITUTE_STATE.canReset(testConfig.slug))window.SUBSTITUTE_STATE.clear(testConfig.slug);
@@ -56,15 +56,18 @@
     navigator.serviceWorker.addEventListener('message',event=>{
       if(event.data?.type==='PRECACHE_RESULT')window.SUBSTITUTE_OFFLINE_SHELL_STATUS=event.data.ok?'ready':'partial';
     });
-    void navigator.serviceWorker.register('./offline-sw.js?v=20261107-v2').then(async()=>{
+    void navigator.serviceWorker.register('./offline-sw.js?v=20261107-v4').then(async()=>{
       const registration=await navigator.serviceWorker.ready;
       const urls=[...document.querySelectorAll('script[src],link[href],img[src]')]
-        .map(element=>element.src||element.href).filter(Boolean);
-      for(const path of ['./offline.mjs','../substitute-k67-shared/app.js','./enhance.js',
+        .map(element=>element.src||element.href).filter(url=>url&&!new URL(url).pathname.includes('/exam-journal/'));
+      for(const path of ['./offline.mjs?v=20261107-substitute-offline-pilot-v4','../substitute-k67-shared/app.js','./enhance.js',
         './annotations.js','../shared/writing-submission.mjs','../../shared/substitute-student-identity.js',
         '../../shared/student-identity.js','../../shared/student-identity-migration.js',
         '../../shared/teacher-entry.js','../../shared/master170/question-layout-v1.1.mjs',
-        '../shared/audio-source-choice.js','../../shared/audio/transport.mjs'])
+        '../shared/audio-source-choice.js','../../shared/audio/transport.mjs',
+        '../substitute-shared/backup-export.mjs?v=20261107-v1','../substitute-shared/audio-preparation.mjs?v=20261107-substitute-r2-v1',
+        '../../shared/audio/direct-substitute.mjs?v=20261107-substitute-r2-v1',
+        '../../shared/audio/catalog.mjs?v=20261107-r2-direct1','../../shared/audio/direct-cache.mjs?v=20261107-r2-direct1'])
         urls.push(new URL(path,location.href).href);
       registration.active?.postMessage({type:'PRECACHE',urls});
     }).catch(()=>{window.SUBSTITUTE_OFFLINE_STATUS='shell_cache_failed';});
@@ -110,6 +113,7 @@
   let previewHeard = false;
   let preparing = false;
   let downloadController = null;
+  let preparedAudio = null;
   const localDemoClasses = Object.freeze([...(window.SUBSTITUTE_STATE.meta.classes || [
     {
       code: 'DEMO',
@@ -472,10 +476,41 @@
     });
   }
 
+  const audioScope=()=>({...offlineScope(),examOrder:state.examOrder||'listening-first'});
+
+  async function requestAudioPreparation(input,signal){
+    const controller=new AbortController();
+    const cancel=()=>controller.abort(signal?.reason);
+    signal?.addEventListener('abort',cancel,{once:true});
+    if(signal?.aborted)cancel();
+    const timeout=window.setTimeout(()=>controller.abort(),20_000);
+    const untrack=window.SUBSTITUTE_STATE.track(controller);
+    try{
+      const response=await fetch(appConfig.API_BASE_URL,{method:'POST',cache:'no-store',signal:controller.signal,
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},
+        body:JSON.stringify({route:'/api/test/exam/audio/prepare',payload:window.SUBSTITUTE_STATE.payload(input)})});
+      if(!response.ok)throw Object.assign(new Error('Chưa xác nhận được quyền tải audio. Hãy thử lại.'),
+        {accessDenied:response.status<500,audioRefreshUnavailable:response.status>=500});
+      return await response.json();
+    }catch(error){
+      signal?.throwIfAborted();
+      if(error instanceof TypeError||error.name==='AbortError')error.audioRefreshUnavailable=true;
+      throw error;
+    }finally{
+      window.clearTimeout(timeout);signal?.removeEventListener('abort',cancel);untrack();
+    }
+  }
+
+  async function authorizeAudio(scope,signal){
+    const {authorizeSubstituteAudio}=await import('../substitute-shared/audio-preparation.mjs?v=20261107-substitute-r2-v1');
+    return authorizeSubstituteAudio(scope,requestAudioPreparation,{signal});
+  }
+
   async function downloadLocalDemoAudio() {
     downloadController?.abort();
     downloadController = new AbortController();
     encryptedAudio = null;
+    preparedAudio = null;
     const resuming = Boolean(state.listeningStartedAt || state.readingStartedAt);
     previewHeard = resuming;
     elements.bootstrapDownloadStep.dataset.state = 'active';
@@ -492,10 +527,13 @@
     try {
       const source = window.K67_SUBSTITUTE_TEST_2_CONTENT?.audio?.src;
       if (!source) throw new Error('Không tìm thấy đường dẫn audio khóa 56.');
+      const scope=audioScope();
+      const preparation=window.SUBSTITUTE_STATE.meta?.r2DirectEnabled===true&&
+        (navigator.onLine!==false||!state.offlinePermit)?await authorizeAudio(scope,downloadController.signal):null;
       let audioBlob=null;
       try{audioBlob=await window.SUBSTITUTE_OFFLINE?.loadAudio();}catch{/* Tải lại từ nguồn có kiểm hash. */}
       const fromCache=Boolean(audioBlob);
-      if(!audioBlob)audioBlob = await audioLoader.downloadAudio(source, {
+      const options={
         signal: downloadController.signal,
         onProgress: ({ loaded, total, complete }) => {
           if (total > 0) {
@@ -508,7 +546,10 @@
             elements.bootstrapDownloadStatus.textContent = `Đang tải audio · ${formatBytes(loaded)}`;
           }
         }
-      });
+      };
+      if(!audioBlob)audioBlob = await (preparation?preparation.download(options):audioLoader.downloadAudio(source,options));
+      preparation?.startFields(audioScope());
+      preparedAudio=preparation;
       if(audioBlob&&!fromCache)
         void window.SUBSTITUTE_OFFLINE?.saveAudio(audioBlob)?.catch(()=>{window.SUBSTITUTE_OFFLINE_STATUS='audio_cache_failed';});
       encryptedAudio = audioBlob;
@@ -867,7 +908,9 @@
         officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
         document.body.append(officialAudio);
         await waitForAudioMetadata(officialAudio);
-        const timing=await window.SUBSTITUTE_EXAM?.start(state);
+        const scope=audioScope();
+        if(preparedAudio&&!preparedAudio.isCurrent(scope))preparedAudio=await authorizeAudio(scope);
+        const timing=await window.SUBSTITUTE_EXAM?.start(state,preparedAudio?.startFields(scope));
         if(timing)saveState({...timing,serverTimeOffsetMs:(window.IZONE_EXAM_CLOCK?.offset(timing.serverNow) ?? (Date.parse(timing.serverNow)-Date.now()))});
         if(timing?.offlinePermit)prepareShellCache();
         if(timing?.examOrder==='reading-first'&&!timing.listeningStartedAt){
