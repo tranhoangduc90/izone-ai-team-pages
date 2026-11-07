@@ -38,3 +38,13 @@ if (finished && receipt) {
   addEventListener('online', showResult);
   void showResult();
 }
+
+const preparationStatus = document.getElementById('prepare-status');
+if (preparationStatus) {
+  new MutationObserver(() => {
+    if (!preparationStatus.textContent.includes('(ALREADY_SUBMITTED)')) return;
+    preparationStatus.textContent = 'Bài này đã được nộp. Hãy mở lại bài trên đúng thiết bị và trình duyệt đã dùng để thi để xem kết quả.';
+    const retry = document.getElementById('retry');
+    if (retry) retry.hidden = true;
+  }).observe(preparationStatus, { childList: true, subtree: true, characterData: true });
+}

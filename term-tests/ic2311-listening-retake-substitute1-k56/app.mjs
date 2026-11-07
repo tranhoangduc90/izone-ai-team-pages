@@ -102,7 +102,12 @@ async function prepare(){
   const asset=await downloadAudio({journal,onProgress:(n,total,source)=>{$('download').value=n/total;text('prepare-status','Đang tải audio '+Math.round(n/total*100)+'% · '+(source==='github_pages'?'GitHub Pages':'Cloudinary'));}});
   reviewAsset=asset;
   done('check-audio');await player.attach(asset);await document.fonts.ready;if([...document.querySelectorAll('link[data-native-style]')].some(link=>!link.sheet))throw Object.assign(Error(),{code:'NATIVE_STYLE_UNAVAILABLE'});await nativeAnnotations({content,identity:state.identity,storage,onError:()=>note('Chưa lưu được Highlight/Note. Đáp án vẫn được lưu riêng; hãy giữ trang mở.')});done('check-player');prepared=true;$('trial').dataset.ready='true';$('preview').disabled=false;$('download-step').dataset.state='complete';$('preview-step').dataset.state='active';show('trial');text('prepare-status','Sẵn sàng trên thiết bị. Nếu mất mạng từ bây giờ, bạn vẫn nghe thử, bắt đầu và làm hết bài được.');journal.emit('app_ready',{phase:'ready',audioAfter:player.snapshot()});
- }catch(e){text('prepare-status','Chưa chuẩn bị được bài thi ('+(e.code||'PREPARATION_FAILED')+'). Bạn chưa nên bắt đầu. Hãy thử lại; nếu vẫn lỗi, liên hệ giảng viên để được tổ chức thi lại.');show('retry-preparation');}
+ }catch(e){
+  if(e.code==='ALREADY_SUBMITTED'){
+   text('prepare-status','Bài này đã được nộp. Hãy mở lại bài trên đúng thiết bị và trình duyệt đã dùng để thi để xem kết quả.');
+   return;
+  }
+  text('prepare-status','Chưa chuẩn bị được bài thi ('+(e.code||'PREPARATION_FAILED')+'). Bạn chưa nên bắt đầu. Hãy thử lại; nếu vẫn lỗi, liên hệ giảng viên để được tổ chức thi lại.');show('retry-preparation');}
  finally{busy=false;$('prepare').disabled=prepared||!presentationReady||!$('student').value;}
 }
 $('student').addEventListener('change',()=>{$('prepare').disabled=busy||!presentationReady||!$('student').value;});$('prepare').onclick=prepare;$('retry-preparation').onclick=prepare;
