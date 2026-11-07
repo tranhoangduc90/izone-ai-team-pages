@@ -21,7 +21,9 @@
  async function start(state){
   if(window.SUBSTITUTE_STATE.meta?.examTimingVersion!==VERSION||state.listeningStartedAt&&!state.examSessionId)return null;
   const data=await request('/api/test/exam/session',{classCode:state.classCode,studentRef:state.studentRef,clientRunId:state.clientRunId,
-   ...(state.examOrder?{examOrder:state.examOrder}:{})});
+   ...(state.examOrder?{examOrder:state.examOrder}:{}),
+   ...(state.classCode&&window.TERM_TEST_CONFIG?.slug==='substitute-test-2-k67'
+    ?{deviceId:state.annotationRunId,generation:Number(state.generation)||0}:{})});
   if(data.clientRunId!==state.clientRunId||data.classCode!==state.classCode||data.studentRef!==state.studentRef||data.timingVersion!==VERSION)throw new Error('Thời gian trả về không đúng lượt thi.');
   if(state.examOrder&&data.examOrder!==state.examOrder)throw new Error('Thứ tự làm bài không đúng lượt thi.');
   // Cùng lượt: mốc provisional đã lưu không bị phản hồi chưa xác nhận của server xóa đi.
@@ -35,7 +37,8 @@
   const bootstrap=window.TERM_TEST_BOOTSTRAP;
   if(!bootstrap?.examSessionId||bootstrap.examOrder!=='reading-first'||window.SUBSTITUTE_STATE.blocked)throw new Error('LISTENING_PHASE_NOT_ALLOWED');
   const data=await request('/api/test/exam/listening/start',{classCode:bootstrap.classCode,studentRef:bootstrap.studentRef,
-   clientRunId:bootstrap.clientRunId});
+   clientRunId:bootstrap.clientRunId,deviceId:bootstrap.offlineDeviceId||null,
+   generation:bootstrap.offlineGeneration??null});
   if(data.clientRunId!==bootstrap.clientRunId||data.examOrder!=='reading-first'||data.timingVersion!==VERSION
    ||!Number.isFinite(Date.parse(data.listeningStartedAt||'')))throw new Error('EXAM_TIMING_CONFLICT');
   window.IZONE_EXAM_CLOCK?.observe(data);
