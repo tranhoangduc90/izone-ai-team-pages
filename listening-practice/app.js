@@ -6,7 +6,7 @@ const {expandPracticeHistory,practiceHistoryPath}=await import('../shared/practi
 const {createPracticeResultView,patchPracticeResultView,patchPracticeResultPart}=await import('../shared/practice-result-view.mjs?v=20261102-result1');
 let serverCapabilities={};
 const AuthoredUI=await import('./authored-ui.js?v=20261029-approved-r3');
-const {fetchListeningAudio,clearListeningAudioMemory}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1');
+const {fetchListeningAudio,clearListeningAudioMemory}=await import('./audio-delivery.mjs?v=20261026-review-fast1&journal=20261024-audio-v1&audio=20261028-part-rescue-v1&r2=20261107-1');
 let AUTHORED_DEF=null;
 // Nhận bài từ API sau bắt đầu. Nháp giữ trên máy; điểm, lượt và thời gian do máy chủ xác nhận.
 let CODE='67-practice-listening_mcq_flowchart',FULL_TIME=579207;const TAB=crypto.randomUUID();

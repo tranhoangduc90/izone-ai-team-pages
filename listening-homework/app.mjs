@@ -1,7 +1,7 @@
 import {gradingStatus,renderGradingStatus} from '../shared/grading-status.mjs?v=1';
 import {setWorkspaceText} from './workspace-status.mjs?v=20261101-space1';
 import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
-import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261102-state1&audio=20261028-part-rescue-v1';
+import {createListeningWorkspace} from './interactive-workspace.mjs?v=20261102-state1&audio=20261028-part-rescue-v1&r2=20261107-1';
 import {createCourseStudentIdentity} from '../shared/course-student-identity.js?v=20261101-listening-owner1';
 import {createTestStateObserver} from '../shared/test-state-observer.mjs?v=20261101-state1';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
@@ -48,7 +48,7 @@ async function request(path,options={}){
  const url=new URL(API+path,location.origin);url.searchParams.set('assignmentCode',code);
  let observation;try{observation=options.observation?.binding?.begin(options.observation);}catch{}
  const report=(...args)=>{try{observation?.(...args);}catch{}};
- let response;try{response=await fetch(url,{credentials:'include',cache:'no-store',signal:options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(20000)]):AbortSignal.timeout(20000),method:options.method||'GET',headers:{...(token&&!readonly?{Authorization:'Bearer '+token}:{}),...(entryDocument!==null&&!readonly?{'X-Reading-Homework-Document':entryDocument}:{}),...(options.body?{'Content-Type':'application/json'}:{}),...(options.method==='POST'?{'X-Izone-Csrf':'1'}:{})},...(options.body?{body:JSON.stringify(options.body)}:{})});}catch(error){report('unknown');throw error;}
+ let response;try{response=await fetch(url,{credentials:'include',cache:'no-store',signal:options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(20000)]):AbortSignal.timeout(20000),method:options.method||'GET',headers:{...(token&&!readonly?{Authorization:'Bearer '+token}:{}),...(entryDocument!==null&&!readonly?{'X-Reading-Homework-Document':entryDocument}:{}),...(options.body?{'Content-Type':'application/json'}:{}),...(options.method==='POST'?{'X-Izone-Csrf':'1'}:{}),...options.headers},...(options.body?{body:JSON.stringify(options.body)}:{})});}catch(error){report('unknown');throw error;}
  let value;try{value=await response.json();}catch{report('unknown',response.status);throw Error('Máy chủ chưa trả được dữ liệu bài. Hãy thử lại.');}
  report(response.ok?'confirmed':'rejected',response.status,value?.revision??value?.draftRevision,value?.error);
  if(!response.ok)throw Object.assign(Error(value.error||'Chưa tải được bài.'),{code:value.error,status:response.status,details:value.details});return value;
@@ -101,7 +101,7 @@ async function render(){
  if(content.code!==code||content.version!==presentation.runtimeVersion||JSON.stringify(content.items.map(i=>i.id))!==JSON.stringify(presentation.items.map(i=>i.id)))throw Error('Nội dung tương tác chưa khớp phiên bản bài trên hệ thống. Nháp vẫn được giữ.');
  view?.destroy();text('lesson-title',content.title);text('person',`${person.name} · ${person.className}`);
  text('threshold',`Điền ít nhất ${Math.ceil(content.items.length*content.minimumCompletion)}/${content.items.length} mục để nộp. Nhận xét dựa trên ý nghĩa; bạn có thể sửa và nộp lại.`);
- view=createListeningWorkspace({data:presentation,readonly,body:draft?.body||{answers:{},annotations:[],notes:'',flags:[]},initialView:storage.get(backupKey()+':view'),onChange:changed,onView:v=>storage.put(backupKey()+':view',v),onHistory:()=>{$('history-dialog').showModal();history().catch(fatal);},captureDiagnostic:()=>journalBinding,audioManifest:async()=>{const generation=identityGeneration;const v=await request('/audio'+(readonly?'?teacher=1&classId='+encodeURIComponent(person.courseId):''));if(generation!==identityGeneration)throw new DOMException('Identity changed','AbortError');return v.audio;}});
+ view=createListeningWorkspace({data:presentation,readonly,body:draft?.body||{answers:{},annotations:[],notes:'',flags:[]},initialView:storage.get(backupKey()+':view'),onChange:changed,onView:v=>storage.put(backupKey()+':view',v),onHistory:()=>{$('history-dialog').showModal();history().catch(fatal);},captureDiagnostic:()=>journalBinding,audioManifest:async({signal}={})=>{const generation=identityGeneration;const v=await request('/audio'+(readonly?'?teacher=1&classId='+encodeURIComponent(person.courseId):''),{signal,headers:{'X-Izone-Audio-Transport':'r2-direct-v1'}});if(generation!==identityGeneration)throw new DOMException('Identity changed','AbortError');return {manifest:v.audio,download:v.audioDownload};}});
  $('header-status').hidden=false;$('teacher-entry').hidden=true;$('readonly').hidden=!readonly;$('submit').hidden=readonly;$('new-run').hidden=readonly;$('change-person').hidden=readonly;$('teacher-logout').hidden=!readonly;$('history-button').disabled=false;$('access').hidden=true;$('work-area').hidden=false;completion();
 }
 

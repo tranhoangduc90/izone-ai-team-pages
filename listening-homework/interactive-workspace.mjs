@@ -1,4 +1,5 @@
 import {downloadPreferred} from '../shared/audio/transport.mjs?v=20261101-natural-dyes1&audio=20261028-part-rescue-v1';
+import {downloadDirect,supportsDirect} from '../shared/audio/direct.mjs?v=20261107-r2-direct1';
 import {decodeBody,encodeBody,encodeAnswer} from './answer-codec.mjs?v=20261031-lessons1';
 import {hasAnswerContent} from './answer-content.mjs?v=20261029-grading2';
 import {mountWorkspaceStatus} from './workspace-status.mjs?v=20261101-space1';
@@ -133,14 +134,15 @@ async function prepareAudio(preferFallback=false){
  const work=(async()=>{
   downloadAbort=new AbortController();const signal=AbortSignal.any([lifetime.signal,downloadAbort.signal]);
   observe(log,'audio.transfer',{phase:'started'},traceId);
-  const manifest=await options.audioManifest();if(destroyed||options.accessRevoked)throw new DOMException('Identity changed','AbortError');
+  const access=await options.audioManifest({signal}),manifest=access.manifest||access;if(destroyed||options.accessRevoked)throw new DOMException('Identity changed','AbortError');
   transfer={assetId:manifest.assetId||manifest.id,expectedHash:manifest.sha256,byteLength:manifest.byteLength};
-  const blob=await downloadPreferred(manifest,{signal,preferFallback,onProgress:p=>{if(!destroyed)$('audio-status').textContent=`Đang tải audio · ${Math.min(100,Math.round(p.loaded/p.total*100))}%`;},onEvent:e=>{
+  const loadOptions={signal,preferFallback,onProgress:p=>{if(!destroyed)$('audio-status').textContent=`Đang tải audio · ${Math.min(100,Math.round(p.loaded/p.total*100))}%`;},onEvent:e=>{
    if(destroyed)return;if(e.source==='pages')$('audio-status').textContent='Đang tải từ nguồn dự phòng…';
-   const source=['primary','cloudflare'].includes(e.source)?'cloudflare':['pages','cache'].includes(e.source)?e.source:null;
+   const source=['primary','cloudflare','r2-direct'].includes(e.source)?'cloudflare':['pages','cache'].includes(e.source)?e.source:null;
    if(source&&source!==lastSource){lastSource=source;observe(log,'audio.transfer',{...transfer,phase:'source',source},traceId);}
    if(e.source==='primary-error'){const errorCode=reason({message:e.reason});if(errorCode!==lastReason){lastReason=errorCode;observe(log,'audio.transfer',{...transfer,phase:'source',source:'cloudflare',errorCode},traceId);}}
-  }});
+  }};
+  const blob=access.download&&supportsDirect()?await downloadDirect(manifest,access.download,{...loadOptions,refresh:input=>options.audioManifest(input)}):await downloadPreferred(manifest,loadOptions);
   if(destroyed||options.accessRevoked)throw new DOMException('Identity changed','AbortError');
   if(!blob)throw Error('Audio unavailable');transferVerified=true;observe(log,'audio.transfer',{...transfer,phase:'verified',byteLength:blob.size,source:lastSource||'unknown',verified:true,durationMs:Math.min(600000,Math.max(0,Math.round(performance.now()-started)))},traceId);audioUrl=URL.createObjectURL(blob);audio.src=audioUrl;
   await new Promise((resolve,reject)=>{if(audio.readyState>=1)return resolve();scopeListen(audio,'loadedmetadata',resolve,{once:true});scopeListen(audio,'error',reject,{once:true});});
