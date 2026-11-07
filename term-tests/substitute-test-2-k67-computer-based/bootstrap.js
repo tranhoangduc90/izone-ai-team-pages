@@ -86,7 +86,8 @@
   const annotationStorageKey = window.SUBSTITUTE_STATE.key('izone-test-annotations:',storageNamespace,{lobby:true});
   let state = await readState();
   const offlineScope=()=>({testSlug:testConfig.slug,historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,
-    classCode:state.classCode||classCode,studentRef:state.studentRef,clientRunId:state.clientRunId});
+    classCode:state.classCode||classCode,studentRef:state.studentRef,clientRunId:state.clientRunId,
+    deviceId:state.annotationRunId,generation:Number(state.generation)||0});
   window.SUBSTITUTE_OFFLINE=offline?Object.freeze({
     saveSnapshot:(kind,value)=>offline.saveSnapshot(offlineScope(),kind,value),
     loadSnapshot:kind=>offline.loadSnapshot(offlineScope(),kind),

@@ -6,14 +6,17 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 function normalizeScope(value){
  const scope={testSlug:String(value?.testSlug||''),historyEpoch:String(value?.historyEpoch||''),
   classCode:String(value?.classCode||'').toUpperCase(),studentRef:String(value?.studentRef||''),
-  clientRunId:String(value?.clientRunId||'').toLowerCase()};
+  clientRunId:String(value?.clientRunId||'').toLowerCase(),deviceId:String(value?.deviceId||'').toLowerCase(),
+  generation:Number(value?.generation)};
  if(scope.testSlug!=='substitute-test-2-k67'||!uuid.test(scope.historyEpoch)||!uuid.test(scope.clientRunId)
+  ||!uuid.test(scope.deviceId)||!Number.isSafeInteger(scope.generation)||scope.generation<0
   ||!/^(?:DEMO|IC\d{3,8})$/.test(scope.classCode)||!/^[A-Za-z0-9_-]{1,100}$/.test(scope.studentRef))
   throw Error('OFFLINE_SCOPE_INVALID');
  return scope;
 }
 const owner=scope=>JSON.stringify([scope.testSlug,scope.historyEpoch,scope.classCode,scope.studentRef]);
-const key=(scope,kind)=>JSON.stringify([scope.testSlug,scope.historyEpoch,scope.classCode,scope.studentRef,scope.clientRunId,kind]);
+const key=(scope,kind)=>JSON.stringify([scope.testSlug,scope.historyEpoch,scope.classCode,scope.studentRef,
+ scope.clientRunId,scope.deviceId,scope.generation,kind]);
 const requestResult=request=>new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||Error('OFFLINE_STORAGE_FAILED'));});
 const transactionDone=transaction=>new Promise((resolve,reject)=>{transaction.oncomplete=resolve;transaction.onabort=()=>reject(transaction.error||Error('OFFLINE_STORAGE_FAILED'));
  transaction.onerror=()=>reject(transaction.error||Error('OFFLINE_STORAGE_FAILED'));});
@@ -109,7 +112,8 @@ async function allSections(identity){
  const scope=normalizeScope(identity),db=await database(),transaction=db.transaction('outbox','readonly');
  const rows=await requestResult(transaction.objectStore('outbox').getAll());await transactionDone(transaction);
  return rows.filter(row=>row.scope.testSlug===scope.testSlug&&row.scope.historyEpoch===scope.historyEpoch
-  &&row.scope.classCode===scope.classCode&&row.scope.studentRef===scope.studentRef&&row.scope.clientRunId===scope.clientRunId)
+  &&row.scope.classCode===scope.classCode&&row.scope.studentRef===scope.studentRef&&row.scope.clientRunId===scope.clientRunId
+  &&row.scope.deviceId===scope.deviceId&&row.scope.generation===scope.generation)
   .sort((a,b)=>a.queuedAt-b.queuedAt);
 }
 export async function pendingSections(identity){return (await allSections(identity)).filter(row=>row.status==='pending'&&['reading','listening'].includes(row.skill));}
