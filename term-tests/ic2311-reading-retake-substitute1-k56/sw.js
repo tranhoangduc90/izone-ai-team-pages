@@ -1,13 +1,15 @@
-const BUILD='reading-retake-20261106-v1',CACHE='reading-retake:'+BUILD,BASE=new URL('./',self.location).href;
+const BUILD = 'reading-retake-20261106-v1';
+const CACHE = 'reading-retake:' + BUILD;
+const BASE = new URL('./', self.location).href;
 const REVIEW = new URL('../ic2311-retake-review/?skill=reading', BASE).href;
-const API = 'https://ducizone.ddns.net/api/reading-retake/v1/';
+const BRIDGE = new URL('review-redirect.mjs?v=20261107-1', BASE).href;
+const BRIDGE_CACHE = 'ic2311-reading-review-bridge-v1';
 
 function savedAttempt() {
   return new Promise(resolve => {
     const request = indexedDB.open('izone-reading-retake-v1', 1);
     request.onupgradeneeded = () => request.transaction.abort();
-    request.onerror = () => resolve(null);
-    request.onblocked = () => resolve(null);
+    request.onerror = request.onblocked = () => resolve(null);
     request.onsuccess = () => {
       const db = request.result;
       try {
@@ -24,10 +26,12 @@ function savedAttempt() {
   });
 }
 
-function isExam(url) {
-  const value = new URL(url);
-  return (value.origin + value.pathname === BASE || value.origin + value.pathname === BASE + 'index.html') &&
-    value.searchParams.get('result') !== '0';
+function isExamPage(url) {
+  return url.origin + url.pathname === BASE || url.origin + url.pathname === BASE + 'index.html';
+}
+
+function canOpen(url) {
+  return isExamPage(url) && url.searchParams.get('result') !== '0' && self.navigator.onLine !== false;
 }
 
 function isConfirmed(state) {
@@ -35,48 +39,54 @@ function isConfirmed(state) {
     typeof state.receipt === 'string' && state.permit && state.identity?.classCode === 'IC2311';
 }
 
-async function openResult(clientId, waitForReceipt = false) {
-  const client = await self.clients.get(clientId);
-  if (!client || !isExam(client.url) || self.navigator.onLine === false) return;
-  let attempt = await savedAttempt();
-  if (attempt?.phase !== 'submitted') return;
-  const id = attempt.identity?.attemptId;
-  for (let retry = 0; waitForReceipt && !isConfirmed(attempt) && retry < 20; retry++) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    attempt = await savedAttempt();
-    if (attempt?.identity?.attemptId !== id || attempt.phase !== 'submitted') return;
-  }
-  if (isConfirmed(attempt)) {
-    const latest = await self.clients.get(clientId);
-    if (latest && isExam(latest.url)) await latest.navigate(REVIEW).catch(() => {});
-  }
+async function withReviewBridge(page) {
+  if (!page.ok || !page.headers.get('Content-Type')?.includes('text/html')) return page;
+  const html = await page.text();
+  const headers = new Headers(page.headers);
+  for (const key of ['Content-Length', 'Content-Encoding', 'ETag', 'Last-Modified']) headers.delete(key);
+  headers.set('Cache-Control', 'no-store');
+  return new Response(html.replace('</body>', '<script type="module" src="' + BRIDGE + '"></script></body>'), {
+    status: page.status, headers,
+  });
 }
 
-// The exam shell and verification protocol are still the v1 bundle. This update
-// only routes a locally confirmed submission to the independent results page.
-self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
-self.addEventListener('activate', e => e.waitUntil((async () => {
-  await self.clients.claim();
-  if (isConfirmed(await savedAttempt())) {
-    const clients = await self.clients.matchAll({ type: 'window' });
-    await Promise.allSettled(clients.map(client => openResult(client.id)));
-  }
+// Keep the original pinned shell and its verification protocol. The additional
+// script is attached to navigation responses, never to the bytes in the exam cache.
+self.addEventListener('install', event => event.waitUntil((async () => {
+  const cache = await caches.open(BRIDGE_CACHE);
+  await cache.add(new Request(BRIDGE, { cache: 'reload' }));
+  await self.skipWaiting();
 })()));
-self.addEventListener('message',e=>{if(e.data?.type==='VERIFY')e.waitUntil((async()=>{const c=await caches.open(CACHE),ok=e.data.build===BUILD&&(await Promise.all(e.data.paths.map(p=>c.match(p)))).every(Boolean);e.ports[0]?.postMessage({ok,build:BUILD});})());if(e.data?.type==='ACTIVATE_WHEN_IDLE')self.skipWaiting();});
-self.addEventListener('fetch',e=>{
- const u=new URL(e.request.url);
- if (e.request.method === 'POST' && [API + 'snapshot', API + 'operation-status'].includes(u.href)) {
-   e.waitUntil(openResult(e.clientId, true).catch(() => {}));
-   return;
- }
- if(e.request.method!=='GET'||!u.href.startsWith(BASE)||u.pathname.includes('/teacher'))return;
- e.respondWith((async()=>{
-   if (e.request.mode === 'navigate' && isExam(u.href) && self.navigator.onLine !== false && isConfirmed(await savedAttempt())) {
-     return Response.redirect(REVIEW, 302);
-   }
-   const cache=await caches.open(CACHE);
-   const key=e.request.mode==='navigate'?BASE+'index.html':u.href;
-   const hit=await cache.match(key);
-   return hit||fetch(e.request);
- })());
+
+self.addEventListener('activate', event => event.waitUntil((async () => {
+  await self.clients.claim();
+  if (!isConfirmed(await savedAttempt())) return;
+  const clients = await self.clients.matchAll({ type: 'window' });
+  await Promise.allSettled(clients.filter(client => canOpen(new URL(client.url))).map(client => client.navigate(REVIEW)));
+})()));
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'VERIFY') event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    const ok = event.data.build === BUILD && (await Promise.all(event.data.paths.map(path => cache.match(path)))).every(Boolean);
+    event.ports[0]?.postMessage({ ok, build: BUILD });
+  })());
+  if (event.data?.type === 'ACTIVATE_WHEN_IDLE') self.skipWaiting();
+});
+
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || !url.href.startsWith(BASE) || url.pathname.includes('/teacher')) return;
+  event.respondWith((async () => {
+    if (url.href === BRIDGE) {
+      const cache = await caches.open(BRIDGE_CACHE);
+      return await cache.match(BRIDGE) || fetch(request);
+    }
+    const navigation = request.mode === 'navigate';
+    if (navigation && canOpen(url) && isConfirmed(await savedAttempt())) return Response.redirect(REVIEW, 302);
+    const cache = await caches.open(CACHE);
+    const page = await cache.match(navigation ? BASE + 'index.html' : url.href) || await fetch(request);
+    return navigation && isExamPage(url) ? withReviewBridge(page) : page;
+  })());
 });
