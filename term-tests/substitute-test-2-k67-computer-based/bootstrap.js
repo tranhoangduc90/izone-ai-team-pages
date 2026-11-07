@@ -664,6 +664,7 @@
       serverTimeOffsetMs:state.serverTimeOffsetMs,
       ...(state.writingSessionId?{writingSessionId:state.writingSessionId}:{}),
       ...(state.examVersion?{examVersion:state.examVersion}:{}),
+      blankWritingAllowed: twoTasks && state.blankWritingAllowed === true,
       attemptToken: state.attemptToken,
       historyEpoch: window.SUBSTITUTE_STATE.meta.historyEpoch,
       listeningStartedAt: state.listeningStartedAt,
@@ -680,7 +681,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1');
     await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
@@ -763,7 +764,8 @@
             body:JSON.stringify({route:'/api/test/writing/session',payload:window.SUBSTITUTE_STATE.payload({classCode:state.classCode||classCode,studentRef:state.studentRef,clientRunId:state.clientRunId})}),cache:'no-store'});
           const session=await response.json();
           if(!response.ok||session.testSlug!==testConfig.slug||session.studentRef!==state.studentRef||session.classCode!==(state.classCode||classCode)||session.clientRunId!==state.clientRunId||session.historyEpoch!==window.SUBSTITUTE_STATE.meta.historyEpoch)throw new Error('Không xác nhận được phiên bản Writing của lượt này.');
-          saveState({writingSessionId:session.writingSessionId,examVersion:session.examVersion});
+          saveState({writingSessionId:session.writingSessionId,examVersion:session.examVersion,
+            blankWritingAllowed:session.blankWritingAllowed===true});
         }
         officialObjectUrl = URL.createObjectURL(encryptedAudio);
         const officialAudio = document.createElement('audio');

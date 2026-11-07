@@ -2470,7 +2470,7 @@
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
       const automatic = event.submitter?.dataset.autoSubmit === 'true'
         || elements.writingView.dataset.writingTimeExpired === 'true';
-      if(twoTaskWriting&&!automatic){
+      if(twoTaskWriting&&!automatic&&window.TERM_TEST_BOOTSTRAP?.blankWritingAllowed!==true){
         const missing=writingConfig.tasks.find(task=>!state.drafts.writing[task.id]?.trim());
         if(missing){elements.writingTaskTabs.children[writingConfig.tasks.indexOf(missing)]?.click();showNotice(`Bạn chưa viết ${missing.label}. Bản nháp vẫn được giữ; hãy hoàn thành cả hai Task trước khi nộp.`, 'error');
           elements.writingView.querySelector(`[data-writing-task="${missing.id}"]`)?.focus();return;}
