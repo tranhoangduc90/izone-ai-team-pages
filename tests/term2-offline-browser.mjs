@@ -8,13 +8,14 @@ import {createHash,randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {canonical} from '../term-tests/term-test-2-k56-computer-based/offline.mjs';
+import {ASSETS as audioCatalog} from '../shared/audio/catalog.mjs';
 const root=resolve(fileURLToPath(new URL('../',import.meta.url))),output=process.env.TERM2_EVIDENCE||resolve(root,'output/term2-offline');
 const modules=process.env.CODEX_NODE_MODULES||resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const {chromium}=createRequire(pathToFileURL(resolve(modules,'playwright/package.json')))('playwright');
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.mp3':'audio/mpeg'};
 export async function fixture(mode,{profile,native,product=2}={}){
  await mkdir(output,{recursive:true});
- const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
+ const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,r2Audio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
  const server=createServer(async(req,res)=>{const url=new URL(req.url,'http://localhost'),p=resolve(root,'.'+(url.pathname.endsWith('/')?url.pathname+'index.html':url.pathname));
   if(!p.startsWith(root+sep)&&p!==root)return res.writeHead(403).end();
   if(controls.assetFailures.has(url.pathname))return res.writeHead(503).end('Fixture unavailable asset');
@@ -28,13 +29,22 @@ export async function fixture(mode,{profile,native,product=2}={}){
  page=await context.newPage();
  const id=native?.a||randomUUID(),session=native?.s||randomUUID(),student=randomUUID(),receipts=new Map(),calls=[],errors=[];let disconnected=false,fixtureContent;
  page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
- const audio=await readFile(resolve(root,product===2?'term-tests/k56-audio-assets/term-test-2-k56-3600563c0af62fd5.mp3':'term-tests/k56-audio-assets/term-test-1-k56-c7766f97758ec5ec.mp3'));
+ const asset=audioCatalog['term-test-'+product+'-k56'];
+ const audio=await readFile(resolve(root,'term-tests/k56-audio-assets',new URL(asset.url).pathname.split('/').pop()));
  const routeHandler=async route=>{
   const request=route.request(),u=new URL(request.url());
   const fulfill=route.fulfill.bind(route);route.fulfill=options=>fulfill({...options,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,OPTIONS',...options.headers}});
   if(u.origin===base)return route.continue();
   if(disconnected)return route.abort('internetdisconnected');
-  if(u.pathname.endsWith('.mp3')){controls.audioCalls.push(u.href);if(controls.realAudio)return route.continue();if(controls.primaryAudioFail&&u.hostname==='tranhoangduc90.github.io')return route.fulfill({status:503,body:'Unavailable'});return route.fulfill({body:audio,contentType:'audio/mpeg',headers:{'access-control-allow-origin':'*'}});}
+  if(u.pathname.endsWith('.mp3')){
+   controls.audioCalls.push(u.origin+u.pathname);
+   if(controls.realAudio)return route.continue();
+   const isR2=u.hostname.endsWith('.r2.cloudflarestorage.com');
+   if(controls.primaryAudioFail&&isR2)return route.fulfill({status:403,body:'Expired'});
+   if(controls.pagesAudioFail&&!isR2)return route.fulfill({status:503,body:'Unavailable'});
+   if(controls.corruptR2&&isR2)return route.fulfill({body:Buffer.alloc(audio.length,1),contentType:'audio/mpeg'});
+   return route.fulfill({body:audio,contentType:'audio/mpeg'});
+  }
   if(!u.pathname.includes('/api/term-tests/'))return route.abort();
   const endpoint=u.pathname.split('/api/term-tests/')[1],body=request.method()==='POST'?request.postDataJSON():{};calls.push(endpoint);
   if(controls.apiDelayMs&&endpoint.includes('/offline/')){await new Promise(ok=>setTimeout(ok,controls.apiDelayMs));return route.fulfill({status:503,json:{ok:false,error:'FIXTURE_SLOW_UNAVAILABLE'}}).catch(()=>{});}
@@ -51,7 +61,13 @@ export async function fixture(mode,{profile,native,product=2}={}){
   const prepared={ok:true,attemptToken:id,examSessionToken:session,studentRef:student,studentName:'Học viên giả Term 2',generation:0,examMode:mode,nextSection:mode==='read_first'?'reading':'listening',serverNow:new Date().toISOString(),
    listeningSubmitted:false,readingSubmitted:false,content,timing:product===2?{listeningDurationSeconds:1824,listeningReviewSeconds:0,readingDurationMinutes:60,writingDurationMinutes:30}:{listeningDurationSeconds:1848,listeningReviewSeconds:0,readingDurationMinutes:40,writingDurationMinutes:55},...controls.preparedOverride};
   if(endpoint.endsWith('/attempt/prepare'))return route.fulfill({json:prepared});
-  if(endpoint.endsWith('/offline/prepare'))return route.fulfill({json:{...prepared,offline:{policy:`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow}}});
+  if(endpoint.endsWith('/offline/prepare')){
+   if(controls.denyOfflinePrepare)return route.fulfill({status:403,json:{ok:false,error:'FIXTURE_ACCESS_DENIED',message:'Fixture từ chối quyền thi.'}});
+   const audioDownload=controls.r2Audio&&body.audioTransport==='r2-direct-v1'
+    ? {version:1,policy:'r2-direct-v1',method:'GET',url:`https://e340869dcc6ff285504947407d148104.r2.cloudflarestorage.com/izone-audio-r2-lab-20261023/${asset.key}?X-Amz-Signature=fixture`,sha256:asset.sha256,byteLength:asset.byteLength,validForSeconds:600,fallback:'public-pages'}
+    : undefined;
+   return route.fulfill({json:{...prepared,audioDownload,offline:{policy:`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow}}});
+  }
   if(endpoint.endsWith('/offline/status'))return route.fulfill({json:{ok:true,persisted:receipts.has(body.operationId),receipt:receipts.get(body.operationId)||null}});
   if(endpoint.endsWith('/offline/operation')){
    const receipt={version:1,receiptId:randomUUID(),operationId:body.operationId,payloadHash:createHash('sha256').update(canonical(body)).digest('hex'),attemptToken:id,examSessionToken:session,generation:0,section:body.section,kind:body.kind,acceptedRevision:body.revision,status:'accepted',serverCommittedAt:new Date().toISOString()};
@@ -67,12 +83,14 @@ export async function fixture(mode,{profile,native,product=2}={}){
 }
 export async function wait(page,fn,label,timeout=60000){try{await page.waitForFunction(fn,{},{timeout});}catch(e){throw Error(label+': '+JSON.stringify({text:(await page.locator('body').innerText()).slice(0,2000),errors:await page.evaluate(()=>window.__errors||[])}),{cause:e});}}
 if(!process.env.TERM2_FULL_ROUND&&!process.env.K56_FIXTURE_IMPORT_ONLY)for(const mode of ['lis_first','read_first'])test('Term 2 offline/phục hồi/tải file: '+mode,{timeout:180000},async()=>{
- const f=await fixture(mode),p=f.page;
+ const f=await fixture(mode),p=f.page;f.controls.r2Audio=true;
  try{
   await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});
   await p.selectOption('#bootstrapStudent',f.student);await p.click('#confirmIdentity');
   await wait(p,()=>window.K56_TERM2_OFFLINE?.active,'Chuẩn bị offline');
-  assert.equal(f.calls.filter(x=>x.includes('cloudflare')).length,0);
+  assert.equal(f.controls.audioCalls.length,1);
+  assert.match(f.controls.audioCalls[0],/\.r2\.cloudflarestorage\.com/);
+  assert.equal(await p.evaluate(()=>JSON.stringify(window.K56_TERM2_OFFLINE.record).includes('X-Amz-Signature')),false);
   f.disconnected=true;await f.context.setOffline(true);
   if(mode==='lis_first'){
    await p.click('#bootstrapPreview');await p.waitForTimeout(11000);await p.click('#bootstrapStart');
@@ -96,6 +114,7 @@ if(!process.env.TERM2_FULL_ROUND&&!process.env.K56_FIXTURE_IMPORT_ONLY)for(const
    await p.click('#bootstrapPreview');await p.waitForTimeout(11000);await p.click('#bootstrapStart');
    await wait(p,()=>window.K56_TERM2_APP_READY&&window.K56_TERM2_OFFLINE.playerReady,'Listening sau Reading');await p.click('#submitListening');
   }
+  assert.equal(f.controls.audioCalls.length,1);
   await p.click('#startWriting');await wait(p,()=>!document.getElementById('writingView').hidden,'Writing bắt đầu offline');
   assert.equal(await p.locator('textarea[data-writing-outline]:not([readonly])').count(),0);
   await p.locator('[data-writing-task="task1"]').fill('Unicode giữ bài — <script>alert(1)</script>\nNew paragraph.');

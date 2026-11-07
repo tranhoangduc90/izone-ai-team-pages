@@ -24,14 +24,14 @@
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   let term1Offline = null;
   if (!localDemo && classCode && classCode !== 'CODEXDEMO56') {
-    const {Term1Offline, ExamStore} = await import('./offline.mjs?v=term1-offline-20261107-v1');
+    const {Term1Offline, ExamStore} = await import('./offline.mjs?v=20261107-k56-r2-v1');
     term1Offline = new Term1Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try { await term1Offline.open(); window.K56_TERM1_OFFLINE = term1Offline; }
     catch (error) { root.textContent=error.message; return; }
   }
   if(!window.IZONE_EXAM_DEVICE_CHECKED)await loadScript('../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1');
   if(window.IZONE_EXAM_DEVICE_BLOCKED)return;
-  const {downloadWhole} = await import('./audio-whole.mjs?v=term1-offline-20261107-v1');
+  const {downloadWhole} = await import('./audio-whole.mjs?v=20261107-k56-r2-v1');
   if(!window.IZONE_EXAM_CLOCK)await loadScript('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
   document.body.classList.add('cbt-mode');
   if ('serviceWorker' in navigator && !localDemo && !term1Offline) {
@@ -102,7 +102,7 @@
   }
   // Entry không có mã lớp có thể vừa được identity resolver gắn đúng lớp.
   if(!term1Offline&&!localDemo&&classCode&&classCode!=='CODEXDEMO56'){
-    const {Term1Offline,ExamStore}=await import('./offline.mjs?v=term1-offline-20261107-v1');
+    const {Term1Offline,ExamStore}=await import('./offline.mjs?v=20261107-k56-r2-v1');
     term1Offline=new Term1Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try{await term1Offline.open();window.K56_TERM1_OFFLINE=term1Offline;}catch(error){root.textContent=error.message;return;}
   }
@@ -663,6 +663,7 @@
         ? await import('../k56-shared/public-audio.mjs?v=20261024-cf512-1&journal=20261024-startup-v2&audio=20261028-part-rescue-v1') : null;
       const [encrypted, previewResponse] = await Promise.all([
         (term1Offline?.record?.prepared?.offline ? downloadWhole : publicStore ? publicStore.downloadSessionAudio.bind(null,publicAudioManifest) : audioLoader.downloadAudio.bind(null,audioUrl))({
+          audioDownload: session.audioDownload,
           signal: downloadController.signal,
           onProgress: ({ loaded, total, complete }) => {
             if (total > 0) {

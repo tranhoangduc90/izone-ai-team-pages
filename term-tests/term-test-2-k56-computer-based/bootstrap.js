@@ -22,14 +22,14 @@
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   let term2Offline = null;
   if (!localDemo && classCode && classCode !== 'CODEXDEMO56') {
-    const {Term2Offline, ExamStore} = await import('./offline.mjs?v=term2-offline-20261106-v1');
+    const {Term2Offline, ExamStore} = await import('./offline.mjs?v=20261107-k56-r2-v1');
     term2Offline = new Term2Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try { await term2Offline.open(); window.K56_TERM2_OFFLINE = term2Offline; }
     catch (error) { root.textContent=error.message; return; }
   }
   if(!window.IZONE_EXAM_DEVICE_CHECKED)await loadScript('../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1');
   if(window.IZONE_EXAM_DEVICE_BLOCKED)return;
-  const {downloadWhole} = await import('./audio-whole.mjs?v=term2-offline-20261106-v1');
+  const {downloadWhole} = await import('./audio-whole.mjs?v=20261107-k56-r2-v1');
   if(!window.IZONE_EXAM_CLOCK)await loadScript('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
   document.body.classList.add('cbt-mode');
   if ('serviceWorker' in navigator && !localDemo && !term2Offline) {
@@ -91,7 +91,7 @@
   }
   // Entry không có mã lớp có thể vừa được identity resolver gắn đúng lớp.
   if(!term2Offline&&!localDemo&&classCode&&classCode!=='CODEXDEMO56'){
-    const {Term2Offline,ExamStore}=await import('./offline.mjs?v=term2-offline-20261106-v1');
+    const {Term2Offline,ExamStore}=await import('./offline.mjs?v=20261107-k56-r2-v1');
     term2Offline=new Term2Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try{await term2Offline.open();window.K56_TERM2_OFFLINE=term2Offline;}catch(error){root.textContent=error.message;return;}
   }
@@ -563,6 +563,7 @@
       const publicStore = true;
       const [encrypted, previewResponse] = await Promise.all([
         downloadWhole({
+          audioDownload: session.audioDownload,
           signal: downloadController.signal,
           onProgress: ({ loaded, total, complete }) => {
             if (total > 0) {

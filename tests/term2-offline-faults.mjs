@@ -5,23 +5,22 @@ import {writeFile,readFile} from 'node:fs/promises';import {resolve} from 'node:
 process.env.TERM2_FULL_ROUND='1';
 const {fixture,wait}=await import('./term2-offline-browser.mjs');
 async function ready(f,{timeout=60000}={}){const p=f.page;await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});await p.selectOption('#bootstrapStudent',f.student);await p.click('#confirmIdentity');await wait(p,()=>window.K56_TERM2_OFFLINE?.active,'Ready',timeout);}
-test('Hai CDN thật: fetch qua CORS, bytes/hash và duration từ decoder browser',{timeout:360000},async()=>{
+test('Pages thật qua CORS, bytes/hash và duration từ decoder browser',{timeout:360000},async()=>{
  const f=await fixture('read_first');f.controls.realAudio=true;
  try{await ready(f,{timeout:260000});const evidence=await f.page.evaluate(async()=>{
-  const {downloadWhole,AUDIO}=await import('./audio-whole.mjs');const saved=await window.K56_TERM2_OFFLINE.audio();
-  const fallback=await downloadWhole({sources:[AUDIO.sources[1]]});
+  const {AUDIO}=await import('./audio-whole.mjs');const saved=await window.K56_TERM2_OFFLINE.audio();
   const duration=await new Promise((ok,no)=>{const a=new Audio(),url=URL.createObjectURL(saved);a.onloadedmetadata=()=>{ok(a.duration);URL.revokeObjectURL(url);};a.onerror=no;a.src=url;});
-  return {pagesBytes:saved.size,cloudinaryBytes:fallback.size,sha256:AUDIO.sha256,duration};
- });assert.equal(evidence.pagesBytes,29173785);assert.equal(evidence.cloudinaryBytes,29173785);assert.ok(evidence.duration>1820&&evidence.duration<1826);
+  return {pagesBytes:saved.size,sha256:AUDIO.sha256,duration};
+ });assert.equal(evidence.pagesBytes,29173785);assert.ok(evidence.duration>1820&&evidence.duration<1826);
  if(process.env.TERM2_EVIDENCE)await writeFile(resolve(process.env.TERM2_EVIDENCE,'actual-cdn.json'),JSON.stringify(evidence,null,2));
  }finally{await f.close();}
 });
-test('Pages lỗi chuyển Cloudinary trước Start; cache thiếu không báo sẵn sàng',{timeout:130000},async()=>{
- const f=await fixture('lis_first');f.controls.primaryAudioFail=true;f.controls.assetFailures.add('/term-tests/k56-test2-shared/styles.css');
+test('R2 hết hạn chuyển Pages trước Start; cache thiếu không báo sẵn sàng',{timeout:130000},async()=>{
+ const f=await fixture('lis_first');f.controls.r2Audio=true;f.controls.primaryAudioFail=true;f.controls.assetFailures.add('/term-tests/k56-test2-shared/styles.css');
  try{const p=f.page;await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});await p.selectOption('#bootstrapStudent',f.student);await p.click('#confirmIdentity');
   await wait(p,()=>Boolean(window.K56_TERM2_OFFLINE?.record&&!window.K56_TERM2_OFFLINE.record.ready&&document.getElementById('bootstrapNotice')?.textContent.includes('Chưa tải đủ')),'Thiếu cache phải giữ khóa',65000);
   assert.equal(await p.evaluate(()=>Boolean(window.K56_TERM2_OFFLINE.record.sections.listening?.startedAt)),false);
-  assert.ok(f.controls.audioCalls[0].includes('github.io'));assert.ok(f.controls.audioCalls[1].includes('cloudinary.com'));
+  assert.deepEqual(f.controls.audioCalls.map(url=>new URL(url).hostname.split('.').slice(-2).join('.')),['cloudflarestorage.com','github.io']);
  }finally{await f.close();}
 });
 test('Hai tab không cùng sở hữu; đọc và focus giữ qua ba nhịp đồng bộ',{timeout:100000},async()=>{

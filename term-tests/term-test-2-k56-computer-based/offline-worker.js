@@ -1,5 +1,5 @@
 // Chỉ giữ tài nguyên công khai của đúng build; không cache API hoặc bài làm.
-import {ASSETS,ASSET_HASHES,ASSET_BUILD_ID} from './offline-assets.mjs';
+import {ASSETS,ASSET_HASHES,ASSET_BUILD_ID} from './offline-assets.mjs?v=20261107-k56-r2-v1';
 const BUILD='term2-offline-20261106-v1',CACHE=BUILD+'-'+ASSET_BUILD_ID,base=new URL('.',self.location.href);
 const url=value=>new URL(value,base).href;
 const paths=new Set(ASSETS.map(x=>new URL(x,base).pathname));
