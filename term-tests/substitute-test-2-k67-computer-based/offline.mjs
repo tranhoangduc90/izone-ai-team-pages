@@ -21,18 +21,27 @@ let dbPromise;
 function database(){
  if(!globalThis.indexedDB)return Promise.reject(Error('OFFLINE_STORAGE_UNAVAILABLE'));
  return dbPromise??=new Promise((resolve,reject)=>{
-  const request=indexedDB.open(DB_NAME,1);
+  const request=indexedDB.open(DB_NAME,2);
   request.onupgradeneeded=()=>{
    const db=request.result;
-   const snapshots=db.createObjectStore('snapshots',{keyPath:'key'});
-   snapshots.createIndex('owner','owner');
-   db.createObjectStore('assets',{keyPath:'key'});
-   db.createObjectStore('outbox',{keyPath:'key'});
+   if(!db.objectStoreNames.contains('snapshots')){
+    const snapshots=db.createObjectStore('snapshots',{keyPath:'key'});
+    snapshots.createIndex('owner','owner');
+   }
+   if(!db.objectStoreNames.contains('assets'))db.createObjectStore('assets',{keyPath:'key'});
+   if(!db.objectStoreNames.contains('outbox'))db.createObjectStore('outbox',{keyPath:'key'});
+   if(!db.objectStoreNames.contains('meta'))db.createObjectStore('meta',{keyPath:'key'});
   };
   request.onsuccess=()=>resolve(request.result);
   request.onerror=()=>reject(request.error||Error('OFFLINE_STORAGE_UNAVAILABLE'));
  }).catch(error=>{dbPromise=null;throw error;});
 }
+export async function saveMeta(value){
+ if(value?.testSlug!=='substitute-test-2-k67'||!uuid.test(String(value.historyEpoch||''))
+  ||value.stateVersion!==2||(value.classes!==undefined&&!Array.isArray(value.classes)))throw Error('OFFLINE_META_INVALID');
+ return put('meta',{key:'history',value:JSON.parse(JSON.stringify(value)),updatedAt:Date.now()});
+}
+export async function loadMeta(){return (await get('meta','history'))?.value??null;}
 async function get(storeName,itemKey){
  const db=await database(),transaction=db.transaction(storeName,'readonly');
  const result=await requestResult(transaction.objectStore(storeName).get(itemKey));
@@ -61,6 +70,18 @@ export async function latestLobby(identity){
  const rows=await requestResult(transaction.objectStore('snapshots').index('owner').getAll(owner(partial)));
  await transactionDone(transaction);
  return rows.filter(row=>row.kind==='lobby').sort((a,b)=>b.updatedAt-a.updatedAt)[0]?.value??null;
+}
+export async function cachedStudents(identity){
+ const epoch=String(identity.historyEpoch||''),classCode=String(identity.classCode||'').toUpperCase();
+ if(!uuid.test(epoch)||!/^(?:DEMO|IC\d{3,8})$/.test(classCode))return [];
+ const db=await database(),transaction=db.transaction('snapshots','readonly');
+ const rows=await requestResult(transaction.objectStore('snapshots').getAll());await transactionDone(transaction);
+ const seen=new Set();return rows.filter(row=>row.kind==='lobby'&&row.scope.historyEpoch===epoch
+  &&row.scope.classCode===classCode&&row.value.offlinePermit&&row.value.studentRef)
+  .sort((a,b)=>b.updatedAt-a.updatedAt).flatMap(row=>{
+   const ref=row.value.studentRef;if(seen.has(ref))return [];seen.add(ref);
+   return [{ref,name:row.value.studentName||ref}];
+  });
 }
 export async function saveAudio(identity,blob){
  const scope=normalizeScope(identity);
@@ -91,7 +112,23 @@ async function allSections(identity){
   &&row.scope.classCode===scope.classCode&&row.scope.studentRef===scope.studentRef&&row.scope.clientRunId===scope.clientRunId)
   .sort((a,b)=>a.queuedAt-b.queuedAt);
 }
-export async function pendingSections(identity){return (await allSections(identity)).filter(row=>row.status==='pending');}
+export async function pendingSections(identity){return (await allSections(identity)).filter(row=>row.status==='pending'&&['reading','listening'].includes(row.skill));}
+export async function queueWriting(identity,payload){
+ const scope=normalizeScope(identity),itemKey=key(scope,'writing'),old=await get('outbox',itemKey);
+ if(old)return old;
+ return put('outbox',{key:itemKey,scope,skill:'writing',payload:JSON.parse(JSON.stringify(payload)),
+  status:'pending',queuedAt:Date.now()});
+}
+export async function pendingWriting(identity){
+ const row=await get('outbox',key(normalizeScope(identity),'writing'));
+ return row?.status==='pending'?row:null;
+}
+export async function acknowledgeWriting(identity,receipt){
+ const itemKey=key(normalizeScope(identity),'writing'),row=await get('outbox',itemKey);
+ if(!row||receipt?.accepted!==true||!receipt?.grading||typeof receipt.grading.status!=='string')throw Error('OFFLINE_WRITING_RECEIPT_INVALID');
+ return put('outbox',{...row,status:'acknowledged',receipt:{status:receipt.grading.status,
+  ready:receipt.grading.ready===true},acknowledgedAt:Date.now()});
+}
 export async function acknowledgeSection(identity,skill,receipt){
  const scope=normalizeScope(identity),itemKey=key(scope,'section:'+skill),row=await get('outbox',itemKey);
  if(!row||receipt?.persisted!==true||!receipt.snapshotHash||!receipt.submittedAt)throw Error('OFFLINE_RECEIPT_INVALID');
@@ -102,7 +139,8 @@ export async function makeDownload(identity,appFallback=null){
  const scope=normalizeScope(identity);
  const [lobby,app,sections]=await Promise.all([loadSnapshot(scope,'lobby').catch(()=>null),
   loadSnapshot(scope,'app').catch(()=>appFallback),allSections(scope).catch(()=>[])]);
- const record={version:1,exportedAt:new Date().toISOString(),scope,lobby,app:app??appFallback,sections};
+ const writing=await get('outbox',key(scope,'writing')).catch(()=>null);
+ const record={version:1,exportedAt:new Date().toISOString(),scope,lobby,app:app??appFallback,sections,writing};
  const json=JSON.stringify(record,null,2);
  const html=`<!doctype html><html lang="vi"><meta charset="utf-8"><title>Bài làm Substitute Test 2 K67</title><style>body{font:16px/1.6 system-ui;max-width:960px;margin:auto;padding:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>Bài làm Substitute Test 2 K67</h1><p>Bản lưu ngoại tuyến để giữ câu trả lời. Hãy giữ file này và liên hệ giáo viên nếu trang thi không đồng bộ được.</p><pre>${escapeHtml(json)}</pre></html>`;
  return {blob:new Blob([html],{type:'text/html;charset=utf-8'}),name:`substitute-test-2-k67-${scope.classCode}-${scope.studentRef}-${scope.clientRunId.slice(0,8)}.html`};

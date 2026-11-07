@@ -29,7 +29,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1&offline=20261107-v1'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1&offline=20261107-v2'))
       .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
@@ -39,17 +39,36 @@
   }
 
   if(!localDemo){query.set('demo','exam');query.set('grading','server');location.replace(location.pathname+'?'+query.toString());return;}
+  const offline=await import('./offline.mjs?v=20261107-substitute-offline-pilot-v2').catch(()=>null);
   try {
     if(query.get('reset')==='1'){
       if(query.get('resetOwner')!=='done'&&window.SUBSTITUTE_STATE.canReset(testConfig.slug))window.SUBSTITUTE_STATE.clear(testConfig.slug);
       query.delete('reset');query.delete('resetOwner');
       location.replace(location.pathname+'?'+query.toString());return;
     }
-    await window.SUBSTITUTE_STATE.initialize(testConfig,appConfig);
+    await window.SUBSTITUTE_STATE.initialize(testConfig,appConfig,offline?{
+      readOfflineMeta:offline.loadMeta,writeOfflineMeta:offline.saveMeta}:undefined);
   } catch(error) {
     root.textContent=error.message||'Không mở được phiên thi. Hãy tải lại trang.';return;
   }
-  const offline=await import('./offline.mjs?v=20261107-substitute-offline-pilot-v1').catch(()=>null);
+  function prepareShellCache(){
+    if(!offline||!('serviceWorker' in navigator)||!('caches' in window))return;
+    navigator.serviceWorker.addEventListener('message',event=>{
+      if(event.data?.type==='PRECACHE_RESULT')window.SUBSTITUTE_OFFLINE_SHELL_STATUS=event.data.ok?'ready':'partial';
+    });
+    void navigator.serviceWorker.register('./offline-sw.js?v=20261107-v2').then(async()=>{
+      const registration=await navigator.serviceWorker.ready;
+      const urls=[...document.querySelectorAll('script[src],link[href],img[src]')]
+        .map(element=>element.src||element.href).filter(Boolean);
+      for(const path of ['./offline.mjs','../substitute-k67-shared/app.js','./enhance.js',
+        './annotations.js','../shared/writing-submission.mjs','../../shared/substitute-student-identity.js',
+        '../../shared/student-identity.js','../../shared/student-identity-migration.js',
+        '../../shared/teacher-entry.js','../../shared/master170/question-layout-v1.1.mjs',
+        '../shared/audio-source-choice.js','../../shared/audio/transport.mjs'])
+        urls.push(new URL(path,location.href).href);
+      registration.active?.postMessage({type:'PRECACHE',urls});
+    }).catch(()=>{window.SUBSTITUTE_OFFLINE_STATUS='shell_cache_failed';});
+  }
   let sharedIdentity;
   try {
     const module = await import('../../shared/substitute-student-identity.js?v=20261018-identity-v1');
@@ -76,6 +95,9 @@
     queueSection:(skill,answers)=>offline.queueSection(offlineScope(),skill,answers),
     pendingSections:()=>offline.pendingSections(offlineScope()),
     acknowledgeSection:(skill,receipt)=>offline.acknowledgeSection(offlineScope(),skill,receipt),
+    queueWriting:payload=>offline.queueWriting(offlineScope(),payload),
+    pendingWriting:()=>offline.pendingWriting(offlineScope()),
+    acknowledgeWriting:receipt=>offline.acknowledgeWriting(offlineScope(),receipt),
     makeDownload:appState=>offline.makeDownload(offlineScope(),appState)
   }):null;
   let legacyUiState = readLegacyUiState();
@@ -748,7 +770,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1&offline=20261107-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1&offline=20261107-v2');
     await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
@@ -844,6 +866,7 @@
         await waitForAudioMetadata(officialAudio);
         const timing=await window.SUBSTITUTE_EXAM?.start(state);
         if(timing)saveState({...timing,serverTimeOffsetMs:(window.IZONE_EXAM_CLOCK?.offset(timing.serverNow) ?? (Date.parse(timing.serverNow)-Date.now()))});
+        if(timing?.offlinePermit)prepareShellCache();
         if(timing?.examOrder==='reading-first'&&!timing.listeningStartedAt){
           elements.bootstrapOrder.disabled=true;
           const readingDeadlineAt=new Date(Date.parse(timing.readingStartedAt)+Number(testConfig.reading.durationMinutes)*60000).toISOString();
@@ -941,12 +964,19 @@
   async function loadDemoRoster(selectedClass) {
     if (!selectedClass) return [];
     if (selectedClass.code === 'DEMO') return [{ ref: 'demo-k67-sub2-01', name: 'Học viên Demo K67' }];
-    const response = await fetch(appConfig.API_BASE_URL, {
+    let response;
+    try{response = await fetch(appConfig.API_BASE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify({ route: '/api/test/roster', payload: { classCode: selectedClass.code } }),
       cache: 'no-store'
-    });
+    });}
+    catch(error){
+      const cached=await offline?.cachedStudents({historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,
+        classCode:selectedClass.code}).catch(()=>[]);
+      if(cached?.length)return cached;
+      throw error;
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Không tải được danh sách lớp từ Portal.');
     return Array.isArray(data.students) ? data.students : [];

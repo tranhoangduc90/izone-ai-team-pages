@@ -21,10 +21,24 @@
  }
  async function start(state){
   if(window.SUBSTITUTE_STATE.meta?.examTimingVersion!==VERSION||state.listeningStartedAt&&!state.examSessionId)return null;
-  const data=await request('/api/test/exam/session',{classCode:state.classCode,studentRef:state.studentRef,clientRunId:state.clientRunId,
+  let data;
+  try{data=await request('/api/test/exam/session',{classCode:state.classCode,studentRef:state.studentRef,clientRunId:state.clientRunId,
    ...(state.examOrder?{examOrder:state.examOrder}:{}),
    ...(state.classCode&&window.TERM_TEST_CONFIG?.slug==='substitute-test-2-k67'
-    ?{deviceId:state.annotationRunId,generation:Number(state.generation)||0}:{})});
+    ?{deviceId:state.annotationRunId,generation:Number(state.generation)||0}:{})});}
+  catch(error){
+   if(window.TERM_TEST_CONFIG?.slug!=='substitute-test-2-k67'||!state.offlinePermit
+    ||state.examSessionId!==state.clientRunId||!state.offlineDeviceId||state.offlineDeviceId!==state.annotationRunId)throw error;
+   data={testSlug:window.TERM_TEST_CONFIG.slug,classCode:state.classCode,studentRef:state.studentRef,
+    clientRunId:state.clientRunId,historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,timingVersion:VERSION,
+    examOrder:state.examOrder||'listening-first',readingStartedAt:state.readingStartedAt||'',
+    listeningStartedAt:state.listeningStartedAt||'',listeningDeadlineAt:state.listeningDeadlineAt||'',
+    audioEndedAt:state.audioEndedAt||'',transferSeconds:300,
+    serverNow:new Date((window.IZONE_EXAM_CLOCK?.estimate(state.serverTimeOffsetMs)
+     ??(Date.now()+(Number(state.serverTimeOffsetMs)||0)))).toISOString(),
+    offlinePermit:state.offlinePermit,offlineDeviceId:state.offlineDeviceId,
+    offlineGeneration:state.offlineGeneration,offlineListeningPending:state.offlineListeningPending===true};
+  }
   if(data.clientRunId!==state.clientRunId||data.classCode!==state.classCode||data.studentRef!==state.studentRef||data.timingVersion!==VERSION)throw new Error('Thời gian trả về không đúng lượt thi.');
   if(state.examOrder&&data.examOrder!==state.examOrder)throw new Error('Thứ tự làm bài không đúng lượt thi.');
   // Cùng lượt: mốc provisional đã lưu không bị phản hồi chưa xác nhận của server xóa đi.

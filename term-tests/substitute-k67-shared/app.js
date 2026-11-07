@@ -2535,6 +2535,13 @@
           if(receipt.persisted){state.testGrades[item.skill]=receipt.section;delete state.pendingSections[item.skill];saveSession();}
         } catch { return; }
       }
+      if(state.stage==='writing'&&!state.writingSubmitted&&!writingSubmission.busy){
+        let writing;try{writing=await window.SUBSTITUTE_OFFLINE.pendingWriting();}catch{return;}
+        if(writing&&!elements.submitWriting.disabled){
+          elements.submitWriting.dataset.retrySubmission='true';elements.submitWriting.click();
+          delete elements.submitWriting.dataset.retrySubmission;
+        }
+      }
     };
     window.SUBSTITUTE_SYNC_PENDING=retryPendingSection;
     window.addEventListener('online', retryPendingSection);
@@ -2583,7 +2590,7 @@
         words: countWords(state.drafts.writing[task.id]),
         minimum: task.minimumWords
       })).filter(task => task.words < task.minimum);
-      if (!automatic && belowMinimum.length) {
+      if (!automatic && event.submitter?.dataset.retrySubmission !== 'true' && belowMinimum.length) {
         const summary = belowMinimum.map(task => `${task.label}: ${task.words}/${task.minimum} từ`).join('\n');
         if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
       }
@@ -2596,28 +2603,31 @@
           if (serverGradingMode) {
             try {
               ensureValidAttemptToken();
+              const writingPayload={
+                classCode,studentRef:state.studentRef,attemptToken:state.attemptToken,promptVersion,
+                ...(twoTaskWriting?{examVersion:writingConfig.examVersion,automatic}:{}),
+                listeningAnswers:state.drafts.listening,readingAnswers:state.drafts.reading,
+                outline:state.drafts.writing.outline,task1:state.drafts.writing.task1,task2:state.drafts.writing.task2
+              };
+              let retainedWriting=null;
+              try{retainedWriting=await window.SUBSTITUTE_OFFLINE?.pendingWriting();}
+              catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_queue_read_failed';}
+              const exactPayload=retainedWriting?.payload||writingPayload;
+              try{await window.SUBSTITUTE_OFFLINE?.queueWriting(exactPayload);}
+              catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_queue_failed';}
               state.testGrades.writing = await writingSubmission.submitOnline({
-                payload: {
-                  classCode,
-                  studentRef: state.studentRef,
-                  attemptToken: state.attemptToken,
-                  promptVersion,
-                  ...(twoTaskWriting?{examVersion:writingConfig.examVersion,automatic}:{}),
-                  listeningAnswers: state.drafts.listening,
-                  readingAnswers: state.drafts.reading,
-                  outline: state.drafts.writing.outline,
-                  task1: state.drafts.writing.task1,
-                  task2: state.drafts.writing.task2
-                },
+                payload:exactPayload,
                 send: value => apiRequest('/api/test/writing', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)}),
                 read: value => apiRequest('/api/test/writing/status', {method:'POST',headers:{'Content-Type':'application/json'},
                   body:JSON.stringify({classCode:value.classCode,studentRef:value.studentRef,attemptToken:value.attemptToken,promptVersion:value.promptVersion})})
               });
+              try{await window.SUBSTITUTE_OFFLINE?.acknowledgeWriting(state.testGrades.writing);}
+              catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_receipt_cache_failed';}
               if (!writingSubmission.current(writingOwner)) return;
             } catch (error) {
               if (!writingSubmission.current(writingOwner)) return;
               if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
-              showNotice(`Chưa xác nhận được trạng thái nộp Writing. Bản đã gửi vẫn được giữ. Chi tiết: ${error.message}`, 'error');
+              showNotice(`Writing đã được giữ trên trình duyệt và đang chờ biên nhận. Bấm Tải bài làm về máy để giữ thêm một bản. Chi tiết: ${error.message}`, 'error');
               return;
             }
           }
