@@ -57,6 +57,8 @@
         stored = {};
       }
     }
+    if(!Object.keys(stored).length&&serverGradingMode&&!window.TERM_TEST_BOOTSTRAP?.startAtFirstSection)
+      stored=window.TERM_TEST_BOOTSTRAP?.uiState||{};
     return {
       flags: {
         listening: { ...(stored.flags?.listening || {}) },
@@ -96,6 +98,10 @@
         // Bộ nhớ trình duyệt có thể bị chặn; bài làm chính vẫn được shared/app.js quản lý.
       }
     }
+    if(serverGradingMode&&window.SUBSTITUTE_OFFLINE)
+      void window.SUBSTITUTE_OFFLINE.saveSnapshot('ui',JSON.parse(serialized)).catch(()=>{
+        window.SUBSTITUTE_OFFLINE_STATUS='ui_checkpoint_failed';
+      });
   }
 
   function makeButton(className, label) {
@@ -950,7 +956,6 @@
       // Substitute giữ vị trí nghe cục bộ; mốc kết thúc đi qua SUBSTITUTE_EXAM.
       // Webhook gateway không có REST audio-progress của Term Test.
       if (window.SUBSTITUTE_EXAM && protectedBootstrap?.examSessionId) return Promise.resolve(null);
-      if (appConfig.LOCAL_DEMO_ONLY) return Promise.resolve(null);
       const examSessionToken = protectedBootstrap?.examSessionToken;
       if (!examSessionToken || !examStarted || !['term-test-1-k56', 'term-test-2-k56', 'mini-test-k56', 'substitute-test-1-k56'].includes(testConfig.slug)) return Promise.resolve(null);
       const heardSeconds = rememberActualHeardPosition(true);
@@ -1053,6 +1058,12 @@
         previewing = false;
         previewButton.textContent = 'Nghe lại 30 giây đầu';
         previewStatus.textContent = 'Đã nghe hết đoạn thử. Nếu âm lượng vừa tai, bạn có thể bắt đầu thi.';
+        return;
+      }
+      if (protectedBootstrap?.examSessionId && !window.SUBSTITUTE_EXAM?.validAudioEnd(audio)) {
+        examRetryButton.hidden = false;
+        updateExamStatus('Audio dừng trước khi nghe đủ · nhấn Khôi phục audio');
+        saveUiState();
         return;
       }
       uiState.audio.time = audio.duration || uiState.audio.time;
@@ -1178,6 +1189,8 @@
       const officialTime = examStarted ? uiState.audio.time : 0;
       audio.currentTime = Math.min(Math.max(0, officialTime), Math.max(0, (audio.duration || 1) - 1));
       try {
+        if(protectedBootstrap?.examSessionId&&protectedBootstrap.examOrder==='reading-first'
+          &&!protectedBootstrap.listeningStartedAt)await window.SUBSTITUTE_EXAM.startListeningPhase();
         await audio.play();
         examStarted = true;
         uiState.audio.started = true;
@@ -1190,7 +1203,7 @@
         saveUiState();
       } catch {
         allowPause = false;
-        downloadStatus.textContent = 'Trình duyệt chưa cho phép phát audio. Hãy nhấn lại “Bắt đầu thi Listening”.';
+        downloadStatus.textContent = 'Chưa mở hoặc phát được Listening. Bài Reading vẫn được giữ; hãy nhấn lại “Bắt đầu thi Listening”.';
       }
     });
     resumeButton.addEventListener('click', () => recoverInterruptedAudio('pause', true));
@@ -1236,7 +1249,10 @@
       saveUiState();
     } else {
       setListeningVisible(false);
-      downloadFullAudio();
+      if(protectedBootstrap?.preloadedAudioBlob instanceof Blob){
+        objectUrl=URL.createObjectURL(protectedBootstrap.preloadedAudioBlob);
+        audio.src=objectUrl;audio.load();
+      }else downloadFullAudio();
     }
     audioWatchdog = window.setInterval(() => {
       if (!examStarted || !ready || audio.ended || allowPause || examCard.hidden) return;
@@ -1404,8 +1420,8 @@
     const form = document.getElementById('writingView');
     const header = form?.querySelector('.writing-exam-header');
     if (!form || !header) return;
-    const totalMinutes = Number(testConfig.writing?.durationMinutes) || Number(contentConfig.writing?.totalMinutes) || 55;
-    const planningMinutes = Number(testConfig.writing?.planningMinutes) || Number(contentConfig.writing?.planningMinutes) || 15;
+    const totalMinutes = Number(testConfig.writing?.durationMinutes ?? contentConfig.writing?.totalMinutes ?? 30);
+    const planningMinutes = Number(testConfig.writing?.planningMinutes ?? contentConfig.writing?.planningMinutes ?? 0);
     const essayMinutes = Math.max(1, totalMinutes - planningMinutes);
     const essaySeconds = essayMinutes * 60;
 
@@ -1424,7 +1440,7 @@
     clock.append(clockLabel, clockValue, clockTotal);
     const phase = document.createElement('span');
     phase.className = 'cbt-writing-phase';
-    phase.textContent = 'Lập dàn ý · còn ' + planningMinutes + ' phút';
+    phase.textContent = planningMinutes > 0 ? 'Lập dàn ý · còn ' + planningMinutes + ' phút' : 'Viết bài · còn ' + totalMinutes + ' phút';
     phase.setAttribute('role', 'status');
     header.insertBefore(clock, document.getElementById('submitWriting'));
     // Không hiển thị nhãn lập dàn ý; giữ nguyên đồng hồ tổng và hạn giờ.
@@ -1475,7 +1491,7 @@
         const planningPhase = remainingSeconds > essaySeconds;
         phase.textContent = planningPhase
           ? 'Lập dàn ý · còn ' + formatMinutes(remainingSeconds - essaySeconds) + ' phút'
-          : 'Viết bài Task 2 · còn ' + formatMinutes(remainingSeconds) + ' phút';
+          : 'Viết bài · còn ' + formatMinutes(remainingSeconds) + ' phút';
         phase.classList.toggle('is-essay', !planningPhase);
         if (!planningPhase && !essayPhaseAnnounced && remainingSeconds > 0) {
           essayPhaseAnnounced = true;
