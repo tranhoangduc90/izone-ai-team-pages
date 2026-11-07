@@ -10,6 +10,8 @@ const definition = new Map([
 ]);
 const skill = new URLSearchParams(location.search).get('skill');
 const setup = definition.get(skill);
+const teacherMode = location.pathname.endsWith('/teacher.html');
+const teacherAttempt = new URLSearchParams(location.search).get('attemptId');
 const status = byId('result-status');
 const retry = byId('result-retry');
 let request;
@@ -98,7 +100,7 @@ function render(review) {
   const section = review.result[skill];
   byId('result-student').textContent = review.studentName || 'Bài làm của bạn';
   byId('result-meta').textContent = `${review.identity.classCode} · Substitute Test 1 · Khóa 56 · ${setup.label} thi lại`;
-  byId('result-receipt').textContent = 'Biên nhận nộp bài ' + review.identity.receiptId;
+  if (!teacherMode) byId('result-receipt').textContent = 'Biên nhận nộp bài ' + review.identity.receiptId;
   const scores = table(['Kỹ năng', 'Điểm thực tế', 'Trạng thái'], 'substitute-score-table', 'Tổng hợp điểm thực tế');
   appendCells(scores.body, [setup.label, `${section.correct}/${section.total} câu đúng`, 'Đã chấm']);
   byId('review-score').replaceChildren(scores.node);
@@ -130,7 +132,7 @@ function render(review) {
     window.K67_ANSWER_EXPLANATIONS.attach({
       container, payload: { completed: true, result: review.result },
       testSlug: review.identity.testSlug, title: 'Substitute Test 1 · Khóa 56',
-      reviewKey: review.identity.receiptId, loadReview: async () => ({ review }),
+      reviewKey: teacherMode ? review.identity.attemptId : review.identity.receiptId, loadReview: async () => ({ review }),
     });
   }
 }
@@ -157,7 +159,7 @@ async function load() {
       identityKey = undefined;
       clearResult();
       byId('result-student').textContent = 'Chưa có kết quả của lượt thi';
-      status.textContent = state?.pending ? 'Bài đang chờ đồng bộ. Mở lại trang bài thi khi có mạng.' : 'Mở bằng trình duyệt đã dùng để nộp bài hoặc liên hệ giảng viên.';
+      status.textContent = state?.pending ? 'Bài đang chờ đồng bộ. Mở lại trang bài thi khi có mạng.' : 'Mở lại bài trên đúng thiết bị và trình duyệt đã dùng để thi.';
       return;
     }
     const { receiptId, key } = current;
@@ -210,7 +212,68 @@ async function load() {
   }
 }
 
-if (setup) {
+async function loadTeacherReview() {
+  if (request) return;
+  if (!/^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i.test(teacherAttempt ?? '')) {
+    byId('result-student').textContent = 'Chọn bài đã nộp từ bảng giảng viên';
+    return;
+  }
+  const controller = new AbortController();
+  request = controller;
+  retry.hidden = true;
+  try {
+    const response = await fetch(setup.api + '/teacher/review?' + new URLSearchParams({attemptId:teacherAttempt}), {
+      cache:'no-store', credentials:'include',
+      headers:{'X-Izone-Csrf':'1','X-Request-Id':crypto.randomUUID()},
+      signal:AbortSignal.any([controller.signal,AbortSignal.timeout(10000)]),
+    });
+    if ([401,403,404].includes(response.status)) {
+      clearResult();
+      byId('result-student').textContent = 'Chưa mở được bài đã nộp';
+      status.textContent = response.status===404 ? 'Hãy chọn lại bài từ bảng giảng viên.' : 'Hãy đăng nhập bằng tài khoản được cấp quyền tại bảng giảng viên.';
+      return;
+    }
+    if (!response.ok) throw Error('Review unavailable');
+    const {review}=await response.json();
+    const identity=review?.identity;
+    if (identity?.classCode!=='IC2311'||identity.attemptId!==teacherAttempt||
+        !matchingReview(review,{identity},undefined)) throw Error('Wrong review');
+    controller.signal.throwIfAborted();
+    render(review);
+    status.textContent = review.bundle ? '' : 'Đã tải điểm và đáp án. Lời giải chi tiết đang được chuẩn bị.';
+  } catch {
+    if (controller.signal.aborted) return;
+    clearResult();
+    byId('result-student').textContent = 'Chưa tải được kết quả';
+    status.textContent = 'Hãy kết nối mạng rồi thử tải lại.';
+    retry.hidden = false;
+  } finally {
+    request = undefined;
+  }
+}
+
+if (setup && teacherMode) {
+  byId('review-skill').textContent = setup.label;
+  const back=byId('exam-link');
+  back.href = '../ic2311-' + skill + '-retake-substitute1-k56/teacher.html';
+  back.hidden = false;
+  retry.onclick = loadTeacherReview;
+  addEventListener('storage', event => {
+    if (!['izone:teacher-sso-logout','izone:teacher-sso-login'].includes(event.key)) return;
+    request?.abort();
+    clearResult();
+    byId('result-student').textContent = 'Phiên đăng nhập đã thay đổi';
+    status.textContent = 'Quay lại bảng giảng viên để mở bài.';
+    retry.hidden = true;
+  });
+  addEventListener('pagehide', () => {
+    request?.abort();
+    clearResult();
+    byId('result-student').textContent = 'Đang xác minh phiên giảng viên…';
+  });
+  addEventListener('pageshow', event => { if (event.persisted) void loadTeacherReview(); });
+  void loadTeacherReview();
+} else if (setup) {
   byId('review-skill').textContent = setup.label;
   const back = byId('exam-link');
   back.href = `../ic2311-${skill}-retake-substitute1-k56/?result=0`;
