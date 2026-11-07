@@ -13,6 +13,7 @@ const backend=process.env.K67_BACKEND;
 assert.ok(backend,'Set K67_BACKEND to the isolated backend package.');
 const full=process.env.K67_JOURNEY_FULL==='1';
 const reopenTab=process.env.K67_JOURNEY_REOPEN_TAB==='1';
+const breakAudio=process.env.K67_JOURNEY_AUDIO_FAULT==='1';
 const modes=process.env.K67_JOURNEY_ORDER?[process.env.K67_JOURNEY_ORDER]:['lis_first','read_first'];
 const require=createRequire(resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const {chromium}=require('playwright');
@@ -97,6 +98,18 @@ for(const mode of modes)test('Mini K67 journey '+mode,{timeout:full?2_650_000:12
         log('play_before_reload');
         await page.evaluate(()=>document.getElementById('miniJourneyAudio').dispatchEvent(new Event('ended')));
         assert.equal(await form.isVisible(),true);
+        if(breakAudio){
+          await page.evaluate(()=>{
+            const audio=document.getElementById('miniJourneyAudio');
+            audio.src=URL.createObjectURL(new Blob(['unplayable'],{type:'audio/mpeg'}));
+            audio.load();
+          });
+          await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.error?.code===4);
+          await new Promise(resolve=>setTimeout(resolve,12_000));
+          assert.equal(await form.isVisible(),true);
+          assert.deepEqual(seals,[]);
+          log('audio_fault_held_listening');
+        }
         if(reopenTab){
           await page.close();
           page=await openPage();
