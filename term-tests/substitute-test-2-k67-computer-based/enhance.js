@@ -57,6 +57,8 @@
         stored = {};
       }
     }
+    if(!Object.keys(stored).length&&serverGradingMode&&!window.TERM_TEST_BOOTSTRAP?.startAtFirstSection)
+      stored=window.TERM_TEST_BOOTSTRAP?.uiState||{};
     return {
       flags: {
         listening: { ...(stored.flags?.listening || {}) },
@@ -96,6 +98,10 @@
         // Bộ nhớ trình duyệt có thể bị chặn; bài làm chính vẫn được shared/app.js quản lý.
       }
     }
+    if(serverGradingMode&&window.SUBSTITUTE_OFFLINE)
+      void window.SUBSTITUTE_OFFLINE.saveSnapshot('ui',JSON.parse(serialized)).catch(()=>{
+        window.SUBSTITUTE_OFFLINE_STATUS='ui_checkpoint_failed';
+      });
   }
 
   function makeButton(className, label) {

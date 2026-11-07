@@ -56,7 +56,7 @@ async function put(storeName,item){
 }
 export async function saveSnapshot(identity,kind,value){
  const scope=normalizeScope(identity);
- if(!['lobby','app'].includes(kind))throw Error('OFFLINE_KIND_INVALID');
+ if(!['lobby','app','ui'].includes(kind))throw Error('OFFLINE_KIND_INVALID');
  const serialized=JSON.stringify(value);
  if(serialized.length>4*1024*1024)throw Error('OFFLINE_SNAPSHOT_TOO_LARGE');
  return put('snapshots',{key:key(scope,kind),owner:owner(scope),kind,scope,updatedAt:Date.now(),value:JSON.parse(serialized)});
@@ -141,10 +141,10 @@ export async function acknowledgeSection(identity,skill,receipt){
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 export async function makeDownload(identity,appFallback=null){
  const scope=normalizeScope(identity);
- const [lobby,app,sections]=await Promise.all([loadSnapshot(scope,'lobby').catch(()=>null),
-  loadSnapshot(scope,'app').catch(()=>appFallback),allSections(scope).catch(()=>[])]);
+ const [lobby,app,ui,sections]=await Promise.all([loadSnapshot(scope,'lobby').catch(()=>null),
+  loadSnapshot(scope,'app').catch(()=>appFallback),loadSnapshot(scope,'ui').catch(()=>null),allSections(scope).catch(()=>[])]);
  const writing=await get('outbox',key(scope,'writing')).catch(()=>null);
- const record={version:1,exportedAt:new Date().toISOString(),scope,lobby,app:app??appFallback,sections,writing};
+ const record={version:1,exportedAt:new Date().toISOString(),scope,lobby,app:app??appFallback,ui,sections,writing};
  const json=JSON.stringify(record,null,2);
  const html=`<!doctype html><html lang="vi"><meta charset="utf-8"><title>Bài làm Substitute Test 2 K67</title><style>body{font:16px/1.6 system-ui;max-width:960px;margin:auto;padding:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>Bài làm Substitute Test 2 K67</h1><p>Bản lưu ngoại tuyến để giữ câu trả lời. Hãy giữ file này và liên hệ giáo viên nếu trang thi không đồng bộ được.</p><pre>${escapeHtml(json)}</pre></html>`;
  return {blob:new Blob([html],{type:'text/html;charset=utf-8'}),name:`substitute-test-2-k67-${scope.classCode}-${scope.studentRef}-${scope.clientRunId.slice(0,8)}.html`};

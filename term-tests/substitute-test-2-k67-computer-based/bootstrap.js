@@ -30,7 +30,7 @@
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
       .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1&offline=20261107-v2'))
-      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1'))
+      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -39,7 +39,7 @@
   }
 
   if(!localDemo){query.set('demo','exam');query.set('grading','server');location.replace(location.pathname+'?'+query.toString());return;}
-  const offline=await import('./offline.mjs?v=20261107-substitute-offline-pilot-v2').catch(()=>null);
+  const offline=await import('./offline.mjs?v=20261107-substitute-offline-pilot-v3').catch(()=>null);
   try {
     if(query.get('reset')==='1'){
       if(query.get('resetOwner')!=='done'&&window.SUBSTITUTE_STATE.canReset(testConfig.slug))window.SUBSTITUTE_STATE.clear(testConfig.slug);
@@ -719,8 +719,9 @@
   }
 
   async function enterExam(started, audioElement = null) {
-    let appCheckpoint=null;
-    try{appCheckpoint=await window.SUBSTITUTE_OFFLINE?.loadSnapshot('app');}
+    let appCheckpoint=null,uiCheckpoint=null;
+    try{[appCheckpoint,uiCheckpoint]=await Promise.all([
+      window.SUBSTITUTE_OFFLINE?.loadSnapshot('app'),window.SUBSTITUTE_OFFLINE?.loadSnapshot('ui')]);}
     catch{/* App sẽ dùng bản sessionStorage/RAM hiện có. */}
     window.addEventListener('term-test:listening-timing-updated',event=>{
       if(state.examSessionId&&event.detail?.audioEndedAt)saveState({audioEndedAt:event.detail.audioEndedAt,listeningDeadlineAt:event.detail.listeningDeadlineAt});
@@ -749,6 +750,7 @@
       offlineDeviceId:state.offlineDeviceId||'',
       offlineGeneration:state.offlineGeneration??null,
       offlineListeningPending:state.offlineListeningPending===true,
+      uiState:uiCheckpoint,
       audioEndedAt:state.audioEndedAt,
       serverTimeOffsetMs:state.serverTimeOffsetMs,
       ...(state.writingSessionId?{writingSessionId:state.writingSessionId}:{}),
@@ -772,7 +774,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1&offline=20261107-v2');
-    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1');
+    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
@@ -887,7 +889,10 @@
         });
         const existingStart = Date.parse(state.listeningStartedAt || '');
         // Bookmark đã được kiểm đúng người/lượt/epoch; thời gian gián đoạn không phải đoạn đã nghe.
-        const heardSeconds = readLegacyUiState().audioTime;
+        let savedUi=null;
+        try{savedUi=await window.SUBSTITUTE_OFFLINE?.loadSnapshot('ui');}catch{}
+        const heardSeconds = Math.max(readLegacyUiState().audioTime,
+          Number(savedUi?.audio?.time)||0);
         officialAudio.currentTime = state.audioEndedAt ? officialAudio.duration
           : Math.min(Math.max(0, heardSeconds), Math.max(0, officialAudio.duration - 0.05));
         if (!state.audioEndedAt) await officialAudio.play();
