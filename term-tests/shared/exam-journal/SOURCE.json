@@ -24,8 +24,8 @@
     {
       "file": "bridge.mjs",
       "source": "browser/bridge.mjs",
-      "sha256": "c6c09b8d612ddab8c5da738afa2d4b0bc738bd6ea08c79c38482bb1e73aecba2",
-      "bytes": 19912
+      "sha256": "8d47d61c61cdb8f0560017dfa03300980d4deb02b0c21d7788899aa58dcb7b11",
+      "bytes": 22491
     },
     {
       "file": "bootstrap-capture.mjs",
