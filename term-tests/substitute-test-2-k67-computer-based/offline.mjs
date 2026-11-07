@@ -1,0 +1,109 @@
+const DB_NAME='izone-substitute-test-2-k67-offline-v1';
+const AUDIO_SHA='3881716311bc53826cbcae5fc7e791b226777c46b438e88637d4d63e9794f0cd';
+const AUDIO_BYTES=41881391;
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function normalizeScope(value){
+ const scope={testSlug:String(value?.testSlug||''),historyEpoch:String(value?.historyEpoch||''),
+  classCode:String(value?.classCode||'').toUpperCase(),studentRef:String(value?.studentRef||''),
+  clientRunId:String(value?.clientRunId||'').toLowerCase()};
+ if(scope.testSlug!=='substitute-test-2-k67'||!uuid.test(scope.historyEpoch)||!uuid.test(scope.clientRunId)
+  ||!/^(?:DEMO|IC\d{3,8})$/.test(scope.classCode)||!/^[A-Za-z0-9_-]{1,100}$/.test(scope.studentRef))
+  throw Error('OFFLINE_SCOPE_INVALID');
+ return scope;
+}
+const owner=scope=>JSON.stringify([scope.testSlug,scope.historyEpoch,scope.classCode,scope.studentRef]);
+const key=(scope,kind)=>JSON.stringify([scope.testSlug,scope.historyEpoch,scope.classCode,scope.studentRef,scope.clientRunId,kind]);
+const requestResult=request=>new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||Error('OFFLINE_STORAGE_FAILED'));});
+const transactionDone=transaction=>new Promise((resolve,reject)=>{transaction.oncomplete=resolve;transaction.onabort=()=>reject(transaction.error||Error('OFFLINE_STORAGE_FAILED'));
+ transaction.onerror=()=>reject(transaction.error||Error('OFFLINE_STORAGE_FAILED'));});
+let dbPromise;
+function database(){
+ if(!globalThis.indexedDB)return Promise.reject(Error('OFFLINE_STORAGE_UNAVAILABLE'));
+ return dbPromise??=new Promise((resolve,reject)=>{
+  const request=indexedDB.open(DB_NAME,1);
+  request.onupgradeneeded=()=>{
+   const db=request.result;
+   const snapshots=db.createObjectStore('snapshots',{keyPath:'key'});
+   snapshots.createIndex('owner','owner');
+   db.createObjectStore('assets',{keyPath:'key'});
+   db.createObjectStore('outbox',{keyPath:'key'});
+  };
+  request.onsuccess=()=>resolve(request.result);
+  request.onerror=()=>reject(request.error||Error('OFFLINE_STORAGE_UNAVAILABLE'));
+ }).catch(error=>{dbPromise=null;throw error;});
+}
+async function get(storeName,itemKey){
+ const db=await database(),transaction=db.transaction(storeName,'readonly');
+ const result=await requestResult(transaction.objectStore(storeName).get(itemKey));
+ await transactionDone(transaction);return result;
+}
+async function put(storeName,item){
+ const db=await database(),transaction=db.transaction(storeName,'readwrite');
+ transaction.objectStore(storeName).put(item);await transactionDone(transaction);return item;
+}
+export async function saveSnapshot(identity,kind,value){
+ const scope=normalizeScope(identity);
+ if(!['lobby','app'].includes(kind))throw Error('OFFLINE_KIND_INVALID');
+ const serialized=JSON.stringify(value);
+ if(serialized.length>4*1024*1024)throw Error('OFFLINE_SNAPSHOT_TOO_LARGE');
+ return put('snapshots',{key:key(scope,kind),owner:owner(scope),kind,scope,updatedAt:Date.now(),value:JSON.parse(serialized)});
+}
+export async function loadSnapshot(identity,kind){
+ const scope=normalizeScope(identity);return (await get('snapshots',key(scope,kind)))?.value??null;
+}
+export async function latestLobby(identity){
+ const partial={testSlug:'substitute-test-2-k67',historyEpoch:String(identity.historyEpoch||''),
+  classCode:String(identity.classCode||'').toUpperCase(),studentRef:String(identity.studentRef||'')};
+ if(!uuid.test(partial.historyEpoch)||!/^(?:DEMO|IC\d{3,8})$/.test(partial.classCode)
+  ||!/^[A-Za-z0-9_-]{1,100}$/.test(partial.studentRef))return null;
+ const db=await database(),transaction=db.transaction('snapshots','readonly');
+ const rows=await requestResult(transaction.objectStore('snapshots').index('owner').getAll(owner(partial)));
+ await transactionDone(transaction);
+ return rows.filter(row=>row.kind==='lobby').sort((a,b)=>b.updatedAt-a.updatedAt)[0]?.value??null;
+}
+export async function saveAudio(identity,blob){
+ const scope=normalizeScope(identity);
+ if(!(blob instanceof Blob)||blob.size!==AUDIO_BYTES)throw Error('OFFLINE_AUDIO_SIZE_MISMATCH');
+ const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),b=>b.toString(16).padStart(2,'0')).join('');
+ if(digest!==AUDIO_SHA)throw Error('OFFLINE_AUDIO_HASH_MISMATCH');
+ await put('assets',{key:key(scope,'audio'),scope,sha256:digest,bytes:blob.size,blob,updatedAt:Date.now()});
+ return {sha256:digest,bytes:blob.size};
+}
+export async function loadAudio(identity){
+ const scope=normalizeScope(identity),row=await get('assets',key(scope,'audio'));
+ if(!row||row.bytes!==AUDIO_BYTES||row.sha256!==AUDIO_SHA)return null;
+ const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await row.blob.arrayBuffer())),b=>b.toString(16).padStart(2,'0')).join('');
+ return digest===AUDIO_SHA?row.blob:null;
+}
+export async function queueSection(identity,skill,answers){
+ const scope=normalizeScope(identity);
+ if(!['reading','listening'].includes(skill))throw Error('OFFLINE_SKILL_INVALID');
+ const payload=JSON.parse(JSON.stringify(answers));
+ const itemKey=key(scope,'section:'+skill),old=await get('outbox',itemKey);
+ if(old){if(JSON.stringify(old.answers)!==JSON.stringify(payload))throw Error('OFFLINE_SUBMISSION_CONFLICT');return old;}
+ return put('outbox',{key:itemKey,scope,skill,answers:payload,status:'pending',queuedAt:Date.now()});
+}
+async function allSections(identity){
+ const scope=normalizeScope(identity),db=await database(),transaction=db.transaction('outbox','readonly');
+ const rows=await requestResult(transaction.objectStore('outbox').getAll());await transactionDone(transaction);
+ return rows.filter(row=>row.scope.testSlug===scope.testSlug&&row.scope.historyEpoch===scope.historyEpoch
+  &&row.scope.classCode===scope.classCode&&row.scope.studentRef===scope.studentRef&&row.scope.clientRunId===scope.clientRunId)
+  .sort((a,b)=>a.queuedAt-b.queuedAt);
+}
+export async function pendingSections(identity){return (await allSections(identity)).filter(row=>row.status==='pending');}
+export async function acknowledgeSection(identity,skill,receipt){
+ const scope=normalizeScope(identity),itemKey=key(scope,'section:'+skill),row=await get('outbox',itemKey);
+ if(!row||receipt?.persisted!==true||!receipt.snapshotHash||!receipt.submittedAt)throw Error('OFFLINE_RECEIPT_INVALID');
+ return put('outbox',{...row,status:'acknowledged',receipt:{snapshotHash:receipt.snapshotHash,submittedAt:receipt.submittedAt},acknowledgedAt:Date.now()});
+}
+const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+export async function makeDownload(identity,appFallback=null){
+ const scope=normalizeScope(identity);
+ const [lobby,app,sections]=await Promise.all([loadSnapshot(scope,'lobby').catch(()=>null),
+  loadSnapshot(scope,'app').catch(()=>appFallback),allSections(scope).catch(()=>[])]);
+ const record={version:1,exportedAt:new Date().toISOString(),scope,lobby,app:app??appFallback,sections};
+ const json=JSON.stringify(record,null,2);
+ const html=`<!doctype html><html lang="vi"><meta charset="utf-8"><title>Bài làm Substitute Test 2 K67</title><style>body{font:16px/1.6 system-ui;max-width:960px;margin:auto;padding:24px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>Bài làm Substitute Test 2 K67</h1><p>Bản lưu ngoại tuyến để giữ câu trả lời. Hãy giữ file này và liên hệ giáo viên nếu trang thi không đồng bộ được.</p><pre>${escapeHtml(json)}</pre></html>`;
+ return {blob:new Blob([html],{type:'text/html;charset=utf-8'}),name:`substitute-test-2-k67-${scope.classCode}-${scope.studentRef}-${scope.clientRunId.slice(0,8)}.html`};
+}

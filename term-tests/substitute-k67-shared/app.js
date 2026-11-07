@@ -231,6 +231,10 @@
         // Không coi thao tác lưu thất bại là đã lưu thành công.
       }
     }
+    if(serverGradingMode&&window.SUBSTITUTE_OFFLINE)
+      void window.SUBSTITUTE_OFFLINE.saveSnapshot('app',JSON.parse(serialized)).catch(()=>{
+        window.SUBSTITUTE_OFFLINE_STATUS='checkpoint_failed';
+      });
     localSaveStatus = saved === 2
       ? 'Đã lưu trên trình duyệt này'
       : saved === 1
@@ -423,6 +427,23 @@
       if (!await window.TERM_TEST_CHANGE_STUDENT()) showNotice('Chưa đổi được lựa chọn chung. Bài hiện tại vẫn được giữ.', 'error');
     });
     root.querySelector('.topbar').append(change);
+  }
+  if(twoTaskWriting&&serverGradingMode&&window.SUBSTITUTE_OFFLINE){
+    const download=document.createElement('button');download.type='button';
+    download.className='button button-secondary';download.textContent='Tải bài làm về máy';
+    download.addEventListener('click',async()=>{
+      const snapshot={...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP?.clientRunId,
+        _substitute:window.SUBSTITUTE_STATE.stamp({})._substitute};
+      try{await window.SUBSTITUTE_OFFLINE.saveSnapshot('app',snapshot);}catch{/* File vẫn lấy từ state RAM hiện tại. */}
+      try{
+        const record=await window.SUBSTITUTE_OFFLINE.makeDownload(snapshot);
+        const url=URL.createObjectURL(record.blob),anchor=document.createElement('a');
+        anchor.href=url;anchor.download=record.name;document.body.append(anchor);anchor.click();anchor.remove();
+        window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+        showNotice('Đã tạo file bài làm để lưu trên máy. Hãy giữ file cho đến khi có biên nhận nộp bài.','success');
+      }catch(error){showNotice(`Chưa tạo được file: ${error.message}. Bài vẫn ở trang này.`,'error');}
+    });
+    root.querySelector('.topbar').append(download);
   }
   const views = [
     elements.loadingView,

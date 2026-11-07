@@ -29,7 +29,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_2_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1'))
+      .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1&offline=20261107-v1'))
       .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
@@ -49,6 +49,7 @@
   } catch(error) {
     root.textContent=error.message||'Không mở được phiên thi. Hãy tải lại trang.';return;
   }
+  const offline=await import('./offline.mjs?v=20261107-substitute-offline-pilot-v1').catch(()=>null);
   let sharedIdentity;
   try {
     const module = await import('../../shared/substitute-student-identity.js?v=20261018-identity-v1');
@@ -65,6 +66,18 @@
   const uiStorageKey = window.SUBSTITUTE_STATE.key('izone-test-ui:',storageNamespace,{lobby:true});
   const annotationStorageKey = window.SUBSTITUTE_STATE.key('izone-test-annotations:',storageNamespace,{lobby:true});
   let state = await readState();
+  const offlineScope=()=>({testSlug:testConfig.slug,historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,
+    classCode:state.classCode||classCode,studentRef:state.studentRef,clientRunId:state.clientRunId});
+  window.SUBSTITUTE_OFFLINE=offline?Object.freeze({
+    saveSnapshot:(kind,value)=>offline.saveSnapshot(offlineScope(),kind,value),
+    loadSnapshot:kind=>offline.loadSnapshot(offlineScope(),kind),
+    saveAudio:blob=>offline.saveAudio(offlineScope(),blob),
+    loadAudio:()=>offline.loadAudio(offlineScope()),
+    queueSection:(skill,answers)=>offline.queueSection(offlineScope(),skill,answers),
+    pendingSections:()=>offline.pendingSections(offlineScope()),
+    acknowledgeSection:(skill,receipt)=>offline.acknowledgeSection(offlineScope(),skill,receipt),
+    makeDownload:appState=>offline.makeDownload(offlineScope(),appState)
+  }):null;
   let legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
@@ -237,6 +250,15 @@
             && await window.SUBSTITUTE_STATE.verifyStoredRun(candidate) && window.SUBSTITUTE_STATE.accept(candidate, null)) { restored = candidate; break; }
       } catch { /* Không xóa nháp hỏng hoặc dữ liệu chưa xác định chủ. */ }
     }
+    if(!restored&&offline){
+      try{
+        const candidate=await offline.latestLobby({historyEpoch:window.SUBSTITUTE_STATE.meta.historyEpoch,
+          classCode:selectedClass,studentRef:student.ref});
+        if(candidate?.studentRef===student.ref&&candidate.classCode===selectedClass
+          &&await window.SUBSTITUTE_STATE.verifyStoredRun(candidate)
+          &&window.SUBSTITUTE_STATE.accept(candidate,null))restored=candidate;
+      }catch{/* Nếu IndexedDB lỗi, vẫn dùng lượt đã xác nhận trên máy chủ. */}
+    }
     if (selectionGeneration !== classLoadGeneration || elements.bootstrapClass.value !== selectedClass
         || elements.bootstrapStudent.value !== selectedStudentValue) return false;
     if (restored) {
@@ -352,6 +374,10 @@
         catch { /* Không xóa con trỏ/bài cũ khi bộ nhớ hết chỗ. */ }
       }
     }
+    if(state.studentRef&&state.clientRunId)
+      void window.SUBSTITUTE_OFFLINE?.saveSnapshot('lobby',state)?.catch(()=>{
+        window.SUBSTITUTE_OFFLINE_STATUS='checkpoint_failed';
+      });
     if (localDemo) {
       history.replaceState({ ...(history.state || {}), k67DemoState: state }, '', window.location.href);
     }
@@ -443,7 +469,10 @@
     try {
       const source = window.K67_SUBSTITUTE_TEST_2_CONTENT?.audio?.src;
       if (!source) throw new Error('Không tìm thấy đường dẫn audio khóa 56.');
-      const audioBlob = await audioLoader.downloadAudio(source, {
+      let audioBlob=null;
+      try{audioBlob=await window.SUBSTITUTE_OFFLINE?.loadAudio();}catch{/* Tải lại từ nguồn có kiểm hash. */}
+      const fromCache=Boolean(audioBlob);
+      if(!audioBlob)audioBlob = await audioLoader.downloadAudio(source, {
         signal: downloadController.signal,
         onProgress: ({ loaded, total, complete }) => {
           if (total > 0) {
@@ -457,6 +486,8 @@
           }
         }
       });
+      if(audioBlob&&!fromCache)
+        void window.SUBSTITUTE_OFFLINE?.saveAudio(audioBlob)?.catch(()=>{window.SUBSTITUTE_OFFLINE_STATUS='audio_cache_failed';});
       encryptedAudio = audioBlob;
       revokePreview();
       previewObjectUrl = URL.createObjectURL(audioBlob);
@@ -665,6 +696,9 @@
   }
 
   async function enterExam(started, audioElement = null) {
+    let appCheckpoint=null;
+    try{appCheckpoint=await window.SUBSTITUTE_OFFLINE?.loadSnapshot('app');}
+    catch{/* App sẽ dùng bản sessionStorage/RAM hiện có. */}
     window.addEventListener('term-test:listening-timing-updated',event=>{
       if(state.examSessionId&&event.detail?.audioEndedAt)saveState({audioEndedAt:event.detail.audioEndedAt,listeningDeadlineAt:event.detail.listeningDeadlineAt});
     });
@@ -704,12 +738,12 @@
       preloadedAudioBlob:state.examOrder==='reading-first'&&!state.listeningStartedAt?encryptedAudio:null,
       officialAudioUrl: officialObjectUrl,
       skipListeningAudio: Boolean(state.attemptToken || started.listeningSubmitted),
-      sessionState: Object.freeze({ ...state }),
+      sessionState: Object.freeze(appCheckpoint??{ ...state }),
       annotationRunId: state.annotationRunId
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1');
+    await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1&offline=20261107-v1');
     await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
