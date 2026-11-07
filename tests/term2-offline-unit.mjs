@@ -1,7 +1,8 @@
 // Kho và contract dùng dữ liệu giả; browser test kiểm IndexedDB/player thật riêng.
 import test from 'node:test';import assert from 'node:assert/strict';
 import {ExamStore,Term2Offline,exportHtml,hash} from '../term-tests/term-test-2-k56-computer-based/offline.mjs';
-import {downloadWhole} from '../term-tests/term-test-2-k56-computer-based/audio-whole.mjs';
+import {readFile} from 'node:fs/promises';
+import {AUDIO,downloadWhole} from '../term-tests/term-test-2-k56-computer-based/audio-whole.mjs';
 const local=()=>{const map=new Map();return {getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};};
 test('Kho lỗi không báo lưu; fallback bền chọn revision, không theo giờ máy',async()=>{
  const storage=local(),store=await new ExamStore({local:storage,idb:null}).open();await store.put('run',{answer:'new',_savedAt:1});
@@ -57,9 +58,14 @@ test('Giá trị cuối cùng khác draft cùng counter có revision mới khi k
  await r.seal('listening',{answers:{1:'last focused input'}},1);const last=r.record.operations.at(-1);
  assert.equal(last.revision,2);assert.equal(last.payload.answers[1],'last focused input');
 });
-test('Pages sai hash phải dùng Cloudinary; thiếu file cả hai không báo ready',async()=>{
- const bytes=new TextEncoder().encode('fixture audio'),sha=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join(''),seen=[];
- const blob=await downloadWhole({sources:['https://fixture/pages','https://fixture/cloudinary'],metadata:{bytes:bytes.length,sha256:sha},fetchImpl:async url=>{seen.push(url);return new Response(url.endsWith('pages')?new Uint8Array(bytes.length):bytes);}});
- assert.equal(blob.size,bytes.length);assert.equal(seen.length,2);
- await assert.rejects(downloadWhole({sources:['x','y'],metadata:{bytes:100,sha256:sha},fetchImpl:async()=>new Response('short')}),/hai nguồn/);
+test('Thiếu descriptor chỉ tải đúng Pages và từ chối khi byte/hash sai',async()=>{
+ const file=new URL(AUDIO.pagesUrl).pathname.split('/').pop();
+ const bytes=await readFile(new URL('../term-tests/k56-audio-assets/'+file,import.meta.url));
+ const seen=[];
+ const blob=await downloadWhole({fetchImpl:async url=>{seen.push(url);return new Response(bytes);}});
+ assert.equal(blob.size,AUDIO.bytes);
+ assert.deepEqual(seen,[AUDIO.pagesUrl]);
+ await assert.rejects(downloadWhole({fetchImpl:async()=>new Response('short')}),error=>/byte\/hash/.test(error.cause?.message));
+ bytes[0]^=1;
+ await assert.rejects(downloadWhole({fetchImpl:async()=>new Response(bytes)}),error=>/byte\/hash/.test(error.cause?.message));
 });

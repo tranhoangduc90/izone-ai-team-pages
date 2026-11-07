@@ -100,12 +100,13 @@ class OfflineRuntime extends EventTarget{
  async prepare(prepared,{classCode,studentRef,mode}){
   const ownerKey=profile.localPrefix+'device:'+classCode;let ownerId;
   try{ownerId=localStorage.getItem(ownerKey)||crypto.randomUUID();localStorage.setItem(ownerKey,ownerId);}catch{throw failure();}
-  const response=await this.post('/offline/prepare',{attemptToken:prepared.attemptToken,examSessionToken:prepared.examSessionToken,generation:Number(prepared.generation)||0,ownerId,classCode,studentRef,mode},false);
+  const {audioDownload,...response}=await this.post('/offline/prepare',{attemptToken:prepared.attemptToken,examSessionToken:prepared.examSessionToken,generation:Number(prepared.generation)||0,ownerId,classCode,studentRef,mode,audioTransport:'r2-direct-v1'},false);
   if(response.offline?.policy!==profile.policy||response.attemptToken!==prepared.attemptToken)throw Error('Chưa có quyền offline khớp lượt.');
   if(this.record&&this.record.prepared.attemptToken!==response.attemptToken)await this.detachLatest();
   this.record={classCode,studentRef,prepared:{...prepared,...response},snapshot:null,operations:[],receipts:{},sections:{},ready:false,player:{position:0,ended:false}};
   this.key='run:'+response.attemptToken;await this.claim();this.anchor();await this.persist();
-  await this.store.put('latest:'+classCode,{key:this.key});return this.record.prepared;
+  await this.store.put('latest:'+classCode,{key:this.key});
+  return {...this.record.prepared,audioDownload};
  }
  async finishPreparation(blob){
   const bytes=await blob.arrayBuffer(),audioHash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join('');

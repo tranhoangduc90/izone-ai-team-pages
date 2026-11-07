@@ -2,12 +2,14 @@ import {fixture,wait} from './term2-offline-browser.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile,writeFile} from 'node:fs/promises';import {resolve} from 'node:path';
 const output=process.env.TERM2_EVIDENCE;assert.ok(output);
 for(const mode of ['lis_first','read_first'])test('Term 1 offline/phục hồi/tải file: '+mode,{timeout:180000},async()=>{
- const f=await fixture(mode,{product:1}),p=f.page;
+ const f=await fixture(mode,{product:1}),p=f.page;f.controls.r2Audio=true;
  try{
   await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});
   await p.selectOption('#bootstrapStudent',f.student);await p.click('#confirmIdentity');
   await wait(p,()=>window.K56_TERM1_OFFLINE?.active,'Chuẩn bị offline');
-  assert.equal(f.calls.filter(x=>x.includes('cloudflare')).length,0);
+  assert.equal(f.controls.audioCalls.length,1);
+  assert.match(f.controls.audioCalls[0],/\.r2\.cloudflarestorage\.com/);
+  assert.equal(await p.evaluate(()=>JSON.stringify(window.K56_TERM1_OFFLINE.record).includes('X-Amz-Signature')),false);
   f.disconnected=true;await f.context.setOffline(true);
   if(mode==='lis_first'){
    await p.click('#bootstrapPreview');await p.waitForTimeout(11000);await p.click('#bootstrapStart');
@@ -32,6 +34,7 @@ for(const mode of ['lis_first','read_first'])test('Term 1 offline/phục hồi/t
    await p.click('#bootstrapPreview');await p.waitForTimeout(11000);await p.click('#bootstrapStart');
    await wait(p,()=>window.K56_TERM1_APP_READY&&window.K56_TERM1_OFFLINE.playerReady,'Listening sau Reading');await p.click('#submitListening');
   }
+  assert.equal(f.controls.audioCalls.length,1);
   await p.click('#startWriting');await wait(p,()=>!document.getElementById('writingView').hidden,'Writing bắt đầu offline');
   assert.equal(await p.locator('textarea[data-writing-outline]:not([readonly])').count(),0);
   await p.locator('[data-writing-task="task2"]').fill('Unicode giữ bài — <script>alert(1)</script>\nNew paragraph.');
