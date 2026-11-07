@@ -1,7 +1,7 @@
-const CACHE = 'ic2311-retake-review-static-20261107-v2';
+const CACHE = 'ic2311-retake-review-static-20261107-v3';
 const index = new URL('index.html', self.location).href;
 const paths = [
-  'index.html', 'review.css?v=20261107-1', 'review.mjs?v=20261107-viewer1', 'answer-explanations.js?v=20261107-1',
+  'index.html', 'student-review-entry.mjs?v=1', 'review.css?v=20261107-1', 'review.mjs?v=20261107-name1', 'answer-explanations.js?v=20261107-1',
   '../../shared/izone-favicon.svg', '../../recordings/assets/fonts/SourceSansPro-Regular.ttf',
   '../../recordings/assets/fonts/SourceSansPro-Bold.ttf', '../substitute-shared/izone-logo-color.png',
   '../substitute-shared/brand.css?v=20261014-exam-source-v1', '../substitute-k56-shared/styles.css?rev=20261003-writing-save-cas-v1',

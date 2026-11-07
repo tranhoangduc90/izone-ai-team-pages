@@ -2,8 +2,8 @@ const BUILD = 'reading-retake-20261106-v1';
 const CACHE = 'reading-retake:' + BUILD;
 const BASE = new URL('./', self.location).href;
 const REVIEW = new URL('../ic2311-retake-review/?skill=reading', BASE).href;
-const BRIDGE = new URL('review-redirect.mjs?v=20261107-2', BASE).href;
-const BRIDGE_CACHE = 'ic2311-reading-review-bridge-v2';
+const BRIDGE = new URL('review-redirect.mjs?v=20261107-name1', BASE).href;
+const BRIDGE_CACHE = 'ic2311-reading-review-bridge-v3';
 
 function savedAttempt() {
   return new Promise(resolve => {
@@ -42,7 +42,7 @@ function isConfirmed(state) {
 async function withReviewBridge(page) {
   if (!page.ok || !page.headers.get('Content-Type')?.includes('text/html')) return page;
   const html = await page.clone().text();
-  if (html.includes("review-redirect.mjs?v=20261107-2")) return page;
+  if (html.includes("review-redirect.mjs?v=20261107-name1")) return page;
   const headers = new Headers(page.headers);
   for (const key of ['Content-Length', 'Content-Encoding', 'ETag', 'Last-Modified']) headers.delete(key);
   headers.set('Cache-Control', 'no-store');

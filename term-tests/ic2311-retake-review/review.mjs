@@ -1,3 +1,4 @@
+import {readNameReview, selectionKey} from './student-review-entry.mjs?v=1';
 import { DurableStore as ReadingStore } from '../ic2311-reading-retake-substitute1-k56/storage.mjs';
 import { DurableStore as ListeningStore } from '../ic2311-listening-retake-substitute1-k56/storage.mjs';
 import { API as readingApi } from '../ic2311-reading-retake-substitute1-k56/config.mjs';
@@ -12,6 +13,7 @@ const skill = new URLSearchParams(location.search).get('skill');
 const setup = definition.get(skill);
 const teacherMode = location.pathname.endsWith('/teacher.html');
 const teacherAttempt = new URLSearchParams(location.search).get('attemptId');
+const byName = new URLSearchParams(location.search).get('view')==='by-name';
 const status = byId('result-status');
 const retry = byId('result-retry');
 let request;
@@ -100,7 +102,7 @@ function render(review) {
   const section = review.result[skill];
   byId('result-student').textContent = review.studentName || 'Bài làm của bạn';
   byId('result-meta').textContent = `${review.identity.classCode} · Substitute Test 1 · Khóa 56 · ${setup.label} thi lại`;
-  if (!teacherMode) byId('result-receipt').textContent = 'Biên nhận nộp bài ' + review.identity.receiptId;
+  if (!teacherMode && review.identity.receiptId) byId('result-receipt').textContent = 'Biên nhận nộp bài ' + review.identity.receiptId;
   const scores = table(['Kỹ năng', 'Điểm thực tế', 'Trạng thái'], 'substitute-score-table', 'Tổng hợp điểm thực tế');
   appendCells(scores.body, [setup.label, `${section.correct}/${section.total} câu đúng`, 'Đã chấm']);
   byId('review-score').replaceChildren(scores.node);
@@ -132,7 +134,7 @@ function render(review) {
     window.K67_ANSWER_EXPLANATIONS.attach({
       container, payload: { completed: true, result: review.result },
       testSlug: review.identity.testSlug, title: 'Substitute Test 1 · Khóa 56',
-      reviewKey: teacherMode ? review.identity.attemptId : review.identity.receiptId, loadReview: async () => ({ review }),
+      reviewKey: review.identity.receiptId ?? review.identity.attemptId, loadReview: async () => ({ review }),
     });
   }
 }
@@ -159,7 +161,7 @@ async function load() {
       identityKey = undefined;
       clearResult();
       byId('result-student').textContent = 'Chưa có kết quả của lượt thi';
-      status.textContent = state?.pending ? 'Bài đang chờ đồng bộ. Mở lại trang bài thi khi có mạng.' : 'Mở lại bài trên đúng thiết bị và trình duyệt đã dùng để thi.';
+      status.textContent = state?.pending ? 'Bài đang chờ đồng bộ. Mở lại trang bài thi khi có mạng.' : '';
       return;
     }
     const { receiptId, key } = current;
@@ -252,6 +254,81 @@ async function loadTeacherReview() {
   }
 }
 
+function initNameReview() {
+  const picker=byId('review-name');
+  const heading=byId('result-student');
+  let namedRequest;
+  let rosterReady=false;
+  let rosterLoading=false;
+
+  async function showSelected() {
+    namedRequest?.abort();
+    clearResult();
+    retry.hidden=true;
+    const studentRef=picker.value;
+    heading.textContent=studentRef?'Đang tải kết quả…':'Chọn tên để xem kết quả';
+    status.textContent='';
+    try {
+      if (studentRef) sessionStorage.setItem(selectionKey(skill),studentRef);
+      else sessionStorage.removeItem(selectionKey(skill));
+    } catch {}
+    if (!studentRef) return;
+
+    const controller=new AbortController();
+    namedRequest=controller;
+    try {
+      const payload=await readNameReview(setup.api,studentRef,{signal:controller.signal});
+      controller.signal.throwIfAborted();
+      if (!payload) {
+        heading.textContent='Chưa có bài đã nộp';
+        return;
+      }
+      const {review}=payload, identity=review?.identity;
+      if (identity?.classCode!=='IC2311'||identity.studentRef!==studentRef||
+          !matchingReview(review,{identity},undefined)) throw Error('Wrong review');
+      render(review);
+      status.textContent=review.bundle?'':'Đã tải điểm và đáp án. Lời giải chi tiết đang được chuẩn bị.';
+    } catch {
+      if (controller.signal.aborted) return;
+      heading.textContent='Chưa tải được kết quả';
+      status.textContent='Hãy kết nối mạng rồi thử lại.';
+      retry.hidden=false;
+    } finally {
+      if (namedRequest===controller) namedRequest=undefined;
+    }
+  }
+
+  async function loadRoster() {
+    if (rosterLoading) return;
+    rosterLoading=true;
+    heading.textContent='Đang tải danh sách học viên…';
+    retry.hidden=true;
+    try {
+      const r=await fetch(setup.api+'/roster',{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(7000)});
+      if (!r.ok) throw Error('Roster unavailable');
+      const data=await r.json();
+      if (data.classCode!=='IC2311'||data.testSlug!=='ic2311-'+skill+'-retake-substitute1-k56'||!Array.isArray(data.students)) throw Error('Wrong roster');
+      picker.replaceChildren(new Option('Chọn tên',''),...data.students.map(s=>new Option(s.name,s.studentRef)));
+      try { picker.value=sessionStorage.getItem(selectionKey(skill))??''; } catch {}
+      byId('review-name-field').hidden=false;
+      rosterReady=true;
+      await showSelected();
+    } catch {
+      heading.textContent='Chưa tải được danh sách học viên';
+      status.textContent='Hãy kết nối mạng rồi thử lại.';
+      retry.hidden=false;
+    } finally {
+      rosterLoading=false;
+    }
+  }
+
+  picker.onchange=showSelected;
+  retry.onclick=()=>rosterReady?showSelected():loadRoster();
+  addEventListener('pagehide',()=>namedRequest?.abort());
+  addEventListener('pageshow',event=>{if(event.persisted)void retry.onclick();});
+  void loadRoster();
+}
+
 if (setup && teacherMode) {
   byId('review-skill').textContent = setup.label;
   const back=byId('exam-link');
@@ -278,6 +355,23 @@ if (setup && teacherMode) {
   const back = byId('exam-link');
   back.href = `../ic2311-${skill}-retake-substitute1-k56/?result=0`;
   back.hidden = false;
+  if (byName) initNameReview();
+  else initSavedReview();
+} else {
+  byId('result-student').textContent = 'Chọn kết quả cần xem';
+  for (const [name, item] of definition) {
+    const link = element('a', `Kết quả ${item.label}`);
+    link.href = `?skill=${name}`;
+    const line = element('p');
+    line.append(link);
+    status.append(line);
+  }
+}
+
+function initSavedReview() {
+  const pick=byId('pick-name-link');
+  pick.href='?' + new URLSearchParams({skill,view:'by-name'});
+  pick.hidden=false;
   retry.onclick = load;
   addEventListener('online', load);
   addEventListener('pagehide', () => request?.abort());
@@ -292,13 +386,4 @@ if (setup && teacherMode) {
   });
   navigator.serviceWorker?.register('sw.js').catch(() => {});
   void load();
-} else {
-  byId('result-student').textContent = 'Chọn kết quả cần xem';
-  for (const [name, item] of definition) {
-    const link = element('a', `Kết quả ${item.label}`);
-    link.href = `?skill=${name}`;
-    const line = element('p');
-    line.append(link);
-    status.append(line);
-  }
 }

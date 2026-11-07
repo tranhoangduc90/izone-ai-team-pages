@@ -1,3 +1,4 @@
+import { API } from './config.mjs';
 import { DurableStore } from './storage.mjs';
 
 const finished = document.getElementById('finished');
@@ -42,9 +43,18 @@ if (finished && receipt) {
 const preparationStatus = document.getElementById('prepare-status');
 if (preparationStatus) {
   new MutationObserver(() => {
-    if (!preparationStatus.textContent.includes('(ALREADY_SUBMITTED)')) return;
-    preparationStatus.textContent = 'Bài này đã được nộp. Hãy mở lại bài trên đúng thiết bị và trình duyệt đã dùng để thi để xem kết quả.';
+    const message = preparationStatus.textContent;
+    if (!message.includes('(ALREADY_SUBMITTED)') && !message.startsWith('Bài này đã được nộp. Hãy mở lại')) return;
+    preparationStatus.textContent = 'Bài này đã được nộp.';
     const retry = document.getElementById('retry');
     if (retry) retry.hidden = true;
+    const link=document.createElement('a');
+    link.href='../ic2311-retake-review/?skill=reading&view=by-name';
+    link.textContent='Xem kết quả';
+    preparationStatus.append(' ',link);
+    document.dispatchEvent(new Event('retake-already-submitted'));
   }).observe(preparationStatus, { childList: true, subtree: true, characterData: true });
 }
+
+void import('../ic2311-retake-review/student-review-entry.mjs?v=1')
+  .then(({attachStudentReview})=>attachStudentReview({api:API,skill:'reading'})).catch(()=>{});
