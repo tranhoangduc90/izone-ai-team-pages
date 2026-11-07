@@ -2,6 +2,7 @@
  'use strict';
  const VERSION='substitute-audio-transfer-20261014-v1';
  const endedByRun=new Map();
+ const provisionalStarts=new Map(),syncingStarts=new Set();
  const confirmingRuns=new Set(),confirmedRuns=new Set();
  function validAudioEnd(audio){
   if(window.TERM_TEST_CONFIG?.slug!=='substitute-test-2-k67')return true;
@@ -30,21 +31,59 @@
   // Khi server đã có mốc xác nhận, luôn dùng deadline của server.
   const provisional=!data.audioEndedAt&&state.audioEndedAt&&Number.isFinite(Date.parse(state.listeningDeadlineAt||''))
    ?{audioEndedAt:state.audioEndedAt,listeningDeadlineAt:state.listeningDeadlineAt}:{};
+  const provisionalListening=state.offlineListeningPending&&Number.isFinite(Date.parse(state.listeningStartedAt||''))
+   &&!data.listeningStartedAt?{listeningStartedAt:state.listeningStartedAt,offlineListeningPending:true}:{};
+  if(provisionalListening.listeningStartedAt){
+   provisionalStarts.set(state.clientRunId,provisionalListening.listeningStartedAt);
+   window.setTimeout(()=>{const bootstrap=window.TERM_TEST_BOOTSTRAP;
+    if(bootstrap?.clientRunId===state.clientRunId)void syncProvisionalListening(bootstrap,provisionalListening.listeningStartedAt);},1500);
+  }
   window.IZONE_EXAM_CLOCK?.observe(data);
-  return {...data,...provisional,examSessionId:data.clientRunId};
+  return {...data,...provisional,...provisionalListening,examSessionId:data.clientRunId};
+ }
+ async function syncProvisionalListening(bootstrap,startedAt){
+  if(!navigator.onLine||syncingStarts.has(bootstrap.clientRunId))return;
+  syncingStarts.add(bootstrap.clientRunId);
+  try{
+   await window.SUBSTITUTE_SYNC_PENDING?.();
+   const data=await request('/api/test/exam/listening/start',{classCode:bootstrap.classCode,studentRef:bootstrap.studentRef,
+    clientRunId:bootstrap.clientRunId,deviceId:bootstrap.offlineDeviceId,generation:bootstrap.offlineGeneration,
+    offlinePermit:bootstrap.offlinePermit,listeningStartedAt:startedAt});
+   if(data.clientRunId!==bootstrap.clientRunId||data.listeningStartedAt!==startedAt)throw Error('EXAM_TIMING_CONFLICT');
+   provisionalStarts.delete(bootstrap.clientRunId);
+   window.dispatchEvent(new CustomEvent('term-test:listening-phase-started',{detail:{...data,offlineListeningPending:false}}));
+  }catch{window.setTimeout(()=>syncProvisionalListening(bootstrap,startedAt),15000);}
+  finally{syncingStarts.delete(bootstrap.clientRunId);}
  }
  async function startListeningPhase(){
   const bootstrap=window.TERM_TEST_BOOTSTRAP;
   if(!bootstrap?.examSessionId||bootstrap.examOrder!=='reading-first'||window.SUBSTITUTE_STATE.blocked)throw new Error('LISTENING_PHASE_NOT_ALLOWED');
-  const data=await request('/api/test/exam/listening/start',{classCode:bootstrap.classCode,studentRef:bootstrap.studentRef,
+  let data;
+  try{data=await request('/api/test/exam/listening/start',{classCode:bootstrap.classCode,studentRef:bootstrap.studentRef,
    clientRunId:bootstrap.clientRunId,deviceId:bootstrap.offlineDeviceId||null,
-   generation:bootstrap.offlineGeneration??null});
+   generation:bootstrap.offlineGeneration??null});}
+  catch(error){
+   if(!bootstrap.offlinePermit||!bootstrap.offlineDeviceId||!window.SUBSTITUTE_OFFLINE)throw error;
+   const startedAt=new Date((window.IZONE_EXAM_CLOCK?.estimate(bootstrap.serverTimeOffsetMs)
+    ??(Date.now()+(Number(bootstrap.serverTimeOffsetMs)||0)))).toISOString();
+   data={clientRunId:bootstrap.clientRunId,examOrder:'reading-first',timingVersion:VERSION,
+    listeningStartedAt:startedAt,serverNow:startedAt,offlineListeningPending:true};
+   provisionalStarts.set(bootstrap.clientRunId,startedAt);
+   window.setTimeout(()=>syncProvisionalListening(bootstrap,startedAt),1000);
+  }
   if(data.clientRunId!==bootstrap.clientRunId||data.examOrder!=='reading-first'||data.timingVersion!==VERSION
    ||!Number.isFinite(Date.parse(data.listeningStartedAt||'')))throw new Error('EXAM_TIMING_CONFLICT');
   window.IZONE_EXAM_CLOCK?.observe(data);
   window.dispatchEvent(new CustomEvent('term-test:listening-phase-started',{detail:data}));
   return data;
  }
+ window.addEventListener('online',()=>{
+  const bootstrap=window.TERM_TEST_BOOTSTRAP;
+  if(!bootstrap?.offlinePermit)return;
+  const startedAt=provisionalStarts.get(bootstrap.clientRunId)
+   ||(bootstrap.offlineListeningPending?bootstrap.listeningStartedAt:'');
+  if(startedAt)void syncProvisionalListening(bootstrap,startedAt);
+ });
  function ended(audio,observedAudioEndedAt){
   const bootstrap=window.TERM_TEST_BOOTSTRAP;if(!bootstrap?.examSessionId||window.SUBSTITUTE_STATE.blocked||!validAudioEnd(audio))return false;
   const audioEndedAt=endedByRun.get(bootstrap.clientRunId)||observedAudioEndedAt||bootstrap.audioEndedAt||new Date((window.IZONE_EXAM_CLOCK?.estimate(bootstrap.serverTimeOffsetMs) ?? (Date.now()+(Number(bootstrap.serverTimeOffsetMs)||0)))).toISOString();

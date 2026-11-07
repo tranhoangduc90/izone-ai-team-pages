@@ -80,6 +80,7 @@
     drafts: { listening: {}, reading: {}, writing: { outline: '', task1: '', task2: '' } },
     writingLayout: { activeTask: writingConfig?.tasks?.[0]?.id || 'task1', splits: {} },
     frozenAnswers: { listening: null, reading: null },
+    pendingSections: {},
     testGrades: { listening: null, reading: null, writing: null },
     result: null,
     ...restoredSession,
@@ -101,6 +102,7 @@
       listening: restoredSession.frozenAnswers?.listening || null,
       reading: restoredSession.frozenAnswers?.reading || null
     },
+    pendingSections: {...(restoredSession.pendingSections||{})},
     testGrades: {
       listening: restoredSession.testGrades?.listening || null,
       reading: restoredSession.testGrades?.reading || null,
@@ -220,6 +222,7 @@
       writingLayout: state.writingLayout,
       resultDetailsOpen: state.resultDetailsOpen,
       frozenAnswers: state.frozenAnswers,
+      pendingSections: state.pendingSections,
       testGrades: state.testGrades
     });
     let saved = 0;
@@ -2369,6 +2372,13 @@
       }
     } catch (error) {
       queuedSubmission = Boolean(error.offlineQueued);
+      if (queuedSubmission && window.TERM_TEST_BOOTSTRAP?.offlinePermit) {
+        state.pendingSections.listening = true;
+        state.frozenAnswers.listening = {...answers};
+        saveSession();
+        elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
+        setStage(readingFirst ? 'writing-prep' : 'listening-saved');
+      }
       showNotice(error.offlineQueued
         ? 'Listening đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.'
         : automatic
@@ -2482,6 +2492,13 @@
       }
     } catch (error) {
       queuedSubmission = Boolean(error.offlineQueued);
+      if (queuedSubmission && window.TERM_TEST_BOOTSTRAP?.offlinePermit) {
+        state.pendingSections.reading = true;
+        state.frozenAnswers.reading = {...answers};
+        saveSession();
+        elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
+        setStage(readingFirst ? 'listening' : 'writing-prep');
+      }
       showNotice(error.offlineQueued
         ? 'Reading đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.'
         : automatic
@@ -2506,13 +2523,20 @@
       let pending;
       try { pending = await window.SUBSTITUTE_OFFLINE.pendingSections(); } catch { return; }
       const skill = state.stage === 'reading' ? 'reading' : state.stage === 'listening' ? 'listening' : '';
-      if (!pending.some(item => item.skill === skill)) return;
-      const button = skill === 'reading' ? elements.submitReading : elements.submitListening;
-      if (!button || button.disabled) return;
-      button.dataset.retrySubmission = 'true';
-      button.click();
-      delete button.dataset.retrySubmission;
+      for (const item of pending) {
+        if(item.skill===skill && !state.pendingSections[item.skill]){
+          const button = skill === 'reading' ? elements.submitReading : elements.submitListening;
+          if (!button || button.disabled) return;
+          button.dataset.retrySubmission = 'true';button.click();delete button.dataset.retrySubmission;
+          return;
+        }
+        try {
+          const receipt=await submitSection(item.skill,item.answers);
+          if(receipt.persisted){state.testGrades[item.skill]=receipt.section;delete state.pendingSections[item.skill];saveSession();}
+        } catch { return; }
+      }
     };
+    window.SUBSTITUTE_SYNC_PENDING=retryPendingSection;
     window.addEventListener('online', retryPendingSection);
     window.setTimeout(retryPendingSection, 1500);
   }
@@ -2830,13 +2854,17 @@
           scheduleWritingGradingRefresh();
           return;
         }
+        if(serverGradingMode&&((readingFirst&&state.pendingSections.listening)||(!readingFirst&&state.pendingSections.reading))){
+          showNotice('Phần đã làm được giữ trên trình duyệt và đang chờ đồng bộ với máy chủ. Bạn có thể giữ nháp Writing.', 'success');
+          setStage(state.writingStarted?'writing':'writing-prep');return;
+        }
         if (serverGradingMode && state.completed && state.testGrades.reading) {
           showNotice('Backend test đã khôi phục bài Reading. Tiếp tục hoặc nộp Writing khi sẵn sàng.', 'success');
           setStage(state.writingStarted ? 'writing' : 'writing-prep');
           return;
         }
         if(readingFirst){
-          if(state.testGrades.reading){
+          if(state.testGrades.reading||state.pendingSections.reading){
             showNotice('Backend test đã khôi phục bài Reading. Tiếp tục Listening từ vị trí đã nghe.', 'success');
             setStage('listening');
           }else{
@@ -2845,7 +2873,7 @@
           }
           return;
         }
-        if (serverGradingMode && state.testGrades.listening) {
+        if (serverGradingMode && (state.testGrades.listening||state.pendingSections.listening)) {
           elements.readingStudentName.textContent = state.studentName;
           showNotice('Backend test đã khôi phục điểm Listening đã nộp.', 'success');
           setStage(state.readingDeadlineAt ? 'reading' : 'listening-saved');

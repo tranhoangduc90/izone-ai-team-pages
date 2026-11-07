@@ -704,7 +704,8 @@
     });
     window.addEventListener('term-test:listening-phase-started',event=>{
       if(state.examSessionId&&event.detail?.clientRunId===state.clientRunId)
-        saveState({listeningStartedAt:event.detail.listeningStartedAt,serverTimeOffsetMs:
+        saveState({listeningStartedAt:event.detail.listeningStartedAt,
+          offlineListeningPending:event.detail.offlineListeningPending===true,serverTimeOffsetMs:
           (window.IZONE_EXAM_CLOCK?.offset(event.detail.serverNow) ?? (Date.parse(event.detail.serverNow)-Date.now()))});
     });
     const source=window.K67_SUBSTITUTE_TEST_2_CONTENT.writing;
@@ -724,6 +725,7 @@
       offlinePermit:state.offlinePermit||'',
       offlineDeviceId:state.offlineDeviceId||'',
       offlineGeneration:state.offlineGeneration??null,
+      offlineListeningPending:state.offlineListeningPending===true,
       audioEndedAt:state.audioEndedAt,
       serverTimeOffsetMs:state.serverTimeOffsetMs,
       ...(state.writingSessionId?{writingSessionId:state.writingSessionId}:{}),
