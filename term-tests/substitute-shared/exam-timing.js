@@ -91,7 +91,7 @@
   window.dispatchEvent(new CustomEvent('term-test:listening-phase-started',{detail:data}));
   return data;
  }
- window.addEventListener('online',()=>{
+ window.addEventListener?.('online',()=>{
   const bootstrap=window.TERM_TEST_BOOTSTRAP;
   if(!bootstrap?.offlinePermit)return;
   const startedAt=provisionalStarts.get(bootstrap.clientRunId)
