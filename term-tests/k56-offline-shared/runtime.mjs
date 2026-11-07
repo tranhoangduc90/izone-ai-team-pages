@@ -35,7 +35,9 @@ function exportHtml(record){
   receipts:Object.fromEntries(Object.entries(record.receipts||{}).map(([key,r])=>[key,Object.fromEntries(['version','receiptId','operationId','payloadHash','section','kind','acceptedRevision','status','reason','serverCommittedAt'].filter(k=>r[k]!==undefined).map(k=>[k,r[k]]))])),
   pending:(record.operations||[]).map(o=>({operationId:o.operationId,section:o.section,kind:o.kind,revision:o.revision})),createdAt:new Date().toISOString()};
  const rows=skill=>profile.answerKeys[skill].map(key=>`<tr><td>${escape(key)}</td><td>${escape(data.drafts[skill]?.[key]||'')}</td></tr>`).join('');
- return '<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>'+escape(profile.pageTitle)+'</title><style>body{font:17px system-ui;max-width:900px;margin:32px auto;padding:16px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #aaa;padding:7px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>'+escape(profile.exportTitle)+'</h1><p>'+escape(data.studentName)+' · '+escape(data.classCode)+'</p><p>Lượt: '+escape(data.runReference)+' · Revision: '+escape(data.revision)+'</p><p>'+escape(data.pending.length?'Còn bài đang chờ máy chủ xác nhận. File này giữ nội dung, không thay biên nhận nộp bài.':'Xem trạng thái trong phần biên nhận. Thời gian máy không chứng nhận giờ nộp.')+'</p><h2>Listening</h2><table><tr><th>Câu</th><th>Bài làm</th></tr>'+rows('listening')+'</table><h2>Reading</h2><table><tr><th>Câu</th><th>Bài làm</th></tr>'+rows('reading')+'</table><h2>'+escape(profile.taskLabel)+'</h2><pre>'+escape(data.drafts.writing?.[profile.taskId]||'')+'</pre><h2>Thông tin khôi phục</h2><pre>'+escape(JSON.stringify(data,null,2))+'</pre></html>';
+ if(profile.paper){delete data.drafts.writing;delete data.sections.writing;delete data.player;}
+ const writing=profile.paper?'':'<h2>'+escape(profile.taskLabel)+'</h2><pre>'+escape(data.drafts.writing?.[profile.taskId]||'')+'</pre>';
+ return '<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>'+escape(profile.pageTitle)+'</title><style>body{font:17px system-ui;max-width:900px;margin:32px auto;padding:16px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #aaa;padding:7px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>'+escape(profile.exportTitle)+'</h1><p>'+escape(data.studentName)+' · '+escape(data.classCode)+'</p><p>Lượt: '+escape(data.runReference)+' · Revision: '+escape(data.revision)+'</p><p>'+escape(data.pending.length?'Còn bài đang chờ máy chủ xác nhận. File này giữ nội dung, không thay biên nhận nộp bài.':'Xem trạng thái trong phần biên nhận. Thời gian máy không chứng nhận giờ nộp.')+'</p><h2>Listening</h2><table><tr><th>Câu</th><th>Bài làm</th></tr>'+rows('listening')+'</table><h2>Reading</h2><table><tr><th>Câu</th><th>Bài làm</th></tr>'+rows('reading')+'</table>'+writing+'<h2>Thông tin khôi phục</h2><pre>'+escape(JSON.stringify(data,null,2))+'</pre></html>';
 }
 
 class OfflineRuntime extends EventTarget{
@@ -100,8 +102,9 @@ class OfflineRuntime extends EventTarget{
  async prepare(prepared,{classCode,studentRef,mode}){
   const ownerKey=profile.localPrefix+'device:'+classCode;let ownerId;
   try{ownerId=localStorage.getItem(ownerKey)||crypto.randomUUID();localStorage.setItem(ownerKey,ownerId);}catch{throw failure();}
-  const {audioDownload,...response}=await this.post('/offline/prepare',{attemptToken:prepared.attemptToken,examSessionToken:prepared.examSessionToken,generation:Number(prepared.generation)||0,ownerId,classCode,studentRef,mode,audioTransport:'r2-direct-v1'},false);
-  if(response.offline?.policy!==profile.policy||response.attemptToken!==prepared.attemptToken)throw Error('Chưa có quyền offline khớp lượt.');
+  const transport=profile.paper?{attemptMode:'answer_sheet',identityConfirmed:true}:{audioTransport:'r2-direct-v1'};
+  const {audioDownload,...response}=await this.post('/offline/prepare',{attemptToken:prepared.attemptToken,examSessionToken:prepared.examSessionToken,generation:Number(prepared.generation)||0,ownerId,classCode,studentRef,mode,...transport},false);
+  if(response.offline?.policy!==profile.policy||response.attemptToken!==prepared.attemptToken||response.examSessionToken!==prepared.examSessionToken||Number(response.generation)!==Number(prepared.generation)||(profile.paper&&response.attemptMode!=='answer_sheet'))throw Error('Chưa có quyền offline khớp lượt.');
   if(this.record&&this.record.prepared.attemptToken!==response.attemptToken)await this.detachLatest();
   this.record={classCode,studentRef,prepared:{...prepared,...response},snapshot:null,operations:[],receipts:{},sections:{},ready:false,player:{position:0,ended:false}};
   this.key='run:'+response.attemptToken;await this.claim();this.anchor();await this.persist();
@@ -109,10 +112,14 @@ class OfflineRuntime extends EventTarget{
   return {...this.record.prepared,audioDownload};
  }
  async finishPreparation(blob){
+  if(!profile.paper){
   const bytes=await blob.arrayBuffer(),audioHash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join('');
   await this.store.put(this.key+':audio',{blob,hash:audioHash,bytes:blob.size});
   const read=await this.store.get(this.key+':audio');if(!(read?.blob instanceof Blob)||read.blob.size!==blob.size)throw Error('Chưa lưu được audio để mở lại offline.');
-  this.record.audioHash=audioHash;this.record.audioBytes=blob.size;await this.prepareCache();this.record.ready=true;await this.persist();
+  this.record.audioHash=audioHash;this.record.audioBytes=blob.size;
+  }
+  await this.prepareCache();this.record.ready=true;
+  try{await this.persist();}catch(error){this.record.ready=false;throw error;}
  }
  async audio(){const saved=await this.store.get(this.key+':audio');if(!(saved?.blob instanceof Blob))throw Error('Thiếu file audio đã lưu. Bài làm được giữ; hãy liên hệ giảng viên.');
   const actual=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await saved.blob.arrayBuffer()))].map(v=>v.toString(16).padStart(2,'0')).join('');
@@ -134,11 +141,12 @@ class OfflineRuntime extends EventTarget{
  }
  saveSnapshot(snapshot){if(!this.active)return;this.record.snapshot=clone(snapshot);void this.persist(true).catch(()=>{});}
  async capture(snapshot){this.record.snapshot=clone(snapshot);await this.persist(true);}
- order(){return this.record.prepared.examMode==='read_first'?['reading','listening','writing']:['listening','reading','writing'];}
+ order(){const sections=this.record.prepared.examMode==='read_first'?['reading','listening']:['listening','reading'];if(!profile.paper)sections.push('writing');return sections;}
  sectionResponse(){const p=this.record.prepared,s=this.record.sections,order=this.order();return {...p,localOnly:true,completed:Boolean(s.listening?.sealed&&s.reading?.sealed),listeningSubmitted:Boolean(s.listening?.sealed),readingSubmitted:Boolean(s.reading?.sealed),
   nextSection:order.find(k=>!s[k]?.sealed)||'result',...Object.fromEntries(order.flatMap(k=>[[k+'StartedAt',s[k]?.startedAt||null],[k+'DeadlineAt',s[k]?.deadlineAt||null]])),serverNow:new Date(this.now()).toISOString(),portalSyncStatus:'pending'};}
  async enqueue(section,kind,payload,revision,occurredAt){
   const index=this.order().indexOf(section),prior=index?this.record.sections[this.order()[index-1]]:null;
+  if(index<0)throw Error('Kỹ năng này không thuộc lượt thi.');
   if(index&&!prior?.sealed)throw Error('Hãy khóa kỹ năng trước trước khi tiếp tục.');
   const item=this.record.sections[section];if(item?.sealed)throw Error('Bài đã khóa; không thay nội dung.');
   // DOM/IME có thể chốt giá trị cuối trước bộ đếm input của renderer.
@@ -153,8 +161,9 @@ class OfflineRuntime extends EventTarget{
  }
  async start(section){
   if(this.record.sections[section]?.startedAt){await this.persist();return this.sectionResponse();}
-  const timing=this.record.prepared.timing,start=this.now(),minutes=section==='reading'?timing.readingDurationMinutes:timing.writingDurationMinutes;
-  this.record.sections[section]={startedAt:new Date(start).toISOString(),deadlineAt:section==='listening'?null:new Date(start+minutes*60000).toISOString(),sealed:false};
+  if(!this.order().includes(section))throw Error('Kỹ năng này không thuộc lượt thi.');
+  const timing=this.record.prepared.timing,start=this.now(),minutes=section==='reading'?timing?.readingDurationMinutes:timing?.writingDurationMinutes;
+  this.record.sections[section]={startedAt:new Date(start).toISOString(),deadlineAt:profile.paper||section==='listening'?null:new Date(start+minutes*60000).toISOString(),sealed:false};
   await this.enqueue(section,'start',section==='writing'?{[profile.taskId]:''}:{answers:{}},0);return this.sectionResponse();
  }
  async draft(section,data,revision){

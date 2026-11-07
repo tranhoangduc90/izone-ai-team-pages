@@ -18,6 +18,16 @@
   const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
 
   if (!testConfig || !appConfig || !root) return;
+  let offline=window.K56_MINI_OFFLINE?.active?window.K56_MINI_OFFLINE:null;
+  let paperRuntime=null;
+  if(paperMini&&!demoMode&&classCode&&classCode!=='CODEXDEMO56'){
+    try{
+      const {OfflineRuntime,ExamStore}=await import('../mini-test-k56/offline.mjs?v=20261107-mini-v1');
+      paperRuntime=new OfflineRuntime({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
+      await paperRuntime.open();
+      if(paperRuntime.active)offline=paperRuntime;
+    }catch(error){root.textContent=error.message;return;}
+  }
   const { createWritingSubmission } = await import('../shared/writing-submission.mjs?v=20261105-writing-submit-v1');
   if(!window.IZONE_EXAM_CLOCK)await import('../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1');
 
@@ -39,7 +49,9 @@
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input)
         }) });
       window.TERM_TEST_CHANGE_STUDENT = async () => {
+        if(offline)try{await offline.capture(currentSnapshot());}catch{return false;}
         if (paperBusy || (await paperIdentity.forget()).status !== 'empty') return false;
+        if(offline)await offline.detachLatest();
         ++paperEpoch; window.TERM_TEST_ALLOW_NAVIGATION = true; location.reload(); return true;
       };
     } catch {
@@ -136,7 +148,7 @@
       && restoredSession.writingServerRevision >= 0 ? restoredSession.writingServerRevision : null,
     writingRecovery: Array.isArray(restoredSession.writingRecovery) ? restoredSession.writingRecovery.slice(0, 5) : []
   };
-  if(!demoMode || serverGradingMode)window.IZONE_EXAM_CLOCK?.configure(() => apiRequest(`/api/term-tests/${testConfig.slug}/clock`));
+  if(!offline&&(!demoMode || serverGradingMode))window.IZONE_EXAM_CLOCK?.configure(() => apiRequest(`/api/term-tests/${testConfig.slug}/clock`));
 
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null;
@@ -144,15 +156,17 @@
     void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || appConfig.API_BASE_URL + '/api/term-tests/' + testConfig.slug,
-        testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
+        testSlug: testConfig.slug, build: offline?.build || appConfig.EXAM_JOURNAL_BUILD || 'unknown',
         getState: () => ({ ...state, classCode,
           generation: typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
           clientRunId: window.TERM_TEST_BOOTSTRAP?.clientRunId || '', examSessionId: window.TERM_TEST_BOOTSTRAP?.examSessionId || '', historyEpoch: window.TERM_TEST_BOOTSTRAP?.historyEpoch || '' })
       });
+      if(offline)offline.setJournal(examJournal);
     }).catch(() => {});
   }
 
   function readSession() {
+    if (offline?.record.snapshot) return structuredClone(offline.record.snapshot);
     if (!storageKey) return {};
     for (const storage of availableStorages()) {
       try {
@@ -182,6 +196,7 @@
       attemptMode: state.attemptMode,
       generation: state.generation,
       studentRef: state.studentRef,
+      ...(offline?{stage:state.stage}:{}),
       studentName: state.studentName,
       clientSubmissionId: state.clientSubmissionId,
       examSessionToken: state.examSessionToken,
@@ -218,6 +233,7 @@
       frozenAnswers: state.frozenAnswers,
       testGrades: state.testGrades
     });
+    if (offline) offline.saveSnapshot(JSON.parse(serialized));
     let saved = false;
     for (const storage of availableStorages()) {
       try {
@@ -455,7 +471,8 @@
     const change = document.createElement('button'); change.type = 'button';
     change.id = 'termTestChangeStudent'; change.className = 'button button-secondary'; change.textContent = 'Đổi người học';
     change.addEventListener('click', async () => {
-      if (!saveSession()) { showNotice('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.', 'error'); return; }
+      if(offline)try{await offline.capture(currentSnapshot());}catch{showNotice('Chưa giữ được nháp. Hãy tải bài về máy trước khi đổi người.','error');return;}
+      if (!offline&&!saveSession()) { showNotice('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.', 'error'); return; }
       if (!await window.TERM_TEST_CHANGE_STUDENT()) showNotice('Chưa đổi được lựa chọn chung. Bài hiện tại vẫn được giữ.', 'error');
     });
     root.querySelector('.topbar').append(change);
@@ -557,6 +574,18 @@
           if (!['ok', 'empty', 'not_selected'].includes(result.status)) showNotice('Lượt thi đã mở đúng người. Trình duyệt chưa ghi nhớ được cho bài khác.');
         }).catch(() => {});
       }
+      if(paperRuntime){
+        if(await paperRuntime.restorePrepared(response,studentRef)){
+          offline=paperRuntime;initializeOfflineView();return;
+        }
+        if(!response.completed&&!response.listeningStartedAt&&!response.readingStartedAt&&!response.listeningSubmitted&&!response.readingSubmitted){
+          try{
+            await paperRuntime.prepare(response,{classCode,studentRef,mode:response.examMode});
+            await paperRuntime.finishPreparation();
+            offline=paperRuntime;initializeOfflineView();return;
+          }catch(error){if(error.code!=='OFFLINE_NEW_DISABLED')throw error;}
+        }
+      }
       await showPreparedAttempt(response);
       if(paperMini) {
         for(const skill of ['listening','reading']) {
@@ -630,7 +659,7 @@
       if (document.body.classList.contains('cbt-mode')) { window.TERM_TEST_ALLOW_NAVIGATION = true; window.location.reload(); return; }
       setBusy(button, true, 'Đang mở Listening...', 'Bắt đầu Listening');
       try {
-        const started = await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
+        const started = offline?await offline.start('listening'):await apiRequest(`/api/term-tests/${testConfig.slug}/session/start`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ examSessionToken: state.examSessionToken })
         });
@@ -648,7 +677,7 @@
     if(paperMini && !paperConfirmed && stage!=='loading') stage='identity-ready';
     elements.studentSelect.disabled = Boolean(state.studentRef && (state.attemptToken || state.examSessionToken
       || state.listeningStartedAt || state.listeningDeadlineAt));
-    if (!demoMode && !paperMini) window.K56_EXAM_ORDER.deadlineGuard(state, elements);
+    if (!offline && !demoMode && !paperMini) window.K56_EXAM_ORDER.deadlineGuard(state, elements);
     const ready = document.getElementById('k56SectionReady');
     if (ready) ready.hidden = stage !== 'section-ready';
     state.stage = stage;
@@ -801,6 +830,16 @@
   }
 
   async function apiRequest(path, options = {}) {
+    if(offline){
+      const data=JSON.parse(options.body||'{}'),match=path.match(/\/mini-test-k56\/(listening|reading)(?:\/(start|draft))?$/);
+      if(match&&options.method==='POST'){
+        const skill=match[1],kind=match[2];
+        if(kind==='start')return offline.start(skill);
+        if(kind==='draft'){await offline.draft(skill,data,data.revision);return {ok:true,localOnly:true,accepted:true,revision:data.revision,draft:data.answers,serverNow:new Date(offline.now()).toISOString()};}
+        const auto=elements[skill+'View']?.dataset[skill+'TimeExpired']==='true'||(skill==='listening'&&offline.record.player.ended);
+        return offline.seal(skill,data,data.draftRevision,auto?(skill==='listening'?'ended':'deadline'):'manual');
+      }
+    }
     let operationId;
     try {
       if ((typeof examJournal !== 'undefined' && examJournal) || window.EXAM_JOURNAL_STARTUP) operationId = crypto.randomUUID();
@@ -1018,10 +1057,11 @@
   }
 
   function isSectionExpired(skill) {
+    if(offline&&skill==='listening')return !paperMini&&Boolean(offline.record.player.ended);
     if(paperMini)return false;
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const deadline = Date.parse(deadlineValue || '');
-    return Number.isFinite(deadline) && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + (Number(state.serverTimeOffsetMs) || 0))) >= deadline;
+    return Number.isFinite(deadline) && (offline?offline.now():(window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + (Number(state.serverTimeOffsetMs) || 0)))) >= deadline;
   }
 
   // Giữ trạng thái nộp Writing riêng với lỗi đọc kết quả; không đổi luồng Listening/Reading.
@@ -1031,7 +1071,7 @@
       window.TERM_TEST_BOOTSTRAP?.clientRunId]),
     submitted: () => Boolean(state.writingSubmitted),
     grading: () => state.result?.writing?.grading || state.testGrades?.writing?.grading,
-    notify: showNotice, check: () => refreshWritingGrading(),
+    notify: (message,kind) => showNotice(offline?offline.message:message,offline?'':kind), check: () => refreshWritingGrading(),
     hosts: () => [elements.writingView, elements.writingSubmissionResult],
     storage: () => { try { return window.SUBSTITUTE_STATE?.storages?.() || [window.sessionStorage,window.localStorage]; } catch { return []; } }
   });
@@ -1117,6 +1157,7 @@
   }
 
   function setWritingSaveStatus(message) {
+    if(offline)message=offline.message;
     for (const label of document.querySelectorAll('.writing-editor-meta > span:first-child')) {
       label.textContent = message;
     }
@@ -1190,7 +1231,7 @@
   function writingTimeExpired() {
     return Boolean(state.writingConflict?.timedOut
       || elements.writingView?.dataset.writingTimeExpired === 'true'
-      || (state.writingDeadlineAt && (window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + state.serverTimeOffsetMs)) > Date.parse(state.writingDeadlineAt)));
+      || (state.writingDeadlineAt && (offline?offline.now():(window.IZONE_EXAM_CLOCK?.now(state.serverTimeOffsetMs) ?? (Date.now() + state.serverTimeOffsetMs))) > Date.parse(state.writingDeadlineAt)));
   }
 
   function renderWritingConflict() {
@@ -1275,6 +1316,17 @@
   }
 
   async function saveWritingToServer(action) {
+    if(offline){
+      const data=writingSnapshot();
+      if(action==='start'){
+        const response=await offline.start('writing');Object.assign(state,{writingStarted:true,writingStartedAt:response.writingStartedAt,writingDeadlineAt:response.writingDeadlineAt,writingServerRevision:state.writingRevision||0});
+      } else if(action==='submit') {
+        await offline.capture({...state,drafts:{...state.drafts,writing:data}});
+        await offline.seal('writing',data,state.writingRevision,writingTimeExpired()?'deadline':'manual');
+      } else await offline.draft('writing',data,state.writingRevision);
+      saveSession();setWritingSaveStatus(offline.message);
+      return {ok:true,localOnly:true,writing:{...data,revision:state.writingRevision,accepted:true,submitted:action==='submit',localOnly:true}};
+    }
     if (demoMode) return { writing: null };
     if (!state.attemptToken) throw new Error('Chưa có mã lượt làm để lưu Writing.');
     window.clearTimeout(writingSaveTimer); window.clearTimeout(writingForceSaveTimer);
@@ -1431,6 +1483,7 @@
 
   function countWords(value) {
     const normalized = String(value || '').trim();
+    if(offline&&!normalized.replace(/[\s\p{Default_Ignorable_Code_Point}]/gu,''))return 0;
     return normalized ? normalized.split(/\s+/u).length : 0;
   }
 
@@ -1555,7 +1608,7 @@
       const editorMeta = document.createElement('footer');
       editorMeta.className = 'writing-editor-meta';
       const autosave = document.createElement('span');
-      autosave.textContent = state.writingDirty ? 'Đang chờ lưu trên hệ thống...' : 'Tự lưu trên hệ thống';
+      autosave.textContent = offline ? 'Tự lưu trên thiết bị' : state.writingDirty ? 'Đang chờ lưu trên hệ thống...' : 'Tự lưu trên hệ thống';
       const wordCount = document.createElement('strong');
       wordCount.textContent = `${countWords(editor.value)} từ`;
       editorMeta.append(autosave, wordCount);
@@ -2024,6 +2077,10 @@
     const section = document.createElement('section');
     section.className = 'writing-result-section';
     const grading = state.result?.writing?.grading || null;
+    if(grading?.mode==='blank'){
+      const label=document.createElement('strong');label.textContent='Đã nộp · Bài trắng';
+      elements.writingSubmissionResult.replaceChildren(label);return;
+    }
     const legacyTask = grading?.ready && grading?.mode === 'legacy'
       ? grading.tasks?.find(task => Number(task.taskNumber) === 2) || null
       : null;
@@ -2336,6 +2393,7 @@
   }
 
   async function loadResult(button) {
+    if(offline&&(offline.pending||offline.record.review)) {setStage('result-ready');showNotice(offline.message);return;}
     setBusy(button, true, 'Đang tải kết quả...', button.dataset.normalText || button.textContent);
     if (demoMode) {
       const mode = state.completed ? 'complete' : 'listening-only';
@@ -2495,7 +2553,7 @@
       saveSession();
       submitted = true;
       elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
-      showNotice(portalNotice(response.portalSyncStatus, state.completed), ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
+      showNotice(response.localOnly?offline.message:portalNotice(response.portalSyncStatus, state.completed), ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
       if (state.completed && writingConfig && !state.writingSubmitted) {
         setStage(state.writingStarted ? 'writing' : 'writing-prep');
       } else {
@@ -2612,7 +2670,7 @@
       submitted = true;
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
       if (!state.completed) {
-        showNotice('Reading đã được lưu và khóa. Tiếp theo là Listening.', 'success');
+        showNotice(response.localOnly?offline.message:'Reading đã được lưu và khóa. Tiếp theo là Listening.', response.localOnly?'':'success');
         if (document.body.classList.contains('cbt-mode')) { window.TERM_TEST_ALLOW_NAVIGATION = true; window.location.reload(); }
         else showSectionReady('listening');
         return;
@@ -2620,9 +2678,9 @@
       if (writingConfig) {
         setStage('writing-prep');
         const portalMessage = portalNotice(response.portalSyncStatus, true);
-        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
+        showNotice(response.localOnly?offline.message:`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, true), ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
+        showNotice(response.localOnly?offline.message:portalNotice(response.portalSyncStatus, true), ['unknown', 'processing', 'pending', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
         setStage('result-ready');
         if (automatic) await loadResult(elements.viewResult);
       }
@@ -2673,6 +2731,11 @@
     elements.writingView.addEventListener('submit', async event => {
       event.preventDefault();
       if (writingSubmission.busy || state.writingSubmitted) { await writingSubmission.inspect(); return; }
+      if(offline){
+        let changed=false;
+        for(const editor of elements.writingView.querySelectorAll('[data-writing-task]'))if(state.drafts.writing[editor.dataset.writingTask]!==editor.value){state.drafts.writing[editor.dataset.writingTask]=editor.value;changed=true;}
+        if(changed){state.writingRevision++;state.writingDirty=true;saveSession();}
+      }
       const automatic = event.submitter?.dataset.autoSubmit === 'true'
         || elements.writingView.dataset.writingTimeExpired === 'true';
       const belowMinimum = Array.from(writingConfig.tasks || []).map(task => ({
@@ -2682,10 +2745,13 @@
       })).filter(task => task.words < task.minimum);
       const emptyTasks = belowMinimum.filter(task => task.words === 0);
       if (!automatic && emptyTasks.length) {
+        if(offline){if(!window.confirm('Bài Writing đang trống. Sau khi máy chủ nhận bài, trạng thái sẽ là Đã nộp · Bài trắng. Bạn vẫn muốn nộp?'))return;}
+        else {
         showNotice(`${emptyTasks.map(task => task.label).join(', ')} chưa có nội dung. Hãy viết bài trước khi nộp để hệ thống có thể chấm điểm.`, 'error');
         return;
+        }
       }
-      if (!automatic && belowMinimum.length) {
+      if (!automatic && belowMinimum.length && !emptyTasks.length) {
         const summary = belowMinimum.map(task => `${task.label}: ${task.words}/${task.minimum} từ`).join('\n');
         if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
       }
@@ -2734,7 +2800,7 @@
           saveSession();
           elements.writingView.dispatchEvent(new CustomEvent('term-test:writing-submitted'));
           setStage('result-ready');
-          showNotice(saved.writing?.accepted === false
+          showNotice(saved.localOnly?offline.message:saved.writing?.accepted === false
             ? 'Hệ thống đã chốt bản lưu đúng hạn. Bản khác trên máy được giữ trong mục phục hồi.'
             : automatic
             ? 'Đã hết 15 phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.'
@@ -2883,7 +2949,7 @@
     };
   }
 
-  async function initialize() {
+  function initializeLayout() {
     elements.listeningTitle.textContent = testConfig.listening.title;
     elements.readingTitle.textContent = testConfig.reading.title;
     appendInstructions(elements.listeningInstructions, paperMini
@@ -2899,7 +2965,51 @@
     setupWritingExam();
     // Khôi phục cả cảnh báo và bản sao khi đọc server lỗi hoặc trả bản cũ.
     renderWritingConflict(); renderWritingRecovery();
+  }
 
+  function currentSnapshot(){
+    for(const skill of ['listening','reading'])if(!state[skill+'Submitted'])state.drafts[skill]=collectAnswers(elements[skill+'Questions']);
+    if(!state.writingSubmitted)for(const editor of elements.writingView.querySelectorAll('[data-writing-task]'))state.drafts.writing[editor.dataset.writingTask]=editor.value;
+    return structuredClone(state);
+  }
+
+  function initializeOfflineView(){
+    const response=offline.sectionResponse();
+    if(offline.record.snapshot)Object.assign(state,offline.record.snapshot);
+    Object.assign(state,{...response,studentRef:offline.record.studentRef,writingStarted:Boolean(response.writingStartedAt),
+      writingSubmitted:Boolean(offline.record.sections.writing?.sealed),writingServerRevision:state.writingRevision||0});
+    if(paperMini){
+      paperConfirmed=true;
+      storageKey=`${legacyStorageKey}:paper:${state.studentRef}:${response.attemptToken}:${response.generation}`;
+      if(paperEnter)paperEnter.hidden=true;
+      if(paperChange)paperChange.hidden=true;
+    }
+    initializeLayout();
+    state.roster=[{ref:state.studentRef,name:state.studentName}];
+    populateRoster({class:{name:classCode},students:state.roster});
+    elements.readingStudentName.textContent=state.studentName;
+    hideNotice();
+    const skill=response.nextSection;
+    if(skill==='result')setStage('result-ready');
+    else if(skill==='writing')setStage(state.writingStarted?'writing':'writing-prep');
+    else if(response[skill+'StartedAt'])setStage(skill);
+    else showSectionReady(skill);
+    if(examJournal)offline.setJournal(examJournal);
+    offline.mount({snapshot:currentSnapshot,host:document.querySelector('.page-shell')});
+    const title=elements.resultReadyView.querySelector('h2');
+    const updateResultTitle=()=>{
+      if(!title)return;
+      const blank=Object.values(offline.record.receipts).some(receipt=>receipt.kind==='seal'&&receipt.section==='writing'&&receipt.status==='accepted'&&receipt.writingBlank);
+      const label=blank?'Đã nộp · Bài trắng':'Bài làm đã khóa trên thiết bị';
+      if(title.textContent!==label)title.textContent=label;
+    };
+    offline.addEventListener('change',updateResultTitle);updateResultTitle();
+    saveSession();window.K56_MINI_APP_READY=true;
+  }
+
+  async function initialize() {
+    if(offline){initializeOfflineView();return;}
+    initializeLayout();
     if (demoMode) {
       if (demoMode === 'reading' || demoMode === 'listening') {
         state.studentName = 'Học viên QA';
@@ -3020,7 +3130,7 @@
         paperChange.onclick=async()=>{
           if(paperBusy)return;
           if (paperIdentity) {
-            if (!saveSession()) { showNotice('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.', 'error'); return; }
+            if (!offline&&!saveSession()) { showNotice('Chưa giữ được nháp. Hãy sao chép bài hoặc thử lưu lại trước khi đổi người.', 'error'); return; }
             await window.TERM_TEST_CHANGE_STUDENT(); return;
           }
           saveSession();++paperEpoch;paperConfirmed=false;
@@ -3120,7 +3230,7 @@
   // Khi đóng tab, gửi đúng base đã biết; không ACK local hay tự vượt xung đột khi chưa có phản hồi.
   window.addEventListener('pagehide', () => {
     saveSession();
-    if (demoMode || !state.attemptToken || !state.writingDirty || state.writingSubmitted
+    if (offline || demoMode || !state.attemptToken || !state.writingDirty || state.writingSubmitted
       || state.writingConflict || !validWritingRevision(state.writingServerRevision)) return;
     fetch(`${appConfig.API_BASE_URL}/api/term-tests/writing`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

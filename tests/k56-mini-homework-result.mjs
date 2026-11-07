@@ -28,6 +28,8 @@ function renderContext(grading, { serverGradingMode = true, refreshWritingGradin
     writingConfig: { tasks: [{ id: 'task2' }] },
     elements: { writingSubmissionResult: root },
     state: { writingSubmitted: true, attemptToken: 'mini-test-attempt', result: { writing: { grading } } },
+    writingSubmission: {sync(){},owner(){return 'mini-test-attempt';}},
+    writingSubmissionRenderSignature:'',
     serverGradingMode,
     refreshWritingGrading
   });
@@ -72,4 +74,10 @@ test('Mini đã chấm trước cập nhật vẫn có nút mở bản chấm l�
     tasks: [{ taskNumber: 2, taskScore: 7, criteria: [] }] });
   assert.equal(nodes.some(node => node.tag === 'button' && node.textContent === 'Xem bản chấm cũ'), true);
   assert.equal(nodes.some(node => node.tag === 'a'), false);
+});
+
+test('Mini bài trắng đã nộp không có điểm, nút chấm hoặc Link LMS',()=>{
+  const nodes=render({ready:true,status:'blank',mode:'blank',taskStates:{task2:'blank'}});
+  assert.ok(nodes.some(node=>node.textContent==='Đã nộp · Bài trắng'));
+  assert.equal(nodes.some(node=>['button','a'].includes(node.tag)),false);
 });

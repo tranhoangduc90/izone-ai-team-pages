@@ -101,6 +101,7 @@ export const ASSETS=[
   "../k56-offline-shared/profiles.mjs",
   "../k56-offline-shared/runtime.mjs",
   "../k56-offline-shared/whole-audio.mjs",
+  "../k56-offline-shared/worker.mjs",
   "../k56-shared/config.js",
   "../k56-shared/public-audio.mjs",
   "../k56-shared/teacher-session-client.js",
@@ -178,7 +179,7 @@ export const ASSET_HASHES={
   "../../shared/audio/chunks.mjs": "6796d41d2da64a33b5981fb16a612535770d61ab24bfda755309fb0beb5f941c",
   "../../shared/audio/config.mjs": "8c6f4f6f92d15e44fab4016d73f76d06d1a6695b10095d32226a853a3456ef1d",
   "../../shared/audio/direct-cache.mjs": "db458244476e95128789ee499ff9ed7041f7bb9f5c0ee4db35d0717c39ab9256",
-  "../../shared/audio/direct.mjs": "182b3a1000261c36ae8fb30451f6ddffbb1d5b6930a66558206a6f8d9a9c4d98",
+  "../../shared/audio/direct.mjs": "d5d8df9813f99c845c7a265c0b3ebead3ae7f2a3722b9897369ce2c6d8262c26",
   "../../shared/audio/protocol.mjs": "eebab8f26eefbc300fc5093e2190b281b3b170a6a2e805eba0f6d7233b4ee6f4",
   "../../shared/audio/transport.mjs": "a7a4cb95e2fb1fe0bdb9911af1901ad8142d8c384975a639c7fec27c07625901",
   "../../shared/course-student-identity.js": "0e26a37332856b1cedd2860920094fc2b36310cb067e9e230a1689ae2577bcc1",
@@ -272,9 +273,10 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
-  "../k56-offline-shared/profiles.mjs": "4ad7768b0a1e582d749f9a57c4ddbf4f8195eca08f62fa97086d64014e324edb",
-  "../k56-offline-shared/runtime.mjs": "d6968fb7cca3535bd50450125cf110b1080c93c92023a872dcb1c3979fb73e06",
-  "../k56-offline-shared/whole-audio.mjs": "cbcee5452cd7688ce66ce240c1d32b821c325ab7c6d04722443c0ed25c024c85",
+  "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
+  "../k56-offline-shared/runtime.mjs": "d147773bf61ea19e57410fbb1563af8548357a9b9fa01201a75d323e3a6b9e2c",
+  "../k56-offline-shared/whole-audio.mjs": "7ef8fe668795f691b69a1412ce209c446c9f23d86f58f068adb929c1a48c34a9",
+  "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio.mjs": "2fe35adec2c70006e5bf839380c3f180e38a54de8c0b7f619631f9c1ade86500",
   "../k56-shared/teacher-session-client.js": "e23d770dc0a4beb35a5b9751990cfd9667e1ea2568d0bffb3125e721dafefa27",
@@ -347,4 +349,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="0a0dd37aa051f88917a309a61da54f7dee55a65f2fcd88df15166a473c2a6858";
+export const ASSET_BUILD_ID="ed77fd54a62c1a793d004f0a425fd79c5f9a62042b363e9324d93d6f0c8d40b6";
