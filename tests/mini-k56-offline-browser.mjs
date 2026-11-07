@@ -75,6 +75,7 @@ for(const paper of [true,false])for(const mode of ['lis_first','read_first']){
    await wait(p,()=>document.querySelector('.writing-save-status')?.textContent.includes('Máy chủ đã xác nhận'),'Đã đối chiếu máy chủ');
    const seals=[...f.receipts.values()].filter(receipt=>receipt.kind==='seal');
    assert.deepEqual(seals.map(receipt=>receipt.section),paper?skills:[...skills,'writing']);
+   f.assertJournalFaultExercised();
    assert.equal(f.controls.ackLost,true);
    if(!paper&&mode==='lis_first'){
     assert.equal(seals.at(-1).writingBlank,true);

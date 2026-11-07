@@ -48,6 +48,7 @@ for(const mode of ['lis_first','read_first'])test('Term 1 offline/phục hồi/t
   assert.ok(await p.evaluate(()=>window.K56_TERM1_OFFLINE.pending)>0);
   f.disconnected=false;await f.context.setOffline(false);await p.evaluate(()=>{window.K56_TERM1_OFFLINE.retryAt=0;return window.K56_TERM1_OFFLINE.flush();});
   await wait(p,()=>window.K56_TERM1_OFFLINE.pending===0,'Gửi lại đủ operation');
+  f.assertJournalFaultExercised();
   assert.equal(f.calls.some(x=>x.includes('writing-grading')),false);
   await writeFile(resolve(output,mode+'-result.json'),JSON.stringify({mode,calls:f.calls,errors:f.errors,receipts:[...f.receipts.values()]},null,2));
   assert.deepEqual(f.errors,[]);
