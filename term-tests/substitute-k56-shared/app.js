@@ -744,6 +744,19 @@
     saveSession();
   });
 
+  window.addEventListener('term-test:listening-phase-started', event => {
+    const clientRunId = window.TERM_TEST_BOOTSTRAP?.clientRunId;
+    if (!readingFirst || !clientRunId || event.detail?.clientRunId !== clientRunId) return;
+    const startedAt = String(event.detail.listeningStartedAt || '');
+    if (!Number.isFinite(Date.parse(startedAt))) return;
+    state.listeningStartedAt = startedAt;
+    const serverNow = String(event.detail.serverNow || '');
+    if (Number.isFinite(Date.parse(serverNow))) {
+      state.serverTimeOffsetMs = window.IZONE_EXAM_CLOCK?.offset(serverNow) ?? (Date.parse(serverNow) - Date.now());
+    }
+    saveSession();
+  });
+
   const sectionDraftTimers = { listening: 0, reading: 0 };
   window.addEventListener('substitute:stopped',()=>{stopWritingGradingPolling();for(const value of Object.values(sectionDraftTimers))clearTimeout(value);clearTimeout(writingSaveTimer);clearTimeout(writingRetryTimer);clearTimeout(writingForceSaveTimer);for(const form of document.querySelectorAll('form'))for(const control of form.querySelectorAll('input,textarea,select,button'))control.disabled=true;showNotice('Lượt này đã được reset ở tab khác. Hãy tải lại trang.','error');});
 
