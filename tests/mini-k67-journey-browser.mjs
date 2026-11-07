@@ -7,11 +7,13 @@ import {once} from 'node:events';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {randomUUID} from 'node:crypto';
 
 const pages=fileURLToPath(new URL('../',import.meta.url));
 const backend=process.env.K67_BACKEND;
 assert.ok(backend,'Set K67_BACKEND to the isolated backend package.');
 const full=process.env.K67_JOURNEY_FULL==='1';
+const eofJournal=process.env.K67_JOURNEY_EOF_JOURNAL==='1';
 const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
@@ -69,10 +71,30 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     await context.route('**/*',route=>{
       const url=new URL(route.request().url());
       if(r2Fail&&url.hostname.endsWith('.r2.cloudflarestorage.com'))return route.abort();
-      return (url.origin===base&&!url.pathname.includes('/exam-journal'))
+      return (url.origin===base&&(eofJournal||!url.pathname.includes('/exam-journal')))
         ||(r2Smoke&&(url.hostname.endsWith('.r2.cloudflarestorage.com')||url.hostname==='tranhoangduc90.github.io'))
         ?route.continue():route.abort();
     });
+    const journalRows=[];
+    const learnerBinding='b'.repeat(64);
+    if(eofJournal){
+      await context.addInitScript(()=>{
+        Object.defineProperty(window,'TERM_TEST_APP_CONFIG',{configurable:true,set(config){
+          Object.defineProperty(window,'TERM_TEST_APP_CONFIG',{configurable:true,writable:true,
+            value:{...config,EXAM_JOURNAL_ENABLED:true}});
+        }});
+      });
+      await context.route(new RegExp('/api/term-tests/'+slug+'/journal-(context|events)$'),route=>{
+        const body=route.request().postDataJSON();
+        if(route.request().url().endsWith('/journal-context')){
+          const identityConfirmed=Boolean(body.examSessionToken&&body.attemptToken);
+          return route.fulfill({json:{ok:true,identityConfirmed,ticket:'fixture',ticketId:randomUUID(),
+            bindingId:identityConfirmed?learnerBinding:'a'.repeat(64),issuedAt:Date.now(),expiresAt:Date.now()+90000}});
+        }
+        for(const event of body.events)journalRows.push({bindingId:body.bindingId,event});
+        return route.fulfill({json:{ok:true,persisted:true,scopeId:body.bindingId,acknowledgedIds:body.events.map(event=>event.id)}});
+      });
+    }
     const errors=[],seals=[],rejections=[],r2Requests=[],pagesRequests=[],offers=[];
     const openPage=async()=>{
       const target=await context.newPage();
@@ -117,6 +139,11 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     await page.getByRole('button',{name:term?'Bắt đầu Term Test '+(term1?'1':'2'):'Bắt đầu bài Mini K67',exact:true}).click({timeout:50_000});
     log('started');
     await page.getByRole('button',{name:'Tải bài làm về máy'}).waitFor();
+    if(eofJournal){
+      for(let i=0;i<100&&!journalRows.some(row=>row.bindingId===learnerBinding&&row.event.type==='identity_observed');i++)
+        await new Promise(resolve=>setTimeout(resolve,100));
+      assert.ok(journalRows.some(row=>row.bindingId===learnerBinding&&row.event.type==='identity_observed'));
+    }
     await context.setOffline(true);
     const order=mode==='read_first'?['reading','listening']:['listening','reading'];
     if(term)order.push('writing');
@@ -162,11 +189,16 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       log('section_started',{section});
       if(section==='listening'){
         const answer=await field.inputValue();
+        if(eofJournal)await page.evaluate(()=>{
+          const player=document.getElementById('miniJourneyAudio');
+          player.dispatchEvent(new Event('ended'));
+          player.dispatchEvent(new Event('ended'));
+        });
         await page.getByRole('button',{name:'Nghe tiếp',exact:true}).click();
         log('play_clicked');
         await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.currentTime>2.2);
         log('play_before_reload');
-        await page.evaluate(()=>document.getElementById('miniJourneyAudio').dispatchEvent(new Event('ended')));
+        if(!eofJournal)await page.evaluate(()=>document.getElementById('miniJourneyAudio').dispatchEvent(new Event('ended')));
         assert.equal(await form.isVisible(),true);
         if(breakAudio){
           await page.evaluate(()=>{
@@ -180,7 +212,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           assert.deepEqual(seals,[]);
           log('audio_fault_held_listening');
         }
-        if(reopenTab){
+        // The journal test keeps the verified page binding through the outage.
+        if(!eofJournal&&reopenTab){
           await page.close();
           page=await openPage();
           await page.goto(url,{waitUntil:'domcontentloaded'});
@@ -194,12 +227,14 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           await recover.click();
           form=page.locator('#'+section+'View');
           field=form.locator('[data-number]:visible').first();
-        }else await page.reload({waitUntil:'domcontentloaded'});
-        log('offline_shell_loaded');
-        await page.waitForFunction(()=>{const audio=document.getElementById('miniJourneyAudio');return audio?.paused&&audio.currentTime>.75;});
-        assert.equal(await field.inputValue(),answer);
-        await page.getByRole('button',{name:'Nghe tiếp',exact:true}).click();
-        log('offline_audio_resumed');
+        }else if(!eofJournal)await page.reload({waitUntil:'domcontentloaded'});
+        if(!eofJournal){
+          log('offline_shell_loaded');
+          await page.waitForFunction(()=>{const audio=document.getElementById('miniJourneyAudio');return audio?.paused&&audio.currentTime>.75;});
+          assert.equal(await field.inputValue(),answer);
+          await page.getByRole('button',{name:'Nghe tiếp',exact:true}).click();
+          log('offline_audio_resumed');
+        }
         await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.ended,
           null,{timeout:full?(term?2_000_000:1_100_000):20_000});
         assert.equal(await form.isVisible(),true);
@@ -227,6 +262,19 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     });
     assert.deepEqual(seals,order);
     assert.deepEqual(errors,[]);
+    if(eofJournal){
+      await page.evaluate(async()=>{
+        const endpoint=location.origin+'/api/term-tests/'+window.TERM_TEST_CONFIG.slug;
+        const bridge=window[Symbol.for('izone.examJournal.connections.v1')].get(JSON.stringify([endpoint,window.TERM_TEST_CONFIG.slug]));
+        await bridge.recorder.idle();
+        await bridge.recorder.flush({force:true});
+      });
+      const rows=journalRows.filter(row=>row.event.data.action==='k67_listening_eof');
+      assert.ok(rows.every(row=>row.bindingId===learnerBinding));
+      const phases=rows.map(row=>row.event.data.checkpointState.phase).sort();
+      assert.deepEqual(phases,['eof_accepted','event_unverified','review_local']);
+      log('journal_verified',{phases,oneLearnerBinding:true});
+    }
     log('passed',{seals});
   }catch(error){
     const media=await page?.evaluate(()=>{const audio=document.getElementById('miniJourneyAudio');return {seconds:audio?.currentTime,

@@ -232,7 +232,10 @@
       eofRetryAt = performance.now() + 10_000;
       try {
         const value = await request('audio-progress', { heardSeconds: audio.currentTime, state: 'ended' }, false);
-        if (apply(value) && value.listeningEofAt) { eofPending = false; notify(); }
+        if (apply(value) && value.listeningEofAt) {
+          eofPending = false; notify();
+          eofGate?.recordReview?.('review_server',value.listeningEofAt,value.listeningDeadlineAt);
+        }
       } catch { /* Keep the exam open and retry after reconnect. */ }
       finally { eofRequest = false; }
     }

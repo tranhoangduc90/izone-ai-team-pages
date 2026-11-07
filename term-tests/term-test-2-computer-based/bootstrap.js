@@ -973,7 +973,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1&miniSync=20261107-v1':''));
+    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1&miniSync=20261107-v1':''));
     await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
@@ -991,7 +991,7 @@
 
   async function openJourneyLobby(prepare=false){
     if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
-    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1');
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1&termEof=20261108-v1');
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope);
     if(!existing&&(!prepare||state.completed))return false;
@@ -1018,7 +1018,7 @@
     if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||listeningOnly||state.studentRef)return false;
     if(document.getElementById('miniJourneyRecovery'))return true;
     const mode=query.get('mode');
-    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1&termEof=20261108-v1');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'');
     if(!match)return false;
     const form=document.createElement('form');form.id='miniJourneyRecovery';
@@ -1192,7 +1192,7 @@
     previewAudio.pause();
     let started = null, officialAudio = null;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':''));
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':''));
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
@@ -1249,8 +1249,10 @@
       const reviewOnly = eofRequired && Boolean(started.listeningEofAt || audioAccess.listeningEofAt);
       if (eofRequired && !reviewOnly) {
         resumeAt = Math.min(resumeAt, Math.max(0, officialAudio.duration - 1));
-        const { createListeningEofGate } = await import('../k67-shared/listening-eof.mjs?v=20261107-v1');
-        window.K67_ACTIVE_LISTENING?.requireEof(createListeningEofGate({ audio: officialAudio, anchorSeconds: resumeAt }));
+        const { createListeningEofGate, createK67EofObserver } = await import('../k67-shared/listening-eof.mjs?v=20261108-journal-v1');
+        const observeDecision = createK67EofObserver(officialAudio, { mode: 'online',
+          configuredDurationSeconds: Number(audioAccess.listeningDurationSeconds) });
+        window.K67_ACTIVE_LISTENING?.requireEof(createListeningEofGate({ audio: officialAudio, anchorSeconds: resumeAt, observeDecision }));
       }
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
       if (!reviewOnly && resumeAt < officialAudio.duration) window.K67_ACTIVE_LISTENING?.arm();

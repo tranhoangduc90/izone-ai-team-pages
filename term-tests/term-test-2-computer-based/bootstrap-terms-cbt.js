@@ -975,7 +975,7 @@
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
     const journeyVersion=journey?'&offlineJourney=20261107-term1-v1':'';
-    await loadScript('../shared/app-terms-cbt.js?v=20261107-terms-cbt-v1'+journeyVersion);
+    await loadScript('../shared/app-terms-cbt.js?v=20261107-terms-cbt-v1&termEof=20261108-v1'+journeyVersion);
     await loadScript(cbtAssetUrl('enhance-terms-cbt.js?v=20261107-terms-cbt-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
@@ -994,7 +994,7 @@
   async function openJourneyLobby(prepare=false){
     const slug=testConfig.slug;
     if(!['mini-test-lesson-5','term-test-1','term-test-2'].includes(slug)||listeningOnly||!sharedIdentity||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
-    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1');
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1');
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope,slug);
     if(!existing&&(!prepare||state.completed))return false;
@@ -1023,7 +1023,7 @@
     if(!['mini-test-lesson-5','term-test-1','term-test-2'].includes(slug)||!sharedIdentity||listeningOnly||state.studentRef)return false;
     if(document.getElementById('miniJourneyRecovery'))return true;
     const mode=query.get('mode');
-    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'',slug);
     if(!match)return false;
     const form=document.createElement('form');form.id='miniJourneyRecovery';
@@ -1198,7 +1198,7 @@
     previewAudio.pause();
     let started = null, officialAudio = null;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':'&termsEof=20261107-v1'));
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
@@ -1255,8 +1255,10 @@
       const reviewOnly = eofRequired && Boolean(started.listeningEofAt || audioAccess.listeningEofAt);
       if (eofRequired && !reviewOnly) {
         resumeAt = Math.min(resumeAt, Math.max(0, officialAudio.duration - 1));
-        const { createListeningEofGate } = await import('../k67-shared/listening-eof.mjs?v=20261107-v1');
-        window.K67_ACTIVE_LISTENING?.requireEof(createListeningEofGate({ audio: officialAudio, anchorSeconds: resumeAt }));
+        const { createListeningEofGate, createK67EofObserver } = await import('../k67-shared/listening-eof.mjs?v=20261108-journal-v1');
+        const observeDecision = createK67EofObserver(officialAudio, { mode: 'online',
+          configuredDurationSeconds: Number(audioAccess.listeningDurationSeconds) });
+        window.K67_ACTIVE_LISTENING?.requireEof(createListeningEofGate({ audio: officialAudio, anchorSeconds: resumeAt, observeDecision }));
       }
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
       if (!reviewOnly && resumeAt < officialAudio.duration) window.K67_ACTIVE_LISTENING?.arm();

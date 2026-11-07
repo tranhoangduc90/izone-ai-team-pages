@@ -229,6 +229,30 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
         return observer;
       }catch{return null;}
     },
+    recordK67ListeningEof(owner,detail) {
+      if(stopped||!current||!['term-test-1','term-test-2','mini-test-lesson-5'].includes(testSlug)
+        ||!owner?.examSessionToken||owner!==win.TERM_TEST_BOOTSTRAP)return false;
+      const proof=proofOf(getState()),context=bindingCache.get(ownerKey);
+      if(proof.examSessionToken!==owner.examSessionToken||proof.generation!==Number(owner.sessionState?.generation||0)
+        ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return false;
+      const {phase,mode}=detail||{};
+      if(!['online','offline'].includes(mode)||!['event_unverified','media_not_finished','playback_rate_invalid',
+        'duration_unavailable','position_short','playback_incomplete','eof_accepted',
+        'review_local','review_restored','review_server'].includes(phase))return false;
+      const metadata={telemetryVersion:1,assetId:testSlug,mode,phase};
+      if(phase.startsWith('review_')){
+        if((phase==='review_server')!==(mode==='online')||!listeningEndTime(detail.reviewStartedAt)
+          ||!listeningEndTime(detail.reviewDeadlineAt)||Date.parse(detail.reviewDeadlineAt)<Date.parse(detail.reviewStartedAt))return false;
+        Object.assign(metadata,{reviewStartedAt:detail.reviewStartedAt,reviewDeadlineAt:detail.reviewDeadlineAt});
+      }
+      for(const field of ['anchorSeconds','reviewSeconds','configuredDurationSeconds'])
+        if(listeningEndNumber(detail[field]))metadata[field]=detail[field];
+      const measurements={};
+      for(const field of ['durationSeconds','positionSeconds','playbackRate'])
+        if(listeningEndNumber(detail[field]))measurements[field]=detail[field];
+      if(typeof detail.ended==='boolean')measurements.ended=detail.ended;
+      return Boolean(recorder.record('audio_observed',{action:'k67_listening_eof',...measurements,checkpointState:metadata},current));
+    },
     recordMiniListening(owner,detail) {
       if(stopped||!current||testSlug!=='mini-test-k56'||!owner?.examSessionToken||owner!==win.TERM_TEST_BOOTSTRAP)return false;
       const proof=proofOf(getState()),context=bindingCache.get(ownerKey);
