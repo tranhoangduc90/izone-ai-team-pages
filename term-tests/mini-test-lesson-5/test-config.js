@@ -67,7 +67,7 @@
   const changes=new Set(['bootstrap-change-remembered-student','change-remembered-student','termTestChangeStudent','bootstrapChangeStudent','miniPaperChange','changeStudent','changeStudentButton']);
   const lobbyActions=new Set(['confirmIdentity','bootstrapConfirm','bootstrapConfirmPrefilled','bootstrapStart','bootstrapPreview','bootstrapRetry','bootstrapContinue','miniPaperEnter']);
   const queue=[],last=new Map(),listeners=[];
-  let openIdentityDialog=null;
+  let openIdentityDialog=null,dialogClass='',dialogSignature='',dialogCheckedAt=0;
   let bridge=null,loading=false,busy=false,stopped=false,bytes=0,lost=0,ordinal=0,nextTry=0;
   const classCode=()=>{
     const value=doc.getElementById('classCode')?.value||doc.getElementById('bootstrapClass')?.value
@@ -92,9 +92,18 @@
   }
   function scanIdentityDialog(){
     const dialog=doc.querySelector('#identityConfirm[open],.cbt-identity-confirmation-dialog[open]');
-    if(dialog===openIdentityDialog)return;
-    openIdentityDialog=dialog;
+    const same=dialog===openIdentityDialog;
+    if(!same&&openIdentityDialog){
+      enqueue('dialog_observed',{action:'identity_confirmation',outcome:'closed',identityConfirmed:false,
+        checkpointState:{presentation:'html_dialog'}},dialogClass);
+      openIdentityDialog=null;dialogSignature='';
+    }
     if(!dialog)return;
+    const now=performance.now();
+    // Reuse the existing one-second scan. Coalesce layout storms before reading geometry.
+    if(same&&now-dialogCheckedAt<1000)return;
+    if(!same){openIdentityDialog=dialog;dialogClass=classCode();}
+    dialogCheckedAt=now;
     const rect=dialog.getBoundingClientRect(),visual=win.visualViewport;
     const viewport={width:win.innerWidth,height:win.innerHeight,dpr:win.devicePixelRatio};
     const left=visual?.offsetLeft||0,top=visual?.offsetTop||0;
@@ -106,9 +115,12 @@
     if(!rect.width||!rect.height||dialog.checkVisibility?.({opacityProperty:true,visibilityProperty:true})===false||style.visibility==='hidden'||style.visibility==='collapse'||Number(style.opacity)===0)visibility='hidden';
     else if(rect.right<=left||rect.bottom<=top||rect.left>=left+width||rect.top>=top+height)visibility='outside_viewport';
     else if(rect.left<left-1||rect.top<top-1||rect.right>left+width+1||rect.bottom>top+height+1)visibility='partly_outside';
-    enqueue('dialog_observed',{action:'identity_confirmation',outcome:'opened',identityConfirmed:false,viewport,
-      checkpointState:{presentation:'html_dialog',visibility,rect:{x:Math.round(rect.x),y:Math.round(rect.y),
-        width:Math.round(rect.width),height:Math.round(rect.height)}}});
+    const checkpointState={presentation:'html_dialog',visibility,rect:{x:Math.round(rect.x),y:Math.round(rect.y),
+      width:Math.round(rect.width),height:Math.round(rect.height)}};
+    const signature=JSON.stringify({viewport,checkpointState});
+    if(signature===dialogSignature)return;
+    const outcome=dialogSignature?'updated':'opened';dialogSignature=signature;
+    enqueue('dialog_observed',{action:'identity_confirmation',outcome,identityConfirmed:false,viewport,checkpointState},dialogClass);
   }
   function scan(cause,event){
     try{
@@ -188,17 +200,13 @@
   const timer=win.setInterval(()=>{scan('periodic_snapshot');void drain();},1000);
   win.EXAM_JOURNAL_STARTUP={
     snapshot:scan,
-    startRequest(route,options={},trace){
+    startRequest(route,options={}){
       try{
         const url=new URL(route,win.location.href),safe=url.pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi,':id').slice(0,240);
         const requestId=crypto.randomUUID(),began=performance.now(),capturedClass=classCode();
-        const method=String(options.method||'GET').slice(0,12);
-        const details=trace&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(trace.operationId)
-          &&['single','send','readback'].includes(trace.phase)
-          ? {checkpointState:{operationId:trace.operationId,phase:trace.phase}} : {};
-        enqueue('request_started',{requestId,route:safe,method,...details},capturedClass);
+        enqueue('request_started',{requestId,route:safe,method:String(options.method||'GET').slice(0,12)},capturedClass);
         let done=false;return {done(result,error,status){if(done)return;done=true;
-          enqueue(error?'request_failed':'request_finished',{requestId,route:safe,method,durationMs:performance.now()-began,...details,
+          enqueue(error?'request_failed':'request_finished',{requestId,route:safe,durationMs:performance.now()-began,
             ...(Number.isInteger(status)?{status}:{}),operationStatus:error?'client_handler_failed':'client_handler_returned',
             errorCode:error?String(error.name||'Error').slice(0,80):''},capturedClass);scan('request_finished');}};
       }catch{return null;}
