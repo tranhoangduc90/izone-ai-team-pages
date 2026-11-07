@@ -11,6 +11,7 @@
   let miniConfirmed = false;
   let miniGeneration = 0;
   let miniEpoch = 0;
+  let miniOffline = null;
   const miniPrefix = '/api/term-tests/mini-test-lesson-5/answer-sheet';
   const requestedDemo = query.get('demo') || '';
   const retakeConfig = window.TERM_TEST_RETAKE_CONFIG || {};
@@ -181,6 +182,7 @@
     try { if (typeof examJournal !== 'undefined') examJournal?.stateChanged('save_requested'); } catch {}
     if (miniAnswerSheet && !miniConfirmed) return true;
     if (!storageKey) return !state.studentRef;
+    if (activeMiniOffline()) miniOffline.saveSnapshot(miniOfflineSnapshot());
     const serialized = JSON.stringify({
       generation: miniGeneration,
       studentRef: state.studentRef,
@@ -915,7 +917,50 @@
     return answered;
   }
 
+  function activeMiniOffline() {
+    return Boolean(miniOffline?.active && miniConfirmed && miniOffline.classCode === classCode
+      && miniOffline.record.studentRef === state.studentRef
+      && miniOffline.scope.examSessionToken === state.examSessionToken);
+  }
+
+  function miniOfflineSnapshot() {
+    return { studentName: state.studentName, examMode: state.examMode,
+      drafts: state.drafts, draftRevisions: state.draftRevisions };
+  }
+
+  async function localMiniRequest(path, options) {
+    const paperRoute = path.startsWith(miniPrefix + '/') ? path.slice(miniPrefix.length + 1) : null;
+    const standardPrefix = '/api/term-tests/' + testConfig.slug + '/';
+    const action = path === '/api/term-tests/result' ? 'result'
+      : paperRoute || (path.startsWith(standardPrefix) ? path.slice(standardPrefix.length) : '');
+    if (action === 'result') {
+      await miniOffline.flush();
+      if (miniOffline.pending) throw new Error('Bài đã lưu trên máy. Kết quả sẽ mở sau khi máy chủ nhận đủ hai phần.');
+      const result = await miniOffline.post('/offline/result', miniOffline.scope);
+      return { ...result, attemptToken: result.nativeAttemptToken || result.attemptToken };
+    }
+    const match = /^(listening|reading)(?:\/(start|draft))?$/.exec(action);
+    if (!match) return undefined;
+    const [, section, kind] = match;
+    const data = JSON.parse(options.body || '{}');
+    await miniOffline.start(section);
+    if (kind === 'start') return miniOffline.sectionResponse();
+    if (kind === 'draft') {
+      await miniOffline.draft(section, data, data.revision);
+      const revision = miniOffline.record.sections[section].revision;
+      return { ...miniOffline.sectionResponse(), accepted: true, revision, draft: data.answers, deadlineAt: null };
+    }
+    return miniOffline.seal(section, data, data.draftRevision, 'manual');
+  }
+
   async function apiRequest(path, options = {}) {
+    if (options.method === 'POST' && activeMiniOffline()) {
+      const local = await localMiniRequest(path, options);
+      if (local) {
+        window.K67_EXAM_ORDER?.apply(state, local);
+        return local;
+      }
+    }
     let operationId;
     try {
       if ((typeof examJournal !== 'undefined' && examJournal) || window.EXAM_JOURNAL_STARTUP) operationId = crypto.randomUUID();
@@ -1198,7 +1243,7 @@
       if (window.K67_EXAM_ORDER && (queuedStudent !== state.studentRef
         || queuedToken !== (skill === 'listening' ? state.examSessionToken : state.attemptToken)
         || state[skill + 'Submitted'])) return null;
-      setSectionSaveStatus(skill, 'Đang lưu trên hệ thống...', 'saving');
+      setSectionSaveStatus(skill, activeMiniOffline() ? 'Đang lưu trên thiết bị...' : 'Đang lưu trên hệ thống...', 'saving');
       const response = await saveSectionDraftSnapshot(skill, answers, revision);
       const acknowledgedRevision = Number(response?.revision) || revision;
       if (response?.accepted === false) {
@@ -1216,7 +1261,7 @@
       if ((Number(state.draftRevisions[skill]) || 0) > state.draftAckRevisions[skill]) {
         scheduleSectionDraft(skill, 0);
       } else {
-        setSectionSaveStatus(skill, 'Đã lưu trên hệ thống', 'saved');
+        setSectionSaveStatus(skill, response.localOnly ? 'Đã lưu trên thiết bị' : 'Đã lưu trên hệ thống', 'saved');
       }
       return response;
     });
@@ -3287,12 +3332,14 @@
         Number(state.draftAckRevisions.listening) || 0,
         Number(state.draftRevisions.listening) || 0
       );
-      setSectionSaveStatus('listening', 'Đã nộp bài', 'saved');
+      setSectionSaveStatus('listening', response.localOnly ? 'Đã lưu trên máy · Chờ đồng bộ' : 'Đã nộp bài', 'saved');
       stopSectionDeadlineGuard('listening');
       saveSession();
       submitted = true;
       elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
-      if (writingConfig || deferResultsUntilComplete) {
+      if (response.localOnly) {
+        showNotice('Listening đã lưu trên máy. Hệ thống sẽ đồng bộ khi có mạng.', 'success');
+      } else if (writingConfig || deferResultsUntilComplete) {
         showNotice(`Bài Listening đã được ghi nhận. Kết quả sẽ mở sau khi bạn hoàn thành ${writingConfig ? 'Reading và nộp Writing' : 'Reading'}.`, 'success');
       } else {
         showNotice(
@@ -3417,13 +3464,14 @@
         Number(state.draftAckRevisions.reading) || 0,
         Number(state.draftRevisions.reading) || 0
       );
-      setSectionSaveStatus('reading', 'Đã nộp bài', 'saved');
+      setSectionSaveStatus('reading', response.localOnly ? 'Đã lưu trên máy · Chờ đồng bộ' : 'Đã nộp bài', 'saved');
       stopSectionDeadlineGuard('reading');
       saveSession();
       submitted = true;
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
       if (response.examMode === 'read_first' && !response.completed) {
-        showNotice('Reading đã được lưu. Tiếp tục Listening khi bạn sẵn sàng.', 'success');
+        showNotice(response.localOnly ? 'Reading đã lưu trên máy. Tiếp tục Listening khi bạn sẵn sàng.'
+          : 'Reading đã được lưu. Tiếp tục Listening khi bạn sẵn sàng.', 'success');
         if (document.body.classList.contains('cbt-mode')) { allowExamNavigation=true;window.location.reload();return; }
         setStage('listening');
       } else if (writingConfig) {
@@ -3431,7 +3479,8 @@
         const portalMessage = portalNotice(response.portalSyncStatus, true);
         showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, true), ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success');
+        showNotice(response.localOnly ? 'Bài đã lưu trên máy. Hệ thống sẽ đồng bộ khi có mạng.'
+          : portalNotice(response.portalSyncStatus, true), response.localOnly || !['pending', 'queued'].includes(response.portalSyncStatus) ? 'success' : '');
         setStage('result-ready');
         if (automatic) await loadResult(elements.viewResult);
       }
@@ -3731,6 +3780,57 @@
     if (!paperIdentity) try {remembered=JSON.parse(localStorage.getItem('izone-mini-identity:v2')||'{}');} catch {}
     const pinnedMini = paperIdentity?.current().studentRef ? { ...state } : null;
     const requestedClass=classCode||remembered.classCode||'';
+    async function offlineRuntime() {
+      if (miniOffline?.classCode === classCode) return miniOffline;
+      if (miniOffline?.record) await miniOffline.detachLatest();
+      const { openPaperRuntime } = await import('../mini-test-lesson-5/offline.mjs?v=mini-k67-paper-v1');
+      miniOffline = await openPaperRuntime({ apiBase: appConfig.API_BASE_URL, classCode, testConfig });
+      return miniOffline;
+    }
+
+    function renderOfflinePaper(runtime) {
+      const response = runtime.sectionResponse();
+      const { record } = runtime;
+      miniGeneration = response.generation;
+      miniConfirmed = true;
+      state.studentRef = record.studentRef;
+      state.studentName = response.studentName;
+      state.className = response.className;
+      state.examSessionToken = response.examSessionToken;
+      state.attemptToken = response.attemptToken;
+      state.attemptReview = null;
+      state.pendingSubmissions = {};
+      window.K67_EXAM_ORDER?.apply(state, response);
+      for (const section of ['listening', 'reading']) {
+        const savedSection = record.sections[section];
+        const snapshotRevision = Number(record.snapshot?.draftRevisions?.[section]) || 0;
+        let draft = record.snapshot?.drafts?.[section] || response[section + 'Draft'] || {};
+        if (savedSection?.content && (savedSection.sealed || savedSection.revision >= snapshotRevision)) {
+          draft = JSON.parse(savedSection.content).answers;
+        }
+        state.drafts[section] = { ...draft };
+        state.draftRevisions[section] = Math.max(snapshotRevision, savedSection?.revision || 0);
+        renderQuestionControls(testConfig[section], elements[section + 'Questions'], section);
+        setAnswerControlsLocked(section, Boolean(savedSection?.sealed));
+        updateAnswerCount(section);
+      }
+      elements.readingStudentName.textContent = state.studentName;
+      name.textContent = state.className + ' · ' + state.studentName;
+      current.hidden = false;
+      storageKey = `izone-mini-answer:v2:${testConfig.slug}:${classCode}:${state.studentRef}:${state.attemptToken}`;
+      try {
+        const url = new URL(location.href);
+        url.searchParams.set('class', classCode);
+        history.replaceState(history.state, '', url.href);
+      } catch {}
+      runtime.mount({ snapshot: miniOfflineSnapshot, host: current });
+      if (typeof examJournal !== 'undefined' && examJournal) runtime.setJournal(examJournal);
+      saveSession();
+      setStage(response.completed ? 'result-ready' : response.nextSection === 'reading'
+        ? (response.readingStartedAt ? 'reading' : 'listening-saved') : 'listening');
+      showNotice('Bài được lưu trên thiết bị. Giảng viên tổ chức thời gian; bạn chủ động nhấn nộp.', 'success');
+      void runtime.flush();
+    }
     change.addEventListener('click',()=>{
       saveSession(); ++miniEpoch; miniConfirmed=false; current.hidden=true;
       for(const section of ['listening','reading']) {stopSectionDraftFlow(section);stopSectionDeadlineGuard(section);}
@@ -3791,6 +3891,26 @@
           body:JSON.stringify({classCode,studentRef:student.ref,identityConfirmed:true})});
         if(epoch!==miniEpoch||response.studentRef!==student.ref||response.policy?.timed!==false) throw new Error('Chưa xác nhận được đúng người và cách nhập bài.');
         rememberPaperStudent(student.ref);
+        if (response.offlinePaper && response.examSessionToken) {
+          const runtime = await offlineRuntime();
+          if (runtime) {
+            const prepared = { ...response, attemptToken: response.examSessionToken };
+            if (await runtime.restorePrepared(prepared, student.ref)) {
+              renderOfflinePaper(runtime);
+              return;
+            }
+            if (!response.completed) try {
+              // Verify the local web shell before asking the server to reserve this paper run.
+              await runtime.prepareCache();
+              await runtime.prepare(prepared, { classCode, studentRef: student.ref, mode: response.examMode || 'lis_first' });
+              await runtime.finishPreparation();
+              renderOfflinePaper(runtime);
+              return;
+            } catch (error) {
+              if (!['OFFLINE_LEGACY', 'OFFLINE_NEW_DISABLED'].includes(error.code)) throw error;
+            }
+          }
+        }
         state.studentRef=student.ref;state.studentName=response.studentName;state.className=response.className;
         state.attemptToken=response.attemptToken||'';state.examSessionToken=response.examSessionToken||'';
         state.attemptReview=null;
@@ -3849,6 +3969,18 @@
       await openMiniStudent(student);
     });
     setStage('identity');elements.identityTitle.textContent='Chọn lớp và họ tên';
+    if (classCode && pinnedMini?.studentRef) try {
+      const runtime = await offlineRuntime();
+      if (runtime?.active && runtime.record.studentRef === pinnedMini.studentRef) {
+        renderOfflinePaper(runtime);
+        return;
+      }
+    } catch (error) {
+      if (navigator.onLine === false) {
+        showNotice('Chưa mở được bản trên thiết bị: ' + error.message, 'error');
+        return;
+      }
+    }
     try{
       const response=await apiRequest(`${miniPrefix}/classes`);
       // Danh sách lớp thật không công khai lớp demo. Chỉ thêm đúng mã từ link demo;
