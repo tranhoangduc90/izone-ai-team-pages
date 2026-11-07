@@ -109,6 +109,7 @@
   let audioAccess = null, audioScope = null, audioFromCache = false, audioCacheStatus = '';
   let previewObjectUrl = '';
   let officialObjectUrl = '';
+  let miniJourney = null;
   let previewHeard = false;
   let preparing = false;
   let bootstrapSelectionBusy = false;
@@ -520,6 +521,14 @@
     elements.bootstrapNotice.textContent = '';
   }
 
+  function requestAudioAccess(examSessionToken = state.examSessionToken, generation = Number(state.generation) || 0) {
+    return apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-access`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({examSessionToken, generation, publicAudioVersion: 1,
+        ...(testConfig.slug === 'mini-test-lesson-5' ? { audioTransport: 'r2-direct-v1', listeningEofVersion: 1 } : {})})
+    });
+  }
+
   async function apiRequest(path, options = {}, timeoutMs = 30_000) {
     // Quy đổi danh tính chỉ đọc không nhận các trường dành cho lượt thi/audio.
     if (!path.endsWith('/student-identity')) {
@@ -556,6 +565,7 @@
   }
 
   function setStartAvailability() {
+    if(miniJourney){elements.bootstrapStart.disabled=preparing||(miniJourney.view().examMode!=='read_first'&&!previewHeard);return;}
     const resumed = Boolean(state.listeningStartedAt || legacyListeningResume);
     const ready = Boolean(encryptedAudio && (previewHeard || resumed));
     elements.bootstrapStart.disabled = !ready || preparing;
@@ -571,10 +581,38 @@
     previewObjectUrl = '';
   }
 
+  async function verifyPreviewDuration(expectedSeconds, signal) {
+    await new Promise((resolve, reject) => {
+      const rejectDecode = () => finish(new Error('Trình duyệt chưa đọc được file audio của bài thi.'));
+      const abort = () => finish(signal.reason);
+      const ready = () => {
+        const actual = previewAudio.duration;
+        finish(Number.isFinite(actual) && Math.abs(actual - expectedSeconds) <= 1 ? null
+          : new Error('Thời lượng audio không khớp bản đề. Hãy thử tải lại.'));
+      };
+      const timeout = setTimeout(rejectDecode, 10000);
+      function finish(error) {
+        clearTimeout(timeout);
+        previewAudio.removeEventListener('loadedmetadata', ready);
+        previewAudio.removeEventListener('error', rejectDecode);
+        signal.removeEventListener('abort', abort);
+        if (error) reject(error); else resolve();
+      }
+      if (signal.aborted) { abort(); return; }
+      if (previewAudio.error) { rejectDecode(); return; }
+      if (previewAudio.readyState >= HTMLMediaElement.HAVE_METADATA) { ready(); return; }
+      previewAudio.addEventListener('loadedmetadata', ready, { once: true });
+      previewAudio.addEventListener('error', rejectDecode, { once: true });
+      signal.addEventListener('abort', abort, { once: true });
+      previewAudio.load();
+    });
+  }
+
   async function downloadForSession(session) {
     hideNotice();
     downloadController?.abort();
     downloadController = new AbortController();
+    const signal = downloadController.signal;
     encryptedAudio = null;
     audioAccess = null; audioScope = null; audioFromCache = false; audioCacheStatus = '';
     cacheStatus.textContent = 'Đang xác thực quyền tải hoặc khôi phục audio...';
@@ -598,11 +636,11 @@
         window.K67_AUDIO_OWNER=await window.K67_CREATE_AUDIO_OWNER({apiBase:appConfig.API_BASE_URL,slug:testConfig.slug,
           token:state.examSessionToken,generation:Number(state.generation)||0,recoverPreparationEpoch:expectedOwnerEpoch});
       }
+      if (resuming && await replayMiniListeningSeal()) return;
       try {
-        audioAccess = await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-access`, {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({examSessionToken: state.examSessionToken, generation: Number(state.generation) || 0, publicAudioVersion: 1})
-        });
+        const access = await requestAudioAccess();
+        signal.throwIfAborted();
+        audioAccess = access;
       } catch (error) {
         if (error.status !== 404 || error.code) throw error; // Backend cũ chưa có endpoint: vẫn phải online start.
       }
@@ -624,8 +662,10 @@
           let journal = null;
           try { journal = JSON.parse(localStorage.getItem(journalKey) || 'null'); } catch {}
           const duration = Number(audioAccess.listeningDurationSeconds);
-          let reviewOnly = !audioAccess.activeIncident && Number(audioAccess.listeningResumeAtSeconds) >= duration;
-          if (!reviewOnly && !audioAccess.activeIncident && Number(legacyUiState.audioTime) >= duration - 0.5) {
+          const eofRequired = audioAccess.listeningEofVersion === 1;
+          let reviewOnly = !audioAccess.activeIncident && (eofRequired ? Boolean(audioAccess.listeningEofAt)
+            : Number(audioAccess.listeningResumeAtSeconds) >= duration);
+          if (!eofRequired && !reviewOnly && !audioAccess.activeIncident && Number(legacyUiState.audioTime) >= duration - 0.5) {
             const progress = await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-progress`, {
               method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
                 examSessionToken: state.examSessionToken, generation: audioAccess.generation, heardSeconds: duration, state: 'playing'})
@@ -650,7 +690,7 @@
       const previewUrl = appConfig.API_BASE_URL + session.previewAudioUrl;
       const [encrypted, previewResponse] = await Promise.all([
         loadEncryptedAudio(audioUrl, {
-          signal: downloadController.signal,
+          signal,
           onProgress: ({ loaded, total, complete }) => {
             if (total > 0) {
               elements.bootstrapDownloadProgress.max = total;
@@ -663,15 +703,21 @@
             }
           }
         }),
-        resuming || audioAccess?.audioManifest?.envelopeVersion === 'MP3' ? null : fetch(previewUrl, { cache: 'no-store', signal: downloadController.signal })
+        resuming || audioAccess?.audioManifest?.envelopeVersion === 'MP3' ? null : fetch(previewUrl, { cache: 'no-store', signal })
       ]);
+      signal.throwIfAborted();
       if (previewResponse && !previewResponse.ok) throw new Error('Không tải được bản nghe thử.');
-      encryptedAudio = encrypted;
       revokePreview();
       if (previewResponse || (!resuming && audioAccess?.audioManifest?.envelopeVersion === 'MP3')) {
-        previewObjectUrl = URL.createObjectURL(previewResponse ? await previewResponse.blob() : encrypted);
+        const previewBlob = previewResponse ? await previewResponse.blob() : encrypted;
+        signal.throwIfAborted();
+        previewObjectUrl = URL.createObjectURL(previewBlob);
         previewAudio.src = previewObjectUrl;
+        if (audioAccess?.audioTransport === 'r2-direct-v1') {
+          await verifyPreviewDuration(Number(audioAccess.listeningDurationSeconds), signal);
+        }
       }
+      encryptedAudio = encrypted;
       previewAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       elements.bootstrapDownloadProgress.max = 1;
       elements.bootstrapDownloadProgress.value = 1;
@@ -691,7 +737,7 @@
       }
       setStartAvailability();
     } catch (error) {
-      if (error.name === 'AbortError') return;
+      if (signal.aborted || error.name === 'AbortError') return;
       elements.bootstrapDownloadStep.dataset.state = 'error';
       elements.bootstrapDownloadStatus.textContent = 'Chưa tải đủ audio. Bài thi vẫn đang khóa.';
       elements.bootstrapRetry.textContent = 'Thử tải lại audio';
@@ -705,7 +751,27 @@
 
   async function loadEncryptedAudio(url, options, skipCache = false) {
     if (audioAccess?.audioManifest?.envelopeVersion === 'MP3') {
-      const blob = await window.K67_PUBLIC_AUDIO.download(audioAccess.audioManifest, options);
+      const manifest = audioAccess.audioManifest;
+      let blob;
+      if (testConfig.slug === 'mini-test-lesson-5' && audioAccess.audioTransport === 'r2-direct-v1') {
+        const { examSessionToken, generation } = audioAccess;
+        const { downloadTermAudio } = await import('../k56-offline-shared/whole-audio.mjs?v=20261107-mini-v1');
+        const refresh = async ({ signal }) => {
+          let updated;
+          try { updated = await requestAudioAccess(examSessionToken, generation); }
+          catch (error) {
+            if (!error.status || error.status >= 500) error.audioRefreshUnavailable = true;
+            throw error;
+          }
+          signal.throwIfAborted();
+          return { manifest: updated.audioManifest, download: updated.audioDownload };
+        };
+        blob = await downloadTermAudio(testConfig.slug,
+          { pagesUrl: manifest.url, sha256: manifest.sha256, bytes: manifest.byteLength },
+          { ...options, audioDownload: audioAccess.audioDownload, refresh });
+      } else {
+        blob = await window.K67_PUBLIC_AUDIO.download(manifest, options);
+      }
       audioCacheStatus = 'Đã kiểm đúng phiên bản và tải đủ audio. Khi vào lại vẫn cần mạng để xác thực phiên thi.';
       return blob;
     }
@@ -800,6 +866,7 @@
         }
       });
       window.K67_EXAM_ORDER?.apply(state, prepared);
+      if(await openJourneyLobby(true))return;
       if (state.attemptToken || prepared.listeningSubmitted) {
         await resumeAfterListening();
         return;
@@ -882,15 +949,17 @@
     return `${base}/${fileName}?rev=${revision}`;
   }
 
-  async function enterExam(started, audioElement = null) {
+  async function enterExam(started, audioElement = null, offlineSection = '', journey = null) {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
+    const boundIdentity = sharedIdentity && started.examSessionToken === state.examSessionToken
+      && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
+      ? Object.freeze({ testSlug: testConfig.slug, classCode, studentRef: state.studentRef,
+        studentName: started.studentName, examSessionToken: state.examSessionToken, attemptToken: state.attemptToken || '' }) : null;
     window.TERM_TEST_BOOTSTRAP = Object.freeze({
       restoredIdentity,
-      verifiedIdentity: sharedIdentity && started.examSessionToken === state.examSessionToken
-        && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
-        ? Object.freeze({ testSlug: testConfig.slug, classCode, studentRef: state.studentRef,
-          studentName: started.studentName, examSessionToken: state.examSessionToken,
-          attemptToken: state.attemptToken || '' }) : null,
+      verifiedIdentity: offlineSection ? null : boundIdentity,
+      offlineSectionIdentity: offlineSection && boundIdentity ? { ...boundIdentity, section: offlineSection } : null,
+      miniJourney:journey,
       sessionState: sharedIdentity ? structuredClone(state) : null,
       examSessionToken: state.examSessionToken,
       listeningDeadlineAt: started.listeningDeadlineAt,
@@ -898,15 +967,112 @@
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted)
+      skipListeningAudio: Boolean(offlineSection||journey) || (started.examMode === 'read_first' ? started.nextSection !== 'listening' || Boolean(started.listeningSubmitted) : Boolean(state.attemptToken || started.listeningSubmitted))
     });
     previewAudio.remove();
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1');
+    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1&miniSync=20261107-v1':''));
     await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
+  }
+
+  function miniCbtScope() {
+    return { classCode, studentRef: state.studentRef, examSessionToken: state.examSessionToken,
+      attemptToken: state.attemptToken, generation: Number(state.generation) || 0 };
+  }
+
+  async function enterJourney(){
+    const view=miniJourney.view();
+    saveState({...view,drafts:{...state.drafts,...miniJourney.drafts()},draftRevisions:miniJourney.revisions()});
+    await enterExam({...view,content:miniJourney.content},null,'',miniJourney);
+  }
+
+  async function openJourneyLobby(prepare=false){
+    if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1');
+    const scope=miniCbtScope();
+    const existing=await findMiniJourney(scope);
+    if(!existing&&(!prepare||state.completed))return false;
+    miniJourney=await openMiniJourney({scope,request:apiRequest,existing,prepare});
+    if(!miniJourney)return false;
+    if(miniJourney.activated()){await enterJourney();return true;}
+    revokePreview();
+    previewObjectUrl=URL.createObjectURL(await miniJourney.verifiedAudio());
+    previewAudio.src=previewObjectUrl;
+    previewAudio.volume=Number(elements.bootstrapVolume.value)||1;
+    elements.bootstrapPreview.disabled=false;
+    elements.bootstrapVolume.disabled=false;
+    elements.bootstrapPreviewStep.dataset.state='active';
+    elements.bootstrapPreviewStatus.textContent='Bấm nghe thử để chỉnh âm lượng.';
+    elements.bootstrapDownloadStep.dataset.state='complete';
+    elements.bootstrapDownloadStatus.textContent='Đã chuẩn bị hai phần và lưu audio trên thiết bị.';
+    elements.bootstrapStartStep.dataset.state='active';
+    elements.bootstrapStart.textContent='Bắt đầu bài Mini K67';
+    elements.bootstrapStartStatus.textContent='Hãy có mạng khi bấm bắt đầu. Sau đó có thể làm tiếp khi mất mạng.';
+    return true;
+  }
+
+  async function offerMiniJourneyRecovery(){
+    if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||listeningOnly||state.studentRef)return false;
+    if(document.getElementById('miniJourneyRecovery'))return true;
+    const mode=query.get('mode');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1');
+    const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'');
+    if(!match)return false;
+    const form=document.createElement('form');form.id='miniJourneyRecovery';
+    const label=document.createElement('label');label.textContent='Họ và tên dùng khi vào thi';
+    const input=document.createElement('input');input.required=true;input.maxLength=180;input.autocomplete='off';label.append(input);
+    const button=document.createElement('button');button.className='button button-primary';button.textContent='Mở bài đã lưu';
+    const status=document.createElement('p');status.setAttribute('role','status');
+    status.textContent='Có bài Mini K67 lưu trên trình duyệt này. Nhập đúng họ tên đã chọn để tiếp tục.';
+    form.append(status,label,button);elements.bootstrapDownloadStep.before(form);
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const bundle=match(input.value);
+      if(!bundle){status.textContent='Chưa xác định được bài đúng họ tên và lớp. Khi có mạng, hãy mở lại từ danh sách lớp.';return;}
+      button.disabled=true;
+      try{
+        bindSharedStudent({ref:bundle.studentRef,name:bundle.studentName});
+        saveState({examSessionToken:bundle.examSessionToken,generation:bundle.generation});
+        if(!await openJourneyLobby())throw new Error('Chưa mở được bản đã lưu.');
+      }catch(error){button.disabled=false;status.textContent=error.message;}
+    });
+    return true;
+  }
+
+  async function replayMiniListeningSeal() {
+    if (testConfig.slug !== 'mini-test-lesson-5' || navigator.onLine === false || !state.studentRef || !state.examSessionToken) return false;
+    const scope = miniCbtScope();
+    const current = () => scope.examSessionToken === state.examSessionToken && scope.studentRef === state.studentRef && scope.classCode === classCode;
+    const { openCbtResilience } = await import('../mini-test-lesson-5-computer-based/resilience.mjs?v=20261107-cbt-sync-v1');
+    const runtime = await openCbtResilience({ scope, current, request: apiRequest, clock: Date.now, notify: () => {} }).catch(() => null);
+    if (!runtime) return false;
+    let receipt;
+    try {
+      receipt = await runtime.syncPending('listening').catch(() => null);
+      if (!receipt || !current()) return false;
+      saveState({ attemptToken: receipt.attemptToken, listeningSubmitted: true, completed: receipt.completed, nextSection: receipt.nextSection });
+      await runtime.applied('listening');
+    } finally { runtime.close(); }
+    await resumeAfterListening();
+    return true;
+  }
+
+  async function resumeMiniOffline(transportUnavailable = false) {
+    if (testConfig.slug !== 'mini-test-lesson-5' || (!transportUnavailable && navigator.onLine !== false) || !sharedIdentity
+        || !isUuid(state.studentRef) || !isUuid(state.examSessionToken) || state.completed) return false;
+    const section = state.readingDeadlineAt && !state.readingSubmitted ? 'reading' : 'listening';
+    if (state[section + 'Submitted']) return false;
+    const { restoreOfflineSection } = await import('../mini-test-lesson-5-computer-based/resilience.mjs?v=20261107-cbt-sync-v1');
+    const saved = await restoreOfflineSection(miniCbtScope(), section);
+    if (!saved) return false;
+    const { entry, content } = saved;
+    saveState({ examMode: entry.examMode, nextSection: section, listeningSubmitted: entry.listeningSubmitted, readingSubmitted: entry.readingSubmitted,
+      [section + 'StartedAt']: entry[section + 'StartedAt'], [section + 'DeadlineAt']: entry[section + 'DeadlineAt'] });
+    await enterExam({ ...entry, content, nextSection: section }, null, section);
+    return true;
   }
 
   async function resumeAfterListening() {
@@ -998,7 +1164,7 @@
   });
   // Bản nghe thử dùng chính file đã kiểm, dừng ở 30 giây và không bắt đầu đồng hồ thi.
   previewAudio.addEventListener('timeupdate', () => {
-    if (audioAccess?.audioManifest?.envelopeVersion === 'MP3' && previewAudio.currentTime >= 30 && !previewAudio.paused) {
+    if ((miniJourney||audioAccess?.audioManifest?.envelopeVersion === 'MP3') && previewAudio.currentTime >= 30 && !previewAudio.paused) {
       previewAudio.pause();
       elements.bootstrapPreview.textContent = 'Nghe lại 30 giây đầu';
       elements.bootstrapPreviewStatus.textContent = 'Đã nghe hết bản thử. Bạn có thể bắt đầu thi.';
@@ -1010,6 +1176,15 @@
     saveState({ audioVolume: volume });
   });
   elements.bootstrapStart.addEventListener('click', async () => {
+    if(miniJourney){
+      if(preparing)return;
+      preparing=true;setStartAvailability();
+      previewAudio.pause();
+      try{await miniJourney.begin();await enterJourney();}
+      catch(error){showNotice(error.message,true);}
+      finally{preparing=false;setStartAvailability();}
+      return;
+    }
     if (!encryptedAudio || preparing) return;
     preparing = true;
     elements.bootstrapStart.disabled = true;
@@ -1017,7 +1192,7 @@
     previewAudio.pause();
     let started = null, officialAudio = null;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1');
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':''));
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
@@ -1061,7 +1236,7 @@
       officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       const serverElapsed = Math.max(0, (Date.parse(started.serverNow) - Date.parse(started.listeningStartedAt)) / 1000);
       const serverResumeAt = Number(started.listeningResumeAtSeconds);
-      const resumeAt = Number.isFinite(serverResumeAt)
+      let resumeAt = Number.isFinite(serverResumeAt)
         ? Math.min(serverElapsed, Math.max(0, serverResumeAt))
         : serverElapsed;
       await new Promise((resolve, reject) => {
@@ -1070,11 +1245,18 @@
         officialAudio.addEventListener('error', () => {clearTimeout(timeout);reject(new Error('Trình duyệt không đọc được audio chính.'));}, { once: true });
         officialAudio.load();
       });
+      const eofRequired = audioAccess?.listeningEofVersion === 1;
+      const reviewOnly = eofRequired && Boolean(started.listeningEofAt || audioAccess.listeningEofAt);
+      if (eofRequired && !reviewOnly) {
+        resumeAt = Math.min(resumeAt, Math.max(0, officialAudio.duration - 1));
+        const { createListeningEofGate } = await import('../k67-shared/listening-eof.mjs?v=20261107-v1');
+        window.K67_ACTIVE_LISTENING?.requireEof(createListeningEofGate({ audio: officialAudio, anchorSeconds: resumeAt }));
+      }
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
-      if (resumeAt < officialAudio.duration) window.K67_ACTIVE_LISTENING?.arm();
+      if (!reviewOnly && resumeAt < officialAudio.duration) window.K67_ACTIVE_LISTENING?.arm();
       await window.K67_ACTIVE_LISTENING?.start();
       if(window.K67_ACTIVE_LISTENING)started={...started,...window.K67_ACTIVE_LISTENING.getSnapshot()};
-      if (!window.K67_ACTIVE_LISTENING?.isHeld() && resumeAt < officialAudio.duration) await officialAudio.play();
+      if (!reviewOnly && !window.K67_ACTIVE_LISTENING?.isHeld() && resumeAt < officialAudio.duration) await officialAudio.play();
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
@@ -1322,6 +1504,10 @@
       showNotice('Không thể mở lượt thi bù bằng liên kết này.', true);
       return;
     }
+    try {if(await openJourneyLobby()) {setStartAvailability();return;}}
+    catch(error){showNotice(error.message,true);return;}
+    if(navigator.onLine===false){try{if(await offerMiniJourneyRecovery())return;}catch{/* Keep the standard retry control. */}}
+    try { if (await resumeMiniOffline()) return; } catch { /* Standard lobby retains the local draft. */ }
     let restoreError=null;
     // Có mã lượt: xác minh trực tiếp, không dựng lại danh sách cả lớp để mở lại bài.
     // Lỗi giữ nguyên token/nháp và không tự tạo lượt mới hoặc bắt đầu đồng hồ.
@@ -1332,6 +1518,9 @@
       elements.bootstrapDownloadStatus.textContent='Đang tiếp tục bài đã lưu...';
       try {await resumeAfterListening();return;}
       catch(error) {
+        if (!error.status || error.status >= 500) {
+          try { if (await resumeMiniOffline(true)) return; } catch { /* Keep the native error and local draft. */ }
+        }
         restoreError=error;
         identity.hidden=false;
         if(![400,404,409].includes(error.status)) {
@@ -1447,6 +1636,7 @@
       }
     } catch (error) {
       roster = [];
+      try{if(await offerMiniJourneyRecovery())return;}catch{/* Keep the standard retry control. */}
       elements.bootstrapDownloadStep.dataset.state = 'error';
       elements.bootstrapDownloadStatus.textContent = 'Không kết nối được máy chủ. Hãy kiểm tra mạng hoặc thử lại.';
       elements.bootstrapRetry.textContent = 'Thử tải danh sách lại';
@@ -1455,7 +1645,8 @@
     }
   }
 
-  window.addEventListener('pagehide', () => {
+  window.addEventListener('pagehide', event => {
+    if(!event.persisted)void miniJourney?.close();
     document.removeEventListener('keydown', blockInPageSearchShortcuts, { capture: true });
     window.clearTimeout(shortcutNoticeTimer);
     downloadController?.abort();

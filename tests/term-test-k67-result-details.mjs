@@ -43,6 +43,7 @@ test('K67: polling giữ toggle/focus, cập nhật câu và đặt lại khi đ
         function renderWritingSubmission(){}
         function applyWritingFromServer(){}
         function startWritingGradingStream(){}
+        const writingSubmission={owner:()=>state.attemptToken,current:key=>key===state.attemptToken,readAvailable(){},readUnavailable(){}};
         function showNotice(){}
         function stopWritingGradingPolling(){clearTimeout(writingGradingPollTimer);writingGradingPollTimer=0;}
         async function apiRequest(){calls++;return structuredClone(payload);}
@@ -54,7 +55,7 @@ test('K67: polling giữ toggle/focus, cập nhật câu và đặt lại khi đ
       `)();
       window.probe.start();
     }, code);
-    await page.waitForFunction(() => window.probe.calls() === 1, { timeout: 12_000 });
+    await page.waitForFunction(() => window.probe.calls() >= 3, null, { timeout: 40_000 });
     const polled = await page.evaluate(() => { window.probe.stop(); return window.probe.snapshot(); });
     assert.deepEqual(polled, {open:[true,false],same:true,focused:true}, 'Polling không được đóng bảng hoặc làm mất focus');
 

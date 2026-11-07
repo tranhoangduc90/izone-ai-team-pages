@@ -9,7 +9,7 @@ export function supportsDirect(){return !!(globalThis.crypto?.subtle&&globalThis
 export function directAsset(manifest,termSlug){
  const candidates=termSlug===undefined
   ? Object.values(ASSETS).filter(x=>/^(homework-|listening-)/.test(x.id))
-  : ['term-test-1-k56','term-test-2-k56','mini-test-k56'].filter(slug=>slug===termSlug).map(slug=>ASSETS[slug]);
+  : ['term-test-1-k56','term-test-2-k56','mini-test-k56','mini-test-lesson-5'].filter(slug=>slug===termSlug).map(slug=>ASSETS[slug]);
  const asset=candidates.find(x=>x.sha256===manifest?.sha256&&x.byteLength===manifest?.byteLength&&x.url===manifest?.url);
  if(!asset||manifest.envelopeVersion!=='MP3')throw Error('AUDIO_MANIFEST_DENIED');
  return asset;
@@ -33,7 +33,10 @@ export async function downloadDirect(manifest,initialGrant,options={}){
  const progress=()=>options.onProgress?.({loaded:offset,total:asset.byteLength,complete:offset===asset.byteLength});
  async function renew(){
   signal.throwIfAborted();if(renewed||!options.refresh)return false;renewed=true;
-  let value;try{value=await options.refresh({signal});}catch(e){e.accessDenied=true;throw e;}
+  let value;try{value=await options.refresh({signal});}catch(e){
+   if(!e.audioRefreshUnavailable){e.accessDenied=true;throw e;}
+   fallback=true;return true;
+  }
   signal.throwIfAborted();
   if(value?.manifest&&value?.download){const fresh=directAsset(value.manifest,options.termSlug);if(fresh.sha256!==asset.sha256)throw denied();grant=value.download;validate(grant,asset);receivedAt=performance.now();return true;}
   // A valid native response may turn the direct flag off. Only same-file public fallback is allowed.

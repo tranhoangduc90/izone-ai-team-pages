@@ -55,6 +55,7 @@ export const ASSETS=[
   "../k67-shared/answer-explanations.js",
   "../k67-shared/config.js",
   "../k67-shared/review-audio.js",
+  "../mini-test-lesson-5-computer-based/resilience.mjs",
   "../shared/app.js",
   "../shared/attempt-review.js",
   "../shared/exam-clock.js",
@@ -125,7 +126,7 @@ export const ASSET_HASHES={
   "../design-demo/skin.css": "d71ce4a4e2f75345c805fb0ca192c95cf4973e8ee7d35bf36d29bdeea66b0048",
   "../design-demo/theme.css": "afe1789ef3b18a8ef53fae51e22efdc0a9f83f91e6eb6b73fabc3257784d64b5",
   "../design-full/native.css": "54aa42e4a564376e71b7e99c0e0d9e4c396e44d298bfbb69a6d1954ce8bea2be",
-  "../k56-offline-shared/runtime.mjs": "6aa17d4fc03633e6fdf90c5da63b0085ed566f3bae3eb0e99349491014426488",
+  "../k56-offline-shared/runtime.mjs": "982dd1b35f381b3a7778a52e9b80f6d0dbde0d8055005aac40eafae8ead6a73f",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k67-design/appearance.css": "3ad160b70e0bfa79d2570280cbc63c745053abc039efd957068cd38ae5f2b0a0",
   "../k67-design/appearance.js": "35b8aec07531b3218bf5de31b28db54671e7b9bc4e8857a22aff8807f02d7d9d",
@@ -136,7 +137,8 @@ export const ASSET_HASHES={
   "../k67-shared/answer-explanations.js": "9760a6122a1f0f0205c4808f7f8db712fc0e5883bae601d44608ec1dfae7a3e6",
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
-  "../shared/app.js": "fd42ce02497df0b6a56dfadf7699a42802d80a63fa077c52863fcffb819f9f38",
+  "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
+  "../shared/app.js": "c8409706261342d488a4a627333afa8b9cb622de13450804f66c1516c1f3435b",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
@@ -161,4 +163,4 @@ export const ASSET_HASHES={
   "offline.mjs": "1cf42cff36f54bb0ae4cfe8da2de42a9dd79e2b5cec3b2641b9fc4e9441c84f7",
   "test-config.js": "6a8d3b2e9be401e37154b44df97001a543053179bb892929c8fd4d2f8d784fc7"
 };
-export const ASSET_BUILD_ID="970c97990bdd6dd279ba155fc737034f0bf1d73367980d58f9d5df0aadacf45c";
+export const ASSET_BUILD_ID="fe5a6d40a8dfd203a4055da9273fbaebd8b4b04cb36bf54d07d936077363f003";

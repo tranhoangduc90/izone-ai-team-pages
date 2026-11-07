@@ -20,8 +20,10 @@
     let sampleAudio = null, sampleUrl = '', storageFailed = false, progressPending = false;
     let lastPosition = Number(audio.currentTime) || 0, lastAdvance = performance.now(), waitSince = 0;
     let resumeRequest = stored?.resumeRequest || null, lastMessage = '';
+    let eofGate = null, eofPending = false, eofRequest = false, eofRetryAt = 0;
     const reviewOnly=()=>{const duration=Number(snapshot.listeningDurationSeconds??snapshot.timing?.listeningDurationSeconds);
-      return !held&&(audio.ended||(duration>0&&Number(snapshot.listeningResumeAtSeconds)>=duration));};
+      return !held&&(snapshot.listeningEofVersion===1?Boolean(snapshot.listeningEofAt||eofPending)
+        :audio.ended||(duration>0&&Number(snapshot.listeningResumeAtSeconds)>=duration));};
     const pause = () => { suppressPause = true; audio.pause(); suppressPause = false; };
     function persist() {
       try {
@@ -224,8 +226,24 @@
     audio.addEventListener('waiting', () => { waitSince ||= performance.now(); });
     audio.addEventListener('stalled', () => { waitSince ||= performance.now(); });
     audio.addEventListener('error', () => automatic('error'));
-    audio.addEventListener('ended', () => {
-      if (armed && !held && !stopped) request('audio-progress', {heardSeconds: audio.currentTime, state: 'playing'}, false).then(apply).catch(() => {});
+    async function sendEof() {
+      if (!eofPending || eofRequest || held || stopped || performance.now() < eofRetryAt) return;
+      eofRequest = true;
+      eofRetryAt = performance.now() + 10_000;
+      try {
+        const value = await request('audio-progress', { heardSeconds: audio.currentTime, state: 'ended' }, false);
+        if (apply(value) && value.listeningEofAt) { eofPending = false; notify(); }
+      } catch { /* Keep the exam open and retry after reconnect. */ }
+      finally { eofRequest = false; }
+    }
+    audio.addEventListener('ratechange', () => eofGate?.recordRate());
+    audio.addEventListener('ended', event => {
+      if (!armed || held || stopped) return;
+      if (snapshot.listeningEofVersion === 1 || eofGate) {
+        if (eofGate?.confirmEnd(event)) { eofPending = true; void sendEof(); }
+        return;
+      }
+      request('audio-progress', {heardSeconds: audio.currentTime, state: 'playing'}, false).then(apply).catch(() => {});
     });
     const watchdog = setInterval(() => {
       if (!armed || held || stopped || recovering || audio.ended || document.getElementById('listeningView')?.hidden) return;
@@ -233,6 +251,7 @@
       else if (audio.paused || performance.now() - lastAdvance > 2000) automatic(audio.paused ? 'pause' : 'stalled');
     }, 500);
     const progress = setInterval(async () => {
+      if (eofPending) { await sendEof(); return; }
       if (!armed || held || stopped || progressPending || audio.paused || audio.ended) return;
       progressPending = true;
       try {
@@ -242,7 +261,7 @@
       } catch { /* Nhịp sau sẽ gửi mốc mới; không pause vì lỗi API tiến độ. */ }
       finally { progressPending = false; }
     }, 5000);
-    const online = () => { if (held) synchronize().catch(() => render()); };
+    const online = () => { if (held) synchronize().catch(() => render()); if (eofPending) { eofRetryAt = 0; void sendEof(); } };
     window.addEventListener('online', online);
     const leaving = () => { if (armed && !held && !stopped && !audio.ended) report('reload'); };
     window.addEventListener('pagehide', leaving);
@@ -253,6 +272,8 @@
     return {attach, report, stop,
       // Bắt đầu đã nghe thử ở phòng chờ: xác nhận player tiến trước khi mở thời gian/đáp án.
       start: async () => {if(snapshot.activeIncident?.startup)await resume(true);},
-      arm: () => {armed = true; lastAdvance = performance.now();}, isHeld: () => held, getSnapshot: () => ({held, ...snapshot})};
+      arm: () => {armed = true; lastAdvance = performance.now();}, isHeld: () => held, getSnapshot: () => ({held, ...snapshot}),
+      requireEof: gate => { eofGate = gate; snapshot = { ...snapshot, listeningEofVersion: 1 }; },
+      canAutoSubmit: () => snapshot.listeningEofVersion !== 1 || Boolean(snapshot.listeningEofAt && (!eofGate || eofGate.canAutoSubmit()))};
   };
 }());
