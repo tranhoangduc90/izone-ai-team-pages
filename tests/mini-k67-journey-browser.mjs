@@ -12,10 +12,12 @@ const pages=fileURLToPath(new URL('../',import.meta.url));
 const backend=process.env.K67_BACKEND;
 assert.ok(backend,'Set K67_BACKEND to the isolated backend package.');
 const full=process.env.K67_JOURNEY_FULL==='1';
+const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
 assert.ok(!(term1&&term2),'Select only one Term profile.');
+assert.ok(!writingOnly||(term2&&!full),'Writing-only fixture targets Term 2 without real audio.');
 const slug=term1?'term-test-1':term2?'term-test-2':'mini-test-lesson-5';
 const reopenTab=process.env.K67_JOURNEY_REOPEN_TAB==='1';
 const breakAudio=process.env.K67_JOURNEY_AUDIO_FAULT==='1';
@@ -27,14 +29,14 @@ const modes=process.env.K67_JOURNEY_ORDER?[process.env.K67_JOURNEY_ORDER]:['lis_
 const require=createRequire(resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const {chromium}=require('playwright');
 
-for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):120_000},async()=>{
+for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):writingOnly?4_200_000:120_000},async()=>{
   assert.ok(['lis_first','read_first'].includes(mode));
   const listener=createServer().listen(0,'127.0.0.1');
   await once(listener,'listening');
   const port=listener.address().port;
   await new Promise(resolve=>listener.close(resolve));
   const base=`http://127.0.0.1:${port}`;
-  const fixture=spawn(process.execPath,['tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
+  const fixture=spawn(process.execPath,[process.env.K67_JOURNEY_PREVIEW_TOOL||'tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
     env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_MINI_CBT_JOURNEY:term?'off':'on',
       K67_PREVIEW_TERM1_CBT_JOURNEY:term1?'on':'off',
       K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',
@@ -48,8 +50,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
   let browser,page,fixtureError='';
   let sectionInProgress;
   fixture.stderr.on('data',chunk=>{fixtureError=(fixtureError+String(chunk)).slice(-3_000);});
-  const log=(phase,details={})=>console.log(JSON.stringify({at:new Date().toISOString(),mode,full,phase,...details}));
-  const heartbeat=full?setInterval(async()=>{
+  const log=(phase,details={})=>console.log(JSON.stringify({at:new Date().toISOString(),mode,full,writingOnly,phase,...details}));
+  const heartbeat=(full||writingOnly)?setInterval(async()=>{
     const media=await page?.evaluate(()=>({position:document.getElementById('miniJourneyAudio')?.currentTime,
       review:document.getElementById('miniJourneyPlayer')?.innerText})).catch(()=>null);
     log('heartbeat',{section:sectionInProgress,...media});
@@ -144,7 +146,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           if(term2)assert.equal(await form.locator('textarea[data-writing-task="task1"]').inputValue(),'Báo cáo Task 1 giả để kiểm khôi phục.');
           log('offline_writing_resumed');
         }
-        await form.waitFor({state:'hidden',timeout:full?2_500_000:25000});
+        await form.waitFor({state:'hidden',timeout:(full||writingOnly)?(term2?3_900_000:2_500_000):25_000});
         assert.deepEqual(seals,[]);
         log('section_sealed_offline',{section});
         continue;
