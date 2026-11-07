@@ -528,10 +528,19 @@
       const source = window.K67_SUBSTITUTE_TEST_2_CONTENT?.audio?.src;
       if (!source) throw new Error('Không tìm thấy đường dẫn audio khóa 56.');
       const scope=audioScope();
-      const preparation=window.SUBSTITUTE_STATE.meta?.r2DirectEnabled===true&&
-        (navigator.onLine!==false||!state.offlinePermit)?await authorizeAudio(scope,downloadController.signal):null;
+      const canResumeAudio=state.offlinePermit&&state.examSessionId===scope.clientRunId&&
+        state.offlineDeviceId===scope.deviceId&&state.offlineGeneration===scope.generation;
+      let preparation=null,preparationError=null;
+      if(window.SUBSTITUTE_STATE.meta?.r2DirectEnabled===true&&(navigator.onLine!==false||!canResumeAudio)){
+        try{preparation=await authorizeAudio(scope,downloadController.signal);}
+        catch(error){
+          if(!canResumeAudio||!error.audioRefreshUnavailable)throw error;
+          preparationError=error;
+        }
+      }
       let audioBlob=null;
       try{audioBlob=await window.SUBSTITUTE_OFFLINE?.loadAudio();}catch{/* Tải lại từ nguồn có kiểm hash. */}
+      if(!audioBlob&&preparationError)throw preparationError;
       const fromCache=Boolean(audioBlob);
       const options={
         signal: downloadController.signal,
