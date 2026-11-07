@@ -25,7 +25,7 @@
     mode: 'listening-only',
     grant: retakeGrant,
     storageScope: retakeGrant
-      ? `:listening-retake:${fingerprint(retakeGrant)}`
+      ? `:listening-retake:${fingerprint(retakeGrant)}:isolated-v1`
       : ':listening-retake:missing'
   });
 }());

@@ -18,7 +18,7 @@ test('trang thi bù chỉ bật chế độ Listening và không nhúng danh tí
   assert.doesNotMatch(entry + config, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
   assert.doesNotMatch(config, /student(?:Name|Ref)\s*:/i);
   assert.ok(entry.indexOf('term-test-1/test-config.js') < entry.indexOf('retake-config.js'));
-  assert.ok(entry.indexOf('retake-config.js') < entry.indexOf('bootstrap.js'));
+  assert.ok(entry.indexOf('retake-config.js') < entry.indexOf('bootstrap-retake.js'));
 
   for (const asset of [...entry.matchAll(/(?:src|href)="([^"#?]+)(?:\?[^"#]*)?"/g)].map(match => match[1])) {
     if (asset.startsWith('data:') || /^https?:/i.test(asset)) continue;
@@ -27,13 +27,14 @@ test('trang thi bù chỉ bật chế độ Listening và không nhúng danh tí
 });
 
 test('thi bù điền sẵn bằng UUID chính thức, giữ cổng xác nhận và tách bộ nhớ', async () => {
-  const bootstrap = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/bootstrap.js'), 'utf8');
-  const sharedApp = await readFile(path.join(repoRoot, 'term-tests/shared/app.js'), 'utf8');
+  const bootstrap = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/bootstrap-retake.js'), 'utf8');
+  const sharedApp = await readFile(path.join(repoRoot, 'term-tests/shared/app-retake.js'), 'utf8');
   const enhance = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/enhance.js'), 'utf8');
   const interactions = await readFile(path.join(repoRoot, 'term-tests/term-test-2-computer-based/interaction-tools.js'), 'utf8');
 
   assert.match(bootstrap, /query\.get\('student'\)/);
-  assert.match(bootstrap, /retakeGrant:\s*retakeGrant \|\| undefined/);
+  assert.match(bootstrap, /openRetakeLobby/);
+  assert.doesNotMatch(bootstrap, /retakeGrant:\s*retakeGrant \|\| undefined/);
   assert.match(bootstrap, /Liên kết thi bù chưa có vé hợp lệ/);
   assert.match(bootstrap, /launchMatches\.length !== 1/);
   assert.match(bootstrap, /bootstrapStudent\.dispatchEvent\(new Event\('change'\)\)/);
@@ -44,7 +45,7 @@ test('thi bù điền sẵn bằng UUID chính thức, giữ cổng xác nhận 
 });
 
 test('kết quả thi bù chỉ hiện Listening và chờ Portal xác nhận đồng bộ', async () => {
-  const sharedApp = await readFile(path.join(repoRoot, 'term-tests/shared/app.js'), 'utf8');
+  const sharedApp = await readFile(path.join(repoRoot, 'term-tests/shared/app-retake.js'), 'utf8');
 
   assert.match(sharedApp, /const hasReading = !listeningOnly/);
   assert.match(sharedApp, /if \(!listeningOnly\) summaryCards\.push/);
@@ -52,4 +53,6 @@ test('kết quả thi bù chỉ hiện Listening và chờ Portal xác nhận đ
   assert.match(sharedApp, /payload\.portalSyncStatus === 'synced'/);
   assert.match(sharedApp, /Điểm Reading và Writing được giữ nguyên/);
   assert.match(sharedApp, /Lượt làm đang gắn với tên đã xác nhận/);
+  assert.match(sharedApp, /if\(miniJourney\.retake\)return miniJourney\.loadResult\(\)/);
+  assert.match(sharedApp, /Điểm Portal đang chờ đối soát/);
 });
