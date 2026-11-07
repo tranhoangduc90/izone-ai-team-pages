@@ -24,17 +24,25 @@
   const stores=(names=['sessionStorage','localStorage'])=>names.flatMap(name=>{try{return window[name]?[window[name]]:[];}catch{return [];}});
   const allowed=slug=>/^substitute-test-[12]-k(?:56|67)$/.test(slug);
   function stop(){blocked=true;for(const controller of controllers)controller.abort();controllers.clear();window.dispatchEvent(new Event('substitute:stopped'));}
-  async function initialize(config,app){
+  async function initialize(config,app,{readOfflineMeta,writeOfflineMeta}={}){
     if(!allowed(config.slug))throw new Error('Bài thi không hợp lệ.');
     // Chỉ link lớp thử yêu cầu thêm hai hồ sơ giả; link lớp thật gửi payload cũ.
     const testClass=/(?:^|[?&])class=CODEXID261018(?:&|$)/.test(location.search||'');
     const controller=new AbortController();controllers.add(controller);
     const timer=setTimeout(()=>controller.abort(),20000);
     try{
-      const response=await fetch(app.API_BASE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},
-        body:JSON.stringify({route:'/api/test/history',payload:testClass?{qaClass:'CODEXID261018'}:{}}),signal:controller.signal,cache:'no-store'});
-      const value=await response.json();
-      if(!response.ok||value.testSlug!==config.slug||!uuid.test(value.historyEpoch)||value.stateVersion!==2)throw new Error('Không xác nhận được phiên dữ liệu. Hãy tải lại trang.');
+      let response,value,offlineRestored=false;
+      try{
+        response=await fetch(app.API_BASE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},
+          body:JSON.stringify({route:'/api/test/history',payload:testClass?{qaClass:'CODEXID261018'}:{}}),signal:controller.signal,cache:'no-store'});
+        value=await response.json();
+      }catch(error){
+        if(config.slug!=='substitute-test-2-k67'||typeof readOfflineMeta!=='function')throw error;
+        value=await readOfflineMeta().catch(()=>null);
+        if(!value)throw error;
+        offlineRestored=true;
+      }
+      if((response&&!response.ok)||value.testSlug!==config.slug||!uuid.test(value.historyEpoch)||value.stateVersion!==2)throw new Error('Không xác nhận được phiên dữ liệu. Hãy tải lại trang.');
       if(value.maintenance)throw new Error('Bài thi đang bảo trì. Vui lòng quay lại sau.');
       if(value.classes!==undefined&&(!Array.isArray(value.classes)||!value.classes.length||new Set(value.classes.map(c=>c?.code)).size!==value.classes.length||value.classes.some(c=>!c||!(/^(?:DEMO|IC\d{3,8})$/.test(c.code)||testClass&&c.code==='CODEXID261018')||typeof c.name!=='string'||!c.name.trim())))throw new Error('Danh sách lớp không hợp lệ. Hãy tải lại trang.');
       const hashes=value.invalidatedRunHashes??[];
@@ -56,7 +64,10 @@
           if(revoked.has(hash))invalidatedRuns.add(run);checkedRuns.add(run);
         }
       }
-      meta=value;return value;
+      meta=value;
+      if(!offlineRestored&&config.slug==='substitute-test-2-k67'&&typeof writeOfflineMeta==='function')
+        void writeOfflineMeta(value).catch(()=>{});
+      return value;
     }finally{clearTimeout(timer);controllers.delete(controller);}
   }
   function bind(value){

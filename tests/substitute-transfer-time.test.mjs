@@ -43,3 +43,18 @@ test('Kết thúc audio khi chưa đối soát được giờ không tạo ngày
  assert.equal(f.events[0].detail.audioEndedAt,'2026-10-14T00:28:48.536Z');assert.equal(f.events[0].detail.serverNow,undefined);
  await new Promise(r=>setImmediate(r));assert.ok(f.events.at(-1).detail.serverNow);
 });
+
+test('Substitute 2 K67: audio ngắn hoặc ended sớm không tạo mốc tự thu',async()=>{
+ const f=fixture();f.window.TERM_TEST_CONFIG={slug:'substitute-test-2-k67',listening:{durationSeconds:1745}};
+ f.window.TERM_TEST_BOOTSTRAP={...f.state,examSessionId:f.state.clientRunId};
+ f.advance(1745058);
+ assert.equal(f.window.SUBSTITUTE_EXAM.ended({duration:1200,currentTime:1200}),false);
+ assert.equal(f.window.SUBSTITUTE_EXAM.ended({duration:1745.057958,currentTime:1200}),false);
+ assert.equal(f.events.length,0);
+ assert.equal(f.requests.length,0);
+ const audio={duration:1745.057958,currentTime:1745.057958};
+ assert.equal(f.window.SUBSTITUTE_EXAM.ended(audio),true);
+ await new Promise(r=>setImmediate(r));
+ assert.equal(f.requests.length,1);
+ assert.equal(Date.parse(f.events[0].detail.listeningDeadlineAt)-Date.parse(f.events[0].detail.audioEndedAt),300000);
+});

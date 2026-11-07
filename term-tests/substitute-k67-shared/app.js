@@ -18,6 +18,8 @@
     ? requestedDemo
     : '';
   const serverGradingMode = demoMode === 'exam' && query.get('grading') === 'server';
+  const readingFirst = serverGradingMode && twoTaskWriting
+    && window.TERM_TEST_BOOTSTRAP?.examOrder === 'reading-first';
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
   if (!testConfig || !appConfig || !root) return;
@@ -57,6 +59,7 @@
     examSessionToken: '',
     attemptToken: '',
     listeningStartedAt: '',
+    examOrder: 'listening-first',
     readingStartedAt: '',
     writingStartedAt: '',
     listeningDeadlineAt: '',
@@ -77,6 +80,7 @@
     drafts: { listening: {}, reading: {}, writing: { outline: '', task1: '', task2: '' } },
     writingLayout: { activeTask: writingConfig?.tasks?.[0]?.id || 'task1', splits: {} },
     frozenAnswers: { listening: null, reading: null },
+    pendingSections: {},
     testGrades: { listening: null, reading: null, writing: null },
     result: null,
     ...restoredSession,
@@ -98,6 +102,7 @@
       listening: restoredSession.frozenAnswers?.listening || null,
       reading: restoredSession.frozenAnswers?.reading || null
     },
+    pendingSections: {...(restoredSession.pendingSections||{})},
     testGrades: {
       listening: restoredSession.testGrades?.listening || null,
       reading: restoredSession.testGrades?.reading || null,
@@ -118,6 +123,9 @@
     state.identityConfirmed = true;
     state.listeningStartedAt ||= window.TERM_TEST_BOOTSTRAP.listeningStartedAt || '';
     state.listeningDeadlineAt ||= window.TERM_TEST_BOOTSTRAP.listeningDeadlineAt || '';
+    state.examOrder = readingFirst ? 'reading-first' : 'listening-first';
+    state.readingStartedAt ||= window.TERM_TEST_BOOTSTRAP.readingStartedAt || '';
+    state.readingDeadlineAt ||= window.TERM_TEST_BOOTSTRAP.readingDeadlineAt || '';
   }
 
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
@@ -190,6 +198,7 @@
       attemptToken: state.attemptToken,
       promptVersion,
       listeningStartedAt: state.listeningStartedAt,
+      examOrder: state.examOrder,
       readingStartedAt: state.readingStartedAt,
       writingStartedAt: state.writingStartedAt,
       listeningDeadlineAt: state.listeningDeadlineAt,
@@ -213,6 +222,7 @@
       writingLayout: state.writingLayout,
       resultDetailsOpen: state.resultDetailsOpen,
       frozenAnswers: state.frozenAnswers,
+      pendingSections: state.pendingSections,
       testGrades: state.testGrades
     });
     let saved = 0;
@@ -224,6 +234,10 @@
         // Không coi thao tác lưu thất bại là đã lưu thành công.
       }
     }
+    if(serverGradingMode&&window.SUBSTITUTE_OFFLINE)
+      void window.SUBSTITUTE_OFFLINE.saveSnapshot('app',JSON.parse(serialized)).catch(()=>{
+        window.SUBSTITUTE_OFFLINE_STATUS='checkpoint_failed';
+      });
     localSaveStatus = saved === 2
       ? 'Đã lưu trên trình duyệt này'
       : saved === 1
@@ -237,8 +251,8 @@
   }
 
   const progressMarkup = writingConfig
-    ? `<div class="progress-step" data-progress="listening">1. Listening</div>
-        <div class="progress-step" data-progress="reading">2. Reading</div>
+    ? `<div class="progress-step" data-progress="${readingFirst?'reading':'listening'}">1. ${readingFirst?'Reading':'Listening'}</div>
+        <div class="progress-step" data-progress="${readingFirst?'listening':'reading'}">2. ${readingFirst?'Listening':'Reading'}</div>
         <div class="progress-step" data-progress="writing">3. Writing</div>
         <div class="progress-step" data-progress="result">4. Kết quả</div>`
     : `<div class="progress-step" data-progress="listening">1. Listening</div>
@@ -325,7 +339,7 @@
       <form class="panel test-panel" id="listeningView" hidden>
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Phần 1</p>
+            <p class="eyebrow">Phần ${readingFirst?2:1}</p>
             <h2 id="listeningTitle"></h2>
             <ul class="instructions" id="listeningInstructions"></ul>
           </div>
@@ -350,7 +364,7 @@
       <form class="panel test-panel" id="readingView" hidden>
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Phần 2 · <span id="readingStudentName"></span></p>
+            <p class="eyebrow">Phần ${readingFirst?1:2} · <span id="readingStudentName"></span></p>
             <h2 id="readingTitle"></h2>
             <ul class="instructions" id="readingInstructions"></ul>
           </div>
@@ -417,6 +431,23 @@
     });
     root.querySelector('.topbar').append(change);
   }
+  if(twoTaskWriting&&serverGradingMode&&window.SUBSTITUTE_OFFLINE){
+    const download=document.createElement('button');download.type='button';
+    download.className='button button-secondary';download.textContent='Tải bài làm về máy';
+    download.addEventListener('click',async()=>{
+      const snapshot={...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP?.clientRunId,
+        _substitute:window.SUBSTITUTE_STATE.stamp({})._substitute};
+      try{await window.SUBSTITUTE_OFFLINE.saveSnapshot('app',snapshot);}catch{/* File vẫn lấy từ state RAM hiện tại. */}
+      try{
+        const record=await window.SUBSTITUTE_OFFLINE.makeDownload(snapshot);
+        const url=URL.createObjectURL(record.blob),anchor=document.createElement('a');
+        anchor.href=url;anchor.download=record.name;document.body.append(anchor);anchor.click();anchor.remove();
+        window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+        showNotice('Đã tạo file bài làm để lưu trên máy. Hãy giữ file cho đến khi có biên nhận nộp bài.','success');
+      }catch(error){showNotice(`Chưa tạo được file: ${error.message}. Bài vẫn ở trang này.`,'error');}
+    });
+    root.querySelector('.topbar').append(download);
+  }
   const views = [
     elements.loadingView,
     elements.identityView,
@@ -457,15 +488,15 @@
       : stage === 'reading' ? 'reading'
         : stage === 'writing-prep' || stage === 'writing' ? 'writing'
           : stage === 'result-ready' || stage === 'result' ? 'result' : '';
-    const order = writingConfig ? ['listening', 'reading', 'writing', 'result'] : ['listening', 'reading', 'result'];
+    const order = writingConfig ? (readingFirst?['reading','listening','writing','result']:['listening','reading','writing','result']) : ['listening', 'reading', 'result'];
     const activeIndex = order.indexOf(activeProgress);
     for (const step of progressSteps) {
       const index = order.indexOf(step.dataset.progress);
       step.classList.toggle('active', index === activeIndex);
       const completed = step.dataset.progress === 'listening'
-        ? Boolean(state.attemptToken || state.result?.result?.listening)
+        ? Boolean(state.testGrades?.listening || state.attemptToken || state.result?.result?.listening)
         : step.dataset.progress === 'reading'
-          ? Boolean(state.completed || state.result?.result?.reading)
+          ? Boolean(state.testGrades?.reading || state.completed || state.result?.result?.reading)
           : step.dataset.progress === 'writing'
             ? Boolean(state.writingSubmitted)
             : false;
@@ -675,14 +706,32 @@
     const trace = phase => operationId ? { operationId, phase, owner } : undefined;
     const options = { method: 'POST', body: JSON.stringify({ examId, answers }) };
     if (!window.TERM_TEST_BOOTSTRAP?.examSessionId) return apiRequest('/api/test/grade', options, trace('send'));
+    let queued = false;
+    if (window.SUBSTITUTE_OFFLINE) {
+      try { await window.SUBSTITUTE_OFFLINE.queueSection(examId, answers); queued = true; }
+      catch (error) {
+        if (error.message === 'OFFLINE_SUBMISSION_CONFLICT') throw new Error('Bài đã chờ đồng bộ với nội dung khác. Hãy giữ nguyên câu trả lời và thử lại khi có mạng.');
+        window.SUBSTITUTE_OFFLINE_STATUS = 'section_queue_failed';
+      }
+    }
+    const accept = async receipt => {
+      if (receipt?.persisted && queued) {
+        try { await window.SUBSTITUTE_OFFLINE.acknowledgeSection(examId, receipt); }
+        catch { window.SUBSTITUTE_OFFLINE_STATUS = 'receipt_cache_failed'; }
+      }
+      return receipt;
+    };
     const read = () => apiRequest('/api/test/exam/section-status', {
       method: 'POST', body: JSON.stringify({ examId })
     }, trace('readback'));
-    const existing = await read();
-    if (existing.persisted) return existing;
-    try { return await apiRequest('/api/test/grade', options, trace('send')); }
+    try {
+      const existing = await read();
+      if (existing.persisted) return accept(existing);
+      return accept(await apiRequest('/api/test/grade', options, trace('send')));
+    }
     catch (error) {
-      try { const saved = await read(); if (saved.persisted) return saved; } catch {}
+      try { const saved = await read(); if (saved.persisted) return accept(saved); } catch {}
+      if (queued) error.offlineQueued = true;
       throw error;
     }
   }
@@ -701,6 +750,15 @@
     if (!Number.isFinite(Date.parse(deadlineAt))) return;
     state.listeningDeadlineAt = deadlineAt;
     if (Number.isFinite(Date.parse(serverNow))) state.serverTimeOffsetMs = (window.IZONE_EXAM_CLOCK?.offset(serverNow) ?? (Date.parse(serverNow) - Date.now()));
+    saveSession();
+  });
+  window.addEventListener('term-test:listening-phase-started',event=>{
+    if(!readingFirst||event.detail?.clientRunId!==window.TERM_TEST_BOOTSTRAP?.clientRunId)return;
+    const startedAt=String(event.detail.listeningStartedAt||'');
+    if(!Number.isFinite(Date.parse(startedAt)))return;
+    state.listeningStartedAt=startedAt;
+    if(Number.isFinite(Date.parse(event.detail.serverNow||'')))
+      state.serverTimeOffsetMs=(window.IZONE_EXAM_CLOCK?.offset(event.detail.serverNow) ?? (Date.parse(event.detail.serverNow)-Date.now()));
     saveSession();
   });
 
@@ -2258,7 +2316,7 @@
       answers = state.frozenAnswers.listening;
     }
     const answered = updateAnswerCount('listening');
-    if (!automatic && !confirmIncomplete(answered, 'Listening')) return;
+    if (!automatic && event.submitter?.dataset.retrySubmission !== 'true' && !confirmIncomplete(answered, 'Listening')) return;
     state.clientSubmissionId ||= crypto.randomUUID();
     state.drafts.listening = answers;
     saveSession();
@@ -2266,25 +2324,26 @@
     setAnswerControlsLocked('listening', true);
     setBusy(elements.submitListening, true, 'Đang lưu Listening...', 'Nộp bài Listening');
     if (automatic) showNotice('Đã hết giờ. Hệ thống đang tự thu và chấm bài Listening...');
-    let submitted = false;
+    let submitted = false, queuedSubmission = false;
     try {
       if (demoMode === 'exam') {
-        if(serverGradingMode && (!window.TERM_TEST_BOOTSTRAP?.clientRunId || !window.TERM_TEST_BOOTSTRAP?.listeningStartedAt)){showNotice('Hãy bắt đầu lượt thi từ phòng chờ.','error');return;}
+        if(serverGradingMode && (!window.TERM_TEST_BOOTSTRAP?.clientRunId
+          || !(readingFirst?state.listeningStartedAt:window.TERM_TEST_BOOTSTRAP.listeningStartedAt))){showNotice('Hãy bắt đầu lượt thi từ phòng chờ.','error');return;}
         if (serverGradingMode) {
           const grade = await submitSection('listening', answers);
           state.testGrades.listening = grade.section;
         }
         ensureValidAttemptToken();
         state.studentName = state.studentName || 'Học viên Demo';
-        state.completed = false;
+        state.completed = readingFirst && Boolean(state.testGrades.reading);
         state.frozenAnswers.listening = null;
         saveSession();
         submitted = true;
         elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
         showNotice(serverGradingMode
-          ? 'Đã nhận bài Listening.'
+          ? (readingFirst?'Đã nhận bài Listening. Hãy tiếp tục Writing.':'Đã nhận bài Listening.')
           : 'Bản demo: Listening đã được lưu. Bạn có thể tiếp tục Reading.', 'success');
-        setStage('listening-saved');
+        setStage(readingFirst?'writing-prep':'listening-saved');
         return;
       }
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/listening`, {
@@ -2312,7 +2371,17 @@
         setStage(state.completed ? 'result-ready' : 'listening-saved');
       }
     } catch (error) {
-      showNotice(automatic
+      queuedSubmission = Boolean(error.offlineQueued);
+      if (queuedSubmission && window.TERM_TEST_BOOTSTRAP?.offlinePermit) {
+        state.pendingSections.listening = true;
+        state.frozenAnswers.listening = {...answers};
+        saveSession();
+        elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
+        setStage(readingFirst ? 'writing-prep' : 'listening-saved');
+      }
+      showNotice(error.offlineQueued
+        ? 'Listening đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.'
+        : automatic
         ? `Hết giờ nhưng chưa thể nộp Listening: ${error.message}. Bài đã khóa và hệ thống sẽ tự thử lại.`
         : `Không thể lưu Listening: ${error.message}`, 'error');
     } finally {
@@ -2321,7 +2390,7 @@
         elements.listeningView.dataset.listeningTimeExpired = 'true';
         state.frozenAnswers.listening ||= { ...answers };
         saveSession();
-      } else if (!automatic && !submitted) {
+      } else if (!automatic && !submitted && !queuedSubmission) {
         setAnswerControlsLocked('listening', false);
       }
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
@@ -2375,7 +2444,7 @@
       answers = state.frozenAnswers.reading;
     }
     const answered = updateAnswerCount('reading');
-    if (!automatic && !confirmIncomplete(answered, 'Reading')) return;
+    if (!automatic && event.submitter?.dataset.retrySubmission !== 'true' && !confirmIncomplete(answered, 'Reading')) return;
     elements.readingView.dataset.readingSubmitting = 'true';
     state.drafts.reading = answers;
     saveSession();
@@ -2384,22 +2453,22 @@
     if (automatic) {
       showNotice(`Đã hết ${Number(testConfig.reading.durationMinutes) || 40} phút. Hệ thống đang tự thu và chấm bài Reading...`);
     }
-    let submitted = false;
+    let submitted = false, queuedSubmission = false;
     try {
       if (demoMode === 'exam') {
         if (serverGradingMode) {
           const grade = await submitSection('reading', answers);
           state.testGrades.reading = grade.section;
         }
-        state.completed = true;
+        state.completed = !readingFirst;
         state.frozenAnswers.reading = null;
         saveSession();
         submitted = true;
         elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
         showNotice(serverGradingMode
-          ? 'Đã nhận bài Reading. Hãy tiếp tục phần Writing.'
+          ? (readingFirst?'Đã nhận bài Reading. Hãy tiếp tục Listening.':'Đã nhận bài Reading. Hãy tiếp tục phần Writing.')
           : 'Bản demo: Reading đã được lưu. Kết quả sẽ mở sau Writing.', 'success');
-        setStage('writing-prep');
+        setStage(readingFirst?'listening':'writing-prep');
         return;
       }
       const response = await apiRequest(`/api/term-tests/${testConfig.slug}/reading`, {
@@ -2422,7 +2491,17 @@
         if (automatic) await loadResult(elements.viewResult);
       }
     } catch (error) {
-      showNotice(automatic
+      queuedSubmission = Boolean(error.offlineQueued);
+      if (queuedSubmission && window.TERM_TEST_BOOTSTRAP?.offlinePermit) {
+        state.pendingSections.reading = true;
+        state.frozenAnswers.reading = {...answers};
+        saveSession();
+        elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
+        setStage(readingFirst ? 'listening' : 'writing-prep');
+      }
+      showNotice(error.offlineQueued
+        ? 'Reading đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.'
+        : automatic
         ? `Hết giờ nhưng chưa thể nộp Reading: ${error.message}. Hệ thống sẽ tự thử lại; không làm mới trang.`
         : `Không thể lưu Reading: ${error.message}`, 'error');
     } finally {
@@ -2431,12 +2510,43 @@
         elements.readingView.dataset.readingTimeExpired = 'true';
         state.frozenAnswers.reading ||= { ...answers };
         saveSession();
-      } else if (!automatic && !submitted) {
+      } else if (!automatic && !submitted && !queuedSubmission) {
         setAnswerControlsLocked('reading', false);
       }
       setBusy(elements.submitReading, false, 'Đang lưu và chấm...', 'Nộp bài Reading');
     }
   });
+
+  if (serverGradingMode && window.SUBSTITUTE_OFFLINE) {
+    const retryPendingSection = async () => {
+      if (!navigator.onLine || window.SUBSTITUTE_STATE.blocked) return;
+      let pending;
+      try { pending = await window.SUBSTITUTE_OFFLINE.pendingSections(); } catch { return; }
+      const skill = state.stage === 'reading' ? 'reading' : state.stage === 'listening' ? 'listening' : '';
+      for (const item of pending) {
+        if(item.skill===skill && !state.pendingSections[item.skill]){
+          const button = skill === 'reading' ? elements.submitReading : elements.submitListening;
+          if (!button || button.disabled) return;
+          button.dataset.retrySubmission = 'true';button.click();delete button.dataset.retrySubmission;
+          return;
+        }
+        try {
+          const receipt=await submitSection(item.skill,item.answers);
+          if(receipt.persisted){state.testGrades[item.skill]=receipt.section;delete state.pendingSections[item.skill];saveSession();}
+        } catch { return; }
+      }
+      if(state.stage==='writing'&&!state.writingSubmitted&&!writingSubmission.busy){
+        let writing;try{writing=await window.SUBSTITUTE_OFFLINE.pendingWriting();}catch{return;}
+        if(writing&&!elements.submitWriting.disabled){
+          elements.submitWriting.dataset.retrySubmission='true';elements.submitWriting.click();
+          delete elements.submitWriting.dataset.retrySubmission;
+        }
+      }
+    };
+    window.SUBSTITUTE_SYNC_PENDING=retryPendingSection;
+    window.addEventListener('online', retryPendingSection);
+    window.setTimeout(retryPendingSection, 1500);
+  }
 
   elements.viewResult.dataset.normalText = 'Xem kết quả';
   elements.viewResult.addEventListener('click', () => loadResult(elements.viewResult));
@@ -2470,7 +2580,7 @@
     if(serverGradingMode && window.SUBSTITUTE_STATE.blocked)return;
       const automatic = event.submitter?.dataset.autoSubmit === 'true'
         || elements.writingView.dataset.writingTimeExpired === 'true';
-      if(twoTaskWriting&&!automatic){
+      if(twoTaskWriting&&!automatic&&window.TERM_TEST_BOOTSTRAP?.blankWritingAllowed!==true){
         const missing=writingConfig.tasks.find(task=>!state.drafts.writing[task.id]?.trim());
         if(missing){elements.writingTaskTabs.children[writingConfig.tasks.indexOf(missing)]?.click();showNotice(`Bạn chưa viết ${missing.label}. Bản nháp vẫn được giữ; hãy hoàn thành cả hai Task trước khi nộp.`, 'error');
           elements.writingView.querySelector(`[data-writing-task="${missing.id}"]`)?.focus();return;}
@@ -2480,7 +2590,7 @@
         words: countWords(state.drafts.writing[task.id]),
         minimum: task.minimumWords
       })).filter(task => task.words < task.minimum);
-      if (!automatic && belowMinimum.length) {
+      if (!automatic && event.submitter?.dataset.retrySubmission !== 'true' && belowMinimum.length) {
         const summary = belowMinimum.map(task => `${task.label}: ${task.words}/${task.minimum} từ`).join('\n');
         if (!((message) => { try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, 'opened'); } catch {} const accepted = window.confirm(message); try { if (typeof examJournal !== 'undefined') examJournal?.dialog(message, accepted ? 'confirmed' : 'cancelled'); } catch {} return accepted; })(`${summary}\n\nBạn vẫn muốn nộp bài Writing?`)) return;
       }
@@ -2493,28 +2603,31 @@
           if (serverGradingMode) {
             try {
               ensureValidAttemptToken();
+              const writingPayload={
+                classCode,studentRef:state.studentRef,attemptToken:state.attemptToken,promptVersion,
+                ...(twoTaskWriting?{examVersion:writingConfig.examVersion,automatic}:{}),
+                listeningAnswers:state.drafts.listening,readingAnswers:state.drafts.reading,
+                outline:state.drafts.writing.outline,task1:state.drafts.writing.task1,task2:state.drafts.writing.task2
+              };
+              let retainedWriting=null;
+              try{retainedWriting=await window.SUBSTITUTE_OFFLINE?.pendingWriting();}
+              catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_queue_read_failed';}
+              const exactPayload=retainedWriting?.payload||writingPayload;
+              try{await window.SUBSTITUTE_OFFLINE?.queueWriting(exactPayload);}
+              catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_queue_failed';}
               state.testGrades.writing = await writingSubmission.submitOnline({
-                payload: {
-                  classCode,
-                  studentRef: state.studentRef,
-                  attemptToken: state.attemptToken,
-                  promptVersion,
-                  ...(twoTaskWriting?{examVersion:writingConfig.examVersion,automatic}:{}),
-                  listeningAnswers: state.drafts.listening,
-                  readingAnswers: state.drafts.reading,
-                  outline: state.drafts.writing.outline,
-                  task1: state.drafts.writing.task1,
-                  task2: state.drafts.writing.task2
-                },
+                payload:exactPayload,
                 send: value => apiRequest('/api/test/writing', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)}),
                 read: value => apiRequest('/api/test/writing/status', {method:'POST',headers:{'Content-Type':'application/json'},
                   body:JSON.stringify({classCode:value.classCode,studentRef:value.studentRef,attemptToken:value.attemptToken,promptVersion:value.promptVersion})})
               });
+              try{await window.SUBSTITUTE_OFFLINE?.acknowledgeWriting(state.testGrades.writing);}
+              catch{window.SUBSTITUTE_OFFLINE_STATUS='writing_receipt_cache_failed';}
               if (!writingSubmission.current(writingOwner)) return;
             } catch (error) {
               if (!writingSubmission.current(writingOwner)) return;
               if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
-              showNotice(`Chưa xác nhận được trạng thái nộp Writing. Bản đã gửi vẫn được giữ. Chi tiết: ${error.message}`, 'error');
+              showNotice(`Writing đã được giữ trên trình duyệt và đang chờ biên nhận. Bấm Tải bài làm về máy để giữ thêm một bản. Chi tiết: ${error.message}`, 'error');
               return;
             }
           }
@@ -2751,12 +2864,26 @@
           scheduleWritingGradingRefresh();
           return;
         }
+        if(serverGradingMode&&((readingFirst&&state.pendingSections.listening)||(!readingFirst&&state.pendingSections.reading))){
+          showNotice('Phần đã làm được giữ trên trình duyệt và đang chờ đồng bộ với máy chủ. Bạn có thể giữ nháp Writing.', 'success');
+          setStage(state.writingStarted?'writing':'writing-prep');return;
+        }
         if (serverGradingMode && state.completed && state.testGrades.reading) {
           showNotice('Backend test đã khôi phục bài Reading. Tiếp tục hoặc nộp Writing khi sẵn sàng.', 'success');
           setStage(state.writingStarted ? 'writing' : 'writing-prep');
           return;
         }
-        if (serverGradingMode && state.testGrades.listening) {
+        if(readingFirst){
+          if(state.testGrades.reading||state.pendingSections.reading){
+            showNotice('Backend test đã khôi phục bài Reading. Tiếp tục Listening từ vị trí đã nghe.', 'success');
+            setStage('listening');
+          }else{
+            elements.readingStudentName.textContent=state.studentName;
+            hideNotice();setStage('reading');
+          }
+          return;
+        }
+        if (serverGradingMode && (state.testGrades.listening||state.pendingSections.listening)) {
           elements.readingStudentName.textContent = state.studentName;
           showNotice('Backend test đã khôi phục điểm Listening đã nộp.', 'success');
           setStage(state.readingDeadlineAt ? 'reading' : 'listening-saved');
