@@ -256,7 +256,7 @@ export const ASSET_HASHES={
   "../../speaking-homework/fonts/nunito.css": "a6b6f9ccb2e3105406b58fec8d7bd865b8642548b334c04892492d3320820b7c",
   "../demo/model.js": "fcf87b5a54be6e5a3cdcbc477c1b7a7b2198bd35a579e264498550fbb63fbe76",
   "../demo/reset-listener.js": "739a3b589d8a34419c6b31b55e35d1f9a0f5f394cc81a92a65ed75d08800e18e",
-  "../k56-audio-recovery.js": "aac99c11879525f158a8383df2837e1e72b107a727babcb3447faa15b1e0eeab",
+  "../k56-audio-recovery.js": "3f6001cb2b518c07fbeaade10af63b1e7c8ab175518aaa8f66520b8c5a41f622",
   "../k56-demo-reset/app.js": "38caf4e57010fbc951d78d18521117d9dd86f9303f1eb58c8218c64f6a03133e",
   "../k56-demo-reset/styles.css": "c31c8f3116187a38574b1ac32187c87af2cd5e4bd7d12f57566be64dbad42b9f",
   "../k56-design/assets/SourceSans3-Variable.woff2": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
@@ -337,4 +337,4 @@ export const ASSET_HASHES={
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="1e9a46d3536bbc6e4f2b75d0832948fc54bde1d766f29923d51f46e265f92295";
+export const ASSET_BUILD_ID="26b9d4dc53da1bb19b8e11544006d7fd5d859ce234496cfbef3681377f845532";

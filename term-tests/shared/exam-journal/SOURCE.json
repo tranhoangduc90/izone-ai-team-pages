@@ -24,14 +24,14 @@
     {
       "file": "bridge.mjs",
       "source": "browser/bridge.mjs",
-      "sha256": "02fa4c6b21a03ab8c1fbf34d23c485ee52a6cad15cbbcbd22381aa8642665a55",
-      "bytes": 26519
+      "sha256": "80516559694422c5bbcbe3fd4366f524906c89a671426ad1a968958194379379",
+      "bytes": 26836
     },
     {
       "file": "bootstrap-capture.mjs",
       "source": "browser/bootstrap-capture.mjs",
-      "sha256": "1e08fc18927f38f66fdc9ee706eb69ab156920fc9a04534d1ac70de4f7eee5a9",
-      "bytes": 1101
+      "sha256": "743c8cf393090b0cf3aedb232b635bdcb58391d8113f25a2963836cceb7d1347",
+      "bytes": 1126
     },
     {
       "file": "lobby-capture.js",

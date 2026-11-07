@@ -793,6 +793,7 @@
       const manualButton=makeButton('cbt-audio-incident','Tôi không nghe được');examControls.append(manualButton);
       setListeningVisible(true);examRetryButton.hidden=true;
       const controller=runtime.attachPlayer({audio:player,resumeButton,manualButton,form:listeningForm.form,
+        observeListening:window.K56AudioRecovery?.journalObserver?.(protectedBootstrap,player,'offline'),
         render(prefix,current,duration){playbackProgress.max=duration||1;playbackProgress.value=current||0;examStatus.textContent=prefix+' · '+formatTime(current)+' / '+formatTime(duration);uiState.audio.started=true;uiState.audio.time=Number(current)||0;}});
       examVolumeInput.addEventListener('input',()=>{player.volume=Number(examVolumeInput.value);uiState.audio.volume=player.volume;saveUiState();});
       listeningForm.form.addEventListener('term-test:listening-submitted',()=>controller.finish());
@@ -811,6 +812,7 @@
         studentRef: protectedBootstrap.studentRef, generation: protectedBootstrap.generation,
         apiBase: appConfig.API_BASE_URL, classCode, initial: protectedBootstrap.audioRecoveryInitial,
         resumeButton, manualButton,
+        observeListening:window.K56AudioRecovery.journalObserver?.(protectedBootstrap,player,'online'),
         render(prefix, current, duration) {
           playbackProgress.max = duration || 1; playbackProgress.value = current || 0;
           examStatus.textContent = prefix + ' · ' + formatTime(current) + ' / ' + formatTime(duration);

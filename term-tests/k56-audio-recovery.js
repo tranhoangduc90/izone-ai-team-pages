@@ -318,5 +318,17 @@
     if (memory.pending && !memory.manual && phase !== 'awaiting_user') recover('ready');
     return controller;
   }
-  window.K56AudioRecovery = Object.freeze({ version: VERSION, ownerId, prepare, beginLoading, create });
+  function journalObserver(owner,audio,mode) {
+    const config=window.TERM_TEST_APP_CONFIG,slug=window.TERM_TEST_CONFIG?.slug;
+    if(config?.EXAM_JOURNAL_ENABLED!==true||!['term-test-1-k56','term-test-2-k56'].includes(slug))return undefined;
+    try {
+      const endpoint=config.EXAM_JOURNAL_BASE_URL||config.API_BASE_URL+'/api/term-tests/'+slug;
+      const key=JSON.stringify([new URL(endpoint,window.location.href).href,slug]);
+      return detail=>window[Symbol.for('izone.examJournal.connections.v1')]?.get(key)?.recordK56Listening?.(owner,{
+        ...detail,mode,positionSeconds:audio.currentTime,durationSeconds:audio.duration,
+        paused:audio.paused,ended:audio.ended,volume:audio.volume,muted:audio.muted
+      });
+    } catch { return undefined; }
+  }
+  window.K56AudioRecovery = Object.freeze({ version: VERSION, ownerId, prepare, beginLoading, create, journalObserver });
 }());
