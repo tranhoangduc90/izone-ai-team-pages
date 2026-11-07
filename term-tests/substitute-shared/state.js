@@ -37,7 +37,7 @@
           body:JSON.stringify({route:'/api/test/history',payload:testClass?{qaClass:'CODEXID261018'}:{}}),signal:controller.signal,cache:'no-store'});
         value=await response.json();
       }catch(error){
-        if(config.slug!=='substitute-test-2-k67'||typeof readOfflineMeta!=='function')throw error;
+        if(typeof readOfflineMeta!=='function')throw error;
         value=await readOfflineMeta().catch(()=>null);
         if(!value)throw error;
         offlineRestored=true;
@@ -65,7 +65,7 @@
         }
       }
       meta=value;
-      if(!offlineRestored&&config.slug==='substitute-test-2-k67'&&typeof writeOfflineMeta==='function')
+      if(!offlineRestored&&typeof writeOfflineMeta==='function')
         void writeOfflineMeta(value).catch(()=>{});
       return value;
     }finally{clearTimeout(timer);controllers.delete(controller);}
