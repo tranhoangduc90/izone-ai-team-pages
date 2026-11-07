@@ -229,6 +229,30 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
         return observer;
       }catch{return null;}
     },
+    recordMiniListening(owner,detail) {
+      if(stopped||!current||testSlug!=='mini-test-k56'||!owner?.examSessionToken||owner!==win.TERM_TEST_BOOTSTRAP)return false;
+      const proof=proofOf(getState()),context=bindingCache.get(ownerKey);
+      if(proof.examSessionToken!==owner.examSessionToken||proof.generation!==owner.generation
+        ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return false;
+      const phases=detail?.mode==='offline'
+        ? ['manual_pause','local_resumed','eof_untrusted','eof_media_state','eof_duration_mismatch','eof_position_short','eof_accepted']
+        : detail?.mode==='online' ? ['manual_pause','recovery_sent','recovery_ack','recovery_failed'] : [];
+      if(!phases.includes(detail?.phase))return false;
+      const metadata={telemetryVersion:1,mode:detail.mode,phase:detail.phase};
+      if(typeof detail.incidentId==='string'&&/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(detail.incidentId))
+        metadata.incidentId=detail.incidentId;
+      if((detail.phase==='manual_pause'||detail.phase==='local_resumed'||detail.mode==='online')&&!metadata.incidentId)return false;
+      if(listeningEndNumber(detail.configuredDurationSeconds))metadata.configuredDurationSeconds=detail.configuredDurationSeconds;
+      if(detail.phase==='recovery_ack'){
+        for(const field of ['grantedRecoverySeconds','totalRecoverySeconds'])
+          if(listeningEndNumber(detail[field])&&detail[field]<=900)metadata[field]=detail[field];
+      }
+      const measurements={};
+      for(const field of ['durationSeconds','positionSeconds'])if(listeningEndNumber(detail[field]))measurements[field]=detail[field];
+      for(const field of ['paused','ended','muted'])if(typeof detail[field]==='boolean')measurements[field]=detail[field];
+      if(typeof detail.volume==='number'&&detail.volume>=0&&detail.volume<=1)measurements.volume=detail.volume;
+      return Boolean(recorder.record('audio_observed',{action:'mini_listening_diagnostic',...measurements,checkpointState:metadata},current));
+    },
     recordListeningEnd(owner,data) {
       if(stopped||!current||!owner?.examSessionId||owner!==win.TERM_TEST_BOOTSTRAP)return false;
       const state=getState(),proof=proofOf(state),context=bindingCache.get(ownerKey),detail=data?.checkpointState;
