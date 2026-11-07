@@ -91,7 +91,7 @@ export const ASSET_HASHES={
   "../../shared/audio/chunks.mjs": "6796d41d2da64a33b5981fb16a612535770d61ab24bfda755309fb0beb5f941c",
   "../../shared/audio/config.mjs": "8c6f4f6f92d15e44fab4016d73f76d06d1a6695b10095d32226a853a3456ef1d",
   "../../shared/audio/direct-cache.mjs": "db458244476e95128789ee499ff9ed7041f7bb9f5c0ee4db35d0717c39ab9256",
-  "../../shared/audio/direct.mjs": "e04771e87e6c10dc5ba9c9e85ccaaf1e0c32a2c0a9f0bee10bc9e25fe5c84037",
+  "../../shared/audio/direct.mjs": "d419b924473aa5b802cb64cf6d576376d5837266821e31bb8928058404e9e840",
   "../../shared/audio/protocol.mjs": "eebab8f26eefbc300fc5093e2190b281b3b170a6a2e805eba0f6d7233b4ee6f4",
   "../../shared/audio/transport.mjs": "a7a4cb95e2fb1fe0bdb9911af1901ad8142d8c384975a639c7fec27c07625901",
   "../../shared/izone-favicon.svg": "dccacd0f15fb7b10cb6a95f1ef91484bc6bca1fb9b0863a3382e0ac2e91f0df1",
@@ -173,4 +173,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "117bb977e4d242f955bc39104a6b1f72e32ec27055dd2e94e534d1c6fd194c8f",
   "test-config.js": "e2bfb0a33b5fde631ce807e6a3400438879bbaecf863bd07fd27bc3e98dbfebb"
 };
-export const ASSET_BUILD_ID="69ead600aa1dcc34471ec3ceb1357e9b03b96f3788c9ff3666a347680367aedf";
+export const ASSET_BUILD_ID="af09ec93c94bb8289fd87ccaf5cc4546c609cea6ea29f73705b7fc96c84bed37";

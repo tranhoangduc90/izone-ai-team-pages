@@ -159,7 +159,7 @@ export const ASSET_HASHES={
   "../../shared/audio/chunks.mjs": "6796d41d2da64a33b5981fb16a612535770d61ab24bfda755309fb0beb5f941c",
   "../../shared/audio/config.mjs": "8c6f4f6f92d15e44fab4016d73f76d06d1a6695b10095d32226a853a3456ef1d",
   "../../shared/audio/direct-cache.mjs": "db458244476e95128789ee499ff9ed7041f7bb9f5c0ee4db35d0717c39ab9256",
-  "../../shared/audio/direct.mjs": "e04771e87e6c10dc5ba9c9e85ccaaf1e0c32a2c0a9f0bee10bc9e25fe5c84037",
+  "../../shared/audio/direct.mjs": "d419b924473aa5b802cb64cf6d576376d5837266821e31bb8928058404e9e840",
   "../../shared/audio/protocol.mjs": "eebab8f26eefbc300fc5093e2190b281b3b170a6a2e805eba0f6d7233b4ee6f4",
   "../../shared/audio/transport.mjs": "a7a4cb95e2fb1fe0bdb9911af1901ad8142d8c384975a639c7fec27c07625901",
   "../../shared/course-student-identity.js": "0e26a37332856b1cedd2860920094fc2b36310cb067e9e230a1689ae2577bcc1",
@@ -309,4 +309,4 @@ export const ASSET_HASHES={
   "offline.mjs": "eaad6811b24c1e5ccf4ccf46489e53317fee901864635e3269a8cae9cd86714b",
   "test-config.js": "44e259fb28a2646b9429e7662add638a66183b8bd844c662c4790ffe1f1efb18"
 };
-export const ASSET_BUILD_ID="33e7a6fa6d463eba9e21616a83876f89861152c63b9dba912bd9083b33ebe60b";
+export const ASSET_BUILD_ID="5595f06028e3666f632126d8ae3a8a2cc953ae8c8702ac313f1f0f67084b9820";
