@@ -6,7 +6,7 @@ import {mountNativeListening,nativeLayout,nativeAnnotations} from './native-ui.m
 const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value;
 function show(id,value=true){$(id).hidden=!value;if(id==='exam'){$('listeningView').hidden=!value;$('identityView').hidden=!value;$('page-shell').classList.toggle('cbt-bootstrap-shell',!value);if(value)$('lobby').hidden=true;}if(id==='finished'&&value)$('lobby').hidden=true;}
 const storage=await new DurableStore().open().catch(e=>{text('identity-status',e.message);throw e;});
-let state=await storage.get('current'),preparation=await storage.get('preparation'),busy=false,syncing=false,syncFailures=0,retryAt=0,content,roster,prepared=false,reviewMono=null,holdTimer,presentationReady=false,trialPassed=false;
+let state=await storage.get('current'),preparation=await storage.get('preparation'),busy=false,syncing=false,syncFailures=0,retryAt=0,content,roster,prepared=false,reviewMono=null,holdTimer,presentationReady=false,trialPassed=false,reviewAsset;
 const tabId=crypto.randomUUID(),audioOwnerId=state?.identity?.audioOwnerId||preparation?.audioOwnerId||crypto.randomUUID();
 let releaseOwner,ownerHeld=false;
 async function acquireOwner(){
@@ -31,8 +31,19 @@ async function synchronize(force=false){
    journal.decision(r.requestId,pending.operationId,same,{revisionSent:pending.revision,revisionReceived:r.value.revision,reason:same?'receipt_verified':'newer_local_revision'});
    state.ackedRevision=Math.max(state.ackedRevision||0,pending.revision);state.uncertainOperation=null;
    if(same)state.pending=null;
-   if(pending.status==='submitted'&&state.sealed?.operationId===pending.operationId){state.receipt=r.value;state.serverConfirmed=true;renderFinished();}
-   await persist();syncFailures=0;text('save-status','Đã lưu lên máy chủ');
+   const submitted = pending.status === 'submitted' && state.sealed?.operationId === pending.operationId;
+   if(submitted){state.receipt=r.value;state.serverConfirmed=true;}
+   try { await persist(); }
+   catch (error) {
+     if (submitted) {
+       state.pending = pending;
+       state.serverConfirmed = false;
+       state.receipt = null;
+     }
+     throw error;
+   }
+   syncFailures=0;text('save-status','Đã lưu lên máy chủ');
+   if(submitted)renderFinished();
   }
  }catch(e){state.uncertainOperation=sentOperation;if(state.pending&&state.pending.operationId!==sentOperation)journal.emit('operation_superseded',{operationId:sentOperation,reason:'newer_local_revision',serverOutcome:'unknown'});retryAt=performance.now()+Math.min(60000,2000*2**Math.min(5,syncFailures++));await persist().catch(()=>{});text('save-status','Đã lưu trên thiết bị · chờ đồng bộ');if(state.phase==='submitted')renderFinished();}
  finally{syncing=false;}
@@ -48,14 +59,28 @@ function renderFinished(){
  text('finish-message',state.phase==='technical_stop'?'Audio đang gặp sự cố và chưa thể bảo đảm phần thi chính xác. Bạn không nên tiếp tục bài thi. Hãy liên hệ giảng viên để được tổ chức thi lại. Phần trả lời đã được giữ trên thiết bị này.':state.serverConfirmed?'Máy chủ đã xác nhận nhận bài Listening. Bạn có thể đóng trang.':'Bài làm đã được lưu trên thiết bị này, chưa được máy chủ xác nhận. Hệ thống sẽ tự gửi khi có kết nối. Hãy giữ trang mở; nếu đã đóng trang, mở lại liên kết này trên cùng thiết bị và trình duyệt khi có mạng. Không xóa dữ liệu trình duyệt trước khi có xác nhận nộp thành công.');
  text('receipt',state.serverConfirmed?'Biên nhận: '+state.receipt.receiptId+' · '+new Date(state.receipt.serverNow).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'Mã lượt: '+state.identity.attemptId.slice(0,8));
  show('check-new-attempt',state.phase==='technical_stop');if(state.localPersistFailed)text('finish-message','Bộ nhớ trình duyệt đang gặp lỗi; một phần bài có thể chưa lưu được. Không đóng trang và liên hệ giảng viên ngay để kiểm tra phần đã lưu.');
+ const link = $('view-review');
+ const confirmed = state.phase === 'submitted' && state.serverConfirmed && !state.pending && state.receipt?.receiptId;
+ if (link) link.hidden = !confirmed;
+ if (link && confirmed && navigator.onLine && !state.localPersistFailed && new URLSearchParams(location.search).get('result') !== '0') {
+   location.replace(link.href);
+ }
 }
 async function technicalStop(reason){
  if(!state||['submitted','technical_stop'].includes(state.phase))return;clearTimeout(holdTimer);$('technical').close();state.phase='technical_stop';player.finish('technical_stop',reason);state.pending=snapshot('technical_stop');state.stopReason=reason;
  journal.emit('technical_stop',{reason,audioAfter:player.snapshot()});try{await persist();}catch{state.localPersistFailed=true;note('Bộ nhớ trình duyệt đang gặp lỗi. Hãy giữ nguyên trang và liên hệ giảng viên để kiểm tra phần đã lưu.');}renderFinished();void synchronize(true);
 }
+async function cacheReviewAudio() {
+ if (!reviewAsset || !globalThis.caches) return;
+ const key = new URL('../ic2311-retake-review/verified-audio-' + reviewAsset.hash + '.mp3', location.href);
+ try {
+   const cache = await caches.open('ic2311-retake-review-audio-v1');
+   await cache.put(key, new Response(reviewAsset.blob));
+ } catch {}
+}
 async function seal(reason){
  if(!['playing','review'].includes(state?.phase)||busy)return;busy=true;
- try{state.submitReason=reason;state.phase='submitted';state.sealed=snapshot('submitted');state.pending=structuredClone(state.sealed);player.finish('submitted',reason);$('listeningView').inert=true;await persist();journal.emit('submission_sealed',{operationId:state.sealed.operationId,revisionSent:state.sealed.revision,submitReason:reason});renderFinished();void synchronize(true);}
+ try{state.submitReason=reason;state.phase='submitted';state.sealed=snapshot('submitted');state.pending=structuredClone(state.sealed);player.finish('submitted',reason);$('listeningView').inert=true;await persist();void cacheReviewAudio();journal.emit('submission_sealed',{operationId:state.sealed.operationId,revisionSent:state.sealed.revision,submitReason:reason});renderFinished();void synchronize(true);}
  catch{note('Chưa lưu được bài đã khóa trên thiết bị. Giữ trang mở và liên hệ giảng viên ngay.');show('finished');text('finish-message','Chưa xác nhận lưu được bài trên thiết bị. Không đóng trang; hãy liên hệ giảng viên.');}
  finally{busy=false;}
 }
@@ -75,6 +100,7 @@ async function prepare(){
   }
   await acquireOwner();if(!journal.permit)journal.bind(state.identity,state.permit);done('check-permit');$('student').disabled=true;
   const asset=await downloadAudio({journal,onProgress:(n,total,source)=>{$('download').value=n/total;text('prepare-status','Đang tải audio '+Math.round(n/total*100)+'% · '+(source==='github_pages'?'GitHub Pages':'Cloudinary'));}});
+  reviewAsset=asset;
   done('check-audio');await player.attach(asset);await document.fonts.ready;if([...document.querySelectorAll('link[data-native-style]')].some(link=>!link.sheet))throw Object.assign(Error(),{code:'NATIVE_STYLE_UNAVAILABLE'});await nativeAnnotations({content,identity:state.identity,storage,onError:()=>note('Chưa lưu được Highlight/Note. Đáp án vẫn được lưu riêng; hãy giữ trang mở.')});done('check-player');prepared=true;$('trial').dataset.ready='true';$('preview').disabled=false;$('download-step').dataset.state='complete';$('preview-step').dataset.state='active';show('trial');text('prepare-status','Sẵn sàng trên thiết bị. Nếu mất mạng từ bây giờ, bạn vẫn nghe thử, bắt đầu và làm hết bài được.');journal.emit('app_ready',{phase:'ready',audioAfter:player.snapshot()});
  }catch(e){text('prepare-status','Chưa chuẩn bị được bài thi ('+(e.code||'PREPARATION_FAILED')+'). Bạn chưa nên bắt đầu. Hãy thử lại; nếu vẫn lỗi, liên hệ giảng viên để được tổ chức thi lại.');show('retry-preparation');}
  finally{busy=false;$('prepare').disabled=prepared||!presentationReady||!$('student').value;}
