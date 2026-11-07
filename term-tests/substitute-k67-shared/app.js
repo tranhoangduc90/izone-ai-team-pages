@@ -703,14 +703,32 @@
     const trace = phase => operationId ? { operationId, phase, owner } : undefined;
     const options = { method: 'POST', body: JSON.stringify({ examId, answers }) };
     if (!window.TERM_TEST_BOOTSTRAP?.examSessionId) return apiRequest('/api/test/grade', options, trace('send'));
+    let queued = false;
+    if (window.SUBSTITUTE_OFFLINE) {
+      try { await window.SUBSTITUTE_OFFLINE.queueSection(examId, answers); queued = true; }
+      catch (error) {
+        if (error.message === 'OFFLINE_SUBMISSION_CONFLICT') throw new Error('Bài đã chờ đồng bộ với nội dung khác. Hãy giữ nguyên câu trả lời và thử lại khi có mạng.');
+        window.SUBSTITUTE_OFFLINE_STATUS = 'section_queue_failed';
+      }
+    }
+    const accept = async receipt => {
+      if (receipt?.persisted && queued) {
+        try { await window.SUBSTITUTE_OFFLINE.acknowledgeSection(examId, receipt); }
+        catch { window.SUBSTITUTE_OFFLINE_STATUS = 'receipt_cache_failed'; }
+      }
+      return receipt;
+    };
     const read = () => apiRequest('/api/test/exam/section-status', {
       method: 'POST', body: JSON.stringify({ examId })
     }, trace('readback'));
-    const existing = await read();
-    if (existing.persisted) return existing;
-    try { return await apiRequest('/api/test/grade', options, trace('send')); }
+    try {
+      const existing = await read();
+      if (existing.persisted) return accept(existing);
+      return accept(await apiRequest('/api/test/grade', options, trace('send')));
+    }
     catch (error) {
-      try { const saved = await read(); if (saved.persisted) return saved; } catch {}
+      try { const saved = await read(); if (saved.persisted) return accept(saved); } catch {}
+      if (queued) error.offlineQueued = true;
       throw error;
     }
   }
@@ -2295,7 +2313,7 @@
       answers = state.frozenAnswers.listening;
     }
     const answered = updateAnswerCount('listening');
-    if (!automatic && !confirmIncomplete(answered, 'Listening')) return;
+    if (!automatic && event.submitter?.dataset.retrySubmission !== 'true' && !confirmIncomplete(answered, 'Listening')) return;
     state.clientSubmissionId ||= crypto.randomUUID();
     state.drafts.listening = answers;
     saveSession();
@@ -2303,7 +2321,7 @@
     setAnswerControlsLocked('listening', true);
     setBusy(elements.submitListening, true, 'Đang lưu Listening...', 'Nộp bài Listening');
     if (automatic) showNotice('Đã hết giờ. Hệ thống đang tự thu và chấm bài Listening...');
-    let submitted = false;
+    let submitted = false, queuedSubmission = false;
     try {
       if (demoMode === 'exam') {
         if(serverGradingMode && (!window.TERM_TEST_BOOTSTRAP?.clientRunId
@@ -2350,7 +2368,10 @@
         setStage(state.completed ? 'result-ready' : 'listening-saved');
       }
     } catch (error) {
-      showNotice(automatic
+      queuedSubmission = Boolean(error.offlineQueued);
+      showNotice(error.offlineQueued
+        ? 'Listening đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.'
+        : automatic
         ? `Hết giờ nhưng chưa thể nộp Listening: ${error.message}. Bài đã khóa và hệ thống sẽ tự thử lại.`
         : `Không thể lưu Listening: ${error.message}`, 'error');
     } finally {
@@ -2359,7 +2380,7 @@
         elements.listeningView.dataset.listeningTimeExpired = 'true';
         state.frozenAnswers.listening ||= { ...answers };
         saveSession();
-      } else if (!automatic && !submitted) {
+      } else if (!automatic && !submitted && !queuedSubmission) {
         setAnswerControlsLocked('listening', false);
       }
       setBusy(elements.submitListening, false, 'Đang lưu Listening...', 'Nộp bài Listening');
@@ -2413,7 +2434,7 @@
       answers = state.frozenAnswers.reading;
     }
     const answered = updateAnswerCount('reading');
-    if (!automatic && !confirmIncomplete(answered, 'Reading')) return;
+    if (!automatic && event.submitter?.dataset.retrySubmission !== 'true' && !confirmIncomplete(answered, 'Reading')) return;
     elements.readingView.dataset.readingSubmitting = 'true';
     state.drafts.reading = answers;
     saveSession();
@@ -2422,7 +2443,7 @@
     if (automatic) {
       showNotice(`Đã hết ${Number(testConfig.reading.durationMinutes) || 40} phút. Hệ thống đang tự thu và chấm bài Reading...`);
     }
-    let submitted = false;
+    let submitted = false, queuedSubmission = false;
     try {
       if (demoMode === 'exam') {
         if (serverGradingMode) {
@@ -2460,7 +2481,10 @@
         if (automatic) await loadResult(elements.viewResult);
       }
     } catch (error) {
-      showNotice(automatic
+      queuedSubmission = Boolean(error.offlineQueued);
+      showNotice(error.offlineQueued
+        ? 'Reading đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.'
+        : automatic
         ? `Hết giờ nhưng chưa thể nộp Reading: ${error.message}. Hệ thống sẽ tự thử lại; không làm mới trang.`
         : `Không thể lưu Reading: ${error.message}`, 'error');
     } finally {
@@ -2469,12 +2493,29 @@
         elements.readingView.dataset.readingTimeExpired = 'true';
         state.frozenAnswers.reading ||= { ...answers };
         saveSession();
-      } else if (!automatic && !submitted) {
+      } else if (!automatic && !submitted && !queuedSubmission) {
         setAnswerControlsLocked('reading', false);
       }
       setBusy(elements.submitReading, false, 'Đang lưu và chấm...', 'Nộp bài Reading');
     }
   });
+
+  if (serverGradingMode && window.SUBSTITUTE_OFFLINE) {
+    const retryPendingSection = async () => {
+      if (!navigator.onLine || window.SUBSTITUTE_STATE.blocked) return;
+      let pending;
+      try { pending = await window.SUBSTITUTE_OFFLINE.pendingSections(); } catch { return; }
+      const skill = state.stage === 'reading' ? 'reading' : state.stage === 'listening' ? 'listening' : '';
+      if (!pending.some(item => item.skill === skill)) return;
+      const button = skill === 'reading' ? elements.submitReading : elements.submitListening;
+      if (!button || button.disabled) return;
+      button.dataset.retrySubmission = 'true';
+      button.click();
+      delete button.dataset.retrySubmission;
+    };
+    window.addEventListener('online', retryPendingSection);
+    window.setTimeout(retryPendingSection, 1500);
+  }
 
   elements.viewResult.dataset.normalText = 'Xem kết quả';
   elements.viewResult.addEventListener('click', () => loadResult(elements.viewResult));
