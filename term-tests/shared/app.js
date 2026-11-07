@@ -1317,6 +1317,7 @@
 
   function isSectionExpired(skill) {
     if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.isHeld()) return false;
+    if (skill === 'listening' && window.K67_ACTIVE_LISTENING?.canAutoSubmit?.() === false) return false;
     if (miniAnswerSheet) return false;
     const deadlineValue = skill === 'listening' ? state.listeningDeadlineAt : state.readingDeadlineAt;
     const deadline = Date.parse(deadlineValue || '');
@@ -3281,6 +3282,7 @@
     }
     const automatic = event.submitter?.dataset.autoSubmit === 'true'
       || elements.listeningView.dataset.listeningTimeExpired === 'true';
+    if (automatic && window.K67_ACTIVE_LISTENING?.canAutoSubmit?.() === false) return;
     let answers = state.pendingSubmissions?.listening?.answers || state.frozenAnswers.listening || collectAnswers(elements.listeningQuestions);
     if (automatic && !state.frozenAnswers.listening) {
       state.frozenAnswers.listening = Object.freeze({ ...answers });

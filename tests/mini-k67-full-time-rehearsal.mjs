@@ -11,6 +11,7 @@ const mode = process.argv[2];
 assert.ok(['lis_first', 'read_first'].includes(mode));
 const backend = process.argv[3];
 assert.ok(backend, 'Supply the isolated K67 backend package.');
+const checkNativeEof = process.env.K67_REHEARSAL_NATIVE_EOF === '1';
 const pages = fileURLToPath(new URL('../', import.meta.url));
 const reservation = createServer().listen(0, '127.0.0.1');
 await once(reservation, 'listening');
@@ -19,12 +20,12 @@ await new Promise(resolve => reservation.close(resolve));
 const base = `http://127.0.0.1:${port}`;
 const fixture = spawn(process.execPath, ['tools/preview-exam-order.mjs', pages], { cwd: backend, windowsHide: true,
   env: { ...process.env, K67_ORDER_NATIVE_URL: '', K67_PREVIEW_PORT: String(port), K67_PREVIEW_REAL_MINI_AUDIO: 'true',
-    K67_PREVIEW_AUDIO_PROTECTION: 'true', K67_PREVIEW_AUDIO_OWNER: 'true' }, stdio: ['ignore','pipe','pipe'] });
+    K67_PREVIEW_AUDIO_PROTECTION: 'true', K67_PREVIEW_AUDIO_OWNER: 'true', K67_PREVIEW_MINI_EOF: String(checkNativeEof) }, stdio: ['ignore','pipe','pipe'] });
 let browser;
 fixture.stdout.pipe(process.stderr);
 fixture.stderr.pipe(process.stderr);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const log = (phase, details = {}) => console.log(JSON.stringify({ at: new Date().toISOString(), mode, phase, ...details }));
+const log = (phase, details = {}) => console.log(JSON.stringify({ at: new Date().toISOString(), mode, phase, checkNativeEof, ...details }));
 const endpoint = '/api/term-tests/mini-test-lesson-5';
 
 try {
@@ -84,6 +85,9 @@ try {
             !audio.error && audio.currentTime >= audio.duration - 0.25;
         });
       });
+      if (skill === 'listening' && checkNativeEof) {
+        assert.equal(await page.evaluate(() => window.K67_ACTIVE_LISTENING.getSnapshot().listeningEofVersion), 1);
+      }
       log('section_started', { skill });
       const stop = performance.now() + 22 * 60_000;
       let heartbeat = 0;
@@ -105,6 +109,7 @@ try {
       else {
         const elapsedAfterEnd = await page.evaluate(() => window.fullRehearsal.eof === null ? -1 : performance.now() - window.fullRehearsal.eof);
         assert.ok(elapsedAfterEnd >= 119_500, 'Listening submitted before native EOF plus review');
+        if (checkNativeEof) assert.ok(await page.evaluate(() => window.K67_ACTIVE_LISTENING.getSnapshot().listeningEofAt));
       }
       log('section_committed', { skill, elapsedMs: Math.round(clock.submit - clock.start) });
     } finally { page.off('response', network); }

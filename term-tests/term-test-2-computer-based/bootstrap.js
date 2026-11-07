@@ -524,7 +524,7 @@
     return apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-access`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({examSessionToken, generation, publicAudioVersion: 1,
-        ...(testConfig.slug === 'mini-test-lesson-5' ? { audioTransport: 'r2-direct-v1' } : {})})
+        ...(testConfig.slug === 'mini-test-lesson-5' ? { audioTransport: 'r2-direct-v1', listeningEofVersion: 1 } : {})})
     });
   }
 
@@ -659,8 +659,10 @@
           let journal = null;
           try { journal = JSON.parse(localStorage.getItem(journalKey) || 'null'); } catch {}
           const duration = Number(audioAccess.listeningDurationSeconds);
-          let reviewOnly = !audioAccess.activeIncident && Number(audioAccess.listeningResumeAtSeconds) >= duration;
-          if (!reviewOnly && !audioAccess.activeIncident && Number(legacyUiState.audioTime) >= duration - 0.5) {
+          const eofRequired = audioAccess.listeningEofVersion === 1;
+          let reviewOnly = !audioAccess.activeIncident && (eofRequired ? Boolean(audioAccess.listeningEofAt)
+            : Number(audioAccess.listeningResumeAtSeconds) >= duration);
+          if (!eofRequired && !reviewOnly && !audioAccess.activeIncident && Number(legacyUiState.audioTime) >= duration - 0.5) {
             const progress = await apiRequest(`/api/term-tests/${testConfig.slug}/session/audio-progress`, {
               method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
                 examSessionToken: state.examSessionToken, generation: audioAccess.generation, heardSeconds: duration, state: 'playing'})
@@ -965,7 +967,7 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1');
+    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':''));
     await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
@@ -1078,7 +1080,7 @@
     previewAudio.pause();
     let started = null, officialAudio = null;
     try {
-      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1');
+      if (!window.K67_LISTENING_PROTECTION) await loadScript('../k67-shared/listening-controller.js?rev=20261016-reading-recovery-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1':''));
       const savedHeardSeconds = state.listeningStartedAt && legacyUiState.audioStarted
         ? legacyUiState.audioTime
         : undefined;
@@ -1122,7 +1124,7 @@
       officialAudio.volume = Number(elements.bootstrapVolume.value) || 1;
       const serverElapsed = Math.max(0, (Date.parse(started.serverNow) - Date.parse(started.listeningStartedAt)) / 1000);
       const serverResumeAt = Number(started.listeningResumeAtSeconds);
-      const resumeAt = Number.isFinite(serverResumeAt)
+      let resumeAt = Number.isFinite(serverResumeAt)
         ? Math.min(serverElapsed, Math.max(0, serverResumeAt))
         : serverElapsed;
       await new Promise((resolve, reject) => {
@@ -1131,11 +1133,18 @@
         officialAudio.addEventListener('error', () => {clearTimeout(timeout);reject(new Error('Trình duyệt không đọc được audio chính.'));}, { once: true });
         officialAudio.load();
       });
+      const eofRequired = audioAccess?.listeningEofVersion === 1;
+      const reviewOnly = eofRequired && Boolean(started.listeningEofAt || audioAccess.listeningEofAt);
+      if (eofRequired && !reviewOnly) {
+        resumeAt = Math.min(resumeAt, Math.max(0, officialAudio.duration - 1));
+        const { createListeningEofGate } = await import('../k67-shared/listening-eof.mjs?v=20261107-v1');
+        window.K67_ACTIVE_LISTENING?.requireEof(createListeningEofGate({ audio: officialAudio, anchorSeconds: resumeAt }));
+      }
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
-      if (resumeAt < officialAudio.duration) window.K67_ACTIVE_LISTENING?.arm();
+      if (!reviewOnly && resumeAt < officialAudio.duration) window.K67_ACTIVE_LISTENING?.arm();
       await window.K67_ACTIVE_LISTENING?.start();
       if(window.K67_ACTIVE_LISTENING)started={...started,...window.K67_ACTIVE_LISTENING.getSnapshot()};
-      if (!window.K67_ACTIVE_LISTENING?.isHeld() && resumeAt < officialAudio.duration) await officialAudio.play();
+      if (!reviewOnly && !window.K67_ACTIVE_LISTENING?.isHeld() && resumeAt < officialAudio.duration) await officialAudio.play();
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
