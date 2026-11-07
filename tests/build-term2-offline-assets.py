@@ -1,14 +1,16 @@
 """Danh mục tài nguyên công khai của Term 2; không lấy API, key hay audio vào vỏ cache."""
 from pathlib import Path
-import json,re,html,hashlib
+import json,re,html,hashlib,sys
+number=int(sys.argv[1]) if len(sys.argv)>1 else 2
+assert number in (1,2)
 from urllib.parse import urlparse,unquote
 
 root=Path(__file__).resolve().parents[1]
-route=root/'term-tests/term-test-2-k56-computer-based'
-dirs=['term-tests/term-test-2-k56-computer-based','term-tests/k56-test2-shared','term-tests/shared','shared','term-tests/k56-design','term-tests/k56-demo-reset','term-tests/k56-exam-integrity','term-tests/k56-writing-feedback']
+route=root/f'term-tests/term-test-{number}-k56-computer-based'
+dirs=[f'term-tests/term-test-{number}-k56-computer-based','term-tests/k56-test2-shared' if number==2 else 'term-tests/k56-shared','term-tests/k56-offline-shared','term-tests/shared','shared','term-tests/k56-design','term-tests/k56-demo-reset','term-tests/k56-exam-integrity','term-tests/k56-writing-feedback']
 allowed={'.js','.mjs','.css','.html','.woff2','.png','.svg'}
 files={p for d in dirs for p in (root/d).rglob('*') if p.is_file() and p.suffix in allowed and 'private' not in p.parts}
-files.update(root/p for p in ['term-tests/k56-audio-recovery.js','term-tests/k56-exam-order.js','term-tests/term-test-2-k56/test-config.js','term-tests/demo/reset-listener.js'])
+files.update(root/p for p in ['term-tests/k56-audio-recovery.js','term-tests/k56-exam-order.js',f'term-tests/term-test-{number}-k56/test-config.js','term-tests/demo/reset-listener.js'])
 queue=list(files)
 while queue:
  p=queue.pop()

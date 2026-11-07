@@ -69,6 +69,7 @@ async function setup(options = {}) {
       const aliases = options.multipleClasses ? [alias, { ...alias, classId: '222', classCode: 'LOPKHAC' }] : [alias];
       return send({ status: 'unique', identity, aliases: aliases.filter(value => !body.classCode || value.classCode === body.classCode) });
     }
+    if (url.pathname.endsWith('/clock')) return send({ok:true,serverNow:new Date().toISOString()});
     if (url.pathname.endsWith('/roster')) return send({ class: { name: 'LOPTHU' }, students: [
       { ref: refA, name: 'Học viên thử A' }, { ref: refB, name: 'Học viên thử B' }] });
     if (url.pathname.endsWith('/attempt/active')) return send({ found: true, attemptToken: tokens[body.studentRef][0],
