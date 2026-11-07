@@ -13,7 +13,7 @@ const root=resolve(fileURLToPath(new URL('../',import.meta.url))),output=process
 const modules=process.env.CODEX_NODE_MODULES||resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const {chromium}=createRequire(pathToFileURL(resolve(modules,'playwright/package.json')))('playwright');
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.mp3':'audio/mpeg'};
-export async function fixture(mode,{profile,native,product=2}={}){
+export async function fixture(mode,{profile,native,product=2,paper=false}={}){
  await mkdir(output,{recursive:true});
  const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,r2Audio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
  const server=createServer(async(req,res)=>{const url=new URL(req.url,'http://localhost'),p=resolve(root,'.'+(url.pathname.endsWith('/')?url.pathname+'index.html':url.pathname));
@@ -29,7 +29,9 @@ export async function fixture(mode,{profile,native,product=2}={}){
  page=await context.newPage();
  const id=native?.a||randomUUID(),session=native?.s||randomUUID(),student=randomUUID(),receipts=new Map(),calls=[],errors=[];let disconnected=false,fixtureContent;
  page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
- const asset=audioCatalog['term-test-'+product+'-k56'];
+ const mini=product==='mini';
+ const slug=mini?'mini-test-k56':'term-test-'+product+'-k56';
+ const asset=audioCatalog[slug];
  const audio=await readFile(resolve(root,'term-tests/k56-audio-assets',new URL(asset.url).pathname.split('/').pop()));
  const routeHandler=async route=>{
   const request=route.request(),u=new URL(request.url());
@@ -58,25 +60,30 @@ export async function fixture(mode,{profile,native,product=2}={}){
    const response=await fetch(native.base+u.pathname.slice(u.pathname.indexOf('/offline/')),{method:'POST',headers:{'content-type':'application/json','x-term2-permit':request.headers()['x-term2-permit']||'','x-exam-journal-request-id':request.headers()['x-exam-journal-request-id']||''},body:request.postData()});
    return route.fulfill({status:response.status,json:await response.json()});
   }
+  const timing=mini?{listeningDurationSeconds:446,listeningReviewSeconds:0,readingDurationMinutes:25,writingDurationMinutes:15}
+   :product===2?{listeningDurationSeconds:1824,listeningReviewSeconds:0,readingDurationMinutes:60,writingDurationMinutes:30}:{listeningDurationSeconds:1848,listeningReviewSeconds:0,readingDurationMinutes:40,writingDurationMinutes:55};
   const prepared={ok:true,attemptToken:id,examSessionToken:session,studentRef:student,studentName:'Học viên giả Term 2',generation:0,examMode:mode,nextSection:mode==='read_first'?'reading':'listening',serverNow:new Date().toISOString(),
-   listeningSubmitted:false,readingSubmitted:false,content,timing:product===2?{listeningDurationSeconds:1824,listeningReviewSeconds:0,readingDurationMinutes:60,writingDurationMinutes:30}:{listeningDurationSeconds:1848,listeningReviewSeconds:0,readingDurationMinutes:40,writingDurationMinutes:55},...controls.preparedOverride};
+   listeningSubmitted:false,readingSubmitted:false,content,timing,attemptMode:paper?'answer_sheet':'cbt',policy:{timed:!paper,autoSubmit:!paper},...controls.preparedOverride};
   if(endpoint.endsWith('/attempt/prepare'))return route.fulfill({json:prepared});
   if(endpoint.endsWith('/offline/prepare')){
    if(controls.denyOfflinePrepare)return route.fulfill({status:403,json:{ok:false,error:'FIXTURE_ACCESS_DENIED',message:'Fixture từ chối quyền thi.'}});
    const audioDownload=controls.r2Audio&&body.audioTransport==='r2-direct-v1'
     ? {version:1,policy:'r2-direct-v1',method:'GET',url:`https://e340869dcc6ff285504947407d148104.r2.cloudflarestorage.com/izone-audio-r2-lab-20261023/${asset.key}?X-Amz-Signature=fixture`,sha256:asset.sha256,byteLength:asset.byteLength,validForSeconds:600,fallback:'public-pages'}
     : undefined;
-   return route.fulfill({json:{...prepared,audioDownload,offline:{policy:`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow}}});
+   return route.fulfill({json:{...prepared,audioDownload,offline:{policy:mini?'mini-k56-offline-v1':`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow}}});
   }
   if(endpoint.endsWith('/offline/status'))return route.fulfill({json:{ok:true,persisted:receipts.has(body.operationId),receipt:receipts.get(body.operationId)||null}});
   if(endpoint.endsWith('/offline/operation')){
    const receipt={version:1,receiptId:randomUUID(),operationId:body.operationId,payloadHash:createHash('sha256').update(canonical(body)).digest('hex'),attemptToken:id,examSessionToken:session,generation:0,section:body.section,kind:body.kind,acceptedRevision:body.revision,status:'accepted',serverCommittedAt:new Date().toISOString()};
-   receipts.set(body.operationId,receipt);return route.fulfill({json:{ok:true,persisted:true,receipt}});
+   if(mini&&body.kind==='seal'&&body.section==='writing'&&!body.payload.task2.replace(/[\s\p{Default_Ignorable_Code_Point}]/gu,''))receipt.writingBlank=true;
+   receipts.set(body.operationId,receipt);
+   if(controls.loseAck&&!controls.ackLost&&body.kind==='seal'){controls.ackLost=true;return route.abort();}
+   return route.fulfill({json:{ok:true,persisted:true,receipt}});
   }
   return route.fulfill({status:404,json:{ok:false,error:'FIXTURE_UNEXPECTED',message:endpoint}});
  };
  await context.route('**/*',routeHandler);
- const url=base+`/term-tests/term-test-${product}-k56-computer-based/?class=IC5601&mode=`+mode;
+ const url=base+`/term-tests/${slug}${paper?'':'-computer-based'}/?class=IC5601&mode=`+mode;
  return {get page(){return page;},get context(){return context;},get browser(){return browser;},server,url,student,calls,errors,receipts,controls,get disconnected(){return disconnected;},set disconnected(v){disconnected=v;},
   reopen:async({offline=false}={})=>{assert.ok(profileDir);await browser.close();context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());await context.route('**/*',routeHandler);await context.setOffline(offline);},
   close:async()=>{await browser.close();await new Promise(ok=>server.close(ok));}};

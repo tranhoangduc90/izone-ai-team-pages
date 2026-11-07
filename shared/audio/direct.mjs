@@ -9,7 +9,7 @@ export function supportsDirect(){return !!(globalThis.crypto?.subtle&&globalThis
 export function directAsset(manifest,termSlug){
  const candidates=termSlug===undefined
   ? Object.values(ASSETS).filter(x=>/^(homework-|listening-)/.test(x.id))
-  : ['term-test-1-k56','term-test-2-k56'].filter(slug=>slug===termSlug).map(slug=>ASSETS[slug]);
+  : ['term-test-1-k56','term-test-2-k56','mini-test-k56'].filter(slug=>slug===termSlug).map(slug=>ASSETS[slug]);
  const asset=candidates.find(x=>x.sha256===manifest?.sha256&&x.byteLength===manifest?.byteLength&&x.url===manifest?.url);
  if(!asset||manifest.envelopeVersion!=='MP3')throw Error('AUDIO_MANIFEST_DENIED');
  return asset;

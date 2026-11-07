@@ -1,4 +1,4 @@
-import {downloadDirect} from '../../shared/audio/direct.mjs?v=20261107-k56-r2-v1';
+import {downloadDirect} from '../../shared/audio/direct.mjs?v=20261107-mini-v1';
 
 // The capability is transient. Only the verified Blob reaches the exam store.
 export async function downloadTermAudio(slug,metadata,{audioDownload,signal,onProgress=()=>{},fetchImpl=fetch}={}){

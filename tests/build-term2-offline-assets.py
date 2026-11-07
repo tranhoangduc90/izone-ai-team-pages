@@ -1,16 +1,21 @@
 """Danh mục tài nguyên công khai của Term 2; không lấy API, key hay audio vào vỏ cache."""
 from pathlib import Path
 import json,re,html,hashlib,sys
-number=int(sys.argv[1]) if len(sys.argv)>1 else 2
-assert number in (1,2)
+profile=sys.argv[1] if len(sys.argv)>1 else '2'
 from urllib.parse import urlparse,unquote
 
 root=Path(__file__).resolve().parents[1]
-route=root/f'term-tests/term-test-{number}-k56-computer-based'
-dirs=[f'term-tests/term-test-{number}-k56-computer-based','term-tests/k56-test2-shared' if number==2 else 'term-tests/k56-shared','term-tests/k56-offline-shared','term-tests/shared','shared','term-tests/k56-design','term-tests/k56-demo-reset','term-tests/k56-exam-integrity','term-tests/k56-writing-feedback']
+slug,entry,app={
+ '1':('term-test-1-k56','term-test-1-k56-computer-based','k56-shared'),
+ '2':('term-test-2-k56','term-test-2-k56-computer-based','k56-test2-shared'),
+ 'mini-cbt':('mini-test-k56','mini-test-k56-computer-based','k56-mini-shared'),
+ 'mini-paper':('mini-test-k56','mini-test-k56','k56-mini-shared'),
+}[profile]
+route=root/'term-tests'/entry
+dirs=[f'term-tests/{entry}',f'term-tests/{app}','term-tests/k56-offline-shared','term-tests/shared','shared','term-tests/k56-design','term-tests/k56-demo-reset','term-tests/k56-exam-integrity','term-tests/k56-writing-feedback']
 allowed={'.js','.mjs','.css','.html','.woff2','.png','.svg'}
 files={p for d in dirs for p in (root/d).rglob('*') if p.is_file() and p.suffix in allowed and 'private' not in p.parts}
-files.update(root/p for p in ['term-tests/k56-audio-recovery.js','term-tests/k56-exam-order.js',f'term-tests/term-test-{number}-k56/test-config.js','term-tests/demo/reset-listener.js'])
+files.update(root/p for p in ['term-tests/k56-audio-recovery.js','term-tests/k56-exam-order.js',f'term-tests/{slug}/test-config.js','term-tests/demo/reset-listener.js'])
 queue=list(files)
 while queue:
  p=queue.pop()
@@ -20,7 +25,7 @@ while queue:
   if parsed.scheme or parsed.netloc:continue
   candidate=(root/parsed.path.lstrip('/') if parsed.path.startswith('/') else p.parent/unquote(parsed.path)).resolve()
   if candidate.is_relative_to(root) and candidate.is_file() and candidate not in files:files.add(candidate);queue.append(candidate)
-files.discard(route/'offline-assets.mjs')
+files={p for p in files if p.name!='offline-assets.mjs'}
 import os
 assets=sorted(os.path.relpath(p,route).replace('\\','/') for p in files)
 def published_bytes(path):
