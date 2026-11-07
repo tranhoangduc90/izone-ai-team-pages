@@ -104,7 +104,12 @@ async function prepare(){
   done('check-audio');await player.attach(asset);await document.fonts.ready;if([...document.querySelectorAll('link[data-native-style]')].some(link=>!link.sheet))throw Object.assign(Error(),{code:'NATIVE_STYLE_UNAVAILABLE'});await nativeAnnotations({content,identity:state.identity,storage,onError:()=>note('Chưa lưu được Highlight/Note. Đáp án vẫn được lưu riêng; hãy giữ trang mở.')});done('check-player');prepared=true;$('trial').dataset.ready='true';$('preview').disabled=false;$('download-step').dataset.state='complete';$('preview-step').dataset.state='active';show('trial');text('prepare-status','Sẵn sàng trên thiết bị. Nếu mất mạng từ bây giờ, bạn vẫn nghe thử, bắt đầu và làm hết bài được.');journal.emit('app_ready',{phase:'ready',audioAfter:player.snapshot()});
  }catch(e){
   if(e.code==='ALREADY_SUBMITTED'){
-   text('prepare-status','Bài này đã được nộp. Hãy mở lại bài trên đúng thiết bị và trình duyệt đã dùng để thi để xem kết quả.');
+   text('prepare-status','Bài này đã được nộp. ');
+   const link=document.createElement('a');
+   link.href='../ic2311-retake-review/?skill=listening&view=by-name';
+   link.textContent='Xem kết quả';
+   $('prepare-status').append(link);
+   document.dispatchEvent(new Event('retake-already-submitted'));
    return;
   }
   text('prepare-status','Chưa chuẩn bị được bài thi ('+(e.code||'PREPARATION_FAILED')+'). Bạn chưa nên bắt đầu. Hãy thử lại; nếu vẫn lỗi, liên hệ giảng viên để được tổ chức thi lại.');show('retry-preparation');}
@@ -151,3 +156,6 @@ try{
   if(state?.phase==='prepared'){$('student').value=state.identity.studentRef;void prepare();}
  }
 }catch(e){if(e.code==='AUDIO_OWNER_CONFLICT'){show('identity',false);note('Bài Listening đang mở ở tab khác. Hãy quay lại tab đó để tiếp tục; trang này không thay đổi bài đang làm.');}else text('identity-status','Chưa tải được nội dung hoặc danh sách học viên. Hãy kết nối mạng và tải lại trước khi bắt đầu.');}
+
+void import('../ic2311-retake-review/student-review-entry.mjs?v=1')
+  .then(({attachStudentReview})=>attachStudentReview({api:API,skill:'listening'})).catch(()=>{});

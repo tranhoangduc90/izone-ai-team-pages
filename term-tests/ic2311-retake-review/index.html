@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="review.css?v=20261107-1">
   <script defer src="../k67-shared/review-audio.js?v=20261026-term1-replay1"></script>
   <script defer src="answer-explanations.js?v=20261107-1"></script>
-  <script type="module" src="review.mjs?v=20261107-viewer1"></script>
+  <script type="module" src="review.mjs?v=20261107-name1"></script>
 </head>
 <body class="cbt-mode cbt-semantic-mode retake-review">
   <div class="substitute-brandbar"><img src="../substitute-shared/izone-logo-color.png" alt="IZONE" width="120" height="44"></div>
@@ -29,11 +29,12 @@
       <section class="panel result-panel" id="resultView">
         <p class="eyebrow">Kết quả cá nhân</p>
         <h2 id="result-student">Đang tải kết quả…</h2>
+        <label id="review-name-field" hidden>Họ và tên <select id="review-name"></select></label>
         <p id="result-meta"></p>
         <p id="result-receipt"></p>
         <p id="result-status" role="status" aria-live="polite"></p>
         <button class="button button-secondary" id="result-retry" type="button" hidden>Thử tải lại</button>
-        <p><a id="exam-link" hidden>Về trang bài thi</a></p>
+        <p><a id="exam-link" hidden>Về trang bài thi</a> <a id="pick-name-link" hidden>Chọn tên để xem kết quả</a></p>
         <div id="review-score"></div>
         <div id="review-details" class="question-details"></div>
         <div id="review-analysis" class="skill-performance-sections"></div>
