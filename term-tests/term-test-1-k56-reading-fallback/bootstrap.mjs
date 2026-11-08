@@ -100,11 +100,15 @@ async function showListening(runtime) {
   if (runtime.record.sections.listening?.startedAt) return begin(true);
   const panel = document.getElementById('skillAudioLobby');
   const previewButton = document.getElementById('skillPreview');
+  const previewStatus = document.getElementById('skillPreviewStatus');
   const start = document.getElementById('skillStart');
   const volume = document.getElementById('skillVolume');
   const preview = await makeAudio(blob);
   form.hidden = true;
   notice.hidden = true;
+  document.querySelector('.cbt-lobby-badge').textContent = 'Phòng chờ Listening';
+  document.getElementById('securePrepTitle').textContent = 'Kiểm tra âm thanh trước khi bắt đầu';
+  document.querySelector('.cbt-lobby-header > p').textContent = 'Audio được tải đủ và kiểm tra trước khi bạn bấm Bắt đầu.';
   panel.hidden = false;
   let playbackStarted = 0;
   volume.addEventListener('input', () => { preview.volume = Number(volume.value); });
@@ -115,8 +119,14 @@ async function showListening(runtime) {
     try { await preview.play(); } catch (error) { showError(error); }
   });
   preview.addEventListener('play', () => { previewButton.textContent = 'Dừng nghe thử'; });
-  preview.addEventListener('pause', () => { previewButton.textContent = 'Nghe lại 30 giây đầu'; });
+  preview.addEventListener('pause', () => {
+    previewButton.textContent = 'Nghe lại 30 giây đầu';
+    previewStatus.textContent = preview.currentTime >= 30 ? 'Đã nghe đủ 30 giây. Bạn có thể bắt đầu thi.' : 'Đã dừng nghe thử.';
+  });
   preview.addEventListener('timeupdate', () => {
+    if (!preview.paused && preview.currentTime < 30) {
+      previewStatus.textContent = 'Đang nghe thử · 00:' + String(Math.floor(preview.currentTime)).padStart(2, '0') + ' / 00:30';
+    }
     if (preview.currentTime >= 30) preview.pause();
     if (preview.currentTime >= 10 && performance.now() - playbackStarted >= 10000) {
       start.disabled = false;

@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import test from 'node:test';
 import { fixture as browserFixture, wait } from './term2-offline-browser.mjs';
+import { captureSkillScreen } from './term1-fallback-screen-evidence.mjs';
 
 test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyến và có đúng một điểm /26', { timeout: 60000 }, async t => {
   const output = process.env.TERM2_EVIDENCE;
@@ -64,13 +65,7 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   const browser = await browserFixture('read_first', { product: 1 });
   t.after(browser.close);
   const page = browser.page;
-  async function capture(screen) {
-    for (const width of [1440, 1024, 390]) {
-      await page.setViewportSize({ width, height: 1000 });
-      await page.screenshot({ path: resolve(output, `reading-fallback-${screen}-${width}.png`) });
-    }
-    await page.setViewportSize({ width: 1440, height: 1000 });
-  }
+  const capture = screen => captureSkillScreen(page, output, 'reading', screen);
   const fallback = new URL('../term-test-1-k56-reading-fallback/?class=IC5601', browser.url);
   fallback.hash = new URLSearchParams({ g: grant.token });
   let disconnected = false, droppedAck = false;
@@ -90,10 +85,12 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   });
 
   await page.goto(fallback.href);
+  await capture('login');
   await page.locator('#activationCode').fill('INVALID');
   await page.getByRole('button', { name: 'Kiểm tra thông tin học viên' }).click();
   await page.locator('#bootstrapNotice').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#identityConfirm').isVisible(), false);
+  await capture('invalid');
   await page.locator('#activationCode').fill(grant.activationCode);
   await page.getByRole('button', { name: 'Kiểm tra thông tin học viên' }).click();
   await page.locator('#identityConfirm').waitFor({ state: 'visible' });
@@ -101,11 +98,18 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   await capture('confirm');
   await page.click('#confirmIdentity');
   await wait(page, () => window.K56_TERM1_APP_READY && document.querySelector('.cbt-reading-form'), 'Reading đã chuẩn bị');
+  await capture('ready');
   await page.getByRole('button', { name: 'Bắt đầu Reading', exact: true }).click();
   await page.locator('#readingView').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#readingQuestions [data-number]').count(), 26);
   assert.equal(await page.locator('#listeningView').isVisible(), false);
   assert.equal(await page.getByRole('button', { name: 'Xem giải thích câu 1', exact: true }).count(), 0);
+  await capture('exam');
+  await page.getByRole('button', { name: 'Notes', exact: true }).click();
+  await page.locator('#cbtNotesPanel').waitFor();
+  await capture('notes');
+  await page.keyboard.press('Escape');
+  await page.locator('#cbtNotesPanel').waitFor({ state: 'hidden' });
   const anotherTab = await browser.context.newPage();
   try {
     await anotherTab.goto(fallback.href);
@@ -125,7 +129,7 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   await page.reload();
   await wait(page, () => window.K56_TERM1_APP_READY && document.querySelector('.cbt-reading-form'), 'Mở lại offline');
   assert.equal(await firstText.inputValue(), 'Giữ nháp <script>');
-  await capture('exam');
+  await capture('offline');
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Tải bài làm về máy' }).click();
   const download = await downloading;
@@ -135,10 +139,12 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   await page.click('#submitReading');
   await wait(page, () => window.K56_TERM1_OFFLINE.record.sections.reading?.sealed, 'Nộp offline');
   assert.equal(await page.locator('#viewResult').isDisabled(), true);
+  await capture('pending');
   disconnected = false;
   await browser.context.setOffline(false);
   await wait(page, () => window.K56_TERM1_OFFLINE.pending === 0, 'Biên nhận sau mất ACK', 20000);
   assert.equal(droppedAck, true);
+  await capture('ack');
   await page.click('#viewResult');
   await page.locator('#resultView').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#summaryGrid').getByText('0/26 câu đúng').count(), 1);
@@ -146,6 +152,7 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   assert.equal(await page.locator('#questionDetails [data-skill="Listening"]').count(), 0);
   await capture('result');
   await page.locator('#questionDetails summary').click();
+  await capture('analysis');
   const showExplanation = page.getByRole('button', { name: 'Xem giải thích câu 1', exact: true });
   await showExplanation.click();
   const review = page.getByRole('dialog', { name: 'Reading · Câu 1' });

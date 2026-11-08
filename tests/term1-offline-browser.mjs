@@ -1,12 +1,16 @@
 import {fixture,wait} from './term2-offline-browser.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile,writeFile} from 'node:fs/promises';import {resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {captureSkillScreen} from './term1-fallback-screen-evidence.mjs';
 const output=process.env.TERM2_EVIDENCE;assert.ok(output);
 test('Term 1 chính đọc Reading đã nộp trên link dự phòng, rồi mở lại màn Listening offline',{timeout:60000},async()=>{
  const f=await fixture('read_first',{product:1}),p=f.page;f.controls.r2Audio=true;
  try{
   await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});
-  await p.selectOption('#bootstrapStudent',f.student);await p.click('#confirmIdentity');
+  await p.selectOption('#bootstrapStudent',f.student);
+  await p.locator('#identityConfirm').waitFor({state:'visible'});
+  await captureSkillScreen(p,output,'main','confirm');
+  await p.click('#confirmIdentity');
   await wait(p,()=>window.K56_TERM1_OFFLINE?.active&&window.K56_TERM1_APP_READY,'Bài chính Reading trước đã sẵn sàng');
   const operationId=randomUUID(),start=Date.now()-60000;
   f.controls.completedElsewhere={reading:{operationId,startedAt:new Date(start).toISOString(),deadlineAt:new Date(start+2400000).toISOString(),revision:1}};

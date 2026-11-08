@@ -8,6 +8,7 @@ import vm from 'node:vm';
 import test from 'node:test';
 import { ASSETS } from '../shared/audio/catalog.mjs';
 import { fixture as browserFixture, wait } from './term2-offline-browser.mjs';
+import { captureSkillScreen } from './term1-fallback-screen-evidence.mjs';
 
 const full = process.env.TERM1_LISTENING_FULL === '1';
 test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'khôi phục và chặn EOF giả'), { timeout: full ? 2200000 : 75000 }, async t => {
@@ -44,6 +45,7 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   const browser = await browserFixture('read_first', { product: 1 });
   t.after(browser.close);
   const page = browser.page;
+  const capture = screen => full ? Promise.resolve() : captureSkillScreen(page, output, 'listening', screen);
   browser.controls.primaryAudioFail = !full;
   const link = new URL('../term-test-1-k56-listening-fallback/?class=IC5601', browser.url);
   link.hash = new URLSearchParams({ g: grant.token });
@@ -61,14 +63,20 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   });
 
   await page.goto(link.href);
+  await capture('login');
   await page.locator('#activationCode').fill(grant.activationCode);
   await page.getByRole('button', { name: 'Kiểm tra thông tin học viên' }).click();
   await page.locator('#identityConfirm').waitFor({ state: 'visible' });
+  await capture('confirm');
   await page.click('#confirmIdentity');
   await page.locator('#skillPreview').waitFor({ state: 'visible', timeout: 30000 });
+  await capture('preview');
   assert.equal(await page.locator('#skillStart').isDisabled(), true);
   await page.click('#skillPreview');
   await page.locator('#skillStart:enabled').waitFor({ state: 'visible', timeout: 20000 });
+  assert.equal(await page.locator('#securePrepTitle').textContent(), 'Kiểm tra âm thanh trước khi bắt đầu');
+  assert.match(await page.locator('#skillPreviewStatus').textContent(), /Đang nghe thử/);
+  await capture('ready');
   assert.ok(browser.controls.audioCalls.some(url => url.includes('r2.cloudflarestorage.com')));
   if (!full) assert.ok(browser.controls.audioCalls.some(url => url.includes('github.io')));
   await page.click('#skillStart');
@@ -77,6 +85,14 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
     at: Date.parse(window.K56_TERM1_OFFLINE.record.sections.listening.startedAt) }));
   assert.equal(started.rate, 1);
   assert.ok(Math.abs(started.duration - 1848) < 2);
+  await capture('exam');
+  if (!full) {
+    await page.getByRole('button', { name: 'Notes', exact: true }).click();
+    await page.locator('#cbtNotesPanel').waitFor();
+    await capture('notes');
+    await page.keyboard.press('Escape');
+    await page.locator('#cbtNotesPanel').waitFor({ state: 'hidden' });
+  }
   await page.locator('#listeningQuestions input[data-number="1"]').fill('A');
   disconnected = true;
   await browser.context.setOffline(true);
@@ -93,6 +109,7 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   assert.equal(await page.locator('#listeningQuestions input[data-number="1"]').inputValue(), 'A');
   const restored = await page.evaluate(() => window.K56_TERM1_OFFLINE.player.currentTime);
   assert.ok(checkpoint >= 1 && Math.abs(restored - checkpoint) < 0.6, `Mốc ${checkpoint}, mở lại ${restored}`);
+  await capture('offline');
   await page.getByRole('button', { name: 'Tiếp tục audio', exact: true }).click();
   await wait(page, () => window.K56_TERM1_OFFLINE.player.currentTime > 4, 'Audio tiếp tục ở 1×');
   assert.equal(await page.evaluate(() => window.K56_TERM1_OFFLINE.player.playbackRate), 1);
@@ -107,12 +124,15 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   }
   await page.locator('#resultReadyView').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#viewResult').isDisabled(), true);
+  await capture('pending');
   disconnected = false;
   await browser.context.setOffline(false);
   await wait(page, () => window.K56_TERM1_OFFLINE.pending === 0, 'Biên nhận khi có mạng', 25000);
+  await capture('ack');
   await page.click('#viewResult');
   await page.locator('#resultView').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#summaryGrid').getByText('1/40 câu đúng').count(), 1);
+  await capture('result');
   if (!full) {
     await page.locator('#questionDetails summary').click();
     await page.getByRole('button', { name: 'Xem giải thích câu 1', exact: true }).click();
@@ -133,10 +153,7 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
     assert.equal(position.paused, true);
     assert.ok(position.time >= 3.5 && position.time < 4.1);
     assert.equal(browser.controls.audioCalls.length, audioCalls);
-    for (const width of [1440, 1024, 390]) {
-      await page.setViewportSize({ width, height: 1000 });
-      await page.screenshot({ path: resolve(output, `listening-fallback-review-${width}.png`) });
-    }
+    await capture('review');
     await page.keyboard.press('Escape');
     await review.waitFor({ state: 'hidden' });
   }

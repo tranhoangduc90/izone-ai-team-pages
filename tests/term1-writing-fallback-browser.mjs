@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import test from 'node:test';
 import { fixture as browserFixture, wait } from './term2-offline-browser.mjs';
+import { captureSkillScreen } from './term1-fallback-screen-evidence.mjs';
 
 test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không có job AI', { timeout: 65000 }, async t => {
   const { TERM2_EVIDENCE: output, TERM1_FALLBACK_BACKEND: backend, TERM2_RUNTIME_ROOT: runtime, TERM2_DEPS_PACKAGE: deps } = process.env;
@@ -40,6 +41,7 @@ test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không 
   const browser = await browserFixture('read_first', { product: 1 });
   t.after(browser.close);
   const page = browser.page;
+  const capture = screen => captureSkillScreen(page, output, 'writing', screen);
   const link = new URL('../term-test-1-k56-writing-fallback/?class=IC5601', browser.url);
   link.hash = new URLSearchParams({ g: grant.token });
   let disconnected = false, lost = false;
@@ -58,13 +60,18 @@ test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không 
   });
 
   await page.goto(link.href);
+  await capture('login');
   await page.locator('#activationCode').fill(grant.activationCode);
   await page.getByRole('button', { name: 'Kiểm tra thông tin học viên' }).click();
   await page.locator('#identityConfirm').waitFor({ state: 'visible' });
+  await capture('confirm');
   await page.click('#confirmIdentity');
+  await page.getByRole('button', { name: 'Bắt đầu Writing', exact: true }).waitFor();
+  await capture('ready');
   await page.getByRole('button', { name: 'Bắt đầu Writing', exact: true }).click();
   const editor = page.locator('textarea[data-writing-task="task2"]');
   await editor.waitFor();
+  await capture('exam');
   assert.equal(await page.locator('textarea[data-writing-outline],textarea[data-writing-task="task1"]').count(), 0);
   assert.equal(await page.evaluate(() => {
     const section = window.K56_TERM1_OFFLINE.record.sections.writing;
@@ -82,25 +89,27 @@ test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không 
   const backup = await readFile(await (await saving).path(), 'utf8');
   assert.match(backup, /Bài viết &lt;script&gt; đã giữ\./);
   assert.ok(!backup.includes(grant.token) && !backup.includes(grant.activationCode));
-  await page.screenshot({ path: resolve(output, 'writing-offline.png') });
+  await capture('offline');
   await editor.fill(' \u200b\u00a0');
   await page.click('#submitWriting');
   await page.locator('#resultReadyView').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#viewResult').isDisabled(), true);
+  await capture('pending');
   disconnected = false;
   await browser.context.setOffline(false);
   await wait(page, () => window.K56_TERM1_OFFLINE.pending === 0, 'Biên nhận sau mất ACK', 25000);
   assert.equal(lost, true);
+  await capture('ack');
   await page.click('#viewResult');
   await page.locator('#resultView').waitFor({ state: 'visible' });
   assert.equal(await page.getByText('Bài Writing trắng · 0/9').count(), 0);
-  await page.screenshot({ path: resolve(output, 'writing-awaiting-release.png') });
+  await capture('processing');
   afterRelease = true;
   await page.reload();
   await page.click('#viewResult');
   await page.getByText('Bài Writing trắng · 0/9', { exact: true }).waitFor();
   assert.equal(await page.locator('#questionDetails details').count(), 0);
-  await page.screenshot({ path: resolve(output, 'writing-result.png') });
+  await capture('result');
   assert.deepEqual((await native.db.query('SELECT id FROM assessment.term_test_writing_grading_job')).rows, []);
   const grades = await native.db.query('SELECT field,grade FROM assessment.k56_portal_field_dispatch WHERE attempt_id=$1', [native.a]);
   assert.deepEqual(grades.rows.map(row => [row.field, Number(row.grade)]), [['writing', 0]]);
