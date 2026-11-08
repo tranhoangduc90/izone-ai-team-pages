@@ -566,7 +566,14 @@
   }
 
   function setStartAvailability() {
-    if(miniJourney){elements.bootstrapStart.disabled=preparing||(miniJourney.view().examMode!=='read_first'&&!previewHeard);return;}
+    if (miniJourney) {
+      const listeningFirst = miniJourney.view().examMode !== 'read_first';
+      elements.bootstrapStart.disabled = preparing || (listeningFirst && !previewHeard);
+      if (listeningFirst && previewHeard && !preparing) {
+        window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart, true);
+      }
+      return;
+    }
     const resumed = Boolean(state.listeningStartedAt || legacyListeningResume);
     const ready = Boolean(encryptedAudio && (previewHeard || resumed));
     elements.bootstrapStart.disabled = !ready || preparing;
