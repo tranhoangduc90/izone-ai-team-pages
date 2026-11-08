@@ -3026,8 +3026,10 @@
     }
     state.resultDetailsIdentity = identity;
     if (!writingConfig || payload.writing?.submitted) {
+      // Lời giải đọc theo mã bài đã chấm. Giữ mã phiên offline cho đồng bộ.
       window.K67_ANSWER_EXPLANATIONS?.attach({
-        container: elements.questionDetails, payload, attemptToken: state.attemptToken,
+        container: elements.questionDetails, payload,
+        attemptToken: activeMiniOffline() ? payload.nativeAttemptToken : state.attemptToken,
         testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
       });
     }

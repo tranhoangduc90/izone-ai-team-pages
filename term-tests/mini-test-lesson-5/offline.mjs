@@ -18,6 +18,36 @@ export async function openPaperRuntime({ apiBase, classCode, testConfig }) {
     answerKeys
   });
   class PaperRuntime extends OfflineRuntime {
+    mount(options) {
+      const mounted = Boolean(this.panel);
+      super.mount(options);
+      if (mounted || !this.panel) return;
+
+      const card = document.getElementById('resultReadyView');
+      const label = card.querySelector('.eyebrow');
+      const heading = card.querySelector('h2');
+      const detail = card.querySelector('h2 + p');
+      const button = card.querySelector('#viewResult');
+      const original = [label.textContent, heading.textContent, detail.textContent];
+      let status = '';
+      const render = () => {
+        const { listening, reading } = this.record.sections;
+        const next = listening?.sealed && reading?.sealed && this.pending
+          ? (this.record.review ? 'review' : 'pending') : '';
+        if (next === status) return;
+        status = next;
+        const copy = next === 'review'
+          ? ['Đã lưu bài làm', 'Bài làm cần được đối soát', 'Bài làm đã lưu trên thiết bị. Hãy báo giảng viên để kiểm tra.']
+          : next === 'pending'
+            ? ['Đã lưu bài làm', 'Bài làm đang chờ đồng bộ', 'Bài làm đã lưu trên thiết bị. Bạn có thể xem kết quả sau khi máy chủ xác nhận đã nhận bài.']
+            : original;
+        [label.textContent, heading.textContent, detail.textContent] = copy;
+        button.disabled = Boolean(next);
+      };
+      this.addEventListener('change', render);
+      render();
+    }
+
     async flush() {
       if (navigator.onLine === false) return;
       return super.flush();
