@@ -25,6 +25,7 @@
   const writingMinutes = Math.max(1, Number(window.TERM_TEST_CONTENT?.timing?.writingMinutes) || 60);
   const writingTasks = Array.from(writingConfig?.tasks || []);
   const writingTaskLabels = writingTasks.map(task => task.label || task.id).join(' và ');
+  const writingPrepNotice = 'Bạn đã hoàn thành Listening và Reading. Kết quả sẽ mở sau khi bạn nộp Writing.';
   const demoMode = window.TERM_TEST_CONTENT?.variant === 'semantic-html'
     && ['complete', 'listening-only', 'writing-prep', 'writing'].includes(requestedDemo)
     ? requestedDemo
@@ -301,7 +302,9 @@
         <ul class="writing-prep-list">
           <li>Tổng thời gian: ${writingMinutes} phút. Còn 10 phút đồng hồ sẽ chuyển đỏ; hết giờ hệ thống tự thu bài và mở kết quả.</li>
           ${writingTasks.map(task => `<li>${task.label}: nên dành khoảng ${task.recommendedMinutes} phút và viết ít nhất ${task.minimumWords} từ.</li>`).join('')}
-          <li>Bài viết được tự lưu trên hệ thống; đóng tab rồi mở lại vẫn có thể tiếp tục.</li>
+          <li>${miniJourney
+            ? 'Bài viết tự lưu trên thiết bị này. Mở lại trên cùng thiết bị để tiếp tục.'
+            : 'Bài viết được tự lưu trên hệ thống; đóng tab rồi mở lại vẫn có thể tiếp tục.'}</li>
         </ul>
         <button class="button button-primary" id="startWriting" type="button">Bắt đầu Writing</button>
       </section>
@@ -3449,6 +3452,7 @@
         void waitForListeningPortalSync();
       } else if (state.completed && writingConfig && !state.writingSubmitted) {
         setStage(state.writingStarted ? 'writing' : 'writing-prep');
+        if (miniJourney && !state.writingStarted) showNotice(writingPrepNotice, 'success');
       } else {
         setStage(state.completed ? 'result-ready' : 'listening-saved');
       }
@@ -3570,8 +3574,12 @@
         setStage('listening');
       } else if (writingConfig) {
         setStage('writing-prep');
-        const portalMessage = portalNotice(response.portalSyncStatus, true);
-        showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success');
+        if (miniJourney) {
+          showNotice(writingPrepNotice, 'success');
+        } else {
+          const portalMessage = portalNotice(response.portalSyncStatus, true);
+          showNotice(`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, ['pending', 'queued'].includes(response.portalSyncStatus) ? '' : 'success');
+        }
       } else {
         showNotice(response.localOnly ? 'Bài đã lưu trên máy. Hệ thống sẽ đồng bộ khi có mạng.'
           : portalNotice(response.portalSyncStatus, true), response.localOnly || !['pending', 'queued'].includes(response.portalSyncStatus) ? 'success' : '');
