@@ -289,12 +289,12 @@ export const ASSET_HASHES={
   "../shared/writing-planning.js": "1ce3652cdb91ce598f50e03516318154331fb461dcd28834534ddeb599da7094",
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../substitute-test-1-k67-computer-based/assets/figures/home-improvement-store.png": "feab5540ce3cac2115201f167f1a05cf5b916021e4ec2c4f67912728290aa150",
-  "../teacher-k56/app.js": "a0ea0550f8b32c20d0a5902759ca39a8b20081541258b264bf5e4d2e3472e577",
-  "../teacher-k56/index.html": "6dcf0da7dd8f00a1abf88354d4d7200641a1a8b91042e9a8e69df21da26a51f8",
+  "../teacher-k56/app.js": "088e095bb45700bb0510733d5ab8a1c001e17f044ddf9d50fa0438100662daf6",
+  "../teacher-k56/index.html": "9c3eca48b9062749731ad15a79246e191f58c3fccf5eab6045e952b8a8133368",
   "../teacher-k56/model.js": "9766cea8d9ca6617d22a3fd4f947590458d4909add0d22415b2deec9e3b5a5c3",
   "../teacher-k56/styles.css": "131d01f090fc461af96f1408f90c56cec05d467420146cd799f83ea65e854aa7",
-  "../teacher/app.js": "36dfe68404ece4a478798ad1f22b3804321288034c5d441ec989e789bf39cc5d",
-  "../teacher/index.html": "e9eb26dcfd36af4af71b2c4461a0f06db30afd9fd81894a2cd702ccdce333ad0",
+  "../teacher/app.js": "4741c17e7beb347dbbd8d103cfcaa6a48a5717d50e0f8e08e1ecc0924272dcea",
+  "../teacher/index.html": "ddf188e44dd49af9ddcd8a17ba58476d49b39d84830c89be4c01c91a0b6b0437",
   "../teacher/model.js": "e6a8e1bb205201c05faa70427bb55d73712352c8af40b9c69a6e229565170802",
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
@@ -303,4 +303,4 @@ export const ASSET_HASHES={
   "offline.mjs": "eaad6811b24c1e5ccf4ccf46489e53317fee901864635e3269a8cae9cd86714b",
   "test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca"
 };
-export const ASSET_BUILD_ID="2c842af986d1117fbad6bc1975642f0ff45637de7c2cab908494e5b99bcd5143";
+export const ASSET_BUILD_ID="6908cf2d169191831606e6e0d914cdf3ff485ccd9248315c0afd79a6bbf6e6f3";

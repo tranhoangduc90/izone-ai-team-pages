@@ -615,11 +615,26 @@ function openTeacherWritingFeedback(studentName, writing) {
   dialog.addEventListener('close', () => dialog.remove(), { once: true });
   document.body.append(dialog);
   dialog.showModal();
+  return dialog;
+}
+
+function teacherDetailIsCurrent(selectedClass, student, button) {
+  const test = state.selectedTestSlug;
+  return () => state.authenticated && button.isConnected
+    && getSelectedClass()?.id === selectedClass.id && state.selectedTestSlug === test
+    && state.selectedTab === student.ref;
+}
+
+function restoreTeacherDetailFocus(dialog, button, isCurrent) {
+  dialog?.addEventListener('close', () => {
+    if (isCurrent()) button.focus({ preventScroll: true });
+  }, { once: true });
 }
 
 async function loadTeacherWritingDetail(student, taskNumber, button) {
   const selectedClass = getSelectedClass();
   if (!selectedClass || !student || ![1, 2].includes(taskNumber)) return;
+  const isCurrent = teacherDetailIsCurrent(selectedClass, student, button);
   const cacheKey = [selectedClass.id, state.selectedTestSlug, student.ref, taskNumber, student.writing?.updatedAt || ''].join('|');
   let payload = state.writingDetailCache.get(cacheKey);
   const originalText = button.querySelector('strong')?.textContent || '';
@@ -633,10 +648,12 @@ async function loadTeacherWritingDetail(student, taskNumber, button) {
         student: student.ref,
         task: String(taskNumber)
       });
-      payload = await apiRequest(`/api/term-tests/teacher/writing-detail?${query}`);
+      payload = await apiRequest(`/api/term-tests/teacher/writing-detail?${query}`, { isCurrent });
       state.writingDetailCache.set(cacheKey, payload);
     }
-    openTeacherWritingFeedback(payload.studentName || student.name, payload.writing);
+    if (!isCurrent()) return;
+    const dialog = openTeacherWritingFeedback(payload.studentName || student.name, payload.writing);
+    restoreTeacherDetailFocus(dialog, button, isCurrent);
   } catch (error) {
     if (error.staleSession) return;
     showNotice(`Không thể tải bài chấm Writing: ${error.message}`, 'error');
@@ -649,6 +666,7 @@ async function loadTeacherWritingDetail(student, taskNumber, button) {
 async function openTeacherAttemptReview(student, button) {
   const selectedClass = getSelectedClass();
   if (!selectedClass || !student?.ref) return;
+  const isCurrent = teacherDetailIsCurrent(selectedClass, student, button);
   const cacheKey = [selectedClass.id, state.selectedTestSlug, student.ref].join('|');
   const normalText = 'Xem lại toàn bộ bài làm';
   button.disabled = true;
@@ -660,11 +678,13 @@ async function openTeacherAttemptReview(student, button) {
         test: state.selectedTestSlug,
         student: student.ref
       });
-      const payload = await apiRequest(`/api/term-tests/teacher/attempt-review?${query}`);
+      const payload = await apiRequest(`/api/term-tests/teacher/attempt-review?${query}`, { isCurrent });
       state.attemptReviewCache.set(cacheKey, payload.review);
     }
     if (!window.TERM_TEST_ATTEMPT_REVIEW?.open) throw new Error('Chưa tải được giao diện xem lại bài làm.');
-    window.TERM_TEST_ATTEMPT_REVIEW.open(state.attemptReviewCache.get(cacheKey));
+    if (!isCurrent()) return;
+    const dialog = window.TERM_TEST_ATTEMPT_REVIEW.open(state.attemptReviewCache.get(cacheKey));
+    restoreTeacherDetailFocus(dialog, button, isCurrent);
   } catch (error) {
     if (error.staleSession) return;
     showNotice(`Không thể tải bài chi tiết: ${error.message}`, 'error');
