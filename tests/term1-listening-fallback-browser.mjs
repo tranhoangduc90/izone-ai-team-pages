@@ -30,6 +30,8 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   registerTerm1SkillRoutes(router, { authenticate: noop, readTeacherScope: async (_db, input) => assert.equal(input.student, studentRef),
     transaction: work => native.db.transaction(work), prepare: (slug, _input, _create, db) => native.load(db, slug, native.a), load: native.load,
     findStudent: async () => ({ class_id: '5601', student_id: '5602' }), assets: {}, policy: 'term1-offline-v1', limiter: noop, readLimiter: noop,
+    readReview: async () => [{ number: 1, source: 'Part 1', evidence: 'Practice Test', explanation: 'Dẫn chứng mẫu.',
+      clip: { start: 1.5, end: 3.5 } }],
     allowNew: () => true, issueAudio: () => ({ version: 1, policy: 'r2-direct-v1', method: 'GET',
       url: 'https://e340869dcc6ff285504947407d148104.r2.cloudflarestorage.com/izone-audio-r2-lab-20261023/' + asset.key + '?X-Amz-Signature=fixture',
       sha256: asset.sha256, byteLength: asset.byteLength, validForSeconds: 600, fallback: 'public-pages' }) });
@@ -111,6 +113,33 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   await page.click('#viewResult');
   await page.locator('#resultView').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#summaryGrid').getByText('1/40 câu đúng').count(), 1);
+  if (!full) {
+    await page.locator('#questionDetails summary').click();
+    await page.getByRole('button', { name: 'Xem giải thích câu 1', exact: true }).click();
+    const review = page.getByRole('dialog', { name: 'Listening · Câu 1' });
+    const startReplay = review.getByRole('button', { name: 'Nghe dẫn chứng', exact: true });
+    const audioCalls = browser.controls.audioCalls.length;
+    await startReplay.click();
+    await wait(page, () => {
+      const audio = document.querySelector('dialog[open] audio');
+      return audio && !audio.paused && audio.currentTime >= 1.5 && audio.playbackRate === 1;
+    }, 'Phát đúng mốc dẫn chứng');
+    await wait(page, () => {
+      const audio = document.querySelector('dialog[open] audio');
+      return audio?.paused && audio.currentTime >= 3.5;
+    }, 'Dừng ở cuối dẫn chứng');
+    await startReplay.waitFor({ state: 'visible' });
+    const position = await review.locator('audio').evaluate(audio => ({ paused: audio.paused, time: audio.currentTime }));
+    assert.equal(position.paused, true);
+    assert.ok(position.time >= 3.5 && position.time < 4.1);
+    assert.equal(browser.controls.audioCalls.length, audioCalls);
+    for (const width of [1440, 1024, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.screenshot({ path: resolve(output, `listening-fallback-review-${width}.png`) });
+    }
+    await page.keyboard.press('Escape');
+    await review.waitFor({ state: 'hidden' });
+  }
   const grade = await native.db.query('SELECT field,grade FROM assessment.k56_portal_field_dispatch WHERE attempt_id=$1', [native.a]);
   assert.deepEqual(grade.rows.map(row => [row.field, Number(row.grade)]), [['listening', 1]]);
   browser.assertJournalFaultExercised();

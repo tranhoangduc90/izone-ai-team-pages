@@ -1,4 +1,4 @@
-import { SkillOffline } from './reading-offline.mjs?v=20261108-v3';
+import { SkillOffline } from './reading-offline.mjs?v=20261109-v4';
 
 const form = document.getElementById('skillIdentity');
 const dialog = document.getElementById('identityConfirm');
@@ -34,7 +34,7 @@ async function enter(runtime, audio) {
     const timer = setTimeout(() => reject(Error('Giao diện chưa sẵn sàng. Hãy mở lại link.')), 15000);
     window.addEventListener('term1:app-ready', () => { clearTimeout(timer); resolve(); }, { once: true });
   });
-  await Promise.all([ready, loadScript('../k56-shared/app.js?v=20261108-term1-skill-fallback-v3')]);
+  await Promise.all([ready, loadScript('../k56-shared/app.js?v=20261109-term1-skill-review-v1')]);
   if (prepared.content[skill]) {
     await loadScript('../term-test-1-k56-computer-based/enhance.js?v=20261108-term1-skill-fallback-v3');
     await loadScript('../term-test-1-k56-computer-based/annotations.js?v=20261018-identity-v1');

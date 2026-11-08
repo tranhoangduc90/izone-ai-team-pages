@@ -29,6 +29,8 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   native.content.reading = context.window.K56_TERM_TEST_CONTENT.reading;
 
   const studentRef = randomUUID();
+  const explanation = { number: 1, source: 'Passage 1 · đoạn 1',
+    evidence: 'more sensors and cleverer software', explanation: 'Đối chiếu đời máy mới và đời máy trước.' };
   const app = express();
   app.use(express.json());
   const router = express.Router();
@@ -41,6 +43,11 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
     findStudent: async (_db, input) => input.classCode === 'IC5601' && input.studentRef === studentRef
       ? { class_id: '5601', student_id: '5602' } : null,
     assets: {}, policy: 'term1-offline-v1',
+    readReview: async (attempt, section) => {
+      assert.equal(attempt.attempt_token, native.a);
+      assert.equal(section, 'reading');
+      return [explanation];
+    },
     limiter: (_req, _res, next) => next(), readLimiter: (_req, _res, next) => next(), allowNew: () => true
   });
   app.use('/api/term-tests', router);
@@ -98,6 +105,7 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   await page.locator('#readingView').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#readingQuestions [data-number]').count(), 26);
   assert.equal(await page.locator('#listeningView').isVisible(), false);
+  assert.equal(await page.getByRole('button', { name: 'Xem giải thích câu 1', exact: true }).count(), 0);
   const anotherTab = await browser.context.newPage();
   try {
     await anotherTab.goto(fallback.href);
@@ -137,6 +145,16 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   assert.equal(await page.locator('#questionDetails [data-skill="Reading"]').count(), 1);
   assert.equal(await page.locator('#questionDetails [data-skill="Listening"]').count(), 0);
   await capture('result');
+  await page.locator('#questionDetails summary').click();
+  const showExplanation = page.getByRole('button', { name: 'Xem giải thích câu 1', exact: true });
+  await showExplanation.click();
+  const review = page.getByRole('dialog', { name: 'Reading · Câu 1' });
+  assert.equal(await review.getByText(explanation.evidence, { exact: true }).count(), 1);
+  assert.equal(await review.getByText(explanation.explanation, { exact: true }).count(), 1);
+  await capture('review');
+  await page.keyboard.press('Escape');
+  await review.waitFor({ state: 'hidden' });
+  assert.equal(await showExplanation.evaluate(button => document.activeElement === button), true);
   const grades = await native.db.query('SELECT field, grade FROM assessment.k56_portal_field_dispatch WHERE attempt_id=$1', [native.a]);
   assert.deepEqual(grades.rows.map(row => [row.field, Number(row.grade)]), [['reading', 0]]);
   const event = normalize({ eventId: native.a + ':reading', revision: 1, kind: 'exam_grade', mode: 'write',

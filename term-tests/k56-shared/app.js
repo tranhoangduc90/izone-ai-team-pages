@@ -2358,7 +2358,90 @@
     return wrapper;
   }
 
-  function renderDetailBlock(title, details) {
+  function addReviewAudio(dialog, clip) {
+    const player = document.createElement('audio');
+    player.hidden = true;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button-secondary';
+    button.textContent = 'Nghe dẫn chứng';
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    let source = '';
+    let request = 0;
+    const stop = () => {
+      request += 1;
+      player.pause();
+      button.disabled = false;
+      button.textContent = 'Nghe dẫn chứng';
+    };
+    const fail = () => {
+      stop();
+      status.textContent = 'Chưa phát được đoạn dẫn chứng. Bạn vẫn có thể đọc giải thích.';
+    };
+    const onHidden = () => { if (document.hidden) stop(); };
+    document.addEventListener('visibilitychange', onHidden);
+    player.addEventListener('ratechange', () => { if (player.playbackRate !== 1) player.playbackRate = 1; });
+    player.addEventListener('timeupdate', () => { if (player.currentTime >= clip.end) stop(); });
+    player.addEventListener('ended', stop);
+    player.addEventListener('error', fail);
+    dialog.addEventListener('close', () => {
+      stop();
+      document.removeEventListener('visibilitychange', onHidden);
+      if (source) URL.revokeObjectURL(source);
+    }, { once: true });
+    button.addEventListener('click', async () => {
+      if (!player.paused) { stop(); return; }
+      const intent = ++request;
+      button.disabled = true;
+      status.textContent = '';
+      try {
+        if (!source) {
+          const blob = await offline.audio();
+          if (!dialog.open || request !== intent || document.hidden) return;
+          source = URL.createObjectURL(blob);
+          player.src = source;
+        }
+        player.currentTime = clip.start;
+        await player.play();
+        if (!dialog.open || request !== intent || document.hidden) return;
+        button.disabled = false;
+        button.textContent = 'Dừng nghe dẫn chứng';
+      } catch {
+        if (dialog.open && request === intent) fail();
+      }
+    });
+    dialog.append(button, status, player);
+  }
+
+  function openSkillReview(title, item) {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cbt-identity-confirm';
+    dialog.setAttribute('aria-labelledby', 'term1SkillReviewHeading');
+    const heading = document.createElement('h2');
+    heading.id = 'term1SkillReviewHeading';
+    heading.textContent = title + ' · Câu ' + item.number;
+    const source = document.createElement('strong');
+    source.textContent = item.source;
+    const evidence = document.createElement('blockquote');
+    evidence.textContent = item.evidence;
+    const explanation = document.createElement('p');
+    explanation.textContent = item.explanation;
+    const controls = document.createElement('form');
+    controls.method = 'dialog';
+    const close = document.createElement('button');
+    close.className = 'button button-secondary';
+    close.textContent = 'Đóng';
+    controls.append(close);
+    dialog.append(heading, source, evidence, explanation);
+    if (fallbackSkill === 'listening' && item.clip) addReviewAudio(dialog, item.clip);
+    dialog.append(controls);
+    dialog.addEventListener('close', () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
+  function renderDetailBlock(title, details, review) {
     const block = document.createElement('details');
     block.className = 'detail-block';
     const summary = document.createElement('summary');
@@ -2372,7 +2455,9 @@
     table.className = 'detail-table';
     const head = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    for (const label of ['Câu', 'Bài làm', 'Đáp án đúng', 'Kết quả']) {
+    const columns = ['Câu', 'Bài làm', 'Đáp án đúng', 'Kết quả'];
+    if (review.size) columns.push('Giải thích');
+    for (const label of columns) {
       const cell = document.createElement('th');
       cell.textContent = label;
       headerRow.append(cell);
@@ -2407,6 +2492,20 @@
       resultLabel.textContent = resultMeta.label;
       resultCell.append(resultIcon, resultLabel);
       row.append(resultCell);
+      if (review.size) {
+        const cell = document.createElement('td');
+        const explanation = review.get(Number(detail.number));
+        if (explanation) {
+          const action = document.createElement('button');
+          action.type = 'button';
+          action.className = 'button button-secondary';
+          action.textContent = 'Xem giải thích';
+          action.setAttribute('aria-label', 'Xem giải thích câu ' + detail.number);
+          action.addEventListener('click', () => openSkillReview(title, explanation));
+          cell.append(action);
+        }
+        row.append(cell);
+      }
       body.append(row);
     }
     table.append(head, body);
@@ -2441,11 +2540,12 @@
     const identity = JSON.stringify([payload.className, payload.studentRef || state.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);
     const previousBlocks = state.resultDetailsIdentity === identity
       ? Array.from(elements.questionDetails.children) : [];
+    const review = fallbackSkill ? new Map((payload.review || []).map(item => [item.number, item])) : new Map();
     const detailBlocks = skills.map(([title, skill]) => {
-      const fingerprint = JSON.stringify(skill.details || []);
+      const fingerprint = JSON.stringify(review.size ? [skill.details || [], [...review.values()]] : skill.details || []);
       const previous = previousBlocks.find(block => block.dataset.skill === title);
       if (previous?.dataset.details === fingerprint) return previous;
-      const block = renderDetailBlock(title, skill.details);
+      const block = renderDetailBlock(title, skill.details, review);
       block.dataset.skill = title;
       block.dataset.details = fingerprint;
       block.open = previous?.open || false;

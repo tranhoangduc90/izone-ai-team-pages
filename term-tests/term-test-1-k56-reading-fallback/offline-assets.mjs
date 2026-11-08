@@ -67,7 +67,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/runtime.mjs": "79a0e06cb7f70b32677d62604de6035e6d459cdf2a4f2f2b238504d07e0b408e",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
-  "../k56-shared/app.js": "744d242cf8b1a093c4ccf39e0a438d9ae774fe96619b13c97fd2f13280e0444d",
+  "../k56-shared/app.js": "1b60e5f848eed3a746301c049ff443b2f206e3abeff9b1007d478991d8e0ab4e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
@@ -82,9 +82,9 @@ export const ASSET_HASHES={
   "../term-test-1-k56-computer-based/layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "../term-test-1-k56-computer-based/styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb",
   "../term-test-1-k56/test-config.js": "fdfa91aa74cda341a1965c418f24b2a7a7065c547d0fbad4ae581c8ec1844bc2",
-  "bootstrap.mjs": "fd73d767b94496f3bffdc94a867c3494e0675798f82cd4975e67a90c1b6b1964",
-  "index.html": "cd4970e9189ef0a83f26a0d7593b556ddcffb94208a04784433f0cf7b16fdc0b",
+  "bootstrap.mjs": "c5b2a7e52d2acc45b25c78cb6c19c4fa0671890841352e02b1404bad9c164d47",
+  "index.html": "dbc951c1e80111dc141f848a1f5fbf49f884be98a023ea80ed5e30ae7bec47c3",
   "offline-worker.js": "aa14476016b290ed8157adc19652fb7a8795beab0d773ad207caf8dfc8b79358",
-  "reading-offline.mjs": "6dd18a20f62c14b994a303cde4f672e55de3859d6444784771878dac137f383a"
+  "reading-offline.mjs": "8c193210a06568d361e79cf1e0202be03a80a12a2f9993bc6a9c7b4c59fa3f1e"
 };
-export const ASSET_BUILD_ID="8bb5e2075f247dfc477759ce76cdf1e3af3c78d3695bc6110270a0f549bc0c1d";
+export const ASSET_BUILD_ID="8c1158f34e08614956a239c1f56998591781a5418ee3cd36f07e26d903f22c16";

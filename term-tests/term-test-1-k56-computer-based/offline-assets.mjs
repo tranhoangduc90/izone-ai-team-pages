@@ -263,7 +263,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/runtime.mjs": "79a0e06cb7f70b32677d62604de6035e6d459cdf2a4f2f2b238504d07e0b408e",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
-  "../k56-shared/app.js": "744d242cf8b1a093c4ccf39e0a438d9ae774fe96619b13c97fd2f13280e0444d",
+  "../k56-shared/app.js": "1b60e5f848eed3a746301c049ff443b2f206e3abeff9b1007d478991d8e0ab4e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio.mjs": "2fe35adec2c70006e5bf839380c3f180e38a54de8c0b7f619631f9c1ade86500",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
@@ -325,4 +325,4 @@ export const ASSET_HASHES={
   "offline.mjs": "1416a6c594d627384a7d1eb1132fb1be3d820dbff0139d74d571b00cad21762a",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="383fe2118c656c5cbe07d4315b53fb669f6420881ab3b2d8def95022f5a14e2b";
+export const ASSET_BUILD_ID="fe20933ddb94c75f48aab4205fe69608f3d439ae17e02dcad27f433db66702c0";

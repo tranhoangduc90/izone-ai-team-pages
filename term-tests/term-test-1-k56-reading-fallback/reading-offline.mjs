@@ -91,6 +91,7 @@ export class SkillOffline extends OfflineRuntime {
       throw Error('Chưa có kết quả ' + this.label + ' đã xác nhận.');
     return { studentName: this.record.prepared.studentName, className: this.classCode,
       result: { testTitle: 'Term Test 1 · Khóa 56', ...(writing ? {} : { [this.skill]: value.result }) },
+      ...(!writing && Array.isArray(value.review) ? { review: value.review } : {}),
       ...(writing ? { writing: value.writing } : {}) };
   }
 
