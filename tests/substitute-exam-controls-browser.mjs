@@ -7,13 +7,29 @@ const{chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href),
 const baseline=process.env.SUBSTITUTE_CONTROLS_BASELINE;
 if(baseline&&!/^[a-f0-9]{40}$/.test(baseline))throw Error('Baseline phải là revision Git đầy đủ.');
 if(baseline&&process.argv.includes('--online'))throw Error('Không trộn baseline và tài nguyên online.');
-const server=createServer((q,r)=>{const u=new URL(q.url,'http://fixture'),p=path.resolve(root,'.'+u.pathname.replace(/^\/izone-ai-team-pages/,'')+(u.pathname.endsWith('/')?'index.html':''));if(!p.startsWith(root+path.sep))return r.writeHead(403).end();try{r.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2'})[path.extname(p)]||'application/octet-stream');const relative=path.relative(root,p).replaceAll(path.sep,'/');r.end(baseline&&/^term-tests\/substitute-test-[12]-k(?:56|67)-computer-based\/index.html$/.test(relative)?execFileSync('git',['show',baseline+':'+relative],{cwd:root,windowsHide:true}):fs.readFileSync(p));}catch{r.writeHead(404).end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const server=createServer((q,r)=>{const u=new URL(q.url,'http://fixture'),p=path.resolve(root,'.'+u.pathname.replace(/^\/izone-ai-team-pages/,'')+(u.pathname.endsWith('/')?'index.html':''));if(!p.startsWith(root+path.sep))return r.writeHead(403).end();try{r.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.ttf':'font/ttf'})[path.extname(p)]||'application/octet-stream');const relative=path.relative(root,p).replaceAll(path.sep,'/');r.end(baseline&&/^term-tests\/substitute-test-[12]-k(?:56|67)-computer-based\/index.html$/.test(relative)?execFileSync('git',['show',baseline+':'+relative],{cwd:root,windowsHide:true}):fs.readFileSync(p));}catch{r.writeHead(404).end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const base=process.argv.includes('--online')?'https://tranhoangduc90.github.io/izone-ai-team-pages':'http://127.0.0.1:'+server.address().port,browser=await chromium.launch({channel:'msedge',headless:true}),results=[];
 
 function check(checks,id,ok,observed){checks.push({id,ok:Boolean(ok),observed});}
+async function inspectMediumHeader(page, state, checks) {
+ if (page.viewportSize().width !== 1024) return;
+ const names = ['Đổi người học', 'Tải bài làm về máy', 'Reset dữ liệu'];
+ const buttons = names.map(name => page.getByRole('button', { name, exact: true }));
+ const boxes = await Promise.all([...buttons, page.locator('#studentSelect')].map(control => control.boundingBox()));
+ const [change, download, reset, student] = boxes;
+ const centerY = box => box.y + box.height / 2;
+ const fits = boxes.every(Boolean)
+  && boxes.every(box => Math.abs(centerY(box) - centerY(change)) < 5)
+  && download.x >= change.x + change.width
+  && student.x >= download.x + download.width
+  && reset.x >= student.x + student.width
+  && reset.x + reset.width <= 1024;
+ check(checks, state + '-medium-header-fits', fits, boxes);
+}
 async function inspectControls(p,skill,checks){
  const form=p.locator('#'+skill+'View');
  await form.locator('.cbt-notes-open').waitFor();
+ await inspectMediumHeader(p,skill,checks);
  if(skill==='listening'&&p.viewportSize().width===390){
   const download=p.getByRole('button',{name:'Tải bài làm về máy',exact:true});
   const change=p.getByRole('button',{name:'Đổi người học',exact:true});
@@ -95,7 +111,7 @@ try{for(const slug of slugs)for(const width of widths){const height=900;
   else return r.abort();return r.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(d)});
  }return r.abort();});
  const p=await c.newPage();p.setDefaultTimeout(15000);p.on('dialog',d=>d.accept());p.on('pageerror',e=>errors.push(e.message));const observed=[],controlChecks=[];
- try{await p.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server');await p.locator('#bootstrapClass').selectOption('DEMO');const opt=p.locator('#bootstrapStudent option:not([value=""])').first();await opt.waitFor({state:'attached'});await p.locator('#bootstrapStudent').selectOption(await opt.getAttribute('value'));await p.locator('#confirmIdentity').click();await p.locator('#bootstrapPreview:enabled').click();await p.locator('#bootstrapStart:enabled').click();await p.locator('#listeningView').waitFor({state:'visible'});await inspectControls(p,'listening',controlChecks);await p.locator('#submitListening').click();await p.locator('#listeningView').waitFor({state:'hidden'});await p.locator('#startReading').click();await p.locator('#readingView').waitFor({state:'visible'});await p.locator('#readingView .cbt-passage-header').first().waitFor({state:'visible'});
+ try{await p.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server');await p.locator('#bootstrapClass').selectOption('DEMO');const opt=p.locator('#bootstrapStudent option:not([value=""])').first();await opt.waitFor({state:'attached'});await p.locator('#bootstrapStudent').selectOption(await opt.getAttribute('value'));await p.locator('#confirmIdentity').click();await p.locator('#bootstrapPreview:enabled').click();await p.locator('#bootstrapStart:enabled').click();await p.locator('#listeningView').waitFor({state:'visible'});await inspectControls(p,'listening',controlChecks);await p.locator('#submitListening').click();await p.locator('#listeningView').waitFor({state:'hidden'});await p.locator('#startReading').waitFor({state:'visible'});await inspectMediumHeader(p,'reading-prep',controlChecks);await p.locator('#startReading').click();await p.locator('#readingView').waitFor({state:'visible'});await p.locator('#readingView .cbt-passage-header').first().waitFor({state:'visible'});
   await inspectControls(p,'reading',controlChecks);const control=p.locator('#readingView .cbt-reading-questions input:visible, #readingView .cbt-reading-questions select:visible').first(),handle=await control.elementHandle(),kind=await control.evaluate(e=>e.tagName==='SELECT'?'select':e.type);
   if(kind==='select'){const value=await control.locator('option:not([value=""])').first().getAttribute('value');await control.selectOption(value);}else if(['radio','checkbox'].includes(kind))await control.check();else await control.fill('Scroll fixture');const answer=await control.inputValue();
   const tabs=p.locator('#readingView .cbt-part-button'),count=await tabs.count();

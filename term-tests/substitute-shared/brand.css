@@ -124,7 +124,7 @@ button:disabled,.button:disabled{opacity:.6;cursor:not-allowed}
 
 /* Giữ nút tải trong hàng tiêu đề khi làm bài ở cửa sổ hẹp. */
 .substitute-backup-compact { display: none; }
-@media (max-width: 620px) {
+@media (max-width: 1100px) {
   .cbt-mode .topbar .substitute-backup-download {
     flex: 0 0 auto;
     inline-size: 52px;
@@ -134,4 +134,11 @@ button:disabled,.button:disabled{opacity:.6;cursor:not-allowed}
   }
   .substitute-backup-download .substitute-backup-full { display: none; }
   .substitute-backup-download .substitute-backup-compact { display: inline; }
+}
+
+@media (min-width: 981px) and (max-width: 1100px) {
+  .cbt-mode .topbar.k56-reset-header:has(> .substitute-backup-download) .cbt-identity-panel {
+    flex-basis: 300px;
+    grid-template-columns: minmax(150px, .65fr) minmax(0, 1fr);
+  }
 }
