@@ -4,7 +4,7 @@ import {pathToFileURL} from 'node:url';
 const root=path.resolve(new URL('../',import.meta.url).pathname.replace(/^\/([A-Z]:)/,'$1'));
 if(!process.env.PLAYWRIGHT_MODULE)throw new Error('Cần đường dẫn Playwright đã cài.');
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
-const server=createServer((req,res)=>{const p=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{const file=fs.statSync(p).isDirectory()?path.join(p,'index.html'):p;res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
+const server=createServer((req,res)=>{const p=path.resolve(root,'.'+new URL(req.url,'http://local').pathname);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();try{const file=fs.statSync(p).isDirectory()?path.join(p,'index.html'):p;res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'msedge',headless:true}),results=[];
 try{
@@ -12,7 +12,10 @@ try{
   const context=await browser.newContext({serviceWorkers:'block'}),sessions=new Map(),grades=[];let page,offlineEnd=false,fixtureNow=Date.parse('2026-10-14T00:00:00Z');
   await context.addInitScript(()=>{
    // Giữ các sự kiện DOM/media của ứng dụng; không chờ 30 phút audio trong test.
-   for(const [key,value]of [['duration',1800],['readyState',4]])Object.defineProperty(HTMLMediaElement.prototype,key,{get:()=>value,configurable:true});
+   Object.defineProperty(HTMLMediaElement.prototype,'duration',{
+    get:()=>window.TERM_TEST_CONFIG?.listening?.durationSeconds,configurable:true
+   });
+   Object.defineProperty(HTMLMediaElement.prototype,'readyState',{get:()=>4,configurable:true});
    HTMLMediaElement.prototype.play=function(){this._fixturePaused=false;this.dispatchEvent(new Event('play'));this.dispatchEvent(new Event('playing'));if(window.__fixtureEndBeforeEnhance){this.currentTime=this.duration;this._fixtureEnded=true;queueMicrotask(()=>this.dispatchEvent(new Event('ended')));}return Promise.resolve();};
    HTMLMediaElement.prototype.pause=function(){this._fixturePaused=true;};
    HTMLMediaElement.prototype.load=function(){queueMicrotask(()=>this.dispatchEvent(new Event('loadedmetadata')));};
@@ -30,7 +33,7 @@ try{
     else if(api==='/api/test/roster')response={students:[{ref:'fictional-01',name:'Học viên giả'}]};
     else if(api==='/api/test/writing/session')response={testSlug:slug,classCode:payload.classCode,studentRef:payload.studentRef,clientRunId:payload.clientRunId,historyEpoch:payload.historyEpoch,examVersion:'substitute-k67-test2-two-task-20261007-v1',writingSessionId:payload.clientRunId};
     else if(api==='/api/test/exam/session'){
-     if(!sessions.has(payload.clientRunId))sessions.set(payload.clientRunId,{testSlug:slug,classCode:'DEMO',studentRef:payload.studentRef,clientRunId:payload.clientRunId,historyEpoch:payload.historyEpoch,timingVersion:'substitute-audio-transfer-20261014-v1',listeningStartedAt:new Date(fixtureNow).toISOString(),audioEndedAt:'',listeningDeadlineAt:'',transferSeconds:300});
+     if(!sessions.has(payload.clientRunId))sessions.set(payload.clientRunId,{testSlug:slug,classCode:'DEMO',studentRef:payload.studentRef,clientRunId:payload.clientRunId,historyEpoch:payload.historyEpoch,timingVersion:'substitute-audio-transfer-20261014-v1',examOrder:payload.examOrder,listeningStartedAt:new Date(fixtureNow).toISOString(),audioEndedAt:'',listeningDeadlineAt:'',transferSeconds:300});
      response={...sessions.get(payload.clientRunId),serverNow:new Date(fixtureNow).toISOString()};
     }else if(api==='/api/test/exam/audio-ended'){
      if(offlineEnd)return route.abort();

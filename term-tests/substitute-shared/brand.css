@@ -121,3 +121,24 @@ button:disabled,.button:disabled{opacity:.6;cursor:not-allowed}
  .cbt-mode .topbar.cbt-topbar-with-identity{grid-template-columns:1fr;gap:8px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Giữ nút tải trong hàng tiêu đề khi làm bài ở cửa sổ hẹp. */
+.substitute-backup-compact { display: none; }
+@media (max-width: 1100px) {
+  .cbt-mode .topbar .substitute-backup-download {
+    flex: 0 0 auto;
+    inline-size: 52px;
+    padding-inline: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .substitute-backup-download .substitute-backup-full { display: none; }
+  .substitute-backup-download .substitute-backup-compact { display: inline; }
+}
+
+@media (min-width: 981px) and (max-width: 1100px) {
+  .cbt-mode .topbar.k56-reset-header:has(> .substitute-backup-download) .cbt-identity-panel {
+    flex-basis: 300px;
+    grid-template-columns: minmax(150px, .65fr) minmax(0, 1fr);
+  }
+}

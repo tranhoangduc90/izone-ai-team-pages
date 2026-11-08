@@ -355,7 +355,7 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">Đã chấm bài Listening</p>
         <h2>Bài Listening đã được ghi nhận</h2>
-        <p>Bài Listening đã được lưu. Khi sẵn sàng, hãy tiếp tục làm Reading.</p>
+        <p>Hệ thống đã ghi bài Listening. Khi sẵn sàng, mở Reading để đọc passage và làm câu hỏi ngay trong giao diện.</p>
         <div class="form-actions transition-actions">
           <button class="button button-primary" id="startReading" type="button">Bắt đầu bài Reading</button>
         </div>
@@ -433,7 +433,15 @@
   }
   if(serverGradingMode&&window.SUBSTITUTE_OFFLINE){
     const download=document.createElement('button');download.type='button';
-    download.className='button button-secondary';download.textContent='Tải bài làm về máy';
+    download.className = 'button button-secondary substitute-backup-download';
+    download.setAttribute('aria-label', 'Tải bài làm về máy');
+    const fullLabel = document.createElement('span');
+    fullLabel.className = 'substitute-backup-full';
+    fullLabel.textContent = 'Tải bài làm về máy';
+    const shortLabel = document.createElement('span');
+    shortLabel.className = 'substitute-backup-compact';
+    shortLabel.textContent = 'Tải bài';
+    download.append(fullLabel, shortLabel);
     download.addEventListener('click',async()=>{
       const snapshot={...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP?.clientRunId,
         _substitute:window.SUBSTITUTE_STATE.stamp({})._substitute};
@@ -470,6 +478,30 @@
     elements.notice.hidden = true;
     elements.notice.textContent = '';
     elements.notice.className = 'notice';
+  }
+
+  const listeningHandoffLabels = [...elements.listeningSavedView.querySelectorAll('.eyebrow, h2, h2 + p')];
+  const listeningHandoffCopy = listeningHandoffLabels.map(label => label.textContent);
+  const writingHandoffLabel = elements.writingPrepView?.querySelector('.eyebrow');
+  const writingHandoffCopy = writingHandoffLabel?.textContent;
+
+  const sectionLabel = skill => skill === 'listening' ? 'Listening' : 'Reading';
+  const pendingSectionNotice = skill => `${sectionLabel(skill)} đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.`;
+
+  function renderHandoff() {
+    if (state.stage === 'listening-saved') {
+      const copy = state.pendingSections.listening
+        ? ['Đã lưu bài Listening', 'Bài Listening đã lưu trên thiết bị', 'Bạn có thể tiếp tục làm Reading. Bài sẽ đồng bộ khi có mạng.']
+        : listeningHandoffCopy;
+      listeningHandoffLabels.forEach((label, index) => {
+        if (label.textContent !== copy[index]) label.textContent = copy[index];
+      });
+    }
+    if (state.stage === 'writing-prep' && writingHandoffLabel) {
+      const copy = state.pendingSections.listening || state.pendingSections.reading
+        ? 'Bài đã lưu · Chờ đồng bộ' : writingHandoffCopy;
+      if (writingHandoffLabel.textContent !== copy) writingHandoffLabel.textContent = copy;
+    }
   }
 
   function setStage(stage) {
@@ -513,6 +545,7 @@
     if (stage === 'writing' && elements.writingView) elements.writingView.hidden = false;
     if (stage === 'result-ready') elements.resultReadyView.hidden = false;
     if (stage === 'result') elements.resultView.hidden = false;
+    renderHandoff();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -873,6 +906,19 @@
       writingSubmission.readAvailable();
       if (state.attemptToken !== requestedAttempt || state.studentRef !== requestedStudent
         || (serverGradingMode && window.SUBSTITUTE_STATE.blocked)) return;
+      // Keep the visible answer row or heading in place when Writing adds content above it.
+      const answerDetails = elements.questionDetails;
+      const visible = node => {
+        const { top, bottom } = node.getBoundingClientRect();
+        return top < window.innerHeight && bottom > 0;
+      };
+      const focused = document.activeElement;
+      const readingAnchor = !elements.resultView.hidden
+        ? answerDetails.contains(focused) && visible(focused)
+          ? focused
+          : Array.from(answerDetails.querySelectorAll('summary, details[open] tbody tr')).find(visible)
+        : null;
+      const readingTop = readingAnchor?.getBoundingClientRect().top;
       if (serverGradingMode) {
         state.testGrades.writing = payload;
         saveSession();
@@ -892,6 +938,10 @@
               : 'Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.',
           'success'
         );
+      }
+      if (readingAnchor?.isConnected) {
+        const shift = readingAnchor.getBoundingClientRect().top - readingTop;
+        if (Math.abs(shift) > 0.5) window.scrollBy({ top: shift, behavior: 'instant' });
       }
       return grading?.ready ? 'ready' : 'pending';
     } catch {
@@ -2380,7 +2430,7 @@
         setStage(readingFirst ? 'writing-prep' : 'listening-saved');
       }
       showNotice(error.offlineQueued
-        ? 'Listening đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.'
+        ? pendingSectionNotice('listening')
         : automatic
         ? `Hết giờ nhưng chưa thể nộp Listening: ${error.message}. Bài đã khóa và hệ thống sẽ tự thử lại.`
         : `Không thể lưu Listening: ${error.message}`, 'error');
@@ -2500,7 +2550,7 @@
         setStage(readingFirst ? 'listening' : 'writing-prep');
       }
       showNotice(error.offlineQueued
-        ? 'Reading đã được giữ trong bộ nhớ trình duyệt và đang chờ đồng bộ. Hãy giữ trang hoặc tải bài về máy; hệ thống sẽ thử lại khi có mạng.'
+        ? pendingSectionNotice('reading')
         : automatic
         ? `Hết giờ nhưng chưa thể nộp Reading: ${error.message}. Hệ thống sẽ tự thử lại; không làm mới trang.`
         : `Không thể lưu Reading: ${error.message}`, 'error');
@@ -2532,7 +2582,16 @@
         }
         try {
           const receipt=await submitSection(item.skill,item.answers);
-          if(receipt.persisted){state.testGrades[item.skill]=receipt.section;delete state.pendingSections[item.skill];saveSession();}
+          if(receipt.persisted){
+            state.testGrades[item.skill]=receipt.section;
+            delete state.pendingSections[item.skill];
+            saveSession();
+            renderHandoff();
+            if (!Object.values(state.pendingSections).some(Boolean)
+              && elements.notice.textContent === pendingSectionNotice(item.skill)) {
+              showNotice(`Bài ${sectionLabel(item.skill)} đã được máy chủ xác nhận.`, 'success');
+            }
+          }
         } catch { return; }
       }
       if(state.stage==='writing'&&!state.writingSubmitted&&!writingSubmission.busy){
@@ -2627,7 +2686,7 @@
             } catch (error) {
               if (!writingSubmission.current(writingOwner)) return;
               if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
-              showNotice(`Writing đã được giữ trên trình duyệt và đang chờ biên nhận. Bấm Tải bài làm về máy để giữ thêm một bản. Chi tiết: ${error.message}`, 'error');
+              showNotice(`Bài còn trên trang và đang chờ biên nhận. Bấm Tải bài để lưu một bản. ${error.message}`, 'error');
               return;
             }
           }

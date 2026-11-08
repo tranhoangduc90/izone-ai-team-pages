@@ -43,7 +43,7 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
   const {route:api,payload={}}=request.postDataJSON(),id={...payload,testSlug:slug};let response={},status=200;
   if(!['/api/test/history','/api/test/roster'].includes(api))assert.equal(payload.classCode,testClass,'Payload phải giữ lớp đã xác nhận');
   if(fault&&fault!=='lost-ack'&&['/api/test/grade','/api/test/writing'].includes(api)){
-   const value=fault;fault=null;return route.fulfill({status:value==='http'?502:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:value==='empty'?'':JSON.stringify(value==='http'?{ok:false,code:'SUBSTITUTE_SAVE_UNCONFIRMED',message:'Lỗi thử có kiểm soát'}:{accepted:true})});
+   const value=fault;if(api==='/api/test/grade')fault=null;return route.fulfill({status:value==='http'?502:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:value==='empty'?'':JSON.stringify(value==='http'?{ok:false,code:'SUBSTITUTE_SAVE_UNCONFIRMED',message:'Lỗi thử có kiểm soát'}:{accepted:true})});
   }
   try{
    if(api==='/api/test/history')response={...store.historyState(id),examTimingVersion:'substitute-audio-transfer-20261014-v1',classes:[{code:testClass,name:testClass}],...(slug==='substitute-test-2-k67'?{writingVersions:{[testClass]:'substitute-k67-test2-two-task-20261007-v1'}}:{})};
@@ -130,11 +130,30 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
     try{return JSON.parse(r.request().postData()||'{}').route==='/api/test/writing';}catch{return false;}
    });
    await page.locator('#submitWriting').click();await response;
-   // Đợi cả bước đối soát status kết thúc; thông báo "đang gửi" chưa phải lỗi đã xử lý xong.
-   await page.waitForFunction(()=>document.querySelector('#notice')?.textContent.includes('Chưa xác nhận được trạng thái nộp Writing.'));
-   assert.equal(await page.locator('#writingView').isVisible(),true);assert.equal(acceptedWriting,0);
+   // Giữ lỗi đến hết phép kiểm để lần tự đồng bộ lúc vào trang không vô tình nộp thành công.
+   await page.waitForFunction(()=>document.querySelector('#notice')?.textContent.includes('đang chờ biên nhận'));
+   assert.equal(await page.locator('#writingView').isVisible(),true);
+   assert.match(await page.locator('#writingView textarea[data-writing-task]:visible').inputValue(), /Fictional original essay/);
+   assert.equal(acceptedWriting,0);
+   assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,0);
   }
+  if(process.env.WRITING_UX_EVIDENCE){
+   fs.mkdirSync(process.env.WRITING_UX_EVIDENCE,{recursive:true});
+   await page.screenshot({path:path.join(process.env.WRITING_UX_EVIDENCE,slug+'-waiting-for-receipt.png')});
+  }
+  await context.setOffline(true);
+  const downloaded=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Tải bài làm về máy',exact:true}).click();
+  const backup=await downloaded;
+  assert.match(backup.suggestedFilename(),/\.html$/);
+  const file=fs.readFileSync(await backup.path(),'utf8');
+  const backupRecord=await page.evaluate(html=>JSON.parse(new DOMParser().parseFromString(html,'text/html').querySelector('pre').textContent),file);
+  assert.equal(backupRecord.scope.classCode,testClass);
+  assert.equal(backupRecord.writing.status,'pending');
+  for(const task of ids)assert.equal(backupRecord.writing.answers[task],'Fictional original essay. '.repeat(85));
+  fault=null;
   const writingBefore=acceptedWriting;
+  await context.setOffline(false);
   await page.evaluate(()=>{
    const form=document.querySelector('#writingView');
    for(let i=0;i<3;i++)form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
@@ -157,7 +176,7 @@ try{for(const slug of Object.keys(TESTS).filter(slug=>!process.env.SUBSTITUTE_TE
   if(process.env.WRITING_UX_EVIDENCE){fs.mkdirSync(process.env.WRITING_UX_EVIDENCE,{recursive:true});await page.screenshot({path:path.join(process.env.WRITING_UX_EVIDENCE,slug+'-queued.png'),fullPage:true});}
   await page.reload();await page.locator('#resultView').waitFor({state:'visible'});assert.match(await page.locator('#summaryGrid').innerText(),emptyListening?/0\/40/:/1\/40/);
   assert.equal(store.db.prepare('SELECT count(*) AS n FROM attempt').get().n,1);assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({slug,ok:true,answeredListening:emptyListening?0:completeListening?40:39,staleClassUrl,earlyBeforeAudioEnd:true,failuresKeepDrafts:true,lostAckRecovered:true,doubleSubmitNoDuplicate:true,resultsAfterWriting:true,reloadNoDuplicate:true,realAI:false,portalWrites:0}));
+  console.log(JSON.stringify({slug,ok:true,answeredListening:emptyListening?0:completeListening?40:39,staleClassUrl,earlyBeforeAudioEnd:true,failuresKeepDrafts:true,lostAckRecovered:true,writingBackupOffline:true,doubleSubmitNoDuplicate:true,resultsAfterWriting:true,reloadNoDuplicate:true,realAI:false,portalWrites:0}));
  }catch(error){console.error(JSON.stringify({slug,errors,...await page.evaluate(()=>({notice:document.querySelector('#notice')?.textContent,bootstrap:document.querySelector('#bootstrapNotice')?.textContent,download:document.querySelector('#bootstrapDownloadStatus')?.textContent}))}));throw error;}
  finally{await context.unrouteAll({behavior:'ignoreErrors'});await context.close();store.close();}
 }}finally{await browser.close();await new Promise(r=>server.close(r));}

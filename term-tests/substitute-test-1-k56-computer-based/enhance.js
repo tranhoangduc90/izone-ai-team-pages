@@ -1001,8 +1001,10 @@
         updateExamStatus('Đang phát bài thi');
         await reportAudioProgress('recovered').catch(() => null);
       } catch {
+        const label = heardSeconds > 0 ? 'Tiếp tục audio' : 'Phát audio';
+        resumeButton.textContent = label;
         resumeButton.hidden = false;
-        updateExamStatus('Audio chưa tự phát lại · nhấn Tiếp tục audio');
+        updateExamStatus(`Audio chưa tự phát lại · nhấn ${label}`);
       } finally { allowPause = false; recoveryInFlight = false; }
     }
 
@@ -1188,10 +1190,14 @@
       previewing = false;
       const officialTime = examStarted ? uiState.audio.time : 0;
       audio.currentTime = Math.min(Math.max(0, officialTime), Math.max(0, (audio.duration || 1) - 1));
+      let playBlocked = false;
       try {
         if(protectedBootstrap?.examSessionId&&protectedBootstrap.examOrder==='reading-first'
           &&!protectedBootstrap.listeningStartedAt)await window.SUBSTITUTE_EXAM.startListeningPhase();
-        await audio.play();
+        await audio.play().catch(error => {
+          playBlocked = error?.name === 'NotAllowedError';
+          throw error;
+        });
         examStarted = true;
         uiState.audio.started = true;
         uiState.audio.time = audio.currentTime;
@@ -1203,7 +1209,13 @@
         saveUiState();
       } catch {
         allowPause = false;
-        downloadStatus.textContent = 'Chưa mở hoặc phát được Listening. Bài Reading vẫn được giữ; hãy nhấn lại “Bắt đầu thi Listening”.';
+        if (playBlocked) {
+          const label = officialTime > 0 ? 'Tiếp tục audio' : 'Phát audio';
+          startButton.textContent = label;
+          downloadStatus.textContent = `Trình duyệt chưa cho phát. Bài Reading vẫn được giữ. Hãy bấm “${label}”.`;
+        } else {
+          downloadStatus.textContent = 'Chưa mở hoặc phát được Listening. Bài Reading vẫn được giữ; hãy nhấn lại “Bắt đầu thi Listening”.';
+        }
       }
     });
     resumeButton.addEventListener('click', () => recoverInterruptedAudio('pause', true));
@@ -1535,9 +1547,7 @@
   if (topbarTitle) topbarTitle.textContent = 'Substitute Test 1 · Khóa 56';
 
   const loadingLabel = document.querySelector('#loadingView strong');
-  const listeningSavedCopy = document.querySelector('#listeningSavedView > p:not(.eyebrow)');
   if (loadingLabel) loadingLabel.textContent = 'Đang chuẩn bị đề thi HTML...';
-  if (listeningSavedCopy) listeningSavedCopy.textContent = 'Hệ thống đã ghi bài Listening. Khi sẵn sàng, mở Reading để đọc passage và làm câu hỏi ngay trong giao diện.';
 
   const listeningInstructions = document.getElementById('listeningInstructions');
   const readingInstructions = document.getElementById('readingInstructions');

@@ -17,7 +17,7 @@ function fixture(core,{server=true,request}={}){
  const context={state,classCode:'SYNTHETIC',promptVersion:'fixture-v1',demoMode:false,serverGradingMode:server,
   writingSubmission:{owner:()=>state.studentRef+':'+state.attemptToken,current:value=>value===state.studentRef+':'+state.attemptToken,
     readAvailable(){},readUnavailable(){}},
-  writingGradingPollInFlight:false,document:{hidden:false},navigator:{onLine:true},window:{SUBSTITUTE_STATE:{blocked:false}},
+  writingGradingPollInFlight:false,elements:{resultView:{hidden:true}},document:{hidden:false},navigator:{onLine:true},window:{SUBSTITUTE_STATE:{blocked:false}},
   apiRequest:async(path,options)=>{calls.push({path,options,body:JSON.parse(options.body)});return request?request():{accepted:true,grading:{ready:false,status:'processing'}};},
   saveSession(){},buildDemoPayload:()=>({writing:{grading:state.testGrades.writing.grading}}),
   renderResult:value=>{rendered.push(value);state.result=value;},applyWritingFromServer(){},
