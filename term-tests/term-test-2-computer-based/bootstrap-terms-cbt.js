@@ -570,7 +570,11 @@
       const listeningFirst = miniJourney.view().examMode !== 'read_first';
       elements.bootstrapStart.disabled = preparing || (listeningFirst && !previewHeard);
       if (listeningFirst && previewHeard && !preparing) {
-        window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart, true);
+        if (window.K67_RESCUE_AUDIO_SOURCE === 'pages') {
+          elements.bootstrapStart.textContent = 'Bắt đầu thi Listening';
+        } else {
+          window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart, true);
+        }
       }
       return;
     }

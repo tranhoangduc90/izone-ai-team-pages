@@ -201,12 +201,12 @@ export const ASSET_HASHES={
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-1/test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b",
   "../term-test-2-computer-based/audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
-  "../term-test-2-computer-based/bootstrap-terms-cbt.js": "36eb72a92c66e6c16d245a3aee9f981f9bd0462d50488ccbbc36a61c199cb1fa",
+  "../term-test-2-computer-based/bootstrap-terms-cbt.js": "2154238c7bdb770d0d3a6eaf8beea0e89a78613cc1356063ffb99bfe81be39eb",
   "../term-test-2-computer-based/enhance-terms-cbt.js": "a834b59dbff2dd946755f80dd0aa16cbebd87027da5924800f68e11c137ff244",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index.html": "a3731c7d1b8726ed854df2a2f310221f1477524f319996a31ac60319e164e733",
+  "index.html": "352855efa6dd144df8432f3545752116c1a82730c534e28ef353614b7a097d41",
   "offline-worker.js": "0dadfe352bd918b4a941195cd3e6c0aa7fb4b4d99833d6b8a5b51a29f79b1db9"
 };
-export const ASSET_BUILD_ID="2ac6a7a1dbf25f8b15a262c612c0ff6057db54656aa8cdae8df808e061d86b77";
+export const ASSET_BUILD_ID="5b16b6f8ef7a17bd6caae23c007a3f3540dbf25b811fcf8bea5a27053df6bda2";
