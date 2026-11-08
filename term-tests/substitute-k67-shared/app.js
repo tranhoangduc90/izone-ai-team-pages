@@ -355,7 +355,7 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">Đã chấm bài Listening</p>
         <h2>Bài Listening đã được ghi nhận</h2>
-        <p>Bài Listening đã được lưu. Khi sẵn sàng, hãy tiếp tục làm Reading.</p>
+        <p>Hệ thống đã ghi bài Listening. Khi sẵn sàng, mở Reading để đọc passage và làm câu hỏi ngay trong giao diện.</p>
         <div class="form-actions transition-actions">
           <button class="button button-primary" id="startReading" type="button">Bắt đầu bài Reading</button>
         </div>

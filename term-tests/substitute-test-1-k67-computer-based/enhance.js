@@ -1547,9 +1547,7 @@
   if (topbarTitle) topbarTitle.textContent = 'Substitute Test 1 · Khóa 67';
 
   const loadingLabel = document.querySelector('#loadingView strong');
-  const listeningSavedCopy = document.querySelector('#listeningSavedView > p:not(.eyebrow)');
   if (loadingLabel) loadingLabel.textContent = 'Đang chuẩn bị đề thi HTML...';
-  if (listeningSavedCopy) listeningSavedCopy.textContent = 'Hệ thống đã ghi bài Listening. Khi sẵn sàng, mở Reading để đọc passage và làm câu hỏi ngay trong giao diện.';
 
   const listeningInstructions = document.getElementById('listeningInstructions');
   const readingInstructions = document.getElementById('readingInstructions');
