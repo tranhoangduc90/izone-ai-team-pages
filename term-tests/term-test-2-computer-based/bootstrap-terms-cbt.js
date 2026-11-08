@@ -976,7 +976,7 @@
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
     const journeyVersion=journey?'&offlineJourney=20261107-term1-v1':'';
-    await loadScript('../shared/app-terms-cbt.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7'+journeyVersion);
+    await loadScript('../shared/app-terms-cbt.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v8'+journeyVersion);
     await loadScript(cbtAssetUrl('enhance-terms-cbt.js?v=20261107-terms-cbt-v1&uiRestore=20261108-v6', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }

@@ -857,9 +857,30 @@
       elements.writingView.hidden = false;
       window.dispatchEvent(new Event('term-test:writing-stage'));
     }
-    if (stage === 'result-ready') elements.resultReadyView.hidden = false;
+    if (stage === 'result-ready') {
+      elements.resultReadyView.hidden = false;
+      updateJourneyResultReady();
+    }
     if (stage === 'result') elements.resultView.hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  let journeyResultReadyCopy;
+  function updateJourneyResultReady() {
+    const card = elements.resultReadyView;
+    if (!miniJourney || !writingConfig || card.hidden) return;
+    const waiting = !miniJourney.resultToken();
+    if (card.dataset.awaitingReceipt === String(waiting)) return;
+    const fields = [card.querySelector('.eyebrow'), card.querySelector('h2'), card.querySelector('p:not(.eyebrow)')];
+    journeyResultReadyCopy ||= fields.map(field => field.textContent);
+    const copy = waiting ? [
+      'Đã lưu bài làm',
+      'Bài làm đang chờ đồng bộ',
+      'Bài làm đã lưu trên thiết bị. Kết quả sẽ mở sau khi máy chủ xác nhận nhận bài.'
+    ] : journeyResultReadyCopy;
+    fields.forEach((field, index) => { field.textContent = copy[index]; });
+    card.dataset.awaitingReceipt = String(waiting);
+    elements.viewResult.disabled = waiting;
   }
 
   function appendInstructions(list, instructions) {
@@ -3120,6 +3141,10 @@
   }
 
   async function loadResult(button) {
+    if (miniJourney && writingConfig && !miniJourney.resultToken()) {
+      updateJourneyResultReady();
+      return;
+    }
     if (!resultsUnlocked()) {
       setStage(stageBeforeResults());
       showNotice('Kết quả Listening và Reading được giữ kín cho tới khi bạn nộp Writing.', 'success');
@@ -4232,6 +4257,7 @@
           ? collectAnswers(elements[section+'Questions']) : null);
       }
     });
+    if (writingConfig) miniJourney.changed.addEventListener('change', updateJourneyResultReady);
     if(view.nextSection==='listening')await showJourneyListening(window.TERM_TEST_BOOTSTRAP?.playNewListening === true);
     else if(view.nextSection==='reading'){
       setStage(view.readingStartedAt?'reading':'listening-saved');
