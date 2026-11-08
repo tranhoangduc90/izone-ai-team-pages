@@ -1519,7 +1519,10 @@
   async function initialize() {
     await initializeStudentMemory();
     if (!/^[A-Z0-9._-]{2,32}$/.test(classCode)) {
+      elements.bootstrapStudent.disabled = true;
       if (rememberedClasses.length > 1) {
+        elements.bootstrapDownloadStep.dataset.state = 'active';
+        elements.bootstrapDownloadStatus.textContent = 'Chọn lớp để tiếp tục.';
         elements.bootstrapClass.textContent = 'Chọn lớp của bài muốn mở';
         const picker = document.createElement('select'); picker.id = 'bootstrapRememberedClass';
         picker.setAttribute('aria-label', 'Lớp của bài muốn mở');
@@ -1528,9 +1531,13 @@
           if (!rememberedClasses.includes(picker.value)) return;
           query.set('class', picker.value); location.assign(`${location.pathname}?${query.toString()}${location.hash}`);
         });
-        elements.bootstrapClass.after(picker); elements.bootstrapStudent.disabled = true;
+        elements.bootstrapClass.after(picker);
         showNotice('Trình duyệt đã nhớ bạn. Hãy chọn lớp của bài muốn mở; không cần chọn lại tên.');
-      } else showNotice('Link chưa có mã lớp hợp lệ. Hãy mở link bài của lớp được giao.', true);
+      } else {
+        elements.bootstrapDownloadStep.dataset.state = 'error';
+        elements.bootstrapDownloadStatus.textContent = 'Chưa có mã lớp hợp lệ.';
+        showNotice('Link chưa có mã lớp hợp lệ. Hãy mở link bài của lớp được giao.', true);
+      }
       return;
     }
     if (listeningOnly && !retakeGrant) {

@@ -71,6 +71,11 @@ test('Term 1 retake keeps its ticket, offline attempt and result separate', {tim
     };
     page=await open();
     const entry=base+'/term-tests/term-test-1-listening-retake/?class=IC2304&mode=read_first&retake=';
+    await page.goto(base+'/term-tests/term-test-1-listening-retake/');
+    await page.getByText(/Link chưa có mã lớp hợp lệ/).waitFor();
+    assert.equal(await page.locator('#bootstrapDownloadStatus').textContent(),'Chưa có mã lớp hợp lệ.');
+    assert.ok(await page.locator('#bootstrapStudent').isDisabled());
+    assert.ok(!requests.some(url=>url.endsWith('/roster')));
     const select=async()=>{
       await page.locator('#bootstrapStudent').selectOption(studentRef);
       await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
