@@ -174,11 +174,11 @@ export const ASSET_HASHES={
   "../k67-shared/public-audio.js": "9276d58ce2fe43c10b283c4bde9f329562c61d792f591fed35044ebe34fddf16",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
   "../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs": "68d4751a0831ec45fc7602fdf4ec9bfa6b726fe68c8d98306334235ac640070b",
-  "../mini-test-lesson-5-computer-based/journey.mjs": "425d23a1a29b66abc6f59ee609e6852aa6b0bfa0edc55542176ae691b18fdf77",
+  "../mini-test-lesson-5-computer-based/journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
   "../shared/app-terms-cbt.js": "3ce38864fc70835867e5dbcaf0e8f85df56cb43dbffb41140b0b7e2dc190b8a2",
-  "../shared/app.js": "c3dcd51fe4f51282d147a69ef95142453d45e9b1e1abeb747ff5d07ff151f253",
+  "../shared/app.js": "74ce92e0fcf39f2b6863ab7fdd7dd4c511632c7fae5129cdeff9456683639d6f",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
   "../shared/cbt-audio-start-label.js": "2f19d0a786e5e2226f40f329927ae8ad5bec41cd20b5e48f2ebe63452f378e29",
@@ -206,13 +206,13 @@ export const ASSET_HASHES={
   "../term-test-2/test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
   "audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
   "bootstrap-terms-cbt.js": "2154238c7bdb770d0d3a6eaf8beea0e89a78613cc1356063ffb99bfe81be39eb",
-  "bootstrap.js": "7d9b21ac9f3d86072fd53ab24ffacfbf3519ae7f64c0d5d3240b451cb7fd2841",
+  "bootstrap.js": "719b9152569a208ade5612a69171aa1d5df57774c52d3895df493a7b2c3f6e6a",
   "enhance-terms-cbt.js": "a834b59dbff2dd946755f80dd0aa16cbebd87027da5924800f68e11c137ff244",
-  "enhance.js": "768cff6790937d272424e384759c7d1f723f615736e4a22efbc5539909697e72",
+  "enhance.js": "baa32ce7b4144f5f6425e6fea188e9f2b70401e46c9eeecf7759f9ae4254334f",
   "index.html": "cc037e5e8abf9f270f355199e7bccae424f4f5fb895422a7f3ef2c8fa800ed1e",
   "interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "offline-worker.js": "fdd7d647c8cfe5ad4a7401de6c8333c18c8a5da304cc7453525457428547d62f",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="c1a409d222f9f748ef02a6a8a041b10bb8ccd1a90caecb878bc2037ab0378b71";
+export const ASSET_BUILD_ID="ac4537b2c26349fda91e4cf2e2d7e5db04eb881540afb5373aa8ce92ef1f8ab1";

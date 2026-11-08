@@ -171,7 +171,7 @@ export const ASSET_HASHES={
   "../k67-shared/public-audio.js": "9276d58ce2fe43c10b283c4bde9f329562c61d792f591fed35044ebe34fddf16",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
   "../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs": "68d4751a0831ec45fc7602fdf4ec9bfa6b726fe68c8d98306334235ac640070b",
-  "../mini-test-lesson-5-computer-based/journey.mjs": "425d23a1a29b66abc6f59ee609e6852aa6b0bfa0edc55542176ae691b18fdf77",
+  "../mini-test-lesson-5-computer-based/journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
   "../shared/app-terms-cbt.js": "3ce38864fc70835867e5dbcaf0e8f85df56cb43dbffb41140b0b7e2dc190b8a2",
@@ -209,4 +209,4 @@ export const ASSET_HASHES={
   "index.html": "352855efa6dd144df8432f3545752116c1a82730c534e28ef353614b7a097d41",
   "offline-worker.js": "0dadfe352bd918b4a941195cd3e6c0aa7fb4b4d99833d6b8a5b51a29f79b1db9"
 };
-export const ASSET_BUILD_ID="ffc43410f2a5cfb597e454eb99975c7c749304f198f24926fda623a7d8df3a1c";
+export const ASSET_BUILD_ID="df86a8758d0b2428846a96ed3b01f4de25159274309d442c209838ffca313ef7";

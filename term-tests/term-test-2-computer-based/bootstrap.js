@@ -565,7 +565,22 @@
   }
 
   function setStartAvailability() {
-    if(miniJourney){elements.bootstrapStart.disabled=preparing||(miniJourney.view().examMode!=='read_first'&&!previewHeard);return;}
+    if (miniJourney) {
+      const start = elements.bootstrapStart;
+      const listeningFirst = miniJourney.view().examMode !== 'read_first';
+      start.disabled = preparing || (listeningFirst && !previewHeard);
+      const label = 'Bắt đầu bài Mini K67';
+      start.setAttribute('aria-label', label);
+      if (listeningFirst && previewHeard) {
+        if (!start.querySelector('br')) {
+          start.replaceChildren('Âm thanh đã vừa tai', document.createElement('br'), label);
+        }
+      } else if (start.textContent !== label) {
+        start.textContent = label;
+      }
+      return;
+    }
+    elements.bootstrapStart.removeAttribute('aria-label');
     const resumed = Boolean(state.listeningStartedAt || legacyListeningResume);
     const ready = Boolean(encryptedAudio && (previewHeard || resumed));
     elements.bootstrapStart.disabled = !ready || preparing;
@@ -949,7 +964,7 @@
     return `${base}/${fileName}?rev=${revision}`;
   }
 
-  async function enterExam(started, audioElement = null, offlineSection = '', journey = null) {
+  async function enterExam(started, audioElement = null, offlineSection = '', journey = null, playNewListening = false) {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     const boundIdentity = sharedIdentity && started.examSessionToken === state.examSessionToken
       && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
@@ -960,6 +975,7 @@
       verifiedIdentity: offlineSection ? null : boundIdentity,
       offlineSectionIdentity: offlineSection && boundIdentity ? { ...boundIdentity, section: offlineSection } : null,
       miniJourney:journey,
+      playNewListening,
       sessionState: sharedIdentity ? structuredClone(state) : null,
       examSessionToken: state.examSessionToken,
       listeningDeadlineAt: started.listeningDeadlineAt,
@@ -973,8 +989,8 @@
     revokePreview();
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
-    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1&miniSync=20261107-v1':''));
-    await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
+    await loadScript('../shared/app.js?v=20261023-submit-v1&journal=20261024-startup-v2&ej=20261024-production-r1&replay=20261026-term1-replay1&resilience=20261027-v1&writing_ack=20261029-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&termEof=20261108-v1'+(testConfig.slug==='mini-test-lesson-5'?'&miniEof=20261107-v1&miniSync=20261107-v1&uiRestore=20261108-v6':''));
+    await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1&uiRestore=20261108-v6', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1'));
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
 
@@ -983,15 +999,15 @@
       attemptToken: state.attemptToken, generation: Number(state.generation) || 0 };
   }
 
-  async function enterJourney(){
+  async function enterJourney(playNewListening = false){
     const view=miniJourney.view();
     saveState({...view,drafts:{...state.drafts,...miniJourney.drafts()},draftRevisions:miniJourney.revisions()});
-    await enterExam({...view,content:miniJourney.content},null,'',miniJourney);
+    await enterExam({...view,content:miniJourney.content},null,'',miniJourney,playNewListening);
   }
 
   async function openJourneyLobby(prepare=false){
     if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
-    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1&termEof=20261108-v1');
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1&termEof=20261108-v1&uiRestore=20261108-v6');
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope);
     if(!existing&&(!prepare||state.completed))return false;
@@ -1006,6 +1022,8 @@
     elements.bootstrapVolume.disabled=false;
     elements.bootstrapPreviewStep.dataset.state='active';
     elements.bootstrapPreviewStatus.textContent='Bấm nghe thử để chỉnh âm lượng.';
+    elements.bootstrapDownloadProgress.max=1;
+    elements.bootstrapDownloadProgress.value=1;
     elements.bootstrapDownloadStep.dataset.state='complete';
     elements.bootstrapDownloadStatus.textContent='Đã chuẩn bị hai phần và lưu audio trên thiết bị.';
     elements.bootstrapStartStep.dataset.state='active';
@@ -1018,7 +1036,7 @@
     if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||listeningOnly||state.studentRef)return false;
     if(document.getElementById('miniJourneyRecovery'))return true;
     const mode=query.get('mode');
-    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1&termEof=20261108-v1');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey.mjs?v=20261107-v1&termEof=20261108-v1&uiRestore=20261108-v6');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'');
     if(!match)return false;
     const form=document.createElement('form');form.id='miniJourneyRecovery';
@@ -1180,7 +1198,7 @@
       if(preparing)return;
       preparing=true;setStartAvailability();
       previewAudio.pause();
-      try{await miniJourney.begin();await enterJourney();}
+      try{await miniJourney.begin();await enterJourney(true);}
       catch(error){showNotice(error.message,true);}
       finally{preparing=false;setStartAvailability();}
       return;
