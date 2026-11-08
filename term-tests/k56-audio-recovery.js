@@ -133,12 +133,17 @@
       const snapshot = { examSessionToken: token, heardSeconds: Math.max(0, Number(memory.heardSeconds) || 0, Number(audio.currentTime) || 0),
         state, recoveryId: memory.recoveryId || uuid() };
       const manualRecovery = state === 'recovered' && snapshot.recoveryId === reportedEpisode;
+      let trace;
       const execute = async () => {
         if (state === 'playing' && memory.pending) return null;
         if (state === 'playing' && snapshot.heardSeconds + 0.25 < (Number(memory.ackedHeard) || 0)) return null;
-        if (manualRecovery) observeListening('recovery_sent', snapshot.recoveryId);
+        if (manualRecovery && options.observeListening) {
+          trace = {requestId:uuid(),requestRevision:revision,generation:Number(generation)||0,
+            requestedSeconds:snapshot.heardSeconds};
+          observeListening('recovery_sent', snapshot.recoveryId, trace);
+        }
         const response = await fetch(`${apiBase}/api/term-tests/${slug}/session/audio-progress`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...snapshot,
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...(trace?{'x-exam-journal-request-id':trace.requestId}:{}) }, body: JSON.stringify({ ...snapshot,
             audioStateRevision: revision, generation: Number(generation) || 0, audioOwnerId: ownerId }),
           signal: AbortSignal.timeout(8000), keepalive
         });
@@ -148,6 +153,7 @@
         const applied = apply(payload);
         if (manualRecovery && !terminal() && !navigating) {
           observeListening('recovery_ack', snapshot.recoveryId, {
+            ...trace, serverRevision:applied.audioStateRevision, checkpointSeconds:applied.listeningResumeAtSeconds,
             grantedRecoverySeconds: applied.grantedRecoverySeconds,
             totalRecoverySeconds: applied.listeningRecoverySeconds
           });
@@ -156,7 +162,8 @@
       };
       const work = keepalive ? execute() : queue.catch(() => null).then(execute);
       const operation = manualRecovery && options.observeListening ? work.catch(error => {
-        if (!terminal() && !navigating) observeListening('recovery_failed', snapshot.recoveryId);
+        if (trace && !terminal() && !navigating) observeListening('recovery_failed', snapshot.recoveryId,
+          {...trace,errorCode:typeof error.code==='string'?error.code:'AUDIO_NETWORK_ERROR'});
         throw error;
       }) : work;
       queue = operation.catch(() => null);

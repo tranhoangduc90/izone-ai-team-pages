@@ -253,7 +253,7 @@ export const ASSET_HASHES={
   "../../speaking-homework/fonts/nunito.css": "a6b6f9ccb2e3105406b58fec8d7bd865b8642548b334c04892492d3320820b7c",
   "../demo/model.js": "fcf87b5a54be6e5a3cdcbc477c1b7a7b2198bd35a579e264498550fbb63fbe76",
   "../demo/reset-listener.js": "739a3b589d8a34419c6b31b55e35d1f9a0f5f394cc81a92a65ed75d08800e18e",
-  "../k56-audio-recovery.js": "3f6001cb2b518c07fbeaade10af63b1e7c8ab175518aaa8f66520b8c5a41f622",
+  "../k56-audio-recovery.js": "ea4ac8e3fa8c65c6aa3fb4687dbb7bddb4debaa7b2384fd6e5b479bd29bb8765",
   "../k56-demo-reset/app.js": "38caf4e57010fbc951d78d18521117d9dd86f9303f1eb58c8218c64f6a03133e",
   "../k56-demo-reset/styles.css": "c31c8f3116187a38574b1ac32187c87af2cd5e4bd7d12f57566be64dbad42b9f",
   "../k56-design/assets/SourceSans3-Variable.woff2": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
@@ -268,7 +268,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/runtime.mjs": "8c750d2f6b142f84aa1cc3ca910e2e2833ad7fe9e15145125adffe7565019fc2",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
-  "../k56-shared/app.js": "08435c2cdb560b24b0ef3a1c57af3f72672076121bdc54d5b3c3612635a61949",
+  "../k56-shared/app.js": "4d1603f4ad1da26667b832d45809981dcbed8a0371ddcc81787d753b90c0c994",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio.mjs": "2fe35adec2c70006e5bf839380c3f180e38a54de8c0b7f619631f9c1ade86500",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
@@ -322,13 +322,13 @@ export const ASSET_HASHES={
   "assets/figures/rovio.png": "9f2d562f1ffd3b98536b5b11658844b7d75655da48b4bd3ebfa04a2a3ff8cc9d",
   "audio-loader.js": "d6bffc4f4115053e85cca55e837204412187f3a2f0be73a423b2ff892d40b8a3",
   "audio-whole.mjs": "58cf1707f218e010196b5861ef579009f38922edcd184bef7c2543a4941c68f1",
-  "bootstrap.js": "5f43c5eb8fae3d8ff9522db2a009f10d2228f54beb79aa952a3b82d29125ceff",
+  "bootstrap.js": "21e7f368f7512e4b9f97b0c6ed1abf9f72a586663f907bc7a45acff4d3a69731",
   "content.js": "498e78b7e9490fc75bda0f7c47826ba69abfca64f0e46d6f0319833c7060aec3",
   "enhance.js": "7d942bfe83961d8811b749230a163ab2842d15111a12d82b385b25f716bf597f",
-  "index.html": "1a47ce14a74d3651a0a3b3808fdcaf70fc4c17df9ea64b23eba0ed4e62ac2d29",
+  "index.html": "98fad6dc007fb01952a53df8a5634d8abe9c1417b486ee0ac3ae4a276fdd57c7",
   "layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "offline-worker.js": "a65a27295c4caff3c6fda7348d21c54dfab389d1a27e54a1736cbe12580e5079",
   "offline.mjs": "83616543d78814b23a5c03e3e60fcbb720e34247683e5732e4d166b194edd174",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="5729358a03480c8462ba339301294b503593081a5e91e1a67147d18df3651891";
+export const ASSET_BUILD_ID="7997e86a68d99e8f60ebd6fd14141fe7300b92bc06ec809b5def141ef44c8abf";
