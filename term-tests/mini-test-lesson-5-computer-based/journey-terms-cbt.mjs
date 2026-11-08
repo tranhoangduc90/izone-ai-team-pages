@@ -320,8 +320,11 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     const link=document.createElement('a');link.href=url;link.download=title.replaceAll(' ','-')+'.html';link.click();setTimeout(()=>URL.revokeObjectURL(url),30_000);
   }
   const resultToken=()=>record.receipts[order().at(-1)]?.attemptToken||null;
-  if(paper)notify(record.review?'Bài vẫn lưu trên máy · Cần đối soát':record.pending.length?'Đã lưu trên máy · Chờ đồng bộ':
-    resultToken()?'Máy chủ đã xác nhận nhận bài':'Tự lưu trên thiết bị');
+  const hasReceipt = paper ? Boolean(resultToken()) : Object.keys(record.receipts).length > 0;
+  if (record.review) notify('Bài vẫn lưu trên máy · Cần đối soát');
+  else if (record.pending.length) notify('Đã lưu trên máy · Chờ đồng bộ');
+  else if (hasReceipt) notify('Máy chủ đã xác nhận nhận bài');
+  else if (paper) notify('Tự lưu trên thiết bị');
   void flush();
   return {content:record.package.content,paper,view,start,begin,saveDrafts,seal,mountPlayer,verifiedAudio,download,resultToken,now,
     activated:()=>Boolean(record.activatedAt),drafts:()=>structuredClone(record.drafts),revisions:()=>({...record.revisions}),close,changed,

@@ -170,11 +170,11 @@ export const ASSET_HASHES={
   "../k67-shared/offline-journey-ui.mjs": "d82dbcca26109e2e051ffe413fd7fb5bee404528dacf020a76d7a5017fe7e804",
   "../k67-shared/public-audio.js": "9276d58ce2fe43c10b283c4bde9f329562c61d792f591fed35044ebe34fddf16",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
-  "../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs": "2110311707fa44267afc71339c93c0fa8255becab4d8252c51da860ed9511592",
+  "../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs": "68d4751a0831ec45fc7602fdf4ec9bfa6b726fe68c8d98306334235ac640070b",
   "../mini-test-lesson-5-computer-based/journey.mjs": "425d23a1a29b66abc6f59ee609e6852aa6b0bfa0edc55542176ae691b18fdf77",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "1cf42cff36f54bb0ae4cfe8da2de42a9dd79e2b5cec3b2641b9fc4e9441c84f7",
-  "../shared/app-terms-cbt.js": "673b07155567c339a6a281c3b05fdcb266de9870fa3b83871588479e141c56af",
+  "../shared/app-terms-cbt.js": "3ce38864fc70835867e5dbcaf0e8f85df56cb43dbffb41140b0b7e2dc190b8a2",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
@@ -199,14 +199,14 @@ export const ASSET_HASHES={
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-2-computer-based/audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
-  "../term-test-2-computer-based/bootstrap-terms-cbt.js": "974294c6cd311feee19d63592a9e59e8ca17fbb0852f76340156cc426341bba2",
+  "../term-test-2-computer-based/bootstrap-terms-cbt.js": "36eb72a92c66e6c16d245a3aee9f981f9bd0462d50488ccbbc36a61c199cb1fa",
   "../term-test-2-computer-based/enhance-terms-cbt.js": "a834b59dbff2dd946755f80dd0aa16cbebd87027da5924800f68e11c137ff244",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "e5b035243a7888d1d28e9a4fa399ad9352dbc961365fac8f2bea873dfe0575d5",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
   "../term-test-2/test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
-  "index.html": "a0a699beaeaf9f86087b6dbd539374b94197ba7cd49a8d7b9e24b8bde21a6fc3",
+  "index.html": "aa336264ded993d33a4d63f98b87dd2992f0148363bf799c057fe6a2843cc3bd",
   "offline-worker.js": "a29d83cfdba626310e9866f2ddec734ebc4bb045985dcc1954121d865d5494a8",
   "rescue-audio.js": "e4e590e58e66587641d483e2b9ce7ab29c87ad8d1dd01bf8d1d92a5e6e3db2c3"
 };
-export const ASSET_BUILD_ID="14757445008dcd03049bad476813adbdbcdb1570fc654195d4bdbaf0cdd70ca9";
+export const ASSET_BUILD_ID="f8cc901c0610c7eab309b6c0db92628a27c42d60b9c4104d8f099f8156973271";

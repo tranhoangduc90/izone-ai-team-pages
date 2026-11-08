@@ -777,6 +777,29 @@
   });
 
   let listeningSavedCopy;
+  function updateListeningSavedCopy() {
+    const card = elements.listeningSavedView;
+    if (card.hidden) return;
+    const heading = card.querySelector('h2');
+    const copy = card.querySelector('p:not(.eyebrow)');
+    const eyebrow = card.querySelector('.eyebrow');
+    listeningSavedCopy ||= {heading:heading.textContent,copy:copy.textContent,eyebrow:eyebrow.textContent};
+    const readingFirst = state.examMode === 'read_first' && !state.readingSubmitted;
+    const waitingForListening = !readingFirst && !miniJourney?.paper && Boolean(miniJourney?.view().localOnly);
+    const nextCopy = readingFirst ? {
+      heading: 'Sẵn sàng làm Reading',
+      copy: 'Đồng hồ chỉ bắt đầu khi bạn nhấn Bắt đầu Reading. Listening sẽ mở sau khi nộp Reading.',
+      eyebrow: 'Kỹ năng đầu tiên · Reading',
+    } : waitingForListening ? {
+      heading: listeningSavedCopy.heading,
+      copy: 'Bài Listening đã lưu trên thiết bị và đang chờ đồng bộ. Bạn có thể mở Reading để tiếp tục làm bài.',
+      eyebrow: 'Listening đã lưu trên máy',
+    } : listeningSavedCopy;
+    for (const [node, value] of [[heading, nextCopy.heading], [copy, nextCopy.copy], [eyebrow, nextCopy.eyebrow]]) {
+      if (node.textContent !== value) node.textContent = value;
+    }
+  }
+
   function resultsUnlocked() {
     if (listeningOnly) return Boolean(state.attemptToken || state.result?.result?.listening);
     if (writingConfig) return Boolean(state.writingSubmitted);
@@ -835,14 +858,7 @@
     }
     if (stage === 'listening-saved') {
       elements.listeningSavedView.hidden = false;
-      const heading=elements.listeningSavedView.querySelector('h2');
-      const copy=elements.listeningSavedView.querySelector('p:not(.eyebrow)');
-      const eyebrow=elements.listeningSavedView.querySelector('.eyebrow');
-      listeningSavedCopy ||= {heading:heading.textContent,copy:copy.textContent,eyebrow:eyebrow?.textContent};
-      const readingFirst=state.examMode === 'read_first' && !state.readingSubmitted;
-      heading.textContent=readingFirst?'Sẵn sàng làm Reading':listeningSavedCopy.heading;
-      copy.textContent=readingFirst?'Đồng hồ chỉ bắt đầu khi bạn nhấn Bắt đầu Reading. Listening sẽ mở sau khi nộp Reading.':listeningSavedCopy.copy;
-      if(eyebrow)eyebrow.textContent=readingFirst?'Kỹ năng đầu tiên · Reading':listeningSavedCopy.eyebrow;
+      updateListeningSavedCopy();
     }
     if (window.K67_EXAM_ORDER) {
       const progress = progressSteps[0]?.parentElement;
@@ -3456,7 +3472,9 @@
       submitted = true;
       if (response.cbtOfflineReceipt) await miniCbt.applied('listening');
       elements.listeningView.dispatchEvent(new CustomEvent('term-test:listening-submitted'));
-      if (response.localOnly) {
+      if (miniJourney && !miniJourney.paper && writingConfig) {
+        hideNotice();
+      } else if (response.localOnly) {
         showNotice('Listening đã lưu trên máy. Hệ thống sẽ đồng bộ khi có mạng.', 'success');
       } else if (writingConfig || deferResultsUntilComplete) {
         showNotice(`Bài Listening đã được ghi nhận. Kết quả sẽ mở sau khi bạn hoàn thành ${writingConfig ? 'Reading và nộp Writing' : 'Reading'}.`, 'success');
@@ -4261,6 +4279,7 @@
           ? collectAnswers(elements[section+'Questions']) : null);
       }
     });
+    if (!miniJourney.paper) miniJourney.changed.addEventListener('change', updateListeningSavedCopy);
     if (writingConfig) miniJourney.changed.addEventListener('change', updateJourneyResultReady);
     if(view.nextSection==='listening')await showJourneyListening(window.TERM_TEST_BOOTSTRAP?.playNewListening === true);
     else if(view.nextSection==='reading'){
