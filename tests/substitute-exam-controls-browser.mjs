@@ -14,6 +14,15 @@ function check(checks,id,ok,observed){checks.push({id,ok:Boolean(ok),observed});
 async function inspectControls(p,skill,checks){
  const form=p.locator('#'+skill+'View');
  await form.locator('.cbt-notes-open').waitFor();
+ if(skill==='listening'&&p.viewportSize().width===390){
+  const download=p.getByRole('button',{name:'Tải bài làm về máy',exact:true});
+  const change=p.getByRole('button',{name:'Đổi người học',exact:true});
+  const [backupBox,changeBox]=await Promise.all([download.boundingBox(),change.boundingBox()]);
+  check(checks,'download-shares-mobile-header-row',
+   backupBox&&changeBox&&backupBox.x>=changeBox.x+changeBox.width
+   &&Math.abs(backupBox.y+backupBox.height/2-changeBox.y-changeBox.height/2)<3
+   &&backupBox.x+backupBox.width<=390,{backupBox,changeBox});
+ }
  const geometry=await form.evaluate(f=>{
   const heading=f.querySelector('.cbt-test-heading'),tools=f.querySelector('.cbt-toolbar-controls'),nav=f.querySelector('.cbt-question-nav');
   const buttons=[...nav.querySelectorAll('.cbt-question-button')],r=buttons.map(e=>e.getBoundingClientRect());

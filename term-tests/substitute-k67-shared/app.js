@@ -433,7 +433,15 @@
   }
   if(serverGradingMode&&window.SUBSTITUTE_OFFLINE){
     const download=document.createElement('button');download.type='button';
-    download.className='button button-secondary';download.textContent='Tải bài làm về máy';
+    download.className = 'button button-secondary substitute-backup-download';
+    download.setAttribute('aria-label', 'Tải bài làm về máy');
+    const fullLabel = document.createElement('span');
+    fullLabel.className = 'substitute-backup-full';
+    fullLabel.textContent = 'Tải bài làm về máy';
+    const shortLabel = document.createElement('span');
+    shortLabel.className = 'substitute-backup-compact';
+    shortLabel.textContent = 'Tải bài';
+    download.append(fullLabel, shortLabel);
     download.addEventListener('click',async()=>{
       const snapshot={...state,classCode,clientRunId:window.TERM_TEST_BOOTSTRAP?.clientRunId,
         _substitute:window.SUBSTITUTE_STATE.stamp({})._substitute};
