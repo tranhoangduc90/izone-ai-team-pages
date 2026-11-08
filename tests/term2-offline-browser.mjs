@@ -79,6 +79,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0}
    return route.fulfill({json:{...prepared,audioDownload,offline:{policy:mini?'mini-k56-offline-v1':`term${product}-offline-v1`,permit:'fixture-permit-no-production-authority',ownerId:body.ownerId,preparedAt:prepared.serverNow}}});
   }
   if(endpoint.endsWith('/offline/status'))return route.fulfill({json:{ok:true,persisted:receipts.has(body.operationId),receipt:receipts.get(body.operationId)||null}});
+  if(product===1&&endpoint.endsWith('/offline/resume'))return route.fulfill({json:{ok:true,completedElsewhere:controls.completedElsewhere||{}}});
   if(endpoint.endsWith('/offline/operation')){
    const receipt={version:1,receiptId:randomUUID(),operationId:body.operationId,payloadHash:createHash('sha256').update(canonical(body)).digest('hex'),attemptToken:id,examSessionToken:session,generation:0,...controls.recoveredRun,section:body.section,kind:body.kind,acceptedRevision:body.revision,status:'accepted',serverCommittedAt:new Date().toISOString()};
    if(mini&&body.kind==='seal'&&body.section==='writing'&&!body.payload.task2.replace(/[\s\p{Default_Ignorable_Code_Point}]/gu,''))receipt.writingBlank=true;

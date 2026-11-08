@@ -18,6 +18,40 @@ test('Tải file giữ nguyên Unicode và escape, không xuất quyền/khóa',
 async function runtime(fetchImpl){const store=await new ExamStore({idb:null,local:local()}).open(),r=new Term1Offline({apiBase:'https://fixture.invalid',classCode:'FIXTURE',store,fetchImpl});
  r.record={ready:true,prepared:{attemptToken:crypto.randomUUID(),examSessionToken:crypto.randomUUID(),generation:0,examMode:'lis_first',serverNow:new Date().toISOString(),timing:{readingDurationMinutes:60,writingDurationMinutes:30},offline:{ownerId:crypto.randomUUID(),permit:'fixture'}},sections:{},player:{position:10,ended:false},receipts:{},operations:[]};r.key='fixture';r.owned=true;r.anchor();return r;}
 const response=(value,status=200)=>({ok:status>=200&&status<300,status,json:async()=>value});
+const completedReading=()=>({reading:{operationId:crypto.randomUUID(),startedAt:'2026-11-08T00:00:00.000Z',deadlineAt:'2026-11-08T00:40:00.000Z',revision:3}});
+test('Bài chính nhận Reading đã chốt qua link dự phòng và tiếp tục theo đúng thứ tự',async()=>{
+ for(const mode of ['lis_first','read_first']){
+  const completedElsewhere=completedReading();let calls=0;
+  const r=await runtime(async(url,options)=>{
+   assert.match(url,/\/offline\/resume$/);assert.equal(options.headers['x-term2-permit'],'fixture');
+   assert.deepEqual(JSON.parse(options.body),r.scope);calls++;return response({completedElsewhere});
+  });
+  r.record.prepared.examMode=mode;
+  r.record.snapshot={drafts:{reading:{'1':'nháp thiết bị này'}}};
+  if(mode==='lis_first') r.record.sections.listening={sealed:true};
+  r.record.sections.reading={startedAt:completedElsewhere.reading.startedAt,sealed:false};
+  await r.refreshCompletedElsewhere();
+  assert.equal(calls,1);assert.equal(r.sectionResponse().nextSection,mode==='lis_first'?'writing':'listening');
+  const stored=await r.store.get(r.key);
+  assert.equal(stored.sections.reading.operationId,completedElsewhere.reading.operationId);
+  assert.equal(stored.snapshot.drafts.reading['1'],'nháp thiết bị này');
+  assert.deepEqual(stored.receipts,{});
+  r.fetchImpl=async()=>{throw Error('offline');};
+  const section=r.sectionResponse().nextSection;
+  await r.start(section);
+  assert.equal(r.record.operations[0].dependency,completedElsewhere.reading.operationId);
+ }
+});
+test('Giữ nguyên nháp và hàng đợi nếu mốc chốt mới xung đột với bản trên máy',async()=>{
+ const r=await runtime(async()=>{throw Error('offline');});
+ const marker=completedReading();
+ r.record.sections.reading={sealed:true,startedAt:marker.reading.startedAt,operationId:crypto.randomUUID()};
+ r.record.operations.push({section:'writing',dependency:r.record.sections.reading.operationId});
+ const local=structuredClone(r.record);
+ await r.applyCompletedElsewhere(marker);
+ assert.deepEqual(r.record,local);
+ assert.equal(r.diagnostics.at(-1).action,'fallback_progress_conflict');
+});
 test('HTTP 200 thiếu receipt không xóa pending; lỗi mạng không gọi player',async()=>{
  const r=await runtime(async()=>response({ok:true,persisted:true}));let pause=0;r.player={pause(){pause++;}};
  await r.start('listening');await new Promise(ok=>setTimeout(ok,20));assert.equal(r.pending,1);assert.equal(pause,0);assert.match(r.message,/giữ|xác nhận/);

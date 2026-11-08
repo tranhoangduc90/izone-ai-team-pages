@@ -6,8 +6,10 @@
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
   const offline=window.K56_TERM1_OFFLINE?.active?window.K56_TERM1_OFFLINE:null;
+  const fallbackSkill=offline?.skill || '';
+  const fallbackLabel={listening:'Listening',reading:'Reading',writing:'Writing'}[fallbackSkill];
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const requestedDemo = query.get('demo') || '';
+  const requestedDemo = fallbackSkill ? '' : query.get('demo') || '';
   const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
   const demoMode = window.TERM_TEST_CONTENT?.variant === 'semantic-html'
     && ['complete', 'listening-only', 'writing-prep', 'writing', 'exam'].includes(requestedDemo)
@@ -274,7 +276,9 @@
     saveSession();
   });
 
-  const progressMarkup = writingConfig
+  const progressMarkup = fallbackSkill
+    ? `<div class="progress-step" data-progress="${fallbackSkill}">1. ${fallbackLabel}</div><div class="progress-step" data-progress="result">2. Kết quả</div>`
+    : writingConfig
     ? `<div class="progress-step" data-progress="listening">1. Listening</div>
         <div class="progress-step" data-progress="reading">2. Reading</div>
         <div class="progress-step" data-progress="writing">3. Writing</div>
@@ -286,9 +290,9 @@
   const writingMarkup = writingConfig ? `
       <section class="panel transition-card writing-prep-card" id="writingPrepView" hidden>
         <div class="transition-icon">✓</div>
-        <p class="eyebrow">Reading đã được ghi nhận</p>
+        <p class="eyebrow">${fallbackSkill==='writing'?'Thông tin học viên đã xác nhận':'Reading đã được ghi nhận'}</p>
         <h2>Chuẩn bị phần Writing</h2>
-        <p>Kết quả Listening và Reading đang được giữ kín. Khi sẵn sàng, hãy bắt đầu Writing Task 2.</p>
+        <p>${fallbackSkill==='writing'?'Đồng hồ chỉ bắt đầu khi bạn bấm bắt đầu Writing Task 2.':'Kết quả Listening và Reading đang được giữ kín. Khi sẵn sàng, hãy bắt đầu Writing Task 2.'}</p>
         <ul class="writing-prep-list">
           <li>Tổng thời gian: ${writingConfig.totalMinutes || 55} phút.</li>
           <li>Task 2: viết ít nhất 250 từ.</li>
@@ -333,7 +337,7 @@
     <header class="topbar">
       <p class="eyebrow">IZONE · IELTS 6–7</p>
       <h1>${testConfig.title}</h1>
-      <p>${testConfig.intro || 'Nhập đáp án từ answer sheet giấy. Listening được lưu trước, sau đó hệ thống mở Reading và chấm toàn bộ khi hoàn tất.'}</p>
+      <p>${fallbackSkill ? fallbackLabel + ' · Bài dự phòng' : testConfig.intro || 'Nhập đáp án từ answer sheet giấy. Listening được lưu trước, sau đó hệ thống mở Reading và chấm toàn bộ khi hoàn tất.'}</p>
     </header>
     <main class="page-shell">
       <div class="progress" aria-label="Tiến độ bài test">
@@ -406,7 +410,8 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
         <h2>Kết quả của bạn đã sẵn sàng</h2>
-        <p>${writingConfig
+        <p>${fallbackSkill==='writing' ? 'Bài Writing đã được lưu. Kết quả sẽ hiển thị khi bài chấm được công bố.'
+          : fallbackSkill ? fallbackLabel + ' đã được lưu, chấm và phân tích theo từng dạng bài.' : writingConfig
           ? 'Listening và Reading đã được chấm, phân tích. Điểm Writing sẽ hiển thị khi bài chấm sẵn sàng.'
           : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
         <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
@@ -660,7 +665,8 @@
       : stage === 'reading' ? 'reading'
         : stage === 'writing-prep' || stage === 'writing' ? 'writing'
           : stage === 'result-ready' || stage === 'result' ? 'result' : '';
-    const order = [...window.K56_EXAM_ORDER.skills(state.examMode || window.K56_EXAM_ORDER.requested()), ...(writingConfig ? ['writing'] : []), 'result'];
+    const order = fallbackSkill ? [fallbackSkill, 'result']
+      : [...window.K56_EXAM_ORDER.skills(state.examMode || window.K56_EXAM_ORDER.requested()), ...(writingConfig ? ['writing'] : []), 'result'];
     for (const [index, skill] of order.entries()) {
       const step = Array.from(progressSteps).find(item => item.dataset.progress === skill);
       step.textContent = `${index + 1}. ${skill === 'result' ? 'Kết quả' : skill[0].toUpperCase() + skill.slice(1)}`;
@@ -1179,7 +1185,7 @@
     const requestedWritingOwner = writingSubmission.owner();
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
-      const payload = await apiRequest('/api/term-tests/result', {
+      const payload = fallbackSkill==='writing' ? await offline.readResult() : await apiRequest('/api/term-tests/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attemptToken: state.attemptToken })
@@ -2352,7 +2358,90 @@
     return wrapper;
   }
 
-  function renderDetailBlock(title, details) {
+  function addReviewAudio(dialog, clip) {
+    const player = document.createElement('audio');
+    player.hidden = true;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button-secondary';
+    button.textContent = 'Nghe dẫn chứng';
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    let source = '';
+    let request = 0;
+    const stop = () => {
+      request += 1;
+      player.pause();
+      button.disabled = false;
+      button.textContent = 'Nghe dẫn chứng';
+    };
+    const fail = () => {
+      stop();
+      status.textContent = 'Chưa phát được đoạn dẫn chứng. Bạn vẫn có thể đọc giải thích.';
+    };
+    const onHidden = () => { if (document.hidden) stop(); };
+    document.addEventListener('visibilitychange', onHidden);
+    player.addEventListener('ratechange', () => { if (player.playbackRate !== 1) player.playbackRate = 1; });
+    player.addEventListener('timeupdate', () => { if (player.currentTime >= clip.end) stop(); });
+    player.addEventListener('ended', stop);
+    player.addEventListener('error', fail);
+    dialog.addEventListener('close', () => {
+      stop();
+      document.removeEventListener('visibilitychange', onHidden);
+      if (source) URL.revokeObjectURL(source);
+    }, { once: true });
+    button.addEventListener('click', async () => {
+      if (!player.paused) { stop(); return; }
+      const intent = ++request;
+      button.disabled = true;
+      status.textContent = '';
+      try {
+        if (!source) {
+          const blob = await offline.audio();
+          if (!dialog.open || request !== intent || document.hidden) return;
+          source = URL.createObjectURL(blob);
+          player.src = source;
+        }
+        player.currentTime = clip.start;
+        await player.play();
+        if (!dialog.open || request !== intent || document.hidden) return;
+        button.disabled = false;
+        button.textContent = 'Dừng nghe dẫn chứng';
+      } catch {
+        if (dialog.open && request === intent) fail();
+      }
+    });
+    dialog.append(button, status, player);
+  }
+
+  function openSkillReview(title, item) {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cbt-identity-confirm';
+    dialog.setAttribute('aria-labelledby', 'term1SkillReviewHeading');
+    const heading = document.createElement('h2');
+    heading.id = 'term1SkillReviewHeading';
+    heading.textContent = title + ' · Câu ' + item.number;
+    const source = document.createElement('strong');
+    source.textContent = item.source;
+    const evidence = document.createElement('blockquote');
+    evidence.textContent = item.evidence;
+    const explanation = document.createElement('p');
+    explanation.textContent = item.explanation;
+    const controls = document.createElement('form');
+    controls.method = 'dialog';
+    const close = document.createElement('button');
+    close.className = 'button button-secondary';
+    close.textContent = 'Đóng';
+    controls.append(close);
+    dialog.append(heading, source, evidence, explanation);
+    if (fallbackSkill === 'listening' && item.clip) addReviewAudio(dialog, item.clip);
+    dialog.append(controls);
+    dialog.addEventListener('close', () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
+  function renderDetailBlock(title, details, review) {
     const block = document.createElement('details');
     block.className = 'detail-block';
     const summary = document.createElement('summary');
@@ -2366,7 +2455,9 @@
     table.className = 'detail-table';
     const head = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    for (const label of ['Câu', 'Bài làm', 'Đáp án đúng', 'Kết quả']) {
+    const columns = ['Câu', 'Bài làm', 'Đáp án đúng', 'Kết quả'];
+    if (review.size) columns.push('Giải thích');
+    for (const label of columns) {
       const cell = document.createElement('th');
       cell.textContent = label;
       headerRow.append(cell);
@@ -2401,6 +2492,20 @@
       resultLabel.textContent = resultMeta.label;
       resultCell.append(resultIcon, resultLabel);
       row.append(resultCell);
+      if (review.size) {
+        const cell = document.createElement('td');
+        const explanation = review.get(Number(detail.number));
+        if (explanation) {
+          const action = document.createElement('button');
+          action.type = 'button';
+          action.className = 'button button-secondary';
+          action.textContent = 'Xem giải thích';
+          action.setAttribute('aria-label', 'Xem giải thích câu ' + detail.number);
+          action.addEventListener('click', () => openSkillReview(title, explanation));
+          cell.append(action);
+        }
+        row.append(cell);
+      }
       body.append(row);
     }
     table.append(head, body);
@@ -2415,27 +2520,32 @@
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
-    elements.summaryGrid.replaceChildren(
-      addSummaryCard('Listening', `${result.listening.correct}/${result.listening.total} câu đúng`),
-      addSummaryCard('Reading', hasReading ? `${result.reading.correct}/${result.reading.total} câu đúng` : 'Chưa nộp')
-    );
-    elements.resultStatus.textContent = hasReading
+    const skills = fallbackSkill==='writing' ? [] : fallbackSkill ? [[fallbackLabel, result[fallbackSkill]]]
+      : [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const summary = skills.map(([name, score]) => addSummaryCard(name, `${score.correct}/${score.total} câu đúng`));
+    if (!fallbackSkill && !hasReading) summary.push(addSummaryCard('Reading', 'Chưa nộp'));
+    elements.summaryGrid.replaceChildren(...summary);
+    const grading = payload.writing?.grading;
+    elements.resultStatus.textContent = fallbackSkill==='writing' ? grading?.ready
+      ? (grading.tasks?.[0]?.gradingMethod==='blank_rule' ? 'Bài Writing trắng · 0/9' : `Kết quả Writing Task 2 · ${formatBand(grading.writingScore)}/9`)
+      : writingGradingNotice(grading)
+      : fallbackSkill ? `Phân tích dựa trên bài ${fallbackLabel} đã nộp.` : hasReading
       ? payload.writing?.grading?.ready
         ? 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.'
         : 'Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
-    elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
+    elements.continueReadingFromResult.hidden = Boolean(fallbackSkill) || hasReading || Boolean(demoMode);
     renderWritingSubmission();
     // Polling Writing không làm thay DOM/focus của bảng L/R đang được học viên xem.
     const identity = JSON.stringify([payload.className, payload.studentRef || state.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);
     const previousBlocks = state.resultDetailsIdentity === identity
       ? Array.from(elements.questionDetails.children) : [];
-    const skills = [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const review = fallbackSkill ? new Map((payload.review || []).map(item => [item.number, item])) : new Map();
     const detailBlocks = skills.map(([title, skill]) => {
-      const fingerprint = JSON.stringify(skill.details || []);
+      const fingerprint = JSON.stringify(review.size ? [skill.details || [], [...review.values()]] : skill.details || []);
       const previous = previousBlocks.find(block => block.dataset.skill === title);
       if (previous?.dataset.details === fingerprint) return previous;
-      const block = renderDetailBlock(title, skill.details);
+      const block = renderDetailBlock(title, skill.details, review);
       block.dataset.skill = title;
       block.dataset.details = fingerprint;
       block.open = previous?.open || false;
@@ -2446,8 +2556,7 @@
       elements.questionDetails.replaceChildren(...detailBlocks);
     }
     state.resultDetailsIdentity = identity;
-    const performanceSections = [renderSkillPerformance('Listening', result.listening)];
-    if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
+    const performanceSections = skills.map(([name, score]) => renderSkillPerformance(name, score));
     elements.skillPerformanceSections.replaceChildren(...performanceSections);
     if (payload.writing?.grading?.ready) stopWritingGradingPolling();
   }
@@ -2498,6 +2607,15 @@
       return;
     }
     try {
+      if (fallbackSkill) {
+        const payload = await offline.readResult();
+        if (fallbackSkill==='writing') applyWritingFromServer(payload.writing, true);
+        renderResult(payload);
+        hideNotice();
+        setStage('result');
+        if (fallbackSkill==='writing') scheduleWritingGradingRefresh();
+        return;
+      }
       const payload = await apiRequest('/api/term-tests/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2790,7 +2908,7 @@
         const portalMessage = portalNotice(response.portalSyncStatus, true);
         showNotice(response.localOnly?offline.message:`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, response.localOnly?'':['unknown', 'processing', 'pending', 'queued', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, true), ['unknown', 'processing', 'pending', 'queued', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
+        showNotice(fallbackSkill ? offline.message : portalNotice(response.portalSyncStatus, true), fallbackSkill || ['unknown', 'processing', 'pending', 'queued', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
         setStage('result-ready');
         if (automatic) await loadResult(elements.viewResult);
       }
@@ -3290,7 +3408,7 @@
     });
     offline.mount({snapshot:()=>{
       for(const skill of ['listening','reading'])if(!state[skill+'Submitted'])state.drafts[skill]=collectAnswers(elements[skill+'Questions']);
-      if(!state.writingSubmitted)for(const editor of elements.writingView.querySelectorAll('[data-writing-task]'))state.drafts.writing[editor.dataset.writingTask]=editor.value;
+      if(!state.writingSubmitted)for(const editor of elements.writingView?.querySelectorAll('[data-writing-task]') || [])state.drafts.writing[editor.dataset.writingTask]=editor.value;
       return structuredClone(state);
     },host:document.querySelector('.page-shell')});
     offline.mountListeningSavedCard(elements.listeningSavedView);

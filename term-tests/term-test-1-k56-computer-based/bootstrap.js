@@ -24,7 +24,7 @@
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   let term1Offline = null;
   if (!localDemo && classCode && classCode !== 'CODEXDEMO56') {
-    const {Term1Offline, ExamStore} = await import('./offline.mjs?v=20261107-k56-r2-v1');
+    const {Term1Offline, ExamStore} = await import('./offline.mjs?v=20261108-term1-fallback-resume-v1');
     term1Offline = new Term1Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try { await term1Offline.open(); window.K56_TERM1_OFFLINE = term1Offline; }
     catch (error) { root.textContent=error.message; return; }
@@ -102,7 +102,7 @@
   }
   // Entry không có mã lớp có thể vừa được identity resolver gắn đúng lớp.
   if(!term1Offline&&!localDemo&&classCode&&classCode!=='CODEXDEMO56'){
-    const {Term1Offline,ExamStore}=await import('./offline.mjs?v=20261107-k56-r2-v1');
+    const {Term1Offline,ExamStore}=await import('./offline.mjs?v=20261108-term1-fallback-resume-v1');
     term1Offline=new Term1Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
     try{await term1Offline.open();window.K56_TERM1_OFFLINE=term1Offline;}catch(error){root.textContent=error.message;return;}
   }
@@ -767,7 +767,8 @@
       if(term1Offline&&!term1Offline.active&&await term1Offline.restorePrepared(prepared,studentRef)){
         await restoreOffline();return;
       }
-      if (term1Offline && !prepared.listeningStartedAt && !prepared.readingStartedAt && !prepared.writingStartedAt) {
+      if (term1Offline && (prepared.resumeTerm1Offline ||
+          (!prepared.listeningStartedAt && !prepared.readingStartedAt && !prepared.writingStartedAt))) {
         try{Object.assign(prepared, await term1Offline.prepare(prepared,{classCode,studentRef,mode:prepared.examMode||'lis_first'}));}
         catch(error){if(error.code!=='OFFLINE_NEW_DISABLED')throw error;if(term1Offline.record)await term1Offline.detachLatest();term1Offline=null;window.K56_TERM1_OFFLINE=null;}
       }
@@ -925,7 +926,9 @@
   }
 
   async function restoreOffline() {
-    const runtime=term1Offline,p=runtime.record.prepared,current=runtime.sectionResponse();
+    const runtime=term1Offline;
+    await runtime.refreshCompletedElsewhere();
+    const p=runtime.record.prepared,current=runtime.sectionResponse();
     state={...state,...(runtime.record.snapshot||{}),...current,studentRef:runtime.record.studentRef,identityConfirmed:true};
     showLobby(current.nextSection==='reading'?'reading':'listening');
     roster=[{ref:state.studentRef,name:p.studentName}];
