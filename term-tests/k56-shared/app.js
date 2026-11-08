@@ -7,7 +7,7 @@
   const query = new URLSearchParams(window.location.search);
   const offline=window.K56_TERM1_OFFLINE?.active?window.K56_TERM1_OFFLINE:null;
   const fallbackSkill=offline?.skill || '';
-  const fallbackLabel=fallbackSkill==='listening'?'Listening':'Reading';
+  const fallbackLabel={listening:'Listening',reading:'Reading',writing:'Writing'}[fallbackSkill];
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const requestedDemo = fallbackSkill ? '' : query.get('demo') || '';
   const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
@@ -290,9 +290,9 @@
   const writingMarkup = writingConfig ? `
       <section class="panel transition-card writing-prep-card" id="writingPrepView" hidden>
         <div class="transition-icon">✓</div>
-        <p class="eyebrow">Reading đã được ghi nhận</p>
+        <p class="eyebrow">${fallbackSkill==='writing'?'Thông tin học viên đã xác nhận':'Reading đã được ghi nhận'}</p>
         <h2>Chuẩn bị phần Writing</h2>
-        <p>Kết quả Listening và Reading đang được giữ kín. Khi sẵn sàng, hãy bắt đầu Writing Task 2.</p>
+        <p>${fallbackSkill==='writing'?'Đồng hồ chỉ bắt đầu khi bạn bấm bắt đầu Writing Task 2.':'Kết quả Listening và Reading đang được giữ kín. Khi sẵn sàng, hãy bắt đầu Writing Task 2.'}</p>
         <ul class="writing-prep-list">
           <li>Tổng thời gian: ${writingConfig.totalMinutes || 55} phút.</li>
           <li>Task 2: viết ít nhất 250 từ.</li>
@@ -410,7 +410,8 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
         <h2>Kết quả của bạn đã sẵn sàng</h2>
-        <p>${fallbackSkill ? fallbackLabel + ' đã được lưu, chấm và phân tích theo từng dạng bài.' : writingConfig
+        <p>${fallbackSkill==='writing' ? 'Bài Writing đã được lưu. Kết quả sẽ hiển thị khi bài chấm được công bố.'
+          : fallbackSkill ? fallbackLabel + ' đã được lưu, chấm và phân tích theo từng dạng bài.' : writingConfig
           ? 'Listening và Reading đã được chấm, phân tích. Điểm Writing sẽ hiển thị khi bài chấm sẵn sàng.'
           : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
         <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
@@ -1184,7 +1185,7 @@
     const requestedWritingOwner = writingSubmission.owner();
     try {
       const wasReady = Boolean(state.result?.writing?.grading?.ready);
-      const payload = await apiRequest('/api/term-tests/result', {
+      const payload = fallbackSkill==='writing' ? await offline.readResult() : await apiRequest('/api/term-tests/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attemptToken: state.attemptToken })
@@ -2420,11 +2421,16 @@
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
-    const skills = fallbackSkill ? [[fallbackLabel, result[fallbackSkill]]] : [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const skills = fallbackSkill==='writing' ? [] : fallbackSkill ? [[fallbackLabel, result[fallbackSkill]]]
+      : [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
     const summary = skills.map(([name, score]) => addSummaryCard(name, `${score.correct}/${score.total} câu đúng`));
     if (!fallbackSkill && !hasReading) summary.push(addSummaryCard('Reading', 'Chưa nộp'));
     elements.summaryGrid.replaceChildren(...summary);
-    elements.resultStatus.textContent = fallbackSkill ? `Phân tích dựa trên bài ${fallbackLabel} đã nộp.` : hasReading
+    const grading = payload.writing?.grading;
+    elements.resultStatus.textContent = fallbackSkill==='writing' ? grading?.ready
+      ? (grading.tasks?.[0]?.gradingMethod==='blank_rule' ? 'Bài Writing trắng · 0/9' : `Kết quả Writing Task 2 · ${formatBand(grading.writingScore)}/9`)
+      : writingGradingNotice(grading)
+      : fallbackSkill ? `Phân tích dựa trên bài ${fallbackLabel} đã nộp.` : hasReading
       ? payload.writing?.grading?.ready
         ? 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.'
         : 'Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau'
@@ -2502,9 +2508,12 @@
     }
     try {
       if (fallbackSkill) {
-        renderResult(await offline.readResult());
+        const payload = await offline.readResult();
+        if (fallbackSkill==='writing') applyWritingFromServer(payload.writing, true);
+        renderResult(payload);
         hideNotice();
         setStage('result');
+        if (fallbackSkill==='writing') scheduleWritingGradingRefresh();
         return;
       }
       const payload = await apiRequest('/api/term-tests/result', {

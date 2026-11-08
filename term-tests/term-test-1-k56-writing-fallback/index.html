@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://ducizone.ddns.net; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+    <title>Term Test 1 · Khóa 56 · Writing dự phòng</title>
+    <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg">
+    <link rel="stylesheet" href="../k56-shared/styles.css?rev=20261003-writing-save-cas-v1">
+    <link rel="stylesheet" href="../term-test-1-k56-computer-based/styles.css?v=20261018-cbt-viewport-r73-identity-v1">
+    <link rel="stylesheet" href="../term-test-1-k56-computer-based/layout-updates.css?v=20260911-parity-v2">
+    <link rel="stylesheet" href="../k56-exam-integrity/styles.css?rev=20260911-find-lock-v1">
+    <link rel="stylesheet" href="../k56-writing-feedback/styles.css?rev=20260914-student-feedback-v1-html-v2-teacher-parity-v1">
+    <link rel="preload" href="../k56-design/assets/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="../k56-design/theme.css?v=20261023-master170-v3">
+    <link rel="stylesheet" href="../shared/desktop-exam-guard.css?v=20261027-v1&resilience=20261027-v1">
+    <script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
+  </head>
+  <body class="cbt-mode" data-k56-design data-term1-skill="writing">
+    <div id="app">
+      <header class="topbar cbt-bootstrap-topbar"><h1>Term Test 1 · Khóa 56</h1></header>
+      <main class="page-shell cbt-bootstrap-shell">
+        <section class="panel cbt-bootstrap-card" aria-labelledby="securePrepTitle">
+          <header class="cbt-lobby-header">
+            <span class="cbt-lobby-badge">Chuẩn bị Writing</span>
+            <h2 id="securePrepTitle">Xác nhận học viên trước khi bắt đầu Writing</h2>
+            <p>Nhập mã giảng viên đã gửi để xác nhận lượt Writing của bạn.</p>
+          </header>
+          <form class="cbt-bootstrap-identity" id="skillIdentity" hidden>
+            <strong id="bootstrapClass"></strong>
+            <label>Mã kích hoạt<input id="activationCode" type="text" required maxlength="30" autocomplete="off" spellcheck="false"></label>
+            <button class="button button-primary" type="submit">Kiểm tra thông tin học viên</button>
+          </form>
+          <div class="notice" id="bootstrapNotice" role="status">Đang kiểm tra link dự phòng…</div>
+        </section>
+      </main>
+      <dialog class="cbt-identity-confirm" id="identityConfirm" aria-labelledby="identityConfirmTitle" aria-describedby="identityConfirmHelp">
+        <p class="cbt-confirm-eyebrow">Kiểm tra trước khi vào bài</p>
+        <h2 id="identityConfirmTitle">Xác nhận thông tin học viên</h2>
+        <p id="identityConfirmHelp">Vui lòng kiểm tra đúng họ tên và lớp của bạn trước khi tiếp tục.</p>
+        <dl><div><dt>Họ và tên</dt><dd id="confirmStudentName"></dd></div><div><dt>Lớp</dt><dd id="confirmClassName"></dd></div></dl>
+        <p class="cbt-confirm-warning">Nếu thông tin chưa đúng, hãy kiểm tra lại link với giảng viên.</p>
+        <div class="cbt-confirm-actions"><button class="button button-secondary" id="cancelIdentity" type="button">Quay lại</button><button class="button button-primary" id="confirmIdentity" type="button">Xác nhận, tiếp tục</button></div>
+      </dialog>
+    </div>
+    <script src="../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1"></script>
+    <script src="../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1"></script>
+    <script src="../k56-exam-order.js?rev=20260930-k56-order-v1&amp;history=20261102-1"></script>
+    <script src="../k56-shared/config.js?rev=20261020-demo-v1&amp;ej=20261024-production-r1"></script>
+    <script src="../term-test-1-k56/test-config.js?journal=20261024-startup-v2&amp;diagnostics=20261107-v3"></script>
+    <script type="module" src="../term-test-1-k56-reading-fallback/bootstrap.mjs?v=20261108-v3"></script>
+    <script defer src="../k56-exam-integrity/app.js?rev=20260911-find-lock-v1"></script>
+    <script defer src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
+  </body>
+</html>

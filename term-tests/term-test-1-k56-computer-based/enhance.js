@@ -1609,8 +1609,8 @@
   if (listeningInstructions && contentConfig.listening) replaceInstructions(listeningInstructions, contentConfig.listening.instructions);
   if (readingInstructions && contentConfig.reading) replaceInstructions(readingInstructions, contentConfig.reading.instructions);
 
-  const listeningForm = fallbackSkill === 'reading' ? null : enhanceForm('listening');
-  const readingForm = fallbackSkill === 'listening' ? null : enhanceForm('reading');
+  const listeningForm = fallbackSkill && fallbackSkill !== 'listening' ? null : enhanceForm('listening');
+  const readingForm = fallbackSkill && fallbackSkill !== 'reading' ? null : enhanceForm('reading');
   if (!isDemo) {
     if (!window.TERM_TEST_BOOTSTRAP?.skipListeningAudio) {
       setupBufferedAudio(listeningForm);

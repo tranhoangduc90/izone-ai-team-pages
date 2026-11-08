@@ -67,7 +67,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/runtime.mjs": "79a0e06cb7f70b32677d62604de6035e6d459cdf2a4f2f2b238504d07e0b408e",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
-  "../k56-shared/app.js": "dedc825359c046da4e97051e22a9b67bd121da5c96c6f26a2ea9ac37d4cd050e",
+  "../k56-shared/app.js": "744d242cf8b1a093c4ccf39e0a438d9ae774fe96619b13c97fd2f13280e0444d",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
@@ -78,13 +78,13 @@ export const ASSET_HASHES={
   "../term-test-1-k56-computer-based/annotations.js": "ce80cf6b0f49db5a271574838503f0dd59a3bd3ca76e385c255cde2de610a43b",
   "../term-test-1-k56-computer-based/assets/figures/hinchingbrooke-park.png": "b23d864282c6d60ffca15b0efff45545ae1134e82e146510fe674b85bc88a463",
   "../term-test-1-k56-computer-based/audio-whole.mjs": "58cf1707f218e010196b5861ef579009f38922edcd184bef7c2543a4941c68f1",
-  "../term-test-1-k56-computer-based/enhance.js": "883e4b6e76c09fa2dcd3b8baab704c95cb159669e7dedddf939d21d4ee809c8a",
+  "../term-test-1-k56-computer-based/enhance.js": "34955203a034225d72173837b4aebf9d8c7578aa2f9bb0ec4c935a878b5c4a1e",
   "../term-test-1-k56-computer-based/layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "../term-test-1-k56-computer-based/styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb",
-  "../term-test-1-k56-reading-fallback/bootstrap.mjs": "c377e5658223dce9f5a312b70b1f67e1d55e55de8384041da74331a3e8eae490",
-  "../term-test-1-k56-reading-fallback/reading-offline.mjs": "71f61b0b23e2c26d04aa74c84c4c8a6e9357c11d5fc8d52974068c75e77c734e",
+  "../term-test-1-k56-reading-fallback/bootstrap.mjs": "fd73d767b94496f3bffdc94a867c3494e0675798f82cd4975e67a90c1b6b1964",
+  "../term-test-1-k56-reading-fallback/reading-offline.mjs": "6dd18a20f62c14b994a303cde4f672e55de3859d6444784771878dac137f383a",
   "../term-test-1-k56/test-config.js": "fdfa91aa74cda341a1965c418f24b2a7a7065c547d0fbad4ae581c8ec1844bc2",
-  "index.html": "40c9b6c9cefa19fd8d95570ebcabdf245a73196205179946364c83ad4fd60166",
+  "index.html": "60460dfc3cbeada4c35cc6da2bd873c9bbe4d68a43bad676e90dd2c876ec7336",
   "offline-worker.js": "aa14476016b290ed8157adc19652fb7a8795beab0d773ad207caf8dfc8b79358"
 };
-export const ASSET_BUILD_ID="ef6ec91725966d7b6c13b6f8aa8bfb747f4ab9c40505346fc28667a22efcde0e";
+export const ASSET_BUILD_ID="a214087cc1cf4cfb9689fa64f9d9c0bcb6ba82632ed04916d89b2ebe1fd5acda";

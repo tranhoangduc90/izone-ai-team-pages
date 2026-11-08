@@ -13,7 +13,9 @@ pattern = re.compile(r'''["'(]([^"'()\s<>]+\.(?:js|mjs|css|woff2|png|svg|html)(?
 
 
 def graph(entry, figure):
-    assets = {entry / 'index.html', entry / 'offline-worker.js', main / 'assets/figures' / figure}
+    assets = {entry / 'index.html', entry / 'offline-worker.js'}
+    if figure:
+        assets.add(main / 'assets/figures' / figure)
     pending = list(assets)
     while pending:
         file = pending.pop()
@@ -49,7 +51,7 @@ def write_manifest(folder, names, header):
     (folder / 'offline-assets.mjs').write_text(content, encoding='utf-8', newline='\n')
 
 
-for skill, figure in [('reading', 'rovio.png'), ('listening', 'hinchingbrooke-park.png')]:
+for skill, figure in [('reading', 'rovio.png'), ('listening', 'hinchingbrooke-park.png'), ('writing', None)]:
     entry = root / f'term-tests/term-test-1-k56-{skill}-fallback'
     assets = graph(entry, figure)
     assert not any(path.name == 'content.js' for path in assets), 'Exam content must come from the authenticated API'

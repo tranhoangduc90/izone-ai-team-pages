@@ -1,4 +1,4 @@
-import { SkillOffline } from './reading-offline.mjs?v=20261108-v2';
+import { SkillOffline } from './reading-offline.mjs?v=20261108-v3';
 
 const form = document.getElementById('skillIdentity');
 const dialog = document.getElementById('identityConfirm');
@@ -8,7 +8,7 @@ const confirm = document.getElementById('confirmIdentity');
 const classCode = (new URLSearchParams(location.search).get('class') || '').trim().toUpperCase();
 const grant = new URLSearchParams(location.hash.slice(1)).get('g') || '';
 const validGrant = /^([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.[A-Za-z0-9_-]{43}$/i.exec(grant);
-const skill = document.body.dataset.term1Skill === 'listening' ? 'listening' : 'reading';
+const skill = ['listening', 'writing'].includes(document.body.dataset.term1Skill) ? document.body.dataset.term1Skill : 'reading';
 const listening = skill === 'listening';
 const transport = listening ? { audioTransport: 'r2-direct-v1' } : {};
 
@@ -34,9 +34,9 @@ async function enter(runtime, audio) {
     const timer = setTimeout(() => reject(Error('Giao diện chưa sẵn sàng. Hãy mở lại link.')), 15000);
     window.addEventListener('term1:app-ready', () => { clearTimeout(timer); resolve(); }, { once: true });
   });
-  await Promise.all([ready, loadScript('../k56-shared/app.js?v=20261108-term1-skill-fallback-v2')]);
+  await Promise.all([ready, loadScript('../k56-shared/app.js?v=20261108-term1-skill-fallback-v3')]);
   if (prepared.content[skill]) {
-    await loadScript('../term-test-1-k56-computer-based/enhance.js?v=20261108-term1-skill-fallback-v2');
+    await loadScript('../term-test-1-k56-computer-based/enhance.js?v=20261108-term1-skill-fallback-v3');
     await loadScript('../term-test-1-k56-computer-based/annotations.js?v=20261018-identity-v1');
   }
   void runtime.flush();

@@ -26,7 +26,7 @@ export function clearTerm1SkillManager({ staleOnly = false } = {}) {
 
 export function openTerm1SkillManager({ classCode, student, opener, request, isCurrent, section = 'reading' }) {
   if (!isCurrent()) return;
-  const label = section === 'listening' ? 'Listening' : 'Reading';
+  const label = { listening: 'Listening', reading: 'Reading', writing: 'Writing' }[section];
   clearTerm1SkillManager();
   const dialog = node('dialog', '', 'teacher-saved-progress-dialog term1-skill-manager');
   const title = node('h2', 'Link dự phòng ' + label);

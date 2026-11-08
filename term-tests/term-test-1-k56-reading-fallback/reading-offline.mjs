@@ -15,7 +15,7 @@ export class SkillOffline extends OfflineRuntime {
       return fetch(url, { ...options, headers, cache: 'no-store' });
     } });
     this.skill = skill;
-    this.label = skill === 'listening' ? 'Listening' : 'Reading';
+    this.label = { listening: 'Listening', reading: 'Reading', writing: 'Writing' }[skill];
     this.grantId = grantId;
     this.grantHash = hash(grant);
   }
@@ -38,14 +38,16 @@ export class SkillOffline extends OfflineRuntime {
   async prepareSkill(opened, identity, ownerId) {
     if (opened.grantId !== this.grantId || opened.section !== this.skill) throw Error('Máy chủ trả lượt khác.');
     const listening = this.skill === 'listening';
+    const writing = this.skill === 'writing';
     const timing = listening ? { listeningDurationSeconds: opened.durationSeconds, listeningReviewSeconds: opened.reviewSeconds }
-      : { readingDurationMinutes: opened.durationMinutes };
-    const timingMatches = listening ? opened.durationSeconds === 1848 && opened.reviewSeconds === 0 : opened.durationMinutes === 40;
-    if (!opened.submitted && (!opened.content?.[this.skill]?.sections?.length || !timingMatches))
+      : { [this.skill + 'DurationMinutes']: opened.durationMinutes };
+    const timingMatches = listening ? opened.durationSeconds === 1848 && opened.reviewSeconds === 0 : opened.durationMinutes === (writing ? 55 : 40);
+    const content = opened.content?.[this.skill];
+    const validContent = writing ? content?.tasks?.length === 1 && content.tasks[0].id === 'task2' : content?.sections?.length;
+    if ((!opened.submitted || writing) && (!validContent || !timingMatches))
       throw Error('Đề và thời lượng ' + this.label + ' chưa khớp lượt được cấp.');
-    const reading = opened.content?.reading;
     // The pinned Term 1 content uses a relative path to its original figure.
-    for (const section of opened.content?.[this.skill]?.sections || []) {
+    for (const section of content?.sections || []) {
       for (const field of ['passageHtml', 'questionsHtml', 'html']) {
         if (typeof section[field] === 'string') section[field] = section[field].replaceAll('src="assets/figures/', 'src="../term-test-1-k56-computer-based/assets/figures/');
       }
@@ -54,11 +56,12 @@ export class SkillOffline extends OfflineRuntime {
       prepared: { attemptToken: this.grantId, examSessionToken: this.grantId, examMode: 'read_first',
         studentName: identity.studentName, generation: Number(opened.generation) || 0, serverNow: opened.serverNow,
         offline: { ownerId, preparedAt: opened.preparedAt }, timing,
-        content: { baseTestSlug: TERM1_PROFILE.slug, ...listening ? { listening: opened.content?.listening,
-          audio: { label: 'Audio Listening · Term Test 1', durationLabel: '30:48' } } : { reading } } },
+        content: { baseTestSlug: TERM1_PROFILE.slug, [this.skill]: content,
+          ...(listening ? { audio: { label: 'Audio Listening · Term Test 1', durationLabel: '30:48' } } : {}) } },
       snapshot: { studentRef: identity.studentRef, studentName: identity.studentName, className: this.classCode,
         attemptToken: this.grantId, examSessionToken: this.grantId, identityConfirmed: true, annotationRunId: this.grantId,
-        drafts: { [this.skill]: opened.draft || {} }, draftRevisions: { [this.skill]: opened.revision || 0 } },
+        drafts: { [this.skill]: opened.draft || {} }, draftRevisions: { [this.skill]: opened.revision || 0 },
+        ...(writing ? { writingRevision: opened.revision || 0, writingAckRevision: opened.revision || 0 } : {}) },
       operations: [], receipts: {}, sections: {}, ready: false, player: { position: opened.position || 0, ended: false } };
     if (opened.startedAt || opened.submitted) this.record.sections[this.skill] = { startedAt: opened.startedAt,
       deadlineAt: opened.deadlineAt, revision: opened.revision || 0, sealed: opened.submitted };
@@ -83,9 +86,12 @@ export class SkillOffline extends OfflineRuntime {
 
   async readResult() {
     const value = await this.post('/skill-fallback/result', { grantId: this.grantId, ownerId: this.scope.ownerId, section: this.skill }, false);
-    if (value.section !== this.skill || !value.submitted || !value.result) throw Error('Chưa có kết quả ' + this.label + ' đã xác nhận.');
+    const writing = this.skill === 'writing';
+    if (value.section !== this.skill || !value.submitted || !(writing ? value.writing : value.result))
+      throw Error('Chưa có kết quả ' + this.label + ' đã xác nhận.');
     return { studentName: this.record.prepared.studentName, className: this.classCode,
-      result: { testTitle: 'Term Test 1 · Khóa 56', [this.skill]: value.result } };
+      result: { testTitle: 'Term Test 1 · Khóa 56', ...(writing ? {} : { [this.skill]: value.result }) },
+      ...(writing ? { writing: value.writing } : {}) };
   }
 
   mount({ snapshot, host }) {
@@ -110,9 +116,10 @@ export class SkillOffline extends OfflineRuntime {
       try { await this.capture(current); } catch { /* Bản tải dùng được ngay cả khi bộ nhớ đã đầy. */ }
       const answers = current.drafts[this.skill] || {};
       const escape = text => String(text ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-      const rows = profile.answerKeys[this.skill].map(key => `<tr><td>${key}</td><td>${escape(answers[key])}</td></tr>`).join('');
+      const answerBlock = this.skill === 'writing' ? `<h2>Task 2</h2><pre>${escape(answers.task2)}</pre>`
+        : `<table><thead><tr><th>Câu</th><th>Bài làm</th></tr></thead><tbody>${profile.answerKeys[this.skill].map(key => `<tr><td>${key}</td><td>${escape(answers[key])}</td></tr>`).join('')}</tbody></table>`;
       const receipt = Object.values(this.record.receipts).find(value => value.kind === 'seal' && value.status === 'accepted');
-      const html = `<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><title>Term Test 1 K56 · ${this.label}</title><h1>Term Test 1 K56 · ${this.label}</h1><p>${escape(current.studentName)} · ${escape(this.classCode)}</p><p>${receipt ? 'Biên nhận: ' + escape(receipt.receiptId) : 'Bản lưu trên thiết bị. Chưa có biên nhận nộp bài trong bản lưu này.'}</p><table><thead><tr><th>Câu</th><th>Bài làm</th></tr></thead><tbody>${rows}</tbody></table></html>`;
+      const html = `<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><title>Term Test 1 K56 · ${this.label}</title><h1>Term Test 1 K56 · ${this.label}</h1><p>${escape(current.studentName)} · ${escape(this.classCode)}</p><p>${receipt ? 'Biên nhận: ' + escape(receipt.receiptId) : 'Bản lưu trên thiết bị. Chưa có biên nhận nộp bài trong bản lưu này.'}</p>${answerBlock}</html>`;
       const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
       const link = document.createElement('a');
       link.href = url;
