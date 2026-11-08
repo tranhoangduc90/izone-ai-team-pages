@@ -398,7 +398,7 @@
         <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
         <h2>Kết quả của bạn đã sẵn sàng</h2>
         <p>${writingConfig
-          ? 'Listening và Reading đã được chấm, phân tích. Writing đang được chấm riêng và sẽ hiện điểm khi đủ cả hai Task.'
+          ? 'Listening và Reading đã được chấm, phân tích. Điểm Writing sẽ hiển thị khi bài chấm sẵn sàng.'
           : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
         <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
       </section>
