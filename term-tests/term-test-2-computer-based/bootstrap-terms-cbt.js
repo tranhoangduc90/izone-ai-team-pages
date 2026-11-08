@@ -1034,14 +1034,16 @@
     const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v6');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'',slug);
     if(!match)return false;
-    const form=document.createElement('form');form.id='miniJourneyRecovery';
+    const form=document.createElement('form');form.id='miniJourneyRecovery';form.className='cbt-bootstrap-identity';
     const label=document.createElement('label');label.textContent='Họ và tên dùng khi vào thi';
     const input=document.createElement('input');input.required=true;input.maxLength=180;input.autocomplete='off';label.append(input);
     const button=document.createElement('button');button.className='button button-primary';button.textContent='Mở bài đã lưu';
     const status=document.createElement('p');status.setAttribute('role','status');
     status.textContent=slug.startsWith('term-test-')?'Có bài Term Test '+slug.at(-1)+' lưu trên trình duyệt này. Nhập đúng họ tên đã chọn để tiếp tục.'
       :'Có bài Mini K67 lưu trên trình duyệt này. Nhập đúng họ tên đã chọn để tiếp tục.';
-    form.append(status,label,button);elements.bootstrapDownloadStep.before(form);
+    form.append(status,label,button);
+    elements.bootstrapDownloadStep.parentElement.before(form);
+    elements.bootstrapDownloadStatus.textContent='Chưa tải được danh sách lớp. Bạn có thể mở bài đã lưu ở trên.';
     form.addEventListener('submit',async event=>{
       event.preventDefault();
       const bundle=match(input.value);

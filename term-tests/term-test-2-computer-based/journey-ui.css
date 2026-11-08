@@ -12,6 +12,19 @@
   max-width: 91px;
 }
 
+.design67 #miniJourneyPlayer:has(.cbt-audio-play:not([hidden])) .cbt-audio-status {
+  white-space: normal;
+}
+
+#miniJourneyRecovery {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#miniJourneyRecovery > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 @media (max-width: 1100px) {
   .design67 .topbar .cbt-journey-sync {
     max-inline-size: 16ch;
@@ -44,6 +57,10 @@
 }
 
 @media (max-width: 620px) {
+  #miniJourneyRecovery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   /* Dòng xác nhận khi mới mở Reading giữ vị trí nút Nộp như mẫu. */
   .design67:is([data-k67-design="term-test-1"], [data-k67-design="term-test-2"]) #readingSaveStatus:not([data-status]) {
     flex: 0 0 150px;
