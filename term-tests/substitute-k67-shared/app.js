@@ -906,6 +906,19 @@
       writingSubmission.readAvailable();
       if (state.attemptToken !== requestedAttempt || state.studentRef !== requestedStudent
         || (serverGradingMode && window.SUBSTITUTE_STATE.blocked)) return;
+      // Keep the visible answer row or heading in place when Writing adds content above it.
+      const answerDetails = elements.questionDetails;
+      const visible = node => {
+        const { top, bottom } = node.getBoundingClientRect();
+        return top < window.innerHeight && bottom > 0;
+      };
+      const focused = document.activeElement;
+      const readingAnchor = !elements.resultView.hidden
+        ? answerDetails.contains(focused) && visible(focused)
+          ? focused
+          : Array.from(answerDetails.querySelectorAll('summary, details[open] tbody tr')).find(visible)
+        : null;
+      const readingTop = readingAnchor?.getBoundingClientRect().top;
       if (serverGradingMode) {
         state.testGrades.writing = payload;
         saveSession();
@@ -925,6 +938,10 @@
               : 'Bài Writing đã được chấm xong. Điểm và phân tích chi tiết đã hiển thị bên dưới.',
           'success'
         );
+      }
+      if (readingAnchor?.isConnected) {
+        const shift = readingAnchor.getBoundingClientRect().top - readingTop;
+        if (Math.abs(shift) > 0.5) window.scrollBy({ top: shift, behavior: 'instant' });
       }
       return grading?.ready ? 'ready' : 'pending';
     } catch {
