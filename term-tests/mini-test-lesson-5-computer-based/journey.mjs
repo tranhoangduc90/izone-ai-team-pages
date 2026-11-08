@@ -1,6 +1,6 @@
 import { createOfflineRuntime } from '../k56-offline-shared/runtime.mjs?v=20261107-mini-v3';
 import { downloadTermAudio } from '../k56-offline-shared/whole-audio.mjs?v=20261107-mini-v1';
-import { createListeningEofGate, createK67EofObserver } from '../k67-shared/listening-eof.mjs?v=20261108-journal-v1';
+import { mountOfflineListeningPlayer } from '../k67-shared/offline-journey-ui.mjs?v=20261108-v1';
 
 const version = 'mini-k67-cbt-journey-v1';
 const endpoint = '/api/term-tests/mini-test-lesson-5/cbt-journey/';
@@ -204,76 +204,15 @@ export async function openMiniJourney({scope,request,existing,prepare=false}) {
     return stored.blob;
   }
 
-  async function mountPlayer({host,onReview,onAuto,volume}){
-    if(playing||next()!=='listening'||!record.sections.listening)return;
-    const audio=document.createElement('audio');
-    audio.hidden=true;audio.id='miniJourneyAudio';
-    if(Number.isFinite(volume))audio.volume=Math.max(0,Math.min(1,volume));
-    const button=document.createElement('button');button.type='button';button.className='button button-secondary';button.textContent='Nghe tiếp';
-    const status=document.createElement('p');status.setAttribute('role','status');
-    host.append(audio,button,status);
-    const s=record.sections.listening;
-    let blob;
-    try{blob=await verifiedAudio();}catch(error){button.disabled=true;status.textContent=error.message;return;}
-    const url=URL.createObjectURL(blob);
-    audio.src=url;audio.preload='metadata';
-    const anchor=s.position||0;
-    let last=anchor, stoppedPlayer=false, reviewing=false, lastAuto=-Infinity;
-    const observeDecision=createK67EofObserver(audio,{mode:'offline',owner:window.TERM_TEST_BOOTSTRAP,
-      configuredDurationSeconds:record.package.timing.listeningDurationSeconds,active:()=>!stoppedPlayer});
-    const gate=createListeningEofGate({audio,anchorSeconds:anchor,reviewSeconds:record.package.timing.listeningReviewSeconds,observeDecision});
-    let reviewEnd=null;
-    function covered(){
-      let value=anchor;
-      for(let i=0;i<audio.played.length;i+=1){
-        if(audio.played.start(i)>value+.25)break;
-        value=Math.max(value,audio.played.end(i));
-      }
-      return Math.min(value,audio.currentTime||0);
-    }
-    async function checkpoint(){
-      if(stoppedPlayer||s.operationId)return;
-      if(!s.eofAt)s.position=Math.max(s.position||0,covered());
-      else if(reviewEnd!==null)s.reviewRemaining=Math.max(0,Math.ceil(reviewEnd-performance.now()));
-      await persist();
-    }
-    function startReview(restored=false){
-      reviewing=true;button.disabled=true;
-      reviewEnd=performance.now()+(s.reviewRemaining??record.package.timing.listeningReviewSeconds*1_000);
-      onReview(s.deadline);
-      gate.recordReview(restored?'review_restored':'review_local',s.eofAt,s.deadline);
-    }
-    if(s.eofAt) startReview(true);
-    audio.addEventListener('loadedmetadata',()=>{
-      if(!s.eofAt&&anchor>0)audio.currentTime=Math.min(anchor,Math.max(0,audio.duration-.02));
+  async function mountPlayer({autoplay=false,...options}){
+    const section=record.sections.listening;
+    if(playing||next()!=='listening'||!section)return;
+    const player=await mountOfflineListeningPlayer({
+      ...options,section,timing:record.package.timing,verifiedAudio,now,persist
     });
-    audio.addEventListener('ratechange',gate.recordRate);
-    audio.addEventListener('pause',()=>{void checkpoint().catch(()=>{});});
-    audio.addEventListener('error',()=>{status.textContent='Chưa phát được audio. Nháp vẫn được giữ.';});
-    audio.addEventListener('timeupdate',()=>{
-      if(audio.currentTime>=last+1){last=audio.currentTime;void checkpoint().catch(()=>{});}
-    });
-    audio.addEventListener('ended',event=>{
-      if(!gate.confirmEnd(event))return;
-      s.position=audio.duration;s.eofAt=now();s.reviewRemaining=record.package.timing.listeningReviewSeconds*1_000;
-      s.deadline=s.eofAt+s.reviewRemaining;
-      void persist().then(()=>startReview()).catch(()=>{status.textContent='Chưa lưu được mốc nghe. Bài sẽ chưa tự nộp.';});
-    });
-    button.addEventListener('click',async()=>{
-      try{await audio.play();button.disabled=true;}
-      catch{status.textContent='Chưa phát được audio. Hãy thử nghe tiếp.';}
-    });
-    audio.addEventListener('pause',()=>{if(!reviewing&&!stoppedPlayer)button.disabled=false;});
-    const reviewComplete=()=>reviewEnd!==null&&performance.now()>=reviewEnd&&now()>=s.deadline;
-    const tick=setInterval(()=>{
-      if(reviewing){
-        const seconds=Math.max(0,Math.ceil((reviewEnd-performance.now())/1000));
-        status.textContent=`Đã nghe hết · Còn ${seconds} giây rà bài`;
-        void checkpoint().catch(()=>{});
-        if(reviewComplete()&&!s.operationId&&performance.now()-lastAuto>=10_000){lastAuto=performance.now();onAuto();}
-      }else status.textContent=audio.paused?'Bấm Nghe tiếp để phát từ mốc đã lưu.':`Đang nghe · ${Math.floor(audio.currentTime)} giây`;
-    },1000);
-    playing={checkpoint,reviewComplete,stop(){stoppedPlayer=true;clearInterval(tick);audio.pause();URL.revokeObjectURL(url);host.hidden=true;}};
+    if(!player)return;
+    playing=player;
+    if(autoplay)playing.playFromStart();
   }
 
   function download(){
@@ -284,6 +223,9 @@ export async function openMiniJourney({scope,request,existing,prepare=false}) {
     const link=document.createElement('a');link.href=url;link.download='Mini-K67.html';link.click();setTimeout(()=>URL.revokeObjectURL(url),30_000);
   }
   const resultToken=()=>record.receipts[order()[1]]?.attemptToken||null;
+  if(record.review)notify('Bài vẫn lưu trên máy · Cần đối soát');
+  else if(record.pending.length)notify('Đã lưu trên máy · Chờ đồng bộ');
+  else if(Object.keys(record.receipts).length)notify('Máy chủ đã xác nhận nhận bài');
   void flush();
   return {content:record.package.content,view,start,begin,saveDrafts,seal,mountPlayer,verifiedAudio,download,resultToken,now,
     activated:()=>Boolean(record.activatedAt),drafts:()=>structuredClone(record.drafts),revisions:()=>({...record.revisions}),close,changed,

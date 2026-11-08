@@ -1630,7 +1630,7 @@
 
   const listeningForm = enhanceForm('listening');
   const readingForm = listeningRetake ? null : enhanceForm('reading');
-  if (authorizedRetake) {
+  if (authorizedRetake || window.TERM_TEST_BOOTSTRAP?.miniJourney) {
     listeningForm?.source.toolbar.classList.add('k67-single-row');
   }
   if (!isDemo) {

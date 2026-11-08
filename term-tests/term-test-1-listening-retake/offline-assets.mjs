@@ -112,7 +112,7 @@ export const ASSET_HASHES={
   "../k67-shared/offline-journey-ui.mjs": "d82dbcca26109e2e051ffe413fd7fb5bee404528dacf020a76d7a5017fe7e804",
   "../k67-shared/public-audio.js": "9276d58ce2fe43c10b283c4bde9f329562c61d792f591fed35044ebe34fddf16",
   "../mini-test-lesson-5-computer-based/journey-retake.mjs": "680c833dacfb2af5283f47d04c9b4969c63f267ed867e5ca595ae6c6b5717ab0",
-  "../mini-test-lesson-5-computer-based/journey.mjs": "425d23a1a29b66abc6f59ee609e6852aa6b0bfa0edc55542176ae691b18fdf77",
+  "../mini-test-lesson-5-computer-based/journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
   "../shared/app-retake.js": "74d828f440fcb78113d6044b37afb2810f245f8b1dd20e7eabd796e21c22cb96",
@@ -129,7 +129,7 @@ export const ASSET_HASHES={
   "../term-test-1/test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b",
   "../term-test-2-computer-based/audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
   "../term-test-2-computer-based/bootstrap-retake.js": "f0cd7d006eb3af156997e9a8b7f88bd0de62f26de8303b68367c7cc9b6b3e3a1",
-  "../term-test-2-computer-based/enhance.js": "768cff6790937d272424e384759c7d1f723f615736e4a22efbc5539909697e72",
+  "../term-test-2-computer-based/enhance.js": "baa32ce7b4144f5f6425e6fea188e9f2b70401e46c9eeecf7759f9ae4254334f",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
   "index.html": "3cc023c78dd48ff17638c82de870fefcbbf1f6c58735e65ec0bc8d5f3d12dea6",
@@ -137,4 +137,4 @@ export const ASSET_HASHES={
   "retake-config.js": "e9a2a1225733362235d9368c109a199ec00ee97c71bde8ce04893c988fcbef2a",
   "retake-ui.css": "657f632c6c1159c4385011b6bc1ad21b45b35502f8cc725d0fd8b7d220c07c54"
 };
-export const ASSET_BUILD_ID="4dc298336952995baa75ebf27b875835955c2b33b4f8ede751b0e49faa5c824b";
+export const ASSET_BUILD_ID="748e74d8d2778ddc136fe2c5d1514d6a8f32ddc96af1f9c98de336f5c69641b9";
