@@ -1628,6 +1628,9 @@
 
   const listeningForm = enhanceForm('listening');
   const readingForm = enhanceForm('reading');
+  if (window.TERM_TEST_BOOTSTRAP?.miniJourney) {
+    listeningForm?.source.toolbar.classList.add('k67-single-row');
+  }
   if (!isDemo) {
     if (!window.TERM_TEST_BOOTSTRAP?.skipListeningAudio) {
       setupBufferedAudio(listeningForm);

@@ -4152,7 +4152,7 @@
     }, { once: true });
   }
 
-  async function showJourneyListening(){
+  async function showJourneyListening(playNewListening = false){
     if(miniJourney.paper){
       if(!miniJourney.view().listeningStartedAt)await miniJourney.start('listening');
       setStage('listening');
@@ -4160,22 +4160,34 @@
     }
     setStage('listening');
     if(document.getElementById('miniJourneyPlayer'))return;
-    const host=document.createElement('div');host.id='miniJourneyPlayer';
-    (document.querySelector('.topbar')||root).append(host);
-    const play=()=>miniJourney.mountPlayer({host,volume:Number(state.audioVolume ?? 1),onReview:deadline=>{
+    const host = document.createElement('section');
+    host.id = 'miniJourneyPlayer';
+    host.className = 'cbt-audio-card k67-inline-audio';
+    host.setAttribute('aria-label', 'Trạng thái audio Listening');
+    elements.listeningView.prepend(host);
+    const play=autoplay=>miniJourney.mountPlayer({host,autoplay,volume:Number(state.audioVolume ?? 1),onVolume:volume=>{
+      state.audioVolume = volume;
+      saveSession();
+    },onHold:held=>{
+      if(elements.listeningView.dataset.listeningSubmitting!=='true')elements.submitListening.disabled=held;
+    },onReopen:async()=>{
+      await miniJourney.saveDrafts(state.drafts, state.draftRevisions);
+      allowExamNavigation = true;
+      location.reload();
+    },onReview:deadline=>{
       state.listeningDeadlineAt=new Date(deadline).toISOString();
     },onAuto:()=>{
       if(state.listeningSubmitted||elements.listeningView.dataset.listeningSubmitting==='true')return;
       const submit=document.createElement('button');submit.type='submit';submit.hidden=true;submit.dataset.autoSubmit='true';
       elements.listeningView.append(submit);elements.listeningView.requestSubmit(submit);submit.remove();
     }});
-    if(miniJourney.view().listeningStartedAt){await play();return;}
+    if(miniJourney.view().listeningStartedAt){await play(playNewListening);return;}
     const start=document.createElement('button');start.type='button';start.className='button button-primary';start.textContent='Bắt đầu Listening';
     elements.submitListening.disabled=true;
     setAnswerControlsLocked('listening',true);
     start.addEventListener('click',async()=>{
       start.disabled=true;
-      try{await miniJourney.start('listening');start.remove();setAnswerControlsLocked('listening',false);elements.submitListening.disabled=false;await play();}
+      try{await miniJourney.start('listening');start.remove();setAnswerControlsLocked('listening',false);elements.submitListening.disabled=false;await play(true);}
       catch(error){start.disabled=false;showNotice(error.message,'error');}
     });
     host.append(start);
@@ -4185,6 +4197,13 @@
     const view=miniJourney.view();
     Object.assign(state,view);
     if(miniJourney.paper)window.K67_EXAM_ORDER.apply(state,view);
+    else if (state.studentRef && view.studentName) {
+      elements.studentSelect.replaceChildren(new Option(view.studentName, state.studentRef, true, true));
+      elements.studentSelect.disabled = true;
+      elements.studentSelect.setAttribute('aria-label', 'Họ và tên đã xác nhận');
+      elements.classLabel.textContent = `Lớp ${state.className || classCode}`;
+    }
+    hideNotice();
     Object.assign(state.drafts,miniJourney.drafts());
     Object.assign(state.draftRevisions,miniJourney.revisions());
     if(writingConfig){
@@ -4194,16 +4213,18 @@
     }
     for(const skill of ['listening','reading'])renderQuestionControls(testConfig[skill],elements[skill+'Questions'],skill);
     elements.readingStudentName.textContent=state.studentName;
-    const host=document.querySelector('.topbar')||root;
-    const status=document.createElement('span');status.setAttribute('role','status');
-    const render=()=>{const message=miniJourney.message();if(status.textContent!==message)status.textContent=message;};
-    const download=document.createElement('button');download.type='button';download.className='button button-secondary';download.textContent='Tải bài làm về máy';
-    download.addEventListener('click',()=>{
-      const section=miniJourney.view().nextSection;
-      miniJourney.download(miniJourney.paper&&['listening','reading'].includes(section)
-        ? collectAnswers(elements[section+'Questions']) : null);
-    });host.append(status,download);miniJourney.changed.addEventListener('change',render);render();
-    if(view.nextSection==='listening')await showJourneyListening();
+    const {mountOfflineJourneyHeader}=await import('../k67-shared/offline-journey-ui.mjs?v=20261108-v1');
+    mountOfflineJourneyHeader({
+      host:document.querySelector('.topbar')||root,
+      studentSelect:miniJourney.paper?null:elements.studentSelect,
+      changed:miniJourney.changed,readStatus:()=>miniJourney.message(),
+      onDownload:()=>{
+        const section=miniJourney.view().nextSection;
+        miniJourney.download(miniJourney.paper&&['listening','reading'].includes(section)
+          ? collectAnswers(elements[section+'Questions']) : null);
+      }
+    });
+    if(view.nextSection==='listening')await showJourneyListening(window.TERM_TEST_BOOTSTRAP?.playNewListening === true);
     else if(view.nextSection==='reading'){
       setStage(view.readingStartedAt?'reading':'listening-saved');
       if(view.readingStartedAt)startSectionDeadlineGuard('reading');
