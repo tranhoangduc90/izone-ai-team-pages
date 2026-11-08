@@ -24,11 +24,12 @@ export function clearTerm1SkillManager({ staleOnly = false } = {}) {
   if (previous.isCurrent() && previous.opener.isConnected) previous.opener.focus();
 }
 
-export function openTerm1SkillManager({ classCode, student, opener, request, isCurrent }) {
+export function openTerm1SkillManager({ classCode, student, opener, request, isCurrent, section = 'reading' }) {
   if (!isCurrent()) return;
+  const label = section === 'listening' ? 'Listening' : 'Reading';
   clearTerm1SkillManager();
   const dialog = node('dialog', '', 'teacher-saved-progress-dialog term1-skill-manager');
-  const title = node('h2', 'Link dự phòng Reading');
+  const title = node('h2', 'Link dự phòng ' + label);
   title.id = 'term1SkillManagerTitle';
   dialog.setAttribute('aria-labelledby', title.id);
   const header = node('header');
@@ -40,7 +41,7 @@ export function openTerm1SkillManager({ classCode, student, opener, request, isC
   dialog.append(header, node('p', `${student.name} · ${classCode} · Term Test 1`), status, actions);
   active = { dialog, opener, isCurrent };
   const current = () => active?.dialog === dialog && dialog.isConnected && isCurrent();
-  const scope = { classCode, studentRef: student.ref, section: 'reading' };
+  const scope = { classCode, studentRef: student.ref, section };
   let issued;
 
   const send = (action, fields = {}) => request(endpoint + action, {
@@ -97,30 +98,30 @@ export function openTerm1SkillManager({ classCode, student, opener, request, isC
 
   function render(value) {
     const grant = value.activeGrant;
-    status.textContent = value.submitted ? 'Reading đã nộp.' : grant ? grantLabels[grant.state]
-      : value.issueEnabled ? 'Có thể cấp một link Reading cho học viên này.' : 'Cấp link mới đang tạm đóng.';
+    status.textContent = value.submitted ? label + ' đã nộp.' : grant ? grantLabels[grant.state]
+      : value.issueEnabled ? `Có thể cấp một link ${label} cho học viên này.` : 'Cấp link mới đang tạm đóng.';
     if (value.attemptExists && modeLabels[value.examMode]) actions.append(node('p', 'Bài chính · ' + modeLabels[value.examMode]));
     if (grant) {
       if (grant.state === 'awaiting') actions.append(node('p', 'Hạn kích hoạt · ' + new Date(grant.expiresAt).toLocaleString('vi-VN')));
       if (issued?.grantId === grant.grantId && grant.state === 'awaiting') {
-        const link = new URL('../term-test-1-k56-reading-fallback/', import.meta.url);
+        const link = new URL('../term-test-1-k56-' + section + '-fallback/', import.meta.url);
         link.searchParams.set('class', classCode);
         link.hash = new URLSearchParams({ g: issued.token });
         actions.append(node('p', 'Sao chép link và gửi mã kích hoạt riêng cho học viên.'),
-          copyField('Link Reading', link.href), copyField('Mã kích hoạt', issued.activationCode));
+          copyField('Link ' + label, link.href), copyField('Mã kích hoạt', issued.activationCode));
       } else if (grant.state === 'awaiting') {
         actions.append(node('p', 'Link và mã được hiển thị khi cấp. Nếu chưa lưu được, hãy thu hồi rồi cấp lại.'));
       }
       const revoke = button('Thu hồi link');
       revoke.addEventListener('click', () => {
-        const message = grant.state === 'bound' ? 'Link đã gắn với thiết bị học viên. Xác nhận đã dừng làm và lưu bản trên thiết bị đó trước khi thu hồi?' : 'Thu hồi link Reading của học viên này?';
+        const message = grant.state === 'bound' ? 'Link đã gắn với thiết bị học viên. Xác nhận đã dừng làm và lưu bản trên thiết bị đó trước khi thu hồi?' : `Thu hồi link ${label} của học viên này?`;
         if (window.confirm(message)) void mutate('revoke', { grantId: grant.grantId });
       });
       actions.append(revoke);
       return;
     }
     if (!value.issueEnabled || value.submitted) return;
-    const issue = button('Cấp link Reading', true);
+    const issue = button('Cấp link ' + label, true);
     const mode = node('select');
     const stopped = node('input');
     if (!value.attemptExists) {
@@ -130,10 +131,11 @@ export function openTerm1SkillManager({ classCode, student, opener, request, isC
       actions.append(label);
     }
     if (value.started) {
-      const label = node('label');
+      const stopLabel = node('label');
       stopped.type = 'checkbox';
-      label.append(stopped, document.createTextNode(' Tôi đã xác nhận học viên dừng Reading và lưu bài trên thiết bị cũ.'));
-      actions.append(node('p', 'Link tiếp tục từ giờ và nháp đã lưu trên máy chủ.'), label, node('br'));
+      stopLabel.append(stopped, document.createTextNode(` Tôi đã xác nhận học viên dừng ${label} và lưu bài trên thiết bị cũ.`));
+      const resumeCopy = section === 'listening' ? 'Cần mốc nghe đã được máy chủ xác nhận trước khi chuyển thiết bị.' : 'Link tiếp tục từ giờ và nháp đã lưu trên máy chủ.';
+      actions.append(node('p', resumeCopy), stopLabel, node('br'));
     }
     const validate = () => { issue.disabled = (!value.attemptExists && !mode.value) || (value.started && !stopped.checked); };
     mode.addEventListener('change', validate);

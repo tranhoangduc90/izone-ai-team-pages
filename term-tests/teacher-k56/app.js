@@ -896,17 +896,19 @@ function savedProgressButton(student){
   const classCode=getSelectedClass()?.name;
   if(state.selectedTestSlug==='term-test-1-k56'&&classCode!=='CODEXDEMO56'&&!student.temporary
     &&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(student.ref||'')){
-    const grant=createNode('button','button button-secondary','Link dự phòng Reading');grant.type='button';
-    grant.addEventListener('click',async()=>{
-      const generation=loginGeneration,classId=state.selectedClassId;
-      const isCurrent=()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId
-        &&state.selectedTestSlug==='term-test-1-k56'&&state.selectedTab===student.ref;
-      try{
-        term1SkillManager??=await import('./term1-skill-manager.mjs?v=20261108-reading-v1');
-        term1SkillManager.openTerm1SkillManager({classCode,student,opener:grant,request:apiRequest,isCurrent});
-      }catch(error){if(isCurrent())showNotice(`Chưa mở được công cụ cấp link: ${error.message}`,'error');}
-    });
-    controls.append(document.createTextNode(' '),grant);
+    for(const [section,label] of [['reading','Reading'],['listening','Listening']]){
+      const grant=createNode('button','button button-secondary','Link dự phòng '+label);grant.type='button';
+      grant.addEventListener('click',async()=>{
+        const generation=loginGeneration,classId=state.selectedClassId;
+        const isCurrent=()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId
+          &&state.selectedTestSlug==='term-test-1-k56'&&state.selectedTab===student.ref;
+        try{
+          term1SkillManager??=await import('./term1-skill-manager.mjs?v=20261108-skills-v2');
+          term1SkillManager.openTerm1SkillManager({classCode,student,opener:grant,request:apiRequest,isCurrent,section});
+        }catch(error){if(isCurrent())showNotice(`Chưa mở được công cụ cấp link: ${error.message}`,'error');}
+      });
+      controls.append(document.createTextNode(' '),grant);
+    }
   }
   return controls;
 }

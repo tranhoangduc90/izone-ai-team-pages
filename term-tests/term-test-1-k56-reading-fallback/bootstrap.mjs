@@ -1,4 +1,4 @@
-import { ReadingOffline } from './reading-offline.mjs?v=20261108-v1';
+import { SkillOffline } from './reading-offline.mjs?v=20261108-v2';
 
 const form = document.getElementById('skillIdentity');
 const dialog = document.getElementById('identityConfirm');
@@ -8,6 +8,9 @@ const confirm = document.getElementById('confirmIdentity');
 const classCode = (new URLSearchParams(location.search).get('class') || '').trim().toUpperCase();
 const grant = new URLSearchParams(location.hash.slice(1)).get('g') || '';
 const validGrant = /^([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.[A-Za-z0-9_-]{43}$/i.exec(grant);
+const skill = document.body.dataset.term1Skill === 'listening' ? 'listening' : 'reading';
+const listening = skill === 'listening';
+const transport = listening ? { audioTransport: 'r2-direct-v1' } : {};
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -19,41 +22,131 @@ function loadScript(src) {
   });
 }
 
-async function enter(runtime) {
+async function enter(runtime, audio) {
   const { prepared, snapshot } = runtime.record;
   window.K56_TERM1_OFFLINE = runtime;
-  window.TERM_TEST_STORAGE_SCOPE = ':reading-fallback:' + runtime.grantId;
+  window.TERM_TEST_STORAGE_SCOPE = ':' + skill + '-fallback:' + runtime.grantId;
   window.TERM_TEST_CONTENT = prepared.content;
-  window.TERM_TEST_BOOTSTRAP = Object.freeze({ sessionState: snapshot, skipListeningAudio: true,
+  window.TERM_TEST_BOOTSTRAP = Object.freeze({ sessionState: snapshot, skipListeningAudio: !audio, officialAudioElement: audio, audioVolume: audio?.volume,
     examSessionToken: prepared.examSessionToken, generation: prepared.generation,
     annotationRunId: runtime.grantId, serverNow: prepared.serverNow });
   const ready = new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(Error('Giao diện chưa sẵn sàng. Hãy mở lại link.')), 15000);
     window.addEventListener('term1:app-ready', () => { clearTimeout(timer); resolve(); }, { once: true });
   });
-  await Promise.all([ready, loadScript('../k56-shared/app.js?v=20261108-term1-reading-fallback-v1')]);
-  if (prepared.content.reading) {
-    await loadScript('../term-test-1-k56-computer-based/enhance.js?v=20261108-term1-reading-fallback-v1');
+  await Promise.all([ready, loadScript('../k56-shared/app.js?v=20261108-term1-skill-fallback-v2')]);
+  if (prepared.content[skill]) {
+    await loadScript('../term-test-1-k56-computer-based/enhance.js?v=20261108-term1-skill-fallback-v2');
     await loadScript('../term-test-1-k56-computer-based/annotations.js?v=20261018-identity-v1');
   }
   void runtime.flush();
 }
 
+async function finishPreparation(runtime, opened) {
+  if (!listening || runtime.record.sections.listening?.sealed) return runtime.finishReadingPreparation();
+  const { AUDIO, downloadWhole } = await import('../term-test-1-k56-computer-based/audio-whole.mjs?v=20261107-k56-r2-v1');
+  const refresh = async () => {
+    const response = await runtime.post('/skill-fallback/open', {
+      classCode, ownerId: runtime.scope.ownerId, studentRef: runtime.record.studentRef, section: skill, ...transport
+    }, false);
+    if (response.grantId !== runtime.grantId || response.section !== skill || response.submitted) throw Error('Quyền tải audio đã thay đổi.');
+    return { manifest: { envelopeVersion: 'MP3', url: AUDIO.pagesUrl, sha256: AUDIO.sha256, byteLength: AUDIO.bytes }, download: response.audioDownload };
+  };
+  const blob = await downloadWhole({ audioDownload: opened ? opened.audioDownload : (await refresh()).download, refresh,
+    onProgress: ({ loaded, total }) => { notice.textContent = `Đang tải và kiểm tra audio · ${Math.floor(loaded * 100 / total)}%`; } });
+  const probe = await makeAudio(blob);
+  URL.revokeObjectURL(probe.src);
+  probe.removeAttribute('src');
+  await runtime.finishPreparation(blob);
+}
+
+async function makeAudio(blob) {
+  const audio = document.createElement('audio');
+  audio.preload = 'metadata';
+  audio.hidden = true;
+  audio.src = URL.createObjectURL(blob);
+  audio.addEventListener('ratechange', () => { if (audio.playbackRate !== 1) audio.playbackRate = 1; });
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(Error('Chưa đọc được audio. Hãy mở lại link để thử lại.')), 8000);
+      audio.addEventListener('loadedmetadata', () => { clearTimeout(timer); resolve(); }, { once: true });
+      audio.addEventListener('error', () => { clearTimeout(timer); reject(Error('Không phát được audio đã tải.')); }, { once: true });
+    });
+    if (!Number.isFinite(audio.duration) || Math.abs(audio.duration - 1848) > 2) throw Error('Thời lượng audio chưa khớp Term Test 1.');
+    return audio;
+  } catch (error) { URL.revokeObjectURL(audio.src); throw error; }
+}
+
+async function showListening(runtime) {
+  if (!listening || runtime.record.sections.listening?.sealed) return enter(runtime);
+  const blob = await runtime.audio();
+  async function begin(resuming = false, volume = 1) {
+    const audio = await makeAudio(blob);
+    audio.volume = volume;
+    document.body.append(audio);
+    if (!resuming) await runtime.start('listening');
+    await enter(runtime, audio);
+    if (runtime.record.player.ended) {
+      const form = document.getElementById('listeningView');
+      const submit = document.createElement('button');
+      submit.type = 'submit'; submit.hidden = true; submit.dataset.autoSubmit = 'true';
+      form.append(submit); form.requestSubmit(submit);
+      return;
+    }
+    if (!runtime.record.player.held) {
+      try { await audio.play(); } catch { window.K56_LISTENING_AUDIO?.playBlocked(); }
+    }
+  }
+  if (runtime.record.sections.listening?.startedAt) return begin(true);
+  const panel = document.getElementById('skillAudioLobby');
+  const previewButton = document.getElementById('skillPreview');
+  const start = document.getElementById('skillStart');
+  const volume = document.getElementById('skillVolume');
+  const preview = await makeAudio(blob);
+  form.hidden = true;
+  notice.hidden = true;
+  panel.hidden = false;
+  let playbackStarted = 0;
+  volume.addEventListener('input', () => { preview.volume = Number(volume.value); });
+  previewButton.addEventListener('click', async () => {
+    if (!preview.paused) { preview.pause(); return; }
+    preview.currentTime = 0;
+    playbackStarted = performance.now();
+    try { await preview.play(); } catch (error) { showError(error); }
+  });
+  preview.addEventListener('play', () => { previewButton.textContent = 'Dừng nghe thử'; });
+  preview.addEventListener('pause', () => { previewButton.textContent = 'Nghe lại 30 giây đầu'; });
+  preview.addEventListener('timeupdate', () => {
+    if (preview.currentTime >= 30) preview.pause();
+    if (preview.currentTime >= 10 && performance.now() - playbackStarted >= 10000) {
+      start.disabled = false;
+      previewButton.closest('.cbt-lobby-step').dataset.state = 'complete';
+      start.closest('.cbt-lobby-step').dataset.state = 'active';
+    }
+  });
+  start.addEventListener('click', async () => {
+    start.disabled = true;
+    preview.pause();
+    try { await begin(false, Number(volume.value)); URL.revokeObjectURL(preview.src); }
+    catch (error) { start.disabled = false; showError(error); }
+  });
+}
+
 async function initialize() {
   if (!validGrant || !/^[A-Z0-9._-]{2,32}$/.test(classCode)) throw Error('Link dự phòng chưa đầy đủ. Hãy dùng link giảng viên đã gửi.');
   document.getElementById('bootstrapClass').textContent = 'Lớp ' + classCode;
-  const runtime = await new ReadingOffline({ apiBase: window.TERM_TEST_APP_CONFIG.API_BASE_URL, classCode, grant, grantId: validGrant[1] }).open();
-  if (runtime.active) return enter(runtime);
+  const runtime = await new SkillOffline({ apiBase: window.TERM_TEST_APP_CONFIG.API_BASE_URL, classCode, grant, grantId: validGrant[1], skill }).open();
+  if (runtime.active) return showListening(runtime);
   if (runtime.record) {
     notice.textContent = 'Đang hoàn tất lưu trang để mở lại khi mất mạng…';
-    await runtime.finishReadingPreparation();
-    return enter(runtime);
+    await finishPreparation(runtime);
+    return showListening(runtime);
   }
   const ownerKey = 'owner:' + runtime.grantId;
   const remembered = await runtime.store.get(ownerKey);
   const ownerId = remembered?.ownerId || crypto.randomUUID();
   if (!remembered) await runtime.store.put(ownerKey, { ownerId });
-  const base = { classCode, ownerId, section: 'reading' };
+  const base = { classCode, ownerId, section: skill };
   let identity, activationCode;
   form.hidden = false;
   notice.hidden = true;
@@ -78,13 +171,14 @@ async function initialize() {
     if (!identity) return;
     confirm.disabled = true;
     try {
-      const opened = await runtime.post('/skill-fallback/open', { ...base, activationCode, studentRef: identity.studentRef }, false);
+      const opened = await runtime.post('/skill-fallback/open', { ...base, ...transport, activationCode, studentRef: identity.studentRef }, false);
       const selected = identity;
       dialog.close();
       notice.hidden = false;
       notice.textContent = 'Đang lưu trang để có thể mở lại khi mất mạng…';
-      await runtime.prepareReading(opened, selected, ownerId);
-      await enter(runtime);
+      await runtime.prepareSkill(opened, selected, ownerId);
+      await finishPreparation(runtime, opened);
+      await showListening(runtime);
     } catch (error) { dialog.close(); showError(error); }
     finally { confirm.disabled = false; }
   });
