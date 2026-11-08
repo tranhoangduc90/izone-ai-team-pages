@@ -128,13 +128,13 @@ export const ASSET_HASHES={
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../term-test-1/test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b",
   "../term-test-2-computer-based/audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
-  "../term-test-2-computer-based/bootstrap-retake.js": "238227d7c919a4bdea5e1c99c5d9ab008cdf1e63e31c7c118b52c92b86377fa8",
+  "../term-test-2-computer-based/bootstrap-retake.js": "f0cd7d006eb3af156997e9a8b7f88bd0de62f26de8303b68367c7cc9b6b3e3a1",
   "../term-test-2-computer-based/enhance.js": "768cff6790937d272424e384759c7d1f723f615736e4a22efbc5539909697e72",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index.html": "5cfda2844b93612ae9b039fdf616d1bbb4cf9214dc0a7aadcd9bf5089e6d55ed",
+  "index.html": "3cc023c78dd48ff17638c82de870fefcbbf1f6c58735e65ec0bc8d5f3d12dea6",
   "offline-worker.js": "5781a83736f8e18762b3aa2e02bb45135fe0283e9f4566cd8fc3e1d6a35ce375",
   "retake-config.js": "e9a2a1225733362235d9368c109a199ec00ee97c71bde8ce04893c988fcbef2a",
   "retake-ui.css": "657f632c6c1159c4385011b6bc1ad21b45b35502f8cc725d0fd8b7d220c07c54"
 };
-export const ASSET_BUILD_ID="c0d3e000e180de55e07b890eba4f9a55cf360de29a764e9b9d9ea2b92b421ff5";
+export const ASSET_BUILD_ID="6073fe0ef396bac3b5576dae310966d76a1fe5db32cf36d2b27320ebd4b4cd94";
