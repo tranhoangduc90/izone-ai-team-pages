@@ -876,6 +876,8 @@ function formatCompletedAt(value) {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('vi-VN');
 }
 
+let term1SkillManager;
+
 function savedProgressButton(student){
   const button=createNode('button','button button-secondary','Xem tiến trình đã lưu');button.type='button';
   button.addEventListener('click',()=>{
@@ -890,7 +892,23 @@ function savedProgressButton(student){
     const isCurrent=()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId&&testSlug===state.selectedTestSlug&&state.selectedTab===student.ref;
     openTeacherAudioRecovery({student,className:getSelectedClass().name,testSlug,testTitle:getSelectedTest()?.title,
       request:(path,options={})=>apiRequest(path,{...options,isCurrent}),isCurrent});});
-  const controls=document.createDocumentFragment();controls.append(button,document.createTextNode(' '),support);return controls;
+  const controls=document.createDocumentFragment();controls.append(button,document.createTextNode(' '),support);
+  const classCode=getSelectedClass()?.name;
+  if(state.selectedTestSlug==='term-test-1-k56'&&classCode!=='CODEXDEMO56'&&!student.temporary
+    &&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(student.ref||'')){
+    const grant=createNode('button','button button-secondary','Link dự phòng Reading');grant.type='button';
+    grant.addEventListener('click',async()=>{
+      const generation=loginGeneration,classId=state.selectedClassId;
+      const isCurrent=()=>state.authenticated&&generation===loginGeneration&&classId===state.selectedClassId
+        &&state.selectedTestSlug==='term-test-1-k56'&&state.selectedTab===student.ref;
+      try{
+        term1SkillManager??=await import('./term1-skill-manager.mjs?v=20261108-reading-v1');
+        term1SkillManager.openTerm1SkillManager({classCode,student,opener:grant,request:apiRequest,isCurrent});
+      }catch(error){if(isCurrent())showNotice(`Chưa mở được công cụ cấp link: ${error.message}`,'error');}
+    });
+    controls.append(document.createTextNode(' '),grant);
+  }
+  return controls;
 }
 
 function renderStudentResult(student) {
@@ -1008,6 +1026,7 @@ function renderStudentResult(student) {
 function renderActiveView() {
   const selectedStudent = state.students.find(student => student.ref === state.selectedTab);
   if (state.selectedTab !== 'overview' && !selectedStudent) state.selectedTab = 'overview';
+  term1SkillManager?.clearTerm1SkillManager({staleOnly:true});
   const scope=[loginGeneration,state.selectedClassId,state.selectedTestSlug];
   renderReadingRegion('tabs',[scope,state.selectedTab,state.students.map(s=>[s.ref,s.name,s.temporary,s.status])],renderTabs);
   elements.overviewView.hidden = state.selectedTab !== 'overview';
@@ -1064,6 +1083,7 @@ function resetLoginAfterError() {
   clearTeacherSavedProgress();clearTeacherAudioRecovery();
   loginGeneration += 1;
   state.authenticated = false;
+  term1SkillManager?.clearTerm1SkillManager();
   state.connected = false;
   state.resultsLoading = false;
   state.reviewer = null;

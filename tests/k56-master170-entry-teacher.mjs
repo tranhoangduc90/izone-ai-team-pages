@@ -4,12 +4,13 @@ import assert from 'node:assert/strict';
 import {readFile,mkdir} from 'node:fs/promises';
 import vm from 'node:vm';
 import {resolve} from 'node:path';
+import {randomUUID} from 'node:crypto';
 import {chromium,serve,slugs} from './helpers/k56-design-fixture.mjs';
 let browser,server;
 const output=resolve(process.env.K56_DESIGN_OUTPUT||'output/playwright/k56-master170');
 before(async()=>{await mkdir(output,{recursive:true});server=await serve();browser=await chromium.launch({channel:'msedge',headless:true});});
 after(async()=>{await browser?.close();await server?.close();});
-async function fixture({teacher=false}={}){
+async function fixture({teacher=false,manager}={}){
  const context=await browser.newContext({serviceWorkers:'block',viewport:{width:1366,height:768}}),page=await context.newPage(),calls=[],errors=[];
  page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
  const content={};for(const slug of slugs){
@@ -32,6 +33,21 @@ async function fixture({teacher=false}={}){
    else if(url.pathname.includes('/teacher/results')){
     selected=url.searchParams.get('test')||selected;
     data={ok:true,students:[{ref:'student-1',name:'Học viên giả có tên dài để kiểm bảng',status:'completed',completedAt:new Date().toISOString(),writing:{status:'processing',task2State:'submitted'},result:{testTitle:'Bài thi giả',listening:{correct:20,total:40,details:[],typeStats:[]},reading:{correct:18,total:26,details:[],typeStats:[]},performance:{best:[],needsImprovement:[],other:[]}}}]};
+    if(manager)data={ok:true,students:[{ref:manager.studentRef,name:'Học viên giả Reading',status:'not_started'}]};
+    data.class={id:'class-1',name:'IC9999'};data.test={slug:selected};
+   }else if(manager&&url.pathname.includes('/term-test-1-k56/skill-fallback/')){
+    const body=request.postDataJSON(),action=url.pathname.split('/').at(-1);
+    assert.deepEqual([body.classCode,body.studentRef,body.section],['IC9999',manager.studentRef,'reading']);
+    manager.calls.push({action,body});
+    if(manager.deny)return route.fulfill({status:403,json:{ok:false,message:'Tài khoản không có quyền lớp này.'}});
+    if(action==='manage')data={ok:true,issueEnabled:manager.issueEnabled,attemptExists:manager.attemptExists,examMode:manager.examMode,started:manager.started,submitted:false,activeGrant:manager.activeGrant};
+    else if(action==='issue'){
+     if(!manager.attemptExists){manager.attemptExists=true;manager.examMode=body.examMode;}
+     manager.activeGrant={grantId:randomUUID(),state:'awaiting',expiresAt:new Date(Date.now()+7200000).toISOString()};
+     data={ok:true,...manager.activeGrant,token:manager.activeGrant.grantId+'.'+'X'.repeat(43),activationCode:'ABCDEF0123456789'};
+    }else if(action==='revoke'){
+     assert.equal(body.grantId,manager.activeGrant.grantId);manager.activeGrant=null;
+    }
    }else if(url.pathname.includes('/teacher/attempt-review'))data={ok:true,review:{testSlug:selected,studentName:'Học viên giả có tên dài để kiểm bảng',content:content[selected],answers:{listening:{1:'ANSWER'},reading:{1:'TRUE'},writing:{task1:'Bài giả được giữ nguyên để kiểm xem bài.',task2:'Bài giả được giữ nguyên để kiểm xem bài.'}}}};
    else if(url.pathname.includes('/teacher/saved-progress'))data={ok:true,student:{ref:'student-1'},attempts:[{viewId:'saved-1',order:'lis_first',delivery:'cbt',definitionVersion:1,createdAt:new Date().toISOString(),listening:{answers:{1:'Nháp giả'}},reading:{answers:{}},writing:{task2:'Bài nháp giả có dấu tiếng Việt.'}}]};
    else if(url.pathname.includes('roster'))data={ok:true,class:{name:'IC9999'},students:[{ref:'student-1',name:'Học viên giả'}]};
@@ -53,6 +69,59 @@ for(const slug of slugs)for(const delivery of ['','-computer-based'])for(const m
   await f.page.waitForURL('**/'+slug+delivery+'/?**');
   const url=new URL(f.page.url());assert.equal(url.searchParams.get('class'),'IC9999');assert.equal(url.searchParams.get('mode'),mode);
   assert(!f.calls.some(c=>/\/(listening|reading|writing|start)$/.test(c.path)));
+ }finally{await f.close();}
+});
+
+test('Giảng viên Term 1 cấp và thu hồi Reading theo hồ sơ, giữ phiên chung và khóa sai phạm vi',async()=>{
+ const manager={studentRef:randomUUID(),calls:[],issueEnabled:true,attemptExists:false,examMode:null,started:false,activeGrant:null};
+ const f=await fixture({teacher:true,manager});
+ try{
+  const p=f.page;
+  await p.goto(server.base+'term-tests/teacher-k56/?class=IC9999&test=term-test-1-k56');
+  await p.locator('#dashboardView').waitFor({state:'visible'});
+  await p.locator(`[data-tab="${manager.studentRef}"]`).click();
+  const opener=p.getByRole('button',{name:'Link dự phòng Reading',exact:true});
+  await opener.click();
+  const dialog=p.getByRole('dialog',{name:'Link dự phòng Reading'});
+  const issue=dialog.getByRole('button',{name:'Cấp link Reading',exact:true});
+  await issue.waitFor();
+  assert.equal(await issue.isDisabled(),true);
+  await dialog.getByLabel('Thứ tự của bài chính').selectOption('read_first');
+  await issue.click();
+  const link=dialog.getByLabel('Link Reading',{exact:true});
+  await link.waitFor();
+  const url=new URL(await link.inputValue());
+  assert.match(url.pathname,/term-test-1-k56-reading-fallback\/$/);
+  assert.equal(url.searchParams.get('class'),'IC9999');
+  assert.equal(url.hash,'#g='+manager.activeGrant.grantId+'.'+'X'.repeat(43));
+  assert.equal(await dialog.getByLabel('Mã kích hoạt',{exact:true}).inputValue(),'ABCDEF0123456789');
+  assert.deepEqual(manager.calls.find(call=>call.action==='issue').body,{classCode:'IC9999',studentRef:manager.studentRef,section:'reading',examMode:'read_first',oldDeviceStopped:false});
+  await p.screenshot({path:resolve(output,'teacher-reading-grant.png')});
+  await dialog.getByRole('button',{name:'Đóng',exact:true}).click();
+  await opener.click();
+  await dialog.getByText('Link và mã được hiển thị khi cấp.',{exact:false}).waitFor();
+  assert.equal(await link.count(),0);
+  manager.issueEnabled=false;
+  p.once('dialog',prompt=>prompt.accept());
+  await dialog.getByRole('button',{name:'Thu hồi link'}).click();
+  await dialog.getByText('Cấp link mới đang tạm đóng.').waitFor();
+  assert.equal(manager.activeGrant,null);
+  await dialog.getByRole('button',{name:'Đóng',exact:true}).click();
+  manager.issueEnabled=true;manager.started=true;
+  await opener.click();await issue.waitFor();
+  assert.equal(await issue.isDisabled(),true);
+  assert.equal(await dialog.getByLabel('Thứ tự của bài chính').count(),0);
+  await dialog.getByRole('checkbox').check();assert.equal(await issue.isEnabled(),true);
+  await dialog.getByRole('button',{name:'Đóng',exact:true}).click();
+  await p.selectOption('#testSelect','term-test-2-k56');
+  await p.locator(`[data-tab="${manager.studentRef}"]`).click();
+  assert.equal(await opener.count(),0);
+  await p.selectOption('#testSelect','term-test-1-k56');
+  await p.locator(`[data-tab="${manager.studentRef}"]`).click();
+  manager.deny=true;await opener.click();
+  await dialog.waitFor({state:'detached'});
+  assert.equal(await p.locator('#dashboardView').isVisible(),false);
+  assert.deepEqual(f.errors,[]);
  }finally{await f.close();}
 });
 test('Landing: desktop/mobile có lựa chọn lớp, thứ tự, ba bài và hỗ trợ tách nhóm',async()=>{
