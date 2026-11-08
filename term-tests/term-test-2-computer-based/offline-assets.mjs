@@ -209,10 +209,10 @@ export const ASSET_HASHES={
   "bootstrap.js": "7d9b21ac9f3d86072fd53ab24ffacfbf3519ae7f64c0d5d3240b451cb7fd2841",
   "enhance-terms-cbt.js": "a834b59dbff2dd946755f80dd0aa16cbebd87027da5924800f68e11c137ff244",
   "enhance.js": "768cff6790937d272424e384759c7d1f723f615736e4a22efbc5539909697e72",
-  "index.html": "8882d266947ba51c9fdc392fba7294c0097b036a5f6600f97db78ec60d8ff4c2",
+  "index.html": "cb7a0c38cc4891cf9cd215798c25f16ad36ee1637d8a76412871a6ef7269790d",
   "interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
-  "journey-ui.css": "f53baa64cc13bd286255927d17bc2ce9c61a3949c9629887acad69935cf71906",
+  "journey-ui.css": "9c4a7ac71e03035d587eb9b9cdd35ead24e9d7aa10dff486a8ae5b559724915c",
   "offline-worker.js": "fdd7d647c8cfe5ad4a7401de6c8333c18c8a5da304cc7453525457428547d62f",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="b975c2ab28e1f8179763e70eb79a9055cde9a011c1e1a465707112a4e8ffbb71";
+export const ASSET_BUILD_ID="e264a953b5b848de4a85b68a9a208800ae92de5db0ccce04b4538cbb21fb9f44";

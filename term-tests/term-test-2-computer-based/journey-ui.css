@@ -36,7 +36,21 @@
   }
 }
 
+@media (min-width: 1201px) {
+  .design67:is([data-k67-design="term-test-1"], [data-k67-design="term-test-2"]) #readingSaveStatus:not([data-status]) {
+    flex: 0 0 115px;
+    max-inline-size: 115px;
+  }
+}
+
 @media (max-width: 620px) {
+  /* Dòng xác nhận khi mới mở Reading giữ vị trí nút Nộp như mẫu. */
+  .design67:is([data-k67-design="term-test-1"], [data-k67-design="term-test-2"]) #readingSaveStatus:not([data-status]) {
+    flex: 0 0 150px;
+    max-inline-size: 150px;
+    text-align: end;
+  }
+
   .design67.cbt-mode .topbar .cbt-identity-panel:has(.cbt-journey-download) {
     flex-wrap: nowrap;
   }
