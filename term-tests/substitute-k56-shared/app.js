@@ -2594,7 +2594,7 @@
             } catch (error) {
               if (!writingSubmission.current(writingOwner)) return;
               if (state.writingSubmitted) { writingSubmission.readUnavailable(); await writingSubmission.inspect(); return; }
-              showNotice(`Writing đã được giữ trên trình duyệt và đang chờ biên nhận. Bấm Tải bài làm về máy để giữ thêm một bản. Chi tiết: ${error.message}`, 'error');
+              showNotice(`Bài còn trên trang và đang chờ biên nhận. Bấm Tải bài để lưu một bản. ${error.message}`, 'error');
               return;
             }
           }
