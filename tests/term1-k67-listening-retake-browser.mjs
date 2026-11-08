@@ -84,7 +84,11 @@ test('Term 1 retake keeps its ticket, offline attempt and result separate', {tim
     await page.locator('#bootstrapPreview').click();
     await page.getByRole('button',{name:'Bắt đầu bài thi bù Listening',exact:true}).click();
     report('started');
-    await page.getByRole('button',{name:'Nghe tiếp',exact:true}).click();
+    const player=page.locator('#listeningView .cbt-toolbar #miniJourneyPlayer');
+    await player.locator('progress[aria-label="Tiến độ phát audio"]').waitFor({timeout:5_000});
+    await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.currentTime>0.25);
+    assert.equal(await player.getByRole('button',{name:'Nghe tiếp',exact:true}).isVisible(),false);
+    await player.getByRole('button',{name:'Tôi không nghe được',exact:true}).waitFor();
     const answer='#listeningQuestions [data-number="1"]';
     await page.locator(answer).fill('Bài lưu <thử>');
     await page.getByText('Đã lưu nháp trên máy',{exact:true}).waitFor();
@@ -99,6 +103,7 @@ test('Term 1 retake keeps its ticket, offline attempt and result separate', {tim
     page=await open();
     await page.goto(entry+signedTicket,{waitUntil:'domcontentloaded'});
     assert.equal(await page.locator(answer).inputValue(),'Bài lưu <thử>');
+    await page.getByText('1/40 đã nhập',{exact:true}).waitFor();
     assert.ok(await page.locator('#readingView').isHidden());
     assert.equal(await page.locator('textarea[data-writing-task]').count(),0);
     if(realClock)await page.locator('#miniJourneyAudio').evaluate(audio=>{

@@ -954,7 +954,7 @@
     return `${base}/${fileName}?rev=${revision}`;
   }
 
-  async function enterExam(started, audioElement = null, offlineSection = '', journey = null) {
+  async function enterExam(started, audioElement = null, offlineSection = '', journey = null, playNewListening = false) {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
     const boundIdentity = sharedIdentity && started.examSessionToken === state.examSessionToken
       && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
@@ -965,6 +965,7 @@
       verifiedIdentity: offlineSection ? null : boundIdentity,
       offlineSectionIdentity: offlineSection && boundIdentity ? { ...boundIdentity, section: offlineSection } : null,
       miniJourney:journey,
+      playNewListening,
       sessionState: sharedIdentity ? structuredClone(state) : null,
       examSessionToken: state.examSessionToken,
       listeningDeadlineAt: started.listeningDeadlineAt,
@@ -979,8 +980,13 @@
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
     const journeyVersion=journey?.retake?'&offlineJourney=20261107-retake-v1':journey?'&offlineJourney=20261107-term1-v1':'';
-    await loadScript('../shared/app-retake.js?v=20261107-retake-v1'+journeyVersion);
-    await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
+    await loadScript('../shared/app-retake.js?v=20261108-retake-ui-v1'+journeyVersion);
+    await loadScript(cbtAssetUrl('enhance.js?v=20261023-submit-v1&resilience=20261027-v1&retakeUI=20261108-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
+    if (journey?.retake) {
+      const toolbar = document.querySelector('#listeningView .cbt-toolbar');
+      const player = document.getElementById('miniJourneyPlayer');
+      if (toolbar && player && player.parentElement !== toolbar) toolbar.append(player);
+    }
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
 
@@ -989,10 +995,10 @@
       attemptToken: state.attemptToken, generation: Number(state.generation) || 0 };
   }
 
-  async function enterJourney(){
+  async function enterJourney(playNewListening = false){
     const view=miniJourney.view();
     saveState({...view,drafts:miniJourney.retake?miniJourney.drafts():{...state.drafts,...miniJourney.drafts()},draftRevisions:miniJourney.revisions()});
-    await enterExam({...view,content:miniJourney.content},null,'',miniJourney);
+    await enterExam({...view,content:miniJourney.content},null,'',miniJourney,playNewListening);
   }
 
   async function openJourneyLobby(prepare=false){
@@ -1010,7 +1016,7 @@
 
   async function openRetakeLobby(prepare=false){
     if(!listeningOnly||!retakeGrant)return false;
-    const {openTerm1RetakeJourney}=await import('../mini-test-lesson-5-computer-based/journey-retake.mjs?v=20261107-retake-v1');
+    const {openTerm1RetakeJourney}=await import('../mini-test-lesson-5-computer-based/journey-retake.mjs?v=20261108-retake-ui-v2');
     miniJourney=await openTerm1RetakeJourney({classCode,studentRef:prepare?state.studentRef:launchStudentRef,
       retakeGrant,request:apiRequest,prepare});
     if(!miniJourney)return false;
@@ -1031,6 +1037,7 @@
     elements.bootstrapPreviewStep.dataset.state='active';
     elements.bootstrapPreviewStatus.textContent='Bấm nghe thử để chỉnh âm lượng.';
     elements.bootstrapDownloadStep.dataset.state='complete';
+    elements.bootstrapDownloadProgress.value = 1;
     elements.bootstrapDownloadStatus.textContent=miniJourney.retake?'Đã chuẩn bị bài thi bù Listening và lưu audio trên thiết bị.'
       :slug.startsWith('term-test-')?'Đã chuẩn bị ba phần và lưu audio trên thiết bị.':'Đã chuẩn bị hai phần và lưu audio trên thiết bị.';
     elements.bootstrapStartStep.dataset.state='active';
@@ -1208,7 +1215,7 @@
       if(preparing)return;
       preparing=true;setStartAvailability();
       previewAudio.pause();
-      try{await miniJourney.begin();await enterJourney();}
+      try{await miniJourney.begin();await enterJourney(true);}
       catch(error){showNotice(error.message,true);}
       finally{preparing=false;setStartAvailability();}
       return;
