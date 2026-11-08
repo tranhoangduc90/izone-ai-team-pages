@@ -918,7 +918,7 @@
     await enterExam({...prepared,...started},audio);
     if (!runtime.playerReady) throw new Error('Bộ điều khiển audio chưa sẵn sàng. Bài được giữ.');
     if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended && !runtime.record.player.held) {
-      try { await audio.play(); } catch { document.querySelector('.cbt-audio-play')?.removeAttribute('hidden'); }
+      try { await audio.play(); } catch { window.K56_LISTENING_AUDIO?.playBlocked(); }
     } else if(runtime.record.player.ended&&!runtime.record.sections.listening.sealed) {
       const form=document.getElementById('listeningView'),submit=document.createElement('button');submit.type='submit';submit.hidden=true;submit.dataset.autoSubmit='true';form.append(submit);form.requestSubmit(submit);
     }

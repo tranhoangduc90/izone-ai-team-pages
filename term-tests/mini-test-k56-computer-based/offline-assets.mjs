@@ -262,11 +262,11 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
-  "../k56-mini-shared/app.js": "7cbe6a4610a682fe10895a3a44d63c1b14d592f686996940e30cc392c263b6d3",
+  "../k56-mini-shared/app.js": "5fe76bb3225a71782bef70591d76dc8d3908f7adfdae9ecea7fd47d3dc329bde",
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime.mjs": "aefc7b009a56a450f97279a28a4a491d5311af2f9e08ed5c5dd3fc0a46717f98",
+  "../k56-offline-shared/runtime.mjs": "79a0e06cb7f70b32677d62604de6035e6d459cdf2a4f2f2b238504d07e0b408e",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
@@ -319,7 +319,7 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader.js": "d79e5c3899dd5172678ea13e9597bc7389eba06aa0886fa42aaeaf4f7bbc21eb",
   "audio-whole.mjs": "23721b5b7ad9fb99c265d54bdea4c4a90c55a9b582b1b888596b2ebc28506635",
-  "bootstrap.js": "1b6bca0cd6e6663632e5e1a7b165fe71808c95597f8802b27cbaf73301822547",
+  "bootstrap.js": "49d8b9b19bd2e6bb72f37bf4019dd2d295a19e28759fa905057bdfcf40310af8",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
@@ -331,4 +331,4 @@ export const ASSET_HASHES={
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="0ed60b69a7ca671a6f9c9ae98f70c27e55eadea500248c901402bd09af1ada3b";
+export const ASSET_BUILD_ID="0d009fbaa71227d508c774eba5bf8c00f3a6de0ec12b3e1e6140fbe4eed8a3d3";

@@ -3004,6 +3004,7 @@
       }
     });
     offline.mount({snapshot:currentSnapshot,host:document.querySelector('.page-shell')});
+    offline.mountListeningSavedCard(elements.listeningSavedView);
     offline.mountResultCard(elements.resultReadyView,{showBlankWriting:!paperMini});
     saveSession();window.K56_MINI_APP_READY=true;
   }

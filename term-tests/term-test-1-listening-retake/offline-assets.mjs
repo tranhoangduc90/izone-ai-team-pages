@@ -96,7 +96,7 @@ export const ASSET_HASHES={
   "../../shared/student-product-state.js": "d7f95d981142cf7b7961bcbfc57a1530f29fdea6b810f9cea6703ff2af21e175",
   "../../shared/test-student-class.js": "5c868b604fc02faf7b3c60be981b1c87db6c9c8eab8a79364130acbbde87aa0f",
   "../../shared/test-student-identity.js": "4f6e4723b70c7fa57414beb28f4f87cd1f6d087da2806a8bb0ff5f9f1d81389f",
-  "../k56-offline-shared/runtime.mjs": "aefc7b009a56a450f97279a28a4a491d5311af2f9e08ed5c5dd3fc0a46717f98",
+  "../k56-offline-shared/runtime.mjs": "79a0e06cb7f70b32677d62604de6035e6d459cdf2a4f2f2b238504d07e0b408e",
   "../k56-offline-shared/whole-audio-retake.mjs": "c01754cb5a93e47b3c2460309228e912c87e6c3d285a0866eda787925a98c669",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
@@ -137,4 +137,4 @@ export const ASSET_HASHES={
   "retake-config.js": "e9a2a1225733362235d9368c109a199ec00ee97c71bde8ce04893c988fcbef2a",
   "retake-ui.css": "657f632c6c1159c4385011b6bc1ad21b45b35502f8cc725d0fd8b7d220c07c54"
 };
-export const ASSET_BUILD_ID="66b8cf3b699e3a6e05d5578ca39e1e616bc807a861a864339f5b2916c666c95b";
+export const ASSET_BUILD_ID="ff9046e3a21519a912a064487762c78fbf286aee8ab3dc80d17e7d06f125ddc6";

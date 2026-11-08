@@ -260,10 +260,10 @@ export const ASSET_HASHES={
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime.mjs": "aefc7b009a56a450f97279a28a4a491d5311af2f9e08ed5c5dd3fc0a46717f98",
+  "../k56-offline-shared/runtime.mjs": "79a0e06cb7f70b32677d62604de6035e6d459cdf2a4f2f2b238504d07e0b408e",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
-  "../k56-shared/app.js": "89ba607861abc9de07b5b30f013d3ade1a407df1583fb58b462d4a9dafa35f26",
+  "../k56-shared/app.js": "cc79a44f7b092863e21b305d18dd5d6dc752572c16f8784796d662a9e1407920",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio.mjs": "2fe35adec2c70006e5bf839380c3f180e38a54de8c0b7f619631f9c1ade86500",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
@@ -316,7 +316,7 @@ export const ASSET_HASHES={
   "assets/figures/rovio.png": "9f2d562f1ffd3b98536b5b11658844b7d75655da48b4bd3ebfa04a2a3ff8cc9d",
   "audio-loader.js": "d6bffc4f4115053e85cca55e837204412187f3a2f0be73a423b2ff892d40b8a3",
   "audio-whole.mjs": "58cf1707f218e010196b5861ef579009f38922edcd184bef7c2543a4941c68f1",
-  "bootstrap.js": "987d89e7f373b921cabb6d62261a80539f1520f1e175298d196257df3d5b9b43",
+  "bootstrap.js": "7d293b2bcd8e63eb24075fa33b34b7f5699f6e91029522a6043696c836f7ef71",
   "content.js": "498e78b7e9490fc75bda0f7c47826ba69abfca64f0e46d6f0319833c7060aec3",
   "enhance.js": "7d942bfe83961d8811b749230a163ab2842d15111a12d82b385b25f716bf597f",
   "index.html": "0bf59430110dea449047caed60ba7c52f67f14ad859d75131794fda6aa741473",
@@ -325,4 +325,4 @@ export const ASSET_HASHES={
   "offline.mjs": "83616543d78814b23a5c03e3e60fcbb720e34247683e5732e4d166b194edd174",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="aa931af0fb626b465381fea8f83487cffebe121671b7bd9f6ee19815d98de6ee";
+export const ASSET_BUILD_ID="cd62359184e58a677bd5cc27b53b87c81dff8868b843ed20f3731d84cbf029a5";

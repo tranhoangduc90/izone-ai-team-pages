@@ -3293,6 +3293,7 @@
       if(!state.writingSubmitted)for(const editor of elements.writingView.querySelectorAll('[data-writing-task]'))state.drafts.writing[editor.dataset.writingTask]=editor.value;
       return structuredClone(state);
     },host:document.querySelector('.page-shell')});
+    offline.mountListeningSavedCard(elements.listeningSavedView);
     offline.mountResultCard(elements.resultReadyView);
     saveSession();window.K56_TERM1_APP_READY=true;window.dispatchEvent(new Event('term1:app-ready'));
   }else initialize();

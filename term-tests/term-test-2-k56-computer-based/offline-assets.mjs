@@ -265,13 +265,13 @@ export const ASSET_HASHES={
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
-  "../k56-offline-shared/runtime.mjs": "aefc7b009a56a450f97279a28a4a491d5311af2f9e08ed5c5dd3fc0a46717f98",
+  "../k56-offline-shared/runtime.mjs": "79a0e06cb7f70b32677d62604de6035e6d459cdf2a4f2f2b238504d07e0b408e",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/public-audio.mjs": "2fe35adec2c70006e5bf839380c3f180e38a54de8c0b7f619631f9c1ade86500",
   "../k56-shared/teacher-session-client.js": "e23d770dc0a4beb35a5b9751990cfd9667e1ea2568d0bffb3125e721dafefa27",
-  "../k56-test2-shared/app.js": "79c3f9d6255f54695e56696c8ebc9927a17d1e111a8ece5db560e3ed11cf2407",
+  "../k56-test2-shared/app.js": "595949fe464ed9ecb565d9e32642ee29651e7434eacec7eee66170b4398692e9",
   "../k56-test2-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-test2-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-writing-feedback/styles.css": "5f1990abcb8a2a38b7168dfbaa56565e0faece43c4c4c15c146ef6c800fca99e",
@@ -324,7 +324,7 @@ export const ASSET_HASHES={
   "assets/figures/writing-waste.png": "c77f854bcb39a1481d525d768ccbab8532c09dc5dbfe549c100c3149a8e8688d",
   "audio-loader.js": "d6bffc4f4115053e85cca55e837204412187f3a2f0be73a423b2ff892d40b8a3",
   "audio-whole.mjs": "d5ae5bc0a5db9bc15dad983af55c8db3a5441f5f33f80aad51f37ab08d62bc16",
-  "bootstrap.js": "f51d93c18c43b5d145a6f009a68c8b34c8b603593df7cfb99af9146f899a366a",
+  "bootstrap.js": "a3718b913ed8ee6ae682e0ee1ba7f9909432916837667a78a10c81b444d69a5d",
   "content.js": "61653a59ae0b7427f5de300cbbc6ceb0121a668664811436802cdfa89a370aa5",
   "enhance.js": "e1aefc04490273147f68fe285a30734b4f71adfa232ede192a1b8935cde55e1c",
   "exam.css": "b89325ce97e1efef761f3f8996aecef28a35b02cef20ac1a24f6521d1ada3012",
@@ -335,4 +335,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="c619541d82a329d6e3177c5928666e14650dc16854599c75eca0b22ec51e9511";
+export const ASSET_BUILD_ID="f59ac5bb501b94e36d5ed481d3275ce392f541db2503e8df59d845e1967eff46";
