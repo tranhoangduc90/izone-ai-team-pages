@@ -121,7 +121,7 @@ export const ASSET_HASHES={
   "../design-demo/skin.css": "d71ce4a4e2f75345c805fb0ca192c95cf4973e8ee7d35bf36d29bdeea66b0048",
   "../design-demo/theme.css": "afe1789ef3b18a8ef53fae51e22efdc0a9f83f91e6eb6b73fabc3257784d64b5",
   "../design-full/native.css": "54aa42e4a564376e71b7e99c0e0d9e4c396e44d298bfbb69a6d1954ce8bea2be",
-  "../k56-offline-shared/runtime.mjs": "8c750d2f6b142f84aa1cc3ca910e2e2833ad7fe9e15145125adffe7565019fc2",
+  "../k56-offline-shared/runtime.mjs": "aefc7b009a56a450f97279a28a4a491d5311af2f9e08ed5c5dd3fc0a46717f98",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k67-design/appearance.css": "3ad160b70e0bfa79d2570280cbc63c745053abc039efd957068cd38ae5f2b0a0",
   "../k67-design/appearance.js": "35b8aec07531b3218bf5de31b28db54671e7b9bc4e8857a22aff8807f02d7d9d",
@@ -157,4 +157,4 @@ export const ASSET_HASHES={
   "offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
   "test-config.js": "ad6f4db2ae4dec2ee39e6c3fdc62f02dd073862f8c1355008b9913dc6291521c"
 };
-export const ASSET_BUILD_ID="8aa7caf4ca9cf53aa91b8c185efca2e241cf018530ac0d743a788d1783ce8eae";
+export const ASSET_BUILD_ID="bf2216c81716b8823dadafb1741794241d1480459733d79dc04a3bd98a07f367";

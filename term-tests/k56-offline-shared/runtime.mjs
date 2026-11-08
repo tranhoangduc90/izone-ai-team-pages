@@ -237,6 +237,29 @@ class OfflineRuntime extends EventTarget{
   }
   finally{this.inFlight=null;this.busy=false;this.changed();}
  }
+ mountResultCard(card,{showBlankWriting=false}={}){
+  const labels=[...card.querySelectorAll('.eyebrow, h2, h2 + p')];
+  const original=labels.map(label=>label.textContent);
+  const button=card.querySelector('#viewResult');
+  let status='', locked=false;
+  const render=()=>{
+   const blank=showBlankWriting&&Object.values(this.record.receipts).some(receipt=>
+    receipt.kind==='seal'&&receipt.section==='writing'&&receipt.status==='accepted'&&receipt.writingBlank);
+   const next=this.record.review?'review':this.pending?'pending':blank?'blank':'';
+   if(next===status)return;
+   status=next;
+   const copy={
+    pending:['Bài làm đã khóa','Bài làm đã khóa trên thiết bị','Bài đã lưu trên thiết bị và đang chờ máy chủ xác nhận.'],
+    review:['Bài làm đã khóa','Bài làm cần được đối soát','Bài đã lưu trên thiết bị. Hãy báo giảng viên để kiểm tra.'],
+    blank:['Máy chủ đã nhận bài','Đã nộp · Bài trắng','Máy chủ đã nhận đoạn văn để trống.']
+   }[next]||original;
+   labels.forEach((label,index)=>{if(label.textContent!==copy[index])label.textContent=copy[index];});
+   const waiting=next==='pending'||next==='review';
+   if(waiting!==locked){locked=waiting;button.disabled=waiting;}
+  };
+  this.addEventListener('change',render);
+  render();
+ }
  mount({snapshot,host}){
   if(!this.active||this.panel)return;
   const panel=document.createElement('div');panel.className='writing-save-status';panel.setAttribute('role','status');

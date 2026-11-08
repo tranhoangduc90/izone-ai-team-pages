@@ -8,6 +8,7 @@ after(async()=>{await browser?.close();await server?.close();});
 for(const slug of slugs)test(slug+': giữ bố cục đề K56 trước redesign',async()=>{
   const f=await readingPage(browser,server.base,slug);
   try{
+    assert.equal(await f.page.getByRole('navigation',{name:'Lối vào giảng viên'}).count(),0);
     const section=f.page.locator('.cbt-reading-section:not([hidden])');
     const ratio=await section.evaluate(el=>el.firstElementChild.getBoundingClientRect().width/el.getBoundingClientRect().width);
     assert(Math.abs(ratio-.5)<.01,'Reading phải giữ hai cột bằng nhau như K56 cũ');
@@ -22,6 +23,7 @@ for(const slug of slugs)test(slug+': giữ bố cục đề K56 trước redesig
   }finally{await f.close();}
   const paper=await readingPage(browser,server.base,slug,'lis_first','');
   try{
+    assert.equal(await paper.page.getByRole('navigation',{name:'Lối vào giảng viên'}).count(),0);
     const fields=paper.page.locator('#readingQuestions .question');
     const positions=await fields.evaluateAll(nodes=>nodes.slice(0,2).map(n=>{const r=n.getBoundingClientRect();return {left:r.left,top:r.top};}));
     assert(Math.abs(positions[0].left-positions[1].left)<2&&positions[1].top>positions[0].top,'Phiếu giữ thứ tự câu từ trên xuống theo cột như trước');

@@ -493,7 +493,9 @@
   function showNotice(message, kind = '') {
     elements.notice.hidden = false;
     elements.notice.textContent = message;
-    elements.notice.className = `notice${kind ? ` ${kind}` : ''}`;
+    const followsOffline = Boolean(offline && message === offline.message);
+    elements.notice.toggleAttribute('data-offline-status', followsOffline);
+    elements.notice.className = `notice${kind && !followsOffline ? ` ${kind}` : ''}`;
   }
 
   function hideNotice() {
@@ -3280,14 +3282,18 @@
     if(skill==='result')setStage('result-ready');
     else if(skill==='writing')setStage(state.writingStarted?'writing':'writing-prep');
     else if(response[skill+'StartedAt'])setStage(skill);else showSectionReady(skill);
+    offline.addEventListener('change', () => {
+      const { notice } = elements;
+      if (!notice.hidden && notice.hasAttribute('data-offline-status') && notice.textContent !== offline.message) {
+        notice.textContent = offline.message;
+      }
+    });
     offline.mount({snapshot:()=>{
       for(const skill of ['listening','reading'])if(!state[skill+'Submitted'])state.drafts[skill]=collectAnswers(elements[skill+'Questions']);
       if(!state.writingSubmitted)for(const editor of elements.writingView.querySelectorAll('[data-writing-task]'))state.drafts.writing[editor.dataset.writingTask]=editor.value;
       return structuredClone(state);
     },host:document.querySelector('.page-shell')});
-    const title=elements.resultReadyView.querySelector('h2');if(title)title.textContent='Bài làm đã khóa trên thiết bị';
-    const eyebrow=elements.resultReadyView.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='Bài Writing đã khóa';
-    const copy=elements.resultReadyView.querySelector('p:last-of-type');if(copy)copy.textContent='Theo dõi trạng thái đồng bộ và giữ bản tải về. Chỉ có biên nhận mới xác nhận máy chủ đã nhận bài.';
+    offline.mountResultCard(elements.resultReadyView);
     saveSession();window.K56_TERM1_APP_READY=true;window.dispatchEvent(new Event('term1:app-ready'));
   }else initialize();
 })();

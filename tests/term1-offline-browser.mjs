@@ -44,10 +44,18 @@ for(const mode of ['lis_first','read_first'])test('Term 1 offline/phục hồi/t
   // Kiểm bài trắng: xóa có chủ đích, nộp và xác nhận theo quy tắc 0; không có endpoint AI.
   await p.locator('[data-writing-task="task2"]').fill('');await p.click('#submitWriting');
   await wait(p,()=>window.K56_TERM1_OFFLINE.record.sections.writing?.sealed,'Khóa Writing offline');
+  await wait(p,()=>{
+    const notice=document.getElementById('notice');
+    const status=document.querySelector('.page-shell > .writing-save-status > span')?.textContent;
+    return Boolean(status&&!status.startsWith('Đang lưu')&&notice?.textContent===status);
+  },'Thông báo chính theo đúng trạng thái lưu/đồng bộ',5000);
   await p.screenshot({path:resolve(output,mode+'-pending.png'),fullPage:true});
   assert.ok(await p.evaluate(()=>window.K56_TERM1_OFFLINE.pending)>0);
+  assert.equal(await p.locator('#viewResult').isDisabled(),true,'Bài chờ biên nhận chưa được mở kết quả');
   f.disconnected=false;await f.context.setOffline(false);await p.evaluate(()=>{window.K56_TERM1_OFFLINE.retryAt=0;return window.K56_TERM1_OFFLINE.flush();});
   await wait(p,()=>window.K56_TERM1_OFFLINE.pending===0,'Gửi lại đủ operation');
+  assert.equal(await p.locator('#viewResult').isEnabled(),true);
+  assert.equal(await p.locator('#resultReadyView h2').textContent(),'Kết quả của bạn đã sẵn sàng');
   f.assertJournalFaultExercised();
   assert.equal(f.calls.some(x=>x.includes('writing-grading')),false);
   await writeFile(resolve(output,mode+'-result.json'),JSON.stringify({mode,calls:f.calls,errors:f.errors,receipts:[...f.receipts.values()]},null,2));

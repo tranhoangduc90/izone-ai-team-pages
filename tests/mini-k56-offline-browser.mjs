@@ -68,11 +68,16 @@ for(const paper of [true,false])for(const mode of ['lis_first','read_first']){
     else await p.click('#submitWriting');
    }
    await p.locator('#resultReadyView').waitFor({state:'visible'});
+   await wait(p,()=>document.getElementById('notice')?.textContent.includes('chờ đồng bộ'),'Thông báo chính phản ánh trạng thái đã lưu',3000);
+   assert.equal(await p.locator('#resultReadyView .eyebrow').textContent(),'Bài làm đã khóa');
+   assert.equal(await p.locator('#viewResult').isDisabled(),true,'Bài chờ biên nhận chưa được mở kết quả');
    if(paper)assert.deepEqual(f.controls.audioCalls,[]);
    else assert.equal(f.controls.audioCalls.length,mode==='read_first'?2:1);
    if(!paper)assert.equal(await p.evaluate(()=>window.K56_MINI_OFFLINE.failures),0,'Offline phải giữ bài tại chỗ, không tăng backoff');
    f.disconnected=false;await f.context.setOffline(false);
    await wait(p,()=>document.querySelector('.writing-save-status')?.textContent.includes('Máy chủ đã xác nhận'),'Đã đối chiếu máy chủ');
+   assert.equal(await p.locator('#viewResult').isEnabled(),true);
+   if(paper||mode==='read_first')assert.equal(await p.locator('#resultReadyView h2').textContent(),'Kết quả của bạn đã sẵn sàng');
    const seals=[...f.receipts.values()].filter(receipt=>receipt.kind==='seal');
    assert.deepEqual(seals.map(receipt=>receipt.section),paper?skills:[...skills,'writing']);
    f.assertJournalFaultExercised();
