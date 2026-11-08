@@ -1019,6 +1019,10 @@
     } catch (error) {
       if (blockedPlayAt !== null) {
         const label = blockedPlayAt > 0 ? 'Tiếp tục audio' : 'Phát audio';
+        if (previewHeard) {
+          elements.bootstrapPreview.textContent = 'Nghe lại 30 giây đầu';
+          elements.bootstrapPreviewStatus.textContent = 'Đã dừng nghe thử.';
+        }
         showNotice(`Trình duyệt chưa cho phát. Hãy bấm “${label}”.`, true);
         elements.bootstrapStart.textContent = label;
       } else {
