@@ -58,7 +58,11 @@ try{
   await page.screenshot({path:path.join(out,'dashboard-'+width+'.png'),fullPage:true});
  },{width,height:900});
  for(const slug of slugs){
-  const open=async page=>{await page.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server');await page.locator('#bootstrapClass option[value="IC9001"]').waitFor({state:'attached'});};
+  const open=async page=>{
+   await page.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server');
+   await page.locator('#bootstrapClass option[value="IC9001"]').waitFor({state:'attached'});
+   assert.equal(await page.getByRole('navigation',{name:'Lối vào giảng viên'}).count(),0);
+  };
   await scenario(slug+': DEMO cuối danh sách, lớp thật giữ thứ tự và không có Reset',async({page})=>{
    await open(page);
    const values=await page.locator('#bootstrapClass option').evaluateAll(o=>o.map(x=>x.value).filter(Boolean));
