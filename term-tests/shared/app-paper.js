@@ -499,6 +499,21 @@
     'writingRecovery', 'writingRecoveryDrafts'
   ].map(id => [id, document.getElementById(id)]));
 
+  const paperResultCopy = [...elements.resultReadyView.querySelectorAll('.eyebrow, h2, h2 + p')];
+  const defaultPaperResultCopy = paperResultCopy.map(element => element.textContent);
+  let paperResultWaiting = false;
+
+  function renderPaperResultReady() {
+    const waiting = Boolean(miniJourney?.paper && !miniJourney.resultToken());
+    if (waiting === paperResultWaiting) return;
+    paperResultWaiting = waiting;
+    const copy = waiting
+      ? ['Đã lưu bài làm', 'Bài làm đang chờ đồng bộ', 'Bài làm đã lưu trên thiết bị. Bạn có thể xem kết quả sau khi máy chủ xác nhận đã nhận bài.']
+      : defaultPaperResultCopy;
+    paperResultCopy.forEach((element, index) => { element.textContent = copy[index]; });
+    elements.viewResult.disabled = waiting;
+  }
+
   // Bộ nhớ dùng chung chỉ là gợi ý chọn tên cho hai lớp Writing đã mở thử.
   // Nó không chứa tên, lớp, mã lượt làm hay dữ liệu bài thi, và không tự mở lượt làm.
   const studentMemoryForAllClasses = !demoMode && classCode !== 'CODEXDEMO806';
@@ -848,7 +863,10 @@
       elements.writingView.hidden = false;
       window.dispatchEvent(new Event('term-test:writing-stage'));
     }
-    if (stage === 'result-ready') elements.resultReadyView.hidden = false;
+    if (stage === 'result-ready') {
+      renderPaperResultReady();
+      elements.resultReadyView.hidden = false;
+    }
     if (stage === 'result') elements.resultView.hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -3032,8 +3050,10 @@
     }
     state.resultDetailsIdentity = identity;
     if (!writingConfig || payload.writing?.submitted) {
+      // Luồng phiếu dùng mã bài đã chấm từ biên nhận cho lời giải, giữ mã phiên để đồng bộ.
       window.K67_ANSWER_EXPLANATIONS?.attach({
-        container: elements.questionDetails, payload, attemptToken: state.attemptToken,
+        container: elements.questionDetails, payload,
+        attemptToken: miniJourney?.paper ? miniJourney.resultToken() : state.attemptToken,
         testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
       });
     }
@@ -3585,6 +3605,12 @@
   elements.viewListeningResult?.addEventListener('click', () => loadResult(elements.viewListeningResult));
   elements.viewResult.addEventListener('click', () => loadResult(elements.viewResult));
   elements.viewFullAttempt.addEventListener('click', async () => {
+    if (termPaper && !writingConfig && state.result?.completed) {
+      const skills = [...elements.questionDetails.querySelectorAll('details[data-skill]')];
+      for (const skill of skills) skill.open = true;
+      skills[0]?.querySelector('summary')?.focus();
+      return;
+    }
     setBusy(elements.viewFullAttempt, true, 'Đang tải bài chi tiết...', 'Xem lại toàn bộ bài làm');
     try {
       if (!state.attemptReview) {
@@ -4167,7 +4193,11 @@
     elements.readingStudentName.textContent=state.studentName;
     const host=document.querySelector('.topbar')||root;
     const status=document.createElement('span');status.setAttribute('role','status');
-    const render=()=>{const message=miniJourney.message();if(status.textContent!==message)status.textContent=message;};
+    const render=()=>{
+      const message=miniJourney.message();
+      if(status.textContent!==message)status.textContent=message;
+      if(state.stage==='result-ready')renderPaperResultReady();
+    };
     const download=document.createElement('button');download.type='button';download.className='button button-secondary';download.textContent='Tải bài làm về máy';
     download.addEventListener('click',()=>{
       const section=miniJourney.view().nextSection;
