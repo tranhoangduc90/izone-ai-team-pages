@@ -114,7 +114,7 @@ export const ASSET_HASHES={
   "../mini-test-lesson-5-computer-based/journey-retake.mjs": "680c833dacfb2af5283f47d04c9b4969c63f267ed867e5ca595ae6c6b5717ab0",
   "../mini-test-lesson-5-computer-based/journey.mjs": "425d23a1a29b66abc6f59ee609e6852aa6b0bfa0edc55542176ae691b18fdf77",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
-  "../mini-test-lesson-5/offline.mjs": "1cf42cff36f54bb0ae4cfe8da2de42a9dd79e2b5cec3b2641b9fc4e9441c84f7",
+  "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
   "../shared/app-retake.js": "74d828f440fcb78113d6044b37afb2810f245f8b1dd20e7eabd796e21c22cb96",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
@@ -137,4 +137,4 @@ export const ASSET_HASHES={
   "retake-config.js": "e9a2a1225733362235d9368c109a199ec00ee97c71bde8ce04893c988fcbef2a",
   "retake-ui.css": "657f632c6c1159c4385011b6bc1ad21b45b35502f8cc725d0fd8b7d220c07c54"
 };
-export const ASSET_BUILD_ID="6073fe0ef396bac3b5576dae310966d76a1fe5db32cf36d2b27320ebd4b4cd94";
+export const ASSET_BUILD_ID="4dc298336952995baa75ebf27b875835955c2b33b4f8ede751b0e49faa5c824b";

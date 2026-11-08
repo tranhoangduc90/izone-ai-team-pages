@@ -166,9 +166,9 @@ export const ASSET_HASHES={
   "../k67-shared/listening-eof.mjs": "b411d6b8cd0c79882c5d6a917a9d5bc7b6f4449589fdcbeba1400880296c42b5",
   "../k67-shared/public-audio.js": "9276d58ce2fe43c10b283c4bde9f329562c61d792f591fed35044ebe34fddf16",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
-  "../mini-test-lesson-5/offline.mjs": "1cf42cff36f54bb0ae4cfe8da2de42a9dd79e2b5cec3b2641b9fc4e9441c84f7",
+  "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
   "../mini-test-lesson-5/test-config.js": "ad6f4db2ae4dec2ee39e6c3fdc62f02dd073862f8c1355008b9913dc6291521c",
-  "../shared/app.js": "a201a72133a5510c75c24953cc66e3ff7ad2afb942383007f357d2ccf7475e65",
+  "../shared/app.js": "c3dcd51fe4f51282d147a69ef95142453d45e9b1e1abeb747ff5d07ff151f253",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
   "../shared/cbt-audio-start-label.js": "2f19d0a786e5e2226f40f329927ae8ad5bec41cd20b5e48f2ebe63452f378e29",
@@ -203,4 +203,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "180f1ae141f5fe675cd4a161cae972053351fa9b98219ca2c3b72dc31f59da36",
   "resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f"
 };
-export const ASSET_BUILD_ID="9269b4f23ee28ef0de390ff4928320c9133e90186f7eadad97c36addb7c9f479";
+export const ASSET_BUILD_ID="f67d8fd00a9de8d61b9745f2839e51204e68834ad834cde1d3adcbda8cc45424";
