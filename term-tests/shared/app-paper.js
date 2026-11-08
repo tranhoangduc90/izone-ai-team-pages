@@ -3605,6 +3605,12 @@
   elements.viewListeningResult?.addEventListener('click', () => loadResult(elements.viewListeningResult));
   elements.viewResult.addEventListener('click', () => loadResult(elements.viewResult));
   elements.viewFullAttempt.addEventListener('click', async () => {
+    if (termPaper && !writingConfig && state.result?.completed) {
+      const skills = [...elements.questionDetails.querySelectorAll('details[data-skill]')];
+      for (const skill of skills) skill.open = true;
+      skills[0]?.querySelector('summary')?.focus();
+      return;
+    }
     setBusy(elements.viewFullAttempt, true, 'Đang tải bài chi tiết...', 'Xem lại toàn bộ bài làm');
     try {
       if (!state.attemptReview) {

@@ -143,7 +143,7 @@ export const ASSET_HASHES={
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
-  "../shared/app-paper.js": "d821dc024edd432e7ed4eeeb57355ecb00dd85fcb45ed8beb613365c98cc81f8",
+  "../shared/app-paper.js": "32e4b7b6912dfca1850ccaef84305e2c697d6b4686c650a29b76b5cb873c6b1a",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
   "../shared/exam-order.js": "b8bfff8d4e8e16fd487db614423ec1e83230196695b7572b48ef284a3faebd88",
@@ -167,4 +167,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "117bb977e4d242f955bc39104a6b1f72e32ec27055dd2e94e534d1c6fd194c8f",
   "test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b"
 };
-export const ASSET_BUILD_ID="2f0dcfef56134e92fd3a3e7693b7ca3626f4def050ff9be08bf171edd33323f9";
+export const ASSET_BUILD_ID="57ff486a49c69ec128399796b9864ba7e91fd1694f083c2b39b1904ea09b6c45";
