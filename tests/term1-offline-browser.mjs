@@ -1,6 +1,28 @@
 import {fixture,wait} from './term2-offline-browser.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile,writeFile} from 'node:fs/promises';import {resolve} from 'node:path';
+import {randomUUID} from 'node:crypto';
 const output=process.env.TERM2_EVIDENCE;assert.ok(output);
+test('Term 1 chính đọc Reading đã nộp trên link dự phòng, rồi mở lại màn Listening offline',{timeout:60000},async()=>{
+ const f=await fixture('read_first',{product:1}),p=f.page;f.controls.r2Audio=true;
+ try{
+  await p.goto(f.url);await p.locator('#bootstrapStudent option[value="'+f.student+'"]').waitFor({state:'attached'});
+  await p.selectOption('#bootstrapStudent',f.student);await p.click('#confirmIdentity');
+  await wait(p,()=>window.K56_TERM1_OFFLINE?.active&&window.K56_TERM1_APP_READY,'Bài chính Reading trước đã sẵn sàng');
+  const operationId=randomUUID(),start=Date.now()-60000;
+  f.controls.completedElsewhere={reading:{operationId,startedAt:new Date(start).toISOString(),deadlineAt:new Date(start+2400000).toISOString(),revision:1}};
+  await p.reload();
+  await wait(p,()=>window.K56_TERM1_OFFLINE?.record.sections.reading?.sealed&&document.getElementById('bootstrapPreview')?.disabled===false,'Đọc Reading đã nộp và chuyển phòng nghe');
+  assert.equal(await p.evaluate(()=>window.K56_TERM1_OFFLINE.record.sections.reading.operationId),operationId);
+  assert.equal(await p.evaluate(()=>Object.keys(window.K56_TERM1_OFFLINE.record.receipts).length),0);
+  assert.equal(f.calls.filter(path=>path.endsWith('/offline/resume')).length,1);
+  f.disconnected=true;await f.context.setOffline(true);await p.reload();
+  await wait(p,()=>window.K56_TERM1_OFFLINE?.sectionResponse().nextSection==='listening'&&document.getElementById('bootstrapPreview')?.disabled===false,'Phòng nghe đã lưu mở lại offline');
+  assert.equal(await p.evaluate(()=>window.K56_TERM1_OFFLINE.record.sections.reading.operationId),operationId);
+  assert.equal(f.calls.filter(path=>path.endsWith('/offline/resume')).length,1);
+  await p.screenshot({path:resolve(output,'main-read-first-after-fallback.png'),fullPage:true});
+  assert.deepEqual(f.errors,[]);
+ }finally{await f.close();}
+});
 for(const mode of ['lis_first','read_first'])test('Term 1 offline/phục hồi/tải file: '+mode,{timeout:180000},async()=>{
  const f=await fixture(mode,{product:1}),p=f.page;f.controls.r2Audio=true;
  try{
