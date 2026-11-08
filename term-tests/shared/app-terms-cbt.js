@@ -3730,11 +3730,15 @@
           saveSession();
           elements.writingView.dispatchEvent(new CustomEvent('term-test:writing-submitted'));
           setStage('result-ready');
-          showNotice(saved.localOnly?'Writing đã lưu trên máy. Hệ thống sẽ đồng bộ khi có mạng.':saved.writing.accepted === false
-            ? 'Hệ thống đã chốt bản lưu đúng hạn. Bản khác trên máy được giữ trong mục phục hồi để bạn đọc và sao chép.'
-            : automatic
-              ? `Đã hết ${writingMinutes} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
-              : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
+          if (saved.localOnly && miniJourney) {
+            hideNotice();
+          } else {
+            showNotice(saved.localOnly?'Writing đã lưu trên máy. Hệ thống sẽ đồng bộ khi có mạng.':saved.writing.accepted === false
+              ? 'Hệ thống đã chốt bản lưu đúng hạn. Bản khác trên máy được giữ trong mục phục hồi để bạn đọc và sao chép.'
+              : automatic
+                ? `Đã hết ${writingMinutes} phút và hệ thống đã thu bài Writing. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.`
+                : 'Đã nộp Writing thành công. Bài đang được chấm; bạn có thể tắt trang web và quay lại sau.', 'success');
+          }
           if(!saved.localOnly||miniJourney?.resultToken())await loadResult(elements.viewResult);
       } catch (error) {
         if (!writingSubmission.current(writingOwner)) return;

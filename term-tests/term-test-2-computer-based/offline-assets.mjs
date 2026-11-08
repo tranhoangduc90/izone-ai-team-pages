@@ -177,7 +177,7 @@ export const ASSET_HASHES={
   "../mini-test-lesson-5-computer-based/journey.mjs": "425d23a1a29b66abc6f59ee609e6852aa6b0bfa0edc55542176ae691b18fdf77",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "1cf42cff36f54bb0ae4cfe8da2de42a9dd79e2b5cec3b2641b9fc4e9441c84f7",
-  "../shared/app-terms-cbt.js": "2f760c0eaef7af4c8c18768c4ac07f94a6b6aa9eedd4a181caf0dd6e09af7375",
+  "../shared/app-terms-cbt.js": "673b07155567c339a6a281c3b05fdcb266de9870fa3b83871588479e141c56af",
   "../shared/app.js": "a201a72133a5510c75c24953cc66e3ff7ad2afb942383007f357d2ccf7475e65",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
@@ -215,4 +215,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "fdd7d647c8cfe5ad4a7401de6c8333c18c8a5da304cc7453525457428547d62f",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="7ffcaca5f52bb8aa49da520cd0175ff7198fa852dad95fa79b17ec0f3dac2177";
+export const ASSET_BUILD_ID="2d9591b1116d47b0b2d7a2d955420c08198f5df635ad03ebfc5a6686bee8cec7";
