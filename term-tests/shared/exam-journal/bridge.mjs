@@ -268,11 +268,24 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
         : detail?.mode==='online' ? ['manual_pause','recovery_sent','recovery_ack','recovery_failed'] : [];
       if(!phases.includes(detail?.phase))return false;
       const metadata={telemetryVersion:1,mode:detail.mode,phase:detail.phase};
+      let requestId;
       if(!mini)metadata.assetId=testSlug;
       if(typeof detail.incidentId==='string'&&/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(detail.incidentId))
         metadata.incidentId=detail.incidentId;
       if((detail.phase==='manual_pause'||detail.phase==='local_resumed'||detail.mode==='online')&&!metadata.incidentId)return false;
       if(listeningEndNumber(detail.configuredDurationSeconds))metadata.configuredDurationSeconds=detail.configuredDurationSeconds;
+      if(!mini&&detail.mode==='online'&&detail.phase!=='manual_pause'){
+        if(typeof detail.requestId==='string'&&/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(detail.requestId))
+          requestId=detail.requestId;
+        for(const field of ['requestRevision','serverRevision','generation'])
+          if(Number.isSafeInteger(detail[field])&&detail[field]>=0)metadata[field]=detail[field];
+        for(const field of ['requestedSeconds','checkpointSeconds'])
+          if(listeningEndNumber(detail[field])&&detail[field]<=7200)metadata[field]=detail[field];
+        if(detail.phase==='recovery_failed'&&['AUDIO_OWNER_CONFLICT','AUDIO_PROGRESS_STALE','AUDIO_GENERATION_STALE',
+          'AUDIO_RESPONSE_STALE','AUDIO_PROGRESS_LOCKED','AUDIO_RECOVERY_CONFLICT','AUDIO_RECOVERY_EXPIRED',
+          'AUDIO_CONTRACT_MISMATCH','INVALID_AUDIO_PROGRESS','AUDIO_SYNC_FAILED','AUDIO_NETWORK_ERROR'].includes(detail.errorCode))
+          metadata.errorCode=detail.errorCode;
+      }
       if(detail.phase==='recovery_ack'){
         for(const field of ['grantedRecoverySeconds','totalRecoverySeconds'])
           if(listeningEndNumber(detail[field])&&detail[field]<=900)metadata[field]=detail[field];
@@ -282,7 +295,7 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       for(const field of ['paused','ended','muted'])if(typeof detail[field]==='boolean')measurements[field]=detail[field];
       if(typeof detail.volume==='number'&&detail.volume>=0&&detail.volume<=1)measurements.volume=detail.volume;
       const action=mini?'mini_listening_diagnostic':'term_k56_listening_diagnostic';
-      return Boolean(recorder.record('audio_observed',{action,...measurements,checkpointState:metadata},current));
+      return Boolean(recorder.record('audio_observed',{action,...measurements,...requestId?{requestId}:{},checkpointState:metadata},current));
     },
     recordListeningEnd(owner,data) {
       if(stopped||!current||!owner?.examSessionId||owner!==win.TERM_TEST_BOOTSTRAP)return false;
