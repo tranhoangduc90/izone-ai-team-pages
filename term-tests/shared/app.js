@@ -3011,10 +3011,12 @@
           : 'Listening và Reading được phân tích riêng. Writing đang được chấm và chưa hiện điểm thành phần.'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
     elements.continueReadingFromResult.hidden = listeningOnly || hasReading || Boolean(demoMode);
+    const resultAttemptToken = miniJourney ? miniJourney.resultToken()
+      : activeMiniOffline() ? payload.nativeAttemptToken : state.attemptToken;
     elements.viewFullAttempt.hidden = !(
       !listeningOnly
       && (!miniAnswerSheet || Boolean(window.TERM_TEST_ATTEMPT_REVIEW?.open))
-      && state.attemptToken
+      && resultAttemptToken
       && payload.completed
       && (!writingConfig || payload.writing?.submitted)
       && !demoMode
@@ -3046,8 +3048,7 @@
     if (!writingConfig || payload.writing?.submitted) {
       // Lời giải đọc theo mã bài đã chấm. Giữ mã phiên offline cho đồng bộ.
       window.K67_ANSWER_EXPLANATIONS?.attach({
-        container: elements.questionDetails, payload,
-        attemptToken: activeMiniOffline() ? payload.nativeAttemptToken : state.attemptToken,
+        container: elements.questionDetails, payload, attemptToken: resultAttemptToken,
         testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
       });
     }
@@ -3599,7 +3600,7 @@
         const payload = await apiRequest('/api/term-tests/result/review', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attemptToken: state.attemptToken })
+          body: JSON.stringify({ attemptToken: miniJourney ? miniJourney.resultToken() : state.attemptToken })
         });
         state.attemptReview = payload.review;
       }

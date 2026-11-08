@@ -28,6 +28,8 @@ test('K67: polling giữ toggle/focus, cập nhật câu và đặt lại khi đ
       // Chỉ thay các biên API/trình bày ngoài bảng; dùng nguyên hàm đang phát hành.
       window.probe = new Function(`
         const state = {attemptToken:'fake-a',studentRef:'student-a',writingSubmitted:true};
+        const miniJourney = null;
+        const activeMiniOffline = () => false;
         const elements = Object.fromEntries(['resultStudentName','resultMeta','summaryGrid','resultStatus','continueReadingFromResult','viewFullAttempt','questionDetails','skillPerformanceSections'].map(id=>[id,document.createElement('div')]));
         document.body.append(...Object.values(elements));
         const demoMode=false, miniAnswerSheet=false, writingConfig={}, writingTaskLabels='Writing', testConfig={title:'Synthetic test',slug:'term-test-1'};
