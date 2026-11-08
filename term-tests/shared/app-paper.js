@@ -3050,8 +3050,10 @@
     }
     state.resultDetailsIdentity = identity;
     if (!writingConfig || payload.writing?.submitted) {
+      // Luồng phiếu dùng mã bài đã chấm từ biên nhận cho lời giải, giữ mã phiên để đồng bộ.
       window.K67_ANSWER_EXPLANATIONS?.attach({
-        container: elements.questionDetails, payload, attemptToken: state.attemptToken,
+        container: elements.questionDetails, payload,
+        attemptToken: miniJourney?.paper ? miniJourney.resultToken() : state.attemptToken,
         testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
       });
     }
