@@ -237,6 +237,42 @@ class OfflineRuntime extends EventTarget{
   }
   finally{this.inFlight=null;this.busy=false;this.changed();}
  }
+ mountListeningSavedCard(card){
+  const labels=[...card.querySelectorAll('.eyebrow, h2, h2 + p')];
+  const original=labels.map(label=>label.textContent);
+  const render=()=>{
+   const listening=this.record.sections.listening;
+   const waiting=listening?.sealed&&this.record.receipts[listening.operationId]?.status!=='accepted';
+   const copy=waiting?['Đã lưu bài Listening','Bài Listening đã lưu trên thiết bị',
+    'Bạn có thể tiếp tục làm Reading. Hãy giữ bài trên thiết bị để đồng bộ khi có mạng.']:original;
+   labels.forEach((label,index)=>{if(label.textContent!==copy[index])label.textContent=copy[index];});
+  };
+  this.addEventListener('change',render);
+  render();
+ }
+ mountResultCard(card,{showBlankWriting=false}={}){
+  const labels=[...card.querySelectorAll('.eyebrow, h2, h2 + p')];
+  const original=labels.map(label=>label.textContent);
+  const button=card.querySelector('#viewResult');
+  let status='', locked=false;
+  const render=()=>{
+   const blank=showBlankWriting&&Object.values(this.record.receipts).some(receipt=>
+    receipt.kind==='seal'&&receipt.section==='writing'&&receipt.status==='accepted'&&receipt.writingBlank);
+   const next=this.record.review?'review':this.pending?'pending':blank?'blank':'';
+   if(next===status)return;
+   status=next;
+   const copy={
+    pending:['Bài làm đã khóa','Bài làm đã khóa trên thiết bị','Bài đã lưu trên thiết bị và đang chờ máy chủ xác nhận.'],
+    review:['Bài làm đã khóa','Bài làm cần được đối soát','Bài đã lưu trên thiết bị. Hãy báo giảng viên để kiểm tra.'],
+    blank:['Máy chủ đã nhận bài','Đã nộp · Bài trắng','Máy chủ đã nhận đoạn văn để trống.']
+   }[next]||original;
+   labels.forEach((label,index)=>{if(label.textContent!==copy[index])label.textContent=copy[index];});
+   const waiting=next==='pending'||next==='review';
+   if(waiting!==locked){locked=waiting;button.disabled=waiting;}
+  };
+  this.addEventListener('change',render);
+  render();
+ }
  mount({snapshot,host}){
   if(!this.active||this.panel)return;
   const panel=document.createElement('div');panel.className='writing-save-status';panel.setAttribute('role','status');
@@ -252,7 +288,16 @@ class OfflineRuntime extends EventTarget{
   if(oldPosition>0&&!this.record.player.ended)audio.currentTime=Math.min(oldPosition,Math.max(0,audio.duration-.25));
   const lock=value=>{for(const input of form.querySelectorAll('input:not([type="range"]),select,textarea'))input.disabled=value;};
   const update=()=>{render(held?'Audio đang dừng — bài làm đã giữ':audio.ended?'Đã phát hết audio':'Đang phát bài thi',audio.currentTime,audio.duration);};
-  const hold=reason=>{if(submitted||audio.ended)return;held=true;holdEpoch++;this.record.player.held=true;this.observe('audio_command',{command:'pause',actor:'media_or_learner',position:audio.currentTime,ended:audio.ended,paused:audio.paused});audio.pause();lock(true);resumeButton.hidden=false;render(reason+' · Không tự thu bài khi chưa nghe hết',audio.currentTime,audio.duration);void this.persist().catch(()=>{});};
+  const showPlayButton=()=>{
+   const label=this.record.player.position>0?'Tiếp tục audio':'Phát audio';
+   resumeButton.textContent=label;resumeButton.hidden=false;return label;
+  };
+  const hold=reason=>{if(submitted||audio.ended)return;held=true;holdEpoch++;this.record.player.held=true;this.observe('audio_command',{command:'pause',actor:'media_or_learner',position:audio.currentTime,ended:audio.ended,paused:audio.paused});audio.pause();lock(true);showPlayButton();render(reason+' · Không tự thu bài khi chưa nghe hết',audio.currentTime,audio.duration);void this.persist().catch(()=>{});};
+  const playBlocked=({keepHeld=false}={})=>{
+   const label=showPlayButton();
+   const message='Trình duyệt chưa cho phát. Hãy bấm '+label;
+   if(keepHeld)hold(message);else render(message,audio.currentTime,audio.duration);
+  };
   manualButton.addEventListener('click',()=>{
    const report=observeListening&&!submitted&&!audio.ended;
    hold('Hãy kiểm tra tai nghe rồi tiếp tục đúng mốc');
@@ -296,8 +341,8 @@ class OfflineRuntime extends EventTarget{
   }catch(e){hold(e.message);}finally{resumeButton.disabled=false;}});
   const timer=setInterval(()=>{if(!this.record.sections.listening?.startedAt||this.record.sections.listening.sealed||form.hidden||held||submitted)return;
    if(!audio.ended&&performance.now()-lastAt>5000)hold('Audio chưa tiến lên. Giữ đúng mốc để phục hồi');},1000);
-  const controller={hold,beforeAutoSubmit:async()=>({submit:Boolean(this.record.player.ended),deadlineChanged:!this.record.player.ended}),submitting(){},submitFailed(){},finish(){submitted=true;audio.pause();clearInterval(timer);}};
-  if(held){lock(true);resumeButton.hidden=false;}
+  const controller={hold,playBlocked,beforeAutoSubmit:async()=>({submit:Boolean(this.record.player.ended),deadlineChanged:!this.record.player.ended}),submitting(){},submitFailed(){},finish(){submitted=true;audio.pause();clearInterval(timer);}};
+  if(held){lock(true);showPlayButton();}
   window.K56_LISTENING_AUDIO=controller;this.player=audio;this.playerReady=true;update();return controller;
  }
 }

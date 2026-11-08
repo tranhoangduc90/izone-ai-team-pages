@@ -398,7 +398,7 @@
         <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
         <h2>Kết quả của bạn đã sẵn sàng</h2>
         <p>${writingConfig
-          ? 'Listening và Reading đã được chấm, phân tích. Writing đang được chấm riêng và sẽ hiện điểm khi đủ cả hai Task.'
+          ? 'Listening và Reading đã được chấm, phân tích. Điểm Writing sẽ hiển thị khi bài chấm sẵn sàng.'
           : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
         <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
       </section>
@@ -468,7 +468,9 @@
   function showNotice(message, kind = '') {
     elements.notice.hidden = false;
     elements.notice.textContent = message;
-    elements.notice.className = `notice${kind ? ` ${kind}` : ''}`;
+    const followsOffline = Boolean(offline && message === offline.message);
+    elements.notice.toggleAttribute('data-offline-status', followsOffline);
+    elements.notice.className = `notice${kind && !followsOffline ? ` ${kind}` : ''}`;
   }
 
   function hideNotice() {
@@ -3057,14 +3059,19 @@
     if(skill==='result')setStage('result-ready');
     else if(skill==='writing')setStage(state.writingStarted?'writing':'writing-prep');
     else if(response[skill+'StartedAt'])setStage(skill);else showSectionReady(skill);
+    offline.addEventListener('change', () => {
+      const { notice } = elements;
+      if (!notice.hidden && notice.hasAttribute('data-offline-status') && notice.textContent !== offline.message) {
+        notice.textContent = offline.message;
+      }
+    });
     offline.mount({snapshot:()=>{
       for(const skill of ['listening','reading'])if(!state[skill+'Submitted'])state.drafts[skill]=collectAnswers(elements[skill+'Questions']);
       if(!state.writingSubmitted)for(const editor of elements.writingView.querySelectorAll('[data-writing-task]'))state.drafts.writing[editor.dataset.writingTask]=editor.value;
       return structuredClone(state);
     },host:document.querySelector('.page-shell')});
-    const title=elements.resultReadyView.querySelector('h2');if(title)title.textContent='Bài làm đã khóa trên thiết bị';
-    const eyebrow=elements.resultReadyView.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='Bài Writing đã khóa';
-    const copy=elements.resultReadyView.querySelector('p:last-of-type');if(copy)copy.textContent='Theo dõi trạng thái đồng bộ và giữ bản tải về. Chỉ có biên nhận mới xác nhận máy chủ đã nhận bài.';
+    offline.mountListeningSavedCard(elements.listeningSavedView);
+    offline.mountResultCard(elements.resultReadyView);
     saveSession();window.K56_TERM2_APP_READY=true;window.dispatchEvent(new Event('term2:app-ready'));
   }else initialize();
   // Khi đóng tab, gửi đúng base đã biết; không ACK local hay tự vượt xung đột khi chưa có phản hồi.

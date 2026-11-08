@@ -492,7 +492,9 @@
   function showNotice(message, kind = '') {
     elements.notice.hidden = false;
     elements.notice.textContent = message;
-    elements.notice.className = `notice${kind ? ` ${kind}` : ''}`;
+    const followsOffline = Boolean(offline && message === offline.message);
+    elements.notice.toggleAttribute('data-offline-status', followsOffline);
+    elements.notice.className = `notice${kind && !followsOffline ? ` ${kind}` : ''}`;
   }
 
   function hideNotice() {
@@ -1072,7 +1074,8 @@
     submitted: () => Boolean(state.writingSubmitted),
     grading: () => state.result?.writing?.grading || state.testGrades?.writing?.grading,
     notify: (message,kind) => showNotice(offline?offline.message:message,offline?'':kind), check: () => refreshWritingGrading(),
-    hosts: () => [elements.writingView, elements.writingSubmissionResult],
+    hosts: () => [elements.writingView,
+      elements.writingSubmissionResult?.querySelector('[data-writing-result-action]') ? null : elements.writingSubmissionResult],
     storage: () => { try { return window.SUBSTITUTE_STATE?.storages?.() || [window.sessionStorage,window.localStorage]; } catch { return []; } }
   });
 
@@ -2125,6 +2128,7 @@
     const gradingArea = document.createElement('div');
     if (lmsUrl) {
       gradingArea.className = 'writing-grading-status';
+      gradingArea.dataset.writingResultAction = 'true';
       const link = document.createElement('a');
       link.className = 'button button-primary';
       link.href = lmsUrl;
@@ -2134,6 +2138,7 @@
       gradingArea.append(link);
     } else if (legacyTask) {
       gradingArea.className = 'writing-grading-status';
+      gradingArea.dataset.writingResultAction = 'true';
       const button = document.createElement('button');
       button.className = 'button button-secondary';
       button.type = 'button';
@@ -2995,21 +3000,15 @@
     else if(response[skill+'StartedAt'])setStage(skill);
     else showSectionReady(skill);
     if(examJournal)offline.setJournal(examJournal);
+    offline.addEventListener('change', () => {
+      const { notice } = elements;
+      if (!notice.hidden && notice.hasAttribute('data-offline-status') && notice.textContent !== offline.message) {
+        notice.textContent = offline.message;
+      }
+    });
     offline.mount({snapshot:currentSnapshot,host:document.querySelector('.page-shell')});
-    const title=elements.resultReadyView.querySelector('h2');
-    const help=elements.resultReadyView.querySelector('p:last-of-type');
-    const updateResultTitle=()=>{
-      if(!title)return;
-      const blank=Object.values(offline.record.receipts).some(receipt=>receipt.kind==='seal'&&receipt.section==='writing'&&receipt.status==='accepted'&&receipt.writingBlank);
-      const label=blank?'Đã nộp · Bài trắng':'Bài làm đã khóa trên thiết bị';
-      if(title.textContent!==label)title.textContent=label;
-      const message=offline.pending?'Bài đã lưu trên thiết bị và đang chờ máy chủ xác nhận.'
-        :blank?'Máy chủ đã nhận đoạn văn để trống.'
-        :paperMini?'Mở kết quả Listening và Reading khi có mạng.'
-        :'Mở kết quả để xem điểm Listening, Reading và Link LMS khi bài chữa sẵn sàng.';
-      if(help&&help.textContent!==message)help.textContent=message;
-    };
-    offline.addEventListener('change',updateResultTitle);updateResultTitle();
+    offline.mountListeningSavedCard(elements.listeningSavedView);
+    offline.mountResultCard(elements.resultReadyView,{showBlankWriting:!paperMini});
     saveSession();window.K56_MINI_APP_READY=true;
   }
 

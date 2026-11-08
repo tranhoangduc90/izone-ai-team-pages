@@ -47,7 +47,7 @@
     }
     window.TERM_TEST_CONTENT = Object.freeze(window.K56_TERM_TEST_CONTENT);
     Promise.resolve()
-      .then(() => loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v1&miniAudio=20261108-v1'))
+      .then(() => loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v1&miniAudio=20261108-v1&offlineNotice=20261108-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&miniAudio=20261108-v1'))
       .then(() => loadScript('enhance.js?offline=mini-20261107-v1&v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&miniAudio=20261108-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
@@ -831,7 +831,7 @@
     });
     previewAudio.remove();
     revokePreview();
-    await loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v3&miniAudio=20261108-v1');
+    await loadScript('../k56-mini-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&offline=mini-20261107-v3&miniAudio=20261108-v1&offlineNotice=20261108-v1');
     if(miniOffline?.active){
       const began=performance.now();
       while(!window.K56_MINI_APP_READY){
@@ -858,7 +858,7 @@
     await enterExam({...prepared,...started},audio);
     if (!runtime.playerReady) throw new Error('Bộ điều khiển audio chưa sẵn sàng. Bài được giữ.');
     if (!runtime.record.sections.listening.sealed && !runtime.record.player.ended && !runtime.record.player.held) {
-      try { await audio.play(); } catch { document.querySelector('.cbt-audio-play')?.removeAttribute('hidden'); }
+      try { await audio.play(); } catch { window.K56_LISTENING_AUDIO?.playBlocked(); }
     } else if(runtime.record.player.ended&&!runtime.record.sections.listening.sealed) {
       const form=document.getElementById('listeningView'),submit=document.createElement('button');submit.type='submit';submit.hidden=true;submit.dataset.autoSubmit='true';form.append(submit);form.requestSubmit(submit);
     }
