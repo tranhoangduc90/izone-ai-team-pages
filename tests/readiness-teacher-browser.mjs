@@ -36,8 +36,8 @@ test('Làm quen GV: đọc nháp và thiết bị, đúng lượt/A–B/reload, 
   return route.fulfill({status:401,json:{ok:false,error:'FIXTURE_NO_STUDENT_OPEN',message:'Bộ thử không mở phiên học viên.'}});
  });
  await page.goto(server.base+'term-tests/lam-quen-k67/index.html?class=IC2304');
- const entry=page.locator('[data-teacher-entry]');await entry.waitFor();const href=await entry.getAttribute('href');assert.equal(new URL(href).pathname,'/term-tests/lam-quen-k67/teacher.html');
- await page.goto(href);await page.getByRole('button',{name:'Xem bản đã lưu →'}).first().click();await page.getByText('Bản Writing A mới',{exact:true}).waitFor();
+ assert.equal(await page.locator('[data-teacher-entry], .test-teacher-entry').count(),0);
+ await page.goto(server.base+'term-tests/lam-quen-k67/teacher.html?class=IC2304');await page.getByRole('button',{name:'Xem bản đã lưu →'}).first().click();await page.getByText('Bản Writing A mới',{exact:true}).waitFor();
  assert.equal(googleLoads,0);assert.match(await page.locator('#detail').innerText(),/Kết nối hệ thống: Cần kiểm tra/);
  await page.getByLabel('Lượt làm quen').selectOption('a'.repeat(64));await page.getByText('Bản Writing A cũ',{exact:true}).waitFor();
  await page.reload();await page.getByText('Bản Writing A cũ',{exact:true}).waitFor();
