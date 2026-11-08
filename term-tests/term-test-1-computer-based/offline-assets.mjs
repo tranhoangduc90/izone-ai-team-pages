@@ -204,9 +204,9 @@ export const ASSET_HASHES={
   "../term-test-2-computer-based/bootstrap-terms-cbt.js": "36eb72a92c66e6c16d245a3aee9f981f9bd0462d50488ccbbc36a61c199cb1fa",
   "../term-test-2-computer-based/enhance-terms-cbt.js": "a834b59dbff2dd946755f80dd0aa16cbebd87027da5924800f68e11c137ff244",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
-  "../term-test-2-computer-based/journey-ui.css": "e5b035243a7888d1d28e9a4fa399ad9352dbc961365fac8f2bea873dfe0575d5",
+  "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index.html": "c25903a265efd192752db92a0ceb03485ce202d02bc9a9aff2b93bc69ea7b671",
+  "index.html": "a3731c7d1b8726ed854df2a2f310221f1477524f319996a31ac60319e164e733",
   "offline-worker.js": "0dadfe352bd918b4a941195cd3e6c0aa7fb4b4d99833d6b8a5b51a29f79b1db9"
 };
-export const ASSET_BUILD_ID="325b802b2e7fd9d3769ef39dbb5919973c5ec138d37d0a0489680f7093861151";
+export const ASSET_BUILD_ID="2ac6a7a1dbf25f8b15a262c612c0ff6057db54656aa8cdae8df808e061d86b77";

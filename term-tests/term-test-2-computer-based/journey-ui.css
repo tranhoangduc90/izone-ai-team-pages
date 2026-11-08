@@ -8,11 +8,11 @@
   margin-inline-start: 5px;
 }
 
-.design67[data-k67-design="mini-test-lesson-5"] #listeningView #miniJourneyPlayer.k67-reviewing .cbt-audio-status {
+.design67 #listeningView #miniJourneyPlayer.k67-reviewing .cbt-audio-status {
   max-width: 91px;
 }
 
-.design67 #miniJourneyPlayer:has(.cbt-audio-play:not([hidden])) .cbt-audio-status {
+.design67 #miniJourneyPlayer:is(.k67-reviewing, :has(.cbt-audio-play:not([hidden]))) .cbt-audio-status {
   white-space: normal;
 }
 
