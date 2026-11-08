@@ -136,7 +136,11 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       return;
     }
     if(mode==='lis_first')await page.locator('#bootstrapPreview').click({timeout:50_000});
-    await page.getByRole('button',{name:term?'Bắt đầu Term Test '+(term1?'1':'2'):'Bắt đầu bài Mini K67',exact:true}).click({timeout:50_000});
+    const startName = term ? `Bắt đầu Term Test ${term1 ? 1 : 2}` : 'Bắt đầu bài Mini K67';
+    const confirmedStartName = rescueClass ? 'Bắt đầu thi Listening' : 'Âm thanh đã vừa tai Bắt đầu thi';
+    await page.getByRole('button',{
+      name: term && mode === 'lis_first' ? confirmedStartName : startName, exact:true,
+    }).click({timeout:50_000});
     log('started');
     await page.getByRole('button',{name:'Tải bài làm về máy'}).waitFor();
     if(eofJournal){

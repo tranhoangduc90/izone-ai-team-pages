@@ -1,0 +1,107 @@
+/* Điều khiển bổ sung của Term K67 thi máy giữ hình học phần đầu của mẫu. */
+.design67 .topbar .cbt-journey-sync:empty,
+.design67 .cbt-journey-download-short {
+  display: none;
+}
+
+.design67 #miniJourneyPlayer :is(.k67-cache-status, .cbt-audio-incident) {
+  margin-inline-start: 5px;
+}
+
+.design67 #listeningView #miniJourneyPlayer.k67-reviewing .cbt-audio-status {
+  max-width: 91px;
+}
+
+.design67 #miniJourneyPlayer:is(.k67-reviewing, :has(.cbt-audio-play:not([hidden]))) .cbt-audio-status {
+  white-space: normal;
+}
+
+#miniJourneyRecovery {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#miniJourneyRecovery > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .design67 .topbar .cbt-journey-sync {
+    max-inline-size: 16ch;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .design67 .topbar .cbt-journey-download {
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .design67 .topbar .cbt-journey-download-full {
+    display: none;
+  }
+
+  .design67 .topbar .cbt-journey-download-short {
+    display: inline;
+  }
+}
+
+@media (min-width: 1201px) {
+  .design67:is([data-k67-design="term-test-1"], [data-k67-design="term-test-2"]) #readingSaveStatus:not([data-status]) {
+    flex: 0 0 115px;
+    max-inline-size: 115px;
+  }
+}
+
+@media (max-width: 620px) {
+  #miniJourneyRecovery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Dòng xác nhận khi mới mở Reading giữ vị trí nút Nộp như mẫu. */
+  .design67:is([data-k67-design="term-test-1"], [data-k67-design="term-test-2"]) #readingSaveStatus:not([data-status]) {
+    flex: 0 0 150px;
+    max-inline-size: 150px;
+    text-align: end;
+  }
+
+  .design67.cbt-mode .topbar .cbt-identity-panel:has(.cbt-journey-download) {
+    flex-wrap: nowrap;
+  }
+
+  .design67 .cbt-identity-panel:has(.cbt-journey-download) .identity-copy {
+    flex-shrink: 0;
+  }
+
+  .design67 .topbar .cbt-journey-sync {
+    flex: 0 0 14.5ch;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .design67 .cbt-identity-panel:has(.cbt-journey-download) .cbt-student-select {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: end;
+  }
+
+  .design67 .cbt-identity-panel:has(.cbt-journey-download) .cbt-student-select select {
+    max-width: min(205px, 100%);
+    padding-inline-end: 12px;
+  }
+}
+
+@media (max-width: 350px) {
+  .design67.cbt-mode .topbar .cbt-identity-panel:has(.cbt-journey-download) {
+    flex-wrap: wrap;
+  }
+
+  .design67 .topbar .cbt-journey-sync {
+    order: 1;
+    flex-basis: 100%;
+    max-inline-size: none;
+  }
+}
