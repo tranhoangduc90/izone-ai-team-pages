@@ -195,7 +195,7 @@ export const ASSET_HASHES={
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-2-computer-based/audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
   "../term-test-2-computer-based/bootstrap.js": "7d9b21ac9f3d86072fd53ab24ffacfbf3519ae7f64c0d5d3240b451cb7fd2841",
-  "../term-test-2-computer-based/enhance.js": "1c0ef8c64e70dc032d3290a3bbcd210a7432b83e468521cbb4b4a4d258d67b17",
+  "../term-test-2-computer-based/enhance.js": "768cff6790937d272424e384759c7d1f723f615736e4a22efbc5539909697e72",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
   "index.html": "bdb081347344f3d368820b93d6aabfef6d1aa08ba277b47db7abec07a2e963d5",
@@ -203,4 +203,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "180f1ae141f5fe675cd4a161cae972053351fa9b98219ca2c3b72dc31f59da36",
   "resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f"
 };
-export const ASSET_BUILD_ID="83fc0967af8c9921fc7d4e319a295e2b25dc3644278f4cf0577a70ba62be6614";
+export const ASSET_BUILD_ID="9269b4f23ee28ef0de390ff4928320c9133e90186f7eadad97c36addb7c9f479";

@@ -40,6 +40,7 @@ export const ASSETS=[
   "../k67-shared/config.js",
   "../k67-shared/listening-controller.js",
   "../k67-shared/listening-eof.mjs",
+  "../k67-shared/offline-journey-ui.mjs",
   "../k67-shared/public-audio.js",
   "../mini-test-lesson-5-computer-based/journey-retake.mjs",
   "../mini-test-lesson-5-computer-based/journey.mjs",
@@ -64,7 +65,8 @@ export const ASSETS=[
   "../term-test-2-computer-based/styles.css",
   "index.html",
   "offline-worker.js",
-  "retake-config.js"
+  "retake-config.js",
+  "retake-ui.css"
 ];
 export const ASSET_HASHES={
   "../../shared/audio/catalog.mjs": "90816532d8a6d9f7ea1319c2a20f890bac5aba260616d4d0ddb64178e16f0dee",
@@ -107,12 +109,13 @@ export const ASSET_HASHES={
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/listening-controller.js": "c8fdd10275dd2a8a35dd98c67c325a0bcc74fed8eb13add47f891106d00d1f6c",
   "../k67-shared/listening-eof.mjs": "b411d6b8cd0c79882c5d6a917a9d5bc7b6f4449589fdcbeba1400880296c42b5",
+  "../k67-shared/offline-journey-ui.mjs": "d82dbcca26109e2e051ffe413fd7fb5bee404528dacf020a76d7a5017fe7e804",
   "../k67-shared/public-audio.js": "9276d58ce2fe43c10b283c4bde9f329562c61d792f591fed35044ebe34fddf16",
-  "../mini-test-lesson-5-computer-based/journey-retake.mjs": "3fea335f39ed9b671e916e093907d41d5370f7f9a579ecda62f5b8dcc9bde0c2",
+  "../mini-test-lesson-5-computer-based/journey-retake.mjs": "680c833dacfb2af5283f47d04c9b4969c63f267ed867e5ca595ae6c6b5717ab0",
   "../mini-test-lesson-5-computer-based/journey.mjs": "425d23a1a29b66abc6f59ee609e6852aa6b0bfa0edc55542176ae691b18fdf77",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "1cf42cff36f54bb0ae4cfe8da2de42a9dd79e2b5cec3b2641b9fc4e9441c84f7",
-  "../shared/app-retake.js": "a2b01727b2428377227d2fd33d7243e10cd3c9b4f0e21a41363c0ab688687178",
+  "../shared/app-retake.js": "74d828f440fcb78113d6044b37afb2810f245f8b1dd20e7eabd796e21c22cb96",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
@@ -125,12 +128,13 @@ export const ASSET_HASHES={
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../term-test-1/test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b",
   "../term-test-2-computer-based/audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
-  "../term-test-2-computer-based/bootstrap-retake.js": "68ac4ab80e6cb00144cd3622b3aca028d51996533ed5429d1ca9b03c68bf4de9",
-  "../term-test-2-computer-based/enhance.js": "1c0ef8c64e70dc032d3290a3bbcd210a7432b83e468521cbb4b4a4d258d67b17",
+  "../term-test-2-computer-based/bootstrap-retake.js": "238227d7c919a4bdea5e1c99c5d9ab008cdf1e63e31c7c118b52c92b86377fa8",
+  "../term-test-2-computer-based/enhance.js": "768cff6790937d272424e384759c7d1f723f615736e4a22efbc5539909697e72",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index.html": "6fdd35f4edbfca3b465acca50fac23c14034f633a5d68c05c72080ae7eb3371f",
+  "index.html": "5cfda2844b93612ae9b039fdf616d1bbb4cf9214dc0a7aadcd9bf5089e6d55ed",
   "offline-worker.js": "5781a83736f8e18762b3aa2e02bb45135fe0283e9f4566cd8fc3e1d6a35ce375",
-  "retake-config.js": "e9a2a1225733362235d9368c109a199ec00ee97c71bde8ce04893c988fcbef2a"
+  "retake-config.js": "e9a2a1225733362235d9368c109a199ec00ee97c71bde8ce04893c988fcbef2a",
+  "retake-ui.css": "657f632c6c1159c4385011b6bc1ad21b45b35502f8cc725d0fd8b7d220c07c54"
 };
-export const ASSET_BUILD_ID="6a6128987f5d7489867d41891f5aadb44a26dd2e0eb7b747bc134ee67bca5965";
+export const ASSET_BUILD_ID="c0d3e000e180de55e07b890eba4f9a55cf360de29a764e9b9d9ea2b92b421ff5";
