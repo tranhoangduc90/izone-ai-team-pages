@@ -4,6 +4,7 @@
   const contentConfig = window.TERM_TEST_CONTENT;
   const testConfig = window.TERM_TEST_CONFIG;
   const appConfig = window.TERM_TEST_APP_CONFIG;
+  const readingFallback = window.K56_TERM1_OFFLINE?.skill === 'reading';
   const query = new URLSearchParams(window.location.search);
   const classCode = (query.get('class') || '').trim().toUpperCase();
   const isDemo = ['complete', 'listening-only', 'writing-prep', 'writing'].includes(query.get('demo'));
@@ -1605,10 +1606,10 @@
 
   const listeningInstructions = document.getElementById('listeningInstructions');
   const readingInstructions = document.getElementById('readingInstructions');
-  if (listeningInstructions) replaceInstructions(listeningInstructions, contentConfig.listening.instructions);
+  if (listeningInstructions && !readingFallback) replaceInstructions(listeningInstructions, contentConfig.listening.instructions);
   if (readingInstructions) replaceInstructions(readingInstructions, contentConfig.reading.instructions);
 
-  const listeningForm = enhanceForm('listening');
+  const listeningForm = readingFallback ? null : enhanceForm('listening');
   const readingForm = enhanceForm('reading');
   if (!isDemo) {
     if (!window.TERM_TEST_BOOTSTRAP?.skipListeningAudio) {

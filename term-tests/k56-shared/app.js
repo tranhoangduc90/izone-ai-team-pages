@@ -6,8 +6,9 @@
   const root = document.getElementById('app');
   const query = new URLSearchParams(window.location.search);
   const offline=window.K56_TERM1_OFFLINE?.active?window.K56_TERM1_OFFLINE:null;
+  const readingFallback=offline?.skill==='reading';
   const classCode = (query.get('class') || '').trim().toUpperCase();
-  const requestedDemo = query.get('demo') || '';
+  const requestedDemo = readingFallback ? '' : query.get('demo') || '';
   const writingConfig = window.TERM_TEST_CONTENT?.writing || null;
   const demoMode = window.TERM_TEST_CONTENT?.variant === 'semantic-html'
     && ['complete', 'listening-only', 'writing-prep', 'writing', 'exam'].includes(requestedDemo)
@@ -274,7 +275,9 @@
     saveSession();
   });
 
-  const progressMarkup = writingConfig
+  const progressMarkup = readingFallback
+    ? `<div class="progress-step" data-progress="reading">1. Reading</div><div class="progress-step" data-progress="result">2. Kết quả</div>`
+    : writingConfig
     ? `<div class="progress-step" data-progress="listening">1. Listening</div>
         <div class="progress-step" data-progress="reading">2. Reading</div>
         <div class="progress-step" data-progress="writing">3. Writing</div>
@@ -333,7 +336,7 @@
     <header class="topbar">
       <p class="eyebrow">IZONE · IELTS 6–7</p>
       <h1>${testConfig.title}</h1>
-      <p>${testConfig.intro || 'Nhập đáp án từ answer sheet giấy. Listening được lưu trước, sau đó hệ thống mở Reading và chấm toàn bộ khi hoàn tất.'}</p>
+      <p>${readingFallback ? 'Reading · Bài dự phòng' : testConfig.intro || 'Nhập đáp án từ answer sheet giấy. Listening được lưu trước, sau đó hệ thống mở Reading và chấm toàn bộ khi hoàn tất.'}</p>
     </header>
     <main class="page-shell">
       <div class="progress" aria-label="Tiến độ bài test">
@@ -406,7 +409,7 @@
         <div class="transition-icon">✓</div>
         <p class="eyebrow">${writingConfig ? 'Đã nộp Writing' : 'Đã chấm xong'}</p>
         <h2>Kết quả của bạn đã sẵn sàng</h2>
-        <p>${writingConfig
+        <p>${readingFallback ? 'Reading đã được lưu, chấm và phân tích theo từng dạng bài.' : writingConfig
           ? 'Listening và Reading đã được chấm, phân tích. Điểm Writing sẽ hiển thị khi bài chấm sẵn sàng.'
           : 'Cả Listening và Reading đã được lưu, chấm và phân tích theo từng dạng bài.'}</p>
         <button class="button button-primary" id="viewResult" type="button">Xem kết quả</button>
@@ -660,7 +663,8 @@
       : stage === 'reading' ? 'reading'
         : stage === 'writing-prep' || stage === 'writing' ? 'writing'
           : stage === 'result-ready' || stage === 'result' ? 'result' : '';
-    const order = [...window.K56_EXAM_ORDER.skills(state.examMode || window.K56_EXAM_ORDER.requested()), ...(writingConfig ? ['writing'] : []), 'result'];
+    const order = readingFallback ? ['reading', 'result']
+      : [...window.K56_EXAM_ORDER.skills(state.examMode || window.K56_EXAM_ORDER.requested()), ...(writingConfig ? ['writing'] : []), 'result'];
     for (const [index, skill] of order.entries()) {
       const step = Array.from(progressSteps).find(item => item.dataset.progress === skill);
       step.textContent = `${index + 1}. ${skill === 'result' ? 'Kết quả' : skill[0].toUpperCase() + skill.slice(1)}`;
@@ -2415,11 +2419,11 @@
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
-    elements.summaryGrid.replaceChildren(
-      addSummaryCard('Listening', `${result.listening.correct}/${result.listening.total} câu đúng`),
-      addSummaryCard('Reading', hasReading ? `${result.reading.correct}/${result.reading.total} câu đúng` : 'Chưa nộp')
-    );
-    elements.resultStatus.textContent = hasReading
+    const skills = readingFallback ? [['Reading', result.reading]] : [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const summary = skills.map(([name, score]) => addSummaryCard(name, `${score.correct}/${score.total} câu đúng`));
+    if (!readingFallback && !hasReading) summary.push(addSummaryCard('Reading', 'Chưa nộp'));
+    elements.summaryGrid.replaceChildren(...summary);
+    elements.resultStatus.textContent = readingFallback ? 'Phân tích dựa trên bài Reading đã nộp.' : hasReading
       ? payload.writing?.grading?.ready
         ? 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.'
         : 'Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau'
@@ -2430,7 +2434,6 @@
     const identity = JSON.stringify([payload.className, payload.studentRef || state.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);
     const previousBlocks = state.resultDetailsIdentity === identity
       ? Array.from(elements.questionDetails.children) : [];
-    const skills = [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
     const detailBlocks = skills.map(([title, skill]) => {
       const fingerprint = JSON.stringify(skill.details || []);
       const previous = previousBlocks.find(block => block.dataset.skill === title);
@@ -2446,8 +2449,7 @@
       elements.questionDetails.replaceChildren(...detailBlocks);
     }
     state.resultDetailsIdentity = identity;
-    const performanceSections = [renderSkillPerformance('Listening', result.listening)];
-    if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
+    const performanceSections = skills.map(([name, score]) => renderSkillPerformance(name, score));
     elements.skillPerformanceSections.replaceChildren(...performanceSections);
     if (payload.writing?.grading?.ready) stopWritingGradingPolling();
   }
@@ -2498,6 +2500,12 @@
       return;
     }
     try {
+      if (readingFallback) {
+        renderResult(await offline.readResult());
+        hideNotice();
+        setStage('result');
+        return;
+      }
       const payload = await apiRequest('/api/term-tests/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2790,7 +2798,7 @@
         const portalMessage = portalNotice(response.portalSyncStatus, true);
         showNotice(response.localOnly?offline.message:`${portalMessage} Kết quả sẽ mở sau khi bạn nộp Writing.`, response.localOnly?'':['unknown', 'processing', 'pending', 'queued', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
       } else {
-        showNotice(portalNotice(response.portalSyncStatus, true), ['unknown', 'processing', 'pending', 'queued', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
+        showNotice(readingFallback ? offline.message : portalNotice(response.portalSyncStatus, true), readingFallback || ['unknown', 'processing', 'pending', 'queued', 'failed_response'].includes(response.portalSyncStatus) ? '' : 'success');
         setStage('result-ready');
         if (automatic) await loadResult(elements.viewResult);
       }
@@ -3290,7 +3298,7 @@
     });
     offline.mount({snapshot:()=>{
       for(const skill of ['listening','reading'])if(!state[skill+'Submitted'])state.drafts[skill]=collectAnswers(elements[skill+'Questions']);
-      if(!state.writingSubmitted)for(const editor of elements.writingView.querySelectorAll('[data-writing-task]'))state.drafts.writing[editor.dataset.writingTask]=editor.value;
+      if(!state.writingSubmitted)for(const editor of elements.writingView?.querySelectorAll('[data-writing-task]') || [])state.drafts.writing[editor.dataset.writingTask]=editor.value;
       return structuredClone(state);
     },host:document.querySelector('.page-shell')});
     offline.mountListeningSavedCard(elements.listeningSavedView);
