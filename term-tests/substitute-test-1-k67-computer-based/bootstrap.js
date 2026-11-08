@@ -30,7 +30,7 @@
     window.TERM_TEST_CONTENT = Object.freeze(window.K67_SUBSTITUTE_TEST_1_CONTENT);
     Promise.resolve()
       .then(() => loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&order=20261107-v1&offline=20261107-v2&eofLog=20261108-v1&uiRestore=20261108-v2'))
-      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1&eofLog=20261108-v1'))
+      .then(() => loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1&eofLog=20261108-v1&playLabel=20261108-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -812,7 +812,7 @@
     previewAudio.remove();
     revokePreview();
     await loadScript('../substitute-k67-shared/app.js?v=20261022-listening-recovery-v1&journal=20261024-startup-v2&ej=20261024-production-r1&recovery=20261026-v1&resilience=20261027-v1&status=20261103-t5r1&diagnostics=20261105-v2&sub_trace=20261105-v1&writingSubmit=20261105-v1&blankWriting=20261107-v1&order=20261107-v1&offline=20261107-v2&eofLog=20261108-v1&uiRestore=20261108-v2');
-    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1&eofLog=20261108-v1');
+    await loadScript('enhance.js?v=20261022-listening-recovery-v1&recovery=20261026-v1&resilience=20261027-v1&examGuard=20261028-v1&workspace=20261031-v1&eof=20261107-v1&order=20261107-v1&offlineUi=20261107-v1&eofLog=20261108-v1&playLabel=20261108-v1');
     await loadScript('annotations.js?v=20261018-identity-v1&recovery=20261026-v1');
     if(state.examSessionId&&audioElement&&(state.audioEndedAt||audioElement.ended))window.SUBSTITUTE_EXAM?.ended(audioElement,state.audioEndedAt);
   }
@@ -885,6 +885,14 @@
       && !state.attemptToken && !legacyListeningResume;
     if (!encryptedAudio || preparing) return;
     preparing = true;
+    let blockedPlayAt = null;
+    async function playOfficialAudio(audio) {
+      try { await audio.play(); }
+      catch (error) {
+        if (error?.name === 'NotAllowedError') blockedPlayAt = audio.currentTime;
+        throw error;
+      }
+    }
     elements.bootstrapStart.disabled = true;
     elements.bootstrapStart.textContent = 'Đang mở đề và audio...';
     previewAudio.pause();
@@ -927,7 +935,7 @@
           Number(savedUi?.audio?.time)||0);
         officialAudio.currentTime = state.audioEndedAt ? officialAudio.duration
           : Math.min(Math.max(0, heardSeconds), Math.max(0, officialAudio.duration - 0.05));
-        if (!state.audioEndedAt) await officialAudio.play();
+        if (!state.audioEndedAt) await playOfficialAudio(officialAudio);
         const serverNow = new Date();
         const listeningStartedAt = Number.isFinite(existingStart) ? new Date(existingStart) : serverNow;
         const existingDeadline = Date.parse(state.listeningDeadlineAt || '');
@@ -978,7 +986,7 @@
         officialAudio.load();
       });
       officialAudio.currentTime = Math.min(resumeAt, Math.max(0, officialAudio.duration - 0.05));
-      if (resumeAt < officialAudio.duration) await officialAudio.play();
+      if (resumeAt < officialAudio.duration) await playOfficialAudio(officialAudio);
       saveState({
         listeningStartedAt: started.listeningStartedAt,
         listeningDeadlineAt: started.listeningDeadlineAt,
@@ -989,11 +997,17 @@
       legacyListeningResume = false;
       await enterExam(started, officialAudio);
     } catch (error) {
-      showNotice(`Chưa thể bắt đầu: ${error.userMessage || error.message}. Đề vẫn đang khóa.`, true);
-      elements.bootstrapStart.textContent = state.listeningStartedAt ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
+      if (blockedPlayAt !== null) {
+        const label = blockedPlayAt > 0 ? 'Tiếp tục audio' : 'Phát audio';
+        showNotice(`Trình duyệt chưa cho phát. Hãy bấm “${label}”.`, true);
+        elements.bootstrapStart.textContent = label;
+      } else {
+        showNotice(`Chưa thể bắt đầu: ${error.userMessage || error.message}. Đề vẫn đang khóa.`, true);
+        elements.bootstrapStart.textContent = state.listeningStartedAt ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
+      }
       elements.bootstrapStart.disabled = false;
       window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart,
-        previewHeard && !state.listeningStartedAt && !legacyListeningResume);
+        blockedPlayAt === null && previewHeard && !state.listeningStartedAt && !legacyListeningResume);
     } finally {
       preparing = false;
     }
