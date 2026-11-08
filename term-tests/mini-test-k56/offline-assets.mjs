@@ -247,7 +247,7 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/app.js": "ac6c9207775d9dcb4877f06f5da6b3c706a9b92ba26ac253eff17f10f66b513f",
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
-  "../k56-mini-shared/app.js": "5fe76bb3225a71782bef70591d76dc8d3908f7adfdae9ecea7fd47d3dc329bde",
+  "../k56-mini-shared/app.js": "e284711ffceda1b4f10e86a2a6710c2c8b2fb6146c3b19a10307b3b7d5dc6cce",
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
@@ -303,4 +303,4 @@ export const ASSET_HASHES={
   "offline.mjs": "eaad6811b24c1e5ccf4ccf46489e53317fee901864635e3269a8cae9cd86714b",
   "test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca"
 };
-export const ASSET_BUILD_ID="126d920ee25965405ce0e2182d4b9452db137b49b006573ff231c961b3460637";
+export const ASSET_BUILD_ID="2c842af986d1117fbad6bc1975642f0ff45637de7c2cab908494e5b99bcd5143";

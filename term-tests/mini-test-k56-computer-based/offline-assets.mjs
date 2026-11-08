@@ -262,7 +262,7 @@ export const ASSET_HASHES={
   "../k56-exam-integrity/styles.css": "a19764edbec0b712c585402eec5f36b78570e44004f8d73f04df09f88058064a",
   "../k56-exam-order.js": "a697bcd6f0e87725b099a22366fec29ab765c0290bc3875377333eb089490731",
   "../k56-listening-offline-worker.js": "127318a193ed5689f1f42cc4c841582c1af4fcbe695aea9a61341cd526a10e0e",
-  "../k56-mini-shared/app.js": "5fe76bb3225a71782bef70591d76dc8d3908f7adfdae9ecea7fd47d3dc329bde",
+  "../k56-mini-shared/app.js": "e284711ffceda1b4f10e86a2a6710c2c8b2fb6146c3b19a10307b3b7d5dc6cce",
   "../k56-mini-shared/config.js": "62ac8509d583c6c696ce746ed0e169655a732ea0c6d11ac740629c644b76a58f",
   "../k56-mini-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../k56-offline-shared/profiles.mjs": "2f4502c1e2cc63f191a33f25173586db33bb4dfd2f0de9b0a69b82443125a59c",
@@ -331,4 +331,4 @@ export const ASSET_HASHES={
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="0d009fbaa71227d508c774eba5bf8c00f3a6de0ec12b3e1e6140fbe4eed8a3d3";
+export const ASSET_BUILD_ID="5c0fe738ac1ec80562c391facf2575248b153f1c7867a9a613609ed4e17b19ce";

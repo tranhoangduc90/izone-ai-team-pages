@@ -1074,7 +1074,8 @@
     submitted: () => Boolean(state.writingSubmitted),
     grading: () => state.result?.writing?.grading || state.testGrades?.writing?.grading,
     notify: (message,kind) => showNotice(offline?offline.message:message,offline?'':kind), check: () => refreshWritingGrading(),
-    hosts: () => [elements.writingView, elements.writingSubmissionResult],
+    hosts: () => [elements.writingView,
+      elements.writingSubmissionResult?.querySelector('[data-writing-result-action]') ? null : elements.writingSubmissionResult],
     storage: () => { try { return window.SUBSTITUTE_STATE?.storages?.() || [window.sessionStorage,window.localStorage]; } catch { return []; } }
   });
 
@@ -2127,6 +2128,7 @@
     const gradingArea = document.createElement('div');
     if (lmsUrl) {
       gradingArea.className = 'writing-grading-status';
+      gradingArea.dataset.writingResultAction = 'true';
       const link = document.createElement('a');
       link.className = 'button button-primary';
       link.href = lmsUrl;
@@ -2136,6 +2138,7 @@
       gradingArea.append(link);
     } else if (legacyTask) {
       gradingArea.className = 'writing-grading-status';
+      gradingArea.dataset.writingResultAction = 'true';
       const button = document.createElement('button');
       button.className = 'button button-secondary';
       button.type = 'button';
