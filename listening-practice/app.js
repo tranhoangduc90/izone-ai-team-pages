@@ -234,12 +234,12 @@ async function request(path,body,teacher=false,keepalive=false,{signal}={}){
 function serial(fn){const next=queue.then(fn);queue=next.catch(()=>{});return next;}
 function setActivating(value){activating=value;document.querySelectorAll('[data-action="request-reset"],[data-action="request-submit"]').forEach(button=>button.disabled=value||!isOnline());}
 async function sendPulse(){
- if(route!=='exercise'||current()?.status!=='running'||busy||pulsePending||activating)return;
- pulsePending=true;lastPulse=performance.now();
+ if(route!=='exercise'||current()?.status!=='running'||busy||pulsePending||activating||bufferingCheck)return;
+ pulsePending=true;
  clearTimeout(debounce);
  return serial(async()=>{
-  if(route!=='exercise'||current()?.status!=='running')return;
-  consumeTime();rememberScroll();persist(false);
+  if(route!=='exercise'||current()?.status!=='running'||bufferingCheck)return;
+  lastPulse=performance.now();consumeTime();rememberScroll();persist(false);
   const id=current().id,proof=lease,draft=structuredClone(snapshot());
   try{let response=await request('/pulse'+(serverCapabilities.compactPulseAck?'?ack=compact-v1':''),{attemptId:id,lease:proof,snapshot:draft});
    if(current()?.id!==id||lease?.id!==proof.id)return;
@@ -273,7 +273,35 @@ async function perform(action,payload){
 }
 
 // Giữ tiến độ nghe và giờ rà trong lượt; tải audio qua API có kiểm chủ bài.
-function stopAudio(){playbackGeneration++;audioStarted=false;audioFetchController?.abort();audioFetchController=null;audio.pause();}
+const BUFFERING_GRACE_MS=750, BUFFERING_MIN_PROGRESS_SECONDS=.025;
+let bufferingCheck=null;
+function clearBufferingCheck(){
+ if(bufferingCheck)clearTimeout(bufferingCheck.timer);
+ bufferingCheck=null;
+}
+function isListeningPlayback(attempt){
+ return route==='exercise'&&attempt?.status==='running'&&attempt.owner===TAB&&attempt.phase==='listening'&&!audio.paused;
+}
+function onAudioWaiting(){
+ observeListeningAudio('waiting','buffering');
+ const attempt=current();
+ if(!audioStarted||seekingAudio||!isListeningPlayback(attempt))return;
+ const position=audio.currentTime;
+ // Another waiting event only starts a new window if playback actually advanced.
+ if(bufferingCheck&&position-bufferingCheck.position<BUFFERING_MIN_PROGRESS_SECONDS)return;
+ clearBufferingCheck();
+ const generation=playbackGeneration,id=attempt.id;
+ const timer=setTimeout(()=>{
+  bufferingCheck=null;
+  const latest=current();
+  if(generation!==playbackGeneration||latest?.id!==id||!isListeningPlayback(latest))return;
+  // Chrome can queue waiting and playing back-to-back even with a full buffer.
+  // Trust movement of the media timeline before pausing the attempt.
+  if(audio.currentTime-position<BUFFERING_MIN_PROGRESS_SECONDS)pause('audio-buffering');
+ },BUFFERING_GRACE_MS);
+ bufferingCheck={position,timer};
+}
+function stopAudio(){clearBufferingCheck();playbackGeneration++;audioStarted=false;audioFetchController?.abort();audioFetchController=null;audio.pause();}
 function consumeTime(){
  const a=current();if(!a||a.status!=='running'||a.owner!==TAB||!lastTick)return;
  const now=performance.now();
@@ -294,6 +322,7 @@ function updateAudioToolbar() {
   }
 
 async function startPlayback(id,proof){
+ clearBufferingCheck();
  const generation=++playbackGeneration;audioStarted=false;seekingAudio=true;
  if(journalScope)audioJournalTrace=crypto.randomUUID();
  const audioLoadStarted=performance.now();observeListeningAudio('loading',undefined,{},id);
@@ -327,9 +356,9 @@ async function startPlayback(id,proof){
  if(a.phase==='listening')document.querySelector('#audio-status').textContent='Đang nghe · tốc độ gốc';
 }
 function audioFinished(){const a=current();if(a?.status!=='running'||a.owner!==TAB||a.phase!=='listening')return;consumeTime();a.audioPosition=AUDIO_DURATION;activeMs=Math.max(activeMs,AUDIO_DURATION*1000-leaseBaseline);a.phase='review';a.reviewRemainingMs=REVIEW_TIME;lastTick=performance.now();persist(false);updateProgress();sendPulse();}
-audio.addEventListener('ended',()=>{observeListeningAudio('ended');audioFinished();});
+audio.addEventListener('ended',()=>{clearBufferingCheck();observeListeningAudio('ended');audioFinished();});
 audio.addEventListener('playing',()=>{audioStarted=true;observeListeningAudio('playing');});
-audio.addEventListener('waiting',()=>{observeListeningAudio('waiting','buffering');if(audioStarted&&current()?.status==='running')pause('audio-buffering');});
+audio.addEventListener('waiting',onAudioWaiting);
 audio.addEventListener('error',()=>{observeListeningAudio('failed','media_error');if(current()?.status==='running')pause('audio-error');});
 audio.addEventListener('volumechange',()=>observeListeningAudio(audio.paused?'paused':'playing','user'));
 document.addEventListener('input',e=>{if(e.target.id==='audio-volume')audio.volume=Number(e.target.value);});
