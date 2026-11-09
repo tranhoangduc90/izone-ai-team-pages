@@ -109,6 +109,7 @@ const thuyLayout=THUY_UI?mountThuyTeacherLayout(elements,{onMode:showThuyMode,on
   refreshAssignmentSelect();for(const dialog of [elements.draftDialog,elements.journeyDetailDialog])if(dialog.open)dialog.close();
   if(!elements.overviewPanel.hidden)void loadCourseOverview();else void loadDashboard();
 }}):null;
+document.body.classList.remove('progress-starting');
 const connectionHost=document.getElementById('teacherConnectionStatus');
 const liveUpdates=createTeacherLiveUpdates({
   read:async({assignmentId,after,force,signal})=>(await apiRequest('/teacher/assignments/'+encodeURIComponent(assignmentId)+'/live-updates?after='+after+'&force='+(force?'1':'0'),{signal})).update,

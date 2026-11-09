@@ -8,6 +8,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {createRequire} from 'node:module';
 const root=resolve(process.env.TEACHER_STARTUP_ROOT||fileURLToPath(new URL('../',import.meta.url)));
 const out=resolve(process.env.TEACHER_STARTUP_OUTPUT||'output/playwright/teacher-startup');
+const screenshots=process.env.TEACHER_STARTUP_SCREENSHOTS!=='0';
 const {chromium}=createRequire(pathToFileURL(resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')))('playwright');
 const origin='https://tranhoangduc90.github.io',prefix='/izone-ai-team-pages';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
@@ -27,10 +28,19 @@ try{
   const width=Number(process.env.TEACHER_STARTUP_WIDTH||1440);
   const context=await browser.newContext({viewport:{width,height:900}});
   const calls=[],errors=[],escaped=[];
-  await context.addInitScript(({panel})=>{
+  await context.addInitScript(({panel,id})=>{
    localStorage.setItem('izone:teacher-auto-login:v1','1');
    window.__startupFrames=[];
-   const observe=()=>{const el=document.querySelector(panel);if(el){const r=el.getBoundingClientRect();if(r.width&&r.height&&getComputedStyle(el).visibility!=='hidden')window.__startupFrames.push(performance.now());}requestAnimationFrame(observe);};
+   const visible=el=>Boolean(el?.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
+   const observe=()=>{
+    if(visible(document.querySelector(panel)))window.__startupFrames.push(performance.now());
+    if(id==='mapping'){
+     const tab=document.querySelector('.thuy-side #createTab');
+     if(visible(tab)&&tab.textContent==='Tạo phiếu')sessionStorage.setItem('startup-old-shell','1');
+     if(visible(document.querySelector('#teacherNotice'))&&document.querySelector('#teacherNotice').textContent.includes('khôi phục đăng nhập'))sessionStorage.setItem('startup-loading-visible','1');
+    }
+    requestAnimationFrame(observe);
+   };
    requestAnimationFrame(observe);
   },variant);
   await context.route('**/*',async route=>{
@@ -45,7 +55,7 @@ try{
    }
    if(u.hostname==='accounts.google.com'){googleLoads++;return route.fulfill({contentType:'text/javascript',body:gis});}
    if(u.hostname!=='ducizone.ddns.net'){escaped.push(u.origin);return route.abort();}
-   if(p.endsWith('/learning/frontend-release'))return route.fulfill({status:503,json:{ok:false,error:'FRONTEND_RELEASE_UNAVAILABLE'}});
+   if(p.endsWith('/learning/frontend-release')){await delay(250);return route.fulfill({status:503,json:{ok:false,error:'FRONTEND_RELEASE_UNAVAILABLE'}});}
    calls.push({path:p,method:req.method(),at:performance.now()});
    await delay(150);
    if(p.includes('/restore/')&&['missing','forbidden','offline'].includes(mode))return route.fulfill({status:{missing:401,forbidden:403,offline:503}[mode],json:{error:'FIXTURE_'+mode}});
@@ -67,7 +77,7 @@ try{
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   const started=performance.now();
   await page.goto(origin+prefix+variant.path);
-  if(round===0&&scenario==='active')await page.screenshot({path:resolve(out,variant.id+'-loading-'+width+'.png'),fullPage:true});
+  if(screenshots&&round===0&&scenario==='active')await page.screenshot({path:resolve(out,variant.id+'-loading-'+width+'.png'),fullPage:true});
   try{
    if(['missing','expired-product'].includes(scenario)){
     await page.getByRole('button',{name:'Google thử',exact:true}).waitFor({state:'visible',timeout:15000});
@@ -83,9 +93,15 @@ try{
   catch(error){console.log(JSON.stringify({product:variant.id,calls,errors,escaped,body:await page.locator('body').innerText()}));throw error;}
   const readyMs=Math.round(performance.now()-started),frames=await page.evaluate(()=>window.__startupFrames);
   if(scenario==='active')assert.equal(googleLoads,0,'Phiên còn hiệu lực không tải Google');
+  if(variant.id==='mapping'){
+   const startup=await page.evaluate(()=>({old:sessionStorage.getItem('startup-old-shell'),loading:sessionStorage.getItem('startup-loading-visible')}));
+   assert.equal(startup.loading,'1','Màn chờ phải hiện trong lúc tải');
+   assert.equal(startup.old,null,'Menu giảng viên cũ xuất hiện trong lúc tải');
+   assert.equal(await page.getByRole('button',{name:'Quản lý bài tập',exact:true}).isVisible(),true);
+  }
   const record={product:variant.id,scenario,width,round,readyMs,loginVisibleFrames:frames.length,restores:calls.filter(c=>c.path.includes('/restore/')).length,sessionReads:calls.filter(c=>c.path.endsWith('/auth/session')).length,requests:calls.map(c=>({path:c.path,method:c.method,startMs:Math.round(c.at-started)})),errors,escaped};
   records.push(record);
-  if(round===0)await page.screenshot({path:resolve(out,variant.id+'-'+scenario+'-'+width+'.png'),fullPage:true});
+  if(screenshots&&round===0)await page.screenshot({path:resolve(out,variant.id+'-'+scenario+'-'+width+'.png'),fullPage:true});
   await context.close();
  }
 }finally{await browser.close();}

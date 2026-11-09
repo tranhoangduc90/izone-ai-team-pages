@@ -242,14 +242,10 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();
     const row=page.getByRole('row',{name:'Xem Bài ghép tiêu đề của giảng viên'});
     await row.getByRole('button',{name:'Giao bài',exact:true}).click();
-    await sessionAt(1).selectOption('5');
-    const confirmation=dialog.getByRole('checkbox',{name:/Tôi đã kiểm tra đáp án/});
     assert.equal(await send.isEnabled(),false);
-    await confirmation.check();
     await sessionAt(1).selectOption('6');
-    assert.equal(await confirmation.isChecked(),false);
-    assert.equal(await send.isEnabled(),false);
-    await confirmation.check();
+    assert.equal(await dialog.getByRole('checkbox').count(),0);
+    assert.equal(await send.isEnabled(),true);
     const request=page.waitForRequest(req=>req.method()==='POST'&&new URL(req.url()).pathname.endsWith('/assign-to-classes'));
     await sourceDb.exec('SET ROLE learning_api');
     await send.click();
