@@ -1,8 +1,65 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { execFileSync } from 'node:child_process';
 
 process.env.K56_FIXTURE_IMPORT_ONLY = '1';
-const { fixture, wait } = await import('./term2-offline-browser.mjs');
+const { fixture, wait, activateWorkerUpdate } = await import('./term2-offline-browser.mjs');
+
+const previousPagesRevision = process.env.K56_PHASE2_PREVIOUS_PAGES_REVISION;
+for (const [product, name, key, slug, shared] of [
+  [2, 'Term 2', 'K56_TERM2_OFFLINE', 'term-test-2-k56', 'k56-test2-shared'],
+  ['mini', 'Mini', 'K56_MINI_OFFLINE', 'mini-test-k56', 'k56-mini-shared']
+]) {
+  test(`${name} K56: giữ bài khóa trên Pages cũ qua đổi cache và mất ACK`, {
+    timeout: 150000, skip: !previousPagesRevision
+  }, async () => {
+    assert.match(previousPagesRevision, /^[0-9a-f]{7,40}$/);
+    const f = await fixture('lis_first', { product, defaultAutoplay: true });
+    const p = f.page;
+    try {
+      const shell = `term-tests/${slug}-computer-based`;
+      const files = [...['bootstrap.js', 'enhance.js', 'offline.mjs', 'offline-assets.mjs'].map(name => `${shell}/${name}`),
+        `term-tests/${shared}/app.js`, 'term-tests/k56-offline-shared/runtime.mjs'];
+      for (const path of files) {
+        f.controls.assetOverrides.set('/' + path, execFileSync('git', ['show', `${previousPagesRevision}:${path}`]));
+      }
+      await p.goto(f.url);
+      await p.locator('#bootstrapStudent option[value="' + f.student + '"]').waitFor({ state: 'attached' });
+      await p.selectOption('#bootstrapStudent', f.student);
+      await p.click('#confirmIdentity');
+      await p.click('#bootstrapPreview');
+      await p.click('#bootstrapStart');
+      await p.waitForFunction(key => window[key]?.player?.currentTime > 0, key);
+      assert.equal(await p.evaluate(key => typeof window[key].interruptListening, key), 'undefined');
+      await p.locator('#listeningQuestions input[data-number]').first().fill('A');
+      f.disconnected = true;
+      await p.click('#submitListening');
+      await p.waitForFunction(key => window[key]?.record.sections.listening?.sealed, key);
+      const storedSeal = await p.evaluate(async key => {
+        const runtime = window[key];
+        const record = await runtime.store.get(runtime.key);
+        return record.operations.find(op => op.section === 'listening' && op.kind === 'seal');
+      }, key);
+      assert.ok(storedSeal?.operationId);
+      f.controls.assetOverrides.clear();
+      await activateWorkerUpdate(p);
+      await f.context.setOffline(true);
+      await p.reload({ waitUntil: 'domcontentloaded' });
+      await p.waitForFunction(key => typeof window[key]?.interruptListening === 'function' && window[key].active, key);
+      const pending = await p.evaluate(key => window[key].record.operations.find(op => op.section === 'listening' && op.kind === 'seal'), key);
+      assert.deepEqual(pending, storedSeal);
+      f.controls.loseAck = true;
+      f.disconnected = false;
+      await f.context.setOffline(false);
+      await p.waitForFunction(key => window[key]?.pending === 0, key);
+      assert.equal(f.controls.ackLost, true);
+      const seals = [...f.receipts.values()].filter(receipt => receipt.section === 'listening' && receipt.kind === 'seal');
+      assert.equal(seals.length, 1);
+      assert.equal(seals[0].operationId, storedSeal.operationId);
+      assert.deepEqual(f.errors, []);
+    } finally { await f.close(); }
+  });
+}
 
 for (const [product, name, runtimeKey] of [[1, 'Term 1', 'K56_TERM1_OFFLINE'], [2, 'Term 2', 'K56_TERM2_OFFLINE'], ['mini', 'Mini', 'K56_MINI_OFFLINE']]) {
   for (const mode of ['lis_first', 'read_first']) {
