@@ -1082,7 +1082,10 @@
         saveUiState();
         return;
       }
-      if(!continuity)uiState.audio.time = audio.duration || uiState.audio.time;
+      if(continuity)window.dispatchEvent(new CustomEvent('substitute:listening-observed',{
+        detail:{phase:'ended',positionSeconds:audio.currentTime}
+      }));
+      else uiState.audio.time = audio.duration || uiState.audio.time;
       window.SUBSTITUTE_EXAM?.ended(audio, undefined, protectedBootstrap);
       cannotHear.hidden=true;
       resumeButton.hidden = true;

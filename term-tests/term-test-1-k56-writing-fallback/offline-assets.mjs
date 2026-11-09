@@ -83,10 +83,10 @@ export const ASSET_HASHES={
   "../term-test-1-k56-computer-based/enhance.js": "54bb7a2728aa187eb8c480544c39d7be90eb6532faf880ef1378ffa67ec84fb3",
   "../term-test-1-k56-computer-based/layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "../term-test-1-k56-computer-based/styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb",
-  "../term-test-1-k56-reading-fallback/bootstrap.mjs": "4f96151b3a99e99a979ef496d878949da45b89b185fe1c933e9045127c5ce8b5",
+  "../term-test-1-k56-reading-fallback/bootstrap.mjs": "1d7d227d7133ea3b8ada7aadef9fa5f3c619c2c4ddcec9cec40f3fe784f3c46f",
   "../term-test-1-k56-reading-fallback/reading-offline.mjs": "b2430abe4feeb63d9a63c7271f077b6cc1b94f29cb8633ed7628bcf88a25b184",
   "../term-test-1-k56/test-config.js": "fdfa91aa74cda341a1965c418f24b2a7a7065c547d0fbad4ae581c8ec1844bc2",
-  "index.html": "cfcdb24f26d6239ab10df52ab57df78297b88bbbe3bd684e1b82e272bcfbdf0a",
-  "offline-worker.js": "c27b164ffcb9e6af19009725a03b9b374e22d6d77ecf3e577ee67541410b3560"
+  "index.html": "31556431efc4ef87d1c9a1fb58635da7f8b718cce9f8194ab01898873d949616",
+  "offline-worker.js": "4f343041a15cb5b49437c5e38b4518454b91355bf9de11e2cf6f0a4c4cfd631d"
 };
-export const ASSET_BUILD_ID="e386ea17a8b8ab435b44d6aaee175f0c25915ffb36b1bcc83a09131ad78482da";
+export const ASSET_BUILD_ID="38dcaa18e08e6a5db2429f04a8dc4f71b8589285b6db51f044b5c59dfd934ae7";

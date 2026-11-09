@@ -65,6 +65,7 @@ async function finishPreparation(runtime, opened) {
     URL.revokeObjectURL(probe.src);
     probe.removeAttribute('src');
   }
+  if (runtime.listeningContinuity) runtime.observe('audio_downloaded',{bytes:blob.size});
   await runtime.finishPreparation(blob);
 }
 
@@ -99,7 +100,10 @@ async function showListening(runtime) {
     const audio = preparedPlayer?.audio ?? await makeAudio(blob);
     audio.volume = volume;
     document.body.append(audio);
-    if (!resuming) await runtime.start('listening');
+    if (!resuming) {
+      if (continuity) runtime.listeningStartIntent = performance.now();
+      await runtime.start('listening');
+    }
     await enter(runtime, audio);
     if (runtime.record.player.ended) {
       const form = document.getElementById('listeningView');

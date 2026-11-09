@@ -127,7 +127,7 @@
   // exam-journal-20261023: mặc định tắt, khởi tạo nền và chỉ đọc state.
   let examJournal = null;
   if (appConfig.EXAM_JOURNAL_ENABLED === true) {
-    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-v1&continuity=20261110-v1').then(({ connectExamJournal }) => {
+    void import('../shared/exam-journal/bridge.mjs?v=20261023-v1&journal=20261024-startup-v2&resilience=20261027-v1&diagnostics=20261105-v2&eofLog=20261108-v1&continuity=20261110-listening-observations-v1&continuity=20261110-listening-observations-v1').then(({ connectExamJournal }) => {
       examJournal = connectExamJournal({ enabled: true,
         endpoint: appConfig.EXAM_JOURNAL_BASE_URL || new URL(appConfig.API_BASE_URL).origin + '/substitute-journal-api/' + testConfig.slug,
         testSlug: testConfig.slug, build: appConfig.EXAM_JOURNAL_BUILD || 'unknown',
@@ -727,8 +727,12 @@
   if(listeningContinuity){
     window.addEventListener('substitute:listening-observed',event=>noteListeningContinuity(event.detail));
     const startup=window.TERM_TEST_BOOTSTRAP.listeningStartup;
+    if(Number.isSafeInteger(startup?.verifiedAudioBytes))
+      noteListeningContinuity({phase:'download_verified',byteLength:startup.verifiedAudioBytes});
     if(Number.isFinite(startup?.playerReadyMs))noteListeningContinuity({phase:'player_ready',elapsedMs:startup.playerReadyMs});
     if(Number.isFinite(startup?.playbackMs))noteListeningContinuity({phase:'started',elapsedMs:startup.playbackMs});
+    if(window.TERM_TEST_BOOTSTRAP.continuityReview&&window.TERM_TEST_BOOTSTRAP.audioEndedAt)
+      noteListeningContinuity({phase:'ended',reason:'reload'});
   }
 
   async function apiRequest(path, options = {}, trace) {
