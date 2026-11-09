@@ -1,6 +1,6 @@
 // Pinned pure presentation functions from Substitute K56 enhance.js at Pages 3b0bdc5b.
 // No legacy audio, timer, identity, draft or API controller is loaded.
-export function mountNativeListening({content,grid,form,heading,uiState,onUiState}){
+export function mountNativeListening({content,answers={},grid,form,heading,uiState,onUiState}){
  const saveUiState=()=>onUiState(uiState);
   function makeButton(className, label) {
     const button = document.createElement('button');
@@ -442,7 +442,7 @@ export function mountNativeListening({content,grid,form,heading,uiState,onUiStat
     return wrap;
   }
  const fields=new Map();
- for(const c of content.controls){const field=document.createElement(c.kind==='select'?'select':'input');field.dataset.number=String(c.number);field.dataset.question=String(c.number);field.name='question-'+c.number;field.setAttribute('aria-label','Câu '+c.number);field.title='Câu '+c.number;if(c.kind==='select'){field.add(new Option('Chọn',''));for(const v of c.options)field.add(new Option(v,v));}else{field.type='text';field.maxLength=250;field.autocomplete='off';field.placeholder='Nhập đáp án';field.spellcheck=false;}fields.set(String(c.number),field);}
+ for(const c of content.controls){const field=document.createElement(c.kind==='select'?'select':'input');field.dataset.number=String(c.number);field.dataset.question=String(c.number);field.name='question-'+c.number;field.setAttribute('aria-label','Câu '+c.number);field.title='Câu '+c.number;if(c.kind==='select'){field.add(new Option('Chọn',''));for(const v of c.options)field.add(new Option(v,v));}else{field.type='text';field.maxLength=250;field.autocomplete='off';field.placeholder='Nhập đáp án';field.spellcheck=false;}field.value=answers?.[c.number]??'';fields.set(String(c.number),field);}
  const source=createSemanticPane('listening',content.listening,heading,fields);
  source.viewport.id='questions';source.toolbar.querySelector('.cbt-part-nav').id='section-nav';
  grid.replaceChildren(source.pane);form.append(createQuestionNav('listening',source));
