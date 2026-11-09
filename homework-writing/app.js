@@ -103,8 +103,9 @@ async function home() {
       const query = new URLSearchParams(location.search);
       if (query.get('view') === 'docs-debug') return docsView();
       if (query.get('submission')) {
-        const owned = await api('/student/submissions/' + encodeURIComponent(query.get('submission')));
-        return openStudent(owned.assignment.id);
+        const submission = query.get('submission');
+        const owned = await api('/student/submissions/' + encodeURIComponent(submission));
+        return openStudent(owned.assignment.id, { resultSubmissionId: submission });
       }
       return query.get('assignment')&&query.get('view')!=='assignments' ? openStudent(query.get('assignment')) : studentHome();
     }
@@ -151,12 +152,14 @@ function showPageError(e) {
   $('#app').innerHTML = `<section class="card"><h1>Chưa mở được bài</h1><p>${esc(e.message)}</p><button id="home">Về danh sách</button></section>`;
   if(!me){$('#home').textContent='Thử lại';$('#home').onclick=()=>start().catch(showPageError);}else $('#home').onclick = () => { setRoute({}); home(); };
 }
-async function openStudent(id) {
+async function openStudent(id, { resultSubmissionId = null } = {}) {
   clearTimeout(saveTimer); await flushBackups(); const gen = ++generation;
   const state = await api('/student/assignments/' + encodeURIComponent(id));
   if (gen !== generation) return;
   setWriting67Scope([state.assignment.classId]);
-  setRoute({assignment:id});
+  const resultRoute = resultSubmissionId && state.submission?.id === resultSubmissionId ? resultSubmissionId : null;
+  const showResult = resultRoute && state.publication;
+  setRoute({assignment:id,...(resultRoute?{submission:resultRoute}:{})});
   const kind = state.publication ? 'revision' : 'original';
   const server = kind === 'revision' ? state.revisionDraft : state.draft;
   const revisionRound=state.revisionRound?.number||1;
@@ -165,7 +168,8 @@ async function openStudent(id) {
   try { backup = await loadBackup(storageKey); otherBackups = await listBackups(storageKey); } catch { backupError = true; }
   if (gen !== generation) return;
   model = { id, kind, state, storageKey, revisionRound, text: kind==='revision'?initialRevisionText(state):server.text, baseRevision: server.revision,
-    handoutMode:model?.id===id?model.handoutMode:'handout',
+    resultSubmissionId: resultRoute,
+    handoutMode:showResult?'feedback':model?.id===id?model.handoutMode:'handout',
     lastSavedText: server.text, history: [], pendingSave: null, pendingSubmit: null, conflict: null, saving: null, backupError, otherBackups };
   if (backup) {
     model.history = backup.history || [];
@@ -183,6 +187,7 @@ async function openStudent(id) {
   if (state.revision&&!state.revisionEditable) model.text = state.revision.text;
   else if (kind === 'original' && state.submission) model.text = state.submission.text;
   renderStudent();
+  if(showResult)$('#approved-feedback')?.focus();
   if(kind==='revision'&&!locked()&&model.text!==model.lastSavedText){const current=model;await persist();if(gen===generation&&model===current)setSaveStatus(backup?'Đã giữ bản sửa trên thiết bị · chưa đồng bộ':'Đã mở bản sửa từ bài đã nộp · chưa lưu lên hệ thống');}
   if (model.pendingSubmit && !state.submission && kind === 'original') await recoverReceipt();
 }
@@ -219,7 +224,7 @@ function renderStudent() {
     $('.editor-card').tabIndex = 0;
     $('.editor-card').setAttribute('aria-label', 'Đề bài và bài làm của em');
   }
-  $('#refresh').onclick = () => openStudent(model.id).catch(showPageError);
+  $('#refresh').onclick = () => openStudent(model.id, { resultSubmissionId: model.resultSubmissionId }).catch(showPageError);
   $('#student-home').onclick = () => studentWorkspace().catch(editorError);
   if (!locked()) {
     $('#essay').oninput = () => { const current = model; current.text = $('#essay').value;studentAlignment?.draw(null); $('#essay').removeAttribute('aria-invalid'); if($('#editor-error').dataset.errorCode==='SUBMISSION_INVALID')$('#editor-error').replaceChildren(); $('#word-count').textContent = wordCount(current.text) + ' từ'; persist().then(() => { if (model === current && !current.backupError) setSaveStatus('Đã lưu trên thiết bị này · chờ đồng bộ'); }); clearTimeout(saveTimer); saveTimer = setTimeout(() => saveDraft().catch(editorError), 1500); };

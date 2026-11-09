@@ -3,7 +3,7 @@ import { handoutTablesHtml } from './handout-tables.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function handoutPreviewHtml(assignment, person, result = {tables:[]}) {
   return `<header class="handout-heading"><div><h2>Handout Writing</h2><p>${esc(assignment.title)}</p></div><button type="button" id="close-handout" aria-label="Đóng handout">×</button></header>
-    <div class="handout-sheet"><div class="handout-person"><strong>${esc(person.label)}</strong><span class="badge neutral">Kết quả K67 · chỉ đọc</span></div>
+    <div class="handout-sheet"><div class="handout-person"><strong>${esc(person.label)}</strong><span class="badge neutral">Đang xác định nguồn</span></div>
     <div class="handout-actions"><button type="button" id="reload-handout">Tải lại handout</button><span id="handout-status" role="status"></span></div>
     <div id="handout-content"><p class="section-note">${esc(result.message || '')}</p><div class="handout-summary-title"><h3>Bảng tổng hợp trên lớp</h3><span class="badge neutral">${result.tables.length} bảng</span></div>
     ${handoutTablesHtml(result.tables,esc)}</div></div>`;
@@ -29,7 +29,7 @@ export function setupHandoutPreview(root,{assignment,person,initialMode='handout
       handout.querySelector('#reload-handout').textContent=snapshot?'Xem lại bản đã lấy':'Tải lại handout';
       status.textContent=result.readAt ? (snapshot?'Bản đọc K67 lúc ':'Đã đọc bản mới nhất · ')+new Date(result.readAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
       await copyEditor.receive(result);
-    } catch(e) { if(current(id)){ status.textContent='Chưa tải được handout';content.innerHTML=`<p class="error-panel">${esc(e.message)}</p><p>Em vẫn có thể viết và lưu bài. Bấm Tải lại handout để thử lại.</p>`; } }
+    } catch(e) { if(current(id)){ status.textContent='Chưa tải được handout';if(!copyEditor.isDirty())handout.querySelector('.handout-person .badge').textContent='Chưa xác định nguồn';content.innerHTML=`<p class="error-panel">${esc(e.message)}</p><p>Em vẫn có thể viết và lưu bài. Bấm Tải lại handout để thử lại.</p>`; } }
     finally {if(current(id))handout.removeAttribute('aria-busy');}
   }
   const select=(next,focus=false)=>{

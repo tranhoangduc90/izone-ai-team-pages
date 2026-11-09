@@ -1,9 +1,9 @@
 {
   "source": {
-    "revision": "0626ad9ea248c9560d3580d1cc77ea63c02e0935b7a9d64dd0c6ae6812ad8e19",
-    "files": 207
+    "revision": "200b2bc16d4a577d065d4ae5cc49dc464ae735fd05edcc15f02680c6d9876c80",
+    "files": 211
   },
-  "createdAt": "2026-11-05T10:02:47.968Z",
+  "createdAt": "2026-11-09T09:57:26.820Z",
   "public": {
     "mode": "online",
     "apiBase": "https://ducizone.ddns.net/homework-writing-api/api",
@@ -18,8 +18,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 46025,
-      "sha256": "0fc075d225ec7774832e625afe6f06b165ed38941c2e87af16621c2a95011dac"
+      "bytes": 46517,
+      "sha256": "cc870b72b59765c5e6fad60803ff4ecdabb4e29b6e111160f0d96df02e76664e"
     },
     {
       "path": "assets/SourceSans3-Italic-Variable.woff2",
@@ -78,13 +78,13 @@
     },
     {
       "path": "handout-editor.js",
-      "bytes": 6395,
-      "sha256": "cec363ddc32e7b45f4bfe9f3e14907b00b475740f386384b06611eb853d53aa0"
+      "bytes": 6608,
+      "sha256": "74851ddc3940de24a2a20ce1394f07ef0d6c01a4286ceaadb49b929a37a3e6ee"
     },
     {
       "path": "handout-preview.js",
-      "bytes": 5354,
-      "sha256": "2a88c4b1816fd4b5caa3f464cd4452eca63b87a0fec4fbd42c60a66f1daf3869"
+      "bytes": 5463,
+      "sha256": "1849e3355b096e73c1bd0def4048198f6f20e334e58ad3411e5c1a8b0b702be0"
     },
     {
       "path": "handout-tables.js",
