@@ -1,4 +1,2 @@
-import { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } from './offline-assets.mjs?v=term1-k67-listening-retake-shell-v1';
-import { registerExamShell } from '../k56-offline-shared/worker.mjs?v=term1-k67-listening-retake-shell-v1';
-
-registerExamShell({build:'term1-k67-listening-retake-shell-v1',assets:ASSETS,hashes:ASSET_HASHES,assetBuildId:ASSET_BUILD_ID});
+// Retire the old cache-first worker on this scope. Existing caches and exam data are left intact.
+self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));

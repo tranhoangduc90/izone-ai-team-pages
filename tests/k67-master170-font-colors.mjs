@@ -98,7 +98,7 @@ test('K67 entry fonts load locally; shared demo and K56 never load this styleshe
    return r.abort();
   });
   const page=await context.newPage();
-  for(const entry of ['','teacher/','term-test-1-listening-retake/']){
+  for(const entry of ['','teacher/']){
    await page.goto(server.base+'term-tests/'+entry);await page.evaluate(()=>document.fonts.ready);
    assert.match(await page.locator('body').evaluate(e=>getComputedStyle(e).fontFamily),/Source Sans 3/);
    assert.equal(await page.locator('body').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(245, 246, 248)',entry+' canvas role');

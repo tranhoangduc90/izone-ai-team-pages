@@ -18,15 +18,13 @@ for(const directory of ['term-test-2-computer-based','term-test-1-k56-computer-b
  const urls=[...source.matchAll(/(?:shared|k56-shared|k56-test2-shared|k56-mini-shared)\/app\.js\?[^'"\s)]+/g)].map(m=>m[0]);
  assert.ok(urls.length>0);for(const url of urls)assert.equal(new URL(url,'https://fixture.invalid').searchParams.get('v'),version);
 });
-test('Thi bù Listening giữ cùng bản vá; module không có đáp án/chìa khóa',()=>{
- assert.match(fs.readFileSync('term-tests/term-test-1-listening-retake/index.html','utf8'),/bootstrap\.js\?v=20261023-submit-v1/);
+test('Module nộp không có đáp án/chìa khóa',()=>{
  const source=fs.readFileSync('term-tests/shared/section-submission.mjs','utf8');
  assert.doesNotMatch(source,/correctAnswers|acceptedAnswers|api_key|Bearer /);
 });
 test('K67 nạp bản phục hồi ACK qua entry và bootstrap',()=>{
  const files=['term-test-1/index.html','term-test-2/index.html','mini-test-lesson-5/index.html',
-  'term-test-1-computer-based/index.html','term-test-2-computer-based/index.html','mini-test-lesson-5-computer-based/index.html',
-  'term-test-1-listening-retake/index.html'];
+  'term-test-1-computer-based/index.html','term-test-2-computer-based/index.html','mini-test-lesson-5-computer-based/index.html'];
  for(const file of files){
   const html=fs.readFileSync('term-tests/'+file,'utf8');
   const urls=[...html.matchAll(/src="([^"]+)"/g)].map(m=>m[1]).filter(url=>url.includes('shared/app.js')||url.includes('bootstrap.js'));

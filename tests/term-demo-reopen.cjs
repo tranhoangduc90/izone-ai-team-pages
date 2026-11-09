@@ -33,7 +33,7 @@ after(async () => {
   if (server) await new Promise(resolve => server.close(resolve));
 });
 
-async function fixture({slug='term-test-2', classCode='CODEXDEMO806', query='', retake=false}={}) {
+async function fixture({slug='term-test-2', classCode='CODEXDEMO806', query=''}={}) {
   const context = await browser.newContext();
   const page = await context.newPage();
   page.setDefaultTimeout(4000);
@@ -51,27 +51,20 @@ async function fixture({slug='term-test-2', classCode='CODEXDEMO806', query='', 
     unexpected.push(request.url());
     return route.abort();
   });
-  await page.addInitScript(({slug,classCode,A,OLD,retake}) => {
+  await page.addInitScript(({slug,classCode,A,OLD}) => {
     // Seed đúng dấu vết tồn tại từ lần làm trước, chỉ một lần cho mỗi context.
     if (sessionStorage.getItem('fixture-seeded')) return;
     sessionStorage.setItem('fixture-seeded','1');
-    let suffix='';
-    if(retake) {
-      const grant=new URLSearchParams(location.search).get('retake');
-      let hash=0x811c9dc5;
-      for(const char of grant) { hash ^= char.charCodeAt(0); hash=Math.imul(hash,0x01000193); }
-      suffix=':listening-retake:'+(hash>>>0).toString(16).padStart(8,'0');
-    }
-    const key=`izone-test:${slug}:${classCode}${suffix}`;
+    const key=`izone-test:${slug}:${classCode}`;
     const old={studentRef:A,studentName:'Học viên giả A',attemptToken:OLD,examSessionToken:OLD,listeningStartedAt:'2026-10-01T00:00:00Z',drafts:{listening:{q1:'OLD'},reading:{},writing:{task1:'OLD'}}};
     for(const storage of [sessionStorage,localStorage]) {
       storage.setItem(key,JSON.stringify(old));
-      storage.setItem(`izone-test-ui:${slug}:${classCode}${suffix}`,JSON.stringify({audio:{started:true,time:120}}));
-      storage.setItem(`izone-test-interactions:${slug}:${classCode}${suffix}:${OLD}`,'OLD');
+      storage.setItem(`izone-test-ui:${slug}:${classCode}`,JSON.stringify({audio:{started:true,time:120}}));
+      storage.setItem(`izone-test-interactions:${slug}:${classCode}:${OLD}`,'OLD');
       storage.setItem('unrelated-fixture','KEEP');
     }
-  },{slug,classCode,A,OLD,retake});
-  const route=retake?'term-test-1-listening-retake':`${slug}-computer-based`;
+  },{slug,classCode,A,OLD});
+  const route=`${slug}-computer-based`;
   await page.goto(`${site}term-tests/${route}/?class=${classCode}${query}`);
   if(classCode==='CODEXDEMO806')await page.locator(`#bootstrapStudent option[value="${B}"]`).waitFor({state:'attached'});
   return {page,context,requests,unexpected,errors};
@@ -119,16 +112,6 @@ test('liên kết kết quả demo vẫn khôi phục đúng lượt được ch
     const resumed=f.requests.find(r=>r.path.endsWith('/session/resume-attempt'));
     assert.equal(resumed.body.studentRef,A);assert.equal(resumed.body.attemptToken,OLD);
     assert.equal(await f.page.locator('#bootstrapDemoReset').isVisible(),true);
-    assert.deepEqual(f.unexpected,[]);assert.deepEqual(f.errors,[]);
-  }finally{await f.context.close();}
-});
-
-test('thi bù Listening giữ nguyên bộ nhớ riêng của lượt thi',async()=>{
-  const grant='A'.repeat(50)+'.'+'B'.repeat(43);
-  const f=await fixture({slug:'term-test-1',retake:true,query:`&retake=${grant}`});
-  try{
-    const saved=await f.page.evaluate(()=>[...Array(sessionStorage.length)].map((_,i)=>sessionStorage.key(i)).filter(k=>k.startsWith('izone-test:')) .map(k=>JSON.parse(sessionStorage.getItem(k))));
-    assert.equal(saved.length,1);assert.equal(saved[0].attemptToken,OLD);
     assert.deepEqual(f.unexpected,[]);assert.deepEqual(f.errors,[]);
   }finally{await f.context.close();}
 });

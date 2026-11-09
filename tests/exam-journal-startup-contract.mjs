@@ -56,7 +56,7 @@ for(const file of bootstraps){
 
 test('all live student entries install early capture before app/bootstrap, with cache closure',()=>{
  const entries=['term-test-1','term-test-2','mini-test-lesson-5','term-test-1-k56','term-test-2-k56','mini-test-k56'].flatMap(s=>[s,s+'-computer-based'])
-  .concat(['substitute-test-1-k67-computer-based','substitute-test-2-k67-computer-based','substitute-test-1-k56-computer-based','substitute-test-2-k56-computer-based','term-test-1-listening-retake']);
+  .concat(['substitute-test-1-k67-computer-based','substitute-test-2-k67-computer-based','substitute-test-1-k56-computer-based','substitute-test-2-k56-computer-based']);
  for(const entry of entries){
   const html=fs.readFileSync('term-tests/'+entry+'/index.html','utf8'),config=html.match(/src="([^"]*test-config\.js[^\"]*)"/);
   assert.ok(config,entry);assert.ok(config.index<html.search(/<script src="[^"]*(?:shared\/app|bootstrap)\.js/),entry);

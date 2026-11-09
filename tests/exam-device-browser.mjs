@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const {chromium}=createRequire('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json')('playwright');
 const papers=['term-test-1','term-test-2','mini-test-lesson-5','term-test-1-k56','term-test-2-k56','mini-test-k56'];
-const cbt=[...papers.map(x=>x+'-computer-based'),...['1-k56','2-k56','1-k67','2-k67'].map(x=>'substitute-test-'+x+'-computer-based'),'term-test-2-rescue','term-test-1-listening-retake'];
+const cbt=[...papers.map(x=>x+'-computer-based'),...['1-k56','2-k56','1-k67','2-k67'].map(x=>'substitute-test-'+x+'-computer-based'),'term-test-2-rescue'];
 let server,browser,base;
 before(async()=>{
  server=createServer((req,res)=>{
@@ -23,7 +23,7 @@ before(async()=>{
 after(async()=>{await browser?.close();if(server)await new Promise(r=>server.close(r));});
 const phones=[{name:'Android',userAgent:'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36'},
  {name:'iPad desktop UA',userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15',iPad:true}];
-for(const device of phones)test(`${device.name}: all 12 CBT entries block before every exam or audio API request`,async()=>{
+for(const device of phones)test(`${device.name}: all CBT entries block before every exam or audio API request`,async()=>{
  const c=await browser.newContext({userAgent:device.userAgent,viewport:{width:390,height:844}}),external=[];
  if(device.iPad)await c.addInitScript(()=>{Object.defineProperty(navigator,'platform',{get:()=> 'MacIntel'});Object.defineProperty(navigator,'maxTouchPoints',{get:()=>5});});
  await c.route('**/*',r=>{if(new URL(r.request().url()).hostname==='127.0.0.1')return r.continue();external.push(r.request().url());return r.abort();});
