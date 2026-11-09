@@ -17,6 +17,7 @@
   const launchStudentRef = listeningOnly ? (query.get('student') || '').trim() : '';
   const demoStudentRef = classCode === 'CODEXDEMO806' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO806' ? (query.get('demoAttempt') || '').trim() : '';
+  const demoJourneyEntry = classCode === 'CODEXDEMO806' && !demoStudentRef && !demoAttemptToken;
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   if(!window.IZONE_EXAM_DEVICE_CHECKED)await loadScript('../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1');
   if(window.IZONE_EXAM_DEVICE_BLOCKED)return;
@@ -849,7 +850,7 @@
         if (!recoverFromServerReset(error, student)) throw error;
         prepared = await prepareSession();
       }
-      if (sharedIdentity && (!isUuid(prepared.examSessionToken)
+      if ((sharedIdentity || demoJourneyEntry) && (!isUuid(prepared.examSessionToken)
           || (prepared.attemptToken && !isUuid(prepared.attemptToken))
           || (prepared.studentRef && prepared.studentRef !== studentRef)
           || (state.examSessionToken && state.examSessionToken !== prepared.examSessionToken)))
@@ -968,7 +969,7 @@
 
   async function enterExam(started, audioElement = null, offlineSection = '', journey = null, playNewListening = false) {
     window.TERM_TEST_CONTENT = Object.freeze(started.content);
-    const boundIdentity = sharedIdentity && started.examSessionToken === state.examSessionToken
+    const boundIdentity = (sharedIdentity || (demoJourneyEntry && journey)) && started.examSessionToken === state.examSessionToken
       && isUuid(state.examSessionToken) && isUuid(state.studentRef) && started.studentName
       ? Object.freeze({ testSlug: testConfig.slug, classCode, studentRef: state.studentRef,
         studentName: started.studentName, examSessionToken: state.examSessionToken, attemptToken: state.attemptToken || '' }) : null;
@@ -978,7 +979,7 @@
       offlineSectionIdentity: offlineSection && boundIdentity ? { ...boundIdentity, section: offlineSection } : null,
       miniJourney:journey,
       playNewListening,
-      sessionState: sharedIdentity ? structuredClone(state) : null,
+      sessionState: (sharedIdentity || (demoJourneyEntry && journey)) ? structuredClone(state) : null,
       examSessionToken: state.examSessionToken,
       listeningDeadlineAt: started.listeningDeadlineAt,
       serverNow: started.serverNow,
@@ -1008,9 +1009,16 @@
     await enterExam({...view,content:miniJourney.content},null,'',miniJourney,playNewListening);
   }
 
-  async function openJourneyLobby(prepare=false){
-    if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
-    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261110-mini-continuity-v1');
+  async function openJourneyLobby(prepare=false,recover=false){
+    if(testConfig.slug!=='mini-test-lesson-5'||!(sharedIdentity||demoJourneyEntry)||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
+    if(demoJourneyEntry&&!prepare&&!recover){
+      // A fresh online visit keeps the roster picker. Reload can reopen this tab's exact demo run.
+      if(navigator.onLine!==false&&performance.getEntriesByType('navigation')[0]?.type!=='reload')return false;
+      let saved;
+      try{saved=JSON.parse(sessionStorage.getItem(storageKey)||'null');}catch{return false;}
+      if(saved?.studentRef!==state.studentRef||saved?.examSessionToken!==state.examSessionToken)return false;
+    }
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261110-mini-continuity-v1&demoJourney=20261110-v1');
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope);
     if(!existing&&(!prepare||state.completed))return false;
@@ -1042,10 +1050,10 @@
   }
 
   async function offerMiniJourneyRecovery(){
-    if(testConfig.slug!=='mini-test-lesson-5'||!sharedIdentity||listeningOnly||state.studentRef)return false;
+    if(testConfig.slug!=='mini-test-lesson-5'||!(sharedIdentity||demoJourneyEntry)||listeningOnly||(state.studentRef&&!demoJourneyEntry))return false;
     if(document.getElementById('miniJourneyRecovery'))return true;
     const mode=query.get('mode');
-    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261110-mini-continuity-v1');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261110-mini-continuity-v1&demoJourney=20261110-v1');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'');
     if(!match)return false;
     const form=document.createElement('form');form.id='miniJourneyRecovery';
@@ -1061,9 +1069,10 @@
       if(!bundle){status.textContent='Chưa xác định được bài đúng họ tên và lớp. Khi có mạng, hãy mở lại từ danh sách lớp.';return;}
       button.disabled=true;
       try{
-        bindSharedStudent({ref:bundle.studentRef,name:bundle.studentName});
+        if(sharedIdentity)bindSharedStudent({ref:bundle.studentRef,name:bundle.studentName});
+        else saveState({studentRef:bundle.studentRef,studentName:bundle.studentName});
         saveState({examSessionToken:bundle.examSessionToken,generation:bundle.generation});
-        if(!await openJourneyLobby())throw new Error('Chưa mở được bản đã lưu.');
+        if(!await openJourneyLobby(false,true))throw new Error('Chưa mở được bản đã lưu.');
       }catch(error){button.disabled=false;status.textContent=error.message;}
     });
     return true;
@@ -1355,6 +1364,8 @@
           confirmation: 'RESET_DEMO_STUDENT'
         })
       });
+      try { localStorage.setItem(`izone-demo-reset:student:${classCode}:${studentRef}:${testConfig.slug}`,crypto.randomUUID()); }
+      catch { /* The server already invalidated the scoped demo run. */ }
       clearAllLocalAttemptData();
       window.location.reload();
     } catch (error) {

@@ -21,6 +21,16 @@ const ordered = answers => Object.fromEntries(Object.entries(answers).sort(([a],
 const id = value => typeof value === 'string' && /^[a-f0-9-]{36}$/i.test(value);
 const nameKey = value => String(value||'').normalize('NFC').trim().replace(/\s+/gu,' ').toLocaleLowerCase('vi');
 
+function demoResetSignal(classCode,studentRef,slug){
+  if(classCode!=='CODEXDEMO806'||slug.endsWith('-paper'))return '';
+  try{return localStorage.getItem(`izone-demo-reset:student:${classCode}:${studentRef}:${slug}`)||'';}
+  catch{return '';}
+}
+
+function currentDemoRecord(record,classCode,slug,studentRef=record.package?.studentRef){
+  return (record.demoResetSignal||'')===demoResetSignal(classCode,studentRef,slug);
+}
+
 export async function miniJourneyRecovery(classCode,mode,slug=miniSlug){
   if(!navigator.locks||!crypto.subtle)return null;
   const {ExamStore,version}=journeyProfiles.get(slug);
@@ -30,7 +40,7 @@ export async function miniJourneyRecovery(classCode,mode,slug=miniSlug){
     if(key.endsWith(':audio'))continue;
     const record=await store.get(key).catch(()=>null);
     const bundle=record?.package;
-    if(!record?.ready||!record.activatedAt||bundle?.version!==version||!id(bundle.studentRef)||!id(bundle.examSessionToken)
+    if(!record?.ready||!currentDemoRecord(record,classCode,slug)||!record.activatedAt||bundle?.version!==version||!id(bundle.studentRef)||!id(bundle.examSessionToken)
         ||(mode&&bundle.examMode!==mode)||keyOf({...bundle,classCode})!==key)continue;
     candidates.push({bundle,activatedAt:record.activatedAt});
   }
@@ -50,7 +60,7 @@ export async function findMiniJourney(scope,slug=miniSlug) {
   const store = await new ExamStore().open();
   const key = keyOf(scope);
   const record = await store.get(key);
-  if (!record?.ready || record.package?.version !== version || record.package.examSessionToken !== scope.examSessionToken
+  if (!record?.ready || !currentDemoRecord(record,scope.classCode,slug) || record.package?.version !== version || record.package.examSessionToken !== scope.examSessionToken
       || record.package.studentRef !== scope.studentRef || record.package.generation !== scope.generation) return null;
   return { store,key,record };
 }
@@ -158,9 +168,11 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
 
   try {
     record=await store.get(key);
+    if(record&&!currentDemoRecord(record,scope.classCode,slug,scope.studentRef)){await close();return null;}
     if (!record?.ready) {
       if(!prepare || navigator.onLine===false){await close();return null;}
-      record ||= {deviceProof:hex(crypto.getRandomValues(new Uint8Array(32))),sections:{},drafts:{},revisions:{},pending:[],receipts:{}};
+      record ||= {deviceProof:hex(crypto.getRandomValues(new Uint8Array(32))),sections:{},drafts:{},revisions:{},pending:[],receipts:{},
+        ...(scope.classCode==='CODEXDEMO806'?{demoResetSignal:demoResetSignal(scope.classCode,scope.studentRef,slug)}:{})};
       await save();
       let value;
       try {value=await send('prepare',{classCode:scope.classCode,studentRef:scope.studentRef},null);}
@@ -192,6 +204,9 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
         preparedPlayer=prepareContinuityAudio(stored.blob,observe);
       }
       await new OfflineRuntime({}).prepareCache();
+      if(!currentDemoRecord(record,scope.classCode,slug,scope.studentRef)){
+        throw new Error('Lượt demo vừa được đặt lại. Hãy mở lại bài từ danh sách.');
+      }
       record.package=bundle;record.ready=true;
       await save();
     }else if(pagesOnly&&navigator.onLine!==false&&!navigator.serviceWorker?.controller){

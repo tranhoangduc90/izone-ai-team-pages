@@ -196,15 +196,15 @@ export const ASSET_HASHES={
   "../teacher/reading-appearance.css": "bf31605b6d8cd1f073ee4a15816c45fab17e34a7881a82175313e35978a4cacc",
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-2-computer-based/audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
-  "../term-test-2-computer-based/bootstrap.js": "a6689ad390198e01e098e7f8d4094114b47bcd63bc0c74a88681c1bd606c5f79",
+  "../term-test-2-computer-based/bootstrap.js": "7e5a284b7a815e1a7f94f9be9a9c3940c23c60dcdd5fd9c71144e1d8b85b24a7",
   "../term-test-2-computer-based/enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index.html": "e3caab0d23f7fbcdbfb941e88177caff784dfbd14a6ce2023347854d4ffbd6ce",
-  "journey-terms-cbt.mjs": "f6a86e1335a43d95d6b3a6cb517bd04f2a4de798baac389198427fe1648e279f",
+  "index.html": "f0eed12809bb1155180be6dfe1746dabcc2b5f91652953a57e03f21e73d56d87",
+  "journey-terms-cbt.mjs": "fa76413a7062a9e133fb9c54b13855d670b61c15c6da9b636b22b04943397655",
   "journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
-  "offline-worker.js": "180f1ae141f5fe675cd4a161cae972053351fa9b98219ca2c3b72dc31f59da36",
+  "offline-worker.js": "57a9afc416610fd7372655953535001e82a9db9a094a4790673673a395d996ed",
   "resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f"
 };
-export const ASSET_BUILD_ID="2647e7c7b86242dd81efb45ebfa8549a05b75ed830615ba6123e6df0f63700d7";
+export const ASSET_BUILD_ID="a1a975db53ebfc5edf16ef9425b500a8c57297aa2a846dd4a14f93e98fd93cf8";
