@@ -146,3 +146,14 @@ body.design67.listening-full-test #explanation-dialog :is(p.replay-meta,.replay-
  .listening-full-test .cbt-toolbar-controls{flex-wrap:wrap}
  .listening-full-test .cbt-part-nav{width:100%}
 }
+
+.design67 [data-group="one-day-classes"] .authored-completion-table td{white-space:pre-line}
+.design67 .authored-flow-step>label{display:block;font-size:inherit;font-weight:600;color:var(--lab-ink)}
+.design67 .authored-map-layout{display:grid;grid-template-columns:minmax(9rem,1fr) minmax(0,2fr);gap:12px;align-items:start}
+.design67 .authored-map-layout img{position:sticky;top:0;display:block;width:100%}
+.design67 .authored-map-layout .authored-matching-row{padding:8px 0;gap:2px}
+@media(max-width:980px){
+  .design67 .authored-map-layout{grid-template-columns:minmax(0,1fr)}
+  .design67 .authored-map-layout img{position:static;grid-row:1}
+}
+.design67 .authored-flow-step .cbt-select-answer [data-answer-slot]{width:min(132px,32vw)}

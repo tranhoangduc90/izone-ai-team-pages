@@ -66,19 +66,24 @@ function noteTextHtml(text){
  return `<strong class="authored-note-heading" role="heading" aria-level="5">${esc(title)}</strong>${esc(text.slice(lineEnd))}`;
 }
 function instructionHtml(text){
- return esc(text).replace(/ONE WORD(?: AND\/OR A NUMBER)?(?: ONLY)?|TWO letters|SIX answers|A, B or C|A–H|A–E/g,'<strong>$&</strong>');
+ return esc(text).replace(/ONE WORD(?: AND\/OR A NUMBER)?(?: ONLY)?|TWO letters|(?:FOUR|SIX) answers|A, B or C|A–[EFHI]/g,'<strong>$&</strong>');
 }
 export function groupsHtml(groups,a,flag,{documentNotes=false,practiceLayout=false}={}){
  return groups.map(g=>{
   const instruction=practiceLayout?instructionHtml(g.instruction):esc(g.instruction);
   if(g.table||g.answerMode==='unordered-pair')return `<section class="design-question-group" data-group="${esc(g.id)}" data-m170-question-kind="${g.kind==='matching'?'matching':'other'}" data-m170-visual="${!!g.image}"><header class="cbt-subsection-heading"><h4>Questions ${g.start}–${g.end} · ${esc(g.label)}</h4><p>${instruction}</p></header><div class="design-question-content">${g.table?tableHtml(g,a,flag):pairHtml(g,a,flag)}</div></section>`;
   const bank=g.options;
-  const questions=g.questions.map(q=>{
+  const flow=g.kind==='flowchart'&&bank;
+  const map=g.image&&bank?.every(o=>o.value===o.text);
+  const showBank=bank&&!map;
+  const figure=g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:'';
+  const questions=g.questions.map((q,i)=>{
    const options=q.options||bank,selected=String(a.answers[q.n]||'').split('|');
    let control;
    if(g.kind==='mcq')control='<div class="cbt-choice-list">'+options.map(o=>`<label class="cbt-choice"><input type="${q.multiple?'checkbox':'radio'}" name="answer-${q.n}" value="${esc(o.value)}" ${q.multiple?'data-authored-multi="'+q.n+'"':'data-answer="'+q.n+'"'} ${selected.includes(o.value)?'checked':''}><span class="cbt-choice-letter">${esc(o.value)}</span><span>${esc(o.text)}</span></label>`).join('')+'</div>';
    else if(options)control=`<span class="cbt-select-answer" data-question-number="${q.n}"><span class="cbt-blank-number">${q.n}</span><span data-answer-slot><select class="cbt-answer-select" id="answer-${q.n}" data-answer="${q.n}" aria-label="Câu ${q.n}"><option value="">Nhấn để chọn</option>${options.map(o=>`<option value="${esc(o.value)}" title="${esc(o.text)}" ${a.answers[q.n]===o.value?'selected':''}>${esc(o.value)}${bank?'':' · '+esc(o.text)}</option>`).join('')}</select></span></span>`;
    else control=`<span class="cbt-inline-answer"><span class="cbt-blank-number">${q.n}</span><span data-answer-slot><input class="cbt-answer-input" type="text" id="answer-${q.n}" data-answer="${q.n}" value="${esc(a.answers[q.n]||'')}" aria-label="Câu ${q.n}" maxlength="80" autocomplete="off"></span></span>`;
+   if(flow)return `<div class="flow-step authored-flow-step" id="q-${q.n}" data-question-number="${q.n}"><label for="answer-${q.n}">${esc(q.text)}</label><span class="authored-matching-answer">${control}${flag(q.n)}</span></div>${i<g.questions.length-1?'<div class="flow-arrow" aria-hidden="true">↓</div>':''}`;
    if(g.kind!=='mcq'&&options)return `<div class="authored-matching-row" id="q-${q.n}" data-question-number="${q.n}"><label for="answer-${q.n}">${esc(q.text)}</label><span class="authored-matching-answer">${control}${flag(q.n)}</span></div>`;
    // Câu điền ghi chú giữ chữ hai bên ô nhập để không mất nghĩa hoặc lộ ký hiệu bản soạn.
    if(!options&&q.text.includes('{blank}')){
@@ -87,9 +92,9 @@ export function groupsHtml(groups,a,flag,{documentNotes=false,practiceLayout=fal
    }
    return `<article class="cbt-question-card" id="q-${q.n}" data-question-number="${q.n}"><div class="cbt-question-heading"><span class="cbt-question-number">${q.n}</span><p id="stem-${q.n}">${esc(q.text)}</p>${flag(q.n)}</div>${control}</article>`;
   }).join('');
-  const questionClass=(documentNotes||practiceLayout)&&g.kind==='completion'&&!bank?'authored-note-list':practiceLayout&&g.kind==='mcq'?'authored-question-list':'cbt-matching-questions';
+  const questionClass=flow?'listening-flow':(documentNotes||practiceLayout)&&g.kind==='completion'&&!bank?'authored-note-list':practiceLayout&&g.kind==='mcq'?'authored-question-list':'cbt-matching-questions';
   const introduction=g.introduction?`<p class="authored-introduction" style="white-space:pre-line">${practiceLayout?noteTextHtml(g.introduction):esc(g.introduction)}</p>`:'';
-  return `<section class="design-question-group" data-group="${esc(g.id)}" data-m170-question-kind="${g.kind==='matching'?'matching':'other'}" data-m170-visual="${!!g.image}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${instruction}</p></header>${practiceLayout?'':introduction}${g.image?`<img alt="${esc(g.imageAlt||g.label)}" src="${esc(g.image)}" style="max-width:100%;height:auto">`:''}<div class="design-question-content ${bank?'cbt-matching-layout cbt-answer-first-matching-layout':''}">${practiceLayout?introduction:''}<section class="${questionClass}">${questions}</section>${bank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
+  return `<section class="design-question-group" data-group="${esc(g.id)}" data-m170-question-kind="${g.kind==='matching'&&!map?'matching':'other'}" data-m170-visual="${!!g.image}"><header class="cbt-subsection-heading"><h4>Questions ${g.questions[0].n}–${g.questions.at(-1).n} · ${esc(g.label||g.kind)}</h4><p>${instruction}</p></header>${!practiceLayout||flow||map?introduction:''}${map?'':figure}<div class="design-question-content ${map?'authored-map-layout':showBank?'cbt-matching-layout cbt-answer-first-matching-layout':''}">${practiceLayout&&!flow&&!map?introduction:''}<section class="${questionClass}">${questions}</section>${map?figure:''}${showBank?`<aside class="cbt-option-bank"><h4>Options</h4>${bank.map(o=>`<div><strong>${esc(o.value)}</strong><span>${esc(o.text)}</span></div>`).join('')}</aside>`:''}</div></section>`;
  }).join('');
 }
 export function bindMultiple(root,onAnswer){
