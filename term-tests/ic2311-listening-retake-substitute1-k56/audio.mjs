@@ -20,17 +20,17 @@ export async function downloadAudio({journal,onProgress,signal}){
 }
 export class LocalPlayer{
  #audio;#url;#asset;#journal;#phase='preparing';#lastAdvance=performance.now();#lastPosition=0;#intended=null;
- constructor(audio,journal){this.#audio=audio;this.#journal=journal;this.noProgressRecoveries=0;this.recoveryCount=0;this.onFault=()=>{};this.onEnded=()=>{};
-  for(const type of ['pause','seeking','seeked','emptied','error','ended','playing','ratechange'])audio.addEventListener(type,()=>{
+ constructor(audio,journal){this.#audio=audio;this.#journal=journal;this.onFault=()=>{};this.onEnded=()=>{};
+  for(const type of ['pause','seeking','seeked','emptied','error','ended','playing','ratechange','waiting','stalled'])audio.addEventListener(type,()=>{
    const cmd=this.#intended;this.#journal.emit('audio_media_event',{phase:this.#phase,reason:type,commandId:cmd?.commandId,audioAfter:this.snapshot()});
    if(['pause','seeking','emptied'].includes(type)&&!cmd&&!['preparing','preview','ready','ended','submitted','technical_stop'].includes(this.#phase))this.#journal.emit('audio_unattributed_transition',{reason:type,audioAfter:this.snapshot()});
    if(type==='seeked'||type==='pause')this.#intended=null;
    if(type==='error'&&this.#phase==='playing')this.onFault('MEDIA_ERROR');
-   if(type==='ended'&&['playing','recovering'].includes(this.#phase)){if(Math.abs(audio.currentTime-AUDIO.seconds)>1){this.onFault('MEDIA_EARLY_ENDED');return;}this.#phase='ended';this.onEnded();}
+   if(type==='ended'&&this.#phase==='playing'){if(Math.abs(audio.currentTime-AUDIO.seconds)>1){this.onFault('MEDIA_EARLY_ENDED');return;}this.#phase='ended';this.onEnded();}
   });
   audio.addEventListener('timeupdate',()=>{if(audio.currentTime>this.#lastPosition+.05){this.#lastPosition=audio.currentTime;this.#lastAdvance=performance.now();}});
  }
- snapshot(){const a=this.#audio;return {playerCurrentTime:a.currentTime,paused:a.paused,ended:a.ended,readyState:a.readyState,mediaErrorCode:a.error?.code??null,playbackRate:a.playbackRate,muted:a.muted,volume:a.volume,sourceKind:this.#asset?'local_blob':'none',verifiedAudioSha256:this.#asset?.hash,verifiedAudioBytes:this.#asset?.size,lastPositionAdvanceMonoMs:this.#lastAdvance,lastAdvancedPosition:this.#lastPosition,lastAdvanceAgeMs:performance.now()-this.#lastAdvance,controllerStateBefore:this.#phase,consecutiveNoProgressRecoveries:this.noProgressRecoveries};}
+ snapshot(){const a=this.#audio;return {playerCurrentTime:a.currentTime,paused:a.paused,ended:a.ended,readyState:a.readyState,mediaErrorCode:a.error?.code??null,playbackRate:a.playbackRate,muted:a.muted,volume:a.volume,sourceKind:this.#asset?'local_blob':'none',verifiedAudioSha256:this.#asset?.hash,verifiedAudioBytes:this.#asset?.size,lastPositionAdvanceMonoMs:this.#lastAdvance,lastAdvancedPosition:this.#lastPosition,lastAdvanceAgeMs:performance.now()-this.#lastAdvance,controllerStateBefore:this.#phase};}
  #command(action,actor,reason,fn){const commandId=crypto.randomUUID();this.#journal.emit('audio_command_requested',{commandId,actor,reason,callsiteId:'LocalPlayer.'+action,phase:this.#phase,audioBefore:this.snapshot()});this.#intended={commandId,action};try{const v=fn();this.#journal.emit('audio_command_observed',{commandId,actor,reason,callsiteId:'LocalPlayer.'+action,phase:this.#phase,audioAfter:this.snapshot()});return v;}catch(e){this.#journal.emit('audio_command_failed',{commandId,errorCode:'MEDIA_COMMAND_FAILED',audioAfter:this.snapshot()});throw e;}}
  async attach(asset){
   this.#asset=asset;this.#url=URL.createObjectURL(asset.blob);this.#command('set_source','initialization','verified_asset',()=>{this.#audio.src=this.#url;this.#audio.preload='auto';this.#audio.load();});
@@ -40,26 +40,33 @@ export class LocalPlayer{
  async #play(reason){this.#journal.emit('audio_play_requested',{phase:this.#phase,reason,audioBefore:this.snapshot()});try{await this.#audio.play();this.#intended=null;this.#journal.emit('audio_play_resolved',{phase:this.#phase,reason,audioAfter:this.snapshot()});}catch(e){this.#journal.emit('audio_play_rejected',{phase:this.#phase,reason,errorCode:e.name==='NotAllowedError'?'PLAY_NOT_ALLOWED':'PLAY_FAILED',exceptionName:e.name==='NotAllowedError'?'NotAllowedError':'OtherError',audioAfter:this.snapshot()});throw error(e.name==='NotAllowedError'?'PLAY_NOT_ALLOWED':'PLAY_FAILED');}}
  async preview(onProgress){
   this.#phase='preview';this.#command('seek','initialization','preview_start',()=>{this.#audio.currentTime=0;});await this.#play('preview');
-  let before={time:this.#audio.currentTime,mono:performance.now()};await new Promise(r=>setTimeout(r,1000));before={time:this.#audio.currentTime,mono:performance.now()};
-  await new Promise((resolve,reject)=>{const timer=setInterval(()=>{const elapsed=performance.now()-before.mono;onProgress(Math.min(1,elapsed/10000));if(elapsed<10000)return;clearInterval(timer);const advanced=this.#audio.currentTime-before.time,ratio=advanced/(elapsed/1000);this.pause('initialization','preview_finished');this.#command('seek','initialization','preview_reset',()=>{this.#audio.currentTime=0;});this.#phase='ready';this.#journal.emit('audio_trial_completed',{elapsedMs:elapsed,positionBefore:before.time,positionAfter:before.time+advanced,playbackRate:ratio});if(ratio<.95||ratio>1.05||this.#audio.error)reject(error('PLAYER_NOT_REAL_TIME'));else resolve();},200);});
+  const started=performance.now(),position=this.#audio.currentTime;
+  await new Promise((resolve,reject)=>{
+   const timer=setInterval(()=>{
+    const elapsed=performance.now()-started,advanced=this.#audio.currentTime-position;
+    onProgress(Math.min(1,Math.min(elapsed,advanced*1000)/10000));
+    if(!this.#audio.paused&&!this.#audio.error&&(elapsed<10000||advanced<10)&&elapsed<13000)return;
+    clearInterval(timer);
+    const passed=!this.#audio.paused&&!this.#audio.error&&elapsed>=10000&&advanced>=10&&advanced/(elapsed/1000)<=1.05;
+    this.pause('initialization','preview_finished');
+    this.#command('seek','initialization','preview_reset',()=>{this.#audio.currentTime=0;});
+    this.#phase='ready';
+    this.#journal.emit('audio_trial_completed',{elapsedMs:elapsed,positionBefore:position,positionAfter:position+advanced,
+     playbackRate:advanced/(elapsed/1000),outcome:passed?'verified':'incomplete'});
+    if(passed)resolve();else reject(error('PLAYER_NOT_REAL_TIME'));
+   },100);
+  });
  }
- async start(){if(this.#phase!=='ready')throw error('PLAYER_NOT_READY');await this.#play('official_start');this.#phase='playing';this.#lastPosition=this.#audio.currentTime;this.#lastAdvance=performance.now();
-  this.watch=setInterval(()=>{if(this.#phase==='playing'&&!this.#audio.ended&&performance.now()-this.#lastAdvance>5000)this.onFault('PLAYER_NO_PROGRESS');},1000);
-  this.progress=setInterval(()=>{if(this.#phase==='playing')this.#journal.emit('audio_progress',{phase:'playing',audioAfter:this.snapshot()});},10000);
+ async start(){
+  if(this.#phase!=='ready')throw error('PLAYER_NOT_READY');
+  await this.#play('official_start');this.#phase='playing';this.#lastPosition=this.#audio.currentTime;this.#lastAdvance=performance.now();
  }
  pause(actor,reason){this.#command('pause',actor,reason,()=>this.#audio.pause());}
- hold(reason,recoveryId,actor='learner'){this.recoveryId=recoveryId||crypto.randomUUID();this.#journal.emit('controller_transition',{recoveryId:this.recoveryId,actor,reason,controllerStateBefore:this.#phase,controllerStateAfter:'technical_hold',audioBefore:this.snapshot()});this.#phase='technical_hold';this.pause(actor,reason);}
- async resume(onPlaying=()=>{}){
-  if(this.#phase!=='technical_hold'||this.recoveryCount>=1)throw error('RECOVERY_LIMIT_REACHED');this.recoveryCount++;
-  if(this.#audio.currentTime+.25<this.#lastPosition){this.noProgressRecoveries++;this.#journal.emit('recovery_no_progress',{recoveryId:this.recoveryId,errorCode:'AUDIO_PROGRESS_STALE',playerCurrentTime:this.#audio.currentTime,lastAdvancedPosition:this.#lastPosition,consecutiveNoProgressRecoveries:this.noProgressRecoveries});throw error('AUDIO_PROGRESS_STALE');}
-  const recoveryId=this.recoveryId,before=this.#audio.currentTime,start=performance.now();await this.#play('technical_resume');this.#phase='recovering';onPlaying();
-  await new Promise(r=>setTimeout(r,3000));const advanced=this.#audio.currentTime-before;
-  if(this.#phase==='ended')return;if(['submitted','technical_stop'].includes(this.#phase))throw error('RECOVERY_INTERRUPTED');
-  if(advanced<2.8){this.noProgressRecoveries++;this.#journal.emit('recovery_no_progress',{recoveryId,positionBefore:before,positionAfter:this.#audio.currentTime,consecutiveNoProgressRecoveries:this.noProgressRecoveries});throw error('PLAYER_NO_PROGRESS');}
-  this.#journal.emit('recovery_position_advanced',{recoveryId,positionBefore:before,positionAfter:this.#audio.currentTime,elapsedMs:performance.now()-start});
-  await new Promise(r=>setTimeout(r,7000));if(this.#phase==='ended')return;if(['submitted','technical_stop'].includes(this.#phase))throw error('RECOVERY_INTERRUPTED');if(this.#audio.currentTime-before<9.5){this.noProgressRecoveries++;throw error('PLAYER_NO_PROGRESS');}
-  this.#phase='playing';this.#lastAdvance=performance.now();this.noProgressRecoveries=0;this.#journal.emit('recovery_playback_stable',{recoveryId,positionBefore:before,positionAfter:this.#audio.currentTime});
+ finish(status,reason,{stopAudio=false}={}){
+  const actor=reason==='review_deadline'?'review_deadline':['manual','LEARNER_CANNOT_HEAR'].includes(reason)?'learner':'navigation';
+  this.#journal.emit('controller_transition',{actor,reason,controllerStateBefore:this.#phase,controllerStateAfter:status,audioBefore:this.snapshot()});
+  this.#phase=status;
+  if(stopAudio&&!this.#audio.paused&&!this.#audio.ended)this.pause(actor,reason);
  }
- finish(status,reason){const actor=reason==='review_deadline'?'review_deadline':reason==='manual'||reason==='LEARNER_STOPPED'?'learner':reason==='PAGE_RELOADED_DURING_EXAM'?'navigation':'controller';this.#journal.emit('controller_transition',{actor,reason,controllerStateBefore:this.#phase,controllerStateAfter:status,audioBefore:this.snapshot()});this.#phase=status;clearInterval(this.watch);clearInterval(this.progress);this.pause(actor,reason);}
  setVolume(v){this.#audio.volume=Math.max(0,Math.min(1,v));}
 }
