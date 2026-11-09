@@ -87,7 +87,10 @@ test('Term 1 retake keeps its ticket, offline attempt and result separate', {tim
     await page.goto(entry+signedTicket);
     await select();
     await page.locator('#bootstrapPreview').click();
-    await page.getByRole('button',{name:'Bắt đầu bài thi bù Listening',exact:true}).click();
+    const start = page.getByRole('button',{name:'Đã nghe rõ Bắt đầu thi Listening',exact:true});
+    await start.waitFor();
+    assert.equal(await start.innerText(),'Đã nghe rõ\nBắt đầu thi Listening');
+    await start.click();
     report('started');
     const player=page.locator('#listeningView .cbt-toolbar #miniJourneyPlayer');
     await player.locator('progress[aria-label="Tiến độ phát audio"]').waitFor({timeout:5_000});

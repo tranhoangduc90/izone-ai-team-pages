@@ -49,6 +49,7 @@ export const ASSETS=[
   "../shared/app-retake.js",
   "../shared/attempt-review.js",
   "../shared/audio-source-choice.js",
+  "../shared/cbt-audio-start-label.js",
   "../shared/desktop-exam-guard.css",
   "../shared/desktop-exam-guard.js",
   "../shared/exam-clock.js",
@@ -118,6 +119,7 @@ export const ASSET_HASHES={
   "../shared/app-retake.js": "74d828f440fcb78113d6044b37afb2810f245f8b1dd20e7eabd796e21c22cb96",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
+  "../shared/cbt-audio-start-label.js": "f804290520ea13ec0425aba5657633d286308c853e7be3a32dea18da143e80c8",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
@@ -128,13 +130,13 @@ export const ASSET_HASHES={
   "../shared/writing-submission.mjs": "6bd89beb3cdc09740aa63f7f07554efb5131b1c60424f883239836428d6410de",
   "../term-test-1/test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b",
   "../term-test-2-computer-based/audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
-  "../term-test-2-computer-based/bootstrap-retake.js": "f0cd7d006eb3af156997e9a8b7f88bd0de62f26de8303b68367c7cc9b6b3e3a1",
+  "../term-test-2-computer-based/bootstrap-retake.js": "92c2f6a2d7f19316520da86aa8edf4a9fd69505fee2414948204c303e5ed0392",
   "../term-test-2-computer-based/enhance.js": "baa32ce7b4144f5f6425e6fea188e9f2b70401e46c9eeecf7759f9ae4254334f",
   "../term-test-2-computer-based/interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "../term-test-2-computer-based/styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3",
-  "index.html": "3cc023c78dd48ff17638c82de870fefcbbf1f6c58735e65ec0bc8d5f3d12dea6",
+  "index.html": "39620b0092c6c67cd8aaf50240af8297fe180a996af33b25abef5cd2e2a4f676",
   "offline-worker.js": "5781a83736f8e18762b3aa2e02bb45135fe0283e9f4566cd8fc3e1d6a35ce375",
   "retake-config.js": "e9a2a1225733362235d9368c109a199ec00ee97c71bde8ce04893c988fcbef2a",
   "retake-ui.css": "657f632c6c1159c4385011b6bc1ad21b45b35502f8cc725d0fd8b7d220c07c54"
 };
-export const ASSET_BUILD_ID="ff9046e3a21519a912a064487762c78fbf286aee8ab3dc80d17e7d06f125ddc6";
+export const ASSET_BUILD_ID="f7bc30f8923d6b05d282ff94c6af332f07ee1b70e88441e50a70fa91eb5bf587";

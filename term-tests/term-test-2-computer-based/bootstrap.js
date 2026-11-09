@@ -570,13 +570,12 @@
       const listeningFirst = miniJourney.view().examMode !== 'read_first';
       start.disabled = preparing || (listeningFirst && !previewHeard);
       const label = 'Bắt đầu bài Mini K67';
-      start.setAttribute('aria-label', label);
-      if (listeningFirst && previewHeard) {
-        if (!start.querySelector('br')) {
-          start.replaceChildren('Âm thanh đã vừa tai', document.createElement('br'), label);
-        }
-      } else if (start.textContent !== label) {
-        start.textContent = label;
+      if (listeningFirst && !start.disabled && window.IZONE_CBT_AUDIO_START_LABEL) {
+        start.removeAttribute('aria-label');
+        window.IZONE_CBT_AUDIO_START_LABEL(start, true);
+      } else {
+        start.setAttribute('aria-label', label);
+        if (start.textContent !== label) start.textContent = label;
       }
       return;
     }

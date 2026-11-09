@@ -287,7 +287,7 @@ export const ASSET_HASHES={
   "../shared/app.js": "cb2039410811ed90492f7ad475855f4ce238530a0993aaa5506db98f946a98c2",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
-  "../shared/cbt-audio-start-label.js": "2f19d0a786e5e2226f40f329927ae8ad5bec41cd20b5e48f2ebe63452f378e29",
+  "../shared/cbt-audio-start-label.js": "f804290520ea13ec0425aba5657633d286308c853e7be3a32dea18da143e80c8",
   "../shared/config.js": "b21f4c664ab133a8f0508ed03458b6dbe4b89df076acff2abbc1fdc224c77e56",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
@@ -324,15 +324,15 @@ export const ASSET_HASHES={
   "assets/figures/writing-waste.png": "c77f854bcb39a1481d525d768ccbab8532c09dc5dbfe549c100c3149a8e8688d",
   "audio-loader.js": "d6bffc4f4115053e85cca55e837204412187f3a2f0be73a423b2ff892d40b8a3",
   "audio-whole.mjs": "d5ae5bc0a5db9bc15dad983af55c8db3a5441f5f33f80aad51f37ab08d62bc16",
-  "bootstrap.js": "a3718b913ed8ee6ae682e0ee1ba7f9909432916837667a78a10c81b444d69a5d",
+  "bootstrap.js": "8ee3bb56f2a4c34dfd277b996b9cdfd82f4ae3ea2459fcb1eb4205ad7cf2654b",
   "content.js": "61653a59ae0b7427f5de300cbbc6ceb0121a668664811436802cdfa89a370aa5",
   "enhance.js": "e1aefc04490273147f68fe285a30734b4f71adfa232ede192a1b8935cde55e1c",
   "exam.css": "b89325ce97e1efef761f3f8996aecef28a35b02cef20ac1a24f6521d1ada3012",
-  "index.html": "2e6194295ee29121b000f3d311721a455af8c700be932a8680a6c930b814f803",
+  "index.html": "429d9f70821f47c17f9a7a72febb5c8d1614fc8ccf1f08d29464a375ba492f6f",
   "layout-updates.css": "f4e81684b6a9c416b72bc7c3ceccdc2e39dda0d0c569f2cd11a6dd7daff3fe9a",
   "offline-worker.js": "3826c7ea34ce6a5d1f48b77119e5d39de262fff6d2774450ebf2f7b5a9d117bc",
   "offline.mjs": "de756118a3be7833031576517a10e74464f6fbd0f47af280db8a9d172edc5a8b",
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="dd97fa8b747e96d136ff50e43b6525c24a80c6d7b0dc82de7df7e2685d4488fc";
+export const ASSET_BUILD_ID="fe09ab0bfea51d38e78b91ee20aee85f5eefdb45de8a553ee7b5a6d27be0cd61";

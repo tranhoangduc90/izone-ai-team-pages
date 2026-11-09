@@ -464,6 +464,7 @@
   }
 
   function revokePreview() {
+    window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart);
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
     previewObjectUrl = '';
   }
@@ -865,6 +866,7 @@
       await previewAudio.play();
       previewHeard = !term2Offline?.active;
       previewSample={at:performance.now(),position:previewAudio.currentTime};
+      if (term2Offline?.active) window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart, 10);
       elements.bootstrapPreview.textContent = 'Dừng nghe thử';
       elements.bootstrapPreviewStep.dataset.state = 'complete';
       elements.bootstrapStartStep.dataset.state = 'active';
@@ -875,6 +877,12 @@
     }
   });
   let previewSample=null;
+  previewAudio.addEventListener('pause', () => {
+    if (previewAudio.paused) window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart);
+  });
+  previewAudio.addEventListener('error', () => {
+    window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart);
+  });
   previewAudio.addEventListener('ended', () => {
     elements.bootstrapPreview.textContent = 'Nghe lại 30 giây đầu';
     elements.bootstrapPreviewStatus.textContent = 'Đã nghe hết bản thử. Bạn có thể bắt đầu thi.';
@@ -883,7 +891,13 @@
     if (previewAudio.paused) return;
     if(term2Offline?.active&&!previewHeard&&previewSample){
       const wall=(performance.now()-previewSample.at)/1000,media=previewAudio.currentTime-previewSample.position;
-      if(wall>=10&&media/wall>=0.95&&media/wall<=1.05){previewHeard=true;setStartAvailability();}
+      if (wall>=10&&media/wall>=0.95&&media/wall<=1.05) {
+        previewHeard = true;
+        window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart);
+        setStartAvailability();
+      } else {
+        window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart, 10 - Math.min(wall, media));
+      }
     }
     const elapsed = Math.min(30, previewAudio.currentTime || 0);
     elements.bootstrapPreviewStatus.textContent = `Đang nghe thử · ${formatTime(elapsed)} / 00:30`;

@@ -137,9 +137,9 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     }
     if(mode==='lis_first')await page.locator('#bootstrapPreview').click({timeout:50_000});
     const startName = term ? `Bắt đầu Term Test ${term1 ? 1 : 2}` : 'Bắt đầu bài Mini K67';
-    const confirmedStartName = rescueClass ? 'Bắt đầu thi Listening' : 'Âm thanh đã vừa tai Bắt đầu thi';
+    const confirmedStartName = 'Đã nghe rõ Bắt đầu thi Listening';
     await page.getByRole('button',{
-      name: term && mode === 'lis_first' ? confirmedStartName : startName, exact:true,
+      name: mode === 'lis_first' ? confirmedStartName : startName, exact:true,
     }).click({timeout:50_000});
     log('started');
     await page.getByRole('button',{name:'Tải bài làm về máy'}).waitFor();
