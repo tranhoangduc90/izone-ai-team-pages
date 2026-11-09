@@ -276,11 +276,25 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           const original=await savedSeal();
           assert.ok(original?.operationId);
           assert.equal(original.outcome,undefined);
+          const cacheFamily=term1?'term1-k67-cbt-shell-v1-':term2?'term2-k67-cbt-shell-v1-':'mini-k67-cbt-shell-v1-';
+          const cachedShells=()=>page.evaluate(async family=>{
+            const keys=(await caches.keys()).filter(key=>key.startsWith(family));
+            return Promise.all(keys.map(async key=>{
+              const response=await (await caches.open(key)).match(new URL('index.html',location.href));
+              return [key,await response?.text()];
+            }));
+          },cacheFamily);
+          const originalShells=await cachedShells();
+          assert.equal(originalShells.length,1);
+          assert.ok(originalShells[0][1]);
           assert.ok((await fetch(base+'/preview/switch-pages',{method:'POST'})).ok);
           await context.setOffline(false);
           process.env.K56_FIXTURE_IMPORT_ONLY='1';
           const {activateWorkerUpdate}=await import('./term2-offline-browser.mjs');
           await activateWorkerUpdate(page);
+          const upgradedShells=await cachedShells();
+          assert.equal(upgradedShells.length,2);
+          assert.deepEqual(upgradedShells.find(([key])=>key===originalShells[0][0]),originalShells[0]);
           await context.setOffline(true);
           await page.reload({waitUntil:'domcontentloaded'});
           await page.waitForFunction(()=>window.TERM_TEST_BOOTSTRAP?.miniJourney?.continuity?.());

@@ -19,7 +19,7 @@ for (const [product, name, key, slug, shared] of [
     try {
       const shell = `term-tests/${slug}-computer-based`;
       const files = [...['bootstrap.js', 'enhance.js', 'offline.mjs', 'offline-assets.mjs'].map(name => `${shell}/${name}`),
-        `term-tests/${shared}/app.js`, 'term-tests/k56-offline-shared/runtime.mjs'];
+        `term-tests/${shared}/app.js`, 'term-tests/k56-offline-shared/runtime.mjs', 'term-tests/shared/app.js'];
       for (const path of files) {
         f.controls.assetOverrides.set('/' + path, execFileSync('git', ['show', `${previousPagesRevision}:${path}`]));
       }
