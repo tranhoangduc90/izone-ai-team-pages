@@ -1,5 +1,7 @@
 // Nhận item đã có của Progress Log: ghép notes và answer sheet theo groupId riêng.
 // Giữ mỗi ô gắn đúng item để nháp, required và chấm chạy như cũ; dữ liệu không phù hợp trả null.
+import {dropdownOptionLabel} from './dropdown-option-label.js';
+
 function noteGroups(items) {
   if (!items.length || !items.every(item => item.groupId?.startsWith('notes-')
     && item.interactionType === 'short_text' && item.pedagogicalTypeCode === 'sentence_completion')) return null;
@@ -114,7 +116,7 @@ export function buildCompactExercises(items, {valueFor, requiredFor, onChange, r
     select.required = requiredFor(item);
     select.setAttribute('aria-label', `Câu ${item.displayNumber}`);
     select.append(new Option('Chọn tên', ''));
-    for (const option of item.options) select.append(new Option(`${option.id} · ${option.label}`, option.id));
+    for (const option of item.options) select.append(new Option(dropdownOptionLabel(option, ' · '), option.id));
     select.value = String(valueFor(item) || '');
     select.addEventListener('change', () => onChange(item.itemVersionId, select.value || undefined));
     content.append(select);

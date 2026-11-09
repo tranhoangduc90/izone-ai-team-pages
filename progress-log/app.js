@@ -3,6 +3,7 @@ import {createReadCoordinator} from './read-coordinator.js';
 import {pilotEntry} from './pilot-entry.js?rev=20261022-official-v2';
 import {renderSessionReview} from './session-review.js?rev=20261104-the25-v1';
 import {buildDropdownFlowchart} from './dropdown-flowchart.js?rev=20261010-v1';
+import {dropdownOptionLabel} from './dropdown-option-label.js';
 import {buildCompactExercises} from './compact-exercises.js?rev=20261019-quoted-notes-v1';
 import {commentPanel,paintJourneyComments,createCommentPoller,bindDialogDismiss} from './session-comments.js?rev=20261102-the24-v1';
 import {observeSubmissionWindow, windowCanSubmit, submissionWindowMessage} from './submission-window.js?rev=20261022-official-v2';
@@ -1089,7 +1090,7 @@ function buildQuestion(item) {
     for (const option of item.options) {
       const choice = document.createElement('option');
       choice.value = option.id;
-      choice.textContent = option.id + '. ' + option.label;
+      choice.textContent = dropdownOptionLabel(option);
       select.append(choice);
     }
     select.value = String(responseFor(item) || '');
@@ -1097,7 +1098,7 @@ function buildQuestion(item) {
     preview.className = 'heading-choice-preview';
     const showSelection = () => {
       const selected = item.options.find(option => option.id === select.value);
-      preview.textContent = selected ? selected.id + '. ' + selected.label : '';
+      preview.textContent = selected ? dropdownOptionLabel(selected) : '';
       preview.hidden = !selected;
     };
     showSelection();
@@ -1273,6 +1274,7 @@ function answerLabel(item, answer) {
   const selected = Array.isArray(answer) ? answer : [answer];
   return selected.map((value,index) => {
     const option = item.options?.find(candidate => candidate.id === value);
+    if (option && item.layoutType === 'matching_heading_dropdown') return dropdownOptionLabel(option);
     const label=option ? `${option.id}. ${option.label}` : String(value ?? '—');
     return item.layoutType==='matching_pairs'?`${item.interactionConfig.matchingPrompts[index]} → ${label}`:label;
   }).join(', ');

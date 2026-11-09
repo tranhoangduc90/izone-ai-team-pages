@@ -1,513 +1,518 @@
 {
-  "version": "9f9f3265967cffe5",
+  "version": "c1ed906fefb7c78e",
   "assets": [
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/ai-import-example.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/ai-import-example.js",
       "sha256": "52d16a92b2585ebe486003b1c5cc12a344596baa09d7a4ccb3d06c0cac3ce29b",
       "bytes": 1712
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/answer-review.js",
-      "sha256": "ca8df7406bc8f6836660311afefce7d5ad79667167a5e4866d800858a2aa9093",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/answer-review.js",
+      "sha256": "cbe138757b70e392db19bc46286ca095ec36c35155e9d055d8889afbeb7d98c3",
       "bytes": 7639
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/api-response.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/api-response.js",
       "sha256": "301f6832b0a8011d445158f6e868388ff59b337f9d8b1b52c9018b8378cda0e4",
       "bytes": 1871
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/app.js",
-      "sha256": "c7d1df9b555b68ee631e203cabbc831ae0cb7224316317d24b996cb9d6cedf39",
-      "bytes": 124761
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/app.js",
+      "sha256": "ac0e864f66d911d1fc77d920deb1b5dbbe246f67649c99b12aa97a5e3afe536d",
+      "bytes": 124989
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/authoring-action.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/authoring-action.js",
       "sha256": "7922ac935f51160ea1c06106857a0d6db46640db9d6f1a4b26eef15d8ce5f266",
       "bytes": 1158
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/authoring-answers.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/authoring-answers.js",
       "sha256": "38f79ace9a9cd3136fa15e92dc599ae87700cfa6cc6e82bcd5d47a2ee8057463",
       "bytes": 5574
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/authoring-parts.js",
-      "sha256": "8fbea1d385c7c8a77589fc129f78723e998acab5401b714ae086b7e7deca743b",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/authoring-parts.js",
+      "sha256": "d5bf8ce15baf680c7e87f476e5b6baf3732f7d1f011a0b7148ef030c5ba5efe3",
       "bytes": 6657
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/authoring-validation.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/authoring-validation.js",
       "sha256": "e02f3c036ec1a3bc2e83b5e441b3f8c9ba46c47207cc87ad15a4e49359b04bbb",
       "bytes": 4978
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/class-analytics-view.js",
-      "sha256": "841015b5fd76689d271fbcb3b28199184c2832ef99ad6cf78035bbd19396592a",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/class-analytics-view.js",
+      "sha256": "5cb21708cb36e2db985e5ed0b254da9068481b3c7af1336e9738831b40da100b",
       "bytes": 5293
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/compact-exercises.js",
-      "sha256": "34df103a6e4b5ebdc85fc4be0ddda76e61ef6c10ea4d82287255d113fc080163",
-      "bytes": 5990
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/compact-exercises.js",
+      "sha256": "85884e39e3165d2eddd8e8cab5978971a8a8f9d6cb520c8f86f3559edaa2ab2c",
+      "bytes": 6128
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/config.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/config.js",
       "sha256": "42d077dadc06dfb2c8ee38df02ab260fb5615d5adef0519925645a9ff7f6faab",
       "bytes": 596
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/course-analytics.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/course-analytics.js",
       "sha256": "fc96a6d338d825296ac6c3734c6df59170f836c5de2fb0654588215243a64f1f",
       "bytes": 3496
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/demo/boot.js",
-      "sha256": "eb76b50a0bb4c79ca01fc39248551d3cea060c94f5a334060928a322681ef59d",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/demo/boot.js",
+      "sha256": "4dadbb62187ea7de7bffc7e4c64974d798858957e2fe52d18a5bec79208f2b56",
       "bytes": 3570
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/demo/config.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/demo/config.js",
       "sha256": "e2dfe42f3da874b9239e90176bf5d8a747be61a753bcddddc576f336510f21cb",
       "bytes": 475
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/demo/demo.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/demo/demo.css",
       "sha256": "37ab4af5ee77edd1f7bb7a7bdbc060b64e5dbafdb19d0c1a6a1f405458d5e44e",
       "bytes": 450
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/demo/index.html",
-      "sha256": "27c7c126188193645c104750fddf3761a4dee4d1e95cecda3fdcd8870baee147",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/demo/index.html",
+      "sha256": "453a5340ce2b4f27370009ab9348fa2c27fe9558ae51956f34769f49fc640c5e",
       "bytes": 10759
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/demo/thuy.html",
-      "sha256": "64936e4a1df28f34a69030fc76272462e3d50e3fe545c4789c54b86d768f0fc3",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/demo/thuy.html",
+      "sha256": "d333ea30dbe40b86a70521cc75593a4297c8af914dd3ab4959819a48cf8645e3",
       "bytes": 10994
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/demo/worksheet.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/demo/worksheet.css",
       "sha256": "d87e6a6531622d6eaebf9e4b9c9d36f11bf2bfd97df19a1febcdca58b3cde65f",
       "bytes": 891
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/docs-batch-import.js",
-      "sha256": "d162d8b03e5cb5b663d00b9d5d892a7e2243db58a264b6df4501c467d72d969e",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/docs-batch-import.js",
+      "sha256": "7fe4a83f25a96b964f20a026588c0d5a916a32cbeef39b0d50f131b58547c90f",
       "bytes": 16454
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/docs-import-review.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/docs-import-review.js",
       "sha256": "2b438258c144a7bf872cc89cd1df2456128ae63c86af6721b14ab331376c8eed",
       "bytes": 3485
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/docs-source-table.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/docs-source-table.js",
       "sha256": "21f82e0263c901ef9770d7b878ba56f8c0df0aa7c35e62fbafa15c27aa8e7aac",
       "bytes": 2513
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/dropdown-flowchart.js",
-      "sha256": "26cb36591a461d400f972addd7202e5c500de4793f024eac2ef4dc6b1bda9715",
-      "bytes": 4069
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/dropdown-flowchart.js",
+      "sha256": "c33696e0da50a1ff37afc51a36e2fcccc68cbf76f43b668f03bcf3294c9efa70",
+      "bytes": 4207
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/gap-authoring.js",
-      "sha256": "35ec96595d5a6b1bcdd3f425da64dd6c3f999d4e752377c2c5ee9a02118fe7af",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/dropdown-option-label.js",
+      "sha256": "2ffa388e69773ec47da3f21f9b1250acfb138d600a992c9276c4fb4f59930931",
+      "bytes": 352
+    },
+    {
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/gap-authoring.js",
+      "sha256": "89e5e028a90e22a29e7a7e7c5a694b415df411c12d010cdfd838533581eba1c8",
       "bytes": 17407
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/index.html",
-      "sha256": "afe1c6ce5eb1259e186b2ab39f00014ad819f5b510bf5b6d6659d8a31cfe7d69",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/index.html",
+      "sha256": "73416b69c9cd5712eb099983fe0e97c61ea4f028928f29d2ec20010d821cdd91",
       "bytes": 10755
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/item-kind.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/item-kind.js",
       "sha256": "060afd7d76475b738f77a308189c1a1d4c22c31667bede2901c0ac219b415741",
       "bytes": 301
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/journey.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/journey.css",
       "sha256": "a9a913ab23381512a602313145ceddd55d2d1c0b7074a91b56928cbf0c93e5a2",
       "bytes": 4208
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/journey.html",
-      "sha256": "ae376ab1c2a330f7bb0e6c561be0d553ebcbca2c4aecc53882a179825b33d048",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/journey.html",
+      "sha256": "c1b11658fc98816fad7ca54e1264acc1c927741c64d5d2c6c659fb6f217631f3",
       "bytes": 5151
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/journey.js",
-      "sha256": "65c68df7c7a6b1e86ed6f1729623ce6d595996781389b4c8af1458d864240aa2",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/journey.js",
+      "sha256": "1e1aae7a4b913b365499b66e5f042bd79168282c414e599ac3f6d1f8500a2617",
       "bytes": 23424
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/legacy-sentences.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/legacy-sentences.js",
       "sha256": "f1e9cd2e6ed32c79249ab9298afafa887d680134d7138b1ed2c9e485cb121181",
       "bytes": 771
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/pilot-entry.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/pilot-entry.js",
       "sha256": "e4424618d61e8c56c6dfd92be389ce15052488f3bcd44d902c55072a8f5d618c",
       "bytes": 657
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/read-coordinator.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/read-coordinator.js",
       "sha256": "57f5bf2282c548b505847b8ca589a79fce8bef72385125e9cd1b5aa221b127f0",
       "bytes": 1082
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/reference-components.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/reference-components.css",
       "sha256": "0e3987060ccf13504c0607fff74de09ad2627c9b445afb2b1896d4f5e43af119",
       "bytes": 33083
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/release-loader.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/release-loader.js",
       "sha256": "7b955d2f31fd292b1d67d29defd498183d4d3f17b2a63f60e5c85c3a72e3022e",
       "bytes": 1505
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/release-runtime.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/release-runtime.js",
       "sha256": "9c00874ea87c9f7a49497ec27e2e14c378e1e602700008f75b1e14ea955ce238",
       "bytes": 542
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/release-updater.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/release-updater.js",
       "sha256": "27c86b7a931175e554748d2bd1fc2a5bfab69684b1b245b0bfccaa951bf4840c",
       "bytes": 4235
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/session-comments.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/session-comments.css",
       "sha256": "3490218c1d69bc958515da36feaf21713d4735a018ac201b288857812c0a0d9a",
       "bytes": 3241
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/session-comments.js",
-      "sha256": "1aec5b97f8e160ec7306b7a9efbb33464724c143843161a0282b7955f25572d1",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/session-comments.js",
+      "sha256": "38371abc228bc5c8bf40fbe24fc354910408466d6d3d2bb3ff38e9e57760b58d",
       "bytes": 4851
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/session-presentation.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/session-presentation.js",
       "sha256": "85e39cc70bff0d20525758e042c1576c0d2750d402c2aacc179f767f4b014cc0",
       "bytes": 3137
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/session-review.js",
-      "sha256": "db663000d549a3c5ea4be01ffa2d8cc561bcf198934658ae8bba8246fdf2426a",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/session-review.js",
+      "sha256": "b34df38b436527fd059d8c485c0b99c288958e5b5559f4e11b5ad29661afe416",
       "bytes": 5378
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/student-instructions.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/student-instructions.js",
       "sha256": "1001867a3d92293937bef060de749eef09bae7d1072763d26aa08380aaebfd9d",
       "bytes": 289
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/student-portal.js",
-      "sha256": "ad18ef3a7a05261fa2ebee112cfd0aeb49c897724b19403e823dfbcff6c56b47",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/student-portal.js",
+      "sha256": "48ffa2ead0172470d03b65a7adc85ee1d0b428838679d83b96e059ad83470034",
       "bytes": 9153
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/student-session-dashboard.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/student-session-dashboard.css",
       "sha256": "293d26ad1e4d41fcffdf5e9f148c6c98ba8f531eea32dd4cafceec3eb084bdd8",
       "bytes": 1866
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/student-session-dashboard.js",
-      "sha256": "910af0b6cd384fe294cfac4aeded18f55c255d0867ad627cdbf80cefae6f2519",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/student-session-dashboard.js",
+      "sha256": "05b3e3b1cd8f79582b98b59d49025596d37e1f47afcf5bf0c3e58cf5e438defc",
       "bytes": 10596
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/student-session-memory.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/student-session-memory.js",
       "sha256": "cfa363ecda08cb0b7ea82bc2fce7b91ecdebc5d284d3461ae5e4274bc4f67333",
       "bytes": 1696
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/student-test-results.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/student-test-results.js",
       "sha256": "cd8137000121c1195c01abed679980d01329cc25fb134362a8ddc606f0af945b",
       "bytes": 3032
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/student-the20.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/student-the20.css",
       "sha256": "153d357282fa9a9d7c22dfcbb20bd3b9a2b9a3aa6998c2cb86cb7a9df84f0cc3",
       "bytes": 6573
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/student.html",
-      "sha256": "205269b2c77ea51fb0ab145d47d1354bc5fd75c22bfe659a601f2ab8bc3f450d",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/student.html",
+      "sha256": "b144359b7816c65efbc005602472e16ce990bd41cf35cfea328572adea1e7004",
       "bytes": 3138
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/styles.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/styles.css",
       "sha256": "947438b72ca3911e5d5f6a4e08d864351764eb9914a05b29278ef2bea18db05c",
       "bytes": 18484
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/submission-window.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/submission-window.js",
       "sha256": "532c21fd02ee8e8037a5f5e05f1154abd46498cd834da2a9c6994483ee8c22c1",
       "bytes": 1649
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-assignment-dialog.js",
-      "sha256": "d631d7fcbef4270915929ceb97d987af3236adeb2d06de9576d96becba2f7610",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-assignment-dialog.js",
+      "sha256": "5e2f74085835eb893760ac093bf9250c83b35e44b1ea7587ca6fd8af5df54b05",
       "bytes": 15387
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-class-portal.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-class-portal.js",
       "sha256": "9436c6d088da957960a04c834b6d33195353e58a649da540741f181773772e58",
       "bytes": 2791
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-course-overview.js",
-      "sha256": "75b5bb2b257c461df229ef3190b1d99486a58dd70b4911e15a3703f0dc724223",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-course-overview.js",
+      "sha256": "2432388942c5f6a2a4e32b05bfec5ae29dbda890d2a5ae37aa01ecd114c185bb",
       "bytes": 9047
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-entry-context.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-entry-context.js",
       "sha256": "efe5482a7b3d41f63c97f400bb3f50ddf033bc1032ecf6a861b817af76bcd77b",
       "bytes": 754
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-form-editor.js",
-      "sha256": "ee7cc944eccc034244a325f58fd29823a2679d348e7ee7228ec248b97d0d8440",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-form-editor.js",
+      "sha256": "81bcbec35fbcaa223b61ffb847a404f618a4f78cc728dbfc343df2d1fcd28e1d",
       "bytes": 92222
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-form-library.js",
-      "sha256": "2b236fce1123ad4cb74a769d58d730a2226dc47790444f90a442efbe0ef06129",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-form-library.js",
+      "sha256": "7ee7774ccdda63e73ea6fe8dc1faaf3ef4c72c6348eb32204e5e169cc4810824",
       "bytes": 15580
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-live-updates.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-live-updates.js",
       "sha256": "26575bc2f3ab67fea1976fbe5ed28a722de1e3bdeb7fd3775e1fe7f6752c3d80",
       "bytes": 7848
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-realtime.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-realtime.css",
       "sha256": "5810c323956c1dc18965b8ecd73f0db42254bfe3ef43ae2b2a9e2af33c64b950",
       "bytes": 2937
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-session-comments.js",
-      "sha256": "60d0c87e73a32eae2b3d0ea95d3333bdef811e523890d7f1b6fc8d49fc3b3378",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-session-comments.js",
+      "sha256": "a034a5575ac5b25bbea8da3ec9063742144dd8c86d89618f6101b08862f052f9",
       "bytes": 17884
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher-thuy.html",
-      "sha256": "76073f4f246bd8bdb4903e5ed5cba0b6140eb35970140192ca55e91fac7aff44",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher-thuy.html",
+      "sha256": "8cc8a3cae9331bb732491943976f0d8acbf0fe27f1dc98eba9589a1e969af3d3",
       "bytes": 18060
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher.css",
       "sha256": "7b77b955e7ef1ff80a38c8051e57a0f91c30afcf1101470e3d2978ec9b92d7d8",
       "bytes": 17515
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher.html",
-      "sha256": "76073f4f246bd8bdb4903e5ed5cba0b6140eb35970140192ca55e91fac7aff44",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher.html",
+      "sha256": "8cc8a3cae9331bb732491943976f0d8acbf0fe27f1dc98eba9589a1e969af3d3",
       "bytes": 18060
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/teacher.js",
-      "sha256": "1f93cac6c62febafce8c768ca0cfb6252582a4a65736954888f324457f1b9a49",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/teacher.js",
+      "sha256": "2536944f310e55c00f07fb3da87afb5f5c5a90f47fccfb6248e38d2d8600c26e",
       "bytes": 119150
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/the24.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/the24.css",
       "sha256": "86ee4277caf1b41cd250569e985147e5cbcd0983df500961efc2274ef511fa2f",
       "bytes": 10147
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/assignment-management.js",
-      "sha256": "86b9786f4d30862b10abc09f5358231bf716129d848af517fad61042c92a874b",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/assignment-management.js",
+      "sha256": "634e3dad108ad2623058d416135bdd31b486b7b07c3f7d0b0d9686313eb93698",
       "bytes": 7621
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/comparison-table.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/comparison-table.js",
       "sha256": "af1406fbe6a3b833dfd3a1c8b8f385aded03da0cfce233a404f97464d4527ec8",
       "bytes": 2844
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/course-skills.js",
-      "sha256": "f5bde93b545aa712f905a68fb6180c3ba23950ac6f3e3352364c273e68b12cc2",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/course-skills.js",
+      "sha256": "d732cc41a765af15e7c2d3fe7f89217740eee90e12b3b770e9725ee60ff977c7",
       "bytes": 22373
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/feedback-policy.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/feedback-policy.js",
       "sha256": "c5f88916c4fc5d029df1194e51a7199c8894ae8c2fcaf8d02e0af80d0ec6e27d",
       "bytes": 630
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/keyword-selection.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/keyword-selection.css",
       "sha256": "50ed44d945b928b5165a37f573f772420275dcc8f3fd00a3a8bdbb2fbcb1c37b",
       "bytes": 805
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/keyword-selection.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/keyword-selection.js",
       "sha256": "3a2ff97ff006107540da66af203d1c324b1d7a27b0a5f3fe15f701037c055847",
       "bytes": 1839
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/learner-view.js",
-      "sha256": "9f86bc8d76833fab96f031088a13d14050293973ea25e64254c9f9d24e0613e7",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/learner-view.js",
+      "sha256": "41a0d4f254b923fac58940f354bb76b80ca7eb9d904c9c1d396f2501a1d36686",
       "bytes": 5216
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/part-feedback.js",
-      "sha256": "2b0f33bb4cd65f50416cdcd21dee40f4e82a10b097b3e3e992b0fa1fb3946b1b",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/part-feedback.js",
+      "sha256": "8a0dae929bf32f48558de526a737f0c371ec2b4f1128dab5ff53bcf1f6f46561",
       "bytes": 4162
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/question-analytics.js",
-      "sha256": "f32ed291ae4f258289f054244ae33a23e9e167e5f05665d1ead231b578439f63",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/question-analytics.js",
+      "sha256": "221d2f5e32eae5d5b33e0e8c414c5719a1ff61051bcf2704c8014f98943c34dd",
       "bytes": 6404
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/question-presentation.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/question-presentation.js",
       "sha256": "4339024041b8d1e047515527d85aac883e694d3a8ec4e4d46baec80a477267f1",
       "bytes": 1675
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/question-review.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/question-review.css",
       "sha256": "33abd644e0da8788cc8e2a4492904c03ef6d157bb2bb4570271c09616d29c5fb",
       "bytes": 899
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/question-review.js",
-      "sha256": "d1dd3d6ef6f6726382c18f625fcd3cbe339981fcedf5462d6aa2f046c49a5784",
-      "bytes": 5350
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/question-review.js",
+      "sha256": "d66dfabd2f005e7fc8bf0fe55c3d216e5bc6221b5fd8ef42cd08a163c18f1b8a",
+      "bytes": 5485
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/revisions.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/revisions.css",
       "sha256": "10a875574edbefb309f29230c8bc4d5cc4bd63ffc9858a8eb03a777e98170c49",
       "bytes": 16877
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/student-skills-journey.js",
-      "sha256": "38703e324fff6ef66559d360f6c22f60deca80705c71be6f78d63c03fdf05a82",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/student-skills-journey.js",
+      "sha256": "35d1f20e6c889eb5477340ccd37eddd37d1d28cbab79f5720c676e9f598163f1",
       "bytes": 2944
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/styles.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/styles.css",
       "sha256": "40aca599afb8b8b00b595f1dad242f808dac26552322c3cc97c93fbffe23cf86",
       "bytes": 41638
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-live/teacher-view.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-live/teacher-view.js",
       "sha256": "601d45a29b8ad3c3af482c4615b9771f764559aa97cfda7a2b792c150d97eb27",
       "bytes": 16905
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-review/fonts.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-review/fonts.css",
       "sha256": "0291b696320fd3dc475150d931dc5be0cada3654a9e801c6fdf62d3946040ba5",
       "bytes": 1912
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-review/fonts/geologica-0.woff2",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-review/fonts/geologica-0.woff2",
       "sha256": "73249ccb96d45b9fb3cc3a5fb531b045e990d841216f63e63430ea920f686206",
       "bytes": 11488
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-review/fonts/geologica-1.woff2",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-review/fonts/geologica-1.woff2",
       "sha256": "a7dc739efa0c2d4066164b40b15276440978d8efb6003b5f10a6b9c3e5c1cd30",
       "bytes": 16428
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-review/fonts/geologica-2.woff2",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-review/fonts/geologica-2.woff2",
       "sha256": "bfdc6f24e4a293fcd4330a8d48d26c804e9aa7820fe9222183e9a76e0bea75dc",
       "bytes": 10928
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-review/fonts/geologica-3.woff2",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-review/fonts/geologica-3.woff2",
       "sha256": "7920935f257c10fa233ff9379a8072fb27b1216be7ffde3141f66262b4885b92",
       "bytes": 8328
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-review/fonts/geologica-4.woff2",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-review/fonts/geologica-4.woff2",
       "sha256": "85ea5e8563c66d7fc38c97e7fabf398643c719e76ce058704b3690317d6d0993",
       "bytes": 22404
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-review/fonts/geologica-5.woff2",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-review/fonts/geologica-5.woff2",
       "sha256": "b14f1edee95a57f8782d505232e54584c80c673acbd25a0e7c6366332977b47d",
       "bytes": 24944
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy-review/model.mjs",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy-review/model.mjs",
       "sha256": "a0bcd09a1a12793f24b980de74b32bd8fa6face4dd2999e9685efdddc22d323f",
       "bytes": 15570
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/thuy.html",
-      "sha256": "1bb7c8e697ae96c1e95d575767e6d9e6fc63f3ee226d76a93008c58ddfc12bb6",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/thuy.html",
+      "sha256": "03d36b6f8568ebad54c822e55c7e833741d6d7f52976dc8a06a21bb1f057f4ea",
       "bytes": 10793
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/progress-log/worksheet-preview.js",
-      "sha256": "c0d7f45ff33e63f187746933e06d6d4c393682c75213d38304117a5114292bb6",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/progress-log/worksheet-preview.js",
+      "sha256": "290a1a7f3f3761b03de78d4c2e30186bbc4f5ee3ab5603caebd2c1c87da46fba",
       "bytes": 2247
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/course-student-identity.js",
-      "sha256": "8f8dea3f3f52b8dcda93e37f68b6b544234f23e7d367bc59291a2e94c1c3df49",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/course-student-identity.js",
+      "sha256": "905c16b52282ad5a77c5206eddb001704131c369f4fcba3f539fef84334d0894",
       "bytes": 5336
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/izone-favicon.svg",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/izone-favicon.svg",
       "sha256": "dccacd0f15fb7b10cb6a95f1ef91484bc6bca1fb9b0863a3382e0ac2e91f0df1",
       "bytes": 493695
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/red-focus-glow.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/red-focus-glow.css",
       "sha256": "92ec0173cb14704d3d2f3beafd12356ccc3e47ca5ff9fe13a1d4c3f6aba80438",
       "bytes": 781
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/red-focus-glow.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/red-focus-glow.js",
       "sha256": "21bdf68ed43d91865eb6116b03759741c54a88f2274d28e63754afc4dc34e50c",
       "bytes": 6676
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/student-identity-client.js",
-      "sha256": "87101a4d6224ce6eb9f9dddebb434d480979727b0b876c89f1ddaa6a659d1466",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/student-identity-client.js",
+      "sha256": "37ea793c16d518ca123b7dd100731fb81b690f2f6be7fa211438fffa38baf35d",
       "bytes": 6326
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/student-identity-migration.js",
-      "sha256": "c24a59447578f1db55be216a5bfa586eee268f4b2e3d7bb7f7b736d15ed95569",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/student-identity-migration.js",
+      "sha256": "de94c39f39a3c3347384d91b287a5b78dc44b972c5ae235b03d8fdbbbd2d830d",
       "bytes": 5560
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/student-identity.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/student-identity.js",
       "sha256": "7ebfce327fae4c12fa8e6079605e49cf79987841dcff1786a5bb166a2addb625",
       "bytes": 7422
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/student-memory.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/student-memory.js",
       "sha256": "52001d6e855d0890c793443faced3c6d95482d4c4ec5561a6c8595f0ce4cec89",
       "bytes": 3693
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/teacher-auth-state.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/teacher-auth-state.js",
       "sha256": "940c025ca99faee0225cde8270cce0a7a4ceda2062e0fd8a31271c7dbae1f5c2",
       "bytes": 2147
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/teacher-entry.css",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/teacher-entry.css",
       "sha256": "c9231e0e3542f78c586b8f94f67cf08105b1ac8953ca64dc6cb8e7f8d1283604",
       "bytes": 1023
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/teacher-login-preference.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/teacher-login-preference.js",
       "sha256": "b6640ff8815415ba121acff2b7af6ac567b38f5c41633c2b8c715eeb3f031e4c",
       "bytes": 606
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/teacher-session-client.js",
-      "sha256": "82516577ef443cd95241c6010dd2114bddb68f6ba234de5d6052ad86ba690923",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/teacher-session-client.js",
+      "sha256": "da4992efd654536e13506c33ae20de5e77f0615fad042bff35d7222d6e206ac1",
       "bytes": 2688
     },
     {
-      "path": "/izone-ai-team-pages/progress-log/releases/9f9f3265967cffe5/shared/teacher-single-sign-on.js",
+      "path": "/izone-ai-team-pages/progress-log/releases/c1ed906fefb7c78e/shared/teacher-single-sign-on.js",
       "sha256": "4ada5fa5ee979c1e5b2b6bd496da52957e82e9c4142ad546698b937657c2ce9e",
       "bytes": 9635
     }
