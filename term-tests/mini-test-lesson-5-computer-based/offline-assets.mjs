@@ -201,4 +201,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "180f1ae141f5fe675cd4a161cae972053351fa9b98219ca2c3b72dc31f59da36",
   "resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f"
 };
-export const ASSET_BUILD_ID="a4b1478f68e24d4831da8b6a0daf191a07bfbd38ac78a4b63b70d82dccbb1f33";
+export const ASSET_BUILD_ID="6cda12ad251ff81dbe4c50a439e8f0ef57b81c4530c6b54d59f2901d45a14a5b";

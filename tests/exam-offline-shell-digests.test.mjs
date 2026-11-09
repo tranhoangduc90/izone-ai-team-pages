@@ -14,8 +14,10 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
   if (!existsSync(manifest)) continue;
 
   test(`${entry.name} offline shell matches its published files`, async () => {
-    const { ASSETS, ASSET_HASHES } = await import(manifest.href);
+    const { ASSETS, ASSET_HASHES, ASSET_BUILD_ID } = await import(manifest.href);
     assert.deepEqual(ASSETS, Object.keys(ASSET_HASHES));
+    const sorted = Object.fromEntries(Object.keys(ASSET_HASHES).sort().map(name => [name, ASSET_HASHES[name]]));
+    assert.equal(ASSET_BUILD_ID, createHash('sha256').update(JSON.stringify(sorted)).digest('hex'));
     const mismatches = [];
     for (const asset of ASSETS) {
       const file = new URL(asset, route);
