@@ -84,9 +84,9 @@ export const ASSET_HASHES={
   "../term-test-1-k56-computer-based/layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "../term-test-1-k56-computer-based/styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb",
   "../term-test-1-k56/test-config.js": "fdfa91aa74cda341a1965c418f24b2a7a7065c547d0fbad4ae581c8ec1844bc2",
-  "bootstrap.mjs": "4f96151b3a99e99a979ef496d878949da45b89b185fe1c933e9045127c5ce8b5",
-  "index.html": "97570f40a9b291c632dcfc1f7fb974b1e95c562f3e56a5e40392866aaeb86174",
-  "offline-worker.js": "c27b164ffcb9e6af19009725a03b9b374e22d6d77ecf3e577ee67541410b3560",
+  "bootstrap.mjs": "1d7d227d7133ea3b8ada7aadef9fa5f3c619c2c4ddcec9cec40f3fe784f3c46f",
+  "index.html": "060072d8d87ae9e0c500964027526192c3e11df1b4eafd53e9c46c15903083e6",
+  "offline-worker.js": "4f343041a15cb5b49437c5e38b4518454b91355bf9de11e2cf6f0a4c4cfd631d",
   "reading-offline.mjs": "b2430abe4feeb63d9a63c7271f077b6cc1b94f29cb8633ed7628bcf88a25b184"
 };
-export const ASSET_BUILD_ID="cf5abd58b4b8d980a8b2dcb33e14f35cca6e7a3f7e00c0d9823db4aaf37a0552";
+export const ASSET_BUILD_ID="259f9d6140dae14b4fff47ba290571d69d73922cc44d837f36f3a9c656a4acdd";

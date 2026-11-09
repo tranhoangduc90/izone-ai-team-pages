@@ -320,9 +320,11 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       const proof=proofOf(getState()),context=bindingCache.get(ownerKey);
       if(proof.clientRunId!==owner.clientRunId||proof.examSessionId!==owner.examSessionId
         ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return false;
-      const phases=['player_ready','started','early_confirmed','interrupted_local','interrupted_ack','submission_local','submission_ack'];
+      const phases=['download_verified','player_ready','started','ended','early_confirmed','interrupted_local','interrupted_ack','submission_local','submission_ack'];
       if(!phases.includes(detail?.phase))return false;
       const metadata={telemetryVersion:1,phase:detail.phase,assetId:testSlug};
+      if(Number.isSafeInteger(detail.byteLength)&&detail.byteLength>0&&detail.byteLength<=512*1024*1024)
+        metadata.byteLength=detail.byteLength;
       if(typeof detail.elapsedMs==='number'&&detail.elapsedMs>=0&&detail.elapsedMs<=120_000)
         metadata.elapsedMs=Math.round(detail.elapsedMs);
       if(['learner_report','reload'].includes(detail.reason))metadata.reason=detail.reason;
