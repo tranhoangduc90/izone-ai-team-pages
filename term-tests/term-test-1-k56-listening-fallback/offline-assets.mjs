@@ -27,6 +27,7 @@ export const ASSETS=[
   "../k56-shared/app.js",
   "../k56-shared/config.js",
   "../k56-shared/styles.css",
+  "../shared/cbt-audio-start-label.js",
   "../shared/desktop-exam-guard.css",
   "../shared/desktop-exam-guard.js",
   "../shared/exam-clock.js",
@@ -72,6 +73,7 @@ export const ASSET_HASHES={
   "../k56-shared/app.js": "1b60e5f848eed3a746301c049ff443b2f206e3abeff9b1007d478991d8e0ab4e",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
+  "../shared/cbt-audio-start-label.js": "2f19d0a786e5e2226f40f329927ae8ad5bec41cd20b5e48f2ebe63452f378e29",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
   "../shared/exam-clock.js": "54e54acbe25ceea6670cf96afb683d583430e088eac28a753a8f028775072fbd",
@@ -83,10 +85,10 @@ export const ASSET_HASHES={
   "../term-test-1-k56-computer-based/enhance.js": "34955203a034225d72173837b4aebf9d8c7578aa2f9bb0ec4c935a878b5c4a1e",
   "../term-test-1-k56-computer-based/layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "../term-test-1-k56-computer-based/styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb",
-  "../term-test-1-k56-reading-fallback/bootstrap.mjs": "55942a05f7cad320da5c67e431b15b4b553356485c72c5008f9d926402526ad1",
+  "../term-test-1-k56-reading-fallback/bootstrap.mjs": "74d0bf64e41854aef79e39364e50a827394cd7faa1d58e35d4787282d951ebe3",
   "../term-test-1-k56-reading-fallback/reading-offline.mjs": "f0397ec36f8b528736583c4493bd30f86c37caa5a85401187bb0a483026f6144",
   "../term-test-1-k56/test-config.js": "fdfa91aa74cda341a1965c418f24b2a7a7065c547d0fbad4ae581c8ec1844bc2",
-  "index.html": "f65e315838b508b8ff4e1ee78fbe2e3a0eda77dbb38693618f9e292de078a92f",
+  "index.html": "135296a329be8da7aeb5ad0639f5384084d3d13118c2aa753b29a6a9fbedd699",
   "offline-worker.js": "aa14476016b290ed8157adc19652fb7a8795beab0d773ad207caf8dfc8b79358"
 };
-export const ASSET_BUILD_ID="849b2e486b0b1b5c6b67aaac6fe32014a325de665e8d447a773b12f43f143ace";
+export const ASSET_BUILD_ID="bdb15127445c35ab2f99cde6ae66a9a5acdc69a5d2c79f084e027620b89986c4";
