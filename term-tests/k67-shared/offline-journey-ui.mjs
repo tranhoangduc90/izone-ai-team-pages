@@ -395,3 +395,196 @@ export function mountOfflineJourneyHeader({host, studentSelect, changed, readSta
   changed.addEventListener('change', render);
   render();
 }
+
+export function prepareContinuityAudio(blob, observe) {
+  const audio = document.createElement('audio');
+  const url = URL.createObjectURL(blob);
+  const began = performance.now();
+  audio.hidden = true;
+  audio.preload = 'auto';
+  const entry = {audio, url, canPlay:false, release};
+  const controller = new AbortController();
+  const {signal} = controller;
+  entry.ready = new Promise((resolve,reject)=>{
+    const timer = setTimeout(()=>fail(),15_000);
+    function fail() {
+      reject(new Error('Chưa chuẩn bị được trình phát Listening trên thiết bị.'));
+      controller.abort();
+    }
+    signal.addEventListener('abort',()=>clearTimeout(timer),{once:true});
+    signal.addEventListener('abort',()=>reject(new Error('Đã đóng trình phát Listening.')),{once:true});
+    audio.addEventListener('error',fail,{signal,once:true});
+    audio.addEventListener('canplay',()=>{
+      clearTimeout(timer);
+      entry.canPlay=true;
+      observe('audio_player_ready',{elapsedMs:performance.now()-began});
+      resolve();
+    },{signal,once:true});
+  });
+  void entry.ready.catch(()=>{});
+  audio.src=url;
+  return entry;
+
+  function release() {
+    controller.abort();
+    audio.remove();
+    URL.revokeObjectURL(url);
+  }
+}
+
+export function mountContinuityListeningPlayer({
+  host, entry, section, timing, now, persist, onReview, onAuto, onReport, canReport, volume, onVolume, observe
+}) {
+  const audio = entry?.audio;
+  const status = document.createElement('p');
+  status.className = 'cbt-audio-status';
+  status.setAttribute('role','status');
+  host.append(status);
+  const action = (id, label) => {
+    const button = document.createElement('button');
+    Object.assign(button,{id,type:'button',className:'cbt-button',textContent:label});
+    host.append(button);
+    return button;
+  };
+  const play = action('k67PlayOfflineAudio','Phát audio');
+  const report = action('k67ReportAudio','Tôi không nghe được');
+  play.hidden = true;
+  const reviewMs = timing.listeningReviewSeconds * 1_000;
+  let stopped=false, starting=false, started=false, reporting=false, reportRequested=false, reviewPending=false;
+  let reviewUntil = null, lastAuto = -Infinity;
+  const diagnostics = new Set();
+  const media = new AbortController();
+  const {signal} = media;
+  const gate = audio && createListeningEofGate({audio,reviewSeconds:timing.listeningReviewSeconds,
+    observeDecision:createK67EofObserver(audio,{mode:'offline',owner:window.TERM_TEST_BOOTSTRAP,
+      configuredDurationSeconds:timing.listeningDurationSeconds,active:()=>!stopped})});
+
+  function startReview() {
+    const remaining = Math.max(0, section.deadline - now());
+    reviewUntil=performance.now()+remaining;
+    onReview(section.deadline);
+    gate?.recordReview('review_local',section.eofAt,section.deadline);
+    updateReview();
+  }
+  function updateReview() {
+    if (reviewUntil===null || stopped) return;
+    const seconds=Math.max(0,Math.ceil((reviewUntil-performance.now())/1_000));
+    status.textContent=`Đã nghe hết · Còn ${seconds} giây rà bài`;
+    if (reviewComplete()&&!section.operationId&&performance.now()-lastAuto>=2_000) {
+      lastAuto=performance.now();
+      onAuto();
+    }
+  }
+  function reviewComplete() { return reviewUntil!==null&&performance.now()>=reviewUntil&&now()>=section.deadline; }
+  async function persistReview() {
+    if (reviewPending || stopped) return;
+    reviewPending=true;
+    try { await persist(); if(!stopped)startReview(); }
+    catch { status.textContent='Chưa lưu được mốc kết thúc. Hệ thống sẽ thử lưu lại.'; }
+    finally { reviewPending=false; }
+  }
+
+  if (audio) {
+    audio.id='miniJourneyAudio';
+    audio.volume=Number.isFinite(volume)?Math.max(0.1,Math.min(1,volume)):1;
+    host.prepend(audio);
+    const slider = document.createElement('input');
+    slider.setAttribute('aria-label','Âm lượng');
+    Object.assign(slider,{type:'range',min:'0.1',max:'1',step:'0.1',value:String(audio.volume)});
+    slider.addEventListener('input',()=>{audio.volume=Number(slider.value);});
+    slider.addEventListener('change',()=>onVolume?.(audio.volume));
+    host.append(slider);
+    audio.addEventListener('ratechange',gate.recordRate,{signal});
+    audio.addEventListener('playing',()=>{
+      if (started) return;
+      started=true;
+      play.hidden=true;
+      status.textContent='Đang phát bài thi';
+      observe('audio_playing',{position:audio.currentTime});
+    },{signal});
+    for(const event of ['waiting','stalled','error','pause']) audio.addEventListener(event,()=>{
+      if (audio.ended||reportRequested||section.operationId||diagnostics.has(event))return;
+      diagnostics.add(event);
+      observe('audio_diagnostic',{event,position:audio.currentTime});
+    },{signal});
+    audio.addEventListener('ended',event=>{
+      if (reportRequested || section.operationId || section.eofAt || !gate.confirmEnd(event)) return;
+      report.disabled=true;
+      section.position=audio.duration;
+      section.eofAt=now();
+      section.deadline=section.eofAt+reviewMs;
+      observe('audio_ended',{position:audio.currentTime,duration:audio.duration});
+      void persistReview();
+    },{signal});
+  }
+  async function playFromStart() {
+    if (!audio || started || starting || stopped || reportRequested || section.eofAt) return;
+    starting=true;
+    play.hidden=true;
+    try { await audio.play(); }
+    catch {
+      if (!reportRequested && !stopped) {
+        status.textContent='Trình duyệt chưa cho phát. Hãy bấm Phát audio.';
+        play.hidden=false;
+      }
+    } finally { starting=false; }
+  }
+  play.addEventListener('click',playFromStart);
+  report.addEventListener('click',async()=>{
+    if (reporting || section.eofAt || audio?.ended || !canReport())return;
+    reporting=true;
+    reportRequested=true;
+    play.hidden=true;
+    report.disabled=true;
+    if (audio && !audio.paused)audio.pause();
+    try { await onReport(); }
+    catch {
+      status.textContent='Chưa lưu được trạng thái gián đoạn. Hãy bấm lại để lưu trên thiết bị.';
+      report.disabled=false;
+    } finally { reporting=false; }
+  });
+  if(section.eofAt){report.disabled=true;startReview();}
+  else status.textContent='Đang mở audio đã chuẩn bị trên thiết bị.';
+  const timer=setInterval(()=>{
+    if(section.eofAt&&reviewUntil===null)void persistReview();
+    else updateReview();
+  },1000);
+  return {
+    reviewComplete, playFromStart,
+    pauseForSubmit(){ if (audio && !audio.paused)audio.pause(); play.hidden=true; },
+    stop() {
+      stopped=true;
+      media.abort();
+      clearInterval(timer);
+      entry?.release();
+      host.hidden=true;
+    }
+  };
+}
+
+export function showContinuityInterruption(acknowledge,onContinue) {
+  if(document.getElementById('offlineListeningInterrupted'))return;
+  const dialog=document.createElement('dialog');
+  dialog.id='offlineListeningInterrupted';
+  dialog.className='cbt-identity-confirm';
+  dialog.setAttribute('aria-label','Listening gián đoạn');
+  const message=document.createElement('p');
+  message.textContent='Bài thi listening cần được nghe liền mạch không trục trặc để đánh giá đúng năng lực thí sinh. Khi bạn không nghe được âm thanh, bạn không nên tiếp tục listening. Hãy tiếp tục làm kỹ năng tiếp theo, và sau buổi thi hãy liên hệ giảng viên để được nhận bài Listening thay thế.';
+  const status=document.createElement('p');
+  status.setAttribute('role','status');
+  const button=document.createElement('button');
+  Object.assign(button,{type:'button',className:'button button-primary',textContent:'Tôi đã hiểu. Đến phần thi tiếp theo.'});
+  dialog.addEventListener('cancel',event=>event.preventDefault());
+  button.addEventListener('click',async()=>{
+    button.disabled=true;
+    let view;
+    try{view=await acknowledge();}
+    catch{status.textContent='Chưa lưu được xác nhận trên thiết bị. Hãy thử lại.';button.disabled=false;return;}
+    dialog.close();
+    dialog.remove();
+    onContinue(view);
+  });
+  dialog.append(message,status,button);
+  document.body.append(dialog);
+  dialog.showModal();
+}

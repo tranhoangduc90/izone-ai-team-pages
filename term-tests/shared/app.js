@@ -2994,14 +2994,20 @@
   function renderResult(payload) {
     if (!resultsUnlocked()) return false;
     const result = payload.result;
+    const hasListening = Boolean(result.listening);
+    const listeningInterrupted = result.listeningStatus === 'interrupted';
     const hasReading = !listeningOnly && Boolean(result.reading);
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
-    const summaryCards = [addSummaryCard('Listening', sectionScoreText(result.listening))];
+    const listeningScore = hasListening ? sectionScoreText(result.listening)
+      : listeningInterrupted ? 'Gián đoạn · Cần bài thay thế' : 'Chưa nộp';
+    const summaryCards = [addSummaryCard('Listening', listeningScore)];
     if (!listeningOnly) summaryCards.push(addSummaryCard('Reading', hasReading ? sectionScoreText(result.reading) : 'Chưa nộp'));
     elements.summaryGrid.replaceChildren(...summaryCards);
-    elements.resultStatus.textContent = listeningOnly
+    elements.resultStatus.textContent = listeningInterrupted
+      ? 'Listening bị gián đoạn. Bạn hãy liên hệ giảng viên để nhận bài thay thế.'
+      : listeningOnly
       ? 'Lượt thi bù này chỉ chấm và phân tích Listening. Điểm Reading và Writing được giữ nguyên.'
       : hasReading
       ? !writingConfig
@@ -3029,7 +3035,10 @@
     ]);
     const previousBlocks = state.resultDetailsIdentity === identity
       ? Array.from(elements.questionDetails.children) : [];
-    const skills = [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const skills = [
+      ...(hasListening ? [['Listening', result.listening]] : []),
+      ...(hasReading ? [['Reading', result.reading]] : [])
+    ];
     const detailBlocks = skills.map(([title, skill]) => {
       const fingerprint = JSON.stringify(skill.details || []);
       const previous = previousBlocks.find(block => block.dataset.skill === title);
@@ -3052,8 +3061,7 @@
         testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
       });
     }
-    const performanceSections = [renderSkillPerformance('Listening', result.listening)];
-    if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
+    const performanceSections = skills.map(([title, skill]) => renderSkillPerformance(title, skill));
     elements.skillPerformanceSections.replaceChildren(...performanceSections);
     if (payload.writing?.grading?.ready) stopWritingGradingPolling();
     return true;
@@ -3130,7 +3138,9 @@
         showNotice(writingGradingNotice(grading), 'success');
       } else {
         showNotice(
-          portalNotice(payload.portalSyncStatus, payload.completed),
+          payload.result.listeningStatus === 'interrupted'
+            ? 'Listening bị gián đoạn. Liên hệ giảng viên để nhận bài thay thế.'
+            : portalNotice(payload.portalSyncStatus, payload.completed),
           ['pending', 'queued'].includes(payload.portalSyncStatus) ? '' : 'success'
         );
       }

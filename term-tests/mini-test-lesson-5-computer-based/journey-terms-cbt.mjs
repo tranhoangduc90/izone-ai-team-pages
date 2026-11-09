@@ -1,6 +1,6 @@
 import { createOfflineRuntime } from '../k56-offline-shared/runtime.mjs?v=20261107-mini-v3';
 import { downloadTermAudio } from '../k56-offline-shared/whole-audio-terms-cbt.mjs?v=20261107-terms-cbt-v1';
-import { mountOfflineListeningPlayer } from '../k67-shared/offline-journey-ui.mjs?v=20261108-v1';
+import { mountOfflineListeningPlayer, prepareContinuityAudio, mountContinuityListeningPlayer } from '../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v1';
 
 const miniSlug='mini-test-lesson-5';
 const term1Slug='term-test-1';
@@ -112,7 +112,29 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
   let record;
   const changed = new EventTarget();
   let busy=false, retryAt=0, message='', stopped=false, timer;
-  let playing=null;
+  let playing=null, preparedPlayer=null, preparingPlayer=null, verifiedBlob=null, savingOperation=false;
+  let journal, listeningStartIntent;
+  const diagnostics=[];
+  const continuity=()=>!paper&&record.package.listeningContinuityVersion===1;
+  function drainDiagnostics() {
+    while(journal?.recorder&&diagnostics.length){
+      try{
+        if(!journal.recorder.record('state_observed',{cause:'k67_offline_journey',checkpointState:diagnostics[0]}))return;
+        diagnostics.shift();
+      }catch{return;}
+    }
+  }
+  function observe(action,details={}){
+    if(action==='audio_playing'&&listeningStartIntent!==undefined){
+      details={...details,elapsedMs:performance.now()-listeningStartIntent};
+    }
+    if(diagnostics.length>=32)diagnostics.shift();
+    diagnostics.push({offlineVersion:1,action,observedAt:new Date().toISOString(),...details});
+    drainDiagnostics();
+  }
+  function setJournal(value){journal=value;drainDiagnostics();}
+  function markListeningStart(){listeningStartIntent=performance.now();}
+  function onOnline(){retryAt=0;void flush();}
   const owner = {examSessionToken:scope.examSessionToken,generation:scope.generation};
   const save = () => store.put(key,record);
   const notify = value=>{if(value!==message){message=value;changed.dispatchEvent(new Event('change'));}};
@@ -127,9 +149,11 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     body:JSON.stringify({...owner,deviceProof:record.deviceProof,...body})});
   async function close(){
     if(stopped)return;
-    stopped=true;clearInterval(timer);window.removeEventListener('online',flush);
-    if(playing)await playing.checkpoint().catch(()=>{});
-    playing?.stop();release();
+    stopped=true;clearInterval(timer);window.removeEventListener('online',onOnline);
+    if(playing?.checkpoint)await playing.checkpoint().catch(()=>{});
+    playing?.stop();
+    preparedPlayer?.release();
+    release();
   }
 
   try {
@@ -162,6 +186,11 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
       if (!(stored?.blob instanceof Blob) || stored.blob.size!==manifest.byteLength || await hash(await stored.blob.arrayBuffer())!==manifest.sha256) {
         throw new Error('Không đọc lại được audio trên thiết bị.');
       }
+      verifiedBlob=stored.blob;
+      if(!paper&&bundle.listeningContinuityVersion===1){
+        observe('audio_download_verified',{byteLength:stored.blob.size});
+        preparedPlayer=prepareContinuityAudio(stored.blob,observe);
+      }
       await new OfflineRuntime({}).prepareCache();
       record.package=bundle;record.ready=true;
       await save();
@@ -170,7 +199,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
       // Keep the verified attempt accessible even if this route's secondary shell cannot be installed now.
       await new OfflineRuntime({}).prepareCache().catch(()=>{});
     }
-    window.addEventListener('online',flush);
+    window.addEventListener('online',onOnline);
     timer=setInterval(flush,5_000);
   } catch(error){await close();throw error;}
 
@@ -189,7 +218,9 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     const l=record.sections.listening,r=record.sections.reading,w=record.sections.writing;
     return {ok:true,studentName:p.studentName,...(paper?{className:p.className,examDelivery:'answer_sheet'}:{}),
       examSessionToken:p.examSessionToken,attemptToken:p.attemptToken,generation:p.generation,
-      examMode:p.examMode,nextSection:next(),listeningSubmitted:Boolean(l?.operationId),readingSubmitted:Boolean(r?.operationId),completed:Boolean(l?.operationId&&r?.operationId),
+      examMode:p.examMode,nextSection:next(),listeningSubmitted:Boolean(l?.operationId&&!l.interrupted),
+      listeningInterrupted:Boolean(l?.interrupted),needsListeningAcknowledgment:Boolean(l?.interrupted&&!l.acknowledged),
+      readingSubmitted:Boolean(r?.operationId),completed:Boolean(l?.operationId&&r?.operationId),
       ...(writing?{writingStarted:Boolean(w?.startedAt),writingSubmitted:Boolean(w?.operationId),
         writingDeadlineAt:w?.deadline?new Date(w.deadline).toISOString():null}:{}),
       readingStartedAt:r?.startedAt?new Date(r.startedAt).toISOString():null,readingDeadlineAt:r?.deadline?new Date(r.deadline).toISOString():null,
@@ -210,7 +241,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
   }
 
   async function start(section,at=now()){
-    if(!record.activatedAt||next()!==section)throw new Error('Hãy hoàn thành phần trước.');
+    if(!record.activatedAt||next()!==section||view().needsListeningAcknowledgment)throw new Error('Hãy hoàn thành phần trước.');
     if(!record.sections[section]){
       record.sections[section]={startedAt:at,...(section==='listening'?{position:0}:
         {deadline:at+record.package.timing[section+'DurationMinutes']*60_000})};
@@ -242,7 +273,9 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
 
   async function seal(section,answers,revision,automatic){
     const s=record.sections[section];
+    if(s?.interrupted||view().needsListeningAcknowledgment)throw new Error('Hãy xác nhận Listening đã gián đoạn.');
     if(s?.operationId)return view();
+    if(savingOperation)throw new Error('Đang lưu kết quả của lượt.');
     if(stopped||next()!==section||!s?.startedAt)throw new Error('Chưa bắt đầu phần này.');
     if(record.clockInvalid)throw new Error('Chưa xác nhận được giờ thi. Nháp vẫn được giữ trên máy.');
     const captured=now();
@@ -253,30 +286,90 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     const payload={...owner,operationId:crypto.randomUUID(),section,previousOperationId:preceding?record.sections[preceding].operationId:null,
       startedAt:s.startedAt,capturedAt:automatic?s.deadline:captured,revision:Number(revision)||0,automatic,
       eofAt:section==='listening'?s.eofAt||null:null,heardSeconds:section==='listening'?s.position||0:0,answers:ordered(answers||{})};
-    s.operationId=payload.operationId;record.pending.push(payload);
-    record.drafts[section]=payload.answers;record.revisions[section]=payload.revision;
-    try{await persist();}catch(error){record.pending.pop();delete s.operationId;throw error;}
-    if(section==='listening'){playing?.stop();playing=null;}
+    if(section==='listening'&&continuity()&&!automatic){
+      observe('listening_early_submit_confirmed',{operationId:payload.operationId});
+      playing?.pauseForSubmit?.();
+    }
+    await storeOperation(s,payload);
+    if(section==='listening'){
+      if(continuity())observe('listening_local_collected',{operationId:payload.operationId});
+      playing?.stop();playing=null;
+    }
     notify('Đã lưu trên máy · Chờ đồng bộ');void flush();return view();
   }
 
+  async function storeOperation(section,payload){
+    const {section:skill}=payload;
+    const previousDraft=record.drafts[skill], previousRevision=record.revisions[skill];
+    const interrupted=payload.outcome==='interrupted';
+    savingOperation=true;
+    section.operationId=payload.operationId;
+    if(interrupted)section.interrupted=true;
+    record.pending.push(payload);
+    if(!interrupted){
+      record.drafts[skill]=payload.answers;
+      record.revisions[skill]=payload.revision;
+    }
+    try{await persist();}
+    catch(error){
+      record.pending.splice(record.pending.indexOf(payload),1);
+      delete section.operationId;
+      if(interrupted)delete section.interrupted;
+      else {
+        if(previousDraft===undefined)delete record.drafts[skill];else record.drafts[skill]=previousDraft;
+        if(previousRevision===undefined)delete record.revisions[skill];else record.revisions[skill]=previousRevision;
+      }
+      throw error;
+    }finally{savingOperation=false;}
+  }
+
+  async function interrupt(reason){
+    const section=record.sections.listening;
+    if(section?.interrupted)return view();
+    if(!continuity()||savingOperation||!section?.startedAt||section.operationId||section.eofAt||next()!=='listening')
+      throw new Error('Listening đã có kết quả.');
+    const preceding=order()[order().indexOf('listening')-1];
+    const payload={...owner,operationId:crypto.randomUUID(),section:'listening',
+      previousOperationId:preceding?record.sections[preceding].operationId:null,
+      startedAt:section.startedAt,capturedAt:now(),revision:record.revisions.listening||0,
+      automatic:false,eofAt:null,heardSeconds:0,answers:{},outcome:'interrupted'};
+    await storeOperation(section,payload);
+    observe('listening_interrupted',{operationId:payload.operationId,reason});
+    playing?.stop();playing=null;
+    preparedPlayer?.release();preparedPlayer=null;
+    notify('Listening gián đoạn đã lưu trên máy · Chờ đồng bộ');
+    void flush();
+    return view();
+  }
+
+  async function acknowledgeInterruption(){
+    const section=record.sections.listening;
+    if(!section?.interrupted)throw new Error('Chưa lưu được trạng thái gián đoạn.');
+    section.acknowledged=true;
+    try{await persist();}
+    catch(error){delete section.acknowledged;throw error;}
+    return view();
+  }
+
   async function flush(){
-    if(stopped||busy||navigator.onLine===false||performance.now()<retryAt||record.review||!record.pending.length)return;
+    if(stopped||busy||savingOperation||navigator.onLine===false||performance.now()<retryAt||record.review||!record.pending.length)return;
     busy=true;
     try{
-      while(!stopped&&record.pending.length){
+      while(!stopped&&!savingOperation&&record.pending.length){
         const pending=record.pending[0];
         const checked=(writing||paper)?await send('status',{section:pending.section,operationId:pending.operationId}):null;
-        const result=checked?.persisted?checked:await send('seal',pending);
+        const result=checked?.persisted?checked:await send(pending.outcome==='interrupted'?'interrupt':'seal',pending);
         const receipt=result.receipt;
         if(stopped)return;
         if(receipt?.version!==version||receipt.examSessionToken!==scope.examSessionToken||receipt.generation!==scope.generation
-            ||receipt.section!==pending.section||receipt.operationId!==pending.operationId||!id(receipt.attemptToken)
+            ||receipt.section!==pending.section||receipt.operationId!==pending.operationId||receipt.outcome!==pending.outcome||!id(receipt.attemptToken)
             ||receipt.payloadHash!==await hash(text.encode(JSON.stringify(pending))))throw new Error('Biên nhận không khớp bản đã lưu.');
         record.receipts[pending.section]=receipt;record.pending.shift();
         try{await persist();}catch(error){record.pending.unshift(pending);delete record.receipts[pending.section];throw error;}
+        if(continuity()&&pending.section==='listening')
+          observe('listening_server_received',{operationId:pending.operationId,outcome:pending.outcome||'submitted'});
       }
-      notify('Máy chủ đã xác nhận nhận bài');
+      if(!record.pending.length)notify('Máy chủ đã xác nhận nhận bài');
     }catch(error){
       retryAt=performance.now()+10_000;
       if([400,401,403,409,422].includes(error.status)){record.review=true;await persist().catch(()=>{});}
@@ -285,20 +378,35 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
   }
 
   async function verifiedAudio(){
+    if(verifiedBlob)return verifiedBlob;
     const stored=await store.get(key+':audio');
     const manifest=record.package.audioManifest;
     if (!(stored?.blob instanceof Blob)||stored.blob.size!==manifest.byteLength||await hash(await stored.blob.arrayBuffer())!==manifest.sha256) {
       throw new Error('Audio trên máy chưa khớp. Bài vẫn được giữ.');
     }
-    return stored.blob;
+    verifiedBlob=stored.blob;
+    if(continuity())observe('audio_download_verified',{byteLength:verifiedBlob.size});
+    return verifiedBlob;
+  }
+
+  async function preparePlayer(){
+    if(preparedPlayer)return preparedPlayer;
+    if(!preparingPlayer)preparingPlayer=verifiedAudio().then(blob=>{
+      if(stopped)throw new Error('Đã đóng lượt Listening.');
+      preparedPlayer=prepareContinuityAudio(blob,observe);
+      return preparedPlayer;
+    }).finally(()=>{preparingPlayer=null;});
+    return preparingPlayer;
   }
 
   async function mountPlayer({autoplay=false,...options}){
     const section=record.sections.listening;
     if(playing||next()!=='listening'||!section)return;
-    const player=await mountOfflineListeningPlayer({
-      ...options,section,timing:record.package.timing,verifiedAudio,now,persist
-    });
+    const timing=record.package.timing;
+    const player=continuity()
+      ? mountContinuityListeningPlayer({...options,section,timing,now,persist,observe,
+          entry:section.eofAt?null:await preparePlayer()})
+      : await mountOfflineListeningPlayer({...options,section,timing,verifiedAudio,now,persist});
     if(!player)return;
     playing=player;
     if(autoplay)playing.playFromStart();
@@ -308,7 +416,9 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
     const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
     const body=order().map(section=>{
       const progress=record.sections[section];
-      const status=record.receipts[section]?'Máy chủ đã nhận':progress?.operationId?'Đã lưu trên máy · Chờ đồng bộ':
+      const status=progress?.interrupted
+        ? (record.receipts[section]?'Listening gián đoạn · Máy chủ đã nhận':'Listening gián đoạn · Chờ đồng bộ')
+        : record.receipts[section]?'Máy chủ đã nhận':progress?.operationId?'Đã lưu trên máy · Chờ đồng bộ':
         progress?'Đang làm':'Chưa bắt đầu';
       const started=progress?.startedAt?` · Bắt đầu ${new Date(progress.startedAt).toISOString()}`:'';
       const answers=paper&&liveDraft&&next()===section?liveDraft:record.drafts[section]||{};
@@ -328,5 +438,7 @@ export async function openMiniJourney({scope,request,existing,prepare=false,slug
   void flush();
   return {content:record.package.content,paper,view,start,begin,saveDrafts,seal,mountPlayer,verifiedAudio,download,resultToken,now,
     activated:()=>Boolean(record.activatedAt),drafts:()=>structuredClone(record.drafts),revisions:()=>({...record.revisions}),close,changed,
-    message:()=>message,reviewComplete:()=>playing?.reviewComplete()===true};
+    message:()=>message,reviewComplete:()=>playing?.reviewComplete()===true,
+    continuity,preparePlayer,interrupt,acknowledgeInterruption,setJournal,markListeningStart,
+    listeningReviewStarted:()=>Boolean(record.sections.listening?.eofAt)};
 }

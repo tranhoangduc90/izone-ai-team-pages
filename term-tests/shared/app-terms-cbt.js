@@ -174,6 +174,7 @@
           generation: typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
           clientRunId: window.TERM_TEST_BOOTSTRAP?.clientRunId || '', examSessionId: window.TERM_TEST_BOOTSTRAP?.examSessionId || '', historyEpoch: window.TERM_TEST_BOOTSTRAP?.historyEpoch || '' })
       });
+      miniJourney?.setJournal?.(examJournal);
     }).catch(() => {});
   }
 
@@ -790,6 +791,10 @@
       heading: 'Sẵn sàng làm Reading',
       copy: 'Đồng hồ chỉ bắt đầu khi bạn nhấn Bắt đầu Reading. Listening sẽ mở sau khi nộp Reading.',
       eyebrow: 'Kỹ năng đầu tiên · Reading',
+    } : state.listeningInterrupted ? {
+      heading: 'Sẵn sàng làm Reading',
+      copy: 'Listening bị gián đoạn và cần bài thay thế. Đồng hồ Reading chỉ bắt đầu khi bạn nhấn Bắt đầu Reading.',
+      eyebrow: 'Kỹ năng tiếp theo · Reading',
     } : waitingForListening ? {
       heading: listeningSavedCopy.heading,
       copy: 'Bài Listening đã lưu trên thiết bị và đang chờ đồng bộ. Bạn có thể mở Reading để tiếp tục làm bài.',
@@ -3044,14 +3049,20 @@
   function renderResult(payload) {
     if (!resultsUnlocked()) return false;
     const result = payload.result;
+    const hasListening = Boolean(result.listening);
+    const listeningInterrupted = result.listeningStatus === 'interrupted';
     const hasReading = !listeningOnly && Boolean(result.reading);
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
-    const summaryCards = [addSummaryCard('Listening', sectionScoreText(result.listening))];
+    const listeningScore = hasListening ? sectionScoreText(result.listening)
+      : listeningInterrupted ? 'Gián đoạn · Cần bài thay thế' : 'Chưa nộp';
+    const summaryCards = [addSummaryCard('Listening', listeningScore)];
     if (!listeningOnly) summaryCards.push(addSummaryCard('Reading', hasReading ? sectionScoreText(result.reading) : 'Chưa nộp'));
     elements.summaryGrid.replaceChildren(...summaryCards);
-    elements.resultStatus.textContent = listeningOnly
+    elements.resultStatus.textContent = listeningInterrupted
+      ? 'Listening bị gián đoạn. Bạn hãy liên hệ giảng viên để nhận bài thay thế.'
+      : listeningOnly
       ? 'Lượt thi bù này chỉ chấm và phân tích Listening. Điểm Reading và Writing được giữ nguyên.'
       : hasReading
       ? !writingConfig
@@ -3077,7 +3088,10 @@
     ]);
     const previousBlocks = state.resultDetailsIdentity === identity
       ? Array.from(elements.questionDetails.children) : [];
-    const skills = [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const skills = [
+      ...(hasListening ? [['Listening', result.listening]] : []),
+      ...(hasReading ? [['Reading', result.reading]] : [])
+    ];
     const detailBlocks = skills.map(([title, skill]) => {
       const fingerprint = JSON.stringify(skill.details || []);
       const previous = previousBlocks.find(block => block.dataset.skill === title);
@@ -3099,8 +3113,7 @@
         testSlug: testConfig.slug, title: result.testTitle || testConfig.title, request: apiRequest
       });
     }
-    const performanceSections = [renderSkillPerformance('Listening', result.listening)];
-    if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
+    const performanceSections = skills.map(([title, skill]) => renderSkillPerformance(title, skill));
     elements.skillPerformanceSections.replaceChildren(...performanceSections);
     if (payload.writing?.grading?.ready) stopWritingGradingPolling();
     return true;
@@ -3180,7 +3193,9 @@
         showNotice(writingGradingNotice(grading), 'success');
       } else {
         showNotice(
-          portalNotice(payload.portalSyncStatus, payload.completed),
+          payload.result.listeningStatus === 'interrupted'
+            ? 'Listening bị gián đoạn. Liên hệ giảng viên để nhận bài thay thế.'
+            : portalNotice(payload.portalSyncStatus, payload.completed),
           ['pending', 'queued'].includes(payload.portalSyncStatus) ? '' : 'success'
         );
       }
@@ -3403,7 +3418,7 @@
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
     if (offlineListeningIdentity) return;
-    if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
+    if (state.listeningSubmitted || state.listeningInterrupted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
       showNotice('Hãy chọn đúng họ và tên trước khi nộp Listening.', 'error');
@@ -4207,6 +4222,18 @@
     }, { once: true });
   }
 
+  async function showJourneyInterruption(){
+    setStage('listening');
+    setAnswerControlsLocked('listening',true);
+    elements.submitListening.disabled=true;
+    const {showContinuityInterruption}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v1');
+    showContinuityInterruption(()=>miniJourney.acknowledgeInterruption(),view=>{
+      Object.assign(state,view);
+      saveSession();
+      setStage(view.nextSection==='writing'?'writing-prep':'listening-saved');
+    });
+  }
+
   async function showJourneyListening(playNewListening = false){
     if(miniJourney.paper){
       if(!miniJourney.view().listeningStartedAt)await miniJourney.start('listening');
@@ -4215,6 +4242,14 @@
     }
     setStage('listening');
     if(document.getElementById('miniJourneyPlayer'))return;
+    const continuity=miniJourney.continuity?.()===true;
+    if(continuity&&miniJourney.view().listeningStartedAt&&!playNewListening&&!miniJourney.listeningReviewStarted()){
+      setAnswerControlsLocked('listening',true);
+      elements.submitListening.disabled=true;
+      try{await miniJourney.interrupt('reload');await showJourneyInterruption();}
+      catch(error){showNotice(error.message,'error');}
+      return;
+    }
     const host = document.createElement('section');
     host.id = 'miniJourneyPlayer';
     host.className = 'cbt-audio-card k67-inline-audio';
@@ -4229,6 +4264,14 @@
       await miniJourney.saveDrafts(state.drafts, state.draftRevisions);
       allowExamNavigation = true;
       location.reload();
+    },canReport:()=>elements.listeningView.dataset.listeningSubmitting!=='true'&&!state.listeningInterrupted,
+    onReport:async()=>{
+      setAnswerControlsLocked('listening',true);
+      elements.submitListening.disabled=true;
+      stopSectionDraftFlow('listening');
+      Object.assign(state,await miniJourney.interrupt('learner_report'));
+      saveSession();
+      await showJourneyInterruption();
     },onReview:deadline=>{
       state.listeningDeadlineAt=new Date(deadline).toISOString();
     },onAuto:()=>{
@@ -4240,12 +4283,60 @@
     const start=document.createElement('button');start.type='button';start.className='button button-primary';start.textContent='Bắt đầu Listening';
     elements.submitListening.disabled=true;
     setAnswerControlsLocked('listening',true);
-    start.addEventListener('click',async()=>{
-      start.disabled=true;
-      try{await miniJourney.start('listening');start.remove();setAnswerControlsLocked('listening',false);elements.submitListening.disabled=false;await play(true);}
-      catch(error){start.disabled=false;showNotice(error.message,'error');}
+    if(!continuity){
+      start.addEventListener('click',async()=>{
+        start.disabled=true;
+        try{await miniJourney.start('listening');start.remove();setAnswerControlsLocked('listening',false);elements.submitListening.disabled=false;await play(true);}
+        catch(error){start.disabled=false;showNotice(error.message,'error');}
+      });
+      host.append(start);
+      return;
+    }
+    const preview=document.createElement('audio');
+    preview.hidden=true;
+    preview.volume=Number(state.audioVolume??1);
+    const sample=document.createElement('button');
+    Object.assign(sample,{type:'button',className:'cbt-button',textContent:'Nghe thử',disabled:true});
+    const status=document.createElement('p');
+    status.setAttribute('role','status');
+    status.textContent='Đang chuẩn bị audio đã tải.';
+    start.disabled=true;
+    host.append(preview,sample,status,start);
+    const entry=await miniJourney.preparePlayer();
+    preview.src=entry.url;
+    sample.disabled=false;
+    let previewHeard=false;
+    const update=()=>{
+      start.disabled=!(previewHeard&&entry.canPlay);
+      window.IZONE_CBT_AUDIO_START_LABEL(start,!start.disabled);
+    };
+    void entry.ready.then(update,error=>{status.textContent=error.message;});
+    sample.addEventListener('click',async()=>{
+      if(!preview.paused){preview.pause();return;}
+      preview.currentTime=0;
+      try{
+        await preview.play();
+        window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW(preview,start,()=>{
+          previewHeard=true;
+          status.textContent='Đã nghe thử đủ 10 giây.';
+          preview.pause();
+          update();
+        });
+      }catch{status.textContent='Chưa phát được bản nghe thử. Hãy bấm Nghe thử lại.';}
     });
-    host.append(start);
+    start.addEventListener('click',async()=>{
+      if(start.disabled)return;
+      start.disabled=true;
+      preview.pause();
+      miniJourney.markListeningStart();
+      try{
+        await miniJourney.start('listening');
+        preview.remove();sample.remove();status.remove();start.remove();
+        setAnswerControlsLocked('listening',false);
+        elements.submitListening.disabled=false;
+        await play(true);
+      }catch(error){update();showNotice(error.message,'error');}
+    });
   }
 
   async function initializeMiniJourney(){
@@ -4268,7 +4359,7 @@
     }
     for(const skill of ['listening','reading'])renderQuestionControls(testConfig[skill],elements[skill+'Questions'],skill);
     elements.readingStudentName.textContent=state.studentName;
-    const {mountOfflineJourneyHeader}=await import('../k67-shared/offline-journey-ui.mjs?v=20261108-v1');
+    const {mountOfflineJourneyHeader}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v1');
     mountOfflineJourneyHeader({
       host:document.querySelector('.topbar')||root,
       studentSelect:miniJourney.paper?null:elements.studentSelect,
@@ -4281,7 +4372,8 @@
     });
     if (!miniJourney.paper) miniJourney.changed.addEventListener('change', updateListeningSavedCopy);
     if (writingConfig) miniJourney.changed.addEventListener('change', updateJourneyResultReady);
-    if(view.nextSection==='listening')await showJourneyListening(window.TERM_TEST_BOOTSTRAP?.playNewListening === true);
+    if(view.needsListeningAcknowledgment)await showJourneyInterruption();
+    else if(view.nextSection==='listening')await showJourneyListening(window.TERM_TEST_BOOTSTRAP?.playNewListening === true);
     else if(view.nextSection==='reading'){
       setStage(view.readingStartedAt?'reading':'listening-saved');
       if(view.readingStartedAt)startSectionDeadlineGuard('reading');

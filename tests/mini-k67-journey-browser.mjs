@@ -18,6 +18,10 @@ const writingOnly=process.env.K67_JOURNEY_WRITING_ONLY==='1';
 const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
+const continuity=process.env.K67_JOURNEY_CONTINUITY||'';
+assert.ok(!continuity||(term&&['eof','manual','interrupt','reload','upgrade'].includes(continuity)));
+const interrupted=['interrupt','reload'].includes(continuity);
+const upgrade=continuity==='upgrade';
 assert.ok(!(term1&&term2),'Select only one Term profile.');
 assert.ok(!writingOnly||(term2&&!full),'Writing-only fixture targets Term 2 without real audio.');
 const slug=term1?'term-test-1':term2?'term-test-2':'mini-test-lesson-5';
@@ -31,7 +35,7 @@ const modes=process.env.K67_JOURNEY_ORDER?[process.env.K67_JOURNEY_ORDER]:['lis_
 const require=createRequire(resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const {chromium}=require('playwright');
 
-for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):writingOnly?4_200_000:120_000},async()=>{
+for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_000:term1?8_300_000:2_650_000):writingOnly?4_200_000:upgrade?180_000:120_000},async()=>{
   assert.ok(['lis_first','read_first'].includes(mode));
   const listener=createServer().listen(0,'127.0.0.1');
   await once(listener,'listening');
@@ -41,7 +45,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
   const fixture=spawn(process.execPath,[process.env.K67_JOURNEY_PREVIEW_TOOL||'tools/preview-exam-order.mjs',pages],{cwd:backend,windowsHide:true,
     env:{...process.env,K67_ORDER_NATIVE_URL:'',K67_PREVIEW_PORT:String(port),K67_PREVIEW_MINI_CBT_JOURNEY:term?'off':'on',
       K67_PREVIEW_TERM1_CBT_JOURNEY:term1?'on':'off',
-      K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',
+      K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',K67_PREVIEW_LISTENING_CONTINUITY:continuity?'true':'false',
       K67_PREVIEW_RESCUE_CLASS:rescueClass,
       K67_PREVIEW_AUDIO_PROTECTION:'true',K67_PREVIEW_REAL_MINI_AUDIO:full&&!term?'true':'false',
       K67_PREVIEW_REAL_TERM1_AUDIO:(full||r2Smoke)&&term1?'true':'false',K67_PREVIEW_AUDIO_SECONDS:'18',
@@ -50,7 +54,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       K67_PREVIEW_TERM1_R2_CONFIG:process.env.K67_JOURNEY_TERM1_R2_CONFIG||'',
       K67_PREVIEW_MINI_REVIEW_SECONDS:full?'120':'3',K67_PREVIEW_MINI_READING_MINUTES:full?'20':'.12'},stdio:['ignore','ignore','pipe']});
   let browser,page,fixtureError='';
-  let sectionInProgress;
+  let sectionInProgress,dismissNextDialog=false;
   fixture.stderr.on('data',chunk=>{fixtureError=(fixtureError+String(chunk)).slice(-3_000);});
   const log=(phase,details={})=>console.log(JSON.stringify({at:new Date().toISOString(),mode,full,writingOnly,phase,...details}));
   const heartbeat=(full||writingOnly)?setInterval(async()=>{
@@ -75,6 +79,8 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         ||(r2Smoke&&(url.hostname.endsWith('.r2.cloudflarestorage.com')||url.hostname==='tranhoangduc90.github.io'))
         ?route.continue():route.abort();
     });
+    let blockQueue=upgrade;
+    if(upgrade)await context.route(/\/cbt-journey\/(status|seal|interrupt)$/,route=>blockQueue?route.abort():route.continue());
     const journalRows=[];
     const learnerBinding='b'.repeat(64);
     if(eofJournal){
@@ -99,12 +105,15 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     const openPage=async()=>{
       const target=await context.newPage();
       target.on('pageerror',error=>errors.push(error.message));
-      target.on('dialog',dialog=>dialog.accept());
+      target.on('dialog',dialog=>{
+        if(dismissNextDialog){dismissNextDialog=false;return dialog.dismiss();}
+        return dialog.accept();
+      });
       target.on('request',request=>{if(request.url().includes('.r2.cloudflarestorage.com'))r2Requests.push(request.url());});
       target.on('request',request=>{if(request.url().includes('github.io/izone-ai-team-pages/term-tests/k67-audio-assets/'))pagesRequests.push(request.url());});
       target.on('response',async response=>{
         if(response.url().endsWith('/cbt-journey/prepare'))offers.push(await response.json().catch(()=>({})));
-        if(!response.url().endsWith('/cbt-journey/seal'))return;
+        if(!/\/cbt-journey\/(seal|interrupt)$/.test(response.url()))return;
         const section=response.request().postDataJSON().section;
         if(response.ok())seals.push(section);
         else rejections.push({section,status:response.status(),code:(await response.json().catch(()=>({}))).error});
@@ -136,6 +145,14 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       return;
     }
     if (mode === 'lis_first') {
+      if(continuity){
+        const preview=page.locator('#bootstrapPreview');
+        await preview.click({timeout:50_000});
+        await page.locator('[data-audio-start-wait]').waitFor();
+        await preview.click();
+        await page.locator('[data-audio-start-wait]').waitFor({state:'hidden'});
+        assert.equal(await page.locator('#bootstrapStart').isDisabled(),true);
+      }
       await page.locator('#bootstrapPreview').click({timeout:50_000});
       const countdown = page.locator('[data-audio-start-wait]');
       await countdown.waitFor();
@@ -191,12 +208,84 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       await form.waitFor({state:'visible'});
       if(section==='listening'){
         const start=page.getByRole('button',{name:'Bắt đầu Listening',exact:true});
-        if(await start.isVisible())await start.click();
+        if(continuity&&!upgrade&&mode==='read_first'){
+          await page.getByRole('button',{name:'Nghe thử',exact:true}).click();
+          await page.locator('[data-audio-start-wait]').waitFor();
+          assert.equal(await start.isDisabled(),true);
+          await page.getByRole('button',{name:'Đã nghe rõ Bắt đầu thi Listening',exact:true}).click();
+        }else if(await start.isVisible())await start.click();
       }
       let field=form.locator('[data-number]:visible').first();
       if(await field.evaluate(node=>node.tagName)==='SELECT')await field.selectOption({index:1});
       else await field.fill('A');
       log('section_started',{section});
+      if(section==='listening'&&continuity){
+        const audio=page.locator('#miniJourneyAudio');
+        await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.currentTime>.25);
+        assert.equal(await audio.evaluate(player=>player.controls),false);
+        assert.equal(await page.getByRole('button',{name:'Nghe tiếp',exact:true}).isVisible(),false);
+        const submit=form.getByRole('button',{name:'Nộp bài Listening',exact:true});
+        if(continuity==='manual'||upgrade){
+          dismissNextDialog=true;
+          await submit.click();
+          assert.equal(dismissNextDialog,false);
+          assert.equal(await audio.evaluate(player=>player.paused),false);
+          await submit.click();
+        }else if(interrupted){
+          if(continuity==='reload')await page.reload({waitUntil:'domcontentloaded'});
+          else await page.getByRole('button',{name:'Tôi không nghe được',exact:true}).click();
+          const dialog=page.getByRole('dialog',{name:'Listening gián đoạn'});
+          await dialog.waitFor();
+          assert.equal(await page.locator('#miniJourneyAudio').count(),0);
+          if(continuity==='interrupt'){
+            await page.reload({waitUntil:'domcontentloaded'});
+            await dialog.waitFor();
+          }
+          assert.match(await dialog.textContent(),/hãy liên hệ giảng viên để được nhận bài Listening thay thế/);
+          await dialog.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.',exact:true}).click();
+          const next=mode==='lis_first'?'Reading':'Writing';
+          assert.equal(await page.locator('#'+next.toLowerCase()+'View').isVisible(),false);
+          await page.locator('#start'+next).waitFor({state:'visible'});
+        }else{
+          const before=await audio.evaluate(player=>player.currentTime);
+          await page.evaluate(()=>{
+            const player=document.getElementById('miniJourneyAudio');
+            window.addEventListener('timeupdate',event=>{if(event.target===player)event.stopImmediatePropagation();},true);
+            window.dispatchEvent(new Event('blur'));
+            player.dispatchEvent(new Event('waiting'));
+            player.dispatchEvent(new Event('ended'));
+          });
+          await page.waitForFunction(before=>{
+            const player=document.getElementById('miniJourneyAudio');
+            return !player.paused&&player.currentTime>before+5.1;
+          },before);
+          await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.ended,null,{timeout:25_000});
+          await page.getByText(/Đã nghe hết · Còn [1-9]/).waitFor();
+          assert.equal(await form.isVisible(),true);
+        }
+        await form.waitFor({state:'hidden',timeout:25_000});
+        assert.deepEqual(seals,[]);
+        if(upgrade){
+          const savedSeal=()=>page.evaluate(()=>Object.keys(localStorage)
+            .filter(key=>/^term[12]-k67-cbt-journey-v1:/.test(key))
+            .map(key=>JSON.parse(localStorage.getItem(key)))
+            .flatMap(record=>record.pending||[]).find(operation=>operation.section==='listening'));
+          const original=await savedSeal();
+          assert.ok(original?.operationId);
+          assert.equal(original.outcome,undefined);
+          assert.ok((await fetch(base+'/preview/switch-pages',{method:'POST'})).ok);
+          await context.setOffline(false);
+          process.env.K56_FIXTURE_IMPORT_ONLY='1';
+          const {activateWorkerUpdate}=await import('./term2-offline-browser.mjs');
+          await activateWorkerUpdate(page);
+          await context.setOffline(true);
+          await page.reload({waitUntil:'domcontentloaded'});
+          await page.waitForFunction(()=>window.TERM_TEST_BOOTSTRAP?.miniJourney?.continuity?.());
+          assert.deepEqual(await savedSeal(),original);
+          assert.equal(await page.evaluate(()=>window.TERM_TEST_BOOTSTRAP.miniJourney.view().needsListeningAcknowledgment),false);
+        }
+        continue;
+      }
       if(section==='listening'){
         const answer=await field.inputValue();
         if(eofJournal)await page.evaluate(()=>{
@@ -270,12 +359,42 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     if(term)assert.match(html,/Bài luận giả &lt;để kiểm xuất file&gt;\./);
     if(term2)assert.match(html,/Báo cáo Task 1 giả để kiểm khôi phục\./);
     assert.doesNotMatch(html,/deviceProof|examSessionToken|permit/);
+    let droppedReceipt;
+    const recoveredReceipts=[];
+    if(continuity==='interrupt'){
+      await context.route('**/cbt-journey/interrupt',async route=>{
+        if(droppedReceipt)return route.continue();
+        const response=await route.fetch();
+        if(!response.ok())return route.fulfill({response});
+        droppedReceipt=(await response.json()).receipt;
+        seals.push('listening');
+        await route.abort();
+      });
+      page.on('response',async response=>{
+        if(response.ok()&&response.url().endsWith('/cbt-journey/status')){
+          const payload=await response.json();
+          if(payload.receipt?.outcome==='interrupted')recoveredReceipts.push(payload.receipt);
+        }
+      });
+    }
+    blockQueue=false;
     await context.setOffline(false);
     await page.getByText('Máy chủ đã xác nhận nhận bài',{exact:true}).waitFor({timeout:30_000}).catch(error=>{
       throw new Error(`${error.message}\n${JSON.stringify({seals,rejections})}`);
     });
     assert.deepEqual(seals,order);
+    if(continuity==='interrupt'){
+      assert.equal(droppedReceipt?.outcome,'interrupted');
+      assert.deepEqual(recoveredReceipts,[droppedReceipt]);
+    }
     assert.deepEqual(errors,[]);
+    if(continuity&&interrupted){
+      const viewResult=page.locator('#viewResult');
+      await viewResult.click();
+      await page.getByText('Gián đoạn · Cần bài thay thế',{exact:true}).waitFor();
+      await page.getByText('Reading',{exact:true}).first().waitFor();
+      assert.equal(await page.locator('#resultView details[data-skill="Listening"]').count(),0);
+    }
     if(eofJournal){
       await page.evaluate(async()=>{
         const endpoint=location.origin+'/api/term-tests/'+window.TERM_TEST_CONFIG.slug;
@@ -287,6 +406,18 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       assert.ok(rows.every(row=>row.bindingId===learnerBinding));
       const phases=rows.map(row=>row.event.data.checkpointState.phase).sort();
       assert.deepEqual(phases,['eof_accepted','event_unverified','review_local']);
+      if(continuity){
+        const milestones=journalRows.filter(row=>row.bindingId===learnerBinding
+          && row.event.type==='state_observed'&&row.event.data.cause==='k67_offline_journey')
+          .map(row=>row.event.data.checkpointState);
+        const actions=new Set(milestones.map(item=>item.action));
+        for(const action of ['audio_download_verified','audio_player_ready','audio_playing','audio_ended',
+          'listening_local_collected','listening_server_received'])assert.ok(actions.has(action),action);
+        const playing=milestones.find(item=>item.action==='audio_playing');
+        assert.ok(playing.position<0.25);
+        assert.ok(Number.isFinite(playing.elapsedMs));
+        log('audio_start_measured',{elapsedMs:playing.elapsedMs});
+      }
       log('journal_verified',{phases,oneLearnerBinding:true});
     }
     log('passed',{seals});
