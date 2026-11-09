@@ -98,7 +98,8 @@ export function mountThuyTeacherLayout(elements,{onMode,onClass,onHome}){
   foot.append(document.querySelector('#teacherLogoutButton'));
   const learner=node('a','Cổng học viên ↗','tab');learner.id='thuyStudentPortal';learner.target='_blank';learner.rel='noopener';learner.href='./';side.append(learner);
   const dashboard=elements.dashboardPanel,hero=node('div','','thuy-session-header'),overview=node('section','','thuy-session-overview'),parts=node('section','','thuy-session-parts');
-  overview.append(elements.dashboardTitle,elements.teacherSubmissionWindow||document.querySelector('#teacherSubmissionWindow'),document.querySelector('.dashboard-share'));
+  overview.append(elements.dashboardTitle,elements.teacherSubmissionWindow||document.querySelector('#teacherSubmissionWindow'),elements.copyCurrentLinkButton,document.querySelector('.dashboard-share'));
+  elements.copyCurrentLinkButton.hidden=true;
   overview.querySelector('.dashboard-share').hidden=true;
   parts.append(elements.blockControls);hero.append(overview,parts);dashboard.prepend(hero);
   dashboard.querySelector('.teacherReferenceHero').hidden=true;priorLabel?.remove();priorParts?.remove();

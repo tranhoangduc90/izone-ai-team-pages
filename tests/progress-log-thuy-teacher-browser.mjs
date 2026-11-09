@@ -14,6 +14,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
  await new Promise(done=>server.listen(0,'127.0.0.1',done));const origin=`http://127.0.0.1:${server.address().port}`;
  const browser=await chromium.launch({channel:'chrome',headless:true}),ctx=await browser.newContext({serviceWorkers:'block',viewport:{width:1440,height:1000}}),page=await ctx.newPage(),errors=[],writes=[],unexpected=[];
  page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(8000);
+ await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>{window.copiedAssignment=value;}}}));
  const A=uid(1),B=uid(2),id=uid(3),block=uid(4),item=uid(5),comments=new Map();
  let savedDraft=null;
  const definition={title:'Phiếu từ khóa thử',blocks:[{blockId:block,checkpoint:1,title:'Từ khóa',items:[{itemVersionId:item,position:1,prompt:'Câu 1 · Câu hỏi',displayNumber:'1',skillCodes:['reflection'],interactionType:'multi_choice_group',layoutType:'keyword_selection',options:[{id:'w1',label:'go'},{id:'w2',label:'go'},{id:'w3',label:'home?'}],interactionConfig:{maxSelections:3}}]}]};
@@ -60,6 +61,14 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.equal(await page.locator('#journeyPlanSection').isVisible(),false);
   assert.equal(await page.locator('#dashboardPanel .thuy-extra-tools,#dashboardPanel #dashboardSummary').count(),0);
   await page.locator('.thuy-roster').getByText('Đã điểm danh',{exact:true}).waitFor();
+  const copyLink=page.getByRole('button',{name:'Sao chép link cho học viên',exact:true});
+  const copyEvidence=process.env.PROGRESS_COPY_LINK_EVIDENCE;
+  if(copyEvidence){
+    await mkdir(copyEvidence,{recursive:true});
+    await page.screenshot({path:resolve(copyEvidence,'quan-ly-lop.png'),clip:{x:0,y:0,width:1440,height:640}});
+  }
+  await copyLink.click();
+  assert.equal(await page.evaluate(()=>window.copiedAssignment),origin+'/progress-log/thuy.html#assignment='+id);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   const modes=await page.locator('[data-thuy-mode]').evaluateAll(nodes=>nodes.map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height,font:parseFloat(getComputedStyle(node).fontSize)})));
   assert.equal(modes.length,2);assert.ok(Math.abs(modes[0].width-modes[1].width)<1);assert.ok(modes.every(m=>m.height===44&&m.font>=16));

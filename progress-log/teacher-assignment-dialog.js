@@ -1,5 +1,6 @@
 // Giao đúng bản đã xuất bản; giữ từng dòng đích và mã retry khi có lỗi một phần.
 import {bindDialogDismiss,node} from './session-comments.js';
+import {COPY_STUDENT_LINK_LABEL,decorateCopyStudentLinkButton,studentAssignmentLink} from './student-assignment-link.js';
 const button=(label,action)=>{const b=node('button',label,'button');b.type='button';b.addEventListener('click',action);return b;};
 const scheduleLabels={empty:'Portal chưa có lịch cho lớp này.',unavailable:'Chưa đọc được lịch Portal của lớp.',
   needs_review:'Lịch trên Portal có buổi chưa rõ thứ tự hoặc trạng thái. Hãy đối chiếu tại Portal.'};
@@ -22,11 +23,12 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
       const body=node('div','','thuy-management-body'),summary=node('section','','thuy-assignment-summary'),tags=node('div','','thuy-assignment-skills');
       summary.append(node('h2',entry.title));for(const skill of new Set((entry.definition?.blocks||[]).flatMap(b=>b.items.flatMap(i=>i.skillCodes||[]))))tags.append(node('span',({general:'Chung',listening:'Listening',reading:'Reading',speaking:'Speaking',writing:'Writing'})[skill]||skill));summary.append(tags);
       const targets=node('div','','thuy-assignment-targets'),status=node('p','','notice');status.setAttribute('role','status');
+      const receipts=node('div','','thuy-delivery-receipt');
       const footer=node('footer','','thuy-assignment-footer'),back=button('Quay lại bài tập',()=>dialog.close()),submit=button('Giao bài',()=>void assign()),add=button('+ Thêm lớp nhận bài tập',()=>addTarget(''));submit.classList.add('primary');
       const classNotice=node('p','','thuy-assignment-class-notice');classNotice.setAttribute('role','status');
       const ownDraft=entry.source==='personal'&&entry.draft?.id&&!entry.draft.reviewMode&&!entry.publication;
       body.append(summary,classNotice,targets,add);
-      footer.append(status,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
+      footer.append(status,receipts,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
       const rows=[],reads=new Map(),operationId=crypto.randomUUID();let busy=false,opener=null;
       const canSend=row=>Boolean(row.classes.value&&row.sessions.value&&!row.loading&&!row.sessions.selectedOptions[0]?.disabled);
       function syncSubmit(){
@@ -47,7 +49,11 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
         const ordered=available.map(item=>({item,icNumber:icClassNumber(item.class_name)}))
           .sort((a,b)=>b.icNumber-a.icNumber);
         select.replaceChildren(new Option('Chọn lớp',''));
-        for(const {item} of ordered)select.append(new Option(item.class_name+(item.student_count!=null?' · '+item.student_count+' học viên':''),String(item.class_id)));
+        for(const {item} of ordered){
+          const option=new Option(item.class_name+(item.student_count!=null?' · '+item.student_count+' học viên':''),String(item.class_id));
+          option.dataset.className=item.class_name;
+          select.append(option);
+        }
         select.disabled=!available.length;
         select.value=available.some(item=>String(item.class_id)===preferred)?preferred:'';
         classNotice.textContent=available.length?'':getClassStatus()==='unavailable'
@@ -107,6 +113,25 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
         sessions.addEventListener('change',syncSubmit);
         await readPlan(String(entry.sessionNumber||''));
       }
+      function addReceipt(row,delivery){
+        const destination=row.classes.selectedOptions[0].dataset.className+' · '+row.sessions.selectedOptions[0].textContent;
+        const receipt=node('div','','thuy-delivery-row'),info=node('div','','thuy-delivery-destination');
+        info.append(node('b',destination),node('small',row.message.textContent));
+        const feedback=node('small','','thuy-delivery-copy-status');feedback.setAttribute('role','status');
+        const link=studentAssignmentLink(delivery.publicToken);
+        const copy=button(COPY_STUDENT_LINK_LABEL,async()=>{
+          try{
+            await navigator.clipboard.writeText(link);
+            feedback.textContent='Đã sao chép link';
+          }catch{
+            const manual=node('a','Mở link để sao chép');manual.href=link;manual.target='_blank';manual.rel='noopener noreferrer';
+            feedback.replaceChildren(manual);
+          }
+        });
+        copy.setAttribute('aria-label',COPY_STUDENT_LINK_LABEL+' · '+destination);
+        decorateCopyStudentLinkButton(copy);
+        receipt.append(info,copy,feedback);receipts.append(receipt);
+      }
       async function assign(){
         if(busy)return;
         const active=rows.filter(row=>!row.done),choices=active.map(row=>({classId:row.classes.value,
@@ -140,17 +165,18 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
             if(result.ok&&(!result.delivery?.formVersionId||!ownDraft&&result.delivery.formVersionId!==entry.publication.formVersionId
               ||!Number.isInteger(result.delivery.rosterCount)||result.delivery.rosterCount<1))
               throw Error('Phiên bản hoặc số học viên vừa giao chưa khớp.');
+            if(result.ok&&(key(result.delivery)!==key(choice)||!studentAssignmentLink(result.delivery.publicToken)))
+              throw Error('Link học viên chưa khớp lớp và buổi đã giao.');
           }
           for(const [index,expected]of choices.entries()){
             const row=active[index],result=byTarget.get(key(expected));
-            if(result.ok){row.done=true;row.retry.hidden=true;row.message.textContent='Đã giao · '+result.delivery.rosterCount+' học viên';onAssigned({...result.delivery,title:entry.title});}
+            if(result.ok){row.done=true;row.retry.hidden=true;row.message.textContent='Đã giao · '+result.delivery.rosterCount+' học viên';addReceipt(row,result.delivery);onAssigned({...result.delivery,title:entry.title});}
             else {
               row.message.textContent=result.message||'Chưa giao được. Thử lại đích này.';
               if(refreshErrors.has(result.error))void row.refresh(row.sessions.value);
             }
           }
           status.textContent=rows.every(row=>row.done)?'Đã giao và đối chiếu tất cả các lớp.':'Một số đích chưa giao được. Các lớp đã giao được giữ nguyên; bấm Giao bài để thử lại đích còn lại.';
-          const receipt=node('span',rows.filter(row=>row.done).map(row=>row.classes.selectedOptions[0]?.textContent+' · '+row.sessions.selectedOptions[0]?.textContent+' · '+row.message.textContent).join('; '),'thuy-delivery-receipt');status.append(receipt);
           status.classList.add(rows.every(row=>row.done)?'success':'error');
         }catch(error){status.classList.add('error');status.textContent='Chưa xác nhận đủ kết quả: '+error.message;}
         finally{
