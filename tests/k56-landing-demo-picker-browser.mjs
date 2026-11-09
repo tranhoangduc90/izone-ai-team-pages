@@ -31,6 +31,7 @@ test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo
   const base = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN}:{channel:'chrome'}) });
   const context = await browser.newContext();
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: base });
   await context.addInitScript(()=>{window.__loginFrames=0;const watch=()=>{const el=document.querySelector('#googleSignInButton');if(el&&el.getBoundingClientRect().height)window.__loginFrames++;requestAnimationFrame(watch);};requestAnimationFrame(watch);});
   const page = await context.newPage();
   const requests = [];
@@ -70,15 +71,45 @@ test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo
           assert.equal(new URL(page.url()).searchParams.get('class'), 'IC2305');
           await select.selectOption(code);
           await page.locator(`[data-slug="${slug}"]`).click();
+          const studentUrl = `${base}/term-tests/${slug}-computer-based/?class=${code}&mode=${mode}`;
+          const studentLink = page.getByRole('textbox', { name: 'Đường dẫn gửi học viên' });
+          assert.equal(await studentLink.inputValue(), studentUrl);
+          assert.equal(await studentLink.getAttribute('readonly'), '');
+          const copy = page.getByRole('button', { name: 'Sao chép đường dẫn' });
+          assert.equal(await copy.innerText(), '');
+          await copy.click();
+          await page.getByText('Đã sao chép đường dẫn.').waitFor();
+          assert.equal(await page.evaluate(() => navigator.clipboard.readText()), studentUrl);
+          const paper = page.locator('#paperExam');
+          assert.equal(await paper.evaluate(el => el.open), false);
+          await paper.getByText('Bài thi giấy', { exact: true }).click();
+          const sheet = paper.getByRole('link', { name: /^Answer Sheet/ });
+          const sheetUrl = `${base}/term-tests/${slug}/?class=${code}&mode=${mode}`;
+          assert.equal(await sheet.getAttribute('href'), sheetUrl);
+          assert.match(await sheet.innerText(), new RegExp(slug + '/'));
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
           assert.equal(await page.locator('#rescue').evaluate(el => el.open), false);
           await page.locator('#rescue summary').click();
           assert.equal(await page.locator('[data-case=skill]').isVisible(), slug === 'term-test-1-k56');
           await page.locator('#openExam').click();
-          await page.waitForURL(`**/${slug}-computer-based/?class=${code}&mode=${mode}`);
+          await page.waitForURL(studentUrl);
         }
       }
     }
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${base}/term-tests/k56-demo/?class=IC2264&mode=lis_first&test=mini-test-k56`);
+    await page.locator('#classSelect').waitFor({ state: 'visible' });
+    await page.locator('#classSelect').selectOption('IC2305');
+    await page.getByRole('button', { name: 'Reading trước' }).click();
+    const selectedPaperUrl = `${base}/term-tests/mini-test-k56/?class=IC2305&mode=read_first`;
+    assert.equal(await page.getByRole('textbox', { name: 'Đường dẫn gửi học viên' }).inputValue(),
+      `${base}/term-tests/mini-test-k56-computer-based/?class=IC2305&mode=read_first`);
+    const paperSummary = page.locator('#paperExam summary');
+    await paperSummary.focus();
+    await paperSummary.press('Enter');
+    await page.locator('#paperExamLink').click();
+    await page.waitForURL(selectedPaperUrl);
+
     for (const mode of ['lis_first', 'read_first']) {
       const code = 'IC2264';
       for (const [slug, name] of [['term-test-1-k56', 'Term Test 1'], ['term-test-2-k56', 'Term Test 2'], ['mini-test-k56', 'Mini Test']]) {

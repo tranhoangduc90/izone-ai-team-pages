@@ -60,6 +60,14 @@ body[data-k56-design] .topbar .results-shortcut { margin-left: auto; min-height:
 .test-context { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--surface-soft); }
 body[data-k56-design] .test-context h2 { margin: 0; font-size: 16px; }
 .test-context span { display: block; color: var(--muted); font-size: 13px; }
+.student-link-preview { margin-top: -5px; padding: 13px 14px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.student-link-preview label { display: block; margin-bottom: 7px; color: var(--navy); font-size: 16px; font-weight: 700; }
+.student-link-row { display: flex; gap: 9px; }
+body[data-k56-design] .student-link-row input { flex: 1; width: 0; min-width: 0; min-height: 44px; padding: 8px 10px; font: inherit; font-size: 11.5px; }
+.student-link-row .copy-student-link { display: inline-grid; place-items: center; flex: 0 0 44px; width: 44px; min-height: 44px; padding: 0; }
+.student-link-preview .student-link-status { margin: 0; font-size: 13px; color: var(--muted); }
+.student-link-preview .student-link-status:not(:empty) { margin-top: 5px; }
+.student-link-status[data-copied] { color: #166534; }
 .main-test-action { margin: 12px 0 0; }
 .main-test-action .button { width: 100%; min-height: 52px; }
 .rescue { margin: 16px 0 0; border: 1px solid var(--line); border-radius: 12px; }
@@ -67,6 +75,9 @@ body[data-k56-design] .test-context h2 { margin: 0; font-size: 16px; }
 .rescue[open] > summary { border-bottom: 1px solid var(--line); background: var(--surface-soft); border-radius: 12px 12px 0 0; }
 .rescue-body { padding: 14px; }
 .rescue-body > p { margin: 0 0 12px; color: var(--muted); }
+.answer-sheet-entry { display: grid; gap: 3px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--navy); text-decoration: none; }
+.answer-sheet-entry:hover, .answer-sheet-entry:focus-visible { border-color: var(--action); text-decoration: underline; }
+.answer-sheet-entry small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .rescue-list { display: grid; gap: 8px; }
 .rescue-choice { text-align: left; display: block; width: 100%; }
 .rescue-choice strong, .rescue-choice small { display: block; }

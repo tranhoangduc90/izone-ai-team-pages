@@ -5,12 +5,13 @@ import {sortClassesNewestFirst,buildK56LandingClasses} from '../term-tests/k56-d
 const source=fs.readFileSync(new URL('../term-tests/k56-demo/landing.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
 function element(){return {value:'',hidden:false,dataset:{},handlers:{},classList:{toggle(){}},setAttribute(){},removeAttribute(){},focus(){},after(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){return !this.validation},append(){}};}
 const elements=Object.fromEntries(['classCode','classSelect','classHelp','loginBadge','loginStatus','googleSignInButton','logoutButton','teacherDashboard',
-  'openExam','chosenName','rescue','rescueDetail','rescueLinks','rescueHelp','testPicker','testActions','pickStep','actionStep','changeTest'].map(id=>[id,element()]));
+  'openExam','chosenName','rescue','rescueDetail','rescueLinks','rescueHelp','testPicker','testActions','pickStep','actionStep','changeTest',
+  'studentLinkPanel','studentLink','studentLinkStatus','copyStudentLink','paperExam','paperExamLink','paperExamLabel','paperExamUrl','paperExamHelp'].map(id=>[id,element()]));
 const modes=['lis_first','read_first'].map(mode=>Object.assign(element(),{dataset:{mode}}));
 const history=[];
-const buttons=[1,2].map(n=>Object.assign(element(),{dataset:{test:`term-test-${n}-k56-computer-based`,slug:`term-test-${n}-k56`}}));
+const buttons=[1,2].map(n=>Object.assign(element(),{textContent:`Term Test ${n}`,dataset:{test:`term-test-${n}-k56-computer-based`,slug:`term-test-${n}-k56`}}));
 const requests=[];
-buttons.push(Object.assign(element(), {dataset:{test:'mini-test-k56-computer-based',slug:'mini-test-k56'}}));
+buttons.push(Object.assign(element(), {textContent:'Mini Test',dataset:{test:'mini-test-k56-computer-based',slug:'mini-test-k56'}}));
 const rescueChoices=['skill','audio','sheet'].map(kind=>Object.assign(element(),{dataset:{case:kind}}));
 let response={ok:true,students:[{ref:'synthetic',name:'Học viên giả lập'}]};
 const context=vm.createContext({

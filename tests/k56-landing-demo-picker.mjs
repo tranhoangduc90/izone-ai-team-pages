@@ -10,8 +10,11 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function element(){return {value:'',hidden:false,dataset:{},children:[],handlers:{},classList:{toggle(){}},setAttribute(){},removeAttribute(){},focus(){},after(){},addEventListener(n,f){this.handlers[n]=f},replaceChildren(...children){this.children=children},setCustomValidity(s){this.validation=s},reportValidity(){return !this.validation}};}
 async function fixture({query='?class=CODEXDEMO56&mode=lis_first',classes=fakeClasses,demoError='http',liveError=false,restoreError=false,authenticated=true,rosterOk=true}={}) {
  const elements=Object.fromEntries(['classCode','classSelect','classHelp','loginBadge','loginStatus','googleSignInButton','logoutButton','teacherDashboard',
-  'openExam','chosenName','rescue','rescueDetail','rescueLinks','rescueHelp','testPicker','testActions','pickStep','actionStep','changeTest'].map(id=>[id,element()]));
- const tests=['term-test-1-k56','term-test-2-k56','mini-test-k56'].map(slug=>Object.assign(element(),{dataset:{test:slug+'-computer-based',slug}}));
+  'openExam','chosenName','rescue','rescueDetail','rescueLinks','rescueHelp','testPicker','testActions','pickStep','actionStep','changeTest',
+  'studentLinkPanel','studentLink','studentLinkStatus','copyStudentLink','paperExam','paperExamLink','paperExamLabel','paperExamUrl','paperExamHelp'].map(id=>[id,element()]));
+ const tests=['term-test-1-k56','term-test-2-k56','mini-test-k56'].map((slug,index)=>Object.assign(element(),{
+  textContent:['Term Test 1','Term Test 2','Mini Test'][index],dataset:{test:slug+'-computer-based',slug}
+ }));
  const modes=['lis_first','read_first'].map(mode=>Object.assign(element(),{dataset:{mode}}));
  const rescueChoices=['skill','audio','sheet'].map(kind=>Object.assign(element(),{dataset:{case:kind}}));
  const location={search:query,href:'https://example.invalid/term-tests/k56-demo/'+query};

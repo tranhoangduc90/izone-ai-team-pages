@@ -26,12 +26,21 @@ const authenticatedApiUrls = new Set();
 const authView=createTeacherAuthState({panel:googleSignInButton,notice:loginStatus,badge:loginBadge,retry:()=>restoreSessions()});
 let googleStarted=false;
 let loginGeneration = 0;
+const landingUrl = window.location.href;
 const landingQuery = new URLSearchParams(location.search);
 let examMode = landingQuery.get('mode') === 'read_first' ? 'read_first' : 'lis_first';
 const testChoices = [...document.querySelectorAll('[data-test]')];
 const rescueChoices = [...document.querySelectorAll('[data-case]')];
 const openExam = document.getElementById('openExam');
 const heading = document.getElementById('chosenName');
+const studentLinkPanel = document.getElementById('studentLinkPanel');
+const studentLink = document.getElementById('studentLink');
+const studentLinkStatus = document.getElementById('studentLinkStatus');
+const paperExam = document.getElementById('paperExam');
+const paperExamLink = document.getElementById('paperExamLink');
+const paperExamLabel = document.getElementById('paperExamLabel');
+const paperExamUrl = document.getElementById('paperExamUrl');
+const paperExamHelp = document.getElementById('paperExamHelp');
 const rescue = document.getElementById('rescue');
 const rescueDetail = document.getElementById('rescueDetail');
 const rescueLinks = document.getElementById('rescueLinks');
@@ -54,6 +63,7 @@ function updateLandingUrl() {
   if (selectedTest) landingQuery.set('test', selectedTest.dataset.slug);
   else landingQuery.delete('test');
   if (opening && (opening.classCode !== classCode || opening.mode !== examMode)) cancelOpening();
+  renderShareLinks(classCode);
   try{window.history.replaceState(window.history.state, '', `?${landingQuery.toString()}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 function testLink(destination, classCode) {
@@ -61,6 +71,45 @@ function testLink(destination, classCode) {
   if (!destination.endsWith('-audio')) params.set('mode', examMode);
   return `../${destination}/?${params.toString()}`;
 }
+
+function renderShareLinks(classCode) {
+  const available = Boolean(selectedTest && validClassCode(classCode));
+  studentLinkPanel.hidden = !available;
+  paperExamHelp.hidden = available;
+  paperExamLink.hidden = !available;
+  const studentUrl = available ? new URL(testLink(selectedTest.dataset.test, classCode), landingUrl).href : '';
+  if (studentLink.value !== studentUrl) {
+    studentLink.value = studentUrl;
+    studentLinkStatus.textContent = '';
+    studentLinkStatus.removeAttribute('data-copied');
+  }
+  if (!available) {
+    paperExamLink.removeAttribute('href');
+    return;
+  }
+  paperExamLink.href = new URL(testLink(selectedTest.dataset.slug, classCode), landingUrl).href;
+  paperExamLabel.textContent = `Answer Sheet ${selectedTest.textContent.trim()}`;
+  paperExamUrl.textContent = paperExamLink.href;
+}
+
+document.getElementById('copyStudentLink').addEventListener('click', async () => {
+  const url = studentLink.value;
+  if (!url) return;
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(url);
+    copied = true;
+  } catch {
+    if (studentLink.value !== url) return;
+    studentLink.focus();
+    studentLink.select();
+    try { copied = document.execCommand('copy'); } catch { /* Giữ link được chọn để sao chép thủ công. */ }
+  }
+  if (studentLink.value !== url) return;
+  studentLinkStatus.textContent = copied ? 'Đã sao chép đường dẫn.' : 'Đường dẫn đã được chọn. Bạn có thể sao chép bằng Ctrl+C hoặc ⌘+C.';
+  studentLinkStatus.toggleAttribute('data-copied', copied);
+});
+
 document.querySelectorAll('[data-mode]').forEach(button => {
   const refresh = () => {
     const selected = button.dataset.mode === examMode;
@@ -98,6 +147,7 @@ function showManualEntry(message = 'Bạn vẫn có thể nhập mã lớp khi c
   loginBadge.textContent = 'Giảng viên chưa đăng nhập';
   logoutButton.hidden = true;
   googleSignInButton.hidden = false;
+  renderShareLinks(input.value.trim().toUpperCase());
 }
 
 function showAuthorizedClasses(payload) {
@@ -240,6 +290,7 @@ function renderTest() {
   document.getElementById(selectedTest ? 'pickStep' : 'actionStep').removeAttribute('aria-current');
   document.getElementById(selectedTest ? 'actionStep' : 'pickStep').setAttribute('aria-current', 'step');
   heading.textContent = selectedTest?.textContent || '';
+  paperExam.open = false;
   rescue.open = false;
   rescueDetail.hidden = true;
   rescueLinks.replaceChildren();
@@ -356,7 +407,9 @@ classSelect.addEventListener('change', () => {
 });
 input.addEventListener('input', () => {
   input.setCustomValidity('');
-  if (opening && input.value.trim().toUpperCase() !== opening.classCode) cancelOpening();
+  const classCode = input.value.trim().toUpperCase();
+  if (opening && classCode !== opening.classCode) cancelOpening();
+  renderShareLinks(classCode);
 });
 input.addEventListener('change', updateLandingUrl);
 async function restoreSessions(){

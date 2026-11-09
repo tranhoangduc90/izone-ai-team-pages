@@ -8,7 +8,7 @@
     <title>Danh sách bài test · Khóa 56</title>
     <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
     <link rel="stylesheet" href="../shared/styles.css?rev=20261003-writing-save-cas-v1">
-    <link rel="stylesheet" href="landing.css?rev=20261109-guided-v1">
+    <link rel="stylesheet" href="landing.css?rev=20261109-guided-v1&amp;share=20261109-v1">
   <link rel="preload" href="../k56-design/assets/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../k56-design/theme.css?v=20261023-master170-v3">
   <script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
@@ -64,9 +64,29 @@
             </div>
             <p>Cùng thứ tự cho cả ba bài và Answer Sheet. Writing sau Listening và Reading.</p>
           </fieldset>
+          <section class="student-link-preview" id="studentLinkPanel" aria-labelledby="studentLinkLabel" hidden>
+            <label id="studentLinkLabel" for="studentLink">Đường dẫn gửi học viên</label>
+            <div class="student-link-row">
+              <input id="studentLink" type="text" readonly spellcheck="false">
+              <button class="button button-secondary copy-student-link" id="copyStudentLink" type="button" aria-label="Sao chép đường dẫn" title="Sao chép đường dẫn">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+              </button>
+            </div>
+            <p class="student-link-status" id="studentLinkStatus" role="status"></p>
+          </section>
           <div class="main-test-action">
             <button class="button button-primary" type="button" id="openExam">Mở bài thi</button>
           </div>
+          <details class="rescue" id="paperExam">
+            <summary>Bài thi giấy</summary>
+            <div class="rescue-body">
+              <p id="paperExamHelp">Chọn lớp hợp lệ để hiện đường dẫn.</p>
+              <a class="answer-sheet-entry" id="paperExamLink" hidden>
+                <strong id="paperExamLabel"></strong>
+                <small id="paperExamUrl"></small>
+              </a>
+            </div>
+          </details>
           <details class="rescue" id="rescue">
             <summary>Xử lý sự cố</summary>
             <div class="rescue-body">
@@ -87,7 +107,7 @@
       </section>
     </main>
     <script src="../k56-shared/config.js?rev=20261020-demo-v1&ej=20261024-production-r1"></script>
-    <script type="module" src="landing.js?rev=20261022-session-handoff-v1&amp;startup=20261026-v2&amp;history=20261102-1&amp;guided=20261109-v1"></script>
+    <script type="module" src="landing.js?rev=20261022-session-handoff-v1&amp;startup=20261026-v2&amp;history=20261102-1&amp;guided=20261109-v1&amp;share=20261109-v1"></script>
     <script src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
   </body>
 </html>
