@@ -284,7 +284,7 @@ let commentPoller=createCommentPoller({context:()=>journeyData&&accessToken?{acc
     if(historyDialog.open&&historySession){const existing=[...historyContent.querySelectorAll('[data-session-comment]')],panel=commentPanel(byNumber.get(historySession.sessionNumber));
       if(existing.length!==(panel?1:0)||existing[0]?.outerHTML!==panel?.outerHTML){existing.forEach(box=>box.remove());if(panel)historyContent.append(panel);}}
   }});
-stampProgressStudent();void start();
+stampProgressStudent();void start().finally(()=>document.body.classList.remove('progress-starting'));
 window.addEventListener('pageshow',event=>{if(event.persisted&&progressPinWasLoggedOut()){journeyData=null;accessToken='';elements.journeyView.hidden=true;location.replace(new URL('./student.html',location.href));}});
 
 // Đồng hồ chỉ làm mới thẻ; không gọi API và không thay quyền mở phần.

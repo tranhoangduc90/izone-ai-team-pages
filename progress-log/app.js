@@ -2144,7 +2144,7 @@ commentPoller=createCommentPoller({request:apiRequest,context:()=>{
   refreshVisibleComment(elements.resultView,byNumber.get(state.assignment.sessionNumber));
 }});
 bindDialogDismiss(elements.journeySummaryDialog);
-void openAssignment();
+void openAssignment().finally(()=>document.body.classList.remove('progress-starting'));
 
 elements.journeyDetailBackButton.addEventListener('click',backToJourneyList);
 elements.journeyDetailRetryButton.addEventListener('click',()=>void openStudentJourneyDetail(state.journeyDetailSession));

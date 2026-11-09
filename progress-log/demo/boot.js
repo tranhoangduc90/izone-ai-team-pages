@@ -56,6 +56,7 @@ async function boot() {
 }
 
 boot().catch(error => {
+  document.body.classList.remove('progress-starting');
   notice.textContent = error.message; notice.classList.add('error');
   if(compact){const retry=document.createElement('button');retry.type='button';retry.className='button';retry.textContent='Thử mở lại phiếu';retry.addEventListener('click',()=>location.reload());notice.append(' ',retry);}
 });

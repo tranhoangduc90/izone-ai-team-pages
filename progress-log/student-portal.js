@@ -84,6 +84,6 @@ logout.addEventListener('click',async()=>{
 });
 identity.subscribe(()=>{if(currentStudent)notice('Người đã ghi nhớ vừa đổi ở tab khác. Màn này vẫn giữ người đang xem; chọn Đăng xuất để đổi người.');});
 window.addEventListener('pageshow',event=>{if(event.persisted&&progressPinWasLoggedOut())void boot();});
-void boot();
+void boot().finally(()=>document.body.classList.remove('progress-starting'));
 
 window.progressLogUpdateGuard=()=>!busy&&!home.hidden;
