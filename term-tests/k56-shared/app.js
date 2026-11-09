@@ -640,42 +640,12 @@
   }
 
   function showListeningInterruption() {
-    if (!offline?.record.sections.listening?.interrupted || offline.record.listeningInterruptionAcknowledged
-      || document.getElementById('term1ListeningInterrupted')) return;
-    const dialog = document.createElement('dialog');
-    dialog.id = 'term1ListeningInterrupted';
-    dialog.className = 'cbt-identity-confirm';
-    dialog.setAttribute('aria-label', 'Listening gián đoạn');
-    const message = document.createElement('p');
-    message.textContent = 'Bài thi listening cần được nghe liền mạch không trục trặc để đánh giá đúng năng lực thí sinh. Khi bạn không nghe được âm thanh, bạn không nên tiếp tục listening. Hãy tiếp tục làm kỹ năng tiếp theo, và sau buổi thi hãy liên hệ giảng viên để được nhận bài Listening thay thế.';
-    const status = document.createElement('p');
-    status.setAttribute('role', 'status');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'button button-primary';
-    button.textContent = 'Tôi đã hiểu. Đến phần thi tiếp theo.';
-    dialog.addEventListener('cancel', event => event.preventDefault());
-    button.addEventListener('click', async () => {
-      button.disabled = true;
-      offline.record.listeningInterruptionAcknowledged = true;
-      try { await offline.persist(true); }
-      catch {
-        delete offline.record.listeningInterruptionAcknowledged;
-        status.textContent = 'Chưa lưu được xác nhận trên thiết bị. Hãy thử lại.';
-        button.disabled = false;
-        return;
-      }
-      const response = offline.sectionResponse();
+    offline?.showListeningInterruption?.(response => {
       Object.assign(state, response);
       saveSession();
-      dialog.close();
-      dialog.remove();
       if (response.nextSection === 'reading') showSectionReady('reading');
       else setStage('writing-prep');
     });
-    dialog.append(message, status, button);
-    document.body.append(dialog);
-    dialog.showModal();
   }
 
   function setStage(stage) {
@@ -2556,24 +2526,28 @@
   function renderResult(payload) {
     const result = payload.result;
     const hasReading = Boolean(result.reading);
+    const interrupted = payload.listeningInterrupted || state.listeningInterrupted;
+    const listeningStatus = interrupted ? 'Gián đoạn · Cần bài thay thế' : 'Chưa nộp';
+    const listeningDetails = interrupted ? 'Listening bị gián đoạn. Hãy liên hệ giảng viên để nhận bài Listening thay thế.' : 'Listening chưa có kết quả.';
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
     const skills = fallbackSkill==='writing' ? [] : fallbackSkill ? [[fallbackLabel, result[fallbackSkill]]]
-      : [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+      : [...(result.listening ? [['Listening', result.listening]] : []), ...(hasReading ? [['Reading', result.reading]] : [])];
     const summary = skills.map(([name, score]) => addSummaryCard(name, `${score.correct}/${score.total} câu đúng`));
+    if (!fallbackSkill && !result.listening) summary.unshift(addSummaryCard('Listening', listeningStatus));
     if (!fallbackSkill && !hasReading) summary.push(addSummaryCard('Reading', 'Chưa nộp'));
     elements.summaryGrid.replaceChildren(...summary);
     const grading = payload.writing?.grading;
     elements.resultStatus.textContent = fallbackSkill==='writing' ? grading?.ready
       ? (grading.tasks?.[0]?.gradingMethod==='blank_rule' ? 'Bài Writing trắng · 0/9' : `Kết quả Writing Task 2 · ${formatBand(grading.writingScore)}/9`)
       : writingGradingNotice(grading)
-      : fallbackSkill ? `Phân tích dựa trên bài ${fallbackLabel} đã nộp.` : hasReading
+      : fallbackSkill ? `Phân tích dựa trên bài ${fallbackLabel} đã nộp.` : !result.listening ? listeningDetails : hasReading
       ? payload.writing?.grading?.ready
         ? 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.'
         : 'Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
-    elements.continueReadingFromResult.hidden = Boolean(fallbackSkill) || hasReading || Boolean(demoMode);
+    elements.continueReadingFromResult.hidden = Boolean(fallbackSkill) || interrupted || hasReading || Boolean(demoMode);
     renderWritingSubmission();
     // Polling Writing không làm thay DOM/focus của bảng L/R đang được học viên xem.
     const identity = JSON.stringify([payload.className, payload.studentRef || state.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);

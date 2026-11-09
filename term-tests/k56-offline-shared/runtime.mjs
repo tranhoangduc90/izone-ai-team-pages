@@ -360,3 +360,180 @@ class OfflineRuntime extends EventTarget{
 
 return {BUILD,canonical,hash,ExamStore,exportHtml,OfflineRuntime};
 }
+
+// Opt in only for CBT routes with a server that accepts interruption operations.
+export function withListeningContinuity(OfflineRuntime) {
+ return class extends OfflineRuntime {
+  preloadListening(blob, onReady, onFailure) {
+   const audio = document.createElement('audio');
+   const url = URL.createObjectURL(blob);
+   const began = performance.now();
+   const entry = { audio, url, ready: false, discard };
+   audio.hidden = true;
+   audio.preload = 'auto';
+   document.body.append(audio);
+   const timeout = setTimeout(failed, 15000);
+   function cleanup() {
+    clearTimeout(timeout);
+    audio.removeEventListener('canplay', ready);
+    audio.removeEventListener('error', failed);
+   }
+   function discard() {
+    cleanup();
+    audio.remove();
+    URL.revokeObjectURL(url);
+   }
+   function failed() { onFailure(); }
+   const runtime = this;
+   function ready() {
+    cleanup();
+    entry.ready = true;
+    runtime.observe('audio_player_ready', { elapsedMs: performance.now() - began });
+    onReady();
+   }
+   audio.addEventListener('canplay', ready);
+   audio.addEventListener('error', failed);
+   audio.src = url;
+   return entry;
+  }
+
+  showListeningInterruption(onContinue) {
+    if (!this.record.sections.listening?.interrupted || this.record.listeningInterruptionAcknowledged
+      || document.getElementById('offlineListeningInterrupted')) return;
+    const dialog = document.createElement('dialog');
+    dialog.id = 'offlineListeningInterrupted';
+    dialog.className = 'cbt-identity-confirm';
+    dialog.setAttribute('aria-label', 'Listening gián đoạn');
+    const message = document.createElement('p');
+    message.textContent = 'Bài thi listening cần được nghe liền mạch không trục trặc để đánh giá đúng năng lực thí sinh. Khi bạn không nghe được âm thanh, bạn không nên tiếp tục listening. Hãy tiếp tục làm kỹ năng tiếp theo, và sau buổi thi hãy liên hệ giảng viên để được nhận bài Listening thay thế.';
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button-primary';
+    button.textContent = 'Tôi đã hiểu. Đến phần thi tiếp theo.';
+    dialog.addEventListener('cancel', event => event.preventDefault());
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      this.record.listeningInterruptionAcknowledged = true;
+      try { await this.persist(true); }
+      catch {
+        delete this.record.listeningInterruptionAcknowledged;
+        status.textContent = 'Chưa lưu được xác nhận trên thiết bị. Hãy thử lại.';
+        button.disabled = false;
+        return;
+      }
+      dialog.close();
+      dialog.remove();
+      onContinue(this.sectionResponse());
+    });
+    dialog.append(message, status, button);
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
+ attachPlayer({ audio, resumeButton, manualButton, render, form, observeListening }) {
+  let started = false;
+  let terminal = '';
+  let interrupting = false;
+  const update = (message = 'Đang phát bài thi') => render(message, audio.currentTime, audio.duration);
+  const submit = () => {
+   const button = document.createElement('button');
+   button.type = 'submit';
+   button.hidden = true;
+   button.dataset.autoSubmit = 'true';
+   form.append(button);
+   form.requestSubmit(button);
+   button.remove();
+  };
+  const playBlocked = () => {
+   if (started || terminal) return;
+   resumeButton.textContent = 'Phát audio';
+   resumeButton.hidden = false;
+   update('Trình duyệt chưa cho phát. Hãy bấm Phát audio');
+  };
+  resumeButton.addEventListener('click', () => {
+   if (!started && !terminal) void audio.play().catch(playBlocked);
+  });
+  audio.addEventListener('playing', () => {
+   if (!started) this.observe('audio_playing', { position: audio.currentTime,
+    ...(this.listeningStartIntent === undefined ? {} : { elapsedMs: performance.now() - this.listeningStartIntent }) });
+   started = true;
+   resumeButton.hidden = true;
+   if (!terminal) update();
+  });
+  audio.addEventListener('timeupdate', () => { if (!terminal) update(); });
+  for (const event of ['waiting', 'error']) audio.addEventListener(event, () => {
+   if (!terminal) this.observe('audio_diagnostic', { event, position: audio.currentTime });
+  });
+  manualButton.addEventListener('click', async () => {
+   if (interrupting || (terminal && terminal !== 'interrupt') || audio.ended) return;
+   interrupting = true;
+   terminal = 'interrupt';
+   manualButton.disabled = true;
+   if (!audio.paused) audio.pause();
+   for (const control of form.querySelectorAll('input:not([type="range"]),select,textarea,button[type="submit"]')) control.disabled = true;
+   try {
+    await this.interruptListening('learner_cannot_hear');
+    form.dispatchEvent(new Event('term-test:listening-interrupted'));
+   } catch {
+    update('Chưa lưu được trạng thái gián đoạn. Hãy bấm Tôi không nghe được để thử lưu lại.');
+    manualButton.disabled = false;
+   } finally { interrupting = false; }
+  });
+  audio.addEventListener('ended', async event => {
+   const expected = Number(this.record.prepared.timing.listeningDurationSeconds);
+   if (terminal || !event.isTrusted || !audio.ended || audio.seeking || !Number.isFinite(audio.duration)
+       || Math.abs(audio.duration - expected) > 2 || audio.currentTime < audio.duration - 0.5) return;
+   terminal = 'ended';
+   try { observeListening?.({ phase: 'eof_accepted', configuredDurationSeconds: expected }); } catch { /* Chẩn đoán không chặn thu bài. */ }
+   this.observe('audio_ended', { position: audio.currentTime, duration: audio.duration });
+   this.record.player = { position: audio.currentTime, ended: true };
+   update('Đã phát hết audio');
+   submit();
+  });
+  const controller = {
+   playBlocked,
+   beforeAutoSubmit: async () => ({ submit: Boolean(this.record.player.ended), deadlineChanged: !this.record.player.ended }),
+   submitting: () => {
+    if (terminal) return;
+    terminal = 'manual';
+    manualButton.disabled = true;
+    this.observe('listening_early_submit_confirmed');
+    if (!audio.paused) audio.pause();
+   },
+   submitFailed() {},
+   finish() { terminal ||= 'submitted'; manualButton.disabled = true; }
+  };
+  window.K56_LISTENING_AUDIO = controller;
+  this.player = audio;
+  this.playerReady = true;
+  update();
+  return controller;
+ }
+
+ async interruptListening(reason) {
+  if (!['learner_cannot_hear', 'page_interrupted'].includes(reason)) throw Error('Lý do gián đoạn không hợp lệ.');
+  if (this.interruptionPending) return this.interruptionPending;
+  const listening = this.record.sections.listening;
+  if (!listening?.startedAt || listening.sealed) throw Error('Lượt Listening đã kết thúc hoặc chưa bắt đầu.');
+  if (listening.interrupted) return this.sectionResponse();
+  this.interruptionPending = this.enqueue('listening', 'interrupt', { interruptionReason: reason }, listening.revision)
+   .then(operation => {
+    this.observe('listening_interrupted', { operationId: operation.operationId, reason });
+    return this.sectionResponse();
+   });
+  try { return await this.interruptionPending; }
+  finally { this.interruptionPending = null; }
+ }
+
+ async seal(section, data, revision, reason) {
+  const alreadySealed = this.record.sections[section]?.sealed;
+  const response = await super.seal(section, data, revision, reason);
+  if (section === 'listening' && !alreadySealed) {
+   this.observe('listening_local_collected', { operationId: this.record.sections.listening.operationId, reason });
+  }
+  return response;
+ }
+ };
+}
