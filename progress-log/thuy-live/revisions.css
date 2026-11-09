@@ -86,7 +86,19 @@
 .thuy-assignment-footer{position:sticky;bottom:0;background:#fff;flex-wrap:wrap;z-index:2}
 .thuy-assignment-footer>.notice{flex:1 0 100%;margin:0;padding:10px 12px;border-radius:6px;font-size:14px}
 .thuy-assignment-footer>.notice:empty{display:none}.thuy-assignment-footer>.success{background:#e4f5ec;color:#145d38;font-weight:600}
-.thuy-delivery-receipt{display:block;margin-top:6px;font-weight:400}
+.thuy-delivery-receipt{flex:1 0 100%;display:grid;gap:6px;max-height:min(30vh,230px);overflow:auto}
+.thuy-delivery-receipt:empty{display:none}
+.thuy-delivery-row{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:#fff;color:var(--navy)}
+.thuy-delivery-destination small{display:block;color:var(--muted)}
+.thuy-delivery-copy-status{flex-basis:100%;color:#145d38}
+.thuy-delivery-copy-status:empty{display:none}
+.thuy-session-overview > #copyCurrentLinkButton{align-self:flex-start}
+.button.student-assignment-copy{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.student-assignment-copy svg{width:16px;height:16px;flex:none}
+@media(max-width:650px){
+  .thuy-delivery-row{display:grid;grid-template-columns:minmax(0,1fr)}
+  .thuy-delivery-row>.button{justify-self:start}
+}
 .thuy-teacher :is(.thuy-assignment-footer,.thuy-editor-ai,.thuy-library-detail) .notice,.thuy-teacher .thuy-publication-notice{position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:normal;min-width:0}
 .thuy-teacher .thuy-publication-notice{background:#e4f5ec;color:#145d38;margin:12px 20px;border-radius:6px}
 .thuy-assignment-target [aria-invalid=true]{border:2px solid var(--red)!important}

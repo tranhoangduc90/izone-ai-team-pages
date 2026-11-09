@@ -62,7 +62,8 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
       ['1301','Lớp mẫu chưa bắt đầu','5','on_going','2026-11-09'],
       ['1302','Lớp mẫu chưa nối Progress Log','4','pending','2026-11-18']
     ].map(([class_id,class_name,course_id,class_status,class_started_at])=>({class_id,class_name,course_id,class_status,class_started_at}));
-    const classPolicy=createLearningClassPolicy({pool,directoryReader:async()=>structuredClone(catalog),now:()=>new Date('2026-11-05T05:00:00Z')});
+    let classPolicyNow=Date.parse('2026-11-05T05:00:00Z');
+    const classPolicy=createLearningClassPolicy({pool,directoryReader:async()=>structuredClone(catalog),now:()=>new Date(classPolicyNow)});
     const fixtureActors={owner:reviewer,viet:{email:'viet@example.test',role:'teacher',canAccessAllClasses:true},
       thuy:{email:'thuy@example.test',role:'teacher',canAccessAllClasses:false},
       admin:{email:'admin@example.test',role:'teacher',canAccessAllClasses:false}};
@@ -86,6 +87,10 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     app.get('/progress-log/demo/config.js',(_req,res)=>res.type('js').send('window.PROGRESS_LOG_CONFIG=Object.freeze('+JSON.stringify({API_BASE_URL:origin+'/demo',DEMO_MODE:true,GOOGLE_CLIENT_ID:'',THUY_PILOT_CLASS_IDS:[],STUDENT_MEMORY:{enabled:false,allClasses:false}})+');'));
     app.use(async(req,res)=>{try{const file=resolve(root,'.'+new URL(req.url,origin).pathname);if(!file.startsWith(resolve(root)+sep))throw Error('Denied');res.type({'.js':'js','.mjs':'js','.css':'css','.html':'html','.woff2':'font/woff2'}[extname(file)]||'text');res.send(await readFile(file));}catch{res.status(404).end();}});
     browser=await chromium.launch({channel:'chrome',headless:true});const context=await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(15000);
+    await page.addInitScript(()=>{
+      window.copiedLinks=[];
+      Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>window.copiedLinks.push(value)}});
+    });
     await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
     await page.goto(origin+'/progress-log/fixture.html');
     await page.evaluate(async()=>{
@@ -175,6 +180,15 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     await add.click();await classAt(5).selectOption('1295');await sessionAt(5).selectOption('6');
     await send.click();await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
     assert.deepEqual(sent.at(-1).targets,[target('1294',4),target('1295',6)]);
+    for(const [classId,className,session] of [['1294','IC1000',4],['1295','Lớp mẫu B',6]]){
+      const {rows:[delivery]}=await sourceDb.query(
+        'SELECT public_token FROM learning.form_assignment WHERE erp_course_class_id=$1 AND session_number=$2',
+        [classId,session]
+      );
+      const receipt=dialog.locator('.thuy-delivery-row').filter({hasText:className+' · Buổi '+session});
+      await receipt.getByRole('button',{name:/Sao chép link cho học viên/}).click();
+      assert.equal(await page.evaluate(()=>window.copiedLinks.at(-1)),origin+'/progress-log/thuy.html#assignment='+delivery.public_token);
+    }
     const rows=(await sourceDb.query('SELECT erp_course_class_id::text class_id,session_number,form_version_id FROM learning.form_assignment ORDER BY erp_course_class_id,session_number')).rows;
     assert.deepEqual(rows.map(row=>[row.class_id,row.session_number]),[['1294',2],['1294',3],['1294',4],['1295',4],['1295',5],['1295',6]]);assert.ok(rows.every(row=>row.form_version_id===published.form_version_id));assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.outbox_job')).rows[0].n,0);
     const pinned=(await sourceDb.query(`SELECT a.erp_course_class_id::text class_id,a.session_number,t.portal_session_id::text portal_id,t.starts_at
@@ -258,6 +272,12 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     const delivered=repeat.body.delivery.results[0].delivery;
     assert.equal(delivered.replayed,true);
     assert.equal(delivered.rosterCount,1);
+    const evidence=process.env.PROGRESS_COPY_LINK_EVIDENCE;
+    const receipt=dialog.locator('.thuy-delivery-row');
+    assert.equal(await receipt.count(),1);
+    if(evidence){await mkdir(evidence,{recursive:true});await dialog.screenshot({path:resolve(evidence,'giao-mot-lop.png')});}
+    await receipt.first().getByRole('button',{name:/Sao chép link cho học viên/}).click();
+    assert.equal(await page.evaluate(()=>window.copiedLinks.at(-1)),origin+'/progress-log/thuy.html#assignment='+delivered.publicToken);
     await supertest(sourceApp).post(endpoint).send({...body,confirmedAnswers:false}).expect(400);
     const forbidden=await supertest(sourceApp).post(endpoint).send({...body,operationId:randomUUID(),targets:[target('1302',3)]}).expect(200);
     assert.equal(forbidden.body.delivery.results[0].error,'DRAFT_CLASS_ACCESS_DENIED');
@@ -278,6 +298,26 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     assert.doesNotMatch(JSON.stringify(publicView.body),/expectedOptionId|gradingKey/);
     await assert.rejects(()=>sourceDb.query('UPDATE learning.form_assignment SET session_number=1 WHERE id=$1',[delivered.assignmentId]),/CLASS_DRAFT_DELIVERY_TARGET_MISMATCH/);
     await assert.rejects(()=>sourceDb.query('UPDATE learning.form_grading_key SET content_hash=content_hash WHERE form_version_id=$1',[delivered.formVersionId]),/CLASS_DRAFT_DELIVERY_CONTENT_SCOPED/);
+    catalog.find(row=>row.class_id==='1295').class_status='on_going';
+    classPolicyNow+=61000;
+    await add.click();
+    await classAt(2).selectOption('1295');
+    await sessionAt(2).selectOption('3');
+    await send.click();
+    await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
+    assert.equal(await receipt.count(),2);
+    const secondDelivery=(await sourceDb.query('SELECT public_token FROM learning.form_assignment WHERE erp_course_class_id=1295 AND session_number=3')).rows[0];
+    if(evidence){
+      await dialog.screenshot({path:resolve(evidence,'giao-nhieu-lop.png')});
+      await page.setViewportSize({width:390,height:900});
+      assert.equal(await dialog.evaluate(element=>element.scrollWidth>element.clientWidth),false);
+      await dialog.screenshot({path:resolve(evidence,'giao-nhieu-lop-dien-thoai.png')});
+      await page.setViewportSize({width:1440,height:1000});
+    }
+    for(const [index,token] of [delivered.publicToken,secondDelivery.public_token].entries()){
+      await receipt.nth(index).getByRole('button',{name:/Sao chép link cho học viên/}).click();
+      assert.equal(await page.evaluate(()=>window.copiedLinks.at(-1)),origin+'/progress-log/thuy.html#assignment='+token);
+    }
     assert.deepEqual(errors,[]);
   }finally{await browser?.close();if(server)await new Promise(done=>server.close(done));await sourceDb.close();await demoDb.close();}
 });

@@ -24,6 +24,7 @@ import {keywordSelection} from './thuy-live/keyword-selection.js';
 import {renderThuyAnalytics} from './thuy-live/question-analytics.js?rev=20261030-the17-19-v1';
 import {legacyFeedbackForView} from './thuy-live/feedback-policy.js';
 import {mountAssignmentManagement} from './thuy-live/assignment-management.js?rev=20261030-the22-23-v1';
+import {COPY_STUDENT_LINK_LABEL,decorateCopyStudentLinkButton,studentAssignmentLink} from './student-assignment-link.js';
 
 const config = window.PROGRESS_LOG_CONFIG || {};
 // Link chung luôn dùng preset đã duyệt; giữ tham số cũ chỉ cho đường tương thích được chỉ định rõ.
@@ -567,10 +568,7 @@ function renderClassInsights(insights) {
 }
 
 function studentLink(publicToken) {
-  const url = new URL(THUY_UI?'./thuy.html':'./', window.location.href);
-  url.search = '';
-  url.hash = new URLSearchParams({ assignment: publicToken }).toString();
-  return url.toString();
+  return studentAssignmentLink(publicToken,{thuy:THUY_UI});
 }
 
 function selectedLibraryItems() {
@@ -1591,7 +1589,7 @@ function applyLiveUpdate(update){
   const people=update.dashboard?.students||state.dashboard?.students||[];
   if(update.live?.students.some(s=>!people.some(person=>person.studentRef===s.studentRef)))throw Error('Học viên không thuộc phiếu đang xem.');
   if(update.dashboard){
-    const previous=state.dashboard;state.dashboard=update.dashboard;
+    const previous=state.dashboard;state.dashboard=update.dashboard;syncCopyStudentLink();
     thuyLayout.count.textContent=state.dashboard.students.length+' học viên';
     thuyLayout.learner.href=new URL('./thuy.html#assignment='+state.dashboard.publicToken,location.href).href;
     elements.dashboardTitle.textContent=state.dashboard.title;
@@ -1620,7 +1618,7 @@ async function loadDashboard({ quiet = false } = {}) {
   if(state.dashboard?.assignmentId!==assignmentId){
     liveUpdates.stop();state.dashboardGeneration++;state.analyticsGeneration++;state.analyticsController?.abort();
     if(elements.draftDialog.open)elements.draftDialog.close();
-    state.dashboard=null;state.liveByStudent.clear();elements.studentList.replaceChildren();elements.questionAnalytics.replaceChildren();elements.questionAnalyticsStatus.textContent='';
+    state.dashboard=null;syncCopyStudentLink();state.liveByStudent.clear();elements.studentList.replaceChildren();elements.questionAnalytics.replaceChildren();elements.questionAnalyticsStatus.textContent='';
   }
   if (!assignmentId) {
     state.dashboard=null;assignmentManagement?.refresh();
@@ -1642,6 +1640,7 @@ async function loadDashboard({ quiet = false } = {}) {
     if (generation !== state.dashboardGeneration) return;
     const previousAssignmentId = state.dashboard?.assignmentId;
     state.dashboard = payload.dashboard;
+    syncCopyStudentLink();
     if(THUY_UI){thuyLayout.count.textContent=state.dashboard.students.length+' học viên';thuyLayout.learner.href=new URL('./thuy.html#assignment='+state.dashboard.publicToken,location.href).href;thuyLayout.setPanel(elements.createPanel.hidden?(elements.overviewPanel.hidden?'dashboard':'overview'):'create');}
     assignmentManagement?.refresh();
     const deadlineHost = document.getElementById('teacherSubmissionWindow');
@@ -1712,7 +1711,11 @@ async function copyStudentLink() {
 }
 
 function currentStudentLink() {
-  return state.dashboard?.publicToken ? studentLink(state.dashboard.publicToken) : '';
+  return state.dashboard?.assignmentId===elements.assignmentSelect.value ? studentLink(state.dashboard.publicToken) : '';
+}
+
+function syncCopyStudentLink() {
+  if(THUY_UI)elements.copyCurrentLinkButton.hidden=!currentStudentLink()||!canManageClass(state.dashboard?.classId);
 }
 
 function openCurrentStudentForm() {
@@ -1747,8 +1750,9 @@ async function copyCurrentStudentLink() {
   if (!link) return;
   try {
     await navigator.clipboard.writeText(link);
-    elements.copyCurrentLinkButton.textContent = 'Đã sao chép';
-    window.setTimeout(() => { elements.copyCurrentLinkButton.textContent = 'Sao chép link'; }, 1_500);
+    if(link!==currentStudentLink())return;
+    copyCurrentLinkLabel.textContent = 'Đã sao chép';
+    window.setTimeout(() => { copyCurrentLinkLabel.textContent = COPY_STUDENT_LINK_LABEL; }, 1_500);
   } catch {
     setNotice(`Không sao chép tự động được. Link học viên: ${link}`, 'error');
   }
@@ -1919,6 +1923,7 @@ elements.refreshDashboardButton.addEventListener('click', () => {
 });
 elements.openStudentFormButton.addEventListener('click', openCurrentStudentForm);
 elements.previewStudentButton.addEventListener('click', () => void previewAsStudent());
+const copyCurrentLinkLabel=decorateCopyStudentLinkButton(elements.copyCurrentLinkButton);
 elements.copyCurrentLinkButton.addEventListener('click', () => void copyCurrentStudentLink());
 elements.attendanceForm.addEventListener('submit', event => void saveAttendance(event));
 elements.attendanceStatus.addEventListener('change', updateAttendanceSyncHint);
