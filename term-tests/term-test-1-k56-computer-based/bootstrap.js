@@ -23,6 +23,8 @@
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   const demoOfflineEntry = !localDemo && classCode === 'CODEXDEMO56' && !demoStudentRef && !demoAttemptToken;
+  const freshDemoEntry = demoOfflineEntry && navigator.onLine !== false
+    && performance.getEntriesByType('navigation')[0]?.type !== 'reload';
   let term1Offline = null;
   if (!localDemo && classCode && (classCode !== 'CODEXDEMO56' || demoOfflineEntry)) {
     const {Term1Offline, ExamStore} = await import('./offline.mjs?v=20261108-term1-fallback-resume-v1');
@@ -129,7 +131,7 @@
     query.delete('reset');
     history.replaceState(null, '', `${location.pathname}?${query.toString()}`);
   }
-  let state = productState ? productState.current().state : readState();
+  let state = freshDemoEntry ? {} : productState ? productState.current().state : readState();
   let legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
@@ -800,7 +802,7 @@
       if (term1Offline && (prepared.resumeTerm1Offline ||
           (!prepared.listeningStartedAt && !prepared.readingStartedAt && !prepared.writingStartedAt))) {
         try{Object.assign(prepared, await term1Offline.prepare(prepared,{classCode,studentRef,mode:prepared.examMode||'lis_first'}));}
-        catch(error){if(!['OFFLINE_NEW_DISABLED','OFFLINE_LEGACY'].includes(error.code))throw error;if(term1Offline.record)await term1Offline.detachLatest();term1Offline=null;window.K56_TERM1_OFFLINE=null;}
+        catch(error){if(error.code!=='OFFLINE_NEW_DISABLED'&&!(demoOfflineEntry&&error.code==='OFFLINE_LEGACY'))throw error;if(term1Offline.record)await term1Offline.detachLatest();term1Offline=null;window.K56_TERM1_OFFLINE=null;}
       }
       const sameAttempt = !state.attemptToken || state.attemptToken === prepared.attemptToken;
       const keepLocal = skill => sameAttempt && Number(state.draftRevisions?.[skill] || 0) > Number(prepared[skill + 'DraftRevision'] || 0);

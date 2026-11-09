@@ -21,6 +21,8 @@
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
   const demoOfflineEntry = !localDemo && classCode === 'CODEXDEMO56' && !demoStudentRef && !demoAttemptToken;
+  const freshDemoEntry = demoOfflineEntry && navigator.onLine !== false
+    && performance.getEntriesByType('navigation')[0]?.type !== 'reload';
   let miniOffline = null;
   const supportsOffline=Boolean(navigator.locks?.request&&navigator.serviceWorker&&globalThis.crypto?.subtle);
   if (supportsOffline && !localDemo && classCode && (classCode !== 'CODEXDEMO56' || demoOfflineEntry)) {
@@ -127,7 +129,7 @@
     query.delete('reset');
     history.replaceState(null, '', `${location.pathname}?${query.toString()}`);
   }
-  let state = sharedIdentity ? sharedIdentity.current().state : readState();
+  let state = freshDemoEntry ? {} : sharedIdentity ? sharedIdentity.current().state : readState();
   let legacyUiState = readLegacyUiState();
   let legacyListeningResume = Boolean(state.studentRef && !state.attemptToken && legacyUiState.audioStarted);
   let roster = [];
@@ -732,7 +734,7 @@
           const {audioDownload:grant,...admitted}=await miniOffline.prepare(prepared,{classCode,studentRef,mode:prepared.examMode});
           audioDownload=grant;Object.assign(prepared,admitted);
         }catch(error){
-          if(!['OFFLINE_NEW_DISABLED','OFFLINE_LEGACY'].includes(error.code))throw error;
+          if(error.code!=='OFFLINE_NEW_DISABLED'&&!(demoOfflineEntry&&error.code==='OFFLINE_LEGACY'))throw error;
           if(miniOffline.record)await miniOffline.detachLatest();
           miniOffline=null;window.K56_MINI_OFFLINE=null;
         }

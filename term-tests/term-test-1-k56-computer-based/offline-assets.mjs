@@ -318,7 +318,7 @@ export const ASSET_HASHES={
   "assets/figures/rovio.png": "9f2d562f1ffd3b98536b5b11658844b7d75655da48b4bd3ebfa04a2a3ff8cc9d",
   "audio-loader.js": "d6bffc4f4115053e85cca55e837204412187f3a2f0be73a423b2ff892d40b8a3",
   "audio-whole.mjs": "58cf1707f218e010196b5861ef579009f38922edcd184bef7c2543a4941c68f1",
-  "bootstrap.js": "b6a5f57f2fc41566a0249206805ef3cf81a6c382543eb4c5566e62b0ef397a86",
+  "bootstrap.js": "861b463cbb54361bc9f27b1555bb9b0ba8699fdfdf4a0d533fbfd27935e83abf",
   "content.js": "498e78b7e9490fc75bda0f7c47826ba69abfca64f0e46d6f0319833c7060aec3",
   "enhance.js": "54bb7a2728aa187eb8c480544c39d7be90eb6532faf880ef1378ffa67ec84fb3",
   "index.html": "35060117d2ed678c777b9ed7b2e43de23db6bf236a24a7fffb55ce54310569ac",
@@ -327,4 +327,4 @@ export const ASSET_HASHES={
   "offline.mjs": "cb3cfe134491869f3658494a75aab605c20c8317d64da1af34623c0b23031952",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="03f841a738b056206fe0b2a5f535bfd417e542baa0b8888a18cb7e0495f1cd58";
+export const ASSET_BUILD_ID="3c53b0130daee51098b5fc20970a19c5d8b93ec4a5a3d326571bf001606df227";

@@ -326,7 +326,7 @@ export const ASSET_HASHES={
   "assets/figures/writing-waste.png": "c77f854bcb39a1481d525d768ccbab8532c09dc5dbfe549c100c3149a8e8688d",
   "audio-loader.js": "d6bffc4f4115053e85cca55e837204412187f3a2f0be73a423b2ff892d40b8a3",
   "audio-whole.mjs": "d5ae5bc0a5db9bc15dad983af55c8db3a5441f5f33f80aad51f37ab08d62bc16",
-  "bootstrap.js": "67ffaa35cc43d732e55f54d86beb5b0ef32848a92ab57d7c06941cbbba547b1a",
+  "bootstrap.js": "bce15fdf7a8ec86fcd03677d27233553f3c38d04599f11f9ceac678009d8f014",
   "content.js": "61653a59ae0b7427f5de300cbbc6ceb0121a668664811436802cdfa89a370aa5",
   "enhance.js": "205aee7337d23428e4001e0eb5677e9f7f81f244f8ed6d1a48622cc96f17c166",
   "exam.css": "b89325ce97e1efef761f3f8996aecef28a35b02cef20ac1a24f6521d1ada3012",
@@ -337,4 +337,4 @@ export const ASSET_HASHES={
   "passages.js": "e62ad421a5dd2f1b38e7a67ab25e6e4b6b46fbac2732dd92723be0c3aef38615",
   "styles.css": "395c6b03494d670196249461108b3e508b35affe0fbf2185a813276f6c948042"
 };
-export const ASSET_BUILD_ID="8c0e0d7a47f091a296c6555d903f33d00043c90e7910b95ae19875d22974dde5";
+export const ASSET_BUILD_ID="0421de246d2bfa812d3eebf074cfd73d00748f7a1c662b25899e44fc23dcf601";

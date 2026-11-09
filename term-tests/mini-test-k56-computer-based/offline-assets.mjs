@@ -321,7 +321,7 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader.js": "d79e5c3899dd5172678ea13e9597bc7389eba06aa0886fa42aaeaf4f7bbc21eb",
   "audio-whole.mjs": "23721b5b7ad9fb99c265d54bdea4c4a90c55a9b582b1b888596b2ebc28506635",
-  "bootstrap.js": "b2af900ee207d0ac853f4a3d8862335f05a4ba540b557614b13e61c57f582fff",
+  "bootstrap.js": "a4f9595c2c87a25ce8b077033790ede73b331457f90f51db59fe6bf9251b44cb",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
@@ -333,4 +333,4 @@ export const ASSET_HASHES={
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="8011b86ecefad6944629661eb7bb30c57da08c47a9487597018b44538782c3cd";
+export const ASSET_BUILD_ID="615808972cc47b7f927ce8113ca420133b81ab5d801bf542b9ffb1da86edadb5";
