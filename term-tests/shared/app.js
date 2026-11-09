@@ -500,6 +500,7 @@
   let miniResultStatus = '';
 
   function renderMiniJourneyResultReady() {
+    if (!miniJourney) return;
     const waiting = Boolean(miniJourney && !miniJourney.resultToken());
     const interrupted = Boolean(miniJourney?.view().listeningInterrupted);
     const status = [waiting, interrupted].join(':');
