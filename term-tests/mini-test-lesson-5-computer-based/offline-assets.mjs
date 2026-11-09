@@ -161,7 +161,7 @@ export const ASSET_HASHES={
   "../k67-shared/config.js": "99b56b85bb3447c729317d0bdea1b82bec12a82e9ab5c768918012b9efeaeac7",
   "../k67-shared/listening-controller.js": "c8fdd10275dd2a8a35dd98c67c325a0bcc74fed8eb13add47f891106d00d1f6c",
   "../k67-shared/listening-eof.mjs": "b411d6b8cd0c79882c5d6a917a9d5bc7b6f4449589fdcbeba1400880296c42b5",
-  "../k67-shared/offline-journey-ui.mjs": "d82dbcca26109e2e051ffe413fd7fb5bee404528dacf020a76d7a5017fe7e804",
+  "../k67-shared/offline-journey-ui.mjs": "1ba6f9d1e8cfd573a358962f4f79650fae718d81d96e6a90f35fcd233a347967",
   "../k67-shared/public-audio.js": "9276d58ce2fe43c10b283c4bde9f329562c61d792f591fed35044ebe34fddf16",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",

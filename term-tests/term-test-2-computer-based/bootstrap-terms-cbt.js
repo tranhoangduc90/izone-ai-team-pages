@@ -111,6 +111,7 @@
   let officialObjectUrl = '';
   let miniJourney = null;
   let previewHeard = false;
+  let journeyPlayer = null;
   let preparing = false;
   let bootstrapSelectionBusy = false;
   let restoredIdentity = null;
@@ -568,8 +569,8 @@
   function setStartAvailability() {
     if (miniJourney) {
       const listeningFirst = miniJourney.view().examMode !== 'read_first';
-      elements.bootstrapStart.disabled = preparing || (listeningFirst && !previewHeard);
-      if (listeningFirst && previewHeard && !preparing) {
+      elements.bootstrapStart.disabled = preparing || (listeningFirst && (!previewHeard || (miniJourney.continuity() && !journeyPlayer?.canPlay)));
+      if (listeningFirst && !elements.bootstrapStart.disabled) {
         window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart, true);
       }
       return;
@@ -985,7 +986,7 @@
     await loadScript('../shared/attempt-review.js?rev=20260909-k67-update-v1');
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
     const journeyVersion=journey?'&offlineJourney=20261107-term1-v1':'';
-    await loadScript('../shared/app-terms-cbt.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9'+journeyVersion);
+    await loadScript('../shared/app-terms-cbt.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9&continuity=20261110-v1'+journeyVersion);
     await loadScript(cbtAssetUrl('enhance-terms-cbt.js?v=20261107-terms-cbt-v1&uiRestore=20261108-v6&previewWait=20261109-preview-10s-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
@@ -998,13 +999,14 @@
   async function enterJourney(playNewListening = false){
     const view=miniJourney.view();
     saveState({...view,drafts:{...state.drafts,...miniJourney.drafts()},draftRevisions:miniJourney.revisions()});
+    revokePreview();
     await enterExam({...view,content:miniJourney.content},null,'',miniJourney,playNewListening);
   }
 
   async function openJourneyLobby(prepare=false){
     const slug=testConfig.slug;
     if(!['mini-test-lesson-5','term-test-1','term-test-2'].includes(slug)||listeningOnly||!sharedIdentity||!isUuid(state.studentRef)||!isUuid(state.examSessionToken))return false;
-    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7');
+    const {findMiniJourney,openMiniJourney}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1');
     const scope=miniCbtScope();
     const existing=await findMiniJourney(scope,slug);
     if(!existing&&(!prepare||state.completed))return false;
@@ -1013,6 +1015,12 @@
     if(!miniJourney)return false;
     if(miniJourney.activated()){await enterJourney();return true;}
     revokePreview();
+    if(miniJourney.continuity()){
+      journeyPlayer=await miniJourney.preparePlayer();
+      void journeyPlayer.ready.then(setStartAvailability,error=>{
+        elements.bootstrapStartStatus.textContent=error.message;
+      });
+    }
     previewObjectUrl=URL.createObjectURL(await miniJourney.verifiedAudio());
     previewAudio.src=previewObjectUrl;
     previewAudio.volume=Number(elements.bootstrapVolume.value)||1;
@@ -1033,7 +1041,7 @@
     if(!['mini-test-lesson-5','term-test-1','term-test-2'].includes(slug)||!sharedIdentity||listeningOnly||state.studentRef)return false;
     if(document.getElementById('miniJourneyRecovery'))return true;
     const mode=query.get('mode');
-    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7');
+    const {miniJourneyRecovery}=await import('../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v7&continuity=20261110-v1');
     const match=await miniJourneyRecovery(classCode,['lis_first','read_first'].includes(mode)?mode:'',slug);
     if(!match)return false;
     const form=document.createElement('form');form.id='miniJourneyRecovery';form.className='cbt-bootstrap-identity';
@@ -1200,9 +1208,10 @@
   });
   elements.bootstrapStart.addEventListener('click', async () => {
     if(miniJourney){
-      if(preparing)return;
+      if(preparing||elements.bootstrapStart.disabled)return;
       preparing=true;setStartAvailability();
       previewAudio.pause();
+      if(miniJourney.continuity()&&miniJourney.view().examMode!=='read_first')miniJourney.markListeningStart();
       try{await miniJourney.begin();await enterJourney(true);}
       catch(error){showNotice(error.message,true);}
       finally{preparing=false;setStartAvailability();}
