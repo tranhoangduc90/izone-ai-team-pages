@@ -281,7 +281,7 @@ export const ASSET_HASHES={
   "../shared/app.js": "cb2039410811ed90492f7ad475855f4ce238530a0993aaa5506db98f946a98c2",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
-  "../shared/cbt-audio-start-label.js": "2f19d0a786e5e2226f40f329927ae8ad5bec41cd20b5e48f2ebe63452f378e29",
+  "../shared/cbt-audio-start-label.js": "f804290520ea13ec0425aba5657633d286308c853e7be3a32dea18da143e80c8",
   "../shared/config.js": "b21f4c664ab133a8f0508ed03458b6dbe4b89df076acff2abbc1fdc224c77e56",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
@@ -316,13 +316,13 @@ export const ASSET_HASHES={
   "assets/figures/rovio.png": "9f2d562f1ffd3b98536b5b11658844b7d75655da48b4bd3ebfa04a2a3ff8cc9d",
   "audio-loader.js": "d6bffc4f4115053e85cca55e837204412187f3a2f0be73a423b2ff892d40b8a3",
   "audio-whole.mjs": "58cf1707f218e010196b5861ef579009f38922edcd184bef7c2543a4941c68f1",
-  "bootstrap.js": "25e144d17d3683e66909fd287a67f5ae7f93bdc0cec3e9f87a542d640938e91c",
+  "bootstrap.js": "227d113949326011dd48d7ada8c5f439c3521ccaba2ffe62081521bcbc5de693",
   "content.js": "498e78b7e9490fc75bda0f7c47826ba69abfca64f0e46d6f0319833c7060aec3",
   "enhance.js": "34955203a034225d72173837b4aebf9d8c7578aa2f9bb0ec4c935a878b5c4a1e",
-  "index.html": "a70759b055814d25341304a5a07d9a1373e3483150289c3175554c9d83a2ab29",
+  "index.html": "8a8b0bb075407f9420089647a6287e77aa69d95b205cd3329c5897c209f4016d",
   "layout-updates.css": "e097fdb8a68a537a67c6c05cd5fc01397d40f2cf138c96a3bc3af9f5987e8351",
   "offline-worker.js": "a65a27295c4caff3c6fda7348d21c54dfab389d1a27e54a1736cbe12580e5079",
   "offline.mjs": "1416a6c594d627384a7d1eb1132fb1be3d820dbff0139d74d571b00cad21762a",
   "styles.css": "4ed73e7bc2a06323330822e4b081e55aa8af665476ed48ee0ecded4c46df79cb"
 };
-export const ASSET_BUILD_ID="fe20933ddb94c75f48aab4205fe69608f3d439ae17e02dcad27f433db66702c0";
+export const ASSET_BUILD_ID="a33d62cec1eae97a49f51a182d740d7478ea9d3f9889f504a375fd9536760c98";
