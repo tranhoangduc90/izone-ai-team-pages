@@ -1,0 +1,9 @@
+/* Liên kết phụ vẫn đọc và bấm được; không tranh vai trò với nút vào bài học viên. */
+.teacher-entry-link{font:400 14px/1.5 'Nunito Sans',sans-serif;color:#586477;text-decoration:underline;text-underline-offset:4px;padding:10px 6px;white-space:nowrap}
+.studio-header>.teacher-entry-link{margin-left:auto;flex-shrink:0}
+.topbar>.teacher-entry-link{flex-shrink:0}
+.topbar:has(>.teacher-entry-link){flex-wrap:wrap;gap:8px 16px}
+.test-teacher-entry{display:flex;justify-content:flex-end;max-width:1440px;margin:auto;padding:0 20px}
+.identity-card>.teacher-entry-link{display:block;text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid #dce1e7}
+.teacher-entry-link:focus-visible{outline:3px solid #152b4e;outline-offset:3px;border-radius:4px}
+@media(max-width:600px){.studio-header>.teacher-entry-link{font-size:13px}.studio-header:has(>.teacher-entry-link){flex-wrap:wrap;gap:8px 16px;height:auto;min-height:76px}.studio-header:has(>.teacher-entry-link)>h1{flex:1;min-width:140px}}

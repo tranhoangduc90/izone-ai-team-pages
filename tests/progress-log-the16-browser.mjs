@@ -63,7 +63,8 @@ async function fixture(t){
   window.editor=createFormDraftEditor({host:document.querySelector('#formDraftEditor'),apiRequest:request,libraryEnabled:true});
   window.editor.setWorkspace({classes:[{class_id:'1294',class_name:'Lớp giả'}],assignments:[],classId:'1294',sessionNumber:3});
  });
- await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
+ await page.getByRole('tab',{name:/Kho cá nhân/}).click();
+  await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
  t.after(async()=>{assert.deepEqual(errors,[]);await browser.close();await new Promise(done=>server.close(done));});
  return {page,context};
 }

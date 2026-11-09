@@ -28,14 +28,18 @@ test('Thẻ 26: Kho chung dùng cùng bộ soạn, admin xuất bản đúng ngu
    document.body.className='thuy-live thuy-teacher';document.body.innerHTML='<main id="editorHost"></main>';
    const {createFormDraftEditor}=await import('/progress-log/teacher-form-editor.js');window.calls26=[];window.entries26=[];window.saved26=null;
    const request=async(path,options={})=>{window.calls26.push({path,body:options.body,method:options.method});const d=window.saved26;
-    if(path.startsWith('/teacher/form-library?'))return {canManageShared:true,entries:path.includes('izone')?window.entries26:[]};
+    if(path.startsWith('/teacher/form-library?'))return {canManageShared:true,entries:path.includes('izone')?window.entries26:[],
+      shared:{createCourses:['34','45','56','67'],reviewCourses:['56'],selfApproveCourses:['56']}};
     if(path.startsWith('/teacher/form-drafts/review-queue'))return {drafts:[]};
     if(path==='/teacher/form-publications')return {publications:[]};
-    if(path.startsWith('/teacher/form-drafts?'))return {drafts:d?[d]:[]};
+    if(path.startsWith('/teacher/form-drafts?'))return {drafts:d&&!window.entries26.length&&path.includes('izone')?[d]:[]};
     if(path==='/teacher/form-drafts'){window.saved26={...options.body,id:'50000000-0000-4000-8000-000000000026',revision:1,status:'draft',contentHash:'a'.repeat(64)};return {draft:structuredClone(window.saved26)};}
+    if(path.endsWith('/request-review')){d.status='pending_review';return {draft:structuredClone(d)};}
     if(path.endsWith('/approve')){d.status='approved';return {draft:structuredClone(d)};}
-    if(path.endsWith('/publish-library'))return {publication:{id:'publication-26',draftId:d.id,formVersionId:d.definition.formVersionId,revision:d.revision}};
-    if(path==='/teacher/form-library'){window.entries26=[{id:'60000000-0000-4000-8000-000000000026',title:d.definition.title,sourceDraftId:d.id,sourceRevision:d.revision}];return {entry:window.entries26[0]};}
+    if(path.endsWith('/publish-library')){
+      window.entries26=[{id:'60000000-0000-4000-8000-000000000026',title:d.definition.title,sourceDraftId:d.id,sourceRevision:d.revision}];
+      return {publication:{id:'publication-26',libraryEntryId:window.entries26[0].id,draftId:d.id,formVersionId:d.definition.formVersionId,revision:d.revision}};
+    }
     if(path.endsWith('/archive')){window.entries26=[];return {ok:true,archived:true};}
     if(options.method==='PUT'){Object.assign(d,options.body,{revision:d.revision+1});return {draft:structuredClone(d)};}
     throw Error('Outside fixture: '+path);
@@ -43,10 +47,12 @@ test('Thẻ 26: Kho chung dùng cùng bộ soạn, admin xuất bản đúng ngu
    window.editor26=createFormDraftEditor({host:document.querySelector('#editorHost'),apiRequest:request,libraryEnabled:true});window.editor26.setWorkspace({classes:[{class_id:'1294',class_name:'IC_TEST20'}],assignments:[],classId:'1294',sessionNumber:1});
   });
   await page.waitForFunction(()=>document.querySelector('.thuy-library-heading button')?.title==='Tạo bài trong Kho chung');
-  await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByLabel('Tên bài tập',{exact:true}).fill('Bài chung kiểm Thẻ 26');await page.getByLabel('Trình độ',{exact:true}).selectOption('56');
+  await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByLabel('Tên bài tập',{exact:true}).fill('Bài chung kiểm Thẻ 26');await page.getByLabel('Khóa',{exact:true}).selectOption('56');
   await page.getByRole('button',{name:'+ Trả lời mở',exact:true}).click();await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('general');await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Câu phản hồi thử');
+  await page.getByRole('button',{name:'Gửi duyệt',exact:true}).click();await page.getByRole('button',{name:'Duyệt bản này',exact:true}).click();
   await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.getByRole('button',{name:'Bài chung kiểm Thẻ 26',exact:true}).waitFor();
-  assert.equal(await page.evaluate(()=>window.calls26.find(c=>c.path==='/teacher/form-library')?.body.scope),'izone');
+  assert.equal(await page.evaluate(()=>window.calls26.find(c=>c.path==='/teacher/form-drafts')?.body.scope),'izone');
+  assert.equal(await page.evaluate(()=>window.calls26.some(c=>c.path==='/teacher/form-library')),false);
   page.on('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Xóa bài',exact:true}).click();await page.waitForFunction(()=>window.entries26.length===0);assert.equal(await page.locator('dialog[open]').count(),0);
  }finally{await browser.close();await f.close();}
 });
