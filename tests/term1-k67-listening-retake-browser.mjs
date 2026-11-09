@@ -87,6 +87,10 @@ test('Term 1 retake keeps its ticket, offline attempt and result separate', {tim
     await page.goto(entry+signedTicket);
     await select();
     await page.locator('#bootstrapPreview').click();
+    const countdown = page.locator('[data-audio-start-wait]');
+    await countdown.waitFor();
+    assert.equal(await page.locator('#bootstrapStart').isDisabled(), true);
+    assert.equal(await countdown.evaluate(hint => hint.nextElementSibling.id), 'bootstrapStart');
     const start = page.getByRole('button',{name:'Đã nghe rõ Bắt đầu thi Listening',exact:true});
     await start.waitFor();
     assert.equal(await start.innerText(),'Đã nghe rõ\nBắt đầu thi Listening');

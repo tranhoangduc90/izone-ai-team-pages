@@ -585,6 +585,7 @@
   }
 
   function revokePreview() {
+    window.IZONE_CBT_AUDIO_CANCEL_PREVIEW_WAIT?.(previewAudio);
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
     previewObjectUrl = '';
   }
@@ -625,6 +626,7 @@
     audioAccess = null; audioScope = null; audioFromCache = false; audioCacheStatus = '';
     cacheStatus.textContent = 'Đang xác thực quyền tải hoặc khôi phục audio...';
     const resuming = Boolean(session.listeningStartedAt || legacyListeningResume);
+    window.IZONE_CBT_AUDIO_CANCEL_PREVIEW_WAIT?.(previewAudio);
     previewHeard = resuming;
     elements.bootstrapDownloadStep.dataset.state = 'active';
     elements.bootstrapPreviewStep.dataset.state = 'locked';
@@ -984,7 +986,7 @@
     await loadScript('../shared/writing-planning.js?rev=20260909-k67-update-v1');
     const journeyVersion=journey?'&offlineJourney=20261107-term1-v1':'';
     await loadScript('../shared/app-terms-cbt.js?v=20261107-terms-cbt-v1&termEof=20261108-v1&uiRestore=20261108-v9'+journeyVersion);
-    await loadScript(cbtAssetUrl('enhance-terms-cbt.js?v=20261107-terms-cbt-v1&uiRestore=20261108-v6', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
+    await loadScript(cbtAssetUrl('enhance-terms-cbt.js?v=20261107-terms-cbt-v1&uiRestore=20261108-v6&previewWait=20261109-preview-10s-v1', '20260912-load-guard-v1-20261014-order-v1-20261014-audio-recovery-v1-20261015-incident-v1-20261016-review-label-v1')+journeyVersion);
     await loadScript(cbtAssetUrl('interaction-tools.js?v=20261018-identity-v1', '20260824-writing-note-fix-v1-20260911-listening-retake-v2'));
   }
 
@@ -1164,12 +1166,17 @@
     previewAudio.currentTime = 0;
     try {
       await previewAudio.play();
-      previewHeard = true;
       elements.bootstrapPreview.textContent = 'Dừng nghe thử';
       elements.bootstrapPreviewStep.dataset.state = 'complete';
       elements.bootstrapStartStep.dataset.state = 'active';
       elements.bootstrapPreviewStatus.textContent = 'Đang nghe thử · tối đa 30 giây.';
       setStartAvailability();
+      if (!previewHeard) {
+        window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW(previewAudio, elements.bootstrapStart, () => {
+          previewHeard = true;
+          setStartAvailability();
+        });
+      }
     } catch {
       elements.bootstrapPreviewStatus.textContent = 'Trình duyệt chưa cho phát. Hãy nhấn lại nút nghe thử.';
     }

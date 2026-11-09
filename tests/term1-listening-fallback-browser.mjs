@@ -101,7 +101,12 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   await capture('preview');
   assert.equal(await page.locator('#skillStart').isDisabled(), true);
   await page.click('#skillPreview');
-  await page.locator('#skillStart:enabled').waitFor({ state: 'visible', timeout: 3000 });
+  const countdown = page.locator('[data-audio-start-wait]');
+  await countdown.waitFor();
+  assert.equal(await page.locator('#skillStart').isDisabled(), true);
+  assert.equal(await countdown.evaluate(hint => hint.nextElementSibling.id), 'skillStart');
+  await page.locator('#skillStart:enabled').waitFor({ state: 'visible', timeout: 15000 });
+  assert.equal(await countdown.count(), 0);
   assert.match(await page.locator('#skillStart').innerText(), /^Đã nghe rõ\nBắt đầu thi Listening$/);
   assert.equal(await page.locator('#listeningView').count(), 0);
   assert.equal(await page.locator('#skillPreviewStep').getAttribute('data-state'), 'complete');
