@@ -22,10 +22,14 @@
   const demoStudentRef = classCode === 'CODEXDEMO56' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
+  const demoOfflineEntry = !localDemo && classCode === 'CODEXDEMO56' && !demoStudentRef && !demoAttemptToken;
   let term1Offline = null;
-  if (!localDemo && classCode && classCode !== 'CODEXDEMO56') {
+  if (!localDemo && classCode && (classCode !== 'CODEXDEMO56' || demoOfflineEntry)) {
     const {Term1Offline, ExamStore} = await import('./offline.mjs?v=20261108-term1-fallback-resume-v1');
-    term1Offline = new Term1Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
+    const store=demoOfflineEntry
+      ? (await import('../k56-offline-shared/demo-store.mjs?v=20261110-v1')).createDemoStore(ExamStore,testConfig.slug,classCode,query)
+      : new ExamStore();
+    term1Offline = new Term1Offline({apiBase:appConfig.API_BASE_URL,classCode,store});
     try { await term1Offline.open(); window.K56_TERM1_OFFLINE = term1Offline; }
     catch (error) { root.textContent=error.message; return; }
   }
@@ -796,7 +800,7 @@
       if (term1Offline && (prepared.resumeTerm1Offline ||
           (!prepared.listeningStartedAt && !prepared.readingStartedAt && !prepared.writingStartedAt))) {
         try{Object.assign(prepared, await term1Offline.prepare(prepared,{classCode,studentRef,mode:prepared.examMode||'lis_first'}));}
-        catch(error){if(error.code!=='OFFLINE_NEW_DISABLED')throw error;if(term1Offline.record)await term1Offline.detachLatest();term1Offline=null;window.K56_TERM1_OFFLINE=null;}
+        catch(error){if(!['OFFLINE_NEW_DISABLED','OFFLINE_LEGACY'].includes(error.code))throw error;if(term1Offline.record)await term1Offline.detachLatest();term1Offline=null;window.K56_TERM1_OFFLINE=null;}
       }
       const sameAttempt = !state.attemptToken || state.attemptToken === prepared.attemptToken;
       const keepLocal = skill => sameAttempt && Number(state.draftRevisions?.[skill] || 0) > Number(prepared[skill + 'DraftRevision'] || 0);

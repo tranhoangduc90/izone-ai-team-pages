@@ -20,10 +20,14 @@
   const demoStudentRef = classCode === 'CODEXDEMO56' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
+  const demoOfflineEntry = !localDemo && classCode === 'CODEXDEMO56' && !demoStudentRef && !demoAttemptToken;
   let term2Offline = null;
-  if (!localDemo && classCode && classCode !== 'CODEXDEMO56') {
+  if (!localDemo && classCode && (classCode !== 'CODEXDEMO56' || demoOfflineEntry)) {
     const {Term2Offline, ExamStore} = await import('./offline.mjs?v=20261107-k56-r2-v1');
-    term2Offline = new Term2Offline({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
+    const store=demoOfflineEntry
+      ? (await import('../k56-offline-shared/demo-store.mjs?v=20261110-v1')).createDemoStore(ExamStore,testConfig.slug,classCode,query)
+      : new ExamStore();
+    term2Offline = new Term2Offline({apiBase:appConfig.API_BASE_URL,classCode,store});
     try { await term2Offline.open(); window.K56_TERM2_OFFLINE = term2Offline; }
     catch (error) { root.textContent=error.message; return; }
   }
@@ -692,7 +696,7 @@
       }
       if (term2Offline && !prepared.listeningStartedAt && !prepared.readingStartedAt && !prepared.writingStartedAt) {
         try{Object.assign(prepared, await term2Offline.prepare(prepared,{classCode,studentRef,mode:prepared.examMode||'lis_first'}));}
-        catch(error){if(error.code!=='OFFLINE_NEW_DISABLED')throw error;if(term2Offline.record)await term2Offline.detachLatest();term2Offline=null;window.K56_TERM2_OFFLINE=null;}
+        catch(error){if(!['OFFLINE_NEW_DISABLED','OFFLINE_LEGACY'].includes(error.code))throw error;if(term2Offline.record)await term2Offline.detachLatest();term2Offline=null;window.K56_TERM2_OFFLINE=null;}
       }
       rememberPreparedStudent(studentRef);
       const sameAttempt = !state.attemptToken || state.attemptToken === prepared.attemptToken;

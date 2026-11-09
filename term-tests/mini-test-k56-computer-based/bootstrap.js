@@ -20,11 +20,15 @@
   const demoStudentRef = classCode === 'CODEXDEMO56' ? (query.get('demoStudent') || '').trim() : '';
   const demoAttemptToken = classCode === 'CODEXDEMO56' ? (query.get('demoAttempt') || '').trim() : '';
   if (!testConfig || !appConfig || !audioLoader || !root) return;
+  const demoOfflineEntry = !localDemo && classCode === 'CODEXDEMO56' && !demoStudentRef && !demoAttemptToken;
   let miniOffline = null;
   const supportsOffline=Boolean(navigator.locks?.request&&navigator.serviceWorker&&globalThis.crypto?.subtle);
-  if (supportsOffline && !localDemo && classCode && classCode !== 'CODEXDEMO56') {
+  if (supportsOffline && !localDemo && classCode && (classCode !== 'CODEXDEMO56' || demoOfflineEntry)) {
     const {OfflineRuntime, ExamStore} = await import('./offline.mjs?v=20261107-mini-v1&miniAudio=20261108-v1');
-    miniOffline = new OfflineRuntime({apiBase:appConfig.API_BASE_URL,classCode,store:new ExamStore()});
+    const store=demoOfflineEntry
+      ? (await import('../k56-offline-shared/demo-store.mjs?v=20261110-v1')).createDemoStore(ExamStore,testConfig.slug,classCode,query)
+      : new ExamStore();
+    miniOffline = new OfflineRuntime({apiBase:appConfig.API_BASE_URL,classCode,store});
     try { await miniOffline.open(); window.K56_MINI_OFFLINE = miniOffline; }
     catch (error) { root.textContent=error.message; return; }
   }
@@ -728,7 +732,7 @@
           const {audioDownload:grant,...admitted}=await miniOffline.prepare(prepared,{classCode,studentRef,mode:prepared.examMode});
           audioDownload=grant;Object.assign(prepared,admitted);
         }catch(error){
-          if(error.code!=='OFFLINE_NEW_DISABLED')throw error;
+          if(!['OFFLINE_NEW_DISABLED','OFFLINE_LEGACY'].includes(error.code))throw error;
           if(miniOffline.record)await miniOffline.detachLatest();
           miniOffline=null;window.K56_MINI_OFFLINE=null;
         }
