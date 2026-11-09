@@ -1,6 +1,6 @@
-import {bodyView,bodyKey,bodyIndexOf,ideaPassed,available,isPrepared,isOpinion,bodyConfig} from './workflow.mjs?v=20261102-l13-v1';
+import {bodyView,bodyKey,bodyIndexOf,ideaPassed,available,isPrepared,isOpinion,isDiscussion,bodyConfig} from './workflow.mjs?v=20261109-l15-discussion1';
 import {wholeSections} from './whole-chain-ui.mjs';
-import {renderRecap} from '../lesson5-thu/recovery-ui.mjs?v=20261102-l13-v1';
+import {renderRecap} from '../lesson5-thu/recovery-ui.mjs?v=20261109-l15-discussion1';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Cùng component Lesson 9; chỉ thêm phạm vi ID/action để hai body không nhận nhầm sự kiện.
 export function scopeBodyMarkup(html,n){
@@ -14,7 +14,7 @@ export function scopeBodyMarkup(html,n){
  });
 }
 export function renderMultiBodies(state,lesson,renderers){
- const preparation=isPrepared(lesson)?'<section class="section-group" id="outline"><div class="group-header"><div><span class="group-number" aria-hidden="true">1</span><h2>Chốt idea của cả hai thân bài</h2><p>'+(isOpinion(lesson)?'Chốt mức đồng ý, phương án ủng hộ và bốn idea; giữ đúng thứ tự hai thân bài.':'Làm rõ phương án tốt hơn trước; chưa viết Topic sentence ở bước này.')+'</p></div></div>'+renderers.stepCard('outline')+'</section>':'';
+ const preparation=isPrepared(lesson)?'<section class="section-group" id="outline"><div class="group-header"><div><span class="group-number" aria-hidden="true">1</span><h2>Chốt idea của cả hai thân bài</h2><p>'+(isDiscussion(lesson)?'Chọn quan điểm bạn ủng hộ và nêu hai idea cho mỗi thân bài.':isOpinion(lesson)?'Chốt mức đồng ý, phương án ủng hộ và bốn idea; giữ đúng thứ tự hai thân bài.':'Làm rõ phương án tốt hơn trước; chưa viết Topic sentence ở bước này.')+'</p></div></div>'+renderers.stepCard('outline')+'</section>':'';
  if(isPrepared(lesson)&&state.steps.outline?.status!=='passed')return preparation+'<div class="lock-note">◌ &nbsp; Hai thân bài mở sau khi kế hoạch idea chung được thông qua.</div>';
  return preparation+lesson.bodies.map(base=>{
   const copy=bodyConfig(lesson,state,base.body);
