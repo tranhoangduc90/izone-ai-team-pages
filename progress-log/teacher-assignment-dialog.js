@@ -24,12 +24,22 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
       const targets=node('div','','thuy-assignment-targets'),status=node('p','','notice');status.setAttribute('role','status');
       const footer=node('footer','','thuy-assignment-footer'),back=button('Quay lại bài tập',()=>dialog.close()),submit=button('Giao bài',()=>void assign()),add=button('+ Thêm lớp nhận bài tập',()=>addTarget(''));submit.classList.add('primary');
       const classNotice=node('p','','thuy-assignment-class-notice');classNotice.setAttribute('role','status');
-      body.append(summary,classNotice,targets,add);footer.append(status,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
-      const rows=[],reads=new Map(),operationId=crypto.randomUUID(),publicationOperationId=crypto.randomUUID();let busy=false,opener=null;
+      const ownDraft=entry.source==='personal'&&entry.draft?.id&&!entry.draft.reviewMode&&!entry.publication;
+      const confirmation=node('input');confirmation.type='checkbox';
+      const confirmationLabel=node('label','','thuy-assignment-confirmation');
+      const scored=(entry.definition?.blocks||[]).some(block=>block.items.some(item=>item.graderType&&item.graderType!=='none'||item.maxScore>0));
+      confirmationLabel.append(confirmation,document.createTextNode(scored
+        ?' Tôi đã kiểm tra đáp án và xác nhận giao bài cho các lớp, buổi đã chọn.'
+        :' Tôi đã kiểm tra nội dung và xác nhận giao bài cho các lớp, buổi đã chọn.'));
+      if(ownDraft)confirmation.addEventListener('change',syncSubmit);
+      body.append(summary,classNotice,targets,add);
+      if(ownDraft)body.append(confirmationLabel);
+      footer.append(status,back,submit);dialog.append(head,body,footer);bindDialogDismiss(dialog);
+      const rows=[],reads=new Map(),operationId=crypto.randomUUID();let busy=false,opener=null;
       const canSend=row=>Boolean(row.classes.value&&row.sessions.value&&!row.loading&&!row.sessions.selectedOptions[0]?.disabled);
       function syncSubmit(){
         const active=rows.filter(row=>!row.done);
-        submit.disabled=busy||!active.length||active.some(row=>!canSend(row));
+        submit.disabled=busy||!active.length||active.some(row=>!canSend(row))||Boolean(ownDraft&&!confirmation.checked);
         submit.textContent=busy?'Đang giao…':!active.length?'Đã giao':'Giao bài';
       }
       function getAvailability(classId){
@@ -54,6 +64,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
         add.hidden=!available.length;
       }
       async function addTarget(preferred=getPreferredClass()){
+        if(ownDraft)confirmation.checked=false;
         if(rows.length&&rows.every(row=>row.done)&&status.classList.contains('success')){
           status.firstChild.textContent='Các lượt giao đã xác nhận.';
         }
@@ -101,12 +112,12 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
             if(current()){state.loading=false;syncSubmit();}
           }
         }
-        classes.addEventListener('change',()=>{message.textContent='';void readPlan();});
-        sessions.addEventListener('change',syncSubmit);
+        classes.addEventListener('change',()=>{if(ownDraft)confirmation.checked=false;message.textContent='';void readPlan();});
+        sessions.addEventListener('change',()=>{if(ownDraft)confirmation.checked=false;syncSubmit();});
         await readPlan(String(entry.sessionNumber||''));
       }
       async function assign(){
-        if(busy)return;
+        if(busy||ownDraft&&!confirmation.checked)return;
         const active=rows.filter(row=>!row.done),choices=active.map(row=>({classId:row.classes.value,
           sessionNumber:Number(row.sessions.value),portalTarget:row.portalTargets.get(row.sessions.value)}));
         if(!choices.length)return;
@@ -115,25 +126,18 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
         const missing=active.find(row=>!canSend(row));
         if(missing){const control=missing.classes.value?missing.sessions:missing.classes;control.setAttribute('aria-invalid','true');missing.message.textContent='Chọn đủ lớp và buổi học.';status.textContent='Chọn đủ lớp và buổi học cho từng dòng.';control.focus();return;}
         if(new Set(rows.map(row=>row.classes.value+':'+row.sessions.value)).size!==rows.length){status.textContent='Một lớp và buổi chỉ xuất hiện một lần.';return;}
-        busy=true;submit.disabled=add.disabled=close.disabled=back.disabled=true;
+        busy=true;submit.disabled=add.disabled=close.disabled=back.disabled=confirmation.disabled=true;
         for(const row of rows){row.classes.disabled=true;row.sessions.disabled=true;row.retry.disabled=true;}
         syncSubmit();dialog.setAttribute('aria-busy','true');
         status.textContent='Đang giao và đối chiếu từng lớp…';
         try{
-          if(!entry.publication){
-            const {draft}=await request('/teacher/form-drafts/'+entry.id);
-            if(run!==lifecycle)return;
-            if(draft.id!==entry.id||draft.revision!==entry.detail.revision||draft.contentHash!==entry.detail.contentHash)throw Error('Phiếu đã được chỉnh sửa. Đóng cửa sổ và mở lại Giao bài để dùng đúng bản mới.');
-            if(draft.status!=='approved')await request('/teacher/form-drafts/'+entry.id+'/approve',{method:'POST',body:{expectedRevision:draft.revision,expectedHash:draft.contentHash,libraryOnly:true}});
-            if(run!==lifecycle)return;
-            const prepared=await request('/teacher/form-drafts/'+entry.id+'/publish-library',{method:'POST',body:{expectedRevision:draft.revision,operationId:publicationOperationId}});
-            if(run!==lifecycle)return;
-            const p=prepared.publication;
-            if(!p?.id||p.draftId!==entry.id||p.revision!==draft.revision||p.formVersionId!==draft.definition.formVersionId)throw Error('Phiên bản chuẩn bị giao chưa khớp phiếu; chưa giao cho lớp.');
-            entry.publication=p;
-          }
-          const reply=await request('/teacher/form-publications/'+entry.publication.id+'/assign',{method:'POST',body:{operationId,targets:choices,origin:{source:entry.draft?'draft':'library',id:entry.id}}});
+          const reply=ownDraft
+            ?await request('/teacher/form-drafts/'+entry.id+'/assign-to-classes',{method:'POST',body:{operationId,targets:choices,
+              expectedRevision:entry.detail.revision,expectedHash:entry.detail.contentHash,confirmedAnswers:true}})
+            :await request('/teacher/form-publications/'+entry.publication.id+'/assign',{method:'POST',body:{operationId,targets:choices,origin:{source:entry.draft?'draft':'library',id:entry.id}}});
           if(run!==lifecycle)return;
+          if(ownDraft&&(reply.sourceRevision!==entry.detail.revision||reply.sourceHash!==entry.detail.contentHash))
+            throw Error('Kết quả giao chưa khớp phiên bản bài đã xác nhận.');
           const results=reply.delivery?.results;if(!Array.isArray(results)||results.length!==choices.length)throw Error('Kết quả chưa đủ các đích vừa giao. Thử lại dùng cùng mã thao tác.');
           const key=value=>String(value.classId)+':'+value.sessionNumber,byTarget=new Map(results.map(result=>[key(result),result]));
           if(byTarget.size!==choices.length||choices.some(choice=>!byTarget.has(key(choice))))throw Error('Kết quả giao chưa khớp lớp và buổi đã chọn.');
@@ -141,7 +145,8 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
             const result=byTarget.get(key(choice));
             if(result.portalTarget?.id!==choice.portalTarget.id||result.portalTarget?.startsAt!==choice.portalTarget.startsAt)
               throw Error('Kết quả giao chưa khớp mốc Portal đã chọn.');
-            if(result.ok&&(result.delivery?.formVersionId!==entry.publication.formVersionId||!Number.isInteger(result.delivery.rosterCount)||result.delivery.rosterCount<0))
+            if(result.ok&&(!result.delivery?.formVersionId||!ownDraft&&result.delivery.formVersionId!==entry.publication.formVersionId
+              ||!Number.isInteger(result.delivery.rosterCount)||result.delivery.rosterCount<1))
               throw Error('Phiên bản hoặc số học viên vừa giao chưa khớp.');
           }
           for(const [index,expected]of choices.entries()){
@@ -157,7 +162,7 @@ export function createAssignmentDialog({request,getClasses,getPreferredClass,get
           status.classList.add(rows.every(row=>row.done)?'success':'error');
         }catch(error){status.classList.add('error');status.textContent='Chưa xác nhận đủ kết quả: '+error.message;}
         finally{
-          busy=false;dialog.setAttribute('aria-busy','false');add.disabled=close.disabled=back.disabled=false;
+          busy=false;dialog.setAttribute('aria-busy','false');add.disabled=close.disabled=back.disabled=confirmation.disabled=false;
           for(const row of rows){
             row.classes.disabled=row.done;row.sessions.disabled=row.done||row.loading||row.sessions.options.length<=1;
             row.retry.disabled=row.done;

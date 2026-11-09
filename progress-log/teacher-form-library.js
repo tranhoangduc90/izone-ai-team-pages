@@ -39,7 +39,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     for(const entry of selected){
       const row=node('tr'),name=node('td'),open=button(entry.title,()=>void preview(entry));row.tabIndex=0;row.dataset.entryId=entry.id;row.classList.toggle('thuy-library-published',entry.id===highlighted);row.setAttribute('aria-label','Xem '+entry.title);open.className='thuy-library-name';
       name.append(open,node('small',entry.meta||`${entry.itemCount||0} câu`));const actions=node('td');
-      if(entry.source!=='used'){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');actions.append(assign);}
+      if(entry.source!=='used'&&!entry.draft?.reviewMode){const assign=button('Giao bài',()=>void assignEntry(entry));assign.classList.add('primary');actions.append(assign);}
       if(entry.source==='personal'&&!entry.draft?.reviewMode||entry.source==='izone'&&canManageShared){
         const remove=button('Xóa bài',()=>void archiveEntry(entry));actions.append(remove);
       }
@@ -67,7 +67,7 @@ export function createFormLibrary({host,request,onCopy,onCreate=()=>{},onOpenDra
     if((entry.source==='used'?detail.assignmentId:detail.id)!==entry.id)throw Error('Nội dung trả về chưa khớp phiếu.');
     const full={...entry,detail,definition:detail.definition};full.publication=matchedPublication(full);return full;
   }
-  async function assignEntry(entry){if(entry.source==='used')return;const run=lifecycle;try{
+  async function assignEntry(entry){if(entry.source==='used'||entry.draft?.reviewMode)return;const run=lifecycle;try{
     const full=await readEntry(entry);
     if(run!==lifecycle)return;
     if(!full.publication&&!entry.draft){

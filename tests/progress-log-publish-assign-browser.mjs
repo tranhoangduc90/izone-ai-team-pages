@@ -22,7 +22,7 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
   try{
     await initializeLearningDemoDatabase(sourceDb);await initializeLearningDemoDatabase(demoDb);
     await sourceDb.exec("ALTER TABLE mapping.reviewer_account ADD COLUMN role text DEFAULT 'teacher', ADD COLUMN can_access_all_classes boolean DEFAULT false;");
-    for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql','202611040001_form_assignment_portal_target.sql','202611050001_progress_log_course_viewer.sql'])
+    for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql','202611040001_form_assignment_portal_target.sql','202611050001_progress_log_course_viewer.sql','202611090001_class_draft_delivery.sql'])
       await sourceDb.exec(await readFile(resolve(backend,'ops/learning-migrations',file),'utf8'));
     await sourceDb.exec(`INSERT INTO mapping.classroom_course_mapping VALUES(1294,'IC1000','approved',NULL,NULL),(1295,'Lớp mẫu B','approved',NULL,NULL),
       (1296,'Lớp mẫu trống','approved',NULL,NULL),(1298,'IC999','approved',NULL,NULL),(1299,'Lớp mẫu cần đối chiếu','approved',NULL,NULL),
@@ -227,6 +227,61 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
       .send({operationId:randomUUID(),targets:[target('1295',1)]}).expect(200);
     assert.equal(ended.body.delivery.results[0].error,'CLASS_NOT_ONGOING');
     assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_assignment')).rows[0].n,6);
+    await sourceDb.exec("UPDATE learning.course_content_authority SET status='revoked',revoked_at=now() WHERE reviewer_email='owner@example.test'");
+    await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
+    await page.getByLabel('Tên bài tập',{exact:true}).fill('Bài ghép tiêu đề của giảng viên');
+    await page.getByLabel('Trình độ',{exact:true}).selectOption('56');
+    await page.getByRole('button',{name:'+ Danh sách xổ xuống',exact:true}).click();
+    await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('reading');
+    await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Chọn tiêu đề cho đoạn A');
+    for(const [index,label]of ['i Tiêu đề một','ii Tiêu đề hai','iii Tiêu đề ba','iv Tiêu đề bốn'].entries())
+      await page.getByLabel('Lựa chọn '+String.fromCharCode(65+index)+' câu 1',{exact:true}).fill(label);
+    await page.getByLabel('Đáp án đúng B câu 1',{exact:true}).check();
+    await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();
+    await page.locator('.thuy-editor-save-state').filter({hasText:'Đã lưu'}).waitFor();
+    await page.getByRole('button',{name:'Quay lại Quản lý bài tập',exact:true}).click();
+    const row=page.getByRole('row',{name:'Xem Bài ghép tiêu đề của giảng viên'});
+    await row.getByRole('button',{name:'Giao bài',exact:true}).click();
+    await sessionAt(1).selectOption('5');
+    const confirmation=dialog.getByRole('checkbox',{name:/Tôi đã kiểm tra đáp án/});
+    assert.equal(await send.isEnabled(),false);
+    await confirmation.check();
+    await sessionAt(1).selectOption('6');
+    assert.equal(await confirmation.isChecked(),false);
+    assert.equal(await send.isEnabled(),false);
+    await confirmation.check();
+    const request=page.waitForRequest(req=>req.method()==='POST'&&new URL(req.url()).pathname.endsWith('/assign-to-classes'));
+    await sourceDb.exec('SET ROLE learning_api');
+    await send.click();
+    await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
+    const submitted=await request,body=submitted.postDataJSON(),draftId=new URL(submitted.url()).pathname.split('/').at(-2);
+    assert.deepEqual(body.targets,[target('1294',6)]);
+    assert.equal(body.confirmedAnswers,true);
+    const endpoint='/api/learning/teacher/form-drafts/'+draftId+'/assign-to-classes';
+    const repeat=await supertest(sourceApp).post(endpoint).send(body).expect(200);
+    const delivered=repeat.body.delivery.results[0].delivery;
+    assert.equal(delivered.replayed,true);
+    assert.equal(delivered.rosterCount,1);
+    await supertest(sourceApp).post(endpoint).send({...body,confirmedAnswers:false}).expect(400);
+    const forbidden=await supertest(sourceApp).post(endpoint).send({...body,operationId:randomUUID(),targets:[target('1302',3)]}).expect(200);
+    assert.equal(forbidden.body.delivery.results[0].error,'DRAFT_CLASS_ACCESS_DENIED');
+    const stale=await supertest(sourceApp).post(endpoint).send({...body,operationId:randomUUID(),expectedRevision:body.expectedRevision+1}).expect(200);
+    assert.equal(stale.body.delivery.results[0].error,'DRAFT_STALE');
+    await supertest(sourceApp).post('/api/learning/teacher/form-drafts/'+draftId+'/publish-library')
+      .send({expectedRevision:body.expectedRevision,operationId:randomUUID()}).expect(409);
+    await sourceDb.exec('RESET ROLE');
+    const scoped=(await sourceDb.query('SELECT * FROM learning.class_draft_delivery')).rows[0];
+    assert.equal(scoped.form_version_id,delivered.formVersionId);
+    assert.equal(scoped.draft_hash,body.expectedHash);
+    assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_publication')).rows[0].n,2);
+    assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.form_assignment')).rows[0].n,7);
+    assert.equal((await sourceDb.query('SELECT count(*)::int n FROM learning.outbox_job')).rows[0].n,0);
+    assert.equal((await sourceDb.query('SELECT status FROM learning.form_draft WHERE id=$1',[draftId])).rows[0].status,'draft');
+    const publicView=await supertest(sourceApp).post('/api/learning/assignments/open').send({publicToken:delivered.publicToken}).expect(200);
+    assert.equal(publicView.body.assignment.definition.title,'Bài ghép tiêu đề của giảng viên');
+    assert.doesNotMatch(JSON.stringify(publicView.body),/expectedOptionId|gradingKey/);
+    await assert.rejects(()=>sourceDb.query('UPDATE learning.form_assignment SET session_number=1 WHERE id=$1',[delivered.assignmentId]),/CLASS_DRAFT_DELIVERY_TARGET_MISMATCH/);
+    await assert.rejects(()=>sourceDb.query('UPDATE learning.form_grading_key SET content_hash=content_hash WHERE form_version_id=$1',[delivered.formVersionId]),/CLASS_DRAFT_DELIVERY_CONTENT_SCOPED/);
     assert.deepEqual(errors,[]);
   }finally{await browser?.close();if(server)await new Promise(done=>server.close(done));await sourceDb.close();await demoDb.close();}
 });
