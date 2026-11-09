@@ -147,6 +147,7 @@ for(const code of ['IC2264','CODEXDEMO56'])test(`${code}: không có Web Locks, 
   await landing.evaluate(()=>{window.qaGoogleCallback({credential:'synthetic-late-cookie'});});
   for(let n=0;n<200&&f.calls.filter(c=>c.method==='POST'&&c.kind===f.selected).length===count;n++)await landing.waitForTimeout(20);
   assert.equal(f.calls.filter(c=>c.method==='POST'&&c.kind===f.selected).length,count+1);
+  await f.page.bringToFront();
   await f.page.locator('#logoutButton').click();await f.page.locator('#notice').filter({hasText:'Đã đăng xuất'}).waitFor();
   f.releaseLogin();await landing.waitForTimeout(250);
   const fresh=await f.context.newPage();await fresh.goto(base+'/term-tests/teacher-k56/?class='+code);await fresh.locator('#notice').filter({hasText:'Đã đăng xuất'}).waitFor();
