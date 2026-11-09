@@ -19,7 +19,7 @@ const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
 const continuity=process.env.K67_JOURNEY_CONTINUITY||'';
-assert.ok(!continuity||(term&&['eof','manual','interrupt','reload','upgrade'].includes(continuity)));
+assert.ok(!continuity||['eof','manual','interrupt','reload','upgrade'].includes(continuity));
 const interrupted=['interrupt','reload'].includes(continuity);
 const upgrade=continuity==='upgrade';
 assert.ok(!(term1&&term2),'Select only one Term profile.');
@@ -242,10 +242,13 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             await dialog.waitFor();
           }
           assert.match(await dialog.textContent(),/hãy liên hệ giảng viên để được nhận bài Listening thay thế/);
-          await dialog.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.',exact:true}).click();
-          const next=mode==='lis_first'?'Reading':'Writing';
-          assert.equal(await page.locator('#'+next.toLowerCase()+'View').isVisible(),false);
-          await page.locator('#start'+next).waitFor({state:'visible'});
+          const next=mode==='lis_first'?'Reading':term?'Writing':'';
+          const label=next?'Tôi đã hiểu. Đến phần thi tiếp theo.':'Tôi đã hiểu.';
+          await dialog.getByRole('button',{name:label,exact:true}).click();
+          if(next){
+            assert.equal(await page.locator('#'+next.toLowerCase()+'View').isVisible(),false);
+            await page.locator('#start'+next).waitFor({state:'visible'});
+          }else await page.locator('#resultReadyView').waitFor({state:'visible'});
         }else{
           const before=await audio.evaluate(player=>player.currentTime);
           await page.evaluate(()=>{
@@ -267,13 +270,13 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         assert.deepEqual(seals,[]);
         if(upgrade){
           const savedSeal=()=>page.evaluate(()=>Object.keys(localStorage)
-            .filter(key=>/^term[12]-k67-cbt-journey-v1:/.test(key))
+            .filter(key=>/^(?:term[12]|mini)-k67-cbt-journey-v1:/.test(key))
             .map(key=>JSON.parse(localStorage.getItem(key)))
             .flatMap(record=>record.pending||[]).find(operation=>operation.section==='listening'));
           const original=await savedSeal();
           assert.ok(original?.operationId);
           assert.equal(original.outcome,undefined);
-          const cacheFamily=term1?'term1-k67-cbt-shell-v1-':'term2-k67-cbt-shell-v1-';
+          const cacheFamily=term1?'term1-k67-cbt-shell-v1-':term2?'term2-k67-cbt-shell-v1-':'mini-k67-cbt-shell-v1-';
           const cachedShells=()=>page.evaluate(async family=>{
             const keys=(await caches.keys()).filter(key=>key.startsWith(family));
             return Promise.all(keys.map(async key=>{
@@ -381,11 +384,11 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         const response=await route.fetch();
         if(!response.ok())return route.fulfill({response});
         droppedReceipt=(await response.json()).receipt;
-        seals.push('listening');
+        if(term)seals.push('listening');
         await route.abort();
       });
       page.on('response',async response=>{
-        if(response.ok()&&response.url().endsWith('/cbt-journey/status')){
+        if(response.ok()&&response.url().endsWith(term?'/cbt-journey/status':'/cbt-journey/interrupt')){
           const payload=await response.json();
           if(payload.receipt?.outcome==='interrupted')recoveredReceipts.push(payload.receipt);
         }
@@ -410,12 +413,20 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       assert.equal(await page.locator('#resultView details[data-skill="Listening"]').count(),0);
     }
     if(eofJournal){
-      await page.evaluate(async()=>{
+      const flushJournal=()=>page.evaluate(async()=>{
         const endpoint=location.origin+'/api/term-tests/'+window.TERM_TEST_CONFIG.slug;
         const bridge=window[Symbol.for('izone.examJournal.connections.v1')].get(JSON.stringify([endpoint,window.TERM_TEST_CONFIG.slug]));
         await bridge.recorder.idle();
         await bridge.recorder.flush({force:true});
       });
+      const expectedActions=['audio_download_verified','audio_player_ready','audio_playing','audio_ended',
+        'listening_local_collected','listening_server_received'];
+      for(let attempt=0;attempt<20;attempt++){
+        await flushJournal();
+        if(!continuity||expectedActions.every(action=>journalRows.some(row=>row.bindingId===learnerBinding
+            && row.event.data.cause==='k67_offline_journey'&&row.event.data.checkpointState?.action===action)))break;
+        await new Promise(resolve=>setTimeout(resolve,150));
+      }
       const rows=journalRows.filter(row=>row.event.data.action==='k67_listening_eof');
       assert.ok(rows.every(row=>row.bindingId===learnerBinding));
       const phases=rows.map(row=>row.event.data.checkpointState.phase).sort();
@@ -425,8 +436,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           && row.event.type==='state_observed'&&row.event.data.cause==='k67_offline_journey')
           .map(row=>row.event.data.checkpointState);
         const actions=new Set(milestones.map(item=>item.action));
-        for(const action of ['audio_download_verified','audio_player_ready','audio_playing','audio_ended',
-          'listening_local_collected','listening_server_received'])assert.ok(actions.has(action),action);
+        for(const action of expectedActions)assert.ok(actions.has(action),action);
         const playing=milestones.find(item=>item.action==='audio_playing');
         assert.ok(playing.position<0.25);
         assert.ok(Number.isFinite(playing.elapsedMs));

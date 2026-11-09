@@ -168,6 +168,7 @@
           generation: typeof miniGeneration === 'number' ? miniGeneration : Number(state.generation || 0),
           clientRunId: window.TERM_TEST_BOOTSTRAP?.clientRunId || '', examSessionId: window.TERM_TEST_BOOTSTRAP?.examSessionId || '', historyEpoch: window.TERM_TEST_BOOTSTRAP?.historyEpoch || '' })
       });
+      miniJourney?.setJournal?.(examJournal);
     }).catch(() => {});
   }
 
@@ -496,15 +497,21 @@
 
   const miniResultLabels = [...elements.resultReadyView.querySelectorAll('.eyebrow, h2, h2 + p')];
   const miniResultDefaultCopy = miniResultLabels.map(element => element.textContent);
-  let miniResultWaiting = false;
+  let miniResultStatus = '';
 
   function renderMiniJourneyResultReady() {
+    if (!miniJourney) return;
     const waiting = Boolean(miniJourney && !miniJourney.resultToken());
-    if (waiting === miniResultWaiting) return;
-    miniResultWaiting = waiting;
-    const copy = waiting
-      ? ['Đã lưu bài làm', 'Bài làm đang chờ đồng bộ', 'Bài làm đã lưu trên thiết bị. Bạn có thể xem kết quả sau khi máy chủ xác nhận đã nhận bài.']
-      : miniResultDefaultCopy;
+    const interrupted = Boolean(miniJourney?.view().listeningInterrupted);
+    const status = [waiting, interrupted].join(':');
+    if (status === miniResultStatus) return;
+    miniResultStatus = status;
+    const copy = interrupted
+      ? ['Listening gián đoạn', waiting ? 'Bài làm đang chờ đồng bộ' : 'Kết quả Reading đã sẵn sàng',
+        'Bạn hãy liên hệ giảng viên để nhận bài Listening thay thế.']
+      : waiting
+        ? ['Đã lưu bài làm', 'Bài làm đang chờ đồng bộ', 'Bài làm đã lưu trên thiết bị. Bạn có thể xem kết quả sau khi máy chủ xác nhận đã nhận bài.']
+        : miniResultDefaultCopy;
     miniResultLabels.forEach((element, index) => { element.textContent = copy[index]; });
     elements.viewResult.disabled = waiting;
   }
@@ -841,9 +848,12 @@
       const eyebrow=elements.listeningSavedView.querySelector('.eyebrow');
       listeningSavedCopy ||= {heading:heading.textContent,copy:copy.textContent,eyebrow:eyebrow?.textContent};
       const readingFirst=state.examMode === 'read_first' && !state.readingSubmitted;
-      heading.textContent=readingFirst?'Sẵn sàng làm Reading':listeningSavedCopy.heading;
-      copy.textContent=readingFirst?'Đồng hồ chỉ bắt đầu khi bạn nhấn Bắt đầu Reading. Listening sẽ mở sau khi nộp Reading.':listeningSavedCopy.copy;
-      if(eyebrow)eyebrow.textContent=readingFirst?'Kỹ năng đầu tiên · Reading':listeningSavedCopy.eyebrow;
+      heading.textContent=readingFirst||state.listeningInterrupted?'Sẵn sàng làm Reading':listeningSavedCopy.heading;
+      copy.textContent=readingFirst?'Đồng hồ chỉ bắt đầu khi bạn nhấn Bắt đầu Reading. Listening sẽ mở sau khi nộp Reading.'
+        :state.listeningInterrupted?'Listening bị gián đoạn và cần bài thay thế. Đồng hồ Reading chỉ bắt đầu khi bạn nhấn Bắt đầu Reading.'
+        :listeningSavedCopy.copy;
+      if(eyebrow)eyebrow.textContent=readingFirst?'Kỹ năng đầu tiên · Reading'
+        :state.listeningInterrupted?'Kỹ năng tiếp theo · Reading':listeningSavedCopy.eyebrow;
     }
     if (window.K67_EXAM_ORDER) {
       const progress = progressSteps[0]?.parentElement;
@@ -3356,7 +3366,7 @@
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
     if (offlineListeningIdentity) return;
-    if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
+    if (state.listeningSubmitted || state.listeningInterrupted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
       showNotice('Hãy chọn đúng họ và tên trước khi nộp Listening.', 'error');
@@ -4147,9 +4157,29 @@
     }, { once: true });
   }
 
+  async function showJourneyInterruption(){
+    setStage('listening');
+    setAnswerControlsLocked('listening',true);
+    elements.submitListening.disabled=true;
+    const {showContinuityInterruption}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v2');
+    showContinuityInterruption(()=>miniJourney.acknowledgeInterruption(),view=>{
+      Object.assign(state,view);
+      saveSession();
+      setStage(view.nextSection==='reading'?'listening-saved':'result-ready');
+    },miniJourney.view().nextSection==='reading');
+  }
+
   async function showJourneyListening(playNewListening = false){
     setStage('listening');
     if(document.getElementById('miniJourneyPlayer'))return;
+    const continuity=miniJourney.continuity?.()===true;
+    if(continuity&&miniJourney.view().listeningStartedAt&&!playNewListening&&!miniJourney.listeningReviewStarted()){
+      setAnswerControlsLocked('listening',true);
+      elements.submitListening.disabled=true;
+      try{await miniJourney.interrupt('reload');await showJourneyInterruption();}
+      catch(error){showNotice(error.message,'error');}
+      return;
+    }
     const host = document.createElement('section');
     host.id = 'miniJourneyPlayer';
     host.className = 'cbt-audio-card k67-inline-audio';
@@ -4164,6 +4194,14 @@
       await miniJourney.saveDrafts(state.drafts, state.draftRevisions);
       allowExamNavigation = true;
       location.reload();
+    },canReport:()=>elements.listeningView.dataset.listeningSubmitting!=='true'&&!state.listeningInterrupted,
+    onReport:async()=>{
+      setAnswerControlsLocked('listening',true);
+      elements.submitListening.disabled=true;
+      stopSectionDraftFlow('listening');
+      Object.assign(state,await miniJourney.interrupt('learner_report'));
+      saveSession();
+      await showJourneyInterruption();
     },onReview:deadline=>{
       state.listeningDeadlineAt=new Date(deadline).toISOString();
     },onAuto:()=>{
@@ -4175,12 +4213,22 @@
     const start=document.createElement('button');start.type='button';start.className='button button-primary';start.textContent='Bắt đầu Listening';
     elements.submitListening.disabled=true;
     setAnswerControlsLocked('listening',true);
-    start.addEventListener('click',async()=>{
-      start.disabled=true;
-      try{await miniJourney.start('listening');start.remove();setAnswerControlsLocked('listening',false);elements.submitListening.disabled=false;await play(true);}
-      catch(error){start.disabled=false;showNotice(error.message,'error');}
-    });
-    host.append(start);
+    if(!continuity){
+      start.addEventListener('click',async()=>{
+        start.disabled=true;
+        try{await miniJourney.start('listening');start.remove();setAnswerControlsLocked('listening',false);elements.submitListening.disabled=false;await play(true);}
+        catch(error){start.disabled=false;showNotice(error.message,'error');}
+      });
+      host.append(start);
+      return;
+    }
+    const {mountContinuityStart}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v2');
+    await mountContinuityStart({host,start,journey:miniJourney,volume:Number(state.audioVolume??1),
+      onStart:async()=>{
+        setAnswerControlsLocked('listening',false);
+        elements.submitListening.disabled=false;
+        await play(true);
+      },onError:error=>showNotice(error.message,'error')});
   }
 
   async function initializeMiniJourney(){
@@ -4197,7 +4245,7 @@
     Object.assign(state.draftRevisions,miniJourney.revisions());
     for(const skill of ['listening','reading'])renderQuestionControls(testConfig[skill],elements[skill+'Questions'],skill);
     elements.readingStudentName.textContent=state.studentName;
-    const {mountOfflineJourneyHeader}=await import('../k67-shared/offline-journey-ui.mjs?v=20261108-v1');
+    const {mountOfflineJourneyHeader}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v2');
     mountOfflineJourneyHeader({
       host:document.querySelector('.topbar')||root,
       studentSelect:elements.studentSelect,
@@ -4207,7 +4255,8 @@
     miniJourney.changed.addEventListener('change', () => {
       if (state.stage === 'result-ready') renderMiniJourneyResultReady();
     });
-    if(view.nextSection==='listening')await showJourneyListening(window.TERM_TEST_BOOTSTRAP?.playNewListening === true);
+    if(view.needsListeningAcknowledgment)await showJourneyInterruption();
+    else if(view.nextSection==='listening')await showJourneyListening(window.TERM_TEST_BOOTSTRAP?.playNewListening === true);
     else if(view.nextSection==='reading'){
       setStage(view.readingStartedAt?'reading':'listening-saved');
       if(view.readingStartedAt)startSectionDeadlineGuard('reading');
