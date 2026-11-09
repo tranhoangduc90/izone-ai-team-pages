@@ -13,7 +13,7 @@ assert.ok(backend,'Set K67_BACKEND to the isolated backend package.');
 const require=createRequire(resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json'));
 const {chromium}=require('playwright');
 
-test('Term 2 rescue flag off keeps legacy entrance', {timeout:90_000}, async()=>{
+test('old Term 2 link reaches the main entrance with journey disabled', {timeout:90_000}, async()=>{
   const socket=createServer().listen(0,'127.0.0.1');
   await once(socket,'listening');
   const port=socket.address().port;
@@ -37,6 +37,7 @@ test('Term 2 rescue flag off keeps legacy entrance', {timeout:90_000}, async()=>
     const page=await browser.newPage();
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.goto(base+'/term-tests/term-test-2-rescue/?class=IC2213&mode=lis_first');
+    await page.waitForURL(base+'/term-tests/term-test-2-computer-based/?class=IC2213&mode=lis_first');
     await page.locator('#bootstrapStudent').selectOption('11111111-1111-4111-8111-111111111111');
     await page.getByRole('button',{name:'Xác nhận, tiếp tục',exact:true}).click();
     await page.waitForFunction(()=>!document.getElementById('bootstrapPreview')?.disabled);
