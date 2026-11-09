@@ -1,6 +1,6 @@
 // Nhận thao tác UI; gửi đúng API riêng và token trong header, không đặt trong URL.
 // Retry một lần cùng requestId khi mất ACK. HTTP lỗi giữ mã để UI bảo toàn nháp.
-import {bodyIndexOf} from '../shared/workflow.mjs?v=20261102-l13-v1';
+import {bodyIndexOf} from '../shared/workflow.mjs?v=20261109-l15-discussion1';
 export function createClient(base,fetcher=fetch){
  let token='';
  async function call(path,method='GET',body,etag){

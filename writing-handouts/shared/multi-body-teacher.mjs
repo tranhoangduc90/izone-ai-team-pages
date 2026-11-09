@@ -1,4 +1,4 @@
-import {bodyKey,isPrepared,isOpinion,planFields,bodyConfig} from './workflow.mjs?v=20261102-l13-v1';
+import {bodyKey,isPrepared,isOpinion,planFields,bodyConfig} from './workflow.mjs?v=20261109-l15-discussion1';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Hai recap cùng cấu tạo bảng GV Lesson 9, chung hồ sơ và bộ gửi comment đã có.
 export function teacherBodies(lesson,field,session){

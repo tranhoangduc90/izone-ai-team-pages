@@ -1,8 +1,8 @@
 import '../../shared/teacher-single-sign-on.js?v=20261026-startup2&startup=20261026-v2';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
-import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261102-l13-v1';
-import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,bodyKey,bodyIndexOf} from '../shared/workflow.mjs?v=20261102-l13-v1';
-import {teacherBodies} from '../shared/multi-body-teacher.mjs?v=20261102-l13-v1';
+import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261109-l15-discussion1';
+import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,bodyKey,bodyIndexOf} from '../shared/workflow.mjs?v=20261109-l15-discussion1';
+import {teacherBodies} from '../shared/multi-body-teacher.mjs?v=20261109-l15-discussion1';
 const multi=isMulti(globalThis.handout67Lesson||{});
 import {classQuery,resolveClassRef} from '../js/class-selection.js';
 const whole=isWhole(globalThis.handout67Lesson||{});
