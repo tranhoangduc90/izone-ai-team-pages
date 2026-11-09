@@ -48,7 +48,7 @@
     Promise.resolve()
       .then(() => loadScript('../k56-test2-shared/app.js?v=20261023-submit-v1&ui=20261023-master170-v3&journal=20261024-startup-v2&ej=20261024-production-r1&resilience=20261027-v1&diagnostics=20261105-v2&writingSubmit=20261105-v1&outline=20261106-v1&termK56Audio=20261108-v2&offlineNotice=20261108-v1'))
       .then(() => loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&termK56Audio=20261108-v2'))
-      .then(() => loadScript('enhance.js?v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2'))
+      .then(() => loadScript('enhance.js?v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1'))
       .then(() => loadScript('annotations.js?v=20261018-identity-v1'))
       .catch(error => {
         root.innerHTML = `<main class="page-shell"><section class="panel"><h1>Không mở được demo.</h1><p>${escapeText(error.message)}</p></section></main>`;
@@ -464,7 +464,7 @@
   }
 
   function revokePreview() {
-    window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart);
+    window.IZONE_CBT_AUDIO_CANCEL_PREVIEW_WAIT?.(previewAudio);
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
     previewObjectUrl = '';
   }
@@ -483,6 +483,7 @@
     downloadController = new AbortController();
     encryptedAudio = null;
     const resuming = Boolean(state.listeningStartedAt);
+    window.IZONE_CBT_AUDIO_CANCEL_PREVIEW_WAIT?.(previewAudio);
     previewHeard = resuming;
     elements.bootstrapDownloadStep.dataset.state = 'active';
     elements.bootstrapPreviewStep.dataset.state = 'locked';
@@ -547,6 +548,7 @@
     downloadController = new AbortController();
     encryptedAudio = null;
     const resuming = Boolean(session.listeningStartedAt || legacyListeningResume);
+    window.IZONE_CBT_AUDIO_CANCEL_PREVIEW_WAIT?.(previewAudio);
     previewHeard = resuming;
     elements.bootstrapDownloadStep.dataset.state = 'active';
     elements.bootstrapPreviewStep.dataset.state = 'locked';
@@ -790,7 +792,7 @@
       while (!window.K56_TERM2_APP_READY) { if(performance.now()-began>20000)throw new Error('Màn làm bài chưa sẵn sàng; audio chưa phát.');await new Promise(ok=>setTimeout(ok,30)); }
     }
     await loadScript('../k56-audio-recovery.js?rev=20261014-audio-terminal-v1&resilience=20261027-v1&termK56Audio=20261108-v2');
-    await loadScript('enhance.js?v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2');
+    await loadScript('enhance.js?v=20261023-submit-v1&ui=20261023-master170-v3&resilience=20261027-v1&termK56Audio=20261108-v2&previewWait=20261109-preview-10s-v1');
     await loadScript('annotations.js?v=20261018-identity-v1');
   }
 
@@ -864,24 +866,21 @@
     previewAudio.currentTime = 0;
     try {
       await previewAudio.play();
-      previewHeard = !term2Offline?.active;
-      previewSample={at:performance.now(),position:previewAudio.currentTime};
-      if (term2Offline?.active) window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart, 10);
+      previewHeard = false;
       elements.bootstrapPreview.textContent = 'Dừng nghe thử';
       elements.bootstrapPreviewStep.dataset.state = 'complete';
       elements.bootstrapStartStep.dataset.state = 'active';
       elements.bootstrapPreviewStatus.textContent = 'Đang nghe thử · tối đa 30 giây.';
       setStartAvailability();
+      if (!previewHeard) {
+        window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW(previewAudio, elements.bootstrapStart, () => {
+          previewHeard = true;
+          setStartAvailability();
+        });
+      }
     } catch {
       elements.bootstrapPreviewStatus.textContent = 'Trình duyệt chưa cho phát. Hãy nhấn lại nút nghe thử.';
     }
-  });
-  let previewSample=null;
-  previewAudio.addEventListener('pause', () => {
-    if (previewAudio.paused) window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart);
-  });
-  previewAudio.addEventListener('error', () => {
-    window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart);
   });
   previewAudio.addEventListener('ended', () => {
     elements.bootstrapPreview.textContent = 'Nghe lại 30 giây đầu';
@@ -889,16 +888,6 @@
   });
   previewAudio.addEventListener('timeupdate', () => {
     if (previewAudio.paused) return;
-    if(term2Offline?.active&&!previewHeard&&previewSample){
-      const wall=(performance.now()-previewSample.at)/1000,media=previewAudio.currentTime-previewSample.position;
-      if (wall>=10&&media/wall>=0.95&&media/wall<=1.05) {
-        previewHeard = true;
-        window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart);
-        setStartAvailability();
-      } else {
-        window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart, 10 - Math.min(wall, media));
-      }
-    }
     const elapsed = Math.min(30, previewAudio.currentTime || 0);
     elements.bootstrapPreviewStatus.textContent = `Đang nghe thử · ${formatTime(elapsed)} / 00:30`;
     if (elapsed < 30) return;

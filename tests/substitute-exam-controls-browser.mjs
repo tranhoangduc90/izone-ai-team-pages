@@ -95,13 +95,46 @@ async function inspectWriting(p,slug,checks){
  await p.screenshot({path:out+'/'+slug+'-writing-'+p.viewportSize().width+'.png',fullPage:true});
  await p.reload();await p.locator('#writingView').waitFor({state:'visible'});for(let i=0;i<count;i++){await p.locator('#writingTaskTabs button').nth(i).click();check(checks,'writing-reload-'+i,await p.locator('[data-writing-task]:visible').inputValue()==='Fictional task '+i);}
 }
+// The lobby preview uses native playback so the ten-second gate sees real media progress.
+const previewRate = 8000, previewFrames = 16 * previewRate;
+const previewWav = Buffer.alloc(44 + 2 * previewFrames);
+previewWav.write('RIFF');
+previewWav.writeUInt32LE(previewWav.length - 8, 4);
+previewWav.write('WAVEfmt ', 8);
+previewWav.writeUInt32LE(16, 16);
+previewWav.writeUInt16LE(1, 20);
+previewWav.writeUInt16LE(1, 22);
+previewWav.writeUInt32LE(previewRate, 24);
+previewWav.writeUInt32LE(previewRate * 2, 28);
+previewWav.writeUInt16LE(2, 32);
+previewWav.writeUInt16LE(16, 34);
+previewWav.write('data', 36);
+previewWav.writeUInt32LE(previewFrames * 2, 40);
+
 const slugs=['substitute-test-1-k56','substitute-test-2-k56','substitute-test-1-k67','substitute-test-2-k67'].filter(s=>!process.env.SUBSTITUTE_CONTROLS_SLUG||s===process.env.SUBSTITUTE_CONTROLS_SLUG);
 const widths=[1440,1024,390].filter(w=>!process.env.SUBSTITUTE_CONTROLS_WIDTH||String(w)===process.env.SUBSTITUTE_CONTROLS_WIDTH);
 if(!slugs.length||!widths.length)throw Error('Bộ lọc kiểm thử không hợp lệ.');
 try{for(const slug of slugs)for(const width of widths){const height=900;
  const c=await browser.newContext({viewport:{width,height},serviceWorkers:'block'}),errors=[],requests=[];const epoch='11111111-1111-4111-8111-111111111111';
- await c.addInitScript(()=>{window.IZONE_EXAM_DEVICE_CHECKED=true;for(const[k,v]of[['duration',1800],['readyState',4]])Object.defineProperty(HTMLMediaElement.prototype,k,{get:()=>v,configurable:true});HTMLMediaElement.prototype.play=function(){return Promise.resolve();};HTMLMediaElement.prototype.load=function(){queueMicrotask(()=>this.dispatchEvent(new Event('loadedmetadata')));};});
- await c.route('**/*',async r=>{const q=r.request(),u=q.url();if(u.startsWith(base+'/shared/audio/transport.mjs'))return r.fulfill({status:200,contentType:'text/javascript',body:'export async function downloadSubstitute(){return null;}'});if(/\.(mp3|wav|m4a|enc)(?:\?|$)/.test(u))return r.fulfill({status:200,contentType:'audio/mpeg',body:Buffer.alloc(64)});if(u.startsWith(base+'/'))return r.continue();if(u.includes('/webhook/')){const{route,payload={}}=q.postDataJSON();requests.push(route);let d={};
+ await c.addInitScript(() => {
+   window.IZONE_EXAM_DEVICE_CHECKED = true;
+   const media = HTMLMediaElement.prototype;
+   const play = media.play, load = media.load;
+   const preview = element => element.hidden && element.parentElement === document.body;
+   for (const [key, fakeValue] of [['duration', 1800], ['readyState', 4]]) {
+     const original = Object.getOwnPropertyDescriptor(media, key).get;
+     Object.defineProperty(media, key, {
+       get() { return preview(this) ? original.call(this) : fakeValue; },
+       configurable: true,
+     });
+   }
+   media.play = function() { return preview(this) ? play.call(this) : Promise.resolve(); };
+   media.load = function() {
+     if (preview(this)) load.call(this);
+     else queueMicrotask(() => this.dispatchEvent(new Event('loadedmetadata')));
+   };
+ });
+ await c.route('**/*',async r=>{const q=r.request(),u=q.url();if(u.startsWith(base+'/shared/audio/transport.mjs'))return r.fulfill({status:200,contentType:'text/javascript',body:'export async function downloadSubstitute(){return null;}'});if(/\.(mp3|wav|m4a|enc)(?:\?|$)/.test(u))return r.fulfill({status:200,contentType:'audio/wav',body:previewWav});if(u.startsWith(base+'/'))return r.continue();if(u.includes('/webhook/')){const{route,payload={}}=q.postDataJSON();requests.push(route);let d={};
   if(route==='/api/test/history')d={testSlug:slug,historyEpoch:epoch,stateVersion:2,maintenance:false,serverNow:new Date().toISOString(),examTimingVersion:'substitute-audio-transfer-20261014-v1',classes:[{code:'DEMO',name:'DEMO'}],...(slug==='substitute-test-2-k67'?{writingVersions:{DEMO:'substitute-k67-test2-two-task-20261007-v1'}}:{})};
   else if(route==='/api/test/roster')d={students:[{ref:'fictional-01',name:'Học viên giả'}]};
   else if(route==='/api/test/writing/session')d={...payload,testSlug:slug,examVersion:'substitute-k67-test2-two-task-20261007-v1',writingSessionId:payload.clientRunId};
@@ -111,7 +144,15 @@ try{for(const slug of slugs)for(const width of widths){const height=900;
   else return r.abort();return r.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(d)});
  }return r.abort();});
  const p=await c.newPage();p.setDefaultTimeout(15000);p.on('dialog',d=>d.accept());p.on('pageerror',e=>errors.push(e.message));const observed=[],controlChecks=[];
- try{await p.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server');await p.locator('#bootstrapClass').selectOption('DEMO');const opt=p.locator('#bootstrapStudent option:not([value=""])').first();await opt.waitFor({state:'attached'});await p.locator('#bootstrapStudent').selectOption(await opt.getAttribute('value'));await p.locator('#confirmIdentity').click();await p.locator('#bootstrapPreview:enabled').click();await p.locator('#bootstrapStart:enabled').click();await p.locator('#listeningView').waitFor({state:'visible'});await inspectControls(p,'listening',controlChecks);await p.locator('#submitListening').click();await p.locator('#listeningView').waitFor({state:'hidden'});await p.locator('#startReading').waitFor({state:'visible'});await inspectMediumHeader(p,'reading-prep',controlChecks);await p.locator('#startReading').click();await p.locator('#readingView').waitFor({state:'visible'});await p.locator('#readingView .cbt-passage-header').first().waitFor({state:'visible'});
+ try{await p.goto(base+'/term-tests/'+slug+'-computer-based/?demo=exam&grading=server');await p.locator('#bootstrapClass').selectOption('DEMO');const opt=p.locator('#bootstrapStudent option:not([value=""])').first();await opt.waitFor({state:'attached'});await p.locator('#bootstrapStudent').selectOption(await opt.getAttribute('value'));await p.locator('#confirmIdentity').click();await p.locator('#bootstrapPreview:enabled').click();
+  const countdown = p.locator('[data-audio-start-wait]');
+  await countdown.waitFor();
+  assert.equal(await p.locator('#bootstrapStart').isDisabled(), true);
+  assert.equal(await countdown.evaluate(hint => hint.nextElementSibling.id), 'bootstrapStart');
+  const start = p.locator('#bootstrapStart:enabled');
+  await start.waitFor();
+  assert.equal(await start.innerText(), 'Đã nghe rõ\nBắt đầu thi Listening');
+  await start.click();await p.locator('#listeningView').waitFor({state:'visible'});await inspectControls(p,'listening',controlChecks);await p.locator('#submitListening').click();await p.locator('#listeningView').waitFor({state:'hidden'});await p.locator('#startReading').waitFor({state:'visible'});await inspectMediumHeader(p,'reading-prep',controlChecks);await p.locator('#startReading').click();await p.locator('#readingView').waitFor({state:'visible'});await p.locator('#readingView .cbt-passage-header').first().waitFor({state:'visible'});
   await inspectControls(p,'reading',controlChecks);const control=p.locator('#readingView .cbt-reading-questions input:visible, #readingView .cbt-reading-questions select:visible').first(),handle=await control.elementHandle(),kind=await control.evaluate(e=>e.tagName==='SELECT'?'select':e.type);
   if(kind==='select'){const value=await control.locator('option:not([value=""])').first().getAttribute('value');await control.selectOption(value);}else if(['radio','checkbox'].includes(kind))await control.check();else await control.fill('Scroll fixture');const answer=await control.inputValue();
   const tabs=p.locator('#readingView .cbt-part-button'),count=await tabs.count();

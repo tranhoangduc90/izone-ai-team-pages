@@ -130,8 +130,12 @@ async function showListening(runtime) {
       previewButton.textContent = 'Dừng nghe thử';
       previewStep.dataset.state = 'complete';
       startStep.dataset.state = 'active';
-      start.disabled = false;
-      window.IZONE_CBT_AUDIO_START_LABEL(start, true);
+      if (start.disabled) {
+        window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW(preview, start, () => {
+          start.disabled = false;
+          window.IZONE_CBT_AUDIO_START_LABEL(start, true);
+        });
+      }
       previewStatus.textContent = 'Đang nghe thử · tối đa 30 giây.';
       runtime.observe('listening_preview_playing', { playbackRate: preview.playbackRate, volume: preview.volume });
     } catch (error) {

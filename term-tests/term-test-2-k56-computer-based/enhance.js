@@ -877,6 +877,7 @@
       const audioReady = ready && (examStarted || previewHeard);
       const identityReady = hasSelectedStudent();
       startButton.disabled = !(audioReady && identityReady);
+      window.IZONE_CBT_AUDIO_START_LABEL?.(startButton, previewHeard && !examStarted);
       if (audioReady && !identityReady) {
         startNotice.textContent = 'Hãy chọn họ và tên ở phía trên trước khi bắt đầu thi Listening.';
       } else {
@@ -1188,7 +1189,15 @@
       previewing = true;
       try {
         await audio.play();
-        previewHeard = true;
+        const waitForPreview = window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW;
+        if (!previewHeard && waitForPreview) {
+          waitForPreview(audio, startButton, () => {
+            previewHeard = true;
+            updateStartAvailability();
+          });
+        } else {
+          previewHeard = true;
+        }
         previewButton.textContent = 'Dừng nghe thử';
         setStepState(previewStep.step, 'complete');
         setStepState(startStep.step, 'active');

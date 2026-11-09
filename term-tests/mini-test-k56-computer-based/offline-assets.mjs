@@ -287,7 +287,7 @@ export const ASSET_HASHES={
   "../shared/app.js": "cb2039410811ed90492f7ad475855f4ce238530a0993aaa5506db98f946a98c2",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
-  "../shared/cbt-audio-start-label.js": "f804290520ea13ec0425aba5657633d286308c853e7be3a32dea18da143e80c8",
+  "../shared/cbt-audio-start-label.js": "f62890142ebc075664342c4dd321071754ad59c4fffc716019f14ad1a1944304",
   "../shared/config.js": "b21f4c664ab133a8f0508ed03458b6dbe4b89df076acff2abbc1fdc224c77e56",
   "../shared/desktop-exam-guard.css": "df09ffdeea28ccaf28f08e5060f1451c60faa3c488bdf66c51a18c73795964b4",
   "../shared/desktop-exam-guard.js": "13678712771a1b38de6c419c40dff0dbd197fae578805a49c7b413b0f42c2460",
@@ -319,16 +319,16 @@ export const ASSET_HASHES={
   "annotations.js": "47360f47eac16dc08256fe1fcea82f0906ebd29502ee4a87f79436bad2306013",
   "audio-loader.js": "d79e5c3899dd5172678ea13e9597bc7389eba06aa0886fa42aaeaf4f7bbc21eb",
   "audio-whole.mjs": "23721b5b7ad9fb99c265d54bdea4c4a90c55a9b582b1b888596b2ebc28506635",
-  "bootstrap.js": "fde08aa7305d874e32c8a762c4390c242d47fe03dce89eed1753944bfd8e37f3",
+  "bootstrap.js": "3aef6b8ffe2a0c54f86eb922fcb8f568d6830d276d9aaef3b019635123484cf7",
   "content.js": "63c3c0b8ea82c8c5cb8e47c28b031bf758051f545e8e37e911f1da0e23440bce",
   "demo-reset.css": "68cc9302e085b30e2470537a30ac11b027c20a1c0d2e601f628fc9eb99521035",
   "demo-reset.js": "298c0fab15fe45739ad3b19094c71876cc7cb04d9dc2a2922d3d3381221e9dd3",
-  "enhance.js": "417d3815b787513a536f1d2bdc85271c6171bc023524d77c8506d52cc300650b",
+  "enhance.js": "2e55e702fcc02a1c6c26208c079eb5ce60b723e36f756b4529ab9d47ba1b4e37",
   "exam.css": "12a46e66c5cce7095e5bb41c0cc8166c99e10fa74036fd176ecd87b231cd2939",
-  "index.html": "18b19df0a2a186d7de6fd031113478dcdee97176aa5bb19b3d252c8cb4e966aa",
+  "index.html": "d56708bdb071c8addfd9b0529e59a8d458808ad75eb7e9dfc2c2c1ca9c5a0681",
   "offline-worker.js": "c6e02275af2830b7b38444f8b957fffba00af0fe041c65d926d2098ccb742b88",
   "offline.mjs": "4d1cf6cdc6d33a4c780d7b404cee5d0ed4d0b7eca18f6e0efcfe560d7ddcd64b",
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="e9a547f4f1a9287b0424e744c7ba90816729ae858258fbcab085d4e42a922eed";
+export const ASSET_BUILD_ID="6c2f776a88b74b179928a9c00465c21eec64bf236695df177d85e45fd6068eec";

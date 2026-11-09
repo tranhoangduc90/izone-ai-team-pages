@@ -44,7 +44,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       K67_PREVIEW_TERM2_CBT_JOURNEY:term2?'on':'off',
       K67_PREVIEW_RESCUE_CLASS:rescueClass,
       K67_PREVIEW_AUDIO_PROTECTION:'true',K67_PREVIEW_REAL_MINI_AUDIO:full&&!term?'true':'false',
-      K67_PREVIEW_REAL_TERM1_AUDIO:(full||r2Smoke)&&term1?'true':'false',K67_PREVIEW_AUDIO_SECONDS:'8',
+      K67_PREVIEW_REAL_TERM1_AUDIO:(full||r2Smoke)&&term1?'true':'false',K67_PREVIEW_AUDIO_SECONDS:'18',
       K67_PREVIEW_REAL_TERM2_AUDIO:(full||r2Smoke)&&term2?'true':'false',
       K67_PREVIEW_TERM2_R2_CONFIG:process.env.K67_JOURNEY_TERM2_R2_CONFIG||'',
       K67_PREVIEW_TERM1_R2_CONFIG:process.env.K67_JOURNEY_TERM1_R2_CONFIG||'',
@@ -135,7 +135,13 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       log('r2_verified',{requests:r2Requests.length,pagesFallbackRequests:pagesRequests.length});
       return;
     }
-    if(mode==='lis_first')await page.locator('#bootstrapPreview').click({timeout:50_000});
+    if (mode === 'lis_first') {
+      await page.locator('#bootstrapPreview').click({timeout:50_000});
+      const countdown = page.locator('[data-audio-start-wait]');
+      await countdown.waitFor();
+      assert.equal(await page.locator('#bootstrapStart').isDisabled(), true);
+      assert.equal(await countdown.evaluate(hint => hint.nextElementSibling.id), 'bootstrapStart');
+    }
     const startName = term ? `Bắt đầu Term Test ${term1 ? 1 : 2}` : 'Bắt đầu bài Mini K67';
     const confirmedStartName = 'Đã nghe rõ Bắt đầu thi Listening';
     await page.getByRole('button',{
@@ -198,8 +204,12 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           player.dispatchEvent(new Event('ended'));
           player.dispatchEvent(new Event('ended'));
         });
-        await page.getByRole('button',{name:'Nghe tiếp',exact:true}).click();
-        log('play_clicked');
+        await page.waitForFunction(() => {
+          const audio = document.getElementById('miniJourneyAudio');
+          return audio && !audio.paused && audio.currentTime > .25;
+        });
+        assert.equal(await page.getByRole('button',{name:'Nghe tiếp',exact:true}).isVisible(),false);
+        log('first_audio_playing');
         await page.waitForFunction(()=>document.getElementById('miniJourneyAudio')?.currentTime>2.2);
         log('play_before_reload');
         if(!eofJournal)await page.evaluate(()=>document.getElementById('miniJourneyAudio').dispatchEvent(new Event('ended')));
