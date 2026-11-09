@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import test from 'node:test';
 import { fixture as browserFixture, wait } from './term2-offline-browser.mjs';
-import { captureSkillScreen } from './term1-fallback-screen-evidence.mjs';
+import { captureSkillScreen, chooseFallbackLearner, rosterFixture } from './term1-fallback-screen-evidence.mjs';
 
 test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyến và có đúng một điểm /26', { timeout: 60000 }, async t => {
   const output = process.env.TERM2_EVIDENCE;
@@ -56,19 +56,15 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   await new Promise(resolve => server.once('listening', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const skillsApi = 'http://127.0.0.1:' + server.address().port + '/api/term-tests/term-test-1-k56/skill-fallback';
-  const issue = await fetch(skillsApi + '/issue', { method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-fixture-teacher': 'yes' },
-    body: JSON.stringify({ classCode: 'IC5601', section: 'reading', studentRef }) });
-  assert.equal(issue.status, 200);
-  const grant = await issue.json();
+  let grant;
 
   const browser = await browserFixture('read_first', { product: 1 });
   t.after(browser.close);
   const page = browser.page;
   const capture = screen => captureSkillScreen(page, output, 'reading', screen);
-  const fallback = new URL('../term-test-1-k56-reading-fallback/?class=IC5601', browser.url);
-  fallback.hash = new URLSearchParams({ g: grant.token });
+  const fallback = new URL('../term-test-1-k56-reading-fallback/', browser.url);
   let disconnected = false, droppedAck = false;
+  await rosterFixture(browser, studentRef);
   await browser.context.route('**/api/term-tests/term-test-1-k56/**', async route => {
     const request = route.request();
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST,OPTIONS' };
@@ -76,6 +72,11 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
     if (disconnected) return route.abort();
     const relative = new URL(request.url()).pathname.split('/term-test-1-k56/')[1];
     assert.match(relative, /^(?:skill-fallback|offline)\//);
+    if (relative === 'skill-fallback/enroll') {
+      const token = request.headers()['x-term1-skill-grant'];
+      assert.equal(JSON.parse(request.postData()).activationCode, undefined);
+      grant = { token, grantId: token.split('.')[0] };
+    }
     assert.equal(request.headers()['x-term1-skill-grant'], grant.token);
     const destination = relative.startsWith('offline/') ? native.base + '/' + relative : skillsApi + relative.slice('skill-fallback'.length);
     const response = await fetch(destination, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-term1-skill-grant': grant.token }, body: request.postData() });
@@ -86,17 +87,8 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
 
   await page.goto(fallback.href);
   await capture('login');
-  await page.locator('#activationCode').fill('INVALID');
-  await page.getByRole('button', { name: 'Kiểm tra thông tin học viên' }).click();
-  await page.locator('#bootstrapNotice').waitFor({ state: 'visible' });
-  assert.equal(await page.locator('#identityConfirm').isVisible(), false);
-  await capture('invalid');
-  await page.locator('#activationCode').fill(grant.activationCode);
-  await page.getByRole('button', { name: 'Kiểm tra thông tin học viên' }).click();
-  await page.locator('#identityConfirm').waitFor({ state: 'visible' });
-  assert.equal(await page.locator('#confirmStudentName').textContent(), 'Học viên giả');
-  await capture('confirm');
-  await page.click('#confirmIdentity');
+  await chooseFallbackLearner(page, studentRef);
+  fallback.searchParams.set('class', 'IC5601');
   await wait(page, () => window.K56_TERM1_APP_READY && document.querySelector('.cbt-reading-form'), 'Reading đã chuẩn bị');
   await capture('ready');
   await page.getByRole('button', { name: 'Bắt đầu Reading', exact: true }).click();
@@ -135,7 +127,7 @@ test('Reading dự phòng qua UI và backend thật, phục hồi ngoại tuyế
   const download = await downloading;
   const backup = await readFile(await download.path(), 'utf8');
   assert.match(backup, /Giữ nháp &lt;script&gt;/);
-  assert.ok(!backup.includes(grant.token) && !backup.includes(grant.activationCode));
+  assert.ok(!backup.includes(grant.token));
   await page.click('#submitReading');
   await wait(page, () => window.K56_TERM1_OFFLINE.record.sections.reading?.sealed, 'Nộp offline');
   assert.equal(await page.locator('#viewResult').isDisabled(), true);

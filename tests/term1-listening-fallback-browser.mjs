@@ -8,7 +8,7 @@ import vm from 'node:vm';
 import test from 'node:test';
 import { ASSETS } from '../shared/audio/catalog.mjs';
 import { fixture as browserFixture, wait } from './term2-offline-browser.mjs';
-import { captureSkillScreen } from './term1-fallback-screen-evidence.mjs';
+import { captureSkillScreen, chooseFallbackLearner, rosterFixture } from './term1-fallback-screen-evidence.mjs';
 
 const full = process.env.TERM1_LISTENING_FULL === '1';
 test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'khôi phục và chặn EOF giả'), { timeout: full ? 2200000 : 75000 }, async t => {
@@ -25,7 +25,7 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   vm.runInNewContext(await readFile(new URL('../term-tests/term-test-1-k56-computer-based/content.js', import.meta.url), 'utf8'), sandbox);
   native.content.listening = sandbox.window.K56_TERM_TEST_CONTENT.listening;
   const asset = ASSETS['term-test-1-k56'];
-  const studentRef = randomUUID(), scope = { classCode: 'IC5601', studentRef, section: 'listening' };
+  const studentRef = randomUUID();
   const app = express(), router = express.Router(), noop = (_req, _res, next) => next();
   app.use(express.json());
   registerTerm1SkillRoutes(router, { authenticate: noop, readTeacherScope: async (_db, input) => assert.equal(input.student, studentRef),
@@ -41,14 +41,14 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   await new Promise(done => server.once('listening', done));
   t.after(() => new Promise(done => server.close(done)));
   const skillsApi = 'http://127.0.0.1:' + server.address().port + '/api/term-tests/term-test-1-k56/skill-fallback';
-  const { body: grant } = await require('supertest')(app).post('/api/term-tests/term-test-1-k56/skill-fallback/issue').send(scope).expect(200);
+  let grant;
   const browser = await browserFixture('read_first', { product: 1 });
   t.after(browser.close);
   const page = browser.page;
   const capture = screen => full ? Promise.resolve() : captureSkillScreen(page, output, 'listening', screen);
   browser.controls.primaryAudioFail = !full;
-  const link = new URL('../term-test-1-k56-listening-fallback/?class=IC5601', browser.url);
-  link.hash = new URLSearchParams({ g: grant.token });
+  const link = new URL('../term-test-1-k56-listening-fallback/', browser.url);
+  await rosterFixture(browser, studentRef);
   let disconnected = false;
   await browser.context.route('**/api/term-tests/term-test-1-k56/**', async route => {
     const request = route.request(), cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST,OPTIONS' };
@@ -56,6 +56,10 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
     if (disconnected) return route.abort();
     const relative = new URL(request.url()).pathname.split('/term-test-1-k56/')[1];
     assert.match(relative, /^(?:skill-fallback|offline)\//);
+    if (relative === 'skill-fallback/enroll') {
+      assert.equal(JSON.parse(request.postData()).activationCode, undefined);
+      grant = { token: request.headers()['x-term1-skill-grant'] };
+    }
     assert.equal(request.headers()['x-term1-skill-grant'], grant.token);
     const destination = relative.startsWith('offline/') ? native.base + '/' + relative : skillsApi + relative.slice('skill-fallback'.length);
     const response = await fetch(destination, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-term1-skill-grant': grant.token }, body: request.postData() });
@@ -64,11 +68,7 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
 
   await page.goto(link.href);
   await capture('login');
-  await page.locator('#activationCode').fill(grant.activationCode);
-  await page.getByRole('button', { name: 'Kiểm tra thông tin học viên' }).click();
-  await page.locator('#identityConfirm').waitFor({ state: 'visible' });
-  await capture('confirm');
-  await page.click('#confirmIdentity');
+  await chooseFallbackLearner(page, studentRef);
   await page.locator('#skillPreview').waitFor({ state: 'visible', timeout: 30000 });
   await capture('preview');
   assert.equal(await page.locator('#skillStart').isDisabled(), true);
