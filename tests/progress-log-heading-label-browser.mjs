@@ -47,6 +47,7 @@ for (const preview of [false, true]) {
     const origin = new URL(base).origin;
     const browser = await chromium.launch({channel: 'chrome', headless: true});
     const page = await browser.newPage({serviceWorkers: 'block', viewport: {width: preview ? 1440 : 390, height: 900}});
+    page.setDefaultTimeout(10000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     let draft = {}, revision = 0, checkpoint, final = false, startCount = 0, submissionCount = 0;
@@ -107,12 +108,17 @@ for (const preview of [false, true]) {
         await page.goto(`${base}/progress-log/index.html#assignment=${assignment.publicToken}`);
       }
       const view = preview ? page.frameLocator('iframe.thuy-library-preview') : page;
-      if (!preview) {
+      const enterStudent = async () => {
+        await view.locator('#studentSelect:visible, #formView:visible').first().waitFor();
+        if (await view.locator('#formView').isVisible()) return;
         await view.locator('#studentSelect').selectOption(id(60));
         await view.locator('#chooseStudentButton').click();
         await view.locator('#confirmButton').click();
-      } else {
+      };
+      if (preview) {
         await view.getByRole('button', {name: 'Bắt đầu làm'}).click();
+      } else {
+        await enterStudent();
       }
       const dropdowns = view.locator('.matching-heading-select');
       await dropdowns.first().waitFor({timeout: 7000}).catch(async error => {
@@ -135,6 +141,8 @@ for (const preview of [false, true]) {
         await view.getByRole('button', {name: 'Tiếp tục làm'}).click();
       } else {
         await page.reload();
+        // The public build may prompt for the same identity again on a fresh device.
+        await enterStudent();
       }
       await dropdowns.first().waitFor();
       assert.deepEqual(await dropdowns.evaluateAll(nodes => nodes.map(node => node.value)), [options[0].id, options[0].id]);
