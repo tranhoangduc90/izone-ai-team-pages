@@ -1,4 +1,4 @@
-import { createOfflineRuntime } from '../k56-offline-shared/runtime.mjs?v=20261107-k56-r2-v1';
+import { createOfflineRuntime, withListeningContinuity } from '../k56-offline-shared/runtime.mjs?v=20261107-k56-r2-v1';
 import { TERM1_PROFILE } from '../k56-offline-shared/profiles.mjs';
 
 export const BUILD = 'term1-k56-skill-fallback-v1';
@@ -7,7 +7,7 @@ const profile = Object.freeze({ ...TERM1_PROFILE, build: BUILD, dbName: 'izone-t
 const { ExamStore, OfflineRuntime, hash } = createOfflineRuntime(profile);
 export { ExamStore };
 
-export class SkillOffline extends OfflineRuntime {
+export class SkillOffline extends withListeningContinuity(OfflineRuntime) {
   constructor({ apiBase, classCode, grant, grantId, skill }) {
     super({ apiBase, classCode, store: new ExamStore(), fetchImpl(url, options) {
       const headers = new Headers(options.headers);
@@ -37,6 +37,71 @@ export class SkillOffline extends OfflineRuntime {
     return this;
   }
 
+  get listeningContinuity() { return this.skill === 'listening' && this.record?.listeningContinuityVersion === 1; }
+
+  attachPlayer(options) {
+    return this.listeningContinuity ? super.attachPlayer(options) : OfflineRuntime.prototype.attachPlayer.call(this, options);
+  }
+
+  showInterruptedFinish() {
+    const root = document.getElementById('app');
+    const panel = document.createElement('section');
+    panel.className = 'panel transition-card';
+    const title = document.createElement('h2');
+    title.textContent = 'Listening gián đoạn';
+    const instruction = document.createElement('p');
+    instruction.textContent = 'Hãy liên hệ giảng viên sau buổi thi để được nhận bài Listening thay thế.';
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    const refresh = () => {
+      const listening = this.record.sections.listening;
+      const receipt = this.record.receipts[listening.operationId];
+      status.textContent = receipt?.status === 'accepted' || listening.interruptedOnServer
+        ? 'Máy chủ đã nhận thông tin gián đoạn.'
+        : 'Đã lưu trên thiết bị. Thông tin sẽ đồng bộ khi có mạng.';
+    };
+    panel.append(title, instruction, status);
+    root.replaceChildren(panel);
+    this.addEventListener('change', refresh);
+    refresh();
+  }
+
+  showListeningInterruption() {
+    if (!this.listeningContinuity || !this.record.sections.listening?.interrupted) return;
+    if (this.record.listeningInterruptionAcknowledged) { this.showInterruptedFinish(); return; }
+    if (document.getElementById('fallbackListeningInterruption')) return;
+    const dialog = document.createElement('dialog');
+    dialog.id = 'fallbackListeningInterruption';
+    dialog.className = 'cbt-identity-confirm';
+    dialog.setAttribute('aria-label', 'Listening gián đoạn');
+    const message = document.createElement('p');
+    message.textContent = 'Bài thi listening cần được nghe liền mạch không trục trặc để đánh giá đúng năng lực thí sinh. Khi bạn không nghe được âm thanh, bạn không nên tiếp tục listening. Hãy tiếp tục làm kỹ năng tiếp theo, và sau buổi thi hãy liên hệ giảng viên để được nhận bài Listening thay thế.';
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button-primary';
+    button.textContent = 'Tôi đã hiểu.';
+    dialog.addEventListener('cancel', event => event.preventDefault());
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      this.record.listeningInterruptionAcknowledged = true;
+      try { await this.persist(true); }
+      catch {
+        delete this.record.listeningInterruptionAcknowledged;
+        status.textContent = 'Chưa lưu được xác nhận trên thiết bị. Hãy thử lại.';
+        button.disabled = false;
+        return;
+      }
+      dialog.close();
+      dialog.remove();
+      this.showInterruptedFinish();
+    });
+    dialog.append(message, status, button);
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
   async prepareSkill(opened, identity, ownerId) {
     if (opened.grantId !== this.grantId || opened.section !== this.skill) throw Error('Máy chủ trả lượt khác.');
     const listening = this.skill === 'listening';
@@ -64,9 +129,12 @@ export class SkillOffline extends OfflineRuntime {
         attemptToken: this.grantId, examSessionToken: this.grantId, identityConfirmed: true, annotationRunId: this.grantId,
         drafts: { [this.skill]: opened.draft || {} }, draftRevisions: { [this.skill]: opened.revision || 0 },
         ...(writing ? { writingRevision: opened.revision || 0, writingAckRevision: opened.revision || 0 } : {}) },
-      operations: [], receipts: {}, sections: {}, ready: false, player: { position: opened.position || 0, ended: false } };
+      operations: [], receipts: {}, sections: {}, ready: false,
+      ...(listening && opened.listeningContinuityVersion === 1 ? { listeningContinuityVersion: 1 } : {}),
+      player: { position: opened.listeningContinuityVersion === 1 ? 0 : (opened.position || 0), ended: false } };
     if (opened.startedAt || opened.submitted) this.record.sections[this.skill] = { startedAt: opened.startedAt,
-      deadlineAt: opened.deadlineAt, revision: opened.revision || 0, sealed: opened.submitted };
+      deadlineAt: opened.deadlineAt, revision: opened.revision || 0, sealed: opened.submitted,
+      ...(listening && opened.listeningInterrupted ? { interrupted: true, interruptedOnServer: true } : {}) };
     await this.claim();
     this.anchor();
     await this.persist(true);
