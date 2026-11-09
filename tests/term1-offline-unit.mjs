@@ -68,6 +68,31 @@ test('ACK mất: receipt cùng operation/hash được đọc lại, không gử
 test('Không tự thu Listening chỉ do deadline hoặc play Promise thành công',async()=>{
  const r=await runtime(async()=>{throw Error('offline');});await r.start('listening');await assert.rejects(r.seal('listening',{answers:{}},0,'deadline'),/chưa phát hết/);assert.equal(r.record.sections.listening.sealed,false);
 });
+test('Gián đoạn khi offline được lưu một lần, không biến thành bài Listening đã nộp',async()=>{
+ for(const mode of ['lis_first','read_first']){
+  const r=await runtime(async()=>{throw Error('offline');});r.record.prepared.examMode=mode;
+  if(mode==='read_first'){await r.start('reading');await r.seal('reading',{answers:{}},0);}
+  await r.start('listening');
+  const [first,second]=await Promise.all([r.interruptListening('learner_cannot_hear'),r.interruptListening('page_interrupted')]);
+  assert.deepEqual(first,second);
+  assert.equal(first.listeningInterrupted,true);assert.equal(first.listeningSubmitted,false);
+  const next=mode==='lis_first'?'reading':'writing';assert.equal(first.nextSection,next);
+  const stored=await r.store.get(r.key);const markers=stored.operations.filter(op=>op.kind==='interrupt');
+  assert.equal(markers.length,1);assert.equal(markers[0].payload.interruptionReason,'learner_cannot_hear');
+  assert.equal(stored.sections[next],undefined);
+  await assert.rejects(r.seal('listening',{answers:{}},0),/gián đoạn/);
+  await r.start(next);assert.equal(r.record.operations.at(-1).dependency,markers[0].operationId);
+ }
+});
+test('Kho lỗi khi báo gián đoạn thì chưa đổi kỹ năng hay gửi trạng thái',async()=>{
+ const r=await runtime(async()=>{throw Error('offline');});await r.start('listening');
+ const saved=await r.store.get(r.key);
+ r.store.put=async()=>{throw Error('quota');};
+ await assert.rejects(r.interruptListening('learner_cannot_hear'),/quota/);
+ assert.equal(r.sectionResponse().nextSection,'listening');
+ assert.equal(r.record.operations.length,saved.operations.length);
+ assert.equal(r.record.sections.listening.interrupted,undefined);
+});
 test('Đổi người giữ run cũ và bỏ ACK đang bay, không gắn vào lượt mới',async()=>{
  let finish;const r=await runtime(async()=>await new Promise(ok=>{finish=ok;}));
  await r.start('listening');await new Promise(ok=>setTimeout(ok,10));const key=r.key;

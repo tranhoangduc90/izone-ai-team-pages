@@ -13,7 +13,7 @@ const root=resolve(fileURLToPath(new URL('../',import.meta.url))),output=process
 const modules=process.env.CODEX_NODE_MODULES||resolve(process.env.USERPROFILE,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
 const {chromium}=createRequire(pathToFileURL(resolve(modules,'playwright/package.json')))('playwright');
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.mp3':'audio/mpeg'};
-export async function fixture(mode,{profile,native,product=2,paper=false,port=0}={}){
+export async function fixture(mode,{profile,native,product=2,paper=false,port=0,defaultAutoplay=false}={}){
  await mkdir(output,{recursive:true});
  const controls={assetFailures:new Set(),assetOverrides:new Map(),realAudio:false,r2Audio:false,primaryAudioFail:false,audioCalls:[],apiDelayMs:0};
  const blockJournalAssets=process.env.K56_BLOCK_JOURNAL_ASSETS==='1';
@@ -27,14 +27,19 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0}
   if(controls.assetFailures.has(url.pathname))return res.writeHead(503).end('Fixture unavailable asset');
   try{let data=controls.assetOverrides.has(url.pathname)?Buffer.from(controls.assetOverrides.get(url.pathname)):await readFile(p);if(['.html','.js','.mjs','.css','.svg'].includes(extname(p)))data=Buffer.from(data.toString('utf8').replace(/\r\n/g,'\n'));res.writeHead(200,{'content-type':mime[extname(p)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404).end();}});
  await new Promise((ok,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',ok);});const base=`http://127.0.0.1:${server.address().port}`;
- const launchOptions={channel:process.env.TERM2_BROWSER_CHANNEL||'msedge',headless:true,args:['--autoplay-policy=no-user-gesture-required']},contextOptions={acceptDownloads:true,viewport:{width:1440,height:1000}};
+ const launchOptions={channel:process.env.TERM2_BROWSER_CHANNEL||'msedge',headless:true,
+  args:defaultAutoplay?[]:['--autoplay-policy=no-user-gesture-required']},contextOptions={acceptDownloads:true,viewport:{width:1440,height:1000}};
  const profileDir=profile?resolve(output,profile):null;
  let browser,context,page;
  if(profileDir){context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();}
  else{browser=await chromium.launch(launchOptions);context=await browser.newContext(contextOptions);}
  page=await context.newPage();
  const id=native?.a||randomUUID(),session=native?.s||randomUUID(),student=randomUUID(),receipts=new Map(),calls=[],errors=[];let disconnected=false,fixtureContent;
- page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ function handleDialog(dialog){
+  if(dialog.type()==='confirm'&&controls.dismissNextConfirmation){controls.dismissNextConfirmation=false;return dialog.dismiss();}
+  return dialog.accept();
+ }
+ page.on('pageerror',e=>errors.push(e.message));page.on('dialog',handleDialog);
  const mini=product==='mini';
  const slug=mini?'mini-test-k56':'term-test-'+product+'-k56';
  const asset=audioCatalog[slug];
@@ -64,7 +69,11 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0}
   if(native&&endpoint.includes('/offline/')){
    Object.assign(native.content,content);
    const response=await fetch(native.base+u.pathname.slice(u.pathname.indexOf('/offline/')),{method:'POST',headers:{'content-type':'application/json','x-term2-permit':request.headers()['x-term2-permit']||'','x-exam-journal-request-id':request.headers()['x-exam-journal-request-id']||''},body:request.postData()});
-   return route.fulfill({status:response.status,json:await response.json()});
+   const json=await response.json();
+   if(controls.loseAck&&!controls.ackLost&&endpoint.endsWith('/offline/operation')&&body.kind==='seal'&&json.receipt?.status==='accepted'){
+    controls.ackLost=true;return route.abort();
+   }
+   return route.fulfill({status:response.status,json});
   }
   const timing=mini?{listeningDurationSeconds:446,listeningReviewSeconds:0,readingDurationMinutes:25,writingDurationMinutes:15}
    :product===2?{listeningDurationSeconds:1824,listeningReviewSeconds:0,readingDurationMinutes:60,writingDurationMinutes:30}:{listeningDurationSeconds:1848,listeningReviewSeconds:0,readingDurationMinutes:40,writingDurationMinutes:55};
@@ -93,7 +102,7 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0}
  const url=base+`/term-tests/${slug}${paper?'':'-computer-based'}/?class=IC5601&mode=`+mode;
  return {get page(){return page;},get context(){return context;},get browser(){return browser;},server,url,student,calls,errors,receipts,controls,get disconnected(){return disconnected;},set disconnected(v){disconnected=v;},
   assertJournalFaultExercised(){if(blockJournalAssets)assert.ok(blockedJournalAssets.has('/term-tests/shared/exam-journal/bridge.mjs'),'Expected the exam journal bridge request to fail');},
-  reopen:async({offline=false}={})=>{assert.ok(profileDir);await browser.close();context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());await context.route('**/*',routeHandler);await context.setOffline(offline);},
+  reopen:async({offline=false}={})=>{assert.ok(profileDir);await browser.close();context=await chromium.launchPersistentContext(profileDir,{...launchOptions,...contextOptions});browser=context.browser();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',handleDialog);await context.route('**/*',routeHandler);await context.setOffline(offline);},
   close:async()=>{await browser.close();await new Promise(ok=>server.close(ok));}};
 }
 export async function wait(page,fn,label,timeout=60000){try{await page.waitForFunction(fn,{},{timeout});}catch(e){throw Error(label+': '+JSON.stringify({text:(await page.locator('body').innerText()).slice(0,2000),errors:await page.evaluate(()=>window.__errors||[])}),{cause:e});}}

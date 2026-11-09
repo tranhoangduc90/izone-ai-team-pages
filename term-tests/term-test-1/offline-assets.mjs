@@ -128,7 +128,7 @@ export const ASSET_HASHES={
   "../design-demo/skin.css": "d71ce4a4e2f75345c805fb0ca192c95cf4973e8ee7d35bf36d29bdeea66b0048",
   "../design-demo/theme.css": "afe1789ef3b18a8ef53fae51e22efdc0a9f83f91e6eb6b73fabc3257784d64b5",
   "../design-full/native.css": "54aa42e4a564376e71b7e99c0e0d9e4c396e44d298bfbb69a6d1954ce8bea2be",
-  "../k56-offline-shared/runtime.mjs": "79a0e06cb7f70b32677d62604de6035e6d459cdf2a4f2f2b238504d07e0b408e",
+  "../k56-offline-shared/runtime.mjs": "c99c09e78cc61e09d0ac46fbcd811022160ec58de58afc422815d0812a8d4289",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
   "../k67-design/appearance.css": "3ad160b70e0bfa79d2570280cbc63c745053abc039efd957068cd38ae5f2b0a0",
@@ -167,4 +167,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "117bb977e4d242f955bc39104a6b1f72e32ec27055dd2e94e534d1c6fd194c8f",
   "test-config.js": "82de9c261e20fc107ed0c0b76c4e8b48d6b9e4d64f03d86bf2060a51e411cc4b"
 };
-export const ASSET_BUILD_ID="d8f53e297f4aa08b634e4f6d621d64b3464b517ee9165cbbcf106138141df3da";
+export const ASSET_BUILD_ID="d5ff794a3f23207768c47c1d61e30c80f6f29490cf2b13b7984a4fd453aa2ab5";
