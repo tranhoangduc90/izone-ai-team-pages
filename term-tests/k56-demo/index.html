@@ -8,13 +8,17 @@
     <title>Danh sách bài test · Khóa 56</title>
     <link rel="icon" type="image/svg+xml" href="../../shared/izone-favicon.svg?v=20261105">
     <link rel="stylesheet" href="../shared/styles.css?rev=20261003-writing-save-cas-v1">
-    <link rel="stylesheet" href="landing.css?rev=20261020-demo-first-v1">
+    <link rel="stylesheet" href="landing.css?rev=20261109-guided-v1">
   <link rel="preload" href="../k56-design/assets/SourceSans3-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../k56-design/theme.css?v=20261023-master170-v3">
   <script defer src="../../shared/red-focus-glow.js?v=20261102-r1"></script>
   </head>
   <body data-k56-design>
-    <header class="topbar"><span class="k56-brand"><img src="../k56-design/assets/izone-logo-color.png" alt="IZONE · IELTS Chiến lược"></span><span class="k56-product-label">Bài thi khóa 56</span></header>
+    <header class="topbar">
+      <span class="k56-brand"><img src="../k56-design/assets/izone-logo-color.png" alt="IZONE · IELTS Chiến lược"></span>
+      <span class="k56-product-label">Bài thi khóa 56</span>
+      <button class="button button-secondary results-shortcut" type="button" id="teacherDashboard" aria-describedby="resultsHelp">Xem kết quả</button>
+    </header>
     <main class="landing-shell">
       <section class="panel landing-card">
         <p class="eyebrow">IZONE · IELTS 5–6 · Hệ thống bài thi</p>
@@ -35,7 +39,23 @@
           <p class="landing-class-help" id="classHelp" role="status">Bạn vẫn có thể nhập mã lớp khi chưa đăng nhập.</p>
         </div>
         <p>Các lớp khóa 56 đã được mở bài dùng danh sách học viên thật và đồng bộ điểm sang Portal.</p>
-        <section class="landing-link-group" aria-labelledby="onlineTestsHeading">
+        <ol class="flow-steps" aria-label="Các bước mở bài thi">
+          <li id="pickStep" aria-current="step"><span aria-hidden="true">1</span> Chọn bài test</li>
+          <li id="actionStep"><span aria-hidden="true">2</span> Mở bài hoặc xử lý sự cố</li>
+        </ol>
+        <section class="landing-link-group" id="testPicker" aria-labelledby="onlineTestsHeading">
+          <h2 id="onlineTestsHeading">Bài thi</h2>
+          <div class="landing-actions landing-actions-three">
+            <button class="button button-secondary landing-choice" type="button" data-test="term-test-1-k56-computer-based" data-slug="term-test-1-k56">Term Test 1</button>
+            <button class="button button-secondary landing-choice" type="button" data-test="term-test-2-k56-computer-based" data-slug="term-test-2-k56">Term Test 2</button>
+            <button class="button button-secondary landing-choice" type="button" data-test="mini-test-k56-computer-based" data-slug="mini-test-k56">Mini Test</button>
+          </div>
+        </section>
+        <section class="landing-link-group" id="testActions" aria-labelledby="chosenName" hidden>
+          <div class="test-context">
+            <div><span>Bài test đang chọn</span><h2 id="chosenName" tabindex="-1"></h2></div>
+            <button class="button button-secondary" id="changeTest" type="button">Đổi bài test</button>
+          </div>
           <fieldset class="landing-order">
             <legend>Thứ tự làm bài</legend>
             <div class="landing-actions">
@@ -44,37 +64,30 @@
             </div>
             <p>Cùng thứ tự cho cả ba bài và Answer Sheet. Writing sau Listening và Reading.</p>
           </fieldset>
-          <h2 id="onlineTestsHeading">Bài thi</h2>
-          <div class="landing-actions landing-actions-three">
-            <button class="button button-secondary landing-choice" type="button" data-test="term-test-1-k56-computer-based" data-slug="term-test-1-k56" aria-pressed="false">Term Test 1</button>
-            <button class="button button-secondary landing-choice" type="button" data-test="term-test-2-k56-computer-based" data-slug="term-test-2-k56" aria-pressed="false">Term Test 2</button>
-            <button class="button button-secondary landing-choice" type="button" data-test="mini-test-k56-computer-based" data-slug="mini-test-k56" aria-pressed="false">Mini Test</button>
+          <div class="main-test-action">
+            <button class="button button-primary" type="button" id="openExam">Mở bài thi</button>
           </div>
+          <details class="rescue" id="rescue">
+            <summary>Xử lý sự cố</summary>
+            <div class="rescue-body">
+              <p>Chọn theo tình huống của học viên.</p>
+              <div class="rescue-list">
+                <button class="button button-secondary rescue-choice" type="button" data-case="skill" aria-pressed="false" aria-controls="rescueDetail" hidden><strong>Bài dự phòng theo kỹ năng</strong><small>Học viên chỉ cần làm lại một kỹ năng.</small></button>
+                <button class="button button-secondary rescue-choice" type="button" data-case="audio" aria-pressed="false" aria-controls="rescueDetail"><strong>Audio Backup</strong><small>Cần nguồn audio thay thế cho phần Listening.</small></button>
+                <button class="button button-secondary rescue-choice" type="button" data-case="sheet" aria-pressed="false" aria-controls="rescueDetail"><strong>Answer Sheet dự phòng</strong><small>Cần dùng phiếu trả lời của bài đang chọn.</small></button>
+              </div>
+              <div class="rescue-detail" id="rescueDetail" hidden>
+                <p id="rescueHelp" role="status"></p>
+                <div class="landing-actions landing-actions-three" id="rescueLinks"></div>
+              </div>
+            </div>
+          </details>
         </section>
-        <section class="landing-link-group" aria-labelledby="audioBackupHeading">
-          <h2 id="audioBackupHeading">Audio Backup</h2>
-          <div class="landing-actions landing-actions-three">
-            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-1-k56-audio" aria-pressed="false">Audio Term Test 1</button>
-            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-2-k56-audio" aria-pressed="false">Audio Term Test 2</button>
-            <button class="button button-secondary landing-choice" type="button" data-destination="mini-test-k56-audio" aria-pressed="false">Audio Mini Test</button>
-          </div>
-        </section>
-        <section class="landing-link-group" aria-labelledby="answerSheetHeading">
-          <h2 id="answerSheetHeading">Answer Sheet dự phòng</h2>
-          <div class="landing-actions landing-actions-three">
-            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-1-k56" aria-pressed="false">Answer Sheet Term Test 1</button>
-            <button class="button button-secondary landing-choice" type="button" data-destination="term-test-2-k56" aria-pressed="false">Answer Sheet Term Test 2</button>
-            <button class="button button-secondary landing-choice" type="button" data-destination="mini-test-k56" aria-pressed="false">Answer Sheet Mini Test</button>
-          </div>
-        </section>
-        <div class="landing-actions landing-result-action">
-          <button class="button button-secondary" type="button" id="teacherDashboard">Xem kết quả</button>
-        </div>
-        <p>Trong trang kết quả, chọn Term Test 1, Term Test 2 hoặc Mini Test. Giảng viên cần đăng nhập Google bằng tài khoản đã được cấp quyền.</p>
+        <p id="resultsHelp" class="results-help">Trong trang kết quả, chọn Term Test 1, Term Test 2 hoặc Mini Test. Giảng viên cần đăng nhập Google bằng tài khoản đã được cấp quyền.</p>
       </section>
     </main>
     <script src="../k56-shared/config.js?rev=20261020-demo-v1&ej=20261024-production-r1"></script>
-    <script type="module" src="landing.js?rev=20261022-session-handoff-v1&amp;startup=20261026-v2&amp;history=20261102-1"></script>
+    <script type="module" src="landing.js?rev=20261022-session-handoff-v1&amp;startup=20261026-v2&amp;history=20261102-1&amp;guided=20261109-v1"></script>
     <script src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
   </body>
 </html>

@@ -12,13 +12,12 @@ async function read(relative, encoding = 'utf8') {
   return fs.readFile(path.join(root, relative), encoding);
 }
 
-test('landing K56 chỉ hiện tên bài thi và đủ sáu link dự phòng', async () => {
+test('landing K56 giữ tên ba bài và nhãn các nhóm dự phòng', async () => {
   const html = await read('term-tests/k56-demo/index.html');
   assert.equal(/Listening:\s*\d+\s*câu|Reading:\s*\d+\s*câu/.test(html), false);
   for (const label of [
     'Term Test 1', 'Term Test 2', 'Mini Test',
-    'Audio Term Test 1', 'Audio Term Test 2', 'Audio Mini Test',
-    'Answer Sheet Term Test 1', 'Answer Sheet Term Test 2', 'Answer Sheet Mini Test'
+    'Audio Backup', 'Answer Sheet dự phòng', 'Bài dự phòng theo kỹ năng'
   ]) assert.match(html, new RegExp(`>${label}<`));
 });
 
