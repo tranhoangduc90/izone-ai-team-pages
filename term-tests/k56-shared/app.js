@@ -2556,24 +2556,28 @@
   function renderResult(payload) {
     const result = payload.result;
     const hasReading = Boolean(result.reading);
+    const interrupted = payload.listeningInterrupted || state.listeningInterrupted;
+    const listeningStatus = interrupted ? 'Gián đoạn · Cần bài thay thế' : 'Chưa nộp';
+    const listeningDetails = interrupted ? 'Listening bị gián đoạn. Hãy liên hệ giảng viên để nhận bài Listening thay thế.' : 'Listening chưa có kết quả.';
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
     const skills = fallbackSkill==='writing' ? [] : fallbackSkill ? [[fallbackLabel, result[fallbackSkill]]]
-      : [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+      : [...(result.listening ? [['Listening', result.listening]] : []), ...(hasReading ? [['Reading', result.reading]] : [])];
     const summary = skills.map(([name, score]) => addSummaryCard(name, `${score.correct}/${score.total} câu đúng`));
+    if (!fallbackSkill && !result.listening) summary.unshift(addSummaryCard('Listening', listeningStatus));
     if (!fallbackSkill && !hasReading) summary.push(addSummaryCard('Reading', 'Chưa nộp'));
     elements.summaryGrid.replaceChildren(...summary);
     const grading = payload.writing?.grading;
     elements.resultStatus.textContent = fallbackSkill==='writing' ? grading?.ready
       ? (grading.tasks?.[0]?.gradingMethod==='blank_rule' ? 'Bài Writing trắng · 0/9' : `Kết quả Writing Task 2 · ${formatBand(grading.writingScore)}/9`)
       : writingGradingNotice(grading)
-      : fallbackSkill ? `Phân tích dựa trên bài ${fallbackLabel} đã nộp.` : hasReading
+      : fallbackSkill ? `Phân tích dựa trên bài ${fallbackLabel} đã nộp.` : !result.listening ? listeningDetails : hasReading
       ? payload.writing?.grading?.ready
         ? 'Listening và Reading được phân tích riêng; điểm Writing Task 2 đã hoàn tất và có bài chấm chi tiết.'
         : 'Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
-    elements.continueReadingFromResult.hidden = Boolean(fallbackSkill) || hasReading || Boolean(demoMode);
+    elements.continueReadingFromResult.hidden = Boolean(fallbackSkill) || interrupted || hasReading || Boolean(demoMode);
     renderWritingSubmission();
     // Polling Writing không làm thay DOM/focus của bảng L/R đang được học viên xem.
     const identity = JSON.stringify([payload.className, payload.studentRef || state.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);

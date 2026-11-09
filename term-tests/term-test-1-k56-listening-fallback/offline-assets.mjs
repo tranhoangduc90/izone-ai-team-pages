@@ -70,7 +70,7 @@ export const ASSET_HASHES={
   "../k56-offline-shared/runtime.mjs": "c99c09e78cc61e09d0ac46fbcd811022160ec58de58afc422815d0812a8d4289",
   "../k56-offline-shared/whole-audio.mjs": "82528b0790bb52669c516e0256dbd9a86a65f5e13cbe68f11f2c78a427662447",
   "../k56-offline-shared/worker.mjs": "e094dddd9acb1cdea894969cf04e6e055878f76eba8d3d6ea1e3f62a37fee97e",
-  "../k56-shared/app.js": "e128a850d6c5be29c4618193bc5c824ba0f93b56b48dfbf34c487dfd0881cbc9",
+  "../k56-shared/app.js": "a89215f343ba8f7b41f112d7fdd9351454b33e38c3e116b4d34e7b8bfd1b3404",
   "../k56-shared/config.js": "cb5c63536b11fc24615a8819421e899211d1840382f4f024bcf1e5e7c50baaea",
   "../k56-shared/styles.css": "3d7ffe651e167851033600ccc019bc7446a9bc1d0759f727d5e7f16e082bcb4e",
   "../shared/cbt-audio-start-label.js": "f62890142ebc075664342c4dd321071754ad59c4fffc716019f14ad1a1944304",
@@ -91,4 +91,4 @@ export const ASSET_HASHES={
   "index.html": "2740317c332a135cd4991c8e1d9a5baef46fc5f611106eebe09951b7b916dba2",
   "offline-worker.js": "aa14476016b290ed8157adc19652fb7a8795beab0d773ad207caf8dfc8b79358"
 };
-export const ASSET_BUILD_ID="cd9fad23bb965edcb3ddc5ef3f26118ae43cfb70be2b8d5c55f92f3fc0f843ec";
+export const ASSET_BUILD_ID="1eb4d090040eabd11d43e4cc6fe53670a7c93acd19c341551f6a6b4608b97d62";
