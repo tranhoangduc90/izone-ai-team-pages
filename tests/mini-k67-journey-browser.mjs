@@ -116,7 +116,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
     const url=base+`/term-tests/${entry}/?class=${rescueClass||'IC2304'}&mode=${mode}`;
     if(rescueClass){
       await page.goto(url.replace(rescueClass,'OTHER'));
-      await page.getByText('Link dự phòng này dành cho Term Test 2',{exact:false}).waitFor();
+      await page.getByText('Hãy mở đường dẫn chính do giảng viên gửi.',{exact:false}).waitFor();
       assert.equal(await page.locator('#bootstrapStudent').count(),0);
     }
     await page.goto(url);
@@ -128,9 +128,9 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       assert.equal(offers.at(-1)?.audioDownload?.sha256,term1
         ?'9af027eaaf402acc230fdaeff11bcc1b792b62e55d75067f1a2bcf2392b485f8'
         :'656921dc9888dcfe778eb0cfa6b61491fd906500edde28054d53d26194df219e');
-      if(rescueClass)assert.equal(r2Requests.length,0,'Rescue must use Pages even if a signed R2 offer exists.');
+      if(rescueClass)assert.equal(new URL(page.url()).pathname,'/term-tests/term-test-2-computer-based/');
       else assert.ok(r2Requests.length>0,'Browser should fetch signed R2 audio.');
-      if(r2Fail||rescueClass)assert.ok(pagesRequests.length>0,'Browser should use the pinned Pages audio.');
+      if(r2Fail)assert.ok(pagesRequests.length>0,'Browser should use the pinned Pages audio.');
       assert.deepEqual(errors,[]);
       log('r2_verified',{requests:r2Requests.length,pagesFallbackRequests:pagesRequests.length});
       return;
