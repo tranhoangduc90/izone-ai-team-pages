@@ -162,21 +162,31 @@ class OfflineRuntime extends EventTarget{
  async capture(snapshot){this.record.snapshot=clone(snapshot);await this.persist(true);}
  order(){const sections=this.record.prepared.examMode==='read_first'?['reading','listening']:['listening','reading'];if(!profile.paper)sections.push('writing');return sections;}
  sectionResponse(){const p=this.record.prepared,s=this.record.sections,order=this.order();return {...p,localOnly:true,completed:Boolean(s.listening?.sealed&&s.reading?.sealed),listeningSubmitted:Boolean(s.listening?.sealed),readingSubmitted:Boolean(s.reading?.sealed),
-  nextSection:order.find(k=>!s[k]?.sealed)||'result',...Object.fromEntries(order.flatMap(k=>[[k+'StartedAt',s[k]?.startedAt||null],[k+'DeadlineAt',s[k]?.deadlineAt||null]])),serverNow:new Date(this.now()).toISOString(),portalSyncStatus:'pending'};}
+  ...(s.listening?.interrupted?{listeningInterrupted:true}:{}),nextSection:order.find(k=>!s[k]?.sealed&&!s[k]?.interrupted)||'result',...Object.fromEntries(order.flatMap(k=>[[k+'StartedAt',s[k]?.startedAt||null],[k+'DeadlineAt',s[k]?.deadlineAt||null]])),serverNow:new Date(this.now()).toISOString(),portalSyncStatus:'pending'};}
  async enqueue(section,kind,payload,revision,occurredAt){
   const index=this.order().indexOf(section),prior=index?this.record.sections[this.order()[index-1]]:null;
   if(index<0)throw Error('Kỹ năng này không thuộc lượt thi.');
-  if(index&&!prior?.sealed)throw Error('Hãy khóa kỹ năng trước trước khi tiếp tục.');
-  const item=this.record.sections[section];if(item?.sealed)throw Error('Bài đã khóa; không thay nội dung.');
+  if(index&&!prior?.sealed&&!prior?.interrupted)throw Error('Hãy khóa kỹ năng trước trước khi tiếp tục.');
+  const item=this.record.sections[section];if(item?.sealed||item?.interrupted)throw Error('Bài đã khóa; không thay nội dung.');
   // DOM/IME có thể chốt giá trị cuối trước bộ đếm input của renderer.
-  const content=canonical(section==='writing'?{[profile.taskId]:payload[profile.taskId]}:{answers:payload.answers});
+  const content=kind==='interrupt'?item.content:canonical(section==='writing'?{[profile.taskId]:payload[profile.taskId]}:{answers:payload.answers});
   revision=Math.max(Number(revision)||0,item.revision||0);
   if(kind!=='start'&&item.content!==undefined&&item.content!==content)revision=Math.max(revision,(item.revision||0)+1);
   const op={...this.scope,operationId:crypto.randomUUID(),section,kind,revision:Number(revision)||0,occurredAt:occurredAt||new Date(this.now()).toISOString(),dependency:prior?.operationId||null,
    payload:{...payload,startedAt:item.startedAt,deadlineAt:item.deadlineAt,timeValid:this.record.timeValid!==false}};
   if(kind==='draft')this.record.operations=this.record.operations.filter(x=>!(x.section===section&&x.kind==='draft'&&x.operationId!==this.inFlight));
-  this.record.sections[section]={...item,revision,content,...kind==='seal'?{sealed:true,operationId:op.operationId}:{}};
-  this.record.operations.push(op);await this.persist(true);void this.flush();return op;
+  this.record.sections[section]={...item,revision,content,...kind==='seal'?{sealed:true,operationId:op.operationId}:{},...kind==='interrupt'?{interrupted:true,operationId:op.operationId}:{}};
+  if(kind==='interrupt')this.pendingInterruptionId=op.operationId;
+  this.record.operations.push(op);
+  try{await this.persist(true);}
+  catch(error){
+   if(kind==='interrupt'){
+    this.record.sections[section]=item;
+    this.record.operations=this.record.operations.filter(operation=>operation.operationId!==op.operationId);
+   }
+   throw error;
+  }finally{if(kind==='interrupt')this.pendingInterruptionId=null;}
+  void this.flush();return op;
  }
  async start(section){
   if(this.record.sections[section]?.startedAt){await this.persist();return this.sectionResponse();}
@@ -186,13 +196,14 @@ class OfflineRuntime extends EventTarget{
   await this.enqueue(section,'start',section==='writing'?{[profile.taskId]:''}:{answers:{}},0);return this.sectionResponse();
  }
  async draft(section,data,revision){
-  if(!this.record.sections[section]?.startedAt||this.record.sections[section].sealed)return;
+  if(!this.record.sections[section]?.startedAt||this.record.sections[section].sealed||this.record.sections[section].interrupted)return;
   const item=this.record.sections[section],deadline=Date.parse(item.deadlineAt||'');
   if(Number.isFinite(deadline)&&this.now()>deadline)return;
   await this.enqueue(section,'draft',section==='writing'?{[profile.taskId]:String(data[profile.taskId]??'')}:{answers:clone(data.answers||{})},revision);
  }
  async seal(section,data,revision,reason='manual'){
   if(this.record.sections[section]?.sealed){await this.persist();return this.sectionResponse();}
+  if(this.record.sections[section]?.interrupted)throw Error('Lượt Listening đã khóa do gián đoạn.');
   if(section==='listening'&&reason!=='manual'&&!this.record.player.ended)throw Error('Audio chưa phát hết; không tự thu bài.');
   const item=this.record.sections[section];if(!item?.startedAt)throw Error('Chưa bắt đầu kỹ năng.');
   const at=this.now(),end=Date.parse(item.deadlineAt||'');
@@ -216,7 +227,7 @@ class OfflineRuntime extends EventTarget{
   if(!this.active||this.busy||!this.pending||performance.now()<this.retryAt||this.record.review)return;
   if(mini&&globalThis.navigator?.onLine===false)return;
   const run=this.record;this.busy=true;
-  try{while(this.pending){const op=clone(this.record.operations[0]);this.inFlight=op.operationId;
+  try{while(this.pending&&this.record.operations[0].operationId!==this.pendingInterruptionId){const op=clone(this.record.operations[0]);this.inFlight=op.operationId;
    const status=await this.post('/offline/status',{...this.scope,operationId:op.operationId});
    if(this.record!==run||!this.owned)return;
    const result=status.persisted?status:await this.post('/offline/operation',op),r=result.receipt;

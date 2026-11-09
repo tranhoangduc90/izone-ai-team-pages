@@ -639,6 +639,45 @@
     setStage('section-ready'); panel.hidden = false;
   }
 
+  function showListeningInterruption() {
+    if (!offline?.record.sections.listening?.interrupted || offline.record.listeningInterruptionAcknowledged
+      || document.getElementById('term1ListeningInterrupted')) return;
+    const dialog = document.createElement('dialog');
+    dialog.id = 'term1ListeningInterrupted';
+    dialog.className = 'cbt-identity-confirm';
+    dialog.setAttribute('aria-label', 'Listening gián đoạn');
+    const message = document.createElement('p');
+    message.textContent = 'Bài thi listening cần được nghe liền mạch không trục trặc để đánh giá đúng năng lực thí sinh. Khi bạn không nghe được âm thanh, bạn không nên tiếp tục listening. Hãy tiếp tục làm kỹ năng tiếp theo, và sau buổi thi hãy liên hệ giảng viên để được nhận bài Listening thay thế.';
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button-primary';
+    button.textContent = 'Tôi đã hiểu. Đến phần thi tiếp theo.';
+    dialog.addEventListener('cancel', event => event.preventDefault());
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      offline.record.listeningInterruptionAcknowledged = true;
+      try { await offline.persist(true); }
+      catch {
+        delete offline.record.listeningInterruptionAcknowledged;
+        status.textContent = 'Chưa lưu được xác nhận trên thiết bị. Hãy thử lại.';
+        button.disabled = false;
+        return;
+      }
+      const response = offline.sectionResponse();
+      Object.assign(state, response);
+      saveSession();
+      dialog.close();
+      dialog.remove();
+      if (response.nextSection === 'reading') showSectionReady('reading');
+      else setStage('writing-prep');
+    });
+    dialog.append(message, status, button);
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
   function setStage(stage) {
     elements.studentSelect.disabled = Boolean(state.studentRef && (state.attemptToken || state.examSessionToken
       || state.listeningStartedAt || state.listeningDeadlineAt));
@@ -2626,6 +2665,8 @@
       const grading = payload.writing?.grading;
       if (payload.writing?.submitted && !grading?.ready) {
         showNotice(writingGradingNotice(grading), 'success');
+      } else if (state.listeningInterrupted) {
+        showNotice('Listening bị gián đoạn. Hãy liên hệ giảng viên để nhận bài Listening thay thế.');
       } else {
         showNotice(portalNotice(payload.portalSyncStatus, payload.completed), ['unknown', 'processing', 'pending', 'queued', 'failed_response'].includes(payload.portalSyncStatus) ? '' : 'success');
       }
@@ -2685,7 +2726,7 @@
 
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
-    if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
+    if (state.listeningSubmitted || offline?.record.sections.listening?.interrupted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
       showNotice('Hãy chọn đúng họ và tên trước khi nộp Listening.', 'error');
@@ -2897,7 +2938,7 @@
       saveSession();
       submitted = true;
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
-      if (!state.completed) {
+      if (!state.completed && !response.listeningInterrupted) {
         showNotice(response.localOnly?offline.message:'Reading đã được lưu và khóa. Tiếp theo là Listening.', response.localOnly?'':'success');
         if (document.body.classList.contains('cbt-mode')) { window.TERM_TEST_ALLOW_NAVIGATION = true; window.location.reload(); }
         else showSectionReady('listening');
@@ -3400,6 +3441,8 @@
     if(skill==='result')setStage('result-ready');
     else if(skill==='writing')setStage(state.writingStarted?'writing':'writing-prep');
     else if(response[skill+'StartedAt'])setStage(skill);else showSectionReady(skill);
+    elements.listeningView.addEventListener('term-test:listening-interrupted', showListeningInterruption);
+    showListeningInterruption();
     offline.addEventListener('change', () => {
       const { notice } = elements;
       if (!notice.hidden && notice.hasAttribute('data-offline-status') && notice.textContent !== offline.message) {
