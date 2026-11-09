@@ -10,6 +10,12 @@ const validGrant = /^([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.[A-Za-z0-9_-
 const skill = ['listening', 'writing'].includes(document.body.dataset.term1Skill) ? document.body.dataset.term1Skill : 'reading';
 const listening = skill === 'listening';
 const transport = listening ? { audioTransport: 'r2-direct-v1' } : {};
+const volumeKey = 'term1-k56-skill-fallback:audio-volume';
+
+function savedVolume() {
+  try { return Math.min(1, Math.max(0.1, Number(localStorage.getItem(volumeKey)) || 1)); }
+  catch { return 1; }
+}
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -79,7 +85,7 @@ async function makeAudio(blob) {
 async function showListening(runtime) {
   if (!listening || runtime.record.sections.listening?.sealed) return enter(runtime);
   const blob = await runtime.audio();
-  async function begin(resuming = false, volume = 1) {
+  async function begin(resuming = false, volume = savedVolume()) {
     const audio = await makeAudio(blob);
     audio.volume = volume;
     document.body.append(audio);
@@ -100,24 +106,39 @@ async function showListening(runtime) {
   const panel = document.getElementById('skillAudioLobby');
   const previewButton = document.getElementById('skillPreview');
   const previewStatus = document.getElementById('skillPreviewStatus');
+  const previewStep = document.getElementById('skillPreviewStep');
   const start = document.getElementById('skillStart');
+  const startStep = document.getElementById('skillStartStep');
   const volume = document.getElementById('skillVolume');
   const preview = await makeAudio(blob);
+  volume.value = preview.volume = savedVolume();
   form.hidden = true;
   notice.hidden = true;
   document.querySelector('.cbt-lobby-badge').textContent = 'Phòng chờ Listening';
   document.getElementById('securePrepTitle').textContent = 'Kiểm tra âm thanh trước khi bắt đầu';
   document.querySelector('.cbt-lobby-header > p').textContent = 'Audio được tải đủ và kiểm tra trước khi bạn bấm Bắt đầu.';
   panel.hidden = false;
-  let playbackStarted = 0;
-  volume.addEventListener('input', () => { preview.volume = Number(volume.value); });
+  volume.addEventListener('input', () => {
+    preview.volume = Number(volume.value);
+    try { localStorage.setItem(volumeKey, volume.value); } catch {}
+  });
   previewButton.addEventListener('click', async () => {
     if (!preview.paused) { preview.pause(); return; }
     preview.currentTime = 0;
-    playbackStarted = performance.now();
-    try { await preview.play(); } catch (error) { showError(error); }
+    try {
+      await preview.play();
+      previewButton.textContent = 'Dừng nghe thử';
+      previewStep.dataset.state = 'complete';
+      startStep.dataset.state = 'active';
+      start.disabled = false;
+      window.IZONE_CBT_AUDIO_START_LABEL(start, true);
+      previewStatus.textContent = 'Đang nghe thử · tối đa 30 giây.';
+      runtime.observe('listening_preview_playing', { playbackRate: preview.playbackRate, volume: preview.volume });
+    } catch (error) {
+      previewStatus.textContent = 'Trình duyệt chưa cho phát. Hãy nhấn lại nút nghe thử.';
+      runtime.observe('listening_preview_failed', { errorCode: error.name });
+    }
   });
-  preview.addEventListener('play', () => { previewButton.textContent = 'Dừng nghe thử'; });
   preview.addEventListener('pause', () => {
     previewButton.textContent = 'Nghe lại 30 giây đầu';
     previewStatus.textContent = preview.currentTime >= 30 ? 'Đã nghe đủ 30 giây. Bạn có thể bắt đầu thi.' : 'Đã dừng nghe thử.';
@@ -127,17 +148,17 @@ async function showListening(runtime) {
       previewStatus.textContent = 'Đang nghe thử · 00:' + String(Math.floor(preview.currentTime)).padStart(2, '0') + ' / 00:30';
     }
     if (preview.currentTime >= 30) preview.pause();
-    if (preview.currentTime >= 10 && performance.now() - playbackStarted >= 10000) {
-      start.disabled = false;
-      previewButton.closest('.cbt-lobby-step').dataset.state = 'complete';
-      start.closest('.cbt-lobby-step').dataset.state = 'active';
-    }
   });
   start.addEventListener('click', async () => {
     start.disabled = true;
+    start.textContent = 'Đang mở đề và audio...';
     preview.pause();
     try { await begin(false, Number(volume.value)); URL.revokeObjectURL(preview.src); }
-    catch (error) { start.disabled = false; showError(error); }
+    catch (error) {
+      start.disabled = false;
+      window.IZONE_CBT_AUDIO_START_LABEL(start, true);
+      showError(error);
+    }
   });
 }
 
@@ -161,9 +182,12 @@ async function initializeRoster() {
   await store.open();
   const lastKey = 'roster-last:' + skill;
   const remembered = await store.get(lastKey);
+  const sharedLastKey = 'roster-last';
+  const sharedRemembered = await store.get(sharedLastKey);
   const helper = document.querySelector('.cbt-lobby-header > p');
   helper.textContent = 'Chọn lớp và họ tên để vào bài.';
-  if (!classCode && remembered?.classCode) classCode = remembered.classCode;
+  if (!classCode) classCode = remembered?.classCode || sharedRemembered?.classCode || '';
+  const candidate = remembered?.classCode === classCode ? remembered : sharedRemembered;
   const chooseClass = code => {
     query.set('class', code);
     location.assign(location.pathname + '?' + query);
@@ -220,8 +244,8 @@ async function initializeRoster() {
   const students = Array.isArray(body.students) ? body.students : [];
   studentSelect.required = true;
   studentSelect.replaceChildren(new Option('Chọn họ và tên', ''), ...students.map(student => new Option(student.name, student.ref)));
-  if (remembered?.classCode === classCode && students.some(student => student.ref === remembered.studentRef))
-    studentSelect.value = remembered.studentRef;
+  if (candidate?.classCode === classCode && students.some(student => student.ref === candidate.studentRef))
+    studentSelect.value = candidate.studentRef;
   if (!students.length) throw Error('Lớp chưa có danh sách học viên cho bài này.');
   form.hidden = false;
   notice.hidden = true;
@@ -243,7 +267,9 @@ async function initializeRoster() {
         return created;
       };
       const entry = navigator.locks ? await navigator.locks.request(key, getEntry) : await getEntry();
-      await store.put(lastKey, { classCode, studentRef });
+      const selection = { classCode, studentRef };
+      await store.put(lastKey, selection);
+      await store.put(sharedLastKey, selection).catch(() => {});
       classPicker.hidden = true;
       form.hidden = true;
       notice.hidden = false;

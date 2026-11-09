@@ -70,20 +70,59 @@ test('Listening dự phòng · ' + (full ? 'audio thật đủ giờ 1×' : 'kh�
   await capture('login');
   await chooseFallbackLearner(page, studentRef);
   await page.locator('#skillPreview').waitFor({ state: 'visible', timeout: 30000 });
+  if (!full) {
+    for (const skill of ['reading', 'writing']) {
+      const next = await browser.context.newPage();
+      try {
+        await next.goto(new URL('../term-test-1-k56-' + skill + '-fallback/', browser.url).href);
+        const select = next.getByRole('combobox', { name: 'Họ và tên' });
+        await select.waitFor();
+        assert.equal(await select.inputValue(), studentRef);
+        assert.equal(await next.getByRole('textbox', { name: 'Mã lớp' }).inputValue(), 'IC5601');
+      } finally { await next.close(); }
+    }
+    await page.locator('#skillVolume').fill('0.6');
+    await browser.context.setOffline(true);
+    await page.goto(link.href);
+    await page.locator('#skillPreview').waitFor({ state: 'visible', timeout: 30000 });
+    assert.equal(await page.locator('#skillVolume').inputValue(), '0.6');
+    await browser.context.setOffline(false);
+    await page.evaluate(() => {
+      const play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        HTMLMediaElement.prototype.play = play;
+        return Promise.reject(new DOMException('Fixture blocked playback', 'NotAllowedError'));
+      };
+    });
+    await page.click('#skillPreview');
+    await page.getByText('Trình duyệt chưa cho phát. Hãy nhấn lại nút nghe thử.').waitFor();
+    assert.equal(await page.locator('#skillStart').isDisabled(), true);
+  }
   await capture('preview');
   assert.equal(await page.locator('#skillStart').isDisabled(), true);
   await page.click('#skillPreview');
-  await page.locator('#skillStart:enabled').waitFor({ state: 'visible', timeout: 20000 });
+  await page.locator('#skillStart:enabled').waitFor({ state: 'visible', timeout: 3000 });
+  assert.match(await page.locator('#skillStart').innerText(), /Âm thanh đã vừa tai\s+Bắt đầu thi/);
+  assert.equal(await page.locator('#listeningView').count(), 0);
+  assert.equal(await page.locator('#skillPreviewStep').getAttribute('data-state'), 'complete');
+  assert.equal(await page.locator('#skillStartStep').getAttribute('data-state'), 'active');
   assert.equal(await page.locator('#securePrepTitle').textContent(), 'Kiểm tra âm thanh trước khi bắt đầu');
   assert.match(await page.locator('#skillPreviewStatus').textContent(), /Đang nghe thử/);
   await capture('ready');
+  if (!full) {
+    await page.click('#skillPreview');
+    assert.equal(await page.locator('#skillStart').isEnabled(), true);
+    await page.getByRole('button', { name: 'Nghe lại 30 giây đầu' }).waitFor();
+  }
   assert.ok(browser.controls.audioCalls.some(url => url.includes('r2.cloudflarestorage.com')));
   if (!full) assert.ok(browser.controls.audioCalls.some(url => url.includes('github.io')));
   await page.click('#skillStart');
   await wait(page, () => window.K56_TERM1_OFFLINE?.player?.currentTime >= 2, 'Audio đã phát thật');
   const started = await page.evaluate(() => ({ rate: window.K56_TERM1_OFFLINE.player.playbackRate, duration: window.K56_TERM1_OFFLINE.player.duration,
+    volume: window.K56_TERM1_OFFLINE.player.volume,
     at: Date.parse(window.K56_TERM1_OFFLINE.record.sections.listening.startedAt) }));
   assert.equal(started.rate, 1);
+  assert.equal(started.volume, full ? 1 : 0.6);
   assert.ok(Math.abs(started.duration - 1848) < 2);
   await capture('exam');
   if (!full) {
