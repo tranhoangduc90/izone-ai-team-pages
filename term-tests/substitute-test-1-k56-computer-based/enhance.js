@@ -676,6 +676,7 @@
   function setupBufferedAudio(listeningForm) {
     if (!listeningForm) return;
     const protectedBootstrap = window.TERM_TEST_BOOTSTRAP || null;
+    const continuity=protectedBootstrap?.listeningContinuityVersion===1;
     const preparedVolume = Number(protectedBootstrap?.audioVolume);
     if (Number.isFinite(preparedVolume) && preparedVolume >= 0.1 && preparedVolume <= 1) {
       uiState.audio.volume = preparedVolume;
@@ -806,18 +807,28 @@
     examVolume.classList.remove('cbt-lobby-volume');
     const examVolumeInput = examVolume.querySelector('input');
     examVolumeInput.disabled = false;
-    examControls.append(resumeButton, examRetryButton, playbackProgress, examVolume);
+    const cannotHear=makeButton('cbt-audio-cannot-hear','Tôi không nghe được');
+    cannotHear.hidden=!continuity||protectedBootstrap?.continuityReview===true;
+    if(continuity)examControls.append(playbackProgress,examVolume,cannotHear);
+    else examControls.append(resumeButton,examRetryButton,playbackProgress,examVolume);
     examCard.append(examCopy, examControls);
     listeningForm.source.toolbar.append(examCard);
 
-    const audio = protectedBootstrap?.officialAudioElement || document.createElement('audio');
+    const audio = protectedBootstrap?.officialAudioElement || protectedBootstrap?.preparedListeningPlayer || document.createElement('audio');
+    audio.controls=false;
+    cannotHear.addEventListener('click',()=>{
+      if(!continuity||!examStarted||audio.ended||cannotHear.disabled)return;
+      cannotHear.disabled=true;
+      window.dispatchEvent(new CustomEvent('substitute:listening-cannot-hear',{detail:{audio}}));
+    });
     audio.preload = 'auto';
     audio.volume = uiState.audio.volume;
     audio.hidden = true;
     lobby.append(audio);
 
     let lastSavedSecond = Math.floor(uiState.audio.time);
-    let examStarted = Boolean(protectedBootstrap?.officialAudioElement || uiState.audio.started);
+    let examStarted = Boolean(protectedBootstrap?.officialAudioElement || (continuity
+      ?protectedBootstrap.continuityReview:uiState.audio.started));
     let previewHeard = false;
     let previewing = false;
     let ready = false;
@@ -926,7 +937,7 @@
     }
 
     function restoreOfficialTime() {
-      if (protectedBootstrap?.officialAudioElement || !examStarted || !Number.isFinite(audio.duration)) return;
+      if (continuity || protectedBootstrap?.officialAudioElement || !examStarted || !Number.isFinite(audio.duration)) return;
       const safeTime = Math.min(Math.max(0, uiState.audio.time), Math.max(0, audio.duration - 1));
       audio.currentTime = safeTime;
     }
@@ -983,7 +994,7 @@
     }
 
     async function recoverInterruptedAudio(trigger, force = false) {
-      if (!examStarted || !ready || audio.ended || allowPause || examCard.hidden || recoveryInFlight) return;
+      if (continuity || !examStarted || !ready || audio.ended || allowPause || examCard.hidden || recoveryInFlight) return;
       const now = Date.now();
       if (!force && now - lastRecoveryAttemptAt < 750) return;
       lastRecoveryAttemptAt = now;
@@ -1052,6 +1063,7 @@
       }
       if (!examStarted) return;
       updateExamStatus(audio.paused ? 'Audio đang bị gián đoạn' : 'Đang phát bài thi');
+      if(continuity)return;
       rememberActualHeardPosition();
       if (audio.currentTime > lastObservedAudioTime + 0.05) { lastObservedAudioTime = audio.currentTime; lastAudioAdvanceAt = performance.now(); }
       reportAudioProgress('playing').catch(() => null);
@@ -1064,13 +1076,15 @@
         return;
       }
       if (protectedBootstrap?.examSessionId && !window.SUBSTITUTE_EXAM?.validAudioEnd(audio, protectedBootstrap)) {
+        if(continuity){examStatus.textContent='Audio dừng trước khi nghe đủ. Nếu bạn không nghe được, hãy báo sự cố.';return;}
         examRetryButton.hidden = false;
         updateExamStatus('Audio dừng trước khi nghe đủ · nhấn Khôi phục audio');
         saveUiState();
         return;
       }
-      uiState.audio.time = audio.duration || uiState.audio.time;
+      if(!continuity)uiState.audio.time = audio.duration || uiState.audio.time;
       window.SUBSTITUTE_EXAM?.ended(audio, undefined, protectedBootstrap);
+      cannotHear.hidden=true;
       resumeButton.hidden = true;
       updateExamStatus('Đã phát xong');
       saveUiState();
@@ -1079,7 +1093,7 @@
       if (!examStarted || audio.ended || allowPause || examCard.hidden) return;
       recoverInterruptedAudio('pause');
     });
-    audio.addEventListener('waiting', () => window.setTimeout(() => {
+    if(!continuity)audio.addEventListener('waiting', () => window.setTimeout(() => {
       if (performance.now() - lastAudioAdvanceAt >= 1200) recoverInterruptedAudio('waiting');
     }, 1250));
     audio.addEventListener('stalled', () => recoverInterruptedAudio('stalled'));
@@ -1087,6 +1101,7 @@
       if (!ready) {
         failDownload('File audio tải xong nhưng trình duyệt không đọc được. Hãy nhấn “Tải lại audio”.');
       } else if (examStarted) {
+        if(continuity){examStatus.textContent='Không thể phát audio. Nếu bạn không nghe được, hãy báo sự cố.';return;}
         examStatus.textContent = 'Không thể phát audio. Hãy nhấn “Khôi phục audio”.';
         examRetryButton.hidden = false;
       } else {
@@ -1195,11 +1210,12 @@
         return;
       }
       allowPause = true;
-      audio.pause();
+      if(!continuity)audio.pause();
       previewing = false;
-      const officialTime = examStarted ? uiState.audio.time : 0;
-      audio.currentTime = Math.min(Math.max(0, officialTime), Math.max(0, (audio.duration || 1) - 1));
+      const officialTime = !continuity&&examStarted ? uiState.audio.time : 0;
+      if(!continuity)audio.currentTime = Math.min(Math.max(0, officialTime), Math.max(0, (audio.duration || 1) - 1));
       let playBlocked = false;
+      const startClicked=performance.now();
       try {
         if(protectedBootstrap?.examSessionId&&protectedBootstrap.examOrder==='reading-first'
           &&!protectedBootstrap.listeningStartedAt)await window.SUBSTITUTE_EXAM.startListeningPhase();
@@ -1207,9 +1223,12 @@
           playBlocked = error?.name === 'NotAllowedError';
           throw error;
         });
+        if(continuity)window.dispatchEvent(new CustomEvent('substitute:listening-observed',{
+          detail:{phase:'started',elapsedMs:performance.now()-startClicked}
+        }));
         examStarted = true;
         uiState.audio.started = true;
-        uiState.audio.time = audio.currentTime;
+        if(!continuity)uiState.audio.time = audio.currentTime;
         lastSavedSecond = Math.floor(audio.currentTime);
         allowPause = false;
         lockStudentSelection();
@@ -1246,36 +1265,55 @@
     if (studentSelect) {
       new MutationObserver(updateStartAvailability).observe(studentSelect, { childList: true });
     }
+    listeningForm.form.addEventListener('term-test:listening-early-confirmed',()=>{
+      if(!continuity)return;
+      cannotHear.disabled=true;audio.pause();
+    });
+    listeningForm.form.addEventListener('term-test:listening-interrupted',()=>{cannotHear.disabled=true;});
     listeningForm.form.addEventListener('term-test:listening-submitted', () => {
       allowPause = true;
       window.clearInterval(audioWatchdog);
-      audio.pause();
-      if (examStarted) rememberActualHeardPosition(true);
+      if(!continuity){
+        audio.pause();
+        if (examStarted) rememberActualHeardPosition(true);
+      }
     });
     window.addEventListener('pagehide', () => {
       allowPause = true;
       window.clearInterval(audioWatchdog);
-      if (examStarted) { rememberActualHeardPosition(true); reportAudioProgress('pagehide', true).catch(() => null); }
+      if (!continuity&&examStarted) { rememberActualHeardPosition(true); reportAudioProgress('pagehide', true).catch(() => null); }
       downloadController?.abort();
       revokeAudioUrl();
     });
 
-    if (protectedBootstrap?.officialAudioElement) {
+    if(protectedBootstrap?.continuityReview){
+      ready=true;
+      lockStudentSelection();
+      setListeningVisible(true);
+      examStatus.textContent='Audio đã phát xong. Bạn có thể rà đáp án đến hết giờ.';
+    }else if (protectedBootstrap?.officialAudioElement) {
       ready = true;
       uiState.audio.started = true;
-      uiState.audio.time = audio.currentTime || 0;
+      if(!continuity)uiState.audio.time = audio.currentTime || 0;
       lockStudentSelection();
       setListeningVisible(true);
       updateExamStatus(audio.ended ? 'Đã phát xong' : 'Đang phát bài thi');
       saveUiState();
     } else {
       setListeningVisible(false);
-      if(protectedBootstrap?.preloadedAudioBlob instanceof Blob){
+      if(continuity&&protectedBootstrap?.preparedListeningPlayer){
+        ready=true;previewHeard=true;
+        downloadProgress.value=1;downloadStatus.textContent='Trình phát đã sẵn sàng.';
+        setStepState(downloadStep.step,'complete');setStepState(previewStep.step,'complete');
+        setStepState(startStep.step,'active');previewButton.hidden=true;volumeInput.disabled=false;
+        previewStatus.textContent='Đã nghe thử ở phòng chờ.';
+        updateStartAvailability();
+      }else if(protectedBootstrap?.preloadedAudioBlob instanceof Blob){
         objectUrl=URL.createObjectURL(protectedBootstrap.preloadedAudioBlob);
         audio.src=objectUrl;audio.load();
       }else downloadFullAudio();
     }
-    audioWatchdog = window.setInterval(() => {
+    if(!continuity)audioWatchdog = window.setInterval(() => {
       if (!examStarted || !ready || audio.ended || allowPause || examCard.hidden) return;
       const current = Number(audio.currentTime) || 0;
       if (current > lastObservedAudioTime + 0.05) { lastObservedAudioTime = current; lastAudioAdvanceAt = performance.now(); return; }
@@ -1317,10 +1355,14 @@
     function render() {
       if(window.SUBSTITUTE_STATE?.blocked){window.clearInterval(intervalId);return;}
       const exam = readExamState();
-      const deadline = Date.parse(exam.listeningDeadlineAt || '');
+      const owner=window.TERM_TEST_BOOTSTRAP;
+      const deadline=Date.parse(exam.listeningDeadlineAt||owner?.listeningDeadlineAt||'');
       if (!Number.isFinite(deadline)) return;
-      const serverOffset = Number(exam.serverTimeOffsetMs) || 0;
-      const remaining = Math.max(0, deadline - (window.IZONE_EXAM_CLOCK?.now(serverOffset) ?? (Date.now() + serverOffset)));
+      const serverOffset=Number(exam.serverTimeOffsetMs??owner?.serverTimeOffsetMs)||0;
+      const clock=window.IZONE_EXAM_CLOCK;
+      // The locally durable EOF anchors this review even if the live clock cannot reconnect.
+      const now=owner?.listeningContinuityVersion===1?clock?.estimate(serverOffset):clock?.now(serverOffset);
+      const remaining=Math.max(0,deadline-(now??Date.now()+serverOffset));
       if (!Number.isFinite(remaining)) return;
       if(window.TERM_TEST_BOOTSTRAP?.examSessionId){
         transferClock.hidden=false;const seconds=Math.ceil(remaining/1000);
@@ -1332,6 +1374,7 @@
     render();
     intervalId = window.setInterval(render, 1000);
     listeningForm.form.addEventListener('term-test:listening-submitted', () => window.clearInterval(intervalId));
+    listeningForm.form.addEventListener('term-test:listening-interrupted', () => window.clearInterval(intervalId));
     window.addEventListener('pagehide', () => window.clearInterval(intervalId));
   }
 

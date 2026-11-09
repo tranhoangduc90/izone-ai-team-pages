@@ -1,3 +1,4 @@
+import {createListeningOutbox} from '../substitute-shared/listening-outbox.mjs?v=20261110-continuity-v1';
 import {makeSubstituteBackup} from '../substitute-shared/backup-export.mjs';
 const DB_NAME='izone-substitute-test-2-k56-offline-v1';
 const AUDIO_SHA='45ec0f67301ab0efc16fcf2e5206b23d760a1253badf8d296907c3bfb3f4ef5c';
@@ -87,11 +88,14 @@ export async function cachedStudents(identity){
    return [{ref,name:row.value.studentName||ref}];
   });
 }
-export async function saveAudio(identity,blob){
- const scope=normalizeScope(identity);
+export async function verifyAudio(blob){
  if(!(blob instanceof Blob)||blob.size!==AUDIO_BYTES)throw Error('OFFLINE_AUDIO_SIZE_MISMATCH');
  const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),b=>b.toString(16).padStart(2,'0')).join('');
  if(digest!==AUDIO_SHA)throw Error('OFFLINE_AUDIO_HASH_MISMATCH');
+ return digest;
+}
+export async function saveAudio(identity,blob){
+ const scope=normalizeScope(identity),digest=await verifyAudio(blob);
  await put('assets',{key:key(scope,'audio'),scope,sha256:digest,bytes:blob.size,blob,updatedAt:Date.now()});
  return {sha256:digest,bytes:blob.size};
 }
@@ -101,14 +105,10 @@ export async function loadAudio(identity){
  const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await row.blob.arrayBuffer())),b=>b.toString(16).padStart(2,'0')).join('');
  return digest===AUDIO_SHA?row.blob:null;
 }
-export async function queueSection(identity,skill,answers){
- const scope=normalizeScope(identity);
- if(!['reading','listening'].includes(skill))throw Error('OFFLINE_SKILL_INVALID');
- const payload=JSON.parse(JSON.stringify(answers));
- const itemKey=key(scope,'section:'+skill),old=await get('outbox',itemKey);
- if(old){if(JSON.stringify(old.answers)!==JSON.stringify(payload))throw Error('OFFLINE_SUBMISSION_CONFLICT');return old;}
- return put('outbox',{key:itemKey,scope,skill,answers:payload,status:'pending',queuedAt:Date.now()});
-}
+export const {queueSection,listeningOutcome,recordListeningEof,acknowledgeListeningEof,
+ queueListeningInterruption,acknowledgeListeningInterruption}=createListeningOutbox({
+ database,transactionDone,requestResult,normalizeScope,key,uuid
+});
 async function allSections(identity){
  const scope=normalizeScope(identity),db=await database(),transaction=db.transaction('outbox','readonly');
  const rows=await requestResult(transaction.objectStore('outbox').getAll());await transactionDone(transaction);

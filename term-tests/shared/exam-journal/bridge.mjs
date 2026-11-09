@@ -314,6 +314,24 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       const action=mini?'mini_listening_diagnostic':'term_k56_listening_diagnostic';
       return Boolean(recorder.record('audio_observed',{action,...measurements,...requestId?{requestId}:{},checkpointState:metadata},current));
     },
+    recordSubstituteListening(owner,detail) {
+      if(stopped||!current||!/^substitute-test-[12]-k(?:56|67)$/.test(testSlug)
+        ||owner?.listeningContinuityVersion!==1||owner!==win.TERM_TEST_BOOTSTRAP)return false;
+      const proof=proofOf(getState()),context=bindingCache.get(ownerKey);
+      if(proof.clientRunId!==owner.clientRunId||proof.examSessionId!==owner.examSessionId
+        ||JSON.stringify(proof)!==ownerKey||context?.identityConfirmed!==true||context.bindingId!==current.bindingId)return false;
+      const phases=['player_ready','started','early_confirmed','interrupted_local','interrupted_ack','submission_local','submission_ack'];
+      if(!phases.includes(detail?.phase))return false;
+      const metadata={telemetryVersion:1,phase:detail.phase,assetId:testSlug};
+      if(typeof detail.elapsedMs==='number'&&detail.elapsedMs>=0&&detail.elapsedMs<=120_000)
+        metadata.elapsedMs=Math.round(detail.elapsedMs);
+      if(['learner_report','reload'].includes(detail.reason))metadata.reason=detail.reason;
+      if(typeof detail.operationId==='string'&&/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(detail.operationId))
+        metadata.operationId=detail.operationId;
+      const measures={};
+      if(listeningEndNumber(detail.positionSeconds))measures.positionSeconds=detail.positionSeconds;
+      return Boolean(recorder.record('audio_observed',{action:'substitute_listening_continuity',...measures,checkpointState:metadata},current));
+    },
     recordListeningEnd(owner,data) {
       if(stopped||!current||!owner?.examSessionId||owner!==win.TERM_TEST_BOOTSTRAP)return false;
       const state=getState(),proof=proofOf(state),context=bindingCache.get(ownerKey),detail=data?.checkpointState;
