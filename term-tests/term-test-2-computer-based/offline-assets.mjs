@@ -173,7 +173,7 @@ export const ASSET_HASHES={
   "../k67-shared/offline-journey-ui.mjs": "e1d7e5db216c7cb54ebecd7f2053a5ca3bcef9ed326d6b2e28037eb4eb2f3591",
   "../k67-shared/public-audio.js": "9276d58ce2fe43c10b283c4bde9f329562c61d792f591fed35044ebe34fddf16",
   "../k67-shared/review-audio.js": "a6f0230c2d1650b9b630348992d0f14a8264a421b5a3d96232e719ab3811bedd",
-  "../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs": "f6a86e1335a43d95d6b3a6cb517bd04f2a4de798baac389198427fe1648e279f",
+  "../mini-test-lesson-5-computer-based/journey-terms-cbt.mjs": "fa76413a7062a9e133fb9c54b13855d670b61c15c6da9b636b22b04943397655",
   "../mini-test-lesson-5-computer-based/journey.mjs": "e6bdb3be01b65f1acd43e40ab29e4806c7f3759860a17b5f8d0381a4ce6dae1e",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
@@ -205,14 +205,14 @@ export const ASSET_HASHES={
   "../teacher/styles.css": "5066f0113be078d161ca72fade27882d46bf657b6e0221d5b5109440a31096a7",
   "../term-test-2/test-config.js": "3d14318c6977c4f00a328c32a2ecfddc809f9bffe52754debcf21690f97afee8",
   "audio-loader.js": "d93199791c837a26864b7737c27ba6500c1f1bb5c2d7e6f1e17f328346269e5f",
-  "bootstrap-terms-cbt.js": "c8149c1cd8257d4fd970e2d5a163dca5f4c0068e3ef54964524ffda03eb90441",
-  "bootstrap.js": "a6689ad390198e01e098e7f8d4094114b47bcd63bc0c74a88681c1bd606c5f79",
+  "bootstrap-terms-cbt.js": "90286deeb79baf37bb63daaa648b35c9912c0ff8564ee83b37740094d67f19d4",
+  "bootstrap.js": "7e5a284b7a815e1a7f94f9be9a9c3940c23c60dcdd5fd9c71144e1d8b85b24a7",
   "enhance-terms-cbt.js": "456ed5aa3a11497ca1e32338108bc31c9ce7996f182dc2ce8a533e95dce82424",
   "enhance.js": "b2fa19b00fb7f2615207a4b3a03deb8baae8d258a8d2abec26be39d3b3fc7883",
-  "index.html": "d6ac7dc21822cc9a2624cc9ce5c851b4a81804d7389bd05824001203f71fc2b8",
+  "index.html": "220eeb852e1eaaad2ab216d806c88eec7a07f4df253be29ea5b847122b1acfb2",
   "interaction-tools.js": "0f76f187b2d803c1796ee400751ccdf691f1e739cb9450afa3686da3828b0f5f",
   "journey-ui.css": "b988e07bfaa1ca5a9a7a8e13381be583c4c12c723ae0a2f3a4783028ed85bfb0",
-  "offline-worker.js": "fdd7d647c8cfe5ad4a7401de6c8333c18c8a5da304cc7453525457428547d62f",
+  "offline-worker.js": "f716466d05cef42b47aa6ae8c1af7fbd144614de43b612765c774796a0c0752f",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="eb47d7c83aeb89e498a2793f3b83fac878ab4079291476b36dbfde41d419daf7";
+export const ASSET_BUILD_ID="292099063796285f800125881666bcc723353ac649e449bdd58ceb56ec20096a";
