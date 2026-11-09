@@ -28,11 +28,32 @@ let googleStarted=false;
 let loginGeneration = 0;
 const landingQuery = new URLSearchParams(location.search);
 let examMode = landingQuery.get('mode') === 'read_first' ? 'read_first' : 'lis_first';
+const testChoices = [...document.querySelectorAll('[data-test]')];
+const rescueChoices = [...document.querySelectorAll('[data-case]')];
+const openExam = document.getElementById('openExam');
+const heading = document.getElementById('chosenName');
+const rescue = document.getElementById('rescue');
+const rescueDetail = document.getElementById('rescueDetail');
+const rescueLinks = document.getElementById('rescueLinks');
+let selectedTest = testChoices.find(button => button.dataset.slug === landingQuery.get('test'));
+let opening;
+
+function cancelOpening() {
+  if (!opening) return;
+  opening.controller.abort();
+  classHelp.textContent = opening.previousHelp;
+  opening = undefined;
+  openExam.disabled = false;
+}
+
 function updateLandingUrl() {
   landingQuery.set('mode', examMode);
   const classCode = selectedClassCode();
   if (validClassCode(classCode)) landingQuery.set('class', classCode);
   else landingQuery.delete('class');
+  if (selectedTest) landingQuery.set('test', selectedTest.dataset.slug);
+  else landingQuery.delete('test');
+  if (opening && (opening.classCode !== classCode || opening.mode !== examMode)) cancelOpening();
   try{window.history.replaceState(window.history.state, '', `?${landingQuery.toString()}`);}catch{/* URL không được chặn xử lý bài hoặc màn đang xem. */}
 }
 function testLink(destination, classCode) {
@@ -57,14 +78,6 @@ document.querySelectorAll('[data-mode]').forEach(button => {
     });
   });
 });
-function selectLandingButton(selectedButton) {
-  document.querySelectorAll('.landing-choice').forEach(button => {
-    const selected = button === selectedButton;
-    button.classList?.toggle('is-selected', selected);
-    button.setAttribute?.('aria-pressed', String(selected));
-  });
-}
-
 function selectedClassCode() {
   const value = classSelect.hidden ? input.value : classSelect.value;
   const normalized = String(value || '').trim().toUpperCase();
@@ -145,6 +158,7 @@ async function loadAuthorizedClasses() {
 }
 
 function resetLogin() {
+  cancelOpening();
   loginGeneration += 1;
   authenticatedApiUrls.clear();
   showManualEntry();
@@ -213,55 +227,113 @@ function setupGoogleSignIn() {
   document.head.append(script);
 }
 
-document.querySelectorAll('[data-test]').forEach(button => {
-  button.addEventListener('click', async () => {
-    selectLandingButton(button);
-    const classCode = selectedClassCode();
-    if (!validClassCode(classCode)) {
-      input.setCustomValidity('Hãy nhập hoặc chọn mã lớp hợp lệ.');
-      input.reportValidity();
-      return;
-    }
-    input.setCustomValidity('');
-    const slug = button.dataset.slug;
-    button.disabled = true;
-    classHelp.textContent = 'Đang kiểm tra danh sách học viên của lớp...';
-    try {
-      const apiBaseUrl = appConfig.API_FOR_CLASS(classCode);
-      const response = await fetch(
-        `${apiBaseUrl}/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(slug)}`,
-        { cache: 'no-store', signal: AbortSignal.timeout(15000) }
-      );
-      const payload = await response.json();
-      if (!response.ok || !payload.ok) throw new Error(payload.message || 'Lớp này chưa được mở bài test trên hệ thống K56.');
-      if (!Array.isArray(payload.students) || !payload.students.length) throw new Error('Lớp chưa có danh sách học viên cho bài test này.');
-      updateLandingUrl();
-      window.location.href = testLink(button.dataset.test, classCode);
-    } catch (error) {
-      classHelp.textContent = `Không mở được bài test: ${error.message}`;
-    } finally { button.disabled = false; }
-  });
+function requireClass() {
+  const classCode = selectedClassCode();
+  const control = classSelect.hidden ? input : classSelect;
+  control.setCustomValidity(validClassCode(classCode) ? '' : 'Hãy nhập hoặc chọn mã lớp hợp lệ.');
+  return control.reportValidity() ? classCode : '';
+}
+
+function renderTest() {
+  document.getElementById('testPicker').hidden = Boolean(selectedTest);
+  document.getElementById('testActions').hidden = !selectedTest;
+  document.getElementById(selectedTest ? 'pickStep' : 'actionStep').removeAttribute('aria-current');
+  document.getElementById(selectedTest ? 'actionStep' : 'pickStep').setAttribute('aria-current', 'step');
+  heading.textContent = selectedTest?.textContent || '';
+  rescue.open = false;
+  rescueDetail.hidden = true;
+  rescueLinks.replaceChildren();
+  for (const button of rescueChoices) button.setAttribute('aria-pressed', 'false');
+  rescueChoices.find(button => button.dataset.case === 'skill').hidden = selectedTest?.dataset.slug !== 'term-test-1-k56';
+}
+
+for (const button of testChoices) button.addEventListener('click', () => {
+  if (!requireClass()) return;
+  selectedTest = button;
+  renderTest();
+  updateLandingUrl();
+  heading.focus();
 });
 
-document.querySelectorAll('[data-destination]').forEach(button => {
-  button.addEventListener('click', () => {
-    selectLandingButton(button);
-    const classCode = selectedClassCode();
-    if (!validClassCode(classCode)) {
-      input.setCustomValidity('Hãy nhập hoặc chọn mã lớp hợp lệ.');
-      input.reportValidity();
-      return;
-    }
-    input.setCustomValidity('');
+document.getElementById('changeTest').addEventListener('click', () => {
+  cancelOpening();
+  const prior = selectedTest;
+  selectedTest = undefined;
+  renderTest();
+  updateLandingUrl();
+  prior.focus();
+});
+
+openExam.addEventListener('click', async () => {
+  const classCode = requireClass();
+  if (!classCode || !selectedTest || opening) return;
+  const { slug, test } = selectedTest.dataset;
+  const request = { classCode, mode: examMode, controller: new AbortController(), previousHelp: classHelp.textContent };
+  opening = request;
+  openExam.disabled = true;
+  classHelp.textContent = 'Đang kiểm tra danh sách học viên của lớp...';
+  try {
+    const apiBaseUrl = appConfig.API_FOR_CLASS(classCode);
+    const response = await fetch(
+      `${apiBaseUrl}/api/term-tests/roster?class=${encodeURIComponent(classCode)}&test=${encodeURIComponent(slug)}`,
+      { cache: 'no-store', signal: AbortSignal.any([request.controller.signal, AbortSignal.timeout(15000)]) }
+    );
+    const payload = await response.json();
+    if (opening !== request || selectedClassCode() !== classCode) return;
+    if (!response.ok || !payload.ok) throw new Error(payload.message || 'Lớp này chưa được mở bài test trên hệ thống K56.');
+    if (!Array.isArray(payload.students) || !payload.students.length) throw new Error('Lớp chưa có danh sách học viên cho bài test này.');
     updateLandingUrl();
-    window.location.href = testLink(button.dataset.destination, classCode);
+    window.location.href = testLink(test, classCode);
+  } catch (error) {
+    if (opening === request) classHelp.textContent = `Không mở được bài test: ${error.message}`;
+  } finally {
+    if (opening === request) {
+      opening = undefined;
+      openExam.disabled = false;
+    }
+  }
+});
+
+function rescueLink(label, destination) {
+  const button = document.createElement('button');
+  button.className = 'button button-secondary';
+  button.type = 'button';
+  button.textContent = label;
+  button.addEventListener('click', () => {
+    const classCode = requireClass();
+    if (!classCode) return;
+    cancelOpening();
+    updateLandingUrl();
+    window.location.href = testLink(destination, classCode);
   });
+  return button;
+}
+
+for (const button of rescueChoices) button.addEventListener('click', () => {
+  const kind = button.dataset.case;
+  const slug = selectedTest?.dataset.slug;
+  if (!slug || button.hidden) return;
+  for (const choice of rescueChoices) choice.setAttribute('aria-pressed', String(choice === button));
+  const help = document.getElementById('rescueHelp');
+  if (kind === 'skill') {
+    help.textContent = 'Gửi đúng link kỹ năng mà học viên cần làm.';
+    rescueLinks.replaceChildren(...['Listening', 'Reading', 'Writing'].map(skill =>
+      rescueLink(skill, slug + '-' + skill.toLowerCase() + '-fallback')));
+  } else {
+    const audio = kind === 'audio';
+    help.textContent = audio ? 'Mở nguồn audio của bài đang chọn.' : 'Mở phiếu trả lời theo thứ tự làm bài đang chọn.';
+    rescueLinks.replaceChildren(rescueLink((audio ? 'Audio ' : 'Answer Sheet ') + selectedTest.textContent, slug + (audio ? '-audio' : '')));
+  }
+  rescueDetail.hidden = false;
 });
 
 document.getElementById('teacherDashboard')?.addEventListener('click', () => {
+  cancelOpening();
   const classCode = selectedClassCode();
-  const query = validClassCode(classCode) ? `?class=${encodeURIComponent(classCode)}` : '';
-  window.location.href = `../teacher-k56/${query}`;
+  const query = new URLSearchParams();
+  if (validClassCode(classCode)) query.set('class', classCode);
+  if (selectedTest) query.set('test', selectedTest.dataset.slug);
+  window.location.href = `../teacher-k56/${query.size ? '?' + query : ''}`;
 });
 
 logoutButton.addEventListener('click', async () => {
@@ -276,10 +348,15 @@ const requestedClass = new URLSearchParams(location.search).get('class');
 const initialClass = String(requestedClass || '').trim().toUpperCase();
 input.value = validClassCode(initialClass) ? initialClass : '';
 showManualEntry();
+renderTest();
 updateLandingUrl();
 classSelect.addEventListener('change', () => {
   input.value = selectedClassCode();
   updateLandingUrl();
+});
+input.addEventListener('input', () => {
+  input.setCustomValidity('');
+  if (opening && input.value.trim().toUpperCase() !== opening.classCode) cancelOpening();
 });
 input.addEventListener('change', updateLandingUrl);
 async function restoreSessions(){

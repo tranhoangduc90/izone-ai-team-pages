@@ -17,7 +17,7 @@ test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo
     const target = resolve(root, `.${path.endsWith('/') ? path + 'index.html' : path}`);
     if (!target.startsWith(root + sep)) return res.writeHead(403).end();
     // Ranh giới test là điều hướng landing, không chạy lại toàn app thi ở mỗi link.
-    if (path.endsWith('-computer-based/')) {
+    if (/^\/term-tests\/(?:term-test-[12]-k56|mini-test-k56)(?:-computer-based|-audio|-(?:listening|reading|writing)-fallback)?\/$/.test(path)) {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       return res.end('<!doctype html><html><body><h1>Đích bài thi giả lập</h1></body></html>');
     }
@@ -70,7 +70,35 @@ test('Chromium desktop/mobile: khôi phục phiên không lóe Google, mở demo
           assert.equal(new URL(page.url()).searchParams.get('class'), 'IC2305');
           await select.selectOption(code);
           await page.locator(`[data-slug="${slug}"]`).click();
+          assert.equal(await page.locator('#rescue').evaluate(el => el.open), false);
+          await page.locator('#rescue summary').click();
+          assert.equal(await page.locator('[data-case=skill]').isVisible(), slug === 'term-test-1-k56');
+          await page.locator('#openExam').click();
           await page.waitForURL(`**/${slug}-computer-based/?class=${code}&mode=${mode}`);
+        }
+      }
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const mode of ['lis_first', 'read_first']) {
+      const code = 'IC2264';
+      for (const [slug, name] of [['term-test-1-k56', 'Term Test 1'], ['term-test-2-k56', 'Term Test 2'], ['mini-test-k56', 'Mini Test']]) {
+        const targets = [
+          ['audio', 'Audio ' + name, slug + '-audio', `class=${code}`],
+          ['sheet', 'Answer Sheet ' + name, slug, `class=${code}&mode=${mode}`]
+        ];
+        if (slug === 'term-test-1-k56') {
+          for (const skill of ['Listening', 'Reading', 'Writing']) {
+            targets.push(['skill', skill, slug + '-' + skill.toLowerCase() + '-fallback', `class=${code}&mode=${mode}`]);
+          }
+        }
+        for (const [kind, label, destination, query] of targets) {
+          await page.goto(`${base}/term-tests/k56-demo/?class=${code}&mode=${mode}`);
+          await page.locator('#classSelect').waitFor({ state: 'visible' });
+          await page.getByRole('button', { name, exact: true }).click();
+          await page.locator('#rescue summary').click();
+          await page.locator(`[data-case=${kind}]`).click();
+          await page.getByRole('button', { name: label, exact: true }).click();
+          await page.waitForURL(`${base}/term-tests/${destination}/?${query}`);
         }
       }
     }
