@@ -303,4 +303,4 @@ export const ASSET_HASHES={
   "offline.mjs": "eaad6811b24c1e5ccf4ccf46489e53317fee901864635e3269a8cae9cd86714b",
   "test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca"
 };
-export const ASSET_BUILD_ID="7c0f9d3c2e6d1815fa26b38dd44452dbac8a561029a7881f27ef4c9a12f3ac9d";
+export const ASSET_BUILD_ID="19f8c35ef0d620057cd2e1709fbf5afc46d3712323dfbb50e2eeabf76adb41cc";

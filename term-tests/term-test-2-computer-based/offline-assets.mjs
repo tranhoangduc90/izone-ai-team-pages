@@ -215,4 +215,4 @@ export const ASSET_HASHES={
   "offline-worker.js": "fdd7d647c8cfe5ad4a7401de6c8333c18c8a5da304cc7453525457428547d62f",
   "styles.css": "e98f6b6028f094b4c6a5e5dcfe1741989b6e69889b533956d88a0164fdf8c0a3"
 };
-export const ASSET_BUILD_ID="d1cb22e6baf57e562645a060fa6ae8351c8451c3faf9f6846d61127d9d1a0baa";
+export const ASSET_BUILD_ID="4ac2ac8e64c2b97aa611c20a1beb6d79217d3cdd161d0dee26a58aaa0ba91b65";

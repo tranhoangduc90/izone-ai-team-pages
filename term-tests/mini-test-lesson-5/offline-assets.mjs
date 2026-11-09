@@ -157,4 +157,4 @@ export const ASSET_HASHES={
   "offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
   "test-config.js": "ad6f4db2ae4dec2ee39e6c3fdc62f02dd073862f8c1355008b9913dc6291521c"
 };
-export const ASSET_BUILD_ID="35a40a8bf3696719bb38a0e38a4007a60878542d67601d83198a9415c85beea6";
+export const ASSET_BUILD_ID="c2bb8db7f8a912706142dbee741d0d5f37830673af0960d339b382e1868a7162";
