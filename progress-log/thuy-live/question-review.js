@@ -1,5 +1,6 @@
 // Cùng một bản chỉ đọc cho thống kê GV và câu đã chữa của HV. Key do caller đã kiểm quyền cấp.
 import {questionPresentation} from './question-presentation.js?rev=20261022-parity-v1';
+import {dropdownOptionLabel} from '../dropdown-option-label.js';
 const node=(tag,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const values=value=>value==null?[]:Array.isArray(value)?value:[value];
 const text=value=>values(value).map(v=>Array.isArray(v)?v.join(' / '):typeof v==='object'?`${v.correct??''}/${v.total??''}`:String(v)).join(' · ');
@@ -26,7 +27,7 @@ export function questionReview(item,{correctAnswer=null,expectedIds=[],rawAnswer
     }table.append(body);root.append(table);
   }else if(item.layoutType==='matching_heading_dropdown'){
     const select=node('select');select.disabled=true;select.setAttribute('aria-label','Lựa chọn câu '+display.number);select.append(new Option('Chọn đáp án',''));
-    for(const option of options)select.append(new Option(option.id+'. '+option.label,option.id));select.value=String(rawAnswer??values(expectedIds)[0]??'');root.append(select);
+    for(const option of options)select.append(new Option(dropdownOptionLabel(option),option.id));select.value=String(rawAnswer??values(expectedIds)[0]??'');root.append(select);
   }else if(config.sentenceLines?.length){
     let slot=0;for(const line of config.sentenceLines){const paragraph=node('p','','thuy-review-sentence');if(line.title)paragraph.append(node('strong',line.title+' '));
       for(const [index,part]of line.parts.entries()){paragraph.append(document.createTextNode(part));if(index<line.parts.length-1){const value=values(rawAnswer)[slot]??(Array.isArray(correctAnswer?.[slot])?correctAnswer[slot][0]:correctAnswer?.[slot])??'';const blank=node('input');blank.className='sentence-blank';blank.readOnly=true;blank.setAttribute('aria-label',config.responseLabels?.[slot]||'Ô '+(slot+1));blank.value=String(value);paragraph.append(blank);slot++;}}root.append(paragraph);

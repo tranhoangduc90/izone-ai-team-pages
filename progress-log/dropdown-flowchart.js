@@ -1,5 +1,7 @@
 // Nhận các câu dropdown cùng nhóm flowchart-, giữ nguyên câu và nối số ô với item riêng.
 // Chọn đáp án trả về mã option cho luồng nháp/nộp hiện hành; cấu trúc không hợp lệ dùng giao diện dropdown cũ.
+import {dropdownOptionLabel} from './dropdown-option-label.js';
+
 export function buildDropdownFlowchart(items, {valueFor, requiredFor, onChange}) {
   if (!items.length || !items.every(item => item.groupId?.startsWith('flowchart-')
     && item.layoutType === 'matching_heading_dropdown' && item.interactionType === 'single_choice')) return null;
@@ -64,7 +66,7 @@ export function buildDropdownFlowchart(items, {valueFor, requiredFor, onChange})
           select.required = requiredFor(item);
           select.setAttribute('aria-label', `Câu ${item.displayNumber} · ${group.title}`);
           select.append(new Option('Chọn A–H', ''));
-          for (const option of item.options) select.append(new Option(`${option.id} · ${option.label}`, option.id));
+          for (const option of item.options) select.append(new Option(dropdownOptionLabel(option, ' · '), option.id));
           select.value = String(valueFor(item) || '');
           select.addEventListener('change', () => onChange(item.itemVersionId, select.value || undefined));
           field.append(select);
