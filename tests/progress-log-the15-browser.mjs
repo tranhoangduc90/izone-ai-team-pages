@@ -22,6 +22,7 @@ test('T15: mode từng câu, placeholder, popup vùng chọn, chữ gốc, đáp
     throw Error('Ngoài fixture: '+path);
    };window.editor=createFormDraftEditor({host:document.querySelector('#formDraftEditor'),apiRequest:request,libraryEnabled:true});window.editor.setWorkspace({classes:[{class_id:'1294',class_name:'Lớp giả'}],assignments:[],classId:'1294',sessionNumber:3});
   });
+  await page.getByRole('tab',{name:/Kho cá nhân/}).click();
   await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByLabel('Tên bài tập',{exact:true}).fill('Thẻ 15 · Phiếu dữ liệu giả');
   await page.getByRole('button',{name:'+ Trắc nghiệm',exact:true}).click();await page.getByRole('button',{name:'+ Điền từ',exact:true}).click();
   for(const n of [1,2])await page.getByLabel('Kỹ năng câu '+n,{exact:true}).selectOption('general');

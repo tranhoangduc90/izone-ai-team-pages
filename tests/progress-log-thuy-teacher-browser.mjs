@@ -118,7 +118,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   await page.locator('.thuy-side').getByRole('button',{name:'Quản lý lớp',exact:true}).click();
   assert.equal(await page.locator('#overviewPanel').isVisible(),true);assert.equal(await page.locator('#courseOverview .thuy-skill-tabs').getByRole('button',{name:'Writing',exact:true}).getAttribute('aria-pressed'),'true');
   await page.locator('#createTab').click();
-  assert.equal(await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).isVisible(),true);
+  assert.equal(await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).isVisible(),false);
   assert.equal(await page.getByRole('heading',{name:'Soạn và duyệt phiếu học tập',exact:true}).isVisible(),false,'Bộ soạn không trộn vào màn danh sách');
   assert.equal(await page.getByRole('searchbox',{name:'Tìm bài tập',exact:true}).isVisible(),true);
   const geometry=await page.evaluate(()=>({side:document.querySelector('.thuy-side').getBoundingClientRect().width,header:document.querySelector('.teacher-header').getBoundingClientRect().height,search:document.querySelector('.thuy-library-tools input').getBoundingClientRect().width}));
@@ -130,6 +130,7 @@ test('Thủy GV: bảng một cột điểm danh, đổi người giữ nháp, c
   assert.equal(await libraryPreview.getByRole('button',{name:'Sửa bài',exact:true}).count(),1);assert.equal(await libraryPreview.getByRole('button',{name:'Giao bài',exact:true}).count(),0);
   await libraryPreview.locator('iframe.thuy-library-preview').waitFor();
   await libraryPreview.getByRole('button',{name:'Đóng',exact:true}).click();
+  await page.getByRole('tab',{name:/Kho cá nhân/}).click();
   await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
   await page.getByLabel('Tên bài tập',{exact:true}).waitFor();
   assert.equal(await page.locator('.thuy-editor-info').isVisible(),true);

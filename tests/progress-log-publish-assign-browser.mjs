@@ -22,7 +22,7 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
   try{
     await initializeLearningDemoDatabase(sourceDb);await initializeLearningDemoDatabase(demoDb);
     await sourceDb.exec("ALTER TABLE mapping.reviewer_account ADD COLUMN role text DEFAULT 'teacher', ADD COLUMN can_access_all_classes boolean DEFAULT false;");
-    for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql','202611040001_form_assignment_portal_target.sql','202611050001_progress_log_course_viewer.sql','202611090001_class_draft_delivery.sql'])
+    for(const file of ['202609160002_learning_api_mapping_schema_usage.sql','202609160005_publisher_account_lookup.sql','202610010001_progress_log_form_drafts.sql','202610090001_journey_schedule_changes.sql','202610220002_form_library.sql','202610280001_form_publications.sql','202610300001_worksheet_revisions.sql','202611040001_form_assignment_portal_target.sql','202611050001_progress_log_course_viewer.sql','202611090001_class_draft_delivery.sql','202611090002_shared_course_drafts.sql'])
       await sourceDb.exec(await readFile(resolve(backend,'ops/learning-migrations',file),'utf8'));
     await sourceDb.exec(`INSERT INTO mapping.classroom_course_mapping VALUES(1294,'IC1000','approved',NULL,NULL),(1295,'Lớp mẫu B','approved',NULL,NULL),
       (1296,'Lớp mẫu trống','approved',NULL,NULL),(1298,'IC999','approved',NULL,NULL),(1299,'Lớp mẫu cần đối chiếu','approved',NULL,NULL),
@@ -93,18 +93,20 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     });
     await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
     await page.goto(origin+'/progress-log/fixture.html');
-    await page.evaluate(async()=>{
+    async function openEditor(actor,classId,sessionNumber){await page.evaluate(async({actor,classId,sessionNumber})=>{
       const {createFormDraftEditor}=await import('/progress-log/teacher-form-editor.js');
-      const request=async(path,options={})=>{const response=await fetch('/source/api/learning'+path,{method:options.method||'GET',headers:{'content-type':'application/json'},...(options.body?{body:JSON.stringify(options.body)}:{})});const body=await response.json();if(!response.ok||!body.ok){const error=Error(body.message||body.error);error.status=response.status;throw error;}return body;};
+      const request=async(path,options={})=>{const response=await fetch('/source/api/learning'+path,{method:options.method||'GET',headers:{'content-type':'application/json','x-fixture-actor':actor},...(options.body?{body:JSON.stringify(options.body)}:{})});const body=await response.json();if(!response.ok||!body.ok){const error=Error(body.message||body.error);error.status=response.status;error.code=body.error;throw error;}return body;};
       window.deliveries=[];window.editor=createFormDraftEditor({host:document.querySelector('#formDraftEditor'),apiRequest:request,libraryEnabled:true,
         onPublished:value=>window.deliveries.push(value)});
       window.fixtureRead=async(actor,path)=>{
         const response=await fetch('/source/api/learning'+path,{headers:{'x-fixture-actor':actor}});
         return {status:response.status,body:await response.json()};
       };
-      const {body}=await window.fixtureRead('owner','/teacher/options');
-      window.editor.setWorkspace({...body,classId:'1294',sessionNumber:3});
-    });
+      const {body}=await window.fixtureRead(actor,'/teacher/options');
+      window.editor.setWorkspace({...body,classId,sessionNumber});
+    },{actor,classId,sessionNumber});}
+    await openEditor('owner','1294',3);
+    await page.getByRole('tab',{name:/Kho cá nhân/}).click();
     await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();await page.getByLabel('Tên bài tập',{exact:true}).fill('Phiếu tích hợp R22');await page.getByLabel('Trình độ',{exact:true}).selectOption('56');
     await page.getByRole('button',{name:'+ Trắc nghiệm',exact:true}).click();await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('reading');await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Chọn ý phù hợp');
     for(const [index,label]of ['Một','Hai','Ba','Bốn'].entries())await page.getByLabel('Lựa chọn '+String.fromCharCode(65+index)+' câu 1',{exact:true}).fill(label);
@@ -113,7 +115,7 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     await page.getByLabel('Kỹ năng câu 2',{exact:true}).selectOption('general');await second.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Điều em muốn chia sẻ');await second.getByLabel('Đáp án tham khảo (tùy chọn)',{exact:true}).fill('Lời tham khảo từ giáo viên');
     await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();await page.locator('.thuy-editor-save-state').filter({hasText:'Đã lưu'}).waitFor();
     if(process.env.PROGRESS_LOG_EVIDENCE_DIR){await mkdir(process.env.PROGRESS_LOG_EVIDENCE_DIR,{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:resolve(process.env.PROGRESS_LOG_EVIDENCE_DIR,'editor-'+width+'.png'),fullPage:true});}await page.setViewportSize({width:1440,height:1000});}
-    assert.deepEqual(await page.locator('.editor-actions>button').allTextContents(),['Xem trước','Lưu nháp','Xuất bản']);
+    assert.deepEqual(await page.locator('.editor-actions>button:visible').allTextContents(),['Xem trước','Lưu nháp','Xuất bản']);
     // Vị trí ghim mới được kiểm qua cuộn và viewport trong progress-log-the16-browser.mjs.
     await page.getByRole('button',{name:'Xuất bản',exact:true}).click();await page.locator('.thuy-publication-notice').filter({hasText:'Đã xuất bản thành công'}).waitFor();
     const published=(await sourceDb.query('SELECT * FROM learning.form_publication')).rows[0];assert.ok(published);
@@ -317,6 +319,82 @@ test('Chrome: chỉ chọn buổi Portal từ hôm nay, giao một lớp và nhi
     for(const [index,token] of [delivered.publicToken,secondDelivery.public_token].entries()){
       await receipt.nth(index).getByRole('button',{name:/Sao chép link cho học viên/}).click();
       assert.equal(await page.evaluate(()=>window.copiedLinks.at(-1)),origin+'/progress-log/thuy.html#assignment='+token);
+    }
+    await sourceDb.exec(`RESET ROLE;
+      INSERT INTO mapping.reviewer_account(email,status) VALUES('lead67@example.test','active');
+      INSERT INTO learning.course_content_authority(reviewer_email,course_code,can_self_approve_scored_forms,grant_reference)
+        VALUES('lead67@example.test','67',true,'Browser fixture only');
+      INSERT INTO mapping.classroom_course_mapping VALUES(1310,'IC1310','approved',NULL,NULL),(1311,'IC1311','approved',NULL,NULL);
+      INSERT INTO mapping.reviewer_class_access VALUES('owner@example.test',1310),('owner@example.test',1311);
+      INSERT INTO mapping.student_mapping_review(erp_course_class_id,erp_student_contact_id,erp_student_name_snapshot)
+        VALUES(1310,130,'Học viên giả C'),(1311,131,'Học viên giả D');
+      INSERT INTO mapping.erp_class_membership_snapshot VALUES(1310,130),(1311,131);
+      SET ROLE learning_api;`);
+    for(const class_id of ['1310','1311'])catalog.push({class_id,class_name:'IC'+class_id,course_id:'5',class_status:'on_going',class_started_at:'2026-09-01'});
+    classPolicyNow+=120000;
+    fixtureActors.lead67={email:'lead67@example.test',role:'teacher',canAccessAllClasses:false};
+    await page.reload();await openEditor('lead67');
+    const api=path=>supertest(sourceApp).post('/api/learning'+path).set('x-fixture-actor','lead67');
+    await page.getByRole('button',{name:'+ Tạo bài tập',exact:true}).click();
+    assert.equal(await page.getByLabel('Khóa',{exact:true}).inputValue(),'67');
+    await page.getByLabel('Tên bài tập',{exact:true}).fill('Matching Heading Kho chung 67');
+    await page.getByRole('button',{name:'+ Danh sách xổ xuống',exact:true}).click();
+    await page.getByLabel('Kỹ năng câu 1',{exact:true}).selectOption('reading');
+    await page.getByLabel('Nội dung câu hỏi',{exact:true}).fill('Chọn tiêu đề đoạn A');
+    for(const [index,label]of ['i Tiêu đề A','ii Tiêu đề B','iii Tiêu đề C','iv Tiêu đề D'].entries())
+      await page.getByLabel('Lựa chọn '+String.fromCharCode(65+index)+' câu 1',{exact:true}).fill(label);
+    await page.getByLabel('Đáp án đúng B câu 1',{exact:true}).check();
+    const forbiddenPayload=await page.evaluate(()=>window.editor.getPayload());
+    await api('/teacher/form-drafts').send({...forbiddenPayload,scope:'izone',operationId:randomUUID(),definition:{...forbiddenPayload.definition,courseCode:'56'}}).expect(403);
+    await page.getByRole('button',{name:'Lưu nháp',exact:true}).click();
+    await page.locator('.thuy-editor-save-state').filter({hasText:'Đã lưu'}).waitFor();
+    const sharedDraft=(await sourceDb.query("SELECT id,erp_course_class_id,session_number FROM learning.form_draft WHERE draft_scope='izone'")).rows[0];
+    assert.ok(sharedDraft);assert.equal(sharedDraft.erp_course_class_id,null);assert.equal(sharedDraft.session_number,null);
+    await page.reload();await openEditor('lead67');
+    await page.getByRole('button',{name:'Matching Heading Kho chung 67',exact:true}).click();
+    assert.equal(await page.getByLabel('Khóa',{exact:true}).inputValue(),'67');
+    assert.equal(await page.getByLabel('Đáp án đúng B câu 1',{exact:true}).isChecked(),true);
+    await page.getByRole('button',{name:'Xem trước',exact:true}).click();
+    const sharedPreview=page.frameLocator('.thuy-library-preview');
+    await sharedPreview.getByRole('button',{name:'Bắt đầu làm',exact:true}).click();
+    const headings=sharedPreview.locator('.thuy-part select').first();
+    assert.deepEqual((await headings.locator('option').allTextContents()).slice(1),
+      ['i Tiêu đề A','ii Tiêu đề B','iii Tiêu đề C','iv Tiêu đề D']);
+    await headings.selectOption({label:'ii Tiêu đề B'});
+    const previewSubmission=page.waitForResponse(reply=>reply.url().includes('/demo/')&&reply.url().endsWith('/attempts/checkpoints/submit'));
+    await sharedPreview.getByRole('button',{name:'Nộp phần này',exact:true}).click();
+    const previewResponse=await previewSubmission;
+    assert.ok(previewResponse.ok(),await previewResponse.text());
+    const {checkpointSubmission}=await previewResponse.json();
+    const checked=(await demoDb.query(`SELECT checkpoint.response_payload,version.public_definition,grading.private_definition
+      FROM learning.checkpoint_submission checkpoint JOIN learning.form_version version ON version.id=checkpoint.form_version_id
+      JOIN learning.form_grading_key grading ON grading.form_version_id=version.id WHERE checkpoint.id=$1`,
+    [checkpointSubmission.checkpointSubmissionId])).rows[0];
+    const {gradeLearningSubmission}=await load('learning-domain.js');
+    const grade=gradeLearningSubmission({definition:checked.public_definition,gradingKey:checked.private_definition,responses:checked.response_payload});
+    assert.match(JSON.stringify(grade),/"verdict":"correct"/u);
+    await page.getByRole('dialog').getByRole('button',{name:'Đóng xem trước',exact:true}).click();
+    await api('/teacher/form-drafts/'+sharedDraft.id+'/publish-library').send({expectedRevision:1,operationId:randomUUID()}).expect(409);
+    await page.getByRole('button',{name:'Gửi duyệt',exact:true}).click();
+    await page.getByRole('button',{name:'Duyệt bản này',exact:true}).click();
+    await page.getByRole('button',{name:'Xuất bản',exact:true}).click();
+    await page.locator('.thuy-publication-notice').filter({hasText:'Đã xuất bản thành công vào Kho chung'}).waitFor();
+    const sharedPublication=(await sourceDb.query('SELECT id,source_revision FROM learning.form_publication WHERE source_draft_id=$1',[sharedDraft.id])).rows[0];
+    const retry=await api('/teacher/form-drafts/'+sharedDraft.id+'/publish-library').send({expectedRevision:sharedPublication.source_revision,operationId:randomUUID()}).expect(201);
+    assert.equal(retry.body.publication.replayed,true);
+    assert.equal((await sourceDb.query("SELECT count(*)::int n FROM learning.form_library_entry WHERE sharing_scope='izone'")).rows[0].n,1);
+    await page.reload();await openEditor('owner','1310',2);
+    await page.getByRole('row',{name:'Xem Matching Heading Kho chung 67'}).getByRole('button',{name:'Giao bài',exact:true}).click();
+    await classAt(1).selectOption('1310');await sessionAt(1).selectOption('2');
+    await add.click();await classAt(2).selectOption('1311');await sessionAt(2).selectOption('4');
+    await send.click();await statuses.filter({hasText:'Đã giao và đối chiếu tất cả các lớp.'}).waitFor();
+    for(const [id,session] of [['1310',2],['1311',4]]){
+      const delivery=(await sourceDb.query('SELECT public_token FROM learning.form_assignment WHERE erp_course_class_id=$1 AND session_number=$2',[id,session])).rows[0];
+      await receipt.filter({hasText:'IC'+id+' · Buổi '+session}).getByRole('button',{name:/Sao chép link cho học viên/}).click();
+      assert.equal(await page.evaluate(()=>window.copiedLinks.at(-1)),origin+'/progress-log/thuy.html#assignment='+delivery.public_token);
+      const opened=await supertest(sourceApp).post('/api/learning/assignments/open').send({publicToken:delivery.public_token}).expect(200);
+      assert.equal(opened.body.assignment.sessionNumber,session);
+      assert.equal(opened.body.assignment.definition.title,'Matching Heading Kho chung 67');
     }
     assert.deepEqual(errors,[]);
   }finally{await browser?.close();if(server)await new Promise(done=>server.close(done));await sourceDb.close();await demoDb.close();}
