@@ -1,4 +1,4 @@
-import { ExamStore, SkillOffline } from './reading-offline.mjs?v=20261109-roster1';
+import { ExamStore, SkillOffline } from './reading-offline.mjs?v=20261110-continuity-v1';
 import { isK56ClassCode, renderK56ClassEntry } from '../k56-offline-shared/class-entry.mjs';
 
 const form = document.getElementById('skillIdentity');
@@ -48,7 +48,8 @@ async function enter(runtime, audio) {
 }
 
 async function finishPreparation(runtime, opened) {
-  if (!listening || runtime.record.sections.listening?.sealed) return runtime.finishReadingPreparation();
+  if (!listening || runtime.record.sections.listening?.sealed || runtime.record.sections.listening?.interrupted)
+    return runtime.finishReadingPreparation();
   const { AUDIO, downloadWhole } = await import('../term-test-1-k56-computer-based/audio-whole.mjs?v=20261107-k56-r2-v1');
   const refresh = async () => {
     const response = await runtime.post('/skill-fallback/open', {
@@ -59,9 +60,11 @@ async function finishPreparation(runtime, opened) {
   };
   const blob = await downloadWhole({ audioDownload: opened ? opened.audioDownload : (await refresh()).download, refresh,
     onProgress: ({ loaded, total }) => { notice.textContent = `Đang tải và kiểm tra audio · ${Math.floor(loaded * 100 / total)}%`; } });
-  const probe = await makeAudio(blob);
-  URL.revokeObjectURL(probe.src);
-  probe.removeAttribute('src');
+  if (!runtime.listeningContinuity) {
+    const probe = await makeAudio(blob);
+    URL.revokeObjectURL(probe.src);
+    probe.removeAttribute('src');
+  }
   await runtime.finishPreparation(blob);
 }
 
@@ -84,9 +87,16 @@ async function makeAudio(blob) {
 
 async function showListening(runtime) {
   if (!listening || runtime.record.sections.listening?.sealed) return enter(runtime);
+  const continuity = runtime.listeningContinuity;
+  if (continuity && runtime.record.sections.listening?.startedAt && !runtime.record.player.ended) {
+    if (!runtime.record.sections.listening.interrupted) await runtime.interruptListening('page_interrupted');
+    runtime.showListeningInterruption();
+    return;
+  }
   const blob = await runtime.audio();
+  let preparedPlayer;
   async function begin(resuming = false, volume = savedVolume()) {
-    const audio = await makeAudio(blob);
+    const audio = preparedPlayer?.audio ?? await makeAudio(blob);
     audio.volume = volume;
     document.body.append(audio);
     if (!resuming) await runtime.start('listening');
@@ -110,6 +120,18 @@ async function showListening(runtime) {
   const start = document.getElementById('skillStart');
   const startStep = document.getElementById('skillStartStep');
   const volume = document.getElementById('skillVolume');
+  let previewHeard = false;
+  const unlock = () => {
+    if (previewHeard && (!continuity || preparedPlayer?.ready)) {
+      start.disabled = false;
+      startStep.dataset.state = 'active';
+      window.IZONE_CBT_AUDIO_START_LABEL(start, true);
+    }
+  };
+  if (continuity) {
+    preparedPlayer = runtime.preloadListening(blob, unlock, () => showError(Error('Trình phát chính chưa đọc được audio.')));
+    preparedPlayer.audio.controls = false;
+  }
   const preview = await makeAudio(blob);
   volume.value = preview.volume = savedVolume();
   form.hidden = true;
@@ -128,15 +150,15 @@ async function showListening(runtime) {
     try {
       await preview.play();
       previewButton.textContent = 'Dừng nghe thử';
-      previewStep.dataset.state = 'complete';
-      startStep.dataset.state = 'active';
-      if (start.disabled) {
+      previewStep.dataset.state = 'active';
+      if (!previewHeard) {
         window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW(preview, start, () => {
-          start.disabled = false;
-          window.IZONE_CBT_AUDIO_START_LABEL(start, true);
+          previewHeard = true;
+          previewStep.dataset.state = 'complete';
+          unlock();
         });
       }
-      previewStatus.textContent = 'Đang nghe thử · tối đa 30 giây.';
+      previewStatus.textContent = 'Đang nghe thử · ' + (continuity ? 10 : 30) + ' giây.';
       runtime.observe('listening_preview_playing', { playbackRate: preview.playbackRate, volume: preview.volume });
     } catch (error) {
       previewStatus.textContent = 'Trình duyệt chưa cho phát. Hãy nhấn lại nút nghe thử.';
@@ -144,16 +166,19 @@ async function showListening(runtime) {
     }
   });
   preview.addEventListener('pause', () => {
-    previewButton.textContent = 'Nghe lại 30 giây đầu';
-    previewStatus.textContent = preview.currentTime >= 30 ? 'Đã nghe đủ 30 giây. Bạn có thể bắt đầu thi.' : 'Đã dừng nghe thử.';
+    previewButton.textContent = 'Nghe lại ' + (continuity ? 10 : 30) + ' giây đầu';
+    previewStatus.textContent = previewHeard ? 'Đã nghe đủ đoạn thử.' : 'Đã dừng nghe thử.';
   });
   preview.addEventListener('timeupdate', () => {
-    if (!preview.paused && preview.currentTime < 30) {
-      previewStatus.textContent = 'Đang nghe thử · 00:' + String(Math.floor(preview.currentTime)).padStart(2, '0') + ' / 00:30';
+    const seconds = continuity ? 10 : 30;
+    if (!preview.paused && preview.currentTime < seconds) {
+      previewStatus.textContent = 'Đang nghe thử · 00:' + String(Math.floor(preview.currentTime)).padStart(2, '0') + ' / 00:' + seconds;
     }
-    if (preview.currentTime >= 30) preview.pause();
+    if (preview.currentTime >= seconds && (!continuity || previewHeard)) preview.pause();
   });
   start.addEventListener('click', async () => {
+    if (continuity && (!preparedPlayer?.ready || !previewHeard)) return;
+    runtime.listeningStartIntent = performance.now();
     start.disabled = true;
     start.textContent = 'Đang mở đề và audio...';
     preview.pause();
