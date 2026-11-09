@@ -5,6 +5,7 @@ export const BUILD = 'term1-k56-skill-fallback-v1';
 const profile = Object.freeze({ ...TERM1_PROFILE, build: BUILD, dbName: 'izone-term1-k56-skill-fallback-v1',
   localPrefix: 'term1-k56-skill-fallback:', lockPrefix: 'term1-k56-skill-fallback:', cause: 'term1_skill_fallback' });
 const { ExamStore, OfflineRuntime, hash } = createOfflineRuntime(profile);
+export { ExamStore };
 
 export class SkillOffline extends OfflineRuntime {
   constructor({ apiBase, classCode, grant, grantId, skill }) {
@@ -20,10 +21,11 @@ export class SkillOffline extends OfflineRuntime {
     this.grantHash = hash(grant);
   }
 
-  async open() {
+  async open({ existingOnly = false } = {}) {
     await this.store.open();
     this.key = 'run:' + this.grantId;
     this.record = await this.store.get(this.key);
+    if (existingOnly && !this.record) return this;
     if (this.record) {
       if (this.record.classCode !== this.classCode || this.record.skill !== this.skill || this.record.grantHash !== await this.grantHash)
         throw Error('Link chưa khớp bài đã lưu. Hãy dùng link giảng viên đã gửi.');

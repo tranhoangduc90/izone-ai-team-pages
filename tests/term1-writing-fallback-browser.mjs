@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import test from 'node:test';
 import { fixture as browserFixture, wait } from './term2-offline-browser.mjs';
-import { captureSkillScreen } from './term1-fallback-screen-evidence.mjs';
+import { captureSkillScreen, chooseFallbackLearner, rosterFixture } from './term1-fallback-screen-evidence.mjs';
 
 test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không có job AI', { timeout: 65000 }, async t => {
   const { TERM2_EVIDENCE: output, TERM1_FALLBACK_BACKEND: backend, TERM2_RUNTIME_ROOT: runtime, TERM2_DEPS_PACKAGE: deps } = process.env;
@@ -23,7 +23,7 @@ test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không 
   const sandbox = { window: {} };
   vm.runInNewContext(await readFile(new URL('../term-tests/term-test-1-k56-computer-based/content.js', import.meta.url), 'utf8'), sandbox);
   native.content.writing = sandbox.window.K56_TERM_TEST_CONTENT.writing;
-  const studentRef = randomUUID(), scope = { classCode: 'IC5601', studentRef, section: 'writing' };
+  const studentRef = randomUUID();
   const app = express(), router = express.Router(), noop = (_req, _res, next) => next();
   let afterRelease = false;
   app.use(express.json());
@@ -37,13 +37,13 @@ test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không 
   await new Promise(done => server.once('listening', done));
   t.after(() => new Promise(done => server.close(done)));
   const skillsApi = 'http://127.0.0.1:' + server.address().port + '/api/term-tests/term-test-1-k56/skill-fallback';
-  const { body: grant } = await require('supertest')(app).post('/api/term-tests/term-test-1-k56/skill-fallback/issue').send(scope).expect(200);
+  let grant;
   const browser = await browserFixture('read_first', { product: 1 });
   t.after(browser.close);
   const page = browser.page;
   const capture = screen => captureSkillScreen(page, output, 'writing', screen);
-  const link = new URL('../term-test-1-k56-writing-fallback/?class=IC5601', browser.url);
-  link.hash = new URLSearchParams({ g: grant.token });
+  const link = new URL('../term-test-1-k56-writing-fallback/', browser.url);
+  await rosterFixture(browser, studentRef);
   let disconnected = false, lost = false;
   await browser.context.route('**/api/term-tests/term-test-1-k56/**', async route => {
     const request = route.request(), cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST,OPTIONS' };
@@ -51,6 +51,10 @@ test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không 
     if (disconnected) return route.abort();
     const relative = new URL(request.url()).pathname.split('/term-test-1-k56/')[1];
     assert.match(relative, /^(?:skill-fallback|offline)\//);
+    if (relative === 'skill-fallback/enroll') {
+      assert.equal(JSON.parse(request.postData()).activationCode, undefined);
+      grant = { token: request.headers()['x-term1-skill-grant'] };
+    }
     assert.equal(request.headers()['x-term1-skill-grant'], grant.token);
     const destination = relative.startsWith('offline/') ? native.base + '/' + relative : skillsApi + relative.slice('skill-fallback'.length);
     const response = await fetch(destination, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-term1-skill-grant': grant.token }, body: request.postData() });
@@ -61,11 +65,7 @@ test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không 
 
   await page.goto(link.href);
   await capture('login');
-  await page.locator('#activationCode').fill(grant.activationCode);
-  await page.getByRole('button', { name: 'Kiểm tra thông tin học viên' }).click();
-  await page.locator('#identityConfirm').waitFor({ state: 'visible' });
-  await capture('confirm');
-  await page.click('#confirmIdentity');
+  await chooseFallbackLearner(page, studentRef);
   await page.getByRole('button', { name: 'Bắt đầu Writing', exact: true }).waitFor();
   await capture('ready');
   await page.getByRole('button', { name: 'Bắt đầu Writing', exact: true }).click();
@@ -88,7 +88,7 @@ test('Writing dự phòng giữ Task 2 offline và bài trắng nhận 0 không 
   await page.getByRole('button', { name: 'Tải bài làm về máy' }).click();
   const backup = await readFile(await (await saving).path(), 'utf8');
   assert.match(backup, /Bài viết &lt;script&gt; đã giữ\./);
-  assert.ok(!backup.includes(grant.token) && !backup.includes(grant.activationCode));
+  assert.ok(!backup.includes(grant.token));
   await capture('offline');
   await editor.fill(' \u200b\u00a0');
   await page.click('#submitWriting');

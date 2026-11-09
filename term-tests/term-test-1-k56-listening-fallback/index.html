@@ -24,12 +24,12 @@
           <header class="cbt-lobby-header">
             <span class="cbt-lobby-badge">Chuẩn bị Listening</span>
             <h2 id="securePrepTitle">Xác nhận học viên trước khi bắt đầu Listening</h2>
-            <p>Nhập mã giảng viên đã gửi để xác nhận lượt Listening của bạn.</p>
+            <p>Chọn lớp và họ tên để vào bài.</p>
           </header>
           <form class="cbt-bootstrap-identity" id="skillIdentity" hidden>
             <strong id="bootstrapClass"></strong>
-            <label>Mã kích hoạt<input id="activationCode" type="text" required maxlength="30" autocomplete="off" spellcheck="false"></label>
-            <button class="button button-primary" type="submit">Kiểm tra thông tin học viên</button>
+            <label>Họ và tên<select required></select></label>
+            <button class="button button-primary" type="submit">Tiếp tục</button>
           </form>
           <div class="cbt-lobby-steps" id="skillAudioLobby" hidden>
             <section class="cbt-lobby-step" data-state="complete"><span class="cbt-lobby-step-number">1</span><div class="cbt-lobby-step-body"><h3>Tải đủ và kiểm tra audio</h3><p>Audio đã sẵn sàng để nghe thử.</p><strong class="cbt-audio-status cbt-lobby-download-status" role="status">Đã tải đủ audio · 100%</strong><progress class="cbt-audio-progress" max="1" value="1" aria-label="Tiến độ tải audio"></progress></div></section>
@@ -39,21 +39,13 @@
           <div class="notice" id="bootstrapNotice" role="status">Đang kiểm tra link dự phòng…</div>
         </section>
       </main>
-      <dialog class="cbt-identity-confirm" id="identityConfirm" aria-labelledby="identityConfirmTitle" aria-describedby="identityConfirmHelp">
-        <p class="cbt-confirm-eyebrow">Kiểm tra trước khi vào bài</p>
-        <h2 id="identityConfirmTitle">Xác nhận thông tin học viên</h2>
-        <p id="identityConfirmHelp">Vui lòng kiểm tra đúng họ tên và lớp của bạn trước khi tiếp tục.</p>
-        <dl><div><dt>Họ và tên</dt><dd id="confirmStudentName"></dd></div><div><dt>Lớp</dt><dd id="confirmClassName"></dd></div></dl>
-        <p class="cbt-confirm-warning">Nếu thông tin chưa đúng, hãy kiểm tra lại link với giảng viên.</p>
-        <div class="cbt-confirm-actions"><button class="button button-secondary" id="cancelIdentity" type="button">Quay lại</button><button class="button button-primary" id="confirmIdentity" type="button">Xác nhận, tiếp tục</button></div>
-      </dialog>
     </div>
     <script src="../shared/desktop-exam-guard.js?v=20261027-v1&resilience=20261027-v1"></script>
     <script src="../shared/exam-clock.js?v=20261026-v1&resilience=20261027-v1"></script>
     <script src="../k56-exam-order.js?rev=20260930-k56-order-v1&amp;history=20261102-1"></script>
     <script src="../k56-shared/config.js?rev=20261020-demo-v1&amp;ej=20261024-production-r1"></script>
     <script src="../term-test-1-k56/test-config.js?journal=20261024-startup-v2&amp;diagnostics=20261107-v3"></script>
-    <script type="module" src="../term-test-1-k56-reading-fallback/bootstrap.mjs?v=20261109-v5"></script>
+    <script type="module" src="../term-test-1-k56-reading-fallback/bootstrap.mjs?v=20261109-roster1"></script>
     <script defer src="../k56-exam-integrity/app.js?rev=20260911-find-lock-v1"></script>
     <script defer src="../k56-design/presentation.js?v=20261023-master170-v3"></script>
   </body>
