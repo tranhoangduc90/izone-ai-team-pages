@@ -1,8 +1,11 @@
 import '../../shared/teacher-single-sign-on.js?v=20261026-startup2&startup=20261026-v2';
 import {createTeacherAuthState} from '../../shared/teacher-auth-state.js?v=20261026-startup2';
-import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261109-l15-discussion1';
-import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,bodyKey,bodyIndexOf} from '../shared/workflow.mjs?v=20261109-l15-discussion1';
-import {teacherBodies} from '../shared/multi-body-teacher.mjs?v=20261109-l15-discussion1';
+import {card,ordered,rowState,states,patchHTML,patchThreads,names,approval,stepLabel,jobText,stamp} from './teacher-dashboard.mjs?v=20261109-l3-v1';
+import {workflowFor,isWhole,isMulti,isPrepared,isOpinion,bodyKey,bodyIndexOf} from '../shared/workflow.mjs?v=20261109-l3-v1';
+import {teacherBodies} from '../shared/multi-body-teacher.mjs?v=20261109-l3-v1';
+import {OUTLINE_DIRECTIONS,isBodyOutline} from '../shared/workflow.mjs?v=20261109-l3-v1';
+import {relationMessages} from '../shared/body-outline-ui.mjs?v=20261109-l3-v1';
+const outline=isBodyOutline(globalThis.handout67Lesson||{});
 const multi=isMulti(globalThis.handout67Lesson||{});
 import {classQuery,resolveClassRef} from '../js/class-selection.js';
 const whole=isWhole(globalThis.handout67Lesson||{});
@@ -29,6 +32,10 @@ async function setupGoogle(){
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={si1:'Cả chuỗi ý 1',si2:'Cả chuỗi ý 2',topic:'Topic sentence và idea',b1:'Điểm B · Ý 1',a1:'Điểm A · Ý 1',x1:'Cầu nối X · Ý 1',b2:'Điểm B · Ý 2',a2:'Điểm A · Ý 2',x2:'Cầu nối X · Ý 2',idea1:'Idea 1',idea2:'Idea 2',topicSentence:'Topic sentence'};
 if(multi)for(const b of [1,2]){for(const [k,v] of Object.entries({...labels}))if(!bodyIndexOf(k))labels[bodyKey(b,k)]=v+' · Thân bài '+b;for(const [k,v] of Object.entries({...names}))if(!bodyIndexOf(k))names[bodyKey(b,k)]=v+' · Thân bài '+b;}
+if(outline)for(const n of [1,2]){
+ labels[bodyKey(n,'topic')]='Thân bài '+n;
+ labels[bodyKey(n,'topicSentence')]=names[bodyKey(n,'topicSentence')]='Thông điệp chung';
+}
 if(isPrepared(globalThis.handout67Lesson||{})){labels.outline='Kế hoạch idea hai thân bài';labels.chosenSolution='Phương án học viên chọn';names.outline=labels.outline;names.chosenSolution=labels.chosenSolution;}
 if(isOpinion(globalThis.handout67Lesson||{})){for(const [key,label] of Object.entries({agreementLevel:'Mức độ đồng ý',positionLimit:'Giới hạn hoặc điều kiện',chosenSolution:'Phương án học viên ủng hộ'})){labels[key]=label;names[key]=label;}}
 const statuses={draft:'Chưa check',passed:'Đã đạt',revision:'Cần sửa',pending:'Đang chấm',technical_error:'Gặp lỗi'};
@@ -76,7 +83,8 @@ function renderDetail(session){
   content.dataset.session=session.ref;
   const field=f=>`<div class="teacher-response-field" data-field-box="${f}"><strong>${names[f]}</strong><span data-current-status="${f}" class="step-status"></span><div data-field-read="${f}"></div><div data-keywords="${f}"></div></div>`;
   content.innerHTML=`<section class="recap"><h3>Bài hiện tại · A → X → B</h3><p class="fine-print">${whole?'Mỗi ý Check chung cả chuỗi A → X → B.':'Thứ tự Check vẫn B → A → X.'} Bôi đen để góp ý đoạn hoặc chọn Comment cả phần.</p>${['idea1','idea2','topicSentence'].map(field).join('')}<div class="recap-scroll"><table class="recap-table"><thead><tr><th>Ý</th><th>Điểm đầu A</th><th>Cầu nối X</th><th>Điểm cuối B</th></tr></thead><tbody>${[1,2].map(n=>`<tr><th>Ý ${n}</th>${['a','x','b'].map(k=>`<td>${field(k+n)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div id="recap-status"></div></section><div class="teacher-detail-section-layout"><section><h3>Các phần làm bài</h3>${ORDER.map(k=>`<details class="teacher-detail-section expandable" data-history="section-${k}"><summary><span class="section-title">${labels[k]}</span><span data-section-status="${k}" class="step-status"></span><span class="expand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path class="vertical" d="M12 5v14"/></svg></span></summary><div class="teacher-section-body"><div data-step-read="${k}"></div><div data-history-read="${k}"></div><div data-legacy-read="${k}"></div></div></details>`).join('')}<section class="teacher-detail-vocabulary"><h3>${whole?'Một bảng từ vựng chung':'Từ vựng từng ý'}</h3><div id="vocabulary-read"></div></section><details class="activity-panel"><summary>Nhật ký hoạt động · Giữ hai tháng</summary><p class="fine-print">Lượt trước khi bật tính năng có thể thiếu nhật ký. Mở lượt chấm để xem nội dung và phản hồi AI.</p><p id="activity-state" role="status">Đang tải nhật ký…</p><div id="activity-list"></div><div id="activity-job"></div></details></section><aside class="teacher-note"><h3>Trao đổi GV–HV</h3><p class="fine-print">Đã xử lý chỉ đổi trạng thái trao đổi; không cho qua Check.</p><div id="threads-read"></div></aside></div>`;
-  if(multi)content.querySelector('.recap').outerHTML=teacherBodies(globalThis.handout67Lesson,field,session);
+  if(outline)content.querySelector('.recap').outerHTML=`<section class="recap"><h3>Quan điểm và hai thân bài</h3><p id="outline-teacher-stance"></p>${[1,2].map(n=>`<section class="handout-body"><h4>Thân bài ${n}</h4>${['topicSentence','idea1','idea2'].map(k=>field(bodyKey(n,k))).join('')}</section>`).join('')}<div id="recap-status"></div></section>`;
+  else if(multi)content.querySelector('.recap').outerHTML=teacherBodies(globalThis.handout67Lesson,field,session);
  }
  const d=session.dashboard;
  $('detail-meta').textContent=d?`${d.filled}/${d.totalFields||Object.keys(session.responses).length} ô · ${d.passed}/${ORDER.length} phần thông qua · ${d.checks} Check · ${d.openThreads} trao đổi mở`:'';
@@ -91,7 +99,11 @@ function renderDetail(session){
   if(pill){pill.className='step-status '+status;pill.textContent=statuses[status];}
   if(node?.closest('td')){node.closest('td').dataset.status=status;node.closest('td').dataset.cell=f;}
  }
- patchHTML($('recap-status'),`<p class="fine-print">${d?.passed===ORDER.length?ORDER.length+'/'+ORDER.length+' phần đã thông qua.':'Tiến độ theo các phần Check.'} ${d?.attested?d.attested+' phần do HV xác nhận được GV đồng ý.':''}</p>`);
+ if(outline){
+  $('outline-teacher-stance').textContent='Quan điểm của cả bài · '+(OUTLINE_DIRECTIONS[session.responses.stance]||'Chưa chọn');
+  content.querySelector('.teacher-detail-vocabulary').hidden=true;
+ }
+ patchHTML($('recap-status'),outline?`<p class="fine-print">${relationMessages[session.relation]||relationMessages.waiting}</p>`:`<p class="fine-print">${d?.passed===ORDER.length?ORDER.length+'/'+ORDER.length+' phần đã thông qua.':'Tiến độ theo các phần Check.'} ${d?.attested?d.attested+' phần do HV xác nhận được GV đồng ý.':''}</p>`);
  for(const key of ORDER){
   const step=session.steps[key],job=session.processing?.[key];
   const pill=content.querySelector(`[data-section-status="${key}"]`);pill.className='step-status '+step.status;pill.textContent=stepLabel(d?.stepStates[key]||step);

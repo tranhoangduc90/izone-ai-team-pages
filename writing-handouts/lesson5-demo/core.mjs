@@ -1,6 +1,6 @@
 // Dữ liệu nhận vào là bài demo; quản lý luật mở khóa và kết quả giả, không gọi dịch vụ.
 // Lỗi nhập/lượt cũ trả mã để giao diện báo rõ, không biến lỗi thành bài cần sửa.
-import {workflowFor,isWhole,preparationContext,requiredFields,available as policyAvailable,ideaPassed as policyIdeaPassed} from '../shared/workflow.mjs?v=20261109-l15-discussion1';
+import {workflowFor,isWhole,preparationContext,requiredFields,available as policyAvailable,ideaPassed as policyIdeaPassed} from '../shared/workflow.mjs?v=20261109-l3-v1';
 export const ORDER = ['topic', 'b1', 'a1', 'x1', 'b2', 'a2', 'x2'];
 export const FIELDS = {topic:['idea1','idea2','topicSentence'], b1:['b1'], a1:['a1'], x1:['x1'], b2:['b2'], a2:['a2'], x2:['x2']};
 export const EXAMPLE = {
