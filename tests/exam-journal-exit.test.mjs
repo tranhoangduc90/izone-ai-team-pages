@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRecorder} from '../term-tests/shared/exam-journal/recorder.mjs';
+import {createRecorder,observeDocument} from '../term-tests/shared/exam-journal/recorder.mjs';
 
 const context=()=>({bindingId:'a'.repeat(64),auth:{ticket:'synthetic',ticketId:crypto.randomUUID()},versions:{}});
 const ack=body=>({ok:true,persisted:true,scopeId:body.bindingId,acknowledgedIds:body.events.map(e=>e.id)});
@@ -51,4 +51,29 @@ test('durable keepalive and new in-memory tail share the same request budget',as
  assert.equal(calls.length,2);assert.ok(calls[1].body.events.some(e=>e.type==='page_hidden'));
  assert.ok(calls.reduce((n,c)=>n+bytes(c.body),0)<=60*1024);
  for(const call of calls)call.resolve();await Promise.all([first,second]);releaseStorage();await recorder.idle();recorder.stop();
+});
+
+test('sampled Writing still records the edit immediately before pagehide',()=>{
+ const doc=new EventTarget(),win=new EventTarget(),editor={value:''},observed=[];
+ doc.querySelectorAll=()=>[editor];
+ win.navigator={};
+ win.screen={width:320,height:640};
+ const recorder={record(){},content:(field,text,metadata)=>observed.push([field,text,metadata.cause]),flush:async()=>{}};
+ const observer=observeDocument({recorder,document:doc,window:win,
+  resolveField:target=>target===editor?{fieldId:'writing:task2',text:editor.value}:null,
+  sampleInput:field=>field==='writing:task2'});
+ try{
+  const input=new Event('input');
+  Object.defineProperty(input,'target',{value:editor});
+  editor.value='sampled';
+  doc.dispatchEvent(input);
+  assert.deepEqual(observed,[['writing:task2','','mount']]);
+  observer.sampleContent(editor);
+  editor.value='sampled plus last edit';
+  win.dispatchEvent(new Event('pagehide'));
+  assert.deepEqual(observed.slice(1),[
+   ['writing:task2','sampled','periodic_writing'],
+   ['writing:task2','sampled plus last edit','pagehide']
+  ]);
+ }finally{observer.stop();}
 });

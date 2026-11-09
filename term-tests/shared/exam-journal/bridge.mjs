@@ -1,5 +1,5 @@
 import { IndexedOutbox } from './outbox.mjs';
-import { createRecorder,fetchTransport,observeDocument,observeAudio,viewportSnapshot } from './recorder.mjs?v=20261105-diagnostics-v1';
+import { createRecorder,fetchTransport,observeDocument,observeAudio,viewportSnapshot } from './recorder.mjs?v=20261109-term1-writing-v1';
 import {createAudioTransferObserver} from './audio-delivery.mjs?v=20261024-startup-v2';
 
 const copy = value => JSON.parse(JSON.stringify(value));
@@ -43,6 +43,9 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   if(existing)return adoptExistingState?existing.adopt(getState):existing;
   const outbox = providedOutbox || new IndexedOutbox({ name:'izone-exam-journal-v2:' + target.origin + target.pathname });
   const visitId = crypto.randomUUID(); let current = null,ownerKey = '',requesting = '',lastProjection = '',nextContextTry = 0,stopped = false,unobservedSince=performance.now(),previousFields=new Set();
+  const sampleTerm1Writing = testSlug === 'term-test-1-k56'
+    && /\/term-test-1-k56-computer-based(?:\/|$)/.test(win.location.pathname);
+  const sampleWritingInput = fieldId => sampleTerm1Writing && fieldId === 'writing:task2';
   const audioStops = new Map();
   const recordedListeningEnds=new WeakMap();
   const bindingRequests=new Map(),bindingCache=new Map(),audioPending=new Set();let audioPendingBytes=0;
@@ -110,12 +113,14 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
       if (text !== lastProjection) {
         lastProjection = text;recorder.record('state_observed',{cause,checkpointState:projected});
       }
-      const fields=contentFields(state),names=new Set(fields.map(row=>row[0]));
+      const fields=contentFields(state).filter(([fieldId])=>!sampleWritingInput(fieldId));
+      const names=new Set(fields.map(row=>row[0]));
       for(const fieldId of previousFields)if(!names.has(fieldId))recorder.content(fieldId,'',{cause:'application_field_removed'});
-      for (const [fieldId,value] of fields) recorder.content(fieldId,value,{cause:'application_state'});previousFields=names;
+      for (const [fieldId,value] of fields) recorder.content(fieldId,value,{cause:'application_state'});
+      previousFields=names;
     } catch { health({status:'degraded',errorCode:'JOURNAL_STATE_UNAVAILABLE'}); }
   }
-  const observer = observeDocument({recorder,document:doc,window:win,
+  const observer = observeDocument({recorder,document:doc,window:win,sampleInput:sampleWritingInput,
     resolveField:element => {
       if (!element.matches?.('input,textarea,select,[contenteditable="true"]')) return null;
       const stage = getState().stage || '';
@@ -170,7 +175,19 @@ export function connectExamJournal({ enabled = false,endpoint,getState,testSlug,
   const runtimeError = event => recorder.record('runtime_error',{errorCode:event.type === 'error' ? 'WINDOW_ERROR' : 'UNHANDLED_REJECTION',
     stack:event.type === 'error' ? {file:safeRoute(event.filename || ''),line:event.lineno || 0,column:event.colno || 0} : {},stage:String(getState().stage || '')});
   win.addEventListener('error',runtimeError);win.addEventListener('unhandledrejection',runtimeError);
-  const timer = setInterval(() => { void refresh();stateChanged('periodic');void recorder.flush(); },1000);
+  const timer = setInterval(() => {
+    void refresh();stateChanged('periodic');
+    try {
+      if (sampleTerm1Writing && current) {
+        const state=getState();
+        if (state.stage==='writing' && JSON.stringify(proofOf(state))===ownerKey) {
+          const target=doc.querySelector('textarea[data-writing-task="task2"]');
+          if (target && !target.closest('[hidden]')) observer.sampleContent(target);
+        }
+      }
+    } catch { health({status:'degraded',errorCode:'JOURNAL_STATE_UNAVAILABLE'}); }
+    void recorder.flush();
+  },1000);
   void refresh();
   const api={ stateChanged,recorder,
     adopt(reader){if(typeof reader==='function'){getState=reader;stateChanged('state_reader_changed');}return api;},

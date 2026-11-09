@@ -273,7 +273,7 @@ export function fetchTransport(endpoint, fetcher = globalThis.fetch) {
 }
 
 export function observeDocument({ recorder, document: doc = globalThis.document, window: win = globalThis.window,
-  resolveField, resolveAction }) {
+  resolveField, resolveAction, sampleInput = () => false }) {
   let lastNavigation = { cause: 'unknown', at: 0 };
   const remove = [], listen = (target, type, handler, options) => {
     const safe = event => { try { handler(event); } catch { /* Never change exam behavior. */ } };
@@ -309,6 +309,7 @@ export function observeDocument({ recorder, document: doc = globalThis.document,
   }, true);
   for (const type of ['input', 'change', 'compositionend']) listen(doc, type, event => {
     const value = field(event.target); if (!value) return;
+    if (type === 'input' && sampleInput(value.fieldId)) return;
     recorder.content(value.fieldId, value.text, { inputType: event.inputType || type,
       composing: Boolean(event.isComposing), trusted: event.isTrusted });
   }, true);
@@ -342,7 +343,11 @@ export function observeDocument({ recorder, document: doc = globalThis.document,
     capabilities: { indexedDB: Boolean(win.indexedDB), serviceWorkerControlled: Boolean(win.navigator.serviceWorker?.controller) } }); }
   environment();
   snapshot('mount');
-  return { snapshot,environment, stop: () => remove.forEach(stop => stop()) };
+  function sampleContent(target) {
+    const value=field(target);
+    if (value && sampleInput(value.fieldId)) recorder.content(value.fieldId,value.text,{cause:'periodic_writing'});
+  }
+  return { snapshot,environment,sampleContent,stop: () => remove.forEach(stop => stop()) };
 }
 
 export function viewportSnapshot(win) {
