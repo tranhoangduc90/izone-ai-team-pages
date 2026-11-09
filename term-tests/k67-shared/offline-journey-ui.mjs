@@ -562,7 +562,7 @@ export function mountContinuityListeningPlayer({
   };
 }
 
-export function showContinuityInterruption(acknowledge,onContinue) {
+export function showContinuityInterruption(acknowledge,onContinue,hasNextSkill=true) {
   if(document.getElementById('offlineListeningInterrupted'))return;
   const dialog=document.createElement('dialog');
   dialog.id='offlineListeningInterrupted';
@@ -573,7 +573,7 @@ export function showContinuityInterruption(acknowledge,onContinue) {
   const status=document.createElement('p');
   status.setAttribute('role','status');
   const button=document.createElement('button');
-  Object.assign(button,{type:'button',className:'button button-primary',textContent:'Tôi đã hiểu. Đến phần thi tiếp theo.'});
+  Object.assign(button,{type:'button',className:'button button-primary',textContent:hasNextSkill?'Tôi đã hiểu. Đến phần thi tiếp theo.':'Tôi đã hiểu.'});
   dialog.addEventListener('cancel',event=>event.preventDefault());
   button.addEventListener('click',async()=>{
     button.disabled=true;
@@ -587,4 +587,50 @@ export function showContinuityInterruption(acknowledge,onContinue) {
   dialog.append(message,status,button);
   document.body.append(dialog);
   dialog.showModal();
+}
+
+export async function mountContinuityStart({host,start,journey,volume,onStart,onError}) {
+  const preview=document.createElement('audio');
+  preview.hidden=true;
+  preview.volume=volume;
+  const sample=document.createElement('button');
+  Object.assign(sample,{type:'button',className:'cbt-button',textContent:'Nghe thử',disabled:true});
+  const status=document.createElement('p');
+  status.setAttribute('role','status');
+  status.textContent='Đang chuẩn bị audio đã tải.';
+  start.disabled=true;
+  host.append(preview,sample,status,start);
+  const entry=await journey.preparePlayer();
+  preview.src=entry.url;
+  sample.disabled=false;
+  let previewHeard=false;
+  const update=()=>{
+    start.disabled=!(previewHeard&&entry.canPlay);
+    window.IZONE_CBT_AUDIO_START_LABEL(start,!start.disabled);
+  };
+  void entry.ready.then(update,error=>{status.textContent=error.message;});
+  sample.addEventListener('click',async()=>{
+    if(!preview.paused){preview.pause();return;}
+    preview.currentTime=0;
+    try{
+      await preview.play();
+      window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW(preview,start,()=>{
+        previewHeard=true;
+        status.textContent='Đã nghe thử đủ 10 giây.';
+        preview.pause();
+        update();
+      });
+    }catch{status.textContent='Chưa phát được bản nghe thử. Hãy bấm Nghe thử lại.';}
+  });
+  start.addEventListener('click',async()=>{
+    if(start.disabled)return;
+    start.disabled=true;
+    preview.pause();
+    journey.markListeningStart();
+    try{
+      await journey.start('listening');
+      preview.remove();sample.remove();status.remove();start.remove();
+      await onStart();
+    }catch(error){update();onError(error);}
+  });
 }

@@ -284,7 +284,7 @@ export const ASSET_HASHES={
   "../mini-test-k56/test-config.js": "0629f850b5571a83c272322c0d9ecc22bcda2dc5c48ecfe24af4600f0ad3d7ca",
   "../mini-test-lesson-5-computer-based/resilience.mjs": "b085b2bdba175278a42baa4580fae32300bc740009159e3defa6bdebfdc27d8f",
   "../mini-test-lesson-5/offline.mjs": "7efa38b96eb351dcda033e4e7f7eace3d0be01e0f306ffa9da3f76903830adb6",
-  "../shared/app.js": "b6269e0c11ca27f19b600c1468f199d81be3eeada1da662667d6d37befcfd4b3",
+  "../shared/app.js": "2ce1f5fc991134ab8670bfd9b922e0779c87769a6a18d43e0b8585746e87d440",
   "../shared/attempt-review.js": "2c1ccdaa6027a7ccc08f35c562c20677f7c26af32eb718e6582b7346a22d6865",
   "../shared/audio-source-choice.js": "f312233b50d4a64624e25cd6a24de380aada7b07d033f7a9d79ab8fcb1e2e97e",
   "../shared/cbt-audio-start-label.js": "f62890142ebc075664342c4dd321071754ad59c4fffc716019f14ad1a1944304",
@@ -331,4 +331,4 @@ export const ASSET_HASHES={
   "passages.js": "61acaafa4642df20456e20255c7f04a9e0ac9564b3571325068496a5e49fc397",
   "styles.css": "38036436c04741e3ea04e4d59eca9a5e4e015b6dc908306606f0e7c21fbf3fff"
 };
-export const ASSET_BUILD_ID="4fcfca148174406ef3e96046c513b0fddea18b796bf3bade78819f24ada15ff5";
+export const ASSET_BUILD_ID="dbc5080e02dfb01e5ce996b9257a252908f996cb3fc0da7b861b6e0ca7364931";

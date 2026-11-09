@@ -4226,7 +4226,7 @@
     setStage('listening');
     setAnswerControlsLocked('listening',true);
     elements.submitListening.disabled=true;
-    const {showContinuityInterruption}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v1');
+    const {showContinuityInterruption}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v2');
     showContinuityInterruption(()=>miniJourney.acknowledgeInterruption(),view=>{
       Object.assign(state,view);
       saveSession();
@@ -4292,51 +4292,13 @@
       host.append(start);
       return;
     }
-    const preview=document.createElement('audio');
-    preview.hidden=true;
-    preview.volume=Number(state.audioVolume??1);
-    const sample=document.createElement('button');
-    Object.assign(sample,{type:'button',className:'cbt-button',textContent:'Nghe thử',disabled:true});
-    const status=document.createElement('p');
-    status.setAttribute('role','status');
-    status.textContent='Đang chuẩn bị audio đã tải.';
-    start.disabled=true;
-    host.append(preview,sample,status,start);
-    const entry=await miniJourney.preparePlayer();
-    preview.src=entry.url;
-    sample.disabled=false;
-    let previewHeard=false;
-    const update=()=>{
-      start.disabled=!(previewHeard&&entry.canPlay);
-      window.IZONE_CBT_AUDIO_START_LABEL(start,!start.disabled);
-    };
-    void entry.ready.then(update,error=>{status.textContent=error.message;});
-    sample.addEventListener('click',async()=>{
-      if(!preview.paused){preview.pause();return;}
-      preview.currentTime=0;
-      try{
-        await preview.play();
-        window.IZONE_CBT_AUDIO_WAIT_FOR_PREVIEW(preview,start,()=>{
-          previewHeard=true;
-          status.textContent='Đã nghe thử đủ 10 giây.';
-          preview.pause();
-          update();
-        });
-      }catch{status.textContent='Chưa phát được bản nghe thử. Hãy bấm Nghe thử lại.';}
-    });
-    start.addEventListener('click',async()=>{
-      if(start.disabled)return;
-      start.disabled=true;
-      preview.pause();
-      miniJourney.markListeningStart();
-      try{
-        await miniJourney.start('listening');
-        preview.remove();sample.remove();status.remove();start.remove();
+    const {mountContinuityStart}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v2');
+    await mountContinuityStart({host,start,journey:miniJourney,volume:Number(state.audioVolume??1),
+      onStart:async()=>{
         setAnswerControlsLocked('listening',false);
         elements.submitListening.disabled=false;
         await play(true);
-      }catch(error){update();showNotice(error.message,'error');}
-    });
+      },onError:error=>showNotice(error.message,'error')});
   }
 
   async function initializeMiniJourney(){
@@ -4359,7 +4321,7 @@
     }
     for(const skill of ['listening','reading'])renderQuestionControls(testConfig[skill],elements[skill+'Questions'],skill);
     elements.readingStudentName.textContent=state.studentName;
-    const {mountOfflineJourneyHeader}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v1');
+    const {mountOfflineJourneyHeader}=await import('../k67-shared/offline-journey-ui.mjs?v=20261110-continuity-v2');
     mountOfflineJourneyHeader({
       host:document.querySelector('.topbar')||root,
       studentSelect:miniJourney.paper?null:elements.studentSelect,

@@ -19,7 +19,7 @@ const term1=process.env.K67_JOURNEY_TERM1==='1';
 const term2=process.env.K67_JOURNEY_TERM2==='1';
 const term=term1||term2;
 const continuity=process.env.K67_JOURNEY_CONTINUITY||'';
-assert.ok(!continuity||(term&&['eof','manual','interrupt','reload','upgrade'].includes(continuity)));
+assert.ok(!continuity||['eof','manual','interrupt','reload','upgrade'].includes(continuity));
 const interrupted=['interrupt','reload'].includes(continuity);
 const upgrade=continuity==='upgrade';
 assert.ok(!(term1&&term2),'Select only one Term profile.');
@@ -242,10 +242,13 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
             await dialog.waitFor();
           }
           assert.match(await dialog.textContent(),/hãy liên hệ giảng viên để được nhận bài Listening thay thế/);
-          await dialog.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.',exact:true}).click();
-          const next=mode==='lis_first'?'Reading':'Writing';
-          assert.equal(await page.locator('#'+next.toLowerCase()+'View').isVisible(),false);
-          await page.locator('#start'+next).waitFor({state:'visible'});
+          const next=mode==='lis_first'?'Reading':term?'Writing':'';
+          const label=next?'Tôi đã hiểu. Đến phần thi tiếp theo.':'Tôi đã hiểu.';
+          await dialog.getByRole('button',{name:label,exact:true}).click();
+          if(next){
+            assert.equal(await page.locator('#'+next.toLowerCase()+'View').isVisible(),false);
+            await page.locator('#start'+next).waitFor({state:'visible'});
+          }else await page.locator('#resultReadyView').waitFor({state:'visible'});
         }else{
           const before=await audio.evaluate(player=>player.currentTime);
           await page.evaluate(()=>{
@@ -267,7 +270,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         assert.deepEqual(seals,[]);
         if(upgrade){
           const savedSeal=()=>page.evaluate(()=>Object.keys(localStorage)
-            .filter(key=>/^term[12]-k67-cbt-journey-v1:/.test(key))
+            .filter(key=>/^(?:term[12]-k67-cbt|mini-k67)-journey-v1:/.test(key))
             .map(key=>JSON.parse(localStorage.getItem(key)))
             .flatMap(record=>record.pending||[]).find(operation=>operation.section==='listening'));
           const original=await savedSeal();
@@ -367,11 +370,11 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         const response=await route.fetch();
         if(!response.ok())return route.fulfill({response});
         droppedReceipt=(await response.json()).receipt;
-        seals.push('listening');
+        if(term)seals.push('listening');
         await route.abort();
       });
       page.on('response',async response=>{
-        if(response.ok()&&response.url().endsWith('/cbt-journey/status')){
+        if(response.ok()&&response.url().endsWith(term?'/cbt-journey/status':'/cbt-journey/interrupt')){
           const payload=await response.json();
           if(payload.receipt?.outcome==='interrupted')recoveredReceipts.push(payload.receipt);
         }
