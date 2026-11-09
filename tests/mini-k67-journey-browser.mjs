@@ -270,7 +270,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
         assert.deepEqual(seals,[]);
         if(upgrade){
           const savedSeal=()=>page.evaluate(()=>Object.keys(localStorage)
-            .filter(key=>/^(?:term[12]-k67-cbt|mini-k67)-journey-v1:/.test(key))
+            .filter(key=>/^(?:term[12]|mini)-k67-cbt-journey-v1:/.test(key))
             .map(key=>JSON.parse(localStorage.getItem(key)))
             .flatMap(record=>record.pending||[]).find(operation=>operation.section==='listening'));
           const original=await savedSeal();
@@ -413,12 +413,20 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
       assert.equal(await page.locator('#resultView details[data-skill="Listening"]').count(),0);
     }
     if(eofJournal){
-      await page.evaluate(async()=>{
+      const flushJournal=()=>page.evaluate(async()=>{
         const endpoint=location.origin+'/api/term-tests/'+window.TERM_TEST_CONFIG.slug;
         const bridge=window[Symbol.for('izone.examJournal.connections.v1')].get(JSON.stringify([endpoint,window.TERM_TEST_CONFIG.slug]));
         await bridge.recorder.idle();
         await bridge.recorder.flush({force:true});
       });
+      const expectedActions=['audio_download_verified','audio_player_ready','audio_playing','audio_ended',
+        'listening_local_collected','listening_server_received'];
+      for(let attempt=0;attempt<20;attempt++){
+        await flushJournal();
+        if(!continuity||expectedActions.every(action=>journalRows.some(row=>row.bindingId===learnerBinding
+            && row.event.data.cause==='k67_offline_journey'&&row.event.data.checkpointState?.action===action)))break;
+        await new Promise(resolve=>setTimeout(resolve,150));
+      }
       const rows=journalRows.filter(row=>row.event.data.action==='k67_listening_eof');
       assert.ok(rows.every(row=>row.bindingId===learnerBinding));
       const phases=rows.map(row=>row.event.data.checkpointState.phase).sort();
@@ -428,8 +436,7 @@ for(const mode of modes)test(slug+' journey '+mode,{timeout:full?(term2?10_500_0
           && row.event.type==='state_observed'&&row.event.data.cause==='k67_offline_journey')
           .map(row=>row.event.data.checkpointState);
         const actions=new Set(milestones.map(item=>item.action));
-        for(const action of ['audio_download_verified','audio_player_ready','audio_playing','audio_ended',
-          'listening_local_collected','listening_server_received'])assert.ok(actions.has(action),action);
+        for(const action of expectedActions)assert.ok(actions.has(action),action);
         const playing=milestones.find(item=>item.action==='audio_playing');
         assert.ok(playing.position<0.25);
         assert.ok(Number.isFinite(playing.elapsedMs));
