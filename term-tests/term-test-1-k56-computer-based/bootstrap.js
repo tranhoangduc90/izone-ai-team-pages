@@ -573,41 +573,12 @@
 
   function preloadExamAudio(blob) {
     discardPreparedPlayer();
-    const audio = document.createElement('audio');
-    const url = URL.createObjectURL(blob);
-    const began = performance.now();
-    const entry = { audio, url, ready: false, discard };
-    preparedPlayer = entry;
-    audio.hidden = true;
-    audio.preload = 'auto';
-    document.body.append(audio);
-    const timeout = setTimeout(failed, 15000);
-    function cleanup() {
-      clearTimeout(timeout);
-      audio.removeEventListener('canplay', ready);
-      audio.removeEventListener('error', failed);
-    }
-    function discard() {
-      cleanup();
-      audio.remove();
-      URL.revokeObjectURL(url);
-    }
-    function failed() {
-      if (preparedPlayer !== entry) return;
+    preparedPlayer = term1Offline.preloadListening(blob, setStartAvailability, () => {
       discardPreparedPlayer();
       setStartAvailability();
       elements.bootstrapRetry.hidden = false;
       showNotice('Trình phát chính chưa sẵn sàng. Hãy thử chuẩn bị lại audio.', true);
-    }
-    function ready() {
-      cleanup();
-      entry.ready = true;
-      term1Offline.observe('audio_player_ready', { elapsedMs: performance.now() - began });
-      setStartAvailability();
-    }
-    audio.addEventListener('canplay', ready);
-    audio.addEventListener('error', failed);
-    audio.src = url;
+    });
   }
 
   function revokePreview() {

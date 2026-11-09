@@ -640,42 +640,12 @@
   }
 
   function showListeningInterruption() {
-    if (!offline?.record.sections.listening?.interrupted || offline.record.listeningInterruptionAcknowledged
-      || document.getElementById('term1ListeningInterrupted')) return;
-    const dialog = document.createElement('dialog');
-    dialog.id = 'term1ListeningInterrupted';
-    dialog.className = 'cbt-identity-confirm';
-    dialog.setAttribute('aria-label', 'Listening gián đoạn');
-    const message = document.createElement('p');
-    message.textContent = 'Bài thi listening cần được nghe liền mạch không trục trặc để đánh giá đúng năng lực thí sinh. Khi bạn không nghe được âm thanh, bạn không nên tiếp tục listening. Hãy tiếp tục làm kỹ năng tiếp theo, và sau buổi thi hãy liên hệ giảng viên để được nhận bài Listening thay thế.';
-    const status = document.createElement('p');
-    status.setAttribute('role', 'status');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'button button-primary';
-    button.textContent = 'Tôi đã hiểu. Đến phần thi tiếp theo.';
-    dialog.addEventListener('cancel', event => event.preventDefault());
-    button.addEventListener('click', async () => {
-      button.disabled = true;
-      offline.record.listeningInterruptionAcknowledged = true;
-      try { await offline.persist(true); }
-      catch {
-        delete offline.record.listeningInterruptionAcknowledged;
-        status.textContent = 'Chưa lưu được xác nhận trên thiết bị. Hãy thử lại.';
-        button.disabled = false;
-        return;
-      }
-      const response = offline.sectionResponse();
+    offline?.showListeningInterruption?.(response => {
       Object.assign(state, response);
       saveSession();
-      dialog.close();
-      dialog.remove();
       if (response.nextSection === 'reading') showSectionReady('reading');
       else setStage('writing-prep');
     });
-    dialog.append(message, status, button);
-    document.body.append(dialog);
-    dialog.showModal();
   }
 
   function setStage(stage) {

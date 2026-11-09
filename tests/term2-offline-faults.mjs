@@ -41,13 +41,17 @@ test('Quota/IDB abort vẫn phát audio, báo chưa lưu và cho tải nội dun
   assert.equal(await p.evaluate(()=>Boolean(window.K56_TERM2_OFFLINE.record.sections.listening.sealed)),false);
  }finally{await f.close();}
 });
-test('Timeout API không dừng/tua; play resolve mà đứng không được coi là phục hồi',{timeout:110000},async()=>{
+test('Timeout API không dừng/tua; báo sự cố vẫn lưu gián đoạn trên máy',{timeout:110000},async()=>{
  const f=await fixture('lis_first');try{const p=f.page;await ready(f);await p.locator('#bootstrapVolume').evaluate(el=>{el.value='0.4';el.dispatchEvent(new Event('input'));});await p.click('#bootstrapPreview');await p.waitForTimeout(11000);await p.click('#bootstrapStart');await wait(p,()=>window.K56_TERM2_OFFLINE.playerReady,'Player');
   assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.player.volume),.4);f.controls.apiDelayMs=9000;
   const before=await p.evaluate(()=>window.K56_TERM2_OFFLINE.player.currentTime);await p.locator('#listeningQuestions input[data-number]').first().fill('keep during timeout');await p.waitForTimeout(12500);
   const after=await p.evaluate(()=>({time:window.K56_TERM2_OFFLINE.player.currentTime,paused:window.K56_TERM2_OFFLINE.player.paused,sealed:window.K56_TERM2_OFFLINE.record.sections.listening.sealed}));assert.ok(after.time>before+11);assert.equal(after.paused,false);assert.equal(after.sealed,false);
-  await p.getByRole('button',{name:'Tôi không nghe được',exact:true}).click();await p.evaluate(()=>{window.K56_TERM2_OFFLINE.player.play=async()=>{};});await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).click();await p.waitForTimeout(3400);
-  assert.equal(await p.locator('#listeningQuestions input[data-number]').first().isDisabled(),true);assert.equal(await p.evaluate(()=>window.K56_LISTENING_AUDIO.beforeAutoSubmit().then(x=>x.submit)),false);
+  await p.getByRole('button',{name:'Tôi không nghe được',exact:true}).click();
+  await p.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.',exact:true}).waitFor();
+  assert.equal(await p.locator('#listeningQuestions input[data-number]').first().isDisabled(),true);
+  assert.equal(await p.evaluate(()=>window.K56_LISTENING_AUDIO.beforeAutoSubmit().then(x=>x.submit)),false);
+  assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.record.sections.listening.interrupted),true);
+  assert.equal(await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).isVisible(),false);
  }finally{await f.close();}
 });
 test('Đóng hẳn browser rồi mở lại offline giữ Reading/deadline và audio trong IndexedDB',{timeout:120000},async()=>{
@@ -74,13 +78,15 @@ test('Worker mới dùng cache riêng và không chiếm tab đang làm',{timeou
   await other.close();
  }finally{await f.close();}
 });
-test('Player tụt về 0 khi lỗi phải phục hồi đúng checkpoint, không phát lại từ đầu',{timeout:100000},async()=>{
+test('Sự kiện lỗi không điều khiển trình phát; tải lại giữa lượt mở màn xác nhận gián đoạn',{timeout:100000},async()=>{
  const f=await fixture('lis_first');try{const p=f.page;await ready(f);await p.click('#bootstrapPreview');await p.waitForTimeout(11000);await p.click('#bootstrapStart');await wait(p,()=>window.K56_TERM2_OFFLINE.playerReady,'Player');await p.waitForTimeout(7500);
-  const marker=await p.evaluate(()=>{const r=window.K56_TERM2_OFFLINE,pos=r.record.player.position;r.player.currentTime=0;r.player.dispatchEvent(new Event('error'));return pos;});assert.ok(marker>6);
-  await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).click();await p.waitForTimeout(3600);
-  const state=await p.evaluate(()=>({position:window.K56_TERM2_OFFLINE.player.currentTime,sealed:window.K56_TERM2_OFFLINE.record.sections.listening.sealed,paused:window.K56_TERM2_OFFLINE.player.paused}));assert.ok(state.position>=marker+1,'Đã phát lại từ 0 thay vì checkpoint');assert.equal(state.sealed,false);assert.equal(state.paused,false);
-  await p.getByRole('button',{name:'Tôi không nghe được',exact:true}).click();await p.waitForTimeout(400);await p.reload();await wait(p,()=>window.K56_TERM2_OFFLINE?.playerReady,'Khôi phục trạng thái dừng');assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.player.paused),true);assert.equal(await p.locator('#listeningQuestions input[data-number]').first().isDisabled(),true);
-  await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).click();await p.waitForTimeout(1100);await p.getByRole('button',{name:'Tôi không nghe được',exact:true}).click();await p.waitForTimeout(2500);
-  assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.record.player.held),true);assert.equal(await p.evaluate(()=>window.K56_TERM2_OFFLINE.player.paused),true);assert.equal(await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).isVisible(),true);
+  const marker=await p.evaluate(()=>{const {player}=window.K56_TERM2_OFFLINE;player.dispatchEvent(new Event('error'));return player.currentTime;});assert.ok(marker>6);
+  await p.waitForTimeout(1200);
+  const state=await p.evaluate(()=>({position:window.K56_TERM2_OFFLINE.player.currentTime,sealed:window.K56_TERM2_OFFLINE.record.sections.listening.sealed,paused:window.K56_TERM2_OFFLINE.player.paused}));assert.ok(state.position>marker);assert.equal(state.sealed,false);assert.equal(state.paused,false);
+  f.disconnected=true;await f.context.setOffline(true);await p.reload({waitUntil:'domcontentloaded'});
+  await p.getByRole('button',{name:'Tôi đã hiểu. Đến phần thi tiếp theo.',exact:true}).waitFor();
+  const operations=await p.evaluate(()=>window.K56_TERM2_OFFLINE.record.operations.filter(op=>op.kind==='interrupt').map(op=>op.payload.interruptionReason));
+  assert.deepEqual(operations,['page_interrupted']);
+  assert.equal(await p.getByRole('button',{name:'Tiếp tục audio',exact:true}).isVisible(),false);
  }finally{await f.close();}
 });

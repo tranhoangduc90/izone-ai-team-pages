@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 process.env.TERM2_FULL_ROUND='1';process.env.TERM2_FIXTURE_IMPORT_ONLY='1';
 assert.ok(process.env.TERM2_NATIVE_FIXTURE,'Cần đường dẫn release/test.mjs đã ghép native source');
 const {fixture:nativeFixture}=await import(pathToFileURL(process.env.TERM2_NATIVE_FIXTURE));
-const {fixture,wait}=await import('./term2-offline-browser.mjs');
+const {fixture,wait,activateWorkerUpdate}=await import('./term2-offline-browser.mjs');
 
 const previousPagesRevision = process.env.TERM1_PREVIOUS_PAGES_REVISION;
 test('Bài khóa offline từ Pages cũ đồng bộ qua Pages mới dù mất ACK', {
@@ -43,31 +43,7 @@ test('Bài khóa offline từ Pages cũ đồng bộ qua Pages mới dù mất A
   assert.equal((await native.db.query('SELECT listening_submitted_at FROM assessment.term_test_attempt')).rows[0].listening_submitted_at, null);
 
   f.controls.assetOverrides.clear();
-  await p.evaluate(async () => {
-   const registration = await navigator.serviceWorker.getRegistration();
-   const previous = navigator.serviceWorker.controller;
-   const deadline = performance.now() + 40000;
-   await registration.update();
-   while (navigator.serviceWorker.controller === previous && !registration.waiting) {
-    if (performance.now() >= deadline) throw new Error('Vỏ offline mới chưa cài xong.');
-    await new Promise(resolve => setTimeout(resolve, 100));
-   }
-   const waiting = registration.waiting;
-   if (waiting) await new Promise((resolve, reject) => {
-    const channel = new MessageChannel();
-    const timeout = setTimeout(() => reject(new Error('Không nhận được phản hồi ACTIVATE.')), 5000);
-    channel.port1.onmessage = event => {
-     clearTimeout(timeout);
-     if (event.data.ok) resolve();
-     else reject(new Error(event.data.error));
-    };
-    waiting.postMessage({ type: 'ACTIVATE' }, [channel.port2]);
-   });
-   while (navigator.serviceWorker.controller === previous) {
-    if (performance.now() >= deadline) throw new Error('Vỏ offline mới chưa nắm quyền điều khiển.');
-    await new Promise(resolve => setTimeout(resolve, 100));
-   }
-  });
+  await activateWorkerUpdate(p);
   await f.context.setOffline(true);
   await p.reload({ waitUntil: 'domcontentloaded' });
   await wait(p, () => typeof window.K56_TERM1_OFFLINE?.interruptListening === 'function' && window.K56_TERM1_APP_READY, 'Pages mới mở lại bài khi offline');

@@ -803,11 +803,12 @@
     if (protectedBootstrap?.officialAudioElement && window.K56_MINI_OFFLINE?.active) {
       const runtime=window.K56_MINI_OFFLINE,player=protectedBootstrap.officialAudioElement;
       player.volume=uiState.audio.volume;
+      uiState.audio.time = 0;
       const manualButton=makeButton('cbt-audio-incident','Tôi không nghe được');examControls.append(manualButton);
       setListeningVisible(true);examRetryButton.hidden=true;
       const controller=runtime.attachPlayer({audio:player,resumeButton,manualButton,form:listeningForm.form,
         observeListening:detail=>observeListening(player,{mode:'offline',...detail}),
-        render(prefix,current,duration){playbackProgress.max=duration||1;playbackProgress.value=current||0;examStatus.textContent=prefix+' · '+formatTime(current)+' / '+formatTime(duration);uiState.audio.started=true;uiState.audio.time=Number(current)||0;}});
+        render(prefix,current,duration){playbackProgress.max=duration||1;playbackProgress.value=current||0;examStatus.textContent=prefix+' · '+formatTime(current)+' / '+formatTime(duration);uiState.audio.started=true;}});
       examVolumeInput.addEventListener('input',()=>{player.volume=Number(examVolumeInput.value);uiState.audio.volume=player.volume;saveUiState();});
       listeningForm.form.addEventListener('term-test:listening-submitted',()=>controller.finish());
       return;

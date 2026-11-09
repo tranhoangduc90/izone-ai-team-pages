@@ -106,6 +106,33 @@ export async function fixture(mode,{profile,native,product=2,paper=false,port=0,
   close:async()=>{await browser.close();await new Promise(ok=>server.close(ok));}};
 }
 export async function wait(page,fn,label,timeout=60000){try{await page.waitForFunction(fn,{},{timeout});}catch(e){throw Error(label+': '+JSON.stringify({text:(await page.locator('body').innerText()).slice(0,2000),errors:await page.evaluate(()=>window.__errors||[])}),{cause:e});}}
+export async function activateWorkerUpdate(page) {
+  await page.evaluate(async () => {
+   const registration = await navigator.serviceWorker.getRegistration();
+   const previous = navigator.serviceWorker.controller;
+   const deadline = performance.now() + 40000;
+   await registration.update();
+   while (navigator.serviceWorker.controller === previous && !registration.waiting) {
+    if (performance.now() >= deadline) throw new Error('Vỏ offline mới chưa cài xong.');
+    await new Promise(resolve => setTimeout(resolve, 100));
+   }
+   const waiting = registration.waiting;
+   if (waiting) await new Promise((resolve, reject) => {
+    const channel = new MessageChannel();
+    const timeout = setTimeout(() => reject(new Error('Không nhận được phản hồi ACTIVATE.')), 5000);
+    channel.port1.onmessage = event => {
+     clearTimeout(timeout);
+     if (event.data.ok) resolve();
+     else reject(new Error(event.data.error));
+    };
+    waiting.postMessage({ type: 'ACTIVATE' }, [channel.port2]);
+   });
+   while (navigator.serviceWorker.controller === previous) {
+    if (performance.now() >= deadline) throw new Error('Vỏ offline mới chưa nắm quyền điều khiển.');
+    await new Promise(resolve => setTimeout(resolve, 100));
+   }
+  });
+}
 if(!process.env.TERM2_FULL_ROUND&&!process.env.K56_FIXTURE_IMPORT_ONLY)for(const mode of ['lis_first','read_first'])test('Term 2 offline/phục hồi/tải file: '+mode,{timeout:180000},async()=>{
  const f=await fixture(mode),p=f.page;f.controls.r2Audio=true;
  try{

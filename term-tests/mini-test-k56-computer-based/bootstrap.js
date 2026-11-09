@@ -131,6 +131,7 @@
   let publicAudioManifest = null;
   let previewObjectUrl = '';
   let officialObjectUrl = '';
+  let preparedPlayer = null;
   let previewHeard = false;
   let preparing = false;
   let downloadController = null;
@@ -267,6 +268,7 @@
 
   function resetPreparation() {
     downloadController?.abort();
+    discardPreparedPlayer();
     previewAudio.pause();
     previewAudio.removeAttribute('src');
     revokePreview();
@@ -479,8 +481,10 @@
 
   function setStartAvailability() {
     const resumed = Boolean(state.listeningStartedAt || legacyListeningResume);
+    const needsPreparedPlayer = Boolean(miniOffline?.record?.prepared?.offline && !resumed);
     const ready = Boolean(encryptedAudio && (previewHeard || resumed)
-      && (!miniOffline?.record?.prepared?.offline || miniOffline.active));
+      && (!miniOffline?.record?.prepared?.offline || miniOffline.active)
+      && (!needsPreparedPlayer || preparedPlayer?.ready));
     elements.bootstrapStart.disabled = !ready || preparing;
     elements.bootstrapStart.textContent = resumed ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
     window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart, previewHeard && !resumed);
@@ -489,6 +493,21 @@
       : resumed
       ? 'Đồng hồ máy chủ vẫn đang chạy. Tiếp tục ngay sau khi audio tải đủ.'
       : 'Sau khi bấm, audio phát từ đầu và đề mới được mở.';
+  }
+
+  function discardPreparedPlayer() {
+    preparedPlayer?.discard();
+    preparedPlayer = null;
+  }
+
+  function preloadExamAudio(blob) {
+    discardPreparedPlayer();
+    preparedPlayer = miniOffline.preloadListening(blob, setStartAvailability, () => {
+      discardPreparedPlayer();
+      setStartAvailability();
+      elements.bootstrapRetry.hidden = false;
+      showNotice('Trình phát chính chưa sẵn sàng. Hãy thử chuẩn bị lại audio.', true);
+    });
   }
 
   function revokePreview() {
@@ -613,6 +632,10 @@
       ]);
       if (!publicStore && !previewResponse.ok) throw new Error('Không tải được bản nghe thử.');
       encryptedAudio = encrypted;
+      if (miniOffline?.record?.prepared?.offline && !resuming) {
+        miniOffline.observe('audio_downloaded', { bytes: encrypted.size });
+        preloadExamAudio(encrypted);
+      }
       const previewBlob = publicStore ? encrypted : await previewResponse.blob();
       revokePreview();
       previewObjectUrl = URL.createObjectURL(previewBlob);
@@ -822,7 +845,7 @@
       audioVolume: Number(state.audioVolume) || 1,
       officialAudioElement: audioElement,
       officialAudioUrl: officialObjectUrl,
-      skipListeningAudio: Boolean(started.listeningSubmitted || started.nextSection === 'reading' || started.completed),
+      skipListeningAudio: Boolean(started.listeningSubmitted || started.listeningInterrupted || started.nextSection === 'reading' || started.completed),
       preparedAttempt: state.preparedAttempt ? {
         ...state.preparedAttempt,
         listeningStartedAt: started.listeningStartedAt || state.listeningStartedAt || '',
@@ -849,10 +872,18 @@
 
   async function enterOfflineListening() {
     const runtime=miniOffline, prepared=runtime.record.prepared;
-    const blob=await runtime.audio();
-    officialObjectUrl=URL.createObjectURL(blob);
-    const audio=document.createElement('audio');audio.hidden=true;audio.src=officialObjectUrl;document.body.append(audio);
-    await waitForAudioMetadata(audio);
+    let audio;
+    if (!runtime.record.sections.listening?.startedAt) {
+      if (!preparedPlayer?.ready) throw new Error('Trình phát chính chưa sẵn sàng.');
+      ({ audio, url: officialObjectUrl } = preparedPlayer);
+      preparedPlayer = null;
+      audio.volume = Number(elements.bootstrapVolume.value) || 1;
+    } else {
+      const blob=await runtime.audio();
+      officialObjectUrl=URL.createObjectURL(blob);
+      audio=document.createElement('audio');audio.hidden=true;audio.src=officialObjectUrl;document.body.append(audio);
+      await waitForAudioMetadata(audio);
+    }
     const progress=runtime.record.player.position||0;
     if (progress>0) audio.currentTime=Math.min(progress,audio.duration);
     const started=await runtime.start('listening');
@@ -868,7 +899,12 @@
   }
 
   async function restoreOffline() {
-    const runtime=miniOffline,p=runtime.record.prepared,current=runtime.sectionResponse();
+    const runtime=miniOffline;
+    const listening = runtime.record.sections.listening;
+    if (listening?.startedAt && !listening.sealed && !listening.interrupted && !runtime.record.player.ended) {
+      await runtime.interruptListening('page_interrupted');
+    }
+    const p=runtime.record.prepared,current=runtime.sectionResponse();
     state={...state,...(runtime.record.snapshot||{}),...current,studentRef:runtime.record.studentRef,identityConfirmed:true};
     showLobby(current.nextSection==='reading'?'reading':'listening');
     roster=[{ref:state.studentRef,name:p.studentName}];
@@ -878,6 +914,7 @@
     state.preparedAttempt={...p,...current};
     if (current.nextSection!=='listening') { await enterExam({...p,...current});return; }
     encryptedAudio=await runtime.audio();publicAudioManifest=null;
+    preloadExamAudio(encryptedAudio);
     revokePreview();previewObjectUrl=URL.createObjectURL(encryptedAudio);previewAudio.src=previewObjectUrl;
     await waitForAudioMetadata(previewAudio);previewHeard=false;
     elements.bootstrapDownloadStep.dataset.state='complete';elements.bootstrapPreviewStep.dataset.state='active';
@@ -953,14 +990,17 @@
     saveState({ audioVolume: volume });
   });
   elements.bootstrapStart.addEventListener('click', async () => {
-    if (!encryptedAudio || preparing) return;
+    if (elements.bootstrapStart.disabled || !encryptedAudio || preparing) return;
     preparing = true;
     elements.bootstrapStart.disabled = true;
     elements.bootstrapStart.textContent = 'Đang mở đề và audio...';
     let startingAudio = null, entered = false;
     previewAudio.pause();
     try {
-      if (miniOffline?.active) { await enterOfflineListening();entered=true;return; }
+      if (miniOffline?.active) {
+        miniOffline.listeningStartIntent = performance.now();
+        await enterOfflineListening();entered=true;return;
+      }
       if (localDemo) {
         officialObjectUrl = URL.createObjectURL(encryptedAudio);
         const officialAudio = document.createElement('audio');
@@ -1069,14 +1109,17 @@
       }
       showNotice(`Chưa thể bắt đầu: ${error.userMessage || error.message}. Đề vẫn đang khóa.`, true);
       elements.bootstrapStart.textContent = state.listeningStartedAt ? 'Tiếp tục bài thi Listening' : 'Bắt đầu thi Listening';
-      elements.bootstrapStart.disabled = false;
-      window.IZONE_CBT_AUDIO_START_LABEL?.(elements.bootstrapStart,
-        previewHeard && !state.listeningStartedAt && !legacyListeningResume);
     } finally {
       preparing = false;
+      if (!entered) setStartAvailability();
     }
   });
-  elements.bootstrapRetry.addEventListener('click', () => confirmedCurrentTab && roster.length ? prepareSelectedStudent() : initialize());
+  elements.bootstrapRetry.addEventListener('click', () => {
+    if (miniOffline?.active && encryptedAudio && !preparedPlayer && !state.listeningStartedAt) {
+      elements.bootstrapRetry.hidden = true;
+      preloadExamAudio(encryptedAudio);
+    } else void (confirmedCurrentTab && roster.length ? prepareSelectedStudent() : initialize());
+  });
   elements.bootstrapStudent.addEventListener('change', () => {
     if (preparing || ((state.listeningStartedAt || state.attemptToken) && confirmedCurrentTab)) {
       elements.bootstrapStudent.value = state.studentRef || '';
@@ -1246,6 +1289,7 @@
 
   window.addEventListener('pagehide', () => {
     downloadController?.abort();
+    discardPreparedPlayer();
     previewAudio.pause();
     revokePreview();
   });

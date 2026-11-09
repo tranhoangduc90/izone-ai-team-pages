@@ -675,6 +675,15 @@
     setStage('section-ready'); panel.hidden = false;
   }
 
+  function showListeningInterruption() {
+    offline?.showListeningInterruption?.(response => {
+      Object.assign(state, response);
+      saveSession();
+      if (response.nextSection === 'reading') showSectionReady('reading');
+      else setStage('writing-prep');
+    });
+  }
+
   function setStage(stage) {
     if(paperMini && !paperConfirmed && stage!=='loading') stage='identity-ready';
     elements.studentSelect.disabled = Boolean(state.studentRef && (state.attemptToken || state.examSessionToken
@@ -2332,27 +2341,30 @@
   function renderResult(payload) {
     const result = payload.result;
     const hasReading = Boolean(result.reading);
+    const interrupted = payload.listeningInterrupted || state.listeningInterrupted;
+    const listeningStatus = interrupted ? 'Gián đoạn · Cần bài thay thế' : 'Chưa nộp';
+    const listeningDetails = interrupted ? 'Listening bị gián đoạn. Hãy liên hệ giảng viên để nhận bài Listening thay thế.' : 'Listening chưa có kết quả.';
     state.result = payload;
     elements.resultStudentName.textContent = payload.studentName;
     elements.resultMeta.textContent = `${payload.className} · ${result.testTitle || testConfig.title}`;
     elements.summaryGrid.replaceChildren(
-      addSummaryCard('Listening', `${result.listening.correct}/${result.listening.total} câu đúng`),
+      addSummaryCard('Listening', result.listening ? `${result.listening.correct}/${result.listening.total} câu đúng` : listeningStatus),
       addSummaryCard('Reading', hasReading ? `${result.reading.correct}/${result.reading.total} câu đúng` : 'Chưa nộp')
     );
-    elements.resultStatus.textContent = hasReading
+    elements.resultStatus.textContent = !result.listening ? listeningDetails : hasReading
       ? payload.writing?.grading?.ready
         ? payload.writing?.grading?.mode === 'legacy'
           ? 'Listening và Reading được phân tích riêng. Bản chấm Writing cũ vẫn được giữ để tra cứu.'
           : 'Listening và Reading được phân tích riêng. Xem bài Writing đã chữa qua Link LMS khi có sẵn.'
         : 'Phần Writing của bạn đang được giáo viên chấm điểm, kết quả sẽ được hiển thị sau'
       : 'Listening đã được chấm và lưu riêng. Phân tích dưới đây chỉ dùng bài Listening; Reading chưa bị tính là 0 điểm.';
-    elements.continueReadingFromResult.hidden = hasReading || Boolean(demoMode);
+    elements.continueReadingFromResult.hidden = interrupted || hasReading || Boolean(demoMode);
     renderWritingSubmission();
     // Polling Writing không làm thay DOM/focus của bảng L/R đang được học viên xem.
     const identity = JSON.stringify([payload.className, payload.studentRef || state.studentRef || payload.studentName, payload.attemptToken || state.attemptToken]);
     const previousBlocks = state.resultDetailsIdentity === identity
       ? Array.from(elements.questionDetails.children) : [];
-    const skills = [['Listening', result.listening], ...(hasReading ? [['Reading', result.reading]] : [])];
+    const skills = [...(result.listening ? [['Listening', result.listening]] : []), ...(hasReading ? [['Reading', result.reading]] : [])];
     const detailBlocks = skills.map(([title, skill]) => {
       const fingerprint = JSON.stringify(skill.details || []);
       const previous = previousBlocks.find(block => block.dataset.skill === title);
@@ -2368,8 +2380,7 @@
       elements.questionDetails.replaceChildren(...detailBlocks);
     }
     state.resultDetailsIdentity = identity;
-    const performanceSections = [renderSkillPerformance('Listening', result.listening)];
-    if (hasReading) performanceSections.push(renderSkillPerformance('Reading', result.reading));
+    const performanceSections = skills.map(([name, score]) => renderSkillPerformance(name, score));
     elements.skillPerformanceSections.replaceChildren(...performanceSections);
     if (payload.writing?.grading?.ready) stopWritingGradingPolling();
   }
@@ -2425,6 +2436,8 @@
       const grading = payload.writing?.grading;
       if (payload.writing?.submitted && !grading?.ready) {
         showNotice(writingGradingNotice(grading), 'success');
+      } else if (payload.listeningInterrupted || state.listeningInterrupted) {
+        showNotice('Listening bị gián đoạn. Hãy liên hệ giảng viên để nhận bài Listening thay thế.');
       } else {
         showNotice(portalNotice(payload.portalSyncStatus, payload.completed), ['unknown', 'processing', 'pending', 'failed_response'].includes(payload.portalSyncStatus) ? '' : 'success');
       }
@@ -2478,7 +2491,7 @@
 
   elements.listeningView.addEventListener('submit', async event => {
     event.preventDefault();
-    if (state.listeningSubmitted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
+    if (state.listeningSubmitted || offline?.record.sections.listening?.interrupted || elements.listeningView.dataset.listeningSubmitting === 'true') return;
     if(paperMini&&(!paperConfirmed||paperBusy||event.submitter?.dataset.autoSubmit==='true'))return;
     if (!state.studentRef) {
       elements.studentSelect.reportValidity();
@@ -2674,7 +2687,7 @@
       saveSession();
       submitted = true;
       elements.readingView.dispatchEvent(new CustomEvent('term-test:reading-submitted'));
-      if (!state.completed) {
+      if (!state.completed && !response.listeningInterrupted) {
         showNotice(response.localOnly?offline.message:'Reading đã được lưu và khóa. Tiếp theo là Listening.', response.localOnly?'':'success');
         if (document.body.classList.contains('cbt-mode')) { window.TERM_TEST_ALLOW_NAVIGATION = true; window.location.reload(); }
         else showSectionReady('listening');
@@ -2999,6 +3012,8 @@
     else if(skill==='writing')setStage(state.writingStarted?'writing':'writing-prep');
     else if(response[skill+'StartedAt'])setStage(skill);
     else showSectionReady(skill);
+    elements.listeningView.addEventListener('term-test:listening-interrupted', showListeningInterruption);
+    showListeningInterruption();
     if(examJournal)offline.setJournal(examJournal);
     offline.addEventListener('change', () => {
       const { notice } = elements;
