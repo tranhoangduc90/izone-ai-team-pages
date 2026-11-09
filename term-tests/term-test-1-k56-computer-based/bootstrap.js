@@ -979,9 +979,9 @@
     previewAudio.currentTime = 0;
     try {
       await previewAudio.play();
-      previewHeard = !term1Offline?.active;
+      previewHeard = classCode !== 'CODEXDEMO56' && !term1Offline?.active;
       previewSample={at:performance.now(),position:previewAudio.currentTime};
-      if (term1Offline?.active) window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart, 10);
+      if (!previewHeard) window.IZONE_CBT_AUDIO_START_WAIT?.(elements.bootstrapStart, 10);
       elements.bootstrapPreview.textContent = 'Dừng nghe thử';
       elements.bootstrapPreviewStep.dataset.state = 'complete';
       elements.bootstrapStartStep.dataset.state = 'active';
@@ -1004,7 +1004,7 @@
   });
   previewAudio.addEventListener('timeupdate', () => {
     if (previewAudio.paused) return;
-    if(term1Offline?.active&&!previewHeard&&previewSample){
+    if ((classCode === 'CODEXDEMO56' || term1Offline?.active) && !previewHeard && previewSample) {
       const wall=(performance.now()-previewSample.at)/1000,media=previewAudio.currentTime-previewSample.position;
       // Một đoạn chờ decoder không phủ nhận số giây đã nghe thật trước/sau đoạn chờ.
       if (wall>=10&&media>=10&&media<=wall*1.05) {
