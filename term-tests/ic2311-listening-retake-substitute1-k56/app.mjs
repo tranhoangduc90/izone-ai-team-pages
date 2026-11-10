@@ -4,9 +4,11 @@ import {Telemetry} from './telemetry.mjs?v=20261106-controls-v3';
 import {LocalPlayer,downloadAudio} from './audio.mjs?v=20261110-continuity-v1';
 import {mountNativeListening,nativeLayout,nativeAnnotations} from './native-ui.mjs?v=20261110-continuity-v1';
 const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value;
+const params=new URLSearchParams(location.search),cohort=params.get('course')==='56';
 function show(id,value=true){$(id).hidden=!value;if(id==='exam'){$('listeningView').hidden=!value;$('identityView').hidden=!value;$('page-shell').classList.toggle('cbt-bootstrap-shell',!value);if(value)$('lobby').hidden=true;}if(id==='finished'&&value)$('lobby').hidden=true;}
-const storage=await new DurableStore().open().catch(e=>{text('identity-status',e.message);throw e;});
+const storage=await new DurableStore(cohort?'k56:':'').open().catch(e=>{text('identity-status',e.message);throw e;});
 let state=await storage.get('current'),preparation=await storage.get('preparation'),busy=false,syncing=false,syncFailures=0,retryAt=0,content,roster,prepared=false,reviewMono=null,presentationReady=false,trialPassed=false,reviewAsset;
+if(cohort){document.title='Listening thi lại · Khóa 56';text('roster-note','Chọn lớp và đúng họ tên của bạn. Danh sách chỉ hiện học viên chưa nộp.');$('view-review').href='../ic2311-retake-review/?skill=listening&course=56';}
 const tabId=crypto.randomUUID(),audioOwnerId=state?.identity?.audioOwnerId||preparation?.audioOwnerId||crypto.randomUUID();
 let releaseOwner,ownerHeld=false,durablePending=state?.pending?.operationId??null;
 async function acquireOwner(){
@@ -154,7 +156,7 @@ async function prepareOfflineShell(){
  let timer;
  try{
   return await Promise.race([new Promise(resolve=>{timer=setTimeout(()=>resolve(false),6000);}), (async()=>{
-   await navigator.serviceWorker.register('./offline-sw.js?v=20261110-continuity-v1');
+   await navigator.serviceWorker.register('./offline-sw.js?v=20261110-k56-picker-v1');
    const worker=(await navigator.serviceWorker.ready).active;
    if(!worker)return false;
    const urls=[...performance.getEntriesByType('resource').map(entry=>entry.name),
@@ -168,12 +170,15 @@ async function prepareOfflineShell(){
  }catch{return false;}finally{clearTimeout(timer);}
 }
 async function prepare(){
- if(busy||!presentationReady||(!$('student').value&&!state?.permit))return;busy=true;$('prepare').disabled=true;show('preparation');show('retry-preparation',false);
+ if(busy||!presentationReady||(!$('student').value&&!state?.permit))return;busy=true;$('prepare').disabled=true;$('class').disabled=true;show('preparation');show('retry-preparation',false);
  try{
   done('check-content');done('check-storage');
-  if(!state?.permit){const studentRef=$('student').value;if(preparation?.studentRef!==studentRef)preparation={studentRef,audioOwnerId,operationId:crypto.randomUUID()};await storage.put('preparation',preparation);const operationId=preparation.operationId;const r=await journal.request('/prepare',{classCode:'IC2311',studentRef,audioOwnerId,tabId,operationId},{permit:null,operationId});
-   if(r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.audioHash!==AUDIO.hash||r.value.identity.studentRef!==studentRef)throw Error('PREPARE_CONTRACT_MISMATCH');
-   state={permit:r.value.permit,identity:r.value.identity,revision:r.value.revision,answers:Object.fromEntries(Array.from({length:40},(_,i)=>[i+1,''])),phase:'prepared',pending:null,serverConfirmed:false};await persist();
+  if(!state?.permit){const studentRef=$('student').value,student=roster.students.find(item=>item.studentRef===studentRef),classCode=cohort?$('class').value:'IC2311';
+   if(!student||!classCode||cohort&&roster.classCode!==classCode)throw Error('ROSTER_SELECTION_MISMATCH');
+   if(preparation?.studentRef!==studentRef)preparation={studentRef,audioOwnerId,operationId:crypto.randomUUID()};await storage.put('preparation',preparation);const operationId=preparation.operationId;
+   const r=await journal.request(cohort?'/self-enrollment/prepare':'/prepare',{classCode,studentRef,audioOwnerId,tabId,operationId},{permit:null,operationId});
+   if(r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.audioHash!==AUDIO.hash||r.value.identity.studentRef!==studentRef||r.value.identity.classCode!==classCode)throw Error('PREPARE_CONTRACT_MISMATCH');
+   state={permit:r.value.permit,identity:r.value.identity,learnerName:student.name,revision:r.value.revision,answers:Object.fromEntries(Array.from({length:40},(_,i)=>[i+1,''])),phase:'prepared',pending:null,serverConfirmed:false};await persist();
   }
   await acquireOwner();if(!journal.permit)journal.bind(state.identity,state.permit);done('check-permit');$('student').disabled=true;
   const downloadedAt=performance.now();
@@ -192,12 +197,12 @@ async function prepare(){
    const link=document.createElement('a');
    link.href='../ic2311-retake-review/?skill=listening&view=by-name';
    link.textContent='Xem kết quả';
-   $('prepare-status').append(link);
+   if(!cohort)$('prepare-status').append(link);
    document.dispatchEvent(new Event('retake-already-submitted'));
    return;
   }
   text('prepare-status','Chưa chuẩn bị được bài thi ('+(e.code||'PREPARATION_FAILED')+'). Bạn chưa nên bắt đầu. Hãy thử lại; nếu vẫn lỗi, liên hệ giảng viên để được tổ chức thi lại.');show('retry-preparation');}
- finally{busy=false;$('prepare').disabled=prepared||!presentationReady||!$('student').value;}
+ finally{busy=false;if(cohort&&!state?.permit)$('class').disabled=false;$('prepare').disabled=prepared||!presentationReady||!$('student').value;}
 }
 $('student').addEventListener('change',()=>{$('prepare').disabled=busy||!presentationReady||!$('student').value;});$('prepare').onclick=prepare;$('retry-preparation').onclick=prepare;
 $('preview').onclick=async()=>{
@@ -212,7 +217,7 @@ for(const id of ['volume','exam-volume'])$(id).oninput=()=>{const v=Number($(id)
 $('start').onclick=async()=>{
  if(busy||!prepared||!trialPassed)return;busy=true;$('start').disabled=true;
  try{state.phase='playing';state.startedAt=new Date().toISOString();state.startedMono=performance.now();
- state.learnerName=roster.students.find(s=>s.studentRef===state.identity.studentRef)?.name;await persist();
+ state.learnerName=roster.students.find(s=>s.studentRef===state.identity.studentRef)?.name??state.learnerName;text('classLabel',state.identity.classCode);await persist();
  await player.start();show('preparation',false);show('exam');text('learner',state.learnerName);text('phase-label','Đang nghe');
  journal.emit('official_player_started',{phase:'playing',elapsedMs:performance.now()-state.startedMono,audioAfter:player.snapshot()});await queueDraft();}
  catch(e){state.phase='prepared';state.startedAt=null;await persist().catch(()=>{});
@@ -239,7 +244,7 @@ $('sync-now').onclick=async()=>{
 };
 $('check-new-attempt').onclick=async()=>{
  if(busy||state?.phase!=='technical_stop')return;busy=true;
- try{if(!state.replacementPreparation)state.replacementPreparation={operationId:crypto.randomUUID(),audioOwnerId:crypto.randomUUID()};await persist();const {operationId,audioOwnerId:owner}=state.replacementPreparation;const r=await journal.request('/prepare',{classCode:state.identity.classCode,studentRef:state.identity.studentRef,operationId,tabId,audioOwnerId:owner},{permit:null,operationId});if(r.value.identity.generation<=state.identity.generation||r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.audioHash!==AUDIO.hash||r.value.identity.studentRef!==state.identity.studentRef)throw Error('NEW_GENERATION_REQUIRED');await storage.put('attempt:'+state.identity.attemptId,state);state={permit:r.value.permit,identity:r.value.identity,revision:r.value.revision,answers:Object.fromEntries(Array.from({length:40},(_,i)=>[i+1,''])),phase:'prepared',pending:null,serverConfirmed:false};await persist();location.reload();}catch{note('Chưa có lượt mới được xác nhận. Hãy giữ bài hiện tại và liên hệ giảng viên; hệ thống không tự reset lượt thi.');}finally{busy=false;}
+ try{if(!state.replacementPreparation)state.replacementPreparation={operationId:crypto.randomUUID(),audioOwnerId:crypto.randomUUID()};await persist();const {operationId,audioOwnerId:owner}=state.replacementPreparation;const r=await journal.request(cohort?'/self-enrollment/replacement':'/prepare',{classCode:state.identity.classCode,studentRef:state.identity.studentRef,operationId,tabId,audioOwnerId:owner},{permit:cohort?state.permit:null,operationId});if(r.value.identity.generation<=state.identity.generation||r.value.identity.contentVersion!==CONTENT_VERSION||r.value.identity.audioHash!==AUDIO.hash||r.value.identity.studentRef!==state.identity.studentRef||r.value.identity.classCode!==state.identity.classCode)throw Error('NEW_GENERATION_REQUIRED');await storage.put('attempt:'+state.identity.attemptId,state);state={permit:r.value.permit,identity:r.value.identity,learnerName:state.learnerName,revision:r.value.revision,answers:Object.fromEntries(Array.from({length:40},(_,i)=>[i+1,''])),phase:'prepared',pending:null,serverConfirmed:false};await persist();location.reload();}catch{note('Chưa có lượt mới được xác nhận. Hãy giữ bài hiện tại và liên hệ giảng viên; hệ thống không tự reset lượt thi.');}finally{busy=false;}
 };
 addEventListener('offline',()=>{if(['playing','review'].includes(state?.phase))note('Bạn đang mất kết nối. Audio và bài thi vẫn tiếp tục. Đáp án đang được lưu trên thiết bị này.');});
 addEventListener('online',()=>{retryAt=0;void synchronize(true);});
@@ -260,14 +265,32 @@ try{
  else if(state.phase!=='prepared'){await technicalStop('PAGE_RELOADED_DURING_EXAM');}}
  if(!state||state.phase==='prepared'){
   if(![...document.styleSheets].some(sheet=>sheet.href?.includes('/native-upgrades.css')))throw Error('STYLESHEET_UNAVAILABLE');
-  const results=await Promise.all([loadContent(),journal.request('/roster?purpose=prepare',null,{permit:null,method:'GET'})]);content=results[0];roster=results[1].value;
-  if(roster.classCode!=='IC2311'||roster.contentVersion!==CONTENT_VERSION)throw Error('CONTENT_CONTRACT_MISMATCH');
+  const results=await Promise.all([loadContent(),cohort?(state?null:journal.request('/self-enrollment',null,{permit:null,method:'GET'})):journal.request('/roster?purpose=prepare',null,{permit:null,method:'GET'})]);content=results[0];
+  roster=cohort?{classCode:state?.identity?.classCode,students:state?[{...state.identity,name:state.learnerName}]:[]}:results[1].value;
+  if(!cohort&&(roster.classCode!=='IC2311'||roster.contentVersion!==CONTENT_VERSION))throw Error('CONTENT_CONTRACT_MISMATCH');
   const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src='assets/kinney-hotel-plan.png';});
-  $('student').replaceChildren(new Option('Chọn tên của bạn',''));for(const s of roster.students)$('student').add(new Option(s.name,s.studentRef));await renderContent();
-  if(!roster.students.length)text('identity-status','Hiện không còn học viên trong danh sách vào thi. Nếu bạn cần hỗ trợ, hãy liên hệ giảng viên.');
-  if(state?.phase==='prepared'){$('student').value=state.identity.studentRef;void prepare();}
+  function fillPicker(label='Chọn tên của bạn'){const select=$('student');select.replaceChildren(new Option(label,''));for(const s of roster.students)select.add(new Option(s.name,s.studentRef));select.disabled=!roster.students.length;select.dispatchEvent(new Event('change'));}
+  fillPicker();await renderContent();
+  if(cohort&&!state){
+   const {value}=results[1];if(value.contentVersion!==CONTENT_VERSION||!Array.isArray(value.classes))throw Error('CONTENT_CONTRACT_MISMATCH');
+   const classPicker=$('class');classPicker.replaceChildren(new Option('Chọn lớp của bạn',''),...value.classes.map(code=>new Option(code,code)));classPicker.disabled=false;
+   fillPicker('Chọn lớp trước');
+   let rosterRequest=0;
+   classPicker.addEventListener('change',async()=>{
+    const token=++rosterRequest,classCode=classPicker.value;roster={students:[]};
+    fillPicker(classCode?'Đang tải danh sách…':'Chọn lớp trước');text('identity-status','');
+    if(!classCode)return;
+    try{const {value:members}=await journal.request('/self-enrollment/roster?class='+encodeURIComponent(classCode),null,{permit:null,method:'GET'});
+     if(token!==rosterRequest)return;
+     if(members.classCode!==classCode||!Array.isArray(members.students))throw Error('ROSTER_SCOPE_MISMATCH');
+     roster=members;fillPicker();
+     if(!members.students.length)text('identity-status','Lớp này không còn học viên trong danh sách vào thi.');
+    }catch{if(token===rosterRequest){fillPicker('Chưa tải được danh sách');text('identity-status','Hãy chọn lại lớp để tải danh sách học viên.');}}
+   });
+  }else if(!roster.students.length)text('identity-status','Hiện không còn học viên trong danh sách vào thi. Nếu bạn cần hỗ trợ, hãy liên hệ giảng viên.');
+  if(state?.phase==='prepared'){if(cohort)$('class').replaceChildren(new Option(state.identity.classCode,state.identity.classCode));$('student').value=state.identity.studentRef;void prepare();}
  }
 }catch(e){if(e.code==='AUDIO_OWNER_CONFLICT'){show('identity',false);note('Bài Listening đang mở ở tab khác. Hãy quay lại tab đó để tiếp tục; trang này không thay đổi bài đang làm.');}else text('identity-status','Chưa tải được nội dung hoặc danh sách học viên. Hãy kết nối mạng và tải lại trước khi bắt đầu.');}
 
-void import('../ic2311-retake-review/student-review-entry.mjs?v=1')
+if(!cohort)void import('../ic2311-retake-review/student-review-entry.mjs?v=1')
   .then(({attachStudentReview})=>attachStudentReview({api:API,skill:'listening'})).catch(()=>{});
