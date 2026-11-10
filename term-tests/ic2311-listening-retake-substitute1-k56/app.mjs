@@ -273,7 +273,8 @@ try{
   fillPicker();await renderContent();
   if(cohort&&!state){
    const {value}=results[1];if(value.contentVersion!==CONTENT_VERSION||!Array.isArray(value.classes))throw Error('CONTENT_CONTRACT_MISMATCH');
-   const classPicker=$('class');classPicker.replaceChildren(new Option('Chọn lớp của bạn',''),...value.classes.map(code=>new Option(code,code)));classPicker.disabled=false;
+   const classes=value.classes.slice().sort((a,b)=>Number(b.slice(2))-Number(a.slice(2)));
+   const classPicker=$('class');classPicker.replaceChildren(new Option('Chọn lớp của bạn',''),...classes.map(code=>new Option(code,code)));classPicker.disabled=false;
    fillPicker('Chọn lớp trước');
    let rosterRequest=0;
    classPicker.addEventListener('change',async()=>{
